@@ -42,13 +42,9 @@ func NewBlock(data []byte) (*Block, error) {
 	if len(data)<81 {
 		return nil, errors.New("Block too short")
 	}
-	
 	var bl Block
-
 	bl.Hash = NewSha2Hash(data[:80])
-	bl.Raw = make([]byte, len(data))
-	copy(bl.Raw[:], data[:])
-
+	bl.Raw = data
 	return &bl, nil
 }
 

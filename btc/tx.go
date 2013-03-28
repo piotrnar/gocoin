@@ -20,7 +20,6 @@ type TxIn struct {
 type TxOut struct {
 	Value uint64
 	Pk_script []byte
-	Times uint32 // Only used in by the unspent list
 }
 
 type Tx struct {
@@ -112,6 +111,11 @@ func (to *TxOut)Save(f *os.File) {
 	write64bit(f, to.Value)
 	write32bit(f, uint32(len(to.Pk_script)))
 	f.Write(to.Pk_script[:])
+}
+
+
+func (to *TxOut)Size() uint32 {
+	return uint32(8+4+len(to.Pk_script[:]))
 }
 
 

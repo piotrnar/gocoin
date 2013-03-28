@@ -20,6 +20,9 @@ type BlockDB struct {
 	currfileidx uint32
 	
 	blockIndex map[[32]byte]BlockPos
+	
+	blockbuf []byte
+	curbloklen uint32
 }
 
 
@@ -29,6 +32,7 @@ func NewBlockDB(dir string, magic [4]byte) (res *BlockDB) {
 	res.magic = magic
 	res.openFile(false)
 	res.blockIndex = make(map[[32]byte]BlockPos, BlockMapInitLen)
+	res.blockbuf = make([]byte, MAX_BLOCK_SIZE)
 	return
 }
 
@@ -77,16 +81,17 @@ func (db *BlockDB)GetBlock(hash *Uint256) (res []byte, e error) {
 		}
 	}
 	db.f.Seek(bp.fpos, 0)
-	res, e = db.readOneBlock()
+	e = db.readOneBlock()
 	if e != nil {
 		println("GetBlock2: ", e.Error())
 		os.Exit(1)
 	}
+	res = db.blockbuf
 	return
 }
 
 
-func (db *BlockDB)readOneBlock() (res []byte, e error) {
+func (db *BlockDB)readOneBlock() (e error) {
 	var bp BlockPos
 
 	bp.fidx = db.currfileidx
@@ -116,30 +121,35 @@ func (db *BlockDB)readOneBlock() (res []byte, e error) {
 		return
 	}
 
-	if le<81 {
-		e = errors.New(fmt.Sprintf("Block too short %d", le))
+	if le<81 || le>MAX_BLOCK_SIZE {
+		e = errors.New(fmt.Sprintf("Incorrect block size %d", le))
 		return
 	}
 
-	res = make([]byte, le)
-	_, e = db.f.Read(res[:])
+	_, e = db.f.Read(db.blockbuf[:le])
 	if e!=nil {
-		res = nil
 		return
 	}
+	db.curbloklen = le
 
-	db.blockIndex[Sha2Sum(res[:80])] = bp
+	db.blockIndex[Sha2Sum(db.blockbuf[:80])] = bp
 	return
 }
 
-func (db *BlockDB)ReadNextBlock() (res []byte, e error) {
-	res, e = db.readOneBlock()
+func (db *BlockDB) FetchNextBlock() (bl *Block) {
+	e := db.readOneBlock()
 	if e != nil {
 		//fmt.Println("readOneBlock error:", e.Error())
 		e = db.openFile(true)
 		if e == nil {
-			res, e = db.readOneBlock()
+			e = db.readOneBlock()
 		}
 	}
-	return
+	if e==nil {
+		bl = new(Block)
+		bl.Raw = db.blockbuf
+		bl.Hash = NewSha2Hash(db.blockbuf[:80])
+	}
+	return 
 }
+

@@ -6,7 +6,7 @@ const(
 	MAX_MONEY = 21000000 * COIN
 
 	BlockMapInitLen = 300e3
-	UnspentTxsMapInitLen = 1e6
+	UnspentTxsMapInitLen = 4e6
 	
 	UnwindBufferMaxHistory = 24*6  // Let's give it about one day
 )
