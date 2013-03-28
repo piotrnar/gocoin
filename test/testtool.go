@@ -35,22 +35,18 @@ func printstat() {
 
 func reloadBlockchain(limit uint64) {
 	var bl *btc.Block
+	var er error
 	start := time.Now().UnixNano()
 	var blkcnt, totbytes uint64
 	for blkcnt=0; blkcnt<limit; blkcnt++ {
-		b, er := BlockDatabase.ReadNextBlock()
+		bl = BlockDatabase.FetchNextBlock()
 		if er != nil {
-			//println(er.Error())
 			break
 		}
-		totbytes += uint64(len(b))
-		
-		bl, er = btc.NewBlock(b)
 		if GenesisBlock.Equal(bl.Hash) {
 			fmt.Println("Skip genesis block")
 			continue
 		}
-		errorFatal(er, "btc.NewBlock")
 
 		er = bl.CheckBlock()
 		errorFatal(er, "CheckBlock() failed")
@@ -68,16 +64,6 @@ func reloadBlockchain(limit uint64) {
 		if BlockChain.GetHeight()==61934 {
 			println("dbg-on")
 			btc.DbgSwitch(btc.DBG_BLOCKS, true)
-		}
-		*/
-
-		/*
-		h := BlockChain.GetHeight()
-		if h>90000 {
-			if BlockChain.TotalUnspent() != 50e8*uint64(h) {
-				fmt.Printf("Wykurw na %d\n", h)
-				break
-			}
 		}
 		*/
 	}
@@ -130,20 +116,9 @@ Enter number:`)
 }
 
 
-
 func make_transaction() {
-/*
-{
-"txid" : "fafcb1ecf8ebf87e8cc75ab7dd37536d4c24f025b5142ba82d1a39e10db9ac12",
-"vout" : 5,
-"scriptPubKey" : "76a91409aec0bf1f5ad5ed2209d14c4284c3b9909f7bae88ac",
-"amount" : 19.47650000,
-"confirmations" : 463
-}
-*/
 	fmt.Println()
 
-	//intxid := btc.NewUint256FromString("fafcb1ecf8ebf87e8cc75ab7dd37536d4c24f025b5142ba82d1a39e10db9ac12")
 	intxid := btc.NewUint256FromString("44ec33ba11a1199b808dd1b8f20d7caeee3ec0c7de2139a367c6a01a16dfa6f1").Hash
 	intxco := uint32(0)
 
@@ -173,14 +148,6 @@ func make_transaction() {
 	tx.Lock_time = 0xffffffff
 
 	println(bin2hex(tx.Unsigned()))
-
-/*
-unsigned:
-0100000001f1a6df161aa0c667a33921dec7c03eeeae7c0df2b8d18d809b19a111ba33ec4400000000000000000001d0c71674000000001976a91409aec0bf1f5ad5ed2209d14c4284c3b9909f7bae88acffffffff
-
-signed:
-0100000001f1a6df161aa0c667a33921dec7c03eeeae7c0df2b8d18d809b19a111ba33ec44000000006b48304502201f8620292fecb7cf8d33ebf0f9115e95d4752533335d7201e08d9d940a87f442022100d8ff799b1002158215f830b1e3ade85497d73348e3ea2c809231d2a2dd3bb80b012102f0251d3bc8242123ec1feca1e54efc6bf984dfbb63b3fe0ae599f51f6037f0ea0000000001d0c71674000000001976a91409aec0bf1f5ad5ed2209d14c4284c3b9909f7bae88acffffffff
-*/
 }
 
 
@@ -211,8 +178,7 @@ func main() {
 	var dir string
 	
 	if *testnet { // testnet3
-		//dir = os.Getenv("APPDATA")+"/Bitcoin/blocks/testnet3/blocks"
-		dir = "testnet3/blocks"
+		dir = os.Getenv("APPDATA")+"/Bitcoin/testnet3/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
 	} else {
@@ -224,7 +190,7 @@ func main() {
 	BlockDatabase = btc.NewBlockDB(dir, Magic)
 	BlockChain = btc.NewChain(BlockDatabase, GenesisBlock)
 	if *autoload {
-		reloadBlockchain(1+177778)
+		reloadBlockchain(1+150e3)
 	} else {
 		reloadBlockchain(1)
 	}
