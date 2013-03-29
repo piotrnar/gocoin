@@ -46,6 +46,13 @@ func lsb2uint(lt []byte) (res uint64) {
 	return
 }
 
+func msb2uint(lt []byte) (res uint64) {
+	for i:=0; i<len(lt); i++ {
+		res = (res<<8) | uint64(lt[i])
+	}
+	return
+}
+
 func getVlenVal(b *bytes.Buffer) (res uint64) {
 	c, e := b.ReadByte()
 	errorFatal(e, "GetVarLen first")
@@ -104,6 +111,15 @@ func getVlen(buf []byte) (le uint64, size uint32) {
 	return
 }
 
+func allzeros(b []byte) bool {
+	for i := range b {
+		if b[i]!=0 {
+			return false
+		}
+	}
+	return true
+}
+
 
 func errorFatal(er error, s string) {
 	if er != nil {
@@ -125,6 +141,17 @@ func bin2hex(mem []byte) string {
 	return s
 }
 
+
+func read32bit(f *os.File) (v uint32, e error) {
+	var b [4]byte
+	_, e = f.Read(b[:])
+	if e == nil {
+		v = uint32(msb2uint(b[:]))
+	}
+	return 
+}
+
+
 func write32bit(f *os.File, v uint32) {
 	var b [4]byte
 	b[0] = byte(v>>24)
@@ -133,6 +160,17 @@ func write32bit(f *os.File, v uint32) {
 	b[3] = byte(v)
 	f.Write(b[:])
 }
+
+
+func read64bit(f *os.File) (v uint64, e error) {
+	var b [8]byte
+	_, e = f.Read(b[:])
+	if e == nil {
+		v = msb2uint(b[:])
+	}
+	return 
+}
+
 
 func write64bit(f *os.File, v uint64) {
 	var b [8]byte
@@ -175,4 +213,9 @@ func putVlen(b []byte, vl int) uint32 {
 	println("putVlen only supports small number now")
 	os.Exit(1)
 	return 1
+}
+
+func getfilepos(f *os.File) (p int64) {
+	p, _ = f.Seek(0, os.SEEK_CUR)
+	return
 }

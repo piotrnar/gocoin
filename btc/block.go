@@ -48,6 +48,7 @@ func NewBlock(data []byte) (*Block, error) {
 	return &bl, nil
 }
 
+
 func (bl *Block)BuildTxList() {
 	offs := uint32(80)
 	txcnt, cnt := getVlen(bl.Raw[offs:])
@@ -57,7 +58,6 @@ func (bl *Block)BuildTxList() {
 	for i:=0; i<int(txcnt); i++ {
 		offs += bl.Txs[i].set(bl.Raw[offs:])
 	}
-
 }
 
 

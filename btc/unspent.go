@@ -3,10 +3,20 @@ package btc
 import (
 	"fmt"
 	"os"
+	"bytes"
 )
 
+type unspentTxOut struct {
+	txout TxOut
+	prvout TxPrevOut
+	times byte
+}
+
+const mapLen = 8  // The bigger it it, the more memory is needed, but lower chance of a collision
+
+
 type UnspentDb struct {
-	outs map[TxPrevOut] *TxOut
+	outs map[[mapLen]byte] unspentTxOut
 	unwd *txUnwindData
 	lastPickInput *TxPrevOut
 	lastPickOut *TxOut
@@ -14,10 +24,19 @@ type UnspentDb struct {
 
 func NewUnspentDb() (us *UnspentDb) {
 	us = new(UnspentDb)
-	us.outs = make(map[TxPrevOut] *TxOut, UnspentTxsMapInitLen)
+	us.outs = make(map[[mapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
 	us.unwd = NewUnwindBuffer()
 	return
 }
+
+func NewUnspentIndex(po *TxPrevOut) (o [mapLen]byte) {
+	put32lsb(o[:], po.Vout)
+	for i := 0; i<mapLen; i++ {
+		o[i] ^= po.Hash[i]
+	}
+	return 
+}
+
 
 func (us *UnspentDb)NewHeight(height uint32) {
 	if don(DBG_UNSPENT) {
@@ -28,41 +47,50 @@ func (us *UnspentDb)NewHeight(height uint32) {
 
 
 func (us *UnspentDb)del(txin *TxPrevOut) {
-	is, pres := us.outs[*txin]
+	idx := NewUnspentIndex(txin)
+	is, pres := us.outs[idx]
 	if !pres {
 		println("Cannot remove", txin.String())
 		os.Exit(1)
 	}
-	if is.Times > 1 {
-		is.Times--
+	if is.times > 1 {
+		is.times--
 	} else {
-		delete(us.outs, *txin)
+		delete(us.outs, idx)
 	}
 }
 
 
 func (us *UnspentDb)add(txin *TxPrevOut, newout *TxOut) {
-	is, pres := us.outs[*txin]
+	idx := NewUnspentIndex(txin)
+	is, pres := us.outs[idx]
 	if pres {
 		fmt.Println("Note:", txin.String(), "is already unspent")
-		is.Times++
+		is.times++
 	} else {
-		newout.Times = 1
-		us.outs[*txin] = newout
+		rec := unspentTxOut{txout:*newout,prvout:*txin,times:1}
+		us.outs[idx] = rec
 	}
 }
 
 
 func (us *UnspentDb)LookUnspent(txin *TxPrevOut) (txout *TxOut) {
-	txout, _ = us.outs[*txin]
+	idx := NewUnspentIndex(txin)
+	txout_x, ok := us.outs[idx]
+	if ok {
+		txout = &txout_x.txout
+	}
 	return
 }
 
 func (us *UnspentDb)PickUnspent(txin *TxPrevOut) (txout *TxOut, ok bool) {
-	txout, ok = us.outs[*txin]
-	if ok {
+	idx := NewUnspentIndex(txin)
+	txout_x, yes := us.outs[idx]
+	if yes {
+		txout = &txout_x.txout
 		us.lastPickInput = txin
 		us.lastPickOut = txout
+		ok = true
 	}
 	return
 }
@@ -79,6 +107,7 @@ func (us *UnspentDb)RemoveLastPick(height uint32) {
 }
 
 
+// We down want txin to be pointer since it gets changed (a local variable) in the caller
 func (us *UnspentDb)Append(height uint32, txin TxPrevOut, newout *TxOut) {
 	if don(DBG_UNSPENT) {
 		fmt.Println(" + ", txin.String())
@@ -93,34 +122,58 @@ func (us *UnspentDb)UnwindBlock(height uint32) {
 
 
 func (us *UnspentDb)Stats() (s string) {
-	sum := uint64(0)
+	siz := uint64(0)
+	sum := uint64(0)            
 	cnt := uint32(0)
 	for _, v := range us.outs {
-		cnt += v.Times
-		if v.Times > 1 {
-			sum += v.Value*uint64(v.Times)
-		} else {
-			sum += v.Value
-		}
+		cnt += uint32(v.times)
+		sum += v.txout.Value*uint64(v.times)
+		siz += uint64(v.txout.Size() + 32 + 4) * uint64(v.times)
 	}
-	s += fmt.Sprintf("UNSPENT : tx_cnt=%d  btc=%.8f\n", cnt, float64(sum)/1e8)
+	s += fmt.Sprintf("UNSPENT : tx_cnt=%d  btc=%.8f  size:%dMB\n", cnt, float64(sum)/1e8, siz>>20)
 	s += us.unwd.Stats()
 	return
 }
 
-func (us *UnspentDb)Save() {
-	// Variable record length
-	f, e := os.Create("unspent_outs.bin")
-	if e == nil {
-		for k, v := range us.outs {
-			f.Write(k.Hash[:])
-			write32bit(f, k.Index)
-			v.Save(f)
-		}
-		println(len(us.outs), "saved in unspent_outs.bin")
-		f.Close()
+
+func (us *UnspentDb)Load(f *os.File) {
+	us.outs = make(map[[mapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
+	var txout TxOut
+	var prvout TxPrevOut
+	for prvout.Load(f) {
+		txout.Load(f)
+		us.add(&prvout, &txout)
 	}
-	
-	us.unwd.Save()
+	println(len(us.outs), "loaded into UnspentDb")
 }
 
+
+func (us *UnspentDb) Save(f *os.File) {
+	for _, v := range us.outs {
+		for xx := 0; xx<int(v.times); xx++ {
+			v.prvout.Save(f)
+			v.txout.Save(f)
+		}
+	}
+	println(len(us.outs), "saved in UnspentDb", getfilepos(f))
+}
+
+
+type OneUnspentTx struct {
+	Output TxPrevOut
+	Value uint64
+}
+
+func (u *OneUnspentTx) String() string {
+	return u.Output.String() + fmt.Sprintf(" %15.8f BTC", float64(u.Value)/1e8)
+}
+
+
+func (us *UnspentDb) GetUnspentFromPkScr(scr []byte) (res []OneUnspentTx) {
+	for _, v := range us.outs {
+		if bytes.Equal(v.txout.Pk_script[:], scr[:]) {
+			res = append(res, OneUnspentTx{Value:v.txout.Value, Output: v.prvout})
+		}
+	}
+	return
+}

@@ -8,7 +8,7 @@ import (
 
 type TxPrevOut struct {
 	Hash [32]byte
-	Index uint32
+	Vout uint32
 }
 
 type TxIn struct {
@@ -48,7 +48,7 @@ func (t *Tx) Unsigned() (res []byte) {
 	for i := range t.TxIn {
 		copy(buf[off:off+32], t.TxIn[i].Input.Hash[:])
 		off += 32
-		off += put32lsb(buf[off:], t.TxIn[i].Input.Index)
+		off += put32lsb(buf[off:], t.TxIn[i].Input.Vout)
 		off += putVlen(buf[off:], 0) // no subScript in Unsiged
 		off += put32lsb(buf[off:], t.TxIn[i].Sequence)
 	}
@@ -93,9 +93,18 @@ func CreateTransaction(spend []TxIn, outs[]AddrValue) (out *Tx) {
 }
 
 
+func (oi *TxPrevOut)Load(f *os.File) bool {
+	_, e := f.Read(oi.Hash[:])
+	if e!=nil {
+		return false
+	}
+	oi.Vout, _ = read32bit(f)
+	return true
+}
+
 func (oi *TxPrevOut)Save(f *os.File) {
 	f.Write(oi.Hash[:])
-	write32bit(f, oi.Index)
+	write32bit(f, oi.Vout)
 }
 
 
@@ -103,9 +112,18 @@ func (t *TxPrevOut)String() (s string) {
 	for i := 0; i<32; i++ {
 		s+= fmt.Sprintf("%02x", t.Hash[31-i])
 	}
-	s+= fmt.Sprintf("-%03d", t.Index)
+	s+= fmt.Sprintf("-%03d", t.Vout)
 	return
 }
+
+
+func (to *TxOut)Load(f *os.File) {
+	to.Value, _ = read64bit(f)
+	le, _ := read32bit(f)
+	to.Pk_script = make([]byte, le)
+	f.Read(to.Pk_script[:])
+}
+
 
 func (to *TxOut)Save(f *os.File) {
 	write64bit(f, to.Value)
@@ -121,19 +139,21 @@ func (to *TxOut)Size() uint32 {
 
 func (txin *TxIn) set(buf []byte) (size uint32) {
 	copy(txin.Input.Hash[:], buf[:32])
-	txin.Input.Index = uint32(lsb2uint(buf[32:36]))
+	txin.Input.Vout = uint32(lsb2uint(buf[32:36]))
 	
 	size = 36
 	le, cnt := getVlen(buf[size:])
 	size += uint32(cnt)
 	
 	// Signature script
-	txin.ScriptSig = buf[size:size+uint32(le)]
-
-	/* - not needed since all in txs are freed with the block
-	txin.ScriptSig = make([]byte, le)
-	copy(txin.ScriptSig[:], buf[size:size+uint32(le)])
-	*/
+	if false {
+		// Allocate own memory since blocks are being freed
+		txin.ScriptSig = make([]byte, le)
+		copy(txin.ScriptSig[:], buf[size:size+uint32(le)])
+	} else {
+		// This is re-using block's memory:
+		txin.ScriptSig = buf[size:size+uint32(le)]
+	}
 
 	size += uint32(le)
 	
@@ -151,13 +171,14 @@ func (txout *TxOut) set(buf []byte) (size uint32) {
 	le, cnt := getVlen(buf[size:])
 	size += cnt
 	
-	// Allocate own memory since blocks are being freed
-	txout.Pk_script = make([]byte, le)
-	copy(txout.Pk_script[:], buf[size:size+uint32(le)])
-	
-	/* This is re-using block's memory:
-	txout.Pk_script = buf[size:size+uint32(le)]
-	*/
+	if true {
+		// Allocate own memory since blocks are being freed
+		txout.Pk_script = make([]byte, le)
+		copy(txout.Pk_script[:], buf[size:size+uint32(le)])
+	} else {
+		// This is re-using block's memory:
+		txout.Pk_script = buf[size:size+uint32(le)]
+	}
 	
 	size += uint32(le)
 	return
@@ -175,15 +196,6 @@ func (tx *Tx) set(data []byte) (size uint32) {
 	tx.TxIn = make([]TxIn, le)
 	for i := range tx.TxIn {
 		size += tx.TxIn[i].set(data[size:])
-		/*
-		lll := tx.TxIn[i].set(data[size:])
-		if i>1 {
-			println("tx_:", bin2hex(data[size:size+lll]))
-			println("sig:", bin2hex(tx.TxIn[i].ScriptSig[:]))
-			os.Exit(1)
-		}
-		size += lll
-		*/
 	}
 	
 	// TxOut
@@ -205,12 +217,7 @@ func (tx *Tx) set(data []byte) (size uint32) {
 
 
 func (in *TxPrevOut)IsNull() bool {
-	for i:=0; i<32; i++ {
-		if in.Hash[i]!=0 {
-			return false
-		}
-	}
-	return in.Index==0xffffffff
+	return allzeros(in.Hash[:]) && in.Vout==0xffffffff
 }
 
 func (tx *Tx) IsCoinBase() bool {

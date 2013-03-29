@@ -8,19 +8,10 @@ import (
 )
 
 type BlockTreeNode struct {
-	hash *Uint256
+	hash Uint256
 	height uint32
 	parent *BlockTreeNode
 	childs []*BlockTreeNode
-}
-
-func (v *BlockTreeNode)Save(f *os.File) {
-	f.Write(v.hash.Hash[:])
-	if v.parent != nil {
-		f.Write(v.parent.hash.Hash[:])
-	} else {
-		f.Write(bytes.Repeat([]byte{0}, 32))
-	}
 }
 
 type Chain struct {
@@ -41,7 +32,7 @@ func NewChain(blockdb *BlockDB, genesis *Uint256) (ch *Chain) {
 	ch.blockIndex = make(map[[32]byte] *BlockTreeNode, BlockMapInitLen)
 	
 	ch.blockTreeRoot = new(BlockTreeNode)
-	ch.blockTreeRoot.hash = genesis
+	ch.blockTreeRoot.hash = *genesis
 	ch.blockIndex[genesis.Hash] = ch.blockTreeRoot
 	ch.blockTreeEnd = ch.blockTreeRoot
 	ch.orphaned = make(map[[32]byte] *BlockTreeNode, UnwindBufferMaxHistory)
@@ -104,7 +95,7 @@ func (ch *Chain)commitTxs(bl *Block, height uint32) (error) {
 				fmt.Printf("  out %d: %12.8f\n", j+1, float64(bl.Txs[i].TxOut[j].Value)/1e8)
 			}
 			txoutsum += bl.Txs[i].TxOut[j].Value
-			iii.Index = uint32(j)
+			iii.Vout = uint32(j)
 			ch.unspent.Append(height, iii, &bl.Txs[i].TxOut[j])
 			
 		}
@@ -157,6 +148,7 @@ func (n *BlockTreeNode)FindLongestChild() (res *BlockTreeNode) {
 
 func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 	fmt.Printf("Moving branches %d -> %d\n", ch.blockTreeEnd.height, cur.height)
+
 	old := ch.blockTreeEnd
 	
 	for cur.height > old.height {
@@ -182,7 +174,7 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		}
 		fmt.Printf(" + new %d ... \n", cur.height)
 		
-		b, er := ch.blockdb.GetBlock(cur.hash)
+		b, er := ch.blockdb.GetBlock(&cur.hash)
 		errorFatal(er, "MoveToBranch/GetBlock")
 
 		bl, er := NewBlock(b)
@@ -202,6 +194,11 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 }
 
 
+func (n *BlockTreeNode)addChild(c *BlockTreeNode) {
+	n.childs = append(n.childs, c)
+}
+
+
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	_, pres := ch.blockIndex[bl.Hash.Hash]
 	if pres {
@@ -212,16 +209,16 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	copy(p[:], bl.GetParent()[:])
 	prevblk, ok := ch.blockIndex[p]
 	if !ok {
-		return errors.New("AcceptBlock() : prev block not found")
+		return errors.New("AcceptBlock() : prev block not found"+NewUint256(p[:]).String())
 	}
 
 	// create new BlockTreeNode
 	cur := new(BlockTreeNode)
-	cur.hash = bl.Hash
+	cur.hash = *bl.Hash
 	cur.parent = prevblk
 	cur.height = prevblk.height + 1
 	
-	prevblk.childs = append(prevblk.childs, cur)
+	prevblk.addChild(cur)
 	
 	// Add this block to the block index
 	ch.blockIndex[cur.hash.Hash] = cur
@@ -252,7 +249,9 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 	e = ch.CommitTransactions(bl, cur.height)
 	if e != nil {
-		println("rejecting block", cur.height, cur.hash.String())
+		println("rejecting block", cur.height, cur.hash.String(), 
+			"\nparent:", NewUint256(p[:]).String(),
+			"\n", e.Error())
 		ch.unspent.UnwindBlock(cur.height)
 		delete(ch.blockIndex, cur.hash.Hash)
 		ch.blockTreeEnd = ch.blockTreeEnd.parent
@@ -262,8 +261,10 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 
 func (ch *Chain)Stats() (s string) {
-	s = fmt.Sprintf("BCHAIN  : height=%d orphaned=%d/%d\n", 
-		ch.blockTreeEnd.height, len(ch.orphaned), len(ch.blockIndex))
+	siz := uint64(len(ch.orphaned)+len(ch.blockIndex)) * (32 + 4 + 8 + 16)
+	s = fmt.Sprintf("BCHAIN  : height=%d orphaned=%d/%d  siz:~%dMB\n", 
+		ch.blockTreeEnd.height, len(ch.orphaned), len(ch.blockIndex),
+			siz >> 20 )
 	s += ch.unspent.Stats()
 	return
 }
@@ -273,34 +274,132 @@ func (ch *Chain)GetHeight() uint32 {
 }
 
 
-func (ch *Chain)Save() {
-	ch.blockdb.Save()
-	ch.unspent.Save()
-	
-	// 96 bytes per record
-	f, e := os.Create("blocktr_idx.bin")
+func (v *BlockTreeNode)Load(f *os.File) (h [32]byte, e error) {
+	_, e = f.Read(v.hash.Hash[:])
 	if e == nil {
-		for k, v := range ch.blockIndex {
-			f.Write(k[:])
-			v.Save(f)
-		}
-		println(len(ch.blockIndex), "saved in blocktr_idx.bin")
-		f.Close()
+		_, e = f.Read(h[:])
 	}
-	
-	// 96 bytes per record
-	f, e = os.Create("orphaned.bin")
-	if e == nil {
-		for k, v := range ch.orphaned {
-			f.Write(k[:])
-			v.Save(f)
-		}
-		println(len(ch.orphaned), "saved in orphaned.bin")
-		f.Close()
+	return 
+}
+
+
+func (v *BlockTreeNode)Save(f *os.File) {
+	f.Write(v.hash.Hash[:])
+	if v.parent != nil {
+		f.Write(v.parent.hash.Hash[:])
+	} else {
+		f.Write(bytes.Repeat([]byte{0}, 32))
 	}
 }
 
-func (ch *Chain)LookUnspent(tid [32]byte, vout uint32) *TxOut {
-	txin := TxPrevOut{Hash:tid, Index:vout}
+func (ch *Chain)loadIndex(f *os.File) {
+	var k, h [32]byte
+	var orph [1]byte
+	var ok bool
+	var e error
+	for {
+		v := new(BlockTreeNode)
+		h, e = v.Load(f)
+		if e != nil {
+			break
+		}
+
+		if allzeros(h[:]) {
+			ch.blockTreeRoot = v
+		} else {
+			v.parent, ok = ch.blockIndex[h]
+			if !ok {
+				println("Mid: no such parent", NewUint256(k[:]).String(), " - hook to ", NewUint256(h[:]).String())
+				os.Exit(1)
+			}
+			v.height = v.parent.height + 1
+			v.parent.addChild(v)
+		}
+		ch.blockIndex[v.hash.Hash] = v
+
+		f.Read(orph[:])
+		if (orph[0]!=0) {
+			ch.orphaned[v.hash.Hash] = v
+		} else {
+			ch.blockTreeEnd = v // they shoudl be saved in order
+		}
+	}
+	
+	println(len(ch.blockIndex), "loaded into blidxDB. orphaned:", len(ch.orphaned))
+}
+
+
+func (ch *Chain)Load() {
+	f, e := os.Open("blockdb.bin")
+	errorFatal(e, "cannot open blockdb.bin")
+	ch.blockdb.Load(f)
+	f.Close()
+
+	f, e = os.Open("unspent.bin")
+	errorFatal(e, "cannot open unspent.bin")
+	ch.unspent.Load(f)
+	f.Close()
+
+	f, e = os.Open("unwinds.bin")
+	errorFatal(e, "cannot open unwinds.bin")
+	ch.unspent.unwd.Load(f)
+	f.Close()
+	
+	ch.blockIndex = make(map[[32]byte] *BlockTreeNode, BlockMapInitLen)
+	ch.orphaned = make(map[[32]byte] *BlockTreeNode, UnwindBufferMaxHistory)
+	f, e = os.Open("blookup.bin")
+	errorFatal(e, "cannot open blookup.bin")
+	ch.loadIndex(f)
+	f.Close()
+}
+
+
+func (ch *Chain)SaveBlockIndexTree(f *os.File, v *BlockTreeNode) (cnt uint32) {
+	v.Save(f)
+	_, orphnd := ch.orphaned[v.hash.Hash]
+	if orphnd {
+		f.Write([]byte{1})
+	} else {
+		f.Write([]byte{0})
+	}
+	cnt = 1
+	for i := range v.childs {
+		cnt += ch.SaveBlockIndexTree(f, v.childs[i])
+	}
+	return 
+}
+
+
+func (ch *Chain)Save() {
+	f, e := os.Create("blockdb.bin")
+	errorFatal(e, "cannot create blockdb.bin")
+	ch.blockdb.Save(f)
+	f.Close()
+
+	f, e = os.Create("unspent.bin")
+	errorFatal(e, "cannot create unspent.bin")
+	ch.unspent.Save(f)
+	f.Close()
+	
+	f, e = os.Create("unwinds.bin")
+	errorFatal(e, "cannot create unwinds.bin")
+	ch.unspent.unwd.Save(f)
+	f.Close()
+	
+	f, e = os.Create("blookup.bin")
+	errorFatal(e, "cannot create blookup.bin")
+	cnt := ch.SaveBlockIndexTree(f, ch.blockTreeRoot)
+	println(cnt, len(ch.blockIndex), "saved in blidxDB - last ", ch.blockTreeEnd.hash.String())
+	f.Close()
+}
+
+func (ch *Chain) LookUnspent(tid [32]byte, vout uint32) *TxOut {
+	txin := TxPrevOut{Hash:tid, Vout:vout}
 	return ch.unspent.LookUnspent(&txin)
 }
+
+func (ch *Chain) GetUnspentFromPkScr(scr []byte) []OneUnspentTx {
+	return ch.unspent.GetUnspentFromPkScr(scr)
+}
+
+

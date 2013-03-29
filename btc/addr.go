@@ -78,6 +78,17 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 }
 
 
+func (a *BtcAddr) OutScript() (res []byte) {
+	res = make([]byte, 25)
+	res[0] = 0x76
+	res[1] = 0xa9
+	res[2] = 20
+	copy(res[3:23], a.Hash160[:])
+	res[23] = 0x88
+	res[24] = 0xac
+	return
+}
+
 var b58set []byte = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 
 func b58chr2int(chr byte) int {

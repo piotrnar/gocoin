@@ -10,11 +10,6 @@ type UnspentOneUnwind struct {
 	out *TxOut
 }
 
-func (o *UnspentOneUnwind)Save(f *os.File) {
-	o.input.Save(f)
-	o.out.Save(f)
-}
-
 type UnspentBlockUnwind struct {
 	added []UnspentOneUnwind
 	deleted []UnspentOneUnwind
@@ -24,6 +19,20 @@ type UnspentBlockUnwind struct {
 type txUnwindData struct {
 	blocksUnwind map[uint32]*UnspentBlockUnwind
 }
+
+
+func (o *UnspentOneUnwind)Load(f *os.File) {
+	o.input = new(TxPrevOut)
+	o.out = new(TxOut)
+	o.input.Load(f)
+	o.out.Load(f)
+}
+
+func (o *UnspentOneUnwind)Save(f *os.File) {
+	o.input.Save(f)
+	o.out.Save(f)
+}
+
 
 func NewUnwindBuffer() (ub *txUnwindData) {
 	ub = new(txUnwindData)
@@ -105,25 +114,47 @@ func (u *txUnwindData)Stats() (s string) {
 }
 
 
-func (u *txUnwindData)Save() {
-	// Variable record size
-	f, e := os.Create("unwind_data.bin")
-	if e == nil {
-		for k, v := range u.blocksUnwind {
-			write32bit(f, k)
-
-			write32bit(f, uint32(len(v.added)))
-			for j := range v.added {
-				v.added[j].Save(f)
-			}
-
-			write32bit(f, uint32(len(v.deleted)))
-			for j := range v.deleted {
-				v.deleted[j].Save(f)
-			}
+func (u *txUnwindData)Load(f *os.File) {
+	u.blocksUnwind = make(map[uint32] *UnspentBlockUnwind, UnspentTxsMapInitLen)
+	for {
+		v := new(UnspentBlockUnwind)
+		height, e := read32bit(f)
+		if e != nil {
+			break
 		}
-		println(len(u.blocksUnwind), "saved in unwind_data.bin")
-		f.Close()
+
+		le, _ := read32bit(f)
+		v.added = make([]UnspentOneUnwind, le)
+		for j := range v.added {
+			v.added[j].Load(f)
+		}
+		
+		le, _ = read32bit(f)
+		v.deleted = make([]UnspentOneUnwind, le)
+		for j := range v.deleted {
+			v.deleted[j].Load(f)
+		}
+
+		u.blocksUnwind[height] = v
 	}
+	println(len(u.blocksUnwind), "loaded into unwindDB")
+}
+
+
+func (u *txUnwindData)Save(f *os.File) {
+	for k, v := range u.blocksUnwind {
+		write32bit(f, k)
+
+		write32bit(f, uint32(len(v.added)))
+		for j := range v.added {
+			v.added[j].Save(f)
+		}
+
+		write32bit(f, uint32(len(v.deleted)))
+		for j := range v.deleted {
+			v.deleted[j].Save(f)
+		}
+	}
+	println(len(u.blocksUnwind), "saved in unwindDB")
 }
 

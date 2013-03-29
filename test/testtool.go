@@ -40,14 +40,17 @@ func reloadBlockchain(limit uint64) {
 	var blkcnt, totbytes uint64
 	for blkcnt=0; blkcnt<limit; blkcnt++ {
 		bl = BlockDatabase.FetchNextBlock()
-		if er != nil {
+		if bl == nil {
+			println("END of DB file")
 			break
 		}
+		//println("got block len", len(bl.Raw))
 		if GenesisBlock.Equal(bl.Hash) {
 			fmt.Println("Skip genesis block")
 			continue
 		}
 
+		totbytes += uint64(len(bl.Raw))
 		er = bl.CheckBlock()
 		errorFatal(er, "CheckBlock() failed")
 		
@@ -75,44 +78,52 @@ func reloadBlockchain(limit uint64) {
 
 
 func askUserInt(ask string) int {
-	fmt.Print(ask)
+	ask = "Global commands: [I]nfo, [S]ave, [L]oad, [Q]uit\n" + ask + "\nEnter your choice: "
 	for {
+		fmt.Println("============================================")
+		fmt.Print(ask)
 		li, _, _ := sin.ReadLine()
+		fmt.Println("............................................")
 		n, e := strconv.ParseInt(string(li[:]), 10, 32)
 		if e == nil {
 			fmt.Println()
 			return int(n)
+		}
+		switch string(li[:]) {
+			case "i": printstat()
+			case "s": save_database()
+			case "l": load_database()
+			case "q": os.Exit(0)
 		}
 	}
 	return 0
 }
 
 func loadblocks_menu() {
-loop:
-	cmd := askUserInt(`
- 1) scan 1 block
- 2) scan 10 block
- 3) scan 100 block
- 4) scan 1000 block
- 5) scan 10000 block
- 6) scan 91840 block
- 7) scan 100000 block
- 9) print stats
- 0) Quit
-Enter number:`)
-
-	switch cmd {
-		case 1: reloadBlockchain(1)
-		case 2: reloadBlockchain(10)
-		case 3: reloadBlockchain(100)
-		case 4: reloadBlockchain(1000)
-		case 5: reloadBlockchain(10000)
-		case 6: reloadBlockchain(91840)
-		case 7: reloadBlockchain(100000)
-		case 9: printstat()
-		case 0: return
+	for {
+		cmd := askUserInt("Enter number of block to scan, or 0 to exit:")
+		if cmd == 0 {
+			return
+		}
+		reloadBlockchain(uint64(cmd))
 	}
-	goto loop
+}
+
+func load_database() {
+	println("Loading...")
+	start := time.Now().UnixNano()
+	BlockChain.Load()
+	stop := time.Now().UnixNano()
+	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
+}
+
+
+func save_database() {
+	println("Saving...")
+	start := time.Now().UnixNano()
+	BlockChain.Load()
+	stop := time.Now().UnixNano()
+	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
 }
 
 
@@ -135,7 +146,7 @@ func make_transaction() {
 	tx.Version = 1
 	
 	tx.TxIn = make([]btc.TxIn, 1)
-	tx.TxIn[0].Input = btc.TxPrevOut{Hash:intxid, Index:intxco}
+	tx.TxIn[0].Input = btc.TxPrevOut{Hash:intxid, Vout:intxco}
 	//tx.ScriptSig = ???
 	tx.TxIn[0].Sequence = 0
 	
@@ -151,24 +162,33 @@ func make_transaction() {
 }
 
 
-func menu_main() {
-loop:
-	cmd := askUserInt(`
- 1) load block
- 2) make transaction
- 3) save blockchain status
- 9) print stats
- 0) Quit
-Enter number:`)
-
-	switch cmd {
-		case 1: loadblocks_menu()
-		case 2: make_transaction()
-		case 3: BlockChain.Save()
-		case 9: printstat()
-		case 0: return
+func list_unspent() {
+	fmt.Print("Enter address to check: ")
+	li, _, _ := sin.ReadLine()
+	a, e := btc.NewAddrFromString(string(li[:]))
+	if e != nil {
+		println(e.Error())
+		return
 	}
-	goto loop
+	unsp := BlockChain.GetUnspentFromPkScr(a.OutScript())
+	var sum uint64
+	for i := range unsp {
+		fmt.Println(unsp[i].String())
+		sum += unsp[i].Value
+	}
+	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a.Enc58str);
+}
+
+
+func menu_main() {
+	for {
+		cmd := askUserInt(" 1) load block\n 2) make transaction\n 3) list unspent")
+		switch cmd {
+			case 1: loadblocks_menu()
+			case 2: make_transaction()
+			case 3: list_unspent()
+		}
+	}
 }
 
 
@@ -189,11 +209,12 @@ func main() {
 
 	BlockDatabase = btc.NewBlockDB(dir, Magic)
 	BlockChain = btc.NewChain(BlockDatabase, GenesisBlock)
+	reloadBlockchain(1) // skip the genesis vlock
+	
 	if *autoload {
-		reloadBlockchain(1+150e3)
-	} else {
-		reloadBlockchain(1)
+		load_database()
 	}
+
 	menu_main()
 }
 
