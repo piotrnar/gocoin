@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"errors"
-	"os"
 )
 
 const (
@@ -22,6 +21,10 @@ type BtcAddr struct {
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	dec := decodeb58(hs)
+	if dec == nil {
+		e = errors.New("Cannot decode b58 string "+hs)
+		return
+	}
 	if (len(dec)<25) {
 		dec = append(bytes.Repeat([]byte{0}, 25-len(dec)), dec...)
 	}
@@ -97,8 +100,6 @@ func b58chr2int(chr byte) int {
 			return i
 		}
 	}
-	fmt.Printf("Unexpected character (%d=0x%x )in b58 string\n", chr, chr)
-	os.Exit(1)
 	return -1
 }
 
@@ -132,6 +133,9 @@ func decodeb58(s string) []byte {
 	bn := big.NewInt(0)
 	for i := range s {
 		v := b58chr2int(byte(s[i]))
+		if v < 0 {
+			return nil
+		}
 		bn = bn.Mul(bn, bn58)
 		bn = bn.Add(bn, big.NewInt(int64(v)))
 	}

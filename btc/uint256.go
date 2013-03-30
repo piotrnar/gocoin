@@ -41,3 +41,7 @@ func (u *Uint256) String() (s string) {
 func (u *Uint256) Equal(o *Uint256) bool {
 	return bytes.Equal(u.Hash[:], o.Hash[:])
 }
+
+func (u *Uint256) BIdx() [blockMapLen]byte {
+	return NewBlockIndex(u.Hash[:])
+}

@@ -8,9 +8,11 @@ import (
 )
 
 type BlockPos struct {
+	hash [32]byte
 	fidx uint32
 	fpos uint32 // We dont plan to use 4GB+ files 
 }
+
 
 
 type BlockDB struct {
@@ -19,20 +21,23 @@ type BlockDB struct {
 	f *os.File
 	currfileidx uint32
 	
-	blockIndex map[[32]byte]BlockPos
+	blockIndex map[[blockMapLen]byte]*BlockPos
 	
 	lastvalidpos uint32 // last known file pos where a block was read from
 	
-	blockpos BlockPos // index of block_hash -> file pos
+	last_valid_fidx uint32
+	last_valid_fpos uint32 // We dont plan to use 4GB+ files 
 }
 
 
 func NewBlockDB(dir string, magic [4]byte) (res *BlockDB) {
+	f, e := os.Open(idx2fname(dir, 0))
+	errorFatal(e, "Cannot open block database file")
 	res = new(BlockDB)
 	res.dir = dir
 	res.magic = magic
-	res.openFile(false)
-	res.blockIndex = make(map[[32]byte]BlockPos, BlockMapInitLen)
+	res.f = f
+	res.blockIndex = make(map[[blockMapLen]byte]*BlockPos, BlockMapInitLen)
 	return
 }
 
@@ -41,32 +46,31 @@ func (db *BlockDB)Load(f *os.File) {
 	db.currfileidx, _ = read32bit(f)
 	db.lastvalidpos, _ = read32bit(f)
 	if db.lastvalidpos!=0xffffffff {
-		db.openFile(false)
+		db.f, _ = os.Open(idx2fname(db.dir, db.currfileidx))
 		db.f.Seek(int64(db.lastvalidpos), os.SEEK_SET)
 	}
 
-	db.blockIndex = make(map[[32]byte]BlockPos, BlockMapInitLen)
-	var k [32]byte
-	var v BlockPos
+	db.blockIndex = make(map[[blockMapLen]byte]*BlockPos, BlockMapInitLen)
 	for {
-		n, _ := f.Read(k[:])
-		if n!=len(k) {
+		v := new(BlockPos)
+		_, er := f.Read(v.hash[:])
+		if er != nil {
 			break
 		}
 		v.fidx, _ = read32bit(f)
 		v.fpos, _ = read32bit(f)
-		db.blockIndex[k] = v
+		db.blockIndex[NewBlockIndex(v.hash[:])] = v
 	}
 	println(len(db.blockIndex), "loaded into BlockDB")
 }
 
 
 func (db *BlockDB)Save(f *os.File) {
-	write32bit(f, db.blockpos.fidx)
-	write32bit(f, db.blockpos.fpos)
-	println("BlockDB last valid pos:", db.blockpos.fidx, db.blockpos.fpos)
-	for k, v := range db.blockIndex {
-		f.Write(k[:])
+	write32bit(f, db.last_valid_fidx)
+	write32bit(f, db.last_valid_fpos)
+	println("BlockDB last valid pos:", db.last_valid_fidx, db.last_valid_fpos)
+	for _, v := range db.blockIndex {
+		f.Write(v.hash[:])
 		write32bit(f, v.fidx)
 		write32bit(f, v.fpos)
 	}
@@ -74,32 +78,22 @@ func (db *BlockDB)Save(f *os.File) {
 }
 
 
-func (db *BlockDB)idx2fname(fidx uint32) string {
-	return fmt.Sprintf("%s/blk%05d.dat", db.dir, fidx)
-}
-
-
-func (db *BlockDB)openFile(next bool) (er error) {
-	if db.f != nil {
-		db.f.Close()
-		db.f = nil
-		if next {
-			db.currfileidx++
-		}
+func idx2fname(dir string, fidx uint32) string {
+	if fidx == 0xffffffff {
+		return "blk99999.dat"
 	}
-	db.f, er = os.Open(db.idx2fname(db.currfileidx))
-	return 
+	return fmt.Sprintf("%s/blk%05d.dat", dir, fidx)
 }
 
 
 func (db *BlockDB)GetBlock(hash *Uint256) (res []byte, e error) {
-	bp, yes := db.blockIndex[hash.Hash]
+	bp, yes := db.blockIndex[hash.BIdx()]
 	if !yes {
 		println("No such block in the index: ", hash.String())
 		os.Exit(1)
 	}
 
-	f, e := os.Open(db.idx2fname(bp.fidx))
+	f, e := os.Open(idx2fname(db.dir, bp.fidx))
 	if e != nil {
 		println("GetBlock1:", e.Error())
 		os.Exit(1)
@@ -152,37 +146,43 @@ func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 
 
 func (db *BlockDB)readOneBlock() (res []byte, e error) {
-	var bp BlockPos
-
-	bp.fidx = db.currfileidx
-	bp.fpos = uint32(getfilepos(db.f))
-	if bp.fpos != db.lastvalidpos {
-		println("readOneBlock: file pos inconsistent", bp.fpos, db.lastvalidpos)
+	fidx := db.currfileidx
+	fpos := uint32(getfilepos(db.f))
+	if fpos != db.lastvalidpos {
+		println("readOneBlock: file pos inconsistent", fpos, db.lastvalidpos)
 		os.Exit(1)
 	}
 
 	res, e = readBlockFromFile(db.f, db.magic[:])
 	if e != nil {
+		db.f.Seek(int64(fpos), os.SEEK_SET) // restore the original position
 		return
 	}
 	
 	db.lastvalidpos = uint32(getfilepos(db.f))
-	if db.lastvalidpos != bp.fpos+uint32(len(res))+8 {
+	if db.lastvalidpos != fpos+uint32(len(res))+8 {
 		println("readOneBlock: end file pos inconsistent", db.lastvalidpos, len(res))
 		os.Exit(1)
 	}
 	
-	db.blockpos = bp
+	db.last_valid_fidx = fidx
+	db.last_valid_fpos = fpos
 	
 	return
 }
 
 func (db *BlockDB) FetchNextBlock() (bl *Block) {
+	if db.f == nil {
+		println("DB file not open - this shoudl never happen")
+		os.Exit(1)
+	}
 	raw, e := db.readOneBlock()
 	if e != nil {
-		//fmt.Println("readOneBlock error:", e.Error())
-		e = db.openFile(true)
-		if e == nil {
+		f, e2 := os.Open(idx2fname(db.dir, db.currfileidx+1))
+		if e2 == nil {
+			db.currfileidx++
+			db.f.Close()
+			db.f = f
 			db.lastvalidpos = 0
 			raw, e = db.readOneBlock()
 		}
@@ -191,8 +191,36 @@ func (db *BlockDB) FetchNextBlock() (bl *Block) {
 		bl = new(Block)
 		bl.Raw = raw
 		bl.Hash = NewSha2Hash(raw[:80])
-		db.blockIndex[bl.Hash.Hash] = db.blockpos
+		bp := new(BlockPos)
+		copy(bp.hash[:], bl.Hash.Hash[:])
+		bp.fidx = db.last_valid_fidx
+		bp.fpos = db.last_valid_fpos
+		db.blockIndex[bl.Hash.BIdx()] = bp
 	}
 	return 
+}
+
+func (db *BlockDB) AddToExtraIndex(bl *Block) {
+	f, e := os.OpenFile(idx2fname(db.dir, 0xffffffff), 
+		os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
+	if e != nil {
+		println(" *** AddToExtraIndex", e.Error())
+		return
+	}
+	defer f.Close()
+	
+	pos := uint32(getfilepos(f))
+	
+	var b [4]byte
+	put32lsb(b[:], uint32(len(bl.Raw)))
+	f.Write(db.magic[:])
+	f.Write(b[:])
+	f.Write(bl.Raw[:])
+	
+	bp := new(BlockPos)
+	copy(bp.hash[:], bl.Hash.Hash[:])
+	bp.fidx = 0xffffffff
+	bp.fpos = pos
+	db.blockIndex[bl.Hash.BIdx()] = bp
 }
 

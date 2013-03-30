@@ -12,11 +12,11 @@ type unspentTxOut struct {
 	times byte
 }
 
-const mapLen = 8  // The bigger it it, the more memory is needed, but lower chance of a collision
+const txOutMapLen = 8  // The bigger it it, the more memory is needed, but lower chance of a collision
 
 
 type UnspentDb struct {
-	outs map[[mapLen]byte] unspentTxOut
+	outs map[[txOutMapLen]byte] unspentTxOut
 	unwd *txUnwindData
 	lastPickInput *TxPrevOut
 	lastPickOut *TxOut
@@ -24,14 +24,14 @@ type UnspentDb struct {
 
 func NewUnspentDb() (us *UnspentDb) {
 	us = new(UnspentDb)
-	us.outs = make(map[[mapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
+	us.outs = make(map[[txOutMapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
 	us.unwd = NewUnwindBuffer()
 	return
 }
 
-func NewUnspentIndex(po *TxPrevOut) (o [mapLen]byte) {
+func NewTxoutUnspentIndex(po *TxPrevOut) (o [txOutMapLen]byte) {
 	put32lsb(o[:], po.Vout)
-	for i := 0; i<mapLen; i++ {
+	for i := 0; i<txOutMapLen; i++ {
 		o[i] ^= po.Hash[i]
 	}
 	return 
@@ -47,7 +47,7 @@ func (us *UnspentDb)NewHeight(height uint32) {
 
 
 func (us *UnspentDb)del(txin *TxPrevOut) {
-	idx := NewUnspentIndex(txin)
+	idx := NewTxoutUnspentIndex(txin)
 	is, pres := us.outs[idx]
 	if !pres {
 		println("Cannot remove", txin.String())
@@ -62,7 +62,7 @@ func (us *UnspentDb)del(txin *TxPrevOut) {
 
 
 func (us *UnspentDb)add(txin *TxPrevOut, newout *TxOut) {
-	idx := NewUnspentIndex(txin)
+	idx := NewTxoutUnspentIndex(txin)
 	is, pres := us.outs[idx]
 	if pres {
 		fmt.Println("Note:", txin.String(), "is already unspent")
@@ -75,7 +75,7 @@ func (us *UnspentDb)add(txin *TxPrevOut, newout *TxOut) {
 
 
 func (us *UnspentDb)LookUnspent(txin *TxPrevOut) (txout *TxOut) {
-	idx := NewUnspentIndex(txin)
+	idx := NewTxoutUnspentIndex(txin)
 	txout_x, ok := us.outs[idx]
 	if ok {
 		txout = &txout_x.txout
@@ -84,7 +84,7 @@ func (us *UnspentDb)LookUnspent(txin *TxPrevOut) (txout *TxOut) {
 }
 
 func (us *UnspentDb)PickUnspent(txin *TxPrevOut) (txout *TxOut, ok bool) {
-	idx := NewUnspentIndex(txin)
+	idx := NewTxoutUnspentIndex(txin)
 	txout_x, yes := us.outs[idx]
 	if yes {
 		txout = &txout_x.txout
@@ -137,7 +137,7 @@ func (us *UnspentDb)Stats() (s string) {
 
 
 func (us *UnspentDb)Load(f *os.File) {
-	us.outs = make(map[[mapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
+	us.outs = make(map[[txOutMapLen]byte] unspentTxOut, UnspentTxsMapInitLen)
 	var txout TxOut
 	var prvout TxPrevOut
 	for prvout.Load(f) {

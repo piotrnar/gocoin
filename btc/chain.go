@@ -7,36 +7,46 @@ import (
 	"fmt"
 )
 
+const blockMapLen = 8  // The bigger it is, the more memory is needed, but lower chance of a collision
+
+
 type BlockTreeNode struct {
-	hash Uint256
-	height uint32
+	BlockHash Uint256
+	Height uint32
 	parent *BlockTreeNode
 	childs []*BlockTreeNode
 }
 
 type Chain struct {
 	
-	blockTreeRoot *BlockTreeNode
-	blockTreeEnd *BlockTreeNode
+	BlockTreeRoot *BlockTreeNode
+	BlockTreeEnd *BlockTreeNode
 
-	blockIndex map[[32]byte] *BlockTreeNode
-	orphaned map[[32]byte] *BlockTreeNode
+	BlockIndex map[[blockMapLen]byte] *BlockTreeNode
+	OrphanedBlocks map[[blockMapLen]byte] *BlockTreeNode
 	
 	blockdb *BlockDB;
 	unspent *UnspentDb
 }
 
+
 func NewChain(blockdb *BlockDB, genesis *Uint256) (ch *Chain) {
 	ch = new(Chain)
 	ch.blockdb = blockdb
-	ch.blockIndex = make(map[[32]byte] *BlockTreeNode, BlockMapInitLen)
+	ch.BlockIndex = make(map[[blockMapLen]byte] *BlockTreeNode, BlockMapInitLen)
 	
-	ch.blockTreeRoot = new(BlockTreeNode)
-	ch.blockTreeRoot.hash = *genesis
-	ch.blockIndex[genesis.Hash] = ch.blockTreeRoot
-	ch.blockTreeEnd = ch.blockTreeRoot
-	ch.orphaned = make(map[[32]byte] *BlockTreeNode, UnwindBufferMaxHistory)
+	ch.BlockTreeRoot = new(BlockTreeNode)
+	ch.BlockTreeRoot.BlockHash = *genesis
+	ch.BlockIndex[NewBlockIndex(genesis.Hash[:])] = ch.BlockTreeRoot
+	ch.BlockTreeEnd = ch.BlockTreeRoot
+	ch.OrphanedBlocks = make(map[[blockMapLen]byte] *BlockTreeNode)
 	ch.unspent = NewUnspentDb()
+	return 
+}
+
+
+func NewBlockIndex(h []byte) (o [blockMapLen]byte) {
+	copy(o[:], h[:blockMapLen])
 	return 
 }
 
@@ -147,34 +157,33 @@ func (n *BlockTreeNode)FindLongestChild() (res *BlockTreeNode) {
 }
 
 func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
-	fmt.Printf("Moving branches %d -> %d\n", ch.blockTreeEnd.height, cur.height)
+	fmt.Printf("Moving branches %d -> %d\n", ch.BlockTreeEnd.Height, cur.Height)
 
-	old := ch.blockTreeEnd
+	old := ch.BlockTreeEnd
 	
-	for cur.height > old.height {
+	for cur.Height > old.Height {
 		cur = cur.parent
 	}
 	
 	for old!=cur {
-		ch.unspent.UnwindBlock(old.height)
+		ch.unspent.UnwindBlock(old.Height)
 		
-		fmt.Printf("->orph block %s @ %d\n", old.hash.String(), old.height)
-		ch.orphaned[old.hash.Hash] = old
-		delete(ch.blockIndex, old.hash.Hash)
+		fmt.Printf("->orph block %s @ %d\n", old.BlockHash.String(), old.Height)
+		ch.OrphanedBlocks[old.BlockHash.BIdx()] = old
 		
 		old = old.parent
 		cur = cur.parent
 	}
 	
-	fmt.Printf("Found common node @ %d\n", cur.height)
+	fmt.Printf("Found common node @ %d\n", cur.Height)
 	for  {
 		cur = cur.FindLongestChild()
 		if cur == nil {
 			break
 		}
-		fmt.Printf(" + new %d ... \n", cur.height)
+		fmt.Printf(" + new %d ... \n", cur.Height)
 		
-		b, er := ch.blockdb.GetBlock(&cur.hash)
+		b, er := ch.blockdb.GetBlock(&cur.BlockHash)
 		errorFatal(er, "MoveToBranch/GetBlock")
 
 		bl, er := NewBlock(b)
@@ -183,12 +192,12 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		fmt.Println("  ... Got block ", bl.Hash.String())
 		bl.BuildTxList()
 
-		er = ch.CommitTransactions(bl, cur.height)
+		er = ch.CommitTransactions(bl, cur.Height)
 		errorFatal(er, "MoveToBranch/CommitTransactions")
 		fmt.Printf("  ... %d new txs commited\n", len(bl.Txs))
 
-		delete(ch.orphaned, cur.hash.Hash)
-		ch.blockTreeEnd = cur
+		delete(ch.OrphanedBlocks, cur.BlockHash.BIdx())
+		ch.BlockTreeEnd = cur
 	}
 	return nil
 }
@@ -200,44 +209,44 @@ func (n *BlockTreeNode)addChild(c *BlockTreeNode) {
 
 
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
-	_, pres := ch.blockIndex[bl.Hash.Hash]
+	_, pres := ch.BlockIndex[bl.Hash.BIdx()]
 	if pres {
-		return errors.New("AcceptBlock() : "+bl.Hash.String()+" already in mapblockIndex")
+		return errors.New("AcceptBlock() : "+bl.Hash.String()+" already in mapBlockIndex")
 	}
 
 	var p [32]byte
 	copy(p[:], bl.GetParent()[:])
-	prevblk, ok := ch.blockIndex[p]
+	prevblk, ok := ch.BlockIndex[NewBlockIndex(p[:])]
 	if !ok {
 		return errors.New("AcceptBlock() : prev block not found"+NewUint256(p[:]).String())
 	}
 
 	// create new BlockTreeNode
 	cur := new(BlockTreeNode)
-	cur.hash = *bl.Hash
+	cur.BlockHash = *bl.Hash
 	cur.parent = prevblk
-	cur.height = prevblk.height + 1
+	cur.Height = prevblk.Height + 1
 	
 	prevblk.addChild(cur)
 	
 	// Add this block to the block index
-	ch.blockIndex[cur.hash.Hash] = cur
+	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
 
 	// Update the end of the tree
-	if ch.blockTreeEnd==prevblk {
-		ch.blockTreeEnd = cur
+	if ch.BlockTreeEnd==prevblk {
+		ch.BlockTreeEnd = cur
 		if don(DBG_BLOCKS) {
-			fmt.Printf("Adding block %s @ %d\n", cur.hash.String(), cur.height)
+			fmt.Printf("Adding block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
 	} else {
 		if don(DBG_BLOCKS|DBG_ORPHAS) {
-			fmt.Printf("Orphan block %s @ %d\n", cur.hash.String(), cur.height)
+			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
-		ch.orphaned[bl.Hash.Hash] = cur
-		if cur.height > ch.blockTreeEnd.height {
+		ch.OrphanedBlocks[bl.Hash.BIdx()] = cur
+		if cur.Height > ch.BlockTreeEnd.Height {
 			ch.MoveToBranch(cur)
 			/*return errors.New(fmt.Sprintf("The different branch is longer now %d/%d!\n",
-				cur.height, ch.blockTreeEnd.height))*/
+				cur.Height, ch.BlockTreeEnd.Height))*/
 		}
 		return nil
 	}
@@ -247,35 +256,35 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	
 	// Assume that all transactions are finalized
 
-	e = ch.CommitTransactions(bl, cur.height)
+	e = ch.CommitTransactions(bl, cur.Height)
 	if e != nil {
-		println("rejecting block", cur.height, cur.hash.String(), 
+		println("rejecting block", cur.Height, cur.BlockHash.String(), 
 			"\nparent:", NewUint256(p[:]).String(),
 			"\n", e.Error())
-		ch.unspent.UnwindBlock(cur.height)
-		delete(ch.blockIndex, cur.hash.Hash)
-		ch.blockTreeEnd = ch.blockTreeEnd.parent
+		ch.unspent.UnwindBlock(cur.Height)
+		delete(ch.BlockIndex, cur.BlockHash.BIdx())
+		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 	}
 	return 
 }
 
 
 func (ch *Chain)Stats() (s string) {
-	siz := uint64(len(ch.orphaned)+len(ch.blockIndex)) * (32 + 4 + 8 + 16)
-	s = fmt.Sprintf("BCHAIN  : height=%d orphaned=%d/%d  siz:~%dMB\n", 
-		ch.blockTreeEnd.height, len(ch.orphaned), len(ch.blockIndex),
+	siz := uint64(len(ch.OrphanedBlocks)+len(ch.BlockIndex)) * (32 + 4 + 8 + 16)
+	s = fmt.Sprintf("BCHAIN  : height=%d OrphanedBlocks=%d/%d  siz:~%dMB\n", 
+		ch.BlockTreeEnd.Height, len(ch.OrphanedBlocks), len(ch.BlockIndex),
 			siz >> 20 )
 	s += ch.unspent.Stats()
 	return
 }
 
 func (ch *Chain)GetHeight() uint32 {
-	return ch.blockTreeEnd.height
+	return ch.BlockTreeEnd.Height
 }
 
 
 func (v *BlockTreeNode)Load(f *os.File) (h [32]byte, e error) {
-	_, e = f.Read(v.hash.Hash[:])
+	_, e = f.Read(v.BlockHash.Hash[:])
 	if e == nil {
 		_, e = f.Read(h[:])
 	}
@@ -284,9 +293,9 @@ func (v *BlockTreeNode)Load(f *os.File) (h [32]byte, e error) {
 
 
 func (v *BlockTreeNode)Save(f *os.File) {
-	f.Write(v.hash.Hash[:])
+	f.Write(v.BlockHash.Hash[:])
 	if v.parent != nil {
-		f.Write(v.parent.hash.Hash[:])
+		f.Write(v.parent.BlockHash.Hash[:])
 	} else {
 		f.Write(bytes.Repeat([]byte{0}, 32))
 	}
@@ -305,27 +314,27 @@ func (ch *Chain)loadIndex(f *os.File) {
 		}
 
 		if allzeros(h[:]) {
-			ch.blockTreeRoot = v
+			ch.BlockTreeRoot = v
 		} else {
-			v.parent, ok = ch.blockIndex[h]
+			v.parent, ok = ch.BlockIndex[NewBlockIndex(h[:])]
 			if !ok {
 				println("Mid: no such parent", NewUint256(k[:]).String(), " - hook to ", NewUint256(h[:]).String())
 				os.Exit(1)
 			}
-			v.height = v.parent.height + 1
+			v.Height = v.parent.Height + 1
 			v.parent.addChild(v)
 		}
-		ch.blockIndex[v.hash.Hash] = v
+		ch.BlockIndex[v.BlockHash.BIdx()] = v
 
 		f.Read(orph[:])
 		if (orph[0]!=0) {
-			ch.orphaned[v.hash.Hash] = v
+			ch.OrphanedBlocks[v.BlockHash.BIdx()] = v
 		} else {
-			ch.blockTreeEnd = v // they shoudl be saved in order
+			ch.BlockTreeEnd = v // they shoudl be saved in order
 		}
 	}
 	
-	println(len(ch.blockIndex), "loaded into blidxDB. orphaned:", len(ch.orphaned))
+	println(len(ch.BlockIndex), "loaded into blidxDB. OrphanedBlocks:", len(ch.OrphanedBlocks))
 }
 
 
@@ -345,8 +354,8 @@ func (ch *Chain)Load() {
 	ch.unspent.unwd.Load(f)
 	f.Close()
 	
-	ch.blockIndex = make(map[[32]byte] *BlockTreeNode, BlockMapInitLen)
-	ch.orphaned = make(map[[32]byte] *BlockTreeNode, UnwindBufferMaxHistory)
+	ch.BlockIndex = make(map[[blockMapLen]byte] *BlockTreeNode, BlockMapInitLen)
+	ch.OrphanedBlocks = make(map[[blockMapLen]byte] *BlockTreeNode)
 	f, e = os.Open("blookup.bin")
 	errorFatal(e, "cannot open blookup.bin")
 	ch.loadIndex(f)
@@ -356,7 +365,7 @@ func (ch *Chain)Load() {
 
 func (ch *Chain)SaveBlockIndexTree(f *os.File, v *BlockTreeNode) (cnt uint32) {
 	v.Save(f)
-	_, orphnd := ch.orphaned[v.hash.Hash]
+	_, orphnd := ch.OrphanedBlocks[v.BlockHash.BIdx()]
 	if orphnd {
 		f.Write([]byte{1})
 	} else {
@@ -388,8 +397,8 @@ func (ch *Chain)Save() {
 	
 	f, e = os.Create("blookup.bin")
 	errorFatal(e, "cannot create blookup.bin")
-	cnt := ch.SaveBlockIndexTree(f, ch.blockTreeRoot)
-	println(cnt, len(ch.blockIndex), "saved in blidxDB - last ", ch.blockTreeEnd.hash.String())
+	cnt := ch.SaveBlockIndexTree(f, ch.BlockTreeRoot)
+	println(cnt, len(ch.BlockIndex), "saved in blidxDB - last ", ch.BlockTreeEnd.BlockHash.String())
 	f.Close()
 }
 
