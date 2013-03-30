@@ -121,7 +121,7 @@ func load_database() {
 func save_database() {
 	println("Saving...")
 	start := time.Now().UnixNano()
-	BlockChain.Load()
+	BlockChain.Save()
 	stop := time.Now().UnixNano()
 	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
 }
