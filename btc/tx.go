@@ -69,30 +69,6 @@ func (t *Tx) Unsigned() (res []byte) {
 }
 
 
-func CreateTransaction(spend []TxIn, outs[]AddrValue) (out *Tx) {
-	out = new(Tx)
-	out.Version = 1
-	
-	out.TxIn = make([]TxIn, len(spend))
-	copy(out.TxIn[:], spend[:])
-	
-	out.TxOut = make([]TxOut, len(outs))
-	for i:=range out.TxOut {
-		out.TxOut[i].Value = outs[i].Value
-		out.TxOut[i].Pk_script = make([]byte, 25)
-		out.TxOut[i].Pk_script[0] = 0x76
-		out.TxOut[i].Pk_script[1] = 0xa9
-		out.TxOut[i].Pk_script[2] = 0x14
-		copy(out.TxOut[i].Pk_script[3:23], outs[i].Addr20[:])
-		out.TxOut[i].Pk_script[23] = 0x88
-		out.TxOut[i].Pk_script[24] = 0xac
-	}
-	out.Lock_time = 0xffffffff
-
-	return
-}
-
-
 func (oi *TxPrevOut)Load(f *os.File) bool {
 	_, e := f.Read(oi.Hash[:])
 	if e!=nil {

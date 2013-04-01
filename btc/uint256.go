@@ -15,12 +15,24 @@ func NewUint256(h []byte) (res *Uint256) {
 	return
 }
 
+// Get from MSB hexstring
 func NewUint256FromString(s string) (res *Uint256) {
 	var v int
 	res = new(Uint256)
 	for i := 0; i<32; i++ {
 		fmt.Sscanf(s[2*i:2*i+2], "%x", &v)
 		res.Hash[31-i] = byte(v)
+	}
+	return
+}
+
+// Get from LSB hexstring
+func NewUint256FromLSBString(s string) (res *Uint256) {
+	var v int
+	res = new(Uint256)
+	for i := 0; i<32; i++ {
+		fmt.Sscanf(s[2*i:2*i+2], "%x", &v)
+		res.Hash[i] = byte(v)
 	}
 	return
 }
