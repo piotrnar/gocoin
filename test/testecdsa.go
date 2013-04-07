@@ -31,6 +31,8 @@ func main () {
 		X:     bigIntFromHex(pubX),
 		Y:     bigIntFromHex(pubY),
 	}
+	println("x", pub.X.String())
+	println("y", pub.Y.String())
 	
 	msg, er := hex.DecodeString(msgRaw + "01000000")
 	if er != nil {
@@ -40,6 +42,10 @@ func main () {
 	h := btc.NewSha2Hash(msg[:])
 	println(h.String())
 	
-	ok := ecdsa.Verify(&pub, h.Hash[:], bigIntFromHex(sigR), bigIntFromHex(sigS))
+	r := bigIntFromHex(sigR)
+	s := bigIntFromHex(sigS)
+	println("r", r.String())
+	println("s", s.String())
+	ok := ecdsa.Verify(&pub, h.Hash[:], r, s)
 	println(ok)
 }
