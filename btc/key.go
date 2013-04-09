@@ -6,19 +6,62 @@ import (
 	"bytes"
 	"math/big"
 	"crypto/ecdsa"
+	"encoding/hex"
 )
 
 type PublicKey struct {
 	ecdsa.PublicKey
 }
 
+func decompressPoint(off bool, x *big.Int)  (y *big.Int) {
+	x2 := new(big.Int).Mul(x, x)
+	x3 := new(big.Int).Mul(x2, x)
+
+	y2 := new(big.Int).Add(x3, secp256k1.B)
+
+	q1 := new(big.Int).Add(secp256k1.P, big.NewInt(1))
+	q1d := new(big.Int).Div(q1, big.NewInt(4))
+	
+	y = new(big.Int).Exp(y2, q1d, secp256k1.P)
+
+	bts := y.Bytes()
+	odd := (bts[len(bts)-1]&1)!=0
+
+	if odd != off {
+		y = new(big.Int).Sub(secp256k1.P, y)
+	}
+
+	return
+}
+
+
+/*
+Public keys (in scripts) are given as 04 <x> <y> where x and y are 32 byte big-endian 
+integers representing the coordinates of a point on the curve 
+
+or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 0x03 if y is odd.
+*/
 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
-	if len(buf)>=65 && buf[0]==4 {
+	fmt.Println("Het Pub Key:", hex.EncodeToString(buf[:]))
+	if len(buf)==65 && buf[0]==4 {
 		res = new(PublicKey)
 		res.Curve = S256()
 		res.X = new(big.Int).SetBytes(buf[1:33])
 		res.Y = new(big.Int).SetBytes(buf[33:65])
+		return
+	}
+	if len(buf)==33 && (buf[0]==2 || buf[0]==3) {
+		println("Warning: comperssed public key")
+		res = new(PublicKey)
+		res.Curve = S256()
+		res.X = new(big.Int).SetBytes(buf[1:33])
+		res.Y = decompressPoint(buf[0]==3, res.X);
+		/*if buf[0]==2 {
+			res.Y = decompressPoint(false, res.X);
+		} else {
+			res.Y = decompressPoint(true, res.X);
+		}*/
 		return
 	}
 	e = errors.New("NewPublicKey: Unknown format")
