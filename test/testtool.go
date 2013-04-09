@@ -145,12 +145,12 @@ func make_transaction() {
 	
 	tx.Version = 1
 	
-	tx.TxIn = make([]btc.TxIn, 1)
+	tx.TxIn = make([]*btc.TxIn, 1)
 	tx.TxIn[0].Input = btc.TxPrevOut{Hash:intxid, Vout:intxco}
 	//tx.ScriptSig = ???
 	tx.TxIn[0].Sequence = 0
 	
-	tx.TxOut = make([]btc.TxOut, 1)
+	tx.TxOut = make([]*btc.TxOut, 1)
 	
 	tx.TxOut[0].Value = unsp.Value // spend at all
 	tx.TxOut[0].Pk_script = make([]byte, 25)

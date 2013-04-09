@@ -29,12 +29,9 @@ func NewTxOut(rd *bytes.Reader) (res *TxOut, e error) {
 }
 
 
-func NewTx(data []byte) (res *Tx, e error) {
-	rd := bytes.NewReader(data[:])
-
+func NewTx(rd *bytes.Reader) (res *Tx, e error) {
 	var tx Tx
 	var le uint64
-	var siz int64
 	
 	tx.Version, e = ReadUint32(rd)
 	if e != nil {
@@ -69,14 +66,6 @@ func NewTx(data []byte) (res *Tx, e error) {
 	
 	tx.Lock_time, e = ReadUint32(rd)
 
-	siz, e = rd.Seek(0, 1)
-	if e != nil {
-		return
-	}
-
-	tx.Raw = data[0:siz]
-	tx.Hash = NewSha2Hash(tx.Raw)
 	res = &tx
-
 	return
 }

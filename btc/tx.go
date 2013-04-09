@@ -24,11 +24,13 @@ type TxOut struct {
 
 type Tx struct {
 	Version uint32
-	Raw []byte
-	Hash *Uint256
 	TxIn []*TxIn
 	TxOut []*TxOut
 	Lock_time uint32
+	
+	// These two fields should be set in block.go:
+	Size uint32
+	Hash *Uint256
 }
 
 
@@ -116,85 +118,6 @@ func (to *TxOut)Size() uint32 {
 }
 
 
-func (txin *TxIn) set(buf []byte) (size uint32) {
-	copy(txin.Input.Hash[:], buf[:32])
-	txin.Input.Vout = uint32(lsb2uint(buf[32:36]))
-	
-	size = 36
-	le, cnt := getVlen(buf[size:])
-	size += uint32(cnt)
-	
-	// Signature script
-	if false {
-		// Allocate own memory since blocks are being freed
-		txin.ScriptSig = make([]byte, le)
-		copy(txin.ScriptSig[:], buf[size:size+uint32(le)])
-	} else {
-		// This is re-using block's memory:
-		txin.ScriptSig = buf[size:size+uint32(le)]
-	}
-
-	size += uint32(le)
-	
-	// Sequence
-	txin.Sequence = uint32(lsb2uint(buf[size:size+4]))
-	size += 4
-
-	return 
-}
-
-
-func (txout *TxOut) set(buf []byte) (size uint32) {
-	txout.Value = lsb2uint(buf[:8])
-	size = 8
-	le, cnt := getVlen(buf[size:])
-	size += cnt
-	
-	if true {
-		// Allocate own memory since blocks are being freed
-		txout.Pk_script = make([]byte, le)
-		copy(txout.Pk_script[:], buf[size:size+uint32(le)])
-	} else {
-		// This is re-using block's memory:
-		txout.Pk_script = buf[size:size+uint32(le)]
-	}
-	
-	size += uint32(le)
-	return
-}
-
-
-func (tx *Tx) set(data []byte) (size uint32) {
-	tx.Version = uint32(lsb2uint(data[0:4]))
-
-	size = 4 // skip version field
-	
-	// TxIn
-	le, n := getVlen(data[size:])
-	size += uint32(n)
-	tx.TxIn = make([]*TxIn, le)
-	for i := range tx.TxIn {
-		size += tx.TxIn[i].set(data[size:])
-	}
-	
-	// TxOut
-	le, n = getVlen(data[size:])
-	size += uint32(n)
-	tx.TxOut = make([]*TxOut, le)
-	for i := range tx.TxOut {
-		size += tx.TxOut[i].set(data[size:])
-	}
-	
-	tx.Lock_time = uint32(lsb2uint(data[size:size+4]))
-	size += 4
-
-	tx.Raw = data[0:size]
-	tx.Hash = NewSha2Hash(tx.Raw)
-
-	return
-}
-
-
 func (in *TxPrevOut)IsNull() bool {
 	return allzeros(in.Hash[:]) && in.Vout==0xffffffff
 }
@@ -213,7 +136,7 @@ func (tx *Tx) CheckTransaction() error {
 	}
     
 	// Size limits
-	if len(tx.Raw) > MAX_BLOCK_SIZE {
+	if tx.Size > MAX_BLOCK_SIZE {
 		return errors.New("CheckTransaction() : size limits failed")
 	}
 	

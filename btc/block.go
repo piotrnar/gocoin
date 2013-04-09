@@ -3,14 +3,14 @@ package btc
 import (
 //	"os"
 	"errors"
-//	"bytes"
+	"bytes"
 	"time"
 )
 
 type Block struct {
 	Raw []byte
 	Hash *Uint256
-	Txs []Tx
+	Txs []*Tx
 }
 
 func (bl *Block)GetVersion() uint32 {
@@ -49,15 +49,27 @@ func NewBlock(data []byte) (*Block, error) {
 }
 
 
-func (bl *Block)BuildTxList() {
-	offs := uint32(80)
-	txcnt, cnt := getVlen(bl.Raw[offs:])
-	offs+= cnt
-
-	bl.Txs = make([]Tx, txcnt)
-	for i:=0; i<int(txcnt); i++ {
-		offs += bl.Txs[i].set(bl.Raw[offs:])
+func (bl *Block)BuildTxList() (e error) {
+	var txcnt uint64
+	txblock := bl.Raw[80:]
+	rd := bytes.NewReader(txblock)
+	txcnt, e = ReadVLen64(rd)
+	if e != nil {
+		return
 	}
+	
+	bl.Txs = make([]*Tx, txcnt)
+	for i:=0; i<int(txcnt); i++ {
+		sta, _ := rd.Seek(0, 1)
+		bl.Txs[i], e = NewTx(rd)
+		if e != nil {
+			return
+		}
+		sto, _ := rd.Seek(0, 1)
+		bl.Txs[i].Size = uint32(sto-sta)
+		bl.Txs[i].Hash = NewSha2Hash(txblock[sta:sto])
+	}
+	return
 }
 
 
@@ -75,7 +87,10 @@ func (bl *Block)CheckBlock() (er error) {
 		return errors.New("CheckBlock() : block timestamp too far in the future")
 	}
 
-	bl.BuildTxList()
+	er = bl.BuildTxList()
+	if er != nil {
+		return
+	}
 	
 	txcnt := len(bl.Txs)
 	
