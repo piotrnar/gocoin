@@ -106,7 +106,7 @@ func (ch *Chain)commitTxs(bl *Block, height uint32) (error) {
 			}
 			txoutsum += bl.Txs[i].TxOut[j].Value
 			iii.Vout = uint32(j)
-			ch.unspent.Append(height, iii, &bl.Txs[i].TxOut[j])
+			ch.unspent.Append(height, iii, bl.Txs[i].TxOut[j])
 			
 		}
 		sumblockout += txoutsum
