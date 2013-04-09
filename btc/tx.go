@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"errors"
 	"os"
+	"bytes"
 )
 
 type TxPrevOut struct {
@@ -179,3 +180,110 @@ func (tx *Tx) CheckTransaction() error {
 }
 
 
+func NewTxOut(rd *bytes.Reader) (res *TxOut, e error) {
+	var le uint64
+	var txout TxOut
+	
+	txout.Value, e = ReadUint64(rd)
+	if e != nil {
+		return
+	}
+	
+	le, e = ReadVLen64(rd)
+	if e != nil {
+		return
+	}
+	txout.Pk_script = make([]byte, le)
+	_, e = rd.Read(txout.Pk_script[:])
+	if e != nil {
+		return
+	}
+	
+	res = &txout
+	return
+}
+
+
+func NewTx(rd *bytes.Reader) (res *Tx, e error) {
+	var tx Tx
+	var le uint64
+	
+	tx.Version, e = ReadUint32(rd)
+	if e != nil {
+		return
+	}
+
+	// TxOut
+	le, e = ReadVLen64(rd)
+	if e != nil {
+		return
+	}
+	tx.TxIn = make([]*TxIn, le)
+	for i := range tx.TxIn {
+		tx.TxIn[i], e = NewTxIn(rd)
+		if e != nil {
+			return
+		}
+	}
+	
+	// TxOut
+	le, e = ReadVLen64(rd)
+	if e != nil {
+		return
+	}
+	tx.TxOut = make([]*TxOut, le)
+	for i := range tx.TxOut {
+		tx.TxOut[i], e = NewTxOut(rd)
+		if e != nil {
+			return
+		}
+	}
+	
+	tx.Lock_time, e = ReadUint32(rd)
+
+	res = &tx
+	return
+}
+
+func NewTxIn(rd *bytes.Reader) (res *TxIn, e error) {
+	var txin TxIn
+	var le uint64
+	
+	_, e = rd.Read(txin.Input.Hash[:])
+	if e != nil {
+		return
+	}
+	
+	txin.Input.Vout, e = ReadUint32(rd)
+	if e != nil {
+		return
+	}
+	
+	le, e = ReadVLen64(rd)
+	if e != nil {
+		return
+	}
+	txin.ScriptSig = make([]byte, le)
+	_, e = rd.Read(txin.ScriptSig[:])
+	if e != nil {
+		return
+	}
+	
+	// Sequence
+	txin.Sequence, e = ReadUint32(rd)
+	if e==nil {
+		res = &txin
+	}
+
+	return 
+}
+
+func (txin *TxIn) GetKeyAndSig() (sig *Signature, key *PublicKey, e error) {
+	sig, e = NewSignature(txin.ScriptSig[1:1+txin.ScriptSig[0]])
+	if e != nil {
+		return
+	}
+	offs := 1+txin.ScriptSig[0]
+	key, e = NewPublicKey(txin.ScriptSig[1+offs:1+offs+txin.ScriptSig[offs]])
+	return
+}

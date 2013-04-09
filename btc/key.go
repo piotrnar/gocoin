@@ -18,10 +18,7 @@ func decompressPoint(off bool, x *big.Int)  (y *big.Int) {
 
 	y2 := new(big.Int).Add(x3, secp256k1.B)
 
-	q1 := new(big.Int).Add(secp256k1.P, big.NewInt(1))
-	q1d := new(big.Int).Div(q1, big.NewInt(4))
-	
-	y = new(big.Int).Exp(y2, q1d, secp256k1.P)
+	y = new(big.Int).Exp(y2, Qplus1div4, secp256k1.P)
 
 	bts := y.Bytes()
 	odd := (bts[len(bts)-1]&1)!=0

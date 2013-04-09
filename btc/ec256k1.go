@@ -277,6 +277,7 @@ func (BitCurve *BitCurve) Unmarshal(data []byte) (x, y *big.Int) {
 
 var initonce sync.Once
 var secp256k1 *BitCurve
+var Qplus1div4 *big.Int  // This is used by key.go:decompressPoint()
 
 func initAll() {
 	initS256()
@@ -291,6 +292,7 @@ func initS256() {
 	secp256k1.Gx, _ = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
 	secp256k1.Gy, _ = new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
 	secp256k1.BitSize = 256
+	Qplus1div4 = new(big.Int).Div(new(big.Int).Add(secp256k1.P, big.NewInt(1)), big.NewInt(4))
 }
 
 // S256 returns a BitCurve which implements secp256k1 (see SEC 2 section 2.7.1)
