@@ -26,8 +26,8 @@ type Tx struct {
 	Version uint32
 	Raw []byte
 	Hash *Uint256
-	TxIn []TxIn
-	TxOut []TxOut
+	TxIn []*TxIn
+	TxOut []*TxOut
 	Lock_time uint32
 }
 
@@ -49,7 +49,10 @@ func (t *Tx) Unsigned() (res []byte) {
 		copy(buf[off:off+32], t.TxIn[i].Input.Hash[:])
 		off += 32
 		off += put32lsb(buf[off:], t.TxIn[i].Input.Vout)
-		off += putVlen(buf[off:], 0) // no subScript in Unsiged
+		
+		//off += putVlen(buf[off:], 0) // no subScript in Unsiged
+		panic("TODO: here you need to put output script from the tx which you are spending")
+		
 		off += put32lsb(buf[off:], t.TxIn[i].Sequence)
 	}
 
@@ -169,7 +172,7 @@ func (tx *Tx) set(data []byte) (size uint32) {
 	// TxIn
 	le, n := getVlen(data[size:])
 	size += uint32(n)
-	tx.TxIn = make([]TxIn, le)
+	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
 		size += tx.TxIn[i].set(data[size:])
 	}
@@ -177,7 +180,7 @@ func (tx *Tx) set(data []byte) (size uint32) {
 	// TxOut
 	le, n = getVlen(data[size:])
 	size += uint32(n)
-	tx.TxOut = make([]TxOut, le)
+	tx.TxOut = make([]*TxOut, le)
 	for i := range tx.TxOut {
 		size += tx.TxOut[i].set(data[size:])
 	}
