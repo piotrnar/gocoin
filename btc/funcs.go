@@ -2,18 +2,8 @@ package btc
 
 import (
 	"crypto/sha256"
-	"math/big"
-	"bytes"
 	"os"
-	"fmt"
 )
-
-func ShaSum(b []byte) (out [32]byte) {
-	s := sha256.New()
-	s.Write(b[:])
-	copy(out[:], s.Sum(nil))
-	return
-}
 
 func Sha2Sum(b []byte) (out [32]byte) {
 	s := sha256.New()
@@ -22,20 +12,6 @@ func Sha2Sum(b []byte) (out [32]byte) {
 	s.Reset()
 	s.Write(tmp)
 	copy(out[:], s.Sum(nil))
-	return
-}
-
-func AddressAsB58(a []byte) (s string) {
-	const CHRS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	bn0 := big.NewInt(0)
-	bn58 := big.NewInt(58)
-	bn := big.NewInt(0).SetBytes(a)
-	var mo *big.Int
-	for bn.Cmp(bn0) != 0 {
-		bn, mo = new(big.Int).DivMod(bn, bn58, new(big.Int))
-		s = string(CHRS[mo.Int64()]) + s
-	}
-	s = "1" + s
 	return
 }
 
@@ -53,26 +29,7 @@ func msb2uint(lt []byte) (res uint64) {
 	return
 }
 
-func getVlenVal(b *bytes.Buffer) (res uint64) {
-	c, e := b.ReadByte()
-	errorFatal(e, "GetVarLen first")
-	if c < 0xfd {
-		res = uint64(c)
-		return
-	}
-
-	var buf [8]byte;
-	c = 2 << (2-(0xff-c));
-
-	_, e = b.Read(buf[:c])
-	errorFatal(e, "GetVarLen second")
-	var i byte
-	for i=0; i<c; i++ {
-		res |= (uint64(buf[i]) << uint64(8*i))
-	}
-	return
-}
-
+/*
 func getVlenData(b *bytes.Buffer) (res []byte, le uint64) {
 	var buf [9]byte
 	_, e := b.Read(buf[:1])
@@ -93,6 +50,7 @@ func getVlenData(b *bytes.Buffer) (res []byte, le uint64) {
 	}
 	return
 }
+*/
 
 func getVlen(buf []byte) (le uint64, size uint32) {
 	if buf[0] < 0xfd {
@@ -130,15 +88,6 @@ func errorFatal(er error, s string) {
 
 func GetBlockReward(height uint32) (uint64) {
 	return 50e8 >> (height/210000)
-}
-
-
-func bin2hex(mem []byte) string {
-	var s string
-	for i := 0; i<len(mem); i++ {
-		s+= fmt.Sprintf("%02x", mem[i])
-	}
-	return s
 }
 
 
