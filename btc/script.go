@@ -1,12 +1,13 @@
 package btc
 
 import (
-	"fmt"
-	"os"
+//	"fmt"
+//	"os"
 )
 
 func VerifyTxScript(sig []byte, in *TxOut) bool {
 	return true
+/*
 	fmt.Println("VerifyTxScript")
 	fmt.Println("sigScript:", bin2hex(sig[:]))
 	fmt.Println("btcValue :", in.Value)
@@ -17,8 +18,10 @@ func VerifyTxScript(sig []byte, in *TxOut) bool {
 	evalScript(in.Pk_script[:], &st)
 
 	return false
+*/
 }
 
+/*
 func evalScript(p []byte, stack *scrStack) bool {
 	idx := 0
 	for idx < len(p) {
@@ -66,28 +69,6 @@ func evalScript(p []byte, stack *scrStack) bool {
 			println("cod", bin2hex(scriptCode[:]))
 
 			os.Exit(1)
-/*
-            // Subset of script starting at the most recent codeseparator
-            CScript scriptCode(pbegincodehash, pend);
-
-            // Drop the signature, since there's no way for a signature to sign itself
-            scriptCode.FindAndDelete(CScript(vchSig));
-
-            bool fSuccess = (!fStrictEncodings || (IsCanonicalSignature(vchSig) && IsCanonicalPubKey(vchPubKey)));
-            if (fSuccess)
-                fSuccess = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType, flags);
-
-            popstack(stack);
-            popstack(stack);
-            stack.push_back(fSuccess ? vchTrue : vchFalse);
-            if (opcode == OP_CHECKSIGVERIFY)
-            {
-                if (fSuccess)
-                    popstack(stack);
-                else
-                    return false;
-            }
-*/
 		} else {
 			fmt.Printf("evalScript: Unexpected script command 0x%02X\n", opcode)
 			os.Exit(1)
@@ -241,3 +222,4 @@ const (
 
     OP_INVALIDOPCODE = 0xff
 )
+*/
