@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"math/big"
 	"crypto/ecdsa"
-	"encoding/hex"
 )
 
 type PublicKey struct {
@@ -43,7 +42,7 @@ or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 
 */
 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
-	fmt.Println("Het Pub Key:", hex.EncodeToString(buf[:]))
+	//fmt.Println("Het Pub Key:", hex.EncodeToString(buf[:]))
 	if len(buf)==65 && buf[0]==4 {
 		res = new(PublicKey)
 		res.Curve = S256()
@@ -52,7 +51,7 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 		return
 	}
 	if len(buf)==33 && (buf[0]==2 || buf[0]==3) {
-		println("Warning: comperssed public key")
+		//println("Warning: comperssed public key")
 		res = new(PublicKey)
 		res.Curve = S256()
 		res.X = new(big.Int).SetBytes(buf[1:33])
