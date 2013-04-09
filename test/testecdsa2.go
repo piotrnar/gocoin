@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/hex"
-	"piotr/btc"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 const (

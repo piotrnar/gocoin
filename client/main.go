@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"flag"
-	"piotr/btc"
+	"github.com/piotrnar/gocoin/btc"
 	"time"
 	"bufio"
 	"strings"

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
-	"piotr/btc"
+	"github.com/piotrnar/gocoin/btc"
 	"time"
 	"flag"
 	"bufio"

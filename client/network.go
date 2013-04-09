@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
-    "piotr/btc"
+    "github.com/piotrnar/gocoin/btc"
 )
 
 type BCmsg struct {

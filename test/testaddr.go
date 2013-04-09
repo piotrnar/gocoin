@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
-	"piotr/btc"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 func main() {

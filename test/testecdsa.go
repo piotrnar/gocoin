@@ -3,7 +3,7 @@ package main
 import (
 	"math/big"
 	"encoding/hex"
-	"piotr/btc"
+	"github.com/piotrnar/gocoin/btc"
 	"crypto/ecdsa"
 )
 
