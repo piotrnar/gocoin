@@ -3,7 +3,6 @@ package btc
 import (
 	"fmt"
 	"errors"
-	"os"
 	"bytes"
 )
 
@@ -75,42 +74,12 @@ func (t *Tx) Unsigned() (res []byte) {
 }
 
 
-func (oi *TxPrevOut)Load(f *os.File) bool {
-	_, e := f.Read(oi.Hash[:])
-	if e!=nil {
-		return false
-	}
-	oi.Vout, _ = read32bit(f)
-	return true
-}
-
-func (oi *TxPrevOut)Save(f *os.File) {
-	f.Write(oi.Hash[:])
-	write32bit(f, oi.Vout)
-}
-
-
 func (t *TxPrevOut)String() (s string) {
 	for i := 0; i<32; i++ {
 		s+= fmt.Sprintf("%02x", t.Hash[31-i])
 	}
 	s+= fmt.Sprintf("-%03d", t.Vout)
 	return
-}
-
-
-func (to *TxOut)Load(f *os.File) {
-	to.Value, _ = read64bit(f)
-	le, _ := read32bit(f)
-	to.Pk_script = make([]byte, le)
-	f.Read(to.Pk_script[:])
-}
-
-
-func (to *TxOut)Save(f *os.File) {
-	write64bit(f, to.Value)
-	write32bit(f, uint32(len(to.Pk_script)))
-	f.Write(to.Pk_script[:])
 }
 
 

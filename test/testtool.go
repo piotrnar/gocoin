@@ -4,10 +4,12 @@ import (
 	"os"
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
+	_ "github.com/piotrnar/gocoin/btc/mysqldb"
 	"time"
 	"flag"
 	"bufio"
 	"strconv"
+	"github.com/piotrnar/gocoin/btc/blockdb"
 )
 
 var testnet *bool = flag.Bool("t", false, "use testnet")
@@ -16,7 +18,7 @@ var autoload *bool = flag.Bool("l", false, "auto load blocks")
 var GenesisBlock *btc.Uint256
 var Magic [4]byte
 var BlockChain *btc.Chain
-var BlockDatabase *btc.BlockDB
+var BlockDatabase *blockdb.BlockDB
 
 var sin = bufio.NewReader(os.Stdin)
 
@@ -36,14 +38,22 @@ func printstat() {
 func reloadBlockchain(limit uint64) {
 	var bl *btc.Block
 	var er error
+	var dat []byte
 	start := time.Now().UnixNano()
 	var blkcnt, totbytes uint64
 	for blkcnt=0; blkcnt<limit; blkcnt++ {
-		bl = BlockDatabase.FetchNextBlock()
-		if bl == nil {
+		dat, er = BlockDatabase.FetchNextBlock()
+		if dat==nil || er!=nil {
 			println("END of DB file")
 			break
 		}
+		
+		bl, er = btc.NewBlock(dat[:])
+		if er != nil {
+			println("Block inconsisrent:", er.Error())
+			return
+		}
+
 		//println("got block len", len(bl.Raw))
 		if GenesisBlock.Equal(bl.Hash) {
 			fmt.Println("Skip genesis block")
@@ -56,19 +66,12 @@ func reloadBlockchain(limit uint64) {
 		
 		er = BlockChain.AcceptBlock(bl)
 		if er != nil {
-			println("Block not accepted into chain:", er.Error())
+			//println("Block not accepted into chain:", er.Error())
 		}
 		
 		if limit>10000 && blkcnt%10000 == 0 {
 			printstat()
 		}
-		
-		/*
-		if BlockChain.GetHeight()==61934 {
-			println("dbg-on")
-			btc.DbgSwitch(btc.DBG_BLOCKS, true)
-		}
-		*/
 	}
 	stop := time.Now().UnixNano()
 	fmt.Printf("Operation took: %.3fs, read %d blocks containing %dMB of data\n", 
@@ -78,7 +81,7 @@ func reloadBlockchain(limit uint64) {
 
 
 func askUserInt(ask string) int {
-	ask = "Global commands: [I]nfo, [S]ave, [L]oad, [Q]uit\n" + ask + "\nEnter your choice: "
+	ask = "Global commands: [I]nfo, [Q]uit\n" + ask + "\nEnter your choice: "
 	for {
 		fmt.Println("============================================")
 		fmt.Print(ask)
@@ -91,8 +94,6 @@ func askUserInt(ask string) int {
 		}
 		switch string(li[:]) {
 			case "i": printstat()
-			case "s": save_database()
-			case "l": load_database()
 			case "q": os.Exit(0)
 		}
 	}
@@ -108,24 +109,6 @@ func loadblocks_menu() {
 		reloadBlockchain(uint64(cmd))
 	}
 }
-
-func load_database() {
-	println("Loading...")
-	start := time.Now().UnixNano()
-	BlockChain.Load()
-	stop := time.Now().UnixNano()
-	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
-}
-
-
-func save_database() {
-	println("Saving...")
-	start := time.Now().UnixNano()
-	BlockChain.Save()
-	stop := time.Now().UnixNano()
-	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
-}
-
 
 func make_transaction() {
 	fmt.Println()
@@ -207,14 +190,11 @@ func main() {
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
-	BlockDatabase = btc.NewBlockDB(dir, Magic)
-	BlockChain = btc.NewChain(BlockDatabase, GenesisBlock)
+	BlockDatabase = blockdb.NewBlockDB(dir, Magic)
+
+	BlockChain = btc.NewChain(GenesisBlock)
 	reloadBlockchain(1) // skip the genesis vlock
 	
-	if *autoload {
-		load_database()
-	}
-
 	menu_main()
 }
 

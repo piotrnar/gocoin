@@ -5,7 +5,6 @@ import (
 	"os"
 	"flag"
 	"github.com/piotrnar/gocoin/btc"
-	"time"
 	"bufio"
 	"strings"
 	"strconv"
@@ -23,7 +22,6 @@ var (
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	BlockChain *btc.Chain
-	BlockDatabase *btc.BlockDB
 
 	dbg uint64
 )
@@ -33,24 +31,6 @@ type command struct {
 	src string
 	str string
 	dat []byte
-}
-
-
-func load_database() {
-	println("Loading...")
-	start := time.Now().UnixNano()
-	BlockChain.Load()
-	stop := time.Now().UnixNano()
-	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
-}
-
-
-func save_database() {
-	println("Saving...")
-	start := time.Now().UnixNano()
-	BlockChain.Save()
-	stop := time.Now().UnixNano()
-	fmt.Printf("Operation took: %.3fs\n", float64(stop-start)/1e9)
 }
 
 
@@ -67,9 +47,7 @@ func init_blockchain() {
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
-	BlockDatabase = btc.NewBlockDB(dir, Magic)
-	BlockChain = btc.NewChain(BlockDatabase, GenesisBlock)
-	load_database()
+	BlockChain = btc.NewChain(GenesisBlock)
 }
 
 
@@ -128,8 +106,6 @@ func main() {
 			} else {
 				switch msg.str {
 					case "i": fmt.Println(BlockChain.Stats())
-					case "s": save_database()
-					case "q": os.Exit(0) 
 				}
 			}
 		} else if msg.src=="net" {
@@ -143,7 +119,6 @@ func main() {
 							e = BlockChain.AcceptBlock(bl)
 							if e == nil {
 								println("New block accepted", BlockChain.BlockTreeEnd.Height)
-								BlockDatabase.AddToExtraIndex(bl)
 							} else {
 								println(e.Error())
 							}
