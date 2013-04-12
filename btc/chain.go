@@ -10,11 +10,11 @@ const blockMapLen = 8  // The bigger it is, the more memory is needed, but lower
 
 
 type BlockTreeNode struct {
-	BlockHash Uint256
+	BlockHash *Uint256
 	Height uint32
+	parenHash *Uint256
 	parent *BlockTreeNode
 	childs []*BlockTreeNode
-	Orphan bool
 }
 
 type Chain struct {
@@ -22,6 +22,7 @@ type Chain struct {
 	
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
+	Genesis *Uint256
 
 	BlockIndex map[[blockMapLen]byte] *BlockTreeNode
 	
@@ -29,18 +30,14 @@ type Chain struct {
 }
 
 
-func NewChain(genesis *Uint256) (ch *Chain) {
+func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 	ch = new(Chain)
+	ch.Genesis = genesis
 	ch.Db = NewDb()
-	ch.BlockIndex = make(map[[blockMapLen]byte] *BlockTreeNode, BlockMapInitLen)
-	
-	ch.BlockTreeRoot = new(BlockTreeNode)
-	ch.BlockTreeRoot.BlockHash = *genesis
-	ch.BlockIndex[NewBlockIndex(genesis.Hash[:])] = ch.BlockTreeRoot
-	ch.BlockTreeEnd = ch.BlockTreeRoot
 	ch.unspent = NewUnspentDb(ch.Db)
-
-	ch.loadIndex()
+	if ch.loadBlockIndex() || rescan {
+		ch.rescan()
+	}
 	return 
 }
 
@@ -172,9 +169,6 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		ch.unspent.UnwindBlock(old.Height)
 		
 		fmt.Printf("->orph block %s @ %d\n", old.BlockHash.String(), old.Height)
-		old.Orphan = true
-		ch.Db.BlockOrphan(&old.BlockHash, 1)
-		
 		old = old.parent
 		cur = cur.parent
 	}
@@ -187,7 +181,7 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		}
 		fmt.Printf(" + new %d ... \n", cur.Height)
 		
-		b, er := ch.Db.BlockGet(&cur.BlockHash)
+		b, er := ch.Db.BlockGet(cur.BlockHash)
 		if er != nil {
 			return er
 		}
@@ -206,8 +200,6 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		}
 		fmt.Printf("  ... %d new txs commited\n", len(bl.Txs))
 
-		cur.Orphan = false
-		ch.Db.BlockOrphan(&cur.BlockHash, 0)
 		ch.BlockTreeEnd = cur
 	}
 	return nil
@@ -225,16 +217,14 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		return errors.New("AcceptBlock() : "+bl.Hash.String()+" already in mapBlockIndex")
 	}
 
-	var p [32]byte
-	copy(p[:], bl.GetParent()[:])
-	prevblk, ok := ch.BlockIndex[NewBlockIndex(p[:])]
+	prevblk, ok := ch.BlockIndex[bl.GetParent().BIdx()]
 	if !ok {
-		return errors.New("AcceptBlock() : prv not found:"+NewUint256(p[:]).String())
+		return errors.New("AcceptBlock() : parent not found : "+bl.GetParent().String())
 	}
 
 	// create new BlockTreeNode
 	cur := new(BlockTreeNode)
-	cur.BlockHash = *bl.Hash
+	cur.BlockHash = bl.Hash
 	cur.parent = prevblk
 	cur.Height = prevblk.Height + 1
 	
@@ -254,7 +244,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		e = ch.CommitTransactions(bl, cur.Height)
 		if e != nil {
 			fmt.Println("rejecting block", cur.Height, cur.BlockHash.String())
-			fmt.Println("parent:", NewUint256(p[:]).String())
+			fmt.Println("parent:", bl.GetParent().String())
 			ch.unspent.UnwindBlock(cur.Height)
 			ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 		}
@@ -262,8 +252,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		if don(DBG_BLOCKS|DBG_ORPHAS) {
 			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
-		cur.Orphan = true
-		ch.Db.BlockOrphan(bl.Hash, 1)
 		if cur.Height > ch.BlockTreeEnd.Height {
 			e = ch.MoveToBranch(cur)
 			/*return errors.New(fmt.Sprintf("The different branch is longer now %d/%d!\n",
@@ -296,26 +284,15 @@ func (ch *Chain)GetHeight() uint32 {
 }
 
 
-func (ch *Chain) orphanTree(cur *BlockTreeNode) {
-	cur.Orphan = true
-	ch.Db.BlockOrphan(&cur.BlockHash, 1)
-	for i := range cur.childs {
-		ch.orphanTree(cur.childs[i])
-	}
-}
-
-
-func (ch *Chain)Rescan() {
+func (ch *Chain)rescan() {
 	var bl *Block
 	println("Rescanning blocks...")
 	ch.Db.UnspentPurge()
 
 	cur := ch.BlockTreeRoot
 	for cur!=nil {
-		cur.Orphan = false
-		
 		// Read block
-		b, e := ch.Db.BlockGet(&cur.BlockHash)
+		b, e := ch.Db.BlockGet(cur.BlockHash)
 		if b==nil || e!=nil {
 			panic("BlockGet failed")
 		}
@@ -333,14 +310,6 @@ func (ch *Chain)Rescan() {
 			println(cur.Height)  // progress indicator
 		}
 		
-		// mark all the orphans
-		for i := range cur.childs {
-			if cur.childs[i]!=nxt {
-				//println("orphan tree @", cur.childs[i].Height)
-				ch.orphanTree(cur.childs[i])
-			}
-		}
-
 		bl, e = NewBlock(b[:])
 		if e != nil {
 			panic("Rescan: NewBlock error")
@@ -367,37 +336,56 @@ func (ch *Chain)Rescan() {
 }
 
 
-func nextBlock(ch *Chain, hash, prev []byte, orph int) {
+func nextBlock(ch *Chain, hash, prev []byte, height uint32) {
 	bh := NewUint256(hash[:])
-	ph := NewUint256(prev[:])
 	_, ok := ch.BlockIndex[bh.BIdx()]
 	if ok {
 		println("nextBlock:", bh.String(), "- already in")
 		return
 	}
-	
+
 	v := new(BlockTreeNode)
-	v.BlockHash = *bh
-	v.parent, ok = ch.BlockIndex[ph.BIdx()]
-	if !ok {
-		println("Mid: no such parent", ph.String(), " - hook to ", bh.String())
-		os.Exit(1)
-	}
-	v.Height = v.parent.Height + 1
-	v.parent.addChild(v)
-	v.Orphan = (orph!=0)
+	v.BlockHash = bh
+	v.parenHash = NewUint256(prev[:])
+	v.Height = height
 	ch.BlockIndex[v.BlockHash.BIdx()] = v
-	if !v.Orphan {
-		ch.BlockTreeEnd = v // they shoudl come in block height order
-	}
 }
 
 
-func (ch *Chain)loadIndex() {
-	println("Loading Index...")
+func (ch *Chain)loadBlockIndex() bool {
+	ch.BlockIndex = make(map[[blockMapLen]byte]*BlockTreeNode, BlockMapInitLen)
+	ch.BlockTreeRoot = new(BlockTreeNode)
+	ch.BlockTreeRoot.BlockHash = ch.Genesis
+	ch.BlockIndex[NewBlockIndex(ch.Genesis.Hash[:])] = ch.BlockTreeRoot
+	ch.BlockTreeEnd = nil
+	println("Loading Index...", len(ch.BlockIndex))
 	ch.Db.LoadBlockIndex(ch, nextBlock)
-	println("block Index loaded")
+	println("Building block tree", len(ch.BlockIndex))
+	var mh, mhcnt uint32
+	for _, v := range ch.BlockIndex {
+		if v==ch.BlockTreeRoot {
+			println(" - skip roor block")
+			continue
+		}
+		par, ok := ch.BlockIndex[v.parenHash.BIdx()]
+		if !ok {
+			panic(v.BlockHash.String()+" has no parent "+v.parenHash.String())
+		}
+		v.parent = par
+		v.parent.addChild(v)
+		v.parenHash = nil
+		if v.Height>mh {
+			mh = v.Height
+			mhcnt = 0
+			ch.BlockTreeEnd = v
+		} else if v.Height==mh {
+			mhcnt++
+		}
+	}
+	println("Done", len(ch.BlockIndex), mh, mhcnt)
+	return mhcnt>0
 }
+
 
 func (ch *Chain) LookUnspent(tid [32]byte, vout uint32) *TxOut {
 	txin := TxPrevOut{Hash:tid, Vout:vout}

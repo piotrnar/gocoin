@@ -4,13 +4,13 @@ import (
 	"os"
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/btc/wierddb"
+	"github.com/piotrnar/gocoin/btc/leveldb"
 	"github.com/piotrnar/gocoin/btc/blockdb"
 	"time"
 	"flag"
 )
 
-var testnet *bool = flag.Bool("t", false, "use testnet")
+var testnet *bool = flag.Bool("t", true, "use testnet")
 
 var GenesisBlock *btc.Uint256
 var Magic [4]byte
@@ -31,12 +31,12 @@ func main() {
 	var dir string
 	
 	if *testnet { // testnet3
-		dir = os.Getenv("APPDATA")+"/Bitcoin/testnet3/blocks"
+		dir = os.Getenv("HOME")+"/btc/testnet3/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
-		wierddb.Testnet = true
+		leveldb.Testnet = true
 	} else {
-		dir = os.Getenv("APPDATA")+"/Bitcoin/blocks"
+		dir = os.Getenv("HOME")+"/btc/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
@@ -44,7 +44,7 @@ func main() {
 	bidx = make(map[btc.Uint256] *btn, 300000)
 
 	BlockDatabase = blockdb.NewBlockDB(dir, Magic)
-	db := wierddb.NewDb()
+	db := leveldb.NewDb()
 	var bl *btc.Block
 	var er error
 	var dat []byte
@@ -69,7 +69,7 @@ func main() {
 		nod := new(btn)
 		nod.Hash = *bl.Hash
 
-		ParHash := btc.NewUint256(bl.GetParent()[:])
+		ParHash := bl.GetParent()
 		par, ok := bidx[*ParHash]
 		if !ok {
 			if root == nil {

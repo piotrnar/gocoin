@@ -17,8 +17,8 @@ func (bl *Block)GetVersion() uint32 {
 	return uint32(lsb2uint(bl.Raw[:4]))
 }
 
-func (bl *Block)GetParent() (res []byte) {
-	return bl.Raw[4:36]
+func (bl *Block)GetParent() (*Uint256) {
+	return NewUint256(bl.Raw[4:36])
 }
 
 func (bl *Block)GetMerkleRoot() (res []byte) {

@@ -17,9 +17,8 @@ type BtcDB interface {
 
 	BlockAdd(height uint32, bl *Block) (error)
 	BlockGet(hash *Uint256) ([]byte, error)
-	BlockOrphan(hash *Uint256, orph int) (error)
 
-	LoadBlockIndex(*Chain, func(*Chain, []byte, []byte, int)) (error)
+	LoadBlockIndex(*Chain, func(*Chain, []byte, []byte, uint32)) (error)
 
 	Close()
 
