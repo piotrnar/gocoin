@@ -4,7 +4,7 @@ import (
 	"os"
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/btc/mysqldb"
+	"github.com/piotrnar/gocoin/btc/wierddb"
 	"github.com/piotrnar/gocoin/btc/blockdb"
 	"time"
 	"flag"
@@ -34,6 +34,7 @@ func main() {
 		dir = os.Getenv("APPDATA")+"/Bitcoin/testnet3/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
+		wierddb.Testnet = true
 	} else {
 		dir = os.Getenv("APPDATA")+"/Bitcoin/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
@@ -43,7 +44,7 @@ func main() {
 	bidx = make(map[btc.Uint256] *btn, 300000)
 
 	BlockDatabase = blockdb.NewBlockDB(dir, Magic)
-	db := mysqldb.NewDb()
+	db := wierddb.NewDb()
 	var bl *btc.Block
 	var er error
 	var dat []byte

@@ -22,6 +22,9 @@ type BtcDB interface {
 	LoadBlockIndex(*Chain, func(*Chain, []byte, []byte, int)) (error)
 
 	Close()
+
+	GetUnspentFromPkScr(scr []byte) (res []OneUnspentTx)
+	ListUnspent()
 }
 
 var NewDb func() BtcDB

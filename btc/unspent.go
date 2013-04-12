@@ -99,12 +99,6 @@ func (u *OneUnspentTx) String() string {
 
 
 func (us *UnspentDb) GetUnspentFromPkScr(scr []byte) (res []OneUnspentTx) {
-	/*
-	for _, v := range us.outs {
-		if bytes.Equal(v.txout.Pk_script[:], scr[:]) {
-			res = append(res, OneUnspentTx{Value:v.txout.Value, Output: v.prvout})
-		}
-	}
-	*/
+	return us.db.GetUnspentFromPkScr(scr)
 	return
 }

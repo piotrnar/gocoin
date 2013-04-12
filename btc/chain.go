@@ -18,7 +18,7 @@ type BlockTreeNode struct {
 }
 
 type Chain struct {
-	db BtcDB
+	Db BtcDB
 	
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
@@ -31,14 +31,14 @@ type Chain struct {
 
 func NewChain(genesis *Uint256) (ch *Chain) {
 	ch = new(Chain)
-	ch.db = NewDb()
+	ch.Db = NewDb()
 	ch.BlockIndex = make(map[[blockMapLen]byte] *BlockTreeNode, BlockMapInitLen)
 	
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = *genesis
 	ch.BlockIndex[NewBlockIndex(genesis.Hash[:])] = ch.BlockTreeRoot
 	ch.BlockTreeEnd = ch.BlockTreeRoot
-	ch.unspent = NewUnspentDb(ch.db)
+	ch.unspent = NewUnspentDb(ch.Db)
 
 	ch.loadIndex()
 	return 
@@ -173,7 +173,7 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		
 		fmt.Printf("->orph block %s @ %d\n", old.BlockHash.String(), old.Height)
 		old.Orphan = true
-		ch.db.BlockOrphan(&old.BlockHash, 1)
+		ch.Db.BlockOrphan(&old.BlockHash, 1)
 		
 		old = old.parent
 		cur = cur.parent
@@ -187,21 +187,27 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 		}
 		fmt.Printf(" + new %d ... \n", cur.Height)
 		
-		b, er := ch.db.BlockGet(&cur.BlockHash)
-		errorFatal(er, "MoveToBranch/GetBlock")
+		b, er := ch.Db.BlockGet(&cur.BlockHash)
+		if er != nil {
+			return er
+		}
 
 		bl, er := NewBlock(b)
-		errorFatal(er, "MoveToBranch/NewBlock")
+		if er != nil {
+			return er
+		}
 
 		fmt.Println("  ... Got block ", bl.Hash.String())
 		bl.BuildTxList()
 
 		er = ch.CommitTransactions(bl, cur.Height)
-		errorFatal(er, "MoveToBranch/CommitTransactions")
+		if er != nil {
+			return er
+		}
 		fmt.Printf("  ... %d new txs commited\n", len(bl.Txs))
 
 		cur.Orphan = false
-		ch.db.BlockOrphan(&cur.BlockHash, 0)
+		ch.Db.BlockOrphan(&cur.BlockHash, 0)
 		ch.BlockTreeEnd = cur
 	}
 	return nil
@@ -223,7 +229,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	copy(p[:], bl.GetParent()[:])
 	prevblk, ok := ch.BlockIndex[NewBlockIndex(p[:])]
 	if !ok {
-		return errors.New("AcceptBlock() : prev block not found"+NewUint256(p[:]).String())
+		return errors.New("AcceptBlock() : prv not found:"+NewUint256(p[:]).String())
 	}
 
 	// create new BlockTreeNode
@@ -234,9 +240,10 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	
 	prevblk.addChild(cur)
 	
+	ch.Db.StartTransaction()
+	
 	// Add this block to the block index
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
-	ch.db.BlockAdd(cur.Height, bl)
 
 	// Update the end of the tree
 	if ch.BlockTreeEnd==prevblk {
@@ -246,11 +253,9 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		}
 		e = ch.CommitTransactions(bl, cur.Height)
 		if e != nil {
-			println("rejecting block", cur.Height, cur.BlockHash.String(), 
-				"\nparent:", NewUint256(p[:]).String(),
-				"\n", e.Error())
+			fmt.Println("rejecting block", cur.Height, cur.BlockHash.String())
+			fmt.Println("parent:", NewUint256(p[:]).String())
 			ch.unspent.UnwindBlock(cur.Height)
-			delete(ch.BlockIndex, cur.BlockHash.BIdx())
 			ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 		}
 	} else {
@@ -258,14 +263,21 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
 		cur.Orphan = true
-		ch.db.BlockOrphan(bl.Hash, 1)
+		ch.Db.BlockOrphan(bl.Hash, 1)
 		if cur.Height > ch.BlockTreeEnd.Height {
-			ch.MoveToBranch(cur)
+			e = ch.MoveToBranch(cur)
 			/*return errors.New(fmt.Sprintf("The different branch is longer now %d/%d!\n",
 				cur.Height, ch.BlockTreeEnd.Height))*/
 		}
 	}
 
+	if e == nil {
+		ch.Db.BlockAdd(cur.Height, bl)
+		ch.Db.CommitTransaction()
+	} else {
+		delete(ch.BlockIndex, cur.BlockHash.BIdx())
+		ch.Db.RollbackTransaction()
+	}
 	// TODO: Check proof of work
 	// TODO: Check timestamp against prev
 	
@@ -276,7 +288,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 
 func (ch *Chain)Stats() (s string) {
-	return ch.db.GetStats()
+	return ch.Db.GetStats()
 }
 
 func (ch *Chain)GetHeight() uint32 {
@@ -286,7 +298,7 @@ func (ch *Chain)GetHeight() uint32 {
 
 func (ch *Chain) orphanTree(cur *BlockTreeNode) {
 	cur.Orphan = true
-	ch.db.BlockOrphan(&cur.BlockHash, 1)
+	ch.Db.BlockOrphan(&cur.BlockHash, 1)
 	for i := range cur.childs {
 		ch.orphanTree(cur.childs[i])
 	}
@@ -296,14 +308,14 @@ func (ch *Chain) orphanTree(cur *BlockTreeNode) {
 func (ch *Chain)Rescan() {
 	var bl *Block
 	println("Rescanning blocks...")
-	ch.db.UnspentPurge()
+	ch.Db.UnspentPurge()
 
 	cur := ch.BlockTreeRoot
-	for {
+	for cur!=nil {
 		cur.Orphan = false
 		
 		// Read block
-		b, e := ch.db.BlockGet(&cur.BlockHash)
+		b, e := ch.Db.BlockGet(&cur.BlockHash)
 		if b==nil || e!=nil {
 			panic("BlockGet failed")
 		}
@@ -311,7 +323,14 @@ func (ch *Chain)Rescan() {
 		nxt := cur.FindLongestChild()
 		if nxt == nil {
 			ch.BlockTreeEnd = cur
-			break // Last block
+			//break // Last block
+		} else if cur.Height+1 != nxt.Height {
+			println("height error", cur.Height+1, nxt.Height, len(cur.childs))
+			os.Exit(1)
+		}
+		
+		if (cur.Height%10000)==0 {
+			println(cur.Height)  // progress indicator
 		}
 		
 		// mark all the orphans
@@ -321,35 +340,27 @@ func (ch *Chain)Rescan() {
 				ch.orphanTree(cur.childs[i])
 			}
 		}
-		
-		if cur.Height+1 != nxt.Height {
-			println("height error", cur.Height+1, nxt.Height, len(cur.childs))
-			return
-		}
 
 		bl, e = NewBlock(b[:])
 		if e != nil {
 			panic("Rescan: NewBlock error")
 			return
 		}
+		//fmt.Println("\nBlock", cur.Height, cur.BlockHash.String(), nxt)
 
 		e = bl.CheckBlock()
 		if e != nil {
 			panic("Rescan: CheckBlock error:"+e.Error())
 		}
 
-		ch.db.StartTransaction()
+		//ch.Db.StartTransaction()
 		e = ch.CommitTransactions(bl, cur.Height)
 		if e != nil {
 			panic("Rescan: CommitTransactions error:"+e.Error())
 		}
-		ch.db.CommitTransaction()
+		//ch.Db.CommitTransaction()
 
 		cur = nxt
-		
-		if (cur.Height%10000)==0 {
-			println(cur.Height)
-		}
 	}
 
 	println("block Index rescan done", ch.BlockTreeEnd.Height)
@@ -384,7 +395,7 @@ func nextBlock(ch *Chain, hash, prev []byte, orph int) {
 
 func (ch *Chain)loadIndex() {
 	println("Loading Index...")
-	ch.db.LoadBlockIndex(ch, nextBlock)
+	ch.Db.LoadBlockIndex(ch, nextBlock)
 	println("block Index loaded")
 }
 

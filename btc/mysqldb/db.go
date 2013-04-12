@@ -10,7 +10,9 @@ import (
 	_ "github.com/ziutek/mymysql/native"
 )
 
-const BlocksFilename = "c:\\blocks.bin"
+var Testnet bool
+var blocksFilename = "c:\\blocks.bin"
+var blocksTable = "blocks"
 
 type BtcDB struct {
 	blks *os.File
@@ -25,7 +27,12 @@ type BtcDB struct {
 func NewDb() btc.BtcDB {
 	var db BtcDB
 
-	db.blks, _ = os.OpenFile(BlocksFilename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
+	if Testnet {
+		blocksFilename = "c:\\testnet.bin"
+		blocksTable = "blocks_t"
+	}
+	
+	db.blks, _ = os.OpenFile(blocksFilename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
 
 	c := mysql.New("tcp4", "", "127.0.0.1:3306", "go", "", "gocoin")
 	e := c.Connect()
@@ -42,16 +49,16 @@ func NewDb() btc.BtcDB {
 	db.delunwindst, e = c.Prepare("DELETE FROM unwind WHERE height=?")
 	db.selunwindst, e = c.Prepare("SELECT added, in_txid, in_vout, value, pkscr FROM unwind WHERE height=? ORDER by added")
 	
-	db.addblockst, e = c.Prepare("INSERT INTO blocks(height, hash, prev, fpos, len) VALUES(?, ?, ?, ?, ?)")
-	db.updblockst, e = c.Prepare("UPDATE blocks SET orph=? WHERE hash=?")
-	db.getblockst, e = c.Prepare("SELECT hash, prev, orph FROM blocks ORDER by height")
-	db.posblockst, e = c.Prepare("SELECT fpos, `len` FROM blocks WHERE hash=? LIMIT 1")
+	db.addblockst, e = c.Prepare("INSERT INTO "+blocksTable+"(height, hash, prev, fpos, len) VALUES(?, ?, ?, ?, ?)")
+	db.updblockst, e = c.Prepare("UPDATE "+blocksTable+" SET orph=? WHERE hash=?")
+	db.getblockst, e = c.Prepare("SELECT hash, prev, orph FROM "+blocksTable+" ORDER by height")
+	db.posblockst, e = c.Prepare("SELECT fpos, `len` FROM "+blocksTable+" WHERE hash=? LIMIT 1")
 	
 	// Clean up the tables
 	if false {
 		c.Query("DELETE FROM unspent")
 		c.Query("DELETE FROM unwind")
-		c.Query("DELETE FROM blocks")
+		c.Query("DELETE FROM "+blocksTable)
 	}
 	return &db
 }
@@ -60,7 +67,7 @@ func NewDb() btc.BtcDB {
 func (db BtcDB) UnspentPurge() {
 	db.con.Query("DELETE FROM unspent")
 	db.con.Query("DELETE FROM unwind")
-	db.con.Query("UPDATE blocks SET orph=0")
+	db.con.Query("UPDATE "+blocksTable+" SET orph=0")
 }
 
 
@@ -140,11 +147,17 @@ func (db BtcDB) UnwindNow(height uint32) (e error) {
 }
 
 func (db BtcDB) GetStats() (s string) {
+	/*
 	rows, _, er := mysql.Query(db.con, 
 		"SELECT COUNT(*), SUM(value), SUM(LENGTH(pkscr)) from unspent")
 	if er==nil && len(rows)==1 {
 		s += fmt.Sprintf("UNSPENT : tx_cnt=%d  btc=%.8f  size:%dMB\n", rows[0].Uint(0), 
 			float64(rows[0].Uint64(1))/1e8, rows[0].Uint64(2)>>20)
+	}
+	*/
+	rows, _, er := mysql.Query(db.con, "SELECT COUNT(*) from unspent")
+	if er==nil && len(rows)==1 {
+		s += fmt.Sprintf("UNSPENT : tx_cnt=%d\n", rows[0].Uint(0))
 	}
 
 	rows, _, er = mysql.Query(db.con, 
@@ -156,7 +169,7 @@ func (db BtcDB) GetStats() (s string) {
 	}
 	
 	rows, _, er = mysql.Query(db.con, 
-		"SELECT MAX(height), COUNT(*), SUM(orph), SUM(`len`) from blocks")
+		"SELECT MAX(height), COUNT(*), SUM(orph), SUM(`len`) FROM "+blocksTable)
 	if er==nil && len(rows)==1 {
 		s += fmt.Sprintf("BCHAIN  : height=%d  OrphanedBlocks=%d/%d  : siz:~%dMB\n", 
 			rows[0].Uint64(0), rows[0].Uint64(2), rows[0].Uint64(1), rows[0].Uint64(3)>>20)
@@ -219,22 +232,16 @@ func (db BtcDB) LoadBlockIndex(ch *btc.Chain, walk func(ch *btc.Chain, hash, pre
 	return
 }
 
-func (db BtcDB) getuint(sql string) (res uint64, e error) {
-	rows, _, er := mysql.Query(db.con, sql)
-	if er != nil {
-		e = er
-		return
-	}
-	if len(rows)==0 {
-		e = errors.New("No rows returned: "+sql)
-	}
-	res = rows[0].Uint64(0)
+func (db BtcDB) GetUnspentFromPkScr(scr []byte) (res []btc.OneUnspentTx) {
 	return
 }
 
+func (db BtcDB) ListUnspent() {
+}
 
 
 func init() {
 	btc.NewDb = NewDb
 }
+
 

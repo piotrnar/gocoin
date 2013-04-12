@@ -200,7 +200,9 @@ func ProcessInv(conn *net.TCPConn, pl []byte) {
 			ui := btc.NewUint256(h[:])
 			_, haveit := BlockChain.BlockIndex[ui.BIdx()]
 			if !haveit {
+				fmt.Printf("ASK FOR block %s ... \n", hash2str(h))
 				ask4data(conn, typ, h)
+				//break
 			} else {
 				println("INV: alerady have block", ui.String())
 			}

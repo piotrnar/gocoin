@@ -4,7 +4,7 @@ import (
 	"os"
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
-	_ "github.com/piotrnar/gocoin/btc/mysqldb"
+	"github.com/piotrnar/gocoin/btc/wierddb"
 	"time"
 	"flag"
 	"bufio"
@@ -12,7 +12,7 @@ import (
 	"github.com/piotrnar/gocoin/btc/blockdb"
 )
 
-var testnet *bool = flag.Bool("t", false, "use testnet")
+var testnet *bool = flag.Bool("t", true, "use testnet")
 var autoload *bool = flag.Bool("l", false, "auto load blocks")
 
 var GenesisBlock *btc.Uint256
@@ -184,6 +184,7 @@ func main() {
 		dir = os.Getenv("APPDATA")+"/Bitcoin/testnet3/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
+		wierddb.BlocksFilename = "c:\\testnet.bin"
 	} else {
 		dir = os.Getenv("APPDATA")+"/Bitcoin/blocks"
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
@@ -193,7 +194,8 @@ func main() {
 	BlockDatabase = blockdb.NewBlockDB(dir, Magic)
 
 	BlockChain = btc.NewChain(GenesisBlock)
-	reloadBlockchain(1) // skip the genesis vlock
+	BlockChain.Rescan()
+	//reloadBlockchain(1) // skip the genesis vlock
 	
 	menu_main()
 }
