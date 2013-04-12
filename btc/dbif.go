@@ -1,10 +1,6 @@
 package btc
 
 type BtcDB interface {
-	StartTransaction()
-	CommitTransaction()
-	RollbackTransaction()
-	
 	UnspentPurge()
 	UnspentAdd(idx *TxPrevOut, rec *TxOut) (error)
 	UnspentGet(out *TxPrevOut) (*TxOut, error)

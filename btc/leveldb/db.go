@@ -34,6 +34,7 @@ func NewDb() btc.BtcDB {
 	} else {
 		dirname = "bitcoin"
 	}
+	dirname = os.Getenv("HOME")+"/"+dirname
 	
 	db.blidx, e = storage.OpenFile(dirname+"/blockindex")
 	if e != nil {
@@ -57,19 +58,6 @@ func NewDb() btc.BtcDB {
 }
 
 
-func (db BtcDB) StartTransaction() {
-	panic("StartTransaction not implemented")
-}
-
-func (db BtcDB) CommitTransaction() {
-	panic("CommitTransaction not implemented")
-}
-
-func (db BtcDB) RollbackTransaction() {
-	panic("RollbackTransaction not implemented")
-}
-
-
 func (db BtcDB) GetStats() (s string) {
 	sum := uint64(0)
 	for _, v := range db.mapUnspent {
@@ -79,16 +67,6 @@ func (db BtcDB) GetStats() (s string) {
 		len(db.mapUnspent), float64(sum)/1e8)
 	
 	s += fmt.Sprintf("UNWIND : blk_cnt=%d\n", len(db.mapUnwind))
-	
-	/*
-	rows, _, er := mysql.Query(db.con, 
-		"SELECT MAX(height), COUNT(*), SUM(orph), SUM(`len`) from "+blocksTable)
-	if er==nil && len(rows)==1 {
-		s += fmt.Sprintf("BCHAIN  : height=%d  OrphanedBlocks=%d/%d  : siz:~%dMB\n", 
-			rows[0].Uint64(0), rows[0].Uint64(2), rows[0].Uint64(1), rows[0].Uint64(3)>>20)
-	}
-	*/
-
 	return
 }
 

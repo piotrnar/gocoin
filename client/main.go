@@ -5,7 +5,7 @@ import (
 	"os"
 	"flag"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/btc/wierddb"
+	"github.com/piotrnar/gocoin/btc/leveldb"
 	"bufio"
 	"strings"
 	"strconv"
@@ -14,7 +14,7 @@ import (
 
 var (
 	//host *string = flag.String("c", "blockchain.info:8333", "Connect to specified host")
-	host *string = flag.String("c", "127.0.0.1:18333", "Connect to specified host")
+	host *string = flag.String("c", "192.168.2.85:18333", "Connect to specified host")
 	listen *bool = flag.Bool("l", false, "Listen insted of connecting")
 	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", true, "Use Testnet")
@@ -39,14 +39,13 @@ func init_blockchain() {
 	if *testnet { // testnet3
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
-		wierddb.BlocksFilename = "c:\\testnet.bin"
+		leveldb.Testnet = true
 	} else {
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
-	BlockChain = btc.NewChain(GenesisBlock)
-	BlockChain.Rescan()
+	BlockChain = btc.NewChain(GenesisBlock, true)
 }
 
 

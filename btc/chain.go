@@ -230,8 +230,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	
 	prevblk.addChild(cur)
 	
-	ch.Db.StartTransaction()
-	
 	// Add this block to the block index
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
 
@@ -261,10 +259,8 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 	if e == nil {
 		ch.Db.BlockAdd(cur.Height, bl)
-		ch.Db.CommitTransaction()
 	} else {
 		delete(ch.BlockIndex, cur.BlockHash.BIdx())
-		ch.Db.RollbackTransaction()
 	}
 	// TODO: Check proof of work
 	// TODO: Check timestamp against prev
@@ -276,7 +272,9 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 
 func (ch *Chain)Stats() (s string) {
-	return ch.Db.GetStats()
+	s = fmt.Sprintf("CHAIN: tot_blocks:%d  max_height:%d\n", len(ch.BlockIndex), ch.BlockTreeEnd.Height)
+	s += ch.Db.GetStats()
+	return
 }
 
 func (ch *Chain)GetHeight() uint32 {
