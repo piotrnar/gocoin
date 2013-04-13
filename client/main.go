@@ -18,6 +18,7 @@ var (
 	listen *bool = flag.Bool("l", false, "Listen insted of connecting")
 	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", true, "Use Testnet")
+	rescan *bool = flag.Bool("r", false, "rescan")
 
 
 	GenesisBlock *btc.Uint256
@@ -45,7 +46,7 @@ func init_blockchain() {
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
-	BlockChain = btc.NewChain(GenesisBlock, true)
+	BlockChain = btc.NewChain(GenesisBlock, *rescan)
 }
 
 
@@ -64,6 +65,7 @@ func do_userif(out chan *command) {
 
 
 func list_unspent(addr string) {
+	fmt.Println("Checking unspent coins for addr", addr)
 	a, e := btc.NewAddrFromString(addr)
 	if e != nil {
 		println(e.Error())
@@ -104,6 +106,7 @@ func main() {
 			} else {
 				switch msg.str {
 					case "i": fmt.Println(BlockChain.Stats())
+					case "q": goto exit
 				}
 			}
 		} else if msg.src=="net" {
@@ -129,5 +132,7 @@ func main() {
 			}
 		}
 	}
-
+exit:
+	println("Closing blockchain")
+	BlockChain.Close()
 }
