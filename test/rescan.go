@@ -9,6 +9,7 @@ import (
 )
 
 var testnet *bool = flag.Bool("t", true, "use testnet")
+var rescan *bool = flag.Bool("r", false, "rescan")
 
 var GenesisBlock *btc.Uint256
 
@@ -25,8 +26,9 @@ func main() {
 		addr = "19vPUYV7JE45ZP9z11RZCFcBHU1KXpUcNv"
 	}
 
-	chain := btc.NewChain(GenesisBlock, true)
+	chain := btc.NewChain(GenesisBlock, *rescan)
 	println(chain.Stats())
+	chain.Db.ListUnspent()
 
 	a, e := btc.NewAddrFromString(addr)
 	if e != nil {
