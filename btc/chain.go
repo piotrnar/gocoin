@@ -282,6 +282,11 @@ func (ch *Chain)GetHeight() uint32 {
 }
 
 
+func (ch *Chain)Close() {
+	ch.Db.Close()
+}
+
+
 func (ch *Chain)rescan() {
 	var bl *Block
 	println("Rescanning blocks...")

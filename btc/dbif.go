@@ -7,8 +7,8 @@ type BtcDB interface {
 	UnspentDel(out *TxPrevOut) (error)
 
 	UnwindDel(height uint32) (error)
-	UnwindAdd(height uint32, added int, po *TxPrevOut, rec *TxOut) (error)
-	UnwindNow(height uint32) (error)
+	UnwindNewRecord(height uint32, added bool, po *TxPrevOut, rec *TxOut) (error)
+	UnwindBlock(height uint32) (error)
 	GetStats() (string)
 
 	BlockAdd(height uint32, bl *Block) (error)
@@ -19,7 +19,6 @@ type BtcDB interface {
 	Close()
 
 	GetUnspentFromPkScr(scr []byte) (res []OneUnspentTx)
-	ListUnspent()
 }
 
 var NewDb func() BtcDB

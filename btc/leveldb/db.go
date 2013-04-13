@@ -13,22 +13,20 @@ import (
 
 var Testnet bool
 
+var dirname string
 
 type BtcDB struct {
+
 	blockfile *os.File
 
-	blidx *storage.FileStorage
-	blidxdb *leveldb.DB
-
-	mapUnspent map[[poutIdxLen]byte] *oneUnspent
-	mapUnwind map[uint32] *oneUnwindSet
+	blockstorage *storage.FileStorage
+	blockdbase *leveldb.DB
 }
 
 func NewDb() btc.BtcDB {
 	var e error
 	var db BtcDB
 
-	var dirname string
 	if Testnet {
 		dirname = "testnet"
 	} else {
@@ -36,12 +34,12 @@ func NewDb() btc.BtcDB {
 	}
 	dirname = os.Getenv("HOME")+"/"+dirname
 	
-	db.blidx, e = storage.OpenFile(dirname+"/blockindex")
+	db.blockstorage, e = storage.OpenFile(dirname+"/blockindex")
 	if e != nil {
 		panic(e.Error())
 	}
 
-	db.blidxdb, e = leveldb.Open(db.blidx, &opt.Options{Flag: opt.OFCreateIfMissing})
+	db.blockdbase, e = leveldb.Open(db.blockstorage, &opt.Options{Flag: opt.OFCreateIfMissing})
 	if e != nil {
 		panic(e.Error())
 	}
@@ -51,23 +49,24 @@ func NewDb() btc.BtcDB {
 		panic(e.Error())
 	}
 
-	db.mapUnspent = make(map[[poutIdxLen]byte] *oneUnspent, 1000000)
-	db.mapUnwind = make(map[uint32] *oneUnwindSet, 144)
+	unspentOpen()
 
 	return &db
 }
 
 
 func (db BtcDB) GetStats() (s string) {
+	cnt := uint64(0)
 	sum := uint64(0)
-	for _, v := range db.mapUnspent {
-		sum += v.out.Value*uint64(v.cnt)
+	it := unspentdbase.NewIterator(&opt.ReadOptions{})
+	for it.Next() {
+		v := it.Value()
+		for i:=0; i<8; i++ {
+			sum += uint64(v[i])<<(uint(i)*8)
+		}
+		cnt++
 	}
-	s += fmt.Sprintf("UNSPENT : tx_cnt=%d  tot_btc:%.8f\n", 
-		len(db.mapUnspent), float64(sum)/1e8)
-	
-	s += fmt.Sprintf("UNWIND : blk_cnt=%d\n", len(db.mapUnwind))
-	return
+	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs\n", float64(sum)/1e8, cnt)
 }
 
 
@@ -99,19 +98,21 @@ func (db BtcDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		record[8+i] = byte(uint64(pos)>>(i*8))
 	}
 	copy(record[4+4+8:], bl.GetParent().Hash[:])
-	db.blidxdb.Put(bl.Hash.Hash[:], record[:], &opt.WriteOptions{})
+	db.blockdbase.Put(bl.Hash.Hash[:], record[:], &opt.WriteOptions{})
 	return
 }
 
 func (db BtcDB) Close() {
-	db.blidxdb.Close()
-	db.blidx.Close()
+	unspentClose()
+	db.blockdbase.Close()
+	db.blockdbase.Close()
+	db.blockstorage.Close()
 }
 
 
 func (db BtcDB) BlockGet(hash *btc.Uint256) (bl []byte, e error) {
 	var record []byte
-	record, e = db.blidxdb.Get(hash.Hash[:], &opt.ReadOptions{})
+	record, e = db.blockdbase.Get(hash.Hash[:], &opt.ReadOptions{})
 	if e != nil {
 		panic(e.Error())
 	}
@@ -135,7 +136,7 @@ func (db BtcDB) BlockGet(hash *btc.Uint256) (bl []byte, e error) {
 
 func (db BtcDB) LoadBlockIndex(ch *btc.Chain, walk func(ch *btc.Chain, hash, prev []byte, height uint32)) (e error) {
 	var i, h uint32
-	iter := db.blidxdb.NewIterator(&opt.ReadOptions{})
+	iter := db.blockdbase.NewIterator(&opt.ReadOptions{})
 	for iter.Next() {
 		key := iter.Key()
 		val := iter.Value()
