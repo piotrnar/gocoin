@@ -2,9 +2,8 @@ package leveldb
 
 import (
 	"os"
-//	"errors"
 	"fmt"
-//	"encoding/hex"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -58,15 +57,34 @@ func NewDb() btc.BtcDB {
 func (db BtcDB) GetStats() (s string) {
 	cnt := uint64(0)
 	sum := uint64(0)
+	println("scanning unspent...")
 	it := unspentdbase.NewIterator(&opt.ReadOptions{})
 	for it.Next() {
 		v := it.Value()
-		for i:=0; i<8; i++ {
-			sum += uint64(v[i])<<(uint(i)*8)
+		sum += binary.LittleEndian.Uint64(v[1:9]) * uint64(v[0])
+		cnt++
+	}
+	s += fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs\n", float64(sum)/1e8, cnt)
+	
+	println("scanning unwind...")
+	cnt, sum = 0, 0
+	it = unwinddbase.NewIterator(&opt.ReadOptions{})
+	minh := uint32(0xffffffff)
+	var maxh uint32
+	for it.Next() {
+		k := it.Key()
+		h := binary.BigEndian.Uint32(k[0:4])
+		sum += uint64(len(it.Value()))
+		if h>maxh {
+			maxh = h
+		}
+		if h<minh {
+			minh = h
 		}
 		cnt++
 	}
-	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs\n", float64(sum)/1e8, cnt)
+	s += fmt.Sprintf("UNWIND: tx_cnt=%d  size=%dKB  blocks=%d..%d\n", cnt, sum>>10, minh, maxh)
+	return
 }
 
 

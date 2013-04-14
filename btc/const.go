@@ -8,6 +8,6 @@ const(
 	BlockMapInitLen = 300e3
 	UnspentTxsMapInitLen = 4e6
 	
-	UnwindBufferMaxHistory = 24*6  // Let's give it about one day
+	UnwindBufferMaxHistory = 7*24*6  // Let's give it about one week
 )
 

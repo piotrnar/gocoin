@@ -74,7 +74,7 @@ func list_unspent(addr string) {
 	unsp := BlockChain.GetUnspentFromPkScr(a.OutScript())
 	var sum uint64
 	for i := range unsp {
-		fmt.Println(unsp[i].String())
+		fmt.Println(unsp[i].Output.String())
 		sum += unsp[i].Value
 	}
 	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a.Enc58str);

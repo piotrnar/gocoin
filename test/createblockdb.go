@@ -10,7 +10,7 @@ import (
 	"flag"
 )
 
-var testnet *bool = flag.Bool("t", true, "use testnet")
+var testnet *bool = flag.Bool("t", false, "use testnet")
 
 var GenesisBlock *btc.Uint256
 var Magic [4]byte
