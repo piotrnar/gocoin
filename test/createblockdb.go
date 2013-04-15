@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 	"fmt"
+	"github.com/piotrnar/gocoin/blockdb"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/btc/leveldb"
-	"github.com/piotrnar/gocoin/btc/blockdb"
 	"time"
 	"flag"
 )
@@ -96,6 +96,9 @@ func main() {
 			fmt.Printf("%.3fs, read %d blocks containing %dMB of data...\n", 
 				float64(stop-start)/1e9, blkcnt, totbytes>>20)
 		}
+		/*if nod.Height==177778 {
+			break
+		}*/
 	}
 	db.Close()
 	stop := time.Now().UnixNano()
