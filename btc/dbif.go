@@ -22,8 +22,9 @@ type BtcDB interface {
 	// Call this one before rescanning
 	UnspentPurge()
 
-	CommitBlockTxs(*BlockChanges) error
-	UndoBlockTransactions(uint32) error
+	CommitBlockTxs(*BlockChanges, []byte) error
+	UndoBlockTransactions(uint32, []byte) error
+	GetLastBlockHash() []byte
 	
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
 

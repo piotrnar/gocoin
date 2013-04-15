@@ -115,14 +115,16 @@ func (bl *Block)CheckBlock() (er error) {
 	// TODO: Build the merkle tree already
     
     
-	// Check for duplicate txids. This is caught by ConnectInputs(),
-	uniqueTx := make(map[[32]byte]bool, txcnt)
-	for i:=1; i<txcnt; i++ {
-		_, present := uniqueTx[bl.Txs[i].Hash.Hash]
-		if present {
-			return errors.New("CheckBlock() : duplicate transaction")
+	if slowMode {
+		// Check for duplicate txids. This is caught by ConnectInputs(),
+		uniqueTx := make(map[[32]byte]bool, txcnt)
+		for i:=1; i<txcnt; i++ {
+			_, present := uniqueTx[bl.Txs[i].Hash.Hash]
+			if present {
+				return errors.New("CheckBlock() : duplicate transaction")
+			}
+			uniqueTx[bl.Txs[i].Hash.Hash] = true
 		}
-		uniqueTx[bl.Txs[i].Hash.Hash] = true
 	}
 
 	//TODO: check out-of-bounds SigOpCount

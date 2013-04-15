@@ -61,7 +61,7 @@ func (db BtcDB) GetStats() (s string) {
 	it := unspentdbase.NewIterator(&opt.ReadOptions{})
 	for it.Next() {
 		v := it.Value()
-		sum += binary.LittleEndian.Uint64(v[1:9]) * uint64(v[0])
+		sum += binary.LittleEndian.Uint64(v[0:8])
 		cnt++
 	}
 	s += fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs\n", float64(sum)/1e8, cnt)
@@ -73,7 +73,7 @@ func (db BtcDB) GetStats() (s string) {
 	var maxh uint32
 	for it.Next() {
 		k := it.Key()
-		h := binary.BigEndian.Uint32(k[0:4])
+		h := binary.LittleEndian.Uint32(k[0:4])
 		sum += uint64(len(it.Value()))
 		if h>maxh {
 			maxh = h

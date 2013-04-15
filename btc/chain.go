@@ -36,8 +36,13 @@ func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
 	ch.Db = NewDb()
-	if ch.loadBlockIndex() || rescan {
+	ch.loadBlockIndex() 
+	if rescan {
 		ch.rescan()
+	} else {
+		fmt.Printf("Current top is %d and it has %d children\n", 
+			ch.BlockTreeEnd.Height, len(ch.BlockTreeEnd.childs))
+		ch.ParseTillTheEnd(1)
 	}
 	return 
 }
@@ -117,8 +122,8 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (error) {
 					t[inp.Vout] = nil // and now mark it as spent:
 					//println("TxInput from the current block", inp.String())
 				}
-				// Verify Transaction script:
 				
+				// Verify Transaction script:
 				if !VerifyTxScript(bl.Txs[i].TxIn[j].ScriptSig, tout) {
 					fmt.Printf("Transaction signature error in block %d!\n", changes.Height)
 					os.Exit(1)
@@ -203,7 +208,6 @@ func (n *BlockTreeNode)FindLongestChild() (res *BlockTreeNode) {
 }
 
 func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
-	panic("MoveToBranch not implemented")
 	fmt.Printf("Moving branches %d -> %d\n", ch.BlockTreeEnd.Height, cur.Height)
 
 	old := ch.BlockTreeEnd
@@ -213,7 +217,7 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 	}
 	
 	for old!=cur {
-		ch.Db.UndoBlockTransactions(old.Height)
+		ch.Db.UndoBlockTransactions(old.Height, cur.parent.BlockHash.Hash[:])
 		
 		fmt.Printf("->orph block %s @ %d\n", old.BlockHash.String(), old.Height)
 		old = old.parent
@@ -221,12 +225,19 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 	}
 	
 	fmt.Printf("Found common node @ %d\n", cur.Height)
-	for  {
+
+	return ch.ParseTillTheEnd(0)
+}
+
+
+func (ch *Chain) ParseTillTheEnd(limit uint32) (error) {
+	cur := ch.BlockTreeEnd
+	for {
 		cur = cur.FindLongestChild()
 		if cur == nil {
 			break
 		}
-		fmt.Printf(" + new %d ... \n", cur.Height)
+		//fmt.Printf(" + new %d ... \n", cur.Height)
 		
 		b, er := ch.Db.BlockGet(cur.BlockHash)
 		if er != nil {
@@ -238,20 +249,27 @@ func (ch *Chain)MoveToBranch(cur *BlockTreeNode) (error) {
 			return er
 		}
 
-		fmt.Println("  ... Got block ", bl.Hash.String())
+		//fmt.Println("  ... Got block ", bl.Hash.String())
 		bl.BuildTxList()
 
 		changes, er := ch.ProcessBlockTransactions(bl, cur.Height)
 		if er != nil {
 			return er
 		}
-		ch.Db.CommitBlockTxs(changes)
-		fmt.Printf("  ... %d new txs commited\n", len(bl.Txs))
+		ch.Db.CommitBlockTxs(changes, bl.Hash.Hash[:])
+		//fmt.Printf("  ... %d new txs commited\n", len(bl.Txs))
 
 		ch.BlockTreeEnd = cur
+		
+		if limit==1 {
+			break
+		} else if limit>0 {
+			limit--
+		}
 	}
 	return nil
 }
+
 
 
 func (n *BlockTreeNode)addChild(c *BlockTreeNode) {
@@ -296,7 +314,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 			fmt.Println("parent:", bl.GetParent().String())
 			ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 		} else {
-			ch.Db.CommitBlockTxs(changes)
+			ch.Db.CommitBlockTxs(changes, bl.Hash.Hash[:])
 		}
 	} else {
 		if don(DBG_BLOCKS|DBG_ORPHAS) {
@@ -304,6 +322,9 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		}
 		if cur.Height > ch.BlockTreeEnd.Height {
 			e = ch.MoveToBranch(cur)
+			if e != nil {
+				panic("ch.MoveToBranch failed: "+e.Error())
+			}
 			/*return errors.New(fmt.Sprintf("The different branch is longer now %d/%d!\n",
 				cur.Height, ch.BlockTreeEnd.Height))*/
 		}
@@ -354,7 +375,7 @@ func (ch *Chain)rescan() {
 			println(cur.Height, "Rollback", n, "blocks")
 			for n>0 && cur.parent!=nil {
 				cur = cur.parent
-				ch.Db.UndoBlockTransactions(cur.Height)
+				ch.Db.UndoBlockTransactions(cur.Height, cur.parent.BlockHash.Hash[:])
 				n--
 			}
 		}
@@ -395,12 +416,15 @@ func (ch *Chain)rescan() {
 			panic(e.Error())
 		}
 
-		//ch.Db.StartTransaction()
-		changes, e := ch.ProcessBlockTransactions(bl, cur.Height)
-		if e != nil {
-			panic(e.Error())
+		//fmt.Println(bl.Hash.String())
+		
+		if false {
+			changes, e := ch.ProcessBlockTransactions(bl, cur.Height)
+			if e != nil {
+				panic(e.Error())
+			}
+			ch.Db.CommitBlockTxs(changes, bl.Hash.Hash[:])
 		}
-		ch.Db.CommitBlockTxs(changes)
 
 		cur = nxt
 	}
@@ -427,16 +451,20 @@ func nextBlock(ch *Chain, hash, prev []byte, height uint32) {
 }
 
 
-func (ch *Chain)loadBlockIndex() bool {
+func (ch *Chain)loadBlockIndex() {
 	ch.BlockIndex = make(map[[blockMapLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
 	ch.BlockIndex[NewBlockIndex(ch.Genesis.Hash[:])] = ch.BlockTreeRoot
-	ch.BlockTreeEnd = nil
-	println("Loading Index...", len(ch.BlockIndex))
+	tlb := ch.Db.GetLastBlockHash()
+	if tlb == nil {
+		println("no last block")
+		ch.BlockTreeEnd = ch.BlockTreeRoot
+		return
+	}
+	println("Loading Index", len(ch.BlockIndex))
 	ch.Db.LoadBlockIndex(ch, nextBlock)
 	println("Building block tree", len(ch.BlockIndex))
-	var mh, mhcnt uint32
 	for _, v := range ch.BlockIndex {
 		if v==ch.BlockTreeRoot {
 			println(" - skip root block (should be only one)")
@@ -448,17 +476,14 @@ func (ch *Chain)loadBlockIndex() bool {
 		}
 		v.parent = par
 		v.parent.addChild(v)
-		v.parenHash = nil
-		if v.Height>mh {
-			mh = v.Height
-			mhcnt = 0
-			ch.BlockTreeEnd = v
-		} else if v.Height==mh {
-			mhcnt++
-		}
+		v.parenHash = nil // we wont need this anymore
 	}
-	println("Done", len(ch.BlockIndex), mh, mhcnt)
-	return mhcnt>0
+	var ok bool
+	ch.BlockTreeEnd, ok = ch.BlockIndex[NewUint256(tlb).BIdx()]
+	if !ok {
+		panic("Last Block Hash not found")
+	}
+	println("Done", len(ch.BlockIndex), ch.BlockTreeEnd.Height)
 }
 
 

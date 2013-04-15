@@ -6,6 +6,9 @@ import (
 	"bytes"
 )
 
+var slowMode bool
+
+
 type TxPrevOut struct {
 	Hash [32]byte
 	Vout uint32
@@ -110,26 +113,28 @@ func (tx *Tx) CheckTransaction() error {
 		return errors.New("CheckTransaction() : size limits failed")
 	}
 	
-	// Check for negative or overflow output values
-	var nValueOut uint64
-	for i := range tx.TxOut {
-		if (tx.TxOut[i].Value > MAX_MONEY) {
-			return errors.New("CheckTransaction() : txout.nValue too high")
+	if slowMode {
+		// Check for negative or overflow output values
+		var nValueOut uint64
+		for i := range tx.TxOut {
+			if (tx.TxOut[i].Value > MAX_MONEY) {
+				return errors.New("CheckTransaction() : txout.nValue too high")
+			}
+			nValueOut += tx.TxOut[i].Value
+			if (nValueOut > MAX_MONEY) {
+				return errors.New("CheckTransaction() : txout total out of range")
+			}
 		}
-		nValueOut += tx.TxOut[i].Value
-		if (nValueOut > MAX_MONEY) {
-			return errors.New("CheckTransaction() : txout total out of range")
-		}
-	}
 
-	// Check for duplicate inputs
-	vInOutPoints := make(map[TxPrevOut]bool, len(tx.TxIn))
-	for i := range tx.TxIn {
-		_, present := vInOutPoints[tx.TxIn[i].Input]
-		if present {
-			return errors.New("CheckTransaction() : duplicate inputs")
+		// Check for duplicate inputs
+		vInOutPoints := make(map[TxPrevOut]bool, len(tx.TxIn))
+		for i := range tx.TxIn {
+			_, present := vInOutPoints[tx.TxIn[i].Input]
+			if present {
+				return errors.New("CheckTransaction() : duplicate inputs")
+			}
+			vInOutPoints[tx.TxIn[i].Input] = true
 		}
-		vInOutPoints[tx.TxIn[i].Input] = true
 	}
 
 	if tx.IsCoinBase() {
@@ -213,6 +218,7 @@ func NewTx(rd *bytes.Reader) (res *Tx, e error) {
 	res = &tx
 	return
 }
+
 
 func NewTxIn(rd *bytes.Reader) (res *TxIn, e error) {
 	var txin TxIn
