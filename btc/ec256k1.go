@@ -1,21 +1,9 @@
 package btc
 
-// Copyright 2010 The Go Authors. All rights reserved.
-// Copyright 2011 ThePiachu. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// This source code is taken from: https://github.com/ThePiachu/GoBit
-
-// Package bitelliptic implements several Koblitz elliptic curves over prime
-// fields.
-
-// This package operates, internally, on Jacobian coordinates. For a given
-// (x, y) position on the curve, the Jacobian coordinates are (x1, y1, z1)
-// where x = x1/z1² and y = y1/z1³. The greatest speedups come when the whole
-// calculation can be performed within the transform (as in ScalarMult and
-// ScalarBaseMult). But even for Add and Double, it's faster to apply and
-// reverse the transform than to operate in affine coordinates.
+/*
+ Thanks @ThePiachu
+ https://github.com/ThePiachu/GoBit
+*/
 
 import (
 	"crypto/elliptic"

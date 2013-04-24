@@ -1,5 +1,7 @@
 package btc
 
+import "runtime"
+
 const(
 	MAX_BLOCK_SIZE = 1000000
 	COIN = 1e8
@@ -7,7 +9,12 @@ const(
 
 	BlockMapInitLen = 300e3
 	UnspentTxsMapInitLen = 4e6
-	
-	UnwindBufferMaxHistory = 7*24*6  // Let's give it about one week
 )
 
+var CpuCount int = runtime.NumCPU()
+
+const useThreads = 32
+
+var taskDone chan bool = make(chan bool, useThreads)
+
+ 

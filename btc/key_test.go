@@ -69,3 +69,38 @@ func TestPbkyues(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkKey02swap(b *testing.B) {
+	xy, _ := hex.DecodeString("02BD22E9E7AE9238EBD7937DCAF2887535B13DEB2EF9E95D5FB9225D29BDCD450F")
+	for i := 0; i < b.N; i++ {
+		NewPublicKey(xy)
+	}
+}
+
+func BenchmarkKey02nswa(b *testing.B) {
+	xy, _ := hex.DecodeString("0276232786465DE7FD05B68DB84A3C1D84AAEF2928E907D99969196383E71717A9")
+	for i := 0; i < b.N; i++ {
+		NewPublicKey(xy)
+	}
+}
+
+func BenchmarkKey03swap(b *testing.B) {
+	xy, _ := hex.DecodeString("03672E9066C6A7980359514621D1FE787CCD5B6539B67614B940929723BDF5623C")
+	for i := 0; i < b.N; i++ {
+		NewPublicKey(xy)
+	}
+}
+
+func BenchmarkKey03nswa(b *testing.B) {
+	xy, _ := hex.DecodeString("03CEB28DE33FBC5ED8B343DE5B00E68A53B73653C204D236694BE2C2DD6A959AEB")
+	for i := 0; i < b.N; i++ {
+		NewPublicKey(xy)
+	}
+}
+
+func BenchmarkKey04full(b *testing.B) {
+	xy, _ := hex.DecodeString("049F2F10A61354C2ADF5C5A9B82E2CFC4A209F8C5BA9B29B7DC8B56574105E4B80D484D98F6FD138B0DA7915B6E343D1E67DFA4A96FE4AD1B6AC52E0DAD3C01E66")
+	for i := 0; i < b.N; i++ {
+		NewPublicKey(xy)
+	}
+}

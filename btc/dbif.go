@@ -1,5 +1,6 @@
 package btc
 
+import "fmt"
 
 // Returned by GetUnspentFromPkScr
 type OneUnspentTx struct {
@@ -7,35 +8,28 @@ type OneUnspentTx struct {
 	Value uint64
 }
 
-type OneAddedTx struct {
-	Tx_Adr *TxPrevOut  // This is the unspent input address (hash-vout)
-	Val_Pk *TxOut      // This is the amount and the Pk_script
+func (ou *OneUnspentTx) String() string {
+	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.Output.String()
 }
 
 type BlockChanges struct {
 	Height uint32
-	AddedTxs [] *OneAddedTx
-	DeledTxs [] *OneAddedTx
+	AddedTxs map[TxPrevOut] *TxOut
+	DeledTxs map[TxPrevOut] *TxOut
 }
 
-type BtcDB interface {
-	// Call this one before rescanning
-	UnspentPurge()
-
+type UnspentDB interface {
 	CommitBlockTxs(*BlockChanges, []byte) error
 	UndoBlockTransactions(uint32, []byte) error
 	GetLastBlockHash() []byte
 	
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
+	//GetAllUnspent(addr *BtcAddr) []OneUnspentTx
 
-	BlockAdd(height uint32, bl *Block) (error)
-	BlockGet(hash *Uint256) ([]byte, error)
-	LoadBlockIndex(*Chain, func(*Chain, []byte, []byte, uint32)) (error)
-
-	GetStats() (string)
+	Save()
 	Close()
-
-	GetUnspentFromPkScr(scr []byte) (res []OneUnspentTx)
+	Sync()
+	GetStats() (string)
 }
 
-var NewDb func() BtcDB
+var NewUnspentDb func(string, bool) UnspentDB

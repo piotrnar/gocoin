@@ -81,6 +81,14 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 }
 
 
+func (a *BtcAddr) Owns(scr []byte) bool {
+	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==20 && scr[23]==0x88 && scr[24]==0xac {
+		return bytes.Equal(scr[3:23], a.Hash160[:])
+	}
+	return false
+}
+
+
 func (a *BtcAddr) OutScript() (res []byte) {
 	res = make([]byte, 25)
 	res[0] = 0x76

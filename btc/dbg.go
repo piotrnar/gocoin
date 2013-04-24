@@ -6,6 +6,7 @@ const (
 	DBG_BLOCKS = 1<<2
 	DBG_ORPHAS = 1<<3
 	DBG_TX = 1<<4
+	DBG_SCRIPT = 1<<5
 )
 
 var dbgmask uint32 = DBG_ORPHAS

@@ -3,7 +3,11 @@ package btc
 import (
 	"fmt"
 	"bytes"
+	"crypto/sha256"
+    "math/big"
 )
+
+const Uint256IdxLen = 6  // The bigger it is, the more memory is needed, but lower chance of a collision
 
 type Uint256 struct {
 	Hash [32]byte
@@ -54,6 +58,27 @@ func (u *Uint256) Equal(o *Uint256) bool {
 	return bytes.Equal(u.Hash[:], o.Hash[:])
 }
 
-func (u *Uint256) BIdx() [blockMapLen]byte {
+func (u *Uint256) BIdx() [Uint256IdxLen]byte {
 	return NewBlockIndex(u.Hash[:])
 }
+
+func (u *Uint256) BigInt() *big.Int {
+	var buf [32]byte
+	for i := range buf {
+		buf[i] = u.Hash[31-i]
+	}
+	return new(big.Int).SetBytes(buf[:])
+}
+
+
+func Sha2Sum(b []byte) (out [32]byte) {
+	s := sha256.New()
+	s.Write(b[:])
+	tmp := s.Sum(nil)
+	s.Reset()
+	s.Write(tmp)
+	copy(out[:], s.Sum(nil))
+	return
+}
+
+

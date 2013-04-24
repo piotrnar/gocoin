@@ -2,9 +2,21 @@ package btc
 
 import (
 	"fmt"
-	"errors"
 	"bytes"
+	"errors"
+//	"encoding/hex"
+	"encoding/binary"
+	"crypto/sha256"
 )
+
+const (
+	SIGHASH_ALL = 1
+	SIGHASH_NONE = 2
+	SIGHASH_SINGLE = 3
+	SIGHASH_ANYONECANPAY = 0x80
+)
+
+
 
 var slowMode bool
 
@@ -18,6 +30,7 @@ type TxIn struct {
 	Input TxPrevOut
 	ScriptSig []byte
 	Sequence uint32
+	//PrvOut *TxOut  // this field is used only during verification
 }
 
 type TxOut struct {
@@ -43,37 +56,128 @@ type AddrValue struct {
 }
 
 
-func (t *Tx) Unsigned() (res []byte) {
-	var buf [0x10000]byte
-	var off uint32
+func (t *Tx) Serialize() ([]byte) {
+	var buf [9]byte
+	wr := new(bytes.Buffer)
 	
-	off += put32lsb(buf[:4], t.Version)
+	// Version
+	binary.Write(wr, binary.LittleEndian, t.Version)
 	
-	off += putVlen(buf[off:], len(t.TxIn))
+	//TxIns
+	wr.Write(buf[:putVlen(buf[:], len(t.TxIn))])
 	for i := range t.TxIn {
-		copy(buf[off:off+32], t.TxIn[i].Input.Hash[:])
-		off += 32
-		off += put32lsb(buf[off:], t.TxIn[i].Input.Vout)
-		
-		//off += putVlen(buf[off:], 0) // no subScript in Unsiged
-		panic("TODO: here you need to put output script from the tx which you are spending")
-		
-		off += put32lsb(buf[off:], t.TxIn[i].Sequence)
+		wr.Write(t.TxIn[i].Input.Hash[:])
+		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Input.Vout)
+		wr.Write(buf[:putVlen(buf[:], len(t.TxIn[i].ScriptSig))])
+		wr.Write(t.TxIn[i].ScriptSig[:])
+		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Sequence)
 	}
-
-	off += putVlen(buf[off:], len(t.TxOut))
+	
+	//TxOuts
+	wr.Write(buf[:putVlen(buf[:], len(t.TxOut))])
 	for i := range t.TxOut {
-		off += put64lsb(buf[off:], t.TxOut[i].Value)
-		off += putVlen(buf[off:], len(t.TxOut[i].Pk_script))
-		copy(buf[off:], t.TxOut[i].Pk_script[:])
-		off += uint32(len(t.TxOut[i].Pk_script))
+		binary.Write(wr, binary.LittleEndian, t.TxOut[i].Value)
+		wr.Write(buf[:putVlen(buf[:], len(t.TxOut[i].Pk_script))])
+		wr.Write(t.TxOut[i].Pk_script[:])
 	}
 
-	off += put32lsb(buf[off:], t.Lock_time)
+	//Lock_time
+	binary.Write(wr, binary.LittleEndian, t.Lock_time)
 
-	res = make([]byte, off)
-	copy(res[:], buf[:off])
-	return
+	/* // Verify if we did it right:
+	h := Sha2Sum(wr.Bytes()[:])
+	if bytes.Equal(h[:], t.Hash.Hash[:]) {
+		println("Serialize - tx OK")
+	} else {
+		println("Serialize - hash mismatch\007")
+	}
+	*/
+
+	return wr.Bytes()
+}
+
+
+func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
+	var buf [9]byte
+
+	ht := hashType&0x1f
+	
+	sha := sha256.New()
+	
+	binary.LittleEndian.PutUint32(buf[:4], t.Version)
+	sha.Write(buf[:4])
+	
+	if (hashType&SIGHASH_ANYONECANPAY)!=0 {
+		sha.Write([]byte{1}) // only 1 input
+		// The one input:
+		sha.Write(t.TxIn[nIn].Input.Hash[:])
+		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Input.Vout)
+		sha.Write(buf[:4])
+		sha.Write(buf[:putVlen(buf[:], len(scriptCode))])
+		sha.Write(scriptCode[:])
+		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Sequence)
+		sha.Write(buf[:4])
+	} else {
+		sha.Write(buf[:putVlen(buf[:], len(t.TxIn))])
+		for i := range t.TxIn {
+			sha.Write(t.TxIn[i].Input.Hash[:])
+			binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Input.Vout)
+			sha.Write(buf[:4])
+			
+			if i==nIn {
+				sha.Write(buf[:putVlen(buf[:], len(scriptCode))])
+				sha.Write(scriptCode[:])
+			} else {
+				sha.Write([]byte{0})
+			}
+			
+			if (ht==SIGHASH_NONE || ht==SIGHASH_SINGLE) && i!=nIn {
+				sha.Write([]byte{0,0,0,0})
+			} else {
+				binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Sequence)
+				sha.Write(buf[:4])
+			}
+		}
+	}
+
+	if ht==SIGHASH_NONE {
+		//println("SIGHASH_NONE...")
+		sha.Write([]byte{0})
+	} else if ht==SIGHASH_SINGLE {
+		//println("SIGHASH_SINGLE...")
+		nOut := nIn
+		if nOut >= len(t.TxOut) {
+			fmt.Printf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
+			return nil
+		}
+		
+		sha.Write(buf[:putVlen(buf[:], nOut+1)])
+		for i:=0; i < nOut; i++ {
+			sha.Write([]byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0})
+		}
+		binary.LittleEndian.PutUint64(buf[:8], t.TxOut[nOut].Value)
+		sha.Write(buf[:8])
+		sha.Write(buf[:putVlen(buf[:], len(t.TxOut[nOut].Pk_script))])
+		sha.Write(t.TxOut[nOut].Pk_script[:])
+	} else {
+		sha.Write(buf[:putVlen(buf[:], len(t.TxOut))])
+		for i := range t.TxOut {
+			binary.LittleEndian.PutUint64(buf[:8], t.TxOut[i].Value)
+			sha.Write(buf[:8])
+			
+			sha.Write(buf[:putVlen(buf[:], len(t.TxOut[i].Pk_script))])
+			
+			sha.Write(t.TxOut[i].Pk_script[:])
+		}
+	}
+
+	binary.LittleEndian.PutUint32(buf[:4], t.Lock_time)
+	sha.Write(buf[:4])
+	sha.Write([]byte{hashType,0,0,0})
+	tmp := sha.Sum(nil)
+	sha.Reset()
+	sha.Write(tmp)
+	return sha.Sum(nil)
 }
 
 
@@ -154,104 +258,80 @@ func (tx *Tx) CheckTransaction() error {
 }
 
 
-func NewTxOut(rd *bytes.Reader) (res *TxOut, e error) {
-	var le uint64
-	var txout TxOut
+func NewTxOutB(b []byte) (txout *TxOut, offs int) {
+	var le, n int
 	
-	txout.Value, e = ReadUint64(rd)
-	if e != nil {
-		return
-	}
+	txout = new(TxOut)
 	
-	le, e = ReadVLen64(rd)
-	if e != nil {
-		return
-	}
+	txout.Value = binary.LittleEndian.Uint64(b[0:8])
+	offs = 8
+	
+	le, n = VLen(b[offs:])
+	offs+= n
+
 	txout.Pk_script = make([]byte, le)
-	_, e = rd.Read(txout.Pk_script[:])
-	if e != nil {
-		return
-	}
+	copy(txout.Pk_script[:], b[offs:offs+le])
+	offs += le
 	
-	res = &txout
 	return
 }
 
 
-func NewTx(rd *bytes.Reader) (res *Tx, e error) {
-	var tx Tx
-	var le uint64
+func NewTxInB(b []byte) (txin *TxIn, offs int) {
+	var le, n int
 	
-	tx.Version, e = ReadUint32(rd)
-	if e != nil {
-		return
-	}
-
-	// TxOut
-	le, e = ReadVLen64(rd)
-	if e != nil {
-		return
-	}
-	tx.TxIn = make([]*TxIn, le)
-	for i := range tx.TxIn {
-		tx.TxIn[i], e = NewTxIn(rd)
-		if e != nil {
-			return
-		}
-	}
+	txin = new(TxIn)
 	
-	// TxOut
-	le, e = ReadVLen64(rd)
-	if e != nil {
-		return
-	}
-	tx.TxOut = make([]*TxOut, le)
-	for i := range tx.TxOut {
-		tx.TxOut[i], e = NewTxOut(rd)
-		if e != nil {
-			return
-		}
-	}
+	copy(txin.Input.Hash[:], b[0:32])
+	txin.Input.Vout = binary.LittleEndian.Uint32(b[32:36])
+	offs = 36
 	
-	tx.Lock_time, e = ReadUint32(rd)
-
-	res = &tx
-	return
-}
-
-
-func NewTxIn(rd *bytes.Reader) (res *TxIn, e error) {
-	var txin TxIn
-	var le uint64
+	le, n = VLen(b[offs:])
+	offs+= n
 	
-	_, e = rd.Read(txin.Input.Hash[:])
-	if e != nil {
-		return
-	}
-	
-	txin.Input.Vout, e = ReadUint32(rd)
-	if e != nil {
-		return
-	}
-	
-	le, e = ReadVLen64(rd)
-	if e != nil {
-		return
-	}
 	txin.ScriptSig = make([]byte, le)
-	_, e = rd.Read(txin.ScriptSig[:])
-	if e != nil {
-		return
-	}
+	copy(txin.ScriptSig[:], b[offs:offs+le])
+	offs+= le
 	
 	// Sequence
-	txin.Sequence, e = ReadUint32(rd)
-	if e==nil {
-		res = &txin
-	}
+	txin.Sequence = binary.LittleEndian.Uint32(b[offs:offs+4])
+	offs += 4
 
 	return 
 }
+
+func NewTxB(b []byte) (tx *Tx, offs int) {
+	var le, n int
+	
+	tx = new(Tx)
+	
+	tx.Version = binary.LittleEndian.Uint32(b[0:4])
+	offs = 4
+	
+	// TxIn
+	le, n = VLen(b[offs:])
+	offs += n
+	tx.TxIn = make([]*TxIn, le)
+	for i := range tx.TxIn {
+		tx.TxIn[i], n = NewTxInB(b[offs:])
+		offs += n
+	}
+	
+	// TxOut
+	le, n = VLen(b[offs:])
+	offs += n
+	tx.TxOut = make([]*TxOut, le)
+	for i := range tx.TxOut {
+		tx.TxOut[i], n = NewTxOutB(b[offs:])
+		offs += n
+	}
+
+	tx.Lock_time = binary.LittleEndian.Uint32(b[offs:offs+4])
+	offs += 4
+
+	return
+}
+
 
 func (txin *TxIn) GetKeyAndSig() (sig *Signature, key *PublicKey, e error) {
 	sig, e = NewSignature(txin.ScriptSig[1:1+txin.ScriptSig[0]])

@@ -6,15 +6,21 @@ import (
 	"bytes"
 	"math/big"
 	"crypto/ecdsa"
+	"encoding/hex"
 )
 
 type PublicKey struct {
 	ecdsa.PublicKey
 }
 
+
+/*
+ Thanks @Zeilap
+ https://bitcointalk.org/index.php?topic=171314.msg1781562#msg1781562
+*/
 func decompressPoint(off bool, x *big.Int)  (y *big.Int) {
-	x2 := new(big.Int).Mul(x, x)
-	x3 := new(big.Int).Mul(x2, x)
+	x3 := new(big.Int).Mul(x, x) //x^2
+	x3.Mul(x3, x)                //x^3
 
 	y2 := new(big.Int).Add(x3, secp256k1.B)
 
@@ -39,35 +45,35 @@ or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 
 */
 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
-	//fmt.Println("Het Pub Key:", hex.EncodeToString(buf[:]))
-	if len(buf)==65 && buf[0]==4 {
-		res = new(PublicKey)
-		res.Curve = S256()
-		res.X = new(big.Int).SetBytes(buf[1:33])
-		res.Y = new(big.Int).SetBytes(buf[33:65])
-		return
+	switch len(buf) {
+		case 65: 
+			/*if buf[0]==4*/ {
+				res = new(PublicKey)
+				res.Curve = S256()
+				res.X = new(big.Int).SetBytes(buf[1:33])
+				res.Y = new(big.Int).SetBytes(buf[33:65])
+				return
+			}
+		case 33:
+			/*if buf[0]==2 || buf[0]==3*/ {
+				res = new(PublicKey)
+				res.Curve = S256()
+				res.X = new(big.Int).SetBytes(buf[1:33])
+				res.Y = decompressPoint(buf[0]==3, res.X);
+				return
+			}
 	}
-	if len(buf)==33 && (buf[0]==2 || buf[0]==3) {
-		//println("Warning: comperssed public key")
-		res = new(PublicKey)
-		res.Curve = S256()
-		res.X = new(big.Int).SetBytes(buf[1:33])
-		res.Y = decompressPoint(buf[0]==3, res.X);
-		/*if buf[0]==2 {
-			res.Y = decompressPoint(false, res.X);
-		} else {
-			res.Y = decompressPoint(true, res.X);
-		}*/
-		return
-	}
-	e = errors.New("NewPublicKey: Unknown format")
+	e = errors.New("NewPublicKey: Unknown format: "+hex.EncodeToString(buf[:]))
 	return
 }
 
 
 
-func (pk *PublicKey) Verify(h *Uint256, s *Signature) bool {
-	return ecdsa.Verify(&pk.PublicKey, h.Hash[:], s.R, s.S)
+func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
+	//ChSta("Verify")
+	ok = ecdsa.Verify(&pk.PublicKey, h[:], s.R, s.S)
+	//ChSto("Verify")
+	return 
 }
 
 

@@ -3,134 +3,135 @@ package btc
 import (
 //	"os"
 	"errors"
-	"bytes"
 	"time"
+	"encoding/binary"
 )
 
 type Block struct {
 	Raw []byte
 	Hash *Uint256
 	Txs []*Tx
+	
+	Version uint32
+	Parent []byte
+	MerkleRoot []byte
+	BlockTime uint32
+	Bits uint32
+	
+	// if the block is trusted, we do not check signatures and some other things...
+	Trusted bool 
 }
 
-func (bl *Block)GetVersion() uint32 {
-	return uint32(lsb2uint(bl.Raw[:4]))
-}
-
-func (bl *Block)GetParent() (*Uint256) {
-	return NewUint256(bl.Raw[4:36])
-}
-
-func (bl *Block)GetMerkleRoot() (res []byte) {
-	return bl.Raw[36:68]
-}
-
-
-func (bl *Block)GetBlockTime() uint32 {
-	return uint32(lsb2uint(bl.Raw[68:72]))
-}
-
-func (bl *Block)GetBits() uint32 {
-	return uint32(lsb2uint(bl.Raw[72:76]))
-}
-
-func (bl *Block)GetNonce() uint32 {
-	return uint32(lsb2uint(bl.Raw[76:80]))
-}
 
 func NewBlock(data []byte) (*Block, error) {
+	ChSta("NewBlock")
 	if len(data)<81 {
+		ChSto("NewBlock")
 		return nil, errors.New("Block too short")
 	}
 	var bl Block
 	bl.Hash = NewSha2Hash(data[:80])
 	bl.Raw = data
+	bl.Version = binary.LittleEndian.Uint32(data[0:4])
+	bl.Parent = data[4:36]
+	bl.MerkleRoot = data[36:68]
+	bl.BlockTime = binary.LittleEndian.Uint32(data[68:72])
+	bl.Bits = binary.LittleEndian.Uint32(data[72:76])
+	ChSto("NewBlock")
 	return &bl, nil
 }
 
 
-func (bl *Block)BuildTxList() (e error) {
-	var txcnt uint64
-	txblock := bl.Raw[80:]
-	rd := bytes.NewReader(txblock)
-	txcnt, e = ReadVLen64(rd)
-	if e != nil {
-		return
+func calcHash(h **Uint256, b []byte, ) {
+	*h = NewSha2Hash(b[:])
+	taskDone <- true
+}
+
+
+func (bl *Block) BuildTxList() (e error) {
+	ChSta("BuildTxList")
+	offs := int(80)
+	txcnt, n := VLen(bl.Raw[offs:])
+	offs += n
+	bl.Txs = make([]*Tx, txcnt)
+
+	for i:=0; i<useThreads; i++ {
+		taskDone <- false
+	}
+
+	for i:=0; i<int(txcnt); i++ {
+		_ = <- taskDone // wait if we have too many threads already
+		bl.Txs[i], n = NewTxB(bl.Raw[offs:])
+		bl.Txs[i].Size = uint32(n)
+		ChSta("TxHash")
+		go calcHash(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
+		ChSto("TxHash")
+		offs += n
 	}
 	
-	bl.Txs = make([]*Tx, txcnt)
-	for i:=0; i<int(txcnt); i++ {
-		sta, _ := rd.Seek(0, 1)
-		bl.Txs[i], e = NewTx(rd)
-		if e != nil {
-			return
-		}
-		sto, _ := rd.Seek(0, 1)
-		bl.Txs[i].Size = uint32(sto-sta)
-		bl.Txs[i].Hash = NewSha2Hash(txblock[sta:sto])
+	// Wait for pending hashing to finish...
+	ChSta("TxHash")
+	for i:=0; i<useThreads; i++ {
+		_ = <- taskDone
 	}
+	ChSto("TxHash")
+
+	ChSto("BuildTxList")
 	return
 }
 
 
-func (bl *Block)CheckBlock() (er error) {
+func (bl *Block) CheckBlock() (er error) {
+	ChSta("CheckBlock")
 	// Size limits
 	if len(bl.Raw)<81 || len(bl.Raw)>1e6 {
+		ChSto("CheckBlock")
 		return errors.New("CheckBlock() : size limits failed")
 	}
 
 	// TODO: Check proof of work matches claimed amount
 	
-	
-	// Check timestamp
-	if int64(bl.GetBlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
+	// Check timestamp (must not be higher than now +2 minutes)
+	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
+		ChSto("CheckBlock")
 		return errors.New("CheckBlock() : block timestamp too far in the future")
 	}
 
 	er = bl.BuildTxList()
 	if er != nil {
+		ChSto("CheckBlock")
 		return
 	}
 	
-	txcnt := len(bl.Txs)
-	
-	// First transaction must be coinbase, the rest must not be
-	if txcnt==0 || !bl.Txs[0].IsCoinBase() {
-		return errors.New("CheckBlock() : first tx is not coinbase")
-	}
-	for i:=1; i<txcnt; i++ {
-		if bl.Txs[i].IsCoinBase() {
-			return errors.New("CheckBlock() : more than one coinbase")
+	if !bl.Trusted {
+		// First transaction must be coinbase, the rest must not be
+		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
+			ChSto("CheckBlock")
+			return errors.New("CheckBlock() : first tx is not coinbase")
 		}
-	}
-
-	// Check transactions
-	for i:=0; i<txcnt; i++ {
-		er = bl.Txs[i].CheckTransaction()
-		if er!=nil {
-			return errors.New("CheckBlock() : CheckTransaction failed\n"+er.Error())
-		}
-	}
-
-	// TODO: Build the merkle tree already
-    
-    
-	if slowMode {
-		// Check for duplicate txids. This is caught by ConnectInputs(),
-		uniqueTx := make(map[[32]byte]bool, txcnt)
-		for i:=1; i<txcnt; i++ {
-			_, present := uniqueTx[bl.Txs[i].Hash.Hash]
-			if present {
-				return errors.New("CheckBlock() : duplicate transaction")
+		for i:=1; i<len(bl.Txs); i++ {
+			if bl.Txs[i].IsCoinBase() {
+				ChSto("CheckBlock")
+				return errors.New("CheckBlock() : more than one coinbase")
 			}
-			uniqueTx[bl.Txs[i].Hash.Hash] = true
+		}
+
+		// Check transactions
+		for i:=0; i<len(bl.Txs); i++ {
+			er = bl.Txs[i].CheckTransaction()
+			if er!=nil {
+				ChSto("CheckBlock")
+				return errors.New("CheckBlock() : CheckTransaction failed\n"+er.Error())
+			}
 		}
 	}
 
-	//TODO: check out-of-bounds SigOpCount
-
-	//TODO: Check merkle root
-
+	ChSto("CheckBlock")
 	return 
+}
+
+
+func GetBlockReward(height uint32) (uint64) {
+	return 50e8 >> (height/210000)
 }
 
