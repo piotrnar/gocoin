@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"crypto/sha256"
-	"math/big"
 )
 
 const (
@@ -87,37 +85,6 @@ func GetVarLen(b *bytes.Buffer) (res uint64) {
 	var i byte
 	for i=0; i<c; i++ {
 		res |= (uint64(buf[i]) << uint64(8*i))
-	}
-	return
-}
-
-func sha256sum(b []byte) (out [32]byte) {
-	s := sha256.New()
-	s.Write(b[:])
-	copy(out[:], s.Sum(nil))
-	return
-}
-
-func addr2b58(a []byte) (s string) {
-	const CHRS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	bn0 := big.NewInt(0)
-	bn58 := big.NewInt(58)
-	bn := big.NewInt(0).SetBytes(a)
-	var mo *big.Int
-	for bn.Cmp(bn0) != 0 {
-		bn, mo = new(big.Int).DivMod(bn, bn58, new(big.Int))
-		s = string(CHRS[mo.Int64()]) + s
-	}
-	s = "1" + s
-	return
-}
-
-func str2hash(s string) (h [32]byte) {
-	var v int
-	for i := 0; i<32; i++ {
-		fmt.Sscanf(s[2*i:2*i+2], "%x", &v)
-		//h[i] = byte(v)
-		h[31-i] = byte(v)
 	}
 	return
 }
