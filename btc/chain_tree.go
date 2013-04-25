@@ -25,13 +25,18 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	prv_sync := ch.DoNotSync
 	ch.DoNotSync = true
 
-	sta := time.Now().Unix()
+	if end.Height - ch.BlockTreeEnd.Height > 100 {
+		ch.Unspent.NoSync()
+	}
+
+	sta := time.Now().UnixNano()
+	prv := sta
 	ChSta("ParseTillBlock")
 	for ch.BlockTreeEnd != end {
-		cur := time.Now().Unix()
-		if cur-sta >= 10 {
+		cur := time.Now().UnixNano()
+		if cur-prv >= 10e9 {
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
-			sta = cur
+			prv = cur
 		}
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
@@ -56,6 +61,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height)
 		if er != nil {
+			println("ProcessBlockTransactions", nxt.Height, er.Error())
 			ch.DeleteBranch(nxt)
 			break
 		}
@@ -67,7 +73,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		ch.BlockTreeEnd = nxt
 	}
+	ch.Unspent.Sync()
 	ChSto("ParseTillBlock")
+	
+	prv = time.Now().UnixNano()
+	fmt.Printf("ParseTillBlock completed in %.3fs\n", float64(prv-sta)/1e9)
 	
 	if ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
@@ -141,7 +151,7 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 			fmt.Printf("->orph block %s @ %d\n", ch.BlockTreeEnd.BlockHash.String(), 
 				ch.BlockTreeEnd.Height)
 		}
-		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height, ch.BlockTreeEnd.parent.BlockHash.Hash[:])
+		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 		cur = cur.parent
 	}

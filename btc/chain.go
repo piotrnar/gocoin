@@ -33,8 +33,14 @@ func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 		fmt.Println("Force rescan while being at", ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	}
+	
 	fmt.Printf("Current top is %d and it has %d children\n", 
 		ch.BlockTreeEnd.Height, len(ch.BlockTreeEnd.childs))
+	for i:=0; i<5 && ch.BlockTreeEnd.Height>0; i++ {
+		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
+		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
+	}
+	
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
 		fmt.Println("Force rescan up to", end.Height, len(ch.BlockIndex))
@@ -51,10 +57,13 @@ func NewBlockIndex(h []byte) (o [Uint256IdxLen]byte) {
 }
 
 
-func (ch *Chain) Save() () {
+func (ch *Chain) Idle() {
+	ch.Unspent.Idle()
+}
+
+func (ch *Chain) Save() {
 	ch.Blocks.Sync()
 	ch.Unspent.Save()
-	ch.Unspent.Sync()
 }
 
 

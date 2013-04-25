@@ -7,17 +7,6 @@ import (
 )
 
 
-/*
-	LoadBlockIndex(*Chain, func(ch *Chain, ha []byte, pa []byte, h, b, t uint32)) (error)
-	BlockAdd(height uint32, bl *Block) (error)
-	BlockTrusted(h []byte)
-	BlockInvalid(h []byte)
-	BlockGet(hash *Uint256) ([]byte, bool, error)
-	Sync()
-	Close()
-	GetStats() (string)
-*/
-
 const (
 	BLOCK_TRUSTED = 0x01
 	BLOCK_INVALID = 0x02

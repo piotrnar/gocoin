@@ -138,6 +138,9 @@ func block_fetcher() {
 			}
 		}
 		mutex.Unlock()
+		if len(cmdChannel)==0 {
+			cmdChannel <- &command{src:"tick"}
+		}
 	}
 }
 
@@ -259,6 +262,8 @@ func main() {
 						println("NewBlock:", e.Error())
 					}
 			}
+		} else if msg.src=="tick" {
+			BlockChain.Idle()
 		}
 	}
 exit:

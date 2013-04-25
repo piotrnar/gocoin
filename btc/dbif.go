@@ -20,14 +20,16 @@ type BlockChanges struct {
 
 type UnspentDB interface {
 	CommitBlockTxs(*BlockChanges, []byte) error
-	UndoBlockTransactions(uint32, []byte) error
+	UndoBlockTransactions(uint32)
 	GetLastBlockHash() []byte
 	
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
 	//GetAllUnspent(addr *BtcAddr) []OneUnspentTx
 
+	Idle()
 	Save()
 	Close()
+	NoSync()
 	Sync()
 	GetStats() (string)
 }

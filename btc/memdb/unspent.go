@@ -1,18 +1,13 @@
 package memdb
 
 import (
-	"os"
 	"fmt"
-	"bytes"
 	"errors"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/qdb"
 )
-
-type oneUnspent struct {
-	btc.TxPrevOut
-	btc.TxOut
-}
 
 /*
 Each unspent key is prevOutIdxLen bytes long - thats part of the tx hash xored witth vout
@@ -21,64 +16,32 @@ Eech value is variable length:
   [32:36] - TxPrevOut.Vout LSB
   [36:44] - Value LSB
   [44:] - Pk_script (in DBfile first 4 bytes are LSB length)
-
-
-There is also a special index containnig all zeros (zeroIndex)
-and the value is 32-bytes long hash of the last block.
 */
 
 
-const prevOutIdxLen = 8
+const prevOutIdxLen = qdb.KeySize
 
 
-var (
-	unspentdbase map[[prevOutIdxLen]byte] *oneUnspent
-	
-	db_version_seq uint32
+type unspentDb struct {
+	dir string
+	tdb [0x100] *qdb.DB
+	defragIndex int
+	defragCount uint64
+}
 
-	logfile *os.File
-	logfile_pos int64
-	
-	zeroHash = []byte{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-)
+func newUnspentDB(dir string) (db *unspentDb) {
+	db = new(unspentDb)
+	db.dir = dir
+	return
+}
 
 
-
-func checkLogfile() bool {
-	if logfile==nil {
-		logfile, _ = os.Create(dirname+"unspent.log")
-		logfile_pos = 0
-		if logfile!=nil {
-			binary.Write(logfile, binary.LittleEndian, db_version_seq)
-			println("stored log sequence", db_version_seq)
-			logfile_pos = 4
-		}
+func (db *unspentDb) dbN(i int) (*qdb.DB) {
+	if db.tdb[i]==nil {
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
+		db.tdb[i].Load()
 	}
-	return logfile!=nil
-}
-
-
-func unspentSync() {
-	if logfile!=nil {
-		logfile.Sync()
-	}
-}
-
-func unspentInit() {
-	unspentdbase = make(map[[prevOutIdxLen]byte] *oneUnspent)
-}
-
-
-func delUnspDbFiles() {
-	os.Remove(dirname+"unspent.0")
-	os.Remove(dirname+"unspent.1")
-}
-
-func unspentClose() {
-	if logfile!=nil {
-		logfile.Close()
-	}
-	unspentdbase = nil
+	return db.tdb[i]
 }
 
 
@@ -92,267 +55,144 @@ func getUnspIndex(po *btc.TxPrevOut) (idx [prevOutIdxLen]byte) {
 }
 
 
-func (db UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
-	//btc.ChSta("DB.UnspentGet")
-	//fmt.Println(" ?", po.String())
-	val, ok := unspentdbase[getUnspIndex(po)]
-	if ok {
-		res = &val.TxOut
-	} else {
-		e = errors.New("unspent not found")
+func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
+	ind := getUnspIndex(po)
+	val, _ := db.dbN(int(po.Hash[31])).Get(ind)
+	if val==nil {
+		//println(po.Hash[31], len(db.tdb[po.Hash[31]].Cache), hex.EncodeToString(ind[:]))
+		//panic("Unspent not found")
+		e = errors.New("Unspent not found")
+		return
 	}
-	//btc.ChSto("DB.UnspentGet")
+
+	if len(val)<44 {
+		panic(fmt.Sprint("unspent record too short:", len(val)))
+	}
+	
+	res = new(btc.TxOut)
+	res.Value = binary.LittleEndian.Uint64(val[36:44])
+	res.Pk_script = make([]byte, len(val)-44)
+	copy(res.Pk_script, val[44:])
 	return
 }
 
 
-func addUnspent(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
-	unspentdbase[getUnspIndex(idx)] = &oneUnspent{TxPrevOut:*idx, TxOut:*Val_Pk}
-	if checkLogfile() {
-		logfile.Seek(logfile_pos, os.SEEK_SET)
-		writeSpent(logfile, idx, Val_Pk)
-		logfile_pos, _ = logfile.Seek(0, os.SEEK_CUR)
-	}
-}
-
-
-func delUnspent(idx *btc.TxPrevOut) {
-	delete(unspentdbase, getUnspIndex(idx))
-	if checkLogfile() {
-		logfile.Seek(logfile_pos, os.SEEK_SET)
-		writeSpent(logfile, idx, nil)
-		logfile_pos, _ = logfile.Seek(0, os.SEEK_CUR)
-	}
-}
-
-func loadUnspent(f *os.File) (*oneUnspent, bool) {
-	var b [48]byte
-
-	// Read 32 bytes
-	n, _ := f.Read(b[:32])
-	if n != 32 {
-		return nil, true
-	}
-	
-	// Of all bytes are zero - this is lastBlockHash
-	if bytes.Equal(b[:32], zeroHash[:]) {
-		// lastBlockHash
-		lastBlockHash = make([]byte, 32)
-		n, _ = f.Read(lastBlockHash[:])
-		if n != 32 {
-			panic("Unexpexted end of file")
-		}
-		println("LastBlockHash:", btc.NewUint256(lastBlockHash).String())
-		return nil, false
-	}
-
-	n, _ = f.Read(b[32:48])
-	if n != 16 {
-		panic("Unexpexted end of file")
-	}
-
-	//println(fpos, "-", hex.EncodeToString(b[0:32]), hex.EncodeToString(b[32:36]), hex.EncodeToString(b[36:44]))
-	slen := binary.LittleEndian.Uint32(b[44:48])
-
-	o := new(oneUnspent)
-	copy(o.TxPrevOut.Hash[:], b[0:32])
-	o.TxPrevOut.Vout = binary.LittleEndian.Uint32(b[32:36])
-	o.TxOut.Value = binary.LittleEndian.Uint64(b[36:44])
-	o.TxOut.Pk_script = make([]byte, slen)
-
-	n, _ = f.Read(o.TxOut.Pk_script[:])
-	if n != len(o.TxOut.Pk_script) {
-		panic("Unexpexted end of file")
-	}
-	
-	return o, false
-}
-
-
-func (o *oneUnspent) SaveTo(wr *os.File) {
-	wr.Write(o.TxPrevOut.Hash[:])
-	binary.Write(wr, binary.LittleEndian, uint32(o.TxPrevOut.Vout))
-	binary.Write(wr, binary.LittleEndian, uint64(o.TxOut.Value))
-	binary.Write(wr, binary.LittleEndian, uint32(len(o.TxOut.Pk_script)))
-	wr.Write(o.TxOut.Pk_script[:])
-	return
-}
-
-
-func (db UnspentDB) GetAllUnspent(addr *btc.BtcAddr) (res []btc.OneUnspentTx) {
-	for _, v := range unspentdbase {
-		if addr.Owns(v.TxOut.Pk_script) {
-			var nr btc.OneUnspentTx
-			nr.Output = v.TxPrevOut
-			nr.Value = v.TxOut.Value
-			res = append(res, nr)
+func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
+	v := make([]byte, 44+len(Val_Pk.Pk_script))
+	copy(v[0:32], idx.Hash[:])
+	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
+	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
+	copy(v[44:], Val_Pk.Pk_script)
+	ind := getUnspIndex(idx)
+	db.dbN(int(idx.Hash[31])).Put(ind, v)
+	/*
+	if idx.Hash[31]==169 {
+		println("dodalem", len(db.tdb[idx.Hash[31]].Cache), hex.EncodeToString(ind[:]))
+		for k, _ := range db.tdb[idx.Hash[31]].Cache {
+			println(" *", hex.EncodeToString(k[:]))
 		}
 	}
-	return
+	*/
 }
 
 
-// Opens file and checks the ffffffff-sequence-FINI marker at the end
-func openAndGetSeq(fn string) (f *os.File, seq uint32) {
-	var b [12]byte
-	var e error
-	
-	if f, e = os.Open(fn); e != nil {
-		return
+func (db *unspentDb) idle() bool {
+	for _ = range db.tdb {
+		db.defragIndex++
+		if db.defragIndex >= len(db.tdb) {
+			db.defragIndex = 0
+		}
+		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag() {
+			db.defragCount++
+			//println(db.defragIndex, "defragmented")
+			return true
+		}
 	}
-	
-	if _, e = f.Seek(-12, os.SEEK_END); e != nil {
-		f.Close()
-		f = nil
-		return
-	}
-
-	if _, e = f.Read(b[:]); e != nil {
-		f.Close()
-		f = nil
-		return
-	}
-
-	if binary.LittleEndian.Uint32(b[0:4])!=0xffffffff || string(b[8:12])!="FINI" {
-		f.Close()
-		f = nil
-		return
-	}
-
-	seq = binary.LittleEndian.Uint32(b[4:8])
-	return
+	return false
 }
 
 
-func loadDataFromDisk() (e error) {
-	// Try to read the database from the disk
-	f, seq := openAndGetSeq(dirname+"unspent.0")
-	f1, seq1 := openAndGetSeq(dirname+"unspent.1")
-	
-	if f == nil && f1 == nil {
-		e = errors.New("No unspent database")
-		return
-	}
-
-	if f!=nil && f1!=nil {
-		// Both files are valid - take the one with higher sequence
-		if int32(seq-seq1) > 0 {
-			f1.Close()
-			os.Remove(dirname+"unspent.1")
-		} else {
-			f.Close()
-			f = f1
-			os.Remove(dirname+"unspent.0")
-		}
-	} else if f==nil {
-		f = f1
-		seq = seq1
-	}
-	
-	db_version_seq = seq
-	
-	// at this point we should have the db storage open in "f"
-	fmt.Printf("Restoring unspent database from disk seq=%08x...\n", db_version_seq)
-	
-	// unspent txs data
-	f.Seek(0, os.SEEK_SET)
-	for {
-		uns, eof := loadUnspent(f)
-		if eof {
-			break
-		}
-		if uns != nil {
-			unspentdbase[getUnspIndex(&uns.TxPrevOut)] = uns
-		}
-	}
-	f.Close()
-	return
+func (db *unspentDb) del(idx *btc.TxPrevOut) {
+	db.dbN(int(idx.Hash[31])).Del(getUnspIndex(idx))
 }
 
 
-func appendDataFromLog() (e error) {
-	fn := fmt.Sprintf(dirname+"unspent.log")
-	logfile, e = os.OpenFile(fn, os.O_RDWR, 0660)
-	if e == nil {
-		var buf [36]byte
-		var u32 uint32
-		
-		markerpos, _ := logfile.Seek(-36, os.SEEK_END)
-		n, e := logfile.Read(buf[:])
-		if n==36 && e==nil && string(buf[:4])=="MARK" {
-			fmt.Println("Last block hash from log:", btc.NewUint256(buf[4:36]).String(), markerpos)
-			setLastBlock(buf[4:36])
-			logfile.Seek(0, os.SEEK_SET)
-			
-			e = binary.Read(logfile, binary.LittleEndian, &u32)
-			if e != nil {
-				println("logfile get sequence ", u32, e.Error())
-				goto discard_log_file
+func (db *unspentDb) GetAllUnspent(addr *btc.BtcAddr) (res []btc.OneUnspentTx) {
+	for i := range db.tdb {
+		for _, v := range db.dbN(i).Cache {
+			if addr.Owns(v[8:]) {
+				var nr btc.OneUnspentTx
+				copy(nr.Output.Hash[:], v[0:32])
+				nr.Output.Vout = binary.LittleEndian.Uint32(v[32:36])
+				nr.Value = binary.LittleEndian.Uint64(v[36:44])
+				res = append(res, nr)
 			}
-			
-			if u32 != db_version_seq {
-				println("logfile sequence mismatch", u32, db_version_seq)
-				goto discard_log_file
-			}
-			
-			var lastokpos, ad, de int64
-			for {
-				lastokpos, _ = logfile.Seek(0, os.SEEK_CUR)
-				if lastokpos >= markerpos {
-					break
-				}
-
-				po, to := readSpent(logfile)
-				if po == nil {
-					println("break at", lastokpos)
-					break
-				}
-				idx := getUnspIndex(po)
-				if to == nil {
-					delete(unspentdbase, idx)
-					de++
-				} else {
-					unspentdbase[idx] = &oneUnspent{TxPrevOut:*po, TxOut:*to}
-					ad++
-				}
-			}
-			logfile.Seek(lastokpos, os.SEEK_SET)
-			fmt.Println(ad, "adds and", de, "dels, from the logfile ->", lastokpos)
-		} else {
-			goto discard_log_file
 		}
-	} else {
-		fmt.Println("Log file not found", e.Error())
 	}
-	return
-
-discard_log_file:
-	fmt.Println("The log file does not look good - discard it")
-	logfile.Close()
-	logfile = nil
-	os.Remove(fn)
 	return
 }
 
 
-func unspentCommit(changes *btc.BlockChanges, blhash []byte) {
+func (db *unspentDb) commit(changes *btc.BlockChanges) {
 	// Now ally the unspent changes
 	for k, v := range changes.AddedTxs {
-		addUnspent(&k, v)
+		db.add(&k, v)
 	}
 	for k, _ := range changes.DeledTxs {
-		delUnspent(&k)
-	}
-	setLastBlock(blhash)
-	if logfile!=nil {
-		logfile.Write([]byte("MARK"))
-		logfile.Write(blhash[:])
+		db.del(&k)
 	}
 }
 
 
-func init() {
-	unspentInit()
+func (db *unspentDb) stats() (s string) {
+	var cnt, sum uint64
+	var chsum [prevOutIdxLen]byte
+	for i := range db.tdb {
+		for k, v := range db.dbN(i).Cache {
+			sum += binary.LittleEndian.Uint64(v[36:44])
+			cnt++
+			for i := range k {
+				chsum[i] ^= k[i]
+			}
+		}
+	}
+	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Checksum:%s  defrgs:%d\n", 
+		float64(sum)/1e8, cnt, hex.EncodeToString(chsum[:]), db.defragCount)
+}
+
+
+func (db *unspentDb) sync() {
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Sync()
+		}
+	}
+}
+
+func (db *unspentDb) nosync() {
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].NoSync()
+		}
+	}
+}
+
+
+func (db *unspentDb) save() {
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Defrag()
+		}
+	}
+}
+
+func (db *unspentDb) close() {
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Close()
+		}
+		db.tdb[i] = nil
+	}
 }
 
 

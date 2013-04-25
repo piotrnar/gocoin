@@ -2,8 +2,9 @@ package btc
 
 import (
 	"fmt"
-    "time"
+	"time"
 	"errors"
+	"encoding/hex"
 )
 
 
@@ -110,6 +111,16 @@ func verify(sig []byte, prv []byte, i int, tx *Tx) {
 }
 
 
+func getUnspIndex(po *TxPrevOut) (idx [8]byte) {
+	copy(idx[:], po.Hash[:8])
+	idx[0] ^= byte(po.Vout)
+	idx[1] ^= byte(po.Vout>>8)
+	idx[2] ^= byte(po.Vout>>16)
+	idx[3] ^= byte(po.Vout>>32)
+	return
+}
+
+
 func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	//ChSta("commitTxs")
 	sumblockin := GetBlockReward(changes.Height)
@@ -149,8 +160,15 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					e = errors.New("Input spent more then once in same block")
 					break
 				}
+				if don(DBG_TX) {
+					idx := getUnspIndex(inp)
+					println(" idx", hex.EncodeToString(idx[:]))
+				}
 				tout := ch.PickUnspent(inp)
 				if tout==nil {
+					if don(DBG_TX) {
+						println("PickUnspent failed")
+					}
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
 						println("Unknown txin", j, inp.String(), "in", changes.Height)
@@ -174,6 +192,10 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
 					//println("TxInput from the current block", inp.String())
+				} else {
+					if don(DBG_TX) {
+						println("PickUnspent OK")
+					}
 				}
 				
 				if !(<-taskDone) {
@@ -193,8 +215,8 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				changes.DeledTxs[*inp] = tout
 
 				if don(DBG_TX) {
-					fmt.Printf("  in %d: %s  %.8f\n", j+1, bl.Txs[i].TxIn[j].Input.String(),
-						float64(tout.Value)/1e8)
+					fmt.Printf("  in %d: %.8f BTC @ %s\n", j+1, float64(tout.Value)/1e8,
+						bl.Txs[i].TxIn[j].Input.String())
 				}
 				
 			}
@@ -243,6 +265,12 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				float64(txinsum-txoutsum)/1e8)
 		}
 		
+		if don(DBG_TX) && i>0 {
+			fmt.Printf(" fee : %.8f\n", float64(txinsum-txoutsum)/1e8)
+		}
+		if i>0 && txoutsum > txinsum {
+			panic("more spent than input")
+		}
 		if e != nil {
 			break // If any input fails, do not continue
 		}

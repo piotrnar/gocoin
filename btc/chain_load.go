@@ -64,6 +64,7 @@ func (ch *Chain)loadBlockIndex() {
 		if !ok {
 			panic("Last Block Hash not found")
 		}
+		println("last Block Hash:", NewUint256(tlb).String())
 	}
 	println("Block Index loaded. Height =", ch.BlockTreeEnd.Height, "/", len(ch.BlockIndex))
 	//ChSto("loadBlockIndex")

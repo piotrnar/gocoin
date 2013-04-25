@@ -1,2 +1,0 @@
-AcceptBlock() : incorrect proof of work  486604799  at block 40320  exp: 469942493
-AcceptBlock() : incorrect proof of work  486604799  at block 56448  exp: 469946108

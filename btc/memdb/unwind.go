@@ -1,27 +1,43 @@
 package memdb
 
 import (
-	"os"
 	"io"
 	"fmt"
 	"bytes"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/qdb"
 )
 
 const (
-	UnwindBufferMaxHistory = 3*24*6  // about 3 days...
+	UnwindBufferMaxHistory = 24*6  // about 24 hours...
 )
 
-var unwindCache map[uint32] []byte = make(map[uint32] []byte, UnwindBufferMaxHistory)
-
-
-func unwindFileName(height uint32) string {
-	return fmt.Sprint(dirname, "unwind/", height)
+type unwindDb struct {
+	tdb *qdb.DB
+	lastBlockHeight uint32
+	lastBlockHash [32]byte
+	defragCount uint64
 }
 
 
+func newUnwindDB(dir string) (db *unwindDb) {
+	db = new(unwindDb)
+	db.tdb, _ = qdb.NewDB(dir)
+	db.tdb.Load()
+	db.lastBlockHeight = 0
+	for k, v := range db.tdb.Cache {
+		h := binary.LittleEndian.Uint32(k[0:4])
+		if h > db.lastBlockHeight {
+			db.lastBlockHeight = h
+			copy(db.lastBlockHash[:], v[:32])
+		}          
+	}
+	return
+}
 
-func unwindFromReader(f io.Reader) {
+
+func unwindFromReader(f io.Reader, unsp *unspentDb) {
 	for {
 		po, to := readSpent(f)
 		if po == nil {
@@ -29,78 +45,108 @@ func unwindFromReader(f io.Reader) {
 		}
 		if to != nil {
 			// record deleted - so add it
-			addUnspent(po, to)
+			unsp.add(po, to)
 		} else {
 			// record added - so delete it
-			delUnspent(po)
+			unsp.del(po)
 		}
 	}
 }
 
 
-func unwindDelete(height uint32) {
-	delete(unwindCache, height)
-	//os.Remove(unwindFileName(height))
+func (db *unwindDb) del(height uint32) {
+	db.tdb.Del(h2k(height))
 }
 
 
-func unwindSync() {
-	os.MkdirAll(dirname+"/unwind", 0770)
-	for {
-		found := false
-		for k, v := range unwindCache {
-			f, _ := os.Create(unwindFileName(k))
-			f.Write(v[:])
-			f.Close()
-			delete(unwindCache, k)
-			found = true
-			break
-		}
-		if !found {
-			break
-		}
-	}
+func (db *unwindDb) sync() {
+	db.tdb.Sync()
 }
 
+func (db *unwindDb) nosync() {
+	db.tdb.NoSync()
+}
 
-func (db UnspentDB) UndoBlockTransactions(height uint32, blhash []byte) (e error) {
-	btc.ChSta("UndoBlockTransactions")
+func (db *unwindDb) save() {
+	db.tdb.Defrag()
+}
 
-	if v, ok := unwindCache[height]; ok {
-		unwindFromReader(bytes.NewReader(v[:]))
-	} else {
-		var f *os.File
-		f, e = os.Open(unwindFileName(height))
-		if e != nil {
-			btc.ChSto("UndoBlockTransactions")
-			panic("UndoBlockTransactions: "+e.Error())
-			return
-		}
-		unwindFromReader(f)
-		f.Close()            
+func (db *unwindDb) close() {
+	db.tdb.Close()
+	db.tdb = nil
+}
+
+func (db *unwindDb) idle() bool {
+	if db.tdb.Defrag() {
+		db.defragCount++
+		return true
 	}
-	unwindDelete(height)
+	return false
+}
 
-	setLastBlock(blhash)
+func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
+	if height != db.lastBlockHeight {
+		panic("Unexpected height")
+	}
+	
+	v, _ := db.tdb.Get(h2k(height))
+	if v == nil {
+		panic("Unwind data not found")
+	}
 
-	btc.ChSto("UndoBlockTransactions")
+	println("Unwind block", height)
+	unwindFromReader(bytes.NewReader(v[32:]), unsp)
+	db.del(height)
+
+	db.lastBlockHeight--
+	v, _ = db.tdb.Get(h2k(db.lastBlockHeight))
+	if v == nil {
+		panic("Parent data not found")
+	}
+	copy(db.lastBlockHash[:], v[:32])
 	return
 }
 
 
-func unwindCommit(changes *btc.BlockChanges) {
-	//f, e := os.Create(unwindFileName(changes.Height))
+func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
+	if db.lastBlockHeight+1 != changes.Height {
+		panic("Unexpected height")
+	}
+	db.lastBlockHeight++
+	copy(db.lastBlockHash[:], blhash[0:32])
+
 	f := new(bytes.Buffer)
+	f.Write(blhash[0:32])
 	for k, _ := range changes.AddedTxs {
 		writeSpent(f, &k, nil)
 	}
 	for k, v := range changes.DeledTxs {
 		writeSpent(f, &k, v)
 	}
-	unwindCache[changes.Height] = f.Bytes()[:]
-	             
+	db.tdb.Put(h2k(changes.Height), f.Bytes())
 	if changes.Height >= UnwindBufferMaxHistory {
-		unwindDelete(changes.Height-UnwindBufferMaxHistory)
+		db.del(changes.Height-UnwindBufferMaxHistory)
 	}
 }
+
+
+func (db *unwindDb) GetLastBlockHash() (val []byte) {
+	if db.lastBlockHeight != 0 {
+		val = make([]byte, 32)
+		copy(val, db.lastBlockHash[:])
+	}
+	return
+}
+
+
+func (db *unwindDb) stats() (s string) {
+	return fmt.Sprintf("UNWIND: len:%d  defrgs:%d  last:%d %s\n", db.tdb.Count(), db.defragCount,
+		db.lastBlockHeight, btc.NewUint256(db.lastBlockHash[:]).String())
+}
+
+func h2k(h uint32) (k [qdb.KeySize]byte) {
+	binary.LittleEndian.PutUint32(k[0:4], h)
+	return
+}
+
 
