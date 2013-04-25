@@ -65,7 +65,7 @@ func show_unspent() {
 			fmt.Println(e.Error())
 			return
 		}
-		fmt.Println("dobry adres:", ad.Enc58str)
+		fmt.Println("dobry adres:", ad.String())
 		/*res := BlockChain.GetAllUnspent(ad)
 		var tot uint64
 		for i := range res {

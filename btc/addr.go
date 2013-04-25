@@ -15,8 +15,8 @@ const (
 type BtcAddr struct {
 	Version byte
 	Hash160 [20]byte
-	Checksum [4]byte
-	Enc58str string
+	checksum []byte
+	enc58str string
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
@@ -36,8 +36,9 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 			a = new(BtcAddr)
 			a.Version = dec[0]
 			copy(a.Hash160[:], dec[1:21])
-			copy(a.Checksum[:], dec[21:25])
-			a.Enc58str = hs
+			a.checksum = make([]byte, 4)
+			copy(a.checksum, dec[21:25])
+			a.enc58str = hs
 		}
 	} else {
 		e = errors.New(fmt.Sprintf("Unsupported hash length %d", len(dec)))
@@ -46,17 +47,9 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 }
 
 func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
-	var ad [25]byte
-	ad[0] = ver
-	copy(ad[1:21], in[:])
-	sh := Sha2Sum(ad[0:21])
-	copy(ad[21:25], sh[:4])
-	
 	a = new(BtcAddr)
 	a.Version = ver
 	copy(a.Hash160[:], in[:])
-	copy(a.Checksum[:], sh[:4])
-	a.Enc58str = encodeb58(ad[0:25])
 	return
 }
 
@@ -75,11 +68,27 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 	a = new(BtcAddr)
 	a.Version = ver
 	copy(a.Hash160[:], in[:])
-	copy(a.Checksum[:], sh[:4])
-	a.Enc58str = encodeb58(ad[0:25])
+	
+	a.checksum = make([]byte, 4)
+	copy(a.checksum, sh[:4])
 	return
 }
 
+func (a *BtcAddr) String() string {
+	if a.enc58str=="" {
+		var ad [25]byte
+		ad[0] = a.Version
+		copy(ad[1:21], a.Hash160[:])
+		if a.checksum==nil {
+			sh := Sha2Sum(ad[0:21])
+			a.checksum = make([]byte, 4)
+			copy(a.checksum, sh[:4])
+		}
+		copy(ad[21:25], a.checksum[:])
+		a.enc58str = encodeb58(ad[:])
+	}
+	return a.enc58str
+}
 
 func (a *BtcAddr) Owns(scr []byte) bool {
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==20 && scr[23]==0x88 && scr[24]==0xac {

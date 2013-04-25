@@ -83,7 +83,7 @@ func list_unspent(addr string) {
 		fmt.Println(unsp[i].String())
 		sum += unsp[i].Value
 	}
-	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a[0].Enc58str);
+	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a[0].String());
 }
 
 
@@ -118,7 +118,7 @@ func show_balance() {
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
 	var sum uint64
 	for i := range unsp {
-		fmt.Println(unsp[i].String())
+		fmt.Println(unsp[i].String(), "@", MyWallet.addrs[unsp[i].AskIndex].String())
 		sum += unsp[i].Value
 	}
 	fmt.Printf("Total %.8f unspent BTC from %d addresses\n", float64(sum)/1e8, len(MyWallet.addrs));

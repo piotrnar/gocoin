@@ -4,12 +4,13 @@ import "fmt"
 
 // Returned by GetUnspentFromPkScr
 type OneUnspentTx struct {
-	Output TxPrevOut
+	TxPrevOut
 	Value uint64
+	AskIndex uint
 }
 
 func (ou *OneUnspentTx) String() string {
-	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.Output.String()
+	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
 }
 
 type BlockChanges struct {
