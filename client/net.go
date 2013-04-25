@@ -330,6 +330,7 @@ func do_network(host string) {
 		conn.TCPConn, e = net.DialTCP("tcp4", nil, oa)
 		if e != nil {
 			println(e.Error())
+			time.Sleep(5e9)
 			continue
 		}
 		println("Connected to bitcoin node", host)
