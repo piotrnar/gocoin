@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"flag"
+	"time"
 	"bufio"
 	"strconv"
 	"github.com/piotrnar/gocoin/btc"
@@ -25,7 +26,7 @@ func printstat() {
 
 
 func askUserInt(ask string) int {
-	ask = "Global commands: [I]nfo, [S]ave, [Q]uit\n" + ask + "\nEnter your choice: "
+	ask = "Global commands: [I]nfo, [T]ick, [S]ave, [Q]uit\n" + ask + "\nEnter your choice: "
 	for {
 		fmt.Println("============================================")
 		fmt.Print(ask)
@@ -36,13 +37,19 @@ func askUserInt(ask string) int {
 			fmt.Println()
 			return int(n)
 		}
+		sta := time.Now().UnixNano()
 		switch string(li[:]) {
 			case "s": BlockChain.Unspent.Save()
+			case "t": BlockChain.Idle()
 			case "i": printstat()
 			case "q":
 				BlockChain.Close()
 				os.Exit(0)
+			default:
+				println("Unknown command", len(li))
 		}
+		sto := time.Now().UnixNano()
+		fmt.Printf("Command executed in %.3fs\n", float64(sto-sta)/1e9)
 	}
 	return 0
 }
