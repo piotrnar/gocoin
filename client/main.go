@@ -121,12 +121,20 @@ func show_balance() {
 		return
 	}
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
-	var sum uint64
-	for i := range unsp {
-		fmt.Println(unsp[i].String(), "@", MyWallet.addrs[unsp[i].AskIndex].String())
-		sum += unsp[i].Value
+	var sumsum uint64
+	for a := range MyWallet.addrs {
+		var sum uint64
+		fmt.Println(MyWallet.addrs[a].String(), ":")
+		for i := range unsp {
+			if uint(a) == unsp[i].AskIndex {
+				fmt.Println(unsp[i].String())
+				sum += unsp[i].Value
+			}
+		}
+		fmt.Printf("%.8f BTC @ %s\n", float64(sum)/1e8, MyWallet.addrs[a].String())
+		sumsum += sum
 	}
-	fmt.Printf("Total %.8f unspent BTC from %d addresses\n", float64(sum)/1e8, len(MyWallet.addrs));
+	fmt.Printf("%.8f BTC @ all %d addresses\n", float64(sumsum)/1e8, len(MyWallet.addrs))
 }
 
 
@@ -273,7 +281,6 @@ func main() {
 				case "bl":
 					bl, e := btc.NewBlock(msg.dat[:])
 					if e == nil {
-						println("bl", bl.Hash.String())
 						mutex.Lock()
 						delete(pendingBlocks, bl.Hash.BIdx())
 						askForDataCnt--
@@ -282,7 +289,7 @@ func main() {
 						if e == nil {
 							e = BlockChain.AcceptBlock(bl)
 							if e == nil {
-								print("\007")
+								println(BlockChain.BlockTreeEnd.Height, "\007")
 								//println("*** New block accepted", BlockChain.BlockTreeEnd.Height)
 								retry_cached_blocks()
 							} else if e.Error()==btc.ErrParentNotFound {
