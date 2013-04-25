@@ -57,6 +57,8 @@ func init_blockchain() {
 
 func do_userif() {
 	for {
+		time.Sleep(250e6)
+		fmt.Print("> ")
 		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 		if len(li) > 0 {
 			c := new(command)
