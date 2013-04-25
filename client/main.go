@@ -32,6 +32,8 @@ var (
 	pendingBlocks map[[btc.Uint256IdxLen]byte] []byte = make(map[[btc.Uint256IdxLen]byte] []byte)
 	askForDataCnt int32
 	cachedBlocks map[[btc.Uint256IdxLen]byte] *btc.Block = make(map[[btc.Uint256IdxLen]byte] *btc.Block)
+
+	MyWallet *oneWallet
 )
 
 
@@ -44,7 +46,11 @@ func init_blockchain() {
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
+	fmt.Println("Opening blockchain...")
+	sta := time.Now().UnixNano()
 	BlockChain = btc.NewChain(GenesisBlock, *rescan)
+	sto := time.Now().UnixNano()
+	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
 }
 
 
@@ -64,18 +70,20 @@ func do_userif() {
 
 func list_unspent(addr string) {
 	fmt.Println("Checking unspent coins for addr", addr)
-	a, e := btc.NewAddrFromString(addr)
+	var a[1] *btc.BtcAddr
+	var e error
+	a[0], e = btc.NewAddrFromString(addr)
 	if e != nil {
 		println(e.Error())
 		return
 	}
-	unsp := BlockChain.GetAllUnspent(a)
+	unsp := BlockChain.GetAllUnspent(a[:])
 	var sum uint64
 	for i := range unsp {
 		fmt.Println(unsp[i].String())
 		sum += unsp[i].Value
 	}
-	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a.Enc58str);
+	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a[0].Enc58str);
 }
 
 
@@ -101,6 +109,22 @@ func show_cached() {
 	}
 }
 
+
+func show_balance() {
+	if len(MyWallet.addrs)==0 {
+		println("You have no addresses")
+		return
+	}
+	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
+	var sum uint64
+	for i := range unsp {
+		fmt.Println(unsp[i].String())
+		sum += unsp[i].Value
+	}
+	fmt.Printf("Total %.8f unspent BTC from %d addresses\n", float64(sum)/1e8, len(MyWallet.addrs));
+}
+
+
 func retry_cached_blocks() {
 start_over:
 	for k, v := range cachedBlocks {
@@ -119,7 +143,7 @@ start_over:
 func block_fetcher() {
 	next_ask_for_block := time.Now()
 	for {
-		time.Sleep(1e9)
+		time.Sleep(250e6) // 150ms
 		mutex.Lock()
 		if len(pendingBlocks)==0 {
 			if askForBlocks==nil && time.Now().After(next_ask_for_block) {
@@ -139,6 +163,7 @@ func block_fetcher() {
 		}
 		mutex.Unlock()
 		if len(cmdChannel)==0 {
+			// Defragment database if nothing is happening
 			cmdChannel <- &command{src:"tick"}
 		}
 	}
@@ -153,6 +178,7 @@ func main() {
 	flag.Parse()
 
 	init_blockchain()
+	MyWallet = NewWallet("wallet.txt")
 
 	var host string
 	
@@ -172,6 +198,8 @@ func main() {
 		if msg.src=="ui" {
 			if strings.HasPrefix(msg.str, "unspent") {
 				list_unspent(strings.Trim(msg.str[7:], " "))
+			} else if strings.HasPrefix(msg.str, "u ") {
+				list_unspent(strings.Trim(msg.str[2:], " "))
 			} else if strings.HasPrefix(msg.str, "dbg") {
 				dbg, _ = strconv.ParseUint(msg.str[3:], 10, 64)
 			} else {
@@ -183,6 +211,9 @@ func main() {
 					case "info": 
 						show_stats()
 					
+					case "bal": 
+						show_balance()
+
 					case "cach": 
 						show_cached()
 					
@@ -201,8 +232,8 @@ func main() {
 						BlockChain.Save()
 						goto exit
 					
-					case "q!": 
-						goto exit
+					case "q": 
+						os.Exit(0)
 					
 					case "mem":
 						var ms runtime.MemStats

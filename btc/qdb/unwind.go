@@ -94,7 +94,6 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 		panic("Unwind data not found")
 	}
 
-	println("Unwind block", height)
 	unwindFromReader(bytes.NewReader(v[32:]), unsp)
 	db.del(height)
 

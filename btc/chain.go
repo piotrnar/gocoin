@@ -34,9 +34,8 @@ func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	}
 	
-	fmt.Printf("Current top is %d and it has %d children\n", 
-		ch.BlockTreeEnd.Height, len(ch.BlockTreeEnd.childs))
-	for i:=0; i<5 && ch.BlockTreeEnd.Height>0; i++ {
+	// Unwind 3 blocks (in case if unspent DB was interrupted while being updated)
+	for i:=0; i<3 && ch.BlockTreeEnd.Height>0; i++ {
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 	}
@@ -94,7 +93,7 @@ func (ch *Chain) Close() {
 }
 
 // Returns list of unspent output fro a given address
-func (ch *Chain) GetAllUnspent(addr *BtcAddr) []OneUnspentTx {
-	panic("GetAllUnspent not implemented")
+func (ch *Chain) GetAllUnspent(addr []*BtcAddr) []OneUnspentTx {
+	return ch.Unspent.GetAllUnspent(addr)
 }
 

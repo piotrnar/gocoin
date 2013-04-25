@@ -121,15 +121,17 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 }
 
 
-func (db *unspentDb) GetAllUnspent(addr *btc.BtcAddr) (res []btc.OneUnspentTx) {
+func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr) (res []btc.OneUnspentTx) {
 	for i := range db.tdb {
 		for _, v := range db.dbN(i).Cache {
-			if addr.Owns(v[8:]) {
-				var nr btc.OneUnspentTx
-				copy(nr.Output.Hash[:], v[0:32])
-				nr.Output.Vout = binary.LittleEndian.Uint32(v[32:36])
-				nr.Value = binary.LittleEndian.Uint64(v[36:44])
-				res = append(res, nr)
+			for a := range addr {
+				if addr[a].Owns(v[44:]) {
+					var nr btc.OneUnspentTx
+					copy(nr.Output.Hash[:], v[0:32])
+					nr.Output.Vout = binary.LittleEndian.Uint32(v[32:36])
+					nr.Value = binary.LittleEndian.Uint64(v[36:44])
+					res = append(res, nr)
+				}
 			}
 		}
 	}

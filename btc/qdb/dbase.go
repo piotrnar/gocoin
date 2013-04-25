@@ -80,7 +80,7 @@ func (db UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	return db.unspent.get(po)
 }
 
-func (db UnspentDB) GetAllUnspent(addr *btc.BtcAddr) (res []btc.OneUnspentTx) {
+func (db UnspentDB) GetAllUnspent(addr []*btc.BtcAddr) (res []btc.OneUnspentTx) {
 	return db.unspent.GetAllUnspent(addr)
 }
 

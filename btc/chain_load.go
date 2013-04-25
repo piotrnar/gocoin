@@ -25,7 +25,6 @@ func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp uint32) {
 // Loads block index from the disk
 func (ch *Chain)loadBlockIndex() {
 	//ChSta("loadBlockIndex")
-	println("Allocating map for BlockIndex...")
 	ch.BlockIndex = make(map[[Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
@@ -33,7 +32,6 @@ func (ch *Chain)loadBlockIndex() {
 	ch.BlockIndex[NewBlockIndex(ch.Genesis.Hash[:])] = ch.BlockTreeRoot
 
 
-	println("Loading Block Index...")
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
 	tlb := ch.Unspent.GetLastBlockHash()
 	//println("Building tree from", len(ch.BlockIndex), "nodes")
@@ -64,9 +62,7 @@ func (ch *Chain)loadBlockIndex() {
 		if !ok {
 			panic("Last Block Hash not found")
 		}
-		println("last Block Hash:", NewUint256(tlb).String())
 	}
-	println("Block Index loaded. Height =", ch.BlockTreeEnd.Height, "/", len(ch.BlockIndex))
 	//ChSto("loadBlockIndex")
 }
 

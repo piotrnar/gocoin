@@ -22,7 +22,7 @@ type BtcAddr struct {
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	dec := decodeb58(hs)
 	if dec == nil {
-		e = errors.New("Cannot decode b58 string "+hs)
+		e = errors.New("Cannot decode b58 string *"+hs+"*")
 		return
 	}
 	if (len(dec)<25) {
