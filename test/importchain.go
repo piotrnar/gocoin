@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/blockdb"
 	"github.com/piotrnar/gocoin/btc"
-	_ "github.com/piotrnar/gocoin/btc/memdb"
+	_ "github.com/piotrnar/gocoin/btc/qdb"
 	"flag"
 )
 

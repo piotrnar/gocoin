@@ -1,4 +1,4 @@
-package memdb
+package qdb
 
 import (
 	"io"

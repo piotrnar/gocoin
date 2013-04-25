@@ -3,13 +3,11 @@ package main
 import (
 	"os"
 	"fmt"
-//	"time"
 	"flag"
 	"bufio"
 	"strconv"
-//	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	_ "github.com/piotrnar/gocoin/btc/memdb"
+	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
 
 var testnet *bool = flag.Bool("t", false, "use testnet")

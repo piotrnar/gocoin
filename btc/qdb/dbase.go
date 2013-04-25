@@ -1,11 +1,6 @@
-package memdb
+package qdb
 
 import (
-//	"os"
-//	"fmt"
-//	"time"
-//	"encoding/hex"
-//	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
 

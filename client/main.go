@@ -12,7 +12,7 @@ import (
 	"strings"
 	"strconv"
 	"github.com/piotrnar/gocoin/btc"
-	_ "github.com/piotrnar/gocoin/btc/memdb"
+	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
 
 
