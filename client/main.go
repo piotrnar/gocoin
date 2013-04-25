@@ -185,6 +185,11 @@ func block_fetcher() {
 }
 
 
+func show_help() {
+	fmt.Println("There are different commands...")
+	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, quit")
+}
+
 func main() {
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
@@ -254,6 +259,12 @@ func main() {
 						var ms runtime.MemStats
 						runtime.ReadMemStats(&ms)
 						fmt.Println("HeapAlloc", ms.HeapAlloc>>20, "MB")
+					
+					case "?":
+						show_help()
+					
+					case "h":
+						show_help()
 					
 					default:
 						println("unknown command")
