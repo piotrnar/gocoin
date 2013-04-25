@@ -27,6 +27,7 @@ type unspentDb struct {
 	tdb [0x100] *qdb.DB
 	defragIndex int
 	defragCount uint64
+	nosyncinprogress bool
 }
 
 func newUnspentDB(dir string) (db *unspentDb) {
@@ -40,6 +41,9 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
 		db.tdb[i].Load()
+		if db.nosyncinprogress {
+			db.tdb[i].NoSync()
+		}
 	}
 	return db.tdb[i]
 }
@@ -156,12 +160,13 @@ func (db *unspentDb) stats() (s string) {
 			}
 		}
 	}
-	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Checksum:%s  defrgs:%d\n", 
+	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Checksum:%s  defrags:%d\n", 
 		float64(sum)/1e8, cnt, hex.EncodeToString(chsum[:]), db.defragCount)
 }
 
 
 func (db *unspentDb) sync() {
+	db.nosyncinprogress = false
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Sync()
@@ -170,13 +175,13 @@ func (db *unspentDb) sync() {
 }
 
 func (db *unspentDb) nosync() {
+	db.nosyncinprogress = true
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].NoSync()
 		}
 	}
 }
-
 
 func (db *unspentDb) save() {
 	for i := range db.tdb {
