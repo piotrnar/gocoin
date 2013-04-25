@@ -140,8 +140,10 @@ func (db *unwindDb) GetLastBlockHash() (val []byte) {
 
 
 func (db *unwindDb) stats() (s string) {
-	return fmt.Sprintf("UNWIND: len:%d  defrgs:%d  last:%d %s\n", db.tdb.Count(), db.defragCount,
-		db.lastBlockHeight, btc.NewUint256(db.lastBlockHash[:]).String())
+	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d\n", 
+		db.tdb.Count(), db.lastBlockHeight, db.defragCount)
+	s += "Last block: " + btc.NewUint256(db.lastBlockHash[:]).String() + "\n"
+	return
 }
 
 func h2k(h uint32) (k [qdb.KeySize]byte) {
