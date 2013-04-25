@@ -3,7 +3,7 @@ package qdb
 import (
 	"fmt"
 	"errors"
-	"encoding/hex"
+//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/qdb"
@@ -153,18 +153,14 @@ func (db *unspentDb) commit(changes *btc.BlockChanges) {
 
 func (db *unspentDb) stats() (s string) {
 	var cnt, sum uint64
-	var chsum [prevOutIdxLen]byte
 	for i := range db.tdb {
-		for k, v := range db.dbN(i).Cache {
+		for _, v := range db.dbN(i).Cache {
 			sum += binary.LittleEndian.Uint64(v[36:44])
 			cnt++
-			for i := range k {
-				chsum[i] ^= k[i]
-			}
 		}
 	}
-	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Checksum:%s  defrags:%d\n", 
-		float64(sum)/1e8, cnt, hex.EncodeToString(chsum[:]), db.defragCount)
+	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n", 
+		float64(sum)/1e8, cnt, db.defragCount)
 }
 
 
