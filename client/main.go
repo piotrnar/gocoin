@@ -112,6 +112,10 @@ func show_cached() {
 
 
 func show_balance() {
+	if MyWallet==nil {
+		println("You have no wallet")
+		return
+	}
 	if len(MyWallet.addrs)==0 {
 		println("You have no addresses")
 		return
