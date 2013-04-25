@@ -30,7 +30,6 @@ func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 
 	ch.loadBlockIndex() 
 	if rescan {
-		fmt.Println("Force rescan while being at", ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	}
 	
@@ -42,7 +41,6 @@ func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
 	
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
-		fmt.Println("Force rescan up to", end.Height, len(ch.BlockIndex))
 		ch.ParseTillBlock(end)
 	}
 
