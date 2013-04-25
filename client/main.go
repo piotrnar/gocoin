@@ -22,6 +22,7 @@ var (
 	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
 	rescan *bool = flag.Bool("rescan", false, "Rescan unspent outputs (not scripts)")
+	proxy *string = flag.String("c", "127.0.0.1", "Connect to this host")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -183,9 +184,9 @@ func main() {
 	var host string
 	
 	if *testnet {
-		host = "127.0.0.1:18333"
+		host = *proxy+":18333"
 	} else {
-		host = "127.0.0.1:8333"
+		host = *proxy+":8333"
 	}
 
 	go do_network(host)
