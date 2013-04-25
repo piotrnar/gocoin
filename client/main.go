@@ -133,7 +133,7 @@ func show_balance() {
 				sum += unsp[i].Value
 			}
 		}
-		fmt.Printf("%.8f BTC @ %s\n", float64(sum)/1e8, MyWallet.addrs[a].String())
+		fmt.Printf("%15.8f BTC\n", float64(sum)/1e8)
 		sumsum += sum
 	}
 	fmt.Printf("%.8f BTC @ all %d addresses\n", float64(sumsum)/1e8, len(MyWallet.addrs))
