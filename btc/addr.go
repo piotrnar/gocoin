@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"errors"
+	"code.google.com/p/go.crypto/ripemd160"
 )
 
 const (
@@ -17,6 +18,7 @@ type BtcAddr struct {
 	Hash160 [20]byte
 	checksum []byte
 	enc58str string
+	xy []byte
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
@@ -90,11 +92,30 @@ func (a *BtcAddr) String() string {
 	return a.enc58str
 }
 
-func (a *BtcAddr) Owns(scr []byte) bool {
-	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==20 && scr[23]==0x88 && scr[24]==0xac {
-		return bytes.Equal(scr[3:23], a.Hash160[:])
+func (a *BtcAddr) Owns(scr []byte) (yes bool) {
+	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+		yes = bytes.Equal(scr[3:23], a.Hash160[:])
+		return 
+	} else if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
+		if a.xy == nil {
+			rim := ripemd160.New()
+			rim.Write(scr[1:66])
+			h := rim.Sum(nil)
+			if bytes.Equal(h, a.Hash160[:]) {
+				a.xy = make([]byte, 65)
+				copy(a.xy, scr[1:66])
+				yes = true
+				return
+			}
+			return
+		}
+		yes = bytes.Equal(scr[1:66], a.xy)
+		return 
+	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+		yes = bytes.Equal(scr[2:22], a.Hash160[:])
+		return 
 	}
-	return false
+	return
 }
 
 
