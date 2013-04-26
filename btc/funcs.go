@@ -51,3 +51,26 @@ func VLen(b []byte) (len int, var_int_siz int) {
 	len = int(res)
 	return
 }
+
+
+func getMerkel(txs []*Tx) ([]byte) {
+	mtr := make([][]byte, len(txs))
+	for i := range txs {
+		mtr[i] = txs[i].Hash.Hash[:]
+	}
+	var j int
+	var h [32]byte
+	for siz:=len(txs); siz>1; siz=(siz+1)/2 {
+		for i := 0; i < siz; i += 2 {
+			if i+1 < siz-1 {
+				h = Sha2Sum(append(mtr[j+i], mtr[j+i+1]...))
+			} else {
+				h = Sha2Sum(append(mtr[j+i], mtr[j+siz-1]...))
+			}
+			mtr = append(mtr, h[:])
+		}
+		j += siz
+	}
+	return mtr[len(mtr)-1]
+}
+
