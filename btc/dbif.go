@@ -2,11 +2,14 @@ package btc
 
 import "fmt"
 
+type AllUnspentTx []OneUnspentTx
+
 // Returned by GetUnspentFromPkScr
 type OneUnspentTx struct {
 	TxPrevOut
 	Value uint64
 	AskIndex uint
+	MinedAt uint32
 }
 
 func (ou *OneUnspentTx) String() string {
@@ -25,7 +28,7 @@ type UnspentDB interface {
 	GetLastBlockHash() []byte
 	
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
-	GetAllUnspent(addr []*BtcAddr) []OneUnspentTx
+	GetAllUnspent(addr []*BtcAddr) AllUnspentTx
 
 	Idle()
 	Save()
