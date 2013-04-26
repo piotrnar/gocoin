@@ -123,7 +123,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 	}
 	println("mark", NewUint256(hash).String(), "as invalid")
 	if cur.trusted {
-		panic("if it is strusted - how can be invalid?")
+		panic("if it is trusted - how can be invalid?")
 	}
 	db.setBlockFlag(cur, BLOCK_INVALID)
 	delete(db.blockIndex, idx)
