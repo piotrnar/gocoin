@@ -302,7 +302,7 @@ main_loop:
 					println("tx unexpected here (now)")
 					break main_loop
 				
-				case "addr":// ParseAddr(cmd.pl)
+				case "addr": ParseAddr(cmd.pl)
 				
 				case "block": //ParseBlock(cmd.pl)
 					blockReceived(cmd.pl)

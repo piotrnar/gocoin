@@ -123,20 +123,13 @@ func show_balance() {
 		return
 	}
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
-	var sumsum uint64
-	for a := range MyWallet.addrs {
-		var sum uint64
-		fmt.Println(MyWallet.addrs[a].String(), ":")
-		for i := range unsp {
-			if uint(a) == unsp[i].AskIndex {
-				fmt.Println(unsp[i].String())
-				sum += unsp[i].Value
-			}
-		}
-		fmt.Printf("%15.8f BTC\n", float64(sum)/1e8)
-		sumsum += sum
+	var sum uint64
+	for i := range unsp {
+		fmt.Printf("%7d %s @ %s\n", BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
+			unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
+		sum += unsp[i].Value
 	}
-	fmt.Printf("%.8f BTC @ all %d addresses\n", float64(sumsum)/1e8, len(MyWallet.addrs))
+	fmt.Printf("%.8f BTC @ all %d addresses\n", float64(sum)/1e8, len(MyWallet.addrs))
 }
 
 
@@ -187,7 +180,7 @@ func block_fetcher() {
 
 func show_help() {
 	fmt.Println("There are different commands...")
-	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, quit")
+	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, pers, quit")
 }
 
 func main() {
@@ -248,8 +241,6 @@ func main() {
 						BlockChain.Save()
 					
 					case "quit": 
-						fmt.Println("Saving coinbase & quitting...")
-						BlockChain.Save()
 						goto exit
 					
 					case "q": 
@@ -259,6 +250,9 @@ func main() {
 						var ms runtime.MemStats
 						runtime.ReadMemStats(&ms)
 						fmt.Println("HeapAlloc", ms.HeapAlloc>>20, "MB")
+					
+					case "pers":
+						show_addresses()
 					
 					case "?":
 						show_help()
@@ -325,4 +319,5 @@ func main() {
 exit:
 	println("Closing blockchain")
 	BlockChain.Close()
+	peerDB.Close()
 }
