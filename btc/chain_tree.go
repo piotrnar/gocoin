@@ -35,8 +35,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	for ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
+			ChSto("ParseTillBlock")
+			ShowProfileData()
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
 			prv = cur
+			ChSta("ParseTillBlock")
 		}
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
@@ -69,7 +72,9 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if !ch.DoNotSync {
 			ch.Blocks.Sync()
 		}
+		ChSta("db.CommitBlockTxs")
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
+		ChSto("db.CommitBlockTxs")
 
 		ch.BlockTreeEnd = nxt
 	}
