@@ -1,8 +1,8 @@
 package btc
 
 import (
-//	"os"
 	"errors"
+	"bytes"
 	"time"
 	"encoding/binary"
 )
@@ -24,11 +24,10 @@ type Block struct {
 
 
 func NewBlock(data []byte) (*Block, error) {
-	ChSta("NewBlock")
 	if len(data)<81 {
-		ChSto("NewBlock")
 		return nil, errors.New("Block too short")
 	}
+
 	var bl Block
 	bl.Hash = NewSha2Hash(data[:80])
 	bl.Raw = data
@@ -37,7 +36,6 @@ func NewBlock(data []byte) (*Block, error) {
 	bl.MerkleRoot = data[36:68]
 	bl.BlockTime = binary.LittleEndian.Uint32(data[68:72])
 	bl.Bits = binary.LittleEndian.Uint32(data[72:76])
-	ChSto("NewBlock")
 	return &bl, nil
 }
 
@@ -89,8 +87,6 @@ func (bl *Block) CheckBlock() (er error) {
 		return errors.New("CheckBlock() : size limits failed")
 	}
 
-	// TODO: Check proof of work matches claimed amount
-	
 	// Check timestamp (must not be higher than now +2 minutes)
 	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
 		ChSto("CheckBlock")
@@ -101,6 +97,12 @@ func (bl *Block) CheckBlock() (er error) {
 	if er != nil {
 		ChSto("CheckBlock")
 		return
+	}
+	
+	// Check Merkle Root
+	if !bytes.Equal(getMerkel(bl.Txs), bl.MerkleRoot) {
+		ChSto("CheckBlock")
+		return errors.New("CheckBlock() : Merkle Root mismatch")
 	}
 	
 	if !bl.Trusted {
