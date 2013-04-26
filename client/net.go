@@ -15,7 +15,7 @@ import (
 )
 
 
-const MaxCons = 8
+const MaxCons = 12
 
 
 var (
@@ -141,8 +141,9 @@ func (c *oneConnection) FetchMessage() (*BCmsg, error) {
 			return nil, c.HandleError(e)
 		}
 		if c.hdr_len>=4 && !bytes.Equal(c.hdr[:4], Magic[:]) {
-			println("Proto sync...")
-			copy(c.hdr[0:c.hdr_len-1], c.hdr[1:c.hdr_len])
+			return nil, errors.New("Proto out of sync")
+			/*println("Proto sync...")
+			copy(c.hdr[0:c.hdr_len-1], c.hdr[1:c.hdr_len])*/
 		}
 	}
 
