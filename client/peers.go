@@ -210,10 +210,14 @@ func getBestPeer() (p *onePeer) {
 	}
 	
 	oldest_failed := uint32(0xffffffff)
+	var best_time uint32
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
-		if ad.FailedLast < oldest_failed && !connectionActive(ad) {
+		if (ad.FailedLast < oldest_failed || 
+			(ad.FailedLast == oldest_failed && ad.Time > best_time) ) &&
+			!connectionActive(ad) {
 			oldest_failed = ad.FailedLast
+			best_time = ad.Time
 			p = ad
 		}
 		return true
