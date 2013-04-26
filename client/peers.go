@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"bytes"
+    "net"
 	"time"
-//	"encoding/hex"
+	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
 	"hash/crc64"
@@ -14,7 +14,6 @@ var (
 	peerDB *qdb.DB
 	crctab = crc64.MakeTable(crc64.ISO)
 )
-
 
 type onePeer struct {
 	Time uint32  // When seen last time
@@ -26,6 +25,14 @@ type onePeer struct {
 	Banned uint32 // time when this address baned or zero if never
 	FirstSeen uint32 // time when this address was seen for the first time
 	TimesSeen uint32 // how many times this address have been seen
+	
+	FailedLast uint32
+	FailedCount uint32
+	
+	ConnectedLast uint32
+	ConnectedCount uint32
+
+	BytesReceived uint64
 }
 
 
@@ -42,12 +49,23 @@ func newPeer(v []byte) (p *onePeer) {
 	copy(p.Ip4[:], v[24:28])
 	p.Port = binary.BigEndian.Uint16(v[28:30])
 	
-	if len(v) == 42 {
+	if len(v) >= 42 {
 		p.Banned = binary.LittleEndian.Uint32(v[30:34])
 		p.FirstSeen = binary.LittleEndian.Uint32(v[34:38])
 		p.TimesSeen = binary.LittleEndian.Uint32(v[38:42])
 	} else {
 		p.FirstSeen = p.Time
+	}
+
+	if len(v) >= 58 {
+		p.FailedLast = binary.LittleEndian.Uint32(v[42:46])
+		p.FailedCount = binary.LittleEndian.Uint32(v[46:50])
+		p.ConnectedLast = binary.LittleEndian.Uint32(v[50:54])
+		p.ConnectedCount = binary.LittleEndian.Uint32(v[54:58])
+	}
+	
+	if len(v) >= 66 {
+		p.BytesReceived = binary.LittleEndian.Uint64(v[58:66])
 	}
 	return
 }
@@ -64,16 +82,59 @@ func (p *onePeer) Bytes(all bool) []byte {
 		binary.Write(b, binary.LittleEndian, p.Banned)
 		binary.Write(b, binary.LittleEndian, p.FirstSeen)
 		binary.Write(b, binary.LittleEndian, p.TimesSeen)
+		
+		binary.Write(b, binary.LittleEndian, p.FailedLast)
+		binary.Write(b, binary.LittleEndian, p.FailedCount)
+		binary.Write(b, binary.LittleEndian, p.ConnectedLast)
+		binary.Write(b, binary.LittleEndian, p.ConnectedCount)
+		
+		binary.Write(b, binary.LittleEndian, p.BytesReceived)
 	}
 	return b.Bytes()
 }
 
 
+func (p *onePeer) Save() {
+	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes(true))
+}
+
+
+func (p *onePeer) Failed() {
+	p.FailedCount++
+	p.FailedLast = uint32(time.Now().Unix())
+	p.Save()
+}
+
+
+func (p *onePeer) Connected() {
+	p.ConnectedCount++
+	p.ConnectedLast = uint32(time.Now().Unix())
+	p.Save()
+}
+
+
+func (p *onePeer) GotData(l int) {
+	p.BytesReceived += uint64(l)
+	p.Save()
+}
+
+
+
+func (p *onePeer) Ip() (string) {
+	return fmt.Sprintf("%d.%d.%d.%d:%d", p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port)
+}
+
 func (p *onePeer) String() (s string) {
+	s = p.Ip()
+	s += fmt.Sprintf(",  serv:%x,   failed %d times, last %s", 
+		p.Services, p.FailedCount,
+		time.Unix(int64(p.FailedLast), 0).Format("06-01-02 15:04:05"))
+	/*
 	s = fmt.Sprintf("%d.%d.%d.%d:%d  0x%x, seen %d times in %s..%s",
 		p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port, p.Services, p.TimesSeen,
 		time.Unix(int64(p.FirstSeen), 0).Format("06-01-02 15:04:05"),
 		time.Unix(int64(p.Time), 0).Format("06-01-02 15:04:05"),)
+	*/
 	if p.Banned!=0 {
 		s += " BAN at "+time.Unix(int64(p.Banned), 0).Format("06-01-02 15:04:05")
 	}
@@ -81,12 +142,12 @@ func (p *onePeer) String() (s string) {
 }
 
 
-func (p *onePeer) QdbKey() (qdb.KeyType) {
+func (p *onePeer) UniqID() (uint64) {
 	h := crc64.New(crctab)
 	h.Write(p.Ip6[:])
 	h.Write(p.Ip4[:])
 	h.Write([]byte{byte(p.Port>>8),byte(p.Port)})
-	return qdb.KeyType(h.Sum64())
+	return h.Sum64()
 }
 
 
@@ -101,11 +162,11 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		k := a.QdbKey()
+		k := qdb.KeyType(a.UniqID())
 		v := peerDB.Get(k)
 		if v != nil {
 			prv := newPeer(v[:])
-			println(a.String(), "already in the db", prv.Time, a.Time)
+			//println(a.String(), "already in the db", prv.Time, a.Time)
 			a.Banned = prv.Banned
 			a.FirstSeen = prv.FirstSeen
 			a.TimesSeen = a.TimesSeen+1
@@ -125,6 +186,62 @@ func show_addresses() {
 }
 
 
+func getBestPeer() (p *onePeer) {
+	lh := new(onePeer)
+	lh.Ip4 = [4]byte{127,0,0,1}
+	if *testnet {
+		lh.Port = 18333
+	} else {
+		lh.Port = 8333
+	}
+	if !connectionActive(lh) {
+		p = lh
+	}
+	
+	oldest_failed := uint32(0xffffffff)
+	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		ad := newPeer(v)
+		if ad.FailedLast < oldest_failed && !connectionActive(ad) {
+			oldest_failed = ad.FailedLast
+			p = ad
+		}
+		return true
+	})
+
+	return 
+}
+
+
+func initSeeds(seeds []string, port int) {
+	for i := range seeds {
+		ad, er := net.LookupHost(seeds[i])
+		if er == nil {
+			for j := range ad {
+				ip := net.ParseIP(ad[j])
+				if ip != nil && len(ip)==16 {
+					p := new(onePeer)
+					p.Services = 1
+					copy(p.Ip6[:], ip[:12])
+					copy(p.Ip4[:], ip[12:16])
+					p.Port = uint16(port)
+					p.Save()
+				}
+			}
+		}
+	}
+}
+
+
 func init () {
 	peerDB, _ = qdb.NewDB("peers")
+	if peerDB.Count()==0 {
+		if !*testnet {
+			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
+				"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
+		} else {
+			initSeeds([]string{"testnet-seed.bitcoin.petertodd.org","testnet-seed.bluematt.me"}, 18333)
+		}
+		println("peerDB initiated with ", peerDB.Count(), "seeds")
+	}
 }
+

@@ -35,6 +35,8 @@ var (
 	cachedBlocks map[[btc.Uint256IdxLen]byte] *btc.Block = make(map[[btc.Uint256IdxLen]byte] *btc.Block)
 
 	MyWallet *oneWallet
+
+	InvsIgnored uint32
 )
 
 
@@ -91,8 +93,8 @@ func list_unspent(addr string) {
 
 
 func show_stats() {
-	fmt.Printf("Blocks in the cache : %d.  Pending blocks : %d\n", 
-		len(cachedBlocks), len(pendingBlocks))
+	fmt.Printf("Blocks in the cache : %d.  Pending blocks : %d.  Invs ignored : %d\n", 
+		len(cachedBlocks), len(pendingBlocks), InvsIgnored)
 	fmt.Println(BlockChain.Stats())
 }
 
@@ -125,7 +127,7 @@ func show_balance() {
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
 	var sum uint64
 	for i := range unsp {
-		fmt.Printf("%7d %s @ %s\n", BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
+		fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
 			unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
 		sum += unsp[i].Value
 	}
@@ -160,11 +162,10 @@ func block_fetcher() {
 				next_ask_for_block = time.Now().Add(10*time.Second)
 			}
 		} else {
-			if askForDataCnt==0 && askForData==nil {
+			if askForData==nil {
 				for _, v := range pendingBlocks {
 					//println("ask4dat", btc.NewUint256(v).String())
 					askForData = v
-					askForDataCnt++
 					break
 				}
 			}
@@ -178,9 +179,26 @@ func block_fetcher() {
 }
 
 
+func blockWanted(h []byte) (yes bool) {
+	ha := btc.NewUint256(h)
+	idx := ha.BIdx()
+	mutex.Lock()
+	if _, ok := cachedBlocks[idx]; !ok {
+		if _, ok := BlockChain.BlockIndex[idx]; !ok {
+			yes = true
+		}
+	}
+	mutex.Unlock()
+	if !yes {
+		InvsIgnored++
+	}
+	return
+}
+
+
 func show_help() {
 	fmt.Println("There are different commands...")
-	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, pers, quit")
+	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, pers, net, quit")
 }
 
 func main() {
@@ -193,15 +211,7 @@ func main() {
 	init_blockchain()
 	MyWallet = NewWallet("wallet.txt")
 
-	var host string
-	
-	if *testnet {
-		host = *proxy+":18333"
-	} else {
-		host = *proxy+":8333"
-	}
-
-	go do_network(host)
+	go network_process()
 	go do_userif()
 	go block_fetcher()
 
@@ -233,6 +243,9 @@ func main() {
 					case "invs": 
 						show_invs()
 					
+					case "net":
+						net_stats()
+
 					case "prof": 
 						btc.ShowProfileData()
 					
@@ -278,7 +291,8 @@ func main() {
 					} else if _, ok := cachedBlocks[idx]; ok {
 						println(ha.String(), "already received")
 					} else if _, ok := BlockChain.BlockIndex[idx]; ok {
-						println(ha.String(), "already accepted")
+						//println(ha.String(), "already accepted")
+						InvsIgnored++
 					} else {
 						pendingBlocks[idx] = msg.dat
 						//println(" - accepted")
@@ -288,10 +302,13 @@ func main() {
 				case "bl":
 					bl, e := btc.NewBlock(msg.dat[:])
 					if e == nil {
+						idx := bl.Hash.BIdx()
 						mutex.Lock()
-						delete(pendingBlocks, bl.Hash.BIdx())
-						askForDataCnt--
+						delete(pendingBlocks, idx)
 						mutex.Unlock()
+						if _, ok := BlockChain.BlockIndex[idx]; ok {
+							break
+						}
 						e = bl.CheckBlock()
 						if e == nil {
 							e = BlockChain.AcceptBlock(bl)

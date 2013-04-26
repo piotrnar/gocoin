@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -16,13 +15,19 @@ import (
 )
 
 
+const MaxCons = 8
+
+
 var (
 	mutex sync.Mutex
 	askForBlocks []byte
 	askForData []byte
+	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxCons)
 )
 
 type oneConnection struct {
+	addr *onePeer
+	
 	listen bool
 	*net.TCPConn
 	
@@ -31,6 +36,15 @@ type oneConnection struct {
 
 	dat []byte
 	datlen uint32
+
+	// Data from the version message
+	node struct {
+		version uint32
+		services uint64
+		timestamp uint64
+		height uint32
+		agent string
+	}
 }
 
 
@@ -164,37 +178,34 @@ func (c *oneConnection) FetchMessage() (*BCmsg, error) {
 }
 
 
-func (c *oneConnection) VerMsg(pl []byte) {
+func (c *oneConnection) VerMsg(pl []byte) error {
 	if len(pl) >= 46 {
-		fmt.Println()
-		fmt.Printf("Version %d, serv=0x%x, time:%s\n",
-			binary.LittleEndian.Uint32(pl[0:4]),
-			binary.LittleEndian.Uint64(pl[4:12]),
-			time.Unix(int64(binary.LittleEndian.Uint64(pl[12:20])), 0).Format("2006-01-02 15:04:05"),
-			)
-		fmt.Println("Recv:", btc.NewNetAddr(pl[20:46]).String())
+		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
+		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
+		c.node.timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		if len(pl) >= 86 {
-			fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
-			fmt.Println("Nonce:", hex.EncodeToString(pl[72:80]))
+			//fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
+			//fmt.Println("Nonce:", hex.EncodeToString(pl[72:80]))
 			le, of := btc.VLen(pl[80:])
 			of += 80
-			fmt.Println("Agent:", string(pl[of:of+le]))
+			c.node.agent = string(pl[of:of+le])
 			of += le
 			if len(pl) >= of+4 {
-				fmt.Println("Height:", binary.LittleEndian.Uint32(pl[of:of+4]))
-				of += 4
+				c.node.height = binary.LittleEndian.Uint32(pl[of:of+4])
+				/*of += 4
 				if len(pl) >= of+1 {
 					fmt.Println("Relay:", pl[of])
-				}
+				}*/
 			}
 		}
 	} else {
-		println("Corrupt version message", hex.EncodeToString(pl[:]))
+		return errors.New("Version message too short")
 	}
 	c.SendRawMsg("verack", []byte{})
 	if c.listen {
 		c.SendVersion()
 	}
+	return nil
 }
 
 func (c *oneConnection) GetBlockData(h []byte) {
@@ -217,7 +228,7 @@ func (c *oneConnection) GetBlocks(lastbl []byte) {
 }
 
 
-func ProcessInv(pl []byte) {
+func (c *oneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
 		println("inv payload too short")
 		return
@@ -227,6 +238,18 @@ func ProcessInv(pl []byte) {
 	if len(pl) != of + 36*cnt {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
+
+	if cnt==1 {
+		typ := binary.LittleEndian.Uint32(pl[of:of+4])
+		if typ==2 {
+			if blockWanted(pl[of+4:of+36]) {
+				c.GetBlockData(pl[of+4:of+36])
+			} else {
+				//println("Ignore block INV from", c.addr.Ip(), btc.NewUint256(pl[of+4:of+36]).String())
+			}
+		}
+		return
+	}           
 
 	for cnt>0 {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
@@ -273,7 +296,7 @@ func (c *oneConnection) Tick() {
 }
 
 
-func do_one_connection(c oneConnection) {
+func do_one_connection(c *oneConnection) {
 	c.SendVersion()
 
 	ver_ack_received := false
@@ -282,21 +305,29 @@ main_loop:
 	for {
 		cmd, er := c.FetchMessage()
 		if er != nil {
+			c.addr.Failed()
 			println("FetchMessage:", er.Error())
 			break
 		}
 
 		if cmd!=nil {
+			c.addr.GotData(24+len(cmd.pl))
+
 			switch cmd.cmd {
 				case "version":
-					c.VerMsg(cmd.pl)
-				
+					er = c.VerMsg(cmd.pl)
+					if er != nil {
+						println("version:", er.Error())
+						c.addr.Failed()
+						break main_loop
+					}
+
 				case "verack":
-					fmt.Println("Received Ver ACK")
+					//fmt.Println("Received Ver ACK")
 					ver_ack_received = true
-				
+
 				case "inv":
-					ProcessInv(cmd.pl)
+					c.ProcessInv(cmd.pl)
 				
 				case "tx": //ParseTx(cmd.pl)
 					println("tx unexpected here (now)")
@@ -307,6 +338,8 @@ main_loop:
 				case "block": //ParseBlock(cmd.pl)
 					blockReceived(cmd.pl)
 
+				case "alert": // do nothing
+
 				default:
 					println(cmd.cmd)
 			}
@@ -316,27 +349,69 @@ main_loop:
 			c.Tick()
 		}
 	}
+	println("Disconnected from", c.addr.Ip())
 	c.TCPConn.Close()
 }
 
-func do_network(host string) {
-	var conn oneConnection
-	oa, e := net.ResolveTCPAddr("tcp4", host)
-	if e != nil {
-		println(e.Error())
-		return
-	}
-	for {
-		conn.TCPConn, e = net.DialTCP("tcp4", nil, oa)
-		if e != nil {
-			println(e.Error())
-			time.Sleep(5e9)
-			continue
-		}
-		println("Connected to bitcoin node", host)
 
-		do_one_connection(conn)
-	}
+func connectionActive(ad *onePeer) (yes bool) {
+	mutex.Lock()
+	_, yes = openCons[ad.UniqID()]
+	mutex.Unlock()
+	return
 }
 
 
+func do_network(ad *onePeer) {
+	var e error
+	conn := new(oneConnection)
+	conn.addr = ad
+	mutex.Lock()
+	openCons[ad.UniqID()] = conn
+	mutex.Unlock()
+	go func() {
+		conn.TCPConn, e = net.DialTCP("tcp4", nil, &net.TCPAddr{
+			IP: net.IPv4(ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3]),
+			Port: int(ad.Port)})
+		if e == nil {
+			ad.Connected()
+			println("Connected to", ad.Ip())
+			do_one_connection(conn)
+		} else {
+			println("Could not connect to", ad.Ip())
+			//println(e.Error())
+			ad.Failed()
+		}
+		mutex.Lock()
+		delete(openCons, ad.UniqID())
+		mutex.Unlock()
+	}()
+}
+
+
+func network_process() {
+	for {
+		mutex.Lock()
+		conn_cnt := len(openCons)
+		mutex.Unlock()
+		if conn_cnt < MaxCons {
+			ad := getBestPeer()
+			if ad != nil {
+				do_network(ad)
+			} else {
+				println("no new peers", len(openCons), MaxCons)
+			}
+		}
+		time.Sleep(250e6)
+	}
+}
+
+func net_stats() {
+	mutex.Lock()
+	println(len(openCons), "active net connections:")
+	for _, v := range openCons {
+		println(" ", v.addr.Ip(), "\t", v.addr.BytesReceived, "bts  \tver:",
+			v.node.version, v.node.agent, "\t", v.node.height)
+	}
+	mutex.Unlock()
+}
