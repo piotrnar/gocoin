@@ -15,7 +15,8 @@ Eech value is variable length:
   [0:32] - TxPrevOut.Hash
   [32:36] - TxPrevOut.Vout LSB
   [36:44] - Value LSB
-  [44:] - Pk_script (in DBfile first 4 bytes are LSB length)
+  [44:48] - BlockHeight LSB (where mined)
+  [48:] - Pk_script (in DBfile first 4 bytes are LSB length)
 */
 
 
@@ -33,6 +34,11 @@ type unspentDb struct {
 func newUnspentDB(dir string) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
+	/*println("loading db...")
+	for i := range db.tdb {
+		println(db.dbN(i).Count(), "in", i)
+	}
+	println("loaded...")*/
 	return
 }
 
@@ -49,19 +55,14 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 }
 
 
-func getUnspIndex(po *btc.TxPrevOut) (idx [prevOutIdxLen]byte) {
-	copy(idx[:], po.Hash[:prevOutIdxLen])
-	idx[0] ^= byte(po.Vout)
-	idx[1] ^= byte(po.Vout>>8)
-	idx[2] ^= byte(po.Vout>>16)
-	idx[3] ^= byte(po.Vout>>32)
-	return
+func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
+	return qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout))
 }
 
 
 func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := getUnspIndex(po)
-	val, _ := db.dbN(int(po.Hash[31])).Get(ind)
+	val := db.dbN(int(po.Hash[31])).Get(ind)
 	if val==nil {
 		//println(po.Hash[31], len(db.tdb[po.Hash[31]].Cache), hex.EncodeToString(ind[:]))
 		//panic("Unspent not found")
@@ -69,24 +70,26 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 		return
 	}
 
-	if len(val)<44 {
+	if len(val)<48 {
 		panic(fmt.Sprint("unspent record too short:", len(val)))
 	}
 	
 	res = new(btc.TxOut)
 	res.Value = binary.LittleEndian.Uint64(val[36:44])
-	res.Pk_script = make([]byte, len(val)-44)
-	copy(res.Pk_script, val[44:])
+	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
+	res.Pk_script = make([]byte, len(val)-48)
+	copy(res.Pk_script, val[48:])
 	return
 }
 
 
 func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
-	v := make([]byte, 44+len(Val_Pk.Pk_script))
+	v := make([]byte, 48+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
 	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
-	copy(v[44:], Val_Pk.Pk_script)
+	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
+	copy(v[48:], Val_Pk.Pk_script)
 	ind := getUnspIndex(idx)
 	db.dbN(int(idx.Hash[31])).Put(ind, v)
 	/*
@@ -121,20 +124,22 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 }
 
 
-func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr) (res []btc.OneUnspentTx) {
+func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr) (res btc.AllUnspentTx) {
 	for i := range db.tdb {
-		for _, v := range db.dbN(i).Cache {
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
 			for a := range addr {
-				if addr[a].Owns(v[44:]) {
+				if addr[a].Owns(v[48:]) {
 					var nr btc.OneUnspentTx
 					copy(nr.TxPrevOut.Hash[:], v[0:32])
 					nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
 					nr.Value = binary.LittleEndian.Uint64(v[36:44])
+					nr.MinedAt = binary.LittleEndian.Uint32(v[44:48])
 					nr.AskIndex = uint(a)
 					res = append(res, nr)
 				}
 			}
-		}
+			return true
+		})
 	}
 	return
 }
@@ -154,10 +159,11 @@ func (db *unspentDb) commit(changes *btc.BlockChanges) {
 func (db *unspentDb) stats() (s string) {
 	var cnt, sum uint64
 	for i := range db.tdb {
-		for _, v := range db.dbN(i).Cache {
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
 			sum += binary.LittleEndian.Uint64(v[36:44])
 			cnt++
-		}
+			return true
+		})
 	}
 	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n", 
 		float64(sum)/1e8, cnt, db.defragCount)

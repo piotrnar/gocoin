@@ -4,7 +4,6 @@ import (
 	"io"
 	"fmt"
 	"bytes"
-	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/qdb"
 )
@@ -24,15 +23,15 @@ type unwindDb struct {
 func newUnwindDB(dir string) (db *unwindDb) {
 	db = new(unwindDb)
 	db.tdb, _ = qdb.NewDB(dir)
-	db.tdb.Load()
 	db.lastBlockHeight = 0
-	for k, v := range db.tdb.Cache {
-		h := binary.LittleEndian.Uint32(k[0:4])
+	db.tdb.Browse(func(k qdb.KeyType, v []byte) bool {
+		h := uint32(k)
 		if h > db.lastBlockHeight {
 			db.lastBlockHeight = h
 			copy(db.lastBlockHash[:], v[:32])
-		}          
-	}
+		}
+		return true
+	})
 	return
 }
 
@@ -55,7 +54,7 @@ func unwindFromReader(f io.Reader, unsp *unspentDb) {
 
 
 func (db *unwindDb) del(height uint32) {
-	db.tdb.Del(h2k(height))
+	db.tdb.Del(qdb.KeyType(height))
 }
 
 
@@ -89,7 +88,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 		panic("Unexpected height")
 	}
 	
-	v, _ := db.tdb.Get(h2k(height))
+	v := db.tdb.Get(qdb.KeyType(height))
 	if v == nil {
 		panic("Unwind data not found")
 	}
@@ -98,7 +97,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 	db.del(height)
 
 	db.lastBlockHeight--
-	v, _ = db.tdb.Get(h2k(db.lastBlockHeight))
+	v = db.tdb.Get(qdb.KeyType(db.lastBlockHeight))
 	if v == nil {
 		panic("Parent data not found")
 	}
@@ -122,7 +121,7 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	for k, v := range changes.DeledTxs {
 		writeSpent(f, &k, v)
 	}
-	db.tdb.Put(h2k(changes.Height), f.Bytes())
+	db.tdb.Put(qdb.KeyType(changes.Height), f.Bytes())
 	if changes.Height >= UnwindBufferMaxHistory {
 		db.del(changes.Height-UnwindBufferMaxHistory)
 	}
@@ -144,10 +143,4 @@ func (db *unwindDb) stats() (s string) {
 	s += "Last block: " + btc.NewUint256(db.lastBlockHash[:]).String() + "\n"
 	return
 }
-
-func h2k(h uint32) (k [qdb.KeySize]byte) {
-	binary.LittleEndian.PutUint32(k[0:4], h)
-	return
-}
-
 
