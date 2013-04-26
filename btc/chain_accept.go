@@ -135,6 +135,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	for i := range bl.Txs {
 		outs := make([]*TxOut, len(bl.Txs[i].TxOut))
 		for j := range bl.Txs[i].TxOut {
+			bl.Txs[i].TxOut[j].BlockHeight = changes.Height
 			outs[j] = bl.Txs[i].TxOut[j]
 		}
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
