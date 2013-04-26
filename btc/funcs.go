@@ -1,5 +1,6 @@
 package btc
 
+
 func allzeros(b []byte) bool {
 	for i := range b {
 		if b[i]!=0 {
@@ -58,15 +59,15 @@ func getMerkel(txs []*Tx) ([]byte) {
 	for i := range txs {
 		mtr[i] = txs[i].Hash.Hash[:]
 	}
-	var j int
-	var h [32]byte
+	var j, i2 int
 	for siz:=len(txs); siz>1; siz=(siz+1)/2 {
 		for i := 0; i < siz; i += 2 {
 			if i+1 < siz-1 {
-				h = Sha2Sum(append(mtr[j+i], mtr[j+i+1]...))
+				i2 = i+1
 			} else {
-				h = Sha2Sum(append(mtr[j+i], mtr[j+siz-1]...))
+				i2 = siz-1
 			}
+			h := Sha2Sum(append(mtr[j+i], mtr[j+i2]...))
 			mtr = append(mtr, h[:])
 		}
 		j += siz
