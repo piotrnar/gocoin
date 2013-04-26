@@ -126,10 +126,21 @@ func (p *onePeer) Ip() (string) {
 
 func (p *onePeer) String() (s string) {
 	s = p.Ip()
-	s += fmt.Sprintf(",  serv:%x,   failed %d times, last %s", 
-		p.Services, p.FailedCount,
-		time.Unix(int64(p.FailedLast), 0).Format("06-01-02 15:04:05"))
-	/*
+	if p.Services!=1 {
+		s += fmt.Sprintf("  serv:%x", p.Services)
+	}
+	if p.BytesReceived > 0 {
+		s += fmt.Sprintf("  bytes:%d", p.BytesReceived)
+	}
+	if p.ConnectedCount > 0 {
+		s += fmt.Sprintf("  connected %d times, last %s", p.ConnectedCount,
+			time.Unix(int64(p.ConnectedLast), 0).Format("06-01-02 15:04:05"))
+	}
+	if p.FailedCount > 0 {
+		s += fmt.Sprintf("  failed %d times, last %s", p.FailedCount,
+			time.Unix(int64(p.FailedLast), 0).Format("06-01-02 15:04:05"))
+	}
+			/*
 	s = fmt.Sprintf("%d.%d.%d.%d:%d  0x%x, seen %d times in %s..%s",
 		p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port, p.Services, p.TimesSeen,
 		time.Unix(int64(p.FirstSeen), 0).Format("06-01-02 15:04:05"),
