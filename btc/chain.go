@@ -2,6 +2,7 @@ package btc
 
 import (
 	"fmt"
+	"sort"
 )
 
 
@@ -90,8 +91,24 @@ func (ch *Chain) Close() {
 	ch.Unspent.Close()
 }
 
+func (x AllUnspentTx) Len() int {
+	return len(x)
+}
+
+func (x AllUnspentTx) Less(i, j int) bool {
+	return x[i].MinedAt < x[j].MinedAt
+}
+
+func (x AllUnspentTx) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
+}
+
 // Returns list of unspent output fro a given address
-func (ch *Chain) GetAllUnspent(addr []*BtcAddr) []OneUnspentTx {
-	return ch.Unspent.GetAllUnspent(addr)
+func (ch *Chain) GetAllUnspent(addr []*BtcAddr) AllUnspentTx {
+	unsp := ch.Unspent.GetAllUnspent(addr)
+	if unsp!=nil && len(unsp)>0 {
+		sort.Sort(unsp)
+	}
+	return unsp
 }
 
