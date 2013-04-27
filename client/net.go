@@ -31,6 +31,9 @@ type oneConnection struct {
 	listen bool
 	*net.TCPConn
 	
+	connectedAt int64
+	ver_ack_received bool
+
 	hdr [24]byte
 	hdr_len int
 
@@ -317,8 +320,6 @@ func (c *oneConnection) Tick() {
 func do_one_connection(c *oneConnection) {
 	c.SendVersion()
 
-	ver_ack_received := false
-
 	for {
 		cmd := c.FetchMessage()
 		if c.broken {
@@ -327,7 +328,7 @@ func do_one_connection(c *oneConnection) {
 		}
 		
 		if cmd==nil {
-			if ver_ack_received {
+			if c.ver_ack_received {
 				c.Tick()
 			}
 			continue
@@ -346,7 +347,7 @@ func do_one_connection(c *oneConnection) {
 
 			case "verack":
 				//fmt.Println("Received Ver ACK")
-				ver_ack_received = true
+				c.ver_ack_received = true
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
@@ -393,6 +394,7 @@ func do_network(ad *onePeer) {
 			IP: net.IPv4(ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3]),
 			Port: int(ad.Port)})
 		if e == nil {
+			conn.connectedAt = time.Now().Unix()
 			ad.Connected()
 			if dbg>0 {
 				println("Connected to", ad.Ip())
@@ -433,8 +435,14 @@ func net_stats() {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
 	for _, v := range openCons {
-		println(" ", v.addr.Ip(), "\t", v.addr.BytesReceived, "bts  \tver:",
-			v.node.version, v.node.agent, "\t", v.node.height)
+		fmt.Printf(" %-21s %10d KB", v.addr.Ip(), v.addr.BytesReceived>>10)
+		if v.connectedAt != 0 {
+			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
+		}
+		if v.node.version!=0 {
+			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
+		}
+		fmt.Println()
 	}
 	mutex.Unlock()
 }
