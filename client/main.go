@@ -41,6 +41,7 @@ var (
 	disableSync time.Time
 
 	mutex sync.Mutex
+	uicmddone sync.Mutex
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, 1000)
@@ -67,11 +68,16 @@ func init_blockchain() {
 
 
 func do_userif() {
+	var prompt bool = true
+	time.Sleep(1e9)
 	for {
-		fmt.Print("> ")
+		if prompt {
+			fmt.Print("> ")
+		}
 		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 		if len(li) > 0 {
 			cmd := string(li[:])
+			prompt = true
 			switch cmd {
 				case "i":
 					show_info()
@@ -100,13 +106,25 @@ func do_userif() {
 				case "h":
 					show_help()
 				
+				case "q":
+					os.Exit(0)
+				
+				case "pers":
+					show_addresses()
+					
 				default:
+					prompt = false
 					c := new(command)
 					c.src = "ui"
 					c.str = string(li[:])
 					println("sending command for execution in the other therad...")
+					uicmddone.Lock()
 					cmdChannel <- c
-					time.Sleep(2e9)
+					uicmddone.Lock()
+					go func() {
+						uicmddone.Lock()
+						fmt.Print("> ")
+					}()
 			}
 		}
 	}
@@ -383,18 +401,13 @@ func main() {
 					case "quit": 
 						goto exit
 					
-					case "q": 
-						os.Exit(0)
-					
-					case "pers":
-						show_addresses()
-					
 					default:
 						println("unknown command")
 				}
 				sto := time.Now().UnixNano()
 				fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 			}
+			uicmddone.Unlock()
 		} else if msg.src=="net" {
 			Busy = "Network: "+msg.str
 			switch msg.str {
