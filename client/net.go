@@ -133,7 +133,9 @@ func (c *oneConnection) HandleError(e error) (error) {
 		//fmt.Println("Just a timeout - ignore")
 		return nil
 	}
-	println("HandleError:", e.Error())
+	if dbg>0 {
+		println("HandleError:", e.Error())
+	}
 	c.hdr_len = 0
 	c.dat = nil
 	c.broken = true
