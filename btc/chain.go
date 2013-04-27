@@ -54,6 +54,13 @@ func NewBlockIndex(h []byte) (o [Uint256IdxLen]byte) {
 }
 
 
+func (ch *Chain) Sync() {
+	ch.DoNotSync = false
+	ch.Blocks.Sync()
+	ch.Unspent.Sync()
+}
+
+
 func (ch *Chain) Idle() {
 	ch.Unspent.Idle()
 }
@@ -74,7 +81,8 @@ func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 
 
 func (ch *Chain)Stats() (s string) {
-	s = fmt.Sprintf("CHAIN: tot_blocks:%d  max_height:%d\n", len(ch.BlockIndex), ch.BlockTreeEnd.Height)
+	s = fmt.Sprintf("CHAIN: blocks:%d  height:%d  nosync:%t\n", 
+		len(ch.BlockIndex), ch.BlockTreeEnd.Height, ch.DoNotSync)
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
 	return
