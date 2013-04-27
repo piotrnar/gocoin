@@ -65,20 +65,20 @@ func (t *Tx) Serialize() ([]byte) {
 	binary.Write(wr, binary.LittleEndian, t.Version)
 	
 	//TxIns
-	wr.Write(buf[:putVlen(buf[:], len(t.TxIn))])
+	wr.Write(buf[:PutVlen(buf[:], len(t.TxIn))])
 	for i := range t.TxIn {
 		wr.Write(t.TxIn[i].Input.Hash[:])
 		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Input.Vout)
-		wr.Write(buf[:putVlen(buf[:], len(t.TxIn[i].ScriptSig))])
+		wr.Write(buf[:PutVlen(buf[:], len(t.TxIn[i].ScriptSig))])
 		wr.Write(t.TxIn[i].ScriptSig[:])
 		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Sequence)
 	}
 	
 	//TxOuts
-	wr.Write(buf[:putVlen(buf[:], len(t.TxOut))])
+	wr.Write(buf[:PutVlen(buf[:], len(t.TxOut))])
 	for i := range t.TxOut {
 		binary.Write(wr, binary.LittleEndian, t.TxOut[i].Value)
-		wr.Write(buf[:putVlen(buf[:], len(t.TxOut[i].Pk_script))])
+		wr.Write(buf[:PutVlen(buf[:], len(t.TxOut[i].Pk_script))])
 		wr.Write(t.TxOut[i].Pk_script[:])
 	}
 
@@ -114,19 +114,19 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 		sha.Write(t.TxIn[nIn].Input.Hash[:])
 		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Input.Vout)
 		sha.Write(buf[:4])
-		sha.Write(buf[:putVlen(buf[:], len(scriptCode))])
+		sha.Write(buf[:PutVlen(buf[:], len(scriptCode))])
 		sha.Write(scriptCode[:])
 		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Sequence)
 		sha.Write(buf[:4])
 	} else {
-		sha.Write(buf[:putVlen(buf[:], len(t.TxIn))])
+		sha.Write(buf[:PutVlen(buf[:], len(t.TxIn))])
 		for i := range t.TxIn {
 			sha.Write(t.TxIn[i].Input.Hash[:])
 			binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Input.Vout)
 			sha.Write(buf[:4])
 			
 			if i==nIn {
-				sha.Write(buf[:putVlen(buf[:], len(scriptCode))])
+				sha.Write(buf[:PutVlen(buf[:], len(scriptCode))])
 				sha.Write(scriptCode[:])
 			} else {
 				sha.Write([]byte{0})
@@ -152,21 +152,21 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 			return nil
 		}
 		
-		sha.Write(buf[:putVlen(buf[:], nOut+1)])
+		sha.Write(buf[:PutVlen(buf[:], nOut+1)])
 		for i:=0; i < nOut; i++ {
 			sha.Write([]byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0})
 		}
 		binary.LittleEndian.PutUint64(buf[:8], t.TxOut[nOut].Value)
 		sha.Write(buf[:8])
-		sha.Write(buf[:putVlen(buf[:], len(t.TxOut[nOut].Pk_script))])
+		sha.Write(buf[:PutVlen(buf[:], len(t.TxOut[nOut].Pk_script))])
 		sha.Write(t.TxOut[nOut].Pk_script[:])
 	} else {
-		sha.Write(buf[:putVlen(buf[:], len(t.TxOut))])
+		sha.Write(buf[:PutVlen(buf[:], len(t.TxOut))])
 		for i := range t.TxOut {
 			binary.LittleEndian.PutUint64(buf[:8], t.TxOut[i].Value)
 			sha.Write(buf[:8])
 			
-			sha.Write(buf[:putVlen(buf[:], len(t.TxOut[i].Pk_script))])
+			sha.Write(buf[:PutVlen(buf[:], len(t.TxOut[i].Pk_script))])
 			
 			sha.Write(t.TxOut[i].Pk_script[:])
 		}

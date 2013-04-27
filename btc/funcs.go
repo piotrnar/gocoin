@@ -11,7 +11,7 @@ func allzeros(b []byte) bool {
 }
 
 
-func putVlen(b []byte, vl int) uint32 {
+func PutVlen(b []byte, vl int) uint32 {
 	uvl := uint32(vl)
 	if uvl<0xfd {
 		b[0] = byte(uvl)
