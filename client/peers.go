@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 	"bytes"
+    "strings"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
 	"hash/crc64"
@@ -269,22 +270,24 @@ func initPeers(dir string) {
 	}
 
 	if *proxy != "" {
-		ip := net.ParseIP(*proxy)
-		if ip != nil && len(ip)==16 {
-			println("Proxy IP:", ip[12],ip[13],ip[14],ip[15])
-			proxyPeer = new(onePeer)
-			proxyPeer.Services = 1
-			copy(proxyPeer.Ip6[:], ip[:12])
-			copy(proxyPeer.Ip4[:], ip[12:16])
-			if *testnet {
-				proxyPeer.Port = 18333
-			} else {
-				proxyPeer.Port = 8333
+		oa, e := net.ResolveTCPAddr("tcp4", *proxy)
+		if e != nil {
+			if strings.HasPrefix(e.Error(), "missing port in address") {
+				if *testnet {
+					oa, e = net.ResolveTCPAddr("tcp4", *proxy+":18333")
+				} else {
+					oa, e = net.ResolveTCPAddr("tcp4", *proxy+":8333")
+				}
 			}
-		} else {
-			println("Incorrect host:", *proxy)
-			os.Exit(1)
+			if e!=nil {
+				println(e.Error())
+				os.Exit(1)
+			}
 		}
+		proxyPeer = new(onePeer)
+		proxyPeer.Services = 1
+		copy(proxyPeer.Ip4[:], oa.IP[0:4])
+		proxyPeer.Port = uint16(oa.Port)
 	}
 	
 }

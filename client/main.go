@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	InvsAskDuration = 2*time.Second
+	InvsAskDuration = 10*time.Second
 )
 
 var (
@@ -34,9 +34,12 @@ var (
 	BlockChain *btc.Chain
 
 	dbg uint64
+	beep bool
 
 	LastBlock *btc.BlockTreeNode
-	
+	lastInvAsked  *btc.BlockTreeNode
+	disableSync time.Time
+
 	mutex sync.Mutex
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
@@ -49,7 +52,8 @@ var (
 
 	nextInvAsk time.Time = time.Now()
 
-	InvsIgnored, BlockDups, InvsAsked uint32
+	InvsIgnored, BlockDups, InvsAsked, MsgsCnt uint32
+	Busy string
 )
 
 
@@ -68,10 +72,41 @@ func do_userif() {
 		fmt.Print("> ")
 		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 		if len(li) > 0 {
-			c := new(command)
-			c.src = "ui"
-			c.str = string(li[:])
-			cmdChannel <- c
+			cmd := string(li[:])
+			switch cmd {
+				case "i":
+					show_info()
+				
+				case "mem":
+					var ms runtime.MemStats
+					runtime.ReadMemStats(&ms)
+					fmt.Println("HeapAlloc", ms.HeapAlloc>>20, "MB")
+				
+				case "cach": 
+					show_cached()
+				
+				case "invs": 
+					show_invs()
+				
+				case "net":
+					net_stats()
+
+				case "beep":
+					beep = !beep
+					println("beep", beep)
+
+				case "?":
+					show_help()
+				
+				case "h":
+					show_help()
+				
+				default:
+					c := new(command)
+					c.src = "ui"
+					c.str = string(li[:])
+					cmdChannel <- c
+			}
 		}
 	}
 }
@@ -97,15 +132,21 @@ func list_unspent(addr string) {
 }
 
 
-func show_stats() {
+func show_info() {
 	mutex.Lock()
 	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks))
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d\n", 
-		InvsIgnored, BlockDups, InvsAsked)
+	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  MsgsCnt:%d\n", 
+		InvsIgnored, BlockDups, InvsAsked, MsgsCnt)
+	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String())
+	if Busy!="" {
+		println("Currently busy with", Busy)
+	} else {
+		println("Not busy")
+	}
 	mutex.Unlock()
-	fmt.Println(BlockChain.Stats())
 }
+
 
 func show_invs() {
 	mutex.Lock()
@@ -157,12 +198,10 @@ func retry_cached_blocks() bool {
 			//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 			delete(cachedBlocks, k)
 			LastBlock = BlockChain.BlockTreeEnd
+			snoozeDisableSync(1)
 			return len(cachedBlocks)>0
 		} else if e.Error()!=btc.ErrParentNotFound {
-			println(e.Error())
-			show_stats()
-			show_cached()
-			os.Exit(0)
+			panic(e.Error())
 			delete(cachedBlocks, k)
 			return len(cachedBlocks)>0
 		}
@@ -170,15 +209,18 @@ func retry_cached_blocks() bool {
 	return false
 }
 
-
+func snoozeDisableSync(sec int) {
+	if BlockChain.DoNotSync {
+		disableSync = time.Now().Add(time.Duration(sec)*time.Second)
+	}
+}
 
 func blocksNeeded() (res []byte) {
 	mutex.Lock()
-	if time.Now().After(nextInvAsk) {
-		if len(pendingBlocks)==0 {
-			InvsAsked++
-			res = LastBlock.BlockHash.Hash[:]
-		}
+	if lastInvAsked != LastBlock || time.Now().After(nextInvAsk) {
+		lastInvAsked = LastBlock
+		InvsAsked++
+		res = LastBlock.BlockHash.Hash[:]
 		nextInvAsk = time.Now().Add(InvsAskDuration)
 	}
 	mutex.Unlock()
@@ -222,7 +264,7 @@ func blockWanted(h []byte) (yes bool) {
 }
 
 
-func InvsNotify(h []byte) {
+func InvsNotify(h []byte) (need bool) {
 	ha := btc.NewUint256(h)
 	idx := ha.BIdx()
 	mutex.Lock()
@@ -233,14 +275,16 @@ func InvsNotify(h []byte) {
 	} else {
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
+		need = true
 	}
 	mutex.Unlock()
+	return
 }
 
 
 func show_help() {
 	fmt.Println("There are different commands...")
-	fmt.Println("bal, unspent <address>, info, mem, prof, invs, cach, pers, net, quit")
+	fmt.Println("b, i, bal, unspent <address>, mem, prof, invs, cach, pers, net, quit")
 }
 
 
@@ -274,28 +318,44 @@ func main() {
 	for k, _ := range BlockChain.BlockIndex {
 		receivedBlocks[k] = sta
 	}
-	println("receivedBlocks:", len(receivedBlocks))
 	
 	go network_process()
 	go do_userif()
 
-	if LastBlock.Height > 10000 {
-		sta = 0
-	}
+	var msg *command
 	for {
+		//println(BlockChain.DoNotSync, retryCachedBlocks)
 		if retryCachedBlocks {
+			Busy = "retry_cached_blocks"
 			retryCachedBlocks = retry_cached_blocks()
 		}
 
-		msg, ok := <- cmdChannel
-		if !ok {
-			if !retryCachedBlocks {
-				BlockChain.Idle()
-			}
-			continue
+		Busy = ""
+		select {
+			case msg = <-cmdChannel:
+				break
+			
+			case <-time.After(100*time.Millisecond):
+				//println("tick")
+				if !retryCachedBlocks {
+					if BlockChain.DoNotSync && time.Now().After(disableSync) {
+						sto := time.Now().Unix()
+						println("Blocks stopped comming - enable disk sync")
+						println("Block", LastBlock.Height, "reached after", sto-sta, "seconds")
+						sta = 0
+						BlockChain.Sync()
+					}
+
+					Busy = "BlockChain.Idle()"
+					BlockChain.Idle()
+				}
+				continue
 		}
+
+		MsgsCnt++
 		//println("got msg", msg.src)
 		if msg.src=="ui" {
+			Busy = "User Interface: "+msg.str
 			if strings.HasPrefix(msg.str, "unspent") {
 				list_unspent(strings.Trim(msg.str[7:], " "))
 			} else if strings.HasPrefix(msg.str, "u ") {
@@ -306,23 +366,11 @@ func main() {
 			} else {
 				sta := time.Now().UnixNano()
 				switch msg.str {
-					case "i": 
-						show_stats()
+					case "b": 
+						fmt.Println(BlockChain.Stats())
 
-					case "info": 
-						show_stats()
-					
 					case "bal": 
 						show_balance()
-
-					case "cach": 
-						show_cached()
-					
-					case "invs": 
-						show_invs()
-					
-					case "net":
-						net_stats()
 
 					case "prof": 
 						btc.ShowProfileData()
@@ -337,19 +385,8 @@ func main() {
 					case "q": 
 						os.Exit(0)
 					
-					case "mem":
-						var ms runtime.MemStats
-						runtime.ReadMemStats(&ms)
-						fmt.Println("HeapAlloc", ms.HeapAlloc>>20, "MB")
-					
 					case "pers":
 						show_addresses()
-					
-					case "?":
-						show_help()
-					
-					case "h":
-						show_help()
 					
 					default:
 						println("unknown command")
@@ -358,6 +395,7 @@ func main() {
 				fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 			}
 		} else if msg.src=="net" {
+			Busy = "Network: "+msg.str
 			switch msg.str {
 				case "bl":
 					bl, e := btc.NewBlock(msg.dat[:])
@@ -376,15 +414,27 @@ func main() {
 						receivedBlocks[idx] = time.Now().UnixNano()
 						delete(pendingBlocks, idx)
 						mutex.Unlock()
+						
+						//TODO: disable turbo mode
+						//bl.Trusted = true
+						
 						e = bl.CheckBlock()
 						if e == nil {
+							if !BlockChain.DoNotSync && len(pendingBlocks)>50 {
+								BlockChain.DoNotSync = true
+								println("lots of pending blocks - switch syncing off for now...")
+							}
+
 							e = BlockChain.AcceptBlock(bl)
 							if e == nil {
-								//println(BlockChain.BlockTreeEnd.Height, "\007")
+								if beep {
+									go print("\007")
+								}
 								retryCachedBlocks = retry_cached_blocks()
 								mutex.Lock()
 								LastBlock = BlockChain.BlockTreeEnd
 								mutex.Unlock()
+								snoozeDisableSync(2)
 							} else if e.Error()==btc.ErrParentNotFound {
 								cachedBlocks[bl.Hash.BIdx()] = bl
 								//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
@@ -399,13 +449,6 @@ func main() {
 						println("NewBlock:", e.Error())
 					}
 			}
-		}
-
-		if sta!=0 && LastBlock.Height>=10000 {
-			sto := time.Now().Unix()
-			println("Block", LastBlock.Height, "reached after", sto-sta, "seconds")
-			sta = 0
-			//goto exit
 		}
 	}
 exit:

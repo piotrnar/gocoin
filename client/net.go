@@ -15,7 +15,7 @@ import (
 
 
 const (
-	MaxCons = 15
+	MaxCons = 8
 )
 
 
@@ -227,14 +227,6 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 	return nil
 }
 
-func (c *oneConnection) GetBlockData(h []byte) {
-	var b [1+4+32]byte
-	b[0] = 1 // One inv
-	b[1] = 2 // Block
-	copy(b[5:37], h[:32])
-	c.SendRawMsg("getdata", b[:])
-}
-
 
 func (c *oneConnection) GetBlocks(lastbl []byte) {
 	//println("GetBlocks since", btc.NewUint256(lastbl).String())
@@ -262,25 +254,29 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
 
-	if cnt==1 {
-		typ := binary.LittleEndian.Uint32(pl[of:of+4])
-		if typ==2 {
-			if blockWanted(pl[of+4:of+36]) {
-				c.GetBlockData(pl[of+4:of+36])
-			} else {
-				//println("Ignore block INV from", c.addr.Ip(), btc.NewUint256(pl[of+4:of+36]).String())
-			}
-		}
-		return
-	}           
-
+	var blocks2get [][32]byte
 	for cnt>0 {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
-		if typ==2 {
-			InvsNotify(pl[of+4:of+36])
+		if typ==2 && InvsNotify(pl[of+4:of+36]) {
+			var inv [32]byte
+			copy(inv[:], pl[of+4:of+36])
+			blocks2get = append(blocks2get, inv)
 		}
 		of+= 36
 		cnt--
+	}
+	if len(blocks2get) > 0 {
+		msg := make([]byte, 9/*maxvlen*/+len(blocks2get)*36)
+		le := btc.PutVlen(msg, len(blocks2get))
+		for i := range blocks2get {
+			binary.LittleEndian.PutUint32(msg[le:le+4], 2)
+			copy(msg[le+4:le+36], blocks2get[i][:])
+			le += 36
+		}
+		if dbg>0 {
+			println("getdata for", len(blocks2get), le, "blocks")
+		}
+		c.SendRawMsg("getdata", msg[:le])
 	}
 	return
 }
@@ -292,6 +288,15 @@ func blockReceived(b []byte) {
 	msg.str = "bl"
 	msg.dat = b
 	cmdChannel <- msg
+}
+
+
+func (c *oneConnection) GetBlockData(h []byte) {
+	var b [1+4+32]byte
+	b[0] = 1 // One inv
+	b[1] = 2 // Block
+	copy(b[5:37], h[:32])
+	c.SendRawMsg("getdata", b[:])
 }
 
 
