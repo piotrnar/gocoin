@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"sync"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -15,19 +14,20 @@ import (
 )
 
 
-const MaxCons = 12
+const (
+	MaxCons = 15
+)
 
 
 var (
-	mutex sync.Mutex
-	askForBlocks []byte
-	askForData []byte
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxCons)
 )
 
 type oneConnection struct {
 	addr *onePeer
 	
+	broken bool // maker that the conenction has been broken
+
 	listen bool
 	*net.TCPConn
 	
@@ -53,26 +53,38 @@ type BCmsg struct {
 	pl  []byte
 }
 
+
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
+
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	copy(b[0:4], Magic[:])
 	copy(b[4:16], cmd)
 	binary.LittleEndian.PutUint32(b[16:20], uint32(len(pl)))
 	_, e = c.TCPConn.Write(b[:20])
 	if e != nil {
+		println("SendRawMsg 1", e.Error())
+		c.broken = true
 		return
 	}
 
 	sh := btc.Sha2Sum(pl[:])
 	_, e = c.TCPConn.Write(sh[:4])
 	if e != nil {
+		println("SendRawMsg 2", e.Error())
+		c.broken = true
 		return
 	}
 
 	_, e = c.TCPConn.Write(pl[:])
+	if e != nil {
+		println("SendRawMsg 3", e.Error())
+		c.broken = true
+	}
+
 	return
 }
+
 
 func putaddr(b *bytes.Buffer, a string) {
 	var i1, i2, i3, i4, p int
@@ -121,29 +133,32 @@ func (c *oneConnection) HandleError(e error) (error) {
 		//fmt.Println("Just a timeout - ignore")
 		return nil
 	}
+	println("HandleError:", e.Error())
 	c.hdr_len = 0
 	c.dat = nil
+	c.broken = true
 	return e
 }
 
 
-func (c *oneConnection) FetchMessage() (*BCmsg, error) {
+func (c *oneConnection) FetchMessage() (*BCmsg) {
 	var e error
 	var n int
 
-	c.TCPConn.SetReadDeadline(time.Now().Add(time.Second))
-	//println("reading response")
+	// Try for 1 millisecond and timeout if full msg not received
+	c.TCPConn.SetReadDeadline(time.Now().Add(time.Millisecond))
 
 	for c.hdr_len < 24 {
 		n, e = c.TCPConn.Read(c.hdr[c.hdr_len:24])
-		c.hdr_len = n
+		c.hdr_len += n
 		if e != nil {
-			return nil, c.HandleError(e)
+			c.HandleError(e)
+			return nil
 		}
 		if c.hdr_len>=4 && !bytes.Equal(c.hdr[:4], Magic[:]) {
-			return nil, errors.New("Proto out of sync")
-			/*println("Proto sync...")
-			copy(c.hdr[0:c.hdr_len-1], c.hdr[1:c.hdr_len])*/
+			println("FetchMessage: Proto out of sync")
+			c.broken = true
+			return nil
 		}
 	}
 
@@ -157,16 +172,19 @@ func (c *oneConnection) FetchMessage() (*BCmsg, error) {
 			n, e = c.TCPConn.Read(c.dat[c.datlen:])
 			c.datlen += uint32(n)
 			if e != nil {
-				return nil, c.HandleError(e)
+				c.HandleError(e)
+				return nil
 			}
 		}
 	}
 
 	sh := btc.Sha2Sum(c.dat)
 	if !bytes.Equal(c.hdr[20:24], sh[:4]) {
+		println("Msg checksum error")
 		c.hdr_len = 0
 		c.dat = nil
-		return nil, errors.New("Msg checksum error")
+		c.broken = true
+		return nil
 	}
 
 	ret := new(BCmsg)
@@ -175,7 +193,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg, error) {
 	c.dat = nil
 	c.hdr_len = 0
 
-	return ret, nil
+	return ret
 }
 
 
@@ -230,6 +248,10 @@ func (c *oneConnection) GetBlocks(lastbl []byte) {
 
 
 func (c *oneConnection) ProcessInv(pl []byte) {
+	if dbg>0 {
+		println("ProcessInv", len(pl))
+	}
+	
 	if len(pl) < 37 {
 		println("inv payload too short")
 		return
@@ -255,11 +277,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	for cnt>0 {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		if typ==2 {
-			msg := new(command)
-			msg.src = "net"
-			msg.str = "invbl"
-			msg.dat = pl[of+4:of+36]
-			cmdChannel <- msg
+			InvsNotify(pl[of+4:of+36])
 		}
 		of+= 36
 		cnt--
@@ -278,22 +296,14 @@ func blockReceived(b []byte) {
 
 
 func (c *oneConnection) Tick() {
-	mutex.Lock()
-	if askForBlocks != nil {
-		tmp := askForBlocks
-		askForBlocks = nil
-		mutex.Unlock()
+	if tmp := blocksNeeded(); tmp != nil {
 		c.GetBlocks(tmp)
 		return
 	}
-	if askForData != nil {
-		tmp := askForData
-		askForData = nil
-		mutex.Unlock()
+
+	if tmp := blockDataNeeded(); tmp != nil {
 		c.GetBlockData(tmp)
-		return
 	}
-	mutex.Unlock()
 }
 
 
@@ -302,55 +312,56 @@ func do_one_connection(c *oneConnection) {
 
 	ver_ack_received := false
 
-main_loop:
 	for {
-		cmd, er := c.FetchMessage()
-		if er != nil {
+		cmd := c.FetchMessage()
+		if c.broken {
 			c.addr.Failed()
-			println("FetchMessage:", er.Error())
 			break
 		}
-
-		if cmd!=nil {
-			c.addr.GotData(24+len(cmd.pl))
-
-			switch cmd.cmd {
-				case "version":
-					er = c.VerMsg(cmd.pl)
-					if er != nil {
-						println("version:", er.Error())
-						c.addr.Failed()
-						break main_loop
-					}
-
-				case "verack":
-					//fmt.Println("Received Ver ACK")
-					ver_ack_received = true
-
-				case "inv":
-					c.ProcessInv(cmd.pl)
-				
-				case "tx": //ParseTx(cmd.pl)
-					println("tx unexpected here (now)")
-					break main_loop
-				
-				case "addr": ParseAddr(cmd.pl)
-				
-				case "block": //ParseBlock(cmd.pl)
-					blockReceived(cmd.pl)
-
-				case "alert": // do nothing
-
-				default:
-					println(cmd.cmd)
+		
+		if cmd==nil {
+			if ver_ack_received {
+				c.Tick()
 			}
+			continue
 		}
 
-		if ver_ack_received {
-			c.Tick()
+		c.addr.GotData(24+len(cmd.pl))
+
+		switch cmd.cmd {
+			case "version":
+				er := c.VerMsg(cmd.pl)
+				if er != nil {
+					println("version:", er.Error())
+					c.addr.Failed()
+					c.broken = true
+				}
+
+			case "verack":
+				//fmt.Println("Received Ver ACK")
+				ver_ack_received = true
+
+			case "inv":
+				c.ProcessInv(cmd.pl)
+			
+			case "tx": //ParseTx(cmd.pl)
+				println("tx unexpected here (now)")
+				c.broken = true
+			
+			case "addr": ParseAddr(cmd.pl)
+			
+			case "block": //ParseBlock(cmd.pl)
+				blockReceived(cmd.pl)
+
+			case "alert": // do nothing
+
+			default:
+				println(cmd.cmd)
 		}
 	}
-	println("Disconnected from", c.addr.Ip())
+	if dbg>0 {
+		println("Disconnected from", c.addr.Ip())
+	}
 	c.TCPConn.Close()
 }
 
@@ -376,10 +387,14 @@ func do_network(ad *onePeer) {
 			Port: int(ad.Port)})
 		if e == nil {
 			ad.Connected()
-			println("Connected to", ad.Ip())
+			if dbg>0 {
+				println("Connected to", ad.Ip())
+			}
 			do_one_connection(conn)
 		} else {
-			println("Could not connect to", ad.Ip())
+			if dbg>0 {
+				println("Could not connect to", ad.Ip())
+			}
 			//println(e.Error())
 			ad.Failed()
 		}
@@ -399,7 +414,7 @@ func network_process() {
 			ad := getBestPeer()
 			if ad != nil {
 				do_network(ad)
-			} else {
+			} else if *proxy=="" {
 				println("no new peers", len(openCons), MaxCons)
 			}
 		}

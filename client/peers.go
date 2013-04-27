@@ -1,8 +1,9 @@
 package main
 
 import (
+	"os"
 	"fmt"
-    "net"
+	"net"
 	"time"
 	"bytes"
 	"encoding/binary"
@@ -10,9 +11,15 @@ import (
 	"hash/crc64"
 )
 
+const defragEvery = (10*time.Second)
+
 var (
 	peerDB *qdb.DB
 	crctab = crc64.MakeTable(crc64.ISO)
+	
+	proxyPeer *onePeer // when this is not nil we should only connect to this single node
+
+	nextDefrag time.Time
 )
 
 type onePeer struct {
@@ -96,6 +103,10 @@ func (p *onePeer) Bytes(all bool) []byte {
 
 func (p *onePeer) Save() {
 	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes(true))
+	if nextDefrag.Before(time.Now()) {
+		peerDB.Defrag()
+		nextDefrag = time.Now().Add(defragEvery)
+	}
 }
 
 
@@ -198,15 +209,11 @@ func show_addresses() {
 
 
 func getBestPeer() (p *onePeer) {
-	lh := new(onePeer)
-	lh.Ip4 = [4]byte{127,0,0,1}
-	if *testnet {
-		lh.Port = 18333
-	} else {
-		lh.Port = 8333
-	}
-	if !connectionActive(lh) {
-		p = lh
+	if proxyPeer!=nil {
+		if !connectionActive(proxyPeer) {
+			p = proxyPeer
+		}
+		return
 	}
 	
 	oldest_failed := uint32(0xffffffff)
@@ -247,8 +254,10 @@ func initSeeds(seeds []string, port int) {
 }
 
 
-func init () {
-	peerDB, _ = qdb.NewDB("peers")
+func initPeers(dir string) {
+	nextDefrag = time.Now().Add(defragEvery)
+
+	peerDB, _ = qdb.NewDB(dir+"peers")
 	if peerDB.Count()==0 {
 		if !*testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
@@ -258,5 +267,25 @@ func init () {
 		}
 		println("peerDB initiated with ", peerDB.Count(), "seeds")
 	}
+
+	if *proxy != "" {
+		ip := net.ParseIP(*proxy)
+		if ip != nil && len(ip)==16 {
+			println("Proxy IP:", ip[12],ip[13],ip[14],ip[15])
+			proxyPeer = new(onePeer)
+			proxyPeer.Services = 1
+			copy(proxyPeer.Ip6[:], ip[:12])
+			copy(proxyPeer.Ip4[:], ip[12:16])
+			if *testnet {
+				proxyPeer.Port = 18333
+			} else {
+				proxyPeer.Port = 8333
+			}
+		} else {
+			println("Incorrect host:", *proxy)
+			os.Exit(1)
+		}
+	}
+	
 }
 
