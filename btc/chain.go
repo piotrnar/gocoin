@@ -20,8 +20,7 @@ type Chain struct {
 }
 
 
-func NewChain(genesis *Uint256, rescan bool) (ch *Chain) {
-	dbrootdir := "/btc/database/"+genesis.String()[56:]+"/"
+func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	testnet = genesis.Hash[0]==0x43
 	
 	ch = new(Chain)
