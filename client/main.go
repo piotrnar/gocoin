@@ -68,7 +68,6 @@ func init_blockchain() {
 
 func do_userif() {
 	for {
-		time.Sleep(250e6)
 		fmt.Print("> ")
 		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 		if len(li) > 0 {
@@ -105,7 +104,9 @@ func do_userif() {
 					c := new(command)
 					c.src = "ui"
 					c.str = string(li[:])
+					println("sending command for execution in the other therad...")
 					cmdChannel <- c
+					time.Sleep(2e9)
 			}
 		}
 	}
