@@ -41,7 +41,7 @@ var (
 	disableSync time.Time
 
 	mutex sync.Mutex
-	uicmddone sync.Mutex
+	uicmddone chan bool = make(chan bool, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, 1000)
@@ -117,12 +117,13 @@ func do_userif() {
 					c := new(command)
 					c.src = "ui"
 					c.str = string(li[:])
-					println("sending command for execution in the other therad...")
-					uicmddone.Lock()
+					println("...")
+					sta := time.Now().UnixNano()
 					cmdChannel <- c
-					uicmddone.Lock()
 					go func() {
-						uicmddone.Lock()
+						_ = <- uicmddone
+						sto := time.Now().UnixNano()
+						fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 						fmt.Print("> ")
 					}()
 			}
@@ -383,7 +384,6 @@ func main() {
 				dbg, _ = strconv.ParseUint(msg.str[4:], 10, 64)
 				println("dbg:", dbg)
 			} else {
-				sta := time.Now().UnixNano()
 				switch msg.str {
 					case "b": 
 						fmt.Println(BlockChain.Stats())
@@ -404,10 +404,8 @@ func main() {
 					default:
 						println("unknown command")
 				}
-				sto := time.Now().UnixNano()
-				fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 			}
-			uicmddone.Unlock()
+			uicmddone <- true
 		} else if msg.src=="net" {
 			Busy = "Network: "+msg.str
 			switch msg.str {
