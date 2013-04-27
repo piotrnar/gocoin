@@ -99,17 +99,11 @@ func (bl *Block) CheckBlock() (er error) {
 		return
 	}
 	
-	// Check Merkle Root
-	if !bytes.Equal(getMerkel(bl.Txs), bl.MerkleRoot) {
-		ChSto("CheckBlock")
-		return errors.New("CheckBlock() : Merkle Root mismatch")
-	}
-	
 	if !bl.Trusted {
 		// First transaction must be coinbase, the rest must not be
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			ChSto("CheckBlock")
-			return errors.New("CheckBlock() : first tx is not coinbase")
+			return errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
 		}
 		for i:=1; i<len(bl.Txs); i++ {
 			if bl.Txs[i].IsCoinBase() {
@@ -118,6 +112,12 @@ func (bl *Block) CheckBlock() (er error) {
 			}
 		}
 
+		// Check Merkle Root
+		if !bytes.Equal(getMerkel(bl.Txs), bl.MerkleRoot) {
+			ChSto("CheckBlock")
+			return errors.New("CheckBlock() : Merkle Root mismatch")
+		}
+		
 		// Check transactions
 		for i:=0; i<len(bl.Txs); i++ {
 			er = bl.Txs[i].CheckTransaction()
