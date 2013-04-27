@@ -36,7 +36,9 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
 			ChSto("ParseTillBlock")
-			ShowProfileData()
+			if !ProfilerDisabled {
+				ShowProfileData()
+			}
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
 			prv = cur
 			ChSta("ParseTillBlock")
