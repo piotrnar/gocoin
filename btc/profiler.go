@@ -12,6 +12,8 @@ var (
 	chpStart map[string]int64
 	chpTotal map[string]int64
 	start int64
+
+	ProfilerDisabled bool = false
 )
 
 type oneval struct {
@@ -36,6 +38,9 @@ func (x sortif) Swap(i, j int) {
 
 
 func ChSta(name string) {
+	if ProfilerDisabled {
+		return
+	}
 	ioprof.Do(initProfiler)
 	_, ok := chpStart[name]
 	if ok {
@@ -45,6 +50,9 @@ func ChSta(name string) {
 }
 
 func ChSto(name string) {
+	if ProfilerDisabled {
+		return
+	}
 	tim, ok := chpStart[name]
 	if !ok {
 		panic(name+" not started")
@@ -60,6 +68,9 @@ func ChSto(name string) {
 }
 
 func ShowProfileData() {
+	if ProfilerDisabled {
+		println("ProfilerDisabled")
+	}
 	stop := time.Now().UnixNano() - start
 
 	var mk sortif
@@ -80,6 +91,9 @@ func ShowProfileData() {
 }
 
 func initProfiler() {
+	if ProfilerDisabled {
+		return
+	}
 	chpStart = make(map[string]int64)
 	chpTotal = make(map[string]int64)
 	start = time.Now().UnixNano()
