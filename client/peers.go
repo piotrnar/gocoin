@@ -6,10 +6,12 @@ import (
 	"net"
 	"time"
 	"bytes"
-    "strings"
+	"strings"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
 	"hash/crc64"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 const defragEvery = (10*time.Second)
@@ -39,6 +41,8 @@ type onePeer struct {
 	
 	ConnectedLast uint32
 	ConnectedCount uint32
+	
+	GotdataLast uint32
 
 	BytesReceived, BytesSent uint64
 }
@@ -133,6 +137,7 @@ func (p *onePeer) Connected() {
 
 func (p *onePeer) GotData(l int) {
 	p.BytesReceived += uint64(l)
+	p.GotdataLast += uint32(time.Now().Unix())
 	p.Save()
 }
 
@@ -143,36 +148,13 @@ func (p *onePeer) SentData(l int) {
 }
 
 
-
 func (p *onePeer) Ip() (string) {
 	return fmt.Sprintf("%d.%d.%d.%d:%d", p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port)
 }
 
+
 func (p *onePeer) String() (s string) {
-	s = p.Ip()
-	if p.Services!=1 {
-		s += fmt.Sprintf("  serv:%x", p.Services)
-	}
-	if p.BytesReceived > 0 {
-		s += fmt.Sprintf("  bytes:%d", p.BytesReceived)
-	}
-	if p.ConnectedCount > 0 {
-		s += fmt.Sprintf("  connected %d times, last %s", p.ConnectedCount,
-			time.Unix(int64(p.ConnectedLast), 0).Format("06-01-02 15:04:05"))
-	}
-	if p.FailedCount > 0 {
-		s += fmt.Sprintf("  failed %d times, last %s", p.FailedCount,
-			time.Unix(int64(p.FailedLast), 0).Format("06-01-02 15:04:05"))
-	}
-			/*
-	s = fmt.Sprintf("%d.%d.%d.%d:%d  0x%x, seen %d times in %s..%s",
-		p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port, p.Services, p.TimesSeen,
-		time.Unix(int64(p.FirstSeen), 0).Format("06-01-02 15:04:05"),
-		time.Unix(int64(p.Time), 0).Format("06-01-02 15:04:05"),)
-	*/
-	if p.Banned!=0 {
-		s += " BAN at "+time.Unix(int64(p.Banned), 0).Format("06-01-02 15:04:05")
-	}
+	s = p.Ip() + " " + hex.EncodeToString(p.Bytes(true))
 	return
 }
 
@@ -188,7 +170,7 @@ func (p *onePeer) UniqID() (uint64) {
 
 func ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
-	cnt := GetVarLen(b)
+	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
 		var buf [30]byte
 		n, e := b.Read(buf[:])
