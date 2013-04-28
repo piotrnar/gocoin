@@ -42,13 +42,13 @@ func (ch *Chain)loadBlockIndex() {
 		}
 		par, ok := ch.BlockIndex[v.parenHash.BIdx()]
 		if !ok {
-			panic(v.BlockHash.String()+" has no parent "+v.parenHash.String())
+			panic(v.BlockHash.String()+" has no Parent "+v.parenHash.String())
 		}
 		/*if par.Height+1 != v.Height {
 			panic("height mismatch")
 		}*/
-		v.parent = par
-		v.parent.addChild(v)
+		v.Parent = par
+		v.Parent.addChild(v)
 		v.parenHash = nil // we wont need this anymore
 	}
 	if tlb == nil {
