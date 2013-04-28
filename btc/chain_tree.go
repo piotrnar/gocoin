@@ -12,8 +12,8 @@ type BlockTreeNode struct {
 	Bits uint32
 	Timestamp uint32
 	parenHash *Uint256
-	parent *BlockTreeNode
-	childs []*BlockTreeNode
+	Parent *BlockTreeNode
+	Childs []*BlockTreeNode
 }
 
 
@@ -97,14 +97,14 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 // Looks for the fartherst node
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
-	//fmt.Println("FFN:", n.Height, "kids:", len(n.childs))
-	if len(n.childs)==0 {
+	//fmt.Println("FFN:", n.Height, "kids:", len(n.Childs))
+	if len(n.Childs)==0 {
 		return n, 0
 	}
-	res, depth := n.childs[0].FindFarthestNode()
-	if len(n.childs) > 1 {
-		for i := 1; i<len(n.childs); i++ {
-			_re, _dept := n.childs[i].FindFarthestNode()
+	res, depth := n.Childs[0].FindFarthestNode()
+	if len(n.Childs) > 1 {
+		for i := 1; i<len(n.Childs); i++ {
+			_re, _dept := n.Childs[i].FindFarthestNode()
 			if _dept > depth {
 				res = _re
 				depth = _dept
@@ -125,20 +125,20 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 		panic("End block is not higher then current")
 	}
 
-	if len(n.childs)==0 {
+	if len(n.Childs)==0 {
 		panic("Unknown path to block " + end.BlockHash.String() )
 	}
 	
-	if len(n.childs)==1 {
-		return n.childs[0]  // if there is only one child, do it fast
+	if len(n.Childs)==1 {
+		return n.Childs[0]  // if there is only one child, do it fast
 	}
 
 	for {
 		// more then one children: go fomr the end until you reach the current node
-		if end.parent==n {
+		if end.Parent==n {
 			return end
 		}
-		end = end.parent
+		end = end.Parent
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
-		cur = cur.parent
+		cur = cur.Parent
 	}
 	// At this point both "ch.BlockTreeEnd" and "cur" should be at the same height
 	for ch.BlockTreeEnd != cur {
@@ -159,8 +159,8 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 				ch.BlockTreeEnd.Height)
 		}
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
-		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
-		cur = cur.parent
+		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
+		cur = cur.Parent
 	}
 	fmt.Printf("Reached common node @ %d\n", ch.BlockTreeEnd.Height)
 	ch.ParseTillBlock(dst)
@@ -168,17 +168,19 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 
 
 func (cur *BlockTreeNode) delAllChildren() {
-	for i := range cur.childs {
-		cur.childs[i].delAllChildren()
+	for i := range cur.Childs {
+		cur.Childs[i].delAllChildren()
 	}
 }
 
 
 func (ch *Chain) DeleteBranch(cur *BlockTreeNode) {
-	// first disconnect it from the parent
+	// first disconnect it from the Parent
+	ch.BlockIndexAccess.Lock()
 	delete(ch.BlockIndex, cur.BlockHash.BIdx())
-	cur.parent.delChild(cur)
+	cur.Parent.delChild(cur)
 	cur.delAllChildren()
+	ch.BlockIndexAccess.Unlock()
 	ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	if !ch.DoNotSync {
 		ch.Blocks.Sync()
@@ -187,23 +189,23 @@ func (ch *Chain) DeleteBranch(cur *BlockTreeNode) {
 
 
 func (n *BlockTreeNode)addChild(c *BlockTreeNode) {
-	n.childs = append(n.childs, c)
+	n.Childs = append(n.Childs, c)
 }
 
 
 func (n *BlockTreeNode)delChild(c *BlockTreeNode) {
-	newChds := make([]*BlockTreeNode, len(n.childs)-1)
+	newChds := make([]*BlockTreeNode, len(n.Childs)-1)
 	xxx := 0
-	for i := range n.childs {
-		if n.childs[i]!=c {
-			newChds[xxx] = n.childs[i]
+	for i := range n.Childs {
+		if n.Childs[i]!=c {
+			newChds[xxx] = n.Childs[i]
 			xxx++
 		}
 	}
-	if xxx!=len(n.childs)-1 {
+	if xxx!=len(n.Childs)-1 {
 		panic("Child not found")
 	}
-	n.childs = newChds
+	n.Childs = newChds
 }
 
 
