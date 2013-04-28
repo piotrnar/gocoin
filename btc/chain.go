@@ -33,8 +33,8 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	}
 	
-	// Unwind one block, in case if unspent DB update was interrupted last time
-	if ch.BlockTreeEnd.Height>0 {
+	// Unwind some blocks, in case if unspent DB update was interrupted last time
+	for i:=0; i<3 && ch.BlockTreeEnd.Height>0; i++ {
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
 	}
