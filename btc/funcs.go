@@ -1,5 +1,9 @@
 package btc
 
+import (
+	"io"
+	"errors"
+)
 
 func allzeros(b []byte) bool {
 	for i := range b {
@@ -11,6 +15,7 @@ func allzeros(b []byte) bool {
 }
 
 
+// Puts var_length field into the given buffer
 func PutVlen(b []byte, vl int) uint32 {
 	uvl := uint32(vl)
 	if uvl<0xfd {
@@ -73,5 +78,44 @@ func getMerkel(txs []*Tx) ([]byte) {
 		j += siz
 	}
 	return mtr[len(mtr)-1]
+}
+
+
+// Reads var_len from the given reader
+func ReadVLen(b io.Reader) (res uint64, e error) {
+	var buf [8]byte;
+	var n int
+	
+	n, e = b.Read(buf[:1])
+	if e != nil {
+		println("ReadVLen1 error:", e.Error())
+		return
+	}
+
+	if n != 1 {
+		e = errors.New("Buffer empty")
+		return
+	}
+
+	if buf[0] < 0xfd {
+		res = uint64(buf[0])
+		return
+	}
+
+	c := 2 << (2-(0xff-buf[0]));
+
+	n, e = b.Read(buf[:c])
+	if e != nil {
+		println("ReadVLen1 error:", e.Error())
+		return
+	}
+	if n != c {
+		e = errors.New("Buffer too short")
+		return
+	}
+	for i:=0; i<c; i++ {
+		res |= (uint64(buf[i]) << uint64(8*i))
+	}
+	return
 }
 
