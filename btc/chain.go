@@ -3,6 +3,7 @@ package btc
 import (
 	"fmt"
 	"sort"
+	"sync"
 )
 
 
@@ -14,9 +15,11 @@ type Chain struct {
 	BlockTreeEnd *BlockTreeNode
 	Genesis *Uint256
 
+	BlockIndexAccess sync.Mutex
 	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
 
 	DoNotSync bool // do not flush all trhe files after each block
+
 }
 
 
@@ -36,7 +39,7 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	// Unwind some blocks, in case if unspent DB update was interrupted last time
 	for i:=0; i<3 && ch.BlockTreeEnd.Height>0; i++ {
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
-		ch.BlockTreeEnd = ch.BlockTreeEnd.parent
+		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 	}
 	
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
@@ -81,8 +84,10 @@ func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 
 
 func (ch *Chain)Stats() (s string) {
+	ch.BlockIndexAccess.Lock()
 	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n", 
 		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height)
+	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
 	return
