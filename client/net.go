@@ -31,6 +31,8 @@ var (
 
 type oneConnection struct {
 	addr *onePeer
+
+	last_cmd_sent string
 	
 	broken bool // maker that the conenction has been broken
 
@@ -107,6 +109,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}
 
 	c.addr.SentData(24+len(pl))
+	c.last_cmd_sent = cmd
 
 	return
 }
@@ -383,7 +386,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 
 
 func (c *oneConnection) ProcessGetData(pl []byte) {
-	println(c.addr.Ip(), "getdata")
+	//println(c.addr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
@@ -618,8 +621,9 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) {
 func net_stats() {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
+	var tosnt, totrec uint64
 	for _, v := range openCons {
-		fmt.Printf(" %21s", v.addr.Ip())
+		fmt.Printf(" %21s %16s", v.addr.Ip(), v.last_cmd_sent)
 		if v.connectedAt != 0 {
 			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
 			fmt.Print(bts2str(v.addr.BytesReceived))
@@ -629,7 +633,10 @@ func net_stats() {
 			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
 		}
 		fmt.Println()
+		totrec += v.addr.BytesReceived
+		tosnt += v.addr.BytesSent
 	}
-	fmt.Printf("InvsSent:%d  BlockSent:%d\n", InvsSent, BlockSent)
+	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
+		InvsSent, BlockSent, totrec>>20, tosnt>>20)
 	mutex.Unlock()
 }
