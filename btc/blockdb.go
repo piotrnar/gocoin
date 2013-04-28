@@ -3,6 +3,8 @@ package btc
 import (
 	"os"
 	"fmt"
+	"sync"
+	"errors"
 	"encoding/binary"
 )
 
@@ -20,7 +22,7 @@ const (
 			bit(1) - "invalid" flag - this block's scripts have failed
 		[1:3] - reserved
 		[4:36]  - 256-bit block hash
-		[36:68] - 256-bit block's parent hash
+		[36:68] - 256-bit block's Parent hash
 		[68:72] - 32-bit block height (genesis is 0)
 		[72:76] - 32-bit block's timestamp
 		[76:80] - 32-bit block's bits
@@ -43,6 +45,7 @@ type BlockDB struct {
 	blockIndex map[[Uint256IdxLen]byte] *oneBl
 	blockdata *os.File
 	blockindx *os.File
+	mutex sync.Mutex
 }
 
 
@@ -67,7 +70,9 @@ func NewBlockDB(dir string) (db *BlockDB) {
 
 
 func (db *BlockDB) GetStats() (s string) {
+	db.mutex.Lock()
 	s += fmt.Sprintf("BlockDB: %d blocks\n", len(db.blockIndex))
+	db.mutex.Unlock()
 	return
 }
 
@@ -106,8 +111,10 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	binary.Write(db.blockindx, binary.LittleEndian, uint64(pos))
 	binary.Write(db.blockindx, binary.LittleEndian, uint32(len(bl.Raw[:])))
 
+	db.mutex.Lock()
 	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos), 
 		blen:uint32(len(bl.Raw[:])), ipos:ipos, trusted:bl.Trusted}
+	db.mutex.Unlock()
 	ChSto("DB.BlockAdd")
 	return
 }
@@ -116,8 +123,10 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 
 func (db *BlockDB) BlockInvalid(hash []byte) {
 	idx := hash2idx(hash[:])
+	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
+		db.mutex.Unlock()
 		println("BlockInvalid: no such block")
 		return
 	}
@@ -127,13 +136,16 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 	}
 	db.setBlockFlag(cur, BLOCK_INVALID)
 	delete(db.blockIndex, idx)
+	db.mutex.Unlock()
 }
 
 
 func (db *BlockDB) BlockTrusted(hash []byte) {
 	idx := hash2idx(hash[:])
+	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
+		db.mutex.Unlock()
 		println("BlockTrusted: no such block")
 		return
 	}
@@ -141,6 +153,7 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 		println("mark", NewUint256(hash).String(), "as trusted")
 		db.setBlockFlag(cur, BLOCK_TRUSTED)
 	}
+	db.mutex.Unlock()
 }   
 
 func (db *BlockDB) setBlockFlag(cur *oneBl, fl byte) {
@@ -169,16 +182,16 @@ func (db *BlockDB) Close() {
 
 func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	ChSta("Db.BlockGet")
+	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash2idx(hash.Hash[:])]
+	db.mutex.Unlock()
 	if !ok {
-		panic("block not in the index")
+		e = errors.New("Block not in the index")
+		return
 	}
 	bl = make([]byte, rec.blen)
-	_, e = db.blockdata.Seek(int64(rec.fpos), os.SEEK_SET)
-	if e != nil {
-		panic(e.Error())
-	}
-	_, e = db.blockdata.Read(bl[:])
+	db.blockdata.Seek(int64(rec.fpos), os.SEEK_SET)
+	db.blockdata.Read(bl[:])
 	trusted = rec.trusted
 	ChSto("Db.BlockGet")
 	return
