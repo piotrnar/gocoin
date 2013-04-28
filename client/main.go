@@ -33,6 +33,8 @@ var (
 	Magic [4]byte
 	BlockChain *btc.Chain
 
+	exit_now bool
+
 	dbg uint64
 	beep bool
 
@@ -42,6 +44,8 @@ var (
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
+	netChannel chan *NetCommand = make(chan *NetCommand, 100)
+	uiChannel chan string = make(chan string, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, 1000)
@@ -53,7 +57,8 @@ var (
 
 	nextInvAsk time.Time = time.Now()
 
-	InvsIgnored, BlockDups, InvsAsked, MsgsCnt uint32
+	InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt uint64
+	TicksCnt uint64
 	busy string
 )
 
@@ -120,9 +125,6 @@ func do_userif() {
 					
 				default:
 					prompt = false
-					c := new(command)
-					c.src = "ui"
-					c.str = string(li[:])
 					mutex.Lock()
 					if busy!="" {
 						print("now busy with ", busy)
@@ -130,7 +132,7 @@ func do_userif() {
 					mutex.Unlock()
 					println("...")
 					sta := time.Now().UnixNano()
-					cmdChannel <- c
+					uiChannel <- cmd
 					go func() {
 						_ = <- uicmddone
 						sto := time.Now().UnixNano()
@@ -167,8 +169,8 @@ func show_info() {
 	mutex.Lock()
 	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks))
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  MsgsCnt:%d\n", 
-		InvsIgnored, BlockDups, InvsAsked, MsgsCnt)
+	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d  UiMsgs:%d  Ticks:%d\n", 
+		InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, TicksCnt)
 	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String())
 	if busy!="" {
 		println("Currently busy with", busy)
@@ -222,7 +224,7 @@ func retry_cached_blocks() bool {
 	if len(cachedBlocks)==0 {
 		return false
 	}
-	if len(cmdChannel) > 0 {
+	if len(netChannel) > 0 {
 		return true
 	}
 	for k, v := range cachedBlocks {
@@ -315,6 +317,46 @@ func InvsNotify(h []byte) (need bool) {
 }
 
 
+func do_ui_request(str string) {
+	Busy("User Interface: "+str)
+	UiMsgsCnt++
+	if strings.HasPrefix(str, "unspent") {
+		list_unspent(strings.Trim(str[7:], " "))
+	} else if strings.HasPrefix(str, "u ") {
+		list_unspent(strings.Trim(str[2:], " "))
+	} else if strings.HasPrefix(str, "dbg ") {
+		dbg, _ = strconv.ParseUint(str[4:], 10, 64)
+		println("dbg:", dbg)
+	} else if strings.HasPrefix(str, "wal ") {
+		println("Switching to wallet from file", str[4:])
+		MyWallet = NewWallet(str[4:])
+	} else {
+		switch str {
+			case "b": 
+				fmt.Println(BlockChain.Stats())
+
+			case "bal": 
+				show_balance()
+
+			case "prof": 
+				btc.ShowProfileData()
+			
+			case "save": 
+				fmt.Println("Saving coinbase...")
+				BlockChain.Save()
+			
+			case "quit": 
+				exit_now = true
+				return
+			
+			default:
+				println("unknown command")
+		}
+	}
+	uicmddone <- true
+}
+
+
 func show_help() {
 	fmt.Println("There are different commands...")
 	fmt.Println("b -bockchain stat, i -geninfo, bal -balance, unspent <address>")
@@ -356,8 +398,8 @@ func main() {
 	go network_process()
 	go do_userif()
 
-	var msg *command
-	for {
+	var netmsg *NetCommand
+	for !exit_now {
 		//println(BlockChain.DoNotSync, retryCachedBlocks)
 		if retryCachedBlocks {
 			Busy("retry_cached_blocks")
@@ -366,11 +408,15 @@ func main() {
 
 		Busy("")
 		select {
-			case msg = <-cmdChannel:
+			case netmsg = <-netChannel:
 				break
 			
+			case cmd := <-uiChannel:
+				do_ui_request(cmd)
+				continue
+			
 			case <-time.After(100*time.Millisecond):
-				//println("tick")
+				TicksCnt++
 				if !retryCachedBlocks {
 					if BlockChain.DoNotSync && time.Now().After(disableSync) {
 						sto := time.Now().Unix()
@@ -385,101 +431,61 @@ func main() {
 				continue
 		}
 
-		MsgsCnt++
-		//println("got msg", msg.src)
-		if msg.src=="ui" {
-			Busy("User Interface: "+msg.str)
-			if strings.HasPrefix(msg.str, "unspent") {
-				list_unspent(strings.Trim(msg.str[7:], " "))
-			} else if strings.HasPrefix(msg.str, "u ") {
-				list_unspent(strings.Trim(msg.str[2:], " "))
-			} else if strings.HasPrefix(msg.str, "dbg ") {
-				dbg, _ = strconv.ParseUint(msg.str[4:], 10, 64)
-				println("dbg:", dbg)
-			} else if strings.HasPrefix(msg.str, "wal ") {
-				println("Switching to wallet from file", msg.str[4:])
-				MyWallet = NewWallet(msg.str[4:])
-			} else {
-				switch msg.str {
-					case "b": 
-						fmt.Println(BlockChain.Stats())
-
-					case "bal": 
-						show_balance()
-
-					case "prof": 
-						btc.ShowProfileData()
+		NetMsgsCnt++
+		if netmsg.cmd=="bl" {
+			Busy("NewBlock")
+			bl, e := btc.NewBlock(netmsg.dat[:])
+			if e == nil {
+				idx := bl.Hash.BIdx()
+				mutex.Lock()
+				if _, got := receivedBlocks[idx]; got {
+					if _, ok := pendingBlocks[idx]; ok {
+						panic("wtf?")
+					} else {
+						BlockDups++
+					}
+					mutex.Unlock()
+				} else {
+					receivedBlocks[idx] = time.Now().UnixNano()
+					delete(pendingBlocks, idx)
+					mutex.Unlock()
 					
-					case "save": 
-						fmt.Println("Saving coinbase...")
-						BlockChain.Save()
-					
-					case "quit": 
-						goto exit
-					
-					default:
-						println("unknown command")
-				}
-			}
-			uicmddone <- true
-		} else if msg.src=="net" {
-			switch msg.str {
-				case "bl":
-					Busy("NewBlock")
-					bl, e := btc.NewBlock(msg.dat[:])
+					Busy("CheckBlock "+bl.Hash.String())
+					e = bl.CheckBlock()
 					if e == nil {
-						idx := bl.Hash.BIdx()
-						mutex.Lock()
-						if _, got := receivedBlocks[idx]; got {
-							if _, ok := pendingBlocks[idx]; ok {
-								panic("wtf?")
-							} else {
-								BlockDups++
-							}
-							mutex.Unlock()
-							break
+						if !BlockChain.DoNotSync && len(pendingBlocks)>50 {
+							BlockChain.DoNotSync = true
+							println("lots of pending blocks - switch syncing off for now...")
+							snoozeDisableSync(5)
 						}
-						receivedBlocks[idx] = time.Now().UnixNano()
-						delete(pendingBlocks, idx)
-						mutex.Unlock()
-						
-						Busy("CheckBlock "+bl.Hash.String())
-						e = bl.CheckBlock()
-						if e == nil {
-							if !BlockChain.DoNotSync && len(pendingBlocks)>50 {
-								BlockChain.DoNotSync = true
-								println("lots of pending blocks - switch syncing off for now...")
-								snoozeDisableSync(5)
-							}
 
-							Busy("AcceptBlock "+bl.Hash.String())
-							e = BlockChain.AcceptBlock(bl)
-							if e == nil {
-								if beep {
-									go print("\007")
-								}
-								retryCachedBlocks = retry_cached_blocks()
-								mutex.Lock()
-								LastBlock = BlockChain.BlockTreeEnd
-								mutex.Unlock()
-								snoozeDisableSync(5)
-							} else if e.Error()==btc.ErrParentNotFound {
-								cachedBlocks[bl.Hash.BIdx()] = bl
-								//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
-							} else {
-								println("AcceptBlock:", e.Error())
+						Busy("AcceptBlock "+bl.Hash.String())
+						e = BlockChain.AcceptBlock(bl)
+						if e == nil {
+							if beep {
+								go print("\007")
 							}
+							retryCachedBlocks = retry_cached_blocks()
+							mutex.Lock()
+							LastBlock = BlockChain.BlockTreeEnd
+							mutex.Unlock()
+							snoozeDisableSync(5)
+						} else if e.Error()==btc.ErrParentNotFound {
+							cachedBlocks[bl.Hash.BIdx()] = bl
+							//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
 						} else {
-							println("CheckBlock:", e.Error(), LastBlock.Height)
-							show_invs()
+							println("AcceptBlock:", e.Error())
 						}
 					} else {
-						println("NewBlock:", e.Error())
+						println("CheckBlock:", e.Error(), LastBlock.Height)
+						show_invs()
 					}
+				}
+			} else {
+				println("NewBlock:", e.Error())
 			}
 		}
 	}
-exit:
 	println("Closing blockchain")
 	BlockChain.Close()
 	peerDB.Close()
