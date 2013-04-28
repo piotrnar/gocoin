@@ -1,20 +1,25 @@
 package main
 
 import (
+	"os"
 	"bytes"
 	"errors"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
-    "github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 
 const (
+	Version = 70001
+	UserAgent = "/Satoshi:0.8.1/" // Let's pretend being someone else :)
+
+	Services = uint64(0x1)
+
 	MaxCons = 8
 )
 
@@ -57,10 +62,15 @@ type BCmsg struct {
 }
 
 
+type NetCommand struct {
+	conn *oneConnection
+	cmd string
+	dat []byte
+}
+
+
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
-
-	defer c.addr.SentData(24+len(pl))
 
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	copy(b[0:4], Magic[:])
@@ -93,47 +103,46 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		c.broken = true
 	}
 
+	c.addr.SentData(24+len(pl))
+
 	return
 }
 
 
 func putaddr(b *bytes.Buffer, a string) {
-	var i1, i2, i3, i4, p int
-
-	n, e := fmt.Sscanf(a, "%d.%d.%d.%d:%d", &i1, &i2, &i3, &i4, &p)
+	var ip [4]byte
+	var p uint16
+	n, e := fmt.Sscanf(a, "%d.%d.%d.%d:%d", &ip[0], &ip[1], &ip[2], &ip[3], &p)
 	if e != nil || n != 5 {
 		println("Incorrect address:", a)
 		os.Exit(1)
 	}
-
-	b.Write(Services)
+	binary.Write(b, binary.LittleEndian, uint64(Services))
+	// No Ip6 supported:
 	b.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF})
-
-	b.WriteByte(byte(i1))
-	b.WriteByte(byte(i2))
-	b.WriteByte(byte(i3))
-	b.WriteByte(byte(i4))
-	b.WriteByte(byte(p >> 8))
-	b.WriteByte(byte(p & 0xff))
+	b.Write(ip[:])
+	binary.Write(b, binary.BigEndian, uint16(p))
 }
 
 
 func (c *oneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
 
-	WriteLSB(b, Version, 4)
-	b.Write(Services)
-	WriteLSB(b, uint64(time.Now().Unix()), 8)
+	binary.Write(b, binary.LittleEndian, uint32(Version))
+	binary.Write(b, binary.LittleEndian, uint64(Services))
+	binary.Write(b, binary.LittleEndian, uint64(time.Now().Unix()))
 
 	putaddr(b, c.TCPConn.RemoteAddr().String())
 	putaddr(b, c.TCPConn.LocalAddr().String())
 
-	var r [8]byte
-	rand.Read(r[:])
-	b.Write(r[:])
+	var nonce [8]byte
+	rand.Read(nonce[:])
+	b.Write(nonce[:])
 
-	b.WriteByte(0)
-	WriteLSB(b, 0, 4) // last block
+	b.WriteByte(byte(len(UserAgent)))
+	b.Write([]byte(UserAgent))
+
+	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
 
 	c.SendRawMsg("version", b.Bytes())
 }
@@ -205,6 +214,8 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	ret.pl = c.dat
 	c.dat = nil
 	c.hdr_len = 0
+
+	c.addr.GotData(24+len(ret.pl))
 
 	return ret
 }
@@ -295,15 +306,6 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 }
 
 
-func blockReceived(b []byte) {
-	msg := new(command)
-	msg.src = "net"
-	msg.str = "bl"
-	msg.dat = b
-	cmdChannel <- msg
-}
-
-
 func (c *oneConnection) GetBlockData(h []byte) {
 	var b [1+4+32]byte
 	b[0] = 1 // One inv
@@ -342,8 +344,6 @@ func do_one_connection(c *oneConnection) {
 			continue
 		}
 
-		c.addr.GotData(24+len(cmd.pl))
-
 		switch cmd.cmd {
 			case "version":
 				er := c.VerMsg(cmd.pl)
@@ -366,13 +366,13 @@ func do_one_connection(c *oneConnection) {
 			
 			case "addr": ParseAddr(cmd.pl)
 			
-			case "block": //ParseBlock(cmd.pl)
-				blockReceived(cmd.pl)
+			case "block": //block received
+				netChannel <- &NetCommand{conn:c, cmd:"bl", dat:cmd.pl}
 
 			case "alert": // do nothing
 
 			default:
-				println(cmd.cmd)
+				println(cmd.cmd, "from", c.addr.Ip())
 		}
 	}
 	if dbg>0 {
