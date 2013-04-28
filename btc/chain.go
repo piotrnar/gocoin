@@ -81,8 +81,8 @@ func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 
 
 func (ch *Chain)Stats() (s string) {
-	s = fmt.Sprintf("CHAIN: blocks:%d  height:%d  nosync:%t\n", 
-		len(ch.BlockIndex), ch.BlockTreeEnd.Height, ch.DoNotSync)
+	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n", 
+		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height)
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
 	return
