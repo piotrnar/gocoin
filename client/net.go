@@ -16,7 +16,7 @@ import (
 
 const (
 	Version = 70001
-	UserAgent = "/Satoshi:0.8.1/" // Let's pretend being someone else :)
+	UserAgent = "/Satoshi:0.8.1/" // Let's pretend being someone else
 
 	Services = uint64(0x1)
 
@@ -26,6 +26,7 @@ const (
 
 var (
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxCons)
+	InvsSent, BlockSent uint64
 )
 
 type oneConnection struct {
@@ -44,6 +45,8 @@ type oneConnection struct {
 
 	dat []byte
 	datlen uint32
+
+	invs2send []*[36]byte
 
 	// Data from the version message
 	node struct {
@@ -279,7 +282,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	}
 
 	var blocks2get [][32]byte
-	for cnt>0 {
+	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		if typ==2 && InvsNotify(pl[of+4:of+36]) {
 			var inv [32]byte
@@ -298,11 +301,124 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			le += 36
 		}
 		if dbg>0 {
-			println("getdata for", len(blocks2get), le, "blocks")
+			println("getdata for", len(blocks2get), "/", cnt, "blocks", le)
 		}
 		c.SendRawMsg("getdata", msg[:le])
 	}
 	return
+}
+
+
+func addInvBlockBranch(inv map[[32]byte] bool, bl *btc.BlockTreeNode, stop *btc.Uint256) {
+	if len(inv)>=500 || bl.BlockHash.Equal(stop) {
+		return
+	}
+	inv[bl.BlockHash.Hash] = true
+	for i := range bl.Childs {
+		if len(inv)>=500 {
+			return
+		}
+		addInvBlockBranch(inv, bl.Childs[i], stop)
+	}
+}
+
+
+func (c *oneConnection) ProcessGetBlocks(pl []byte) {
+	b := bytes.NewReader(pl)
+	var ver uint32
+	e := binary.Read(b, binary.LittleEndian, &ver)
+	if e != nil {
+		println("ProcessGetBlocks:", e.Error(), c.addr.Ip())
+		return
+	}
+	cnt, e := btc.ReadVLen(b)
+	if e != nil {
+		println("ProcessGetBlocks:", e.Error(), c.addr.Ip())
+		return
+	}
+	h2get := make([]*btc.Uint256, cnt)
+	var h [32]byte
+	for i:=0; i<int(cnt); i++ {
+		n, _ := b.Read(h[:])
+		if n != 32 {
+			println("getblocks too short", c.addr.Ip())
+			return
+		}
+		h2get[i] = btc.NewUint256(h[:])
+	}
+	n, _ := b.Read(h[:])
+	if n != 32 {
+		println("getblocks does not have hash_stop", c.addr.Ip())
+		return
+	}
+	hashstop := btc.NewUint256(h[:])
+
+	var maxheight uint32
+	invs := make(map[[32]byte] bool, 500)
+	for i := range h2get {
+		BlockChain.BlockIndexAccess.Lock()
+		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
+			if bl.Height > maxheight {
+				maxheight = bl.Height
+			}
+			addInvBlockBranch(invs, bl, hashstop)
+		}
+		BlockChain.BlockIndexAccess.Unlock()
+		if len(invs)>=500 {
+			break
+		}
+	}
+	inv := new(bytes.Buffer)
+	btc.WriteVlen(inv, uint32(len(invs)))
+	for k, _ := range invs {
+		binary.Write(inv, binary.LittleEndian, uint32(2))
+		inv.Write(k[:])
+	}
+	if dbg>0 {
+		println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
+	}
+	InvsSent++
+	c.SendRawMsg("inv", inv.Bytes())
+}
+
+
+func (c *oneConnection) ProcessGetData(pl []byte) {
+	println(c.addr.Ip(), "getdata")
+	b := bytes.NewReader(pl)
+	cnt, e := btc.ReadVLen(b)
+	if e != nil {
+		println("ProcessGetData:", e.Error(), c.addr.Ip())
+		return
+	}
+	for i:=0; i<int(cnt); i++ {
+		var typ uint32
+		var h [32]byte
+		
+		e = binary.Read(b, binary.LittleEndian, &typ)
+		if e != nil {
+			println("ProcessGetData:", e.Error(), c.addr.Ip())
+			return
+		}
+
+		n, _ := b.Read(h[:])
+		if n!=32 {
+			println("ProcessGetData: pl too short", c.addr.Ip())
+			return
+		}
+
+		if typ == 2 {
+			uh := btc.NewUint256(h[:])
+			bl, _, er := BlockChain.Blocks.BlockGet(uh)
+			if er == nil {
+				BlockSent++
+				c.SendRawMsg("block", bl)
+			} else {
+				println("block", uh.String(), er.Error())
+			}
+		} else {
+			println("getdata for type", typ, "not supported yet")
+		}
+	}
 }
 
 
@@ -315,14 +431,41 @@ func (c *oneConnection) GetBlockData(h []byte) {
 }
 
 
+func (c *oneConnection) SendInvs(i2s []*[36]byte) {
+	b := new(bytes.Buffer)
+	btc.WriteVlen(b, uint32(len(i2s)))
+	for i := range i2s {
+		b.Write((*i2s[i])[:])
+	}
+	//println("sending invs", len(i2s), len(b.Bytes()))
+	c.SendRawMsg("inv", b.Bytes())
+}
+
+
 func (c *oneConnection) Tick() {
+
+	// Need to send getblocks...?
 	if tmp := blocksNeeded(); tmp != nil {
 		c.GetBlocks(tmp)
 		return
 	}
 
+	// Need to send getdata...?
 	if tmp := blockDataNeeded(); tmp != nil {
 		c.GetBlockData(tmp)
+		return
+	}
+
+	// Need to send inv...?
+	var i2s []*[36]byte
+	mutex.Lock()
+	if len(c.invs2send)>0 {
+		i2s = c.invs2send
+		c.invs2send = nil
+	}
+	mutex.Unlock()
+	if i2s != nil {
+		c.SendInvs(i2s)
 	}
 }
 
@@ -369,6 +512,12 @@ func do_one_connection(c *oneConnection) {
 			case "block": //block received
 				netChannel <- &NetCommand{conn:c, cmd:"bl", dat:cmd.pl}
 
+			case "getblocks":
+				c.ProcessGetBlocks(cmd.pl)
+			
+			case "getdata":
+				c.ProcessGetData(cmd.pl)
+			
 			case "alert": // do nothing
 
 			default:
@@ -450,11 +599,27 @@ func bts2str(val uint64) string {
 }
 
 
+func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) {
+	inv := new([36]byte)
+	
+	binary.LittleEndian.PutUint32(inv[0:4], typ)
+	copy(inv[4:36], h)
+	
+	mutex.Lock()
+	for _, v := range openCons {
+		if v != fromConn && len(v.invs2send)<500 {
+			v.invs2send = append(v.invs2send, inv)
+		}
+	}
+	mutex.Unlock()
+}
+
+
 func net_stats() {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
 	for _, v := range openCons {
-		fmt.Printf(" %-21s", v.addr.Ip())
+		fmt.Printf(" %21s", v.addr.Ip())
 		if v.connectedAt != 0 {
 			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
 			fmt.Print(bts2str(v.addr.BytesReceived))
@@ -465,5 +630,6 @@ func net_stats() {
 		}
 		fmt.Println()
 	}
+	fmt.Printf("InvsSent:%d  BlockSent:%d\n", InvsSent, BlockSent)
 	mutex.Unlock()
 }
