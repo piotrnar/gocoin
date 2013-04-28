@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	UnwindBufferMaxHistory = 24*6  // about 24 hours...
+	UnwindBufferMaxHistory = 7*24*6  // we keep unwind history for about 7 days...
 )
 
 type unwindDb struct {
