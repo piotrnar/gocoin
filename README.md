@@ -1,13 +1,12 @@
 gocoin
 ======
 
-Bitcoin client library for Go / golang
+Bitcoin client library for Go / golang with an example client.
 
-Under development (not finished yet)
-
+Project under development.
 
 ======
-It requites qdb library:
+Dependencies
 * go get github.com/piotrnar/qdb
 * go install github.com/piotrnar/qdb
 
@@ -16,7 +15,7 @@ Installation:
 * go get github.com/piotrnar/gocoin/btc 
 
 
-Running test client:
+Building and running the test client:
 * cd $GOPATH/src/github.com/piotrnar/gocoin/client
 * go build
 * ./client
