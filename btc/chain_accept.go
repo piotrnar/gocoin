@@ -23,9 +23,11 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	ChSta("AcceptBlock")
 
+	ch.BlockIndexAccess.Lock()
 	if prv, pres := ch.BlockIndex[bl.Hash.BIdx()]; pres {
+		ch.BlockIndexAccess.Unlock()
 		ChSto("AcceptBlock")
-		if prv.parent == nil {
+		if prv.Parent == nil {
 			// This is genesis block
 			prv.Timestamp = bl.BlockTime
 			prv.Bits = bl.Bits
@@ -39,6 +41,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
 	if !ok {
+		ch.BlockIndexAccess.Unlock()
 		ChSto("AcceptBlock")
 		return errors.New(ErrParentNotFound)
 	}
@@ -50,6 +53,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
 			" exp:", gnwr)
 		if !testnet || ((prevblk.Height+1)%2016)!=0 {
+			ch.BlockIndexAccess.Unlock()
 			ChSto("AcceptBlock")
 			return errors.New("AcceptBlock() : incorrect proof of work")
 		}
@@ -58,7 +62,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	// create new BlockTreeNode
 	cur := new(BlockTreeNode)
 	cur.BlockHash = bl.Hash
-	cur.parent = prevblk
+	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
 	cur.Bits = bl.Bits
 	cur.Timestamp = bl.BlockTime
@@ -67,6 +71,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	
 	// Add this block to the block index
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
+	ch.BlockIndexAccess.Unlock()
 	
 	if ch.BlockTreeEnd==prevblk {
 		// Append the end of the longest
@@ -77,8 +82,10 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		if e != nil {
 			fmt.Println("Reject:", cur.BlockHash.String(), cur.Height)
 			fmt.Println("Parent:", NewUint256(bl.Parent).String())
-			cur.parent.delChild(cur)
+			ch.BlockIndexAccess.Lock()
+			cur.Parent.delChild(cur)
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
+			ch.BlockIndexAccess.Unlock()
 		} else {
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
