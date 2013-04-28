@@ -208,11 +208,13 @@ func show_balance() {
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
 	var sum uint64
 	for i := range unsp {
-		fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
-			unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
+		if len(unsp)<100 {
+			fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
+				unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
+		}
 		sum += unsp[i].Value
 	}
-	fmt.Printf("%.8f BTC @ all %d addresses\n", float64(sum)/1e8, len(MyWallet.addrs))
+	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 }
 
 
@@ -315,7 +317,8 @@ func InvsNotify(h []byte) (need bool) {
 
 func show_help() {
 	fmt.Println("There are different commands...")
-	fmt.Println("b, i, bal, unspent <address>, mem, prof, invs, cach, pers, net, quit")
+	fmt.Println("b -bockchain stat, i -geninfo, bal -balance, unspent <address>")
+	fmt.Println("wal <filename>, mem, prof, invs, cach, pers, net, quit")
 }
 
 
@@ -393,6 +396,9 @@ func main() {
 			} else if strings.HasPrefix(msg.str, "dbg ") {
 				dbg, _ = strconv.ParseUint(msg.str[4:], 10, 64)
 				println("dbg:", dbg)
+			} else if strings.HasPrefix(msg.str, "wal ") {
+				println("Switching to wallet from file", msg.str[4:])
+				MyWallet = NewWallet(msg.str[4:])
 			} else {
 				switch msg.str {
 					case "b": 
