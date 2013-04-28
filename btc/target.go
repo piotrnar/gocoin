@@ -71,7 +71,7 @@ func CheckProofOfWork(hash *Uint256, nBits uint32) error {
 func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	
 	// Genesis block
-	if lst.parent == nil {
+	if lst.Parent == nil {
 		return nProofOfWorkLimit
 	}
 	
@@ -86,8 +86,8 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 			} else {
 				// Return the last non-special-min-difficulty-rules-block
 				prv := lst
-				for prv.parent!=nil && (prv.Height%nInterval)!=0 && prv.Bits==nProofOfWorkLimit {
-					prv = prv.parent
+				for prv.Parent!=nil && (prv.Height%nInterval)!=0 && prv.Bits==nProofOfWorkLimit {
+					prv = prv.Parent
 				}
 				return prv.Bits
 			}
@@ -97,7 +97,7 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 
 	prv := lst
 	for i:=0; i<nInterval-1; i++ {
-		prv = prv.parent
+		prv = prv.Parent
 	}
 
 	nActualTimespan := int64(lst.Timestamp - prv.Timestamp)
@@ -128,7 +128,7 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	fmt.Printf("GetNextWorkRequired RETARGET\n");
 	fmt.Printf("GetNextWorkRequired RETARGET\n");
 	fmt.Printf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan)
-	fmt.Printf("Before: %08x\n", lst.parent.Bits)
+	fmt.Printf("Before: %08x\n", lst.Parent.Bits)
 	fmt.Printf("After:  %08x\n", GetCompact(bnNew))
 	*/
 
