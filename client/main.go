@@ -357,6 +357,16 @@ func do_ui_request(str string) {
 }
 
 
+func GetBlockData(h []byte) []byte {
+	bl, _, e  := BlockChain.Blocks.BlockGet(btc.NewUint256(h))
+	if e == nil {
+		return bl
+	}
+	println("BlockChain.Blocks.BlockGet failed")
+	return nil
+}
+
+
 func show_help() {
 	fmt.Println("There are different commands...")
 	fmt.Println("b -bockchain stat, i -geninfo, bal -balance, unspent <address>")
@@ -462,8 +472,10 @@ func main() {
 						Busy("AcceptBlock "+bl.Hash.String())
 						e = BlockChain.AcceptBlock(bl)
 						if e == nil {
+							// block accepted, so route this inv to peers
+							NetSendInv(2, bl.Hash.Hash[:], netmsg.conn)
 							if beep {
-								go print("\007")
+								print("\007")
 							}
 							retryCachedBlocks = retry_cached_blocks()
 							mutex.Lock()
