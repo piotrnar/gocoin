@@ -66,7 +66,9 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	binary.LittleEndian.PutUint32(b[16:20], uint32(len(pl)))
 	_, e = c.TCPConn.Write(b[:20])
 	if e != nil {
-		println("SendRawMsg 1", e.Error())
+		if dbg > 0 {
+			println("SendRawMsg 1", e.Error())
+		}
 		c.broken = true
 		return
 	}
@@ -74,14 +76,18 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	sh := btc.Sha2Sum(pl[:])
 	_, e = c.TCPConn.Write(sh[:4])
 	if e != nil {
-		println("SendRawMsg 2", e.Error())
+		if dbg > 0 {
+			println("SendRawMsg 2", e.Error())
+		}
 		c.broken = true
 		return
 	}
 
 	_, e = c.TCPConn.Write(pl[:])
 	if e != nil {
-		println("SendRawMsg 3", e.Error())
+		if dbg > 0 {
+			println("SendRawMsg 3", e.Error())
+		}
 		c.broken = true
 	}
 
@@ -435,9 +441,18 @@ func net_stats() {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
 	for _, v := range openCons {
-		fmt.Printf(" %-21s %10d KB", v.addr.Ip(), v.addr.BytesReceived>>10)
+		fmt.Printf(" %-21s", v.addr.Ip())
 		if v.connectedAt != 0 {
 			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
+		}
+		if v.addr.BytesReceived > 0 {
+			if v.addr.BytesReceived < 1e5 {
+				fmt.Printf("%10d B ", v.addr.BytesReceived)
+			} else if v.addr.BytesReceived < 1e5*1024 {
+				fmt.Printf("%10d kB", v.addr.BytesReceived>>10)
+			} else {
+				fmt.Printf("%10d MB", v.addr.BytesReceived>>20)
+			}
 		}
 		if v.node.version!=0 {
 			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
