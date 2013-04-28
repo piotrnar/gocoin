@@ -119,3 +119,17 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 	return
 }
 
+// Writes var_length field into the given writer
+func WriteVlen(b io.Writer, var_len uint32) {
+	if var_len < 0xfd {
+		b.Write([]byte{byte(var_len)})
+		return
+	}
+	if var_len < 0x10000 {
+		b.Write([]byte{0xfd, byte(var_len), byte(var_len>>8)})
+		return
+	}
+	b.Write([]byte{0xfe, byte(var_len), byte(var_len>>8), byte(var_len>>16), byte(var_len>>24)})
+}
+
+
