@@ -60,6 +60,8 @@ type BCmsg struct {
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
 
+	defer c.addr.SentData(24+len(pl))
+
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	copy(b[0:4], Magic[:])
 	copy(b[4:16], cmd)
@@ -437,6 +439,17 @@ func network_process() {
 	}
 }
 
+func bts2str(val uint64) string {
+	if val < 1e5 {
+		return fmt.Sprintf("%10d B ", val)
+	}
+	if val < 1e5*1024 {
+		return fmt.Sprintf("%10d kB", val>>10)
+	}
+	return fmt.Sprintf("%10d MB", val>>20)
+}
+
+
 func net_stats() {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
@@ -444,15 +457,8 @@ func net_stats() {
 		fmt.Printf(" %-21s", v.addr.Ip())
 		if v.connectedAt != 0 {
 			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
-		}
-		if v.addr.BytesReceived > 0 {
-			if v.addr.BytesReceived < 1e5 {
-				fmt.Printf("%10d B ", v.addr.BytesReceived)
-			} else if v.addr.BytesReceived < 1e5*1024 {
-				fmt.Printf("%10d kB", v.addr.BytesReceived>>10)
-			} else {
-				fmt.Printf("%10d MB", v.addr.BytesReceived>>20)
-			}
+			fmt.Print(bts2str(v.addr.BytesReceived))
+			fmt.Print(bts2str(v.addr.BytesSent))
 		}
 		if v.node.version!=0 {
 			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
