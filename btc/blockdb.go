@@ -84,7 +84,6 @@ func hash2idx (h []byte) (idx [Uint256IdxLen]byte) {
 
 
 func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
-	ChSta("DB.BlockAdd")
 	var pos int64
 	var flagz [4]byte
 
@@ -115,7 +114,6 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos), 
 		blen:uint32(len(bl.Raw[:])), ipos:ipos, trusted:bl.Trusted}
 	db.mutex.Unlock()
-	ChSto("DB.BlockAdd")
 	return
 }
 
@@ -181,7 +179,6 @@ func (db *BlockDB) Close() {
 
 
 func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
-	ChSta("Db.BlockGet")
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash2idx(hash.Hash[:])]
 	db.mutex.Unlock()
@@ -193,7 +190,6 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	db.blockdata.Seek(int64(rec.fpos), os.SEEK_SET)
 	db.blockdata.Read(bl[:])
 	trusted = rec.trusted
-	ChSto("Db.BlockGet")
 	return
 }
 
