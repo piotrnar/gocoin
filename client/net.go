@@ -50,6 +50,8 @@ type oneConnection struct {
 
 	invs2send []*[36]byte
 
+	BytesReceived, BytesSent uint64
+
 	// Data from the version message
 	node struct {
 		version uint32
@@ -108,6 +110,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		c.broken = true
 	}
 
+	c.BytesSent += uint64(24+len(pl))
 	c.addr.SentData(24+len(pl))
 	c.last_cmd_sent = cmd
 
@@ -221,6 +224,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	c.dat = nil
 	c.hdr_len = 0
 
+	c.BytesReceived += uint64(24+len(ret.pl))
 	c.addr.GotData(24+len(ret.pl))
 
 	return ret
@@ -270,10 +274,6 @@ func (c *oneConnection) GetBlocks(lastbl []byte) {
 
 
 func (c *oneConnection) ProcessInv(pl []byte) {
-	if dbg>0 {
-		println("ProcessInv", len(pl))
-	}
-	
 	if len(pl) < 37 {
 		println("inv payload too short")
 		return
@@ -285,16 +285,24 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	}
 
 	var blocks2get [][32]byte
+	var txs uint32
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
-		if typ==2 && InvsNotify(pl[of+4:of+36]) {
-			var inv [32]byte
-			copy(inv[:], pl[of+4:of+36])
-			blocks2get = append(blocks2get, inv)
+		if typ==2 {
+			if InvsNotify(pl[of+4:of+36]) {
+				var inv [32]byte
+				copy(inv[:], pl[of+4:of+36])
+				blocks2get = append(blocks2get, inv)
+			}
+		} else {
+			txs++
 		}
 		of+= 36
-		cnt--
 	}
+	if dbg>1 {
+		println(c.addr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs -> get", len(blocks2get), "blocks")
+	}
+	
 	if len(blocks2get) > 0 {
 		msg := make([]byte, 9/*maxvlen*/+len(blocks2get)*36)
 		le := btc.PutVlen(msg, len(blocks2get))
@@ -348,6 +356,9 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			return
 		}
 		h2get[i] = btc.NewUint256(h[:])
+		if dbg>1 {
+			println(c.addr.Ip(), "getbl", h2get[i].String())
+		}
 	}
 	n, _ := b.Read(h[:])
 	if n != 32 {
@@ -626,17 +637,18 @@ func net_stats() {
 		fmt.Printf(" %21s %16s", v.addr.Ip(), v.last_cmd_sent)
 		if v.connectedAt != 0 {
 			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
-			fmt.Print(bts2str(v.addr.BytesReceived))
-			fmt.Print(bts2str(v.addr.BytesSent))
+			fmt.Print(bts2str(v.BytesReceived))
+			fmt.Print(bts2str(v.BytesSent))
 		}
 		if v.node.version!=0 {
 			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
 		}
 		fmt.Println()
-		totrec += v.addr.BytesReceived
-		tosnt += v.addr.BytesSent
+		totrec += v.BytesReceived
+		tosnt += v.BytesSent
 	}
 	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
 		InvsSent, BlockSent, totrec>>20, tosnt>>20)
+	fmt.Println("Bandwidth: ", bw_stats())
 	mutex.Unlock()
 }
