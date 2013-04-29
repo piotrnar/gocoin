@@ -236,9 +236,6 @@ func show_balance() {
 						for n.Height > po.BlockHeight {
 							n = n.Parent
 						}
-						/*binary.Write(txf, binary.LittleEndian, po.Value)
-						binary.Write(txf, binary.LittleEndian, po.BlockHeight)
-						txf.Write(po.Pk_script)*/
 						bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
 						if e == nil {
 							bl, e := btc.NewBlock(bd)
@@ -273,10 +270,12 @@ func show_balance() {
 		}
 		sum += unsp[i].Value
 	}
+	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 	if utxt != nil {
+		fmt.Println("Your balance data has been saved to the balance folder.")
+		fmt.Println("You can move this folder now to your offline wallet PC.")
 		utxt.Close()
 	}
-	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 }
 
 
