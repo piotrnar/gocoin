@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"bufio"
 	"strconv"
+	"strings"
 //	"math/big"
 //	"crypto/rand"
 //	"crypto/ecdsa"
@@ -27,6 +28,7 @@ var (
 	verbyte byte
 
 	unspentOuts []*btc.TxPrevOut
+	amBtc, feeBtc, totBtc uint64
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 )
 
@@ -88,7 +90,6 @@ func load_balance() {
 		os.Exit(1)
 	}
 	rd := bufio.NewReader(f)
-	var totval uint64
 	for {
 		l, _, e := rd.ReadLine()
 		if len(l)==0 && e!=nil {
@@ -96,7 +97,8 @@ func load_balance() {
 		}
 		if l[64]=='-' {
 			txid := btc.NewUint256FromString(string(l[:64]))
-			vout, _ := strconv.ParseUint(string(l[65:]), 10, 32)
+			rst := strings.SplitN(string(l[65:]), " ", 2)
+			vout, _ := strconv.ParseUint(rst[0], 10, 32)
 			uns := new(btc.TxPrevOut)
 			copy(uns.Hash[:], txid.Hash[:])
 			uns.Vout = uint32(vout)
@@ -126,14 +128,17 @@ func load_balance() {
 					os.Exit(1)
 				}
 			}
-			tx, _ := loadedTxs[txid.Hash]
-			totval += tx.TxOut[uns.Vout].Value
+			totBtc += UO(uns)
 		}
 	}
 	f.Close()
-	fmt.Printf("%.8f BTC in %d unspent outputs:", float64(totval)/1e8, len(unspentOuts))
+	fmt.Printf("%.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
 }
 
+func UO(uns *btc.TxPrevOut) uint64 {
+	tx, _ := loadedTxs[uns.Hash]
+	return tx.TxOut[uns.Vout].Value
+}
 
 func main() {
 	if flag.Lookup("h") != nil {
@@ -142,6 +147,16 @@ func main() {
 	}
 	flag.Parse()
 
+	if *amout<=0 {
+		fmt.Println("Specify -amount parameter (how much you want to spend)")
+		return
+	}
+	
+	if *toaddr=="" {
+		fmt.Println("Specify -to parameter (where you want to transfer it)")
+		return
+	}
+	
 	pass := getpass()
 	
 	if *testnet {
@@ -151,6 +166,14 @@ func main() {
 	}
 
 	load_balance()
+
+	amBtc = uint64(*amout*1e8)
+	feeBtc = uint64(*fee*1e8)
+
+	if amBtc + feeBtc > totBtc {
+		fmt.Println("You want to spend more than you own")
+		return
+	}
 
 	curv := btc.S256()
 	seed_key := btc.Sha2Sum([]byte(pass))
@@ -168,4 +191,18 @@ func main() {
 		i++
 	}
 	fmt.Println("Private keys re-generated")
+
+	sofar := uint64(0)
+	for i=0; i<uint(len(unspentOuts)); i++ {
+		sofar += UO(unspentOuts[i])
+		if sofar >= amBtc + feeBtc {
+			break
+		}
+	}
+	fmt.Printf("Spending %d out of %d outputs...\n", i+1, len(unspentOuts))
+
+	// Make the transaction
+	tx := new(btc.Tx)
+	tx.Version = 1
+	tx.Lock_time = 0xffffffff
 }
