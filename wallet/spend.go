@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"flag"
+	"bytes"
 	"bufio"
 	"strconv"
 //	"math/big"
@@ -26,6 +27,7 @@ var (
 	verbyte byte
 
 	unspentOuts []*btc.TxPrevOut
+	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 )
 
 
@@ -86,6 +88,7 @@ func load_balance() {
 		os.Exit(1)
 	}
 	rd := bufio.NewReader(f)
+	var totval uint64
 	for {
 		l, _, e := rd.ReadLine()
 		if len(l)==0 && e!=nil {
@@ -98,10 +101,37 @@ func load_balance() {
 			copy(uns.Hash[:], txid.Hash[:])
 			uns.Vout = uint32(vout)
 			unspentOuts = append(unspentOuts, uns)
+			if _, ok := loadedTxs[txid.Hash]; !ok {
+				tf, _ := os.Open("balance/"+txid.String()+".tx")
+				if tf != nil {
+					siz, _ := tf.Seek(0, os.SEEK_END)
+					tf.Seek(0, os.SEEK_SET)
+					buf := make([]byte, siz)
+					tf.Read(buf)
+					tf.Close()
+					th := btc.Sha2Sum(buf)
+					if bytes.Equal(th[:], txid.Hash[:]) {
+						tx, _ := btc.NewTx(buf)
+						if tx != nil {
+							loadedTxs[txid.Hash] = tx
+						} else {
+							println("transaction is corrupt:", txid.String())
+						}
+					} else {
+						println("transaction file is corrupt:", txid.String())
+						os.Exit(1)
+					}
+				} else {
+					println("transaction file not found:", txid.String())
+					os.Exit(1)
+				}
+			}
+			tx, _ := loadedTxs[txid.Hash]
+			totval += tx.TxOut[uns.Vout].Value
 		}
 	}
 	f.Close()
-	fmt.Println("Number of unspent outputs:", len(unspentOuts))
+	fmt.Printf("%.8f BTC in %d unspent outputs:", float64(totval)/1e8, len(unspentOuts))
 }
 
 
