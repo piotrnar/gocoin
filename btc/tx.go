@@ -259,7 +259,7 @@ func (tx *Tx) CheckTransaction() error {
 }
 
 
-func NewTxOutB(b []byte) (txout *TxOut, offs int) {
+func NewTxOut(b []byte) (txout *TxOut, offs int) {
 	var le, n int
 	
 	txout = new(TxOut)
@@ -278,7 +278,7 @@ func NewTxOutB(b []byte) (txout *TxOut, offs int) {
 }
 
 
-func NewTxInB(b []byte) (txin *TxIn, offs int) {
+func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	var le, n int
 	
 	txin = new(TxIn)
@@ -301,7 +301,7 @@ func NewTxInB(b []byte) (txin *TxIn, offs int) {
 	return 
 }
 
-func NewTxB(b []byte) (tx *Tx, offs int) {
+func NewTx(b []byte) (tx *Tx, offs int) {
 	var le, n int
 	
 	tx = new(Tx)
@@ -314,7 +314,7 @@ func NewTxB(b []byte) (tx *Tx, offs int) {
 	offs += n
 	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
-		tx.TxIn[i], n = NewTxInB(b[offs:])
+		tx.TxIn[i], n = NewTxIn(b[offs:])
 		offs += n
 	}
 	
@@ -323,7 +323,7 @@ func NewTxB(b []byte) (tx *Tx, offs int) {
 	offs += n
 	tx.TxOut = make([]*TxOut, le)
 	for i := range tx.TxOut {
-		tx.TxOut[i], n = NewTxOutB(b[offs:])
+		tx.TxOut[i], n = NewTxOut(b[offs:])
 		offs += n
 	}
 
