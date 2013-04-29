@@ -217,13 +217,14 @@ func main() {
 	
 	sofar := uint64(0)
 	for i=0; i<uint(len(unspentOuts)); i++ {
-		sofar += UO(unspentOuts[i]).Value
+		uo := UO(unspentOuts[i])
 		
 		tin := new(btc.TxIn)
 		tin.Input = *unspentOuts[i]
 		tin.Sequence = 0xffffffff
 		tx.TxIn = append(tx.TxIn, tin)
 
+		sofar += uo.Value
 		if sofar >= amBtc + feeBtc {
 			break
 		}
@@ -233,7 +234,18 @@ func main() {
 	if sofar - amBtc - feeBtc > 0 {
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:chng.OutScript()})
 	}
-	println(hex.EncodeToString(tx.Serialize()))
+
+	for in := range tx.TxIn {
+		uo := UO(unspentOuts[in])
+		for j := range publ_addrs {
+			if publ_addrs[j].Owns(uo.Pk_script) {
+				fmt.Println("in", i, "- sign with", publ_addrs[j].String())
+			}
+		}
+	}
+
+	fmt.Println()
+	fmt.Println(hex.EncodeToString(tx.Serialize()))
 
 	// Make the transaction
 }
