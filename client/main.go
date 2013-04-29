@@ -221,7 +221,8 @@ func show_balance() {
 	for i := range unsp {
 		if utxt != nil {
 			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
-			fmt.Fprintln(utxt, unsp[i].TxPrevOut.String())
+			fmt.Fprintf(utxt, "%s %.8f # BTC @ Block %d", unsp[i].TxPrevOut.String(), 
+				float64(unsp[i].Value)/1e8, unsp[i].MinedAt)
 			po, e := BlockChain.Unspent.UnspentGet(&unsp[i].TxPrevOut)
 			if e == nil {
 				fn := "balance/"+txid.String()[:64]+".tx"
