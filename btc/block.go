@@ -59,7 +59,7 @@ func (bl *Block) BuildTxList() (e error) {
 
 	for i:=0; i<int(txcnt); i++ {
 		_ = <- taskDone // wait if we have too many threads already
-		bl.Txs[i], n = NewTxB(bl.Raw[offs:])
+		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		bl.Txs[i].Size = uint32(n)
 		ChSta("TxHash")
 		go calcHash(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
