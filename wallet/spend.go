@@ -11,7 +11,7 @@ import (
 //	"math/big"
 //	"crypto/rand"
 //	"crypto/ecdsa"
-//	"encoding/hex"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"code.google.com/p/go.crypto/ripemd160"
 )
@@ -128,16 +128,16 @@ func load_balance() {
 					os.Exit(1)
 				}
 			}
-			totBtc += UO(uns)
+			totBtc += UO(uns).Value
 		}
 	}
 	f.Close()
 	fmt.Printf("%.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
 }
 
-func UO(uns *btc.TxPrevOut) uint64 {
+func UO(uns *btc.TxPrevOut) *btc.TxOut {
 	tx, _ := loadedTxs[uns.Hash]
-	return tx.TxOut[uns.Vout].Value
+	return tx.TxOut[uns.Vout]
 }
 
 func main() {
@@ -156,7 +156,22 @@ func main() {
 		fmt.Println("Specify -to parameter (where you want to transfer it)")
 		return
 	}
+	dest, e := btc.NewAddrFromString(*toaddr)
+	if e != nil {
+		fmt.Println("Destination address:", e.Error())
+		return
+	}
 	
+	var chng *btc.BtcAddr
+	if *change!="" {
+		var e error
+		chng, e = btc.NewAddrFromString(*change)
+		if e != nil {
+			fmt.Println("Change address:", e.Error())
+			return
+		}
+	}
+
 	pass := getpass()
 	
 	if *testnet {
@@ -192,17 +207,33 @@ func main() {
 	}
 	fmt.Println("Private keys re-generated")
 
+	if chng == nil {
+		chng = publ_addrs[0]
+	}
+
+	tx := new(btc.Tx)
+	tx.Version = 1
+	tx.Lock_time = 0
+	
 	sofar := uint64(0)
 	for i=0; i<uint(len(unspentOuts)); i++ {
-		sofar += UO(unspentOuts[i])
+		sofar += UO(unspentOuts[i]).Value
+		
+		tin := new(btc.TxIn)
+		tin.Input = *unspentOuts[i]
+		tin.Sequence = 0xffffffff
+		tx.TxIn = append(tx.TxIn, tin)
+
 		if sofar >= amBtc + feeBtc {
 			break
 		}
 	}
 	fmt.Printf("Spending %d out of %d outputs...\n", i+1, len(unspentOuts))
+	tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:amBtc, Pk_script:dest.OutScript()})
+	if sofar - amBtc - feeBtc > 0 {
+		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:chng.OutScript()})
+	}
+	println(hex.EncodeToString(tx.Serialize()))
 
 	// Make the transaction
-	tx := new(btc.Tx)
-	tx.Version = 1
-	tx.Lock_time = 0xffffffff
 }
