@@ -25,11 +25,14 @@ func NewWallet(fn string) (wal *oneWallet) {
 		l, e = rd.ReadString('\n')
 		l = strings.Trim(l, " \t\r\n")
 		if len(l)>0 && l[0]!='#' {
-			a, e := btc.NewAddrFromString(l)
-			if e != nil {
-				println(l, ": ", e.Error())
-			} else {
-				wal.addrs = append(wal.addrs, a)
+			ls := strings.SplitN(l, " ", 2)
+			if len(ls)>0 {
+				a, e := btc.NewAddrFromString(ls[0])
+				if e != nil {
+					println(l, ": ", e.Error())
+				} else {
+					wal.addrs = append(wal.addrs, a)
+				}
 			}
 		}
 		if e != nil {
