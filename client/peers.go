@@ -41,10 +41,6 @@ type onePeer struct {
 	
 	ConnectedLast uint32
 	ConnectedCount uint32
-	
-	GotdataLast uint32
-
-	BytesReceived, BytesSent uint64
 }
 
 
@@ -76,14 +72,6 @@ func newPeer(v []byte) (p *onePeer) {
 		p.ConnectedCount = binary.LittleEndian.Uint32(v[54:58])
 	}
 	
-	if len(v) >= 66 {
-		p.BytesReceived = binary.LittleEndian.Uint64(v[58:66])
-	}
-
-	if len(v) >= 74 {
-		p.BytesSent = binary.LittleEndian.Uint64(v[66:74])
-	}
-	
 	return
 }
 
@@ -104,9 +92,6 @@ func (p *onePeer) Bytes(all bool) []byte {
 		binary.Write(b, binary.LittleEndian, p.FailedCount)
 		binary.Write(b, binary.LittleEndian, p.ConnectedLast)
 		binary.Write(b, binary.LittleEndian, p.ConnectedCount)
-		
-		binary.Write(b, binary.LittleEndian, p.BytesReceived)
-		binary.Write(b, binary.LittleEndian, p.BytesSent)
 	}
 	return b.Bytes()
 }
@@ -136,15 +121,12 @@ func (p *onePeer) Connected() {
 
 
 func (p *onePeer) GotData(l int) {
-	p.BytesReceived += uint64(l)
-	p.GotdataLast += uint32(time.Now().Unix())
-	p.Save()
+	bw_got(l)
 }
 
 
 func (p *onePeer) SentData(l int) {
-	p.BytesSent += uint64(l)
-	p.Save()
+	bw_sent(l)
 }
 
 
