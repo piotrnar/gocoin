@@ -429,6 +429,13 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			} else {
 				println("block", uh.String(), er.Error())
 			}
+		} else if typ == 1 {
+			// transaction
+			uh := btc.NewUint256(h[:])
+			if tx, ok := TransactionsToSend[uh.Hash]; ok {
+				c.SendRawMsg("tx", tx)
+				println("sent tx to", c.addr.Ip())
+			}
 		} else {
 			println("getdata for type", typ, "not supported yet")
 		}
