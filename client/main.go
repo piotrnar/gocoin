@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"strconv"
+	"encoding/hex"
+//	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -60,6 +62,8 @@ var (
 	InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt uint64
 	TicksCnt uint64
 	busy string
+
+	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
 )
 
 
@@ -207,14 +211,70 @@ func show_balance() {
 		println("You have no addresses")
 		return
 	}
+	os.RemoveAll("balance")
+	os.MkdirAll("balance/", 0770)
+
+	utxt, _ := os.Create("balance/unspent.txt")
+
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
 	var sum uint64
 	for i := range unsp {
+		if utxt != nil {
+			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
+			fmt.Fprintln(utxt, unsp[i].TxPrevOut.String())
+			po, e := BlockChain.Unspent.UnspentGet(&unsp[i].TxPrevOut)
+			if e == nil {
+				fn := "balance/"+txid.String()[:64]+".tx"
+				txf, _ := os.Open(fn)
+				if txf != nil {
+					println(fn, "already done")
+					txf.Close()
+				} else {
+					txf, _ = os.Create(fn)
+					if txf != nil {
+						n := BlockChain.BlockTreeEnd
+						for n.Height > po.BlockHeight {
+							n = n.Parent
+						}
+						/*binary.Write(txf, binary.LittleEndian, po.Value)
+						binary.Write(txf, binary.LittleEndian, po.BlockHeight)
+						txf.Write(po.Pk_script)*/
+						bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
+						if e == nil {
+							bl, e := btc.NewBlock(bd)
+							if e == nil {
+								e = bl.BuildTxList()
+								if e == nil {
+									for i := range bl.Txs {
+										if bl.Txs[i].Hash.Equal(txid) {
+											txf.Write(bl.Txs[i].Serialize())
+											break
+										}
+									}
+								} else {
+									println("BuildTxList: ", e.Error())
+								}
+							} else {
+								println("NewBlock: ", e.Error())
+							}
+						} else {
+							println("BlockGet: ", e.Error())
+						}
+						txf.Close()
+					}
+				}
+			} else {
+				println(e.Error())
+			}
+		}
 		if len(unsp)<100 {
 			fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
 				unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
 		}
 		sum += unsp[i].Value
+	}
+	if utxt != nil {
+		utxt.Close()
 	}
 	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 }
@@ -324,6 +384,15 @@ func do_ui_request(str string) {
 		list_unspent(strings.Trim(str[7:], " "))
 	} else if strings.HasPrefix(str, "u ") {
 		list_unspent(strings.Trim(str[2:], " "))
+	} else if strings.HasPrefix(str, "tx ") {
+		tx, er := hex.DecodeString(str[3:])
+		if er != nil {
+			println(er.Error())
+		}
+		println("broadcast tx len", len(tx))
+		h := btc.Sha2Sum(tx)
+		TransactionsToSend[h] = tx
+		NetSendInv(1, h[:], nil)
 	} else if strings.HasPrefix(str, "dbg ") {
 		dbg, _ = strconv.ParseUint(str[4:], 10, 64)
 		println("dbg:", dbg)
@@ -368,9 +437,14 @@ func GetBlockData(h []byte) []byte {
 
 
 func show_help() {
-	fmt.Println("There are different commands...")
-	fmt.Println("b -bockchain stat, i -geninfo, bal -balance, unspent <address>")
-	fmt.Println("wal <filename>, mem, prof, invs, cach, pers, net, quit")
+	fmt.Println("There are different commands... some of them:")
+	fmt.Println("i - show general info")
+	fmt.Println("mem - show memory usage info")
+	fmt.Println("b - show bockchain stats")
+	fmt.Println("bal - show balance of your wallet")
+	fmt.Println("u <address> - show unspent outputs of the given address")
+	fmt.Println("wal <filename> - load a differetn wallet")
+	fmt.Println("prof, invs, cach, pers, net, quit ...")
 }
 
 
