@@ -312,14 +312,18 @@ func main() {
 		}
 	}
 
-	fmt.Println()
-	fmt.Println(hex.EncodeToString(tx.Serialize()))
+	rawtx := tx.Serialize()
+	ha := btc.NewSha2Hash(rawtx)
+	hs := ha.String()
+	fmt.Println(hs)
 	
-	f, _ := os.Create("tx.txt")
+	f, _ := os.Create(hs+".txt")
 	if f != nil {
-		f.Write([]byte(hex.EncodeToString(tx.Serialize())))
+		f.Write([]byte(hex.EncodeToString(rawtx)))
 		f.Close()
+		fmt.Println("Transaction data stored in", hs+".txt")
 	}
+	//fmt.Println(hex.EncodeToString(tx.Serialize()))
 
 	// Make the transaction
 }
