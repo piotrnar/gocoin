@@ -314,6 +314,12 @@ func main() {
 
 	fmt.Println()
 	fmt.Println(hex.EncodeToString(tx.Serialize()))
+	
+	f, _ := os.Create("tx.txt")
+	if f != nil {
+		f.Write([]byte(hex.EncodeToString(tx.Serialize())))
+		f.Close()
+	}
 
 	// Make the transaction
 }
