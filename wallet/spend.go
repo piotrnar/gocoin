@@ -8,10 +8,11 @@ import (
 	"bufio"
 	"strconv"
 	"strings"
-//	"math/big"
-//	"crypto/rand"
-//	"crypto/ecdsa"
+	"math/big"
+	"crypto/rand"
+	"crypto/ecdsa"
 	"encoding/hex"
+	"crypto/sha256"
 	"github.com/piotrnar/gocoin/btc"
 	"code.google.com/p/go.crypto/ripemd160"
 )
@@ -59,9 +60,11 @@ func getline() string {
 	return string(li)
 }
 
-func rimp160(data []byte) (res [20]byte) {
+func sharimp160(data []byte) (res [20]byte) {
+	sha := sha256.New()
 	rim := ripemd160.New()
-	rim.Write(data)
+	sha.Write(data)
+	rim.Write(sha.Sum(nil)[:])
 	copy(res[:], rim.Sum(nil))
 	return
 }
@@ -201,7 +204,7 @@ func main() {
 		seed_key = btc.Sha2Sum(seed_key[:])
 		priv_keys[i] = seed_key
 		publ_keys[i] = getPubKey(curv, seed_key[:])
-		h160 := rimp160(publ_keys[i][:])
+		h160 := sharimp160(publ_keys[i][:])
 		publ_addrs[i] = btc.NewAddrFromHash160(h160[:], verbyte)
 		i++
 	}
@@ -235,12 +238,77 @@ func main() {
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:chng.OutScript()})
 	}
 
+	//fmt.Println("Unsigned:", hex.EncodeToString(tx.Serialize()))
+	
 	for in := range tx.TxIn {
 		uo := UO(unspentOuts[in])
+		var found bool
 		for j := range publ_addrs {
 			if publ_addrs[j].Owns(uo.Pk_script) {
-				fmt.Println("in", i, "- sign with", publ_addrs[j].String())
+				// Load the private key
+				var key ecdsa.PrivateKey
+				key.PublicKey.Curve = btc.S256()
+				key.PublicKey.X = new(big.Int).SetBytes(publ_keys[j][1:33])
+				key.PublicKey.Y = new(big.Int).SetBytes(publ_keys[j][33:65])
+				key.D = new(big.Int).SetBytes(priv_keys[j][:])
+
+				//Calculate proper transaction hash
+				h := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
+				//fmt.Println("SignatureHash:", btc.NewUint256(h).String())
+				
+				// Sign
+				r, s, err := ecdsa.Sign(rand.Reader, &key, h)
+				if err != nil {
+					println("Sign:", err.Error())
+					return
+				}
+				rb := r.Bytes()
+				sb := s.Bytes()
+				
+				if rb[0] >= 0x80 {
+					rb = append([]byte{0x00}, rb...)
+				}
+
+				if sb[0] >= 0x80 {
+					sb = append([]byte{0x00}, sb...)
+				}
+
+				// Output the signing result into a buffer
+				busig := new(bytes.Buffer)
+				busig.WriteByte(0x30)
+				busig.WriteByte(byte(4+len(rb)+len(sb)))
+				busig.WriteByte(0x02)
+				busig.WriteByte(byte(len(rb)))
+				busig.Write(rb)
+				busig.WriteByte(0x02)
+				busig.WriteByte(byte(len(sb)))
+				busig.Write(sb)
+				busig.WriteByte(0x01) // hash type
+				/*
+				fmt.Println("R:", hex.EncodeToString(rb))
+				fmt.Println("S:", hex.EncodeToString(sb))
+				fmt.Println("Sig:", hex.EncodeToString(busig.Bytes()))
+				*/
+
+				// Output the signature and the public key into tx.ScriptSig
+				buscr := new(bytes.Buffer)
+				buscr.WriteByte(byte(busig.Len()))
+				buscr.Write(busig.Bytes())
+				
+				buscr.WriteByte(0x41)
+				buscr.Write(publ_keys[j][:])
+
+				// assign:
+				tx.TxIn[in].ScriptSig = buscr.Bytes()
+
+				//fmt.Println("Input", in, "signed with", publ_addrs[j].String())
+				//fmt.Println("  ..", hex.EncodeToString(tx.TxIn[in].ScriptSig))
+				found = true
+				break
 			}
+		}
+		if !found {
+			fmt.Println("Key not found for", hex.EncodeToString(uo.Pk_script))
 		}
 	}
 
