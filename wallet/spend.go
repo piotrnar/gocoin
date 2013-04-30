@@ -284,11 +284,6 @@ func main() {
 				busig.WriteByte(byte(len(sb)))
 				busig.Write(sb)
 				busig.WriteByte(0x01) // hash type
-				/*
-				fmt.Println("R:", hex.EncodeToString(rb))
-				fmt.Println("S:", hex.EncodeToString(sb))
-				fmt.Println("Sig:", hex.EncodeToString(busig.Bytes()))
-				*/
 
 				// Output the signature and the public key into tx.ScriptSig
 				buscr := new(bytes.Buffer)
@@ -301,8 +296,6 @@ func main() {
 				// assign:
 				tx.TxIn[in].ScriptSig = buscr.Bytes()
 
-				//fmt.Println("Input", in, "signed with", publ_addrs[j].String())
-				//fmt.Println("  ..", hex.EncodeToString(tx.TxIn[in].ScriptSig))
 				found = true
 				break
 			}
@@ -317,11 +310,11 @@ func main() {
 	hs := ha.String()
 	fmt.Println(hs)
 	
-	f, _ := os.Create(hs+".txt")
+	f, _ := os.Create(hs[:8]+".txt")
 	if f != nil {
 		f.Write([]byte(hex.EncodeToString(rawtx)))
 		f.Close()
-		fmt.Println("Transaction data stored in", hs+".txt")
+		fmt.Println("Transaction data stored in", hs[:8]+".txt")
 	}
 	//fmt.Println(hex.EncodeToString(tx.Serialize()))
 
