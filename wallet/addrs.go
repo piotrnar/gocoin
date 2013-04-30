@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"crypto/sha256"
 	"github.com/piotrnar/gocoin/btc"
 	"code.google.com/p/go.crypto/ripemd160"
 )
@@ -53,9 +54,12 @@ func getline() string {
 	return string(li)
 }
 
-func rimp160(data []byte) (res [20]byte) {
+
+func sharimp160(data []byte) (res [20]byte) {
+	sha := sha256.New()
 	rim := ripemd160.New()
-	rim.Write(data)
+	sha.Write(data)
+	rim.Write(sha.Sum(nil)[:])
 	copy(res[:], rim.Sum(nil))
 	return
 }
@@ -148,7 +152,7 @@ func main() {
 			println("You dont want to use this password - choose another one")
 			os.Exit(1)
 		}
-		h160 := rimp160(publ_keys[i][:])
+		h160 := sharimp160(publ_keys[i][:])
 		publ_addrs[i] = btc.NewAddrFromHash160(h160[:], verbyte)
 		i++
 	}
