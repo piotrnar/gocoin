@@ -108,6 +108,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 
 func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	if db.lastBlockHeight+1 != changes.Height {
+		println(db.lastBlockHeight+1, changes.Height)
 		panic("Unexpected height")
 	}
 	db.lastBlockHeight++
