@@ -312,8 +312,9 @@ func main() {
 	}
 
 	rawtx := tx.Serialize()
-	ha := btc.NewSha2Hash(rawtx)
-	hs := ha.String()
+	tx.Hash = btc.NewSha2Hash(rawtx)
+
+	hs := tx.Hash.String()
 	fmt.Println(hs)
 	
 	f, _ := os.Create(hs[:8]+".txt")
@@ -330,8 +331,27 @@ func main() {
 				fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
 			}
 		}
+		fmt.Println(i, "spent output(s) removed from 'balance/unspent.txt'")
+
+		var addback int
+		for out := range tx.TxOut {
+			for j := range publ_addrs {
+				if publ_addrs[j].Owns(tx.TxOut[out].Pk_script) {
+					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
+						float64(tx.TxOut[out].Value)/1e8, publ_addrs[j].String())
+					addback++
+				}
+			}
+		}
 		f.Close()
-		fmt.Println("Spent outputs removed from the 'balance/' folder")
+		if addback > 0 {
+			f, _ = os.Create("balance/"+hs+".tx")
+			if f != nil {
+				f.Write(rawtx)
+				f.Close()
+			}
+			fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+		}
 	}
 
 	//fmt.Println(hex.EncodeToString(tx.Serialize()))
