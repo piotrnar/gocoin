@@ -74,9 +74,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if !ch.DoNotSync {
 			ch.Blocks.Sync()
 		}
-		ChSta("db.CommitBlockTxs")
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
-		ChSto("db.CommitBlockTxs")
 
 		ch.BlockTreeEnd = nxt
 	}
