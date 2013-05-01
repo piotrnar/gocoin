@@ -9,6 +9,7 @@ import (
 
 type oneWallet struct {
 	addrs []*btc.BtcAddr
+	label []string
 }
 
 func NewWallet(fn string) (wal *oneWallet) {
@@ -32,6 +33,11 @@ func NewWallet(fn string) (wal *oneWallet) {
 					println(l, ": ", e.Error())
 				} else {
 					wal.addrs = append(wal.addrs, a)
+					if len(ls)>1 {
+						wal.label = append(wal.label, ls[1])
+					} else {
+						wal.label = append(wal.label, "")
+					}
 				}
 			}
 		}
