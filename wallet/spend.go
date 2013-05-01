@@ -29,6 +29,7 @@ var (
 	verbyte byte
 
 	unspentOuts []*btc.TxPrevOut
+	unspentOutsLabel []string
 	amBtc, feeBtc, totBtc uint64
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 )
@@ -106,6 +107,11 @@ func load_balance() {
 			copy(uns.Hash[:], txid.Hash[:])
 			uns.Vout = uint32(vout)
 			unspentOuts = append(unspentOuts, uns)
+			lab := ""
+			if len(rst)>1 {
+				lab = rst[1]
+			}
+			unspentOutsLabel = append(unspentOutsLabel, lab)
 			if _, ok := loadedTxs[txid.Hash]; !ok {
 				tf, _ := os.Open("balance/"+txid.String()+".tx")
 				if tf != nil {
@@ -316,6 +322,18 @@ func main() {
 		f.Close()
 		fmt.Println("Transaction data stored in", hs[:8]+".txt")
 	}
+
+	f, _ = os.Create("balance/unspent.txt")
+	if f != nil {
+		for j:=uint(0); j<uint(len(unspentOuts)); j++ {
+			if j>i {
+				fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
+			}
+		}
+		f.Close()
+		fmt.Println("Spent outputs removed from the 'balance/' folder")
+	}
+
 	//fmt.Println(hex.EncodeToString(tx.Serialize()))
 
 	// Make the transaction
