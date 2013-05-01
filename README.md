@@ -8,7 +8,7 @@ Project under development.
 ======
 Dependencies
 * go get github.com/piotrnar/qdb
-* go install github.com/piotrnar/qdb
+* go get code.google.com/p/go.crypto/ripemd160
 
 
 Installation:
