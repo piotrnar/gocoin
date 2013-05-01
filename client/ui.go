@@ -51,6 +51,7 @@ func do_userif() {
 			fmt.Print("> ")
 		}
 		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
+		prompt = true
 		if len(li) > 0 {
 			cmdpar := strings.SplitN(strings.Trim(string(li[:]), " \n\t\r"), " ", 2)
 			cmd := cmdpar[0]
@@ -58,7 +59,6 @@ func do_userif() {
 			if len(cmdpar)==2 {
 				param = cmdpar[1]
 			}
-			prompt = true
 			found := false
 			for i := range uiCmds {
 				for j := range uiCmds[i].cmds {
