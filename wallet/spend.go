@@ -216,10 +216,6 @@ func main() {
 	}
 	fmt.Println("Private keys re-generated")
 
-	if chng == nil {
-		chng = publ_addrs[0]
-	}
-
 	tx := new(btc.Tx)
 	tx.Version = 1
 	tx.Lock_time = 0
@@ -240,8 +236,16 @@ func main() {
 	}
 	fmt.Printf("Spending %d out of %d outputs...\n", i+1, len(unspentOuts))
 	tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:amBtc, Pk_script:dest.OutScript()})
+	
 	if sofar - amBtc - feeBtc > 0 {
-		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:chng.OutScript()})
+		if chng == nil {
+			// If change address was not specified, send the change to the first input address
+			tx.TxOut = append(tx.TxOut, 
+				&btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:UO(unspentOuts[0]).Pk_script})
+		} else {
+			tx.TxOut = append(tx.TxOut, 
+				&btc.TxOut{Value:sofar - amBtc - feeBtc, Pk_script:chng.OutScript()})
+		}
 	}
 
 	//fmt.Println("Unsigned:", hex.EncodeToString(tx.Serialize()))
@@ -251,6 +255,9 @@ func main() {
 		var found bool
 		for j := range publ_addrs {
 			if publ_addrs[j].Owns(uo.Pk_script) {
+				if chng == nil {
+					chng = publ_addrs[j]
+				}
 				// Load the private key
 				var key ecdsa.PrivateKey
 				key.PublicKey.Curve = btc.S256()
@@ -308,6 +315,7 @@ func main() {
 		}
 		if !found {
 			fmt.Println("Key not found for", hex.EncodeToString(uo.Pk_script))
+			os.Exit(1)
 		}
 	}
 
