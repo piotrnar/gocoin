@@ -96,23 +96,28 @@ func do_userif() {
 
 
 func show_info(par string) {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	
 	mutex.Lock()
-	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d\n", 
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks))
+	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d  MemUsed:%dMB\n", 
+		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
+		ms.HeapAlloc>>20)
 	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d  UiMsgs:%d  Ticks:%d\n", 
 		InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, TicksCnt)
-	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String())
+	var minago string = "?"
+	if LastBlockReceived != 0 {
+		minago = fmt.Sprint((time.Now().Unix()-LastBlockReceived)/60)
+	}
+	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String(), minago, "min ago")
 	if busy!="" {
-		println("Currently busy with", busy)
+		println("BlockChain thread currently busy with", busy)
 	} else {
-		println("Not busy")
+		println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
 
 	// memory usage:
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	fmt.Println("HeapAlloc (memory used):", ms.HeapAlloc>>20, "MB")
 }
 
 
