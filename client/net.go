@@ -636,7 +636,7 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) {
 }
 
 
-func net_stats() {
+func net_stats(par string) {
 	mutex.Lock()
 	println(len(openCons), "active net connections:")
 	var tosnt, totrec uint64
@@ -658,4 +658,8 @@ func net_stats() {
 		InvsSent, BlockSent, totrec>>20, tosnt>>20)
 	fmt.Println("Bandwidth: ", bw_stats())
 	mutex.Unlock()
+}
+
+func init() {
+	newUi("net", false, net_stats, "Show network statustics")
 }

@@ -176,15 +176,6 @@ func ParseAddr(pl []byte) {
 }
 
 
-func show_addresses() {
-	println(peerDB.Count(), "peers in the database:")
-	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-		println(" *", newPeer(v).String())
-		return true
-	})
-}
-
-
 func getBestPeer() (p *onePeer) {
 	if proxyPeer!=nil {
 		if !connectionActive(proxyPeer) {
@@ -268,3 +259,16 @@ func initPeers(dir string) {
 	
 }
 
+
+func show_addresses(par string) {
+	println(peerDB.Count(), "peers in the database:")
+	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		println(" *", newPeer(v).String())
+		return true
+	})
+}
+
+
+func init() {
+	newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
+}

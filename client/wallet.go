@@ -34,7 +34,7 @@ func NewWallet(fn string) (wal *oneWallet) {
 				} else {
 					wal.addrs = append(wal.addrs, a)
 					if len(ls)>1 {
-						wal.label = append(wal.label, ls[1])
+						wal.label = append(wal.label, strings.Trim(ls[1], " \n\t\t"))
 					} else {
 						wal.label = append(wal.label, "")
 					}

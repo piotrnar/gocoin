@@ -5,12 +5,10 @@ import (
 	"os"
 	"flag"
 	"time"
-	"bufio"
 //	"bytes"
 	"sync"
-	"runtime"
-	"strings"
-	"strconv"
+//	"strings"
+//	"strconv"
 	"encoding/hex"
 //	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
@@ -47,7 +45,7 @@ var (
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
 	netChannel chan *NetCommand = make(chan *NetCommand, 100)
-	uiChannel chan string = make(chan string, 1)
+	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, 1000)
@@ -82,74 +80,6 @@ func Busy(b string) {
 }
 
 
-func do_userif() {
-	var prompt bool = true
-	time.Sleep(1e9)
-	for {
-		if prompt {
-			fmt.Print("> ")
-		}
-		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
-		if len(li) > 0 {
-			cmd := string(li[:])
-			prompt = true
-			switch cmd {
-				case "i":
-					show_info()
-				
-				case "mem":
-					var ms runtime.MemStats
-					runtime.ReadMemStats(&ms)
-					fmt.Println("HeapAlloc", ms.HeapAlloc>>20, "MB")
-				
-				case "cach": 
-					show_cached()
-				
-				case "invs": 
-					show_invs()
-				
-				case "net":
-					net_stats()
-
-				case "beep":
-					beep = !beep
-					println("beep", beep)
-
-				case "?":
-					show_help()
-				
-				case "h":
-					show_help()
-				
-				case "q":
-					os.Exit(0)
-				
-				case "pers":
-					show_addresses()
-					
-				default:
-					prompt = false
-					mutex.Lock()
-					if busy!="" {
-						print("now busy with ", busy)
-					}
-					mutex.Unlock()
-					println("...")
-					sta := time.Now().UnixNano()
-					uiChannel <- cmd
-					go func() {
-						_ = <- uicmddone
-						sto := time.Now().UnixNano()
-						fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
-						fmt.Print("> ")
-					}()
-			}
-		}
-	}
-}
-
-
-
 func list_unspent(addr string) {
 	fmt.Println("Checking unspent coins for addr", addr)
 	var a[1] *btc.BtcAddr
@@ -169,40 +99,7 @@ func list_unspent(addr string) {
 }
 
 
-func show_info() {
-	mutex.Lock()
-	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d\n", 
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks))
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d  UiMsgs:%d  Ticks:%d\n", 
-		InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, TicksCnt)
-	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String())
-	if busy!="" {
-		println("Currently busy with", busy)
-	} else {
-		println("Not busy")
-	}
-	mutex.Unlock()
-}
-
-
-func show_invs() {
-	mutex.Lock()
-	fmt.Println(len(pendingBlocks), "pending invs")
-	for _, v := range pendingBlocks {
-		fmt.Println(v.String())
-	}
-	mutex.Unlock()
-}
-
-
-func show_cached() {
-	for _, v := range cachedBlocks {
-		fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.Parent).String())
-	}
-}
-
-
-func show_balance() {
+func show_balance(p string) {
 	if MyWallet==nil {
 		println("You have no wallet")
 		return
@@ -221,8 +118,9 @@ func show_balance() {
 	for i := range unsp {
 		if utxt != nil {
 			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
-			fmt.Fprintf(utxt, "%s # %.8f BTC @ Block %d\n", unsp[i].TxPrevOut.String(), 
-				float64(unsp[i].Value)/1e8, unsp[i].MinedAt)
+			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", unsp[i].TxPrevOut.String(), 
+				float64(unsp[i].Value)/1e8, unsp[i].MinedAt,
+				MyWallet.addrs[unsp[i].AskIndex].String(), MyWallet.label[unsp[i].AskIndex])
 			po, e := BlockChain.Unspent.UnspentGet(&unsp[i].TxPrevOut)
 			if e == nil {
 				fn := "balance/"+txid.String()[:64]+".tx"
@@ -267,14 +165,14 @@ func show_balance() {
 		}
 		if len(unsp)<100 {
 			fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
-				unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String())
+				unsp[i].String(), MyWallet.label[unsp[i].AskIndex])
 		}
 		sum += unsp[i].Value
 	}
 	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 	if utxt != nil {
-		fmt.Println("Your balance data has been saved to the balance folder.")
-		fmt.Println("You can move this folder now to your offline wallet PC.")
+		fmt.Println("Your balance data has been saved to the 'balance/' folder.")
+		fmt.Println("You nend to move this folder to your wallet PC, to spend the coins.")
 		utxt.Close()
 	}
 }
@@ -377,52 +275,55 @@ func InvsNotify(h []byte) (need bool) {
 }
 
 
-func do_ui_request(str string) {
-	Busy("User Interface: "+str)
-	UiMsgsCnt++
-	if strings.HasPrefix(str, "unspent") {
-		list_unspent(strings.Trim(str[7:], " "))
-	} else if strings.HasPrefix(str, "u ") {
-		list_unspent(strings.Trim(str[2:], " "))
-	} else if strings.HasPrefix(str, "tx ") {
-		tx, er := hex.DecodeString(str[3:])
-		if er != nil {
-			println(er.Error())
-		}
-		println("broadcast tx len", len(tx))
-		h := btc.Sha2Sum(tx)
-		TransactionsToSend[h] = tx
-		NetSendInv(1, h[:], nil)
-	} else if strings.HasPrefix(str, "dbg ") {
-		dbg, _ = strconv.ParseUint(str[4:], 10, 64)
-		println("dbg:", dbg)
-	} else if strings.HasPrefix(str, "wal ") {
-		println("Switching to wallet from file", str[4:])
-		MyWallet = NewWallet(str[4:])
-	} else {
-		switch str {
-			case "b": 
-				fmt.Println(BlockChain.Stats())
+func ui_quit(par string) {
+	exit_now = true
+}
 
-			case "bal": 
-				show_balance()
+func blchain_stats(par string) {
+	fmt.Println(BlockChain.Stats())
+}
 
-			case "prof": 
-				btc.ShowProfileData()
-			
-			case "save": 
-				fmt.Println("Saving coinbase...")
-				BlockChain.Save()
-			
-			case "quit": 
-				exit_now = true
-				return
-			
-			default:
-				println("unknown command")
-		}
+
+func load_wallet(fn string) {
+	if fn != "" {
+		fmt.Println("Switching to wallet from file", fn)
+		MyWallet = NewWallet(fn)
 	}
-	uicmddone <- true
+	fmt.Println("Dumping wallet:")
+	for i := range MyWallet.addrs {
+		fmt.Println(" ", MyWallet.addrs[i].String(), MyWallet.label[i])
+	}
+}
+
+func send_tx(par string) {
+	tx, er := hex.DecodeString(par)
+	if er != nil {
+		println(er.Error())
+	}
+	txid := btc.NewSha2Hash(tx)
+	fmt.Println("Broadcasting tx", txid.String(), "len", len(tx), "...")
+	//h := btc.Sha2Sum(tx)
+	TransactionsToSend[txid.Hash] = tx
+	NetSendInv(1, txid.Hash[:], nil)
+}
+
+func save_bchain(par string) {
+	BlockChain.Save()
+}
+
+func show_profile(par string) {
+	btc.ShowProfileData()
+}
+
+func init() {
+	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("quit q", true, ui_quit, "Exit gracefully (closing all files)")
+	newUi("balance bal", true, show_balance, "Show & save the balance of your wallet's addresses")
+	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
+	newUi("sendtx tx", true, send_tx, "Broadcast given hex-encoded tx to the network")
+	newUi("wallet wal", true, load_wallet, "Load wallet from file, or just display current one")
+	newUi("save", true, save_bchain, "Save blockchain state now (usually not needed)")
+	newUi("profile prof", true, show_profile, "Shows CPU usage stats")
 }
 
 
@@ -433,18 +334,6 @@ func GetBlockData(h []byte) []byte {
 	}
 	println("BlockChain.Blocks.BlockGet failed")
 	return nil
-}
-
-
-func show_help() {
-	fmt.Println("There are different commands... some of them:")
-	fmt.Println("i - show general info")
-	fmt.Println("mem - show memory usage info")
-	fmt.Println("b - show bockchain stats")
-	fmt.Println("bal - show balance of your wallet")
-	fmt.Println("u <address> - show unspent outputs of the given address")
-	fmt.Println("wal <filename> - load a differetn wallet")
-	fmt.Println("prof, invs, cach, pers, net, quit ...")
 }
 
 
@@ -480,6 +369,7 @@ func main() {
 	}
 	
 	go network_process()
+
 	go do_userif()
 
 	var netmsg *NetCommand
@@ -496,7 +386,10 @@ func main() {
 				break
 			
 			case cmd := <-uiChannel:
-				do_ui_request(cmd)
+				Busy("UI command")
+				UiMsgsCnt++
+				cmd.handler(cmd.param)
+				uicmddone <- true
 				continue
 			
 			case <-time.After(100*time.Millisecond):
@@ -564,7 +457,6 @@ func main() {
 						}
 					} else {
 						println("CheckBlock:", e.Error(), LastBlock.Height)
-						show_invs()
 					}
 				}
 			} else {
