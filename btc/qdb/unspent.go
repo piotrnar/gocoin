@@ -34,11 +34,6 @@ type unspentDb struct {
 func newUnspentDB(dir string) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
-	/*println("loading db...")
-	for i := range db.tdb {
-		println(db.dbN(i).Count(), "in", i)
-	}
-	println("loaded...")*/
 	return
 }
 
@@ -64,8 +59,6 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := getUnspIndex(po)
 	val := db.dbN(int(po.Hash[31])).Get(ind)
 	if val==nil {
-		//println(po.Hash[31], len(db.tdb[po.Hash[31]].Cache), hex.EncodeToString(ind[:]))
-		//panic("Unspent not found")
 		e = errors.New("Unspent not found")
 		return
 	}
@@ -92,14 +85,6 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	copy(v[48:], Val_Pk.Pk_script)
 	ind := getUnspIndex(idx)
 	db.dbN(int(idx.Hash[31])).Put(ind, v)
-	/*
-	if idx.Hash[31]==169 {
-		println("dodalem", len(db.tdb[idx.Hash[31]].Cache), hex.EncodeToString(ind[:]))
-		for k, _ := range db.tdb[idx.Hash[31]].Cache {
-			println(" *", hex.EncodeToString(k[:]))
-		}
-	}
-	*/
 }
 
 
