@@ -39,6 +39,7 @@ var (
 	beep bool
 
 	LastBlock *btc.BlockTreeNode
+	LastBlockReceived int64 // time when the last block was received
 	lastInvAsked  *btc.BlockTreeNode
 	disableSync time.Time
 
@@ -116,58 +117,87 @@ func show_balance(p string) {
 	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
 	var sum uint64
 	for i := range unsp {
-		if utxt != nil {
-			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
-			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", unsp[i].TxPrevOut.String(), 
-				float64(unsp[i].Value)/1e8, unsp[i].MinedAt,
-				MyWallet.addrs[unsp[i].AskIndex].String(), MyWallet.label[unsp[i].AskIndex])
-			po, e := BlockChain.Unspent.UnspentGet(&unsp[i].TxPrevOut)
-			if e == nil {
-				fn := "balance/"+txid.String()[:64]+".tx"
-				txf, _ := os.Open(fn)
-				if txf != nil {
-					println(fn, "already done")
-					txf.Close()
-				} else {
-					txf, _ = os.Create(fn)
-					if txf != nil {
-						n := BlockChain.BlockTreeEnd
-						for n.Height > po.BlockHeight {
-							n = n.Parent
-						}
-						bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
-						if e == nil {
-							bl, e := btc.NewBlock(bd)
-							if e == nil {
-								e = bl.BuildTxList()
-								if e == nil {
-									for i := range bl.Txs {
-										if bl.Txs[i].Hash.Equal(txid) {
-											txf.Write(bl.Txs[i].Serialize())
-											break
-										}
-									}
-								} else {
-									println("BuildTxList: ", e.Error())
-								}
-							} else {
-								println("NewBlock: ", e.Error())
-							}
-						} else {
-							println("BlockGet: ", e.Error())
-						}
-						txf.Close()
-					}
-				}
-			} else {
-				println(e.Error())
-			}
-		}
+		sum += unsp[i].Value
+		
 		if len(unsp)<100 {
 			fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
 				unsp[i].String(), MyWallet.label[unsp[i].AskIndex])
 		}
-		sum += unsp[i].Value
+
+		// update the balance/ folder
+		if utxt != nil {
+			po, e := BlockChain.Unspent.UnspentGet(&unsp[i].TxPrevOut)
+			if e != nil {
+				println("UnspentGet:", e.Error())
+				fmt.Println("This should not happen - please, report a bug.")
+				fmt.Println("You can probably fix it by launching the client with -rescan")
+				os.Exit(1)
+			}
+			
+			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
+			
+			// Store the unspent line in balance/unspent.txt
+			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", unsp[i].TxPrevOut.String(), 
+				float64(unsp[i].Value)/1e8, unsp[i].MinedAt,
+				MyWallet.addrs[unsp[i].AskIndex].String(), MyWallet.label[unsp[i].AskIndex])
+				
+			
+			// store the entire transactiojn in balance/<txid>.tx
+			fn := "balance/"+txid.String()[:64]+".tx"
+			txf, _ := os.Open(fn)
+			if txf != nil {
+				// This file already exist - do no need to redo it
+				txf.Close()
+				continue
+			}
+
+			// Find the block with the indicated Height in the main tree
+			BlockChain.BlockIndexAccess.Lock()
+			n := BlockChain.BlockTreeEnd
+			if n.Height < po.BlockHeight {
+				println(n.Height, po.BlockHeight)
+				BlockChain.BlockIndexAccess.Unlock()
+				panic("This should not happen")
+			}
+			for n.Height > po.BlockHeight {
+				n = n.Parent
+			}
+			BlockChain.BlockIndexAccess.Unlock()
+
+			bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
+			if e != nil {
+				println("BlockGet", n.BlockHash.String(), po.BlockHeight, e.Error())
+				fmt.Println("This should not happen - please, report a bug.")
+				fmt.Println("You can probably fix it by launching the client with -rescan")
+				os.Exit(1)
+			}
+
+			bl, e := btc.NewBlock(bd)
+			if e != nil {
+				println("NewBlock: ", e.Error())
+				os.Exit(1)
+			}
+
+			e = bl.BuildTxList()
+			if e != nil {
+				println("BuildTxList:", e.Error())
+				os.Exit(1)
+			}
+
+			// Find the transaction we need and store it in the file
+			for i := range bl.Txs {
+				if bl.Txs[i].Hash.Equal(txid) {
+					txf, _ = os.Create(fn)
+					if txf==nil {
+						println("Cannot create ", fn)
+						os.Exit(1)
+					}
+					txf.Write(bl.Txs[i].Serialize())
+					txf.Close()
+					break
+				}
+			}
+		}
 	}
 	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(unsp))
 	if utxt != nil {
@@ -191,6 +221,7 @@ func retry_cached_blocks() bool {
 			//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 			delete(cachedBlocks, k)
 			LastBlock = BlockChain.BlockTreeEnd
+			LastBlockReceived = time.Now().Unix()
 			snoozeDisableSync(5)
 			return len(cachedBlocks)>0
 		} else if e.Error()!=btc.ErrParentNotFound {
@@ -208,15 +239,49 @@ func snoozeDisableSync(sec int) {
 	}
 }
 
+/*
+func findAllLeafes(n *btc.BlockTreeNode) {
+	if len(n.Childs)==0 {
+		println("Leaf:", n.BlockHash.String())
+		return
+	}
+	for i := range n.Childs {
+		findAllLeafes(n.Childs[i])
+	}
+}
+*/
+
 func blocksNeeded() (res []byte) {
 	mutex.Lock()
 	if lastInvAsked != LastBlock || time.Now().After(nextInvAsk) {
 		lastInvAsked = LastBlock
 		InvsAsked++
-		res = LastBlock.BlockHash.Hash[:]
+		BlockChain.BlockIndexAccess.Lock()
+		var depth = 144 // by default let's ask up to 
+		if LastBlockReceived != 0 {
+			// Every minute from last block reception moves us 1-block up the chain
+			depth = int((time.Now().Unix() - LastBlockReceived) / 60)
+		}
+		// ask N-blocks up in the chain, allowing to "recover" from chain fork
+		n := LastBlock
+		for i:=0; i<depth && n.Parent != nil; i++ {
+			n = n.Parent
+		}
+		BlockChain.BlockIndexAccess.Unlock()
+		res = n.BlockHash.Hash[:]
 		nextInvAsk = time.Now().Add(InvsAskDuration)
 	}
 	mutex.Unlock()
+
+	/*
+	if res != nil {
+		println("Last:", btc.NewUint256(res).String())
+		BlockChain.BlockIndexAccess.Lock()
+		findAllLeafes(BlockChain.BlockTreeRoot)
+		BlockChain.BlockIndexAccess.Unlock()
+	}
+	*/
+
 	return
 }
 
@@ -447,6 +512,7 @@ func main() {
 							retryCachedBlocks = retry_cached_blocks()
 							mutex.Lock()
 							LastBlock = BlockChain.BlockTreeEnd
+							LastBlockReceived = time.Now().Unix()
 							mutex.Unlock()
 							snoozeDisableSync(5)
 						} else if e.Error()==btc.ErrParentNotFound {
