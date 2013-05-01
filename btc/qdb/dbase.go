@@ -1,6 +1,7 @@
 package qdb
 
 import (
+	"os"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -13,8 +14,12 @@ type UnspentDB struct {
 func NewDb(dir string, init bool) btc.UnspentDB {
 	var db UnspentDB
 	
+	if init {
+		os.RemoveAll(dir+"unspent/")
+		os.RemoveAll(dir+"unspent/unwind/")
+	}
+
 	db.unspent = newUnspentDB(dir+"unspent/")
-	
 	db.unwind = newUnwindDB(dir+"unspent/unwind/")
 	
 	return &db
