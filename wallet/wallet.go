@@ -27,7 +27,7 @@ var (
 	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	change *string  = flag.String("change", "", "Send any change to this address")
-	testnet *bool = flag.Bool("t", true, "Work with testnet addresses")
+	testnet *bool = flag.Bool("t", false, "Work with testnet addresses")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 
 	// set in load_balance():
