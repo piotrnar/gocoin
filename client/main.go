@@ -120,8 +120,9 @@ func show_balance(p string) {
 		sum += unsp[i].Value
 		
 		if len(unsp)<100 {
-			fmt.Printf("%7d %s @ %s\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
-				unsp[i].String(), MyWallet.label[unsp[i].AskIndex])
+			fmt.Printf("%7d %s @ %s (%s)\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
+				unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String(),
+				MyWallet.label[unsp[i].AskIndex])
 		}
 
 		// update the balance/ folder
