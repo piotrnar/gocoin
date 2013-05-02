@@ -91,7 +91,7 @@ func list_unspent(addr string) {
 		println(e.Error())
 		return
 	}
-	unsp := BlockChain.GetAllUnspent(a[:])
+	unsp := BlockChain.GetAllUnspent(a[:], false)
 	var sum uint64
 	for i := range unsp {
 		fmt.Println(unsp[i].String())
@@ -115,7 +115,7 @@ func show_balance(p string) {
 
 	utxt, _ := os.Create("balance/unspent.txt")
 
-	unsp := BlockChain.GetAllUnspent(MyWallet.addrs)
+	unsp := BlockChain.GetAllUnspent(MyWallet.addrs, true)
 	var sum uint64
 	for i := range unsp {
 		sum += unsp[i].Value
