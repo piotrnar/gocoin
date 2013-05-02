@@ -293,7 +293,6 @@ func parse_spend() {
 		spendBtc += sendTo[i].amount
 	}
 	feeBtc = uint64(*fee*1e8)
-	changeBtc = totBtc - (spendBtc + feeBtc)
 }
 
 
@@ -346,6 +345,7 @@ func make_signed_tx() {
 			break
 		}
 	}
+	changeBtc = btcsofar - (spendBtc + feeBtc)
 	fmt.Printf("Spending %d out of %d outputs...\n", inpcnt+1, len(unspentOuts))
 
 	// Build transaction outputs:
