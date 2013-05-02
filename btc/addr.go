@@ -69,6 +69,18 @@ func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	return
 }
 
+func NewAddrFromPkScript(scr []byte, ver byte) (*BtcAddr) {
+	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+		return NewAddrFromHash160(scr[3:23], ver)
+	} else if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
+		return NewAddrFromPubkey(scr[1:66], ver)
+	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+		return NewAddrFromHash160(scr[2:22], ver)
+	}
+	return nil
+}
+
+
 func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 	var ad [25]byte
 	ad[0] = ver
