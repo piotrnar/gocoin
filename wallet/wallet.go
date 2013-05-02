@@ -22,14 +22,13 @@ type oneSendTo struct {
 
 var (
 	// Command line switches
-	keycnt *uint = flag.Uint("c", 100, "Set maximum number of keys")
-	testnet *bool = flag.Bool("t", true, "Work with testnet addresses")
-	dump *bool = flag.Bool("d", false, "Write public addressses into wallet.txt")
-	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
+	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
+	keycnt *uint = flag.Uint("n", 100, "Set the number of keys to be used")
 	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
-	send *string  = flag.String("send", "", "List of comma separated pairs: address=amount")
-	change *string  = flag.String("change", "", "Send change to this address")
-
+	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
+	change *string  = flag.String("change", "", "Send any change to this address")
+	testnet *bool = flag.Bool("t", true, "Work with testnet addresses")
+	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
