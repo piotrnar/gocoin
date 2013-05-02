@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"errors"
+	"crypto/sha256"
 	"code.google.com/p/go.crypto/ripemd160"
 )
 
@@ -17,12 +18,12 @@ type BtcAddr struct {
 	Version byte
 	Hash160 [20]byte
 	Checksum []byte
-	enc58str string
-	xy []byte
+	Pubkey []byte
+	Enc58str string 
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
-	dec := decodeb58(hs)
+	dec := Decodeb58(hs)
 	if dec == nil {
 		e = errors.New("Cannot decode b58 string *"+hs+"*")
 		return
@@ -40,7 +41,7 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 			copy(a.Hash160[:], dec[1:21])
 			a.Checksum = make([]byte, 4)
 			copy(a.Checksum, dec[21:25])
-			a.enc58str = hs
+			a.Enc58str = hs
 		}
 	} else {
 		e = errors.New(fmt.Sprintf("Unsupported hash length %d", len(dec)))
@@ -52,6 +53,19 @@ func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
 	a = new(BtcAddr)
 	a.Version = ver
 	copy(a.Hash160[:], in[:])
+	return
+}
+
+func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
+	a = new(BtcAddr)
+	a.Pubkey = make([]byte, len(in))
+	copy(a.Pubkey[:], in[:])
+	a.Version = ver
+	sha := sha256.New()
+	rim := ripemd160.New()
+	sha.Write(in)
+	rim.Write(sha.Sum(nil)[:])
+	copy(a.Hash160[:], rim.Sum(nil))
 	return
 }
 
@@ -77,7 +91,7 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 }
 
 func (a *BtcAddr) String() string {
-	if a.enc58str=="" {
+	if a.Enc58str=="" {
 		var ad [25]byte
 		ad[0] = a.Version
 		copy(ad[1:21], a.Hash160[:])
@@ -87,9 +101,9 @@ func (a *BtcAddr) String() string {
 			copy(a.Checksum, sh[:4])
 		}
 		copy(ad[21:25], a.Checksum[:])
-		a.enc58str = encodeb58(ad[:])
+		a.Enc58str = Encodeb58(ad[:])
 	}
-	return a.enc58str
+	return a.Enc58str
 }
 
 func (a *BtcAddr) Owns(scr []byte) (yes bool) {
@@ -97,19 +111,19 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 		yes = bytes.Equal(scr[3:23], a.Hash160[:])
 		return 
 	} else if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
-		if a.xy == nil {
+		if a.Pubkey == nil {
 			rim := ripemd160.New()
 			rim.Write(scr[1:66])
 			h := rim.Sum(nil)
 			if bytes.Equal(h, a.Hash160[:]) {
-				a.xy = make([]byte, 65)
-				copy(a.xy, scr[1:66])
+				a.Pubkey = make([]byte, 65)
+				copy(a.Pubkey, scr[1:66])
 				yes = true
 				return
 			}
 			return
 		}
-		yes = bytes.Equal(scr[1:66], a.xy)
+		yes = bytes.Equal(scr[1:66], a.Pubkey)
 		return 
 	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
 		yes = bytes.Equal(scr[2:22], a.Hash160[:])
@@ -145,7 +159,7 @@ func b58chr2int(chr byte) int {
 var bn0 *big.Int = big.NewInt(0)
 var bn58 *big.Int = big.NewInt(58)
 
-func encodeb58(a []byte) (s string) {
+func Encodeb58(a []byte) (s string) {
 	idx := len(a) * 138 / 100 + 1
 	buf := make([]byte, idx)
 	bn := big.NewInt(0).SetBytes(a)
@@ -167,7 +181,7 @@ func encodeb58(a []byte) (s string) {
 	return
 }
 
-func decodeb58(s string) []byte {
+func Decodeb58(s string) []byte {
 	bn := big.NewInt(0)
 	for i := range s {
 		v := b58chr2int(byte(s[i]))
