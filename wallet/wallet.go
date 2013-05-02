@@ -30,6 +30,7 @@ var (
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
 	testnet *bool = flag.Bool("t", false, "Work with testnet addresses")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
+	secfile *string  = flag.String("sec", "wallet.sec", "Read secret password (master seed) from this file")
 
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
@@ -59,9 +60,16 @@ func getline() string {
 func getpass() string {
 	f, e := os.Open("wallet.sec")
 	if e != nil {
-		println("Make sure to create wallet.sec file put your wallet's secret/password into it.\007")
-		println(e.Error())
-		os.Exit(1)
+		fmt.Print("Enter your wallet's seed password: ")
+		pass := getline()
+		if *dump {
+			fmt.Print("Re-enter the seed password (to be sure): ")
+			if pass!=getline() {
+				println("The two passwords you entered do not match")
+				os.Exit(1)
+			}
+		}
+		return pass
 	}
 	le, _ := f.Seek(0, os.SEEK_END)
 	buf := make([]byte, le)
