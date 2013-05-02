@@ -23,10 +23,11 @@ type oneSendTo struct {
 var (
 	// Command line switches
 	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
+	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
 	keycnt *uint = flag.Uint("n", 100, "Set the number of keys to be used")
 	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
-	change *string  = flag.String("change", "", "Send any change to this address")
+	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
 	testnet *bool = flag.Bool("t", false, "Work with testnet addresses")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 
@@ -176,7 +177,7 @@ func verify_key(priv []byte, publ []byte) bool {
 func dump_addrs() {
 	maxKeyVal, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
 	for i := range publ_addrs {
-		if !verify_key(priv_keys[i][:], publ_addrs[i].Pubkey) {
+		if !*noverify && !verify_key(priv_keys[i][:], publ_addrs[i].Pubkey) {
 			println("Something wrong with key at index", i, " - abort!\007")
 			os.Exit(1)
 		}
