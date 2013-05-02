@@ -115,9 +115,10 @@ func (x AllUnspentTx) Swap(i, j int) {
 	x[i], x[j] = x[j], x[i]
 }
 
-// Returns list of unspent output fro a given address
-func (ch *Chain) GetAllUnspent(addr []*BtcAddr) AllUnspentTx {
-	unsp := ch.Unspent.GetAllUnspent(addr)
+// Returns list of unspent output from given address
+// In the quick mode we only look for: 76 a9 14 [HASH160] 88 AC
+func (ch *Chain) GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx {
+	unsp := ch.Unspent.GetAllUnspent(addr, quick)
 	if unsp!=nil && len(unsp)>0 {
 		sort.Sort(unsp)
 	}

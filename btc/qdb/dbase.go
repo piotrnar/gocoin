@@ -85,8 +85,8 @@ func (db UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	return db.unspent.get(po)
 }
 
-func (db UnspentDB) GetAllUnspent(addr []*btc.BtcAddr) (res btc.AllUnspentTx) {
-	return db.unspent.GetAllUnspent(addr)
+func (db UnspentDB) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.AllUnspentTx) {
+	return db.unspent.GetAllUnspent(addr, quick)
 }
 
 func init() {

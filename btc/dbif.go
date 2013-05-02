@@ -28,7 +28,7 @@ type UnspentDB interface {
 	GetLastBlockHash() []byte
 	
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
-	GetAllUnspent(addr []*BtcAddr) AllUnspentTx
+	GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx
 
 	Idle()
 	Save()

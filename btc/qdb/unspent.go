@@ -109,22 +109,53 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 }
 
 
-func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr) (res btc.AllUnspentTx) {
-	for i := range db.tdb {
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
-			for a := range addr {
-				if addr[a].Owns(v[48:]) {
-					var nr btc.OneUnspentTx
-					copy(nr.TxPrevOut.Hash[:], v[0:32])
-					nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
-					nr.Value = binary.LittleEndian.Uint64(v[36:44])
-					nr.MinedAt = binary.LittleEndian.Uint32(v[44:48])
-					nr.AskIndex = uint(a)
-					res = append(res, nr)
+func bin2unspent(v []byte, a uint) (nr btc.OneUnspentTx) {
+	copy(nr.TxPrevOut.Hash[:], v[0:32])
+	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
+	nr.Value = binary.LittleEndian.Uint64(v[36:44])
+	nr.MinedAt = binary.LittleEndian.Uint32(v[44:48])
+	nr.AskIndex = uint(a)
+	return
+}
+
+
+func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.AllUnspentTx) {
+	if quick {
+		addrs := make(map[[20]byte] uint, len(addr))
+		for i := range addr {
+			addrs[addr[i].Hash160] = uint(i)
+		}
+		// 76 a9 14 [HASH160] 88 ac
+		for i := range db.tdb {
+			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
+				scr := v[48:]
+				if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+					var idx [20]byte
+					copy(idx[:], scr[3:23])
+					if askidx, ok := addrs[idx]; ok {
+						res = append(res, bin2unspent(v[:48], askidx))
+					}
+				} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+					var idx [20]byte
+					copy(idx[:], scr[2:22])
+					if askidx, ok := addrs[idx]; ok {
+						res = append(res, bin2unspent(v[:48], askidx))
+					}
 				}
-			}
-			return true
-		})
+				return true
+			})
+		}
+	} else {
+		for i := range db.tdb {
+			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
+				for a := range addr {
+					if addr[a].Owns(v[48:]) {
+						res = append(res, bin2unspent(v[:48], uint(a)))
+					}
+				}
+				return true
+			})
+		}
 	}
 	return
 }
