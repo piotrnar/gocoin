@@ -32,6 +32,7 @@ var (
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	BlockChain *btc.Chain
+	AddrVersion byte
 
 	exit_now bool
 
@@ -262,6 +263,9 @@ func blocksNeeded() (res []byte) {
 		if LastBlockReceived != 0 {
 			// Every minute from last block reception moves us 1-block up the chain
 			depth = int((time.Now().Unix() - LastBlockReceived) / 60)
+			if depth>400 {
+				depth = 400
+			}
 		}
 		// ask N-blocks up in the chain, allowing to "recover" from chain fork
 		n := LastBlock
@@ -361,6 +365,45 @@ func load_wallet(fn string) {
 	}
 }
 
+func dump_tx(par string) {
+	txd, er := hex.DecodeString(par)
+	if er != nil {
+		println(er.Error())
+	}
+	tx, le := btc.NewTx(txd)
+	if le != len(txd) {
+		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
+	}
+	fmt.Println(len(tx.TxIn), "inputs:")
+	var totinp, totout uint64
+	var missinginp bool
+	for i := range tx.TxIn {
+		fmt.Printf(" %3d %s", i, tx.TxIn[i].Input.String())
+		po, _ := BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+		if po != nil {
+			totinp += po.Value
+			fmt.Printf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
+				btc.NewAddrFromPkScript(po.Pk_script, AddrVersion).String())
+		} else {
+			fmt.Println(" * no such unspent in the blockchain *")
+			missinginp = true
+		}
+	}
+	fmt.Println(len(tx.TxOut), "outputs:")
+	for i := range tx.TxOut {
+		totout += tx.TxOut[i].Value
+		fmt.Printf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
+			btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, AddrVersion).String())
+	}
+	if missinginp {
+		fmt.Println("WARNING: There are missing inputs, so you cannot calc input BTC amount")
+	} else {
+		fmt.Printf("%.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
+			float64(totout)/1e8, float64(totinp-totout)/1e8)
+	}
+}
+
+
 func send_tx(par string) {
 	tx, er := hex.DecodeString(par)
 	if er != nil {
@@ -386,6 +429,7 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit gracefully (closing all files)")
 	newUi("balance bal", true, show_balance, "Show & save the balance of your wallet's addresses")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
+	newUi("dumptx t", true, dump_tx, "Decode given hex-encoded transaction")
 	newUi("sendtx tx", true, send_tx, "Broadcast given hex-encoded tx to the network")
 	newUi("wallet wal", true, load_wallet, "Load wallet from file, or just display current one")
 	newUi("save", true, save_bchain, "Save blockchain state now (usually not needed)")
@@ -417,10 +461,12 @@ func main() {
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
 		dbdir = "/btc/database/tstnet/"
+		AddrVersion = 0x6f
 	} else {
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 		dbdir = "/btc/database/btcnet/"
+		AddrVersion = 0x00
 	}
 	
 	init_blockchain()
