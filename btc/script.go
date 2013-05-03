@@ -511,11 +511,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					sha := sha256.New()
-					rim := ripemd160.New()
-					sha.Write(stack.pop()[:])
-					rim.Write(sha.Sum(nil)[:])
-					stack.push(rim.Sum(nil)[:])
+					rim160 := Rimp160AfterSha256(stack.pop())
+					stack.push(rim160[:])
 				
 				case opcode==0xaa: //OP_HASH256
 					if stack.size()<1 {
