@@ -2,7 +2,6 @@ package btc
 
 import (
 	"fmt"
-	"time"
 	"errors"
 	"encoding/hex"
 )
