@@ -48,6 +48,20 @@ func readline() string {
 	return string(li)
 }
 
+
+func ask_yes_no(msg string) bool {
+	for {
+		fmt.Print(msg, " (y/n) : ")
+		l := strings.ToLower(readline())
+		if l=="y" {
+			return true
+		} else if l=="n" {
+			return false
+		}
+	}
+}
+
+
 func do_userif() {
 	var prompt bool = true
 	time.Sleep(5e8)
