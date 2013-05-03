@@ -365,6 +365,8 @@ func dump_tx(par string) {
 	if le != len(txd) {
 		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
 	}
+	txid := btc.NewSha2Hash(txd)
+	fmt.Println("TX", txid.String())
 	fmt.Println(len(tx.TxIn), "inputs:")
 	var totinp, totout uint64
 	var missinginp bool
@@ -392,20 +394,14 @@ func dump_tx(par string) {
 		fmt.Printf("%.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-}
-
-
-func send_tx(par string) {
-	tx, er := hex.DecodeString(par)
-	if er != nil {
-		println(er.Error())
+	if ask_yes_no("Broadcast this transaction to the network?") {
+		TransactionsToSend[txid.Hash] = txd
+		cnt := NetSendInv(1, txid.Hash[:], nil)
+		fmt.Println("Transaction broadcasted to", cnt, "node(s)")
+		fmt.Println("If it does not apprear in the chain, you may want to redo it.")
 	}
-	txid := btc.NewSha2Hash(tx)
-	fmt.Println("Broadcasting tx", txid.String(), "len", len(tx), "...")
-	//h := btc.Sha2Sum(tx)
-	TransactionsToSend[txid.Hash] = tx
-	NetSendInv(1, txid.Hash[:], nil)
 }
+
 
 func save_bchain(par string) {
 	BlockChain.Save()
@@ -417,8 +413,7 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit gracefully (closing all files)")
 	newUi("balance bal", true, show_balance, "Show & save the balance of your wallet's addresses")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("dumptx ti", true, dump_tx, "Decode given hex-encoded transaction")
-	newUi("sendtx tx", true, send_tx, "Broadcast given hex-encoded tx to the network")
+	newUi("sendtx tx", true, dump_tx, "Broadcast given hex-encoded tx to the network")
 	newUi("wallet wal", true, load_wallet, "Load wallet from file, or just display current one")
 	newUi("save", true, save_bchain, "Save blockchain state now (usually not needed)")
 }
