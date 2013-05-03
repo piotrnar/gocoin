@@ -87,7 +87,7 @@ func do_userif() {
 				}
 			}
 			if !found {
-				fmt.Println("Unknown command:", cmd)
+				fmt.Printf("Unknown command '%s'. Type 'help' for help.\n", cmd)
 			}
 		}
 	}
