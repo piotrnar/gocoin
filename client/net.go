@@ -620,7 +620,7 @@ func bts2str(val uint64) string {
 }
 
 
-func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) {
+func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 	inv := new([36]byte)
 	
 	binary.LittleEndian.PutUint32(inv[0:4], typ)
@@ -630,9 +630,11 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) {
 	for _, v := range openCons {
 		if v != fromConn && len(v.invs2send)<500 {
 			v.invs2send = append(v.invs2send, inv)
+			cnt++
 		}
 	}
 	mutex.Unlock()
+	return
 }
 
 
