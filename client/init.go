@@ -143,7 +143,7 @@ func import_blockchain(dir string) {
 	stop := time.Now().UnixNano()
 	stat(stop-start, totbytes, chain.BlockTreeEnd.Height)
 	
-	fmt.Println("Satoshi's database import finished in", stop-start, "seconds")
+	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
 	
 	fmt.Println("Now saving the new database...")
 	chain.Sync()
