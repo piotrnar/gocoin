@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"errors"
-	"crypto/sha256"
-	"code.google.com/p/go.crypto/ripemd160"
 )
 
 const (
@@ -56,16 +54,13 @@ func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
 	return
 }
 
+
 func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	a = new(BtcAddr)
 	a.Pubkey = make([]byte, len(in))
 	copy(a.Pubkey[:], in[:])
 	a.Version = ver
-	sha := sha256.New()
-	rim := ripemd160.New()
-	sha.Write(in)
-	rim.Write(sha.Sum(nil)[:])
-	copy(a.Hash160[:], rim.Sum(nil))
+	a.Hash160 = Rimp160AfterSha256(in)
 	return
 }
 
@@ -118,31 +113,60 @@ func (a *BtcAddr) String() string {
 	return a.Enc58str
 }
 
+
 func (a *BtcAddr) Owns(scr []byte) (yes bool) {
+	// The most common spend script
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 		yes = bytes.Equal(scr[3:23], a.Hash160[:])
 		return 
-	} else if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
+	}
+
+	// Spend script with an entire public key
+	if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
 		if a.Pubkey == nil {
-			rim := ripemd160.New()
-			rim.Write(scr[1:66])
-			h := rim.Sum(nil)
-			if bytes.Equal(h, a.Hash160[:]) {
+			h := Rimp160AfterSha256(scr[1:66])
+			if h == a.Hash160 {
 				a.Pubkey = make([]byte, 65)
 				copy(a.Pubkey, scr[1:66])
 				yes = true
-				return
 			}
 			return
 		}
-		yes = bytes.Equal(scr[1:66], a.Pubkey)
-		return 
-	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
-		yes = bytes.Equal(scr[2:22], a.Hash160[:])
+		yes = bytes.Equal(scr[1:34], a.Pubkey[:33])
 		return 
 	}
+
+	// Spend script with a compressed public key
+	if len(scr)==35 && scr[0]==0x21 && (scr[1]==0x02 || scr[1]==0x03) && scr[34]==0xac {
+		if a.Pubkey == nil {
+			h := Rimp160AfterSha256(scr[1:34])
+			if h == a.Hash160 {
+				a.Pubkey = make([]byte, 33)
+				copy(a.Pubkey, scr[1:34])
+				yes = true
+			}
+			return
+		}
+		yes = bytes.Equal(scr[1:34], a.Pubkey[:33])
+		return 
+	}
+
 	return
 }
+
+/*
+	Just for information: 
+
+	// Spend script with only a hash of a password
+	if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+		return 
+	}
+	
+	// Escrow
+	if len(scr)==201 && scr[0]==0x51 && scr[1]==0x41 && scr[199]==0x53 && scr[200]==0xae {
+		return
+	}
+*/
 
 
 func (a *BtcAddr) OutScript() (res []byte) {
