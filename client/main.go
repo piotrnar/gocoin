@@ -5,12 +5,8 @@ import (
 	"os"
 	"flag"
 	"time"
-//	"bytes"
 	"sync"
-//	"strings"
-//	"strconv"
 	"encoding/hex"
-//	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -26,9 +22,8 @@ var (
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
 	rescan *bool = flag.Bool("rescan", false, "Rescan unspent outputs (not scripts)")
 	proxy *string = flag.String("c", "", "Connect to this host")
+	datadir *string = flag.String("datadir", "", "Specify Gocoin's database root folder")
 
-	dbdir string
-	
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	BlockChain *btc.Chain
@@ -66,14 +61,6 @@ var (
 	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
 )
 
-
-func init_blockchain() {
-	fmt.Println("Opening blockchain...")
-	sta := time.Now().UnixNano()
-	BlockChain = btc.NewChain(dbdir, GenesisBlock, *rescan)
-	sto := time.Now().UnixNano()
-	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-}
 
 func Busy(b string) {
 	mutex.Lock()
@@ -424,20 +411,16 @@ func save_bchain(par string) {
 	BlockChain.Save()
 }
 
-func show_profile(par string) {
-	btc.ShowProfileData()
-}
 
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("quit q", true, ui_quit, "Exit gracefully (closing all files)")
 	newUi("balance bal", true, show_balance, "Show & save the balance of your wallet's addresses")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("dumptx t", true, dump_tx, "Decode given hex-encoded transaction")
+	newUi("dumptx ti", true, dump_tx, "Decode given hex-encoded transaction")
 	newUi("sendtx tx", true, send_tx, "Broadcast given hex-encoded tx to the network")
 	newUi("wallet wal", true, load_wallet, "Load wallet from file, or just display current one")
 	newUi("save", true, save_bchain, "Save blockchain state now (usually not needed)")
-	newUi("profile prof", true, show_profile, "Shows CPU usage stats")
 }
 
 
@@ -461,21 +444,10 @@ func main() {
 	}
 	flag.Parse()
 
-	if *testnet { // testnet3
-		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
-		Magic = [4]byte{0x0B,0x11,0x09,0x07}
-		dbdir = "/btc/database/tstnet/"
-		AddrVersion = 0x6f
-	} else {
-		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
-		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
-		dbdir = "/btc/database/btcnet/"
-		AddrVersion = 0x00
-	}
-	
-	init_blockchain()
-	MyWallet = NewWallet(dbdir+"wallet.txt")
-	initPeers(dbdir)
+	host_init()
+
+	MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
+	initPeers(GocoinHomeDir)
 
 	LastBlock = BlockChain.BlockTreeEnd
 	

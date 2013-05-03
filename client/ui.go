@@ -43,6 +43,11 @@ func newUi(cmds string, sync bool, hn func(string), help string) {
 	}
 }
 
+func readline() string {
+	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
+	return string(li)
+}
+
 func do_userif() {
 	var prompt bool = true
 	time.Sleep(5e8)
@@ -50,10 +55,10 @@ func do_userif() {
 		if prompt {
 			fmt.Print("> ")
 		}
-		li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 		prompt = true
+		li := strings.Trim(readline(), " \n\t\r")
 		if len(li) > 0 {
-			cmdpar := strings.SplitN(strings.Trim(string(li[:]), " \n\t\r"), " ", 2)
+			cmdpar := strings.SplitN(li, " ", 2)
 			cmd := cmdpar[0]
 			param := ""
 			if len(cmdpar)==2 {
@@ -103,13 +108,14 @@ func show_info(par string) {
 	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d  MemUsed:%dMB\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
 		ms.HeapAlloc>>20)
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d  UiMsgs:%d  Ticks:%d\n", 
-		InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, TicksCnt)
-	var minago string = "?"
+	var minago string = ""
 	if LastBlockReceived != 0 {
-		minago = fmt.Sprint((time.Now().Unix()-LastBlockReceived)/60)
+		minago = fmt.Sprintf("  Block got %d min ago", (time.Now().Unix()-LastBlockReceived)/60)
 	}
-	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String(), minago, "min ago")
+	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d  UiMsgs:%d  Ticks:%d%s\n", 
+		InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, TicksCnt, minago)
+	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String(),
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"))
 	if busy!="" {
 		println("BlockChain thread currently busy with", busy)
 	} else {

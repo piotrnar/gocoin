@@ -661,5 +661,5 @@ func net_stats(par string) {
 }
 
 func init() {
-	newUi("net", false, net_stats, "Show network statustics")
+	newUi("net", false, net_stats, "Show network statistics")
 }
