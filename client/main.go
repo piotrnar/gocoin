@@ -359,6 +359,10 @@ func load_wallet(fn string) {
 		fmt.Println("Switching to wallet from file", fn)
 		MyWallet = NewWallet(fn)
 	}
+	if MyWallet == nil {
+		fmt.Println("You have no wallet")
+		return
+	}
 	fmt.Println("Dumping wallet:")
 	for i := range MyWallet.addrs {
 		fmt.Println(" ", MyWallet.addrs[i].String(), MyWallet.label[i])
