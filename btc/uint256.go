@@ -3,7 +3,6 @@ package btc
 import (
 	"fmt"
 	"bytes"
-	"crypto/sha256"
     "math/big"
 )
 
@@ -68,17 +67,6 @@ func (u *Uint256) BigInt() *big.Int {
 		buf[i] = u.Hash[31-i]
 	}
 	return new(big.Int).SetBytes(buf[:])
-}
-
-
-func Sha2Sum(b []byte) (out [32]byte) {
-	s := sha256.New()
-	s.Write(b[:])
-	tmp := s.Sum(nil)
-	s.Reset()
-	s.Write(tmp)
-	copy(out[:], s.Sum(nil))
-	return
 }
 
 
