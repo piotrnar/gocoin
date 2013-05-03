@@ -37,7 +37,6 @@ var (
 	LastBlock *btc.BlockTreeNode
 	LastBlockReceived int64 // time when the last block was received
 	lastInvAsked  *btc.BlockTreeNode
-	disableSync time.Time
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
@@ -211,7 +210,6 @@ func retry_cached_blocks() bool {
 			delete(cachedBlocks, k)
 			LastBlock = BlockChain.BlockTreeEnd
 			LastBlockReceived = time.Now().Unix()
-			snoozeDisableSync(5)
 			return len(cachedBlocks)>0
 		} else if e.Error()!=btc.ErrParentNotFound {
 			panic(e.Error())
@@ -220,12 +218,6 @@ func retry_cached_blocks() bool {
 		}
 	}
 	return false
-}
-
-func snoozeDisableSync(sec int) {
-	if BlockChain.DoNotSync {
-		disableSync = time.Now().Add(time.Duration(sec)*time.Second)
-	}
 }
 
 /*
@@ -478,13 +470,6 @@ func main() {
 			case <-time.After(100*time.Millisecond):
 				TicksCnt++
 				if !retryCachedBlocks {
-					if BlockChain.DoNotSync && time.Now().After(disableSync) {
-						sto := time.Now().Unix()
-						println("Blocks stopped comming - enable disk sync")
-						println("Block", LastBlock.Height, "reached after", sto-sta, "seconds")
-						BlockChain.Sync()
-					}
-
 					Busy("BlockChain.Idle()")
 					BlockChain.Idle()
 				}
@@ -513,10 +498,9 @@ func main() {
 					Busy("CheckBlock "+bl.Hash.String())
 					e = bl.CheckBlock()
 					if e == nil {
-						if !BlockChain.DoNotSync && len(pendingBlocks)>50 {
+						if !BlockChain.DoNotSync && len(pendingBlocks)>=10 {
 							BlockChain.DoNotSync = true
 							println("lots of pending blocks - switch syncing off for now...")
-							snoozeDisableSync(5)
 						}
 
 						Busy("AcceptBlock "+bl.Hash.String())
@@ -532,7 +516,6 @@ func main() {
 							LastBlock = BlockChain.BlockTreeEnd
 							LastBlockReceived = time.Now().Unix()
 							mutex.Unlock()
-							snoozeDisableSync(5)
 						} else if e.Error()==btc.ErrParentNotFound {
 							cachedBlocks[bl.Hash.BIdx()] = bl
 							//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
