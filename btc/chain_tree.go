@@ -31,17 +31,14 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 	sta := time.Now().UnixNano()
 	prv := sta
-	ChSta("ParseTillBlock")
 	for ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
-			ChSto("ParseTillBlock")
 			if !ProfilerDisabled {
 				ShowProfileData()
 			}
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
 			prv = cur
-			ChSta("ParseTillBlock")
 		}
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
@@ -79,7 +76,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 	}
 	ch.Unspent.Sync()
-	ChSto("ParseTillBlock")
 	
 	prv = time.Now().UnixNano()
 	fmt.Printf("ParseTillBlock completed in %.3fs\n", float64(prv-sta)/1e9)

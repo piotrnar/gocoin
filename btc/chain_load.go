@@ -24,7 +24,6 @@ func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp uint32) {
 
 // Loads block index from the disk
 func (ch *Chain)loadBlockIndex() {
-	//ChSta("loadBlockIndex")
 	ch.BlockIndex = make(map[[Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
@@ -52,9 +51,8 @@ func (ch *Chain)loadBlockIndex() {
 		v.parenHash = nil // we wont need this anymore
 	}
 	if tlb == nil {
-		println("No last block - full rescan will be needed")
+		//println("No last block - full rescan will be needed")
 		ch.BlockTreeEnd = ch.BlockTreeRoot
-		//ChSto("loadBlockIndex")
 		return
 	} else {
 		var ok bool
@@ -63,7 +61,6 @@ func (ch *Chain)loadBlockIndex() {
 			panic("Last Block Hash not found")
 		}
 	}
-	//ChSto("loadBlockIndex")
 }
 
 

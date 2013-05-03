@@ -70,9 +70,7 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 
 
 func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
-	//ChSta("Verify")
 	ok = ecdsa.Verify(&pk.PublicKey, h[:], s.R, s.S)
-	//ChSto("Verify")
 	return 
 }
 

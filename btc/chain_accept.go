@@ -9,30 +9,24 @@ import (
 
 
 func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *BlockChanges, e error) {
-	ChSta("ProcessBlockTransactions")
 	changes = new(BlockChanges)
 	changes.Height = height
 	changes.DeledTxs = make(map[TxPrevOut]*TxOut)
 	changes.AddedTxs = make(map[TxPrevOut]*TxOut)
 	e = ch.commitTxs(bl, changes)
-	ChSto("ProcessBlockTransactions")
 	return
 }
 
 
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
-	ChSta("AcceptBlock")
 
 	ch.BlockIndexAccess.Lock()
 	if prv, pres := ch.BlockIndex[bl.Hash.BIdx()]; pres {
 		ch.BlockIndexAccess.Unlock()
-		ChSto("AcceptBlock")
 		if prv.Parent == nil {
 			// This is genesis block
 			prv.Timestamp = bl.BlockTime
 			prv.Bits = bl.Bits
-			println("Genesis block has bits of", prv.Bits, "and time", 
-				time.Unix(int64(prv.Bits), 0).Format("2006-01-02 15:04:05"))
 			return
 		} else {
 			return errors.New("AcceptBlock() : "+bl.Hash.String()+" already in mapBlockIndex")
@@ -42,7 +36,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
 	if !ok {
 		ch.BlockIndexAccess.Unlock()
-		ChSto("AcceptBlock")
 		return errors.New(ErrParentNotFound)
 	}
 
@@ -54,7 +47,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 			" exp:", gnwr)
 		if !testnet || ((prevblk.Height+1)%2016)!=0 {
 			ch.BlockIndexAccess.Unlock()
-			ChSto("AcceptBlock")
 			return errors.New("AcceptBlock() : incorrect proof of work")
 		}
 	}
@@ -108,7 +100,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		}
 	}
 
-	ChSto("AcceptBlock")
 	return 
 }
 
@@ -129,7 +120,6 @@ func getUnspIndex(po *TxPrevOut) (idx [8]byte) {
 
 
 func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
-	//ChSta("commitTxs")
 	sumblockin := GetBlockReward(changes.Height)
 	sumblockout := uint64(0)
 	
@@ -229,7 +219,6 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				
 			}
 
-			ChSta("VerifyScript")
 			if scripts_ok {
 				scripts_ok = <- taskDone
 			}
@@ -239,7 +228,6 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					scripts_ok = false
 				}
 			}
-			ChSto("VerifyScript")
 			if !scripts_ok {
 				return errors.New("VerifyScripts failed")
 			}
@@ -290,7 +278,6 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		fmt.Printf("%.8f BTC wasted in block %d\n", float64(sumblockin-sumblockout)/1e8, changes.Height)
 	}
 
-	//ChSto("commitTxs")
 	return nil
 }
 
