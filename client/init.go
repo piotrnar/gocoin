@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"strings"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/blockdb"
 )
@@ -65,19 +64,6 @@ func host_init() {
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, *rescan)
 	sto := time.Now().UnixNano()
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-}
-
-
-func ask_yes_no(msg string) bool {
-	for {
-		fmt.Print(msg, " (y/n) : ")
-		l := strings.ToLower(readline())
-		if l=="y" {
-			return true
-		} else if l=="n" {
-			return false
-		}
-	}
 }
 
 
