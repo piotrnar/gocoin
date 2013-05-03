@@ -8,7 +8,7 @@ type AllUnspentTx []OneUnspentTx
 type OneUnspentTx struct {
 	TxPrevOut
 	Value uint64
-	AskIndex uint
+	AskIndex uint32
 	MinedAt uint32
 }
 
