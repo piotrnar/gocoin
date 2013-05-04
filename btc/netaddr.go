@@ -7,8 +7,8 @@ import (
 
 type NetAddr struct {
 	Services uint64
-	//Ip6 string
-	Ip4 string
+	Ip6 [12]byte
+	Ip4 [4]byte
 	Port uint16
 }
 
@@ -19,22 +19,21 @@ func NewNetAddr(b []byte) (na *NetAddr) {
 	}
 	na = new(NetAddr)
 	na.Services = binary.LittleEndian.Uint64(b[0:8])
-	na.Ip4 = fmt.Sprintf("%d.%d.%d.%d", b[20], b[21], b[22], b[23])
-	/*for i:=0; i<16; i++ {
-		na.Ip6 += 
-	}
-	na.Ip6 = fmt.Sprintf("%x:%x:%x:%x:%x:%x:",
-		binary.BigEndian.Uint16(b[8:10]),
-		binary.BigEndian.Uint16(b[10:12]),
-		binary.BigEndian.Uint16(b[12:14]),
-		binary.BigEndian.Uint16(b[14:16]),
-		binary.BigEndian.Uint16(b[16:18]),
-		binary.BigEndian.Uint16(b[18:20]),
-		) + na.Ip4*/
+	copy(na.Ip6[:], b[8:20])
+	copy(na.Ip4[:], b[20:24])
 	na.Port = binary.BigEndian.Uint16(b[24:26])
 	return
 }
 
+func (a *NetAddr) Bytes() (res [26]byte) {
+	binary.LittleEndian.PutUint64(res[0:8], a.Services)
+	copy(res[8:20], a.Ip6[:])
+	copy(res[20:24], a.Ip4[:])
+	binary.BigEndian.PutUint16(res[24:26], a.Port)
+	return
+}
+
+
 func (a *NetAddr) String() string {
-	return fmt.Sprint(a.Ip4, ":", a.Port, " services:", a.Services)
+	return fmt.Sprintf("%d.%d.%d.%d:%d", a.Ip4[0], a.Ip4[1], a.Ip4[2], a.Ip4[3], a.Port)
 }
