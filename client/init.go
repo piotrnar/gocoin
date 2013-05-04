@@ -18,7 +18,7 @@ func BitcoinHome() (res string) {
 	}
 	res = os.Getenv("HOME")
 	if res!="" {
-		res += ".bitcoin/"
+		res += "/.bitcoin/"
 	}
 	return
 }
