@@ -819,10 +819,6 @@ func net_stats(par string) {
 			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
 		}
 
-		if v.writing {
-			fmt.Print("  wr")
-		}
-
 		fmt.Println()
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
