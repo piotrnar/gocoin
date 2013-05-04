@@ -216,6 +216,7 @@ func initSeeds(seeds []string, port int) {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip)==16 {
 					p := new(onePeer)
+					p.Time = uint32(time.Now().Unix())
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
