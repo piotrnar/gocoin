@@ -390,7 +390,7 @@ func load_tx(par string) {
 	}
 	TransactionsToSend[txid.Hash] = txd
 	fmt.Println("Transaction", txid.String(), "stored in the memory pool")
-	fmt.Println("Execute 'txs" + txid.String() + "' if you want to send it")
+	fmt.Println("Execute 'stx " + txid.String() + "' to send it out")
 }
 
 
@@ -568,13 +568,16 @@ func main() {
 							//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
 						} else {
 							println("AcceptBlock:", e.Error())
+							netmsg.conn.DoS()
 						}
 					} else {
 						println("CheckBlock:", e.Error(), LastBlock.Height)
+						netmsg.conn.DoS()
 					}
 				}
 			} else {
 				println("NewBlock:", e.Error())
+				netmsg.conn.DoS()
 			}
 		}
 	}
