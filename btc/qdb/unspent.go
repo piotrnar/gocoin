@@ -207,8 +207,8 @@ func (db *unspentDb) close() {
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Close()
+			db.tdb[i] = nil
 		}
-		db.tdb[i] = nil
 	}
 }
 
