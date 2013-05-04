@@ -262,7 +262,6 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 		if MyExternalAddr == nil {
 			MyExternalAddr = btc.NewNetAddr(pl[20:46]) // These bytes should know our external IP
 			MyExternalAddr.Port = DefaultTcpPort
-			println("MyExternalAddr:", MyExternalAddr.String(), MyExternalAddr.Port)
 		}
 		if len(pl) >= 86 {
 			//fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
@@ -773,26 +772,32 @@ func net_stats(par string) {
 	}
 	sort.Sort(srt)
 	var tosnt, totrec uint64
+	fmt.Print("                      Remote IP      LastCmd     Connected    LastActive")
+	fmt.Print("    Received         Sent")
+	fmt.Print("    Version  UserAgent              Height   Addr Sent")
+	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx]]
 		fmt.Printf("%4d) ", idx+1)
 		if v.listen {
-			fmt.Print("FROM")
+			fmt.Print("<- ")
 		} else {
-			fmt.Print("TO  ")
+			fmt.Print("-> ")
 		}
 		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd_sent)
 		if v.connectedAt != 0 {
-			fmt.Print("  Con @ ", time.Unix(v.connectedAt, 0).Format("01/02 15:04"))
+			now := time.Now().Unix()
+			fmt.Printf("  %4d min ago", (now-v.connectedAt)/60)
+			fmt.Printf("  %4d sec ago", now-int64(v.addr.Time))
 			fmt.Print(bts2str(v.BytesReceived))
 			fmt.Print(bts2str(v.BytesSent))
 		}
 		if v.node.version!=0 {
-			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
+			fmt.Printf("  %8d  %-20s %7d", v.node.version, v.node.agent, v.node.height)
 		}
 
 		if v.NextAddrSent != 0 {
-			fmt.Printf("  addr %2d min", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
+			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
 		}
 
 		fmt.Println()
