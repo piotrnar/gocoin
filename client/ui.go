@@ -142,9 +142,9 @@ func show_info(par string) {
 
 
 func ui_beep(par string) {
-	if par=="1" {
+	if par=="1" || par=="on" || par=="true" {
 		beep = true
-	} else if par=="0" {
+	} else if par=="0" || par=="off" || par=="false" {
 		beep = false
 	}
 	fmt.Println("beep:", beep)
