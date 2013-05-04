@@ -262,7 +262,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 			fmt.Printf(" fee : %.8f\n", float64(txinsum-txoutsum)/1e8)
 		}
 		if i>0 && txoutsum > txinsum {
-			panic("more spent than input")
+			return errors.New("More spent than at the input")
 		}
 		if e != nil {
 			break // If any input fails, do not continue
