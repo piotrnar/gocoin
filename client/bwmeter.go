@@ -27,9 +27,12 @@ func bw_sent(siz int) {
 	tot_up += uint64(siz)
 	now := uint32(time.Now().Unix())
 	if cv, ok := siz_sent[now]; ok {
-		siz_sent[secondsBack-1] = cv+uint64(siz)
+		// same second
+		siz_sent[now] = cv+uint64(siz)
 	} else {
-		siz_sent[secondsBack-1] = uint64(siz)
+		// new second
+		siz_sent[now] = uint64(siz)
+		// remove expired entries
 		for k, _ := range siz_sent {
 			if k<now-secondsBack {
 				delete(siz_sent, k)
@@ -44,9 +47,12 @@ func bw_got(siz int) {
 	tot_dn += uint64(siz)
 	now := uint32(time.Now().Unix())
 	if cv, ok := siz_rcvd[now]; ok {
+		// same second
 		siz_rcvd[now] = cv+uint64(siz)
 	} else {
+		// new second
 		siz_rcvd[now] = uint64(siz)
+		// remove expired entries
 		for k, _ := range siz_rcvd {
 			if k<now-secondsBack {
 				delete(siz_rcvd, k)
@@ -61,8 +67,8 @@ func bw_stats() (s string) {
 	bw_mutex.Lock()
 	
 	now := uint32(time.Now().Unix())
-	sum := uint64(0)
-	sum5 := uint64(0)
+	sum := uint64(0)  // 60 seconds average
+	sum5 := uint64(0)  // 5 seconds average
 	for i := now-secondsBack; i<=now; i++ {
 		if v, ok := siz_rcvd[i]; ok {
 			sum += v
