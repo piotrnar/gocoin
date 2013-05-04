@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-const secondsBack = 10  // timespan on which we measure the speed
+const secondsBack = 5  // timespan on which we measure the speed
 
 
 var (
@@ -112,50 +112,36 @@ func expire_records() {
 
 
 func bw_sent(siz int) {
+	bw_mutex.Lock()
 	tot_up += uint64(siz)
 	now := uint32(time.Now().Unix())
-	if cv, ok := siz_sent[now]; ok {
-		// same second
-		siz_sent[now] = cv+uint64(siz)
-	} else {
-		// new second
-		siz_sent[now] = uint64(siz)
-	}
+	siz_sent[now] = uint64(siz)
+	bw_mutex.Unlock()
 }
 
 func bw_got(siz int) {
 	bw_mutex.Lock()
 	tot_dn += uint64(siz)
 	now := uint32(time.Now().Unix())
-	if cv, ok := siz_rcvd[now]; ok {
-		// same second
-		siz_rcvd[now] = cv+uint64(siz)
-	} else {
-		// new second
-		siz_rcvd[now] = uint64(siz)
-		// remove expired entries
-	}
+	siz_rcvd[now] = uint64(siz)
 	bw_mutex.Unlock()
 }
 
 
 func bw_stats() (s string) {
-	bw_mutex.Lock()
+	var sum uint64
 	
+	bw_mutex.Lock()
 	now := uint32(time.Now().Unix())
-	sum := uint64(0)  // 60 seconds average
+
 	for i := now-secondsBack; i<=now; i++ {
-		if v, ok := siz_rcvd[i]; ok {
-			sum += v
-		}
+		sum += siz_rcvd[i]
 	}
 	s += fmt.Sprintf("DOWN:[%d KB/s,  %d MB tot]  ", (sum/secondsBack)>>10, tot_dn>>20)
 	
 	sum = 0
 	for i := now-secondsBack; i<=now; i++ {
-		if v, ok := siz_sent[i]; ok {
-			sum += v
-		}
+		sum += siz_sent[i]
 	}
 	s += fmt.Sprintf(" UP:[%d KB/s, %d MB tot]", (sum/secondsBack)>>10, tot_up>>20)
 
