@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"sort"
 	"bytes"
 	"errors"
 	"crypto/rand"
@@ -16,17 +17,23 @@ import (
 
 const (
 	Version = 70001
-	UserAgent = "/Satoshi:0.8.1/" // Let's pretend being someone else
+	UserAgent = "/Gocoin:0.0.0/"
 
 	Services = uint64(0x1)
 
-	MaxCons = 8
+	MaxInCons = 32
+	MaxOutCons = 8
+	MaxTotCons = MaxInCons+MaxOutCons
 )
 
 
 var (
-	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxCons)
+	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxTotCons)
 	InvsSent, BlockSent uint64
+	InConsActive, OutConsActive uint
+	
+	DefaultTcpPort uint16
+	MyExternalAddr *btc.NetAddr
 )
 
 type oneConnection struct {
@@ -231,11 +238,25 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 }
 
 
+func (c *oneConnection) AnnounceOwnAddr() {
+	var buf [31]byte
+	buf[0] = 1 // Only one address
+	binary.LittleEndian.PutUint32(buf[1:5], uint32(time.Now().Unix()))
+	ipd := MyExternalAddr.Bytes()
+	copy(buf[5:], ipd[:])
+	c.SendRawMsg("addr", buf[:])
+}
+
+
 func (c *oneConnection) VerMsg(pl []byte) error {
 	if len(pl) >= 46 {
 		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
 		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
 		c.node.timestamp = binary.LittleEndian.Uint64(pl[12:20])
+		if MyExternalAddr == nil {
+			MyExternalAddr = btc.NewNetAddr(pl[20:46]) // These bytes should know our external IP
+			MyExternalAddr.Port = DefaultTcpPort
+		}
 		if len(pl) >= 86 {
 			//fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
 			//fmt.Println("Nonce:", hex.EncodeToString(pl[72:80]))
@@ -257,6 +278,8 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 	c.SendRawMsg("verack", []byte{})
 	if c.listen {
 		c.SendVersion()
+	} else if *server {
+		c.AnnounceOwnAddr()
 	}
 	return nil
 }
@@ -492,7 +515,9 @@ func (c *oneConnection) Tick() {
 
 
 func do_one_connection(c *oneConnection) {
-	c.SendVersion()
+	if !c.listen {
+		c.SendVersion()
+	}
 
 	for {
 		cmd := c.FetchMessage()
@@ -515,6 +540,8 @@ func do_one_connection(c *oneConnection) {
 					println("version:", er.Error())
 					c.addr.Failed()
 					c.broken = true
+				} else if c.listen {
+					c.SendVersion()
 				}
 
 			case "verack":
@@ -528,17 +555,21 @@ func do_one_connection(c *oneConnection) {
 				println("tx unexpected here (now)")
 				c.broken = true
 			
-			case "addr": ParseAddr(cmd.pl)
+			case "addr":
+				ParseAddr(cmd.pl)
 			
 			case "block": //block received
 				netChannel <- &NetCommand{conn:c, cmd:"bl", dat:cmd.pl}
 
 			case "getblocks":
 				c.ProcessGetBlocks(cmd.pl)
-			
+
 			case "getdata":
 				c.ProcessGetData(cmd.pl)
-			
+
+			case "getaddr":
+				c.AnnounceOwnAddr()
+
 			case "alert": // do nothing
 
 			default:
@@ -560,12 +591,75 @@ func connectionActive(ad *onePeer) (yes bool) {
 }
 
 
+func start_server() {
+	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", DefaultTcpPort))
+	if e != nil {
+		println("ResolveTCPAddr", e.Error())
+		return
+	}
+
+	lis, e := net.ListenTCP("tcp4", ad)
+	if e != nil {
+		println("ListenTCP", e.Error())
+		return
+	}
+	defer lis.Close()
+
+	fmt.Println("TCP server started at", ad.String())
+
+	for {
+		if InConsActive < MaxInCons {
+			tc, e := lis.AcceptTCP()
+			if e == nil {
+				fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+				ad := newIncommingPeer(tc.RemoteAddr().String())
+				if ad != nil {
+					ad.Connected()
+					conn := new(oneConnection)
+					conn.connectedAt = time.Now().Unix()
+					conn.addr = ad
+					conn.listen = true
+					conn.TCPConn = tc
+					mutex.Lock()
+					if _, ok := openCons[ad.UniqID()]; ok {
+						fmt.Println(ad.Ip(), "already connected")
+						mutex.Unlock()
+					} else {
+						openCons[ad.UniqID()] = conn
+						InConsActive++
+						mutex.Unlock()
+						go func () {
+							do_one_connection(conn)
+							mutex.Lock()
+							delete(openCons, ad.UniqID())
+							InConsActive--
+							mutex.Unlock()
+						}()
+					}
+				} else {
+					println("newIncommingPeer failed")
+					tc.Close()
+				}
+			}
+		} else {
+			time.Sleep(250e6)
+		}
+	}
+}
+
+
 func do_network(ad *onePeer) {
 	var e error
 	conn := new(oneConnection)
 	conn.addr = ad
 	mutex.Lock()
+	if _, ok := openCons[ad.UniqID()]; ok {
+		fmt.Println(ad.Ip(), "already connected")
+		mutex.Unlock()
+		return
+	}
 	openCons[ad.UniqID()] = conn
+	OutConsActive++
 	mutex.Unlock()
 	go func() {
 		conn.TCPConn, e = net.DialTCP("tcp4", nil, &net.TCPAddr{
@@ -587,22 +681,26 @@ func do_network(ad *onePeer) {
 		}
 		mutex.Lock()
 		delete(openCons, ad.UniqID())
+		OutConsActive--
 		mutex.Unlock()
 	}()
 }
 
 
 func network_process() {
+	if *server {
+		go start_server()
+	}
 	for {
 		mutex.Lock()
-		conn_cnt := len(openCons)
+		conn_cnt := OutConsActive
 		mutex.Unlock()
-		if conn_cnt < MaxCons {
+		if conn_cnt < MaxOutCons {
 			ad := getBestPeer()
 			if ad != nil {
 				do_network(ad)
 			} else if *proxy=="" {
-				println("no new peers", len(openCons), MaxCons)
+				println("no new peers", len(openCons), conn_cnt)
 			}
 		}
 		time.Sleep(250e6)
@@ -638,14 +736,43 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 }
 
 
+type sortedkeys []uint64
+
+func (sk sortedkeys) Len() int {
+	return len(sk)
+}
+
+func (sk sortedkeys) Less(a, b int) bool {
+	return sk[a]<sk[b]
+}
+
+func (sk sortedkeys) Swap(a, b int) {
+	sk[a], sk[b] = sk[b], sk[a]
+}
+
+
 func net_stats(par string) {
 	mutex.Lock()
-	println(len(openCons), "active net connections:")
+	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
+	srt := make(sortedkeys, len(openCons))
+	cnt := 0
+	for k, _ := range openCons {
+		srt[cnt] = k
+		cnt++
+	}
+	sort.Sort(srt)
 	var tosnt, totrec uint64
-	for _, v := range openCons {
-		fmt.Printf(" %21s %16s", v.addr.Ip(), v.last_cmd_sent)
+	for idx := range srt {
+		v := openCons[srt[idx]]
+		fmt.Printf("%4d) ", idx+1)
+		if v.listen {
+			fmt.Print("FROM")
+		} else {
+			fmt.Print("TO  ")
+		}
+		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd_sent)
 		if v.connectedAt != 0 {
-			fmt.Print("   ", time.Unix(v.connectedAt, 0).Format("06-01-02 15:04:05"))
+			fmt.Print("  Con @ ", time.Unix(v.connectedAt, 0).Format("01/02 15:04"))
 			fmt.Print(bts2str(v.BytesReceived))
 			fmt.Print(bts2str(v.BytesSent))
 		}
@@ -658,6 +785,9 @@ func net_stats(par string) {
 	}
 	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
 		InvsSent, BlockSent, totrec>>20, tosnt>>20)
+	if MyExternalAddr!=nil {
+		fmt.Println("External address:", MyExternalAddr.String())
+	}
 	fmt.Println("Bandwidth: ", bw_stats())
 	mutex.Unlock()
 }
