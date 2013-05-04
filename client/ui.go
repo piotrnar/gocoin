@@ -59,6 +59,7 @@ func ask_yes_no(msg string) bool {
 			return false
 		}
 	}
+	return false
 }
 
 
