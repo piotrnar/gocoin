@@ -785,7 +785,7 @@ func net_stats(par string) {
 	}
 	sort.Sort(srt)
 	var tosnt, totrec uint64
-	fmt.Print("                      Remote IP      LastCmd     Connected    LastActive")
+	fmt.Print("                        Remote IP      LastCmd     Connected    LastActive")
 	fmt.Print("    Received         Sent")
 	fmt.Print("    Version  UserAgent             Height   Addr Sent")
 	fmt.Println()
