@@ -45,6 +45,7 @@ type oneConnection struct {
 	
 	broken bool // maker that the conenction has been broken
 	ban bool // ban this client after disconnecting
+	writing bool // we are currently busy writing to the socket
 
 	listen bool
 	*net.TCPConn
@@ -92,31 +93,34 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
 
 	c.last_cmd = cmd+"*"
+	c.writing = true
 
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	copy(b[0:4], Magic[:])
 	copy(b[4:16], cmd)
 	binary.LittleEndian.PutUint32(b[16:20], uint32(len(pl)))
-	_, e = c.TCPConn.Write(b[:20])
+	e = SockWrite(c.TCPConn, b[:20])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 1", e.Error())
 		}
 		c.broken = true
+		c.writing = false
 		return
 	}
 
 	sh := btc.Sha2Sum(pl[:])
-	_, e = c.TCPConn.Write(sh[:4])
+	e = SockWrite(c.TCPConn, sh[:4])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 2", e.Error())
 		}
 		c.broken = true
+		c.writing = false
 		return
 	}
 
-	_, e = c.TCPConn.Write(pl[:])
+	e = SockWrite(c.TCPConn, pl[:])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 3", e.Error())
@@ -125,9 +129,9 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}
 
 	c.BytesSent += uint64(24+len(pl))
-	c.addr.SentData(24+len(pl))
 	c.last_cmd = cmd
 
+	c.writing = false
 	return
 }
 
@@ -200,7 +204,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	c.TCPConn.SetReadDeadline(time.Now().Add(time.Millisecond))
 
 	for c.hdr_len < 24 {
-		n, e = c.TCPConn.Read(c.hdr[c.hdr_len:24])
+		n, e = SockRead(c.TCPConn, c.hdr[c.hdr_len:24])
 		c.hdr_len += n
 		if e != nil {
 			c.HandleError(e)
@@ -220,7 +224,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			c.datlen = 0
 		}
 		for c.datlen < dlen {
-			n, e = c.TCPConn.Read(c.dat[c.datlen:])
+			n, e = SockRead(c.TCPConn, c.dat[c.datlen:])
 			c.datlen += uint32(n)
 			if e != nil {
 				c.HandleError(e)
@@ -245,7 +249,6 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	c.hdr_len = 0
 
 	c.BytesReceived += uint64(24+len(ret.pl))
-	c.addr.GotData(24+len(ret.pl))
 
 	return ret
 }
@@ -550,6 +553,7 @@ func do_one_connection(c *oneConnection) {
 			}
 			continue
 		}
+		c.addr.Alive()
 
 		switch cmd.cmd {
 			case "version":
@@ -636,7 +640,6 @@ func start_server() {
 				}
 				ad := newIncommingPeer(tc.RemoteAddr().String())
 				if ad != nil {
-					ad.Connected()
 					conn := new(oneConnection)
 					conn.connectedAt = time.Now().Unix()
 					conn.addr = ad
@@ -689,7 +692,6 @@ func do_network(ad *onePeer) {
 			Port: int(ad.Port)})
 		if e == nil {
 			conn.connectedAt = time.Now().Unix()
-			ad.Connected()
 			if dbg>0 {
 				println("Connected to", ad.Ip())
 			}
@@ -790,10 +792,16 @@ func net_stats(par string) {
 	for idx := range srt {
 		v := openCons[srt[idx]]
 		fmt.Printf("%4d) ", idx+1)
+		if v.writing {
+			fmt.Print("w ")
+		} else {
+			fmt.Print("  ")
+		}
+
 		if v.listen {
 			fmt.Print("<- ")
 		} else {
-			fmt.Print("-> ")
+			fmt.Print(" ->")
 		}
 		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd)
 		if v.connectedAt != 0 {
@@ -811,6 +819,10 @@ func net_stats(par string) {
 			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
 		}
 
+		if v.writing {
+			fmt.Print("  wr")
+		}
+
 		fmt.Println()
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
@@ -824,6 +836,34 @@ func net_stats(par string) {
 	mutex.Unlock()
 }
 
+
+func net_drop(par string) {
+	ip := net.ParseIP(par)
+	if ip == nil || len(ip)!=16 {
+		fmt.Println("Specify IP of the node to get disconnected")
+		return
+	}
+	var ip4 [4]byte
+	copy(ip4[:], ip[12:16])
+	mutex.Lock()
+	found := false
+	for _, v := range openCons {
+		if ip4==v.addr.Ip4 {
+			v.broken = true
+			found = true
+			break
+		}
+	}
+	mutex.Unlock()
+	if found {
+		fmt.Println("The connection is being dropped")
+	} else {
+		fmt.Println("You are not connected to such IP")
+	}
+}
+
+
 func init() {
 	newUi("net", false, net_stats, "Show network statistics")
+	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 }

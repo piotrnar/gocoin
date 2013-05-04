@@ -120,25 +120,15 @@ func (p *onePeer) Save() {
 }
 
 
-func (p *onePeer) Failed() {
-}
-
-
-func (p *onePeer) Connected() {
-	p.Time = uint32(time.Now().Unix())
+func (p *onePeer) Ban() {
+	p.Banned = uint32(time.Now().Unix())
 	p.Save()
 }
 
 
-func (p *onePeer) GotData(l int) {
+func (p *onePeer) Alive() {
 	p.Time = uint32(time.Now().Unix())
-	bw_got(l)
 	p.Save()
-}
-
-
-func (p *onePeer) SentData(l int) {
-	bw_sent(l)
 }
 
 
@@ -171,6 +161,7 @@ func (p *onePeer) UniqID() (uint64) {
 
 func ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
+	now := uint32(time.Now().Unix())
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
 		var buf [30]byte
@@ -180,12 +171,14 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		k := qdb.KeyType(a.UniqID())
-		v := peerDB.Get(k)
-		if v != nil {
-			a.Banned = newPeer(v[:]).Banned
+		if a.Time > now - expirePeerAfter {
+			k := qdb.KeyType(a.UniqID())
+			v := peerDB.Get(k)
+			if v != nil {
+				a.Banned = newPeer(v[:]).Banned
+			}
+			peerDB.Put(k, a.Bytes())
 		}
-		peerDB.Put(k, a.Bytes())
 	}
 	peerDB.Defrag()
 }
