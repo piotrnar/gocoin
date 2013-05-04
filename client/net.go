@@ -41,9 +41,10 @@ var (
 type oneConnection struct {
 	addr *onePeer
 
-	last_cmd_sent string
+	last_cmd string
 	
 	broken bool // maker that the conenction has been broken
+	ban bool // ban this client after disconnecting
 
 	listen bool
 	*net.TCPConn
@@ -90,6 +91,8 @@ type NetCommand struct {
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
 
+	c.last_cmd = cmd+"*"
+
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	copy(b[0:4], Magic[:])
 	copy(b[4:16], cmd)
@@ -123,9 +126,15 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	c.BytesSent += uint64(24+len(pl))
 	c.addr.SentData(24+len(pl))
-	c.last_cmd_sent = cmd
+	c.last_cmd = cmd
 
 	return
+}
+
+
+func (c *oneConnection) DoS() {
+	c.ban = true
+	c.broken = true
 }
 
 
@@ -415,8 +424,8 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		binary.Write(inv, binary.LittleEndian, uint32(2))
 		inv.Write(k[:])
 	}
-	if dbg>0 {
-		println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
+	if dbg>1 {
+		fmt.Println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
 	}
 	InvsSent++
 	c.SendRawMsg("inv", inv.Bytes())
@@ -532,7 +541,6 @@ func do_one_connection(c *oneConnection) {
 	for {
 		cmd := c.FetchMessage()
 		if c.broken {
-			c.addr.Failed()
 			break
 		}
 		
@@ -548,7 +556,6 @@ func do_one_connection(c *oneConnection) {
 				er := c.VerMsg(cmd.pl)
 				if er != nil {
 					println("version:", er.Error())
-					c.addr.Failed()
 					c.broken = true
 				} else if c.listen {
 					c.SendVersion()
@@ -586,6 +593,9 @@ func do_one_connection(c *oneConnection) {
 				println(cmd.cmd, "from", c.addr.Ip())
 		}
 	}
+	if c.ban {
+		c.addr.Ban()
+	}
 	if dbg>0 {
 		println("Disconnected from", c.addr.Ip())
 	}
@@ -621,7 +631,9 @@ func start_server() {
 		if InConsActive < MaxInCons {
 			tc, e := lis.AcceptTCP()
 			if e == nil {
-				fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+				if dbg>0 {
+					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+				}
 				ad := newIncommingPeer(tc.RemoteAddr().String())
 				if ad != nil {
 					ad.Connected()
@@ -687,7 +699,6 @@ func do_network(ad *onePeer) {
 				println("Could not connect to", ad.Ip())
 			}
 			//println(e.Error())
-			ad.Failed()
 		}
 		mutex.Lock()
 		delete(openCons, ad.UniqID())
@@ -774,7 +785,7 @@ func net_stats(par string) {
 	var tosnt, totrec uint64
 	fmt.Print("                      Remote IP      LastCmd     Connected    LastActive")
 	fmt.Print("    Received         Sent")
-	fmt.Print("    Version  UserAgent              Height   Addr Sent")
+	fmt.Print("    Version  UserAgent             Height   Addr Sent")
 	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx]]
@@ -784,7 +795,7 @@ func net_stats(par string) {
 		} else {
 			fmt.Print("-> ")
 		}
-		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd_sent)
+		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd)
 		if v.connectedAt != 0 {
 			now := time.Now().Unix()
 			fmt.Printf("  %4d min ago", (now-v.connectedAt)/60)
@@ -807,7 +818,7 @@ func net_stats(par string) {
 	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
 		InvsSent, BlockSent, totrec>>20, tosnt>>20)
 	if MyExternalAddr!=nil {
-		fmt.Println("External address:", MyExternalAddr.String())
+		fmt.Println("External address:", MyExternalAddr.String(), "   Server enabled:", *server)
 	}
 	fmt.Println("Bandwidth: ", bw_stats())
 	mutex.Unlock()
