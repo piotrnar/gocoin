@@ -2,26 +2,28 @@ package main
 
 import (
 	"os"
+	"fmt"
+	"net"
+	"time"
 	"sort"
 	"bytes"
 	"errors"
+	"strings"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
-	"net"
-	"strings"
-	"time"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 
 const (
 	Version = 70001
-	UserAgent = "/Gocoin:0.0.0/"
+	UserAgent = "/Satoshi:0.8.1/"
 
 	Services = uint64(0x1)
 
-	MaxInCons = 32
+	SendAddrsEvery = (15*60) // 15 minutes
+
+	MaxInCons = 24
 	MaxOutCons = 8
 	MaxTotCons = MaxInCons+MaxOutCons
 )
@@ -67,6 +69,8 @@ type oneConnection struct {
 		height uint32
 		agent string
 	}
+
+	NextAddrSent uint32
 }
 
 
@@ -240,8 +244,10 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 func (c *oneConnection) AnnounceOwnAddr() {
 	var buf [31]byte
+	now := uint32(time.Now().Unix())
+	c.NextAddrSent = now+SendAddrsEvery
 	buf[0] = 1 // Only one address
-	binary.LittleEndian.PutUint32(buf[1:5], uint32(time.Now().Unix()))
+	binary.LittleEndian.PutUint32(buf[1:5], now)
 	ipd := MyExternalAddr.Bytes()
 	copy(buf[5:], ipd[:])
 	c.SendRawMsg("addr", buf[:])
@@ -256,6 +262,7 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 		if MyExternalAddr == nil {
 			MyExternalAddr = btc.NewNetAddr(pl[20:46]) // These bytes should know our external IP
 			MyExternalAddr.Port = DefaultTcpPort
+			println("MyExternalAddr:", MyExternalAddr.String(), MyExternalAddr.Port)
 		}
 		if len(pl) >= 86 {
 			//fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
@@ -278,8 +285,6 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 	c.SendRawMsg("verack", []byte{})
 	if c.listen {
 		c.SendVersion()
-	} else if *server {
-		c.AnnounceOwnAddr()
 	}
 	return nil
 }
@@ -510,6 +515,12 @@ func (c *oneConnection) Tick() {
 	mutex.Unlock()
 	if i2s != nil {
 		c.SendInvs(i2s)
+		return
+	}
+
+	if *server && (c.NextAddrSent==0 || uint32(time.Now().Unix()) >= c.NextAddrSent) {
+		c.AnnounceOwnAddr()
+		return
 	}
 }
 
@@ -779,6 +790,11 @@ func net_stats(par string) {
 		if v.node.version!=0 {
 			fmt.Printf("%8d %-20s %7d", v.node.version, v.node.agent, v.node.height)
 		}
+
+		if v.NextAddrSent != 0 {
+			fmt.Printf("  addr %2d min", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
+		}
+
 		fmt.Println()
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
