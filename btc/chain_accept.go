@@ -168,9 +168,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					}
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
-						println("Unknown txin", j, inp.String(), "in", changes.Height)
-						panic("this should not happen???")
-						e = errors.New("Unknown input")        
+						e = errors.New("Unknown input")
 						break
 					}
 
