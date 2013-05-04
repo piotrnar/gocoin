@@ -466,7 +466,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 				BlockSent++
 				c.SendRawMsg("block", bl)
 			} else {
-				println("block", uh.String(), er.Error())
+				//println("block", uh.String(), er.Error())
 			}
 		} else if typ == 1 {
 			// transaction
