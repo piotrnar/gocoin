@@ -7,14 +7,16 @@ import (
 	"time"
 	"bytes"
 	"strings"
-	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
 	"hash/crc64"
 	"github.com/piotrnar/gocoin/btc"
 )
 
-const defragEvery = (10*time.Second)
+const (
+	defragEvery = (60*time.Second) // Once a minute should be more than enough
+	expirePeerAfter = 3*3600 // 3 hours - https://en.bitcoin.it/wiki/Protocol_specification#addr
+)
 
 var (
 	peerDB *qdb.DB
@@ -26,21 +28,13 @@ var (
 )
 
 type onePeer struct {
-	Time uint32  // When seen last time
 	Services uint64
 	Ip6 [12]byte
 	Ip4 [4]byte
 	Port uint16
 	
+	Time uint32  // When seen last time
 	Banned uint32 // time when this address baned or zero if never
-	FirstSeen uint32 // time when this address was seen for the first time
-	TimesSeen uint32 // how many times this address have been seen
-	
-	FailedLast uint32
-	FailedCount uint32
-	
-	ConnectedLast uint32
-	ConnectedCount uint32
 }
 
 
@@ -57,71 +51,89 @@ func newPeer(v []byte) (p *onePeer) {
 	copy(p.Ip4[:], v[24:28])
 	p.Port = binary.BigEndian.Uint16(v[28:30])
 	
-	if len(v) >= 42 {
+	if len(v) == 34 {
 		p.Banned = binary.LittleEndian.Uint32(v[30:34])
-		p.FirstSeen = binary.LittleEndian.Uint32(v[34:38])
-		p.TimesSeen = binary.LittleEndian.Uint32(v[38:42])
-	} else {
-		p.FirstSeen = p.Time
-	}
-
-	if len(v) >= 58 {
-		p.FailedLast = binary.LittleEndian.Uint32(v[42:46])
-		p.FailedCount = binary.LittleEndian.Uint32(v[46:50])
-		p.ConnectedLast = binary.LittleEndian.Uint32(v[50:54])
-		p.ConnectedCount = binary.LittleEndian.Uint32(v[54:58])
 	}
 	
 	return
 }
 
 
-func (p *onePeer) Bytes(all bool) []byte {
+func newIncommingPeer(ipstr string) (p *onePeer) {
+	x := strings.Index(ipstr, ":")
+	if x != -1 {
+		ipstr = ipstr[:x] // remove port number
+	}
+	ip := net.ParseIP(ipstr)
+	if ip != nil && len(ip)==16 {
+		p = new(onePeer)
+		p.Time = uint32(time.Now().Unix())
+		p.Services = 1
+		copy(p.Ip6[:], ip[:12])
+		copy(p.Ip4[:], ip[12:16])
+		p.Port = DefaultTcpPort
+		p.Save()
+	} else {
+		println("newIncommingPeer: error parsing IP", ipstr)
+	}
+	return
+}
+
+
+func (p *onePeer) Bytes() []byte {
 	b := new(bytes.Buffer)
 	binary.Write(b, binary.LittleEndian, p.Time)
 	binary.Write(b, binary.LittleEndian, p.Services)
 	b.Write(p.Ip6[:])
 	b.Write(p.Ip4[:])
 	binary.Write(b, binary.BigEndian, p.Port)
-	if all {
-		binary.Write(b, binary.LittleEndian, p.Banned)
-		binary.Write(b, binary.LittleEndian, p.FirstSeen)
-		binary.Write(b, binary.LittleEndian, p.TimesSeen)
-		
-		binary.Write(b, binary.LittleEndian, p.FailedLast)
-		binary.Write(b, binary.LittleEndian, p.FailedCount)
-		binary.Write(b, binary.LittleEndian, p.ConnectedLast)
-		binary.Write(b, binary.LittleEndian, p.ConnectedCount)
-	}
+	binary.Write(b, binary.LittleEndian, p.Banned)
 	return b.Bytes()
 }
 
 
-func (p *onePeer) Save() {
-	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes(true))
-	if nextDefrag.Before(time.Now()) {
+func pers_do_cleanup() {
+	if time.Now().After(nextDefrag) {
+		var delcnt uint32
+		now := uint32(time.Now().Unix())
+		todel := make([]qdb.KeyType, peerDB.Count())
+		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+			if int(now - newPeer(v).Time) > expirePeerAfter {
+				todel[delcnt] = k // we cannot call Del() from here
+				delcnt++
+			}
+			return true
+		})
+		for delcnt > 0 {
+			delcnt--
+			peerDB.Del(todel[delcnt])
+		}
 		peerDB.Defrag()
 		nextDefrag = time.Now().Add(defragEvery)
 	}
 }
 
 
+func (p *onePeer) Save() {
+	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
+	pers_do_cleanup()
+}
+
+
 func (p *onePeer) Failed() {
-	p.FailedCount++
-	p.FailedLast = uint32(time.Now().Unix())
-	p.Save()
 }
 
 
 func (p *onePeer) Connected() {
-	p.ConnectedCount++
-	p.ConnectedLast = uint32(time.Now().Unix())
+	p.Time = uint32(time.Now().Unix())
 	p.Save()
 }
 
 
 func (p *onePeer) GotData(l int) {
+	p.Time = uint32(time.Now().Unix())
 	bw_got(l)
+	p.Save()
 }
 
 
@@ -136,7 +148,14 @@ func (p *onePeer) Ip() (string) {
 
 
 func (p *onePeer) String() (s string) {
-	s = p.Ip() + " " + hex.EncodeToString(p.Bytes(true))
+	s = fmt.Sprintf("%21s", p.Ip())
+	
+	now := uint32(time.Now().Unix())
+	if p.Banned != 0 {
+		s += fmt.Sprintf("  *BAN %3d min ago", (now-p.Banned)/60)
+	} else {
+		s += fmt.Sprintf("  Seen %3d min ago", (now-p.Time)/60)
+	}
 	return
 }
 
@@ -164,13 +183,9 @@ func ParseAddr(pl []byte) {
 		k := qdb.KeyType(a.UniqID())
 		v := peerDB.Get(k)
 		if v != nil {
-			prv := newPeer(v[:])
-			//println(a.String(), "already in the db", prv.Time, a.Time)
-			a.Banned = prv.Banned
-			a.FirstSeen = prv.FirstSeen
-			a.TimesSeen = a.TimesSeen+1
+			a.Banned = newPeer(v[:]).Banned
 		}
-		peerDB.Put(k, a.Bytes(true))
+		peerDB.Put(k, a.Bytes())
 	}
 	peerDB.Defrag()
 }
@@ -184,16 +199,14 @@ func getBestPeer() (p *onePeer) {
 		return
 	}
 	
-	oldest_failed := uint32(0xffffffff)
 	var best_time uint32
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
-		if (ad.FailedLast < oldest_failed || 
-			(ad.FailedLast == oldest_failed && ad.Time > best_time) ) &&
-			!connectionActive(ad) {
-			oldest_failed = ad.FailedLast
-			best_time = ad.Time
-			p = ad
+		if ad.Ip4!=[4]byte{127,0,0,1} {
+			if ad.Time > best_time && !connectionActive(ad) {
+				best_time = ad.Time
+				p = ad
+			}
 		}
 		return true
 	})
@@ -240,11 +253,7 @@ func initPeers(dir string) {
 		oa, e := net.ResolveTCPAddr("tcp4", *proxy)
 		if e != nil {
 			if strings.HasPrefix(e.Error(), "missing port in address") {
-				if *testnet {
-					oa, e = net.ResolveTCPAddr("tcp4", *proxy+":18333")
-				} else {
-					oa, e = net.ResolveTCPAddr("tcp4", *proxy+":8333")
-				}
+				oa, e = net.ResolveTCPAddr("tcp4", fmt.Sprint(*proxy,":",DefaultTcpPort))
 			}
 			if e!=nil {
 				println(e.Error())
@@ -261,9 +270,11 @@ func initPeers(dir string) {
 
 
 func show_addresses(par string) {
-	println(peerDB.Count(), "peers in the database:")
+	fmt.Println(peerDB.Count(), "peers in the database:")
+	cnt := 0
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-		println(" *", newPeer(v).String())
+		cnt++
+		fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
 		return true
 	})
 }
