@@ -72,7 +72,6 @@ func (db *unwindDb) save() {
 
 func (db *unwindDb) close() {
 	db.tdb.Close()
-	db.tdb = nil
 }
 
 func (db *unwindDb) idle() bool {
