@@ -22,6 +22,7 @@ var (
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
 	rescan *bool = flag.Bool("rescan", false, "Rescan unspent outputs (not scripts)")
 	proxy *string = flag.String("c", "", "Connect to this host")
+	server *bool = flag.Bool("server", false, "Enable TCP server (allow incomming connections)")
 	datadir *string = flag.String("datadir", "", "Specify Gocoin's database root folder")
 
 	GenesisBlock *btc.Uint256
@@ -337,6 +338,8 @@ func load_wallet(fn string) {
 	if fn != "" {
 		fmt.Println("Switching to wallet from file", fn)
 		MyWallet = NewWallet(fn)
+	} else {
+		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
 	}
 	if MyWallet == nil {
 		fmt.Println("You have no wallet")
@@ -348,7 +351,7 @@ func load_wallet(fn string) {
 	}
 }
 
-func dump_tx(par string) {
+func load_tx(par string) {
 	txd, er := hex.DecodeString(par)
 	if er != nil {
 		println(er.Error())
@@ -358,7 +361,6 @@ func dump_tx(par string) {
 		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
 	}
 	txid := btc.NewSha2Hash(txd)
-	fmt.Println("TX", txid.String())
 	fmt.Println(len(tx.TxIn), "inputs:")
 	var totinp, totout uint64
 	var missinginp bool
@@ -386,11 +388,35 @@ func dump_tx(par string) {
 		fmt.Printf("%.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-	if ask_yes_no("Broadcast this transaction to the network?") {
-		TransactionsToSend[txid.Hash] = txd
-		cnt := NetSendInv(1, txid.Hash[:], nil)
-		fmt.Println("Transaction broadcasted to", cnt, "node(s)")
-		fmt.Println("If it does not apprear in the chain, you may want to redo it.")
+	TransactionsToSend[txid.Hash] = txd
+	fmt.Println("Transaction", txid.String(), "stored in the memory pool")
+	fmt.Println("Execute 'txs" + txid.String() + "' if you want to send it")
+}
+
+
+func send_tx(par string) {
+	txid := btc.NewUint256FromString(par)
+	if txid==nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		list_txs("")
+		return
+	}
+	if _, ok := TransactionsToSend[txid.Hash]; !ok {
+		fmt.Println("No such transaction ID in the memory pool.")
+		list_txs("")
+		return
+	}
+	cnt := NetSendInv(1, txid.Hash[:], nil)
+	fmt.Println("Transaction", txid.String(), "broadcasted to", cnt, "node(s)")
+	fmt.Println("If it does not appear in the chain, you may want to redo it.")
+}
+
+
+func list_txs(par string) {
+	fmt.Println("Transactions in the memory pool:")
+	cnt := 0
+	for k, v := range TransactionsToSend {
+		fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v), "bytes")
 	}
 }
 
@@ -400,14 +426,41 @@ func save_bchain(par string) {
 }
 
 
+func switch_sync(par string) {
+	offit := (par=="0" || par=="false" || par=="off")
+	
+	// Actions when syncing is enabled:
+	if !BlockChain.DoNotSync {
+		if offit {
+			BlockChain.DoNotSync = true
+			fmt.Println("Sync has been disabled. Do not forget to switch it back on, to have DB changes on disk.")
+		} else {
+			fmt.Println("Sync is enabled. Use 'sync 0' to switch it off.")
+		}
+		return
+	}
+	
+	// Actions when syncing is disabled:
+	if offit {
+		fmt.Println("Sync is already disabled. Request ignored.")
+	} else {
+		fmt.Println("Switching sync back on & saving all the changes...")
+		BlockChain.Sync()
+		fmt.Println("Sync is back on now.")
+	}
+}
+
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
-	newUi("quit q", true, ui_quit, "Exit gracefully (closing all files)")
-	newUi("balance bal", true, show_balance, "Show & save the balance of your wallet's addresses")
+	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
+	newUi("balance bal", true, show_balance, "Show & save the balance of the currently loaded wallet")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("sendtx tx", true, dump_tx, "Broadcast given hex-encoded tx to the network")
-	newUi("wallet wal", true, load_wallet, "Load wallet from file, or just display current one")
-	newUi("save", true, save_bchain, "Save blockchain state now (usually not needed)")
+	newUi("loadtx tx", true, load_tx, "Decode given hex-encoded tx and store it in memory pool")
+	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool, identified given <txid>")
+	newUi("lstx", true, list_txs, "List all the transaction loaded into memory pool")
+	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
+	newUi("sync", true, switch_sync, "Control sync of the database to disk")
 }
 
 
@@ -449,7 +502,6 @@ func main() {
 
 	var netmsg *NetCommand
 	for !exit_now {
-		//println(BlockChain.DoNotSync, retryCachedBlocks)
 		if retryCachedBlocks {
 			Busy("retry_cached_blocks")
 			retryCachedBlocks = retry_cached_blocks()
@@ -498,11 +550,6 @@ func main() {
 					Busy("CheckBlock "+bl.Hash.String())
 					e = bl.CheckBlock()
 					if e == nil {
-						if !BlockChain.DoNotSync && len(pendingBlocks)>=10 {
-							BlockChain.DoNotSync = true
-							println("lots of pending blocks - switch syncing off for now...")
-						}
-
 						Busy("AcceptBlock "+bl.Hash.String())
 						e = BlockChain.AcceptBlock(bl)
 						if e == nil {
