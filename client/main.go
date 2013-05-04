@@ -20,10 +20,10 @@ var (
 	//listen *bool = flag.Bool("l", false, "Listen insted of connecting")
 	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
-	rescan *bool = flag.Bool("rescan", false, "Rescan unspent outputs (not scripts)")
+	rescan *bool = flag.Bool("r", false, "Discard unspent outputs DB and rescan the blockchain")
 	proxy *string = flag.String("c", "", "Connect to this host")
-	server *bool = flag.Bool("server", false, "Enable TCP server (allow incomming connections)")
-	datadir *string = flag.String("datadir", "", "Specify Gocoin's database root folder")
+	server *bool = flag.Bool("l", false, "Enable TCP server (allow incomming connections)")
+	datadir *string = flag.String("d", "", "Specify Gocoin's database root folder")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
