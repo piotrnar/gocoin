@@ -26,6 +26,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 			// This is genesis block
 			prv.Timestamp = bl.BlockTime
 			prv.Bits = bl.Bits
+			er = errors.New("CheckBlock: Genesis bock")
 			return
 		} else {
 			er = errors.New("CheckBlock: "+bl.Hash.String()+" already in")
