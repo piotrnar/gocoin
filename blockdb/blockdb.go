@@ -1,3 +1,7 @@
+/* 
+This package is suposed to help importin Satoshi's bitcoin
+client blockchain into Gocoin's bitcoin client.
+*/
 package blockdb
 
 import (
