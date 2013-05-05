@@ -13,6 +13,7 @@ import (
 
 const (
 	InvsAskDuration = 10*time.Second
+	PendingFifoLen = 2000
 )
 
 var (
@@ -46,7 +47,7 @@ var (
 	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
-	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, 1000)
+	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
 	
 	cachedBlocks map[[btc.Uint256IdxLen]byte] *btc.Block = make(map[[btc.Uint256IdxLen]byte] *btc.Block)
 	receivedBlocks map[[btc.Uint256IdxLen]byte] int64 = make(map[[btc.Uint256IdxLen]byte] int64, 300e3)
@@ -358,10 +359,12 @@ func InvsNotify(h []byte) (need bool) {
 		InvsIgnored++
 	} else if _, ok := receivedBlocks[idx]; ok {
 		InvsIgnored++
-	} else {
+	} else if len(pendingFifo)<PendingFifoLen {
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
+	} else {
+		println("pending FIFO full")
 	}
 	mutex.Unlock()
 	return
