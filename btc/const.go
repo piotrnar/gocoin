@@ -13,7 +13,7 @@ const(
 
 var CpuCount int = runtime.NumCPU()
 
-const useThreads = 32
+const useThreads = 10
 
 var taskDone chan bool = make(chan bool, useThreads)
 
