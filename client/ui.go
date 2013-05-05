@@ -114,11 +114,11 @@ func do_userif() {
 }
 
 
-
 func show_info(par string) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	
+	println("...", busy, len(pendingFifo))
 	mutex.Lock()
 	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d  MemUsed:%dMB\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
