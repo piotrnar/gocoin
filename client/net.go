@@ -26,6 +26,8 @@ const (
 	MaxInCons = 24
 	MaxOutCons = 8
 	MaxTotCons = MaxInCons+MaxOutCons
+
+	NoDataTimeout = 60
 )
 
 
@@ -72,9 +74,9 @@ type oneConnection struct {
 		agent string
 	}
 
-	NextAddrSent uint32
-	tick_cnt uint32
-	where string
+	NextAddrSent uint32 // When we shoudl annonce our "addr" again
+
+	LastDataGot uint32 // if we have no data for some time, we abort this conenction
 }
 
 
@@ -297,7 +299,9 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 
 
 func (c *oneConnection) GetBlocks(lastbl []byte) {
-	//println("GetBlocks since", btc.NewUint256(lastbl).String())
+	if dbg > 0 {
+		println("GetBlocks since", btc.NewUint256(lastbl).String())
+	}
 	var b [4+1+32+32]byte
 	binary.LittleEndian.PutUint32(b[0:4], Version)
 	b[4] = 1 // only one locator
@@ -482,7 +486,7 @@ func (c *oneConnection) GetBlockData(h []byte) {
 	b[0] = 1 // One inv
 	b[1] = 2 // Block
 	copy(b[5:37], h[:32])
-	if dbg > 0 {
+	if dbg > 1 {
 		println("GetBlockData", btc.NewUint256(h).String())
 	}
 	c.SendRawMsg("getdata", b[:])
@@ -538,25 +542,30 @@ func do_one_connection(c *oneConnection) {
 		c.SendVersion()
 	}
 
+	c.LastDataGot = uint32(time.Now().Unix())
 	for {
-		c.tick_cnt++
-c.where = "FetchMessage.."
 		cmd := c.FetchMessage()
 		if c.broken {
 			break
 		}
 		
+		now := uint32(time.Now().Unix())
+
 		if cmd==nil {
-			if c.ver_ack_received {
-c.where = "Tick.."
+			if int(now-c.LastDataGot) > NoDataTimeout {
+				println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
+				c.broken = true
+				break
+			} else if c.ver_ack_received {
 				c.Tick()
 			}
 			continue
 		}
-c.where = "Alive "+cmd.cmd+".."
+		
+		c.LastDataGot = now
+
 		c.addr.Alive()
 
-c.where = "cmd "+cmd.cmd+"..."
 		switch cmd.cmd {
 			case "version":
 				er := c.VerMsg(cmd.pl)
@@ -811,16 +820,14 @@ func net_stats(par string) {
 			fmt.Print(bts2str(v.BytesSent))
 		}
 		if v.node.version!=0 {
-			fmt.Printf("  %8d  %-20s %7d", v.node.version, v.node.agent, v.node.height)
+			fmt.Printf("  %d, %20s, %d", v.node.version, v.node.agent, v.node.height)
 		}
 
-		/*
 		if v.NextAddrSent != 0 {
 			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
 		}
-		*/
 
-		fmt.Println("   ", v.tick_cnt, v.where)
+		fmt.Println()
 
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
