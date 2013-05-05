@@ -29,8 +29,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.Unspent.NoSync()
 	}
 
-	sta := time.Now().UnixNano()
-	prv := sta
+	prv := time.Now().UnixNano()
 	for ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
@@ -73,9 +72,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 	}
 	ch.Unspent.Sync()
-	
-	prv = time.Now().UnixNano()
-	fmt.Printf("ParseTillBlock completed in %.3fs\n", float64(prv-sta)/1e9)
 	
 	if ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
