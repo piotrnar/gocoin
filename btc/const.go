@@ -11,10 +11,10 @@ const(
 	UnspentTxsMapInitLen = 4e6
 )
 
-var CpuCount int = runtime.NumCPU()
+var useThreads int = 3 * runtime.NumCPU() // use few times more go-routines to optimize an idle time
 
-const useThreads = 16
+var taskDone chan bool
 
-var taskDone chan bool = make(chan bool, useThreads)
-
- 
+func init() {
+	taskDone = make(chan bool, useThreads)
+}
