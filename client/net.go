@@ -820,7 +820,7 @@ func net_stats(par string) {
 			fmt.Print(bts2str(v.BytesSent))
 		}
 		if v.node.version!=0 {
-			fmt.Printf("  %d, %20s, %d", v.node.version, v.node.agent, v.node.height)
+			fmt.Printf("  [%d * %s * %d]", v.node.version, v.node.agent, v.node.height)
 		}
 
 		if v.NextAddrSent != 0 {
