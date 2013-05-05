@@ -35,6 +35,8 @@ type onePeer struct {
 	
 	Time uint32  // When seen last time
 	Banned uint32 // time when this address baned or zero if never
+
+	where string
 }
 
 
@@ -115,8 +117,11 @@ func pers_do_cleanup() {
 
 
 func (p *onePeer) Save() {
+	p.where = "aaa"
 	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
+	p.where = "bbb"
 	pers_do_cleanup()
+	p.where = "ccc"
 }
 
 
@@ -146,6 +151,8 @@ func (p *onePeer) String() (s string) {
 	} else {
 		s += fmt.Sprintf("  Seen %3d min ago", (now-p.Time)/60)
 	}
+
+	s += "   where:"+p.where
 	return
 }
 
