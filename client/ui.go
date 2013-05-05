@@ -118,7 +118,6 @@ func show_info(par string) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	
-	println("...", busy, len(pendingFifo))
 	mutex.Lock()
 	fmt.Printf("CachedBlocks:%d  PendingBlocks:%d/%d  receivedBlocks:%d  FifoFull:%d  MemUsed:%dMB\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
