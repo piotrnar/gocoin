@@ -69,10 +69,10 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		if don(DBG_BLOCKS) {
 			fmt.Printf("Adding block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
-		changes, e := ch.ProcessBlockTransactions(bl, cur.Height)
+		var changes *BlockChanges
+		changes, e = ch.ProcessBlockTransactions(bl, cur.Height)
 		if e != nil {
-			fmt.Println("Reject:", cur.BlockHash.String(), cur.Height)
-			fmt.Println("Parent:", NewUint256(bl.Parent).String())
+			println("ProcessBlockTransactions ", cur.BlockHash.String(), cur.Height, e.Error())
 			ch.BlockIndexAccess.Lock()
 			cur.Parent.delChild(cur)
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
