@@ -731,13 +731,10 @@ func network_process() {
 }
 
 func bts2str(val uint64) string {
-	if val < 1e5 {
-		return fmt.Sprintf("%10d B ", val)
-	}
 	if val < 1e5*1024 {
-		return fmt.Sprintf("%10d kB", val>>10)
+		return fmt.Sprintf("%10.1f k ", float64(val)/1024)
 	}
-	return fmt.Sprintf("%10d MB", val>>20)
+	return fmt.Sprintf("%10.1f MB", float64(val)/(1024*1024))
 }
 
 
@@ -825,10 +822,9 @@ func net_stats(par string) {
 	}
 	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
 		InvsSent, BlockSent, totrec>>20, tosnt>>20)
-	if MyExternalAddr!=nil {
-		fmt.Println("External address:", MyExternalAddr.String(), "   Server enabled:", *server)
+	if *server && MyExternalAddr!=nil {
+		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
 	}
-	fmt.Println("Bandwidth: ", bw_stats())
 	mutex.Unlock()
 }
 
