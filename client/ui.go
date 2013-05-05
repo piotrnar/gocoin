@@ -120,9 +120,9 @@ func show_info(par string) {
 	
 	println("...", busy, len(pendingFifo))
 	mutex.Lock()
-	fmt.Printf("cachedBlocks:%d  pendingBlocks:%d/%d  receivedBlocks:%d  MemUsed:%dMB\n", 
+	fmt.Printf("CachedBlocks:%d  PendingBlocks:%d/%d  receivedBlocks:%d  FifoFull:%d  MemUsed:%dMB\n", 
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
-		ms.HeapAlloc>>20)
+		FifoFullCnt, ms.HeapAlloc>>20)
 	var minago string = ""
 	if LastBlockReceived != 0 {
 		minago = fmt.Sprintf("  Block got %d min ago", (time.Now().Unix()-LastBlockReceived)/60)
