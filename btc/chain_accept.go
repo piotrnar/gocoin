@@ -18,38 +18,12 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 
 
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
-
-	ch.BlockIndexAccess.Lock()
-	if prv, pres := ch.BlockIndex[bl.Hash.BIdx()]; pres {
-		ch.BlockIndexAccess.Unlock()
-		if prv.Parent == nil {
-			// This is genesis block
-			prv.Timestamp = bl.BlockTime
-			prv.Bits = bl.Bits
-			return
-		} else {
-			return errors.New("AcceptBlock() : "+bl.Hash.String()+" already in mapBlockIndex")
-		}
-	}
-
+	
 	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
 	if !ok {
-		ch.BlockIndexAccess.Unlock()
-		return errors.New(ErrParentNotFound)
+		panic("This should not happen")
 	}
 
-	// Check proof of work
-	//println("block with bits", bl.Bits, "...")
-	gnwr := GetNextWorkRequired(prevblk, bl.BlockTime)
-	if bl.Bits != gnwr {
-		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
-			" exp:", gnwr)
-		if !testnet || ((prevblk.Height+1)%2016)!=0 {
-			ch.BlockIndexAccess.Unlock()
-			return errors.New("AcceptBlock() : incorrect proof of work")
-		}
-	}
-	
 	// create new BlockTreeNode
 	cur := new(BlockTreeNode)
 	cur.BlockHash = bl.Hash
@@ -58,9 +32,9 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	cur.Bits = bl.Bits
 	cur.Timestamp = bl.BlockTime
 	
-	prevblk.addChild(cur)
-	
 	// Add this block to the block index
+	ch.BlockIndexAccess.Lock()
+	prevblk.addChild(cur)
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
 	ch.BlockIndexAccess.Unlock()
 	
