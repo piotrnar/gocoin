@@ -73,19 +73,14 @@ type oneConnection struct {
 	}
 
 	NextAddrSent uint32
+	tick_cnt uint32
+	where string
 }
 
 
 type BCmsg struct {
 	cmd string
 	pl  []byte
-}
-
-
-type NetCommand struct {
-	conn *oneConnection
-	cmd string
-	dat []byte
 }
 
 
@@ -487,6 +482,9 @@ func (c *oneConnection) GetBlockData(h []byte) {
 	b[0] = 1 // One inv
 	b[1] = 2 // Block
 	copy(b[5:37], h[:32])
+	if dbg > 0 {
+		println("GetBlockData", btc.NewUint256(h).String())
+	}
 	c.SendRawMsg("getdata", b[:])
 }
 
@@ -503,7 +501,6 @@ func (c *oneConnection) SendInvs(i2s []*[36]byte) {
 
 
 func (c *oneConnection) Tick() {
-
 	// Need to send getblocks...?
 	if tmp := blocksNeeded(); tmp != nil {
 		c.GetBlocks(tmp)
@@ -542,6 +539,8 @@ func do_one_connection(c *oneConnection) {
 	}
 
 	for {
+		c.tick_cnt++
+c.where = "FetchMessage.."
 		cmd := c.FetchMessage()
 		if c.broken {
 			break
@@ -549,12 +548,15 @@ func do_one_connection(c *oneConnection) {
 		
 		if cmd==nil {
 			if c.ver_ack_received {
+c.where = "Tick.."
 				c.Tick()
 			}
 			continue
 		}
+c.where = "Alive "+cmd.cmd+".."
 		c.addr.Alive()
 
+c.where = "cmd "+cmd.cmd+"..."
 		switch cmd.cmd {
 			case "version":
 				er := c.VerMsg(cmd.pl)
@@ -580,7 +582,7 @@ func do_one_connection(c *oneConnection) {
 				ParseAddr(cmd.pl)
 			
 			case "block": //block received
-				netChannel <- &NetCommand{conn:c, cmd:"bl", dat:cmd.pl}
+				netBlockReceived(c, cmd.pl)
 
 			case "getblocks":
 				c.ProcessGetBlocks(cmd.pl)
@@ -784,7 +786,7 @@ func net_stats(par string) {
 	var tosnt, totrec uint64
 	fmt.Print("                        Remote IP      LastCmd     Connected    LastActive")
 	fmt.Print("    Received         Sent")
-	fmt.Print("    Version  UserAgent             Height   Addr Sent")
+	//fmt.Print("    Version  UserAgent             Height   Addr Sent")
 	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx]]
@@ -812,11 +814,14 @@ func net_stats(par string) {
 			fmt.Printf("  %8d  %-20s %7d", v.node.version, v.node.agent, v.node.height)
 		}
 
+		/*
 		if v.NextAddrSent != 0 {
 			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
 		}
+		*/
 
-		fmt.Println()
+		fmt.Println("   ", v.tick_cnt, v.where)
+
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
 	}
