@@ -66,6 +66,10 @@ func host_init() {
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, *rescan)
 	sto := time.Now().UnixNano()
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
+	if *nosync {
+		BlockChain.DoNotSync = true
+		fmt.Println("Syncing is disabled. Switch it on with 'sync' command")
+	}
 }
 
 
@@ -113,7 +117,7 @@ func import_blockchain(dir string) {
 
 		bl.Trusted = trust
 
-		er = bl.CheckBlock()
+		er, _, _ = chain.CheckBlock(bl)
 		if er != nil {
 			println("CheckBlock failed:", er.Error())
 			continue
