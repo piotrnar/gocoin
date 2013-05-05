@@ -56,7 +56,7 @@ var (
 
 	nextInvAsk time.Time = time.Now()
 
-	InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt uint64
+	InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, FifoFullCnt uint64
 	TicksCnt uint64
 	busy string
 
@@ -364,7 +364,7 @@ func InvsNotify(h []byte) (need bool) {
 		pendingFifo <- idx
 		need = true
 	} else {
-		println("pending FIFO full")
+		FifoFullCnt++
 	}
 	mutex.Unlock()
 	return
