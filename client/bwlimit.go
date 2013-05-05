@@ -52,31 +52,52 @@ func init() {
 }
 
 
+func count_rcvd(n uint64) {
+	bw_mutex.Lock()
+	now := time.Now().Unix()
+	if now != dl_last_sec {
+		dl_bytes_prv_sec = dl_bytes_so_far
+		dl_bytes_so_far = 0
+		dl_last_sec = now
+	}
+	dl_bytes_so_far += n
+	dl_bytes_total += n
+	bw_mutex.Unlock()
+}
+
+
 func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	n, e = con.Read(buf)
 	if e == nil {
-		bw_mutex.Lock()
-		now := time.Now().Unix()
-		if now != dl_last_sec {
-			dl_bytes_prv_sec = dl_bytes_so_far
-			dl_bytes_so_far = 0
-			dl_last_sec = now
-		}
-		dl_bytes_so_far += uint64(n)
-		dl_bytes_total += uint64(n)
-		bw_mutex.Unlock()
+		count_rcvd(uint64(n))
 	}
 	return
 }
 
 
+func count_sent(n uint64) {
+	bw_mutex.Lock()
+	now := time.Now().Unix()
+	if now != ul_last_sec {
+		ul_bytes_prv_sec = ul_bytes_so_far
+		ul_bytes_so_far = 0
+		ul_last_sec = now
+	}
+	ul_bytes_so_far += n
+	ul_bytes_total += n
+	bw_mutex.Unlock()
+}
+
+
 // Send all the bytes, but respect the upload limit (force delays)
 func SockWrite(con *net.TCPConn, buf []byte) (e error) {
-	bw_mutex.Lock()
-	ul_bytes_total += uint64(len(buf))
-	bw_mutex.Unlock()
-	_, e = con.Write(buf)
+	var n int
+	n, e = con.Write(buf)
+	if e == nil {
+		count_sent(uint64(n))
+	}
 	return
+/*
 	var n, sent, left2send, now2send int
 	var now int64
 	for sent < len(buf) {
@@ -108,6 +129,7 @@ func SockWrite(con *net.TCPConn, buf []byte) (e error) {
 		time.Sleep(250e6) // wait 250ms
 	}
 	return
+*/
 }
 
 
