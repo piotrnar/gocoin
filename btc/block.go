@@ -2,8 +2,6 @@ package btc
 
 import (
 	"errors"
-	"bytes"
-	"time"
 	"encoding/binary"
 )
 
@@ -69,51 +67,6 @@ func (bl *Block) BuildTxList() (e error) {
 		_ = <- taskDone
 	}
 	return
-}
-
-
-func (bl *Block) CheckBlock() (er error) {
-	// Size limits
-	if len(bl.Raw)<81 || len(bl.Raw)>1e6 {
-		return errors.New("CheckBlock() : size limits failed")
-	}
-
-	// Check timestamp (must not be higher than now +2 minutes)
-	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
-		return errors.New("CheckBlock() : block timestamp too far in the future")
-	}
-
-	er = bl.BuildTxList()
-	if er != nil {
-		return
-	}
-	
-	if !bl.Trusted {
-		// First transaction must be coinbase, the rest must not be
-		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
-			return errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
-		}
-		for i:=1; i<len(bl.Txs); i++ {
-			if bl.Txs[i].IsCoinBase() {
-				return errors.New("CheckBlock() : more than one coinbase")
-			}
-		}
-
-		// Check Merkle Root
-		if !bytes.Equal(getMerkel(bl.Txs), bl.MerkleRoot) {
-			return errors.New("CheckBlock() : Merkle Root mismatch")
-		}
-		
-		// Check transactions
-		for i:=0; i<len(bl.Txs); i++ {
-			er = bl.Txs[i].CheckTransaction()
-			if er!=nil {
-				return errors.New("CheckBlock() : CheckTransaction failed\n"+er.Error())
-			}
-		}
-	}
-
-	return 
 }
 
 
