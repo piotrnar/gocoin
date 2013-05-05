@@ -24,6 +24,7 @@ var (
 	proxy *string = flag.String("c", "", "Connect to this host")
 	server *bool = flag.Bool("l", false, "Enable TCP server (allow incomming connections)")
 	datadir *string = flag.String("d", "", "Specify Gocoin's database root folder")
+	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -41,7 +42,7 @@ var (
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
-	netChannel chan *NetCommand = make(chan *NetCommand, 100)
+	netBlocks chan *blockRcvd = make(chan *blockRcvd, 300)
 	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
@@ -60,6 +61,12 @@ var (
 
 	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
 )
+
+
+type blockRcvd struct {
+	conn *oneConnection
+	bl *btc.Block
+}
 
 
 func Busy(b string) {
@@ -201,21 +208,30 @@ func retry_cached_blocks() bool {
 	if len(cachedBlocks)==0 {
 		return false
 	}
-	if len(netChannel) > 0 {
+	if len(netBlocks) > 0 {
 		return true
 	}
 	for k, v := range cachedBlocks {
-		e := BlockChain.AcceptBlock(v)
+		e, _, maybelater := BlockChain.CheckBlock(v)
 		if e == nil {
-			//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
-			delete(cachedBlocks, k)
-			LastBlock = BlockChain.BlockTreeEnd
-			LastBlockReceived = time.Now().Unix()
-			return len(cachedBlocks)>0
-		} else if e.Error()!=btc.ErrParentNotFound {
-			panic(e.Error())
-			delete(cachedBlocks, k)
-			return len(cachedBlocks)>0
+			e := BlockChain.AcceptBlock(v)
+			if e == nil {
+				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
+				delete(cachedBlocks, k)
+				LastBlock = BlockChain.BlockTreeEnd
+				LastBlockReceived = time.Now().Unix()
+				return len(cachedBlocks)>0
+			} else {
+				println("retry AcceptBlock:", e.Error())
+				delete(cachedBlocks, k)
+				return len(cachedBlocks)>0
+			}
+		} else {
+			if !maybelater {
+				println("retry CheckBlock:", e.Error())
+				delete(cachedBlocks, k)
+				return len(cachedBlocks)>0
+			}
 		}
 	}
 	return false
@@ -271,8 +287,35 @@ func blocksNeeded() (res []byte) {
 }
 
 
+func netBlockReceived(conn *oneConnection, b []byte) {
+	bl, e := btc.NewBlock(b)
+	if e != nil {
+		conn.DoS()
+		println("NewBlock:", e.Error())
+		return
+	}
+
+	mutex.Lock()
+	idx := bl.Hash.BIdx()
+	if _, got := receivedBlocks[idx]; got {
+		if _, ok := pendingBlocks[idx]; ok {
+			panic("wtf?")
+		} else {
+			BlockDups++
+		}
+		mutex.Unlock()
+		return
+	}
+	receivedBlocks[idx] = time.Now().UnixNano()
+	delete(pendingBlocks, idx)
+	mutex.Unlock()
+
+	netBlocks <- &blockRcvd{conn:conn, bl:bl}
+}
+
+
 func blockDataNeeded() ([]byte) {
-	for len(pendingFifo)>0 {
+	for len(pendingFifo)>0 && len(netBlocks)<200 {
 		idx := <- pendingFifo
 		mutex.Lock()
 		if _, hadit := receivedBlocks[idx]; !hadit {
@@ -500,16 +543,16 @@ func main() {
 
 	go do_userif()
 
-	var netmsg *NetCommand
+	var newbl *blockRcvd
 	for !exit_now {
 		if retryCachedBlocks {
-			Busy("retry_cached_blocks")
+			Busy("retry_cached_blocks 1")
 			retryCachedBlocks = retry_cached_blocks()
 		}
 
 		Busy("")
 		select {
-			case netmsg = <-netChannel:
+			case newbl = <-netBlocks:
 				break
 			
 			case cmd := <-uiChannel:
@@ -529,55 +572,39 @@ func main() {
 		}
 
 		NetMsgsCnt++
-		if netmsg.cmd=="bl" {
-			Busy("NewBlock")
-			bl, e := btc.NewBlock(netmsg.dat[:])
-			if e == nil {
-				idx := bl.Hash.BIdx()
-				mutex.Lock()
-				if _, got := receivedBlocks[idx]; got {
-					if _, ok := pendingBlocks[idx]; ok {
-						panic("wtf?")
-					} else {
-						BlockDups++
-					}
-					mutex.Unlock()
-				} else {
-					receivedBlocks[idx] = time.Now().UnixNano()
-					delete(pendingBlocks, idx)
-					mutex.Unlock()
-					
-					Busy("CheckBlock "+bl.Hash.String())
-					e = bl.CheckBlock()
-					if e == nil {
-						Busy("AcceptBlock "+bl.Hash.String())
-						e = BlockChain.AcceptBlock(bl)
-						if e == nil {
-							// block accepted, so route this inv to peers
-							NetSendInv(2, bl.Hash.Hash[:], netmsg.conn)
-							if beep {
-								print("\007")
-							}
-							retryCachedBlocks = retry_cached_blocks()
-							mutex.Lock()
-							LastBlock = BlockChain.BlockTreeEnd
-							LastBlockReceived = time.Now().Unix()
-							mutex.Unlock()
-						} else if e.Error()==btc.ErrParentNotFound {
-							cachedBlocks[bl.Hash.BIdx()] = bl
-							//println("Store block", bl.Hash.String(), "->", bl.GetParent().String(), "for later", len(blocksWithNoParent))
-						} else {
-							println("AcceptBlock:", e.Error())
-							netmsg.conn.DoS()
-						}
-					} else {
-						println("CheckBlock:", e.Error(), LastBlock.Height)
-						netmsg.conn.DoS()
-					}
-				}
+
+		bl := newbl.bl
+
+		Busy("CheckBlock "+bl.Hash.String())
+		e, dos, maybelater := BlockChain.CheckBlock(bl)
+		if e != nil {
+			if maybelater {
+				cachedBlocks[bl.Hash.BIdx()] = bl
 			} else {
-				println("NewBlock:", e.Error())
-				netmsg.conn.DoS()
+				println(dos, e.Error())
+				if dos {
+					newbl.conn.DoS()
+				}
+			}
+		} else {
+			Busy("AcceptBlock "+bl.Hash.String())
+			e = BlockChain.AcceptBlock(bl)
+			if e == nil {
+				// block accepted, so route this inv to peers
+				Busy("NetSendInv")
+				NetSendInv(2, bl.Hash.Hash[:], newbl.conn)
+				if beep {
+					print("\007")
+				}
+				Busy("retry_cached_blocks 2")
+				retryCachedBlocks = retry_cached_blocks()
+				mutex.Lock()
+				LastBlock = BlockChain.BlockTreeEnd
+				LastBlockReceived = time.Now().Unix()
+				mutex.Unlock()
+			} else {
+				println("AcceptBlock:", e.Error())
+				newbl.conn.DoS()
 			}
 		}
 	}
