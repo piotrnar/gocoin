@@ -8,23 +8,19 @@ import (
 	"strconv"
 )
 
-const secondsBack = 5  // timespan on which we measure the speed
-
-
 var (
 	bw_mutex sync.Mutex
 
-	tot_up, tot_dn uint64
-
-	siz_sent map[uint32]uint64 = make(map[uint32]uint64, secondsBack)
-	sec_sent uint32
-
-	siz_rcvd map[uint32]uint64 = make(map[uint32]uint64, secondsBack)
-	sec_rcvd uint32
+	dl_last_sec int64
+	dl_bytes_so_far uint64
+	dl_bytes_prv_sec uint64
+	dl_bytes_total uint64
 
 	UploadLimit uint64 // in bytes per second
-	last_sec int64
-	bytes_so_far uint64
+	ul_last_sec int64
+	ul_bytes_so_far uint64
+	ul_bytes_prv_sec uint64
+	ul_bytes_total uint64
 )
 
 
@@ -41,40 +37,65 @@ func set_ulmax(par string) {
 }
 
 
+func bw_stats(par string) {
+	fmt.Printf("Dowloading at %d KB/s.  Downloaded %d MB total\n",
+		dl_bytes_prv_sec>>10, dl_bytes_total>>20)
+	fmt.Printf(" Uploading at %d KB/s.  Uploaded %d MB total.  Limit %d B/s\n",
+		ul_bytes_prv_sec>>10, ul_bytes_total>>20, UploadLimit)
+	return
+}
+
+
 func init() {
+	newUi("bw", false, bw_stats, "Show network bandwidth statistics")
 	newUi("maxu", false, set_ulmax, "Set maximum upload speed. The value is in KB/second")
-	go expire_records()
 }
 
 
 func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	n, e = con.Read(buf)
-	bw_got(n)
+	if e == nil {
+		bw_mutex.Lock()
+		now := time.Now().Unix()
+		if now != dl_last_sec {
+			dl_bytes_prv_sec = dl_bytes_so_far
+			dl_bytes_so_far = 0
+			dl_last_sec = now
+		}
+		dl_bytes_so_far += uint64(n)
+		dl_bytes_total += uint64(n)
+		bw_mutex.Unlock()
+	}
 	return
 }
 
 
 // Send all the bytes, but respect the upload limit (force delays)
 func SockWrite(con *net.TCPConn, buf []byte) (e error) {
+	bw_mutex.Lock()
+	ul_bytes_total += uint64(len(buf))
+	bw_mutex.Unlock()
+	_, e = con.Write(buf)
+	return
 	var n, sent, left2send, now2send int
 	var now int64
 	for sent < len(buf) {
 		now = time.Now().Unix()
 		left2send = len(buf) - sent
 		bw_mutex.Lock()
-		if now!=last_sec {
-			last_sec = now
-			bytes_so_far = 0
+		if now!=ul_last_sec {
+			ul_last_sec = now
+			ul_bytes_so_far = 0
 		}
 		if UploadLimit==0 {
 			now2send = left2send
 		} else {
-			now2send = int(UploadLimit-bytes_so_far)
+			now2send = int(UploadLimit-ul_bytes_so_far)
 			if now2send > left2send {
 				now2send = left2send
 			}
 		}
-		bytes_so_far += uint64(now2send)
+		ul_bytes_so_far += uint64(now2send)
 		bw_mutex.Unlock()
 		
 		if now2send>0 {
@@ -83,7 +104,6 @@ func SockWrite(con *net.TCPConn, buf []byte) (e error) {
 				return
 			}
 			sent += n
-			bw_sent(n)
 		}
 		time.Sleep(250e6) // wait 250ms
 	}
@@ -91,60 +111,3 @@ func SockWrite(con *net.TCPConn, buf []byte) (e error) {
 }
 
 
-func expire_records() {
-	for {
-		now := uint32(time.Now().Unix())
-		bw_mutex.Lock()
-		for k, _ := range siz_sent {
-			if k<now-secondsBack {
-				delete(siz_sent, k)
-			}
-		}
-		for k, _ := range siz_rcvd {
-			if k<now-secondsBack {
-				delete(siz_rcvd, k)
-			}
-		}
-		bw_mutex.Unlock()
-		time.Sleep(1e9)
-	}
-}
-
-
-func bw_sent(siz int) {
-	bw_mutex.Lock()
-	tot_up += uint64(siz)
-	now := uint32(time.Now().Unix())
-	siz_sent[now] = uint64(siz)
-	bw_mutex.Unlock()
-}
-
-func bw_got(siz int) {
-	bw_mutex.Lock()
-	tot_dn += uint64(siz)
-	now := uint32(time.Now().Unix())
-	siz_rcvd[now] = uint64(siz)
-	bw_mutex.Unlock()
-}
-
-
-func bw_stats() (s string) {
-	var sum uint64
-	
-	bw_mutex.Lock()
-	now := uint32(time.Now().Unix())
-
-	for i := now-secondsBack; i<=now; i++ {
-		sum += siz_rcvd[i]
-	}
-	s += fmt.Sprintf("DOWN:[%d KB/s,  %d MB tot]  ", (sum/secondsBack)>>10, tot_dn>>20)
-	
-	sum = 0
-	for i := now-secondsBack; i<=now; i++ {
-		sum += siz_sent[i]
-	}
-	s += fmt.Sprintf(" UP:[%d KB/s, %d MB tot]", (sum/secondsBack)>>10, tot_up>>20)
-
-	bw_mutex.Unlock()
-	return
-}
