@@ -176,7 +176,10 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				if bl.Trusted {
 					taskDone <- true
 				} else {
-					go verify(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
+					go func() {
+						taskDone <- VerifyTxScript(bl.Txs[i].TxIn[j].ScriptSig, 
+							tout.Pk_script, j, bl.Txs[i])
+					}()
 				}
 				
 				// Verify Transaction script:
