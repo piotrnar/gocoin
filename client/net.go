@@ -220,7 +220,8 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 	sh := btc.Sha2Sum(c.dat)
 	if !bytes.Equal(c.hdr[20:24], sh[:4]) {
-		println("Msg checksum error")
+		println(c.addr.Ip(), "Msg checksum error")
+		c.DoS()
 		c.hdr_len = 0
 		c.dat = nil
 		c.broken = true
@@ -240,6 +241,8 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 
 func (c *oneConnection) AnnounceOwnAddr() {
+	c.SendRawMsg("getaddr", nil) // ask for his addresses BTW
+
 	if MyExternalAddr == nil {
 		return
 	}
@@ -659,6 +662,8 @@ func do_one_connection(c *oneConnection) {
 	}
 	if c.ban {
 		c.addr.Ban()
+	} else {
+		c.addr.Dead()
 	}
 	if dbg>0 {
 		println("Disconnected from", c.addr.Ip())
@@ -782,8 +787,10 @@ func network_process() {
 			ad := getBestPeer()
 			if ad != nil {
 				do_network(ad)
-			} else if *proxy=="" {
-				println("no new peers", len(openCons), conn_cnt)
+			} else {
+				if dbg>0 {
+					println("no new peers", len(openCons), conn_cnt)
+				}
 			}
 		}
 		time.Sleep(250e6)
