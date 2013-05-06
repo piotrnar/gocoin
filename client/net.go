@@ -670,8 +670,6 @@ func do_one_connection(c *oneConnection) {
 	}
 	if c.ban {
 		c.addr.Ban()
-	} else {
-		c.addr.Dead()
 	}
 	if dbg>0 {
 		println("Disconnected from", c.addr.Ip())
@@ -779,6 +777,7 @@ func do_network(ad *onePeer) {
 		delete(openCons, ad.UniqID())
 		OutConsActive--
 		mutex.Unlock()
+		ad.Dead()
 	}()
 }
 
