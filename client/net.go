@@ -483,8 +483,8 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		if len(c.sendbuf) >= MaxBytesInSendBuffer {
 			if dbg > 0 {
 				println(c.addr.Ip(), "Too many bytes")
-				break
 			}
+			break
 		}
 	}
 }
