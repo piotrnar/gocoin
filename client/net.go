@@ -23,11 +23,13 @@ const (
 
 	SendAddrsEvery = (15*60) // 15 minutes
 
-	MaxInCons = 24
+	MaxInCons = 8
 	MaxOutCons = 8
 	MaxTotCons = MaxInCons+MaxOutCons
 
 	NoDataTimeout = 60
+
+	MaxBytesInSendBuffer = 1024*1024 // If we have more than this in the send buffer, we send no more responses
 )
 
 
@@ -93,13 +95,6 @@ type BCmsg struct {
 
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	/*
-	if c.sendbuf != nil {
-		println(c.addr.Ip(), "SendRawMsg", cmd, "while sendbuf is not nil", string(c.sendbuf[4:16]))
-		return
-	}
-	*/
-
 	sbuf := make([]byte, 24+len(pl))
 
 	c.last_cmd = cmd+"*"
@@ -520,7 +515,9 @@ func (c *oneConnection) Tick() {
 			}
 		}
 		if e != nil {
-			println(c.addr.Ip(), "Connection broken during send")
+			if dbg > 0 {
+				println(c.addr.Ip(), "Connection broken during send")
+			}
 			c.broken = true
 		}
 		return
@@ -571,7 +568,7 @@ func do_one_connection(c *oneConnection) {
 	c.LastDataGot = uint32(time.Now().Unix())
 	c.NextAddrSent = c.LastDataGot + 10  // send address 10 seconds from now
 
-	for {
+	for !c.broken {
 		c.loops++
 		cmd := c.FetchMessage()
 		if c.broken {
@@ -627,13 +624,25 @@ func do_one_connection(c *oneConnection) {
 				netBlockReceived(c, cmd.pl)
 
 			case "getblocks":
-				c.ProcessGetBlocks(cmd.pl)
+				if len(c.sendbuf) < MaxBytesInSendBuffer {
+					c.ProcessGetBlocks(cmd.pl)
+				} else {
+					println("Ignore getblocks")
+				}
 
 			case "getdata":
-				c.ProcessGetData(cmd.pl)
+				if len(c.sendbuf) < MaxBytesInSendBuffer {
+					c.ProcessGetData(cmd.pl)
+				} else {
+					println("Ignore getdata")
+				}
 
 			case "getaddr":
-				c.AnnounceOwnAddr()
+				if len(c.sendbuf) < MaxBytesInSendBuffer {
+					c.AnnounceOwnAddr()
+				} else {
+					println("Ignore getaddr")
+				}
 
 			case "alert": // do nothing
 
