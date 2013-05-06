@@ -420,17 +420,19 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			break
 		}
 	}
-	inv := new(bytes.Buffer)
-	btc.WriteVlen(inv, uint32(len(invs)))
-	for k, _ := range invs {
-		binary.Write(inv, binary.LittleEndian, uint32(2))
-		inv.Write(k[:])
+	if len(invs) > 0 {
+		inv := new(bytes.Buffer)
+		btc.WriteVlen(inv, uint32(len(invs)))
+		for k, _ := range invs {
+			binary.Write(inv, binary.LittleEndian, uint32(2))
+			inv.Write(k[:])
+		}
+		if dbg>1 {
+			fmt.Println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
+		}
+		InvsSent++
+		c.SendRawMsg("inv", inv.Bytes())
 	}
-	if dbg>1 {
-		fmt.Println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
-	}
-	InvsSent++
-	c.SendRawMsg("inv", inv.Bytes())
 }
 
 
