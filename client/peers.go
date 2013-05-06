@@ -201,7 +201,7 @@ func getBestPeer() (p *onePeer) {
 	var best_time uint32
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
-		if ad.Ip4!=[4]byte{127,0,0,1} {
+		if ad.Banned!=0 && ad.Ip4!=[4]byte{127,0,0,1} {
 			if ad.Time > best_time && !connectionActive(ad) {
 				best_time = ad.Time
 				p = ad
