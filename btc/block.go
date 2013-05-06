@@ -38,12 +38,6 @@ func NewBlock(data []byte) (*Block, error) {
 }
 
 
-func calcHash(h **Uint256, b []byte, ) {
-	*h = NewSha2Hash(b[:])
-	taskDone <- true
-}
-
-
 func (bl *Block) BuildTxList() (e error) {
 	offs := int(80)
 	txcnt, n := VLen(bl.Raw[offs:])
@@ -58,7 +52,10 @@ func (bl *Block) BuildTxList() (e error) {
 		_ = <- taskDone // wait if we have too many threads already
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		bl.Txs[i].Size = uint32(n)
-		go calcHash(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
+		go func() {
+			bl.Txs[i].Hash = NewSha2Hash(bl.Raw[offs:offs+n])
+			taskDone <- true
+		}()
 		offs += n
 	}
 	
