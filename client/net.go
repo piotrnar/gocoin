@@ -49,7 +49,6 @@ type oneConnection struct {
 	
 	broken bool // maker that the conenction has been broken
 	ban bool // ban this client after disconnecting
-	writing bool // we are currently busy writing to the socket
 
 	listen bool
 	*net.TCPConn
@@ -62,6 +61,11 @@ type oneConnection struct {
 
 	dat []byte
 	datlen uint32
+
+	sendbuf []byte
+	sentsofar int
+
+	loops, ticks uint
 
 	invs2send []*[36]byte
 
@@ -88,66 +92,30 @@ type BCmsg struct {
 }
 
 
-func (c *oneConnection) Send(b []byte) (e error) {
-	var n, sent int
-	for sent < len(b) {
-		if c.broken {
-			e = errors.New("Connection dropped while writing")
-			return
-		}
-		n, e = SockWrite(c.TCPConn, b[sent:])
-		sent += n
-		if e != nil {
-			return
-		}
-	}
-	return
-}
-
-
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	var b [20]byte
+	/*
+	if c.sendbuf != nil {
+		println(c.addr.Ip(), "SendRawMsg", cmd, "while sendbuf is not nil", string(c.sendbuf[4:16]))
+		return
+	}
+	*/
+
+	sbuf := make([]byte, 24+len(pl))
 
 	c.last_cmd = cmd+"*"
-	c.writing = true
 
-	binary.LittleEndian.PutUint32(b[0:4], Version)
-	copy(b[0:4], Magic[:])
-	copy(b[4:16], cmd)
-	binary.LittleEndian.PutUint32(b[16:20], uint32(len(pl)))
-	e = c.Send(b[:20])
-	if e != nil {
-		if dbg > 0 {
-			println("SendRawMsg 1", e.Error())
-		}
-		c.broken = true
-		c.writing = false
-		return
-	}
+	binary.LittleEndian.PutUint32(sbuf[0:4], Version)
+	copy(sbuf[0:4], Magic[:])
+	copy(sbuf[4:16], cmd)
+	binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 
 	sh := btc.Sha2Sum(pl[:])
-	e = c.Send(sh[:4])
-	if e != nil {
-		if dbg > 0 {
-			println("SendRawMsg 2", e.Error())
-		}
-		c.broken = true
-		c.writing = false
-		return
-	}
+	copy(sbuf[20:24], sh[:4])
+	copy(sbuf[24:], pl)
 
-	e = c.Send(pl[:])
-	if e != nil {
-		if dbg > 0 {
-			println("SendRawMsg 3", e.Error())
-		}
-		c.broken = true
-	}
+	c.sendbuf = append(c.sendbuf, sbuf...)
 
-	c.BytesSent += uint64(24+len(pl))
-	c.last_cmd = cmd
-
-	c.writing = false
+	//println(len(c.sendbuf), "queued for seding to", c.addr.Ip())
 	return
 }
 
@@ -277,6 +245,9 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 
 func (c *oneConnection) AnnounceOwnAddr() {
+	if MyExternalAddr == nil {
+		return
+	}
 	var buf [31]byte
 	now := uint32(time.Now().Unix())
 	c.NextAddrSent = now+SendAddrsEvery
@@ -530,6 +501,36 @@ func (c *oneConnection) SendInvs(i2s []*[36]byte) {
 
 
 func (c *oneConnection) Tick() {
+	c.ticks++
+
+	if c.sendbuf != nil {
+		max2send := len(c.sendbuf) - c.sentsofar
+		if max2send > 4096 {
+			max2send = 4096
+		}
+		n, e := SockWrite(c.TCPConn, c.sendbuf[c.sentsofar:])
+		if n > 0 {
+			c.LastDataGot = uint32(time.Now().Unix())
+			c.BytesSent += uint64(n)
+			c.sentsofar += n
+			//println(c.addr.Ip(), max2send, "...", c.sentsofar, n, e)
+			if c.sentsofar >= len(c.sendbuf) {
+				c.sendbuf = nil
+				c.sentsofar = 0
+			}
+		}
+		if e != nil {
+			println(c.addr.Ip(), "Connection broken during send")
+			c.broken = true
+		}
+		return
+	}
+
+	if !c.ver_ack_received {
+		// If we have no ack, do nothing more.
+		return
+	}
+	
 	// Need to send getblocks...?
 	if tmp := blocksNeeded(); tmp != nil {
 		c.GetBlocks(tmp)
@@ -555,7 +556,7 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	if *server && (c.NextAddrSent==0 || uint32(time.Now().Unix()) >= c.NextAddrSent) {
+	if *server && uint32(time.Now().Unix()) >= c.NextAddrSent {
 		c.AnnounceOwnAddr()
 		return
 	}
@@ -568,7 +569,10 @@ func do_one_connection(c *oneConnection) {
 	}
 
 	c.LastDataGot = uint32(time.Now().Unix())
+	c.NextAddrSent = c.LastDataGot + 10  // send address 10 seconds from now
+
 	for {
+		c.loops++
 		cmd := c.FetchMessage()
 		if c.broken {
 			break
@@ -584,13 +588,14 @@ func do_one_connection(c *oneConnection) {
 					println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
 				}
 				break
-			} else if c.ver_ack_received {
+			} else {
 				c.Tick()
 			}
 			continue
 		}
 		
 		c.LastDataGot = now
+		c.last_cmd = cmd.cmd
 
 		c.addr.Alive()
 
@@ -821,18 +826,13 @@ func net_stats(par string) {
 	}
 	sort.Sort(srt)
 	var tosnt, totrec uint64
-	fmt.Print("                        Remote IP      LastCmd     Connected    LastActive")
+	fmt.Print("                      Remote IP      LastCmd     Connected    LastActive")
 	fmt.Print("    Received         Sent")
 	//fmt.Print("    Version  UserAgent             Height   Addr Sent")
 	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx]]
 		fmt.Printf("%4d) ", idx+1)
-		if v.writing {
-			fmt.Print("w ")
-		} else {
-			fmt.Print("  ")
-		}
 
 		if v.listen {
 			fmt.Print("<- ")
@@ -848,11 +848,20 @@ func net_stats(par string) {
 			fmt.Print(bts2str(v.BytesSent))
 		}
 		if v.node.version!=0 {
-			fmt.Printf("  [%d * %s * %d]", v.node.version, v.node.agent, v.node.height)
+			//fmt.Printf("  [%d * %s * %d]", v.node.version, v.node.agent, v.node.height)
+			fmt.Printf("  [%d / %d]", v.node.version, v.node.height)
 		}
 
+		/*
 		if v.NextAddrSent != 0 {
 			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
+		}
+		*/
+
+		//fmt.Print("  ts:", v.ticks, "  ls:", v.loops)
+
+		if v.sendbuf != nil {
+			fmt.Print("  tosend:", len(v.sendbuf) - v.sentsofar)
 		}
 
 		fmt.Println()
