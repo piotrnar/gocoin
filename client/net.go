@@ -29,7 +29,7 @@ const (
 
 	NoDataTimeout = 60
 
-	MaxBytesInSendBuffer = 1024*1024 // If we have more than this in the send buffer, we send no more responses
+	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
 )
 
 
@@ -437,6 +437,13 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		var typ uint32
 		var h [32]byte
 		
+		if len(c.sendbuf) >= MaxBytesInSendBuffer {
+			if dbg > 0 {
+				println(c.addr.Ip(), "Too many bytes")
+				break
+			}
+		}
+
 		e = binary.Read(b, binary.LittleEndian, &typ)
 		if e != nil {
 			println("ProcessGetData:", e.Error(), c.addr.Ip())
@@ -626,22 +633,22 @@ func do_one_connection(c *oneConnection) {
 			case "getblocks":
 				if len(c.sendbuf) < MaxBytesInSendBuffer {
 					c.ProcessGetBlocks(cmd.pl)
-				} else {
-					println("Ignore getblocks")
+				} else if dbg>0 {
+					println(c.addr.Ip(), "Ignore getblocks")
 				}
 
 			case "getdata":
 				if len(c.sendbuf) < MaxBytesInSendBuffer {
 					c.ProcessGetData(cmd.pl)
-				} else {
-					println("Ignore getdata")
+				} else if dbg>0 {
+					println(c.addr.Ip(), "Ignore getdata")
 				}
 
 			case "getaddr":
 				if len(c.sendbuf) < MaxBytesInSendBuffer {
 					c.AnnounceOwnAddr()
-				} else {
-					println("Ignore getaddr")
+				} else if dbg>0 {
+					println(c.addr.Ip(), "Ignore getaddr")
 				}
 
 			case "alert": // do nothing
