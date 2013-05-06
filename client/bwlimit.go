@@ -56,10 +56,10 @@ func bw_stats(par string) {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	fmt.Printf("Downloading at %d KB/s. \tDownloaded %d MB total. \tLimit %d KB/s\n",
-		dl_bytes_prv_sec>>10, dl_bytes_total>>20, DownloadLimit>>10)
-	fmt.Printf("Uploading at %d KB/s.  \tUploaded   %d MB total. \tLimit %d KB/s\n",
-		ul_bytes_prv_sec>>10, ul_bytes_total>>20, UploadLimit>>10)
+	fmt.Printf("Downloading at %d/%d KB/s     %d MB total\n",
+		dl_bytes_prv_sec>>10, DownloadLimit>>10, dl_bytes_total>>20)
+	fmt.Printf("Uploading at %d/%d KB/s    %d MB total\n",
+		ul_bytes_prv_sec>>10, UploadLimit>>10, ul_bytes_total>>20)
 	bw_mutex.Unlock()
 	return
 }
