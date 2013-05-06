@@ -313,7 +313,7 @@ func (c *oneConnection) GetBlocks(lastbl []byte) {
 
 func (c *oneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
-		println("inv payload too short")
+		println(c.addr.Ip(), "inv payload too short", len(pl))
 		return
 	}
 	
