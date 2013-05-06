@@ -52,10 +52,10 @@ func (bl *Block) BuildTxList() (e error) {
 		_ = <- taskDone // wait if we have too many threads already
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		bl.Txs[i].Size = uint32(n)
-		go func() {
-			bl.Txs[i].Hash = NewSha2Hash(bl.Raw[offs:offs+n])
+		go func(b []byte) {
+			bl.Txs[i].Hash = NewSha2Hash(b)
 			taskDone <- true
-		}()
+		}(bl.Raw[offs:offs+n])
 		offs += n
 	}
 	
