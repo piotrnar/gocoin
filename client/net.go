@@ -38,6 +38,8 @@ var (
 	
 	DefaultTcpPort uint16
 	MyExternalAddr *btc.NetAddr
+
+	ConnTimeoutCnt uint64
 )
 
 type oneConnection struct {
@@ -86,6 +88,23 @@ type BCmsg struct {
 }
 
 
+func (c *oneConnection) Send(b []byte) (e error) {
+	var n, sent int
+	for sent < len(b) {
+		if c.broken {
+			e = errors.New("Connection dropped while writing")
+			return
+		}
+		n, e = SockWrite(c.TCPConn, b[sent:])
+		sent += n
+		if e != nil {
+			return
+		}
+	}
+	return
+}
+
+
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	var b [20]byte
 
@@ -96,7 +115,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	copy(b[0:4], Magic[:])
 	copy(b[4:16], cmd)
 	binary.LittleEndian.PutUint32(b[16:20], uint32(len(pl)))
-	e = SockWrite(c.TCPConn, b[:20])
+	e = c.Send(b[:20])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 1", e.Error())
@@ -107,7 +126,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}
 
 	sh := btc.Sha2Sum(pl[:])
-	e = SockWrite(c.TCPConn, sh[:4])
+	e = c.Send(sh[:4])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 2", e.Error())
@@ -117,7 +136,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		return
 	}
 
-	e = SockWrite(c.TCPConn, pl[:])
+	e = c.Send(pl[:])
 	if e != nil {
 		if dbg > 0 {
 			println("SendRawMsg 3", e.Error())
@@ -553,8 +572,11 @@ func do_one_connection(c *oneConnection) {
 
 		if cmd==nil {
 			if int(now-c.LastDataGot) > NoDataTimeout {
-				println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
 				c.broken = true
+				ConnTimeoutCnt++
+				if dbg>0 {
+					println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
+				}
 				break
 			} else if c.ver_ack_received {
 				c.Tick()
@@ -832,8 +854,8 @@ func net_stats(par string) {
 		totrec += v.BytesReceived
 		tosnt += v.BytesSent
 	}
-	fmt.Printf("InvsSent:%d  BlockSent:%d  Received:%d MB, Sent %d MB\n", 
-		InvsSent, BlockSent, totrec>>20, tosnt>>20)
+	fmt.Printf("InvsSent:%d,  BlockSent:%d,  Timeouts:%d,  Received %d MB, Sent %d MB\n", 
+		InvsSent, BlockSent, ConnTimeoutCnt, totrec>>20, tosnt>>20)
 	if *server && MyExternalAddr!=nil {
 		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
 	}
