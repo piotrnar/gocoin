@@ -883,9 +883,9 @@ func node_info(par string) {
 
 func bts(val uint64) {
 	if val < 1e5*1024 {
-		fmt.Printf("%6.1f k ", float64(val)/1024)
+		fmt.Printf("%9.1f k ", float64(val)/1024)
 	} else {
-		fmt.Printf("%6.1f MB", float64(val)/(1024*1024))
+		fmt.Printf("%9.1f MB", float64(val)/(1024*1024))
 	}
 }
 
