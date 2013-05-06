@@ -1,7 +1,6 @@
 package main                   
 
 import (
-	"flag"
 	"sync"
 	"time"
 	"fmt"
@@ -17,8 +16,8 @@ var (
 	dl_bytes_prv_sec int
 	dl_bytes_total uint64
 
-	UploadLimit = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
-	DownloadLimit = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
+	UploadLimit uint
+	DownloadLimit uint
 
 	ul_last_sec int64
 	ul_bytes_so_far int
@@ -30,10 +29,10 @@ var (
 func set_ulmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		*UploadLimit = uint(v<<10)
+		UploadLimit = uint(v<<10)
 	}
-	if *UploadLimit!=0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", *UploadLimit>>10)
+	if UploadLimit!=0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", UploadLimit>>10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -43,10 +42,10 @@ func set_ulmax(par string) {
 func set_dlmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		*DownloadLimit = uint(v<<10)
+		DownloadLimit = uint(v<<10)
 	}
-	if *DownloadLimit!=0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", *DownloadLimit>>10)
+	if DownloadLimit!=0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", DownloadLimit>>10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -54,10 +53,14 @@ func set_dlmax(par string) {
 
 
 func bw_stats(par string) {
-	fmt.Printf("Dowloading at %d KB/s.  Downloaded %d MB total\n",
-		dl_bytes_prv_sec>>10, dl_bytes_total>>20)
-	fmt.Printf("Uploading at %d KB/s.  Uploaded %d MB total.  Limit %d B/s\n",
-		ul_bytes_prv_sec>>10, ul_bytes_total>>20, UploadLimit)
+	bw_mutex.Lock()
+	do_recv(0)
+	do_sent(0)
+	fmt.Printf("Downloading at %d KB/s. \tDownloaded %d MB total. \tLimit %d KB/s\n",
+		dl_bytes_prv_sec>>10, dl_bytes_total>>20, DownloadLimit>>10)
+	fmt.Printf("Uploading at %d KB/s.  \tUploaded   %d MB total. \tLimit %d KB/s\n",
+		ul_bytes_prv_sec>>10, ul_bytes_total>>20, UploadLimit>>10)
+	bw_mutex.Unlock()
 	return
 }
 
@@ -91,11 +94,11 @@ func count_rcvd(n int) {
 func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
-	if *DownloadLimit==0 {
+	if DownloadLimit==0 {
 		toread = len(buf)
 	} else {
 		do_recv(0)
-		toread = int(*DownloadLimit) - dl_bytes_so_far
+		toread = int(DownloadLimit) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
 		}
@@ -133,18 +136,20 @@ func count_sent(n int) {
 func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
-	if *UploadLimit==0 {
+	if UploadLimit==0 {
 		tosend = len(buf)
 	} else {
 		do_sent(0)
-		tosend = int(*UploadLimit) - ul_bytes_so_far
+		tosend = int(UploadLimit) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
 		}
 	}
 	bw_mutex.Unlock()
-	n, e = con.Write(buf[:tosend])
-	count_sent(n)
+	if tosend > 0 {
+		n, e = con.Write(buf[:tosend])
+		count_sent(n)
+	}
 	return
 }
 
