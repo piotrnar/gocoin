@@ -90,8 +90,7 @@ func count_sent(n uint64) {
 
 
 // Send all the bytes, but respect the upload limit (force delays)
-func SockWrite(con *net.TCPConn, buf []byte) (e error) {
-	var n int
+func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	n, e = con.Write(buf)
 	if e == nil {
 		count_sent(uint64(n))
