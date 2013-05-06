@@ -154,7 +154,13 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	ul_bytes_total += uint64(tosend)
 	bw_mutex.Unlock()
 	if tosend > 0 {
+		con.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
 		n, e = con.Write(buf[:tosend])
+		if e != nil {
+			if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
+				e = nil
+			}
+		}
 	}
 	return
 }
