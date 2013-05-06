@@ -8,6 +8,7 @@ import (
 	"sort"
 	"bytes"
 	"errors"
+	"strconv"
 	"strings"
 	"crypto/rand"
 	"encoding/binary"
@@ -95,6 +96,11 @@ type BCmsg struct {
 
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	if len(c.sendbuf) > 1024*1024 {
+		println(c.addr.Ip(), "WTF??", cmd, c.last_cmd)
+		return
+	}
+	
 	sbuf := make([]byte, 24+len(pl))
 
 	c.last_cmd = cmd+"*"
@@ -440,13 +446,6 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		var typ uint32
 		var h [32]byte
 		
-		if len(c.sendbuf) >= MaxBytesInSendBuffer {
-			if dbg > 0 {
-				println(c.addr.Ip(), "Too many bytes")
-				break
-			}
-		}
-
 		e = binary.Read(b, binary.LittleEndian, &typ)
 		if e != nil {
 			println("ProcessGetData:", e.Error(), c.addr.Ip())
@@ -477,6 +476,13 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			}
 		} else {
 			println("getdata for type", typ, "not supported yet")
+		}
+
+		if len(c.sendbuf) >= MaxBytesInSendBuffer {
+			if dbg > 0 {
+				println(c.addr.Ip(), "Too many bytes")
+				break
+			}
 		}
 	}
 }
@@ -838,6 +844,51 @@ func (sk sortedkeys) Swap(a, b int) {
 }
 
 
+func node_info(par string) {
+	key, e := strconv.ParseUint(par, 16, 64)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	mutex.Lock()
+	if v, ok := openCons[key]; ok {
+		fmt.Printf("Connection to node %08x:\n", key)
+		if v.listen {
+			fmt.Println("Comming from", v.addr.Ip())
+		} else {
+			fmt.Println("Going to", v.addr.Ip())
+		}
+		if v.connectedAt != 0 {
+			now := time.Now().Unix()
+			fmt.Println(" Connected:", (now-v.connectedAt), "seconds ago")
+			fmt.Println(" Last data:", now-int64(v.addr.Time), "seconds ago")
+			fmt.Println(" Last command:", v.last_cmd)
+			fmt.Println(" Bytes received:", v.BytesReceived)
+			fmt.Println(" Bytes sent:", v.BytesSent)
+			fmt.Println(" Next 'addr': ", v.NextAddrSent-uint32(time.Now().Unix()), "seconds from now")
+			if v.node.version!=0 {
+				fmt.Println(" Node Version:", v.node.version)
+				fmt.Println(" User Agent:", v.node.agent)
+				fmt.Println(" Chain Height:", v.node.height)
+			}
+			fmt.Println(" Ticks:", v.ticks)
+			fmt.Println(" Loops:", v.loops)
+			if v.sendbuf != nil {
+				fmt.Println(" Bytes to send:", len(v.sendbuf), "-", v.sentsofar)
+			}
+			if len(v.invs2send)>0 {
+				fmt.Println(" Invs to send:", len(v.invs2send))
+			}
+		} else {
+			fmt.Println("Not yet connected")
+		}
+	} else {
+		fmt.Printf("There is no connection to node %08x\n", key)
+	}
+	mutex.Unlock()
+}
+
+
 func net_stats(par string) {
 	mutex.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
@@ -848,14 +899,10 @@ func net_stats(par string) {
 		cnt++
 	}
 	sort.Sort(srt)
-	var tosnt, totrec uint64
-	fmt.Print("                      Remote IP      LastCmd     Connected    LastActive")
-	fmt.Print("    Received         Sent")
-	//fmt.Print("    Version  UserAgent             Height   Addr Sent")
 	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx]]
-		fmt.Printf("%4d) ", idx+1)
+		fmt.Printf("%4d) %08x ", idx+1, srt[idx])
 
 		if v.listen {
 			fmt.Print("<- ")
@@ -863,37 +910,13 @@ func net_stats(par string) {
 			fmt.Print(" ->")
 		}
 		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd)
-		if v.connectedAt != 0 {
-			now := time.Now().Unix()
-			fmt.Printf("  %4d min ago", (now-v.connectedAt)/60)
-			fmt.Printf("  %4d sec ago", now-int64(v.addr.Time))
-			fmt.Print(bts2str(v.BytesReceived))
-			fmt.Print(bts2str(v.BytesSent))
+		if v.sendbuf !=nil {
+			fmt.Print("  Sending:", v.sentsofar, " / ", len(v.sendbuf))
 		}
-		if v.node.version!=0 {
-			//fmt.Printf("  [%d * %s * %d]", v.node.version, v.node.agent, v.node.height)
-			fmt.Printf("  [%d / %d]", v.node.version, v.node.height)
-		}
-
-		/*
-		if v.NextAddrSent != 0 {
-			fmt.Printf("  %2d min ago", (uint32(time.Now().Unix())-(v.NextAddrSent-SendAddrsEvery))/60)
-		}
-		*/
-
-		//fmt.Print("  ts:", v.ticks, "  ls:", v.loops)
-
-		if v.sendbuf != nil {
-			fmt.Print("  tosend:", len(v.sendbuf) - v.sentsofar)
-		}
-
 		fmt.Println()
-
-		totrec += v.BytesReceived
-		tosnt += v.BytesSent
 	}
-	fmt.Printf("InvsSent:%d,  BlockSent:%d,  Timeouts:%d,  Received %d MB, Sent %d MB\n", 
-		InvsSent, BlockSent, ConnTimeoutCnt, totrec>>20, tosnt>>20)
+	fmt.Printf("InvsSent:%d,  BlockSent:%d,  Timeouts:%d\n", 
+		InvsSent, BlockSent, ConnTimeoutCnt)
 	if *server && MyExternalAddr!=nil {
 		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
 	}
@@ -929,5 +952,7 @@ func net_drop(par string) {
 
 func init() {
 	newUi("net", false, net_stats, "Show network statistics")
+	newUi("node", false, node_info, "Show information about the specific node")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
+	
 }
