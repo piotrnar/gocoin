@@ -54,8 +54,8 @@ func set_dlmax(par string) {
 
 func bw_stats(par string) {
 	bw_mutex.Lock()
-	do_recv(0)
-	do_sent(0)
+	tick_recv()
+	tick_sent()
 	fmt.Printf("Downloading at %d KB/s. \tDownloaded %d MB total. \tLimit %d KB/s\n",
 		dl_bytes_prv_sec>>10, dl_bytes_total>>20, DownloadLimit>>10)
 	fmt.Printf("Uploading at %d KB/s.  \tUploaded   %d MB total. \tLimit %d KB/s\n",
@@ -72,21 +72,21 @@ func init() {
 }
 
 
-func do_recv(n int) {
+func tick_recv() {
 	now := time.Now().Unix()
 	if now != dl_last_sec {
 		dl_bytes_prv_sec = dl_bytes_so_far
 		dl_bytes_so_far = 0
 		dl_last_sec = now
 	}
-	dl_bytes_so_far += n
-	dl_bytes_total += uint64(n)
 }
 
 
 func count_rcvd(n int) {
 	bw_mutex.Lock()
-	do_recv(n)
+	tick_recv()
+	dl_bytes_so_far += n
+	dl_bytes_total += uint64(n)
 	bw_mutex.Unlock()
 }
 
@@ -94,40 +94,43 @@ func count_rcvd(n int) {
 func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
+	tick_recv()
 	if DownloadLimit==0 {
 		toread = len(buf)
 	} else {
-		do_recv(0)
 		toread = int(DownloadLimit) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
+		} else if toread < 0 {
+			toread = 0
 		}
 	}
+	dl_bytes_so_far += toread
+	dl_bytes_total += uint64(toread)
 	bw_mutex.Unlock()
 
 	if toread>0 {
 		n, e = con.Read(buf[:toread])
-		count_rcvd(n)
 	}
 	return
 }
 
 
-func do_sent(n int) {
+func tick_sent() {
 	now := time.Now().Unix()
 	if now != ul_last_sec {
 		ul_bytes_prv_sec = ul_bytes_so_far
 		ul_bytes_so_far = 0
 		ul_last_sec = now
 	}
-	ul_bytes_so_far += n
-	ul_bytes_total += uint64(n)
 }
 
 
 func count_sent(n int) {
 	bw_mutex.Lock()
-	do_sent(n)
+	tick_sent()
+	ul_bytes_so_far += n
+	ul_bytes_total += uint64(n)
 	bw_mutex.Unlock()
 }
 
@@ -136,19 +139,22 @@ func count_sent(n int) {
 func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
+	tick_sent()
 	if UploadLimit==0 {
 		tosend = len(buf)
 	} else {
-		do_sent(0)
 		tosend = int(UploadLimit) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
+		} else if tosend<0 {
+			tosend = 0
 		}
 	}
+	ul_bytes_so_far += tosend
+	ul_bytes_total += uint64(tosend)
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		n, e = con.Write(buf[:tosend])
-		count_sent(n)
 	}
 	return
 }
