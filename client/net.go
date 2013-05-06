@@ -231,6 +231,9 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			c.broken = true
 			return nil
 		}
+		if c.broken {
+			return nil
+		}
 	}
 
 	dlen :=  binary.LittleEndian.Uint32(c.hdr[16:20])
@@ -244,6 +247,9 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			c.datlen += uint32(n)
 			if e != nil {
 				c.HandleError(e)
+				return nil
+			}
+			if c.broken {
 				return nil
 			}
 		}
