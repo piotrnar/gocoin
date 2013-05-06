@@ -26,6 +26,8 @@ var (
 	server *bool = flag.Bool("l", false, "Enable TCP server (allow incomming connections)")
 	datadir *string = flag.String("d", "", "Specify Gocoin's database root folder")
 	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
+	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
+	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -529,6 +531,9 @@ func main() {
 		os.Exit(0)
 	}
 	flag.Parse()
+
+	UploadLimit = *maxul << 10
+	DownloadLimit = *maxdl << 10
 
 	host_init()
 
