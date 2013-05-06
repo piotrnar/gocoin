@@ -803,14 +803,6 @@ func network_process() {
 	}
 }
 
-func bts2str(val uint64) string {
-	if val < 1e5*1024 {
-		return fmt.Sprintf("%10.1f k ", float64(val)/1024)
-	}
-	return fmt.Sprintf("%10.1f MB", float64(val)/(1024*1024))
-}
-
-
 func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 	inv := new([36]byte)
 	
@@ -889,6 +881,15 @@ func node_info(par string) {
 }
 
 
+func bts(val uint64) {
+	if val < 1e5*1024 {
+		fmt.Printf("%6.1f k ", float64(val)/1024)
+	} else {
+		fmt.Printf("%6.1f MB", float64(val)/(1024*1024))
+	}
+}
+
+
 func net_stats(par string) {
 	mutex.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
@@ -909,9 +910,13 @@ func net_stats(par string) {
 		} else {
 			fmt.Print(" ->")
 		}
-		fmt.Printf(" %21s %12s", v.addr.Ip(), v.last_cmd)
-		if v.sendbuf !=nil {
-			fmt.Print("  Sending:", v.sentsofar, " / ", len(v.sendbuf))
+		fmt.Printf(" %21s  %-16s", v.addr.Ip(), v.last_cmd)
+		if v.connectedAt != 0 {
+			bts(v.BytesReceived)
+			bts(v.BytesSent)
+			if v.sendbuf !=nil {
+				fmt.Print("  ", v.sentsofar, "/", len(v.sendbuf))
+			}
 		}
 		fmt.Println()
 	}
