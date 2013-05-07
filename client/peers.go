@@ -133,7 +133,7 @@ func (p *onePeer) Alive() {
 
 
 func (p *onePeer) Dead() {
-	p.Time = uint32(time.Now().Unix()) - 600 // make it 10 min older
+	p.Time -= 600 // make it 10 min older
 	p.Save()
 }
 

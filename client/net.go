@@ -21,6 +21,7 @@ const (
 	Services = uint64(0x1)
 
 	SendAddrsEvery = (15*time.Minute)
+	AskAddrsEvery = (5*time.Minute)
 
 	MaxInCons = 8
 	MaxOutCons = 8
@@ -36,7 +37,7 @@ const (
 
 var (
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxTotCons)
-	InvsSent, BlockSent uint64
+	InvsSent, BlockSent, GetaddrCnt uint64
 	InConsActive, OutConsActive uint
 	
 	DefaultTcpPort uint16
@@ -94,6 +95,7 @@ type oneConnection struct {
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
 	NextAddrSent time.Time // When we shoudl annonce our "addr" again
+	NextGetAddr time.Time // When we shoudl issue "getaddr" again
 
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
 	
@@ -259,8 +261,6 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 
 func (c *oneConnection) AnnounceOwnAddr() {
-	c.SendRawMsg("getaddr", nil) // ask for his addresses BTW
-
 	if MyExternalAddr == nil {
 		return
 	}
@@ -630,6 +630,13 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
+	if time.Now().After(c.NextGetAddr) {
+		GetaddrCnt++
+		c.SendRawMsg("getaddr", nil)
+		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
+		return
+	}
+
 	if !c.NextAddrSent.IsZero() && time.Now().After(c.NextAddrSent) {
 		c.AnnounceOwnAddr()
 		return
@@ -644,8 +651,9 @@ func do_one_connection(c *oneConnection) {
 
 	c.LastDataGot = time.Now()                                                                     
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
+	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
 	if *server {
-		c.NextAddrSent = time.Now().Add(10*time.Second)  // announce own addres ~10 seconds from now
+		c.NextAddrSent = c.NextGetAddr
 	}
 
 	for !c.Broken {
