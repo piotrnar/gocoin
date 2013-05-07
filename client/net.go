@@ -333,41 +333,21 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
 
-	var blocks2get [][32]byte
-	var txs, blks uint32
+	var txs uint32
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		if typ==2 {
-			blks++
-			if InvsNotify(pl[of+4:of+36]) {
-				var inv [32]byte
-				copy(inv[:], pl[of+4:of+36])
-				blocks2get = append(blocks2get, inv)
-			}
+			InvsNotify(pl[of+4:of+36])
+			/*if cnt>100 && i==cnt-1 {
+				c.GetBlocks(pl[of+4:of+36])
+			}*/
 		} else {
 			txs++
 		}
 		of+= 36
 	}
-	if blks>=500 {
-		c.NextBlocksAsk = time.Now() // for another getblocks ASAP
-	}
 	if dbg>1 {
-		println(c.PeerAddr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs -> get", len(blocks2get), "blocks")
-	}
-	
-	if len(blocks2get) > 0 {
-		msg := make([]byte, 9/*maxvlen*/+len(blocks2get)*36)
-		le := btc.PutVlen(msg, len(blocks2get))
-		for i := range blocks2get {
-			binary.LittleEndian.PutUint32(msg[le:le+4], 2)
-			copy(msg[le+4:le+36], blocks2get[i][:])
-			le += 36
-		}
-		if dbg>0 {
-			println("getdata for", len(blocks2get), "/", cnt, "blocks", le)
-		}
-		c.SendRawMsg("getdata", msg[:le])
+		println(c.PeerAddr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs")
 	}
 	return
 }
@@ -559,7 +539,10 @@ func (c *oneConnection) SendInvs() (res bool) {
 
 
 func (c *oneConnection) blocksNeeded() bool {
-	if time.Now().After(c.NextBlocksAsk) {
+	mutex.Lock()
+	force := c.LastBlocksFrom != LastBlock
+	mutex.Unlock()
+	if force || time.Now().After(c.NextBlocksAsk) {
 		c.LastBlocksFrom = LastBlock
 
 		// Lock the blocktree while we're browsing through it
