@@ -129,7 +129,7 @@ func show_info(par string) {
 	fmt.Printf("InvsIgn:%d  BlockDups:%d  BlocksNeeded:%d  NetMsgs:%d/%d  UiMsgs:%d  GetaddrCnt:%d  Ticks:%d%s\n", 
 		InvsIgnored, BlockDups, BlocksNeeded, len(netBlocks), NetMsgsCnt, UiMsgsCnt, GetaddrCnt, TicksCnt, minago)
 	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
-	fmt.Printf("LastBlock's  Height:%d  TS:%s  Diff:%.0f\n", LastBlock.Height, 
+	fmt.Printf("LastBlock's  Height %d,  Time %s,  Difficulty %.1f\n", LastBlock.Height, 
 		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"), 
 		btc.GetDifficulty(LastBlock.Bits))
 	if busy!="" {
