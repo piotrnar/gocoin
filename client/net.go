@@ -49,11 +49,11 @@ var (
 
 type oneConnection struct {
 	// Source of this IP:
-	addr *onePeer
-	id uint32
+	PeerAddr *onePeer
+	ConnID uint32
 
-	broken bool // maker that the conenction has been broken
-	ban bool // ban this client after disconnecting
+	Broken bool // maker that the conenction has been Broken
+	BanIt bool // BanIt this client after disconnecting
 
 	// TCP connection data:
 	Incomming bool
@@ -61,7 +61,7 @@ type oneConnection struct {
 	
 	// Handshake data
 	ConnectedAt time.Time
-	ver_ack_received bool
+	VerackReceived bool
 
 	// Data from the version message
 	node struct {
@@ -73,21 +73,25 @@ type oneConnection struct {
 	}
 
 	// Messages reception state machine:
-	hdr [24]byte
-	hdr_len int
-	dat []byte
-	datlen uint32
+	recv struct {
+		hdr [24]byte
+		hdr_len int
+		dat []byte
+		datlen uint32
+	}
 
 	// Message sending state machine:
-	sendbuf []byte
-	sentsofar int
+	send struct {
+		buf []byte
+		sofar int
+	}
 
 	// Statistics:
-	loops, ticks uint  // just to see if the threads loop is alive
+	LoopCnt, TicksCnt uint  // just to see if the threads loop is alive
 	BytesReceived, BytesSent uint64
-	last_cmd string
+	LastCmdRcvd, LastCmdSent string
 
-	invs2send []*[36]byte // List of pending INV to send and the mutex protecting access to it
+	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
 	NextAddrSent time.Time // When we shoudl annonce our "addr" again
 
@@ -98,21 +102,15 @@ type oneConnection struct {
 }
 
 
-type BCmsg struct {
-	cmd string
-	pl  []byte
-}
-
-
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	if len(c.sendbuf) > 1024*1024 {
-		println(c.addr.Ip(), "WTF??", cmd, c.last_cmd)
+	if len(c.send.buf) > 1024*1024 {
+		println(c.PeerAddr.Ip(), "WTF??", cmd, c.LastCmdSent)
 		return
 	}
 	
 	sbuf := make([]byte, 24+len(pl))
 
-	c.last_cmd = cmd+"*"
+	c.LastCmdSent = cmd
 
 	binary.LittleEndian.PutUint32(sbuf[0:4], Version)
 	copy(sbuf[0:4], Magic[:])
@@ -123,16 +121,16 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[20:24], sh[:4])
 	copy(sbuf[24:], pl)
 
-	c.sendbuf = append(c.sendbuf, sbuf...)
+	c.send.buf = append(c.send.buf, sbuf...)
 
-	//println(len(c.sendbuf), "queued for seding to", c.addr.Ip())
+	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
 }
 
 
 func (c *oneConnection) DoS() {
-	c.ban = true
-	c.broken = true
+	c.BanIt = true
+	c.Broken = true
 }
 
 
@@ -183,12 +181,17 @@ func (c *oneConnection) HandleError(e error) (error) {
 	if dbg>0 {
 		println("HandleError:", e.Error())
 	}
-	c.hdr_len = 0
-	c.dat = nil
-	c.broken = true
+	c.recv.hdr_len = 0
+	c.recv.dat = nil
+	c.Broken = true
 	return e
 }
 
+
+type BCmsg struct {
+	cmd string
+	pl  []byte
+}
 
 func (c *oneConnection) FetchMessage() (*BCmsg) {
 	var e error
@@ -197,57 +200,57 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	// Try for 1 millisecond and timeout if full msg not received
 	c.TCPConn.SetReadDeadline(time.Now().Add(time.Millisecond))
 
-	for c.hdr_len < 24 {
-		n, e = SockRead(c.TCPConn, c.hdr[c.hdr_len:24])
-		c.hdr_len += n
+	for c.recv.hdr_len < 24 {
+		n, e = SockRead(c.TCPConn, c.recv.hdr[c.recv.hdr_len:24])
+		c.recv.hdr_len += n
 		if e != nil {
 			c.HandleError(e)
 			return nil
 		}
-		if c.hdr_len>=4 && !bytes.Equal(c.hdr[:4], Magic[:]) {
+		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
 			println("FetchMessage: Proto out of sync")
-			c.broken = true
+			c.Broken = true
 			return nil
 		}
-		if c.broken {
+		if c.Broken {
 			return nil
 		}
 	}
 
-	dlen :=  binary.LittleEndian.Uint32(c.hdr[16:20])
+	dlen :=  binary.LittleEndian.Uint32(c.recv.hdr[16:20])
 	if dlen > 0 {
-		if c.dat == nil {
-			c.dat = make([]byte, dlen)
-			c.datlen = 0
+		if c.recv.dat == nil {
+			c.recv.dat = make([]byte, dlen)
+			c.recv.datlen = 0
 		}
-		for c.datlen < dlen {
-			n, e = SockRead(c.TCPConn, c.dat[c.datlen:])
-			c.datlen += uint32(n)
+		for c.recv.datlen < dlen {
+			n, e = SockRead(c.TCPConn, c.recv.dat[c.recv.datlen:])
+			c.recv.datlen += uint32(n)
 			if e != nil {
 				c.HandleError(e)
 				return nil
 			}
-			if c.broken {
+			if c.Broken {
 				return nil
 			}
 		}
 	}
 
-	sh := btc.Sha2Sum(c.dat)
-	if !bytes.Equal(c.hdr[20:24], sh[:4]) {
-		println(c.addr.Ip(), "Msg checksum error")
+	sh := btc.Sha2Sum(c.recv.dat)
+	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
+		println(c.PeerAddr.Ip(), "Msg checksum error")
 		c.DoS()
-		c.hdr_len = 0
-		c.dat = nil
-		c.broken = true
+		c.recv.hdr_len = 0
+		c.recv.dat = nil
+		c.Broken = true
 		return nil
 	}
 
 	ret := new(BCmsg)
-	ret.cmd = strings.TrimRight(string(c.hdr[4:16]), "\000")
-	ret.pl = c.dat
-	c.dat = nil
-	c.hdr_len = 0
+	ret.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+	ret.pl = c.recv.dat
+	c.recv.dat = nil
+	c.recv.hdr_len = 0
 
 	c.BytesReceived += uint64(24+len(ret.pl))
 
@@ -321,7 +324,7 @@ func (c *oneConnection) GetBlocks(lastbl []byte) {
 
 func (c *oneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
-		println(c.addr.Ip(), "inv payload too short", len(pl))
+		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
 		return
 	}
 	
@@ -346,7 +349,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		of+= 36
 	}
 	if dbg>1 {
-		println(c.addr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs -> get", len(blocks2get), "blocks")
+		println(c.PeerAddr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs -> get", len(blocks2get), "blocks")
 	}
 	
 	if len(blocks2get) > 0 {
@@ -373,12 +376,12 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 	binary.LittleEndian.PutUint32(inv[0:4], typ)
 	copy(inv[4:36], h)
 	
-	// Append it to invs2send in each open connection
+	// Append it to PendingInvs in each open connection
 	mutex.Lock()
 	for _, v := range openCons {
 		if v != fromConn { // except for the one that this inv came from
-			if len(v.invs2send)<500 {
-				v.invs2send = append(v.invs2send, inv)
+			if len(v.PendingInvs)<500 {
+				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
 			}
 		}
@@ -407,12 +410,12 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	var ver uint32
 	e := binary.Read(b, binary.LittleEndian, &ver)
 	if e != nil {
-		println("ProcessGetBlocks:", e.Error(), c.addr.Ip())
+		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
-		println("ProcessGetBlocks:", e.Error(), c.addr.Ip())
+		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
 	h2get := make([]*btc.Uint256, cnt)
@@ -420,17 +423,17 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	for i:=0; i<int(cnt); i++ {
 		n, _ := b.Read(h[:])
 		if n != 32 {
-			println("getblocks too short", c.addr.Ip())
+			println("getblocks too short", c.PeerAddr.Ip())
 			return
 		}
 		h2get[i] = btc.NewUint256(h[:])
 		if dbg>1 {
-			println(c.addr.Ip(), "getbl", h2get[i].String())
+			println(c.PeerAddr.Ip(), "getbl", h2get[i].String())
 		}
 	}
 	n, _ := b.Read(h[:])
 	if n != 32 {
-		println("getblocks does not have hash_stop", c.addr.Ip())
+		println("getblocks does not have hash_stop", c.PeerAddr.Ip())
 		return
 	}
 	hashstop := btc.NewUint256(h[:])
@@ -458,7 +461,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			inv.Write(k[:])
 		}
 		if dbg>1 {
-			fmt.Println(c.addr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
+			fmt.Println(c.PeerAddr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
 		}
 		InvsSent++
 		c.SendRawMsg("inv", inv.Bytes())
@@ -467,11 +470,11 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 
 
 func (c *oneConnection) ProcessGetData(pl []byte) {
-	//println(c.addr.Ip(), "getdata")
+	//println(c.PeerAddr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
-		println("ProcessGetData:", e.Error(), c.addr.Ip())
+		println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
 	for i:=0; i<int(cnt); i++ {
@@ -480,13 +483,13 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		
 		e = binary.Read(b, binary.LittleEndian, &typ)
 		if e != nil {
-			println("ProcessGetData:", e.Error(), c.addr.Ip())
+			println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
 			return
 		}
 
 		n, _ := b.Read(h[:])
 		if n!=32 {
-			println("ProcessGetData: pl too short", c.addr.Ip())
+			println("ProcessGetData: pl too short", c.PeerAddr.Ip())
 			return
 		}
 
@@ -504,15 +507,15 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
 				c.SendRawMsg("tx", tx)
-				println("sent tx to", c.addr.Ip())
+				println("sent tx to", c.PeerAddr.Ip())
 			}
 		} else {
 			println("getdata for type", typ, "not supported yet")
 		}
 
-		if len(c.sendbuf) >= MaxBytesInSendBuffer {
+		if len(c.send.buf) >= MaxBytesInSendBuffer {
 			if dbg > 0 {
-				println(c.addr.Ip(), "Too many bytes")
+				println(c.PeerAddr.Ip(), "Too many bytes")
 			}
 			break
 		}
@@ -535,14 +538,14 @@ func (c *oneConnection) GetBlockData(h []byte) {
 func (c *oneConnection) SendInvs() (res bool) {
 	b := new(bytes.Buffer)
 	mutex.Lock()
-	if len(c.invs2send)>0 {
-		btc.WriteVlen(b, uint32(len(c.invs2send)))
-		for i := range c.invs2send {
-			b.Write((*c.invs2send[i])[:])
+	if len(c.PendingInvs)>0 {
+		btc.WriteVlen(b, uint32(len(c.PendingInvs)))
+		for i := range c.PendingInvs {
+			b.Write((*c.PendingInvs[i])[:])
 		}
 		res = true
 	}
-	c.invs2send = nil
+	c.PendingInvs = nil
 	mutex.Unlock()
 	if res {
 		c.SendRawMsg("inv", b.Bytes())
@@ -582,45 +585,45 @@ func (c *oneConnection) blocksNeeded() bool {
 
 
 func (c *oneConnection) Tick() {
-	c.ticks++
+	c.TicksCnt++
 
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
-		c.broken = true
+		c.Broken = true
 		ConnTimeoutCnt++
 		if dbg>0 {
-			println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
+			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
 		}
 		return
 	}
 
-	if c.sendbuf != nil {
-		max2send := len(c.sendbuf) - c.sentsofar
+	if c.send.buf != nil {
+		max2send := len(c.send.buf) - c.send.sofar
 		if max2send > 4096 {
 			max2send = 4096
 		}
-		n, e := SockWrite(c.TCPConn, c.sendbuf[c.sentsofar:])
+		n, e := SockWrite(c.TCPConn, c.send.buf[c.send.sofar:])
 		if n > 0 {
 			c.
 			LastDataGot = time.Now()
 			c.BytesSent += uint64(n)
-			c.sentsofar += n
-			//println(c.addr.Ip(), max2send, "...", c.sentsofar, n, e)
-			if c.sentsofar >= len(c.sendbuf) {
-				c.sendbuf = nil
-				c.sentsofar = 0
+			c.send.sofar += n
+			//println(c.PeerAddr.Ip(), max2send, "...", c.send.sofar, n, e)
+			if c.send.sofar >= len(c.send.buf) {
+				c.send.buf = nil
+				c.send.sofar = 0
 			}
 		}
 		if e != nil {
 			if dbg > 0 {
-				println(c.addr.Ip(), "Connection broken during send")
+				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
-			c.broken = true
+			c.Broken = true
 		}
 		return
 	}
 
-	if !c.ver_ack_received {
+	if !c.VerackReceived {
 		// If we have no ack, do nothing more.
 		return
 	}
@@ -656,10 +659,10 @@ func do_one_connection(c *oneConnection) {
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
 	c.NextAddrSent = time.Now().Add(10*time.Second)  // announce own addres ~10 seconds from now
 
-	for !c.broken {
-		c.loops++
+	for !c.Broken {
+		c.LoopCnt++
 		cmd := c.FetchMessage()
-		if c.broken {
+		if c.Broken {
 			break
 		}
 		
@@ -669,30 +672,29 @@ func do_one_connection(c *oneConnection) {
 		}
 		
 		c.LastDataGot = time.Now()
-		c.last_cmd = cmd.cmd
+		c.LastCmdRcvd = cmd.cmd
 
-		c.addr.Alive()
+		c.PeerAddr.Alive()
 
 		switch cmd.cmd {
 			case "version":
 				er := c.VerMsg(cmd.pl)
 				if er != nil {
 					println("version:", er.Error())
-					c.broken = true
+					c.Broken = true
 				} else if c.Incomming {
 					c.SendVersion()
 				}
 
 			case "verack":
-				//fmt.Println("Received Ver ACK")
-				c.ver_ack_received = true
+				c.VerackReceived = true
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
 			
 			case "tx": //ParseTx(cmd.pl)
 				println("tx unexpected here (now)")
-				c.broken = true
+				c.Broken = true
 			
 			case "addr":
 				ParseAddr(cmd.pl)
@@ -701,37 +703,37 @@ func do_one_connection(c *oneConnection) {
 				netBlockReceived(c, cmd.pl)
 
 			case "getblocks":
-				if len(c.sendbuf) < MaxBytesInSendBuffer {
+				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.ProcessGetBlocks(cmd.pl)
 				} else if dbg>0 {
-					println(c.addr.Ip(), "Ignore getblocks")
+					println(c.PeerAddr.Ip(), "Ignore getblocks")
 				}
 
 			case "getdata":
-				if len(c.sendbuf) < MaxBytesInSendBuffer {
+				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.ProcessGetData(cmd.pl)
 				} else if dbg>0 {
-					println(c.addr.Ip(), "Ignore getdata")
+					println(c.PeerAddr.Ip(), "Ignore getdata")
 				}
 
 			case "getaddr":
-				if len(c.sendbuf) < MaxBytesInSendBuffer {
+				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.AnnounceOwnAddr()
 				} else if dbg>0 {
-					println(c.addr.Ip(), "Ignore getaddr")
+					println(c.PeerAddr.Ip(), "Ignore getaddr")
 				}
 
 			case "alert": // do nothing
 
 			default:
-				println(cmd.cmd, "from", c.addr.Ip())
+				println(cmd.cmd, "from", c.PeerAddr.Ip())
 		}
 	}
-	if c.ban {
-		c.addr.Ban()
+	if c.BanIt {
+		c.PeerAddr.Ban()
 	}
 	if dbg>0 {
-		println("Disconnected from", c.addr.Ip())
+		println("Disconnected from", c.PeerAddr.Ip())
 	}
 	c.TCPConn.Close()
 }
@@ -754,9 +756,9 @@ func nextConnId() uint32 {
 func do_network(ad *onePeer) {
 	var e error
 	conn := new(oneConnection)
-	conn.addr = ad
+	conn.PeerAddr = ad
 	mutex.Lock()
-	conn.id = nextConnId()
+	conn.ConnID = nextConnId()
 	if _, ok := openCons[ad.UniqID()]; ok {
 		fmt.Println(ad.Ip(), "already connected")
 		mutex.Unlock()
@@ -840,11 +842,11 @@ func start_server() {
 				if ad != nil {
 					conn := new(oneConnection)
 					conn.ConnectedAt = time.Now()
-					conn.addr = ad
+					conn.PeerAddr = ad
 					conn.Incomming = true
 					conn.TCPConn = tc
 					mutex.Lock()
-					conn.id = nextConnId()
+					conn.ConnID = nextConnId()
 					if _, ok := openCons[ad.UniqID()]; ok {
 						fmt.Println(ad.Ip(), "already connected")
 						mutex.Unlock()
