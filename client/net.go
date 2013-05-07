@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"sort"
 	"bytes"
 	"errors"
-	"strconv"
 	"strings"
 	"crypto/rand"
 	"encoding/binary"
@@ -22,15 +20,17 @@ const (
 
 	Services = uint64(0x1)
 
-	SendAddrsEvery = (15*60) // 15 minutes
+	SendAddrsEvery = (15*time.Minute)
 
 	MaxInCons = 8
 	MaxOutCons = 8
 	MaxTotCons = MaxInCons+MaxOutCons
 
-	NoDataTimeout = 60
+	NoDataTimeout = 2*time.Minute
 
 	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
+	
+	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min 
 )
 
 
@@ -43,36 +43,25 @@ var (
 	MyExternalAddr *btc.NetAddr
 
 	ConnTimeoutCnt uint64
+	
+	LastConnId uint32
 )
 
 type oneConnection struct {
+	// Source of this IP:
 	addr *onePeer
+	id uint32
 
-	last_cmd string
-	
 	broken bool // maker that the conenction has been broken
 	ban bool // ban this client after disconnecting
 
-	listen bool
+	// TCP connection data:
+	Incomming bool
 	*net.TCPConn
 	
-	connectedAt int64
+	// Handshake data
+	ConnectedAt time.Time
 	ver_ack_received bool
-
-	hdr [24]byte
-	hdr_len int
-
-	dat []byte
-	datlen uint32
-
-	sendbuf []byte
-	sentsofar int
-
-	loops, ticks uint
-
-	invs2send []*[36]byte
-
-	BytesReceived, BytesSent uint64
 
 	// Data from the version message
 	node struct {
@@ -83,9 +72,29 @@ type oneConnection struct {
 		agent string
 	}
 
-	NextAddrSent uint32 // When we shoudl annonce our "addr" again
+	// Messages reception state machine:
+	hdr [24]byte
+	hdr_len int
+	dat []byte
+	datlen uint32
 
-	LastDataGot uint32 // if we have no data for some time, we abort this conenction
+	// Message sending state machine:
+	sendbuf []byte
+	sentsofar int
+
+	// Statistics:
+	loops, ticks uint  // just to see if the threads loop is alive
+	BytesReceived, BytesSent uint64
+	last_cmd string
+
+	invs2send []*[36]byte // List of pending INV to send and the mutex protecting access to it
+
+	NextAddrSent time.Time // When we shoudl annonce our "addr" again
+
+	LastDataGot time.Time // if we have no data for some time, we abort this conenction
+	
+	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
+	NextBlocksAsk time.Time           // when the next getblocks should be needed
 }
 
 
@@ -253,10 +262,9 @@ func (c *oneConnection) AnnounceOwnAddr() {
 		return
 	}
 	var buf [31]byte
-	now := uint32(time.Now().Unix())
-	c.NextAddrSent = now+SendAddrsEvery
+	c.NextAddrSent = time.Now().Add(SendAddrsEvery)
 	buf[0] = 1 // Only one address
-	binary.LittleEndian.PutUint32(buf[1:5], now)
+	binary.LittleEndian.PutUint32(buf[1:5], uint32(time.Now().Unix()))
 	ipd := MyExternalAddr.Bytes()
 	copy(buf[5:], ipd[:])
 	c.SendRawMsg("addr", buf[:])
@@ -291,7 +299,7 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 		return errors.New("Version message too short")
 	}
 	c.SendRawMsg("verack", []byte{})
-	if c.listen {
+	if c.Incomming {
 		c.SendVersion()
 	}
 	return nil
@@ -354,6 +362,28 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		}
 		c.SendRawMsg("getdata", msg[:le])
 	}
+	return
+}
+
+
+// This function is called from the main thread
+func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
+	// Prepare the inv
+	inv := new([36]byte)
+	binary.LittleEndian.PutUint32(inv[0:4], typ)
+	copy(inv[4:36], h)
+	
+	// Append it to invs2send in each open connection
+	mutex.Lock()
+	for _, v := range openCons {
+		if v != fromConn { // except for the one that this inv came from
+			if len(v.invs2send)<500 {
+				v.invs2send = append(v.invs2send, inv)
+				cnt++
+			}
+		}
+	}
+	mutex.Unlock()
 	return
 }
 
@@ -502,19 +532,67 @@ func (c *oneConnection) GetBlockData(h []byte) {
 }
 
 
-func (c *oneConnection) SendInvs(i2s []*[36]byte) {
+func (c *oneConnection) SendInvs() (res bool) {
 	b := new(bytes.Buffer)
-	btc.WriteVlen(b, uint32(len(i2s)))
-	for i := range i2s {
-		b.Write((*i2s[i])[:])
+	mutex.Lock()
+	if len(c.invs2send)>0 {
+		btc.WriteVlen(b, uint32(len(c.invs2send)))
+		for i := range c.invs2send {
+			b.Write((*c.invs2send[i])[:])
+		}
+		res = true
 	}
-	//println("sending invs", len(i2s), len(b.Bytes()))
-	c.SendRawMsg("inv", b.Bytes())
+	c.invs2send = nil
+	mutex.Unlock()
+	if res {
+		c.SendRawMsg("inv", b.Bytes())
+	}
+	return
+}
+
+
+func (c *oneConnection) blocksNeeded() bool {
+	if time.Now().After(c.NextBlocksAsk) {
+		c.LastBlocksFrom = LastBlock
+
+		// Lock the blocktree while we're browsing through it
+		BlockChain.BlockIndexAccess.Lock()
+		var depth = 144 // by default let's ask up to 
+		if LastBlockReceived != 0 {
+			// Every minute from last block reception moves us 1-block up the chain
+			depth = int((time.Now().Unix() - LastBlockReceived) / 60)
+			if depth>400 {
+				depth = 400
+			}
+		}
+		// ask N-blocks up in the chain, allowing to "recover" from chain fork
+		n := LastBlock
+		for i:=0; i<depth && n.Parent != nil; i++ {
+			n = n.Parent
+		}
+		BlockChain.BlockIndexAccess.Unlock()
+
+		BlocksNeeded++
+		c.GetBlocks(n.BlockHash.Hash[:])
+		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
+		return true
+	}
+	return false
 }
 
 
 func (c *oneConnection) Tick() {
 	c.ticks++
+
+	// Check no-data timeout
+	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
+		c.broken = true
+		ConnTimeoutCnt++
+		if dbg>0 {
+			println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
+		}
+		return
+	}
 
 	if c.sendbuf != nil {
 		max2send := len(c.sendbuf) - c.sentsofar
@@ -523,7 +601,8 @@ func (c *oneConnection) Tick() {
 		}
 		n, e := SockWrite(c.TCPConn, c.sendbuf[c.sentsofar:])
 		if n > 0 {
-			c.LastDataGot = uint32(time.Now().Unix())
+			c.
+			LastDataGot = time.Now()
 			c.BytesSent += uint64(n)
 			c.sentsofar += n
 			//println(c.addr.Ip(), max2send, "...", c.sentsofar, n, e)
@@ -547,8 +626,7 @@ func (c *oneConnection) Tick() {
 	}
 	
 	// Need to send getblocks...?
-	if tmp := blocksNeeded(); tmp != nil {
-		c.GetBlocks(tmp)
+	if c.blocksNeeded() {
 		return
 	}
 
@@ -558,20 +636,11 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	// Need to send inv...?
-	var i2s []*[36]byte
-	mutex.Lock()
-	if len(c.invs2send)>0 {
-		i2s = c.invs2send
-		c.invs2send = nil
-	}
-	mutex.Unlock()
-	if i2s != nil {
-		c.SendInvs(i2s)
+	if c.SendInvs() {
 		return
 	}
 
-	if *server && uint32(time.Now().Unix()) >= c.NextAddrSent {
+	if *server && time.Now().After(c.NextAddrSent) {
 		c.AnnounceOwnAddr()
 		return
 	}
@@ -579,12 +648,13 @@ func (c *oneConnection) Tick() {
 
 
 func do_one_connection(c *oneConnection) {
-	if !c.listen {
+	if !c.Incomming {
 		c.SendVersion()
 	}
 
-	c.LastDataGot = uint32(time.Now().Unix())
-	c.NextAddrSent = c.LastDataGot + 10  // send address 10 seconds from now
+	c.LastDataGot = time.Now()                                                                     
+	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
+	c.NextAddrSent = time.Now().Add(10*time.Second)  // announce own addres ~10 seconds from now
 
 	for !c.broken {
 		c.loops++
@@ -593,23 +663,12 @@ func do_one_connection(c *oneConnection) {
 			break
 		}
 		
-		now := uint32(time.Now().Unix())
-
 		if cmd==nil {
-			if int(now-c.LastDataGot) > NoDataTimeout {
-				c.broken = true
-				ConnTimeoutCnt++
-				if dbg>0 {
-					println(c.addr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
-				}
-				break
-			} else {
-				c.Tick()
-			}
+			c.Tick()
 			continue
 		}
 		
-		c.LastDataGot = now
+		c.LastDataGot = time.Now()
 		c.last_cmd = cmd.cmd
 
 		c.addr.Alive()
@@ -620,7 +679,7 @@ func do_one_connection(c *oneConnection) {
 				if er != nil {
 					println("version:", er.Error())
 					c.broken = true
-				} else if c.listen {
+				} else if c.Incomming {
 					c.SendVersion()
 				}
 
@@ -686,61 +745,9 @@ func connectionActive(ad *onePeer) (yes bool) {
 }
 
 
-func start_server() {
-	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", DefaultTcpPort))
-	if e != nil {
-		println("ResolveTCPAddr", e.Error())
-		return
-	}
-
-	lis, e := net.ListenTCP("tcp4", ad)
-	if e != nil {
-		println("ListenTCP", e.Error())
-		return
-	}
-	defer lis.Close()
-
-	fmt.Println("TCP server started at", ad.String())
-
-	for {
-		if InConsActive < MaxInCons {
-			tc, e := lis.AcceptTCP()
-			if e == nil {
-				if dbg>0 {
-					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
-				}
-				ad := newIncommingPeer(tc.RemoteAddr().String())
-				if ad != nil {
-					conn := new(oneConnection)
-					conn.connectedAt = time.Now().Unix()
-					conn.addr = ad
-					conn.listen = true
-					conn.TCPConn = tc
-					mutex.Lock()
-					if _, ok := openCons[ad.UniqID()]; ok {
-						fmt.Println(ad.Ip(), "already connected")
-						mutex.Unlock()
-					} else {
-						openCons[ad.UniqID()] = conn
-						InConsActive++
-						mutex.Unlock()
-						go func () {
-							do_one_connection(conn)
-							mutex.Lock()
-							delete(openCons, ad.UniqID())
-							InConsActive--
-							mutex.Unlock()
-						}()
-					}
-				} else {
-					println("newIncommingPeer failed")
-					tc.Close()
-				}
-			}
-		} else {
-			time.Sleep(250e6)
-		}
-	}
+func nextConnId() uint32 {
+	LastConnId++
+	return LastConnId
 }
 
 
@@ -749,6 +756,7 @@ func do_network(ad *onePeer) {
 	conn := new(oneConnection)
 	conn.addr = ad
 	mutex.Lock()
+	conn.id = nextConnId()
 	if _, ok := openCons[ad.UniqID()]; ok {
 		fmt.Println(ad.Ip(), "already connected")
 		mutex.Unlock()
@@ -762,7 +770,7 @@ func do_network(ad *onePeer) {
 			IP: net.IPv4(ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3]),
 			Port: int(ad.Port)})
 		if e == nil {
-			conn.connectedAt = time.Now().Unix()
+			conn.ConnectedAt = time.Now()
 			if dbg>0 {
 				println("Connected to", ad.Ip())
 			}
@@ -804,161 +812,63 @@ func network_process() {
 	}
 }
 
-func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
-	inv := new([36]byte)
-	
-	binary.LittleEndian.PutUint32(inv[0:4], typ)
-	copy(inv[4:36], h)
-	
-	mutex.Lock()
-	for _, v := range openCons {
-		if v != fromConn && len(v.invs2send)<500 {
-			v.invs2send = append(v.invs2send, inv)
-			cnt++
-		}
-	}
-	mutex.Unlock()
-	return
-}
 
-
-type sortedkeys []uint64
-
-func (sk sortedkeys) Len() int {
-	return len(sk)
-}
-
-func (sk sortedkeys) Less(a, b int) bool {
-	return sk[a]<sk[b]
-}
-
-func (sk sortedkeys) Swap(a, b int) {
-	sk[a], sk[b] = sk[b], sk[a]
-}
-
-
-func node_info(par string) {
-	key, e := strconv.ParseUint(par, 16, 64)
+func start_server() {
+	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", DefaultTcpPort))
 	if e != nil {
-		println(e.Error())
+		println("ResolveTCPAddr", e.Error())
 		return
 	}
-	mutex.Lock()
-	if v, ok := openCons[key]; ok {
-		fmt.Printf("Connection to node %08x:\n", key)
-		if v.listen {
-			fmt.Println("Comming from", v.addr.Ip())
-		} else {
-			fmt.Println("Going to", v.addr.Ip())
-		}
-		if v.connectedAt != 0 {
-			now := time.Now().Unix()
-			fmt.Println(" Connected:", (now-v.connectedAt), "seconds ago")
-			fmt.Println(" Last data:", now-int64(v.addr.Time), "seconds ago")
-			fmt.Println(" Last command:", v.last_cmd)
-			fmt.Println(" Bytes received:", v.BytesReceived)
-			fmt.Println(" Bytes sent:", v.BytesSent)
-			fmt.Println(" Next 'addr': ", v.NextAddrSent-uint32(time.Now().Unix()), "seconds from now")
-			if v.node.version!=0 {
-				fmt.Println(" Node Version:", v.node.version)
-				fmt.Println(" User Agent:", v.node.agent)
-				fmt.Println(" Chain Height:", v.node.height)
-			}
-			fmt.Println(" Ticks:", v.ticks)
-			fmt.Println(" Loops:", v.loops)
-			if v.sendbuf != nil {
-				fmt.Println(" Bytes to send:", len(v.sendbuf), "-", v.sentsofar)
-			}
-			if len(v.invs2send)>0 {
-				fmt.Println(" Invs to send:", len(v.invs2send))
-			}
-		} else {
-			fmt.Println("Not yet connected")
-		}
-	} else {
-		fmt.Printf("There is no connection to node %08x\n", key)
-	}
-	mutex.Unlock()
-}
 
-
-func bts(val uint64) {
-	if val < 1e5*1024 {
-		fmt.Printf("%9.1f k ", float64(val)/1024)
-	} else {
-		fmt.Printf("%9.1f MB", float64(val)/(1024*1024))
-	}
-}
-
-
-func net_stats(par string) {
-	mutex.Lock()
-	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
-	srt := make(sortedkeys, len(openCons))
-	cnt := 0
-	for k, _ := range openCons {
-		srt[cnt] = k
-		cnt++
-	}
-	sort.Sort(srt)
-	fmt.Println()
-	for idx := range srt {
-		v := openCons[srt[idx]]
-		fmt.Printf("%4d) %08x ", idx+1, srt[idx])
-
-		if v.listen {
-			fmt.Print("<- ")
-		} else {
-			fmt.Print(" ->")
-		}
-		fmt.Printf(" %21s  %-16s", v.addr.Ip(), v.last_cmd)
-		if v.connectedAt != 0 {
-			bts(v.BytesReceived)
-			bts(v.BytesSent)
-			if v.sendbuf !=nil {
-				fmt.Print("  ", v.sentsofar, "/", len(v.sendbuf))
-			}
-		}
-		fmt.Println()
-	}
-	fmt.Printf("InvsSent:%d,  BlockSent:%d,  Timeouts:%d\n", 
-		InvsSent, BlockSent, ConnTimeoutCnt)
-	if *server && MyExternalAddr!=nil {
-		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
-	}
-	mutex.Unlock()
-}
-
-
-func net_drop(par string) {
-	ip := net.ParseIP(par)
-	if ip == nil || len(ip)!=16 {
-		fmt.Println("Specify IP of the node to get disconnected")
+	lis, e := net.ListenTCP("tcp4", ad)
+	if e != nil {
+		println("ListenTCP", e.Error())
 		return
 	}
-	var ip4 [4]byte
-	copy(ip4[:], ip[12:16])
-	mutex.Lock()
-	found := false
-	for _, v := range openCons {
-		if ip4==v.addr.Ip4 {
-			v.broken = true
-			found = true
-			break
+	defer lis.Close()
+
+	fmt.Println("TCP server started at", ad.String())
+
+	for {
+		if InConsActive < MaxInCons {
+			tc, e := lis.AcceptTCP()
+			if e == nil {
+				if dbg>0 {
+					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+				}
+				ad := newIncommingPeer(tc.RemoteAddr().String())
+				if ad != nil {
+					conn := new(oneConnection)
+					conn.ConnectedAt = time.Now()
+					conn.addr = ad
+					conn.Incomming = true
+					conn.TCPConn = tc
+					mutex.Lock()
+					conn.id = nextConnId()
+					if _, ok := openCons[ad.UniqID()]; ok {
+						fmt.Println(ad.Ip(), "already connected")
+						mutex.Unlock()
+					} else {
+						openCons[ad.UniqID()] = conn
+						InConsActive++
+						mutex.Unlock()
+						go func () {
+							do_one_connection(conn)
+							mutex.Lock()
+							delete(openCons, ad.UniqID())
+							InConsActive--
+							mutex.Unlock()
+						}()
+					}
+				} else {
+					println("newIncommingPeer failed")
+					tc.Close()
+				}
+			}
+		} else {
+			time.Sleep(250e6)
 		}
 	}
-	mutex.Unlock()
-	if found {
-		fmt.Println("The connection is being dropped")
-	} else {
-		fmt.Println("You are not connected to such IP")
-	}
 }
 
 
-func init() {
-	newUi("net", false, net_stats, "Show network statistics")
-	newUi("node", false, node_info, "Show information about the specific node")
-	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
-	
-}
