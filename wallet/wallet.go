@@ -28,7 +28,7 @@ var (
 	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
-	testnet *bool = flag.Bool("t", false, "Work with testnet addresses")
+	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 	secfile *string  = flag.String("sec", "wallet.sec", "Read secret password (master seed) from this file")
 
@@ -151,7 +151,13 @@ func load_others() {
 
 			if pkb[0]!=privver {
 				println(pk[0], "has version", pkb[0], "while we expect", privver)
-				continue
+				if pkb[0]==0xef {
+					fmt.Println("We guess you meant testnet, so switching to testnet mode...")
+					privver = 0xef
+					verbyte = 0x6f
+				} else {
+					continue
+				}
 			}
 
 			if pkb[33]!=1 {
