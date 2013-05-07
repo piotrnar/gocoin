@@ -643,7 +643,7 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	if *server && time.Now().After(c.NextAddrSent) {
+	if !c.NextAddrSent.IsZero() && time.Now().After(c.NextAddrSent) {
 		c.AnnounceOwnAddr()
 		return
 	}
@@ -657,7 +657,9 @@ func do_one_connection(c *oneConnection) {
 
 	c.LastDataGot = time.Now()                                                                     
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
-	c.NextAddrSent = time.Now().Add(10*time.Second)  // announce own addres ~10 seconds from now
+	if *server {
+		c.NextAddrSent = time.Now().Add(10*time.Second)  // announce own addres ~10 seconds from now
+	}
 
 	for !c.Broken {
 		c.LoopCnt++
