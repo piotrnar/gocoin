@@ -12,13 +12,10 @@ import (
 )
 
 const (
-	InvsAskDuration = 10*time.Second
 	PendingFifoLen = 2000
 )
 
 var (
-	//host *string = flag.String("c", "blockchain.info:8333", "Connect to specified host")
-	//listen *bool = flag.Bool("l", false, "Listen insted of connecting")
 	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
 	rescan *bool = flag.Bool("r", false, "Discard unspent outputs DB and rescan the blockchain")
@@ -41,7 +38,6 @@ var (
 
 	LastBlock *btc.BlockTreeNode
 	LastBlockReceived int64 // time when the last block was received
-	lastInvAsked  *btc.BlockTreeNode
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
@@ -56,9 +52,7 @@ var (
 
 	MyWallet *oneWallet
 
-	nextInvAsk time.Time = time.Now()
-
-	InvsIgnored, BlockDups, InvsAsked, NetMsgsCnt, UiMsgsCnt, FifoFullCnt uint64
+	InvsIgnored, BlockDups, BlocksNeeded, NetMsgsCnt, UiMsgsCnt, FifoFullCnt uint64
 	TicksCnt uint64
 	busy string
 
@@ -251,44 +245,6 @@ func findAllLeafes(n *btc.BlockTreeNode) {
 	}
 }
 */
-
-func blocksNeeded() (res []byte) {
-	mutex.Lock()
-	if lastInvAsked != LastBlock || time.Now().After(nextInvAsk) {
-		lastInvAsked = LastBlock
-		InvsAsked++
-		BlockChain.BlockIndexAccess.Lock()
-		var depth = 144 // by default let's ask up to 
-		if LastBlockReceived != 0 {
-			// Every minute from last block reception moves us 1-block up the chain
-			depth = int((time.Now().Unix() - LastBlockReceived) / 60)
-			if depth>400 {
-				depth = 400
-			}
-		}
-		// ask N-blocks up in the chain, allowing to "recover" from chain fork
-		n := LastBlock
-		for i:=0; i<depth && n.Parent != nil; i++ {
-			n = n.Parent
-		}
-		BlockChain.BlockIndexAccess.Unlock()
-		res = n.BlockHash.Hash[:]
-		nextInvAsk = time.Now().Add(InvsAskDuration)
-	}
-	mutex.Unlock()
-
-	/*
-	if res != nil {
-		println("Last:", btc.NewUint256(res).String())
-		BlockChain.BlockIndexAccess.Lock()
-		findAllLeafes(BlockChain.BlockTreeRoot)
-		BlockChain.BlockIndexAccess.Unlock()
-	}
-	*/
-
-	return
-}
-
 
 func netBlockReceived(conn *oneConnection, b []byte) {
 	bl, e := btc.NewBlock(b)
