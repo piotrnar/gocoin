@@ -38,8 +38,11 @@ var (
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 	totBtc uint64  
 
+	verbyte, privver byte
+
 	// set in make_wallet():
 	priv_keys [][32]byte
+	labels []string
 	publ_addrs []*btc.BtcAddr
 
 	maxKeyVal *big.Int // used by verify_key
@@ -47,6 +50,8 @@ var (
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo  
+	
+	curv *btc.BitCurve = btc.S256()
 )
 
 
@@ -62,7 +67,7 @@ func getpass() string {
 	if e != nil {
 		fmt.Print("Enter your wallet's seed password: ")
 		pass := getline()
-		if *dump {
+		if pass!="" && *dump {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			if pass!=getline() {
 				println("The two passwords you entered do not match")
@@ -122,24 +127,82 @@ func getPubKey(curv *btc.BitCurve, priv_key []byte) (res []byte) {
 	return
 }
 
+func load_others() {
+	f, e := os.Open("others.sec")
+	if e == nil {
+		defer f.Close()
+		td := bufio.NewReader(f)
+		for {
+			li, _, _ := td.ReadLine()
+			if li == nil {
+				break
+			}
+			pk := strings.SplitN(strings.Trim(string(li), " "), " ", 2)
+			pkb := btc.Decodeb58(pk[0])
+			if pkb == nil {
+				println("Decodeb58 failed:", pk[0])
+				continue
+			}
+			
+			if len(pkb)!=38 {
+				println(pk[0], "is nor 38 bytes long")
+				continue
+			}
+
+			if pkb[0]!=privver {
+				println(pk[0], "has version", pkb[0], "while we expect", privver)
+				continue
+			}
+
+			if pkb[33]!=1 {
+				println("we only support compressed keys, so for safety rejecting", pk[0])
+				continue
+			}
+
+			sh := btc.Sha2Sum(pkb[0:34])
+			if !bytes.Equal(sh[:4], pkb[34:38]) {
+				println(pk[0], "checksum error")
+			}
+			
+			var key [32]byte
+			copy(key[:], pkb[1:33])
+			priv_keys = append(priv_keys, key)
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, key[:]), verbyte))
+			if len(pk)>1 {
+				labels = append(labels, pk[1])
+			} else {
+				labels = append(labels, fmt.Sprint("Other ", len(priv_keys)))
+			}
+		}
+	} else {
+		fmt.Println("You can also place imported private key in others.sec")
+	}
+}
+
+
 // Get the secret seed and generate "*keycnt" key pairs (both private and public)
 func make_wallet() {
-	var verbyte byte // normally it will be zero (means: normal bitcoin network)
 	if *testnet {
-		verbyte = 0x6f  // .. but for testnet we need 0x6f
+		verbyte = 0x6f
+		privver = 0xef
+	} else {
+		// verbyte is be zero by definition
+		privver = 0x80
 	}
+	load_others()
+
 	pass := getpass()
-	curv := btc.S256()
 	seed_key := btc.Sha2Sum([]byte(pass))
-	priv_keys = make([][32]byte, *keycnt)
-	publ_addrs = make([]*btc.BtcAddr, *keycnt)
-	fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
-	for i:=uint(0); i < *keycnt; i++ {
-		seed_key = btc.Sha2Sum(seed_key[:])
-		priv_keys[i] = seed_key
-		publ_addrs[i] = btc.NewAddrFromPubkey(getPubKey(curv, seed_key[:]), verbyte)
+	if pass!="" {
+		fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+		for i:=uint(0); i < *keycnt; i++ {
+			seed_key = btc.Sha2Sum(seed_key[:])
+			priv_keys = append(priv_keys, seed_key)
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, seed_key[:]), verbyte))
+			labels = append(labels, fmt.Sprint("Auto ", i+1))
+		}
+		fmt.Println("Private keys re-generated")
 	}
-	fmt.Println("Private keys re-generated")
 }
 
 // Verify the secret key's range and al if a test message signed with it verifies OK
@@ -190,9 +253,9 @@ func dump_addrs() {
 			println("Something wrong with key at index", i, " - abort!\007")
 			os.Exit(1)
 		}
-		fmt.Println(publ_addrs[i].String(), "Addr", i+1)
+		fmt.Println(publ_addrs[i].String(), labels[i])
 		if f != nil {
-			fmt.Fprintln(f, publ_addrs[i].String(), "Addr", i+1)
+			fmt.Fprintln(f, publ_addrs[i].String(), labels[i])
 		}
 	}
 	if f != nil {
