@@ -334,10 +334,11 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	}
 
 	var blocks2get [][32]byte
-	var txs uint32
+	var txs, blks uint32
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		if typ==2 {
+			blks++
 			if InvsNotify(pl[of+4:of+36]) {
 				var inv [32]byte
 				copy(inv[:], pl[of+4:of+36])
@@ -347,6 +348,9 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			txs++
 		}
 		of+= 36
+	}
+	if blks>=500 {
+		c.NextBlocksAsk = time.Now() // for another getblocks ASAP
 	}
 	if dbg>1 {
 		println(c.PeerAddr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs -> get", len(blocks2get), "blocks")
