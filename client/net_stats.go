@@ -133,7 +133,9 @@ func node_info(par string) {
 		fmt.Println(" Last command sent:", v.LastCmdSent)
 		fmt.Println(" Bytes received:", v.BytesReceived)
 		fmt.Println(" Bytes sent:", v.BytesSent)
-		fmt.Println(" Next addr sending in: ", v.NextAddrSent.Sub(time.Now()).String())
+		if !v.NextAddrSent.IsZero() {
+			fmt.Println(" Next addr sending in: ", v.NextAddrSent.Sub(time.Now()).String())
+		}
 		fmt.Println(" Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
 		if v.LastBlocksFrom != nil {
 			fmt.Println(" Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
