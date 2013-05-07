@@ -126,8 +126,8 @@ func show_info(par string) {
 	if LastBlockReceived != 0 {
 		minago = fmt.Sprintf("  Block got %d min ago", (time.Now().Unix()-LastBlockReceived)/60)
 	}
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  InvsAsked:%d  NetMsgs:%d/%d  UiMsgs:%d  Ticks:%d%s\n", 
-		InvsIgnored, BlockDups, InvsAsked, len(netBlocks), NetMsgsCnt, UiMsgsCnt, TicksCnt, minago)
+	fmt.Printf("InvsIgn:%d  BlockDups:%d  BlocksNeeded:%d  NetMsgs:%d/%d  UiMsgs:%d  Ticks:%d%s\n", 
+		InvsIgnored, BlockDups, BlocksNeeded, len(netBlocks), NetMsgsCnt, UiMsgsCnt, TicksCnt, minago)
 	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String(),
 		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"))
 	if busy!="" {
