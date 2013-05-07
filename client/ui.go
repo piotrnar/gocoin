@@ -129,7 +129,7 @@ func show_info(par string) {
 	fmt.Printf("InvsIgn:%d  BlockDups:%d  BlocksNeeded:%d  NetMsgs:%d/%d  UiMsgs:%d  GetaddrCnt:%d  Ticks:%d%s\n", 
 		InvsIgnored, BlockDups, BlocksNeeded, len(netBlocks), NetMsgsCnt, UiMsgsCnt, GetaddrCnt, TicksCnt, minago)
 	fmt.Println("LastBlock:", LastBlock.Height, LastBlock.BlockHash.String(),
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"))
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"), btc.GetDifficulty(LastBlock.Bits))
 	if busy!="" {
 		println("BlockChain thread currently busy with", busy)
 	} else {
