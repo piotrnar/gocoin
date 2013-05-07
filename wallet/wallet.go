@@ -174,6 +174,7 @@ func load_others() {
 				labels = append(labels, fmt.Sprint("Other ", len(priv_keys)))
 			}
 		}
+		fmt.Println(len(priv_keys), "keys imported")
 	} else {
 		fmt.Println("You can also place imported private key in others.sec")
 	}
