@@ -10,7 +10,7 @@ import (
 
 type sortedkeys [] struct {
 	key uint64
-	id uint32
+	ConnID uint32
 }
 
 func (sk sortedkeys) Len() int {
@@ -18,7 +18,7 @@ func (sk sortedkeys) Len() int {
 }
 
 func (sk sortedkeys) Less(a, b int) bool {
-	return sk[a].id<sk[b].id
+	return sk[a].ConnID<sk[b].ConnID
 }
 
 func (sk sortedkeys) Swap(a, b int) {
@@ -34,7 +34,7 @@ func look2conn(par string) (c *oneConnection) {
 	}
 	mutex.Lock()
 	for _, v := range openCons {
-		if uint32(conid)==v.id {
+		if uint32(conid)==v.ConnID {
 			c = v
 			break
 		}
@@ -54,32 +54,37 @@ func bts(val uint64) {
 
 
 func net_stats(par string) {
+	if par!="" {
+		node_info(par)
+		return 
+	}
+	
 	mutex.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
 	for k, v := range openCons {
 		srt[cnt].key = k
-		srt[cnt].id = v.id
+		srt[cnt].ConnID = v.ConnID
 		cnt++
 	}
 	sort.Sort(srt)
 	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx].key]
-		fmt.Printf("%8d) ", v.id)
+		fmt.Printf("%8d) ", v.ConnID)
 
 		if v.Incomming {
 			fmt.Print("<- ")
 		} else {
 			fmt.Print(" ->")
 		}
-		fmt.Printf(" %21s  %-16s", v.addr.Ip(), v.last_cmd)
+		fmt.Printf(" %21s  %-16s  %-16s", v.PeerAddr.Ip(), v.LastCmdRcvd, v.LastCmdSent)
 		if (v.BytesReceived|v.BytesSent)!=0 {
 			bts(v.BytesReceived)
 			bts(v.BytesSent)
-			if v.sendbuf !=nil {
-				fmt.Print("  ", v.sentsofar, "/", len(v.sendbuf))
+			if v.send.buf !=nil {
+				fmt.Print("  ", v.send.sofar, "/", len(v.send.buf))
 			}
 		}
 		fmt.Println()
@@ -96,8 +101,8 @@ func net_stats(par string) {
 func net_drop(par string) {
 	c := look2conn(par)
 	if c!=nil {
-		c.broken = true
-		fmt.Println("The connection with", c.addr.Ip(), "is being dropped")
+		c.Broken = true
+		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped")
 	} else {
 		fmt.Println("There is no such an active connection")
 	}
@@ -110,31 +115,35 @@ func node_info(par string) {
 		fmt.Println("There is no such an active connection")
 	}
 
-	fmt.Printf("Connection ID %d:\n", v.id)
+	fmt.Printf("Connection ID %d:\n", v.ConnID)
 	if v.Incomming {
-		fmt.Println("Comming from", v.addr.Ip())
+		fmt.Println("Comming from", v.PeerAddr.Ip())
 	} else {
-		fmt.Println("Going to", v.addr.Ip())
+		fmt.Println("Going to", v.PeerAddr.Ip())
 	}
 	if !v.ConnectedAt.IsZero() {
 		fmt.Println(" Connected at", v.ConnectedAt.Format("2006-01-02 15:04:05"))
-		fmt.Println(" Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
-		fmt.Println(" Last command:", v.last_cmd)
-		fmt.Println(" Bytes received:", v.BytesReceived)
-		fmt.Println(" Bytes sent:", v.BytesSent)
-		fmt.Println(" Next addr sending in: ", v.NextAddrSent.Sub(time.Now()).String())
 		if v.node.version!=0 {
 			fmt.Println(" Node Version:", v.node.version)
 			fmt.Println(" User Agent:", v.node.agent)
 			fmt.Println(" Chain Height:", v.node.height)
 		}
-		fmt.Println(" Ticks:", v.ticks)
-		fmt.Println(" Loops:", v.loops)
-		if v.sendbuf != nil {
-			fmt.Println(" Bytes to send:", len(v.sendbuf), "-", v.sentsofar)
+		fmt.Println(" Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
+		fmt.Println(" Last command received:", v.LastCmdRcvd)
+		fmt.Println(" Last command sent:", v.LastCmdSent)
+		fmt.Println(" Bytes received:", v.BytesReceived)
+		fmt.Println(" Bytes sent:", v.BytesSent)
+		fmt.Println(" Next addr sending in: ", v.NextAddrSent.Sub(time.Now()).String())
+		fmt.Println(" Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
+		if v.LastBlocksFrom != nil {
+			fmt.Println(" Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
 		}
-		if len(v.invs2send)>0 {
-			fmt.Println(" Invs to send:", len(v.invs2send))
+		fmt.Println(" Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
+		if v.send.buf != nil {
+			fmt.Println(" Bytes to send:", len(v.send.buf), "-", v.send.sofar)
+		}
+		if len(v.PendingInvs)>0 {
+			fmt.Println(" Invs to send:", len(v.PendingInvs))
 		}
 	} else {
 		fmt.Println("Not yet connected")
@@ -143,8 +152,7 @@ func node_info(par string) {
 
 
 func init() {
-	newUi("net", false, net_stats, "Show network statistics")
-	newUi("node n", false, node_info, "Show information about the specific node")
+	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 }
 
