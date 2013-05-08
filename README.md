@@ -110,10 +110,10 @@ Now move this transaction file to your running client and use its UI to execute:
 
 	tx 01234567.txt
 
-The node should decode the transaction and display its details, for your verification. It will also output the <transactionid>.
+The node should decode the transaction and display its details, for your verification. It will also output the transaction ID.
 
 After making sure that the transaction does what you wanted, you can broadcast it to the network:
 
-	stx <transactionid>
+	stx  <transactionid>
 
 Please note that the current version of client does not re-broadcast transactions, so if your transaction does not appear in the chain soon enough, you may want  to repeat the "stx ..." command. There may of course be other reasons why your transaction does not get confirmed (i.e. the fee was to small), in which case repeating "stx ..." will not help much.
