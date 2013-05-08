@@ -69,7 +69,6 @@ func net_stats(par string) {
 		cnt++
 	}
 	sort.Sort(srt)
-	fmt.Println()
 	for idx := range srt {
 		v := openCons[srt[idx].key]
 		fmt.Printf("%8d) ", v.ConnID)
@@ -89,8 +88,6 @@ func net_stats(par string) {
 		}
 		fmt.Println()
 	}
-	fmt.Printf("InvsSent:%d,  BlockSent:%d,  Timeouts:%d\n", 
-		InvsSent, BlockSent, ConnTimeoutCnt)
 	if *server && MyExternalAddr!=nil {
 		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
 	}
