@@ -25,4 +25,3 @@ func Rimp160AfterSha256(in []byte) (res [20]byte) {
 	copy(res[:], rim.Sum(nil))
 	return
 }
-

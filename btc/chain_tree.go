@@ -21,7 +21,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var b []byte
 	var er error
 	var trusted bool
-	
+
 	prv_sync := ch.DoNotSync
 	ch.DoNotSync = true
 
@@ -41,13 +41,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if nxt == nil {
 			break
 		}
-		
+
 		b, trusted, er = ch.Blocks.BlockGet(nxt.BlockHash)
 		if er != nil {
 			panic("Db.BlockGet(): "+er.Error())
 		}
 
-		bl, er := NewBlock(b)  
+		bl, er := NewBlock(b)
 		if er != nil {
 			ch.DeleteBranch(nxt)
 			break
@@ -72,7 +72,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 	}
 	ch.Unspent.Sync()
-	
+
 	if ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
@@ -107,7 +107,7 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	if n==end {
 		return nil
 	}
-	
+
 	if end.Height <= n.Height {
 		panic("End block is not higher then current")
 	}
@@ -115,7 +115,7 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	if len(n.Childs)==0 {
 		panic("Unknown path to block " + end.BlockHash.String() )
 	}
-	
+
 	if len(n.Childs)==1 {
 		return n.Childs[0]  // if there is only one child, do it fast
 	}
@@ -142,7 +142,7 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 	// At this point both "ch.BlockTreeEnd" and "cur" should be at the same height
 	for ch.BlockTreeEnd != cur {
 		if don(DBG_ORPHAS) {
-			fmt.Printf("->orph block %s @ %d\n", ch.BlockTreeEnd.BlockHash.String(), 
+			fmt.Printf("->orph block %s @ %d\n", ch.BlockTreeEnd.BlockHash.String(),
 				ch.BlockTreeEnd.Height)
 		}
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
@@ -194,6 +194,3 @@ func (n *BlockTreeNode)delChild(c *BlockTreeNode) {
 	}
 	n.Childs = newChds
 }
-
-
-

@@ -60,5 +60,3 @@ func readSpent(f io.Reader) (po *btc.TxPrevOut, to *btc.TxOut) {
 	}
 	return
 }
-
-

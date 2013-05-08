@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"sort"
 	"bufio"
 	"strings"
 	"strconv"
@@ -15,12 +16,12 @@ type oneUiCmd struct {
 	cmds []string // command name
 	help string // a helf for this command
 	sync bool  // shall be executed in the blochcina therad
-	handler func(pars string) 
+	handler func(pars string)
 }
 
 type oneUiReq struct {
 	param string
-	handler func(pars string) 
+	handler func(pars string)
 }
 
 
@@ -115,22 +116,54 @@ func do_userif() {
 
 
 func show_info(par string) {
-
 	// Memory used
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	fmt.Println("Go version:", runtime.Version(), "   System Memory used:", 
+	fmt.Println("Go version:", runtime.Version(), "   System Memory used:",
 		ms.HeapAlloc>>20, "MB    NewBlockBeep:", beep)
 
 	mutex.Lock()
+	// Main thread activity:
+	if busy!="" {
+		println("BlockChain thread is busy with", busy)
+	} else {
+		println("BlockChain thread is currently idle")
+	}
+	mutex.Unlock()
+}
 
-	// Queues and caches
-	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n", 
+
+// The last block:
+func show_last(par string) {
+	mutex.Lock()
+	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
+	fmt.Printf("  Height: %d @ %s,  Difficulty: %.1f\n", LastBlock.Height,
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
+		btc.GetDifficulty(LastBlock.Bits))
+	if !LastBlockReceived.IsZero() {
+		fmt.Println("  Received", time.Now().Sub(LastBlockReceived), "ago")
+	}
+	mutex.Unlock()
+}
+
+
+func show_counters(par string) {
+	mutex.Lock()
+	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n",
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
 
-	// Counters
+	ck := make([]string, len(Counter))
+	i := 0
+	for k, _ := range Counter {
+		ck[i] = k
+		i++
+	}
+	sort.Strings(ck)
+
 	var li string
-	for k, v := range Counter {
+	for i := range ck {
+		k := ck[i]
+		v := Counter[k]
 		s := fmt.Sprint(k, ": ", v)
 		if len(li)+len(s) >= 80 {
 			fmt.Println(li)
@@ -142,22 +175,6 @@ func show_info(par string) {
 	}
 	if li != "" {
 		fmt.Println(li)
-	}
-
-	// Last block:
-	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
-	fmt.Printf("  Height: %d @ %s,  Difficulty: %.1f\n", LastBlock.Height, 
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"), 
-		btc.GetDifficulty(LastBlock.Bits))
-	if !LastBlockReceived.IsZero() {
-		fmt.Println("  Received", time.Now().Sub(LastBlockReceived), "ago")
-	}
-
-	// Main thread activity:
-	if busy!="" {
-		println("BlockChain thread is busy with", busy)
-	} else {
-		println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
 }
@@ -218,10 +235,10 @@ func show_help(par string) {
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info")
+	newUi("last l", false, show_last, "Show last block info")
+	newUi("counters c", false, show_counters, "Show counters")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
 }
-
-

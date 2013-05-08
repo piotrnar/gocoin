@@ -32,7 +32,7 @@ func host_init() {
 	} else {
 		GocoinHomeDir = *datadir+"/"
 	}
-	
+
 	if *testnet { // testnet3
 		DefaultTcpPort = 18333
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
@@ -60,7 +60,7 @@ func host_init() {
 			}
 		}
 	}
-	
+
 	fmt.Println("Opening blockchain...")
 	sta := time.Now().UnixNano()
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, *rescan)
@@ -75,17 +75,17 @@ func host_init() {
 
 func stat(nsec int64, totbytes uint64, height uint32) {
 	mbs := float64(totbytes) / (1024*1024)
-	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec\n", 
+	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec\n",
 		mbs, height, mbs/(float64(nsec)/1e9))
 }
 
 
 func import_blockchain(dir string) {
 	trust := !ask_yes_no("Go you want to verify scripts while importing (will be slow)?")
-	
+
 	BlockDatabase := blockdb.NewBlockDB(dir, Magic)
 	chain := btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	
+
 	var bl *btc.Block
 	var er error
 	var dat []byte
@@ -134,9 +134,9 @@ func import_blockchain(dir string) {
 
 	stop := time.Now().UnixNano()
 	stat(stop-start, totbytes, chain.BlockTreeEnd.Height)
-	
+
 	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
-	
+
 	fmt.Println("Now saving the new database...")
 	chain.Sync()
 	chain.Close()

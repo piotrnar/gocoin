@@ -17,7 +17,7 @@ type BtcAddr struct {
 	Hash160 [20]byte
 	Checksum []byte
 	Pubkey []byte
-	Enc58str string 
+	Enc58str string
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
@@ -87,11 +87,11 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 	}
 
 	copy(ad[21:25], sh[:4])
-	
+
 	a = new(BtcAddr)
 	a.Version = ver
 	copy(a.Hash160[:], in[:])
-	
+
 	a.Checksum = make([]byte, 4)
 	copy(a.Checksum, sh[:4])
 	return
@@ -118,7 +118,7 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	// The most common spend script
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 		yes = bytes.Equal(scr[3:23], a.Hash160[:])
-		return 
+		return
 	}
 
 	// Spend script with an entire public key
@@ -133,7 +133,7 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 			return
 		}
 		yes = bytes.Equal(scr[1:34], a.Pubkey[:33])
-		return 
+		return
 	}
 
 	// Spend script with a compressed public key
@@ -148,20 +148,20 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 			return
 		}
 		yes = bytes.Equal(scr[1:34], a.Pubkey[:33])
-		return 
+		return
 	}
 
 	return
 }
 
 /*
-	Just for information: 
+	Just for information:
 
 	// Spend script with only a hash of a password
 	if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
-		return 
+		return
 	}
-	
+
 	// Escrow
 	if len(scr)==201 && scr[0]==0x51 && scr[1]==0x41 && scr[199]==0x53 && scr[200]==0xae {
 		return
@@ -212,8 +212,9 @@ func Encodeb58(a []byte) (s string) {
 		idx--
 		buf[idx] = b58set[0]
 	}
-	
+
 	s = string(buf[idx:])
+
 	return
 }
 
@@ -229,5 +230,3 @@ func Decodeb58(s string) []byte {
 	}
 	return bn.Bytes()
 }
-
-

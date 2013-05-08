@@ -1,5 +1,5 @@
 package btc
-    
+
 import (
 //	"fmt"
 	"errors"
@@ -55,7 +55,7 @@ func GetDifficulty(nBits uint32) (dDiff float64) {
 
 func CheckProofOfWork(hash *Uint256, nBits uint32) error {
 	bnTarget := SetCompact(nBits)
-	
+
 	if bnTarget.Cmp(big.NewInt(0)) <= 0 || bnTarget.Cmp(bnProofOfWorkLimit) > 0 {
 		return errors.New("CheckProofOfWork() : nBits below minimum work")
 	}
@@ -69,12 +69,12 @@ func CheckProofOfWork(hash *Uint256, nBits uint32) error {
 }
 
 func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
-	
+
 	// Genesis block
 	if lst.Parent == nil {
 		return nProofOfWorkLimit
 	}
-	
+
 	if ((lst.Height+1) % nInterval) != 0 {
 		//println("*newdiff")
 		// Special difficulty rule for testnet:
@@ -118,10 +118,10 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	if bnNew.Cmp(bnProofOfWorkLimit) > 0 {
 		bnNew = bnProofOfWorkLimit
 	}
-	
+
 	res = GetCompact(bnNew)
 	/*
-	fmt.Printf("Block %d: diff %.2f => %.2f\n", lst.Height+1, 
+	fmt.Printf("Block %d: diff %.2f => %.2f\n", lst.Height+1,
 		GetDifficulty(lst.Bits), GetDifficulty(res))*/
 
 	/*
@@ -137,17 +137,17 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 
 
 func GetCompact(b *big.Int) uint32 {
-	
+
 	nSize := uint32(len(b.Bytes()))
 	var nCompact uint32
-	
+
 	if nSize <= 3 {
 		nCompact = uint32(b.Int64() << uint(8*(3-nSize)))
 	} else {
 		b = new(big.Int).Rsh(b, uint(8*(nSize-3)))
 		nCompact = uint32(b.Int64())
 	}
-	
+
 	// The 0x00800000 bit denotes the sign.
 	// Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
 	if (nCompact & 0x00800000) != 0 {

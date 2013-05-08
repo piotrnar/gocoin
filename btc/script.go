@@ -30,7 +30,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 		fmt.Println("\nsigScr verified OK")
 		st.print()
 	}
-	
+
 	if !evalScript(pkScr[:], &st, tx, i) {
 		fmt.Println("pkScript failed :", hex.EncodeToString(pkScr[:]))
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -65,7 +65,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			println("vchPushValue too long", len(vchPushValue))
 			return false
 		}
-		
+
 		if opcode > 0x60 {
 			nOpCount++
 			if nOpCount > 201 {
@@ -102,10 +102,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode>=0x51 && opcode<=0x60: // OP_1-OP_16
 					stack.pushInt(opcode-0x50)
-				
+
 				case opcode==0x61: // OP_NOP
 					// Do nothing
-				
+
 				case opcode==0x62: // OP_VER
 					// I think, do nothing...
 
@@ -281,7 +281,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					stack.push(x2)
 					stack.push(x3)
 					stack.push(x1)
-				
+
 				case opcode==0x7c: //OP_SWAP
 					if stack.size()<2 {
 						println("Stack too short for opcode", opcode)
@@ -309,7 +309,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					stack.pushInt(len(stack.top(-1)))
-				
+
 				case opcode==0x87: //OP_EQUAL
 					if stack.size()<2 {
 						println("Stack too short for opcode", opcode)
@@ -390,7 +390,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					stack.pushBool(stack.popInt()!=0 && stack.popInt()!=0)
-				
+
 				case opcode==0x9b: //OP_BOOLOR
 					if stack.size()<2 {
 						println("Stack too short for opcode", opcode)
@@ -464,7 +464,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					} else {
 						stack.pushInt(b)
 					}
-				
+
 				case opcode==0xa4: //OP_MAX
 					if stack.size()<2 {
 						println("Stack too short for opcode", opcode)
@@ -487,7 +487,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					mi := stack.popInt()
 					ma := stack.popInt()
 					stack.pushBool(x>=mi && x<ma)
-				
+
 				case opcode==0xa6: //OP_RIPEMD160
 					if stack.size()<1 {
 						println("Stack too short for opcode", opcode)
@@ -513,7 +513,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					rim160 := Rimp160AfterSha256(stack.pop())
 					stack.push(rim160[:])
-				
+
 				case opcode==0xaa: //OP_HASH256
 					if stack.size()<1 {
 						println("Stack too short for opcode", opcode)
@@ -541,7 +541,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					return key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
-				
+
 				case opcode==0xae: //OP_CHECKMULTISIG
 					//println("OP_CHECKMULTISIG ...")
 					//stack.print()
@@ -592,7 +592,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 							return false
 						}
 						fOk := key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
-						
+
 						if fOk {
 							isig++
 							nSigsCount--
@@ -612,10 +612,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					//stack.print()
 					return fSuccess
-				
+
 				case opcode>=0xb0 && opcode<=0xb9: //OP_NOP
 					// just do nothing
-				
+
 				case opcode>=0xba: // inivalid opcode = invaid script
 					println("fail tx because it contains invalid opcode", opcode)
 					return false
@@ -627,7 +627,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					os.Exit(0)
 			}
 		}
-		
+
 		if don(DBG_SCRIPT) {
 			stack.print()
 		}
@@ -636,7 +636,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			return false
 		}
 	}
-	
+
 	if vfExec.size()>0 {
 		println("Unfinished if..")
 		return false
@@ -684,7 +684,6 @@ func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 		pvchRet = b[pc:pc+nSize]
 		pc += nSize
 	}
-	
+
 	return
 }
-

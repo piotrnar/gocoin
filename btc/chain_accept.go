@@ -18,7 +18,7 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 
 
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
-	
+
 	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
 	if !ok {
 		panic("This should not happen")
@@ -31,13 +31,13 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	cur.Height = prevblk.Height + 1
 	cur.Bits = bl.Bits
 	cur.Timestamp = bl.BlockTime
-	
+
 	// Add this block to the block index
 	ch.BlockIndexAccess.Lock()
 	prevblk.addChild(cur)
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
 	ch.BlockIndexAccess.Unlock()
-	
+
 	if ch.BlockTreeEnd==prevblk {
 		// Append the end of the longest
 		if don(DBG_BLOCKS) {
@@ -73,7 +73,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		}
 	}
 
-	return 
+	return
 }
 
 
@@ -95,11 +95,11 @@ func getUnspIndex(po *TxPrevOut) (idx [8]byte) {
 func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	sumblockin := GetBlockReward(changes.Height)
 	sumblockout := uint64(0)
-	
+
 	if don(DBG_TX) {
 		fmt.Printf("Commiting %d transactions\n", len(bl.Txs))
 	}
-	
+
 	// Add each tx outs from the current block to the temporary pool
 	blUnsp := make(map[[32]byte] []*TxOut, len(bl.Txs))
 	for i := range bl.Txs {
@@ -110,7 +110,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		}
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
-	
+
 	for i := range bl.Txs {
 		var txoutsum, txinsum uint64
 		if don(DBG_TX) {
@@ -166,22 +166,22 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 						println("PickUnspent OK")
 					}
 				}
-				
+
 				if !(<-taskDone) {
 					println("VerifyScript error 1")
 					scripts_ok = false
 					break
 				}
-				
+
 				if bl.Trusted {
 					taskDone <- true
 				} else {
 					go func(i, j int, pks []byte) {
-						taskDone <- VerifyTxScript(bl.Txs[i].TxIn[j].ScriptSig, 
+						taskDone <- VerifyTxScript(bl.Txs[i].TxIn[j].ScriptSig,
 							pks, j, bl.Txs[i])
 					}(i, j, tout.Pk_script)
 				}
-				
+
 				// Verify Transaction script:
 				txinsum += tout.Value
 				changes.DeledTxs[*inp] = tout
@@ -190,7 +190,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					fmt.Printf("  in %d: %.8f BTC @ %s\n", j+1, float64(tout.Value)/1e8,
 						bl.Txs[i].TxIn[j].Input.String())
 				}
-				
+
 			}
 
 			if scripts_ok {
@@ -228,13 +228,13 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 			}
 		}
 		sumblockout += txoutsum
-		
+
 		if don(DBG_TX) {
-			fmt.Sprintf("  %12.8f -> %12.8f  (%.8f)\n", 
+			fmt.Sprintf("  %12.8f -> %12.8f  (%.8f)\n",
 				float64(txinsum)/1e8, float64(txoutsum)/1e8,
 				float64(txinsum-txoutsum)/1e8)
 		}
-		
+
 		if don(DBG_TX) && i>0 {
 			fmt.Printf(" fee : %.8f\n", float64(txinsum-txoutsum)/1e8)
 		}
@@ -254,4 +254,3 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 
 	return nil
 }
-

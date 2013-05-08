@@ -44,7 +44,7 @@ type Tx struct {
 	TxIn []*TxIn
 	TxOut []*TxOut
 	Lock_time uint32
-	
+
 	// These two fields should be set in block.go:
 	Size uint32
 	Hash *Uint256
@@ -60,10 +60,10 @@ type AddrValue struct {
 func (t *Tx) Serialize() ([]byte) {
 	var buf [9]byte
 	wr := new(bytes.Buffer)
-	
+
 	// Version
 	binary.Write(wr, binary.LittleEndian, t.Version)
-	
+
 	//TxIns
 	wr.Write(buf[:PutVlen(buf[:], len(t.TxIn))])
 	for i := range t.TxIn {
@@ -73,7 +73,7 @@ func (t *Tx) Serialize() ([]byte) {
 		wr.Write(t.TxIn[i].ScriptSig[:])
 		binary.Write(wr, binary.LittleEndian, t.TxIn[i].Sequence)
 	}
-	
+
 	//TxOuts
 	wr.Write(buf[:PutVlen(buf[:], len(t.TxOut))])
 	for i := range t.TxOut {
@@ -102,12 +102,12 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	var buf [9]byte
 
 	ht := hashType&0x1f
-	
+
 	sha := sha256.New()
-	
+
 	binary.LittleEndian.PutUint32(buf[:4], t.Version)
 	sha.Write(buf[:4])
-	
+
 	if (hashType&SIGHASH_ANYONECANPAY)!=0 {
 		sha.Write([]byte{1}) // only 1 input
 		// The one input:
@@ -124,14 +124,14 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 			sha.Write(t.TxIn[i].Input.Hash[:])
 			binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Input.Vout)
 			sha.Write(buf[:4])
-			
+
 			if i==nIn {
 				sha.Write(buf[:PutVlen(buf[:], len(scriptCode))])
 				sha.Write(scriptCode[:])
 			} else {
 				sha.Write([]byte{0})
 			}
-			
+
 			if (ht==SIGHASH_NONE || ht==SIGHASH_SINGLE) && i!=nIn {
 				sha.Write([]byte{0,0,0,0})
 			} else {
@@ -151,7 +151,7 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 			fmt.Printf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
 			return nil
 		}
-		
+
 		sha.Write(buf[:PutVlen(buf[:], nOut+1)])
 		for i:=0; i < nOut; i++ {
 			sha.Write([]byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0})
@@ -165,9 +165,9 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 		for i := range t.TxOut {
 			binary.LittleEndian.PutUint64(buf[:8], t.TxOut[i].Value)
 			sha.Write(buf[:8])
-			
+
 			sha.Write(buf[:PutVlen(buf[:], len(t.TxOut[i].Pk_script))])
-			
+
 			sha.Write(t.TxOut[i].Pk_script[:])
 		}
 	}
@@ -212,12 +212,12 @@ func (tx *Tx) CheckTransaction() error {
 	if len(tx.TxOut)==0 {
 		return errors.New("CheckTransaction() : vout empty")
 	}
-    
+
 	// Size limits
 	if tx.Size > MAX_BLOCK_SIZE {
 		return errors.New("CheckTransaction() : size limits failed")
 	}
-	
+
 	if slowMode {
 		// Check for negative or overflow output values
 		var nValueOut uint64
@@ -244,7 +244,7 @@ func (tx *Tx) CheckTransaction() error {
 
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
-			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d", 
+			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d",
 				len(tx.TxIn[0].ScriptSig)))
 		}
 	} else {
@@ -261,54 +261,54 @@ func (tx *Tx) CheckTransaction() error {
 
 func NewTxOut(b []byte) (txout *TxOut, offs int) {
 	var le, n int
-	
+
 	txout = new(TxOut)
-	
+
 	txout.Value = binary.LittleEndian.Uint64(b[0:8])
 	offs = 8
-	
+
 	le, n = VLen(b[offs:])
 	offs+= n
 
 	txout.Pk_script = make([]byte, le)
 	copy(txout.Pk_script[:], b[offs:offs+le])
 	offs += le
-	
+
 	return
 }
 
 
 func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	var le, n int
-	
+
 	txin = new(TxIn)
-	
+
 	copy(txin.Input.Hash[:], b[0:32])
 	txin.Input.Vout = binary.LittleEndian.Uint32(b[32:36])
 	offs = 36
-	
+
 	le, n = VLen(b[offs:])
 	offs+= n
-	
+
 	txin.ScriptSig = make([]byte, le)
 	copy(txin.ScriptSig[:], b[offs:offs+le])
 	offs+= le
-	
+
 	// Sequence
 	txin.Sequence = binary.LittleEndian.Uint32(b[offs:offs+4])
 	offs += 4
 
-	return 
+	return
 }
 
 func NewTx(b []byte) (tx *Tx, offs int) {
 	var le, n int
-	
+
 	tx = new(Tx)
-	
+
 	tx.Version = binary.LittleEndian.Uint32(b[0:4])
 	offs = 4
-	
+
 	// TxIn
 	le, n = VLen(b[offs:])
 	offs += n
@@ -317,7 +317,7 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 		tx.TxIn[i], n = NewTxIn(b[offs:])
 		offs += n
 	}
-	
+
 	// TxOut
 	le, n = VLen(b[offs:])
 	offs += n

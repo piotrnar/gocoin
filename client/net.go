@@ -30,8 +30,8 @@ const (
 	NoDataTimeout = 2*time.Minute
 
 	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
-	
-	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min 
+
+	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min
 )
 
 
@@ -55,7 +55,7 @@ type oneConnection struct {
 	// TCP connection data:
 	Incomming bool
 	*net.TCPConn
-	
+
 	// Handshake data
 	ConnectedAt time.Time
 	VerackReceived bool
@@ -94,7 +94,7 @@ type oneConnection struct {
 	NextGetAddr time.Time // When we shoudl issue "getaddr" again
 
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
-	
+
 	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
 }
@@ -105,7 +105,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		println(c.PeerAddr.Ip(), "WTF??", cmd, c.LastCmdSent)
 		return
 	}
-	
+
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
@@ -323,7 +323,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
 		return
 	}
-	
+
 	cnt, of := btc.VLen(pl)
 	if len(pl) != of + 36*cnt {
 		println("inv payload length mismatch", len(pl), of, cnt)
@@ -355,7 +355,7 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 	inv := new([36]byte)
 	binary.LittleEndian.PutUint32(inv[0:4], typ)
 	copy(inv[4:36], h)
-	
+
 	// Append it to PendingInvs in each open connection
 	mutex.Lock()
 	for _, v := range openCons {
@@ -460,7 +460,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 	for i:=0; i<int(cnt); i++ {
 		var typ uint32
 		var h [32]byte
-		
+
 		e = binary.Read(b, binary.LittleEndian, &typ)
 		if e != nil {
 			println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
@@ -543,7 +543,7 @@ func (c *oneConnection) blocksNeeded() bool {
 
 		// Lock the blocktree while we're browsing through it
 		BlockChain.BlockIndexAccess.Lock()
-		var depth = 144 // by default let's ask up to 
+		var depth = 144 // by default let's ask up to
 		if !LastBlockReceived.IsZero() {
 			// Every minute from last block reception moves us 1-block up the chain
 			depth = int(time.Now().Sub(LastBlockReceived)/time.Minute)
@@ -610,7 +610,7 @@ func (c *oneConnection) Tick() {
 		// If we have no ack, do nothing more.
 		return
 	}
-	
+
 	// Need to send getblocks...?
 	if c.blocksNeeded() {
 		return
@@ -645,7 +645,7 @@ func do_one_connection(c *oneConnection) {
 		c.SendVersion()
 	}
 
-	c.LastDataGot = time.Now()                                                                     
+	c.LastDataGot = time.Now()
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
 	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
 	if *server {
@@ -658,12 +658,12 @@ func do_one_connection(c *oneConnection) {
 		if c.Broken {
 			break
 		}
-		
+
 		if cmd==nil {
 			c.Tick()
 			continue
 		}
-		
+
 		c.LastDataGot = time.Now()
 		c.LastCmdRcvd = cmd.cmd
 
@@ -684,14 +684,14 @@ func do_one_connection(c *oneConnection) {
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
-			
+
 			case "tx": //ParseTx(cmd.pl)
 				println("tx unexpected here (now)")
 				c.Broken = true
-			
+
 			case "addr":
 				ParseAddr(cmd.pl)
-			
+
 			case "block": //block received
 				netBlockReceived(c, cmd.pl)
 
@@ -865,5 +865,3 @@ func start_server() {
 		}
 	}
 }
-
-

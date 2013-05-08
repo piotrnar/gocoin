@@ -10,7 +10,7 @@ import (
 type Chain struct {
 	Blocks *BlockDB
 	Unspent UnspentDB
-	
+
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
 	Genesis *Uint256
@@ -25,13 +25,13 @@ type Chain struct {
 
 func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	testnet = genesis.Hash[0]==0x43
-	
+
 	ch = new(Chain)
 	ch.Genesis = genesis
 	ch.Blocks = NewBlockDB(dbrootdir)
 	ch.Unspent = NewUnspentDb(dbrootdir, rescan)
 
-	ch.loadBlockIndex() 
+	ch.loadBlockIndex()
 	if rescan {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	} else {
@@ -41,19 +41,19 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 			ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		}
 	}
-	
+
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
 		ch.ParseTillBlock(end)
 	}
 
-	return 
+	return
 }
 
 
 func NewBlockIndex(h []byte) (o [Uint256IdxLen]byte) {
 	copy(o[:], h[:Uint256IdxLen])
-	return 
+	return
 }
 
 
@@ -85,7 +85,7 @@ func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 
 func (ch *Chain)Stats() (s string) {
 	ch.BlockIndexAccess.Lock()
-	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n", 
+	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n",
 		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height)
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
@@ -124,4 +124,3 @@ func (ch *Chain) GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx {
 	}
 	return unsp
 }
-

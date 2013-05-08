@@ -1,4 +1,4 @@
-/* 
+/*
 This package is suposed to help importin Satoshi's bitcoin
 client blockchain into Gocoin's bitcoin client.
 */
@@ -50,11 +50,11 @@ func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 	}
 
 	if !bytes.Equal(buf[:], mag[:]) {
-		e = errors.New(fmt.Sprintf("BlockDB: Unexpected magic: %02x%02x%02x%02x", 
+		e = errors.New(fmt.Sprintf("BlockDB: Unexpected magic: %02x%02x%02x%02x",
 			buf[0], buf[1], buf[2], buf[3]))
 		return
 	}
-	
+
 	_, e = f.Read(buf[:])
 	if e != nil {
 		return
@@ -70,9 +70,9 @@ func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 	if e!=nil {
 		return
 	}
-	
+
 	return
-}   
+}
 
 
 func (db *BlockDB)readOneBlock() (res []byte, e error) {
@@ -100,7 +100,7 @@ func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 			bl, e = db.readOneBlock()
 		}
 	}
-	return 
+	return
 }
 
 func lsb2uint(lt []byte) (res uint64) {

@@ -13,7 +13,7 @@ type UnspentDB struct {
 
 func NewDb(dir string, init bool) btc.UnspentDB {
 	var db UnspentDB
-	
+
 	if init {
 		os.RemoveAll(dir+"unspent/")
 		os.RemoveAll(dir+"unspent/unwind/")
@@ -21,7 +21,7 @@ func NewDb(dir string, init bool) btc.UnspentDB {
 
 	db.unspent = newUnspentDB(dir+"unspent/")
 	db.unwind = newUnwindDB(dir+"unspent/unwind/")
-	
+
 	return &db
 }
 
@@ -92,4 +92,3 @@ func (db UnspentDB) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.AllU
 func init() {
 	btc.NewUnspentDb = NewDb
 }
-

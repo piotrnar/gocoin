@@ -56,9 +56,9 @@ func bts(val uint64) {
 func net_stats(par string) {
 	if par!="" {
 		node_info(par)
-		return 
+		return
 	}
-	
+
 	mutex.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
 	srt := make(sortedkeys, len(openCons))
@@ -154,4 +154,3 @@ func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 }
-

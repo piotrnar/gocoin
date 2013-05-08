@@ -26,7 +26,7 @@ type UnspentDB interface {
 	CommitBlockTxs(*BlockChanges, []byte) error
 	UndoBlockTransactions(uint32)
 	GetLastBlockHash() []byte
-	
+
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
 	GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx
 

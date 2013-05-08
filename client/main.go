@@ -46,14 +46,14 @@ var (
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
-	
+
 	cachedBlocks map[[btc.Uint256IdxLen]byte] *btc.Block = make(map[[btc.Uint256IdxLen]byte] *btc.Block)
 	receivedBlocks map[[btc.Uint256IdxLen]byte] int64 = make(map[[btc.Uint256IdxLen]byte] int64, 300e3)
 
 	MyWallet *oneWallet
 
 	Counter map[string] uint64 = make(map[string]uint64)
-	
+
 	busy string
 
 	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
@@ -116,7 +116,7 @@ func show_balance(p string) {
 	var sum uint64
 	for i := range unsp {
 		sum += unsp[i].Value
-		
+
 		if len(unsp)<100 {
 			fmt.Printf("%7d %s @ %s (%s)\n", 1+BlockChain.BlockTreeEnd.Height-unsp[i].MinedAt,
 				unsp[i].String(), MyWallet.addrs[unsp[i].AskIndex].String(),
@@ -132,15 +132,15 @@ func show_balance(p string) {
 				fmt.Println("You can probably fix it by launching the client with -rescan")
 				os.Exit(1)
 			}
-			
+
 			txid := btc.NewUint256(unsp[i].TxPrevOut.Hash[:])
-			
+
 			// Store the unspent line in balance/unspent.txt
-			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", unsp[i].TxPrevOut.String(), 
+			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", unsp[i].TxPrevOut.String(),
 				float64(unsp[i].Value)/1e8, unsp[i].MinedAt,
 				MyWallet.addrs[unsp[i].AskIndex].String(), MyWallet.label[unsp[i].AskIndex])
-				
-			
+
+
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
 			txf, _ := os.Open(fn)
@@ -366,7 +366,7 @@ func load_tx(par string) {
 			fmt.Println("Something went wrong, but recovered in f", r)
 		}
 	}()
-	
+
 	f, e := os.Open(par)
 	if e != nil {
 		println(e.Error())
@@ -459,7 +459,7 @@ func save_bchain(par string) {
 
 func switch_sync(par string) {
 	offit := (par=="0" || par=="false" || par=="off")
-	
+
 	// Actions when syncing is enabled:
 	if !BlockChain.DoNotSync {
 		if offit {
@@ -470,7 +470,7 @@ func switch_sync(par string) {
 		}
 		return
 	}
-	
+
 	// Actions when syncing is disabled:
 	if offit {
 		fmt.Println("Sync is already disabled. Request ignored.")
@@ -524,12 +524,12 @@ func main() {
 	initPeers(GocoinHomeDir)
 
 	LastBlock = BlockChain.BlockTreeEnd
-	
+
 	sta = time.Now().Unix()
 	for k, _ := range BlockChain.BlockIndex {
 		receivedBlocks[k] = sta
 	}
-	
+
 	go network_process()
 
 	go do_userif()
@@ -545,14 +545,14 @@ func main() {
 		select {
 			case newbl = <-netBlocks:
 				break
-			
+
 			case cmd := <-uiChannel:
 				Busy("UI command")
 				CountSafe("UI messages")
 				cmd.handler(cmd.param)
 				uicmddone <- true
 				continue
-			
+
 			case <-time.After(100*time.Millisecond):
 				CountSafe("MainThreadTicks")
 				if !retryCachedBlocks {

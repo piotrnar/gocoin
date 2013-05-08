@@ -1,5 +1,5 @@
 package btc
-    
+
 import (
 //	"fmt"
 	"testing"
@@ -32,23 +32,22 @@ func TestTarget(t *testing.T) {
 	for i := range testvecs {
 		x := SetCompact(testvecs[i].b)
 		d := GetDifficulty(testvecs[i].b)
-		
+
 		c := GetCompact(x)
 		//fmt.Printf("%d. %d/%d -> %.8f / %.8f\n", i, testvecs[i].b, c, d, testvecs[i].d)
 		if testvecs[i].b != c {
 			t.Error("Set/GetCompact mismatch at alement", i)
 		}
-		
+
 		if testvecs[i].e!="" {
 			y, _ := new(big.Int).SetString(testvecs[i].e, 16)
 			if x.Cmp(y) != 0 {
 				t.Error("Target mismatch at alement", i)
 			}
 		}
-		
+
 		if testvecs[i].d!=0 && math.Abs(d-testvecs[i].d) > 0.1 {
 			t.Error("Difficulty mismatch at alement", i)
 		}
 	}
 }
-

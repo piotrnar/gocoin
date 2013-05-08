@@ -53,7 +53,7 @@ func TestVerify(t *testing.T) {
 			panic(e.Error())
 		}
 		h := NewSha2Hash(b[:])
-		
+
 		ok := key.Verify(h.Hash[:], sig)
 		if !ok {
 			t.Error("Test vector failed", i)
@@ -81,4 +81,3 @@ func BenchmarkVerify(b *testing.B) {
 		key.Verify(h.Hash[:], sig)
 	}
 }
-

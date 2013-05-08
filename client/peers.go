@@ -21,7 +21,7 @@ const (
 var (
 	peerDB *qdb.DB
 	crctab = crc64.MakeTable(crc64.ISO)
-	
+
 	proxyPeer *onePeer // when this is not nil we should only connect to this single node
 
 	nextDefrag time.Time
@@ -32,7 +32,7 @@ type onePeer struct {
 	Ip6 [12]byte
 	Ip4 [4]byte
 	Port uint16
-	
+
 	Time uint32  // When seen last time
 	Banned uint32 // time when this address baned or zero if never
 }
@@ -50,11 +50,11 @@ func newPeer(v []byte) (p *onePeer) {
 	copy(p.Ip6[:], v[12:24])
 	copy(p.Ip4[:], v[24:28])
 	p.Port = binary.BigEndian.Uint16(v[28:30])
-	
+
 	if len(v) == 34 {
 		p.Banned = binary.LittleEndian.Uint32(v[30:34])
 	}
-	
+
 	return
 }
 
@@ -145,7 +145,7 @@ func (p *onePeer) Ip() (string) {
 
 func (p *onePeer) String() (s string) {
 	s = fmt.Sprintf("%21s", p.Ip())
-	
+
 	now := uint32(time.Now().Unix())
 	if p.Banned != 0 {
 		s += fmt.Sprintf("  *BAN %3d min ago", (now-p.Banned)/60)
@@ -197,7 +197,7 @@ func getBestPeer() (p *onePeer) {
 		}
 		return
 	}
-	
+
 	var best_time uint32
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
@@ -210,7 +210,7 @@ func getBestPeer() (p *onePeer) {
 		return true
 	})
 
-	return 
+	return
 }
 
 
@@ -265,7 +265,7 @@ func initPeers(dir string) {
 		copy(proxyPeer.Ip4[:], oa.IP[0:4])
 		proxyPeer.Port = uint16(oa.Port)
 	}
-	
+
 }
 
 

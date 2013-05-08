@@ -66,7 +66,7 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	if len(val)<48 {
 		panic(fmt.Sprint("unspent record too short:", len(val)))
 	}
-	
+
 	res = new(btc.TxOut)
 	res.Value = binary.LittleEndian.Uint64(val[36:44])
 	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
@@ -172,7 +172,7 @@ func (db *unspentDb) stats() (s string) {
 			return true
 		})
 	}
-	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n", 
+	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n",
 		float64(sum)/1e8, cnt, db.defragCount)
 }
 
@@ -211,5 +211,3 @@ func (db *unspentDb) close() {
 		}
 	}
 }
-
-

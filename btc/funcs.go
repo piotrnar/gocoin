@@ -44,12 +44,12 @@ func VLen(b []byte) (len int, var_int_siz int) {
 		return int(c), 1
 	}
 	var_int_siz = 1 + (2 << (2-(0xff-c)))
-	
+
 	var res uint64
 	for i:=1; i<var_int_siz; i++ {
 		res |= (uint64(b[i]) << uint64(8*(i-1)))
 	}
-	
+
 	if res>0x7fffffff {
 		panic("This should never happen")
 	}
@@ -85,7 +85,7 @@ func getMerkel(txs []*Tx) ([]byte) {
 func ReadVLen(b io.Reader) (res uint64, e error) {
 	var buf [8]byte;
 	var n int
-	
+
 	n, e = b.Read(buf[:1])
 	if e != nil {
 		println("ReadVLen1 error:", e.Error())
@@ -131,5 +131,3 @@ func WriteVlen(b io.Writer, var_len uint32) {
 	}
 	b.Write([]byte{0xfe, byte(var_len), byte(var_len>>8), byte(var_len>>16), byte(var_len>>24)})
 }
-
-

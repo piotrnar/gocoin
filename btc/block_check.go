@@ -53,13 +53,13 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 			return
 		}
 	}
-	
+
 	er = bl.BuildTxList()
 	if er != nil {
 		dos = true
 		return
 	}
-	
+
 	if !bl.Trusted {
 		// First transaction must be coinbase, the rest must not be
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
@@ -81,7 +81,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 			dos = true
 			return
 		}
-		
+
 		// Check transactions
 		for i:=0; i<len(bl.Txs); i++ {
 			er = bl.Txs[i].CheckTransaction()
@@ -95,4 +95,3 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 
 	return
 }
-

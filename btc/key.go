@@ -38,15 +38,15 @@ func decompressPoint(off bool, x *big.Int)  (y *big.Int) {
 
 
 /*
-Public keys (in scripts) are given as 04 <x> <y> where x and y are 32 byte big-endian 
-integers representing the coordinates of a point on the curve 
+Public keys (in scripts) are given as 04 <x> <y> where x and y are 32 byte big-endian
+integers representing the coordinates of a point on the curve
 
 or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 0x03 if y is odd.
 */
 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 	switch len(buf) {
-		case 65: 
+		case 65:
 			/*if buf[0]==4*/ {
 				res = new(PublicKey)
 				res.Curve = S256()
@@ -71,7 +71,7 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 
 func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
 	ok = ecdsa.Verify(&pk.PublicKey, h[:], s.R, s.S)
-	return 
+	return
 }
 
 
@@ -87,9 +87,9 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 		e = errors.New("NewSignature: Key too short " + fmt.Sprint(len(buf)))
 		return
 	}
-	
+
 	rd := bytes.NewReader(buf[:])
-	
+
 	// 0x30
 	c, e = rd.ReadByte()
 	if e!=nil || c!=0x30 {
@@ -103,14 +103,14 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 		e = errors.New("NewSignature: Error parsing Signature at step 2")
 		return
 	}
-	
+
 	// 0x02
 	c, e = rd.ReadByte()
 	if e!=nil || c!=0x02 {
 		e = errors.New("NewSignature: Error parsing Signature at step 3")
 		return
 	}
-	
+
 	// len R
 	c, e = rd.ReadByte()
 	if e!=nil {
@@ -124,14 +124,14 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 		e = errors.New("NewSignature: Error parsing Signature at step 5")
 		return
 	}
-	
+
 	// 0x02
 	c, e = rd.ReadByte()
 	if e!=nil || c!=0x02 {
 		e = errors.New("NewSignature: Error parsing Signature at step 5a")
 		return
 	}
-	
+
 	// len S
 	c, e = rd.ReadByte()
 	if e!=nil {
@@ -155,7 +155,6 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	sig.R = new(big.Int).SetBytes(Rdat[:])
 	sig.S = new(big.Int).SetBytes(Sdat[:])
 	sig.HashType = c
-	
+
 	return
 }
-

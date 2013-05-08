@@ -62,5 +62,3 @@ func (ch *Chain)loadBlockIndex() {
 		}
 	}
 }
-
-

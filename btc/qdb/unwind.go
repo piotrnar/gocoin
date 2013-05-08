@@ -86,7 +86,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 	if height != db.lastBlockHeight {
 		panic("Unexpected height")
 	}
-	
+
 	v := db.tdb.Get(qdb.KeyType(height))
 	if v == nil {
 		panic("Unwind data not found")
@@ -138,9 +138,8 @@ func (db *unwindDb) GetLastBlockHash() (val []byte) {
 
 
 func (db *unwindDb) stats() (s string) {
-	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d\n", 
+	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d\n",
 		db.tdb.Count(), db.lastBlockHeight, db.defragCount)
 	s += "Last block: " + btc.NewUint256(db.lastBlockHash[:]).String() + "\n"
 	return
 }
-

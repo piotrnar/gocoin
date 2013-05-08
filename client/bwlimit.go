@@ -1,4 +1,4 @@
-package main                   
+package main
 
 import (
 	"sync"
@@ -164,5 +164,3 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	}
 	return
 }
-
-

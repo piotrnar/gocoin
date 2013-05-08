@@ -34,7 +34,7 @@ const (
 type oneBl struct {
 	fpos uint64 // where at the block is stored in blockchain.dat
 	blen uint32 // how long the block is in blockchain.dat
-	
+
 	ipos int64  // where at the record is stored in blockchain.idx
 	trusted bool
 }
@@ -97,7 +97,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	}
 
 	ipos, _ := db.blockindx.Seek(0, os.SEEK_CUR) // at this point the file shall always be at its end
-	
+
 	if bl.Trusted {
 		flagz[0] |= BLOCK_TRUSTED
 	}
@@ -111,7 +111,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	binary.Write(db.blockindx, binary.LittleEndian, uint32(len(bl.Raw[:])))
 
 	db.mutex.Lock()
-	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos), 
+	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos),
 		blen:uint32(len(bl.Raw[:])), ipos:ipos, trusted:bl.Trusted}
 	db.mutex.Unlock()
 	return
@@ -152,7 +152,7 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 		db.setBlockFlag(cur, BLOCK_TRUSTED)
 	}
 	db.mutex.Unlock()
-}   
+}
 
 func (db *BlockDB) setBlockFlag(cur *oneBl, fl byte) {
 	var b [1]byte
@@ -203,12 +203,12 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		if e != nil {
 			break
 		}
-		
+
 		if (b[0]&BLOCK_INVALID) != 0 {
 			println("Block #", binary.LittleEndian.Uint32(b[68:72]), "is invalid", b[0])
 			continue
 		}
-		
+
 		trusted := (b[0]&BLOCK_TRUSTED) != 0
 		blh := b[4:36]
 		pah := b[36:68]
@@ -234,5 +234,3 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 	db.blockdata.Seek(maxfilepos, os.SEEK_SET) // In case if there was some trash, this should truncate it
 	return
 }
-
-

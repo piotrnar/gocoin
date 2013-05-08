@@ -9,15 +9,15 @@ type Block struct {
 	Raw []byte
 	Hash *Uint256
 	Txs []*Tx
-	
+
 	Version uint32
 	Parent []byte
 	MerkleRoot []byte
 	BlockTime uint32
 	Bits uint32
-	
+
 	// if the block is trusted, we do not check signatures and some other things...
-	Trusted bool 
+	Trusted bool
 }
 
 
@@ -58,7 +58,7 @@ func (bl *Block) BuildTxList() (e error) {
 		}(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
 		offs += n
 	}
-	
+
 	// Wait for pending hashing to finish...
 	for i:=0; i<useThreads; i++ {
 		_ = <- taskDone
@@ -70,4 +70,3 @@ func (bl *Block) BuildTxList() (e error) {
 func GetBlockReward(height uint32) (uint64) {
 	return 50e8 >> (height/210000)
 }
-

@@ -36,7 +36,7 @@ var (
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
-	totBtc uint64  
+	totBtc uint64
 
 	verbyte, privver byte
 
@@ -49,8 +49,8 @@ var (
 
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
-	sendTo []oneSendTo  
-	
+	sendTo []oneSendTo
+
 	curv *btc.BitCurve = btc.S256()
 )
 
@@ -143,7 +143,7 @@ func load_others() {
 				println("Decodeb58 failed:", pk[0])
 				continue
 			}
-			
+
 			if len(pkb)!=37 && len(pkb)!=38 {
 				println(pk[0], "has wrong key", len(pkb))
 				println(hex.EncodeToString(pkb))
@@ -233,7 +233,7 @@ func make_wallet() {
 func verify_key(priv []byte, publ []byte) bool {
 	const TestMessage = "Just some test message..."
 	hash := btc.Sha2Sum([]byte(TestMessage))
-	
+
 	pub_key, e := btc.NewPublicKey(publ)
 	if e != nil {
 		println("NewPublicKey:", e.Error(), "\007")
@@ -248,7 +248,7 @@ func verify_key(priv []byte, publ []byte) bool {
 		println("pubkey value is zero")
 		return false
 	}
-	
+
 	if key.D.Cmp(maxKeyVal) != -1 {
 		println("pubkey value is too big", hex.EncodeToString(publ))
 		return false
@@ -312,7 +312,7 @@ func load_balance() {
 			if len(rst)>1 {
 				lab = rst[1]
 			}
-			
+
 			if _, ok := loadedTxs[txid.Hash]; !ok {
 				tf, _ := os.Open("balance/"+txid.String()+".tx")
 				if tf != nil {
@@ -350,7 +350,7 @@ func load_balance() {
 					break
 				}
 			}
-			
+
 			if !fnd {
 				fmt.Println(uns.String(), "does not belogn to your wallet - ignore it")
 			}
@@ -373,14 +373,14 @@ func parse_spend() {
 	// No dump, so send money...
 	outs := strings.Split(*send, ",")
 	sendTo = make([]oneSendTo, len(outs))
-	
+
 	for i := range outs {
 		tmp := strings.Split(strings.Trim(outs[i], " "), "=")
 		if len(tmp)!=2 {
 			println("The otputs must be in a format address1=amount1[,addressN=amountN]\007")
 			os.Exit(1)
 		}
-		
+
 		a, e := btc.NewAddrFromString(tmp[0])
 		if e != nil {
 			println("NewAddrFromString:", e.Error(), "\007")
@@ -419,7 +419,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 			return
 		}
 	}
-	
+
 	fmt.Println("You do not own the address of the first input\007")
 	os.Exit(1)
 	return
@@ -432,7 +432,7 @@ func make_signed_tx() {
 	tx := new(btc.Tx)
 	tx.Version = 1
 	tx.Lock_time = 0
-	
+
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
 	var inpcnt uint
@@ -457,14 +457,14 @@ func make_signed_tx() {
 	for o := range sendTo {
 		tx.TxOut[o] = &btc.TxOut{Value: sendTo[o].amount, Pk_script: sendTo[o].addr.OutScript()}
 	}
-	
+
 	if changeBtc > 0 {
 		// Add one more output (with the change)
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: get_change_addr().OutScript()})
 	}
-	
+
 	//fmt.Println("Unsigned:", hex.EncodeToString(tx.Serialize()))
-	
+
 	for in := range tx.TxIn {
 		uo := UO(unspentOuts[in])
 		var found bool
@@ -484,7 +484,7 @@ func make_signed_tx() {
 				//Calculate proper transaction hash
 				h := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
 				//fmt.Println("SignatureHash:", btc.NewUint256(h).String())
-				
+
 				// Sign
 				r, s, err := ecdsa.Sign(rand.Reader, &key, h)
 				if err != nil {
@@ -493,7 +493,7 @@ func make_signed_tx() {
 				}
 				rb := r.Bytes()
 				sb := s.Bytes()
-				
+
 				if rb[0] >= 0x80 { // I thinnk this is needed, thought I am not quite sure... :P
 					rb = append([]byte{0x00}, rb...)
 				}
@@ -518,7 +518,7 @@ func make_signed_tx() {
 				buscr := new(bytes.Buffer)
 				buscr.WriteByte(byte(busig.Len()))
 				buscr.Write(busig.Bytes())
-				
+
 				buscr.WriteByte(byte(len(publ_addrs[j].Pubkey)))
 				buscr.Write(publ_addrs[j].Pubkey)
 
@@ -540,7 +540,7 @@ func make_signed_tx() {
 
 	hs := tx.Hash.String()
 	fmt.Println(hs)
-	
+
 	f, _ := os.Create(hs[:8]+".txt")
 	if f != nil {
 		f.Write([]byte(hex.EncodeToString(rawtx)))
@@ -596,7 +596,7 @@ func main() {
 
 	// If no dump, then it should be send money
 	load_balance()
-	
+
 	if *send!="" {
 		parse_spend()
 		if spendBtc + feeBtc > totBtc {
