@@ -115,27 +115,47 @@ func do_userif() {
 
 
 func show_info(par string) {
+
+	// Memory used
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	
+	fmt.Println("Go version:", runtime.Version(), "   System Memory used:", 
+		ms.HeapAlloc>>20, "MB    NewBlockBeep:", beep)
+
 	mutex.Lock()
-	fmt.Printf("CachedBlocks:%d  PendingBlocks:%d/%d  receivedBlocks:%d  FifoFull:%d  MemUsed:%dMB\n", 
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(receivedBlocks),
-		FifoFullCnt, ms.HeapAlloc>>20)
-	var minago string = ""
-	if LastBlockReceived != 0 {
-		minago = fmt.Sprintf("  Block got %d min ago", (time.Now().Unix()-LastBlockReceived)/60)
+
+	// Queues and caches
+	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n", 
+		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
+
+	// Counters
+	var li string
+	for k, v := range Counter {
+		s := fmt.Sprint(k, ": ", v)
+		if len(li)+len(s) >= 80 {
+			fmt.Println(li)
+			li = ""
+		} else if li!="" {
+			li += ",   "
+		}
+		li += s
 	}
-	fmt.Printf("InvsIgn:%d  BlockDups:%d  BlocksNeeded:%d  NetMsgs:%d/%d\n", 
-		InvsIgnored, BlockDups, BlocksNeeded, len(netBlocks), NetMsgsCnt)
-	fmt.Printf("UiMsgs:%d  GetaddrCnt:%d  Ticks:%d%s\n", 
-		UiMsgsCnt, GetaddrCnt, TicksCnt, minago)
+	if li != "" {
+		fmt.Println(li)
+	}
+
+	// Last block:
 	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
-	fmt.Printf("LastBlock's  Height %d,  Time %s,  Difficulty %.1f\n", LastBlock.Height, 
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006-01-02 15:04:05"), 
+	fmt.Printf("  Height: %d @ %s,  Difficulty: %.1f\n", LastBlock.Height, 
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"), 
 		btc.GetDifficulty(LastBlock.Bits))
+	if !LastBlockReceived.IsZero() {
+		fmt.Println("  Received", time.Now().Sub(LastBlockReceived), "ago")
+	}
+
+	// Main thread activity:
 	if busy!="" {
-		println("BlockChain thread currently busy with", busy)
+		println("BlockChain thread is busy with", busy)
 	} else {
 		println("BlockChain thread is currently idle")
 	}
