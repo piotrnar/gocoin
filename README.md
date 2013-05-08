@@ -10,7 +10,7 @@ The entire software package consists of two applications:
 
 … and two libraries:
 * btc – the bitcoin library, with a persistent storage database
-* blockdb – a helper lib, used fro importing blocks from the official client
+* blockdb – a helper lib, used for importing blocks from the official client
 
 
 Dependencies
