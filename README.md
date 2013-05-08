@@ -54,6 +54,7 @@ Both the applications (client and wallet) are command line only. The client, aft
 Client
 --------------
 Command line switches for executing the client:
+
 	-t - use Testnet (instead of regular bitcoin network)
 	-l – also listen for incoming TCP connections (no UPnP support)
 	-ul=NN - set maximum upload speed to NN kilobytes per second
@@ -79,30 +80,36 @@ To do this use “dumprivkey” RPC and store the base58 encoded value in a file nam
 
 Spending money
 --------------
-After you setup your wallet in a secured environment, you should export its public addresses. In order to to this, just run
+After you setup your wallet in a secured environment, you should export its public addresses. In order to to this, just run:
+
 	wallet -l
 
 The wallet's public addresses will be written to wallet.txt. Now you can take this file safely to your client's PC and place it in the folder where it looks for wallet.txt (the path is printed while are starting the client). Execute “wal” from the UI to reload the wallet.
 
 From the moment when wallet.txt is properly loaded into your client, you can check your balance using the UI:
+
 	bal
 
 Each time you execute “bal”, a directory "balance/" is (re)created, in the folder where you run your client from.
 
 To spend your money, move the most recent "balance/" folder to the PC with your wallet. If you execute “wallet” without any parameters, it should show you how many bitcoins you are able to spend, from the current balance. If it is more than zero, to spend the coins, order the wallet to make and sign a transaction using a command like:
+
 	wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=1.0
 
 There are also additional switches which you may find useful at this stage. To see them all, try:
+
 	wallet -h
 
-If everything goes well with the "-send …" order, the wallet creates a text file with a signed transaction. The fiel is named like 01234567.txt
+If everything goes well with the "-send …" order, the wallet creates a text file with a signed transaction. The file is named like 01234567.txt
 
 Now move this transaction file to your running client and use its UI to execute:
+
 	tx 01234567.txt
 
 The node should decode the transaction and display its details, for your verification. It will also output the <transactionid>.
 
 After making sure that the transaction does what you wanted, you can broadcast it to the network:
+
 	stx <transactionid>
 
 Please note that the current version of client does not re-broadcast transactions, so if your transaction does not appear in the chain soon enough, you may want  to repeat the "stx ..." command. There may of course be other reasons why your transaction does not get confirmed (i.e. the fee was to small), in which case repeating "stx ..." will not help much.
