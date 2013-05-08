@@ -41,6 +41,7 @@ Please keep in mind that the wallet uses unencrypted files to store the private 
 Building
 ==============
 For anyone familiar with Go language, building should not be a problem. You can fetch the source code using i.e.:
+
 	go get github.com/piotrnar/gocoin/btc
 
 After you have the sources in your local disk, building them is usually as simple as executing "go build" - in either the client or the wallet directory.
