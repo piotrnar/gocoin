@@ -356,16 +356,38 @@ func load_wallet(fn string) {
 }
 
 func load_tx(par string) {
-	txd, er := hex.DecodeString(par)
-	if er != nil {
-		println(er.Error())
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Something went wrong, but recovered in f", r)
+		}
+	}()
+	
+	f, e := os.Open(par)
+	if e != nil {
+		println(e.Error())
+		return
 	}
+	n, _ := f.Seek(0, os.SEEK_END)
+	f.Seek(0, os.SEEK_SET)
+	buf := make([]byte, n)
+	f.Read(buf)
+	f.Close()
+
+	txd, er := hex.DecodeString(string(buf))
+	if er != nil {
+		txd = buf
+		fmt.Println("Seems like the transaction is in a binary format")
+	} else {
+		fmt.Println("Looks like the transaction file contains hex data")
+	}
+
+	// At this place we should have raw transaction in txd
 	tx, le := btc.NewTx(txd)
 	if le != len(txd) {
 		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
 	}
 	txid := btc.NewSha2Hash(txd)
-	fmt.Println(len(tx.TxIn), "inputs:")
+	fmt.Println(len(tx.TxIn), "Inputs:")
 	var totinp, totout uint64
 	var missinginp bool
 	for i := range tx.TxIn {
@@ -380,7 +402,7 @@ func load_tx(par string) {
 			missinginp = true
 		}
 	}
-	fmt.Println(len(tx.TxOut), "outputs:")
+	fmt.Println(len(tx.TxOut), "Outputs:")
 	for i := range tx.TxOut {
 		totout += tx.TxOut[i].Value
 		fmt.Printf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
@@ -393,8 +415,8 @@ func load_tx(par string) {
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
 	TransactionsToSend[txid.Hash] = txd
-	fmt.Println("Transaction", txid.String(), "stored in the memory pool")
-	fmt.Println("Execute 'stx " + txid.String() + "' to send it out")
+	fmt.Println("Transaction stored in the memory pool")
+	fmt.Println("To brodcast it, execute: stx " + txid.String())
 }
 
 
@@ -460,7 +482,7 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("balance bal", true, show_balance, "Show & save the balance of the currently loaded wallet")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("loadtx tx", true, load_tx, "Decode given hex-encoded tx and store it in memory pool")
+	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool, identified given <txid>")
 	newUi("lstx", true, list_txs, "List all the transaction loaded into memory pool")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
