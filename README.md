@@ -49,7 +49,9 @@ After you have the sources in your local disk, building them is usually as simpl
 
 User Manual
 ==============
-Both the applications (client and wallet) are command line only. The client, after run, provides an additional interactive text interface (referred later as UI)
+Both the applications (client and wallet) are command line only – no GIU.
+
+ The client app, after started, provides an additional text command based interface, that referred later as UI.
 
 
 Client
