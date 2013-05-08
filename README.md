@@ -6,9 +6,9 @@ At the current version it only works with entire blocks and does not rely transa
 
 
 The entire software package consists of:
-* btc - bitcoin client library
+* btc - bitcoin library
 * client - bitcoin node
-* wallet - a deterministic wallet
+* wallet - deterministic wallet
 
 
 Dependencies
@@ -49,7 +49,7 @@ After you have the sources in your local disk, building them is usually as simpl
 
 User Manual
 ==============
-Both the applications (client and wallet) are command line only – no GIU.
+Both the applications (client and wallet) are console only (no GUI).
 
  The client app, after started, provides an additional text command based interface, that referred later as UI.
 
