@@ -16,7 +16,6 @@ const (
 )
 
 var (
-	verbose *bool = flag.Bool("v", false, "Verbose mode")
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
 	rescan *bool = flag.Bool("r", false, "Discard unspent outputs DB and rescan the blockchain")
 	proxy *string = flag.String("c", "", "Connect to this host")
