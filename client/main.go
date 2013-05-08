@@ -37,7 +37,7 @@ var (
 	beep bool
 
 	LastBlock *btc.BlockTreeNode
-	LastBlockReceived int64 // time when the last block was received
+	LastBlockReceived time.Time // time when the last block was received
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
@@ -52,8 +52,8 @@ var (
 
 	MyWallet *oneWallet
 
-	InvsIgnored, BlockDups, BlocksNeeded, NetMsgsCnt, UiMsgsCnt, FifoFullCnt uint64
-	TicksCnt uint64
+	Counter map[string] uint64 = make(map[string]uint64)
+	
 	busy string
 
 	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
@@ -69,6 +69,12 @@ type blockRcvd struct {
 func Busy(b string) {
 	mutex.Lock()
 	busy = b
+	mutex.Unlock()
+}
+
+func CountSafe(k string) {
+	mutex.Lock()
+	Counter[k]++
 	mutex.Unlock()
 }
 
@@ -216,7 +222,7 @@ func retry_cached_blocks() bool {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 				delete(cachedBlocks, k)
 				LastBlock = BlockChain.BlockTreeEnd
-				LastBlockReceived = time.Now().Unix()
+				LastBlockReceived = time.Now()
 				return len(cachedBlocks)>0
 			} else {
 				println("retry AcceptBlock:", e.Error())
@@ -260,7 +266,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		if _, ok := pendingBlocks[idx]; ok {
 			panic("wtf?")
 		} else {
-			BlockDups++
+			Counter["SameBlockReceived"]++
 		}
 		mutex.Unlock()
 		return
@@ -300,11 +306,10 @@ func blockWanted(h []byte) (yes bool) {
 	mutex.Lock()
 	if _, ok := receivedBlocks[idx]; !ok {
 		yes = true
+	} else {
+		Counter["Block not wanted"]++
 	}
 	mutex.Unlock()
-	if !yes {
-		InvsIgnored++
-	}
 	return
 }
 
@@ -314,15 +319,15 @@ func InvsNotify(h []byte) (need bool) {
 	idx := ha.BIdx()
 	mutex.Lock()
 	if _, ok := pendingBlocks[idx]; ok {
-		InvsIgnored++
+		Counter["InvWasPending"]++
 	} else if _, ok := receivedBlocks[idx]; ok {
-		InvsIgnored++
+		Counter["InvWasReceived"]++
 	} else if len(pendingFifo)<PendingFifoLen {
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
 	} else {
-		FifoFullCnt++
+		Counter["INV when pending FIFO full"]++
 	}
 	mutex.Unlock()
 	return
@@ -543,13 +548,13 @@ func main() {
 			
 			case cmd := <-uiChannel:
 				Busy("UI command")
-				UiMsgsCnt++
+				CountSafe("UI messages")
 				cmd.handler(cmd.param)
 				uicmddone <- true
 				continue
 			
 			case <-time.After(100*time.Millisecond):
-				TicksCnt++
+				CountSafe("MainThreadTicks")
 				if !retryCachedBlocks {
 					Busy("BlockChain.Idle()")
 					BlockChain.Idle()
@@ -557,7 +562,7 @@ func main() {
 				continue
 		}
 
-		NetMsgsCnt++
+		CountSafe("NetMessagesGot")
 
 		bl := newbl.bl
 
@@ -586,7 +591,7 @@ func main() {
 				retryCachedBlocks = retry_cached_blocks()
 				mutex.Lock()
 				LastBlock = BlockChain.BlockTreeEnd
-				LastBlockReceived = time.Now().Unix()
+				LastBlockReceived = time.Now()
 				mutex.Unlock()
 			} else {
 				println("AcceptBlock:", e.Error())
