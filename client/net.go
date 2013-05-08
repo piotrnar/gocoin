@@ -37,16 +37,12 @@ const (
 
 var (
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxTotCons)
-	InvsSent, BlockSent, GetaddrCnt uint64
 	InConsActive, OutConsActive uint
-	
 	DefaultTcpPort uint16
 	MyExternalAddr *btc.NetAddr
-
-	ConnTimeoutCnt uint64
-	
 	LastConnId uint32
 )
+
 
 type oneConnection struct {
 	// Source of this IP:
@@ -447,7 +443,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		if dbg>1 {
 			fmt.Println(c.PeerAddr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
 		}
-		InvsSent++
+		CountSafe("GetblocksReplies")
 		c.SendRawMsg("inv", inv.Bytes())
 	}
 }
@@ -481,7 +477,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			bl, _, er := BlockChain.Blocks.BlockGet(uh)
 			if er == nil {
-				BlockSent++
+				CountSafe("BlockSent")
 				c.SendRawMsg("block", bl)
 			} else {
 				//println("block", uh.String(), er.Error())
@@ -548,21 +544,21 @@ func (c *oneConnection) blocksNeeded() bool {
 		// Lock the blocktree while we're browsing through it
 		BlockChain.BlockIndexAccess.Lock()
 		var depth = 144 // by default let's ask up to 
-		if LastBlockReceived != 0 {
+		if !LastBlockReceived.IsZero() {
 			// Every minute from last block reception moves us 1-block up the chain
-			depth = int((time.Now().Unix() - LastBlockReceived) / 60)
+			depth = int(time.Now().Sub(LastBlockReceived)/time.Minute)
 			if depth>400 {
 				depth = 400
 			}
 		}
-		// ask N-blocks up in the chain, allowing to "recover" from chain fork
+		// ask N-blocks up in the chain, to recover from dead-end chain forks
 		n := LastBlock
 		for i:=0; i<depth && n.Parent != nil; i++ {
 			n = n.Parent
 		}
 		BlockChain.BlockIndexAccess.Unlock()
 
-		BlocksNeeded++
+		CountSafe("GetblocksRequested")
 		c.GetBlocks(n.BlockHash.Hash[:])
 		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
 		return true
@@ -577,7 +573,7 @@ func (c *oneConnection) Tick() {
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
 		c.Broken = true
-		ConnTimeoutCnt++
+		CountSafe("NetConnTimeouts")
 		if dbg>0 {
 			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
 		}
@@ -631,7 +627,7 @@ func (c *oneConnection) Tick() {
 	}
 
 	if time.Now().After(c.NextGetAddr) {
-		GetaddrCnt++
+		CountSafe("GetaddrSent")
 		c.SendRawMsg("getaddr", nil)
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
 		return
