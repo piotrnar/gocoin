@@ -1,11 +1,11 @@
 Gocoin
 ==============
-Gocoin is a bictoin software written in Go langage (golang).
-At the current version it only works with entire blocks and
-does not rely transactions, except from announcing own transactions
-to the netowrk.
+Gocoin is a bitcoin software written in Go language (golang).
 
-The entire tree consists of:
+At the current version it only works with entire blocks and does not rely transactions, except from announcing own transactions to the network.
+
+
+The entire software package consists of:
 * btc - bitcoin client library
 * client - bitcoin node
 * wallet - a deterministic wallet
@@ -13,7 +13,7 @@ The entire tree consists of:
 
 Dependencies
 ==============
-Alow go to fetch the dependencies for you:
+Allow Go to fetch the dependencies for you:
 
 	go get github.com/piotrnar/qdb
 	go get code.google.com/p/go.crypto/ripemd160
@@ -24,121 +24,85 @@ Requirements
 
 Client
 --------------
-Becasue of the required memory space, the client side (network node)
-is only supposed to be used with a 64-bit architecture (OS), though
-for testnet only purposes, 32-bit arch should also be enough.
+Because of the required memory space, the client side (network node) is only supposed to be used with a 64-bit architecture (OS), though for Testnet only purposes, 32-bit arch should also be enough.
 
-When the full bitcoin blockchain is loaded, the node needs about 2GB
-of system memory, so make sure that there is enough of it.
+When the full bitcoin block chain is loaded, the node needs about 2GB of system memory, so make sure that there is enough of it.
 
-The blockchain is stored in one large file, so make sure that your file
-system supports files larger than 4GB.
+The block chain is stored in one large file, so make sure that your file system supports files larger than 4GB.
 
 
 Wallet
 --------------
-The wallet app has very little requirements and it should work with
-literelly any platform where you have a working Go compiler.
+The wallet app has very little requirements and it should work with literally any platform where you have a working Go compiler, including ARM (i.e. for Raspberry Pi)
 
-Also, though it has not been tested, there is no reason why it would
-not work on ARM (i.e. Raspberry Pi)
-
-Please keep in mind that the wallet uses unencrypted files to store
-the private keys, so run it always from an encrypted disk.
-Also use an encrypted swap file.
+Please keep in mind that the wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk. Also use an encrypted swap file.
 
 
 Building
 ==============
-For anyone familiar with Go language, building shoudl not be a problem.
-You can fetch the souce code using i.e.:
+For anyone familiar with Go language, building should not be a problem. You can fetch the source code using i.e.:
 	go get github.com/piotrnar/gocoin/btc
 
-After you have the sorces in your local disk, building them is usually
-as simple as executing "go build" in either the client, or the wallet,
-directory.
+After you have the sources in your local disk, building them is usually as simple as executing "go build" - in either the client or the wallet directory.
 
 
-Running
+User Manual
 ==============
-Both the applications (client and wallet) are command line only.
-The client, after run has an additional interactive text interface.
+Both the applications (client and wallet) are command line only. The client, after run, provides an additional interactive text interface (referred later as UI)
 
 
 Client
 --------------
 Command line switches for executing the client:
-	-t - use testnet (insted of regular bitcoin network)
-	-l - listen for incomming TCP connections (no UPnP support)
-	-ul=NN - set maximu upload speed to NN kilobytes per second
-	-dl=NN - set maximu download speed to NN kilobytes per second
-	-r - rescan the blockchain and re-create unspent database
+	-t - use Testnet (instead of regular bitcoin network)
+	-l – also listen for incoming TCP connections (no UPnP support)
+	-ul=NN - set maximum upload speed to NN kilobytes per second
+	-dl=NN - set maximum download speed to NN kilobytes per second
+	-r - rescan the block chain and re-create unspent database
 	-c="1.2.3.4" - connect only to this host
 
-When the client is running you have an interactive interface where
-you can issue commands. Type "help" to see the while list.
+When the client is already running you have the UI where you can issue commands. Type "help" to see  the options..
 
 
 
 Wallet
 --------------
-Wallet is deterministic and the only thing you need to setup it with
-is the seed password. You do not need to backup it, as long as you
-remember the password.
+Wallet is deterministic and the only thing you need to setup it is the seed password.
+You can either enter this password each time you use the wallet, or you can store it in a file called wallet.sec.
+Make sure that the disk with wallet.sec file is encrypted. Also keep in mind that wallet.sec should not contain any special characters, nor new line characters, because they count while calculating the seed and you don't see them on screen, so you may have problems re-creating the same file after you would loose it.
 
-Store your master seed password in file named wallet.sec
-Make sure that there are no accidential end-of-line characters,
-because they count while calculating the seed.
+As long as you remember the password, you do not need to backup the wallet.
 
-You can also import keys from your existing bitcoin wallet.
-To do this use dumprivkey RPC and store the base58 encoded value in
-a file named others.sec - each key in a separate line.
-You can also place a key's label in each line, after the space.
+Additionally, you can also import keys from your existing bitcoin wallet.
+To do this use “dumprivkey” RPC and store the base58 encoded value in a file named others.sec - each key must be in a separate line. You can also place a key's label in each line, after the space.
 
 
 Spending money
 --------------
-
-After you setup your wallet with a proper content of wallet.sec file,
-you should export your public addresses. In order to to this, just run
+After you setup your wallet in a secured environment, you should export its public addresses. In order to to this, just run
 	wallet -l
 
-The wallet's public keys will be written to wallet.txt - you can take
-this file safely to your client's PC and place it in the forder where it
-looks for wallet.txt (the path is printed while are starting the client).
+The wallet's public addresses will be written to wallet.txt. Now you can take this file safely to your client's PC and place it in the folder where it looks for wallet.txt (the path is printed while are starting the client). Execute “wal” from the UI to reload the wallet.
 
-After you place your wallet.txt in the right folder, you can check your
-balance using the clients interactive command:
+From the moment when wallet.txt is properly loaded into your client, you can check your balance using the UI:
 	bal
 
-Each time you execute it, a directory "balance/" is created in the folder
-where you run your client from.
+Each time you execute “bal”, a directory "balance/" is (re)created, in the folder where you run your client from.
 
-To spend your money, move the most recent "balance/" folder to the PC
-with your wallet. If you execute wallet app without any paremeters, it
-should show you how many bitcoins you are able to spend.
-To spend them, order the wallet to make and sign a transaction using:
+To spend your money, move the most recent "balance/" folder to the PC with your wallet. If you execute “wallet” without any parameters, it should show you how many bitcoins you are able to spend, from the current balance. If it is more than zero, to spend the coins, order the wallet to make and sign a transaction using a command like:
 	wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=1.0
 
-There are also additional switches you can use. To see them all ty:
+There are also additional switches which you may find useful at this stage. To see them all, try:
 	wallet -h
 
-If evrything goes well with the "-send ...", the wallet should create
-a text file with a signed transaction (i.e. 01234567.txt).
+If everything goes well with the "-send …" order, the wallet creates a text file with a signed transaction. The fiel is named like 01234567.txt
 
-Now move this transaction file to your running client and use it's
-interactive interface to execute the following command:
+Now move this transaction file to your running client and use its UI to execute:
 	tx 01234567.txt
 
-The node should decode the transaction and show it to you for verification.
-It will also output some <transactionid>.
+The node should decode the transaction and display its details, for your verification. It will also output the <transactionid>.
 
-After making sure that this is what you wanted to send, you can broadcast
-the transaction to the network:
+After making sure that the transaction does what you wanted, you can broadcast it to the network:
 	stx <transactionid>
 
-Please note that the current version of client does not re-broadcast
-transactions, so if your transaction does not appear in the chain soon
-enough, you may need to repeat the "stx ..." command.
-There may be of course other reasons, like i.e. your fee was not big enough,
-in which case repeating "stx ..." will not help much.
+Please note that the current version of client does not re-broadcast transactions, so if your transaction does not appear in the chain soon enough, you may want  to repeat the "stx ..." command. There may of course be other reasons why your transaction does not get confirmed (i.e. the fee was to small), in which case repeating "stx ..." will not help much.
