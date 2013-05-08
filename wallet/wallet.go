@@ -98,7 +98,7 @@ func getpass() string {
 }
 
 // get public key in bitcoin protocol format, from the give private key
-func getPubKey(curv *btc.BitCurve, priv_key []byte) (res []byte) {
+func getPubKey(curv *btc.BitCurve, priv_key []byte, compressed bool) (res []byte) {
 	x, y := curv.ScalarBaseMult(priv_key)
 	xd := x.Bytes()
 
@@ -107,7 +107,7 @@ func getPubKey(curv *btc.BitCurve, priv_key []byte) (res []byte) {
 		os.Exit(2)
 	}
 
-	if *uncompressed {
+	if !compressed {
 		yd := y.Bytes()
 		if len(yd)>32 {
 			println("y is too long:", len(yd))
@@ -144,8 +144,9 @@ func load_others() {
 				continue
 			}
 			
-			if len(pkb)!=38 {
-				println(pk[0], "is nor 38 bytes long")
+			if len(pkb)!=37 && len(pkb)!=38 {
+				println(pk[0], "has wrong key", len(pkb))
+				println(hex.EncodeToString(pkb))
 				continue
 			}
 
@@ -160,20 +161,36 @@ func load_others() {
 				}
 			}
 
-			if pkb[33]!=1 {
-				println("we only support compressed keys, so for safety rejecting", pk[0])
-				continue
+			var sh [32]byte
+			var compr bool
+
+			if len(pkb)==37 {
+				// compressed key
+				//println(pk[0], "is compressed")
+				sh = btc.Sha2Sum(pkb[0:33])
+				if !bytes.Equal(sh[:4], pkb[33:37]) {
+					println(pk[0], "checksum error")
+					continue
+				}
+				compr = false
+			} else {
+				if pkb[33]!=1 {
+					println("we only support compressed keys of length 38 bytes", pk[0])
+					continue
+				}
+
+				sh = btc.Sha2Sum(pkb[0:34])
+				if !bytes.Equal(sh[:4], pkb[34:38]) {
+					println(pk[0], "checksum error")
+					continue
+				}
+				compr = true
 			}
 
-			sh := btc.Sha2Sum(pkb[0:34])
-			if !bytes.Equal(sh[:4], pkb[34:38]) {
-				println(pk[0], "checksum error")
-			}
-			
 			var key [32]byte
 			copy(key[:], pkb[1:33])
 			priv_keys = append(priv_keys, key)
-			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, key[:]), verbyte))
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, key[:], compr), verbyte))
 			if len(pk)>1 {
 				labels = append(labels, pk[1])
 			} else {
@@ -182,7 +199,7 @@ func load_others() {
 		}
 		fmt.Println(len(priv_keys), "keys imported")
 	} else {
-		fmt.Println("You can also place imported private key in others.sec")
+		fmt.Println("You can also have some dumped (b58 encoded) priv keys in 'others.sec'")
 	}
 }
 
@@ -205,7 +222,7 @@ func make_wallet() {
 		for i:=uint(0); i < *keycnt; i++ {
 			seed_key = btc.Sha2Sum(seed_key[:])
 			priv_keys = append(priv_keys, seed_key)
-			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, seed_key[:]), verbyte))
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(getPubKey(curv, seed_key[:], !*uncompressed), verbyte))
 			labels = append(labels, fmt.Sprint("Auto ", i+1))
 		}
 		fmt.Println("Private keys re-generated")
