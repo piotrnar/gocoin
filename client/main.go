@@ -13,6 +13,7 @@ import (
 
 const (
 	PendingFifoLen = 2000
+	MaxCachedBlocks = 600
 )
 
 var (
@@ -46,7 +47,7 @@ var (
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
 
-	cachedBlocks map[[btc.Uint256IdxLen]byte] *btc.Block = make(map[[btc.Uint256IdxLen]byte] *btc.Block)
+	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
 	receivedBlocks map[[btc.Uint256IdxLen]byte] int64 = make(map[[btc.Uint256IdxLen]byte] int64, 300e3)
 
 	MyWallet *oneWallet
@@ -64,6 +65,11 @@ type blockRcvd struct {
 	bl *btc.Block
 }
 
+type oneCachedBlock struct {
+	time.Time
+	*btc.Block
+	conn *oneConnection
+}
 
 func Busy(b string) {
 	mutex.Lock()
@@ -206,6 +212,25 @@ func show_balance(p string) {
 }
 
 
+func addBlockToCache(bl *btc.Block, conn *oneConnection) {
+	// we use cachedBlocks only from one therad so no need for a mutex
+	if len(cachedBlocks)==MaxCachedBlocks {
+		// Remove the oldest one
+		oldest := time.Now()
+		var todel [btc.Uint256IdxLen]byte
+		for k, v := range cachedBlocks {
+			if v.Time.Before(oldest) {
+				oldest = v.Time
+				todel = k
+			}
+		}
+		delete(cachedBlocks, todel)
+		CountSafe("CacheBlocksExpired")
+	}
+	cachedBlocks[bl.Hash.BIdx()] = oneCachedBlock{Time:time.Now(), Block:bl, conn:conn}
+}
+
+
 func retry_cached_blocks() bool {
 	if len(cachedBlocks)==0 {
 		return false
@@ -214,23 +239,31 @@ func retry_cached_blocks() bool {
 		return true
 	}
 	for k, v := range cachedBlocks {
-		e, _, maybelater := BlockChain.CheckBlock(v)
+		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
 		if e == nil {
-			e := BlockChain.AcceptBlock(v)
+			e := BlockChain.AcceptBlock(v.Block)
 			if e == nil {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
+				CountSafe("BlocksFromCache")
 				delete(cachedBlocks, k)
 				LastBlock = BlockChain.BlockTreeEnd
 				LastBlockReceived = time.Now()
 				return len(cachedBlocks)>0
 			} else {
 				println("retry AcceptBlock:", e.Error())
+				CountSafe("CachedBlocksDOS")
+				v.conn.DoS()
 				delete(cachedBlocks, k)
 				return len(cachedBlocks)>0
 			}
 		} else {
 			if !maybelater {
 				println("retry CheckBlock:", e.Error())
+				CountSafe("BadCachedBlocks")
+				if dos {
+					v.conn.DoS()
+					CountSafe("CachedBlocksDoS")
+				}
 				delete(cachedBlocks, k)
 				return len(cachedBlocks)>0
 			}
@@ -488,7 +521,7 @@ func init() {
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool, identified given <txid>")
-	newUi("lstx", true, list_txs, "List all the transaction loaded into memory pool")
+	newUi("listtx ltx", true, list_txs, "List all the transaction loaded into memory pool")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
 	newUi("sync", true, switch_sync, "Control sync of the database to disk")
 }
@@ -569,7 +602,7 @@ func main() {
 		e, dos, maybelater := BlockChain.CheckBlock(bl)
 		if e != nil {
 			if maybelater {
-				cachedBlocks[bl.Hash.BIdx()] = bl
+				addBlockToCache(bl, newbl.conn)
 			} else {
 				println(dos, e.Error())
 				if dos {
