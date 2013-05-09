@@ -512,7 +512,10 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
 				c.SendRawMsg("tx", tx)
-				println("sent tx to", c.PeerAddr.Ip())
+				CountSafe("TxsSent")
+				if dbg > 0 {
+					println("sent tx to", c.PeerAddr.Ip())
+				}
 			}
 		} else {
 			println("getdata for type", typ, "not supported yet")
@@ -726,25 +729,35 @@ func do_one_connection(c *oneConnection) {
 			case "getblocks":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.ProcessGetBlocks(cmd.pl)
-				} else if dbg>0 {
-					println(c.PeerAddr.Ip(), "Ignore getblocks")
+				} else {
+					CountSafe("CmdGetblocksIgnored")
 				}
 
 			case "getdata":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.ProcessGetData(cmd.pl)
-				} else if dbg>0 {
-					println(c.PeerAddr.Ip(), "Ignore getdata")
+				} else {
+					CountSafe("CmdGetdataIgnored")
 				}
 
 			case "getaddr":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
 					c.SendAddr()
-				} else if dbg>0 {
-					println(c.PeerAddr.Ip(), "Ignore getaddr")
+				} else {
+					CountSafe("CmdGetaddrIgnored")
 				}
 
-			case "alert": // do nothing
+			case "alert":
+				c.HandleAlert(cmd.pl)
+
+			case "ping":
+				if len(c.send.buf) < MaxBytesInSendBuffer {
+					re := make([]byte, len(cmd.pl))
+					copy(re, cmd.pl)
+					c.SendRawMsg("pong", re)
+				} else {
+					CountSafe("CmdPingIgnored")
+				}
 
 			default:
 				println(cmd.cmd, "from", c.PeerAddr.Ip())
