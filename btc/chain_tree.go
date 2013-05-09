@@ -53,9 +53,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			break
 		}
 
-		bl.Trusted = trusted
+		er = bl.BuildTxList()
+		if er != nil {
+			ch.DeleteBranch(nxt)
+			break
+		}
 
-		bl.BuildTxList()
+		bl.Trusted = trusted
 
 		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height)
 		if er != nil {
