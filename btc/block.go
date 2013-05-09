@@ -49,9 +49,13 @@ func (bl *Block) BuildTxList() (e error) {
 	}
 
 	for i:=0; i<int(txcnt); i++ {
-		_ = <- taskDone // wait if we have too many threads already
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
+		if bl.Txs[i] == nil {
+			e = errors.New("NewTx failed")
+			break
+		}
 		bl.Txs[i].Size = uint32(n)
+		_ = <- taskDone // wait if we have too many threads already
 		go func(h **Uint256, b []byte) {
 			*h = NewSha2Hash(b)
 			taskDone <- true
