@@ -64,12 +64,17 @@ func ask_yes_no(msg string) bool {
 }
 
 
+func ui_show_prompt() {
+	fmt.Print("> ")
+}
+
+
 func do_userif() {
 	var prompt bool = true
 	time.Sleep(5e8)
 	for {
 		if prompt {
-			fmt.Print("> ")
+			ui_show_prompt()
 		}
 		prompt = true
 		li := strings.Trim(readline(), " \n\t\r")
