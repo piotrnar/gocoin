@@ -256,17 +256,40 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 }
 
 
-func (c *oneConnection) AnnounceOwnAddr() {
-	if MyExternalAddr == nil {
-		return
+func (c *oneConnection) SendAddr() {
+	buf := new(bytes.Buffer)
+	mutex.Lock()
+	adrscnt := uint32(len(openCons))
+	sendown := !c.NextAddrSent.IsZero() && MyExternalAddr!=nil
+	if sendown {
+		adrscnt++
 	}
-	var buf [31]byte
-	c.NextAddrSent = time.Now().Add(SendAddrsEvery)
-	buf[0] = 1 // Only one address
-	binary.LittleEndian.PutUint32(buf[1:5], uint32(time.Now().Unix()))
-	ipd := MyExternalAddr.Bytes()
-	copy(buf[5:], ipd[:])
-	c.SendRawMsg("addr", buf[:])
+	if adrscnt > 0 {
+		now := uint32(time.Now().Unix())
+
+		btc.WriteVlen(buf, adrscnt)
+
+		for _, v := range openCons {
+			binary.Write(buf, binary.LittleEndian, now)
+			tmp := v.PeerAddr.NetAddr.Bytes()
+			buf.Write(tmp[:])
+		}
+
+		if sendown {
+			binary.Write(buf, binary.LittleEndian, now)
+			tmp := MyExternalAddr.Bytes()
+			buf.Write(tmp[:])
+		}
+	}
+	// Store our own address
+	mutex.Unlock()
+	if !c.NextAddrSent.IsZero() {
+		c.NextAddrSent = time.Now().Add(SendAddrsEvery)
+	}
+
+	if adrscnt > 0 {
+		c.SendRawMsg("addr", buf.Bytes())
+	}
 }
 
 
@@ -363,6 +386,8 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 			if len(v.PendingInvs)<500 {
 				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
+			} else {
+				Counter["SendInvIgnored"]++
 			}
 		}
 	}
@@ -611,8 +636,8 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	// Need to send getblocks...?
-	if c.blocksNeeded() {
+	// Need to send some invs...?
+	if c.SendInvs() {
 		return
 	}
 
@@ -622,10 +647,12 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	if c.SendInvs() {
+	// Need to send getblocks...?
+	if c.blocksNeeded() {
 		return
 	}
 
+	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
 		CountSafe("GetaddrSent")
 		c.SendRawMsg("getaddr", nil)
@@ -633,8 +660,9 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
+	// Announce our own address...?
 	if !c.NextAddrSent.IsZero() && time.Now().After(c.NextAddrSent) {
-		c.AnnounceOwnAddr()
+		c.SendAddr()
 		return
 	}
 }
@@ -649,7 +677,7 @@ func do_one_connection(c *oneConnection) {
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
 	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
 	if *server {
-		c.NextAddrSent = c.NextGetAddr
+		c.NextAddrSent = c.NextGetAddr // If not a server, send "addr" only when asked
 	}
 
 	for !c.Broken {
@@ -711,7 +739,7 @@ func do_one_connection(c *oneConnection) {
 
 			case "getaddr":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
-					c.AnnounceOwnAddr()
+					c.SendAddr()
 				} else if dbg>0 {
 					println(c.PeerAddr.Ip(), "Ignore getaddr")
 				}
