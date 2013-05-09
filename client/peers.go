@@ -28,10 +28,7 @@ var (
 )
 
 type onePeer struct {
-	Services uint64
-	Ip6 [12]byte
-	Ip4 [4]byte
-	Port uint16
+	btc.NetAddr
 
 	Time uint32  // When seen last time
 	Banned uint32 // time when this address baned or zero if never
@@ -250,22 +247,22 @@ func initPeers(dir string) {
 	}
 
 	if *proxy != "" {
+		x := strings.Index(*proxy, ":")
+		if x == -1 {
+			*proxy = fmt.Sprint(*proxy, ":", DefaultTcpPort)
+		}
 		oa, e := net.ResolveTCPAddr("tcp4", *proxy)
 		if e != nil {
-			if strings.HasPrefix(e.Error(), "missing port in address") {
-				oa, e = net.ResolveTCPAddr("tcp4", fmt.Sprint(*proxy,":",DefaultTcpPort))
-			}
-			if e!=nil {
-				println(e.Error())
-				os.Exit(1)
-			}
+			println(e.Error())
+			os.Exit(1)
 		}
 		proxyPeer = new(onePeer)
 		proxyPeer.Services = 1
 		copy(proxyPeer.Ip4[:], oa.IP[0:4])
 		proxyPeer.Port = uint16(oa.Port)
+		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
+			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
 	}
-
 }
 
 
