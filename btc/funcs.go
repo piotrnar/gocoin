@@ -131,3 +131,18 @@ func WriteVlen(b io.Writer, var_len uint32) {
 	}
 	b.Write([]byte{0xfe, byte(var_len), byte(var_len>>8), byte(var_len>>16), byte(var_len>>24)})
 }
+
+// Read bitcoin protocol string
+func ReadString(rd io.Reader) (s string, e error) {
+	var le uint64
+	le, e = ReadVLen(rd)
+	if e != nil {
+		return
+	}
+	bu := make([]byte, le)
+	_, e = rd.Read(bu)
+	if e == nil {
+		s = string(bu)
+	}
+	return
+}
