@@ -99,7 +99,8 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 
 	// 0x45
 	c, e = rd.ReadByte()
-	if e!=nil || int(c)+1 > rd.Len() {
+	if e!=nil || int(c) > rd.Len() {
+		println(e, c, rd.Len())
 		e = errors.New("NewSignature: Error parsing Signature at step 2")
 		return
 	}
@@ -145,16 +146,16 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 		return
 	}
 
-	c, e = rd.ReadByte()
-	if e!=nil {
-		e = errors.New("NewSignature: Error parsing Signature at step 8")
-		return
-	}
-
 	sig = new(Signature)
 	sig.R = new(big.Int).SetBytes(Rdat[:])
 	sig.S = new(big.Int).SetBytes(Sdat[:])
-	sig.HashType = c
+
+	c, e = rd.ReadByte()
+	if e==nil {
+		sig.HashType = c
+	} else {
+		e = nil // missing hash type byte is not an error (i.e. for alert signature)
+	}
 
 	return
 }
