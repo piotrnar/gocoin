@@ -14,7 +14,7 @@ type Uint256 struct {
 
 func NewUint256(h []byte) (res *Uint256) {
 	res = new(Uint256)
-	copy(res.Hash[:], h[:])
+	copy(res.Hash[:], h)
 	return
 }
 
@@ -42,7 +42,7 @@ func NewUint256FromLSBString(s string) (res *Uint256) {
 
 func NewSha2Hash(data []byte) (res *Uint256) {
 	res = new(Uint256)
-	res.Hash = Sha2Sum(data[:])
+	ShaHash(data, res.Hash[:])
 	return
 }
 
@@ -68,5 +68,3 @@ func (u *Uint256) BigInt() *big.Int {
 	}
 	return new(big.Int).SetBytes(buf[:])
 }
-
-
