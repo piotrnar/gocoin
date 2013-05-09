@@ -85,19 +85,11 @@ func (t *Tx) Serialize() ([]byte) {
 	//Lock_time
 	binary.Write(wr, binary.LittleEndian, t.Lock_time)
 
-	/* // Verify if we did it right:
-	h := Sha2Sum(wr.Bytes()[:])
-	if bytes.Equal(h[:], t.Hash.Hash[:]) {
-		println("Serialize - tx OK")
-	} else {
-		println("Serialize - hash mismatch\007")
-	}
-	*/
-
 	return wr.Bytes()
 }
 
 
+// Return the transaction's hash, that is about to get signed/verified
 func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	var buf [9]byte
 
@@ -190,19 +182,15 @@ func (t *TxPrevOut)String() (s string) {
 	return
 }
 
-
-func (to *TxOut)Size() uint32 {
-	return uint32(8+4+len(to.Pk_script[:]))
-}
-
-
 func (in *TxPrevOut)IsNull() bool {
 	return allzeros(in.Hash[:]) && in.Vout==0xffffffff
 }
 
+
 func (tx *Tx) IsCoinBase() bool {
 	return len(tx.TxIn)==1 && tx.TxIn[0].Input.IsNull()
 }
+
 
 func (tx *Tx) CheckTransaction() error {
 	// Basic checks that don't depend on any context
@@ -259,6 +247,8 @@ func (tx *Tx) CheckTransaction() error {
 }
 
 
+// Decode a raw transaction output from a given bytes slice.
+// Returns the output and the size it took in the buffer.
 func NewTxOut(b []byte) (txout *TxOut, offs int) {
 	var le, n int
 
@@ -278,6 +268,8 @@ func NewTxOut(b []byte) (txout *TxOut, offs int) {
 }
 
 
+// Decode a raw transaction input from a given bytes slice.
+// Returns the input and the size it took in the buffer.
 func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	var le, n int
 
@@ -301,7 +293,17 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	return
 }
 
+
+// Decode a raw transaction from a given bytes slice.
+// Returns the transaction and the size it took in the buffer.
 func NewTx(b []byte) (tx *Tx, offs int) {
+	defer func() { // In case if the buffer was too short, to recover from a panic
+		if r := recover(); r != nil {
+			println("NewTx failed")
+			tx = nil
+		}
+	}()
+
 	var le, n int
 
 	tx = new(Tx)
