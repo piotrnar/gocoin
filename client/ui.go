@@ -119,8 +119,10 @@ func show_info(par string) {
 	// Memory used
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	fmt.Println("Go version:", runtime.Version(), "   System Memory used:",
-		ms.HeapAlloc>>20, "MB    NewBlockBeep:", beep)
+	fmt.Println("Go version:", runtime.Version(),
+		"   Heap size:", ms.Alloc>>20, "MB",
+		"   Sys mem used", ms.Sys>>20, "MB",
+		"   NewBlockBeep:", beep)
 
 	mutex.Lock()
 	// Main thread activity:
@@ -232,11 +234,37 @@ func show_help(par string) {
 }
 
 
+func show_mem(p string) {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	fmt.Println("Alloc       :", ms.Alloc)
+	fmt.Println("TotalAlloc  :", ms.TotalAlloc)
+	fmt.Println("Sys         :", ms.Sys)
+	fmt.Println("Lookups     :", ms.Lookups)
+	fmt.Println("Mallocs     :", ms.Mallocs)
+	fmt.Println("Frees       :", ms.Frees)
+	fmt.Println("HeapAlloc   :", ms.HeapAlloc)
+	fmt.Println("HeapSys     :", ms.HeapSys)
+	fmt.Println("HeapIdle    :", ms.HeapIdle)
+	fmt.Println("HeapInuse   :", ms.HeapInuse)
+	fmt.Println("HeapReleased:", ms.HeapReleased)
+	fmt.Println("HeapObjects :", ms.HeapObjects)
+	fmt.Println("StackInuse  :", ms.StackInuse)
+	fmt.Println("StackSys    :", ms.StackSys)
+	fmt.Println("MSpanInuse  :", ms.MSpanInuse)
+	fmt.Println("MSpanSys    :", ms.MSpanSys)
+	fmt.Println("MCacheInuse :", ms.MCacheInuse)
+	fmt.Println("MCacheSys   :", ms.MCacheSys)
+	fmt.Println("BuckHashSys :", ms.BuckHashSys)
+}
+
+
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info")
 	newUi("last l", false, show_last, "Show last block info")
 	newUi("counters c", false, show_counters, "Show counters")
+	newUi("mem", false, show_mem, "Show detailed memory stats")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
