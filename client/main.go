@@ -239,8 +239,10 @@ func retry_cached_blocks() bool {
 		return true
 	}
 	for k, v := range cachedBlocks {
+		Busy("Cache.CheckBlock "+v.Block.Hash.String())
 		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
 		if e == nil {
+			Busy("Cache.AcceptBlock "+v.Block.Hash.String())
 			e := BlockChain.AcceptBlock(v.Block)
 			if e == nil {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
@@ -569,7 +571,6 @@ func main() {
 	var newbl *blockRcvd
 	for !exit_now {
 		if retryCachedBlocks {
-			Busy("retry_cached_blocks 1")
 			retryCachedBlocks = retry_cached_blocks()
 		}
 
@@ -617,9 +618,9 @@ func main() {
 				Busy("NetSendInv")
 				NetSendInv(2, bl.Hash.Hash[:], newbl.conn)
 				if beep {
-					print("\007")
+					fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
+					ui_show_prompt()
 				}
-				Busy("retry_cached_blocks 2")
 				retryCachedBlocks = retry_cached_blocks()
 				mutex.Lock()
 				LastBlock = BlockChain.BlockTreeEnd
