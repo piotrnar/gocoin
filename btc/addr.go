@@ -60,7 +60,7 @@ func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	a.Pubkey = make([]byte, len(in))
 	copy(a.Pubkey[:], in[:])
 	a.Version = ver
-	a.Hash160 = Rimp160AfterSha256(in)
+	RimpHash(in, a.Hash160[:])
 	return
 }
 
