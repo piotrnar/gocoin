@@ -34,7 +34,7 @@ func BN_bn2hex(b *big.Int) string {
 
 
 /*
-Thanks to jackjack for providing me with this nice OpenSSL solution:
+Thanks to jackjack for providing me with this nice solution:
 https://bitcointalk.org/index.php?topic=162805.msg2112936#msg2112936
 */
 func ECRecoverKey(r, s *big.Int, msg []byte, recid int, check bool) (key *ecdsa.PublicKey) {
