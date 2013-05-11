@@ -3,13 +3,17 @@ package main
 import (
 	"os"
 	"fmt"
+	"bytes"
 	"strings"
 	"math/big"
+	"io/ioutil"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/base64"
 	"github.com/piotrnar/gocoin/btc"
 )
+
+const BtcMessageMagic = "Bitcoin Signed Message:\n"
 
 var Curv *btc.BitCurve = btc.S256()
 
@@ -94,9 +98,21 @@ func main() {
 		return
 	}
 
-	msg := os.Args[3]
-	msg = "\x18Bitcoin Signed Message:\n" + string([]byte{byte(len(msg))}) + msg
-	hash := btc.Sha2Sum([]byte(msg))
+	var msg []byte
+	if len(os.Args) < 4 {
+		msg, _ = ioutil.ReadAll(os.Stdin)
+	} else {
+		msg = []byte(os.Args[3])
+	}
+
+	b := new(bytes.Buffer)
+	btc.WriteVlen(b, uint32(len(BtcMessageMagic)))
+	b.Write([]byte(BtcMessageMagic))
+	btc.WriteVlen(b, uint32(len(msg)))
+	//b.WriteByte(byte())
+	b.Write(msg)
+
+	hash := btc.Sha2Sum(b.Bytes())
 
 	nv := sig[0]
 	compressed := false
@@ -128,17 +144,17 @@ func main() {
 		ok := ecdsa.Verify(pub, hash[:], r, s)
 		if ok {
 			if ad.Hash160!=sa.Hash160 {
-				fmt.Println("Signature looks fine, but it is for", sa.String(), "not for", ad.String())
+				fmt.Println("BAD signature for", ad.String())
 				os.Exit(1)
 			} else {
-				fmt.Println("Signature Verified OK for", sa.String())
+				fmt.Println("Good signature for", sa.String(), len(msg))
 			}
 		} else {
-			println("Signature verification ERROR!")
+			println("BAD signature")
 			os.Exit(1)
 		}
 	} else {
-		println("Could not recover public key")
+		println("BAD, BAD, BAD signature")
 		os.Exit(1)
 	}
 }
