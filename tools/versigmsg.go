@@ -73,7 +73,7 @@ func ECRecoverKey(r, s *big.Int, msg []byte, recid int, check bool) (key *ecdsa.
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("Specify at least two parameters:")
-		fmt.Println(" 1) The base58 endoided bitcoin addres, that the sugnature shall be checked agains")
+		fmt.Println(" 1) The base58 encoded bitcoin addres, that the signature was made with")
 		fmt.Println(" 2) The base64 encoded signature for the message...")
 		fmt.Println("If you specify a 3rd parameter - this will be assumed to be the message you want to verify")
 		fmt.Println("If you do not specify a 3rd parameter - the message will be read from stdin")
