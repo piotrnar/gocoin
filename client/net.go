@@ -29,7 +29,7 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 
-	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
+	MaxBytesInSendBuffer = 32*1024 // If we have more than this in the send buffer, we send no more responses
 
 	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min
 )
@@ -127,6 +127,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 
 func (c *oneConnection) DoS() {
+	CountSafe("BannedNodes")
 	c.BanIt = true
 	c.Broken = true
 }
@@ -236,7 +237,10 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
-		println(c.PeerAddr.Ip(), "Msg checksum error")
+		if dbg > 0 {
+			println(c.PeerAddr.Ip(), "Msg checksum error")
+		}
+		CountSafe("BadMsgChecksum")
 		c.DoS()
 		c.recv.hdr_len = 0
 		c.recv.dat = nil
@@ -321,9 +325,6 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 		return errors.New("Version message too short")
 	}
 	c.SendRawMsg("verack", []byte{})
-	if c.Incomming {
-		c.SendVersion()
-	}
 	return nil
 }
 
