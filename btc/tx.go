@@ -258,6 +258,9 @@ func NewTxOut(b []byte) (txout *TxOut, offs int) {
 	offs = 8
 
 	le, n = VLen(b[offs:])
+	if n==0 {
+		return nil, 0
+	}
 	offs+= n
 
 	txout.Pk_script = make([]byte, le)
@@ -280,6 +283,9 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 	offs = 36
 
 	le, n = VLen(b[offs:])
+	if n==0 {
+		return nil, 0
+	}
 	offs+= n
 
 	txin.ScriptSig = make([]byte, le)
@@ -301,6 +307,7 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 		if r := recover(); r != nil {
 			println("NewTx failed")
 			tx = nil
+			offs = 0
 		}
 	}()
 
@@ -313,6 +320,9 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 
 	// TxIn
 	le, n = VLen(b[offs:])
+	if n==0 {
+		return nil, 0
+	}
 	offs += n
 	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
@@ -322,6 +332,9 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 
 	// TxOut
 	le, n = VLen(b[offs:])
+	if n==0 {
+		return nil, 0
+	}
 	offs += n
 	tx.TxOut = make([]*TxOut, le)
 	for i := range tx.TxOut {
