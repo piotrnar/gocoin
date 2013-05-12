@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"code.google.com/p/go.crypto/ripemd160"
 )
@@ -38,4 +39,16 @@ func RimpHash(in []byte, out []byte) {
 func Rimp160AfterSha256(b []byte) (out [20]byte) {
 	RimpHash(b, out[:])
 	return
+}
+
+
+// This function is used to sign and verify messages using the bitcoin standard.
+// The second paramater must point to a 32-bytes buffer, where hash will be stored.
+func HashFromMessage(msg []byte, out []byte) {
+	b := new(bytes.Buffer)
+	WriteVlen(b, uint32(len(MessageMagic)))
+	b.Write([]byte(MessageMagic))
+	WriteVlen(b, uint32(len(msg)))
+	b.Write(msg)
+	ShaHash(b.Bytes(), out)
 }
