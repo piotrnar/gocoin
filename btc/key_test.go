@@ -197,3 +197,12 @@ func TestVerifyMessage(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkRecoverKey(b *testing.B) {
+	var hash [32]byte
+	HashFromMessage([]byte("rel net msg"), hash[:])
+	nv, sig, _ := ParseMessageSignature("H2AoueOjHJ5yX8vX1dFnNqqq/Mm/FX37S+Yry88JadSIA21KNvojW4+fgVqm9UV6YH+VanGgNb8JcNhXi/IYu1o=")
+	for i := 0; i < b.N; i++ {
+		sig.RecoverPublicKey(hash[:], int(nv-27))
+	}
+}
