@@ -68,6 +68,25 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 }
 
 
+// Returns serialized key in uncompressed format "<04> <X> <Y>"
+// ... or in compressed format: "<02> <X>", eventually "<03> <X>"
+func (pub *PublicKey) Bytes(compressed bool) (raw []byte) {
+	if compressed {
+		raw = make([]byte, 33)
+		raw[0] = byte(2+pub.Y.Bit(0))
+		x := pub.X.Bytes()
+		copy(raw[1+32-len(x):], x)
+	} else {
+		raw = make([]byte, 65)
+		raw[0] = 4
+		x := pub.X.Bytes()
+		y := pub.Y.Bytes()
+		copy(raw[1+32-len(x):], x)
+		copy(raw[1+64-len(y):], y)
+	}
+	return
+}
+
 
 func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
 	ok = ecdsa.Verify(&pk.PublicKey, h[:], s.R, s.S)
