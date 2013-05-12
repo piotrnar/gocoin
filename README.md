@@ -1,24 +1,28 @@
 Gocoin
 ==============
-Gocoin is a bitcoin client written in Go language (golang).
+Gocoin is a bitcoin software (client node and a wallet) written in Go language (golang).
 
-If you would like to express your interest in a further development of this project, send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt (please don't send  more - I  have enough, give it to orphans).
-
-
-Limitations
---------------
-At the current version it only works with entire blocks and does not rely transactions, except from announcing own transactions to the network.
+If you would like to support this project and express your interest in its further development, send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt. Please don't send  more - I  have enough, give it to orphans.
 
 
 Architecture
 --------------
-The entire software package consists of two applications:
-* client - bitcoin node
-* wallet – deterministic wallet
+The two basic components of the software are:
+* client – a bitcoin node that must be connected to Internet
+* wallet – a wallet app, that is designed to be used (for security) on a network-free PC
 
-… and two libraries:
-* btc – the bitcoin library, with a persistent storage database
-* blockdb – a helper lib, used for importing blocks from the official client
+Main features
+--------------
+* Deterministic, seed-password based, cold wallet (does not require any backups)
+* Fast & easy switching between different wallets
+* Support for a bandwidth limit used by the node – configured separately for both; upload and download.
+
+
+Limitations of the client node
+--------------
+* No GUI.
+* Works only with entire (mined) blocks - does not rely transactions, except from sending own transactions to the network.
+* Requires a file system that supports large files (bigger than 4GB).
 
 
 Dependencies
