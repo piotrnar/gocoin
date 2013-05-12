@@ -205,7 +205,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 
 
 func main() {
-	fmt.Println("Gocoin wallet version 0.0.2")
+	fmt.Println("Gocoin wallet version", btc.SourcesTag)
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
