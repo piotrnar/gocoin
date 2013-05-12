@@ -116,7 +116,7 @@ There are also additional switches which you may find useful at this stage. To s
 
 	wallet -h
 
-Please note that you can choose which coins you want to spend, by editing the file "balance/unspent.txt". Whatever you remove from that file will not be spent. Whatever will be spent, will be taken in the order that appears in this file.
+Please note that you can choose which coins you want to spend, by editing the file "balance/unspent.txt". Whatever you remove from that file will not be spent. Whatever will be spent, will be taken in the order that appears in this file. The change will go to the address from your first input, unless you use “-change” parameter.
 
 If everything goes well with the "-send …" order, the wallet creates a text file with a signed transaction. The file is named like 01234567.txt
 
