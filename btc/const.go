@@ -9,6 +9,8 @@ const(
 
 	BlockMapInitLen = 300e3
 	UnspentTxsMapInitLen = 4e6
+
+	MessageMagic = "Bitcoin Signed Message:\n"
 )
 
 var useThreads int = 3 * runtime.NumCPU() // use few times more go-routines to optimize an idle time
