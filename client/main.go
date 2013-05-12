@@ -562,6 +562,7 @@ func main() {
 	var retryCachedBlocks bool
 
 	fmt.Println("Gocoin client version", btc.SourcesTag)
+	fmt.Println("Send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt if you support this project")
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
