@@ -38,6 +38,8 @@ func NewBlock(data []byte) (*Block, error) {
 }
 
 
+// Parses block's transactions and adds them to the structure, calculating hashes BTW.
+// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 func (bl *Block) BuildTxList() (e error) {
 	offs := int(80)
 	txcnt, n := VLen(bl.Raw[offs:])
