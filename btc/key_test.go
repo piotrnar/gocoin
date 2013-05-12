@@ -163,6 +163,12 @@ func TestVerifyMessage(t *testing.T) {
 			"test",
 			false,
 		},
+		{
+			"momBPYuZ42xGVBNC1DxQBKM3WT3fa8MLMn",
+			"ILRw4C+DSjqq+ie9K0ngcmnpYqUUEPNk6eGVwxNRoF5QVgl4rtdt6dXXgfh+0gaIMu1UXyshvwQGVKLa/2lMiwk=",
+			"test",
+			true,
+		},
 	}
 
 	var hash [32]byte
