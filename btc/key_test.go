@@ -189,21 +189,7 @@ func TestVerifyMessage(t *testing.T) {
 			t.Error("RecoverPublicKey failed")
 		}
 
-		var raw []byte
-		if compressed {
-			raw = make([]byte, 33)
-			raw[0] = byte(2+pub.Y.Bit(0))
-			x := pub.X.Bytes()
-			copy(raw[1+32-len(x):], x)
-		} else {
-			raw = make([]byte, 65)
-			raw[0] = 4
-			x := pub.X.Bytes()
-			y := pub.Y.Bytes()
-			copy(raw[1+32-len(x):], x)
-			copy(raw[1+64-len(y):], y)
-		}
-		sa := NewAddrFromPubkey(raw, ad.Version)
+		sa := NewAddrFromPubkey(pub.Bytes(compressed), ad.Version)
 
 		verified_ok := ad.Hash160==sa.Hash160 && pub.Verify(hash[:], sig)
 		if verified_ok != testvcs[i].expected {
