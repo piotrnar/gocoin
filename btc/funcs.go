@@ -165,9 +165,14 @@ func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
 	}
 
 	nv = sd[0]
+
 	sig = new(Signature)
 	sig.R = new(big.Int).SetBytes(sd[1:33])
 	sig.S = new(big.Int).SetBytes(sd[33:65])
+
+	if nv<27 || nv>34 {
+		er = errors.New("nv out of range")
+	}
 
 	return
 }
