@@ -40,12 +40,19 @@ func PutVlen(b []byte, vl int) uint32 {
 
 
 // Returns length and number of bytes that the var_int took
-func VLen(b []byte) (len int, var_int_siz int) {
+// If there is not enough bytes in the buffer 0, 0 gets returned
+func VLen(b []byte) (le int, var_int_siz int) {
+	if len(b)==0 {
+		return // better to quit with zeros than to cause a panic
+	}
 	c := b[0]
 	if c < 0xfd {
 		return int(c), 1
 	}
 	var_int_siz = 1 + (2 << (2-(0xff-c)))
+	if len(b)<1+var_int_siz {
+		return // better to quit with zeros than to cause a panic
+	}
 
 	var res uint64
 	for i:=1; i<var_int_siz; i++ {
@@ -56,7 +63,7 @@ func VLen(b []byte) (len int, var_int_siz int) {
 		panic("This should never happen")
 	}
 
-	len = int(res)
+	le = int(res)
 	return
 }
 
