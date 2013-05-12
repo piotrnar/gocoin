@@ -159,3 +159,36 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 
 	return
 }
+
+
+/*
+Thanks to jackjack for providing me with this nice solution:
+https://bitcointalk.org/index.php?topic=162805.msg2112936#msg2112936
+*/
+func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
+    order := secp256k1.N
+
+	x := new(big.Int).Set(order)
+	x.Mul(x, big.NewInt(int64(recid/2)))
+	x.Add(x, sig.R)
+
+	y := decompressPoint(false, x)
+
+	e := new(big.Int).SetBytes(msg)
+	e.Neg(e)
+	new(big.Int).DivMod(e, order, e)
+
+	inv_r := new(big.Int).ModInverse(sig.R, order)
+
+	RSx, RSy := secp256k1.ScalarMult(x, y, sig.S.Bytes())
+	Gex, Gey := secp256k1.ScalarMult(secp256k1.Gx, secp256k1.Gy, e.Bytes())
+	_x, _y := secp256k1.Add(RSx, RSy, Gex, Gey)
+	Qx, Qy := secp256k1.ScalarMult(_x, _y, inv_r.Bytes())
+
+	key = new(PublicKey)
+	key.Curve = secp256k1
+	key.X = Qx
+	key.Y = Qy
+
+	return
+}
