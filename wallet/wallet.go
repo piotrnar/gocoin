@@ -54,22 +54,21 @@ func load_others() {
 			pk := strings.SplitN(strings.Trim(string(li), " "), " ", 2)
 			pkb := btc.Decodeb58(pk[0])
 			if pkb == nil {
-				println("Decodeb58 failed:", pk[0])
+				println("Decodeb58 failed:", pk[0][:6])
 				continue
 			}
 
 			if len(pkb)!=37 && len(pkb)!=38 {
-				println(pk[0], "has wrong key", len(pkb))
+				println(pk[0][:6], "has wrong key", len(pkb))
 				println(hex.EncodeToString(pkb))
 				continue
 			}
 
 			if pkb[0]!=privver {
-				println(pk[0], "has version", pkb[0], "while we expect", privver)
+				println(pk[0][:6], "has version", pkb[0], "while we expect", privver)
 				if pkb[0]==0xef {
-					fmt.Println("We guess you meant testnet, so switching to testnet mode...")
-					privver = 0xef
-					verbyte = 0x6f
+					fmt.Println("You probably meant testnet, so use -t switch")
+					os.Exit(0)
 				} else {
 					continue
 				}
@@ -80,22 +79,21 @@ func load_others() {
 
 			if len(pkb)==37 {
 				// compressed key
-				//println(pk[0], "is compressed")
 				sh = btc.Sha2Sum(pkb[0:33])
 				if !bytes.Equal(sh[:4], pkb[33:37]) {
-					println(pk[0], "checksum error")
+					println(pk[0][:6], "checksum error")
 					continue
 				}
 				compr = false
 			} else {
 				if pkb[33]!=1 {
-					println("we only support compressed keys of length 38 bytes", pk[0])
+					println(pk[0][:6], "a key of length 38 bytes must be compressed")
 					continue
 				}
 
 				sh = btc.Sha2Sum(pkb[0:34])
 				if !bytes.Equal(sh[:4], pkb[34:38]) {
-					println(pk[0], "checksum error")
+					println(pk[0][:6], "checksum error")
 					continue
 				}
 				compr = true
@@ -112,7 +110,7 @@ func load_others() {
 				labels = append(labels, fmt.Sprint("Other ", len(priv_keys)))
 			}
 		}
-		fmt.Println(len(priv_keys), "keys imported")
+		fmt.Println(len(priv_keys), "keys imported from 'others.sec'")
 	} else {
 		fmt.Println("You can also have some dumped (b58 encoded) priv keys in 'others.sec'")
 	}
