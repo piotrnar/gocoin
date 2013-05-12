@@ -189,7 +189,7 @@ func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 	x.Mul(x, big.NewInt(int64(recid/2)))
 	x.Add(x, sig.R)
 
-	y := decompressPoint(false, x)
+	y := decompressPoint((recid&1)!=0, x)
 
 	e := new(big.Int).SetBytes(msg)
 	new(big.Int).DivMod(e.Neg(e), secp256k1.N, e)
