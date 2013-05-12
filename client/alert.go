@@ -27,3 +27,18 @@ func (c *oneConnection) HandleAlert(b []byte) {
 	alert_access.Unlock()
 	return
 }
+
+
+func list_alerst(p string) {
+	alert_access.Lock()
+	for _, v := range alerts {
+		fmt.Println(v.Version, v.RelayUntil, v.Expiration, v.ID, v.Cancel,
+			v.MinVer, v.MaxVer, v.Priority, v.Comment, v.StatusBar, v.Reserved)
+	}
+	alert_access.Unlock()
+}
+
+
+func init() {
+	newUi("alerts a", false, list_alerst, "Show received alerts")
+}
