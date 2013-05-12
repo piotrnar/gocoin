@@ -20,15 +20,22 @@ type oneSendTo struct {
 
 var (
 	// Command line switches
+
+	// Wallet options
 	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
 	keycnt *uint = flag.Uint("n", 25, "Set the number of keys to be used")
+	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
+	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
+
+	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
-	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
-	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
-	secfile *string  = flag.String("sec", "wallet.sec", "Read secret password (master seed) from this file")
+
+	// Message signing options
+	signaddr *string  = flag.String("sign", "", "Request a sign operation with a given bitcoin address")
+	message *string  = flag.String("msg", "", "Defines a message to be signed (otherwise take it from stdin)")
 
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
@@ -218,6 +225,14 @@ func main() {
 	if *dump {
 		dump_addrs()
 		return
+	}
+
+	if *signaddr!="" {
+		sign_message()
+		if *send=="" {
+			// Don't load_balnace if he did not want to spend coins as well
+			return
+		}
 	}
 
 	// If no dump, then it should be send money
