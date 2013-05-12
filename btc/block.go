@@ -43,6 +43,9 @@ func NewBlock(data []byte) (*Block, error) {
 func (bl *Block) BuildTxList() (e error) {
 	offs := int(80)
 	txcnt, n := VLen(bl.Raw[offs:])
+	if n == 0 {
+		e = errors.New("Unexpected end of the block's payload")
+	}
 	offs += n
 	bl.Txs = make([]*Tx, txcnt)
 
@@ -52,7 +55,7 @@ func (bl *Block) BuildTxList() (e error) {
 
 	for i:=0; i<int(txcnt); i++ {
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
-		if bl.Txs[i] == nil {
+		if bl.Txs[i] == nil || n==0 {
 			e = errors.New("NewTx failed")
 			break
 		}
