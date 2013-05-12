@@ -264,6 +264,25 @@ func show_mem(p string) {
 }
 
 
+func dump_block(s string) {
+	h := btc.NewUint256FromString(s)
+	bl, _, e := BlockChain.Blocks.BlockGet(h)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	fn := h.String()+".bin"
+	f, e := os.Create(fn)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	f.Write(bl)
+	f.Close()
+	fmt.Println("Block saved to file:", fn)
+}
+
+
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info")
@@ -274,4 +293,5 @@ func init() {
 	newUi("dbg", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
+	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 }
