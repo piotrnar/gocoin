@@ -3,6 +3,8 @@ package btc
 import (
 	"io"
 	"errors"
+	"math/big"
+	"encoding/base64"
 )
 
 func allzeros(b []byte) bool {
@@ -144,5 +146,28 @@ func ReadString(rd io.Reader) (s string, e error) {
 	if e == nil {
 		s = string(bu)
 	}
+	return
+}
+
+
+// Takes a base64 encoded bitcoin generated signature and decodes it
+func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
+	var sd []byte
+
+	sd, er = base64.StdEncoding.DecodeString(encsig)
+	if er != nil {
+		return
+	}
+
+	if len(sd)!=65 {
+		er = errors.New("The decoded signature is not 65 bytes long")
+		return
+	}
+
+	nv = sd[0]
+	sig = new(Signature)
+	sig.R = new(big.Int).SetBytes(sd[1:33])
+	sig.S = new(big.Int).SetBytes(sd[33:65])
+
 	return
 }
