@@ -104,3 +104,110 @@ func BenchmarkKey04full(b *testing.B) {
 		NewPublicKey(xy)
 	}
 }
+
+
+type vervec struct {
+	addr string
+	signature string
+	message string
+	expected bool
+}
+
+func TestVerifyMessage(t *testing.T) {
+	var testvcs = []vervec {
+		{
+			"13XSgyGGJcUso5f1EK8LZ7j194FtEvTfkn",
+			"H2AoueOjHJ5yX8vX1dFnNqqq/Mm/FX37S+Yry88JadSIA21KNvojW4+fgVqm9UV6YH+VanGgNb8JcNhXi/IYu1o=",
+			"rel net msg",
+			true,
+		},
+		{
+			"mqMmY5Uc6AgWoemdbRsvkpTes5hF6p5d8w",
+			"H+HUh1GiTw22BMhqRwbSET/4aYCFIuivSgTyU/A+qH7xZp5gz61zp//WMFTbpNDbiMYoYz7pD88NYg/0DekcMpY=",
+			"test",
+			true,
+		},
+		{
+			"muTPoTTXbVWdurzw4aqTh7DLQ82RRE8hXz",
+			"H5iQmSJeZKrDcvKJrkAIOubFfajrxuPiSO0/xMorz+C31EyDF/bmkE+XLAihfkt3EQTEjxSgPURkdKxqJpxTw8Y=",
+			"This is some test message",
+			true,
+		},
+		{
+			"mmS8FqnakrybtSzXSHXcGjeMfHUQqojx6Q",
+			"H0m1/OUAc1amV02c/bMF2Rdv2pJIPYfdSv5To3rax5O0eauXuexvafATfdLN1VFh/71SvpayMm3qoq2/9y+QQBA=",
+			"test",
+			true,
+		},
+		{
+			"mpu4t3bSgcWneVDKdjB8JHcGu2RgXT6QhJ",
+			"H3PJeR3oSKwYfbiCFhzIpSbLjS3aZge2qMEi+gnB1ay+nNENnJo6uaejoVvo7+gBI3M7eU+jk5Jv91tj8DjOIxQ=",
+			"test",
+			true,
+		},
+		{
+			"mwajpkz1ZthoAN3fvG8bCRvgoEf3BRraSP",
+			"H+TE9nhNgZXizuEySs8npLojQMAEhE0r1TpJCC3QxV4dd4l8AEN3smJH5ryw4IcHApJf6Z5m5hxz8Q0vnPd5aVw=",
+			"dlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibmwajpkz1ZthoAN3fvG8bCRvgoEf3BRraSPdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibmwajpkz1ZthoAN3fvG8bCRvgoEf3BRraSPdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoeirbeoibdlrhkjelrhjedslgjekrojirweopjighoerihoei",
+			true,
+		},
+		{
+			"mmS8FqnakrybtSzXSHXcGjeMfHUQqojx6Q",
+			"H3PJeR3oSKwYfbiCFhzIpSbLjS3aZge2qMEi+gnB1ay+nNENnJo6uaejoVvo7+gBI3M7eU+jk5Jv91tj8DjOIxQ=",
+			"test",
+			false,
+		},
+		{
+			"mqMmY5Uc6AgWoemdbRsvkpTes5hF6p5d8w",
+			"H+hUh1GiTw22BMhqRwbSET/4aYCFIuivSgTyU/A+qH7xZp5gz61zp//WMFTbpNDbiMYoYz7pD88NYg/0DekcMpY=",
+			"test",
+			false,
+		},
+	}
+
+	var hash [32]byte
+	for i := range testvcs {
+		ad, er := NewAddrFromString(testvcs[i].addr)
+		if er != nil {
+			t.Error(er.Error())
+		}
+
+		nv, sig, er := ParseMessageSignature(testvcs[i].signature)
+		if er != nil {
+			t.Error(er.Error())
+		}
+
+		HashFromMessage([]byte(testvcs[i].message), hash[:])
+
+		compressed := nv>=31
+		if compressed {
+			nv -= 4
+		}
+
+		pub := sig.RecoverPublicKey(hash[:], int(nv-27))
+		if pub == nil {
+			t.Error("RecoverPublicKey failed")
+		}
+
+		var raw []byte
+		if compressed {
+			raw = make([]byte, 33)
+			raw[0] = byte(2+pub.Y.Bit(0))
+			x := pub.X.Bytes()
+			copy(raw[1+32-len(x):], x)
+		} else {
+			raw = make([]byte, 65)
+			raw[0] = 4
+			x := pub.X.Bytes()
+			y := pub.Y.Bytes()
+			copy(raw[1+32-len(x):], x)
+			copy(raw[1+64-len(y):], y)
+		}
+		sa := NewAddrFromPubkey(raw, ad.Version)
+
+		verified_ok := ad.Hash160==sa.Hash160 && pub.Verify(hash[:], sig)
+		if verified_ok != testvcs[i].expected {
+			t.Error("Tesult different than expected at index", i)
+		}
+	}
+}
