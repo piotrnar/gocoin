@@ -55,25 +55,30 @@ func sign_message() {
 		sb[0] += 4
 	}
 
-	fmt.Println("Trying to find the right signature...")
-	for {
-		btcsig.R, btcsig.S, e = ecdsa.Sign(rand.Reader, privkey, hash)
-		if e != nil {
-			println(e.Error())
-			return
-		}
-
-		rd := btcsig.R.Bytes()
-		sd := btcsig.S.Bytes()
-		copy(sb[1+32-len(rd):], rd)
-		copy(sb[1+64-len(sd):], sd)
-
-		rpk := btcsig.RecoverPublicKey(hash[:], 0)
-		sa := btc.NewAddrFromPubkey(rpk.Bytes(!*uncompressed), ad2s.Version)
-		if sa.Hash160==ad2s.Hash160 {
-			fmt.Println(base64.StdEncoding.EncodeToString(sb[:]))
-			return
-		}
-		fmt.Println(".")
+	btcsig.R, btcsig.S, e = ecdsa.Sign(rand.Reader, privkey, hash)
+	if e != nil {
+		println(e.Error())
+		return
 	}
+
+	rd := btcsig.R.Bytes()
+	sd := btcsig.S.Bytes()
+	copy(sb[1+32-len(rd):], rd)
+	copy(sb[1+64-len(sd):], sd)
+
+	rpk := btcsig.RecoverPublicKey(hash[:], 0)
+	sa := btc.NewAddrFromPubkey(rpk.Bytes(!*uncompressed), ad2s.Version)
+	if sa.Hash160==ad2s.Hash160 {
+		fmt.Println(base64.StdEncoding.EncodeToString(sb[:]))
+		return
+	}
+
+	rpk = btcsig.RecoverPublicKey(hash[:], 1)
+	sa = btc.NewAddrFromPubkey(rpk.Bytes(!*uncompressed), ad2s.Version)
+	if sa.Hash160==ad2s.Hash160 {
+		sb[0]++
+		fmt.Println(base64.StdEncoding.EncodeToString(sb[:]))
+		return
+	}
+	println("Something went wrong. The message has not been signed.")
 }
