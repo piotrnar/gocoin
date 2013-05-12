@@ -477,6 +477,23 @@ func send_tx(par string) {
 }
 
 
+func del_tx(par string) {
+	txid := btc.NewUint256FromString(par)
+	if txid==nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		list_txs("")
+		return
+	}
+	if _, ok := TransactionsToSend[txid.Hash]; !ok {
+		fmt.Println("No such transaction ID in the memory pool.")
+		list_txs("")
+		return
+	}
+	delete(TransactionsToSend, txid.Hash)
+	fmt.Println("Transaction", txid.String(), "removed from the memory pool")
+}
+
+
 func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
@@ -522,7 +539,8 @@ func init() {
 	newUi("balance bal", true, show_balance, "Show & save the balance of the currently loaded wallet")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
-	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool, identified given <txid>")
+	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
+	newUi("deltx dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
 	newUi("listtx ltx", true, list_txs, "List all the transaction loaded into memory pool")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
 	newUi("sync", true, switch_sync, "Control sync of the database to disk")
@@ -542,6 +560,8 @@ func GetBlockData(h []byte) []byte {
 func main() {
 	var sta int64
 	var retryCachedBlocks bool
+
+	fmt.Println("Gocoin client version", btc.SourcesTag)
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
