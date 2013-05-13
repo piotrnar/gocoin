@@ -795,7 +795,10 @@ func do_network(ad *onePeer) {
 	mutex.Lock()
 	conn.ConnID = nextConnId()
 	if _, ok := openCons[ad.UniqID()]; ok {
-		fmt.Println(ad.Ip(), "already connected")
+		if dbg>0 {
+			fmt.Println(ad.Ip(), "already connected")
+		}
+		CountSafe("ConnectingAgain")
 		mutex.Unlock()
 		return
 	}
