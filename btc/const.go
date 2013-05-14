@@ -3,14 +3,13 @@ package btc
 import "runtime"
 
 const(
-	SourcesTag = "0.0.3"
+	SourcesTag = "0.0.4"
 
 	MAX_BLOCK_SIZE = 1000000
 	COIN = 1e8
 	MAX_MONEY = 21000000 * COIN
 
 	BlockMapInitLen = 300e3
-	UnspentTxsMapInitLen = 4e6
 
 	MessageMagic = "Bitcoin Signed Message:\n"
 )
