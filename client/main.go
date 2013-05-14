@@ -104,12 +104,17 @@ func list_unspent(addr string) {
 
 
 func show_balance(p string) {
+	if p!="" {
+		fmt.Println("Using wallet from file", p, "...")
+		MyWallet = NewWallet(p)
+	}
+
 	if MyWallet==nil {
-		println("You have no wallet")
+		println("You have no loaded wallet")
 		return
 	}
 	if len(MyWallet.addrs)==0 {
-		println("You have no addresses")
+		println("Your loaded wallet has no addresses")
 		return
 	}
 	os.RemoveAll("balance")
@@ -536,7 +541,7 @@ func switch_sync(par string) {
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
-	newUi("balance bal", true, show_balance, "Show & save the balance of the currently loaded wallet")
+	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
