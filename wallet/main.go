@@ -29,7 +29,7 @@ var (
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 
 	// Spending money options
-	fee *float64 = flag.Float64("fee", 0.0005, "Transaction fee")
+	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
 
