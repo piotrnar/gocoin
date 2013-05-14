@@ -45,10 +45,10 @@ func look2conn(par string) (c *oneConnection) {
 
 
 func bts(val uint64) {
-	if val < 1e5*1024 {
-		fmt.Printf("%9.1f k ", float64(val)/1024)
+	if val < 1e4*1024 {
+		fmt.Printf("%8.1f k ", float64(val)/1024)
 	} else {
-		fmt.Printf("%9.1f MB", float64(val)/(1024*1024))
+		fmt.Printf("%8.1f MB", float64(val)/(1024*1024))
 	}
 }
 
