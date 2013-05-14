@@ -384,9 +384,13 @@ func blchain_stats(par string) {
 
 func load_wallet(fn string) {
 	if fn != "" {
-		fmt.Println("Switching to wallet from file", fn)
+		fmt.Println("Switching to wallet from file", fn, "...")
 		MyWallet = NewWallet(fn)
+	} else if MyWallet!=nil {
+		fmt.Println("Reloading wallet from", MyWallet.filename, "...")
+		MyWallet = NewWallet(MyWallet.filename)
 	} else {
+		fmt.Println("Loading wallet from", GocoinHomeDir+"wallet.txt", "...")
 		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
 	}
 	if MyWallet == nil {
