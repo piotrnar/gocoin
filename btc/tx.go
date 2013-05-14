@@ -17,10 +17,6 @@ const (
 )
 
 
-
-var slowMode bool
-
-
 type TxPrevOut struct {
 	Hash [32]byte
 	Vout uint32
@@ -204,30 +200,6 @@ func (tx *Tx) CheckTransaction() error {
 	// Size limits
 	if tx.Size > MAX_BLOCK_SIZE {
 		return errors.New("CheckTransaction() : size limits failed")
-	}
-
-	if slowMode {
-		// Check for negative or overflow output values
-		var nValueOut uint64
-		for i := range tx.TxOut {
-			if (tx.TxOut[i].Value > MAX_MONEY) {
-				return errors.New("CheckTransaction() : txout.nValue too high")
-			}
-			nValueOut += tx.TxOut[i].Value
-			if (nValueOut > MAX_MONEY) {
-				return errors.New("CheckTransaction() : txout total out of range")
-			}
-		}
-
-		// Check for duplicate inputs
-		vInOutPoints := make(map[TxPrevOut]bool, len(tx.TxIn))
-		for i := range tx.TxIn {
-			_, present := vInOutPoints[tx.TxIn[i].Input]
-			if present {
-				return errors.New("CheckTransaction() : duplicate inputs")
-			}
-			vInOutPoints[tx.TxIn[i].Input] = true
-		}
 	}
 
 	if tx.IsCoinBase() {
