@@ -8,6 +8,7 @@ import (
 )
 
 type oneWallet struct {
+	filename string
 	addrs []*btc.BtcAddr
 	label []string
 }
@@ -20,6 +21,7 @@ func NewWallet(fn string) (wal *oneWallet) {
 	}
 	defer f.Close()
 	wal = new(oneWallet)
+	wal.filename = fn
 	rd := bufio.NewReader(f)
 	for {
 		var l string
