@@ -82,15 +82,6 @@ func tick_recv() {
 }
 
 
-func count_rcvd(n int) {
-	bw_mutex.Lock()
-	tick_recv()
-	dl_bytes_so_far += n
-	dl_bytes_total += uint64(n)
-	bw_mutex.Unlock()
-}
-
-
 func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
@@ -123,15 +114,6 @@ func tick_sent() {
 		ul_bytes_so_far = 0
 		ul_last_sec = now
 	}
-}
-
-
-func count_sent(n int) {
-	bw_mutex.Lock()
-	tick_sent()
-	ul_bytes_so_far += n
-	ul_bytes_total += uint64(n)
-	bw_mutex.Unlock()
 }
 
 
