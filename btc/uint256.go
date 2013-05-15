@@ -57,8 +57,10 @@ func (u *Uint256) Equal(o *Uint256) bool {
 	return bytes.Equal(u.Hash[:], o.Hash[:])
 }
 
-func (u *Uint256) BIdx() [Uint256IdxLen]byte {
-	return NewBlockIndex(u.Hash[:])
+
+func (u *Uint256) BIdx() (o [Uint256IdxLen]byte) {
+	copy(o[:], u.Hash[:Uint256IdxLen])
+	return
 }
 
 func (u *Uint256) BigInt() *big.Int {
