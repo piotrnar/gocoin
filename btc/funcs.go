@@ -68,7 +68,7 @@ func VLen(b []byte) (le int, var_int_siz int) {
 }
 
 
-func getMerkel(txs []*Tx) ([]byte) {
+func GetMerkel(txs []*Tx) ([]byte) {
 	mtr := make([][]byte, len(txs))
 	for i := range txs {
 		mtr[i] = txs[i].Hash.Hash[:]
