@@ -82,9 +82,10 @@ func net_stats(par string) {
 		if (v.BytesReceived|v.BytesSent)!=0 {
 			bts(v.BytesReceived)
 			bts(v.BytesSent)
-			if v.send.buf !=nil {
-				fmt.Print("  ", v.send.sofar, "/", len(v.send.buf))
-			}
+		}
+		fmt.Print("  ", v.node.agent)
+		if v.send.buf !=nil {
+			fmt.Print("  ", v.send.sofar, "/", len(v.send.buf))
 		}
 		fmt.Println()
 	}
