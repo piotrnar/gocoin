@@ -42,26 +42,22 @@ func NewAlert(b []byte) (res *Alert, e error) {
 	payload = make([]byte, le)
 	_, e = rd.Read(payload)
 	if e != nil {
-		println("dupa4")
 		return
 	}
 
 	// read signature
 	le, e = ReadVLen(rd)
 	if e != nil {
-		println("dupa3")
 		return
 	}
 	signature = make([]byte, le)
 	_, e = rd.Read(signature)
 	if e != nil {
-		println("dupa2")
 		return
 	}
 
 	sig, e = NewSignature(signature)
 	if e != nil {
-		println("dupa1")
 		return
 	}
 
