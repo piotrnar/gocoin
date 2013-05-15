@@ -28,7 +28,7 @@ func (ch *Chain)loadBlockIndex() {
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
 	ch.BlockTreeRoot.Bits = nProofOfWorkLimit
-	ch.BlockIndex[NewBlockIndex(ch.Genesis.Hash[:])] = ch.BlockTreeRoot
+	ch.BlockIndex[ch.Genesis.BIdx()] = ch.BlockTreeRoot
 
 
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
