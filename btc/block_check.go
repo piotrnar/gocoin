@@ -63,28 +63,21 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	}
 
 	if !bl.Trusted {
-		// First transaction must be coinbase, the rest must not be
+		// This is a stupid check, but well..
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
 			dos = true
 			return
 		}
-		for i:=1; i<len(bl.Txs); i++ {
-			if bl.Txs[i].IsCoinBase() {
-				er = errors.New("CheckBlock() : more than one coinbase")
-				dos = true
-				return
-			}
-		}
 
-		// Check Merkle Root
-		if !bytes.Equal(getMerkel(bl.Txs), bl.MerkleRoot) {
+		// Check Merkle Root - that's importnant
+		if !bytes.Equal(GetMerkel(bl.Txs), bl.MerkleRoot) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch")
 			dos = true
 			return
 		}
 
-		// Check transactions
+		// Check transactions - this is the most time consuming task
 		for i:=0; i<len(bl.Txs); i++ {
 			er = bl.Txs[i].CheckTransaction()
 			if er!=nil {
