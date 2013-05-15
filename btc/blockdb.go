@@ -204,26 +204,27 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		}
 
 		if (b[0]&BLOCK_INVALID) != 0 {
-			println("Block #", binary.LittleEndian.Uint32(b[68:72]), "is invalid", b[0])
+			if dbg > 0 {
+				println("Block #", binary.LittleEndian.Uint32(b[68:72]), "is invalid", b[0])
+			}
+			// just ignore it
 			continue
 		}
 
-		trusted := (b[0]&BLOCK_TRUSTED) != 0
-		blh := b[4:36]
-		pah := b[36:68]
-		height := binary.LittleEndian.Uint32(b[68:72])
-		timestamp := binary.LittleEndian.Uint32(b[72:76])
-		bits := binary.LittleEndian.Uint32(b[76:80])
-		filepos := binary.LittleEndian.Uint64(b[80:88])
-		bocklen := binary.LittleEndian.Uint32(b[88:92])
+		ob := new(oneBl)
+		ob.trusted := (b[0]&BLOCK_TRUSTED) != 0
+		ob.fpos = binary.LittleEndian.Uint64(b[80:88])
+		ob.blen = binary.LittleEndian.Uint32(b[88:92])
+		ob.ipos = validpos
 
-		db.blockIndex[hash2idx(blh)] = &oneBl{ fpos: filepos, blen: bocklen,
-			ipos: validpos, trusted : trusted}
+		BlockHash := b[4:36]
+		db.blockIndex[hash2idx(BlockHash)] = ob
 
-		walk(ch, blh, pah, height, bits, timestamp)
+		walk(ch, BlockHash, b[36:68], binary.LittleEndian.Uint32(b[68:72]),
+			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]))
 		validpos += 92
 	}
-	// In case if there was some trash, this should truncate it:
+	// In case if there was some trash, this should truncate it (and sorry for what there was before - too much weed):
 	db.blockindx.Seek(validpos, os.SEEK_SET)
 	return
 }
