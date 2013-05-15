@@ -33,7 +33,7 @@ var (
 
 	exit_now bool
 
-	dbg uint64
+	dbg int64
 	beep bool
 
 	LastBlock *btc.BlockTreeNode
