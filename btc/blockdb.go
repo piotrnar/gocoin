@@ -209,7 +209,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		}
 
 		ob := new(oneBl)
-		ob.trusted := (b[0]&BLOCK_TRUSTED) != 0
+		ob.trusted = (b[0]&BLOCK_TRUSTED) != 0
 		ob.fpos = binary.LittleEndian.Uint64(b[80:88])
 		ob.blen = binary.LittleEndian.Uint32(b[88:92])
 		ob.ipos = validpos
