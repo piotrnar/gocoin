@@ -32,6 +32,8 @@ const (
 	MaxBytesInSendBuffer = 32*1024 // If we have more than this in the send buffer, we send no more responses
 
 	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min
+
+	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it wont come
 )
 
 
@@ -97,6 +99,17 @@ type oneConnection struct {
 
 	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
+
+	GetBlocksInProgress map[[btc.Uint256IdxLen]byte] time.Time // We've sent getdata for a block...
+}
+
+
+func NewConnection(ad *onePeer) (c *oneConnection) {
+	println("init")
+	c = new(oneConnection)
+	c.PeerAddr = ad
+	c.GetBlocksInProgress = make(map[[btc.Uint256IdxLen]byte] time.Time)
+	return
 }
 
 
@@ -121,6 +134,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	c.send.buf = append(c.send.buf, sbuf...)
 
+	//fmt.Println(cmd, "->")
 	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
 }
@@ -167,6 +181,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
+	//b.WriteByte(0)  // don't send me txs
 
 	c.SendRawMsg("version", b.Bytes())
 }
@@ -647,7 +662,13 @@ func (c *oneConnection) Tick() {
 
 	// Need to send getdata...?
 	if tmp := blockDataNeeded(); tmp != nil {
-		c.GetBlockData(tmp)
+		idx := btc.NewUint256(tmp).BIdx()
+		if t, pr := c.GetBlocksInProgress[idx]; !pr || time.Now().After(t.Add(GetBlockTimeout)) {
+			c.GetBlockData(tmp)
+			c.GetBlocksInProgress[idx] = time.Now()
+		} else {
+			CountSafe("GetBlocksInProgress")
+		}
 		return
 	}
 
@@ -700,6 +721,7 @@ func do_one_connection(c *oneConnection) {
 		c.LastCmdRcvd = cmd.cmd
 
 		c.PeerAddr.Alive()
+		//fmt.Println("->", cmd.cmd)
 
 		switch cmd.cmd {
 			case "version":
@@ -719,7 +741,7 @@ func do_one_connection(c *oneConnection) {
 
 			case "tx": //ParseTx(cmd.pl)
 				println("tx unexpected here (now)")
-				c.Broken = true
+				//c.Broken = true
 
 			case "addr":
 				ParseAddr(cmd.pl)
@@ -790,8 +812,7 @@ func nextConnId() uint32 {
 
 func do_network(ad *onePeer) {
 	var e error
-	conn := new(oneConnection)
-	conn.PeerAddr = ad
+	conn := NewConnection(ad)
 	mutex.Lock()
 	conn.ConnID = nextConnId()
 	if _, ok := openCons[ad.UniqID()]; ok {
@@ -842,10 +863,8 @@ func network_process() {
 			ad := getBestPeer()
 			if ad != nil {
 				do_network(ad)
-			} else {
-				if dbg>0 {
-					println("no new peers", len(openCons), conn_cnt)
-				}
+			} else if *proxy=="" && dbg>0 {
+				println("no new peers", len(openCons), conn_cnt)
 			}
 		}
 		time.Sleep(250e6)
@@ -878,9 +897,8 @@ func start_server() {
 				}
 				ad := newIncommingPeer(tc.RemoteAddr().String())
 				if ad != nil {
-					conn := new(oneConnection)
+					conn := NewConnection(ad)
 					conn.ConnectedAt = time.Now()
-					conn.PeerAddr = ad
 					conn.Incomming = true
 					conn.TCPConn = tc
 					mutex.Lock()
