@@ -8,8 +8,8 @@ import (
 
 
 type Chain struct {
-	Blocks *BlockDB
-	Unspent UnspentDB
+	Blocks *BlockDB      // blockchain.dat and blockchain.idx
+	Unspent UnspentDB    // unspent folder
 
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
@@ -18,13 +18,13 @@ type Chain struct {
 	BlockIndexAccess sync.Mutex
 	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
 
-	DoNotSync bool // do not flush all trhe files after each block
+	DoNotSync bool // do not flush all the files after each block
 
 }
 
 
 func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
-	testnet = genesis.Hash[0]==0x43
+	testnet = genesis.Hash[0]==0x43 // it's simple, but works
 
 	ch = new(Chain)
 	ch.Genesis = genesis
@@ -42,6 +42,7 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 		}
 	}
 
+	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
 		ch.ParseTillBlock(end)
