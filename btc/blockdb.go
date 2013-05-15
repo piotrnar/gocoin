@@ -35,7 +35,7 @@ type oneBl struct {
 	fpos uint64 // where at the block is stored in blockchain.dat
 	blen uint32 // how long the block is in blockchain.dat
 
-	ipos int64  // where at the record is stored in blockchain.idx
+	ipos int64  // where at the record is stored in blockchain.idx (used to set flags)
 	trusted bool
 }
 
