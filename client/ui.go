@@ -198,7 +198,7 @@ func ui_beep(par string) {
 
 
 func ui_dbg(par string) {
-	v, e := strconv.ParseUint(par, 10, 32)
+	v, e := strconv.ParseInt(par, 10, 32)
 	if e == nil {
 		dbg = v
 	}
