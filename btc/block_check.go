@@ -47,6 +47,8 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	if bl.Bits != gnwr {
 		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
 			" exp:", gnwr)
+
+		// Here is a "solution" for whatever shit there is in testnet3, that nobody can explain me:
 		if !testnet || ((prevblk.Height+1)%2016)!=0 {
 			er = errors.New("CheckBlock: incorrect proof of work")
 			dos = true
