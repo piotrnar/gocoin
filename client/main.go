@@ -299,8 +299,9 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		return
 	}
 
-	mutex.Lock()
 	idx := bl.Hash.BIdx()
+	delete(conn.GetBlocksInProgress, idx)
+	mutex.Lock()
 	if _, got := receivedBlocks[idx]; got {
 		if _, ok := pendingBlocks[idx]; ok {
 			panic("wtf?")
@@ -362,11 +363,13 @@ func InvsNotify(h []byte) (need bool) {
 	} else if _, ok := receivedBlocks[idx]; ok {
 		Counter["InvWasReceived"]++
 	} else if len(pendingFifo)<PendingFifoLen {
+		fmt.Println("inv", btc.NewUint256(h).String())
+		Counter["InvWanted"]++
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
 	} else {
-		Counter["INV when pending FIFO full"]++
+		Counter["InvFIFOfull"]++
 	}
 	mutex.Unlock()
 	return
