@@ -221,7 +221,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]))
 		validpos += 92
 	}
-	// In case if there was some trash, this should truncate it (and sorry for what there was before - too much weed):
+	// In case if there was some trash, this should truncate it:
 	db.blockindx.Seek(validpos, os.SEEK_SET)
 	return
 }
