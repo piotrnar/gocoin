@@ -8,7 +8,7 @@ import (
 
 func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	// Size limits
-	if len(bl.Raw)<81 || len(bl.Raw)>1e6 {
+	if len(bl.Raw)<81 || len(bl.Raw)>MAX_BLOCK_SIZE {
 		er = errors.New("CheckBlock() : size limits failed")
 		dos = true
 		return
