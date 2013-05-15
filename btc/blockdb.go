@@ -221,11 +221,8 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 			maxfilepos = int64(filepos)+int64(bocklen)
 		}
 
-		db.blockIndex[hash2idx(blh)] = &oneBl{
-			fpos: filepos,
-			blen: bocklen,
-			ipos: validpos,
-			trusted : trusted}
+		db.blockIndex[hash2idx(blh)] = &oneBl{ fpos: filepos, blen: bocklen,
+			ipos: validpos, trusted : trusted}
 
 		walk(ch, blh, pah, height, bits, timestamp)
 		validpos += 92
