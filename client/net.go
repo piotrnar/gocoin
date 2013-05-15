@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"crypto/rand"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -16,14 +17,14 @@ import (
 
 const (
 	Version = 70001
-	UserAgent = "/Satoshi:0.8.1/"
+	UserAgent = "/Gocoin:"+btc.SourcesTag+"/"
 
 	Services = uint64(0x1)
 
 	SendAddrsEvery = (15*time.Minute)
 	AskAddrsEvery = (5*time.Minute)
 
-	MaxInCons = 8
+	MaxInCons = 16
 	MaxOutCons = 8
 	MaxTotCons = MaxInCons+MaxOutCons
 
@@ -108,6 +109,7 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 	c = new(oneConnection)
 	c.PeerAddr = ad
 	c.GetBlocksInProgress = make(map[[btc.Uint256IdxLen]byte] time.Time)
+	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	return
 }
 
@@ -805,17 +807,10 @@ func connectionActive(ad *onePeer) (yes bool) {
 }
 
 
-func nextConnId() uint32 {
-	LastConnId++
-	return LastConnId
-}
-
-
 func do_network(ad *onePeer) {
 	var e error
 	conn := NewConnection(ad)
 	mutex.Lock()
-	conn.ConnID = nextConnId()
 	if _, ok := openCons[ad.UniqID()]; ok {
 		if dbg>0 {
 			fmt.Println(ad.Ip(), "already connected")
@@ -903,7 +898,6 @@ func start_server() {
 					conn.Incomming = true
 					conn.TCPConn = tc
 					mutex.Lock()
-					conn.ConnID = nextConnId()
 					if _, ok := openCons[ad.UniqID()]; ok {
 						fmt.Println(ad.Ip(), "already connected")
 						mutex.Unlock()
