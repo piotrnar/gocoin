@@ -196,7 +196,6 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []byte, h, bits, tim uint32)) (e error) {
 	var b [92]byte
-	var maxfilepos int64
 	validpos, _ := db.blockindx.Seek(0, os.SEEK_SET)
 	for {
 		_, e := db.blockindx.Read(b[:])
@@ -217,9 +216,6 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		bits := binary.LittleEndian.Uint32(b[76:80])
 		filepos := binary.LittleEndian.Uint64(b[80:88])
 		bocklen := binary.LittleEndian.Uint32(b[88:92])
-		if int64(filepos)+int64(bocklen) > maxfilepos {
-			maxfilepos = int64(filepos)+int64(bocklen)
-		}
 
 		db.blockIndex[hash2idx(blh)] = &oneBl{ fpos: filepos, blen: bocklen,
 			ipos: validpos, trusted : trusted}
@@ -227,7 +223,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		walk(ch, blh, pah, height, bits, timestamp)
 		validpos += 92
 	}
+	// In case if there was some trash, this should truncate it:
 	db.blockindx.Seek(validpos, os.SEEK_SET)
-	db.blockdata.Seek(maxfilepos, os.SEEK_SET) // In case if there was some trash, this should truncate it
 	return
 }
