@@ -52,12 +52,6 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 }
 
 
-func NewBlockIndex(h []byte) (o [Uint256IdxLen]byte) {
-	copy(o[:], h[:Uint256IdxLen])
-	return
-}
-
-
 func (ch *Chain) Sync() {
 	ch.DoNotSync = false
 	ch.Blocks.Sync()
@@ -92,10 +86,6 @@ func (ch *Chain)Stats() (s string) {
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
 	return
-}
-
-func (ch *Chain)GetHeight() uint32 {
-	return ch.BlockTreeEnd.Height
 }
 
 
