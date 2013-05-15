@@ -9,7 +9,7 @@ const (
 	DBG_SCRIPT = 1<<5
 )
 
-var dbgmask uint32 = DBG_ORPHAS
+var dbgmask uint32 = 0
 
 func don(b uint32) bool {
 	return (dbgmask&b)!=0
@@ -22,4 +22,3 @@ func DbgSwitch(b uint32, on bool) {
 		dbgmask ^= (b&dbgmask)
 	}
 }
-
