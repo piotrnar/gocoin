@@ -105,7 +105,6 @@ type oneConnection struct {
 
 
 func NewConnection(ad *onePeer) (c *oneConnection) {
-	println("init")
 	c = new(oneConnection)
 	c.PeerAddr = ad
 	c.GetBlocksInProgress = make(map[[btc.Uint256IdxLen]byte] time.Time)
