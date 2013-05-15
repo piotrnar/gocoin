@@ -363,7 +363,9 @@ func InvsNotify(h []byte) (need bool) {
 	} else if _, ok := receivedBlocks[idx]; ok {
 		Counter["InvWasReceived"]++
 	} else if len(pendingFifo)<PendingFifoLen {
-		fmt.Println("inv", btc.NewUint256(h).String())
+		if dbg>0 {
+			fmt.Println("blinv", btc.NewUint256(h).String())
+		}
 		Counter["InvWanted"]++
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
