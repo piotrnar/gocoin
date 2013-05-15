@@ -134,7 +134,9 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	c.send.buf = append(c.send.buf, sbuf...)
 
-	//fmt.Println(cmd, "->")
+	if dbg<0 {
+		fmt.Println(cmd, len(c.send.buf), "->")
+	}
 	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
 }
@@ -181,7 +183,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	//b.WriteByte(0)  // don't send me txs
+	b.WriteByte(0)  // don't notify me about txs
 
 	c.SendRawMsg("version", b.Bytes())
 }
@@ -368,7 +370,6 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
 
-	var txs uint32
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		if typ==2 {
@@ -376,13 +377,12 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			/*if cnt>100 && i==cnt-1 {
 				c.GetBlocks(pl[of+4:of+36])
 			}*/
+		} else if typ==1 {
+			CountSafe("InvGotTxs")
 		} else {
-			txs++
+			CountSafe("InvGot???")
 		}
 		of+= 36
-	}
-	if dbg>1 {
-		println(c.PeerAddr.Ip(), "ProcessInv:", cnt, "tot /", txs, "txs")
 	}
 	return
 }
@@ -721,7 +721,9 @@ func do_one_connection(c *oneConnection) {
 		c.LastCmdRcvd = cmd.cmd
 
 		c.PeerAddr.Alive()
-		//fmt.Println("->", cmd.cmd)
+		if dbg<0 {
+			fmt.Println("->", cmd.cmd, len(cmd.pl))
+		}
 
 		switch cmd.cmd {
 			case "version":
