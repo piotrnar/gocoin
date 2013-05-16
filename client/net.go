@@ -461,11 +461,12 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	hashstop := btc.NewUint256(h[:])
 
 	var maxheight, minheight uint32
+	minheight = 0xffffffff
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
-			if minheight==0 || bl.Height<minheight {
+			if bl.Height<minheight {
 				minheight = bl.Height
 			}
 			if bl.Height > maxheight {
