@@ -78,7 +78,7 @@ func net_stats(par string) {
 		} else {
 			fmt.Print(" ->")
 		}
-		fmt.Printf(" %21s  %6d:%-16s  %6d:%-16s", v.PeerAddr.Ip(),
+		fmt.Printf(" %21s %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
 			v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
 		if (v.BytesReceived|v.BytesSent)!=0 {
 			bts(v.BytesReceived)
