@@ -19,10 +19,10 @@ type Chain struct {
 	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
 
 	DoNotSync bool // do not flush all the files after each block
-
 }
 
 
+// This is the very first function one should call in order to use this package
 func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	testnet = genesis.Hash[0]==0x43 // it's simple, but works
 
