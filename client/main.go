@@ -37,7 +37,7 @@ var (
 	beep bool
 
 	LastBlock *btc.BlockTreeNode
-	LastBlockReceived time.Time // time when the last block was received
+	LastBlockReceived time.Time = time.Now().Add(-10*time.Minute) // Let's just assume this on init
 
 	mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
