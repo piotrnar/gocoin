@@ -128,8 +128,8 @@ func node_info(par string) {
 			fmt.Println(" Chain Height:", v.node.height)
 		}
 		fmt.Println(" Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
-		fmt.Println(" Last command received:", v.LastCmdRcvd, ", ", v.LastBtsRcvd, "bytes")
-		fmt.Println(" Last command sent:", v.LastCmdSent, ", ", v.LastBtsSent, "bytes")
+		fmt.Println(" Last command received:", v.LastCmdRcvd, " ", v.LastBtsRcvd, "bytes")
+		fmt.Println(" Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
 		fmt.Println(" Bytes received:", v.BytesReceived)
 		fmt.Println(" Bytes sent:", v.BytesSent)
 		if !v.NextAddrSent.IsZero() {
@@ -152,7 +152,19 @@ func node_info(par string) {
 }
 
 
+func net_conn(par string) {
+	ad := newIncommingPeer(par)
+	if ad == nil {
+		fmt.Println(par, "does not seem to be a valid TCP endpoint")
+		return
+	}
+	do_network(ad)
+	fmt.Println("Conencting to", ad.Ip())
+}
+
+
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
+	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
 }
