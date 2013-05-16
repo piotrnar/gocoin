@@ -89,6 +89,7 @@ type oneConnection struct {
 	// Statistics:
 	LoopCnt, TicksCnt uint  // just to see if the threads loop is alive
 	BytesReceived, BytesSent uint64
+	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
 
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
@@ -123,6 +124,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
+	c.LastBtsSent = uint32(len(pl))
 
 	binary.LittleEndian.PutUint32(sbuf[0:4], Version)
 	copy(sbuf[0:4], Magic[:])
@@ -343,7 +345,7 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 
 func (c *oneConnection) GetBlocks(lastbl []byte) {
 	if dbg > 0 {
-		println("GetBlocks since", btc.NewUint256(lastbl).String())
+		println(c.PeerAddr.Ip(), "getblocks since", btc.NewUint256(lastbl).String())
 	}
 	var b [4+1+32+32]byte
 	binary.LittleEndian.PutUint32(b[0:4], Version)
@@ -486,7 +488,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			binary.Write(inv, binary.LittleEndian, uint32(2))
 			inv.Write(k[:])
 		}
-		if dbg>1 {
+		if dbg>0 {
 			fmt.Printf("%s: getblocks  cnt=%d  h:%d..%d => %d invs / %d bytes\n",
 				c.PeerAddr.Ip(), cnt, minheight, maxheight, len(invs), len(inv.Bytes()))
 		}
@@ -592,16 +594,14 @@ func (c *oneConnection) blocksNeeded() bool {
 		c.LastBlocksFrom = LastBlock
 
 		// Lock the blocktree while we're browsing through it
-		BlockChain.BlockIndexAccess.Lock()
-		var depth = 144 // by default let's ask up to
-		if !LastBlockReceived.IsZero() {
-			// Every minute from last block reception moves us 1-block up the chain
-			depth = int(time.Now().Sub(LastBlockReceived)/time.Minute)
-			if depth>400 {
-				depth = 400
-			}
-		}
 		// ask N-blocks up in the chain, to recover from dead-end chain forks
+
+		BlockChain.BlockIndexAccess.Lock()
+		// Look one block deeper, with each lasting minute since the last block was received
+		depth := int(time.Now().Sub(LastBlockReceived)/time.Minute)
+		if depth>400 { // ... but don't get too crazy with it
+			depth = 400
+		}
 		n := LastBlock
 		for i:=0; i<depth && n.Parent != nil; i++ {
 			n = n.Parent
@@ -725,6 +725,7 @@ func do_one_connection(c *oneConnection) {
 
 		c.LastDataGot = time.Now()
 		c.LastCmdRcvd = cmd.cmd
+		c.LastBtsRcvd = uint32(len(cmd.pl))
 
 		c.PeerAddr.Alive()
 		if dbg<0 {
