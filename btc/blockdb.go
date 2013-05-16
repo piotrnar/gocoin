@@ -187,15 +187,28 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 		return
 	}
 	bl = make([]byte, rec.blen)
-	db.blockdata.Seek(int64(rec.fpos), os.SEEK_SET)
-	db.blockdata.Read(bl[:])
+
+	// we will re-open the data file, to not spoil the writting pointer
+	f, e := os.Open(db.dirname+"blockchain.dat")
+	if e != nil {
+		return
+	}
+
+	_, e = f.Seek(int64(rec.fpos), os.SEEK_SET)
+	if e == nil {
+		_, e = f.Read(bl[:])
+	}
+	f.Close()
+
 	trusted = rec.trusted
+
 	return
 }
 
 
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []byte, h, bits, tim uint32)) (e error) {
 	var b [92]byte
+	var maxdatfilepos int64
 	validpos, _ := db.blockindx.Seek(0, os.SEEK_SET)
 	for {
 		_, e := db.blockindx.Read(b[:])
@@ -214,14 +227,20 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		ob.blen = binary.LittleEndian.Uint32(b[88:92])
 		ob.ipos = validpos
 
+
 		BlockHash := b[4:36]
 		db.blockIndex[hash2idx(BlockHash)] = ob
+
+		if int64(ob.fpos)+int64(ob.blen) > maxdatfilepos {
+			maxdatfilepos = int64(ob.fpos)+int64(ob.blen)
+		}
 
 		walk(ch, BlockHash, b[36:68], binary.LittleEndian.Uint32(b[68:72]),
 			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]))
 		validpos += 92
 	}
-	// In case if there was some trash, this should truncate it:
+	// In case if there was some trash at the end of data or index file, this should truncate it:
 	db.blockindx.Seek(validpos, os.SEEK_SET)
+	db.blockdata.Seek(maxdatfilepos, os.SEEK_SET)
 	return
 }
