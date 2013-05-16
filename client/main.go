@@ -394,8 +394,10 @@ func load_wallet(fn string) {
 	} else if MyWallet!=nil {
 		fmt.Println("Reloading wallet from", MyWallet.filename, "...")
 		MyWallet = NewWallet(MyWallet.filename)
-	} else {
-		fmt.Println("Loading wallet from", GocoinHomeDir+"wallet.txt", "...")
+	}
+
+	if MyWallet!=nil {
+		fmt.Println("Loading default wallet, from", GocoinHomeDir+"wallet.txt", "...")
 		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
 	}
 	if MyWallet == nil {
