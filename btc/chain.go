@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+    "encoding/binary"
 )
 
 
@@ -99,6 +100,13 @@ func (x AllUnspentTx) Len() int {
 }
 
 func (x AllUnspentTx) Less(i, j int) bool {
+	if x[i].MinedAt == x[j].MinedAt {
+		if x[i].TxPrevOut.Hash==x[j].TxPrevOut.Hash {
+			return x[i].TxPrevOut.Vout < x[j].TxPrevOut.Vout
+		}
+		return binary.LittleEndian.Uint64(x[i].TxPrevOut.Hash[24:32]) <
+			binary.LittleEndian.Uint64(x[j].TxPrevOut.Hash[24:32])
+	}
 	return x[i].MinedAt < x[j].MinedAt
 }
 
