@@ -599,8 +599,8 @@ func (c *oneConnection) blocksNeeded() bool {
 		BlockChain.BlockIndexAccess.Lock()
 		// Look one block deeper, with each lasting minute since the last block was received
 		depth := int(time.Now().Sub(LastBlockReceived)/time.Minute)
-		if depth>400 { // ... but don't get too crazy with it
-			depth = 400
+		if depth>200 { // ... but don't get too crazy with it
+			depth = 200
 		}
 		n := LastBlock
 		for i:=0; i<depth && n.Parent != nil; i++ {
