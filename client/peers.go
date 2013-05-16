@@ -64,12 +64,17 @@ func newIncommingPeer(ipstr string) (p *onePeer) {
 	ip := net.ParseIP(ipstr)
 	if ip != nil && len(ip)==16 {
 		p = new(onePeer)
-		p.Time = uint32(time.Now().Unix())
 		p.Services = 1
 		copy(p.Ip6[:], ip[:12])
 		copy(p.Ip4[:], ip[12:16])
 		p.Port = DefaultTcpPort
-		p.Save()
+		if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
+			println(p.Ip(), "is banned")
+			p = nil
+		} else {
+			p.Time = uint32(time.Now().Unix())
+			p.Save()
+		}
 	} else {
 		println("newIncommingPeer: error parsing IP", ipstr)
 	}
