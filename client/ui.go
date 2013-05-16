@@ -304,7 +304,7 @@ func init() {
 	newUi("counters c", false, show_counters, "Show counters")
 	newUi("mem", false, show_mem, "Show detailed memory stats")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
-	newUi("dbg", false, ui_dbg, "Control debugs (use numeric parameter)")
+	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
