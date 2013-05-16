@@ -161,9 +161,7 @@ func show_last(par string) {
 	fmt.Printf("  Height: %d @ %s,  Difficulty: %.1f\n", LastBlock.Height,
 		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
 		btc.GetDifficulty(LastBlock.Bits))
-	if !LastBlockReceived.IsZero() {
-		fmt.Println("  Received", time.Now().Sub(LastBlockReceived), "ago")
-	}
+	fmt.Println("  got", time.Now().Sub(LastBlockReceived), "ago")
 	mutex.Unlock()
 }
 
