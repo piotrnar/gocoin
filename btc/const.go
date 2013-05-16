@@ -14,7 +14,10 @@ const(
 	MessageMagic = "Bitcoin Signed Message:\n"
 )
 
-var useThreads int = 3 * runtime.NumCPU() // use few times more go-routines to optimize an idle time
+// Increase the number of threads to optimize txs verification time,
+// but if you set it too high, the UI may be non-responsive
+// while parsing more complex blocks.
+var useThreads int = 3 * runtime.NumCPU()
 
 var taskDone chan bool
 
