@@ -315,7 +315,7 @@ func (c *oneConnection) SendAddr() {
 }
 
 
-func (c *oneConnection) VerMsg(pl []byte) error {
+func (c *oneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 46 {
 		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
 		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
@@ -325,18 +325,12 @@ func (c *oneConnection) VerMsg(pl []byte) error {
 			MyExternalAddr.Port = DefaultTcpPort
 		}
 		if len(pl) >= 86 {
-			//fmt.Println("From:", btc.NewNetAddr(pl[46:72]).String())
-			//fmt.Println("Nonce:", hex.EncodeToString(pl[72:80]))
 			le, of := btc.VLen(pl[80:])
 			of += 80
 			c.node.agent = string(pl[of:of+le])
 			of += le
 			if len(pl) >= of+4 {
 				c.node.height = binary.LittleEndian.Uint32(pl[of:of+4])
-				/*of += 4
-				if len(pl) >= of+1 {
-					fmt.Println("Relay:", pl[of])
-				}*/
 			}
 		}
 	} else {
@@ -728,7 +722,7 @@ func do_one_connection(c *oneConnection) {
 
 		switch cmd.cmd {
 			case "version":
-				er := c.VerMsg(cmd.pl)
+				er := c.HandleVersion(cmd.pl)
 				if er != nil {
 					println("version:", er.Error())
 					c.Broken = true
