@@ -78,7 +78,8 @@ func net_stats(par string) {
 		} else {
 			fmt.Print(" ->")
 		}
-		fmt.Printf(" %21s  %-16s  %-16s", v.PeerAddr.Ip(), v.LastCmdRcvd, v.LastCmdSent)
+		fmt.Printf(" %21s  %6d:%-16s  %6d:%-16s", v.PeerAddr.Ip(),
+			v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
 		if (v.BytesReceived|v.BytesSent)!=0 {
 			bts(v.BytesReceived)
 			bts(v.BytesSent)
@@ -127,8 +128,8 @@ func node_info(par string) {
 			fmt.Println(" Chain Height:", v.node.height)
 		}
 		fmt.Println(" Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
-		fmt.Println(" Last command received:", v.LastCmdRcvd)
-		fmt.Println(" Last command sent:", v.LastCmdSent)
+		fmt.Println(" Last command received:", v.LastCmdRcvd, ", ", v.LastBtsRcvd, "bytes")
+		fmt.Println(" Last command sent:", v.LastCmdSent, ", ", v.LastBtsSent, "bytes")
 		fmt.Println(" Bytes received:", v.BytesReceived)
 		fmt.Println(" Bytes sent:", v.BytesSent)
 		if !v.NextAddrSent.IsZero() {
