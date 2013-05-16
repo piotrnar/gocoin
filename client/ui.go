@@ -24,10 +24,10 @@ type oneUiReq struct {
 	handler func(pars string)
 }
 
-
 var uiCmds []*oneUiCmd
 
 
+// add a new UI commend handler
 func newUi(cmds string, sync bool, hn func(string), help string) {
 	cs := strings.Split(cmds, " ")
 	if len(cs[0])>0 {
@@ -38,7 +38,21 @@ func newUi(cmds string, sync bool, hn func(string), help string) {
 		c.sync = sync
 		c.help = help
 		c.handler = hn
-		uiCmds = append(uiCmds, c)
+		if len(uiCmds)>0 {
+			var i int
+			for i = range uiCmds {
+				if uiCmds[i].cmds[0]>c.cmds[0] {
+					break // lets have them sorted
+				}
+			}
+			tmp := make([]*oneUiCmd, len(uiCmds)+1)
+			copy(tmp[:i], uiCmds[:i])
+			tmp[i] = c
+			copy(tmp[i+1:], uiCmds[i:])
+			uiCmds = tmp
+		} else {
+			uiCmds = []*oneUiCmd{c}
+		}
 	} else {
 		panic("empty command string")
 	}
@@ -224,7 +238,7 @@ func show_cached(par string) {
 
 
 func show_help(par string) {
-	fmt.Println("There following commands are supported:")
+	fmt.Println("There following", len(uiCmds), "commands are supported:")
 	for i := range uiCmds {
 		fmt.Print("   ")
 		for j := range uiCmds[i].cmds {
