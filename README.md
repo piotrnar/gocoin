@@ -23,6 +23,8 @@ Limitations of the client node
 * No GUI.
 * Works only with entire (mined) blocks - does not rely transactions, except from sending own transactions to the network.
 * Requires a file system that supports large files (bigger than 4GB).
+* No UPnP support
+* No IP v6 support
 
 
 Dependencies
