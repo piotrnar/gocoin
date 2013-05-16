@@ -158,8 +158,8 @@ func net_conn(par string) {
 		fmt.Println(par, "does not seem to be a valid TCP endpoint")
 		return
 	}
-	do_network(ad)
 	fmt.Println("Conencting to", ad.Ip())
+	do_network(ad)
 }
 
 
