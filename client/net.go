@@ -30,7 +30,7 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 
-	MaxBytesInSendBuffer = 32*1024 // If we have more than this in the send buffer, we send no more responses
+	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
 
 	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min
 
@@ -136,7 +136,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	c.send.buf = append(c.send.buf, sbuf...)
 
 	if dbg<0 {
-		fmt.Println(cmd, len(c.send.buf), "->")
+		fmt.Println(cmd, len(c.send.buf), "->", c.PeerAddr.Ip())
 	}
 	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
@@ -427,11 +427,13 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	e := binary.Read(b, binary.LittleEndian, &ver)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
+		c.DoS()
 		return
 	}
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
+		c.DoS()
 		return
 	}
 	h2get := make([]*btc.Uint256, cnt)
@@ -440,25 +442,32 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		n, _ := b.Read(h[:])
 		if n != 32 {
 			println("getblocks too short", c.PeerAddr.Ip())
+			CountSafe("GetBlocksTooShort")
+			c.DoS()
 			return
 		}
 		h2get[i] = btc.NewUint256(h[:])
-		if dbg>1 {
+		if dbg>2 {
 			println(c.PeerAddr.Ip(), "getbl", h2get[i].String())
 		}
 	}
 	n, _ := b.Read(h[:])
 	if n != 32 {
 		println("getblocks does not have hash_stop", c.PeerAddr.Ip())
+		CountSafe("GetBlocksNoStop")
+		c.DoS()
 		return
 	}
 	hashstop := btc.NewUint256(h[:])
 
-	var maxheight uint32
+	var maxheight, minheight uint32
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
+			if minheight==0 || bl.Height<minheight {
+				minheight = bl.Height
+			}
 			if bl.Height > maxheight {
 				maxheight = bl.Height
 			}
@@ -477,7 +486,8 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			inv.Write(k[:])
 		}
 		if dbg>1 {
-			fmt.Println(c.PeerAddr.Ip(), "getblocks", cnt, maxheight, " ...", len(invs), "invs in resp ->", len(inv.Bytes()))
+			fmt.Printf("%s: getblocks  cnt=%d  h:%d..%d => %d invs / %d bytes\n",
+				c.PeerAddr.Ip(), cnt, minheight, maxheight, len(invs), len(inv.Bytes()))
 		}
 		CountSafe("GetblocksReplies")
 		c.SendRawMsg("inv", inv.Bytes())
@@ -717,7 +727,7 @@ func do_one_connection(c *oneConnection) {
 
 		c.PeerAddr.Alive()
 		if dbg<0 {
-			fmt.Println("->", cmd.cmd, len(cmd.pl))
+			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
 		switch cmd.cmd {
@@ -778,6 +788,9 @@ func do_one_connection(c *oneConnection) {
 				} else {
 					CountSafe("CmdPingIgnored")
 				}
+
+			case "notfound":
+				CountSafe("NotFound")
 
 			default:
 				println(cmd.cmd, "from", c.PeerAddr.Ip())
@@ -893,7 +906,8 @@ func start_server() {
 					conn.TCPConn = tc
 					mutex.Lock()
 					if _, ok := openCons[ad.UniqID()]; ok {
-						fmt.Println(ad.Ip(), "already connected")
+						//fmt.Println(ad.Ip(), "already connected")
+						CountSafe("SameIpReconnect")
 						mutex.Unlock()
 					} else {
 						openCons[ad.UniqID()] = conn
@@ -908,7 +922,8 @@ func start_server() {
 						}()
 					}
 				} else {
-					println("newIncommingPeer failed")
+					println("newIncommingPeer failed - IP probably baned", tc.RemoteAddr().String())
+					CountSafe("InConnRefused")
 					tc.Close()
 				}
 			}
