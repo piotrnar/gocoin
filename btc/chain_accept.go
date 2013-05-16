@@ -3,7 +3,6 @@ package btc
 import (
 	"fmt"
 	"errors"
-	"encoding/hex"
 )
 
 
@@ -17,6 +16,11 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 }
 
 
+// This function either appends a new block at the end of the existing chain
+// in which case it also applies all the transactions to the unspent database.
+// If the block does is not the heighest, it is added to the chain, but maked
+// as an orphan - its transaction will be verified only if the chain would swap
+// to its branch later on.
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
@@ -39,35 +43,41 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	ch.BlockIndexAccess.Unlock()
 
 	if ch.BlockTreeEnd==prevblk {
-		// Append the end of the longest
+		// The head of out chain - apply the transactions
 		if don(DBG_BLOCKS) {
 			fmt.Printf("Adding block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
 		var changes *BlockChanges
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height)
 		if e != nil {
+			// ProcessBlockTransactions failed, so trash the block.
 			println("ProcessBlockTransactions ", cur.BlockHash.String(), cur.Height, e.Error())
 			ch.BlockIndexAccess.Lock()
 			cur.Parent.delChild(cur)
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
 			ch.BlockIndexAccess.Unlock()
 		} else {
+			// ProcessBlockTransactions succeeded, so save the block as "trusted".
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
+			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 			if !ch.DoNotSync {
 				ch.Blocks.Sync()
 				ch.Unspent.Sync()
 			}
-			ch.BlockTreeEnd = cur
-			// Store as trusted block in the persistent storage
+			ch.BlockTreeEnd = cur // Advance the head
 		}
 	} else {
-		// Store block in the persistent storage
+		// The block's parent is not the current head of the chain...
+
+		// Save the block, though do not makt it as "trusted"
 		ch.Blocks.BlockAdd(cur.Height, bl)
 		if don(DBG_BLOCKS|DBG_ORPHAS) {
 			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
+
+		// If it has a bigger height than the current head, move coinstate to the new branch
 		if cur.Height > ch.BlockTreeEnd.Height {
 			ch.MoveToBlock(cur)
 		}
@@ -82,19 +92,9 @@ func verify(sig []byte, prv []byte, i int, tx *Tx) {
 }
 
 
-func getUnspIndex(po *TxPrevOut) (idx [8]byte) {
-	copy(idx[:], po.Hash[:8])
-	idx[0] ^= byte(po.Vout)
-	idx[1] ^= byte(po.Vout>>8)
-	idx[2] ^= byte(po.Vout>>16)
-	idx[3] ^= byte(po.Vout>>32)
-	return
-}
-
-
 func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	sumblockin := GetBlockReward(changes.Height)
-	sumblockout := uint64(0)
+	var txoutsum, txinsum, sumblockout uint64
 
 	if don(DBG_TX) {
 		fmt.Printf("Commiting %d transactions\n", len(bl.Txs))
@@ -112,12 +112,12 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	}
 
 	for i := range bl.Txs {
-		var txoutsum, txinsum uint64
 		if don(DBG_TX) {
 			fmt.Printf("tx %d/%d:\n", i+1, len(bl.Txs))
 		}
+		txoutsum, txinsum = 0, 0
 
-		// Check each tx for a valid input
+		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			scripts_ok := true
 			for j:=0; j<useThreads; j++ {
@@ -130,10 +130,6 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					println("txin", inp.String(), "already spent in this block")
 					e = errors.New("Input spent more then once in same block")
 					break
-				}
-				if don(DBG_TX) {
-					idx := getUnspIndex(inp)
-					println(" idx", hex.EncodeToString(idx[:]))
 				}
 				tout := ch.PickUnspent(inp)
 				if tout==nil {
@@ -176,10 +172,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				if bl.Trusted {
 					taskDone <- true
 				} else {
-					go func(i, j int, pks []byte) {
-						taskDone <- VerifyTxScript(bl.Txs[i].TxIn[j].ScriptSig,
-							pks, j, bl.Txs[i])
-					}(i, j, tout.Pk_script)
+					go verify(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
 				// Verify Transaction script:
