@@ -388,20 +388,19 @@ func blchain_stats(par string) {
 
 
 func load_wallet(fn string) {
-	if fn != "" {
-		fmt.Println("Switching to wallet from file", fn, "...")
+	if fn=="def" {
+		fmt.Println("Loading default wallet from", GocoinHomeDir+"wallet.txt", "...")
+		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
+	} else if fn != "" {
+		fmt.Println("Switching to a wallet from", fn, "...")
 		MyWallet = NewWallet(fn)
 	} else if MyWallet!=nil {
-		fmt.Println("Reloading wallet from", MyWallet.filename, "...")
+		fmt.Println("Reloading the wallet from", MyWallet.filename, "...")
 		MyWallet = NewWallet(MyWallet.filename)
 	}
 
-	if MyWallet==nil {
-		fmt.Println("Loading default wallet, from", GocoinHomeDir+"wallet.txt", "...")
-		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
-	}
 	if MyWallet == nil {
-		fmt.Println("You have no wallet")
+		fmt.Println("No wallet loaded")
 		return
 	}
 	fmt.Println("Dumping wallet:")
