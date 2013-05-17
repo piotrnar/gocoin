@@ -110,6 +110,7 @@ func pers_do_cleanup() {
 			delcnt--
 			peerDB.Del(todel[delcnt])
 		}
+		CountSafe("PeersDefrags")
 		peerDB.Defrag()
 		nextDefrag = time.Now().Add(defragEvery)
 	}
@@ -188,7 +189,7 @@ func ParseAddr(pl []byte) {
 			peerDB.Put(k, a.Bytes())
 		}
 	}
-	peerDB.Defrag()
+	//peerDB.Defrag()
 }
 
 
