@@ -80,7 +80,7 @@ func getpass() string {
 	}
 	for i := range buf {
 		if buf[i]<' ' || buf[i]>126 {
-			fmt.Println("WARNING: Your secret contains non-printable characters\007")
+			fmt.Println("WARNING: Your secret contains non-printable characters")
 			break
 		}
 	}
@@ -94,7 +94,7 @@ func verify_key(priv []byte, publ []byte) bool {
 
 	pub_key, e := btc.NewPublicKey(publ)
 	if e != nil {
-		println("NewPublicKey:", e.Error(), "\007")
+		println("NewPublicKey:", e.Error())
 		os.Exit(1)
 	}
 
@@ -124,4 +124,30 @@ func verify_key(priv []byte, publ []byte) bool {
 		return false
 	}
 	return true
+}
+
+
+// return the change addrress or nil if there will be no change
+func get_change_addr() (chng *btc.BtcAddr) {
+	if *change!="" {
+		var e error
+		chng, e = btc.NewAddrFromString(*change)
+		if e != nil {
+			println("Change address:", e.Error())
+			os.Exit(1)
+		}
+	}
+
+	// If change address not specified, send it back to the first input
+	uo := UO(unspentOuts[0])
+	for j := range publ_addrs {
+		if publ_addrs[j].Owns(uo.Pk_script) {
+			chng = publ_addrs[j]
+			return
+		}
+	}
+
+	fmt.Println("You do not own the address of the first input")
+	os.Exit(1)
+	return
 }
