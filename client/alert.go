@@ -21,7 +21,7 @@ func (c *oneConnection) HandleAlert(b []byte) {
 	alert_access.Lock()
 	if _, ok := alerts[a.ID]; !ok {
 		alerts[a.ID] = a
-		fmt.Println("\007\007New alert:", a.StatusBar)
+		fmt.Println("\007New alert:", a.StatusBar)
 		ui_show_prompt()
 	}
 	alert_access.Unlock()
