@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"bufio"
 	"math/big"
+	"strings"
 	"crypto/rand"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -25,10 +26,25 @@ func getline() string {
 	return string(li)
 }
 
+
+func ask_yes_no(msg string) bool {
+	for {
+		fmt.Print(msg, " (y/n) : ")
+		l := strings.ToLower(getline())
+		if l=="y" {
+			return true
+		} else if l=="n" {
+			return false
+		}
+	}
+	return false
+}
+
 // Input the password (that is the secret seed to your wallet)
 func getpass() string {
 	f, e := os.Open("wallet.sec")
 	if e != nil {
+		fmt.Println("Seed file 'wallet.sec' not found.")
 		fmt.Print("Enter your wallet's seed password: ")
 		pass := getline()
 		if pass!="" && *dump {
@@ -36,6 +52,16 @@ func getpass() string {
 			if pass!=getline() {
 				println("The two passwords you entered do not match")
 				os.Exit(1)
+			}
+			// Maybe he wants to save the password?
+			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
+				f, e = os.Create("wallet.sec")
+				if e == nil {
+					f.Write([]byte(pass))
+					f.Close()
+				} else {
+					println("Could not save the password:", e.Error())
+				}
 			}
 		}
 		return pass
