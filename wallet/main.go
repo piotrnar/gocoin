@@ -18,6 +18,11 @@ type oneSendTo struct {
 	amount uint64
 }
 
+const (
+	PassSeedFilename = ".secret"
+	RawKeysFilename = ".others"
+)
+
 var (
 	// Command line switches
 
@@ -215,6 +220,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 func main() {
 	fmt.Println("Gocoin Wallet version", btc.SourcesTag)
 	fmt.Println("This program comes with ABSOLUTELY NO WARRANTY")
+	fmt.Println()
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
