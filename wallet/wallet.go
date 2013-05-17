@@ -53,6 +53,11 @@ func load_others() {
 			}
 			pk := strings.SplitN(strings.Trim(string(li), " "), " ", 2)
 			pkb := btc.Decodeb58(pk[0])
+
+			if pk[0][0]=='#' {
+				continue // Just a comment-line
+			}
+
 			if pkb == nil {
 				println("Decodeb58 failed:", pk[0][:6])
 				continue
