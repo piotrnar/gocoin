@@ -48,7 +48,11 @@ func make_signed_tx() {
 
 	if changeBtc > 0 {
 		// Add one more output (with the change)
-		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: get_change_addr().OutScript()})
+		chad := get_change_addr()
+		if *verbose {
+			fmt.Println("Sending change", changeBtc, "to", chad.String())
+		}
+		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: chad.OutScript()})
 	}
 
 	//fmt.Println("Unsigned:", hex.EncodeToString(tx.Serialize()))
@@ -136,36 +140,39 @@ func make_signed_tx() {
 		fmt.Println("Transaction data stored in", hs[:8]+".txt")
 	}
 
-	f, _ = os.Create("balance/unspent.txt")
-	if f != nil {
-		for j:=uint(0); j<uint(len(unspentOuts)); j++ {
-			if j>inpcnt {
-				fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
-			}
-		}
-		if *verbose {
-			fmt.Println(inpcnt, "spent output(s) removed from 'balance/unspent.txt'")
-		}
-
-		var addback int
-		for out := range tx.TxOut {
-			for j := range publ_addrs {
-				if publ_addrs[j].Owns(tx.TxOut[out].Pk_script) {
-					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
-						float64(tx.TxOut[out].Value)/1e8, publ_addrs[j].String())
-					addback++
+	if *apply2bal {
+		fmt.Println("Applying the transaction to the balance/ folder...")
+		f, _ = os.Create("balance/unspent.txt")
+		if f != nil {
+			for j:=uint(0); j<uint(len(unspentOuts)); j++ {
+				if j>inpcnt {
+					fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
 				}
 			}
-		}
-		f.Close()
-		if addback > 0 {
-			f, _ = os.Create("balance/"+hs+".tx")
-			if f != nil {
-				f.Write(rawtx)
-				f.Close()
-			}
 			if *verbose {
-				fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+				fmt.Println(inpcnt, "spent output(s) removed from 'balance/unspent.txt'")
+			}
+
+			var addback int
+			for out := range tx.TxOut {
+				for j := range publ_addrs {
+					if publ_addrs[j].Owns(tx.TxOut[out].Pk_script) {
+						fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
+							float64(tx.TxOut[out].Value)/1e8, publ_addrs[j].String())
+						addback++
+					}
+				}
+			}
+			f.Close()
+			if addback > 0 {
+				f, _ = os.Create("balance/"+hs+".tx")
+				if f != nil {
+					f.Write(rawtx)
+					f.Close()
+				}
+				if *verbose {
+					fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+				}
 			}
 		}
 	}
