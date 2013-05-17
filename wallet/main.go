@@ -27,6 +27,7 @@ var (
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	verbose *bool = flag.Bool("v", false, "Verbose bersion (print more info)")
+	apply2bal *bool = flag.Bool("a", false, "Apply chamges to the balance folder")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
