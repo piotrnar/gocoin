@@ -29,6 +29,7 @@ type unspentDb struct {
 	defragIndex int
 	defragCount uint64
 	nosyncinprogress bool
+	notifyTx btc.TxNotifyFunc
 }
 
 func newUnspentDB(dir string) (db *unspentDb) {
@@ -77,6 +78,9 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 
 
 func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
+	if db.notifyTx!=nil {
+		db.notifyTx(idx, Val_Pk)
+	}
 	v := make([]byte, 48+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
@@ -105,6 +109,9 @@ func (db *unspentDb) idle() bool {
 
 
 func (db *unspentDb) del(idx *btc.TxPrevOut) {
+	if db.notifyTx!=nil {
+		db.notifyTx(idx, nil)
+	}
 	db.dbN(int(idx.Hash[31])).Del(getUnspIndex(idx))
 }
 
