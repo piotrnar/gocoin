@@ -49,8 +49,9 @@ func (bl *Block) BuildTxList() (e error) {
 	offs += n
 	bl.Txs = make([]*Tx, txcnt)
 
+	done := make(chan bool, useThreads)
 	for i:=0; i<useThreads; i++ {
-		taskDone <- false
+		done <- false
 	}
 
 	for i:=0; i<int(txcnt); i++ {
@@ -60,17 +61,17 @@ func (bl *Block) BuildTxList() (e error) {
 			break
 		}
 		bl.Txs[i].Size = uint32(n)
-		_ = <- taskDone // wait if we have too many threads already
+		_ = <- done // wait here, if we have too many threads already
 		go func(h **Uint256, b []byte) {
 			*h = NewSha2Hash(b)
-			taskDone <- true
+			done <- true // indicate mission completed
 		}(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
 		offs += n
 	}
 
-	// Wait for pending hashing to finish...
+	// Wait for all the pending mission to complete...
 	for i:=0; i<useThreads; i++ {
-		_ = <- taskDone
+		_ = <- done
 	}
 	return
 }
