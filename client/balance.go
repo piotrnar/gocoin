@@ -22,8 +22,9 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 					fmt.Println(" +", idx.String(), valpk.String())
 				}
 				MyBalance = append(MyBalance, btc.OneUnspentTx{TxPrevOut:*idx,
-					Value:valpk.Value, MinedAt:valpk.BlockHeight})
+					Value:valpk.Value, MinedAt:valpk.BlockHeight, BtcAddr:MyWallet.addrs[i]})
 				BalanceChanged = true
+				break
 			}
 		}
 	} else {
@@ -53,9 +54,8 @@ func DumpBalance(utxt *os.File) {
 		sum += MyBalance[i].Value
 
 		if len(MyBalance)<100 {
-			fmt.Printf("%7d %s @ %s (%s)\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
-				MyBalance[i].String(), MyWallet.addrs[MyBalance[i].AskIndex].String(),
-				MyWallet.label[MyBalance[i].AskIndex])
+			fmt.Printf("%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
+				MyBalance[i].String())
 		}
 
 		// update the balance/ folder
@@ -71,10 +71,9 @@ func DumpBalance(utxt *os.File) {
 			txid := btc.NewUint256(MyBalance[i].TxPrevOut.Hash[:])
 
 			// Store the unspent line in balance/unspent.txt
-			fmt.Fprintf(utxt, "%s # %.8f BTC / %d / %s (%s)\n", MyBalance[i].TxPrevOut.String(),
-				float64(MyBalance[i].Value)/1e8, MyBalance[i].MinedAt,
-				MyWallet.addrs[MyBalance[i].AskIndex].String(), MyWallet.label[MyBalance[i].AskIndex])
-
+			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs\n", MyBalance[i].TxPrevOut.String(),
+				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.String(),
+				1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt)
 
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
