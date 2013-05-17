@@ -11,8 +11,8 @@ type AllUnspentTx []OneUnspentTx
 type OneUnspentTx struct {
 	TxPrevOut
 	Value uint64
-	AskIndex uint32
 	MinedAt uint32
+	*BtcAddr
 }
 
 func (x AllUnspentTx) Len() int {
@@ -34,6 +34,10 @@ func (x AllUnspentTx) Swap(i, j int) {
 	x[i], x[j] = x[j], x[i]
 }
 
-func (ou *OneUnspentTx) String() string {
-	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
+func (ou *OneUnspentTx) String() (s string) {
+	s = fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
+	if ou.BtcAddr!=nil {
+		s += " @ " + ou.BtcAddr.String()
+	}
+	return
 }
