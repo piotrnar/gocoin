@@ -60,7 +60,7 @@ func make_signed_tx() {
 			if publ_addrs[j].Owns(uo.Pk_script) {
 				pub_key, e := btc.NewPublicKey(publ_addrs[j].Pubkey)
 				if e != nil {
-					println("NewPublicKey:", e.Error(), "\007")
+					println("NewPublicKey:", e.Error())
 					os.Exit(1)
 				}
 
@@ -76,7 +76,7 @@ func make_signed_tx() {
 				// Sign
 				r, s, err := ecdsa.Sign(rand.Reader, &key, h)
 				if err != nil {
-					println("Sign:", err.Error(), "\007")
+					println("Sign:", err.Error())
 					os.Exit(1)
 				}
 				rb := r.Bytes()
@@ -118,7 +118,7 @@ func make_signed_tx() {
 			}
 		}
 		if !found {
-			fmt.Println("You do not have private key for input number", hex.EncodeToString(uo.Pk_script), "\007")
+			fmt.Println("You do not have private key for input number", hex.EncodeToString(uo.Pk_script))
 			os.Exit(1)
 		}
 	}
