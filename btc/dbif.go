@@ -16,11 +16,16 @@ func (ou *OneUnspentTx) String() string {
 	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
 }
 
+// Used to pass block's changes to UnspentDB
 type BlockChanges struct {
 	Height uint32
 	AddedTxs map[TxPrevOut] *TxOut
 	DeledTxs map[TxPrevOut] *TxOut
 }
+
+// If TxNotifyFunc is set, it will be called each time a new unspent
+// output is being added or removed. When being removed, TxOut is nil.
+type TxNotifyFunc func (*TxPrevOut, *TxOut)
 
 type UnspentDB interface {
 	CommitBlockTxs(*BlockChanges, []byte) error
@@ -36,6 +41,9 @@ type UnspentDB interface {
 	NoSync()
 	Sync()
 	GetStats() (string)
+
+	SetTxNotify(TxNotifyFunc)
 }
 
+// Set automatically by a specific UnspentDB backend, in its init()
 var NewUnspentDb func(string, bool) UnspentDB
