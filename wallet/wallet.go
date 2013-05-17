@@ -42,7 +42,7 @@ func priv2pub(curv *btc.BitCurve, priv_key []byte, compressed bool) (res []byte)
 }
 
 func load_others() {
-	f, e := os.Open(".others")
+	f, e := os.Open(RawKeysFilename)
 	if e == nil {
 		defer f.Close()
 		td := bufio.NewReader(f)
@@ -116,11 +116,11 @@ func load_others() {
 			}
 		}
 		if *verbose {
-			fmt.Println(len(priv_keys), "keys imported from .others")
+			fmt.Println(len(priv_keys), "keys imported from", RawKeysFilename)
 		}
 	} else {
 		if *verbose {
-			fmt.Println("You can also have some dumped (b58 encoded) priv keys in file name .others")
+			fmt.Println("You can also have some dumped (b58 encoded) priv keys in file", RawKeysFilename)
 		}
 	}
 }
