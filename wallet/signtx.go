@@ -36,7 +36,9 @@ func make_signed_tx() {
 		}
 	}
 	changeBtc = btcsofar - (spendBtc + feeBtc)
-	fmt.Printf("Spending %d out of %d outputs...\n", inpcnt+1, len(unspentOuts))
+	if *verbose {
+		fmt.Printf("Spending %d out of %d outputs...\n", inpcnt+1, len(unspentOuts))
+	}
 
 	// Build transaction outputs:
 	tx.TxOut = make([]*btc.TxOut, len(sendTo))
@@ -141,7 +143,9 @@ func make_signed_tx() {
 				fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
 			}
 		}
-		fmt.Println(inpcnt, "spent output(s) removed from 'balance/unspent.txt'")
+		if *verbose {
+			fmt.Println(inpcnt, "spent output(s) removed from 'balance/unspent.txt'")
+		}
 
 		var addback int
 		for out := range tx.TxOut {
@@ -160,7 +164,9 @@ func make_signed_tx() {
 				f.Write(rawtx)
 				f.Close()
 			}
-			fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+			if *verbose {
+				fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+			}
 		}
 	}
 }
