@@ -18,9 +18,3 @@ const(
 // but if you set it too high, the UI may be non-responsive
 // while parsing more complex blocks.
 var useThreads int = 3 * runtime.NumCPU()
-
-var taskDone chan bool
-
-func init() {
-	taskDone = make(chan bool, useThreads)
-}
