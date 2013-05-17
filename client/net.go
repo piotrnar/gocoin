@@ -216,9 +216,6 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	var e error
 	var n int
 
-	// Try for 1 millisecond and timeout if full msg not received
-	c.TCPConn.SetReadDeadline(time.Now().Add(time.Millisecond))
-
 	for c.recv.hdr_len < 24 {
 		n, e = SockRead(c.TCPConn, c.recv.hdr[c.recv.hdr_len:24])
 		c.recv.hdr_len += n
