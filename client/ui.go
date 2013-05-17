@@ -9,6 +9,7 @@ import (
 	"strings"
 	"strconv"
 	"runtime"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -137,11 +138,17 @@ func do_userif() {
 func show_info(par string) {
 	// Memory used
 	var ms runtime.MemStats
+	var gs debug.GCStats
 	runtime.ReadMemStats(&ms)
 	fmt.Println("Go version:", runtime.Version(),
 		"   Heap size:", ms.Alloc>>20, "MB",
 		"   Sys mem used", ms.Sys>>20, "MB",
 		"   NewBlockBeep:", beep)
+
+	debug.ReadGCStats(&gs)
+	fmt.Println("LastGC:", time.Now().Sub(gs.LastGC).String(),
+		"   NumGC:", gs.NumGC,
+		"   PauseTotal:", gs.PauseTotal.String())
 
 	mutex.Lock()
 	// Main thread activity:
@@ -273,6 +280,11 @@ func show_mem(p string) {
 	fmt.Println("MCacheInuse :", ms.MCacheInuse)
 	fmt.Println("MCacheSys   :", ms.MCacheSys)
 	fmt.Println("BuckHashSys :", ms.BuckHashSys)
+	if p=="free" {
+		fmt.Println("Freeing the mem...")
+		debug.FreeOSMemory()
+		show_mem("")
+	}
 }
 
 
