@@ -7,15 +7,15 @@ import (
 	"time"
 	"bytes"
 	"strings"
+	"hash/crc64"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
-	"hash/crc64"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 const (
 	defragEvery = (60*time.Second) // Once a minute should be more than enough
-	expirePeerAfter = 3*3600 // 3 hours - https://en.bitcoin.it/wiki/Protocol_specification#addr
+	ExpirePeerAfter = (3*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
 )
 
 var (
@@ -23,8 +23,6 @@ var (
 	crctab = crc64.MakeTable(crc64.ISO)
 
 	proxyPeer *onePeer // when this is not nil we should only connect to this single node
-
-	nextDefrag time.Time
 )
 
 type onePeer struct {
@@ -94,13 +92,16 @@ func (p *onePeer) Bytes() []byte {
 }
 
 
-func pers_do_cleanup() {
-	if time.Now().After(nextDefrag) {
+func peers_db_maintanence() {
+	for {
+		time.Sleep(defragEvery)
+
 		var delcnt uint32
-		now := uint32(time.Now().Unix())
+		now := time.Now()
 		todel := make([]qdb.KeyType, peerDB.Count())
 		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-			if int(now - newPeer(v).Time) > expirePeerAfter {
+			ptim := binary.LittleEndian.Uint32(v[0:4])
+			if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
 				todel[delcnt] = k // we cannot call Del() from here
 				delcnt++
 			}
@@ -109,17 +110,16 @@ func pers_do_cleanup() {
 		for delcnt > 0 {
 			delcnt--
 			peerDB.Del(todel[delcnt])
+			CountSafe("PeersExpired")
 		}
-		CountSafe("PeersDefrags")
+		CountSafe("PeerDefrags")
 		peerDB.Defrag()
-		nextDefrag = time.Now().Add(defragEvery)
 	}
 }
 
 
 func (p *onePeer) Save() {
 	peerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
-	pers_do_cleanup()
 }
 
 
@@ -170,7 +170,6 @@ func (p *onePeer) UniqID() (uint64) {
 
 func ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
-	now := uint32(time.Now().Unix())
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
 		var buf [30]byte
@@ -180,16 +179,17 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		if a.Time > now - expirePeerAfter {
+		if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
 			k := qdb.KeyType(a.UniqID())
 			v := peerDB.Get(k)
 			if v != nil {
 				a.Banned = newPeer(v[:]).Banned
 			}
 			peerDB.Put(k, a.Bytes())
+		} else {
+			CountSafe("AddrStale")
 		}
 	}
-	//peerDB.Defrag()
 }
 
 
@@ -239,15 +239,14 @@ func initSeeds(seeds []string, port int) {
 
 
 func initPeers(dir string) {
-	nextDefrag = time.Now().Add(defragEvery)
-
 	peerDB, _ = qdb.NewDB(dir+"peers")
 	if peerDB.Count()==0 {
 		if !*testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
 				"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
 		} else {
-			initSeeds([]string{"testnet-seed.bitcoin.petertodd.org","testnet-seed.bluematt.me"}, 18333)
+			initSeeds([]string{"testnet-seed.bitcoin.petertodd.org","testnet-seed.bluematt.me",
+				"bluematt.me", "testnet-seed.bluematt.me"}, 18333)
 		}
 		println("peerDB initiated with ", peerDB.Count(), "seeds")
 	}
@@ -268,6 +267,9 @@ func initPeers(dir string) {
 		proxyPeer.Port = uint16(oa.Port)
 		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
 			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
+	} else {
+		newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
+		go peers_db_maintanence()
 	}
 }
 
@@ -280,9 +282,4 @@ func show_addresses(par string) {
 		fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
 		return true
 	})
-}
-
-
-func init() {
-	newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
 }
