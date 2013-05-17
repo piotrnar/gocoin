@@ -2,7 +2,6 @@ package btc
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 )
 
@@ -98,8 +97,5 @@ func (ch *Chain) Close() {
 // In the quick mode we only look for: 76 a9 14 [HASH160] 88 AC
 func (ch *Chain) GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx {
 	unsp := ch.Unspent.GetAllUnspent(addr, quick)
-	if unsp!=nil && len(unsp)>0 {
-		sort.Sort(unsp)
-	}
 	return unsp
 }
