@@ -87,11 +87,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 }
 
 
-func verify(sig []byte, prv []byte, i int, tx *Tx) {
-	taskDone <- VerifyTxScript(sig, prv, i, tx)
-}
-
-
+// This isusually the most time consuming process when applying a new block
 func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	sumblockin := GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
@@ -111,6 +107,9 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
 
+	// create a channnel to receive results from VerifyScript threads:
+	done := make(chan bool, useThreads)
+
 	for i := range bl.Txs {
 		if don(DBG_TX) {
 			fmt.Printf("tx %d/%d:\n", i+1, len(bl.Txs))
@@ -120,8 +119,9 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			scripts_ok := true
+
 			for j:=0; j<useThreads; j++ {
-				taskDone <- true
+				done <- true
 			}
 
 			for j:=0; j<len(bl.Txs[i].TxIn) /*&& e==nil*/; j++ {
@@ -163,16 +163,18 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					}
 				}
 
-				if !(<-taskDone) {
+				if !(<-done) {
 					println("VerifyScript error 1")
 					scripts_ok = false
 					break
 				}
 
 				if bl.Trusted {
-					taskDone <- true
+					done <- true
 				} else {
-					go verify(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
+				    go func (sig []byte, prv []byte, i int, tx *Tx) {
+						done <- VerifyTxScript(sig, prv, i, tx)
+					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
 				// Verify Transaction script:
@@ -187,14 +189,18 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 			}
 
 			if scripts_ok {
-				scripts_ok = <- taskDone
+				scripts_ok = <- done
 			}
 			for j:=1; j<useThreads; j++ {
-				if !(<- taskDone) {
+				if !(<- done) {
 					println("VerifyScript error 2")
 					scripts_ok = false
 				}
 			}
+			if len(done) != 0 {
+				panic("ASSERT: The channel should be empty gere")
+			}
+
 			if !scripts_ok {
 				return errors.New("VerifyScripts failed")
 			}
