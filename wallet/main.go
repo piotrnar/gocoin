@@ -27,6 +27,7 @@ var (
 	keycnt *uint = flag.Uint("n", 25, "Set the number of keys to be used")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
+	verbose *bool = flag.Bool("v", false, "Verbose bersion (print more info)")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
@@ -212,7 +213,8 @@ func get_change_addr() (chng *btc.BtcAddr) {
 
 
 func main() {
-	fmt.Println("Gocoin wallet version", btc.SourcesTag)
+	fmt.Println("Gocoin Wallet version", btc.SourcesTag)
+	fmt.Println("This program comes with ABSOLUTELY NO WARRANTY")
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
