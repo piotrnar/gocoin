@@ -10,32 +10,36 @@ import (
 var (
 	MyBalance btc.AllUnspentTx  // unspent outputs that can be removed
 	MyWallet *oneWallet     // addresses that cann be poped up
+	BalanceChanged bool
+	BalanceInvalid bool = true
 )
 
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
-	var changed bool
 	if valpk!=nil {
 		for i := range MyWallet.addrs {
 			if MyWallet.addrs[i].Owns(valpk.Pk_script) {
-				fmt.Println(" +", idx.String(), valpk.String())
+				if dbg>0 {
+					fmt.Println(" +", idx.String(), valpk.String())
+				}
 				MyBalance = append(MyBalance, btc.OneUnspentTx{TxPrevOut:*idx,
 					Value:valpk.Value, MinedAt:valpk.BlockHeight})
+				BalanceChanged = true
 			}
 		}
 	} else {
 		for i := range MyBalance {
 			if MyBalance[i].TxPrevOut == *idx {
 				tmp := make([]btc.OneUnspentTx, len(MyBalance)-1)
-				fmt.Println(" -", MyBalance[i].String())
+				if dbg>0 {
+					fmt.Println(" -", MyBalance[i].String())
+				}
 				copy(tmp[:i], MyBalance[:i])
 				copy(tmp[i:], MyBalance[i+1:])
 				MyBalance = tmp
+				BalanceChanged = true
 				break
 			}
 		}
-	}
-	if changed {
-		fmt.Println("\007\007\007Your balance has just changed")
 	}
 }
 
@@ -135,4 +139,37 @@ func DumpBalance(utxt *os.File) {
 		fmt.Println("You nend to move this folder to your wallet PC, to spend the coins.")
 		utxt.Close()
 	}
+}
+
+
+func show_balance(p string) {
+	if p!="" {
+		fmt.Println("Using wallet from file", p, "...")
+		LoadWallet(p)
+	}
+
+	if MyWallet==nil {
+		println("You have no loaded wallet")
+		return
+	}
+
+	if len(MyWallet.addrs)==0 {
+		println("Your loaded wallet has no addresses")
+		return
+	}
+	os.RemoveAll("balance")
+	os.MkdirAll("balance/", 0770)
+
+	if BalanceInvalid {
+		MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
+		BalanceInvalid = false
+	}
+
+	utxt, _ := os.Create("balance/unspent.txt")
+	DumpBalance(utxt)
+}
+
+
+func init() {
+	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 }
