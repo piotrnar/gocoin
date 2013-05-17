@@ -70,6 +70,7 @@ func host_init() {
 		BlockChain.DoNotSync = true
 		fmt.Println("Syncing is disabled. Switch it on with 'sync' command")
 	}
+	BlockChain.Unspent.SetTxNotify(TxNotify)
 }
 
 
