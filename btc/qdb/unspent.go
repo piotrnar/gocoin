@@ -116,28 +116,28 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 }
 
 
-func bin2unspent(v []byte, a uint32) (nr btc.OneUnspentTx) {
+func bin2unspent(v []byte, ad *btc.BtcAddr) (nr btc.OneUnspentTx) {
 	copy(nr.TxPrevOut.Hash[:], v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
 	nr.Value = binary.LittleEndian.Uint64(v[36:44])
 	nr.MinedAt = binary.LittleEndian.Uint32(v[44:48])
-	nr.AskIndex = a
+	nr.BtcAddr = ad
 	return
 }
 
 
 func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.AllUnspentTx) {
 	if quick {
-		addrs := make(map[uint64] uint32, len(addr))
+		addrs := make(map[uint64]*btc.BtcAddr, len(addr))
 		for i := range addr {
-			addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = uint32(i)
+			addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = addr[i]
 		}
 		for i := range db.tdb {
 			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
 				scr := v[48:]
 				if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
-					if askidx, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
-						res = append(res, bin2unspent(v[:48], askidx))
+					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
+						res = append(res, bin2unspent(v[:48], ad))
 					}
 				}
 				return true
@@ -148,7 +148,7 @@ func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.All
 			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
 				for a := range addr {
 					if addr[a].Owns(v[48:]) {
-						res = append(res, bin2unspent(v[:48], uint32(a)))
+						res = append(res, bin2unspent(v[:48], addr[a]))
 					}
 				}
 				return true
