@@ -245,6 +245,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
+			ui_show_prompt()
 		}
 	}
 	return
