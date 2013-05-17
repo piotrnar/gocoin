@@ -275,11 +275,15 @@ func initPeers(dir string) {
 
 
 func show_addresses(par string) {
-	fmt.Println(peerDB.Count(), "peers in the database:")
-	cnt := 0
-	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-		cnt++
-		fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
-		return true
-	})
+	fmt.Println(peerDB.Count(), "peers in the database")
+	if par=="list" {
+		cnt := 0
+		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+			cnt++
+			fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
+			return true
+		})
+	} else {
+		fmt.Println("Use 'peers list' to list them")
+	}
 }
