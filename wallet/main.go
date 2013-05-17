@@ -12,12 +12,6 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-// Resolved while parsing "-send" parameter
-type oneSendTo struct {
-	addr *btc.BtcAddr
-	amount uint64
-}
-
 const (
 	PassSeedFilename = ".secret"
 	RawKeysFilename = ".others"
@@ -37,6 +31,7 @@ var (
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
+	batch *string  = flag.String("batch", "", "Send money as per the given batch file (each line: address=amount)")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
 
 	// Message signing options
@@ -72,7 +67,7 @@ func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
 	for i := range publ_addrs {
 		if !*noverify && !verify_key(priv_keys[i][:], publ_addrs[i].Pubkey) {
-			println("Something wrong with key at index", i, " - abort!\007")
+			println("Something wrong with key at index", i, " - abort!")
 			os.Exit(1)
 		}
 		fmt.Println(publ_addrs[i].String(), labels[i])
@@ -159,63 +154,6 @@ func load_balance() {
 	fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
 }
 
-// parse the "-send ..." parameter
-func parse_spend() {
-	// No dump, so send money...
-	outs := strings.Split(*send, ",")
-	sendTo = make([]oneSendTo, len(outs))
-
-	for i := range outs {
-		tmp := strings.Split(strings.Trim(outs[i], " "), "=")
-		if len(tmp)!=2 {
-			println("The otputs must be in a format address1=amount1[,addressN=amountN]\007")
-			os.Exit(1)
-		}
-
-		a, e := btc.NewAddrFromString(tmp[0])
-		if e != nil {
-			println("NewAddrFromString:", e.Error(), "\007")
-			os.Exit(1)
-		}
-		sendTo[i].addr = a
-
-		am, e := strconv.ParseFloat(tmp[1], 64)
-		if e != nil {
-			println("ParseFloat:", e.Error(), "\007")
-			os.Exit(1)
-		}
-		sendTo[i].amount = uint64(am*1e8)
-		spendBtc += sendTo[i].amount
-	}
-	feeBtc = uint64(*fee*1e8)
-}
-
-
-// return the change addrress or nil if there will be no change
-func get_change_addr() (chng *btc.BtcAddr) {
-	if *change!="" {
-		var e error
-		chng, e = btc.NewAddrFromString(*change)
-		if e != nil {
-			println("Change address:", e.Error(), "\007")
-			os.Exit(1)
-		}
-	}
-
-	// If change address not specified, send it back to the first input
-	uo := UO(unspentOuts[0])
-	for j := range publ_addrs {
-		if publ_addrs[j].Owns(uo.Pk_script) {
-			chng = publ_addrs[j]
-			return
-		}
-	}
-
-	fmt.Println("You do not own the address of the first input\007")
-	os.Exit(1)
-	return
-}
-
 
 func main() {
 	fmt.Println("Gocoin Wallet version", btc.SourcesTag)
@@ -246,8 +184,7 @@ func main() {
 	// If no dump, then it should be send money
 	load_balance()
 
-	if *send!="" {
-		parse_spend()
+	if send_request() {
 		if spendBtc + feeBtc > totBtc {
 			fmt.Println("You want to spend more than you own")
 			return
