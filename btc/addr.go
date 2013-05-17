@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	ADDRVER_BTC = 0x00
-	ADDRVER_TESTNET = 0x6F
+	ADDRVER_BTC = byte(0x00)
+	ADDRVER_TESTNET = byte(0x6F)
 )
 
 type BtcAddr struct {
