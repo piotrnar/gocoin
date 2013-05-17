@@ -89,11 +89,13 @@ Wallet
 --------------
 Wallet is deterministic and the only thing you need to setup it is the seed password, therefore as long as you remember the password, you do not need to backup the wallet ever.
 
-You can either enter this password each time when running the wallet (not advised since characters are shown on the screen) - or you can store it, once and for all, in a file called wallet.sec
+You can either enter this password each  time  when  running  the  wallet  (not
+advised since characters are shown on the screen) - or you can store  it,  once
+and for all, in a file called .secret
 
-Make sure that the disk with wallet.sec file is encrypted. Also keep in mind that wallet.sec should not contain any special characters, nor new line characters, because they count while calculating the seed while you don't see them on screen, so you may have problems re-creating the same file after you would loose it.
+Make sure that the disk with .secret file is encrypted. Also keep in mind that .secret should not contain any special characters, nor new line characters, because they count while calculating the seed while you don't see them on screen, so you may have problems re-creating the same file after you would loose it.
 
-Additionally, you can also import keys from your existing bitcoin wallet. To do this use “dumprivkey” RPC and store the base58 encoded value in a file named others.sec - each key must be in a separate line. You can also place a key's label in each line, after a space.
+Additionally, you can also import keys from your existing bitcoin wallet. To do this use “dumprivkey” RPC and store the base58 encoded value in a file named .others - each key must be in a separate line. You can also place a key's label in each line, after a space.
 
 
 Spending money
