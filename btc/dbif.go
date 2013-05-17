@@ -1,21 +1,5 @@
 package btc
 
-import "fmt"
-
-type AllUnspentTx []OneUnspentTx
-
-// Returned by GetUnspentFromPkScr
-type OneUnspentTx struct {
-	TxPrevOut
-	Value uint64
-	AskIndex uint32
-	MinedAt uint32
-}
-
-func (ou *OneUnspentTx) String() string {
-	return fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
-}
-
 // Used to pass block's changes to UnspentDB
 type BlockChanges struct {
 	Height uint32
