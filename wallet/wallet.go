@@ -42,7 +42,7 @@ func priv2pub(curv *btc.BitCurve, priv_key []byte, compressed bool) (res []byte)
 }
 
 func load_others() {
-	f, e := os.Open("others.sec")
+	f, e := os.Open(".others")
 	if e == nil {
 		defer f.Close()
 		td := bufio.NewReader(f)
@@ -115,9 +115,13 @@ func load_others() {
 				labels = append(labels, fmt.Sprint("Other ", len(priv_keys)))
 			}
 		}
-		fmt.Println(len(priv_keys), "keys imported from 'others.sec'")
+		if *verbose {
+			fmt.Println(len(priv_keys), "keys imported from .others")
+		}
 	} else {
-		fmt.Println("You can also have some dumped (b58 encoded) priv keys in 'others.sec'")
+		if *verbose {
+			fmt.Println("You can also have some dumped (b58 encoded) priv keys in file name .others")
+		}
 	}
 }
 
@@ -136,7 +140,9 @@ func make_wallet() {
 	pass := getpass()
 	seed_key := btc.Sha2Sum([]byte(pass))
 	if pass!="" {
-		fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+		if *verbose {
+			fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+		}
 		for i:=uint(0); i < *keycnt; i++ {
 			seed_key = btc.Sha2Sum(seed_key[:])
 			priv_keys = append(priv_keys, seed_key)
@@ -144,6 +150,8 @@ func make_wallet() {
 				btc.NewAddrFromPubkey(priv2pub(curv, seed_key[:], !*uncompressed), verbyte))
 			labels = append(labels, fmt.Sprint("Auto ", i+1))
 		}
-		fmt.Println("Private keys re-generated")
+		if *verbose {
+			fmt.Println("Private keys re-generated")
+		}
 	}
 }
