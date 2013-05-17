@@ -136,6 +136,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 			println("Change address:", e.Error())
 			os.Exit(1)
 		}
+		return
 	}
 
 	// If change address not specified, send it back to the first input
