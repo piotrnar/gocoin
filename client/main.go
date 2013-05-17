@@ -236,6 +236,21 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 }
 
 
+func AcceptBlock(bl *btc.Block) (e error) {
+	sta := time.Now()
+	e = BlockChain.AcceptBlock(bl)
+	sto := time.Now()
+	if e == nil {
+		LastBlock = BlockChain.BlockTreeEnd
+		tim := sto.Sub(sta)
+		if tim > 3*time.Second {
+			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
+		}
+	}
+	return
+}
+
+
 func retry_cached_blocks() bool {
 	if len(cachedBlocks)==0 {
 		return false
@@ -248,13 +263,11 @@ func retry_cached_blocks() bool {
 		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
 		if e == nil {
 			Busy("Cache.AcceptBlock "+v.Block.Hash.String())
-			e := BlockChain.AcceptBlock(v.Block)
+			e := AcceptBlock(v.Block)
 			if e == nil {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 				CountSafe("BlocksFromCache")
 				delete(cachedBlocks, k)
-				LastBlock = BlockChain.BlockTreeEnd
-				LastBlockReceived = time.Now()
 				return len(cachedBlocks)>0
 			} else {
 				println("retry AcceptBlock:", e.Error())
@@ -279,17 +292,6 @@ func retry_cached_blocks() bool {
 	return false
 }
 
-/*
-func findAllLeafes(n *btc.BlockTreeNode) {
-	if len(n.Childs)==0 {
-		println("Leaf:", n.BlockHash.String())
-		return
-	}
-	for i := range n.Childs {
-		findAllLeafes(n.Childs[i])
-	}
-}
-*/
 
 func netBlockReceived(conn *oneConnection, b []byte) {
 	bl, e := btc.NewBlock(b)
@@ -648,8 +650,9 @@ func main() {
 			}
 		} else {
 			Busy("AcceptBlock "+bl.Hash.String())
-			e = BlockChain.AcceptBlock(bl)
+			e = AcceptBlock(bl)
 			if e == nil {
+				LastBlockReceived = time.Now()
 				// block accepted, so route this inv to peers
 				Busy("NetSendInv")
 				NetSendInv(2, bl.Hash.Hash[:], newbl.conn)
@@ -658,10 +661,6 @@ func main() {
 					ui_show_prompt()
 				}
 				retryCachedBlocks = retry_cached_blocks()
-				mutex.Lock()
-				LastBlock = BlockChain.BlockTreeEnd
-				LastBlockReceived = time.Now()
-				mutex.Unlock()
 			} else {
 				println("AcceptBlock:", e.Error())
 				newbl.conn.DoS()
