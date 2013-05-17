@@ -17,4 +17,4 @@ const(
 // Increase the number of threads to optimize txs verification time,
 // but if you set it too high, the UI may be non-responsive
 // while parsing more complex blocks.
-var useThreads int = 3 * runtime.NumCPU()
+var useThreads int = 4 * runtime.NumCPU()
