@@ -101,31 +101,6 @@ func list_unspent(addr string) {
 }
 
 
-func show_balance(p string) {
-	if p!="" {
-		fmt.Println("Using wallet from file", p, "...")
-		MyWallet = NewWallet(p)
-	}
-
-	if MyWallet==nil {
-		println("You have no loaded wallet")
-		return
-	}
-	if len(MyWallet.addrs)==0 {
-		println("Your loaded wallet has no addresses")
-		return
-	}
-	os.RemoveAll("balance")
-	os.MkdirAll("balance/", 0770)
-
-
-	MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
-
-	utxt, _ := os.Create("balance/unspent.txt")
-	DumpBalance(utxt)
-}
-
-
 func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 	// we use cachedBlocks only from one therad so no need for a mutex
 	if len(cachedBlocks)==MaxCachedBlocks {
@@ -155,6 +130,12 @@ func AcceptBlock(bl *btc.Block) (e error) {
 		if tim > 3*time.Second {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
 			ui_show_prompt()
+		}
+		if BalanceChanged {
+			fmt.Println("\007Your balance has just changed")
+			DumpBalance(nil)
+			ui_show_prompt()
+			BalanceChanged = false
 		}
 	}
 	return
@@ -299,28 +280,6 @@ func blchain_stats(par string) {
 }
 
 
-func load_wallet(fn string) {
-	if fn=="def" {
-		fmt.Println("Loading default wallet from", GocoinHomeDir+"wallet.txt", "...")
-		MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
-	} else if fn != "" {
-		fmt.Println("Switching to a wallet from", fn, "...")
-		MyWallet = NewWallet(fn)
-	} else if MyWallet!=nil {
-		fmt.Println("Reloading the wallet from", MyWallet.filename, "...")
-		MyWallet = NewWallet(MyWallet.filename)
-	}
-
-	if MyWallet == nil {
-		fmt.Println("No wallet loaded")
-		return
-	}
-	fmt.Println("Dumping wallet:")
-	for i := range MyWallet.addrs {
-		fmt.Println(" ", MyWallet.addrs[i].String(), MyWallet.label[i])
-	}
-}
-
 func load_tx(par string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -463,13 +422,11 @@ func switch_sync(par string) {
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
-	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
 	newUi("deltx dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
 	newUi("listtx ltx", true, list_txs, "List all the transaction loaded into memory pool")
-	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
 	newUi("sync", true, switch_sync, "Control sync of the database to disk")
 }
 
@@ -502,7 +459,7 @@ func main() {
 
 	host_init()
 
-	MyWallet = NewWallet(GocoinHomeDir+"wallet.txt")
+	LoadWallet(GocoinHomeDir+"wallet.txt")
 	initPeers(GocoinHomeDir)
 
 	LastBlock = BlockChain.BlockTreeEnd
