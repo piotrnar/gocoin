@@ -42,9 +42,9 @@ func ask_yes_no(msg string) bool {
 
 // Input the password (that is the secret seed to your wallet)
 func getpass() string {
-	f, e := os.Open("wallet.sec")
+	f, e := os.Open(".secret")
 	if e != nil {
-		fmt.Println("Seed file 'wallet.sec' not found.")
+		fmt.Println("Seed file '.secret' not found")
 		fmt.Print("Enter your wallet's seed password: ")
 		pass := getline()
 		if pass!="" && *dump {
@@ -55,7 +55,7 @@ func getpass() string {
 			}
 			// Maybe he wants to save the password?
 			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
-				f, e = os.Create("wallet.sec")
+				f, e = os.Create(".secret")
 				if e == nil {
 					f.Write([]byte(pass))
 					f.Close()
