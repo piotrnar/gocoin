@@ -45,6 +45,10 @@ func (db UnspentDB) GetStats() (s string) {
 }
 
 
+func (db UnspentDB) SetTxNotify(fn btc.TxNotifyFunc) {
+	db.unspent.notifyTx = fn
+}
+
 // Flush all the data to files
 func (db UnspentDB) Sync() {
 	db.unwind.sync()
