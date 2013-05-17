@@ -3,7 +3,7 @@ package btc
 import "runtime"
 
 const(
-	SourcesTag = "0.0.6"
+	SourcesTag = "0.0.7"
 
 	MAX_BLOCK_SIZE = 1000000
 	COIN = 1e8
@@ -15,6 +15,6 @@ const(
 )
 
 // Increase the number of threads to optimize txs verification time,
-// but if you set it too high, the UI may be non-responsive
-// while parsing more complex blocks.
-var useThreads int = 4 * runtime.NumCPU()
+// proportionaly among cores, but if you set it too high, the UI and
+// network threads may be laggy while parsing blocks.
+var useThreads int = 8 * runtime.NumCPU()
