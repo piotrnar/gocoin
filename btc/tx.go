@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
-//	"encoding/hex"
+	"encoding/hex"
 	"encoding/binary"
 	"crypto/sha256"
 )
@@ -50,6 +50,23 @@ type Tx struct {
 type AddrValue struct {
 	Value uint64
 	Addr20 [20]byte
+}
+
+
+func (to *TxOut) String() (s string) {
+	s = fmt.Sprintf("%.8f BTC", float64(to.Value)/1e8)
+	s += fmt.Sprint(" in block ", to.BlockHeight)
+	ver := ADDRVER_BTC
+	if testnet {
+		ver = ADDRVER_TESTNET
+	}
+	a := NewAddrFromPkScript(to.Pk_script, ver)
+	if a != nil {
+		s += " to "+a.String()
+	} else {
+		s += " pk_scr:" + hex.EncodeToString(to.Pk_script)
+	}
+	return
 }
 
 
