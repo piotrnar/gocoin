@@ -8,7 +8,11 @@ import (
 	"github.com/piotrnar/gocoin/blockdb"
 )
 
-var GocoinHomeDir string
+var (
+	GocoinHomeDir string
+	StartTime time.Time
+)
+
 
 func BitcoinHome() (res string) {
 	res = os.Getenv("APPDATA")
@@ -71,6 +75,7 @@ func host_init() {
 		fmt.Println("Syncing is disabled. Switch it on with 'sync' command")
 	}
 	BlockChain.Unspent.SetTxNotify(TxNotify)
+	StartTime = time.Now()
 }
 
 
