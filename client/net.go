@@ -397,7 +397,7 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
 			} else {
-				Counter["SendInvIgnored"]++
+				CountSafe("SendInvIgnored")
 			}
 		}
 	}
