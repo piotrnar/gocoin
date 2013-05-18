@@ -148,7 +148,7 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 		return
 	}
 	if !cur.trusted {
-		println("mark", NewUint256(hash).String(), "as trusted")
+		//fmt.Println("mark", NewUint256(hash).String(), "as trusted")
 		db.setBlockFlag(cur, BLOCK_TRUSTED)
 	}
 	db.mutex.Unlock()
