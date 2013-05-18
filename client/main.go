@@ -39,7 +39,7 @@ var (
 	LastBlock *btc.BlockTreeNode
 	LastBlockReceived time.Time = time.Now().Add(-10*time.Minute) // Let's just assume this on init
 
-	mutex sync.Mutex
+	mutex, counter_mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 300)
 	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
@@ -76,9 +76,9 @@ func Busy(b string) {
 }
 
 func CountSafe(k string) {
-	mutex.Lock()
+	counter_mutex.Lock()
 	Counter[k]++
-	mutex.Unlock()
+	counter_mutex.Unlock()
 }
 
 
@@ -199,7 +199,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		if _, ok := pendingBlocks[idx]; ok {
 			panic("wtf?")
 		} else {
-			Counter["SameBlockReceived"]++
+			CountSafe("SameBlockReceived")
 		}
 		mutex.Unlock()
 		return
@@ -240,7 +240,7 @@ func blockWanted(h []byte) (yes bool) {
 	if _, ok := receivedBlocks[idx]; !ok {
 		yes = true
 	} else {
-		Counter["Block not wanted"]++
+		CountSafe("Block not wanted")
 	}
 	mutex.Unlock()
 	return
@@ -252,19 +252,19 @@ func InvsNotify(h []byte) (need bool) {
 	idx := ha.BIdx()
 	mutex.Lock()
 	if _, ok := pendingBlocks[idx]; ok {
-		Counter["InvWasPending"]++
+		CountSafe("InvWasPending")
 	} else if _, ok := receivedBlocks[idx]; ok {
-		Counter["InvWasReceived"]++
+		CountSafe("InvWasReceived")
 	} else if len(pendingFifo)<PendingFifoLen {
 		if dbg>0 {
 			fmt.Println("blinv", btc.NewUint256(h).String())
 		}
-		Counter["InvWanted"]++
+		CountSafe("InvWanted")
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
 	} else {
-		Counter["InvFIFOfull"]++
+		CountSafe("InvFIFOfull")
 	}
 	mutex.Unlock()
 	return
