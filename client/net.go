@@ -532,7 +532,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			// transaction
 			uh := btc.NewUint256(h[:])
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
-				c.SendRawMsg("tx", tx)
+				c.SendRawMsg("tx", tx.data)
 				CountSafe("TxsSent")
 				if dbg > 0 {
 					println("sent tx to", c.PeerAddr.Ip())
