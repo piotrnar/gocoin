@@ -15,6 +15,9 @@ var (
 )
 
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
+	if MyWallet==nil {
+		return
+	}
 	if valpk!=nil {
 		for i := range MyWallet.addrs {
 			if MyWallet.addrs[i].Owns(valpk.Pk_script) {
