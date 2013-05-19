@@ -210,7 +210,7 @@ var bn58 *big.Int = big.NewInt(58)
 func Encodeb58(a []byte) (s string) {
 	idx := len(a) * 138 / 100 + 1
 	buf := make([]byte, idx)
-	bn := big.NewInt(0).SetBytes(a)
+	bn := new(big.Int).SetBytes(a)
 	var mo *big.Int
 	for bn.Cmp(bn0) != 0 {
 		bn, mo = bn.DivMod(bn, bn58, new(big.Int))
