@@ -64,11 +64,11 @@ func load_tx(par string) {
 		fmt.Println("WARNING: There are missing inputs and we cannot calc input BTC amount.")
 		fmt.Println("If there is somethign wrong with this transaction, you can loose money...")
 	} else {
-		fmt.Printf("%.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
+		fmt.Printf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
 	TransactionsToSend[tx.Hash.Hash] = txd
-	fmt.Println("OK: transaction accepted. Please double check its details.")
+	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
 	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
 }
 
