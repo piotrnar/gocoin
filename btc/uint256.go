@@ -3,7 +3,8 @@ package btc
 import (
 	"fmt"
 	"bytes"
-    "math/big"
+	"math/big"
+	"encoding/hex"
 )
 
 const Uint256IdxLen = 6  // The bigger it is, the more memory is needed, but lower chance of a collision
@@ -20,25 +21,22 @@ func NewUint256(h []byte) (res *Uint256) {
 
 // Get from MSB hexstring
 func NewUint256FromString(s string) (res *Uint256) {
-	var v int
+	d, e := hex.DecodeString(s)
+	if e != nil {
+		println("NewUint256FromString", s, e.Error())
+		return
+	}
+	if len(d)!=32 {
+		println("NewUint256FromString", s, "not 32 bytes long")
+		return
+	}
 	res = new(Uint256)
 	for i := 0; i<32; i++ {
-		fmt.Sscanf(s[2*i:2*i+2], "%x", &v)
-		res.Hash[31-i] = byte(v)
+		res.Hash[31-i] = d[i]
 	}
 	return
 }
 
-// Get from LSB hexstring
-func NewUint256FromLSBString(s string) (res *Uint256) {
-	var v int
-	res = new(Uint256)
-	for i := 0; i<32; i++ {
-		fmt.Sscanf(s[2*i:2*i+2], "%x", &v)
-		res.Hash[i] = byte(v)
-	}
-	return
-}
 
 func NewSha2Hash(data []byte) (res *Uint256) {
 	res = new(Uint256)
