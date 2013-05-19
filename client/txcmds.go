@@ -15,7 +15,7 @@ type OneTxToSend struct {
 }
 
 var (
-	TransactionsToSend map[[32]byte] OneTxToSend = make(map[[32]byte] OneTxToSend)
+	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
 )
 
 func load_tx(par string) {
@@ -78,7 +78,7 @@ func load_tx(par string) {
 		fmt.Printf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-	TransactionsToSend[tx.Hash.Hash] = OneTxToSend{data:txd}
+	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd}
 	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
 	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
 }
@@ -91,14 +91,16 @@ func send_tx(par string) {
 		list_txs("")
 		return
 	}
-	if _, ok := TransactionsToSend[txid.Hash]; !ok {
+	if ptx, ok := TransactionsToSend[txid.Hash]; ok {
+		cnt := NetSendInv(1, txid.Hash[:], nil)
+		ptx.sentCount++
+		ptx.lastTime = time.Now()
+		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
+		fmt.Println("If it does not appear in the chain, you may want to redo it.")
+	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
-		return
 	}
-	cnt := NetSendInv(1, txid.Hash[:], nil)
-	fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
-	fmt.Println("If it does not appear in the chain, you may want to redo it.")
 }
 
 
@@ -123,10 +125,11 @@ func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
 	for k, v := range TransactionsToSend {
-		if v.lastTime.IsZero() {
-			fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - never sent")
+		cnt++
+		if v.sentCount==0 {
+			fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - never sent")
 		} else {
-			fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - sent",
+			fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - sent",
 			v.sentCount, "times, last", time.Now().Sub(v.lastTime).String(), "ago")
 		}
 	}
@@ -134,8 +137,10 @@ func list_txs(par string) {
 
 
 func send_all_tx(par string) {
-	for k, _ := range TransactionsToSend {
+	for k, v := range TransactionsToSend {
 		cnt := NetSendInv(1, k[:], nil)
+		v.sentCount++
+		v.lastTime = time.Now()
 		fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
 	}
 }
