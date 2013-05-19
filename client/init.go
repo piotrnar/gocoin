@@ -125,7 +125,9 @@ func import_blockchain(dir string) {
 
 		er, _, _ = chain.CheckBlock(bl)
 		if er != nil {
-			println("CheckBlock failed:", er.Error())
+			if er.Error()!="Genesis" {
+				println("CheckBlock failed:", er.Error())
+			}
 			continue
 		}
 
