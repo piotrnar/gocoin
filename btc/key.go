@@ -89,7 +89,17 @@ func (pub *PublicKey) Bytes(compressed bool) (raw []byte) {
 
 
 func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
-	ok = ecdsa.Verify(&pk.PublicKey, h[:], s.R, s.S)
+	if don(DBG_VERIFY) {
+		fmt.Println("Verify signature, HashType", s.HashType)
+		fmt.Println("R:", s.R.String())
+		fmt.Println("S:", s.S.String())
+		fmt.Println("Hash:", hex.EncodeToString(h))
+		fmt.Println("Key:", hex.EncodeToString(pk.Bytes(false)))
+	}
+	ok = ecdsa.Verify(&pk.PublicKey, h, s.R, s.S)
+	if don(DBG_VERIFY) {
+		fmt.Println("Verify signature =>", ok)
+	}
 	return
 }
 
