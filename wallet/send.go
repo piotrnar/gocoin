@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"bufio"
-	"strconv"
 	"strings"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -31,13 +30,9 @@ func parse_spend() {
 			os.Exit(1)
 		}
 
-		am, e := strconv.ParseFloat(tmp[1], 64)
-		if e != nil {
-			println("ParseFloat:", e.Error())
-			os.Exit(1)
-		}
-		sendTo = append(sendTo, oneSendTo{addr:a, amount:uint64(am*1e8)})
-		spendBtc += uint64(am*1e8)
+		am := ParseAmount(tmp[1])
+		sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
+		spendBtc += am
 	}
 }
 
@@ -69,14 +64,10 @@ func parse_batch() {
 				os.Exit(1)
 			}
 
-			am, e := strconv.ParseFloat(tmp[1], 64)
-			if e != nil {
-				println("ParseFloat:", e.Error())
-				os.Exit(1)
-			}
+			am := ParseAmount(tmp[1])
 
-			sendTo = append(sendTo, oneSendTo{addr:a, amount:uint64(am*1e8)})
-			spendBtc += uint64(am*1e8)
+			sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
+			spendBtc += am
 		}
 	} else {
 		println(e.Error())
