@@ -72,7 +72,7 @@ func DumpBalance(utxt *os.File) {
 
 			// Store the unspent line in balance/unspent.txt
 			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs\n", MyBalance[i].TxPrevOut.String(),
-				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.String(),
+				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.StringLab(),
 				1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt)
 
 			// store the entire transactiojn in balance/<txid>.tx
