@@ -3,7 +3,6 @@ package btc
 import (
 	"fmt"
 	"encoding/hex"
-	"encoding/binary"
 )
 
 type scrStack struct {
@@ -22,20 +21,62 @@ func (s *scrStack) pushBool(v bool) {
 	}
 }
 
-func (s *scrStack) pushInt(val int) {
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buf[:], uint32(val))
+func (s *scrStack) pushInt(val int64) {
+	if val==0 {
+		s.data = append(s.data, []byte{})
+		return
+	}
+	neg := (val<0)
+	if neg {
+		val = -val
+	}
+	var buf = []byte{byte(val)}
+	val >>= 8
+	for val != 0 {
+		buf = append(buf, byte(val))
+		val >>= 8
+	}
+	if neg {
+		if (buf[len(buf)-1]&0x80)==0 {
+			buf[len(buf)-1] |= 0x80
+		} else {
+			buf = append(buf, 0x80)
+		}
+	}
 	s.data = append(s.data, buf)
 }
 
 
-func (s *scrStack) popInt() int {
-	var res uint32
-	d := s.pop()
-	for i := range d {
-		res |= ( uint32(d[i]) << uint32(8*i) )
+
+func bts2int(d []byte) int64 {
+	//println("bts2int", hex.EncodeToString(d), "...")
+	if len(d) == 0 {
+		return 0
+	} else if len(d) > 8 {
+		println("Int too long", len(d))
 	}
-	return int(res)
+	var neg bool
+	var res uint64
+	for i := range d {
+		if i==len(d)-1 {
+			neg = (d[i]&0x80) != 0
+			res |= ( uint64(d[i]&0x7f) << uint64(8*i) )
+		} else {
+			res |= ( uint64(d[i]) << uint64(8*i) )
+		}
+	}
+	if neg {
+		//println("... neg ", res)
+		return -int64(res)
+	} else {
+		//println("... +", res)
+		return int64(res)
+	}
+}
+
+
+func (s *scrStack) popInt() int64 {
+	return bts2int(s.pop())
 }
 
 func (s *scrStack) popBool() bool {
@@ -52,13 +93,8 @@ func (s *scrStack) top(idx int) (d []byte) {
 	return s.data[len(s.data)+idx]
 }
 
-func (s *scrStack) topInt(idx int) (int) {
-	var res uint32
-	d := s.data[len(s.data)+idx]
-	for i := range d {
-		res |= ( uint32(d[i]) << uint32(8*i) )
-	}
-	return int(res)
+func (s *scrStack) topInt(idx int) int64 {
+	return bts2int(s.data[len(s.data)+idx])
 }
 
 func (s *scrStack) pop() (d []byte) {
