@@ -15,10 +15,11 @@ var (
 )
 
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
-	if MyWallet==nil {
-		return
-	}
 	if valpk!=nil {
+		delete(TransactionsToSend, idx.Hash) // remove confirmed tx from memory pool
+		if MyWallet==nil {
+			return
+		}
 		for i := range MyWallet.addrs {
 			if MyWallet.addrs[i].Owns(valpk.Pk_script) {
 				if dbg>0 {
