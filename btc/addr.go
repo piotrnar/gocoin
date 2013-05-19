@@ -18,6 +18,7 @@ type BtcAddr struct {
 	Checksum []byte
 	Pubkey []byte
 	Enc58str string
+	Label string  // This is normally not used, unless for GetAllUnspent() purposes
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
@@ -99,6 +100,7 @@ func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
 	return
 }
 
+// Base58 encoded address
 func (a *BtcAddr) String() string {
 	if a.Enc58str=="" {
 		var ad [25]byte
@@ -115,7 +117,15 @@ func (a *BtcAddr) String() string {
 	return a.Enc58str
 }
 
+// String with a label
+func (a *BtcAddr) StringLab() string {
+	if a.Label=="" {
+		return a.String()
+	}
+	return a.String() + " (" + a.Label + ")"
+}
 
+// Check if a pk_script send coins to this address
 func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	// The most common spend script
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
