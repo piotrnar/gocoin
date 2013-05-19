@@ -14,10 +14,10 @@ import (
 const MAX_SCRIPT_ELEMENT_SIZE = 520
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
-	/*
-	fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
-	fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
-	*/
+	if don(DBG_SCRIPT) {
+		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
+		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
+	}
 
 	var st scrStack
 	if !evalScript(sigScr[:], &st, tx, i) {
@@ -32,12 +32,16 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	}
 
 	if !evalScript(pkScr[:], &st, tx, i) {
-		fmt.Println("pkScript failed :", hex.EncodeToString(pkScr[:]))
-		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
-		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
+		if don(DBG_SCRIPT) {
+			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
+			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
+			fmt.Println("* sigScript:", hex.EncodeToString(sigScr[:]))
+		}
 		return false
 	}
-	//fmt.Println("pkScr verified OK")
+	if don(DBG_SCRIPT) {
+		fmt.Println("pkScr verified OK")
+	}
 	return true
 }
 
@@ -45,7 +49,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	var vfExec scrStack
 	var altstack scrStack
 	sta, idx, nOpCount := 0, 0, 0
-	for idx < len(p) {
+	for  {
+		if idx >= len(p) {
+			if don(DBG_SCRIPT) {
+				fmt.Println("End of script")
+				stack.print()
+			}
+			break
+		}
 		fExec := vfExec.empties()==0
 
 		// Read instruction
@@ -326,7 +337,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					return bytes.Equal(stack.pop()[:], stack.pop()[:])
+					if !bytes.Equal(stack.pop()[:], stack.pop()[:]) {
+						return false
+					}
 
 				case opcode==0x8c: //OP_1SUB
 					if stack.size()<1 {
