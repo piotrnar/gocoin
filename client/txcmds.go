@@ -141,9 +141,9 @@ func send_all_tx(par string) {
 }
 
 func init () {
-	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
-	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
-	newUi("sendalltx stxall", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
-	newUi("deltx dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
-	newUi("listtx ltx", true, list_txs, "List all the transaction loaded into memory pool")
+	newUi("ltxoad tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
+	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
+	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
+	newUi("txdel dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
+	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool")
 }
