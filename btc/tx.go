@@ -291,6 +291,7 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 
 // Decode a raw transaction from a given bytes slice.
 // Returns the transaction and the size it took in the buffer.
+// WARNING: This function does not set Tx.Hash neither Tx.Size
 func NewTx(b []byte) (tx *Tx, offs int) {
 	defer func() { // In case if the buffer was too short, to recover from a panic
 		if r := recover(); r != nil {
