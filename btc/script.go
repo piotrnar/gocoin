@@ -39,9 +39,21 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 		}
 		return false
 	}
-	if don(DBG_SCRIPT) {
-		fmt.Println("pkScr verified OK")
+
+	if st.size()==0 {
+		if don(DBG_SCRIPT) {
+			fmt.Println("* stack empty after executing scripts:", hex.EncodeToString(pkScr[:]))
+		}
+		return false
 	}
+
+	if !st.popBool() {
+		if don(DBG_SCRIPT) {
+			fmt.Println("* FALSE on stack after executing scripts:", hex.EncodeToString(pkScr[:]))
+		}
+		return false
+	}
+
 	return true
 }
 
@@ -49,14 +61,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	var vfExec scrStack
 	var altstack scrStack
 	sta, idx, nOpCount := 0, 0, 0
-	for  {
-		if idx >= len(p) {
-			if don(DBG_SCRIPT) {
-				fmt.Println("End of script")
-				stack.print()
-			}
-			break
-		}
+	for idx < len(p) {
 		fExec := vfExec.empties()==0
 
 		// Read instruction
@@ -556,6 +561,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					ok := key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
+					if don(DBG_SCRIPT) {
+						println("ver:", ok)
+					}
 					if opcode==0xad {
 						if !ok { // OP_CHECKSIGVERIFY
 							return false
@@ -662,6 +670,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			println("Stack too big")
 			return false
 		}
+	}
+
+	if don(DBG_SCRIPT) {
+		fmt.Println("END OF SCRIPT")
+		stack.print()
 	}
 
 	if vfExec.size()>0 {
