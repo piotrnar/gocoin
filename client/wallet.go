@@ -11,7 +11,6 @@ import (
 type oneWallet struct {
 	filename string
 	addrs []*btc.BtcAddr
-	label []string
 }
 
 // Load public wallet from a text file
@@ -36,12 +35,10 @@ func NewWallet(fn string) (wal *oneWallet) {
 				if e != nil {
 					println(l, ": ", e.Error())
 				} else {
-					wal.addrs = append(wal.addrs, a)
 					if len(ls)>1 {
-						wal.label = append(wal.label, strings.Trim(ls[1], " \n\t\t"))
-					} else {
-						wal.label = append(wal.label, "")
+						a.Label = strings.Trim(ls[1], " \n\t\t")
 					}
+					wal.addrs = append(wal.addrs, a)
 				}
 			}
 		}
@@ -82,7 +79,7 @@ func load_wallet(fn string) {
 	}
 
 	for i := range MyWallet.addrs {
-		fmt.Println(" ", MyWallet.addrs[i].String(), MyWallet.label[i])
+		fmt.Println(" ", MyWallet.addrs[i].StringLab())
 	}
 }
 
