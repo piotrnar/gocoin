@@ -8,12 +8,6 @@ import (
 )
 
 func load_tx(par string) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Something went wrong, but recovered in f", r)
-		}
-	}()
-
 	f, e := os.Open(par)
 	if e != nil {
 		println(e.Error())
@@ -38,8 +32,9 @@ func load_tx(par string) {
 	if le != len(txd) {
 		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
 	}
-	txid := btc.NewSha2Hash(txd)
-	fmt.Println(len(tx.TxIn), "Inputs:")
+	tx.Hash = btc.NewSha2Hash(txd)
+	fmt.Println("Transaction details (for your information):")
+	fmt.Println(len(tx.TxIn), "Input(s):")
 	var totinp, totout uint64
 	var missinginp bool
 	for i := range tx.TxIn {
@@ -48,18 +43,18 @@ func load_tx(par string) {
 		if po != nil {
 			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
 			if !ok {
-				fmt.Println("The transacion does not have a valid signature!")
+				fmt.Println("\nERROR: The transacion does not have a valid signature.")
 				return
 			}
 			totinp += po.Value
 			fmt.Printf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
 				btc.NewAddrFromPkScript(po.Pk_script, AddrVersion).String())
 		} else {
-			fmt.Println(" * no such unspent in the blockchain *")
+			fmt.Println(" - UNKNOWN INPUT")
 			missinginp = true
 		}
 	}
-	fmt.Println(len(tx.TxOut), "Outputs:")
+	fmt.Println(len(tx.TxOut), "Output(s):")
 	for i := range tx.TxOut {
 		totout += tx.TxOut[i].Value
 		fmt.Printf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
@@ -72,9 +67,9 @@ func load_tx(par string) {
 		fmt.Printf("%.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-	TransactionsToSend[txid.Hash] = txd
-	fmt.Println("Transaction stored in the memory pool. Please doeble check what it does.")
-	fmt.Println("If it does what you needed, execute: stx " + txid.String())
+	TransactionsToSend[tx.Hash.Hash] = txd
+	fmt.Println("OK: transaction accepted. Please double check its details.")
+	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
 }
 
 
