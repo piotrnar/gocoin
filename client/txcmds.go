@@ -1,10 +1,21 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"fmt"
+	"time"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+)
+
+type OneTxToSend struct {
+	data []byte
+	sentCount uint
+	lastTime time.Time
+}
+
+var (
+	TransactionsToSend map[[32]byte] OneTxToSend = make(map[[32]byte] OneTxToSend)
 )
 
 func load_tx(par string) {
@@ -67,7 +78,7 @@ func load_tx(par string) {
 		fmt.Printf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-	TransactionsToSend[tx.Hash.Hash] = txd
+	TransactionsToSend[tx.Hash.Hash] = OneTxToSend{data:txd}
 	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
 	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
 }
@@ -86,7 +97,7 @@ func send_tx(par string) {
 		return
 	}
 	cnt := NetSendInv(1, txid.Hash[:], nil)
-	fmt.Println("Transaction", txid.String(), "broadcasted to", cnt, "node(s)")
+	fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 	fmt.Println("If it does not appear in the chain, you may want to redo it.")
 }
 
@@ -112,13 +123,27 @@ func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
 	for k, v := range TransactionsToSend {
-		fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v), "bytes")
+		if v.lastTime.IsZero() {
+			fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - never sent")
+		} else {
+			fmt.Println(cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - sent",
+			v.sentCount, "times, last", time.Now().Sub(v.lastTime).String(), "ago")
+		}
+	}
+}
+
+
+func send_all_tx(par string) {
+	for k, _ := range TransactionsToSend {
+		cnt := NetSendInv(1, k[:], nil)
+		fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
 	}
 }
 
 func init () {
 	newUi("loadtx tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("sendtx stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
+	newUi("sendalltx stxall", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("deltx dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
 	newUi("listtx ltx", true, list_txs, "List all the transaction loaded into memory pool")
 }
