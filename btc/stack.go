@@ -16,9 +16,9 @@ func (s *scrStack) push(d []byte) {
 
 func (s *scrStack) pushBool(v bool) {
 	if v {
-		s.data = append(s.data, []byte{})
-	} else {
 		s.data = append(s.data, []byte{1})
+	} else {
+		s.data = append(s.data, []byte{})
 	}
 }
 
@@ -29,13 +29,23 @@ func (s *scrStack) pushInt(val int) {
 }
 
 
-func (s *scrStack) popInt() (int) {
+func (s *scrStack) popInt() int {
 	var res uint32
 	d := s.pop()
 	for i := range d {
 		res |= ( uint32(d[i]) << uint32(8*i) )
 	}
 	return int(res)
+}
+
+func (s *scrStack) popBool() bool {
+	d := s.pop()
+	for i := range d {
+		if d[i]!=0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *scrStack) top(idx int) (d []byte) {
