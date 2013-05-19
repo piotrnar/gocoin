@@ -540,7 +540,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				case opcode==0xab: // OP_CODESEPARATOR
 					sta = idx
 
-				case opcode==0xac: // OP_CHECKSIG
+				case opcode==0xac || opcode==0xad: // OP_CHECKSIG || OP_CHECKSIGVERIFY
 					if stack.size()<2 {
 						println("Stack too short for opcode", opcode)
 						return false
@@ -555,8 +555,13 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println(e.Error())
 						return false
 					}
-					if !key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig) {
-						return false
+					ok := key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
+					if opcode==0xad {
+						if !ok { // OP_CHECKSIGVERIFY
+							return false
+						}
+					} else { // OP_CHECKSIG
+						stack.pushBool(ok)
 					}
 
 				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
