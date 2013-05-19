@@ -41,7 +41,7 @@ func newUi(cmds string, sync bool, hn func(string), help string) {
 		c.handler = hn
 		if len(uiCmds)>0 {
 			var i int
-			for i = range uiCmds {
+			for i = 0; i<len(uiCmds); i++ {
 				if uiCmds[i].cmds[0]>c.cmds[0] {
 					break // lets have them sorted
 				}
