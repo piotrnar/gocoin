@@ -37,7 +37,7 @@ func (x AllUnspentTx) Swap(i, j int) {
 func (ou *OneUnspentTx) String() (s string) {
 	s = fmt.Sprintf("%15.8f BTC from ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
 	if ou.BtcAddr!=nil {
-		s += " @ " + ou.BtcAddr.String()
+		s += " @ " + ou.BtcAddr.StringLab()
 	}
 	return
 }
