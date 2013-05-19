@@ -52,8 +52,6 @@ var (
 	Counter map[string] uint64 = make(map[string]uint64)
 
 	busy string
-
-	TransactionsToSend map[[32]byte] []byte = make(map[[32]byte] []byte)
 )
 
 
