@@ -416,8 +416,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					if opcode==0x9d {
-						return stack.popInt()==stack.popInt()
+					if opcode==0x9d { // OP_NUMEQUALVERIFY
+						if stack.popInt()!=stack.popInt() {
+							return false
+						}
 					} else {
 						stack.pushBool(stack.popInt()==stack.popInt())
 					}
@@ -553,9 +555,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println(e.Error())
 						return false
 					}
-					return key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
+					if !key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig) {
+						return false
+					}
 
-				case opcode==0xae: //OP_CHECKMULTISIG
+				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
 					//println("OP_CHECKMULTISIG ...")
 					//stack.print()
 					if stack.size()<1 {
@@ -566,7 +570,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					nKeysCount := stack.topInt(-i)
 					if nKeysCount < 0 || nKeysCount > 20 {
 						println("OP_CHECKMULTISIG: Wrong number of keys")
-						return false;
+						return false
 					}
 					nOpCount += nKeysCount
 					if nOpCount > 201 {
@@ -623,8 +627,13 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						i--
 						stack.pop()
 					}
-					//stack.print()
-					return fSuccess
+					if opcode==0xaf {
+						if !fSuccess { // OP_CHECKMULTISIGVERIFY
+							return false
+						}
+					} else {
+						stack.pushBool(fSuccess)
+					}
 
 				case opcode>=0xb0 && opcode<=0xb9: //OP_NOP
 					// just do nothing
@@ -634,7 +643,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					return false
 
 				default:
-					fmt.Printf("Unhandled opcode 0x%02x\n", opcode)
+					fmt.Printf("Unhandled opcode 0x%02x - a handler must be implemented\n", opcode)
 					stack.print()
 					fmt.Println("Rest of the script:", hex.EncodeToString(p[idx:]))
 					os.Exit(0)
