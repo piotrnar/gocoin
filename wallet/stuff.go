@@ -4,8 +4,9 @@ import (
 	"os"
 	"fmt"
 	"bufio"
-	"math/big"
+	"strconv"
 	"strings"
+	"math/big"
 	"crypto/rand"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -151,4 +152,15 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	fmt.Println("You do not own the address of the first input")
 	os.Exit(1)
 	return
+}
+
+
+// Parses floating number abount to return an int value expressed in satoshis
+func ParseAmount(s string) uint64 {
+	fl, e := strconv.ParseFloat(s, 64)
+	if e != nil {
+		println("Incorrect amount", s, e.Error())
+		os.Exit(1)
+	}
+	return uint64(fl*1e8)
 }
