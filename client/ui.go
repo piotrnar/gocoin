@@ -151,6 +151,8 @@ func show_info(par string) {
 		"   PauseTotal:", gs.PauseTotal.String())
 
 	mutex.Lock()
+	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n",
+		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
 	// Main thread activity:
 	if busy!="" {
 		fmt.Println("BlockChain thread is busy with", busy)
@@ -158,7 +160,7 @@ func show_info(par string) {
 		fmt.Println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
-	fmt.Println("Nonde's uptime:", time.Now().Sub(StartTime).String())
+	fmt.Println("Threads:", btc.UseThreads, "  Uptime:", time.Now().Sub(StartTime).String())
 }
 
 
@@ -175,11 +177,6 @@ func show_last(par string) {
 
 
 func show_counters(par string) {
-	mutex.Lock()
-	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n",
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
-	mutex.Unlock()
-
 	counter_mutex.Lock()
 	ck := make([]string, len(Counter))
 	i := 0
