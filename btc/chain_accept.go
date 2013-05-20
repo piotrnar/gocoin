@@ -108,7 +108,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	}
 
 	// create a channnel to receive results from VerifyScript threads:
-	done := make(chan bool, useThreads)
+	done := make(chan bool, UseThreads)
 
 	for i := range bl.Txs {
 		if don(DBG_TX) {
@@ -120,7 +120,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		if i>0 {
 			scripts_ok := true
 
-			for j:=0; j<useThreads; j++ {
+			for j:=0; j<UseThreads; j++ {
 				done <- true
 			}
 
@@ -191,7 +191,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 			if scripts_ok {
 				scripts_ok = <- done
 			}
-			for j:=1; j<useThreads; j++ {
+			for j:=1; j<UseThreads; j++ {
 				if !(<- done) {
 					println("VerifyScript error 2")
 					scripts_ok = false
