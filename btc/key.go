@@ -112,8 +112,8 @@ type Signature struct {
 
 func NewSignature(buf []byte) (sig *Signature, e error) {
 	var c byte
-	if len(buf)<9 {
-		e = errors.New("NewSignature: Key too short " + fmt.Sprint(len(buf)))
+	if len(buf)<9 || len(buf)>73 {
+		e = errors.New("NewSignature: Unexpected signature length ")
 		return
 	}
 
@@ -179,11 +179,20 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	sig.R = new(big.Int).SetBytes(Rdat[:])
 	sig.S = new(big.Int).SetBytes(Sdat[:])
 
-	c, e = rd.ReadByte()
-	if e==nil {
-		sig.HashType = c
+	/*
+	   It seems the implementation in the original bitcoin client has been fucked up.
+	   If we'd follow the spec here, we should reject this TX from block #135405:
+	       67e758b27df26ad609f943b30e5bbb270d835b737c8b3df1a7944ba08df8b9a2
+	   So we must ignore the prior lengths and always take the last byte as the HashType.
+	*/
+	_, e = rd.ReadByte()
+	if e == nil {
+		// There is at least one more byte after S, so take the HashType from the last byte
+		sig.HashType = buf[len(buf)-1]
 	} else {
-		e = nil // missing hash type byte is not an error (i.e. for alert signature)
+		// A missing HashType byte is not an error - such signatures are used for alerts.
+		e = nil
+		// sig.HashType field has been set to zero in new(Signature).
 	}
 
 	return
