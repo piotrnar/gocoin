@@ -25,6 +25,7 @@ Limitations of the client node
 * Requires a file system that supports large files (bigger than 4GB).
 * No UPnP support
 * No IP v6 support
+* Except for OP_EQUAL(VERIFY), the scripting engine does not handle numbers longer than 8 bytes, but there are no such in any existing chain.
 
 
 Dependencies
