@@ -14,11 +14,6 @@ import (
 const MAX_SCRIPT_ELEMENT_SIZE = 520
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
-	/*
-	if i==15 && tx.Hash.String()=="e335562f7e297aadeed88e5954bc4eeb8dc00b31d829eedb232e39d672b0c009" {
-		DbgSwitch(DBG_SCRIPT, true)
-	}*/
-
 	if don(DBG_SCRIPT) {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
