@@ -91,8 +91,8 @@ func (pub *PublicKey) Bytes(compressed bool) (raw []byte) {
 func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
 	if don(DBG_VERIFY) {
 		fmt.Println("Verify signature, HashType", s.HashType)
-		fmt.Println("R:", s.R.String())
-		fmt.Println("S:", s.S.String())
+		fmt.Println("R:", hex.EncodeToString(s.R.Bytes()))
+		fmt.Println("S:", hex.EncodeToString(s.S.Bytes()))
 		fmt.Println("Hash:", hex.EncodeToString(h))
 		fmt.Println("Key:", hex.EncodeToString(pk.Bytes(false)))
 	}
@@ -188,7 +188,7 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	_, e = rd.ReadByte()
 	if e == nil {
 		// There is at least one more byte after S, so take the HashType from the last byte
-		sig.HashType = buf[len(buf)-1] & 0x7F // &0x7F clears SIGHASH_ANYONECANPAY bit
+		sig.HashType = buf[len(buf)-1]
 	} else {
 		// A missing HashType byte is not an error - such signatures are used for alerts.
 		e = nil
