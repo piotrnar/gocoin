@@ -79,10 +79,11 @@ func host_init() {
 }
 
 
-func stat(nsec int64, totbytes uint64, height uint32) {
-	mbs := float64(totbytes) / (1024*1024)
-	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec\n",
-		mbs, height, mbs/(float64(nsec)/1e9))
+func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
+	totmbs := float64(totbytes) / (1024*1024)
+	perkbs := float64(perbytes) / (1024)
+	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec, recent: %.1fKB/s\n",
+		totmbs, height, totmbs/(float64(totnsec)/1e9), perkbs/(float64(pernsec)/1e9))
 }
 
 
@@ -95,7 +96,7 @@ func import_blockchain(dir string) {
 	var bl *btc.Block
 	var er error
 	var dat []byte
-	var totbytes uint64
+	var totbytes, perbytes uint64
 
 	chain.DoNotSync = true
 
@@ -105,8 +106,9 @@ func import_blockchain(dir string) {
 	for {
 		now := time.Now().UnixNano()
 		if now-prv >= 10e9 {
+			stat(now-start, now-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
 			prv = now  // show progress each 10 seconds
-			stat(now-start, totbytes, chain.BlockTreeEnd.Height)
+			perbytes = 0
 		}
 
 		dat, er = BlockDatabase.FetchNextBlock()
@@ -127,6 +129,7 @@ func import_blockchain(dir string) {
 		if er != nil {
 			if er.Error()!="Genesis" {
 				println("CheckBlock failed:", er.Error())
+				os.Exit(1) // Such a thing should not happen, so let's better abort here.
 			}
 			continue
 		}
@@ -134,19 +137,20 @@ func import_blockchain(dir string) {
 		er = chain.AcceptBlock(bl)
 		if er != nil {
 			println("AcceptBlock failed:", er.Error())
-			continue
+			os.Exit(1) // Such a thing should not happen, so let's better abort here.
 		}
 
 		totbytes += uint64(len(bl.Raw))
+		perbytes += uint64(len(bl.Raw))
 	}
 
 	stop := time.Now().UnixNano()
-	stat(stop-start, totbytes, chain.BlockTreeEnd.Height)
+	stat(stop-start, stop-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
 
 	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
 
 	fmt.Println("Now saving the new database...")
-	chain.Sync()
+	chain.Save()
 	chain.Close()
 	fmt.Println("Database saved. No more imports should be needed.")
 }
