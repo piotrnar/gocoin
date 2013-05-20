@@ -70,6 +70,26 @@ func TestPbkyues(t *testing.T) {
 	}
 }
 
+
+/*
+If it was up to me, this test should not pass, but we need to follow the original
+implementation, because such an inconsistent signatures have been mined alredy.
+See more comments about it at the end of NewSignature() in key.go
+*/
+func TestSignature(t *testing.T) {
+	raw, _ := hex.DecodeString("3045022034e4786cf22cd00b45faff8afc3b8789c924378176d934adee0d3b3f4a8bf0dc022100b658dd07beeede1f792d238c3ee29c25200f3b834662f9c900bb4d065526dac90001")
+	s, e := NewSignature(raw)
+	if e != nil {
+		t.Error(e.Error())
+		return
+	}
+	if s.HashType!=1 {
+		t.Error("HashType", s.HashType)
+		return
+	}
+}
+
+
 func BenchmarkKey02swap(b *testing.B) {
 	xy, _ := hex.DecodeString("02BD22E9E7AE9238EBD7937DCAF2887535B13DEB2EF9E95D5FB9225D29BDCD450F")
 	for i := 0; i < b.N; i++ {
