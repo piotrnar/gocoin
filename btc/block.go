@@ -49,8 +49,8 @@ func (bl *Block) BuildTxList() (e error) {
 	offs += n
 	bl.Txs = make([]*Tx, txcnt)
 
-	done := make(chan bool, useThreads)
-	for i:=0; i<useThreads; i++ {
+	done := make(chan bool, UseThreads)
+	for i:=0; i<UseThreads; i++ {
 		done <- false
 	}
 
@@ -70,7 +70,7 @@ func (bl *Block) BuildTxList() (e error) {
 	}
 
 	// Wait for all the pending mission to complete...
-	for i:=0; i<useThreads; i++ {
+	for i:=0; i<UseThreads; i++ {
 		_ = <- done
 	}
 	return
