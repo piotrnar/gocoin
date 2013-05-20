@@ -328,7 +328,8 @@ func do_asicminer(s string) {
 			return
 		}
 		if string(bl[0x7f:0x91])=="Mined By ASICMiner" {
-			println(end.Height, end.BlockHash.String())
+			println(end.Height, end.BlockHash.String(),
+				time.Unix(int64(end.Timestamp), 0).Format("2006-01-02 15:04:05"))
 		}
 		end = end.Parent
 	}
