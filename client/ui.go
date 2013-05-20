@@ -290,6 +290,10 @@ func show_mem(p string) {
 
 func dump_block(s string) {
 	h := btc.NewUint256FromString(s)
+	if h==nil {
+		println("Specify block's hash")
+		return
+	}
 	bl, _, e := BlockChain.Blocks.BlockGet(h)
 	if e != nil {
 		println(e.Error())
@@ -307,6 +311,30 @@ func dump_block(s string) {
 }
 
 
+func do_asicminer(s string) {
+	var limit uint64
+	if s != "" {
+		limit, _ = strconv.ParseUint(s, 10, 64)
+	}
+	if limit == 0 {
+		limit = 1000
+	}
+	fmt.Println("Looking back", limit, "blocks...")
+	end := BlockChain.BlockTreeEnd
+	for i:=uint64(0); i<limit; i++ {
+		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
+		if e != nil {
+			println(i, e.Error())
+			return
+		}
+		if string(bl[0x7f:0x91])=="Mined By ASICMiner" {
+			println(end.Height, end.BlockHash.String())
+		}
+		end = end.Parent
+	}
+}
+
+
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info")
@@ -318,4 +346,5 @@ func init() {
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
+	newUi("aminer", false, do_asicminer, "Look for 'Mined By ASICMiner' in the last N blocks")
 }
