@@ -188,7 +188,7 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	_, e = rd.ReadByte()
 	if e == nil {
 		// There is at least one more byte after S, so take the HashType from the last byte
-		sig.HashType = buf[len(buf)-1]
+		sig.HashType = buf[len(buf)-1] & 0x7F // &0x7F clears SIGHASH_ANYONECANPAY bit
 	} else {
 		// A missing HashType byte is not an error - such signatures are used for alerts.
 		e = nil
