@@ -361,7 +361,7 @@ func main() {
 
 	host_init()
 
-	LoadWallet(GocoinHomeDir+"wallet.txt")
+	show_balance(GocoinHomeDir+"wallet.txt") // load default wallet and its balance
 	initPeers(GocoinHomeDir)
 
 	LastBlock = BlockChain.BlockTreeEnd
