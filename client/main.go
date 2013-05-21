@@ -26,7 +26,7 @@ var (
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 
-	prof *bool = flag.Bool("pprof", false, "Enable CPU profiler while doing AcceptBlock")
+	prof *bool = flag.Bool("pprof", false, "Enable CPU profiler during AcceptBlock")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -151,6 +151,10 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			DumpBalance(nil)
 			ui_show_prompt()
 			BalanceChanged = false
+		}
+		if mined_by_aminer(bl.Raw) {
+			fmt.Println("\007Mined by ASICMINER:", LastBlock.Height)
+			ui_show_prompt()
 		}
 	}
 	return
