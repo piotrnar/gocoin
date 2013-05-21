@@ -284,7 +284,21 @@ func show_mem(p string) {
 		fmt.Println("Freeing the mem...")
 		debug.FreeOSMemory()
 		show_mem("")
+		return
 	}
+	if p=="gc" {
+		fmt.Println("Running GC...")
+		runtime.GC()
+		fmt.Println("Done.")
+		return
+	}
+	i, e := strconv.ParseInt(p, 10, 64)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	debug.SetGCPercent(int(i))
+	fmt.Println("GC treshold set to", i, "percent")
 }
 
 
@@ -341,7 +355,7 @@ func init() {
 	newUi("info i", false, show_info, "Shows general info")
 	newUi("last l", false, show_last, "Show last block info")
 	newUi("counters c", false, show_counters, "Show counters")
-	newUi("mem", false, show_mem, "Show detailed memory stats")
+	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
