@@ -136,7 +136,7 @@ func DumpBalance(utxt *os.File) {
 			}
 		}
 	}
-	fmt.Printf("%.8f BTC in total, in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
+	fmt.Printf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
 	if utxt != nil {
 		fmt.Println("Your balance data has been saved to the 'balance/' folder.")
 		fmt.Println("You nend to move this folder to your wallet PC, to spend the coins.")
