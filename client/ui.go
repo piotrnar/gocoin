@@ -326,26 +326,43 @@ func dump_block(s string) {
 
 
 func do_asicminer(s string) {
-	var limit uint64
+	var totbtc, hrs uint64
 	if s != "" {
-		limit, _ = strconv.ParseUint(s, 10, 64)
+		hrs, _ = strconv.ParseUint(s, 10, 64)
 	}
-	if limit == 0 {
-		limit = 1000
+	if hrs == 0 {
+		hrs = 24
 	}
-	fmt.Println("Looking back", limit, "blocks...")
+	fmt.Println("Looking back", hrs, "hours...")
+	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
 	end := BlockChain.BlockTreeEnd
-	for i:=uint64(0); i<limit; i++ {
+	cnt := 0
+	for end.Timestamp >= lim {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
-			println(i, e.Error())
+			println(cnt, e.Error())
 			return
 		}
 		if string(bl[0x7f:0x91])=="Mined By ASICMiner" {
-			println(end.Height, end.BlockHash.String(),
-				time.Unix(int64(end.Timestamp), 0).Format("2006-01-02 15:04:05"))
+			block, e := btc.NewBlock(bl)
+			if e!=nil {
+				println("btc.NewBlock failed", e.Error())
+				return
+			}
+			block.BuildTxList()
+			totbtc += block.Txs[0].TxOut[0].Value
+			cnt++
+			fmt.Printf("%4d) %6d %s %s  %5.2f => %5.2f BTC total\n",
+				cnt, end.Height, end.BlockHash.String(),
+				time.Unix(int64(end.Timestamp), 0).Format("2006-01-02 15:04:05"),
+				float64(block.Txs[0].TxOut[0].Value)/1e8, float64(totbtc)/1e8)
 		}
 		end = end.Parent
+	}
+	if cnt>0 {
+		fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
+			float64(totbtc)/1e8, cnt, hrs)
+		fmt.Printf("Projected weekly income : %.0f BTC\n", 7*24*float64(totbtc)/float64(hrs)/1e8)
 	}
 }
 
