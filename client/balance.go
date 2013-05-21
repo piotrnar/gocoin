@@ -57,7 +57,7 @@ func DumpBalance(utxt *os.File) {
 	for i := range MyBalance {
 		sum += MyBalance[i].Value
 
-		if len(MyBalance)<100 {
+		if utxt!=nil && len(MyBalance)<100 {
 			fmt.Printf("%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
 				MyBalance[i].String())
 		}
