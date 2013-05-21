@@ -280,6 +280,9 @@ func show_mem(p string) {
 	fmt.Println("MCacheInuse :", ms.MCacheInuse)
 	fmt.Println("MCacheSys   :", ms.MCacheSys)
 	fmt.Println("BuckHashSys :", ms.BuckHashSys)
+	if p=="" {
+		return
+	}
 	if p=="free" {
 		fmt.Println("Freeing the mem...")
 		debug.FreeOSMemory()
@@ -383,5 +386,5 @@ func init() {
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("aminer", false, do_asicminer, "Look for 'Mined By ASICMiner' in the last N blocks")
+	newUi("asicminer am", false, do_asicminer, "Look for 'Mined By ASICMiner' in recent blocks")
 }
