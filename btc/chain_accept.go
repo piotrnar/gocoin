@@ -138,7 +138,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					}
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
-						e = errors.New("Unknown input")
+						e = errors.New("Unknown input TxID: " + NewUint256(inp.Hash[:]).String())
 						break
 					}
 
@@ -156,7 +156,9 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
-					//println("TxInput from the current block", inp.String())
+					if don(DBG_TX) {
+						println("TxInput from the current block", inp.String())
+					}
 				} else {
 					if don(DBG_TX) {
 						println("PickUnspent OK")
@@ -237,11 +239,12 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 		if don(DBG_TX) && i>0 {
 			fmt.Printf(" fee : %.8f\n", float64(txinsum-txoutsum)/1e8)
 		}
-		if i>0 && txoutsum > txinsum {
-			return errors.New("More spent than at the input")
-		}
 		if e != nil {
-			break // If any input fails, do not continue
+			return // If any input fails, do not continue
+		}
+		if i>0 && txoutsum > txinsum {
+			return errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
+				float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
 		}
 	}
 
