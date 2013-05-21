@@ -112,8 +112,8 @@ type Signature struct {
 
 func NewSignature(buf []byte) (sig *Signature, e error) {
 	var c byte
-	if len(buf)<9 || len(buf)>73 {
-		e = errors.New("NewSignature: Unexpected signature length ")
+	if len(buf)<9 {
+		e = errors.New("NewSignature: Signature too short")
 		return
 	}
 
