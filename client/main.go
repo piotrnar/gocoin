@@ -8,6 +8,7 @@ import (
 	"sync"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
+	"runtime/pprof"
 )
 
 const (
@@ -24,6 +25,8 @@ var (
 	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
+
+	prof *bool = flag.Bool("pprof", false, "Enable CPU profiler while doing AcceptBlock")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -118,15 +121,30 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 
 func AcceptBlock(bl *btc.Block) (e error) {
+	var f *os.File
+	var fn string
+	if *prof {
+		fn = fmt.Sprint("bl", LastBlock.Height+1, ".prof")
+		f, _ = os.Create(fn)
+	}
+	if f != nil {
+		pprof.StartCPUProfile(f)
+	}
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
+	if f != nil {
+		pprof.StopCPUProfile()
+		f.Close()
+	}
 	if e == nil {
 		LastBlock = BlockChain.BlockTreeEnd
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
 			ui_show_prompt()
+		} else if fn!="" {
+			os.Remove(fn)
 		}
 		if BalanceChanged {
 			fmt.Println("\007Your balance has just changed")
