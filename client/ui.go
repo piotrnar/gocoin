@@ -325,6 +325,11 @@ func dump_block(s string) {
 }
 
 
+func mined_by_aminer(bl []byte) bool {
+	return string(bl[0x7f:0x91])=="Mined By ASICMiner"
+}
+
+
 func do_asicminer(s string) {
 	var totbtc, hrs uint64
 	if s != "" {
@@ -343,7 +348,7 @@ func do_asicminer(s string) {
 			println(cnt, e.Error())
 			return
 		}
-		if string(bl[0x7f:0x91])=="Mined By ASICMiner" {
+		if mined_by_aminer(bl) {
 			block, e := btc.NewBlock(bl)
 			if e!=nil {
 				println("btc.NewBlock failed", e.Error())
