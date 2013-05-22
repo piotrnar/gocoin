@@ -370,7 +370,11 @@ func do_asicminer(s string) {
 	if cnt>0 {
 		fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
 			float64(totbtc)/1e8, cnt, hrs)
-		fmt.Printf("Projected weekly income : %.0f BTC\n", 7*24*float64(totbtc)/float64(hrs)/1e8)
+		weekly := 7*24*float64(totbtc)/float64(hrs)/1e8
+		diff := btc.GetDifficulty(BlockChain.BlockTreeEnd.Bits)
+		fmt.Printf("Projected weekly income : %.0f BTC\n", weekly)
+		fmt.Printf("Estimated hashrate : %.2f TH/s @ Difficulty %.0f\n",
+			diff*weekly/3.5204/1e9, diff)
 	}
 }
 
