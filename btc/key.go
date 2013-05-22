@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"fmt"
 	"errors"
 	"bytes"
 	"math/big"
@@ -83,22 +82,6 @@ func (pub *PublicKey) Bytes(compressed bool) (raw []byte) {
 		y := pub.Y.Bytes()
 		copy(raw[1+32-len(x):], x)
 		copy(raw[1+64-len(y):], y)
-	}
-	return
-}
-
-
-func (pk *PublicKey) Verify(h []byte, s *Signature) (ok bool) {
-	if don(DBG_VERIFY) {
-		fmt.Println("Verify signature, HashType", s.HashType)
-		fmt.Println("R:", hex.EncodeToString(s.R.Bytes()))
-		fmt.Println("S:", hex.EncodeToString(s.S.Bytes()))
-		fmt.Println("Hash:", hex.EncodeToString(h))
-		fmt.Println("Key:", hex.EncodeToString(pk.Bytes(false)))
-	}
-	ok = ecdsa.Verify(&pk.PublicKey, h, s.R, s.S)
-	if don(DBG_VERIFY) {
-		fmt.Println("Verify signature =>", ok)
 	}
 	return
 }
