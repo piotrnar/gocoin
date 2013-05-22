@@ -115,6 +115,12 @@ int main( int argc, char **argv )
 		fprintf( stderr, "Cannot create socket\n" );
 		return 1;
 	}
+	int yes = 1;
+	if ( setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1 ) {
+		fprintf(stderr, "SO_REUSEADDR failed\n");
+		return 1;
+	}
+
 	if (bind(sock, (struct sockaddr*)&addr, sizeof(addr))==-1) {
 		fprintf(stderr, "Cannot bind do specified port\n");
 		return 1;
