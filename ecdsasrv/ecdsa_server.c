@@ -29,6 +29,12 @@ static int verify(unsigned char *pkey, unsigned int pkl,
 	}
 	if (!o2i_ECPublicKey(&ecpkey, (const unsigned char **)&pkey, pkl)) {
 		printf("o2i_ECPublicKey fail!\n");
+		while (pkl>0) {
+			printf("%02x", *pkey);
+			pkey++;
+			pkl--;
+		}
+		printf("\n");
 		return -2;
 	}
 	int res = ECDSA_verify(0, hasz, 32, sign, sil, ecpkey);
@@ -100,6 +106,8 @@ err:
 
 int main( int argc, char **argv )
 {
+	unsigned int totcnt = 0;
+	time_t prv, now;
 #ifdef WINDOWS
 	WSADATA wsdata;
 	WSAStartup(MAKEWORD(2, 2), &wsdata);
@@ -123,6 +131,7 @@ int main( int argc, char **argv )
 
 	listen(sock, 5);
 	printf("TCP server ready\n");
+	prv = time(NULL);
 	while (1) {
 		int len = sizeof addr;
 		memset(&addr, 0, len);
@@ -147,6 +156,13 @@ int main( int argc, char **argv )
 #ifndef WINDOWS
 		pthread_detach(tid);
 #endif
+		totcnt++;
+		now = time(NULL);
+		if (now!=prv) {
+			printf("%u op / sec\n", totcnt/(now-prv));
+			prv = now;
+			totcnt = 0;
+		}
 	}
 
 	return 0;
