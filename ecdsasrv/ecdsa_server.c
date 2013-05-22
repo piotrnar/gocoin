@@ -74,8 +74,6 @@ void *one_server(void *par) {
 		goto err;
 	}
 
-	//
-	//printf("Got cmd 0x%02x\n", c);
 	if (buf[0]==1) { // ECDSA verify
 		buf[0] = verify(buf+16, buf[1], buf+128, buf[2], buf+224)==1;
 		if (send(sock, buf, 1, 0)!=1) {
