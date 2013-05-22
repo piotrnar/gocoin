@@ -11,7 +11,7 @@
 	#include <sys/socket.h>
 	#include <netinet/in.h>
 	typedef int SOCKET;
-	#define closesocket(close)
+	#define closesocket close
 #endif
 
 #include <openssl/ec.h>
