@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"fmt"
+	"net"
 	"flag"
 	"time"
 	"sync"
+	"strings"
+	"strconv"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
-	"runtime/pprof"
 )
 
 const (
@@ -26,7 +28,7 @@ var (
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 
-	prof *bool = flag.Bool("pprof", false, "Enable CPU profiler during AcceptBlock")
+	ecdsa *string = flag.String("ecdsa", "", "Use this ECDSA server (ip:port)")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -121,30 +123,15 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 
 func AcceptBlock(bl *btc.Block) (e error) {
-	var f *os.File
-	var fn string
-	if *prof {
-		fn = fmt.Sprint("bl", LastBlock.Height+1, ".prof")
-		f, _ = os.Create(fn)
-	}
-	if f != nil {
-		pprof.StartCPUProfile(f)
-	}
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
-	if f != nil {
-		pprof.StopCPUProfile()
-		f.Close()
-	}
 	if e == nil {
 		LastBlock = BlockChain.BlockTreeEnd
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
 			ui_show_prompt()
-		} else if fn!="" {
-			os.Remove(fn)
 		}
 		if BalanceChanged {
 			fmt.Println("\007Your balance has just changed")
@@ -362,6 +349,26 @@ func main() {
 
 	UploadLimit = *maxul << 10
 	DownloadLimit = *maxdl << 10
+
+	if *ecdsa != "" {
+		fmt.Println("Using ECDSA server at", *ecdsa)
+		ips := strings.Split(*ecdsa, ":")
+		if len(ips)!=2 {
+			println("-ecdsa parem must be ip:port")
+			os.Exit(1)
+		}
+		port, e := strconv.ParseUint(ips[1], 10, 32)
+		if e != nil {
+			println(e.Error())
+			return
+		}
+		ip := net.ParseIP(ips[0])
+		if ip!=nil && len(ip)==16 {
+			btc.EcdsaServer = &net.TCPAddr{IP: ip, Port : int(port)}
+		} else {
+			fmt.Println("IP Parse error")
+		}
+	}
 
 	host_init()
 
