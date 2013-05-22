@@ -9,6 +9,7 @@ import (
 	"sync"
 	"strings"
 	"strconv"
+	"runtime"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -370,6 +371,7 @@ func main() {
 		}
 	}
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	host_init()
 
 	// load default wallet and its balance
