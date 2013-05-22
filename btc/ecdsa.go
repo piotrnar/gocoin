@@ -14,6 +14,10 @@ var (
 
 // Use ECDSA_server
 func NetVerify(kd []byte, sd []byte, h []byte) bool {
+	if len(kd)>65 || len(sd)>96 || len(h)!=32 {
+		println("EcdsaVerify input len error", len(kd), len(sd), len(h))
+		return false
+	}
 	//var res [1]byte
 	var buf [256]byte
 	conn, e := net.DialTCP("tcp4", nil, EcdsaServer)
@@ -57,10 +61,6 @@ func GoVerify(kd []byte, sd []byte, h []byte) bool {
 
 
 func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
-	if len(kd)>65 || len(sd)>96 || len(hash)!=32 {
-		println("EcdsaVerify input len error", len(kd), len(sd), len(hash))
-		return false
-	}
 	atomic.AddUint64(&VerScriptCnt, 1)
 	if EC_Verify!=nil {
 		return EC_Verify(kd, sd, hash)
