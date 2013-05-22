@@ -82,8 +82,13 @@ func host_init() {
 func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 	totmbs := float64(totbytes) / (1024*1024)
 	perkbs := float64(perbytes) / (1024)
-	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec, recent: %.1fKB/s\n",
-		totmbs, height, totmbs/(float64(totnsec)/1e9), perkbs/(float64(pernsec)/1e9))
+	var x string
+	if btc.VerScriptCnt > 0 {
+		x = fmt.Sprintf("%d -> %d us/scr", btc.VerScriptCnt, uint64(pernsec)/btc.VerScriptCnt/1e3)
+		btc.VerScriptCnt = 0
+	}
+	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec, recent: %.1fKB/s |  %s\n",
+		totmbs, height, totmbs/(float64(totnsec)/1e9), perkbs/(float64(pernsec)/1e9), x)
 }
 
 
@@ -126,6 +131,7 @@ func import_blockchain(dir string) {
 		bl.Trusted = trust
 
 		er, _, _ = chain.CheckBlock(bl)
+
 		if er != nil {
 			if er.Error()!="Genesis" {
 				println("CheckBlock failed:", er.Error())
