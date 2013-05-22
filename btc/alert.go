@@ -24,13 +24,12 @@ type Alert struct {
 	Reserved string   // Reserved
 }
 
-var alertPubKey *PublicKey
+var alertPubKey []byte
 
 
 func NewAlert(b []byte) (res *Alert, e error) {
 	var payload, signature []byte
 	var le uint64
-	var sig *Signature
 
 	rd := bytes.NewReader(b)
 
@@ -56,13 +55,8 @@ func NewAlert(b []byte) (res *Alert, e error) {
 		return
 	}
 
-	sig, e = NewSignature(signature)
-	if e != nil {
-		return
-	}
-
 	h := NewSha2Hash(payload)
-	if !alertPubKey.Verify(h.Hash[:], sig) {
+	if !EcdsaVerify(alertPubKey, signature, h.Hash[:]) {
 		e = errors.New("The alert's signature is not correct")
 		return
 	}
@@ -99,6 +93,5 @@ func NewAlert(b []byte) (res *Alert, e error) {
 
 
 func init() {
-	b, _ := hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
-	alertPubKey, _ = NewPublicKey(b)
+	alertPubKey, _ = hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
 }
