@@ -505,17 +505,12 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					key, e := NewPublicKey(stack.pop())
-					if e != nil {
-						println(e.Error())
-						return false
+					var ok bool
+					pk := stack.pop()
+					si := stack.pop()
+					if len(si) > 9 {
+						ok = EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1]))
 					}
-					sig, e := NewSignature(stack.pop())
-					if e != nil {
-						println(e.Error())
-						return false
-					}
-					ok := key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
 					if don(DBG_SCRIPT) {
 						println("ver:", ok)
 					}
@@ -566,17 +561,12 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					fSuccess := true
 					for nSigsCount > 0 {
-						key, e := NewPublicKey(stack.top(-ikey))
-						if e != nil {
-							println(e.Error())
-							return false
+						pk := stack.top(-ikey)
+						si := stack.top(-isig)
+						var fOk bool
+						if len(si)>9 {
+							fOk = EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1]))
 						}
-						sig, e := NewSignature(stack.top(-isig))
-						if e != nil {
-							println(e.Error())
-							return false
-						}
-						fOk := key.Verify(tx.SignatureHash(p[sta:], inp, sig.HashType), sig)
 
 						if fOk {
 							isig++
