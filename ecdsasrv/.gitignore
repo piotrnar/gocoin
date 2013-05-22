@@ -1,0 +1,3 @@
+libcrypto.a
+libz.a
+openssl/
