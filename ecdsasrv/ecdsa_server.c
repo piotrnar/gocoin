@@ -1,31 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <sys/time.h>
 
-#include <windows.h>
+
+#ifdef WINDOWS
+	#include <windows.h>
+#else
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	typedef int SOCKET;
+	#define closesocket(close)
+#endif
 
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
 
 
-unsigned char *text2bin(unsigned int *le, char *s) {
-	char tmp[3] = "00";
-	int v, i, len = strlen(s)/2;
-	unsigned char *res = malloc(len);
-	for (i=0; i<len; i++) {
-		tmp[0] = s[2*i];
-		tmp[1] = s[2*i+1];
-		if (sscanf(tmp, "%x", &v)!=1 || v<0 || v>255) {
-			printf("Not a hex string: %s\n", s);
-			exit(1);
-		}
-		res[i] = (unsigned char)v;
-	}
-	*le = len;
-	return res;
-}
 
 static int verify(unsigned char *pkey, unsigned int pkl,
 	unsigned char *sign, unsigned int sil, unsigned char *hasz) {
@@ -56,7 +49,11 @@ int readall(SOCKET sock, unsigned char *p, int l) {
 }
 
 
+#ifdef WINDOWS
 DWORD WINAPI one_server(LPVOID par) {
+#else
+void *one_server(void *par) {
+#endif
 	unsigned char pkey[256], sign[256], hasz[32];
 	unsigned char c, pkl, sil;
 	SOCKET sock;
@@ -92,6 +89,11 @@ DWORD WINAPI one_server(LPVOID par) {
 err:
 	//printf("Closing socket %d\n", sock);
 	closesocket(sock);
+#ifdef WINDOWS
+	return 0;
+#else
+	return NULL;
+#endif
 }
 
 
@@ -132,11 +134,19 @@ int main( int argc, char **argv )
 		//printf("Socket %d connected from %s\n", clnt, inet_ntoa(addr.sin_addr));
 		void *tmp = malloc(sizeof clnt);
 		memcpy(tmp, &clnt, sizeof clnt);
+#ifdef WINDOWS
 		if (!CreateThread(NULL, 0, one_server, tmp, 0, NULL)) {
+#else
+		pthread_t tid;
+		if (pthread_create(&tid, NULL, one_server, tmp)) {
+#endif
 			fprintf( stderr, "Cannot create thread\n" );
 			free(tmp);
 			closesocket(clnt);
 		}
+#ifndef WINDOWS
+		pthread_detach(tid);
+#endif
 	}
 
 	return 0;
