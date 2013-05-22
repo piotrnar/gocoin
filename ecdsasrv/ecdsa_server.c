@@ -63,36 +63,22 @@ DWORD WINAPI one_server(LPVOID par) {
 #else
 void *one_server(void *par) {
 #endif
-	unsigned char pkey[256], sign[256], hasz[32];
-	unsigned char c, pkl, sil;
+	unsigned char buf[256];
 	SOCKET sock;
 
 	memcpy(&sock, par, sizeof sock);
 	free(par);
 
-	if (readall(sock, &c, 1)) {
+	if (readall(sock, buf, 256)) {
+		printf("Socket read error\n");
 		goto err;
 	}
+
+	//
 	//printf("Got cmd 0x%02x\n", c);
-	if (c==1) { // ECDSA verify
-		// PublicKey
-		if (readall(sock, &pkl, 1)) {
-			goto err;
-		}
-		if (readall(sock, pkey, pkl)) {
-			goto err;
-		}
-		if (readall(sock, &sil, 1)) {
-			goto err;
-		}
-		if (readall(sock, sign, sil)) {
-			goto err;
-		}
-		if (readall(sock, hasz, 32)) {
-			goto err;
-		}
-		c = (unsigned char)verify(pkey, pkl, sign, sil, hasz);
-		if (send(sock, &c, 1, 0)!=1) {
+	if (buf[0]==1) { // ECDSA verify
+		buf[0] = verify(buf+16, buf[1], buf+128, buf[2], buf+224)==1;
+		if (send(sock, buf, 1, 0)!=1) {
 			printf("Send error\n");
 		}
 	}
