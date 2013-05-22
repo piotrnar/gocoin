@@ -19,13 +19,16 @@
 #include <openssl/obj_mac.h>
 
 
+static int inport = 16667;
+static char bind_to[256] = "127.0.0.1";
+
 
 static int verify(unsigned char *pkey, unsigned int pkl,
 	unsigned char *sign, unsigned int sil, unsigned char *hasz) {
 	EC_KEY* ecpkey = EC_KEY_new_by_curve_name(NID_secp256k1);
 	if (!ecpkey) {
 		printf("EC_KEY_new_by_curve_name error!\n");
-		return -1;
+		return 0;
 	}
 	if (!o2i_ECPublicKey(&ecpkey, (const unsigned char **)&pkey, pkl)) {
 		printf("o2i_ECPublicKey fail!\n");
@@ -35,11 +38,11 @@ static int verify(unsigned char *pkey, unsigned int pkl,
 			pkl--;
 		}
 		printf("\n");
-		return -2;
+		return 0;
 	}
 	int res = ECDSA_verify(0, hasz, 32, sign, sil, ecpkey);
 	EC_KEY_free(ecpkey);
-	return res;
+	return res==1;
 }
 
 int readall(SOCKET sock, unsigned char *p, int l) {
@@ -89,7 +92,9 @@ void *one_server(void *par) {
 			goto err;
 		}
 		c = (unsigned char)verify(pkey, pkl, sign, sil, hasz);
-		send(sock, &c, 1, 0);
+		if (send(sock, &c, 1, 0)!=1) {
+			printf("Send error\n");
+		}
 	}
 
 err:
@@ -116,8 +121,8 @@ int main( int argc, char **argv )
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(16667);
-	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	addr.sin_port = htons(inport);
+	addr.sin_addr.s_addr = inet_addr(bind_to);
 
 	SOCKET sock = socket( AF_INET, SOCK_STREAM, 0 );
 	if (sock==-1) {
@@ -130,7 +135,7 @@ int main( int argc, char **argv )
 	}
 
 	listen(sock, 5);
-	printf("TCP server ready\n");
+	printf("TCP server listening at %s:%d\n", bind_to, inport);
 	prv = time(NULL);
 	while (1) {
 		int len = sizeof addr;
@@ -159,7 +164,11 @@ int main( int argc, char **argv )
 		totcnt++;
 		now = time(NULL);
 		if (now!=prv) {
-			printf("%u op / sec\n", totcnt/(unsigned int)(now-prv));
+			if (now-prv == 1) {
+				printf("%u: %u op / sec\n", (unsigned)now, totcnt/(unsigned int)(now-prv));
+			} else {
+				printf("%u: %u op\n", (unsigned)now, totcnt);
+			}
 			prv = now;
 			totcnt = 0;
 		}
