@@ -77,7 +77,7 @@ func b2i(b bool) int64 {
 func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	var vfExec scrStack
 	var altstack scrStack
-	sta, idx, nOpCount := 0, 0, 0
+	sta, idx, opcnt := 0, 0, 0
 	for idx < len(p) {
 		fExec := vfExec.empties()==0
 
@@ -100,8 +100,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		}
 
 		if opcode > 0x60 {
-			nOpCount++
-			if nOpCount > 201 {
+			opcnt++
+			if opcnt > 201 {
 				println("evalScript: too many opcodes A")
 				return false
 			}
@@ -510,6 +510,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					si := stack.pop()
 					if len(si) > 9 {
 						ok = EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1]))
+						if !ok {
+							println("EcdsaVerify fail 1")
+						}
 					}
 					if don(DBG_SCRIPT) {
 						println("ver:", ok)
@@ -530,55 +533,54 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					i := 1
-					nKeysCount := stack.topInt(-i)
-					if nKeysCount < 0 || nKeysCount > 20 {
+					keyscnt := stack.topInt(-i)
+					if keyscnt < 0 || keyscnt > 20 {
 						println("OP_CHECKMULTISIG: Wrong number of keys")
 						return false
 					}
-					nOpCount += int(nKeysCount)
-					if nOpCount > 201 {
+					opcnt += int(keyscnt)
+					if opcnt > 201 {
 						println("evalScript: too many opcodes B")
 						return false
 					}
 					i++
 					ikey := i
-					i += int(nKeysCount)
+					i += int(keyscnt)
 					if stack.size()<i {
 						println("OP_CHECKMULTISIG: Stack too short B")
 						return false
 					}
-					nSigsCount := stack.topInt(-i)
-					if nSigsCount < 0 || nSigsCount > nKeysCount {
-						println("OP_CHECKMULTISIG: nSigsCount error")
+					sigscnt := stack.topInt(-i)
+					if sigscnt < 0 || sigscnt > keyscnt {
+						println("OP_CHECKMULTISIG: sigscnt error")
 						return false
 					}
 					i++
 					isig := i
-					i += int(nSigsCount)
+					i += int(sigscnt)
 					if stack.size()<i {
 						println("OP_CHECKMULTISIG: Stack too short C")
 						return false
 					}
-					fSuccess := true
-					for nSigsCount > 0 {
+					success := true
+					for sigscnt > 0 {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
-						var fOk bool
-						if len(si)>9 {
-							fOk = EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1]))
+						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
+							if EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1])) {
+								isig++
+								sigscnt--
+							}
 						}
 
-						if fOk {
-							isig++
-							nSigsCount--
-						}
 						ikey++
-						nKeysCount--
+						keyscnt--
 
 						// If there are more signatures left than keys left,
 						// then too many signatures have failed
-						if nSigsCount > nKeysCount {
-							fSuccess = false
+						if sigscnt > keyscnt {
+							success = false
+							break
 						}
 					}
 					for i > 0 {
@@ -586,11 +588,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						stack.pop()
 					}
 					if opcode==0xaf {
-						if !fSuccess { // OP_CHECKMULTISIGVERIFY
+						if !success { // OP_CHECKMULTISIGVERIFY
 							return false
 						}
 					} else {
-						stack.pushBool(fSuccess)
+						stack.pushBool(success)
 					}
 
 				case opcode>=0xb0 && opcode<=0xb9: //OP_NOP
