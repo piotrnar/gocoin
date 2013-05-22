@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"net"
 	"testing"
 	"encoding/hex"
 )
@@ -28,33 +29,25 @@ var ta = [][3]string{
 
 func TestVerify(t *testing.T) {
 	for i := range ta {
-		b, e := hex.DecodeString(ta[i][0])
-		if e != nil {
-			panic(e.Error())
-		}
-		key, e := NewPublicKey(b[:])
+		key, e := hex.DecodeString(ta[i][0])
 		if e != nil {
 			panic(e.Error())
 		}
 
 		// signature script
-		b, e = hex.DecodeString(ta[i][1])
-		if e != nil {
-			panic(e.Error())
-		}
-		sig, e := NewSignature(b[:])
+		sig, e := hex.DecodeString(ta[i][1])
 		if e != nil {
 			panic(e.Error())
 		}
 
 		// hash of the message
-		b, e = hex.DecodeString(ta[i][2] + "01000000")
+		b, e := hex.DecodeString(ta[i][2] + "01000000")
 		if e != nil {
 			panic(e.Error())
 		}
 		h := NewSha2Hash(b[:])
 
-		ok := key.Verify(h.Hash[:], sig)
+		ok := EcdsaVerify(key, sig, h.Hash[:])
 		if !ok {
 			t.Error("Test vector failed", i)
 		}
@@ -71,13 +64,16 @@ func BenchmarkNewSignature(b *testing.B) {
 
 
 func BenchmarkVerify(b *testing.B) {
-	ptr, _ := hex.DecodeString(ta[0][0])
-	key, _ := NewPublicKey(ptr[:])
-	ptr, _ = hex.DecodeString(ta[0][1])
-	sig, _ := NewSignature(ptr[:])
-	ptr, _ = hex.DecodeString(ta[0][2] + "01000000")
+	if false {
+		EcdsaServer = &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(16667)}
+	}
+	key, _ := hex.DecodeString(ta[0][0])
+	sig, _ := hex.DecodeString(ta[0][1])
+	ptr, _ := hex.DecodeString(ta[0][2] + "01000000")
 	h := NewSha2Hash(ptr[:])
 	for i := 0; i < b.N; i++ {
-		key.Verify(h.Hash[:], sig)
+		if !EcdsaVerify(key, sig, h.Hash[:]) {
+			b.Error("Verify failed")
+		}
 	}
 }
