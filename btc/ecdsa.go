@@ -9,6 +9,7 @@ import (
 var (
 	EcdsaServer *net.TCPAddr
 	VerScriptCnt uint64
+	EC_Verify func(k, s, h []byte) bool
 )
 
 // Use ECDSA_server
@@ -42,7 +43,7 @@ func NetVerify(kd []byte, sd []byte, h []byte) bool {
 
 
 // Use crypto/ecdsa
-func NormalVerify(kd []byte, sd []byte, h []byte) bool {
+func GoVerify(kd []byte, sd []byte, h []byte) bool {
 	pk, e := NewPublicKey(kd)
 	if e != nil {
 		return false
@@ -61,10 +62,13 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 		return false
 	}
 	atomic.AddUint64(&VerScriptCnt, 1)
+	if EC_Verify!=nil {
+		return EC_Verify(kd, sd, hash)
+	}
 	if EcdsaServer!=nil {
 		return NetVerify(kd, sd, hash)
 	}
-	return NormalVerify(kd, sd, hash)
+	return GoVerify(kd, sd, hash)
 }
 
 
