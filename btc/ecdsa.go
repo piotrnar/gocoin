@@ -13,21 +13,31 @@ var (
 
 // Use ECDSA_server
 func NetVerify(kd []byte, sd []byte, h []byte) bool {
-	var res [1]byte
+	//var res [1]byte
+	var buf [256]byte
 	conn, e := net.DialTCP("tcp4", nil, EcdsaServer)
 	if e != nil {
 		println(e.Error())
 		return false
 	}
-	conn.Write([]byte{1})
-	conn.Write([]byte{byte(len(kd))})
-	conn.Write(kd)
-	conn.Write([]byte{byte(len(sd))})
-	conn.Write(sd)
-	conn.Write(h[0:32])
-	conn.Read(res[:])
+	buf[0] = 1
+	buf[1] = byte(len(kd))
+	buf[2] = byte(len(sd))
+	copy(buf[16:], kd)
+	copy(buf[128:], sd)
+	copy(buf[224:], h)
+	_, e = conn.Write(buf[:])
+	if e != nil {
+		println("NetVerify", e.Error())
+		return false
+	}
+	_, e = conn.Read(buf[:1])
 	conn.Close()
-	return res[0]!=0
+	if e != nil {
+		println("NetVerify", e.Error())
+		return false
+	}
+	return buf[0]!=0
 }
 
 
@@ -46,6 +56,10 @@ func NormalVerify(kd []byte, sd []byte, h []byte) bool {
 
 
 func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
+	if len(kd)>65 || len(sd)>96 || len(hash)!=32 {
+		println("EcdsaVerify input len error", len(kd), len(sd), len(hash))
+		return false
+	}
 	atomic.AddUint64(&VerScriptCnt, 1)
 	if EcdsaServer!=nil {
 		return NetVerify(kd, sd, hash)
