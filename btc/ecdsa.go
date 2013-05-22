@@ -11,6 +11,7 @@ var (
 	VerScriptCnt uint64
 )
 
+// Use ECDSA_server
 func NetVerify(kd []byte, sd []byte, h []byte) bool {
 	var res [1]byte
 	conn, e := net.DialTCP("tcp4", nil, EcdsaServer)
@@ -30,6 +31,7 @@ func NetVerify(kd []byte, sd []byte, h []byte) bool {
 }
 
 
+// Use crypto/ecdsa
 func NormalVerify(kd []byte, sd []byte, h []byte) bool {
 	pk, e := NewPublicKey(kd)
 	if e != nil {
