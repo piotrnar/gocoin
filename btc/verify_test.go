@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"net"
 	"testing"
 	"encoding/hex"
 )
@@ -64,9 +63,6 @@ func BenchmarkNewSignature(b *testing.B) {
 
 
 func BenchmarkVerify(b *testing.B) {
-	if false {
-		EcdsaServer = &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(16667)}
-	}
 	key, _ := hex.DecodeString(ta[0][0])
 	sig, _ := hex.DecodeString(ta[0][1])
 	ptr, _ := hex.DecodeString(ta[0][2] + "01000000")
