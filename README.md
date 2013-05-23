@@ -64,8 +64,8 @@ For anyone familiar with Go language, building should not be a problem. You can 
 After you have the sources in your local disk, building them is usually as simple as executing "go build", in either the client or the wallet directory.
 
 
-Use OpenSSL wrapper
-==============
+OpenSSL wrapper
+--------------
 EC operations built into Go are very slow, comparing to OpenSSL, therefore it is strongly advised to use an OpenSLL cgo wrapper. In order to do this copy file “client/speedup/openssl.go” to the “client/” folder and redo “go build” there.
 
 On Linux this should go smoothly, as long as you have openssl-dev installed.
