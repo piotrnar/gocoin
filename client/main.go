@@ -3,12 +3,9 @@ package main
 import (
 	"os"
 	"fmt"
-	"net"
 	"flag"
 	"time"
 	"sync"
-	"strings"
-	"strconv"
 	"runtime"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
@@ -28,8 +25,6 @@ var (
 	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
-
-	ecdsa *string = flag.String("ecdsa", "", "Use this ECDSA server (ip:port)")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -341,6 +336,7 @@ func main() {
 
 	fmt.Println("Gocoin client version", btc.SourcesTag)
 	fmt.Println("Send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt if you support this project")
+	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
@@ -351,27 +347,6 @@ func main() {
 	UploadLimit = *maxul << 10
 	DownloadLimit = *maxdl << 10
 
-	if *ecdsa != "" {
-		fmt.Println("Using ECDSA server at", *ecdsa)
-		ips := strings.Split(*ecdsa, ":")
-		if len(ips)!=2 {
-			println("-ecdsa parem must be ip:port")
-			os.Exit(1)
-		}
-		port, e := strconv.ParseUint(ips[1], 10, 32)
-		if e != nil {
-			println(e.Error())
-			return
-		}
-		ip := net.ParseIP(ips[0])
-		if ip!=nil && len(ip)==16 {
-			btc.EcdsaServer = &net.TCPAddr{IP: ip, Port : int(port)}
-		} else {
-			fmt.Println("IP Parse error")
-		}
-	}
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	host_init()
 
 	// load default wallet and its balance
