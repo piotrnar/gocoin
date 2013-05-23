@@ -52,7 +52,7 @@ func set_dlmax(par string) {
 }
 
 
-func bw_stats(par string) {
+func bw_stats() {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
@@ -66,7 +66,6 @@ func bw_stats(par string) {
 
 
 func init() {
-	newUi("bw", false, bw_stats, "Show network bandwidth statistics")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 }
