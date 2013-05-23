@@ -146,7 +146,7 @@ func send_all_tx(par string) {
 }
 
 func init () {
-	newUi("ltxoad tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
+	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
