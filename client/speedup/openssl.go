@@ -24,5 +24,6 @@ func EC_Verify(k, s, h []byte) bool {
 }
 
 func init() {
+	fmt.Println("Using OpenSSL wrapper for libcrypto.a")
 	btc.EC_Verify = EC_Verify
 }
