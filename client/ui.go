@@ -160,7 +160,8 @@ func show_info(par string) {
 		fmt.Println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
-	fmt.Println("Threads:", btc.UseThreads, "  Uptime:", time.Now().Sub(StartTime).String())
+	fmt.Println("Threads:", btc.UseThreads, "  Uptime:", time.Now().Sub(StartTime).String(),
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
 }
 
 
