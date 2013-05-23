@@ -19,6 +19,10 @@ var (
 )
 
 func load_tx(par string) {
+	if par=="" {
+		fmt.Println("Specify a name of a transaction file")
+		return
+	}
 	f, e := os.Open(par)
 	if e != nil {
 		println(e.Error())
