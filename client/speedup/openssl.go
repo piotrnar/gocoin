@@ -15,6 +15,7 @@ package main
 */
 
 import (
+	"fmt"
 	"github.com/piotrnar/gocoin/openssl"
 	"github.com/piotrnar/gocoin/btc"
 )
