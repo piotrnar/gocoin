@@ -2,7 +2,7 @@ package openssl
 
 /*
 #cgo LDFLAGS: -lcrypto
-#cgo windows LDFLAGS: -L . -lz -lgdi32
+#cgo windows LDFLAGS: -L . libcrypto.a -lgdi32
 #cgo windows CFLAGS: -I .
 
 #include <stdio.h>
