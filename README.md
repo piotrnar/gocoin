@@ -70,7 +70,7 @@ EC operations built into Go are very slow, comparing to OpenSSL, therefore it is
 
 On Linux this should go smoothly, as long as you have openssl-dev installed.
 
-On Windows, you will need a proper mingw+msys environment, the openssl lib build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
+On Windows, you will need a proper mingw(64) and MSys environment, the openssl lib (libcrypto.a) build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
 
 
 User Manual
