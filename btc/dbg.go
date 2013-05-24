@@ -10,7 +10,7 @@ const (
 	DBG_VERIFY = 1<<6
 )
 
-var dbgmask uint32 = DBG_ORPHAS
+var dbgmask uint32 = 0
 
 func don(b uint32) bool {
 	return (dbgmask&b)!=0
