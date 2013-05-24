@@ -49,7 +49,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 			" exp:", gnwr)
 
 		// Here is a "solution" for whatever shit there is in testnet3, that nobody can explain me:
-		if !ch.testnet || ((prevblk.Height+1)%2016)!=0 {
+		if !ch.testnet() || ((prevblk.Height+1)%2016)!=0 {
 			er = errors.New("CheckBlock: incorrect proof of work")
 			dos = true
 			return
