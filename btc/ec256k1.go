@@ -266,11 +266,7 @@ var initonce sync.Once
 var secp256k1 *BitCurve
 var Qplus1div4 *big.Int  // This is used by key.go:decompressPoint()
 
-func initAll() {
-	initS256()
-}
-
-func initS256() {
+func init() {
 	// See SEC 2 section 2.7.1
 	secp256k1 = new(BitCurve)
 	secp256k1.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
@@ -284,6 +280,5 @@ func initS256() {
 
 // S256 returns a BitCurve which implements secp256k1 (see SEC 2 section 2.7.1)
 func S256() *BitCurve {
-	initonce.Do(initAll)
 	return secp256k1
 }
