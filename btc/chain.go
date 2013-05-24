@@ -23,7 +23,6 @@ type Chain struct {
 
 // This is the very first function one should call in order to use this package
 func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
-	testnet = genesis.Hash[0]==0x43 // it's simple, but works
 
 	ch = new(Chain)
 	ch.Genesis = genesis
@@ -51,6 +50,7 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 }
 
 
+// Forces all database changes to be flushed to disk.
 func (ch *Chain) Sync() {
 	ch.DoNotSync = false
 	ch.Blocks.Sync()
@@ -58,16 +58,21 @@ func (ch *Chain) Sync() {
 }
 
 
+// Call this function periodically (i.e. each second)
+// when your client is idle, to defragment databases.
 func (ch *Chain) Idle() {
 	ch.Unspent.Idle()
 }
 
+
+// Save all the databases. Defragment when needed.
 func (ch *Chain) Save() {
 	ch.Blocks.Sync()
 	ch.Unspent.Save()
 }
 
 
+// Returns detauils of an unspent output, it there is such.
 func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 	o, e := ch.Unspent.UnspentGet(txin)
 	if e == nil {
@@ -77,7 +82,8 @@ func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
 }
 
 
-func (ch *Chain)Stats() (s string) {
+// Return blockchain stats in one string.
+func (ch *Chain) Stats() (s string) {
 	ch.BlockIndexAccess.Lock()
 	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n",
 		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height)
@@ -88,14 +94,22 @@ func (ch *Chain)Stats() (s string) {
 }
 
 
+// Close the databases.
 func (ch *Chain) Close() {
 	ch.Blocks.Close()
 	ch.Unspent.Close()
 }
+
 
 // Returns list of unspent output from given address
 // In the quick mode we only look for: 76 a9 14 [HASH160] 88 AC
 func (ch *Chain) GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx {
 	unsp := ch.Unspent.GetAllUnspent(addr, quick)
 	return unsp
+}
+
+
+// Returns true if we are on Testnet3 chain
+func (ch *Chain) testnet() bool {
+	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
 }
