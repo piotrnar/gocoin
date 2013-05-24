@@ -71,15 +71,15 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	} else {
 		// The block's parent is not the current head of the chain...
 
-		// Save the block, though do not makt it as "trusted"
+		// Save the block, though do not makt it as "trusted" just yet
 		ch.Blocks.BlockAdd(cur.Height, bl)
-		if don(DBG_BLOCKS|DBG_ORPHAS) {
-			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
-		}
 
-		// If it has a bigger height than the current head, move coinstate to the new branch
+		// If it has a bigger height than the current head,
+		// ... move the coin state into a new branch.
 		if cur.Height > ch.BlockTreeEnd.Height {
 			ch.MoveToBlock(cur)
+		} else if don(DBG_BLOCKS|DBG_ORPHAS) {
+			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
 	}
 
