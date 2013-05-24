@@ -372,11 +372,17 @@ func main() {
 
 	var newbl *blockRcvd
 	for !exit_now {
-		if retryCachedBlocks {
+		CountSafe("MainThreadLoops")
+		for retryCachedBlocks {
 			retryCachedBlocks = retry_cached_blocks()
+			// We have done one per loop - now do something else if pending...
+			if len(netBlocks)>0 && len(uiChannel)>0 {
+				break
+			}
 		}
 
 		Busy("")
+
 		select {
 			case newbl = <-netBlocks:
 				break
@@ -388,8 +394,8 @@ func main() {
 				uicmddone <- true
 				continue
 
-			case <-time.After(100*time.Millisecond):
-				CountSafe("MainThreadTicks")
+			case <-time.After(time.Second):
+				CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
 					Busy("BlockChain.Idle()")
 					BlockChain.Idle()
