@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"net"
 	"time"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
@@ -20,13 +19,10 @@ const THREADS = 8
 func main() {
 	if len(os.Args)>1 {
 		switch os.Args[1] {
-			case "tcp":
-				btc.EcdsaServer = &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: int(16667)}
-				CNT *= 20
 			case "openssl":
 				btc.EC_Verify = EC_Verify
 			default:
-				println("Specify either tcp or openssl as the only parameter")
+				println("The only allowed parameter is openssl")
 				return
 		}
 	}
