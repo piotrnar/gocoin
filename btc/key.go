@@ -208,3 +208,27 @@ func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 
 	return
 }
+
+
+// Returns serialized canoncal signature
+func (sig *Signature) Bytes() []byte {
+	r := sig.R.Bytes()
+	if r[0]>=0x80 {
+		r = append([]byte{0}, r...)
+	}
+	s := sig.S.Bytes()
+	if s[0]>=0x80 {
+		s = append([]byte{0}, s...)
+	}
+	res := new(bytes.Buffer)
+	res.WriteByte(0x30)
+	res.WriteByte(byte(4+len(r)+len(s)))
+	res.WriteByte(0x02)
+	res.WriteByte(byte(len(r)))
+	res.Write(r)
+	res.WriteByte(0x02)
+	res.WriteByte(byte(len(s)))
+	res.Write(s)
+	res.WriteByte(sig.HashType)
+	return res.Bytes()
+}
