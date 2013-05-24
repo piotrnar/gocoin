@@ -23,7 +23,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		for i := range MyWallet.addrs {
 			if MyWallet.addrs[i].Owns(valpk.Pk_script) {
 				if dbg>0 {
-					fmt.Println(" +", idx.String(), valpk.String())
+					fmt.Println(" +", idx.String(), valpk.String(AddrVersion))
 				}
 				MyBalance = append(MyBalance, btc.OneUnspentTx{TxPrevOut:*idx,
 					Value:valpk.Value, MinedAt:valpk.BlockHeight, BtcAddr:MyWallet.addrs[i]})
