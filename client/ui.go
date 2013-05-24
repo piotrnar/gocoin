@@ -150,6 +150,11 @@ func show_info(par string) {
 		"   NumGC:", gs.NumGC,
 		"   PauseTotal:", gs.PauseTotal.String())
 
+	fmt.Println("Gocoin:", btc.SourcesTag,
+		"  Threads:", btc.UseThreads,
+		"  Uptime:", time.Now().Sub(StartTime).String(),
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
+
 	mutex.Lock()
 	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n",
 		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
@@ -160,9 +165,6 @@ func show_info(par string) {
 		fmt.Println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
-	bw_stats()
-	fmt.Println("Threads:", btc.UseThreads, "  Uptime:", time.Now().Sub(StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
 }
 
 
