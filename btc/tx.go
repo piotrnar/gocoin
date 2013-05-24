@@ -53,13 +53,9 @@ type AddrValue struct {
 }
 
 
-func (to *TxOut) String() (s string) {
+func (to *TxOut) String(ver byte) (s string) {
 	s = fmt.Sprintf("%.8f BTC", float64(to.Value)/1e8)
 	s += fmt.Sprint(" in block ", to.BlockHeight)
-	ver := ADDRVER_BTC
-	if testnet {
-		ver = ADDRVER_TESTNET
-	}
 	a := NewAddrFromPkScript(to.Pk_script, ver)
 	if a != nil {
 		s += " to "+a.String()
