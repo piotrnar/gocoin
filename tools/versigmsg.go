@@ -47,14 +47,15 @@ func main() {
 
 	pub := btcsig.RecoverPublicKey(hash[:], int(nv-27))
 	if pub != nil {
-		sa := btc.NewAddrFromPubkey(pub.Bytes(compressed), ad.Version)
-		ok := pub.Verify(hash, btcsig)
+		pk := pub.Bytes(compressed)
+		ok := btc.EcdsaVerify(pk, btcsig.Bytes(), hash)
 		if ok {
+			sa := btc.NewAddrFromPubkey(pk, ad.Version)
 			if ad.Hash160!=sa.Hash160 {
 				fmt.Println("BAD signature for", ad.String())
 				os.Exit(1)
 			} else {
-				fmt.Println("Good signature for", sa.String(), len(msg))
+				fmt.Println("Good signature for", sa.String())
 			}
 		} else {
 			println("BAD signature")
