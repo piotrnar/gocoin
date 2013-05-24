@@ -1,22 +1,16 @@
 package btc
 
 import (
-//	"fmt"
-	"errors"
 	"math/big"
 )
 
+var bnProofOfWorkLimit *big.Int // it's var but used as a constant
 
 const (
 	nTargetTimespan = 14 * 24 * 60 * 60 // two weeks
 	nTargetSpacing = 10 * 60
 	nInterval = nTargetTimespan / nTargetSpacing
 	nProofOfWorkLimit = 0x1d00ffff
-)
-
-var (
-	bnProofOfWorkLimit *big.Int
-	testnet bool
 )
 
 
@@ -53,32 +47,15 @@ func GetDifficulty(nBits uint32) (dDiff float64) {
 }
 
 
-func CheckProofOfWork(hash *Uint256, nBits uint32) error {
-	bnTarget := SetCompact(nBits)
-
-	if bnTarget.Cmp(big.NewInt(0)) <= 0 || bnTarget.Cmp(bnProofOfWorkLimit) > 0 {
-		return errors.New("CheckProofOfWork() : nBits below minimum work")
-	}
-
-	// Check proof of work matches claimed amount
-	if bnTarget.Cmp(hash.BigInt()) < 0 {
-		return errors.New("CheckProofOfWork() : hash doesn't match nBits")
-	}
-
-	return nil
-}
-
-func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
-
+func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	// Genesis block
 	if lst.Parent == nil {
 		return nProofOfWorkLimit
 	}
 
 	if ((lst.Height+1) % nInterval) != 0 {
-		//println("*newdiff")
 		// Special difficulty rule for testnet:
-		if testnet {
+		if ch.testnet() {
 			// If the new block's timestamp is more than 2* 10 minutes
 			// then allow mining of a min-difficulty block.
 			if ts > lst.Timestamp + nTargetSpacing*2 {
@@ -101,7 +78,6 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	}
 
 	nActualTimespan := int64(lst.Timestamp - prv.Timestamp)
-	//println("  nActualTimespan =", nActualTimespan, " before bounds")
 
 	if nActualTimespan < nTargetTimespan/4 {
 		nActualTimespan = nTargetTimespan/4
@@ -120,17 +96,6 @@ func GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32) {
 	}
 
 	res = GetCompact(bnNew)
-	/*
-	fmt.Printf("Block %d: diff %.2f => %.2f\n", lst.Height+1,
-		GetDifficulty(lst.Bits), GetDifficulty(res))*/
-
-	/*
-	fmt.Printf("GetNextWorkRequired RETARGET\n");
-	fmt.Printf("GetNextWorkRequired RETARGET\n");
-	fmt.Printf("nTargetTimespan = %d    nActualTimespan = %d\n", nTargetTimespan, nActualTimespan)
-	fmt.Printf("Before: %08x\n", lst.Parent.Bits)
-	fmt.Printf("After:  %08x\n", GetCompact(bnNew))
-	*/
 
 	return
 }
@@ -160,7 +125,6 @@ func GetCompact(b *big.Int) uint32 {
 	}
 	return nCompact
 }
-
 
 func init() {
 	bnProofOfWorkLimit, _ = new(big.Int).SetString("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
