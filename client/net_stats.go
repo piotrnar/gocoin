@@ -54,7 +54,10 @@ func bts(val uint64) {
 
 
 func net_stats(par string) {
-	if par!="" {
+	if par=="bw" {
+		bw_stats()
+		return
+	} else if par!="" {
 		node_info(par)
 		return
 	}
@@ -94,6 +97,7 @@ func net_stats(par string) {
 		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
 	}
 	mutex.Unlock()
+	bw_stats()
 }
 
 
