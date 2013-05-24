@@ -123,7 +123,6 @@ func AcceptBlock(bl *btc.Block) (e error) {
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
 	if e == nil {
-		LastBlock = BlockChain.BlockTreeEnd
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
@@ -138,6 +137,13 @@ func AcceptBlock(bl *btc.Block) (e error) {
 		if mined_by_aminer(bl.Raw) {
 			fmt.Println("\007Mined by ASICMINER:", LastBlock.Height)
 			ui_show_prompt()
+		}
+		if LastBlock == BlockChain.BlockTreeEnd {
+			// last block has not changes - it must have been an orphaned block
+			fmt.Println("\007Orphaned block:", LastBlock.Height, LastBlock.BlockHash.String())
+			ui_show_prompt()
+		} else {
+			LastBlock = BlockChain.BlockTreeEnd
 		}
 	}
 	return
