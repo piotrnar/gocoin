@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"bytes"
 	"testing"
 	"encoding/hex"
 )
@@ -18,9 +19,6 @@ var ta = [][3]string{
 	},
 	{
 		"0428f42723f81c70664e200088437282d0e11ae0d4ae139f88bdeef1550471271692970342db8e3f9c6f0123fab9414f7865d2db90c24824da775f00e228b791fd",
-		//"3045022100e326cfb347fb9bdc5f1c096ebf1770955148f7d7facacb7556b191f0c8fc0d57022100bc6b94594b9c709560c43126f6928ea1c0de1c0974c9c8291362581324f0d72601",
-		//"30450221035512730b8c779459b5e4e56fc76069a9baa592a7ddcb54e9454323eee08890022100b5c81f6549f9fb14d6a7129b0ea2d1541ec97632cc407706ac8a1622ae219c9b",
-		//"3045022100c6ddd96158b9b5f252c30c580e0265b6a9702e08a0715b0381faff4073630af8022100bc85376c14b3c46c55f7a7819721ee640bb9c2cf68ac321e5a6b097be982e62d01",
 		"3045022100d557da5d9bf886e0c3f98fd6d5d337487cd01d5b887498679a57e3d32bd5d0af0220153217b63a75c3145b14f58c64901675fe28dba2352c2fa9f2a1579c74a2de1701",
 		"0100000001402a2443bb5f1d8582ac06e1cc4232a75ba98c3db339ab4e036b8a0ed7e9e602010000001976a9143ad4ff2b7712c0c41a46324031bc7e55e4341f1a88acffffffff0100e1f505000000001976a91440e6fd9a591bb2e6ce886b317959fb3ffa906f6988ac00000000",
 	},
@@ -30,19 +28,31 @@ func TestVerify(t *testing.T) {
 	for i := range ta {
 		key, e := hex.DecodeString(ta[i][0])
 		if e != nil {
-			panic(e.Error())
+			t.Error(e.Error())
 		}
 
 		// signature script
 		sig, e := hex.DecodeString(ta[i][1])
 		if e != nil {
-			panic(e.Error())
+			t.Error(e.Error())
+		}
+
+		// verify signature.Bytes()
+		_s, e := NewSignature(sig)
+		if e != nil {
+			t.Error(e.Error())
+		} else if _s == nil {
+			t.Error("NewSignature failed")
+		} else {
+			if !bytes.Equal(_s.Bytes(), sig) {
+				t.Error("Signature.Bytes() not equal")
+			}
 		}
 
 		// hash of the message
 		b, e := hex.DecodeString(ta[i][2] + "01000000")
 		if e != nil {
-			panic(e.Error())
+			t.Error(e.Error())
 		}
 		h := NewSha2Hash(b[:])
 
