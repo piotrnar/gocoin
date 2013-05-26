@@ -165,6 +165,8 @@ func show_info(par string) {
 		fmt.Println("BlockChain thread is currently idle")
 	}
 	mutex.Unlock()
+
+	bw_stats()
 }
 
 
