@@ -1,12 +1,11 @@
 package main
 
 import (
+	"sync"
+	"time"
 	"fmt"
 	"net"
-	"time"
-	"sync"
 	"strconv"
-	"sync/atomic"
 )
 
 var (
@@ -57,17 +56,11 @@ func bw_stats() {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	dlb := dl_bytes_prv_sec
-	ulb := dl_bytes_prv_sec
-	if dlb<0 {
-		dlb = 0
-	}
-	if ulb<0 {
-		ulb = 0
-	}
+	fmt.Printf("Downloading at %d/%d KB/s, %d MB total\n",
+		dl_bytes_prv_sec>>10, DownloadLimit>>10, dl_bytes_total>>20)
+	fmt.Printf("Uploading at %d/%d KB/s, %d MB total\n",
+		ul_bytes_prv_sec>>10, UploadLimit>>10, ul_bytes_total>>20)
 	bw_mutex.Unlock()
-	fmt.Printf("Downloading at %d/%d KB/s, %d MB total", dlb>>10, DownloadLimit>>10, dl_bytes_total>>20)
-	fmt.Printf("  |  Uploading at %d/%d KB/s, %d MB total\n", ulb>>10, UploadLimit>>10, ul_bytes_total>>20)
 	return
 }
 
@@ -103,20 +96,15 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	dl_bytes_so_far += toread
+	dl_bytes_total += uint64(toread)
 	bw_mutex.Unlock()
 
 	if toread>0 {
 		// Wait 1 millisecond for a data, timeout if nothign there
 		con.SetReadDeadline(time.Now().Add(time.Millisecond))
 		n, e = con.Read(buf[:toread])
-		atomic.AddUint64(&dl_bytes_total, uint64(n))
-		if n<toread {
-			bw_mutex.Lock()
-			dl_bytes_so_far -= toread-n
-			bw_mutex.Unlock()
-		}
 	} else {
-		// supsend the task for awhile, to prevent stucking in a busy loop
+		// supsend a task for awhile, to prevent stucking in a busy loop
 		time.Sleep(10*time.Millisecond)
 	}
 	return
@@ -149,25 +137,18 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	ul_bytes_so_far += tosend
+	ul_bytes_total += uint64(tosend)
 	bw_mutex.Unlock()
-
 	if tosend > 0 {
 		// This timeout is to prevent net thread from getting stuck in con.Write()
 		con.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
 		n, e = con.Write(buf[:tosend])
-		atomic.AddUint64(&ul_bytes_total, uint64(n))
-		if n<tosend {
-			bw_mutex.Lock()
-			ul_bytes_so_far -= tosend-n
-			bw_mutex.Unlock()
-		}
 		if e != nil {
 			if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
 				e = nil
 			}
 		}
 	} else {
-		// supsend the task for awhile, to prevent stucking in a busy loop
 		time.Sleep(10*time.Millisecond)
 	}
 	return
