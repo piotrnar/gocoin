@@ -156,8 +156,9 @@ func show_info(par string) {
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
 
 	mutex.Lock()
-	fmt.Printf("BlocksCached: %d,   BlocksPending: %d/%d,   NetQueueSize: %d,   NetConns: %d\n",
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons))
+	fmt.Printf("BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
+		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons),
+		peerDB.Count())
 	// Main thread activity:
 	if busy!="" {
 		fmt.Println("BlockChain thread is busy with", busy)
