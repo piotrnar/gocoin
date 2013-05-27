@@ -66,8 +66,8 @@ func bw_stats() {
 		ulb = 0
 	}
 	bw_mutex.Unlock()
-	fmt.Printf("Downloading at %d/%d KB/s, %d MB total \t", dlb>>10, DownloadLimit>>10, dl_bytes_total>>20)
-	fmt.Printf("Uploading at %d/%d KB/s, %d MB total\n", ulb>>10, UploadLimit>>10, ul_bytes_total>>20)
+	fmt.Printf("Downloading at %d/%d KB/s, %d MB total", dlb>>10, DownloadLimit>>10, dl_bytes_total>>20)
+	fmt.Printf("  |  Uploading at %d/%d KB/s, %d MB total\n", ulb>>10, UploadLimit>>10, ul_bytes_total>>20)
 	return
 }
 
