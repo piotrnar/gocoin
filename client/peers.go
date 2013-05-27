@@ -179,15 +179,19 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
-			k := qdb.KeyType(a.UniqID())
-			v := peerDB.Get(k)
-			if v != nil {
-				a.Banned = newPeer(v[:]).Banned
+		if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
+			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
+				k := qdb.KeyType(a.UniqID())
+				v := peerDB.Get(k)
+				if v != nil {
+					a.Banned = newPeer(v[:]).Banned
+				}
+				peerDB.Put(k, a.Bytes())
+			} else {
+				CountSafe("AddrStale")
 			}
-			peerDB.Put(k, a.Bytes())
 		} else {
-			CountSafe("AddrStale")
+			CountSafe("AddrInFuture")
 		}
 	}
 }
@@ -212,6 +216,9 @@ func getBestPeer() (p *onePeer) {
 		}
 		return true
 	})
+	if dbg > 1 {
+		fmt.Println("Best addr", p.Ip(), "seen", (time.Now().Unix()-int64(best_time))/60, "min ago")
+	}
 
 	return
 }
