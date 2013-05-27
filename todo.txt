@@ -1,1 +1,2 @@
 * make the scripts to work with big numbers (now there is int64 limit)
+* check why new version of bwlimit.go does not work right
