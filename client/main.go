@@ -340,10 +340,14 @@ func main() {
 	var sta int64
 	var retryCachedBlocks bool
 
+	if btc.EC_Verify==nil {
+		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable OpenSSL wrapper if possible.")
+		fmt.Println("         Look for the instruction in README.md or in client/speedup folder.")
+	}
+
 	fmt.Println("Gocoin client version", btc.SourcesTag)
 	fmt.Println("Send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt if you support this project")
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
 		os.Exit(0)
