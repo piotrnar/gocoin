@@ -153,7 +153,8 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", btc.SourcesTag,
 		"  Threads:", btc.UseThreads,
 		"  Uptime:", time.Now().Sub(StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
+		"  Height:", LastBlock.Height)
 
 	mutex.Lock()
 	fmt.Printf("BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
