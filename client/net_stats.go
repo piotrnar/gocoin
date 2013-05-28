@@ -44,12 +44,13 @@ func look2conn(par string) (c *oneConnection) {
 }
 
 
-func bts(val uint64) {
-	if val < 1e4*1024 {
-		fmt.Printf("%8.1f k ", float64(val)/1024)
-	} else {
-		fmt.Printf("%8.1f MB", float64(val)/(1024*1024))
+func bts(val uint64) string {
+	if val < 1e6 {
+		return fmt.Sprintf("%.1f KB", float64(val)/1e3)
+	} else if val < 1e9 {
+		return fmt.Sprintf("%.2f MB", float64(val)/1e6)
 	}
+	return fmt.Sprintf("%.2f GB", float64(val)/1e9)
 }
 
 
@@ -84,8 +85,7 @@ func net_stats(par string) {
 		fmt.Printf(" %21s %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
 			v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
 		if (v.BytesReceived|v.BytesSent)!=0 {
-			bts(v.BytesReceived)
-			bts(v.BytesSent)
+			fmt.Printf("%9s %9s", bts(v.BytesReceived), bts(v.BytesSent))
 		}
 		fmt.Print("  ", v.node.agent)
 		if v.send.buf !=nil {
