@@ -56,9 +56,9 @@ func bw_stats() {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	fmt.Printf("Downloading at %d/%d KB/s, %d MB total\n",
+	fmt.Printf("Downloading at %d/%d KB/s, %d MB total",
 		dl_bytes_prv_sec>>10, DownloadLimit>>10, dl_bytes_total>>20)
-	fmt.Printf("Uploading at %d/%d KB/s, %d MB total\n",
+	fmt.Printf(" | Uploading at %d/%d KB/s, %d MB total\n",
 		ul_bytes_prv_sec>>10, UploadLimit>>10, ul_bytes_total>>20)
 	bw_mutex.Unlock()
 	return
@@ -137,7 +137,7 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	ul_bytes_so_far += tosend
-	ul_bytes_total += uint64(tosend)
+	now := ul_last_sec
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// This timeout is to prevent net thread from getting stuck in con.Write()
@@ -148,6 +148,12 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 				e = nil
 			}
 		}
+		bw_mutex.Lock()
+		ul_bytes_total += uint64(n)
+		if n < tosend && now == ul_last_sec {
+			ul_bytes_so_far -= tosend-n
+		}
+		bw_mutex.Unlock()
 	} else {
 		time.Sleep(10*time.Millisecond)
 	}
