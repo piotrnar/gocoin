@@ -8,22 +8,21 @@ import (
 	"strconv"
 )
 
-const ticksPerSecond = 8
-
 var (
 	bw_mutex sync.Mutex
 
-	dl_last_period int64
+	dl_last_sec int64
 	dl_bytes_so_far int
-	dl_bytes_prv_sec int
+
+	dl_bytes_prv_sec, dl_bytes_priod uint64
 	dl_bytes_total uint64
 
-	UploadLimit uint   // in max bytes transmietted within a whole second
-	DownloadLimit uint // in max bytes transmietted within a whole second
+	UploadLimit uint
+	DownloadLimit uint
 
-	ul_last_period int64
+	ul_last_sec int64
 	ul_bytes_so_far int
-	ul_bytes_prv_sec int
+	ul_bytes_prv_sec, ul_bytes_priod uint64
 	ul_bytes_total uint64
 )
 
@@ -58,10 +57,10 @@ func bw_stats() {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	fmt.Printf("Downloading at %d/%d KB/s, %d MB total",
-		dl_bytes_prv_sec>>10, DownloadLimit>>10, dl_bytes_total>>20)
-	fmt.Printf(" | Uploading at %d/%d KB/s, %d MB total\n",
-		ul_bytes_prv_sec>>10, UploadLimit>>10, ul_bytes_total>>20)
+	fmt.Printf("Downloading at %d/%d KB/s, %s total",
+		dl_bytes_prv_sec>>10, DownloadLimit>>10, bts(dl_bytes_total))
+	fmt.Printf("  |  Uploading at %d/%d KB/s, %s total\n",
+		ul_bytes_prv_sec>>10, UploadLimit>>10, bts(ul_bytes_total))
 	bw_mutex.Unlock()
 	return
 }
@@ -74,15 +73,31 @@ func init() {
 
 
 func tick_recv() {
-	now := time.Now().UnixNano() / (1e9/ticksPerSecond)
-	if now != dl_last_period {
-		if dl_bytes_so_far < 0 || (now-dl_last_period) != 1 {
-			dl_bytes_prv_sec = 0
+	now := time.Now().Unix()
+	if now != dl_last_sec {
+		if now - dl_last_sec == 1 {
+			dl_bytes_prv_sec = dl_bytes_priod
 		} else {
-			dl_bytes_prv_sec = dl_bytes_so_far
+			dl_bytes_prv_sec = 0
 		}
+		dl_bytes_priod = 0
 		dl_bytes_so_far = 0
-		dl_last_period = now
+		dl_last_sec = now
+	}
+}
+
+
+func tick_sent() {
+	now := time.Now().Unix()
+	if now != ul_last_sec {
+		if now - ul_last_sec == 1 {
+			ul_bytes_prv_sec = ul_bytes_priod
+		} else {
+			ul_bytes_prv_sec = 0
+		}
+		ul_bytes_priod = 0
+		ul_bytes_so_far = 0
+		ul_last_sec = now
 	}
 }
 
@@ -94,7 +109,7 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	if DownloadLimit==0 {
 		toread = len(buf)
 	} else {
-		toread = int(DownloadLimit/ticksPerSecond) - dl_bytes_so_far
+		toread = int(DownloadLimit) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
 		} else if toread < 0 {
@@ -105,34 +120,18 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	bw_mutex.Unlock()
 
 	if toread>0 {
-		// Wait 1 millisecond for a data, timeout if nothign there
+		// Wait 1 millisecond for a data, timeout if nothing there
 		con.SetReadDeadline(time.Now().Add(time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		dl_bytes_total += uint64(n)
-		if n < toread {
-			dl_bytes_so_far -= toread-n // allow to receive this more
-		}
+		dl_bytes_priod += uint64(n)
 		bw_mutex.Unlock()
 	} else {
 		// supsend a task for awhile, to prevent stucking in a busy loop
 		time.Sleep(10*time.Millisecond)
 	}
 	return
-}
-
-
-func tick_sent() {
-	now := time.Now().UnixNano() / (1e9/ticksPerSecond)
-	if now != ul_last_period {
-		if ul_bytes_so_far<0 || (now-dl_last_period) != 1  {
-			ul_bytes_prv_sec = 0
-		} else {
-			ul_bytes_prv_sec = ul_bytes_so_far
-		}
-		ul_bytes_so_far = 0
-		ul_last_period = now
-	}
 }
 
 
@@ -144,7 +143,7 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	if UploadLimit==0 {
 		tosend = len(buf)
 	} else {
-		tosend = int(UploadLimit/ticksPerSecond) - ul_bytes_so_far
+		tosend = int(UploadLimit) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
 		} else if tosend<0 {
@@ -154,20 +153,18 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	ul_bytes_so_far += tosend
 	bw_mutex.Unlock()
 	if tosend > 0 {
-		// This timeout is to prevent net thread from getting stuck in con.Write()
-		con.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
+		// Set timeout to prevent thread from getting stuck if the other end does not read
+		con.SetWriteDeadline(time.Now().Add(time.Millisecond))
 		n, e = con.Write(buf[:tosend])
+		bw_mutex.Lock()
+		ul_bytes_total += uint64(n)
+		ul_bytes_priod += uint64(n)
+		bw_mutex.Unlock()
 		if e != nil {
 			if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
 				e = nil
 			}
 		}
-		bw_mutex.Lock()
-		ul_bytes_total += uint64(n)
-		if n < tosend {
-			ul_bytes_so_far -= tosend-n // allow to send this more
-		}
-		bw_mutex.Unlock()
 	} else {
 		time.Sleep(10*time.Millisecond)
 	}
