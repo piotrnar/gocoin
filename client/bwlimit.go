@@ -96,13 +96,19 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	dl_bytes_so_far += toread
-	dl_bytes_total += uint64(toread)
+	now := dl_last_sec
 	bw_mutex.Unlock()
 
 	if toread>0 {
 		// Wait 1 millisecond for a data, timeout if nothign there
 		con.SetReadDeadline(time.Now().Add(time.Millisecond))
 		n, e = con.Read(buf[:toread])
+		bw_mutex.Lock()
+		dl_bytes_total += uint64(n)
+		if n < toread && now == dl_last_sec {
+			dl_bytes_so_far -= toread-n
+		}
+		bw_mutex.Unlock()
 	} else {
 		// supsend a task for awhile, to prevent stucking in a busy loop
 		time.Sleep(10*time.Millisecond)
