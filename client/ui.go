@@ -352,21 +352,23 @@ func do_asicminer(s string) {
 	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
 	end := BlockChain.BlockTreeEnd
 	cnt, diff := 0, float64(0)
+	tot_blocks := 0
 	for end.Timestamp >= lim {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			println(cnt, e.Error())
 			return
 		}
+		block, e := btc.NewBlock(bl)
+		if e!=nil {
+			println("btc.NewBlock failed", e.Error())
+			return
+		}
+		tot_blocks++
+		diff += btc.GetDifficulty(block.Bits)
 		if mined_by_aminer(bl) {
-			block, e := btc.NewBlock(bl)
-			if e!=nil {
-				println("btc.NewBlock failed", e.Error())
-				return
-			}
 			block.BuildTxList()
 			totbtc += block.Txs[0].TxOut[0].Value
-			diff += btc.GetDifficulty(block.Bits)
 			cnt++
 			fmt.Printf("%4d) %6d %s %s  %5.2f => %5.2f BTC total\n",
 				cnt, end.Height, end.BlockHash.String(),
@@ -375,15 +377,21 @@ func do_asicminer(s string) {
 		}
 		end = end.Parent
 	}
-	if cnt>0 {
-		fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
-			float64(totbtc)/1e8, cnt, hrs)
-		weekly := 7*24*float64(totbtc)/float64(hrs)/1e8
-		diff /= float64(cnt)
-		fmt.Printf("Projected weekly income : %.0f BTC\n", weekly)
-		fmt.Printf("Estimated hashrate : %.2f TH/s @ average diff %.0f\n",
-			diff*weekly/3.5204/1e9, diff)
+	if tot_blocks == 0 {
+		fmt.Println("There are no blocks from the last", hrs, "hour(s)")
+		return
 	}
+	diff /= float64(tot_blocks)
+	fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
+		float64(totbtc)/1e8, cnt, hrs)
+	if cnt > 0 {
+		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %.2f TH/s\n",
+			7*24*float64(totbtc)/float64(hrs)/1e8,
+			float64(cnt)/float64(6*hrs) * diff * 7158278.826667 / 1e12)
+	}
+	bph := float64(tot_blocks)/float64(hrs)
+	fmt.Printf("Total network hashrate : %.2f TH/s @ average diff %.0f  (%.2f bph)\n",
+		bph/6 * diff * 7158278.826667 / 1e12, diff, bph)
 }
 
 
