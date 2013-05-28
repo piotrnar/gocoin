@@ -8,18 +8,20 @@ import (
 	"strconv"
 )
 
+const ticksPerSecond = 8
+
 var (
 	bw_mutex sync.Mutex
 
-	dl_last_sec int64
+	dl_last_period int64
 	dl_bytes_so_far int
 	dl_bytes_prv_sec int
 	dl_bytes_total uint64
 
-	UploadLimit uint
-	DownloadLimit uint
+	UploadLimit uint   // in max bytes transmietted within a whole second
+	DownloadLimit uint // in max bytes transmietted within a whole second
 
-	ul_last_sec int64
+	ul_last_period int64
 	ul_bytes_so_far int
 	ul_bytes_prv_sec int
 	ul_bytes_total uint64
@@ -72,15 +74,15 @@ func init() {
 
 
 func tick_recv() {
-	now := time.Now().Unix()
-	if now != dl_last_sec {
-		if dl_bytes_so_far < 0 {
+	now := time.Now().UnixNano() / (1e9/ticksPerSecond)
+	if now != dl_last_period {
+		if dl_bytes_so_far < 0 || (now-dl_last_period) != 1 {
 			dl_bytes_prv_sec = 0
 		} else {
 			dl_bytes_prv_sec = dl_bytes_so_far
-			dl_bytes_so_far = 0
 		}
-		dl_last_sec = now
+		dl_bytes_so_far = 0
+		dl_last_period = now
 	}
 }
 
@@ -92,7 +94,7 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 	if DownloadLimit==0 {
 		toread = len(buf)
 	} else {
-		toread = int(DownloadLimit) - dl_bytes_so_far
+		toread = int(DownloadLimit/ticksPerSecond) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
 		} else if toread < 0 {
@@ -121,15 +123,15 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 
 
 func tick_sent() {
-	now := time.Now().Unix()
-	if now != ul_last_sec {
-		if ul_bytes_so_far<0 {
+	now := time.Now().UnixNano() / (1e9/ticksPerSecond)
+	if now != ul_last_period {
+		if ul_bytes_so_far<0 || (now-dl_last_period) != 1  {
 			ul_bytes_prv_sec = 0
 		} else {
 			ul_bytes_prv_sec = ul_bytes_so_far
-			ul_bytes_so_far = 0
 		}
-		ul_last_sec = now
+		ul_bytes_so_far = 0
+		ul_last_period = now
 	}
 }
 
@@ -142,7 +144,7 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 	if UploadLimit==0 {
 		tosend = len(buf)
 	} else {
-		tosend = int(UploadLimit) - ul_bytes_so_far
+		tosend = int(UploadLimit/ticksPerSecond) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
 		} else if tosend<0 {
