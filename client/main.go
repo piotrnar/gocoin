@@ -154,9 +154,7 @@ func retry_cached_blocks() bool {
 	if len(cachedBlocks)==0 {
 		return false
 	}
-	if len(netBlocks) > 0 {
-		return true
-	}
+	accepted_cnt := 0
 	for k, v := range cachedBlocks {
 		Busy("Cache.CheckBlock "+v.Block.Hash.String())
 		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
@@ -167,13 +165,13 @@ func retry_cached_blocks() bool {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 				CountSafe("BlocksFromCache")
 				delete(cachedBlocks, k)
-				return len(cachedBlocks)>0
+				accepted_cnt++
+				break // One at a time should be enough
 			} else {
 				println("retry AcceptBlock:", e.Error())
 				CountSafe("CachedBlocksDOS")
 				v.conn.DoS()
 				delete(cachedBlocks, k)
-				return len(cachedBlocks)>0
 			}
 		} else {
 			if !maybelater {
@@ -184,11 +182,10 @@ func retry_cached_blocks() bool {
 					CountSafe("CachedBlocksDoS")
 				}
 				delete(cachedBlocks, k)
-				return len(cachedBlocks)>0
 			}
 		}
 	}
-	return false
+	return accepted_cnt>0 && len(cachedBlocks)>0
 }
 
 
@@ -386,7 +383,7 @@ func main() {
 		for retryCachedBlocks {
 			retryCachedBlocks = retry_cached_blocks()
 			// We have done one per loop - now do something else if pending...
-			if len(netBlocks)>0 && len(uiChannel)>0 {
+			if len(netBlocks)>0 || len(uiChannel)>0 {
 				break
 			}
 		}
