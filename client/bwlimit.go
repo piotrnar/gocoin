@@ -74,8 +74,12 @@ func init() {
 func tick_recv() {
 	now := time.Now().Unix()
 	if now != dl_last_sec {
-		dl_bytes_prv_sec = dl_bytes_so_far
-		dl_bytes_so_far = 0
+		if dl_bytes_so_far < 0 {
+			dl_bytes_prv_sec = 0
+		} else {
+			dl_bytes_prv_sec = dl_bytes_so_far
+			dl_bytes_so_far = 0
+		}
 		dl_last_sec = now
 	}
 }
@@ -96,7 +100,6 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	dl_bytes_so_far += toread
-	now := dl_last_sec
 	bw_mutex.Unlock()
 
 	if toread>0 {
@@ -105,8 +108,8 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		dl_bytes_total += uint64(n)
-		if n < toread && now == dl_last_sec {
-			dl_bytes_so_far -= toread-n
+		if n < toread {
+			dl_bytes_so_far -= toread-n // allow to receive this more
 		}
 		bw_mutex.Unlock()
 	} else {
@@ -120,8 +123,12 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 func tick_sent() {
 	now := time.Now().Unix()
 	if now != ul_last_sec {
-		ul_bytes_prv_sec = ul_bytes_so_far
-		ul_bytes_so_far = 0
+		if ul_bytes_so_far<0 {
+			ul_bytes_prv_sec = 0
+		} else {
+			ul_bytes_prv_sec = ul_bytes_so_far
+			ul_bytes_so_far = 0
+		}
 		ul_last_sec = now
 	}
 }
@@ -143,7 +150,6 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 	}
 	ul_bytes_so_far += tosend
-	now := ul_last_sec
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// This timeout is to prevent net thread from getting stuck in con.Write()
@@ -156,8 +162,8 @@ func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
 		}
 		bw_mutex.Lock()
 		ul_bytes_total += uint64(n)
-		if n < tosend && now == ul_last_sec {
-			ul_bytes_so_far -= tosend-n
+		if n < tosend {
+			ul_bytes_so_far -= tosend-n // allow to send this more
 		}
 		bw_mutex.Unlock()
 	} else {
