@@ -136,6 +136,20 @@ func do_userif() {
 
 
 func show_info(par string) {
+	fmt.Println(busy)
+	mutex.Lock()
+	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
+	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
+		LastBlock.Height,
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
+		btc.GetDifficulty(LastBlock.Bits), time.Now().Sub(LastBlockReceived).String())
+	fmt.Printf("BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
+		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons),
+		peerDB.Count())
+	mutex.Unlock()
+
+	bw_stats()
+
 	// Memory used
 	var ms runtime.MemStats
 	var gs debug.GCStats
@@ -153,34 +167,7 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", btc.SourcesTag,
 		"  Threads:", btc.UseThreads,
 		"  Uptime:", time.Now().Sub(StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
-		"  Height:", LastBlock.Height)
-
-	mutex.Lock()
-	fmt.Printf("BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons),
-		peerDB.Count())
-	// Main thread activity:
-	if busy!="" {
-		fmt.Println("BlockChain thread is busy with", busy)
-	} else {
-		fmt.Println("BlockChain thread is currently idle")
-	}
-	mutex.Unlock()
-
-	bw_stats()
-}
-
-
-// The last block:
-func show_last(par string) {
-	mutex.Lock()
-	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
-	fmt.Printf("  Height: %d @ %s,  Difficulty: %.1f\n", LastBlock.Height,
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(LastBlock.Bits))
-	fmt.Println("  got", time.Now().Sub(LastBlockReceived), "ago")
-	mutex.Unlock()
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
 }
 
 
@@ -398,9 +385,8 @@ func do_asicminer(s string) {
 
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
-	newUi("info i", false, show_info, "Shows general info")
-	newUi("last l", false, show_last, "Show last block info")
-	newUi("counters c", false, show_counters, "Show counters")
+	newUi("info i", false, show_info, "Shows general info about the node")
+	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
