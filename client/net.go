@@ -123,6 +123,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		return
 	}
 
+	CountSafe("snd_cnt_"+cmd)
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
@@ -742,6 +743,7 @@ func do_one_connection(c *oneConnection) {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
+		CountSafe("rcv_cnt_"+cmd.cmd)
 		switch cmd.cmd {
 			case "version":
 				er := c.HandleVersion(cmd.pl)
@@ -790,7 +792,9 @@ func do_one_connection(c *oneConnection) {
 				}
 
 			case "alert":
-				c.HandleAlert(cmd.pl)
+				if *alertson {
+					c.HandleAlert(cmd.pl)
+				}
 
 			case "ping":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
@@ -868,7 +872,11 @@ func do_network(ad *onePeer) {
 
 func network_process() {
 	if *server {
-		go start_server()
+		if *proxy=="" {
+			go start_server()
+		} else {
+			fmt.Println("WARNING: -l switch ignored since -c specified as well")
+		}
 	}
 	for {
 		mutex.Lock()
