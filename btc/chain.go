@@ -32,12 +32,10 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	ch.loadBlockIndex()
 	if rescan {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
-	} else {
-		// Unwind some blocks, in case if unspent DB update was interrupted last time
-		for i:=0; i<3 && ch.BlockTreeEnd.Height>0; i++ {
-			ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
-			ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
-		}
+	} else if ch.BlockTreeEnd.Height>0 {
+		// Redo the last block in case if unspent DB update was interrupted last time
+		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
+		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 	}
 
 	// And now re-apply the blocks which you have just reverted :)
