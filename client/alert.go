@@ -9,10 +9,11 @@ import (
 var (
 	alerts map[int32] *btc.Alert = make(map[int32] *btc.Alert)
 	alert_access sync.Mutex
+	alertPubKey []byte
 )
 
 func (c *oneConnection) HandleAlert(b []byte) {
-	a, e := btc.NewAlert(b)
+	a, e := btc.NewAlert(b, alertPubKey)
 	if e != nil {
 		println(c.PeerAddr.String(), "- alert:", e.Error())
 		c.DoS()
