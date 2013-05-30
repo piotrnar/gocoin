@@ -25,6 +25,7 @@ var (
 	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
+	alertson *bool = flag.Bool("a", false, "Enable support for alert messages")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
