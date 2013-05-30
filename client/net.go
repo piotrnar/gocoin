@@ -476,9 +476,12 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			for end := LastBlock; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
-					println("getblocks from", bl.Height, "to",  hashstop.String(), "->", len(invs), "invs")
+					fmt.Println(c.PeerAddr.Ip(), "getblocks from", bl.Height,
+						"stop at",  hashstop.String(), "->", len(invs), "invs")
 
 					if len(invs)>0 {
+						BlockChain.BlockIndexAccess.Unlock()
+
 						inv := new(bytes.Buffer)
 						btc.WriteVlen(inv, uint32(len(invs)))
 						for k, _ := range invs {
