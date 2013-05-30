@@ -123,7 +123,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		return
 	}
 
-	CountSafe("snd_cnt_"+cmd)
+	CountSafe("sent_"+cmd)
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
@@ -743,7 +743,7 @@ func do_one_connection(c *oneConnection) {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
-		CountSafe("rcv_cnt_"+cmd.cmd)
+		CountSafe("rcvd_"+cmd.cmd)
 		switch cmd.cmd {
 			case "version":
 				er := c.HandleVersion(cmd.pl)
