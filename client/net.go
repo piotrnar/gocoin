@@ -342,7 +342,7 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 
 
 func (c *oneConnection) GetBlocks(lastbl []byte) {
-	if dbg > 0 {
+	if dbg > 1 {
 		println(c.PeerAddr.Ip(), "getblocks since", btc.NewUint256(lastbl).String())
 	}
 	var b [4+1+32+32]byte
