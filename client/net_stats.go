@@ -157,9 +157,9 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad := newIncommingPeer(par)
-	if ad == nil {
-		fmt.Println(par, "does not seem to be a valid TCP endpoint")
+	ad, er := NewIncommingPeer(par)
+	if er != nil {
+		fmt.Println(par, er.Error())
 		return
 	}
 	fmt.Println("Conencting to", ad.Ip())
