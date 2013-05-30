@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 	"bytes"
+	"errors"
 	"strings"
 	"hash/crc64"
 	"encoding/binary"
@@ -54,7 +55,7 @@ func newPeer(v []byte) (p *onePeer) {
 }
 
 
-func newIncommingPeer(ipstr string) (p *onePeer) {
+func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	x := strings.Index(ipstr, ":")
 	if x != -1 {
 		ipstr = ipstr[:x] // remove port number
@@ -67,14 +68,14 @@ func newIncommingPeer(ipstr string) (p *onePeer) {
 		copy(p.Ip4[:], ip[12:16])
 		p.Port = DefaultTcpPort
 		if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
-			println(p.Ip(), "is banned")
+			e = errors.New(p.Ip() + " is banned")
 			p = nil
 		} else {
 			p.Time = uint32(time.Now().Unix())
 			p.Save()
 		}
 	} else {
-		println("newIncommingPeer: error parsing IP", ipstr)
+		e = errors.New("Error parsing IP '"+ipstr+"'")
 	}
 	return
 }
