@@ -918,8 +918,8 @@ func start_server() {
 				if dbg>0 {
 					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
 				}
-				ad := newIncommingPeer(tc.RemoteAddr().String())
-				if ad != nil {
+				ad, e := NewIncommingPeer(tc.RemoteAddr().String())
+				if e == nil {
 					conn := NewConnection(ad)
 					conn.ConnectedAt = time.Now()
 					conn.Incomming = true
@@ -942,7 +942,7 @@ func start_server() {
 						}()
 					}
 				} else {
-					println("newIncommingPeer failed - IP probably baned", tc.RemoteAddr().String())
+					println("NewIncommingPeer:", e.Error())
 					CountSafe("InConnRefused")
 					tc.Close()
 				}
