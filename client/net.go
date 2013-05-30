@@ -476,8 +476,10 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			for end := LastBlock; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
-					fmt.Println(c.PeerAddr.Ip(), "getblocks from", bl.Height,
-						"stop at",  hashstop.String(), "->", len(invs), "invs")
+					if dbg>0 {
+						fmt.Println(c.PeerAddr.Ip(), "getblocks from", bl.Height,
+							"stop at",  hashstop.String(), "->", len(invs), "invs")
+					}
 
 					if len(invs)>0 {
 						BlockChain.BlockIndexAccess.Unlock()
@@ -488,11 +490,6 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 							binary.Write(inv, binary.LittleEndian, uint32(2))
 							inv.Write(k[:])
 						}
-						if dbg>0 {
-							fmt.Printf("%s: getblocks  cnt=%d  => %d invs / %d bytes\n",
-								c.PeerAddr.Ip(), cnt, len(invs), len(inv.Bytes()))
-						}
-						CountSafe("GetblksRepl")
 						c.SendRawMsg("inv", inv.Bytes())
 						return
 					}
