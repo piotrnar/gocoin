@@ -4,7 +4,6 @@ import (
 	"os"
 	"bytes"
 	"errors"
-	"encoding/hex"
 	"encoding/binary"
 )
 
@@ -24,10 +23,8 @@ type Alert struct {
 	Reserved string   // Reserved
 }
 
-var alertPubKey []byte
 
-
-func NewAlert(b []byte) (res *Alert, e error) {
+func NewAlert(b []byte, alertPubKey []byte) (res *Alert, e error) {
 	var payload, signature []byte
 	var le uint64
 
@@ -89,9 +86,4 @@ func NewAlert(b []byte) (res *Alert, e error) {
 	res.StatusBar, e = ReadString(rd)
 	res.Reserved, e = ReadString(rd)
 	return
-}
-
-
-func init() {
-	alertPubKey, _ = hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
 }
