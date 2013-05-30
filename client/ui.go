@@ -6,6 +6,7 @@ import (
 	"time"
 	"sort"
 	"bufio"
+	"bytes"
 	"strings"
 	"strconv"
 	"runtime"
@@ -324,7 +325,8 @@ func dump_block(s string) {
 
 
 func mined_by_aminer(bl []byte) bool {
-	return string(bl[0x7f:0x91])=="Mined By ASICMiner"
+	return len(bl)>0xa0 && bytes.Index(bl[0x51:0xa0], []byte("Mined By ASICMiner"))!=-1
+	//return string(bl[0x51:0x200])==
 }
 
 
