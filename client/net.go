@@ -35,8 +35,6 @@ const (
 	NewBlocksAskDuration = time.Minute  // Ask each connection for new blocks every minute
 
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
-
-	FixRetardedGetblocks = true // To decrease b/w usage, see https://bitcointalk.org/index.php?topic=204150.msg2167299#msg2167299
 )
 
 
@@ -409,6 +407,7 @@ func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
 }
 
 
+// Call this function only when BlockIndexAccess is locked
 func addInvBlockBranch(inv map[[32]byte] bool, bl *btc.BlockTreeNode, stop *btc.Uint256) {
 	if len(inv)>=500 || bl.BlockHash.Equal(stop) {
 		return
@@ -451,7 +450,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		n, _ := b.Read(h[:])
 		if n != 32 {
 			println("getblocks too short", c.PeerAddr.Ip())
-			CountSafe("GetBlocksTooShort")
+			CountSafe("GetblksShort")
 			c.DoS()
 			return
 		}
@@ -463,49 +462,45 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	n, _ := b.Read(h[:])
 	if n != 32 {
 		println("getblocks does not have hash_stop", c.PeerAddr.Ip())
-		CountSafe("GetBlocksNoStop")
+		CountSafe("GetblksNoStop")
 		c.DoS()
 		return
 	}
 	hashstop := btc.NewUint256(h[:])
 
-	if cnt>1 {
-		CountSafe("GetblocksStupid")
-		if FixRetardedGetblocks {
-			h2get = h2get[:1] // Mind only the top one, to not always return 500 records
-			if dbg>0 {
-				println(c.PeerAddr.Ip(), "Fix retarded getblocks to only", h2get[0].String())
-			}
-		}
-	} else {
-		CountSafe("GetblocksFine")
-	}
-
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
-			addInvBlockBranch(invs, bl, hashstop)
+			// make sure that this block is in our main chain
+			for end := LastBlock; end!=nil && end.Height>=bl.Height; end = end.Parent {
+				if end==bl {
+					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
+					println("getblocks from", bl.Height, "to",  hashstop.String(), "->", len(invs), "invs")
+
+					if len(invs)>0 {
+						inv := new(bytes.Buffer)
+						btc.WriteVlen(inv, uint32(len(invs)))
+						for k, _ := range invs {
+							binary.Write(inv, binary.LittleEndian, uint32(2))
+							inv.Write(k[:])
+						}
+						if dbg>0 {
+							fmt.Printf("%s: getblocks  cnt=%d  => %d invs / %d bytes\n",
+								c.PeerAddr.Ip(), cnt, len(invs), len(inv.Bytes()))
+						}
+						CountSafe("GetblksRepl")
+						c.SendRawMsg("inv", inv.Bytes())
+						return
+					}
+				}
+			}
 		}
 		BlockChain.BlockIndexAccess.Unlock()
-		if len(invs)>=500 {
-			break
-		}
 	}
-	if len(invs) > 0 {
-		inv := new(bytes.Buffer)
-		btc.WriteVlen(inv, uint32(len(invs)))
-		for k, _ := range invs {
-			binary.Write(inv, binary.LittleEndian, uint32(2))
-			inv.Write(k[:])
-		}
-		if dbg>0 {
-			fmt.Printf("%s: getblocks  cnt=%d  => %d invs / %d bytes\n",
-				c.PeerAddr.Ip(), cnt, len(invs), len(inv.Bytes()))
-		}
-		CountSafe("GetblocksRepl")
-		c.SendRawMsg("inv", inv.Bytes())
-	}
+
+	CountSafe("GetblksMissed")
+	return
 }
 
 
