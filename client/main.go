@@ -125,7 +125,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 	if e == nil {
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
-			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim.String())
+			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim)
 			ui_show_prompt()
 		}
 		if BalanceChanged {
@@ -135,7 +135,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			BalanceChanged = false
 		}
 		if mined_by_aminer(bl.Raw) {
-			fmt.Println("\007Mined by ASICMINER:", LastBlock.Height)
+			fmt.Println("\007Mined by ASICMINER:", bl.Hash)
 			ui_show_prompt()
 		}
 		if LastBlock == BlockChain.BlockTreeEnd {
