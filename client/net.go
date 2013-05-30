@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"errors"
 	"strings"
-	"crypto/rand"
 	"sync/atomic"
+	"crypto/rand"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -30,11 +30,13 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 
-	MaxBytesInSendBuffer = 16*1024 // If we have more than this in the send buffer, we send no more responses
+	MaxBytesInSendBuffer = 16*1024 // If we have more than this bytes in the send buffer, send no more responses
 
-	NewBlocksAskDuration = 30*time.Second  // Ask each conenction for new blocks every 30 min
+	NewBlocksAskDuration = time.Minute  // Ask each connection for new blocks every minute
 
-	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it wont come
+	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
+
+	FixRetardedGetblocks = true // To decrease b/w usage, see https://bitcointalk.org/index.php?topic=204150.msg2167299#msg2167299
 )
 
 
@@ -435,6 +437,13 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		c.DoS()
 		return
 	}
+
+	if cnt<1 {
+		println("ProcessGetBlocks: empty inv list", c.PeerAddr.Ip())
+		c.DoS()
+		return
+	}
+
 	h2get := make([]*btc.Uint256, cnt)
 	var h [32]byte
 	for i:=0; i<int(cnt); i++ {
@@ -459,18 +468,22 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	}
 	hashstop := btc.NewUint256(h[:])
 
-	var maxheight, minheight uint32
-	minheight = 0xffffffff
+	if cnt>1 {
+		CountSafe("GetblocksStupid")
+		if FixRetardedGetblocks {
+			h2get = h2get[:1] // Mind only the top one, to not always return 500 records
+			if dbg>0 {
+				println(c.PeerAddr.Ip(), "Fix retarded getblocks to only", h2get[0].String())
+			}
+		}
+	} else {
+		CountSafe("GetblocksFine")
+	}
+
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
-			if bl.Height<minheight {
-				minheight = bl.Height
-			}
-			if bl.Height > maxheight {
-				maxheight = bl.Height
-			}
 			addInvBlockBranch(invs, bl, hashstop)
 		}
 		BlockChain.BlockIndexAccess.Unlock()
@@ -486,10 +499,10 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 			inv.Write(k[:])
 		}
 		if dbg>0 {
-			fmt.Printf("%s: getblocks  cnt=%d  h:%d..%d => %d invs / %d bytes\n",
-				c.PeerAddr.Ip(), cnt, minheight, maxheight, len(invs), len(inv.Bytes()))
+			fmt.Printf("%s: getblocks  cnt=%d  => %d invs / %d bytes\n",
+				c.PeerAddr.Ip(), cnt, len(invs), len(inv.Bytes()))
 		}
-		CountSafe("GetblocksReplies")
+		CountSafe("GetblocksRepl")
 		c.SendRawMsg("inv", inv.Bytes())
 	}
 }
@@ -605,7 +618,7 @@ func (c *oneConnection) blocksNeeded() bool {
 		}
 		BlockChain.BlockIndexAccess.Unlock()
 
-		CountSafe("GetblocksRequested")
+		CountSafe("GetblocksOut")
 		c.GetBlocks(n.BlockHash.Hash[:])
 		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
 		return true
