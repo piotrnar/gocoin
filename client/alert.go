@@ -3,29 +3,38 @@ package main
 import (
 	"fmt"
 	"sync"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 var (
-	alerts map[int32] *btc.Alert = make(map[int32] *btc.Alert)
+	alerts map[uint64] *btc.Alert = make(map[uint64] *btc.Alert)
 	alert_access sync.Mutex
-	alertPubKey []byte
+	alertPubKey []byte  // set in init.go
 )
 
 func (c *oneConnection) HandleAlert(b []byte) {
+	var rh [20]byte
+	btc.RimpHash(b, rh[:])
+	alidx := binary.LittleEndian.Uint64(rh[0:8])
+
+	alert_access.Lock() // protect access to the map while in the function
+	defer alert_access.Unlock()
+
+	if _, ok := alerts[alidx]; ok {
+		return // already have this one
+	}
+
 	a, e := btc.NewAlert(b, alertPubKey)
 	if e != nil {
-		println(c.PeerAddr.String(), "- alert:", e.Error())
+		println(c.PeerAddr.String(), "- sent us a broken alert:", e.Error())
 		c.DoS()
 		return
 	}
-	alert_access.Lock()
-	if _, ok := alerts[a.ID]; !ok {
-		alerts[a.ID] = a
-		fmt.Println("\007New alert:", a.StatusBar)
-		ui_show_prompt()
-	}
-	alert_access.Unlock()
+
+	alerts[alidx] = a
+	fmt.Println("\007New alert:", a.StatusBar)
+	ui_show_prompt()
 	return
 }
 
