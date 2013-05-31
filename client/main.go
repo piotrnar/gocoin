@@ -18,14 +18,13 @@ const (
 
 var (
 	testnet *bool = flag.Bool("t", false, "Use Testnet3")
-	rescan *bool = flag.Bool("r", false, "Discard unspent outputs DB and rescan the blockchain")
-	proxy *string = flag.String("c", "", "Connect to this host")
-	server *bool = flag.Bool("l", false, "Enable TCP server (allow incomming connections)")
+	rescan *bool = flag.Bool("r", false, "Rebuild the unspent DB (fixes 'Unknown input TxID' errors)")
+	proxy *string = flag.String("c", "", "Connect to this host and nowhere else")
+	server *bool = flag.Bool("l", true, "Enable TCP server (allow incomming connections)")
 	datadir *string = flag.String("d", "", "Specify Gocoin's database root folder")
 	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
-	alertson *bool = flag.Bool("al", true, "Enable support for alert messages")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -146,6 +145,8 @@ func AcceptBlock(bl *btc.Block) (e error) {
 		} else {
 			LastBlock = BlockChain.BlockTreeEnd
 		}
+	} else {
+		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
 	return
 }
