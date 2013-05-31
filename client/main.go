@@ -134,7 +134,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			ui_show_prompt()
 			BalanceChanged = false
 		}
-		if mined_by_aminer(bl.Raw) {
+		if mined_by_us(bl.Raw) {
 			fmt.Println("\007Mined by ASICMINER:", bl.Hash)
 			ui_show_prompt()
 		}
