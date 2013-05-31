@@ -629,9 +629,9 @@ func (c *oneConnection) Tick() {
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
 		c.Broken = true
-		CountSafe("NetConnTimeouts")
+		CountSafe("NetNodataTout")
 		if dbg>0 {
-			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout, "seconds - disconnect")
+			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
 		}
 		return
 	}
@@ -787,9 +787,7 @@ func do_one_connection(c *oneConnection) {
 				}
 
 			case "alert":
-				if *alertson {
-					c.HandleAlert(cmd.pl)
-				}
+				c.HandleAlert(cmd.pl)
 
 			case "ping":
 				if len(c.send.buf) < MaxBytesInSendBuffer {
