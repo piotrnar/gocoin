@@ -68,7 +68,7 @@ func host_init() {
 		}
 	}
 
-	fmt.Println("Opening blockchain...")
+	fmt.Println("Opening blockchain... (if you interrupt this process the unspent DB may get broken)")
 	sta := time.Now().UnixNano()
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, *rescan)
 	sto := time.Now().UnixNano()
