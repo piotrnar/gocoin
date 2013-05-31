@@ -6,7 +6,6 @@ import (
 	"time"
 	"sort"
 	"bufio"
-	"bytes"
 	"strings"
 	"strconv"
 	"runtime"
@@ -324,67 +323,6 @@ func dump_block(s string) {
 }
 
 
-func mined_by_aminer(bl []byte) bool {
-	return len(bl)>0xa0 && bytes.Index(bl[0x51:0xa0], []byte("Mined By ASICMiner"))!=-1
-	//return string(bl[0x51:0x200])==
-}
-
-
-func do_asicminer(s string) {
-	var totbtc, hrs uint64
-	if s != "" {
-		hrs, _ = strconv.ParseUint(s, 10, 64)
-	}
-	if hrs == 0 {
-		hrs = 24
-	}
-	fmt.Println("Looking back", hrs, "hours...")
-	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
-	end := BlockChain.BlockTreeEnd
-	cnt, diff := 0, float64(0)
-	tot_blocks := 0
-	for end.Timestamp >= lim {
-		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
-		if e != nil {
-			println(cnt, e.Error())
-			return
-		}
-		block, e := btc.NewBlock(bl)
-		if e!=nil {
-			println("btc.NewBlock failed", e.Error())
-			return
-		}
-		tot_blocks++
-		diff += btc.GetDifficulty(block.Bits)
-		if mined_by_aminer(bl) {
-			block.BuildTxList()
-			totbtc += block.Txs[0].TxOut[0].Value
-			cnt++
-			fmt.Printf("%4d) %6d %s %s  %5.2f => %5.2f BTC total\n",
-				cnt, end.Height, end.BlockHash.String(),
-				time.Unix(int64(end.Timestamp), 0).Format("2006-01-02 15:04:05"),
-				float64(block.Txs[0].TxOut[0].Value)/1e8, float64(totbtc)/1e8)
-		}
-		end = end.Parent
-	}
-	if tot_blocks == 0 {
-		fmt.Println("There are no blocks from the last", hrs, "hour(s)")
-		return
-	}
-	diff /= float64(tot_blocks)
-	fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
-		float64(totbtc)/1e8, cnt, hrs)
-	if cnt > 0 {
-		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %.2f TH/s\n",
-			7*24*float64(totbtc)/float64(hrs)/1e8,
-			float64(cnt)/float64(6*hrs) * diff * 7158278.826667 / 1e12)
-	}
-	bph := float64(tot_blocks)/float64(hrs)
-	fmt.Printf("Total network hashrate : %.2f TH/s @ average diff %.0f  (%.2f bph)\n",
-		bph/6 * diff * 7158278.826667 / 1e12, diff, bph)
-}
-
-
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
@@ -395,5 +333,4 @@ func init() {
 	newUi("cach", false, show_cached, "Show blocks cached in memory")
 	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("asicminer am", false, do_asicminer, "Look for 'Mined By ASICMiner' in recent blocks")
 }
