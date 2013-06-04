@@ -32,7 +32,8 @@ const (
 
 	MaxBytesInSendBuffer = 16*1024 // If we have more than this bytes in the send buffer, send no more responses
 
-	NewBlocksAskDuration = time.Minute  // Ask each connection for new blocks every minute
+	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
+	GetBlocksAskBack = 144
 
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
 )
@@ -341,19 +342,6 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 }
 
 
-func (c *oneConnection) GetBlocks(lastbl []byte) {
-	if dbg > 1 {
-		println(c.PeerAddr.Ip(), "getblocks since", btc.NewUint256(lastbl).String())
-	}
-	var b [4+1+32+32]byte
-	binary.LittleEndian.PutUint32(b[0:4], Version)
-	b[4] = 1 // only one locator
-	copy(b[5:37], lastbl)
-	// the remaining bytes should be filled with zero
-	c.SendRawMsg("getblocks", b[:])
-}
-
-
 func (c *oneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
 		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
@@ -592,30 +580,27 @@ func (c *oneConnection) SendInvs() (res bool) {
 }
 
 
-func (c *oneConnection) blocksNeeded() bool {
+func (c *oneConnection) getblocksNeeded() bool {
 	mutex.Lock()
-	force := c.LastBlocksFrom != LastBlock
+	lb := LastBlock
 	mutex.Unlock()
-	if force || time.Now().After(c.NextBlocksAsk) {
+	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
 		c.LastBlocksFrom = LastBlock
 
-		// Lock the blocktree while we're browsing through it
-		// ask N-blocks up in the chain, to recover from dead-end chain forks
-
 		BlockChain.BlockIndexAccess.Lock()
-		// Look one block deeper, with each lasting minute since the last block was received
-		depth := int(time.Now().Sub(LastBlockReceived)/time.Minute)
-		if depth>200 { // ... but don't get too crazy with it
-			depth = 200
-		}
-		n := LastBlock
-		for i:=0; i<depth && n.Parent != nil; i++ {
-			n = n.Parent
+		for i:=0; i < GetBlocksAskBack && lb.Parent != nil; i++ {
+			lb = lb.Parent
 		}
 		BlockChain.BlockIndexAccess.Unlock()
 
+		var b [4+1+3*32]byte
+		binary.LittleEndian.PutUint32(b[0:4], Version)
+		b[4] = 2 // two locators
+		copy(b[5:37], LastBlock.BlockHash.Hash[:])
+		copy(b[37:69], lb.BlockHash.Hash[:])
+		// the remaining bytes (hash_stop) should be filled with zero
+		c.SendRawMsg("getblocks", b[:])
 		CountSafe("GetblocksOut")
-		c.GetBlocks(n.BlockHash.Hash[:])
 		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
 		return true
 	}
@@ -685,7 +670,7 @@ func (c *oneConnection) Tick() {
 	}
 
 	// Need to send getblocks...?
-	if c.blocksNeeded() {
+	if c.getblocksNeeded() {
 		return
 	}
 
