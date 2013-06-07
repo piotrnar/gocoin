@@ -115,6 +115,6 @@ func set_miner(p string) {
 
 
 func init() {
-	newUi("minerset mid", false, set_miner, "Setup the mining monitor with the given ID (specify string paremeter, or 'off')")
+	newUi("minerset mid", false, set_miner, "Setup the mining monitor with the given ID, or off to disable the monitor")
 	newUi("minerstat m", false, do_mining, "Look for the miner ID in recent blocks (optionally specify number of hours)")
 }
