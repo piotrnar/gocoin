@@ -131,28 +131,40 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			ui_show_prompt()
 		}
 
-		just_mined := int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix()
-		if BalanceChanged {
-			if just_mined {
+		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
+			// Freshly mined block - do the beeps...
+
+			if beep {
+				fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
+				ui_show_prompt()
+			}
+
+			if mined_by_us(bl.Raw) {
+				fmt.Println("\007Mined by '"+*minerId+"':", bl.Hash)
+				ui_show_prompt()
+			}
+
+			if LastBlock == BlockChain.BlockTreeEnd {
+				// Last block has not changed, so it must have been an orphaned block
+				commonNode := LastBlock.FirstCommonParent(BlockChain.BlockIndex[bl.Hash.BIdx()])
+				forkDepth := LastBlock.Height - commonNode.Height
+				fmt.Println("Orphaned block:", LastBlock.Height, bl.Hash.String())
+				if forkDepth > 1 {
+					fmt.Print("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
+				}
+				ui_show_prompt()
+			}
+
+			if BalanceChanged {
 				fmt.Println("\007Your balance has just changed")
 				DumpBalance(nil)
 				ui_show_prompt()
 			}
-			BalanceChanged = false
 		}
-		if just_mined && mined_by_us(bl.Raw) {
-			fmt.Println("\007Mined by '"+*minerId+"':", bl.Hash)
-			ui_show_prompt()
-		}
-		if LastBlock == BlockChain.BlockTreeEnd {
-			// last block has not changes - it must have been an orphaned block
-			if just_mined {
-				fmt.Println("\007Orphaned block:", LastBlock.Height, bl.Hash.String())
-				ui_show_prompt()
-			}
-		} else {
-			LastBlock = BlockChain.BlockTreeEnd
-		}
+
+		LastBlock = BlockChain.BlockTreeEnd
+		BalanceChanged = false
+
 	} else {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
@@ -443,10 +455,6 @@ func main() {
 				// block accepted, so route this inv to peers
 				Busy("NetSendInv")
 				NetSendInv(2, bl.Hash.Hash[:], newbl.conn)
-				if beep {
-					fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
-					ui_show_prompt()
-				}
 				retryCachedBlocks = retry_cached_blocks()
 			} else {
 				println("AcceptBlock:", e.Error())
