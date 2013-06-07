@@ -39,7 +39,7 @@ var (
 	beep bool
 
 	LastBlock *btc.BlockTreeNode
-	LastBlockReceived time.Time = time.Now().Add(-10*time.Minute) // Let's just assume this on init
+	LastBlockReceived time.Time
 
 	mutex, counter_mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
@@ -395,6 +395,7 @@ func main() {
 	initPeers(GocoinHomeDir)
 
 	LastBlock = BlockChain.BlockTreeEnd
+	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
 
 	sta = time.Now().Unix()
 	for k, _ := range BlockChain.BlockIndex {
