@@ -26,6 +26,8 @@ var (
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 
+	minerId *string = flag.String("miner", mid_am, "Monitor new blocks with the string in their coinbase TX")
+
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	BlockChain *btc.Chain
@@ -140,7 +142,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 		}
 		if LastBlock == BlockChain.BlockTreeEnd {
 			// last block has not changes - it must have been an orphaned block
-			fmt.Println("\007Orphaned block:", LastBlock.Height, LastBlock.BlockHash.String())
+			fmt.Println("\007Orphaned block:", LastBlock.Height, bl.Hash.String())
 			ui_show_prompt()
 		} else {
 			LastBlock = BlockChain.BlockTreeEnd
