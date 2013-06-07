@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"math/rand"
 	"hash/crc64"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
@@ -210,9 +211,13 @@ func getBestPeer() (p *onePeer) {
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
 		if ad.Banned==0 && ad.Ip4!=[4]byte{127,0,0,1} {
-			if ad.Time > best_time && !connectionActive(ad) {
-				best_time = ad.Time
-				p = ad
+			if ad.Time>best_time+180 || ad.Time>=best_time && rand.Int31n(10)==0 {
+				// Assume it a better peer if its addr timestamp it later than 3 min,
+				// or if it is at least eual (though with 10% change then).
+				if !connectionActive(ad) {
+					best_time = ad.Time
+					p = ad
+				}
 			}
 		}
 		return true
