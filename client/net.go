@@ -22,7 +22,7 @@ const (
 	Services = uint64(0x1)
 
 	SendAddrsEvery = (15*time.Minute)
-	AskAddrsEvery = (15*time.Minute)
+	AskAddrsEvery = (5*time.Minute)
 
 	MaxInCons = 16
 	MaxOutCons = 8
@@ -677,8 +677,14 @@ func (c *oneConnection) Tick() {
 
 	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
-		CountSafe("GetaddrSent")
-		c.SendRawMsg("getaddr", nil)
+		if peerDB.Count() > 100 {
+			// If we have more than 100 pers, do not do it (it saves b/w)
+			// though can only hope that they would not all be banned.. :)
+			CountSafe("GetaddrSkept")
+		} else {
+			CountSafe("GetaddrSent")
+			c.SendRawMsg("getaddr", nil)
+		}
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
 		return
 	}
