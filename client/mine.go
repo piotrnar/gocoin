@@ -74,8 +74,10 @@ func do_mining(s string) {
 		return
 	}
 	diff /= float64(tot_blocks)
-	fmt.Printf("%.8f BTC mined in %d blocks for the last %d hours\n",
-		float64(totbtc)/1e8, cnt, hrs)
+	if *minerId!="" {
+		fmt.Printf("%.8f BTC mined by %s, in %d blocks for the last %d hours\n",
+			float64(totbtc)/1e8, *minerId, cnt, hrs)
+	}
 	if cnt > 0 {
 		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %.2f TH/s\n",
 			7*24*float64(totbtc)/float64(hrs)/1e8,
@@ -91,6 +93,7 @@ func set_miner(p string) {
 	if p=="off" {
 		*minerId = ""
 		fmt.Printf("Mining monitor disabled\n")
+		return
 	}
 	if len(p)>3 {
 		*minerId = p
