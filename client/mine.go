@@ -8,15 +8,26 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-var minerId string = "Mined By ASICMiner"
+const (
+	mid_50 = "Hi from 50BTC.com"
+	mid_am = "Mined By ASICMiner"
+	mid_sl = "/slush/"
+	mid_bt = "BTC Guild"
+	mid_bm = "BitMinter"
+	min_el = "Eligius"
+	min_bp = "bitparking"
+)
 
 
 func mined_by_us(bl []byte) bool {
+	if *minerId=="" {
+		return false
+	}
 	max2search := 0x200
 	if len(bl)<max2search {
 		max2search = len(bl)
 	}
-	return bytes.Index(bl[0x51:max2search], []byte(minerId))!=-1
+	return bytes.Index(bl[0x51:max2search], []byte(*minerId))!=-1
 }
 
 
@@ -77,14 +88,29 @@ func do_mining(s string) {
 
 
 func set_miner(p string) {
-	if len(p)>3 {
-		minerId = p
+	if p=="off" {
+		*minerId = ""
+		fmt.Printf("Mining monitor disabled\n")
 	}
-	fmt.Printf("Current miner ID: '%s'\n", minerId)
+	if len(p)>3 {
+		*minerId = p
+	} else {
+		switch p {
+			case "50": *minerId = mid_50
+			case "am": *minerId = mid_am
+			case "sl": *minerId = mid_sl
+			case "bt": *minerId = mid_bt
+			case "bm": *minerId = mid_bm
+			case "el": *minerId = min_el
+			case "bp": *minerId = min_bp
+			default: fmt.Println("Unknown miner ID alias (50, am, sl, bt, bm, el, bp)")
+		}
+	}
+	fmt.Printf("Current miner ID: '%s'\n", *minerId)
 }
 
 
 func init() {
-	newUi("minerset mid", false, set_miner, "Set the miner ID (specify a string paremeter)")
-	newUi("minerstat m", false, do_mining, "Look for the miner ID in recent blocks")
+	newUi("minerset mid", false, set_miner, "Setup the mining monitor with the given ID (specify string paremeter, or 'off')")
+	newUi("minerstat m", false, do_mining, "Look for the miner ID in recent blocks (optionally specify number of hours)")
 }
