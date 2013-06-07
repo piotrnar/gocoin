@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	mid_50 = "Hi from 50BTC.com"
-	mid_am = "Mined By ASICMiner"
+	mid_50 = "50BTC.com"
+	mid_am = "ASICMiner"
 	mid_sl = "/slush/"
 	mid_bt = "BTC Guild"
 	mid_bm = "BitMinter"
