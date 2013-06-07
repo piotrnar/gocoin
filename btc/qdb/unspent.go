@@ -35,6 +35,10 @@ type unspentDb struct {
 func newUnspentDB(dir string) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
+
+	for i := range db.tdb {
+		db.dbN(i) // Load each of the sub-DBs into memory
+	}
 	return
 }
 
