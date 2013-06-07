@@ -86,6 +86,7 @@ func do_mining(s string) {
 	bph := float64(tot_blocks)/float64(hrs)
 	fmt.Printf("Total network hashrate : %.2f TH/s @ average diff %.0f  (%.2f bph)\n",
 		bph/6 * diff * 7158278.826667 / 1e12, diff, bph)
+	fmt.Println("Next difficulty change in", 2016-BlockChain.BlockTreeEnd.Height%2016, "blocks")
 }
 
 
