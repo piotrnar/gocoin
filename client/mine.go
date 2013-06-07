@@ -31,6 +31,17 @@ func mined_by_us(bl []byte) bool {
 }
 
 
+func hr2str(hr float64) string {
+	if hr>1e12 {
+		return fmt.Sprintf("%.2f TH/s", hr/1e12)
+	}
+	if hr>1e9 {
+		return fmt.Sprintf("%.2f GH/s", hr/1e9)
+	}
+	return fmt.Sprintf("%.2f MH/s", hr/1e6)
+}
+
+
 func do_mining(s string) {
 	var totbtc, hrs uint64
 	if s != "" {
@@ -80,13 +91,13 @@ func do_mining(s string) {
 			float64(totbtc)/1e8, *minerId, cnt, hrs)
 	}
 	if cnt > 0 {
-		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %.2f TH/s\n",
+		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %s\n",
 			7*24*float64(totbtc)/float64(hrs)/1e8,
-			float64(cnt)/float64(6*hrs) * diff * 7158278.826667 / 1e12)
+			hr2str(float64(cnt)/float64(6*hrs) * diff * 7158278.826667))
 	}
 	bph := float64(tot_blocks)/float64(hrs)
-	fmt.Printf("Total network hashrate : %.2f TH/s @ average diff %.0f  (%.2f bph)\n",
-		bph/6 * diff * 7158278.826667 / 1e12, diff, bph)
+	fmt.Printf("Total network hashrate : %s @ average diff %.0f  (%.2f bph)\n",
+		hr2str(bph/6 * diff * 7158278.826667), diff, bph)
 	fmt.Printf("Average block size was %.1f KB,  next difficulty change in %d blocks\n",
 		float64(tot_blocks_len/tot_blocks)/1e3, 2016-BlockChain.BlockTreeEnd.Height%2016)
 }
