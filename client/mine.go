@@ -43,7 +43,7 @@ func do_mining(s string) {
 	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
 	end := BlockChain.BlockTreeEnd
 	cnt, diff := 0, float64(0)
-	tot_blocks := 0
+	tot_blocks, tot_blocks_len := 0, 0
 	for end.Timestamp >= lim {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
@@ -56,6 +56,7 @@ func do_mining(s string) {
 			return
 		}
 		tot_blocks++
+		tot_blocks_len += len(bl)
 		diff += btc.GetDifficulty(block.Bits)
 		if mined_by_us(bl) {
 			block.BuildTxList()
@@ -86,7 +87,8 @@ func do_mining(s string) {
 	bph := float64(tot_blocks)/float64(hrs)
 	fmt.Printf("Total network hashrate : %.2f TH/s @ average diff %.0f  (%.2f bph)\n",
 		bph/6 * diff * 7158278.826667 / 1e12, diff, bph)
-	fmt.Println("Next difficulty change in", 2016-BlockChain.BlockTreeEnd.Height%2016, "blocks")
+	fmt.Printf("Average block size was %.1f KB,  next difficulty change in %d blocks\n",
+		float64(tot_blocks_len/tot_blocks)/1e3, 2016-BlockChain.BlockTreeEnd.Height%2016)
 }
 
 
