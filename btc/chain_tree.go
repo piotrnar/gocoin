@@ -137,7 +137,9 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 
 
 func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
-	fmt.Printf("MoveToBlock: %d -> %d\n", ch.BlockTreeEnd.Height, dst.Height)
+	if don(DBG_ORPHAS) {
+		fmt.Printf("MoveToBlock: %d -> %d\n", ch.BlockTreeEnd.Height, dst.Height)
+	}
 
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
@@ -153,7 +155,9 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		cur = cur.Parent
 	}
-	fmt.Printf("Reached common node @ %d\n", ch.BlockTreeEnd.Height)
+	if don(DBG_ORPHAS) {
+		fmt.Printf("Reached common node @ %d\n", ch.BlockTreeEnd.Height)
+	}
 	ch.ParseTillBlock(dst)
 }
 
