@@ -146,6 +146,10 @@ func DumpBalance(utxt *os.File) {
 
 
 func show_balance(p string) {
+	if p=="sum" {
+		DumpBalance(nil)
+		return
+	}
 	if p!="" {
 		fmt.Println("Using wallet from file", p, "...")
 		LoadWallet(p)
