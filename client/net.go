@@ -22,7 +22,7 @@ const (
 	Services = uint64(0x1)
 
 	SendAddrsEvery = (15*time.Minute)
-	AskAddrsEvery = (5*time.Minute)
+	AskAddrsEvery = (15*time.Minute)
 
 	MaxInCons = 16
 	MaxOutCons = 8
@@ -123,6 +123,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}
 
 	CountSafe("sent_"+cmd)
+	CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
@@ -724,6 +725,7 @@ func do_one_connection(c *oneConnection) {
 		}
 
 		CountSafe("rcvd_"+cmd.cmd)
+		CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 		switch cmd.cmd {
 			case "version":
 				er := c.HandleVersion(cmd.pl)
