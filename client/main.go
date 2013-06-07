@@ -130,20 +130,26 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim)
 			ui_show_prompt()
 		}
+
+		just_mined := int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix()
 		if BalanceChanged {
-			fmt.Println("\007Your balance has just changed")
-			DumpBalance(nil)
-			ui_show_prompt()
+			if just_mined {
+				fmt.Println("\007Your balance has just changed")
+				DumpBalance(nil)
+				ui_show_prompt()
+			}
 			BalanceChanged = false
 		}
-		if mined_by_us(bl.Raw) {
-			fmt.Println("\007Mined by ASICMINER:", bl.Hash)
+		if just_mined && mined_by_us(bl.Raw) {
+			fmt.Println("\007Mined by '"+*minerId+"':", bl.Hash)
 			ui_show_prompt()
 		}
 		if LastBlock == BlockChain.BlockTreeEnd {
 			// last block has not changes - it must have been an orphaned block
-			fmt.Println("\007Orphaned block:", LastBlock.Height, bl.Hash.String())
-			ui_show_prompt()
+			if just_mined {
+				fmt.Println("\007Orphaned block:", LastBlock.Height, bl.Hash.String())
+				ui_show_prompt()
+			}
 		} else {
 			LastBlock = BlockChain.BlockTreeEnd
 		}
