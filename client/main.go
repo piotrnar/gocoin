@@ -156,7 +156,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 				forkDepth := LastBlock.Height - commonNode.Height
 				fmt.Println("Orphaned block:", LastBlock.Height, bl.Hash.String())
 				if forkDepth > 1 {
-					fmt.Print("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
+					fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
 				}
 				ui_show_prompt()
 			}
