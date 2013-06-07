@@ -158,6 +158,26 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 }
 
 
+// Returns a common parent with the highest height
+func (cur *BlockTreeNode)FirstCommonParent(dst *BlockTreeNode) *BlockTreeNode {
+	if cur.Height > dst.Height {
+		for cur.Height > dst.Height {
+			cur = cur.Parent
+		}
+	} else {
+		for cur.Height < dst.Height {
+			dst = dst.Parent
+		}
+	}
+	// From this point on, both cur and dst should be at the same height
+	for cur != dst {
+		cur = cur.Parent
+		dst = dst.Parent
+	}
+	return cur
+}
+
+
 func (cur *BlockTreeNode) delAllChildren() {
 	for i := range cur.Childs {
 		cur.Childs[i].delAllChildren()
