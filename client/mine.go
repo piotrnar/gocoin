@@ -100,7 +100,7 @@ func set_miner(p string) {
 	}
 	if len(p)>3 {
 		*minerId = p
-	} else {
+	} else if p!="" {
 		switch p {
 			case "50": *minerId = mid_50
 			case "am": *minerId = mid_am
