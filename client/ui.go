@@ -86,7 +86,7 @@ func ui_show_prompt() {
 
 func do_userif() {
 	var prompt bool = true
-	time.Sleep(5e8)
+	time.Sleep(1e8)
 	for {
 		if prompt {
 			ui_show_prompt()
