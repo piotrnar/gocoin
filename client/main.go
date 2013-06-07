@@ -81,6 +81,12 @@ func CountSafe(k string) {
 	counter_mutex.Unlock()
 }
 
+func CountSafeAdd(k string, val uint64) {
+	counter_mutex.Lock()
+	Counter[k] += val
+	counter_mutex.Unlock()
+}
+
 
 func list_unspent(addr string) {
 	fmt.Println("Checking unspent coins for addr", addr)
