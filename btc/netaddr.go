@@ -25,7 +25,8 @@ func NewNetAddr(b []byte) (na *NetAddr) {
 	return
 }
 
-func (a *NetAddr) Bytes() (res [26]byte) {
+func (a *NetAddr) Bytes() (res []byte) {
+	res = make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], a.Services)
 	copy(res[8:20], a.Ip6[:])
 	copy(res[20:24], a.Ip4[:])
