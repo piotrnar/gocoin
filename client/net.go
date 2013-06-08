@@ -21,8 +21,8 @@ const (
 
 	Services = uint64(0x1)
 
-	SendAddrsEvery = (15*time.Minute)
 	AskAddrsEvery = (5*time.Minute)
+	MaxAddrsPerMessage = 500
 
 	MaxInCons = 16
 	MaxOutCons = 8
@@ -95,7 +95,6 @@ type oneConnection struct {
 
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
-	NextAddrSent time.Time // When we shoudl annonce our "addr" again
 	NextGetAddr time.Time // When we shoudl issue "getaddr" again
 
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
@@ -281,37 +280,14 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 
 func (c *oneConnection) SendAddr() {
-	buf := new(bytes.Buffer)
-	mutex.Lock()
-	adrscnt := uint32(len(openCons))
-	sendown := !c.NextAddrSent.IsZero() && MyExternalAddr!=nil
-	if sendown {
-		adrscnt++
-	}
-	if adrscnt > 0 {
-		now := uint32(time.Now().Unix())
-
-		btc.WriteVlen(buf, adrscnt)
-
-		for _, v := range openCons {
-			binary.Write(buf, binary.LittleEndian, now)
-			tmp := v.PeerAddr.NetAddr.Bytes()
-			buf.Write(tmp[:])
+	pers := GetBestPeers(MaxAddrsPerMessage, false)
+	if len(pers)>0 {
+		buf := new(bytes.Buffer)
+		btc.WriteVlen(buf, uint32(len(pers)))
+		for i := range pers {
+			binary.Write(buf, binary.LittleEndian, pers[i].Time)
+			buf.Write(pers[i].NetAddr.Bytes())
 		}
-
-		if sendown {
-			binary.Write(buf, binary.LittleEndian, now)
-			tmp := MyExternalAddr.Bytes()
-			buf.Write(tmp[:])
-		}
-	}
-	// Store our own address
-	mutex.Unlock()
-	if !c.NextAddrSent.IsZero() {
-		c.NextAddrSent = time.Now().Add(SendAddrsEvery)
-	}
-
-	if adrscnt > 0 {
 		c.SendRawMsg("addr", buf.Bytes())
 	}
 }
@@ -677,21 +653,14 @@ func (c *oneConnection) Tick() {
 
 	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
-		if peerDB.Count() > 100 {
-			// If we have more than 100 pers, do not do it (it saves b/w)
-			// though can only hope that they would not all be banned.. :)
+		if peerDB.Count() > MaxPeersNeeded {
+			// If we have a lot of peers, do not ask for more, to save bandwidth
 			CountSafe("GetaddrSkept")
 		} else {
 			CountSafe("GetaddrSent")
 			c.SendRawMsg("getaddr", nil)
 		}
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
-		return
-	}
-
-	// Announce our own address...?
-	if !c.NextAddrSent.IsZero() && time.Now().After(c.NextAddrSent) {
-		c.SendAddr()
 		return
 	}
 }
@@ -705,9 +674,6 @@ func do_one_connection(c *oneConnection) {
 	c.LastDataGot = time.Now()
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
 	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
-	if *server {
-		c.NextAddrSent = c.NextGetAddr // If not a server, send "addr" only when asked
-	}
 
 	for !c.Broken {
 		c.LoopCnt++
