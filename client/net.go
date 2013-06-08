@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"net"
 	"time"
@@ -155,22 +154,6 @@ func (c *oneConnection) DoS() {
 }
 
 
-func putaddr(b *bytes.Buffer, a string) {
-	var ip [4]byte
-	var p uint16
-	n, e := fmt.Sscanf(a, "%d.%d.%d.%d:%d", &ip[0], &ip[1], &ip[2], &ip[3], &p)
-	if e != nil || n != 5 {
-		println("Incorrect address:", a)
-		os.Exit(1)
-	}
-	binary.Write(b, binary.LittleEndian, uint64(Services))
-	// No Ip6 supported:
-	b.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF})
-	b.Write(ip[:])
-	binary.Write(b, binary.BigEndian, uint16(p))
-}
-
-
 func (c *oneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
 
@@ -178,8 +161,12 @@ func (c *oneConnection) SendVersion() {
 	binary.Write(b, binary.LittleEndian, uint64(Services))
 	binary.Write(b, binary.LittleEndian, uint64(time.Now().Unix()))
 
-	putaddr(b, c.TCPConn.RemoteAddr().String())
-	putaddr(b, c.TCPConn.LocalAddr().String())
+	b.Write(c.PeerAddr.NetAddr.Bytes())
+	if MyExternalAddr!=nil {
+		b.Write(MyExternalAddr.Bytes())
+	} else {
+		b.Write(bytes.Repeat([]byte{0}, 26))
+	}
 
 	var nonce [8]byte
 	rand.Read(nonce[:])
