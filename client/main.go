@@ -152,9 +152,10 @@ func AcceptBlock(bl *btc.Block) (e error) {
 
 			if LastBlock == BlockChain.BlockTreeEnd {
 				// Last block has not changed, so it must have been an orphaned block
-				commonNode := LastBlock.FirstCommonParent(BlockChain.BlockIndex[bl.Hash.BIdx()])
-				forkDepth := LastBlock.Height - commonNode.Height
-				fmt.Println("Orphaned block:", LastBlock.Height, bl.Hash.String())
+				bln := BlockChain.BlockIndex[bl.Hash.BIdx()]
+				commonNode := LastBlock.FirstCommonParent(bln)
+				forkDepth := bln.Height - commonNode.Height
+				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String())
 				if forkDepth > 1 {
 					fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
 				}
