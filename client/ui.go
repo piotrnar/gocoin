@@ -173,11 +173,11 @@ func show_info(par string) {
 
 func show_counters(par string) {
 	counter_mutex.Lock()
-	ck := make([]string, len(Counter))
-	i := 0
+	ck := make([]string, 0)
 	for k, _ := range Counter {
-		ck[i] = k
-		i++
+		if par=="" || strings.HasPrefix(k, par) {
+			ck = append(ck, k)
+		}
 	}
 	sort.Strings(ck)
 
