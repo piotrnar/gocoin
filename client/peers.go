@@ -11,7 +11,6 @@ import (
 	"errors"
 	"strings"
 	"strconv"
-	"math/rand"
 	"hash/crc64"
 	"encoding/binary"
 	"github.com/piotrnar/qdb"
@@ -223,14 +222,12 @@ func (mp manyPeers) Swap(i, j int) {
 // Set unconnected to true to only get those that we are not connected to.
 func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	peerdb_mutex.Lock()
-	tmp := make(manyPeers, peerDB.Count())
-	cnt := 0
+	tmp := make(manyPeers, 0)
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
 		if ad.Banned==0 && ad.Ip4!=[4]byte{127,0,0,1} {
 			if !unconnected || !connectionActive(ad) {
-				tmp[cnt] = ad
-				cnt++
+				tmp = append(tmp, ad)
 			}
 		}
 		return true
@@ -245,37 +242,6 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 		res = make(manyPeers, limit)
 		copy(res, tmp[:limit])
 	}
-	return
-}
-
-
-func getBestPeer() (p *onePeer) {
-	if proxyPeer!=nil {
-		if !connectionActive(proxyPeer) {
-			p = proxyPeer
-		}
-		return
-	}
-
-	var best_time uint32
-	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-		ad := newPeer(v)
-		if ad.Banned==0 && ad.Ip4!=[4]byte{127,0,0,1} {
-			if ad.Time>best_time+600 || ad.Time>=best_time && rand.Int31n(10)==0 {
-				// Assume it a better peer if its addr timestamp it later than 10 min,
-				// or if it is at least eual (though then only with with 10% change).
-				if !connectionActive(ad) {
-					best_time = ad.Time
-					p = ad
-				}
-			}
-		}
-		return true
-	})
-	if dbg > 1 {
-		fmt.Println("Best addr", p.Ip(), "seen", (time.Now().Unix()-int64(best_time))/60, "min ago")
-	}
-
 	return
 }
 
