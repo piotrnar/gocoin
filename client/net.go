@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	mr "math/rand"
 	"sync/atomic"
 	"crypto/rand"
 	"encoding/binary"
@@ -226,7 +227,10 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			return nil
 		}
 		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
-			println("FetchMessage: Proto out of sync")
+			if dbg >0 {
+				println("FetchMessage: Proto out of sync")
+			}
+			CountSafe("NetBadMagic")
 			c.Broken = true
 			return nil
 		}
@@ -259,7 +263,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 		if dbg > 0 {
 			println(c.PeerAddr.Ip(), "Msg checksum error")
 		}
-		CountSafe("BadMsgChecksum")
+		CountSafe("NetBadChksum")
 		c.DoS()
 		c.recv.hdr_len = 0
 		c.recv.dat = nil
@@ -835,14 +839,18 @@ func network_process() {
 		conn_cnt := OutConsActive
 		mutex.Unlock()
 		if conn_cnt < MaxOutCons {
-			ad := getBestPeer()
-			if ad != nil {
-				do_network(ad)
-			} else if *proxy=="" && dbg>0 {
+			adrs := GetBestPeers(16, true)
+			if len(adrs)>0 {
+				do_network(adrs[mr.Int31n(int32(len(adrs)))])
+				continue // do not sleep
+			}
+
+			if *proxy=="" && dbg>0 {
 				println("no new peers", len(openCons), conn_cnt)
 			}
 		}
-		time.Sleep(250e6)
+		// If we did not continue, wait a few secs before another loop
+		time.Sleep(3e9)
 	}
 }
 
