@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"sync"
+	"sort"
 	"bytes"
 	"errors"
 	"strings"
+	"strconv"
 	"math/rand"
 	"hash/crc64"
 	"encoding/binary"
@@ -25,6 +28,7 @@ var (
 	crctab = crc64.MakeTable(crc64.ISO)
 
 	proxyPeer *onePeer // when this is not nil we should only connect to this single node
+	peerdb_mutex sync.Mutex
 )
 
 type onePeer struct {
@@ -98,6 +102,7 @@ func peers_db_maintanence() {
 	for {
 		time.Sleep(defragEvery)
 
+		peerdb_mutex.Lock()
 		var delcnt uint32
 		now := time.Now()
 		todel := make([]qdb.KeyType, peerDB.Count())
@@ -116,6 +121,7 @@ func peers_db_maintanence() {
 		}
 		CountSafe("PeerDefrags")
 		peerDB.Defrag()
+		peerdb_mutex.Unlock()
 	}
 }
 
@@ -196,6 +202,50 @@ func ParseAddr(pl []byte) {
 			CountSafe("AddrInFuture")
 		}
 	}
+}
+
+
+type manyPeers []*onePeer
+
+func (mp manyPeers) Len() int {
+	return len(mp)
+}
+
+func (mp manyPeers) Less(i, j int) bool {
+	return mp[i].Time > mp[j].Time
+}
+
+func (mp manyPeers) Swap(i, j int) {
+	mp[i], mp[j] = mp[j], mp[i]
+}
+
+// Fetch a given number of best (most recenty seen) peers.
+// Set unconnected to true to only get those that we are not connected to.
+func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
+	peerdb_mutex.Lock()
+	tmp := make(manyPeers, peerDB.Count())
+	cnt := 0
+	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		ad := newPeer(v)
+		if ad.Banned==0 && ad.Ip4!=[4]byte{127,0,0,1} {
+			if !unconnected || !connectionActive(ad) {
+				tmp[cnt] = ad
+				cnt++
+			}
+		}
+		return true
+	})
+	peerdb_mutex.Unlock()
+	// Copy the top rows to the result buffer
+	if len(tmp)>0 {
+		sort.Sort(tmp)
+		if uint(len(tmp))<limit {
+			limit = uint(len(tmp))
+		}
+		res = make(manyPeers, limit)
+		copy(res, tmp[:limit])
+	}
+	return
 }
 
 
@@ -290,12 +340,39 @@ func initPeers(dir string) {
 func show_addresses(par string) {
 	fmt.Println(peerDB.Count(), "peers in the database")
 	if par=="list" {
-		cnt := 0
+		cnt :=  0
 		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 			cnt++
 			fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
 			return true
 		})
+	} else if par=="ban" {
+		cnt :=  0
+		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+			pr := newPeer(v)
+			if pr.Banned != 0 {
+				cnt++
+				fmt.Printf("%4d) %s\n", cnt, pr.String())
+			}
+			return true
+		})
+		if cnt==0 {
+			fmt.Println("No banned peers in the DB")
+		}
+	} else if par != "" {
+		limit, er := strconv.ParseUint(par, 10, 32)
+		if er != nil {
+			fmt.Println("Specify number of best peers to display")
+			return
+		}
+		prs := GetBestPeers(uint(limit), false)
+		for i := range prs {
+			fmt.Printf("%4d) %s", i+1, prs[i].String())
+			if connectionActive(prs[i]) {
+				fmt.Print("  CONNECTED")
+			}
+			fmt.Print("\n")
+		}
 	} else {
 		fmt.Println("Use 'peers list' to list them")
 	}
