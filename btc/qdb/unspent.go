@@ -175,16 +175,24 @@ func (db *unspentDb) commit(changes *btc.BlockChanges) {
 
 
 func (db *unspentDb) stats() (s string) {
-	var cnt, sum uint64
+	var cnt, sum, cntlow, sumlow uint64
 	for i := range db.tdb {
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
-			sum += binary.LittleEndian.Uint64(v[36:44])
+			value := binary.LittleEndian.Uint64(v[36:44])
+			sum += value
 			cnt++
+			if value<1e6 {
+				sumlow += value
+				cntlow++
+			}
 			return true
 		})
 	}
-	return fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n",
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n",
 		float64(sum)/1e8, cnt, db.defragCount)
+	s += fmt.Sprintf(" %d outputs below 0.01 BTC, with %.2f BTC total\n",
+		cntlow, float64(sumlow)/1e8)
+	return
 }
 
 
