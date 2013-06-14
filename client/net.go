@@ -880,11 +880,16 @@ func do_network(ad *onePeer) {
 }
 
 
+// This function should be called only when OutConsActive >= MaxOutCons
 func drop_slowest_peer() {
 	var worst_ping int
 	var worst_conn *oneConnection
 	mutex.Lock()
 	for _, v := range openCons {
+		if v.Incomming && InConsActive < MaxInCons {
+			// If this is an incomming connection, but we are not full yet, ignore it
+			continue
+		}
 		ap := v.GetAveragePing()
 		if ap > worst_ping {
 			worst_ping = ap
@@ -926,6 +931,7 @@ func network_process() {
 				println("no new peers", len(openCons), conn_cnt)
 			}
 		} else {
+			// Having max number of outgoing connections, check to drop the slowest one
 			if time.Now().After(next_drop_slowest) {
 				drop_slowest_peer()
 				next_drop_slowest = time.Now().Add(DropSlowestEvery)
