@@ -26,7 +26,7 @@ const (
 	MaxAddrsPerMessage = 500
 
 	MaxInCons = 16
-	MaxOutCons = 8
+	MaxOutCons = 9
 	MaxTotCons = MaxInCons+MaxOutCons
 
 	NoDataTimeout = 2*time.Minute
