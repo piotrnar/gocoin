@@ -82,8 +82,8 @@ func net_stats(par string) {
 		} else {
 			fmt.Print(" ->")
 		}
-		fmt.Printf(" %21s %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
-			v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
+		fmt.Printf(" %21s %5dms %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
+			v.GetAveragePing(), v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
 		if (v.BytesReceived|v.BytesSent)!=0 {
 			fmt.Printf("%9s %9s", bts(v.BytesReceived), bts(v.BytesSent))
 		}
@@ -147,6 +147,13 @@ func node_info(par string) {
 		if len(v.PendingInvs)>0 {
 			fmt.Println(" Invs to send:", len(v.PendingInvs))
 		}
+
+		// Display ping stats
+		fmt.Print("Ping history:")
+		for i := range(v.PingHistory) {
+			fmt.Print(" ", v.PingHistory[i])
+		}
+		fmt.Println(" ->", v.GetAveragePing(), "ms")
 	} else {
 		fmt.Println("Not yet connected")
 	}
