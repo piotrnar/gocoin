@@ -150,8 +150,10 @@ func node_info(par string) {
 
 		// Display ping stats
 		fmt.Print("Ping history:")
-		for i := range(v.PingHistory) {
-			fmt.Print(" ", v.PingHistory[i])
+		idx := v.PingHistoryIdx
+		for _ = range(v.PingHistory) {
+			fmt.Print(" ", v.PingHistory[idx])
+			idx = (idx+1)%PingHistoryLength
 		}
 		fmt.Println(" ->", v.GetAveragePing(), "ms")
 	} else {
