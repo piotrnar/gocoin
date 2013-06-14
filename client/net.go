@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"sort"
 	"bytes"
 	"errors"
 	"strings"
@@ -37,7 +38,14 @@ const (
 
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
 
-	TCPDialTimeout = 15*time.Second
+	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
+
+	PingPeriod = 60*time.Second
+	PingTimeout = 5*time.Second
+	PingHistoryLength = 8
+	PingHistoryValid = (PingHistoryLength-2) // Ignore two longest pings
+
+	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
 )
 
 
@@ -105,6 +113,12 @@ type oneConnection struct {
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
 
 	GetBlocksInProgress map[[btc.Uint256IdxLen]byte] time.Time // We've sent getdata for a block...
+
+	// Ping stats
+	PingHistory [PingHistoryLength]int
+	NextPing time.Time
+	CurrentPingData [8]byte
+	LastPingSent time.Time
 }
 
 
@@ -656,6 +670,38 @@ func (c *oneConnection) Tick() {
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
 		return
 	}
+
+	// Ping if we dont do anything
+	if c.LastPingSent.IsZero() && time.Now().After(c.NextPing) &&
+		len(c.send.buf)==0 && len(c.GetBlocksInProgress)==0 {
+		rand.Read(c.CurrentPingData[:])
+		c.SendRawMsg("ping", c.CurrentPingData[:])
+		c.LastPingSent = time.Now()
+		//println(c.PeerAddr.Ip(), "ping...")
+		return
+	}
+}
+
+
+func (c *oneConnection) HandlePong() {
+	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
+	//println(c.PeerAddr.Ip(), "pong after", ms, "ms")
+	copy(c.PingHistory[0:PingHistoryLength-1], c.PingHistory[1:PingHistoryLength])
+	c.PingHistory[PingHistoryLength-1] = int(ms)
+	c.LastPingSent = *new(time.Time) // set it to zero
+	c.NextPing = time.Now().Add(PingPeriod)
+}
+
+
+func (c *oneConnection) GetAveragePing() int {
+	var pgs[PingHistoryLength] int
+	copy(pgs[:], c.PingHistory[:])
+	sort.Ints(pgs[:])
+	var sum int
+	for i:=0; i<PingHistoryValid; i++ {
+		sum += pgs[i]
+	}
+	return sum/PingHistoryValid
 }
 
 
@@ -667,12 +713,22 @@ func do_one_connection(c *oneConnection) {
 	c.LastDataGot = time.Now()
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
 	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
+	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
 
 	for !c.Broken {
 		c.LoopCnt++
 		cmd := c.FetchMessage()
 		if c.Broken {
 			break
+		}
+
+		// Timeout ping in progress
+		if !c.LastPingSent.IsZero() && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
+			if dbg > 0 {
+				println(c.PeerAddr.Ip(), "ping timeout", time.Now().Sub(c.LastPingSent).String())
+			}
+			CountSafe("PingTimeout")
+			c.HandlePong()
 		}
 
 		if cmd==nil {
@@ -750,6 +806,16 @@ func do_one_connection(c *oneConnection) {
 					CountSafe("CmdPingIgnored")
 				}
 
+			case "pong":
+				if bytes.Equal(cmd.pl, c.CurrentPingData[:]) {
+					c.HandlePong()
+				} else {
+					if dbg > 0 {
+						println(c.PeerAddr.Ip(), "Pong with unexpected ID")
+					}
+					CountSafe("BadPongID")
+				}
+
 			case "notfound":
 				CountSafe("NotFound")
 
@@ -814,6 +880,27 @@ func do_network(ad *onePeer) {
 }
 
 
+func drop_slowest_peer() {
+	var worst_ping int
+	var worst_conn *oneConnection
+	mutex.Lock()
+	for _, v := range openCons {
+		ap := v.GetAveragePing()
+		if ap > worst_ping {
+			worst_ping = ap
+			worst_conn = v
+		}
+	}
+	if worst_conn != nil {
+		if dbg > 0 {
+			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
+		}
+		worst_conn.Broken = true
+	}
+	mutex.Unlock()
+}
+
+
 func network_process() {
 	if *server {
 		if *proxy=="" {
@@ -822,6 +909,7 @@ func network_process() {
 			fmt.Println("WARNING: -l switch ignored since -c specified as well")
 		}
 	}
+	next_drop_slowest := time.Now().Add(DropSlowestEvery)
 	for {
 		mutex.Lock()
 		conn_cnt := OutConsActive
@@ -835,6 +923,11 @@ func network_process() {
 
 			if *proxy=="" && dbg>0 {
 				println("no new peers", len(openCons), conn_cnt)
+			}
+		} else {
+			if time.Now().After(next_drop_slowest) {
+				drop_slowest_peer()
+				next_drop_slowest = time.Now().Add(DropSlowestEvery)
 			}
 		}
 		// If we did not continue, wait a few secs before another loop
