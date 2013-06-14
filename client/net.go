@@ -41,7 +41,7 @@ const (
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 
 	PingPeriod = 60*time.Second
-	PingTimeout = 5*time.Second
+	PingTimeout = 3*time.Second
 	PingHistoryLength = 8
 	PingHistoryValid = (PingHistoryLength-2) // Ignore two longest pings
 
@@ -116,6 +116,7 @@ type oneConnection struct {
 
 	// Ping stats
 	PingHistory [PingHistoryLength]int
+	PingHistoryIdx int
 	NextPing time.Time
 	CurrentPingData [8]byte
 	LastPingSent time.Time
@@ -686,8 +687,8 @@ func (c *oneConnection) Tick() {
 func (c *oneConnection) HandlePong() {
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
 	//println(c.PeerAddr.Ip(), "pong after", ms, "ms")
-	copy(c.PingHistory[0:PingHistoryLength-1], c.PingHistory[1:PingHistoryLength])
-	c.PingHistory[PingHistoryLength-1] = int(ms)
+	c.PingHistory[c.PingHistoryIdx] = int(ms)
+	c.PingHistoryIdx = (c.PingHistoryIdx+1)%PingHistoryLength
 	c.LastPingSent = *new(time.Time) // set it to zero
 	c.NextPing = time.Now().Add(PingPeriod)
 }
