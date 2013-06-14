@@ -900,9 +900,8 @@ func drop_slowest_peer() {
 		}
 	}
 	if worst_conn != nil {
-		if dbg >= 0 {
+		if dbg > 0 {
 			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
-			ui_show_prompt()
 		}
 		worst_conn.Broken = true
 		CountSafe("PeersDropped")
