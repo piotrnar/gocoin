@@ -102,7 +102,7 @@ func tick_sent() {
 }
 
 
-func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
+func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
 	tick_recv()
@@ -136,7 +136,7 @@ func SockRead(con *net.TCPConn, buf []byte) (n int, e error) {
 
 
 // Send all the bytes, but respect the upload limit (force delays)
-func SockWrite(con *net.TCPConn, buf []byte) (n int, e error) {
+func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
 	tick_sent()
