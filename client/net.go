@@ -41,9 +41,9 @@ const (
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 
 	PingPeriod = 60*time.Second
-	PingTimeout = 3*time.Second
+	PingTimeout = 5*time.Second
 	PingHistoryLength = 8
-	PingHistoryValid = (PingHistoryLength-2) // Ignore two longest pings
+	PingHistoryValid = (PingHistoryLength-4) // Ignore N longest pings
 
 	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
 )
@@ -119,7 +119,7 @@ type oneConnection struct {
 	PingHistoryIdx int
 	NextPing time.Time
 	CurrentPingData [8]byte
-	LastPingSent time.Time
+	LastPingSent *time.Time
 }
 
 
@@ -673,11 +673,12 @@ func (c *oneConnection) Tick() {
 	}
 
 	// Ping if we dont do anything
-	if c.LastPingSent.IsZero() && time.Now().After(c.NextPing) &&
-		len(c.send.buf)==0 && len(c.GetBlocksInProgress)==0 {
+	if c.LastPingSent == nil && time.Now().After(c.NextPing) {
+		/*&&len(c.send.buf)==0 && len(c.GetBlocksInProgress)==0*/
 		rand.Read(c.CurrentPingData[:])
 		c.SendRawMsg("ping", c.CurrentPingData[:])
-		c.LastPingSent = time.Now()
+		t := time.Now()
+		c.LastPingSent = &t
 		//println(c.PeerAddr.Ip(), "ping...")
 		return
 	}
@@ -685,11 +686,13 @@ func (c *oneConnection) Tick() {
 
 
 func (c *oneConnection) HandlePong() {
-	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
-	//println(c.PeerAddr.Ip(), "pong after", ms, "ms")
+	ms := time.Now().Sub(*c.LastPingSent) / time.Millisecond
+	if dbg>1 {
+		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(*c.LastPingSent).String())
+	}
 	c.PingHistory[c.PingHistoryIdx] = int(ms)
 	c.PingHistoryIdx = (c.PingHistoryIdx+1)%PingHistoryLength
-	c.LastPingSent = *new(time.Time) // set it to zero
+	c.LastPingSent = nil
 	c.NextPing = time.Now().Add(PingPeriod)
 }
 
@@ -724,9 +727,9 @@ func do_one_connection(c *oneConnection) {
 		}
 
 		// Timeout ping in progress
-		if !c.LastPingSent.IsZero() && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
+		if c.LastPingSent!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
 			if dbg > 0 {
-				println(c.PeerAddr.Ip(), "ping timeout", time.Now().Sub(c.LastPingSent).String())
+				println(c.PeerAddr.Ip(), "ping timeout")
 			}
 			CountSafe("PingTimeout")
 			c.HandlePong()
@@ -808,13 +811,12 @@ func do_one_connection(c *oneConnection) {
 				}
 
 			case "pong":
-				if bytes.Equal(cmd.pl, c.CurrentPingData[:]) {
+				if c.LastPingSent==nil {
+					CountSafe("PongLate")
+				} else if bytes.Equal(cmd.pl, c.CurrentPingData[:]) {
 					c.HandlePong()
 				} else {
-					if dbg > 0 {
-						println(c.PeerAddr.Ip(), "Pong with unexpected ID")
-					}
-					CountSafe("BadPongID")
+					CountSafe("PongBadID")
 				}
 
 			case "notfound":
@@ -898,8 +900,9 @@ func drop_slowest_peer() {
 		}
 	}
 	if worst_conn != nil {
-		if dbg > 0 {
+		if dbg >= 0 {
 			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
+			ui_show_prompt()
 		}
 		worst_conn.Broken = true
 		CountSafe("PeersDropped")
