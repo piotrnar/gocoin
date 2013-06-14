@@ -896,6 +896,7 @@ func drop_slowest_peer() {
 			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
 		}
 		worst_conn.Broken = true
+		CountSafe("PeersDropped")
 	}
 	mutex.Unlock()
 }
