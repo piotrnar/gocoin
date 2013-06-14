@@ -148,6 +148,8 @@ func node_info(par string) {
 			fmt.Println(" Invs to send:", len(v.PendingInvs))
 		}
 
+		fmt.Println("GetBlocksInProgress:", len(v.GetBlocksInProgress))
+
 		// Display ping stats
 		fmt.Print("Ping history:")
 		idx := v.PingHistoryIdx
