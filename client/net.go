@@ -36,6 +36,8 @@ const (
 	GetBlocksAskBack = 144
 
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
+
+	TCPDialTimeout = 15*time.Second
 )
 
 
@@ -58,7 +60,7 @@ type oneConnection struct {
 
 	// TCP connection data:
 	Incomming bool
-	*net.TCPConn
+	NetConn net.Conn
 
 	// Handshake data
 	ConnectedAt time.Time
@@ -207,7 +209,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	var n int
 
 	for c.recv.hdr_len < 24 {
-		n, e = SockRead(c.TCPConn, c.recv.hdr[c.recv.hdr_len:24])
+		n, e = SockRead(c.NetConn, c.recv.hdr[c.recv.hdr_len:24])
 		c.recv.hdr_len += n
 		if e != nil {
 			c.HandleError(e)
@@ -233,7 +235,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			c.recv.datlen = 0
 		}
 		for c.recv.datlen < dlen {
-			n, e = SockRead(c.TCPConn, c.recv.dat[c.recv.datlen:])
+			n, e = SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
 			c.recv.datlen += uint32(n)
 			if e != nil {
 				c.HandleError(e)
@@ -594,7 +596,7 @@ func (c *oneConnection) Tick() {
 		if max2send > 4096 {
 			max2send = 4096
 		}
-		n, e := SockWrite(c.TCPConn, c.send.buf[c.send.sofar:])
+		n, e := SockWrite(c.NetConn, c.send.buf[c.send.sofar:])
 		if n > 0 {
 			c.
 			LastDataGot = time.Now()
@@ -761,7 +763,7 @@ func do_one_connection(c *oneConnection) {
 	if dbg>0 {
 		println("Disconnected from", c.PeerAddr.Ip())
 	}
-	c.TCPConn.Close()
+	c.NetConn.Close()
 }
 
 
@@ -789,9 +791,8 @@ func do_network(ad *onePeer) {
 	OutConsActive++
 	mutex.Unlock()
 	go func() {
-		conn.TCPConn, e = net.DialTCP("tcp4", nil, &net.TCPAddr{
-			IP: net.IPv4(ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3]),
-			Port: int(ad.Port)})
+		conn.NetConn, e = net.DialTimeout("tcp4", fmt.Sprintf("%d.%d.%d.%d:%d",
+			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
 		if e == nil {
 			conn.ConnectedAt = time.Now()
 			if dbg>0 {
@@ -870,7 +871,7 @@ func start_server() {
 					conn := NewConnection(ad)
 					conn.ConnectedAt = time.Now()
 					conn.Incomming = true
-					conn.TCPConn = tc
+					conn.NetConn = tc
 					mutex.Lock()
 					if _, ok := openCons[ad.UniqID()]; ok {
 						//fmt.Println(ad.Ip(), "already connected")
