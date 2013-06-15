@@ -7,6 +7,7 @@ import (
 	"time"
 	"sync"
 	"runtime"
+	"os/signal"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -55,6 +56,8 @@ var (
 	Counter map[string] uint64 = make(map[string]uint64)
 
 	busy string
+	DbLockFileName string
+	DbLockFileHndl *os.File
 )
 
 
@@ -383,7 +386,17 @@ func main() {
 	UploadLimit = *maxul << 10
 	DownloadLimit = *maxdl << 10
 
-	host_init()
+	// Disable Ctrl+C
+	killchan := make(chan os.Signal, 1)
+	signal.Notify(killchan, os.Interrupt, os.Kill)
+
+	host_init() // This will create the DB lock file and keep it open
+
+	// Clean up the DB lock file on exit
+	defer func() {
+		DbLockFileHndl.Close()
+		os.Remove(DbLockFileName)
+	}()
 
 	// load default wallet and its balance
 	LoadWallet(GocoinHomeDir+"wallet.txt")
@@ -421,6 +434,11 @@ func main() {
 		Busy("")
 
 		select {
+			case s := <-killchan:
+				fmt.Println("Got signal:", s)
+				exit_now = true
+				continue
+
 			case newbl = <-netBlocks:
 				break
 
