@@ -31,6 +31,7 @@ func BitcoinHome() (res string) {
 
 
 func host_init() {
+	var e error
 	BtcRootDir := BitcoinHome()
 
 	if *datadir == "" {
@@ -56,6 +57,17 @@ func host_init() {
 		AddrVersion = 0x00
 		alertPubKey, _ = hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
 		MaxPeersNeeded = 1000
+	}
+
+	// Lock the folder
+	DbLockFileName = GocoinHomeDir+".lock"
+	os.Remove(DbLockFileName)
+	DbLockFileHndl, e = os.OpenFile(DbLockFileName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0660)
+	if e != nil {
+		println(e.Error())
+		println("Could not lock the databse folder for writing. Another instance might be running.")
+		println("Make sure you can delete and re-crete:", DbLockFileName)
+		os.Exit(1)
 	}
 
 	fi, e := os.Stat(GocoinHomeDir+"blockchain.idx")
