@@ -56,8 +56,6 @@ var (
 	Counter map[string] uint64 = make(map[string]uint64)
 
 	busy string
-	DbLockFileName string
-	DbLockFileHndl *os.File
 )
 
 
@@ -393,10 +391,7 @@ func main() {
 	host_init() // This will create the DB lock file and keep it open
 
 	// Clean up the DB lock file on exit
-	defer func() {
-		DbLockFileHndl.Close()
-		os.Remove(DbLockFileName)
-	}()
+	defer UnlockDatabaseDir()
 
 	// load default wallet and its balance
 	LoadWallet(GocoinHomeDir+"wallet.txt")
