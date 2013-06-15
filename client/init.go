@@ -60,18 +60,7 @@ func host_init() {
 	}
 
 	// Lock the folder
-	DbLockFileName = GocoinHomeDir+".lock"
-again:
-	DbLockFileHndl, e = os.OpenFile(DbLockFileName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0660)
-	if e != nil {
-		println(e.Error())
-		println("Could not lock the databse folder for writing. Another instance might be running.")
-		if ask_yes_no("Manually delete the lock file and try again?") {
-			os.Remove(DbLockFileName)
-			goto again
-		}
-		os.Exit(1)
-	}
+	LockDatabaseDir()
 
 	fi, e := os.Stat(GocoinHomeDir+"blockchain.idx")
 	if e!=nil || fi.Size()<100 {
