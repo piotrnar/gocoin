@@ -7,6 +7,11 @@ import (
 	"syscall"
 )
 
+var (
+	DbLockFileName string
+	DbLockFileHndl *os.File
+)
+
 func LockDatabaseDir() {
 	var e error
 	DbLockFileName = GocoinHomeDir+".lock"
@@ -18,4 +23,9 @@ func LockDatabaseDir() {
 		os.Exit(1)
 	}
 	syscall.Flock(int(DbLockFileHndl.Fd()), syscall.LOCK_EX)
+}
+
+func UnlockDatabaseDir() {
+	DbLockFileHndl.Close()
+	os.Remove(DbLockFileName)
 }
