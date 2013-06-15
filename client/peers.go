@@ -67,16 +67,20 @@ func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	ip := net.ParseIP(ipstr)
 	if ip != nil && len(ip)==16 {
 		p = new(onePeer)
-		p.Services = 1
-		copy(p.Ip6[:], ip[:12])
 		copy(p.Ip4[:], ip[12:16])
-		p.Port = DefaultTcpPort
-		if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
-			e = errors.New(p.Ip() + " is banned")
-			p = nil
+		if !ValidIp4(p.Ip4) {
+			e = errors.New("Local IP '"+ipstr+"'")
 		} else {
-			p.Time = uint32(time.Now().Unix())
-			p.Save()
+			p.Services = 1
+			copy(p.Ip6[:], ip[:12])
+			p.Port = DefaultTcpPort
+			if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
+				e = errors.New(p.Ip() + " is banned")
+				p = nil
+			} else {
+				p.Time = uint32(time.Now().Unix())
+				p.Save()
+			}
 		}
 	} else {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
@@ -175,6 +179,7 @@ func (p *onePeer) UniqID() (uint64) {
 }
 
 
+// Parese network's "addr" message
 func ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
@@ -186,7 +191,9 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
+		if !ValidIp4(a.Ip4) {
+			CountSafe("AddrInvalid")
+		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
 				v := peerDB.Get(k)
@@ -218,6 +225,20 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
+// Discard any IP that may refer to our own host
+func ValidIp4(ip [4]byte) bool {
+	if ip==[4]byte{127,0,0,1} {
+		return false
+	}
+	if ip==[4]byte{0,0,0,0} {
+		return false
+	}
+	if MyExternalAddr!=nil && ip==MyExternalAddr.Ip4 {
+		return false
+	}
+	return true
+}
+
 // Fetch a given number of best (most recenty seen) peers.
 // Set unconnected to true to only get those that we are not connected to.
 func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
@@ -225,7 +246,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
-		if ad.Banned==0 && ad.Ip4!=[4]byte{127,0,0,1} {
+		if ad.Banned==0 && ValidIp4(ad.Ip4) {
 			if !unconnected || !connectionActive(ad) {
 				tmp = append(tmp, ad)
 			}
