@@ -19,7 +19,7 @@ func LockDatabaseDir() {
 	if e != nil {
 		println(e.Error())
 		println("Could not lock the databse folder for writing. Another instance might be running.")
-		println("Make sure you can delete and recreate file:", DbLockFileName)
+		println("If it is not the case, just delete this file:", DbLockFileName)
 		os.Exit(1)
 	}
 	syscall.Flock(int(DbLockFileHndl.Fd()), syscall.LOCK_EX)
