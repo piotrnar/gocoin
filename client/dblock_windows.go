@@ -4,6 +4,11 @@ import (
 	"os"
 )
 
+var (
+	DbLockFileName string
+	DbLockFileHndl *os.File
+)
+
 func LockDatabaseDir() {
 	var e error
 	DbLockFileName = GocoinHomeDir+".lock"
@@ -15,4 +20,9 @@ func LockDatabaseDir() {
 		println("Make sure you can delete and recreate file:", DbLockFileName)
 		os.Exit(1)
 	}
+}
+
+func UnlockDatabaseDir() {
+	DbLockFileHndl.Close()
+	os.Remove(DbLockFileName)
 }
