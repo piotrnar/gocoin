@@ -1,2 +1,1 @@
 * make the scripts to work with big numbers (now there is int64 limit)
-* implement a database locking so you cannot accidentaly run a second instance
