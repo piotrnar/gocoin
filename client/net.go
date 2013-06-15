@@ -44,6 +44,7 @@ const (
 	PingTimeout = 5*time.Second
 	PingHistoryLength = 8
 	PingHistoryValid = (PingHistoryLength-4) // Ignore N longest pings
+	PingAssumedIfUnsupported = 999 // ms
 
 	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
 )
@@ -673,7 +674,7 @@ func (c *oneConnection) Tick() {
 	}
 
 	// Ping if we dont do anything
-	if c.LastPingSent == nil && time.Now().After(c.NextPing) {
+	if c.node.version>60000 && c.LastPingSent == nil && time.Now().After(c.NextPing) {
 		/*&&len(c.send.buf)==0 && len(c.GetBlocksInProgress)==0*/
 		rand.Read(c.CurrentPingData[:])
 		c.SendRawMsg("ping", c.CurrentPingData[:])
@@ -698,14 +699,18 @@ func (c *oneConnection) HandlePong() {
 
 
 func (c *oneConnection) GetAveragePing() int {
-	var pgs[PingHistoryLength] int
-	copy(pgs[:], c.PingHistory[:])
-	sort.Ints(pgs[:])
-	var sum int
-	for i:=0; i<PingHistoryValid; i++ {
-		sum += pgs[i]
+	if c.node.version>60000 {
+		var pgs[PingHistoryLength] int
+		copy(pgs[:], c.PingHistory[:])
+		sort.Ints(pgs[:])
+		var sum int
+		for i:=0; i<PingHistoryValid; i++ {
+			sum += pgs[i]
+		}
+		return sum/PingHistoryValid
+	} else {
+		return PingAssumedIfUnsupported
 	}
-	return sum/PingHistoryValid
 }
 
 
