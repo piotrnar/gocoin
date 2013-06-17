@@ -4,7 +4,10 @@ import (
 	"os"
 	"fmt"
 	"sync"
+	"bytes"
 	"errors"
+	"io/ioutil"
+	"compress/gzip"
 	"encoding/binary"
 )
 
@@ -12,6 +15,7 @@ import (
 const (
 	BLOCK_TRUSTED = 0x01
 	BLOCK_INVALID = 0x02
+	BLOCK_COMPRSD = 0x04
 )
 
 /*
@@ -37,6 +41,7 @@ type oneBl struct {
 
 	ipos int64  // where at the record is stored in blockchain.idx (used to set flags)
 	trusted bool
+	compressed bool
 }
 
 
@@ -91,7 +96,16 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	if e != nil {
 		panic(e.Error())
 	}
-	_, e = db.blockdata.Write(bl.Raw[:])
+
+	flagz[0] |= BLOCK_COMPRSD
+	cb := new(bytes.Buffer)
+	gz := gzip.NewWriter(cb)
+	gz.Write(bl.Raw)
+	gz.Close()
+
+	blksize := uint32(len(cb.Bytes()))
+
+	_, e = db.blockdata.Write(cb.Bytes())
 	if e != nil {
 		panic(e.Error())
 	}
@@ -108,11 +122,11 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	binary.Write(db.blockindx, binary.LittleEndian, uint32(bl.BlockTime))
 	binary.Write(db.blockindx, binary.LittleEndian, uint32(bl.Bits))
 	binary.Write(db.blockindx, binary.LittleEndian, uint64(pos))
-	binary.Write(db.blockindx, binary.LittleEndian, uint32(len(bl.Raw[:])))
+	binary.Write(db.blockindx, binary.LittleEndian, blksize)
 
 	db.mutex.Lock()
 	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos),
-		blen:uint32(len(bl.Raw[:])), ipos:ipos, trusted:bl.Trusted}
+		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true}
 	db.mutex.Unlock()
 	return
 }
@@ -201,6 +215,11 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	f.Close()
 
 	trusted = rec.trusted
+	if rec.compressed {
+		gz, _ := gzip.NewReader(bytes.NewReader(bl))
+		bl, _ = ioutil.ReadAll(gz)
+		gz.Close()
+	}
 
 	return
 }
@@ -223,6 +242,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 
 		ob := new(oneBl)
 		ob.trusted = (b[0]&BLOCK_TRUSTED) != 0
+		ob.compressed = (b[0]&BLOCK_COMPRSD) != 0
 		ob.fpos = binary.LittleEndian.Uint64(b[80:88])
 		ob.blen = binary.LittleEndian.Uint32(b[88:92])
 		ob.ipos = validpos
