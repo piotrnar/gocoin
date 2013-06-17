@@ -23,7 +23,6 @@ func LockDatabaseDir() {
 	if e != nil {
 		goto error
 	}
-	println("Database folder locked in Unix mode")
 	return
 
 error:
