@@ -60,6 +60,7 @@ func host_init() {
 	}
 
 	// Lock the folder
+	os.MkdirAll(GocoinHomeDir, 0770)
 	LockDatabaseDir()
 
 	fi, e := os.Stat(GocoinHomeDir+"blockchain.idx")
