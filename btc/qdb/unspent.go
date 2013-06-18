@@ -96,22 +96,6 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 }
 
 
-func (db *unspentDb) idle() bool {
-	for _ = range db.tdb {
-		db.defragIndex++
-		if db.defragIndex >= len(db.tdb) {
-			db.defragIndex = 0
-		}
-		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag() {
-			db.defragCount++
-			//println(db.defragIndex, "defragmented")
-			return true
-		}
-	}
-	return false
-}
-
-
 func (db *unspentDb) del(idx *btc.TxPrevOut) {
 	if db.notifyTx!=nil {
 		db.notifyTx(idx, nil)
@@ -230,3 +214,19 @@ func (db *unspentDb) close() {
 		}
 	}
 }
+
+func (db *unspentDb) idle() bool {
+	for _ = range db.tdb {
+		db.defragIndex++
+		if db.defragIndex >= len(db.tdb) {
+			db.defragIndex = 0
+		}
+		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag() {
+			db.defragCount++
+			return true
+		}
+	}
+	return false
+}
+
+
