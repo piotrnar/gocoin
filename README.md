@@ -68,10 +68,9 @@ EC_Verify wrapper
 --------------
 EC operations built into Go are very slow, comparing to other available solutions, therefore it is strongly advised to use a cgo wrapper. In order to do this copy either "openssl.go" or "sipasec.go"  (but not both of them!) from “client/speedup/” to the “client/” folder and redo “go build” there.
 
-The sipasec option is much faster then openssl, but it takes a bit more hassle to buuld the lib.
+The sipasec option is much faster than openssl, but it takes a bit more hassle to buuld the lib.
 
 On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed.
-
 On Windows, you will need a proper mingw(64) and MSys environment, the openssl lib (libcrypto.a) build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
 
 As for building the sipasec wrapper, it seems less straight forward so figure it out by youself, though if you make it, it's definietelly worth it.
