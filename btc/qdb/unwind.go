@@ -9,29 +9,48 @@ import (
 )
 
 const (
-	UnwindBufferMaxHistory = 24*6  // Let's keep unwind history for about 24 hours...
+	UnwindBufferMaxHistory = 5000  // Let's keep unwind history for so may last blocks
 )
 
 type unwindDb struct {
-	tdb *qdb.DB
+	dir string
+	tdb [0x100] *qdb.DB
 	lastBlockHeight uint32
 	lastBlockHash [32]byte
+	defragIndex int
 	defragCount uint64
+	nosyncinprogress bool
+}
+
+
+func (db *unwindDb) dbH(i int) (*qdb.DB) {
+	i &= 0xff
+	if db.tdb[i]==nil {
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
+		db.tdb[i].Load()
+		if db.nosyncinprogress {
+			db.tdb[i].NoSync()
+		}
+	}
+	return db.tdb[i]
 }
 
 
 func newUnwindDB(dir string) (db *unwindDb) {
+	convertOldUnwindDb(dir)
 	db = new(unwindDb)
-	db.tdb, _ = qdb.NewDB(dir)
-	db.lastBlockHeight = 0
-	db.tdb.Browse(func(k qdb.KeyType, v []byte) bool {
-		h := uint32(k)
-		if h > db.lastBlockHeight {
-			db.lastBlockHeight = h
-			copy(db.lastBlockHash[:], v[:32])
-		}
-		return true
-	})
+	db.dir = dir
+	for i := range db.tdb {
+		// Load each of the sub-DBs into memory and try to find the highest block
+		db.dbH(i).Browse(func(k qdb.KeyType, v []byte) bool {
+			h := uint32(k)
+			if h > db.lastBlockHeight {
+				db.lastBlockHeight = h
+				copy(db.lastBlockHash[:], v[:32])
+			}
+			return true
+		})
+	}
 	return
 }
 
@@ -54,30 +73,55 @@ func unwindFromReader(f io.Reader, unsp *unspentDb) {
 
 
 func (db *unwindDb) del(height uint32) {
-	db.tdb.Del(qdb.KeyType(height))
+	db.tdb[height&0xff].Del(qdb.KeyType(height))
 }
 
 
 func (db *unwindDb) sync() {
-	db.tdb.Sync()
+	db.nosyncinprogress = false
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Sync()
+		}
+	}
 }
 
 func (db *unwindDb) nosync() {
-	db.tdb.NoSync()
+	db.nosyncinprogress = true
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].NoSync()
+		}
+	}
 }
 
 func (db *unwindDb) save() {
-	db.tdb.Defrag()
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Defrag()
+		}
+	}
 }
 
 func (db *unwindDb) close() {
-	db.tdb.Close()
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Close()
+			db.tdb[i] = nil
+		}
+	}
 }
 
 func (db *unwindDb) idle() bool {
-	if db.tdb.Defrag() {
-		db.defragCount++
-		return true
+	for _ = range db.tdb {
+		db.defragIndex++
+		if db.defragIndex >= len(db.tdb) {
+			db.defragIndex = 0
+		}
+		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag() {
+			db.defragCount++
+			return true
+		}
 	}
 	return false
 }
@@ -87,7 +131,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 		panic("Unexpected height")
 	}
 
-	v := db.tdb.Get(qdb.KeyType(height))
+	v := db.dbH(int(height)).Get(qdb.KeyType(height))
 	if v == nil {
 		panic("Unwind data not found")
 	}
@@ -96,7 +140,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 	db.del(height)
 
 	db.lastBlockHeight--
-	v = db.tdb.Get(qdb.KeyType(db.lastBlockHeight))
+	v = db.dbH(int(db.lastBlockHeight)).Get(qdb.KeyType(db.lastBlockHeight))
 	if v == nil {
 		panic("Parent data not found")
 	}
@@ -121,7 +165,7 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	for k, v := range changes.DeledTxs {
 		writeSpent(f, &k, v)
 	}
-	db.tdb.Put(qdb.KeyType(changes.Height), f.Bytes())
+	db.dbH(int(changes.Height)).Put(qdb.KeyType(changes.Height), f.Bytes())
 	if changes.Height >= UnwindBufferMaxHistory {
 		db.del(changes.Height-UnwindBufferMaxHistory)
 	}
@@ -138,8 +182,12 @@ func (db *unwindDb) GetLastBlockHash() (val []byte) {
 
 
 func (db *unwindDb) stats() (s string) {
-	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d\n",
-		db.tdb.Count(), db.lastBlockHeight, db.defragCount)
+	var cnt int
+	for i := range db.tdb {
+		cnt += db.dbH(i).Count()
+	}
+	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d/%d\n",
+		cnt, db.lastBlockHeight, db.defragCount, db.defragIndex)
 	s += "Last block: " + btc.NewUint256(db.lastBlockHash[:]).String() + "\n"
 	return
 }
