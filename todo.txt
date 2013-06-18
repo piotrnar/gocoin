@@ -1,2 +1,2 @@
 * make the scripts to work with big numbers (now there is int64 limit)
-* implement rejecting forks that would be longer than the unwind buffer
+* replace openssl cgo with the one from sipa https://github.com/sipa/secp256k1
