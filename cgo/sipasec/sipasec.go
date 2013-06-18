@@ -1,11 +1,12 @@
 package sipasec
 
 /*
-#cgo LDFLAGS: -lsecp256k1 -lgmp -L /usr/local/secp256k1 -I /usr/local/secp256k1
-#cgo CFLAGS: -I /usr/local/secp256k1
+#cgo linux CFLAGS: -I /usr/local/secp256k1
+#cgo linux LDFLAGS: -lsecp256k1 -lgmp -L /usr/local/secp256k1 -I /usr/local/secp256k1
+#cgo windows LDFLAGS: -L . libsecp256k1.a -lgdi32 libcrypto.a
 
 #include <stdio.h>
-#include <secp256k1.h>
+#include "secp256k1.h"
 
 */
 import "C"
