@@ -9,7 +9,7 @@ import (
 
 func convertOldUnwindDb(dir string) bool {
 	olddb, _ := qdb.NewDB(dir)
-	if olddb == nil {
+	if olddb == nil || olddb.Count()==0 {
 		return false
 	}
 
