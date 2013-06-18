@@ -64,13 +64,17 @@ For anyone familiar with Go language, building should not be a problem. You can 
 After you have the sources in your local disk, building them is usually as simple as executing "go build", in either the client or the wallet directory.
 
 
-OpenSSL wrapper
+EC_Verify wrapper
 --------------
-EC operations built into Go are very slow, comparing to OpenSSL, therefore it is strongly advised to use an OpenSLL cgo wrapper. In order to do this copy file “client/speedup/openssl.go” to the “client/” folder and redo “go build” there.
+EC operations built into Go are very slow, comparing to other available solutions, therefore it is strongly advised to use a cgo wrapper. In order to do this copy either "openssl.go" or "sipasec.go"  (but not both of them!) from “client/speedup/” to the “client/” folder and redo “go build” there.
 
-On Linux this should go smoothly, as long as you have openssl-dev installed.
+The sipasec option is much faster then openssl, but it takes a bit more hassle to buuld the lib.
+
+On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed.
 
 On Windows, you will need a proper mingw(64) and MSys environment, the openssl lib (libcrypto.a) build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
+
+As for building the sipasec wrapper, just figure it out yourelf. :-P
 
 
 User Manual
