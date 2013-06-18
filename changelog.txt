@@ -1,5 +1,5 @@
 0.3.0
-* Added sipasec cgo wrapper for EC_Verify
+* Added sipasec cgo for EC_Verify (~5 times faster than openssl)
 
 0.2.15
 * Support for gzip compressed blocks inside blockchain.dat
