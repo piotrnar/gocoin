@@ -9,13 +9,13 @@ package main
   "client" folder) and try "go build" there.
 
   If it complains about not being able to build
-  "github.com/piotrnar/gocoin/sipasec", either try to fix it,
+  "github.com/piotrnar/gocoin/cgo/sipasec", either try to fix it,
   or just remove the file you copied and continue in slow mode.
 */
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/sipasec"
+	"github.com/piotrnar/gocoin/cgo/sipasec"
 	"github.com/piotrnar/gocoin/btc"
 )
 

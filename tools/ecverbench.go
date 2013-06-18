@@ -5,8 +5,8 @@ import (
 	"time"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/openssl"
-	"github.com/piotrnar/gocoin/sipasec"
+	"github.com/piotrnar/gocoin/cgo/openssl"
+	"github.com/piotrnar/gocoin/cgo/sipasec"
 )
 
 func O_Verify(k, s, h []byte) bool {

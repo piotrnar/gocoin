@@ -1,2 +1,1 @@
 * make the scripts to work with big numbers (now there is int64 limit)
-* replace openssl cgo with the one from sipa https://github.com/sipa/secp256k1

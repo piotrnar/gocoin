@@ -8,13 +8,13 @@ package main
   "client" folder) and try "go build" there.
 
   If it complains about not being able to build
-  "github.com/piotrnar/gocoin/openssl", either try to fix it,
+  "github.com/piotrnar/gocoin/cgo/openssl", either try to fix it,
   or just remove the file you copied and continue in slow mode.
 */
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/openssl"
+	"github.com/piotrnar/gocoin/cgo/openssl"
 	"github.com/piotrnar/gocoin/btc"
 )
 

@@ -1,3 +1,6 @@
+0.3.0
+* Added sipasec cgo wrapper for EC_Verify
+
 0.2.15
 * Support for gzip compressed blocks inside blockchain.dat
 * A tool to compress blockchain.dat (tools/compressdb.go)
