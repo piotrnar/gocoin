@@ -74,7 +74,7 @@ On Linux, the OpenSSL option should build smoothly, as long as you have libssl-d
 
 On Windows, you will need a proper mingw(64) and MSys environment, the openssl lib (libcrypto.a) build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
 
-As for building the sipasec wrapper, just figure it out yourelf. :-P
+As for building the sipasec wrapper, so far we have not managed to make it work on Windows.
 
 
 User Manual
