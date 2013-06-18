@@ -41,8 +41,13 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		return
 	}
 
+	// Reject the block if it reaches into the chain deeper than our unwind buffer
+	if prevblk!=ch.BlockTreeEnd && ch.BlockTreeEnd.Height-(prevblk.Height+1)>=MovingCheckopintDepth {
+		er = errors.New("CheckBlock: Hooks too deep into the chain")
+		return
+	}
+
 	// Check proof of work
-	//println("block with bits", bl.Bits, "...")
 	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime)
 	if bl.Bits != gnwr {
 		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
