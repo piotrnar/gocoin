@@ -1,1 +1,2 @@
 * make the scripts to work with big numbers (now there is int64 limit)
+* add a cache to BlockGet(), so it does not need to decompress every time
