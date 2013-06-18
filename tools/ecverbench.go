@@ -6,10 +6,15 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/openssl"
+	"github.com/piotrnar/gocoin/sipasec"
 )
 
-func EC_Verify(k, s, h []byte) bool {
+func O_Verify(k, s, h []byte) bool {
 	return openssl.EC_Verify(k, s, h)==1
+}
+
+func S_Verify(k, s, h []byte) bool {
+	return sipasec.EC_Verify(k, s, h)==1
 }
 
 
@@ -20,9 +25,13 @@ func main() {
 	if len(os.Args)>1 {
 		switch os.Args[1] {
 			case "openssl":
-				btc.EC_Verify = EC_Verify
+				btc.EC_Verify = O_Verify
+				CNT *= 10
+			case "sipasec":
+				btc.EC_Verify = S_Verify
+				CNT *= 50
 			default:
-				println("The only allowed parameter is openssl")
+				println("The only allowed parameters are either 'openssl' or 'sipasec'")
 				return
 		}
 	}
