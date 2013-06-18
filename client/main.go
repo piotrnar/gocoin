@@ -368,7 +368,7 @@ func main() {
 	var retryCachedBlocks bool
 
 	if btc.EC_Verify==nil {
-		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable OpenSSL wrapper if possible.")
+		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable EC_Verify wrapper if possible.")
 		fmt.Println("         Look for the instruction in README.md or in client/speedup folder.")
 	}
 

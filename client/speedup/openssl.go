@@ -1,7 +1,7 @@
 package main
 
 /*
-  If you want EC verify operations to work about 10 times faster,
+  If you want EC verify operations to work about 30 times faster,
   you can try using OpenSSL cgo wrapper, from the "openssl" dir.
 
   In order to do it, just copy this file one level up (to the
@@ -10,8 +10,6 @@ package main
   If it complains about not being able to build
   "github.com/piotrnar/gocoin/openssl", either try to fix it,
   or just remove the file you copied and continue in slow mode.
-
-  It works on Linux, but so far not seen it working in Windows.
 */
 
 import (
