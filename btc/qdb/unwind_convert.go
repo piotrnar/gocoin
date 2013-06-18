@@ -13,7 +13,6 @@ func convertOldUnwindDb(dir string) bool {
 		return false
 	}
 
-
 	var newdb [0x100] *qdb.DB
 	for i := range newdb {
 		newdb[i], _ = qdb.NewDB(dir+fmt.Sprintf("%02x/", i))
@@ -28,16 +27,14 @@ func convertOldUnwindDb(dir string) bool {
 		newdb[i].Close()
 	}
 
-	dir = dir[:len(dir)-1] // remove tra trailing slash
-	rento := dir+".obsolete"
-	e := os.Rename(dir, rento)
-	if e != nil {
-		println(e.Error())
-	} else {
-		fmt.Println("Unwind database has been converted to a new format.")
-		fmt.Println("The old version was ranamed to "+rento)
-		fmt.Println("You may delete it, if you don't plan to go back to old tag.")
-	}
+	os.Mkdir(dir+"old/", 0770)
+	os.Rename(dir+"qdb.0", dir+"old/qdb.0")
+	os.Rename(dir+"qdb.1", dir+"old/qdb.1")
+	os.Rename(dir+"qdb.log", dir+"old/qdb.log")
+
+	fmt.Println("Unwind database has been converted to a new format.")
+	fmt.Println("The old files were moved to "+dir+"old/")
+	fmt.Println("Delete them when you don't plan to go back to a previous s/w version anymore.")
 
 	return true
 }
