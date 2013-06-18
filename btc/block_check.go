@@ -14,7 +14,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		return
 	}
 
-	// Check timestamp (must not be higher than now +2 minutes)
+	// Check timestamp (must not be higher than now +2 hours)
 	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
 		er = errors.New("CheckBlock() : block timestamp too far in the future")
 		dos = true
