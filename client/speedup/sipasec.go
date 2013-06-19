@@ -1,7 +1,7 @@
 package main
 
 /*
-  If you want EC verify operations to work about 150 times faster,
+  If you want EC verify operations to work almost 100 times faster,
   you can try using a cgo wrapper for secp256k1 lib developer by sipa:
   https://github.com/sipa/secp256k1
 
