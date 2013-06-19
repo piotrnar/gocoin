@@ -1,7 +1,7 @@
 package main
 
 /*
-  If you want EC verify operations to work about 30 times faster,
+  If you want EC verify operations to work about 15 times faster,
   you can try using OpenSSL cgo wrapper, from the "openssl" dir.
 
   In order to do it, just copy this file one level up (to the
