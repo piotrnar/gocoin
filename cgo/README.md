@@ -1,1 +1,1 @@
-cgo wrappers for tatifve libs to speedup EC_Verify operations
+cgo wrappers for native libs to speed up EC_Verify operations
