@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"sync"
+	"time"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -16,6 +17,8 @@ const (
 	BLOCK_TRUSTED = 0x01
 	BLOCK_INVALID = 0x02
 	BLOCK_COMPRSD = 0x04
+
+	MaxCachedBlocks = 200
 )
 
 /*
@@ -44,6 +47,10 @@ type oneBl struct {
 	compressed bool
 }
 
+type cacheRecord struct {
+	data []byte
+	used time.Time
+}
 
 type BlockDB struct {
 	dirname string
@@ -51,6 +58,7 @@ type BlockDB struct {
 	blockdata *os.File
 	blockindx *os.File
 	mutex sync.Mutex
+	cache map[[Uint256IdxLen]byte] *cacheRecord
 }
 
 
@@ -70,13 +78,34 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.idx")
 	}
+	db.cache = make(map[[Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
 	return
+}
+
+
+func (db *BlockDB) addToCache(h *Uint256, bl []byte) {
+	if rec, ok := db.cache[h.BIdx()]; ok {
+		rec.used = time.Now()
+		return
+	}
+	if len(db.cache) >= MaxCachedBlocks {
+		var oldest_t time.Time
+		var oldest_k [Uint256IdxLen]byte
+		for k, v := range db.cache {
+			if oldest_t.IsZero() || v.used.Before(oldest_t) {
+				oldest_t = v.used
+				oldest_k = k
+			}
+		}
+		delete(db.cache, oldest_k)
+	}
+	db.cache[h.BIdx()] = &cacheRecord{used:time.Now(), data:bl}
 }
 
 
 func (db *BlockDB) GetStats() (s string) {
 	db.mutex.Lock()
-	s += fmt.Sprintf("BlockDB: %d blocks\n", len(db.blockIndex))
+	s += fmt.Sprintf("BlockDB: %d blocks, %d in cache\n", len(db.blockIndex), len(db.cache))
 	db.mutex.Unlock()
 	return
 }
@@ -127,6 +156,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	db.mutex.Lock()
 	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos),
 		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true}
+	db.addToCache(bl.Hash, bl.Raw)
 	db.mutex.Unlock()
 	return
 }
@@ -195,11 +225,21 @@ func (db *BlockDB) Close() {
 func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash2idx(hash.Hash[:])]
-	db.mutex.Unlock()
 	if !ok {
+		db.mutex.Unlock()
 		e = errors.New("Block not in the index")
 		return
 	}
+
+	trusted = rec.trusted
+	if crec, hit := db.cache[hash.BIdx()]; hit {
+		db.mutex.Unlock()
+		bl = crec.data
+		crec.used = time.Now()
+		return
+	}
+	db.mutex.Unlock()
+
 	bl = make([]byte, rec.blen)
 
 	// we will re-open the data file, to not spoil the writting pointer
@@ -214,12 +254,13 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	}
 	f.Close()
 
-	trusted = rec.trusted
 	if rec.compressed {
 		gz, _ := gzip.NewReader(bytes.NewReader(bl))
 		bl, _ = ioutil.ReadAll(gz)
 		gz.Close()
 	}
+
+	db.addToCache(hash, bl)
 
 	return
 }
