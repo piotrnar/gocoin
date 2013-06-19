@@ -14,7 +14,7 @@ Unix
 
 4. Execute "make"
 
-5. Copy libsecp256k1.a to the current (sipasec) folder.
+5. Copy libsecp256k1.a and secp256k1.h to the current (sipasec) folder.
 
 6. Both "go build" and "go test" shoudl be working from now on.
 
@@ -41,6 +41,6 @@ Use mingw(64) and msys.
 
 7. Execute "make" in "secp256k1/"
 
-8. Copy libsecp256k1.a and the fixed libgmp.a to the current (sipasec) folder.
+8. Copy libsecp256k1.a, secp256k1.h and fixed libgmp.a to the current (sipasec) folder.
 
 9. Both "go build" and "go test" shoudl be working from now on.
