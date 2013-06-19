@@ -14,11 +14,9 @@ import "unsafe"
 
 // Verify ECDSA signature
 func EC_Verify(pkey, sign, hash []byte) int {
-	h := (*C.uchar)(unsafe.Pointer(&hash[0]))
-	s := (*C.uchar)(unsafe.Pointer(&sign[0]))
-	k := (*C.uchar)(unsafe.Pointer(&pkey[0]))
-	i := C.secp256k1_ecdsa_verify(h, C.int(32), s, C.int(len(sign)), k, C.int(len(pkey)))
-	return int(i)
+	return int(C.secp256k1_ecdsa_verify((*C.uchar)(unsafe.Pointer(&hash[0])), C.int(32),
+		(*C.uchar)(unsafe.Pointer(&sign[0])), C.int(len(sign)),
+		(*C.uchar)(unsafe.Pointer(&pkey[0])), C.int(len(pkey))))
 }
 
 func init() {
