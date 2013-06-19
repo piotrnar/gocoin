@@ -26,5 +26,3 @@ func init() {
 	C.secp256k1_start()
 }
 
-
- /*-lgdi32 libcrypto.a*/
