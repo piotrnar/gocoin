@@ -66,14 +66,23 @@ After you have the sources in your local disk, building them is usually as simpl
 
 EC_Verify wrapper
 --------------
-EC operations built into Go are very slow, comparing to other available solutions, therefore it is strongly advised to use a cgo wrapper. In order to do this copy either "openssl.go" or "sipasec.go"  (but not both of them!) from “client/speedup/” to the “client/” folder and redo “go build” there.
+EC operations built into Go are very slow, comparing to other available solutions.
+Therefore it is strongly advised to use one of the available a cgo wrappers.
+In order to do this, copy either "openssl.go" or "sipasec.go" (but not both of them)
+from “client/speedup/” to the “client/” folder and redo “go build” there.
+Though in practice it does not always go so smoothly...
 
-The sipasec option is much faster than openssl, but it takes a bit more hassle to buuld the lib.
+To build a cgo wrapper on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows).
 
+The "sipasec" option is 5 to 10 times faster from the "openssl".
+To build it, follow the instructions from "cgo/sipasec/README.md".
+It has been proven working on Windows 7 and Ubuntu 12 (both 64 bit arch).
+
+If you fail to build "sipasec", you can try the "openssl" wrapper - this one should go easier.
 On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed.
-On Windows, you will need a proper mingw(64) and MSys environment, the openssl lib (libcrypto.a) build for your architecture and its header files. Having the libcrypto.a, you will need to change it a bit, otherwise cgo will not link it. Use a bash script “openssl/win_fix_libcrypto.sh” to fix the lib.
+On Windows, you will need libcrypto.a build for your architecture and the header files.
+Having the libcrypto.a, you will need to "fix" it using a bash script “openssl/win_fix_libcrypto.sh”.
 
-As for building the sipasec wrapper, it seems less straight forward so figure it out by youself, though if you make it, it's definietelly worth it.
 
 
 User Manual
