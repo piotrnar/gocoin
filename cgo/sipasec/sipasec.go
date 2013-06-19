@@ -3,7 +3,7 @@ package sipasec
 /*
 #cgo linux CFLAGS: -I /usr/local/secp256k1
 #cgo linux LDFLAGS: -lsecp256k1 -lgmp -L /usr/local/secp256k1 -I /usr/local/secp256k1
-#cgo windows LDFLAGS: -L . libsecp256k1.a -lgdi32 libcrypto.a
+#cgo windows LDFLAGS: -L . libsecp256k1.a libgmp.a
 
 #include <stdio.h>
 #include "secp256k1.h"
@@ -25,3 +25,6 @@ func EC_Verify(pkey, sign, hash []byte) int {
 func init() {
 	C.secp256k1_start()
 }
+
+
+ /*-lgdi32 libcrypto.a*/
