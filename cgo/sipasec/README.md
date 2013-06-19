@@ -12,9 +12,9 @@ Unix
 
 3. Execute "./configure" inside "secp256k1/"
 
-4. Execute "make"
+4. Execute "make" and copy the "libsecp256k1.a" to "/lib/" (you will need a root access)
 
-5. Copy "libsecp256k1.a" and "include/secp256k1.h" to the current (sipasec) folder.
+5. Copy "include/secp256k1.h" to the current (sipasec) folder.
 
 6. Both "go build" and "go test" shoudl be working from now on.
 
