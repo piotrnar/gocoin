@@ -1,5 +1,8 @@
+0.3.2
+* Added a memory cache for blocks database (in btc/blockdb.go)
+
 0.3.0
-* Added sipasec cgo for EC_Verify (~5 times faster than openssl)
+* Added sipasec cgo for EC_Verify (over 5 times faster than openssl)
 
 0.2.15
 * Support for gzip compressed blocks inside blockchain.dat
