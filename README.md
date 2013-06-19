@@ -67,7 +67,7 @@ After you have the sources in your local disk, building them is usually as simpl
 EC_Verify wrapper
 --------------
 EC operations built into Go are very slow, comparing to other available solutions.
-Therefore it is strongly advised to use one of the available a cgo wrappers.
+Therefore it is strongly advised to use one of the available cgo wrappers.
 In order to do this, copy either "openssl.go" or "sipasec.go" (but not both of them)
 from “client/speedup/” to the “client/” folder and redo “go build” there.
 Though in practice it does not always go so smoothly...
