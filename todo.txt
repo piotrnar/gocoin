@@ -1,0 +1,1 @@
+* Arithmetic should be limited to signed 32-bit integers, but may overflow their output.
