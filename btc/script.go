@@ -3,6 +3,7 @@ package btc
 import (
 	"os"
 	"fmt"
+	"bytes"
 	"errors"
 	"math/big"
 	"encoding/hex"
@@ -59,14 +60,6 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	return true
 }
 
-// It seems that OP_EQUAL only operates on unsigned values
-func BigIntFromLSB(d []byte) *big.Int {
-	x := make([]byte, len(d))
-	for i := range d {
-		x[len(d)-i-1] = d[i]
-	}
-	return new(big.Int).SetBytes(x)
-}
 
 func b2i(b bool) *big.Int {
 	if b {
@@ -351,14 +344,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					a := BigIntFromLSB(stack.pop())
-					b := BigIntFromLSB(stack.pop())
+					a := stack.pop()
+					b := stack.pop()
 					if opcode==0x88 { //OP_EQUALVERIFY
-						if a.Cmp(b)!=0 {
+						if !bytes.Equal(a, b) {
 							return false
 						}
 					} else {
-						stack.pushBool(a.Cmp(b)==0)
+						stack.pushBool(bytes.Equal(a, b))
 					}
 
 				case opcode==0x8c: //OP_1SUB
