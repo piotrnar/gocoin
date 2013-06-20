@@ -1,3 +1,6 @@
+0.3.4
+* Scripts no longer have int64 size limit (all work on big numbers)
+
 0.3.3
 * Better external IP address discovery and droping connections to self
 
