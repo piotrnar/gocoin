@@ -347,8 +347,6 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 				c.node.height = binary.LittleEndian.Uint32(pl[of:of+4])
 			}
 		}
-		println("con", btc.NewNetAddr(pl[20:46]).String(),
-			btc.NewNetAddr(pl[46:72]).String(), c.node.agent, c.node.height)
 	} else {
 		return errors.New("Version message too short")
 	}
