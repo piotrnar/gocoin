@@ -1,5 +1,5 @@
 0.3.4
-* Scripts no longer have int64 size limit (all work on big numbers)
+* Scripts have a check now for the 32-bit limit at the input ints
 
 0.3.3
 * Better external IP address discovery and droping connections to self
