@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 )
 
+const nMaxNumSize = 4
+
 type scrStack struct {
 	data [][]byte
 }
@@ -30,28 +32,36 @@ func (s *scrStack) pushInt(val *big.Int) {
 		val.Neg(val)
 	}
 	bigend := val.Bytes()
-	d := make([]byte, len(bigend))
-	for i := range bigend {
-		d[len(bigend)-i-1] = bigend[i]
-	}
+	var d []byte
 
-	if negative {
-		if (bigend[0]&0x80) != 0 {
-			d = append(d, 0x80)
-		} else {
-			d[len(d)-1] |= 0x80
+	if len(bigend)!=0 {
+		d = make([]byte, len(bigend))
+		for i := range bigend {
+			d[len(bigend)-i-1] = bigend[i]
+		}
+
+		if negative {
+			if (bigend[0]&0x80) != 0 {
+				d = append(d, 0x80)
+			} else {
+				d[len(d)-1] |= 0x80
+			}
+		} else if (d[len(d)-1]&0x80) != 0 {
+			d = append(d, 0x00)
 		}
 	}
 
 	s.data = append(s.data, d)
 }
 
-
-
 // Converts a little endian, BTC format, integer into big.Int
 func bts2int(d []byte) *big.Int {
 	if len(d) == 0 {
 		return new(big.Int)
+	}
+
+	if len(d) > nMaxNumSize {
+		panic("BigInt from the stack overflow")
 	}
 
 	// convert little endian to big endian
