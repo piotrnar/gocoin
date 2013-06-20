@@ -2,7 +2,6 @@ package btc
 
 import (
 	"fmt"
-	"math/big"
 	"encoding/hex"
 )
 
@@ -24,24 +23,23 @@ func (s *scrStack) pushBool(v bool) {
 	}
 }
 
-func (s *scrStack) pushInt(val *big.Int) {
+func (s *scrStack) pushInt(val int64) {
 	var negative bool
 
-	if val.Sign()<0 {
+	if val<0 {
 		negative = true
-		val.Neg(val)
+		val = -val
 	}
-	bigend := val.Bytes()
 	var d []byte
 
-	if len(bigend)!=0 {
-		d = make([]byte, len(bigend))
-		for i := range bigend {
-			d[len(bigend)-i-1] = bigend[i]
+	if val!=0 {
+		for val!=0 {
+			d = append(d, byte(val))
+			val >>= 8
 		}
 
 		if negative {
-			if (bigend[0]&0x80) != 0 {
+			if (d[len(d)-1]&0x80) != 0 {
 				d = append(d, 0x80)
 			} else {
 				d[len(d)-1] |= 0x80
@@ -54,29 +52,37 @@ func (s *scrStack) pushInt(val *big.Int) {
 	s.data = append(s.data, d)
 }
 
-// Converts a little endian, BTC format, integer into big.Int
-func bts2int(d []byte) *big.Int {
-	if len(d) == 0 {
-		return new(big.Int)
-	}
 
+func bts2int(d []byte) (res int64) {
 	if len(d) > nMaxNumSize {
 		panic("BigInt from the stack overflow")
 	}
 
-	// convert little endian to big endian
-	bigend := make([]byte, len(d))
-	for i := range d {
-		bigend[len(d)-i-1] = d[i]
+	if len(d)==0 {
+		return
 	}
 
-	// process the sign bit
-	if (bigend[0]&0x80) != 0 {
-		bigend[0] &= 0x7f // negative value - remove the sign bit
-		return new(big.Int).Neg(new(big.Int).SetBytes(bigend))
-	} else {
-		return new(big.Int).SetBytes(bigend)
+	var i int
+	for i<len(d)-1 {
+		res |= int64(d[i]) << uint(i*8)
+		i++
+		if don(DBG_SCRIPT) {
+			println("...", i, res)
+		}
 	}
+
+	if don(DBG_SCRIPT) {
+		println("bsdgvfds", res, i, d[i], len(d))
+	}
+
+	if (d[i]&0x80)!=0 {
+		res |= int64(d[i]&0x7f) << uint(i*8)
+		res = -res
+	} else {
+		res |= int64(d[i]) << uint(i*8)
+	}
+
+	return
 }
 
 
@@ -93,7 +99,7 @@ func bts2bool(d []byte) bool {
 }
 
 
-func (s *scrStack) popInt() *big.Int {
+func (s *scrStack) popInt() int64 {
 	return bts2int(s.pop())
 }
 
@@ -105,7 +111,7 @@ func (s *scrStack) top(idx int) (d []byte) {
 	return s.data[len(s.data)+idx]
 }
 
-func (s *scrStack) topInt(idx int) *big.Int {
+func (s *scrStack) topInt(idx int) int64 {
 	return bts2int(s.data[len(s.data)+idx])
 }
 
