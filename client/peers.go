@@ -225,17 +225,23 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
-// Discard any IP that may refer to our own host
+// Discard any IP that may refer to a local network
 func ValidIp4(ip [4]byte) bool {
-	if ip==[4]byte{127,0,0,1} {
+	// local host
+	if ip[0]==0 || ip[0]==127 {
 		return false
 	}
-	if ip==[4]byte{0,0,0,0} {
+
+	// RFC1918
+	if ip[0]==10 || ip[0]==192 && ip[1]==168 || ip[0]==172 && ip[1]>=16 && ip[1]<=31 {
 		return false
 	}
-	if MyExternalAddr!=nil && ip==MyExternalAddr.Ip4 {
+
+	//RFC3927
+	if ip[0]==169 && ip[1]==254 {
 		return false
 	}
+
 	return true
 }
 
