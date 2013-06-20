@@ -13,11 +13,6 @@ import (
 
 const MAX_SCRIPT_ELEMENT_SIZE = 520
 
-var bnZero *big.Int = new(big.Int) // by default set to zero
-var bnOne *big.Int = big.NewInt(1)
-var bnNeg1 *big.Int = big.NewInt(-1)
-var bnTwenty *big.Int = big.NewInt(20)
-
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	if don(DBG_SCRIPT) {
@@ -74,9 +69,9 @@ func BigIntFromLSB(d []byte) *big.Int {
 
 func b2i(b bool) *big.Int {
 	if b {
-		return bnOne
+		return big.NewInt(1)
 	} else {
-		return bnZero
+		return new(big.Int)
 	}
 }
 
@@ -137,7 +132,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		} else if fExec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
 			switch {
 				case opcode==0x4f: // OP_1NEGATE
-					stack.pushInt(bnNeg1)
+					stack.pushInt(big.NewInt(-1))
 
 				case opcode>=0x51 && opcode<=0x60: // OP_1-OP_16
 					stack.pushInt(big.NewInt(int64(opcode-0x50)))
@@ -371,7 +366,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					n := stack.popInt()
-					stack.pushInt(n.Sub(n, bnOne))
+					stack.pushInt(n.Sub(n, big.NewInt(1)))
 
 				case opcode==0x8f: //OP_NEGATE
 					if stack.size()<1 {
@@ -541,7 +536,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					i := 1
 					bnkc := stack.topInt(-i)
-					if bnkc.Sign()<0 || bnkc.Cmp(bnTwenty) > 0 {
+					if bnkc.Sign()<0 || bnkc.Cmp(big.NewInt(20)) > 0 {
 						println("OP_CHECKMULTISIG: Wrong number of keys")
 						return false
 					}
