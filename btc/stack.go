@@ -2,6 +2,7 @@ package btc
 
 import (
 	"fmt"
+	"math/big"
 	"encoding/hex"
 )
 
@@ -21,80 +22,85 @@ func (s *scrStack) pushBool(v bool) {
 	}
 }
 
-func (s *scrStack) pushInt(val int64) {
-	if val==0 {
-		s.data = append(s.data, []byte{})
-		return
+func (s *scrStack) pushInt(val *big.Int) {
+	var negative bool
+
+	if val.Sign()<0 {
+		negative = true
+		val.Neg(val)
 	}
-	neg := (val<0)
-	if neg {
-		val = -val
+	bigend := val.Bytes()
+	d := make([]byte, len(bigend))
+	for i := range bigend {
+		d[len(bigend)-i-1] = bigend[i]
 	}
-	var buf = []byte{byte(val)}
-	val >>= 8
-	for val != 0 {
-		buf = append(buf, byte(val))
-		val >>= 8
-	}
-	if neg {
-		if (buf[len(buf)-1]&0x80)==0 {
-			buf[len(buf)-1] |= 0x80
+
+	if negative {
+		if (bigend[0]&0x80) != 0 {
+			d = append(d, 0x80)
 		} else {
-			buf = append(buf, 0x80)
+			d[len(d)-1] |= 0x80
 		}
 	}
-	s.data = append(s.data, buf)
+
+	s.data = append(s.data, d)
 }
 
 
 
-func bts2int(d []byte) int64 {
-	//println("bts2int", hex.EncodeToString(d), "...")
+// Converts a little endian, BTC format, integer into big.Int
+func bts2int(d []byte) *big.Int {
 	if len(d) == 0 {
-		return 0
-	} else if len(d) > 8 {
-		println("Int too long", len(d))
+		return new(big.Int)
 	}
-	var neg bool
-	var res uint64
+
+	// convert little endian to big endian
+	bigend := make([]byte, len(d))
 	for i := range d {
-		if i==len(d)-1 {
-			neg = (d[i]&0x80) != 0
-			res |= ( uint64(d[i]&0x7f) << uint64(8*i) )
-		} else {
-			res |= ( uint64(d[i]) << uint64(8*i) )
-		}
+		bigend[len(d)-i-1] = d[i]
 	}
-	if neg {
-		//println("... neg ", res)
-		return -int64(res)
+
+	// process the sign bit
+	if (bigend[0]&0x80) != 0 {
+		bigend[0] &= 0x7f // negative value - remove the sign bit
+		return new(big.Int).Neg(new(big.Int).SetBytes(bigend))
 	} else {
-		//println("... +", res)
-		return int64(res)
+		return new(big.Int).SetBytes(bigend)
 	}
 }
 
 
-func (s *scrStack) popInt() int64 {
-	return bts2int(s.pop())
-}
-
-func (s *scrStack) popBool() bool {
-	d := s.pop()
-	for i := range d {
+func bts2bool(d []byte) bool {
+	if len(d)==0 {
+		return false
+	}
+	for i:=0; i<len(d)-1; i++ {
 		if d[i]!=0 {
 			return true
 		}
 	}
-	return false
+	return d[len(d)-1]!=0x80 // -0 is also false (I hope..)
+}
+
+
+func (s *scrStack) popInt() *big.Int {
+	return bts2int(s.pop())
+}
+
+func (s *scrStack) popBool() bool {
+	return bts2bool(s.pop())
 }
 
 func (s *scrStack) top(idx int) (d []byte) {
 	return s.data[len(s.data)+idx]
 }
 
-func (s *scrStack) topInt(idx int) int64 {
+func (s *scrStack) topInt(idx int) *big.Int {
 	return bts2int(s.data[len(s.data)+idx])
+}
+
+func (s *scrStack) topBool(idx int) bool {
+	return bts2bool(s.data[len(s.data)+idx])
 }
 
 func (s *scrStack) pop() (d []byte) {
