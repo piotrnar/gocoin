@@ -1,4 +1,7 @@
-cgo wrappers for native libs to speed up EC_Verify operations
+EC_Verify
+==============
+The sub-folders contain cgo wrappers for native libs, that significantly speed up EC_Verify operations.
+"sipasec" is at least 5 times faster than "openssl", though sipa warns that it's still in an experimantal phase and advises to be careful.
 
 Windows
 --------------
