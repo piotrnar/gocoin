@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
-	"math/big"
 	"encoding/hex"
 	"encoding/binary"
 	"crypto/sha256"
@@ -13,7 +12,6 @@ import (
 )
 
 const MAX_SCRIPT_ELEMENT_SIZE = 520
-
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	if don(DBG_SCRIPT) {
@@ -60,16 +58,22 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	return true
 }
 
-
-func b2i(b bool) *big.Int {
+func b2i(b bool) int64 {
 	if b {
-		return big.NewInt(1)
+		return 1
 	} else {
-		return new(big.Int)
+		return 0
 	}
 }
 
 func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
+
+	defer func() {
+		if r := recover(); r != nil {
+			println("evalScript panic:", r)
+		}
+	}()
+
 	var vfExec scrStack
 	var altstack scrStack
 	sta, idx, opcnt := 0, 0, 0
@@ -126,10 +130,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		} else if fExec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
 			switch {
 				case opcode==0x4f: // OP_1NEGATE
-					stack.pushInt(big.NewInt(-1))
+					stack.pushInt(-1)
 
 				case opcode>=0x51 && opcode<=0x60: // OP_1-OP_16
-					stack.pushInt(big.NewInt(int64(opcode-0x50)))
+					stack.pushInt(int64(opcode-0x50))
 
 				case opcode==0x61: // OP_NOP
 					// Do nothing
@@ -239,7 +243,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 
 				case opcode==0x74: //OP_DEPTH
-					stack.pushInt(big.NewInt(int64(stack.size())))
+					stack.pushInt(int64(stack.size()))
 
 				case opcode==0x75: //OP_DROP
 					if stack.size()<1 {
@@ -279,16 +283,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					n := stack.popInt()
-					//if n < 0 || n >= int64(stack.size()) {
-					if n.Sign()<0 || n.Cmp(big.NewInt(int64(stack.size()))) >= 0 {
+					if n < 0 || n >= int64(stack.size()) {
 						println("Wrong n for opcode", opcode)
 						return false
 					}
-					ni := n.Int64()
 					if opcode==0x79/*OP_PICK*/ {
-						stack.push(stack.top(int(-1-ni)))
-					} else if ni > 0 {
-						tmp := make([][]byte, ni)
+						stack.push(stack.top(int(-1-n)))
+					} else if n > 0 {
+						tmp := make([][]byte, n)
 						for i := range tmp {
 							tmp[i] = stack.pop()
 						}
@@ -337,7 +339,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					stack.pushInt(big.NewInt(int64(len(stack.top(-1)))))
+					stack.pushInt(int64(len(stack.top(-1))))
 
 				case opcode==0x87 || opcode==0x88: //OP_EQUAL || OP_EQUALVERIFY
 					if stack.size()<2 {
@@ -359,16 +361,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					n := stack.popInt()
-					stack.pushInt(n.Sub(n, big.NewInt(1)))
+					stack.pushInt(stack.popInt()-1)
 
 				case opcode==0x8f: //OP_NEGATE
 					if stack.size()<1 {
 						println("Stack too short for opcode", opcode)
 						return false
 					}
-					a := stack.popInt()
-					stack.pushInt(a.Neg(a))
+					stack.pushInt(-stack.popInt())
 
 				case opcode==0x90: //OP_ABS
 					if stack.size()<1 {
@@ -376,8 +376,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					a := stack.popInt()
-					if a.Sign()<0 {
-						stack.pushInt(a.Neg(a))
+					if a<0 {
+						stack.pushInt(-a)
 					} else {
 						stack.pushInt(a)
 					}
@@ -414,27 +414,27 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					bn2 := stack.popInt()
 					bn1 := stack.popInt()
-					var bn *big.Int
+					var bn int64
 					switch opcode {
-						case 0x93: bn = new(big.Int).Add(bn1, bn2) // OP_ADD
-						case 0x94: bn = new(big.Int).Sub(bn1, bn2) // OP_SUB
-						case 0x9a: bn = b2i(bn1.Sign()!=0 && bn2.Sign()!=0) // OP_BOOLAND
-						case 0x9b: bn = b2i(bn1.Sign()!=0 || bn2.Sign()!=0) // OP_BOOLOR
-						case 0x9c: bn = b2i(bn1.Cmp(bn2)==0) // OP_NUMEQUAL
-						case 0x9d: bn = b2i(bn1.Cmp(bn2)==0) // OP_NUMEQUALVERIFY
-						case 0x9e: bn = b2i(bn1.Cmp(bn2)!=0) // OP_NUMNOTEQUAL
-						case 0x9f: bn = b2i(bn1.Cmp(bn2)<0) // OP_LESSTHAN
-						case 0xa0: bn = b2i(bn1.Cmp(bn2)>0) // OP_GREATERTHAN
-						case 0xa1: bn = b2i(bn1.Cmp(bn2)<=0) // OP_LESSTHANOREQUAL
-						case 0xa2: bn = b2i(bn1.Cmp(bn2)>=0) // OP_GREATERTHANOREQUAL
+						case 0x93: bn = bn1 + bn2 // OP_ADD
+						case 0x94: bn = bn1 - bn2 // OP_SUB
+						case 0x9a: bn = b2i(bn1 != 0 && bn2 != 0) // OP_BOOLAND
+						case 0x9b: bn = b2i(bn1 != 0 || bn2 != 0) // OP_BOOLOR
+						case 0x9c: bn = b2i(bn1 == bn2) // OP_NUMEQUAL
+						case 0x9d: bn = b2i(bn1 == bn2) // OP_NUMEQUALVERIFY
+						case 0x9e: bn = b2i(bn1 != bn2) // OP_NUMNOTEQUAL
+						case 0x9f: bn = b2i(bn1 < bn2) // OP_LESSTHAN
+						case 0xa0: bn = b2i(bn1 > bn2) // OP_GREATERTHAN
+						case 0xa1: bn = b2i(bn1 <= bn2) // OP_LESSTHANOREQUAL
+						case 0xa2: bn = b2i(bn1 >= bn2) // OP_GREATERTHANOREQUAL
 						case 0xa3: // OP_MIN
-							if bn1.Cmp(bn2)<0 {
+							if bn1 < bn2 {
 								bn = bn1
 							} else {
 								bn = bn2
 							}
 						case 0xa4: // OP_MAX
-							if bn1.Cmp(bn2)>0 {
+							if bn1 > bn2 {
 								bn = bn1
 							} else {
 								bn = bn2
@@ -442,7 +442,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						default: panic("invalid opcode")
 					}
 					if opcode == 0x9d { //OP_NUMEQUALVERIFY
-						if bn.Sign()==0 {
+						if bn==0 {
 							return false
 						}
 					} else {
@@ -457,7 +457,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					bn3 := stack.popInt()
 					bn2 := stack.popInt()
 					bn1 := stack.popInt()
-					stack.pushBool(bn2.Cmp(bn1)<=0 && bn1.Cmp(bn3)<0)
+					stack.pushBool(bn2 <= bn1 && bn1 < bn3)
 
 				case opcode==0xa6: //OP_RIPEMD160
 					if stack.size()<1 {
@@ -529,12 +529,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						return false
 					}
 					i := 1
-					bnkc := stack.topInt(-i)
-					if bnkc.Sign()<0 || bnkc.Cmp(big.NewInt(20)) > 0 {
+					keyscnt := stack.topInt(-i)
+					if keyscnt < 0 || keyscnt > 20 {
 						println("OP_CHECKMULTISIG: Wrong number of keys")
 						return false
 					}
-					keyscnt := bnkc.Int64()
 					opcnt += int(keyscnt)
 					if opcnt > 201 {
 						println("evalScript: too many opcodes B")
@@ -547,12 +546,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						println("OP_CHECKMULTISIG: Stack too short B")
 						return false
 					}
-					bnsc := stack.topInt(-i)
-					if bnsc.Sign()<0 || bnsc.Cmp(bnkc)>0 {
+					sigscnt := stack.topInt(-i)
+					if sigscnt < 0 || sigscnt > keyscnt {
 						println("OP_CHECKMULTISIG: sigscnt error")
 						return false
 					}
-					sigscnt := bnsc.Int64()
 					i++
 					isig := i
 					i += int(sigscnt)
