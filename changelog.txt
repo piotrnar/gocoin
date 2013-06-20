@@ -1,5 +1,5 @@
 0.3.4
-* Scripts have a check now for the 32-bit limit at the input ints
+* Scripts do a check for the 4 bytes limit at the ints taken from the stack
 
 0.3.3
 * Better external IP address discovery and droping connections to self
