@@ -154,7 +154,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	binary.Write(db.blockindx, binary.LittleEndian, blksize)
 
 	db.mutex.Lock()
-	db.blockIndex[hash2idx(bl.Hash.Hash[:])] = &oneBl{fpos:uint64(pos),
+	db.blockIndex[bl.Hash.BIdx()] = &oneBl{fpos:uint64(pos),
 		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true}
 	db.addToCache(bl.Hash, bl.Raw)
 	db.mutex.Unlock()
@@ -164,7 +164,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 
 
 func (db *BlockDB) BlockInvalid(hash []byte) {
-	idx := hash2idx(hash[:])
+	idx := NewUint256(hash).BIdx()
 	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
@@ -183,7 +183,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 
 
 func (db *BlockDB) BlockTrusted(hash []byte) {
-	idx := hash2idx(hash[:])
+	idx := NewUint256(hash).BIdx()
 	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
@@ -224,7 +224,7 @@ func (db *BlockDB) Close() {
 
 func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	db.mutex.Lock()
-	rec, ok := db.blockIndex[hash2idx(hash.Hash[:])]
+	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
 		db.mutex.Unlock()
 		e = errors.New("Block not in the index")
@@ -290,7 +290,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 
 
 		BlockHash := b[4:36]
-		db.blockIndex[hash2idx(BlockHash)] = ob
+		db.blockIndex[NewUint256(BlockHash).BIdx()] = ob
 
 		if int64(ob.fpos)+int64(ob.blen) > maxdatfilepos {
 			maxdatfilepos = int64(ob.fpos)+int64(ob.blen)
