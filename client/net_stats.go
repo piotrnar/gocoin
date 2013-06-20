@@ -93,9 +93,17 @@ func net_stats(par string) {
 		}
 		fmt.Println()
 	}
-	if *server && MyExternalAddr!=nil {
-		fmt.Println("TCP server listening at external address", MyExternalAddr.String())
+
+	if len(ExternalIp4)>0 {
+		fmt.Print("External addresses:")
+		for ip, cnt := range ExternalIp4 {
+			fmt.Printf(" %d.%d.%d.%d(%d)", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip), cnt)
+		}
+		fmt.Println()
+	} else {
+		fmt.Println("No known external address")
 	}
+
 	mutex.Unlock()
 	bw_stats()
 }
