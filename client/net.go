@@ -47,6 +47,8 @@ const (
 	PingAssumedIfUnsupported = 999 // ms
 
 	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
+
+	MIN_PROTO_VERSION = 209
 )
 
 
@@ -54,8 +56,9 @@ var (
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxTotCons)
 	InConsActive, OutConsActive uint
 	DefaultTcpPort uint16
-	MyExternalAddr *btc.NetAddr
+	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
 	LastConnId uint32
+	nonce [8]byte
 )
 
 
@@ -124,6 +127,11 @@ type oneConnection struct {
 }
 
 
+func init() {
+	rand.Read(nonce[:])
+}
+
+
 func NewConnection(ad *onePeer) (c *oneConnection) {
 	c = new(oneConnection)
 	c.PeerAddr = ad
@@ -172,6 +180,24 @@ func (c *oneConnection) DoS() {
 }
 
 
+func BestExternalAddr() []byte {
+	var best_ip uint32
+	var best_cnt uint
+	for ip, cnt := range ExternalIp4 {
+		if cnt > best_cnt {
+			best_cnt = cnt
+			best_ip = ip
+		}
+	}
+	res := make([]byte, 26)
+	binary.LittleEndian.PutUint64(res[0:8], Services)
+	// leave ip6 filled with zeros
+	binary.BigEndian.PutUint32(res[20:24], best_ip)
+	binary.BigEndian.PutUint16(res[24:26], DefaultTcpPort)
+	return res
+}
+
+
 func (c *oneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
 
@@ -180,14 +206,12 @@ func (c *oneConnection) SendVersion() {
 	binary.Write(b, binary.LittleEndian, uint64(time.Now().Unix()))
 
 	b.Write(c.PeerAddr.NetAddr.Bytes())
-	if MyExternalAddr!=nil {
-		b.Write(MyExternalAddr.Bytes())
+	if len(ExternalIp4)>0 {
+		b.Write(BestExternalAddr())
 	} else {
 		b.Write(bytes.Repeat([]byte{0}, 26))
 	}
 
-	var nonce [8]byte
-	rand.Read(nonce[:])
 	b.Write(nonce[:])
 
 	b.WriteByte(byte(len(UserAgent)))
@@ -303,14 +327,17 @@ func (c *oneConnection) SendAddr() {
 
 
 func (c *oneConnection) HandleVersion(pl []byte) error {
-	if len(pl) >= 46 {
+	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
 		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
+		if bytes.Equal(pl[72:80], nonce[:]) {
+			return errors.New("Connecting to ourselves")
+		}
+		if c.node.version < MIN_PROTO_VERSION {
+			return errors.New("Client version too low")
+		}
 		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
 		c.node.timestamp = binary.LittleEndian.Uint64(pl[12:20])
-		if MyExternalAddr == nil {
-			MyExternalAddr = btc.NewNetAddr(pl[20:46]) // These bytes should know our external IP
-			MyExternalAddr.Port = DefaultTcpPort
-		}
+		ExternalIp4[binary.BigEndian.Uint32(pl[40:44])]++
 		if len(pl) >= 86 {
 			le, of := btc.VLen(pl[80:])
 			of += 80
@@ -320,6 +347,8 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 				c.node.height = binary.LittleEndian.Uint32(pl[of:of+4])
 			}
 		}
+		println("con", btc.NewNetAddr(pl[20:46]).String(),
+			btc.NewNetAddr(pl[46:72]).String(), c.node.agent, c.node.height)
 	} else {
 		return errors.New("Version message too short")
 	}
