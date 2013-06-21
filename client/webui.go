@@ -17,9 +17,10 @@ const page_head = `<html><head><title>Gocoin `+btc.SourcesTag+`</title>
 <table align="center" width="990" cellpadding="0" cellspacing="0"><tr><td>
 <table width="100%"><tr>
 <td align="left"><a href="/">Home</a>
- | <a href="/counts">Counters</a>
+ | <a href="/net">Network</a>
  | <a href="/blocks">Blocks</a>
  | <a href="/miners">Miners</a>
+<td align="right"><a href="/counts">Counters</a>
 </table><hr>
 `
 
@@ -44,19 +45,88 @@ func write_html_tail(w http.ResponseWriter) {
 func p_home(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w)
 	fmt.Fprint(w, "<h1>Home</h1>")
-	fmt.Fprint(w, "<pre>")
-	fmt.Fprintln(w, busy)
+
+	fmt.Fprint(w, "<h2>Wallet</h2>")
+	fmt.Fprintf(w, "Last known balance: <b>%.8f</b> BTC in <b>%d</b> outputs<br>\n",
+		float64(LastBalance)/1e8, len(MyBalance))
+
+	fmt.Fprint(w, "<h2>Last Block</h2>")
 	mutex.Lock()
-	fmt.Fprintln(w, "LastBlock:", LastBlock.BlockHash.String())
-	fmt.Fprintf(w, "Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
-		LastBlock.Height,
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(LastBlock.Bits), time.Now().Sub(LastBlockReceived).String())
-	fmt.Fprintf(w, "BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons),
-		peerDB.Count())
+	fmt.Fprintln(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>Hash:<td>%s\n", LastBlock.BlockHash.String())
+	fmt.Fprintf(w, "<tr><td>Height:<td>%d\n", LastBlock.Height)
+	fmt.Fprintf(w, "<tr><td>Timestamp:<td>%s\n",
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"))
+	fmt.Fprintf(w, "<tr><td>Difficulty:<td>%.3f\n", btc.GetDifficulty(LastBlock.Bits))
+	fmt.Fprintf(w, "<tr><td>Received:<td>%s ago\n", time.Now().Sub(LastBlockReceived).String())
+	fmt.Fprintln(w, "</table>")
 	mutex.Unlock()
-	fmt.Fprint(w, "</pre>")
+
+	fmt.Fprint(w, "<h2>Network</h2>")
+	fmt.Fprintln(w, "<table>")
+	bw_mutex.Lock()
+	tick_recv()
+	tick_sent()
+	fmt.Fprintf(w, "<tr><td>Downloading at:<td>%d/%d KB/s, %s total\n",
+		dl_bytes_prv_sec>>10, DownloadLimit>>10, bts(dl_bytes_total))
+	fmt.Fprintf(w, "<tr><td>Uploading at:<td>%d/%d KB/s, %s total\n",
+		ul_bytes_prv_sec>>10, UploadLimit>>10, bts(ul_bytes_total))
+	bw_mutex.Unlock()
+	fmt.Fprintf(w, "<tr><td>Net Queue Size:<td>%d\n", len(netBlocks))
+	fmt.Fprintf(w, "<tr><td>Open Connections:<td>%d (%d outgoing + %d incomming)\n",
+		len(openCons), OutConsActive, InConsActive)
+	fmt.Fprint(w, "<tr><td>Extrenal IPs:<td>")
+	for ip, cnt := range ExternalIp4 {
+		fmt.Fprintf(w, "%d.%d.%d.%d (%d)&nbsp;&nbsp;", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip), cnt)
+	}
+	fmt.Fprintln(w, "</table>")
+
+
+	fmt.Fprint(w, "<h2>Internals</h2>")
+	fmt.Fprintln(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td>%d\n", len(cachedBlocks))
+	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td>%d/%d\n", len(pendingBlocks), len(pendingFifo))
+	fmt.Fprintf(w, "<tr><td>Know Peers:<td>%d\n", peerDB.Count())
+	fmt.Fprintln(w, "</table>")
+	write_html_tail(w)
+}
+
+func p_net(w http.ResponseWriter, r *http.Request) {
+	write_html_head(w)
+	mutex.Lock()
+	srt := make(sortedkeys, len(openCons))
+	cnt := 0
+	for k, v := range openCons {
+		srt[cnt].key = k
+		srt[cnt].ConnID = v.ConnID
+		cnt++
+	}
+	sort.Sort(srt)
+	fmt.Fprint(w, "<h1>Network</h1>")
+	fmt.Fprintln(w, "<table class=\"netcons\" border=\"1\" cellspacing=\"0\" cellpadding=\"0\">")
+	fmt.Fprint(w, "<tr><th>ID<th colspan=\"2\">IP<th>Ping<th colspan=\"2\">Last Rcvd<th colspan=\"2\">Last Sent")
+	fmt.Fprintln(w, "<th>Total Rcvd<th>Total Sent<th>User Agent<th>Sending")
+	for idx := range srt {
+		v := openCons[srt[idx].key]
+		fmt.Fprintf(w, "<tr class=\"hov\"><td align=\"right\">%d", v.ConnID)
+		if v.Incomming {
+			fmt.Fprint(w, "<td>From")
+		} else {
+			fmt.Fprint(w, "<td>To")
+		}
+		fmt.Fprint(w, "<td align=\"right\">", v.PeerAddr.Ip())
+		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing())
+		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsRcvd)
+		fmt.Fprint(w, "<td align=\"right\">", v.LastCmdRcvd)
+		fmt.Fprint(w, "<td>", v.LastBtsSent)
+		fmt.Fprint(w, "<td>", v.LastCmdSent)
+		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesReceived))
+		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesSent))
+		fmt.Fprint(w, "<td>", v.node.agent)
+		fmt.Fprintf(w, "<td align=\"right\">%d/%d", v.send.sofar, len(v.send.buf))
+	}
+	fmt.Fprint(w, "</table>")
+	mutex.Unlock()
 	write_html_tail(w)
 }
 
@@ -127,7 +197,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w)
 	fmt.Fprint(w, "<h1>Miners of the last 144 blocks</h1>")
 	m := make(map[string]int, 20)
-	cnt := 0
+	cnt, unkn := 0, 0
 	end := BlockChain.BlockTreeEnd
 	for ; end!=nil && cnt<144; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
@@ -135,10 +205,11 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		miner := blocks_miner(bl)
-		if miner=="" {
-			miner = "Unknown"
+		if miner!="" {
+			m[miner]++
+		} else {
+			unkn++
 		}
-		m[miner]++
 		end = end.Parent
 	}
 	srt := make(onemiernstat, len(m))
@@ -152,18 +223,21 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
 	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
 	for i := range srt {
-		fmt.Fprintf(w, "<tr class=\"hov\"><td>%s<td align=\"right\">%d<td align=\"right\">%.1f%%</tr>\n",
+		fmt.Fprintf(w, "<tr class=\"hov\"><td>%s<td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
 			srt[i].name, srt[i].cnt, 100*float64(srt[i].cnt)/float64(cnt))
 	}
+	fmt.Fprintf(w, "<tr class=\"hov\"><td><i>Unknown</i><td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
+		unkn, 100*float64(unkn)/float64(cnt))
 	fmt.Fprint(w, "</table>")
 	write_html_tail(w)
 }
 
-func webui() {
+func webserver() {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/", p_home)
-	http.HandleFunc("/counts", p_counts)
+	http.HandleFunc("/net", p_net)
 	http.HandleFunc("/blocks", p_blocks)
 	http.HandleFunc("/miners", p_miners)
-	http.ListenAndServe("127.0.0.1:8833", nil)
+	http.HandleFunc("/counts", p_counts)
+	http.ListenAndServe(*webui, nil)
 }
