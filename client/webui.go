@@ -86,7 +86,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td><b>%d</b>\n", len(cachedBlocks))
 	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td><b>%d/%d</b>\n", len(pendingBlocks), len(pendingFifo))
-	fmt.Fprintf(w, "<tr><td>Know Peers:<td><b>%d</b>\n", peerDB.Count())
+	fmt.Fprintf(w, "<tr><td>Known Peers:<td><b>%d</b>\n", peerDB.Count())
 	fmt.Fprintf(w, "<tr><td>Node's uptime:<td><b>%s</b>\n", time.Now().Sub(StartTime).String())
 	fmt.Fprintln(w, "</table>")
 	write_html_tail(w)
