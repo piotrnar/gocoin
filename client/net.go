@@ -327,7 +327,7 @@ func (c *oneConnection) SendAddr() {
 
 
 func (c *oneConnection) SendOwnAddr() {
-	if *server && len(ExternalIp4)>0 {
+	if len(ExternalIp4)>0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, 1)
 		binary.Write(buf, binary.LittleEndian, uint32(time.Now().Unix()))
@@ -822,7 +822,9 @@ func do_one_connection(c *oneConnection) {
 
 			case "verack":
 				c.VerackReceived = true
-				c.SendOwnAddr() // It seems stupid, but we get more connections doing it, so..
+				if *server {
+					c.SendOwnAddr()
+				}
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
