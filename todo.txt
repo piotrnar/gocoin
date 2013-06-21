@@ -1,1 +1,1 @@
-* some kind of web interface
+* Make GetBlocksAskBack (in net.go) deeper
