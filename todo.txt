@@ -1,0 +1,1 @@
+* Add LastDataSent to connection and cropt it if the time does not move
