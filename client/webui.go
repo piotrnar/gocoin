@@ -82,11 +82,12 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "</table>")
 
 
-	fmt.Fprint(w, "<h2>Internals</h2>")
+	fmt.Fprint(w, "<h2>Others</h2>")
 	fmt.Fprintln(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td>%d\n", len(cachedBlocks))
 	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td>%d/%d\n", len(pendingBlocks), len(pendingFifo))
 	fmt.Fprintf(w, "<tr><td>Know Peers:<td>%d\n", peerDB.Count())
+	fmt.Fprintf(w, "<tr><td>Node's uptime:<td>%s\n", time.Now().Sub(StartTime).String())
 	fmt.Fprintln(w, "</table>")
 	write_html_tail(w)
 }
@@ -105,7 +106,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Network</h1>")
 	fmt.Fprintln(w, "<table class=\"netcons\" border=\"1\" cellspacing=\"0\" cellpadding=\"0\">")
 	fmt.Fprint(w, "<tr><th>ID<th colspan=\"2\">IP<th>Ping<th colspan=\"2\">Last Rcvd<th colspan=\"2\">Last Sent")
-	fmt.Fprintln(w, "<th>Total Rcvd<th>Total Sent<th>User Agent<th>Sending")
+	fmt.Fprintln(w, "<th>Total Rcvd<th>Total Sent<th colspan=\"2\">Version<th>Sending")
 	for idx := range srt {
 		v := openCons[srt[idx].key]
 		fmt.Fprintf(w, "<tr class=\"hov\"><td align=\"right\">%d", v.ConnID)
@@ -117,15 +118,17 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<td align=\"right\">", v.PeerAddr.Ip())
 		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing())
 		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsRcvd)
-		fmt.Fprint(w, "<td align=\"right\">", v.LastCmdRcvd)
-		fmt.Fprint(w, "<td>", v.LastBtsSent)
-		fmt.Fprint(w, "<td>", v.LastCmdSent)
+		fmt.Fprint(w, "<td class=\"mono\">", v.LastCmdRcvd)
+		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsSent)
+		fmt.Fprint(w, "<td class=\"mono\">", v.LastCmdSent)
 		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesReceived))
 		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesSent))
+		fmt.Fprint(w, "<td align=\"right\">", v.node.version)
 		fmt.Fprint(w, "<td>", v.node.agent)
 		fmt.Fprintf(w, "<td align=\"right\">%d/%d", v.send.sofar, len(v.send.buf))
 	}
-	fmt.Fprint(w, "</table>")
+	fmt.Fprintln(w, "</table><br>")
+	fmt.Fprintln(w, OutConsActive, "outgoing and", InConsActive, "incomming connections")
 	mutex.Unlock()
 	write_html_tail(w)
 }
