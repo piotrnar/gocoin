@@ -82,8 +82,8 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Blocks</h1>")
 	end := BlockChain.BlockTreeEnd
 	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
-	fmt.Fprintf(w, "<tr><th>Height<th>Timestamp<th>Hash<th>Txs<th>Size<th>Difficulty</tr>\n")
-	for cnt:=0; end!=nil && cnt<40; cnt++ {
+	fmt.Fprintf(w, "<tr><th>Height<th>Timestamp<th>Hash<th>Txs<th>Size<th>Mined by</tr>\n")
+	for cnt:=0; end!=nil && cnt<100; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
@@ -93,11 +93,12 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		block.BuildTxList()
-		fmt.Fprintf(w, "<tr class=\"hov\"><td>%d<td>%s<td class=\"mono\">%s<td>%d<td>%d<td>%.2f</tr>\n",
-			end.Height, time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"),
-			end.BlockHash.String(), len(block.Txs), len(bl),
-			btc.GetDifficulty(block.Bits))
-
+		miner := blocks_miner(bl)
+		fmt.Fprintf(w, "<tr class=\"hov\"><td>%d<td>%s", end.Height,
+			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(w, "<td><a class=\"mono\" href=\"http://blockchain.info/block/%s\">%s",
+			end.BlockHash.String(), end.BlockHash.String())
+		fmt.Fprintf(w, "<td align=\"right\">%d<td align=\"right\">%d<td>%s</tr>\n", len(block.Txs), len(bl), miner)
 		end = end.Parent
 	}
 	fmt.Fprint(w, "</table>")
