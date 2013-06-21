@@ -27,7 +27,7 @@ var (
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 
-	minerId *string = flag.String("miner", mid_am, "Monitor new blocks with the string in their coinbase TX")
+	minerId *string = flag.String("miner", "", "Monitor new blocks with the string in their coinbase TX")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
