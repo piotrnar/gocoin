@@ -326,6 +326,17 @@ func (c *oneConnection) SendAddr() {
 }
 
 
+func (c *oneConnection) SendOwnAddr() {
+	if *server && len(ExternalIp4)>0 {
+		buf := new(bytes.Buffer)
+		btc.WriteVlen(buf, 1)
+		binary.Write(buf, binary.LittleEndian, uint32(time.Now().Unix()))
+		buf.Write(BestExternalAddr())
+		c.SendRawMsg("addr", buf.Bytes())
+	}
+}
+
+
 func (c *oneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
 		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
@@ -811,6 +822,7 @@ func do_one_connection(c *oneConnection) {
 
 			case "verack":
 				c.VerackReceived = true
+				c.SendOwnAddr() // It seems stupid, but we get more connections doing it, so..
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
