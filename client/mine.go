@@ -8,18 +8,43 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-var MiderIds = []string{"ASICMiner", "50BTC.com", "/slush/", "BTC Guild", "BitMinter", "Eligius", "bitparking"}
+var MinerIds = [][2]string{
+	{"BTC Guild", "Mined by BTC Guild"},
+	{"ASICMiner", "Mined By ASICMiner"},
+	{"50BTC", "50BTC.com"},
+	{"Slush", "/slush/"},
+	// Dont know how to do Deepbit
+	{"EclipseMC", "EMC "},
+	{"Eligius", "Eligius"},
+	{"BitMinter", "BitMinter"},
+	{"Bitparking", "bitparking"},
+}
+
+
+func mined_by(bl []byte, id string) bool {
+	max2search := 0x200
+	if len(bl)<max2search {
+		max2search = len(bl)
+	}
+	return bytes.Index(bl[0x51:max2search], []byte(id))!=-1
+}
 
 
 func mined_by_us(bl []byte) bool {
 	if *minerId=="" {
 		return false
 	}
-	max2search := 0x200
-	if len(bl)<max2search {
-		max2search = len(bl)
+	return mined_by(bl, *minerId)
+}
+
+
+func blocks_miner(bl []byte) string {
+	for i := range MinerIds {
+		if mined_by(bl, MinerIds[i][1]) {
+			return MinerIds[i][0]
+		}
 	}
-	return bytes.Index(bl[0x51:max2search], []byte(*minerId))!=-1
+	return ""
 }
 
 
@@ -98,8 +123,8 @@ func do_mining(s string) {
 func set_miner(p string) {
 	if p=="" {
 		fmt.Println("Specify MinerID string or one of the numberic values:")
-		for i := range MiderIds {
-			fmt.Printf("%3d - for '%s'\n", i, MiderIds[i])
+		for i := range MinerIds {
+			fmt.Printf("%3d - %s\n", i, MinerIds[i][0])
 		}
 		return
 	}
@@ -113,10 +138,10 @@ func set_miner(p string) {
 	v, e := strconv.ParseUint(p, 10, 32)
 	if e!=nil {
 		*minerId = p
-	} else if int(v)<len(MiderIds) {
-		*minerId = MiderIds[v]
+	} else if int(v)<len(MinerIds) {
+		*minerId = MinerIds[v][1]
 	} else {
-		fmt.Println("The number is too big. Max is", len(MiderIds)-1)
+		fmt.Println("The number is too big. Max is", len(MinerIds)-1)
 	}
 
 	fmt.Printf("Current miner ID: '%s'\n", *minerId)
