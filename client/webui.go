@@ -19,6 +19,7 @@ const page_head = `<html><head><title>Gocoin `+btc.SourcesTag+`</title>
 <td align="left"><a href="/">Home</a>
  | <a href="/counts">Counters</a>
  | <a href="/blocks">Blocks</a>
+ | <a href="/miners">Miners</a>
 </table><hr>
 `
 
@@ -105,10 +106,64 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+type onemiernstat []struct {
+	name string
+	cnt int
+}
+
+func (x onemiernstat) Len() int {
+	return len(x)
+}
+
+func (x onemiernstat) Less(i, j int) bool {
+	return x[i].cnt > x[j].cnt
+}
+
+func (x onemiernstat) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
+}
+
+func p_miners(w http.ResponseWriter, r *http.Request) {
+	write_html_head(w)
+	fmt.Fprint(w, "<h1>Miners of the last 144 blocks</h1>")
+	m := make(map[string]int, 20)
+	cnt := 0
+	end := BlockChain.BlockTreeEnd
+	for ; end!=nil && cnt<144; cnt++ {
+		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
+		if e != nil {
+			return
+		}
+		miner := blocks_miner(bl)
+		if miner=="" {
+			miner = "Unknown"
+		}
+		m[miner]++
+		end = end.Parent
+	}
+	srt := make(onemiernstat, len(m))
+	i := 0
+	for k, v := range m {
+		srt[i].name = k
+		srt[i].cnt = v
+		i++
+	}
+	sort.Sort(srt)
+	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
+	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
+	for i := range srt {
+		fmt.Fprintf(w, "<tr class=\"hov\"><td>%s<td align=\"right\">%d<td align=\"right\">%.1f%%</tr>\n",
+			srt[i].name, srt[i].cnt, 100*float64(srt[i].cnt)/float64(cnt))
+	}
+	fmt.Fprint(w, "</table>")
+	write_html_tail(w)
+}
+
 func webui() {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/", p_home)
-	http.HandleFunc("/blocks", p_blocks)
 	http.HandleFunc("/counts", p_counts)
+	http.HandleFunc("/blocks", p_blocks)
+	http.HandleFunc("/miners", p_miners)
 	http.ListenAndServe("127.0.0.1:8833", nil)
 }
