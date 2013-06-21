@@ -1,3 +1,6 @@
+0.3.5
+* Addded WebUi at http://127.0.0.1:8833/
+
 0.3.4
 * Arithmetic script opcodes check for the 4 bytes limit at input values
 
