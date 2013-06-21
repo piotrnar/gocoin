@@ -55,7 +55,8 @@ func (s *scrStack) pushInt(val int64) {
 
 func bts2int(d []byte) (res int64) {
 	if len(d) > nMaxNumSize {
-		panic("BigInt from the stack overflow")
+		panic("Int on the stack is too long")
+		// Make sure this panic is captured in evalScript (cause the script to fail, not crash)
 	}
 
 	if len(d)==0 {
@@ -66,13 +67,6 @@ func bts2int(d []byte) (res int64) {
 	for i<len(d)-1 {
 		res |= int64(d[i]) << uint(i*8)
 		i++
-		if don(DBG_SCRIPT) {
-			println("...", i, res)
-		}
-	}
-
-	if don(DBG_SCRIPT) {
-		println("bsdgvfds", res, i, d[i], len(d))
 	}
 
 	if (d[i]&0x80)!=0 {
