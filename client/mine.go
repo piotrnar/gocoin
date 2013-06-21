@@ -8,15 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-const (
-	mid_50 = "50BTC.com"
-	mid_am = "ASICMiner"
-	mid_sl = "/slush/"
-	mid_bt = "BTC Guild"
-	mid_bm = "BitMinter"
-	min_el = "Eligius"
-	min_bp = "bitparking"
-)
+var MiderIds = []string{"ASICMiner", "50BTC.com", "/slush/", "BTC Guild", "BitMinter", "Eligius", "bitparking"}
 
 
 func mined_by_us(bl []byte) bool {
@@ -104,25 +96,29 @@ func do_mining(s string) {
 
 
 func set_miner(p string) {
+	if p=="" {
+		fmt.Println("Specify MinerID string or one of the numberic values:")
+		for i := range MiderIds {
+			fmt.Printf("%3d - for '%s'\n", i, MiderIds[i])
+		}
+		return
+	}
+
 	if p=="off" {
 		*minerId = ""
 		fmt.Printf("Mining monitor disabled\n")
 		return
 	}
-	if len(p)>3 {
+
+	v, e := strconv.ParseUint(p, 10, 32)
+	if e!=nil {
 		*minerId = p
-	} else if p!="" {
-		switch p {
-			case "50": *minerId = mid_50
-			case "am": *minerId = mid_am
-			case "sl": *minerId = mid_sl
-			case "bt": *minerId = mid_bt
-			case "bm": *minerId = mid_bm
-			case "el": *minerId = min_el
-			case "bp": *minerId = min_bp
-			default: fmt.Println("Unknown miner ID alias (50, am, sl, bt, bm, el, bp)")
-		}
+	} else if int(v)<len(MiderIds) {
+		*minerId = MiderIds[v]
+	} else {
+		fmt.Println("The number is too big. Max is", len(MiderIds)-1)
 	}
+
 	fmt.Printf("Current miner ID: '%s'\n", *minerId)
 }
 
