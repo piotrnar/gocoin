@@ -412,8 +412,8 @@ func main() {
 	}
 
 	go network_process()
-
 	go do_userif()
+	go webui()
 
 	var newbl *blockRcvd
 	for !exit_now {
