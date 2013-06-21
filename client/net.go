@@ -668,8 +668,7 @@ func (c *oneConnection) Tick() {
 		}
 		n, e := SockWrite(c.NetConn, c.send.buf[c.send.sofar:])
 		if n > 0 {
-			c.
-			LastDataGot = time.Now()
+			c.LastDataGot = time.Now()
 			c.BytesSent += uint64(n)
 			c.send.sofar += n
 			//println(c.PeerAddr.Ip(), max2send, "...", c.send.sofar, n, e)
