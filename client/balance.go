@@ -10,6 +10,7 @@ import (
 var (
 	MyBalance btc.AllUnspentTx  // unspent outputs that can be removed
 	MyWallet *oneWallet     // addresses that cann be poped up
+	LastBalance uint64
 	BalanceChanged bool
 	BalanceInvalid bool = true
 )
@@ -136,6 +137,7 @@ func DumpBalance(utxt *os.File) {
 			}
 		}
 	}
+	LastBalance = sum
 	fmt.Printf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
 	if utxt != nil {
 		fmt.Println("Your balance data has been saved to the 'balance/' folder.")
