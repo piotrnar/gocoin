@@ -53,12 +53,12 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h2>Last Block</h2>")
 	mutex.Lock()
 	fmt.Fprintln(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Hash:<td>%s\n", LastBlock.BlockHash.String())
-	fmt.Fprintf(w, "<tr><td>Height:<td>%d\n", LastBlock.Height)
-	fmt.Fprintf(w, "<tr><td>Timestamp:<td>%s\n",
+	fmt.Fprintf(w, "<tr><td>Hash:<td><b>%s</b>\n", LastBlock.BlockHash.String())
+	fmt.Fprintf(w, "<tr><td>Height:<td><b>%d</b>\n", LastBlock.Height)
+	fmt.Fprintf(w, "<tr><td>Timestamp:<td><b>%s</b>\n",
 		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"))
-	fmt.Fprintf(w, "<tr><td>Difficulty:<td>%.3f\n", btc.GetDifficulty(LastBlock.Bits))
-	fmt.Fprintf(w, "<tr><td>Received:<td>%s ago\n", time.Now().Sub(LastBlockReceived).String())
+	fmt.Fprintf(w, "<tr><td>Difficulty:<td><b>%.3f</b>\n", btc.GetDifficulty(LastBlock.Bits))
+	fmt.Fprintf(w, "<tr><td>Received:<td><b>%s</b> ago\n", time.Now().Sub(LastBlockReceived).String())
 	fmt.Fprintln(w, "</table>")
 	mutex.Unlock()
 
@@ -67,13 +67,13 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	fmt.Fprintf(w, "<tr><td>Downloading at:<td>%d/%d KB/s, %s total\n",
+	fmt.Fprintf(w, "<tr><td>Downloading at:<td><b>%d/%d</b> KB/s, <b>%s</b> total\n",
 		dl_bytes_prv_sec>>10, DownloadLimit>>10, bts(dl_bytes_total))
-	fmt.Fprintf(w, "<tr><td>Uploading at:<td>%d/%d KB/s, %s total\n",
+	fmt.Fprintf(w, "<tr><td>Uploading at:<td><b>%d/%d</b> KB/s, <b>%s</b> total\n",
 		ul_bytes_prv_sec>>10, UploadLimit>>10, bts(ul_bytes_total))
 	bw_mutex.Unlock()
-	fmt.Fprintf(w, "<tr><td>Net Queue Size:<td>%d\n", len(netBlocks))
-	fmt.Fprintf(w, "<tr><td>Open Connections:<td>%d (%d outgoing + %d incomming)\n",
+	fmt.Fprintf(w, "<tr><td>Net Queue Size:<td><b>%d</b>\n", len(netBlocks))
+	fmt.Fprintf(w, "<tr><td>Open Connections:<td><b>%d</b> (<b>%d</b> outgoing + <b>%d</b> incomming)\n",
 		len(openCons), OutConsActive, InConsActive)
 	fmt.Fprint(w, "<tr><td>Extrenal IPs:<td>")
 	for ip, cnt := range ExternalIp4 {
@@ -84,10 +84,10 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprint(w, "<h2>Others</h2>")
 	fmt.Fprintln(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td>%d\n", len(cachedBlocks))
-	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td>%d/%d\n", len(pendingBlocks), len(pendingFifo))
-	fmt.Fprintf(w, "<tr><td>Know Peers:<td>%d\n", peerDB.Count())
-	fmt.Fprintf(w, "<tr><td>Node's uptime:<td>%s\n", time.Now().Sub(StartTime).String())
+	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td><b>%d</b>\n", len(cachedBlocks))
+	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td><b>%d/%d</b>\n", len(pendingBlocks), len(pendingFifo))
+	fmt.Fprintf(w, "<tr><td>Know Peers:<td><b>%d</b>\n", peerDB.Count())
+	fmt.Fprintf(w, "<tr><td>Node's uptime:<td><b>%s</b>\n", time.Now().Sub(StartTime).String())
 	fmt.Fprintln(w, "</table>")
 	write_html_tail(w)
 }
@@ -111,12 +111,12 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		v := openCons[srt[idx].key]
 		fmt.Fprintf(w, "<tr class=\"hov\"><td align=\"right\">%d", v.ConnID)
 		if v.Incomming {
-			fmt.Fprint(w, "<td>From")
+			fmt.Fprint(w, "<td aling=\"center\">From")
 		} else {
-			fmt.Fprint(w, "<td>To")
+			fmt.Fprint(w, "<td aling=\"center\">To")
 		}
 		fmt.Fprint(w, "<td align=\"right\">", v.PeerAddr.Ip())
-		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing())
+		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing(), "ms")
 		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsRcvd)
 		fmt.Fprint(w, "<td class=\"mono\">", v.LastCmdRcvd)
 		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsSent)
