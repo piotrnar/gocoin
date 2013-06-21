@@ -34,7 +34,6 @@ const (
 	MaxBytesInSendBuffer = 16*1024 // If we have more than this bytes in the send buffer, send no more responses
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
-	GetBlocksAskBack = 144
 
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
 
@@ -600,20 +599,36 @@ func (c *oneConnection) getblocksNeeded() bool {
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
 		c.LastBlocksFrom = LastBlock
 
-		BlockChain.BlockIndexAccess.Lock()
-		for i:=0; i < GetBlocksAskBack && lb.Parent != nil; i++ {
-			lb = lb.Parent
+		GetBlocksAskBack := int(time.Now().Sub(LastBlockReceived) / time.Minute)
+		if GetBlocksAskBack >= btc.MovingCheckopintDepth {
+			GetBlocksAskBack = btc.MovingCheckopintDepth
 		}
-		BlockChain.BlockIndexAccess.Unlock()
 
-		var b [4+1+3*32]byte
+		b := make([]byte, 37)
 		binary.LittleEndian.PutUint32(b[0:4], Version)
-		b[4] = 2 // two locators
+		b[4] = 1 // one locator so far...
 		copy(b[5:37], LastBlock.BlockHash.Hash[:])
-		copy(b[37:69], lb.BlockHash.Hash[:])
-		// the remaining bytes (hash_stop) should be filled with zero
-		c.SendRawMsg("getblocks", b[:])
-		CountSafe("GetblocksOut")
+
+		if GetBlocksAskBack > 0 {
+			BlockChain.BlockIndexAccess.Lock()
+			cnt_each := 0
+			for i:=0; i < GetBlocksAskBack && lb.Parent != nil; i++ {
+				lb = lb.Parent
+				cnt_each++
+				if cnt_each==200 {
+					b[4]++
+					b = append(b, lb.BlockHash.Hash[:]...)
+					cnt_each = 0
+				}
+			}
+			if cnt_each!=0 {
+				b = append(b, lb.BlockHash.Hash[:]...)
+			}
+			BlockChain.BlockIndexAccess.Unlock()
+		}
+		var null_stop [32]byte
+		b = append(b, null_stop[:]...)
+		c.SendRawMsg("getblocks", b)
 		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
 		return true
 	}
