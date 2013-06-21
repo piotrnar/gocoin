@@ -190,7 +190,8 @@ func BestExternalAddr() []byte {
 	}
 	res := make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], Services)
-	// leave ip6 filled with zeros
+	// leave ip6 filled with zeros, except for the last 2 bytes:
+	res[18], res[19] = 0xff, 0xff
 	binary.BigEndian.PutUint32(res[20:24], best_ip)
 	binary.BigEndian.PutUint16(res[24:26], DefaultTcpPort)
 	return res
