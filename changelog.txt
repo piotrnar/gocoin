@@ -1,5 +1,5 @@
 0.3.5
-* Addded WebUi (by default via http://127.0.0.1:8833/)
+* Addded WebUI - by default on http://127.0.0.1:8833/
 * Improved framework for mining stats
 * Changed the way "getblocks" is requested
 
