@@ -133,24 +133,6 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
-func p_counts(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w)
-	fmt.Fprint(w, "<h1>Counters</h1>")
-	counter_mutex.Lock()
-	ck := make([]string, 0)
-	for k, _ := range Counter {
-		ck = append(ck, k)
-	}
-	sort.Strings(ck)
-	fmt.Fprint(w, "<table class=\"mono\">")
-	for i := range ck {
-		fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", ck[i], Counter[ck[i]])
-	}
-	fmt.Fprint(w, "</table>")
-	counter_mutex.Unlock()
-	write_html_tail(w)
-}
-
 func p_blocks(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w)
 	fmt.Fprint(w, "<h1>Blocks</h1>")
@@ -241,6 +223,41 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		unkn, 100*float64(unkn)/float64(cnt))
 	fmt.Fprint(w, "</table><br>")
 	fmt.Fprintf(w, "Average blocks per hour: <b>%.2f</b>", float64(cnt)/(float64(now-lastts)/3600))
+	write_html_tail(w)
+}
+
+func p_counts(w http.ResponseWriter, r *http.Request) {
+	write_html_head(w)
+	fmt.Fprint(w, "<h1>Counters</h1>")
+	counter_mutex.Lock()
+	ck := make([]string, 0)
+	for k, _ := range Counter {
+		ck = append(ck, k)
+	}
+	sort.Strings(ck)
+	fmt.Fprint(w, "<table class=\"mono\"><tr>")
+	fmt.Fprint(w, "<td valign=\"top\"><table border=\"1\"><tr><th colspan=\"2\">Generic Counters")
+	prv_ := ""
+	for i := range ck {
+		if ck[i][4]=='_' {
+			if ck[i][:4]!=prv_ {
+				prv_ = ck[i][:4]
+				fmt.Fprint(w, "</table><td valign=\"top\"><table border=\"1\"><tr><th colspan=\"2\">")
+				switch prv_ {
+					case "rbts": fmt.Fprintln(w, "Received bytes")
+					case "rcvd": fmt.Fprintln(w, "Received messages")
+					case "sbts": fmt.Fprintln(w, "Sent bytes")
+					case "sent": fmt.Fprintln(w, "Sent messages")
+					default: fmt.Fprintln(w, prv_)
+				}
+			}
+			fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", ck[i][5:], Counter[ck[i]])
+		} else {
+			fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", ck[i], Counter[ck[i]])
+		}
+	}
+	fmt.Fprint(w, "</table></table>")
+	counter_mutex.Unlock()
 	write_html_tail(w)
 }
 
