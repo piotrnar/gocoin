@@ -1,2 +1,2 @@
-* Add a connection droping for ones that get stuck on sending data
+* Make sure that "getblocks" message we send is ok
 * Add a routing of txs
