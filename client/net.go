@@ -722,7 +722,6 @@ func (c *oneConnection) Tick() {
 	if c.GetBlockInProgress==nil {
 		if tmp := blockDataNeeded(); tmp != nil {
 			c.GetBlockInProgress = btc.NewUint256(tmp)
-			println(c.ConnID, "newbloth", c.GetBlockInProgress.String())
 			c.GetBlockInProgressAt = time.Now()
 			c.GetBlockData(tmp)
 			return
