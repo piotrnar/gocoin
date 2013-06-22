@@ -225,7 +225,7 @@ Support
 ==============
 If you need a support, you have three options:
  * Try to reach me on Freenet-IRC, finding me by the nick “tonikt” (sometimes “tonikt2” or “tonikt3”).
- * If you have access, ask it in this forum thread:  https://bitcointalk.org/index.php?topic=199306.0
+ * Ask in this forum thread: https://bitcointalk.org/index.php?topic=199306.0
  * Open an issue on GitHub: https://github.com/piotrnar/gocoin/issues
 
 
