@@ -288,14 +288,14 @@ func InvsNotify(h []byte) (need bool) {
 	idx := ha.BIdx()
 	mutex.Lock()
 	if _, ok := pendingBlocks[idx]; ok {
-		CountSafe("InvWasPending")
+		CountSafe("InvForPendingBlk")
 	} else if _, ok := receivedBlocks[idx]; ok {
-		CountSafe("InvWasReceived")
+		CountSafe("InvForReceivedBlk")
 	} else if len(pendingFifo)<PendingFifoLen {
 		if dbg>0 {
 			fmt.Println("blinv", btc.NewUint256(h).String())
 		}
-		CountSafe("InvWanted")
+		CountSafe("InvForWantedBlk")
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
