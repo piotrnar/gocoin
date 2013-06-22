@@ -155,7 +155,7 @@ Spending money is a secured process that requires several steps and moving files
 
 Never move any files others than the ones that you actually need to move, which are:
  * The “balance/” folder containing your unspent outputs – you move it from client to wallet
- * Text files with signed transactions – this one you move from wallet to client
+ * Text files with signed transactions – these you move from wallet to client
 
 Assuming that you would not sign a wrong transaction, nothing in the files you move between the two points is security sensitive, so  you do not  need to worry about protecting the medium (USB disk).
 
