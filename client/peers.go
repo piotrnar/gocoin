@@ -68,7 +68,7 @@ func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	if ip != nil && len(ip)==16 {
 		p = new(onePeer)
 		copy(p.Ip4[:], ip[12:16])
-		if !ValidIp4(p.Ip4) {
+		if !ValidIp4(p.Ip4[:]) {
 			e = errors.New("Local IP '"+ipstr+"'")
 		} else {
 			p.Services = 1
@@ -191,7 +191,7 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := newPeer(buf[:])
-		if !ValidIp4(a.Ip4) {
+		if !ValidIp4(a.Ip4[:]) {
 			CountSafe("AddrInvalid")
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
@@ -226,7 +226,7 @@ func (mp manyPeers) Swap(i, j int) {
 }
 
 // Discard any IP that may refer to a local network
-func ValidIp4(ip [4]byte) bool {
+func ValidIp4(ip []byte) bool {
 	// local host
 	if ip[0]==0 || ip[0]==127 {
 		return false
@@ -252,7 +252,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
 		ad := newPeer(v)
-		if ad.Banned==0 && ValidIp4(ad.Ip4) {
+		if ad.Banned==0 && ValidIp4(ad.Ip4[:]) {
 			if !unconnected || !connectionActive(ad) {
 				tmp = append(tmp, ad)
 			}
