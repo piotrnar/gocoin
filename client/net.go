@@ -115,14 +115,15 @@ type oneConnection struct {
 	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
 
-	GetBlocksInProgress map[[btc.Uint256IdxLen]byte] time.Time // We've sent getdata for a block...
+	GetBlockInProgress *btc.Uint256
+	GetBlockInProgressAt time.Time
 
 	// Ping stats
 	PingHistory [PingHistoryLength]int
 	PingHistoryIdx int
 	NextPing time.Time
-	CurrentPingData [8]byte
-	LastPingSent *time.Time
+	PingInProgress []byte
+	LastPingSent time.Time
 }
 
 
@@ -134,7 +135,6 @@ func init() {
 func NewConnection(ad *onePeer) (c *oneConnection) {
 	c = new(oneConnection)
 	c.PeerAddr = ad
-	c.GetBlocksInProgress = make(map[[btc.Uint256IdxLen]byte] time.Time)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	return
 }
@@ -379,16 +379,24 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
 
+	var new_block bool
+	var last_inv []byte
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
-			InvsNotify(pl[of+4:of+36])
-			/*if cnt>100 && i==cnt-1 {
-				c.GetBlocks(pl[of+4:of+36])
-			}*/
+			last_inv = pl[of+4:of+36]
+			new_block = InvsNotify(last_inv)
 		}
 		of+= 36
+	}
+
+	// If this was a single inv for 1 block, fetch it from the peer
+	if cnt==1 && new_block && c.GetBlockInProgress==nil{
+		CountSafe("InvGetblockNow")
+		c.GetBlockInProgress = btc.NewUint256(last_inv)
+		c.GetBlockInProgressAt = time.Now()
+		c.GetBlockData(last_inv)
 	}
 	return
 }
@@ -696,15 +704,16 @@ func (c *oneConnection) Tick() {
 	}
 
 	// Need to send getdata...?
-	if tmp := blockDataNeeded(); tmp != nil {
-		idx := btc.NewUint256(tmp).BIdx()
-		if t, pr := c.GetBlocksInProgress[idx]; !pr || time.Now().After(t.Add(GetBlockTimeout)) {
+	if c.GetBlockInProgress!=nil && time.Now().After(c.GetBlockInProgressAt.Add(GetBlockTimeout)) {
+		CountSafe("GetBlockTimeout")
+	}
+	if c.GetBlockInProgress==nil {
+		if tmp := blockDataNeeded(); tmp != nil {
+			c.GetBlockInProgress = btc.NewUint256(tmp)
+			c.GetBlockInProgressAt = time.Now()
 			c.GetBlockData(tmp)
-			c.GetBlocksInProgress[idx] = time.Now()
-		} else {
-			CountSafe("GetBlocksInProgress")
+			return
 		}
-		return
 	}
 
 	// Need to send getblocks...?
@@ -716,9 +725,9 @@ func (c *oneConnection) Tick() {
 	if time.Now().After(c.NextGetAddr) {
 		if peerDB.Count() > MaxPeersNeeded {
 			// If we have a lot of peers, do not ask for more, to save bandwidth
-			CountSafe("GetaddrSkept")
+			CountSafe("AddrEnough")
 		} else {
-			CountSafe("GetaddrSent")
+			CountSafe("AddrWanted")
 			c.SendRawMsg("getaddr", nil)
 		}
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
@@ -726,12 +735,12 @@ func (c *oneConnection) Tick() {
 	}
 
 	// Ping if we dont do anything
-	if c.node.version>60000 && c.LastPingSent == nil && time.Now().After(c.NextPing) {
+	if c.node.version>60000 && c.PingInProgress == nil && time.Now().After(c.NextPing) {
 		/*&&len(c.send.buf)==0 && len(c.GetBlocksInProgress)==0*/
-		rand.Read(c.CurrentPingData[:])
-		c.SendRawMsg("ping", c.CurrentPingData[:])
-		t := time.Now()
-		c.LastPingSent = &t
+		c.PingInProgress = make([]byte, 8)
+		rand.Read(c.PingInProgress[:])
+		c.SendRawMsg("ping", c.PingInProgress)
+		c.LastPingSent = time.Now()
 		//println(c.PeerAddr.Ip(), "ping...")
 		return
 	}
@@ -739,13 +748,13 @@ func (c *oneConnection) Tick() {
 
 
 func (c *oneConnection) HandlePong() {
-	ms := time.Now().Sub(*c.LastPingSent) / time.Millisecond
+	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
 	if dbg>1 {
-		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(*c.LastPingSent).String())
+		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
 	}
 	c.PingHistory[c.PingHistoryIdx] = int(ms)
 	c.PingHistoryIdx = (c.PingHistoryIdx+1)%PingHistoryLength
-	c.LastPingSent = nil
+	c.PingInProgress = nil
 	c.NextPing = time.Now().Add(PingPeriod)
 }
 
@@ -784,12 +793,12 @@ func do_one_connection(c *oneConnection) {
 		}
 
 		// Timeout ping in progress
-		if c.LastPingSent!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
+		if c.PingInProgress!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "ping timeout")
 			}
 			CountSafe("PingTimeout")
-			c.HandlePong()
+			c.HandlePong()  // this will set LastPingSent to nil
 		}
 
 		if cmd==nil {
@@ -871,12 +880,12 @@ func do_one_connection(c *oneConnection) {
 				}
 
 			case "pong":
-				if c.LastPingSent==nil {
-					CountSafe("PongLate")
-				} else if bytes.Equal(cmd.pl, c.CurrentPingData[:]) {
+				if c.PingInProgress==nil {
+					CountSafe("PongUnexpected")
+				} else if bytes.Equal(cmd.pl, c.PingInProgress) {
 					c.HandlePong()
 				} else {
-					CountSafe("PongBadID")
+					CountSafe("PongMismatch")
 				}
 
 			case "notfound":
