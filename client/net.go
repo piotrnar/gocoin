@@ -381,15 +381,12 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
+		CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			InvsNotify(pl[of+4:of+36])
 			/*if cnt>100 && i==cnt-1 {
 				c.GetBlocks(pl[of+4:of+36])
 			}*/
-		} else if typ==1 {
-			CountSafe("InvGotTxs")
-		} else {
-			CountSafe("InvGot???")
 		}
 		of+= 36
 	}
