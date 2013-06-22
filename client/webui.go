@@ -198,11 +198,17 @@ func (x onemiernstat) Swap(i, j int) {
 
 func p_miners(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w)
-	fmt.Fprint(w, "<h1>Miners of the last 144 blocks</h1>")
+	fmt.Fprint(w, "<h1>Miners</h1>")
 	m := make(map[string]int, 20)
 	cnt, unkn := 0, 0
 	end := BlockChain.BlockTreeEnd
-	for ; end!=nil && cnt<144; cnt++ {
+	var lastts uint32
+	now := uint32(time.Now().Unix())
+	for ; end!=nil; cnt++ {
+		if now-end.Timestamp > 24*3600 {
+			break
+		}
+		lastts = end.Timestamp
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
@@ -223,6 +229,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		i++
 	}
 	sort.Sort(srt)
+	fmt.Fprintf(w, "Data from last <b>%d</b> blocks, starting at <b>%s</b><br><br>\n",
+		cnt, time.Unix(int64(lastts), 0).Format("2006-01-02 15:04:05"))
 	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
 	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
 	for i := range srt {
@@ -231,7 +239,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "<tr class=\"hov\"><td><i>Unknown</i><td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
 		unkn, 100*float64(unkn)/float64(cnt))
-	fmt.Fprint(w, "</table>")
+	fmt.Fprint(w, "</table><br>")
+	fmt.Fprintf(w, "Average blocks per hour: <b>%.2f</b>", float64(cnt)/(float64(now-lastts)/3600))
 	write_html_tail(w)
 }
 
