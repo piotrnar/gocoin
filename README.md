@@ -229,10 +229,12 @@ If you need a support, you have three options:
  * Open an issue on GitHub: https://github.com/piotrnar/gocoin/issues
 
 
-Can I help?
+Would you like to help?
 ==============
 Everyone is welcome to contribute into Gocoin .
 
-You can help by reporting issues, suggesting changes, or submitting pull requests.
+You can help by reporting issues, suggesting changes, or submitting pull requests. 
+
+This project is evry interested in changes that were rejected from the official bitcoin client, even though they were briliant. Go is a different language than C, but try implementing your idea into Gocoin and you will love it.
 
 If you cannot find any way to contribute, but would still like to express your support for a further development of this project, do it by sending 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt (please don't send more).
