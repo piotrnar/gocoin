@@ -86,9 +86,7 @@ On Windows, you will need libcrypto.a build for your architecture and the header
 
 User Manual
 ==============
-Both the applications (client and wallet) are console only (no GUI).
-
-The client, after started, provides an additional text command based interface, that is referred later as UI.
+Both the applications (client and wallet) are console only (no GUI window).
 
 
 Client / Node
