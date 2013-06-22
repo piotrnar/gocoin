@@ -38,6 +38,7 @@ const (
 	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
+	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
 
 	PingPeriod = 60*time.Second
 	PingTimeout = 5*time.Second
@@ -98,6 +99,7 @@ type oneConnection struct {
 	send struct {
 		buf []byte
 		sofar int
+		lastSent time.Time
 	}
 
 	// Statistics:
@@ -163,6 +165,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[24:], pl)
 
 	c.send.buf = append(c.send.buf, sbuf...)
+	c.send.lastSent = time.Now()
 
 	if dbg<0 {
 		fmt.Println(cmd, len(c.send.buf), "->", c.PeerAddr.Ip())
@@ -675,7 +678,7 @@ func (c *oneConnection) Tick() {
 		}
 		n, e := SockWrite(c.NetConn, c.send.buf[c.send.sofar:])
 		if n > 0 {
-			c.LastDataGot = time.Now()
+			c.send.lastSent = time.Now()
 			c.BytesSent += uint64(n)
 			c.send.sofar += n
 			//println(c.PeerAddr.Ip(), max2send, "...", c.send.sofar, n, e)
@@ -683,6 +686,9 @@ func (c *oneConnection) Tick() {
 				c.send.buf = nil
 				c.send.sofar = 0
 			}
+		} else if time.Now().After(c.send.lastSent.Add(AnySendTimeout)) {
+			CountSafe("PeerSendTimeout")
+			c.Broken = true
 		}
 		if e != nil {
 			if dbg > 0 {
