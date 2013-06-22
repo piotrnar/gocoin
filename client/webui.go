@@ -154,7 +154,8 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"))
 		fmt.Fprintf(w, "<td><a class=\"mono\" href=\"http://blockchain.info/block/%s\">%s",
 			end.BlockHash.String(), end.BlockHash.String())
-		fmt.Fprintf(w, "<td align=\"right\">%d<td align=\"right\">%d<td>%s</tr>\n", len(block.Txs), len(bl), miner)
+		fmt.Fprintf(w, "<td align=\"right\">%d<td align=\"right\">%d<td align=\"center\">%s</tr>\n",
+			len(block.Txs), len(bl), miner)
 		end = end.Parent
 	}
 	fmt.Fprint(w, "</table>")
