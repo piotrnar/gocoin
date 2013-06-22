@@ -146,7 +146,7 @@ It import the key, just store the base58 encoded value in a file named .others -
 
 You can also place a key's label in each line, after a space.
 
-The imported keys will extend the key pool of the deterministic ones, that come from your password-seek. Afetr Importing each new key, you should redo “wallet -l” to get an updated wallet.txt for your client.
+The imported keys will extend the key pool of the deterministic ones (that come from your password-seed). Afetr Importing each new key, you should redo “wallet -l” to get an updated wallet.txt for your client.
 
 
 Spending money
