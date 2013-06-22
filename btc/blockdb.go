@@ -18,16 +18,16 @@ const (
 	BLOCK_INVALID = 0x02
 	BLOCK_COMPRSD = 0x04
 
-	MaxCachedBlocks = 200
+	MaxCachedBlocks = 500
 )
 
 /*
 	blockchain.dat - contains raw blocks data, no headers, nothing
-	blockchain.idx - contains records of 92 bytes (all values LSB):
+	blockchain.idx - contains records of 93 bytes (all values LSB):
 		[0] - flags:
 			bit(0) - "trusted" flag - this block's scripts have been verified
 			bit(1) - "invalid" flag - this block's scripts have failed
-		[1:3] - reserved
+			bit(2) - "compressed" flag - this block's data iz gzip compressed
 		[4:36]  - 256-bit block hash
 		[36:68] - 256-bit block's Parent hash
 		[68:72] - 32-bit block height (genesis is 0)
