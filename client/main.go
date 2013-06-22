@@ -374,7 +374,6 @@ func main() {
 	}
 
 	fmt.Println("Gocoin client version", btc.SourcesTag)
-	fmt.Println("Send 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt if you support this project")
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
