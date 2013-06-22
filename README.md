@@ -102,7 +102,9 @@ When the client is already running you have the UI where you can issue commands.
 
 ### Web UI
 You can also monitor a status of a running node, using a web browser. By default it is available only from a local host, via http://127.0.0.1:8833/ - if you want to have access to the WebUI from different computers, start the client with:
+
 	client -webui 0.0.0.0:8833
+
 Be careful with using this option, since there is no access control so anyone who can connect to your TCP port 8833 will be able to access this WebUI.
 
 ### Incoming connections
