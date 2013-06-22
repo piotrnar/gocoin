@@ -35,7 +35,7 @@ const (
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
-	GetBlockTimeout = 5*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
+	GetBlockTimeout = 1*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
@@ -394,12 +394,16 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		of+= 36
 	}
 
-	// If this was a single inv for 1 block, fetch it from the peer
-	if cnt==1 && new_block && c.GetBlockInProgress==nil{
-		CountSafe("InvGetblockNow")
-		c.GetBlockInProgress = btc.NewUint256(last_inv)
-		c.GetBlockInProgressAt = time.Now()
-		c.GetBlockData(last_inv)
+	if cnt==1 && new_block {
+		// If this was a single inv for 1 unknown block, ask for it immediately
+		if c.GetBlockInProgress==nil {
+			CountSafe("InvNewBlockNow")
+			c.GetBlockInProgress = btc.NewUint256(last_inv)
+			c.GetBlockInProgressAt = time.Now()
+			c.GetBlockData(last_inv)
+		} else {
+			CountSafe("InvNewBlockBusy")
+		}
 	}
 	return
 }
@@ -554,7 +558,6 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			bl, _, er := BlockChain.Blocks.BlockGet(uh)
 			if er == nil {
-				CountSafe("BlockSent")
 				c.SendRawMsg("block", bl)
 			} else {
 				//println("block", uh.String(), er.Error())
@@ -644,6 +647,7 @@ func (c *oneConnection) getblocksNeeded() bool {
 				}
 			}
 			if cnt_each!=0 {
+				b[4]++
 				b = append(b, lb.BlockHash.Hash[:]...)
 			}
 			BlockChain.BlockIndexAccess.Unlock()
@@ -709,13 +713,16 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	// Need to send getdata...?
 	if c.GetBlockInProgress!=nil && time.Now().After(c.GetBlockInProgressAt.Add(GetBlockTimeout)) {
 		CountSafe("GetBlockTimeout")
+		c.GetBlockInProgress = nil
 	}
+
+	// Need to send getdata...?
 	if c.GetBlockInProgress==nil {
 		if tmp := blockDataNeeded(); tmp != nil {
 			c.GetBlockInProgress = btc.NewUint256(tmp)
+			println(c.ConnID, "newbloth", c.GetBlockInProgress.String())
 			c.GetBlockInProgressAt = time.Now()
 			c.GetBlockData(tmp)
 			return
