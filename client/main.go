@@ -220,6 +220,7 @@ func retry_cached_blocks() bool {
 }
 
 
+// This function is called from a net conn thread
 func netBlockReceived(conn *oneConnection, b []byte) {
 	bl, e := btc.NewBlock(b)
 	if e != nil {
@@ -228,8 +229,13 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		return
 	}
 
+	if conn.GetBlockInProgress!=nil && conn.GetBlockInProgress.Equal(bl.Hash) {
+		conn.GetBlockInProgress = nil
+	} else {
+		CountSafe("EnxpectedBlockRcvd")
+	}
+
 	idx := bl.Hash.BIdx()
-	delete(conn.GetBlocksInProgress, idx)
 	mutex.Lock()
 	if _, got := receivedBlocks[idx]; got {
 		if _, ok := pendingBlocks[idx]; ok {
@@ -248,6 +254,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 }
 
 
+// Called from network threads
 func blockDataNeeded() ([]byte) {
 	for len(pendingFifo)>0 && len(netBlocks)<200 {
 		idx := <- pendingFifo
@@ -269,6 +276,7 @@ func blockDataNeeded() ([]byte) {
 }
 
 
+// Called from network threads
 func blockWanted(h []byte) (yes bool) {
 	ha := btc.NewUint256(h)
 	idx := ha.BIdx()
@@ -283,6 +291,7 @@ func blockWanted(h []byte) (yes bool) {
 }
 
 
+// Called from a net thread
 func InvsNotify(h []byte) (need bool) {
 	ha := btc.NewUint256(h)
 	idx := ha.BIdx()
