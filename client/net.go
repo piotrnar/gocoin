@@ -575,13 +575,15 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			tx_mutex.Lock()
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
+				tx_mutex.Unlock()
 				c.SendRawMsg("tx", tx.data)
 				CountSafe("TxsSent")
 				if dbg > 0 {
 					println("sent tx to", c.PeerAddr.Ip())
 				}
+			} else {
+				tx_mutex.Unlock()
 			}
-			tx_mutex.Unlock()
 		} else {
 			println("getdata for type", typ, "not supported yet")
 		}
