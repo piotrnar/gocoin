@@ -147,6 +147,10 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			ui_show_prompt()
 		}
 
+		for i:=1; i<len(bl.Txs); i++ {
+			TxMined(bl.Txs[i].Hash.Hash)
+		}
+
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
 			Busy("NetRouteInv")
