@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 	"sync"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -13,13 +14,11 @@ const (
 )
 
 var (
+	tx_mutex sync.Mutex
 	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
 	TransactionsRejected map[[32]byte] *OneTxRejected = make(map[[32]byte] *OneTxRejected)
-
-	// those that are already in the net queue:
 	TransactionsPending map[[32]byte] bool = make(map[[32]byte] bool)
-
-	tx_mutex sync.Mutex
+	SpentOutputs map[uint64] *btc.TxPrevOut = make(map[uint64] *btc.TxPrevOut)
 )
 
 
@@ -28,6 +27,7 @@ type OneTxToSend struct {
 	sentCount uint
 	lastTime time.Time
 	own bool
+	spent []uint64 // Which records in SpentOutputs this TX added
 }
 
 type OneTxRejected struct {
@@ -35,6 +35,9 @@ type OneTxRejected struct {
 	reason int
 }
 
+func VoutIdx(po *btc.TxPrevOut) (uint64) {
+	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
+}
 
 // Return false if we do not want to receive a data fotr this tx
 func NeedThisTx(id *btc.Uint256, unlockMutex bool) (res bool) {
@@ -128,9 +131,20 @@ func HandleNetTx(ntx *txRcvd) {
 	tx := ntx.tx
 	var totinp, totout uint64
 	pos := make([]*btc.TxOut, len(tx.TxIn))
+	spent := make([]uint64, len(tx.TxIn))
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
+		spent[i] = VoutIdx(&tx.TxIn[i].Input)
+
+		if _, ok := SpentOutputs[spent[i]]; ok {
+			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:200}
+			tx_mutex.Unlock()
+			CountSafe("TxDoubleSpend")
+			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
+			return
+		}
+
 		pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		if pos[i] == nil {
 			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:201}
@@ -176,8 +190,9 @@ func HandleNetTx(ntx *txRcvd) {
 		}
 	}
 
-	rec := &OneTxToSend{data:ntx.raw}
+	rec := &OneTxToSend{data:ntx.raw, spent:spent}
 	TransactionsToSend[tx.Hash.Hash] = rec
+
 	tx_mutex.Unlock()
 	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
@@ -189,8 +204,11 @@ func HandleNetTx(ntx *txRcvd) {
 
 func TxMined(h [32]byte) {
 	tx_mutex.Lock()
-	if _, ok := TransactionsToSend[h]; ok {
+	if rec, ok := TransactionsToSend[h]; ok {
 		CountSafe("TxMinedToSend")
+		for i := range rec.spent {
+			delete(SpentOutputs, rec.spent[i])
+		}
 		delete(TransactionsToSend, h)
 	}
 	if _, ok := TransactionsRejected[h]; ok {
