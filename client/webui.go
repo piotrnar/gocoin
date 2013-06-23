@@ -276,7 +276,6 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 func p_counts(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w, r)
-	fmt.Fprint(w, "<h1>Counters</h1>")
 	counter_mutex.Lock()
 	ck := make([]string, 0)
 	for k, _ := range Counter {
