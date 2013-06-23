@@ -1,1 +1,2 @@
 * Add reading command line params from a config file
+* Transacions in mem pool slould need longer to expire if they are bigger
