@@ -14,7 +14,7 @@ const (
 
 var (
 	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
-	TransactionsRejected map[[32]byte] time.Time = make(map[[32]byte] time.Time)
+	TransactionsRejected map[[32]byte] *OneTxRejected = make(map[[32]byte] *OneTxRejected)
 
 	// those that are already in the net queue:
 	TransactionsPending map[[32]byte] bool = make(map[[32]byte] bool)
@@ -29,6 +29,12 @@ type OneTxToSend struct {
 	lastTime time.Time
 	own bool
 }
+
+type OneTxRejected struct {
+	time.Time
+	reason int
+}
+
 
 // Return false if we do not want to receive a data fotr this tx
 func NeedThisTx(id *btc.Uint256, unlockMutex bool) (res bool) {
@@ -50,9 +56,9 @@ func NeedThisTx(id *btc.Uint256, unlockMutex bool) (res bool) {
 
 
 // This transaction is not valid - add it to Rejected
-func BanTx(id *btc.Uint256) {
+func BanTx(id *btc.Uint256, reason int) {
 	tx_mutex.Lock()
-	TransactionsRejected[id.Hash] = time.Now()
+	TransactionsRejected[id.Hash] = &OneTxRejected{Time:time.Now(), reason:reason}
 	tx_mutex.Unlock()
 }
 
@@ -76,20 +82,23 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 	if NeedThisTx(tid, false) {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
-			log.Println("ERROR: ParseTxNet Tx format")
-			BanTx(tid)
+			//log.Println("ERROR: ParseTxNet Tx format")
+			CountSafe("ParseTxNetError")
+			BanTx(tid, 101)
 			c.DoS()
 			return
 		}
 		if le != len(pl) {
-			log.Println("ERROR: ParseTxNet length", le, len(pl))
-			BanTx(tid)
+			CountSafe("ParseTxNetBadLen")
+			//log.Println("ERROR: ParseTxNet length", le, len(pl))
+			BanTx(tid, 102)
 			c.DoS()
 			return
 		}
 		if len(tx.TxIn)<1 {
-			log.Println("ERROR: ParseTxNet No inputs")
-			BanTx(tid)
+			CountSafe("ParseTxNetNoInp")
+			//log.Println("ERROR: ParseTxNet No inputs")
+			BanTx(tid, 103)
 			c.DoS()
 			return
 		}
@@ -124,7 +133,7 @@ func HandleNetTx(ntx *txRcvd) {
 	for i := range tx.TxIn {
 		pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		if pos[i] == nil {
-			TransactionsRejected[tx.Hash.Hash] = time.Now()
+			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:201}
 			tx_mutex.Unlock()
 			CountSafe("TxNoInput")
 			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
@@ -138,7 +147,7 @@ func HandleNetTx(ntx *txRcvd) {
 		totout += tx.TxOut[i].Value
 	}
 	if totout > totinp {
-		TransactionsRejected[tx.Hash.Hash] = time.Now()
+		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:202}
 		tx_mutex.Unlock()
 		ntx.conn.DoS()
 		log.Println("ERROR: HandleNetTx Incorrect output values", totout, totinp)
@@ -149,7 +158,7 @@ func HandleNetTx(ntx *txRcvd) {
 	fee := totout - totinp
 	kb := uint64((len(ntx.raw)+1023)>>10)
 	if fee < kb*FeePerKb {
-		TransactionsRejected[tx.Hash.Hash] = time.Now()
+		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:203}
 		tx_mutex.Unlock()
 		CountSafe("TxFeeTooLow")
 		//log.Println("ERROR: Tx fee too low", fee, len(ntx.raw))
@@ -159,7 +168,7 @@ func HandleNetTx(ntx *txRcvd) {
 	// Verify scripts
 	for i := range tx.TxIn {
 		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx) {
-			TransactionsRejected[tx.Hash.Hash] = time.Now()
+			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:204}
 			tx_mutex.Unlock()
 			ntx.conn.DoS()
 			log.Println("ERROR: HandleNetTx Invalid signature")
@@ -180,8 +189,17 @@ func HandleNetTx(ntx *txRcvd) {
 
 func TxMined(h [32]byte) {
 	tx_mutex.Lock()
-	delete(TransactionsToSend, h) // remove confirmed tx from memory pool
-	delete(TransactionsRejected, h) // remove confirmed tx from memory pool
-	delete(TransactionsPending, h) // remove confirmed tx from memory pool
+	if _, ok := TransactionsToSend[h]; ok {
+		CountSafe("TxMinedToSend")
+		delete(TransactionsToSend, h)
+	}
+	if _, ok := TransactionsRejected[h]; ok {
+		CountSafe("TxMinedRejected")
+		delete(TransactionsRejected, h)
+	}
+	if _, ok := TransactionsPending[h]; ok {
+		CountSafe("TxMinedPending")
+		delete(TransactionsPending, h)
+	}
 	tx_mutex.Unlock()
 }
