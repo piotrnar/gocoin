@@ -1,1 +1,1 @@
-* Do something with this ExternalIp4
+* Add reading command line params from a config file
