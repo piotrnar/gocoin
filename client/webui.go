@@ -5,6 +5,7 @@ import (
 	"time"
 	"sort"
 	"strings"
+	"runtime"
 	"net/http"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/btc"
@@ -106,6 +107,11 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td><b>%d/%d</b>\n", len(pendingBlocks), len(pendingFifo))
 	fmt.Fprintf(w, "<tr><td>Known Peers:<td><b>%d</b>\n", peerDB.Count())
 	fmt.Fprintf(w, "<tr><td>Node's uptime:<td><b>%s</b>\n", time.Now().Sub(StartTime).String())
+
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	fmt.Fprintf(w, "<tr><td>Heap Size:<td><b>%d MB</b>\n", ms.Alloc>>20)
+	fmt.Fprintf(w, "<tr><td>SysMem Used:<td><b>%d MB</b>\n", ms.Sys>>20)
 
 	fmt.Fprintln(w, "</table>")
 
