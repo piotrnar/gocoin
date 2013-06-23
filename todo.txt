@@ -1,2 +1,3 @@
 * Add reading command line params from a config file
 * Transacions in mem pool slould need longer to expire if they are bigger
+* Add minimum output / kb to tx check, to not take ones that have 1000 x 0.0000025 BTC
