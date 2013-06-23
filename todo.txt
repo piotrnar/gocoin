@@ -1,0 +1,2 @@
+* expire old records from memory pool
+* reject double spending txs
