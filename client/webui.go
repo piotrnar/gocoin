@@ -232,13 +232,13 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	m := make(map[string]int, 20)
 	cnt, unkn := 0, 0
 	end := BlockChain.BlockTreeEnd
-	var lastts uint32
-	now := uint32(time.Now().Unix())
+	var lastts int64
+	now := time.Now().Unix()
 	for ; end!=nil; cnt++ {
-		if now-end.Timestamp > 24*3600 {
+		if now-int64(end.Timestamp) > 24*3600 {
 			break
 		}
-		lastts = end.Timestamp
+		lastts = int64(end.Timestamp)
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
@@ -260,7 +260,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Sort(srt)
 	fmt.Fprintf(w, "Data from last <b>%d</b> blocks, starting at <b>%s</b><br><br>\n",
-		cnt, time.Unix(int64(lastts), 0).Format("2006-01-02 15:04:05"))
+		cnt, time.Unix(lastts, 0).Format("2006-01-02 15:04:05"))
 	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
 	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
 	for i := range srt {
