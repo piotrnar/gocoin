@@ -1,2 +1,1 @@
-* Make sure that "getblocks" message we send is ok
 * Add a routing of txs
