@@ -60,14 +60,6 @@ func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 }
 
 
-// This transaction is not valid - add it to Rejected
-func BanTx(id *btc.Uint256, reason int) {
-	tx_mutex.Lock()
-	TransactionsRejected[id.Hash] = &OneTxRejected{Time:time.Now(), reason:reason}
-	tx_mutex.Unlock()
-}
-
-
 // Handle tx-inv notifications
 func (c *oneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
@@ -80,30 +72,26 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 }
 
 
-
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
 	NeedThisTx(tid, func() {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
-			//log.Println("ERROR: ParseTxNet Tx format")
 			CountSafe("TxParseError")
-			BanTx(tid, 101)
+			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:101}
 			c.DoS()
 			return
 		}
 		if le != len(pl) {
 			CountSafe("TxParseLength")
-			//log.Println("ERROR: ParseTxNet length", le, len(pl))
-			BanTx(tid, 102)
+			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:102}
 			c.DoS()
 			return
 		}
 		if len(tx.TxIn)<1 {
 			CountSafe("TxParseEmpty")
-			//log.Println("ERROR: ParseTxNet No inputs")
-			BanTx(tid, 103)
+			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:103}
 			c.DoS()
 			return
 		}
