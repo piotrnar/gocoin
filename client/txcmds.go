@@ -8,17 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-type OneTxToSend struct {
-	data []byte
-	sentCount uint
-	lastTime time.Time
-}
-
-var (
-	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
-	TransactionsRejected map[[32]byte] time.Time
-)
-
 func load_tx(par string) {
 	if par=="" {
 		fmt.Println("Specify a name of a transaction file")
@@ -83,7 +72,9 @@ func load_tx(par string) {
 		fmt.Printf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
-	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd}
+	tx_mutex.Lock()
+	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:true}
+	tx_mutex.Unlock()
 	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
 	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
 }
@@ -96,13 +87,16 @@ func send_tx(par string) {
 		list_txs("")
 		return
 	}
+	tx_mutex.Lock()
 	if ptx, ok := TransactionsToSend[txid.Hash]; ok {
+		tx_mutex.Unlock()
 		cnt := NetRouteInv(1, txid, nil)
-		ptx.sentCount++
+		ptx.sentCount += cnt
 		ptx.lastTime = time.Now()
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
+		tx_mutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 	}
@@ -116,12 +110,15 @@ func del_tx(par string) {
 		list_txs("")
 		return
 	}
+	tx_mutex.Lock()
 	if _, ok := TransactionsToSend[txid.Hash]; !ok {
+		tx_mutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 		return
 	}
 	delete(TransactionsToSend, txid.Hash)
+	tx_mutex.Unlock()
 	fmt.Println("Transaction", txid.String(), "removed from the memory pool")
 }
 
@@ -129,25 +126,52 @@ func del_tx(par string) {
 func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
+	tx_mutex.Lock()
 	for k, v := range TransactionsToSend {
 		cnt++
-		if v.sentCount==0 {
-			fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - never sent")
+		var oe, snt string
+		if v.own {
+			oe = "OWN"
 		} else {
-			fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", len(v.data), "bytes - sent",
-			v.sentCount, "times, last", time.Now().Sub(v.lastTime).String(), "ago")
+			oe = "ext"
 		}
+
+		if v.sentCount==0 {
+			snt = "never sent"
+		} else {
+			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentCount,
+				time.Now().Sub(v.lastTime).String())
+		}
+		fmt.Printf("%5d) %s: %s - %d bytes - %s\n", cnt, oe,
+			btc.NewUint256(k[:]).String(), len(v.data), snt)
 	}
+	tx_mutex.Unlock()
+}
+
+
+func baned_txs(par string) {
+	fmt.Println("Rejected transactions:")
+	cnt := 0
+	tx_mutex.Lock()
+	for k, v := range TransactionsRejected {
+		cnt++
+		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", time.Now().Sub(v).String(), "ago")
+	}
+	tx_mutex.Unlock()
 }
 
 
 func send_all_tx(par string) {
+	tx_mutex.Lock()
 	for k, v := range TransactionsToSend {
-		cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
-		v.sentCount++
-		v.lastTime = time.Now()
-		fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
+		if v.own {
+			cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
+			v.sentCount += cnt
+			v.lastTime = time.Now()
+			fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
+		}
 	}
+	tx_mutex.Unlock()
 }
 
 func init () {
@@ -156,4 +180,5 @@ func init () {
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
 	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool")
+	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 }

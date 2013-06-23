@@ -12,6 +12,10 @@ a:hover {
 	background-color:yellow;
 }
 
+a.menuat {
+	text-decoration:underline;
+}
+
 .mono {
 	font-family: monospace;
 }

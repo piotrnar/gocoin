@@ -221,7 +221,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	b.WriteByte(0)  // don't notify me about txs
+	//b.WriteByte(0)  // don't notify me about txs
 
 	c.SendRawMsg("version", b.Bytes())
 }
@@ -390,6 +390,8 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		if typ==2 {
 			last_inv = pl[of+4:of+36]
 			new_block = BlockInvNotify(last_inv)
+		} else if typ==1 {
+			c.TxInvNotify(pl[of+4:of+36])
 		}
 		of+= 36
 	}
@@ -567,6 +569,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		} else if typ == 1 {
 			// transaction
 			uh := btc.NewUint256(h[:])
+			tx_mutex.Lock()
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
 				c.SendRawMsg("tx", tx.data)
 				CountSafe("TxsSent")
@@ -574,6 +577,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 					println("sent tx to", c.PeerAddr.Ip())
 				}
 			}
+			tx_mutex.Unlock()
 		} else {
 			println("getdata for type", typ, "not supported yet")
 		}
@@ -850,9 +854,8 @@ func do_one_connection(c *oneConnection) {
 			case "inv":
 				c.ProcessInv(cmd.pl)
 
-			case "tx": //ParseTx(cmd.pl)
-				println("tx unexpected here (now)")
-				//c.Broken = true
+			case "tx":
+				c.ParseTxNet(cmd.pl)
 
 			case "addr":
 				ParseAddr(cmd.pl)

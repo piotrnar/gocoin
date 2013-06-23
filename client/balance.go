@@ -17,7 +17,7 @@ var (
 
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	if valpk!=nil {
-		delete(TransactionsToSend, idx.Hash) // remove confirmed tx from memory pool
+		TxMined(idx.Hash)
 		if MyWallet==nil {
 			return
 		}

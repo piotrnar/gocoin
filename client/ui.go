@@ -148,6 +148,11 @@ func show_info(par string) {
 		peerDB.Count())
 	mutex.Unlock()
 
+	tx_mutex.Lock()
+	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
+		len(TransactionsToSend), len(TransactionsRejected), len(TransactionsPending), len(netTxs))
+	tx_mutex.Unlock()
+
 	bw_stats()
 
 	// Memory used

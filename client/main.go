@@ -46,11 +46,13 @@ var (
 	mutex, counter_mutex sync.Mutex
 	uicmddone chan bool = make(chan bool, 1)
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 300)
+	netTxs chan *txRcvd = make(chan *txRcvd, 300)
 	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
 
+	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
 	receivedBlocks map[[btc.Uint256IdxLen]byte] int64 = make(map[[btc.Uint256IdxLen]byte] int64, 300e3)
 
@@ -63,6 +65,12 @@ var (
 type blockRcvd struct {
 	conn *oneConnection
 	bl *btc.Block
+}
+
+type txRcvd struct {
+	conn *oneConnection
+	tx *btc.Tx
+	raw []byte
 }
 
 type oneCachedBlock struct {
@@ -376,9 +384,35 @@ func GetBlockData(h []byte) []byte {
 }
 
 
+func HandleNetBlock(newbl *blockRcvd) {
+	CountSafe("HandleNetBlock")
+	bl := newbl.bl
+	Busy("CheckBlock "+bl.Hash.String())
+	e, dos, maybelater := BlockChain.CheckBlock(bl)
+	if e != nil {
+		if maybelater {
+			addBlockToCache(bl, newbl.conn)
+		} else {
+			println(dos, e.Error())
+			if dos {
+				newbl.conn.DoS()
+			}
+		}
+	} else {
+		Busy("LocalAcceptBlock "+bl.Hash.String())
+		e = LocalAcceptBlock(bl, newbl.conn)
+		if e == nil {
+			retryCachedBlocks = retry_cached_blocks()
+		} else {
+			println("AcceptBlock:", e.Error())
+			newbl.conn.DoS()
+		}
+	}
+}
+
+
 func main() {
 	var sta int64
-	var retryCachedBlocks bool
 
 	if btc.EC_Verify==nil {
 		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable EC_Verify wrapper if possible.")
@@ -429,7 +463,6 @@ func main() {
 		go webserver()
 	}
 
-	var newbl *blockRcvd
 	for !exit_now {
 		CountSafe("MainThreadLoops")
 		for retryCachedBlocks {
@@ -448,8 +481,11 @@ func main() {
 				exit_now = true
 				continue
 
-			case newbl = <-netBlocks:
-				break
+			case newbl := <-netBlocks:
+				HandleNetBlock(newbl)
+
+			case newtx := <-netTxs:
+				HandleNetTx(newtx)
 
 			case cmd := <-uiChannel:
 				Busy("UI command")
@@ -469,29 +505,6 @@ func main() {
 
 		CountSafe("NetMessagesGot")
 
-		bl := newbl.bl
-
-		Busy("CheckBlock "+bl.Hash.String())
-		e, dos, maybelater := BlockChain.CheckBlock(bl)
-		if e != nil {
-			if maybelater {
-				addBlockToCache(bl, newbl.conn)
-			} else {
-				println(dos, e.Error())
-				if dos {
-					newbl.conn.DoS()
-				}
-			}
-		} else {
-			Busy("LocalAcceptBlock "+bl.Hash.String())
-			e = LocalAcceptBlock(bl, newbl.conn)
-			if e == nil {
-				retryCachedBlocks = retry_cached_blocks()
-			} else {
-				println("AcceptBlock:", e.Error())
-				newbl.conn.DoS()
-			}
-		}
 	}
 	println("Closing blockchain")
 	BlockChain.Close()
