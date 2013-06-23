@@ -168,6 +168,8 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 		"\" onclick=\"raw_load('txsre', 'Rejected Transactions')\">")
 
 	fmt.Fprintf(w, "<tr><td>Pending Transactions:<td><b>%d</b> / <b>%d</b>\n", len(TransactionsPending), len(netTxs))
+
+	fmt.Fprintf(w, "<tr><td>Spent Outputs:<td><b>%d</b>\n", len(SpentOutputs))
 	tx_mutex.Unlock()
 
 	w.Write([]byte("</table><br><h2 id=\"rawtit\"></h2><pre id=\"rawdiv\" class=\"mono\"></pre>"))
