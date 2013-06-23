@@ -41,7 +41,7 @@ func VoutIdx(po *btc.TxPrevOut) (uint64) {
 }
 
 // Return false if we do not want to receive a data fotr this tx
-func NeedThisTx(id *btc.Uint256, unlockMutex bool) (res bool) {
+func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	tx_mutex.Lock()
 	if _, present := TransactionsToSend[id.Hash]; present {
 		//res = false
@@ -51,10 +51,11 @@ func NeedThisTx(id *btc.Uint256, unlockMutex bool) (res bool) {
 		//res = false
 	} else {
 		res = true
+		if cb != nil {
+			cb()
+		}
 	}
-	if unlockMutex {
-		tx_mutex.Unlock()
-	}
+	tx_mutex.Unlock()
 	return
 }
 
@@ -69,7 +70,7 @@ func BanTx(id *btc.Uint256, reason int) {
 
 // Handle tx-inv notifications
 func (c *oneConnection) TxInvNotify(hash []byte) {
-	if NeedThisTx(btc.NewUint256(hash), true) {
+	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1+4+32]byte
 		b[0] = 1 // One inv
 		b[1] = 1 // Tx
@@ -79,13 +80,13 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 }
 
 
+
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if NeedThisTx(tid, false) {
+	NeedThisTx(tid, func() {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
-			tx_mutex.Unlock()
 			//log.Println("ERROR: ParseTxNet Tx format")
 			CountSafe("TxParseError")
 			BanTx(tid, 101)
@@ -93,7 +94,6 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 			return
 		}
 		if le != len(pl) {
-			tx_mutex.Unlock()
 			CountSafe("TxParseLength")
 			//log.Println("ERROR: ParseTxNet length", le, len(pl))
 			BanTx(tid, 102)
@@ -101,7 +101,6 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 			return
 		}
 		if len(tx.TxIn)<1 {
-			tx_mutex.Unlock()
 			CountSafe("TxParseEmpty")
 			//log.Println("ERROR: ParseTxNet No inputs")
 			BanTx(tid, 103)
@@ -111,9 +110,8 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 
 		tx.Hash = tid
 		TransactionsPending[tid.Hash] = true
-		tx_mutex.Unlock()
 		netTxs <- &txRcvd{conn:c, tx:tx, raw:pl}
-	}
+	})
 }
 
 
