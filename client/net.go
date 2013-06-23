@@ -409,12 +409,14 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 }
 
 
-// This function is called from the main thread
-func NetSendInv(typ uint32, h []byte, fromConn *oneConnection) (cnt uint) {
+// This function is called from the main thread (or from an UI)
+func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *oneConnection) (cnt uint) {
+	CountSafe(fmt.Sprint("NetRouteInv", typ))
+
 	// Prepare the inv
 	inv := new([36]byte)
 	binary.LittleEndian.PutUint32(inv[0:4], typ)
-	copy(inv[4:36], h)
+	copy(inv[4:36], h.Bytes())
 
 	// Append it to PendingInvs in each open connection
 	mutex.Lock()
