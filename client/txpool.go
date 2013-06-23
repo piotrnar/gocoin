@@ -10,7 +10,7 @@ import (
 
 
 const (
-	FeePerKb = 10000
+	FeePerKB = 10000  // in satoshis
 	TxExpireAfter = time.Hour
 )
 
@@ -82,10 +82,10 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	defer tx_mutex.Unlock() // so we order to not unlock it in NeedThisTx()
 	if NeedThisTx(tid, false) {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
+			tx_mutex.Unlock()
 			//log.Println("ERROR: ParseTxNet Tx format")
 			CountSafe("TxParseError")
 			BanTx(tid, 101)
@@ -93,6 +93,7 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 			return
 		}
 		if le != len(pl) {
+			tx_mutex.Unlock()
 			CountSafe("TxParseLength")
 			//log.Println("ERROR: ParseTxNet length", le, len(pl))
 			BanTx(tid, 102)
@@ -100,6 +101,7 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 			return
 		}
 		if len(tx.TxIn)<1 {
+			tx_mutex.Unlock()
 			CountSafe("TxParseEmpty")
 			//log.Println("ERROR: ParseTxNet No inputs")
 			BanTx(tid, 103)
@@ -109,6 +111,7 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 
 		tx.Hash = tid
 		TransactionsPending[tid.Hash] = true
+		tx_mutex.Unlock()
 		netTxs <- &txRcvd{conn:c, tx:tx, raw:pl}
 	}
 }
@@ -170,9 +173,8 @@ func HandleNetTx(ntx *txRcvd) {
 	}
 
 	// Check for a proper fee
-	fee := totout - totinp
-	kb := uint64((len(ntx.raw)+1023)>>10)
-	if fee < kb*FeePerKb {
+	fee := totinp - totout
+	if fee < (uint64(len(ntx.raw))*FeePerKB)>>10 {
 		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:203}
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
