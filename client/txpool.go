@@ -19,7 +19,7 @@ var (
 	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
 	TransactionsRejected map[[32]byte] *OneTxRejected = make(map[[32]byte] *OneTxRejected)
 	TransactionsPending map[[32]byte] bool = make(map[[32]byte] bool)
-	SpentOutputs map[uint64] *btc.TxPrevOut = make(map[uint64] *btc.TxPrevOut)
+	SpentOutputs map[uint64] bool = make(map[uint64] bool)
 )
 
 
@@ -193,6 +193,9 @@ func HandleNetTx(ntx *txRcvd) {
 
 	rec := &OneTxToSend{data:ntx.raw, spent:spent}
 	TransactionsToSend[tx.Hash.Hash] = rec
+	for i := range spent {
+		SpentOutputs[spent[i]] = true
+	}
 
 	tx_mutex.Unlock()
 	//log.Println("Accepted valid tx", tx.Hash.String())
