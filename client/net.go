@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"sync"
 	"sort"
 	"bytes"
 	"errors"
@@ -57,6 +58,7 @@ var (
 	InConsActive, OutConsActive uint
 	DefaultTcpPort uint16
 	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
+	ExternalIpMutex sync.Mutex
 	LastConnId uint32
 	nonce [8]byte
 )
@@ -182,15 +184,25 @@ func (c *oneConnection) DoS() {
 }
 
 
+func ExternalAddrLen() (res int) {
+	ExternalIpMutex.Lock()
+	res = len(ExternalIp4)
+	ExternalIpMutex.Unlock()
+	return
+}
+
+
 func BestExternalAddr() []byte {
 	var best_ip uint32
 	var best_cnt uint
+	ExternalIpMutex.Lock()
 	for ip, cnt := range ExternalIp4 {
 		if cnt > best_cnt {
 			best_cnt = cnt
 			best_ip = ip
 		}
 	}
+	ExternalIpMutex.Unlock()
 	res := make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], Services)
 	// leave ip6 filled with zeros, except for the last 2 bytes:
@@ -209,7 +221,7 @@ func (c *oneConnection) SendVersion() {
 	binary.Write(b, binary.LittleEndian, uint64(time.Now().Unix()))
 
 	b.Write(c.PeerAddr.NetAddr.Bytes())
-	if len(ExternalIp4)>0 {
+	if ExternalAddrLen()>0 {
 		b.Write(BestExternalAddr())
 	} else {
 		b.Write(bytes.Repeat([]byte{0}, 26))
@@ -332,7 +344,7 @@ func (c *oneConnection) SendAddr() {
 
 
 func (c *oneConnection) SendOwnAddr() {
-	if len(ExternalIp4)>0 {
+	if ExternalAddrLen()>0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, 1)
 		binary.Write(buf, binary.LittleEndian, uint32(time.Now().Unix()))
@@ -354,7 +366,9 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
 		c.node.timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		if ValidIp4(pl[40:44]) {
+			ExternalIpMutex.Lock()
 			ExternalIp4[binary.BigEndian.Uint32(pl[40:44])]++
+			ExternalIpMutex.Unlock()
 		}
 		if len(pl) >= 86 {
 			le, of := btc.VLen(pl[80:])
