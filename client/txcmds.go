@@ -96,7 +96,7 @@ func send_tx(par string) {
 		return
 	}
 	if ptx, ok := TransactionsToSend[txid.Hash]; ok {
-		cnt := NetSendInv(1, txid.Hash[:], nil)
+		cnt := NetRouteInv(1, txid, nil)
 		ptx.sentCount++
 		ptx.lastTime = time.Now()
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
@@ -142,7 +142,7 @@ func list_txs(par string) {
 
 func send_all_tx(par string) {
 	for k, v := range TransactionsToSend {
-		cnt := NetSendInv(1, k[:], nil)
+		cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
 		v.sentCount++
 		v.lastTime = time.Now()
 		fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
