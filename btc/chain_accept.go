@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+var TrustedTxChecker func(*Uint256) bool
+
 
 func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *BlockChanges, e error) {
 	changes = new(BlockChanges)
@@ -118,6 +120,11 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
+			tx_trusted := bl.Trusted
+			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash) {
+				tx_trusted = true
+			}
+
 			scripts_ok := true
 
 			for j:=0; j<UseThreads; j++ {
@@ -171,7 +178,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					break
 				}
 
-				if bl.Trusted {
+				if tx_trusted {
 					done <- true
 				} else {
 				    go func (sig []byte, prv []byte, i int, tx *Tx) {
