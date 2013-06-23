@@ -227,7 +227,22 @@ func TxMined(h [32]byte) {
 }
 
 
-func txmemCleaner() {
+func txChecker(h *btc.Uint256) bool {
+	tx_mutex.Lock()
+	rec, ok := TransactionsToSend[h.Hash]
+	tx_mutex.Unlock()
+	if ok && !rec.own {
+		return false
+	}
+	if ok {
+		CountSafe("ScriptsBoosted")
+	}
+	return ok
+}
+
+
+func txPoolManager() {
+	btc.TrustedTxChecker = txChecker
 	for {
 		time.Sleep(60e9) // Wake up every minute
 		expireTime := time.Now().Add(-TxExpireAfter)
