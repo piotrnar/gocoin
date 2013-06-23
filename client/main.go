@@ -27,8 +27,8 @@ var (
 	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
 	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
 	webui *string = flag.String("webui", "127.0.0.1:8833", "Serve WebUI from the given interface")
-
 	minerId *string = flag.String("miner", "", "Monitor new blocks with the string in their coinbase TX")
+	txrounting *bool = flag.Bool("txr", false, "Enable TX routing")
 
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
