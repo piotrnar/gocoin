@@ -109,8 +109,12 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 		}
 
 		tx.Hash = tid
-		TransactionsPending[tid.Hash] = true
-		netTxs <- &txRcvd{conn:c, tx:tx, raw:pl}
+		select {
+			case netTxs <- &txRcvd{conn:c, tx:tx, raw:pl}:
+				TransactionsPending[tid.Hash] = true
+			default:
+				CountSafe("NetTxsFULL")
+		}
 	})
 }
 
