@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+// TrustedTxChecker is meant to speed up verifying transactions that had
+// been verified already by the client while being taken to its memory pool
 var TrustedTxChecker func(*Uint256) bool
 
 
