@@ -403,8 +403,8 @@ func raw_txsre(w http.ResponseWriter, r *http.Request) {
 	tx_mutex.Lock()
 	for k, v := range TransactionsRejected {
 		cnt++
-		fmt.Fprintf(w, "%5d) %s - %s ago\n", cnt, btc.NewUint256(k[:]).String(),
-			time.Now().Sub(v).String())
+		fmt.Fprintf(w, "%5d) %s (%d) - %s ago\n", cnt, btc.NewUint256(k[:]).String(),
+			v.reason, time.Now().Sub(v.Time).String())
 	}
 	tx_mutex.Unlock()
 }
