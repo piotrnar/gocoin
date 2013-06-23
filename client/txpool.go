@@ -220,7 +220,6 @@ func TxMined(h [32]byte) {
 
 
 func txChecker(h *btc.Uint256) bool {
-	CountSafe("ScriptsBoostTry")
 	tx_mutex.Lock()
 	rec, ok := TransactionsToSend[h.Hash]
 	tx_mutex.Unlock()
