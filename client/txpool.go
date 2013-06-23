@@ -11,6 +11,7 @@ import (
 
 const (
 	FeePerKb = 10000
+	TxExpireAfter = time.Hour
 )
 
 var (
@@ -25,7 +26,7 @@ var (
 type OneTxToSend struct {
 	data []byte
 	sentCount uint
-	lastTime time.Time
+	time.Time
 	own bool
 	spent []uint64 // Which records in SpentOutputs this TX added
 }
@@ -86,20 +87,20 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
 			//log.Println("ERROR: ParseTxNet Tx format")
-			CountSafe("ParseTxNetError")
+			CountSafe("TxParseError")
 			BanTx(tid, 101)
 			c.DoS()
 			return
 		}
 		if le != len(pl) {
-			CountSafe("ParseTxNetBadLen")
+			CountSafe("TxParseLength")
 			//log.Println("ERROR: ParseTxNet length", le, len(pl))
 			BanTx(tid, 102)
 			c.DoS()
 			return
 		}
 		if len(tx.TxIn)<1 {
-			CountSafe("ParseTxNetNoInp")
+			CountSafe("TxParseEmpty")
 			//log.Println("ERROR: ParseTxNet No inputs")
 			BanTx(tid, 103)
 			c.DoS()
@@ -140,7 +141,7 @@ func HandleNetTx(ntx *txRcvd) {
 		if _, ok := SpentOutputs[spent[i]]; ok {
 			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:200}
 			tx_mutex.Unlock()
-			CountSafe("TxDoubleSpend")
+			CountSafe("TxRejectedDoubleSpend")
 			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
 			return
 		}
@@ -149,7 +150,7 @@ func HandleNetTx(ntx *txRcvd) {
 		if pos[i] == nil {
 			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:201}
 			tx_mutex.Unlock()
-			CountSafe("TxNoInput")
+			CountSafe("TxRejectedNoInput")
 			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
 			return
 		}
@@ -174,7 +175,7 @@ func HandleNetTx(ntx *txRcvd) {
 	if fee < kb*FeePerKb {
 		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:203}
 		tx_mutex.Unlock()
-		CountSafe("TxFeeTooLow")
+		CountSafe("TxRejectedLowFee")
 		//log.Println("ERROR: Tx fee too low", fee, len(ntx.raw))
 		return
 	}
@@ -198,7 +199,7 @@ func HandleNetTx(ntx *txRcvd) {
 	CountSafe("TxAccepted")
 
 	rec.sentCount += NetRouteInv(1, tx.Hash, ntx.conn)
-	rec.lastTime = time.Now()
+	rec.Time = time.Now()
 }
 
 
@@ -220,4 +221,38 @@ func TxMined(h [32]byte) {
 		delete(TransactionsPending, h)
 	}
 	tx_mutex.Unlock()
+}
+
+
+func txmemCleaner() {
+	for {
+		time.Sleep(60e9) // Wake up every minute
+		expireTime := time.Now().Add(-TxExpireAfter)
+		var cnt1, cnt2 uint64
+
+		tx_mutex.Lock()
+		for k, v := range TransactionsToSend {
+			if v.Time.Before(expireTime) {
+				delete(TransactionsToSend, k)
+				cnt1++
+			}
+		}
+		for k, v := range TransactionsRejected {
+			if v.Time.Before(expireTime) {
+				delete(TransactionsRejected, k)
+				cnt2++
+			}
+		}
+		tx_mutex.Unlock()
+
+		counter_mutex.Lock()
+		Counter["TxPurgedTicks"]++
+		if cnt1 > 0 {
+			Counter["TxPurgedToSend"] += cnt1
+		}
+		if cnt2 > 0 {
+			Counter["TxPurgedRejected"] += cnt2
+		}
+		counter_mutex.Unlock()
+	}
 }
