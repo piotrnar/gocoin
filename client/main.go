@@ -128,19 +128,21 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 }
 
 
-func AcceptBlock(bl *btc.Block) (e error) {
+func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
 	if e == nil {
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
-			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim)
+			fmt.Println("LocalAcceptBlock", LastBlock.Height, "took", tim)
 			ui_show_prompt()
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
-			// Freshly mined block - do the beeps...
+			// Freshly mined block - do the inv and beeps...
+			Busy("NetRouteInv")
+			NetRouteInv(2, bl.Hash, from)
 
 			if beep {
 				fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
@@ -171,6 +173,7 @@ func AcceptBlock(bl *btc.Block) (e error) {
 			}
 		}
 
+		LastBlockReceived = time.Now()
 		LastBlock = BlockChain.BlockTreeEnd
 		BalanceChanged = false
 
@@ -190,8 +193,8 @@ func retry_cached_blocks() bool {
 		Busy("Cache.CheckBlock "+v.Block.Hash.String())
 		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
 		if e == nil {
-			Busy("Cache.AcceptBlock "+v.Block.Hash.String())
-			e := AcceptBlock(v.Block)
+			Busy("Cache.LocalAcceptBlock "+v.Block.Hash.String())
+			e := LocalAcceptBlock(v.Block, v.conn)
 			if e == nil {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
 				CountSafe("BlocksFromCache")
@@ -480,13 +483,9 @@ func main() {
 				}
 			}
 		} else {
-			Busy("AcceptBlock "+bl.Hash.String())
-			e = AcceptBlock(bl)
+			Busy("LocalAcceptBlock "+bl.Hash.String())
+			e = LocalAcceptBlock(bl, newbl.conn)
 			if e == nil {
-				LastBlockReceived = time.Now()
-				// block accepted, so route this inv to peers
-				Busy("NetSendInv")
-				NetSendInv(2, bl.Hash.Hash[:], newbl.conn)
 				retryCachedBlocks = retry_cached_blocks()
 			} else {
 				println("AcceptBlock:", e.Error())
