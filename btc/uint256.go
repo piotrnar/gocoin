@@ -44,6 +44,12 @@ func NewSha2Hash(data []byte) (res *Uint256) {
 	return
 }
 
+
+func (u *Uint256) Bytes() []byte {
+	return u.Hash[:]
+}
+
+
 func (u *Uint256) String() (s string) {
 	for i := 0; i<32; i++ {
 		s+= fmt.Sprintf("%02x", u.Hash[31-i])
