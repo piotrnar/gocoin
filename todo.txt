@@ -1,0 +1,2 @@
+* Call TxMined from main thread, not from the callback
+* Do something with this ExternalIp4
