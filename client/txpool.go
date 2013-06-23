@@ -228,11 +228,12 @@ func TxMined(h [32]byte) {
 
 
 func txChecker(h *btc.Uint256) bool {
+	CountSafe("ScriptsBoostTry")
 	tx_mutex.Lock()
 	rec, ok := TransactionsToSend[h.Hash]
 	tx_mutex.Unlock()
-	if ok && !rec.own {
-		return false
+	if ok && rec.own {
+		return false // Assume own txs as non-trusted
 	}
 	if ok {
 		CountSafe("ScriptsBoosted")
