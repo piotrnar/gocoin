@@ -139,9 +139,9 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<tr class=\"hov\" style=\"cursor:pointer;\" onclick=\"raw_load('net?id=%d', 'Connection')\"><td align=\"right\">%d",
 			v.ConnID, v.ConnID)
 		if v.Incomming {
-			fmt.Fprint(w, "<td aling=\"center\">From")
+			fmt.Fprint(w, "<td><img src=\"webui/incoming.png\">")
 		} else {
-			fmt.Fprint(w, "<td aling=\"center\">To")
+			fmt.Fprint(w, "<td><img src=\"webui/outgoing.png\">")
 		}
 		fmt.Fprint(w, "<td align=\"right\">", v.PeerAddr.Ip())
 		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing(), "ms")
