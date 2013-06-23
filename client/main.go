@@ -448,7 +448,7 @@ func main() {
 	}
 
 	initPeers(GocoinHomeDir)
-	go txmemCleaner()
+	go txPoolManager()
 
 	LastBlock = BlockChain.BlockTreeEnd
 	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
