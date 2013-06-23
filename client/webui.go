@@ -98,7 +98,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintln(w, "</table>")
 
-	fmt.Fprintln(w, "<td wifth=\"100\"><td valign=\"top\">")
+	fmt.Fprintln(w, "<td width=\"100\">&nbsp;<td valign=\"top\">")
 
 	fmt.Fprint(w, "<h2>Others</h2>")
 	fmt.Fprintln(w, "<table>")
