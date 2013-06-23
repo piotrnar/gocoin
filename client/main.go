@@ -295,24 +295,24 @@ func blockWanted(h []byte) (yes bool) {
 
 
 // Called from a net thread
-func InvsNotify(h []byte) (need bool) {
+func BlockInvNotify(h []byte) (need bool) {
 	ha := btc.NewUint256(h)
 	idx := ha.BIdx()
 	mutex.Lock()
 	if _, ok := pendingBlocks[idx]; ok {
-		CountSafe("InvForPendingBlk")
+		CountSafe("InvBlkAlreadyPending")
 	} else if _, ok := receivedBlocks[idx]; ok {
-		CountSafe("InvForReceivedBlk")
+		CountSafe("InvBlkAlreadyHave")
 	} else if len(pendingFifo)<PendingFifoLen {
 		if dbg>0 {
 			fmt.Println("blinv", btc.NewUint256(h).String())
 		}
-		CountSafe("InvForWantedBlk")
+		CountSafe("InvBlkWanted")
 		pendingBlocks[idx] = ha
 		pendingFifo <- idx
 		need = true
 	} else {
-		CountSafe("InvFIFOfull")
+		CountSafe("InvBlkFifoFull")
 	}
 	mutex.Unlock()
 	return
