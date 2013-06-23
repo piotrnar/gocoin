@@ -11,6 +11,7 @@ import (
 
 const (
 	FeePerKB = 10000  // in satoshis
+	MaxTxSize = 10e3 // Change it, if you want
 	TxExpireAfter = time.Hour
 )
 
@@ -75,6 +76,11 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
+	if len(pl)>MaxTxSize {
+		CountSafe("TxTooBig")
+		TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:100}
+		return
+	}
 	NeedThisTx(tid, func() {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
