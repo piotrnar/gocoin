@@ -17,7 +17,6 @@ var (
 
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	if valpk!=nil {
-		TxMined(idx.Hash)
 		if MyWallet==nil {
 			return
 		}
