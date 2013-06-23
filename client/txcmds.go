@@ -16,6 +16,7 @@ type OneTxToSend struct {
 
 var (
 	TransactionsToSend map[[32]byte] *OneTxToSend = make(map[[32]byte] *OneTxToSend)
+	TransactionsRejected map[[32]byte] time.Time
 )
 
 func load_tx(par string) {
