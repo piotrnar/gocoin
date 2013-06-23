@@ -55,3 +55,7 @@ input[type=button]:hover, input[type=submit]:hover {
 	background-color:#ffeeee;
 	cursor:pointer;
 }
+
+table.blocks {
+	font-size:12px;
+}
