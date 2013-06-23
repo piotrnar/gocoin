@@ -221,7 +221,9 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	//b.WriteByte(0)  // don't notify me about txs
+	if !*txrounting {
+		b.WriteByte(0)  // don't notify me about txs
+	}
 
 	c.SendRawMsg("version", b.Bytes())
 }
@@ -391,7 +393,9 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			last_inv = pl[of+4:of+36]
 			new_block = BlockInvNotify(last_inv)
 		} else if typ==1 {
-			c.TxInvNotify(pl[of+4:of+36])
+			if *txrounting {
+				c.TxInvNotify(pl[of+4:of+36])
+			}
 		}
 		of+= 36
 	}
@@ -855,7 +859,9 @@ func do_one_connection(c *oneConnection) {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				c.ParseTxNet(cmd.pl)
+				if *txrounting {
+					c.ParseTxNet(cmd.pl)
+				}
 
 			case "addr":
 				ParseAddr(cmd.pl)
