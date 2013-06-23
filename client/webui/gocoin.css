@@ -23,7 +23,7 @@ a.menuat {
 #rawdiv {
 	font-family: monospace;
 	background-color:#e0e0e0;
-	width: 980;
+	width: 980px;
 	font-size: 11px;
 	overflow-x: auto;
 }
@@ -58,4 +58,5 @@ input[type=button]:hover, input[type=submit]:hover {
 
 table.blocks {
 	font-size:14px;
+	width: 980px;
 }
