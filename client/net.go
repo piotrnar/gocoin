@@ -591,7 +591,6 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			if tx, ok := TransactionsToSend[uh.Hash]; ok {
 				tx_mutex.Unlock()
 				c.SendRawMsg("tx", tx.data)
-				CountSafe("TxsSent")
 				if dbg > 0 {
 					println("sent tx to", c.PeerAddr.Ip())
 				}
