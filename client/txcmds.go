@@ -92,7 +92,7 @@ func send_tx(par string) {
 		tx_mutex.Unlock()
 		cnt := NetRouteInv(1, txid, nil)
 		ptx.sentCount += cnt
-		ptx.lastTime = time.Now()
+		ptx.Time = time.Now()
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -140,7 +140,7 @@ func list_txs(par string) {
 			snt = "never sent"
 		} else {
 			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentCount,
-				time.Now().Sub(v.lastTime).String())
+				time.Now().Sub(v.Time).String())
 		}
 		fmt.Printf("%5d) %s: %s - %d bytes - %s\n", cnt, oe,
 			btc.NewUint256(k[:]).String(), len(v.data), snt)
@@ -168,7 +168,7 @@ func send_all_tx(par string) {
 		if v.own {
 			cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
 			v.sentCount += cnt
-			v.lastTime = time.Now()
+			v.Time = time.Now()
 			fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
 		}
 	}
