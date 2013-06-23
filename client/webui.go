@@ -185,7 +185,7 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 func p_blocks(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w, r)
 	end := BlockChain.BlockTreeEnd
-	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
+	fmt.Fprint(w, "<table class=\"blocks\" border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
 	fmt.Fprintf(w, "<tr><th>Height<th>Timestamp<th>Hash<th>Txs<th>Size<th>Mined by</tr>\n")
 	for cnt:=0; end!=nil && cnt<100; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
