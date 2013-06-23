@@ -389,7 +389,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			last_inv = pl[of+4:of+36]
-			new_block = InvsNotify(last_inv)
+			new_block = BlockInvNotify(last_inv)
 		}
 		of+= 36
 	}
