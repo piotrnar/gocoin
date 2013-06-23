@@ -239,8 +239,12 @@ func txChecker(h *btc.Uint256) bool {
 }
 
 
-func txPoolManager() {
+func init() {
 	btc.TrustedTxChecker = txChecker
+}
+
+
+func txPoolManager() {
 	for {
 		time.Sleep(60e9) // Wake up every minute
 		expireTime := time.Now().Add(-TxExpireAfter)
