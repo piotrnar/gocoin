@@ -23,9 +23,10 @@ Main features
 
 Limitations of the client node
 --------------
-* No GUI application, so you need to know how to use a command line.
-* Works only with blocks and does not rely transactions (except from sending own transactions to the network).
-* No UPnP, neither IPv6 support
+* No minig API
+* No UPnP
+* No IPv6
+* No GUI window
 
 
 System Requirements
