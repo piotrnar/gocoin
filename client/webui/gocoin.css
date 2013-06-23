@@ -20,6 +20,14 @@ a.menuat {
 	font-family: monospace;
 }
 
+#rawdiv {
+	font-family: monospace;
+	background-color:#e0e0e0;
+	width: 980;
+	font-size: 11px;
+	overflow-x: auto;
+}
+
 td,th {
 	padding: 5px;
 }
@@ -31,4 +39,19 @@ th {
 
 tr.hov:hover {
 	background-color:#e0e0e0;
+}
+
+input[type=button], input[type=submit] {
+	background-color:#dddddd;
+	font-weight:bold;
+	//border: 2px #000000 solid;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+
+input[type=button]:hover, input[type=submit]:hover {
+	background-color:#ffeeee;
+	cursor:pointer;
 }
