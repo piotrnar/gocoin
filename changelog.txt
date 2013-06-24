@@ -1,5 +1,7 @@
 0.4.0
-* Added some basic tx routing
+* Added tx routing (you can switch it off with "-txr=false")
+* Further WebUI extensions
+* A bunch of other code changes, that I don't remember now
 
 0.3.5
 * Addded WebUI - by default on http://127.0.0.1:8833/
