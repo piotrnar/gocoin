@@ -293,7 +293,7 @@ func txPoolManager() {
 
 		tx_mutex.Lock()
 		for k, v := range TransactionsToSend {
-			if v.Time.Before(expireTime(len(v.data))) {
+			if !v.own && !v.Time.IsZero() && v.Time.Before(expireTime(len(v.data))) {
 				delete(TransactionsToSend, k)
 				cnt1++
 			}
