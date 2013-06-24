@@ -1,3 +1,6 @@
+0.4.1
+* Do not route txs that have any output lower than a fee for 0.5KB
+
 0.4.0
 * Added tx routing (you can switch it off with "-txr=false")
 * Further WebUI extensions
