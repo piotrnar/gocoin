@@ -69,6 +69,8 @@ func init() {
 
 
 func save_config(s string) {
+	CFG.MaxUpKBps = UploadLimit>>10
+	CFG.MaxDownKBps = DownloadLimit>>10
 	dat, _ := json.Marshal(&CFG)
 	if dat != nil {
 		ioutil.WriteFile(ConfigFile, dat, 0660)
