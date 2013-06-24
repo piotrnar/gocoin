@@ -34,7 +34,12 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 }
 
 func write_html_head(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("<html><head><title>Gocoin "+btc.SourcesTag+"</title>\n"))
+	w.Write([]byte("<html><head><title>Gocoin "))
+	if CFG.Testnet {
+		w.Write([]byte("Testnet "))
+	}
+	w.Write([]byte(btc.SourcesTag))
+	w.Write([]byte("</title>\n"))
 	w.Write([]byte(htmlhead))
 	for i := range webuimenu {
 		if i==len(webuimenu)-1 {
@@ -410,9 +415,9 @@ func raw_txsre(w http.ResponseWriter, r *http.Request) {
 	tx_mutex.Lock()
 	for k, v := range TransactionsRejected {
 		cnt++
-		fmt.Fprintf(w, "%5d) %s - %d bytes - (%d) - %s ago\n", cnt,
-			btc.NewUint256(k[:]).String(), v.size,
-			v.reason, time.Now().Sub(v.Time).String())
+		fmt.Fprintf(w, "%5d) %s - %d - %d bytes - %s ago\n", cnt,
+			btc.NewUint256(k[:]).String(), v.reason, v.size,
+			time.Now().Sub(v.Time).String())
 	}
 	tx_mutex.Unlock()
 }
