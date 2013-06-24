@@ -1,6 +1,7 @@
 0.4.1
 * Do not route txs that have any output lower than a fee for 0.5KB
 * Added support for a config file
+* Fixed a bug introduced in 0.4.0 that was removing own txs from the pool
 
 0.4.0
 * Added tx routing (you can switch it off with "-txr=false")
