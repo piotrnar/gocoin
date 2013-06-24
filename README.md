@@ -31,9 +31,14 @@ Limitations of the client node
 
 System Requirements
 ==============
+The online client node has much higher system requirements than the wallet app.
+
+
 Client / Node
 --------------
-As for the current bitcoin block chain (aroung block #250000), you need to have at least 3GB of RAM, if you don't want to see your swap file burning. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. For testnet-only purposes 32-bit arch is enough.
+As for the current bitcoin block chain (aroung block #250000), you should have at least 4GB of RAM, if you don't want to see your swap file burning. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. 
+
+For testnet-only purposes 32-bit arch is enough.
 
 The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
 
