@@ -10,9 +10,30 @@ import (
 
 
 const (
-	FeePerKB = 10000  // in satoshis
-	MaxTxSize = 10e3 // Change it, if you want
-	TxExpireAfter = time.Hour
+	// Minimum fee for each KB of data (in Satoshi)
+	FeePerKB = 10000
+
+	// Maximu size of trasnaction that we would route (change it, if you want)
+	MaxTxSize = 10*1024
+
+	// Minimum output value (to filter out txs with dust outputs)
+	MinVoutValue = FeePerKB/2
+
+	// If somethign is 1KB big, it will expire after this time.
+	// Otherwise expiration time is proportionally different.
+	TxExpirePerKB = time.Hour
+
+	TX_REJECTED_TOO_BIG      = 101
+	TX_REJECTED_FORMAT       = 102
+	TX_REJECTED_LEN_MISMATCH = 103
+	TX_REJECTED_NO_INPUTS    = 104
+
+	TX_REJECTED_DOUBLE_SPEND = 201
+	TX_REJECTED_NO_INPUT     = 202
+	TX_REJECTED_DUST         = 203
+	TX_REJECTED_OVERSPEND    = 204
+	TX_REJECTED_LOW_FEE      = 205
+	TX_REJECTED_SCRIPT_FAIL  = 206
 )
 
 var (
@@ -34,8 +55,19 @@ type OneTxToSend struct {
 
 type OneTxRejected struct {
 	time.Time
-	reason int
+	size uint32
+	reason byte
 }
+
+
+func NewRejectedTx(size int, why byte) (result *OneTxRejected) {
+	result = new(OneTxRejected)
+	result.Time = time.Now()
+	result.size = uint32(size)
+	result.reason = why
+	return
+}
+
 
 func VoutIdx(po *btc.TxPrevOut) (uint64) {
 	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
@@ -78,26 +110,26 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
 	if len(pl)>MaxTxSize {
 		CountSafe("TxTooBig")
-		TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:100}
+		TransactionsRejected[tid.Hash] = NewRejectedTx(len(pl), TX_REJECTED_TOO_BIG)
 		return
 	}
 	NeedThisTx(tid, func() {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
 			CountSafe("TxParseError")
-			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:101}
+			TransactionsRejected[tid.Hash] = NewRejectedTx(len(pl), TX_REJECTED_FORMAT)
 			c.DoS()
 			return
 		}
 		if le != len(pl) {
 			CountSafe("TxParseLength")
-			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:102}
+			TransactionsRejected[tid.Hash] = NewRejectedTx(len(pl), TX_REJECTED_LEN_MISMATCH)
 			c.DoS()
 			return
 		}
 		if len(tx.TxIn)<1 {
 			CountSafe("TxParseEmpty")
-			TransactionsRejected[tid.Hash] = &OneTxRejected{Time:time.Now(), reason:103}
+			TransactionsRejected[tid.Hash] = NewRejectedTx(len(pl), TX_REJECTED_NO_INPUTS)
 			c.DoS()
 			return
 		}
@@ -138,19 +170,17 @@ func HandleNetTx(ntx *txRcvd) {
 		spent[i] = VoutIdx(&tx.TxIn[i].Input)
 
 		if _, ok := SpentOutputs[spent[i]]; ok {
-			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:200}
+			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedDoubleSpend")
-			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
 			return
 		}
 
 		pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		if pos[i] == nil {
-			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:201}
+			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_NO_INPUT)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedNoInput")
-			//log.Println("ERROR: HandleNetTx No input", tx.TxIn[i].Input.String())
 			return
 		}
 		totinp += pos[i].Value
@@ -158,20 +188,26 @@ func HandleNetTx(ntx *txRcvd) {
 
 	// Check if total output value does not exceed total input
 	for i := range tx.TxOut {
+		if tx.TxOut[i].Value < MinVoutValue {
+			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_DUST)
+			tx_mutex.Unlock()
+			CountSafe("TxRejectedDust")
+			return
+		}
 		totout += tx.TxOut[i].Value
 	}
 	if totout > totinp {
-		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:202}
+		TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_OVERSPEND)
 		tx_mutex.Unlock()
 		ntx.conn.DoS()
-		log.Println("ERROR: HandleNetTx Incorrect output values", totout, totinp)
+		CountSafe("TxRejectedOverspend")
 		return
 	}
 
 	// Check for a proper fee
 	fee := totinp - totout
 	if fee < (uint64(len(ntx.raw))*FeePerKB)>>10 {
-		TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:203}
+		TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_LOW_FEE)
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
 		//log.Println("ERROR: Tx fee too low", fee, len(ntx.raw))
@@ -181,8 +217,9 @@ func HandleNetTx(ntx *txRcvd) {
 	// Verify scripts
 	for i := range tx.TxIn {
 		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx) {
-			TransactionsRejected[tx.Hash.Hash] = &OneTxRejected{Time:time.Now(), reason:204}
+			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			tx_mutex.Unlock()
+			CountSafe("TxRejectedScriptFail")
 			ntx.conn.DoS()
 			log.Println("ERROR: HandleNetTx Invalid signature")
 			return
@@ -244,21 +281,25 @@ func init() {
 }
 
 
+func expireTime(size int) time.Time {
+	return time.Now().Add(-time.Duration((uint64(size)*uint64(TxExpirePerKB))>>10))
+}
+
+
 func txPoolManager() {
 	for {
 		time.Sleep(60e9) // Wake up every minute
-		expireTime := time.Now().Add(-TxExpireAfter)
 		var cnt1, cnt2 uint64
 
 		tx_mutex.Lock()
 		for k, v := range TransactionsToSend {
-			if v.Time.Before(expireTime) {
+			if v.Time.Before(expireTime(len(v.data))) {
 				delete(TransactionsToSend, k)
 				cnt1++
 			}
 		}
 		for k, v := range TransactionsRejected {
-			if v.Time.Before(expireTime) {
+			if v.Time.Before(expireTime(int(v.size))) {
 				delete(TransactionsRejected, k)
 				cnt2++
 			}
