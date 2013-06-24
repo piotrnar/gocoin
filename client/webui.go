@@ -387,9 +387,9 @@ func raw_txs2s(w http.ResponseWriter, r *http.Request) {
 		cnt++
 		var oe, snt string
 		if v.own {
-			oe = "OWN"
+			oe = " *OWN*"
 		} else {
-			oe = "ext"
+			oe = ""
 		}
 
 		if v.sentCount==0 {
@@ -398,8 +398,8 @@ func raw_txs2s(w http.ResponseWriter, r *http.Request) {
 			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentCount,
 				time.Now().Sub(v.Time).String())
 		}
-		fmt.Fprintf(w, "%5d) %s: %s - %d bytes - %s\n", cnt, oe,
-			btc.NewUint256(k[:]).String(), len(v.data), snt)
+		fmt.Fprintf(w, "%5d) %s - %d bytes - %s%s\n", cnt,
+			btc.NewUint256(k[:]).String(), len(v.data), snt, oe)
 	}
 	tx_mutex.Unlock()
 }
