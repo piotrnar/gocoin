@@ -297,7 +297,7 @@ func initSeeds(seeds []string, port int) {
 func initPeers(dir string) {
 	peerDB, _ = qdb.NewDB(dir+"peers")
 	if peerDB.Count()==0 {
-		if !*testnet {
+		if !CFG.Testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
 				"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
 		} else {
@@ -307,12 +307,12 @@ func initPeers(dir string) {
 		println("peerDB initiated with ", peerDB.Count(), "seeds")
 	}
 
-	if *proxy != "" {
-		x := strings.Index(*proxy, ":")
+	if CFG.ConnectOnly != "" {
+		x := strings.Index(CFG.ConnectOnly, ":")
 		if x == -1 {
-			*proxy = fmt.Sprint(*proxy, ":", DefaultTcpPort)
+			CFG.ConnectOnly = fmt.Sprint(CFG.ConnectOnly, ":", DefaultTcpPort)
 		}
-		oa, e := net.ResolveTCPAddr("tcp4", *proxy)
+		oa, e := net.ResolveTCPAddr("tcp4", CFG.ConnectOnly)
 		if e != nil {
 			println(e.Error())
 			os.Exit(1)

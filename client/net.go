@@ -233,7 +233,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	if !*txrounting {
+	if !CFG.TXRouting {
 		b.WriteByte(0)  // don't notify me about txs
 	}
 
@@ -407,7 +407,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			last_inv = pl[of+4:of+36]
 			new_block = BlockInvNotify(last_inv)
 		} else if typ==1 {
-			if *txrounting {
+			if CFG.TXRouting {
 				c.TxInvNotify(pl[of+4:of+36])
 			}
 		}
@@ -866,7 +866,7 @@ func do_one_connection(c *oneConnection) {
 
 			case "verack":
 				c.VerackReceived = true
-				if *server {
+				if CFG.ListenTCP {
 					c.SendOwnAddr()
 				}
 
@@ -874,7 +874,7 @@ func do_one_connection(c *oneConnection) {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				if *txrounting {
+				if CFG.TXRouting {
 					c.ParseTxNet(cmd.pl)
 				}
 
@@ -1018,8 +1018,8 @@ func drop_slowest_peer() {
 
 
 func network_process() {
-	if *server {
-		if *proxy=="" {
+	if CFG.ListenTCP {
+		if CFG.ConnectOnly=="" {
 			go start_server()
 		} else {
 			fmt.Println("WARNING: -l switch ignored since -c specified as well")
@@ -1037,7 +1037,7 @@ func network_process() {
 				continue // do not sleep
 			}
 
-			if *proxy=="" && dbg>0 {
+			if CFG.ConnectOnly=="" && dbg>0 {
 				println("no new peers", len(openCons), conn_cnt)
 			}
 		} else {

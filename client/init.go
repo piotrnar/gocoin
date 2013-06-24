@@ -34,13 +34,13 @@ func host_init() {
 	var e error
 	BtcRootDir := BitcoinHome()
 
-	if *datadir == "" {
+	if CFG.Datadir == "" {
 		GocoinHomeDir = BtcRootDir+"gocoin/"
 	} else {
-		GocoinHomeDir = *datadir+"/"
+		GocoinHomeDir = CFG.Datadir+"/"
 	}
 
-	if *testnet { // testnet3
+	if CFG.Testnet { // testnet3
 		DefaultTcpPort = 18333
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
@@ -78,10 +78,10 @@ func host_init() {
 
 	fmt.Println("Opening blockchain...")
 	sta := time.Now().UnixNano()
-	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, *rescan)
+	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, FLAG.rescan)
 	sto := time.Now().UnixNano()
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-	if *nosync {
+	if CFG.Nosync {
 		BlockChain.DoNotSync = true
 		fmt.Println("Syncing is disabled. Switch it on with 'sync' command")
 	}

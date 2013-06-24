@@ -21,7 +21,7 @@ const (
 
 	// If somethign is 1KB big, it will expire after this time.
 	// Otherwise expiration time is proportionally different.
-	TxExpirePerKB = time.Hour
+	TxExpirePerKB = (2*time.Hour)
 
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102

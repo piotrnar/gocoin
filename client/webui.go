@@ -432,5 +432,5 @@ func webserver() {
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
 
-	http.ListenAndServe(*webui, nil)
+	http.ListenAndServe(CFG.WebUI, nil)
 }

@@ -3,3 +3,4 @@ balance/
 client
 openssl.go
 sipasec.go
+gocoin.conf

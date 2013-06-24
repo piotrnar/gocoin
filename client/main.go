@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"flag"
 	"time"
 	"sync"
 	"runtime"
@@ -18,18 +17,6 @@ const (
 )
 
 var (
-	testnet *bool = flag.Bool("t", false, "Use Testnet3")
-	rescan *bool = flag.Bool("r", false, "Rebuild the unspent DB (fixes 'Unknown input TxID' errors)")
-	proxy *string = flag.String("c", "", "Connect to this host and nowhere else")
-	server *bool = flag.Bool("l", true, "Enable TCP server (allow incomming connections)")
-	datadir *string = flag.String("d", "", "Specify Gocoin's database root folder")
-	nosync *bool = flag.Bool("nosync", false, "Init blockchain with syncing disabled (dangerous!)")
-	maxul = flag.Uint("ul", 0, "Upload limit in KB/s (0 for no limit)")
-	maxdl = flag.Uint("dl", 0, "Download limit in KB/s (0 for no limit)")
-	webui *string = flag.String("webui", "127.0.0.1:8833", "Serve WebUI from the given interface")
-	minerId *string = flag.String("miner", "", "Monitor new blocks with the string in their coinbase TX")
-	txrounting *bool = flag.Bool("txr", true, "Enable Transaction Routing")
-
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	BlockChain *btc.Chain
@@ -162,7 +149,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			}
 
 			if mined_by_us(bl.Raw) {
-				fmt.Println("\007Mined by '"+*minerId+"':", bl.Hash)
+				fmt.Println("\007Mined by '"+CFG.MinerID+"':", bl.Hash)
 				ui_show_prompt()
 			}
 
@@ -425,14 +412,9 @@ func main() {
 
 	fmt.Println("Gocoin client version", btc.SourcesTag)
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-	if flag.Lookup("h") != nil {
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
-	flag.Parse()
 
-	UploadLimit = *maxul << 10
-	DownloadLimit = *maxdl << 10
+	UploadLimit = CFG.MaxUpKBps << 10
+	DownloadLimit = CFG.MaxDownKBps << 10
 
 	// Disable Ctrl+C
 	killchan := make(chan os.Signal, 1)
@@ -464,7 +446,7 @@ func main() {
 
 	go network_process()
 	go do_userif()
-	if *webui!="" {
+	if CFG.WebUI!="" {
 		go webserver()
 	}
 
