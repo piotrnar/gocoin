@@ -155,8 +155,8 @@ func baned_txs(par string) {
 	tx_mutex.Lock()
 	for k, v := range TransactionsRejected {
 		cnt++
-		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", v.reason,
-			"-", time.Now().Sub(v.Time).String(), "ago")
+		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", v.size, "bytes",
+			"-", v.reason, "-", time.Now().Sub(v.Time).String(), "ago")
 	}
 	tx_mutex.Unlock()
 }
