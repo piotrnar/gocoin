@@ -20,6 +20,17 @@ a.menuat {
 	font-family: monospace;
 }
 
+table.bord {
+	border: 1px #000000 solid;
+	border-spacing:0;
+	border-collapse:collapse;
+}
+
+tr {
+	border-top: 1px solid #000;
+	border-bottom: 1px solid #000;
+}
+
 #rawdiv {
 	font-family: monospace;
 	background-color:#e0e0e0;

@@ -1,0 +1,27 @@
+<h2>Wallet</h2>Last known balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs
+ - <input type="button" value="Show" onclick="raw_load('balance', 'Unspent outputs')">
+<h2>Last Block</h2><table>
+<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
+<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
+<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
+<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+</table>
+<br><table><tr><td valign="top">
+<h2>Network</h2><table>
+<tr><td>Downloading at:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
+<tr><td>Uploading at:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
+<tr><td>Net Block Queue Size:<td><b>{NET_BLOCK_QSIZE}</b>
+<tr><td>Net Tx Queue Size:<td><b>{NET_TX_QSIZE}</b>
+<tr><td>Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incomming)
+<tr><td>Extrenal IPs:<td>{ONE_EXTERNAL_IP}</table>
+<td width="100">&nbsp;<td valign="top">
+<h2>Others</h2><table>
+<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
+<tr><td>Blocks Pending:<td><b>{BLOCKS_PENDING1}/{BLOCKS_PENDING2}</b>
+<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
+<tr><td>Node's uptime:<td><b>{NODE_UPTIME}</b>
+<tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b>
+<tr><td>SysMem Used:<td><b>{SYSMEM_USED_MB} MB</b>
+</table>
+</table><br><h2 id="rawtit"></h2><pre id="rawdiv" class="mono"></pre></table>

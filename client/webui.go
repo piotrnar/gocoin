@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"net/http"
 	"io/ioutil"
+	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -25,102 +26,106 @@ const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
 <table align="center" width="990" cellpadding="0" cellspacing="0"><tr><td>
 `
 
-
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	if len(strings.SplitN(r.URL.Path[1:], "/", 3))==2 {
 		dat, _ := ioutil.ReadFile(r.URL.Path[1:])
-		w.Write(dat)
+		if len(dat)>0 {
+			switch filepath.Ext(r.URL.Path) {
+				case ".js": w.Header()["Content-Type"] = []string{"text/javascript"}
+				case ".css": w.Header()["Content-Type"] = []string{"text/css"}
+			}
+			w.Write(dat)
+		}
 	}
 }
 
 func write_html_head(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("<html><head><title>Gocoin "))
+	dat, _ := ioutil.ReadFile("webht/page_head.html")
+	s := string(dat)
+	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	if CFG.Testnet {
-		w.Write([]byte("Testnet "))
+		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
+	} else {
+		s = strings.Replace(s, "{TESTNET}", "", 1)
 	}
-	w.Write([]byte(btc.SourcesTag))
-	w.Write([]byte("</title>\n"))
-	w.Write([]byte(htmlhead))
 	for i := range webuimenu {
-		if i==len(webuimenu)-1 {
-			w.Write([]byte("<td align=\"right\">")) // Last menu item on the right
-		} else if i==0 {
-			w.Write([]byte("<table width=\"100%\"><tr><td>"))
-		} else {
-			w.Write([]byte(" | "))
+		var x string
+		if i>0 && i<len(webuimenu)-1 {
+			x = " | "
 		}
-		w.Write([]byte("<a "))
+		x += "<a "
 		if r.URL.Path==webuimenu[i][0] {
-			w.Write([]byte("class=\"menuat\" "))
+			x += "class=\"menuat\" "
 		}
-		w.Write([]byte("href=\""+webuimenu[i][0]+"\">"+webuimenu[i][1]+"</a>"))
+		x += "href=\""+webuimenu[i][0]+"\">"+webuimenu[i][1]+"</a>"
+		if i==len(webuimenu)-1 {
+			s = strings.Replace(s, "{MENU_LEFT}", "", 1)
+			s = strings.Replace(s, "{MENU_RIGHT}", x, 1)
+		} else {
+			s = strings.Replace(s, "{MENU_LEFT}", x+"{MENU_LEFT}", 1)
+		}
 	}
-	w.Write([]byte("</table><hr>\n"))
+	w.Write([]byte(s))
 }
 
 func write_html_tail(w http.ResponseWriter) {
-	w.Write([]byte("</body></html>"))
+	dat, _ := ioutil.ReadFile("webht/page_tail.html")
+	w.Write(dat)
 }
 
 func p_home(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
+	dat, _ := ioutil.ReadFile("webht/home.html")
+	s := string(dat)
 
-	fmt.Fprint(w, "<h2>Wallet</h2>")
-	fmt.Fprintf(w, "Last known balance: <b>%.8f</b> BTC in <b>%d</b> outputs\n",
-		float64(LastBalance)/1e8, len(MyBalance))
-	fmt.Fprintln(w, " - <input type=\"button\" value=\"Show\" onclick=\"raw_load('balance', 'Unspent outputs')\">")
-
-	fmt.Fprint(w, "<h2>Last Block</h2>")
 	mutex.Lock()
-	fmt.Fprintln(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Hash:<td><b>%s</b>\n", LastBlock.BlockHash.String())
-	fmt.Fprintf(w, "<tr><td>Height:<td><b>%d</b>\n", LastBlock.Height)
-	fmt.Fprintf(w, "<tr><td>Timestamp:<td><b>%s</b>\n",
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"))
-	fmt.Fprintf(w, "<tr><td>Difficulty:<td><b>%.3f</b>\n", btc.GetDifficulty(LastBlock.Bits))
-	fmt.Fprintf(w, "<tr><td>Received:<td><b>%s</b> ago\n", time.Now().Sub(LastBlockReceived).String())
-	fmt.Fprintln(w, "</table>")
+	s = strings.Replace(s, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
+	s = strings.Replace(s, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_HASH}", LastBlock.BlockHash.String(), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(LastBlock.Height), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_TIME}",
+		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", fmt.Sprintf("%.3f", btc.GetDifficulty(LastBlock.Bits)), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(LastBlockReceived).String(), 1)
+	s = strings.Replace(s, "{BLOCKS_CACHED}", fmt.Sprint(len(cachedBlocks)), 1)
+	s = strings.Replace(s, "{BLOCKS_PENDING1}", fmt.Sprint(len(pendingBlocks)), 1)
+	s = strings.Replace(s, "{BLOCKS_PENDING2}", fmt.Sprint(len(pendingFifo)), 1)
+	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(peerDB.Count()), 1)
+	s = strings.Replace(s, "{NODE_UPTIME}", time.Now().Sub(StartTime).String(), 1)
+	s = strings.Replace(s, "{NET_BLOCK_QSIZE}", fmt.Sprint(len(netBlocks)), 1)
+	s = strings.Replace(s, "{NET_TX_QSIZE}", fmt.Sprint(len(netTxs)), 1)
+	s = strings.Replace(s, "{OPEN_CONNS_TOTAL}", fmt.Sprint(len(openCons)), 1)
+	s = strings.Replace(s, "{OPEN_CONNS_OUT}", fmt.Sprint(OutConsActive), 1)
+	s = strings.Replace(s, "{OPEN_CONNS_IN}", fmt.Sprint(InConsActive), 1)
 	mutex.Unlock()
 
-	fmt.Fprintln(w, "<br><table><tr><td valign=\"top\">")
-
-	fmt.Fprint(w, "<h2>Network</h2>")
-	fmt.Fprintln(w, "<table>")
 	bw_mutex.Lock()
 	tick_recv()
 	tick_sent()
-	fmt.Fprintf(w, "<tr><td>Downloading at:<td><b>%d/%d</b> KB/s, <b>%s</b> total\n",
-		dl_bytes_prv_sec>>10, DownloadLimit>>10, bts(dl_bytes_total))
-	fmt.Fprintf(w, "<tr><td>Uploading at:<td><b>%d/%d</b> KB/s, <b>%s</b> total\n",
-		ul_bytes_prv_sec>>10, UploadLimit>>10, bts(ul_bytes_total))
+	s = strings.Replace(s, "{DL_SPEED_NOW}", fmt.Sprint(dl_bytes_prv_sec>>10), 1)
+	s = strings.Replace(s, "{DL_SPEED_MAX}", fmt.Sprint(DownloadLimit>>10), 1)
+	s = strings.Replace(s, "{DL_TOTAL}", bts(dl_bytes_total), 1)
+	s = strings.Replace(s, "{UL_SPEED_NOW}", fmt.Sprint(ul_bytes_prv_sec>>10), 1)
+	s = strings.Replace(s, "{UL_SPEED_MAX}", fmt.Sprint(UploadLimit>>10), 1)
+	s = strings.Replace(s, "{UL_TOTAL}", bts(ul_bytes_total), 1)
 	bw_mutex.Unlock()
-	fmt.Fprintf(w, "<tr><td>Net Block Queue Size:<td><b>%d</b>\n", len(netBlocks))
-	fmt.Fprintf(w, "<tr><td>Net Tx Queue Size:<td><b>%d</b>\n", len(netTxs))
-	fmt.Fprintf(w, "<tr><td>Open Connections:<td><b>%d</b> (<b>%d</b> outgoing + <b>%d</b> incomming)\n",
-		len(openCons), OutConsActive, InConsActive)
-	fmt.Fprint(w, "<tr><td>Extrenal IPs:<td>")
+
+
+	ExternalIpMutex.Lock()
 	for ip, cnt := range ExternalIp4 {
-		fmt.Fprintf(w, "%d.%d.%d.%d (%d)&nbsp;&nbsp;", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip), cnt)
+		s = strings.Replace(s, "{ONE_EXTERNAL_IP}",
+			fmt.Sprintf("%dx%d.%d.%d.%d&nbsp;&nbsp;{ONE_EXTERNAL_IP}", cnt,
+				byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip)), 1)
 	}
-	fmt.Fprintln(w, "</table>")
-
-	fmt.Fprintln(w, "<td width=\"100\">&nbsp;<td valign=\"top\">")
-
-	fmt.Fprint(w, "<h2>Others</h2>")
-	fmt.Fprintln(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Blocks Cached:<td><b>%d</b>\n", len(cachedBlocks))
-	fmt.Fprintf(w, "<tr><td>Blocks Pending:<td><b>%d/%d</b>\n", len(pendingBlocks), len(pendingFifo))
-	fmt.Fprintf(w, "<tr><td>Known Peers:<td><b>%d</b>\n", peerDB.Count())
-	fmt.Fprintf(w, "<tr><td>Node's uptime:<td><b>%s</b>\n", time.Now().Sub(StartTime).String())
+	ExternalIpMutex.Unlock()
+	s = strings.Replace(s, "{ONE_EXTERNAL_IP}", "", 1)
 
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	fmt.Fprintf(w, "<tr><td>Heap Size:<td><b>%d MB</b>\n", ms.Alloc>>20)
-	fmt.Fprintf(w, "<tr><td>SysMem Used:<td><b>%d MB</b>\n", ms.Sys>>20)
+	s = strings.Replace(s, "{HEAP_SIZE_MB}", fmt.Sprint(ms.Alloc>>20), 1)
+	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
 
-	fmt.Fprintln(w, "</table>")
-
-	w.Write([]byte("</table><br><h2 id=\"rawtit\"></h2><pre id=\"rawdiv\" class=\"mono\"></pre>"))
+	write_html_head(w, r)
+	w.Write([]byte(s))
 	write_html_tail(w)
 }
 
@@ -136,7 +141,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Sort(srt)
 	fmt.Fprintf(w, "<b>%d</b> outgoing and <b>%d</b> incomming connections<br><br>\n", OutConsActive, InConsActive)
-	fmt.Fprintln(w, "<table class=\"netcons\" border=\"1\" cellspacing=\"0\" cellpadding=\"0\">")
+	fmt.Fprintln(w, "<table class=\"netcons bord\">")
 	fmt.Fprint(w, "<tr><th>ID<th colspan=\"2\">IP<th>Ping<th colspan=\"2\">Last Rcvd<th colspan=\"2\">Last Sent")
 	fmt.Fprintln(w, "<th>Total Rcvd<th>Total Sent<th colspan=\"2\">Version<th>Sending")
 	for idx := range srt {
@@ -166,31 +171,25 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_txs(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
+	dat, _ := ioutil.ReadFile("webht/txs.html")
+	s := string(dat)
 	tx_mutex.Lock()
-	fmt.Fprintln(w, "<table>")
-
-	fmt.Fprint(w, "<tr><td>Transactions To Send:<td>")
-	fmt.Fprintln(w, "<input type=\"button\" value=\"", len(TransactionsToSend),
-		"\" onclick=\"raw_load('txs2s', 'Transactions To Send')\">")
-
-	fmt.Fprint(w, "<tr><td>Rejected Transactions:<td>")
-	fmt.Fprintln(w, "<input type=\"button\" value=\"", len(TransactionsRejected),
-		"\" onclick=\"raw_load('txsre', 'Rejected Transactions')\">")
-
-	fmt.Fprintf(w, "<tr><td>Pending Transactions:<td><b>%d</b> / <b>%d</b>\n", len(TransactionsPending), len(netTxs))
-
-	fmt.Fprintf(w, "<tr><td>Spent Outputs:<td><b>%d</b>\n", len(SpentOutputs))
+	s = strings.Replace(s, "{T2S_CNT}", fmt.Sprint(len(TransactionsToSend)), 1)
+	s = strings.Replace(s, "{TRE_CNT}", fmt.Sprint(len(TransactionsRejected)), 1)
+	s = strings.Replace(s, "{PTR1_CNT}", fmt.Sprint(len(TransactionsPending)), 1)
+	s = strings.Replace(s, "{PTR2_CNT}", fmt.Sprint(len(netTxs)), 1)
+	s = strings.Replace(s, "{SPENT_OUTS_CNT}", fmt.Sprint(len(SpentOutputs)), 1)
 	tx_mutex.Unlock()
 
-	w.Write([]byte("</table><br><h2 id=\"rawtit\"></h2><pre id=\"rawdiv\" class=\"mono\"></pre>"))
+	write_html_head(w, r)
+	w.Write([]byte(s))
 	write_html_tail(w)
 }
 
 func p_blocks(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w, r)
 	end := BlockChain.BlockTreeEnd
-	fmt.Fprint(w, "<table class=\"blocks\" border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
+	fmt.Fprint(w, "<table class=\"blocks bord\">\n")
 	fmt.Fprintf(w, "<tr><th>Height<th>Timestamp<th>Hash<th>Txs<th>Size<th>Mined by</tr>\n")
 	for cnt:=0; end!=nil && cnt<100; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
@@ -266,7 +265,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	sort.Sort(srt)
 	fmt.Fprintf(w, "Data from last <b>%d</b> blocks, starting at <b>%s</b><br><br>\n",
 		cnt, time.Unix(lastts, 0).Format("2006-01-02 15:04:05"))
-	fmt.Fprint(w, "<table border=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n")
+	fmt.Fprint(w, "<table class=\"bord\">\n")
 	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
 	for i := range srt {
 		fmt.Fprintf(w, "<tr class=\"hov\"><td>%s<td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
@@ -288,13 +287,13 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(ck)
 	fmt.Fprint(w, "<table class=\"mono\"><tr>")
-	fmt.Fprint(w, "<td valign=\"top\"><table border=\"1\"><tr><th colspan=\"2\">Generic Counters")
+	fmt.Fprint(w, "<td valign=\"top\"><table class=\"bord\"><tr><th colspan=\"2\">Generic Counters")
 	prv_ := ""
 	for i := range ck {
 		if ck[i][4]=='_' {
 			if ck[i][:4]!=prv_ {
 				prv_ = ck[i][:4]
-				fmt.Fprint(w, "</table><td valign=\"top\"><table border=\"1\"><tr><th colspan=\"2\">")
+				fmt.Fprint(w, "</table><td valign=\"top\"><table class=\"bord\"><tr><th colspan=\"2\">")
 				switch prv_ {
 					case "rbts": fmt.Fprintln(w, "Received bytes")
 					case "rcvd": fmt.Fprintln(w, "Received messages")
@@ -386,56 +385,57 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 
 
 func raw_txs2s(w http.ResponseWriter, r *http.Request) {
-	cnt := 0
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<txpool>"))
 	tx_mutex.Lock()
 	for k, v := range TransactionsToSend {
-		cnt++
-		var oe, snt string
-		if v.own {
-			oe = " *OWN*"
-		} else {
-			oe = ""
-		}
-
-		if v.sentCount==0 {
-			snt = "never sent"
-		} else {
-			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentCount,
-				time.Now().Sub(v.Time).String())
-		}
-		fmt.Fprintf(w, "%5d) %s - %d bytes - %s%s\n", cnt,
-			btc.NewUint256(k[:]).String(), len(v.data), snt, oe)
+		w.Write([]byte("<tx>"))
+		fmt.Fprint(w, "<id>", btc.NewUint256(k[:]).String(), "</id>")
+		fmt.Fprint(w, "<time>", v.firstseen.Unix(), "</time>")
+		fmt.Fprint(w, "<len>", len(v.data), "</len>")
+		fmt.Fprint(w, "<own>", v.own, "</own>")
+		fmt.Fprint(w, "<sentcnt>", v.sentcnt, "</sentcnt>")
+		fmt.Fprint(w, "<sentlast>", v.lastsent.Unix(), "</sentlast>")
+		fmt.Fprint(w, "<volume>", v.volume, "</volume>")
+		fmt.Fprint(w, "<fee>", v.fee, "</fee>")
+		w.Write([]byte("</tx>"))
 	}
 	tx_mutex.Unlock()
+	w.Write([]byte("</txpool>"))
 }
 
 
 func raw_txsre(w http.ResponseWriter, r *http.Request) {
-	cnt := 0
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<txbanned>"))
 	tx_mutex.Lock()
 	for k, v := range TransactionsRejected {
-		cnt++
-		fmt.Fprintf(w, "%5d) %s - %d - %d bytes - %s ago\n", cnt,
-			btc.NewUint256(k[:]).String(), v.reason, v.size,
-			time.Now().Sub(v.Time).String())
+		w.Write([]byte("<tx>"))
+		fmt.Fprint(w, "<id>", btc.NewUint256(k[:]).String(), "</id>")
+		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
+		fmt.Fprint(w, "<len>", v.size, "</len>")
+		fmt.Fprint(w, "<reason>", v.reason, "</reason>")
+		w.Write([]byte("</tx>"))
 	}
 	tx_mutex.Unlock()
+	w.Write([]byte("</txbanned>"))
 }
 
 
 func webserver() {
 	http.HandleFunc("/webui/", p_webui)
-	http.HandleFunc("/", p_home)
 	http.HandleFunc("/net", p_net)
 	http.HandleFunc("/txs", p_txs)
 	http.HandleFunc("/blocks", p_blocks)
 	http.HandleFunc("/miners", p_miners)
 	http.HandleFunc("/counts", p_counts)
 
-	http.HandleFunc("/raw_txs2s", raw_txs2s)
-	http.HandleFunc("/raw_txsre", raw_txsre)
+	http.HandleFunc("/txs2s.xml", raw_txs2s)
+	http.HandleFunc("/txsre.xml", raw_txsre)
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
+
+	http.HandleFunc("/", p_home)
 
 	http.ListenAndServe(CFG.WebUI, nil)
 }

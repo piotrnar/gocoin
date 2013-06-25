@@ -27,7 +27,16 @@ var CFG struct {
 	MaxDownKBps uint
 	WebUI string
 	MinerID string
-	TXRouting bool
+	TXRouting struct {
+		Enabled bool // Global on/off swicth
+		FeePerByte uint
+		MaxTxSize uint
+		MinVoutValue uint
+
+		// If somethign is 1KB big, it expires after this many minutes.
+		// Otherwise expiration time will be proportionally different.
+		TxExpirePerKB uint
+	}
 }
 
 
@@ -35,7 +44,11 @@ func init() {
 	// Fill in default values
 	CFG.ListenTCP = true
 	CFG.WebUI = "127.0.0.1:8833"
-	CFG.TXRouting = true
+	CFG.TXRouting.Enabled = true
+	CFG.TXRouting.FeePerByte = 10
+	CFG.TXRouting.MaxTxSize = 10240
+	CFG.TXRouting.MinVoutValue = 500*CFG.TXRouting.FeePerByte // Equivalent of 500 bytes tx fee
+	CFG.TXRouting.TxExpirePerKB = 120 // Two hours
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
@@ -56,7 +69,7 @@ func init() {
 	flag.UintVar(&CFG.MaxDownKBps, "dl", CFG.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
 	flag.StringVar(&CFG.WebUI, "webui", CFG.WebUI, "Serve WebUI from the given interface")
 	flag.StringVar(&CFG.MinerID, "miner", CFG.MinerID, "Monitor new blocks with the string in their coinbase TX")
-	flag.BoolVar(&CFG.TXRouting, "txr", CFG.TXRouting, "Enable Transaction Routing")
+	flag.BoolVar(&CFG.TXRouting.Enabled, "txr", CFG.TXRouting.Enabled, "Enable Transaction Routing")
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()

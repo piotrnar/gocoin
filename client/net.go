@@ -233,7 +233,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	if !CFG.TXRouting {
+	if !CFG.TXRouting.Enabled {
 		b.WriteByte(0)  // don't notify me about txs
 	}
 
@@ -407,7 +407,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			last_inv = pl[of+4:of+36]
 			new_block = BlockInvNotify(last_inv)
 		} else if typ==1 {
-			if CFG.TXRouting {
+			if CFG.TXRouting.Enabled {
 				c.TxInvNotify(pl[of+4:of+36])
 			}
 		}
@@ -874,7 +874,7 @@ func do_one_connection(c *oneConnection) {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				if CFG.TXRouting {
+				if CFG.TXRouting.Enabled {
 					c.ParseTxNet(cmd.pl)
 				}
 

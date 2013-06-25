@@ -10,19 +10,6 @@ import (
 
 
 const (
-	// Minimum fee for each KB of data (in Satoshi)
-	FeePerKB = 10000
-
-	// Maximu size of trasnaction that we would route (change it, if you want)
-	MaxTxSize = 10*1024
-
-	// Minimum output value (to filter out txs with dust outputs)
-	MinVoutValue = FeePerKB/2
-
-	// If somethign is 1KB big, it will expire after this time.
-	// Otherwise expiration time is proportionally different.
-	TxExpirePerKB = (2*time.Hour)
-
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
@@ -47,10 +34,11 @@ var (
 
 type OneTxToSend struct {
 	data []byte
-	sentCount uint
-	time.Time
+	sentcnt uint
+	firstseen, lastsent time.Time
 	own bool
 	spent []uint64 // Which records in SpentOutputs this TX added
+	volume, fee uint64
 }
 
 type OneTxRejected struct {
@@ -108,7 +96,7 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if len(pl)>MaxTxSize {
+	if uint(len(pl))>CFG.TXRouting.MaxTxSize {
 		CountSafe("TxTooBig")
 		TransactionsRejected[tid.Hash] = NewRejectedTx(len(pl), TX_REJECTED_TOO_BIG)
 		return
@@ -188,7 +176,7 @@ func HandleNetTx(ntx *txRcvd) {
 
 	// Check if total output value does not exceed total input
 	for i := range tx.TxOut {
-		if tx.TxOut[i].Value < MinVoutValue {
+		if tx.TxOut[i].Value < uint64(CFG.TXRouting.MinVoutValue) {
 			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_DUST)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedDust")
@@ -206,7 +194,7 @@ func HandleNetTx(ntx *txRcvd) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(len(ntx.raw))*FeePerKB)>>10 {
+	if fee < (uint64(len(ntx.raw))*uint64(CFG.TXRouting.FeePerByte)) {
 		TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_LOW_FEE)
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
@@ -226,7 +214,7 @@ func HandleNetTx(ntx *txRcvd) {
 		}
 	}
 
-	rec := &OneTxToSend{data:ntx.raw, spent:spent}
+	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now()}
 	TransactionsToSend[tx.Hash.Hash] = rec
 	for i := range spent {
 		SpentOutputs[spent[i]] = true
@@ -236,8 +224,8 @@ func HandleNetTx(ntx *txRcvd) {
 	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
 
-	rec.sentCount += NetRouteInv(1, tx.Hash, ntx.conn)
-	rec.Time = time.Now()
+	rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
+	rec.lastsent = time.Now()
 }
 
 
@@ -282,7 +270,7 @@ func init() {
 
 
 func expireTime(size int) time.Time {
-	return time.Now().Add(-time.Duration((uint64(size)*uint64(TxExpirePerKB))>>10))
+	return time.Now().Add(-time.Duration((uint64(size)*uint64(time.Minute)*uint64(CFG.TXRouting.TxExpirePerKB))>>10))
 }
 
 
@@ -293,7 +281,7 @@ func txPoolManager() {
 
 		tx_mutex.Lock()
 		for k, v := range TransactionsToSend {
-			if !v.own && !v.Time.IsZero() && v.Time.Before(expireTime(len(v.data))) {
+			if !v.own && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
 				delete(TransactionsToSend, k)
 				cnt1++
 			}

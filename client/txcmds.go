@@ -73,7 +73,8 @@ func load_tx(par string) {
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
 	tx_mutex.Lock()
-	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:true}
+	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:true, firstseen:time.Now(),
+		volume:totinp, fee:totinp-totout}
 	tx_mutex.Unlock()
 	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
 	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
@@ -91,8 +92,8 @@ func send_tx(par string) {
 	if ptx, ok := TransactionsToSend[txid.Hash]; ok {
 		tx_mutex.Unlock()
 		cnt := NetRouteInv(1, txid, nil)
-		ptx.sentCount += cnt
-		ptx.Time = time.Now()
+		ptx.sentcnt += cnt
+		ptx.lastsent = time.Now()
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
@@ -136,11 +137,11 @@ func list_txs(par string) {
 			oe = ""
 		}
 
-		if v.sentCount==0 {
+		if v.sentcnt==0 {
 			snt = "never sent"
 		} else {
-			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentCount,
-				time.Now().Sub(v.Time).String())
+			snt = fmt.Sprintf("sent %d times, last %s ago", v.sentcnt,
+				time.Now().Sub(v.lastsent).String())
 		}
 		fmt.Printf("%5d) %s - %d bytes - %s%s\n", cnt,
 			btc.NewUint256(k[:]).String(), len(v.data), snt, oe)
@@ -167,8 +168,8 @@ func send_all_tx(par string) {
 	for k, v := range TransactionsToSend {
 		if v.own {
 			cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
-			v.sentCount += cnt
-			v.Time = time.Now()
+			v.sentcnt += cnt
+			v.lastsent = time.Now()
 			fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
 		}
 	}
