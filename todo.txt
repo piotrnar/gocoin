@@ -1,3 +1,4 @@
 * Check performance of cgo based hashing vs the built in one
 * Make it possibe to load, display and broadcast local tx from WebUI
 * Handle own trasnactions separatelly in the txs page
+* Clean up the house
