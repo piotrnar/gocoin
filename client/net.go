@@ -1100,7 +1100,9 @@ func start_server() {
 						}()
 					}
 				} else {
-					println("NewIncommingPeer:", e.Error())
+					if dbg>0 {
+						println("NewIncommingPeer:", e.Error())
+					}
 					CountSafe("InConnRefused")
 					tc.Close()
 				}
