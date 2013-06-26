@@ -3,12 +3,12 @@
 <tr><td>Rejected Transactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre('')">
 <tr><td>Pending Transactions:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
 <tr><td>Spent Outputs:<td><b>{SPENT_OUTS_CNT}</b>
-<tr><td>Upload Local Tx:<td>
+</table>
+<h2>Upload Transaction File:</h2>
 <form id="the-form" method="post" enctype="multipart/form-data">
 	<input name="txfile" type="file">
 	<input type="submit" value="Upload" />
 </form>
-</table>
 {TX_LOAD}
 <br>
 <table class="txs bord" id="txs2s" style="display:none">
