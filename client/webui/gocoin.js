@@ -86,11 +86,12 @@ function show_txs2s(extrapar) {
 
 				if (own!=0) {
 					row = txs2s.insertRow(1)
-					row.style.backgroundColor = 'pink'
+					row.className='hov own'
+					row.title = 'Your own transaction'
 				} else {
 					row = txs2s.insertRow(-1)
+					row.className='hov'
 				}
-				row.className='hov'
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
@@ -125,16 +126,20 @@ function show_txs2s(extrapar) {
 					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'len'))).toFixed(1)
 				} else {
 					c=row.insertCell(-1);c.align='right'
-					c.innerHTML = '???'
+					c.innerHTML = '<i>unknown</i>'
 
 					c=row.insertCell(-1);c.align='right'
-					c.innerHTML = '???'
+					c.innerHTML = '<i>unknown</i>'
 				}
 
 				c=row.insertCell(-1);c.align='right'
-				c.style.cursor='pointer'
-				c.innerHTML = '<img onclick="sendtx_click(\''+txid+'\')" src="webui/sendtx.png">'
-				c.innerHTML += '<img onclick="deltx_click(\''+txid+'\')" src="webui/deltx.png">'
+				if (own!=0) {
+					c.innerHTML = '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/sendtx.png">'
+					c.innerHTML += '&nbsp;'
+					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/deltx.png">'
+				} else {
+					c.innerHTML = '&nbsp;'
+				}
 
 			}
 			txs2s.style.display = 'table'
