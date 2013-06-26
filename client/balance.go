@@ -57,9 +57,11 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 	for i := range MyBalance {
 		sum += MyBalance[i].Value
 
-		if details {
-			s += fmt.Sprintf("%d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
+		if details && i<100 {
+			s += fmt.Sprintf("%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
 				MyBalance[i].String())
+		} else {
+			s += fmt.Sprintl("List of unspent outputs truncated to 100 records")
 		}
 
 		// update the balance/ folder
