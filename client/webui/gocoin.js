@@ -185,3 +185,49 @@ function show_txsre() {
 	xmlHttp.open("GET","txsre.xml", true);
 	xmlHttp.send(null);
 }
+
+
+function show_unspent() {
+	if (unspent.style.display != 'none') {
+		unspent.style.display = 'none'
+		return
+	}
+
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			while (unspent.rows.length>1)  unspent.deleteRow(1)
+			txs = aj.responseXML.getElementsByTagName('output')
+			for (var i=0; i<txs.length; i++) {
+				var c,row = unspent.insertRow(-1)
+
+				row.className='hov'
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = (i+1).toString()
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = xval(txs[i], 'inblock')
+
+				c = row.insertCell(-1)
+				c.className ='mono'
+				c.innerHTML = xval(txs[i], 'txid')
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = xval(txs[i], 'vout')
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = parseFloat(xval(txs[i], 'value'))/1e8
+
+				c=row.insertCell(-1);
+				c.innerHTML = xval(txs[i], 'addr')
+
+				c=row.insertCell(-1);
+				c.innerHTML = xval(txs[i], 'label')
+			}
+			unspent.style.display = 'table'
+		}
+	}
+	xmlHttp.open("GET","balance.xml", true);
+	xmlHttp.send(null);
+}
