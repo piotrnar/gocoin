@@ -1,14 +1,17 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"time"
 	"sort"
 	"sync"
+	"bytes"
 	"strings"
 	"runtime"
 	"net/http"
 	"io/ioutil"
+	"archive/zip"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -355,10 +358,7 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 }
 
 func raw_balance(w http.ResponseWriter, r *http.Request) {
-	for i := range MyBalance {
-		fmt.Fprintf(w, "%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
-			MyBalance[i].String())
-	}
+	w.Write([]byte(UpdateBalanceFolder()))
 }
 
 func raw_net(w http.ResponseWriter, r *http.Request) {
@@ -489,6 +489,29 @@ func raw_txsre(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func dl_balance(w http.ResponseWriter, r *http.Request) {
+	UpdateBalanceFolder()
+	buf := new(bytes.Buffer)
+	zi := zip.NewWriter(buf)
+	filepath.Walk("balance/", func(path string, fi os.FileInfo, err error) error {
+		if !fi.IsDir() {
+			f, _ := zi.Create(path)
+			if f != nil {
+				da, _ := ioutil.ReadFile(path)
+				f.Write(da)
+			}
+		}
+		return nil
+	})
+	if zi.Close() == nil {
+		w.Header()["Content-Type"] = []string{"application/zip"}
+		w.Write(buf.Bytes())
+	} else {
+		w.Write([]byte("Error"))
+	}
+}
+
+
 func webserver() {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/net", p_net)
@@ -501,6 +524,7 @@ func webserver() {
 	http.HandleFunc("/txsre.xml", raw_txsre)
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
+	http.HandleFunc("/balance.zip", dl_balance)
 
 	http.HandleFunc("/", p_home)
 
