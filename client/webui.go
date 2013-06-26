@@ -361,6 +361,34 @@ func raw_balance(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(UpdateBalanceFolder()))
 }
 
+func xml_balance(w http.ResponseWriter, r *http.Request) {
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<unspent>"))
+
+	//For safety, lets get the balance from teh main thread
+	var wg sync.WaitGroup
+	wg.Add(1)
+	req := new(oneUiReq)
+	req.done.Add(1)
+	req.handler = func(dat string) {
+		for i := range MyBalance {
+			w.Write([]byte("<output>"))
+			fmt.Fprint(w, "<txid>", btc.NewUint256(MyBalance[i].TxPrevOut.Hash[:]).String(), "</txid>")
+			fmt.Fprint(w, "<vout>", MyBalance[i].TxPrevOut.Vout, "</vout>")
+			fmt.Fprint(w, "<value>", MyBalance[i].Value, "</value>")
+			fmt.Fprint(w, "<inblock>", MyBalance[i].MinedAt, "</inblock>")
+			fmt.Fprint(w, "<addr>", MyBalance[i].BtcAddr.String(), "</addr>")
+			fmt.Fprint(w, "<label>", MyBalance[i].BtcAddr.Label, "</label>")
+			w.Write([]byte("</output>"))
+		}
+		wg.Done()
+	}
+	uiChannel <- req
+	wg.Wait()
+	w.Write([]byte("</unspent>"))
+}
+
+
 func raw_net(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -427,7 +455,7 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func raw_txs2s(w http.ResponseWriter, r *http.Request) {
+func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	if len(r.Form["del"])>0 {
@@ -472,7 +500,7 @@ func raw_txs2s(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func raw_txsre(w http.ResponseWriter, r *http.Request) {
+func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	tx_mutex.Lock()
@@ -520,8 +548,9 @@ func webserver() {
 	http.HandleFunc("/miners", p_miners)
 	http.HandleFunc("/counts", p_counts)
 
-	http.HandleFunc("/txs2s.xml", raw_txs2s)
-	http.HandleFunc("/txsre.xml", raw_txsre)
+	http.HandleFunc("/txs2s.xml", xmp_txs2s)
+	http.HandleFunc("/txsre.xml", xml_txsre)
+	http.HandleFunc("/balance.xml", xml_balance)
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
 	http.HandleFunc("/balance.zip", dl_balance)
