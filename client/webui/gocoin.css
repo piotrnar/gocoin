@@ -52,6 +52,10 @@ th {
 	color:yellow;
 }
 
+tr.own {
+	background-color:#ffe0e0;
+}
+
 tr.hov:hover {
 	background-color:#e0e0e0;
 }
