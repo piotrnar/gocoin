@@ -1,5 +1,6 @@
 0.4.2
 * Allows loading and broadcasting of local txs via WebUI
+* Allows to download the balance folder via WebUI
 * More WebUI templates
 
 0.4.1
