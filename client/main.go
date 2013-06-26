@@ -166,7 +166,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 
 			if BalanceChanged {
 				fmt.Println("\007Your balance has just changed")
-				DumpBalance(nil)
+				DumpBalance(nil, false)
 				ui_show_prompt()
 			}
 		}
@@ -429,7 +429,7 @@ func main() {
 	if MyWallet!=nil {
 		MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
 		BalanceInvalid = false
-		DumpBalance(nil)
+		DumpBalance(nil, false)
 	}
 
 	initPeers(GocoinHomeDir)
