@@ -67,7 +67,7 @@ func load_raw_tx(buf []byte) (s string) {
 	}
 	tx_mutex.Unlock()
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
-	s += fmt.Sprintln("If it does what you intended, you can send it the network\n. TxID:", tx.Hash.String())
+	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
 	return
 }
 
