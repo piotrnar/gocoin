@@ -10,15 +10,13 @@ import (
 
 func load_raw_tx(buf []byte) (s string) {
 	txd, er := hex.DecodeString(string(buf))
-	if er != nil {
-		txd = buf
-		s += fmt.Sprintln("Seems like the transaction is in a binary format")
-	} else {
-		s += fmt.Sprintln("Looks like the transaction file contains hex data")
-	}
 
 	// At this place we should have raw transaction in txd
 	tx, le := btc.NewTx(txd)
+	if tx==nil {
+		s += fmt.Sprintln("Cuuld not decode the transaction file")
+		return
+	}
 	if le != len(txd) {
 		s += fmt.Sprintln("WARNING: Tx length mismatch", le, len(txd))
 	}
