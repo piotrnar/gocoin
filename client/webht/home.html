@@ -1,7 +1,17 @@
 <h2>Wallet</h2>Last known balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs
 <ul>
-<li><a style="cursor:pointer" onclick="raw_load('balance', 'Unspent outputs')">Show outputs</a> (below)
 <li>Download <a href="balance.zip">balance.zip</a>
+<li><a style="cursor:pointer" onclick="show_unspent()">Show/hide unspent outputs</a>
+<table vspace="10" id="unspent" style="display:none">
+<tr>
+	<th>#
+	<th>MinedAt
+	<th>TxID
+	<th>Vout
+	<th>BTC Value
+	<th>Address
+	<th>Label
+</table>
 </ul>
 
 <h2>Last Block</h2><table>
