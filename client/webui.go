@@ -326,12 +326,13 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	ididx := strings.Index(r.RequestURI, "?id=")
-	if ididx==-1 {
-		fmt.Fprintln(w, "Missing id")
+	r.ParseForm()
+	if len(r.Form["id"])==0 {
+		fmt.Println("No id given")
 		return
 	}
-	v := look2conn(r.RequestURI[ididx+4:])
+
+	v := look2conn(r.Form["id"][0])
 	if v == nil {
 		fmt.Fprintln(w, "There is no such an active connection")
 	}
