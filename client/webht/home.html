@@ -1,5 +1,9 @@
 <h2>Wallet</h2>Last known balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs
- - <input type="button" value="Show" onclick="raw_load('balance', 'Unspent outputs')">
+<ul>
+<li><a style="cursor:pointer" onclick="raw_load('balance', 'Unspent outputs')">Show outputs</a> (below)
+<li>Download <a href="balance.zip">balance.zip</a>
+</ul>
+
 <h2>Last Block</h2><table>
 <tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
 <tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
