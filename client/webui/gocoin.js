@@ -23,7 +23,11 @@ function raw_load(id, tit) {
 }
 
 function xval(xml,tag) {
-	return xml.getElementsByTagName(tag)[0].childNodes[0].nodeValue;
+	try {
+		return xml.getElementsByTagName(tag)[0].childNodes[0].nodeValue;
+	} catch (e) {
+		return NaN
+	}
 }
 
 function add_ths(tab, hdrs) {
@@ -56,14 +60,36 @@ function val2reason(r) {
 }
 
 
-function show_txs2s() {
+function sendtx_click(id) {
+	if (confirm("Broadcast TX "+id)) {
+		show_txs2s('?send='+id)
+	}
+}
+
+function deltx_click(id) {
+	if (confirm("Delete TX "+id)) {
+		show_txs2s('?del='+id)
+	}
+}
+
+
+function show_txs2s(extrapar) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
 			while (txs2s.rows.length>1)  txs2s.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
 			for (var i=0; i<txs.length; i++) {
-				var c,row = txs2s.insertRow(-1)
+				var c,row
+				var own = parseInt(xval(txs[i], 'own'))
+				var txid = xval(txs[i], 'id')
+
+				if (own!=0) {
+					row = txs2s.insertRow(1)
+					row.style.backgroundColor = 'pink'
+				} else {
+					row = txs2s.insertRow(-1)
+				}
 				row.className='hov'
 
 				c=row.insertCell(-1);c.align='right'
@@ -71,7 +97,7 @@ function show_txs2s() {
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				c.innerHTML = xval(txs[i], 'id')
+				c.innerHTML = txid
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
@@ -81,24 +107,44 @@ function show_txs2s() {
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'sentcnt')
+				if (own!=0) {
+					c.addEventListener('click', alert)
+					c.style.cursor = 'pointer'
+				}
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
 
-				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = (parseFloat(xval(txs[i], 'fee'))/1e8).toFixed(8)
+				if (own!=2) {
+					var fee = parseFloat(xval(txs[i], 'fee'))
+
+					c=row.insertCell(-1);c.align='right'
+					c.innerHTML = (fee/1e8).toFixed(8)
+
+					c=row.insertCell(-1);c.align='right'
+					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'len'))).toFixed(1)
+				} else {
+					c=row.insertCell(-1);c.align='right'
+					c.innerHTML = '???'
+
+					c=row.insertCell(-1);c.align='right'
+					c.innerHTML = '???'
+				}
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = (parseFloat(xval(txs[i], 'fee'))/parseFloat(xval(txs[i], 'len'))).toFixed(1)
+				c.style.cursor='pointer'
+				c.innerHTML = '<img onclick="sendtx_click(\''+txid+'\')" src="webui/sendtx.png">'
+				c.innerHTML += '<img onclick="deltx_click(\''+txid+'\')" src="webui/deltx.png">'
+
 			}
 			txs2s.style.display = 'table'
 		}
 	}
 	txs2s.style.display = txsre.style.display = 'none'
-	xmlHttp.open("GET","txs2s.xml", true);
+	xmlHttp.open("GET","txs2s.xml"+extrapar, true);
 	xmlHttp.send(null);
-
 }
+
 
 function show_txsre() {
 	var aj = ajax()

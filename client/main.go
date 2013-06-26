@@ -31,10 +31,9 @@ var (
 	LastBlockReceived time.Time
 
 	mutex, counter_mutex sync.Mutex
-	uicmddone chan bool = make(chan bool, 1)
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 300)
 	netTxs chan *txRcvd = make(chan *txRcvd, 300)
-	uiChannel chan oneUiReq = make(chan oneUiReq, 1)
+	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
 
 	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
@@ -478,7 +477,7 @@ func main() {
 				Busy("UI command")
 				CountSafe("UI messages")
 				cmd.handler(cmd.param)
-				uicmddone <- true
+				cmd.done.Done()
 				continue
 
 			case <-time.After(time.Second):

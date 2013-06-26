@@ -8,6 +8,70 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+func load_raw_tx(buf []byte) (s string) {
+	txd, er := hex.DecodeString(string(buf))
+	if er != nil {
+		txd = buf
+		s += fmt.Sprintln("Seems like the transaction is in a binary format")
+	} else {
+		s += fmt.Sprintln("Looks like the transaction file contains hex data")
+	}
+
+	// At this place we should have raw transaction in txd
+	tx, le := btc.NewTx(txd)
+	if le != len(txd) {
+		s += fmt.Sprintln("WARNING: Tx length mismatch", le, len(txd))
+	}
+	tx.Hash = btc.NewSha2Hash(txd)
+	s += fmt.Sprintln("Transaction details (for your information):")
+	s += fmt.Sprintln(len(tx.TxIn), "Input(s):")
+	var totinp, totout uint64
+	var missinginp bool
+	for i := range tx.TxIn {
+		s += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
+		po, _ := BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+		if po != nil {
+			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
+			if !ok {
+				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
+				return
+			}
+			totinp += po.Value
+			s += fmt.Sprintf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
+				btc.NewAddrFromPkScript(po.Pk_script, AddrVersion).String())
+		} else {
+			s += fmt.Sprintln(" - UNKNOWN INPUT")
+			missinginp = true
+		}
+	}
+	s += fmt.Sprintln(len(tx.TxOut), "Output(s):")
+	for i := range tx.TxOut {
+		totout += tx.TxOut[i].Value
+		s += fmt.Sprintf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
+			btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, AddrVersion).String())
+	}
+	if missinginp {
+		s += fmt.Sprintln("WARNING: There are missing inputs and we cannot calc input BTC amount.")
+		s += fmt.Sprintln("If there is somethign wrong with this transaction, you can loose money...")
+	} else {
+		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
+			float64(totout)/1e8, float64(totinp-totout)/1e8)
+	}
+	tx_mutex.Lock()
+	if missinginp {
+		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:2, firstseen:time.Now(),
+			volume:totout}
+	} else {
+		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:1, firstseen:time.Now(),
+			volume:totinp, fee:totinp-totout}
+	}
+	tx_mutex.Unlock()
+	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
+	s += fmt.Sprintln("If it does what you intended, you can send it the network\n. TxID:", tx.Hash.String())
+	return
+}
+
+
 func load_tx(par string) {
 	if par=="" {
 		fmt.Println("Specify a name of a transaction file")
@@ -23,61 +87,7 @@ func load_tx(par string) {
 	buf := make([]byte, n)
 	f.Read(buf)
 	f.Close()
-
-	txd, er := hex.DecodeString(string(buf))
-	if er != nil {
-		txd = buf
-		fmt.Println("Seems like the transaction is in a binary format")
-	} else {
-		fmt.Println("Looks like the transaction file contains hex data")
-	}
-
-	// At this place we should have raw transaction in txd
-	tx, le := btc.NewTx(txd)
-	if le != len(txd) {
-		fmt.Println("WARNING: Tx length mismatch", le, len(txd))
-	}
-	tx.Hash = btc.NewSha2Hash(txd)
-	fmt.Println("Transaction details (for your information):")
-	fmt.Println(len(tx.TxIn), "Input(s):")
-	var totinp, totout uint64
-	var missinginp bool
-	for i := range tx.TxIn {
-		fmt.Printf(" %3d %s", i, tx.TxIn[i].Input.String())
-		po, _ := BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-		if po != nil {
-			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
-			if !ok {
-				fmt.Println("\nERROR: The transacion does not have a valid signature.")
-				return
-			}
-			totinp += po.Value
-			fmt.Printf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
-				btc.NewAddrFromPkScript(po.Pk_script, AddrVersion).String())
-		} else {
-			fmt.Println(" - UNKNOWN INPUT")
-			missinginp = true
-		}
-	}
-	fmt.Println(len(tx.TxOut), "Output(s):")
-	for i := range tx.TxOut {
-		totout += tx.TxOut[i].Value
-		fmt.Printf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
-			btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, AddrVersion).String())
-	}
-	if missinginp {
-		fmt.Println("WARNING: There are missing inputs and we cannot calc input BTC amount.")
-		fmt.Println("If there is somethign wrong with this transaction, you can loose money...")
-	} else {
-		fmt.Printf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
-			float64(totout)/1e8, float64(totinp-totout)/1e8)
-	}
-	tx_mutex.Lock()
-	TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:true, firstseen:time.Now(),
-		volume:totinp, fee:totinp-totout}
-	tx_mutex.Unlock()
-	fmt.Println("Transaction added to the memory pool. Please double check its details above.")
-	fmt.Println("If it does what you intended, execute: stx " + tx.Hash.String())
+	fmt.Println(load_raw_tx(buf))
 }
 
 
@@ -131,7 +141,7 @@ func list_txs(par string) {
 	for k, v := range TransactionsToSend {
 		cnt++
 		var oe, snt string
-		if v.own {
+		if v.own!=0 {
 			oe = " *OWN*"
 		} else {
 			oe = ""
@@ -166,7 +176,7 @@ func baned_txs(par string) {
 func send_all_tx(par string) {
 	tx_mutex.Lock()
 	for k, v := range TransactionsToSend {
-		if v.own {
+		if v.own!=0 {
 			cnt := NetRouteInv(1, btc.NewUint256(k[:]), nil)
 			v.sentcnt += cnt
 			v.lastsent = time.Now()

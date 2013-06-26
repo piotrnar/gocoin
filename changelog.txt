@@ -1,3 +1,7 @@
+0.4.2
+* Allows loading and broadcasting of local txs via WebUI
+* More WebUI templates
+
 0.4.1
 * Do not route txs that have any output lower than a fee for 0.5KB
 * Added support for a config file

@@ -36,7 +36,7 @@ type OneTxToSend struct {
 	data []byte
 	sentcnt uint
 	firstseen, lastsent time.Time
-	own bool
+	own byte // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
 	spent []uint64 // Which records in SpentOutputs this TX added
 	volume, fee uint64
 }
@@ -254,7 +254,7 @@ func txChecker(h *btc.Uint256) bool {
 	tx_mutex.Lock()
 	rec, ok := TransactionsToSend[h.Hash]
 	tx_mutex.Unlock()
-	if ok && rec.own {
+	if ok && rec.own!=0 {
 		return false // Assume own txs as non-trusted
 	}
 	if ok {
@@ -281,7 +281,7 @@ func txPoolManager() {
 
 		tx_mutex.Lock()
 		for k, v := range TransactionsToSend {
-			if !v.own && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
+			if v.own==0 && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
 				delete(TransactionsToSend, k)
 				cnt1++
 			}

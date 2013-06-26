@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"sort"
+	"sync"
 	"strings"
 	"runtime"
 	"net/http"
@@ -26,6 +27,12 @@ const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
 <table align="center" width="990" cellpadding="0" cellspacing="0"><tr><td>
 `
 
+func load_template(fn string) string {
+	dat, _ := ioutil.ReadFile("webht/"+fn)
+	return string(dat)
+}
+
+
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	if len(strings.SplitN(r.URL.Path[1:], "/", 3))==2 {
 		dat, _ := ioutil.ReadFile(r.URL.Path[1:])
@@ -40,8 +47,7 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 }
 
 func write_html_head(w http.ResponseWriter, r *http.Request) {
-	dat, _ := ioutil.ReadFile("webht/page_head.html")
-	s := string(dat)
+	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	if CFG.Testnet {
 		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
@@ -74,8 +80,7 @@ func write_html_tail(w http.ResponseWriter) {
 }
 
 func p_home(w http.ResponseWriter, r *http.Request) {
-	dat, _ := ioutil.ReadFile("webht/home.html")
-	s := string(dat)
+	s := load_template("home.html")
 
 	mutex.Lock()
 	s = strings.Replace(s, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
@@ -130,7 +135,9 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_net(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
+	net_page := load_template("net.html")
+	net_row := load_template("net_row.html")
+
 	mutex.Lock()
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
@@ -139,40 +146,67 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		srt[cnt].ConnID = v.ConnID
 		cnt++
 	}
+	mutex.Unlock()
 	sort.Sort(srt)
-	fmt.Fprintf(w, "<b>%d</b> outgoing and <b>%d</b> incomming connections<br><br>\n", OutConsActive, InConsActive)
-	fmt.Fprintln(w, "<table class=\"netcons bord\">")
-	fmt.Fprint(w, "<tr><th>ID<th colspan=\"2\">IP<th>Ping<th colspan=\"2\">Last Rcvd<th colspan=\"2\">Last Sent")
-	fmt.Fprintln(w, "<th>Total Rcvd<th>Total Sent<th colspan=\"2\">Version<th>Sending")
+	net_page = strings.Replace(net_page, "{OUT_CONNECTIONS}", fmt.Sprint(OutConsActive), 1)
+	net_page = strings.Replace(net_page, "{IN_CONNECTIONS}", fmt.Sprint(InConsActive), 1)
+
 	for idx := range srt {
 		v := openCons[srt[idx].key]
-		fmt.Fprintf(w, "<tr class=\"hov\" style=\"cursor:pointer;\" onclick=\"raw_load('net?id=%d', 'Connection')\"><td align=\"right\">%d",
-			v.ConnID, v.ConnID)
+		s := net_row
+
+		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), 2)
 		if v.Incomming {
-			fmt.Fprint(w, "<td><img src=\"webui/incoming.png\">")
+			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/incoming.png\">", 1)
 		} else {
-			fmt.Fprint(w, "<td><img src=\"webui/outgoing.png\">")
+			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/outgoing.png\">", 1)
 		}
-		fmt.Fprint(w, "<td align=\"right\">", v.PeerAddr.Ip())
-		fmt.Fprint(w, "<td align=\"right\">", v.GetAveragePing(), "ms")
-		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsRcvd)
-		fmt.Fprint(w, "<td class=\"mono\">", v.LastCmdRcvd)
-		fmt.Fprint(w, "<td align=\"right\">", v.LastBtsSent)
-		fmt.Fprint(w, "<td class=\"mono\">", v.LastCmdSent)
-		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesReceived))
-		fmt.Fprint(w, "<td align=\"right\">", bts(v.BytesSent))
-		fmt.Fprint(w, "<td align=\"right\">", v.node.version)
-		fmt.Fprint(w, "<td>", v.node.agent)
-		fmt.Fprintf(w, "<td align=\"right\">%d/%d", v.send.sofar, len(v.send.buf))
+
+		s = strings.Replace(s, "{PEER_ADDR}", v.PeerAddr.Ip(), 1)
+		s = strings.Replace(s, "{PERR_PING}", fmt.Sprint(v.GetAveragePing()), 1)
+		s = strings.Replace(s, "{LAST_RCVD_LEN}", fmt.Sprint(v.LastBtsRcvd), 1)
+		s = strings.Replace(s, "{LAST_RCVD_CMD}", v.LastCmdRcvd, 1)
+		s = strings.Replace(s, "{LAST_SENT_LEN}", fmt.Sprint(v.LastBtsSent), 1)
+		s = strings.Replace(s, "{LAST_SENT_CNT}", v.LastCmdSent, 1)
+		s = strings.Replace(s, "{TOTAL_RCVD}", bts(v.BytesReceived), 1)
+		s = strings.Replace(s, "{TOTAL_SENT}", bts(v.BytesSent), 1)
+		s = strings.Replace(s, "{NODE_VERSION}", fmt.Sprint(v.node.version), 1)
+		s = strings.Replace(s, "{USER_AGENT}", v.node.agent, 1)
+		s = strings.Replace(s, "{SENDING_DONE}", fmt.Sprint(v.send.sofar), 1)
+		s = strings.Replace(s, "{SENDING_TOTAL}", fmt.Sprint(len(v.send.buf)), 1)
+
+		net_page = strings.Replace(net_page, "{PEER_ROW}", s+"\n{PEER_ROW}", 1)
 	}
-	w.Write([]byte("</table><br><h2 id=\"rawtit\"></h2><pre id=\"rawdiv\" class=\"mono\"></pre>"))
-	mutex.Unlock()
+	net_page = strings.Replace(net_page, "{PEER_ROW}", "", 1)
+
+	write_html_head(w, r)
+	w.Write([]byte(net_page))
 	write_html_tail(w)
 }
 
 func p_txs(w http.ResponseWriter, r *http.Request) {
-	dat, _ := ioutil.ReadFile("webht/txs.html")
-	s := string(dat)
+	var txloadresult string
+	var wg sync.WaitGroup
+
+	// Check if there is a tx upload request
+	r.ParseMultipartForm(2e6)
+	fil, _, _ := r.FormFile("txfile")
+	if fil != nil {
+		tx2in, _ := ioutil.ReadAll(fil)
+		if len(tx2in)>0 {
+			wg.Add(1)
+			req := &oneUiReq{param:string(tx2in)}
+			req.done.Add(1)
+			req.handler = func(dat string) {
+				txloadresult = load_raw_tx([]byte(dat))
+				wg.Done()
+			}
+			uiChannel <- req
+		}
+	}
+
+
+	s := load_template("txs.html")
 	tx_mutex.Lock()
 	s = strings.Replace(s, "{T2S_CNT}", fmt.Sprint(len(TransactionsToSend)), 1)
 	s = strings.Replace(s, "{TRE_CNT}", fmt.Sprint(len(TransactionsRejected)), 1)
@@ -180,6 +214,14 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{PTR2_CNT}", fmt.Sprint(len(netTxs)), 1)
 	s = strings.Replace(s, "{SPENT_OUTS_CNT}", fmt.Sprint(len(SpentOutputs)), 1)
 	tx_mutex.Unlock()
+
+	var ld string
+	wg.Wait()
+	if txloadresult!="" {
+		ld = load_template("txs_load.html")
+		ld = strings.Replace(ld, "{TX_RAW_DATA}", txloadresult, 1)
+	}
+	s = strings.Replace(s, "{TX_LOAD}", ld, 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(s))
@@ -386,6 +428,30 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 
 
 func raw_txs2s(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	if len(r.Form["del"])>0 {
+		tid := btc.NewUint256FromString(r.Form["del"][0])
+		if tid!=nil {
+			tx_mutex.Lock()
+			delete(TransactionsToSend, tid.Hash)
+			tx_mutex.Unlock()
+		}
+	}
+
+	if len(r.Form["send"])>0 {
+		tid := btc.NewUint256FromString(r.Form["send"][0])
+		if tid!=nil {
+			tx_mutex.Lock()
+			if ptx, ok := TransactionsToSend[tid.Hash]; ok {
+				tx_mutex.Unlock()
+				cnt := NetRouteInv(1, tid, nil)
+				ptx.sentcnt += cnt
+				ptx.lastsent = time.Now()
+			}
+		}
+	}
+
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txpool>"))
 	tx_mutex.Lock()

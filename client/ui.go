@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"sort"
+	"sync"
 	"bufio"
 	"strings"
 	"strconv"
@@ -23,6 +24,7 @@ type oneUiCmd struct {
 type oneUiReq struct {
 	param string
 	handler func(pars string)
+	done sync.WaitGroup
 }
 
 var uiCmds []*oneUiCmd
@@ -113,9 +115,11 @@ func do_userif() {
 							mutex.Unlock()
 							println("...")
 							sta := time.Now().UnixNano()
-							uiChannel <- oneUiReq{param:param, handler:uiCmds[i].handler}
+							req := &oneUiReq{param:param, handler:uiCmds[i].handler}
+							req.done.Add(1)
+							uiChannel <- req
 							go func() {
-								_ = <- uicmddone
+								req.done.Wait()
 								sto := time.Now().UnixNano()
 								fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 								fmt.Print("> ")
