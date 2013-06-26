@@ -147,7 +147,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 func show_balance(p string) {
 	if p=="sum" {
-		DumpBalance(nil, false)
+		fmt.Print(DumpBalance(nil, false))
 		return
 	}
 	if p!="" {
