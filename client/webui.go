@@ -191,12 +191,6 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	var txloadresult string
 	var wg sync.WaitGroup
 
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintln(w, "Something had to be wrong with the transaction file")
-		}
-	}()
-
 	// Check if there is a tx upload request
 	r.ParseMultipartForm(2e6)
 	fil, _, _ := r.FormFile("txfile")
