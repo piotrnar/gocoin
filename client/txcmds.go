@@ -10,6 +10,9 @@ import (
 
 func load_raw_tx(buf []byte) (s string) {
 	txd, er := hex.DecodeString(string(buf))
+	if er != nil {
+		txd = buf
+	}
 
 	// At this place we should have raw transaction in txd
 	tx, le := btc.NewTx(txd)
