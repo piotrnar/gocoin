@@ -16,12 +16,9 @@ func load_raw_tx(buf []byte) (s string) {
 
 	// At this place we should have raw transaction in txd
 	tx, le := btc.NewTx(txd)
-	if tx==nil {
-		s += fmt.Sprintln("Cuuld not decode the transaction file")
+	if tx==nil || le != len(txd) {
+		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
 		return
-	}
-	if le != len(txd) {
-		s += fmt.Sprintln("WARNING: Tx length mismatch", le, len(txd))
 	}
 	tx.Hash = btc.NewSha2Hash(txd)
 	s += fmt.Sprintln("Transaction details (for your information):")
