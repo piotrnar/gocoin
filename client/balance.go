@@ -49,7 +49,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 }
 
 
-func DumpBalance(utxt *os.File) {
+func DumpBalance(utxt *os.File, details bool) (s string) {
 	var sum uint64
 	if len(MyBalance)>0 {
 		sort.Sort(MyBalance)
@@ -57,8 +57,8 @@ func DumpBalance(utxt *os.File) {
 	for i := range MyBalance {
 		sum += MyBalance[i].Value
 
-		if utxt!=nil && len(MyBalance)<100 {
-			fmt.Printf("%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
+		if details {
+			s += fmt.Sprintf("%d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
 				MyBalance[i].String())
 		}
 
@@ -67,8 +67,8 @@ func DumpBalance(utxt *os.File) {
 			po, e := BlockChain.Unspent.UnspentGet(&MyBalance[i].TxPrevOut)
 			if e != nil {
 				println("UnspentGet:", e.Error())
-				fmt.Println("This should not happen - please, report a bug.")
-				fmt.Println("You can probably fix it by launching the client with -rescan")
+				println("This should not happen - please, report a bug.")
+				println("You can probably fix it by launching the client with -rescan")
 				os.Exit(1)
 			}
 
@@ -104,8 +104,8 @@ func DumpBalance(utxt *os.File) {
 			bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
 			if e != nil {
 				println("BlockGet", n.BlockHash.String(), po.BlockHeight, e.Error())
-				fmt.Println("This should not happen - please, report a bug.")
-				fmt.Println("You can probably fix it by launching the client with -rescan")
+				println("This should not happen - please, report a bug.")
+				println("You can probably fix it by launching the client with -rescan")
 				os.Exit(1)
 			}
 
@@ -137,18 +137,17 @@ func DumpBalance(utxt *os.File) {
 		}
 	}
 	LastBalance = sum
-	fmt.Printf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
+	s += fmt.Sprintf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
 	if utxt != nil {
-		fmt.Println("Your balance data has been saved to the 'balance/' folder.")
-		fmt.Println("You nend to move this folder to your wallet PC, to spend the coins.")
 		utxt.Close()
 	}
+	return
 }
 
 
 func show_balance(p string) {
 	if p=="sum" {
-		DumpBalance(nil)
+		DumpBalance(nil, false)
 		return
 	}
 	if p!="" {
@@ -165,18 +164,23 @@ func show_balance(p string) {
 		println("Your loaded wallet has no addresses")
 		return
 	}
+
+	fmt.Print(UpdateBalanceFolder())
+	fmt.Println("Your balance data has been saved to the 'balance/' folder.")
+	fmt.Println("You nend to move this folder to your wallet PC, to spend the coins.")
+}
+
+
+func UpdateBalanceFolder() string {
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)
-
 	if BalanceInvalid {
 		MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
 		BalanceInvalid = false
 	}
-
 	utxt, _ := os.Create("balance/unspent.txt")
-	DumpBalance(utxt)
+	return DumpBalance(utxt, true)
 }
-
 
 func init() {
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
