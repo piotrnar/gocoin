@@ -20,6 +20,10 @@ a.menuat {
 	font-family: monospace;
 }
 
+.bold {
+	font-weight: bold;
+}
+
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;
@@ -34,7 +38,7 @@ table.txs {
 	border: 1px #000000 solid;
 	border-spacing:0;
 	border-collapse:collapse;
-	font-size:10px
+	font-size:11px
 }
 
 tr {
