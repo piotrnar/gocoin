@@ -202,6 +202,7 @@ function show_unspent() {
 				var c,row = unspent.insertRow(-1)
 
 				row.className='hov'
+				row.title = xval(txs[i], 'label')
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
@@ -217,13 +218,12 @@ function show_unspent() {
 				c.innerHTML = xval(txs[i], 'vout')
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = parseFloat(xval(txs[i], 'value'))/1e8
+				c.className ='mono bold'
+				c.innerHTML = (parseFloat(xval(txs[i], 'value'))/1e8).toFixed(8)
 
 				c=row.insertCell(-1);
+				c.className ='bold'
 				c.innerHTML = xval(txs[i], 'addr')
-
-				c=row.insertCell(-1);
-				c.innerHTML = xval(txs[i], 'label')
 			}
 			unspent.style.display = 'table'
 		}
