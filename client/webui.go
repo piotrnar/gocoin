@@ -326,8 +326,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	mnrs = strings.Replace(mnrs, "{BLOCKS_COUNT}", fmt.Sprint(cnt), 1)
 	mnrs = strings.Replace(mnrs, "{FIRST_BLOCK_TIME}", time.Unix(lastts, 0).Format("2006-01-02 15:04:05"), 1)
-	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprint(), 1)
-	mnrs = strings.Replace(mnrs, "{}", fmt.Sprintf("%.2f", float64(cnt)/(float64(now-lastts)/3600)), 1)
+	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprintf("%.2f", float64(cnt)/(float64(now-lastts)/3600)), 1)
 
 	for i := range srt {
 		s := onerow
