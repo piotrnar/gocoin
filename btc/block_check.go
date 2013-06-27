@@ -1,9 +1,10 @@
 package btc
 
 import (
-	"errors"
-	"bytes"
+	"fmt"
 	"time"
+	"bytes"
+	"errors"
 )
 
 func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
@@ -42,8 +43,10 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	}
 
 	// Reject the block if it reaches into the chain deeper than our unwind buffer
-	if prevblk!=ch.BlockTreeEnd && ch.BlockTreeEnd.Height-(prevblk.Height+1)>=MovingCheckopintDepth {
-		er = errors.New("CheckBlock: Hooks too deep into the chain")
+	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(prevblk.Height+1)>=MovingCheckopintDepth {
+		er = errors.New(fmt.Sprint("CheckBlock: Block ", bl.Hash.String(),
+			" hooks too deep into the chain: ", prevblk.Height+1, "/", ch.BlockTreeEnd.Height, " ",
+			NewUint256(bl.Parent).String()))
 		return
 	}
 
