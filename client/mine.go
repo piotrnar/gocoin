@@ -9,8 +9,8 @@ import (
 )
 
 var MinerIds = [][2]string{
-	{"BTC Guild", "Mined by BTC Guild"},
-	{"ASICMiner", "Mined By ASICMiner"},
+	{"BTC Guild", "BTC Guild"},
+	{"ASICMiner", "ASICMiner"},
 	{"50BTC", "50BTC.com"},
 	{"Slush", "/slush/"},
 	// Dont know how to do Deepbit
