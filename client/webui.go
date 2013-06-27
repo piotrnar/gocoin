@@ -232,10 +232,10 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_blocks(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
+	blks := load_template("blocks.html")
+	onerow := load_template("blocks_row.html")
+
 	end := BlockChain.BlockTreeEnd
-	fmt.Fprint(w, "<table class=\"blocks bord\">\n")
-	fmt.Fprintf(w, "<tr><th>Height<th>Timestamp<th>Hash<th>Txs<th>Size<th>Mined by</tr>\n")
 	for cnt:=0; end!=nil && cnt<100; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
@@ -246,16 +246,29 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		block.BuildTxList()
-		miner := blocks_miner(bl)
-		fmt.Fprintf(w, "<tr class=\"hov\"><td>%d<td>%s", end.Height,
-			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"))
-		fmt.Fprintf(w, "<td><a class=\"mono\" href=\"http://blockchain.info/block/%s\">%s",
-			end.BlockHash.String(), end.BlockHash.String())
-		fmt.Fprintf(w, "<td align=\"right\">%d<td align=\"right\">%d<td align=\"center\">%s</tr>\n",
-			len(block.Txs), len(bl), miner)
+		s := onerow
+
+		s = strings.Replace(s, "{BLOCK_NUMBER}", fmt.Sprint(end.Height), 1)
+		s = strings.Replace(s, "{BLOCK_TIMESTAMP}",
+			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"), 1)
+		s = strings.Replace(s, "{BLOCK_HASH}", end.BlockHash.String(), 1)
+		s = strings.Replace(s, "{BLOCK_TXS}", fmt.Sprint(len(block.Txs)), 1)
+		s = strings.Replace(s, "{BLOCK_SIZE}", fmt.Sprint(len(bl)), 1)
+		var rew uint64
+		for o := range block.Txs[0].TxOut {
+			rew += block.Txs[0].TxOut[o].Value
+		}
+		s = strings.Replace(s, "{BLOCK_REWARD}", fmt.Sprintf("%.2f", float64(rew)/1e8), 1)
+		s = strings.Replace(s, "{BLOCK_MINER}", blocks_miner(bl), 1)
+
+		blks = strings.Replace(blks, "{BLOCK_ROW}", s+"{BLOCK_ROW}", 1)
+
 		end = end.Parent
 	}
-	fmt.Fprint(w, "</table>")
+	blks = strings.Replace(blks, "{BLOCK_ROW}", "", 1)
+
+	write_html_head(w, r)
+	w.Write([]byte(blks))
 	write_html_tail(w)
 }
 
@@ -277,7 +290,6 @@ func (x onemiernstat) Swap(i, j int) {
 }
 
 func p_miners(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
 	m := make(map[string]int, 20)
 	cnt, unkn := 0, 0
 	end := BlockChain.BlockTreeEnd
@@ -308,18 +320,30 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		i++
 	}
 	sort.Sort(srt)
-	fmt.Fprintf(w, "Data from last <b>%d</b> blocks, starting at <b>%s</b><br><br>\n",
-		cnt, time.Unix(lastts, 0).Format("2006-01-02 15:04:05"))
-	fmt.Fprint(w, "<table class=\"bord\">\n")
-	fmt.Fprint(w, "<tr><th>Miner<th>Blocks<th>Share</tr>\n")
+
+	mnrs := load_template("miners.html")
+	onerow := load_template("miners_row.html")
+
+	mnrs = strings.Replace(mnrs, "{BLOCKS_COUNT}", fmt.Sprint(cnt), 1)
+	mnrs = strings.Replace(mnrs, "{FIRST_BLOCK_TIME}", time.Unix(lastts, 0).Format("2006-01-02 15:04:05"), 1)
+	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprint(), 1)
+	mnrs = strings.Replace(mnrs, "{}", fmt.Sprintf("%.2f", float64(cnt)/(float64(now-lastts)/3600)), 1)
+
 	for i := range srt {
-		fmt.Fprintf(w, "<tr class=\"hov\"><td>%s<td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
-			srt[i].name, srt[i].cnt, 100*float64(srt[i].cnt)/float64(cnt))
+		s := onerow
+		s = strings.Replace(s, "{MINER_NAME}", srt[i].name, 1)
+		s = strings.Replace(s, "{BLOCK_COUNT}", fmt.Sprint(srt[i].cnt), 1)
+		s = strings.Replace(s, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(srt[i].cnt)/float64(cnt)), 1)
+		mnrs = strings.Replace(mnrs, "{MINER_ROW}", s+"{MINER_ROW}", 1)
 	}
-	fmt.Fprintf(w, "<tr class=\"hov\"><td><i>Unknown</i><td align=\"right\">%d<td align=\"right\">%.0f%%</tr>\n",
-		unkn, 100*float64(unkn)/float64(cnt))
-	fmt.Fprint(w, "</table><br>")
-	fmt.Fprintf(w, "Average blocks per hour: <b>%.2f</b>", float64(cnt)/(float64(now-lastts)/3600))
+
+	onerow = strings.Replace(onerow, "{MINER_NAME}", "<i>Unknown</i>", 1)
+	onerow = strings.Replace(onerow, "{BLOCK_COUNT}", fmt.Sprint(unkn), 1)
+	onerow = strings.Replace(onerow, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(unkn)/float64(cnt)), 1)
+	mnrs = strings.Replace(mnrs, "{MINER_ROW}", onerow, 1)
+
+	write_html_head(w, r)
+	w.Write([]byte(mnrs))
 	write_html_tail(w)
 }
 
