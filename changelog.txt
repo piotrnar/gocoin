@@ -1,3 +1,7 @@
+0.4.3
+* Some more WebUI templates, and further extensions
+* Fixed a bug with checking new block height in block_check.go
+
 0.4.2
 * Allows loading and broadcasting of local txs via WebUI
 * Allows to download the balance folder via WebUI
