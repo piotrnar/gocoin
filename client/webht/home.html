@@ -5,7 +5,7 @@
 <table vspace="10" id="unspent" style="display:none">
 <tr>
 	<th width="20">#
-	<th width="40">Mined At
+	<th width="40">Block
 	<th>TxID
 	<th width="30">Vout
 	<th width="80">BTC Value
@@ -37,4 +37,4 @@
 <tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b>
 <tr><td>SysMem Used:<td><b>{SYSMEM_USED_MB} MB</b>
 </table>
-</table><br><h2 id="rawtit"></h2><pre id="rawdiv" class="mono"></pre></table>
+</table><br><h2 id="rawtit"></h2><pre id="rawdiv" class="mono"></pre></table><script>function show_unspent() {	if (unspent.style.display != 'none') {		unspent.style.display = 'none'		return	}	var aj = ajax()	aj.onreadystatechange=function() {		if(xmlHttp.readyState==4) {			while (unspent.rows.length>1)  unspent.deleteRow(1)			txs = aj.responseXML.getElementsByTagName('output')			for (var i=0; i<txs.length; i++) {				var c,row = unspent.insertRow(-1)				row.className='hov'				row.title = xval(txs[i], 'label')				c=row.insertCell(-1);c.align='right'				c.innerHTML = (i+1).toString()				c=row.insertCell(-1);c.align='right'				c.innerHTML = xval(txs[i], 'inblock')				c = row.insertCell(-1)				c.className ='mono'				c.innerHTML = xval(txs[i], 'txid')				c=row.insertCell(-1);c.align='right'				c.innerHTML = xval(txs[i], 'vout')				c=row.insertCell(-1);c.align='right'				c.className ='mono bold'				c.innerHTML = (parseFloat(xval(txs[i], 'value'))/1e8).toFixed(8)				c=row.insertCell(-1);				c.className ='bold'				c.innerHTML = xval(txs[i], 'addr')			}			unspent.style.display = 'table'		}	}	xmlHttp.open("GET","balance.xml", true);	xmlHttp.send(null);}</script>
