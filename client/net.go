@@ -476,18 +476,21 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	e := binary.Read(b, binary.LittleEndian, &ver)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
+		CountSafe("GetblksNoVer")
 		c.DoS()
 		return
 	}
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
+		CountSafe("GetblksNoVlen")
 		c.DoS()
 		return
 	}
 
 	if cnt<1 {
 		println("ProcessGetBlocks: empty inv list", c.PeerAddr.Ip())
+		CountSafe("GetblksNoInvs")
 		c.DoS()
 		return
 	}
@@ -497,8 +500,10 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	for i:=0; i<int(cnt); i++ {
 		n, _ := b.Read(h[:])
 		if n != 32 {
-			println("getblocks too short", c.PeerAddr.Ip())
-			CountSafe("GetblksShort")
+			if dbg>0 {
+				println("getblocks too short", c.PeerAddr.Ip())
+			}
+			CountSafe("GetblksTooShort")
 			c.DoS()
 			return
 		}
@@ -509,7 +514,9 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 	}
 	n, _ := b.Read(h[:])
 	if n != 32 {
-		println("getblocks does not have hash_stop", c.PeerAddr.Ip())
+		if dbg>0 {
+			println("getblocks does not have hash_stop", c.PeerAddr.Ip())
+		}
 		CountSafe("GetblksNoStop")
 		c.DoS()
 		return
