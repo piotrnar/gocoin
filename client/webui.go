@@ -282,6 +282,9 @@ func (x onemiernstat) Len() int {
 }
 
 func (x onemiernstat) Less(i, j int) bool {
+	if x[i].cnt == x[j].cnt {
+		return x[i].name < x[j].name // Same numbers: sort by name
+	}
 	return x[i].cnt > x[j].cnt
 }
 
@@ -327,7 +330,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	onerow := load_template("miners_row.html")
 
 	diff /= float64(cnt)
-	bph := float64(cnt)/(float64(now-lastts)/3600)
+	bph := float64(cnt)/24
 	hrate := bph/6 * diff * 7158278.826667
 	mnrs = strings.Replace(mnrs, "{BLOCKS_COUNT}", fmt.Sprint(cnt), 1)
 	mnrs = strings.Replace(mnrs, "{FIRST_BLOCK_TIME}", time.Unix(lastts, 0).Format("2006-01-02 15:04:05"), 1)
