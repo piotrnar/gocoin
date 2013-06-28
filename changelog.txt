@@ -1,3 +1,6 @@
+0.4.4
+* Allow sorting of transaction tables
+
 0.4.3
 * Some more WebUI templates, and further extensions
 * Fixed a bug with checking new block height in block_check.go
