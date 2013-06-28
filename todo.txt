@@ -1,2 +1,2 @@
-* Check performance of cgo based hashing vs the built in one
-* Clean up the house
+* Clean up the rest of the house
+* The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
