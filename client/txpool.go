@@ -258,7 +258,9 @@ func txChecker(h *btc.Uint256) bool {
 		return false // Assume own txs as non-trusted
 	}
 	if ok {
-		CountSafe("ScriptsBoosted")
+		CountSafe("TxScrBoosted")
+	} else {
+		CountSafe("TxScrMissed")
 	}
 	return ok
 }
