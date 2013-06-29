@@ -204,11 +204,6 @@ func (c *oneConnection) SendInvs() (res bool) {
 func (c *oneConnection) getblocksNeeded() bool {
 	mutex.Lock()
 	lb := LastBlock
-	if lb!=c.LastBlocksFrom && len(c.GetBlockInProgress)>0 {
-		// We have more than 200 pending blocks, so hold on for now...
-		mutex.Unlock()
-		return false
-	}
 	mutex.Unlock()
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
 		c.LastBlocksFrom = LastBlock
