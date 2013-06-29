@@ -243,3 +243,30 @@ func (c *oneConnection) getblocksNeeded() bool {
 	}
 	return false
 }
+
+
+// Called from a net thread
+func BlockInvNotify(h []byte, single bool) (need bool) {
+	ha := btc.NewUint256(h)
+	idx := ha.BIdx()
+	mutex.Lock()
+	if _, ok := pendingBlocks[idx]; ok {
+		CountSafe("InvBlkAlreadyPending")
+	} else if _, ok := receivedBlocks[idx]; ok {
+		CountSafe("InvBlkAlreadyHave")
+	} else if len(pendingFifo)<PendingFifoLen {
+		if dbg>0 {
+			fmt.Println("blinv", btc.NewUint256(h).String())
+		}
+		CountSafe("InvBlkWanted")
+		pendingBlocks[idx] = &onePendingBlock{hash:ha, noticed:time.Now(), single:single}
+		pendingFifo <- idx
+		need = true
+	} else {
+		CountSafe("InvBlkFifoFull")
+	}
+	mutex.Unlock()
+	return
+}
+
+
