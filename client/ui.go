@@ -231,9 +231,9 @@ func ui_dbg(par string) {
 
 func show_invs(par string) {
 	mutex.Lock()
-	fmt.Println(len(pendingBlocks), "pending invs")
+	fmt.Println(len(pendingBlocks), "pending blocks")
 	for _, v := range pendingBlocks {
-		fmt.Println(v.String())
+		fmt.Println(v.noticed.Format("2006-01-02 15:04:05"), v.hash.String(), v.single)
 	}
 	mutex.Unlock()
 }
@@ -247,7 +247,7 @@ func show_cached(par string) {
 
 
 func show_help(par string) {
-	fmt.Println("There following", len(uiCmds), "commands are supported:")
+	fmt.Println("The following", len(uiCmds), "commands are supported:")
 	for i := range uiCmds {
 		fmt.Print("   ")
 		for j := range uiCmds[i].cmds {
@@ -339,7 +339,7 @@ func init() {
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("cach", false, show_cached, "Show blocks cached in memory")
-	newUi("invs", false, show_invs, "Show pending block inv's (ones waiting for data)")
+	newUi("cache", false, show_cached, "Show blocks cached in memory")
+	newUi("invs", false, show_invs, "Show pending block (ones that need to be downloaded)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 }

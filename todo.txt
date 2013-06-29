@@ -1,2 +1,4 @@
+* Replace GetBlockTimeout with two timeouts; for header and the rest
+* Do not ask
 * Clean up the rest of the house
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()

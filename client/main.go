@@ -16,6 +16,12 @@ const (
 	MaxCachedBlocks = 600
 )
 
+type onePendingBlock struct {
+	hash *btc.Uint256
+	noticed time.Time
+	single bool
+}
+
 var (
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
@@ -35,12 +41,14 @@ var (
 	netTxs chan *txRcvd = make(chan *txRcvd, 300)
 	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
 
-	pendingBlocks map[[btc.Uint256IdxLen]byte] *btc.Uint256 = make(map[[btc.Uint256IdxLen]byte] *btc.Uint256, 600)
+	pendingBlocks map[[btc.Uint256IdxLen]byte] *onePendingBlock =
+		make(map[[btc.Uint256IdxLen]byte] *onePendingBlock, 600)
 	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
 
 	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
-	receivedBlocks map[[btc.Uint256IdxLen]byte] int64 = make(map[[btc.Uint256IdxLen]byte] int64, 300e3)
+	receivedBlocks map[[btc.Uint256IdxLen]byte] *onePendingBlock =
+		make(map[[btc.Uint256IdxLen]byte] *onePendingBlock, 300e3)
 
 	Counter map[string] uint64 = make(map[string]uint64)
 
@@ -123,13 +131,16 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
+	mutex.Lock()
+	rb := receivedBlocks[bl.Hash.BIdx()]
+	mutex.Unlock()
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
 	if e == nil {
 		tim := sto.Sub(sta)
 		if tim > 3*time.Second {
-			fmt.Println("LocalAcceptBlock", LastBlock.Height, "took", tim)
+			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim)
 			ui_show_prompt()
 		}
 
@@ -138,6 +149,9 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
+			println("New Block", bl.Hash.String(), "hnadled in",
+				sta.Sub(rb.noticed).String(), sto.Sub(rb.noticed).String())
+
 			// Freshly mined block - do the inv and beeps...
 			Busy("NetRouteInv")
 			NetRouteInv(2, bl.Hash, from)
@@ -191,7 +205,7 @@ func retry_cached_blocks() bool {
 		Busy("Cache.CheckBlock "+v.Block.Hash.String())
 		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
 		if e == nil {
-			Busy("Cache.LocalAcceptBlock "+v.Block.Hash.String())
+			Busy("Cache.AcceptBlock "+v.Block.Hash.String())
 			e := LocalAcceptBlock(v.Block, v.conn)
 			if e == nil {
 				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
@@ -239,39 +253,51 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 	idx := bl.Hash.BIdx()
 	mutex.Lock()
 	if _, got := receivedBlocks[idx]; got {
-		if _, ok := pendingBlocks[idx]; ok {
-			panic("wtf?")
-		} else {
-			CountSafe("SameBlockReceived")
-		}
+		CountSafe("SameBlockReceived")
 		mutex.Unlock()
 		return
 	}
-	receivedBlocks[idx] = time.Now().UnixNano()
-	delete(pendingBlocks, idx)
+	pbl := pendingBlocks[idx]
+	if pbl==nil {
+		println("WTF? Received block that isn't pending", bl.Hash.String())
+	} else {
+		println("New Block", bl.Hash.String(), "received after",
+			time.Now().Sub(pbl.noticed).String())
+		delete(pendingBlocks, idx)
+	}
+	receivedBlocks[idx] = pbl
 	mutex.Unlock()
 
 	netBlocks <- &blockRcvd{conn:conn, bl:bl}
 }
 
 
-// Called from network threads
+// Called from network threads (quite often)
 func blockDataNeeded() ([]byte) {
-	for len(pendingFifo)>0 && len(netBlocks)<200 {
+	if len(pendingFifo)>0 && len(netBlocks)<200 {
 		idx := <- pendingFifo
 		mutex.Lock()
-		if _, hadit := receivedBlocks[idx]; !hadit {
-			if pbl, hasit := pendingBlocks[idx]; hasit {
-				mutex.Unlock()
-				pendingFifo <- idx // put it back to the channel
-				return pbl.Hash[:]
-			} else {
-				println("some block not peending anymore")
+
+		if pbl, ok := pendingBlocks[idx]; ok {
+			mutex.Unlock()
+			pendingFifo <- idx // put it back to the channel
+			if !pbl.single {
+				CountSafe("FromFifoPending")
+				return pbl.hash.Hash[:]
 			}
-		} else {
-			delete(pendingBlocks, idx)
+			CountSafe("FromFifoSingle")
+			return nil
 		}
+
+		if _, ok := receivedBlocks[idx]; ok {
+			mutex.Unlock()
+			CountSafe("FromFifoReceived")
+			return nil
+		}
+
 		mutex.Unlock()
+		println("blockDataNeeded: It should not end up here") // TODO: remove this
+		CountSafe("FromFifoObsolete")
 	}
 	return nil
 }
@@ -293,7 +319,7 @@ func blockWanted(h []byte) (yes bool) {
 
 
 // Called from a net thread
-func BlockInvNotify(h []byte) (need bool) {
+func BlockInvNotify(h []byte, single bool) (need bool) {
 	ha := btc.NewUint256(h)
 	idx := ha.BIdx()
 	mutex.Lock()
@@ -306,7 +332,7 @@ func BlockInvNotify(h []byte) (need bool) {
 			fmt.Println("blinv", btc.NewUint256(h).String())
 		}
 		CountSafe("InvBlkWanted")
-		pendingBlocks[idx] = ha
+		pendingBlocks[idx] = &onePendingBlock{hash:ha, noticed:time.Now(), single:single}
 		pendingFifo <- idx
 		need = true
 	} else {
@@ -402,8 +428,6 @@ func HandleNetBlock(newbl *blockRcvd) {
 
 
 func main() {
-	var sta int64
-
 	if btc.EC_Verify==nil {
 		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable EC_Verify wrapper if possible.")
 		fmt.Println("         Look for the instruction in README.md or in client/speedup folder.")
@@ -438,9 +462,8 @@ func main() {
 	LastBlock = BlockChain.BlockTreeEnd
 	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
 
-	sta = time.Now().Unix()
-	for k, _ := range BlockChain.BlockIndex {
-		receivedBlocks[k] = sta
+	for k, v := range BlockChain.BlockIndex {
+		receivedBlocks[k] = &onePendingBlock{hash:v.BlockHash, noticed:time.Unix(int64(v.Timestamp), 0)}
 	}
 
 	go network_process()

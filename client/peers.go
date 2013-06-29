@@ -179,38 +179,6 @@ func (p *onePeer) UniqID() (uint64) {
 }
 
 
-// Parese network's "addr" message
-func ParseAddr(pl []byte) {
-	b := bytes.NewBuffer(pl)
-	cnt, _ := btc.ReadVLen(b)
-	for i := 0; i < int(cnt); i++ {
-		var buf [30]byte
-		n, e := b.Read(buf[:])
-		if n!=len(buf) || e!=nil {
-			println("ParseAddr:", n, e)
-			break
-		}
-		a := newPeer(buf[:])
-		if !ValidIp4(a.Ip4[:]) {
-			CountSafe("AddrInvalid")
-		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
-			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
-				k := qdb.KeyType(a.UniqID())
-				v := peerDB.Get(k)
-				if v != nil {
-					a.Banned = newPeer(v[:]).Banned
-				}
-				peerDB.Put(k, a.Bytes())
-			} else {
-				CountSafe("AddrStale")
-			}
-		} else {
-			CountSafe("AddrInFuture")
-		}
-	}
-}
-
-
 type manyPeers []*onePeer
 
 func (mp manyPeers) Len() int {
