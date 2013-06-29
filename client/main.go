@@ -136,8 +136,14 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
-			if CFG.MeasureBlockTiming {
+			if CFG.MeasureBlockTiming && from.BlockTiming.hash!=nil &&
+				from.BlockTiming.hash.Equal(bl.Hash) {
+				fmt.Println("Block", bl.Hash.String(), "timing:",
+					receivedBlocks[bl.Hash.BIdx()].Sub(from.BlockTiming.time).String(),
+					sta.Sub(from.BlockTiming.time).String(),
+					sto.Sub(from.BlockTiming.time).String())
 				ui_show_prompt()
+				from.BlockTiming.hash = nil
 			}
 
 			// Freshly mined block - do the inv and beeps...
