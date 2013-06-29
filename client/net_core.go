@@ -24,8 +24,6 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 
-	MaxBytesInSendBuffer = 16*1024 // If we have more than this bytes in the send buffer, send no more responses
-
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
 	GetBlockHeaderTimeout = 10*time.Second  // Timeout for receiving "block" and at least 80 bytes of payload
