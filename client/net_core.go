@@ -139,11 +139,6 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	if len(c.send.buf) > 1024*1024 {
-		println(c.PeerAddr.Ip(), "WTF??", cmd, c.LastCmdSent)
-		return
-	}
-
 	CountSafe("sent_"+cmd)
 	CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
 	sbuf := make([]byte, 24+len(pl))
