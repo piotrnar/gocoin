@@ -109,7 +109,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		println("WTF? Received block that isn't pending", bl.Hash.String())
 		ui_show_prompt()
 	} else {
-		if measure_block_timing {
+		if CFG.MeasureBlockTiming {
 			println("New Block", bl.Hash.String(), "received after",
 				time.Now().Sub(pbl.noticed).String())
 			ui_show_prompt()
