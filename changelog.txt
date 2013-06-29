@@ -1,5 +1,5 @@
-0.4.5
-* Some improvements in the network module
+0.4.6
+* Big rework in the network module
 
 0.4.4
 * Allow sorting of transaction tables
