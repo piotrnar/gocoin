@@ -75,6 +75,9 @@ func (c *oneConnection) GetBlockData(h []byte) {
 	if dbg > 1 {
 		println("GetBlockData", btc.NewUint256(h).String())
 	}
+	c.GetBlockInProgress = btc.NewUint256(h)
+	c.GetBlockInProgressAt = time.Now()
+	c.GetBlockHeaderGot = false
 	c.SendRawMsg("getdata", b[:])
 }
 
