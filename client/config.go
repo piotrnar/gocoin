@@ -37,6 +37,7 @@ var CFG struct {
 		// Otherwise expiration time will be proportionally different.
 		TxExpirePerKB uint
 	}
+	MeasureBlockTiming bool
 }
 
 
