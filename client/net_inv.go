@@ -42,6 +42,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			CountSafe("InvNewBlockNow")
 			c.GetBlockInProgress = btc.NewUint256(last_inv)
 			c.GetBlockInProgressAt = time.Now()
+			c.GetBlockHeaderGot = false
 			c.GetBlockData(last_inv)
 		} else {
 			CountSafe("InvNewBlockBusy")
@@ -268,5 +269,3 @@ func BlockInvNotify(h []byte, single bool) (need bool) {
 	mutex.Unlock()
 	return
 }
-
-
