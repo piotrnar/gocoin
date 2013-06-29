@@ -133,13 +133,11 @@ func HandleNetBlock(newbl *blockRcvd) {
 
 // Called from network threads
 func blockWanted(h []byte) (yes bool) {
-	ha := btc.NewUint256(h)
-	idx := ha.BIdx()
 	mutex.Lock()
-	if _, ok := receivedBlocks[idx]; !ok {
+	if _, ok := receivedBlocks[btc.NewUint256(h).BIdx()]; !ok {
 		yes = true
 	} else {
-		CountSafe("Block not wanted")
+		CountSafe("BlockUnwanted")
 	}
 	mutex.Unlock()
 	return
