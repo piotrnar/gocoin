@@ -149,7 +149,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
-			if measure_block_timing {
+			if CFG.MeasureBlockTiming {
 				println("New Block", bl.Hash.String(), "handled in",
 					sta.Sub(rb.noticed).String(), "->", sto.Sub(rb.noticed).String())
 				ui_show_prompt()
