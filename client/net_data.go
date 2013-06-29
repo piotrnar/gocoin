@@ -92,6 +92,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 	idx := bl.Hash.BIdx()
 	mutex.Lock()
 	if _, got := receivedBlocks[idx]; got {
+		conn.BlockTiming.hash = nil
 		CountSafe("SameBlockReceived")
 		mutex.Unlock()
 		return
