@@ -65,17 +65,20 @@ func load_wallet(fn string) {
 	if fn=="." {
 		fmt.Println("Default wallet from", GocoinHomeDir+"wallet.txt")
 		LoadWallet(GocoinHomeDir+"wallet.txt")
-	} else if fn == "-" {
-		fmt.Println("Reloading wallet from", MyWallet.filename)
-		LoadWallet(MyWallet.filename)
 	} else if fn != "" {
 		fmt.Println("Switching to wallet from", fn)
 		LoadWallet(fn)
-	} else if MyWallet!=nil {
-		fmt.Println("Dumping current wallet from", MyWallet.filename)
-	} else {
+	}
+
+	if MyWallet==nil {
 		fmt.Println("No wallet loaded")
 		return
+	}
+
+	if fn == "-" {
+		fmt.Println("Reloading wallet from", MyWallet.filename)
+		LoadWallet(MyWallet.filename)
+		fmt.Println("Dumping current wallet from", MyWallet.filename)
 	}
 
 	for i := range MyWallet.addrs {
