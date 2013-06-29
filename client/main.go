@@ -149,8 +149,11 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
-			println("New Block", bl.Hash.String(), "hnadled in",
-				sta.Sub(rb.noticed).String(), sto.Sub(rb.noticed).String())
+			if measure_block_timing {
+				println("New Block", bl.Hash.String(), "handled in",
+					sta.Sub(rb.noticed).String(), "->", sto.Sub(rb.noticed).String())
+				ui_show_prompt()
+			}
 
 			// Freshly mined block - do the inv and beeps...
 			Busy("NetRouteInv")
