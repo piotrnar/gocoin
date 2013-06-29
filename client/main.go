@@ -138,7 +138,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			if CFG.MeasureBlockTiming && from.BlockTiming.hash!=nil &&
 				from.BlockTiming.hash.Equal(bl.Hash) {
-				fmt.Println("Block", bl.Hash.String(), "timing:",
+				fmt.Println("Bl", bl.Hash.String(), " len", len(bl.Raw), " timing:",
 					receivedBlocks[bl.Hash.BIdx()].Sub(from.BlockTiming.time).String(),
 					sta.Sub(from.BlockTiming.time).String(),
 					sto.Sub(from.BlockTiming.time).String())
