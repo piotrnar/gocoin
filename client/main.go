@@ -32,8 +32,8 @@ var (
 	LastBlockReceived time.Time
 
 	mutex, counter_mutex sync.Mutex
-	netBlocks chan *blockRcvd = make(chan *blockRcvd, 300)
-	netTxs chan *txRcvd = make(chan *txRcvd, 300)
+	netBlocks chan *blockRcvd = make(chan *blockRcvd, 1000)
+	netTxs chan *txRcvd = make(chan *txRcvd, 1000)
 	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
 
 	retryCachedBlocks bool
