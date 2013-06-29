@@ -105,9 +105,6 @@ func (c *oneConnection) Tick() {
 	// Need to send getdata...?
 	if c.GetBlockInProgress==nil {
 		if tmp := blockDataNeeded(); tmp != nil {
-			c.GetBlockInProgress = btc.NewUint256(tmp)
-			c.GetBlockInProgressAt = time.Now()
-			c.GetBlockHeaderGot = false
 			c.GetBlockData(tmp)
 			return
 		}
