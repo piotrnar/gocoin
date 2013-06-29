@@ -68,19 +68,15 @@ func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	if ip != nil && len(ip)==16 {
 		p = new(onePeer)
 		copy(p.Ip4[:], ip[12:16])
-		if !ValidIp4(p.Ip4[:]) {
-			e = errors.New("Local IP '"+ipstr+"'")
+		p.Services = Services
+		copy(p.Ip6[:], ip[:12])
+		p.Port = DefaultTcpPort
+		if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
+			e = errors.New(p.Ip() + " is banned")
+			p = nil
 		} else {
-			p.Services = 1
-			copy(p.Ip6[:], ip[:12])
-			p.Port = DefaultTcpPort
-			if dbp := peerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && newPeer(dbp).Banned!=0 {
-				e = errors.New(p.Ip() + " is banned")
-				p = nil
-			} else {
-				p.Time = uint32(time.Now().Unix())
-				p.Save()
-			}
+			p.Time = uint32(time.Now().Unix())
+			p.Save()
 		}
 	} else {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
@@ -192,6 +188,7 @@ func (mp manyPeers) Less(i, j int) bool {
 func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
+
 
 // Discard any IP that may refer to a local network
 func ValidIp4(ip []byte) bool {
