@@ -9,6 +9,7 @@ import (
 )
 
 
+
 func (c *oneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
 		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
@@ -37,6 +38,10 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	}
 
 	if len(blinv2ask)>0 {
+		if CFG.MeasureBlockTiming && c.BlockTiming.hash==nil {
+			c.BlockTiming.time = time.Now()
+			c.BlockTiming.hash = btc.NewUint256(blinv2ask[:32])
+		}
 		bu := new(bytes.Buffer)
 		btc.WriteVlen(bu, uint32(len(blinv2ask)/32))
 		for i:=0; i<len(blinv2ask); i+=32 {
