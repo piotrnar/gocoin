@@ -104,9 +104,13 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 	pbl := pendingBlocks[idx]
 	if pbl==nil {
 		println("WTF? Received block that isn't pending", bl.Hash.String())
+		ui_show_prompt()
 	} else {
-		println("New Block", bl.Hash.String(), "received after",
-			time.Now().Sub(pbl.noticed).String())
+		if measure_block_timing {
+			println("New Block", bl.Hash.String(), "received after",
+				time.Now().Sub(pbl.noticed).String())
+			ui_show_prompt()
+		}
 		delete(pendingBlocks, idx)
 	}
 	receivedBlocks[idx] = pbl
@@ -151,6 +155,10 @@ func blockDataNeeded() ([]byte) {
 		mutex.Lock()
 
 		if pbl, ok := pendingBlocks[idx]; ok {
+			if pbl.single && pbl.noticed.Add(GetBlockSwitchOffSingle).After(time.Now()) {
+				CountSafe("FromFifoUnsingle")
+				pbl.single = false
+			}
 			mutex.Unlock()
 			pendingFifo <- idx // put it back to the channel
 			if !pbl.single {
