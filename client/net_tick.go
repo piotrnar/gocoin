@@ -51,25 +51,6 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	// Need to send some invs...?
-	if c.SendInvs() {
-		return
-	}
-
-	// Timeout getdata for blocks in progress
-	for k, v := range c.GetBlockInProgress {
-		if time.Now().After(v.start.Add(GetBlockTimeout)) {
-			CountSafe("GetBlockTimeout")
-			delete(c.GetBlockInProgress, k)
-			println("GetBlockTimeout")
-		}
-	}
-
-	// Need to send getblocks...?
-	if c.getblocksNeeded() {
-		return
-	}
-
 	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
 		if peerDB.Count() > MaxPeersNeeded {
@@ -80,6 +61,24 @@ func (c *oneConnection) Tick() {
 			c.SendRawMsg("getaddr", nil)
 		}
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
+		return
+	}
+
+	// Need to send some invs...?
+	if c.SendInvs() {
+		return
+	}
+
+	// Timeout getdata for blocks in progress, so the map does not grow to infinity
+	for k, v := range c.GetBlockInProgress {
+		if time.Now().After(v.start.Add(GetBlockTimeout)) {
+			CountSafe("GetBlockTimeout")
+			delete(c.GetBlockInProgress, k)
+		}
+	}
+
+	// Need to send getblocks...?
+	if len(c.GetBlockInProgress)==0 && c.getblocksNeeded() {
 		return
 	}
 
@@ -230,8 +229,8 @@ func (c *oneConnection) Run() {
 	c.SendVersion()
 
 	c.LastDataGot = time.Now()
-	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
-	c.NextGetAddr = time.Now().Add(10*time.Second)  // do getaddr ~10 seconds from now
+	c.NextBlocksAsk = time.Now() // ask for blocks ASAP
+	c.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
 
 	for !c.Broken {
