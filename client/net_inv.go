@@ -40,9 +40,6 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		// If this was a single inv for 1 unknown block, ask for it immediately
 		if c.GetBlockInProgress==nil {
 			CountSafe("InvNewBlockNow")
-			c.GetBlockInProgress = btc.NewUint256(last_inv)
-			c.GetBlockInProgressAt = time.Now()
-			c.GetBlockHeaderGot = false
 			c.GetBlockData(last_inv)
 		} else {
 			CountSafe("InvNewBlockBusy")
