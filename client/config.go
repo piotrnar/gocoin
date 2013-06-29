@@ -79,6 +79,19 @@ func init() {
 	flag.Parse()
 
 	newUi("saveconfig sc", false, save_config, "Save current settings to a config file")
+	newUi("timing t", false, block_timing, "Switch block timing on/off")
+}
+
+
+func block_timing(s string) {
+	if s=="1" || s=="on" {
+		CFG.MeasureBlockTiming = true
+	} else if s=="0" || s=="off" {
+		CFG.MeasureBlockTiming = false
+	} else {
+		CFG.MeasureBlockTiming = !CFG.MeasureBlockTiming
+	}
+	fmt.Println("MeasureBlockTiming:", CFG.MeasureBlockTiming)
 }
 
 
