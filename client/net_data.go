@@ -158,7 +158,7 @@ func blockDataNeeded() ([]byte) {
 		mutex.Lock()
 
 		if pbl, ok := pendingBlocks[idx]; ok {
-			if pbl.single && pbl.noticed.Add(GetBlockSwitchOffSingle).After(time.Now()) {
+			if pbl.single && time.Now().After(pbl.noticed.Add(GetBlockSwitchOffSingle)) {
 				CountSafe("FromFifoUnsingle")
 				pbl.single = false
 			}
