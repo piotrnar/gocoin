@@ -236,7 +236,6 @@ func network_process() {
 			fmt.Println("WARNING: -l switch ignored since -c specified as well")
 		}
 	}
-	return
 	next_drop_slowest := time.Now().Add(DropSlowestEvery)
 	for {
 		mutex.Lock()
