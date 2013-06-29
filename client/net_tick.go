@@ -25,10 +25,6 @@ func (c *oneConnection) Tick() {
 	}
 
 	if c.send.buf != nil {
-		max2send := len(c.send.buf) - c.send.sofar
-		if max2send > 4096 {
-			max2send = 4096
-		}
 		n, e := SockWrite(c.NetConn, c.send.buf[c.send.sofar:])
 		if n > 0 {
 			c.send.lastSent = time.Now()
@@ -240,6 +236,7 @@ func network_process() {
 			fmt.Println("WARNING: -l switch ignored since -c specified as well")
 		}
 	}
+	return
 	next_drop_slowest := time.Now().Add(DropSlowestEvery)
 	for {
 		mutex.Lock()
@@ -270,9 +267,7 @@ func network_process() {
 
 // Process that handles communication with a single peer
 func (c *oneConnection) Run() {
-	if !c.Incomming {
-		c.SendVersion()
-	}
+	c.SendVersion()
 
 	c.LastDataGot = time.Now()
 	c.NextBlocksAsk = time.Now() // askf ro blocks ASAP
@@ -317,8 +312,6 @@ func (c *oneConnection) Run() {
 				if er != nil {
 					println("version:", er.Error())
 					c.Broken = true
-				} else if c.Incomming {
-					c.SendVersion()
 				}
 
 			case "verack":
@@ -342,37 +335,21 @@ func (c *oneConnection) Run() {
 				netBlockReceived(c, cmd.pl)
 
 			case "getblocks":
-				if len(c.send.buf) < MaxBytesInSendBuffer {
-					c.ProcessGetBlocks(cmd.pl)
-				} else {
-					CountSafe("CmdGetblocksIgnored")
-				}
+				c.ProcessGetBlocks(cmd.pl)
 
 			case "getdata":
-				if len(c.send.buf) < MaxBytesInSendBuffer {
-					c.ProcessGetData(cmd.pl)
-				} else {
-					CountSafe("CmdGetdataIgnored")
-				}
+				c.ProcessGetData(cmd.pl)
 
 			case "getaddr":
-				if len(c.send.buf) < MaxBytesInSendBuffer {
-					c.SendAddr()
-				} else {
-					CountSafe("CmdGetaddrIgnored")
-				}
+				c.SendAddr()
 
 			case "alert":
 				c.HandleAlert(cmd.pl)
 
 			case "ping":
-				if len(c.send.buf) < MaxBytesInSendBuffer {
-					re := make([]byte, len(cmd.pl))
-					copy(re, cmd.pl)
-					c.SendRawMsg("pong", re)
-				} else {
-					CountSafe("CmdPingIgnored")
-				}
+				re := make([]byte, len(cmd.pl))
+				copy(re, cmd.pl)
+				c.SendRawMsg("pong", re)
 
 			case "pong":
 				if c.PingInProgress==nil {
