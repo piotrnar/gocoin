@@ -216,6 +216,12 @@ func ValidIp4(ip []byte) bool {
 // Fetch a given number of best (most recenty seen) peers.
 // Set unconnected to true to only get those that we are not connected to.
 func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
+	if proxyPeer!=nil {
+		if !unconnected || !connectionActive(proxyPeer) {
+			return manyPeers{proxyPeer}
+		}
+		return manyPeers{}
+	}
 	peerdb_mutex.Lock()
 	tmp := make(manyPeers, 0)
 	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
