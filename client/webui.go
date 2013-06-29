@@ -129,6 +129,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	runtime.ReadMemStats(&ms)
 	s = strings.Replace(s, "{HEAP_SIZE_MB}", fmt.Sprint(ms.Alloc>>20), 1)
 	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
+	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(s))
