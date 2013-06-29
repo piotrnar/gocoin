@@ -77,13 +77,13 @@ func (c *oneConnection) Tick() {
 				btc.ShaHash(c.recv.dat[:80], hash[:])
 				if c.GetBlockInProgress.Hash == hash {
 					if measure_block_timing {
+						mutex.Lock()
 						pb := pendingBlocks[c.GetBlockInProgress.BIdx()]
-						if pb==nil {
-							panic("wtf??? why not pending?")
-						} else {
+						if pb!=nil {
 							println("New Block", c.GetBlockInProgress.String(), "header after",
 								time.Now().Sub(pb.noticed).String(), "in", c.PeerAddr.Ip())
 						}
+						mutex.Unlock()
 						ui_show_prompt()
 					}
 					c.GetBlockHeaderGot = true
