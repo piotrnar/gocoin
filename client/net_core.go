@@ -274,4 +274,3 @@ func connectionActive(ad *onePeer) (yes bool) {
 func init() {
 	rand.Read(nonce[:])
 }
-
