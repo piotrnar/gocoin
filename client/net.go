@@ -5,9 +5,12 @@ import (
 	"net"
 	"time"
 	"bytes"
+	"strings"
 	"math/rand"
 	"github.com/piotrnar/gocoin/btc"
 )
+
+const measure_block_timing = true
 
 
 func (c *oneConnection) Tick() {
@@ -61,9 +64,42 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	if c.GetBlockInProgress!=nil && time.Now().After(c.GetBlockInProgressAt.Add(GetBlockTimeout)) {
-		CountSafe("GetBlockTimeout")
-		c.GetBlockInProgress = nil
+	if c.GetBlockInProgress!=nil {
+		if c.GetBlockHeaderGot {
+			if time.Now().After(c.GetBlockInProgressAt.Add(GetBlockPayloadTimeout)) {
+				CountSafe("GetBlockPayloadTout")
+				c.GetBlockInProgress = nil
+			}
+		} else {
+			if c.recv.hdr_len==24 && strings.TrimRight(string(c.recv.hdr[4:16]), "\000")=="block" &&
+				len(c.recv.dat)>=80 && c.recv.datlen>=80 {
+				var hash [32]byte
+				btc.ShaHash(c.recv.dat[:80], hash[:])
+				if c.GetBlockInProgress.Hash == hash {
+					if measure_block_timing {
+						pb := pendingBlocks[c.GetBlockInProgress.BIdx()]
+						if pb==nil {
+							panic("wtf??? why not pending?")
+						} else {
+							println("New Block", c.GetBlockInProgress.String(), "header after",
+								time.Now().Sub(pb.noticed).String(), "in", c.PeerAddr.Ip())
+						}
+						ui_show_prompt()
+					}
+					c.GetBlockHeaderGot = true
+				} else {
+					println("Received header for a different block")
+					println("Expected:", c.GetBlockInProgress.String())
+					println("Received:", btc.NewUint256(hash[:]).String())
+					ui_show_prompt()
+				}
+			} else {
+				if time.Now().After(c.GetBlockInProgressAt.Add(GetBlockHeaderTimeout)) {
+					CountSafe("GetBlockHeaderTout")
+					c.GetBlockInProgress = nil
+				}
+			}
+		}
 	}
 
 	// Need to send getdata...?
@@ -71,6 +107,7 @@ func (c *oneConnection) Tick() {
 		if tmp := blockDataNeeded(); tmp != nil {
 			c.GetBlockInProgress = btc.NewUint256(tmp)
 			c.GetBlockInProgressAt = time.Now()
+			c.GetBlockHeaderGot = false
 			c.GetBlockData(tmp)
 			return
 		}
