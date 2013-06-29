@@ -10,8 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-const measure_block_timing = true
-
 
 func (c *oneConnection) Tick() {
 	c.TicksCnt++
@@ -76,7 +74,7 @@ func (c *oneConnection) Tick() {
 				var hash [32]byte
 				btc.ShaHash(c.recv.dat[:80], hash[:])
 				if c.GetBlockInProgress.Hash == hash {
-					if measure_block_timing {
+					if CFG.MeasureBlockTiming {
 						mutex.Lock()
 						pb := pendingBlocks[c.GetBlockInProgress.BIdx()]
 						if pb!=nil {
