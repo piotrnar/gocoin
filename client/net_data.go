@@ -56,13 +56,6 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 		} else {
 			println("getdata for type", typ, "not supported yet")
 		}
-
-		if len(c.send.buf) >= MaxBytesInSendBuffer {
-			if dbg > 0 {
-				println(c.PeerAddr.Ip(), "Too many bytes")
-			}
-			break
-		}
 	}
 }
 
