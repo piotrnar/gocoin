@@ -16,11 +16,6 @@ const (
 	MaxCachedBlocks = 600
 )
 
-type onePendingBlock struct {
-	hash *btc.Uint256
-	noticed time.Time
-	single bool
-}
 
 var (
 	GenesisBlock *btc.Uint256
@@ -41,14 +36,9 @@ var (
 	netTxs chan *txRcvd = make(chan *txRcvd, 300)
 	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
 
-	pendingBlocks map[[btc.Uint256IdxLen]byte] *onePendingBlock =
-		make(map[[btc.Uint256IdxLen]byte] *onePendingBlock, 600)
-	pendingFifo chan [btc.Uint256IdxLen]byte = make(chan [btc.Uint256IdxLen]byte, PendingFifoLen)
-
 	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
-	receivedBlocks map[[btc.Uint256IdxLen]byte] *onePendingBlock =
-		make(map[[btc.Uint256IdxLen]byte] *onePendingBlock, 300e3)
+	receivedBlocks map[[btc.Uint256IdxLen]byte] time.Time = make(map[[btc.Uint256IdxLen]byte] time.Time, 300e3)
 
 	Counter map[string] uint64 = make(map[string]uint64)
 
@@ -131,9 +121,6 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
-	mutex.Lock()
-	rb := receivedBlocks[bl.Hash.BIdx()]
-	mutex.Unlock()
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	sto := time.Now()
@@ -150,8 +137,6 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			if CFG.MeasureBlockTiming {
-				println("New Block", bl.Hash.String(), "handled in",
-					sta.Sub(rb.noticed).String(), "->", sto.Sub(rb.noticed).String())
 				ui_show_prompt()
 			}
 
@@ -321,7 +306,7 @@ func main() {
 	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
 
 	for k, v := range BlockChain.BlockIndex {
-		receivedBlocks[k] = &onePendingBlock{hash:v.BlockHash, noticed:time.Unix(int64(v.Timestamp), 0)}
+		receivedBlocks[k] = time.Unix(int64(v.Timestamp), 0)
 	}
 
 	go network_process()

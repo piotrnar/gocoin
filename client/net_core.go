@@ -26,8 +26,7 @@ const (
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
-	GetBlockHeaderTimeout = 10*time.Second  // Timeout for receiving "block" and at least 80 bytes of payload
-	GetBlockPayloadTimeout = 2*time.Minute  // Timeout to receiove the entore block
+	GetBlockTimeout = 3*time.Minute  // Timeout to receive the entire block
 	GetBlockSwitchOffSingle = 15*time.Second // Switch off single mode this time after receiving single block inv
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
@@ -111,9 +110,7 @@ type oneConnection struct {
 	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
 
-	GetBlockInProgress *btc.Uint256
-	GetBlockInProgressAt time.Time
-	GetBlockHeaderGot bool
+	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
 
 	// Ping stats
 	PingHistory [PingHistoryLength]int
@@ -121,6 +118,12 @@ type oneConnection struct {
 	NextPing time.Time
 	PingInProgress []byte
 	LastPingSent time.Time
+}
+
+type oneBlockDl struct {
+	hash *btc.Uint256
+	start time.Time
+	head bool
 }
 
 
@@ -133,6 +136,7 @@ type BCmsg struct {
 func NewConnection(ad *onePeer) (c *oneConnection) {
 	c = new(oneConnection)
 	c.PeerAddr = ad
+	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	return
 }

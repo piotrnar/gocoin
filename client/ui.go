@@ -147,8 +147,8 @@ func show_info(par string) {
 		LastBlock.Height,
 		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
 		btc.GetDifficulty(LastBlock.Bits), time.Now().Sub(LastBlockReceived).String())
-	fmt.Printf("BlocksCached: %d,  BlocksPending: %d/%d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(cachedBlocks), len(pendingBlocks), len(pendingFifo), len(netBlocks), len(openCons),
+	fmt.Printf("BlocksCached: %d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
+		len(cachedBlocks), len(netBlocks), len(openCons),
 		peerDB.Count())
 	mutex.Unlock()
 
@@ -226,16 +226,6 @@ func ui_dbg(par string) {
 		dbg = v
 	}
 	fmt.Println("dbg:", dbg)
-}
-
-
-func show_invs(par string) {
-	mutex.Lock()
-	fmt.Println(len(pendingBlocks), "pending blocks")
-	for _, v := range pendingBlocks {
-		fmt.Println(v.noticed.Format("2006-01-02 15:04:05"), v.hash.String(), v.single)
-	}
-	mutex.Unlock()
 }
 
 
@@ -340,6 +330,5 @@ func init() {
 	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
-	newUi("invs", false, show_invs, "Show pending block (ones that need to be downloaded)")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 }

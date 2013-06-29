@@ -68,9 +68,8 @@ func (c *oneConnection) GetBlockData(h []byte) {
 	if dbg > 1 {
 		println("GetBlockData", btc.NewUint256(h).String())
 	}
-	c.GetBlockInProgress = btc.NewUint256(h)
-	c.GetBlockInProgressAt = time.Now()
-	c.GetBlockHeaderGot = false
+	bh := btc.NewUint256(h)
+	c.GetBlockInProgress[bh.BIdx()] = &oneBlockDl{hash:bh, start:time.Now()}
 	c.SendRawMsg("getdata", b[:])
 }
 
@@ -84,10 +83,10 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		return
 	}
 
-	if conn.GetBlockInProgress!=nil && conn.GetBlockInProgress.Equal(bl.Hash) {
-		conn.GetBlockInProgress = nil
+	if _, ok := conn.GetBlockInProgress[bl.Hash.BIdx()]; ok {
+		delete(conn.GetBlockInProgress, bl.Hash.BIdx())
 	} else {
-		CountSafe("EnxpectedBlockRcvd")
+		CountSafe("UnxpectedBlockRcvd")
 	}
 
 	idx := bl.Hash.BIdx()
@@ -97,19 +96,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		mutex.Unlock()
 		return
 	}
-	pbl := pendingBlocks[idx]
-	if pbl==nil {
-		println("WTF? Received block that isn't pending", bl.Hash.String())
-		ui_show_prompt()
-	} else {
-		if CFG.MeasureBlockTiming {
-			println("New Block", bl.Hash.String(), "received after",
-				time.Now().Sub(pbl.noticed).String())
-			ui_show_prompt()
-		}
-		delete(pendingBlocks, idx)
-	}
-	receivedBlocks[idx] = pbl
+	receivedBlocks[idx] = time.Now()
 	mutex.Unlock()
 
 	netBlocks <- &blockRcvd{conn:conn, bl:bl}
@@ -141,41 +128,6 @@ func HandleNetBlock(newbl *blockRcvd) {
 			newbl.conn.DoS()
 		}
 	}
-}
-
-
-// Called from network threads (quite often)
-func blockDataNeeded() ([]byte) {
-	if len(pendingFifo)>0 && len(netBlocks)<200 {
-		idx := <- pendingFifo
-		mutex.Lock()
-
-		if pbl, ok := pendingBlocks[idx]; ok {
-			if pbl.single && time.Now().After(pbl.noticed.Add(GetBlockSwitchOffSingle)) {
-				CountSafe("FromFifoUnsingle")
-				pbl.single = false
-			}
-			mutex.Unlock()
-			pendingFifo <- idx // put it back to the channel
-			if !pbl.single {
-				CountSafe("FromFifoPending")
-				return pbl.hash.Hash[:]
-			}
-			CountSafe("FromFifoSingle")
-			return nil
-		}
-
-		if _, ok := receivedBlocks[idx]; ok {
-			mutex.Unlock()
-			CountSafe("FromFifoReceived")
-			return nil
-		}
-
-		mutex.Unlock()
-		println("blockDataNeeded: It should not end up here") // TODO: remove this
-		CountSafe("FromFifoObsolete")
-	}
-	return nil
 }
 
 

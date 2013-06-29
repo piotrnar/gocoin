@@ -122,56 +122,60 @@ func net_drop(par string) {
 }
 
 
+func node_stat(v *oneConnection) (s string) {
+	s += fmt.Sprintf("Connection ID %d:\n", v.ConnID)
+	if v.Incomming {
+		s += fmt.Sprintln("Comming from", v.PeerAddr.Ip())
+	} else {
+		s += fmt.Sprintln("Going to", v.PeerAddr.Ip())
+	}
+	if !v.ConnectedAt.IsZero() {
+		s += fmt.Sprintln("Connected at", v.ConnectedAt.Format("2006-01-02 15:04:05"))
+		if v.node.version!=0 {
+			s += fmt.Sprintln("Node Version:", v.node.version)
+			s += fmt.Sprintln("User Agent:", v.node.agent)
+			s += fmt.Sprintln("Chain Height:", v.node.height)
+		}
+		s += fmt.Sprintln("Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
+		s += fmt.Sprintln("Last command received:", v.LastCmdRcvd, " ", v.LastBtsRcvd, "bytes")
+		s += fmt.Sprintln("Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
+		s += fmt.Sprintln("Bytes received:", v.BytesReceived)
+		s += fmt.Sprintln("Bytes sent:", v.BytesSent)
+		s += fmt.Sprintln("Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
+		if v.LastBlocksFrom != nil {
+			s += fmt.Sprintln(" Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
+		}
+		s += fmt.Sprintln("Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
+		if v.send.buf != nil {
+			s += fmt.Sprintln("Bytes to send:", len(v.send.buf), "-", v.send.sofar)
+		}
+		if len(v.PendingInvs)>0 {
+			s += fmt.Sprintln("Invs to send:", len(v.PendingInvs))
+		}
+
+		s += fmt.Sprintln("GetBlockInProgress:", len(v.GetBlockInProgress))
+
+		// Display ping stats
+		s += fmt.Sprint("Ping history:")
+		idx := v.PingHistoryIdx
+		for _ = range(v.PingHistory) {
+			s += fmt.Sprint(" ", v.PingHistory[idx])
+			idx = (idx+1)%PingHistoryLength
+		}
+		s += fmt.Sprintln(" ->", v.GetAveragePing(), "ms")
+	} else {
+		s += fmt.Sprintln("Not yet connected")
+	}
+	return
+}
+
+
 func node_info(par string) {
 	v := look2conn(par)
 	if v == nil {
 		fmt.Println("There is no such an active connection")
-	}
-
-	fmt.Printf("Connection ID %d:\n", v.ConnID)
-	if v.Incomming {
-		fmt.Println("Comming from", v.PeerAddr.Ip())
 	} else {
-		fmt.Println("Going to", v.PeerAddr.Ip())
-	}
-	if !v.ConnectedAt.IsZero() {
-		fmt.Println(" Connected at", v.ConnectedAt.Format("2006-01-02 15:04:05"))
-		if v.node.version!=0 {
-			fmt.Println(" Node Version:", v.node.version)
-			fmt.Println(" User Agent:", v.node.agent)
-			fmt.Println(" Chain Height:", v.node.height)
-		}
-		fmt.Println(" Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
-		fmt.Println(" Last command received:", v.LastCmdRcvd, " ", v.LastBtsRcvd, "bytes")
-		fmt.Println(" Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
-		fmt.Println(" Bytes received:", v.BytesReceived)
-		fmt.Println(" Bytes sent:", v.BytesSent)
-		fmt.Println(" Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
-		if v.LastBlocksFrom != nil {
-			fmt.Println(" Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
-		}
-		fmt.Println(" Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
-		if v.send.buf != nil {
-			fmt.Println(" Bytes to send:", len(v.send.buf), "-", v.send.sofar)
-		}
-		if len(v.PendingInvs)>0 {
-			fmt.Println(" Invs to send:", len(v.PendingInvs))
-		}
-
-		if v.GetBlockInProgress != nil {
-			fmt.Println("GetBlockInProgress:", v.GetBlockInProgress.String())
-		}
-
-		// Display ping stats
-		fmt.Print("Ping history:")
-		idx := v.PingHistoryIdx
-		for _ = range(v.PingHistory) {
-			fmt.Print(" ", v.PingHistory[idx])
-			idx = (idx+1)%PingHistoryLength
-		}
-		fmt.Println(" ->", v.GetAveragePing(), "ms")
-	} else {
-		fmt.Println("Not yet connected")
+		fmt.Print(node_stat(v))
 	}
 }
 

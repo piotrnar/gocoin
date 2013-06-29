@@ -5,9 +5,7 @@ import (
 	"net"
 	"time"
 	"bytes"
-	"strings"
 	"math/rand"
-	"github.com/piotrnar/gocoin/btc"
 )
 
 
@@ -58,49 +56,12 @@ func (c *oneConnection) Tick() {
 		return
 	}
 
-	if c.GetBlockInProgress!=nil {
-		if c.GetBlockHeaderGot {
-			if time.Now().After(c.GetBlockInProgressAt.Add(GetBlockPayloadTimeout)) {
-				CountSafe("GetBlockPayloadTout")
-				c.GetBlockInProgress = nil
-			}
-		} else {
-			if c.recv.hdr_len==24 && strings.TrimRight(string(c.recv.hdr[4:16]), "\000")=="block" &&
-				len(c.recv.dat)>=80 && c.recv.datlen>=80 {
-				var hash [32]byte
-				btc.ShaHash(c.recv.dat[:80], hash[:])
-				if c.GetBlockInProgress.Hash == hash {
-					if CFG.MeasureBlockTiming {
-						mutex.Lock()
-						pb := pendingBlocks[c.GetBlockInProgress.BIdx()]
-						if pb!=nil {
-							println("New Block", c.GetBlockInProgress.String(), "header after",
-								time.Now().Sub(pb.noticed).String(), "in", c.PeerAddr.Ip())
-						}
-						mutex.Unlock()
-						ui_show_prompt()
-					}
-					c.GetBlockHeaderGot = true
-				} else {
-					println("Received header for a different block")
-					println("Expected:", c.GetBlockInProgress.String())
-					println("Received:", btc.NewUint256(hash[:]).String())
-					ui_show_prompt()
-				}
-			} else {
-				if time.Now().After(c.GetBlockInProgressAt.Add(GetBlockHeaderTimeout)) {
-					CountSafe("GetBlockHeaderTout")
-					c.GetBlockInProgress = nil
-				}
-			}
-		}
-	}
-
-	// Need to send getdata...?
-	if c.GetBlockInProgress==nil {
-		if tmp := blockDataNeeded(); tmp != nil {
-			c.GetBlockData(tmp)
-			return
+	// Timeout getdata for blocks in progress
+	for k, v := range c.GetBlockInProgress {
+		if time.Now().After(v.start.Add(GetBlockTimeout)) {
+			CountSafe("GetBlockTimeout")
+			delete(c.GetBlockInProgress, k)
+			println("GetBlockTimeout")
 		}
 	}
 

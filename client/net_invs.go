@@ -20,14 +20,14 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		println("inv payload length mismatch", len(pl), of, cnt)
 	}
 
-	var new_block bool
-	var last_inv []byte
+	var blinv2ask []byte
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
-			last_inv = pl[of+4:of+36]
-			new_block = BlockInvNotify(last_inv, cnt==1)
+			if blockWanted(pl[of+4:of+36]) {
+				blinv2ask = append(blinv2ask, pl[of+4:of+36]...)
+			}
 		} else if typ==1 {
 			if CFG.TXRouting.Enabled {
 				c.TxInvNotify(pl[of+4:of+36])
@@ -36,15 +36,18 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		of+= 36
 	}
 
-	if cnt==1 && new_block {
-		// If this was a single inv for 1 unknown block, ask for it immediately
-		if c.GetBlockInProgress==nil {
-			CountSafe("InvNewBlockNow")
-			c.GetBlockData(last_inv)
-		} else {
-			CountSafe("InvNewBlockBusy")
+	if len(blinv2ask)>0 {
+		bu := new(bytes.Buffer)
+		btc.WriteVlen(bu, uint32(len(blinv2ask)/32))
+		for i:=0; i<len(blinv2ask); i+=32 {
+			bh := btc.NewUint256(blinv2ask[i:i+32])
+			c.GetBlockInProgress[bh.BIdx()] = &oneBlockDl{hash:bh, start:time.Now()}
+			binary.Write(bu, binary.LittleEndian, uint32(2))
+			bu.Write(bh.Hash[:])
 		}
+		c.SendRawMsg("getdata", bu.Bytes())
 	}
+
 	return
 }
 
@@ -201,7 +204,7 @@ func (c *oneConnection) SendInvs() (res bool) {
 func (c *oneConnection) getblocksNeeded() bool {
 	mutex.Lock()
 	lb := LastBlock
-	if lb!=c.LastBlocksFrom && len(pendingBlocks)>200 {
+	if lb!=c.LastBlocksFrom && len(c.GetBlockInProgress)>0 {
 		// We have more than 200 pending blocks, so hold on for now...
 		mutex.Unlock()
 		return false
@@ -245,34 +248,4 @@ func (c *oneConnection) getblocksNeeded() bool {
 		return true
 	}
 	return false
-}
-
-
-// Called from a net thread
-func BlockInvNotify(h []byte, single bool) (need bool) {
-	ha := btc.NewUint256(h)
-	idx := ha.BIdx()
-	mutex.Lock()
-	if _, ok := pendingBlocks[idx]; ok {
-		CountSafe("InvBlkAlreadyPending")
-	} else if _, ok := receivedBlocks[idx]; ok {
-		CountSafe("InvBlkAlreadyHave")
-	} else if len(pendingFifo)<PendingFifoLen {
-		if dbg>0 {
-			fmt.Println("blinv", btc.NewUint256(h).String())
-		}
-		CountSafe("InvBlkWanted")
-		if single && (len(cachedBlocks)>0 || len(pendingBlocks)>3) {
-			// This is sort of a workaround for initial chain downloads getting stuck
-			CountSafe("InvBlkUnsingled")
-			single = false
-		}
-		pendingBlocks[idx] = &onePendingBlock{hash:ha, noticed:time.Now(), single:single}
-		pendingFifo <- idx
-		need = true
-	} else {
-		CountSafe("InvBlkFifoFull")
-	}
-	mutex.Unlock()
-	return
 }
