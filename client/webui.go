@@ -175,6 +175,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{USER_AGENT}", v.node.agent, 1)
 		s = strings.Replace(s, "{SENDING_DONE}", fmt.Sprint(v.send.sofar), 1)
 		s = strings.Replace(s, "{SENDING_TOTAL}", fmt.Sprint(len(v.send.buf)), 1)
+		s = strings.Replace(s, "{BLOCKS_IN_PROGRESS}", fmt.Sprint(len(v.GetBlockInProgress)), 1)
 
 		net_page = strings.Replace(net_page, "{PEER_ROW}", s+"\n{PEER_ROW}", 1)
 	}
