@@ -30,7 +30,7 @@ const (
 
 	GetBlockHeaderTimeout = 10*time.Second  // Timeout for receiving "block" and at least 80 bytes of payload
 	GetBlockPayloadTimeout = 2*time.Minute  // Timeout to receiove the entore block
-	GetBlockSwitchOffSingle = 30*time.Second // Switch off single mode this time after receiving single block inv
+	GetBlockSwitchOffSingle = 15*time.Second // Switch off single mode this time after receiving single block inv
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
