@@ -126,8 +126,9 @@ type oneConnection struct {
 }
 
 
-func init() {
-	rand.Read(nonce[:])
+type BCmsg struct {
+	cmd string
+	pl  []byte
 }
 
 
@@ -193,11 +194,6 @@ func (c *oneConnection) HandleError(e error) (error) {
 	return e
 }
 
-
-type BCmsg struct {
-	cmd string
-	pl  []byte
-}
 
 func (c *oneConnection) FetchMessage() (*BCmsg) {
 	var e error
@@ -273,3 +269,9 @@ func connectionActive(ad *onePeer) (yes bool) {
 	mutex.Unlock()
 	return
 }
+
+
+func init() {
+	rand.Read(nonce[:])
+}
+
