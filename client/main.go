@@ -359,6 +359,7 @@ func main() {
 
 	}
 	println("Closing blockchain")
+	BlockChain.Sync()
 	BlockChain.Close()
 	peerDB.Close()
 }
