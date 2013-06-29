@@ -28,7 +28,9 @@ const (
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
-	GetBlockTimeout = 1*time.Minute  // If you did not get "block" within this time from "getdata", assume it won't come
+	GetBlockHeaderTimeout = 10*time.Second  // Timeout for receiving "block" and at least 80 bytes of payload
+	GetBlockPayloadTimeout = 2*time.Minute  // Timeout to receiove the entore block
+	GetBlockSwitchOffSingle = 30*time.Second // Switch off single mode this time after receiving single block inv
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
@@ -113,6 +115,7 @@ type oneConnection struct {
 
 	GetBlockInProgress *btc.Uint256
 	GetBlockInProgressAt time.Time
+	GetBlockHeaderGot bool
 
 	// Ping stats
 	PingHistory [PingHistoryLength]int
