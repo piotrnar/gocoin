@@ -257,6 +257,11 @@ func BlockInvNotify(h []byte, single bool) (need bool) {
 			fmt.Println("blinv", btc.NewUint256(h).String())
 		}
 		CountSafe("InvBlkWanted")
+		if single && (len(cachedBlocks)>0 || len(pendingBlocks)>3) {
+			// This is sort of a workaround for initial chain downloads getting stuck
+			CountSafe("InvBlkUnsingled")
+			single = false
+		}
 		pendingBlocks[idx] = &onePendingBlock{hash:ha, noticed:time.Now(), single:single}
 		pendingFifo <- idx
 		need = true
