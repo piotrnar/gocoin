@@ -91,13 +91,14 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 
 	idx := bl.Hash.BIdx()
 	mutex.Lock()
-	if _, got := receivedBlocks[idx]; got {
+	if rb, got := receivedBlocks[idx]; got {
+		rb.cnt++
 		conn.BlockTiming.hash = nil
 		CountSafe("SameBlockReceived")
 		mutex.Unlock()
 		return
 	}
-	receivedBlocks[idx] = time.Now()
+	receivedBlocks[idx] = &oneReceivedBlock{Time:time.Now()}
 	mutex.Unlock()
 
 	netBlocks <- &blockRcvd{conn:conn, bl:bl}
