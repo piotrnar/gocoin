@@ -5,7 +5,7 @@
 * Big rework in the network module
 
 0.4.4
-* Allow sorting of transaction tables
+* Allow sorting of transaction tables in WebUI
 
 0.4.3
 * Some more WebUI templates, and further extensions
