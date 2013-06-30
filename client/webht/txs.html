@@ -1,9 +1,9 @@
 <table>
-<tr><td>Transactions To Send:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
-<tr><td>Rejected Transactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
-<tr><td>Pending Transactions:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
-<tr><td>Spent Outputs:<td><b>{SPENT_OUTS_CNT}</b>
-<tr><td>Awaiting inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
+<tr><td>Accepted transactions:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
+<tr><td>Rejected ransactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
+<tr><td>Transactions waiting for inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
+<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
+<tr><td>Outputs spent in the memory:<td><b>{SPENT_OUTS_CNT}</b>
 </table>
 <h2>Upload Transaction File:</h2>
 <form id="the-form" method="post" enctype="multipart/form-data">
