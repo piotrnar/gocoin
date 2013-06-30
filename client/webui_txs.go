@@ -131,7 +131,7 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprint(w, "<id>", v.id.String(), "</id>")
 				fmt.Fprint(w, "<time>", t.Unix(), "</time>")
 			} else {
-				fmt.Fprint(w, "<id>not on list</id>")
+				fmt.Fprint(w, "<id>FATAL ERROR!!! This should not happen! Please report</id>")
 				fmt.Fprint(w, "<time>", time.Now().Unix(), "</time>")
 			}
 			w.Write([]byte("</tx>"))
