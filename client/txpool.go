@@ -39,6 +39,7 @@ type OneTxToSend struct {
 	own byte // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
 	spent []uint64 // Which records in SpentOutputs this TX added
 	volume, fee uint64
+	*btc.Tx
 }
 
 type OneTxRejected struct {
@@ -214,7 +215,7 @@ func HandleNetTx(ntx *txRcvd) {
 		}
 	}
 
-	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now()}
+	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx}
 	TransactionsToSend[tx.Hash.Hash] = rec
 	for i := range spent {
 		SpentOutputs[spent[i]] = true
