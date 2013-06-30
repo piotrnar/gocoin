@@ -43,6 +43,13 @@ func (c *oneConnection) Tick() {
 			}
 			c.Broken = true
 		}
+		if c.send.buf!=nil && len(c.send.buf)-c.send.sofar>MaxDataInSendBuffer {
+			CountSafe("PeerSendOverflow")
+			if dbg > 0 {
+				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
+			}
+			c.Broken = true
+		}
 		return
 	}
 
