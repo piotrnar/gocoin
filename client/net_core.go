@@ -179,7 +179,6 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[24:], pl)
 
 	c.send.buf = append(c.send.buf, sbuf...)
-	c.send.lastSent = time.Now()
 
 	if dbg<0 {
 		fmt.Println(cmd, len(c.send.buf), "->", c.PeerAddr.Ip())
