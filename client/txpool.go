@@ -25,6 +25,7 @@ const (
 	TX_REJECTED_LOW_FEE      = 205
 	TX_REJECTED_SCRIPT_FAIL  = 206
 	TX_REJECTED_MEM_INPUT    = 207
+	TX_REJECTED_NOT_MINED    = 208
 )
 
 var (
@@ -178,6 +179,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 
 	tx := ntx.tx
 	var totinp, totout uint64
+	var frommem bool
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
@@ -201,6 +203,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 			}
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			CountSafe("TxInputInMemory")
+			frommem = true
 		} else {
 			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
@@ -307,7 +310,11 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
 
-	if isRoutable(rec) {
+	if frommem {
+		// Gocoin does not route txs that use not mined inputs
+		rec.blocked = TX_REJECTED_NOT_MINED
+		CountSafe("TxRouteNotMined")
+	} else if isRoutable(rec) {
 		rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
 		rec.lastsent = time.Now()
 		CountSafe("TxRouteOK")
