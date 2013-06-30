@@ -72,17 +72,18 @@ function get_maturity(t) {
 
 function val2reason(r) {
 	switch (parseInt(r)) {
-		case 101: return "TOO_BIG"
+		case 101: return "TOO BIG"
 		case 102: return "FORMAT"
-		case 103: return "LEN_MISMATCH"
-		case 104: return "EMPTY_INPUT"
-		case 201: return "DOUBLE_SPEND"
-		case 202: return "NO_TXOU"
+		case 103: return "LEN MISMATCH"
+		case 104: return "EMPTY INPUT"
+		case 201: return "DOUBLE SPEND"
+		case 202: return "NO TXOUT"
 		case 203: return "DUST"
 		case 204: return "OVERSPEND"
-		case 205: return "LOW_FEE"
-		case 206: return "SCRIPT_FAIL"
-		case 207: return "MEM_INPUT"
+		case 205: return "LOW FEE"
+		case 206: return "SCRIPT FAIL"
+		case 207: return "MEM INPUT"
+		case 207: return "NOT MINED"
 	}
 	return r
 }
