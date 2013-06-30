@@ -23,7 +23,7 @@ const (
 	MaxTotCons = MaxInCons+MaxOutCons
 
 	NoDataTimeout = 2*time.Minute
-	MaxDataInSendBuffer = 16*1024 // If you have more than this in the send buffer, disconenct
+	MaxDataInSendBuffer = 16*1024*1024 // If you have more than this in the send buffer, disconnect
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
