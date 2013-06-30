@@ -21,6 +21,7 @@ const (
 	TX_REJECTED_OVERSPEND    = 204
 	TX_REJECTED_LOW_FEE      = 205
 	TX_REJECTED_SCRIPT_FAIL  = 206
+	TX_REJECTED_MEM_INPUT    = 207
 )
 
 var (
@@ -165,12 +166,23 @@ func HandleNetTx(ntx *txRcvd) {
 			return
 		}
 
-		pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-		if pos[i] == nil {
-			TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_NO_INPUT)
-			tx_mutex.Unlock()
-			CountSafe("TxRejectedNoInput")
-			return
+		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
+				TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_MEM_INPUT)
+				tx_mutex.Unlock()
+				CountSafe("TxRejectedMemInput")
+				return
+			}
+			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
+			CountSafe("TxInputInMemory")
+		} else {
+			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			if pos[i] == nil {
+				TransactionsRejected[tx.Hash.Hash] = NewRejectedTx(len(ntx.raw), TX_REJECTED_NO_INPUT)
+				tx_mutex.Unlock()
+				CountSafe("TxRejectedNoInput")
+				return
+			}
 		}
 		totinp += pos[i].Value
 	}
