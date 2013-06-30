@@ -1,3 +1,6 @@
+0.4.7
+* Improvements in tx memory pool
+
 0.4.6
 * Big rework in the network module
 
