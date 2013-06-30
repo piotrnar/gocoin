@@ -160,6 +160,8 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
+	} else {
+		c.send.lastSent = time.Now()
 	}
 
 	CountSafe("sent_"+cmd)
