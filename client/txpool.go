@@ -210,6 +210,9 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		} else {
 			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
+				// In case it it was already rejected, remove it to free old WaitingForInputs
+				deleteRejected(tx.Hash.BIdx())
+
 				// In this casem let's "save" it for later...
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
