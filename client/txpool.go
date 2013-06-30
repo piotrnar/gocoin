@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 	"sync"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -47,7 +48,7 @@ type OneTxToSend struct {
 }
 
 type Wait4Input struct {
-	missingTx [btc.Uint256IdxLen]byte
+	missingTx *btc.Uint256
 	*txRcvd
 }
 
@@ -60,6 +61,7 @@ type OneTxRejected struct {
 }
 
 type OneWaitingList struct {
+	TxID *btc.Uint256
 	Ids map[[btc.Uint256IdxLen]byte] time.Time  // List of pending tx ids
 }
 
@@ -150,6 +152,11 @@ func (c *oneConnection) ParseTxNet(pl []byte) {
 }
 
 
+func bidx2str(idx [btc.Uint256IdxLen]byte) string {
+	return hex.EncodeToString(idx[:])
+}
+
+
 // Must be called from the chain's thread
 func HandleNetTx(ntx *txRcvd) (accepted bool) {
 	CountSafe("HandleNetTx")
@@ -194,21 +201,36 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
 				// In this casem let's "save" it for later...
+				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
-				nrtx.Wait4Input = &Wait4Input{missingTx: btc.NewUint256(tx.TxIn[i].Input.Hash[:]).BIdx(), txRcvd: ntx}
+				nrtx.Wait4Input = &Wait4Input{missingTx: missingid, txRcvd: ntx}
 				TransactionsRejected[tx.Hash.BIdx()] = nrtx
 
 				// Add to waiting list:
 				var rec *OneWaitingList
-				if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx]; rec==nil {
+				var newone bool
+				if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()]; rec==nil {
 					rec = new(OneWaitingList)
+					rec.TxID = nrtx.Wait4Input.missingTx
 					rec.Ids = make(map[[btc.Uint256IdxLen]byte] time.Time)
+					newone = true
 				}
 				rec.Ids[tx.Hash.BIdx()] = time.Now()
-				WaitingForInputs[nrtx.Wait4Input.missingTx] = rec
+				WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()] = rec
 
 				tx_mutex.Unlock()
-				CountSafe("TxRejectedNoInput")
+				if newone {
+					CountSafe("TxRejectedNoInputUniq")
+					println("Tx No Input NEW", nrtx.Wait4Input.missingTx.String(),
+						"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
+					ui_show_prompt()
+					AskPeersForData(1, missingid)  // This does not seem to help at all
+				} else {
+					CountSafe("TxRejectedNoInputSame")
+					println("Tx No Input  + ", nrtx.Wait4Input.missingTx.String(),
+						"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
+					ui_show_prompt()
+				}
 				return
 			}
 		}
@@ -272,29 +294,29 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 
 	// Try to redo waiting txs
 	if wtg != nil {
-		println("Retry", len(wtg.Ids), "inputs")
-		for k, t := range wtg.Ids {
-			pdg := TransactionsRejected[k]
-			if pdg!=nil && pdg.Wait4Input!=nil {
-				if HandleNetTx(pdg.Wait4Input.txRcvd) {
-					tx_mutex.Lock()
-					deleteRejected(k)
-					tx_mutex.Unlock()
-					CountSafe("TxRetryAccepted")
-					println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
-				} else {
-					CountSafe("TxRetryRejected")
-					println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
-				}
-			} else {
-				CountSafe("TxRetryFatal")
-				println(pdg.Wait4Input.txRcvd.tx.Hash.String(), " - something wrong!")
-			}
-		}
+		RetryWaitingForInput(wtg)
 	}
 
 	accepted = true
 	return
+}
+
+
+func RetryWaitingForInput(wtg *OneWaitingList) {
+	for k, t := range wtg.Ids {
+		pdg := TransactionsRejected[k]
+		if HandleNetTx(pdg.Wait4Input.txRcvd) {
+			tx_mutex.Lock()
+			deleteRejected(k)
+			tx_mutex.Unlock()
+			CountSafe("TxRetryAccepted")
+			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
+			ui_show_prompt()
+		} else {
+			CountSafe("TxRetryRejected")
+			//println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
+		}
+	}
 }
 
 
@@ -315,7 +337,14 @@ func TxMined(h *btc.Uint256) {
 		CountSafe("TxMinedPending")
 		delete(TransactionsPending, h.Hash)
 	}
+	wtg := WaitingForInputs[h.BIdx()]
 	tx_mutex.Unlock()
+
+	// Try to redo waiting txs
+	if wtg != nil {
+		CountSafe("TxMinedGotInput")
+		RetryWaitingForInput(wtg)
+	}
 }
 
 
@@ -349,10 +378,10 @@ func expireTime(size int) time.Time {
 func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
 		if tr.Wait4Input!=nil {
-			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx]
+			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx.BIdx()]
 			delete(w4i.Ids, bidx)
 			if len(w4i.Ids)==0 {
-				delete(WaitingForInputs, tr.Wait4Input.missingTx)
+				delete(WaitingForInputs, tr.Wait4Input.missingTx.BIdx())
 			}
 		}
 		delete(TransactionsRejected, bidx)
