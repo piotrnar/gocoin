@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"time"
 	"sync"
 	"encoding/hex"
@@ -37,6 +37,9 @@ var (
 	WaitingForInputs map[[btc.Uint256IdxLen]byte] *OneWaitingList =
 		make(map[[btc.Uint256IdxLen]byte] *OneWaitingList)
 	SpentOutputs map[uint64] bool = make(map[uint64] bool)
+
+	MaxExpireTime time.Duration
+	ExpirePerKB time.Duration
 )
 
 
@@ -278,7 +281,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
-		//log.Println("ERROR: Tx fee too low", fee, len(ntx.raw))
 		return
 	}
 
@@ -289,7 +291,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedScriptFail")
 			ntx.conn.DoS()
-			log.Println("ERROR: HandleNetTx Invalid signature")
 			return
 		}
 	}
@@ -306,7 +307,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	}
 
 	tx_mutex.Unlock()
-	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
 
 	if frommem {
@@ -420,7 +420,11 @@ func init() {
 
 
 func expireTime(size int) time.Time {
-	return time.Now().Add(-time.Duration((uint64(size)*uint64(time.Minute)*uint64(CFG.TXPool.TxExpirePerKB))>>10))
+	exp := (time.Duration(size)*ExpirePerKB) >> 10
+	if exp > MaxExpireTime {
+		exp = MaxExpireTime
+	}
+	return time.Now().Add(-exp)
 }
 
 
