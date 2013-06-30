@@ -294,10 +294,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	if retry {
-		deleteRejected(tx.Hash.BIdx())
-	}
-
 	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx, minout:minout}
 	TransactionsToSend[tx.Hash.Hash] = rec
 	for i := range spent {
@@ -305,24 +301,22 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	}
 
 	wtg := WaitingForInputs[tx.Hash.BIdx()]
+	if wtg != nil {
+		defer RetryWaitingForInput(wtg) // Redo waiting txs when leaving this function
+	}
 
 	tx_mutex.Unlock()
 	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
 
 	if frommem {
-		// Gocoin does not route txs that use not mined inputs
+		// Gocoin does not route txs that need unconfirmed inputs
 		rec.blocked = TX_REJECTED_NOT_MINED
 		CountSafe("TxRouteNotMined")
 	} else if isRoutable(rec) {
 		rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
 		rec.lastsent = time.Now()
 		CountSafe("TxRouteOK")
-	}
-
-	// Try to redo waiting txs
-	if wtg != nil {
-		RetryWaitingForInput(wtg)
 	}
 
 	accepted = true
@@ -357,15 +351,21 @@ func isRoutable(rec *OneTxToSend) bool {
 
 func RetryWaitingForInput(wtg *OneWaitingList) {
 	for k, t := range wtg.Ids {
-		pdg := TransactionsRejected[k]
-		if HandleNetTx(pdg.Wait4Input.txRcvd, true) {
+		pendtxrcv := TransactionsRejected[k].Wait4Input.txRcvd
+		if HandleNetTx(pendtxrcv, true) {
+			tx_mutex.Lock()
+			deleteRejected(pendtxrcv.tx.Hash.BIdx())
+			tx_mutex.Unlock()
 			CountSafe("TxRetryAccepted")
-			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
+			if dbg>0 {
+				fmt.Println(pendtxrcv.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
+			}
 		} else {
 			CountSafe("TxRetryRejected")
-			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
+			if dbg>0 {
+				fmt.Println(pendtxrcv.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
+			}
 		}
-		ui_show_prompt()
 	}
 }
 
