@@ -230,7 +230,7 @@ function show_txw4i() {
 				pendtxs = wait4s[i].getElementsByTagName('tx')
 				idx++
 				for (var j=0; j<pendtxs.length; j++) {
-					var c,row = txw4i.insertRow(-1)
+					var t,c,row = txw4i.insertRow(-1)
 
 					row.className='hov'
 
@@ -242,12 +242,13 @@ function show_txw4i() {
 					c = row.insertCell(-1)
 					c.className ='mono'
 					if (j==0) {
-						c.innerHTML = xval(wait4s[i], 'id')
+						t = xval(wait4s[i], 'id')
+						c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 					}
 
 					c = row.insertCell(-1)
 					c.className ='mono'
-					var t = xval(pendtxs[j], 'id')
+					t = xval(pendtxs[j], 'id')
 					c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
 					c=row.insertCell(-1);c.align='right'
