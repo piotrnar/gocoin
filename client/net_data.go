@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 	"bytes"
 	"encoding/binary"
@@ -143,4 +144,23 @@ func blockWanted(h []byte) (yes bool) {
 	}
 	mutex.Unlock()
 	return
+}
+
+
+// This function is called from the main thread (or from an UI)
+func AskPeersForData(typ uint32, h *btc.Uint256) {
+	CountSafe(fmt.Sprint("AskPeersForData", typ))
+
+	// Prepare the inv
+	pl := make([]byte, 37)
+	pl[0] = 1 // only one hash
+	binary.LittleEndian.PutUint32(pl[1:5], typ)
+	copy(pl[4:36], h.Bytes())
+
+	// Append it to PendingInvs in each open connection
+	mutex.Lock()
+	for _, v := range openCons {
+		v.SendRawMsg("getdata", pl)
+	}
+	mutex.Unlock()
 }
