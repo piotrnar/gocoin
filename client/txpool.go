@@ -224,15 +224,19 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 				tx_mutex.Unlock()
 				if newone {
 					CountSafe("TxRejectedNoInputUniq")
-					println("Tx No Input NEW", nrtx.Wait4Input.missingTx.String(),
-						"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
-					ui_show_prompt()
-					AskPeersForData(1, missingid)  // This does not seem to help at all
+					if dbg > 0 {
+						println("Tx No Input NEW", nrtx.Wait4Input.missingTx.String(),
+							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
+						ui_show_prompt()
+					}
+					//AskPeersForData(1, missingid)  // This does not seem to help at all
 				} else {
 					CountSafe("TxRejectedNoInputSame")
-					println("Tx No Input  + ", nrtx.Wait4Input.missingTx.String(),
-						"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
-					ui_show_prompt()
+					if dbg > 0 {
+						println("Tx No Input  + ", nrtx.Wait4Input.missingTx.String(),
+							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
+						ui_show_prompt()
+					}
 				}
 				return
 			}
