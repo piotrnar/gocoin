@@ -38,13 +38,17 @@ var (
 
 	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
-	receivedBlocks map[[btc.Uint256IdxLen]byte] time.Time = make(map[[btc.Uint256IdxLen]byte] time.Time, 300e3)
+	receivedBlocks map[[btc.Uint256IdxLen]byte] *oneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *oneReceivedBlock, 300e3)
 
 	Counter map[string] uint64 = make(map[string]uint64)
 
 	busy string
 )
 
+type oneReceivedBlock struct {
+	time.Time
+	cnt uint
+}
 
 type blockRcvd struct {
 	conn *oneConnection
@@ -138,8 +142,9 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			if CFG.MeasureBlockTiming && from.BlockTiming.hash!=nil &&
 				from.BlockTiming.hash.Equal(bl.Hash) {
-				fmt.Println("Bl", bl.Hash.String(), " len", len(bl.Raw), " timing:",
-					receivedBlocks[bl.Hash.BIdx()].Sub(from.BlockTiming.time).String(),
+				fmt.Println("Bl", bl.Hash.String(), receivedBlocks[bl.Hash.BIdx()].cnt,
+					" len", len(bl.Raw), " timing:",
+					receivedBlocks[bl.Hash.BIdx()].Time.Sub(from.BlockTiming.time).String(),
 					sta.Sub(from.BlockTiming.time).String(),
 					sto.Sub(from.BlockTiming.time).String())
 				ui_show_prompt()
@@ -312,7 +317,7 @@ func main() {
 	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
 
 	for k, v := range BlockChain.BlockIndex {
-		receivedBlocks[k] = time.Unix(int64(v.Timestamp), 0)
+		receivedBlocks[k] = &oneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
 	}
 
 	go network_process()
