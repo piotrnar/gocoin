@@ -1,0 +1,50 @@
+package main
+
+import (
+	"fmt"
+	"time"
+	"strings"
+	"net/http"
+	"github.com/piotrnar/gocoin/btc"
+)
+
+func p_blocks(w http.ResponseWriter, r *http.Request) {
+	blks := load_template("blocks.html")
+	onerow := load_template("blocks_row.html")
+
+	end := BlockChain.BlockTreeEnd
+	for cnt:=0; end!=nil && cnt<100; cnt++ {
+		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
+		if e != nil {
+			return
+		}
+		block, e := btc.NewBlock(bl)
+		if e!=nil {
+			return
+		}
+		block.BuildTxList()
+		s := onerow
+
+		s = strings.Replace(s, "{BLOCK_NUMBER}", fmt.Sprint(end.Height), 1)
+		s = strings.Replace(s, "{BLOCK_TIMESTAMP}",
+			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"), 1)
+		s = strings.Replace(s, "{BLOCK_HASH}", end.BlockHash.String(), 1)
+		s = strings.Replace(s, "{BLOCK_TXS}", fmt.Sprint(len(block.Txs)), 1)
+		s = strings.Replace(s, "{BLOCK_SIZE}", fmt.Sprint(len(bl)), 1)
+		var rew uint64
+		for o := range block.Txs[0].TxOut {
+			rew += block.Txs[0].TxOut[o].Value
+		}
+		s = strings.Replace(s, "{BLOCK_REWARD}", fmt.Sprintf("%.2f", float64(rew)/1e8), 1)
+		s = strings.Replace(s, "{BLOCK_MINER}", blocks_miner(bl), 1)
+
+		blks = strings.Replace(blks, "{BLOCK_ROW}", s+"{BLOCK_ROW}", 1)
+
+		end = end.Parent
+	}
+	blks = strings.Replace(blks, "{BLOCK_ROW}", "", 1)
+
+	write_html_head(w, r)
+	w.Write([]byte(blks))
+	write_html_tail(w)
+}
