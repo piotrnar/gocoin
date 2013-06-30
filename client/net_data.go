@@ -55,7 +55,10 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 				tx_mutex.Unlock()
 			}
 		} else {
-			println("getdata for type", typ, "not supported yet")
+			CountSafe(fmt.Sprint("GetdataFor",typ))
+			if dbg>0 {
+				println("getdata for type", typ, "not supported yet")
+			}
 		}
 	}
 }
