@@ -1,9 +1,9 @@
 <table>
 <tr><td>Transactions To Send:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
-<tr><td>Rejected Transactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre('')">
+<tr><td>Rejected Transactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
 <tr><td>Pending Transactions:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
 <tr><td>Spent Outputs:<td><b>{SPENT_OUTS_CNT}</b>
-<tr><td>Awaiting inputs:<td><b>{AWAITING_INPUTS}</b>
+<tr><td>Awaiting inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
 </table>
 <h2>Upload Transaction File:</h2>
 <form id="the-form" method="post" enctype="multipart/form-data">
@@ -33,6 +33,14 @@
 		<th onclick="sorttab('txsre', 2)" style="cursor:pointer" width="60" align="right">Maturity
 		<th onclick="sorttab('txsre', 3)" style="cursor:pointer" width="60" align="right">Size
 		<th width="100" align="right">Reason rejected
+</table>
+<br>
+<table class="txs bord" id="txw4i" style="display:none">
+	<tr>
+		<th width="20" align="right">#
+		<th>Needed TxID
+		<th>Pending TxID
+		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
 
 <script>
@@ -165,7 +173,7 @@ function show_txs2s(extrapar) {
 			txs2s.style.display = 'table'
 		}
 	}
-	txs2s.style.display = txsre.style.display = 'none'
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txs2s.xml"+extrapar, true);
 	xmlHttp.send(null);
 }
@@ -201,8 +209,51 @@ function show_txsre() {
 			txsre.style.display = 'table'
 		}
 	}
-	txs2s.style.display = txsre.style.display = 'none'
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txsre.xml", true);
+	xmlHttp.send(null);
+}
+
+function show_txw4i() {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			while (txw4i.rows.length>1)  txw4i.deleteRow(1)
+			wait4s = aj.responseXML.getElementsByTagName('wait4')
+			var idx=0
+			for (var i=0; i<wait4s.length; i++) {
+				pendtxs = wait4s[i].getElementsByTagName('tx')
+				idx++
+				for (var j=0; j<pendtxs.length; j++) {
+					var c,row = txw4i.insertRow(-1)
+
+					row.className='hov'
+
+					c=row.insertCell(-1);c.align='right'
+					if (j==0) {
+						c.innerHTML = idx.toString()
+					}
+
+					c = row.insertCell(-1)
+					c.className ='mono'
+					if (j==0) {
+						c.innerHTML = xval(wait4s[i], 'id')
+					}
+
+					c = row.insertCell(-1)
+					c.className ='mono'
+					var t = xval(pendtxs[j], 'id')
+					c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
+
+					c=row.insertCell(-1);c.align='right'
+					c.innerHTML = get_maturity(xval(pendtxs[j], 'time'))
+				}
+			}
+			txw4i.style.display = 'table'
+		}
+	}
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	xmlHttp.open("GET","txw4i.xml", true);
 	xmlHttp.send(null);
 }
 
