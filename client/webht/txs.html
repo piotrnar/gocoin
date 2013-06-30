@@ -22,6 +22,7 @@
 		<th onclick="sorttab('txs2s', 5)" style="cursor:pointer" width="90" align="right">Total BTC
 		<th onclick="sorttab('txs2s', 6)" style="cursor:pointer" width="80" align="right">Fee BTC
 		<th onclick="sorttab('txs2s', 7)" style="cursor:pointer" width="60" align="right">Fee/Byte
+		<th width="60">Blocked
 		<th width="60" align="right">Actions
 	</tr>
 </table>
@@ -158,6 +159,12 @@ function show_txs2s(extrapar) {
 
 					c=row.insertCell(-1);c.align='right'
 					c.innerHTML = '<i>unknown</i>'
+				}
+
+				c=row.insertCell(-1)
+				var blkd = parseInt(xval(txs[i], 'blocked'))
+				if (blkd!=0) {
+					c.innerHTML = val2reason(blkd)
 				}
 
 				c=row.insertCell(-1);c.align='right'

@@ -11,6 +11,8 @@ import (
 
 
 const (
+	TX_REJECTED_DISABLED     = 1
+
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
@@ -43,8 +45,9 @@ type OneTxToSend struct {
 	firstseen, lastsent time.Time
 	own byte // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
 	spent []uint64 // Which records in SpentOutputs this TX added
-	volume, fee uint64
+	volume, fee, minout uint64
 	*btc.Tx
+	blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 }
 
 type Wait4Input struct {
@@ -115,7 +118,7 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if uint(len(pl))>CFG.TXRouting.MaxTxSize {
+	if uint(len(pl))>CFG.TXPool.MaxTxSize {
 		CountSafe("TxTooBig")
 		TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_TOO_BIG)
 		return
@@ -238,15 +241,21 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 	}
 
 	// Check if total output value does not exceed total input
+	minout := uint64(btc.MAX_MONEY)
 	for i := range tx.TxOut {
-		if tx.TxOut[i].Value < uint64(CFG.TXRouting.MinVoutValue) {
+		if tx.TxOut[i].Value < uint64(CFG.TXPool.MinVoutValue) {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DUST)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedDust")
 			return
 		}
+		if tx.TxOut[i].Value < minout {
+			minout = tx.TxOut[i].Value
+		}
 		totout += tx.TxOut[i].Value
 	}
+
+
 	if totout > totinp {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_OVERSPEND)
 		tx_mutex.Unlock()
@@ -257,7 +266,7 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(len(ntx.raw))*uint64(CFG.TXRouting.FeePerByte)) {
+	if fee < (uint64(len(ntx.raw))*uint64(CFG.TXPool.FeePerByte)) {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
@@ -277,7 +286,7 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 		}
 	}
 
-	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx}
+	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx, minout:minout}
 	TransactionsToSend[tx.Hash.Hash] = rec
 	for i := range spent {
 		SpentOutputs[spent[i]] = true
@@ -289,8 +298,11 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 	//log.Println("Accepted valid tx", tx.Hash.String())
 	CountSafe("TxAccepted")
 
-	rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
-	rec.lastsent = time.Now()
+	if isRoutable(rec) {
+		rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
+		rec.lastsent = time.Now()
+		CountSafe("TxRouteOK")
+	}
 
 	// Try to redo waiting txs
 	if wtg != nil {
@@ -299,6 +311,31 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 
 	accepted = true
 	return
+}
+
+
+func isRoutable(rec *OneTxToSend) bool {
+	if !CFG.TXRoute.Enabled {
+		CountSafe("TxRouteDisabled")
+		rec.blocked = TX_REJECTED_DISABLED
+		return false
+	}
+	if len(rec.data) > int(CFG.TXRoute.MaxTxSize) {
+		CountSafe("TxRouteTooBig")
+		rec.blocked = TX_REJECTED_TOO_BIG
+		return false
+	}
+	if rec.fee < (uint64(len(rec.data))*uint64(CFG.TXRoute.FeePerByte)) {
+		CountSafe("TxRouteLowFee")
+		rec.blocked = TX_REJECTED_LOW_FEE
+		return false
+	}
+	if rec.minout < uint64(CFG.TXRoute.MinVoutValue) {
+		CountSafe("TxRouteDust")
+		rec.blocked = TX_REJECTED_DUST
+		return false
+	}
+	return true
 }
 
 
@@ -370,7 +407,7 @@ func init() {
 
 
 func expireTime(size int) time.Time {
-	return time.Now().Add(-time.Duration((uint64(size)*uint64(time.Minute)*uint64(CFG.TXRouting.TxExpirePerKB))>>10))
+	return time.Now().Add(-time.Duration((uint64(size)*uint64(time.Minute)*uint64(CFG.TXPool.TxExpirePerKB))>>10))
 }
 
 

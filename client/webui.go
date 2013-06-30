@@ -486,6 +486,7 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<sentlast>", v.lastsent.Unix(), "</sentlast>")
 		fmt.Fprint(w, "<volume>", v.volume, "</volume>")
 		fmt.Fprint(w, "<fee>", v.fee, "</fee>")
+		fmt.Fprint(w, "<blocked>", v.blocked, "</blocked>")
 		w.Write([]byte("</tx>"))
 	}
 	tx_mutex.Unlock()

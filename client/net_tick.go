@@ -283,7 +283,7 @@ func (c *oneConnection) Run() {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				if CFG.TXRouting.Enabled {
+				if CFG.TXPool.Enabled {
 					c.ParseTxNet(cmd.pl)
 				}
 

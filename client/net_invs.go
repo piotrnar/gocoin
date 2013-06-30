@@ -30,7 +30,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 				blinv2ask = append(blinv2ask, pl[of+4:of+36]...)
 			}
 		} else if typ==1 {
-			if CFG.TXRouting.Enabled {
+			if CFG.TXPool.Enabled {
 				c.TxInvNotify(pl[of+4:of+36])
 			}
 		}

@@ -36,7 +36,7 @@ func (c *oneConnection) SendVersion() {
 	b.Write([]byte(UserAgent))
 
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
-	if !CFG.TXRouting.Enabled {
+	if !CFG.TXPool.Enabled {
 		b.WriteByte(0)  // don't notify me about txs
 	}
 
