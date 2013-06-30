@@ -519,11 +519,15 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<wait4>"))
 		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
 		for x, t := range v.Ids {
-			v := TransactionsRejected[x]
-			w.Write([]byte("<tx>"))
-			fmt.Fprint(w, "<id>", v.id.String(), "</id>")
-			fmt.Fprint(w, "<time>", t.Unix(), "</time>")
-			w.Write([]byte("</tx>"))
+			if v, ok := TransactionsRejected[x]; ok {
+				w.Write([]byte("<tx>"))
+				fmt.Fprint(w, "<id>", v.id.String(), "</id>")
+				fmt.Fprint(w, "<time>", t.Unix(), "</time>")
+				w.Write([]byte("</tx>"))
+			} else {
+				fmt.Fprint(w, "<id>not on list</id>")
+				fmt.Fprint(w, "<time>", time.Now().Unix(), "</time>")
+			}
 		}
 		w.Write([]byte("</wait4>"))
 	}
