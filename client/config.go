@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"flag"
+	"time"
 	"io/ioutil"
 	"encoding/json"
 )
@@ -34,7 +35,8 @@ var CFG struct {
 		MinVoutValue uint
 		// If somethign is 1KB big, it expires after this many minutes.
 		// Otherwise expiration time will be proportionally different.
-		TxExpirePerKB uint
+		TxExpireMinPerKB uint
+		TxExpireMaxHours uint
 	}
 	TXRoute struct {
 		Enabled bool // Global on/off swicth
@@ -55,7 +57,8 @@ func init() {
 	CFG.TXPool.FeePerByte = 0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.MinVoutValue = 0
-	CFG.TXPool.TxExpirePerKB = 120 // Two hours
+	CFG.TXPool.TxExpireMinPerKB = 100
+	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 10
@@ -90,6 +93,9 @@ func init() {
 	}
 	flag.Parse()
 
+	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
+	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
+
 	newUi("configsave cs", false, save_config, "Save current settings to a config file")
 	newUi("configload cl", false, load_config, "Re-load settings from the config file")
 	newUi("timing t", false, block_timing, "Switch block timing on/off")
@@ -119,6 +125,8 @@ func load_config(s string) {
 		println(e.Error())
 		return
 	}
+	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
+	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	fmt.Println("Config reloaded")
 }
 
