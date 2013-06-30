@@ -324,6 +324,45 @@ func dump_block(s string) {
 }
 
 
+func ui_quit(par string) {
+	exit_now = true
+}
+
+func blchain_stats(par string) {
+	fmt.Println(BlockChain.Stats())
+}
+
+
+func save_bchain(par string) {
+	BlockChain.Save()
+}
+
+
+func switch_sync(par string) {
+	offit := (par=="0" || par=="false" || par=="off")
+
+	// Actions when syncing is enabled:
+	if !BlockChain.DoNotSync {
+		if offit {
+			BlockChain.DoNotSync = true
+			fmt.Println("Sync has been disabled. Do not forget to switch it back on, to have DB changes on disk.")
+		} else {
+			fmt.Println("Sync is enabled. Use 'sync 0' to switch it off.")
+		}
+		return
+	}
+
+	// Actions when syncing is disabled:
+	if offit {
+		fmt.Println("Sync is already disabled. Request ignored.")
+	} else {
+		fmt.Println("Switching sync back on & saving all the changes...")
+		BlockChain.Sync()
+		fmt.Println("Sync is back on now.")
+	}
+}
+
+
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
@@ -333,4 +372,8 @@ func init() {
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
+	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
+	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
+	newUi("sync", true, switch_sync, "Control sync of the database to disk")
 }
