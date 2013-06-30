@@ -348,7 +348,7 @@ func main() {
 				HandleNetBlock(newbl)
 
 			case newtx := <-netTxs:
-				HandleNetTx(newtx)
+				HandleNetTx(newtx, false)
 
 			case cmd := <-uiChannel:
 				Busy("UI command")
