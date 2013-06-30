@@ -28,7 +28,6 @@ func (c *oneConnection) Tick() {
 			c.send.lastSent = time.Now()
 			c.BytesSent += uint64(n)
 			c.send.sofar += n
-			//println(c.PeerAddr.Ip(), max2send, "...", c.send.sofar, n, e)
 			if c.send.sofar >= len(c.send.buf) {
 				c.send.buf = nil
 				c.send.sofar = 0
@@ -36,14 +35,12 @@ func (c *oneConnection) Tick() {
 		} else if time.Now().After(c.send.lastSent.Add(AnySendTimeout)) {
 			CountSafe("PeerSendTimeout")
 			c.Broken = true
-		}
-		if e != nil {
+		} else if e != nil {
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
 			c.Broken = true
-		}
-		if c.send.buf!=nil && len(c.send.buf)-c.send.sofar>MaxDataInSendBuffer {
+		} else if c.send.buf!=nil && len(c.send.buf)-c.send.sofar>MaxDataInSendBuffer {
 			CountSafe("PeerSendOverflow")
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
