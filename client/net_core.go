@@ -6,6 +6,7 @@ import (
 	"time"
 	"sync"
 	"bytes"
+	"errors"
 	"strings"
 	"sync/atomic"
 	"crypto/rand"
@@ -149,6 +150,18 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	if c.send.buf!=nil {
+		// Before adding more data to the buffer, check the limit
+		if len(c.send.buf)-c.send.sofar+24+len(pl)>MaxDataInSendBuffer {
+			if dbg > 0 {
+				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
+			}
+			c.Broken = true
+			CountSafe("PeerSendOverflow")
+			return errors.New("Send buffer overflow")
+		}
+	}
+
 	CountSafe("sent_"+cmd)
 	CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
 	sbuf := make([]byte, 24+len(pl))
