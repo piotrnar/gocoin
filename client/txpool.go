@@ -168,21 +168,26 @@ func bidx2str(idx [btc.Uint256IdxLen]byte) string {
 func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	CountSafe("HandleNetTx")
 
+	tx := ntx.tx
+	var totinp, totout uint64
+	var frommem bool
+
 	tx_mutex.Lock()
 
 	if !retry {
-		if _, present := TransactionsPending[ntx.tx.Hash.Hash]; !present {
+		if _, present := TransactionsPending[tx.Hash.Hash]; !present {
 			// It had to be mined in the meantime, so just drop it now
 			tx_mutex.Unlock()
 			CountSafe("TxNotPending")
 			return
 		}
 		delete(TransactionsPending, ntx.tx.Hash.Hash)
+	} else {
+		// In case case of retry, it is on the rejected list,
+		// ... so remove it now to free any tied WaitingForInputs
+		deleteRejected(tx.Hash.BIdx())
 	}
 
-	tx := ntx.tx
-	var totinp, totout uint64
-	var frommem bool
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
@@ -210,9 +215,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		} else {
 			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
-				// In case it it was already rejected, remove it to free old WaitingForInputs
-				deleteRejected(tx.Hash.BIdx())
-
 				// In this casem let's "save" it for later...
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
@@ -356,9 +358,6 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 	for k, t := range wtg.Ids {
 		pendtxrcv := TransactionsRejected[k].Wait4Input.txRcvd
 		if HandleNetTx(pendtxrcv, true) {
-			tx_mutex.Lock()
-			deleteRejected(pendtxrcv.tx.Hash.BIdx())
-			tx_mutex.Unlock()
 			CountSafe("TxRetryAccepted")
 			if dbg>0 {
 				fmt.Println(pendtxrcv.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
