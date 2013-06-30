@@ -78,7 +78,8 @@ func init() {
 	}
 	flag.Parse()
 
-	newUi("saveconfig sc", false, save_config, "Save current settings to a config file")
+	newUi("configsave cs", false, save_config, "Save current settings to a config file")
+	newUi("configload cl", false, load_config, "Re-load settings from the config file")
 	newUi("timing t", false, block_timing, "Switch block timing on/off")
 }
 
@@ -92,6 +93,21 @@ func block_timing(s string) {
 		CFG.MeasureBlockTiming = !CFG.MeasureBlockTiming
 	}
 	fmt.Println("MeasureBlockTiming:", CFG.MeasureBlockTiming)
+}
+
+
+func load_config(s string) {
+	d, e := ioutil.ReadFile(ConfigFile)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	e = json.Unmarshal(d, &CFG)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	fmt.Println("Config reloaded")
 }
 
 
