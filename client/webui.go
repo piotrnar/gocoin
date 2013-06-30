@@ -510,6 +510,27 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func xml_txw4i(w http.ResponseWriter, r *http.Request) {
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<pending>"))
+	tx_mutex.Lock()
+	for _, v := range WaitingForInputs {
+		w.Write([]byte("<wait4>"))
+		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
+		for x, t := range v.Ids {
+			v := TransactionsRejected[x]
+			w.Write([]byte("<tx>"))
+			fmt.Fprint(w, "<id>", v.id.String(), "</id>")
+			fmt.Fprint(w, "<time>", t.Unix(), "</time>")
+			w.Write([]byte("</tx>"))
+		}
+		w.Write([]byte("</wait4>"))
+	}
+	tx_mutex.Unlock()
+	w.Write([]byte("</pending>"))
+}
+
+
 func dl_balance(w http.ResponseWriter, r *http.Request) {
 	UpdateBalanceFolder()
 	buf := new(bytes.Buffer)
@@ -543,6 +564,7 @@ func webserver() {
 
 	http.HandleFunc("/txs2s.xml", xmp_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
+	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/balance.xml", xml_balance)
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
