@@ -161,19 +161,20 @@ func bidx2str(idx [btc.Uint256IdxLen]byte) string {
 
 
 // Must be called from the chain's thread
-func HandleNetTx(ntx *txRcvd) (accepted bool) {
+func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	CountSafe("HandleNetTx")
 
 	tx_mutex.Lock()
 
-	if _, present := TransactionsPending[ntx.tx.Hash.Hash]; !present {
-		// It had to be mined in the meantime, so just drop it now
-		tx_mutex.Unlock()
-		CountSafe("TxNotPending")
-		return
+	if !retry {
+		if _, present := TransactionsPending[ntx.tx.Hash.Hash]; !present {
+			// It had to be mined in the meantime, so just drop it now
+			tx_mutex.Unlock()
+			CountSafe("TxNotPending")
+			return
+		}
+		delete(TransactionsPending, ntx.tx.Hash.Hash)
 	}
-
-	delete(TransactionsPending, ntx.tx.Hash.Hash)
 
 	tx := ntx.tx
 	var totinp, totout uint64
@@ -229,7 +230,7 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
 						ui_show_prompt()
 					}
-					//AskPeersForData(1, missingid)  // This does not seem to help at all
+					//AskPeersForData(1, missingid)  // This does not seem to be helping at all
 				} else {
 					CountSafe("TxRejectedNoInputSame")
 					if dbg > 0 {
@@ -290,6 +291,10 @@ func HandleNetTx(ntx *txRcvd) (accepted bool) {
 		}
 	}
 
+	if retry {
+		deleteRejected(k)
+	}
+
 	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx, minout:minout}
 	TransactionsToSend[tx.Hash.Hash] = rec
 	for i := range spent {
@@ -346,13 +351,9 @@ func isRoutable(rec *OneTxToSend) bool {
 func RetryWaitingForInput(wtg *OneWaitingList) {
 	for k, t := range wtg.Ids {
 		pdg := TransactionsRejected[k]
-		if HandleNetTx(pdg.Wait4Input.txRcvd) {
-			tx_mutex.Lock()
-			deleteRejected(k)
-			tx_mutex.Unlock()
+		if HandleNetTx(pdg.Wait4Input.txRcvd, true) {
 			CountSafe("TxRetryAccepted")
-			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
-			ui_show_prompt()
+			//println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
 		} else {
 			CountSafe("TxRetryRejected")
 			//println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
