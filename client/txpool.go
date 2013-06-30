@@ -292,7 +292,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	}
 
 	if retry {
-		deleteRejected(k)
+		deleteRejected(tx.Hash.BIdx())
 	}
 
 	rec := &OneTxToSend{data:ntx.raw, spent:spent, volume:totinp, fee:fee, firstseen:time.Now(), Tx:tx, minout:minout}
@@ -353,11 +353,12 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 		pdg := TransactionsRejected[k]
 		if HandleNetTx(pdg.Wait4Input.txRcvd, true) {
 			CountSafe("TxRetryAccepted")
-			//println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
+			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
 		} else {
 			CountSafe("TxRetryRejected")
-			//println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
+			println(pdg.Wait4Input.txRcvd.tx.Hash.String(), "still rejected", TransactionsRejected[k].reason)
 		}
+		ui_show_prompt()
 	}
 }
 
