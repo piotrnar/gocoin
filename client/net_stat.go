@@ -136,7 +136,8 @@ func node_stat(v *oneConnection) (s string) {
 			s += fmt.Sprintln("User Agent:", v.node.agent)
 			s += fmt.Sprintln("Chain Height:", v.node.height)
 		}
-		s += fmt.Sprintln("Last data got/sent:", time.Now().Sub(v.LastDataGot).String())
+		s += fmt.Sprintln("Last data got:", time.Now().Sub(v.LastDataGot).String())
+		s += fmt.Sprintln("Last data sent:", time.Now().Sub(v.lastSent).String())
 		s += fmt.Sprintln("Last command received:", v.LastCmdRcvd, " ", v.LastBtsRcvd, "bytes")
 		s += fmt.Sprintln("Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
 		s += fmt.Sprintln("Bytes received:", v.BytesReceived)
