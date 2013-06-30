@@ -1,3 +1,2 @@
-* Hangle txs with inputh only in memory pool and move txs with unknown inputs to waiting pool
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Clean up the rest of the house
