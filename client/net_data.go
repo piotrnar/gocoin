@@ -33,6 +33,7 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			return
 		}
 
+		CountSafe(fmt.Sprint("GetdataType",typ))
 		if typ == 2 {
 			uh := btc.NewUint256(h[:])
 			bl, _, er := BlockChain.Blocks.BlockGet(uh)
@@ -55,7 +56,6 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 				tx_mutex.Unlock()
 			}
 		} else {
-			CountSafe(fmt.Sprint("GetdataFor",typ))
 			if dbg>0 {
 				println("getdata for type", typ, "not supported yet")
 			}
