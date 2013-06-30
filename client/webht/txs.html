@@ -127,7 +127,7 @@ function show_txs2s(extrapar) {
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				c.innerHTML = txid
+				c.innerHTML = '<a href="https://blockchain.info/tx/'+txid+'">'+txid+'</a>'
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
@@ -192,7 +192,7 @@ function show_txsre() {
 			while (txsre.rows.length>1)  txsre.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
 			for (var i=0; i<txs.length; i++) {
-				var c,row = txsre.insertRow(-1)
+				var t,c,row = txsre.insertRow(-1)
 
 				row.className='hov'
 
@@ -201,7 +201,8 @@ function show_txsre() {
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				c.innerHTML = xval(txs[i], 'id')
+				t = xval(txs[i], 'id')
+				c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
