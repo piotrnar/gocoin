@@ -3,6 +3,7 @@
 <tr><td>Rejected Transactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre('')">
 <tr><td>Pending Transactions:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
 <tr><td>Spent Outputs:<td><b>{SPENT_OUTS_CNT}</b>
+<tr><td>Awaiting inputs:<td><b>{AWAITING_INPUTS}</b>
 </table>
 <h2>Upload Transaction File:</h2>
 <form id="the-form" method="post" enctype="multipart/form-data">
@@ -66,9 +67,9 @@ function val2reason(r) {
 		case 101: return "TOO_BIG"
 		case 102: return "FORMAT"
 		case 103: return "LEN_MISMATCH"
-		case 104: return "NO_INPUTS"
+		case 104: return "EMPTY_INPUT"
 		case 201: return "DOUBLE_SPEND"
-		case 202: return "NO_INPUT"
+		case 202: return "NO_TXOU"
 		case 203: return "DUST"
 		case 204: return "OVERSPEND"
 		case 205: return "LOW_FEE"

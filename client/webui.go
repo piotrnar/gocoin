@@ -216,6 +216,7 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{PTR1_CNT}", fmt.Sprint(len(TransactionsPending)), 1)
 	s = strings.Replace(s, "{PTR2_CNT}", fmt.Sprint(len(netTxs)), 1)
 	s = strings.Replace(s, "{SPENT_OUTS_CNT}", fmt.Sprint(len(SpentOutputs)), 1)
+	s = strings.Replace(s, "{AWAITING_INPUTS}", fmt.Sprint(len(WaitingForInputs)), 1)
 	tx_mutex.Unlock()
 
 	var ld string
@@ -496,9 +497,9 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	tx_mutex.Lock()
-	for k, v := range TransactionsRejected {
+	for _, v := range TransactionsRejected {
 		w.Write([]byte("<tx>"))
-		fmt.Fprint(w, "<id>", btc.NewUint256(k[:]).String(), "</id>")
+		fmt.Fprint(w, "<id>", v.id.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 		fmt.Fprint(w, "<len>", v.size, "</len>")
 		fmt.Fprint(w, "<reason>", v.reason, "</reason>")

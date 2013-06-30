@@ -136,7 +136,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		}
 
 		for i:=1; i<len(bl.Txs); i++ {
-			TxMined(bl.Txs[i].Hash.Hash)
+			TxMined(bl.Txs[i].Hash)
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
