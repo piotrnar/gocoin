@@ -148,6 +148,8 @@ func blockWanted(h []byte) (yes bool) {
 
 
 // This function is called from the main thread (or from an UI)
+// It is only used to ask for tx that we need for an input,
+// but it does not seem to help, so it will likely be removed.
 func AskPeersForData(typ uint32, h *btc.Uint256) {
 	CountSafe(fmt.Sprint("AskPeersForData", typ))
 
