@@ -262,6 +262,7 @@ func main() {
 	go network_process()
 	go do_userif()
 	if CFG.WebUI!="" {
+		fmt.Println("Starting WebUI at", CFG.WebUI, "...")
 		go webserver()
 	}
 
