@@ -1,3 +1,17 @@
+<script>
+function raw_load(id, tit) {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			rawtit.innerHTML = tit
+			rawdiv.innerHTML = xmlHttp.responseText
+			location.href = "#rawdiv";
+		}
+	}
+	xmlHttp.open("GET","raw_"+id, true);
+	xmlHttp.send(null);
+}
+</script>
 <b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br><br>
 <table class="netcons bord">
 <tr>
@@ -22,4 +36,4 @@
 {PEER_ROW}
 </table>
 <br>
-<h2 id="rawtit"></h2><pre id="rawdiv" class="mono"></pre>
+<a name="rawdiv"><h2 id="rawtit"></h2></a><pre id="rawdiv" class="mono"></pre>
