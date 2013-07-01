@@ -15,6 +15,7 @@ const ConfigFile = "gocoin.conf"
 // Here are command line only options
 var FLAG struct {
 	rescan bool
+	nosync bool
 }
 
 // Here are options that can come from either command line or config file
@@ -23,7 +24,6 @@ var CFG struct {
 	ConnectOnly string
 	ListenTCP bool
 	Datadir string
-	Nosync bool
 	MaxUpKBps uint
 	MaxDownKBps uint
 	WebUI string
@@ -74,11 +74,11 @@ func init() {
 	}
 
 	flag.BoolVar(&FLAG.rescan, "r", false, "Rebuild the unspent DB (fixes 'Unknown input TxID' errors)")
+	flag.BoolVar(&FLAG.nosync, "nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&CFG.ConnectOnly, "c", CFG.ConnectOnly, "Connect only to this host and nowhere else")
 	flag.BoolVar(&CFG.ListenTCP, "l", CFG.ListenTCP, "Listen for incomming TCP connections (on default port)")
 	flag.StringVar(&CFG.Datadir, "d", CFG.Datadir, "Specify Gocoin's database root folder")
-	flag.BoolVar(&CFG.Nosync, "nosync", CFG.Nosync, "Init blockchain with syncing disabled (dangerous!)")
 	flag.UintVar(&CFG.MaxUpKBps, "ul", CFG.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
 	flag.UintVar(&CFG.MaxDownKBps, "dl", CFG.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
 	flag.StringVar(&CFG.WebUI, "webui", CFG.WebUI, "Serve WebUI from the given interface")

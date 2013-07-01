@@ -81,7 +81,7 @@ func host_init() {
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, FLAG.rescan)
 	sto := time.Now().UnixNano()
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-	if CFG.Nosync {
+	if FLAG.nosync {
 		BlockChain.DoNotSync = true
 		fmt.Println("Syncing is disabled. Switch it on with 'sync' command")
 	}
