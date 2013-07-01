@@ -1,3 +1,6 @@
+0.4.8
+* Added new blocks' timing stats to the WebUI
+
 0.4.7
 * Improvements in tx memory pool
 
