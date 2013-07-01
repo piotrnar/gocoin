@@ -49,6 +49,11 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		} else {
 			s = strings.Replace(s, "{TIME_TO_ACCEPT}", "", 1)
 		}
+		if rb.cnt!=0 {
+			s = strings.Replace(s, "{WASTED_BLOCKS}", fmt.Sprint(rb.cnt), 1)
+		} else {
+			s = strings.Replace(s, "{WASTED_BLOCKS}", "", 1)
+		}
 
 		blks = strings.Replace(blks, "{BLOCK_ROW}", s+"{BLOCK_ROW}", 1)
 
