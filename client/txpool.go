@@ -235,7 +235,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 
 				tx_mutex.Unlock()
 				if newone {
-					CountSafe("TxRejectedNoInputUniq")
+					CountSafe("TxRejectedNoInputNew")
 					if dbg > 0 {
 						println("Tx No Input NEW", nrtx.Wait4Input.missingTx.String(),
 							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
@@ -243,7 +243,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 					}
 					//AskPeersForData(1, missingid)  // This does not seem to be helping at all
 				} else {
-					CountSafe("TxRejectedNoInputSame")
+					CountSafe("TxRejectedNoInputOld")
 					if dbg > 0 {
 						println("Tx No Input  + ", nrtx.Wait4Input.missingTx.String(),
 							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
