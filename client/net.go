@@ -120,11 +120,6 @@ type oneConnection struct {
 	NextPing time.Time
 	PingInProgress []byte
 	LastPingSent time.Time
-
-	BlockTiming struct {
-		hash *btc.Uint256
-		time time.Time
-	}
 }
 
 type oneBlockDl struct {

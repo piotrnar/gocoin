@@ -47,6 +47,8 @@ var (
 
 type oneReceivedBlock struct {
 	time.Time
+	tmDownload time.Duration
+	tmAccept time.Duration
 	cnt uint
 }
 
@@ -127,30 +129,14 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
-	sto := time.Now()
 	if e == nil {
-		tim := sto.Sub(sta)
-		if tim > 3*time.Second {
-			fmt.Println("AcceptBlock", LastBlock.Height, "took", tim)
-			ui_show_prompt()
-		}
+		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
 
 		for i:=1; i<len(bl.Txs); i++ {
 			TxMined(bl.Txs[i].Hash)
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
-			if CFG.MeasureBlockTiming && from.BlockTiming.hash!=nil &&
-				from.BlockTiming.hash.Equal(bl.Hash) {
-				fmt.Println("Bl", bl.Hash.String(), receivedBlocks[bl.Hash.BIdx()].cnt,
-					" len", len(bl.Raw), " timing:",
-					receivedBlocks[bl.Hash.BIdx()].Time.Sub(from.BlockTiming.time).String(),
-					sta.Sub(from.BlockTiming.time).String(),
-					sto.Sub(from.BlockTiming.time).String())
-				ui_show_prompt()
-				from.BlockTiming.hash = nil
-			}
-
 			// Freshly mined block - do the inv and beeps...
 			Busy("NetRouteInv")
 			NetRouteInv(2, bl.Hash, from)

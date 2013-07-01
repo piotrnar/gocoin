@@ -144,7 +144,7 @@ func node_stat(v *oneConnection) (s string) {
 		s += fmt.Sprintln("Bytes sent:", v.BytesSent)
 		s += fmt.Sprintln("Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
 		if v.LastBlocksFrom != nil {
-			s += fmt.Sprintln(" Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
+			s += fmt.Sprintln("Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
 		}
 		s += fmt.Sprintln("Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
 		if v.send.buf != nil {

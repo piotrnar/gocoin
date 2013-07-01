@@ -27,16 +27,28 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 
 		s = strings.Replace(s, "{BLOCK_NUMBER}", fmt.Sprint(end.Height), 1)
 		s = strings.Replace(s, "{BLOCK_TIMESTAMP}",
-			time.Unix(int64(block.BlockTime), 0).Format("2006-01-02 15:04:05"), 1)
+			time.Unix(int64(block.BlockTime), 0).Format("Mon 15:04:05"), 1)
 		s = strings.Replace(s, "{BLOCK_HASH}", end.BlockHash.String(), 1)
 		s = strings.Replace(s, "{BLOCK_TXS}", fmt.Sprint(len(block.Txs)), 1)
-		s = strings.Replace(s, "{BLOCK_SIZE}", fmt.Sprint(len(bl)), 1)
+		s = strings.Replace(s, "{BLOCK_SIZE}", fmt.Sprintf("%.1f", float64(len(bl))/1000), 1)
 		var rew uint64
 		for o := range block.Txs[0].TxOut {
 			rew += block.Txs[0].TxOut[o].Value
 		}
 		s = strings.Replace(s, "{BLOCK_REWARD}", fmt.Sprintf("%.2f", float64(rew)/1e8), 1)
 		s = strings.Replace(s, "{BLOCK_MINER}", blocks_miner(bl), 1)
+
+		rb := receivedBlocks[end.BlockHash.BIdx()]
+		if rb.tmDownload!=0 {
+			s = strings.Replace(s, "{TIME_TO_DOWNLOAD}", fmt.Sprint(int(rb.tmDownload/time.Millisecond)), 1)
+		} else {
+			s = strings.Replace(s, "{TIME_TO_DOWNLOAD}", "", 1)
+		}
+		if rb.tmAccept!=0 {
+			s = strings.Replace(s, "{TIME_TO_ACCEPT}", fmt.Sprint(int(rb.tmAccept/time.Millisecond)), 1)
+		} else {
+			s = strings.Replace(s, "{TIME_TO_ACCEPT}", "", 1)
+		}
 
 		blks = strings.Replace(blks, "{BLOCK_ROW}", s+"{BLOCK_ROW}", 1)
 

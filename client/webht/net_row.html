@@ -1,14 +1,14 @@
 <tr class="hov" style="cursor:pointer;" onclick="raw_load('net?id={CONNID}', 'Connection Details')">
-	<td align="right">{CONNID}
-	<td>{CONN_DIR_ICON}
+	<td align="right">&nbsp;<b>{CONNID}</b>&nbsp;
 	<td align="right">{PEER_ADDR}
-	<td align="right">{PERR_PING} ms
+	<td>{CONN_DIR_ICON}
+	<td align="right"><i>{PERR_PING}&nbsp;ms</i>
 	<td align="right">{LAST_RCVD_LEN}
 	<td class="mono">{LAST_RCVD_CMD}
 	<td align="right">{LAST_SENT_LEN}
 	<td class="mono">{LAST_SENT_CNT}
-	<td align="right">{TOTAL_RCVD}
-	<td align="right">{TOTAL_SENT}
+	<td nowrap="nowrap" align="right">{TOTAL_RCVD}
+	<td nowrap="nowrap" align="right">{TOTAL_SENT}
 	<td align="right">{NODE_VERSION}
 	<td>{USER_AGENT}
 	<td align="right">{BLOCKS_IN_PROGRESS}

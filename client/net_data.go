@@ -87,22 +87,22 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		return
 	}
 
-	if _, ok := conn.GetBlockInProgress[bl.Hash.BIdx()]; ok {
-		delete(conn.GetBlockInProgress, bl.Hash.BIdx())
-	} else {
-		CountSafe("UnxpectedBlockRcvd")
-	}
-
 	idx := bl.Hash.BIdx()
 	mutex.Lock()
 	if rb, got := receivedBlocks[idx]; got {
 		rb.cnt++
-		conn.BlockTiming.hash = nil
 		CountSafe("SameBlockReceived")
 		mutex.Unlock()
 		return
 	}
-	receivedBlocks[idx] = &oneReceivedBlock{Time:time.Now()}
+	orb := &oneReceivedBlock{Time:time.Now()}
+	if bip, ok := conn.GetBlockInProgress[idx]; ok {
+		orb.tmDownload = orb.Time.Sub(bip.start)
+		delete(conn.GetBlockInProgress, idx)
+	} else {
+		CountSafe("UnxpectedBlockRcvd")
+	}
+	receivedBlocks[idx] = orb
 	mutex.Unlock()
 
 	netBlocks <- &blockRcvd{conn:conn, bl:bl}

@@ -1,17 +1,24 @@
 <b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br><br>
-<table class="netcons bord">
+<table class="netcons bord" align="center">
 <tr>
-	<th width="25">ID
-	<th width="160" colspan="2">Peer Address
-	<th width="50" align="right">Ping
-	<th colspan="2">Last Rcvd
-	<th colspan="2">Last Sent
-	<th align="right">Total&nbsp;Rcvd
-	<th align="right">Total&nbsp;Sent
-	<th colspan="2">Version
-	<th width="40">Blks...
-	<th>Sending
+	<th rowspan="2">ID
+	<th rowspan="2" colspan="2">Peer Address
+	<th rowspan="2">Ping
+	<th colspan="2">Last received
+	<th colspan="2">Last sent
+	<th rowspan="2">Total<br>rcvd
+	<th rowspan="2">Total<br>sent
+	<th colspan="2">Peer Info
+	<th rowspan="2">Blks
+	<th rowspan="2">Sendbuf
 </tr>
+<tr>
+	<th>bytes
+	<th>command
+	<th>bytes
+	<th>command
+	<th>version
+	<th>user-agent
 {PEER_ROW}
 </table>
 <br>
