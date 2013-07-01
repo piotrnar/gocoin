@@ -471,9 +471,15 @@ func txPoolManager() {
 
 		counter_mutex.Lock()
 		Counter["TxPurgedTicks"]++
-		Counter["TxPurged2SOK"] += cnt1a
-		Counter["TxPurged2SBlocked"] += cnt1b
-		Counter["TxPurgedRejected"] += cnt2
+		if cnt1a>0 {
+			Counter["TxPurgedOK"] += cnt1a
+		}
+		if cnt1b>0 {
+			Counter["TxPurgedBlocked"] += cnt1b
+		}
+		if cnt2 > 0 {
+			Counter["TxPurgedRejected"] += cnt2
+		}
 		counter_mutex.Unlock()
 	}
 }
