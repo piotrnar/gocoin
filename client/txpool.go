@@ -448,13 +448,17 @@ func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
 func txPoolManager() {
 	for {
 		time.Sleep(60e9) // Wake up every minute
-		var cnt1, cnt2 uint64
+		var cnt1a, cnt1b, cnt2 uint64
 
 		tx_mutex.Lock()
 		for k, v := range TransactionsToSend {
 			if v.own==0 && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
 				delete(TransactionsToSend, k)
-				cnt1++
+				if v.blocked==0 {
+					cnt1a++
+				} else {
+					cnt1b++
+				}
 			}
 		}
 		for k, v := range TransactionsRejected {
@@ -467,12 +471,9 @@ func txPoolManager() {
 
 		counter_mutex.Lock()
 		Counter["TxPurgedTicks"]++
-		if cnt1 > 0 {
-			Counter["TxPurgedToSend"] += cnt1
-		}
-		if cnt2 > 0 {
-			Counter["TxPurgedRejected"] += cnt2
-		}
+		Counter["TxPurged2SOK"] += cnt1a
+		Counter["TxPurged2SBlocked"] += cnt1b
+		Counter["TxPurgedRejected"] += cnt2
 		counter_mutex.Unlock()
 	}
 }
