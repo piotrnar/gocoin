@@ -1,2 +1,3 @@
+* Add a counter of how many times block was received after it was received initially
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Clean up the rest of the house
