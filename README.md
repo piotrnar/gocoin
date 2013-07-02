@@ -36,7 +36,7 @@ The online client node has much higher system requirements than the wallet app.
 
 Client / Node
 --------------
-As for the current bitcoin block chain (aroung block #250000), you should have at least 4GB of RAM, if you don't want to see your swap file burning. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. 
+As for the current bitcoin block chain (aroung block #250000), you should have at least 4GB of RAM, if you don't want to see your swap file burning. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
 
 For testnet-only purposes 32-bit arch is enough.
 
@@ -88,6 +88,32 @@ If you fail to build "sipasec", you can try the "openssl" wrapper.
 On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed.
 
 On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
+
+
+Bootstratping
+==============
+Gocoin's client node has not been optimozed for the initial chain download. Even if it was, this is still a very time consuming operation. Waiting for the entire chain to be fetched from the network can be enough of a pain to discourage you from actually trying gocoin where it is really good (at a synchronized chain).
+
+
+Import block from Satoshi client
+--------------
+When you run the client node for the first time, it will look of the satoshi's client block database in its default location (e.g. ~/.bitcoin/ or %appdata%\Bitcoin) and if found, it will ask you whether you want to import these blocks – you should do it. Choosing to verify the scripts is not neccessary, since all the blocks in there should only contain verified scripts anyway.
+
+If you chose to not import the block, but then decided that it was a bad idea, all you need to do is:
+ * close gocoin client
+ * remove "blockchain.idx" from its data folder (e.g. ~/.bitcoin/gocoin/btcnet/)
+ * start the client and answer "yes" this time
+
+If you have a satoshi's database in a non-default localtion, either create a file system link, or modify the path in function BitcoinHome(), in file „./client/init.go”.
+
+
+Importing blockchain from local host
+--------------
+When starting the client, use command line switch „-c=<addr>” to instruct your node to connect to a host of your choice.
+
+For the time of the the chain download do not limit do download, nor upload speed.
+
+Additionaly you may want to start the client with „-nosync” switch. This will disable flushing database onto disk after each received block. I this case you must remember to not exit a node before switching the sync back on by executing „sync 1” at the UI text interface.
 
 
 User Manual
