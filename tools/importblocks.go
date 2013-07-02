@@ -153,7 +153,7 @@ func main() {
 	}
 
 	if len(os.Args)>2 {
-		GocoinHomeDir = RemoveLastSlash(os.Args[1])
+		GocoinHomeDir = RemoveLastSlash(os.Args[2])+string(os.PathSeparator)
 	} else {
 		GocoinHomeDir = BitcoinHome()+"gocoin"+string(os.PathSeparator)
 	}
