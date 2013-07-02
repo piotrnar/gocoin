@@ -1,5 +1,6 @@
 0.4.8
 * Added new blocks' timing stats to the WebUI
+* New tool "importblocks" for importing blocks from Satoshi's DB
 
 0.4.7
 * Improvements in tx memory pool
