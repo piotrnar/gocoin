@@ -138,7 +138,7 @@ func main() {
 	}
 
 	BtcRootDir = RemoveLastSlash(os.Args[1])
-	fn := BtcRootDir+string(os.PathSeparator)+"blocks"+string(os.PathSeparator)+"blk00000.dat"
+	fn := BtcRootDir+string(os.PathSeparator)+"blk00000.dat"
 	fmt.Println("Looking for file", fn, "...")
 	f, e := os.Open(fn)
 	if e != nil {
@@ -186,5 +186,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	import_blockchain(BtcRootDir+string(os.PathSeparator)+"blocks")
+	import_blockchain(BtcRootDir)
 }
