@@ -97,17 +97,12 @@ Gocoin's client node has not been optimozed for the initial chain download. Even
 
 Import block from Satoshi client
 --------------
-When you run the client node for the first time, it will look of the satoshi's client block database in its default location (e.g. ~/.bitcoin/ or %appdata%\Bitcoin) and if found, it will ask you whether you want to import these blocks – you should do it. Choosing to verify the scripts is not neccessary, since all the blocks in there should only contain verified scripts anyway.
+When you run the client node for the first time, it will look of the satoshi's blocks database in its default location (e.g. ~/.bitcoin/blocks or %appdata%\Bitcoin\blocks) and if found, it will ask you whether you want to import these blocks – you should say 'yes'. Choosing to verify the scripts is not neccessary, since it is very time consuming and all the blocks in the input database should only contain verified scripts anyway.
 
-If you chose to not import the block, but then decided that it was a bad idea, all you need to do is:
- * close gocoin client
- * remove "blockchain.idx" from its data folder (e.g. ~/.bitcoin/gocoin/btcnet/)
- * start the client and answer "yes" this time
-
-If you have a satoshi's database in a non-default localtion, either create a file system link, or modify the path in function BitcoinHome(), in file „./client/init.go”.
+There is also a separate tool called „importblocks” that you can use for importing blocks from the satoshi's database into gocoin. Start the tool without parameters and it will tell you how to use it. While importing the blockchain using this tool, make sure that your node is not running.
 
 
-Importing blockchain from local host
+Fetching blockchain from local host
 --------------
 When starting the client, use command line switch „-c=<addr>” to instruct your node to connect to a host of your choice.
 
