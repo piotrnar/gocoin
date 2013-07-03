@@ -178,16 +178,16 @@ func (db *unspentDb) stats() (s string) {
 			value := binary.LittleEndian.Uint64(v[36:44])
 			sum += value
 			cnt++
-			if value<1e6 {
+			if value<1e5 {
 				sumlow += value
 				cntlow++
 			}
 			return true
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d  lh:%d\n",
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Defrags:%d. BH:%d\n",
 		float64(sum)/1e8, cnt, db.defragCount, db.lastHeight)
-	s += fmt.Sprintf(" %d outputs below 0.01 BTC, with %.2f BTC total\n",
+	s += fmt.Sprintf(" %d outputs below 0.001 BTC, with %.2f BTC total\n",
 		cntlow, float64(sumlow)/1e8)
 	return
 }
