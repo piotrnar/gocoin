@@ -120,12 +120,13 @@ func resetcfg() {
 func set_config(s string) {
 	if s!="" {
 		new := CFG
-		e := json.Unmarshal([]byte(s), &new)
+		e := json.Unmarshal([]byte("{"+s+"}"), &new)
 		if e != nil {
 			println(e.Error())
 		} else {
 			CFG = new
 			resetcfg()
+			fmt.Println("Config changed. Execute configsave, if you want to save it.")
 		}
 	}
 	dat, _ := json.Marshal(&CFG)
