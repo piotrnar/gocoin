@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/btc/qdb"
 )
 
 const (
@@ -234,8 +233,6 @@ func main() {
 
 	UploadLimit = CFG.MaxUpKBps << 10
 	DownloadLimit = CFG.MaxDownKBps << 10
-
-	qdb.KeepBlocksBack = CFG.Memory.UTXOCacheBlks
 
 	// Disable Ctrl+C
 	killchan := make(chan os.Signal, 1)
