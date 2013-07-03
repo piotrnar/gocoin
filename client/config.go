@@ -7,6 +7,7 @@ import (
 	"time"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/piotrnar/gocoin/btc/qdb"
 )
 
 
@@ -99,11 +100,34 @@ func init() {
 	}
 	flag.Parse()
 
-	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
-	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
+	resetcfg()
 
 	newUi("configsave cs", false, save_config, "Save current settings to a config file")
 	newUi("configload cl", false, load_config, "Re-load settings from the config file")
+	newUi("configset cfg", false, set_config, "Set a specific config value (use JSON)")
+}
+
+
+func resetcfg() {
+	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
+	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
+	qdb.KeepBlocksBack = CFG.Memory.UTXOCacheBlks
+}
+
+
+func set_config(s string) {
+	if s!="" {
+		new := CFG
+		e := json.Unmarshal([]byte(s), &CFG)
+		if e != nil {
+			println(e.Error())
+		} else {
+			CFG = new
+			resetcfg()
+		}
+	}
+	dat, _ := json.Marshal(&CFG)
+	fmt.Println(string(dat))
 }
 
 
@@ -118,8 +142,7 @@ func load_config(s string) {
 		println(e.Error())
 		return
 	}
-	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
-	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
+	resetcfg()
 	fmt.Println("Config reloaded")
 }
 
