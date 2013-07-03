@@ -25,6 +25,7 @@ var CFG struct {
 	Testnet bool
 	ConnectOnly string
 	ListenTCP bool
+	TCPPort uint
 	Datadir string
 	MaxUpKBps uint
 	MaxDownKBps uint
@@ -114,6 +115,15 @@ func resetcfg() {
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	qdb.KeepBlocksBack = CFG.Memory.UTXOCacheBlks
+	if CFG.TCPPort != 0 {
+		DefaultTcpPort = uint16(CFG.TCPPort)
+	} else {
+		if CFG.Testnet {
+			DefaultTcpPort = 18333
+		} else {
+			DefaultTcpPort = 8333
+		}
+	}
 }
 
 
