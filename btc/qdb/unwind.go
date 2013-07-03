@@ -27,6 +27,7 @@ func (db *unwindDb) dbH(i int) (*qdb.DB) {
 	i &= 0xff
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
+		db.tdb[i].NeverKeepInMem = true
 		db.tdb[i].Load()
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()

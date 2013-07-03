@@ -3,7 +3,6 @@ package qdb
 import (
 	"fmt"
 	"errors"
-//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/qdb"
@@ -20,7 +19,10 @@ Eech value is variable length:
 */
 
 
-const prevOutIdxLen = qdb.KeySize
+const (
+	prevOutIdxLen = qdb.KeySize
+	keepBlocksBack = 0 // Set it to zero to load all into the mem
+)
 
 
 type unspentDb struct {
@@ -30,15 +32,19 @@ type unspentDb struct {
 	defragCount uint64
 	nosyncinprogress bool
 	notifyTx btc.TxNotifyFunc
+	lastHeight uint32
 }
 
-func newUnspentDB(dir string) (db *unspentDb) {
+func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
+	db.lastHeight = lasth
 
 	for i := range db.tdb {
+		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
 		db.dbN(i) // Load each of the sub-DBs into memory
 	}
+	fmt.Print("\r                                                              \r")
 	return
 }
 
@@ -46,6 +52,13 @@ func newUnspentDB(dir string) (db *unspentDb) {
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
+		if keepBlocksBack!=0 {
+			db.tdb[i].KeepInMem = func (v []byte) bool {
+				// Keep in memory outputs that dont go further than X blocks back
+				return int(binary.LittleEndian.Uint32(v[44:48])) >
+					int(db.lastHeight) - keepBlocksBack
+			}
+		}
 		db.tdb[i].Load()
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
@@ -172,8 +185,8 @@ func (db *unspentDb) stats() (s string) {
 			return true
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d\n",
-		float64(sum)/1e8, cnt, db.defragCount)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. defrags:%d  lh:%d\n",
+		float64(sum)/1e8, cnt, db.defragCount, db.lastHeight)
 	s += fmt.Sprintf(" %d outputs below 0.01 BTC, with %.2f BTC total\n",
 		cntlow, float64(sumlow)/1e8)
 	return
@@ -228,5 +241,3 @@ func (db *unspentDb) idle() bool {
 	}
 	return false
 }
-
-

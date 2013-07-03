@@ -19,8 +19,8 @@ func NewDb(dir string, init bool) btc.UnspentDB {
 		os.RemoveAll(dir+"unspent/unwind/")
 	}
 
-	db.unspent = newUnspentDB(dir+"unspent/")
 	db.unwind = newUnwindDB(dir+"unspent/unwind/")
+	db.unspent = newUnspentDB(dir+"unspent/", db.unwind.lastBlockHeight)
 
 	return &db
 }
@@ -33,6 +33,7 @@ func (db UnspentDB) GetLastBlockHash() ([]byte) {
 
 func (db UnspentDB) CommitBlockTxs(changes *btc.BlockChanges, blhash []byte) (e error) {
 	// First the unwind data
+	db.unspent.lastHeight = changes.Height
 	db.unwind.commit(changes, blhash)
 	db.unspent.commit(changes)
 	return
@@ -82,6 +83,7 @@ func (db UnspentDB) Save() {
 
 func (db UnspentDB) UndoBlockTransactions(height uint32) {
 	db.unwind.undo(height, db.unspent)
+	db.unspent.lastHeight = height-1
 }
 
 
