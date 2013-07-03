@@ -44,6 +44,10 @@ var CFG struct {
 		MaxTxSize uint
 		MinVoutValue uint
 	}
+	Memory struct {
+		UTXOCacheBlks int
+		GCPercTrshold int
+	}
 }
 
 
@@ -63,6 +67,9 @@ func init() {
 	CFG.TXRoute.FeePerByte = 10
 	CFG.TXRoute.MaxTxSize = 10240
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
+
+	CFG.Memory.UTXOCacheBlks = 0 // Keep all in mem by default
+	CFG.Memory.GCPercTrshold = 100 // 100%
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
