@@ -36,11 +36,17 @@ The online client node has much higher system requirements than the wallet app.
 
 Client / Node
 --------------
-As for the current bitcoin block chain (aroung block #250000), you should have at least 4GB of RAM, if you don't want to see your swap file burning. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
+As for the current bitcoin block chain (aroung block #250000), it is recommended to have at least 4GB of RAM. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
 
 For testnet-only purposes 32-bit arch is enough.
 
 The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
+
+
+### Optimize memory usage
+You can decrease the node's memory usage in two different ways:
+ * By ordering the node's database to not store all the UTXO records in memory, but only a recent ones. In order to do this, set „keepBlocksBack” in file „btc/qdb/unspent.go” to a non-zero value. This way you will order the database engine to not keep in memory (but only on disk) outputs that are older than the given number of blocks. For start you can try e.g. „keepBlocksBack = 20000”.
+ * Setup Go's garbage colllector to trigger clean-up at a lower treshold. The default if 100%,  by changing it to e.g. 30%, you can save about 30% of memory. In order to do this set such enviorionemnt variable in your OS: „GOGC=30”.
 
 
 Wallet
