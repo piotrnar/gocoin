@@ -21,8 +21,8 @@ Eech value is variable length:
 
 const (
 	prevOutIdxLen = qdb.KeySize
-	keepBlocksBack = 0 // Set it to zero to load all into the mem
 )
+var KeepBlocksBack int // Zero means: keep all the records in memory
 
 
 type unspentDb struct {
@@ -52,11 +52,11 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
-		if keepBlocksBack!=0 {
+		if KeepBlocksBack!=0 {
 			db.tdb[i].KeepInMem = func (v []byte) bool {
 				// Keep in memory outputs that dont go further than X blocks back
 				return int(binary.LittleEndian.Uint32(v[44:48])) >
-					int(db.lastHeight) - keepBlocksBack
+					int(db.lastHeight) - KeepBlocksBack
 			}
 		}
 		db.tdb[i].Load()
@@ -185,8 +185,8 @@ func (db *unspentDb) stats() (s string) {
 			return true
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Defrags:%d. BH:%d\n",
-		float64(sum)/1e8, cnt, db.defragCount, db.lastHeight)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Defrags:%d. BH:%d(%d)\n",
+		float64(sum)/1e8, cnt, db.defragCount, db.lastHeight, KeepBlocksBack)
 	s += fmt.Sprintf(" %d outputs below 0.001 BTC, with %.2f BTC total\n",
 		cntlow, float64(sumlow)/1e8)
 	return
