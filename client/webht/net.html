@@ -12,7 +12,10 @@ function raw_load(id, tit) {
 	xmlHttp.send(null);
 }
 </script>
-<b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br><br>
+<b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br>
+Listening for incomming TCP connections: <b>{LISTEN_TCP}</b><br>
+External address: <b>{EXTERNAL_ADDR}</b><br>
+<br>
 <table class="netcons bord">
 <tr>
 	<th rowspan="2">ID
@@ -35,5 +38,4 @@ function raw_load(id, tit) {
 	<th>user-agent
 {PEER_ROW}
 </table>
-<br>
 <a name="rawdiv"><h2 id="rawtit"></h2></a><pre id="rawdiv" class="mono"></pre>
