@@ -44,9 +44,13 @@ The entire block chain is stored in one large file, so your file system must sup
 
 
 ### Optimize memory usage
-You can decrease the node's memory usage in two different ways:
- * By ordering the node's database to not store all the UTXO records in memory, but only a recent ones. In order to do this, set „keepBlocksBack” in file „btc/qdb/unspent.go” to a non-zero value. This way you will order the database engine to not keep in memory (but only on disk) outputs that are older than the given number of blocks. For start you can try e.g. „keepBlocksBack = 20000”.
- * Setup Go's garbage colllector to trigger clean-up at a lower treshold. The default if 100%,  by changing it to e.g. 30%, you can save about 30% of memory. In order to do this set such enviorionemnt variable in your OS: „GOGC=30”.
+You can decrease the node's memory usage, at a cost of performance.
+Here is how to do it
+ * Start your node (client)
+ * Save the config file using UI's „configsave” command.
+ * Quite the node using UI's „quit” command.
+ * Edit the config file gocoin.conf and change the default values of  UTXOCacheBlks and/or GCPercTrshold. You can try e.g. 25000 (blocks) for UTXOCacheBlks and 30 (percent) for  GCPercTrshold.
+ * Start your node - it should be using the new memory config from now on.
 
 
 Wallet
