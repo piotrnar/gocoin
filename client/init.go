@@ -41,7 +41,6 @@ func host_init() {
 	}
 
 	if CFG.Testnet { // testnet3
-		DefaultTcpPort = 18333
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
 		GocoinHomeDir += "tstnet/"
@@ -50,7 +49,6 @@ func host_init() {
 		alertPubKey, _ = hex.DecodeString("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a")
 		MaxPeersNeeded = 100
 	} else {
-		DefaultTcpPort = 8333
 		GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 		Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 		GocoinHomeDir += "btcnet/"
