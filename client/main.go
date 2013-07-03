@@ -128,7 +128,9 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 	sta := time.Now()
-	debug.SetGCPercent(-1)  // wee need this fast, so disable GC for the time being
+	debug.SetGCPercent(-1)  // we need this fast, so disable GC for the time being
+	dns := BlockChain.DoNotSync // .. and this makes a significant difference for Windows
+	BlockChain.DoNotSync = true
 	e = BlockChain.AcceptBlock(bl)
 	if e == nil {
 		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
@@ -179,6 +181,9 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
+	if !dns {
+		BlockChain.Sync()
+	}
 	return
 }
 
