@@ -24,7 +24,7 @@ const (
 	MaxTotCons = MaxInCons+MaxOutCons
 
 	NoDataTimeout = 2*time.Minute
-	MaxDataInSendBuffer = 16*1024*1024 // If you have more than this in the send buffer, disconnect
+	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
@@ -147,7 +147,7 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if c.send.buf!=nil {
 		// Before adding more data to the buffer, check the limit
-		if len(c.send.buf)-c.send.sofar+24+len(pl)>MaxDataInSendBuffer {
+		if len(c.send.buf)>MaxSendBufferSize {
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
 			}
