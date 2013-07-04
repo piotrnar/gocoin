@@ -59,7 +59,6 @@ type BlockDB struct {
 	blockindx *os.File
 	mutex sync.Mutex
 	cache map[[Uint256IdxLen]byte] *cacheRecord
-	readfile *os.File
 }
 
 
@@ -243,17 +242,17 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 
 	bl = make([]byte, rec.blen)
 
-	if db.readfile == nil {
-		// we will re-open the data file, to not spoil the writting pointer
-		db.readfile, _ = os.Open(db.dirname+"blockchain.dat")
-		if db.readfile == nil {
-			println("Cannot open", db.dirname+"blockchain.dat")
-			return
-		}
+	// we will re-open the data file, to not spoil the writting pointer
+	f, e := os.Open(db.dirname+"blockchain.dat")
+	if e != nil {
+		return
 	}
 
-	db.readfile.Seek(int64(rec.fpos), os.SEEK_SET)
-	db.readfile.Read(bl[:])
+	_, e = f.Seek(int64(rec.fpos), os.SEEK_SET)
+	if e == nil {
+		_, e = f.Read(bl[:])
+	}
+	f.Close()
 
 	if rec.compressed {
 		gz, _ := gzip.NewReader(bytes.NewReader(bl))

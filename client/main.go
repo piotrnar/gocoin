@@ -244,6 +244,10 @@ func main() {
 	UploadLimit = CFG.MaxUpKBps << 10
 	DownloadLimit = CFG.MaxDownKBps << 10
 
+	// Disable Ctrl+C
+	killchan := make(chan os.Signal, 1)
+	signal.Notify(killchan, os.Interrupt, os.Kill)
+
 	host_init() // This will create the DB lock file and keep it open
 
 	// Clean up the DB lock file on exit
@@ -274,10 +278,6 @@ func main() {
 		fmt.Println("Starting WebUI at", CFG.WebUI, "...")
 		go webserver()
 	}
-
-	// Disable Ctrl+C
-	killchan := make(chan os.Signal, 1)
-	signal.Notify(killchan, os.Interrupt, os.Kill)
 
 	for !exit_now {
 		CountSafe("MainThreadLoops")

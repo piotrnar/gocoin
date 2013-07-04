@@ -25,8 +25,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	prv_sync := ch.DoNotSync
 	ch.DoNotSync = true
 
-	unspNosync := end.Height - ch.BlockTreeEnd.Height > 100
-	if unspNosync {
+	if end.Height - ch.BlockTreeEnd.Height > 100 {
 		ch.Unspent.NoSync()
 	}
 
