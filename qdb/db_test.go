@@ -1,10 +1,11 @@
 package qdb
 
 import (
-	"testing"
-	"time"
 	"os"
+	"fmt"
+	"time"
 	"bytes"
+	"testing"
 	mr "math/rand"
 	cr "crypto/rand"
 	"encoding/hex"
@@ -178,4 +179,8 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	os.RemoveAll(dbname)
+}
+
+func k2s(k KeyType) string {
+	return fmt.Sprintf("%16x", k)
 }
