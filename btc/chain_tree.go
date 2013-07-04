@@ -36,11 +36,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if cur-prv >= 10e9 {
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
 			prv = cur
-			if unspNosync {
-				ch.Unspent.Sync()
-				fmt.Println("DB synced")
-				ch.Unspent.NoSync()
-			}
 		}
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
