@@ -1,5 +1,5 @@
 0.5.0
-* Requires new "qdb" ...
+* Requires new "qdb" ... much imporved statrup times.
 * Never keeps unwind records in memory (only on disk)
 * Allows to not keep old unspent outputs in mem. Modify "UTXOCacheBlks" in the config to switch it on.
 
