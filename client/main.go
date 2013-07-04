@@ -313,7 +313,7 @@ func main() {
 			case <-peersTick:
 				expire_peers()
 
-			case <-time.After(time.Second):
+			case <-time.After(time.Second/5):
 				CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
 					Busy("BlockChain.Idle()")
