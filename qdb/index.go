@@ -41,7 +41,7 @@ func NewDBidx(db *DB) (idx *dbidx) {
 		}
 		idx.browse(func(k KeyType, v *oneIdx) bool {
 			dt := dats[v.datseq][v.datpos:v.datpos+v.datlen]
-			if db.cfg.KeepInMem!=nil && !db.cfg.KeepInMem(dt) {
+			if db.cfg.KeepInMem==nil || db.cfg.KeepInMem(dt) {
 				v.data = make([]byte, v.datlen)
 				copy(v.data, dt)
 			}
