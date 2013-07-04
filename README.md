@@ -64,7 +64,6 @@ Dependencies
 ==============
 Allow Go to fetch the dependencies for you:
 
-	go get github.com/piotrnar/qdb
 	go get code.google.com/p/go.crypto/ripemd160
 
 
