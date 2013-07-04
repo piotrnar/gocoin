@@ -28,11 +28,6 @@ type KeyType uint64
 const KeySize = 8
 
 
-func k2s(k KeyType) string {
-	return fmt.Sprintf("%16x", k)
-}
-
-
 type DBConfig struct {
 	// If DoNotCache is set, the records are never pre-loaded not cached in the memory.
 	DoNotCache bool
@@ -298,3 +293,4 @@ func (db *DB) sync() {
 	db.pending_puts = nil
 	db.pending_dels = nil
 }
+
