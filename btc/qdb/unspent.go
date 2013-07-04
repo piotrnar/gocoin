@@ -22,7 +22,10 @@ Eech value is variable length:
 const (
 	prevOutIdxLen = qdb.KeySize
 )
-var KeepBlocksBack int // Zero means: keep all the records in memory
+
+var (
+	KeepBlocksBack int // Zero means: keep all the records in memory
+)
 
 
 type unspentDb struct {
@@ -39,9 +42,10 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.lastHeight = lasth
-
 	for i := range db.tdb {
-		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
+		if ((i&3)==0) {
+			fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
+		}
 		db.dbN(i) // Load each of the sub-DBs into memory
 	}
 	fmt.Print("\r                                                              \r")
@@ -51,7 +55,14 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), nil)
+		if KeepBlocksBack != 0 {
+			db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), &qdb.DBConfig{KeepInMem:func (v []byte) bool {
+				return KeepBlocksBack==0 ||
+					int(binary.LittleEndian.Uint32(v[44:48])) > int(db.lastHeight) - KeepBlocksBack
+			}})
+		} else {
+			db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), nil)
+		}
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
