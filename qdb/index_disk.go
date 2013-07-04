@@ -106,16 +106,13 @@ func (idx *dbidx) loaddat(used map[uint32]bool) {
 		idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq})
 		used[fseq] = true
 	}
-	//println(len(idx.index), "index records loaded from dat")
 	return
 }
 
 
 func (idx *dbidx) loadlog(used map[uint32]bool) {
 	idx.logfile, _ = os.OpenFile(idx.path+"log", os.O_RDWR, 0660)
-
 	if idx.logfile==nil {
-		//println(idx.path+"log", "not found")
 		return
 	}
 
@@ -129,7 +126,6 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 		return
 	}
 
-	var ad, de uint
 	d, _ := ioutil.ReadAll(idx.logfile)
 	for pos:=0; pos+12<=len(d); {
 		key := KeyType(binary.LittleEndian.Uint64(d[pos:pos+8]))
@@ -145,13 +141,10 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 			pos += 8
 			idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq})
 			used[fseq] = true
-			ad++
 		} else {
 			idx.memdel(key)
-			de++
 		}
 	}
-	//println(ad, "idxs added and", de, "deleted via the logfile")
 
 	return
 }
