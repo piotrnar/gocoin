@@ -25,7 +25,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	prv_sync := ch.DoNotSync
 	ch.DoNotSync = true
 
-	if end.Height - ch.BlockTreeEnd.Height > 100 {
+	unspNosync := end.Height - ch.BlockTreeEnd.Height > 100
+	if unspNosync {
 		ch.Unspent.NoSync()
 	}
 
@@ -35,6 +36,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if cur-prv >= 10e9 {
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
 			prv = cur
+			if unspNosync {
+				ch.Unspent.Sync()
+				fmt.Println("DB synced")
+				ch.Unspent.NoSync()
+			}
 		}
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
