@@ -261,6 +261,7 @@ func main() {
 		fmt.Print(DumpBalance(nil, false))
 	}
 
+	peersTick := time.Tick(defragEvery)
 	initPeers(GocoinHomeDir)
 	go txPoolManager()
 
@@ -308,6 +309,9 @@ func main() {
 				cmd.handler(cmd.param)
 				cmd.done.Done()
 				continue
+
+			case <-peersTick:
+				expire_peers()
 
 			case <-time.After(time.Second):
 				CountSafe("MainThreadTouts")

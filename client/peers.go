@@ -13,12 +13,12 @@ import (
 	"strconv"
 	"hash/crc64"
 	"encoding/binary"
-	"github.com/piotrnar/qdb"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 const (
-	defragEvery = (60*time.Second) // Once a minute should be more than enough
+	defragEvery = (5*time.Minute)
 	ExpirePeerAfter = (3*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
 )
 
@@ -97,31 +97,31 @@ func (p *onePeer) Bytes() []byte {
 }
 
 
-func peers_db_maintanence() {
-	for {
-		time.Sleep(defragEvery)
-
-		peerdb_mutex.Lock()
-		var delcnt uint32
-		now := time.Now()
-		todel := make([]qdb.KeyType, peerDB.Count())
-		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-			ptim := binary.LittleEndian.Uint32(v[0:4])
-			if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
-				todel[delcnt] = k // we cannot call Del() from here
-				delcnt++
-			}
-			return true
-		})
+func expire_peers() {
+	peerdb_mutex.Lock()
+	var delcnt uint32
+	now := time.Now()
+	todel := make([]qdb.KeyType, peerDB.Count())
+	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		ptim := binary.LittleEndian.Uint32(v[0:4])
+		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
+			todel[delcnt] = k // we cannot call Del() from here
+			delcnt++
+		}
+		return true
+	})
+	if delcnt > 0 {
+		CountSafeAdd("PeersExpired", uint64(delcnt))
 		for delcnt > 0 {
 			delcnt--
 			peerDB.Del(todel[delcnt])
-			CountSafe("PeersExpired")
 		}
-		CountSafe("PeerDefrags")
+		CountSafe("PeerDefragsDone")
 		peerDB.Defrag()
-		peerdb_mutex.Unlock()
+	} else {
+		CountSafe("PeerDefragsNone")
 	}
+	peerdb_mutex.Unlock()
 }
 
 
@@ -266,7 +266,7 @@ func initSeeds(seeds []string, port int) {
 
 
 func initPeers(dir string) {
-	peerDB, _ = qdb.NewDB(dir+"peers")
+	peerDB, _ = qdb.NewDB(dir+"peers2", nil)
 	if peerDB.Count()==0 {
 		if !CFG.Testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
@@ -296,7 +296,6 @@ func initPeers(dir string) {
 			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
 	} else {
 		newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
-		go peers_db_maintanence()
 	}
 }
 

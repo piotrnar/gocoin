@@ -4,7 +4,7 @@ import (
 	"time"
 	"bytes"
 	"encoding/binary"
-	"github.com/piotrnar/qdb"
+	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
 )
 
