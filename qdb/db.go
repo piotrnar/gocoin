@@ -34,9 +34,9 @@ func k2s(k KeyType) string {
 
 
 type DBConfig struct {
-	// If NeverKeepInMem is set to true, the engine will never keep DB records
-	// in memory, but will laways need to read them from disk.
-	NeverKeepInMem bool
+	// If DoNotCache is set, the records are never pre-loaded not cached in the memory.
+	DoNotCache bool
+
 	// Set this function if you want to be able to decide whether a specific
 	// record should be kept in memory, or freed after loaded, thus will need
 	// to be taken from disk whenever needed next time.
@@ -63,6 +63,8 @@ type DB struct {
 	pending_dels map[KeyType] bool
 
 	cfg DBConfig
+
+	rdfile map[uint32] *os.File
 }
 
 
@@ -95,6 +97,7 @@ func NewDB(dir string, cfg *DBConfig) (db *DB, e error) {
 		db.cfg = *cfg
 	}
 	db.dir = dir
+	db.rdfile = make(map[uint32] *os.File)
 	db.idx = NewDBidx(db)
 	db.datseq = db.idx.max_dat_seq+1
 	return
@@ -114,15 +117,15 @@ func (db *DB) Count() (l int) {
 // If the walk function returns false, it aborts the browsing and returns.
 func (db *DB) Browse(walk func(key KeyType, value []byte) bool) {
 	db.mutex.Lock()
-	//println("br", db.dir)
 	db.idx.browse(func(k KeyType, v *oneIdx) bool {
-		//println(v.String())
 		if v.data == nil {
-			//println("loading...")
 			db.loadrec(v)
-			//println("...", v.String())
 		}
-		return walk(k, v.data)
+		dat := v.data
+		if db.cfg.DoNotCache || db.cfg.KeepInMem!=nil && !db.cfg.KeepInMem(dat) {
+			v.data = nil
+		}
+		return walk(k, dat)
 	})
 	//println("br", db.dir, "done")
 	db.mutex.Unlock()
@@ -138,6 +141,9 @@ func (db *DB) Get(key KeyType) (value []byte) {
 			db.loadrec(idx)
 		}
 		value = idx.data
+		if db.cfg.DoNotCache || db.cfg.KeepInMem!=nil && !db.cfg.KeepInMem(value) {
+			idx.data = nil
+		}
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	db.mutex.Unlock()
@@ -232,6 +238,9 @@ func (db *DB) Close() {
 	}
 	db.idx.close()
 	db.idx = nil
+	for _, f := range db.rdfile {
+		f.Close()
+	}
 	db.mutex.Unlock()
 }
 
@@ -244,7 +253,7 @@ func (db *DB) defrag() {
 		db.logfile = nil
 	}
 	db.checklogfile()
-	used := make(map[uint32]bool)
+	used := make(map[uint32]bool, 10)
 	db.idx.browse(func(key KeyType, rec *oneIdx) bool {
 		if rec.data==nil {
 			db.loadrec(rec)
@@ -262,7 +271,7 @@ func (db *DB) defrag() {
 	// now the index:
 	db.idx.writedatfile() // this will close the file
 
-	db.idx.db.cleanupold(used)
+	db.cleanupold(used)
 	db.idx.needsdefrag = false
 }
 
