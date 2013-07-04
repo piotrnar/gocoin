@@ -43,17 +43,21 @@ func (db *DB) checklogfile() {
 
 
 func (db *DB) loadrec(idx *oneIdx) {
-	fn := db.seq2fn(idx.datseq)
-	f, _ := os.Open(fn)
-	if f==nil {
-		println("file", fn, "not found")
-		os.Exit(1)
+	var f *os.File
+	if f, _ = db.rdfile[idx.datseq]; f==nil {
+		fn := db.seq2fn(idx.datseq)
+		f, _ = os.Open(fn)
+		if f==nil {
+			println("file", fn, "not found")
+			os.Exit(1)
+		}
+		db.rdfile[idx.datseq] = f
 	}
 	f.Seek(int64(idx.datpos), os.SEEK_SET)
 	idx.data = make([]byte, idx.datlen)
 	f.Read(idx.data)
-	f.Close()
 }
+
 
 // add record at the end of the log
 func (db *DB) addtolog(f io.Writer, key KeyType, val []byte) (fpos int64) {
@@ -75,9 +79,16 @@ func (db *DB) cleanupold(used map[uint32]bool) {
 	filepath.Walk(db.dir, func(path string, info os.FileInfo, err error) error {
 		fn := info.Name()
 		if len(fn)==12 && fn[8:12]==".dat" {
-			v, er := strconv.ParseUint(fn[:8], 32, 16)
-			if er == nil && !used[uint32(v)] && uint32(v)!=db.datseq {
-				os.Remove(path)
+			v, er := strconv.ParseUint(fn[:8], 16, 32)
+			if er == nil && uint32(v)!=db.datseq {
+				if _, ok := used[uint32(v)]; !ok {
+					//println("deleting", v, path)
+					if f, _ := db.rdfile[uint32(v)]; f!=nil {
+						f.Close()
+						delete(db.rdfile, uint32(v))
+					}
+					os.Remove(path)
+				}
 			}
 		}
 		return nil
