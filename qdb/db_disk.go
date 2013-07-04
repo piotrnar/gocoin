@@ -76,11 +76,8 @@ func (db *DB) cleanupold(used map[uint32]bool) {
 		fn := info.Name()
 		if len(fn)==12 && fn[8:12]==".dat" {
 			v, er := strconv.ParseUint(fn[:8], 32, 16)
-			if er == nil && !used[uint32(v)] {
-				er = os.Remove(path)
-				if er != nil {
-					println(er.Error())
-				}
+			if er == nil && !used[uint32(v)] && uint32(v)!=db.datseq {
+				os.Remove(path)
 			}
 		}
 		return nil

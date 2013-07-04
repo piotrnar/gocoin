@@ -33,6 +33,10 @@ func NewDBidx(db *DB) (idx *dbidx) {
 	dats := make(map[uint32] []byte, len(used))
 	for k, _ := range used {
 		dats[k], _ = ioutil.ReadFile(db.seq2fn(k))
+		if dats[k]==nil {
+			println("Database corrupt - missing file:", db.seq2fn(k))
+			os.Exit(1)
+		}
 	}
 	idx.browse(func(k KeyType, v *oneIdx) bool {
 		v.data = make([]byte, v.datlen)

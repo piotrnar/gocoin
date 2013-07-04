@@ -61,6 +61,8 @@ type DB struct {
 	nosync bool
 	pending_puts map[KeyType] *oneIdx
 	pending_dels map[KeyType] bool
+
+	cfg DBConfig
 }
 
 
@@ -89,6 +91,9 @@ func NewDB(dir string, cfg *DBConfig) (db *DB, e error) {
 		dir += string(os.PathSeparator)
 	}
 	os.MkdirAll(dir, 0770)
+	if cfg != nil {
+		db.cfg = *cfg
+	}
 	db.dir = dir
 	db.idx = NewDBidx(db)
 	db.datseq = db.idx.max_dat_seq+1
@@ -249,8 +254,14 @@ func (db *DB) defrag() {
 		used[rec.datseq] = true
 		return true
 	})
+
+	// first write & flush the data file:
 	db.logfile.Write(bdat.Bytes())
-	db.idx.writedatfile()
+	db.logfile.Sync()
+
+	// now the index:
+	db.idx.writedatfile() // this will close the file
+
 	db.idx.db.cleanupold(used)
 	db.idx.needsdefrag = false
 }
@@ -272,6 +283,7 @@ func (db *DB) sync() {
 			db.idx.deltolog(bidx, k)
 		}
 		db.logfile.Write(bdat.Bytes())
+		db.logfile.Sync()
 		db.idx.writebuf(bidx.Bytes())
 	}
 	db.pending_puts = nil

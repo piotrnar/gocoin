@@ -223,4 +223,5 @@ func (idx *dbidx) writedatfile() {
 func (idx *dbidx) writebuf(d []byte) {
 	idx.checklogfile()
 	idx.logfile.Write(d)
+	idx.logfile.Sync()
 }
