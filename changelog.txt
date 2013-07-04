@@ -1,7 +1,7 @@
 0.5.0
 * Requires new "qdb" ...
 * Never keeps unwind records in memory (only on disk)
-* Allows to not keep old unspent outputs in mem. Modify "keepBlocksBack" to switch it on.
+* Allows to not keep old unspent outputs in mem. Modify "UTXOCacheBlks" in the config to switch it on.
 
 0.4.8
 * Added new blocks' timing stats to the WebUI
