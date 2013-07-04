@@ -98,18 +98,18 @@ func (p *onePeer) Bytes() []byte {
 
 
 func expire_peers() {
-		peerdb_mutex.Lock()
-		var delcnt uint32
-		now := time.Now()
-		todel := make([]qdb.KeyType, peerDB.Count())
-		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
-			ptim := binary.LittleEndian.Uint32(v[0:4])
-			if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
-				todel[delcnt] = k // we cannot call Del() from here
-				delcnt++
-			}
-			return true
-		})
+	peerdb_mutex.Lock()
+	var delcnt uint32
+	now := time.Now()
+	todel := make([]qdb.KeyType, peerDB.Count())
+	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		ptim := binary.LittleEndian.Uint32(v[0:4])
+		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
+			todel[delcnt] = k // we cannot call Del() from here
+			delcnt++
+		}
+		return true
+	})
 	if delcnt > 0 {
 		CountSafeAdd("PeersExpired", uint64(delcnt))
 		for delcnt > 0 {
@@ -296,7 +296,6 @@ func initPeers(dir string) {
 			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
 	} else {
 		newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
-		go peers_db_maintanence()
 	}
 }
 
