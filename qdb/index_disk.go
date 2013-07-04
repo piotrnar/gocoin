@@ -160,7 +160,6 @@ func (idx *dbidx) checklogfile() {
 
 
 func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
-	//println("+idx", k2s(k))
 	if wr == nil {
 		idx.checklogfile()
 		wr = idx.logfile
@@ -173,7 +172,6 @@ func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 
 
 func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
-	//println("-idx", k2s(k))
 	if wr == nil {
 		idx.checklogfile()
 		wr = idx.logfile
