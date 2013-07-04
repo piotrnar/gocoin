@@ -38,7 +38,6 @@ func (db *unwindDb) dbH(i int) (*qdb.DB) {
 
 
 func newUnwindDB(dir string) (db *unwindDb) {
-	convertOldUnwindDb(dir)
 	db = new(unwindDb)
 	db.dir = dir
 	for i := range db.tdb {
