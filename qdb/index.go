@@ -15,7 +15,8 @@ type dbidx struct {
 
 	index map[KeyType] *oneIdx
 	cnt int
-	needsdefrag bool
+
+	extra_space_used uint64
 }
 
 func NewDBidx(db *DB, load bool) (idx *dbidx) {
@@ -47,10 +48,10 @@ func (idx *dbidx) get(k KeyType) *oneIdx {
 
 
 func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
-	if _, ok := idx.index[k]; !ok {
+	if prv, ok := idx.index[k]; !ok {
 		idx.cnt++
 	} else {
-		idx.needsdefrag = true // defrag will be needed only if we replaced an existing record
+		idx.extra_space_used += uint64(24+prv.datlen)
 	}
 	idx.index[k] = rec
 	if rec.datseq>idx.max_dat_seq {
@@ -60,9 +61,9 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 
 
 func (idx *dbidx) memdel(k KeyType) {
-	if _, ok := idx.index[k]; ok {
+	if cur, ok := idx.index[k]; ok {
 		idx.cnt--
-		idx.needsdefrag = true
+		idx.extra_space_used += uint64(12+cur.datlen)
 		delete(idx.index, k)
 	}
 }
