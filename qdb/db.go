@@ -25,7 +25,10 @@ import (
 )
 
 type KeyType uint64
-const KeySize = 8
+const (
+	KeySize = 8
+	MaxPending = 1014
+)
 
 
 type DBConfig struct {
@@ -54,8 +57,7 @@ type DB struct {
 	idx *dbidx
 
 	nosync bool
-	pending_puts map[KeyType] *oneIdx
-	pending_dels map[KeyType] bool
+	pending_recs map[KeyType] bool
 
 	cfg DBConfig
 
@@ -161,10 +163,8 @@ func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
 	if db.nosync {
-		rec := &oneIdx{data:value}
-		db.idx.memput(key, rec)
-		db.pending_puts[key] = rec
-		delete(db.pending_dels, key)
+		db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value))})
+		db.pending_recs[key] = true
 	} else {
 		fpos := db.addtolog(nil, key, value)
 		db.idx.put(key, &oneIdx{data:value, datpos:uint32(fpos), datlen:uint32(len(value)), datseq:db.datseq})
@@ -179,8 +179,7 @@ func (db *DB) Del(key KeyType) {
 	db.mutex.Lock()
 	if db.nosync {
 		db.idx.memdel(key)
-		db.pending_dels[key] = true
-		delete(db.pending_puts, key)
+		db.pending_recs[key] = true
 	} else {
 		db.idx.del(key)
 	}
@@ -209,8 +208,7 @@ func (db *DB) Defrag() (doing bool) {
 func (db *DB) NoSync() {
 	db.mutex.Lock()
 	if !db.nosync {
-		db.pending_puts = make(map[KeyType] *oneIdx)
-		db.pending_dels = make(map[KeyType] bool)
+		db.pending_recs = make(map[KeyType] bool)
 		db.nosync = true
 	}
 	db.mutex.Unlock()
@@ -222,6 +220,7 @@ func (db *DB) NoSync() {
 func (db *DB) Sync() {
 	db.mutex.Lock()
 	if db.nosync {
+		db.nosync = false
 		go func() {
 			db.sync()
 			db.mutex.Unlock()
@@ -282,24 +281,25 @@ func (db *DB) defrag() {
 
 
 func (db *DB) sync() {
-	db.nosync = false
-	if len(db.pending_puts) > 0 || len(db.pending_dels) > 0 {
+	if len(db.pending_recs)>0 {
 		bidx := new(bytes.Buffer)
 		bdat := new(bytes.Buffer)
 		db.checklogfile()
-		for k, r := range db.pending_puts {
-			fpos := db.addtolog(bdat, k, r.data)
-			rec := &oneIdx{data:r.data, datpos:uint32(fpos), datlen:uint32(len(r.data)), datseq:db.datseq}
-			db.idx.memput(k, rec)
-			db.idx.addtolog(bidx, k, rec)
-		}
-		for k, _ := range db.pending_dels {
-			db.idx.deltolog(bidx, k)
+		for k, _ := range db.pending_recs {
+			rec := db.idx.get(k)
+			if rec != nil {
+				fpos := db.addtolog(bdat, k, rec.data)
+				rec.datlen = uint32(len(rec.data))
+				rec.datpos = uint32(fpos)
+				rec.datseq = db.datseq
+				db.idx.addtolog(bidx, k, rec)
+			} else {
+				db.idx.deltolog(bidx, k)
+			}
 		}
 		db.logfile.Write(bdat.Bytes())
 		db.logfile.Sync()
 		db.idx.writebuf(bidx.Bytes())
 	}
-	db.pending_puts = nil
-	db.pending_dels = nil
+	db.pending_recs = nil
 }
