@@ -326,6 +326,7 @@ func (c *oneConnection) Run() {
 	}
 	if c.BanIt {
 		c.PeerAddr.Ban()
+		CountSafe("PeersBanned")
 	}
 	if dbg>0 {
 		println("Disconnected from", c.PeerAddr.Ip())
