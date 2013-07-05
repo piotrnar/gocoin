@@ -73,6 +73,7 @@ function get_maturity(t) {
 
 function val2reason(r) {
 	switch (parseInt(r)) {
+		case 1: return "RELAY_OFF"
 		case 101: return "TOO_BIG"
 		case 102: return "FORMAT"
 		case 103: return "LEN_MISMATCH"
