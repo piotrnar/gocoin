@@ -25,22 +25,16 @@ import (
 )
 
 type KeyType uint64
+
 const (
 	KeySize = 8
 	MaxPending = 1000
 	MaxPendingNoSync = 10000
+
+	NO_BROWSE = 0x00000001
+	NO_CACHE  = 0x00000002
+	BR_ABORT  = 0x00000004
 )
-
-
-type DBConfig struct {
-	// If DoNotCache is set, the records are never pre-loaded not cached in the memory.
-	DoNotCache bool
-
-	// Set this function if you want to be able to decide whether a specific
-	// record should be kept in memory, or freed after loaded, thus will need
-	// to be taken from disk whenever needed next time.
-	KeepInMem func(v []byte) bool
-}
 
 
 type DB struct {
@@ -60,8 +54,6 @@ type DB struct {
 	nosync bool
 	pending_recs map[KeyType] bool
 
-	cfg DBConfig
-
 	rdfile map[uint32] *os.File
 }
 
@@ -72,6 +64,8 @@ type oneIdx struct {
 	datseq uint32 // data file index
 	datpos uint32 // position of the record in the data file
 	datlen uint32 // length of the record in the data file
+
+	flags uint32
 }
 
 
@@ -85,31 +79,18 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDBCfg(dir string, cfg *DBConfig) (db *DB, e error) {
+func NewDB(dir string, load bool) (db *DB, e error) {
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
 		dir += string(os.PathSeparator)
 	}
 	os.MkdirAll(dir, 0770)
-	if cfg != nil {
-		db.cfg = *cfg
-	}
 	db.dir = dir
 	db.rdfile = make(map[uint32] *os.File)
-	db.idx = NewDBidx(db)
-	db.datseq = db.idx.max_dat_seq+1
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
+	db.idx = NewDBidx(db, load)
+	db.datseq = db.idx.max_dat_seq+1
 	return
-}
-
-
-// Creates or opens a new database with default config.
-func NewDB(dir string) (*DB, error) {
-	return NewDBCfg(dir, nil)
-}
-
-// Just a dummy in this version since loading happens in NewDB
-func (db *DB) Load() {
 }
 
 
@@ -124,17 +105,24 @@ func (db *DB) Count() (l int) {
 
 // Browses through all teh DB records calling teh walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
-func (db *DB) Browse(walk func(key KeyType, value []byte) bool) {
+func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 	db.mutex.Lock()
 	db.idx.browse(func(k KeyType, v *oneIdx) bool {
+		if (v.flags&NO_BROWSE)!=0 {
+			return true
+		}
 		if v.data == nil {
 			db.loadrec(v)
 		}
-		dat := v.data
-		if db.cfg.DoNotCache || db.cfg.KeepInMem!=nil && !db.cfg.KeepInMem(dat) {
+		res := walk(k, v.data)
+		if (res&NO_BROWSE)!=0 {
+			v.flags |= NO_BROWSE
+		}
+		if (res&NO_CACHE)!=0 {
+			v.flags |= NO_CACHE
 			v.data = nil
 		}
-		return walk(k, dat)
+		return (res&BR_ABORT)==0
 	})
 	//println("br", db.dir, "done")
 	db.mutex.Unlock()
@@ -150,9 +138,6 @@ func (db *DB) Get(key KeyType) (value []byte) {
 			db.loadrec(idx)
 		}
 		value = idx.data
-		if db.cfg.DoNotCache || db.cfg.KeepInMem!=nil && !db.cfg.KeepInMem(value) {
-			idx.data = nil
-		}
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	db.mutex.Unlock()
@@ -163,8 +148,24 @@ func (db *DB) Get(key KeyType) (value []byte) {
 // Adds or updates record with a given key.
 func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
-	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
 	db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value))})
+	db.pending_recs[key] = true
+	if db.syncneeded() {
+		go func() {
+			db.sync()
+			db.mutex.Unlock()
+		}()
+	} else {
+		db.mutex.Unlock()
+	}
+}
+
+
+// Adds or updates record with a given key.
+func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
+	db.mutex.Lock()
+	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
+	db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value)), flags:flags})
 	db.pending_recs[key] = true
 	if db.syncneeded() {
 		go func() {
@@ -293,6 +294,9 @@ func (db *DB) sync() {
 				rec.datpos = uint32(fpos)
 				rec.datseq = db.datseq
 				db.idx.addtolog(bidx, k, rec)
+				if (rec.flags&NO_CACHE)!=0 {
+					rec.data = nil
+				}
 			} else {
 				db.idx.deltolog(bidx, k)
 			}

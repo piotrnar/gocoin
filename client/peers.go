@@ -102,13 +102,13 @@ func expire_peers() {
 	var delcnt uint32
 	now := time.Now()
 	todel := make([]qdb.KeyType, peerDB.Count())
-	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+	peerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ptim := binary.LittleEndian.Uint32(v[0:4])
 		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
 			todel[delcnt] = k // we cannot call Del() from here
 			delcnt++
 		}
-		return true
+		return 0
 	})
 	if delcnt > 0 {
 		CountSafeAdd("PeersExpired", uint64(delcnt))
@@ -221,14 +221,14 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	}
 	peerdb_mutex.Lock()
 	tmp := make(manyPeers, 0)
-	peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+	peerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := newPeer(v)
 		if ad.Banned==0 && ValidIp4(ad.Ip4[:]) {
 			if !unconnected || !connectionActive(ad) {
 				tmp = append(tmp, ad)
 			}
 		}
-		return true
+		return 0
 	})
 	peerdb_mutex.Unlock()
 	// Copy the top rows to the result buffer
@@ -266,7 +266,7 @@ func initSeeds(seeds []string, port int) {
 
 
 func initPeers(dir string) {
-	peerDB, _ = qdb.NewDB(dir+"peers2")
+	peerDB, _ = qdb.NewDB(dir+"peers3", true)
 	if peerDB.Count()==0 {
 		if !CFG.Testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
@@ -304,20 +304,20 @@ func show_addresses(par string) {
 	fmt.Println(peerDB.Count(), "peers in the database")
 	if par=="list" {
 		cnt :=  0
-		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		peerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			cnt++
 			fmt.Printf("%4d) %s\n", cnt, newPeer(v).String())
-			return true
+			return 0
 		})
 	} else if par=="ban" {
 		cnt :=  0
-		peerDB.Browse(func(k qdb.KeyType, v []byte) bool {
+		peerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := newPeer(v)
 			if pr.Banned != 0 {
 				cnt++
 				fmt.Printf("%4d) %s\n", cnt, pr.String())
 			}
-			return true
+			return 0
 		})
 		if cnt==0 {
 			fmt.Println("No banned peers in the DB")

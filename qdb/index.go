@@ -19,7 +19,7 @@ type dbidx struct {
 	needsdefrag bool
 }
 
-func NewDBidx(db *DB) (idx *dbidx) {
+func NewDBidx(db *DB, load bool) (idx *dbidx) {
 	idx = new(dbidx)
 	idx.db = db
 	idx.path = db.dir+"qdbidx."
@@ -29,7 +29,7 @@ func NewDBidx(db *DB) (idx *dbidx) {
 	idx.loadlog(used)
 	idx.db.cleanupold(used)
 
-	if !db.cfg.DoNotCache {
+	if load {
 		// pre-load data
 		dats := make(map[uint32] []byte, len(used))
 		for k, _ := range used {
@@ -40,10 +40,9 @@ func NewDBidx(db *DB) (idx *dbidx) {
 			}
 		}
 		idx.browse(func(k KeyType, v *oneIdx) bool {
-			dt := dats[v.datseq][v.datpos:v.datpos+v.datlen]
-			if db.cfg.KeepInMem==nil || db.cfg.KeepInMem(dt) {
+			if (v.flags&NO_CACHE)==0 {
 				v.data = make([]byte, v.datlen)
-				copy(v.data, dt)
+				copy(v.data, dats[v.datseq][v.datpos:v.datpos+v.datlen])
 			}
 			return true
 		})
@@ -51,6 +50,7 @@ func NewDBidx(db *DB) (idx *dbidx) {
 
 	return
 }
+
 
 func (idx *dbidx) size() int {
 	return idx.cnt

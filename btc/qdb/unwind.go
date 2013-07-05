@@ -26,8 +26,7 @@ type unwindDb struct {
 func (db *unwindDb) dbH(i int) (*qdb.DB) {
 	i &= 0xff
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDBCfg(db.dir+fmt.Sprintf("%02x/", i), &qdb.DBConfig{DoNotCache:true})
-		db.tdb[i].Load()
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -41,13 +40,13 @@ func newUnwindDB(dir string) (db *unwindDb) {
 	db.dir = dir
 	for i := range db.tdb {
 		// Load each of the sub-DBs into memory and try to find the highest block
-		db.dbH(i).Browse(func(k qdb.KeyType, v []byte) bool {
+		db.dbH(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 			h := uint32(k)
 			if h > db.lastBlockHeight {
 				db.lastBlockHeight = h
 				copy(db.lastBlockHash[:], v[:32])
 			}
-			return true
+			return qdb.NO_CACHE
 		})
 	}
 	return
@@ -164,7 +163,7 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	for k, v := range changes.DeledTxs {
 		writeSpent(f, &k, v)
 	}
-	db.dbH(int(changes.Height)).Put(qdb.KeyType(changes.Height), f.Bytes())
+	db.dbH(int(changes.Height)).PutExt(qdb.KeyType(changes.Height), f.Bytes(), qdb.NO_CACHE)
 	if changes.Height >= UnwindBufferMaxHistory {
 		db.del(changes.Height-UnwindBufferMaxHistory)
 	}

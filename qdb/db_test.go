@@ -45,7 +45,7 @@ func TestDatabase(t *testing.T) {
 	os.RemoveAll(dbname)
 	mr.Seed(time.Now().UnixNano())
 
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot create db")
 		return
@@ -62,7 +62,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, defrag and close
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -84,7 +84,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, add oneRound more records and Close
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -108,7 +108,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, defrag and close
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -125,7 +125,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -140,16 +140,20 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen, delete 100 records, close...
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
 	}
 
 	var keys []KeyType
-	db.Browse(func (key KeyType, v []byte) bool {
+	db.Browse(func (key KeyType, v []byte) uint32 {
 		keys = append(keys, key)
-		return len(keys)<delRound
+		if len(keys)<delRound {
+			return 0
+		} else {
+			return BR_ABORT
+		}
 	})
 	for i := range keys {
 		db.Del(keys[i])
@@ -157,14 +161,14 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
 	}
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	db.Defrag()
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
@@ -172,7 +176,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDBCfg(dbname, &DBConfig{KeepInMem:kim})
+	db, e = NewDB(dbname, true)
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
 	}

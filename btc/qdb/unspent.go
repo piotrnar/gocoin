@@ -22,7 +22,11 @@ Eech value is variable length:
 const (
 	prevOutIdxLen = qdb.KeySize
 )
-var KeepBlocksBack int // Zero means: keep all the records in memory
+
+var (
+	NocacheBlocksBelow uint // Do not keep in memory blocks older than this height
+	MinBrowsableOutValue uint64 = 1e6 // Zero means: browse throutgh all
+)
 
 
 type unspentDb struct {
@@ -51,16 +55,7 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		var cfg qdb.DBConfig
-		if KeepBlocksBack!=0 {
-			cfg.KeepInMem = func (v []byte) bool {
-				// Keep in memory outputs that dont go further than X blocks back
-				return int(binary.LittleEndian.Uint32(v[44:48])) >
-					int(db.lastHeight) - KeepBlocksBack
-			}
-		}
-		db.tdb[i], _ = qdb.NewDBCfg(db.dir+fmt.Sprintf("%02x/", i), &cfg)
-		db.tdb[i].Load()
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -106,7 +101,13 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
 	copy(v[48:], Val_Pk.Pk_script)
 	ind := getUnspIndex(idx)
-	db.dbN(int(idx.Hash[31])).Put(ind, v)
+	var flgz uint32
+	if Val_Pk.Value<MinBrowsableOutValue {
+		flgz = qdb.NO_CACHE | qdb.NO_BROWSE
+	} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
+		flgz = qdb.NO_CACHE
+	}
+	db.dbN(int(idx.Hash[31])).PutExt(ind, v, flgz)
 }
 
 
@@ -135,25 +136,25 @@ func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.All
 			addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = addr[i]
 		}
 		for i := range db.tdb {
-			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
+			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 				scr := v[48:]
 				if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
 						res = append(res, bin2unspent(v[:48], ad))
 					}
 				}
-				return true
+				return 0
 			})
 		}
 	} else {
 		for i := range db.tdb {
-			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
+			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 				for a := range addr {
 					if addr[a].Owns(v[48:]) {
 						res = append(res, bin2unspent(v[:48], addr[a]))
 					}
 				}
-				return true
+				return 0
 			})
 		}
 	}
@@ -173,23 +174,18 @@ func (db *unspentDb) commit(changes *btc.BlockChanges) {
 
 
 func (db *unspentDb) stats() (s string) {
-	var cnt, sum, cntlow, sumlow uint64
+	var tot, cnt, sum uint64
 	for i := range db.tdb {
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) bool {
-			value := binary.LittleEndian.Uint64(v[36:44])
-			sum += value
+		tot += uint64(db.dbN(i).Count())
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			sum += binary.LittleEndian.Uint64(v[36:44])
 			cnt++
-			if value<1e5 {
-				sumlow += value
-				cntlow++
-			}
-			return true
+			return 0
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outputs. Defrags:%d. BH:%d(%d)\n",
-		float64(sum)/1e8, cnt, db.defragCount, db.lastHeight, KeepBlocksBack)
-	s += fmt.Sprintf(" %d outputs below 0.001 BTC, with %.2f BTC total\n",
-		cntlow, float64(sumlow)/1e8)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs.\n", float64(sum)/1e8, cnt, tot)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d  NocacheBelow:%d  MinOut:%d\n",
+		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
 	return
 }
 

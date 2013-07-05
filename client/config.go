@@ -48,7 +48,8 @@ var CFG struct {
 		MinVoutValue uint
 	}
 	Memory struct {
-		UTXOCacheBlks int
+		MinBrowsableVal uint
+		NoCacheBefore uint
 		GCPercTrshold int
 	}
 }
@@ -71,7 +72,6 @@ func init() {
 	CFG.TXRoute.MaxTxSize = 10240
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
-	CFG.Memory.UTXOCacheBlks = 0 // Keep all in mem by default
 	CFG.Memory.GCPercTrshold = 100 // 100%
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
@@ -114,7 +114,8 @@ func resetcfg() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	qdb.KeepBlocksBack = CFG.Memory.UTXOCacheBlks
+	qdb.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
+	qdb.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
 	if CFG.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.TCPPort)
 	} else {

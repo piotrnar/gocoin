@@ -98,12 +98,13 @@ func (idx *dbidx) loaddat(used map[uint32]bool) {
 		return
 	}
 
-	for pos:=4; pos+20<=len(d)-12; pos+=20 {
+	for pos:=4; pos+24<=len(d)-12; pos+=24 {
 		key := KeyType(binary.LittleEndian.Uint64(d[pos:pos+8]))
 		fpos := binary.LittleEndian.Uint32(d[pos+8:pos+12])
 		flen := binary.LittleEndian.Uint32(d[pos+12:pos+16])
 		fseq := binary.LittleEndian.Uint32(d[pos+16:pos+20])
-		idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq})
+		flgz := binary.LittleEndian.Uint32(d[pos+20:pos+24])
+		idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq, flags:flgz})
 		used[fseq] = true
 	}
 	return
@@ -132,14 +133,15 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 		fpos := binary.LittleEndian.Uint32(d[pos+8:pos+12])
 		pos += 12
 		if fpos!=0 {
-			if pos+8>len(d) {
+			if pos+12>len(d) {
 				println("Unexpected END of file")
 				break
 			}
 			flen := binary.LittleEndian.Uint32(d[pos:pos+4])
 			fseq := binary.LittleEndian.Uint32(d[pos+4:pos+8])
-			pos += 8
-			idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq})
+			flgz := binary.LittleEndian.Uint32(d[pos+8:pos+12])
+			pos += 12
+			idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq, flags:flgz})
 			used[fseq] = true
 		} else {
 			idx.memdel(key)
@@ -168,6 +170,7 @@ func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 	binary.Write(wr, binary.LittleEndian, rec.datpos)
 	binary.Write(wr, binary.LittleEndian, rec.datlen)
 	binary.Write(wr, binary.LittleEndian, rec.datseq)
+	binary.Write(wr, binary.LittleEndian, rec.flags)
 }
 
 
@@ -191,6 +194,7 @@ func (idx *dbidx) writedatfile() {
 		binary.Write(f, binary.LittleEndian, rec.datpos)
 		binary.Write(f, binary.LittleEndian, rec.datlen)
 		binary.Write(f, binary.LittleEndian, rec.datseq)
+		binary.Write(f, binary.LittleEndian, rec.flags)
 		return true
 	})
 	f.Write([]byte{0xff,0xff,0xff,0xff})
