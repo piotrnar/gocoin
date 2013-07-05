@@ -237,11 +237,18 @@ func main() {
 	// Disable Ctrl+C
 	killchan := make(chan os.Signal, 1)
 	signal.Notify(killchan, os.Interrupt, os.Kill)
+	defer func() {
+		if r := recover(); r != nil {
+			println("main panic recovered:", r)
+			os.Exit(1)
+		}
+	}()
+
+	defer UnlockDatabaseDir()
 
 	host_init() // This will create the DB lock file and keep it open
 
 	// Clean up the DB lock file on exit
-	defer UnlockDatabaseDir()
 
 	// load default wallet and its balance
 	LoadWallet(GocoinHomeDir+"wallet.txt")
@@ -306,7 +313,7 @@ func main() {
 			case <-txPoolTick:
 				expire_txs()
 
-			case <-time.After(time.Second/5):
+			case <-time.After(time.Second/2):
 				CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
 					Busy("BlockChain.Idle()")

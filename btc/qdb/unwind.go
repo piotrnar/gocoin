@@ -10,11 +10,12 @@ import (
 
 const (
 	UnwindBufferMaxHistory = 5000  // Let's keep unwind history for so may last blocks
+	NumberOfUnwindSubDBs = 10
 )
 
 type unwindDb struct {
 	dir string
-	tdb [0x100] *qdb.DB
+	tdb [NumberOfUnwindSubDBs] *qdb.DB
 	lastBlockHeight uint32
 	lastBlockHash [32]byte
 	defragIndex int
@@ -26,7 +27,7 @@ type unwindDb struct {
 func (db *unwindDb) dbH(i int) (*qdb.DB) {
 	i &= 0xff
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), true)
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("unw%03d/", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -71,7 +72,7 @@ func unwindFromReader(f io.Reader, unsp *unspentDb) {
 
 
 func (db *unwindDb) del(height uint32) {
-	db.tdb[height&0xff].Del(qdb.KeyType(height))
+	db.tdb[height%NumberOfUnwindSubDBs].Del(qdb.KeyType(height))
 }
 
 
@@ -129,7 +130,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 		panic("Unexpected height")
 	}
 
-	v := db.dbH(int(height)).Get(qdb.KeyType(height))
+	v := db.dbH(int(height)%NumberOfUnwindSubDBs).Get(qdb.KeyType(height))
 	if v == nil {
 		panic("Unwind data not found")
 	}
@@ -138,7 +139,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 	db.del(height)
 
 	db.lastBlockHeight--
-	v = db.dbH(int(db.lastBlockHeight)).Get(qdb.KeyType(db.lastBlockHeight))
+	v = db.dbH(int(db.lastBlockHeight)%NumberOfUnwindSubDBs).Get(qdb.KeyType(db.lastBlockHeight))
 	if v == nil {
 		panic("Parent data not found")
 	}
@@ -163,7 +164,7 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	for k, v := range changes.DeledTxs {
 		writeSpent(f, &k, v)
 	}
-	db.dbH(int(changes.Height)).PutExt(qdb.KeyType(changes.Height), f.Bytes(), qdb.NO_CACHE)
+	db.dbH(int(changes.Height)%NumberOfUnwindSubDBs).PutExt(qdb.KeyType(changes.Height), f.Bytes(), qdb.NO_CACHE)
 	if changes.Height >= UnwindBufferMaxHistory {
 		db.del(changes.Height-UnwindBufferMaxHistory)
 	}

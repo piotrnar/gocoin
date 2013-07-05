@@ -21,6 +21,7 @@ Eech value is variable length:
 
 const (
 	prevOutIdxLen = qdb.KeySize
+	NumberOfUnspentSubDBs = 0x10
 )
 
 var (
@@ -31,7 +32,7 @@ var (
 
 type unspentDb struct {
 	dir string
-	tdb [0x100] *qdb.DB
+	tdb [NumberOfUnspentSubDBs] *qdb.DB
 	defragIndex int
 	defragCount uint64
 	nosyncinprogress bool
@@ -55,7 +56,7 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i), true)
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%06d/", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -71,7 +72,7 @@ func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
 
 func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := getUnspIndex(po)
-	val := db.dbN(int(po.Hash[31])).Get(ind)
+	val := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
 	if val==nil {
 		e = errors.New("Unspent not found")
 		return
@@ -107,7 +108,7 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
 		flgz = qdb.NO_CACHE
 	}
-	db.dbN(int(idx.Hash[31])).PutExt(ind, v, flgz)
+	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).PutExt(ind, v, flgz)
 }
 
 
@@ -115,7 +116,7 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 	if db.notifyTx!=nil {
 		db.notifyTx(idx, nil)
 	}
-	db.dbN(int(idx.Hash[31])).Del(getUnspIndex(idx))
+	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(getUnspIndex(idx))
 }
 
 

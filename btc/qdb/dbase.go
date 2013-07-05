@@ -16,10 +16,9 @@ func NewDb(dir string, init bool) btc.UnspentDB {
 
 	if init {
 		os.RemoveAll(dir+"unspent3/")
-		os.RemoveAll(dir+"unspent3/unwind/")
 	}
 
-	db.unwind = newUnwindDB(dir+"unspent3/unwind/")
+	db.unwind = newUnwindDB(dir+"unspent3/")
 	db.unspent = newUnspentDB(dir+"unspent3/", db.unwind.lastBlockHeight)
 
 	return &db
