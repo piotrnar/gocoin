@@ -2,6 +2,7 @@ package qdb
 
 import (
 	"os"
+	"io/ioutil"
 )
 
 
@@ -19,7 +20,7 @@ type dbidx struct {
 	extra_space_used uint64
 }
 
-func NewDBidx(db *DB, load bool) (idx *dbidx) {
+func NewDBidx(db *DB) (idx *dbidx) {
 	idx = new(dbidx)
 	idx.db = db
 	idx.path = db.dir+"qdbidx."
@@ -28,12 +29,28 @@ func NewDBidx(db *DB, load bool) (idx *dbidx) {
 	idx.loaddat(used)
 	idx.loadlog(used)
 	idx.db.cleanupold(used)
-
-	if load {
-		idx.load()
-	}
-
 	return
+}
+
+
+func (idx *dbidx) load() {
+	dats := make(map[uint32] []byte)
+	idx.browse(func(k KeyType, v *oneIdx) bool {
+		if (v.flags&NO_CACHE)==0 {
+			dat := dats[v.datseq]
+			if dat == nil {
+				dat, _ = ioutil.ReadFile(idx.db.seq2fn(v.datseq))
+				if dat==nil {
+					println("Database corrupt - missing file:", idx.db.seq2fn(v.datseq))
+					os.Exit(1)
+				}
+				dats[v.datseq] = dat
+			}
+			v.data = make([]byte, v.datlen)
+			copy(v.data, dat[v.datpos:v.datpos+v.datlen])
+		}
+		return true
+	})
 }
 
 

@@ -90,7 +90,10 @@ func NewDB(dir string, load bool) (db *DB, e error) {
 	db.dir = dir
 	db.rdfile = make(map[uint32] *os.File)
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
-	db.idx = NewDBidx(db, load)
+	db.idx = NewDBidx(db)
+	if load {
+		db.idx.load()
+	}
 	db.datseq = db.idx.max_dat_seq+1
 	return
 }
