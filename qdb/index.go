@@ -2,7 +2,6 @@ package qdb
 
 import (
 	"os"
-//	"io/ioutil"
 )
 
 
