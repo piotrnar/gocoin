@@ -1,3 +1,6 @@
+0.5.1
+* Yet more improved "qdb" is now a part of the repo
+
 0.5.0
 * Requires new "qdb" ... much imporved statrup times.
 * Never keeps unwind records in memory (only on disk)

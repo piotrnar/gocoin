@@ -5,7 +5,7 @@ import (
 	"errors"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/qdb"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 /*
@@ -51,14 +51,15 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
+		var cfg qdb.DBConfig
 		if KeepBlocksBack!=0 {
-			db.tdb[i].KeepInMem = func (v []byte) bool {
+			cfg.KeepInMem = func (v []byte) bool {
 				// Keep in memory outputs that dont go further than X blocks back
 				return int(binary.LittleEndian.Uint32(v[44:48])) >
 					int(db.lastHeight) - KeepBlocksBack
 			}
 		}
+		db.tdb[i], _ = qdb.NewDBCfg(db.dir+fmt.Sprintf("%02x/", i), &cfg)
 		db.tdb[i].Load()
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
@@ -214,7 +215,7 @@ func (db *unspentDb) nosync() {
 func (db *unspentDb) save() {
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
-			db.tdb[i].Defrag()
+			db.tdb[i].Flush()
 		}
 	}
 }

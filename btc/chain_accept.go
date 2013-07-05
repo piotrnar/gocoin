@@ -68,7 +68,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 			if !ch.DoNotSync {
 				ch.Blocks.Sync()
-				ch.Unspent.Sync()
 			}
 			ch.BlockTreeEnd = cur // Advance the head
 		}

@@ -22,8 +22,6 @@ type UnspentDB interface {
 	Idle()
 	Save()
 	Close()
-	NoSync()
-	Sync()
 	GetStats() (string)
 
 	SetTxNotify(TxNotifyFunc)

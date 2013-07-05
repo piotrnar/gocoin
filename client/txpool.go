@@ -421,7 +421,10 @@ func init() {
 }
 
 
-func expireTime(size int) time.Time {
+func expireTime(size int) (t time.Time) {
+	if !CFG.TXPool.Enabled {
+		return // return zero time which should expire immediatelly
+	}
 	exp := (time.Duration(size)*ExpirePerKB) >> 10
 	if exp > MaxExpireTime {
 		exp = MaxExpireTime
@@ -445,41 +448,38 @@ func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
 }
 
 
-func txPoolManager() {
-	for {
-		time.Sleep(60e9) // Wake up every minute
-		var cnt1a, cnt1b, cnt2 uint64
+func expire_txs() {
+	var cnt1a, cnt1b, cnt2 uint64
 
-		tx_mutex.Lock()
-		for k, v := range TransactionsToSend {
-			if v.own==0 && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
-				delete(TransactionsToSend, k)
-				if v.blocked==0 {
-					cnt1a++
-				} else {
-					cnt1b++
-				}
+	tx_mutex.Lock()
+	for k, v := range TransactionsToSend {
+		if v.own==0 && v.firstseen.Before(expireTime(len(v.data))) {  // Do not expire own txs
+			delete(TransactionsToSend, k)
+			if v.blocked==0 {
+				cnt1a++
+			} else {
+				cnt1b++
 			}
 		}
-		for k, v := range TransactionsRejected {
-			if v.Time.Before(expireTime(int(v.size))) {
-				deleteRejected(k)
-				cnt2++
-			}
-		}
-		tx_mutex.Unlock()
-
-		counter_mutex.Lock()
-		Counter["TxPurgedTicks"]++
-		if cnt1a>0 {
-			Counter["TxPurgedOK"] += cnt1a
-		}
-		if cnt1b>0 {
-			Counter["TxPurgedBlocked"] += cnt1b
-		}
-		if cnt2 > 0 {
-			Counter["TxPurgedRejected"] += cnt2
-		}
-		counter_mutex.Unlock()
 	}
+	for k, v := range TransactionsRejected {
+		if v.Time.Before(expireTime(int(v.size))) {
+			deleteRejected(k)
+			cnt2++
+		}
+	}
+	tx_mutex.Unlock()
+
+	counter_mutex.Lock()
+	Counter["TxPurgedTicks"]++
+	if cnt1a>0 {
+		Counter["TxPurgedOK"] += cnt1a
+	}
+	if cnt1b>0 {
+		Counter["TxPurgedBlocked"] += cnt1b
+	}
+	if cnt2 > 0 {
+		Counter["TxPurgedRejected"] += cnt2
+	}
+	counter_mutex.Unlock()
 }

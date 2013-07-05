@@ -333,11 +333,6 @@ func blchain_stats(par string) {
 }
 
 
-func save_bchain(par string) {
-	BlockChain.Save()
-}
-
-
 func switch_sync(par string) {
 	offit := (par=="0" || par=="false" || par=="off")
 

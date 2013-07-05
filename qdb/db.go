@@ -27,7 +27,8 @@ import (
 type KeyType uint64
 const (
 	KeySize = 8
-	MaxPending = 1014
+	MaxPending = 1000
+	MaxPendingNoSync = 10000
 )
 
 
@@ -97,6 +98,7 @@ func NewDBCfg(dir string, cfg *DBConfig) (db *DB, e error) {
 	db.rdfile = make(map[uint32] *os.File)
 	db.idx = NewDBidx(db)
 	db.datseq = db.idx.max_dat_seq+1
+	db.pending_recs = make(map[KeyType] bool, MaxPending)
 	return
 }
 
@@ -162,14 +164,16 @@ func (db *DB) Get(key KeyType) (value []byte) {
 func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
-	if db.nosync {
-		db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value))})
-		db.pending_recs[key] = true
+	db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value))})
+	db.pending_recs[key] = true
+	if db.syncneeded() {
+		go func() {
+			db.sync()
+			db.mutex.Unlock()
+		}()
 	} else {
-		fpos := db.addtolog(nil, key, value)
-		db.idx.put(key, &oneIdx{data:value, datpos:uint32(fpos), datlen:uint32(len(value)), datseq:db.datseq})
+		db.mutex.Unlock()
 	}
-	db.mutex.Unlock()
 }
 
 
@@ -177,13 +181,16 @@ func (db *DB) Put(key KeyType, value []byte) {
 func (db *DB) Del(key KeyType) {
 	//println("del", hex.EncodeToString(key[:]))
 	db.mutex.Lock()
-	if db.nosync {
-		db.idx.memdel(key)
-		db.pending_recs[key] = true
+	db.idx.memdel(key)
+	db.pending_recs[key] = true
+	if db.syncneeded() {
+		go func() {
+			db.sync()
+			db.mutex.Unlock()
+		}()
 	} else {
-		db.idx.del(key)
+		db.mutex.Unlock()
 	}
-	db.mutex.Unlock()
 }
 
 
@@ -207,10 +214,7 @@ func (db *DB) Defrag() (doing bool) {
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
 	db.mutex.Lock()
-	if !db.nosync {
-		db.pending_recs = make(map[KeyType] bool)
-		db.nosync = true
-	}
+	db.nosync = true
 	db.mutex.Unlock()
 }
 
@@ -219,15 +223,11 @@ func (db *DB) NoSync() {
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
 	db.mutex.Lock()
-	if db.nosync {
-		db.nosync = false
-		go func() {
-			db.sync()
-			db.mutex.Unlock()
-		}()
-	} else {
+	db.nosync = false
+	go func() {
+		db.sync()
 		db.mutex.Unlock()
-	}
+	}()
 }
 
 
@@ -298,8 +298,23 @@ func (db *DB) sync() {
 			}
 		}
 		db.logfile.Write(bdat.Bytes())
-		db.logfile.Sync()
 		db.idx.writebuf(bidx.Bytes())
 	}
-	db.pending_recs = nil
+	db.pending_recs = make(map[KeyType] bool, MaxPending)
+}
+
+
+func (db *DB) Flush() {
+	if db.logfile!=nil {
+		db.logfile.Sync()
+	}
+	if db.idx.logfile!=nil {
+		db.idx.logfile.Sync()
+	}
+}
+
+
+func (db *DB) syncneeded() bool {
+	return len(db.pending_recs) > MaxPendingNoSync ||
+		!db.nosync && len(db.pending_recs) > MaxPending
 }

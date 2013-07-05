@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"bytes"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/qdb"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 const (
@@ -26,8 +26,7 @@ type unwindDb struct {
 func (db *unwindDb) dbH(i int) (*qdb.DB) {
 	i &= 0xff
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%02x/", i))
-		db.tdb[i].NeverKeepInMem = true
+		db.tdb[i], _ = qdb.NewDBCfg(db.dir+fmt.Sprintf("%02x/", i), &qdb.DBConfig{DoNotCache:true})
 		db.tdb[i].Load()
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
@@ -98,7 +97,7 @@ func (db *unwindDb) nosync() {
 func (db *unwindDb) save() {
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
-			db.tdb[i].Defrag()
+			db.tdb[i].Flush()
 		}
 	}
 }

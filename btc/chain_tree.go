@@ -22,13 +22,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var er error
 	var trusted bool
 
-	prv_sync := ch.DoNotSync
-	ch.DoNotSync = true
-
-	if end.Height - ch.BlockTreeEnd.Height > 100 {
-		ch.Unspent.NoSync()
-	}
-
 	prv := time.Now().UnixNano()
 	for ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
@@ -67,22 +60,20 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.DeleteBranch(nxt)
 			break
 		}
-		ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
-		if !ch.DoNotSync {
-			ch.Blocks.Sync()
+		if !trusted {
+			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 
 		ch.BlockTreeEnd = nxt
 	}
-	ch.Unspent.Sync()
 
 	if ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
 	}
-	ch.DoNotSync = prv_sync
+	ch.Save()
 }
 
 

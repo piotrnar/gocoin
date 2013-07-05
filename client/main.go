@@ -127,15 +127,8 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
-	var switchsyncon bool
 	sta := time.Now()
 	debug.SetGCPercent(-1)  // we need this fast, so disable GC for the time being
-	if !BlockChain.DoNotSync {
-		// .. and this makes a significant difference for Windows
-		BlockChain.DoNotSync = true
-		BlockChain.Unspent.NoSync()
-		switchsyncon = true
-	}
 	e = BlockChain.AcceptBlock(bl)
 	if e == nil {
 		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
@@ -186,9 +179,6 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
-	if switchsyncon {
-		BlockChain.Sync()
-	}
 	return
 }
 
@@ -262,8 +252,9 @@ func main() {
 	}
 
 	peersTick := time.Tick(defragEvery)
+	txPoolTick := time.Tick(time.Minute)
+
 	initPeers(GocoinHomeDir)
-	go txPoolManager()
 
 	LastBlock = BlockChain.BlockTreeEnd
 	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
@@ -305,13 +296,15 @@ func main() {
 
 			case cmd := <-uiChannel:
 				Busy("UI command")
-				CountSafe("UI messages")
 				cmd.handler(cmd.param)
 				cmd.done.Done()
 				continue
 
 			case <-peersTick:
 				expire_peers()
+
+			case <-txPoolTick:
+				expire_txs()
 
 			case <-time.After(time.Second/5):
 				CountSafe("MainThreadTouts")
@@ -327,6 +320,6 @@ func main() {
 	}
 	println("Closing blockchain")
 	BlockChain.Sync()
+	BlockChain.Save()
 	BlockChain.Close()
-	peerDB.Close()
 }

@@ -52,7 +52,6 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 func (ch *Chain) Sync() {
 	ch.DoNotSync = false
 	ch.Blocks.Sync()
-	ch.Unspent.Sync()
 }
 
 

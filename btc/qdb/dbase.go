@@ -15,12 +15,12 @@ func NewDb(dir string, init bool) btc.UnspentDB {
 	var db UnspentDB
 
 	if init {
-		os.RemoveAll(dir+"unspent/")
-		os.RemoveAll(dir+"unspent/unwind/")
+		os.RemoveAll(dir+"unspent2/")
+		os.RemoveAll(dir+"unspent2/unwind/")
 	}
 
-	db.unwind = newUnwindDB(dir+"unspent/unwind/")
-	db.unspent = newUnspentDB(dir+"unspent/", db.unwind.lastBlockHeight)
+	db.unwind = newUnwindDB(dir+"unspent2/unwind/")
+	db.unspent = newUnspentDB(dir+"unspent2/", db.unwind.lastBlockHeight)
 
 	return &db
 }
@@ -51,12 +51,12 @@ func (db UnspentDB) SetTxNotify(fn btc.TxNotifyFunc) {
 }
 
 // Flush all the data to files
-func (db UnspentDB) Sync() {
+func (db UnspentDB) sync() {
 	db.unwind.sync()
 	db.unspent.sync()
 }
 
-func (db UnspentDB) NoSync() {
+func (db UnspentDB) nosync() {
 	db.unwind.nosync()
 	db.unspent.nosync()
 }
@@ -82,8 +82,10 @@ func (db UnspentDB) Save() {
 }
 
 func (db UnspentDB) UndoBlockTransactions(height uint32) {
+	db.nosync()
 	db.unwind.undo(height, db.unspent)
 	db.unspent.lastHeight = height-1
+	db.sync()
 }
 
 
