@@ -202,12 +202,10 @@ func (db *DB) Del(key KeyType) {
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag() (doing bool) {
 	db.mutex.Lock()
-	doing = db.idx.extra_space_used > (db.idx.disk_space_needed/8)
+	doing = db.idx.extra_space_used > (db.idx.disk_space_needed/2) // defrag if we waste more than 50%
 	if doing {
-		println(db.dir, "defrag because", db.idx.extra_space_used, db.idx.disk_space_needed)
 		go func() {
 			db.defrag()
-			println(db.dir, "defrag done")
 			db.mutex.Unlock()
 		}()
 	} else {
