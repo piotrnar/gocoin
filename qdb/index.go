@@ -17,6 +17,7 @@ type dbidx struct {
 	index map[KeyType] *oneIdx
 	cnt int
 
+	disk_space_needed uint64
 	extra_space_used uint64
 }
 
@@ -68,9 +69,12 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 	if prv, ok := idx.index[k]; !ok {
 		idx.cnt++
 	} else {
-		idx.extra_space_used += uint64(24+prv.datlen)
+		dif := uint64(24+prv.datlen)
+		idx.extra_space_used += dif
+		idx.disk_space_needed -= dif
 	}
 	idx.index[k] = rec
+	idx.disk_space_needed += uint64(24+rec.datlen)
 	if rec.datseq>idx.max_dat_seq {
 		idx.max_dat_seq = rec.datseq
 	}
@@ -80,7 +84,9 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 func (idx *dbidx) memdel(k KeyType) {
 	if cur, ok := idx.index[k]; ok {
 		idx.cnt--
-		idx.extra_space_used += uint64(12+cur.datlen)
+		dif := uint64(12+cur.datlen)
+		idx.extra_space_used += dif
+		idx.disk_space_needed -= dif
 		delete(idx.index, k)
 	}
 }
