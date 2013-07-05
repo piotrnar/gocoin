@@ -4,7 +4,6 @@ import (
 	"os"
 	"io"
 	"fmt"
-	"bytes"
 	"io/ioutil"
 	"encoding/binary"
 )
@@ -187,7 +186,7 @@ func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
 func (idx *dbidx) writedatfile() {
 	idx.datfile_idx = 1-idx.datfile_idx
 	idx.version_seq++
-	f := new(bytes.Buffer)
+	f, _ := os.Create(fmt.Sprint(idx.path, idx.datfile_idx))
 	binary.Write(f, binary.LittleEndian, idx.version_seq)
 	idx.browse(func(key KeyType, rec *oneIdx) bool {
 		binary.Write(f, binary.LittleEndian, key)
@@ -200,10 +199,7 @@ func (idx *dbidx) writedatfile() {
 	f.Write([]byte{0xff,0xff,0xff,0xff})
 	binary.Write(f, binary.LittleEndian, idx.version_seq)
 	f.Write([]byte("FINI"))
-
-	fil, _ := os.Create(fmt.Sprint(idx.path, idx.datfile_idx))
-	fil.Write(f.Bytes())
-	fil.Close()
+	f.Close()
 
 	// now delete the previous log
 	if idx.logfile!=nil {
