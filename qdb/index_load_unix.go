@@ -3,7 +3,6 @@
 package qdb
 
 import (
-	"os"
 )
 
 func (idx *dbidx) load() {
