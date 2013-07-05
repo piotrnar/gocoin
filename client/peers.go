@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"hash/crc64"
 	"encoding/binary"
-	"github.com/piotrnar/qdb"
+	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -266,7 +266,7 @@ func initSeeds(seeds []string, port int) {
 
 
 func initPeers(dir string) {
-	peerDB, _ = qdb.NewDB(dir+"peers")
+	peerDB, _ = qdb.NewDB(dir+"peers2")
 	if peerDB.Count()==0 {
 		if !CFG.Testnet {
 			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
