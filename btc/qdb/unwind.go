@@ -27,7 +27,7 @@ type unwindDb struct {
 func (db *unwindDb) dbH(i int) (*qdb.DB) {
 	i &= 0xff
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("unw%03d/", i), true)
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("unw%03d", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}

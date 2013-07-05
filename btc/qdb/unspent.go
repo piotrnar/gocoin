@@ -56,7 +56,7 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%06d/", i), true)
+		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%06d", i), true)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
