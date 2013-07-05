@@ -31,6 +31,8 @@ const (
 	MaxPending = 1000
 	MaxPendingNoSync = 10000
 
+	DefragWasteTreshold = 16*1024*1024
+
 	NO_BROWSE = 0x00000001
 	NO_CACHE  = 0x00000002
 	BR_ABORT  = 0x00000004
@@ -199,10 +201,12 @@ func (db *DB) Del(key KeyType) {
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag() (doing bool) {
 	db.mutex.Lock()
-	doing = db.idx.needsdefrag
+	doing = db.idx.extra_space_used > DefragWasteTreshold
 	if doing {
+		println(db.dir, "defrag because", db.idx.extra_space_used)
 		go func() {
 			db.defrag()
+			println(db.dir, "defrag done")
 			db.mutex.Unlock()
 		}()
 	} else {
@@ -275,7 +279,7 @@ func (db *DB) defrag() {
 	db.idx.writedatfile() // this will close the file
 
 	db.cleanupold(used)
-	db.idx.needsdefrag = false
+	db.idx.extra_space_used = 0
 }
 
 
