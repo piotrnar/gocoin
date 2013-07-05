@@ -44,13 +44,13 @@ The entire block chain is stored in one large file, so your file system must sup
 
 
 ### Optimize memory usage
-You can decrease the node's memory usage, at a cost of performance.
-Here is how to do it
- * Start your node (client)
- * Save the config file using UI's „configsave” command.
- * Quite the node using UI's „quit” command.
- * Edit the config file gocoin.conf and change the default values of  UTXOCacheBlks and/or GCPercTrshold. You can try e.g. 25000 (blocks) for UTXOCacheBlks and 30 (percent) for  GCPercTrshold.
- * Start your node - it should be using the new memory config from now on.
+It is possible to decrease the node's memory usage, at a cost of performance. 
+
+One of the things worth trying is decreasing the Go's grabage collector's trashold from the default 100%. 
+If you want to change it to e. g. 30%, use a running node's UI to execute such command:
+	cfg "Memory":{"GCPercTrshold":30}
+
+You can save a modified config values, using "configsave" command.
 
 
 Wallet
