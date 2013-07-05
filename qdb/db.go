@@ -251,7 +251,6 @@ func (db *DB) Close() {
 
 
 func (db *DB) defrag() {
-	bdat := new(bytes.Buffer)
 	db.datseq++
 	if db.logfile!=nil {
 		db.logfile.Close()
@@ -263,14 +262,13 @@ func (db *DB) defrag() {
 		if rec.data==nil {
 			db.loadrec(rec)
 		}
-		rec.datpos = uint32(db.addtolog(bdat, key, rec.data))
+		rec.datpos = uint32(db.addtolog(nil, key, rec.data))
 		rec.datseq = db.datseq
 		used[rec.datseq] = true
 		return true
 	})
 
 	// first write & flush the data file:
-	db.logfile.Write(bdat.Bytes())
 	db.logfile.Sync()
 
 	// now the index:
@@ -284,12 +282,11 @@ func (db *DB) defrag() {
 func (db *DB) sync() {
 	if len(db.pending_recs)>0 {
 		bidx := new(bytes.Buffer)
-		bdat := new(bytes.Buffer)
 		db.checklogfile()
 		for k, _ := range db.pending_recs {
 			rec := db.idx.get(k)
 			if rec != nil {
-				fpos := db.addtolog(bdat, k, rec.data)
+				fpos := db.addtolog(nil, k, rec.data)
 				rec.datlen = uint32(len(rec.data))
 				rec.datpos = uint32(fpos)
 				rec.datseq = db.datseq
@@ -301,7 +298,6 @@ func (db *DB) sync() {
 				db.idx.deltolog(bidx, k)
 			}
 		}
-		db.logfile.Write(bdat.Bytes())
 		db.idx.writebuf(bidx.Bytes())
 	}
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
