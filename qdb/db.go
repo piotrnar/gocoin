@@ -82,7 +82,7 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDB(dir string, cfg *DBConfig) (db *DB, e error) {
+func NewDBCfg(dir string, cfg *DBConfig) (db *DB, e error) {
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
 		dir += string(os.PathSeparator)
@@ -96,6 +96,16 @@ func NewDB(dir string, cfg *DBConfig) (db *DB, e error) {
 	db.idx = NewDBidx(db)
 	db.datseq = db.idx.max_dat_seq+1
 	return
+}
+
+
+// Creates or opens a new database with default config.
+func NewDB(dir string) (*DB, error) {
+	return NewDBCfg(dir, nil)
+}
+
+// Just a dummy in this version since loading happens in NewDB
+func (db *DB) Load() {
 }
 
 
@@ -293,4 +303,3 @@ func (db *DB) sync() {
 	db.pending_puts = nil
 	db.pending_dels = nil
 }
-
