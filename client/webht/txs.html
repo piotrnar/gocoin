@@ -1,17 +1,38 @@
 <h2>Memory Pool:</h2>
-<table>
-<tr><td>Accepted transactions:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
-<tr><td>Rejected ransactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
-<tr><td>Transactions waiting for inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
-<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
-<tr><td>Outputs spent in the memory:<td><b>{SPENT_OUTS_CNT}</b>
+<table width="100%"><tr>
+<td valign="top" width="*">
+	<table>
+		<tr><td>Accepted transactions:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
+		<tr><td>Rejected ransactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
+		<tr><td>Transactions waiting for inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
+		<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
+		<tr><td>Number of TXUO spent in memory:<td><b>{SPENT_OUTS_CNT}</b>
+	</table>
+<td valign="top" width="*">
+	<table>
+		<col width="150">
+		<col width="100">
+		<col width="150">
+		<tr>
+			<td>Memory pool:
+			<td><b><!--MEM_POOL_ENABLED--></b>
+			<td>[<a href="cfg?txponoff">Switch ON/OFF</a>]
+		<tr>
+			<td>Relay transactions:
+			<td><b><!--TX_ROUTE_ENABLED--></b>
+			<td>[<a href="cfg?txronoff">Switch ON/OFF</a>]
+		<tr>
+			<td colspan="3">
+				<hr>
+				<h2>Upload Transaction File:</h2>
+				<form id="the-form" method="post" enctype="multipart/form-data">
+					<input name="txfile" type="file">
+					<input type="submit" value="Upload" />
+				</form>
+	</table>
 </table>
-<h2>Upload Transaction File:</h2>
-<form id="the-form" method="post" enctype="multipart/form-data">
-	<input name="txfile" type="file">
-	<input type="submit" value="Upload" />
-</form>
-{TX_LOAD}
+
+<!--TX_LOAD-->
 <br>
 <table class="txs bord" id="txs2s" style="display:none">
 	<tr>
@@ -165,9 +186,9 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				if (own!=0) {
-					c.innerHTML = '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/sendtx.png">'
+					c.innerHTML = '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/send.png">'
 					c.innerHTML += '&nbsp;'
-					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/deltx.png">'
+					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/del.png">'
 				} else {
 					var blkd = parseInt(xval(txs[i], 'blocked'))
 					if (blkd!=0) {

@@ -1,18 +1,5 @@
-<h2>Wallet</h2>Last known balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs
-<ul>
-<li>Download <a href="balance.zip">balance.zip</a>
-<li><a style="cursor:pointer" onclick="show_unspent()">Show/hide unspent outputs</a>
-<table vspace="10" id="unspent" style="display:none">
-<tr>
-	<th width="20">#
-	<th width="40">Block
-	<th>TxID
-	<th width="30">Vout
-	<th width="80">BTC Value
-	<th width="210">Address
-</table>
-</ul>
-
+<h2>Wallet</h2>
+<!--WALLET-->
 <h2>Last Block</h2><table>
 <tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
 <tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
@@ -33,7 +20,7 @@
 <tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
 <tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
 <tr><td>Node's uptime:<td><b>{NODE_UPTIME}</b>
-<tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b>
+<tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b> &nbsp;[<a href="cfg?freemem">FREE</a>]
 <tr><td>SysMem Used:<td><b>{SYSMEM_USED_MB} MB</b>
 <tr><td>ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
 </table>

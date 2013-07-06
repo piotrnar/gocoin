@@ -51,6 +51,7 @@ tr {
 	background-color:#e0e0e0;
 	width: 980px;
 	overflow-x: auto;
+	font-size:85%
 }
 
 td,th {
@@ -68,6 +69,14 @@ tr.own {
 
 tr.hov:hover {
 	background-color:#e0e0e0;
+}
+
+.hand {
+	cursor:pointer;
+}
+
+.small {
+	font-size:75%
 }
 
 input[type=button], input[type=submit] {

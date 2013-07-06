@@ -1,3 +1,6 @@
+0.5.2
+* WebUI improvements
+
 0.5.1
 * Yet more improved "qdb" is now a part of the repo
 

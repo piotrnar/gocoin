@@ -260,6 +260,7 @@ func main() {
 
 	peersTick := time.Tick(defragEvery)
 	txPoolTick := time.Tick(time.Minute)
+	netTick := time.Tick(time.Second)
 
 	initPeers(GocoinHomeDir)
 
@@ -270,7 +271,6 @@ func main() {
 		receivedBlocks[k] = &oneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
 	}
 
-	go network_process()
 	go do_userif()
 	if CFG.WebUI!="" {
 		fmt.Println("Starting WebUI at", CFG.WebUI, "...")
@@ -312,6 +312,9 @@ func main() {
 
 			case <-txPoolTick:
 				expire_txs()
+
+			case <-netTick:
+				network_tick()
 
 			case <-time.After(time.Second/2):
 				CountSafe("MainThreadTouts")

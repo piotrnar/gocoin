@@ -13,8 +13,18 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s := load_template("home.html")
 
 	mutex.Lock()
-	s = strings.Replace(s, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
-	s = strings.Replace(s, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
+	if len(MyBalance)>0 {
+		wal := load_template("home_wal.html")
+		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
+		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
+		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
+	} else {
+		if MyWallet==nil {
+			s = strings.Replace(s, "<!--WALLET-->", "You have no wallet", 1)
+		} else {
+			s = strings.Replace(s, "<!--WALLET-->", "Your balance is <b>zero</b>", 1)
+		}
+	}
 	s = strings.Replace(s, "{LAST_BLOCK_HASH}", LastBlock.BlockHash.String(), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(LastBlock.Height), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_TIME}",

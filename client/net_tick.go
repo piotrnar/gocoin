@@ -124,6 +124,12 @@ func do_network(ad *onePeer) {
 }
 
 
+var (
+	tcp_server_started bool
+	next_drop_slowest time.Time
+)
+
+
 // TCP server
 func tcp_server() {
 	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", DefaultTcpPort))
@@ -141,8 +147,10 @@ func tcp_server() {
 
 	fmt.Println("TCP server started at", ad.String())
 
-	for {
+	for CFG.ListenTCP {
+		CountSafe("NetServerLoops")
 		if InConsActive < MaxInCons {
+			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
 				if dbg>0 {
@@ -180,44 +188,57 @@ func tcp_server() {
 				}
 			}
 		} else {
-			time.Sleep(250e6)
+			time.Sleep(1e9)
 		}
 	}
+	mutex.Lock()
+	for _, c := range openCons {
+		if c.Incomming {
+			c.Broken = true
+		}
+	}
+	mutex.Unlock()
+	fmt.Println("TCP server stopped")
+	tcp_server_started = false
 }
 
-// General network process (i.e. for establishing outgoing connections)
-func network_process() {
+
+func network_tick() {
+	CountSafe("NetTicks")
+
 	if CFG.ListenTCP {
-		if CFG.ConnectOnly=="" {
+		if !tcp_server_started {
+			tcp_server_started = true
 			go tcp_server()
-		} else {
-			fmt.Println("WARNING: -l switch ignored since -c specified as well")
 		}
 	}
-	next_drop_slowest := time.Now().Add(DropSlowestEvery)
-	for {
-		mutex.Lock()
-		conn_cnt := OutConsActive
-		mutex.Unlock()
-		if conn_cnt < MaxOutCons {
-			adrs := GetBestPeers(16, true)
-			if len(adrs)>0 {
-				do_network(adrs[rand.Int31n(int32(len(adrs)))])
-				continue // do not sleep
-			}
 
+	mutex.Lock()
+	conn_cnt := OutConsActive
+	mutex.Unlock()
+
+	if next_drop_slowest.IsZero() {
+		next_drop_slowest = time.Now().Add(DropSlowestEvery)
+	} else if conn_cnt >= MaxOutCons {
+		// Having max number of outgoing connections, check to drop the slowest one
+		if time.Now().After(next_drop_slowest) {
+			drop_slowest_peer()
+			next_drop_slowest = time.Now().Add(DropSlowestEvery)
+		}
+	}
+
+	for conn_cnt < MaxOutCons {
+		adrs := GetBestPeers(16, true)
+		if len(adrs)==0 {
 			if CFG.ConnectOnly=="" && dbg>0 {
 				println("no new peers", len(openCons), conn_cnt)
 			}
-		} else {
-			// Having max number of outgoing connections, check to drop the slowest one
-			if time.Now().After(next_drop_slowest) {
-				drop_slowest_peer()
-				next_drop_slowest = time.Now().Add(DropSlowestEvery)
-			}
+			break
 		}
-		// If we did not continue, wait a few secs before another loop
-		time.Sleep(3e9)
+		do_network(adrs[rand.Int31n(int32(len(adrs)))])
+		mutex.Lock()
+		conn_cnt = OutConsActive
+		mutex.Unlock()
 	}
 }
 

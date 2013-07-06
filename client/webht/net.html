@@ -11,23 +11,29 @@ function raw_load(id, tit) {
 	xmlHttp.open("GET","raw_"+id, true);
 	xmlHttp.send(null);
 }
+function net_drop(id) {
+	if (confirm("Drop Connection ID "+id)) {
+		document.location = 'cfg?drop='+id
+	}
+}
 </script>
 <b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br>
-Listening for incomming TCP connections: <b>{LISTEN_TCP}</b><br>
+Listening for incomming TCP connections: <b>{LISTEN_TCP}</b>
+ &nbsp;&nbsp;[<a href="cfg?lonoff">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
 <br>
 <table class="netcons bord">
 <tr>
-	<th rowspan="2">ID
+	<th rowspan="2" width="30">ID
 	<th rowspan="2" colspan="2">Peer Address
-	<th rowspan="2">Ping
+	<th rowspan="2" width="60">Ping
 	<th colspan="2">Last received
 	<th colspan="2">Last sent
 	<th rowspan="2">Total<br>rcvd
 	<th rowspan="2">Total<br>sent
 	<th colspan="2">Peer Info
-	<th rowspan="2">Blks
-	<th rowspan="2">Sendbuf
+	<th rowspan="2" width="100">Comm
+	<th rowspan="2">&nbsp;
 </tr>
 <tr>
 	<th>bytes
@@ -36,6 +42,6 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th>command
 	<th>version
 	<th>user-agent
-{PEER_ROW}
+<!--PEER_ROW-->
 </table>
 <a name="rawdiv"><h2 id="rawtit"></h2></a><pre id="rawdiv" class="mono"></pre>

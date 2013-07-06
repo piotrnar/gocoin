@@ -17,22 +17,24 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
 	for k, v := range openCons {
-		srt[cnt].key = k
-		srt[cnt].ConnID = v.ConnID
-		cnt++
+		if !v.Broken {
+			srt[cnt].key = k
+			srt[cnt].ConnID = v.ConnID
+			cnt++
+		}
 	}
 	mutex.Unlock()
 	sort.Sort(srt)
 	net_page = strings.Replace(net_page, "{OUT_CONNECTIONS}", fmt.Sprint(OutConsActive), 1)
 	net_page = strings.Replace(net_page, "{IN_CONNECTIONS}", fmt.Sprint(InConsActive), 1)
-	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(CFG.ListenTCP), 1)
+	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(CFG.ListenTCP, tcp_server_started), 1)
 	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(BestExternalAddr()).String(), 1)
 
 	for idx := range srt {
 		v := openCons[srt[idx].key]
 		s := net_row
 
-		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), 2)
+		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), -1)
 		if v.Incomming {
 			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/incoming.png\">", 1)
 		} else {
@@ -49,13 +51,16 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{TOTAL_SENT}", bts(v.BytesSent), 1)
 		s = strings.Replace(s, "{NODE_VERSION}", fmt.Sprint(v.node.version), 1)
 		s = strings.Replace(s, "{USER_AGENT}", v.node.agent, 1)
-		s = strings.Replace(s, "{SENDING_DONE}", fmt.Sprint(v.send.sofar), 1)
-		s = strings.Replace(s, "{SENDING_TOTAL}", fmt.Sprint(len(v.send.buf)), 1)
-		s = strings.Replace(s, "{BLOCKS_IN_PROGRESS}", fmt.Sprint(len(v.GetBlockInProgress)), 1)
+		if v.send.buf != nil {
+			s = strings.Replace(s, "<!--SENDBUF-->",
+				fmt.Sprintf("%d/%dKB ", v.send.sofar>>10, len(v.send.buf)>>10), 1)
+		}
+		if len(v.GetBlockInProgress)>0 {
+			s = strings.Replace(s, "<!--BLKSINPROG-->", fmt.Sprint(len(v.GetBlockInProgress), "blks "), 1)
+		}
 
-		net_page = strings.Replace(net_page, "{PEER_ROW}", s+"\n{PEER_ROW}", 1)
+		net_page = templ_add(net_page, "<!--PEER_ROW-->", s)
 	}
-	net_page = strings.Replace(net_page, "{PEER_ROW}", "", 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(net_page))

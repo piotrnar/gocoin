@@ -42,13 +42,24 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{AWAITING_INPUTS}", fmt.Sprint(len(WaitingForInputs)), 1)
 	tx_mutex.Unlock()
 
-	var ld string
 	wg.Wait()
 	if txloadresult!="" {
-		ld = load_template("txs_load.html")
+		ld := load_template("txs_load.html")
 		ld = strings.Replace(ld, "{TX_RAW_DATA}", txloadresult, 1)
+		s = strings.Replace(s, "<!--TX_LOAD-->", ld, 1)
 	}
-	s = strings.Replace(s, "{TX_LOAD}", ld, 1)
+
+	if CFG.TXPool.Enabled {
+		s = strings.Replace(s, "<!--MEM_POOL_ENABLED-->", "Enabled", 1)
+	} else {
+		s = strings.Replace(s, "<!--MEM_POOL_ENABLED-->", "Disabled", 1)
+	}
+
+	if CFG.TXRoute.Enabled {
+		s = strings.Replace(s, "<!--TX_ROUTE_ENABLED-->", "Enabled", 1)
+	} else {
+		s = strings.Replace(s, "<!--TX_ROUTE_ENABLED-->", "Disabled", 1)
+	}
 
 	write_html_head(w, r)
 	w.Write([]byte(s))

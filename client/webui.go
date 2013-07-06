@@ -30,6 +30,11 @@ func load_template(fn string) string {
 }
 
 
+func templ_add(tmpl string, id string, val string) string {
+	return strings.Replace(tmpl, id, val+id, 1)
+}
+
+
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	if len(strings.SplitN(r.URL.Path[1:], "/", 3))==2 {
 		dat, _ := ioutil.ReadFile(r.URL.Path[1:])
@@ -117,6 +122,7 @@ func webserver() {
 	http.HandleFunc("/blocks", p_blocks)
 	http.HandleFunc("/miners", p_miners)
 	http.HandleFunc("/counts", p_counts)
+	http.HandleFunc("/cfg", p_cfg)
 
 	http.HandleFunc("/txs2s.xml", xmp_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
