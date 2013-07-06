@@ -32,11 +32,11 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	ch.loadBlockIndex()
 	if rescan {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
-	} /*else if ch.BlockTreeEnd.Height>0 {
+	} else if ch.BlockTreeEnd.Height>0 {
 		// Redo the last block in case if unspent DB update was interrupted last time
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
-	}*/
+	}
 
 	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
