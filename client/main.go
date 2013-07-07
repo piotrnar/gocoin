@@ -231,9 +231,6 @@ func main() {
 	fmt.Println("Gocoin client version", btc.SourcesTag)
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
-	UploadLimit = CFG.MaxUpKBps << 10
-	DownloadLimit = CFG.MaxDownKBps << 10
-
 	// Disable Ctrl+C
 	killchan := make(chan os.Signal, 1)
 	signal.Notify(killchan, os.Interrupt, os.Kill)

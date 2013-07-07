@@ -6,6 +6,7 @@ import (
 	"strings"
 	"runtime"
 	"net/http"
+	"encoding/json"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -67,6 +68,9 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{HEAP_SIZE_MB}", fmt.Sprint(ms.Alloc>>20), 1)
 	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
 	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
+
+	dat, _ := json.Marshal(&CFG)
+	s = strings.Replace(s, "{CONFIG_FILE}", string(dat), 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(s))

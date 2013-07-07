@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io/ioutil"
 	"net/http"
+	"encoding/json"
 )
 
 func p_cfg(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +35,20 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["freemem"])>0 {
 		show_mem("free")
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+
+	if len(r.Form["configjson"])>0 {
+		e := json.Unmarshal([]byte(r.Form["configjson"][0]), &CFG)
+		if e == nil {
+			resetcfg()
+		}
+		if len(r.Form["save"])>0 {
+			dat, _ := json.Marshal(&CFG)
+			if dat != nil {
+				ioutil.WriteFile(ConfigFile, dat, 0660)
+			}
+		}
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }

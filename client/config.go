@@ -111,6 +111,8 @@ func init() {
 
 
 func resetcfg() {
+	UploadLimit = CFG.MaxUpKBps << 10
+	DownloadLimit = CFG.MaxDownKBps << 10
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
@@ -162,8 +164,6 @@ func load_config(s string) {
 
 
 func save_config(s string) {
-	CFG.MaxUpKBps = UploadLimit>>10
-	CFG.MaxDownKBps = DownloadLimit>>10
 	dat, _ := json.Marshal(&CFG)
 	if dat != nil {
 		ioutil.WriteFile(ConfigFile, dat, 0660)
