@@ -55,11 +55,10 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "{WASTED_BLOCKS}", "", 1)
 		}
 
-		blks = strings.Replace(blks, "{BLOCK_ROW}", s+"{BLOCK_ROW}", 1)
+		blks = templ_add(blks, "<!--BLOCK_ROW-->", s)
 
 		end = end.Parent
 	}
-	blks = strings.Replace(blks, "{BLOCK_ROW}", "", 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(blks))

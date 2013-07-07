@@ -9,9 +9,14 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+type omv struct {
+	cnt int
+	bts uint64
+}
+
 type onemiernstat []struct {
 	name string
-	cnt int
+	omv
 }
 
 func (x onemiernstat) Len() int {
@@ -30,11 +35,13 @@ func (x onemiernstat) Swap(i, j int) {
 }
 
 func p_miners(w http.ResponseWriter, r *http.Request) {
-	m := make(map[string]int, 20)
-	cnt, unkn := 0, 0
+	m := make(map[string] omv, 20)
+	var unkn, om omv
+	cnt := 0
 	end := BlockChain.BlockTreeEnd
 	var lastts int64
 	var diff float64
+	var totbts uint64
 	now := time.Now().Unix()
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp) > 24*3600 {
@@ -48,17 +55,22 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		diff += btc.GetDifficulty(end.Bits)
 		miner := blocks_miner(bl)
 		if miner!="" {
-			m[miner]++
+			om = m[miner]
+			om.cnt++
+			om.bts+= uint64(len(bl))
+			m[miner] = om
 		} else {
-			unkn++
+			unkn.cnt++
+			unkn.bts+= uint64(len(bl))
 		}
+		totbts += uint64(len(bl))
 		end = end.Parent
 	}
 	srt := make(onemiernstat, len(m))
 	i := 0
 	for k, v := range m {
 		srt[i].name = k
-		srt[i].cnt = v
+		srt[i].omv = v
 		i++
 	}
 	sort.Sort(srt)
@@ -74,7 +86,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprintf("%.2f", bph), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_DIFFICULTY}", fmt.Sprintf("%.2f", diff), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_HASHDATE}", hr2str(hrate), 1)
-
+	mnrs = strings.Replace(mnrs, "{AVG_BLOCKSIZE}", fmt.Sprintf("%.1fKB", float64(totbts)/float64(cnt)/1000), 1)
 
 	for i := range srt {
 		s := onerow
@@ -82,14 +94,16 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{BLOCK_COUNT}", fmt.Sprint(srt[i].cnt), 1)
 		s = strings.Replace(s, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{MINER_HASHRATE}", hr2str(hrate*float64(srt[i].cnt)/float64(cnt)), 1)
-		mnrs = strings.Replace(mnrs, "{MINER_ROW}", s+"{MINER_ROW}", 1)
+		s = strings.Replace(s, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(srt[i].bts)/float64(srt[i].cnt)/1000), 1)
+		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 	}
 
 	onerow = strings.Replace(onerow, "{MINER_NAME}", "<i>Unknown</i>", 1)
-	onerow = strings.Replace(onerow, "{BLOCK_COUNT}", fmt.Sprint(unkn), 1)
-	onerow = strings.Replace(onerow, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(unkn)/float64(cnt)), 1)
-	onerow = strings.Replace(onerow, "{MINER_HASHRATE}", hr2str(hrate*float64(unkn)/float64(cnt)), 1)
-	mnrs = strings.Replace(mnrs, "{MINER_ROW}", onerow, 1)
+	onerow = strings.Replace(onerow, "{BLOCK_COUNT}", fmt.Sprint(unkn.cnt), 1)
+	onerow = strings.Replace(onerow, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(unkn.cnt)/float64(cnt)), 1)
+	onerow = strings.Replace(onerow, "{MINER_HASHRATE}", hr2str(hrate*float64(unkn.cnt)/float64(cnt)), 1)
+	onerow = strings.Replace(onerow, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(unkn.bts)/float64(unkn.cnt)/1000), 1)
+	mnrs = templ_add(mnrs, "<!--MINER_ROW-->", onerow)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))

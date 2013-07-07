@@ -29,4 +29,8 @@
 	<tr><td>ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
 	</table>
 </table>
-<h2>Configuration</h2><form method="post" action="cfg"><table width="100%"><tr><td colspan="2">	<textarea name="configjson" style="width:100%" rows="5">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be noticed.	<td align="right">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></table></form>
+<div id="showcfg">
+<br>
+<input type="button" value="Show configuration JSON data" onclick="shwcfg()">
+</div>
+<div id="formcfg" style="display:none"><h2>Configuration</h2><table width="90%"><tr><td colspan="2"><form method="post" action="cfg">	<textarea name="configjson" style="width:100%" rows="5">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be noticed.	<td align="right">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></form></table></div><script>function shwcfg() {	showcfg.style.display='none'	formcfg.style.display='block'}</script>

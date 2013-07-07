@@ -1,4 +1,4 @@
-<table class="blocks bord">
+<table class="blocks bord" id="blkstab">
 	<col width="70">
 	<col width="120">
 	<col>
@@ -24,5 +24,17 @@
 	<th>BTC
 	<th align="left">Miner
 </tr>
-{BLOCK_ROW}
+<!--BLOCK_ROW-->
 </table>
+<script>
+function hlminer(row) {
+	var mid = row.cells[9].innerText
+	for (var i=1; i<blkstab.rows.length; i++) {
+		if (blkstab.rows[i].cells[9].innerText==mid) {
+			blkstab.rows[i].style.backgroundColor="#ffd0d0";
+		} else {
+			blkstab.rows[i].style.backgroundColor="#ffffff";
+		}
+	}
+}
+</script>
