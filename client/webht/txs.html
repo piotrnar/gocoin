@@ -85,6 +85,9 @@ function sorttab(tid,col) {
 	for(var i=0, len=store.length; i<len; i++) {
 		tbl.appendChild(store[i][1]);
 	}
+	for (var i=0; i<tbl.rows.length; i++) {
+		tbl.rows[i].cells[0].innerHTML = i.toString()
+	}
 	store = null
 }
 
