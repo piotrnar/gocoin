@@ -27,7 +27,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	sort.Sort(srt)
 	net_page = strings.Replace(net_page, "{OUT_CONNECTIONS}", fmt.Sprint(OutConsActive), 1)
 	net_page = strings.Replace(net_page, "{IN_CONNECTIONS}", fmt.Sprint(InConsActive), 1)
-	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(CFG.ListenTCP, tcp_server_started), 1)
+	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(CFG.Net.ListenTCP, tcp_server_started), 1)
 	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(BestExternalAddr()).String(), 1)
 
 	for idx := range srt {

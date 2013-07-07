@@ -24,7 +24,7 @@ const (
 	TX_REJECTED_OVERSPEND    = 204
 	TX_REJECTED_LOW_FEE      = 205
 	TX_REJECTED_SCRIPT_FAIL  = 206
-	TX_REJECTED_MEM_INPUT    = 207
+	TX_REJECTED_BAD_INPUT    = 207
 	TX_REJECTED_NOT_MINED    = 208
 )
 
@@ -202,11 +202,11 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 			return
 		}
 
-		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; CFG.TXPool.AllowMemInputs && ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_MEM_INPUT)
+				TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				tx_mutex.Unlock()
-				CountSafe("TxRejectedMemInput")
+				CountSafe("TxRejectedBadInput")
 				return
 			}
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
@@ -215,7 +215,13 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		} else {
 			pos[i], _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
-				// In this casem let's "save" it for later...
+				if !CFG.TXPool.AllowMemInputs {
+					TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
+					tx_mutex.Unlock()
+					CountSafe("TxRejectedMemInput")
+					return
+				}
+				// In this case, let's "save" it for later...
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
 				nrtx.Wait4Input = &Wait4Input{missingTx: missingid, txRcvd: ntx}

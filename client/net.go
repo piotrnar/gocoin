@@ -19,10 +19,6 @@ const (
 	AskAddrsEvery = (5*time.Minute)
 	MaxAddrsPerMessage = 500
 
-	MaxInCons = 16
-	MaxOutCons = 9
-	MaxTotCons = MaxInCons+MaxOutCons
-
 	NoDataTimeout = 2*time.Minute
 	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
 
@@ -47,7 +43,7 @@ const (
 
 
 var (
-	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection, MaxTotCons)
+	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection)
 	InConsActive, OutConsActive uint
 	DefaultTcpPort uint16
 	ExternalIp4 map[uint32]uint = make(map[uint32]uint)

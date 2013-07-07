@@ -24,15 +24,20 @@ var FLAG struct {
 var CFG struct {
 	Testnet bool
 	ConnectOnly string
-	ListenTCP bool
-	TCPPort uint
 	Datadir string
-	MaxUpKBps uint
-	MaxDownKBps uint
 	WebUI string
 	MinerID string
+	Net struct {
+		ListenTCP bool
+		TCPPort uint
+		MaxOutCons uint
+		MaxInCons uint
+		MaxUpKBps uint
+		MaxDownKBps uint
+	}
 	TXPool struct {
 		Enabled bool // Global on/off swicth
+		AllowMemInputs bool
 		FeePerByte uint
 		MaxTxSize uint
 		MinVoutValue uint
@@ -57,19 +62,22 @@ var CFG struct {
 
 func init() {
 	// Fill in default values
-	CFG.ListenTCP = true
+	CFG.Net.ListenTCP = true
+	CFG.Net.MaxOutCons = 8
+	CFG.Net.MaxInCons = 8
 	CFG.WebUI = "127.0.0.1:8833"
 
 	CFG.TXPool.Enabled = true
-	CFG.TXPool.FeePerByte = 0
-	CFG.TXPool.MaxTxSize = 100e3
+	CFG.TXPool.AllowMemInputs = true
+	CFG.TXPool.FeePerByte = 10
+	CFG.TXPool.MaxTxSize = 10e3
 	CFG.TXPool.MinVoutValue = 0
 	CFG.TXPool.TxExpireMinPerKB = 100
 	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 10
-	CFG.TXRoute.MaxTxSize = 10240
+	CFG.TXRoute.MaxTxSize = 10e3
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
@@ -87,10 +95,10 @@ func init() {
 	flag.BoolVar(&FLAG.nosync, "nosync", false, "Init blockchain with syncing disabled (dangerous!)")
 	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&CFG.ConnectOnly, "c", CFG.ConnectOnly, "Connect only to this host and nowhere else")
-	flag.BoolVar(&CFG.ListenTCP, "l", CFG.ListenTCP, "Listen for incomming TCP connections (on default port)")
+	flag.BoolVar(&CFG.Net.ListenTCP, "l", CFG.Net.ListenTCP, "Listen for incomming TCP connections (on default port)")
 	flag.StringVar(&CFG.Datadir, "d", CFG.Datadir, "Specify Gocoin's database root folder")
-	flag.UintVar(&CFG.MaxUpKBps, "ul", CFG.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
-	flag.UintVar(&CFG.MaxDownKBps, "dl", CFG.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
+	flag.UintVar(&CFG.Net.MaxUpKBps, "ul", CFG.Net.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
+	flag.UintVar(&CFG.Net.MaxDownKBps, "dl", CFG.Net.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
 	flag.StringVar(&CFG.WebUI, "webui", CFG.WebUI, "Serve WebUI from the given interface")
 	flag.StringVar(&CFG.MinerID, "miner", CFG.MinerID, "Monitor new blocks with the string in their coinbase TX")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
@@ -111,15 +119,15 @@ func init() {
 
 
 func resetcfg() {
-	UploadLimit = CFG.MaxUpKBps << 10
-	DownloadLimit = CFG.MaxDownKBps << 10
+	UploadLimit = CFG.Net.MaxUpKBps << 10
+	DownloadLimit = CFG.Net.MaxDownKBps << 10
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	qdb.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
 	qdb.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
-	if CFG.TCPPort != 0 {
-		DefaultTcpPort = uint16(CFG.TCPPort)
+	if CFG.Net.TCPPort != 0 {
+		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {
 		if CFG.Testnet {
 			DefaultTcpPort = 18333

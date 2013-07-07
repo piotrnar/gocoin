@@ -22,7 +22,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["lonoff"])>0 {
-		CFG.ListenTCP = !CFG.ListenTCP
+		CFG.Net.ListenTCP = !CFG.Net.ListenTCP
 		http.Redirect(w, r, "net", http.StatusFound)
 		return
 	}

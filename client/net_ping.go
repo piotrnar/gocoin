@@ -40,7 +40,7 @@ func drop_slowest_peer() {
 	var worst_conn *oneConnection
 	mutex.Lock()
 	for _, v := range openCons {
-		if v.Incomming && InConsActive < MaxInCons {
+		if v.Incomming && InConsActive < CFG.Net.MaxInCons {
 			// If this is an incomming connection, but we are not full yet, ignore it
 			continue
 		}

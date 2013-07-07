@@ -147,9 +147,9 @@ func tcp_server() {
 
 	fmt.Println("TCP server started at", ad.String())
 
-	for CFG.ListenTCP {
+	for CFG.Net.ListenTCP {
 		CountSafe("NetServerLoops")
-		if InConsActive < MaxInCons {
+		if InConsActive < CFG.Net.MaxInCons {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
@@ -206,7 +206,7 @@ func tcp_server() {
 func network_tick() {
 	CountSafe("NetTicks")
 
-	if CFG.ListenTCP {
+	if CFG.Net.ListenTCP {
 		if !tcp_server_started {
 			tcp_server_started = true
 			go tcp_server()
@@ -219,7 +219,7 @@ func network_tick() {
 
 	if next_drop_slowest.IsZero() {
 		next_drop_slowest = time.Now().Add(DropSlowestEvery)
-	} else if conn_cnt >= MaxOutCons {
+	} else if conn_cnt >= CFG.Net.MaxOutCons {
 		// Having max number of outgoing connections, check to drop the slowest one
 		if time.Now().After(next_drop_slowest) {
 			drop_slowest_peer()
@@ -227,7 +227,7 @@ func network_tick() {
 		}
 	}
 
-	for conn_cnt < MaxOutCons {
+	for conn_cnt < CFG.Net.MaxOutCons {
 		adrs := GetBestPeers(16, true)
 		if len(adrs)==0 {
 			if CFG.ConnectOnly=="" && dbg>0 {
@@ -294,7 +294,7 @@ func (c *oneConnection) Run() {
 
 			case "verack":
 				c.VerackReceived = true
-				if CFG.ListenTCP {
+				if CFG.Net.ListenTCP {
 					c.SendOwnAddr()
 				}
 
