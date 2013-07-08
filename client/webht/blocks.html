@@ -29,11 +29,17 @@
 <script>
 function hlminer(row) {
 	var mid = row.cells[9].innerText
+	if (row.className.indexOf("own")!=-1) {
+		mid = null
+	}
 	for (var i=1; i<blkstab.rows.length; i++) {
 		if (blkstab.rows[i].cells[9].innerText==mid) {
-			blkstab.rows[i].style.backgroundColor="#ffd0d0";
+			//blkstab.rows[i].style.backgroundColor="#ffd0d0";
+			blkstab.rows[i].className = "own hand"
 		} else {
-			blkstab.rows[i].style.backgroundColor="#ffffff";
+			blkstab.rows[i].className = "hov hand"
+			//blkstab.rows[i].classList.add("own")
+			//blkstab.rows[i].style.backgroundColor="#ffffff";
 		}
 	}
 }
