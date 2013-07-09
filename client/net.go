@@ -309,12 +309,12 @@ func connectionActive(ad *onePeer) (yes bool) {
 // Returns maximum accepted payload size of a given type of message
 func maxmsgsize(cmd string) uint32 {
 	switch cmd {
-		case "inv": return 2+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		case "inv": return 3+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
 		case "tx": return 100e3 // max tx size 100KB
 		case "addr": return 3+1000*30 // max 1000 addrs
 		case "block": return 1e6 // max block size 1MB
-		case "getblocks": return 4+2+500*32+32 // we allow up to 500 locator hashes
-		case "getdata": return 2+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
+		case "getdata": return 3+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }
