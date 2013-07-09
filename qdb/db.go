@@ -106,7 +106,7 @@ func (db *DB) Count() (l int) {
 }
 
 
-// Browses through all teh DB records calling teh walk function for each record.
+// Browses through all the DB records calling the walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
 func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 	db.mutex.Lock()
@@ -132,7 +132,24 @@ func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 }
 
 
-// Fetches record with a given key. Returns nil if no such record.
+// works almost like normal browse except that it also returns non-browsable records
+func (db *DB) BrowseAll(walk func(key KeyType, value []byte) uint32) {
+	db.mutex.Lock()
+	db.idx.browse(func(k KeyType, v *oneIdx) bool {
+		if v.data == nil {
+			db.loadrec(v)
+		}
+		res := walk(k, v.data)
+		if (v.flags&NO_CACHE)!=0 {
+			v.data = nil
+		}
+		return (res&BR_ABORT)==0
+	})
+	//println("br", db.dir, "done")
+	db.mutex.Unlock()
+}
+
+
 func (db *DB) Get(key KeyType) (value []byte) {
 	db.mutex.Lock()
 	idx := db.idx.get(key)
