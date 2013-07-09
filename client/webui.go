@@ -99,9 +99,11 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprint(w, "</table><td valign=\"top\"><table class=\"bord\"><tr><th colspan=\"2\">")
 				switch prv_ {
 					case "rbts": fmt.Fprintln(w, "Received bytes")
-					case "rcvd": fmt.Fprintln(w, "Received messages")
+					case "rcvd": fmt.Fprintln(w, "Received msgs")
 					case "sbts": fmt.Fprintln(w, "Sent bytes")
-					case "sent": fmt.Fprintln(w, "Sent messages")
+					case "sent": fmt.Fprintln(w, "Sent msgs")
+					case "hbts": fmt.Fprintln(w, "Hold bytes")
+					case "hold": fmt.Fprintln(w, "Hold msgs")
 					default: fmt.Fprintln(w, prv_)
 				}
 			}
