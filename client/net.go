@@ -145,12 +145,6 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if c.send.buf!=nil {
-		if c.send.sofar > MaxSendBufferSize/2 {
-			// Try to defragment the buffer
-			newbuf := make([]byte, len(c.send.buf)-c.send.sofar)
-			copy(newbuf, c.send.buf[c.send.sofar:])
-			c.send.buf = newbuf
-		}
 		// Before adding more data to the buffer, check the limit
 		if len(c.send.buf)>MaxSendBufferSize {
 			if dbg > 0 {
