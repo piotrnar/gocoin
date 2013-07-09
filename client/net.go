@@ -21,6 +21,7 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
+	SendBufSizeHoldOn = 1000*1000 // If you have more than this in the send buffer do not process any commands
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
@@ -82,6 +83,8 @@ type oneConnection struct {
 	recv struct {
 		hdr [24]byte
 		hdr_len int
+		pl_len uint32 // length taken from the message header
+		cmd string
 		dat []byte
 		datlen uint32
 	}
@@ -142,6 +145,12 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if c.send.buf!=nil {
+		if c.send.sofar > MaxSendBufferSize/2 {
+			// Try to defragment the buffer
+			newbuf := make([]byte, len(c.send.buf)-c.send.sofar)
+			copy(newbuf, c.send.buf[c.send.sofar:])
+			c.send.buf = newbuf
+		}
 		// Before adding more data to the buffer, check the limit
 		if len(c.send.buf)>MaxSendBufferSize {
 			if dbg > 0 {
@@ -181,10 +190,22 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 }
 
 
+func (c *oneConnection) SendBufferSize() (int) {
+	if c.send.buf==nil {
+		return 0
+	}
+	return len(c.send.buf)-c.send.sofar
+}
+
+
 func (c *oneConnection) DoS() {
 	CountSafe("BannedNodes")
 	c.BanIt = true
 	c.Broken = true
+	c.recv.hdr_len = 0
+	c.recv.pl_len = 0
+	c.recv.dat = nil
+	c.recv.datlen = 0
 }
 
 
@@ -225,17 +246,34 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 		if c.Broken {
 			return nil
 		}
+		c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+		c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
 	}
 
-	dlen :=  binary.LittleEndian.Uint32(c.recv.hdr[16:20])
-	if dlen > 0 {
+	if c.recv.pl_len > 0 {
 		if c.recv.dat == nil {
-			c.recv.dat = make([]byte, dlen)
+			msi := maxmsgsize(c.recv.cmd)
+			if c.recv.pl_len > msi {
+				println(c.PeerAddr.Ip(), "Command", c.recv.cmd, "is going to be too big", c.recv.pl_len, msi)
+				c.DoS()
+				CountSafe("NetMsgSizeTooBig")
+				return nil
+			}
+			c.recv.dat = make([]byte, c.recv.pl_len)
 			c.recv.datlen = 0
 		}
-		for c.recv.datlen < dlen {
+		for c.recv.datlen < c.recv.pl_len {
 			n, e = SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
-			c.recv.datlen += uint32(n)
+			if n > 0 {
+				c.recv.datlen += uint32(n)
+				if c.recv.datlen > c.recv.pl_len {
+					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have",
+						c.recv.datlen, c.recv.pl_len)
+					c.DoS()
+					CountSafe("NetMsgSizeIncorrect")
+					return nil
+				}
+			}
 			if e != nil {
 				c.HandleError(e)
 				return nil
@@ -248,19 +286,14 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
-		if dbg > 0 {
-			println(c.PeerAddr.Ip(), "Msg checksum error")
-		}
+		println(c.PeerAddr.Ip(), "Msg checksum error")
 		CountSafe("NetBadChksum")
 		c.DoS()
-		c.recv.hdr_len = 0
-		c.recv.dat = nil
-		c.Broken = true
 		return nil
 	}
 
 	ret := new(BCmsg)
-	ret.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
 	c.recv.dat = nil
 	c.recv.hdr_len = 0
@@ -276,6 +309,20 @@ func connectionActive(ad *onePeer) (yes bool) {
 	_, yes = openCons[ad.UniqID()]
 	mutex.Unlock()
 	return
+}
+
+
+// Returns maximum accepted payload size of a given type of message
+func maxmsgsize(cmd string) uint32 {
+	switch cmd {
+		case "inv": return 2+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		case "tx": return 100e3 // max tx size 100KB
+		case "addr": return 2+1000*30 // max 1000 addrs
+		case "block": return 1e6 // max block size 1MB
+		case "getblocks": return 4+2+500*32+32 // we allow up to 500 locator hashes
+		case "getdata": return 2+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		default: return 1024 // Any other type of block: 1KB payload limit
+	}
 }
 
 

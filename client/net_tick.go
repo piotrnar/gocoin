@@ -282,8 +282,15 @@ func (c *oneConnection) Run() {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
+		if c.SendBufferSize() > SendBufSizeHoldOn {
+			CountSafe("hold_"+cmd.cmd)
+			CountSafeAdd("hbts_"+cmd.cmd, uint64(len(cmd.pl)))
+			continue
+		}
+
 		CountSafe("rcvd_"+cmd.cmd)
 		CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
+
 		switch cmd.cmd {
 			case "version":
 				er := c.HandleVersion(cmd.pl)
