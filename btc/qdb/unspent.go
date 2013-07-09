@@ -149,7 +149,7 @@ func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.All
 		}
 	} else {
 		for i := range db.tdb {
-			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			db.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
 				for a := range addr {
 					if addr[a].Owns(v[48:]) {
 						res = append(res, bin2unspent(v[:48], addr[a]))
