@@ -100,10 +100,13 @@ func list_unspent(addr string) {
 	unsp := BlockChain.GetAllUnspent(a[:], false)
 	var sum uint64
 	for i := range unsp {
-		fmt.Println(unsp[i].String())
+		if len(unsp)<200 {
+			fmt.Println(unsp[i].String())
+		}
 		sum += unsp[i].Value
 	}
-	fmt.Printf("Total %.8f unspent BTC at address %s\n", float64(sum)/1e8, a[0].String());
+	fmt.Printf("Total %.8f unspent BTC in %d outputs at address %s\n",
+		float64(sum)/1e8, len(unsp), a[0].String());
 }
 
 
