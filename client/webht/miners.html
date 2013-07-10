@@ -1,3 +1,18 @@
+<script>
+var curmid='{MINER_MON_IDX}'
+function inerton(id) {
+	if (id<0) {
+		if (curmid>=0) {
+			document.write('<a href="cfg?mid=off">Turn OFF</a>')
+		}
+	} else if (id!=curmid) {
+		document.write('<a href="cfg?mid='+id+'">Turn ON</a>')
+	}
+}
+document.addEventListener('DOMContentLoaded', function() {
+	document.getElementById('midrow'+curmid).className = "own"
+})
+</script>
 Data from last <b>24</b> hours.
  The oldest block starting at <b>{FIRST_BLOCK_TIME}</b><br>
 Total number of blocks was <b>{BLOCKS_COUNT}</b>,
@@ -13,14 +28,7 @@ accounting to total network's rate of <b>{AVG_HASHDATE}</b><br>
 		<th width="80" align="right">Net Share
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right">Avg blk len
-		<th width="60" align="right">Monitor
+		<th width="80" align="right">Monitor
 	</tr>
     <!--MINER_ROW-->
 </table>
-<br>
-<script>
-var curmid='{MINER_MONITOR}'
-if (curmid!='') {
-	document.write('Miner monitor is on <b>'+curmid+'</b> - [<a href="cfg?mid=off">Turn OFF</a>]')
-}
-</script>

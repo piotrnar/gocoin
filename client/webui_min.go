@@ -43,6 +43,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	var lastts int64
 	var diff float64
 	var totbts uint64
+	current_mid := -1
 	now := time.Now().Unix()
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp) > 24*3600 {
@@ -61,6 +62,9 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			om.bts+= uint64(len(bl))
 			om.mid = mid
 			m[miner] = om
+			if current_mid==-1 && CFG.MinerID==MinerIds[mid][1] {
+				current_mid = mid
+			}
 		} else {
 			unkn.cnt++
 			unkn.bts+= uint64(len(bl))
@@ -89,7 +93,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	mnrs = strings.Replace(mnrs, "{AVG_DIFFICULTY}", fmt.Sprintf("%.2f", diff), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_HASHDATE}", hr2str(hrate), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKSIZE}", fmt.Sprintf("%.1fKB", float64(totbts)/float64(cnt)/1000), 1)
-	mnrs = strings.Replace(mnrs, "{MINER_MONITOR}", CFG.MinerID, 1)
+	mnrs = strings.Replace(mnrs, "{MINER_MON_IDX}", fmt.Sprint(current_mid), 1)
 
 	for i := range srt {
 		s := onerow
@@ -98,7 +102,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{MINER_HASHRATE}", hr2str(hrate*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(srt[i].bts)/float64(srt[i].cnt)/1000), 1)
-		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), 1)
+		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 	}
 
@@ -107,6 +111,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	onerow = strings.Replace(onerow, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(unkn.cnt)/float64(cnt)), 1)
 	onerow = strings.Replace(onerow, "{MINER_HASHRATE}", hr2str(hrate*float64(unkn.cnt)/float64(cnt)), 1)
 	onerow = strings.Replace(onerow, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(unkn.bts)/float64(unkn.cnt)/1000), 1)
+	onerow = strings.Replace(onerow, "{MINER_ID}", "-1", -1)
 	mnrs = templ_add(mnrs, "<!--MINER_ROW-->", onerow)
 
 	write_html_head(w, r)
