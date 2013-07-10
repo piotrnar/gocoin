@@ -38,7 +38,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
-	if len(r.Form["configjson"])>0 {
+	if r.Method=="POST" && len(r.Form["configjson"])>0 {
 		e := json.Unmarshal([]byte(r.Form["configjson"][0]), &CFG)
 		if e == nil {
 			resetcfg()
