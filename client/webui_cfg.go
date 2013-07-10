@@ -51,4 +51,9 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
+
+	if r.Method=="POST" && len(r.Form["shutdown"])>0 {
+		exit_now = true
+		w.Write([]byte("Your node should shut down soon"))
+	}
 }

@@ -257,6 +257,19 @@ There is also a command to re-broadcast all the transaction that have been loade
 	stxa
 
 
+Known issues
+==============
+
+UTXO database inconsistency
+--------------
+When you kill you client, and not quite it gracefully (using its UI's „quit” command), it may happen that the unspent outputs database will get corrupt. In that case the node will panic when you start it the next time. 
+
+To fix this issue you will need to rebuild the unspent database, starting the client with „-r” switch.
+
+The UTXO rebuild operation might take around an hour though, so for such cases, it is worth to have a backup of some recent version of this database. Then you don't need to rebuild it all, but only the part that came after your backup.
+What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch. 
+
+
 Support
 ==============
 If you need a support, you have three options:

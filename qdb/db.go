@@ -80,6 +80,7 @@ func (i oneIdx) String() string {
 
 // Creates or opens a new database in the specified folder.
 func NewDB(dir string, load bool) (db *DB, e error) {
+	cnt("NewDB")
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
 		dir += string(os.PathSeparator)
@@ -221,6 +222,7 @@ func (db *DB) Defrag() (doing bool) {
 	db.mutex.Lock()
 	doing = db.idx.extra_space_used > (db.idx.disk_space_needed/2) // defrag if we waste more than 50%
 	if doing {
+		cnt("DefragYes")
 		go func() {
 			db.defrag()
 			db.mutex.Unlock()
@@ -234,6 +236,7 @@ func (db *DB) Defrag() (doing bool) {
 
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
+	cnt("NoSync")
 	db.mutex.Lock()
 	db.nosync = true
 	db.mutex.Unlock()
@@ -243,6 +246,7 @@ func (db *DB) NoSync() {
 // Write all the pending changes to disk now.
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
+	cnt("Sync")
 	db.mutex.Lock()
 	db.nosync = false
 	go func() {
@@ -301,6 +305,7 @@ func (db *DB) defrag() {
 
 func (db *DB) sync() {
 	if len(db.pending_recs)>0 {
+		cnt("SyncOK")
 		bidx := new(bytes.Buffer)
 		db.checklogfile()
 		for k, _ := range db.pending_recs {
@@ -319,12 +324,15 @@ func (db *DB) sync() {
 			}
 		}
 		db.idx.writebuf(bidx.Bytes())
+	} else {
+		cnt("SyncNO")
 	}
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
 }
 
 
 func (db *DB) Flush() {
+	cnt("Flush")
 	if db.logfile!=nil {
 		db.logfile.Sync()
 	}
@@ -335,6 +343,13 @@ func (db *DB) Flush() {
 
 
 func (db *DB) syncneeded() bool {
-	return len(db.pending_recs) > MaxPendingNoSync ||
-		!db.nosync && len(db.pending_recs) > MaxPending
+	if len(db.pending_recs) > MaxPendingNoSync {
+		cnt("SyncNeedBig")
+		return true
+	}
+	if !db.nosync && len(db.pending_recs) > MaxPending {
+		cnt("SyncNeedSmall")
+		return true
+	}
+	return false
 }

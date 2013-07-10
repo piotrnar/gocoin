@@ -1,6 +1,7 @@
 0.5.3
 * Some new network security features
 * Like Satoshi client, do not process incoming messages having more than 1MB in send buffer
+* Some changes around qdb database (improved syncs for unspent db, added counters)
 
 0.5.2
 * WebUI improvements

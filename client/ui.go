@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 type oneUiCmd struct {
@@ -357,6 +358,9 @@ func switch_sync(par string) {
 	}
 }
 
+func qdb_stats(par string) {
+	fmt.Print(qdb.GetStats())
+}
 
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
@@ -371,4 +375,5 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("sync", true, switch_sync, "Control sync of the database to disk")
+	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 }

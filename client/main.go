@@ -239,7 +239,16 @@ func main() {
 	signal.Notify(killchan, os.Interrupt, os.Kill)
 	defer func() {
 		if r := recover(); r != nil {
-			println("main panic recovered:", r)
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
+			}
+			println("main panic recovered:", err.Error())
+			if BlockChain!=nil {
+				BlockChain.Sync()
+				BlockChain.Save()
+				BlockChain.Close()
+			}
 			os.Exit(1)
 		}
 	}()
