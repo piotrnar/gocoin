@@ -40,13 +40,13 @@ func mined_by_us(bl []byte) bool {
 }
 
 
-func blocks_miner(bl []byte) string {
+func blocks_miner(bl []byte) (string, int) {
 	for i := range MinerIds {
 		if mined_by(bl, MinerIds[i][1]) {
-			return MinerIds[i][0]
+			return MinerIds[i][0], i
 		}
 	}
-	return ""
+	return "", -1
 }
 
 

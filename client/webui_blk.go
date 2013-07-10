@@ -36,7 +36,8 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 			rew += block.Txs[0].TxOut[o].Value
 		}
 		s = strings.Replace(s, "{BLOCK_REWARD}", fmt.Sprintf("%.2f", float64(rew)/1e8), 1)
-		s = strings.Replace(s, "{BLOCK_MINER}", blocks_miner(bl), 1)
+		mi, _ := blocks_miner(bl)
+		s = strings.Replace(s, "{BLOCK_MINER}", mi, 1)
 
 		rb := receivedBlocks[end.BlockHash.BIdx()]
 		if rb.tmDownload!=0 {

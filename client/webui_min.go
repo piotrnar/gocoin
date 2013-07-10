@@ -12,6 +12,7 @@ import (
 type omv struct {
 	cnt int
 	bts uint64
+	mid int
 }
 
 type onemiernstat []struct {
@@ -53,11 +54,12 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		diff += btc.GetDifficulty(end.Bits)
-		miner := blocks_miner(bl)
+		miner, mid := blocks_miner(bl)
 		if miner!="" {
 			om = m[miner]
 			om.cnt++
 			om.bts+= uint64(len(bl))
+			om.mid = mid
 			m[miner] = om
 		} else {
 			unkn.cnt++
@@ -87,6 +89,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	mnrs = strings.Replace(mnrs, "{AVG_DIFFICULTY}", fmt.Sprintf("%.2f", diff), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_HASHDATE}", hr2str(hrate), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKSIZE}", fmt.Sprintf("%.1fKB", float64(totbts)/float64(cnt)/1000), 1)
+	mnrs = strings.Replace(mnrs, "{MINER_MONITOR}", CFG.MinerID, 1)
 
 	for i := range srt {
 		s := onerow
@@ -95,6 +98,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{MINER_HASHRATE}", hr2str(hrate*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(srt[i].bts)/float64(srt[i].cnt)/1000), 1)
+		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), 1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 	}
 

@@ -56,4 +56,9 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		exit_now = true
 		w.Write([]byte("Your node should shut down soon"))
 	}
+
+	if len(r.Form["mid"])>0 {
+		set_miner(r.Form["mid"][0])
+		http.Redirect(w, r, "miners", http.StatusFound)
+	}
 }

@@ -13,7 +13,14 @@ accounting to total network's rate of <b>{AVG_HASHDATE}</b><br>
 		<th width="80" align="right">Net Share
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right">Avg blk len
+		<th width="60" align="right">Monitor
 	</tr>
     <!--MINER_ROW-->
 </table>
 <br>
+<script>
+var curmid='{MINER_MONITOR}'
+if (curmid!='') {
+	document.write('Miner monitor is on <b>'+curmid+'</b> - [<a href="cfg?mid=off">Turn OFF</a>]')
+}
+</script>
