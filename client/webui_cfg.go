@@ -9,31 +9,31 @@ import (
 func p_cfg(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	if len(r.Form["txponoff"])>0 {
+	if checksid(r) && len(r.Form["txponoff"])>0 {
 		CFG.TXPool.Enabled = !CFG.TXPool.Enabled
 		http.Redirect(w, r, "txs", http.StatusFound)
 		return
 	}
 
-	if len(r.Form["txronoff"])>0 {
+	if checksid(r) && len(r.Form["txronoff"])>0 {
 		CFG.TXRoute.Enabled = !CFG.TXRoute.Enabled
 		http.Redirect(w, r, "txs", http.StatusFound)
 		return
 	}
 
-	if len(r.Form["lonoff"])>0 {
+	if checksid(r) && len(r.Form["lonoff"])>0 {
 		CFG.Net.ListenTCP = !CFG.Net.ListenTCP
 		http.Redirect(w, r, "net", http.StatusFound)
 		return
 	}
 
-	if len(r.Form["drop"])>0 {
+	if checksid(r) && len(r.Form["drop"])>0 {
 		net_drop(r.Form["drop"][0])
 		http.Redirect(w, r, "net", http.StatusFound)
 		return
 	}
 
-	if len(r.Form["freemem"])>0 {
+	if checksid(r) && len(r.Form["freemem"])>0 {
 		show_mem("free")
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
@@ -57,7 +57,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Your node should shut down soon"))
 	}
 
-	if len(r.Form["mid"])>0 {
+	if checksid(r) && len(r.Form["mid"])>0 {
 		set_miner(r.Form["mid"][0])
 		http.Redirect(w, r, "miners", http.StatusFound)
 	}

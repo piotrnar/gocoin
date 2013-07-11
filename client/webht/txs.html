@@ -16,11 +16,11 @@
 		<tr>
 			<td>Memory pool:
 			<td><b><!--MEM_POOL_ENABLED--></b>
-			<td>[<a href="cfg?txponoff">Switch ON/OFF</a>]
+			<td>[<a href="javascript:config('txponoff')">Switch ON/OFF</a>]
 		<tr>
 			<td>Relay transactions:
 			<td><b><!--TX_ROUTE_ENABLED--></b>
-			<td>[<a href="cfg?txronoff">Switch ON/OFF</a>]
+			<td>[<a href="javascript:config('txronoff')">Switch ON/OFF</a>]
 		<tr>
 			<td colspan="3">
 				<hr>
@@ -117,13 +117,13 @@ function val2reason(r) {
 
 function sendtx_click(id) {
 	if (confirm("Broadcast TX "+id)) {
-		show_txs2s('?send='+id)
+		show_txs2s('?send='+id+'&sid='+sid)
 	}
 }
 
 function deltx_click(id) {
 	if (confirm("Delete TX "+id)) {
-		show_txs2s('?del='+id)
+		show_txs2s('?del='+id+'&sid='+sid)
 	}
 }
 

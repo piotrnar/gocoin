@@ -17,3 +17,7 @@ function xval(xml,tag) {
 		return NaN
 	}
 }
+
+function config(q) {
+	document.location = 'cfg?sid='+sid+'&'+q
+}

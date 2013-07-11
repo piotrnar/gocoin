@@ -6,6 +6,8 @@ import (
 	"strings"
 	"net/http"
 	"io/ioutil"
+	"crypto/rand"
+	"encoding/hex"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -48,9 +50,39 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func sid(r *http.Request) string {
+	c, _ := r.Cookie("sid")
+	if c != nil {
+		return c.Value
+	}
+	return ""
+}
+
+
+func checksid(r *http.Request) bool {
+	if len(r.Form["sid"])==0 {
+		return false
+	}
+	if len(r.Form["sid"][0])<16 {
+		return false
+	}
+	return r.Form["sid"][0]==sid(r)
+}
+
+
 func write_html_head(w http.ResponseWriter, r *http.Request) {
+	sessid := sid(r)
+	if sessid=="" {
+		var sid [16]byte
+		rand.Read(sid[:])
+		sessid = hex.EncodeToString(sid[:])
+		http.SetCookie(w, &http.Cookie{Name:"sid", Value:sessid})
+	}
+
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
+	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
 	if CFG.Testnet {
 		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
 	} else {

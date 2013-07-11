@@ -69,7 +69,7 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	if len(r.Form["del"])>0 {
+	if checksid(r) && len(r.Form["del"])>0 {
 		tid := btc.NewUint256FromString(r.Form["del"][0])
 		if tid!=nil {
 			tx_mutex.Lock()
@@ -78,7 +78,7 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if len(r.Form["send"])>0 {
+	if checksid(r) && len(r.Form["send"])>0 {
 		tid := btc.NewUint256FromString(r.Form["send"][0])
 		if tid!=nil {
 			tx_mutex.Lock()
