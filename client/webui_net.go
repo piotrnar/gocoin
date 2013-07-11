@@ -10,6 +10,10 @@ import (
 
 
 func p_net(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	net_page := load_template("net.html")
 	net_row := load_template("net_row.html")
 
@@ -69,6 +73,10 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 
 
 func raw_net(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintln(w, "Error")

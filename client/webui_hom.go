@@ -11,6 +11,10 @@ import (
 )
 
 func p_home(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	s := load_template("home.html")
 
 	mutex.Lock()
@@ -70,7 +74,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
 
 	dat, _ := json.Marshal(&CFG)
-	s = strings.Replace(s, "{CONFIG_FILE}", string(dat), 1)
+	s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(s))

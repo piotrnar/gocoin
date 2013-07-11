@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"flag"
 	"time"
+	"strings"
 	"io/ioutil"
 	"runtime/debug"
 	"encoding/json"
@@ -25,7 +26,10 @@ var CFG struct {
 	Testnet bool
 	ConnectOnly string
 	Datadir string
-	WebUI string
+	WebUI struct {
+		Interface string
+		AllowedIP string // comma separated
+	}
 	MinerID string
 	Net struct {
 		ListenTCP bool
@@ -59,13 +63,19 @@ var CFG struct {
 	}
 }
 
+type oneAllowedAddr struct {
+	addr, mask uint32
+}
+
+var WebUIAllowed []oneAllowedAddr
 
 func init() {
 	// Fill in default values
 	CFG.Net.ListenTCP = true
 	CFG.Net.MaxOutCons = 8
 	CFG.Net.MaxInCons = 8
-	CFG.WebUI = "127.0.0.1:8833"
+	CFG.WebUI.Interface = "127.0.0.1:8833"
+	CFG.WebUI.AllowedIP = "127.0.0.1"
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
@@ -99,7 +109,7 @@ func init() {
 	flag.StringVar(&CFG.Datadir, "d", CFG.Datadir, "Specify Gocoin's database root folder")
 	flag.UintVar(&CFG.Net.MaxUpKBps, "ul", CFG.Net.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
 	flag.UintVar(&CFG.Net.MaxDownKBps, "dl", CFG.Net.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
-	flag.StringVar(&CFG.WebUI, "webui", CFG.WebUI, "Serve WebUI from the given interface")
+	flag.StringVar(&CFG.WebUI.Interface, "webui", CFG.WebUI.Interface, "Serve WebUI from the given interface")
 	flag.StringVar(&CFG.MinerID, "miner", CFG.MinerID, "Monitor new blocks with the string in their coinbase TX")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
@@ -135,6 +145,42 @@ func resetcfg() {
 			DefaultTcpPort = 8333
 		}
 	}
+
+	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
+	WebUIAllowed = nil
+	for i := range ips {
+		oaa := str2oaa(ips[i])
+		if oaa!=nil {
+			WebUIAllowed = append(WebUIAllowed, *oaa)
+		} else {
+			println("ERROR: Incorrect AllowedIP:", ips[i])
+		}
+	}
+	if len(WebUIAllowed)==0 {
+		println("WARNING: No IP is currently allowed at WebUI")
+	}
+}
+
+
+func str2oaa(ip string) (res *oneAllowedAddr) {
+	var a,b,c,d,x uint32
+	n, _ := fmt.Sscanf(ip, "%d.%d.%d.%d/%d", &a, &b, &c, &d, &x)
+	if n<4 {
+		return
+	}
+	if (a|b|c|d)>255 || n==5 && (x<1 || x>32) {
+		return
+	}
+	res = new(oneAllowedAddr)
+	res.addr = (a<<24) | (b<<16) | (c<<8) | d
+	if n==4 || x==32 {
+		res.mask = 0xffffffff
+	} else {
+		res.mask = uint32(( uint64(1) << (32-x) ) - 1)  ^ 0xffffffff
+	}
+	res.addr &= res.mask
+	//fmt.Printf(" %s -> %08x / %08x\n", ip, res.addr, res.mask)
+	return
 }
 
 

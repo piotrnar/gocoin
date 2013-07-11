@@ -13,10 +13,18 @@ import (
 )
 
 func raw_balance(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	w.Write([]byte(UpdateBalanceFolder()))
 }
 
 func xml_balance(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<unspent>"))
 
@@ -45,6 +53,10 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	UpdateBalanceFolder()
 	buf := new(bytes.Buffer)
 	zi := zip.NewWriter(buf)

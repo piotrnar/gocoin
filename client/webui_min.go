@@ -36,6 +36,10 @@ func (x onemiernstat) Swap(i, j int) {
 }
 
 func p_miners(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	m := make(map[string] omv, 20)
 	var unkn, om omv
 	cnt := 0

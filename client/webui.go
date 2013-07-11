@@ -26,6 +26,23 @@ const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
 <table align="center" width="990" cellpadding="0" cellspacing="0"><tr><td>
 `
 
+func ipchecker(r *http.Request) bool {
+	var a,b,c,d uint32
+	n, _ := fmt.Sscanf(r.RemoteAddr, "%d.%d.%d.%d", &a, &b, &c, &d)
+	if n!=4 {
+		return false
+	}
+	addr := (a<<24) | (b<<16) | (c<<8) | d
+	for i := range WebUIAllowed {
+		if (addr&WebUIAllowed[i].mask)==WebUIAllowed[i].addr {
+			return true
+		}
+	}
+	println("ipchecker:", r.RemoteAddr, "is blocked")
+	return false
+}
+
+
 func load_template(fn string) string {
 	dat, _ := ioutil.ReadFile("webht/"+fn)
 	return string(dat)
@@ -149,6 +166,7 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+
 func webserver() {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/net", p_net)
@@ -168,5 +186,5 @@ func webserver() {
 
 	http.HandleFunc("/", p_home)
 
-	http.ListenAndServe(CFG.WebUI, nil)
+	http.ListenAndServe(CFG.WebUI.Interface, nil)
 }

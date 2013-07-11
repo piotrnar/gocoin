@@ -9,6 +9,10 @@ import (
 )
 
 func p_blocks(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	blks := load_template("blocks.html")
 	onerow := load_template("blocks_row.html")
 

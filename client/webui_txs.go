@@ -11,6 +11,10 @@ import (
 )
 
 func p_txs(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	var txloadresult string
 	var wg sync.WaitGroup
 
@@ -67,6 +71,10 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 }
 
 func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	r.ParseForm()
 
 	if checksid(r) && len(r.Form["del"])>0 {
@@ -113,6 +121,10 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 
 
 func xml_txsre(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	tx_mutex.Lock()
@@ -130,6 +142,10 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 
 
 func xml_txw4i(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<pending>"))
 	tx_mutex.Lock()
