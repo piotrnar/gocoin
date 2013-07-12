@@ -3,7 +3,6 @@ function raw_load(id, tit) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
-			rawtit.innerHTML = tit
 			rawdiv.innerHTML = xmlHttp.responseText
 			location.href = "#rawdiv";
 		}
@@ -16,32 +15,45 @@ function net_drop(id) {
 		document.location = 'cfg?drop='+id+'&sid='+sid
 	}
 }
+document.addEventListener('DOMContentLoaded', function() {
+	for (var r=1; r<netcons.rows.length; r++) {
+		var conid = parseInt(netcons.rows[r].cells[0].innerText)
+		for (var c=0; c<13; c++) {
+			netcons.rows[r].cells[c].title="Connection Details"
+			netcons.rows[r].cells[c].style.cursor="pointer"
+			netcons.rows[r].cells[c].onclick=function(){raw_load('net?id='+conid)}
+		}
+	}
+})
 </script>
 <b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br>
 Listening for incomming TCP connections: <b>{LISTEN_TCP}</b>
  &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
 <br>
-<table class="netcons bord">
+<table class="netcons bord" width="100%" id="netcons">
+<col width="30"> <!--#-->
+<col width="130"> <!--IP-->
+<col width="20"> <!--in/out icon-->
+<col width="60"> <!--ping-->
+<col width="40"><col width="60"> <!--Last rcvd-->
+<col width="40"><col width="60"> <!--Last sent-->
+<col width="80"> <!--total rcvd-->
+<col width="80"> <!--total sent-->
+<col width="50"> <!--vers-->
+<col width="100"> <!--agent-->
+<col> <!--agent-->
+<col width="20"> <!--agent-->
 <tr>
-	<th rowspan="2" width="30">ID
-	<th rowspan="2" colspan="2">Peer Address
-	<th rowspan="2" width="60">Ping
+	<th>ID
+	<th colspan="2">Peer Address
+	<th >Ping
 	<th colspan="2">Last received
 	<th colspan="2">Last sent
-	<th rowspan="2">Total<br>rcvd
-	<th rowspan="2">Total<br>sent
-	<th colspan="2">Peer Info
-	<th rowspan="2" width="100">Comm
-	<th rowspan="2">&nbsp;
+	<th >Tot In
+	<th >Tot Out
+	<th colspan="4">&nbsp;
 </tr>
-<tr>
-	<th>bytes
-	<th>command
-	<th>bytes
-	<th>command
-	<th>version
-	<th>user-agent
 <!--PEER_ROW-->
 </table>
-<a name="rawdiv"><h2 id="rawtit"></h2></a><pre id="rawdiv" class="mono"></pre>
+<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
