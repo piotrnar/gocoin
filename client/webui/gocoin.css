@@ -49,7 +49,7 @@ tr {
 #rawdiv {
 	font-family: monospace;
 	background-color:#e0e0e0;
-	width: 980px;
+	width: 100%;
 	overflow-x: auto;
 	font-size:85%
 }
