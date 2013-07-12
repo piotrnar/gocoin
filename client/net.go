@@ -25,7 +25,7 @@ const (
 
 	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
-	GetBlockTimeout = 3*time.Minute  // Timeout to receive the entire block
+	GetBlockTimeout = 1*time.Minute  // Timeout to receive the entire block
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
