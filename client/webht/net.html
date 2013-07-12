@@ -18,7 +18,7 @@ function net_drop(id) {
 document.addEventListener('DOMContentLoaded', function() {
 	for (var r=1; r<netcons.rows.length; r++) {
 		var conid = parseInt(netcons.rows[r].cells[0].innerText)
-		for (var c=0; c<13; c++) {
+		for (var c=0; c<12; c++) {
 			netcons.rows[r].cells[c].title="Connection Details"
 			netcons.rows[r].cells[c].style.cursor="pointer"
 			netcons.rows[r].cells[c].onclick=function(){raw_load('net?id='+conid)}
