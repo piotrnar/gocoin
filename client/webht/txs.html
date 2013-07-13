@@ -3,8 +3,10 @@
 <td valign="top" width="*">
 	<table>
 		<tr><td>Accepted transactions:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
+		<b>{T2S_SIZE}</b>
 		<tr><td>UTXOs spent in memory:<td><b>{SPENT_OUTS_CNT}</b>
 		<tr><td>Rejected ransactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
+		<b>{TRE_SIZE}</b>
 		<tr><td>Transactions waiting for inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
 		<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
 	</table>
