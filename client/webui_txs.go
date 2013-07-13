@@ -38,12 +38,25 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("txs.html")
 	tx_mutex.Lock()
+
+	var sum uint64
+	for _, v := range TransactionsToSend {
+		sum += uint64(len(v.data))
+	}
 	s = strings.Replace(s, "{T2S_CNT}", fmt.Sprint(len(TransactionsToSend)), 1)
+	s = strings.Replace(s, "{T2S_SIZE}", bts(sum), 1)
+
+	sum = 0
+	for _, v := range TransactionsRejected {
+		sum += uint64(v.size)
+	}
 	s = strings.Replace(s, "{TRE_CNT}", fmt.Sprint(len(TransactionsRejected)), 1)
+	s = strings.Replace(s, "{TRE_SIZE}", bts(sum), 1)
 	s = strings.Replace(s, "{PTR1_CNT}", fmt.Sprint(len(TransactionsPending)), 1)
 	s = strings.Replace(s, "{PTR2_CNT}", fmt.Sprint(len(netTxs)), 1)
 	s = strings.Replace(s, "{SPENT_OUTS_CNT}", fmt.Sprint(len(SpentOutputs)), 1)
 	s = strings.Replace(s, "{AWAITING_INPUTS}", fmt.Sprint(len(WaitingForInputs)), 1)
+
 	tx_mutex.Unlock()
 
 	wg.Wait()
