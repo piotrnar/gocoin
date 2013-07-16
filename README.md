@@ -44,9 +44,9 @@ The entire block chain is stored in one large file, so your file system must sup
 
 
 ### Optimize memory usage
-It is possible to decrease the node's memory usage, at a cost of performance. 
+It is possible to decrease the node's memory usage, at a cost of performance.
 
-One of the things worth trying is decreasing the Go's grabage collector's trashold from the default 100%. 
+One of the things worth trying is decreasing the Go's grabage collector's trashold from the default 100%.
 If you want to change it to e. g. 30%, use a running node's UI to execute such command:
 	cfg "Memory":{"GCPercTrshold":30}
 
@@ -99,7 +99,7 @@ On Linux, the OpenSSL option should build smoothly, as long as you have libssl-d
 On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
 
 
-Bootstratping
+Bootstrapping
 ==============
 Gocoin's client node has not been optimozed for the initial chain download. Even if it was, this is still a very time consuming operation. Waiting for the entire chain to be fetched from the network can be enough of a pain to discourage you from actually trying gocoin where it is really good (at a synchronized chain).
 
@@ -263,12 +263,12 @@ Known issues
 
 UTXO database inconsistency
 --------------
-When you kill you client, and not quite it gracefully (using its UI's „quit” command), it may happen that the unspent outputs database will get corrupt. In that case the node will panic when you start it the next time. 
+When you kill you client, and not quite it gracefully (using its UI's „quit” command), it may happen that the unspent outputs database will get corrupt. In that case the node will panic when you start it the next time.
 
 To fix this issue you will need to rebuild the unspent database, starting the client with „-r” switch.
 
 The UTXO rebuild operation might take around an hour though, so for such cases, it is worth to have a backup of some recent version of this database. Then you don't need to rebuild it all, but only the part that came after your backup.
-What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch. 
+What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch.
 
 
 Support
