@@ -137,11 +137,12 @@ Run “client -h” to see all available command line switches. The main ones are:
 When the client is already running you have the UI where you can issue commands. Type "help" to see  the possible commands.
 
 ### Web UI
-You can also monitor a status of a running node, using a web browser. By default it is available only from a local host, via http://127.0.0.1:8833/ - if you want to have access to the WebUI from different computers, start the client with:
+There is also a web interface that you can operate with a web browser. By default it is available only from a local host, via http://127.0.0.1:8833/ - if you want to have access to the WebUI from different computers, start the client with:
 
 	client -webui 0.0.0.0:8833
 
-Be careful with using this option, since there is no access control so anyone who can connect to your TCP port 8833 will be able to access this WebUI.
+Look into „AllowedIP” value in the config file (gocoin.conf), to control the IP access. If you don't yet have a config file in the folder where you start the node from, use UI command „configsave” to create it.
+
 
 ### Incoming connections
 There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (183333 for testnet) to the PC running the node.
