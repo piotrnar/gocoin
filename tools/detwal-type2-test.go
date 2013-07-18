@@ -71,8 +71,8 @@ func derive_private_key(prv, secret *big.Int) *big.Int {
 
 //B_public_key = G * secret + A_public_key
 func derive_public_key(prvx, prvy, secret *big.Int) (x, y *big.Int) {
-	bspX, bspY := curv.ScalarBaseMult(secret.Bytes())
-	x, y = curv.Add(prvx, prvy, bspX, bspY)
+	gsx, gsy := curv.ScalarBaseMult(secret.Bytes())
+	x, y = curv.Add(prvx, prvy, gsx, gsy)
 	return
 }
 
