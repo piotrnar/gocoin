@@ -11,6 +11,7 @@ import (
 
 var curv *btc.BitCurve = btc.S256()
 
+// convert x,y pubkey to 04... stuff
 func xy2pk(x, y *big.Int) (res []byte) {
 	res = make([]byte, 65)
 	res[0] = 4
@@ -22,7 +23,7 @@ func xy2pk(x, y *big.Int) (res []byte) {
 }
 
 
-// Verify the secret key's range and al if a test message signed with it verifies OK
+// Verify the secret key's range and if a test message signed with it verifies OK
 func verify_key(priv []byte, publ []byte) bool {
 	const TestMessage = "Just some test message..."
 	hash := btc.Sha2Sum([]byte(TestMessage))
@@ -63,10 +64,8 @@ func verify_key(priv []byte, publ []byte) bool {
 
 
 //B_private_key = ( A_private_key + secret ) % N
-func derive_private_key(prv, secret *big.Int) (res *big.Int) {
-	res = new(big.Int).Add(prv, secret)
-	res = new(big.Int).Mod(res, curv.N)
-	return
+func derive_private_key(prv, secret *big.Int) *big.Int {
+	return new(big.Int).Mod(new(big.Int).Add(prv, secret), curv.N)
 }
 
 
