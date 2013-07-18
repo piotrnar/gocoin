@@ -62,12 +62,20 @@ func verify_key(priv []byte, publ []byte) bool {
 }
 
 
+//B_private_key = ( A_private_key + secret ) % N
 func derive_private_key(prv, secret *big.Int) (res *big.Int) {
 	res = new(big.Int).Add(prv, secret)
 	res = new(big.Int).Mod(res, curv.N)
 	return
 }
 
+
+//B_public_key = G * secret + A_public_key
+func derive_public_key(prvx, prvy, secret *big.Int) (x, y *big.Int) {
+	bspX, bspY := curv.ScalarBaseMult(secret.Bytes())
+	x, y = curv.Add(prvx, prvy, bspX, bspY)
+	return
+}
 
 func main() {
 	var buf [32]byte
@@ -87,21 +95,11 @@ func main() {
 
 	var i int
 	for i=0; i<100; i++ {
-		if !verify_key(A_private_key.Bytes(), xy2pk(x,y)) {
-			println(i, "verify key failed")
-		}
-		//println(i)
-		//B_private_key = ( A_private_key + secret ) % N
 		private_key_B := derive_private_key(A_private_key, secret)
-		//println("sb", hex.EncodeToString(private_key_B.Bytes()))
+		bX, bY := derive_public_key(x, y, secret)
 
+		// verify the public key matching the private key
 		xB, yB := curv.ScalarBaseMult(private_key_B.Bytes())
-		//println("xb", hex.EncodeToString(xB.Bytes()))
-		//println("yb", hex.EncodeToString(yB.Bytes()))
-
-		//B_public_key = G * secret + A_public_key
-		bspX, bspY := curv.ScalarBaseMult(secret.Bytes())
-		bX, bY := curv.Add(x, y, bspX, bspY)
 		if bX.Cmp(xB)!=0 {
 			println(i, "x error", hex.EncodeToString(bX.Bytes()))
 			return
@@ -109,6 +107,11 @@ func main() {
 		if bY.Cmp(yB)!=0 {
 			println("y error", hex.EncodeToString(bY.Bytes()))
 			return
+		}
+
+		// make sure that you can sign and verify with it
+		if !verify_key(A_private_key.Bytes(), xy2pk(x,y)) {
+			println(i, "verify key failed")
 		}
 
 		A_private_key = private_key_B
