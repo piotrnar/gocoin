@@ -1,46 +1,118 @@
 package main
 
 import (
+	"os"
 	"math/big"
+	"crypto/rand"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 var curv *btc.BitCurve = btc.S256()
 
+func xy2pk(x, y *big.Int) (res []byte) {
+	res = make([]byte, 65)
+	res[0] = 4
+	xb := x.Bytes()
+	yb := y.Bytes()
+	copy(res[1+32-len(xb):], xb)
+	copy(res[33+32-len(yb):], yb)
+	return
+}
+
+
+// Verify the secret key's range and al if a test message signed with it verifies OK
+func verify_key(priv []byte, publ []byte) bool {
+	const TestMessage = "Just some test message..."
+	hash := btc.Sha2Sum([]byte(TestMessage))
+
+	pub_key, e := btc.NewPublicKey(publ)
+	if e != nil {
+		println("NewPublicKey:", e.Error())
+		os.Exit(1)
+	}
+
+	var key ecdsa.PrivateKey
+	key.D = new(big.Int).SetBytes(priv)
+	key.PublicKey = pub_key.PublicKey
+
+	if key.D.Cmp(big.NewInt(0)) == 0 {
+		println("pubkey value is zero")
+		return false
+	}
+
+	if key.D.Cmp(curv.N) != -1 {
+		println("pubkey value is too big", hex.EncodeToString(publ))
+		return false
+	}
+
+	r, s, err := ecdsa.Sign(rand.Reader, &key, hash[:])
+	if err != nil {
+		println("ecdsa.Sign:", err.Error())
+		return false
+	}
+
+	ok := ecdsa.Verify(&key.PublicKey, hash[:], r, s)
+	if !ok {
+		println("The key pair does not verify!")
+		return false
+	}
+	return true
+}
+
+
+func derive_private_key(prv, secret *big.Int) (res *big.Int) {
+	res = new(big.Int).Add(prv, secret)
+	res = new(big.Int).Mod(res, curv.N)
+	return
+}
+
+
 func main() {
-	//secret, _ := new(big.Int).SetString("f8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35", 16)
-	secret, _ := new(big.Int).SetString("9242353464575846756867969577867969568679679780707897896856436b35", 16)
+	var buf [32]byte
+	rand.Read(buf[:])
+	secret := new(big.Int).SetBytes(buf[:])
 
-	private_key, _ := new(big.Int).SetString("e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35", 16)
+	rand.Read(buf[:])
+	A_private_key := new(big.Int).SetBytes(buf[:])
 
-	println("s", hex.EncodeToString(private_key.Bytes()))
+	println("p", hex.EncodeToString(A_private_key.Bytes()))
 	println("q", hex.EncodeToString(secret.Bytes()))
 
-	x, y := curv.ScalarBaseMult(private_key.Bytes())
+	x, y := curv.ScalarBaseMult(A_private_key.Bytes())
 	println("x", hex.EncodeToString(x.Bytes()))
 	println("y", hex.EncodeToString(y.Bytes()))
+	println(hex.EncodeToString(xy2pk(x, y)))
 
-	for i:=0; i<10; i++ {
-		println(i)
-		//B_private_key = A_private_key + B_secret
-		private_key_B := new(big.Int).Add(private_key, secret)
-		println("sb", hex.EncodeToString(private_key_B.Bytes()))
-
-		private_key_B = new(big.Int).Mod(private_key_B, curv.N)
-		println("sb", hex.EncodeToString(private_key_B.Bytes()))
+	var i int
+	for i=0; i<100; i++ {
+		if !verify_key(A_private_key.Bytes(), xy2pk(x,y)) {
+			println(i, "verify key failed")
+		}
+		//println(i)
+		//B_private_key = ( A_private_key + secret ) % N
+		private_key_B := derive_private_key(A_private_key, secret)
+		//println("sb", hex.EncodeToString(private_key_B.Bytes()))
 
 		xB, yB := curv.ScalarBaseMult(private_key_B.Bytes())
-		println("xb", hex.EncodeToString(xB.Bytes()))
-		println("yb", hex.EncodeToString(yB.Bytes()))
+		//println("xb", hex.EncodeToString(xB.Bytes()))
+		//println("yb", hex.EncodeToString(yB.Bytes()))
 
-		//B_public_key = B_secret*point + A_public_key
+		//B_public_key = G * secret + A_public_key
 		bspX, bspY := curv.ScalarBaseMult(secret.Bytes())
 		bX, bY := curv.Add(x, y, bspX, bspY)
-		println("x-", hex.EncodeToString(bX.Bytes()))
-		println("yi", hex.EncodeToString(bY.Bytes()))
+		if bX.Cmp(xB)!=0 {
+			println(i, "x error", hex.EncodeToString(bX.Bytes()))
+			return
+		}
+		if bY.Cmp(yB)!=0 {
+			println("y error", hex.EncodeToString(bY.Bytes()))
+			return
+		}
 
-		private_key = private_key_B
+		A_private_key = private_key_B
 		x, y = bX, bY
 	}
+	println(i, "deterministic type 2 keys tested OK")
 }
