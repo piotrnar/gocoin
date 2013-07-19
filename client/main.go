@@ -166,7 +166,7 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 				ui_show_prompt()
 			}
 
-			if BalanceChanged {
+			if CFG.Beeps.NewBalance && BalanceChanged {
 				fmt.Println("\007Your balance has just changed")
 				fmt.Print(DumpBalance(nil, false))
 				ui_show_prompt()
