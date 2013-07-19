@@ -50,20 +50,26 @@ Please keep in mind that the wallet uses unencrypted files to store the private 
 
 Dependencies
 ==============
-Allow Go to fetch the dependencies for you:
+
+You should have Git and Mercurial installed in your OS, so „git” ang „hg” cound be executed from a command prompt, without a need to specify a full path to the executables.
+
+If you are on Windows and you want to get adventage od EC_Verify wrapper, you will also need MinGW(64) and MSys.
+
+Of course you also need a Go compiler for your platform.
+
+When you have all of the above, just allow Go to fetch the a dependency library for you, by executing:
 
 	go get code.google.com/p/go.crypto/ripemd160
 
-In other for this command to work, yuo will need to have Mercurial („hg” command) installed in your system.
 
 
 Building
 ==============
-For anyone familiar with Go language, building should not be a problem. If you have Git installed, the simples way to fetch the source code is by executing:
+For anyone familiar with Go language, building should not be a problem. If you have Git installed, the simplest way to fetch the source code is by executing:
 
 	go get github.com/piotrnar/gocoin
 
-After you have the sources in your local disk, building them is usually as simple as executing "go build", in either the client or the wallet directory.
+After you have the sources in your local disk, building them is usually as simple as executing "go build", in either the “client” or the “wallet” directory.
 
 
 EC_Verify wrappers
