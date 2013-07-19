@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"bufio"
 	"strings"
+	"math/big"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -74,9 +75,8 @@ func load_others() {
 				compr = true
 			}
 
-			var key [32]byte
-			copy(key[:], pkb[1:33])
-			pub, er := btc.PublicFromPrivate(key[:], compr)
+			key := pkb[1:33]
+			pub, er := btc.PublicFromPrivate(key, compr)
 			if er != nil {
 				println("PublicFromPrivate:", e.Error())
 				os.Exit(1)
@@ -113,15 +113,27 @@ func make_wallet() {
 	load_others()
 
 	pass := getpass()
-	seed_key := btc.Sha2Sum([]byte(pass))
+	seed_key := make([]byte, 32)
+	btc.ShaHash([]byte(pass), seed_key)
+	if *type2 {
+		var buf [20]byte
+		btc.RimpHash(seed_key, buf[:])
+		type2_secret = new(big.Int).SetBytes(buf[:])
+	}
 	if pass!="" {
 		if *verbose {
 			fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
 		}
 		for i:=uint(0); i < *keycnt; {
-			seed_key = btc.Sha2Sum(seed_key[:])
+			if *type2 {
+				seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
+			} else {
+				new_seed := make([]byte, 32)
+				btc.ShaHash(seed_key, new_seed)
+				seed_key = new_seed
+			}
 			priv_keys = append(priv_keys, seed_key)
-			pub, er := btc.PublicFromPrivate(seed_key[:], !*uncompressed)
+			pub, er := btc.PublicFromPrivate(seed_key, !*uncompressed)
 			if er == nil {
 				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
 				labels = append(labels, fmt.Sprint("Auto ", i+1))
