@@ -168,8 +168,7 @@ func show_info(par string) {
 	runtime.ReadMemStats(&ms)
 	fmt.Println("Go version:", runtime.Version(),
 		"   Heap size:", ms.Alloc>>20, "MB",
-		"   Sys mem used", ms.Sys>>20, "MB",
-		"   NewBlockBeep:", beep)
+		"   Sys mem used", ms.Sys>>20, "MB")
 
 	debug.ReadGCStats(&gs)
 	fmt.Println("LastGC:", time.Now().Sub(gs.LastGC).String(),
@@ -210,16 +209,6 @@ func show_counters(par string) {
 		fmt.Println(li)
 	}
 	counter_mutex.Unlock()
-}
-
-
-func ui_beep(par string) {
-	if par=="1" || par=="on" || par=="true" {
-		beep = true
-	} else if par=="0" || par=="off" || par=="false" {
-		beep = false
-	}
-	fmt.Println("beep:", beep)
 }
 
 
@@ -367,7 +356,6 @@ func init() {
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("beep", false, ui_beep, "Control beep when a new block is received (use param 0 or 1)")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")

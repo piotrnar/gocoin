@@ -26,7 +26,6 @@ var (
 	exit_now bool
 
 	dbg int64
-	beep bool
 
 	LastBlock *btc.BlockTreeNode
 	LastBlockReceived time.Time
@@ -145,17 +144,17 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			Busy("NetRouteInv")
 			NetRouteInv(2, bl.Hash, from)
 
-			if beep {
+			if CFG.Beeps.NewBlock {
 				fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
 				ui_show_prompt()
 			}
 
 			if mined_by_us(bl.Raw) {
-				fmt.Println("\007Mined by '"+CFG.MinerID+"':", bl.Hash)
+				fmt.Println("\007Mined by '"+CFG.Beeps.MinerID+"':", bl.Hash)
 				ui_show_prompt()
 			}
 
-			if LastBlock == BlockChain.BlockTreeEnd {
+			if CFG.Beeps.ActiveFork && LastBlock == BlockChain.BlockTreeEnd {
 				// Last block has not changed, so it must have been an orphaned block
 				bln := BlockChain.BlockIndex[bl.Hash.BIdx()]
 				commonNode := LastBlock.FirstCommonParent(bln)

@@ -30,7 +30,6 @@ var CFG struct {
 		Interface string
 		AllowedIP string // comma separated
 	}
-	MinerID string
 	Net struct {
 		ListenTCP bool
 		TCPPort uint
@@ -60,6 +59,11 @@ var CFG struct {
 		MinBrowsableVal uint
 		NoCacheBefore uint
 		GCPercTrshold int
+	}
+	Beeps struct {
+		NewBlock bool  // beep when a new block has been mined
+		ActiveFork bool  // triple beep when ther is a fork
+		MinerID string // beep when a bew block is mined with this string in coinbase
 	}
 }
 
@@ -110,7 +114,7 @@ func init() {
 	flag.UintVar(&CFG.Net.MaxUpKBps, "ul", CFG.Net.MaxUpKBps, "Upload limit in KB/s (0 for no limit)")
 	flag.UintVar(&CFG.Net.MaxDownKBps, "dl", CFG.Net.MaxDownKBps, "Download limit in KB/s (0 for no limit)")
 	flag.StringVar(&CFG.WebUI.Interface, "webui", CFG.WebUI.Interface, "Serve WebUI from the given interface")
-	flag.StringVar(&CFG.MinerID, "miner", CFG.MinerID, "Monitor new blocks with the string in their coinbase TX")
+	flag.StringVar(&CFG.Beeps.MinerID, "miner", CFG.Beeps.MinerID, "Monitor new blocks with the string in their coinbase TX")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
 

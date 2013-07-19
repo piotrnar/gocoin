@@ -33,10 +33,10 @@ func mined_by(bl []byte, id string) bool {
 
 
 func mined_by_us(bl []byte) bool {
-	if CFG.MinerID=="" {
+	if CFG.Beeps.MinerID=="" {
 		return false
 	}
-	return mined_by(bl, CFG.MinerID)
+	return mined_by(bl, CFG.Beeps.MinerID)
 }
 
 
@@ -105,9 +105,9 @@ func do_mining(s string) {
 		return
 	}
 	diff /= float64(tot_blocks)
-	if CFG.MinerID!="" {
+	if CFG.Beeps.MinerID!="" {
 		fmt.Printf("%.8f BTC mined by %s, in %d blocks for the last %d hours\n",
-			float64(totbtc)/1e8, CFG.MinerID, cnt, hrs)
+			float64(totbtc)/1e8, CFG.Beeps.MinerID, cnt, hrs)
 	}
 	if cnt > 0 {
 		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %s\n",
@@ -132,21 +132,21 @@ func set_miner(p string) {
 	}
 
 	if p=="off" {
-		CFG.MinerID = ""
+		CFG.Beeps.MinerID = ""
 		fmt.Printf("Mining monitor disabled\n")
 		return
 	}
 
 	v, e := strconv.ParseUint(p, 10, 32)
 	if e!=nil {
-		CFG.MinerID = p
+		CFG.Beeps.MinerID = p
 	} else if int(v)<len(MinerIds) {
-		CFG.MinerID = MinerIds[v][1]
+		CFG.Beeps.MinerID = MinerIds[v][1]
 	} else {
 		fmt.Println("The number is too big. Max is", len(MinerIds)-1)
 	}
 
-	fmt.Printf("Current miner ID: '%s'\n", CFG.MinerID)
+	fmt.Printf("Current miner ID: '%s'\n", CFG.Beeps.MinerID)
 }
 
 

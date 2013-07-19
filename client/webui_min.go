@@ -66,7 +66,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			om.bts+= uint64(len(bl))
 			om.mid = mid
 			m[miner] = om
-			if current_mid==-1 && CFG.MinerID==MinerIds[mid][1] {
+			if current_mid==-1 && CFG.Beeps.MinerID==MinerIds[mid][1] {
 				current_mid = mid
 			}
 		} else {
