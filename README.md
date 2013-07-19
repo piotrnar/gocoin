@@ -102,7 +102,7 @@ When starting the client, use command line switch „-c=<addr>” to instruct your n
 
 User Manual
 ==============
-Both the applications (client and wallet) are console only (no GUI window). The client node has a quite functional web interface though, which can be used to control it with your web browser, even from a remote PC (it you allow a remote access first).
+Both the applications (client and wallet) are console only (no GUI window). The client node has a quite functional web interface though, which can be used to control it with your web browser, even from a remote PC (if you've allowed a remote access first).
 
 
 Client / Node
@@ -230,7 +230,7 @@ Move the signed transaction file to your online PC and use the node's text UI to
 The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
 
 #### Load transaction using WebUI
-Alternatively, you can use WebUI and it's “Upload Transaction File” option, in the Transactions tab. 
+Alternatively, you can use WebUI and it's “Upload Transaction File” option, in the Transactions tab.
 After you  load the transaction, its details will be shown in your browser - then you can use the envelope icon with a green arrow to broadcast it to the network, or the red X to unload it.
 Coming back to Transactions tab later, press the button in the “Accepted transactions” row, to see all the transactions you've loaded (those with a red background are yours).
 
