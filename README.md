@@ -102,7 +102,7 @@ When starting the client, use command line switch „-c=<addr>” to instruct your n
 
 User Manual
 ==============
-Both the applications (client and wallet) are console only (no GUI window).
+Both the applications (client and wallet) are console only (no GUI window). The client node has a quite functional web interface though, which can be used to control it with your web browser, even from a remote PC (it you allow a remote access first).
 
 
 Client / Node
