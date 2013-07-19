@@ -130,7 +130,7 @@ If you want to have access to the WebUI from different computers:
 ### Incoming connections
 There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (or 18333 for testnet) to the PC running the node.
 
-It is possible to setup a different incomming port („TCPPort” config value), but currently the satoshi clients refuse to conenct using non-default ports, so if you get any incomming connections on non-default ports, they will only be from alternative clients.
+It is possible to setup a different incomming port („TCPPort” config value), but currently the satoshi clients refuse to conenct using non-default ports, so if you get any incomming connections on non-default ports, they will only be from alternative clients, which there are barely few out there.
 
 
 Wallet
