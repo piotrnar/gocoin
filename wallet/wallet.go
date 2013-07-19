@@ -108,7 +108,7 @@ func load_others() {
 			copy(key[:], pkb[1:33])
 			priv_keys = append(priv_keys, key)
 			publ_addrs = append(publ_addrs,
-				btc.NewAddrFromPubkey(priv2pub(curv, key[:], compr), verbyte))
+				btc.NewAddrFromPubkey(btc.PublicFromPrivate(key[:], compr), verbyte))
 			if len(pk)>1 {
 				labels = append(labels, pk[1])
 			} else {
@@ -147,7 +147,7 @@ func make_wallet() {
 			seed_key = btc.Sha2Sum(seed_key[:])
 			priv_keys = append(priv_keys, seed_key)
 			publ_addrs = append(publ_addrs,
-				btc.NewAddrFromPubkey(priv2pub(curv, seed_key[:], !*uncompressed), verbyte))
+				btc.NewAddrFromPubkey(btc.PublicFromPrivate(seed_key[:], !*uncompressed), verbyte))
 			labels = append(labels, fmt.Sprint("Auto ", i+1))
 		}
 		if *verbose {

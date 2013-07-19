@@ -57,8 +57,6 @@ var (
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo
-
-	curv *btc.BitCurve = btc.S256()
 )
 
 
