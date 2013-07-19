@@ -11,36 +11,6 @@ import (
 )
 
 
-// get public key in bitcoin protocol format, from the give private key
-func priv2pub(curv *btc.BitCurve, priv_key []byte, compressed bool) (res []byte) {
-	x, y := curv.ScalarBaseMult(priv_key)
-	xd := x.Bytes()
-
-	if len(xd)>32 {
-		println("x is too long:", len(xd))
-		os.Exit(2)
-	}
-
-	if !compressed {
-		yd := y.Bytes()
-		if len(yd)>32 {
-			println("y is too long:", len(yd))
-			os.Exit(2)
-		}
-
-		res = make([]byte, 65)
-		res[0] = 4
-		copy(res[1+32-len(xd):33], xd)
-		copy(res[33+32-len(yd):65], yd)
-	} else {
-		res = make([]byte, 33)
-		res[0] = 2+byte(y.Bit(0)) // 02 for even Y values, 03 for odd..
-		copy(res[1+32-len(xd):33], xd)
-	}
-
-	return
-}
-
 func load_others() {
 	f, e := os.Open(RawKeysFilename)
 	if e == nil {
@@ -106,9 +76,14 @@ func load_others() {
 
 			var key [32]byte
 			copy(key[:], pkb[1:33])
+			pub, er := btc.PublicFromPrivate(key[:], compr)
+			if er != nil {
+				println("PublicFromPrivate:", e.Error())
+				os.Exit(1)
+			}
+
 			priv_keys = append(priv_keys, key)
-			publ_addrs = append(publ_addrs,
-				btc.NewAddrFromPubkey(btc.PublicFromPrivate(key[:], compr), verbyte))
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
 			if len(pk)>1 {
 				labels = append(labels, pk[1])
 			} else {
@@ -143,12 +118,17 @@ func make_wallet() {
 		if *verbose {
 			fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
 		}
-		for i:=uint(0); i < *keycnt; i++ {
+		for i:=uint(0); i < *keycnt; {
 			seed_key = btc.Sha2Sum(seed_key[:])
 			priv_keys = append(priv_keys, seed_key)
-			publ_addrs = append(publ_addrs,
-				btc.NewAddrFromPubkey(btc.PublicFromPrivate(seed_key[:], !*uncompressed), verbyte))
-			labels = append(labels, fmt.Sprint("Auto ", i+1))
+			pub, er := btc.PublicFromPrivate(seed_key[:], !*uncompressed)
+			if er == nil {
+				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
+				labels = append(labels, fmt.Sprint("Auto ", i+1))
+				i++
+			} else {
+				println("PublicFromPrivate:", er.Error())
+			}
 		}
 		if *verbose {
 			fmt.Println("Private keys re-generated")
