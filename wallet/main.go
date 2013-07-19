@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"math/big"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -28,6 +29,7 @@ var (
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	verbose *bool = flag.Bool("v", false, "Verbose bersion (print more info)")
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
+	type2 *bool = flag.Bool("t2", false, "Use Type-2 method to generate deterministic addreses")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
@@ -48,7 +50,7 @@ var (
 	verbyte, privver byte  // address version for public and private key
 
 	// set in make_wallet():
-	priv_keys [][32]byte
+	priv_keys [][]byte
 	labels []string
 	publ_addrs []*btc.BtcAddr
 
@@ -57,6 +59,8 @@ var (
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo
+
+	type2_secret *big.Int // used to type-2 wallets
 )
 
 
@@ -64,8 +68,15 @@ var (
 func dump_addrs() {
 	maxKeyVal, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
 	f, _ := os.Create("wallet.txt")
+	if type2_secret!=nil {
+		s := fmt.Sprintf("# Type-2\n# %s\n# %s\n",
+			hex.EncodeToString(publ_addrs[0].Pubkey),
+			hex.EncodeToString(type2_secret.Bytes()))
+		fmt.Print(s)
+		fmt.Fprint(f, s)
+	}
 	for i := range publ_addrs {
-		if !*noverify && !verify_key(priv_keys[i][:], publ_addrs[i].Pubkey) {
+		if !*noverify && !verify_key(priv_keys[i], publ_addrs[i].Pubkey) {
 			println("Something wrong with key at index", i, " - abort!")
 			os.Exit(1)
 		}
