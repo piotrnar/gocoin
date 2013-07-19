@@ -136,7 +136,11 @@ func make_wallet() {
 			pub, er := btc.PublicFromPrivate(seed_key, !*uncompressed)
 			if er == nil {
 				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
-				labels = append(labels, fmt.Sprint("Auto ", i+1))
+				if *type2 {
+					labels = append(labels, fmt.Sprint("TypB ", i+1))
+				} else {
+					labels = append(labels, fmt.Sprint("TypA ", i+1))
+				}
 				i++
 			} else {
 				println("PublicFromPrivate:", er.Error())
