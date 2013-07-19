@@ -36,21 +36,9 @@ The online client node has much higher system requirements than the wallet app.
 
 Client / Node
 --------------
-As for the current bitcoin block chain (aroung block #250000), it is recommended to have at least 4GB of RAM. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
-
-For testnet-only purposes 32-bit arch is enough.
+As for the current bitcoin block chain (aroung block #250000), it is recommended to have at least 4GB of RAM. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. For testnet-only purposes 32-bit arch is enough.
 
 The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
-
-
-### Optimize memory usage
-It is possible to decrease the node's memory usage, at a cost of performance.
-
-One of the things worth trying is decreasing the Go's grabage collector's trashold from the default 100%.
-If you want to change it to e. g. 30%, use a running node's UI to execute such command:
-	cfg "Memory":{"GCPercTrshold":30}
-
-You can save a modified config values, using "configsave" command.
 
 
 Wallet
@@ -66,10 +54,12 @@ Allow Go to fetch the dependencies for you:
 
 	go get code.google.com/p/go.crypto/ripemd160
 
+In other for this command to work, yuo will need to have Mercurial („hg” command) installed in your system.
+
 
 Building
 ==============
-For anyone familiar with Go language, building should not be a problem. You can fetch the source code using i.e.:
+For anyone familiar with Go language, building should not be a problem. If you have Git installed, the simples way to fetch the source code is by executing:
 
 	go get github.com/piotrnar/gocoin
 
@@ -85,23 +75,15 @@ In order to use a cgo wrapper, copy either "openssl.go" or "sipasec.go" (but nev
 To build a cgo wrapper on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows).
 
 ### sipasec
-The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all.
-
-To build this wrapper, follow the instructions in "cgo/sipasec/README.md".
-
-It has been proven working on Windows 7 and Linux (both 64 bit arch).
+The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It has been proven working on Windows 7 and Linux (both 64 bit arch).
 
 ### openssl
-If you fail to build "sipasec", you can try the "openssl" wrapper.
-
-On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed.
-
-On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
+If you fail to build "sipasec", you can try the "openssl" wrapper. On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed. On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
 
 
 Bootstrapping
 ==============
-Gocoin's client node has not been optimozed for the initial chain download. Even if it was, this is still a very time consuming operation. Waiting for the entire chain to be fetched from the network can be enough of a pain to discourage you from actually trying gocoin where it is really good (at a synchronized chain).
+Gocoin's client node has not been really optimized for the initial chain download, but even if it was, this is still a very time consuming operation. Waiting for the entire chain to be fetched from the network and verified can be enough of a pain to discourage you from seeing how good gocoin is while working with an already synchronized chain.
 
 
 Import block from Satoshi client
@@ -110,14 +92,12 @@ When you run the client node for the first time, it will look of the satoshi's b
 
 There is also a separate tool called „importblocks” that you can use for importing blocks from the satoshi's database into gocoin. Start the tool without parameters and it will tell you how to use it. While importing the blockchain using this tool, make sure that your node is not running.
 
+In b oth cases, the oparation might take up to an hour, but it is one time only.
+
 
 Fetching blockchain from local host
 --------------
-When starting the client, use command line switch „-c=<addr>” to instruct your node to connect to a host of your choice.
-
-For the time of the the chain download do not limit do download, nor upload speed.
-
-Additionaly you may want to start the client with „-nosync” switch. This will disable flushing database onto disk after each received block. I this case you must remember to not exit a node before switching the sync back on by executing „sync 1” at the UI text interface.
+When starting the client, use command line switch „-c=<addr>” to instruct your node to connect to a host of your choice. For the time of the the chain download do not limit do download, nor upload speed.
 
 
 User Manual
@@ -137,15 +117,20 @@ Run “client -h” to see all available command line switches. The main ones are:
 When the client is already running you have the UI where you can issue commands. Type "help" to see  the possible commands.
 
 ### Web UI
-There is also a web interface that you can operate with a web browser. By default it is available only from a local host, via http://127.0.0.1:8833/ - if you want to have access to the WebUI from different computers, start the client with:
+There is also a web interface that you can operate with a web browser.
 
-	client -webui 0.0.0.0:8833
+By default, for security reasons, it is available only from a local host, via http://127.0.0.1:8833/
 
-Look into „AllowedIP” value in the config file (gocoin.conf), to control the IP access. If you don't yet have a config file in the folder where you start the node from, use UI command „configsave” to create it.
-
+If you want to have access to the WebUI from different computers:
+ * Save the config file (gocoin.conf), using either TextUI command „configsave” or the „Show Configuaration” ? „Apply & Save”  buttons , at the Home page of the WebUI.
+ * Change „Interface” value in the config file to „:8833”
+ * Change „AllowedIP” value to allow access from all the addresses you need (i.e. „127.0.0.1,192.168.0.0/16”)
+ * Remember to save the new config and then restart your node.
 
 ### Incoming connections
-There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (183333 for testnet) to the PC running the node.
+There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (or 18333 for testnet) to the PC running the node.
+
+It is possible to setup a different incomming port („TCPPort” config value), but currently the satoshi clients refuse to conenct using non-default ports, so if you get any incomming connections on non-default ports, they will only be from alternative clients.
 
 
 Wallet
@@ -203,6 +188,11 @@ From the moment when wallet.txt is properly loaded into your client, you can che
 
 Each time you execute “bal”, a directory "balance/" is (re)created, in the folder where you run your client from.
 
+
+#### Download balance using WebUI
+Alternatively, you can also use the WebUI to download balance.zip file, which contains the balance folder.
+
+
 ### Sing your transaction by the wallet
 To spend your money, move the most recent "balance/" folder, from the client to the PC with your wallet.
 
@@ -239,6 +229,12 @@ Move the signed transaction file to your online PC and use the node's text UI to
 
 The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
 
+#### Load transaction using WebUI
+Alternatively, you can use WebUI and it's “Upload Transaction File” option, in the Transactions tab. 
+After you  load the transaction, its details will be shown in your browser - then you can use the envelope icon with a green arrow to broadcast it to the network, or the red X to unload it.
+Coming back to Transactions tab later, press the button in the “Accepted transactions” row, to see all the transactions you've loaded (those with a red background are yours).
+
+
 ### Verify transaction carefully
 Verify that the information shown on the screen (after loading it) matches exactly what you intended to spend.
 
@@ -258,6 +254,7 @@ There is also a command to re-broadcast all the transaction that have been loade
 	stxa
 
 
+
 Known issues
 ==============
 
@@ -269,6 +266,11 @@ To fix this issue you will need to rebuild the unspent database, starting the cl
 
 The UTXO rebuild operation might take around an hour though, so for such cases, it is worth to have a backup of some recent version of this database. Then you don't need to rebuild it all, but only the part that came after your backup.
 What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch.
+
+
+Go's memory manager
+--------------
+It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Untill this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node.
 
 
 Support
