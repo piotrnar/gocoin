@@ -1,3 +1,2 @@
-* Allow to decode txs that are in memory pool in the WebUI
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
