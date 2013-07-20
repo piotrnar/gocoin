@@ -191,6 +191,9 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintln(w, "Error")
+			if err, ok := r.(error); ok {
+				fmt.Fprintln(w, err.Error())
+			}
 		}
 	}()
 
@@ -201,8 +204,8 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	txid := btc.NewUint256FromString(r.Form["id"][0])
+	fmt.Fprintln(w, "TxID:", txid.String())
 	if tx, ok := TransactionsToSend[txid.Hash]; ok {
-		fmt.Fprintln(w, "TxID:", tx.Tx.Hash.String())
 		s, _, _, _, _ := tx2str(tx.Tx)
 		w.Write([]byte(s))
 	} else {
