@@ -28,7 +28,7 @@
 	overflow: auto;
 }
 </style>
-<div id="light" class="white_content"><pre id="rawdiv" style="background-color:white"></div><div id="fade" class="black_overlay"></div>
+<div id="light" class="white_content"><pre id="rawdiv" style="background-color:white">sdfsdf</pre></div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
 <table width="100%"><tr>
 <td valign="top" width="*">
@@ -163,22 +163,20 @@ function deltx_click(id) {
 var prvpos
 
 function decode_tx(e) {
-	var txid = e.toElement.parentElement.cells[1].innerText
+	var txid = this.id
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
-			rawdiv.innerText = xmlHttp.responseText
 			light.style.display='block'
 			fade.style.display='block'
-			//scroll(0,0)
-			//window.scrollTop = '0';
+			rawdiv.innerHTML = xmlHttp.responseText
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
 
 			fade.addEventListener('click', closepopup)
 			fade.style.cursor = 'pointer'
 			fade.title = 'Click here to close the popup'
-}
+		}
 	}
 	xmlHttp.open("GET","raw_tx?id="+txid, true);
 	xmlHttp.send(null);
@@ -210,8 +208,8 @@ function show_txs2s(extrapar) {
 					row.className='hov'
 				}
 
-				// make the row clickable
 				row.addEventListener('click', decode_tx, false)
+				row.id = txid
 				row.style.cursor='pointer'
 
 				c=row.insertCell(-1);c.align='right'
@@ -220,6 +218,7 @@ function show_txs2s(extrapar) {
 				c = row.insertCell(-1)
 				c.className ='mono'
 				c.innerHTML = txid
+
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
