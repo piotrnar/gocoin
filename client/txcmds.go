@@ -18,14 +18,17 @@ func tx2str(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e err
 		var po *btc.TxOut
 
 		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
-			s += fmt.Sprint(" InMEM")
+			s += fmt.Sprint(" mempool")
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				s += fmt.Sprint(" - Vout TOO BIG!")
+				s += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
 			} else {
 				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			}
 		} else {
 			po, _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			if po != nil {
+				s += fmt.Sprintf("%8d", po.BlockHeight)
+			}
 		}
 		if po != nil {
 			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
