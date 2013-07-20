@@ -123,11 +123,13 @@ Run “client -h” to see all available command line switches. The main ones are:
 When the client is already running you have the UI where you can issue commands. Type "help" to see  the possible commands.
 
 ### Web UI
-There is also a web interface that you can operate with a web browser.
+There is also a web interface that you can operate with a web browser. 
 
-By default, for security reasons, it is available only from a local host, via http://127.0.0.1:8833/
+Make sure that wherever you launch the client executable from, there is the „webht” and „webui” folder, along with its content. They are an important part of the WebUI application. You can edit these files to satisfy your preferences.
 
-If you want to have access to the WebUI from different computers:
+By default, for security reasons, WebUI is available only from a local host, via http://127.0.0.1:8833/
+
+If you want to have access to it from different computers:
  * Save the config file (gocoin.conf), using either TextUI command „configsave” or the „Show Configuaration” -> „Apply & Save” buttons, at the Home tab of the WebUI.
  * Change „Interface” value in the config file to „:8833”
  * Change „AllowedIP” value to allow access from all the addresses you need (i.e. „127.0.0.1,192.168.0.0/16”)
