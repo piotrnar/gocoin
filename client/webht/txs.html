@@ -66,6 +66,7 @@
 		<th>Pending Tx
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
+<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
 
 <script>
 
@@ -129,6 +130,19 @@ function deltx_click(id) {
 	}
 }
 
+function decode_tx(e) {
+	var txid = e.toElement.parentElement.cells[1].innerText
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			rawdiv.innerText = xmlHttp.responseText
+			location.href = "#rawdiv";
+		}
+	}
+	xmlHttp.open("GET","raw_tx?id="+txid, true);
+	xmlHttp.send(null);
+}
+
 
 function show_txs2s(extrapar) {
 	var aj = ajax()
@@ -150,12 +164,16 @@ function show_txs2s(extrapar) {
 					row.className='hov'
 				}
 
+				// make the row clickable
+				row.addEventListener('click', decode_tx, false)
+				row.style.cursor='pointer'
+
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				c.innerHTML = '<a href="https://blockchain.info/tx/'+txid+'">'+txid+'</a>'
+				c.innerHTML = txid
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
