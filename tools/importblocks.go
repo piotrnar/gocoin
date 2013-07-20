@@ -1,3 +1,4 @@
+// This tool can import blockchain database from satoshi client to gocoin
 package main
 
 import (
