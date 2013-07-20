@@ -274,6 +274,11 @@ The UTXO rebuild operation might take around an hour though, so for such cases, 
 What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch.
 
 
+WebUI browser compatibility
+--------------
+The WebUI is being developed and tested with Chrome. As for other browsers some functions might not work.
+
+
 Go's memory manager
 --------------
 It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Untill this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node.
