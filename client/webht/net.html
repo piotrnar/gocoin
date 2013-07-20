@@ -1,10 +1,10 @@
 <script>
-function raw_load(e) {
-	var id = parseInt(e.toElement.parentElement.cells[0].innerText)
+function raw_load() {
+	var id = this.id
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
-			rawdiv.innerText = xmlHttp.responseText
+			document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
 			location.href = "#rawdiv";
 		}
 	}
@@ -18,10 +18,12 @@ function net_drop(id) {
 }
 document.addEventListener('DOMContentLoaded', function() {
 	for (var r=1; r<netcons.rows.length; r++) {
+		var id=parseInt(netcons.rows[r].id)
 		for (var c=0; c<12; c++) {
 			netcons.rows[r].cells[c].title="Connection Details"
 			netcons.rows[r].cells[c].style.cursor="pointer"
 			netcons.rows[r].cells[c].addEventListener('click', raw_load, false)
+			netcons.rows[r].cells[c].id = id
 		}
 	}
 })
