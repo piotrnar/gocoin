@@ -83,6 +83,57 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+
+func output_tx_xml(w http.ResponseWriter, id string) {
+	txid := btc.NewUint256FromString(id)
+	w.Write([]byte("<tx>"))
+	fmt.Fprint(w, "<id>", id, "</id>")
+	if t2s, ok := TransactionsToSend[txid.Hash]; ok {
+		w.Write([]byte("<status>OK</status>"))
+		tx := t2s.Tx
+		w.Write([]byte("<inputs>"))
+		for i := range tx.TxIn {
+			w.Write([]byte("<input>"))
+			var po *btc.TxOut
+			if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+				if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
+					po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
+				}
+			} else {
+				po, _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			}
+			if po != nil {
+				ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
+				if !ok {
+					w.Write([]byte("<status>Script FAILED</status>"))
+				} else {
+					w.Write([]byte("<status>OK</status>"))
+				}
+				fmt.Fprint(w, "<value>", po.Value, "</value>")
+				fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(po.Pk_script, AddrVersion).String(), "</addr>")
+				fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
+			} else {
+				w.Write([]byte("<status>UNKNOWN INPUT</status>"))
+			}
+			w.Write([]byte("</input>"))
+		}
+		w.Write([]byte("</inputs>"))
+
+		w.Write([]byte("<outputs>"))
+		for i := range tx.TxOut {
+			w.Write([]byte("<output>"))
+			fmt.Fprint(w, "<value>", tx.TxOut[i].Value, "</value>")
+			fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, AddrVersion).String(), "</addr>")
+			w.Write([]byte("</output>"))
+		}
+		w.Write([]byte("</outputs>"))
+	} else {
+		w.Write([]byte("<status>Not found</status>"))
+	}
+	w.Write([]byte("</tx>"))
+}
+
+
 func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -113,6 +164,12 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header()["Content-Type"] = []string{"text/xml"}
+
+	if len(r.Form["id"])>0 {
+		output_tx_xml(w, r.Form["id"][0])
+		return
+	}
+
 	w.Write([]byte("<txpool>"))
 	tx_mutex.Lock()
 	for k, v := range TransactionsToSend {

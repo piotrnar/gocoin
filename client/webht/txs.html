@@ -28,7 +28,10 @@
 	overflow: auto;
 }
 </style>
-<div id="light" class="white_content"><pre id="rawdiv" style="background-color:white">sdfsdf</pre></div><div id="fade" class="black_overlay"></div>
+<div id="light" class="white_content">
+Transaction ID: <b class="mono" id="disp_txid"></b>
+<pre id="rawdiv" style="background-color:white"></pre>
+</div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
 <table width="100%"><tr>
 <td valign="top" width="*">
@@ -167,18 +170,66 @@ function decode_tx() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
-			light.style.display='block'
-			fade.style.display='block'
-			rawdiv.innerHTML = xmlHttp.responseText
+			var sta = xval(aj.responseXML,  "status")
+			if (sta!="OK") {
+				alert(sta)
+				return
+			}
+
+			disp_txid.innerHTML = xval(aj.responseXML,  "id")
+
+			var tin=0, tout=0, s = ''
+
+			var is = aj.responseXML.getElementsByTagName('input')
+			for (var i=0; i<is.length; i++) {
+				s += (i+1) + ") "
+				var st = xval(is[i], "status")
+				if (st=="OK") {
+					var val = parseInt(xval(is[i], "value"))
+					tin += val
+					s += (parseFloat(val)/1e8).toFixed(8)
+					s += " BTC <= " + xval(is[i], "addr")
+				} else {
+					s += st
+				}
+				var bl = xval(is[i], "block")
+				if (bl==0) {
+					s += " (not mined yet)"
+				} else {
+					s += " (mined in block "+xval(is[i], "block")+")"
+				}
+				s += "\n"
+			}
+			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"
+			s += "\n"
+
+			is = aj.responseXML.getElementsByTagName('output')
+			for (var i=0; i<is.length; i++) {
+				s += (i+1) + ") "
+				var val = parseInt(xval(is[i], "value"))
+				tout += val
+				s += (parseFloat(val)/1e8).toFixed(8)
+				s += " BTC => " + xval(is[i], "addr")
+				s += "\n"
+			}
+			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
+			s += "\n"
+			s += "Fee: " + (parseFloat(tin-tout)/1e8).toFixed(8) + " BTC\n"
+
+			rawdiv.innerHTML = s
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
 
+			// TODO: make it to happen only once
 			fade.addEventListener('click', closepopup)
 			fade.style.cursor = 'pointer'
 			fade.title = 'Click here to close the popup'
+
+			light.style.display='block'
+			fade.style.display='block'
 		}
 	}
-	xmlHttp.open("GET","raw_tx?id="+txid, true);
+	xmlHttp.open("GET","txs2s.xml?id="+txid, true);
 	xmlHttp.send(null);
 }
 
