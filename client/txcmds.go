@@ -85,10 +85,10 @@ func load_raw_tx(buf []byte) (s string) {
 
 	tx_mutex.Lock()
 	if missinginp {
-		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:2, firstseen:time.Now(),
+		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{Tx:tx, data:txd, own:2, firstseen:time.Now(),
 			volume:totout}
 	} else {
-		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:1, firstseen:time.Now(),
+		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{Tx:tx, data:txd, own:1, firstseen:time.Now(),
 			volume:totinp, fee:totinp-totout}
 	}
 	tx_mutex.Unlock()
