@@ -162,7 +162,7 @@ function deltx_click(id) {
 
 var prvpos
 
-function decode_tx(e) {
+function decode_tx() {
 	var txid = this.id
 	var aj = ajax()
 	aj.onreadystatechange=function() {
@@ -214,8 +214,8 @@ function show_txs2s(extrapar) {
 				c = row.insertCell(-1)
 				c.className ='mono'
 				c.innerHTML = txid
-				c.addEventListener('click', decode_tx, false)
 				c.id = txid
+				c.addEventListener('click', decode_tx, false)
 				c.style.cursor='pointer'
 
 				c=row.insertCell(-1);c.align='right'
