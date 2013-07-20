@@ -160,6 +160,8 @@ function deltx_click(id) {
 	}
 }
 
+var prvpos
+
 function decode_tx(e) {
 	var txid = e.toElement.parentElement.cells[1].innerText
 	var aj = ajax()
@@ -168,7 +170,10 @@ function decode_tx(e) {
 			rawdiv.innerText = xmlHttp.responseText
 			light.style.display='block'
 			fade.style.display='block'
-			scroll(0,0)
+			//scroll(0,0)
+			//window.scrollTop = '0';
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
 
 			fade.addEventListener('click', closepopup)
 			fade.style.cursor = 'pointer'
@@ -182,6 +187,7 @@ function decode_tx(e) {
 function closepopup() {
 	light.style.display='none'
 	fade.style.display='none'
+	window.scrollTo(0,prvpos)
 }
 
 function show_txs2s(extrapar) {
