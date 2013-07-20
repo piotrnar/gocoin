@@ -1,3 +1,5 @@
+// This tool can compress gocoins block database, but it is only needed if the database
+// was created with an old gocoin, that did not support compression yet (before 0.2.15)
 package main
 
 import (
