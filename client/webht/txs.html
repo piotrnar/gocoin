@@ -1,3 +1,34 @@
+<style>
+.black_overlay{
+	display: none;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	z-index:1001;
+	-moz-opacity: 0.8;
+	opacity:.80;
+	filter: alpha(opacity=80);
+}
+
+.white_content {
+	display: none;
+	position: absolute;
+	top: 25%;
+	left: 15%;
+	width: 70%;
+	height: 50%;
+	padding-left: 8px;
+	padding-right: 8px;
+	border: 5px solid #d0d0d0;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+}
+</style>
+<div id="light" class="white_content"><pre id="rawdiv" style="background-color:white"></div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
 <table width="100%"><tr>
 <td valign="top" width="*">
@@ -66,7 +97,6 @@
 		<th>Pending Tx
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
-<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
 
 <script>
 
@@ -136,13 +166,23 @@ function decode_tx(e) {
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
 			rawdiv.innerText = xmlHttp.responseText
-			location.href = "#rawdiv";
-		}
+			light.style.display='block'
+			fade.style.display='block'
+			scroll(0,0)
+
+			fade.addEventListener('click', closepopup)
+			fade.style.cursor = 'pointer'
+			fade.title = 'Click here to close the popup'
+}
 	}
 	xmlHttp.open("GET","raw_tx?id="+txid, true);
 	xmlHttp.send(null);
 }
 
+function closepopup() {
+	light.style.display='none'
+	fade.style.display='none'
+}
 
 function show_txs2s(extrapar) {
 	var aj = ajax()

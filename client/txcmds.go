@@ -4,34 +4,34 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"errors"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
-func load_raw_tx(buf []byte) (s string) {
-	txd, er := hex.DecodeString(string(buf))
-	if er != nil {
-		txd = buf
-	}
 
-	// At this place we should have raw transaction in txd
-	tx, le := btc.NewTx(txd)
-	if tx==nil || le != len(txd) {
-		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
-		return
-	}
-	tx.Hash = btc.NewSha2Hash(txd)
+func tx2str(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e error) {
 	s += fmt.Sprintln("Transaction details (for your information):")
 	s += fmt.Sprintln(len(tx.TxIn), "Input(s):")
-	var totinp, totout uint64
-	var missinginp bool
 	for i := range tx.TxIn {
 		s += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
-		po, _ := BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+		var po *btc.TxOut
+
+		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+			s += fmt.Sprint(" InMEM")
+			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
+				s += fmt.Sprint(" - Vout TOO BIG!")
+			} else {
+				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
+			}
+		} else {
+			po, _ = BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+		}
 		if po != nil {
 			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
+				e = errors.New("Invalid signature")
 				return
 			}
 			totinp += po.Value
@@ -55,6 +55,31 @@ func load_raw_tx(buf []byte) (s string) {
 		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee\n", float64(totinp)/1e8,
 			float64(totout)/1e8, float64(totinp-totout)/1e8)
 	}
+	return
+}
+
+
+func load_raw_tx(buf []byte) (s string) {
+	txd, er := hex.DecodeString(string(buf))
+	if er != nil {
+		txd = buf
+	}
+
+	// At this place we should have raw transaction in txd
+	tx, le := btc.NewTx(txd)
+	if tx==nil || le != len(txd) {
+		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
+		return
+	}
+	tx.Hash = btc.NewSha2Hash(txd)
+
+	var missinginp bool
+	var totinp, totout uint64
+	s, missinginp, totinp, totout, er = tx2str(tx)
+	if er != nil {
+		return
+	}
+
 	tx_mutex.Lock()
 	if missinginp {
 		TransactionsToSend[tx.Hash.Hash] = &OneTxToSend{data:txd, own:2, firstseen:time.Now(),
@@ -132,6 +157,22 @@ func del_tx(par string) {
 }
 
 
+func dec_tx(par string) {
+	txid := btc.NewUint256FromString(par)
+	if txid==nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		list_txs("")
+		return
+	}
+	if tx, ok := TransactionsToSend[txid.Hash]; ok {
+		s, _, _, _, _ := tx2str(tx.Tx)
+		fmt.Println(s)
+	} else {
+		fmt.Println("No such transaction ID in the memory pool.")
+	}
+}
+
+
 func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
@@ -188,7 +229,8 @@ func init () {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
-	newUi("txdel dtx", true, del_tx, "Temove a transaction from memory pool (identified by a given <txid>)")
+	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
+	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
 	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 }

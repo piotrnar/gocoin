@@ -181,3 +181,31 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 	tx_mutex.Unlock()
 	w.Write([]byte("</pending>"))
 }
+
+
+func raw_tx(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintln(w, "Error")
+		}
+	}()
+
+	r.ParseForm()
+	if len(r.Form["id"])==0 {
+		fmt.Println("No id given")
+		return
+	}
+
+	txid := btc.NewUint256FromString(r.Form["id"][0])
+	if tx, ok := TransactionsToSend[txid.Hash]; ok {
+		fmt.Fprintln(w, "TxID:", tx.Tx.Hash.String())
+		s, _, _, _, _ := tx2str(tx.Tx)
+		w.Write([]byte(s))
+	} else {
+		fmt.Fprintln(w, "Not found")
+	}
+}

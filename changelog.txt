@@ -1,6 +1,7 @@
 0.5.5
 * The wallet now supports Type-2 deterministic keys (use "-t2" switch)
 * Make the node's beeping setup configurable though gocoin.conf
+* Allow to decode (display) a transaction's details (only txs that are in memory pool)
 
 0.5.3
 * XSS protection on WebUI and IP access control

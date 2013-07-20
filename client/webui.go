@@ -179,6 +179,7 @@ func webserver() {
 	http.HandleFunc("/txs2s.xml", xmp_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
+	http.HandleFunc("/raw_tx", raw_tx)
 	http.HandleFunc("/balance.xml", xml_balance)
 	http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/raw_net", raw_net)
