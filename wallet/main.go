@@ -30,6 +30,7 @@ var (
 	verbose *bool = flag.Bool("v", false, "Verbose bersion (print more info)")
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
 	type2 *bool = flag.Bool("t2", false, "Use Type-2 method to generate deterministic addreses")
+	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
