@@ -208,17 +208,15 @@ function show_txs2s(extrapar) {
 					row.className='hov'
 				}
 
-				row.addEventListener('click', decode_tx, false)
-				row.id = txid
-				row.style.cursor='pointer'
-
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
 
 				c = row.insertCell(-1)
 				c.className ='mono'
 				c.innerHTML = txid
-
+				c.addEventListener('click', decode_tx, false)
+				c.id = txid
+				c.style.cursor='pointer'
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
