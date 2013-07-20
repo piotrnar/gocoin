@@ -1,3 +1,4 @@
+// This tool is able to verify whether a message was signed with the given bitcoin address
 package main
 
 import (
