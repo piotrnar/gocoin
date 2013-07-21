@@ -45,7 +45,7 @@ var (
 
 type OneTxToSend struct {
 	data []byte
-	sentcnt uint
+	invsentcnt, sentcnt uint
 	firstseen, lastsent time.Time
 	own byte // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
 	spent []uint64 // Which records in SpentOutputs this TX added
@@ -325,8 +325,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 		rec.blocked = TX_REJECTED_NOT_MINED
 		CountSafe("TxRouteNotMined")
 	} else if isRoutable(rec) {
-		rec.sentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
-		rec.lastsent = time.Now()
+		rec.invsentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
 		CountSafe("TxRouteOK")
 	}
 
