@@ -177,6 +177,7 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<time>", v.firstseen.Unix(), "</time>")
 		fmt.Fprint(w, "<len>", len(v.data), "</len>")
 		fmt.Fprint(w, "<own>", v.own, "</own>")
+		fmt.Fprint(w, "<firstseen>", v.firstseen.Unix(), "</firstseen>")
 		fmt.Fprint(w, "<invsentcnt>", v.invsentcnt, "</invsentcnt>")
 		fmt.Fprint(w, "<sentcnt>", v.sentcnt, "</sentcnt>")
 		fmt.Fprint(w, "<sentlast>", v.lastsent.Unix(), "</sentlast>")
