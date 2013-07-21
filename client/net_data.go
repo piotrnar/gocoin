@@ -47,6 +47,8 @@ func (c *oneConnection) ProcessGetData(pl []byte) {
 			uh := btc.NewUint256(h[:])
 			tx_mutex.Lock()
 			if tx, ok := TransactionsToSend[uh.Hash]; ok && tx.blocked==0 {
+				tx.sentcnt++
+				tx.lastsent = time.Now()
 				tx_mutex.Unlock()
 				c.SendRawMsg("tx", tx.data)
 				if dbg > 0 {
