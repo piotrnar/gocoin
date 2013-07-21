@@ -89,7 +89,7 @@ func net_stats(par string) {
 		}
 		fmt.Print("  ", v.node.agent)
 		if v.send.buf !=nil {
-			fmt.Print("  ", v.send.sofar, "/", len(v.send.buf))
+			fmt.Print("  ", len(v.send.buf))
 		}
 		fmt.Println()
 	}
@@ -148,7 +148,7 @@ func node_stat(v *oneConnection) (s string) {
 		}
 		s += fmt.Sprintln("Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
 		if v.send.buf != nil {
-			s += fmt.Sprintln("Bytes to send:", len(v.send.buf), "-", v.send.sofar)
+			s += fmt.Sprintln("Bytes to send:", len(v.send.buf))
 		}
 		if len(v.PendingInvs)>0 {
 			s += fmt.Sprintln("Invs to send:", len(v.PendingInvs))
