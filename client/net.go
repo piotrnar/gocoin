@@ -91,7 +91,6 @@ type oneConnection struct {
 	// Message sending state machine:
 	send struct {
 		buf []byte
-		sofar int
 		lastSent time.Time
 	}
 
@@ -180,14 +179,6 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	}
 	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
-}
-
-
-func (c *oneConnection) SendBufferSize() (int) {
-	if c.send.buf==nil {
-		return 0
-	}
-	return len(c.send.buf)-c.send.sofar
 }
 
 
