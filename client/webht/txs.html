@@ -279,9 +279,12 @@ function show_txs2s(extrapar) {
 				c.innerHTML = xval(txs[i], 'len')
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'sentcnt') + "/" + xval(txs[i], 'invsentcnt')
-				var tim = new Date(xval(txs[i], 'sentlast')*1000)
-				c.title = "Last sent at "+tim.getHours()+":"+leftpad(tim.getMinutes(),'0',2)+":"+leftpad(tim.getSeconds(),'0',2)
+				var sc = xval(txs[i], 'sentcnt')
+				c.innerHTML = sc + "/" + xval(txs[i], 'invsentcnt')
+				if (sc>0) {
+					var tim = new Date(xval(txs[i], 'sentlast')*1000)
+					c.title = "Last sent at "+tim.getHours()+":"+leftpad(tim.getMinutes(),'0',2)+":"+leftpad(tim.getSeconds(),'0',2)
+				}
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
