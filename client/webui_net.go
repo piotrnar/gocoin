@@ -56,8 +56,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{NODE_VERSION}", fmt.Sprint(v.node.version), 1)
 		s = strings.Replace(s, "{USER_AGENT}", v.node.agent, 1)
 		if v.send.buf != nil {
-			s = strings.Replace(s, "<!--SENDBUF-->",
-				fmt.Sprintf("%d/%dKB ", v.send.sofar>>10, len(v.send.buf)>>10), 1)
+			s = strings.Replace(s, "<!--SENDBUF-->", bts(uint64(len(v.send.buf))), 1)
 		}
 		if len(v.GetBlockInProgress)>0 {
 			s = strings.Replace(s, "<!--BLKSINPROG-->", fmt.Sprint(len(v.GetBlockInProgress), "blks "), 1)

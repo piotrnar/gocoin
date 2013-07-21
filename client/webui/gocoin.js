@@ -21,3 +21,10 @@ function xval(xml,tag) {
 function config(q) {
 	document.location = 'cfg?sid='+sid+'&'+q
 }
+
+function leftpad(v,c,n) {
+	v = v.toString()
+	while (v.length<n) v=c+v
+	return v
+}
+

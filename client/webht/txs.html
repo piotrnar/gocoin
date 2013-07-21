@@ -16,10 +16,10 @@
 .white_content {
 	display: none;
 	position: absolute;
-	top: 25%;
+	top: 10%;
 	left: 15%;
 	width: 70%;
-	height: 50%;
+	height: 300px;
 	padding-left: 8px;
 	padding-right: 8px;
 	border: 5px solid #d0d0d0;
@@ -29,7 +29,10 @@
 }
 </style>
 <div id="light" class="white_content">
-Transaction ID: <b class="mono" id="disp_txid"></b>
+<table width="100%"><tr>
+<td><h3><b class="mono" id="disp_txid"></b></h3>
+<td align="right"><a href="javascript:closepopup()">X</a>
+</table>
 <pre id="rawdiv" style="background-color:white"></pre>
 </div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
@@ -276,11 +279,9 @@ function show_txs2s(extrapar) {
 				c.innerHTML = xval(txs[i], 'len')
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'sentcnt')
-				if (own!=0) {
-					c.addEventListener('click', alert)
-					c.style.cursor = 'pointer'
-				}
+				c.innerHTML = xval(txs[i], 'sentcnt') + "/" + xval(txs[i], 'invsentcnt')
+				var tim = new Date(xval(txs[i], 'sentlast')*1000)
+				c.title = "Last sent at "+tim.getHours()+":"+leftpad(tim.getMinutes(),'0',2)+":"+leftpad(tim.getSeconds(),'0',2)
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
