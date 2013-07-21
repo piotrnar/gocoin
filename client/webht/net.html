@@ -1,6 +1,5 @@
 <script>
-function raw_load() {
-	var id = this.id
+function raw_load(id) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
@@ -17,13 +16,15 @@ function net_drop(id) {
 	}
 }
 document.addEventListener('DOMContentLoaded', function() {
+	function onc(c,id) {
+		c.onclick = function() {raw_load(id)}
+	}
 	for (var r=1; r<netcons.rows.length; r++) {
 		var id=parseInt(netcons.rows[r].id)
 		for (var c=0; c<12; c++) {
 			netcons.rows[r].cells[c].title="Connection Details"
 			netcons.rows[r].cells[c].style.cursor="pointer"
-			netcons.rows[r].cells[c].addEventListener('click', raw_load, false)
-			netcons.rows[r].cells[c].id = id
+			onc(netcons.rows[r].cells[c], id)
 		}
 	}
 })
