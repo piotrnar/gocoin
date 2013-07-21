@@ -23,14 +23,16 @@ func (c *oneConnection) Tick() {
 	}
 
 	if c.send.buf != nil {
-		n, e := SockWrite(c.NetConn, c.send.buf[c.send.sofar:])
+		n, e := SockWrite(c.NetConn, c.send.buf)
 		if n > 0 {
 			c.send.lastSent = time.Now()
 			c.BytesSent += uint64(n)
-			c.send.sofar += n
-			if c.send.sofar >= len(c.send.buf) {
+			if n >= len(c.send.buf) {
 				c.send.buf = nil
-				c.send.sofar = 0
+			} else {
+				tmp := make([]byte, len(c.send.buf)-n)
+				copy(tmp, c.send.buf[n:])
+				c.send.buf = tmp
 			}
 		} else if time.Now().After(c.send.lastSent.Add(AnySendTimeout)) {
 			CountSafe("PeerSendTimeout")
@@ -282,7 +284,7 @@ func (c *oneConnection) Run() {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
-		if c.SendBufferSize() > SendBufSizeHoldOn {
+		if c.send.buf != nil && len(c.send.buf) > SendBufSizeHoldOn {
 			CountSafe("hold_"+cmd.cmd)
 			CountSafeAdd("hbts_"+cmd.cmd, uint64(len(cmd.pl)))
 			continue
