@@ -1,3 +1,6 @@
+0.5.7
+* By default, don't download same block from more than 3 peers simultaneously (CFG.Net.MaxBlockAtOnce)
+
 0.5.5
 * The wallet now supports Type-2 deterministic keys (use "-t2" switch)
 * Make the node's beeping setup configurable though gocoin.conf
