@@ -36,6 +36,7 @@ var CFG struct {
 		MaxInCons uint
 		MaxUpKBps uint
 		MaxDownKBps uint
+		MaxBlockAtOnce uint
 	}
 	TXPool struct {
 		Enabled bool // Global on/off swicth
@@ -76,8 +77,10 @@ var WebUIAllowed []oneAllowedAddr
 func init() {
 	// Fill in default values
 	CFG.Net.ListenTCP = true
-	CFG.Net.MaxOutCons = 8
-	CFG.Net.MaxInCons = 8
+	CFG.Net.MaxOutCons = 9
+	CFG.Net.MaxInCons = 10
+	CFG.Net.MaxBlockAtOnce = 3
+
 	CFG.WebUI.Interface = "127.0.0.1:8833"
 	CFG.WebUI.AllowedIP = "127.0.0.1"
 
