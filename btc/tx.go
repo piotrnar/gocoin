@@ -143,14 +143,14 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	}
 
 	if ht==SIGHASH_NONE {
-		//println("SIGHASH_NONE...")
 		sha.Write([]byte{0})
 	} else if ht==SIGHASH_SINGLE {
-		//println("SIGHASH_SINGLE...")
 		nOut := nIn
 		if nOut >= len(t.TxOut) {
-			fmt.Printf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
-			return nil
+			println("ERROR: SignatureHash(SIGHASH_SINGLE) : out of range in tx",
+				nOut, len(t.TxOut), t.Hash.String())
+			// Return 1 as the satoshi client (don't ask me why 1, and not something else)
+			return []byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 		}
 
 		sha.Write(buf[:PutVlen(buf[:], nOut+1)])
