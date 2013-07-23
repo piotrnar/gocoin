@@ -22,6 +22,8 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 	}
 
 	var blinv2ask []byte
+
+	mutex.Lock() // We want to have blockWanted -> GetBlockInProgress as an atomic op
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		CountSafe(fmt.Sprint("InvGot",typ))
@@ -46,7 +48,10 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			binary.Write(bu, binary.LittleEndian, uint32(2))
 			bu.Write(bh.Hash[:])
 		}
+		mutex.Unlock()
 		c.SendRawMsg("getdata", bu.Bytes())
+	} else {
+		mutex.Unlock()
 	}
 
 	return
