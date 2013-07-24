@@ -11,7 +11,12 @@ import (
 	"code.google.com/p/go.crypto/ripemd160"
 )
 
-const MAX_SCRIPT_ELEMENT_SIZE = 520
+const (
+	MAX_SCRIPT_ELEMENT_SIZE = 520
+	OP_PUSHDATA1 = 0x4c
+	OP_PUSHDATA2 = 0x4d
+	OP_PUSHDATA4 = 0x4e
+)
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	if don(DBG_SCRIPT) {
@@ -125,7 +130,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			return false
 		}
 
-		if fExec && 0<=opcode && opcode<=0x4e/*OP_PUSHDATA4*/ {
+		if fExec && 0<=opcode && opcode<=OP_PUSHDATA4 {
 			stack.push(vchPushValue[:])
 		} else if fExec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
 			switch {
@@ -505,7 +510,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					pk := stack.pop()
 					si := stack.pop()
 					if len(si) > 9 {
-						sh := tx.SignatureHash(findAndDelete(p[sta:], si), inp, si[len(si)-1])
+						sh := tx.SignatureHash(delSig(p[sta:], si), inp, si[len(si)-1])
 						ok = EcdsaVerify(pk, si, sh)
 						if !ok {
 							println("EcdsaVerify fail 1")
@@ -564,7 +569,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
 						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
-							sh := tx.SignatureHash(findAndDelete(p[sta:], si), inp, si[len(si)-1])
+							sh := tx.SignatureHash(delSig(p[sta:], si), inp, si[len(si)-1])
 							if EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--
@@ -632,15 +637,30 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 }
 
 
-func findAndDelete(where, what []byte) (res []byte) {
+func delSig(where, sig []byte) (res []byte) {
+	// recover the standard length
+	bb := new(bytes.Buffer)
+	if len(sig) < OP_PUSHDATA1 {
+		bb.Write([]byte{byte(len(sig))})
+	} else if len(sig) <= 0xff {
+		bb.Write([]byte{OP_PUSHDATA1})
+		bb.Write([]byte{byte(len(sig))})
+	} else if len(sig) <= 0xffff {
+		bb.Write([]byte{OP_PUSHDATA2})
+		binary.Write(bb, binary.LittleEndian, uint16(len(sig)))
+	} else {
+		bb.Write([]byte{OP_PUSHDATA4})
+		binary.Write(bb, binary.LittleEndian, uint32(len(sig)))
+	}
+	bb.Write(sig)
+	sig = bb.Bytes()
 	var idx int
 	for idx < len(where) {
-		_, rec, n, e := getOpcode(where[idx:])
+		_, _, n, e := getOpcode(where[idx:])
 		if e!=nil {
-			println(e.Error())
 			return
 		}
-		if !bytes.Equal(rec, what) {
+		if !bytes.Equal(where[idx:idx+n], sig) {
 			res = append(res, where[idx:idx+n]...)
 		}
 		idx+= n
@@ -658,12 +678,12 @@ func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 	opcode = int(b[pc])
 	pc++
 
-	if opcode <= 0x4e/*OP_PUSHDATA4*/ {
+	if opcode <= OP_PUSHDATA4 {
 		nSize := 0
-		if opcode < 0x4c/*OP_PUSHDATA1*/ {
+		if opcode < OP_PUSHDATA1 {
 			nSize = opcode
 		}
-		if opcode == 0x4c/*OP_PUSHDATA1*/ {
+		if opcode == OP_PUSHDATA1 {
 			if pc+1 > len(b) {
 				e = errors.New("getOpcode error 2")
 				return
@@ -677,7 +697,7 @@ func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 			}
 			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+2]))
 			pc += 2
-		} else if opcode == 0x4d/*OP_PUSHDATA2*/ {
+		} else if opcode == OP_PUSHDATA2 {
 			if pc+4 > len(b) {
 				e = errors.New("getOpcode error 4")
 				return
