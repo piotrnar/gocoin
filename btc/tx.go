@@ -102,6 +102,21 @@ func (t *Tx) Serialize() ([]byte) {
 func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	var buf [9]byte
 
+	// Remove any OP_CODESEPARATOR
+	var idx int
+	var nd []byte
+	for idx < len(scriptCode) {
+		op, _, n, e := getOpcode(scriptCode[idx:])
+		if e!=nil {
+			break
+		}
+		if op != 0xab {
+			nd = append(nd, scriptCode[idx:idx+n]...)
+		}
+		idx+= n
+	}
+	scriptCode = nd
+
 	ht := hashType&0x1f
 
 	sha := sha256.New()
