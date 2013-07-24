@@ -505,7 +505,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					pk := stack.pop()
 					si := stack.pop()
 					if len(si) > 9 {
-						ok = EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1]))
+						sh := tx.SignatureHash(findAndDelete(p[sta:], si), inp, si[len(si)-1])
+						ok = EcdsaVerify(pk, si, sh)
 						if !ok {
 							println("EcdsaVerify fail 1")
 						}
@@ -563,7 +564,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
 						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
-							if EcdsaVerify(pk, si, tx.SignatureHash(p[sta:], inp, si[len(si)-1])) {
+							sh := tx.SignatureHash(findAndDelete(p[sta:], si), inp, si[len(si)-1])
+							if EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--
 							}
@@ -628,6 +630,24 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 	return true
 }
+
+
+func findAndDelete(where, what []byte) (res []byte) {
+	var idx int
+	for idx < len(where) {
+		_, rec, n, e := getOpcode(where[idx:])
+		if e!=nil {
+			println(e.Error())
+			return
+		}
+		if !bytes.Equal(rec, what) {
+			res = append(res, where[idx:idx+n]...)
+		}
+		idx+= n
+	}
+	return
+}
+
 
 func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 	// Read instruction
