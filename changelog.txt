@@ -1,7 +1,9 @@
+0.5.8
+* Added some more satoshi-script-evaluation compatiblity patches (and unit tests)
+
 0.5.7
 * By default, don't download same block from more than 3 peers simultaneously (CFG.Net.MaxBlockAtOnce)
 * Fixed a critical blockchain parsing issue, with SIGHASH_SINGLE sigs (was rejecting valid blocks)
-* Added some more satoshi-script-evaluation compatiblity patches
 
 0.5.5
 * The wallet now supports Type-2 deterministic keys (use "-t2" switch)
