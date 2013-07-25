@@ -144,11 +144,15 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 				ui_show_prompt()
 			}
 
-			if CFG.Beeps.NewBalance && BalanceChanged {
-				fmt.Println("\007Your balance has just changed")
-				fmt.Print(DumpBalance(nil, false))
-				ui_show_prompt()
+			if BalanceChanged && CFG.Beeps.NewBalance{
+				fmt.Print("\007")
 			}
+		}
+
+		if BalanceChanged {
+			fmt.Println("Your balance has just changed")
+			fmt.Print(DumpBalance(nil, false))
+			ui_show_prompt()
 		}
 
 		LastBlockReceived = time.Now()
