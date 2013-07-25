@@ -87,28 +87,6 @@ func CountSafeAdd(k string, val uint64) {
 }
 
 
-func list_unspent(addr string) {
-	fmt.Println("Checking unspent coins for addr", addr)
-	var a[1] *btc.BtcAddr
-	var e error
-	a[0], e = btc.NewAddrFromString(addr)
-	if e != nil {
-		println(e.Error())
-		return
-	}
-	unsp := BlockChain.GetAllUnspent(a[:], false)
-	var sum uint64
-	for i := range unsp {
-		if len(unsp)<200 {
-			fmt.Println(unsp[i].String())
-		}
-		sum += unsp[i].Value
-	}
-	fmt.Printf("Total %.8f unspent BTC in %d outputs at address %s\n",
-		float64(sum)/1e8, len(unsp), a[0].String());
-}
-
-
 func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 	// we use cachedBlocks only from one therad so no need for a mutex
 	if len(cachedBlocks)==MaxCachedBlocks {
