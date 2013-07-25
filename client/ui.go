@@ -318,33 +318,32 @@ func ui_quit(par string) {
 	exit_now = true
 }
 
+
 func blchain_stats(par string) {
 	fmt.Println(BlockChain.Stats())
 }
 
 
-func switch_sync(par string) {
-	offit := (par=="0" || par=="false" || par=="off")
-
-	// Actions when syncing is enabled:
-	if !BlockChain.DoNotSync {
-		if offit {
-			BlockChain.DoNotSync = true
-			fmt.Println("Sync has been disabled. Do not forget to switch it back on, to have DB changes on disk.")
-		} else {
-			fmt.Println("Sync is enabled. Use 'sync 0' to switch it off.")
-		}
+func list_unspent(addr string) {
+	fmt.Println("Checking unspent coins for addr", addr)
+	var a[1] *btc.BtcAddr
+	var e error
+	a[0], e = btc.NewAddrFromString(addr)
+	if e != nil {
+		println(e.Error())
 		return
 	}
-
-	// Actions when syncing is disabled:
-	if offit {
-		fmt.Println("Sync is already disabled. Request ignored.")
-	} else {
-		fmt.Println("Switching sync back on & saving all the changes...")
-		BlockChain.Sync()
-		fmt.Println("Sync is back on now.")
+	unsp := BlockChain.GetAllUnspent(a[:], false)
+	sort.Sort(unsp)
+	var sum uint64
+	for i := range unsp {
+		if len(unsp)<200 {
+			fmt.Println(unsp[i].String())
+		}
+		sum += unsp[i].Value
 	}
+	fmt.Printf("Total %.8f unspent BTC in %d outputs at address %s\n",
+		float64(sum)/1e8, len(unsp), a[0].String());
 }
 
 func qdb_stats(par string) {
@@ -362,6 +361,5 @@ func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("sync", true, switch_sync, "Control sync of the database to disk")
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 }
