@@ -1,3 +1,6 @@
+0.5.9
+* UI cmd "unspent" returns outputs sorted by block height
+
 0.5.8
 * Added some more satoshi-script-evaluation compatiblity patches (and unit tests)
 
