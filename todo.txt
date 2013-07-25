@@ -1,3 +1,5 @@
+* Allow to quit via Ctrl+C when opening the chain
+* Execute all the unit test from script_valid.json and script_invalid.json
 * Pass the tx unit tests: https://github.com/TheBlueMatt/test-scripts
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
