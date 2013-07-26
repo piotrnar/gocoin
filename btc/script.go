@@ -1,13 +1,13 @@
 package btc
 
 import (
-	"os"
 	"fmt"
 	"bytes"
 	"errors"
+	"crypto/sha1"
 	"encoding/hex"
-	"encoding/binary"
 	"crypto/sha256"
+	"encoding/binary"
 	"code.google.com/p/go.crypto/ripemd160"
 )
 
@@ -162,6 +162,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					vfExec.pushBool(fValue)
 
+				/* - not handled
+				    OP_VERIF = 0x65,
+				    OP_VERNOTIF = 0x66,
+				*/
 				case opcode==0x67: //OP_ELSE
 					if vfExec.size()==0 {
 						println("vfExec empty in OP_ELSE")
@@ -235,6 +239,40 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					}
 					x1 := stack.top(-4)
 					x2 := stack.top(-3)
+					stack.push(x1)
+					stack.push(x2)
+
+				case opcode==0x71: //OP_2ROT
+					// (x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2)
+					if stack.size()<6 {
+						println("Stack too short for opcode", opcode)
+						return false
+					}
+					x6 := stack.pop()
+					x5 := stack.pop()
+					x4 := stack.pop()
+					x3 := stack.pop()
+					x2 := stack.pop()
+					x1 := stack.pop()
+					stack.push(x3)
+					stack.push(x4)
+					stack.push(x5)
+					stack.push(x6)
+					stack.push(x1)
+					stack.push(x2)
+
+				case opcode==0x72: //OP_2SWAP
+					// (x1 x2 x3 x4 -- x3 x4 x1 x2)
+					if stack.size()<4 {
+						println("Stack too short for opcode", opcode)
+						return false
+					}
+					x4 := stack.pop()
+					x3 := stack.pop()
+					x2 := stack.pop()
+					x1 := stack.pop()
+					stack.push(x3)
+					stack.push(x4)
 					stack.push(x1)
 					stack.push(x2)
 
@@ -361,6 +399,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						stack.pushBool(bytes.Equal(a, b))
 					}
 
+				/* - not handled
+					OP_RESERVED1 = 0x89,
+					OP_RESERVED2 = 0x8a,
+				*/
+
 				case opcode==0x8b: //OP_1ADD
 					if stack.size()<1 {
 						println("Stack too short for opcode", opcode)
@@ -479,6 +522,15 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					rim := ripemd160.New()
 					rim.Write(stack.pop()[:])
 					stack.push(rim.Sum(nil)[:])
+
+				case opcode==0xa7: //OP_SHA1
+					if stack.size()<1 {
+						println("Stack too short for opcode", opcode)
+						return false
+					}
+					sha := sha1.New()
+					sha.Write(stack.pop()[:])
+					stack.push(sha.Sum(nil)[:])
 
 				case opcode==0xa8: //OP_SHA256
 					if stack.size()<1 {
@@ -608,15 +660,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				case opcode>=0xb0 && opcode<=0xb9: //OP_NOP
 					// just do nothing
 
-				case opcode>=0xba: // inivalid opcode = invaid script
-					println("fail tx because it contains invalid opcode", opcode)
-					return false
-
 				default:
 					fmt.Printf("Unhandled opcode 0x%02x - a handler must be implemented\n", opcode)
 					stack.print()
 					fmt.Println("Rest of the script:", hex.EncodeToString(p[idx:]))
-					os.Exit(0)
+					return false
 			}
 		}
 
