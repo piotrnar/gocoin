@@ -225,7 +225,7 @@ func TestTransactions(t *testing.T) {
 	// An invalid P2SH Transaction
 	//DbgSwitch(DBG_SCRIPT, true)
 	/*
-	Gocoin deos not care baour P2SH - https://en.bitcoin.it/wiki/BIP_0016
+	Gocoin deos not care about P2SH - https://en.bitcoin.it/wiki/BIP_0016
 	if !testit("010000000100010000000000000000000000000000000000000000000000000000000000000000000009085768617420697320ffffffff010000000000000000015100000000",
 		0, "HASH160 0x14 0x7a052c840ba73af26755de42cf01cc9e0a49fef0 EQUAL") {
 		t.Error("Error")
