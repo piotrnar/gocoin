@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"strconv"
 	"strings"
@@ -8,8 +9,39 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
+
+
+func RawToStack(sig []byte) ([]byte) {
+	if len(sig)==1 {
+		if sig[0]==0x81 {
+			return []byte{OP_1NEGATE}
+		}
+		if sig[0]==0x80 || sig[0]==0x00 {
+			return []byte{OP_0}
+		}
+		if sig[0]<=16 {
+			return []byte{OP_1-1+sig[0]}
+		}
+	}
+	bb := new(bytes.Buffer)
+	if len(sig) < OP_PUSHDATA1 {
+		bb.Write([]byte{byte(len(sig))})
+	} else if len(sig) <= 0xff {
+		bb.Write([]byte{OP_PUSHDATA1})
+		bb.Write([]byte{byte(len(sig))})
+	} else if len(sig) <= 0xffff {
+		bb.Write([]byte{OP_PUSHDATA2})
+		binary.Write(bb, binary.LittleEndian, uint16(len(sig)))
+	} else {
+		bb.Write([]byte{OP_PUSHDATA4})
+		binary.Write(bb, binary.LittleEndian, uint32(len(sig)))
+	}
+	bb.Write(sig)
+	return bb.Bytes()
+}
 
 
 func int2scr(v int64) ([]byte) {
@@ -38,7 +70,7 @@ func int2scr(v int64) ([]byte) {
 		sig[len(bts)-i-1] = bts[i]
 	}
 
-	return btc.RawToStack(sig)
+	return RawToStack(sig)
 }
 
 
@@ -59,7 +91,7 @@ func pk2hex(pk string) (out []byte, e error) {
 			out = append(out, d...)
 		} else {
 			if len(xx[i])>=2 && xx[i][0]=='\'' && xx[i][len(xx[i])-1]=='\'' {
-				out = append(out, btc.RawToStack([]byte(xx[i][1:len(xx[i])-1]))...)
+				out = append(out, RawToStack([]byte(xx[i][1:len(xx[i])-1]))...)
 			} else {
 				if len(xx[i])>3 && xx[i][:3]=="OP_" {
 					xx[i] = xx[i][3:]
