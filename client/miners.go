@@ -21,8 +21,8 @@ var MinerIds = [][2]string{
 	{"CoinLab", "CoinLab"},
 	{"Triplemining", "Triplemining.com"},
 	{"Ozcoin", "ozcoin"},
-	{"Satoshi Systems", "Satoshi Systems"},
-	{"ST Mining Corp", "st mining corp"},
+	{"SatoshiSys", "Satoshi Systems"},
+	{"ST Mining", "st mining corp"},
 }
 
 
