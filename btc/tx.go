@@ -162,8 +162,10 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	} else if ht==SIGHASH_SINGLE {
 		nOut := nIn
 		if nOut >= len(t.TxOut) {
-			println("ERROR: SignatureHash(SIGHASH_SINGLE) : out of range in tx",
-				nOut, len(t.TxOut), t.Hash.String())
+			if don(DBG_SCRERR) {
+				println("ERROR: SignatureHash(SIGHASH_SINGLE) : out of range in tx",
+					nOut, len(t.TxOut), t.Hash.String())
+			}
 			// Return 1 as the satoshi client (don't ask me why 1, and not something else)
 			return []byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 		}
