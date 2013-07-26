@@ -183,3 +183,8 @@ func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
 
 	return
 }
+
+
+func IsPayToScript(scr []byte) bool {
+	return len(scr)==23 && scr[0]==OP_HASH160 && scr[1]==0x14 && scr[22]==OP_EQUAL
+}
