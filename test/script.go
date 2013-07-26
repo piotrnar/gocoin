@@ -17,26 +17,26 @@ import (
 func RawToStack(sig []byte) ([]byte) {
 	if len(sig)==1 {
 		if sig[0]==0x81 {
-			return []byte{OP_1NEGATE}
+			return []byte{btc.OP_1NEGATE}
 		}
 		if sig[0]==0x80 || sig[0]==0x00 {
-			return []byte{OP_0}
+			return []byte{btc.OP_0}
 		}
 		if sig[0]<=16 {
-			return []byte{OP_1-1+sig[0]}
+			return []byte{btc.OP_1-1+sig[0]}
 		}
 	}
 	bb := new(bytes.Buffer)
-	if len(sig) < OP_PUSHDATA1 {
+	if len(sig) < btc.OP_PUSHDATA1 {
 		bb.Write([]byte{byte(len(sig))})
 	} else if len(sig) <= 0xff {
-		bb.Write([]byte{OP_PUSHDATA1})
+		bb.Write([]byte{btc.OP_PUSHDATA1})
 		bb.Write([]byte{byte(len(sig))})
 	} else if len(sig) <= 0xffff {
-		bb.Write([]byte{OP_PUSHDATA2})
+		bb.Write([]byte{btc.OP_PUSHDATA2})
 		binary.Write(bb, binary.LittleEndian, uint16(len(sig)))
 	} else {
-		bb.Write([]byte{OP_PUSHDATA4})
+		bb.Write([]byte{btc.OP_PUSHDATA4})
 		binary.Write(bb, binary.LittleEndian, uint32(len(sig)))
 	}
 	bb.Write(sig)
