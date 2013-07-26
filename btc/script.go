@@ -361,6 +361,13 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						stack.pushBool(bytes.Equal(a, b))
 					}
 
+				case opcode==0x8b: //OP_1ADD
+					if stack.size()<1 {
+						println("Stack too short for opcode", opcode)
+						return false
+					}
+					stack.pushInt(stack.popInt()+1)
+
 				case opcode==0x8c: //OP_1SUB
 					if stack.size()<1 {
 						println("Stack too short for opcode", opcode)
