@@ -188,3 +188,18 @@ func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
 func IsPayToScript(scr []byte) bool {
 	return len(scr)==23 && scr[0]==OP_HASH160 && scr[1]==0x14 && scr[22]==OP_EQUAL
 }
+
+func IsPushOnly(scr []byte) bool {
+	idx := 0
+	for idx<len(scr) {
+		op, _, n, e := getOpcode(scr[idx:])
+		if e != nil {
+			return false
+		}
+		if op > OP_16 {
+			return false
+		}
+		idx += n
+	}
+	return true
+}
