@@ -13,6 +13,7 @@ import (
 
 const (
 	MAX_SCRIPT_ELEMENT_SIZE = 520
+	OP_1 = 0x51
 	OP_PUSHDATA1 = 0x4c
 	OP_PUSHDATA2 = 0x4d
 	OP_PUSHDATA4 = 0x4e
@@ -22,19 +23,22 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	if don(DBG_SCRIPT) {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
+		fmt.Println("_pkScript:", hex.EncodeToString(pkScr))
 	}
 
 	var st scrStack
 	if !evalScript(sigScr[:], &st, tx, i) {
-		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
-		fmt.Println("sigScript failed :", hex.EncodeToString(sigScr[:]))
-		fmt.Println("pkScript:", hex.EncodeToString(pkScr[:]))
+		if don(DBG_SCRERR) {
+			fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
+			fmt.Println("sigScript failed :", hex.EncodeToString(sigScr[:]))
+			fmt.Println("pkScript:", hex.EncodeToString(pkScr[:]))
+		}
 		return false
 	}
 	if don(DBG_SCRIPT) {
 		fmt.Println("\nsigScr verified OK")
-		st.print()
-		fmt.Println("\npkScript:", hex.EncodeToString(pkScr))
+		//st.print()
+		fmt.Println()
 	}
 
 	if !evalScript(pkScr[:], &st, tx, i) {
@@ -75,7 +79,13 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 	defer func() {
 		if r := recover(); r != nil {
-			println("evalScript panic:", r)
+			if don(DBG_SCRERR) {
+				err, ok := r.(error)
+				if !ok {
+					err = fmt.Errorf("pkg: %v", r)
+				}
+				println("evalScript panic:", err.Error())
+			}
 		}
 	}()
 
@@ -94,7 +104,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		idx+= n
 
 		if don(DBG_SCRIPT) {
-			fmt.Printf("\nExecuting opcode 0x%02x..\n", opcode)
+			fmt.Printf("\nExecuting opcode 0x%02x  n=%d  push:%s..\n", opcode, n, hex.EncodeToString(vchPushValue))
 			stack.print()
 		}
 
@@ -131,7 +141,10 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		}
 
 		if fExec && 0<=opcode && opcode<=OP_PUSHDATA4 {
-			stack.push(vchPushValue[:])
+			stack.push(vchPushValue)
+			if don(DBG_SCRIPT) {
+				fmt.Println("pushed", len(vchPushValue), "bytes")
+			}
 		} else if fExec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
 			switch {
 				case opcode==0x4f: // OP_1NEGATE
@@ -151,7 +164,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					fValue := false
 					if fExec {
 						if (stack.size() < 1) {
-							println("Stack too short for", opcode)
+							if don(DBG_SCRERR) {
+								println("Stack too short for", opcode)
+							}
 							return false
 						}
 						if opcode == 0x63/*OP_IF*/ {
@@ -168,19 +183,25 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				*/
 				case opcode==0x67: //OP_ELSE
 					if vfExec.size()==0 {
-						println("vfExec empty in OP_ELSE")
+						if don(DBG_SCRERR) {
+							println("vfExec empty in OP_ELSE")
+						}
 					}
 					vfExec.pushBool(!vfExec.popBool())
 
 				case opcode==0x68: //OP_ENDIF
 					if vfExec.size()==0 {
-						println("vfExec empty in OP_ENDIF")
+						if don(DBG_SCRERR) {
+							println("vfExec empty in OP_ENDIF")
+						}
 					}
 					vfExec.pop()
 
 				case opcode==0x69: //OP_VERIFY
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					if !stack.topBool(-1) {
@@ -190,21 +211,27 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x6b: //OP_TOALTSTACK
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					altstack.push(stack.pop())
 
 				case opcode==0x6c: //OP_FROMALTSTACK
 					if altstack.size()<1 {
-						println("AltStack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("AltStack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.push(altstack.pop())
 
 				case opcode==0x6d: //OP_2DROP
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pop()
@@ -212,7 +239,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x6e: //OP_2DUP
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x1 := stack.top(-1)
@@ -222,7 +251,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x6f: //OP_3DUP
 					if stack.size()<3 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x1 := stack.top(-3)
@@ -234,7 +265,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x70: //OP_2OVER
 					if stack.size()<4 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x1 := stack.top(-4)
@@ -245,7 +278,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				case opcode==0x71: //OP_2ROT
 					// (x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2)
 					if stack.size()<6 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x6 := stack.pop()
@@ -264,7 +299,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				case opcode==0x72: //OP_2SWAP
 					// (x1 x2 x3 x4 -- x3 x4 x1 x2)
 					if stack.size()<4 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x4 := stack.pop()
@@ -278,7 +315,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x73: //OP_IFDUP
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					if stack.topBool(-1) {
@@ -290,14 +329,18 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x75: //OP_DROP
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pop()
 
 				case opcode==0x76: //OP_DUP
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					el := stack.pop()
@@ -306,7 +349,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x77: //OP_NIP
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x := stack.pop()
@@ -315,19 +360,25 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x78: //OP_OVER
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.push(stack.top(-2))
 
 				case opcode==0x79 || opcode==0x7a: //OP_PICK || OP_ROLL
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					n := stack.popInt()
 					if n < 0 || n >= int64(stack.size()) {
-						println("Wrong n for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Wrong n for opcode", opcode)
+						}
 						return false
 					}
 					if opcode==0x79/*OP_PICK*/ {
@@ -346,7 +397,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x7b: //OP_ROT
 					if stack.size()<3 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x3 := stack.pop()
@@ -358,7 +411,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x7c: //OP_SWAP
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x1 := stack.pop()
@@ -368,7 +423,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x7d: //OP_TUCK
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					x1 := stack.pop()
@@ -379,14 +436,18 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x82: //OP_SIZE
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushInt(int64(len(stack.top(-1))))
 
 				case opcode==0x87 || opcode==0x88: //OP_EQUAL || OP_EQUALVERIFY
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					a := stack.pop()
@@ -406,28 +467,36 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x8b: //OP_1ADD
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushInt(stack.popInt()+1)
 
 				case opcode==0x8c: //OP_1SUB
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushInt(stack.popInt()-1)
 
 				case opcode==0x8f: //OP_NEGATE
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushInt(-stack.popInt())
 
 				case opcode==0x90: //OP_ABS
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					a := stack.popInt()
@@ -439,14 +508,18 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x91: //OP_NOT
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushBool(!stack.popBool())
 
 				case opcode==0x92: //OP_0NOTEQUAL
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					stack.pushBool(stack.popBool())
@@ -464,7 +537,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					opcode==0xa3 || //OP_MIN
 					opcode==0xa4: //OP_MAX
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					bn2 := stack.popInt()
@@ -506,7 +581,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xa5: //OP_WITHIN
 					if stack.size()<3 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					bn3 := stack.popInt()
@@ -516,7 +593,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xa6: //OP_RIPEMD160
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					rim := ripemd160.New()
@@ -525,7 +604,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xa7: //OP_SHA1
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					sha := sha1.New()
@@ -534,7 +615,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xa8: //OP_SHA256
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					sha := sha256.New()
@@ -543,7 +626,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xa9: //OP_HASH160
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					rim160 := Rimp160AfterSha256(stack.pop())
@@ -551,7 +636,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xaa: //OP_HASH256
 					if stack.size()<1 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					h := Sha2Sum(stack.pop())
@@ -562,7 +649,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0xac || opcode==0xad: // OP_CHECKSIG || OP_CHECKSIGVERIFY
 					if stack.size()<2 {
-						println("Stack too short for opcode", opcode)
+						if don(DBG_SCRERR) {
+							println("Stack too short for opcode", opcode)
+						}
 						return false
 					}
 					var ok bool
@@ -590,7 +679,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					//println("OP_CHECKMULTISIG ...")
 					//stack.print()
 					if stack.size()<1 {
-						println("OP_CHECKMULTISIG: Stack too short A")
+						if don(DBG_SCRERR) {
+							println("OP_CHECKMULTISIG: Stack too short A")
+						}
 						return false
 					}
 					i := 1
@@ -608,7 +699,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					ikey := i
 					i += int(keyscnt)
 					if stack.size()<i {
-						println("OP_CHECKMULTISIG: Stack too short B")
+						if don(DBG_SCRERR) {
+							println("OP_CHECKMULTISIG: Stack too short B")
+						}
 						return false
 					}
 					sigscnt := stack.topInt(-i)
@@ -620,7 +713,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					isig := i
 					i += int(sigscnt)
 					if stack.size()<i {
-						println("OP_CHECKMULTISIG: Stack too short C")
+						if don(DBG_SCRERR) {
+							println("OP_CHECKMULTISIG: Stack too short C")
+						}
 						return false
 					}
 					success := true
@@ -661,9 +756,11 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					// just do nothing
 
 				default:
-					fmt.Printf("Unhandled opcode 0x%02x - a handler must be implemented\n", opcode)
-					stack.print()
-					fmt.Println("Rest of the script:", hex.EncodeToString(p[idx:]))
+					if don(DBG_SCRERR) {
+						fmt.Printf("Unhandled opcode 0x%02x - a handler must be implemented\n", opcode)
+						stack.print()
+						fmt.Println("Rest of the script:", hex.EncodeToString(p[idx:]))
+					}
 					return false
 			}
 		}
@@ -673,7 +770,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			stack.print()
 		}
 		if (stack.size() + altstack.size() > 1000) {
-			println("Stack too big")
+			if don(DBG_SCRERR) {
+				println("Stack too big")
+			}
 			return false
 		}
 	}
@@ -684,7 +783,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	}
 
 	if vfExec.size()>0 {
-		println("Unfinished if..")
+		if don(DBG_SCRERR) {
+			println("Unfinished if..")
+		}
 		return false
 	}
 
@@ -745,14 +846,14 @@ func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 			}
 			nSize = int(b[pc])
 			pc++
-		} else if opcode == 0x4d/*OP_PUSHDATA2*/ {
+		} else if opcode == OP_PUSHDATA2 {
 			if pc+2 > len(b) {
 				e = errors.New("getOpcode error 3")
 				return
 			}
 			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+2]))
 			pc += 2
-		} else if opcode == OP_PUSHDATA2 {
+		} else if opcode == OP_PUSHDATA4 {
 			if pc+4 > len(b) {
 				e = errors.New("getOpcode error 4")
 				return
