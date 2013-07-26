@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"strconv"
 	"strings"
@@ -9,28 +8,8 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
-
-
-func raw2scr(sig []byte) ([]byte) {
-	bb := new(bytes.Buffer)
-	if len(sig) < btc.OP_PUSHDATA1 {
-		bb.Write([]byte{byte(len(sig))})
-	} else if len(sig) <= 0xff {
-		bb.Write([]byte{btc.OP_PUSHDATA1})
-		bb.Write([]byte{byte(len(sig))})
-	} else if len(sig) <= 0xffff {
-		bb.Write([]byte{btc.OP_PUSHDATA2})
-		binary.Write(bb, binary.LittleEndian, uint16(len(sig)))
-	} else {
-		bb.Write([]byte{btc.OP_PUSHDATA4})
-		binary.Write(bb, binary.LittleEndian, uint32(len(sig)))
-	}
-	bb.Write(sig)
-	return bb.Bytes()
-}
 
 
 func int2scr(v int64) ([]byte) {
@@ -59,7 +38,7 @@ func int2scr(v int64) ([]byte) {
 		sig[len(bts)-i-1] = bts[i]
 	}
 
-	return raw2scr(sig)
+	return btc.RawToStack(sig)
 }
 
 
@@ -80,7 +59,7 @@ func pk2hex(pk string) (out []byte, e error) {
 			out = append(out, d...)
 		} else {
 			if len(xx[i])>=2 && xx[i][0]=='\'' && xx[i][len(xx[i])-1]=='\'' {
-				out = append(out, raw2scr([]byte(xx[i][1:len(xx[i])-1]))...)
+				out = append(out, btc.RawToStack([]byte(xx[i][1:len(xx[i])-1]))...)
 			} else {
 				if len(xx[i])>3 && xx[i][:3]=="OP_" {
 					xx[i] = xx[i][3:]
@@ -259,20 +238,14 @@ func main() {
 				return
 			}
 
-			if false && tot==198 {
-				btc.DbgSwitch(btc.DBG_SCRIPT, true)
-				println("jade z koksem", vecs[i][0], "->", vecs[i][1])
-				println(hex.EncodeToString(s1))
-				println(hex.EncodeToString(s2))
-			}
-
 			res := btc.VerifyTxScript(s1, s2, 0, tx)
 			if res {
 				println(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1])
+				println(hex.EncodeToString(s1))
+				println(hex.EncodeToString(s2))
+				return
 			}
 		}
 	}
 	println(tot, "invalid vectors processed")
-
-
 }
