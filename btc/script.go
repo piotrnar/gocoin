@@ -77,6 +77,18 @@ func b2i(b bool) int64 {
 
 func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
+	if don(DBG_SCRIPT) {
+		println("script len", len(p))
+	}
+
+
+	if len(p) > 10000 {
+		if don(DBG_SCRERR) {
+			println("script too long", len(p))
+		}
+		return false
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			if don(DBG_SCRERR) {
@@ -109,14 +121,18 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		}
 
 		if vchPushValue!=nil && len(vchPushValue) > MAX_SCRIPT_ELEMENT_SIZE {
-			println("vchPushValue too long", len(vchPushValue))
+			if don(DBG_SCRERR) {
+				println("vchPushValue too long", len(vchPushValue))
+			}
 			return false
 		}
 
 		if opcode > 0x60 {
 			opcnt++
 			if opcnt > 201 {
-				println("evalScript: too many opcodes A")
+				if don(DBG_SCRERR) {
+					println("evalScript: too many opcodes A")
+				}
 				return false
 			}
 		}
@@ -158,8 +174,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 				case opcode==0x61: // OP_NOP
 					// Do nothing
 
-				case opcode==0x62: // OP_VER
-					// I think, do nothing...
+				/* - not handled
+					OP_VER = 0x62
+				*/
 
 				case opcode==0x63 || opcode==0x64: //OP_IF || OP_NOTIF
 					// <expression> if [statements] [else [statements]] endif
