@@ -13,10 +13,6 @@ import (
 
 const (
 	MAX_SCRIPT_ELEMENT_SIZE = 520
-	OP_1 = 0x51
-	OP_PUSHDATA1 = 0x4c
-	OP_PUSHDATA2 = 0x4d
-	OP_PUSHDATA4 = 0x4e
 )
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
@@ -679,7 +675,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					if len(si) > 9 {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, si[len(si)-1])
 						ok = EcdsaVerify(pk, si, sh)
-						if !ok {
+						if !ok && don(DBG_SCRERR) {
 							println("EcdsaVerify fail 1")
 						}
 					}
