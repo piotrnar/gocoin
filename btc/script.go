@@ -136,7 +136,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			opcode == 0x97/*OP_MOD*/ ||
 			opcode == 0x98/*OP_LSHIFT*/ ||
 			opcode == 0x99/*OP_RSHIFT*/ {
-			println("Unsupported opcode")
+			if don(DBG_SCRERR) {
+				println("Unsupported opcode", opcode)
+			}
 			return false
 		}
 
@@ -513,7 +515,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						}
 						return false
 					}
-					stack.pushBool(!stack.popBool())
+					stack.pushBool(stack.popInt()==0)
 
 				case opcode==0x92: //OP_0NOTEQUAL
 					if stack.size()<1 {
