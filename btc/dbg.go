@@ -8,6 +8,7 @@ const (
 	DBG_TX = 1<<4
 	DBG_SCRIPT = 1<<5
 	DBG_VERIFY = 1<<6
+	DBG_SCRERR = 1<<7
 )
 
 var dbgmask uint32 = 0
