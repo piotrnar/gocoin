@@ -297,7 +297,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 
 	// Verify scripts
 	for i := range tx.TxIn {
-		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx) {
+		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx, true) {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedScriptFail")

@@ -31,7 +31,7 @@ func tx2str(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e err
 			}
 		}
 		if po != nil {
-			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx)
+			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx, true)
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
 				e = errors.New("Invalid signature")
