@@ -14,6 +14,8 @@ const(
 	MessageMagic = "Bitcoin Signed Message:\n"
 
 	MovingCheckopintDepth = 2016  // Do not accept forks that wold go deeper in a past
+
+	BIP16SwitchTime = 1333238400 // BIP16 didn't become active until Apr 1 2012
 )
 
 // Increase the number of threads to optimize txs verification time,
