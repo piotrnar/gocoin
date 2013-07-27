@@ -218,6 +218,11 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 			if don(DBG_TX) {
 				fmt.Printf("  mined %.8f\n", float64(sumblockin)/1e8)
 			}
+			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
+			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
+			if len(bl.Txs[0].TxIn[0].ScriptSig)<2 || len(bl.Txs[0].TxIn[0].ScriptSig)>100 {
+				return errors.New(fmt.Sprint("Coinbase script has a wrong length", len(bl.Txs[0].TxIn[0].ScriptSig)))
+			}
 		}
 		sumblockin += txinsum
 
