@@ -183,7 +183,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					done <- true
 				} else {
 				    go func (sig []byte, prv []byte, i int, tx *Tx) {
-						done <- VerifyTxScript(sig, prv, i, tx)
+						done <- VerifyTxScript(sig, prv, i, tx, true)
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
