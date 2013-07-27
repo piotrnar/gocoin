@@ -71,7 +71,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	}
 
 	if !bl.Trusted {
-		// This is a stupid check, but well..
+		// This is a stupid check, but well, we need to be satoshi compatible
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
 			dos = true
