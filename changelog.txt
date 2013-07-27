@@ -1,7 +1,7 @@
 0.6.0
-* Addes support for verifying P2SH transactions
-* UI cmd "unspent" returns outputs sorted by block height
+* Added support for verifying (rejecting) P2SH transactions
 * Added hnadling of OP_1ADD script opcopde and fixed some other opcodes
+* UI cmd "unspent" returns outputs sorted by block height
 
 0.5.8
 * Added some more satoshi-script-evaluation compatiblity patches (and unit tests)
