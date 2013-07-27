@@ -15,7 +15,7 @@ const (
 	MAX_SCRIPT_ELEMENT_SIZE = 520
 )
 
-func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
+func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx, p2sh bool) bool {
 	if don(DBG_SCRIPT) {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -71,7 +71,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *Tx) bool {
 	}
 
 	// Additional validation for spend-to-script-hash transactions:
-	if IsPayToScript(pkScr) {
+	if p2sh && IsPayToScript(pkScr) {
 		if don(DBG_SCRIPT) {
 			fmt.Println()
 			fmt.Println()
