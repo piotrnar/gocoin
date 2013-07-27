@@ -169,7 +169,7 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 /*
 	Just for information:
 
-	// Spend script with only a hash of a password
+	// P2SH transaction
 	if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
 		return
 	}
