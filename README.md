@@ -1,6 +1,6 @@
 Gocoin
 ==============
-Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang).
+Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang). 
 
 
 Architecture
@@ -266,14 +266,16 @@ There is also a command to re-broadcast all the transaction that have been loade
 Known issues
 ==============
 
-UTXO database inconsistency
+Possible UTXO db inconsistency
 --------------
-When you kill you client, and not quite it gracefully (using its UI's „quit” command), it may happen that the unspent outputs database will get corrupt. In that case the node will panic when you start it the next time.
+Sometimes when you kill a client node (instead of quiting it gracefully), it might happen that the unspent outputs database will get corrupt. In that case, when you start it the next time, the node will malfunction (i.e. panic or do not process any new blocks).
 
-To fix this issue you will need to rebuild the unspent database, starting the client with „-r” switch.
+To fix this issue you need to rebuild the unspent database. In order to do this, start the client with „-r” switch.
 
 The UTXO rebuild operation might take around an hour though, so for such cases, it is worth to have a backup of some recent version of this database. Then you don't need to rebuild it all, but only the part that came after your backup.
 What you need to backup is the entire folder named „unspent3”, in gocoin's data folder. After you had recovered a backup, do not use “-r” switch.
+
+Moreover during the rescan it seems to require much more system memory in peaks, so if you have like 4GB, your swap file might be getting a bit hot.
 
 
 WebUI browser compatibility
@@ -283,7 +285,7 @@ The WebUI is being developed and tested with Chrome. As for other browsers some 
 
 Go's memory manager
 --------------
-It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Untill this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node.
+It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Untill this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node. There are opinions (from go devels) that this is an issue only on Windows, but to be honest, I have tested gocoin with Linux as well and it seems to be quite the same there.
 
 
 Support
@@ -293,11 +295,3 @@ If you need a support, you have three options:
  * Ask in this forum thread: https://bitcointalk.org/index.php?topic=199306.0
  * Open an issue on GitHub: https://github.com/piotrnar/gocoin/issues
 
-
-Would you like to help?
-==============
-Everyone is welcome to contribute into Gocoin .
-
-You can help by reporting issues, suggesting changes, or submitting pull requests.
-
-If you cannot find any way to contribute, but would still like to express your support for a further development of this project, do it by sending 0.01 BTC to 1WEyRRbAgPTpAPUgCSxLrJjXgiTU86WKt (please don't send more).
