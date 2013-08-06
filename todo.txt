@@ -1,4 +1,4 @@
-* Imlpemetn the extra chacks for P2SH - pass entire script_invalid.json
+* wal command should immediatelly affect the balance, while it does not
 * Allow to quit via Ctrl+C when opening the chain
 * Pass the tx unit tests: https://github.com/TheBlueMatt/test-scripts
 * Try to improve initial chain download speed
