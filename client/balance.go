@@ -51,9 +51,6 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 
 func DumpBalance(utxt *os.File, details bool) (s string) {
 	var sum uint64
-	if len(MyBalance)>0 {
-		sort.Sort(MyBalance)
-	}
 	for i := range MyBalance {
 		sum += MyBalance[i].Value
 
@@ -178,8 +175,11 @@ func show_balance(p string) {
 func update_balance() {
 	MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
 	LastBalance = 0
-	for i := range MyBalance {
-		LastBalance += MyBalance[i].Value
+	if len(MyBalance) > 0 {
+		sort.Sort(MyBalance)
+		for i := range MyBalance {
+			LastBalance += MyBalance[i].Value
+		}
 	}
 	BalanceInvalid = false
 }
