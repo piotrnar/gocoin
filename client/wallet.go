@@ -57,7 +57,9 @@ func NewWallet(fn string) (wal *oneWallet) {
 
 func LoadWallet(fn string) {
 	MyWallet = NewWallet(fn)
-	BalanceInvalid = true
+	if MyWallet != nil {
+		update_balance()
+	}
 }
 
 

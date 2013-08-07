@@ -243,8 +243,7 @@ func main() {
 	// load default wallet and its balance
 	LoadWallet(GocoinHomeDir+"wallet.txt")
 	if MyWallet!=nil {
-		MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
-		BalanceInvalid = false
+		update_balance()
 		fmt.Print(DumpBalance(nil, false))
 	}
 

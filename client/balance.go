@@ -175,12 +175,21 @@ func show_balance(p string) {
 }
 
 
+func update_balance() {
+	MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
+	LastBalance = 0
+	for i := range MyBalance {
+		LastBalance += MyBalance[i].Value
+	}
+	BalanceInvalid = false
+}
+
+
 func UpdateBalanceFolder() string {
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)
 	if BalanceInvalid {
-		MyBalance = BlockChain.GetAllUnspent(MyWallet.addrs, true)
-		BalanceInvalid = false
+		update_balance()
 	}
 	utxt, _ := os.Create("balance/unspent.txt")
 	return DumpBalance(utxt, true)

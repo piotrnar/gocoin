@@ -1,3 +1,6 @@
+0.6.2
+* Added support for WebUI switchable wallets
+
 0.6.1
 * Improved script_test.go, so it works directly with satoshi's json files
 

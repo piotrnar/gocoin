@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"bytes"
+	"strings"
 	"net/http"
 	"io/ioutil"
 	"archive/zip"
@@ -76,4 +77,70 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write([]byte("Error"))
 	}
+}
+
+
+func walfn2n(fn string) (wn string) {
+	if strings.HasPrefix(fn, "wallet") && strings.HasSuffix(fn, ".txt") {
+		wn = fn[6:len(fn)-4]
+		if wn=="" {
+			wn = "Default"
+		} else if len(wn)>1 && wn[0]=='_' {
+			wn = wn[1:]
+		}
+	}
+	return
+}
+
+
+func p_wal(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	r.ParseForm()
+
+	if checksid(r) && len(r.Form["wal"])>0 {
+		load_wallet(fmt.Sprint(GocoinHomeDir, r.Form["wal"][0]))
+		http.Redirect(w, r, "/wal", http.StatusFound)
+		return
+	}
+
+	page := load_template("wallet.html")
+	wal1 := load_template("wallet_one.html")
+
+	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
+	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
+
+	fis, er := ioutil.ReadDir(GocoinHomeDir)
+	if er == nil {
+		for i := range fis {
+			fn := fis[i].Name()
+			wn := walfn2n(fn)
+			if wn!="" {
+				s := strings.Replace(wal1, "{WALLET_NAME}", wn, 1)
+				s = strings.Replace(s, "{WALLET_FILE}", fn, 1)
+				page = templ_add(page, "<!--ONEWALLET-->", s)
+			}
+		}
+	}
+
+	if MyWallet!=nil {
+		page = strings.Replace(page, "<!--WALLET_FILENAME-->", MyWallet.filename, 1)
+		wc, er := ioutil.ReadFile(MyWallet.filename)
+		if er==nil {
+			page = strings.Replace(page, "{WALLET_DATA}", string(wc), 2)
+		} else {
+			page = strings.Replace(page, "{WALLET_DATA}", "", 2)
+		}
+		page = strings.Replace(page, "{WALLET_FNAME}", walfn2n(filepath.Base(MyWallet.filename)), 1)
+	} else {
+		strings.Replace(page, "<!--WALLET_FILENAME-->", "<i>no wallet loaded</i>", 1)
+		page = strings.Replace(page, "{WALLET_DATA}", "", 1)
+		page = strings.Replace(page, "{WALLET_FNAME}", "wallet.txt", 1)
+	}
+
+	write_html_head(w, r)
+	w.Write([]byte(page))
+	write_html_tail(w)
 }

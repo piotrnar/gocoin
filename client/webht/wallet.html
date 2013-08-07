@@ -1,0 +1,37 @@
+<script>
+function switchwallet(fn) {
+	document.location='?sid='+sid+'&wal='+encodeURIComponent(fn)
+}
+function shwwal() {
+	showwal.style.display='none'
+	formwal.style.display='block'
+}
+</script>
+<h2>Your wallet</h2>
+Balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs<br>
+<br>
+Wallet filename: <b class="mono"><!--WALLET_FILENAME--></b><br>
+<br>
+Quick wallet switch: <!--ONEWALLET--><br>
+<br>
+
+<div id="showwal">
+<pre>{WALLET_DATA}</pre>
+<input type="button" value="Edit wallet" onclick="shwwal()">
+</div>
+
+
+
+<div id="formwal" style="display:none">
+<table width="90%">
+<form method="post" action="cfg">
+<tr><td colspan="2">
+	<textarea name="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
+<tr>
+	<td align="left">
+		File Name: <input type="edit" name="walletfname" value="{WALLET_FNAME}" class="mono">
+	<td align="right">
+		<input type="submit" name="save" value="Apply & Reload">
+</form>
+</table>
+</div>

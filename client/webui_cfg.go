@@ -40,6 +40,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if checksid(r) && len(r.Form["freemem"])>0 {
 		show_mem("free")
 		http.Redirect(w, r, "/", http.StatusFound)
+		return
 	}
 
 	if r.Method=="POST" && len(r.Form["configjson"])>0 {
@@ -54,15 +55,31 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	if r.Method=="POST" && len(r.Form["walletdata"])>0 && len(r.Form["walletfname"])>0 {
+		fn := r.Form["walletfname"][0]
+		if fn=="Default" {
+			fn = GocoinHomeDir + "wallet.txt"
+		} else {
+			fn = GocoinHomeDir + "wallet_" + fn + ".txt"
+		}
+		ioutil.WriteFile(fn, []byte(r.Form["walletdata"][0]), 0660)
+		load_wallet(fn)
+		http.Redirect(w, r, "/wal", http.StatusFound)
+		return
 	}
 
 	if r.Method=="POST" && len(r.Form["shutdown"])>0 {
 		exit_now = true
 		w.Write([]byte("Your node should shut down soon"))
+		return
 	}
 
 	if checksid(r) && len(r.Form["mid"])>0 {
 		set_miner(r.Form["mid"][0])
 		http.Redirect(w, r, "miners", http.StatusFound)
+		return
 	}
 }

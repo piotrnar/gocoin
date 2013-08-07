@@ -1,6 +1,3 @@
-* Make wallets switchable from WebUI
-* wal command should immediatelly affect the balance, while it does not
 * Allow to quit via Ctrl+C when opening the chain
-* Pass the tx unit tests: https://github.com/TheBlueMatt/test-scripts
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
