@@ -65,8 +65,8 @@ func LoadWallet(fn string) {
 
 func load_wallet(fn string) {
 	if fn=="." {
-		fmt.Println("Default wallet from", GocoinHomeDir+"wallet.txt")
-		LoadWallet(GocoinHomeDir+"wallet.txt")
+		fmt.Println("Default wallet from", GocoinHomeDir+"wallet/DEFAULT")
+		LoadWallet(GocoinHomeDir+"wallet/DEFAULT")
 	} else if fn != "" {
 		fmt.Println("Switching to wallet from", fn)
 		LoadWallet(fn)

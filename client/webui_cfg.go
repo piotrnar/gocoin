@@ -60,11 +60,10 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method=="POST" && len(r.Form["walletdata"])>0 && len(r.Form["walletfname"])>0 {
 		fn := r.Form["walletfname"][0]
-		if fn=="Default" {
-			fn = GocoinHomeDir + "wallet.txt"
-		} else {
-			fn = GocoinHomeDir + "wallet_" + fn + ".txt"
+		if fn=="" {
+			fn = "DEFAULT"
 		}
+		fn = GocoinHomeDir + "wallet/" + fn
 		ioutil.WriteFile(fn, []byte(r.Form["walletdata"][0]), 0660)
 		load_wallet(fn)
 		http.Redirect(w, r, "/wal", http.StatusFound)

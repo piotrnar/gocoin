@@ -241,7 +241,10 @@ func main() {
 	// Clean up the DB lock file on exit
 
 	// load default wallet and its balance
-	LoadWallet(GocoinHomeDir+"wallet.txt")
+	LoadWallet(GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
+	if MyWallet==nil {
+		LoadWallet(GocoinHomeDir+"wallet.txt")
+	}
 	if MyWallet!=nil {
 		update_balance()
 		fmt.Print(DumpBalance(nil, false))

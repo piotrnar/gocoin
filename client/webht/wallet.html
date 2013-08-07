@@ -13,25 +13,25 @@ Balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs<br>
 Wallet filename: <b class="mono"><!--WALLET_FILENAME--></b><br>
 <br>
 Quick wallet switch: <!--ONEWALLET--><br>
-<br>
 
 <div id="showwal">
+<h2>Address pool</h2>
 <pre>{WALLET_DATA}</pre>
 <input type="button" value="Edit wallet" onclick="shwwal()">
 </div>
 
 
-
 <div id="formwal" style="display:none">
+<h2>Edit wallet</h2>
 <table width="90%">
 <form method="post" action="cfg">
 <tr><td colspan="2">
 	<textarea name="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
 <tr>
 	<td align="left">
-		File Name: <input type="edit" name="walletfname" value="{WALLET_FNAME}" class="mono">
+		File Name: <input type="edit" name="walletfname" value="{WALLET_NAME}" class="mono">
 	<td align="right">
-		<input type="submit" name="save" value="Apply & Reload">
+		<input type="submit" name="save" value="Save wallet & Recalc balance">
 </form>
 </table>
 </div>

@@ -13,6 +13,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+
 func raw_balance(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -80,19 +81,6 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func walfn2n(fn string) (wn string) {
-	if strings.HasPrefix(fn, "wallet") && strings.HasSuffix(fn, ".txt") {
-		wn = fn[6:len(fn)-4]
-		if wn=="" {
-			wn = "Default"
-		} else if len(wn)>1 && wn[0]=='_' {
-			wn = wn[1:]
-		}
-	}
-	return
-}
-
-
 func p_wal(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -101,7 +89,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	if checksid(r) && len(r.Form["wal"])>0 {
-		load_wallet(fmt.Sprint(GocoinHomeDir, r.Form["wal"][0]))
+		load_wallet(GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
 		http.Redirect(w, r, "/wal", http.StatusFound)
 		return
 	}
@@ -112,16 +100,11 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
 	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
 
-	fis, er := ioutil.ReadDir(GocoinHomeDir)
+	fis, er := ioutil.ReadDir(GocoinHomeDir+"wallet/")
 	if er == nil {
 		for i := range fis {
-			fn := fis[i].Name()
-			wn := walfn2n(fn)
-			if wn!="" {
-				s := strings.Replace(wal1, "{WALLET_NAME}", wn, 1)
-				s = strings.Replace(s, "{WALLET_FILE}", fn, 1)
-				page = templ_add(page, "<!--ONEWALLET-->", s)
-			}
+			s := strings.Replace(wal1, "{WALLET_NAME}", fis[i].Name(), -1)
+			page = templ_add(page, "<!--ONEWALLET-->", s)
 		}
 	}
 
@@ -133,11 +116,11 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		} else {
 			page = strings.Replace(page, "{WALLET_DATA}", "", 2)
 		}
-		page = strings.Replace(page, "{WALLET_FNAME}", walfn2n(filepath.Base(MyWallet.filename)), 1)
+		page = strings.Replace(page, "{WALLET_NAME}", filepath.Base(MyWallet.filename), 1)
 	} else {
 		strings.Replace(page, "<!--WALLET_FILENAME-->", "<i>no wallet loaded</i>", 1)
-		page = strings.Replace(page, "{WALLET_DATA}", "", 1)
-		page = strings.Replace(page, "{WALLET_FNAME}", "wallet.txt", 1)
+		page = strings.Replace(page, "{WALLET_DATA}", "", 2)
+		page = strings.Replace(page, "{WALLET_NAME}", "", -1)
 	}
 
 	write_html_head(w, r)
