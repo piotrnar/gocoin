@@ -1,3 +1,4 @@
+* Make wallets switchable from WebUI
 * wal command should immediatelly affect the balance, while it does not
 * Allow to quit via Ctrl+C when opening the chain
 * Pass the tx unit tests: https://github.com/TheBlueMatt/test-scripts
