@@ -81,6 +81,17 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func getbal(a *btc.BtcAddr) (sum uint64, cnt int) {
+	for i := range MyBalance {
+		if MyBalance[i].BtcAddr.Hash160 == a.Hash160 {
+			sum += MyBalance[i].Value
+			cnt++
+		}
+	}
+	return
+}
+
+
 func p_wal(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -95,7 +106,8 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := load_template("wallet.html")
-	wal1 := load_template("wallet_one.html")
+	wal1 := load_template("wallet_qsw.html")
+	addr := load_template("wallet_adr.html")
 
 	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
 	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 1)
@@ -112,14 +124,21 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		page = strings.Replace(page, "<!--WALLET_FILENAME-->", MyWallet.filename, 1)
 		wc, er := ioutil.ReadFile(MyWallet.filename)
 		if er==nil {
-			page = strings.Replace(page, "{WALLET_DATA}", string(wc), 2)
-		} else {
-			page = strings.Replace(page, "{WALLET_DATA}", "", 2)
+			page = strings.Replace(page, "{WALLET_DATA}", string(wc), 1)
+		}
+		for i := range MyWallet.addrs {
+			ad := addr
+			ad = strings.Replace(ad, "<!--WAL_ADDR-->", MyWallet.addrs[i].Enc58str, 1)
+			ad = strings.Replace(ad, "<!--WAL_LABEL-->", MyWallet.addrs[i].Label, 1)
+			if btc, cnt := getbal(MyWallet.addrs[i]); btc > 0 {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)
+			}
+			page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
 		}
 		page = strings.Replace(page, "{WALLET_NAME}", filepath.Base(MyWallet.filename), 1)
 	} else {
 		strings.Replace(page, "<!--WALLET_FILENAME-->", "<i>no wallet loaded</i>", 1)
-		page = strings.Replace(page, "{WALLET_DATA}", "", 2)
 		page = strings.Replace(page, "{WALLET_NAME}", "", -1)
 	}
 

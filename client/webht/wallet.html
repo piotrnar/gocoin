@@ -14,10 +14,16 @@ Wallet filename: <b class="mono"><!--WALLET_FILENAME--></b><br>
 <br>
 Quick wallet switch: <!--ONEWALLET--><br>
 
+<hr>
 <div id="showwal">
-<h2>Address pool</h2>
-<pre>{WALLET_DATA}</pre>
-<input type="button" value="Edit wallet" onclick="shwwal()">
+<h2>Current wallet <input type="button" value="Edit" onclick="shwwal()"></h2>
+<table class="wal bord" width="600">
+<tr>
+<th>Address
+<th align="left">Label
+<th colspan="2">Balance BTC
+<!--ONE_WALLET_ADDR-->
+</table>
 </div>
 
 

@@ -1,3 +1,6 @@
+0.6.3
+* Show balance of per address at the Wallets tab
+
 0.6.2
 * Added support for WebUI switchable wallets
 
