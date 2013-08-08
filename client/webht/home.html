@@ -1,5 +1,14 @@
+<table width="100%">
+<tr><td valign="top">
 <h2>Wallet</h2>
 <!--WALLET-->
+<td width="400" valign="top">
+<h2>Upload transaction</h2>
+<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
+	<input name="txfile" type="file">
+	<input type="submit" value="Upload" />
+</form>
+</table>
 <h2>Last Block</h2><table>
 <tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
 <tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
