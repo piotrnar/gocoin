@@ -1,3 +1,4 @@
+* Show balance / adddr at the Wallet tab
 * Implement a cache for address balances so switching between wallets would be quick
 * Allow to quit via Ctrl+C when opening the chain
 * Try to improve initial chain download speed
