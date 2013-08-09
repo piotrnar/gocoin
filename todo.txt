@@ -3,3 +3,4 @@
 * Allow to quit via Ctrl+C when opening the chain
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
+* Look into http://godoc.org/code.google.com/p/snappy-go/snappy as a possible block compression method
