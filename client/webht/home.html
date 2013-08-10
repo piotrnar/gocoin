@@ -1,21 +1,26 @@
-<table width="100%">
-<tr><td valign="top">
 <h2>Wallet</h2>
 <!--WALLET-->
-<td width="400" valign="top">
-<h2>Upload transaction</h2>
-<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
-	<input name="txfile" type="file">
-	<input type="submit" value="Upload" />
-</form>
+
+<table width="100%">
+<tr><td valign="top">
+	<h2>Last Block</h2><table>
+	<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
+	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+	<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
+	<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
+	<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+	</table>
+</td>
+<td width="400" valign="bottom">
+	<h2>Upload transaction</h2>
+	<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
+		<input name="txfile" type="file">
+		<input type="submit" value="Upload" />
+	</form>
+</td>
+</tr>
 </table>
-<h2>Last Block</h2><table>
-<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
-<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
-<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
-<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
-<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
-</table>
+
 <br><table><tr><td valign="top">
 	<h2>Network</h2>
 	<table>
