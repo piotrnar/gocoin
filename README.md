@@ -47,6 +47,10 @@ The wallet application has very little requirements and it should work with lite
 
 Please keep in mind that the wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk. Also use an encrypted swap file.
 
+It is extremely importnant, for the security of your wallet's private keys, to run the wallet app on a platform (OS) that has a reliable (menaing: unpredicible) random number generator. Any popular OS (Widnows, Linux, MacOS) should be fine, but be careful using any kind of a simplified hardware/OS. Read more about this:
+ * http://golang.org/pkg/crypto/rand/#pkg-variables 
+ * https://bitcointalk.org/index.php?topic=271486.0 
+
 
 Dependencies
 ==============
