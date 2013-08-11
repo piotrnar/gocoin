@@ -55,8 +55,6 @@ var (
 	labels []string
 	publ_addrs []*btc.BtcAddr
 
-	maxKeyVal *big.Int // used by verify_key
-
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo
@@ -67,7 +65,6 @@ var (
 
 // Print all the piblic addresses
 func dump_addrs() {
-	maxKeyVal, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
 	f, _ := os.Create("wallet.txt")
 	if type2_secret!=nil {
 		s := fmt.Sprintf("# Type-2\n# %s\n# %s\n",
@@ -77,7 +74,7 @@ func dump_addrs() {
 		fmt.Fprint(f, s)
 	}
 	for i := range publ_addrs {
-		if !*noverify && !verify_key(priv_keys[i], publ_addrs[i].Pubkey) {
+		if !*noverify && btc.VerifyKeyPair(priv_keys[i], publ_addrs[i].Pubkey)!=nil {
 			println("Something wrong with key at index", i, " - abort!")
 			os.Exit(1)
 		}
