@@ -31,6 +31,7 @@ var (
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
 	type2 *bool = flag.Bool("t2", false, "Use Type-2 method to generate deterministic addreses")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
+	type3 *bool = flag.Bool("t3", false, "Use Type-3 method to generate deterministic addreses")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
@@ -72,11 +73,15 @@ func dump_addrs() {
 			hex.EncodeToString(type2_secret.Bytes()))
 		fmt.Print(s)
 		fmt.Fprint(f, s)
+	} else if *type3 {
+		fmt.Fprintln(f, "# Type-3")
 	}
 	for i := range publ_addrs {
-		if !*noverify && btc.VerifyKeyPair(priv_keys[i], publ_addrs[i].Pubkey)!=nil {
-			println("Something wrong with key at index", i, " - abort!")
-			os.Exit(1)
+		if !*noverify {
+			if er := btc.VerifyKeyPair(priv_keys[i], publ_addrs[i].Pubkey); er!=nil {
+				println("Something wrong with key at index", i, " - abort!", er.Error())
+				os.Exit(1)
+			}
 		}
 		fmt.Println(publ_addrs[i].String(), labels[i])
 		if f != nil {
