@@ -103,6 +103,8 @@ func load_others() {
 
 // Get the secret seed and generate "*keycnt" key pairs (both private and public)
 func make_wallet() {
+	var lab string
+
 	if *testnet {
 		verbyte = 0x6f
 		privver = 0xef
@@ -115,7 +117,9 @@ func make_wallet() {
 	pass := getpass()
 	seed_key := make([]byte, 32)
 	btc.ShaHash([]byte(pass), seed_key)
-	if *type2 {
+	if *type3 {
+		lab = "TypC"
+	} else if *type2 {
 		if *type2sec!="" {
 			d, e := hex.DecodeString(*type2sec)
 			if e!=nil {
@@ -128,28 +132,31 @@ func make_wallet() {
 			btc.ShaHash([]byte(pass+pass), buf[:])
 			type2_secret = new(big.Int).SetBytes(buf[:])
 		}
+		lab = "TypB"
+	} else {
+		lab = "TypA"
 	}
 	if pass!="" {
 		if *verbose {
 			fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
 		}
 		for i:=uint(0); i < *keycnt; {
-			if *type2 {
+			prv_key := make([]byte, 32)
+			if *type3 {
+				btc.ShaHash(seed_key, prv_key)
+				seed_key = append(seed_key, byte(i))
+			} else if *type2 {
 				seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
+				copy(prv_key, seed_key)
 			} else {
-				new_seed := make([]byte, 32)
-				btc.ShaHash(seed_key, new_seed)
-				seed_key = new_seed
+				btc.ShaHash(seed_key, prv_key)
+				copy(seed_key, prv_key)
 			}
-			priv_keys = append(priv_keys, seed_key)
-			pub, er := btc.PublicFromPrivate(seed_key, !*uncompressed)
+			priv_keys = append(priv_keys, prv_key)
+			pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
 			if er == nil {
 				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
-				if *type2 {
-					labels = append(labels, fmt.Sprint("TypB ", i+1))
-				} else {
-					labels = append(labels, fmt.Sprint("TypA ", i+1))
-				}
+				labels = append(labels, fmt.Sprint(lab, " ", i+1))
 				i++
 			} else {
 				println("PublicFromPrivate:", er.Error())
