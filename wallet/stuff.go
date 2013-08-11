@@ -6,10 +6,6 @@ import (
 	"bufio"
 	"strconv"
 	"strings"
-	"math/big"
-	"crypto/rand"
-	"crypto/ecdsa"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -86,45 +82,6 @@ func getpass() string {
 		}
 	}
 	return string(buf)
-}
-
-// Verify the secret key's range and al if a test message signed with it verifies OK
-func verify_key(priv []byte, publ []byte) bool {
-	const TestMessage = "Just some test message..."
-	hash := btc.Sha2Sum([]byte(TestMessage))
-
-	pub_key, e := btc.NewPublicKey(publ)
-	if e != nil {
-		println("NewPublicKey:", e.Error())
-		os.Exit(1)
-	}
-
-	var key ecdsa.PrivateKey
-	key.D = new(big.Int).SetBytes(priv)
-	key.PublicKey = pub_key.PublicKey
-
-	if key.D.Cmp(big.NewInt(0)) == 0 {
-		println("pubkey value is zero")
-		return false
-	}
-
-	if key.D.Cmp(maxKeyVal) != -1 {
-		println("pubkey value is too big", hex.EncodeToString(publ))
-		return false
-	}
-
-	r, s, err := ecdsa.Sign(rand.Reader, &key, hash[:])
-	if err != nil {
-		println("ecdsa.Sign:", err.Error())
-		return false
-	}
-
-	ok := ecdsa.Verify(&key.PublicKey, hash[:], r, s)
-	if !ok {
-		println("The key pair does not verify!")
-		return false
-	}
-	return true
 }
 
 
