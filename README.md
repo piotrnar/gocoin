@@ -45,12 +45,16 @@ Wallet
 --------------
 The wallet application has very little requirements and it should work with literally any platform where you have a working Go compiler. That includes ARM (i.e. for Raspberry Pi).
 
-Please keep in mind that the wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk. Also use an encrypted swap file.
 
-It is extremely importnant, for the security of your wallet's private keys, to run the wallet app on a platform (OS) that has a reliable (menaing: unpredicible) random number generator. Any popular OS (Widnows, Linux, MacOS) should be fine, but be careful using any kind of a simplified hardware/OS. Read more about this:
+Security
+--------------
+The wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk, with a solid (unbreakable) password. Also use an encrypted swap file since there is no guarantee that no secret part wwould end up in the swap file, at some point. 
+
+It is also extremely importnant (for the security of your wallet's private keys) to run the wallet app on a platform (OS) that has a reliable (menaing: unpredicible) random number generator. Any popular OS (Widnows, Linux, MacOS) should be fine, but be careful using any kind of a simplified hardware/OS. Read more about this:
  * http://golang.org/pkg/crypto/rand/#pkg-variables 
  * https://bitcointalk.org/index.php?topic=271486.0 
 
+Keep in mind that the deterministic nature of the wallet implies that whenever any of your private keys is compromosed, it also compromises all the further keys that originate from it.
 
 Dependencies
 ==============
