@@ -1,3 +1,6 @@
+0.6.4
+* Support for deterministic wallet Type-3 (keeps other keys safe, if one got compromised)
+
 0.6.3
 * Show balance of per address at the Wallets tab
 
