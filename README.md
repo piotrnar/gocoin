@@ -54,7 +54,7 @@ It is also extremely importnant (for the security of your wallet's private keys)
  * http://golang.org/pkg/crypto/rand/#pkg-variables 
  * https://bitcointalk.org/index.php?topic=271486.0 
 
-Keep in mind that the deterministic nature of the wallet implies that whenever any of your private keys is compromosed, it also compromises all the further keys that originate from it.
+Deterministic nature of the wallet implies that whenever any of your private keys is compromised, it also compromises all the further keys that originate from it. To address this risk Type-3 deterministic wallet has been implemented in Gocoin version 0.6.4 (use -t3 command line switch). 
 
 Dependencies
 ==============
