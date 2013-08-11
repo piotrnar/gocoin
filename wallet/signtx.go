@@ -86,11 +86,11 @@ func make_signed_tx() {
 				rb := r.Bytes()
 				sb := s.Bytes()
 
-				if rb[0] >= 0x80 { // I thinnk this is needed, thought I am not quite sure... :P
+				if rb[0] >= 0x80 {
 					rb = append([]byte{0x00}, rb...)
 				}
 
-				if sb[0] >= 0x80 { // I thinnk this is needed, thought I am not quite sure... :P
+				if sb[0] >= 0x80 {
 					sb = append([]byte{0x00}, sb...)
 				}
 
