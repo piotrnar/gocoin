@@ -32,6 +32,7 @@ var (
 	type2 *bool = flag.Bool("t2", false, "Use Type-2 method to generate deterministic addreses")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
 	type3 *bool = flag.Bool("t3", false, "Use Type-3 method to generate deterministic addreses")
+	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
 
 	// Spending money options
 	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
@@ -183,6 +184,11 @@ func main() {
 
 	if *dump {
 		dump_addrs()
+		return
+	}
+
+	if *dumppriv!="" {
+		dump_prvkey()
 		return
 	}
 
