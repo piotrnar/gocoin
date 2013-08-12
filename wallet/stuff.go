@@ -153,13 +153,23 @@ func ParseAmount(s string) uint64 {
 }
 
 
-func sec2b58(pk []byte) string {
+// Uncompressed private key
+func sec2b58unc(pk []byte) string {
+	var dat [37]byte
+	dat[0] = privver
+	copy(dat[1:33], pk)
+	sh := btc.Sha2Sum(dat[0:33])
+	copy(dat[33:37], sh[:4])
+	return btc.Encodeb58(dat[:])
+}
+
+
+// Compressed private key
+func sec2b58com(pk []byte) string {
 	var dat [38]byte
 	dat[0] = privver
 	copy(dat[1:33], pk)
-	if !*uncompressed {
-		dat[33] = 1
-	}
+	dat[33] = 1 // compressed
 	sh := btc.Sha2Sum(dat[0:34])
 	copy(dat[34:38], sh[:4])
 	return btc.Encodeb58(dat[:])
@@ -170,7 +180,11 @@ func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
 		for i := range priv_keys {
-			fmt.Println(sec2b58(priv_keys[i]), publ_addrs[i].String(), labels[i])
+			if len(publ_addrs[i].Pubkey)==33 {
+				fmt.Println(sec2b58com(priv_keys[i]), publ_addrs[i].String(), labels[i])
+			} else {
+				fmt.Println(sec2b58unc(priv_keys[i]), publ_addrs[i].String(), labels[i])
+			}
 		}
 	} else {
 		// single key
@@ -180,16 +194,16 @@ func dump_prvkey() {
 			return
 		}
 		if a.Version != verbyte {
-			if *testnet {
-				println("You specified non-testnet address for a testnet wallet")
-			} else {
-				println("You specified a testnet address for a non-testnet wallet")
-			}
+			println("Dump Private Key: Version byte mismatch", a.Version, verbyte)
 			return
 		}
 		for i := range priv_keys {
 			if publ_addrs[i].Hash160==a.Hash160 {
-				fmt.Println(sec2b58(priv_keys[i]), publ_addrs[i].String(), labels[i])
+				if len(publ_addrs[i].Pubkey)==33 {
+					fmt.Println(sec2b58com(priv_keys[i]), publ_addrs[i].String(), labels[i])
+				} else {
+					fmt.Println(sec2b58unc(priv_keys[i]), publ_addrs[i].String(), labels[i])
+				}
 				return
 			}
 		}
