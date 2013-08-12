@@ -151,3 +151,48 @@ func ParseAmount(s string) uint64 {
 
 	return 1e8*big + small
 }
+
+
+func sec2b58(pk []byte) string {
+	var dat [38]byte
+	dat[0] = privver
+	copy(dat[1:33], pk)
+	if !*uncompressed {
+		dat[33] = 1
+	}
+	sh := btc.Sha2Sum(dat[0:34])
+	copy(dat[34:38], sh[:4])
+	return btc.Encodeb58(dat[:])
+}
+
+
+func dump_prvkey() {
+	if *dumppriv=="*" {
+		// Dump all private keys
+		for i := range priv_keys {
+			fmt.Println(sec2b58(priv_keys[i]), publ_addrs[i].String(), labels[i])
+		}
+	} else {
+		// single key
+		a, e := btc.NewAddrFromString(*dumppriv)
+		if e!=nil {
+			println("Dump Private Key:", e.Error())
+			return
+		}
+		if a.Version != verbyte {
+			if *testnet {
+				println("You specified non-testnet address for a testnet wallet")
+			} else {
+				println("You specified a testnet address for a non-testnet wallet")
+			}
+			return
+		}
+		for i := range priv_keys {
+			if publ_addrs[i].Hash160==a.Hash160 {
+				fmt.Println(sec2b58(priv_keys[i]), publ_addrs[i].String(), labels[i])
+				return
+			}
+		}
+		println("Dump Private Key:", a.String(), "not found it the wallet")
+	}
+}
