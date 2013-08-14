@@ -1,16 +1,7 @@
-<h2>Wallet</h2>
-<!--WALLET-->
-
 <table width="100%">
 <tr><td valign="top">
-	<h2>Last Block</h2><table>
-	<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
-	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
-	<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
-	<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
-	<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
-	</table>
-</td>
+<h2>Wallet</h2>
+<!--WALLET-->
 <td width="400" valign="bottom">
 	<h2>Upload transaction</h2>
 	<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
@@ -19,19 +10,30 @@
 	</form>
 </td>
 </tr>
-</table>
 
-<br><table><tr><td valign="top">
+<tr>
+<tr><td colspan="2">
+	<h2>Last Block</h2><table>
+	<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
+	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+	<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
+	<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
+	<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+	</table>
+</td>
+</tr>
+
+<tr><td valign="top">
 	<h2>Network</h2>
 	<table>
 	<tr><td>Downloading at:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
 	<tr><td>Uploading at:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
-	<tr><td>Net Block Queue Size:<td><b>{NET_BLOCK_QSIZE}</b>
-	<tr><td>Net Tx Queue Size:<td><b>{NET_TX_QSIZE}</b>
-	<tr><td>Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incomming)
+	<tr><td>Net queue len:<td>TXs: <b>{NET_TX_QSIZE}</b>
+	&nbsp;&nbsp;&nbsp;
+	Blocks:<b>{NET_BLOCK_QSIZE}
+	<tr><td nowrap="nowrap">Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incomming)
 	<tr><td>Extrenal IPs:<td><b>{ONE_EXTERNAL_IP}</b>
 	</table>
-<td width="100">&nbsp;
 <td valign="top">
 	<h2>Others</h2>
 	<table>
@@ -40,9 +42,10 @@
 	<tr><td>Node's uptime:<td><b>{NODE_UPTIME}</b>
 	<tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b> &nbsp;[<a href="javascript:config('freemem')">FREE</a>]
 	<tr><td>SysMem Used:<td><b>{SYSMEM_USED_MB} MB</b>
-	<tr><td>ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
+	<tr><td nowrap="nowrap">ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
 	</table>
 </table>
+
 <div id="showcfg">
 <br>
 <input type="button" value="Show configuration JSON data" onclick="shwcfg()">
