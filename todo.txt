@@ -1,3 +1,4 @@
+* testnet block 0000000000b0e181b5a6a1e404709b28a3ae311d95a956a66094fd3359eba5ef!!!!!!!!!!!!!!!!!!!!
 * Add a feature to export a private key from the wallet (in base58 format)
 * Implement a cache for address balances so switching between wallets would be quick
 * Try to make own (faster) implementation of sha256 and rimp160
