@@ -23,7 +23,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var trusted bool
 
 	prv := time.Now().UnixNano()
-	for ch.BlockTreeEnd != end {
+	for !AbortNow && ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
 			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
@@ -68,7 +68,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 	}
 
-	if ch.BlockTreeEnd != end {
+	if !AbortNow && ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
@@ -138,6 +138,9 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 	}
 	// At this point both "ch.BlockTreeEnd" and "cur" should be at the same height
 	for ch.BlockTreeEnd != cur {
+		if AbortNow {
+			return
+		}
 		if don(DBG_ORPHAS) {
 			fmt.Printf("->orph block %s @ %d\n", ch.BlockTreeEnd.BlockHash.String(),
 				ch.BlockTreeEnd.Height)
