@@ -324,4 +324,8 @@ func main() {
 	BlockChain.Sync()
 	BlockChain.Save()
 	BlockChain.Close()
+
+	peerDB.Sync()
+	peerDB.Defrag()
+	peerDB.Close()
 }
