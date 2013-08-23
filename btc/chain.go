@@ -6,6 +6,9 @@ import (
 )
 
 
+var AbortNow bool  // set it to true to abort any activity
+
+
 type Chain struct {
 	Blocks *BlockDB      // blockchain.dat and blockchain.idx
 	Unspent UnspentDB    // unspent folder
@@ -29,7 +32,15 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	ch.Blocks = NewBlockDB(dbrootdir)
 	ch.Unspent = NewUnspentDb(dbrootdir, rescan)
 
+	if AbortNow {
+		return
+	}
+
 	ch.loadBlockIndex()
+	if AbortNow {
+		return
+	}
+
 	if rescan {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	} else if ch.BlockTreeEnd.Height>0 {
@@ -38,6 +49,9 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 	}
 
+	if AbortNow {
+		return
+	}
 	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
