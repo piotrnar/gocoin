@@ -270,7 +270,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 	var b [92]byte
 	var maxdatfilepos int64
 	validpos, _ := db.blockindx.Seek(0, os.SEEK_SET)
-	for {
+	for !AbortNow {
 		_, e := db.blockindx.Read(b[:])
 		if e != nil {
 			break
