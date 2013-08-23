@@ -48,6 +48,9 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
 		db.dbN(i) // Load each of the sub-DBs into memory
+		if btc.AbortNow {
+			return
+		}
 	}
 	fmt.Print("\r                                                              \r")
 	return
