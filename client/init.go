@@ -75,13 +75,34 @@ func host_init() {
 		}
 	}
 
-	fmt.Println("Opening blockchain...")
+	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
+
+	__exit := make(chan bool)
+	__done := make(chan bool)
+	go func() {
+		for {
+			select {
+				case s := <-killchan:
+					fmt.Println(s)
+					btc.AbortNow = true
+				case <-__exit:
+					__done <- true
+					return
+			}
+		}
+	}()
 	sta := time.Now().UnixNano()
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, FLAG.rescan)
 	sto := time.Now().UnixNano()
+	if btc.AbortNow {
+		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
+		os.Exit(1)
+	}
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
 	BlockChain.Unspent.SetTxNotify(TxNotify)
 	StartTime = time.Now()
+	__exit <- true
+	_ = <- __done
 }
 
 
