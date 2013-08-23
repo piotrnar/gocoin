@@ -5,6 +5,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+
 type UnspentDB struct {
 	unspent *unspentDb
 	unwind *unwindDb
@@ -18,7 +19,14 @@ func NewDb(dir string, init bool) btc.UnspentDB {
 		os.RemoveAll(dir+"unspent3")
 	}
 
+	if btc.AbortNow {
+		return nil
+	}
 	db.unwind = newUnwindDB(dir+"unspent3"+string(os.PathSeparator))
+
+	if btc.AbortNow {
+		return nil
+	}
 	db.unspent = newUnspentDB(dir+"unspent3"+string(os.PathSeparator), db.unwind.lastBlockHeight)
 
 	return &db
