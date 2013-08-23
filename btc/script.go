@@ -157,7 +157,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	var altstack scrStack
 	sta, idx, opcnt := 0, 0, 0
 	for idx < len(p) {
-		fExec := vfExec.empties()==0
+		fExec := vfExec.falses()==0
 
 		// Read instruction
 		opcode, vchPushValue, n, e := getOpcode(p[idx:])
@@ -168,7 +168,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		idx+= n
 
 		if don(DBG_SCRIPT) {
-			fmt.Printf("\nExecuting opcode 0x%02x  n=%d  push:%s..\n", opcode, n, hex.EncodeToString(vchPushValue))
+			fmt.Printf("\nExecuting opcode 0x%02x  n=%d  fExec:%t  push:%s..\n",
+				opcode, n, fExec, hex.EncodeToString(vchPushValue))
 			stack.print()
 		}
 
@@ -245,6 +246,9 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						} else {
 							fValue = !stack.popBool()
 						}
+					}
+					if don(DBG_SCRERR) {
+						println(fExec, "if pushing", fValue, "...")
 					}
 					vfExec.pushBool(fValue)
 

@@ -1,3 +1,6 @@
+0.6.5
+* Fixed a critical bug in script parsing (0x00 at top of the stack was not considered as "if true")
+
 0.6.4
 * Support for deterministic wallet Type-3 (keeps other keys safe, if one got compromised)
 * The wallet can export private key now, in the satoshi's base58 format (-dump switch)

@@ -89,7 +89,7 @@ func bts2bool(d []byte) bool {
 			return true
 		}
 	}
-	return d[len(d)-1]!=0x80 // -0 is also false (I hope..)
+	return (d[len(d)-1]&0x7f) != 0 // -0 (0x80) is also false (I hope..)
 }
 
 
@@ -123,9 +123,9 @@ func (s *scrStack) pop() (d []byte) {
 	return
 }
 
-func (s *scrStack) empties() (res int) {
+func (s *scrStack) falses() (res int) {
 	for i := range s.data {
-		if len(s.data[i])==0 {
+		if bts2bool(s.data[i])==false {
 			res++
 		}
 	}
