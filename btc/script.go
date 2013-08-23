@@ -157,7 +157,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 	var altstack scrStack
 	sta, idx, opcnt := 0, 0, 0
 	for idx < len(p) {
-		fExec := vfExec.falses()==0
+		fExec := vfExec.nofalse()
 
 		// Read instruction
 		opcode, vchPushValue, n, e := getOpcode(p[idx:])
