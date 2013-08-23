@@ -49,6 +49,9 @@ func newUnwindDB(dir string) (db *unwindDb) {
 			}
 			return qdb.NO_CACHE
 		})
+		if btc.AbortNow {
+			return
+		}
 	}
 	return
 }
