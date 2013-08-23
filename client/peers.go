@@ -244,7 +244,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 }
 
 
-func initSeeds(seeds []string, port int) {
+func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
@@ -256,10 +256,12 @@ func initSeeds(seeds []string, port int) {
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
-					p.Port = uint16(port)
+					p.Port = port
 					p.Save()
 				}
 			}
+		} else {
+			println("initSeeds LookupHost:", er.Error())
 		}
 	}
 }
@@ -267,16 +269,6 @@ func initSeeds(seeds []string, port int) {
 
 func initPeers(dir string) {
 	peerDB, _ = qdb.NewDB(dir+"peers3", true)
-	if peerDB.Count()==0 {
-		if !CFG.Testnet {
-			initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
-				"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
-		} else {
-			initSeeds([]string{"testnet-seed.bitcoin.petertodd.org","testnet-seed.bluematt.me",
-				"bluematt.me", "testnet-seed.bluematt.me"}, 18333)
-		}
-		println("peerDB initiated with ", peerDB.Count(), "seeds")
-	}
 
 	if CFG.ConnectOnly != "" {
 		x := strings.Index(CFG.ConnectOnly, ":")
@@ -296,6 +288,15 @@ func initPeers(dir string) {
 			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
 	} else {
 		newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
+		go func() {
+			if !CFG.Testnet {
+				initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
+					"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
+			} else {
+				initSeeds([]string{"bitcoin.petertodd.org", "testnet-seed.bitcoin.petertodd.org",
+					"bluematt.me", "testnet-seed.bluematt.me"}, 18333)
+			}
+		}()
 	}
 }
 
