@@ -34,6 +34,7 @@ var (
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 1000)
 	netTxs chan *txRcvd = make(chan *txRcvd, 1000)
 	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
+	killchan chan os.Signal = make(chan os.Signal)
 
 	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
@@ -216,7 +217,6 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
 	// Disable Ctrl+C
-	killchan := make(chan os.Signal, 1)
 	signal.Notify(killchan, os.Interrupt, os.Kill)
 	defer func() {
 		if r := recover(); r != nil {
