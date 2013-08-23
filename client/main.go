@@ -230,11 +230,10 @@ func main() {
 				BlockChain.Save()
 				BlockChain.Close()
 			}
+			UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
-
-	defer UnlockDatabaseDir()
 
 	host_init() // This will create the DB lock file and keep it open
 
@@ -328,4 +327,6 @@ func main() {
 	peerDB.Sync()
 	peerDB.Defrag()
 	peerDB.Close()
+
+	UnlockDatabaseDir()
 }
