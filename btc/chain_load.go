@@ -35,6 +35,9 @@ func (ch *Chain)loadBlockIndex() {
 	tlb := ch.Unspent.GetLastBlockHash()
 	//println("Building tree from", len(ch.BlockIndex), "nodes")
 	for _, v := range ch.BlockIndex {
+		if AbortNow {
+			return
+		}
 		if v==ch.BlockTreeRoot {
 			// skip root block (should be only one)
 			continue
