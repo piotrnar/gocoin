@@ -123,13 +123,13 @@ func (s *scrStack) pop() (d []byte) {
 	return
 }
 
-func (s *scrStack) falses() (res int) {
+func (s *scrStack) nofalse() bool {
 	for i := range s.data {
-		if bts2bool(s.data[i])==false {
-			res++
+		if !bts2bool(s.data[i]) {
+			return false
 		}
 	}
-	return
+	return true
 }
 
 func (s *scrStack) size() int {
