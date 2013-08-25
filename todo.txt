@@ -1,4 +1,3 @@
-* Add a feature to export a private key from the wallet (in base58 format)
 * Implement a cache for address balances so switching between wallets would be quick
 * Try to make own (faster) implementation of sha256 and rimp160
 * Try to improve initial chain download speed

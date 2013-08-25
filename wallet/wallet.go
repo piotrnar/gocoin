@@ -117,9 +117,9 @@ func make_wallet() {
 	pass := getpass()
 	seed_key := make([]byte, 32)
 	btc.ShaHash([]byte(pass), seed_key)
-	if *type3 {
+	if *waltype==3 {
 		lab = "TypC"
-	} else if *type2 {
+	} else if *waltype==2 {
 		if *type2sec!="" {
 			d, e := hex.DecodeString(*type2sec)
 			if e!=nil {
@@ -142,10 +142,10 @@ func make_wallet() {
 		}
 		for i:=uint(0); i < *keycnt; {
 			prv_key := make([]byte, 32)
-			if *type3 {
+			if *waltype==3 {
 				btc.ShaHash(seed_key, prv_key)
 				seed_key = append(seed_key, byte(i))
-			} else if *type2 {
+			} else if *waltype==2 {
 				seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
 				copy(prv_key, seed_key)
 			} else {

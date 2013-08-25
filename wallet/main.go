@@ -27,11 +27,11 @@ var (
 	keycnt *uint = flag.Uint("n", 25, "Set the number of keys to be used")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
-	verbose *bool = flag.Bool("v", false, "Verbose bersion (print more info)")
+	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
-	type2 *bool = flag.Bool("t2", false, "Use Type-2 method to generate deterministic addreses")
+
+	waltype *uint = flag.Uint("type", 3, "Choose a type of the deterministic wallet (1, 2 or 3)")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
-	type3 *bool = flag.Bool("t3", false, "Use Type-3 method to generate deterministic addreses")
 	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
 
 	// Spending money options
@@ -68,14 +68,11 @@ var (
 // Print all the piblic addresses
 func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
+
+	fmt.Fprintln(f, "# Deterministic Walet Type", *waltype)
 	if type2_secret!=nil {
-		s := fmt.Sprintf("# Type-2\n# %s\n# %s\n",
-			hex.EncodeToString(publ_addrs[0].Pubkey),
-			hex.EncodeToString(type2_secret.Bytes()))
-		fmt.Print(s)
-		fmt.Fprint(f, s)
-	} else if *type3 {
-		fmt.Fprintln(f, "# Type-3")
+		fmt.Fprintln(f, "#", hex.EncodeToString(publ_addrs[0].Pubkey))
+		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret.Bytes()))
 	}
 	for i := range publ_addrs {
 		if !*noverify {
@@ -178,6 +175,8 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+
+	parse_config()
 	flag.Parse()
 
 	make_wallet()
