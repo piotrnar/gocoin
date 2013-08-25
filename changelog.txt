@@ -23,7 +23,7 @@
 
 0.6.0
 * Added support for verifying (rejecting) P2SH transactions
-* Added hnadling of OP_1ADD script opcopde and fixed some other opcodes
+* Added handling of OP_1ADD script opcopde and fixed some other opcodes
 * UI cmd "unspent" returns outputs sorted by block height
 
 0.5.8
