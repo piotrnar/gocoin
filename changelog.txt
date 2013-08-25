@@ -1,6 +1,7 @@
 0.6.6
 * Added support for wallet.cfg to specify some default values
 * Wallet's "-t2" and "-t3" command line swiches replaced with "-type=X"
+* Labels returned in balance.xml are HTML escaped
 
 0.6.5
 * Fixed a critical bug in script parsing (0x00 at top of the stack was not considered as "if true")
