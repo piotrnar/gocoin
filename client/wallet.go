@@ -48,8 +48,6 @@ func NewWallet(fn string) (wal *oneWallet) {
 	}
 	if len(wal.addrs)==0 {
 		wal = nil
-	} else {
-		fmt.Println(len(wal.addrs), "addresses loaded from", fn)
 	}
 	return
 }
