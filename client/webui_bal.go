@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"sync"
+	"html"
 	"bytes"
 	"strings"
 	"net/http"
@@ -43,7 +44,7 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "<value>", MyBalance[i].Value, "</value>")
 			fmt.Fprint(w, "<inblock>", MyBalance[i].MinedAt, "</inblock>")
 			fmt.Fprint(w, "<addr>", MyBalance[i].BtcAddr.String(), "</addr>")
-			fmt.Fprint(w, "<label>", MyBalance[i].BtcAddr.Label, "</label>")
+			fmt.Fprint(w, "<label>", html.EscapeString(MyBalance[i].BtcAddr.Label), "</label>")
 			w.Write([]byte("</output>"))
 		}
 		wg.Done()
