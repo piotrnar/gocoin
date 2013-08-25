@@ -66,7 +66,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		}
 		fn = GocoinHomeDir + "wallet" + string(os.PathSeparator) + fn
 		ioutil.WriteFile(fn, []byte(r.Form["walletdata"][0]), 0660)
-		load_wallet(fn)
+		LoadWallet(fn)
 		http.Redirect(w, r, "/wal", http.StatusFound)
 		return
 	}
