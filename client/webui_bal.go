@@ -100,7 +100,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	if checksid(r) && len(r.Form["wal"])>0 {
-		load_wallet(GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
+		LoadWallet(GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
 		http.Redirect(w, r, "/wal", http.StatusFound)
 		return
 	}
