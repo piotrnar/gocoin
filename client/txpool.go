@@ -119,7 +119,7 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 }
 
 
-// Handle incomming "tx" msg
+// Handle incoming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
 	if uint(len(pl))>CFG.TXPool.MaxTxSize {

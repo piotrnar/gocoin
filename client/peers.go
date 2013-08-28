@@ -59,7 +59,7 @@ func newPeer(v []byte) (p *onePeer) {
 }
 
 
-func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
+func NewIncomingPeer(ipstr string) (p *onePeer, e error) {
 	x := strings.Index(ipstr, ":")
 	if x != -1 {
 		ipstr = ipstr[:x] // remove port number
