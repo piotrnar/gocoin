@@ -156,13 +156,13 @@ func tcp_server() {
 			tc, e := lis.AcceptTCP()
 			if e == nil {
 				if dbg>0 {
-					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
-				ad, e := NewIncommingPeer(tc.RemoteAddr().String())
+				ad, e := NewIncomingPeer(tc.RemoteAddr().String())
 				if e == nil {
 					conn := NewConnection(ad)
 					conn.ConnectedAt = time.Now()
-					conn.Incomming = true
+					conn.Incoming = true
 					conn.NetConn = tc
 					mutex.Lock()
 					if _, ok := openCons[ad.UniqID()]; ok {
@@ -183,7 +183,7 @@ func tcp_server() {
 					}
 				} else {
 					if dbg>0 {
-						println("NewIncommingPeer:", e.Error())
+						println("NewIncomingPeer:", e.Error())
 					}
 					CountSafe("InConnRefused")
 					tc.Close()
@@ -195,7 +195,7 @@ func tcp_server() {
 	}
 	mutex.Lock()
 	for _, c := range openCons {
-		if c.Incomming {
+		if c.Incoming {
 			c.Broken = true
 		}
 	}

@@ -62,7 +62,7 @@ type oneConnection struct {
 	BanIt bool // BanIt this client after disconnecting
 
 	// TCP connection data:
-	Incomming bool
+	Incoming bool
 	NetConn net.Conn
 
 	// Handshake data

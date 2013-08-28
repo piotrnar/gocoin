@@ -77,7 +77,7 @@ func net_stats(par string) {
 		v := openCons[srt[idx].key]
 		fmt.Printf("%8d) ", v.ConnID)
 
-		if v.Incomming {
+		if v.Incoming {
 			fmt.Print("<- ")
 		} else {
 			fmt.Print(" ->")
@@ -124,7 +124,7 @@ func net_drop(par string) {
 
 func node_stat(v *oneConnection) (s string) {
 	s += fmt.Sprintf("Connection ID %d:\n", v.ConnID)
-	if v.Incomming {
+	if v.Incoming {
 		s += fmt.Sprintln("Comming from", v.PeerAddr.Ip())
 	} else {
 		s += fmt.Sprintln("Going to", v.PeerAddr.Ip())
@@ -182,7 +182,7 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad, er := NewIncommingPeer(par)
+	ad, er := NewIncomingPeer(par)
 	if er != nil {
 		fmt.Println(par, er.Error())
 		return
