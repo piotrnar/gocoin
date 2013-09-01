@@ -16,14 +16,12 @@ import (
 
 const ConfigFile = "gocoin.conf"
 
-// Here are command line only options
 var (
-	FLAG struct {
+	FLAG struct { // Command line only options
 		rescan bool
 	}
 
-// Here are options that can come from either command line or config file
-	CFG struct {
+	CFG struct { // Options that can come from either command line or config file
 		Testnet bool
 		ConnectOnly string
 		Datadir string
