@@ -18,7 +18,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 
 	mutex.Lock()
 	end := LastBlock
-	for cnt:=0; end!=nil && cnt<50; cnt++ {
+	for cnt:=uint(0); end!=nil && cnt<CFG.WebUI.ShowBlocks; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
