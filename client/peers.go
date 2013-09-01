@@ -261,7 +261,7 @@ func initSeeds(seeds []string, port uint16) {
 				}
 			}
 		} else {
-			println("initSeeds LookupHost:", er.Error())
+			println("initSeeds LookupHost", seeds[i], "-", er.Error())
 		}
 	}
 }
@@ -291,10 +291,10 @@ func initPeers(dir string) {
 		go func() {
 			if !CFG.Testnet {
 				initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
-					"dnsseed.bitcoin.dashjr.org", "bitseed.xf2.org"}, 8333)
+					/*"dnsseed.bitcoin.dashjr.org",*/ "bitseed.xf2.org"}, 8333)
 			} else {
 				initSeeds([]string{"bitcoin.petertodd.org", "testnet-seed.bitcoin.petertodd.org",
-					"bluematt.me", "testnet-seed.bluematt.me"}, 18333)
+					/*"bluematt.me",*/ "testnet-seed.bluematt.me"}, 18333)
 			}
 		}()
 	}
