@@ -74,7 +74,10 @@ func do_mining(s string) {
 	}
 	fmt.Println("Looking back", hrs, "hours...")
 	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
-	end := BlockChain.BlockTreeEnd
+	mutex.Lock()
+	bte := LastBlock
+	end := bte
+	mutex.Unlock()
 	cnt, diff := 0, float64(0)
 	tot_blocks, tot_blocks_len := 0, 0
 	for end.Timestamp >= lim {
@@ -121,7 +124,7 @@ func do_mining(s string) {
 	fmt.Printf("Total network hashrate : %s @ average diff %.0f  (%.2f bph)\n",
 		hr2str(bph/6 * diff * 7158278.826667), diff, bph)
 	fmt.Printf("Average block size was %.1f KB,  next difficulty change in %d blocks\n",
-		float64(tot_blocks_len/tot_blocks)/1e3, 2016-BlockChain.BlockTreeEnd.Height%2016)
+		float64(tot_blocks_len/tot_blocks)/1e3, 2016-bte.Height%2016)
 }
 
 
