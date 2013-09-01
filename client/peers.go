@@ -341,3 +341,13 @@ func show_addresses(par string) {
 		fmt.Println("Use 'peers list' to list them")
 	}
 }
+
+func ClosePeerDB() {
+	if peerDB!=nil {
+		fmt.Println("Closing peer DB")
+		peerDB.Sync()
+		peerDB.Defrag()
+		peerDB.Close()
+		peerDB = nil
+	}
+}
