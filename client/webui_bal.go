@@ -31,7 +31,7 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<unspent>"))
 
-	//For safety, lets get the balance from teh main thread
+	//For safety, lets get the balance from the main thread
 	var wg sync.WaitGroup
 	wg.Add(1)
 	req := new(oneUiReq)

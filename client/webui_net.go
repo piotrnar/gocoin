@@ -17,7 +17,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	net_page := load_template("net.html")
 	net_row := load_template("net_row.html")
 
-	mutex.Lock()
+	mutex_net.Lock()
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
 	for k, v := range openCons {
@@ -32,7 +32,6 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	net_page = strings.Replace(net_page, "{IN_CONNECTIONS}", fmt.Sprint(InConsActive), 1)
 	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(CFG.Net.ListenTCP, tcp_server_started), 1)
 	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(BestExternalAddr()).String(), 1)
-	mutex.Unlock()
 
 	for idx := range srt {
 		v := openCons[srt[idx].key]
@@ -64,6 +63,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 
 		net_page = templ_add(net_page, "<!--PEER_ROW-->", s)
 	}
+	mutex_net.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(net_page))

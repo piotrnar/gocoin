@@ -90,11 +90,11 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 	}
 
 	idx := bl.Hash.BIdx()
-	mutex.Lock()
+	mutex_rcv.Lock()
 	if rb, got := receivedBlocks[idx]; got {
 		rb.cnt++
+		mutex_rcv.Unlock()
 		CountSafe("SameBlockReceived")
-		mutex.Unlock()
 		return
 	}
 	orb := &oneReceivedBlock{Time:time.Now()}
@@ -105,7 +105,7 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 		CountSafe("UnxpectedBlockRcvd")
 	}
 	receivedBlocks[idx] = orb
-	mutex.Unlock()
+	mutex_rcv.Unlock()
 
 	netBlocks <- &blockRcvd{conn:conn, bl:bl}
 }
@@ -156,9 +156,9 @@ func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (bool) {
 }
 
 // Called from network threads
-// Make sure to call it after mutex.Lock()
 func blockWanted(h []byte) (yes bool) {
 	idx := btc.NewUint256(h).BIdx()
+	mutex_rcv.Lock()
 	if _, ok := receivedBlocks[idx]; !ok {
 		if CFG.Net.MaxBlockAtOnce==0 || !blocksLimitReached(idx) {
 			yes = true
@@ -169,7 +169,6 @@ func blockWanted(h []byte) (yes bool) {
 	} else {
 		CountSafe("BlockUnwanted")
 	}
+	mutex_rcv.Unlock()
 	return
 }
-
-

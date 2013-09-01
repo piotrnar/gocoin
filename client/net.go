@@ -43,6 +43,7 @@ const (
 
 
 var (
+	mutex_net sync.Mutex
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection)
 	InConsActive, OutConsActive uint
 	DefaultTcpPort uint16
@@ -308,9 +309,9 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 
 func connectionActive(ad *onePeer) (yes bool) {
-	mutex.Lock()
+	mutex_net.Lock()
 	_, yes = openCons[ad.UniqID()]
-	mutex.Unlock()
+	mutex_net.Unlock()
 	return
 }
 
@@ -332,17 +333,17 @@ func maxmsgsize(cmd string) uint32 {
 func NetCloseAll() {
 	println("Closing network")
 	CFG.Net.ListenTCP = false
-	mutex.Lock()
+	mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range openCons {
 			v.Disconnect()
 		}
 	}
-	mutex.Unlock()
+	mutex_net.Unlock()
 	for {
-		mutex.Lock()
+		mutex_net.Lock()
 		all_done := InConsActive == 0 && OutConsActive == 0
-		mutex.Unlock()
+		mutex_net.Unlock()
 		if all_done {
 			return
 		}

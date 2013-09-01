@@ -26,16 +26,11 @@ var (
 
 	dbg int64
 
-	LastBlock *btc.BlockTreeNode
-	LastBlockReceived time.Time
-
-	/*
-	This mutex protects access to
-		* LastBlock, LastBlockReceived
-		* openCons
-		* receivedBlocks
-	*/
-	mutex sync.Mutex
+	Last struct {
+		mutex sync.Mutex // use it for writing and reading from non-chain thread
+		Block *btc.BlockTreeNode
+		time.Time
+	}
 
 	counter_mutex sync.Mutex
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 1000)
@@ -46,6 +41,7 @@ var (
 	retryCachedBlocks bool
 	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
 	receivedBlocks map[[btc.Uint256IdxLen]byte] *oneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *oneReceivedBlock, 300e3)
+	mutex_rcv sync.Mutex
 
 	Counter map[string] uint64 = make(map[string]uint64)
 
@@ -119,9 +115,9 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 	sta := time.Now()
 	e = BlockChain.AcceptBlock(bl)
 	if e == nil {
-		mutex.Lock()
+		mutex_rcv.Lock()
 		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
-		mutex.Unlock()
+		mutex_rcv.Unlock()
 
 		for i:=1; i<len(bl.Txs); i++ {
 			TxMined(bl.Txs[i].Hash)
@@ -142,10 +138,10 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 				ui_show_prompt()
 			}
 
-			if CFG.Beeps.ActiveFork && LastBlock == BlockChain.BlockTreeEnd {
+			if CFG.Beeps.ActiveFork && Last.Block == BlockChain.BlockTreeEnd {
 				// Last block has not changed, so it must have been an orphaned block
 				bln := BlockChain.BlockIndex[bl.Hash.BIdx()]
-				commonNode := LastBlock.FirstCommonParent(bln)
+				commonNode := Last.Block.FirstCommonParent(bln)
 				forkDepth := bln.Height - commonNode.Height
 				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String())
 				if forkDepth > 1 {
@@ -159,10 +155,10 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			}
 		}
 
-		mutex.Lock()
-		LastBlockReceived = time.Now()
-		LastBlock = BlockChain.BlockTreeEnd
-		mutex.Unlock()
+		Last.mutex.Lock()
+		Last.Time = time.Now()
+		Last.Block = BlockChain.BlockTreeEnd
+		Last.mutex.Unlock()
 
 		if BalanceChanged {
 			BalanceChanged = false
@@ -273,8 +269,8 @@ func main() {
 
 	initPeers(GocoinHomeDir)
 
-	LastBlock = BlockChain.BlockTreeEnd
-	LastBlockReceived = time.Unix(int64(LastBlock.Timestamp), 0)
+	Last.Block = BlockChain.BlockTreeEnd
+	Last.Time = time.Unix(int64(Last.Block.Timestamp), 0)
 
 	for k, v := range BlockChain.BlockIndex {
 		receivedBlocks[k] = &oneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}

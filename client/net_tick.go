@@ -90,18 +90,18 @@ func (c *oneConnection) Tick() {
 func do_network(ad *onePeer) {
 	var e error
 	conn := NewConnection(ad)
-	mutex.Lock()
+	mutex_net.Lock()
 	if _, ok := openCons[ad.UniqID()]; ok {
 		if dbg>0 {
 			fmt.Println(ad.Ip(), "already connected")
 		}
 		CountSafe("ConnectingAgain")
-		mutex.Unlock()
+		mutex_net.Unlock()
 		return
 	}
 	openCons[ad.UniqID()] = conn
 	OutConsActive++
-	mutex.Unlock()
+	mutex_net.Unlock()
 	go func() {
 		conn.NetConn, e = net.DialTimeout("tcp4", fmt.Sprintf("%d.%d.%d.%d:%d",
 			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
@@ -117,10 +117,10 @@ func do_network(ad *onePeer) {
 			}
 			//println(e.Error())
 		}
-		mutex.Lock()
+		mutex_net.Lock()
 		delete(openCons, ad.UniqID())
 		OutConsActive--
-		mutex.Unlock()
+		mutex_net.Unlock()
 		ad.Dead()
 	}()
 }
@@ -151,9 +151,9 @@ func tcp_server() {
 
 	for CFG.Net.ListenTCP {
 		CountSafe("NetServerLoops")
-		mutex.Lock()
+		mutex_net.Lock()
 		ica := InConsActive
-		mutex.Unlock()
+		mutex_net.Unlock()
 		if ica < CFG.Net.MaxInCons {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
@@ -167,21 +167,21 @@ func tcp_server() {
 					conn.ConnectedAt = time.Now()
 					conn.Incomming = true
 					conn.NetConn = tc
-					mutex.Lock()
+					mutex_net.Lock()
 					if _, ok := openCons[ad.UniqID()]; ok {
 						//fmt.Println(ad.Ip(), "already connected")
 						CountSafe("SameIpReconnect")
-						mutex.Unlock()
+						mutex_net.Unlock()
 					} else {
 						openCons[ad.UniqID()] = conn
 						InConsActive++
-						mutex.Unlock()
+						mutex_net.Unlock()
 						go func () {
 							conn.Run()
-							mutex.Lock()
+							mutex_net.Lock()
 							delete(openCons, ad.UniqID())
 							InConsActive--
-							mutex.Unlock()
+							mutex_net.Unlock()
 						}()
 					}
 				} else {
@@ -196,14 +196,14 @@ func tcp_server() {
 			time.Sleep(1e9)
 		}
 	}
-	mutex.Lock()
+	mutex_net.Lock()
 	for _, c := range openCons {
 		if c.Incomming {
 			c.Disconnect()
 		}
 	}
 	tcp_server_started = false
-	mutex.Unlock()
+	mutex_net.Unlock()
 	//fmt.Println("TCP server stopped")
 }
 
@@ -218,9 +218,9 @@ func network_tick() {
 		}
 	}
 
-	mutex.Lock()
+	mutex_net.Lock()
 	conn_cnt := OutConsActive
-	mutex.Unlock()
+	mutex_net.Unlock()
 
 	if next_drop_slowest.IsZero() {
 		next_drop_slowest = time.Now().Add(DropSlowestEvery)
@@ -241,9 +241,9 @@ func network_tick() {
 			break
 		}
 		do_network(adrs[rand.Int31n(int32(len(adrs)))])
-		mutex.Lock()
+		mutex_net.Lock()
 		conn_cnt = OutConsActive
-		mutex.Unlock()
+		mutex_net.Unlock()
 	}
 }
 

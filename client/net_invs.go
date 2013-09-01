@@ -23,7 +23,6 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 
 	var blinv2ask []byte
 
-	mutex.Lock() // We want to have blockWanted -> GetBlockInProgress as an atomic op
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		CountSafe(fmt.Sprint("InvGot",typ))
@@ -48,10 +47,7 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 			binary.Write(bu, binary.LittleEndian, uint32(2))
 			bu.Write(bh.Hash[:])
 		}
-		mutex.Unlock()
 		c.SendRawMsg("getdata", bu.Bytes())
-	} else {
-		mutex.Unlock()
 	}
 
 	return
@@ -68,7 +64,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *oneConnection) (cnt uint)
 	copy(inv[4:36], h.Bytes())
 
 	// Append it to PendingInvs in each open connection
-	mutex.Lock()
+ 	mutex_net.Lock()
 	for _, v := range openCons {
 		if v != fromConn { // except for the one that this inv came from
 			v.Mutex.Lock()
@@ -81,7 +77,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *oneConnection) (cnt uint)
 			v.Mutex.Unlock()
 		}
 	}
-	mutex.Unlock()
+	mutex_net.Unlock()
 	return
 }
 
@@ -159,9 +155,9 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 			// make sure that this block is in our main chain
-			mutex.Lock()
-			end := LastBlock
-			mutex.Unlock()
+			Last.mutex.Lock()
+			end := Last.Block
+			Last.mutex.Unlock()
 			for ; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
@@ -213,15 +209,15 @@ func (c *oneConnection) SendInvs() (res bool) {
 
 
 func (c *oneConnection) getblocksNeeded() bool {
-	mutex.Lock()
-	lb := LastBlock
-	mutex.Unlock()
+	Last.mutex.Lock()
+	lb := Last.Block
+	Last.mutex.Unlock()
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
 		c.LastBlocksFrom = lb
 
-		mutex.Lock()
-		GetBlocksAskBack := int(time.Now().Sub(LastBlockReceived) / time.Minute)
-		mutex.Unlock()
+		Last.mutex.Lock()
+		GetBlocksAskBack := int(time.Now().Sub(Last.Time) / time.Minute)
+		Last.mutex.Unlock()
 		if GetBlocksAskBack >= btc.MovingCheckopintDepth {
 			GetBlocksAskBack = btc.MovingCheckopintDepth
 		}

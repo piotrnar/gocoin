@@ -7,6 +7,7 @@ import (
 	"time"
 	"strings"
 	"io/ioutil"
+	//"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/btc/qdb"
@@ -16,58 +17,60 @@ import (
 const ConfigFile = "gocoin.conf"
 
 // Here are command line only options
-var FLAG struct {
-	rescan bool
-}
+var (
+	FLAG struct {
+		rescan bool
+	}
 
 // Here are options that can come from either command line or config file
-var CFG struct {
-	Testnet bool
-	ConnectOnly string
-	Datadir string
-	WebUI struct {
-		Interface string
-		AllowedIP string // comma separated
-		ShowBlocks uint
+	CFG struct {
+		Testnet bool
+		ConnectOnly string
+		Datadir string
+		WebUI struct {
+			Interface string
+			AllowedIP string // comma separated
+			ShowBlocks uint
+		}
+		Net struct {
+			ListenTCP bool
+			TCPPort uint
+			MaxOutCons uint
+			MaxInCons uint
+			MaxUpKBps uint
+			MaxDownKBps uint
+			MaxBlockAtOnce uint
+		}
+		TXPool struct {
+			Enabled bool // Global on/off swicth
+			AllowMemInputs bool
+			FeePerByte uint
+			MaxTxSize uint
+			MinVoutValue uint
+			// If somethign is 1KB big, it expires after this many minutes.
+			// Otherwise expiration time will be proportionally different.
+			TxExpireMinPerKB uint
+			TxExpireMaxHours uint
+		}
+		TXRoute struct {
+			Enabled bool // Global on/off swicth
+			FeePerByte uint
+			MaxTxSize uint
+			MinVoutValue uint
+		}
+		Memory struct {
+			MinBrowsableVal uint
+			NoCacheBefore uint
+			GCPercTrshold int
+		}
+		Beeps struct {
+			NewBlock bool  // beep when a new block has been mined
+			ActiveFork bool  // triple beep when ther is a fork
+			NewBalance bool // been when a balance has changed
+			MinerID string // beep when a bew block is mined with this string in coinbase
+		}
 	}
-	Net struct {
-		ListenTCP bool
-		TCPPort uint
-		MaxOutCons uint
-		MaxInCons uint
-		MaxUpKBps uint
-		MaxDownKBps uint
-		MaxBlockAtOnce uint
-	}
-	TXPool struct {
-		Enabled bool // Global on/off swicth
-		AllowMemInputs bool
-		FeePerByte uint
-		MaxTxSize uint
-		MinVoutValue uint
-		// If somethign is 1KB big, it expires after this many minutes.
-		// Otherwise expiration time will be proportionally different.
-		TxExpireMinPerKB uint
-		TxExpireMaxHours uint
-	}
-	TXRoute struct {
-		Enabled bool // Global on/off swicth
-		FeePerByte uint
-		MaxTxSize uint
-		MinVoutValue uint
-	}
-	Memory struct {
-		MinBrowsableVal uint
-		NoCacheBefore uint
-		GCPercTrshold int
-	}
-	Beeps struct {
-		NewBlock bool  // beep when a new block has been mined
-		ActiveFork bool  // triple beep when ther is a fork
-		NewBalance bool // been when a balance has changed
-		MinerID string // beep when a bew block is mined with this string in coinbase
-	}
-}
+)
 
 type oneAllowedAddr struct {
 	addr, mask uint32
@@ -199,9 +202,7 @@ func set_config(s string) {
 		if e != nil {
 			println(e.Error())
 		} else {
-			mutex.Lock()
 			CFG = new
-			mutex.Unlock()
 			resetcfg()
 			fmt.Println("Config changed. Execute configsave, if you want to save it.")
 		}
@@ -217,9 +218,7 @@ func load_config(s string) {
 		println(e.Error())
 		return
 	}
-	mutex.Lock()
 	e = json.Unmarshal(d, &CFG)
-	mutex.Unlock()
 	if e != nil {
 		println(e.Error())
 		return

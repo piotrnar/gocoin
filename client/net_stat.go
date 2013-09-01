@@ -32,14 +32,14 @@ func look2conn(par string) (c *oneConnection) {
 		println(e.Error())
 		return
 	}
-	mutex.Lock()
+	mutex_net.Lock()
 	for _, v := range openCons {
 		if uint32(conid)==v.ConnID {
 			c = v
 			break
 		}
 	}
-	mutex.Unlock()
+	mutex_net.Unlock()
 	return
 }
 
@@ -63,7 +63,7 @@ func net_stats(par string) {
 		return
 	}
 
-	mutex.Lock()
+	mutex_net.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(openCons), OutConsActive)
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
@@ -106,7 +106,7 @@ func net_stats(par string) {
 		fmt.Println("No known external address")
 	}
 
-	mutex.Unlock()
+	mutex_net.Unlock()
 	bw_stats()
 }
 

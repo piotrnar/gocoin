@@ -16,8 +16,10 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	blks := load_template("blocks.html")
 	onerow := load_template("blocks_row.html")
 
-	mutex.Lock()
-	end := LastBlock
+	Last.mutex.Lock()
+	end := Last.Block
+	Last.mutex.Unlock()
+
 	for cnt:=uint(0); end!=nil && cnt<CFG.WebUI.ShowBlocks; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
@@ -44,7 +46,10 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		mi, _ := blocks_miner(bl)
 		s = strings.Replace(s, "{BLOCK_MINER}", mi, 1)
 
+		mutex_rcv.Lock()
 		rb := receivedBlocks[end.BlockHash.BIdx()]
+		mutex_rcv.Unlock()
+
 		if rb.tmDownload!=0 {
 			s = strings.Replace(s, "{TIME_TO_DOWNLOAD}", fmt.Sprint(int(rb.tmDownload/time.Millisecond)), 1)
 		} else {
@@ -65,7 +70,6 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 
 		end = end.Parent
 	}
-	mutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(blks))

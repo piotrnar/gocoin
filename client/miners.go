@@ -74,10 +74,10 @@ func do_mining(s string) {
 	}
 	fmt.Println("Looking back", hrs, "hours...")
 	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())
-	mutex.Lock()
-	bte := LastBlock
+	Last.mutex.Lock()
+	bte := Last.Block
 	end := bte
-	mutex.Unlock()
+	Last.mutex.Unlock()
 	cnt, diff := 0, float64(0)
 	tot_blocks, tot_blocks_len := 0, 0
 	for end.Timestamp >= lim {

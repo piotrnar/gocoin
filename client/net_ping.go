@@ -38,7 +38,7 @@ func (c *oneConnection) GetAveragePing() int {
 func drop_slowest_peer() {
 	var worst_ping int
 	var worst_conn *oneConnection
-	mutex.Lock()
+	mutex_net.Lock()
 	for _, v := range openCons {
 		if v.Incomming && InConsActive < CFG.Net.MaxInCons {
 			// If this is an incomming connection, but we are not full yet, ignore it
@@ -57,7 +57,7 @@ func drop_slowest_peer() {
 		worst_conn.Disconnect()
 		CountSafe("PeersDropped")
 	}
-	mutex.Unlock()
+	mutex_net.Unlock()
 }
 
 

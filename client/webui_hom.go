@@ -17,7 +17,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("home.html")
 
-	mutex.Lock()
+	mutex_bal.Lock()
 	if len(MyBalance)>0 {
 		wal := load_template("home_wal.html")
 		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
@@ -30,21 +30,27 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "<!--WALLET-->", "Your balance is <b>zero</b>", 1)
 		}
 	}
-	s = strings.Replace(s, "{LAST_BLOCK_HASH}", LastBlock.BlockHash.String(), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(LastBlock.Height), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_TIME}",
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", fmt.Sprintf("%.3f", btc.GetDifficulty(LastBlock.Bits)), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(LastBlockReceived).String(), 1)
+	mutex_bal.Unlock()
+
+	Last.mutex.Lock()
+	s = strings.Replace(s, "{LAST_BLOCK_HASH}", Last.Block.BlockHash.String(), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(Last.Block.Height), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_TIME}", time.Unix(int64(Last.Block.Timestamp), 0).Format("2006/01/02 15:04:05"), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", fmt.Sprintf("%.3f", btc.GetDifficulty(Last.Block.Bits)), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(Last.Time).String(), 1)
+	Last.mutex.Unlock()
+
 	s = strings.Replace(s, "{BLOCKS_CACHED}", fmt.Sprint(len(cachedBlocks)), 1)
 	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(peerDB.Count()), 1)
 	s = strings.Replace(s, "{NODE_UPTIME}", time.Now().Sub(StartTime).String(), 1)
 	s = strings.Replace(s, "{NET_BLOCK_QSIZE}", fmt.Sprint(len(netBlocks)), 1)
 	s = strings.Replace(s, "{NET_TX_QSIZE}", fmt.Sprint(len(netTxs)), 1)
+
+	mutex_net.Lock()
 	s = strings.Replace(s, "{OPEN_CONNS_TOTAL}", fmt.Sprint(len(openCons)), 1)
 	s = strings.Replace(s, "{OPEN_CONNS_OUT}", fmt.Sprint(OutConsActive), 1)
 	s = strings.Replace(s, "{OPEN_CONNS_IN}", fmt.Sprint(InConsActive), 1)
-	mutex.Unlock()
+	mutex_net.Unlock()
 
 	bw_mutex.Lock()
 	tick_recv()

@@ -43,9 +43,9 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	m := make(map[string] omv, 20)
 	var unkn, om omv
 	cnt := 0
-	mutex.Lock()
-	end := LastBlock
-	mutex.Unlock()
+	Last.mutex.Lock()
+	end := Last.Block
+	Last.mutex.Unlock()
 	var lastts int64
 	var diff float64
 	var totbts uint64

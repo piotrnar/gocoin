@@ -148,16 +148,19 @@ func show_info(par string) {
 		fmt.Println("Chain thread is idle")
 	}
 	busy_mutex.Unlock()
-	mutex.Lock()
-	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
+
+	Last.mutex.Lock()
+	fmt.Println("Last Block:", Last.Block.BlockHash.String())
 	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
-		LastBlock.Height,
-		time.Unix(int64(LastBlock.Timestamp), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(LastBlock.Bits), time.Now().Sub(LastBlockReceived).String())
+		Last.Block.Height,
+		time.Unix(int64(Last.Block.Timestamp), 0).Format("2006/01/02 15:04:05"),
+		btc.GetDifficulty(Last.Block.Bits), time.Now().Sub(Last.Time).String())
+	Last.mutex.Unlock()
+
+	mutex_net.Lock()
 	fmt.Printf("BlocksCached: %d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(cachedBlocks), len(netBlocks), len(openCons),
-		peerDB.Count())
-	mutex.Unlock()
+		len(cachedBlocks), len(netBlocks), len(openCons), peerDB.Count())
+	mutex_net.Unlock()
 
 	tx_mutex.Lock()
 	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
