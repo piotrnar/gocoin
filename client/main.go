@@ -216,6 +216,17 @@ func retry_cached_blocks() bool {
 }
 
 
+func CloseBlockChain() {
+	if BlockChain!=nil {
+		println("Closing blockchain")
+		BlockChain.Sync()
+		BlockChain.Save()
+		BlockChain.Close()
+		BlockChain = nil
+	}
+}
+
+
 func main() {
 	if btc.EC_Verify==nil {
 		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable EC_Verify wrapper if possible.")
@@ -234,11 +245,9 @@ func main() {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			println("main panic recovered:", err.Error())
-			if BlockChain!=nil {
-				BlockChain.Sync()
-				BlockChain.Save()
-				BlockChain.Close()
-			}
+			NetCloseAll()
+			CloseBlockChain()
+			ClosePeerDB()
 			UnlockDatabaseDir()
 			os.Exit(1)
 		}
@@ -326,20 +335,10 @@ func main() {
 		}
 
 		CountSafe("NetMessagesGot")
-
 	}
 
-	println("Closing network")
 	NetCloseAll()
-
-	println("Closing blockchain")
-	BlockChain.Sync()
-	BlockChain.Save()
-	BlockChain.Close()
-
-	peerDB.Sync()
-	peerDB.Defrag()
-	peerDB.Close()
-
+	CloseBlockChain()
+	ClosePeerDB()
 	UnlockDatabaseDir()
 }
