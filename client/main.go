@@ -32,6 +32,7 @@ var (
 	/*
 	This mutex protects access to
 		* LastBlock, LastBlockReceived
+		* openCons
 		* receivedBlocks
 	*/
 	mutex sync.Mutex
@@ -158,17 +159,17 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			}
 		}
 
+		mutex.Lock()
+		LastBlockReceived = time.Now()
+		LastBlock = BlockChain.BlockTreeEnd
+		mutex.Unlock()
+
 		if BalanceChanged {
+			BalanceChanged = false
 			fmt.Println("Your balance has just changed")
 			fmt.Print(DumpBalance(nil, false))
 			ui_show_prompt()
 		}
-
-		mutex.Lock()
-		LastBlockReceived = time.Now()
-		LastBlock = BlockChain.BlockTreeEnd
-		BalanceChanged = false
-		mutex.Unlock()
 	} else {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
