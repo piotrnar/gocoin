@@ -151,7 +151,10 @@ func tcp_server() {
 
 	for CFG.Net.ListenTCP {
 		CountSafe("NetServerLoops")
-		if InConsActive < CFG.Net.MaxInCons {
+		mutex.Lock()
+		ica := InConsActive
+		mutex.Unlock()
+		if ica < CFG.Net.MaxInCons {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
