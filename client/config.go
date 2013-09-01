@@ -28,6 +28,7 @@ var CFG struct {
 	WebUI struct {
 		Interface string
 		AllowedIP string // comma separated
+		ShowBlocks uint
 	}
 	Net struct {
 		ListenTCP bool
@@ -83,6 +84,7 @@ func init() {
 
 	CFG.WebUI.Interface = "127.0.0.1:8833"
 	CFG.WebUI.AllowedIP = "127.0.0.1"
+	CFG.WebUI.ShowBlocks = 25
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
@@ -197,7 +199,9 @@ func set_config(s string) {
 		if e != nil {
 			println(e.Error())
 		} else {
+			mutex.Lock()
 			CFG = new
+			mutex.Unlock()
 			resetcfg()
 			fmt.Println("Config changed. Execute configsave, if you want to save it.")
 		}
@@ -213,7 +217,9 @@ func load_config(s string) {
 		println(e.Error())
 		return
 	}
+	mutex.Lock()
 	e = json.Unmarshal(d, &CFG)
+	mutex.Unlock()
 	if e != nil {
 		println(e.Error())
 		return
