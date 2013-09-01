@@ -15,6 +15,8 @@ var (
 	BalanceInvalid bool = true
 )
 
+
+// This is called while accepting the block (from teh chain's thread)
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	if valpk!=nil {
 		if MyWallet==nil {
@@ -49,6 +51,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 }
 
 
+// Call it only from the Chain thread
 func DumpBalance(utxt *os.File, details bool) (s string) {
 	var sum uint64
 	for i := range MyBalance {
@@ -56,7 +59,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 		if details {
 			if i<100 {
-				s += fmt.Sprintf("%7d %s\n", 1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt,
+				s += fmt.Sprintf("%7d %s\n", 1+LastBlock.Height-MyBalance[i].MinedAt,
 					MyBalance[i].String())
 			} else if i==100 {
 				s += fmt.Sprintln("List of unspent outputs truncated to 100 records")
@@ -78,7 +81,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 			// Store the unspent line in balance/unspent.txt
 			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs\n", MyBalance[i].TxPrevOut.String(),
 				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.StringLab(),
-				1+BlockChain.BlockTreeEnd.Height-MyBalance[i].MinedAt)
+				1+LastBlock.Height-MyBalance[i].MinedAt)
 
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
@@ -91,7 +94,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 			// Find the block with the indicated Height in the main tree
 			BlockChain.BlockIndexAccess.Lock()
-			n := BlockChain.BlockTreeEnd
+			n := LastBlock
 			if n.Height < po.BlockHeight {
 				println(n.Height, po.BlockHeight)
 				BlockChain.BlockIndexAccess.Unlock()
