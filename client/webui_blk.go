@@ -16,8 +16,9 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	blks := load_template("blocks.html")
 	onerow := load_template("blocks_row.html")
 
-	end := BlockChain.BlockTreeEnd
-	for cnt:=0; end!=nil && cnt<100; cnt++ {
+	mutex.Lock()
+	end := LastBlock
+	for cnt:=0; end!=nil && cnt<50; cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
@@ -64,6 +65,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 
 		end = end.Parent
 	}
+	mutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(blks))
