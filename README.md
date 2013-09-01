@@ -1,6 +1,6 @@
 Gocoin
 ==============
-Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang). 
+Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang).
 
 
 Architecture
@@ -48,13 +48,13 @@ The wallet application has very little requirements and it should work with lite
 
 Security
 --------------
-The wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk, with a solid (unbreakable) password. Also use an encrypted swap file since there is no guarantee that no secret part wwould end up in the swap file, at some point. 
+The wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk, with a solid (unbreakable) password. Also use an encrypted swap file since there is no guarantee that no secret part wwould end up in the swap file, at some point.
 
 It is also extremely importnant (for the security of your wallet's private keys) to run the wallet app on a platform (OS) that has a reliable (menaing: unpredicible) random number generator. Any popular OS (Widnows, Linux, MacOS) should be fine, but be careful using any kind of a simplified hardware/OS. Read more about this:
- * http://golang.org/pkg/crypto/rand/#pkg-variables 
- * https://bitcointalk.org/index.php?topic=271486.0 
+ * http://golang.org/pkg/crypto/rand/#pkg-variables
+ * https://bitcointalk.org/index.php?topic=271486.0
 
-Deterministic nature of the wallet implies that whenever any of your private keys is compromised, it also compromises all the further keys that originate from it. To address this risk Type-3 deterministic wallet has been implemented in Gocoin version 0.6.4 (use -t3 command line switch). 
+Deterministic nature of the wallet implies that whenever any of your private keys is compromised, it also compromises all the further keys that originate from it. To address this risk Type-3 deterministic wallet has been implemented in Gocoin version 0.6.4 (use -t3 command line switch).
 
 Dependencies
 ==============
@@ -68,6 +68,7 @@ Of course you also need a Go compiler for your platform.
 When you have all of the above, just allow Go to fetch the a dependency library for you, by executing:
 
 	go get code.google.com/p/go.crypto/ripemd160
+	go get code.google.com/p/snappy-go/snappy
 
 
 
@@ -131,7 +132,7 @@ Run “client -h” to see all available command line switches. The main ones are:
 When the client is already running you have the UI where you can issue commands. Type "help" to see  the possible commands.
 
 ### Web UI
-There is also a web interface that you can operate with a web browser. 
+There is also a web interface that you can operate with a web browser.
 
 Make sure that wherever you launch the client executable from, there is the „webht” and „webui” folder, along with its content. They are an important part of the WebUI application. You can edit these files to satisfy your preferences.
 
@@ -302,4 +303,3 @@ If you need a support, you have three options:
  * Try to reach me on Freenet-IRC, finding me by the nick “tonikt” (sometimes “tonikt2” or “tonikt3”).
  * Ask in this forum thread: https://bitcointalk.org/index.php?topic=199306.0
  * Open an issue on GitHub: https://github.com/piotrnar/gocoin/issues
-
