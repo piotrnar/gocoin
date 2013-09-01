@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"compress/gzip"
 	"encoding/binary"
+	"code.google.com/p/snappy-go/snappy"
 )
 
 
@@ -17,6 +18,7 @@ const (
 	BLOCK_TRUSTED = 0x01
 	BLOCK_INVALID = 0x02
 	BLOCK_COMPRSD = 0x04
+	BLOCK_SNAPPED = 0x08
 
 	MaxCachedBlocks = 500
 )
@@ -27,7 +29,8 @@ const (
 		[0] - flags:
 			bit(0) - "trusted" flag - this block's scripts have been verified
 			bit(1) - "invalid" flag - this block's scripts have failed
-			bit(2) - "compressed" flag - this block's data iz gzip compressed
+			bit(2) - "compressed" flag - this block's data is compressed
+			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
 		[4:36]  - 256-bit block hash
 		[36:68] - 256-bit block's Parent hash
 		[68:72] - 32-bit block height (genesis is 0)
@@ -45,6 +48,7 @@ type oneBl struct {
 	ipos int64  // where at the record is stored in blockchain.idx (used to set flags)
 	trusted bool
 	compressed bool
+	snappied bool
 }
 
 type cacheRecord struct {
@@ -126,15 +130,12 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 		panic(e.Error())
 	}
 
-	flagz[0] |= BLOCK_COMPRSD
-	cb := new(bytes.Buffer)
-	gz := gzip.NewWriter(cb)
-	gz.Write(bl.Raw)
-	gz.Close()
+	flagz[0] |= BLOCK_COMPRSD|BLOCK_SNAPPED // gzip compression is deprecated
+	cbts, _ := snappy.Encode(nil, bl.Raw)
 
-	blksize := uint32(len(cb.Bytes()))
+	blksize := uint32(len(cbts))
 
-	_, e = db.blockdata.Write(cb.Bytes())
+	_, e = db.blockdata.Write(cbts)
 	if e != nil {
 		panic(e.Error())
 	}
@@ -155,7 +156,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 
 	db.mutex.Lock()
 	db.blockIndex[bl.Hash.BIdx()] = &oneBl{fpos:uint64(pos),
-		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true}
+		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true, snappied:true}
 	db.addToCache(bl.Hash, bl.Raw)
 	db.mutex.Unlock()
 	return
@@ -255,9 +256,13 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 	f.Close()
 
 	if rec.compressed {
-		gz, _ := gzip.NewReader(bytes.NewReader(bl))
-		bl, _ = ioutil.ReadAll(gz)
-		gz.Close()
+		if rec.snappied {
+			bl, _ = snappy.Decode(nil, bl)
+		} else {
+			gz, _ := gzip.NewReader(bytes.NewReader(bl))
+			bl, _ = ioutil.ReadAll(gz)
+			gz.Close()
+		}
 	}
 
 	db.addToCache(hash, bl)
@@ -284,6 +289,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		ob := new(oneBl)
 		ob.trusted = (b[0]&BLOCK_TRUSTED) != 0
 		ob.compressed = (b[0]&BLOCK_COMPRSD) != 0
+		ob.snappied = (b[0]&BLOCK_SNAPPED) != 0
 		ob.fpos = binary.LittleEndian.Uint64(b[80:88])
 		ob.blen = binary.LittleEndian.Uint32(b[88:92])
 		ob.ipos = validpos
