@@ -330,6 +330,7 @@ func maxmsgsize(cmd string) uint32 {
 
 
 func NetCloseAll() {
+	println("Closing network")
 	CFG.Net.ListenTCP = false
 	mutex.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
