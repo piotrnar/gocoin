@@ -233,9 +233,9 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 
 	trusted = rec.trusted
 	if crec, hit := db.cache[hash.BIdx()]; hit {
-		db.mutex.Unlock()
 		bl = crec.data
 		crec.used = time.Now()
+		db.mutex.Unlock()
 		return
 	}
 	db.mutex.Unlock()
