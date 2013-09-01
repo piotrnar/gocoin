@@ -147,7 +147,7 @@ func tcp_server() {
 	}
 	defer lis.Close()
 
-	fmt.Println("TCP server started at", ad.String())
+	//fmt.Println("TCP server started at", ad.String())
 
 	for CFG.Net.ListenTCP {
 		CountSafe("NetServerLoops")
@@ -204,7 +204,7 @@ func tcp_server() {
 	}
 	tcp_server_started = false
 	mutex.Unlock()
-	fmt.Println("TCP server stopped")
+	//fmt.Println("TCP server stopped")
 }
 
 
