@@ -376,7 +376,7 @@ func defrag_blocks(par string) {
 			break
 		}
 		if (blk.Height&0xff)==0 {
-			fmt.Printf("\r%d / %d blocks written (%d%%)", blk.Height, BlockChain.BlockTreeEnd.Height,
+			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, BlockChain.BlockTreeEnd.Height,
 				100 * blk.Height / BlockChain.BlockTreeEnd.Height)
 		}
 		bl, trusted, er := BlockChain.Blocks.BlockGet(blk.BlockHash)
