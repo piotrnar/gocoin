@@ -173,22 +173,3 @@ func blockWanted(h []byte) (yes bool) {
 }
 
 
-// This function is called from the main thread (or from an UI)
-// It is only used to ask for tx that we need for an input,
-// but it does not seem to help, so it will likely be removed.
-func AskPeersForData(typ uint32, h *btc.Uint256) {
-	CountSafe(fmt.Sprint("AskPeersForData", typ))
-
-	// Prepare the inv
-	pl := make([]byte, 37)
-	pl[0] = 1 // only one hash
-	binary.LittleEndian.PutUint32(pl[1:5], typ)
-	copy(pl[4:36], h.Bytes())
-
-	// Append it to PendingInvs in each open connection
-	mutex.Lock()
-	for _, v := range openCons {
-		v.SendRawMsg("getdata", pl)
-	}
-	mutex.Unlock()
-}

@@ -114,7 +114,7 @@ func net_stats(par string) {
 func net_drop(par string) {
 	c := look2conn(par)
 	if c!=nil {
-		c.Broken = true
+		c.Disconnect()
 		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped")
 	} else {
 		fmt.Println("There is no such an active connection")
@@ -130,6 +130,7 @@ func node_stat(v *oneConnection) (s string) {
 		s += fmt.Sprintln("Going to", v.PeerAddr.Ip())
 	}
 	if !v.ConnectedAt.IsZero() {
+		v.Mutex.Lock()
 		s += fmt.Sprintln("Connected at", v.ConnectedAt.Format("2006-01-02 15:04:05"))
 		if v.node.version!=0 {
 			s += fmt.Sprintln("Node Version:", v.node.version)
@@ -164,6 +165,7 @@ func node_stat(v *oneConnection) (s string) {
 			idx = (idx+1)%PingHistoryLength
 		}
 		s += fmt.Sprintln(" ->", v.GetAveragePing(), "ms")
+		v.Mutex.Unlock()
 	} else {
 		s += fmt.Sprintln("Not yet connected")
 	}

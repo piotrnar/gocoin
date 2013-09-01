@@ -7,7 +7,6 @@ import (
 	"sync"
 	"runtime"
 	"os/signal"
-	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -30,7 +29,14 @@ var (
 	LastBlock *btc.BlockTreeNode
 	LastBlockReceived time.Time
 
-	mutex, counter_mutex sync.Mutex
+	/*
+	This mutex protects access to
+		* LastBlock, LastBlockReceived
+		* receivedBlocks
+	*/
+	mutex sync.Mutex
+
+	counter_mutex sync.Mutex
 	netBlocks chan *blockRcvd = make(chan *blockRcvd, 1000)
 	netTxs chan *txRcvd = make(chan *txRcvd, 1000)
 	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
@@ -43,6 +49,7 @@ var (
 	Counter map[string] uint64 = make(map[string]uint64)
 
 	busy string
+	busy_mutex sync.Mutex
 )
 
 type oneReceivedBlock struct {
@@ -70,9 +77,9 @@ type oneCachedBlock struct {
 }
 
 func Busy(b string) {
-	mutex.Lock()
+	busy_mutex.Lock()
 	busy = b
-	mutex.Unlock()
+	busy_mutex.Unlock()
 }
 
 func CountSafe(k string) {
@@ -109,10 +116,11 @@ func addBlockToCache(bl *btc.Block, conn *oneConnection) {
 
 func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 	sta := time.Now()
-	debug.SetGCPercent(-1)  // we need this fast, so disable GC for the time being
 	e = BlockChain.AcceptBlock(bl)
 	if e == nil {
+		mutex.Lock()
 		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
+		mutex.Unlock()
 
 		for i:=1; i<len(bl.Txs); i++ {
 			TxMined(bl.Txs[i].Hash)
@@ -156,14 +164,14 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 			ui_show_prompt()
 		}
 
+		mutex.Lock()
 		LastBlockReceived = time.Now()
 		LastBlock = BlockChain.BlockTreeEnd
 		BalanceChanged = false
-
+		mutex.Unlock()
 	} else {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
-	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	return
 }
 
@@ -319,6 +327,10 @@ func main() {
 		CountSafe("NetMessagesGot")
 
 	}
+
+	println("Closing network")
+	NetCloseAll()
+
 	println("Closing blockchain")
 	BlockChain.Sync()
 	BlockChain.Save()

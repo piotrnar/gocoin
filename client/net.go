@@ -58,8 +58,10 @@ type oneConnection struct {
 	PeerAddr *onePeer
 	ConnID uint32
 
-	Broken bool // maker that the conenction has been Broken
-	BanIt bool // BanIt this client after disconnecting
+	sync.Mutex // protects concurent access to any fields inside this structure
+
+	broken bool // flag that the conenction has been broken / shall be disconnected
+	banit bool // Ban this client after disconnecting
 
 	// TCP connection data:
 	Incomming bool
@@ -148,7 +150,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
 			}
-			c.Broken = true
+			c.Disconnect()
 			CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
@@ -182,14 +184,27 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 }
 
 
+func (c *oneConnection) Disconnect() {
+	c.Mutex.Lock()
+	c.broken = true
+	c.Mutex.Unlock()
+}
+
+
+func (c *oneConnection) IsBroken() (res bool) {
+	c.Mutex.Lock()
+	res = c.broken
+	c.Mutex.Unlock()
+	return
+}
+
+
 func (c *oneConnection) DoS() {
 	CountSafe("BannedNodes")
-	c.BanIt = true
-	c.Broken = true
-	c.recv.hdr_len = 0
-	c.recv.pl_len = 0
-	c.recv.dat = nil
-	c.recv.datlen = 0
+	c.Mutex.Lock()
+	c.banit = true
+	c.broken = true
+	c.Mutex.Unlock()
 }
 
 
@@ -203,7 +218,7 @@ func (c *oneConnection) HandleError(e error) (error) {
 	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
-	c.Broken = true
+	c.Disconnect()
 	return e
 }
 
@@ -224,10 +239,10 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 				println("FetchMessage: Proto out of sync")
 			}
 			CountSafe("NetBadMagic")
-			c.Broken = true
+			c.Disconnect()
 			return nil
 		}
-		if c.Broken {
+		if c.IsBroken() {
 			return nil
 		}
 		c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
@@ -262,7 +277,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 				c.HandleError(e)
 				return nil
 			}
-			if c.Broken {
+			if c.IsBroken() {
 				return nil
 			}
 		}
@@ -306,6 +321,26 @@ func maxmsgsize(cmd string) uint32 {
 		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
 		case "getdata": return 3+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
 		default: return 1024 // Any other type of block: 1KB payload limit
+	}
+}
+
+
+func NetCloseAll() {
+	mutex.Lock()
+	if InConsActive > 0 || OutConsActive > 0 {
+		for _, v := range openCons {
+			v.Disconnect()
+		}
+	}
+	mutex.Unlock()
+	for {
+		time.Sleep(1e7)
+		mutex.Lock()
+		all_done := InConsActive == 0 && OutConsActive == 0
+		mutex.Unlock()
+		if all_done {
+			return
+		}
 	}
 }
 

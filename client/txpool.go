@@ -247,7 +247,6 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 							"->", bidx2str(tx.Hash.BIdx()), len(rec.Ids))
 						ui_show_prompt()
 					}
-					//AskPeersForData(1, missingid)  // This does not seem to be helping at all
 				} else {
 					CountSafe("TxRejectedNoInputOld")
 					if dbg > 0 {

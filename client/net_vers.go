@@ -35,7 +35,9 @@ func (c *oneConnection) SendVersion() {
 	b.WriteByte(byte(len(UserAgent)))
 	b.Write([]byte(UserAgent))
 
+	mutex.Lock()
 	binary.Write(b, binary.LittleEndian, uint32(LastBlock.Height))
+	mutex.Unlock()
 	if !CFG.TXPool.Enabled {
 		b.WriteByte(0)  // don't notify me about txs
 	}

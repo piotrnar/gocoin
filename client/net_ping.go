@@ -54,7 +54,7 @@ func drop_slowest_peer() {
 		if dbg > 0 {
 			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
 		}
-		worst_conn.Broken = true
+		worst_conn.Disconnect()
 		CountSafe("PeersDropped")
 	}
 	mutex.Unlock()

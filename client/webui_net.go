@@ -21,7 +21,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	srt := make(sortedkeys, len(openCons))
 	cnt := 0
 	for k, v := range openCons {
-		if !v.Broken {
+		if !v.IsBroken() {
 			srt[cnt].key = k
 			srt[cnt].ConnID = v.ConnID
 			cnt++

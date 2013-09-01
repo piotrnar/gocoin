@@ -109,11 +109,11 @@ func do_userif() {
 					if cmd==uiCmds[i].cmds[j] {
 						found = true
 						if uiCmds[i].sync {
-							mutex.Lock()
+							busy_mutex.Lock()
 							if busy!="" {
 								print("now busy with ", busy)
 							}
-							mutex.Unlock()
+							busy_mutex.Unlock()
 							println("...")
 							sta := time.Now().UnixNano()
 							req := &oneUiReq{param:param, handler:uiCmds[i].handler}
@@ -141,7 +141,13 @@ func do_userif() {
 
 
 func show_info(par string) {
-	fmt.Println(busy)
+	busy_mutex.Lock()
+	if busy!="" {
+		fmt.Println("Chain thread busy with:", busy)
+	} else {
+		fmt.Println("Chain thread is idle")
+	}
+	busy_mutex.Unlock()
 	mutex.Lock()
 	fmt.Println("LastBlock:", LastBlock.BlockHash.String())
 	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",

@@ -14,7 +14,7 @@ func (c *oneConnection) Tick() {
 
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
-		c.Broken = true
+		c.Disconnect()
 		CountSafe("NetNodataTout")
 		if dbg>0 {
 			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
@@ -36,12 +36,12 @@ func (c *oneConnection) Tick() {
 			}
 		} else if time.Now().After(c.send.lastSent.Add(AnySendTimeout)) {
 			CountSafe("PeerSendTimeout")
-			c.Broken = true
+			c.Disconnect()
 		} else if e != nil {
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
-			c.Broken = true
+			c.Disconnect()
 		}
 		return
 	}
@@ -196,7 +196,7 @@ func tcp_server() {
 	mutex.Lock()
 	for _, c := range openCons {
 		if c.Incomming {
-			c.Broken = true
+			c.Disconnect()
 		}
 	}
 	mutex.Unlock()
@@ -254,10 +254,10 @@ func (c *oneConnection) Run() {
 	c.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
 
-	for !c.Broken {
+	for !c.IsBroken() {
 		c.LoopCnt++
 		cmd := c.FetchMessage()
-		if c.Broken {
+		if c.IsBroken() {
 			break
 		}
 
@@ -275,9 +275,11 @@ func (c *oneConnection) Run() {
 			continue
 		}
 
+		c.Mutex.Lock()
 		c.LastDataGot = time.Now()
 		c.LastCmdRcvd = cmd.cmd
 		c.LastBtsRcvd = uint32(len(cmd.pl))
+		c.Mutex.Unlock()
 
 		c.PeerAddr.Alive()
 		if dbg<0 {
@@ -298,7 +300,7 @@ func (c *oneConnection) Run() {
 				er := c.HandleVersion(cmd.pl)
 				if er != nil {
 					println("version:", er.Error())
-					c.Broken = true
+					c.Disconnect()
 				}
 
 			case "verack":
@@ -354,7 +356,10 @@ func (c *oneConnection) Run() {
 				println(cmd.cmd, "from", c.PeerAddr.Ip())
 		}
 	}
-	if c.BanIt {
+	c.Mutex.Lock()
+	ban := c.banit
+	c.Mutex.Unlock()
+	if ban {
 		c.PeerAddr.Ban()
 		CountSafe("PeersBanned")
 	}

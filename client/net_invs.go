@@ -71,12 +71,14 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *oneConnection) (cnt uint)
 	mutex.Lock()
 	for _, v := range openCons {
 		if v != fromConn { // except for the one that this inv came from
+			v.Mutex.Lock()
 			if len(v.PendingInvs)<500 {
 				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
 			} else {
 				CountSafe("SendInvIgnored")
 			}
+			v.Mutex.Unlock()
 		}
 	}
 	mutex.Unlock()
@@ -157,7 +159,10 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 		BlockChain.BlockIndexAccess.Lock()
 		if bl, ok := BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 			// make sure that this block is in our main chain
-			for end := LastBlock; end!=nil && end.Height>=bl.Height; end = end.Parent {
+			mutex.Lock()
+			end := LastBlock
+			mutex.Unlock()
+			for ; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
 					if dbg>0 {
@@ -190,7 +195,7 @@ func (c *oneConnection) ProcessGetBlocks(pl []byte) {
 
 func (c *oneConnection) SendInvs() (res bool) {
 	b := new(bytes.Buffer)
-	mutex.Lock()
+	c.Mutex.Lock()
 	if len(c.PendingInvs)>0 {
 		btc.WriteVlen(b, uint32(len(c.PendingInvs)))
 		for i := range c.PendingInvs {
@@ -199,7 +204,7 @@ func (c *oneConnection) SendInvs() (res bool) {
 		res = true
 	}
 	c.PendingInvs = nil
-	mutex.Unlock()
+	c.Mutex.Unlock()
 	if res {
 		c.SendRawMsg("inv", b.Bytes())
 	}
@@ -212,9 +217,11 @@ func (c *oneConnection) getblocksNeeded() bool {
 	lb := LastBlock
 	mutex.Unlock()
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
-		c.LastBlocksFrom = LastBlock
+		c.LastBlocksFrom = lb
 
+		mutex.Lock()
 		GetBlocksAskBack := int(time.Now().Sub(LastBlockReceived) / time.Minute)
+		mutex.Unlock()
 		if GetBlocksAskBack >= btc.MovingCheckopintDepth {
 			GetBlocksAskBack = btc.MovingCheckopintDepth
 		}
@@ -222,7 +229,7 @@ func (c *oneConnection) getblocksNeeded() bool {
 		b := make([]byte, 37)
 		binary.LittleEndian.PutUint32(b[0:4], Version)
 		b[4] = 1 // one locator so far...
-		copy(b[5:37], LastBlock.BlockHash.Hash[:])
+		copy(b[5:37], lb.BlockHash.Hash[:])
 
 		if GetBlocksAskBack > 0 {
 			BlockChain.BlockIndexAccess.Lock()
