@@ -144,6 +144,8 @@ func NewConnection(ad *onePeer) (c *oneConnection) {
 
 
 func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	c.Mutex.Lock()
+
 	if c.send.buf!=nil {
 		// Before adding more data to the buffer, check the limit
 		if len(c.send.buf)>MaxSendBufferSize {
@@ -152,6 +154,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			}
 			c.Disconnect()
 			CountSafe("PeerSendOverflow")
+			c.Mutex.Unlock()
 			return errors.New("Send buffer overflow")
 		}
 	} else {
@@ -179,6 +182,7 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if dbg<0 {
 		fmt.Println(cmd, len(c.send.buf), "->", c.PeerAddr.Ip())
 	}
+	c.Mutex.Unlock()
 	//println(len(c.send.buf), "queued for seding to", c.PeerAddr.Ip())
 	return
 }
@@ -326,6 +330,7 @@ func maxmsgsize(cmd string) uint32 {
 
 
 func NetCloseAll() {
+	CFG.Net.ListenTCP = false
 	mutex.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range openCons {
