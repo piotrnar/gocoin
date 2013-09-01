@@ -339,13 +339,13 @@ func NetCloseAll() {
 	}
 	mutex.Unlock()
 	for {
-		time.Sleep(1e7)
 		mutex.Lock()
 		all_done := InConsActive == 0 && OutConsActive == 0
 		mutex.Unlock()
 		if all_done {
 			return
 		}
+		time.Sleep(1e7)
 	}
 }
 
