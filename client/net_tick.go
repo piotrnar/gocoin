@@ -202,9 +202,9 @@ func tcp_server() {
 			c.Disconnect()
 		}
 	}
+	tcp_server_started = false
 	mutex.Unlock()
 	fmt.Println("TCP server stopped")
-	tcp_server_started = false
 }
 
 
