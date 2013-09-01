@@ -356,6 +356,54 @@ func qdb_stats(par string) {
 	fmt.Print(qdb.GetStats())
 }
 
+
+func defrag_blocks(par string) {
+	NetCloseAll()
+	ClosePeerDB()
+
+	println("Creating empty database in", GocoinHomeDir+"defrag", "...")
+	os.RemoveAll(GocoinHomeDir+"defrag")
+	defragdb := btc.NewBlockDB(GocoinHomeDir+"defrag")
+
+	fmt.Println("Defragmenting the database...")
+
+	blk := BlockChain.BlockTreeRoot
+	for {
+		blk = blk.FindPathTo(BlockChain.BlockTreeEnd)
+		if blk==nil {
+			fmt.Println("Database defragmenting finished successfully")
+			fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
+			break
+		}
+		if (blk.Height&0xff)==0 {
+			fmt.Printf("\r%d / %d blocks written (%d%%)", blk.Height, BlockChain.BlockTreeEnd.Height,
+				100 * blk.Height / BlockChain.BlockTreeEnd.Height)
+		}
+		bl, trusted, er := BlockChain.Blocks.BlockGet(blk.BlockHash)
+		if er != nil {
+			println("FATAL ERROR during BlockGet:", er.Error())
+			break
+		}
+		nbl, er := btc.NewBlock(bl)
+		if er != nil {
+			println("FATAL ERROR during NewBlock:", er.Error())
+			break
+		}
+		nbl.Trusted = trusted
+		defragdb.BlockAdd(blk.Height, nbl)
+	}
+
+	defragdb.Sync()
+	defragdb.Close()
+
+	CloseBlockChain()
+	UnlockDatabaseDir()
+
+	fmt.Println("The client will exit now")
+	os.Exit(0)
+}
+
+
 func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
@@ -368,4 +416,5 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
+	newUi("defrag", true, defrag_blocks, "Defragment blocks database and quit (purges orphaned blocks)")
 }
