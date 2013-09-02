@@ -5,6 +5,7 @@
 * Added some protection against racing conditions
 * Do not switch off GC while verifying a block
 * Added UI command "defrag" that purges and recompresses the block database
+* Added snappy compression for the block database (its faster than gzip)
 
 0.6.6
 * Added support for wallet.cfg to specify some default values
