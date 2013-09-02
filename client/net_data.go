@@ -147,24 +147,32 @@ func HandleNetBlock(newbl *blockRcvd) {
 // It goes through all the netowrk connections and checks
 // ... how many of them have a given block download in progress
 // Returns true if it's at the max already - don't want another one.
-func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (bool) {
+func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (res bool) {
 	var cnt uint32
+	mutex_net.Lock()
 	for _, v := range openCons {
-		if _, ok := v.GetBlockInProgress[idx]; ok {
+		v.Mutex.Lock()
+		_, ok := v.GetBlockInProgress[idx]
+		v.Mutex.Unlock()
+		if ok {
 			if cnt+1 >= atomic.LoadUint32(&CFG.Net.MaxBlockAtOnce) {
-				return true
+				res = true
+				break
 			}
 			cnt++
 		}
 	}
-	return false
+	mutex_net.Unlock()
+	return
 }
 
 // Called from network threads
 func blockWanted(h []byte) (yes bool) {
 	idx := btc.NewUint256(h).BIdx()
 	mutex_rcv.Lock()
-	if _, ok := receivedBlocks[idx]; !ok {
+	_, ok := receivedBlocks[idx]
+	mutex_rcv.Unlock()
+	if !ok {
 		if atomic.LoadUint32(&CFG.Net.MaxBlockAtOnce)==0 || !blocksLimitReached(idx) {
 			yes = true
 			CountSafe("BlockWanted")
@@ -174,6 +182,5 @@ func blockWanted(h []byte) (yes bool) {
 	} else {
 		CountSafe("BlockUnwanted")
 	}
-	mutex_rcv.Unlock()
 	return
 }
