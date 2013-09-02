@@ -37,6 +37,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		v := openCons[srt[idx].key]
 		s := net_row
 
+		v.Mutex.Lock()
 		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), -1)
 		if v.Incomming {
 			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/incoming.png\">", 1)
@@ -60,6 +61,8 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		if len(v.GetBlockInProgress)>0 {
 			s = strings.Replace(s, "<!--BLKSINPROG-->", fmt.Sprint(len(v.GetBlockInProgress), "blks "), 1)
 		}
+
+		v.Mutex.Unlock()
 
 		net_page = templ_add(net_page, "<!--PEER_ROW-->", s)
 	}

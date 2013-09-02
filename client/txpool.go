@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
+    "sync/atomic"
 	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
@@ -122,7 +123,7 @@ func (c *oneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *oneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if uint(len(pl))>CFG.TXPool.MaxTxSize {
+	if uint32(len(pl))>atomic.LoadUint32(&CFG.TXPool.MaxTxSize) {
 		CountSafe("TxTooBig")
 		TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_TOO_BIG)
 		return
@@ -264,7 +265,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 	// Check if total output value does not exceed total input
 	minout := uint64(btc.MAX_MONEY)
 	for i := range tx.TxOut {
-		if tx.TxOut[i].Value < uint64(CFG.TXPool.MinVoutValue) {
+		if tx.TxOut[i].Value < atomic.LoadUint64(&CFG.TXPool.MinVoutValue) {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DUST)
 			tx_mutex.Unlock()
 			CountSafe("TxRejectedDust")
@@ -287,7 +288,7 @@ func HandleNetTx(ntx *txRcvd, retry bool) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(len(ntx.raw))*uint64(CFG.TXPool.FeePerByte)) {
+	if fee < (uint64(len(ntx.raw)) * atomic.LoadUint64(&CFG.TXPool.FeePerByte)) {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		tx_mutex.Unlock()
 		CountSafe("TxRejectedLowFee")
@@ -339,17 +340,17 @@ func isRoutable(rec *OneTxToSend) bool {
 		rec.blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if len(rec.data) > int(CFG.TXRoute.MaxTxSize) {
+	if uint32(len(rec.data)) > atomic.LoadUint32(&CFG.TXRoute.MaxTxSize) {
 		CountSafe("TxRouteTooBig")
 		rec.blocked = TX_REJECTED_TOO_BIG
 		return false
 	}
-	if rec.fee < (uint64(len(rec.data))*uint64(CFG.TXRoute.FeePerByte)) {
+	if rec.fee < (uint64(len(rec.data))*atomic.LoadUint64(&CFG.TXRoute.FeePerByte)) {
 		CountSafe("TxRouteLowFee")
 		rec.blocked = TX_REJECTED_LOW_FEE
 		return false
 	}
-	if rec.minout < uint64(CFG.TXRoute.MinVoutValue) {
+	if rec.minout < atomic.LoadUint64(&CFG.TXRoute.MinVoutValue) {
 		CountSafe("TxRouteDust")
 		rec.blocked = TX_REJECTED_DUST
 		return false

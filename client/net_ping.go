@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"sort"
+	"sync/atomic"
 	"crypto/rand"
 )
 
@@ -12,13 +13,16 @@ func (c *oneConnection) HandlePong() {
 	if dbg>1 {
 		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
 	}
+	c.Mutex.Lock()
 	c.PingHistory[c.PingHistoryIdx] = int(ms)
 	c.PingHistoryIdx = (c.PingHistoryIdx+1)%PingHistoryLength
 	c.PingInProgress = nil
 	c.NextPing = time.Now().Add(PingPeriod)
+	c.Mutex.Unlock()
 }
 
 
+// Make sure to called it within c.Mutex.Lock()
 func (c *oneConnection) GetAveragePing() int {
 	if c.node.version>60000 {
 		var pgs[PingHistoryLength] int
@@ -40,11 +44,13 @@ func drop_slowest_peer() {
 	var worst_conn *oneConnection
 	mutex_net.Lock()
 	for _, v := range openCons {
-		if v.Incomming && InConsActive < CFG.Net.MaxInCons {
+		if v.Incomming && InConsActive < atomic.LoadUint32(&CFG.Net.MaxInCons) {
 			// If this is an incomming connection, but we are not full yet, ignore it
 			continue
 		}
+		v.Mutex.Lock()
 		ap := v.GetAveragePing()
+		v.Mutex.Unlock()
 		if ap > worst_ping {
 			worst_ping = ap
 			worst_conn = v

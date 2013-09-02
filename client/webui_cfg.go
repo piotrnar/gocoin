@@ -13,6 +13,8 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.ParseForm()
+	mutex_cfg.Lock()
+	defer mutex_cfg.Unlock()
 
 	if checksid(r) && len(r.Form["txponoff"])>0 {
 		CFG.TXPool.Enabled = !CFG.TXPool.Enabled

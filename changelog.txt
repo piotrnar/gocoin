@@ -1,3 +1,6 @@
+0.7.0
+* A major rewrite around shared memory access, in the network client
+
 0.6.7
 * Added some protection against racing conditions
 * Do not switch off GC while verifying a block

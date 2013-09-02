@@ -168,7 +168,7 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func webserver() {
+func webserver(iface string) {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/wal", p_wal)
 	http.HandleFunc("/net", p_net)
@@ -189,5 +189,5 @@ func webserver() {
 
 	http.HandleFunc("/", p_home)
 
-	http.ListenAndServe(CFG.WebUI.Interface, nil)
+	http.ListenAndServe(iface, nil)
 }

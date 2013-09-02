@@ -51,6 +51,11 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	var totbts uint64
 	current_mid := -1
 	now := time.Now().Unix()
+
+	mutex_cfg.Lock()
+	minerid := CFG.Beeps.MinerID
+	mutex_cfg.Unlock()
+
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp) > 24*3600 {
 			break
@@ -68,7 +73,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			om.bts+= uint64(len(bl))
 			om.mid = mid
 			m[miner] = om
-			if current_mid==-1 && CFG.Beeps.MinerID==MinerIds[mid][1] {
+			if current_mid==-1 && minerid==MinerIds[mid][1] {
 				current_mid = mid
 			}
 		} else {

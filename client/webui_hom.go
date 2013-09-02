@@ -79,7 +79,9 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
 	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
 
+	mutex_cfg.Lock()
 	dat, _ := json.Marshal(&CFG)
+	mutex_cfg.Unlock()
 	s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
 
 	write_html_head(w, r)

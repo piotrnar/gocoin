@@ -5,6 +5,7 @@ import (
 	"time"
 	"strings"
 	"net/http"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -20,7 +21,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	end := Last.Block
 	Last.mutex.Unlock()
 
-	for cnt:=uint(0); end!=nil && cnt<CFG.WebUI.ShowBlocks; cnt++ {
+	for cnt:=uint32(0); end!=nil && cnt<atomic.LoadUint32(&CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return

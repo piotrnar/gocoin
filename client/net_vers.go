@@ -49,21 +49,26 @@ func (c *oneConnection) SendVersion() {
 
 func (c *oneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
+		c.Mutex.Lock()
 		c.node.version = binary.LittleEndian.Uint32(pl[0:4])
 		if bytes.Equal(pl[72:80], nonce[:]) {
+			c.Mutex.Unlock()
 			return errors.New("Connecting to ourselves")
 		}
 		if c.node.version < MIN_PROTO_VERSION {
+			c.Mutex.Unlock()
 			return errors.New("Client version too low")
 		}
 		c.node.services = binary.LittleEndian.Uint64(pl[4:12])
 		c.node.timestamp = binary.LittleEndian.Uint64(pl[12:20])
+		c.Mutex.Unlock()
 		if ValidIp4(pl[40:44]) {
 			ExternalIpMutex.Lock()
 			ExternalIp4[binary.BigEndian.Uint32(pl[40:44])]++
 			ExternalIpMutex.Unlock()
 		}
 		if len(pl) >= 86 {
+			c.Mutex.Lock()
 			le, of := btc.VLen(pl[80:])
 			of += 80
 			c.node.agent = string(pl[of:of+le])
@@ -71,6 +76,7 @@ func (c *oneConnection) HandleVersion(pl []byte) error {
 			if len(pl) >= of+4 {
 				c.node.height = binary.LittleEndian.Uint32(pl[of:of+4])
 			}
+			c.Mutex.Unlock()
 		}
 	} else {
 		return errors.New("Version message too short")

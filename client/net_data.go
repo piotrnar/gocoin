@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -75,7 +76,9 @@ func (c *oneConnection) GetBlockData(h []byte) {
 		println("GetBlockData", btc.NewUint256(h).String())
 	}
 	bh := btc.NewUint256(h)
+	c.Mutex.Lock()
 	c.GetBlockInProgress[bh.BIdx()] = &oneBlockDl{hash:bh, start:time.Now()}
+	c.Mutex.Unlock()
 	c.SendRawMsg("getdata", b[:])
 }
 
@@ -100,7 +103,9 @@ func netBlockReceived(conn *oneConnection, b []byte) {
 	orb := &oneReceivedBlock{Time:time.Now()}
 	if bip, ok := conn.GetBlockInProgress[idx]; ok {
 		orb.tmDownload = orb.Time.Sub(bip.start)
+		conn.Mutex.Lock()
 		delete(conn.GetBlockInProgress, idx)
+		conn.Mutex.Unlock()
 	} else {
 		CountSafe("UnxpectedBlockRcvd")
 	}
@@ -143,10 +148,10 @@ func HandleNetBlock(newbl *blockRcvd) {
 // ... how many of them have a given block download in progress
 // Returns true if it's at the max already - don't want another one.
 func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (bool) {
-	var cnt uint
+	var cnt uint32
 	for _, v := range openCons {
 		if _, ok := v.GetBlockInProgress[idx]; ok {
-			if cnt+1 >= CFG.Net.MaxBlockAtOnce {
+			if cnt+1 >= atomic.LoadUint32(&CFG.Net.MaxBlockAtOnce) {
 				return true
 			}
 			cnt++
@@ -160,7 +165,7 @@ func blockWanted(h []byte) (yes bool) {
 	idx := btc.NewUint256(h).BIdx()
 	mutex_rcv.Lock()
 	if _, ok := receivedBlocks[idx]; !ok {
-		if CFG.Net.MaxBlockAtOnce==0 || !blocksLimitReached(idx) {
+		if atomic.LoadUint32(&CFG.Net.MaxBlockAtOnce)==0 || !blocksLimitReached(idx) {
 			yes = true
 			CountSafe("BlockWanted")
 		} else {

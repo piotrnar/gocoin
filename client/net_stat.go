@@ -75,6 +75,7 @@ func net_stats(par string) {
 	sort.Sort(srt)
 	for idx := range srt {
 		v := openCons[srt[idx].key]
+		v.Mutex.Lock()
 		fmt.Printf("%8d) ", v.ConnID)
 
 		if v.Incomming {
@@ -91,6 +92,7 @@ func net_stats(par string) {
 		if v.send.buf !=nil {
 			fmt.Print("  ", len(v.send.buf))
 		}
+		v.Mutex.Unlock()
 		fmt.Println()
 	}
 
@@ -164,7 +166,9 @@ func node_stat(v *oneConnection) (s string) {
 			s += fmt.Sprint(" ", v.PingHistory[idx])
 			idx = (idx+1)%PingHistoryLength
 		}
+
 		s += fmt.Sprintln(" ->", v.GetAveragePing(), "ms")
+
 		v.Mutex.Unlock()
 	} else {
 		s += fmt.Sprintln("Not yet connected")

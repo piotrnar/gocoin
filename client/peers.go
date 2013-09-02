@@ -267,6 +267,7 @@ func initSeeds(seeds []string, port uint16) {
 }
 
 
+// shall be called from the main thread
 func initPeers(dir string) {
 	peerDB, _ = qdb.NewDB(dir+"peers3", true)
 

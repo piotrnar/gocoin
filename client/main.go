@@ -279,7 +279,7 @@ func main() {
 	go do_userif()
 	if CFG.WebUI.Interface!="" {
 		fmt.Println("Starting WebUI at", CFG.WebUI.Interface, "...")
-		go webserver()
+		go webserver(CFG.WebUI.Interface)
 	}
 
 	for !exit_now {

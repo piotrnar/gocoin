@@ -43,7 +43,9 @@ func (c *oneConnection) ProcessInv(pl []byte) {
 		btc.WriteVlen(bu, uint32(len(blinv2ask)/32))
 		for i:=0; i<len(blinv2ask); i+=32 {
 			bh := btc.NewUint256(blinv2ask[i:i+32])
+			c.Mutex.Lock()
 			c.GetBlockInProgress[bh.BIdx()] = &oneBlockDl{hash:bh, start:time.Now()}
+			c.Mutex.Unlock()
 			binary.Write(bu, binary.LittleEndian, uint32(2))
 			bu.Write(bh.Hash[:])
 		}
@@ -64,7 +66,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *oneConnection) (cnt uint)
 	copy(inv[4:36], h.Bytes())
 
 	// Append it to PendingInvs in each open connection
- 	mutex_net.Lock()
+	mutex_net.Lock()
 	for _, v := range openCons {
 		if v != fromConn { // except for the one that this inv came from
 			v.Mutex.Lock()
@@ -213,7 +215,9 @@ func (c *oneConnection) getblocksNeeded() bool {
 	lb := Last.Block
 	Last.mutex.Unlock()
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
+		c.Mutex.Lock()
 		c.LastBlocksFrom = lb
+		c.Mutex.Unlock()
 
 		Last.mutex.Lock()
 		GetBlocksAskBack := int(time.Now().Sub(Last.Time) / time.Minute)
@@ -248,7 +252,9 @@ func (c *oneConnection) getblocksNeeded() bool {
 		var null_stop [32]byte
 		b = append(b, null_stop[:]...)
 		c.SendRawMsg("getblocks", b)
+		c.Mutex.Lock()
 		c.NextBlocksAsk = time.Now().Add(NewBlocksAskDuration)
+		c.Mutex.Unlock()
 		return true
 	}
 	return false

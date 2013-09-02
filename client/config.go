@@ -7,7 +7,7 @@ import (
 	"time"
 	"strings"
 	"io/ioutil"
-	//"sync/atomic"
+	"sync"
 	"runtime/debug"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/btc/qdb"
@@ -28,23 +28,23 @@ var (
 		WebUI struct {
 			Interface string
 			AllowedIP string // comma separated
-			ShowBlocks uint
+			ShowBlocks uint32
 		}
 		Net struct {
 			ListenTCP bool
-			TCPPort uint
-			MaxOutCons uint
-			MaxInCons uint
+			TCPPort uint16
+			MaxOutCons uint32
+			MaxInCons uint32
 			MaxUpKBps uint
 			MaxDownKBps uint
-			MaxBlockAtOnce uint
+			MaxBlockAtOnce uint32
 		}
 		TXPool struct {
 			Enabled bool // Global on/off swicth
 			AllowMemInputs bool
-			FeePerByte uint
-			MaxTxSize uint
-			MinVoutValue uint
+			FeePerByte uint64
+			MaxTxSize uint32
+			MinVoutValue uint64
 			// If somethign is 1KB big, it expires after this many minutes.
 			// Otherwise expiration time will be proportionally different.
 			TxExpireMinPerKB uint
@@ -52,12 +52,12 @@ var (
 		}
 		TXRoute struct {
 			Enabled bool // Global on/off swicth
-			FeePerByte uint
-			MaxTxSize uint
-			MinVoutValue uint
+			FeePerByte uint64
+			MaxTxSize uint32
+			MinVoutValue uint64
 		}
 		Memory struct {
-			MinBrowsableVal uint
+			MinBrowsableVal uint64
 			NoCacheBefore uint
 			GCPercTrshold int
 		}
@@ -68,6 +68,8 @@ var (
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
 	}
+
+	mutex_cfg sync.Mutex
 )
 
 type oneAllowedAddr struct {

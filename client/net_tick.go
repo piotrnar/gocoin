@@ -6,11 +6,14 @@ import (
 	"time"
 	"bytes"
 	"math/rand"
+	"sync/atomic"
 )
 
 
 func (c *oneConnection) Tick() {
+	c.Mutex.Lock()
 	c.TicksCnt++
+	c.Mutex.Unlock()
 
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
@@ -25,6 +28,7 @@ func (c *oneConnection) Tick() {
 	if c.send.buf != nil {
 		n, e := SockWrite(c.NetConn, c.send.buf)
 		if n > 0 {
+			c.Mutex.Lock()
 			c.send.lastSent = time.Now()
 			c.BytesSent += uint64(n)
 			if n >= len(c.send.buf) {
@@ -34,6 +38,7 @@ func (c *oneConnection) Tick() {
 				copy(tmp, c.send.buf[n:])
 				c.send.buf = tmp
 			}
+			c.Mutex.Unlock()
 		} else if time.Now().After(c.send.lastSent.Add(AnySendTimeout)) {
 			CountSafe("PeerSendTimeout")
 			c.Disconnect()
@@ -73,7 +78,9 @@ func (c *oneConnection) Tick() {
 	for k, v := range c.GetBlockInProgress {
 		if time.Now().After(v.start.Add(GetBlockTimeout)) {
 			CountSafe("GetBlockTimeout")
+			c.Mutex.Lock()
 			delete(c.GetBlockInProgress, k)
+			c.Mutex.Unlock()
 		}
 	}
 
@@ -154,7 +161,7 @@ func tcp_server() {
 		mutex_net.Lock()
 		ica := InConsActive
 		mutex_net.Unlock()
-		if ica < CFG.Net.MaxInCons {
+		if ica < atomic.LoadUint32(&CFG.Net.MaxInCons) {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
@@ -224,7 +231,7 @@ func network_tick() {
 
 	if next_drop_slowest.IsZero() {
 		next_drop_slowest = time.Now().Add(DropSlowestEvery)
-	} else if conn_cnt >= CFG.Net.MaxOutCons {
+	} else if conn_cnt >= atomic.LoadUint32(&CFG.Net.MaxOutCons) {
 		// Having max number of outgoing connections, check to drop the slowest one
 		if time.Now().After(next_drop_slowest) {
 			drop_slowest_peer()
@@ -232,12 +239,14 @@ func network_tick() {
 		}
 	}
 
-	for conn_cnt < CFG.Net.MaxOutCons {
+	for conn_cnt < atomic.LoadUint32(&CFG.Net.MaxOutCons) {
 		adrs := GetBestPeers(16, true)
 		if len(adrs)==0 {
+			mutex_cfg.Lock()
 			if CFG.ConnectOnly=="" && dbg>0 {
 				println("no new peers", len(openCons), conn_cnt)
 			}
+			mutex_cfg.Unlock()
 			break
 		}
 		do_network(adrs[rand.Int31n(int32(len(adrs)))])
@@ -252,13 +261,18 @@ func network_tick() {
 func (c *oneConnection) Run() {
 	c.SendVersion()
 
+	c.Mutex.Lock()
 	c.LastDataGot = time.Now()
 	c.NextBlocksAsk = time.Now() // ask for blocks ASAP
 	c.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
+	c.Mutex.Unlock()
 
 	for !c.IsBroken() {
+		c.Mutex.Lock()
 		c.LoopCnt++
+		c.Mutex.Unlock()
+
 		cmd := c.FetchMessage()
 		if c.IsBroken() {
 			break

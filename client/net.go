@@ -45,7 +45,7 @@ const (
 var (
 	mutex_net sync.Mutex
 	openCons map[uint64]*oneConnection = make(map[uint64]*oneConnection)
-	InConsActive, OutConsActive uint
+	InConsActive, OutConsActive uint32
 	DefaultTcpPort uint16
 	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
 	ExternalIpMutex sync.Mutex
@@ -150,12 +150,12 @@ func (c *oneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if c.send.buf!=nil {
 		// Before adding more data to the buffer, check the limit
 		if len(c.send.buf)>MaxSendBufferSize {
+			c.Mutex.Unlock()
 			if dbg > 0 {
 				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
 			}
 			c.Disconnect()
 			CountSafe("PeerSendOverflow")
-			c.Mutex.Unlock()
 			return errors.New("Send buffer overflow")
 		}
 	} else {
@@ -234,12 +234,15 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 
 	for c.recv.hdr_len < 24 {
 		n, e = SockRead(c.NetConn, c.recv.hdr[c.recv.hdr_len:24])
+		c.Mutex.Lock()
 		c.recv.hdr_len += n
 		if e != nil {
+			c.Mutex.Unlock()
 			c.HandleError(e)
 			return nil
 		}
 		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
+			c.Mutex.Unlock()
 			if dbg >0 {
 				println("FetchMessage: Proto out of sync")
 			}
@@ -247,11 +250,13 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 			c.Disconnect()
 			return nil
 		}
-		if c.IsBroken() {
+		if c.broken {
+			c.Mutex.Unlock()
 			return nil
 		}
 		c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
 		c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+		c.Mutex.Unlock()
 	}
 
 	if c.recv.pl_len > 0 {
@@ -263,13 +268,17 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 				CountSafe("NetMsgSizeTooBig")
 				return nil
 			}
+			c.Mutex.Lock()
 			c.recv.dat = make([]byte, c.recv.pl_len)
 			c.recv.datlen = 0
+			c.Mutex.Unlock()
 		}
 		for c.recv.datlen < c.recv.pl_len {
 			n, e = SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
 			if n > 0 {
+				c.Mutex.Lock()
 				c.recv.datlen += uint32(n)
+				c.Mutex.Unlock()
 				if c.recv.datlen > c.recv.pl_len {
 					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have",
 						c.recv.datlen, c.recv.pl_len)
@@ -282,7 +291,7 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 				c.HandleError(e)
 				return nil
 			}
-			if c.IsBroken() {
+			if c.broken {
 				return nil
 			}
 		}
@@ -299,10 +308,12 @@ func (c *oneConnection) FetchMessage() (*BCmsg) {
 	ret := new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
+
+	c.Mutex.Lock()
 	c.recv.dat = nil
 	c.recv.hdr_len = 0
-
 	c.BytesReceived += uint64(24+len(ret.pl))
+	c.Mutex.Unlock()
 
 	return ret
 }
@@ -332,7 +343,9 @@ func maxmsgsize(cmd string) uint32 {
 
 func NetCloseAll() {
 	println("Closing network")
+	mutex_cfg.Lock()
 	CFG.Net.ListenTCP = false
+	mutex_cfg.Unlock()
 	mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range openCons {
