@@ -2,8 +2,9 @@ package main
 
 import (
 	"os"
-	"io/ioutil"
+	"strconv"
 	"net/http"
+	"io/ioutil"
 	"encoding/json"
 )
 
@@ -80,7 +81,12 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if checksid(r) && len(r.Form["mid"])>0 {
-		set_miner(r.Form["mid"][0])
+		v, e := strconv.ParseUint(r.Form["mid"][0], 10, 32)
+		if e==nil {
+			CFG.Beeps.MinerID = MinerIds[v][1]
+		} else {
+			CFG.Beeps.MinerID = ""
+		}
 		http.Redirect(w, r, "miners", http.StatusFound)
 		return
 	}
