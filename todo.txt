@@ -3,4 +3,4 @@
 * Try to make own (faster) implementation of sha256 and rimp160
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
-* Try to totally remove "crypto/rand" dependency, from then wallet app
+* Try to totally remove "crypto/rand" dependency, from then wallet app - https://bitcointalk.org/index.php?topic=271486.msg2908897#msg2908897
