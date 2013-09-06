@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"bytes"
 	"math/big"
-	"crypto/rand"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
@@ -78,7 +77,7 @@ func make_signed_tx() {
 				//fmt.Println("SignatureHash:", btc.NewUint256(h).String())
 
 				// Sign
-				r, s, err := ecdsa.Sign(rand.Reader, &key, h)
+				r, s, err := ecdsa_Sign(&key, h)
 				if err != nil {
 					println("Sign:", err.Error())
 					os.Exit(1)
