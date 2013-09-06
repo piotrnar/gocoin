@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"io/ioutil"
-	"crypto/rand"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"github.com/piotrnar/gocoin/btc"
@@ -55,7 +54,7 @@ func sign_message() {
 		sb[0] += 4
 	}
 
-	btcsig.R, btcsig.S, e = ecdsa.Sign(rand.Reader, privkey, hash)
+	btcsig.R, btcsig.S, e = ecdsa_Sign(privkey, hash)
 	if e != nil {
 		println(e.Error())
 		return
