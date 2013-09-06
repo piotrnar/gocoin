@@ -1,3 +1,6 @@
+0.7.1
+* Wallet's random numbers (used for ECDSA_Sign) don't rely on security of "crypt/random" package
+
 0.7.0
 * A major rewrite around shared memory access, in the network client
 
