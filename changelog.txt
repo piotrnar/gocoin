@@ -1,3 +1,6 @@
+0.7.2
+* A new (DLL based) EC_VErify speedup for Windows (client/speedup/sipadll.go)
+
 0.7.1
 * Wallet's random numbers (used for ECDSA_Sign) don't rely on security of "crypt/random" package
 
