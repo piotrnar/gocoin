@@ -25,8 +25,6 @@ Windows
 
 Use mingw(64) and msys.
 
-Note that instead of this cgo, you may prefer to use "secp256k1.dll" (built in step 6 below), together with "client/speedup/sipadll.go"
-
 1. Download GMP and build libgmp.a, eventually use a pre-compiled binaries:
  * http://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20(Win64%20hosted)/Binaries%20(64-bit)/
 
@@ -40,6 +38,9 @@ Note that instead of this cgo, you may prefer to use "secp256k1.dll" (built in s
 5. Execute "bash winconfig.sh" in "secp256k1/"
 
 6. Execute "make -f Makefile.w64" in "secp256k1/" (for 64 bit windows/mingw)
+
+Note that instead of this cgo, you may prefer to use "secp256k1.dll" (that should have been built)
+together with "client/speedup/sipadll.go". In such case take the dll and do not proceed further.
 
 7. Copy "libsecp256k1.a", "include/secp256k1.h" and fixed "libgmp.a" to the current folder ("cgo/sipasec/")
 
