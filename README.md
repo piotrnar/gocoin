@@ -85,15 +85,19 @@ EC_Verify wrappers
 --------------
 Elliptic Curve math operations provided by standard Go libraries are very slow, comparing to other available solutions, therefore it is strongly  recommended to use one of the available cgo wrappers, whenever possible.
 
-In order to use a cgo wrapper, copy either "openssl.go" or "sipasec.go" (but never both of them) from “client/speedup/” to the “client/” folder and redo “go build” there.  Unfortunately in practice it does not always go so smoothly.
+In order to use a cgo wrapper, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  Unfortunately in practice it does not always go so smoothly.
 
-To build a cgo wrapper on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows).
+To build a cgo wrapper on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows). 
 
 ### sipasec
 The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It has been proven working on Windows 7 and Linux (both 64 bit arch).
 
 ### openssl
 If you fail to build "sipasec", you can try the "openssl" wrapper. On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed. On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
+
+### sipadll 
+This is not a cgo wrapper per se, but it works just as well. It is the advised speedup for Windows.
+If you struggle with building sipasec cgo, you can use pre-compiled DLL from „tools/spia_dll/secp256k1.dll” that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system from where you run your client. Best solution is to just copy it to one of the folders from your PATH.
 
 
 Bootstrapping
