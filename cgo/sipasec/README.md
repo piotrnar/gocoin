@@ -25,22 +25,22 @@ Windows
 
 Use mingw(64) and msys.
 
+Note that instead of this cgo, you may prefer to use "secp256k1.dll" (built in step 6 below), together with "client/speedup/sipadll.go"
+
 1. Download GMP and build libgmp.a, eventually use a pre-compiled binaries:
  * http://sourceforge.net/projects/mingw-w64/files/External%20binary%20packages%20(Win64%20hosted)/Binaries%20(64-bit)/
 
 2. Place libgmp.a in the "win/" folder and execute "bash fixlibgmp.sh"
 
-3. Download secp256k1:
- * https://github.com/sipa/secp256k1
+3. Download forked secp256k1:
+ * https://github.com/piotrnar/secp256k1
 
-4. Replace Makefile inside secp256k1 with "win/Makefile"
+4. Create folder "secp256k1/gmp" and copy there fixed libgmp.a and gmp.h
 
-5. Create folder "secp256k1/gmp" and copy there fixed libgmp.a and gmp.h
+5. Execute "bash winconfig.sh" in "secp256k1/"
 
-6. Copy "win/winconfig.sh" to "secp256k1/" and execute "bash winconfig.sh"
+6. Execute "make -f Makefile.w64" in "secp256k1/" (for 64 bit windows/mingw)
 
-7. Execute "make" in "secp256k1/"
+7. Copy "libsecp256k1.a", "include/secp256k1.h" and fixed "libgmp.a" to the current folder ("cgo/sipasec/")
 
-8. Copy "libsecp256k1.a", "include/secp256k1.h" and fixed "libgmp.a" to the current (sipasec) folder.
-
-9. Both "go build" and "go test" shoudl be working from now on.
+8. Both "go build" and "go test" shoudl be working from now on.
