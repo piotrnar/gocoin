@@ -14,4 +14,9 @@ func TestTheVerify(t *testing.T) {
 	if !Verify(key, sig, msg) {
 		t.Error("Verify failed")
 	}
+
+	msg[0]++
+	if Verify(key, sig, msg) {
+		t.Error("Verify not failed")
+	}
 }
