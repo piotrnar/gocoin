@@ -4,4 +4,6 @@ client
 openssl.go
 sipasec.go
 sipadll.go
+sipadll.go
+mygonat.go
 gocoin.conf
