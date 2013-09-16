@@ -17,7 +17,7 @@ type PublicKey struct {
  Thanks @Zeilap
  https://bitcointalk.org/index.php?topic=171314.msg1781562#msg1781562
 */
-func decompressPoint(off bool, x *big.Int)  (y *big.Int) {
+func DecompressPoint(x *big.Int, off bool)  (y *big.Int) {
 	x3 := new(big.Int).Mul(x, x) //x^2
 	x3.Mul(x3, x)                //x^3
 
@@ -58,7 +58,7 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 				res = new(PublicKey)
 				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
-				res.Y = decompressPoint(buf[0]==3, res.X);
+				res.Y = DecompressPoint(res.X, buf[0]==3)
 				return
 			}
 	}
@@ -191,7 +191,7 @@ func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 	x.Mul(x, big.NewInt(int64(recid/2)))
 	x.Add(x, sig.R)
 
-	y := decompressPoint((recid&1)!=0, x)
+	y := DecompressPoint(x, (recid&1)!=0)
 
 	e := new(big.Int).SetBytes(msg)
 	new(big.Int).DivMod(e.Neg(e), secp256k1.N, e)
