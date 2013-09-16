@@ -1,7 +1,6 @@
 package ecver
 
 import (
-	"math/big"
 	"encoding/hex"
 )
 
@@ -40,7 +39,7 @@ func (sig *secp256k1_ecdsa_sig_t) recompute(pkey *secp256k1_ge_t, msg *secp256k1
 	var xr secp256k1_fe_t
 	pr.get_x_p(&xr)
 
-	return &secp256k1_num_t{Int:xr.Int}
+	return xr.num()
 }
 
 
@@ -65,9 +64,6 @@ const (
 )
 
 var (
-	BigInt0 *big.Int = new(big.Int).SetInt64(0)
-	BigInt1 *big.Int = new(big.Int).SetInt64(1)
-
 	beta secp256k1_fe_t
 	lambda, a1b2, b1, a2 secp256k1_num_t
 	order secp256k1_num_t
