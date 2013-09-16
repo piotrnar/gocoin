@@ -5,6 +5,11 @@ import (
 	"encoding/hex"
 )
 
+var (
+	BigInt0 *big.Int = new(big.Int).SetInt64(0)
+	BigInt1 *big.Int = new(big.Int).SetInt64(1)
+)
+
 // NUM
 type secp256k1_num_t struct {
 	big.Int
@@ -77,6 +82,15 @@ func (a *secp256k1_num_t) split(bits uint) (rl, rh *secp256k1_num_t) {
 	rh.Int.Rsh(&rl.Int, bits)
 	rl.mask_bits(bits)
 	return
+}
+
+
+func (num *secp256k1_num_t) rsh(bits uint) {
+	num.Rsh(&num.Int, bits)
+}
+
+func (num *secp256k1_num_t) inc() {
+	num.Add(&num.Int, BigInt1)
 }
 
 func (num *secp256k1_num_t) shift(bits uint) (res int) {
