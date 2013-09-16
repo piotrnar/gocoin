@@ -24,9 +24,15 @@ func TestTheVerify(t *testing.T) {
 		t.Error("Verify failed")
 	}
 
-	msg[0]++
-	if Verify(key, sig, msg) {
+	if Verify(key, sig, msg[1:]) {
 		t.Error("Verify not failed")
+	}
+
+	k, _ := hex.DecodeString("041f2a00036b3cbd1abe71dca54d406a1e9dd5d376bf125bb109726ff8f2662edcd848bd2c44a86a7772442095c7003248cc619bfec3ddb65130b0937f8311c787")
+	s, _ := hex.DecodeString("3045022100ec6eb6b2aa0580c8e75e8e316a78942c70f46dd175b23b704c0330ab34a86a34022067a73509df89072095a16dbf350cc5f1ca5906404a9275ebed8a4ba219627d6701")
+	m, _ := hex.DecodeString("7c8e7c2cb887682ed04dc82c9121e16f6d669ea3d57a2756785c5863d05d2e6a")
+	if !Verify(k, s, m) {
+		t.Error("Verify2 failed")
 	}
 }
 
