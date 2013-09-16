@@ -58,7 +58,7 @@ func secp256k1_ecmult_wnaf(wnaf []int, a *secp256k1_num_t, w uint) (ret int) {
 	for x.Sign()!=0 {
 		for x.Bit(0)==0 {
 			zeroes++
-			x.Rsh(&x.Int, 1)
+			x.rsh(1)
 		}
 		word := x.shift(w)
 		for zeroes > 0 {
@@ -67,7 +67,7 @@ func secp256k1_ecmult_wnaf(wnaf []int, a *secp256k1_num_t, w uint) (ret int) {
 			zeroes--
 		}
 		if (word & (1 << (w-1))) != 0 {
-			x.Add(&x.Int, BigInt1)
+			x.inc()
 			wnaf[ret] = (word - (1 << w))
 		} else {
 			wnaf[ret] = word
