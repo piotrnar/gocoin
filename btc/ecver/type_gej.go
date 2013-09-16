@@ -203,87 +203,47 @@ func (a *secp256k1_gej_t) get_x_p(r *secp256k1_fe_t) {
 }
 
 
-func (in *secp256k1_gej_t) double_p(rr *secp256k1_gej_t) {
-	if in.infinity || in.y.Sign()==0 {
+func (a *secp256k1_gej_t) double_p(rr *secp256k1_gej_t) {
+	var t1, t2, t3, t4, t5 secp256k1_fe_t
+	var r secp256k1_gej_t
+
+	t5 = a.y
+
+	if a.infinity || t5.Sign()==0 {
 		rr.infinity = true
 		return
 	}
 
-	var r secp256k1_gej_t
-	a := new(big.Int).Mul(&in.x.Int, &in.x.Int) //X12
-	b := new(big.Int).Mul(&in.y.Int, &in.y.Int) //Y12
-	c := new(big.Int).Mul(b, b) //B2
-
-	d := new(big.Int).Add(&in.x.Int, b) //X1+B
-	d.Mul(d, d)                 //(X1+B)2
-	d.Sub(d, a)                 //(X1+B)2-A
-	d.Sub(d, c)                 //(X1+B)2-A-C
-	d.Mul(d, big.NewInt(2))     //2*((X1+B)2-A-C)
-
-	e := new(big.Int).Mul(big.NewInt(3), a) //3*A
-	f := new(big.Int).Mul(e, e)             //E2
-
-	x3 := new(big.Int).Mul(big.NewInt(2), d) //2*D
-	x3.Sub(f, x3)                            //F-2*D
-	x3.Mod(x3, secp256k1.P)
-
-	y3 := new(big.Int).Sub(d, x3)                  //D-X3
-	y3.Mul(e, y3)                                  //E*(D-X3)
-	y3.Sub(y3, new(big.Int).Mul(big.NewInt(8), c)) //E*(D-X3)-8*C
-	y3.Mod(y3, secp256k1.P)
-
-	z3 := new(big.Int).Mul(&in.y.Int, &in.z.Int) //Y1*Z1
-	z3.Mul(big.NewInt(2), z3)    //3*Y1*Z1
-	z3.Mod(z3, secp256k1.P)
-
-	r.x.Int.Set(x3)
-	r.y.Int.Set(y3)
-	r.z.Int.Set(z3)
-
-	*rr = r
-
-	return
-}
-
-
-/*
-func (a *secp256k1_gej_t) ___double() (r *secp256k1_gej_t) {
-	t5 := &a.y
-
-	r = new(secp256k1_gej_t)
-	if a.infinity || t5.Sign()==0 {
-		r.infinity = true
-		return
-	}
-
-	r.z = *t5.mul(&a.z)
+	t5.mul_p(&r.z, &a.z)
 	r.z.mul_int(2)
 
-	t1 := a.x.sqr()
+	a.x.sqr_p(&t1)
 	t1.mul_int(3)
 
-	t2 := t1.sqr()
+	t1.sqr_p(&t2)
 
-	t3 := t5.sqr()
+	t5.sqr_p(&t3)
 	t3.mul_int(2)
 
-	t4 := t3.sqr()
+	t3.sqr_p(&t4)
 	t4.mul_int(2)
 
-	t3 = a.x.mul(t3)
+	a.x.mul_p(&t3, &t3)
 	r.x.Set(&t3.Int)
 	r.x.mul_int(4)
 
-	r.x = *r.x.neg().add(t2)
+	r.x.neg_s()
+	r.x.add_s(&t2)
 
-	t2 = t2.neg()
+	t2.neg_s()
 
 	t3.mul_int(6)
-	t3 = t3.add(t2)
+	t3.add_s(&t2)
 
-	r.y = *t1.mul(t3)
-	t2 = t4.neg()
-	r.y = *r.y.add(t2)
+	t1.mul_p(&r.y, &t3)
+	t4.neg_p(&t2)
+	r.y.add_s(&t2)
+
+	*rr = r
 	return
 }
-*/
