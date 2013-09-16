@@ -37,7 +37,8 @@ func (sig *secp256k1_ecdsa_sig_t) recompute(pkey *secp256k1_ge_t, msg *secp256k1
 		return nil
 	}
 
-	xr := pr.get_x()
+	var xr secp256k1_fe_t
+	pr.get_x_p(&xr)
 
 	return &secp256k1_num_t{Int:xr.Int}
 }
@@ -82,5 +83,3 @@ func init() {
 	order.Set(secp256k1.N)
 	secp256k1_ecmult_start()
 }
-
-
