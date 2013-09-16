@@ -203,12 +203,13 @@ func (a *secp256k1_gej_t) get_x_p(r *secp256k1_fe_t) {
 }
 
 
-func (in *secp256k1_gej_t) double_p(r *secp256k1_gej_t) {
+func (in *secp256k1_gej_t) double_p(rr *secp256k1_gej_t) {
 	if in.infinity || in.y.Sign()==0 {
-		r.infinity = true
+		rr.infinity = true
 		return
 	}
 
+	var r secp256k1_gej_t
 	a := new(big.Int).Mul(&in.x.Int, &in.x.Int) //X12
 	b := new(big.Int).Mul(&in.y.Int, &in.y.Int) //Y12
 	c := new(big.Int).Mul(b, b) //B2
@@ -238,6 +239,8 @@ func (in *secp256k1_gej_t) double_p(r *secp256k1_gej_t) {
 	r.x.Int.Set(x3)
 	r.y.Int.Set(y3)
 	r.z.Int.Set(z3)
+
+	*rr = r
 
 	return
 }
