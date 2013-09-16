@@ -16,6 +16,11 @@ func new_fe_from_string(s string, base int) (r *secp256k1_fe_t) {
 	return
 }
 
+func (fe *secp256k1_fe_t) num() *secp256k1_num_t {
+	return &secp256k1_num_t{Int:fe.Int}
+}
+
+
 func (fe *secp256k1_fe_t) String() string {
 	return hex.EncodeToString(fe.Bytes())
 }
