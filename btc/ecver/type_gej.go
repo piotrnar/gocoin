@@ -1,8 +1,6 @@
 package ecver
 
 import (
-//	"os"
-	"math/big"
 	"encoding/hex"
 )
 
