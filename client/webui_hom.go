@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+
 func p_home(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -36,7 +37,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{LAST_BLOCK_HASH}", Last.Block.BlockHash.String(), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(Last.Block.Height), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_TIME}", time.Unix(int64(Last.Block.Timestamp), 0).Format("2006/01/02 15:04:05"), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", fmt.Sprintf("%.3f", btc.GetDifficulty(Last.Block.Bits)), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", num2str(btc.GetDifficulty(Last.Block.Bits)), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(Last.Time).String(), 1)
 	Last.mutex.Unlock()
 

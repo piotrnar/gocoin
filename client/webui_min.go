@@ -56,6 +56,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	minerid := CFG.Beeps.MinerID
 	mutex_cfg.Unlock()
 
+	next_diff_change := 2016-end.Height%2016
+
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp) > 24*3600 {
 			break
@@ -101,9 +103,10 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	mnrs = strings.Replace(mnrs, "{BLOCKS_COUNT}", fmt.Sprint(cnt), 1)
 	mnrs = strings.Replace(mnrs, "{FIRST_BLOCK_TIME}", time.Unix(lastts, 0).Format("2006-01-02 15:04:05"), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprintf("%.2f", bph), 1)
-	mnrs = strings.Replace(mnrs, "{AVG_DIFFICULTY}", fmt.Sprintf("%.2f", diff), 1)
+	mnrs = strings.Replace(mnrs, "{AVG_DIFFICULTY}", num2str(diff), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_HASHDATE}", hr2str(hrate), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKSIZE}", fmt.Sprintf("%.1fKB", float64(totbts)/float64(cnt)/1000), 1)
+	mnrs = strings.Replace(mnrs, "{DIFF_CHANGE_IN}", fmt.Sprint(next_diff_change), 1)
 	mnrs = strings.Replace(mnrs, "{MINER_MON_IDX}", fmt.Sprint(current_mid), 1)
 
 	for i := range srt {

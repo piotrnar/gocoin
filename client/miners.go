@@ -56,14 +56,28 @@ func blocks_miner(bl []byte) (string, int) {
 }
 
 
+func num2str(num float64) string {
+	if num>1e15 {
+		return fmt.Sprintf("%.2f P", num/1e15)
+	}
+	if num>1e12 {
+		return fmt.Sprintf("%.2f T", num/1e12)
+	}
+	if num>1e9 {
+		return fmt.Sprintf("%.2f G", num/1e9)
+	}
+	if num>1e6 {
+		return fmt.Sprintf("%.2f M", num/1e6)
+	}
+	if num>1e3 {
+		return fmt.Sprintf("%.2f K", num/1e3)
+	}
+	return fmt.Sprintf("%.2f", num)
+}
+
+
 func hr2str(hr float64) string {
-	if hr>1e12 {
-		return fmt.Sprintf("%.2f TH/s", hr/1e12)
-	}
-	if hr>1e9 {
-		return fmt.Sprintf("%.2f GH/s", hr/1e9)
-	}
-	return fmt.Sprintf("%.2f MH/s", hr/1e6)
+	return num2str(hr)+"H/s"
 }
 
 
