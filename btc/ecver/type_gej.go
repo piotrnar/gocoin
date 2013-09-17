@@ -11,18 +11,6 @@ type gej_t struct {
 }
 
 
-func (a *gej_t) set(b *gej_t) {
-	if b.infinity {
-		a.infinity = true
-		return
-	}
-	a.infinity = false
-	a.x = b.x
-	a.y = b.y
-	a.z = b.z
-}
-
-
 func (gej *gej_t) set_ge(val *ge_t) {
 	gej.infinity = val.infinity
 	gej.x.Set(&val.x.Int)
@@ -90,7 +78,7 @@ func (a *gej_t) add_ge_p(rr *gej_t, b *ge_t) {
 	h3.neg_s()
 	r.y.add_s(&h3)
 
-	rr.set(&r)
+	*rr = r
 
 	return
 }
@@ -156,7 +144,7 @@ func (a *gej_t) add_p(rr *gej_t, b *gej_t) {
 	h3.neg_s()
 	r.y.add_s(&h3)
 
-	rr.set(&r)
+	*rr = r
 
 	return
 }
@@ -174,7 +162,7 @@ func (a *gej_t) neg_p(rr *gej_t) {
 	r.x = a.x
 	a.y.neg_p(&r.y)
 	r.z = a.z
-	rr.set(&r)
+	*rr = r
 	return
 }
 
@@ -253,6 +241,6 @@ func (a *gej_t) double_p(rr *gej_t) {
 	t4.neg_p(&t2)
 	r.y.add_s(&t2)
 
-	rr.set(&r)
+	*rr = r
 	return
 }
