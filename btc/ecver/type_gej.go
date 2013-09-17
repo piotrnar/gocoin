@@ -202,17 +202,15 @@ func (a *gej_t) get_x_p(r *fe_t) {
 
 
 func (a *gej_t) double_p(rr *gej_t) {
-	var t1, t2, t3, t4, t5 fe_t
+	var t1, t2, t3, t4 fe_t
 	var r gej_t
 
-	t5 = a.y
-
-	if a.infinity || t5.Sign()==0 {
+	if a.infinity || a.y.Sign()==0 {
 		rr.infinity = true
 		return
 	}
 
-	t5.mul_p(&r.z, &a.z)
+	a.y.mul_p(&r.z, &a.z)
 	r.z.mul_int(2)
 
 	a.x.sqr_p(&t1)
@@ -220,7 +218,7 @@ func (a *gej_t) double_p(rr *gej_t) {
 
 	t1.sqr_p(&t2)
 
-	t5.sqr_p(&t3)
+	a.y.sqr_p(&t3)
 	t3.mul_int(2)
 
 	t3.sqr_p(&t4)
