@@ -6,8 +6,8 @@ import (
 
 
 type gej_t struct {
-    x, y, z fe_t
-    infinity bool
+	x, y, z fe_t
+	infinity bool
 }
 
 
