@@ -20,7 +20,7 @@ func (gej *gej_t) set_ge(val *ge_t) {
 
 func (gej gej_t) print(lab string) {
 	if gej.infinity {
-		println("GEJ." + lab + "- INFINITY")
+		println(lab + " - INFINITY")
 		return
 	}
 	println(lab + ".X", hex.EncodeToString(gej.x.Bytes()))

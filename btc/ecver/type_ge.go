@@ -25,6 +25,10 @@ func (r *ge_t) set_gej(a *gej_t) {
 }
 
 func (ge *ge_t) print(lab string) {
+	if ge.infinity {
+		println(lab + " - infinity")
+		return
+	}
 	println(lab + ".x:", hex.EncodeToString(ge.x.Bytes()))
 	println(lab + ".y:", hex.EncodeToString(ge.y.Bytes()))
 }
