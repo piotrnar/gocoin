@@ -1,14 +1,13 @@
 package ecver
 
 import (
-//	"math/big"
 	"encoding/hex"
 )
 
 // GE
 type ge_t struct {
-    x, y fe_t
-    infinity bool
+	x, y fe_t
+	infinity bool
 }
 
 func (r *ge_t) set_gej(a *gej_t) {
