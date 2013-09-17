@@ -25,8 +25,8 @@ func (r *ge_t) set_gej(a *gej_t) {
 }
 
 func (ge *ge_t) print(lab string) {
-	println("GE." + lab + ".x:", hex.EncodeToString(ge.x.Bytes()))
-	println("GE." + lab + ".y:", hex.EncodeToString(ge.y.Bytes()))
+	println(lab + ".x:", hex.EncodeToString(ge.x.Bytes()))
+	println(lab + ".y:", hex.EncodeToString(ge.y.Bytes()))
 }
 
 func (a *ge_t) neg_p(r *ge_t) {
