@@ -29,12 +29,13 @@ func (ge *ge_t) print(lab string) {
 	println("GE." + lab + ".y:", hex.EncodeToString(ge.y.Bytes()))
 }
 
-func (a *ge_t) neg_p(rr *ge_t) {
-	var r ge_t
+func (a *ge_t) neg_p(r *ge_t) {
 	r.infinity = a.infinity
-	r.x = a.x
-	a.y.neg_p(&r.y)
-	*rr = r
+	if !a.infinity {
+		r.infinity = false
+		r.x = a.x
+		a.y.neg_p(&r.y)
+	}
 	return
 }
 
