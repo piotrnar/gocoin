@@ -27,17 +27,17 @@ func new_num_from_string(s string, base int) (res *num_t) {
 	return
 }
 
+func (fe *num_t) num() *num_t {
+	return &num_t{Int:fe.Int}
+}
+
 func (a *num_t) equal(b *num_t) bool {
 	return a.Cmp(&b.Int)==0
 }
 
 
-func (num *num_t) String() string {
-	return hex.EncodeToString(num.Bytes())
-}
-
 func (num *num_t) print(lab string) {
-	println("NUM."+lab, num.String())
+	println(lab, hex.EncodeToString(num.Bytes()))
 }
 
 func (num *num_t) mask_bits(bits uint) {

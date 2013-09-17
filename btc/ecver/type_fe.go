@@ -2,7 +2,6 @@ package ecver
 
 import (
 	"math/big"
-	"encoding/hex"
 )
 
 // FE
@@ -14,15 +13,6 @@ func new_fe_from_string(s string, base int) (r *fe_t) {
 	r = new(fe_t)
 	r.Int.SetString(s, base)
 	return
-}
-
-func (fe *fe_t) num() *num_t {
-	return &num_t{Int:fe.Int}
-}
-
-
-func (fe *fe_t) String() string {
-	return hex.EncodeToString(fe.Bytes())
 }
 
 func (a *fe_t) equal(b *fe_t) bool {

@@ -23,9 +23,9 @@ func (gej gej_t) print(lab string) {
 		println("GEJ." + lab + "- INFINITY")
 		return
 	}
-	println("GEJ." + lab + ".x", hex.EncodeToString(gej.x.Bytes()))
-	println("GEJ." + lab + ".y", hex.EncodeToString(gej.y.Bytes()))
-	println("GEJ." + lab + ".z", hex.EncodeToString(gej.z.Bytes()))
+	println(lab + ".X", hex.EncodeToString(gej.x.Bytes()))
+	println(lab + ".Y", hex.EncodeToString(gej.y.Bytes()))
+	println(lab + ".X", hex.EncodeToString(gej.z.Bytes()))
 }
 
 
