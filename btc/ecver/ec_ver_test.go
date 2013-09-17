@@ -69,9 +69,9 @@ func BenchmarkVerifyRawIntegers(b *testing.B) {
 	pk, _ := btc.NewPublicKey(key)
 	s, _ := btc.NewSignature(sig)
 
-	var sign secp256k1_ecdsa_sig_t
-	var pkey secp256k1_ge_t
-	var mesg secp256k1_num_t
+	var sign sig_t
+	var pkey ge_t
+	var mesg num_t
 
 	sign.r.Set(s.R)
 	sign.s.Set(s.S)

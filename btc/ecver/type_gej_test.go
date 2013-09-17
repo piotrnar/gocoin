@@ -6,7 +6,7 @@ import (
 
 
 func TestGejDouble(t *testing.T) {
-	var a, a_exp, r secp256k1_gej_t
+	var a, a_exp, r gej_t
 	a.x.SetString("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16)
 	a.y.SetString("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16)
 	a.z.SetString("01", 16)
@@ -22,7 +22,7 @@ func TestGejDouble(t *testing.T) {
 
 
 func TestGejMulLambda(t *testing.T) {
-	var a, a_exp secp256k1_gej_t
+	var a, a_exp gej_t
 	a.x.SetString("0eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66d", 16)
 	a.y.SetString("beb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16", 16)
 	a.z.SetString("01", 16)
@@ -38,8 +38,8 @@ func TestGejMulLambda(t *testing.T) {
 
 
 func TestGejGetX(t *testing.T) {
-	var a secp256k1_gej_t
-	var x secp256k1_fe_t
+	var a gej_t
+	var x fe_t
 	a.x.SetString("EB6752420B6BDB40A760AC26ADD7E7BBD080BF1DF6C0B009A0D310E4511BDF49", 16)
 	a.y.SetString("8E8CEB84E1502FC536FFE67967BC44314270A0B38C79865FFED5A85D138DCA6B", 16)
 	a.z.SetString("813925AF112AAB8243F8CCBADE4CC7F63DF387263028DE6E679232A73A7F3C31", 16)

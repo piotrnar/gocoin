@@ -6,8 +6,8 @@ import (
 
 
 func TestEcdsaVerify(t *testing.T) {
-	var sig secp256k1_ecdsa_sig_t
-	var pkey secp256k1_ge_t
+	var sig sig_t
+	var pkey ge_t
 
 	sig.r.SetString("FE00E013C244062847045AE7EB73B03FCA583E9AA5DBD030A8FD1C6DFCF11B10", 16)
 	sig.s.SetString("7D0D04FED8FA1E93007468D5A9E134B0A7023B6D31DB4E50942D43A250F4D07C", 16)

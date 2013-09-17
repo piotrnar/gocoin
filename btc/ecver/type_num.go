@@ -11,47 +11,47 @@ var (
 )
 
 // NUM
-type secp256k1_num_t struct {
+type num_t struct {
 	big.Int
 }
 
-func new_num_val(val *secp256k1_num_t) (res *secp256k1_num_t) {
-	res = new(secp256k1_num_t)
+func new_num_val(val *num_t) (res *num_t) {
+	res = new(num_t)
 	res.Int.Set(&val.Int)
 	return
 }
 
-func new_num_from_string(s string, base int) (res *secp256k1_num_t) {
-	res = new(secp256k1_num_t)
+func new_num_from_string(s string, base int) (res *num_t) {
+	res = new(num_t)
 	res.Int.SetString(s, base)
 	return
 }
 
-func (a *secp256k1_num_t) equal(b *secp256k1_num_t) bool {
+func (a *num_t) equal(b *num_t) bool {
 	return a.Cmp(&b.Int)==0
 }
 
 
-func (num *secp256k1_num_t) String() string {
+func (num *num_t) String() string {
 	return hex.EncodeToString(num.Bytes())
 }
 
-func (num *secp256k1_num_t) print(lab string) {
+func (num *num_t) print(lab string) {
 	println("NUM."+lab, num.String())
 }
 
-func (num *secp256k1_num_t) mask_bits(bits uint) {
+func (num *num_t) mask_bits(bits uint) {
 	mask := new(big.Int).Lsh(BigInt1, bits)
 	mask.Sub(mask, BigInt1)
 	num.Int.And(&num.Int, mask)
 }
 
 
-func (a *secp256k1_num_t) split_exp() (r1, r2 *secp256k1_num_t) {
-	var bnc1, bnc2, bnn2, bnt1, bnt2 secp256k1_num_t
+func (a *num_t) split_exp() (r1, r2 *num_t) {
+	var bnc1, bnc2, bnn2, bnt1, bnt2 num_t
 
-	r1 = new(secp256k1_num_t)
-	r2 = new(secp256k1_num_t)
+	r1 = new(num_t)
+	r2 = new(num_t)
 
 	bnn2.Int.Rsh(secp256k1.N, 1)
 
@@ -75,9 +75,9 @@ func (a *secp256k1_num_t) split_exp() (r1, r2 *secp256k1_num_t) {
 }
 
 
-func (a *secp256k1_num_t) split(bits uint) (rl, rh *secp256k1_num_t) {
-	rl = new(secp256k1_num_t)
-	rh = new(secp256k1_num_t)
+func (a *num_t) split(bits uint) (rl, rh *num_t) {
+	rl = new(num_t)
+	rh = new(num_t)
 	rl.Int.Set(&a.Int)
 	rh.Int.Rsh(&rl.Int, bits)
 	rl.mask_bits(bits)
@@ -85,15 +85,15 @@ func (a *secp256k1_num_t) split(bits uint) (rl, rh *secp256k1_num_t) {
 }
 
 
-func (num *secp256k1_num_t) rsh(bits uint) {
+func (num *num_t) rsh(bits uint) {
 	num.Rsh(&num.Int, bits)
 }
 
-func (num *secp256k1_num_t) inc() {
+func (num *num_t) inc() {
 	num.Add(&num.Int, BigInt1)
 }
 
-func (num *secp256k1_num_t) shift(bits uint) (res int) {
+func (num *num_t) shift(bits uint) (res int) {
 	mask := new(big.Int).Lsh(BigInt1, bits)
 	mask.Sub(mask, BigInt1)
 	res = int(new(big.Int).And(&num.Int, mask).Int64())
@@ -106,21 +106,21 @@ func (num *secp256k1_num_t) shift(bits uint) (res int) {
 }
 
 
-func (a *secp256k1_num_t) mod_inverse(m *secp256k1_num_t) (r *secp256k1_num_t) {
-	r = new(secp256k1_num_t)
+func (a *num_t) mod_inverse(m *num_t) (r *num_t) {
+	r = new(num_t)
 	r.ModInverse(&a.Int, &m.Int)
 	return
 }
 
 
-func (a *secp256k1_num_t) mul(b *secp256k1_num_t) (r *secp256k1_num_t) {
-	r = new(secp256k1_num_t)
+func (a *num_t) mul(b *num_t) (r *num_t) {
+	r = new(num_t)
 	r.Mul(&a.Int, &b.Int)
 	return
 }
 
-func (a *secp256k1_num_t) mod_mul(b *secp256k1_num_t, m *secp256k1_num_t) (r *secp256k1_num_t) {
-	r = new(secp256k1_num_t)
+func (a *num_t) mod_mul(b *num_t, m *num_t) (r *num_t) {
+	r = new(num_t)
 	r.Mul(&a.Int, &b.Int)
 	r.Mod(&r.Int, &m.Int)
 	return

@@ -4,16 +4,16 @@ import (
 	"encoding/hex"
 )
 
-type secp256k1_ecdsa_sig_t struct {
-	r, s secp256k1_num_t
+type sig_t struct {
+	r, s num_t
 }
 
-func (sig *secp256k1_ecdsa_sig_t) print(lab string) {
+func (sig *sig_t) print(lab string) {
 	println("sig." + lab + ".R:", hex.EncodeToString(sig.r.Bytes()))
 	println("sig." + lab + ".S:", hex.EncodeToString(sig.s.Bytes()))
 }
 
-func (sig *secp256k1_ecdsa_sig_t) recompute(pkey *secp256k1_ge_t, msg *secp256k1_num_t) *secp256k1_num_t {
+func (sig *sig_t) recompute(pkey *ge_t, msg *num_t) *num_t {
 	if sig.r.Sign()<=0 || sig.s.Sign()<=0 {
 		return nil
 	}
@@ -27,23 +27,23 @@ func (sig *secp256k1_ecdsa_sig_t) recompute(pkey *secp256k1_ge_t, msg *secp256k1
 	u1 := sn.mod_mul(msg, &order)
 	u2 := sn.mod_mul(&sig.r, &order)
 
-	var pubkeyj secp256k1_gej_t
+	var pubkeyj gej_t
 	pubkeyj.set_ge(pkey)
 
-	pr := secp256k1_ecmult(&pubkeyj, u2, u1)
+	pr := pubkeyj.ecmult(u2, u1)
 
 	if pr.infinity {
 		return nil
 	}
 
-	var xr secp256k1_fe_t
+	var xr fe_t
 	pr.get_x_p(&xr)
 
 	return xr.num()
 }
 
 
-func (sig *secp256k1_ecdsa_sig_t) verify(pkey *secp256k1_ge_t, msg *secp256k1_num_t) bool {
+func (sig *sig_t) verify(pkey *ge_t, msg *num_t) bool {
 	r2 := sig.recompute(pkey, msg)
 	if r2!=nil {
 		return r2.equal(&sig.r)
@@ -64,9 +64,9 @@ const (
 )
 
 var (
-	beta secp256k1_fe_t
-	lambda, a1b2, b1, a2 secp256k1_num_t
-	order secp256k1_num_t
+	beta fe_t
+	lambda, a1b2, b1, a2 num_t
+	order num_t
 )
 
 
@@ -77,5 +77,5 @@ func init() {
 	b1.SetString(_b1, 16)
 	a2.SetString(_a2, 16)
 	order.Set(secp256k1.N)
-	secp256k1_ecmult_start()
+	ecmult_start()
 }

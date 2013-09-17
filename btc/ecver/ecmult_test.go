@@ -6,8 +6,8 @@ import (
 
 
 func TestECmult(t *testing.T) {
-	var u1, u2 secp256k1_num_t
-	var pubkeyj, expres secp256k1_gej_t
+	var u1, u2 num_t
+	var pubkeyj, expres gej_t
 
 	pubkeyj.x.SetString("0EAEBCD1DF2DF853D66CE0E1B0FDA07F67D1CABEFDE98514AAD795B86A6EA66D", 16)
 	pubkeyj.y.SetString("BEB26B67D7A00E2447BAECCC8A4CEF7CD3CAD67376AC1C5785AEEBB4F6441C16", 16)
@@ -20,9 +20,9 @@ func TestECmult(t *testing.T) {
 	expres.y.SetString("8E8CEB84E1502FC536FFE67967BC44314270A0B38C79865FFED5A85D138DCA6B", 16)
 	expres.z.SetString("813925AF112AAB8243F8CCBADE4CC7F63DF387263028DE6E679232A73A7F3C31", 16)
 
-	pr := secp256k1_ecmult(&pubkeyj, &u2, &u1)
+	pr := pubkeyj.ecmult(&u2, &u1)
 	if !pr.equal(&expres) {
-		t.Error("secp256k1_ecmult failed")
+		t.Error("ecmult failed")
 	}
 }
 
@@ -54,7 +54,7 @@ func TestWNAF(t *testing.T) {
 		},
 	}
 	for idx := range testvcs {
-		bits := secp256k1_ecmult_wnaf(wnaf[:], new_num_from_string(testvcs[idx].inp, 16), testvcs[idx].w)
+		bits := ecmult_wnaf(wnaf[:], new_num_from_string(testvcs[idx].inp, 16), testvcs[idx].w)
 		if bits != len(testvcs[idx].exp) {
 			t.Error("Bad bits at idx", idx)
 		}
@@ -68,7 +68,7 @@ func TestWNAF(t *testing.T) {
 
 
 func TestPrecompileGej(t *testing.T) {
-	var exp, a secp256k1_gej_t
+	var exp, a gej_t
 
 	a.x.SetString("0eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66d", 16)
 	a.y.SetString("beb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16", 16)
