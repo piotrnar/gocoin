@@ -5,19 +5,19 @@ import (
 )
 
 
-type secp256k1_gej_t struct {
-    x, y, z secp256k1_fe_t
+type gej_t struct {
+    x, y, z fe_t
     infinity bool
 }
 
-func (gej *secp256k1_gej_t) set_ge(val *secp256k1_ge_t) {
+func (gej *gej_t) set_ge(val *ge_t) {
 	gej.infinity = val.infinity
 	gej.x.Set(&val.x.Int)
 	gej.y.Set(&val.y.Int)
 	gej.z.Set(BigInt1)
 }
 
-func (gej secp256k1_gej_t) print(lab string) {
+func (gej gej_t) print(lab string) {
 	if gej.infinity {
 		println("GEJ." + lab + "- INFINITY")
 		return
@@ -28,7 +28,7 @@ func (gej secp256k1_gej_t) print(lab string) {
 }
 
 
-func (a *secp256k1_gej_t) add_ge_p(rr *secp256k1_gej_t, b *secp256k1_ge_t) {
+func (a *gej_t) add_ge_p(rr *gej_t, b *ge_t) {
 	if a.infinity {
 		rr.set_ge(b)
 		return;
@@ -38,8 +38,8 @@ func (a *secp256k1_gej_t) add_ge_p(rr *secp256k1_gej_t, b *secp256k1_ge_t) {
 		return
 	}
 
-	var z12, u2, s2, h, h2, h3, i, i2, t secp256k1_fe_t
-	var r secp256k1_gej_t
+	var z12, u2, s2, h, h2, h3, i, i2, t fe_t
+	var r gej_t
 	a.z.sqr_p(&z12)
 	b.x.mul_p(&u2, &z12)
 
@@ -83,7 +83,7 @@ func (a *secp256k1_gej_t) add_ge_p(rr *secp256k1_gej_t, b *secp256k1_ge_t) {
 }
 
 
-func (a *secp256k1_gej_t) add_p(rr *secp256k1_gej_t, b *secp256k1_gej_t) {
+func (a *gej_t) add_p(rr *gej_t, b *gej_t) {
 	if a.infinity {
 		*rr = *b
 		return
@@ -93,8 +93,8 @@ func (a *secp256k1_gej_t) add_p(rr *secp256k1_gej_t, b *secp256k1_gej_t) {
 		return
 	}
 
-	var z22, z12, u1, u2, s1, s2, h, h2, h3, i, i2, t secp256k1_fe_t
-	var r secp256k1_gej_t
+	var z22, z12, u1, u2, s1, s2, h, h2, h3, i, i2, t fe_t
+	var r gej_t
 
 	r.infinity = false
 	b.z.sqr_p(&z22)
@@ -149,14 +149,14 @@ func (a *secp256k1_gej_t) add_p(rr *secp256k1_gej_t, b *secp256k1_gej_t) {
 }
 
 
-func (a *secp256k1_gej_t) mul_lambda_s() {
+func (a *gej_t) mul_lambda_s() {
 	a.x.mul_s(&beta)
 	return
 }
 
 
-func (a *secp256k1_gej_t) neg_p(rr *secp256k1_gej_t) {
-	var r secp256k1_gej_t
+func (a *gej_t) neg_p(rr *gej_t) {
+	var r gej_t
 	r.infinity = a.infinity
 	r.x = a.x
 	a.y.neg_p(&r.y)
@@ -166,7 +166,7 @@ func (a *secp256k1_gej_t) neg_p(rr *secp256k1_gej_t) {
 }
 
 
-func (a *secp256k1_gej_t) equal(b *secp256k1_gej_t) bool {
+func (a *gej_t) equal(b *gej_t) bool {
 	if a.infinity != b.infinity {
 		return false
 	}
@@ -180,9 +180,9 @@ func (a *secp256k1_gej_t) equal(b *secp256k1_gej_t) bool {
 }
 
 
-func (a *secp256k1_gej_t) precomp(w int) (pre []secp256k1_gej_t) {
-	var d secp256k1_gej_t
-	pre = make([]secp256k1_gej_t, (1 << (uint(w)-2)))
+func (a *gej_t) precomp(w int) (pre []gej_t) {
+	var d gej_t
+	pre = make([]gej_t, (1 << (uint(w)-2)))
 	pre[0] = *a;
 	pre[0].double_p(&d)
 	for i:=1 ; i<len(pre); i++ {
@@ -192,8 +192,8 @@ func (a *secp256k1_gej_t) precomp(w int) (pre []secp256k1_gej_t) {
 }
 
 
-func (a *secp256k1_gej_t) get_x_p(r *secp256k1_fe_t) {
-	var zi2 secp256k1_fe_t
+func (a *gej_t) get_x_p(r *fe_t) {
+	var zi2 fe_t
 	a.z.inv_p(&zi2)
 	zi2.sqr_s()
 	a.x.mul_p(r, &zi2)
@@ -201,9 +201,9 @@ func (a *secp256k1_gej_t) get_x_p(r *secp256k1_fe_t) {
 }
 
 
-func (a *secp256k1_gej_t) double_p(rr *secp256k1_gej_t) {
-	var t1, t2, t3, t4, t5 secp256k1_fe_t
-	var r secp256k1_gej_t
+func (a *gej_t) double_p(rr *gej_t) {
+	var t1, t2, t3, t4, t5 fe_t
+	var r gej_t
 
 	t5 = a.y
 

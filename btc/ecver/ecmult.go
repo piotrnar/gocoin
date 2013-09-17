@@ -4,26 +4,26 @@ import (
 )
 
 var (
-	pre_g, pre_g_128 []secp256k1_ge_t
-	prec [64][16]secp256k1_ge_t
-	fin secp256k1_ge_t
+	pre_g, pre_g_128 []ge_t
+	prec [64][16]ge_t
+	fin ge_t
 )
 
 
-func secp256k1_ecmult_start() {
-	var g secp256k1_ge_t
+func ecmult_start() {
+	var g ge_t
 	g.x.Set(secp256k1.Gx)
 	g.y.Set(secp256k1.Gy)
 
 	// calculate 2^128*generator
-	var g_128j secp256k1_gej_t
+	var g_128j gej_t
 	g_128j.set_ge(&g)
 
 	for i := 0; i < 128; i++ {
 		g_128j.double_p(&g_128j)
 	}
 
-	var g_128 secp256k1_ge_t
+	var g_128 ge_t
 	g_128.set_gej(&g_128j)
 
     // precompute the tables with odd multiples
@@ -31,10 +31,10 @@ func secp256k1_ecmult_start() {
 	pre_g_128 = g_128.precomp(WINDOW_G)
 
 	// compute prec and fin
-	var gg secp256k1_gej_t
+	var gg gej_t
 	gg.set_ge(&g)
 	ad := g
-	var fn secp256k1_gej_t
+	var fn gej_t
 	fn.infinity = true
 	for j:=0; j<64; j++ {
 		prec[j][0].set_gej(&gg)
@@ -50,7 +50,7 @@ func secp256k1_ecmult_start() {
 }
 
 
-func secp256k1_ecmult_wnaf(wnaf []int, a *secp256k1_num_t, w uint) (ret int) {
+func ecmult_wnaf(wnaf []int, a *num_t, w uint) (ret int) {
 	var zeroes uint
 
 	x := new_num_val(a)
@@ -80,8 +80,8 @@ func secp256k1_ecmult_wnaf(wnaf []int, a *secp256k1_num_t, w uint) (ret int) {
 
 var dbg bool
 
-func secp256k1_ecmult(a *secp256k1_gej_t, na, ng *secp256k1_num_t) (r *secp256k1_gej_t) {
-	r = new(secp256k1_gej_t)
+func (a *gej_t) ecmult(na, ng *num_t) (r *gej_t) {
+	r = new(gej_t)
 
     // split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit)
 	na_1, na_lam := na.split_exp()
@@ -91,11 +91,11 @@ func secp256k1_ecmult(a *secp256k1_gej_t, na, ng *secp256k1_num_t) (r *secp256k1
 
 	// build wnaf representation for na_1, na_lam, ng_1, ng_128
 	var wnaf_na_1, wnaf_na_lam, wnaf_ng_1, wnaf_ng_128 [129]int
-	bits_na_1 := secp256k1_ecmult_wnaf(wnaf_na_1[:], na_1, WINDOW_A)
-	bits_na_lam := secp256k1_ecmult_wnaf(wnaf_na_lam[:], na_lam, WINDOW_A)
-	bits_ng_1 := secp256k1_ecmult_wnaf(wnaf_ng_1[:], ng_1, WINDOW_G)
+	bits_na_1 := ecmult_wnaf(wnaf_na_1[:], na_1, WINDOW_A)
+	bits_na_lam := ecmult_wnaf(wnaf_na_lam[:], na_lam, WINDOW_A)
+	bits_ng_1 := ecmult_wnaf(wnaf_ng_1[:], ng_1, WINDOW_G)
 
-	bits_ng_128 := secp256k1_ecmult_wnaf(wnaf_ng_128[:], ng_128, WINDOW_G)
+	bits_ng_128 := ecmult_wnaf(wnaf_ng_128[:], ng_128, WINDOW_G)
 
 	// calculate a_lam = a*lambda
 	a_lam := *a
@@ -118,8 +118,8 @@ func secp256k1_ecmult(a *secp256k1_gej_t, na, ng *secp256k1_num_t) (r *secp256k1
 
 	r.infinity = true
 
-	var tmpj secp256k1_gej_t
-	var tmpa secp256k1_ge_t
+	var tmpj gej_t
+	var tmpa ge_t
 	var n int
 
 	for i:=bits-1; i>=0; i-- {
@@ -162,7 +162,7 @@ func secp256k1_ecmult(a *secp256k1_gej_t, na, ng *secp256k1_num_t) (r *secp256k1
 }
 
 
-func ECMULT_TABLE_GET_GEJ(r *secp256k1_gej_t, pre []secp256k1_gej_t, n int, w uint) {
+func ECMULT_TABLE_GET_GEJ(r *gej_t, pre []gej_t, n int, w uint) {
 	if n > 0 {
 		*r = pre[((n)-1)/2]
 	} else {
@@ -170,7 +170,7 @@ func ECMULT_TABLE_GET_GEJ(r *secp256k1_gej_t, pre []secp256k1_gej_t, n int, w ui
 	}
 }
 
-func ECMULT_TABLE_GET_GE(r *secp256k1_ge_t, pre []secp256k1_ge_t, n int, w uint) {
+func ECMULT_TABLE_GET_GE(r *ge_t, pre []ge_t, n int, w uint) {
 	if n > 0 {
 		*r = pre[((n)-1)/2]
 	} else {
