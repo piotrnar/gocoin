@@ -81,23 +81,23 @@ For anyone familiar with Go language, building should not be a problem. If you h
 After you have the sources in your local disk, building them is usually as simple as executing "go build", in either the “client” or the “wallet” directory.
 
 
-EC_Verify wrappers
+EC_Verify speedups
 --------------
-Elliptic Curve math operations provided by standard Go libraries are very slow, comparing to other available solutions, therefore it is strongly  recommended to use one of the available cgo wrappers, whenever possible.
+Elliptic Curve math operations provided by standard Go libraries are slow, comparing to other available solutions. This affects quite much the performance of the client node and therefore it is strongly  recommended to use one of the available speedups.
 
-In order to use a cgo wrapper, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  Unfortunately in practice it does not always go so smoothly.
+In order to use a speedup module, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  For cgo wrappers, it unfortunately does not always go so smoothly. To build any of the cgo wrappers on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows). 
 
-To build a cgo wrapper on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows). 
+### mygonat (native Go)
+This implementation boosts EC_Verify operations about 3 times fold. It uses pure Go and therefore should build without hiccups on any platform. The code is based on secp256k1 library by sipa and has been ported from C language. 
 
-### sipasec
-The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It has been proven working on Windows 7 and Linux (both 64 bit arch).
+### sipasec (cgo)
+The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems. 
 
-### openssl
-If you fail to build "sipasec", you can try the "openssl" wrapper. On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed. On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
+### sipadll (Windows only)
+This is the advised speedup for Windows. It needs “secp256k1.dll” in order to work (follow the instructions from "cgo/sipasec/README.md" to build it). If you struggle with building the DLL yourself, you can use pre-compiled binary from „tools/spia_dll/secp256k1.dll” that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
 
-### sipadll 
-This is not a cgo wrapper per se, but it works just as well. It is the advised speedup for Windows.
-If you struggle with building sipasec cgo, you can use pre-compiled DLL from „tools/spia_dll/secp256k1.dll” that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system from where you run your client. Best solution is to just copy it to one of the folders from your PATH.
+### openssl (cgo)
+If you fail to build "sipasec" or just prefer to use a more mature solution, you can try "openssl" wrapper. On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed. On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
 
 
 Bootstrapping
