@@ -70,7 +70,8 @@ func ParseAddr(pl []byte) {
 		var buf [30]byte
 		n, e := b.Read(buf[:])
 		if n!=len(buf) || e!=nil {
-			println("ParseAddr:", n, e)
+			CountSafe("AddrError")
+			//println("ParseAddr:", n, e)
 			break
 		}
 		a := newPeer(buf[:])

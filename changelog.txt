@@ -1,5 +1,6 @@
 0.7.3
 * A new (native Go) EC_Verify speedup, based on sipa's secp256k1 code (client/speedup/mygonat.go)
+* Cosmetic chanegs in WebUI
 
 0.7.2
 * A new (DLL based) EC_Verify speedup for Windows (client/speedup/sipadll.go)

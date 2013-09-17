@@ -370,7 +370,9 @@ func (c *oneConnection) Run() {
 				CountSafe("NotFound")
 
 			default:
-				println(cmd.cmd, "from", c.PeerAddr.Ip())
+				if dbg>0 {
+					println(cmd.cmd, "from", c.PeerAddr.Ip())
+				}
 		}
 	}
 	c.Mutex.Lock()
