@@ -78,7 +78,6 @@ func ecmult_wnaf(wnaf []int, a *num_t, w uint) (ret int) {
 	return
 }
 
-var dbg bool
 
 func (a *gej_t) ecmult(na, ng *num_t) (r *gej_t) {
 	r = new(gej_t)
@@ -127,53 +126,44 @@ func (a *gej_t) ecmult(na, ng *num_t) (r *gej_t) {
 
 		if i < bits_na_1 {
 			n = wnaf_na_1[i]
-			if n!=0 {
-				ECMULT_TABLE_GET_GEJ(&tmpj, pre_a_1, n, WINDOW_A)
+			if n > 0 {
+				r.add_p(r, &pre_a_1[((n)-1)/2])
+			} else if n != 0 {
+				pre_a_1[(-(n)-1)/2].neg_p(&tmpj)
 				r.add_p(r, &tmpj)
 			}
 		}
 
 		if i < bits_na_lam {
 			n = wnaf_na_lam[i]
-			if n!=0 {
-				ECMULT_TABLE_GET_GEJ(&tmpj, pre_a_lam, n, WINDOW_A)
+			if n > 0 {
+				r.add_p(r, &pre_a_lam[((n)-1)/2])
+			} else if n != 0 {
+				pre_a_lam[(-(n)-1)/2].neg_p(&tmpj)
 				r.add_p(r, &tmpj)
 			}
 		}
 
 		if i < bits_ng_1 {
 			n = wnaf_ng_1[i]
-			if n!=0 {
-				ECMULT_TABLE_GET_GE(&tmpa, pre_g, n, WINDOW_G)
+			if n > 0 {
+				r.add_ge_p(r, &pre_g[((n)-1)/2])
+			} else if n != 0 {
+				pre_g[(-(n)-1)/2].neg_p(&tmpa)
 				r.add_ge_p(r, &tmpa)
 			}
 		}
 
 		if i < bits_ng_128 {
 			n = wnaf_ng_128[i]
-			if n!=0 {
-				ECMULT_TABLE_GET_GE(&tmpa, pre_g_128, n, WINDOW_G);
+			if n > 0 {
+				r.add_ge_p(r, &pre_g_128[((n)-1)/2])
+			} else if n != 0 {
+				pre_g_128[(-(n)-1)/2].neg_p(&tmpa)
 				r.add_ge_p(r, &tmpa)
 			}
 		}
 	}
 
 	return
-}
-
-
-func ECMULT_TABLE_GET_GEJ(r *gej_t, pre []gej_t, n int, w uint) {
-	if n > 0 {
-		*r = pre[((n)-1)/2]
-	} else {
-		pre[(-(n)-1)/2].neg_p(r)
-	}
-}
-
-func ECMULT_TABLE_GET_GE(r *ge_t, pre []ge_t, n int, w uint) {
-	if n > 0 {
-		*r = pre[((n)-1)/2]
-	} else {
-		pre[(-(n)-1)/2].neg_p(r)
-	}
 }
