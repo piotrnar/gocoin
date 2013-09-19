@@ -196,3 +196,45 @@ func (a *fe_t) negate(r *fe_t, m uint32) {
 	r.n[9] = 0x03FFFFF * (m + 1) - a.n[9]
 }
 
+func (a *fe_t) inv(r *fe_t) {
+	// calculate a^p, with p={45,63,1019,1023}
+	var x, a2, a3, a4, a5, a10, a11, a21, a42, a45, a63, a126, a252, a504, a1008, a1019, a1023 fe_t
+	var i, j int
+	a.sqr(&a2)
+	a2.mul(&a3, a)
+	a2.sqr(&a4)
+	a4.mul(&a5, a)
+	a5.sqr(&a10)
+	a10.mul(&a11, a)
+	a11.mul(&a21, &a10)
+	a21.sqr(&a42)
+	a42.mul(&a45, &a3)
+	a42.mul(&a63, &a21)
+	a63.sqr(&a126)
+	a126.sqr(&a252)
+	a252.sqr(&a504)
+	a504.sqr(&a1008)
+	a1008.mul(&a1019, &a11)
+	a1019.mul(&a1023, &a4)
+	x = a63
+	for i=0; i<21; i++ {
+		for j=0; j<10; j++ {
+			x.sqr(&x)
+		}
+		x.mul(&x, &a1023)
+	}
+	for j=0; j<10; j++ {
+		x.sqr(&x)
+	}
+	x.mul(&x, &a1019)
+	for i=0; i<2; i++ {
+		for j=0; j<10; j++ {
+			x.sqr(&x)
+		}
+		x.mul(&x, &a1023)
+	}
+	for j=0; j<10; j++ {
+		x.sqr(&x)
+	}
+	x.mul(r, &a45)
+}
