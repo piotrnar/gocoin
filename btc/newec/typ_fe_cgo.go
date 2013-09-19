@@ -16,11 +16,11 @@ func (a *fe_t) inv_var(r *fe_t) {
 	C.secp256k1_fe_inv_var(unsafe.Pointer(r), unsafe.Pointer(a));
 }
 
+/*
 func (a *fe_t) inv(r *fe_t) {
 	C.secp256k1_fe_inv(unsafe.Pointer(r), unsafe.Pointer(a));
 }
 
-/*
 func (a *fe_t) sqr(r *fe_t) {
 	C.secp256k1_fe_sqr(unsafe.Pointer(r), unsafe.Pointer(a));
 }
