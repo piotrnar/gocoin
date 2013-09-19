@@ -18,18 +18,17 @@ const (
 )
 
 var (
-	//beta fe_t
+	beta fe_t
 	lambda, a1b2, b1, a2 num_t
 	order num_t
 )
 
 
-func init() {
-	//beta.SetString(_beta, 16)
-	lambda.SetString(_lambda, 16)
-	a1b2.SetString(_a1b2, 16)
-	b1.SetString(_b1, 16)
-	a2.SetString(_a2, 16)
+func init_contants() {
+	beta.set_hex(_beta)
+	lambda.set_hex(_lambda)
+	a1b2.set_hex(_a1b2)
+	b1.set_hex(_b1)
+	a2.set_hex(_a2)
 	order.Set(secp256k1.N)
-	//ecmult_start()
 }
