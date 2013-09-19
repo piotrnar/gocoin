@@ -8,15 +8,16 @@ void secp256k1_fe_add(void *r, void *a);
 void secp256k1_fe_inv_var(void *r, void *a);
 void secp256k1_fe_inv(void *r, void *a);
 */
-import "C"
-import "unsafe"
+//import "C"
+//import "unsafe"
 
 
+
+/*
 func (a *fe_t) inv_var(r *fe_t) {
 	C.secp256k1_fe_inv_var(unsafe.Pointer(r), unsafe.Pointer(a));
 }
 
-/*
 func (a *fe_t) inv(r *fe_t) {
 	C.secp256k1_fe_inv(unsafe.Pointer(r), unsafe.Pointer(a));
 }
