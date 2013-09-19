@@ -59,6 +59,6 @@ func Verify(k, s, m []byte) bool {
 
 func init() {
 	C.secp256k1_start()
+	init_contants()
 	ecmult_start()
-	//dump_pres()
 }
