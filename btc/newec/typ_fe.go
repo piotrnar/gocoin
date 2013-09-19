@@ -238,3 +238,18 @@ func (a *fe_t) inv(r *fe_t) {
 	}
 	x.mul(r, &a45)
 }
+
+
+func (a *fe_t) inv_var(r *fe_t) {
+	var b [32]byte
+	var c fe_t
+	c = *a
+	c.normalize()
+	c.get_b32(b[:])
+	var n num_t
+	n.init()
+	n.SetBytes(b[:])
+	n.ModInverse(n.big(), secp256k1.P)
+	r.set_bytes(n.Bytes())
+	n.free()
+}
