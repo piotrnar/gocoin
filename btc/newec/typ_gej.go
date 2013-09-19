@@ -179,3 +179,9 @@ func (a *gej_t) neg(r *gej_t) {
 	r.y.normalize()
 	r.y.negate(&r.y, 1)
 }
+
+func (a *gej_t) mul_lambda(r *gej_t) {
+	*r = *a
+	r.x.mul(&r.x, &beta)
+}
+
