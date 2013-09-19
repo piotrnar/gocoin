@@ -253,3 +253,46 @@ func (a *fe_t) inv_var(r *fe_t) {
 	r.set_bytes(n.Bytes())
 	n.free()
 }
+
+func (a *fe_t) sqrt(r *fe_t) {
+	var x, a2, a3, a6, a12, a15, a30, a60, a120, a240, a255, a510, a750, a780, a1020, a1022, a1023 fe_t
+	var i, j int
+	// calculate a^p, with p={15,780,1022,1023}
+	a.sqr(&a2)
+	a2.mul(&a3, a)
+	a3.sqr(&a6)
+	a6.sqr(&a12)
+	a12.mul(&a15, &a3)
+	a15.sqr(&a30)
+	a30.sqr(&a60)
+	a60.sqr(&a120)
+	a120.sqr(&a240)
+	a240.mul(&a255, &a15)
+	a255.sqr(&a510)
+	a510.mul(&a750, &a240)
+	a750.mul(&a780, &a30)
+	a510.sqr(&a1020)
+	a1020.mul(&a1022, &a2)
+	a1022.mul(&a1023, a)
+	x = a15
+	for i=0; i<21; i++ {
+		for j=0; j<10; j++ {
+			x.sqr(&x)
+		}
+		x.mul(&x, &a1023)
+	}
+	for j=0; j<10; j++ {
+		x.sqr(&x)
+	}
+	x.mul(&x, &a1022)
+	for i=0; i<2; i++ {
+		for j=0; j<10; j++ {
+			x.sqr(&x)
+		}
+		x.mul(&x, &a1023)
+	}
+	for j=0; j<10; j++ {
+		x.sqr(&x)
+	}
+	x.mul(r, &a780)
+}
