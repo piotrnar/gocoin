@@ -42,6 +42,10 @@ func (r *num_t) mod_mul(a, b, m *num_t) {
 	return
 }
 
+func (a *num_t) set_hex(s string) {
+	a.SetString(s, 16)
+}
+
 
 /*Temporary functions*/
 func (a *num_t) set_bn(bn unsafe.Pointer) {

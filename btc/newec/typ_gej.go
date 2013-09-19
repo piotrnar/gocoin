@@ -17,7 +17,7 @@ func (gej gej_t) print(lab string) {
 	}
 	fmt.Println(lab + ".X", gej.x.String())
 	fmt.Println(lab + ".Y", gej.y.String())
-	fmt.Println(lab + ".X", gej.z.String())
+	fmt.Println(lab + ".Z", gej.z.String())
 }
 
 
