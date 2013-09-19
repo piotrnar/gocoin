@@ -26,9 +26,3 @@ func (a *gej_t) add(r, b *gej_t) {
 	C.secp256k1_gej_add(unsafe.Pointer(r), unsafe.Pointer(a), unsafe.Pointer(b))
 }
 
-/*
-func (a *gej_t) mul_lambda(r *gej_t) {
-	C.secp256k1_gej_mul_lambda(unsafe.Pointer(r), unsafe.Pointer(a))
-}
-
-*/
