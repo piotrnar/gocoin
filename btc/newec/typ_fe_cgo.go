@@ -7,10 +7,14 @@ void secp256k1_fe_mul_int(void *r, int a);
 void secp256k1_fe_add(void *r, void *a);
 void secp256k1_fe_inv_var(void *r, void *a);
 void secp256k1_fe_inv(void *r, void *a);
+void secp256k1_fe_sqrt(void *r, void *a);
 */
-//import "C"
-//import "unsafe"
+import "C"
+import "unsafe"
 
+func (a *fe_t) sqrt(r *fe_t) {
+	C.secp256k1_fe_sqrt(unsafe.Pointer(r), unsafe.Pointer(a));
+}
 
 
 /*
