@@ -137,11 +137,3 @@ void secp256k1_num_negate(secp256k1_num_t *r) {
     BN_set_negative(&r->bn, !BN_is_negative(&r->bn));
 }
 
-void bytes2bn(void *bn, void *a, int alen) {
-	BN_init(bn);
-	BN_bin2bn(a, alen, bn);
-}
-
-int bn2bytes(BIGNUM *a, unsigned char *to) {
-	return BN_bn2bin(a, to);
-}
