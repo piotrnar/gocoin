@@ -12,14 +12,6 @@ import "C"
 import "unsafe"
 
 
-func (a *fe_t) sqr(r *fe_t) {
-	C.secp256k1_fe_sqr(unsafe.Pointer(r), unsafe.Pointer(a));
-}
-
-func (a *fe_t) mul(r, b *fe_t) {
-	C.secp256k1_fe_mul(unsafe.Pointer(r), unsafe.Pointer(a), unsafe.Pointer(b))
-}
-
 func (a *fe_t) inv_var(r *fe_t) {
 	C.secp256k1_fe_inv_var(unsafe.Pointer(r), unsafe.Pointer(a));
 }
@@ -29,6 +21,14 @@ func (a *fe_t) inv(r *fe_t) {
 }
 
 /*
+func (a *fe_t) sqr(r *fe_t) {
+	C.secp256k1_fe_sqr(unsafe.Pointer(r), unsafe.Pointer(a));
+}
+
+func (a *fe_t) mul(r, b *fe_t) {
+	C.secp256k1_fe_mul(unsafe.Pointer(r), unsafe.Pointer(a), unsafe.Pointer(b))
+}
+
 func (r *fe_t) mul_int(a int) {
 	C.secp256k1_fe_mul_int(unsafe.Pointer(r), C.int(a))
 }
