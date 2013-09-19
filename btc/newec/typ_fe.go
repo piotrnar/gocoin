@@ -55,6 +55,11 @@ func (a *fe_t) is_odd() bool {
 	return (a.n[0]&1) != 0
 }
 
+func (a *fe_t) is_zero() bool {
+	return (a.n[0] == 0 && a.n[1] == 0 && a.n[2] == 0 && a.n[3] == 0 && a.n[4] == 0 && a.n[5] == 0 && a.n[6] == 0 && a.n[7] == 0 && a.n[8] == 0 && a.n[9] == 0)
+}
+
+
 func (r *fe_t) set_int(a uint32) {
 	r.n[0] = a; r.n[1] = 0; r.n[2] = 0; r.n[3] = 0; r.n[4] = 0;
 	r.n[5] = 0; r.n[6] = 0; r.n[7] = 0; r.n[8] = 0; r.n[9] = 0;
