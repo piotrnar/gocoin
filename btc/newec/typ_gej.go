@@ -55,10 +55,19 @@ func (a *gej_t) get_x(r *fe_t) {
 	a.x.mul(r, &zi2)
 }
 
+func (a *gej_t) normalize() {
+	a.x.normalize()
+	a.y.normalize()
+	a.z.normalize()
+}
+
 func (a *gej_t) equal(b *gej_t) bool {
 	if a.infinity != b.infinity {
 		return false
 	}
+	// TODO: check it it does not affect performance
+	a.normalize()
+	b.normalize()
 	return a.x.equal(&b.x) && a.y.equal(&b.y) && a.z.equal(&b.z)
 }
 

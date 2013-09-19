@@ -21,9 +21,6 @@ func TestECmult(t *testing.T) {
 	expres.z.set_hex("813925AF112AAB8243F8CCBADE4CC7F63DF387263028DE6E679232A73A7F3C31")
 
 	pubkeyj.ecmult(&pr, &u2, &u1)
-	pr.x.normalize()
-	pr.y.normalize()
-	pr.z.normalize()
 	if !pr.equal(&expres) {
 		t.Error("ecmult failed")
 		pr.print("got")
@@ -73,7 +70,6 @@ func TestWNAF(t *testing.T) {
 }
 
 
-/*
 func TestPrecompileGej(t *testing.T) {
 	var exp, a gej_t
 
@@ -105,4 +101,3 @@ func TestPrecompileGej(t *testing.T) {
 		t.Error("Unexpcted value")
 	}
 }
-*/
