@@ -53,6 +53,10 @@ func EC_Verify(pkey, sign, hash []byte) int {
 	}
 }
 
+func Verify(k, s, m []byte) bool {
+	return secp256k1_ecdsa_verify(m, s, k)==1
+}
+
 func init() {
 	C.secp256k1_start()
 	ecmult_start()
