@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-func (r *ge_t) set_xo(x *fe_t, odd bool) {
+func (r *ge_t) ___set_xo(x *fe_t, odd bool) {
 	if odd {
 		C.secp256k1_ge_set_xo(unsafe.Pointer(r), unsafe.Pointer(r), 1)
 	} else {
