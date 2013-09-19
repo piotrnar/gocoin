@@ -91,3 +91,34 @@ func (a *ge_t) neg(r *ge_t) {
 	r.y.normalize()
 	r.y.negate(&r.y, 1)
 }
+
+
+func (r *ge_t) set_xo(x *fe_t, odd bool) {
+	var c, x2, x3 fe_t
+	r.x = *x
+	x.sqr(&x2)
+	x.mul(&x3, &x2)
+	r.infinity = false
+	c.set_int(7)
+	c.add(&x3)
+	c.sqrt(&r.y)
+	r.y.normalize()
+	if r.y.is_odd() != odd {
+		r.y.negate(&r.y, 1)
+	}
+}
+
+/*
+void secp256k1_ge_set_xo(secp256k1_ge_t *r, const secp256k1_fe_t *x, int odd) {
+    r->x = *x
+    secp256k1_fe_t x2; secp256k1_fe_sqr(&x2, x)
+    secp256k1_fe_t x3; secp256k1_fe_mul(&x3, x, &x2)
+    r->infinity = 0
+    secp256k1_fe_t c; secp256k1_fe_set_int(&c, 7)
+    secp256k1_fe_add(&c, &x3)
+    secp256k1_fe_sqrt(&r->y, &c)
+    secp256k1_fe_normalize(&r->y)
+    if (secp256k1_fe_is_odd(&r->y) != odd)
+        secp256k1_fe_negate(&r->y, &r->y, 1)
+}
+*/
