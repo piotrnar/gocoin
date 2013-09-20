@@ -5,11 +5,11 @@ package main
 
   1) Build secp256k1.dll for your arch (32/64 bit)
 
-  2) Place the secp256k1.dll somwhere within the PATH (i.e. in C:\WINDOWS)
+  2) Place the secp256k1.dll somewhere within the PATH (i.e. in C:\WINDOWS)
 
-  3) Copy this file one level up (to the "client" folder).
+  3) Copy this file one level up and remove "speedup.go" from there
 
-  4) Rebuild clinet.exe adn enjoy sipa's verify lib.
+  4) Rebuild clinet.exe and enjoy sipa's verify lib.
 */
 
 import (
