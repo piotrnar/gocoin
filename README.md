@@ -91,15 +91,15 @@ To use the native go implementation, just remove the file "speedup.go" from the 
 In order to use a different speedup module, after removing "speedup.go", copy any of the .go files (but never more than one) from "client/speedup/" to the "client/" folder and redo "go build" there.  For cgo wrappers, it does not always go smoothly, because building them requires a working C toolset and additional external libraries. If it does not build out of the box, see README.md in the wrapper's folder ("./cgo/wrapper/") for some help.
 
 ### sipasec (cgo)
-The "sipasec" option is about 3 times faster from the default speedup, and something like 100 times faster from using no speedup at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems.
+The "sipasec" option is about four times faster than the default speedup, and over a hundred times faster than using no speedup at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems.
 
 ### sipadll (Windows only)
-This is the advised speedup for Windows. It should have the same performance as the cgo option and needs "secp256k1.dll" in order to work (follow the instructions from "cgo/sipasec/README.md" to build it).
+This is the advised speedup for Windows. It should have a similar performance as the cgo option and needs "secp256k1.dll" in order to work (follow the instructions from "cgo/sipasec/README.md" to build it).
 
 If you struggle with building the DLL yourself, you can use pre-compiled binary from "tools/spia_dll/secp256k1.dll" that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
 
 ### openssl (cgo)
-OpenSSL seems to be performing a bit worse than the built-in Go speedup, but it is based on the library that is a well recognized and widely approved standard, so you might prefer to use it for security reasons.
+OpenSSL seems to be performing a bit worse than the built-in native Go speedup, but it is based on the library that is a well recognized and widely approved standard, so you might prefer to use it for security reasons.
 
 
 Bootstrapping
