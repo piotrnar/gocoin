@@ -279,3 +279,61 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 	h3.negate(&h3, 1)
 	r.y.inc_by(&h3)
 }
+
+
+func (a *gej_t) add(r, b *gej_t) {
+	if a.infinity {
+		*r = *b
+		return
+	}
+	if b.infinity {
+		*r = *a
+		return
+	}
+	r.infinity = false
+	var z22, z12, u1, u2, s1, s2 fe_t
+
+	b.z.sqr(&z22)
+	a.z.sqr(&z12)
+	a.x.mul(&u1, &z22)
+	b.x.mul(&u2, &z12)
+	a.y.mul(&s1, &z22)
+	s1.mul(&s1, &b.z)
+	b.y.mul(&s2, &z12)
+	s2.mul(&s2, &a.z)
+	u1.normalize()
+	u2.normalize()
+	if u1.equal(&u2) {
+		s1.normalize()
+		s2.normalize()
+		if s1.equal(&s2) {
+			a.double(r)
+		} else {
+			r.infinity = true
+		}
+		return
+	}
+	var h, i, i2, h2, h3, t fe_t
+
+	u1.negate(&h, 1)
+	h.inc_by(&u2)
+	s1.negate(&i, 1)
+	i.inc_by(&s2)
+	i.sqr(&i2)
+	h.sqr(&h2)
+	h.mul(&h3, &h2)
+	a.z.mul(&r.z, &b.z)
+	r.z.mul(&r.z, &h)
+	u1.mul(&t, &h2)
+	r.x = t
+	r.x.mul_int(2)
+	r.x.inc_by(&h3)
+	r.x.negate(&r.x, 3)
+	r.x.inc_by(&i2)
+	r.x.negate(&r.y, 5)
+	r.y.inc_by(&t)
+	r.y.mul(&r.y, &i)
+	h3.mul(&h3, &s1)
+	h3.negate(&h3, 1)
+	r.y.inc_by(&h3)
+}
