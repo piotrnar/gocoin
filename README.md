@@ -36,36 +36,33 @@ The online client node has much higher system requirements than the wallet app.
 
 Client / Node
 --------------
-As for the current bitcoin block chain (aroung block #250000), it is recommended to have at least 4GB of RAM. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. For testnet-only purposes 32-bit arch is enough.
+As for the current bitcoin block chain (around block #250000), it is recommended to have at least 4GB of RAM. Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. For testnet only purposes 32-bit arch is enough.
 
 The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
 
 
 Wallet
 --------------
-The wallet application has very little requirements and it should work with literally any platform where you have a working Go compiler. That includes ARM (i.e. for Raspberry Pi).
+The wallet application has very little requirements and it should work with literally any platform where you have a working Go compiler. That includes ARM (e.g. for Raspberry Pi).
 
+The wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk, with a solid (unbreakable) password. Also use an encrypted swap file since there is no guarantee that no secret part would end up in the swap file at some point.
 
-Security
---------------
-The wallet uses unencrypted files to store the private keys, so make sure that these files are stored on an encrypted disk, with a solid (unbreakable) password. Also use an encrypted swap file since there is no guarantee that no secret part wwould end up in the swap file, at some point.
-
-It is also extremely importnant (for the security of your wallet's private keys) to run the wallet app on a platform (OS) that has a reliable (menaing: unpredicible) random number generator. Any popular OS (Widnows, Linux, MacOS) should be fine, but be careful using any kind of a simplified hardware/OS. Read more about this:
- * http://golang.org/pkg/crypto/rand/#pkg-variables
- * https://bitcointalk.org/index.php?topic=271486.0
-
-Deterministic nature of the wallet implies that whenever any of your private keys is compromised, it also compromises all the further keys that originate from it. To address this risk Type-3 deterministic wallet has been implemented in Gocoin version 0.6.4 (use -t3 command line switch).
 
 Dependencies
 ==============
 
-You should have Git and Mercurial installed in your OS, so „git” ang „hg” cound be executed from a command prompt, without a need to specify a full path to the executables.
+Tools
+--------------
+In order to build Gocoin you need the following tools installed in your system:
+ 1) Go - http://golang.org/doc/install
+ 2) Git - http://git-scm.com/downloads
+ 3) Mercurial - http://mercurial.selenic.com/
 
-If you are on Windows and you want to get adventage od EC_Verify wrapper, you will also need MinGW(64) and MSys.
+If they are all properly installed you should be able to execute “go”, “git” and “hg” from your OS's command prompt without a need to specify their full path.
 
-Of course you also need a Go compiler for your platform.
-
-When you have all of the above, just allow Go to fetch the a dependency library for you, by executing:
+Libraries
+--------------
+Two additional libraries are needed, both of which are provided by Google, though are not included in the default set of Go libraries, therefore you need to download them manually. Use your installed Go toolset and (that will use Mercurial) to download the libraries for you. Execute the following commands:
 
 	go get code.google.com/p/go.crypto/ripemd160
 	go get code.google.com/p/snappy-go/snappy
@@ -83,21 +80,24 @@ After you have the sources in your local disk, building them is usually as simpl
 
 EC_Verify speedups
 --------------
-Elliptic Curve math operations provided by standard Go libraries are slow, comparing to other available solutions. This affects quite much the performance of the client node and therefore it is strongly  recommended to use one of the available speedups.
+The performance of EC operations provided by standard Go libraries is poor and a package „./btc/newec” has been developed to address this issue. This package is used by default, although you have an option to use a different solutions.
 
-In order to use a speedup module, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  For cgo wrappers, it unfortunately does not always go so smoothly. To build any of the cgo wrappers on Windows, you will need MSys and MinGW (actually mingw64 for 64-bit Windows). 
+In folder „tools/ec_bench” you can find benchmarks that compare a speed of each of available solution.
 
-### mygonat (native Go)
-This implementation boosts EC_Verify operations about 3 times fold. It uses pure Go and therefore should build without hiccups on any platform. The code is based on secp256k1 library by sipa and has been ported from C language. 
+To use the native go implementation, just remove the file „speedup.go” from the „./client” folder.
+
+In order to use a different speedup module, after removing „speedup.go”, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  For cgo wrappers, it does not always go smoothly, because building them requires a working C toolset and additional external libraries. If it does not build out of the box, see README.md in the wrapper's folder (“./cgo/wrapper/”) for some help.
 
 ### sipasec (cgo)
-The "sipasec" option is 5 to 10 times faster from the "openssl", and something like 100 times faster from using no wrapper at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems. 
+The "sipasec" option is about 3 times faster from the default speedup, and something like 100 times faster from using no speedup at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems. 
 
 ### sipadll (Windows only)
-This is the advised speedup for Windows. It needs “secp256k1.dll” in order to work (follow the instructions from "cgo/sipasec/README.md" to build it). If you struggle with building the DLL yourself, you can use pre-compiled binary from „tools/spia_dll/secp256k1.dll” that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
+This is the advised speedup for Windows. It should have the same performance as the cgo option and needs “secp256k1.dll” in order to work (follow the instructions from "cgo/sipasec/README.md" to build it).
+
+If you struggle with building the DLL yourself, you can use pre-compiled binary from „tools/spia_dll/secp256k1.dll” that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
 
 ### openssl (cgo)
-If you fail to build "sipasec" or just prefer to use a more mature solution, you can try "openssl" wrapper. On Linux, the OpenSSL option should build smoothly, as long as you have libssl-dev installed. On Windows, you will need libcrypto.a build for your architecture and the header files. Having the libcrypto.a, you will need to "fix" it by executing  bash script “win_fix_libcrypto.sh”.
+OpenSSL seems to be performing a bit worse than the built-in Go speedup, but it is based on the library that is a well recognized and widely approved standard, so you might prefer to use it for security reasons.
 
 
 Bootstrapping
@@ -107,11 +107,11 @@ Gocoin's client node has not been really optimized for the initial chain downloa
 
 Import block from Satoshi client
 --------------
-When you run the client node for the first time, it will look of the satoshi's blocks database in its default location (e.g. ~/.bitcoin/blocks or %appdata%\Bitcoin\blocks) and if found, it will ask you whether you want to import these blocks – you should say 'yes'. Choosing to verify the scripts is not neccessary, since it is very time consuming and all the blocks in the input database should only contain verified scripts anyway.
+When you run the client node for the first time, it will look of the satoshi's blocks database in its default location (e.g. ~/.bitcoin/blocks or %appdata%\Bitcoin\blocks) and if found, it will ask you whether you want to import these blocks – you should say 'yes'. Choosing to verify the scripts is not necessary, since it is very time consuming and all the blocks in the input database should only contain verified scripts anyway.
 
 There is also a separate tool called „importblocks” that you can use for importing blocks from the satoshi's database into gocoin. Start the tool without parameters and it will tell you how to use it. While importing the blockchain using this tool, make sure that your node is not running.
 
-In b oth cases, the oparation might take up to an hour, but it is one time only.
+In both cases, the operation might take up to an hour, but it is one time only.
 
 
 Fetching blockchain from local host
@@ -151,7 +151,7 @@ If you want to have access to it from different computers:
 ### Incoming connections
 There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (or 18333 for testnet) to the PC running the node.
 
-It is possible to setup a different incomming port („TCPPort” config value), but currently the satoshi clients refuse to conenct using non-default ports, so if you get any incomming connections on non-default ports, they will only be from alternative clients, which there are barely few out there.
+It is possible to setup a different incomming port („TCPPort” config value), but currently the satoshi clients refuse to connect using non-default ports, so if you get any incoming connections on non-default ports, they will only be from alternative clients, which there are barely few out there.
 
 
 Wallet
@@ -189,7 +189,7 @@ It import the key, just store the base58 encoded value in a file named .others -
 
 You can also place a key's label in each line, after a space.
 
-The imported keys will extend the key pool of the deterministic ones (that come from your password-seed). Afetr Importing each new key, you should redo “wallet -l” to get an updated wallet.txt for your client.
+The imported keys will extend the key pool of the deterministic ones (that come from your password-seed). After Importing each new key, you should redo “wallet -l” to get an updated wallet.txt for your client.
 
 
 Spending money
@@ -279,9 +279,14 @@ There is also a command to re-broadcast all the transaction that have been loade
 Known issues
 ==============
 
+Go's memory manager
+--------------
+It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Until this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node. There are opinions (from go devels) that this is an issue only on Windows, but to be honest, I have tested gocoin with Linux as well and it seems to be quite the same there.
+
+
 Possible UTXO db inconsistency
 --------------
-Sometimes when you kill a client node (instead of quiting it gracefully), it might happen that the unspent outputs database will get corrupt. In that case, when you start it the next time, the node will malfunction (i.e. panic or do not process any new blocks).
+Sometimes when you kill a client node (instead of quitting it gracefully), it might happen that the unspent outputs database will get corrupt. In that case, when you start it the next time, the node will malfunction (i.e. panic or do not process any new blocks).
 
 To fix this issue you need to rebuild the unspent database. In order to do this, start the client with „-r” switch.
 
@@ -294,11 +299,6 @@ Moreover during the rescan it seems to require much more system memory in peaks,
 WebUI browser compatibility
 --------------
 The WebUI is being developed and tested with Chrome. As for other browsers some functions might not work.
-
-
-Go's memory manager
---------------
-It is a known issue that the current memory manager used by Go never releases a mem back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in „Heap Size”, but never in „SysMem Used”. Untill this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node. There are opinions (from go devels) that this is an issue only on Windows, but to be honest, I have tested gocoin with Linux as well and it seems to be quite the same there.
 
 
 Support
