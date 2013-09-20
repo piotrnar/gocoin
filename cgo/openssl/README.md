@@ -20,4 +20,4 @@ You will need libcrypto.a build for your architecture and the header files.
 
 Having the libcrypto.a, you will need to "fix" it by executing bash script “win_fix_libcrypto.sh”.
 
-Before doing "go build" place "libcrypto.a" and "openssl" folder (with the headers) in this folder.
+Before doing "go build" edit openssl.go and fix the paths to "libcrypto.a" and openssl include dir.
