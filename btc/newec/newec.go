@@ -41,7 +41,6 @@ func Verify(k, s, m []byte) bool {
 }
 
 func init() {
-	cgo_start()
 	init_contants()
 	ecmult_start()
 }
