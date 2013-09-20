@@ -23,10 +23,11 @@ Main features
 
 Limitations of the client node
 --------------
-* No minig API
+* No mining API
 * No UPnP
 * No IPv6
 * No GUI window
+* No multi signature transactions
 
 
 System Requirements
@@ -89,7 +90,7 @@ To use the native go implementation, just remove the file „speedup.go” from the 
 In order to use a different speedup module, after removing „speedup.go”, copy any of the .go files (but never more than one) from “client/speedup/” to the “client/” folder and redo “go build” there.  For cgo wrappers, it does not always go smoothly, because building them requires a working C toolset and additional external libraries. If it does not build out of the box, see README.md in the wrapper's folder (“./cgo/wrapper/”) for some help.
 
 ### sipasec (cgo)
-The "sipasec" option is about 3 times faster from the default speedup, and something like 100 times faster from using no speedup at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems. 
+The "sipasec" option is about 3 times faster from the default speedup, and something like 100 times faster from using no speedup at all. To build this wrapper, follow the instructions in "cgo/sipasec/README.md". It is the advised speedup for non-Windows systems.
 
 ### sipadll (Windows only)
 This is the advised speedup for Windows. It should have the same performance as the cgo option and needs “secp256k1.dll” in order to work (follow the instructions from "cgo/sipasec/README.md" to build it).
