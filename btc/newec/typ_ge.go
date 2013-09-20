@@ -51,7 +51,7 @@ func (a *ge_t) is_valid() bool {
 	a.y.sqr(&y2)
 	a.x.sqr(&x3); x3.mul(&x3, &a.x)
 	c.set_int(7)
-	x3.add(&c)
+	x3.inc_by(&c)
 	y2.normalize()
 	x3.normalize()
 	return y2.equal(&x3)
@@ -100,7 +100,7 @@ func (r *ge_t) set_xo(x *fe_t, odd bool) {
 	x.mul(&x3, &x2)
 	r.infinity = false
 	c.set_int(7)
-	c.add(&x3)
+	c.inc_by(&x3)
 	c.sqrt(&r.y)
 	r.y.normalize()
 	if r.y.is_odd() != odd {

@@ -42,7 +42,7 @@ func (a *gej_t) is_valid() bool {
 	a.z.sqr(&z2)
 	z2.sqr(&z6); z6.mul(&z6, &z2)
 	z6.mul_int(7)
-	x3.add(&z6)
+	x3.inc_by(&z6)
 	y2.normalize()
 	x3.normalize()
 	return y2.equal(&x3)
@@ -209,13 +209,73 @@ func (a *gej_t) double(r *gej_t) {
 	r.x = t3
 	r.x.mul_int(4)
 	r.x.negate(&r.x, 4)
-	r.x.add(&t2)
+	r.x.inc_by(&t2)
 	t2.negate(&t2, 1)
 	t3.mul_int(6)
-	t3.add(&t2)
+	t3.inc_by(&t2)
 	t1.mul(&r.y, &t3)
 	t4.negate(&t2, 2)
-	r.y.add(&t2)
+	r.y.inc_by(&t2)
 	r.infinity = false
 }
 
+
+func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
+	if a.infinity {
+		r.infinity = b.infinity
+		r.x = b.x
+		r.y = b.y
+		r.z.set_int(1)
+		return
+	}
+	if b.infinity {
+		*r = *a
+		return
+	}
+	r.infinity = false
+	var z12, u1, u2, s1, s2 fe_t
+	a.z.sqr(&z12)
+	u1 = a.x
+	u1.normalize()
+	b.x.mul(&u2, &z12)
+	s1 = a.y
+	s1.normalize()
+	b.y.mul(&s2, &z12)
+	s2.mul(&s2, &a.z)
+	u1.normalize()
+	u2.normalize()
+
+	if u1.equal(&u2) {
+		s1.normalize()
+		s2.normalize()
+		if (s1.equal(&s2)) {
+			a.double(r)
+		} else {
+			r.infinity = true
+		}
+		return
+	}
+
+	var h, i, i2, h2, h3, t fe_t
+	u1.negate(&h, 1)
+	h.inc_by(&u2)
+	s1.negate(&i, 1)
+	i.inc_by(&s2)
+	i.sqr(&i2)
+	h.sqr(&h2)
+	h.mul(&h3, &h2)
+	r.z = a.z
+	r.z.mul(&r.z, &h)
+	u1.mul(&t, &h2)
+	r.x = t
+	r.x.mul_int(2)
+	r.x.inc_by(&h3)
+	r.x.negate(&r.x, 3)
+	r.x.inc_by(&i2)
+	r.x.negate(&r.y, 5)
+	r.y.inc_by(&t)
+	r.y.mul(&r.y, &i)
+	h3.mul(&h3, &s1)
+	h3.negate(&h3, 1)
+	r.y.inc_by(&h3)
+}
