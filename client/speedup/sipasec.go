@@ -1,16 +1,13 @@
 package main
 
 /*
-  If you want EC verify operations to work almost 100 times faster,
-  you can try using a cgo wrapper for secp256k1 lib developer by sipa:
-  https://github.com/sipa/secp256k1
+  This is a EC_Verify speedup that is advised for non Windows systems.
 
-  In order to do it, just copy this file one level up (to the
-  "client" folder) and try "go build" there.
+  1) Build and install sipa's secp256k1 lib for your system
 
-  If it complains about not being able to build
-  "github.com/piotrnar/gocoin/cgo/sipasec", either try to fix it,
-  or just remove the file you copied and continue in slow mode.
+  2) Copy this file one level up and remove "speedup.go" from there
+
+  3) Rebuild clinet.exe and enjoy sipa's verify lib.
 */
 
 import (
