@@ -1,15 +1,11 @@
 package main
 
 /*
-  If you want EC verify operations to work about 15 times faster,
-  you can try using OpenSSL cgo wrapper, from the "openssl" dir.
-
-  In order to do it, just copy this file one level up (to the
-  "client" folder) and try "go build" there.
-
-  If it complains about not being able to build
-  "github.com/piotrnar/gocoin/cgo/openssl", either try to fix it,
-  or just remove the file you copied and continue in slow mode.
+  If you prefer to use OpenSSL implementation for verifying
+  transaction signatures:
+   1) Copy this file one level up (to the "./client" folder)
+   2) Remove "speedup.go" from the client folder
+   3) Redo "go build"
 */
 
 import (
