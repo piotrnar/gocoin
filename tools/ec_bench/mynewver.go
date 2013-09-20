@@ -6,7 +6,7 @@ import (
 	"github.com/piotrnar/gocoin/btc/newec"
 )
 
-var CNT int = 2*250
+var CNT int = 25*250
 
 func main() {
 	key, _ := hex.DecodeString("040eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66dbeb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16")
