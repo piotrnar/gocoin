@@ -64,7 +64,7 @@ If they are all properly installed you should be able to execute "go", "git" and
 
 Libraries
 --------------
-Two additional libraries are needed, both of which are provided by Google, though are not included in the default set of Go libraries, therefore you need to download them manually. Use your installed Go toolset and (that will use Mercurial) to download the libraries for you. Execute the following commands:
+Two additional libraries are needed, both of which are provided by Google, though are not included in the default set of Go libraries, therefore you need to download them manually. Use your installed Go toolset (that will use Mercurial) to download the libraries for you. Execute the following commands:
 
 	go get code.google.com/p/go.crypto/ripemd160
 	go get code.google.com/p/snappy-go/snappy
