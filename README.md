@@ -55,9 +55,9 @@ Dependencies
 Tools
 --------------
 In order to build Gocoin you need the following tools installed in your system:
- 1) Go - http://golang.org/doc/install
- 2) Git - http://git-scm.com/downloads
- 3) Mercurial - http://mercurial.selenic.com/
+* Go - http://golang.org/doc/install
+* Git - http://git-scm.com/downloads
+* Mercurial - http://mercurial.selenic.com/
 
 If they are all properly installed you should be able to execute “go”, “git” and “hg” from your OS's command prompt without a need to specify their full path.
 
