@@ -1,13 +1,12 @@
 package newec
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
-	"encoding/hex"
 )
 
 var (
-	BigInt0 *big.Int = new(big.Int).SetInt64(0)
 	BigInt1 *big.Int = new(big.Int).SetInt64(1)
 )
 
@@ -37,7 +36,6 @@ func (r *num_t) mod_inv(a, b *num_t) {
 func (a *num_t) set_hex(s string) {
 	a.SetString(s, 16)
 }
-
 
 func (num *num_t) mask_bits(bits uint) {
 	mask := new(big.Int).Lsh(BigInt1, bits)
@@ -83,7 +81,7 @@ func (num *num_t) inc() {
 }
 
 func (num *num_t) rsh_x(bits uint) (res int) {
-	res = int (uint(num.Int64()) & ((1<<bits)-1))
+	res = int(uint(num.Int64()) & ((1 << bits) - 1))
 	num.Rsh(&num.Int, bits)
 	return
 }
