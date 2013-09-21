@@ -42,7 +42,7 @@ func (a *gej_t) is_valid() bool {
 	a.z.sqr(&z2)
 	z2.sqr(&z6); z6.mul(&z6, &z2)
 	z6.mul_int(7)
-	x3.inc_by(&z6)
+	x3.set_add(&z6)
 	y2.normalize()
 	x3.normalize()
 	return y2.equal(&x3)
@@ -209,13 +209,13 @@ func (a *gej_t) double(r *gej_t) {
 	r.x = t3
 	r.x.mul_int(4)
 	r.x.negate(&r.x, 4)
-	r.x.inc_by(&t2)
+	r.x.set_add(&t2)
 	t2.negate(&t2, 1)
 	t3.mul_int(6)
-	t3.inc_by(&t2)
+	t3.set_add(&t2)
 	t1.mul(&r.y, &t3)
 	t4.negate(&t2, 2)
-	r.y.inc_by(&t2)
+	r.y.set_add(&t2)
 	r.infinity = false
 }
 
@@ -258,9 +258,9 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 
 	var h, i, i2, h2, h3, t fe_t
 	u1.negate(&h, 1)
-	h.inc_by(&u2)
+	h.set_add(&u2)
 	s1.negate(&i, 1)
-	i.inc_by(&s2)
+	i.set_add(&s2)
 	i.sqr(&i2)
 	h.sqr(&h2)
 	h.mul(&h3, &h2)
@@ -269,15 +269,15 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 	u1.mul(&t, &h2)
 	r.x = t
 	r.x.mul_int(2)
-	r.x.inc_by(&h3)
+	r.x.set_add(&h3)
 	r.x.negate(&r.x, 3)
-	r.x.inc_by(&i2)
+	r.x.set_add(&i2)
 	r.x.negate(&r.y, 5)
-	r.y.inc_by(&t)
+	r.y.set_add(&t)
 	r.y.mul(&r.y, &i)
 	h3.mul(&h3, &s1)
 	h3.negate(&h3, 1)
-	r.y.inc_by(&h3)
+	r.y.set_add(&h3)
 }
 
 
@@ -316,9 +316,9 @@ func (a *gej_t) add(r, b *gej_t) {
 	var h, i, i2, h2, h3, t fe_t
 
 	u1.negate(&h, 1)
-	h.inc_by(&u2)
+	h.set_add(&u2)
 	s1.negate(&i, 1)
-	i.inc_by(&s2)
+	i.set_add(&s2)
 	i.sqr(&i2)
 	h.sqr(&h2)
 	h.mul(&h3, &h2)
@@ -327,13 +327,13 @@ func (a *gej_t) add(r, b *gej_t) {
 	u1.mul(&t, &h2)
 	r.x = t
 	r.x.mul_int(2)
-	r.x.inc_by(&h3)
+	r.x.set_add(&h3)
 	r.x.negate(&r.x, 3)
-	r.x.inc_by(&i2)
+	r.x.set_add(&i2)
 	r.x.negate(&r.y, 5)
-	r.y.inc_by(&t)
+	r.y.set_add(&t)
 	r.y.mul(&r.y, &i)
 	h3.mul(&h3, &s1)
 	h3.negate(&h3, 1)
-	r.y.inc_by(&h3)
+	r.y.set_add(&h3)
 }
