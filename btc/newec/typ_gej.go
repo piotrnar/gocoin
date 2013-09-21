@@ -182,7 +182,7 @@ func (a *gej_t) neg(r *gej_t) {
 
 func (a *gej_t) mul_lambda(r *gej_t) {
 	*r = *a
-	r.x.mul(&r.x, &beta)
+	r.x.mul(&r.x, &secp256k1.beta)
 }
 
 
