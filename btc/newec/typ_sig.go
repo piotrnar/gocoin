@@ -14,49 +14,25 @@ func (r *ecdsa_sig_t) sig_parse(sig []byte) bool {
 	}
 
 	lenr := int(sig[3])
-
-	if 5+lenr >= len(sig) {
+	if lenr == 0 || 5+lenr >= len(sig) || sig[lenr+4] != 0x02 {
 		return false
 	}
 
 	lens := int(sig[lenr+5])
-
-	if int(sig[1]) != lenr+lens+4 {
+	if lens == 0 || int(sig[1]) != lenr+lens+4 || lenr+lens+6 > len(sig) || sig[2] != 0x02 {
 		return false
 	}
 
-	if lenr+lens+6 > len(sig) {
-		return false
-	}
-
-	if sig[2] != 0x02 {
-		return false
-	}
-
-	if lenr == 0 {
-		return false
-	}
-
-	if sig[lenr+4] != 0x02 {
-		return false
-	}
-
-	if lens == 0 {
-		return false
-	}
-
-	r.r.SetBytes(sig[4:4+lenr])
-	r.s.SetBytes(sig[6+lenr:6+lenr+lens])
+	r.r.SetBytes(sig[4 : 4+lenr])
+	r.s.SetBytes(sig[6+lenr : 6+lenr+lens])
 	return true
 }
 
-
 func (r *ecdsa_sig_t) sig_verify(pubkey *ge_t, message *num_t) (ret bool) {
-	var r2 num_t;
-	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(r2.big())==0
+	var r2 num_t
+	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(r2.big()) == 0
 	return
 }
-
 
 func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (ret bool) {
 	var sn, u1, u2 num_t
