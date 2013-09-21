@@ -61,9 +61,9 @@ func (r *ecdsa_sig_t) sig_verify(pubkey *ge_t, message *num_t) (ret bool) {
 func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (ret bool) {
 	var sn, u1, u2 num_t
 
-	sn.ModInverse(sig.s.big(), order.big())
-	u1.mod_mul(&sn, message, &order)
-	u2.mod_mul(&sn, &sig.r, &order)
+	sn.mod_inv(&sig.s, &secp256k1.order)
+	u1.mod_mul(&sn, message, &secp256k1.order)
+	u2.mod_mul(&sn, &sig.r, &secp256k1.order)
 
 	var pr, pubkeyj gej_t
 	pubkeyj.set_ge(pubkey)
@@ -76,7 +76,7 @@ func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (
 		var xrb [32]byte
 		xr.get_b32(xrb[:])
 		r2.SetBytes(xrb[:])
-		r2.Mod(r2.big(), order.big())
+		r2.Mod(r2.big(), secp256k1.order.big())
 		ret = true
 	}
 

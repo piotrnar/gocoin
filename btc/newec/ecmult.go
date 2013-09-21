@@ -13,9 +13,7 @@ var (
 
 
 func ecmult_start() {
-	var g ge_t
-	g.x.set_bytes(secp256k1.Gx.Bytes())
-	g.y.set_bytes(secp256k1.Gy.Bytes())
+	g := secp256k1.g
 
 	// calculate 2^128*generator
 	var g_128j gej_t

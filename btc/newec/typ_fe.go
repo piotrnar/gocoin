@@ -253,7 +253,7 @@ func (a *fe_t) inv_var(r *fe_t) {
 	c.get_b32(b[:])
 	var n num_t
 	n.SetBytes(b[:])
-	n.ModInverse(n.big(), secp256k1.P)
+	n.mod_inv(&n, &secp256k1.p)
 	r.set_bytes(n.Bytes())
 }
 

@@ -29,6 +29,11 @@ func (r *num_t) mod_mul(a, b, m *num_t) {
 	return
 }
 
+func (r *num_t) mod_inv(a, b *num_t) {
+	r.ModInverse(&a.Int, &b.Int)
+	return
+}
+
 func (a *num_t) set_hex(s string) {
 	a.SetString(s, 16)
 }
@@ -43,23 +48,23 @@ func (num *num_t) mask_bits(bits uint) {
 func (a *num_t) split_exp(r1, r2 *num_t) {
 	var bnc1, bnc2, bnn2, bnt1, bnt2 num_t
 
-	bnn2.Int.Rsh(secp256k1.N, 1)
+	bnn2.Int.Rsh(secp256k1.order.big(), 1)
 
-	bnc1.Mul(&a.Int, &a1b2.Int)
+	bnc1.Mul(&a.Int, &secp256k1.a1b2.Int)
 	bnc1.Add(&bnc1.Int, &bnn2.Int)
-	bnc1.Div(&bnc1.Int, secp256k1.N)
+	bnc1.Div(&bnc1.Int, secp256k1.order.big())
 
-	bnc2.Mul(&a.Int, &b1.Int)
+	bnc2.Mul(&a.Int, &secp256k1.b1.Int)
 	bnc2.Add(&bnc2.Int, &bnn2.Int)
-	bnc2.Div(&bnc2.Int, secp256k1.N)
+	bnc2.Div(&bnc2.Int, secp256k1.order.big())
 
-	bnt1.Mul(&bnc1.Int, &a1b2.Int)
-	bnt2.Mul(&bnc2.Int, &a2.Int)
+	bnt1.Mul(&bnc1.Int, &secp256k1.a1b2.Int)
+	bnt2.Mul(&bnc2.Int, &secp256k1.a2.Int)
 	bnt1.Add(&bnt1.Int, &bnt2.Int)
 	r1.Sub(&a.Int, &bnt1.Int)
 
-	bnt1.Mul(&bnc1.Int, &b1.Int)
-	bnt2.Mul(&bnc2.Int, &a1b2.Int)
+	bnt1.Mul(&bnc1.Int, &secp256k1.b1.Int)
+	bnt2.Mul(&bnc2.Int, &secp256k1.a1b2.Int)
 	r2.Sub(&bnt1.Int, &bnt2.Int)
 }
 
