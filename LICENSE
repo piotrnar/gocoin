@@ -3,9 +3,15 @@ in either an original or a modified form, free of charge and without
 a need for an explicit permission, but only for a non-commercial
 purposes.
 
+===============================================================================
 The implementation of the native ECDSA speedup package btc/newec
 is based on the code created by Pieter Wuille. The original code
 has been significantly rewritten while it was being ported from C
 to Go, but the author of the original implementation had obvious
 contribution into the package's code, therefore please read this:
  * https://github.com/sipa/secp256k1/blob/master/COPYING
+
+===============================================================================
+Few parts of the source code (e.g. "btc/target.go") were taken
+from the original (satoshi's) bitcoin client. Its license here:
+ * https://github.com/bitcoin/bitcoin/blob/master/COPYING
