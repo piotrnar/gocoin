@@ -82,14 +82,8 @@ func (num *num_t) inc() {
 	num.Add(&num.Int, BigInt1)
 }
 
-func (num *num_t) shift(bits uint) (res int) {
-	mask := new(big.Int).Lsh(BigInt1, bits)
-	mask.Sub(mask, BigInt1)
-	res = int(new(big.Int).And(&num.Int, mask).Int64())
-	if bits>0 {
-		num.Rsh(&num.Int, bits)
-	} else {
-		num.Lsh(&num.Int, bits)
-	}
+func (num *num_t) rsh_x(bits uint) (res int) {
+	res = int (uint(num.Int64()) & ((1<<bits)-1))
+	num.Rsh(&num.Int, bits)
 	return
 }
