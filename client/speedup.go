@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/btc/newec"
 )
@@ -10,10 +9,7 @@ import (
 func EC_Verify(k, s, h []byte) bool {
 	res := newec.Verify(k, s, h)
 	if !res {
-		println("EC_Verify faield")
-		println("pk", hex.EncodeToString(k))
-		println("si", hex.EncodeToString(s))
-		println("me", hex.EncodeToString(h))
+		CountSafe("ECVerifyFail")
 	}
 	return res
 }
