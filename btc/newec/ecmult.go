@@ -60,7 +60,7 @@ func ecmult_wnaf(wnaf []int, a *num_t, w uint) (ret int) {
 			zeroes++
 			x.rsh(1)
 		}
-		word := x.shift(w)
+		word := x.rsh_x(w)
 		for zeroes > 0 {
 			wnaf[ret] = 0
 			ret++
