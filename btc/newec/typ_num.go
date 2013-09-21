@@ -81,7 +81,7 @@ func (num *num_t) inc() {
 }
 
 func (num *num_t) rsh_x(bits uint) (res int) {
-	res = int(uint(num.Uint64()) & ((1 << bits) - 1))
+	res = int(new(big.Int).And(&num.Int, new(big.Int).SetUint64((1<<bits)-1)).Uint64())
 	num.Rsh(&num.Int, bits)
 	return
 }
