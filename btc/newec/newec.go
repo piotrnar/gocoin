@@ -1,34 +1,23 @@
 package newec
 
-func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) (ret int) {
-	ret = -3
+func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
 	var m num_t
-	m.init()
 	var s ecdsa_sig_t
-	s.init()
 	m.SetBytes(msg)
 
 	var q ge_t
 	if !q.pubkey_parse(pubkey) {
-		ret = -1
-		goto end
+		return -1
 	}
 
 	if !s.sig_parse(sig) {
-		ret = -2
-		goto end
+		return -2
 	}
 
 	if !s.sig_verify(&q, &m) {
-		ret = 0
-		goto end
+		return 0
 	}
-	ret = 1
-
-end:
-	s.free()
-	m.free()
-	return
+	return 1
 }
 
 // Verify ECDSA signature

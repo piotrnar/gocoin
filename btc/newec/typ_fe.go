@@ -252,11 +252,9 @@ func (a *fe_t) inv_var(r *fe_t) {
 	c.normalize()
 	c.get_b32(b[:])
 	var n num_t
-	n.init()
 	n.SetBytes(b[:])
 	n.ModInverse(n.big(), secp256k1.P)
 	r.set_bytes(n.Bytes())
-	n.free()
 }
 
 func (a *fe_t) sqrt(r *fe_t) {

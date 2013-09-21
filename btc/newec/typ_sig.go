@@ -8,12 +8,6 @@ type ecdsa_sig_t struct {
 	r, s num_t
 }
 
-func (s *ecdsa_sig_t) init() {
-}
-
-func (s *ecdsa_sig_t) free() {
-}
-
 func (r *ecdsa_sig_t) sig_parse(sig []byte) bool {
 	if sig[0] != 0x30 || len(sig) < 5 {
 		return false
@@ -59,9 +53,7 @@ func (r *ecdsa_sig_t) sig_parse(sig []byte) bool {
 
 func (r *ecdsa_sig_t) sig_verify(pubkey *ge_t, message *num_t) (ret bool) {
 	var r2 num_t;
-	r2.init()
 	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(r2.big())==0
-	r2.free()
 	return
 }
 
@@ -75,9 +67,6 @@ func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (
 	}
 
 	var sn, u1, u2 num_t
-	sn.init()
-	u1.init()
-	u2.init()
 
 	sn.ModInverse(sig.s.big(), order.big())
 	u1.mod_mul(&sn, message, &order)
@@ -97,9 +86,6 @@ func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (
 		r2.Mod(r2.big(), order.big())
 		ret = true
 	}
-	sn.free()
-	u1.free()
-	u2.free()
 
 	return
 }

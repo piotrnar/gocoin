@@ -15,12 +15,6 @@ type num_t struct {
 	big.Int
 }
 
-func (a *num_t) init() {
-}
-
-func (a *num_t) free() {
-}
-
 func (a *num_t) print(label string) {
 	fmt.Println(label, hex.EncodeToString(a.Bytes()))
 }
