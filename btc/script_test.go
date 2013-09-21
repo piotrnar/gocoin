@@ -98,6 +98,7 @@ func pk2hex(pk string) (out []byte, e error) {
 					xx[i] = xx[i][3:]
 				}
 				switch(xx[i]) {
+					case "RESERVED": out = append(out, 0x50)
 					case "NOP": out = append(out, 0x61)
 					case "VER": out = append(out, 0x62)
 					case "IF": out = append(out, 0x63)
