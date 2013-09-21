@@ -59,13 +59,6 @@ func (r *ecdsa_sig_t) sig_verify(pubkey *ge_t, message *num_t) (ret bool) {
 
 
 func (sig *ecdsa_sig_t) sig_recompute(r2 *num_t, pubkey *ge_t, message *num_t) (ret bool) {
-	if sig.r.Sign()<=0 || sig.s.Sign()<=0 {
-		return false
-	}
-	if sig.r.Cmp(order.big()) >= 0 || sig.s.Cmp(order.big()) >= 0 {
-		return false
-	}
-
 	var sn, u1, u2 num_t
 
 	sn.ModInverse(sig.s.big(), order.big())
