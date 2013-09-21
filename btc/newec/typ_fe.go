@@ -161,7 +161,7 @@ func (a *fe_t) equal(b *fe_t) bool {
 			a.n[5] == b.n[5] && a.n[6] == b.n[6] && a.n[7] == b.n[7] && a.n[8] == b.n[8] && a.n[9] == b.n[9])
 }
 
-func (r *fe_t) inc_by(a *fe_t) {
+func (r *fe_t) set_add(a *fe_t) {
 	r.n[0] += a.n[0]
 	r.n[1] += a.n[1]
 	r.n[2] += a.n[2]
