@@ -99,7 +99,9 @@ The "sipasec" option is about four times faster than the default speedup, and ov
 ### sipadll (Windows only)
 This is the advised speedup for Windows. It should have a similar performance as the cgo option and needs "secp256k1.dll" in order to work (follow the instructions from "cgo/sipasec/README.md" to build it).
 
-If you struggle with building the DLL yourself, you can use pre-compiled binary from "tools/spia_dll/secp256k1.dll" that should work with any 64-bit Windows OS. Just make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
+If you struggle with building the DLL yourself, you can use pre-compiled binary from "tools/spia_dll/secp256k1.dll" that should work with any 64-bit Windows OS.
+
+Make sure the DLL can be found (executed) by the system, from where you run your client. The most convenient solution is to copy the DLL to one of the folders from your PATH.
 
 ### openssl (cgo)
 OpenSSL seems to be performing a bit worse than the built-in native Go speedup, but it is based on the library that is a well recognized and widely approved standard, so you might prefer to use it for security reasons.
