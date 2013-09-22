@@ -114,7 +114,7 @@ Gocoin's client node has not been really optimized for the initial chain downloa
 
 Import block from Satoshi client
 --------------
-When you run the client node for the first time, it will look of the satoshi's blocks database in its default location (e.g. ~/.bitcoin/blocks or %appdata%\Bitcoin\blocks) and if found, it will ask you whether you want to import these blocks " you should say 'yes'. Choosing to verify the scripts is not necessary, since it is very time consuming and all the blocks in the input database should only contain verified scripts anyway.
+When you run the client node for the first time, it will look of the satoshi's blocks database in its default location (e.g. ~/.bitcoin/blocks or %appdata%\Bitcoin\blocks) and if found, it will ask you whether you want to import these blocks - you should say 'yes'. Choosing to verify the scripts is not necessary, since it is very time consuming and all the blocks in the input database should only contain verified scripts anyway.
 
 There is also a separate tool called "importblocks" that you can use for importing blocks from the satoshi's database into gocoin. Start the tool without parameters and it will tell you how to use it. While importing the blockchain using this tool, make sure that your node is not running.
 
