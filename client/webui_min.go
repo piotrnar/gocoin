@@ -59,7 +59,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	next_diff_change := 2016-end.Height%2016
 
 	for ; end!=nil; cnt++ {
-		if now-int64(end.Timestamp) > 24*3600 {
+		if now-int64(end.Timestamp) > int64(CFG.MiningStatHours)*3600 {
 			break
 		}
 		lastts = int64(end.Timestamp)
@@ -98,8 +98,9 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	onerow := load_template("miners_row.html")
 
 	diff /= float64(cnt)
-	bph := float64(cnt)/24
+	bph := float64(cnt)/float64(CFG.MiningStatHours)
 	hrate := bph/6 * diff * 7158278.826667
+	mnrs = strings.Replace(mnrs, "{MINING_HOURS}", fmt.Sprint(CFG.MiningStatHours), 1)
 	mnrs = strings.Replace(mnrs, "{BLOCKS_COUNT}", fmt.Sprint(cnt), 1)
 	mnrs = strings.Replace(mnrs, "{FIRST_BLOCK_TIME}", time.Unix(lastts, 0).Format("2006-01-02 15:04:05"), 1)
 	mnrs = strings.Replace(mnrs, "{AVG_BLOCKS_PER_HOUR}", fmt.Sprintf("%.2f", bph), 1)
