@@ -6,11 +6,14 @@ Gocoin is a full bitcoin client solution (node + wallet) written in Go language 
 Architecture
 --------------
 The two basic components of the software are:
-* client " a bitcoin node that must be connected to Internet
-* wallet " a wallet app, that is designed to be used (for security) on a network-free PC
+* client - a bitcoin node that must be connected to Internet
+* wallet - a wallet app, that is designed to be used (for security) on a network-free PC
 
-There are also some additional tools, from which the most useful one seems to be "versigmsg", that verifies messages signed with bitcoin keys.
+There are also some additional tools, like:
 
+* versigmsg - verify a messages signed with bitcoin address.
+* importblocks - import block database from the satoshi client
+* type2determ - generate public adresses for type-2 deterministic wallets
 
 Main features
 --------------
