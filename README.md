@@ -87,7 +87,7 @@ EC_Verify speedups
 --------------
 The performance of EC operations provided by standard Go libraries is poor and a package "./btc/newec" has been developed to address this issue. This package is used by default, although you have an option to use a different solutions.
 
-In folder "tools/ec_bench" you can find benchmarks that compare a speed of each of available solution.
+In folder "tools/ec_bench" you can find benchmarks that compare a speed of each of the available solutions.
 
 To use the native go implementation, just remove the file "speedup.go" from the "./client" folder.
 
