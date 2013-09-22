@@ -67,6 +67,7 @@ var (
 			NewBalance bool // been when a balance has changed
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
+		MiningStatHours uint
 	}
 
 	mutex_cfg sync.Mutex
@@ -103,6 +104,8 @@ func init() {
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
+
+	CFG.MiningStatHours = 24
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
