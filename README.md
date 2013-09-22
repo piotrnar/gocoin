@@ -118,7 +118,7 @@ When you run the client node for the first time, it will look of the satoshi's b
 
 There is also a separate tool called "importblocks" that you can use for importing blocks from the satoshi's database into gocoin. Start the tool without parameters and it will tell you how to use it. While importing the blockchain using this tool, make sure that your node is not running.
 
-In both cases, the operation might take up to an hour, but it is one time only.
+In both cases, the operation might take like an hour, or even more, but it is one time only.
 
 
 Fetching blockchain from local host
