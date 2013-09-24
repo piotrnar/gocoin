@@ -12,6 +12,6 @@ contribution into the package's code, therefore please read this:
  * https://github.com/sipa/secp256k1/blob/master/COPYING
 
 ===============================================================================
-Few parts of the source code (e.g. "btc/target.go") were taken
+Few parts of the source code (e.g. "btc/test/*.json") were taken
 from the original (satoshi's) bitcoin client. Its license here:
  * https://github.com/bitcoin/bitcoin/blob/master/COPYING
