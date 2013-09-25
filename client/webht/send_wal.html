@@ -89,8 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
 })
 
 </script>
-Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 <h2>Select Inputs</h2>
+Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
+Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
 <form method="post" action="payment.zip">
 <input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <table vspace="10" id="unspent">
@@ -105,9 +106,6 @@ Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 </tr>
 <!--UTXOROW-->
 </table>
-Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
-<br>
-<hr>
 <h2>Payment details</h2>
 <table class="bord" id="outtab">
 <tr>
