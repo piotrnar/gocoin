@@ -79,7 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 <h2>Transaction Inputs</h2>
-<form method="post" action="http://localhost:1111/">
+<form method="post">
+<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <table vspace="10" id="unspent">
 <tr>
 	<th width="20">#
