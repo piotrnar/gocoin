@@ -1,0 +1,12 @@
+<tr class="hov" title="{ADDR_LABEL}">
+	<td align="right">{ROW_NUMBER}</td>
+	<td align="right">{MINED_IN}</td>
+	<td class="mono">{TX_ID}</td>
+	<td align="right">{TX_VOUT}</td>
+	<td align="right" class="mono bold">{BTC_AMOUNT}</td>
+	<td class="bold">{BTC_ADDR}</td>
+	<td align="center"><input name="{TX_ID}" value="{TX_VOUT}" type="checkbox" onchange="txoutclicked(this, {ROW_NUMBER})"></td>
+</tr>
+<script>
+values[{ROW_NUMBER}] = {OUT_VALUE}
+</script>

@@ -1,0 +1,135 @@
+<script>
+var values = new Array({UNSPENT_OUTS})
+var selected_value = 0
+var selected_cnt = 0
+var total_to_pay = 0
+function txoutclicked(cb, idx) {
+	if (cb.checked) {
+		selected_value += values[idx]
+		selected_cnt++
+	} else {
+		selected_value -= values[idx]
+		selected_cnt--
+	}
+	selval.innerText = (selected_value/1e8).toFixed(8)
+	selcnt.innerText = selected_cnt.toString()
+
+	if (selected_cnt==0) {
+		outform.style.display='none'
+	} else {
+		recalc_to_pay()
+		outform.style.display='block'
+	}
+}
+
+function recalc_to_pay() {
+	var el, v, totsend
+	v = parseFloat(txfee.value)
+	if (isNaN(v)) {
+		txfee.style.backgroundColor='red'
+		paybut.disabled = true
+		return
+	}
+	totsend = v
+	for (var idx=1; idx<outtab.rows.length-3; idx++) {
+		el = document.getElementById('out'+idx)
+		v = parseFloat(el.value)
+		if (isNaN(v)) {
+			el.style.backgroundColor='red'
+			paybut.disabled = true
+			return
+		}
+		el.style.backgroundColor=''
+		totsend += v
+	}
+	changeval.innerText = ((selected_value/1e8)-totsend).toFixed(8)
+	txfee.style.backgroundColor=''
+	paybut.disabled = false
+}
+
+function add_new_output() {
+	var idx = outtab.rows.length-3
+	var val, c, r = outtab.insertRow(idx)
+
+	c = r.insertCell(-1)
+	c.innerHTML = 'Out #'+idx
+
+	c = r.insertCell(-1)
+	c.innerHTML = '<input name="adr'+idx+'" size="44" class="mono">'
+
+	c = r.insertCell(-1)
+	val = document.createElement('input')
+	val.type = 'text'
+	val.size = 13
+	val.id = 'out'+idx
+	val.name = 'btc'+idx
+	val.onchange = recalc_to_pay
+	val.onkeyup = recalc_to_pay
+	val.className = 'mono r'
+	val.value = '0.00000000'
+	c.appendChild(val)
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	add_new_output()
+	txfee.onchange = recalc_to_pay
+	txfee.onkeyup = recalc_to_pay
+})
+
+</script>
+Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
+<h2>Transaction Inputs</h2>
+<form method="post" action="http://localhost:1111/">
+<table vspace="10" id="unspent">
+<tr>
+	<th width="20">#
+	<th width="40">Block
+	<th>TxID
+	<th width="30">Vout
+	<th width="80">BTC Value
+	<th width="210">Address
+	<th>Spend
+</tr>
+<!--UTXOROW-->
+</table>
+Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
+<br>
+<div id="outform" style="display:none">
+<hr>
+<h2>Transaction Outputs</h2>
+<table class="bord" id="outtab">
+<tr>
+	<th>Type
+	<th>To address
+	<th>Amount BTC
+</tr>
+
+<tr>
+	<td colspan="2">
+	<table width="100%"><tr>
+	<td><a href="javascript:add_new_output()">+ another output</a>
+	<td align="right">Transaction fee:
+    </table>
+    <td><input id="txfee" name="txfee" size="13" class="mono r" value="0.00010000" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+</tr>
+
+<tr title="Transaction change">
+	<td>Change
+	<td><select name="change" style="width:100%">
+			<option value="">The first input's address</option>
+			<!--ONECHANGEADDR-->
+		</select>
+	<td class="mono r" id="changeval">
+</tr>
+
+<tr>
+	<td colspan="3" align="center">
+		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+	</td>
+</tr>
+</table>
+
+</div>
+
+
+</form>
