@@ -24,6 +24,10 @@ a.menuat {
 	font-weight: bold;
 }
 
+.r {
+	text-align: right;
+}
+
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;

@@ -116,8 +116,8 @@ func net_stats(par string) {
 func net_drop(par string) {
 	c := look2conn(par)
 	if c!=nil {
-		c.Disconnect()
-		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped")
+		c.DoS()
+		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped and the peer is banned")
 	} else {
 		fmt.Println("There is no such an active connection")
 	}
