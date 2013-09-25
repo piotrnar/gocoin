@@ -51,7 +51,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(MyBalance[i].Value)/1e8), 1)
 			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(MyBalance[i].Value), 1)
 			row = strings.Replace(row, "{BTC_ADDR}", MyBalance[i].BtcAddr.String(), 1)
-			wal = strings.Replace(wal, "<!--UTXOROW-->", row, 1)
+			wal = templ_add(wal, "<!--UTXOROW-->", row)
 		}
 		for i := range MyWallet.addrs {
 			op := "<option value=\"" + MyWallet.addrs[i].Enc58str +
