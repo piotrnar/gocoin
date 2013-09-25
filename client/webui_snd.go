@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	"html"
-//	"time"
 	"strings"
-//	"runtime"
+	"strconv"
 	"net/http"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -15,20 +14,40 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method=="POST" {
+		r.ParseForm()
+		if len(r.Form["outcnt"])==1 {
+			outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
+			println("outcnt", outcnt)
+			for i:=1; i<=int(outcnt); i++ {
+				if r.Form[fmt.Sprint("txout", i)][0]=="on" {
+					println(" +", r.Form[fmt.Sprint("txid", i)][0], "-", r.Form[fmt.Sprint("txvout", i)][0])
+				}
+			}
+			for i:=1; len(r.Form[fmt.Sprint("adr", i)])==1; i++ {
+				println(" - ", r.Form[fmt.Sprint("adr", i)][0], r.Form[fmt.Sprint("btc", i)][0])
+			}
+			println(" - fee", r.Form["txfee"][0])
+			println(" - change to", r.Form["change"][0])
+		}
+		http.Redirect(w, r, "/snd", http.StatusFound)
+		return
+	}
+
 	s := load_template("send.html")
 
 	mutex_bal.Lock()
 	if MyWallet!=nil && len(MyBalance)>0 {
 		wal := load_template("send_wal.html")
 		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
-		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), 2)
+		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), -1)
 		row := load_template("send_wal_row.html")
 		for i := range MyBalance {
 			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(MyBalance[i].BtcAddr.Label), 1)
 			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
 			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(MyBalance[i].MinedAt), 1)
-			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(MyBalance[i].TxPrevOut.Hash[:]).String(), 2)
-			row = strings.Replace(row, "{TX_VOUT}", fmt.Sprint(MyBalance[i].TxPrevOut.Vout), 2)
+			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(MyBalance[i].TxPrevOut.Hash[:]).String(), -1)
+			row = strings.Replace(row, "{TX_VOUT}", fmt.Sprint(MyBalance[i].TxPrevOut.Vout), -1)
 			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(MyBalance[i].Value)/1e8), 1)
 			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(MyBalance[i].Value), 1)
 			row = strings.Replace(row, "{BTC_ADDR}", MyBalance[i].BtcAddr.String(), 1)
