@@ -11,7 +11,7 @@ function raw_load(id) {
 	xmlHttp.send(null);
 }
 function net_drop(id) {
-	if (confirm("Drop Connection ID "+id)) {
+	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
 		document.location = 'cfg?drop='+id+'&sid='+sid
 	}
 }

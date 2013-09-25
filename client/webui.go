@@ -15,6 +15,7 @@ import (
 var webuimenu = [][2]string {
 	{"/", "Home"},
 	{"/wal", "Wallets"},
+	{"/snd", "MakeTx"},
 	{"/net", "Network"},
 	{"/txs", "Transactions"},
 	{"/blocks", "Blocks"},
@@ -171,6 +172,7 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 func webserver(iface string) {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/wal", p_wal)
+	http.HandleFunc("/snd", p_snd)
 	http.HandleFunc("/net", p_net)
 	http.HandleFunc("/txs", p_txs)
 	http.HandleFunc("/blocks", p_blocks)
