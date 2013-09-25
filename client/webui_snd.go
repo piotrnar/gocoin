@@ -3,35 +3,118 @@ package main
 import (
 	"fmt"
 	"html"
+	"bytes"
 	"strings"
 	"strconv"
 	"net/http"
+	"archive/zip"
 	"github.com/piotrnar/gocoin/btc"
 )
 
-func p_snd(w http.ResponseWriter, r *http.Request) {
+
+func dl_payment(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
-	if r.Method=="POST" {
-		r.ParseForm()
-		if len(r.Form["outcnt"])==1 {
-			outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
-			println("outcnt", outcnt)
-			for i:=1; i<=int(outcnt); i++ {
-				is := fmt.Sprint(i)
-				if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
-					println(" +", r.Form["txid"+is][0], "-", r.Form["txvout"+is][0])
+	r.ParseForm()
+	if len(r.Form["outcnt"])==1 {
+		var thisbal btc.AllUnspentTx
+		var pay_cmd string
+
+		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
+
+		mutex_bal.Lock()
+		for i:=1; i<=int(outcnt); i++ {
+			is := fmt.Sprint(i)
+			if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
+				hash := btc.NewUint256FromString(r.Form["txid"+is][0])
+				if hash!=nil {
+					vout, er := strconv.ParseUint(r.Form["txvout"+is][0], 10, 32)
+					if er==nil {
+						var po = btc.TxPrevOut{Hash:hash.Hash, Vout:uint32(vout)}
+						for j := range MyBalance {
+							if MyBalance[j].TxPrevOut==po {
+								thisbal = append(thisbal, MyBalance[j])
+							}
+						}
+					}
 				}
 			}
-			for i:=1; len(r.Form[fmt.Sprint("adr", i)])==1; i++ {
-				println(" - ", r.Form[fmt.Sprint("adr", i)][0], r.Form[fmt.Sprint("btc", i)][0])
-			}
-			println(" - fee", r.Form["txfee"][0])
-			println(" - change to", r.Form["change"][0])
 		}
-		http.Redirect(w, r, "/snd", http.StatusFound)
+		mutex_bal.Unlock()
+
+		for i:=1; ; i++ {
+			is := fmt.Sprint(i)
+
+			println("i=", i, "...", pay_cmd)
+			if len(r.Form["adr"+is])!=1 {
+				break
+			}
+
+			if len(r.Form["btc"+is])!=1 {
+				break
+			}
+
+			if len(r.Form["adr"+is][0])>1 {
+				am, er := strconv.ParseFloat(r.Form["btc"+is][0], 64)
+				if er==nil {
+					if pay_cmd=="" {
+						pay_cmd = "wallet -send "
+					} else {
+						pay_cmd += ","
+					}
+					pay_cmd += r.Form["adr"+is][0] + "=" + fmt.Sprintf("%.8f", am)
+				}
+			}
+		}
+
+		if pay_cmd!="" && len(r.Form["txfee"])==1 {
+			pay_cmd += " -fee " + r.Form["txfee"][0]
+		}
+
+		if pay_cmd!="" && len(r.Form["change"])==1 && len(r.Form["change"][0])>1 {
+			pay_cmd += " -change " + r.Form["change"][0]
+		}
+
+		buf := new(bytes.Buffer)
+		zi := zip.NewWriter(buf)
+
+		was_tx := make(map [[32]byte] bool, len(thisbal))
+		for i := range thisbal {
+			if was_tx[thisbal[i].TxPrevOut.Hash] {
+				println("same txid", btc.NewUint256(thisbal[i].TxPrevOut.Hash[:]).String())
+				continue
+			}
+			was_tx[thisbal[i].TxPrevOut.Hash] = true
+			txid := btc.NewUint256(thisbal[i].TxPrevOut.Hash[:])
+			fz, _ := zi.Create("balance/" + txid.String() + ".tx")
+			GetRawTransaction(thisbal[i].MinedAt, txid, fz)
+		}
+
+		fz, _ := zi.Create("balance/unspent.txt")
+		for i := range thisbal {
+			fmt.Fprintf(fz, "%s # %.8f BTC @ %s, %d confs\n", thisbal[i].TxPrevOut.String(),
+				float64(thisbal[i].Value)/1e8, thisbal[i].BtcAddr.StringLab(),
+				1+Last.Block.Height-thisbal[i].MinedAt)
+		}
+
+		if pay_cmd!="" {
+			fz, _ = zi.Create("pay_cmd.txt")
+			fz.Write([]byte(pay_cmd))
+		}
+
+		zi.Close()
+		w.Header()["Content-Type"] = []string{"application/zip"}
+		w.Write(buf.Bytes())
+	} else {
+		http.Redirect(w, r, "/snd", http.StatusNotFound)
+	}
+}
+
+
+func p_snd(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
 		return
 	}
 
