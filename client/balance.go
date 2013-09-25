@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"fmt"
 	"sort"
@@ -57,6 +58,51 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 }
 
 
+func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) bool {
+	// Find the block with the indicated Height in the main tree
+	BlockChain.BlockIndexAccess.Lock()
+	n := Last.Block
+	if n.Height < BlockHeight {
+		println(n.Height, BlockHeight)
+		BlockChain.BlockIndexAccess.Unlock()
+		panic("This should not happen")
+	}
+	for n.Height > BlockHeight {
+		n = n.Parent
+	}
+	BlockChain.BlockIndexAccess.Unlock()
+
+	bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
+	if e != nil {
+		println("BlockGet", n.BlockHash.String(), BlockHeight, e.Error())
+		println("This should not happen - please, report a bug.")
+		println("You can probably fix it by launching the client with -rescan")
+		os.Exit(1)
+	}
+
+	bl, e := btc.NewBlock(bd)
+	if e != nil {
+		println("NewBlock: ", e.Error())
+		os.Exit(1)
+	}
+
+	e = bl.BuildTxList()
+	if e != nil {
+		println("BuildTxList:", e.Error())
+		os.Exit(1)
+	}
+
+	// Find the transaction we need and store it in the file
+	for i := range bl.Txs {
+		if bl.Txs[i].Hash.Equal(txid) {
+			txf.Write(bl.Txs[i].Serialize())
+			return true
+		}
+	}
+	return false
+}
+
+
 // Call it only from the Chain thread
 func DumpBalance(utxt *os.File, details bool) (s string) {
 	var sum uint64
@@ -95,58 +141,16 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
 			txf, _ := os.Open(fn)
-			if txf != nil {
-				// This file already exist - do no need to redo it
-				txf.Close()
-				continue
-			}
-
-			// Find the block with the indicated Height in the main tree
-			BlockChain.BlockIndexAccess.Lock()
-			n := Last.Block
-			if n.Height < po.BlockHeight {
-				println(n.Height, po.BlockHeight)
-				BlockChain.BlockIndexAccess.Unlock()
-				panic("This should not happen")
-			}
-			for n.Height > po.BlockHeight {
-				n = n.Parent
-			}
-			BlockChain.BlockIndexAccess.Unlock()
-
-			bd, _, e := BlockChain.Blocks.BlockGet(n.BlockHash)
-			if e != nil {
-				println("BlockGet", n.BlockHash.String(), po.BlockHeight, e.Error())
-				println("This should not happen - please, report a bug.")
-				println("You can probably fix it by launching the client with -rescan")
-				os.Exit(1)
-			}
-
-			bl, e := btc.NewBlock(bd)
-			if e != nil {
-				println("NewBlock: ", e.Error())
-				os.Exit(1)
-			}
-
-			e = bl.BuildTxList()
-			if e != nil {
-				println("BuildTxList:", e.Error())
-				os.Exit(1)
-			}
-
-			// Find the transaction we need and store it in the file
-			for i := range bl.Txs {
-				if bl.Txs[i].Hash.Equal(txid) {
-					txf, _ = os.Create(fn)
-					if txf==nil {
-						println("Cannot create ", fn)
-						os.Exit(1)
-					}
-					txf.Write(bl.Txs[i].Serialize())
-					txf.Close()
-					break
+			if txf == nil {
+				// Do it only once per txid
+				txf, _ = os.Create(fn)
+				if txf==nil {
+					println("Cannot create ", fn)
+					os.Exit(1)
 				}
+				GetRawTransaction(po.BlockHeight, txid, txf)
 			}
+			txf.Close()
 		}
 	}
 	LastBalance = sum
