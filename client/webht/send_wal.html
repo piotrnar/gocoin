@@ -3,23 +3,21 @@ var values = new Array({UNSPENT_OUTS})
 var selected_value = 0
 var selected_cnt = 0
 var total_to_pay = 0
-function txoutclicked(cb, idx) {
-	if (cb.checked) {
-		selected_value += values[idx]
-		selected_cnt++
-	} else {
-		selected_value -= values[idx]
-		selected_cnt--
+
+function recalc_inputs() {
+	selected_value = 0
+	selected_cnt = 0
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (document.getElementById('txout'+i).checked) {
+			selected_value += values[i]
+			selected_cnt++
+		}
 	}
+
 	selval.innerText = (selected_value/1e8).toFixed(8)
 	selcnt.innerText = selected_cnt.toString()
 
-	if (selected_cnt==0) {
-		outform.style.display='none'
-	} else {
-		recalc_to_pay()
-		outform.style.display='block'
-	}
+	paybut.disabled = (selected_cnt==0)
 }
 
 function recalc_to_pay() {
@@ -59,7 +57,7 @@ function add_new_output() {
 	var val, c, r = outtab.insertRow(idx)
 
 	c = r.insertCell(-1)
-	c.innerHTML = 'Out #'+idx
+	c.innerHTML = 'Output #'+idx
 
 	c = r.insertCell(-1)
 	c.innerHTML = '<input name="adr'+idx+'" size="44" class="mono">'
@@ -81,6 +79,7 @@ function allchange(t) {
 	for (var i=1; i<unspent.rows.length; i++) {
 		document.getElementById('txout'+i).checked = t.checked
 	}
+	recalc_inputs()
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -108,13 +107,12 @@ Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 </table>
 Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
 <br>
-<div id="outform" style="display:none">
 <hr>
 <h2>Transaction Outputs</h2>
 <table class="bord" id="outtab">
 <tr>
-	<th>Type
-	<th>To address
+	<th>&nbsp;
+	<th>Pay to address
 	<th>Amount BTC
 </tr>
 
@@ -142,8 +140,6 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	</td>
 </tr>
 </table>
-
-</div>
 
 
 </form>
