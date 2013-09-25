@@ -77,6 +77,12 @@ function add_new_output() {
 	c.appendChild(val)
 }
 
+function allchange(t) {
+	for (var i=1; i<unspent.rows.length; i++) {
+		document.getElementById('txout'+i).checked = t.checked
+	}
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 	add_new_output()
 	txfee.onchange = recalc_to_pay
@@ -86,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 <h2>Transaction Inputs</h2>
-<form method="post">
+<form method="post" action="payment.zip">
 <input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <table vspace="10" id="unspent">
 <tr>
@@ -96,7 +102,7 @@ Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
 	<th width="30">Vout
 	<th width="80">BTC Value
 	<th width="210">Address
-	<th>Spend
+	<th><input type="checkbox" onchange="allchange(this)">
 </tr>
 <!--UTXOROW-->
 </table>
