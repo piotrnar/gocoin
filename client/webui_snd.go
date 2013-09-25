@@ -20,8 +20,9 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 			println("outcnt", outcnt)
 			for i:=1; i<=int(outcnt); i++ {
-				if r.Form[fmt.Sprint("txout", i)][0]=="on" {
-					println(" +", r.Form[fmt.Sprint("txid", i)][0], "-", r.Form[fmt.Sprint("txvout", i)][0])
+				is := fmt.Sprint(i)
+				if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
+					println(" +", r.Form["txid"+is][0], "-", r.Form["txvout"+is][0])
 				}
 			}
 			for i:=1; len(r.Form[fmt.Sprint("adr", i)])==1; i++ {
@@ -39,10 +40,11 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 	mutex_bal.Lock()
 	if MyWallet!=nil && len(MyBalance)>0 {
 		wal := load_template("send_wal.html")
+		row_tmp := load_template("send_wal_row.html")
 		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(LastBalance)/1e8), 1)
 		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(MyBalance)), -1)
-		row := load_template("send_wal_row.html")
 		for i := range MyBalance {
+			row := row_tmp
 			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(MyBalance[i].BtcAddr.Label), 1)
 			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
 			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(MyBalance[i].MinedAt), 1)

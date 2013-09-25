@@ -42,7 +42,14 @@ function recalc_to_pay() {
 		el.style.backgroundColor=''
 		totsend += v
 	}
-	changeval.innerText = ((selected_value/1e8)-totsend).toFixed(8)
+	var chval = (selected_value/1e8)-totsend
+	changeval.innerText = chval.toFixed(8)
+	if (chval<0) {
+		changeval.style.backgroundColor='red'
+		paybut.disabled = true
+		return
+	}
+	changeval.style.backgroundColor=''
 	txfee.style.backgroundColor=''
 	paybut.disabled = false
 }
