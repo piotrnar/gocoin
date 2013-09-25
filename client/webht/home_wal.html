@@ -4,7 +4,6 @@ Last known balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs
 <li><a style="cursor:pointer" onclick="show_unspent()">Show/hide unspent outputs</a>
 </ul>
 <script>
-
 function show_unspent() {
 	if (unspent.style.display != 'none') {
 		unspent.style.display = 'none'
@@ -30,12 +29,10 @@ function show_unspent() {
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				var txid = xval(txs[i], 'txid')
-				c.innerHTML = txid
+				c.innerHTML = xval(txs[i], 'txid')
 
 				c=row.insertCell(-1);c.align='right'
-				var vout = xval(txs[i], 'vout')
-				c.innerHTML = vout
+				c.innerHTML = xval(txs[i], 'vout')
 
 				c=row.insertCell(-1);c.align='right'
 				c.className ='mono bold'
@@ -44,18 +41,6 @@ function show_unspent() {
 				c=row.insertCell(-1);
 				c.className ='bold'
 				c.innerHTML = xval(txs[i], 'addr')
-
-				c=row.insertCell(-1);
-				c.innerHTML = '<input type="checkbox" name="txin" value="'+txid+'-'+vout+'">'
-			}
-			if (txs.length>0) {
-				// Add make Transaction button
-				var row = unspent.insertRow(-1)
-				var c=row.insertCell(-1);c.align='right';c.colSpan = 7
-				var b=document.createElement("input");b.type='button'
-				b.value="Make transaction from selected inputs"
-				b.onclick=function(){mktx()}
-				c.appendChild(b)
 			}
 			unspent.style.display = 'table'
 		}
