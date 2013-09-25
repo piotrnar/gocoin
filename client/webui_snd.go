@@ -47,7 +47,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		for i:=1; ; i++ {
 			is := fmt.Sprint(i)
 
-			println("i=", i, "...", pay_cmd)
 			if len(r.Form["adr"+is])!=1 {
 				break
 			}
@@ -83,7 +82,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		was_tx := make(map [[32]byte] bool, len(thisbal))
 		for i := range thisbal {
 			if was_tx[thisbal[i].TxPrevOut.Hash] {
-				println("same txid", btc.NewUint256(thisbal[i].TxPrevOut.Hash[:]).String())
 				continue
 			}
 			was_tx[thisbal[i].TxPrevOut.Hash] = true
