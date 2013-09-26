@@ -6,7 +6,7 @@
 	<td class="mono">{TX_ID}</td>
 	<td align="right">{TX_VOUT}</td>
 	<td align="right" class="mono bold">{BTC_AMOUNT}</td>
-	<td class="bold">{BTC_ADDR}</td>
+	<td class="bold hand" onclick="selectadr({ROW_NUMBER})">{BTC_ADDR}</td>
 	<td align="center"><input id="txout{ROW_NUMBER}" name="txout{ROW_NUMBER}" type="checkbox" onchange="recalc_inputs()"></td>
 </tr>
 <script>
