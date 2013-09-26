@@ -18,6 +18,8 @@ function recalc_inputs() {
 	selcnt.innerText = selected_cnt.toString()
 
 	paybut.disabled = (selected_cnt==0)
+
+	recalc_to_pay()
 }
 
 function recalc_to_pay() {
@@ -89,23 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
 })
 
 </script>
-<h2>Select Inputs</h2>
-Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
-Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
+
 <form method="post" action="payment.zip">
-<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
-<table vspace="10" id="unspent">
-<tr>
-	<th width="20">#
-	<th width="40">Block
-	<th>TxID
-	<th width="30">Vout
-	<th width="80">BTC Value
-	<th width="210">Address
-	<th><input type="checkbox" onchange="allchange(this)">
-</tr>
-<!--UTXOROW-->
-</table>
 <h2>Payment details</h2>
 <table class="bord" id="outtab">
 <tr>
@@ -139,5 +126,21 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 </tr>
 </table>
 
+<h2>Select Inputs</h2>
+Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
+Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
+<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
+<table vspace="10" id="unspent">
+<tr>
+	<th width="20">#
+	<th width="40">Block
+	<th>TxID
+	<th width="30">Vout
+	<th width="80">BTC Value
+	<th width="210">Address
+	<th><input type="checkbox" onchange="allchange(this)">
+</tr>
+<!--UTXOROW-->
+</table>
 
 </form>
