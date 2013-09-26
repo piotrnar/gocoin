@@ -84,10 +84,22 @@ function allchange(t) {
 	recalc_inputs()
 }
 
+function selectadr(idx) {
+	var addr = unspent.rows[idx].cells[5].innerText
+	var chkd = document.getElementById('txout'+idx).checked
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (unspent.rows[i].cells[5].innerText==addr) {
+			document.getElementById('txout'+i).checked = !chkd
+		}
+	}
+	recalc_inputs()
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 	add_new_output()
 	txfee.onchange = recalc_to_pay
 	txfee.onkeyup = recalc_to_pay
+	recalc_inputs()
 })
 
 </script>
