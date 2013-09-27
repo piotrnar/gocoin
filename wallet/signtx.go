@@ -30,7 +30,7 @@ func make_signed_tx() {
 		tx.TxIn = append(tx.TxIn, tin)
 
 		btcsofar += uo.Value
-		if btcsofar >= spendBtc + feeBtc {
+		if !*useallinputs && ( btcsofar >= spendBtc + feeBtc ) {
 			break
 		}
 	}
