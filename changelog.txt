@@ -1,6 +1,7 @@
 0.7.6
 * "MakeTx" tab in WebUI (to pre-make the command for the wallet app)
 * Droppig a peer (from TextUI or WebUI) bans its IP by the way
+* Added "-useallinputs" switch to the wallet app
 
 0.7.5
 * Added CFG.MiningStatHours so minig stats are not fixed to 24 hours anymore
