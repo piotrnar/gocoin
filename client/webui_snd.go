@@ -59,7 +59,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				am, er := strconv.ParseFloat(r.Form["btc"+is][0], 64)
 				if er==nil {
 					if pay_cmd=="" {
-						pay_cmd = "wallet -send "
+						pay_cmd = "wallet -useallinputs -send "
 					} else {
 						pay_cmd += ","
 					}
