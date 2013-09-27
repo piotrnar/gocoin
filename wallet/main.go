@@ -46,6 +46,8 @@ var (
 
 	secrand *bool = flag.Bool("sr", true, "Use a proprietary random number source")
 
+	useallinputs *bool = flag.Bool("useallinputs", false, "Use all the unspent outputs as the transaction inputs")
+
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string
