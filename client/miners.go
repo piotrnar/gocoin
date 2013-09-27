@@ -23,6 +23,7 @@ var MinerIds = [][2]string{
 	{"Ozcoin", "ozcoin"},
 	{"SatoshiSys", "Satoshi Systems"},
 	{"ST Mining", "st mining corp"},
+	{"GHash.IO", "ghash.io"},
 }
 
 
