@@ -17,6 +17,8 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var err string
+
 	r.ParseForm()
 	if len(r.Form["outcnt"])==1 {
 		var thisbal btc.AllUnspentTx
@@ -56,14 +58,23 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if len(r.Form["adr"+is][0])>1 {
-				am, er := strconv.ParseFloat(r.Form["btc"+is][0], 64)
-				if er==nil {
-					if pay_cmd=="" {
-						pay_cmd = "wallet -useallinputs -send "
+				addr, er := btc.NewAddrFromString(r.Form["adr"+is][0])
+				if er == nil {
+					am, er := strconv.ParseFloat(r.Form["btc"+is][0], 64)
+					if er==nil && am>0 {
+						if pay_cmd=="" {
+							pay_cmd = "wallet -useallinputs -send "
+						} else {
+							pay_cmd += ","
+						}
+						pay_cmd += addr.Enc58str + "=" + fmt.Sprintf("%.8f", am)
 					} else {
-						pay_cmd += ","
+						err = "Incorrect amount (" + r.Form["btc"+is][0] + ") for Output #" + is
+						goto error
 					}
-					pay_cmd += r.Form["adr"+is][0] + "=" + fmt.Sprintf("%.8f", am)
+				} else {
+					err = "Incorrect address (" + r.Form["adr"+is][0] + ") for Output #" + is
+					goto error
 				}
 			}
 		}
@@ -105,9 +116,16 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		zi.Close()
 		w.Header()["Content-Type"] = []string{"application/zip"}
 		w.Write(buf.Bytes())
+		return
 	} else {
-		http.Redirect(w, r, "/snd", http.StatusNotFound)
+		err = "Bad request"
 	}
+error:
+	s := load_template("send_error.html")
+	write_html_head(w, r)
+	s = strings.Replace(s, "<!--ERROR_MSG-->", err, 1)
+	w.Write([]byte(s))
+	write_html_tail(w)
 }
 
 
