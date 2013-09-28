@@ -75,7 +75,7 @@ function add_new_output() {
 	val.onchange = recalc_to_pay
 	val.onkeyup = recalc_to_pay
 	val.className = 'mono r'
-	val.value = '0.00000000'
+	val.value = ''
 	c.appendChild(val)
 }
 
@@ -107,8 +107,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <form method="post" action="payment.zip">
+<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <h2>Payment details</h2>
-<table class="bord" id="outtab">
+Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
+<table class="bord" vspace="10" id="outtab">
 <tr>
 	<th>&nbsp;
 	<th>Pay to address
@@ -121,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	<td><a href="javascript:add_new_output()">+ another output</a>
 	<td align="right">Transaction fee:
     </table>
-    <td><input id="txfee" name="txfee" size="13" class="mono r" value="0.00010000" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+    <td><input id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
 </tr>
 
 <tr title="Transaction change">
@@ -141,9 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
 
 <h2>Select Inputs</h2>
-Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.<br>
-Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs
-<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
+Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.
 <table vspace="10" id="unspent">
 <tr>
 	<th width="20">#
