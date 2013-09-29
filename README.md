@@ -186,7 +186,15 @@ After you setup your wallet in a secured environment, you should export its publ
 
 	wallet -l
 
-The wallet's public addresses will be written to `wallet.txt`. Now you can take this file safely to your client's PC and place it in the folder where it looks for wallet.txt (the path is printed when starting the client). Execute "wal" from the UI to reload the wallet.
+The wallet's public addresses will be written to `wallet.txt`. Now you can take this file safely to your client's PC and place it in the folder where it looks for `wallet.txt` (the path is printed when starting the client).
+Execute "wal" from the UI to reload the wallet.
+It is advised to rename `wallet.txt` to `DEFAULT`.
+
+
+### Multiple wallets
+Additionally you can place other text files (representing wallets),
+containing different sets of bitcoin addresses, in the gocoin's `wallet` folder.
+This will allow you to quickly switch between the wallets, using WebUI.
 
 ### Security precautions
 Make sure that the disk with `.secret` file is encrypted.
