@@ -87,6 +87,10 @@ tr.hov:hover {
 	font-size:75%
 }
 
+.err {
+	background-color:#ff8080
+}
+
 input[type=button], input[type=submit] {
 	background-color:#dddddd;
 	font-weight:bold;
