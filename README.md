@@ -64,9 +64,9 @@ In order to build Gocoin you need the following tools installed in your system:
 * Git - http://git-scm.com/downloads
 * Mercurial - http://mercurial.selenic.com/
 
-If they are all properly installed you should be able to execute "`go`", "`git`" and "`hg`" from your OS's command prompt without a need to specify their full path.
+If they are all properly installed you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify their full path.
 
-Note: Git and Mercurial are needed only for "`go get`" command to work properly. If you can manually download and install (in a proper `$GOPATH/src/..` folder) the required dependency packages (`ripemd160` and `snappy`), then you do not need Mercurial. If you manually download Gocoin sources from GitHub (e.g. using a web browser) and extract them to a proper folder (`$GOPATH/src/github.com/piotrnar/gocoin`), you do not need Git.
+Note: Git and Mercurial are needed only for `go get` command to work properly. If you can manually download and install (in a proper `$GOPATH/src/..` folder) the required dependency packages (`ripemd160` and `snappy`), then you do not need Mercurial. If you manually download Gocoin sources from GitHub (e.g. using a web browser) and extract them to a proper folder (`$GOPATH/src/github.com/piotrnar/gocoin`), you do not need Git.
 
 
 Dependencies
@@ -86,26 +86,26 @@ For anyone familiar with Go language, building should not be a problem. If you h
 
 	go get github.com/piotrnar/gocoin
 
-After you have the sources in your local disk, building them is usually as simple as going to either the "`client`" or the "`wallet`" directory and executing "`go build`". This will create `client` and `wallet` executable binaries, in their respective folders.
+After you have the sources in your local disk, building them is usually as simple as going to either the `client` or the `wallet` directory and executing `go build`. This will create `client` and `wallet` executable binaries, in their respective folders.
 
 
-To build any of the additional tools, go to the ``tools`` folder and execute "`go build toolname.go`" to build a tool of your choice.
+To build any of the additional tools, go to the `tools` folder and execute `go build toolname.go` to build a tool of your choice.
 
 ECDSA Verify speedups
 --------------
-The performance of EC operations provided by the standard "`crypto/ecdsa`" package is poor and therefore a new package (`btc/newec`) has been developed to address this issue. This package is used by Gocoin as a default option, although you have a choice to use a different solutions.
+The performance of EC operations provided by the standard `crypto/ecdsa` package is poor and therefore a new package (`btc/newec`) has been developed to address this issue. This package is used by Gocoin as a default option, although you have a choice to use a different solutions.
 
-In folder "`tools/ec_bench`" you can find benchmarks that compare a speed of each of the available speedups.
+In folder `tools/ec_bench` you can find benchmarks that compare a speed of each of the available speedups.
 
-To use the native go implementation, just remove the file "`speedup.go`" from the "`./client`" folder.
+To use the native go implementation, just remove the file `speedup.go` from the `./client` folder.
 
-In order to use a different speedup module, after removing "`speedup.go`", copy any of the .go files (but never more than one) from "`client/speedup/`" to the "`client/`" folder and redo "`go build`" there.  For cgo wrappers, it does not always go smoothly, because building them requires a working C toolset and additional external libraries. If it does not build out of the box, see `README.md` in the wrapper's folder (`./cgo/wrapper/`) for some help.
+In order to use a different speedup module, after removing `speedup.go`, copy any of the .go files (but never more than one) from `client/speedup/` to the `client/` folder and redo `go build` there.  For cgo wrappers, it does not always go smoothly, because building them requires a working C toolset and additional external libraries. If it does not build out of the box, see `README.md` in the wrapper's folder (`./cgo/wrapper/`) for some help.
 
 ### sipasec (cgo)
-The "sipasec" option is about four times faster than the default speedup, and over a hundred times faster than using no speedup at all. To build this wrapper, follow the instructions in "`cgo/sipasec/README.md`". It is the advised speedup for non-Windows systems.
+The "sipasec" option is about four times faster than the default speedup, and over a hundred times faster than using no speedup at all. To build this wrapper, follow the instructions in `cgo/sipasec/README.md`. It is the advised speedup for non-Windows systems.
 
 ### sipadll (Windows only)
-This is the advised speedup for Windows. It should have a similar performance as the cgo option and needs "`secp256k1.dll`" in order to work (follow the instructions from "`cgo/sipasec/README.md`" to build it).
+This is the advised speedup for Windows. It should have a similar performance as the cgo option and needs `secp256k1.dll` in order to work (follow the instructions from `cgo/sipasec/README.md` to build it).
 
 If you struggle with building the DLL yourself, you can use pre-compiled binary from `tools/sipa_dll/secp256k1.dll` that should work with any 64-bit Windows OS.
 
@@ -141,7 +141,7 @@ Both the applications (client and wallet) are console only (no GUI window). The 
 
 Client / Node
 --------------
-Run "`client -h`" to see all available command line switches. Some example ones are:
+Run `client -h` to see all available command line switches. Some example ones are:
 
 	-t - use Testnet (instead of regular bitcoin network)
 	-ul=NN - set maximum upload speed to NN kilobytes per second
@@ -160,19 +160,19 @@ By default, for security reasons, WebUI is available only from a local host, via
 If you want to have access to it from different computers:
 
  * Create `gocoin.conf` file, using either TextUI command `configsave` or the "Show Configuaration" -> "Apply & Save" buttons, at the Home tab of the WebUI.
- * Change "`Interface`" value in the config file to "`:8833`"
- * Change "`AllowedIP`" value to allow access from all the addresses you need (i.e. "`127.0.0.1,192.168.0.0/16`")
+ * Change `Interface` value in the config file to `:8833`
+ * Change `AllowedIP` value to allow access from all the addresses you need (i.e. `127.0.0.1,192.168.0.0/16`)
  * Remember to save the new config and then restart your node.
 
 ### Incoming connections
 There is no UPnP support, so if you want to accept incoming connections, make sure to setup your NAT for routing TCP port 8333 (or 18333 for testnet) to the PC running the node.
 
-It is possible to setup a different incomming port ("`TCPPort`" config value), but the satoshi clients refuse connecting to non-default ports, so if you get any incoming connections in such case, they will only be from alternative clients, which there are barely few out there.
+It is possible to setup a different incomming port (`TCPPort` config value), but the satoshi clients refuse connecting to non-default ports, so if you get any incoming connections in such case, they will only be from alternative clients, which there are barely few out there.
 
 
 Wallet
 --------------
-Run "`wallet -h`" to see all available command line switches.
+Run `wallet -h` to see all available command line switches.
 
 
 ### Setup your seed
@@ -199,7 +199,7 @@ You can import keys from your existing bitcoin wallet, as well as keys generated
 The key that you want to import must be in base58 encoded format, which looks somehow like `5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS`.
 To export a private key from the official bitcoin wallet use `dumprivkey` RPC command. To import such a key into your Gocoin wallet, just store the base58 encoded value in a file named `.others` (each key must be in a separate line). You can also place a key's label in each line, after a space.
 
-The imported keys will extend the key pool of the deterministic ones (that come from your password-seed). After Importing each new key, you should redo "`wallet -l`: to get an updated `wallet.txt` for your client.
+The imported keys will extend the key pool of the deterministic ones (that come from your password-seed). After Importing each new key, you should redo `wallet -l`: to get an updated `wallet.txt` for your client.
 
 
 Spending money
@@ -208,17 +208,17 @@ Spending money is a secured process that requires several steps and moving files
 
 Never move any files others than the ones that you actually need to move, which are:
 
- * The "`balance/`" folder containing your unspent outputs - you move it from client to wallet
+ * The `balance/` folder containing your unspent outputs - you move it from client to wallet
  * Text files with signed transactions - these you move from wallet to client
 
 Assuming that you would not sign a wrong transaction, nothing in the files you move between the two points is security sensitive, so  you do not  need to worry about protecting the medium (USB disk).
 
 ### Checking your balance
-From the moment when `wallet.txt` is properly loaded into your client, you can check your balance, either by executing "`bal sum`" from textUI, or via the WebUI (using a web browser).
+From the moment when `wallet.txt` is properly loaded into your client, you can check your balance, either by executing `bal sum` from textUI, or via the WebUI (using a web browser).
 
 ### Exporting balance via TextUI
 
-Each time you execute `bal` command (from TextUI), a directory "`balance/`" is (re)created, in the folder where you run your client from. The `balance` folder is the one that you shall move to the wallet's PC in order to spend your coins.
+Each time you execute `bal` command (from TextUI), a directory `balance/` is (re)created, in the folder where you run your client from. The `balance` folder is the one that you shall move to the wallet's PC in order to spend your coins.
 
 
 ### Download balance via WebUI
@@ -226,7 +226,7 @@ Alternatively, you can use the WebUI to download `balance.zip` file, which conta
 
 
 ### Sign your transaction
-As mentioned before, to spend your money you need to move the most recent "`balance/`" folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute "`wallet`" without any parameters, it should show you how much BTC you are able to spend, from the current balance.
+As mentioned before, to spend your money you need to move the most recent `balance/` folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute `wallet` without any parameters, it should show you how much BTC you are able to spend, from the current balance.
 
 To spend your coins, order the wallet to make and sign a new transaction, using a command like:
 
@@ -234,22 +234,22 @@ To spend your coins, order the wallet to make and sign a new transaction, using 
 
 Please note no spaces between the address, the equal sign and the value. The value represents the amount in BTC, which you request to send to the given address.
 
-There are also other switches which you may find useful at this stage (i.e. a fee control). To see all your options, just run "`wallet -h`".
+There are also other switches which you may find useful at this stage (i.e. a fee control). To see all your options, just run `wallet -h`.
 
 ### Coin control
-You can choose which coins you want to spend, by editing the file "`balance/unspent.txt`", before ordering the wallet to make a transaction.
+You can choose which coins you want to spend, by editing the file `balance/unspent.txt`, before ordering the wallet to make a transaction.
 
-Each line in that file represents an unspent output. Whichever output you remove from "unspent.txt" will not be spent. Whatever will be spent, will be taken in the order that appears in this file. Any change will go back to the address from your first input, unless you use "`-change`" parameter.
+Each line in that file represents an unspent output. Whichever output you remove from "unspent.txt" will not be spent. Whatever will be spent, will be taken in the order that appears in this file. Any change will go back to the address from your first input, unless you use `-change` parameter.
 
 ### MakeTx via WebUI
 Starting from version 0.7.6 the web interface gives you a page where you can select the exact inputs to be spent and prepare a text command to be executed at the wallet PC in order to send these inputs to a specified set of addresses. The form allows you to download `payment.zip` file that contains the `balance/` folder and `pay_cmd.txt` with the command that needs to executed on the wallet's PC in order to generate a requested transaction.
 
 
 ### Signed transaction file
-If everything goes well with the "`wallet -send ...`" command, it will create a text file with a signed transaction. The file is named like `01234567.txt` - this is the file you need to move to your online node in order to notify the network about your payment.
+If everything goes well with the `wallet -send ...` command, it will create a text file with a signed transaction. The file is named like `01234567.txt` - this is the file you need to move to your online node in order to notify the network about your payment.
 
 ### Load transaction using TextUI
-Move the signed transaction file to your online PC and use the node's TextUI to execute "`tx 01234567.txt`" (where `01234567.txt` is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
+Move the signed transaction file to your online PC and use the node's TextUI to execute `tx 01234567.txt` (where `01234567.txt` is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
 
 ### Load transaction using WebUI
 You can also use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.
@@ -267,7 +267,7 @@ If you follow this simple rule, you should be able to keep you money safe, even 
 After making sure that the transaction does indeed what you  intended, you must broadcast it to the network, in order to actually move your coins.
 
 #### TextUI
-Wse "`stx`" command with the transaction ID as its parameter (you had the ID printed, when loading it).
+Wse `stx` command with the transaction ID as its parameter (you had the ID printed, when loading it).
 
 #### WebUI
 Click on the envelope icon with a green arrow to broadcast a loaded transaction to the network.
@@ -276,7 +276,7 @@ Coming back to *Transactions* tab later, press the button in the "Accepted trans
 ### Re-broadcasting transactions
 The client never broadcasts transactions unrequested, so if your transaction does not appear in the chain soon enough, you may want  to re-broadcast it, using the same method as for the initial broadcasting. There may of course be other reasons why your transaction does not get confirmed (i.e. the fee was to low), in which case re-broadcasting will not help much.
 
-There is also a TextUI command "`stxa`" that re-broadcasts all the transaction that have been loaded, but not yet confirmed by the network. Note that when a transaction gets mined into a block it gets removed from the list automatically.
+There is also a TextUI command `stxa` that re-broadcasts all the transaction that have been loaded, but not yet confirmed by the network. Note that when a transaction gets mined into a block it gets removed from the list automatically.
 
 
 Known issues
@@ -284,7 +284,7 @@ Known issues
 
 Go's memory manager
 --------------
-It is a known issue that the current memory manager used by Go (up to version 1.1.2) never releases a memory back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in "Heap Size", but never in "SysMem Used". Until this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node. 
+It is a known issue that the current memory manager used by Go (up to version 1.1.2) never releases a memory back to the OS, after allocating it once. Thus, as long as a node is running you will notice decreases in "Heap Size", but never in "SysMem Used". Until this issue is fixed by Go developers, the only way to free the unused memory back to the system is by restarting the node.
 
 
 Possible UTXO db inconsistency
@@ -318,5 +318,3 @@ If you have a question here are some ways of contacting me:
  * Ask in this forum thread: https://bitcointalk.org/index.php?topic=199306.0
  * Open an issue on GitHub: https://github.com/piotrnar/gocoin/issues
  * Try reaching me on Freenet-IRC, looking for nick "tonikt" (sometimes "tonikt2" or "tonikt3").
-
-
