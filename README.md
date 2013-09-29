@@ -178,7 +178,7 @@ Run `wallet -h` to see all available command line switches.
 ### Setup your seed
 Wallet is deterministic and the only thing you need to setup it is the seed password. As long as you remember the password, you do not need to backup the wallet ever.
 
-You can either enter this password each  time  when  running  the  wallet  (not advised since characters are shown on the screen) - or you can store  it,  once and for all, in a file called `.secret`
+You can either enter this password each  time  when  running  the  wallet  (not advised since characters are shown on the screen) - or you can store  it,  once and for all, in a file called `.secret`.
 
 
 ### Export public addresses
@@ -186,7 +186,7 @@ After you setup your wallet in a secured environment, you should export its publ
 
 	wallet -l
 
-The wallet's public addresses will be written to wallet.txt. Now you can take this file safely to your client's PC and place it in the folder where it looks for wallet.txt (the path is printed when starting the client). Execute "wal" from the UI to reload the wallet.
+The wallet's public addresses will be written to `wallet.txt`. Now you can take this file safely to your client's PC and place it in the folder where it looks for wallet.txt (the path is printed when starting the client). Execute "wal" from the UI to reload the wallet.
 
 ### Security precautions
 Make sure that the disk with `.secret` file is encrypted.
