@@ -9,7 +9,7 @@ import (
 )
 
 var MinerIds = [][2]string{
-	{"BTC Guild", "BTC Guild"},
+	{"BTC_Guild", "BTC Guild"},
 	{"ASICMiner", "ASICMiner"},
 	{"50BTC", "50BTC.com"},
 	{"Slush", "/slush/"},
@@ -19,11 +19,11 @@ var MinerIds = [][2]string{
 	{"BitMinter", "BitMinter"},
 	{"Bitparking", "bitparking"},
 	{"CoinLab", "CoinLab"},
-	{"Triplemining", "Triplemining.com"},
+	{"Triplemin", "Triplemining.com"},
 	{"Ozcoin", "ozcoin"},
 	{"SatoshiSys", "Satoshi Systems"},
-	{"ST Mining", "st mining corp"},
-	{"GHash.IO", "ghash.io"},
+	{"ST_Mining", "st mining corp"},
+	{"GHash.IO", "\x80\xad\x90\xd4\x03\x58\x1f\xa3\xbf\x46\x08\x6a\x91\xb2\xd9\xd4\x12\x5d\xb6\xc1"}, // 1CjPR7Z5ZSyWk6WtXvSFgkptmpoi4UM9BC
 }
 
 
