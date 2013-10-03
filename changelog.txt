@@ -1,3 +1,6 @@
+0.7.7
+* "MakeTx" tab is precise now converting between Satoshi and BTC values
+
 0.7.6
 * "MakeTx" tab in WebUI (to pre-make the command for the wallet app)
 * Droppig a peer (from TextUI or WebUI) bans its IP by the way
