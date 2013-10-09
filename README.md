@@ -2,6 +2,10 @@ Gocoin
 ==============
 Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang).
 
+The official webpage fo the project:
+
+* http://www.assets-otc.com/gocoin
+
 
 Architecture
 --------------
