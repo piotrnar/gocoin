@@ -98,6 +98,7 @@ func dump_addrs() {
 
 // load the content of the "balance/" folder
 func load_balance() {
+	var unknownInputs int
 	f, e := os.Open("balance/unspent.txt")
 	if e != nil {
 		println(e.Error())
@@ -159,14 +160,20 @@ func load_balance() {
 				}
 			}
 
-			if !fnd && *verbose {
-				fmt.Println(uns.String(), "does not belogn to your wallet - ignore it")
+			if !fnd {
+				unknownInputs++
+				if *verbose {
+					fmt.Println(uns.String(), "does not belogn to your wallet - ignore it")
+				}
 			}
 
 		}
 	}
 	f.Close()
 	fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
+	if unknownInputs > 0 {
+		fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);
+	}
 }
 
 
