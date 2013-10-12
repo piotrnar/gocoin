@@ -1,3 +1,6 @@
+0.7.8
+* If you have a working C compiler, use "wallet/hidepass/hidepass.go" for hiding password inputs
+
 0.7.7
 * "MakeTx" tab is precise now converting between Satoshi and BTC values
 
