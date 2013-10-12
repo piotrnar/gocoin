@@ -92,6 +92,8 @@ For anyone familiar with Go language, building should not be a problem. If you h
 
 After you have the sources in your local disk, building them is usually as simple as going to either the `client` or the `wallet` directory and executing `go build`. This will create `client` and `wallet` executable binaries, in their respective folders.
 
+If you cannot build the wallet, just delete the file `wallet/hidepass.go`
+
 
 To build any of the additional tools, go to the `tools` folder and execute `go build toolname.go` to build a tool of your choice.
 
