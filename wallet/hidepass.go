@@ -26,9 +26,11 @@ func enterpassext() string {
 			fmt.Println()
 			break // Enter
 		}
-		if chr=='\b' && pass!="" {
-			pass = pass[0:len(pass)-1]
-			fmt.Print("\b \b")
+		if chr=='\b' {
+			if len(pass)>0 {
+				pass = pass[0:len(pass)-1]
+				fmt.Print("\b \b")
+			}
 			continue
 		}
 		if chr<' ' {
