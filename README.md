@@ -18,7 +18,7 @@ On that webpage you can find all the information from this file, plus much much 
 
 ## Hardware
 It is recommended to have at least 4GB of system memory on the PC where you run the online client node.
-Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler. 
+Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
 The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
 
 The wallet app has very little requirements and should work on any platform with a working Go compiler.
@@ -59,4 +59,4 @@ Go to the `client/` folder and execute `go build` there.
 Go to the `wallet/` folder and execute `go build` there.
 
 If it fails now, it is most likely because you do not have a compatible C compiler installed in your system.
-In such case either install the compiler (MinGW, if you use Windows) or just delete `hidepass.go` and redo `go build`.
+In such case either install the compiler (MinGW, if you use Windows) or just delete `hidepass_*.go` and redo `go build`.
