@@ -2,7 +2,8 @@ package sipasec
 
 /*
 #cgo CFLAGS: -I /DEV/secp256k1/include
-#cgo LDFLAGS: /DEV/secp256k1/libsecp256k1.a /DEV/secp256k1/gmp/libgmp.a
+#cgo windows LDFLAGS: /DEV/secp256k1/libsecp256k1.a /DEV/secp256k1/gmp/libgmp.a
+#cgo !windows LDFLAGS: -lsecp256k1 -lgmp
 
 #include <stdio.h>
 #include "secp256k1.h"
