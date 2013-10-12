@@ -22,7 +22,7 @@ func enterpassext() string {
 			os.Exit(0)
 			// Ctrl+C
 		}
-		if chr==13 {
+		if chr==13 || chr==10 {
 			fmt.Println()
 			break // Enter
 		}
