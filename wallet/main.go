@@ -159,7 +159,7 @@ func load_balance() {
 				}
 			}
 
-			if !fnd {
+			if !fnd && *verbose {
 				fmt.Println(uns.String(), "does not belogn to your wallet - ignore it")
 			}
 
