@@ -58,5 +58,5 @@ Go to the `client/` folder and execute `go build` there.
 ## Compile wallet
 Go to the `wallet/` folder and execute `go build` there.
 
-If it fails now, it is most likely because you do not have a compatible C compiler installed in your system.
-In such case either install the compiler (MinGW, if you use Windows) or just delete `hidepass_*.go` and redo `go build`.
+If it fails on Windows, it is most likely because you do not have a compatible C compiler installed.
+In such case either install MinGW for your host arch (32 or 64 bit), or just delete `hidepass_windows.go` and redo `go build`.
