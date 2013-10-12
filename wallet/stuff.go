@@ -9,6 +9,8 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+var secrespass func() string
+
 
 // Get TxOut record, by the given TxPrevOut
 func UO(uns *btc.TxPrevOut) *btc.TxOut {
@@ -21,6 +23,15 @@ func UO(uns *btc.TxPrevOut) *btc.TxOut {
 func getline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 	return string(li)
+}
+
+
+// Reads a password from stdin
+func readpass() string {
+	if secrespass != nil {
+		return secrespass()
+	}
+	return getline()
 }
 
 
@@ -43,10 +54,10 @@ func getpass() string {
 	if e != nil {
 		fmt.Println("Seed file", PassSeedFilename, "not found")
 		fmt.Print("Enter your wallet's seed password: ")
-		pass := getline()
+		pass := readpass()
 		if pass!="" && *dump {
 			fmt.Print("Re-enter the seed password (to be sure): ")
-			if pass!=getline() {
+			if pass!=readpass() {
 				println("The two passwords you entered do not match")
 				os.Exit(1)
 			}
