@@ -50,7 +50,7 @@ You can also use `go get` to fetch the gocoin sources from GitHub for you:
 
 	go get github.com/piotrnar/gocoin
 
-Make sure that the all sources are placed in a proper location withing your GOPATH folder, before compiling them (`go get` should take care of this).
+Make sure that the all sources are placed in a proper location within your GOPATH folder, before compiling them (`go get` should take care of this).
 
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
