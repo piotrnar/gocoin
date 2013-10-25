@@ -1,4 +1,5 @@
-* Imlement a secured password input method for the wallet app (for Windows with no mingw)
+* Improve the database folder locking, for linux
+* Implement a secured password input method for the wallet app (for Windows with no mingw)
 * Disconnect & ban nodes that do not send any of just a few data
 * Implement a cache for address balances so switching between wallets would be quick
 * Try to make own (faster) implementation of sha256 and rimp160
