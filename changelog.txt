@@ -1,6 +1,6 @@
 0.8.0
 * Souce code of the client hugely restructured
-* A new tool "fetchbalance" that can fetch your ballance from blockexplorer.com (for nodeless wallets)
+* A new tool "fetchbalance" that can fetch the ballance from blockchain.info & blockexplorer.com
 
 0.7.8
 * Password chars are hidden when being input (if wallet does not build, delete "wallet/hidepass.go").
