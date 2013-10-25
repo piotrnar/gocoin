@@ -186,7 +186,11 @@ func DecodeScript(pk string) (out []byte, e error) {
 					case "NOP10": out = append(out, 0xb9)
 					case "": out = append(out, []byte{}...)
 					default:
-						return nil, errors.New("Syntax error: "+xx[i])
+						dat, _ := hex.DecodeString(xx[i])
+						if dat==nil {
+							return nil, errors.New("Syntax error: "+xx[i])
+						}
+						out = append(out, RawToStack(dat)...)
 				}
 			}
 		}
