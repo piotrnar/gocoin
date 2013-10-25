@@ -30,7 +30,7 @@ func parse_spend() {
 			os.Exit(1)
 		}
 
-		am := ParseAmount(tmp[1])
+		am := btc.ParseValue(tmp[1])
 		sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
 		spendBtc += am
 	}
@@ -64,7 +64,7 @@ func parse_batch() {
 				os.Exit(1)
 			}
 
-			am := ParseAmount(tmp[1])
+			am := btc.ParseValue(tmp[1])
 
 			sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
 			spendBtc += am
