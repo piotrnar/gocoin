@@ -1,0 +1,64 @@
+<table width="100%">
+<tr><td valign="top">
+<h2>Wallet</h2>
+<!--WALLET-->
+<td width="400" valign="bottom">
+	<h2>Upload transaction</h2>
+	<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
+		<input name="txfile" type="file">
+		<input type="submit" value="Upload" />
+	</form>
+</td>
+</tr>
+
+<tr>
+<tr><td colspan="2">
+	<table vspace="10" id="unspent" style="display:none">
+	<tr>
+		<th width="20">#
+		<th width="40">Block
+		<th>TxID
+		<th width="30">Vout
+		<th width="80">BTC Value
+		<th width="210">Address
+	</table>
+
+
+	<h2>Last Block</h2><table>
+	<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
+	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+	<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
+	<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
+	<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+	</table>
+</td>
+</tr>
+
+<tr><td valign="top">
+	<h2>Network</h2>
+	<table>
+	<tr><td>Downloading at:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
+	<tr><td>Uploading at:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
+	<tr><td>Net queue len:<td><b>{NET_TX_QSIZE}</b> txs,
+	&nbsp;
+	<b>{NET_BLOCK_QSIZE}</b> blocks
+	<tr><td nowrap="nowrap">Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incomming)
+	<tr><td>Extrenal IPs:<td><b>{ONE_EXTERNAL_IP}</b>
+	</table>
+<td valign="top">
+	<h2>Others</h2>
+	<table>
+	<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
+	<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
+	<tr><td>Node's uptime:<td><b>{NODE_UPTIME}</b>
+	<tr><td>Heap Size:<td><b>{HEAP_SIZE_MB} MB</b> &nbsp;[<a href="javascript:config('freemem')">FREE</a>]
+	<tr><td>SysMem Used:<td><b>{SYSMEM_USED_MB} MB</b>
+	<tr><td nowrap="nowrap">ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
+	</table>
+</table>
+
+<div id="showcfg">
+<br>
+<input type="button" value="Show configuration JSON data" onclick="shwcfg()">
+</div>
+<div id="formcfg" style="display:none"><h2>Configuration</h2><table width="90%"><form method="post" action="cfg"><tr><td colspan="2">	<textarea name="configjson" style="width:100%" rows="6">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be noticed.	<td align="right">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></form></table></div><script>function shwcfg() {	showcfg.style.display='none'	formcfg.style.display='block'}</script><div style="text-align:right"><br><form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');"><input type="hidden" name="shutdown" value="1"><input type="submit" value="Shutdown Node"></form></div>

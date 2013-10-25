@@ -1,0 +1,46 @@
+<table class="blocks bord" id="blkstab">
+	<col width="70">
+	<col width="120">
+	<col>
+	<col width="50">
+	<col width="50">
+	<col width="60">
+	<col width="60">
+	<col width="50">
+<tr>
+	<th colspan="3">Block info
+	<th colspan="2">Block size
+	<th colspan="3">Timing in <i>ms</i>
+	<th colspan="2">Mining info
+<tr>
+	<th>Height
+	<th>Time
+	<th>Hash
+	<th align="right">TXs
+	<th align="right">kB
+	<th align="right">dload
+	<th align="right">verif
+	<th>ohd
+	<th>BTC
+	<th align="left">Miner
+</tr>
+<!--BLOCK_ROW-->
+</table>
+<script>
+function hlminer(row) {
+	var mid = row.cells[9].innerHTML
+	if (row.className.indexOf("own")!=-1) {
+		mid = null
+	}
+	for (var i=1; i<blkstab.rows.length; i++) {
+		if (blkstab.rows[i].cells[9].innerHTML==mid) {
+			//blkstab.rows[i].style.backgroundColor="#ffd0d0";
+			blkstab.rows[i].className = "own hand"
+		} else {
+			blkstab.rows[i].className = "hov hand"
+			//blkstab.rows[i].classList.add("own")
+			//blkstab.rows[i].style.backgroundColor="#ffffff";
+		}
+	}
+}
+</script>
