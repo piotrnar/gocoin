@@ -39,3 +39,23 @@ type OneCachedBlock struct {
 	*btc.Block
 	Conn *OneConnection
 }
+
+
+// This one shall only be called from the chain thread (this no protection)
+func AddBlockToCache(bl *btc.Block, conn *OneConnection) {
+	// we use CachedBlocks only from one therad so no need for a mutex
+	if len(CachedBlocks)==config.MaxCachedBlocks {
+		// Remove the oldest one
+		oldest := time.Now()
+		var todel [btc.Uint256IdxLen]byte
+		for k, v := range CachedBlocks {
+			if v.Time.Before(oldest) {
+				oldest = v.Time
+				todel = k
+			}
+		}
+		delete(CachedBlocks, todel)
+		config.CountSafe("CacheBlocksExpired")
+	}
+	CachedBlocks[bl.Hash.BIdx()] = OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
+}

@@ -15,7 +15,6 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/client/dbase"
 	"github.com/piotrnar/gocoin/client/config"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/bwlimit"
@@ -371,49 +370,8 @@ func qdb_stats(par string) {
 
 
 func defrag_blocks(par string) {
-	network.NetCloseAll()
-	network.ClosePeerDB()
-
-	println("Creating empty database in", config.GocoinHomeDir+"defrag", "...")
-	os.RemoveAll(config.GocoinHomeDir+"defrag")
-	defragdb := btc.NewBlockDB(config.GocoinHomeDir+"defrag")
-
-	fmt.Println("Defragmenting the database...")
-
-	blk := config.BlockChain.BlockTreeRoot
-	for {
-		blk = blk.FindPathTo(config.BlockChain.BlockTreeEnd)
-		if blk==nil {
-			fmt.Println("Database defragmenting finished successfully")
-			fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
-			break
-		}
-		if (blk.Height&0xff)==0 {
-			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, config.BlockChain.BlockTreeEnd.Height,
-				100 * blk.Height / config.BlockChain.BlockTreeEnd.Height)
-		}
-		bl, trusted, er := config.BlockChain.Blocks.BlockGet(blk.BlockHash)
-		if er != nil {
-			println("FATAL ERROR during BlockGet:", er.Error())
-			break
-		}
-		nbl, er := btc.NewBlock(bl)
-		if er != nil {
-			println("FATAL ERROR during NewBlock:", er.Error())
-			break
-		}
-		nbl.Trusted = trusted
-		defragdb.BlockAdd(blk.Height, nbl)
-	}
-
-	defragdb.Sync()
-	defragdb.Close()
-
-	config.CloseBlockChain()
-	dbase.UnlockDatabaseDir()
-
-	fmt.Println("The client will exit now")
-	os.Exit(0)
+	config.DefragBlocksDB = true
+	config.Exit_now = true
 }
 
 
