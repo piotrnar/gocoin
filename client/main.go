@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"os/signal"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/dbase"
 	"github.com/piotrnar/gocoin/client/config"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
@@ -15,32 +14,9 @@ import (
 	"github.com/piotrnar/gocoin/client/webui"
 )
 
-const (
-	defragEvery = (5*time.Minute)
-)
 
-var (
-	killchan chan os.Signal = make(chan os.Signal)
-	retryCachedBlocks bool
-)
-
-func addBlockToCache(bl *btc.Block, conn *network.OneConnection) {
-	// we use network.CachedBlocks only from one therad so no need for a mutex
-	if len(network.CachedBlocks)==config.MaxCachedBlocks {
-		// Remove the oldest one
-		oldest := time.Now()
-		var todel [btc.Uint256IdxLen]byte
-		for k, v := range network.CachedBlocks {
-			if v.Time.Before(oldest) {
-				oldest = v.Time
-				todel = k
-			}
-		}
-		delete(network.CachedBlocks, todel)
-		config.CountSafe("CacheBlocksExpired")
-	}
-	network.CachedBlocks[bl.Hash.BIdx()] = network.OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
-}
+var killchan chan os.Signal = make(chan os.Signal)
+var retryCachedBlocks bool
 
 
 func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
@@ -152,7 +128,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	e, dos, maybelater := config.BlockChain.CheckBlock(bl)
 	if e != nil {
 		if maybelater {
-			addBlockToCache(bl, newbl.Conn)
+			network.AddBlockToCache(bl, newbl.Conn)
 		} else {
 			println(dos, e.Error())
 			if dos {
@@ -169,6 +145,41 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 			newbl.Conn.DoS()
 		}
 	}
+}
+
+
+func defrag_db() {
+	println("Creating empty database in", config.GocoinHomeDir+"defrag", "...")
+	os.RemoveAll(config.GocoinHomeDir+"defrag")
+	defragdb := btc.NewBlockDB(config.GocoinHomeDir+"defrag")
+	fmt.Println("Defragmenting the database...")
+	blk := config.BlockChain.BlockTreeRoot
+	for {
+		blk = blk.FindPathTo(config.BlockChain.BlockTreeEnd)
+		if blk==nil {
+			fmt.Println("Database defragmenting finished successfully")
+			fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
+			break
+		}
+		if (blk.Height&0xff)==0 {
+			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, config.BlockChain.BlockTreeEnd.Height,
+				100 * blk.Height / config.BlockChain.BlockTreeEnd.Height)
+		}
+		bl, trusted, er := config.BlockChain.Blocks.BlockGet(blk.BlockHash)
+		if er != nil {
+			println("FATAL ERROR during BlockGet:", er.Error())
+			break
+		}
+		nbl, er := btc.NewBlock(bl)
+		if er != nil {
+			println("FATAL ERROR during NewBlock:", er.Error())
+			break
+		}
+		nbl.Trusted = trusted
+		defragdb.BlockAdd(blk.Height, nbl)
+	}
+	defragdb.Sync()
+	defragdb.Close()
 }
 
 
@@ -192,7 +203,7 @@ func main() {
 			network.NetCloseAll()
 			config.CloseBlockChain()
 			network.ClosePeerDB()
-			dbase.UnlockDatabaseDir()
+			UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
@@ -211,7 +222,7 @@ func main() {
 		fmt.Print(wallet.DumpBalance(nil, false))
 	}
 
-	peersTick := time.Tick(defragEvery)
+	peersTick := time.Tick(5*time.Minute)
 	txPoolTick := time.Tick(time.Minute)
 	netTick := time.Tick(time.Second)
 
@@ -282,7 +293,12 @@ func main() {
 	}
 
 	network.NetCloseAll()
-	config.CloseBlockChain()
 	network.ClosePeerDB()
-	dbase.UnlockDatabaseDir()
+
+	if config.DefragBlocksDB {
+		defrag_db()
+	}
+
+	config.CloseBlockChain()
+	UnlockDatabaseDir()
 }

@@ -171,6 +171,7 @@ func Reset() {
 }
 
 
+// Converts an IP range to addr/mask
 func str2oaa(ip string) (res *oneAllowedAddr) {
 	var a,b,c,d,x uint32
 	n, _ := fmt.Sscanf(ip, "%d.%d.%d.%d/%d", &a, &b, &c, &d, &x)

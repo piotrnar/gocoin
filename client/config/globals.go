@@ -31,4 +31,5 @@ var (
 	ExpirePerKB time.Duration
 
 	Exit_now bool
+	DefragBlocksDB bool
 )

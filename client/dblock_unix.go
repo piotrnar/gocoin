@@ -1,6 +1,6 @@
 // +build !windows
 
-package dbase
+package main
 
 import (
 	"os"
