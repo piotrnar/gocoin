@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -30,11 +30,11 @@ func BestExternalAddr() []byte {
 	}
 	ExternalIpMutex.Unlock()
 	res := make([]byte, 26)
-	binary.LittleEndian.PutUint64(res[0:8], config.Services)
+	binary.LittleEndian.PutUint64(res[0:8], common.Services)
 	// leave ip6 filled with zeros, except for the last 2 bytes:
 	res[18], res[19] = 0xff, 0xff
 	binary.BigEndian.PutUint32(res[20:24], best_ip)
-	binary.BigEndian.PutUint16(res[24:26], config.DefaultTcpPort)
+	binary.BigEndian.PutUint16(res[24:26], common.DefaultTcpPort)
 	return res
 }
 
@@ -71,13 +71,13 @@ func ParseAddr(pl []byte) {
 		var buf [30]byte
 		n, e := b.Read(buf[:])
 		if n!=len(buf) || e!=nil {
-			config.CountSafe("AddrError")
+			common.CountSafe("AddrError")
 			//println("ParseAddr:", n, e)
 			break
 		}
 		a := NewPeer(buf[:])
 		if !ValidIp4(a.Ip4[:]) {
-			config.CountSafe("AddrInvalid")
+			common.CountSafe("AddrInvalid")
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
@@ -87,10 +87,10 @@ func ParseAddr(pl []byte) {
 				}
 				PeerDB.Put(k, a.Bytes())
 			} else {
-				config.CountSafe("AddrStale")
+				common.CountSafe("AddrStale")
 			}
 		} else {
-			config.CountSafe("AddrInFuture")
+			common.CountSafe("AddrInFuture")
 		}
 	}
 }

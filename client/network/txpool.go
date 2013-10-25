@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -122,27 +122,27 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if uint32(len(pl))>atomic.LoadUint32(&config.CFG.TXPool.MaxTxSize) {
-		config.CountSafe("TxTooBig")
+	if uint32(len(pl))>atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
+		common.CountSafe("TxTooBig")
 		TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_TOO_BIG)
 		return
 	}
 	NeedThisTx(tid, func() {
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
-			config.CountSafe("TxParseError")
+			common.CountSafe("TxParseError")
 			TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_FORMAT)
 			c.DoS()
 			return
 		}
 		if le != len(pl) {
-			config.CountSafe("TxParseLength")
+			common.CountSafe("TxParseLength")
 			TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_LEN_MISMATCH)
 			c.DoS()
 			return
 		}
 		if len(tx.TxIn)<1 {
-			config.CountSafe("TxParseEmpty")
+			common.CountSafe("TxParseEmpty")
 			TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
 			c.DoS()
 			return
@@ -153,7 +153,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 			case NetTxs <- &TxRcvd{conn:c, tx:tx, raw:pl}:
 				TransactionsPending[tid.Hash] = true
 			default:
-				config.CountSafe("NetTxsFULL")
+				common.CountSafe("NetTxsFULL")
 		}
 	})
 }
@@ -166,7 +166,7 @@ func bidx2str(idx [btc.Uint256IdxLen]byte) string {
 
 // Must be called from the chain's thread
 func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
-	config.CountSafe("HandleNetTx")
+	common.CountSafe("HandleNetTx")
 
 	tx := ntx.tx
 	var totinp, totout uint64
@@ -178,7 +178,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if _, present := TransactionsPending[tx.Hash.Hash]; !present {
 			// It had to be mined in the meantime, so just drop it now
 			TxMutex.Unlock()
-			config.CountSafe("TxNotPending")
+			common.CountSafe("TxNotPending")
 			return
 		}
 		delete(TransactionsPending, ntx.tx.Hash.Hash)
@@ -198,27 +198,27 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if _, ok := SpentOutputs[spent[i]]; ok {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
 			TxMutex.Unlock()
-			config.CountSafe("TxRejectedDoubleSpend")
+			common.CountSafe("TxRejectedDoubleSpend")
 			return
 		}
 
-		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; config.CFG.TXPool.AllowMemInputs && ok {
+		if txinmem, ok := TransactionsToSend[tx.TxIn[i].Input.Hash]; common.CFG.TXPool.AllowMemInputs && ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
-				config.CountSafe("TxRejectedBadInput")
+				common.CountSafe("TxRejectedBadInput")
 				return
 			}
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
-			config.CountSafe("TxInputInMemory")
+			common.CountSafe("TxInputInMemory")
 			frommem = true
 		} else {
-			pos[i], _ = config.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			pos[i], _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
-				if !config.CFG.TXPool.AllowMemInputs {
+				if !common.CFG.TXPool.AllowMemInputs {
 					TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
 					TxMutex.Unlock()
-					config.CountSafe("TxRejectedMemInput")
+					common.CountSafe("TxRejectedMemInput")
 					return
 				}
 				// In this case, let's "save" it for later...
@@ -241,9 +241,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 				TxMutex.Unlock()
 				if newone {
-					config.CountSafe("TxRejectedNoInputNew")
+					common.CountSafe("TxRejectedNoInputNew")
 				} else {
-					config.CountSafe("TxRejectedNoInputOld")
+					common.CountSafe("TxRejectedNoInputOld")
 				}
 				return
 			}
@@ -254,10 +254,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	// Check if total output value does not exceed total input
 	minout := uint64(btc.MAX_MONEY)
 	for i := range tx.TxOut {
-		if tx.TxOut[i].Value < atomic.LoadUint64(&config.CFG.TXPool.MinVoutValue) {
+		if tx.TxOut[i].Value < atomic.LoadUint64(&common.CFG.TXPool.MinVoutValue) {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DUST)
 			TxMutex.Unlock()
-			config.CountSafe("TxRejectedDust")
+			common.CountSafe("TxRejectedDust")
 			return
 		}
 		if tx.TxOut[i].Value < minout {
@@ -271,16 +271,16 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_OVERSPEND)
 		TxMutex.Unlock()
 		ntx.conn.DoS()
-		config.CountSafe("TxRejectedOverspend")
+		common.CountSafe("TxRejectedOverspend")
 		return
 	}
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(len(ntx.raw)) * atomic.LoadUint64(&config.CFG.TXPool.FeePerByte)) {
+	if fee < (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte)) {
 		TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
-		config.CountSafe("TxRejectedLowFee")
+		common.CountSafe("TxRejectedLowFee")
 		return
 	}
 
@@ -289,7 +289,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx, true) {
 			TransactionsRejected[tx.Hash.BIdx()] = NewRejectedTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
-			config.CountSafe("TxRejectedScriptFail")
+			common.CountSafe("TxRejectedScriptFail")
 			ntx.conn.DoS()
 			return
 		}
@@ -307,15 +307,15 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	TxMutex.Unlock()
-	config.CountSafe("TxAccepted")
+	common.CountSafe("TxAccepted")
 
 	if frommem {
 		// Gocoin does not route txs that need unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
-		config.CountSafe("TxRouteNotMined")
+		common.CountSafe("TxRouteNotMined")
 	} else if isRoutable(rec) {
 		rec.Invsentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
-		config.CountSafe("TxRouteOK")
+		common.CountSafe("TxRouteOK")
 	}
 
 	accepted = true
@@ -324,23 +324,23 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 
 func isRoutable(rec *OneTxToSend) bool {
-	if !config.CFG.TXRoute.Enabled {
-		config.CountSafe("TxRouteDisabled")
+	if !common.CFG.TXRoute.Enabled {
+		common.CountSafe("TxRouteDisabled")
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if uint32(len(rec.Data)) > atomic.LoadUint32(&config.CFG.TXRoute.MaxTxSize) {
-		config.CountSafe("TxRouteTooBig")
+	if uint32(len(rec.Data)) > atomic.LoadUint32(&common.CFG.TXRoute.MaxTxSize) {
+		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false
 	}
-	if rec.Fee < (uint64(len(rec.Data))*atomic.LoadUint64(&config.CFG.TXRoute.FeePerByte)) {
-		config.CountSafe("TxRouteLowFee")
+	if rec.Fee < (uint64(len(rec.Data))*atomic.LoadUint64(&common.CFG.TXRoute.FeePerByte)) {
+		common.CountSafe("TxRouteLowFee")
 		rec.Blocked = TX_REJECTED_LOW_FEE
 		return false
 	}
-	if rec.Minout < atomic.LoadUint64(&config.CFG.TXRoute.MinVoutValue) {
-		config.CountSafe("TxRouteDust")
+	if rec.Minout < atomic.LoadUint64(&common.CFG.TXRoute.MinVoutValue) {
+		common.CountSafe("TxRouteDust")
 		rec.Blocked = TX_REJECTED_DUST
 		return false
 	}
@@ -352,13 +352,13 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 	for k, t := range wtg.Ids {
 		pendtxrcv := TransactionsRejected[k].Wait4Input.TxRcvd
 		if HandleNetTx(pendtxrcv, true) {
-			config.CountSafe("TxRetryAccepted")
-			if config.DebugLevel>0 {
+			common.CountSafe("TxRetryAccepted")
+			if common.DebugLevel>0 {
 				fmt.Println(pendtxrcv.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
 			}
 		} else {
-			config.CountSafe("TxRetryRejected")
-			if config.DebugLevel>0 {
+			common.CountSafe("TxRetryRejected")
+			if common.DebugLevel>0 {
 				fmt.Println(pendtxrcv.tx.Hash.String(), "still rejected", TransactionsRejected[k].Reason)
 			}
 		}
@@ -369,18 +369,18 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 func TxMined(h *btc.Uint256) {
 	TxMutex.Lock()
 	if rec, ok := TransactionsToSend[h.Hash]; ok {
-		config.CountSafe("TxMinedToSend")
+		common.CountSafe("TxMinedToSend")
 		for i := range rec.Spent {
 			delete(SpentOutputs, rec.Spent[i])
 		}
 		delete(TransactionsToSend, h.Hash)
 	}
 	if _, ok := TransactionsRejected[h.BIdx()]; ok {
-		config.CountSafe("TxMinedRejected")
+		common.CountSafe("TxMinedRejected")
 		deleteRejected(h.BIdx())
 	}
 	if _, ok := TransactionsPending[h.Hash]; ok {
-		config.CountSafe("TxMinedPending")
+		common.CountSafe("TxMinedPending")
 		delete(TransactionsPending, h.Hash)
 	}
 	wtg := WaitingForInputs[h.BIdx()]
@@ -388,7 +388,7 @@ func TxMined(h *btc.Uint256) {
 
 	// Try to redo waiting txs
 	if wtg != nil {
-		config.CountSafe("TxMinedGotInput")
+		common.CountSafe("TxMinedGotInput")
 		RetryWaitingForInput(wtg)
 	}
 }
@@ -402,9 +402,9 @@ func txChecker(h *btc.Uint256) bool {
 		return false // Assume own txs as non-trusted
 	}
 	if ok {
-		config.CountSafe("TxScrBoosted")
+		common.CountSafe("TxScrBoosted")
 	} else {
-		config.CountSafe("TxScrMissed")
+		common.CountSafe("TxScrMissed")
 	}
 	return ok
 }
@@ -416,12 +416,12 @@ func init() {
 
 
 func expireTime(size int) (t time.Time) {
-	if !config.CFG.TXPool.Enabled {
+	if !common.CFG.TXPool.Enabled {
 		return // return zero time which should expire immediatelly
 	}
-	exp := (time.Duration(size)*config.ExpirePerKB) >> 10
-	if exp > config.MaxExpireTime {
-		exp = config.MaxExpireTime
+	exp := (time.Duration(size)*common.ExpirePerKB) >> 10
+	if exp > common.MaxExpireTime {
+		exp = common.MaxExpireTime
 	}
 	return time.Now().Add(-exp)
 }
@@ -464,16 +464,16 @@ func ExpireTxs() {
 	}
 	TxMutex.Unlock()
 
-	config.CounterMutex.Lock()
-	config.Counter["TxPurgedTicks"]++
+	common.CounterMutex.Lock()
+	common.Counter["TxPurgedTicks"]++
 	if cnt1a>0 {
-		config.Counter["TxPurgedOK"] += cnt1a
+		common.Counter["TxPurgedOK"] += cnt1a
 	}
 	if cnt1b>0 {
-		config.Counter["TxPurgedBlocked"] += cnt1b
+		common.Counter["TxPurgedBlocked"] += cnt1b
 	}
 	if cnt2 > 0 {
-		config.Counter["TxPurgedRejected"] += cnt2
+		common.Counter["TxPurgedRejected"] += cnt2
 	}
-	config.CounterMutex.Unlock()
+	common.CounterMutex.Unlock()
 }

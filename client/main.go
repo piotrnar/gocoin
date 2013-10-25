@@ -7,11 +7,12 @@ import (
 	"runtime"
 	"os/signal"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/textui"
-	"github.com/piotrnar/gocoin/client/webui"
+	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/usif/textui"
+	"github.com/piotrnar/gocoin/client/usif/webui"
 )
 
 
@@ -21,7 +22,7 @@ var retryCachedBlocks bool
 
 func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 	sta := time.Now()
-	e = config.BlockChain.AcceptBlock(bl)
+	e = common.BlockChain.AcceptBlock(bl)
 	if e == nil {
 		network.MutexRcv.Lock()
 		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
@@ -33,23 +34,23 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
-			config.Busy("NetRouteInv")
+			common.Busy("NetRouteInv")
 			network.NetRouteInv(2, bl.Hash, from)
 
-			if config.CFG.Beeps.NewBlock {
-				fmt.Println("\007Received block", config.BlockChain.BlockTreeEnd.Height)
+			if common.CFG.Beeps.NewBlock {
+				fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
 				textui.ShowPrompt()
 			}
 
-			if config.MinedByUs(bl.Raw) {
-				fmt.Println("\007Mined by '"+config.CFG.Beeps.MinerID+"':", bl.Hash)
+			if common.MinedByUs(bl.Raw) {
+				fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
 				textui.ShowPrompt()
 			}
 
-			if config.CFG.Beeps.ActiveFork && config.Last.Block == config.BlockChain.BlockTreeEnd {
+			if common.CFG.Beeps.ActiveFork && common.Last.Block == common.BlockChain.BlockTreeEnd {
 				// Last block has not changed, so it must have been an orphaned block
-				bln := config.BlockChain.BlockIndex[bl.Hash.BIdx()]
-				commonNode := config.Last.Block.FirstCommonParent(bln)
+				bln := common.BlockChain.BlockIndex[bl.Hash.BIdx()]
+				commonNode := common.Last.Block.FirstCommonParent(bln)
 				forkDepth := bln.Height - commonNode.Height
 				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String())
 				if forkDepth > 1 {
@@ -58,15 +59,15 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 				textui.ShowPrompt()
 			}
 
-			if wallet.BalanceChanged && config.CFG.Beeps.NewBalance{
+			if wallet.BalanceChanged && common.CFG.Beeps.NewBalance{
 				fmt.Print("\007")
 			}
 		}
 
-		config.Last.Mutex.Lock()
-		config.Last.Time = time.Now()
-		config.Last.Block = config.BlockChain.BlockTreeEnd
-		config.Last.Mutex.Unlock()
+		common.Last.Mutex.Lock()
+		common.Last.Time = time.Now()
+		common.Last.Block = common.BlockChain.BlockTreeEnd
+		common.Last.Mutex.Unlock()
 
 		if wallet.BalanceChanged {
 			wallet.BalanceChanged = false
@@ -87,30 +88,30 @@ func retry_cached_blocks() bool {
 	}
 	accepted_cnt := 0
 	for k, v := range network.CachedBlocks {
-		config.Busy("Cache.CheckBlock "+v.Block.Hash.String())
-		e, dos, maybelater := config.BlockChain.CheckBlock(v.Block)
+		common.Busy("Cache.CheckBlock "+v.Block.Hash.String())
+		e, dos, maybelater := common.BlockChain.CheckBlock(v.Block)
 		if e == nil {
-			config.Busy("Cache.AcceptBlock "+v.Block.Hash.String())
+			common.Busy("Cache.AcceptBlock "+v.Block.Hash.String())
 			e := LocalAcceptBlock(v.Block, v.Conn)
 			if e == nil {
-				//println("*** Old block accepted", config.BlockChain.BlockTreeEnd.Height)
-				config.CountSafe("BlocksFromCache")
+				//println("*** Old block accepted", common.BlockChain.BlockTreeEnd.Height)
+				common.CountSafe("BlocksFromCache")
 				delete(network.CachedBlocks, k)
 				accepted_cnt++
 				break // One at a time should be enough
 			} else {
 				println("retry AcceptBlock:", e.Error())
-				config.CountSafe("CachedBlocksDOS")
+				common.CountSafe("CachedBlocksDOS")
 				v.Conn.DoS()
 				delete(network.CachedBlocks, k)
 			}
 		} else {
 			if !maybelater {
 				println("retry CheckBlock:", e.Error())
-				config.CountSafe("BadCachedBlocks")
+				common.CountSafe("BadCachedBlocks")
 				if dos {
 					v.Conn.DoS()
-					config.CountSafe("CachedBlocksDoS")
+					common.CountSafe("CachedBlocksDoS")
 				}
 				delete(network.CachedBlocks, k)
 			}
@@ -122,10 +123,10 @@ func retry_cached_blocks() bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	config.CountSafe("HandleNetBlock")
+	common.CountSafe("HandleNetBlock")
 	bl := newbl.Block
-	config.Busy("CheckBlock "+bl.Hash.String())
-	e, dos, maybelater := config.BlockChain.CheckBlock(bl)
+	common.Busy("CheckBlock "+bl.Hash.String())
+	e, dos, maybelater := common.BlockChain.CheckBlock(bl)
 	if e != nil {
 		if maybelater {
 			network.AddBlockToCache(bl, newbl.Conn)
@@ -136,7 +137,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 			}
 		}
 	} else {
-		config.Busy("LocalAcceptBlock "+bl.Hash.String())
+		common.Busy("LocalAcceptBlock "+bl.Hash.String())
 		e = LocalAcceptBlock(bl, newbl.Conn)
 		if e == nil {
 			retryCachedBlocks = retry_cached_blocks()
@@ -149,23 +150,23 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 
 func defrag_db() {
-	println("Creating empty database in", config.GocoinHomeDir+"defrag", "...")
-	os.RemoveAll(config.GocoinHomeDir+"defrag")
-	defragdb := btc.NewBlockDB(config.GocoinHomeDir+"defrag")
+	println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
+	os.RemoveAll(common.GocoinHomeDir+"defrag")
+	defragdb := btc.NewBlockDB(common.GocoinHomeDir+"defrag")
 	fmt.Println("Defragmenting the database...")
-	blk := config.BlockChain.BlockTreeRoot
+	blk := common.BlockChain.BlockTreeRoot
 	for {
-		blk = blk.FindPathTo(config.BlockChain.BlockTreeEnd)
+		blk = blk.FindPathTo(common.BlockChain.BlockTreeEnd)
 		if blk==nil {
 			fmt.Println("Database defragmenting finished successfully")
 			fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
 			break
 		}
 		if (blk.Height&0xff)==0 {
-			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, config.BlockChain.BlockTreeEnd.Height,
-				100 * blk.Height / config.BlockChain.BlockTreeEnd.Height)
+			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, common.BlockChain.BlockTreeEnd.Height,
+				100 * blk.Height / common.BlockChain.BlockTreeEnd.Height)
 		}
-		bl, trusted, er := config.BlockChain.Blocks.BlockGet(blk.BlockHash)
+		bl, trusted, er := common.BlockChain.Blocks.BlockGet(blk.BlockHash)
 		if er != nil {
 			println("FATAL ERROR during BlockGet:", er.Error())
 			break
@@ -201,7 +202,7 @@ func main() {
 			}
 			println("main panic recovered:", err.Error())
 			network.NetCloseAll()
-			config.CloseBlockChain()
+			common.CloseBlockChain()
 			network.ClosePeerDB()
 			UnlockDatabaseDir()
 			os.Exit(1)
@@ -213,9 +214,9 @@ func main() {
 	// Clean up the DB lock file on exit
 
 	// load default wallet and its balance
-	wallet.LoadWallet(config.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
+	wallet.LoadWallet(common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
 	if wallet.MyWallet==nil {
-		wallet.LoadWallet(config.GocoinHomeDir+"wallet.txt")
+		wallet.LoadWallet(common.GocoinHomeDir+"wallet.txt")
 	}
 	if wallet.MyWallet!=nil {
 		wallet.UpdateBalance()
@@ -226,37 +227,37 @@ func main() {
 	txPoolTick := time.Tick(time.Minute)
 	netTick := time.Tick(time.Second)
 
-	network.InitPeers(config.GocoinHomeDir)
+	network.InitPeers(common.GocoinHomeDir)
 
-	config.Last.Block = config.BlockChain.BlockTreeEnd
-	config.Last.Time = time.Unix(int64(config.Last.Block.Timestamp), 0)
+	common.Last.Block = common.BlockChain.BlockTreeEnd
+	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp), 0)
 
-	for k, v := range config.BlockChain.BlockIndex {
+	for k, v := range common.BlockChain.BlockIndex {
 		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
 	}
 
 	go textui.MainThread()
-	if config.CFG.WebUI.Interface!="" {
-		fmt.Println("Starting WebUI at", config.CFG.WebUI.Interface, "...")
-		go webui.ServerThread(config.CFG.WebUI.Interface)
+	if common.CFG.WebUI.Interface!="" {
+		fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
+		go webui.ServerThread(common.CFG.WebUI.Interface)
 	}
 
-	for !config.Exit_now {
-		config.CountSafe("MainThreadLoops")
+	for !common.Exit_now {
+		common.CountSafe("MainThreadLoops")
 		for retryCachedBlocks {
 			retryCachedBlocks = retry_cached_blocks()
 			// We have done one per loop - now do something else if pending...
-			if len(network.NetBlocks)>0 || len(textui.UiChannel)>0 {
+			if len(network.NetBlocks)>0 || len(usif.UiChannel)>0 {
 				break
 			}
 		}
 
-		config.Busy("")
+		common.Busy("")
 
 		select {
 			case s := <-killchan:
 				fmt.Println("Got signal:", s)
-				config.Exit_now = true
+				common.Exit_now = true
 				continue
 
 			case newbl := <-network.NetBlocks:
@@ -265,8 +266,8 @@ func main() {
 			case newtx := <-network.NetTxs:
 				network.HandleNetTx(newtx, false)
 
-			case cmd := <-textui.UiChannel:
-				config.Busy("UI command")
+			case cmd := <-usif.UiChannel:
+				common.Busy("UI command")
 				cmd.Handler(cmd.Param)
 				cmd.Done.Done()
 				continue
@@ -281,24 +282,24 @@ func main() {
 				network.NetworkTick()
 
 			case <-time.After(time.Second/2):
-				config.CountSafe("MainThreadTouts")
+				common.CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
-					config.Busy("config.BlockChain.Idle()")
-					config.BlockChain.Idle()
+					common.Busy("common.BlockChain.Idle()")
+					common.BlockChain.Idle()
 				}
 				continue
 		}
 
-		config.CountSafe("NetMessagesGot")
+		common.CountSafe("NetMessagesGot")
 	}
 
 	network.NetCloseAll()
 	network.ClosePeerDB()
 
-	if config.DefragBlocksDB {
+	if common.DefragBlocksDB {
 		defrag_db()
 	}
 
-	config.CloseBlockChain()
+	common.CloseBlockChain()
 	UnlockDatabaseDir()
 }

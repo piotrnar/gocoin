@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -35,10 +35,10 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			return
 		}
 
-		config.CountSafe(fmt.Sprint("GetdataType",typ))
+		common.CountSafe(fmt.Sprint("GetdataType",typ))
 		if typ == 2 {
 			uh := btc.NewUint256(h[:])
-			bl, _, er := config.BlockChain.Blocks.BlockGet(uh)
+			bl, _, er := common.BlockChain.Blocks.BlockGet(uh)
 			if er == nil {
 				c.SendRawMsg("block", bl)
 			} else {
@@ -53,14 +53,14 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()
 				c.SendRawMsg("tx", tx.Data)
-				if config.DebugLevel > 0 {
+				if common.DebugLevel > 0 {
 					println("sent tx to", c.PeerAddr.Ip())
 				}
 			} else {
 				TxMutex.Unlock()
 			}
 		} else {
-			if config.DebugLevel>0 {
+			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")
 			}
 		}
@@ -73,7 +73,7 @@ func (c *OneConnection) GetBlockData(h []byte) {
 	b[0] = 1 // One inv
 	b[1] = 2 // Block
 	copy(b[5:37], h[:32])
-	if config.DebugLevel > 1 {
+	if common.DebugLevel > 1 {
 		println("GetBlockData", btc.NewUint256(h).String())
 	}
 	bh := btc.NewUint256(h)
@@ -98,7 +98,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		MutexRcv.Unlock()
-		config.CountSafe("SameBlockReceived")
+		common.CountSafe("SameBlockReceived")
 		return
 	}
 	orb := &OneReceivedBlock{Time:time.Now()}
@@ -108,7 +108,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		delete(conn.GetBlockInProgress, idx)
 		conn.Mutex.Unlock()
 	} else {
-		config.CountSafe("UnxpectedBlockRcvd")
+		common.CountSafe("UnxpectedBlockRcvd")
 	}
 	ReceivedBlocks[idx] = orb
 	MutexRcv.Unlock()
@@ -128,7 +128,7 @@ func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (res bool) {
 		_, ok := v.GetBlockInProgress[idx]
 		v.Mutex.Unlock()
 		if ok {
-			if cnt+1 >= atomic.LoadUint32(&config.CFG.Net.MaxBlockAtOnce) {
+			if cnt+1 >= atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce) {
 				res = true
 				break
 			}
@@ -146,14 +146,14 @@ func blockWanted(h []byte) (yes bool) {
 	_, ok := ReceivedBlocks[idx]
 	MutexRcv.Unlock()
 	if !ok {
-		if atomic.LoadUint32(&config.CFG.Net.MaxBlockAtOnce)==0 || !blocksLimitReached(idx) {
+		if atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce)==0 || !blocksLimitReached(idx) {
 			yes = true
-			config.CountSafe("BlockWanted")
+			common.CountSafe("BlockWanted")
 		} else {
-			config.CountSafe("BlockInProgress")
+			common.CountSafe("BlockInProgress")
 		}
 	} else {
-		config.CountSafe("BlockUnwanted")
+		common.CountSafe("BlockUnwanted")
 	}
 	return
 }

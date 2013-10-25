@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 type OneReceivedBlock struct {
@@ -31,7 +31,7 @@ var (
 	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, 1000)
 	NetTxs chan *TxRcvd = make(chan *TxRcvd, 1000)
 
-	CachedBlocks map[[btc.Uint256IdxLen]byte] OneCachedBlock = make(map[[btc.Uint256IdxLen]byte] OneCachedBlock, config.MaxCachedBlocks)
+	CachedBlocks map[[btc.Uint256IdxLen]byte] OneCachedBlock = make(map[[btc.Uint256IdxLen]byte] OneCachedBlock, common.MaxCachedBlocks)
 )
 
 type OneCachedBlock struct {
@@ -44,7 +44,7 @@ type OneCachedBlock struct {
 // This one shall only be called from the chain thread (this no protection)
 func AddBlockToCache(bl *btc.Block, conn *OneConnection) {
 	// we use CachedBlocks only from one therad so no need for a mutex
-	if len(CachedBlocks)==config.MaxCachedBlocks {
+	if len(CachedBlocks)==common.MaxCachedBlocks {
 		// Remove the oldest one
 		oldest := time.Now()
 		var todel [btc.Uint256IdxLen]byte
@@ -55,7 +55,7 @@ func AddBlockToCache(bl *btc.Block, conn *OneConnection) {
 			}
 		}
 		delete(CachedBlocks, todel)
-		config.CountSafe("CacheBlocksExpired")
+		common.CountSafe("CacheBlocksExpired")
 	}
 	CachedBlocks[bl.Hash.BIdx()] = OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
 }

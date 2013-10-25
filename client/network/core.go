@@ -12,8 +12,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
-	"github.com/piotrnar/gocoin/client/bwlimit"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -152,26 +151,26 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		// Before adding more data to the buffer, check the limit
 		if len(c.Send.Buf)>MaxSendBufferSize {
 			c.Mutex.Unlock()
-			if config.DebugLevel > 0 {
+			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
 			}
 			c.Disconnect()
-			config.CountSafe("PeerSendOverflow")
+			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
 	} else {
 		c.Send.LastSent = time.Now()
 	}
 
-	config.CountSafe("sent_"+cmd)
-	config.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
+	common.CountSafe("sent_"+cmd)
+	common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
 	sbuf := make([]byte, 24+len(pl))
 
 	c.LastCmdSent = cmd
 	c.LastBtsSent = uint32(len(pl))
 
-	binary.LittleEndian.PutUint32(sbuf[0:4], config.Version)
-	copy(sbuf[0:4], config.Magic[:])
+	binary.LittleEndian.PutUint32(sbuf[0:4], common.Version)
+	copy(sbuf[0:4], common.Magic[:])
 	copy(sbuf[4:16], cmd)
 	binary.LittleEndian.PutUint32(sbuf[16:20], uint32(len(pl)))
 
@@ -181,7 +180,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	c.Send.Buf = append(c.Send.Buf, sbuf...)
 
-	if config.DebugLevel<0 {
+	if common.DebugLevel<0 {
 		fmt.Println(cmd, len(c.Send.Buf), "->", c.PeerAddr.Ip())
 	}
 	c.Mutex.Unlock()
@@ -206,7 +205,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 
 
 func (c *OneConnection) DoS() {
-	config.CountSafe("BannedNodes")
+	common.CountSafe("BannedNodes")
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
@@ -219,7 +218,7 @@ func (c *OneConnection) HandleError(e error) (error) {
 		//fmt.Println("Just a timeout - ignore")
 		return nil
 	}
-	if config.DebugLevel>0 {
+	if common.DebugLevel>0 {
 		println("HandleError:", e.Error())
 	}
 	c.recv.hdr_len = 0
@@ -234,7 +233,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	var n int
 
 	for c.recv.hdr_len < 24 {
-		n, e = bwlimit.SockRead(c.NetConn, c.recv.hdr[c.recv.hdr_len:24])
+		n, e = common.SockRead(c.NetConn, c.recv.hdr[c.recv.hdr_len:24])
 		c.Mutex.Lock()
 		c.recv.hdr_len += n
 		if e != nil {
@@ -242,12 +241,12 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			c.HandleError(e)
 			return nil
 		}
-		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], config.Magic[:]) {
+		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
 			c.Mutex.Unlock()
-			if config.DebugLevel >0 {
+			if common.DebugLevel >0 {
 				println("FetchMessage: Proto out of sync")
 			}
-			config.CountSafe("NetBadMagic")
+			common.CountSafe("NetBadMagic")
 			c.Disconnect()
 			return nil
 		}
@@ -266,7 +265,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			if c.recv.pl_len > msi {
 				println(c.PeerAddr.Ip(), "Command", c.recv.cmd, "is going to be too big", c.recv.pl_len, msi)
 				c.DoS()
-				config.CountSafe("NetMsgSizeTooBig")
+				common.CountSafe("NetMsgSizeTooBig")
 				return nil
 			}
 			c.Mutex.Lock()
@@ -275,7 +274,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			c.Mutex.Unlock()
 		}
 		for c.recv.datlen < c.recv.pl_len {
-			n, e = bwlimit.SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
+			n, e = common.SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
 			if n > 0 {
 				c.Mutex.Lock()
 				c.recv.datlen += uint32(n)
@@ -284,7 +283,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have",
 						c.recv.datlen, c.recv.pl_len)
 					c.DoS()
-					config.CountSafe("NetMsgSizeIncorrect")
+					common.CountSafe("NetMsgSizeIncorrect")
 					return nil
 				}
 			}
@@ -301,7 +300,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
 		println(c.PeerAddr.Ip(), "Msg checksum error")
-		config.CountSafe("NetBadChksum")
+		common.CountSafe("NetBadChksum")
 		c.DoS()
 		return nil
 	}
@@ -344,9 +343,9 @@ func maxmsgsize(cmd string) uint32 {
 
 func NetCloseAll() {
 	println("Closing network")
-	config.Lock()
-	config.CFG.Net.ListenTCP = false
-	config.Unlock()
+	common.LockCfg()
+	common.CFG.Net.ListenTCP = false
+	common.UnlockCfg()
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {

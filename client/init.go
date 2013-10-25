@@ -7,10 +7,10 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/blockdb"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/textui"
+	"github.com/piotrnar/gocoin/client/usif/textui"
 )
 
 
@@ -32,37 +32,37 @@ func host_init() {
 	var e error
 	BtcRootDir := BitcoinHome()
 
-	if config.CFG.Datadir == "" {
-		config.GocoinHomeDir = BtcRootDir+"gocoin"+string(os.PathSeparator)
+	if common.CFG.Datadir == "" {
+		common.GocoinHomeDir = BtcRootDir+"gocoin"+string(os.PathSeparator)
 	} else {
-		config.GocoinHomeDir = config.CFG.Datadir+string(os.PathSeparator)
+		common.GocoinHomeDir = common.CFG.Datadir+string(os.PathSeparator)
 	}
 
-	if config.CFG.Testnet { // testnet3
-		config.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
-		config.Magic = [4]byte{0x0B,0x11,0x09,0x07}
-		config.GocoinHomeDir += "tstnet"+string(os.PathSeparator)
-		config.AddrVersion = 0x6f
+	if common.CFG.Testnet { // testnet3
+		common.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
+		common.Magic = [4]byte{0x0B,0x11,0x09,0x07}
+		common.GocoinHomeDir += "tstnet"+string(os.PathSeparator)
+		common.AddrVersion = 0x6f
 		BtcRootDir += "testnet3"+string(os.PathSeparator)
 		network.AlertPubKey, _ = hex.DecodeString("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a")
-		config.MaxPeersNeeded = 100
+		common.MaxPeersNeeded = 100
 	} else {
-		config.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
-		config.Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
-		config.GocoinHomeDir += "btcnet"+string(os.PathSeparator)
-		config.AddrVersion = 0x00
+		common.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
+		common.Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
+		common.GocoinHomeDir += "btcnet"+string(os.PathSeparator)
+		common.AddrVersion = 0x00
 		network.AlertPubKey, _ = hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
-		config.MaxPeersNeeded = 1000
+		common.MaxPeersNeeded = 1000
 	}
 
 	// Lock the folder
-	os.MkdirAll(config.GocoinHomeDir, 0770)
-	os.MkdirAll(config.GocoinHomeDir+"wallet", 0770)
+	os.MkdirAll(common.GocoinHomeDir, 0770)
+	os.MkdirAll(common.GocoinHomeDir+"wallet", 0770)
 	LockDatabaseDir()
 
-	fi, e := os.Stat(config.GocoinHomeDir+"blockchain.idx")
+	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.idx")
 	if e!=nil {
-		os.RemoveAll(config.GocoinHomeDir)
+		os.RemoveAll(common.GocoinHomeDir)
 		fmt.Println("You seem to be running Gocoin for the fist time on this PC")
 		fi, e = os.Stat(BtcRootDir+"blocks/blk00000.dat")
 		if e==nil && fi.Size()>1024*1024 {
@@ -90,7 +90,7 @@ func host_init() {
 		}
 	}()
 	sta := time.Now().UnixNano()
-	config.BlockChain = btc.NewChain(config.GocoinHomeDir, config.GenesisBlock, config.FLAG.Rescan)
+	common.BlockChain = btc.NewChain(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan)
 	sto := time.Now().UnixNano()
 	if btc.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
@@ -98,8 +98,8 @@ func host_init() {
 		os.Exit(1)
 	}
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-	config.BlockChain.Unspent.SetTxNotify(wallet.TxNotify)
-	config.StartTime = time.Now()
+	common.BlockChain.Unspent.SetTxNotify(wallet.TxNotify)
+	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done
 }
@@ -121,8 +121,8 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 func import_blockchain(dir string) {
 	trust := !textui.AskYesNo("Go you want to verify scripts while importing (will be slow)?")
 
-	BlockDatabase := blockdb.NewBlockDB(dir, config.Magic)
-	chain := btc.NewChain(config.GocoinHomeDir, config.GenesisBlock, false)
+	BlockDatabase := blockdb.NewBlockDB(dir, common.Magic)
+	chain := btc.NewChain(common.GocoinHomeDir, common.GenesisBlock, false)
 
 	var bl *btc.Block
 	var er error
