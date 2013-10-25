@@ -594,7 +594,7 @@ func init() {
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("config.DebugLevel d", false, ui_dbg, "Control debugs (use numeric parameter)")
+	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
