@@ -47,8 +47,6 @@ var (
 	Mutex_net sync.Mutex
 	OpenCons map[uint64]*OneConnection = make(map[uint64]*OneConnection)
 	InConsActive, OutConsActive uint32
-	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
-	ExternalIpMutex sync.Mutex
 	LastConnId uint32
 	nonce [8]byte
 )

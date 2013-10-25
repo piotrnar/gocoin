@@ -2,11 +2,18 @@ package network
 
 import (
 	"time"
+	"sync"
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
+)
+
+
+var (
+	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
+	ExternalIpMutex sync.Mutex
 )
 
 
