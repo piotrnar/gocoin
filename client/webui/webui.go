@@ -47,7 +47,7 @@ func ipchecker(r *http.Request) bool {
 
 
 func load_template(fn string) string {
-	dat, _ := ioutil.ReadFile("webui/templates/"+fn)
+	dat, _ := ioutil.ReadFile("www/templates/"+fn)
 	return string(dat)
 }
 
@@ -60,7 +60,7 @@ func templ_add(tmpl string, id string, val string) string {
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
 	if len(pth)==2 {
-		dat, _ := ioutil.ReadFile("webui/resources/"+pth[1])
+		dat, _ := ioutil.ReadFile("www/resources/"+pth[1])
 		if len(dat)>0 {
 			switch filepath.Ext(r.URL.Path) {
 				case ".js": w.Header()["Content-Type"] = []string{"text/javascript"}
