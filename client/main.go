@@ -4,167 +4,99 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"sync"
 	"runtime"
 	"os/signal"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/client/dbase"
+	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/textui"
+	"github.com/piotrnar/gocoin/client/webui"
 )
 
 const (
-	PendingFifoLen = 2000
-	MaxCachedBlocks = 600
+	defragEvery = (5*time.Minute)
 )
-
 
 var (
-	GenesisBlock *btc.Uint256
-	Magic [4]byte
-	BlockChain *btc.Chain
-	AddrVersion byte
-
-	exit_now bool
-
-	dbg int64
-
-	Last struct {
-		mutex sync.Mutex // use it for writing and reading from non-chain thread
-		Block *btc.BlockTreeNode
-		time.Time
-	}
-
-	counter_mutex sync.Mutex
-	netBlocks chan *blockRcvd = make(chan *blockRcvd, 1000)
-	netTxs chan *txRcvd = make(chan *txRcvd, 1000)
-	uiChannel chan *oneUiReq = make(chan *oneUiReq, 1)
 	killchan chan os.Signal = make(chan os.Signal)
-
 	retryCachedBlocks bool
-	cachedBlocks map[[btc.Uint256IdxLen]byte] oneCachedBlock = make(map[[btc.Uint256IdxLen]byte] oneCachedBlock, MaxCachedBlocks)
-	receivedBlocks map[[btc.Uint256IdxLen]byte] *oneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *oneReceivedBlock, 300e3)
-	mutex_rcv sync.Mutex
-
-	Counter map[string] uint64 = make(map[string]uint64)
-
-	busy string
-	busy_mutex sync.Mutex
 )
 
-type oneReceivedBlock struct {
-	time.Time
-	tmDownload time.Duration
-	tmAccept time.Duration
-	cnt uint
-}
-
-type blockRcvd struct {
-	conn *oneConnection
-	bl *btc.Block
-}
-
-type txRcvd struct {
-	conn *oneConnection
-	tx *btc.Tx
-	raw []byte
-}
-
-type oneCachedBlock struct {
-	time.Time
-	*btc.Block
-	conn *oneConnection
-}
-
-func Busy(b string) {
-	busy_mutex.Lock()
-	busy = b
-	busy_mutex.Unlock()
-}
-
-func CountSafe(k string) {
-	counter_mutex.Lock()
-	Counter[k]++
-	counter_mutex.Unlock()
-}
-
-func CountSafeAdd(k string, val uint64) {
-	counter_mutex.Lock()
-	Counter[k] += val
-	counter_mutex.Unlock()
-}
-
-
-func addBlockToCache(bl *btc.Block, conn *oneConnection) {
-	// we use cachedBlocks only from one therad so no need for a mutex
-	if len(cachedBlocks)==MaxCachedBlocks {
+func addBlockToCache(bl *btc.Block, conn *network.OneConnection) {
+	// we use network.CachedBlocks only from one therad so no need for a mutex
+	if len(network.CachedBlocks)==config.MaxCachedBlocks {
 		// Remove the oldest one
 		oldest := time.Now()
 		var todel [btc.Uint256IdxLen]byte
-		for k, v := range cachedBlocks {
+		for k, v := range network.CachedBlocks {
 			if v.Time.Before(oldest) {
 				oldest = v.Time
 				todel = k
 			}
 		}
-		delete(cachedBlocks, todel)
-		CountSafe("CacheBlocksExpired")
+		delete(network.CachedBlocks, todel)
+		config.CountSafe("CacheBlocksExpired")
 	}
-	cachedBlocks[bl.Hash.BIdx()] = oneCachedBlock{Time:time.Now(), Block:bl, conn:conn}
+	network.CachedBlocks[bl.Hash.BIdx()] = network.OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
 }
 
 
-func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
+func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 	sta := time.Now()
-	e = BlockChain.AcceptBlock(bl)
+	e = config.BlockChain.AcceptBlock(bl)
 	if e == nil {
-		mutex_rcv.Lock()
-		receivedBlocks[bl.Hash.BIdx()].tmAccept = time.Now().Sub(sta)
-		mutex_rcv.Unlock()
+		network.MutexRcv.Lock()
+		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
+		network.MutexRcv.Unlock()
 
 		for i:=1; i<len(bl.Txs); i++ {
-			TxMined(bl.Txs[i].Hash)
+			network.TxMined(bl.Txs[i].Hash)
 		}
 
 		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
-			Busy("NetRouteInv")
-			NetRouteInv(2, bl.Hash, from)
+			config.Busy("NetRouteInv")
+			network.NetRouteInv(2, bl.Hash, from)
 
-			if CFG.Beeps.NewBlock {
-				fmt.Println("\007Received block", BlockChain.BlockTreeEnd.Height)
-				ui_show_prompt()
+			if config.CFG.Beeps.NewBlock {
+				fmt.Println("\007Received block", config.BlockChain.BlockTreeEnd.Height)
+				textui.ShowPrompt()
 			}
 
-			if mined_by_us(bl.Raw) {
-				fmt.Println("\007Mined by '"+CFG.Beeps.MinerID+"':", bl.Hash)
-				ui_show_prompt()
+			if config.MinedByUs(bl.Raw) {
+				fmt.Println("\007Mined by '"+config.CFG.Beeps.MinerID+"':", bl.Hash)
+				textui.ShowPrompt()
 			}
 
-			if CFG.Beeps.ActiveFork && Last.Block == BlockChain.BlockTreeEnd {
+			if config.CFG.Beeps.ActiveFork && config.Last.Block == config.BlockChain.BlockTreeEnd {
 				// Last block has not changed, so it must have been an orphaned block
-				bln := BlockChain.BlockIndex[bl.Hash.BIdx()]
-				commonNode := Last.Block.FirstCommonParent(bln)
+				bln := config.BlockChain.BlockIndex[bl.Hash.BIdx()]
+				commonNode := config.Last.Block.FirstCommonParent(bln)
 				forkDepth := bln.Height - commonNode.Height
 				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String())
 				if forkDepth > 1 {
 					fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
 				}
-				ui_show_prompt()
+				textui.ShowPrompt()
 			}
 
-			if BalanceChanged && CFG.Beeps.NewBalance{
+			if wallet.BalanceChanged && config.CFG.Beeps.NewBalance{
 				fmt.Print("\007")
 			}
 		}
 
-		Last.mutex.Lock()
-		Last.Time = time.Now()
-		Last.Block = BlockChain.BlockTreeEnd
-		Last.mutex.Unlock()
+		config.Last.Mutex.Lock()
+		config.Last.Time = time.Now()
+		config.Last.Block = config.BlockChain.BlockTreeEnd
+		config.Last.Mutex.Unlock()
 
-		if BalanceChanged {
-			BalanceChanged = false
+		if wallet.BalanceChanged {
+			wallet.BalanceChanged = false
 			fmt.Println("Your balance has just changed")
-			fmt.Print(DumpBalance(nil, false))
-			ui_show_prompt()
+			fmt.Print(wallet.DumpBalance(nil, false))
+			textui.ShowPrompt()
 		}
 	} else {
 		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
@@ -174,51 +106,68 @@ func LocalAcceptBlock(bl *btc.Block, from *oneConnection) (e error) {
 
 
 func retry_cached_blocks() bool {
-	if len(cachedBlocks)==0 {
+	if len(network.CachedBlocks)==0 {
 		return false
 	}
 	accepted_cnt := 0
-	for k, v := range cachedBlocks {
-		Busy("Cache.CheckBlock "+v.Block.Hash.String())
-		e, dos, maybelater := BlockChain.CheckBlock(v.Block)
+	for k, v := range network.CachedBlocks {
+		config.Busy("Cache.CheckBlock "+v.Block.Hash.String())
+		e, dos, maybelater := config.BlockChain.CheckBlock(v.Block)
 		if e == nil {
-			Busy("Cache.AcceptBlock "+v.Block.Hash.String())
-			e := LocalAcceptBlock(v.Block, v.conn)
+			config.Busy("Cache.AcceptBlock "+v.Block.Hash.String())
+			e := LocalAcceptBlock(v.Block, v.Conn)
 			if e == nil {
-				//println("*** Old block accepted", BlockChain.BlockTreeEnd.Height)
-				CountSafe("BlocksFromCache")
-				delete(cachedBlocks, k)
+				//println("*** Old block accepted", config.BlockChain.BlockTreeEnd.Height)
+				config.CountSafe("BlocksFromCache")
+				delete(network.CachedBlocks, k)
 				accepted_cnt++
 				break // One at a time should be enough
 			} else {
 				println("retry AcceptBlock:", e.Error())
-				CountSafe("CachedBlocksDOS")
-				v.conn.DoS()
-				delete(cachedBlocks, k)
+				config.CountSafe("CachedBlocksDOS")
+				v.Conn.DoS()
+				delete(network.CachedBlocks, k)
 			}
 		} else {
 			if !maybelater {
 				println("retry CheckBlock:", e.Error())
-				CountSafe("BadCachedBlocks")
+				config.CountSafe("BadCachedBlocks")
 				if dos {
-					v.conn.DoS()
-					CountSafe("CachedBlocksDoS")
+					v.Conn.DoS()
+					config.CountSafe("CachedBlocksDoS")
 				}
-				delete(cachedBlocks, k)
+				delete(network.CachedBlocks, k)
 			}
 		}
 	}
-	return accepted_cnt>0 && len(cachedBlocks)>0
+	return accepted_cnt>0 && len(network.CachedBlocks)>0
 }
 
 
-func CloseBlockChain() {
-	if BlockChain!=nil {
-		println("Closing blockchain")
-		BlockChain.Sync()
-		BlockChain.Save()
-		BlockChain.Close()
-		BlockChain = nil
+// Called from the blockchain thread
+func HandleNetBlock(newbl *network.BlockRcvd) {
+	config.CountSafe("HandleNetBlock")
+	bl := newbl.Block
+	config.Busy("CheckBlock "+bl.Hash.String())
+	e, dos, maybelater := config.BlockChain.CheckBlock(bl)
+	if e != nil {
+		if maybelater {
+			addBlockToCache(bl, newbl.Conn)
+		} else {
+			println(dos, e.Error())
+			if dos {
+				newbl.Conn.DoS()
+			}
+		}
+	} else {
+		config.Busy("LocalAcceptBlock "+bl.Hash.String())
+		e = LocalAcceptBlock(bl, newbl.Conn)
+		if e == nil {
+			retryCachedBlocks = retry_cached_blocks()
+		} else {
+			println("AcceptBlock:", e.Error())
+			newbl.Conn.DoS()
+		}
 	}
 }
 
@@ -241,10 +190,10 @@ func main() {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			println("main panic recovered:", err.Error())
-			NetCloseAll()
-			CloseBlockChain()
-			ClosePeerDB()
-			UnlockDatabaseDir()
+			network.NetCloseAll()
+			config.CloseBlockChain()
+			network.ClosePeerDB()
+			dbase.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
@@ -254,87 +203,87 @@ func main() {
 	// Clean up the DB lock file on exit
 
 	// load default wallet and its balance
-	LoadWallet(GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
-	if MyWallet==nil {
-		LoadWallet(GocoinHomeDir+"wallet.txt")
+	wallet.LoadWallet(config.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
+	if wallet.MyWallet==nil {
+		wallet.LoadWallet(config.GocoinHomeDir+"wallet.txt")
 	}
-	if MyWallet!=nil {
-		update_balance()
-		fmt.Print(DumpBalance(nil, false))
+	if wallet.MyWallet!=nil {
+		wallet.UpdateBalance()
+		fmt.Print(wallet.DumpBalance(nil, false))
 	}
 
 	peersTick := time.Tick(defragEvery)
 	txPoolTick := time.Tick(time.Minute)
 	netTick := time.Tick(time.Second)
 
-	initPeers(GocoinHomeDir)
+	network.InitPeers(config.GocoinHomeDir)
 
-	Last.Block = BlockChain.BlockTreeEnd
-	Last.Time = time.Unix(int64(Last.Block.Timestamp), 0)
+	config.Last.Block = config.BlockChain.BlockTreeEnd
+	config.Last.Time = time.Unix(int64(config.Last.Block.Timestamp), 0)
 
-	for k, v := range BlockChain.BlockIndex {
-		receivedBlocks[k] = &oneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
+	for k, v := range config.BlockChain.BlockIndex {
+		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
 	}
 
-	go do_userif()
-	if CFG.WebUI.Interface!="" {
-		fmt.Println("Starting WebUI at", CFG.WebUI.Interface, "...")
-		go webserver(CFG.WebUI.Interface)
+	go textui.MainThread()
+	if config.CFG.WebUI.Interface!="" {
+		fmt.Println("Starting WebUI at", config.CFG.WebUI.Interface, "...")
+		go webui.ServerThread(config.CFG.WebUI.Interface)
 	}
 
-	for !exit_now {
-		CountSafe("MainThreadLoops")
+	for !config.Exit_now {
+		config.CountSafe("MainThreadLoops")
 		for retryCachedBlocks {
 			retryCachedBlocks = retry_cached_blocks()
 			// We have done one per loop - now do something else if pending...
-			if len(netBlocks)>0 || len(uiChannel)>0 {
+			if len(network.NetBlocks)>0 || len(textui.UiChannel)>0 {
 				break
 			}
 		}
 
-		Busy("")
+		config.Busy("")
 
 		select {
 			case s := <-killchan:
 				fmt.Println("Got signal:", s)
-				exit_now = true
+				config.Exit_now = true
 				continue
 
-			case newbl := <-netBlocks:
+			case newbl := <-network.NetBlocks:
 				HandleNetBlock(newbl)
 
-			case newtx := <-netTxs:
-				HandleNetTx(newtx, false)
+			case newtx := <-network.NetTxs:
+				network.HandleNetTx(newtx, false)
 
-			case cmd := <-uiChannel:
-				Busy("UI command")
-				cmd.handler(cmd.param)
-				cmd.done.Done()
+			case cmd := <-textui.UiChannel:
+				config.Busy("UI command")
+				cmd.Handler(cmd.Param)
+				cmd.Done.Done()
 				continue
 
 			case <-peersTick:
-				expire_peers()
+				network.ExpirePeers()
 
 			case <-txPoolTick:
-				expire_txs()
+				network.ExpireTxs()
 
 			case <-netTick:
-				network_tick()
+				network.NetworkTick()
 
 			case <-time.After(time.Second/2):
-				CountSafe("MainThreadTouts")
+				config.CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
-					Busy("BlockChain.Idle()")
-					BlockChain.Idle()
+					config.Busy("config.BlockChain.Idle()")
+					config.BlockChain.Idle()
 				}
 				continue
 		}
 
-		CountSafe("NetMessagesGot")
+		config.CountSafe("NetMessagesGot")
 	}
 
-	NetCloseAll()
-	CloseBlockChain()
-	ClosePeerDB()
-	UnlockDatabaseDir()
+	network.NetCloseAll()
+	config.CloseBlockChain()
+	network.ClosePeerDB()
+	dbase.UnlockDatabaseDir()
 }
