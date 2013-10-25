@@ -41,7 +41,7 @@ type onetx struct {
 
 
 
-func GetTx(id string, vout int) {
+func GetTx(id string, vout int) bool {
 	r, er := http.Get("http://blockexplorer.com/rawtx/" + id)
 	if er == nil && r.StatusCode == 200 {
 		defer r.Body.Close()
@@ -68,6 +68,7 @@ func GetTx(id string, vout int) {
 			tx.Lock_time = txx.Lock_time
 			rawtx := tx.Serialize()
 			ioutil.WriteFile("balance/"+btc.NewSha2Hash(rawtx).String()+".tx", rawtx, 0666)
+			return true
 		} else {
 			println("UNM:", er.Error())
 		}
@@ -78,6 +79,7 @@ func GetTx(id string, vout int) {
 			println("Status Code", r.StatusCode)
 		}
 	}
+	return false
 }
 
 func main() {
@@ -117,19 +119,25 @@ func main() {
 				txid, _ := hex.DecodeString(r.Unspent_outputs[i].Tx_hash)
 				if txid != nil {
 					txstr := btc.NewUint256(txid).String()
-					fmt.Fprintf(unsp, "%s-%03d # %.8f @ %s, %d confs\n",
-						txstr, r.Unspent_outputs[i].Tx_output_n,
-						float64(r.Unspent_outputs[i].Value) / 1e8,
-						b58adr, r.Unspent_outputs[i].Confirmations)
-
-					GetTx(txstr, int(r.Unspent_outputs[i].Tx_output_n))
+					if GetTx(txstr, int(r.Unspent_outputs[i].Tx_output_n)) {
+						fmt.Fprintf(unsp, "%s-%03d # %.8f @ %s, %d confs\n",
+							txstr, r.Unspent_outputs[i].Tx_output_n,
+							float64(r.Unspent_outputs[i].Value) / 1e8,
+							b58adr, r.Unspent_outputs[i].Confirmations)
+					}
 				}
 			}
 			unsp.Close()
+			fmt.Printf("Total %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(r.Unspent_outputs))
 		} else {
 			println(er.Error())
 		}
+	} else {
+		if er != nil {
+			println(er.Error())
+		} else {
+			println("HTTP StatusCode", r.StatusCode)
+		}
 	}
-	fmt.Printf("Total %.8f BTC\n", float64(sum)/1e8)
 	//println(url)
 }
