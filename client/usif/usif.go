@@ -18,7 +18,12 @@ type OneUiReq struct {
 	Done sync.WaitGroup
 }
 
-var UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
+var (
+	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
+
+	Exit_now bool
+	DefragBlocksDB bool
+)
 
 
 func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e error) {
