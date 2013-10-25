@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/usif"
 )
 
 func p_cfg(w http.ResponseWriter, r *http.Request) {
@@ -79,7 +80,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method=="POST" && len(r.Form["shutdown"])>0 {
-		common.Exit_now = true
+		usif.Exit_now = true
 		w.Write([]byte("Your node should shut down soon"))
 		return
 	}
