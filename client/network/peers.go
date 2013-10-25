@@ -14,7 +14,7 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 const (
@@ -67,9 +67,9 @@ func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	if ip != nil && len(ip)==16 {
 		p = new(onePeer)
 		copy(p.Ip4[:], ip[12:16])
-		p.Services = config.Services
+		p.Services = common.Services
 		copy(p.Ip6[:], ip[:12])
-		p.Port = config.DefaultTcpPort
+		p.Port = common.DefaultTcpPort
 		if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
 			e = errors.New(p.Ip() + " is banned")
 			p = nil
@@ -110,15 +110,15 @@ func ExpirePeers() {
 		return 0
 	})
 	if delcnt > 0 {
-		config.CountSafeAdd("PeersExpired", uint64(delcnt))
+		common.CountSafeAdd("PeersExpired", uint64(delcnt))
 		for delcnt > 0 {
 			delcnt--
 			PeerDB.Del(todel[delcnt])
 		}
-		config.CountSafe("PeerDefragsDone")
+		common.CountSafe("PeerDefragsDone")
 		PeerDB.Defrag()
 	} else {
-		config.CountSafe("PeerDefragsNone")
+		common.CountSafe("PeerDefragsNone")
 	}
 	peerdb_mutex.Unlock()
 }
@@ -270,25 +270,25 @@ func initSeeds(seeds []string, port uint16) {
 func InitPeers(dir string) {
 	PeerDB, _ = qdb.NewDB(dir+"peers3", true)
 
-	if config.CFG.ConnectOnly != "" {
-		x := strings.Index(config.CFG.ConnectOnly, ":")
+	if common.CFG.ConnectOnly != "" {
+		x := strings.Index(common.CFG.ConnectOnly, ":")
 		if x == -1 {
-			config.CFG.ConnectOnly = fmt.Sprint(config.CFG.ConnectOnly, ":", config.DefaultTcpPort)
+			common.CFG.ConnectOnly = fmt.Sprint(common.CFG.ConnectOnly, ":", common.DefaultTcpPort)
 		}
-		oa, e := net.ResolveTCPAddr("tcp4", config.CFG.ConnectOnly)
+		oa, e := net.ResolveTCPAddr("tcp4", common.CFG.ConnectOnly)
 		if e != nil {
 			println(e.Error())
 			os.Exit(1)
 		}
 		proxyPeer = new(onePeer)
-		proxyPeer.Services = config.Services
+		proxyPeer.Services = common.Services
 		copy(proxyPeer.Ip4[:], oa.IP[0:4])
 		proxyPeer.Port = uint16(oa.Port)
 		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
 			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
 	} else {
 		go func() {
-			if !config.CFG.Testnet {
+			if !common.CFG.Testnet {
 				initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
 					/*"dnsseed.bitcoin.dashjr.org",*/ "bitseed.xf2.org"}, 8333)
 			} else {

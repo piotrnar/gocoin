@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -26,13 +26,13 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 
 	for i:=0; i<cnt; i++ {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
-		config.CountSafe(fmt.Sprint("InvGot",typ))
+		common.CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			if blockWanted(pl[of+4:of+36]) {
 				blinv2ask = append(blinv2ask, pl[of+4:of+36]...)
 			}
 		} else if typ==1 {
-			if config.CFG.TXPool.Enabled {
+			if common.CFG.TXPool.Enabled {
 				c.TxInvNotify(pl[of+4:of+36])
 			}
 		}
@@ -59,7 +59,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 
 // This function is called from the main thread (or from an UI)
 func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint) {
-	config.CountSafe(fmt.Sprint("NetRouteInv", typ))
+	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
 
 	// Prepare the inv
 	inv := new([36]byte)
@@ -75,7 +75,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
 			} else {
-				config.CountSafe("SendInvIgnored")
+				common.CountSafe("SendInvIgnored")
 			}
 			v.Mutex.Unlock()
 		}
@@ -106,21 +106,21 @@ func (c *OneConnection) ProcessGetBlocks(pl []byte) {
 	e := binary.Read(b, binary.LittleEndian, &ver)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
-		config.CountSafe("GetblksNoVer")
+		common.CountSafe("GetblksNoVer")
 		c.DoS()
 		return
 	}
 	cnt, e := btc.ReadVLen(b)
 	if e != nil {
 		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
-		config.CountSafe("GetblksNoVlen")
+		common.CountSafe("GetblksNoVlen")
 		c.DoS()
 		return
 	}
 
 	if cnt<1 {
 		println("ProcessGetBlocks: empty inv list", c.PeerAddr.Ip())
-		config.CountSafe("GetblksNoInvs")
+		common.CountSafe("GetblksNoInvs")
 		c.DoS()
 		return
 	}
@@ -130,24 +130,24 @@ func (c *OneConnection) ProcessGetBlocks(pl []byte) {
 	for i:=0; i<int(cnt); i++ {
 		n, _ := b.Read(h[:])
 		if n != 32 {
-			if config.DebugLevel>0 {
+			if common.DebugLevel>0 {
 				println("getblocks too short", c.PeerAddr.Ip())
 			}
-			config.CountSafe("GetblksTooShort")
+			common.CountSafe("GetblksTooShort")
 			c.DoS()
 			return
 		}
 		h2get[i] = btc.NewUint256(h[:])
-		if config.DebugLevel>2 {
+		if common.DebugLevel>2 {
 			println(c.PeerAddr.Ip(), "getbl", h2get[i].String())
 		}
 	}
 	n, _ := b.Read(h[:])
 	if n != 32 {
-		if config.DebugLevel>0 {
+		if common.DebugLevel>0 {
 			println("getblocks does not have hash_stop", c.PeerAddr.Ip())
 		}
-		config.CountSafe("GetblksNoStop")
+		common.CountSafe("GetblksNoStop")
 		c.DoS()
 		return
 	}
@@ -155,22 +155,22 @@ func (c *OneConnection) ProcessGetBlocks(pl []byte) {
 
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {
-		config.BlockChain.BlockIndexAccess.Lock()
-		if bl, ok := config.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
+		common.BlockChain.BlockIndexAccess.Lock()
+		if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 			// make sure that this block is in our main chain
-			config.Last.Mutex.Lock()
-			end := config.Last.Block
-			config.Last.Mutex.Unlock()
+			common.Last.Mutex.Lock()
+			end := common.Last.Block
+			common.Last.Mutex.Unlock()
 			for ; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
-					if config.DebugLevel>0 {
+					if common.DebugLevel>0 {
 						fmt.Println(c.PeerAddr.Ip(), "getblocks from", bl.Height,
 							"stop at",  hashstop.String(), "->", len(invs), "invs")
 					}
 
 					if len(invs)>0 {
-						config.BlockChain.BlockIndexAccess.Unlock()
+						common.BlockChain.BlockIndexAccess.Unlock()
 
 						inv := new(bytes.Buffer)
 						btc.WriteVlen(inv, uint32(len(invs)))
@@ -184,10 +184,10 @@ func (c *OneConnection) ProcessGetBlocks(pl []byte) {
 				}
 			}
 		}
-		config.BlockChain.BlockIndexAccess.Unlock()
+		common.BlockChain.BlockIndexAccess.Unlock()
 	}
 
-	config.CountSafe("GetblksMissed")
+	common.CountSafe("GetblksMissed")
 	return
 }
 
@@ -212,28 +212,28 @@ func (c *OneConnection) SendInvs() (res bool) {
 
 
 func (c *OneConnection) getblocksNeeded() bool {
-	config.Last.Mutex.Lock()
-	lb := config.Last.Block
-	config.Last.Mutex.Unlock()
+	common.Last.Mutex.Lock()
+	lb := common.Last.Block
+	common.Last.Mutex.Unlock()
 	if lb != c.LastBlocksFrom || time.Now().After(c.NextBlocksAsk) {
 		c.Mutex.Lock()
 		c.LastBlocksFrom = lb
 		c.Mutex.Unlock()
 
-		config.Last.Mutex.Lock()
-		GetBlocksAskBack := int(time.Now().Sub(config.Last.Time) / time.Minute)
-		config.Last.Mutex.Unlock()
+		common.Last.Mutex.Lock()
+		GetBlocksAskBack := int(time.Now().Sub(common.Last.Time) / time.Minute)
+		common.Last.Mutex.Unlock()
 		if GetBlocksAskBack >= btc.MovingCheckopintDepth {
 			GetBlocksAskBack = btc.MovingCheckopintDepth
 		}
 
 		b := make([]byte, 37)
-		binary.LittleEndian.PutUint32(b[0:4], config.Version)
+		binary.LittleEndian.PutUint32(b[0:4], common.Version)
 		b[4] = 1 // one locator so far...
 		copy(b[5:37], lb.BlockHash.Hash[:])
 
 		if GetBlocksAskBack > 0 {
-			config.BlockChain.BlockIndexAccess.Lock()
+			common.BlockChain.BlockIndexAccess.Lock()
 			cnt_each := 0
 			for i:=0; i < GetBlocksAskBack && lb.Parent != nil; i++ {
 				lb = lb.Parent
@@ -248,7 +248,7 @@ func (c *OneConnection) getblocksNeeded() bool {
 				b[4]++
 				b = append(b, lb.BlockHash.Hash[:]...)
 			}
-			config.BlockChain.BlockIndexAccess.Unlock()
+			common.BlockChain.BlockIndexAccess.Unlock()
 		}
 		var null_stop [32]byte
 		b = append(b, null_stop[:]...)

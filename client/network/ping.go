@@ -5,13 +5,13 @@ import (
 	"sort"
 	"sync/atomic"
 	"crypto/rand"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
 func (c *OneConnection) HandlePong() {
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
-	if config.DebugLevel>1 {
+	if common.DebugLevel>1 {
 		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
 	}
 	c.Mutex.Lock()
@@ -45,7 +45,7 @@ func drop_slowest_peer() {
 	var worst_conn *OneConnection
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		if v.Incomming && InConsActive < atomic.LoadUint32(&config.CFG.Net.MaxInCons) {
+		if v.Incomming && InConsActive < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 			// If this is an incomming connection, but we are not full yet, ignore it
 			continue
 		}
@@ -58,11 +58,11 @@ func drop_slowest_peer() {
 		}
 	}
 	if worst_conn != nil {
-		if config.DebugLevel > 0 {
+		if common.DebugLevel > 0 {
 			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
 		}
 		worst_conn.Disconnect()
-		config.CountSafe("PeersDropped")
+		common.CountSafe("PeersDropped")
 	}
 	Mutex_net.Unlock()
 }

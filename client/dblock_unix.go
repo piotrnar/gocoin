@@ -5,7 +5,7 @@ package main
 import (
 	"os"
 	"syscall"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 
 func LockDatabaseDir() {
 	var e error
-	DbLockFileName = config.GocoinHomeDir+".lock"
+	DbLockFileName = common.GocoinHomeDir+".lock"
 	DbLockFileHndl, e = os.OpenFile(DbLockFileName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0660)
 	if e != nil {
 		goto error

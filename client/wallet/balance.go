@@ -7,7 +7,7 @@ import (
 	"sort"
 	"sync"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 var (
@@ -20,11 +20,11 @@ var (
 )
 
 
-func Lock() {
+func LockBal() {
 	mutex_bal.Lock()
 }
 
-func Unlock() {
+func UnlockBal() {
 	mutex_bal.Unlock()
 }
 
@@ -64,19 +64,19 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 
 func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) bool {
 	// Find the block with the indicated Height in the main tree
-	config.BlockChain.BlockIndexAccess.Lock()
-	n := config.Last.Block
+	common.BlockChain.BlockIndexAccess.Lock()
+	n := common.Last.Block
 	if n.Height < BlockHeight {
 		println(n.Height, BlockHeight)
-		config.BlockChain.BlockIndexAccess.Unlock()
+		common.BlockChain.BlockIndexAccess.Unlock()
 		panic("This should not happen")
 	}
 	for n.Height > BlockHeight {
 		n = n.Parent
 	}
-	config.BlockChain.BlockIndexAccess.Unlock()
+	common.BlockChain.BlockIndexAccess.Unlock()
 
-	bd, _, e := config.BlockChain.Blocks.BlockGet(n.BlockHash)
+	bd, _, e := common.BlockChain.Blocks.BlockGet(n.BlockHash)
 	if e != nil {
 		println("BlockGet", n.BlockHash.String(), BlockHeight, e.Error())
 		println("This should not happen - please, report a bug.")
@@ -118,7 +118,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 		if details {
 			if i<100 {
-				s += fmt.Sprintf("%7d %s\n", 1+config.Last.Block.Height-MyBalance[i].MinedAt,
+				s += fmt.Sprintf("%7d %s\n", 1+common.Last.Block.Height-MyBalance[i].MinedAt,
 					MyBalance[i].String())
 			} else if i==100 {
 				s += fmt.Sprintln("List of unspent outputs truncated to 100 records")
@@ -127,7 +127,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 		// update the balance/ folder
 		if utxt != nil {
-			po, e := config.BlockChain.Unspent.UnspentGet(&MyBalance[i].TxPrevOut)
+			po, e := common.BlockChain.Unspent.UnspentGet(&MyBalance[i].TxPrevOut)
 			if e != nil {
 				println("UnspentGet:", e.Error())
 				println("This should not happen - please, report a bug.")
@@ -140,7 +140,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 			// Store the unspent line in balance/unspent.txt
 			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs\n", MyBalance[i].TxPrevOut.String(),
 				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.StringLab(),
-				1+config.Last.Block.Height-MyBalance[i].MinedAt)
+				1+common.Last.Block.Height-MyBalance[i].MinedAt)
 
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
@@ -168,7 +168,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 func UpdateBalance() {
 	mutex_bal.Lock()
-	MyBalance = config.BlockChain.GetAllUnspent(MyWallet.Addrs, true)
+	MyBalance = common.BlockChain.GetAllUnspent(MyWallet.Addrs, true)
 	LastBalance = 0
 	if len(MyBalance) > 0 {
 		sort.Sort(MyBalance)

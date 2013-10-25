@@ -6,15 +6,15 @@ import (
 	"errors"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/client/config"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
 func (c *OneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
 
-	binary.Write(b, binary.LittleEndian, uint32(config.Version))
-	binary.Write(b, binary.LittleEndian, uint64(config.Services))
+	binary.Write(b, binary.LittleEndian, uint32(common.Version))
+	binary.Write(b, binary.LittleEndian, uint64(common.Services))
 	binary.Write(b, binary.LittleEndian, uint64(time.Now().Unix()))
 
 	b.Write(c.PeerAddr.NetAddr.Bytes())
@@ -26,13 +26,13 @@ func (c *OneConnection) SendVersion() {
 
 	b.Write(nonce[:])
 
-	b.WriteByte(byte(len(config.UserAgent)))
-	b.Write([]byte(config.UserAgent))
+	b.WriteByte(byte(len(common.UserAgent)))
+	b.Write([]byte(common.UserAgent))
 
-	config.Last.Mutex.Lock()
-	binary.Write(b, binary.LittleEndian, uint32(config.Last.Block.Height))
-	config.Last.Mutex.Unlock()
-	if !config.CFG.TXPool.Enabled {
+	common.Last.Mutex.Lock()
+	binary.Write(b, binary.LittleEndian, uint32(common.Last.Block.Height))
+	common.Last.Mutex.Unlock()
+	if !common.CFG.TXPool.Enabled {
 		b.WriteByte(0)  // don't notify me about txs
 	}
 
@@ -73,7 +73,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			c.Mutex.Unlock()
 		}
 	} else {
-		return errors.New("config.Version message too short")
+		return errors.New("common.Version message too short")
 	}
 	c.SendRawMsg("verack", []byte{})
 	return nil

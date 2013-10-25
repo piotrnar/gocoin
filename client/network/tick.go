@@ -7,8 +7,7 @@ import (
 	"bytes"
 	"math/rand"
 	"sync/atomic"
-	"github.com/piotrnar/gocoin/client/config"
-	"github.com/piotrnar/gocoin/client/bwlimit"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 
@@ -20,15 +19,15 @@ func (c *OneConnection) Tick() {
 	// Check no-data timeout
 	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
 		c.Disconnect()
-		config.CountSafe("NetNodataTout")
-		if config.DebugLevel>0 {
+		common.CountSafe("NetNodataTout")
+		if common.DebugLevel>0 {
 			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
 		}
 		return
 	}
 
 	if c.Send.Buf != nil {
-		n, e := bwlimit.SockWrite(c.NetConn, c.Send.Buf)
+		n, e := common.SockWrite(c.NetConn, c.Send.Buf)
 		if n > 0 {
 			c.Mutex.Lock()
 			c.Send.LastSent = time.Now()
@@ -42,10 +41,10 @@ func (c *OneConnection) Tick() {
 			}
 			c.Mutex.Unlock()
 		} else if time.Now().After(c.Send.LastSent.Add(AnySendTimeout)) {
-			config.CountSafe("PeerSendTimeout")
+			common.CountSafe("PeerSendTimeout")
 			c.Disconnect()
 		} else if e != nil {
-			if config.DebugLevel > 0 {
+			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
 			c.Disconnect()
@@ -60,11 +59,11 @@ func (c *OneConnection) Tick() {
 
 	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
-		if PeerDB.Count() > config.MaxPeersNeeded {
+		if PeerDB.Count() > common.MaxPeersNeeded {
 			// If we have a lot of peers, do not ask for more, to save bandwidth
-			config.CountSafe("AddrEnough")
+			common.CountSafe("AddrEnough")
 		} else {
-			config.CountSafe("AddrWanted")
+			common.CountSafe("AddrWanted")
 			c.SendRawMsg("getaddr", nil)
 		}
 		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
@@ -79,7 +78,7 @@ func (c *OneConnection) Tick() {
 	// Timeout getdata for blocks in progress, so the map does not grow to infinity
 	for k, v := range c.GetBlockInProgress {
 		if time.Now().After(v.start.Add(GetBlockTimeout)) {
-			config.CountSafe("GetBlockTimeout")
+			common.CountSafe("GetBlockTimeout")
 			c.Mutex.Lock()
 			delete(c.GetBlockInProgress, k)
 			c.Mutex.Unlock()
@@ -101,10 +100,10 @@ func DoNetwork(ad *onePeer) {
 	conn := NewConnection(ad)
 	Mutex_net.Lock()
 	if _, ok := OpenCons[ad.UniqID()]; ok {
-		if config.DebugLevel>0 {
+		if common.DebugLevel>0 {
 			fmt.Println(ad.Ip(), "already connected")
 		}
-		config.CountSafe("ConnectingAgain")
+		common.CountSafe("ConnectingAgain")
 		Mutex_net.Unlock()
 		return
 	}
@@ -116,12 +115,12 @@ func DoNetwork(ad *onePeer) {
 			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
 		if e == nil {
 			conn.ConnectedAt = time.Now()
-			if config.DebugLevel>0 {
+			if common.DebugLevel>0 {
 				println("Connected to", ad.Ip())
 			}
 			conn.Run()
 		} else {
-			if config.DebugLevel>0 {
+			if common.DebugLevel>0 {
 				println("Could not connect to", ad.Ip())
 			}
 			//println(e.Error())
@@ -143,7 +142,7 @@ var (
 
 // TCP server
 func tcp_server() {
-	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", config.DefaultTcpPort))
+	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", common.DefaultTcpPort))
 	if e != nil {
 		println("ResolveTCPAddr", e.Error())
 		return
@@ -158,16 +157,16 @@ func tcp_server() {
 
 	//fmt.Println("TCP server started at", ad.String())
 
-	for config.CFG.Net.ListenTCP {
-		config.CountSafe("NetServerLoops")
+	for common.CFG.Net.ListenTCP {
+		common.CountSafe("NetServerLoops")
 		Mutex_net.Lock()
 		ica := InConsActive
 		Mutex_net.Unlock()
-		if ica < atomic.LoadUint32(&config.CFG.Net.MaxInCons) {
+		if ica < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
-				if config.DebugLevel>0 {
+				if common.DebugLevel>0 {
 					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
 				}
 				ad, e := NewIncommingPeer(tc.RemoteAddr().String())
@@ -179,7 +178,7 @@ func tcp_server() {
 					Mutex_net.Lock()
 					if _, ok := OpenCons[ad.UniqID()]; ok {
 						//fmt.Println(ad.Ip(), "already connected")
-						config.CountSafe("SameIpReconnect")
+						common.CountSafe("SameIpReconnect")
 						Mutex_net.Unlock()
 					} else {
 						OpenCons[ad.UniqID()] = conn
@@ -194,10 +193,10 @@ func tcp_server() {
 						}()
 					}
 				} else {
-					if config.DebugLevel>0 {
+					if common.DebugLevel>0 {
 						println("NewIncommingPeer:", e.Error())
 					}
-					config.CountSafe("InConnRefused")
+					common.CountSafe("InConnRefused")
 					tc.Close()
 				}
 			}
@@ -218,9 +217,9 @@ func tcp_server() {
 
 
 func NetworkTick() {
-	config.CountSafe("NetTicks")
+	common.CountSafe("NetTicks")
 
-	if config.CFG.Net.ListenTCP {
+	if common.CFG.Net.ListenTCP {
 		if !TCPServerStarted {
 			TCPServerStarted = true
 			go tcp_server()
@@ -233,7 +232,7 @@ func NetworkTick() {
 
 	if next_drop_slowest.IsZero() {
 		next_drop_slowest = time.Now().Add(DropSlowestEvery)
-	} else if conn_cnt >= atomic.LoadUint32(&config.CFG.Net.MaxOutCons) {
+	} else if conn_cnt >= atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 		// Having max number of outgoing connections, check to drop the slowest one
 		if time.Now().After(next_drop_slowest) {
 			drop_slowest_peer()
@@ -241,14 +240,14 @@ func NetworkTick() {
 		}
 	}
 
-	for conn_cnt < atomic.LoadUint32(&config.CFG.Net.MaxOutCons) {
+	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 		adrs := GetBestPeers(16, true)
 		if len(adrs)==0 {
-			config.Lock()
-			if config.CFG.ConnectOnly=="" && config.DebugLevel>0 {
+			common.LockCfg()
+			if common.CFG.ConnectOnly=="" && common.DebugLevel>0 {
 				println("no new peers", len(OpenCons), conn_cnt)
 			}
-			config.Unlock()
+			common.UnlockCfg()
 			break
 		}
 		DoNetwork(adrs[rand.Int31n(int32(len(adrs)))])
@@ -282,10 +281,10 @@ func (c *OneConnection) Run() {
 
 		// Timeout ping in progress
 		if c.PingInProgress!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
-			if config.DebugLevel > 0 {
+			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "ping timeout")
 			}
-			config.CountSafe("PingTimeout")
+			common.CountSafe("PingTimeout")
 			c.HandlePong()  // this will set LastPingSent to nil
 		}
 
@@ -301,18 +300,18 @@ func (c *OneConnection) Run() {
 		c.Mutex.Unlock()
 
 		c.PeerAddr.Alive()
-		if config.DebugLevel<0 {
+		if common.DebugLevel<0 {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
 
 		if c.Send.Buf != nil && len(c.Send.Buf) > SendBufSizeHoldOn {
-			config.CountSafe("hold_"+cmd.cmd)
-			config.CountSafeAdd("hbts_"+cmd.cmd, uint64(len(cmd.pl)))
+			common.CountSafe("hold_"+cmd.cmd)
+			common.CountSafeAdd("hbts_"+cmd.cmd, uint64(len(cmd.pl)))
 			continue
 		}
 
-		config.CountSafe("rcvd_"+cmd.cmd)
-		config.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
+		common.CountSafe("rcvd_"+cmd.cmd)
+		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 
 		switch cmd.cmd {
 			case "version":
@@ -324,7 +323,7 @@ func (c *OneConnection) Run() {
 
 			case "verack":
 				c.VerackReceived = true
-				if config.CFG.Net.ListenTCP {
+				if common.CFG.Net.ListenTCP {
 					c.SendOwnAddr()
 				}
 
@@ -332,7 +331,7 @@ func (c *OneConnection) Run() {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				if config.CFG.TXPool.Enabled {
+				if common.CFG.TXPool.Enabled {
 					c.ParseTxNet(cmd.pl)
 				}
 
@@ -361,18 +360,18 @@ func (c *OneConnection) Run() {
 
 			case "pong":
 				if c.PingInProgress==nil {
-					config.CountSafe("PongUnexpected")
+					common.CountSafe("PongUnexpected")
 				} else if bytes.Equal(cmd.pl, c.PingInProgress) {
 					c.HandlePong()
 				} else {
-					config.CountSafe("PongMismatch")
+					common.CountSafe("PongMismatch")
 				}
 
 			case "notfound":
-				config.CountSafe("NotFound")
+				common.CountSafe("NotFound")
 
 			default:
-				if config.DebugLevel>0 {
+				if common.DebugLevel>0 {
 					println(cmd.cmd, "from", c.PeerAddr.Ip())
 				}
 		}
@@ -382,9 +381,9 @@ func (c *OneConnection) Run() {
 	c.Mutex.Unlock()
 	if ban {
 		c.PeerAddr.Ban()
-		config.CountSafe("PeersBanned")
+		common.CountSafe("PeersBanned")
 	}
-	if config.DebugLevel>0 {
+	if common.DebugLevel>0 {
 		println("Disconnected from", c.PeerAddr.Ip())
 	}
 	c.NetConn.Close()
