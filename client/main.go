@@ -242,7 +242,7 @@ func main() {
 		go webui.ServerThread(common.CFG.WebUI.Interface)
 	}
 
-	for !common.Exit_now {
+	for !usif.Exit_now {
 		common.CountSafe("MainThreadLoops")
 		for retryCachedBlocks {
 			retryCachedBlocks = retry_cached_blocks()
@@ -257,7 +257,7 @@ func main() {
 		select {
 			case s := <-killchan:
 				fmt.Println("Got signal:", s)
-				common.Exit_now = true
+				usif.Exit_now = true
 				continue
 
 			case newbl := <-network.NetBlocks:
@@ -296,7 +296,7 @@ func main() {
 	network.NetCloseAll()
 	network.ClosePeerDB()
 
-	if common.DefragBlocksDB {
+	if usif.DefragBlocksDB {
 		defrag_db()
 	}
 

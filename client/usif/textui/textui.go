@@ -323,7 +323,7 @@ func dump_block(s string) {
 
 
 func ui_quit(par string) {
-	common.Exit_now = true
+	usif.Exit_now = true
 }
 
 
@@ -360,8 +360,8 @@ func qdb_stats(par string) {
 
 
 func defrag_blocks(par string) {
-	common.DefragBlocksDB = true
-	common.Exit_now = true
+	usif.DefragBlocksDB = true
+	usif.Exit_now = true
 }
 
 
