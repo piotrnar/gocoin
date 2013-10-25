@@ -1,0 +1,62 @@
+<script>
+function raw_load(id) {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
+			location.href = "#rawdiv";
+		}
+	}
+	xmlHttp.open("GET","raw_net?id="+id, true);
+	xmlHttp.send(null);
+}
+function net_drop(id) {
+	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
+		document.location = 'cfg?drop='+id+'&sid='+sid
+	}
+}
+document.addEventListener('DOMContentLoaded', function() {
+	function onc(c,id) {
+		c.onclick = function() {raw_load(id)}
+	}
+	for (var r=1; r<netcons.rows.length; r++) {
+		var id=parseInt(netcons.rows[r].id)
+		for (var c=0; c<12; c++) {
+			netcons.rows[r].cells[c].title="Connection Details"
+			netcons.rows[r].cells[c].style.cursor="pointer"
+			onc(netcons.rows[r].cells[c], id)
+		}
+	}
+})
+</script>
+<b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incomming connections<br>
+Listening for incomming TCP connections: <b>{LISTEN_TCP}</b>
+ &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
+External address: <b>{EXTERNAL_ADDR}</b><br>
+<br>
+<table class="netcons bord" width="100%" id="netcons">
+<col width="30"> <!--#-->
+<col width="130"> <!--IP-->
+<col width="20"> <!--in/out icon-->
+<col width="60"> <!--ping-->
+<col width="40"><col width="60"> <!--Last rcvd-->
+<col width="40"><col width="60"> <!--Last sent-->
+<col width="80"> <!--total rcvd-->
+<col width="80"> <!--total sent-->
+<col width="50"> <!--vers-->
+<col width="100"> <!--agent-->
+<col> <!--agent-->
+<col width="20"> <!--agent-->
+<tr>
+	<th>ID
+	<th colspan="2">Peer Address
+	<th >Ping
+	<th colspan="2">Last received
+	<th colspan="2">Last sent
+	<th >Tot In
+	<th >Tot Out
+	<th colspan="4">&nbsp;
+</tr>
+<!--PEER_ROW-->
+</table>
+<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
