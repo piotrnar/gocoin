@@ -1,8 +1,11 @@
 package btc
 
 import (
+	"os"
 	"io"
 	"errors"
+	"strings"
+	"strconv"
 	"math/big"
 	"encoding/base64"
 )
@@ -202,4 +205,45 @@ func IsPushOnly(scr []byte) bool {
 		idx += n
 	}
 	return true
+}
+
+
+// Parses floating number abount to return an int value expressed in Satoshi's
+// Using strconv.ParseFloat followed by uint64(val*1e8) is not precise enough.
+func ParseValue(s string) uint64 {
+	ss := strings.Split(s, ".")
+	if len(ss)==1 {
+		val, er := strconv.ParseUint(ss[0], 10, 64)
+		if er != nil {
+			println("Incorrect amount", s, er.Error())
+			os.Exit(1)
+		}
+		return 1e8*val
+	}
+	if len(ss)!=2 {
+		println("Incorrect amount", s)
+		os.Exit(1)
+	}
+
+	if len(ss[1])>8 {
+		println("Incorrect amount", s)
+		os.Exit(1)
+	}
+	if len(ss[1])<8 {
+		ss[1] += strings.Repeat("0", 8-len(ss[1]))
+	}
+
+	small, er := strconv.ParseUint(ss[1], 10, 64)
+	if er != nil {
+		println("Incorrect amount", s, er.Error())
+		os.Exit(1)
+	}
+
+	big, er := strconv.ParseUint(ss[0], 10, 64)
+	if er != nil {
+		println("Incorrect amount", s, er.Error())
+		os.Exit(1)
+	}
+
+	return 1e8*big + small
 }
