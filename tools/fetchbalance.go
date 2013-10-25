@@ -128,7 +128,7 @@ func main() {
 				}
 			}
 			unsp.Close()
-			fmt.Printf("Total %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(r.Unspent_outputs))
+			fmt.Printf("Total %.8f BTC in %d unspent outputs - stored in 'balance' folder\n", float64(sum)/1e8, len(r.Unspent_outputs))
 		} else {
 			println(er.Error())
 		}
