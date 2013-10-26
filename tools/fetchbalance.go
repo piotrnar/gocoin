@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"github.com/piotrnar/gocoin/client/wallet"
 )
 
 type restype struct {
@@ -41,8 +42,8 @@ type onetx struct {
 
 
 
-func GetTx(id string, vout int) bool {
-	r, er := http.Get("http://blockexplorer.com/rawtx/" + id)
+func GetTx(txid *btc.Uint256, vout int) bool {
+	r, er := http.Get("http://blockexplorer.com/rawtx/" + txid.String())
 	if er == nil && r.StatusCode == 200 {
 		defer r.Body.Close()
 		c, _ := ioutil.ReadAll(r.Body)
@@ -67,35 +68,81 @@ func GetTx(id string, vout int) bool {
 			}
 			tx.Lock_time = txx.Lock_time
 			rawtx := tx.Serialize()
-			ioutil.WriteFile("balance/"+btc.NewSha2Hash(rawtx).String()+".tx", rawtx, 0666)
+			curid := btc.NewSha2Hash(rawtx)
+			if !curid.Equal(txid) {
+				fmt.Println("The downloaded transaction does not match its ID.")
+				return false
+			}
+			ioutil.WriteFile("balance/"+curid.String()+".tx", rawtx, 0666)
 			return true
 		} else {
-			println("UNM:", er.Error())
+			fmt.Println("json.Unmarshal:", er.Error())
 		}
 	} else {
 		if er != nil {
-			println("Get:", er.Error())
+			fmt.Println("http.Get:", er.Error())
 		} else {
-			println("Status Code", r.StatusCode)
+			fmt.Println("StatusCode=", r.StatusCode)
 		}
 	}
 	return false
 }
 
+
+func print_help() {
+	fmt.Println("Specify at lest one parameter on the command line.")
+	fmt.Println("  Name of one text file containing bitcoin addresses,")
+	fmt.Println("... or space separteted bitcoin addresses themselves.")
+}
+
+
 func main() {
+	fmt.Println("Gocoin FetchBalnace version", btc.SourcesTag)
+
 	if len(os.Args) < 2 {
-		println("Give me at least one address")
+		print_help()
 		return
 	}
-	url := "http://blockchain.info/unspent?active="
-	for i := 1; i < len(os.Args); i++ {
-		if i > 1 {
-			url += "|"
+
+	var addrs[] *btc.BtcAddr
+
+	if len(os.Args)==2 {
+		fi, er := os.Stat(os.Args[1])
+		if er==nil && fi.Size()>10 && !fi.IsDir() {
+			wal := wallet.NewWallet(os.Args[1])
+			if wal != nil {
+				fmt.Println("Found", len(wal.Addrs), "address(es) in", wal.FileName)
+				addrs = wal.Addrs
+			}
 		}
-		url += os.Args[i]
 	}
 
-	var sum uint64
+	if len(addrs)==0 {
+		for i := 1; i < len(os.Args); i++ {
+			a, e := btc.NewAddrFromString(os.Args[i])
+			if e != nil {
+				println(os.Args[i], ": ", e.Error())
+				return
+			} else {
+				addrs = append(addrs, a)
+			}
+		}
+	}
+
+	if len(addrs)==0 {
+		print_help()
+		return
+	}
+
+	url := "http://blockchain.info/unspent?active="
+	for i := range addrs {
+		if i > 0 {
+			url += "|"
+		}
+		url += addrs[i].String()
+	}
+
+	var sum, outcnt uint64
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
 		defer r.Body.Close()
@@ -107,7 +154,6 @@ func main() {
 			os.Mkdir("balance/", os.ModeDir)
 			unsp, _ := os.Create("balance/unspent.txt")
 			for i := 0; i < len(r.Unspent_outputs); i++ {
-				sum += r.Unspent_outputs[i].Value
 				pkscr, _ := hex.DecodeString(r.Unspent_outputs[i].Script)
 				b58adr := "???"
 				if pkscr != nil {
@@ -116,28 +162,37 @@ func main() {
 						b58adr = ba.String()
 					}
 				}
-				txid, _ := hex.DecodeString(r.Unspent_outputs[i].Tx_hash)
-				if txid != nil {
-					txstr := btc.NewUint256(txid).String()
-					if GetTx(txstr, int(r.Unspent_outputs[i].Tx_output_n)) {
+				txidlsb, _ := hex.DecodeString(r.Unspent_outputs[i].Tx_hash)
+				if txidlsb != nil {
+					txid := btc.NewUint256(txidlsb)
+					if GetTx(txid, int(r.Unspent_outputs[i].Tx_output_n)) {
 						fmt.Fprintf(unsp, "%s-%03d # %.8f @ %s, %d confs\n",
-							txstr, r.Unspent_outputs[i].Tx_output_n,
+							txid.String(), r.Unspent_outputs[i].Tx_output_n,
 							float64(r.Unspent_outputs[i].Value) / 1e8,
 							b58adr, r.Unspent_outputs[i].Confirmations)
+						sum += r.Unspent_outputs[i].Value
+						outcnt++
+					} else {
+						fmt.Printf(" - cannot fetch %s-%03d\n", txid.String(), r.Unspent_outputs[i].Tx_output_n)
 					}
 				}
 			}
 			unsp.Close()
-			fmt.Printf("Total %.8f BTC in %d unspent outputs - stored in 'balance' folder\n", float64(sum)/1e8, len(r.Unspent_outputs))
+			if outcnt > 0 {
+				fmt.Printf("Total %.8f BTC in %d unspent outputs.\n", float64(sum)/1e8, outcnt)
+				fmt.Println("The data has been stored in 'balance' folder.")
+				fmt.Println("Use it with the wallet app to spend any of it.")
+			} else {
+				fmt.Println("The fateched balance is empty.")
+			}
 		} else {
-			println(er.Error())
+			fmt.Println("Unspent json.Unmarshal", er.Error())
 		}
 	} else {
 		if er != nil {
-			println(er.Error())
+			fmt.Println("Unspent ", er.Error())
 		} else {
-			println("HTTP StatusCode", r.StatusCode)
+			fmt.Println("Unspent HTTP StatusCode", r.StatusCode)
 		}
 	}
-	//println(url)
 }
