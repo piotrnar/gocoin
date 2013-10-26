@@ -151,7 +151,7 @@ func main() {
 		er = json.Unmarshal(c[:], &r)
 		if er == nil {
 			os.RemoveAll("balance/")
-			os.Mkdir("balance/", os.ModeDir | 0700)
+			os.Mkdir("balance/", 0700)
 			unsp, _ := os.Create("balance/unspent.txt")
 			for i := 0; i < len(r.Unspent_outputs); i++ {
 				pkscr, _ := hex.DecodeString(r.Unspent_outputs[i].Script)
