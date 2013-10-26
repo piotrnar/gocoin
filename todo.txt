@@ -1,5 +1,5 @@
-* Create a tool that would fetch the balance from blockchain.info (for a nodeless wallet)
-* Improve the database folder locking, for linux
+* Make fetchbalance.go to work with a proxy (for Tor)
+* Improve the database folder locking in Linux
 * Implement a secured password input method for the wallet app (for Windows with no mingw)
 * Disconnect & ban nodes that do not send any or just a little data
 * Implement a cache for address balances so switching between wallets would be quick
