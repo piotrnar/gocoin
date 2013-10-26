@@ -141,7 +141,7 @@ func MainThread() {
 func show_info(par string) {
 	common.Busy_mutex.Lock()
 	if common.BusyWith!="" {
-		fmt.Println("Chain thread common.BusyWith with:", common.BusyWith)
+		fmt.Println("Chain thread busy with:", common.BusyWith)
 	} else {
 		fmt.Println("Chain thread is idle")
 	}
