@@ -100,6 +100,7 @@ type OneConnection struct {
 	BytesReceived, BytesSent uint64
 	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
+	InvsRecieved uint64
 
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
