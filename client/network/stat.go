@@ -64,6 +64,7 @@ func (v *OneConnection) Stats() (s string) {
 		s += fmt.Sprintln("Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
 		s += fmt.Sprintln("Bytes received:", v.BytesReceived)
 		s += fmt.Sprintln("Bytes sent:", v.BytesSent)
+		s += fmt.Sprintln("Invs recieved:", v.InvsRecieved)
 		s += fmt.Sprintln("Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
 		if v.LastBlocksFrom != nil {
 			s += fmt.Sprintln("Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
