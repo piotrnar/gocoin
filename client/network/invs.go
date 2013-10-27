@@ -70,8 +70,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 	// Append it to PendingInvs in each open connection
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		if v != fromConn && v.InvsRecieved > 0 {
-			// except the one that this inv came from and ones that never sent us an inv
+		if v != fromConn { // except the one that this inv came from
 			v.Mutex.Lock()
 			if len(v.PendingInvs)<500 {
 				v.PendingInvs = append(v.PendingInvs, inv)
