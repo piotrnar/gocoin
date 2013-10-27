@@ -1,6 +1,6 @@
 0.8.1
 * Some minor changes in fetchbalance
-* Do not send inv to peers that have never sent inv to us - https://bitcointalk.org/index.php?topic=319465.0
+* Disconnect & Ban peers that have not sent a single inv to us for 3 min since connecting
 
 0.8.0
 * Souce code of the client hugely restructured
