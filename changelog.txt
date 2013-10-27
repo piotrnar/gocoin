@@ -1,3 +1,7 @@
+0.8.1
+* Some minor changes in fetchbalance
+* Do not send inv to peers that have never sent inv to us - https://bitcointalk.org/index.php?topic=319465.0
+
 0.8.0
 * Souce code of the client hugely restructured
 * A new tool "fetchbalance" that can fetch the ballance from blockchain.info & blockexplorer.com
