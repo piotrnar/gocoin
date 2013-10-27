@@ -16,6 +16,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
 		return
 	}
+	c.InvsRecieved++
 
 	cnt, of := btc.VLen(pl)
 	if len(pl) != of + 36*cnt {
@@ -69,7 +70,8 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 	// Append it to PendingInvs in each open connection
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		if v != fromConn { // except for the one that this inv came from
+		if v != fromConn && v.InvsRecieved > 0 {
+			// except the one that this inv came from and ones that never sent us an inv
 			v.Mutex.Lock()
 			if len(v.PendingInvs)<500 {
 				v.PendingInvs = append(v.PendingInvs, inv)
