@@ -1,3 +1,4 @@
+* Make fetchbalance.go to fetch coinbase tx properly
 * Make fetchbalance.go to work with a proxy (for Tor)
 * Improve the database folder locking in Linux
 * Implement a secured password input method for the wallet app (for Windows with no mingw)
