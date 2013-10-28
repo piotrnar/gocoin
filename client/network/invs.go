@@ -72,7 +72,10 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 	for _, v := range OpenCons {
 		if v != fromConn { // except the one that this inv came from
 			v.Mutex.Lock()
-			if len(v.PendingInvs)<500 {
+			if fromConn==nil && v.InvsRecieved==0 {
+				// Do not broadcast own txs to nodes that never sent any invs to us
+				common.CountSafe("SendInvOwnBlocked")
+			} else if len(v.PendingInvs)<500 {
 				v.PendingInvs = append(v.PendingInvs, inv)
 				cnt++
 			} else {
