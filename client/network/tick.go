@@ -18,8 +18,7 @@ func (c *OneConnection) Tick() {
 
 	// If no inv received within 3 minutes from conecting, ban the bastard
 	if c.InvsRecieved==0 && c.ConnectedAt.Add(3*time.Minute).Before(time.Now()) {
-		common.CountSafe("NetIdleBanned")
-		println(c.PeerAddr.Ip(), "- ban the spy")
+		common.CountSafe("NetSpyBanned")
 		c.DoS()
 		return
 	}
