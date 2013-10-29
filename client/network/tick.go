@@ -16,9 +16,11 @@ func (c *OneConnection) Tick() {
 	c.TicksCnt++
 	c.Mutex.Unlock()
 
-	// If no inv received within 3 minutes from conecting, ban the bastard
-	if c.InvsRecieved==0 && c.ConnectedAt.Add(3*time.Minute).Before(time.Now()) {
+	// If no single inv received within 15 minutes from conecting, ban the peer
+	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
 		common.CountSafe("NetSpyBanned")
+		println(c.PeerAddr.Ip(), "- ban the spy")
+		println(c.Stats())
 		c.DoS()
 		return
 	}

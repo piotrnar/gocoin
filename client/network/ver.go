@@ -26,8 +26,8 @@ func (c *OneConnection) SendVersion() {
 
 	b.Write(nonce[:])
 
-	b.WriteByte(byte(len(common.UserAgent)))
-	b.Write([]byte(common.UserAgent))
+	b.WriteByte(byte(len(common.CFG.UserAgent)))
+	b.Write([]byte(common.CFG.UserAgent))
 
 	common.Last.Mutex.Lock()
 	binary.Write(b, binary.LittleEndian, uint32(common.Last.Block.Height))
