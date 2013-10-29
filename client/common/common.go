@@ -11,7 +11,7 @@ const (
 	ConfigFile = "gocoin.conf"
 
 	Version = 70001
-	UserAgent = "/Gocoin:"+btc.SourcesTag+"/"
+	DefaultUserAgent = "/Gocoin:"+btc.SourcesTag+"/"
 	Services = uint64(0x00000001)
 
 	MaxCachedBlocks = 600
