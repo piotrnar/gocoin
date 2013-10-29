@@ -1,6 +1,7 @@
 0.8.1
+* Allow to setup User-Agent reported by the version messsage (a privacy feature)
 * Some minor changes in fetchbalance
-* Disconnect & Ban peers that have not sent a single inv to us for 3 min since connecting
+* Disconnect & Ban peers that have not sent a single inv to us for 15 min since connecting
 
 0.8.0
 * Souce code of the client hugely restructured
