@@ -65,6 +65,7 @@ var (
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
 		MiningStatHours uint
+		UserAgent string
 	}
 
 	mutex_cfg sync.Mutex
@@ -104,6 +105,7 @@ func init() {
 	CFG.Memory.GCPercTrshold = 100 // 100%
 
 	CFG.MiningStatHours = 24
+	CFG.UserAgent = DefaultUserAgent
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
