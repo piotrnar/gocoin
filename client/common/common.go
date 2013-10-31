@@ -101,3 +101,12 @@ func NumberToString(num float64) string {
 func HashrateToString(hr float64) string {
 	return NumberToString(hr)+"H/s"
 }
+
+
+func IsIPBlocked(ip4 []byte) bool {
+	// 129.132.230.0/24
+	if ip4[0]==129 && ip4[1]==132 && ip4[2]==230 {
+		return true
+	}
+	return false
+}
