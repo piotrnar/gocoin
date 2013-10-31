@@ -65,6 +65,10 @@ func NewIncommingPeer(ipstr string) (p *onePeer, e error) {
 	}
 	ip := net.ParseIP(ipstr)
 	if ip != nil && len(ip)==16 {
+		if common.IsIPBlocked(ip[12:16]) {
+			e = errors.New(ipstr+" is blocked")
+			return
+		}
 		p = new(onePeer)
 		copy(p.Ip4[:], ip[12:16])
 		p.Services = common.Services
@@ -222,7 +226,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.Banned==0 && ValidIp4(ad.Ip4[:]) {
+		if ad.Banned==0 && ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
 			if !unconnected || !ConnectionActive(ad) {
 				tmp = append(tmp, ad)
 			}
