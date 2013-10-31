@@ -1,4 +1,5 @@
 0.8.1
+* Block subnet 129.132.230.0/24 (fixed for now)
 * Allow to setup User-Agent reported by the version messsage (a privacy feature)
 * Some minor changes in fetchbalance
 * Disconnect & Ban peers that have not sent a single inv to us for 15 min since connecting
