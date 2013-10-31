@@ -1,3 +1,4 @@
+* Do something with the fixed 129.132.230.0/24
 * Broadcast own transaction "slowly" (e.g. with 1 second delay for each new peer)
 * Make fetchbalance.go to fetch coinbase tx properly
 * Make fetchbalance.go to work with a proxy (for Tor)
