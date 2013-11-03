@@ -161,7 +161,7 @@ func import_blockchain(dir string) {
 		if er != nil {
 			if er.Error()!="Genesis" {
 				println("CheckBlock failed:", er.Error())
-				os.Exit(1) // Such a thing should not happen, so let's better abort here.
+				//os.Exit(1) // Such a thing should not happen, so let's better abort here.
 			}
 			continue
 		}
@@ -169,7 +169,7 @@ func import_blockchain(dir string) {
 		er = chain.AcceptBlock(bl)
 		if er != nil {
 			println("AcceptBlock failed:", er.Error())
-			os.Exit(1) // Such a thing should not happen, so let's better abort here.
+			//os.Exit(1) // Such a thing should not happen, so let's better abort here.
 		}
 
 		totbytes += uint64(len(bl.Raw))
