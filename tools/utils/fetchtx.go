@@ -22,6 +22,7 @@ type onetx struct {
 		}
 		ScriptSig string
 		Coinbase string
+		Sequence uint32
 	}
 	Out []struct {
 		Value string
@@ -31,7 +32,7 @@ type onetx struct {
 
 
 
-func GetTxFromExplorer(txid *btc.Uint256) []byte {
+func GetTxFromExplorer(txid *btc.Uint256) ([]byte, []byte) {
 	url := "http://blockexplorer.com/rawtx/" + txid.String()
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
@@ -40,6 +41,13 @@ func GetTxFromExplorer(txid *btc.Uint256) []byte {
 		var txx onetx
 		er = json.Unmarshal(c[:], &txx)
 		if er == nil {
+			// This part looks weird, but this is how I solved seq=FFFFFFFF, if the field not present:
+			for i := range txx.In {
+				txx.In[i].Sequence = 0xffffffff
+			}
+			json.Unmarshal(c[:], &txx)
+			// ... end of the weird solution
+
 			tx := new(btc.Tx)
 			tx.Version = txx.Ver
 			tx.TxIn = make([]*btc.TxIn, len(txx.In))
@@ -53,7 +61,7 @@ func GetTxFromExplorer(txid *btc.Uint256) []byte {
 				} else {
 					tx.TxIn[i].ScriptSig, _ = btc.DecodeScript(txx.In[i].ScriptSig)
 				}
-				tx.TxIn[i].Sequence = 0xffffffff
+				tx.TxIn[i].Sequence = txx.In[i].Sequence
 			}
 			tx.TxOut = make([]*btc.TxOut, len(txx.Out))
 			for i := range txx.Out {
@@ -65,14 +73,14 @@ func GetTxFromExplorer(txid *btc.Uint256) []byte {
 			rawtx := tx.Serialize()
 			if txx.Size != uint(len(rawtx)) {
 				fmt.Printf("Transaction size mismatch: %d expexted, %d decoded\n", txx.Size, len(rawtx))
-				return nil
+				return nil, rawtx
 			}
 			curid := btc.NewSha2Hash(rawtx)
 			if !curid.Equal(txid) {
 				fmt.Println("The downloaded transaction does not match its ID.", txid.String())
-				return nil
+				return nil, rawtx
 			}
-			return rawtx
+			return rawtx, rawtx
 		} else {
 			fmt.Println("json.Unmarshal:", er.Error())
 		}
@@ -83,5 +91,5 @@ func GetTxFromExplorer(txid *btc.Uint256) []byte {
 			fmt.Println("StatusCode=", r.StatusCode)
 		}
 	}
-	return nil
+	return nil, nil
 }
