@@ -18,9 +18,12 @@ func main() {
 	}
 
 	txid := btc.NewUint256FromString(os.Args[1])
-	rawtx := utils.GetTxFromExplorer(txid)
+	rawtx, brokentx := utils.GetTxFromExplorer(txid)
 	if rawtx==nil {
 		fmt.Println("Error fetching the transaction")
+		if brokentx!=nil {
+			ioutil.WriteFile("bad-"+txid.String()+".tx", brokentx, 0666)
+		}
 	} else {
 		ioutil.WriteFile(txid.String()+".tx", rawtx, 0666)
 	}
