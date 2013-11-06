@@ -1,4 +1,6 @@
 0.8.1
+* fetchbalance renamed fetchbalance and now it works with coinbase txs properly
+* New tool fetchtx to downlaod raw tx from blockexplorer.com
 * Block subnet 129.132.230.0/24 (fixed for now)
 * Allow to setup User-Agent reported by the version messsage (a privacy feature)
 * Some minor changes in fetchbalance
