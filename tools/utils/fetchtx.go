@@ -33,7 +33,6 @@ type onetx struct {
 
 func GetTxFromExplorer(txid *btc.Uint256) []byte {
 	url := "http://blockexplorer.com/rawtx/" + txid.String()
-	println(url)
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
 		defer r.Body.Close()
