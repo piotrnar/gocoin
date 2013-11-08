@@ -34,7 +34,7 @@ func print_help() {
 
 
 func main() {
-	fmt.Println("Gocoin FetchBalnace version", btc.SourcesTag)
+	fmt.Println("Gocoin FetchBalance version", btc.SourcesTag)
 
 	if len(os.Args) < 2 {
 		print_help()
