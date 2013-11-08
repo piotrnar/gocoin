@@ -41,8 +41,7 @@ func print_help() {
 }
 
 func dials5(tcp, dest string) (conn net.Conn, err error) {
-	println("Tor'ing to", dest, "via", proxy)
-
+	//println("Tor'ing to", dest, "via", proxy)
 	var buf [10]byte
 	var host, ps string
 	var port uint64
