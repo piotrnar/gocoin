@@ -104,7 +104,7 @@ func HashrateToString(hr float64) string {
 
 
 func IsIPBlocked(ip4 []byte) bool {
-	// 129.132.230.0/24
+	// 129.132.230.0/24 - https://bitcointalk.org/index.php?topic=319465.msg3443572#msg3443572
 	if ip4[0]==129 && ip4[1]==132 && ip4[2]==230 {
 		return true
 	}
