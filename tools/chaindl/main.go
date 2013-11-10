@@ -1,0 +1,63 @@
+package main
+
+import (
+	"os"
+	//"fmt"
+	"time"
+	//"os/signal"
+	"github.com/piotrnar/gocoin/btc"
+	_ "github.com/piotrnar/gocoin/btc/qdb"
+)
+
+
+var (
+	killchan chan os.Signal = make(chan os.Signal)
+	Magic [4]byte
+	StartTime time.Time
+	GocoinHomeDir string
+)
+
+
+func printstats() {
+	println("stats")
+}
+
+func main() {
+	StartTime = time.Now()
+
+	GenesisBlock := btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
+	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
+	GocoinHomeDir = "btcnet"+string(os.PathSeparator)
+
+	BlockChain := btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	if btc.AbortNow || BlockChain==nil {
+		return
+	}
+
+	//new_connection("84.104.143.192")
+	new_connection("5.9.24.81")
+	get_headers()
+	return
+
+	/*
+	netTick := time.Tick(50*time.Millisecond)
+	printInfo := time.Tick(3*time.Second)
+	exit_now := false
+
+	signal.Notify(killchan, os.Interrupt, os.Kill) // Ctrl+C
+	for !exit_now {
+		select {
+			case s := <-killchan:
+				fmt.Println("Got signal:", s)
+				exit_now = true
+				continue
+
+			case <-netTick:
+				net_tick()
+
+			case <-printInfo:
+				printstats()
+		}
+	}
+	*/
+}
