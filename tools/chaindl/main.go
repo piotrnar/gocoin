@@ -15,6 +15,7 @@ var (
 	Magic [4]byte
 	StartTime time.Time
 	GocoinHomeDir string
+	BlockChain *btc.Chain
 )
 
 
@@ -29,13 +30,14 @@ func main() {
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	GocoinHomeDir = "btcnet"+string(os.PathSeparator)
 
-	BlockChain := btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
 	if btc.AbortNow || BlockChain==nil {
 		return
 	}
 
 	//new_connection("84.104.143.192")
 	new_connection("5.9.24.81")
+	//new_connection("179.187.19.177")
 	get_headers()
 	return
 
