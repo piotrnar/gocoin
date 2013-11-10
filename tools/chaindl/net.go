@@ -1,10 +1,12 @@
 package main
 
 import (
+	"os"
 	"net"
 	"time"
 	"sync"
 	"bytes"
+	"errors"
 	"strings"
 //	"encoding/hex"
 	"encoding/binary"
@@ -27,6 +29,8 @@ var (
 
 	PendingHdrs map[[32]byte] bool = make(map[[32]byte] bool)
 	PendingHdrsLock sync.Mutex
+
+	AllHeadersDone bool
 )
 
 
@@ -49,11 +53,6 @@ type one_net_conn struct {
 	net.Conn
 	verackgot bool
 
-	// Messages reception state machine:
-	/*recv struct {
-		buf []*one_net_cmd
-	}*/
-
 	// Message sending state machine:
 	send struct {
 		buf []byte
@@ -73,7 +72,7 @@ func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[20:24], sh[:4])
 	copy(sbuf[24:], pl)
 
-	println("send", cmd, len(sbuf), "...")
+	//println("send", cmd, len(sbuf), "...")
 	c.send.buf = append(c.send.buf, sbuf...)
 	return
 }
@@ -112,17 +111,6 @@ func (c *one_net_conn) getheaders() {
 }
 
 
-/*
-func (c *one_net_conn) getheaders() {
-	b := new(bytes.Buffer)
-	PendingHdrsLock.Lock()
-	binary.Write(b, binary.LittleEndian, uint32(Version))
-	btc.WriteVlen(b, len(len(PendingHdrs)))
-	PendingHdrsLock.Unlock()
-}
-*/
-
-
 func (c *one_net_conn) idle() {
 	if c.verackgot && !c.inprogress {
 		c.getheaders()
@@ -147,7 +135,6 @@ func (c *one_net_conn) run_send() {
 				}
 			} else {
 				c.send.buf = c.send.buf[n:]
-				println(c.peerip, n, "sent")
 			}
 		} else {
 			c.idle()
@@ -208,31 +195,54 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 }
 
 
-/*
-func (c *one_net_conn) gotinv(d []byte) {
-	var typ uint32
-	var id [32]byte
-	b := bytes.NewReader(d)
-	cnt, er := btc.ReadVLen(b)
-	if er != nil {
+func chkblock(bl *btc.Block) (er error) {
+	// Check timestamp (must not be higher than now +2 hours)
+	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
+		er = errors.New("CheckBlock() : block timestamp too far in the future")
 		return
 	}
-	for i := uint64(0); i < cnt; i++ {
-		er = binary.Read(b, binary.LittleEndian, &typ)
-		if er != nil {
+
+	if prv, pres := BlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
+		if prv.Parent == nil {
+			// This is genesis block
+			prv.Timestamp = bl.BlockTime
+			prv.Bits = bl.Bits
+			er = errors.New("Genesis")
 			return
-		}
-		if _, er = b.Read(id[:]); er != nil {
+		} else {
 			return
-		}
-		if typ==2 {
-			PendingHdrsLock.Lock()
-			PendingHdrs[id] = true
-			PendingHdrsLock.Unlock()
 		}
 	}
+
+	prevblk, ok := BlockChain.BlockIndex[btc.NewUint256(bl.Parent).BIdx()]
+	if !ok {
+		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
+		return
+	}
+
+	// Check proof of work
+	gnwr := BlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
+	if bl.Bits != gnwr {
+		er = errors.New("CheckBlock: incorrect proof of work")
+	}
+
+	cur := new(btc.BlockTreeNode)
+	cur.BlockHash = bl.Hash
+	cur.Parent = prevblk
+	cur.Height = prevblk.Height + 1
+	cur.Bits = bl.Bits
+	cur.Timestamp = bl.BlockTime
+	prevblk.Childs = append(prevblk.Childs, cur)
+	BlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
+
+	if cur.Height > LastBlock.Node.Height {
+		LastBlock.Node = cur
+	}
+
+	return
 }
-*/
+
+
 func (c *one_net_conn) headers(d []byte) {
 	var hdr [81]byte
 	b := bytes.NewReader(d)
@@ -240,20 +250,23 @@ func (c *one_net_conn) headers(d []byte) {
 	if er != nil {
 		return
 	}
+	if cnt==0 {
+		AllHeadersDone = true
+	}
 	for i := uint64(0); i < cnt; i++ {
 		if _, er = b.Read(hdr[:]); er != nil {
 			return
 		}
 		bl, er := btc.NewBlock(hdr[:])
 		if er == nil {
-			er, dos, later := BlockChain.CheckBlock(bl)
-			if er == nil {
-				println("got block", bl.Hash.String())
-			} else {
-				println(er.Error(), dos, later)
+			er = chkblock(bl)
+			if er != nil {
+				println(er.Error())
+				os.Exit(1)
 			}
 		}
 	}
+	println("Height:", LastBlock.Node.Height)
 }
 
 
@@ -304,7 +317,8 @@ func new_connection(ip string) *one_net_conn {
 func get_headers() {
 	LastBlock.Node = BlockChain.BlockTreeEnd
 	println("get_headers...")
-	for {
+	for !AllHeadersDone {
 		time.Sleep(1e9)
 	}
+	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 }
