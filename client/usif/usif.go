@@ -5,7 +5,9 @@ import (
 	"time"
 	"sync"
 	"errors"
+	"math/rand"
 	"encoding/hex"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -110,4 +112,34 @@ func LoadRawTx(buf []byte) (s string) {
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
 	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
 	return
+}
+
+
+func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
+	common.CountSafe(fmt.Sprint("NetSendOneInv", typ))
+
+	// Prepare the inv
+	inv := new([36]byte)
+	binary.LittleEndian.PutUint32(inv[0:4], typ)
+	copy(inv[4:36], h.Bytes())
+
+	// Append it to PendingInvs in a random connection
+	network.Mutex_net.Lock()
+	idx := rand.Intn(len(network.OpenCons))
+	var cnt int
+	for _, v := range network.OpenCons {
+		if idx==cnt {
+			v.Mutex.Lock()
+			v.PendingInvs = append(v.PendingInvs, inv)
+			v.Mutex.Unlock()
+			break
+		}
+		cnt++
+	}
+	network.Mutex_net.Unlock()
+	return
+}
+
+func init() {
+	rand.Seed(int64(time.Now().Nanosecond()))
 }

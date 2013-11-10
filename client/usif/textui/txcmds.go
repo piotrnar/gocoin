@@ -51,6 +51,28 @@ func send_tx(par string) {
 }
 
 
+func send1_tx(par string) {
+	txid := btc.NewUint256FromString(par)
+	if txid==nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		list_txs("")
+		return
+	}
+	network.TxMutex.Lock()
+	if ptx, ok := network.TransactionsToSend[txid.Hash]; ok {
+		network.TxMutex.Unlock()
+		usif.SendInvToRandomPeer(1, txid)
+		ptx.Invsentcnt++
+		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
+		fmt.Println("If it does not appear in the chain, you may want to redo it.")
+	} else {
+		network.TxMutex.Unlock()
+		fmt.Println("No such transaction ID in the memory pool.")
+		list_txs("")
+	}
+}
+
+
 func del_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid==nil {
@@ -143,6 +165,7 @@ func send_all_tx(par string) {
 func init () {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
+	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer (identified by a given <txid>)")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
 	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
