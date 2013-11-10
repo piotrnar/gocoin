@@ -155,6 +155,12 @@ function val2reason(r) {
 }
 
 
+function send1tx_click(id) {
+	if (confirm("Send TX "+id+" to one random peer")) {
+		show_txs2s('?sendone='+id+'&sid='+sid)
+	}
+}
+
 function sendtx_click(id) {
 	if (confirm("Broadcast TX "+id)) {
 		show_txs2s('?send='+id+'&sid='+sid)
@@ -308,7 +314,9 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				if (own!=0) {
-					c.innerHTML = '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/send.png">'
+                    c.innerHTML = '<img style="cursor:pointer" title="Send this TX to one random peer" onclick="send1tx_click(\''+txid+'\')" src="webui/send_once.png">'
+					c.innerHTML += '&nbsp;'
+                    c.innerHTML += '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/send.png">'
 					c.innerHTML += '&nbsp;'
 					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/del.png">'
 				} else {

@@ -144,25 +144,40 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
-	if checksid(r) && len(r.Form["del"])>0 {
-		tid := btc.NewUint256FromString(r.Form["del"][0])
-		if tid!=nil {
-			network.TxMutex.Lock()
-			delete(network.TransactionsToSend, tid.Hash)
-			network.TxMutex.Unlock()
-		}
-	}
-
-	if checksid(r) && len(r.Form["send"])>0 {
-		tid := btc.NewUint256FromString(r.Form["send"][0])
-		if tid!=nil {
-			network.TxMutex.Lock()
-			if ptx, ok := network.TransactionsToSend[tid.Hash]; ok {
+	if checksid(r) {
+		if len(r.Form["del"])>0 {
+			tid := btc.NewUint256FromString(r.Form["del"][0])
+			if tid!=nil {
+				network.TxMutex.Lock()
+				delete(network.TransactionsToSend, tid.Hash)
 				network.TxMutex.Unlock()
-				cnt := network.NetRouteInv(1, tid, nil)
-				ptx.Invsentcnt += cnt
 			}
 		}
+
+		if len(r.Form["send"])>0 {
+			tid := btc.NewUint256FromString(r.Form["send"][0])
+			if tid!=nil {
+				network.TxMutex.Lock()
+				if ptx, ok := network.TransactionsToSend[tid.Hash]; ok {
+					network.TxMutex.Unlock()
+					cnt := network.NetRouteInv(1, tid, nil)
+					ptx.Invsentcnt += cnt
+				}
+			}
+		}
+
+		if len(r.Form["sendone"])>0 {
+			tid := btc.NewUint256FromString(r.Form["sendone"][0])
+			if tid!=nil {
+				network.TxMutex.Lock()
+				if ptx, ok := network.TransactionsToSend[tid.Hash]; ok {
+					network.TxMutex.Unlock()
+					usif.SendInvToRandomPeer(1, tid)
+					ptx.Invsentcnt++
+				}
+			}
+		}
+
 	}
 
 	w.Header()["Content-Type"] = []string{"text/xml"}
