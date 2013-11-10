@@ -16,7 +16,7 @@ type OneWallet struct {
 
 
 func LoadWalfile(fn string, included bool) (addrs []*btc.BtcAddr) {
-	waldir := filepath.Dir(fn) + string(os.PathSeparator)
+	waldir, walname := filepath.Split(fn)
 	f, e := os.Open(fn)
 	if e != nil {
 		println(e.Error())
@@ -49,6 +49,7 @@ func LoadWalfile(fn string, included bool) (addrs []*btc.BtcAddr) {
 						if len(ls)>1 {
 							a.Label = strings.Trim(ls[1], " \n\t\t")
 						}
+						a.Label += "@"+walname
 						addrs = append(addrs, a)
 					}
 				}
