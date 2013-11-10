@@ -1,5 +1,7 @@
 0.8.2
 * "fetchbal" can work via tor now (set env variable TOR=localhost:9150)
+* Any own tx can now be sent to only a single random peer (privacy feature)
+* You can include another wallet inside a text wallet file (use "@filename")
 
 0.8.1
 * "fetchbalance" renamed "fetchbal" and now it works with coinbase txs properly
