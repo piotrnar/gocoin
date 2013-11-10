@@ -253,8 +253,10 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			c.Mutex.Unlock()
 			return nil
 		}
-		c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
-		c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+		if c.recv.hdr_len >= 24 {
+			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+		}
 		c.Mutex.Unlock()
 	}
 
