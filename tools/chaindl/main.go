@@ -35,31 +35,12 @@ func main() {
 		return
 	}
 
-	//new_connection("84.104.143.192")
 	new_connection("5.9.24.81")
-	//new_connection("179.187.19.177")
+	//new_connection("198.12.127.2")
+	//new_connection("85.17.239.32")
+	//new_connection("94.23.228.130")
+	//new_connection("129.132.230.75")
+	//new_connection("178.63.63.214")
 	get_headers()
 	return
-
-	/*
-	netTick := time.Tick(50*time.Millisecond)
-	printInfo := time.Tick(3*time.Second)
-	exit_now := false
-
-	signal.Notify(killchan, os.Interrupt, os.Kill) // Ctrl+C
-	for !exit_now {
-		select {
-			case s := <-killchan:
-				fmt.Println("Got signal:", s)
-				exit_now = true
-				continue
-
-			case <-netTick:
-				net_tick()
-
-			case <-printInfo:
-				printstats()
-		}
-	}
-	*/
 }
