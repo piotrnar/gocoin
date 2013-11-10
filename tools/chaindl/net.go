@@ -112,7 +112,7 @@ func (c *one_net_conn) getheaders() {
 
 
 func (c *one_net_conn) idle() {
-	if c.verackgot && !c.inprogress {
+	if c.verackgot && !c.inprogress && !AllHeadersDone {
 		c.getheaders()
 		c.inprogress = true
 	} else {
@@ -252,6 +252,9 @@ func (c *one_net_conn) headers(d []byte) {
 	}
 	if cnt==0 {
 		AllHeadersDone = true
+		println("AllHeadersDone - terminate conn")
+		c.broken = true
+		return
 	}
 	for i := uint64(0); i < cnt; i++ {
 		if _, er = b.Read(hdr[:]); er != nil {
@@ -318,7 +321,7 @@ func get_headers() {
 	LastBlock.Node = BlockChain.BlockTreeEnd
 	println("get_headers...")
 	for !AllHeadersDone {
-		time.Sleep(1e9)
+		time.Sleep(1e8)
 	}
 	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 }
