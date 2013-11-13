@@ -1,3 +1,4 @@
+* Finish "chaindl" tool
 * Do something with the fixed 129.132.230.0/24
 * Broadcast own transaction "slowly" (e.g. with 1 second delay for each new peer)
 * Improve the database folder locking in Linux
