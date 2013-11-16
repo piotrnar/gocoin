@@ -67,7 +67,7 @@ func host_init() {
 		fi, e = os.Stat(BtcRootDir+"blocks/blk00000.dat")
 		if e==nil && fi.Size()>1024*1024 {
 			fmt.Println("There is a database from Satoshi client on your disk...")
-			if textui.AskYesNo("Go you want to import this database into Gocoin?") {
+			if textui.AskYesNo("Do you want to import this database into Gocoin?") {
 				import_blockchain(BtcRootDir+"blocks")
 			}
 		}
@@ -119,7 +119,7 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 
 
 func import_blockchain(dir string) {
-	trust := !textui.AskYesNo("Go you want to verify scripts while importing (will be slow)?")
+	trust := !textui.AskYesNo("Do you want to verify scripts while importing (will be slow)?")
 
 	BlockDatabase := blockdb.NewBlockDB(dir, common.Magic)
 	chain := btc.NewChain(common.GocoinHomeDir, common.GenesisBlock, false)
