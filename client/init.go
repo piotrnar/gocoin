@@ -186,4 +186,5 @@ func import_blockchain(dir string) {
 	chain.Save()
 	chain.Close()
 	fmt.Println("Database saved. No more imports should be needed.")
+	fmt.Println("It is advised to close and restart the node now, to free some mem.")
 }
