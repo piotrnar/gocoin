@@ -1,3 +1,5 @@
+0.8.3
+
 0.8.2
 * "fetchbal" can work via tor now (set env variable TOR=localhost:9150)
 * Any own tx can now be sent to only a single random peer (privacy feature)
