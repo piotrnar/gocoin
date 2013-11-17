@@ -1,4 +1,5 @@
 0.8.3
+* Cosmetic
 
 0.8.2
 * "fetchbal" can work via tor now (set env variable TOR=localhost:9150)
