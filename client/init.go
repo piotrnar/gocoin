@@ -11,26 +11,13 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif/textui"
+	"github.com/piotrnar/gocoin/tools/utils"
 )
-
-
-func BitcoinHome() (res string) {
-	res = os.Getenv("APPDATA")
-	if res!="" {
-		res += "\\Bitcoin\\"
-		return
-	}
-	res = os.Getenv("HOME")
-	if res!="" {
-		res += "/.bitcoin/"
-	}
-	return
-}
 
 
 func host_init() {
 	var e error
-	BtcRootDir := BitcoinHome()
+	BtcRootDir := utils.BitcoinHome()
 
 	if common.CFG.Datadir == "" {
 		common.GocoinHomeDir = BtcRootDir+"gocoin"+string(os.PathSeparator)
