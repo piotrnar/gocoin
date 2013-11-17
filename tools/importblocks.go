@@ -8,6 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 	"github.com/piotrnar/gocoin/blockdb"
+	"github.com/piotrnar/gocoin/tools/utils"
 )
 
 const Trust = true  // Set this to false if you want to re-check all scripts
@@ -102,20 +103,6 @@ func import_blockchain(dir string) {
 }
 
 
-func BitcoinHome() (res string) {
-	res = os.Getenv("APPDATA")
-	if res!="" {
-		res += "\\Bitcoin\\"
-		return
-	}
-	res = os.Getenv("HOME")
-	if res!="" {
-		res += "/.bitcoin/"
-	}
-	return
-}
-
-
 func RemoveLastSlash(p string) string {
 	if len(p)>0 && os.IsPathSeparator(p[len(p)-1]) {
 		return p[:len(p)-1]
@@ -131,7 +118,7 @@ func exists(fn string) bool {
 func main() {
 	if len(os.Args)<2 {
 		fmt.Println("Specify at least one parameter - a path to the blk0000?.dat files.")
-		fmt.Println("By default it should be:", BitcoinHome()+"blocks")
+		fmt.Println("By default it should be:", utils.BitcoinHome()+"blocks")
 		fmt.Println()
 		fmt.Println("If you specify a second parameter, that's where output data will be stored.")
 		fmt.Println("Otherwise the output data will go to Gocoin's default data folder.")
@@ -156,7 +143,7 @@ func main() {
 	if len(os.Args)>2 {
 		GocoinHomeDir = RemoveLastSlash(os.Args[2])+string(os.PathSeparator)
 	} else {
-		GocoinHomeDir = BitcoinHome()+"gocoin"+string(os.PathSeparator)
+		GocoinHomeDir = utils.BitcoinHome()+"gocoin"+string(os.PathSeparator)
 	}
 
 	if Magic==[4]byte{0x0B,0x11,0x09,0x07} {
