@@ -19,8 +19,8 @@ func (c *OneConnection) Tick() {
 	// If no single inv received within 15 minutes from conecting, ban the peer
 	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
 		common.CountSafe("NetSpyBanned")
-		println(c.PeerAddr.Ip(), "- ban the spy")
-		println(c.Stats())
+		//println(c.PeerAddr.Ip(), "- ban the spy")
+		//println(c.Stats())
 		c.DoS()
 		return
 	}
