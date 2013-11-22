@@ -1,7 +1,26 @@
-The copyright holder of this software grants a permission to use it
-in either an original or a modified form, free of charge and without
-a need for an explicit permission, but only for a non-commercial
-purposes.
+NON-COMMERCIAL USE
+-----------------------
+
+As the explicit author of this software I grant a permission to use it
+in either an original or a modified form, free of charge and without a
+need for an explicit permission, but only for a non-commercial purposes
+and only to individuals (not to any kind of companies or corporations).
+
+
+COMMERCIAL USE
+-----------------------
+
+If you want to use this software in a commercial application I can sell
+you any type of license for a reasonable price. The price depends on a
+type of your business and the kind of license you need.
+
+If you can afford buying my time, I can also turn this code into any
+application your business may need, as well as to provide you with a
+professional support.
+
+You can contact me at: tonikt@assets-otc.com
+
+
 
 ===============================================================================
 The implementation of the native ECDSA speedup package btc/newec
@@ -15,3 +34,5 @@ contribution into the package's code, therefore please read this:
 Few parts of the source code (e.g. "btc/test/*.json") were taken
 from the original (satoshi's) bitcoin client. Its license here:
  * https://github.com/bitcoin/bitcoin/blob/master/COPYING
+
+
