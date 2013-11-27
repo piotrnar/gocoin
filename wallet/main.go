@@ -24,7 +24,7 @@ var (
 	// Wallet options
 	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
-	keycnt *uint = flag.Uint("n", 25, "Set the number of keys to be used")
+	keycnt *uint = flag.Uint("n", 50, "Set the number of keys to be used")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
