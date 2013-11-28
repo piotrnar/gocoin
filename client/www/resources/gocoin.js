@@ -54,3 +54,10 @@ function val2int(str) {
 	}
 	return Number.NaN
 }
+
+function tim2str(tim) {
+	var d = new Date(tim*1000)
+	var res = d.getFullYear() + "/" + leftpad(d.getMonth()+1, "0", 2) + "/" + leftpad(d.getDate(), "0", 2)
+	res = res + " " + leftpad(d.getHours(), "0", 2) + ":" + leftpad(d.getMinutes(), "0", 2)
+	return res
+}

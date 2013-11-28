@@ -24,6 +24,15 @@ func raw_balance(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(wallet.UpdateBalanceFolder()))
 }
 
+func get_block_time(height uint32) (res uint32) {
+	common.Last.Mutex.Lock()
+	for bl:=common.Last.Block; bl!=nil && bl.Height>=height; bl=bl.Parent {
+		res = bl.Timestamp
+	}
+	common.Last.Mutex.Unlock()
+	return
+}
+
 func xml_balance(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -39,6 +48,7 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<vout>", wallet.MyBalance[i].TxPrevOut.Vout, "</vout>")
 		fmt.Fprint(w, "<value>", wallet.MyBalance[i].Value, "</value>")
 		fmt.Fprint(w, "<inblock>", wallet.MyBalance[i].MinedAt, "</inblock>")
+		fmt.Fprint(w, "<blocktime>", get_block_time(wallet.MyBalance[i].MinedAt), "</blocktime>")
 		fmt.Fprint(w, "<addr>", wallet.MyBalance[i].BtcAddr.String(), "</addr>")
 		fmt.Fprint(w, "<label>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Label), "</label>")
 		w.Write([]byte("</output>"))
