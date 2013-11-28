@@ -1,4 +1,5 @@
 0.8.3
+* Support for GOCOIN_WALLET_CONFIG env variable (enforces the wallet's config file)
 * Added CFG.PayCommandName so you could e.g. make it .bat or .sh (the default is "pay_cmd.txt")
 * The home tab shows time next to each unspent outputs
 * Cosmetic here and there...
