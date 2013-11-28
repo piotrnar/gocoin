@@ -27,6 +27,10 @@ function show_unspent() {
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'inblock')
 
+				c=row.insertCell(-1);c.align='right'
+				c.className ='i'
+				c.innerHTML = tim2str(xval(txs[i], 'blocktime'))
+
 				c = row.insertCell(-1)
 				c.className ='mono'
 				c.innerHTML = xval(txs[i], 'txid')

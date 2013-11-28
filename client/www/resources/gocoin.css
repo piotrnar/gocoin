@@ -28,6 +28,10 @@ a.menuat {
 	text-align: right;
 }
 
+.i {
+	font-style:italic;
+}
+
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;
