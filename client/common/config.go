@@ -66,6 +66,7 @@ var (
 		}
 		MiningStatHours uint
 		UserAgent string
+		PayCommandName string
 	}
 
 	mutex_cfg sync.Mutex
@@ -106,6 +107,7 @@ func init() {
 
 	CFG.MiningStatHours = 24
 	CFG.UserAgent = DefaultUserAgent
+	CFG.PayCommandName = "pay_cmd.txt"
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
