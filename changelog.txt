@@ -1,5 +1,6 @@
 0.8.3
-* Cosmetic
+* Added CFG.PayCommandName so you could e.g. make it .bat or .sh (the default is "pay_cmd.txt")
+* Cosmetic here and there...
 
 0.8.2
 * "fetchbal" can work via tor now (set env variable TOR=localhost:9150)
