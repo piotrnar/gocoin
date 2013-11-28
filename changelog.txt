@@ -1,5 +1,6 @@
 0.8.3
 * Added CFG.PayCommandName so you could e.g. make it .bat or .sh (the default is "pay_cmd.txt")
+* The home tab shows time next to each unspent outputs
 * Cosmetic here and there...
 
 0.8.2
