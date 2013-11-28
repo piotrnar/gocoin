@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,7 +9,11 @@ import (
 )
 
 func parse_config() {
-	d, e := ioutil.ReadFile("wallet.cfg")
+	cfgfn := os.Getenv("GOCOIN_WALLET_CONFIG")
+	if cfgfn=="" {
+		cfgfn = "wallet.cfg"
+	}
+	d, e := ioutil.ReadFile(cfgfn)
 	if e != nil {
 		fmt.Println("wallet.cfg not found")
 		return
