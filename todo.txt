@@ -1,4 +1,4 @@
-* BUG: Rejected transactions don't seem to get removed from the map inside "func TxMined"
+* Rejected transactions that have already been mined should not end up in "TransactionsRejected"
 * Finish "chaindl" tool
 * Add some an address book for MakeTx destination addresses
 * Add support for relay=0 received from peers (do not send tx invs to them)
