@@ -1,3 +1,7 @@
+0.8.4
+* We do not add mined txs to TransactionsRejected map (or at least try to)
+* WebUI cosmetic here and there...
+
 0.8.3
 * Support for GOCOIN_WALLET_CONFIG env variable (enforces the wallet's config file)
 * Added CFG.PayCommandName so you could e.g. make it .bat or .sh (the default is "pay_cmd.txt")
