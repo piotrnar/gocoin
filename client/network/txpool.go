@@ -87,7 +87,7 @@ func VoutIdx(po *btc.TxPrevOut) (uint64) {
 	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
 }
 
-// Return false if we do not want to receive a data fotr this tx
+// Return false if we do not want to receive a data for this tx
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	TxMutex.Lock()
 	if _, present := TransactionsToSend[id.Hash]; present {
@@ -122,7 +122,7 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 // Handle incomming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
-	if uint32(len(pl))>atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
+	if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
 		common.CountSafe("TxTooBig")
 		TransactionsRejected[tid.BIdx()] = NewRejectedTx(tid, len(pl), TX_REJECTED_TOO_BIG)
 		return
