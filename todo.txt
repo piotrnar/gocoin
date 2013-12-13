@@ -1,3 +1,4 @@
+* "signrawtransaction" for the wallet (including partial signing, with own keys only)
 * Rejected transactions that have already been mined should not end up in "TransactionsRejected"
 * Finish "chaindl" tool
 * Add some an address book for MakeTx destination addresses
@@ -10,4 +11,3 @@
 * Try to make own (faster) implementation of sha256 and rimp160
 * Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
-* "signrawtransaction" for the wallet (so a user could compose the tx in an online node)
