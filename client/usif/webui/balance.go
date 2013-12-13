@@ -119,7 +119,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
 	if er == nil {
 		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size() > 20 {
+			if !fis[i].IsDir() && fis[i].Size() > 1 {
 				s := strings.Replace(wal1, "{WALLET_NAME}", fis[i].Name(), -1)
 				page = templ_add(page, "<!--ONEWALLET-->", s)
 			}
