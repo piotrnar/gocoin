@@ -77,7 +77,7 @@ func make_signed_tx() {
 				//fmt.Println("SignatureHash:", btc.NewUint256(h).String())
 
 				// Sign
-				r, s, err := ecdsa_Sign(&key, h)
+				r, s, err := btc.EcdsaSign(&key, h)
 				if err != nil {
 					println("Sign:", err.Error())
 					os.Exit(1)
