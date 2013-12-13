@@ -155,33 +155,31 @@ func load_balance(showbalance bool) {
 			unspentOuts = append(unspentOuts, uns)
 			unspentOutsLabel = append(unspentOutsLabel, lab)
 
-			if showbalance {
-				// Check if we have private key for this input
-				uo := UO(uns)
-				fnd := false
-				for j := range publ_addrs {
-					if publ_addrs[j].Owns(uo.Pk_script) {
-						totBtc += UO(uns).Value
-						fnd = true
-						break
-					}
-				}
+			// Sum up all the balance and check if we have private key for this input
+			uo := UO(uns)
+			totBtc += UO(uns).Value
 
-				if !fnd {
-					unknownInputs++
-					if *verbose {
-						ss := uns.String()
-						ss = ss[:8]+"..."+ss[len(ss)-12:]
-						fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
-					}
+			fnd := false
+			for j := range publ_addrs {
+				if publ_addrs[j].Owns(uo.Pk_script) {
+					fnd = true
+					break
 				}
 			}
 
+			if showbalance && !fnd {
+				unknownInputs++
+				if *verbose {
+					ss := uns.String()
+					ss = ss[:8]+"..."+ss[len(ss)-12:]
+					fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
+				}
+			}
 		}
 	}
 	f.Close()
+	fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
 	if showbalance {
-		fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
 		if unknownInputs > 0 {
 			fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);
 		}
@@ -239,7 +237,8 @@ func main() {
 	if send_request() {
 		load_balance(true)
 		if spendBtc + feeBtc > totBtc {
-			fmt.Println("WARNING: You are trying to spend more than you own")
+			fmt.Println("ERROR: You are trying to spend more than you own")
+			return
 		}
 		make_signed_tx()
 	}
