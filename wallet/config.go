@@ -75,13 +75,7 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 				}
 
-			case "secrand":
-				v, e := strconv.ParseBool(ll[1])
-				if e == nil {
-					*secrand = v
-				} else {
-					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
-				}
+			// case "secrand": <-- deprecated
 
 			case "fee":
 				v, e := strconv.ParseFloat(ll[1], 64)
