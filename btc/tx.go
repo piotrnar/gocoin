@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
+	"math/big"
+	"crypto/ecdsa"
 	"encoding/hex"
-	"encoding/binary"
 	"crypto/sha256"
+	"encoding/binary"
 )
 
 const (
@@ -197,6 +199,68 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	sha.Reset()
 	sha.Write(tmp)
 	return sha.Sum(nil)
+}
+
+
+// Signs a specified transaction input
+func (tx *Tx) Sign(in int, pk_script []byte, hash_type byte, pubkey, priv_key []byte) error {
+	if in >= len(tx.TxIn) {
+		return errors.New("tx.Sign() - input index overflow")
+	}
+
+	pub_key, er := NewPublicKey(pubkey)
+	if er != nil {
+		return er
+	}
+
+	// Load the key (private and public)
+	var key ecdsa.PrivateKey
+	key.D = new(big.Int).SetBytes(priv_key)
+	key.PublicKey = pub_key.PublicKey
+
+	//Calculate proper transaction hash
+	h := tx.SignatureHash(pk_script, in, hash_type)
+
+	// Sign
+	r, s, er := EcdsaSign(&key, h)
+	if er != nil {
+		return er
+	}
+	rb := r.Bytes()
+	sb := s.Bytes()
+
+	if rb[0] >= 0x80 {
+		rb = append([]byte{0x00}, rb...)
+	}
+
+	if sb[0] >= 0x80 {
+		sb = append([]byte{0x00}, sb...)
+	}
+
+	// Output the signing result into a buffer, in format expected by bitcoin protocol
+	busig := new(bytes.Buffer)
+	busig.WriteByte(0x30)
+	busig.WriteByte(byte(4+len(rb)+len(sb)))
+	busig.WriteByte(0x02)
+	busig.WriteByte(byte(len(rb)))
+	busig.Write(rb)
+	busig.WriteByte(0x02)
+	busig.WriteByte(byte(len(sb)))
+	busig.Write(sb)
+	busig.WriteByte(0x01) // hash type
+
+	// Output the signature and the public key into tx.ScriptSig
+	buscr := new(bytes.Buffer)
+	buscr.WriteByte(byte(busig.Len()))
+	buscr.Write(busig.Bytes())
+
+	buscr.WriteByte(byte(len(pubkey)))
+	buscr.Write(pubkey)
+
+	// assign sign script ot the tx:
+	tx.TxIn[in].ScriptSig = buscr.Bytes()
+
+	return nil // no error
 }
 
 
