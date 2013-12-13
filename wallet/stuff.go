@@ -244,7 +244,7 @@ func dump_raw_tx() {
 	}
 	for i := range tx.TxOut {
 		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, aver)
-		fmt.Printf("%5d) %20.8f BTC to address %s\n", i, float64(tx.TxOut[i].Value)/1e8, addr.String())
+		fmt.Printf("%5d) %20s BTC to address %s\n", i, btc.UintToBtc(tx.TxOut[i].Value), addr.String())
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)
 }
