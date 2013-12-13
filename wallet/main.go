@@ -241,5 +241,9 @@ func main() {
 			return
 		}
 		make_signed_tx()
+		return
 	}
+
+	// If no command specified, just print the balance
+	load_balance(true)
 }
