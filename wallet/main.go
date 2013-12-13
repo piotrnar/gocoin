@@ -44,8 +44,6 @@ var (
 	signaddr *string  = flag.String("sign", "", "Request a sign operation with a given bitcoin address")
 	message *string  = flag.String("msg", "", "Defines a message to be signed (otherwise take it from stdin)")
 
-	secrand *bool = flag.Bool("sr", true, "Use a proprietary random number source")
-
 	useallinputs *bool = flag.Bool("useallinputs", false, "Use all the unspent outputs as the transaction inputs")
 
 	// set in load_balance():
