@@ -3,6 +3,7 @@ package btc
 import (
 	"os"
 	"io"
+	"fmt"
 	"errors"
 	"strings"
 	"strconv"
@@ -246,4 +247,10 @@ func ParseValue(s string) uint64 {
 	}
 
 	return 1e8*big + small
+}
+
+
+// Converts value of satoshis to a BTC-value string (with 8 decimal points)
+func UintToBtc(val uint64) (string) {
+	return fmt.Sprintf("%d.%08d", val/1e8, val%1e8)
 }
