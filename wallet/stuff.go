@@ -198,27 +198,34 @@ func hex_dump(d []byte) (s string) {
 }
 
 
-// sign raw transaction with all the keys we have
-func dump_raw_tx() {
-	d, er := ioutil.ReadFile(*dumptxfn)
+func raw_tx_from_file(fn string) *btc.Tx {
+	d, er := ioutil.ReadFile(fn)
 	if er != nil {
 		fmt.Println(er.Error())
+		return nil
 	}
 
 	dat, er := hex.DecodeString(string(d))
 	if er != nil {
-		fmt.Println("hex.DecodeString failed - assume binary file")
+		fmt.Println("hex.DecodeString failed - assume binary transaction file")
 		dat = d
 	}
-
 	tx, txle := btc.NewTx(dat)
+
+	if tx != nil && txle != len(dat) {
+		fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
+	}
+
+	return tx
+}
+
+
+// sign raw transaction with all the keys we have
+func dump_raw_tx() {
+	tx := raw_tx_from_file(*dumptxfn)
 	if tx == nil {
 		fmt.Println("ERROR: Cannot decode the raw transaction")
 		return
-	}
-
-	if txle != len(dat) {
-		fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
 	}
 
 	fmt.Println("Version:", tx.Version)

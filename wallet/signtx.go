@@ -140,20 +140,10 @@ func make_signed_tx() {
 
 // sign raw transaction with all the keys we have
 func sing_raw_tx() {
-	dat, er := hex.DecodeString(*rawtx)
-	if er != nil {
-		fmt.Println(er.Error())
-		return
-	}
-
-	tx, txle := btc.NewTx(dat)
+	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
 		fmt.Println("ERROR: Cannot decode the raw transaction")
 		return
-	}
-
-	if txle != len(dat) {
-		fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
 	}
 
 	sign_tx(tx)
