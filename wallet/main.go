@@ -46,6 +46,12 @@ var (
 
 	useallinputs *bool = flag.Bool("useallinputs", false, "Use all the unspent outputs as the transaction inputs")
 
+	// Sign raw TX
+	rawtx *string  = flag.String("raw", "", "Sign a raw transaction (use hex-encoded string)")
+
+	// Decode raw tx
+	dumptxfn *string  = flag.String("d", "", "Decode raw transaction from the specified file")
+
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string
@@ -95,7 +101,7 @@ func dump_addrs() {
 }
 
 // load the content of the "balance/" folder
-func load_balance() {
+func load_balance(showbalance bool) {
 	var unknownInputs int
 	f, e := os.Open("balance/unspent.txt")
 	if e != nil {
@@ -146,31 +152,39 @@ func load_balance() {
 				}
 			}
 
-			uo := UO(uns)
-			fnd := false
-			for j := range publ_addrs {
-				if publ_addrs[j].Owns(uo.Pk_script) {
-					unspentOuts = append(unspentOuts, uns)
-					unspentOutsLabel = append(unspentOutsLabel, lab)
-					totBtc += UO(uns).Value
-					fnd = true
-					break
-				}
-			}
+			unspentOuts = append(unspentOuts, uns)
+			unspentOutsLabel = append(unspentOutsLabel, lab)
 
-			if !fnd {
-				unknownInputs++
-				if *verbose {
-					fmt.Println(uns.String(), "does not belogn to your wallet - ignore it")
+			if showbalance {
+				// Check if we have private key for this input
+				uo := UO(uns)
+				fnd := false
+				for j := range publ_addrs {
+					if publ_addrs[j].Owns(uo.Pk_script) {
+						totBtc += UO(uns).Value
+						fnd = true
+						break
+					}
+				}
+
+				if !fnd {
+					unknownInputs++
+					if *verbose {
+						ss := uns.String()
+						ss = ss[:8]+"..."+ss[len(ss)-12:]
+						fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
+					}
 				}
 			}
 
 		}
 	}
 	f.Close()
-	fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
-	if unknownInputs > 0 {
-		fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);
+	if showbalance {
+		fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
+		if unknownInputs > 0 {
+			fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);
+		}
 	}
 }
 
@@ -188,6 +202,12 @@ func main() {
 	parse_config()
 	flag.Parse()
 
+	if *dumptxfn!="" {
+		load_balance(false)
+		dump_raw_tx()
+		return
+	}
+
 	make_wallet()
 
 	if *dump {
@@ -203,18 +223,23 @@ func main() {
 	if *signaddr!="" {
 		sign_message()
 		if *send=="" {
-			// Don't load_balnace if he did not want to spend coins as well
+			// Don't load_balance if he did not want to spend coins as well
 			return
 		}
 	}
 
 	// If no dump, then it should be send money
-	load_balance()
+
+	if *rawtx!="" {
+		load_balance(false)
+		sing_raw_tx()
+		return
+	}
 
 	if send_request() {
+		load_balance(true)
 		if spendBtc + feeBtc > totBtc {
-			fmt.Println("You want to spend more than you own")
-			return
+			fmt.Println("WARNING: You are trying to spend more than you own")
 		}
 		make_signed_tx()
 	}
