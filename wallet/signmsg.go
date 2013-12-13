@@ -54,7 +54,7 @@ func sign_message() {
 		sb[0] += 4
 	}
 
-	btcsig.R, btcsig.S, e = ecdsa_Sign(privkey, hash)
+	btcsig.R, btcsig.S, e = btc.EcdsaSign(privkey, hash)
 	if e != nil {
 		println(e.Error())
 		return
