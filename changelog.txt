@@ -2,6 +2,8 @@
 * We do not add mined txs to TransactionsRejected map (or at least try to)
 * WebUI cosmetic here and there...
 * Transaction and EC signing parts moved from the wallet app to the btc package
+* added "-raw" command to the wallet (to sign raw transactions)
+* added "-dump" command to the wallet (to decode a raw transactions)
 
 0.8.3
 * Support for GOCOIN_WALLET_CONFIG env variable (enforces the wallet's config file)

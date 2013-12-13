@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"bufio"
 	"strings"
+	"io/ioutil"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -178,4 +180,64 @@ func dump_prvkey() {
 		}
 		println("Dump Private Key:", a.String(), "not found it the wallet")
 	}
+}
+
+
+func hex_dump(d []byte) (s string) {
+	for {
+		le := 32
+		if len(d) < le {
+			le = len(d)
+		}
+		s += "\t" + hex.EncodeToString(d[:le]) + "\n"
+		d = d[le:]
+		if len(d)==0 {
+			return
+		}
+	}
+}
+
+
+// sign raw transaction with all the keys we have
+func dump_raw_tx() {
+	d, er := ioutil.ReadFile(*dumptxfn)
+	if er != nil {
+		fmt.Println(er.Error())
+	}
+
+	dat, er := hex.DecodeString(string(d))
+	if er != nil {
+		fmt.Println("hex.DecodeString failed - assume binary file")
+		dat = d
+	}
+
+	tx, txle := btc.NewTx(dat)
+	if tx == nil {
+		fmt.Println("ERROR: Cannot decode the raw transaction")
+		return
+	}
+
+	if txle != len(dat) {
+		fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
+	}
+
+	fmt.Println("Version:", tx.Version)
+	fmt.Println("TX IN cnt:", len(tx.TxIn))
+	for i := range tx.TxIn {
+		fmt.Printf("%5d) %s sl=%d seq=%08x\n", i, tx.TxIn[i].Input.String(),
+			len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
+		if *verbose {
+			fmt.Print(hex_dump(tx.TxIn[i].ScriptSig))
+		}
+	}
+	fmt.Println("TX OUT cnt:", len(tx.TxOut))
+	aver := btc.ADDRVER_BTC
+	if *testnet {
+		aver = btc.ADDRVER_TESTNET
+	}
+	for i := range tx.TxOut {
+		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, aver)
+		fmt.Printf("%5d) %20.8f BTC to address %s\n", i, float64(tx.TxOut[i].Value)/1e8, addr.String())
+	}
+	fmt.Println("Lock Time:", tx.Lock_time)
 }

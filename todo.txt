@@ -1,4 +1,3 @@
-* "signrawtransaction" for the wallet (including partial signing, with own keys only)
 * Rejected transactions that have already been mined should not end up in "TransactionsRejected"
 * Finish "chaindl" tool
 * Add some an address book for MakeTx destination addresses
