@@ -3,9 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"bytes"
-	"math/big"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -61,68 +58,17 @@ func make_signed_tx() {
 		var found bool
 		for j := range publ_addrs {
 			if publ_addrs[j].Owns(uo.Pk_script) {
-				pub_key, e := btc.NewPublicKey(publ_addrs[j].Pubkey)
-				if e != nil {
-					println("NewPublicKey:", e.Error())
-					os.Exit(1)
-				}
-
-				// Load the key (private and public)
-				var key ecdsa.PrivateKey
-				key.D = new(big.Int).SetBytes(priv_keys[j][:])
-				key.PublicKey = pub_key.PublicKey
-
-				//Calculate proper transaction hash
-				h := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
-				//fmt.Println("SignatureHash:", btc.NewUint256(h).String())
-
-				// Sign
-				r, s, err := btc.EcdsaSign(&key, h)
-				if err != nil {
-					println("Sign:", err.Error())
-					os.Exit(1)
-				}
-				rb := r.Bytes()
-				sb := s.Bytes()
-
-				if rb[0] >= 0x80 {
-					rb = append([]byte{0x00}, rb...)
-				}
-
-				if sb[0] >= 0x80 {
-					sb = append([]byte{0x00}, sb...)
-				}
-
-				// Output the signing result into a buffer, in format expected by bitcoin protocol
-				busig := new(bytes.Buffer)
-				busig.WriteByte(0x30)
-				busig.WriteByte(byte(4+len(rb)+len(sb)))
-				busig.WriteByte(0x02)
-				busig.WriteByte(byte(len(rb)))
-				busig.Write(rb)
-				busig.WriteByte(0x02)
-				busig.WriteByte(byte(len(sb)))
-				busig.Write(sb)
-				busig.WriteByte(0x01) // hash type
-
-				// Output the signature and the public key into tx.ScriptSig
-				buscr := new(bytes.Buffer)
-				buscr.WriteByte(byte(busig.Len()))
-				buscr.Write(busig.Bytes())
-
-				buscr.WriteByte(byte(len(publ_addrs[j].Pubkey)))
-				buscr.Write(publ_addrs[j].Pubkey)
-
-				// assign:
-				tx.TxIn[in].ScriptSig = buscr.Bytes()
-
 				found = true
+				er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, publ_addrs[j].Pubkey, priv_keys[j][:])
+				if er != nil {
+					fmt.Println("Error signing input", in, "of", len(tx.TxIn))
+					fmt.Println("...", er.Error())
+				}
 				break
 			}
 		}
 		if !found {
 			fmt.Println("You do not have private key for input number", hex.EncodeToString(uo.Pk_script))
-			os.Exit(1)
 		}
 	}
 
