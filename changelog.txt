@@ -1,4 +1,5 @@
 0.8.4
+* Support for JoinCoin sort of transaction in the wallet
 * We do not add mined txs to TransactionsRejected map (or at least try to)
 * WebUI cosmetic here and there...
 * Transaction and EC signing parts moved from the wallet app to the btc package
