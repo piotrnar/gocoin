@@ -106,7 +106,7 @@ func load_balance(showbalance bool) {
 	f, e := os.Open("balance/unspent.txt")
 	if e != nil {
 		println(e.Error())
-		os.Exit(1)
+		return
 	}
 	rd := bufio.NewReader(f)
 	for {
