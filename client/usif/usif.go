@@ -57,7 +57,7 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 			}
 			totinp += po.Value
 			s += fmt.Sprintf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
-				btc.NewAddrFromPkScript(po.Pk_script, common.AddrVersion).String())
+				btc.NewAddrFromPkScript(po.Pk_script, common.Testnet).String())
 		} else {
 			s += fmt.Sprintln(" - UNKNOWN INPUT")
 			missinginp = true
@@ -67,7 +67,7 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 	for i := range tx.TxOut {
 		totout += tx.TxOut[i].Value
 		s += fmt.Sprintf(" %15.8f BTC to %s\n", float64(tx.TxOut[i].Value)/1e8,
-			btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.AddrVersion).String())
+			btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet).String())
 	}
 	if missinginp {
 		s += fmt.Sprintln("WARNING: There are missing inputs and we cannot calc input BTC amount.")

@@ -113,7 +113,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 					w.Write([]byte("<status>OK</status>"))
 				}
 				fmt.Fprint(w, "<value>", po.Value, "</value>")
-				fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(po.Pk_script, common.AddrVersion).String(), "</addr>")
+				fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(po.Pk_script, common.Testnet).String(), "</addr>")
 				fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
 			} else {
 				w.Write([]byte("<status>UNKNOWN INPUT</status>"))
@@ -126,7 +126,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 		for i := range tx.TxOut {
 			w.Write([]byte("<output>"))
 			fmt.Fprint(w, "<value>", tx.TxOut[i].Value, "</value>")
-			fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.AddrVersion).String(), "</addr>")
+			fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet).String(), "</addr>")
 			w.Write([]byte("</output>"))
 		}
 		w.Write([]byte("</outputs>"))

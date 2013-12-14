@@ -104,7 +104,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
-	if common.CFG.Testnet {
+	if common.Testnet {
 		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
 	} else {
 		s = strings.Replace(s, "{TESTNET}", "", 1)

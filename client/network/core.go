@@ -77,6 +77,7 @@ type OneConnection struct {
 		Timestamp uint64
 		Height uint32
 		Agent string
+		DoNotRelayTxs bool
 	}
 
 	// Messages reception state machine:

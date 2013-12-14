@@ -25,11 +25,11 @@ func host_init() {
 		common.GocoinHomeDir = common.CFG.Datadir+string(os.PathSeparator)
 	}
 
+	common.Testnet = common.CFG.Testnet // So chaging this value would will only affect the behaviour after restart
 	if common.CFG.Testnet { // testnet3
 		common.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		common.Magic = [4]byte{0x0B,0x11,0x09,0x07}
 		common.GocoinHomeDir += "tstnet"+string(os.PathSeparator)
-		common.AddrVersion = 0x6f
 		BtcRootDir += "testnet3"+string(os.PathSeparator)
 		network.AlertPubKey, _ = hex.DecodeString("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a")
 		common.MaxPeersNeeded = 100
@@ -37,7 +37,6 @@ func host_init() {
 		common.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 		common.Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 		common.GocoinHomeDir += "btcnet"+string(os.PathSeparator)
-		common.AddrVersion = 0x00
 		network.AlertPubKey, _ = hex.DecodeString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
 		common.MaxPeersNeeded = 1000
 	}
