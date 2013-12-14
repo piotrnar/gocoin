@@ -87,7 +87,7 @@ func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	} else if _, present := TransactionsPending[id.Hash]; present {
 		//res = false
 	} else if txo, _ := common.BlockChain.Unspent.UnspentGet(&btc.TxPrevOut{Hash:id.Hash}); txo != nil {
-		//res = falseuint32()
+		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
 		common.CountSafe("TxMinedRejected")
 	} else {
 		res = true
