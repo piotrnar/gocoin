@@ -1,5 +1,4 @@
 * Add support to P2SH & multisig transactions to the wallet
-* Add support for relay=0 received from peers (do not send tx invs to them)
 * Rejected transactions that have already been mined should not end up in "TransactionsRejected"
 * Finish "chaindl" tool
 * Add some an address book for MakeTx destination addresses
