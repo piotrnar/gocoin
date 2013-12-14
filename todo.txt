@@ -1,6 +1,5 @@
 * Add support to P2SH & multisig transactions to the wallet
-* Rejected transactions that have already been mined should not end up in "TransactionsRejected"
-* Finish "chaindl" tool
+* Complete "chaindl" tool - a dedicated blockchain downloader
 * Add some an address book for MakeTx destination addresses
 * Do something with the fixed 129.132.230.0/24
 * Improve the database folder locking in Linux
