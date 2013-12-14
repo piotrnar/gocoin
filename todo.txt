@@ -1,9 +1,9 @@
+* Implement multisig in the wallet and 3... type addresses in the client
+* Add support for relay=0 received from peers (do not send tx invs to them)
 * Rejected transactions that have already been mined should not end up in "TransactionsRejected"
 * Finish "chaindl" tool
 * Add some an address book for MakeTx destination addresses
-* Add support for relay=0 received from peers (do not send tx invs to them)
 * Do something with the fixed 129.132.230.0/24
-* Broadcast own transaction "slowly" (e.g. with 1 second delay for each new peer)
 * Improve the database folder locking in Linux
 * Implement a secured password input method for the wallet app (for Windows with no mingw)
 * Implement a cache for address balances so switching between wallets would be quick
