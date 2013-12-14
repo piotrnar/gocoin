@@ -238,12 +238,8 @@ func dump_raw_tx() {
 		}
 	}
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
-	aver := btc.ADDRVER_BTC
-	if *testnet {
-		aver = btc.ADDRVER_TESTNET
-	}
 	for i := range tx.TxOut {
-		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, aver)
+		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, *testnet)
 		fmt.Printf("%5d) %20s BTC to address %s\n", i, btc.UintToBtc(tx.TxOut[i].Value), addr.String())
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)

@@ -177,7 +177,7 @@ func main() {
 				pkscr, _ := hex.DecodeString(r.Unspent_outputs[i].Script)
 				b58adr := "???"
 				if pkscr != nil {
-					ba := btc.NewAddrFromPkScript(pkscr, btc.ADDRVER_BTC)
+					ba := btc.NewAddrFromPkScript(pkscr, false)
 					if ba != nil {
 						b58adr = ba.String()
 					}

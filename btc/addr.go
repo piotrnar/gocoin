@@ -7,10 +7,12 @@ import (
 	"errors"
 )
 
+/*
 const (
 	ADDRVER_BTC = byte(0x00)
 	ADDRVER_TESTNET = byte(0x6F)
 )
+*/
 
 type BtcAddr struct {
 	Version byte
@@ -56,6 +58,14 @@ func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
 }
 
 
+func NewAddrFromP2SH(in []byte, ver byte) (a *BtcAddr) {
+	a = new(BtcAddr)
+	a.Version = ver
+	copy(a.Hash160[:], in[:])
+	return
+}
+
+
 func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	a = new(BtcAddr)
 	a.Pubkey = make([]byte, len(in))
@@ -65,15 +75,34 @@ func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	return
 }
 
-func NewAddrFromPkScript(scr []byte, ver byte) (*BtcAddr) {
+
+func AddrVerPubkey(testnet bool) byte {
+	if testnet {
+		return 111
+	} else {
+		return 0
+	}
+}
+
+
+func AddrVerScript(testnet bool) byte {
+	if testnet {
+		return 196
+	} else {
+		return 5
+	}
+}
+
+
+func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
-		return NewAddrFromHash160(scr[3:23], ver)
+		return NewAddrFromHash160(scr[3:23], AddrVerPubkey(testnet))
 	} else if len(scr)==67 && scr[0]==0x41 && scr[66]==0xac {
-		return NewAddrFromPubkey(scr[1:66], ver)
+		return NewAddrFromPubkey(scr[1:66], AddrVerPubkey(testnet))
 	} else if len(scr)==35 && scr[0]==0x21 && scr[34]==0xac {
-		return NewAddrFromPubkey(scr[1:34], ver)
+		return NewAddrFromPubkey(scr[1:34], AddrVerPubkey(testnet))
 	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
-		return NewAddrFromHash160(scr[2:22], ver)
+		return NewAddrFromHash160(scr[2:22], AddrVerScript(testnet))
 	}
 	return nil
 }

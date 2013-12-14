@@ -15,7 +15,7 @@ import (
 
 
 func main() {
-	var version = btc.ADDRVER_BTC
+	var testnet bool
 
 	if len(os.Args) < 3 {
 		fmt.Println("Specify A_public_key and B_secret (and optionaly number of addresses you want)")
@@ -56,7 +56,7 @@ func main() {
 
 		if n < 0 {
 			n = -n
-			version = btc.ADDRVER_TESTNET
+			testnet = true
 		}
 	}
 
@@ -65,7 +65,7 @@ func main() {
 	fmt.Println("#", hex.EncodeToString(sec.Bytes()))
 
 	for i:=1; i<=int(n); i++ {
-		fmt.Println(btc.NewAddrFromPubkey(pubk.Bytes(compressed), version).String(), "TypB", i)
+		fmt.Println(btc.NewAddrFromPubkey(pubk.Bytes(compressed), testnet).String(), "TypB", i)
 		if i >= int(n) {
 			break
 		}
