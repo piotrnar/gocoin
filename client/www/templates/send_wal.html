@@ -46,7 +46,7 @@ function recalc_to_pay() {
 		}
 	}
 	var chval = selected_value-totsend
-	changeval.innerText = val2str(chval)
+	changeval.value = val2str(chval)
 	if (chval<0) {
 		changeval.style.color = 'red'
 		butdisabled = true
@@ -134,7 +134,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 			<option value="">The first input's address</option>
 			<!--ONECHANGEADDR-->
 		</select>
-	<td class="mono r" id="changeval">
+	<td class="r">
+	<input type="text" class="mono" id="changeval" size="13" readonly="readonly" style="text-align:right" onclick="this.select()">
 </tr>
 
 <tr>
