@@ -5,6 +5,7 @@
 * Transaction and EC signing parts moved from the wallet app to the btc package
 * Added "-raw <filename>" and "-d <filename>" command to the wallet (to sign, decode transaction file)
 * Fixed decoding of P2SH-type addresses in btc.NewAddrFromPkScript()
+* Added support for relay=0 received from peers (do not send tx invs to them)
 
 0.8.3
 * Support for GOCOIN_WALLET_CONFIG env variable (enforces the wallet's config file)
