@@ -167,3 +167,31 @@ func make_wallet() {
 		}
 	}
 }
+
+
+// Print all the public addresses
+func dump_addrs() {
+	f, _ := os.Create("wallet.txt")
+
+	fmt.Fprintln(f, "# Deterministic Walet Type", *waltype)
+	if type2_secret!=nil {
+		fmt.Fprintln(f, "#", hex.EncodeToString(publ_addrs[0].Pubkey))
+		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret.Bytes()))
+	}
+	for i := range publ_addrs {
+		if !*noverify {
+			if er := btc.VerifyKeyPair(priv_keys[i], publ_addrs[i].Pubkey); er!=nil {
+				println("Something wrong with key at index", i, " - abort!", er.Error())
+				os.Exit(1)
+			}
+		}
+		fmt.Println(publ_addrs[i].String(), labels[i])
+		if f != nil {
+			fmt.Fprintln(f, publ_addrs[i].String(), labels[i])
+		}
+	}
+	if f != nil {
+		f.Close()
+		fmt.Println("You can find all the addresses in wallet.txt file")
+	}
+}
