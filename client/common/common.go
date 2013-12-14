@@ -21,7 +21,7 @@ var (
 	BlockChain *btc.Chain
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
-	AddrVersion byte
+	Testnet bool
 
 	Last struct {
 		sync.Mutex // use it for writing and reading from non-chain thread

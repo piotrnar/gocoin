@@ -562,7 +562,7 @@ func init() {
 
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 
-	newUi("pers", false, show_addresses, "Dump pers database (warning: may be long)")
+	newUi("peers", false, show_addresses, "Dump pers database (warning: may be long)")
 
 	newUi("alerts a", false, list_alerst, "Show received alerts")
 }
