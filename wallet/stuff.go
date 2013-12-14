@@ -183,21 +183,6 @@ func dump_prvkey() {
 }
 
 
-func hex_dump(d []byte) (s string) {
-	for {
-		le := 32
-		if len(d) < le {
-			le = len(d)
-		}
-		s += "\t" + hex.EncodeToString(d[:le]) + "\n"
-		d = d[le:]
-		if len(d)==0 {
-			return
-		}
-	}
-}
-
-
 func raw_tx_from_file(fn string) *btc.Tx {
 	d, er := ioutil.ReadFile(fn)
 	if er != nil {
@@ -217,30 +202,4 @@ func raw_tx_from_file(fn string) *btc.Tx {
 	}
 
 	return tx
-}
-
-
-// sign raw transaction with all the keys we have
-func dump_raw_tx() {
-	tx := raw_tx_from_file(*dumptxfn)
-	if tx == nil {
-		fmt.Println("ERROR: Cannot decode the raw transaction")
-		return
-	}
-
-	fmt.Println("Version:", tx.Version)
-	fmt.Println("TX IN cnt:", len(tx.TxIn))
-	for i := range tx.TxIn {
-		fmt.Printf("%5d) %s sl=%d seq=%08x\n", i, tx.TxIn[i].Input.String(),
-			len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
-		if *verbose {
-			fmt.Print(hex_dump(tx.TxIn[i].ScriptSig))
-		}
-	}
-	fmt.Println("TX OUT cnt:", len(tx.TxOut))
-	for i := range tx.TxOut {
-		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, *testnet)
-		fmt.Printf("%5d) %20s BTC to address %s\n", i, btc.UintToBtc(tx.TxOut[i].Value), addr.String())
-	}
-	fmt.Println("Lock Time:", tx.Lock_time)
 }
