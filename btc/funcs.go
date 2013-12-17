@@ -208,18 +208,19 @@ func IsPushOnly(scr []byte) bool {
 	return true
 }
 
-
-// Parses floating number abount to return an int value expressed in Satoshi's
+// Parses a floating number string to return uint64 value expressed in Satoshi's
 // Using strconv.ParseFloat followed by uint64(val*1e8) is not precise enough.
-func ParseValue(s string) uint64 {
+func StringToSatoshis(s string) (val uint64, er error) {
+	var big, small uint64
+
 	ss := strings.Split(s, ".")
 	if len(ss)==1 {
-		val, er := strconv.ParseUint(ss[0], 10, 64)
+		val, er = strconv.ParseUint(ss[0], 10, 64)
 		if er != nil {
-			println("Incorrect amount", s, er.Error())
-			os.Exit(1)
+			return
 		}
-		return 1e8*val
+		val *= 1e8
+		return
 	}
 	if len(ss)!=2 {
 		println("Incorrect amount", s)
@@ -227,28 +228,25 @@ func ParseValue(s string) uint64 {
 	}
 
 	if len(ss[1])>8 {
-		println("Incorrect amount", s)
-		os.Exit(1)
+		er = errors.New("Too many decimal points")
+		return
 	}
 	if len(ss[1])<8 {
 		ss[1] += strings.Repeat("0", 8-len(ss[1]))
 	}
 
-	small, er := strconv.ParseUint(ss[1], 10, 64)
+	small, er = strconv.ParseUint(ss[1], 10, 64)
 	if er != nil {
-		println("Incorrect amount", s, er.Error())
-		os.Exit(1)
+		return
 	}
 
-	big, er := strconv.ParseUint(ss[0], 10, 64)
-	if er != nil {
-		println("Incorrect amount", s, er.Error())
-		os.Exit(1)
+	big, er = strconv.ParseUint(ss[0], 10, 64)
+	if er == nil {
+		val = 1e8*big + small
 	}
 
-	return 1e8*big + small
+	return
 }
-
 
 // Converts value of satoshis to a BTC-value string (with 8 decimal points)
 func UintToBtc(val uint64) (string) {
