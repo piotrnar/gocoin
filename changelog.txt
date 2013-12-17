@@ -1,3 +1,6 @@
+0.8.5
+* From now on every "payment.zip" contains also the unsigned raw transaction file ("tx2sign.txt")
+
 0.8.4
 * Support for JoinCoin sort of transaction in the wallet
 * We do not add mined txs to TransactionsRejected map (or at least try to)
