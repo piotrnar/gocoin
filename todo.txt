@@ -1,3 +1,4 @@
+* Allow to generate unsigned raw transaction in clients MakeTx tab
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
 * Add some an address book for MakeTx destination addresses
