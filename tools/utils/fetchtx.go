@@ -65,8 +65,13 @@ func GetTxFromExplorer(txid *btc.Uint256) ([]byte, []byte) {
 			}
 			tx.TxOut = make([]*btc.TxOut, len(txx.Out))
 			for i := range txx.Out {
+				am, er := btc.StringToSatoshis(txx.Out[i].Value)
+				if er != nil {
+					fmt.Println("Incorrect BTC amount", txx.Out[i].Value, er.Error())
+					return nil, nil
+				}
 				tx.TxOut[i] = new(btc.TxOut)
-				tx.TxOut[i].Value = btc.ParseValue(txx.Out[i].Value)
+				tx.TxOut[i].Value = am
 				tx.TxOut[i].Pk_script, _ = btc.DecodeScript(txx.Out[i].ScriptPubKey)
 			}
 			tx.Lock_time = txx.Lock_time
