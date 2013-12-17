@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -17,7 +18,23 @@ var (
 	LastBalance uint64
 	BalanceChanged bool
 	BalanceInvalid bool = true
+
+	CachedAddrs map[[20]byte] *OneCachedAddrBalance = make(map[[20]byte] *OneCachedAddrBalance)
+	CacheUnspent [] *OneCachedUnspent
+	CacheUnspentIdx map[uint64] [2]uint = make(map[uint64] [2]uint)
 )
+
+
+type OneCachedUnspent struct {
+	*btc.BtcAddr
+	btc.AllUnspentTx  // a cache for unspent outputs (from different wallets)
+}
+
+type OneCachedAddrBalance struct {
+	InWallet bool
+	CacheIndex uint
+	Value uint64
+}
 
 
 func LockBal() {
@@ -29,35 +46,59 @@ func UnlockBal() {
 }
 
 
+func po2idx(po *btc.TxPrevOut) uint64 {
+	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
+}
+
+
 // This is called while accepting the block (from teh chain's thread)
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
+	var update_wallet bool
+
+	mutex_bal.Lock()
+	defer mutex_bal.Unlock()
+
 	if valpk!=nil {
-		if MyWallet==nil {
-			return
+		// Extract hash160 from pkscript
+		adr := btc.NewAddrFromPkScript(valpk.Pk_script, common.Testnet)
+		if adr==nil {
+			return // We do not monitor this address
 		}
-		for i := range MyWallet.Addrs {
-			if MyWallet.Addrs[i].Owns(valpk.Pk_script) {
-				mutex_bal.Lock()
-				MyBalance = append(MyBalance, btc.OneUnspentTx{TxPrevOut:*idx,
-					Value:valpk.Value, MinedAt:valpk.BlockHeight, BtcAddr:MyWallet.Addrs[i]})
-				mutex_bal.Unlock()
-				BalanceChanged = true
-				break
+
+		if rec, ok := CachedAddrs[adr.Hash160]; ok {
+			rec.Value += valpk.Value
+			utxo := btc.OneUnspentTx{TxPrevOut:*idx, Value:valpk.Value,
+					MinedAt:valpk.BlockHeight, BtcAddr:adr}
+			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
+			CacheUnspentIdx[po2idx(idx)] = [2]uint{rec.CacheIndex, uint(len(CacheUnspent[rec.CacheIndex].AllUnspentTx))-1}
+			if rec.InWallet {
+				update_wallet = true
 			}
 		}
 	} else {
-		mutex_bal.Lock()
-		for i := range MyBalance {
-			if MyBalance[i].TxPrevOut == *idx {
-				tmp := make([]btc.OneUnspentTx, len(MyBalance)-1)
-				copy(tmp[:i], MyBalance[:i])
-				copy(tmp[i:], MyBalance[i+1:])
-				MyBalance = tmp
-				BalanceChanged = true
-				break
+		ii := po2idx(idx)
+		if ab, present := CacheUnspentIdx[ii]; present {
+			adrec := CacheUnspent[ab[0]]
+
+			rec := CachedAddrs[adrec.BtcAddr.Hash160]
+			rec.Value -= adrec.AllUnspentTx[ab[1]].Value
+			if rec.InWallet {
+				update_wallet = true
 			}
+
+			adrec.AllUnspentTx = append(adrec.AllUnspentTx[:ab[1]], adrec.AllUnspentTx[ab[1]+1:]...)
+
+			delete(CacheUnspentIdx, ii)
 		}
-		mutex_bal.Unlock()
+	}
+
+	if MyWallet!=nil && update_wallet {
+		MyBalance = nil
+		for i := range MyWallet.Addrs {
+			rec, _ := CachedAddrs[MyWallet.Addrs[i].Hash160]
+			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
+		}
+		BalanceChanged = true
 	}
 }
 
@@ -167,8 +208,44 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 
 func UpdateBalance() {
+	var tofetch []*btc.BtcAddr
+
 	mutex_bal.Lock()
-	MyBalance = common.BlockChain.GetAllUnspent(MyWallet.Addrs, true)
+	defer mutex_bal.Unlock()
+
+	MyBalance = nil
+
+	for _, v := range CachedAddrs {
+		v.InWallet = false
+	}
+
+	for i := range MyWallet.Addrs {
+		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
+			rec.InWallet = true
+			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
+		} else {
+			// Add a new address to the balance cache
+			CachedAddrs[MyWallet.Addrs[i].Hash160] = &OneCachedAddrBalance{InWallet:true, CacheIndex:uint(len(CacheUnspent))}
+			CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
+			tofetch = append(tofetch, MyWallet.Addrs[i])
+		}
+	}
+
+	if len(tofetch)>0 {
+		fmt.Println("Fetching a new blance for", len(tofetch))
+		// There are new addresses which we have not monitored yet
+		new_addrs := common.BlockChain.GetAllUnspent(tofetch, true)
+		for i := range new_addrs {
+			rec := CachedAddrs[new_addrs[i].BtcAddr.Hash160]
+			rec.Value += new_addrs[i].Value
+			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, new_addrs[i])
+			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] =
+				[2]uint{rec.CacheIndex, uint(len(CacheUnspent[rec.CacheIndex].AllUnspentTx))-1}
+		}
+		MyBalance = append(MyBalance, new_addrs...)
+	}
+
+    // Calculate total balance
 	LastBalance = 0
 	if len(MyBalance) > 0 {
 		sort.Sort(MyBalance)
@@ -177,7 +254,6 @@ func UpdateBalance() {
 		}
 	}
 	BalanceInvalid = false
-	mutex_bal.Unlock()
 }
 
 
