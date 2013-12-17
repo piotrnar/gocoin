@@ -53,7 +53,7 @@ func TestParseAmount(t *testing.T) {
 		{"0.00000001", 1},
 	}
 	for i := range tv {
-		res := ParseValue(tv[i].af)
+		res, _ := StringToSatoshis(tv[i].af)
 		if res!=tv[i].ai {
 			t.Error("Mismatch at index", i, tv[i].af, res, tv[i].ai)
 		}
