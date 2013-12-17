@@ -485,6 +485,24 @@ func show_balance(p string) {
 }
 
 
+func show_balance_stats(p string) {
+	println("CachedAddrs count:", len(wallet.CachedAddrs))
+	println("CacheUnspentIdx count:", len(wallet.CacheUnspentIdx))
+	println("CacheUnspent count:", len(wallet.CacheUnspent))
+	if p!="" {
+		wallet.LockBal()
+		for i := range wallet.CacheUnspent {
+			fmt.Printf("%5d) %35s - %d unspent output(s)\n", i, wallet.CacheUnspent[i].BtcAddr.String(),
+				len(wallet.CacheUnspent[i].AllUnspentTx))
+			/*for j := range wallet.CacheUnspent[i].AllUnspentTx {
+				fmt.Printf(" %5d) %s\n", j, wallet.CacheUnspent[i].AllUnspentTx[j].String())
+			}*/
+		}
+		wallet.UnlockBal()
+	}
+}
+
+
 func show_addresses(par string) {
 	fmt.Println(network.PeerDB.Count(), "peers in the database")
 	if par=="list" {
@@ -561,6 +579,7 @@ func init() {
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
+	newUi("balstat", true, show_balance_stats, "Show balance cache statistics")
 
 	newUi("peers", false, show_addresses, "Dump pers database (warning: may be long)")
 
