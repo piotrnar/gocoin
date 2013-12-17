@@ -30,7 +30,12 @@ func parse_spend() {
 			os.Exit(1)
 		}
 
-		am := btc.ParseValue(tmp[1])
+		am, er := btc.StringToSatoshis(tmp[1])
+		if er != nil {
+			println("Incorrect amount: ", tmp[1], er.Error())
+			os.Exit(1)
+		}
+
 		sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
 		spendBtc += am
 	}
@@ -64,7 +69,11 @@ func parse_batch() {
 				os.Exit(1)
 			}
 
-			am := btc.ParseValue(tmp[1])
+			am, e := btc.StringToSatoshis(tmp[1])
+			if e != nil {
+				println("StringToSatoshis:", e.Error())
+				os.Exit(1)
+			}
 
 			sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
 			spendBtc += am
