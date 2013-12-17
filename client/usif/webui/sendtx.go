@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"net/http"
 	"archive/zip"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -25,6 +26,12 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["outcnt"])==1 {
 		var thisbal btc.AllUnspentTx
 		var pay_cmd string
+		var totalinput, spentsofar uint64
+		var change_addr *btc.BtcAddr
+
+		tx := new(btc.Tx)
+		tx.Version = 1
+		tx.Lock_time = 0
 
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 
@@ -40,6 +47,18 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 						for j := range wallet.MyBalance {
 							if wallet.MyBalance[j].TxPrevOut==po {
 								thisbal = append(thisbal, wallet.MyBalance[j])
+
+								// Add the input to our tx
+								tin := new(btc.TxIn)
+								tin.Input = wallet.MyBalance[j].TxPrevOut
+								tin.Sequence = 0xffffffff
+								tx.TxIn = append(tx.TxIn, tin)
+
+								totalinput += wallet.MyBalance[j].Value
+
+								if change_addr == nil {
+									change_addr = wallet.MyBalance[j].BtcAddr
+								}
 							}
 						}
 					}
@@ -49,44 +68,72 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		wallet.UnlockBal()
 
 		for i:=1; ; i++ {
-			is := fmt.Sprint(i)
+			adridx := fmt.Sprint("adr", i)
+			btcidx := fmt.Sprint("btc", i)
 
-			if len(r.Form["adr"+is])!=1 {
+			if len(r.Form[adridx])!=1 || len(r.Form[btcidx])!=1 {
 				break
 			}
 
-			if len(r.Form["btc"+is])!=1 {
-				break
-			}
-
-			if len(r.Form["adr"+is][0])>1 {
-				addr, er := btc.NewAddrFromString(r.Form["adr"+is][0])
+			if len(r.Form[adridx][0])>1 {
+				addr, er := btc.NewAddrFromString(r.Form[adridx][0])
 				if er == nil {
-					am, er := strconv.ParseFloat(r.Form["btc"+is][0], 64)
+					am, er := btc.StringToSatoshis(r.Form[btcidx][0])
 					if er==nil && am>0 {
 						if pay_cmd=="" {
 							pay_cmd = "wallet -useallinputs -send "
 						} else {
 							pay_cmd += ","
 						}
-						pay_cmd += addr.Enc58str + "=" + fmt.Sprintf("%.8f", am)
+						pay_cmd += addr.Enc58str + "=" + btc.UintToBtc(am)
+
+						tout := new(btc.TxOut)
+						tout.Value = am
+						tout.Pk_script = addr.OutScript()
+						tx.TxOut = append(tx.TxOut, tout)
+
+						spentsofar += am
 					} else {
-						err = "Incorrect amount (" + r.Form["btc"+is][0] + ") for Output #" + is
+						err = "Incorrect amount (" + r.Form[btcidx][0] + ") for Output #" + fmt.Sprint(i)
 						goto error
 					}
 				} else {
-					err = "Incorrect address (" + r.Form["adr"+is][0] + ") for Output #" + is
+					err = "Incorrect address (" + r.Form[adridx][0] + ") for Output #" + fmt.Sprint(i)
 					goto error
 				}
 			}
 		}
 
-		if pay_cmd!="" && len(r.Form["txfee"])==1 {
-			pay_cmd += " -fee " + r.Form["txfee"][0]
+		if pay_cmd=="" {
+			err = "No inputs selected"
+			goto error
 		}
 
-		if pay_cmd!="" && len(r.Form["change"])==1 && len(r.Form["change"][0])>1 {
-			pay_cmd += " -change " + r.Form["change"][0]
+		am, er := btc.StringToSatoshis(r.Form["txfee"][0])
+		if er != nil {
+			err = "Incorrect fee value: " + r.Form["txfee"][0]
+			goto error
+		}
+
+		pay_cmd += " -fee " + r.Form["txfee"][0]
+		spentsofar += am
+
+		if len(r.Form["change"][0])>1 {
+			addr, er := btc.NewAddrFromString(r.Form["change"][0])
+			if er != nil {
+				err = "Incorrect change address: " + r.Form["change"][0]
+				goto error
+			}
+			change_addr = addr
+		}
+		pay_cmd += " -change " + change_addr.String()
+
+		if totalinput > spentsofar {
+			// Add change output
+			tout := new(btc.TxOut)
+			tout.Value = totalinput - spentsofar
+			tout.Pk_script = change_addr.OutScript()
+			tx.TxOut = append(tx.TxOut, tout)
 		}
 
 		buf := new(bytes.Buffer)
@@ -110,10 +157,15 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				1+common.Last.Block.Height-thisbal[i].MinedAt)
 		}
 
+		// pay_cmd.bat
 		if pay_cmd!="" {
 			fz, _ = zi.Create(common.CFG.PayCommandName)
 			fz.Write([]byte(pay_cmd))
 		}
+
+		// Raw transaction
+		fz, _ = zi.Create("tx2sign.txt")
+		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
 
 		zi.Close()
 		w.Header()["Content-Type"] = []string{"application/zip"}
