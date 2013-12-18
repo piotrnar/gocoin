@@ -1,23 +1,29 @@
 package main
 
-/*
-If you cannot build a wallet app, just delete this file and retry.
-Then characters will be shown on a console when inputing a password.
-*/
-
-/*
-#include <conio.h>
-*/
-import "C"
 import (
 	"os"
 	"fmt"
 )
 
+// New method (requires msvcrt.dll):
+import (
+	"syscall"
+)
+
+var (
+	msvcrt *syscall.LazyDLL
+	_getch *syscall.LazyProc
+)
+
+func getch() int {
+	res, _, _ := syscall.Syscall(_getch.Addr(), 0, 0, 0, 0)
+	return int(res)
+}
+
 func enterpassext() string {
 	var pass string
 	for {
-		chr := byte(C._getch())
+		chr := byte(getch())
 		if chr==3 {
 			os.Exit(0)
 			// Ctrl+C
@@ -45,5 +51,29 @@ func enterpassext() string {
 }
 
 func init() {
+	msvcrt = syscall.NewLazyDLL("msvcrt.dll")
+	if msvcrt == nil {
+		println("Could not open MSVCRT.DLL - characters will be visible during passowrd input.")
+		return
+	}
+	_getch = msvcrt.NewProc("_getch")
+	if msvcrt == nil {
+		println("Cannot find _getch in MSVCRT.DLL - characters will be visible during passowrd input.")
+		return
+	}
 	secrespass = enterpassext
 }
+
+
+/*
+Old method (requires mingw):
+
+#include <conio.h>
+// end the comment here when enablign this method
+import "C"
+
+func getch() int {
+	return int(C._getch())
+}
+
+*/
