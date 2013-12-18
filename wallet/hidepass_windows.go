@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	msvcrt *syscall.LazyDLL
-	_getch *syscall.LazyProc
+	msvcrt = syscall.NewLazyDLL("msvcrt.dll")
+	_getch = msvcrt.NewProc("_getch")
 )
 
 func getch() int {
@@ -51,16 +51,13 @@ func enterpassext() string {
 }
 
 func init() {
-	msvcrt = syscall.NewLazyDLL("msvcrt.dll")
-	if msvcrt == nil {
-		println("Could not open MSVCRT.DLL - characters will be visible during passowrd input.")
+	er := _getch.Find()
+	if er != nil {
+		println(er.Error())
+		println("WARNING: Characters will be visible during password input.")
 		return
 	}
-	_getch = msvcrt.NewProc("_getch")
-	if msvcrt == nil {
-		println("Cannot find _getch in MSVCRT.DLL - characters will be visible during passowrd input.")
-		return
-	}
+
 	secrespass = enterpassext
 }
 
