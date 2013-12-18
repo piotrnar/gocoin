@@ -68,7 +68,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		if rec, ok := CachedAddrs[adr.Hash160]; ok {
 			rec.Value += valpk.Value
 			utxo := btc.OneUnspentTx{TxPrevOut:*idx, Value:valpk.Value,
-					MinedAt:valpk.BlockHeight, BtcAddr:adr}
+					MinedAt:valpk.BlockHeight, BtcAddr:CacheUnspent[rec.CacheIndex].BtcAddr}
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
 			CacheUnspentIdx[po2idx(idx)] = [2]uint{rec.CacheIndex, uint(len(CacheUnspent[rec.CacheIndex].AllUnspentTx))-1}
 			if rec.InWallet {
