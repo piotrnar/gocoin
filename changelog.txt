@@ -1,5 +1,6 @@
 0.8.6
 * Added "Load TX" to the top menu in WebUI
+* Fix: after changing a label in a wallet file it get changed in the unspent list as well
 
 0.8.5
 * From now on every "payment.zip" contains also the unsigned raw transaction file ("tx2sign.txt")
