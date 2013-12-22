@@ -97,6 +97,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		for i := range MyWallet.Addrs {
 			rec, _ := CachedAddrs[MyWallet.Addrs[i].Hash160]
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
+			MyBalance[len(MyBalance)-1].BtcAddr = MyWallet.Addrs[i]
 		}
 		BalanceChanged = true
 	}
