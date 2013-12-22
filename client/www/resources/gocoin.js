@@ -61,3 +61,19 @@ function tim2str(tim) {
 	res = res + " " + leftpad(d.getHours(), "0", 2) + ":" + leftpad(d.getMinutes(), "0", 2)
 	return res
 }
+
+function pushtx() {
+	var rawtx = prompt("Enter raw transaction data (hexdump)")
+	if (rawtx!=null) {
+		var form = document.createElement("form")
+		form.setAttribute("method", "post")
+		form.setAttribute("action", "txs")
+		var rtx = document.createElement("input")
+		rtx.setAttribute("type", "hidden")
+		rtx.setAttribute("name", "rawtx")
+		rtx.setAttribute("value", rawtx)
+		form.appendChild(rtx)
+		document.body.appendChild(form)
+		form.submit()
+	}
+}
