@@ -1,3 +1,4 @@
+* Fix: after changing a label in a wallet file it does not change in the unspent list (because of the cache)
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
 * Add some address book to MakeTx WebUI
