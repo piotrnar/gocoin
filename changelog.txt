@@ -1,3 +1,6 @@
+0.8.6
+* Added "Load TX" to the top menu in WebUI
+
 0.8.5
 * From now on every "payment.zip" contains also the unsigned raw transaction file ("tx2sign.txt")
 * Added a cache for address balances to speed up switching between wallets

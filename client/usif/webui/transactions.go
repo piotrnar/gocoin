@@ -7,6 +7,7 @@ import (
 	"strings"
 	"net/http"
 	"io/ioutil"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -20,24 +21,27 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 
 	var txloadresult string
 	var wg sync.WaitGroup
+	var tx2in []byte
 
 	// Check if there is a tx upload request
 	r.ParseMultipartForm(2e6)
 	fil, _, _ := r.FormFile("txfile")
 	if fil != nil {
-		tx2in, _ := ioutil.ReadAll(fil)
-		if len(tx2in)>0 {
-			wg.Add(1)
-			req := &usif.OneUiReq{Param:string(tx2in)}
-			req.Done.Add(1)
-			req.Handler = func(dat string) {
-				txloadresult = usif.LoadRawTx([]byte(dat))
-				wg.Done()
-			}
-			usif.UiChannel <- req
-		}
+		tx2in, _ = ioutil.ReadAll(fil)
+	} else if len(r.Form["rawtx"])==1 {
+		tx2in, _ = hex.DecodeString(r.Form["rawtx"][0])
 	}
 
+	if len(tx2in)>0 {
+		wg.Add(1)
+		req := &usif.OneUiReq{Param:string(tx2in)}
+		req.Done.Add(1)
+		req.Handler = func(dat string) {
+			txloadresult = usif.LoadRawTx([]byte(dat))
+			wg.Done()
+		}
+		usif.UiChannel <- req
+	}
 
 	s := load_template("txs.html")
 	network.TxMutex.Lock()
