@@ -97,7 +97,6 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		for i := range MyWallet.Addrs {
 			rec, _ := CachedAddrs[MyWallet.Addrs[i].Hash160]
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
-			MyBalance[len(MyBalance)-1].BtcAddr = MyWallet.Addrs[i]
 		}
 		BalanceChanged = true
 	}
@@ -223,6 +222,10 @@ func UpdateBalance() {
 	for i := range MyWallet.Addrs {
 		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
 			rec.InWallet = true
+			for j := range CacheUnspent[rec.CacheIndex].AllUnspentTx {
+				// update BtcAddr in each of AllUnspentTx to reflect the latest label
+				CacheUnspent[rec.CacheIndex].AllUnspentTx[j].BtcAddr = MyWallet.Addrs[i]
+			}
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		} else {
 			// Add a new address to the balance cache
