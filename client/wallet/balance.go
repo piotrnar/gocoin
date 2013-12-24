@@ -98,6 +98,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 			rec, _ := CachedAddrs[MyWallet.Addrs[i].Hash160]
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		}
+		sort_and_sum()
 		BalanceChanged = true
 	}
 }
@@ -249,7 +250,12 @@ func UpdateBalance() {
 		MyBalance = append(MyBalance, new_addrs...)
 	}
 
-    // Calculate total balance
+	sort_and_sum()
+}
+
+
+// Calculate total balance and sort MyBalnace by block height
+func sort_and_sum() {
 	LastBalance = 0
 	if len(MyBalance) > 0 {
 		sort.Sort(MyBalance)
