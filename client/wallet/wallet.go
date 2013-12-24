@@ -15,8 +15,11 @@ type OneWallet struct {
 }
 
 
-func LoadWalfile(fn string, included bool) (addrs []*btc.BtcAddr) {
+func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	waldir, walname := filepath.Split(fn)
+	if walname[0]=='.' {
+		walname = walname[1:] // remove trailing dot (from hidden wallets)
+	}
 	f, e := os.Open(fn)
 	if e != nil {
 		println(e.Error())
@@ -33,11 +36,11 @@ func LoadWalfile(fn string, included bool) (addrs []*btc.BtcAddr) {
 		//println(fmt.Sprint(fn, ":", linenr), "...")
 		if len(l)>0 {
 			if l[0]=='@' {
-				if included {
-					println(fmt.Sprint(fn, ":", linenr), "You cannot include wallets recursively")
+				if included>3 {
+					println(fmt.Sprint(fn, ":", linenr), "Too many nested wallets")
 				} else {
 					ifn := strings.Trim(l[1:], " \n\t\t")
-					addrs = append(addrs, LoadWalfile(waldir+ifn, true)...)
+					addrs = append(addrs, LoadWalfile(waldir+ifn, included+1)...)
 				}
 			} else if l[0]!='#' {
 				ls := strings.SplitN(l, " ", 2)
@@ -65,7 +68,7 @@ func LoadWalfile(fn string, included bool) (addrs []*btc.BtcAddr) {
 
 // Load public wallet from a text file
 func NewWallet(fn string) (wal *OneWallet) {
-	addrs := LoadWalfile(fn, false)
+	addrs := LoadWalfile(fn, 0)
 	if len(addrs)>0 {
 		wal = new(OneWallet)
 		wal.FileName = fn
