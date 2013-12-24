@@ -237,7 +237,7 @@ func UpdateBalance() {
 	}
 
 	if len(tofetch)>0 {
-		fmt.Println("Fetching a new blance for", len(tofetch))
+		//fmt.Println("Fetching a new blance for", len(tofetch))
 		// There are new addresses which we have not monitored yet
 		new_addrs := common.BlockChain.GetAllUnspent(tofetch, true)
 		for i := range new_addrs {
