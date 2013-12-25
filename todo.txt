@@ -1,4 +1,5 @@
 * Something crashes when thre is a balance update - investigate!
+* Expire ExternalIp-s that were noticed 'long ago'
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
 * Add some address book to MakeTx WebUI
