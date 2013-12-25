@@ -15,6 +15,7 @@ type Block struct {
 	MerkleRoot []byte
 	BlockTime uint32
 	Bits uint32
+	Nonce uint32	
 
 	// if the block is trusted, we do not check signatures and some other things...
 	Trusted bool
@@ -34,6 +35,7 @@ func NewBlock(data []byte) (*Block, error) {
 	bl.MerkleRoot = data[36:68]
 	bl.BlockTime = binary.LittleEndian.Uint32(data[68:72])
 	bl.Bits = binary.LittleEndian.Uint32(data[72:76])
+	bl.Nonce = binary.LittleEndian.Uint32(data[76:80])
 	return &bl, nil
 }
 
