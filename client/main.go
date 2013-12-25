@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"unsafe"
 	"runtime"
 	"os/signal"
 	"github.com/piotrnar/gocoin/btc"
@@ -187,6 +188,10 @@ func defrag_db() {
 func main() {
 	if btc.EC_Verify==nil {
 		fmt.Println("WARNING: EC_Verify acceleration disabled. Enable EC_Verify wrapper if possible.")
+	}
+	var ptr *byte
+	if unsafe.Sizeof(ptr) < 8 {
+		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
 	fmt.Println("Gocoin client version", btc.SourcesTag)
