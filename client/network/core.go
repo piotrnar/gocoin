@@ -345,6 +345,7 @@ func maxmsgsize(cmd string) uint32 {
 
 func NetCloseAll() {
 	println("Closing network")
+	common.NetworkClosed = true
 	common.LockCfg()
 	common.CFG.Net.ListenTCP = false
 	common.UnlockCfg()
