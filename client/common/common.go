@@ -45,6 +45,8 @@ var (
 
 	BusyWith string
 	Busy_mutex sync.Mutex
+
+	NetworkClosed bool
 )
 
 

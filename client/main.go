@@ -7,6 +7,7 @@ import (
 	"unsafe"
 	"runtime"
 	"os/signal"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -206,6 +207,7 @@ func main() {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			println("main panic recovered:", err.Error())
+			println(debug.Stack())
 			network.NetCloseAll()
 			common.CloseBlockChain()
 			network.ClosePeerDB()

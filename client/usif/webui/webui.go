@@ -30,6 +30,9 @@ const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
 `
 
 func ipchecker(r *http.Request) bool {
+	if common.NetworkClosed {
+		return false
+	}
 	var a,b,c,d uint32
 	n, _ := fmt.Sscanf(r.RemoteAddr, "%d.%d.%d.%d", &a, &b, &c, &d)
 	if n!=4 {
