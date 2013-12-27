@@ -1,4 +1,4 @@
-* Something crashes when thre is a balance update - investigate!
+* I think I saw some crashes when there was a change in a balance - keep an eye on it!
 * Expire ExternalIp-s that were noticed 'long ago'
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
