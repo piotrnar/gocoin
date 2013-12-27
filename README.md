@@ -60,3 +60,11 @@ Go to the `wallet/` folder and execute `go build` there.
 
 If it fails on Windows, it is most likely because you do not have a compatible C compiler installed.
 In such case either install MinGW for your host arch (32 or 64 bit), or just delete `hidepass_windows.go` and redo `go build`.
+
+
+# Pull request
+I am sorry to inform you that I will not merge in any pull requests.
+The reason is that I want to stay the only author of this software and therefore the only holder of the copy rights.
+I could have told you that I can pull your changes, if you waive the rights to your pieces of code, but that would be just rude.
+So please fork and develop your own repo, if you want your code in.
+Again, sorry about that.
