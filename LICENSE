@@ -20,13 +20,15 @@ I can also turn this code into any application for your business, including clos
 
 secp256k1
 -----------------------
-The implementation of the native ECDSA speedup package "btc/newec" is based on the code created by Pieter Wuille.
-The code itself has been completely rewritten, but the original author deserves a credit for all the algorithms.
+The implementation of the native ECDSA speedup package "btc/newec" is based on the code created 
+by Pieter Wuille. The code itself has been completely rewritten, but the original author deserves
+a credit for all the algorithms.
  * https://github.com/sipa/secp256k1/blob/master/COPYING
 
 
 bitcoin-qt
 -----------------------
-Some parts of the source code (e.g. "btc/target.go") and some test vectors ("btc/test/*.json") were taken from the original (satoshi's) bitcoin client.
+Some parts of the source code (e.g. "btc/target.go") and some test vectors ("btc/test/*.json")
+were taken from the original (satoshi's) bitcoin client.
  * https://github.com/bitcoin/bitcoin/blob/master/COPYING
 
