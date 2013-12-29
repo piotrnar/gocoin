@@ -69,13 +69,13 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 
 	network.ExternalIpMutex.Lock()
-	for ip, cnt := range network.ExternalIp4 {
-		s = strings.Replace(s, "{ONE_EXTERNAL_IP}",
-			fmt.Sprintf("%dx%d.%d.%d.%d&nbsp;&nbsp;{ONE_EXTERNAL_IP}", cnt,
-				byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip)), 1)
+	for ip, rec := range network.ExternalIp4 {
+		ips := fmt.Sprintf("<b title=\"%d times. Last seen %d min ago\">%d.%d.%d.%d</b>&nbsp;&nbsp;",
+				rec[0], (uint(time.Now().Unix())-rec[1])/60,
+				byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
+		s = templ_add(s, "<!--ONE_EXTERNAL_IP-->", ips)
 	}
 	network.ExternalIpMutex.Unlock()
-	s = strings.Replace(s, "{ONE_EXTERNAL_IP}", "", 1)
 
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)

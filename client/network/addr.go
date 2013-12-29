@@ -12,8 +12,9 @@ import (
 
 
 var (
-	ExternalIp4 map[uint32]uint = make(map[uint32]uint)
+	ExternalIp4 map[uint32][2]uint = make(map[uint32][2]uint) // [0]-count, [1]-timestamp
 	ExternalIpMutex sync.Mutex
+	ExternalIpExpireTicker int
 )
 
 
@@ -26,15 +27,33 @@ func ExternalAddrLen() (res int) {
 
 
 func BestExternalAddr() []byte {
-	var best_ip uint32
-	var best_cnt uint
+	var best_ip, worst_ip uint32
+	var best_cnt, worst_tim uint
+
 	ExternalIpMutex.Lock()
-	for ip, cnt := range ExternalIp4 {
-		if cnt > best_cnt {
-			best_cnt = cnt
-			best_ip = ip
+
+	if len(ExternalIp4) > 0 {
+		for ip, rec := range ExternalIp4 {
+			if worst_tim == 0 {
+				worst_tim = rec[1]
+				worst_ip = ip
+			}
+			if rec[0] > best_cnt {
+				best_cnt = rec[0]
+				best_ip = ip
+			} else if rec[1] < worst_tim {
+				worst_tim = rec[1]
+				worst_ip = ip
+			}
+		}
+
+		// Expire a stale external IP after 1 hour since last seen
+		if uint(time.Now().Unix()) - worst_tim > 3600 {
+			common.CountSafe("ExternalIPExpire")
+			delete(ExternalIp4, worst_ip)
 		}
 	}
+
 	ExternalIpMutex.Unlock()
 	res := make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], common.Services)

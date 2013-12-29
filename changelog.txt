@@ -1,4 +1,5 @@
 0.8.6
+* Expire external IPs after one hour from last seen
 * Added "Load TX" to the top menu in WebUI
 * Fix: after changing a label in a wallet file it get changed in the unspent list as well
 * Fix: the list of unspent outputs is now being sorted properly (by block height)
