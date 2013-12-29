@@ -47,8 +47,8 @@ func BestExternalAddr() []byte {
 			}
 		}
 
-		// Expire a stale external IP after 1 hour since last seen
-		if uint(time.Now().Unix()) - worst_tim > 3600 {
+		// Expire any extra IP if it has been stale for more than an hour
+		if len(ExternalIp4) > 1 && uint(time.Now().Unix())-worst_tim > 3600 {
 			common.CountSafe("ExternalIPExpire")
 			delete(ExternalIp4, worst_ip)
 		}
