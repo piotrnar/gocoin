@@ -1,9 +1,10 @@
 0.8.6
-* Expire external IPs after one hour from last seen
 * Added "Load TX" to the top menu in WebUI
+* Allow for hidden wallets (start filename with ".") and a nested sub-wallets (up to 3 levels deep)
 * Fix: after changing a label in a wallet file it get changed in the unspent list as well
 * Fix: the list of unspent outputs is now being sorted properly (by block height)
-* Allow for hidden wallets (start filename with ".") and a nested sub-wallets (up to 3 levels deep)
+* Expire external IPs after one hour from last seen
+* Added new fields "Nonce", "TxCount", and "TxOffset" to "btc.Block" (set in "btc.NewBlock")
 
 0.8.5
 * From now on every "payment.zip" contains also the unsigned raw transaction file ("tx2sign.txt")
