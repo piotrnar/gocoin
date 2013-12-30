@@ -260,6 +260,10 @@ func (c *one_net_conn) headers(d []byte) {
 		if _, er = b.Read(hdr[:]); er != nil {
 			return
 		}
+		if hdr[80]!=0 {
+			println(LastBlock.Node.Height, "Unexpected value of txn_count")
+			continue
+		}
 		bl, er := btc.NewBlock(hdr[:])
 		if er == nil {
 			er = chkblock(bl)
@@ -267,6 +271,8 @@ func (c *one_net_conn) headers(d []byte) {
 				println(er.Error())
 				os.Exit(1)
 			}
+		} else {
+			println(LastBlock.Node.Height, er.Error())
 		}
 	}
 	println("Height:", LastBlock.Node.Height)
