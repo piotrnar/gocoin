@@ -3,6 +3,8 @@
 * Allow for hidden wallets (start filename with ".") and a nested sub-wallets (up to 3 levels deep)
 * Fix: after changing a label in a wallet file it get changed in the unspent list as well
 * Fix: the list of unspent outputs is now being sorted properly (by block height)
+* "wallet -d" prints number of (yet) unsigned inputs
+* "versigmsg" renamed to "btcversig" and some new features were added
 * Expire external IPs after one hour from last seen
 * Added new fields "Nonce", "TxCount", and "TxOffset" to "btc.Block" (set in "btc.NewBlock")
 

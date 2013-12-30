@@ -91,6 +91,8 @@ func dump_raw_tx() {
 		return
 	}
 
+	var unsigned int
+
 	fmt.Println("Version:", tx.Version)
 	fmt.Println("TX IN cnt:", len(tx.TxIn))
 	for i := range tx.TxIn {
@@ -98,6 +100,8 @@ func dump_raw_tx() {
 			len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
 		if len(tx.TxIn[i].ScriptSig) > 0 {
 			dump_sigscript(tx.TxIn[i].ScriptSig)
+		} else {
+			unsigned++
 		}
 	}
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
@@ -111,4 +115,9 @@ func dump_raw_tx() {
 		}
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)
+	if unsigned>0 {
+		fmt.Println("Number of unsigned inputs:", unsigned)
+	} else {
+		fmt.Println("All the inputs seems to be signed")
+	}
 }
