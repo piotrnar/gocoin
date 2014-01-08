@@ -70,7 +70,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	network.ExternalIpMutex.Lock()
 	for ip, rec := range network.ExternalIp4 {
-		ips := fmt.Sprintf("<b title=\"%d times. Last seen %d min ago\">%d.%d.%d.%d</b>&nbsp;&nbsp;",
+		ips := fmt.Sprintf("<b title=\"%d times. Last seen %d min ago\">%d.%d.%d.%d</b> ",
 				rec[0], (uint(time.Now().Unix())-rec[1])/60,
 				byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
 		s = templ_add(s, "<!--ONE_EXTERNAL_IP-->", ips)
