@@ -209,6 +209,8 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].BtcAddr.String(), 1)
 			wal = templ_add(wal, "<!--UTXOROW-->", row)
 		}
+
+		// Own wallet
 		for i := range wallet.MyWallet.Addrs {
 			row := "wallet.push({'addr':'" + wallet.MyWallet.Addrs[i].Enc58str + "', " +
 				"'label':'" + wallet.MyWallet.Addrs[i].Extra.Label + "', " +
@@ -216,6 +218,16 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 				"'virgin':" + fmt.Sprint(wallet.MyWallet.Addrs[i].Extra.Virgin) + "})\n"
 			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
 		}
+
+		// Address Book
+		book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/ADDRESS", 0)
+		for i := range book {
+			row := "addrbook.push({'addr':'" + book[i].Enc58str + "', " +
+				"'label':'" + book[i].Extra.Label + "', " +
+				"'wallet':'" + book[i].Extra.Wallet + "'})\n"
+			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
+		}
+
 		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
 	} else {
 		if wallet.MyWallet==nil {

@@ -5,10 +5,11 @@ var selected_cnt = 0
 var total_to_pay = 0
 
 var wallet = new Array()
+var addrbook = new Array()
 
 /*WALLET_ENTRY_JS*/
 
-document.addEventListener('DOMContentLoaded', function() {
+function build_change_list() {
 	for (var i=0; i<wallet.length; i++) {
 		var op = document.createElement("option")
 		if (wallet[i].virgin) {
@@ -20,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		op.value = wallet[i].addr
 		changeaddrsel.add(op)
 	}
-})
+}
 
 
 function recalc_inputs() {
@@ -77,17 +78,72 @@ function recalc_to_pay() {
 	paybut.disabled = butdisabled
 }
 
+
+function open_address_book(idx) {
+	var c = outtab.rows[idx].cells[1]
+	var inadr = document.getElementById('inadr'+idx)
+	var div = document.createElement("div")
+	c.style.position="realitive"
+	div.style.position="absolute"
+
+
+	var sel = document.createElement("select")
+	sel.style.width = '100%'
+	sel.size = 10
+
+	for (var i=0; i<addrbook.length; i++) {
+		var op = document.createElement("option")
+		op.text += addrbook[i].wallet + ": "
+		op.text += addrbook[i].label
+		op.text += " - " + addrbook[i].addr
+		op.value = addrbook[i].addr
+		op.selected = inadr.value==op.value
+		sel.add(op)
+	}
+
+	for (var i=0; i<wallet.length; i++) {
+		var op = document.createElement("option")
+		if (wallet[i].virgin) {
+			op.text += wallet[i].wallet + ": "
+			op.text += wallet[i].label
+			op.text += " - " + wallet[i].addr
+			op.value = wallet[i].addr
+			op.selected = inadr.value==op.value
+			sel.add(op)
+		}
+	}
+	div.appendChild(sel)
+	c.appendChild(div)
+
+	var but = document.getElementById("addrbook"+idx)
+	var prv_valu = but.value
+	var prv_oncl = but.onclick
+	but.value = "Use selected"
+	but.onclick = function() {
+		c.removeChild(div)
+		but.value = prv_valu
+		but.onclick = prv_oncl
+		if (sel.selectedIndex!=-1) {
+			inadr.value = sel.options[sel.selectedIndex].value
+		}
+	}
+}
+
+
 function add_new_output() {
 	var idx = outtab.rows.length-3
 	var val, c, r = outtab.insertRow(idx)
 
 	c = r.insertCell(-1)
+	c.style.verticalAlign="top"
 	c.innerHTML = 'Output #'+idx
 
 	c = r.insertCell(-1)
-	c.innerHTML = '<input name="adr'+idx+'" size="44" class="mono">'
+	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono">'
+	c.innerHTML += ' <input type="button" value="Address Book" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
 
 	c = r.insertCell(-1)
+	c.style.verticalAlign="top"
 	val = document.createElement('input')
 	val.type = 'text'
 	val.size = 13
@@ -119,6 +175,7 @@ function selectadr(idx) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+	build_change_list()
 	add_new_output()
 	txfee.onchange = recalc_to_pay
 	txfee.onkeyup = recalc_to_pay
@@ -131,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <h2>Payment details</h2>
 Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
-<table class="bord" vspace="10" id="outtab">
+<table class="bord" vspace="10" id="outtab" width="720">
 <tr>
 	<th>&nbsp;
 	<th>Pay to address
