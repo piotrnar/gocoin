@@ -136,9 +136,13 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		}
 		for i := range wallet.MyWallet.Addrs {
 			ad := addr
+			lab := wallet.MyWallet.Addrs[i].Extra.Label
+			if wallet.MyWallet.Addrs[i].Extra.Virgin {
+				lab += " ***"
+			}
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
-			ad = strings.Replace(ad, "<!--WAL_WALLET-->", wallet.MyWallet.Addrs[i].Extra.Wallet, 1)
-			ad = strings.Replace(ad, "<!--WAL_LABEL-->", wallet.MyWallet.Addrs[i].Extra.Label, 1)
+			ad = strings.Replace(ad, "<!--WAL_WALLET-->", html.EscapeString(wallet.MyWallet.Addrs[i].Extra.Wallet), 1)
+			ad = strings.Replace(ad, "<!--WAL_LABEL-->", html.EscapeString(lab), 1)
 			if btc, cnt := getbal(wallet.MyWallet.Addrs[i]); btc > 0 {
 				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
 				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)
