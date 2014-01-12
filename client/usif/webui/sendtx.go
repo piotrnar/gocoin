@@ -227,6 +227,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 				"'wallet':'" + book[i].Extra.Wallet + "'})\n"
 			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
 		}
+		wal = strings.Replace(wal, "/*WALLET_ENTRY_JS*/", "const ADDR_LIST_SIZE = " + fmt.Sprint(common.CFG.WebUI.AddrListLen), 1)
 
 		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
 	} else {

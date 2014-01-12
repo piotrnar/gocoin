@@ -26,6 +26,7 @@ var (
 			Interface string
 			AllowedIP string // comma separated
 			ShowBlocks uint32
+			AddrListLen uint32 // size of address list in MakeTx tab popups
 		}
 		Net struct {
 			ListenTCP bool
@@ -89,6 +90,7 @@ func init() {
 	CFG.WebUI.Interface = "127.0.0.1:8833"
 	CFG.WebUI.AllowedIP = "127.0.0.1"
 	CFG.WebUI.ShowBlocks = 25
+	CFG.WebUI.AddrListLen = 15
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true

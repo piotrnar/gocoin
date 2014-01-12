@@ -89,7 +89,7 @@ function open_address_book(idx) {
 
 	var sel = document.createElement("select")
 	sel.style.width = '100%'
-	sel.size = 10
+	sel.size = ADDR_LIST_SIZE
 
 	for (var i=0; i<addrbook.length; i++) {
 		var op = document.createElement("option")
@@ -119,7 +119,7 @@ function open_address_book(idx) {
 	var prv_valu = but.value
 	var prv_oncl = but.onclick
 	but.value = "Use selected"
-	but.onclick = function() {
+	but.onclick = sel.onchange = function() {
 		c.removeChild(div)
 		but.value = prv_valu
 		but.onclick = prv_oncl
@@ -140,7 +140,7 @@ function add_new_output() {
 
 	c = r.insertCell(-1)
 	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono">'
-	c.innerHTML += ' <input type="button" value="Address Book" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
+	c.innerHTML += ' <input type="button" style="width:130px" value="Address Book" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
 
 	c = r.insertCell(-1)
 	c.style.verticalAlign="top"
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
 <h2>Payment details</h2>
 Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
-<table class="bord" vspace="10" id="outtab" width="720">
+<table class="bord" vspace="10" id="outtab">
 <tr>
 	<th>&nbsp;
 	<th>Pay to address
