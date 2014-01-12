@@ -143,6 +143,9 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			if btc, cnt := getbal(wallet.MyWallet.Addrs[i]); btc > 0 {
 				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
 				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)
+			} else if len(lll)==2 && strings.Index(lll[1], "<!--VIRGIN-->")!=-1 {
+				// Do not display virgin addresses with zero balance
+				continue
 			}
 			page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
 		}
