@@ -12,7 +12,7 @@ var addrbook = new Array()
 /*WALLET_ENTRY_JS*/
 
 function build_change_list() {
-	var virgincounter = 1
+	var virgincounter = 0
 	for (var i=0; i<wallet.length; i++) {
 		var op = document.createElement("option")
 		if (wallet[i].virgin) {
@@ -23,8 +23,8 @@ function build_change_list() {
 		op.text += " - " + wallet[i].addr //.substr(0,5) + "..." + wallet[i].addr.substr(-5)
 		op.value = wallet[i].addr
 		if (wallet[i].virgin) {
-			changeaddrsel.add(op, changeaddrsel[virgincounter])
 			virgincounter++
+			changeaddrsel.add(op, changeaddrsel[virgincounter])
 		} else {
 			changeaddrsel.add(op)
 		}
