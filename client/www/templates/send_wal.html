@@ -1,4 +1,6 @@
 <script>
+const addrbook_lab = "Address Book"
+
 var values = new Array({UNSPENT_OUTS})
 var selected_value = 0
 var selected_cnt = 0
@@ -98,6 +100,7 @@ function open_address_book(idx) {
 		op.text += " - " + addrbook[i].addr
 		op.value = addrbook[i].addr
 		op.selected = inadr.value==op.value
+		op["addr_label"] = addrbook[i].label
 		sel.add(op)
 	}
 
@@ -109,6 +112,7 @@ function open_address_book(idx) {
 			op.text += " - " + wallet[i].addr
 			op.value = wallet[i].addr
 			op.selected = inadr.value==op.value
+			op["addr_label"] = wallet[i].label
 			sel.add(op)
 		}
 	}
@@ -121,12 +125,33 @@ function open_address_book(idx) {
 	but.value = "Use selected"
 	but.onclick = sel.onchange = function() {
 		c.removeChild(div)
-		but.value = prv_valu
 		but.onclick = prv_oncl
 		if (sel.selectedIndex!=-1) {
 			inadr.value = sel.options[sel.selectedIndex].value
+			but.value = sel.options[sel.selectedIndex].addr_label
+		} else {
+			but.value = addrbook_lab
 		}
 	}
+}
+
+
+function reslab(idx) {
+	var val = document.getElementById("inadr"+idx).value
+	var but = document.getElementById("addrbook"+idx)
+	for (var i=0; i<addrbook.length; i++) {
+		if (val==addrbook[i].addr) {
+			but.value = addrbook[i].label
+			return
+		}
+	}
+	for (var i=0; i<wallet.length; i++) {
+		if (val==wallet[i].addr) {
+			but.value = wallet[i].label
+			return
+		}
+	}
+	but.value = addrbook_lab
 }
 
 
@@ -135,15 +160,13 @@ function add_new_output() {
 	var val, c, r = outtab.insertRow(idx)
 
 	c = r.insertCell(-1)
-	c.style.verticalAlign="top"
 	c.innerHTML = 'Output #'+idx
 
 	c = r.insertCell(-1)
-	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono">'
-	c.innerHTML += ' <input type="button" style="width:130px" value="Address Book" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
+	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
+	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
 
 	c = r.insertCell(-1)
-	c.style.verticalAlign="top"
 	val = document.createElement('input')
 	val.type = 'text'
 	val.size = 13

@@ -2,7 +2,6 @@
 * Expire ExternalIp-s that were noticed 'long ago'
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
-* Add some address book to MakeTx WebUI
 * Do something with the fixed 129.132.230.0/24
 * Improve the database folder locking in Linux
 * Try to make own (faster) implementation of sha256 and rimp160
