@@ -199,7 +199,11 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 		for i := range wallet.MyBalance {
 			row := row_tmp
 			row = strings.Replace(row, "{WALLET_FILE}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Wallet), 1)
-			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Label), 1)
+			lab := wallet.MyBalance[i].BtcAddr.Extra.Label
+			if wallet.MyBalance[i].BtcAddr.Extra.Virgin {
+				lab += " ***"
+			}
+			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(lab), 1)
 			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
 			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(wallet.MyBalance[i].MinedAt), 1)
 			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), -1)
