@@ -1,4 +1,5 @@
 0.8.7
+* Added a special wallet "ADRESSES" that contains the address book (for MakeTx tab)
 * Support for "virgin" addresses in the wallet files (put space before the address).
   (virgin addresses are hidden the wallet tab as long as their balance is zero)
 
