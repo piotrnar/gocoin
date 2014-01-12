@@ -31,6 +31,7 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	for {
 		var l string
 		l, e = rd.ReadString('\n')
+		space_first := len(l)>0 && l[0]==' '
 		l = strings.Trim(l, " \t\r\n")
 		linenr++
 		//println(fmt.Sprint(fn, ":", linenr), "...")
@@ -50,9 +51,12 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 						println(fmt.Sprint(fn, ":", linenr), e.Error())
 					} else {
 						if len(ls)>1 {
-							a.Label = strings.Trim(ls[1], " \n\t\t")
+							a.Label = ls[1]
 						}
 						a.Label += "@"+walname
+						if space_first {
+							a.Label += "<!--VIRGIN-->"
+						}
 						addrs = append(addrs, a)
 					}
 				}
