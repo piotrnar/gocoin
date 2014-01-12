@@ -50,7 +50,9 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<inblock>", wallet.MyBalance[i].MinedAt, "</inblock>")
 		fmt.Fprint(w, "<blocktime>", get_block_time(wallet.MyBalance[i].MinedAt), "</blocktime>")
 		fmt.Fprint(w, "<addr>", wallet.MyBalance[i].BtcAddr.String(), "</addr>")
-		fmt.Fprint(w, "<label>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Label), "</label>")
+		fmt.Fprint(w, "<wallet>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Wallet), "</wallet>")
+		fmt.Fprint(w, "<label>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Label), "</label>")
+		fmt.Fprint(w, "<virgin>", fmt.Sprint(wallet.MyBalance[i].BtcAddr.Extra.Virgin), "</virgin>")
 		w.Write([]byte("</output>"))
 	}
 	wallet.UnlockBal()
@@ -135,15 +137,12 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		for i := range wallet.MyWallet.Addrs {
 			ad := addr
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
-			lll := strings.SplitN(wallet.MyWallet.Addrs[i].Label, "@", 2)
-			ad = strings.Replace(ad, "<!--WAL_LABEL-->", lll[0], 1)
-			if len(lll)==2 {
-				ad = strings.Replace(ad, "<!--WAL_WALLET-->", lll[1], 1)
-			}
+			ad = strings.Replace(ad, "<!--WAL_WALLET-->", wallet.MyWallet.Addrs[i].Extra.Wallet, 1)
+			ad = strings.Replace(ad, "<!--WAL_LABEL-->", wallet.MyWallet.Addrs[i].Extra.Label, 1)
 			if btc, cnt := getbal(wallet.MyWallet.Addrs[i]); btc > 0 {
 				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
 				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)
-			} else if len(lll)==2 && strings.Index(lll[1], "<!--VIRGIN-->")!=-1 {
+			} else if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				// Do not display virgin addresses with zero balance
 				continue
 			}

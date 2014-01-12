@@ -198,7 +198,8 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(wallet.MyBalance)), -1)
 		for i := range wallet.MyBalance {
 			row := row_tmp
-			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Label), 1)
+			row = strings.Replace(row, "{WALLET_FILE}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Wallet), 1)
+			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Label), 1)
 			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
 			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(wallet.MyBalance[i].MinedAt), 1)
 			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), -1)
@@ -209,11 +210,11 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			wal = templ_add(wal, "<!--UTXOROW-->", row)
 		}
 		for i := range wallet.MyWallet.Addrs {
-			op := "<option value=\"" + wallet.MyWallet.Addrs[i].Enc58str +
-				"\">" + wallet.MyWallet.Addrs[i].Enc58str + " (" +
-				html.EscapeString(wallet.MyWallet.Addrs[i].Label) + ")</option>"
-			//wal = strings.Replace(wal, "<!--ONECHANGEADDR-->", op, 1)
-			wal = templ_add(wal, "<!--ONECHANGEADDR-->", op)
+			row := "wallet.push({'addr':'" + wallet.MyWallet.Addrs[i].Enc58str + "', " +
+				"'label':'" + wallet.MyWallet.Addrs[i].Extra.Label + "', " +
+				"'wallet':'" + wallet.MyWallet.Addrs[i].Extra.Wallet + "', " +
+				"'virgin':" + fmt.Sprint(wallet.MyWallet.Addrs[i].Extra.Virgin) + "})\n"
+			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
 		}
 		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
 	} else {

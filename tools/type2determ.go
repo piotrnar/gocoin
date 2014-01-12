@@ -65,7 +65,7 @@ func main() {
 	fmt.Println("#", hex.EncodeToString(sec.Bytes()))
 
 	for i:=1; i<=int(n); i++ {
-		fmt.Println(btc.NewAddrFromPubkey(pubk.Bytes(compressed), testnet).String(), "TypB", i)
+		fmt.Println(btc.NewAddrFromPubkey(pubk.Bytes(compressed), btc.AddrVerPubkey(testnet)).String(), "TypB", i)
 		if i >= int(n) {
 			break
 		}

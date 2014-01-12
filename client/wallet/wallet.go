@@ -50,13 +50,11 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 					if e != nil {
 						println(fmt.Sprint(fn, ":", linenr), e.Error())
 					} else {
+						a.Extra.Wallet = walname
 						if len(ls)>1 {
-							a.Label = ls[1]
+							a.Extra.Label = ls[1]
 						}
-						a.Label += "@"+walname
-						if space_first {
-							a.Label += "<!--VIRGIN-->"
-						}
+						a.Extra.Virgin = space_first
 						addrs = append(addrs, a)
 					}
 				}

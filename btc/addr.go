@@ -20,7 +20,13 @@ type BtcAddr struct {
 	Checksum []byte
 	Pubkey []byte
 	Enc58str string
-	Label string  // This is normally not used, unless for GetAllUnspent() purposes
+
+	// This is normally not used, unless for GetAllUnspent() purposes
+	Extra struct {
+		Label string
+		Wallet string
+		Virgin bool
+	}
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
@@ -147,11 +153,19 @@ func (a *BtcAddr) String() string {
 }
 
 // String with a label
-func (a *BtcAddr) StringLab() string {
-	if a.Label=="" {
-		return a.String()
+func (a *BtcAddr) StringLab() (s string) {
+	s = a.String()
+
+	if a.Extra.Wallet!="" {
+		s += " " + a.Extra.Wallet + ":"
 	}
-	return a.String() + " (" + a.Label + ")"
+	if a.Extra.Label!="" {
+		s += " " + a.Extra.Label
+	}
+	if a.Extra.Virgin {
+		s += " ***"
+	}
+	return
 }
 
 // Check if a pk_script send coins to this address

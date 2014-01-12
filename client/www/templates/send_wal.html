@@ -4,6 +4,25 @@ var selected_value = 0
 var selected_cnt = 0
 var total_to_pay = 0
 
+var wallet = new Array()
+
+/*WALLET_ENTRY_JS*/
+
+document.addEventListener('DOMContentLoaded', function() {
+	for (var i=0; i<wallet.length; i++) {
+		var op = document.createElement("option")
+		if (wallet[i].virgin) {
+			op.text = "* "
+		}
+		op.text += wallet[i].wallet + ": "
+		op.text += wallet[i].label
+		op.text += " - " + wallet[i].addr //.substr(0,5) + "..." + wallet[i].addr.substr(-5)
+		op.value = wallet[i].addr
+		changeaddrsel.add(op)
+	}
+})
+
+
 function recalc_inputs() {
 	selected_value = 0
 	selected_cnt = 0
@@ -130,9 +149,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 
 <tr title="Transaction change">
 	<td>Change
-	<td><select name="change" style="width:100%">
+	<td><select name="change" style="width:100%" id="changeaddrsel">
 			<option value="">The first input's address</option>
-			<!--ONECHANGEADDR-->
 		</select>
 	<td class="r">
 	<input type="text" class="mono" id="changeval" size="13" readonly="readonly" style="text-align:right" onclick="this.select()">
@@ -154,7 +172,7 @@ Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.
 	<th width="40">Block
 	<th>TxID - VOut
 	<th width="80">BTC Value
-	<th colspan="2">Address
+	<th colspan="3">Address
 	<th><input type="checkbox" onchange="allchange(this)">
 </tr>
 <!--UTXOROW-->
