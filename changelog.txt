@@ -1,3 +1,7 @@
+0.8.7
+* Support for "virgin" addresses in the wallet files (put space before the address).
+  (virgin addresses are hidden the wallet tab as long as their balance is zero)
+
 0.8.6
 * Added "Load TX" to the top menu in WebUI
 * Allow for hidden wallets (start filename with ".") and a nested sub-wallets (up to 3 levels deep)
