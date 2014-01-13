@@ -128,7 +128,7 @@ function open_address_book(idx) {
 	var but = document.getElementById("addrbook"+idx)
 	var prv_valu = but.value
 	var prv_oncl = but.onclick
-	but.value = "Use selected"
+	but.value = "Close the list"
 	but.onclick = sel.onchange = function() {
 		c.removeChild(div)
 		but.onclick = prv_oncl
