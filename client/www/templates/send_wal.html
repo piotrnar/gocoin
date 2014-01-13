@@ -5,6 +5,7 @@ var values = new Array({UNSPENT_OUTS})
 var selected_value = 0
 var selected_cnt = 0
 var total_to_pay = 0
+var cur_but = null
 
 var wallet = new Array()
 var addrbook = new Array()
@@ -88,6 +89,10 @@ function recalc_to_pay() {
 
 
 function open_address_book(idx) {
+	if (cur_but!=null) {
+		cur_but.click()
+	}
+
 	var c = outtab.rows[idx].cells[1]
 	var inadr = document.getElementById('inadr'+idx)
 	var div = document.createElement("div")
@@ -129,6 +134,7 @@ function open_address_book(idx) {
 	var prv_valu = but.value
 	var prv_oncl = but.onclick
 	but.value = "Close the list"
+	cur_but = but
 	but.onclick = sel.onchange = function() {
 		c.removeChild(div)
 		but.onclick = prv_oncl
@@ -138,6 +144,7 @@ function open_address_book(idx) {
 		} else {
 			but.value = addrbook_lab
 		}
+		cur_but = null
 	}
 }
 
