@@ -1,8 +1,8 @@
 package main
 
 import (
-	"os"
 	"net"
+	"fmt"
 	"time"
 	"sync"
 	"bytes"
@@ -21,16 +21,8 @@ const (
 )
 
 var (
-	open_connection []*one_net_conn
-	LastBlock struct {
-		sync.Mutex
-		Node *btc.BlockTreeNode
-	}
-
-	PendingHdrs map[[32]byte] bool = make(map[[32]byte] bool)
-	PendingHdrsLock sync.Mutex
-
-	AllHeadersDone bool
+	open_connection_list map[[4]byte] *one_net_conn = make(map [[4]byte] *one_net_conn)
+	open_connection_mutex sync.Mutex
 )
 
 
@@ -42,11 +34,12 @@ type one_net_cmd struct {
 
 type one_net_conn struct {
 	peerip string
+	ip4 [4]byte
 
-	inprogress bool
+	_hdrsinprogress bool
 
 	// Source of this IP:
-	broken bool // flag that the conenction has been broken / shall be disconnected
+	_broken bool // flag that the conenction has been broken / shall be disconnected
 	closed_s bool
 	closed_r bool
 
@@ -57,6 +50,28 @@ type one_net_conn struct {
 	send struct {
 		buf []byte
 	}
+
+	blockinprogress map[[32]byte] bool
+	last_blk_rcvd time.Time
+	connected_at time.Time
+	bytes_received uint64
+
+	sync.Mutex
+}
+
+
+func (c *one_net_conn) isbroken() (res bool) {
+	c.Lock()
+	res = c._broken
+	c.Unlock()
+	return
+}
+
+
+func (c *one_net_conn) setbroken(res bool) {
+	c.Lock()
+	c._broken = res
+	c.Unlock()
 }
 
 
@@ -73,7 +88,9 @@ func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[24:], pl)
 
 	//println("send", cmd, len(sbuf), "...")
+	c.Mutex.Lock()
 	c.send.buf = append(c.send.buf, sbuf...)
+	c.Mutex.Unlock()
 	return
 }
 
@@ -111,37 +128,11 @@ func (c *one_net_conn) getheaders() {
 }
 
 
-func (c *one_net_conn) idle() {
-	if c.verackgot && !c.inprogress && !AllHeadersDone {
-		c.getheaders()
-		c.inprogress = true
-	} else {
-		time.Sleep(time.Millisecond)
-	}
-}
-
-
-func (c *one_net_conn) run_send() {
-	c.sendver()
-	for !c.broken {
-		if len(c.send.buf) > 0 {
-			c.SetWriteDeadline(time.Now().Add(time.Millisecond))
-			n, e := c.Write(c.send.buf)
-			if e != nil {
-				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
-					e = nil
-				} else {
-					c.broken = true
-				}
-			} else {
-				c.send.buf = c.send.buf[n:]
-			}
-		} else {
-			c.idle()
-		}
-	}
-	c.closed_s = true
-	println(c.peerip, "closing sender")
+func (c *one_net_conn) bps() (res float64) {
+	c.Lock()
+	res = 1e9 * float64(c.bytes_received) / float64(time.Now().Sub(c.connected_at))
+	c.Unlock()
+	return
 }
 
 
@@ -160,6 +151,9 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 		if e != nil {
 			return nil
 		}
+		c.Lock()
+		c.bytes_received += uint64(n)
+		c.Unlock()
 		hdr_len += n
 		if hdr_len>=4 && !bytes.Equal(hdr[:4], Magic[:]) {
 			println(c.peerip, "NetBadMagic")
@@ -178,6 +172,9 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 			}
 			if n > 0 {
 				datlen += uint32(n)
+				c.Lock()
+				c.bytes_received += uint64(n)
+				c.Unlock()
 			}
 		}
 	}
@@ -235,99 +232,181 @@ func chkblock(bl *btc.Block) (er error) {
 	prevblk.Childs = append(prevblk.Childs, cur)
 	BlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
 
+	LastBlock.Mutex.Lock()
 	if cur.Height > LastBlock.Node.Height {
 		LastBlock.Node = cur
 	}
+	LastBlock.Mutex.Unlock()
 
 	return
 }
 
 
-func (c *one_net_conn) headers(d []byte) {
-	var hdr [81]byte
-	b := bytes.NewReader(d)
-	cnt, er := btc.ReadVLen(b)
-	if er != nil {
-		return
+func (c *one_net_conn) gethdrsinprogress() (res bool) {
+	c.Lock()
+	res = c._hdrsinprogress
+	c.Unlock()
+	return
+}
+
+
+func (c *one_net_conn) sethdrsinprogress(res bool) {
+	c.Lock()
+	c._hdrsinprogress = res
+	c.Unlock()
+}
+
+
+func (c *one_net_conn) cleanup() {
+	if c.closed_r && c.closed_s {
+		//println("-", c.peerip)
+		open_connection_mutex.Lock()
+		delete(open_connection_list, c.ip4)
+		COUNTER("DROP_PEER")
+		open_connection_mutex.Unlock()
 	}
-	if cnt==0 {
-		AllHeadersDone = true
-		println("AllHeadersDone - terminate conn")
-		c.broken = true
-		return
-	}
-	for i := uint64(0); i < cnt; i++ {
-		if _, er = b.Read(hdr[:]); er != nil {
-			return
-		}
-		if hdr[80]!=0 {
-			println(LastBlock.Node.Height, "Unexpected value of txn_count")
-			continue
-		}
-		bl, er := btc.NewBlock(hdr[:])
-		if er == nil {
-			er = chkblock(bl)
-			if er != nil {
-				println(er.Error())
-				os.Exit(1)
-			}
-		} else {
-			println(LastBlock.Node.Height, er.Error())
-		}
-	}
-	println("Height:", LastBlock.Node.Height)
 }
 
 
 func (c *one_net_conn) run_recv() {
-	for !c.broken {
+	for !c.isbroken() {
 		msg := c.readmsg()
 		if msg==nil {
-			println(c.peerip, "- broken when reading")
-			c.broken = true
+			//println(c.peerip, "- broken when reading")
+			c.setbroken(true)
 		} else {
 			switch msg.cmd {
 				case "verack":
+					c.Mutex.Lock()
 					c.verackgot = true
+					c.Mutex.Unlock()
+					AddrMutex.Lock()
+					if len(AddrDatbase)<2000 {
+						c.sendmsg("getaddr", nil)
+					}
+					AddrMutex.Unlock()
 
 				case "headers":
-					if c.inprogress {
+					if c.gethdrsinprogress() {
+						c.sethdrsinprogress(false)
 						c.headers(msg.pl)
-						c.inprogress = false
 					}
+
+				case "block":
+					c.block(msg.pl)
+
+				case "version":
+
+				case "addr":
+					parse_addr(msg.pl)
+
+				case "inv":
 
 				default:
 					println(c.peerip, "received", msg.cmd, len(msg.pl))
 			}
 		}
 	}
+	//println(c.peerip, "closing receiver")
+	c.Mutex.Lock()
 	c.closed_r = true
-	println(c.peerip, "closing receiver")
+	c.cleanup()
+	c.Mutex.Unlock()
 }
 
 
-func new_connection(ip string) *one_net_conn {
-	var er error
-	res := new(one_net_conn)
-	res.peerip = ip
-	res.Conn, er = net.Dial("tcp4", ip+":8333")
-	if er != nil {
-		println(er.Error())
-		return nil
+func (c *one_net_conn) idle() {
+	c.Mutex.Lock()
+	if c.verackgot {
+		c.Mutex.Unlock()
+		if !c.hdr_idle() && GetDoBlocks() {
+			c.blk_idle()
+		}
+	} else {
+		c.Mutex.Unlock()
+		time.Sleep(time.Millisecond)
 	}
-	println("connected to", res.peerip)
-	open_connection = append(open_connection, res)
+}
+
+
+func (c *one_net_conn) run_send() {
+	c.sendver()
+	for !c.isbroken() {
+		c.Mutex.Lock()
+		if len(c.send.buf) > 0 {
+			c.Mutex.Unlock()
+			c.SetWriteDeadline(time.Now().Add(time.Millisecond))
+			n, e := c.Write(c.send.buf)
+			if e != nil {
+				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
+					e = nil
+				} else {
+					c.setbroken(true)
+				}
+			} else {
+				c.send.buf = c.send.buf[n:]
+			}
+		} else {
+			c.Mutex.Unlock()
+			c.idle()
+		}
+	}
+	//println(c.peerip, "closing sender")
+	c.Mutex.Lock()
+	c.closed_s = true
+	c.cleanup()
+	c.Mutex.Unlock()
+}
+
+
+
+func (res *one_net_conn) connect() {
+	con, er := net.Dial("tcp4", res.peerip+":8333")
+	if er != nil {
+		res.setbroken(true)
+		res.closed_r = true
+		res.closed_s = true
+		res.cleanup()
+		//println(er.Error())
+		return
+	}
+	res.Mutex.Lock()
+	res.Conn = con
+	//println(res.peerip, "connected")
 	go res.run_send()
 	go res.run_recv()
+	res.connected_at = time.Now()
+	res.Mutex.Unlock()
+}
+
+
+// make sure to call it within AddrMutex
+func new_connection(ip4 [4]byte) *one_net_conn {
+	res := new(one_net_conn)
+	res.peerip = fmt.Sprintf("%d.%d.%d.%d", ip4[0], ip4[1], ip4[2], ip4[3])
+	res.ip4 = ip4
+	res.blockinprogress = make(map[[32]byte] bool)
+	open_connection_mutex.Lock()
+	AddrDatbase[ip4] = true
+	open_connection_list[ip4] = res
+	open_connection_mutex.Unlock()
+	go res.connect()
 	return res
 }
 
 
-func get_headers() {
-	LastBlock.Node = BlockChain.BlockTreeEnd
-	println("get_headers...")
-	for !AllHeadersDone {
-		time.Sleep(1e8)
+func add_new_connections() {
+	if open_connection_count() < MAX_CONNECTIONS {
+		AddrMutex.Lock()
+		defer AddrMutex.Unlock()
+		for k, v := range AddrDatbase {
+			if !v {
+				new_connection(k)
+				COUNTER("CONN_PEER")
+				if open_connection_count() >= MAX_CONNECTIONS {
+					return
+				}
+			}
+		}
 	}
-	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 }

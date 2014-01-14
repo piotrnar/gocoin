@@ -2,9 +2,7 @@ package main
 
 import (
 	"os"
-	//"fmt"
 	"time"
-	//"os/signal"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -19,12 +17,11 @@ var (
 )
 
 
-func printstats() {
-	println("stats")
-}
-
 func main() {
-	StartTime = time.Now()
+	load_ips()
+	if len(AddrDatbase)==0 {
+		return
+	}
 
 	GenesisBlock := btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
@@ -35,12 +32,27 @@ func main() {
 		return
 	}
 
-	new_connection("46.4.121.99")
-	//new_connection("198.12.127.2")
-	//new_connection("85.17.239.32")
-	//new_connection("94.23.228.130")
-	//new_connection("129.132.230.75")
-	//new_connection("178.63.63.214")
+	StartTime = time.Now()
 	get_headers()
+	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
+
+	BlocksToGet = make([]*btc.BlockTreeNode, LastBlock.Node.Height+1)
+	for n:=LastBlock.Node; ; n=n.Parent {
+		BlocksToGet[n.Height] = n
+		if n.Height==0 {
+			break
+		}
+	}
+	println("Now download", len(BlocksToGet), "blocks")
+
+	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	if btc.AbortNow || BlockChain==nil {
+		return
+	}
+
+	println("BlocksToGet:", len(BlocksToGet))
+	get_blocks()
+	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
+
 	return
 }
