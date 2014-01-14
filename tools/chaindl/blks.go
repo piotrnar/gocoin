@@ -80,7 +80,7 @@ func (c *one_net_conn) getnextblock() {
 
 
 		BlocksIndex++
-		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > BlockChain.BlockTreeEnd.Height{
+		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > LastBlock.Node.Height {
 			BlocksIndex = BlocksComplete
 		}
 
