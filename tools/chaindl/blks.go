@@ -11,12 +11,12 @@ import (
 
 
 const (
-	MAX_CONNECTIONS = 80
+	MAX_CONNECTIONS = 25
 
 	GETBLOCKS_AT_ONCE_1 = 10
 	GETBLOCKS_AT_ONCE_2 = 3
 	GETBLOCKS_AT_ONCE_3 = 1
-	MAX_BLOCKS_FORWARD = 1000
+	MAX_BLOCKS_FORWARD = 10000
 	BLOCK_TIMEOUT = 3*time.Second
 )
 
@@ -80,7 +80,7 @@ func (c *one_net_conn) getnextblock() {
 
 
 		BlocksIndex++
-		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD {
+		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > BlockChain.BlockTreeEnd.Height{
 			BlocksIndex = BlocksComplete
 		}
 
