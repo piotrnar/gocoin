@@ -16,7 +16,7 @@ const (
 	GETBLOCKS_AT_ONCE_1 = 10
 	GETBLOCKS_AT_ONCE_2 = 3
 	GETBLOCKS_AT_ONCE_3 = 1
-	MAX_BLOCKS_FORWARD = 100
+	MAX_BLOCKS_FORWARD = 1000
 	BLOCK_TIMEOUT = 3*time.Second
 )
 
@@ -29,10 +29,9 @@ var (
 	BlocksIndex uint32
 	BlocksComplete uint32
 
-	same_block_received uint
-
 	DlStartTime time.Time
 	DlBytesProcesses, DlBytesDownloaded uint
+	DlMutex sync.Mutex
 )
 
 func GetDoBlocks() (res bool) {
@@ -72,7 +71,8 @@ func (c *one_net_conn) getnextblock() {
 				SetDoBlocks(true)
 				println("all blocks done")
 			} else {
-				println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
+				//println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
+				COUNTER("DL_WRAP")
 				time.Sleep(1e8)
 			}
 			break
@@ -129,7 +129,8 @@ func (c *one_net_conn) block(d []byte) {
 	c.Mutex.Lock()
 	if !c.blockinprogress[h.Hash] {
 		c.Mutex.Unlock()
-		println(c.peerip, "- unexpected block", h.String())
+		//println(c.peerip, "- unexpected block", h.String())
+		COUNTER("ENEXP_BL")
 		return
 	}
 
@@ -147,11 +148,13 @@ func (c *one_net_conn) block(d []byte) {
 
 	height := BlocksInProgress[bl.Hash.Hash]
 	if height==0 {
-		same_block_received++
+		COUNTER("SAME_BLOCK")
 		//println(bl.Hash.String(), "- already received")
 		return
 	}
+	DlMutex.Lock()
 	DlBytesDownloaded += uint(len(bl.Raw))
+	DlMutex.Unlock()
 	BlocksCached[height] = bl
 	delete(BlocksInProgress, bl.Hash.Hash)
 
@@ -187,7 +190,9 @@ func process_new_block(bl *btc.Block) {
 	if e != nil {
 		panic(e.Error())
 	}
+	DlMutex.Lock()
 	DlBytesProcesses += uint(len(bl.Raw))
+	DlMutex.Unlock()
 }
 
 
@@ -250,11 +255,13 @@ func get_blocks() {
 			cach := len(BlocksCached)
 			BlocksMutex.Unlock()
 			sec := float64(time.Now().Sub(DlStartTime)) / 1e6
-			fmt.Printf("H:%d/%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d, Dups:%d  DL:%.1fKBps  PR:%.1fKBps  %s\n",
+			DlMutex.Lock()
+			fmt.Printf("H:%d/%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d  DL:%.1fKBps  PR:%.1fKBps  %s\n",
 				BlockChain.BlockTreeEnd.Height, BlocksComplete, LastBlock.Node.Height,
-				inpr, cach, open_connection_count(), adrs, indx, same_block_received,
+				inpr, cach, open_connection_count(), adrs, indx,
 				float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec,
 				stats())
+			DlMutex.Unlock()
 		}
 	}
 	println("all blocks done...")
