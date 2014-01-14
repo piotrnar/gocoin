@@ -170,7 +170,10 @@ func (c *one_net_conn) block(d []byte) {
 
 
 func (c *one_net_conn) blk_idle() {
-	if len(c.blockinprogress)==0 {
+	c.Lock()
+	cc := len(c.blockinprogress)
+	c.Unlock()
+	if cc==0 {
 		c.getnextblock()
 	} else {
 		if !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
