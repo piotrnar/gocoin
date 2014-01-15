@@ -7,7 +7,7 @@ import (
 	"sync"
 	"bytes"
 	"strings"
-//	"encoding/hex"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -17,11 +17,16 @@ const (
 	UserAgent = "/Satoshi:0.8.5/"
 	Version = 70001
 	Services = uint64(0x00000001)
+
+	DIAL_TIMEOUT = 3*time.Second
 )
 
 var (
+	MAX_CONNECTIONS uint32 = 40
+
 	open_connection_list map[[4]byte] *one_net_conn = make(map [[4]byte] *one_net_conn)
 	open_connection_mutex sync.Mutex
+	curid uint32
 )
 
 
@@ -32,6 +37,8 @@ type one_net_cmd struct {
 
 
 type one_net_conn struct {
+	id uint32
+
 	peerip string
 	ip4 [4]byte
 
@@ -45,6 +52,17 @@ type one_net_conn struct {
 	net.Conn
 	verackgot bool
 
+	// Message receiving state machine:
+	recv struct {
+		hdr [24]byte
+		hdr_len int
+		pl_len uint32 // length taken from the message header
+		cmd string
+		dat []byte
+		datlen uint32
+	}
+
+
 	// Message sending state machine:
 	send struct {
 		buf []byte
@@ -56,6 +74,27 @@ type one_net_conn struct {
 	bytes_received uint64
 
 	sync.Mutex
+
+	ping struct {
+		sync.Mutex
+
+		cnt uint
+
+		inProgress bool
+		timeSent time.Time
+		pattern [8]byte
+
+		historyMs [PING_SAMPLES]uint
+		historyIdx int
+	}
+}
+
+
+func (c *one_net_conn) isconnected() (res bool) {
+	c.Lock()
+	res = !c._broken && !c.connected_at.IsZero()
+	c.Unlock()
+	return
 }
 
 
@@ -125,57 +164,71 @@ func (c *one_net_conn) bps() (res float64) {
 
 
 func (c *one_net_conn) readmsg() *one_net_cmd {
-	var (
-		hdr [24]byte
-		hdr_len int
-		pl_len uint32 // length taken from the message header
-		cmd string
-		dat []byte
-		datlen uint32
-	)
-
-	for hdr_len < 24 {
-		n, e := c.Read(hdr[hdr_len:])
-		if e != nil {
-			return nil
-		}
-		c.Lock()
-		c.bytes_received += uint64(n)
-		c.Unlock()
-		hdr_len += n
-		if hdr_len>=4 && !bytes.Equal(hdr[:4], Magic[:]) {
-			println(c.peerip, "NetBadMagic")
-			return nil
-		}
-	}
-	pl_len = binary.LittleEndian.Uint32(hdr[16:20])
-	cmd = strings.TrimRight(string(hdr[4:16]), "\000")
-
-	if pl_len > 0 {
-		dat = make([]byte, pl_len)
-		for datlen < pl_len {
-			n, e := c.Read(dat[datlen:])
+	c.SetReadDeadline(time.Now().Add(50*time.Millisecond))
+	if c.recv.hdr_len<24 {
+		for {
+			n, e := c.Read(c.recv.hdr[c.recv.hdr_len:])
 			if e != nil {
+				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
+					//COUNTER("HDRT")
+				} else {
+					c.setbroken(true)
+				}
 				return nil
 			}
-			if n > 0 {
-				datlen += uint32(n)
-				c.Lock()
-				c.bytes_received += uint64(n)
-				c.Unlock()
+			c.Lock()
+			c.bytes_received += uint64(n)
+			c.Unlock()
+			c.recv.hdr_len += n
+			if c.recv.hdr_len>=4 {
+				if !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
+					println(c.peerip, "NetBadMagic")
+					return nil
+				}
+				if c.recv.hdr_len==24 {
+					c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+					c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
+					c.recv.datlen = 0
+					if c.recv.pl_len > 0 {
+						c.recv.dat = make([]byte, c.recv.pl_len)
+					}
+					break
+				}
 			}
 		}
 	}
 
-	sh := btc.Sha2Sum(dat)
-	if !bytes.Equal(hdr[20:24], sh[:4]) {
+	for c.recv.datlen < c.recv.pl_len {
+		n, e := c.Read(c.recv.dat[c.recv.datlen:])
+		if e != nil {
+			if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
+				//COUNTER("HDRT")
+			} else {
+				c.setbroken(true)
+			}
+			return nil
+		}
+		if n > 0 {
+			c.recv.datlen += uint32(n)
+			c.Lock()
+			c.bytes_received += uint64(n)
+			c.Unlock()
+		}
+	}
+
+	sh := btc.Sha2Sum(c.recv.dat)
+	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
 		println(c.peerip, "Msg checksum error")
 		return nil
 	}
 
 	res := new(one_net_cmd)
-	res.cmd = cmd
-	res.pl = dat
+	res.cmd = c.recv.cmd
+	res.pl = c.recv.dat
+
+	c.recv.hdr_len = 0
+	c.recv.dat = nil
+
 	return res
 }
 
@@ -197,24 +250,32 @@ func (c *one_net_conn) sethdrsinprogress(res bool) {
 
 func (c *one_net_conn) cleanup() {
 	if c.closed_r && c.closed_s {
+		COUNTER("DROP")
 		//println("-", c.peerip)
 		open_connection_mutex.Lock()
 		delete(open_connection_list, c.ip4)
-		COUNTER("DROP_PEER")
 		open_connection_mutex.Unlock()
+
+		AddrMutex.Lock()
+		delete(AddrDatbase, c.ip4)
+		AddrMutex.Unlock()
+
+		BlocksMutex.Lock()
+		bi := BlocksIndex
 		for k, _ := range c.blockinprogress {
-			BlocksMutex.Lock()
 			bip := BlocksInProgress[k]
 			if bip!=nil {
-				//println(" block", bip.Height, btc.NewUint256(k[:]).String(), "no more. ", bip.Count, "left")
 				bip.Count--
-				if bip.Count==0 && bip.Height-1<BlocksIndex {
-					//println("BlocksIndex:", BlocksIndex, "->", BlocksIndex-1)
-					BlocksIndex = BlocksIndex-1
+				if bip.Count==0 && bip.Height-1<bi {
+					bi = bi-1
 				}
 			}
-			BlocksMutex.Unlock()
 		}
+		if BlocksIndex!=bi {
+			BlocksIndex = bi
+			COUNTER("REWI")
+		}
+		BlocksMutex.Unlock()
 	}
 }
 
@@ -224,18 +285,18 @@ func (c *one_net_conn) run_recv() {
 		msg := c.readmsg()
 		if msg==nil {
 			//println(c.peerip, "- broken when reading")
-			c.setbroken(true)
+			continue
 		} else {
 			switch msg.cmd {
 				case "verack":
 					c.Mutex.Lock()
 					c.verackgot = true
 					c.Mutex.Unlock()
-					AddrMutex.Lock()
+					/*AddrMutex.Lock()
 					if len(AddrDatbase)<2000 {
 						c.sendmsg("getaddr", nil)
 					}
-					AddrMutex.Unlock()
+					AddrMutex.Unlock()*/
 
 				case "headers":
 					if c.gethdrsinprogress() {
@@ -252,6 +313,11 @@ func (c *one_net_conn) run_recv() {
 					parse_addr(msg.pl)
 
 				case "inv":
+
+				case "pong":
+					if GetRunPings() {
+						c.pong(msg.pl)
+					}
 
 				default:
 					println(c.peerip, "received", msg.cmd, len(msg.pl))
@@ -270,8 +336,13 @@ func (c *one_net_conn) idle() {
 	c.Mutex.Lock()
 	if c.verackgot {
 		c.Mutex.Unlock()
-		if !c.hdr_idle() && GetDoBlocks() {
-			c.blk_idle()
+		if !c.hdr_idle() {
+			if GetRunPings() {
+				c.ping_idle()
+			}
+			if GetDoBlocks() {
+				c.blk_idle()
+			}
 		}
 	} else {
 		c.Mutex.Unlock()
@@ -312,8 +383,9 @@ func (c *one_net_conn) run_send() {
 
 
 func (res *one_net_conn) connect() {
-	con, er := net.Dial("tcp4", res.peerip+":8333")
+	con, er := net.DialTimeout("tcp4", res.peerip+":8333", DIAL_TIMEOUT)
 	if er != nil {
+		COUNTER("CERR")
 		res.setbroken(true)
 		res.closed_r = true
 		res.closed_s = true
@@ -336,6 +408,7 @@ func new_connection(ip4 [4]byte) *one_net_conn {
 	res := new(one_net_conn)
 	res.peerip = fmt.Sprintf("%d.%d.%d.%d", ip4[0], ip4[1], ip4[2], ip4[3])
 	res.ip4 = ip4
+	res.id = atomic.AddUint32(&curid, 1)
 	res.blockinprogress = make(map[[32]byte] bool)
 	open_connection_mutex.Lock()
 	AddrDatbase[ip4] = true
@@ -346,18 +419,20 @@ func new_connection(ip4 [4]byte) *one_net_conn {
 }
 
 
-func add_new_connections() {
+func add_new_connections() bool {
 	if open_connection_count() < MAX_CONNECTIONS {
 		AddrMutex.Lock()
 		defer AddrMutex.Unlock()
 		for k, v := range AddrDatbase {
 			if !v {
 				new_connection(k)
-				COUNTER("CONN_PEER")
+				COUNTER("CONN")
 				if open_connection_count() >= MAX_CONNECTIONS {
-					return
+					return true
 				}
 			}
 		}
+		return true
 	}
+	return false
 }

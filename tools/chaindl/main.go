@@ -28,6 +28,8 @@ func main() {
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	GocoinHomeDir = "btcnet"+string(os.PathSeparator)
 
+	go do_usif()
+
 	if false {
 		download_headers()
 		save_headers()
@@ -35,13 +37,10 @@ func main() {
 		load_headers()
 	}
 
+	do_pings()
+	println("pings done")
+
 	println("Now download", len(BlocksToGet), "blocks")
-
-	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	if btc.AbortNow || BlockChain==nil {
-		return
-	}
-
 	println("BlocksToGet:", len(BlocksToGet))
 	get_blocks()
 	println("AllBlocksDone after", time.Now().Sub(StartTime).String())

@@ -1,22 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"sync"
 	"time"
 	"bytes"
-//	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 
 const (
-	MAX_CONNECTIONS = 25
+	MAX_BLOCKS_FORWARD = 1000
 
 	GETBLOCKS_AT_ONCE_1 = 10
 	GETBLOCKS_AT_ONCE_2 = 3
 	GETBLOCKS_AT_ONCE_3 = 1
-	MAX_BLOCKS_FORWARD = 1000
 	BLOCK_TIMEOUT = 3*time.Second
 )
 
@@ -73,11 +70,11 @@ func (c *one_net_conn) getnextblock() {
 	for secondloop:=false; cnt<maxcnt; secondloop=true {
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
-				SetDoBlocks(true)
+				SetDoBlocks(false)
 				println("all blocks done")
 			} else {
 				//println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
-				COUNTER("DL_WRAP")
+				COUNTER("WRAP")
 				time.Sleep(1e8)
 			}
 			break
@@ -136,7 +133,7 @@ func (c *one_net_conn) block(d []byte) {
 	if !c.blockinprogress[h.Hash] {
 		c.Mutex.Unlock()
 		//println(c.peerip, "- unexpected block", h.String())
-		COUNTER("ENEXP_BL")
+		COUNTER("UNEX")
 		return
 	}
 
@@ -154,7 +151,7 @@ func (c *one_net_conn) block(d []byte) {
 
 	bip := BlocksInProgress[bl.Hash.Hash]
 	if bip==nil {
-		COUNTER("SAME_BLOCK")
+		COUNTER("SAME")
 		//println(bl.Hash.String(), "- already received")
 		return
 	}
@@ -183,7 +180,7 @@ func (c *one_net_conn) blk_idle() {
 		c.getnextblock()
 	} else {
 		if !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
-			COUNTER("DROP_TOUT")
+			COUNTER("TOUT")
 			c.setbroken(true)
 		}
 	}
@@ -205,26 +202,73 @@ func process_new_block(bl *btc.Block) {
 }
 
 
+func drop_slowest_peers() {
+	if open_connection_count() < MAX_CONNECTIONS {
+		return
+	}
+	open_connection_mutex.Lock()
+
+	var min_bps float64
+	var minbps_rec *one_net_conn
+	for _, v := range open_connection_list {
+		if v.isbroken() {
+			// alerady broken
+			continue
+		}
+
+		if v.connected_at.IsZero() {
+			// still connecting
+			continue
+		}
+
+		if time.Now().Sub(v.connected_at) < 3*time.Second {
+			// give him 3 seconds
+			continue
+		}
+
+		v.Lock()
+		br := v.bytes_received
+		v.Unlock()
+
+		if br==0 {
+			// if zero bytes received after 3 seconds - drop it!
+			v.setbroken(true)
+			//println(" -", v.peerip, "- idle")
+			COUNTER("IDLE")
+			continue
+		}
+
+		bps := v.bps()
+		if minbps_rec==nil || bps<min_bps {
+			minbps_rec = v
+			min_bps = bps
+		}
+	}
+	if minbps_rec!=nil {
+		//fmt.Printf(" - %s - slowest (%.3f KBps, %d KB)\n", minbps_rec.peerip, min_bps/1e3, minbps_rec.bytes_received>>10)
+		COUNTER("SLOW")
+		minbps_rec.setbroken(true)
+	}
+
+	open_connection_mutex.Unlock()
+}
+
 func get_blocks() {
+	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	if btc.AbortNow || BlockChain==nil {
+		return
+	}
+
 	BlocksInProgress = make(map[[32]byte] *one_bip, MAX_BLOCKS_FORWARD)
 	BlocksCached = make(map[uint32] *btc.Block, len(BlocksToGet))
 
 	//println("opening connections")
 	DlStartTime = time.Now()
-	/*AddrMutex.Lock()
-	for k, v := range AddrDatbase {
-		if !v {
-			new_connection(k)
-		}
-	}
-	AddrMutex.Unlock()*/
 
 	println("downloading blockchain data...")
 	SetDoBlocks(true)
-	pt := time.Now().Unix()
-	savepeers := pt
-	lastdrop := pt
-	for BlocksComplete < LastBlockHeight {
+	lastdrop := time.Now().Unix()
+	for GetDoBlocks() {
 		ct := time.Now().Unix()
 
 		BlocksMutex.Lock()
@@ -237,41 +281,15 @@ func get_blocks() {
 			process_new_block(bl)
 		} else {
 			BlocksMutex.Unlock()
-			time.Sleep(1e7)
+			time.Sleep(1e8)
 		}
 
-		if ct - lastdrop > 10 {
-			lastdrop = ct  // drop slowest peers every 10 seconds
-			drop_worst_peers()
-		}
-
-		if ct - savepeers > 20 {
-			savepeers = ct // save peers every 20 seconds
-			//save_peers()
+		if ct - lastdrop > 30 {
+			lastdrop = ct  // drop slowest peers every 30 seconds
+			drop_slowest_peers()
 		}
 
 		add_new_connections()
-
-		if ct - pt >= 1 {
-			pt = ct
-
-			AddrMutex.Lock()
-			adrs := len(AddrDatbase)
-			AddrMutex.Unlock()
-			BlocksMutex.Lock()
-			indx := BlocksIndex
-			inpr := len(BlocksInProgress)
-			cach := len(BlocksCached)
-			BlocksMutex.Unlock()
-			sec := float64(time.Now().Sub(DlStartTime)) / 1e6
-			DlMutex.Lock()
-			fmt.Printf("H:%d/%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d  DL:%.1fKBps  PR:%.1fKBps  %s\n",
-				BlockChain.BlockTreeEnd.Height, BlocksComplete, LastBlockHeight,
-				inpr, cach, open_connection_count(), adrs, indx,
-				float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec,
-				stats())
-			DlMutex.Unlock()
-		}
 	}
 	println("all blocks done...")
 }

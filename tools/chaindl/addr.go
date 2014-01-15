@@ -2,10 +2,8 @@ package main
 
 import (
 	"os"
-	"fmt"
 	"net"
 	"sync"
-	"time"
 	"bytes"
 	"bufio"
 	"github.com/piotrnar/gocoin/btc"
@@ -89,79 +87,9 @@ func load_ips() {
 	}
 }
 
-func save_peers() {
-	f, _ := os.Create("ips.txt")
-	fmt.Fprintf(f, "%d.%d.%d.%d\n", FirstIp[0], FirstIp[1], FirstIp[2], FirstIp[3])
-	ccc := 1
-	AddrMutex.Lock()
-	for k, _ := range AddrDatbase {
-		if k!=FirstIp {
-			fmt.Fprintf(f, "%d.%d.%d.%d\n", k[0], k[1], k[2], k[3])
-			ccc++
-		}
-	}
-	AddrMutex.Unlock()
-	f.Close()
-}
-
-
-func open_connection_count() (res int) {
+func open_connection_count() (res uint32) {
 	open_connection_mutex.Lock()
-	res = len(open_connection_list)
+	res = uint32(len(open_connection_list))
 	open_connection_mutex.Unlock()
 	return
 }
-
-
-func drop_worst_peers() {
-	if open_connection_count()<MAX_CONNECTIONS {
-		return
-	}
-	open_connection_mutex.Lock()
-
-	var min_bps float64
-	var minbps_rec *one_net_conn
-	for _, v := range open_connection_list {
-		if v.isbroken() {
-			// alerady broken
-			continue
-		}
-
-		if v.connected_at.IsZero() {
-			// still connecting
-			continue
-		}
-
-		if time.Now().Sub(v.connected_at) < 3*time.Second {
-			// give him 3 seconds
-			continue
-		}
-
-		v.Lock()
-		br := v.bytes_received
-		v.Unlock()
-
-		if br==0 {
-			// if zero bytes received after 3 seconds - drop it!
-			v.setbroken(true)
-			//println(" -", v.peerip, "- idle")
-			COUNTER("DROP_IDLE")
-			continue
-		}
-
-		bps := v.bps()
-		if minbps_rec==nil || bps<min_bps {
-			minbps_rec = v
-			min_bps = bps
-		}
-	}
-	if minbps_rec!=nil {
-		//fmt.Printf(" - %s - slowest (%.3f KBps, %d KB)\n", minbps_rec.peerip, min_bps/1e3, minbps_rec.bytes_received>>10)
-		COUNTER("DROP_SLOW")
-		minbps_rec.setbroken(true)
-	}
-
-	open_connection_mutex.Unlock()
-}
-/*
-*/
