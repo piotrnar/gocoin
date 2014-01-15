@@ -183,6 +183,7 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 			if c.recv.hdr_len>=4 {
 				if !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
 					println(c.peerip, "NetBadMagic")
+					c.setbroken(true)
 					return nil
 				}
 				if c.recv.hdr_len==24 {
@@ -219,6 +220,7 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
 		println(c.peerip, "Msg checksum error")
+		c.setbroken(true)
 		return nil
 	}
 
@@ -369,7 +371,9 @@ func (c *one_net_conn) run_send() {
 					c.setbroken(true)
 				}
 			} else {
+				c.Mutex.Lock()
 				c.send.buf = c.send.buf[n:]
+				c.Mutex.Unlock()
 			}
 		} else {
 			c.Mutex.Unlock()

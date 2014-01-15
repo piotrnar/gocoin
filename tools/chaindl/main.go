@@ -10,7 +10,7 @@ import (
 
 
 var (
-	MAX_CONNECTIONS uint32 = 31
+	MAX_CONNECTIONS uint32 = 51
 	killchan chan os.Signal = make(chan os.Signal)
 	Magic [4]byte
 	StartTime time.Time
@@ -41,11 +41,12 @@ func main() {
 		load_headers()
 	}
 
-	do_pings()
-	println("pings done")
+	if false {
+		do_pings()
+		println("pings done")
+	}
 
-	println("Now download", len(BlocksToGet), "blocks")
-	println("BlocksToGet:", len(BlocksToGet))
+	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
 	get_blocks()
 	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
 

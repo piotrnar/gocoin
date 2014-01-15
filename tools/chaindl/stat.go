@@ -39,16 +39,15 @@ func stats() (s string) {
 }
 
 func print_stats() {
-	AddrMutex.Lock()
-	adrs := len(AddrDatbase)
-	AddrMutex.Unlock()
 	BlocksMutex.Lock()
 	indx := BlocksIndex
 	inpr := len(BlocksInProgress)
 	cach := len(BlocksCached)
+	toge := len(BlocksToGet)
+	bcmp := BlocksComplete
 	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e3
-	fmt.Printf("H:%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d  DL:%.2fMB/s  PR:%.2fMB/s  %s\n",
-		BlocksComplete, LastBlockHeight, inpr, cach, open_connection_count(), adrs, indx,
-		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, stats())
+	fmt.Printf("H:%d/%d  ToGet:%d  InProg:%d  InMem:%d  Conns:%d  Indx:%d  DL:%.2fMB/s  PR:%.2fMB/s  ABS:%d  %s\n",
+		bcmp, LastBlockHeight, toge, inpr, cach, open_connection_count(), indx,
+		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(), stats())
 }
