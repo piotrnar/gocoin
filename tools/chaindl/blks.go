@@ -16,14 +16,19 @@ const (
 	GETBLOCKS_AT_ONCE_1 = 10
 	GETBLOCKS_AT_ONCE_2 = 3
 	GETBLOCKS_AT_ONCE_3 = 1
-	MAX_BLOCKS_FORWARD = 10000
+	MAX_BLOCKS_FORWARD = 1000
 	BLOCK_TIMEOUT = 3*time.Second
 )
 
+type one_bip struct {
+	Height uint32
+	Count uint32
+}
+
 var (
 	_DoBlocks bool
-	BlocksToGet []*btc.BlockTreeNode
-	BlocksInProgress map[[32]byte] uint32 // hash -> blockheight
+	BlocksToGet [][32]byte
+	BlocksInProgress map[[32]byte] *one_bip
 	BlocksCached map[uint32] *btc.Block
 	BlocksMutex sync.Mutex
 	BlocksIndex uint32
@@ -67,7 +72,7 @@ func (c *one_net_conn) getnextblock() {
 
 	for secondloop:=false; cnt<maxcnt; secondloop=true {
 		if secondloop && BlocksIndex==blocks_from {
-			if BlocksComplete == LastBlock.Node.Height {
+			if BlocksComplete == LastBlockHeight {
 				SetDoBlocks(true)
 				println("all blocks done")
 			} else {
@@ -80,7 +85,7 @@ func (c *one_net_conn) getnextblock() {
 
 
 		BlocksIndex++
-		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > LastBlock.Node.Height {
+		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > LastBlockHeight {
 			BlocksIndex = BlocksComplete
 		}
 
@@ -89,27 +94,28 @@ func (c *one_net_conn) getnextblock() {
 			continue
 		}
 
-		bl := BlocksToGet[BlocksIndex]
+		bh := BlocksToGet[BlocksIndex]
 
-		//_, inpro := BlocksInProgress[bl.BlockHash.Hash]
 		c.Mutex.Lock()
-		if c.blockinprogress[bl.BlockHash.Hash] {
+		if c.blockinprogress[bh] {
 			c.Mutex.Unlock()
-			//println(" inpr ->", BlocksIndex)
 			continue
 		}
 
-		BlocksInProgress[bl.BlockHash.Hash] = bl.Height
+		cbip := BlocksInProgress[bh]
+		if cbip==nil {
+			cbip = &one_bip{Height:BlocksIndex, Count:1}
+		} else {
+			cbip.Count++
+		}
+		BlocksInProgress[bh] = cbip
 		//dmppr()
-		c.blockinprogress[bl.BlockHash.Hash] = true
+		c.blockinprogress[bh] = true
 		c.Mutex.Unlock()
 
 		b.Write([]byte{2,0,0,0})
-		b.Write(bl.BlockHash.Hash[:])
+		b.Write(bh[:])
 		cnt++
-
-		//println(c.peerip, "- getblock", bl.Height)
-		//println(" get block", BlocksIndex, bl.Height, len(BlocksCached), len(BlocksInProgress), bl.BlockHash.String())
 	}
 	BlocksMutex.Unlock()
 
@@ -146,8 +152,8 @@ func (c *one_net_conn) block(d []byte) {
 		return
 	}
 
-	height := BlocksInProgress[bl.Hash.Hash]
-	if height==0 {
+	bip := BlocksInProgress[bl.Hash.Hash]
+	if bip==nil {
 		COUNTER("SAME_BLOCK")
 		//println(bl.Hash.String(), "- already received")
 		return
@@ -155,12 +161,12 @@ func (c *one_net_conn) block(d []byte) {
 	DlMutex.Lock()
 	DlBytesDownloaded += uint(len(bl.Raw))
 	DlMutex.Unlock()
-	BlocksCached[height] = bl
+	BlocksCached[bip.Height] = bl
 	delete(BlocksInProgress, bl.Hash.Hash)
 
 	bl.BuildTxList()
 	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot) {
-		println(c.peerip, " - MerkleRoot mismatch at block", height)
+		println(c.peerip, " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return
 	}
@@ -200,7 +206,7 @@ func process_new_block(bl *btc.Block) {
 
 
 func get_blocks() {
-	BlocksInProgress = make(map[[32]byte] uint32, len(BlocksToGet))
+	BlocksInProgress = make(map[[32]byte] *one_bip, MAX_BLOCKS_FORWARD)
 	BlocksCached = make(map[uint32] *btc.Block, len(BlocksToGet))
 
 	//println("opening connections")
@@ -218,7 +224,7 @@ func get_blocks() {
 	pt := time.Now().Unix()
 	savepeers := pt
 	lastdrop := pt
-	for BlocksComplete < LastBlock.Node.Height {
+	for BlocksComplete < LastBlockHeight {
 		ct := time.Now().Unix()
 
 		BlocksMutex.Lock()
@@ -260,7 +266,7 @@ func get_blocks() {
 			sec := float64(time.Now().Sub(DlStartTime)) / 1e6
 			DlMutex.Lock()
 			fmt.Printf("H:%d/%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d  DL:%.1fKBps  PR:%.1fKBps  %s\n",
-				BlockChain.BlockTreeEnd.Height, BlocksComplete, LastBlock.Node.Height,
+				BlockChain.BlockTreeEnd.Height, BlocksComplete, LastBlockHeight,
 				inpr, cach, open_connection_count(), adrs, indx,
 				float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec,
 				stats())

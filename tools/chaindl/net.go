@@ -6,7 +6,6 @@ import (
 	"time"
 	"sync"
 	"bytes"
-	"errors"
 	"strings"
 //	"encoding/hex"
 	"encoding/binary"
@@ -117,17 +116,6 @@ func (c *one_net_conn) sendver() {
 }
 
 
-func (c *one_net_conn) getheaders() {
-	var b [4+1+32+32]byte
-	binary.LittleEndian.PutUint32(b[0:4], Version)
-	b[4] = 1 // one inv
-	LastBlock.Mutex.Lock()
-	copy(b[5:37], LastBlock.Node.BlockHash.Hash[:])
-	LastBlock.Mutex.Unlock()
-	c.sendmsg("getheaders", b[:])
-}
-
-
 func (c *one_net_conn) bps() (res float64) {
 	c.Lock()
 	res = 1e9 * float64(c.bytes_received) / float64(time.Now().Sub(c.connected_at))
@@ -192,56 +180,6 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 }
 
 
-func chkblock(bl *btc.Block) (er error) {
-	// Check timestamp (must not be higher than now +2 hours)
-	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
-		er = errors.New("CheckBlock() : block timestamp too far in the future")
-		return
-	}
-
-	if prv, pres := BlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
-		if prv.Parent == nil {
-			// This is genesis block
-			prv.Timestamp = bl.BlockTime
-			prv.Bits = bl.Bits
-			er = errors.New("Genesis")
-			return
-		} else {
-			return
-		}
-	}
-
-	prevblk, ok := BlockChain.BlockIndex[btc.NewUint256(bl.Parent).BIdx()]
-	if !ok {
-		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
-		return
-	}
-
-	// Check proof of work
-	gnwr := BlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
-	if bl.Bits != gnwr {
-		er = errors.New("CheckBlock: incorrect proof of work")
-	}
-
-	cur := new(btc.BlockTreeNode)
-	cur.BlockHash = bl.Hash
-	cur.Parent = prevblk
-	cur.Height = prevblk.Height + 1
-	cur.Bits = bl.Bits
-	cur.Timestamp = bl.BlockTime
-	prevblk.Childs = append(prevblk.Childs, cur)
-	BlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
-
-	LastBlock.Mutex.Lock()
-	if cur.Height > LastBlock.Node.Height {
-		LastBlock.Node = cur
-	}
-	LastBlock.Mutex.Unlock()
-
-	return
-}
-
-
 func (c *one_net_conn) gethdrsinprogress() (res bool) {
 	c.Lock()
 	res = c._hdrsinprogress
@@ -264,6 +202,19 @@ func (c *one_net_conn) cleanup() {
 		delete(open_connection_list, c.ip4)
 		COUNTER("DROP_PEER")
 		open_connection_mutex.Unlock()
+		for k, _ := range c.blockinprogress {
+			BlocksMutex.Lock()
+			bip := BlocksInProgress[k]
+			if bip!=nil {
+				//println(" block", bip.Height, btc.NewUint256(k[:]).String(), "no more. ", bip.Count, "left")
+				bip.Count--
+				if bip.Count==0 && bip.Height-1<BlocksIndex {
+					//println("BlocksIndex:", BlocksIndex, "->", BlocksIndex-1)
+					BlocksIndex = BlocksIndex-1
+				}
+			}
+			BlocksMutex.Unlock()
+		}
 	}
 }
 
