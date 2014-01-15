@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	MAX_BLOCKS_FORWARD = 2500
+	MAX_BLOCKS_FORWARD = 10e3
 	BLOCK_TIMEOUT = 2*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
