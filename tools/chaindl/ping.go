@@ -1,23 +1,30 @@
 package main
 
 import (
+//	"fmt"
 	"time"
 	"sync"
 	"bytes"
 	"crypto/rand"
+//	"encoding/hex"
+	"encoding/binary"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 
 const (
-	PING_PERIOD  = 5*time.Second
-	PING_TIMEOUT = 5*time.Second
+	PING_FETCH_BLOCKS = 250
+	PING_TIMEOUT = 1*time.Second
 	PING_SAMPLES = 8
-	DROP_SLOW_EVERY = 9*time.Second
+	DROP_SLOW_EVERY = 10*time.Second
 )
 
 var (
 	RunPings bool
 	PingMutex sync.Mutex
+
+	PingInProgress uint32
+	PingSequence uint32
 )
 
 
@@ -39,12 +46,16 @@ func SetRunPings(res bool) {
 func (c *one_net_conn) store_ping_result() {
 	c.ping.historyMs[c.ping.historyIdx] = uint(time.Now().Sub(c.ping.timeSent) / time.Millisecond)
 	c.ping.inProgress = false
-	c.ping.cnt++
 	c.ping.historyIdx++
 	if c.ping.historyIdx >= PING_SAMPLES {
 		c.ping.historyIdx = 0
 	}
 	c.ping.timeSent = time.Now()
+	PingMutex.Lock()
+	if PingInProgress==c.id {
+		PingInProgress = 0
+	}
+	PingMutex.Unlock()
 }
 
 
@@ -74,23 +85,62 @@ func (c *one_net_conn) avg_ping() (sum uint) {
 }
 
 
+func (c *one_net_conn) block_pong(d []byte) {
+	if len(d)>80 {
+		c.ping.Lock()
+		defer c.ping.Unlock()
+		if c.ping.lastBlock!=nil {
+			c.ping.bytes += uint(len(d))
+			h := btc.NewSha2Hash(d[:80])
+			if h.Equal(c.ping.lastBlock) {
+				//fmt.Println(c.peerip, "bl_pong", c.ping.seq, c.ping.bytes, time.Now().Sub(c.ping.timeSent))
+				c.ping.lastBlock = nil
+				c.ping.bytes = 0
+				c.store_ping_result()
+			}
+		}
+	}
+}
+
+
 func (c *one_net_conn) ping_idle() {
 	c.ping.Lock()
 	if c.ping.inProgress {
 		if time.Now().After(c.ping.timeSent.Add(PING_TIMEOUT)) {
 			c.store_ping_result()
 			c.ping.Unlock()
+			//println(c.peerip, "ping timeout", c.ping.seq)
 		} else {
 			c.ping.Unlock()
 			time.Sleep(time.Millisecond)
 		}
-	} else if c.ping.timeSent.IsZero() || c.ping.timeSent.Add(PING_PERIOD).Before(time.Now()) {
-		//println("ping", c.peerip)
+	} else if c.ping.now {
+		//println("ping", c.peerip, c.ping.seq)
 		c.ping.inProgress = true
 		c.ping.timeSent = time.Now()
-		rand.Read(c.ping.pattern[:])
-		c.ping.Unlock()
-		c.sendmsg("ping", c.ping.pattern[:])
+		c.ping.now = false
+		if false {
+			rand.Read(c.ping.pattern[:])
+			c.ping.Unlock()
+			c.sendmsg("ping", c.ping.pattern[:])
+		} else {
+			b := new(bytes.Buffer)
+			btc.WriteVlen(b, PING_FETCH_BLOCKS)
+			BlocksMutex.Lock()
+			for i:=1; ; i++ {
+				binary.Write(b, binary.LittleEndian, uint32(2))
+				b.Write(BlocksToGet[i][:])
+				if i==PING_FETCH_BLOCKS {
+					c.ping.lastBlock = btc.NewUint256(BlocksToGet[i][:])
+					break;
+				}
+			}
+			BlocksMutex.Unlock()
+			c.ping.bytes = 0
+			c.ping.Unlock()
+			c.sendmsg("getdata", b.Bytes())
+			//println("ping sent", c.ping.lastBlock.String())
+		}
 	} else {
 		c.ping.Unlock()
 		time.Sleep(10*time.Millisecond)
@@ -118,6 +168,33 @@ func drop_longest_ping() {
 }
 
 
+func ping_next_host() {
+	PingMutex.Lock()
+	defer PingMutex.Unlock()
+	if PingInProgress==0 {
+		open_connection_mutex.Lock()
+		defer open_connection_mutex.Unlock()
+		var last_node *one_net_conn
+		var minseq = PingSequence+1
+		for _, v := range open_connection_list {
+			v.ping.Lock()
+			if !v.connected_at.IsZero() && v.ping.seq < minseq {
+				minseq = v.ping.seq
+				last_node = v
+			}
+			v.ping.Unlock()
+		}
+		if last_node!=nil {
+			PingSequence++
+			PingInProgress = last_node.id
+			last_node.ping.Lock()
+			last_node.ping.seq = PingSequence
+			last_node.ping.now = true
+			last_node.ping.Unlock()
+		}
+	}
+}
+
 func do_pings() {
 	SetRunPings(true)
 
@@ -127,8 +204,11 @@ func do_pings() {
 		if !add_new_connections() {
 			time.Sleep(2e8)
 		}
+
+		time.Sleep(1e8)
+		ping_next_host()
+
 		if time.Now().After(next_drop) {
-			//println("drop...")
 			drop_longest_ping()
 			next_drop = next_drop.Add(DROP_SLOW_EVERY)
 		}

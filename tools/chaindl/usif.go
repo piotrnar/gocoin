@@ -92,6 +92,9 @@ func do_usif() {
 				case "s":
 					save_peers()
 
+				case "p":
+					show_inprogress()
+
 				case "d":
 					if len(ll)>1 {
 						n, e := strconv.ParseUint(ll[1], 10, 32)

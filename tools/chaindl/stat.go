@@ -46,9 +46,7 @@ func print_stats() {
 	cach := len(BlocksCached)
 	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e6
-	DlMutex.Lock()
 	fmt.Printf("H:%d/%d  InPr:%d  Got:%d  Cons:%d/%d  Indx:%d  DL:%.1fKBps  PR:%.1fKBps  %s\n",
 		BlocksComplete, LastBlockHeight, inpr, cach, open_connection_count(), adrs, indx,
 		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, stats())
-	DlMutex.Unlock()
 }

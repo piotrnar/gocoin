@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"time"
+	"runtime"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -19,6 +20,8 @@ var (
 
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
+
 	load_ips()
 	if len(AddrDatbase)==0 {
 		return

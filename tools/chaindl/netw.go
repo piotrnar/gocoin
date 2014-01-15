@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	MAX_CONNECTIONS uint32 = 40
+	MAX_CONNECTIONS uint32 = 21
 
 	open_connection_list map[[4]byte] *one_net_conn = make(map [[4]byte] *one_net_conn)
 	open_connection_mutex sync.Mutex
@@ -50,7 +50,6 @@ type one_net_conn struct {
 	closed_r bool
 
 	net.Conn
-	verackgot bool
 
 	// Message receiving state machine:
 	recv struct {
@@ -78,11 +77,14 @@ type one_net_conn struct {
 	ping struct {
 		sync.Mutex
 
-		cnt uint
+		now bool
+		seq uint32
 
 		inProgress bool
 		timeSent time.Time
 		pattern [8]byte
+		lastBlock *btc.Uint256
+		bytes uint
 
 		historyMs [PING_SAMPLES]uint
 		historyIdx int
@@ -164,7 +166,7 @@ func (c *one_net_conn) bps() (res float64) {
 
 
 func (c *one_net_conn) readmsg() *one_net_cmd {
-	c.SetReadDeadline(time.Now().Add(50*time.Millisecond))
+	c.SetReadDeadline(time.Now().Add(10*time.Millisecond))
 	if c.recv.hdr_len<24 {
 		for {
 			n, e := c.Read(c.recv.hdr[c.recv.hdr_len:])
@@ -251,6 +253,14 @@ func (c *one_net_conn) sethdrsinprogress(res bool) {
 func (c *one_net_conn) cleanup() {
 	if c.closed_r && c.closed_s {
 		COUNTER("DROP")
+
+		PingMutex.Lock()
+		if c.id==PingInProgress {
+			println(c.peerip, "abort ping")
+			PingInProgress = 0
+		}
+		PingMutex.Unlock()
+
 		//println("-", c.peerip)
 		open_connection_mutex.Lock()
 		delete(open_connection_list, c.ip4)
@@ -281,47 +291,61 @@ func (c *one_net_conn) cleanup() {
 
 
 func (c *one_net_conn) run_recv() {
+	var verackgot bool
 	for !c.isbroken() {
+		if verackgot {
+			if !c.hdr_idle() {
+				if GetRunPings() {
+					c.ping_idle()
+				}
+				if GetDoBlocks() {
+					c.blk_idle()
+				}
+			}
+		}
+
 		msg := c.readmsg()
 		if msg==nil {
-			//println(c.peerip, "- broken when reading")
+			//time.Sleep(5*time.Millisecond)
 			continue
-		} else {
-			switch msg.cmd {
-				case "verack":
-					c.Mutex.Lock()
-					c.verackgot = true
-					c.Mutex.Unlock()
-					/*AddrMutex.Lock()
-					if len(AddrDatbase)<2000 {
-						c.sendmsg("getaddr", nil)
-					}
-					AddrMutex.Unlock()*/
+		}
 
-				case "headers":
-					if c.gethdrsinprogress() {
-						c.sethdrsinprogress(false)
-						c.headers(msg.pl)
-					}
+		switch msg.cmd {
+			case "verack":
+				verackgot = true
+				AddrMutex.Lock()
+				if len(AddrDatbase)<2000 {
+					c.sendmsg("getaddr", nil)
+				}
+				AddrMutex.Unlock()
 
-				case "block":
+			case "headers":
+				if c.gethdrsinprogress() {
+					c.sethdrsinprogress(false)
+					c.headers(msg.pl)
+				}
+
+			case "block":
+				if GetRunPings() {
+					c.block_pong(msg.pl)
+				} else {
 					c.block(msg.pl)
+				}
 
-				case "version":
+			case "version":
 
-				case "addr":
-					parse_addr(msg.pl)
+			case "addr":
+				parse_addr(msg.pl)
 
-				case "inv":
+			case "inv":
 
-				case "pong":
-					if GetRunPings() {
-						c.pong(msg.pl)
-					}
+			case "pong":
+				if GetRunPings() {
+					c.pong(msg.pl)
+				}
 
-				default:
-					println(c.peerip, "received", msg.cmd, len(msg.pl))
-			}
+			default:
+				println(c.peerip, "received", msg.cmd, len(msg.pl))
 		}
 	}
 	//println(c.peerip, "closing receiver")
@@ -332,32 +356,13 @@ func (c *one_net_conn) run_recv() {
 }
 
 
-func (c *one_net_conn) idle() {
-	c.Mutex.Lock()
-	if c.verackgot {
-		c.Mutex.Unlock()
-		if !c.hdr_idle() {
-			if GetRunPings() {
-				c.ping_idle()
-			}
-			if GetDoBlocks() {
-				c.blk_idle()
-			}
-		}
-	} else {
-		c.Mutex.Unlock()
-		time.Sleep(time.Millisecond)
-	}
-}
-
-
 func (c *one_net_conn) run_send() {
 	c.sendver()
 	for !c.isbroken() {
 		c.Mutex.Lock()
 		if len(c.send.buf) > 0 {
 			c.Mutex.Unlock()
-			c.SetWriteDeadline(time.Now().Add(time.Millisecond))
+			c.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
 			n, e := c.Write(c.send.buf)
 			if e != nil {
 				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
@@ -370,7 +375,7 @@ func (c *one_net_conn) run_send() {
 			}
 		} else {
 			c.Mutex.Unlock()
-			c.idle()
+			time.Sleep(10*time.Millisecond)
 		}
 	}
 	//println(c.peerip, "closing sender")

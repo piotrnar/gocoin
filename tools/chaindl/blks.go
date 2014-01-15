@@ -4,12 +4,13 @@ import (
 	"sync"
 	"time"
 	"bytes"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 
 const (
-	MAX_BLOCKS_FORWARD = 1000
+	MAX_BLOCKS_FORWARD = 10000
 
 	GETBLOCKS_AT_ONCE_1 = 10
 	GETBLOCKS_AT_ONCE_2 = 3
@@ -32,8 +33,7 @@ var (
 	BlocksComplete uint32
 
 	DlStartTime time.Time
-	DlBytesProcesses, DlBytesDownloaded uint
-	DlMutex sync.Mutex
+	DlBytesProcesses, DlBytesDownloaded uint64
 )
 
 func GetDoBlocks() (res bool) {
@@ -47,6 +47,18 @@ func SetDoBlocks(res bool) {
 	BlocksMutex.Lock()
 	_DoBlocks = res
 	BlocksMutex.Unlock()
+}
+
+
+func show_inprogress() {
+	BlocksMutex.Lock()
+	defer BlocksMutex.Unlock()
+	println("bocks in progress:")
+	cnt := 0
+	for _, v := range BlocksInProgress {
+		cnt++
+		println(cnt, v.Height, v.Count)
+	}
 }
 
 
@@ -155,9 +167,7 @@ func (c *one_net_conn) block(d []byte) {
 		//println(bl.Hash.String(), "- already received")
 		return
 	}
-	DlMutex.Lock()
-	DlBytesDownloaded += uint(len(bl.Raw))
-	DlMutex.Unlock()
+	atomic.AddUint64(&DlBytesDownloaded, uint64(len(bl.Raw)))
 	BlocksCached[bip.Height] = bl
 	delete(BlocksInProgress, bl.Hash.Hash)
 
@@ -184,21 +194,6 @@ func (c *one_net_conn) blk_idle() {
 			c.setbroken(true)
 		}
 	}
-}
-
-
-func process_new_block(bl *btc.Block) {
-	e, _, _ := BlockChain.CheckBlock(bl)
-	if e != nil {
-		panic(e.Error())
-	}
-	e = BlockChain.AcceptBlock(bl)
-	if e != nil {
-		panic(e.Error())
-	}
-	DlMutex.Lock()
-	DlBytesProcesses += uint(len(bl.Raw))
-	DlMutex.Unlock()
 }
 
 
@@ -253,6 +248,7 @@ func drop_slowest_peers() {
 	open_connection_mutex.Unlock()
 }
 
+
 func get_blocks() {
 	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
 	if btc.AbortNow || BlockChain==nil {
@@ -271,21 +267,31 @@ func get_blocks() {
 	for GetDoBlocks() {
 		ct := time.Now().Unix()
 
-		BlocksMutex.Lock()
-		bl, pres := BlocksCached[BlocksComplete+1]
-		if pres {
+		for {
+			BlocksMutex.Lock()
+			bl, pres := BlocksCached[BlocksComplete+1]
+			if !pres {
+				break
+			}
 			BlocksComplete++
 			BlocksCached[BlocksComplete] = nil
-			BlocksMutex.Unlock()
+			if false {
+				BlockChain.CheckBlock(bl)
+				BlockChain.AcceptBlock(bl)
+			} else {
+				BlockChain.Blocks.BlockAdd(BlocksComplete, bl)
+			}
+			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 
-			process_new_block(bl)
-		} else {
 			BlocksMutex.Unlock()
-			time.Sleep(1e8)
+			time.Sleep(time.Millisecond) // reschedule
 		}
+		BlocksMutex.Unlock()
 
-		if ct - lastdrop > 30 {
-			lastdrop = ct  // drop slowest peers every 30 seconds
+		time.Sleep(1e8)
+
+		if ct - lastdrop > 15 {
+			lastdrop = ct  // drop slowest peers once for awhile
 			drop_slowest_peers()
 		}
 
