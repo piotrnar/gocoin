@@ -172,7 +172,7 @@ func download_headers() {
 	get_headers()
 	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
-	BlocksToGet = make([][32]byte, LastBlockHeight+1)
+	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {
 		BlocksToGet[n.Height] = n.BlockHash.Hash
 		if n.Height==0 {
@@ -189,8 +189,9 @@ func download_headers() {
 func save_headers() {
 	f, _ := os.Create("blocks.bin")
 	if f != nil {
-		for i := range BlocksToGet {
-			f.Write(BlocksToGet[i][:])
+		for i:=1; i<len(BlocksToGet)+1; i++ {
+			prt := BlocksToGet[uint32(i)]
+			f.Write(prt[:])
 		}
 		f.Close()
 	}
@@ -204,10 +205,12 @@ func load_headers() {
 		os.Exit(1)
 	}
 	SetAllHeadersDone(true)
-	cnt := len(d)/32
-	BlocksToGet = make([][32]byte, cnt)
-	for i:=0; i<cnt; i++ {
-		copy(BlocksToGet[i][:], d[32*i:32*(i+1)])
+	cnt := uint32(len(d)/32)
+	BlocksToGet = make(map[uint32][32]byte, cnt)
+	for i:=uint32(0); i<cnt; i++ {
+		var btg [32]byte
+		copy(btg[:], d[32*i:32*(i+1)])
+		BlocksToGet[i+1] = btg
 	}
 	LastBlockHeight = uint32(cnt-1)
 }

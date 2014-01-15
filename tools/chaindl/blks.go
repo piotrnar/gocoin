@@ -23,7 +23,7 @@ type one_bip struct {
 
 var (
 	_DoBlocks bool
-	BlocksToGet [][32]byte
+	BlocksToGet map[uint32][32]byte
 	BlocksInProgress map[[32]byte] *one_bip
 	BlocksCached map[uint32] *btc.Block
 	BlocksMutex sync.Mutex
@@ -93,7 +93,10 @@ func (c *one_net_conn) getnextblock() {
 			continue
 		}
 
-		bh := BlocksToGet[BlocksIndex]
+		bh, ok := BlocksToGet[BlocksIndex]
+		if !ok {
+			continue
+		}
 
 		c.Mutex.Lock()
 		if c.blockinprogress[bh] {
@@ -196,12 +199,7 @@ func (c *one_net_conn) block(d []byte) {
 	}
 	atomic.AddUint64(&DlBytesDownloaded, uint64(len(bl.Raw)))
 	BlocksCached[bip.Height] = bl
-	/*
-	BlocksToGet= append(BlocksToGet[:bip.Height], BlocksToGet[bip.Height:]...)
-	if bip.Height < BlocksIndex {
-		BlocksIndex--
-	}
-	*/
+	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, bl.Hash.Hash)
 
 	bl.BuildTxList()
@@ -250,7 +248,7 @@ atomic.StoreUint32(&iii, 1005)
 		}
 atomic.StoreUint32(&iii, 1006)
 
-		if v.connected_at.IsZero() {
+		if !v.isconnected() {
 			// still connecting
 			continue
 		}

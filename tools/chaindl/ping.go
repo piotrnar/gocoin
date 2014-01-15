@@ -127,11 +127,12 @@ func (c *one_net_conn) ping_idle() {
 			b := new(bytes.Buffer)
 			btc.WriteVlen(b, PING_FETCH_BLOCKS)
 			BlocksMutex.Lock()
-			for i:=1; ; i++ {
+			for i:=uint32(1); ; i++ {
 				binary.Write(b, binary.LittleEndian, uint32(2))
-				b.Write(BlocksToGet[i][:])
+				btg := BlocksToGet[i]
+				b.Write(btg[:])
 				if i==PING_FETCH_BLOCKS {
-					c.ping.lastBlock = btc.NewUint256(BlocksToGet[i][:])
+					c.ping.lastBlock = btc.NewUint256(btg[:])
 					break;
 				}
 			}
