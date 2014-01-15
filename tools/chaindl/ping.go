@@ -213,4 +213,7 @@ func do_pings() {
 			next_drop = next_drop.Add(DROP_SLOW_EVERY)
 		}
 	}
+	PingMutex.Lock()
+	PingInProgress = 0
+	PingMutex.Unlock()
 }

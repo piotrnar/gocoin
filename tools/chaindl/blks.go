@@ -8,15 +8,14 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-
 const (
-	MAX_BLOCKS_FORWARD = 10000
-
-	GETBLOCKS_AT_ONCE_1 = 10
-	GETBLOCKS_AT_ONCE_2 = 3
-	GETBLOCKS_AT_ONCE_3 = 1
+	MAX_BLOCKS_FORWARD = 5e3
 	BLOCK_TIMEOUT = 3*time.Second
+	GETBLOCKS_AT_ONCE_1 = 10 // height < 100e3
+	GETBLOCKS_AT_ONCE_2 = 3  // height < 200e3
+	GETBLOCKS_AT_ONCE_3 = 1  // height >= 200e3
 )
+
 
 type one_bip struct {
 	Height uint32

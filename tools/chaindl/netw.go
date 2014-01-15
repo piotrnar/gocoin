@@ -22,8 +22,6 @@ const (
 )
 
 var (
-	MAX_CONNECTIONS uint32 = 21
-
 	open_connection_list map[[4]byte] *one_net_conn = make(map [[4]byte] *one_net_conn)
 	open_connection_mutex sync.Mutex
 	curid uint32
