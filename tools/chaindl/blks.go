@@ -11,8 +11,8 @@ import (
 const (
 	MAX_BLOCKS_FORWARD = 5e3
 	BLOCK_TIMEOUT = 3*time.Second
-	GETBLOCKS_AT_ONCE_1 = 10 // height < 100e3
-	GETBLOCKS_AT_ONCE_2 = 3  // height < 200e3
+	GETBLOCKS_AT_ONCE_1 = 100 // height < 100e3
+	GETBLOCKS_AT_ONCE_2 = 10  // height < 200e3
 	GETBLOCKS_AT_ONCE_3 = 1  // height >= 200e3
 )
 
@@ -168,6 +168,10 @@ func (c *one_net_conn) block(d []byte) {
 	}
 	atomic.AddUint64(&DlBytesDownloaded, uint64(len(bl.Raw)))
 	BlocksCached[bip.Height] = bl
+	BlocksToGet = append(BlocksToGet[:bip.Height], BlocksToGet[bip.Height:]...)
+	if bip.Height < BlocksIndex {
+		BlocksIndex--
+	}
 	delete(BlocksInProgress, bl.Hash.Hash)
 
 	bl.BuildTxList()
@@ -266,14 +270,14 @@ func get_blocks() {
 	for GetDoBlocks() {
 		ct := time.Now().Unix()
 
+		BlocksMutex.Lock()
 		for {
-			BlocksMutex.Lock()
 			bl, pres := BlocksCached[BlocksComplete+1]
 			if !pres {
 				break
 			}
 			BlocksComplete++
-			BlocksCached[BlocksComplete] = nil
+			delete(BlocksCached, BlocksComplete)
 			if false {
 				BlockChain.CheckBlock(bl)
 				BlockChain.AcceptBlock(bl)
@@ -282,8 +286,8 @@ func get_blocks() {
 			}
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 
-			BlocksMutex.Unlock()
-			time.Sleep(time.Millisecond) // reschedule
+			//BlocksMutex.Unlock()
+			//time.Sleep(time.Millisecond) // reschedule
 		}
 		BlocksMutex.Unlock()
 
