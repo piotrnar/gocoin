@@ -94,6 +94,7 @@ func main() {
 	StartTime = time.Now()
 	get_blocks()
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
+	close_all_connections()
 
 	StartTime = time.Now()
 	fmt.Println("All blocks done - defrag unspent...")

@@ -189,6 +189,8 @@ func download_headers() {
 		}
 	}
 
+	close_all_connections()
+
 	MemBlockChain.Close()
 	MemBlockChain = nil
 }

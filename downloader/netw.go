@@ -453,3 +453,14 @@ func add_new_connections() bool {
 	}
 	return false
 }
+
+func close_all_connections() {
+	open_connection_mutex.Lock()
+	for _, v := range open_connection_list {
+		v.setbroken(true)
+	}
+	open_connection_mutex.Unlock()
+	for open_connection_count()>0 {
+		time.Sleep(1e8)
+	}
+}

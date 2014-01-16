@@ -396,5 +396,4 @@ func get_blocks() {
 			usif_prompt()
 		}
 	}
-	fmt.Println("all blocks done...")
 }
