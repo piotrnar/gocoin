@@ -12,6 +12,12 @@ import (
 )
 
 
+const (
+	TheGenesis  = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+	LastTrusted = "00000000000000007d3e074b94b5bbce557cb57a88011bd66a12a482c70646db"
+)
+
+
 var (
 	MAX_CONNECTIONS uint32 = 20
 	killchan chan os.Signal = make(chan os.Signal)
@@ -20,8 +26,8 @@ var (
 	GocoinHomeDir string
 	TheBlockChain *btc.Chain
 
-	GenesisBlock *btc.Uint256
-	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString("0000000000000001c091ada69f444dc0282ecaabe4808ddbb2532e5555db0c03")
+	GenesisBlock *btc.Uint256 = btc.NewUint256FromString(TheGenesis)
+	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString(LastTrusted)
 	TrustUpTo uint32
 	GlobalExit bool
 )
@@ -32,12 +38,8 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	debug.SetGCPercent(50)
 
-	load_ips()
-	if len(AddrDatbase)==0 {
-		return
-	}
+	add_ip_str("46.253.195.50") // seed node
 
-	GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	if len(os.Args)<2 {
 		GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
