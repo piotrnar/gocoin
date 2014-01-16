@@ -83,7 +83,6 @@ func (c *one_net_conn) getnextblock() {
 	vl := new(bytes.Buffer)
 
 	BlocksMutex_Lock()
-	time_in := time.Now().Unix()
 
 	if BlocksComplete > BlocksIndex {
 		println("dupa", BlocksComplete, BlocksIndex)
@@ -100,29 +99,21 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	println("timeout...", max_block_forward, blocks_from, BlocksIndex, BlocksComplete, LastBlockHeight)
-
 	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
-		BlocksIndex++
-		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
-			BlocksIndex = BlocksComplete
-		}
-
-		if (time.Now().Unix() - time_in) > 10 {
-			println("timeout in getnextblock", cnt, lensofar, secondloop, blocks_from, BlocksIndex,
-				BlocksComplete == LastBlockHeight)
-			break
-		}
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
-				SetDoBlocks(false)
-				println("all blocks done")
+				_DoBlocks = false
 			} else {
-				println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
 				COUNTER("WRAP")
 				time.Sleep(1e8)
 			}
 			break
+		}
+
+		BlocksIndex++
+		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
+			println("wrap", BlocksIndex, BlocksComplete)
+			BlocksIndex = BlocksComplete
 		}
 
 		if _, done := BlocksCached[BlocksIndex]; done {
@@ -132,6 +123,7 @@ func (c *one_net_conn) getnextblock() {
 
 		bh, ok := BlocksToGet[BlocksIndex]
 		if !ok {
+			//println(" toget ->", BlocksIndex)
 			continue
 		}
 
@@ -141,6 +133,7 @@ func (c *one_net_conn) getnextblock() {
 			cbip.Conns = make(map[uint32]bool, MAX_CONNECTIONS)
 		} else {
 			if cbip.Conns[c.id] {
+				//println(" cbip.Conns ->", c.id)
 				continue
 			}
 			cbip.Count++
@@ -331,6 +324,11 @@ func get_blocks() {
 		ct = time.Now().Unix()
 
 		BlocksMutex_Lock()
+		if BlocksComplete>=LastBlockHeight {
+			BlocksMutex_Unlock()
+			break
+		}
+
 		in := time.Now().Unix()
 		for {
 			bl, pres := BlocksCached[BlocksComplete+1]
