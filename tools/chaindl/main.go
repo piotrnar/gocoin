@@ -53,6 +53,9 @@ func main() {
 	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
 	StartTime = time.Now()
 	get_blocks()
+	println("Sync now...")
+	BlockChain.Sync()
+	BlockChain.Close()
 	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
 
 	return

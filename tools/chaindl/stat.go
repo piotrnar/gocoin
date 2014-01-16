@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"sort"
-    "time"
+	"time"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 var (
@@ -46,8 +47,8 @@ func print_stats() {
 	camb := BlocksCachedSize>>20
 	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e3
-	fmt.Printf("Block:%d/%d  Pending:%d  InProgress:%d  Index:%d  Memory:%d/%dMB  Conns:%d  Dload:%.1fMB/s  Output:%.1fMB/s  AvgSize:%d  %.1fmin\n %s\n",
+	fmt.Printf("Block:%d/%d  Pending:%d  InProgress:%d  Index:%d  Memory:%d/%dMB  Conns:%d  Dload:%.2fMB/s  Output:%.2fMB/s  AvgSize:%d  %.1fmin\n %s  EC_Ver:%d\n",
 		bcmp, LastBlockHeight, toge, inpr, indx, cach, camb, open_connection_count(),
 		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(),
-		time.Now().Sub(StartTime).Minutes(), stats())
+		time.Now().Sub(StartTime).Minutes(), stats(), btc.EcdsaVerifyCnt)
 }

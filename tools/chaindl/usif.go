@@ -105,10 +105,9 @@ func do_usif() {
 						AddrMutex.Unlock()
 
 					case "q":
-						os.Exit(0)
-						//SetRunPings(false)
-						//SetDoBlocks(false)
-						//exit = true
+						SetRunPings(false)
+						SetDoBlocks(false)
+						return
 
 					case "bm":
 						println("Trying BlocksMutex...")

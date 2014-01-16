@@ -305,6 +305,7 @@ func get_blocks() {
 
 	SetDoBlocks(true)
 	lastdrop := time.Now().Unix()
+	BlockChain.DoNotSync = true
 	for GetDoBlocks() {
 		ct := time.Now().Unix()
 
@@ -321,10 +322,12 @@ func get_blocks() {
 			}
 			BlocksCachedSize -= uint(len(bl.Raw))
 			delete(BlocksCached, BlocksComplete)
-			if false {
+			if true {
+				//bl.Trusted = true
 				er, _, _ := BlockChain.CheckBlock(bl)
 				if er != nil {
 					println(er.Error())
+					return
 				} else {
 					BlockChain.AcceptBlock(bl)
 				}

@@ -188,6 +188,7 @@ func download_headers() {
 func save_headers() {
 	f, _ := os.Create("blocks.bin")
 	if f != nil {
+		f.Write(GenesisBlock.Hash[:])
 		for i:=1; i<len(BlocksToGet)+1; i++ {
 			prt := BlocksToGet[uint32(i)]
 			f.Write(prt[:])
@@ -206,7 +207,7 @@ func load_headers() {
 	SetAllHeadersDone(true)
 	cnt := uint32(len(d)/32)
 	BlocksToGet = make(map[uint32][32]byte, cnt)
-	for i:=uint32(0); i<cnt; i++ {
+	for i:=uint32(0); i<=cnt; i++ {
 		var btg [32]byte
 		copy(btg[:], d[32*i:32*(i+1)])
 		BlocksToGet[i] = btg
