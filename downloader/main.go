@@ -35,6 +35,8 @@ var (
 
 
 func main() {
+	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
+
 	StartTime = time.Now()
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	debug.SetGCPercent(50)
