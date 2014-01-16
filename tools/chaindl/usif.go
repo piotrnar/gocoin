@@ -107,7 +107,7 @@ func do_usif() {
 
 					case "q":
 						if !GetAllHeadersDone() {
-							os.Exit(0)
+							return
 						}
 						SetRunPings(false)
 						SetDoBlocks(false)
