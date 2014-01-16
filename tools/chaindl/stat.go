@@ -14,7 +14,6 @@ var (
 
 
 func COUNTER(s string) {
-	return
 	cnt_mut.Lock()
 	_CNT[s]++
 	cnt_mut.Unlock()
@@ -22,7 +21,6 @@ func COUNTER(s string) {
 
 
 func stats() (s string) {
-	return
 	cnt_mut.Lock()
 	ss := make([]string, len(_CNT))
 	i := 0
@@ -33,7 +31,7 @@ func stats() (s string) {
 	cnt_mut.Unlock()
 	sort.Strings(ss)
 	for i = range ss {
-		s += " "+ss[i]
+		s += "  "+ss[i]
 	}
 	return
 }
@@ -48,7 +46,7 @@ func print_stats() {
 	camb := BlocksCachedSize>>20
 	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e3
-	fmt.Printf("H:%d/%d  ToGet:%d  InProg:%d  InMem:%d/%dMB  Conns:%d  Indx:%d  DL:%.2fMB/s  PR:%.2fMB/s  ABS:%d  %s\n",
-		bcmp, LastBlockHeight, toge, inpr, cach, camb, open_connection_count(), indx,
+	fmt.Printf("Block:%d/%d  Pending:%d  InProgress:%d  Index:%d  Memory:%d/%dMB  Conns:%d  Dload:%.2fMB/s  Output:%.2fMB/s  AvgSize:%d\n %s\n",
+		bcmp, LastBlockHeight, toge, inpr, indx, cach, camb, open_connection_count(),
 		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(), stats())
 }
