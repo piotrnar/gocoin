@@ -8,8 +8,12 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 )
+
+var iii uint32
 
 func readline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
@@ -29,9 +33,10 @@ func show_connections() {
 			png := v.avg_ping()
 			kbps := v.bps()/1e3
 			v.Lock()
-			ss[i] += fmt.Sprintf(" %20s %5dms %6.2fKB/s", time.Now().Sub(v.connected_at), png, kbps)
+			ss[i] += fmt.Sprintf(" %20s %5dms %6.2fKB/s  sbl:%d",
+				time.Now().Sub(v.connected_at), png, kbps, len(v.send.buf))
 			if !v.last_blk_rcvd.IsZero() {
-				ss[i] += fmt.Sprintf("  %20s %3d", time.Now().Sub(v.last_blk_rcvd), len(v.blockinprogress))
+				ss[i] += fmt.Sprintf("  %20s %3d", time.Now().Sub(v.last_blk_rcvd), v.inprogress)
 			}
 			v.Unlock()
 		}
@@ -61,7 +66,12 @@ func save_peers() {
 	println(ccc, "peers saved")
 }
 
-var iii uint32
+func show_free_mem() {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	println("HEAP size", ms.Alloc>>20, "MB,  SysMEM used", ms.Sys>>20, "MB")
+}
+
 
 func do_usif() {
 	print("cmd> ")
@@ -93,6 +103,14 @@ func do_usif() {
 						//SetRunPings(false)
 						//SetDoBlocks(false)
 						//exit = true
+
+					case "bm":
+						println("Trying BlocksMutex...")
+						BlocksMutex.Lock()
+						println("BlocksMutex locked.")
+						BlocksMutex.Unlock()
+						println("BlocksMutex unlocked.")
+
 
 					case "n":
 						show_connections()
@@ -128,6 +146,14 @@ func do_usif() {
 								drop_slowest_peers()
 							}
 						}
+
+					case "f":
+						show_free_mem()
+						debug.FreeOSMemory()
+						show_free_mem()
+
+					case "m":
+						show_free_mem()
 
 					case "mc":
 						if len(ll)>1 {

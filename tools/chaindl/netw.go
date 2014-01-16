@@ -65,7 +65,8 @@ type one_net_conn struct {
 		buf []byte
 	}
 
-	blockinprogress map[[32]byte] bool
+	inprogress uint32
+
 	last_blk_rcvd time.Time
 	connected_at time.Time
 	bytes_received uint64
@@ -113,6 +114,14 @@ func (c *one_net_conn) setbroken(res bool) {
 }
 
 
+func (c *one_net_conn) sendbuflen() (sbl int) {
+	c.Lock()
+	sbl = len(c.send.buf)
+	c.Unlock()
+	return
+}
+
+
 func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 	sbuf := make([]byte, 24+len(pl))
 
@@ -125,9 +134,9 @@ func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[20:24], sh[:4])
 	copy(sbuf[24:], pl)
 
-	//println("send", cmd, len(sbuf), "...")
 	c.Mutex.Lock()
 	c.send.buf = append(c.send.buf, sbuf...)
+	//println("...", len(c.send.buf))
 	c.Mutex.Unlock()
 	return
 }
@@ -254,6 +263,7 @@ func (c *one_net_conn) cleanup() {
 	if c.closed_r && c.closed_s {
 		COUNTER("DROP")
 
+		// Cleanup pending ping
 		PingMutex.Lock()
 		if c.id==PingInProgress {
 			println(c.peerip, "abort ping")
@@ -261,23 +271,29 @@ func (c *one_net_conn) cleanup() {
 		}
 		PingMutex.Unlock()
 
-		//println("-", c.peerip)
+		// Remove from open connections
 		open_connection_mutex.Lock()
 		delete(open_connection_list, c.ip4)
 		open_connection_mutex.Unlock()
 
+		// Remove peers db
 		AddrMutex.Lock()
 		delete(AddrDatbase, c.ip4)
 		AddrMutex.Unlock()
 
+		// Remove from pending blocks
 		BlocksMutex.Lock()
 		bi := BlocksIndex
-		for k, _ := range c.blockinprogress {
-			bip := BlocksInProgress[k]
-			if bip!=nil {
-				bip.Count--
-				if bip.Count==0 && bip.Height-1<bi {
-					bi = bi-1
+		for k, v := range BlocksInProgress {
+			if v.Conns[c.id] {
+				delete(v.Conns, c.id)
+				if v.Count==1 {
+					delete(BlocksInProgress, k)
+					if v.Height-1<bi {
+						bi = bi-1
+					}
+				} else {
+					v.Count--
 				}
 			}
 		}
@@ -359,9 +375,7 @@ func (c *one_net_conn) run_recv() {
 func (c *one_net_conn) run_send() {
 	c.sendver()
 	for !c.isbroken() {
-		c.Mutex.Lock()
-		if len(c.send.buf) > 0 {
-			c.Mutex.Unlock()
+		if c.sendbuflen() > 0 {
 			c.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
 			n, e := c.Write(c.send.buf)
 			if e != nil {
@@ -376,7 +390,6 @@ func (c *one_net_conn) run_send() {
 				c.Mutex.Unlock()
 			}
 		} else {
-			c.Mutex.Unlock()
 			time.Sleep(10*time.Millisecond)
 		}
 	}
@@ -416,7 +429,6 @@ func new_connection(ip4 [4]byte) *one_net_conn {
 	res.peerip = fmt.Sprintf("%d.%d.%d.%d", ip4[0], ip4[1], ip4[2], ip4[3])
 	res.ip4 = ip4
 	res.id = atomic.AddUint32(&curid, 1)
-	res.blockinprogress = make(map[[32]byte] bool)
 	open_connection_mutex.Lock()
 	AddrDatbase[ip4] = true
 	open_connection_list[ip4] = res

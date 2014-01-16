@@ -210,7 +210,7 @@ func load_headers() {
 	for i:=uint32(0); i<cnt; i++ {
 		var btg [32]byte
 		copy(btg[:], d[32*i:32*(i+1)])
-		BlocksToGet[i+1] = btg
+		BlocksToGet[i] = btg
 	}
 	LastBlockHeight = uint32(cnt-1)
 }
