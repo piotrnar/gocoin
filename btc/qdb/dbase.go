@@ -77,11 +77,11 @@ func (db UnspentDB) Close() {
 }
 
 
-func (db UnspentDB) Idle() {
-	if !db.unspent.idle() {
-		//println("No Unspent to defrag")
-		db.unwind.idle()
+func (db UnspentDB) Idle() bool {
+	if db.unspent.idle() {
+		return true
 	}
+	return db.unwind.idle()
 }
 
 

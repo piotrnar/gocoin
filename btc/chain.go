@@ -71,8 +71,8 @@ func (ch *Chain) Sync() {
 
 // Call this function periodically (i.e. each second)
 // when your client is idle, to defragment databases.
-func (ch *Chain) Idle() {
-	ch.Unspent.Idle()
+func (ch *Chain) Idle() bool {
+	return ch.Unspent.Idle()
 }
 
 

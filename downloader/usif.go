@@ -119,6 +119,10 @@ func do_usif() {
 						BlocksMutex.Unlock()
 						fmt.Println("BlocksMutex unlocked.")
 
+					case "b":
+						if TheBlockChain!=nil {
+							fmt.Println(TheBlockChain.Stats())
+						}
 
 					case "n":
 						show_connections()

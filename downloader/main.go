@@ -98,11 +98,14 @@ func main() {
 	close_all_connections()
 
 	StartTime = time.Now()
-	fmt.Println("All blocks done - defrag unspent...")
-	for i:=0; i<1000; i++ {
-		TheBlockChain.Unspent.Idle()
+	fmt.Print("All blocks done - defrag unspent")
+	for {
+		if !TheBlockChain.Unspent.Idle() {
+			break
+		}
+		fmt.Print(".")
 	}
-	fmt.Println("Defrag unspent done in", time.Now().Sub(StartTime).String())
+	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Sync()
 	TheBlockChain.Close()
 

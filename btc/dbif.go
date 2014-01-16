@@ -19,7 +19,7 @@ type UnspentDB interface {
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
 	GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx
 
-	Idle()
+	Idle() bool
 	Save()
 	Close()
 	GetStats() (string)
