@@ -68,7 +68,7 @@ func show_inprogress() {
 
 
 func (c *one_net_conn) getnextblock() {
-	var cnt, lensofar int
+	var cnt, lensofar, xxx int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
@@ -89,7 +89,8 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
+	for secondloop:=false; xxx<100e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
+		xxx++
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
 				SetDoBlocks(false)
