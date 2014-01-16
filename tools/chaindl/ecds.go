@@ -4,8 +4,6 @@ package main
 
 import (
 	"fmt"
-	"unsafe"
-	"syscall"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/btc/newec"
 )
