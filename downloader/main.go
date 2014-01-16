@@ -42,6 +42,7 @@ func main() {
 	debug.SetGCPercent(50)
 
 	add_ip_str("46.253.195.50") // seed node
+	load_ips() // other seed nodes
 
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	if len(os.Args)<2 {
