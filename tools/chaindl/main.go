@@ -22,6 +22,7 @@ var (
 
 
 func main() {
+	StartTime = time.Now()
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	debug.SetGCPercent(50)
 
@@ -43,12 +44,14 @@ func main() {
 		load_headers()
 	}
 
+	StartTime = time.Now()
 	if false {
 		do_pings()
 		println("pings done")
 	}
 
 	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
+	StartTime = time.Now()
 	get_blocks()
 	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
 

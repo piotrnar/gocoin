@@ -168,7 +168,6 @@ func download_headers() {
 		return
 	}
 
-	StartTime = time.Now()
 	get_headers()
 	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
