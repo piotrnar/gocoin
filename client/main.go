@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/tools/utils"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
@@ -211,7 +212,7 @@ func main() {
 			network.NetCloseAll()
 			common.CloseBlockChain()
 			network.ClosePeerDB()
-			UnlockDatabaseDir()
+			utils.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
@@ -308,5 +309,5 @@ func main() {
 	}
 
 	common.CloseBlockChain()
-	UnlockDatabaseDir()
+	utils.UnlockDatabaseDir()
 }

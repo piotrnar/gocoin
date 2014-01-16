@@ -44,7 +44,7 @@ func host_init() {
 	// Lock the folder
 	os.MkdirAll(common.GocoinHomeDir, 0770)
 	os.MkdirAll(common.GocoinHomeDir+"wallet", 0770)
-	LockDatabaseDir()
+	utils.LockDatabaseDir(common.GocoinHomeDir)
 
 	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.idx")
 	if e!=nil {
@@ -80,7 +80,7 @@ func host_init() {
 	sto := time.Now().UnixNano()
 	if btc.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
-		UnlockDatabaseDir()
+		utils.UnlockDatabaseDir()
 		os.Exit(1)
 	}
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
