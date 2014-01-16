@@ -53,14 +53,15 @@ func main() {
 		return
 	}
 
-	StartTime = time.Now()
+	/*
 	println("tuning to the fastest peers... (enter 'g' to continue)")
+	StartTime = time.Now()
 	usif_prompt()
 	do_pings()
-
 	if GlobalExit {
 		return
 	}
+	*/
 
 	for k, h := range BlocksToGet {
 		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {

@@ -201,7 +201,7 @@ func do_pings() {
 
 	next_drop := time.Now().Add(DROP_SLOW_EVERY)
 
-	ping_timeout := time.Now().Add(5*time.Minute)
+	ping_timeout := time.Now().Add(1*time.Minute)
 	for GetRunPings() {
 		if !add_new_connections() {
 			time.Sleep(2e8)
@@ -216,6 +216,7 @@ func do_pings() {
 		}
 
 		if time.Now().After(ping_timeout) {
+			SetRunPings(false)
 			break
 		}
 	}
