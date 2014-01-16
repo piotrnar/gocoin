@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	MAX_BLOCKS_FORWARD = 10e3
+	MAX_BLOCKS_AHEAD = 10e3
+	MAX_BLOCKS_IM_MEM = 512<<20 // Use up to 512MB of memory for block cache
 	BLOCK_TIMEOUT = 2*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
@@ -73,6 +74,11 @@ func (c *one_net_conn) getnextblock() {
 	blocks_from := BlocksIndex
 
 	avg_len := avg_block_size()
+	max_block_forward := uint32(MAX_BLOCKS_IM_MEM / avg_len)
+	if max_block_forward > MAX_BLOCKS_AHEAD {
+		max_block_forward = MAX_BLOCKS_AHEAD
+	}
+
 	for secondloop:=false; lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
@@ -88,7 +94,7 @@ func (c *one_net_conn) getnextblock() {
 
 
 		BlocksIndex++
-		if BlocksIndex > BlocksComplete+MAX_BLOCKS_FORWARD || BlocksIndex > LastBlockHeight {
+		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
 			BlocksIndex = BlocksComplete
 		}
 
@@ -130,12 +136,14 @@ func (c *one_net_conn) getnextblock() {
 }
 
 
+const BSLEN = 0x1000
+
 var (
 	BSMut sync.Mutex
 	BSSum int
 	BSCnt int
 	BSIdx int
-	BSLen [0x100]int
+	BSLen [BSLEN]int
 )
 
 
@@ -143,10 +151,10 @@ func blocksize_update(le int) {
 	BSMut.Lock()
 	BSLen[BSIdx] = le
 	BSSum += le
-	if BSCnt<0x100 {
+	if BSCnt<BSLEN {
 		BSCnt++
 	}
-	BSIdx = (BSIdx+1) & 0xff
+	BSIdx = (BSIdx+1) % BSLEN
 	BSSum -= BSLen[BSIdx]
 	BSMut.Unlock()
 }
@@ -281,7 +289,7 @@ func get_blocks() {
 		return
 	}
 
-	BlocksInProgress = make(map[[32]byte] *one_bip, MAX_BLOCKS_FORWARD)
+	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block, len(BlocksToGet))
 
 	//println("opening connections")
