@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 )
 
-var iii uint32
 
 func readline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
@@ -92,9 +91,6 @@ func do_usif() {
 			ll := strings.Split(cmd, " ")
 			if len(ll)>0 {
 				switch ll[0] {
-					case "i":
-						println("iii", atomic.LoadUint32(&iii))
-
 					case "g":
 						if GetRunPings() {
 							SetRunPings(false)
