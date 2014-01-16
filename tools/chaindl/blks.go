@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 	"bytes"
@@ -58,9 +59,9 @@ func SetDoBlocks(res bool) {
 func show_pending() {
 	BlocksMutex_Lock()
 	defer BlocksMutex_Unlock()
-	println("bocks pending:")
+	fmt.Println("bocks pending:")
 	for k, v := range BlocksToGet {
-		println(k, hex.EncodeToString(v[:]))
+		fmt.Println(k, hex.EncodeToString(v[:]))
 	}
 }
 
@@ -68,11 +69,11 @@ func show_pending() {
 func show_inprogress() {
 	BlocksMutex_Lock()
 	defer BlocksMutex_Unlock()
-	println("bocks in progress:")
+	fmt.Println("bocks in progress:")
 	cnt := 0
 	for _, v := range BlocksInProgress {
 		cnt++
-		println(cnt, v.Height, v.Count)
+		fmt.Println(cnt, v.Height, v.Count)
 	}
 }
 
@@ -85,7 +86,7 @@ func (c *one_net_conn) getnextblock() {
 	BlocksMutex_Lock()
 
 	if BlocksComplete > BlocksIndex {
-		println("dupa", BlocksComplete, BlocksIndex)
+		fmt.Println("dupa", BlocksComplete, BlocksIndex)
 		BlocksIndex = BlocksComplete
 	}
 
@@ -112,18 +113,18 @@ func (c *one_net_conn) getnextblock() {
 
 		BlocksIndex++
 		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
-			//println("wrap", BlocksIndex, BlocksComplete)
+			//fmt.Println("wrap", BlocksIndex, BlocksComplete)
 			BlocksIndex = BlocksComplete
 		}
 
 		if _, done := BlocksCached[BlocksIndex]; done {
-			//println(" cached ->", BlocksIndex)
+			//fmt.Println(" cached ->", BlocksIndex)
 			continue
 		}
 
 		bh, ok := BlocksToGet[BlocksIndex]
 		if !ok {
-			//println(" toget ->", BlocksIndex)
+			//fmt.Println(" toget ->", BlocksIndex)
 			continue
 		}
 
@@ -133,7 +134,7 @@ func (c *one_net_conn) getnextblock() {
 			cbip.Conns = make(map[uint32]bool, MAX_CONNECTIONS)
 		} else {
 			if cbip.Conns[c.id] {
-				//println(" cbip.Conns ->", c.id)
+				//fmt.Println(" cbip.Conns ->", c.id)
 				continue
 			}
 			cbip.Count++
@@ -204,7 +205,7 @@ func (c *one_net_conn) block(d []byte) {
 	bip := BlocksInProgress[h.Hash]
 	if bip==nil || !bip.Conns[c.id] {
 		COUNTER("UNEX")
-		//println(h.String(), "- already received", bip)
+		//fmt.Println(h.String(), "- already received", bip)
 		return
 	}
 
@@ -217,7 +218,7 @@ func (c *one_net_conn) block(d []byte) {
 
 	bl, er := btc.NewBlock(d)
 	if er != nil {
-		println(c.peerip, "-", er.Error())
+		fmt.Println(c.peerip, "-", er.Error())
 		c.setbroken(true)
 		return
 	}
@@ -229,12 +230,12 @@ func (c *one_net_conn) block(d []byte) {
 
 	bl.BuildTxList()
 	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot) {
-		println(c.peerip, " - MerkleRoot mismatch at block", bip.Height)
+		fmt.Println(c.peerip, " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return
 	}
 
-	//println("  got block", height)
+	//fmt.Println("  got block", height)
 }
 
 
@@ -283,7 +284,7 @@ func drop_slowest_peers() {
 			v.Unlock()
 			// if zero bytes received after 3 seconds - drop it!
 			v.setbroken(true)
-			//println(" -", v.peerip, "- idle")
+			//fmt.Println(" -", v.peerip, "- idle")
 			COUNTER("IDLE")
 			continue
 		}
@@ -312,7 +313,7 @@ func get_blocks() {
 	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block)
 
-	//println("opening connections")
+	//fmt.Println("opening connections")
 	DlStartTime = time.Now()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
 	BlocksIndex = BlocksComplete
@@ -345,7 +346,7 @@ func get_blocks() {
 				bl.Trusted = BlocksComplete<=TrustUpTo
 				er, _, _ := TheBlockChain.CheckBlock(bl)
 				if er != nil {
-					println(er.Error())
+					fmt.Println(er.Error())
 					return
 				} else {
 					TheBlockChain.AcceptBlock(bl)
@@ -358,10 +359,12 @@ func get_blocks() {
 				break // reschedule once a second
 			}
 		}
+		inpr := len(BlocksInProgress)
 		BlocksMutex_Unlock()
 
-		if !hadblock {
+		if !hadblock && inpr>10 {
 			TheBlockChain.Unspent.Idle()
+			COUNTER("IDLE")
 		}
 
 		time.Sleep(1e8)
@@ -393,5 +396,5 @@ func get_blocks() {
 			usif_prompt()
 		}
 	}
-	println("all blocks done...")
+	fmt.Println("all blocks done...")
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"time"
 	"bytes"
 	"runtime"
@@ -50,7 +51,7 @@ func main() {
 		}
 	}
 	GocoinHomeDir += "btcnet" + string(os.PathSeparator)
-	println("GocoinHomeDir:", GocoinHomeDir)
+	fmt.Println("GocoinHomeDir:", GocoinHomeDir)
 
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
@@ -65,7 +66,7 @@ func main() {
 	}
 
 	/*
-	println("tuning to the fastest peers... (enter 'g' to continue)")
+	fmt.Println("tuning to the fastest peers... (enter 'g' to continue)")
 	StartTime = time.Now()
 	usif_prompt()
 	do_pings()
@@ -77,7 +78,7 @@ func main() {
 	for k, h := range BlocksToGet {
 		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
 			TrustUpTo = k
-			println("All the blocks up to", TrustUpTo, "are assumed trusted")
+			fmt.Println("All the blocks up to", TrustUpTo, "are assumed trusted")
 			break
 		}
 	}
@@ -86,18 +87,18 @@ func main() {
 		blocksize_update(int(n.BlockSize))
 	}
 
-	println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
+	fmt.Println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
-	println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
+	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 
 	StartTime = time.Now()
-	println("All blocks done - defrag unspent...")
+	fmt.Println("All blocks done - defrag unspent...")
 	for i:=0; i<1000; i++ {
 		TheBlockChain.Unspent.Idle()
 	}
-	println("Defrag unspent done in", time.Now().Sub(StartTime).String())
+	fmt.Println("Defrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Sync()
 	TheBlockChain.Close()
 

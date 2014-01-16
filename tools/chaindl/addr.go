@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"net"
 	"sync"
 	"bytes"
@@ -43,7 +44,7 @@ func parse_addr(pl []byte) {
 		var ip4 [4]byte
 		n, e := b.Read(buf[:])
 		if n!=len(buf) || e!=nil {
-			println("parse_addr:", n, e)
+			fmt.Println("parse_addr:", n, e)
 			break
 		}
 		copy(ip4[:], buf[24:28])
@@ -68,14 +69,14 @@ func add_ip_str(s string) {
 		}
 		AddrDatbase[ip4] = false
 	} else {
-		println("IP syntax error:", s)
+		fmt.Println("IP syntax error:", s)
 	}
 }
 
 func load_ips() {
 	f, er := os.Open("ips.txt")
 	if er != nil {
-		println(er.Error())
+		fmt.Println(er.Error())
 		os.Exit(1)
 	}
 	defer f.Close()

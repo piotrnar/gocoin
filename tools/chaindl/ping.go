@@ -109,13 +109,13 @@ func (c *one_net_conn) ping_idle() {
 		if time.Now().After(c.ping.timeSent.Add(PING_TIMEOUT)) {
 			c.store_ping_result()
 			c.ping.Unlock()
-			//println(c.peerip, "ping timeout", c.ping.seq)
+			//fmt.Println(c.peerip, "ping timeout", c.ping.seq)
 		} else {
 			c.ping.Unlock()
 			time.Sleep(time.Millisecond)
 		}
 	} else if c.ping.now {
-		//println("ping", c.peerip, c.ping.seq)
+		//fmt.Println("ping", c.peerip, c.ping.seq)
 		c.ping.inProgress = true
 		c.ping.timeSent = time.Now()
 		c.ping.now = false
@@ -140,7 +140,7 @@ func (c *one_net_conn) ping_idle() {
 			c.ping.bytes = 0
 			c.ping.Unlock()
 			c.sendmsg("getdata", b.Bytes())
-			//println("ping sent", c.ping.lastBlock.String())
+			//fmt.Println("ping sent", c.ping.lastBlock.String())
 		}
 	} else {
 		c.ping.Unlock()
@@ -161,7 +161,7 @@ func drop_longest_ping() {
 		}
 	}
 	if conn2drop!=nil {
-		//println(conn2drop.peerip, "- slowest")
+		//fmt.Println(conn2drop.peerip, "- slowest")
 		COUNTER("PDRO")
 		conn2drop.setbroken(true)
 	}

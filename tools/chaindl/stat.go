@@ -35,7 +35,7 @@ func print_counters() {
 	for i = range ss {
 		s += "  "+ss[i]
 	}
-	println(s)
+	fmt.Println(s)
 	return
 }
 

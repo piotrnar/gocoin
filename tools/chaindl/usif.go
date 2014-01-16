@@ -68,13 +68,13 @@ func save_peers() {
 	}
 	AddrMutex.Unlock()
 	f.Close()
-	println(ccc, "peers saved")
+	fmt.Println(ccc, "peers saved")
 }
 
 func show_free_mem() {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	println("HEAP size", ms.Alloc>>20, "MB,  SysMEM used", ms.Sys>>20, "MB")
+	fmt.Println("HEAP size", ms.Alloc>>20, "MB,  SysMEM used", ms.Sys>>20, "MB")
 }
 
 
@@ -94,15 +94,15 @@ func do_usif() {
 					case "g":
 						if GetRunPings() {
 							SetRunPings(false)
-							println("Goto download phase...")
+							fmt.Println("Goto download phase...")
 							time.Sleep(3e8)
 						} else {
-							println("Already in download phase?")
+							fmt.Println("Already in download phase?")
 						}
 
 					case "a":
 						AddrMutex.Lock()
-						println(len(AddrDatbase), "addressess in the database")
+						fmt.Println(len(AddrDatbase), "addressess in the database")
 						AddrMutex.Unlock()
 
 					case "q":
@@ -113,11 +113,11 @@ func do_usif() {
 						return
 
 					case "bm":
-						println("Trying BlocksMutex...", BlockMutexFile, BlockMutexLine)
+						fmt.Println("Trying BlocksMutex...", BlockMutexFile, BlockMutexLine)
 						BlocksMutex_Lock()
-						println("BlocksMutex locked.")
+						fmt.Println("BlocksMutex locked.")
 						BlocksMutex_Unlock()
-						println("BlocksMutex unlocked.")
+						fmt.Println("BlocksMutex unlocked.")
 
 
 					case "n":
@@ -145,7 +145,7 @@ func do_usif() {
 								open_connection_mutex.Lock()
 								for _, v := range open_connection_list {
 									if v.id==uint32(n) {
-										println("dropping peer id", n, "...")
+										fmt.Println("dropping peer id", n, "...")
 										v.setbroken(true)
 									}
 								}
@@ -153,10 +153,10 @@ func do_usif() {
 							}
 						} else {
 							if GetRunPings() {
-								println("dropping longest ping")
+								fmt.Println("dropping longest ping")
 								drop_longest_ping()
 							} else {
-								println("dropping slowest peers")
+								fmt.Println("dropping slowest peers")
 								drop_slowest_peers()
 							}
 						}
@@ -174,16 +174,16 @@ func do_usif() {
 							n, e := strconv.ParseUint(ll[1], 10, 32)
 							if e == nil {
 								atomic.StoreUint32(&MAX_CONNECTIONS, uint32(n))
-								println("MAX_CONNECTIONS set to", n)
+								fmt.Println("MAX_CONNECTIONS set to", n)
 							}
 						}
 
 					default:
-						println("unknown command:", ll[0])
+						fmt.Println("unknown command:", ll[0])
 				}
 			}
 			usif_prompt()
 		}(cmd)
 	}
-	println("do_usif terminated")
+	fmt.Println("do_usif terminated")
 }

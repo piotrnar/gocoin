@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"time"
 	"sync"
 	"bytes"
@@ -129,21 +130,21 @@ func (c *one_net_conn) headers(d []byte) {
 			return
 		}
 		if hdr[80]!=0 {
-			println(LastBlock.node.Height, "Unexpected value of txn_count")
+			fmt.Println(LastBlock.node.Height, "Unexpected value of txn_count")
 			continue
 		}
 		bl, er := btc.NewBlock(hdr[:])
 		if er == nil {
 			er = chkblock(bl)
 			if er != nil {
-				println(er.Error())
+				fmt.Println(er.Error())
 				os.Exit(1)
 			}
 		} else {
-			println(LastBlock.node.Height, er.Error())
+			fmt.Println(LastBlock.node.Height, er.Error())
 		}
 	}
-	//println("Height:", LastBlock.node.Height)
+	//fmt.Println("Height:", LastBlock.node.Height)
 }
 
 
@@ -159,7 +160,7 @@ func get_headers() {
 		if ct-lt > 5 {
 			lt = ct
 			LastBlock.Mutex.Lock()
-			println("Last Header Height:", LastBlock.node.Height, "...")
+			fmt.Println("Last Header Height:", LastBlock.node.Height, "...")
 			LastBlock.Mutex.Unlock()
 			usif_prompt()
 		}
@@ -174,11 +175,11 @@ func download_headers() {
 	defer os.RemoveAll("tmp/")
 
 	*MemBlockChain.BlockTreeRoot = *TheBlockChain.BlockTreeEnd
-	println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
+	fmt.Println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
 		MemBlockChain.BlockTreeRoot.BlockHash.String())
 
 	get_headers()
-	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
+	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {

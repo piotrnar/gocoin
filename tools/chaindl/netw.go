@@ -136,7 +136,7 @@ func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 
 	c.Mutex.Lock()
 	c.send.buf = append(c.send.buf, sbuf...)
-	//println("...", len(c.send.buf))
+	//fmt.Println("...", len(c.send.buf))
 	c.Mutex.Unlock()
 	return
 }
@@ -189,7 +189,7 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 			c.recv.hdr_len += n
 			if c.recv.hdr_len>=4 {
 				if !bytes.Equal(c.recv.hdr[:4], Magic[:]) {
-					println(c.peerip, "NetBadMagic")
+					fmt.Println(c.peerip, "NetBadMagic")
 					c.setbroken(true)
 					return nil
 				}
@@ -226,7 +226,7 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
-		println(c.peerip, "Msg checksum error")
+		fmt.Println(c.peerip, "Msg checksum error")
 		c.setbroken(true)
 		return nil
 	}
@@ -264,7 +264,7 @@ func (c *one_net_conn) cleanup() {
 		// Cleanup pending ping
 		PingMutex.Lock()
 		if c.id==PingInProgress {
-			println(c.peerip, "abort ping")
+			fmt.Println(c.peerip, "abort ping")
 			PingInProgress = 0
 		}
 		PingMutex.Unlock()
@@ -359,10 +359,10 @@ func (c *one_net_conn) run_recv() {
 				}
 
 			default:
-				println(c.peerip, "received", msg.cmd, len(msg.pl))
+				fmt.Println(c.peerip, "received", msg.cmd, len(msg.pl))
 		}
 	}
-	//println(c.peerip, "closing receiver")
+	//fmt.Println(c.peerip, "closing receiver")
 	c.Mutex.Lock()
 	c.closed_r = true
 	c.cleanup()
@@ -391,7 +391,7 @@ func (c *one_net_conn) run_send() {
 			time.Sleep(10*time.Millisecond)
 		}
 	}
-	//println(c.peerip, "closing sender")
+	//fmt.Println(c.peerip, "closing sender")
 	c.Mutex.Lock()
 	c.closed_s = true
 	c.cleanup()
@@ -408,12 +408,12 @@ func (res *one_net_conn) connect() {
 		res.closed_r = true
 		res.closed_s = true
 		res.cleanup()
-		//println(er.Error())
+		//fmt.Println(er.Error())
 		return
 	}
 	res.Mutex.Lock()
 	res.Conn = con
-	//println(res.peerip, "connected")
+	//fmt.Println(res.peerip, "connected")
 	go res.run_send()
 	go res.run_recv()
 	res.connected_at = time.Now()
