@@ -71,10 +71,10 @@ func main() {
 	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
 	StartTime = time.Now()
 	get_blocks()
-	println("Sync now...")
+	println("Sync DB Now...")
 	TheBlockChain.Sync()
 	TheBlockChain.Close()
-	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
+	println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 
 	return
 }
