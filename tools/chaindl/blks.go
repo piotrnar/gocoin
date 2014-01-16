@@ -100,8 +100,8 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	println("timeout...", cnt, secondloop, blocks_from, BlocksIndex,
-		BlocksComplete == LastBlockHeight)
+	println("timeout...", cnt, blocks_from, BlocksIndex, BlocksComplete, LastBlockHeight)
+
 	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; BlocksIndex++ {
 		secondloop = true
 		if (time.Now().Unix() - time_in) > 10 {
