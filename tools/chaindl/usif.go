@@ -127,6 +127,7 @@ func do_usif() {
 
 					case "c":
 						print_stats()
+						print_counters()
 
 					case "s":
 						save_peers()
