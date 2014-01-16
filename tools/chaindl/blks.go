@@ -343,12 +343,7 @@ func get_blocks() {
             cu := time.Now().Unix()
 			if cu!=in {
 				in = cu // reschedule once a second
-				BlocksMutex_Unlock()
-				time.Sleep(time.Millisecond)
-				if !GetDoBlocks() {
-					return
-				}
-				BlocksMutex_Lock()
+				break
 			}
 		}
 		BlocksMutex_Unlock()
