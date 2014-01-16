@@ -64,10 +64,12 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		}
 	}
 
-	er = bl.BuildTxList()
-	if er != nil {
-		dos = true
-		return
+	if bl.Txs==nil {
+		er = bl.BuildTxList()
+		if er != nil {
+			dos = true
+			return
+		}
 	}
 
 	if !bl.Trusted {
