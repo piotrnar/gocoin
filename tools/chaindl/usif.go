@@ -132,8 +132,11 @@ func do_usif() {
 					case "s":
 						save_peers()
 
-					case "p":
+					case "pr":
 						show_inprogress()
+
+					case "pe":
+						show_pending()
 
 					case "d":
 						if len(ll)>1 {

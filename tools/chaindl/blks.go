@@ -5,7 +5,7 @@ import (
 	"time"
 	"bytes"
 	"sync/atomic"
-//	"encoding/hex"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -55,6 +55,16 @@ func SetDoBlocks(res bool) {
 }
 
 
+func show_pending() {
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
+	println("bocks pending:")
+	for k, v := range BlocksToGet {
+		println(k, hex.EncodeToString(v[:]))
+	}
+}
+
+
 func show_inprogress() {
 	BlocksMutex_Lock()
 	defer BlocksMutex_Unlock()
@@ -90,7 +100,8 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
+	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; BlocksIndex++ {
+		secondloop = true
 		if (time.Now().Unix() - time_in) > 10 {
 			println("timeout in getnextblock", cnt, lensofar, secondloop, blocks_from, BlocksIndex,
 				BlocksComplete == LastBlockHeight)
@@ -108,8 +119,6 @@ func (c *one_net_conn) getnextblock() {
 			break
 		}
 
-
-		BlocksIndex++
 		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
 			BlocksIndex = BlocksComplete
 		}
