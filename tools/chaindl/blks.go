@@ -307,6 +307,8 @@ func drop_slowest_peers() {
 
 
 func get_blocks() {
+	var hadblock bool
+	var bl *btc.Block
 	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block)
 
@@ -321,18 +323,16 @@ func get_blocks() {
 	laststat := ct
 	TheBlockChain.DoNotSync = true
 	for GetDoBlocks() {
-		ct = time.Now().Unix()
-
 		BlocksMutex_Lock()
 		if BlocksComplete>=LastBlockHeight {
 			BlocksMutex_Unlock()
 			break
 		}
 
-		in := time.Now().Unix()
+		in := time.Now()
 		for {
-			bl, pres := BlocksCached[BlocksComplete+1]
-			if !pres {
+			bl, hadblock = BlocksCached[BlocksComplete+1]
+			if !hadblock {
 				break
 			}
 			BlocksComplete++
@@ -354,15 +354,19 @@ func get_blocks() {
 				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			}
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
-            cu := time.Now().Unix()
-			if cu!=in {
-				in = cu // reschedule once a second
-				break
+			if in.Add(time.Second).After(time.Now()) {
+				break // reschedule once a second
 			}
 		}
 		BlocksMutex_Unlock()
 
+		if !hadblock {
+			TheBlockChain.Unspent.Idle()
+		}
+
 		time.Sleep(1e8)
+
+		ct = time.Now().Unix()
 
 		if open_connection_count() > MAX_CONNECTIONS {
 			drop_slowest_peers()

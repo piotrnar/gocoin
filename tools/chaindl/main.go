@@ -92,10 +92,12 @@ func main() {
 
 	StartTime = time.Now()
 	println("All blocks done - defrag unspent...")
-	for i:=0; i<10e3; i++ {
+	for i:=0; i<1000; i++ {
 		TheBlockChain.Unspent.Idle()
 	}
 	println("Defrag unspent done in", time.Now().Sub(StartTime).String())
+	TheBlockChain.Sync()
+	TheBlockChain.Close()
 
 	return
 }
