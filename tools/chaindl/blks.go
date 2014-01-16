@@ -74,6 +74,11 @@ func (c *one_net_conn) getnextblock() {
 
 	BlocksMutex_Lock()
 
+	if BlocksComplete > BlocksIndex {
+		println("dupa", BlocksComplete, BlocksIndex)
+		BlocksIndex = BlocksComplete
+	}
+
 	blocks_from := BlocksIndex
 
 	avg_len := avg_block_size()
