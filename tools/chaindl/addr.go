@@ -58,6 +58,20 @@ func parse_addr(pl []byte) {
 }
 
 
+func add_ip_str(s string) {
+	ip := net.ParseIP(s)
+	if len(ip)==16 {
+		var ip4 [4]byte
+		copy(ip4[:], ip[12:16])
+		if len(AddrDatbase)==0 {
+			FirstIp = ip4
+		}
+		AddrDatbase[ip4] = false
+	} else {
+		println("IP syntax error:", s)
+	}
+}
+
 func load_ips() {
 	f, er := os.Open("ips.txt")
 	if er != nil {
@@ -66,24 +80,12 @@ func load_ips() {
 	}
 	defer f.Close()
 	rd := bufio.NewReader(f)
-	AddrMutex.Lock()
-	defer AddrMutex.Unlock()
 	for {
 		d, _, er := rd.ReadLine()
 		if er != nil {
 			break
 		}
-		ip := net.ParseIP(string(d))
-		if len(ip)==16 {
-			var ip4 [4]byte
-			copy(ip4[:], ip[12:16])
-			if len(AddrDatbase)==0 {
-				FirstIp = ip4
-			}
-			AddrDatbase[ip4] = false
-		} else {
-			println("IP syntax error:", string(d))
-		}
+		add_ip_str(string(d))
 	}
 }
 
