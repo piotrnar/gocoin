@@ -79,9 +79,13 @@ func show_free_mem() {
 }
 
 
+func usif_prompt() {
+	print("cmd> ")
+}
+
 func do_usif() {
 	time.Sleep(1e9)
-	print("cmd> ")
+	usif_prompt()
 	for {
 		cmd := readline()
 		go func(cmd string) {
@@ -174,7 +178,7 @@ func do_usif() {
 						println("unknown command:", ll[0])
 				}
 			}
-			print("cmd> ")
+			usif_prompt()
 		}(cmd)
 	}
 	println("do_usif terminated")

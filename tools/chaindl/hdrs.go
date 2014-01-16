@@ -6,7 +6,6 @@ import (
 	"sync"
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -153,46 +152,19 @@ func get_headers() {
 	LastBlock.Mutex.Lock()
 	LastBlock.node = MemBlockChain.BlockTreeEnd
 	LastBlock.Mutex.Unlock()
-//println("get_headers...")
+	lt := time.Now().Unix()
 	for !GetAllHeadersDone() {
-		time.Sleep(1e9)
-		LastBlock.Mutex.Lock()
-		println(LastBlock.node.Height)
-		LastBlock.Mutex.Unlock()
+		time.Sleep(1e8)
+		ct := time.Now().Unix()
+		if ct-lt > 5 {
+			lt = ct
+			LastBlock.Mutex.Lock()
+			println("Last Header Height:", LastBlock.node.Height, "...")
+			LastBlock.Mutex.Unlock()
+			usif_prompt()
+		}
 	}
 	LastBlockHeight = LastBlock.node.Height
-}
-
-
-// Store the chain hashes in a file
-func save_headers() {
-	f, _ := os.Create("blocks.bin")
-	if f != nil {
-		f.Write(GenesisBlock.Hash[:])
-		for i:=1; i<len(BlocksToGet)+1; i++ {
-			prt := BlocksToGet[uint32(i)]
-			f.Write(prt[:])
-		}
-		f.Close()
-	}
-}
-
-
-func load_headers() {
-	d, e := ioutil.ReadFile("blocks.bin")
-	if e!=nil {
-		println(e.Error())
-		os.Exit(1)
-	}
-	SetAllHeadersDone(true)
-	cnt := uint32(len(d)/32)
-	BlocksToGet = make(map[uint32][32]byte, cnt)
-	for i:=uint32(0); i<=cnt; i++ {
-		var btg [32]byte
-		copy(btg[:], d[32*i:32*(i+1)])
-		BlocksToGet[i] = btg
-	}
-	LastBlockHeight = uint32(cnt-1)
 }
 
 

@@ -365,9 +365,10 @@ func get_blocks() {
 
 		add_new_connections()
 
-		if ct - laststat >= 60 {
+		if ct - laststat >= 20 {
 			laststat = ct
 			print_stats()
+			usif_prompt()
 		}
 	}
 	println("all blocks done...")

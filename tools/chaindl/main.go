@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
+	"github.com/piotrnar/gocoin/tools/utils"
 )
 
 
@@ -39,10 +40,10 @@ func main() {
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	GocoinHomeDir = "btcnet"+string(os.PathSeparator)
 
+	utils.LockDatabaseDir(GocoinHomeDir)
+	defer utils.UnlockDatabaseDir()
+
 	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	if btc.AbortNow || TheBlockChain==nil {
-		return
-	}
 
 	go do_usif()
 
@@ -58,6 +59,7 @@ func main() {
 	if false {
 		do_pings()
 		println("pings done")
+		usif_prompt()
 	}
 
 	for k, h := range BlocksToGet {
@@ -69,6 +71,7 @@ func main() {
 	}
 
 	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
+	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
 	println("Sync DB Now...")
