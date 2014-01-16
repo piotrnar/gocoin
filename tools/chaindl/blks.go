@@ -14,7 +14,7 @@ const (
 	MAX_BLOCKS_AHEAD = 10e3
 
 	MAX_BLOCKS_IM_MEM = 256<<20 // Use up to 256MB of memory for block cache
-	BLOCK_TIMEOUT = 2*time.Second
+	BLOCK_TIMEOUT = 10*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
 )
@@ -84,7 +84,7 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	for secondloop:=false; lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
+	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
 				SetDoBlocks(false)
@@ -182,14 +182,16 @@ func (c *one_net_conn) block(d []byte) {
 	defer BlocksMutex.Unlock()
 	h := btc.NewSha2Hash(d[:80])
 
+	c.Lock()
+	c.last_blk_rcvd = time.Now()
+	c.Unlock()
+
 	bip := BlocksInProgress[h.Hash]
 	if bip==nil || !bip.Conns[c.id] {
 		COUNTER("UNEX")
 		//println(h.String(), "- already received", bip)
 		return
 	}
-
-	c.last_blk_rcvd = time.Now()
 
 	delete(bip.Conns, c.id)
 	c.Lock()
@@ -224,14 +226,14 @@ func (c *one_net_conn) block(d []byte) {
 func (c *one_net_conn) blk_idle() {
 	c.Lock()
 	doit := c.inprogress==0
+	if !doit && !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
+		c.inprogress = 0
+		doit = true
+		COUNTER("TOUT")
+	}
 	c.Unlock()
 	if doit {
 		c.getnextblock()
-	} else {
-		if !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
-			COUNTER("TOUT")
-			c.setbroken(true)
-		}
 	}
 }
 
@@ -342,16 +344,20 @@ func get_blocks() {
 
 		time.Sleep(1e8)
 
-		// drop slowest peers once for awhile
-		occ := open_connection_count()
-		if occ > 0 {
-			occ = 1200 / occ // For 20 open connections: drop one per minute
-			if occ < 3 {
-				occ = 3 // .. drop not more often then once sper 3 seconds
-			}
-			if ct - lastdrop > int64(occ) {
-				lastdrop = ct
-				drop_slowest_peers()
+		if open_connection_count() > MAX_CONNECTIONS {
+			drop_slowest_peers()
+		} else {
+			// drop slowest peers once for awhile
+			occ := MAX_CONNECTIONS
+			if occ > 0 {
+				occ = 1200 / occ // For 20 open connections: drop one per minute
+				if occ < 3 {
+					occ = 3 // .. drop not more often then once sper 3 seconds
+				}
+				if ct - lastdrop > int64(occ) {
+					lastdrop = ct
+					drop_slowest_peers()
+				}
 			}
 		}
 

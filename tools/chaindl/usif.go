@@ -31,14 +31,15 @@ func show_connections() {
 			ss[i] += fmt.Sprint(" - Connecting...")
 		} else {
 			v.Lock()
-			ss[i] += fmt.Sprintf(" %20s", time.Now().Sub(v.connected_at))
+			ss[i] += fmt.Sprintf(" %6.1fmin", time.Now().Sub(v.connected_at).Minutes())
 			if GetRunPings() {
 				ss[i] += fmt.Sprintf(" %6sms", v.avg_ping())
 			} else {
 				ss[i] += fmt.Sprintf(" %6.2fKB/s", v.bps()/1e3)
 			}
 			if !v.last_blk_rcvd.IsZero() {
-				ss[i] += fmt.Sprintf("  %20s, %4d bl_in_pr", time.Now().Sub(v.last_blk_rcvd), v.inprogress)
+				ss[i] += fmt.Sprintf(" %6.1fsec, %4d bl_in_pr",
+					time.Now().Sub(v.last_blk_rcvd).Seconds(), v.inprogress)
 			}
 			if len(v.send.buf) > 0 {
 				ss[i] += fmt.Sprintf("  sending %d", len(v.send.buf))

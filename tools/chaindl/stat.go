@@ -46,7 +46,8 @@ func print_stats() {
 	camb := BlocksCachedSize>>20
 	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e3
-	fmt.Printf("Block:%d/%d  Pending:%d  InProgress:%d  Index:%d  Memory:%d/%dMB  Conns:%d  Dload:%.2fMB/s  Output:%.2fMB/s  AvgSize:%d\n %s\n",
+	fmt.Printf("Block:%d/%d  Pending:%d  InProgress:%d  Index:%d  Memory:%d/%dMB  Conns:%d  Dload:%.2fMB/s  Output:%.2fMB/s  AvgSize:%d  %.2fh\n %s\n",
 		bcmp, LastBlockHeight, toge, inpr, indx, cach, camb, open_connection_count(),
-		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(), stats())
+		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(),
+		time.Now().Sub(StartTime).Hours(), stats())
 }
