@@ -106,11 +106,10 @@ func do_usif() {
 						AddrMutex.Unlock()
 
 					case "q":
-						if !GetAllHeadersDone() {
-							return
-						}
+						GlobalExit = true
 						SetRunPings(false)
 						SetDoBlocks(false)
+						SetAllHeadersDone(true)
 						return
 
 					case "bm":

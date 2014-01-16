@@ -23,6 +23,7 @@ var (
 	GenesisBlock *btc.Uint256
 	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString("0000000000000001c091ada69f444dc0282ecaabe4808ddbb2532e5555db0c03")
 	TrustUpTo uint32
+	GlobalExit bool
 )
 
 
@@ -48,12 +49,17 @@ func main() {
 	go do_usif()
 
 	download_headers()
+	if GlobalExit {
+		return
+	}
 
 	StartTime = time.Now()
-	if false {
-		do_pings()
-		println("pings done")
-		usif_prompt()
+	println("tuning to the fastest peers... (enter 'g' to continue)")
+	usif_prompt()
+	do_pings()
+
+	if GlobalExit {
+		return
 	}
 
 	for k, h := range BlocksToGet {
