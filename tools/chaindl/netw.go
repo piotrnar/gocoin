@@ -163,11 +163,9 @@ func (c *one_net_conn) sendver() {
 	c.sendmsg("version", b.Bytes())
 }
 
-
+// Lock the mutex before calling it
 func (c *one_net_conn) bps() (res float64) {
-	c.Lock()
 	res = 1e9 * float64(c.bytes_received) / float64(time.Now().Sub(c.connected_at))
-	c.Unlock()
 	return
 }
 

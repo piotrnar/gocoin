@@ -36,6 +36,7 @@ var (
 	DlBytesProcesses, DlBytesDownloaded uint64
 )
 
+
 func GetDoBlocks() (res bool) {
 	BlocksMutex.Lock()
 	res = _DoBlocks
@@ -104,7 +105,7 @@ func (c *one_net_conn) getnextblock() {
 		cbip := BlocksInProgress[bh]
 		if cbip==nil {
 			cbip = &one_bip{Height:BlocksIndex, Count:1}
-			cbip.Conns = make(map[uint32]bool, 100)
+			cbip.Conns = make(map[uint32]bool, MAX_CONNECTIONS)
 		} else {
 			if cbip.Conns[c.id] {
 				continue
@@ -246,10 +247,9 @@ func drop_slowest_peers() {
 		}
 
 		v.Lock()
-		br := v.bytes_received
-		v.Unlock()
 
-		if br==0 {
+		if v.bytes_received==0 {
+			v.Unlock()
 			// if zero bytes received after 3 seconds - drop it!
 			v.setbroken(true)
 			//println(" -", v.peerip, "- idle")
@@ -258,6 +258,8 @@ func drop_slowest_peers() {
 		}
 
 		bps := v.bps()
+		v.Unlock()
+
 		if minbps_rec==nil || bps<min_bps {
 			minbps_rec = v
 			min_bps = bps
@@ -298,6 +300,9 @@ func get_blocks() {
 				break
 			}
 			BlocksComplete++
+			if BlocksComplete > BlocksIndex {
+				BlocksIndex = BlocksComplete
+			}
 			delete(BlocksCached, BlocksComplete)
 			if false {
 				er, _, _ := BlockChain.CheckBlock(bl)

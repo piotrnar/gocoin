@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 	"runtime"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 )
@@ -22,6 +23,7 @@ var (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
+	debug.SetGCPercent(50)
 
 	load_ips()
 	if len(AddrDatbase)==0 {
