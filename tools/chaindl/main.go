@@ -64,7 +64,11 @@ func main() {
 		}
 	}
 
-	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
+	for n:=TheBlockChain.BlockTreeEnd; n!=nil && n.Height>TheBlockChain.BlockTreeEnd.Height-BSLEN; n=n.Parent {
+		blocksize_update(int(n.BlockSize))
+	}
+
+	println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
