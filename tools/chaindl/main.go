@@ -11,7 +11,7 @@ import (
 
 
 var (
-	MAX_CONNECTIONS uint32 = 21
+	MAX_CONNECTIONS uint32 = 11
 	killchan chan os.Signal = make(chan os.Signal)
 	Magic [4]byte
 	StartTime time.Time
