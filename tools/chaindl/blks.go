@@ -304,10 +304,12 @@ func get_blocks() {
 	DlStartTime = time.Now()
 
 	SetDoBlocks(true)
-	lastdrop := time.Now().Unix()
+	ct := time.Now().Unix()
+	lastdrop := ct
+	laststat := ct
 	BlockChain.DoNotSync = true
 	for GetDoBlocks() {
-		ct := time.Now().Unix()
+		ct = time.Now().Unix()
 
 		BlocksMutex.Lock()
 		in := time.Now().Unix()
@@ -365,6 +367,11 @@ func get_blocks() {
 		}
 
 		add_new_connections()
+
+		if ct - laststat >= 60 {
+			laststat = ct
+			print_stats()
+		}
 	}
 	println("all blocks done...")
 }

@@ -80,6 +80,7 @@ func show_free_mem() {
 
 
 func do_usif() {
+	time.Sleep(1e9)
 	print("cmd> ")
 	for {
 		cmd := readline()
