@@ -77,9 +77,8 @@ func load_ips() {
 	f, er := os.Open("ips.txt")
 	if er != nil {
 		fmt.Println(er.Error())
-		os.Exit(1)
+		return
 	}
-	defer f.Close()
 	rd := bufio.NewReader(f)
 	for {
 		d, _, er := rd.ReadLine()
@@ -88,6 +87,7 @@ func load_ips() {
 		}
 		add_ip_str(string(d))
 	}
+	f.Close()
 }
 
 func open_connection_count() (res uint32) {
