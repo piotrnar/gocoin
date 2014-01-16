@@ -183,7 +183,7 @@ func download_headers() {
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {
 		BlocksToGet[n.Height] = n.BlockHash.Hash
-		if n.Height==0 {
+		if n.Height==TheBlockChain.BlockTreeEnd.Height {
 			break
 		}
 	}
