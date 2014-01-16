@@ -365,7 +365,7 @@ func get_blocks() {
 
 		add_new_connections()
 
-		if ct - laststat >= 20 {
+		if ct - laststat >= 5 {
 			laststat = ct
 			print_stats()
 			usif_prompt()
