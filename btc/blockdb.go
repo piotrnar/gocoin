@@ -271,7 +271,7 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 }
 
 
-func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []byte, h, bits, tim uint32)) (e error) {
+func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []byte, h, bits, tim, blen uint32)) (e error) {
 	var b [92]byte
 	var maxdatfilepos int64
 	validpos, _ := db.blockindx.Seek(0, os.SEEK_SET)
@@ -303,7 +303,8 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		}
 
 		walk(ch, BlockHash, b[36:68], binary.LittleEndian.Uint32(b[68:72]),
-			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]))
+			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]),
+			ob.blen)
 		validpos += 92
 	}
 	// In case if there was some trash at the end of data or index file, this should truncate it:

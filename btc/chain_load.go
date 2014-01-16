@@ -4,7 +4,7 @@ import (
 )
 
 
-func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp uint32) {
+func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp, blen uint32) {
 	bh := NewUint256(hash[:])
 	if have, ok := ch.BlockIndex[bh.BIdx()]; ok {
 		println("nextBlock:", bh.String(), "- already in")
@@ -18,6 +18,7 @@ func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp uint32) {
 	v.Height = height
 	v.Bits = bits
 	v.Timestamp = timestamp
+	v.BlockSize = blen
 	ch.BlockIndex[v.BlockHash.BIdx()] = v
 }
 

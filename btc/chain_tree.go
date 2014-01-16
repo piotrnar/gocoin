@@ -14,6 +14,7 @@ type BlockTreeNode struct {
 	parenHash *Uint256
 	Parent *BlockTreeNode
 	Childs []*BlockTreeNode
+	BlockSize uint32
 }
 
 
