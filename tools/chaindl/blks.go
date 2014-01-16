@@ -42,22 +42,22 @@ var (
 
 
 func GetDoBlocks() (res bool) {
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 	res = _DoBlocks
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 	return
 }
 
 func SetDoBlocks(res bool) {
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 	_DoBlocks = res
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 }
 
 
 func show_inprogress() {
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
 	println("bocks in progress:")
 	cnt := 0
 	for _, v := range BlocksInProgress {
@@ -72,7 +72,7 @@ func (c *one_net_conn) getnextblock() {
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 
 	blocks_from := BlocksIndex
 
@@ -132,7 +132,7 @@ func (c *one_net_conn) getnextblock() {
 		cnt++
 		lensofar += avg_len
 	}
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 
 	btc.WriteVlen(vl, uint32(cnt))
 
@@ -178,8 +178,8 @@ func avg_block_size() (le int) {
 
 
 func (c *one_net_conn) block(d []byte) {
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
 	h := btc.NewSha2Hash(d[:80])
 
 	c.Lock()
@@ -292,26 +292,23 @@ func drop_slowest_peers() {
 
 
 func get_blocks() {
-	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	if btc.AbortNow || BlockChain==nil {
-		return
-	}
-
 	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block)
 
 	//println("opening connections")
 	DlStartTime = time.Now()
+	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
+	BlocksIndex = BlocksComplete
 
 	SetDoBlocks(true)
 	ct := time.Now().Unix()
 	lastdrop := ct
 	laststat := ct
-	BlockChain.DoNotSync = true
+	TheBlockChain.DoNotSync = true
 	for GetDoBlocks() {
 		ct = time.Now().Unix()
 
-		BlocksMutex.Lock()
+		BlocksMutex_Lock()
 		in := time.Now().Unix()
 		for {
 			bl, pres := BlocksCached[BlocksComplete+1]
@@ -325,27 +322,27 @@ func get_blocks() {
 			BlocksCachedSize -= uint(len(bl.Raw))
 			delete(BlocksCached, BlocksComplete)
 			if true {
-				//bl.Trusted = true
-				er, _, _ := BlockChain.CheckBlock(bl)
+				bl.Trusted = BlocksComplete<=TrustUpTo
+				er, _, _ := TheBlockChain.CheckBlock(bl)
 				if er != nil {
 					println(er.Error())
 					return
 				} else {
-					BlockChain.AcceptBlock(bl)
+					TheBlockChain.AcceptBlock(bl)
 				}
 			} else {
-				BlockChain.Blocks.BlockAdd(BlocksComplete, bl)
+				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			}
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
             cu := time.Now().Unix()
 			if cu!=in {
 				in = cu // reschedule once a second
-				BlocksMutex.Unlock()
+				BlocksMutex_Unlock()
 				time.Sleep(time.Millisecond)
-				BlocksMutex.Lock()
+				BlocksMutex_Lock()
 			}
 		}
-		BlocksMutex.Unlock()
+		BlocksMutex_Unlock()
 
 		time.Sleep(1e8)
 

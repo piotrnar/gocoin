@@ -111,10 +111,10 @@ func do_usif() {
 						return
 
 					case "bm":
-						println("Trying BlocksMutex...")
-						BlocksMutex.Lock()
+						println("Trying BlocksMutex...", BlockMutexFile, BlockMutexLine)
+						BlocksMutex_Lock()
 						println("BlocksMutex locked.")
-						BlocksMutex.Unlock()
+						BlocksMutex_Unlock()
 						println("BlocksMutex unlocked.")
 
 

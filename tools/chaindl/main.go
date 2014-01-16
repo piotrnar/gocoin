@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"time"
+	"bytes"
 	"runtime"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
@@ -11,13 +12,16 @@ import (
 
 
 var (
-	MAX_CONNECTIONS uint32 = 10
+	MAX_CONNECTIONS uint32 = 20
 	killchan chan os.Signal = make(chan os.Signal)
 	Magic [4]byte
 	StartTime time.Time
 	GocoinHomeDir string
-	BlockChain *btc.Chain
+	TheBlockChain *btc.Chain
+
 	GenesisBlock *btc.Uint256
+	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString("0000000000000001c091ada69f444dc0282ecaabe4808ddbb2532e5555db0c03")
+	TrustUpTo uint32
 )
 
 
@@ -35,14 +39,20 @@ func main() {
 	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	GocoinHomeDir = "btcnet"+string(os.PathSeparator)
 
+	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	if btc.AbortNow || TheBlockChain==nil {
+		return
+	}
+
 	go do_usif()
 
-	if false {
+	download_headers()
+	/*if false {
 		download_headers()
 		save_headers()
 	} else {
 		load_headers()
-	}
+	}*/
 
 	StartTime = time.Now()
 	if false {
@@ -50,12 +60,20 @@ func main() {
 		println("pings done")
 	}
 
+	for k, h := range BlocksToGet {
+		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
+			TrustUpTo = k
+			println("All the blocks up to", TrustUpTo, "are assumed trusted")
+			break
+		}
+	}
+
 	println("Downloading blocks - BlocksToGet:", len(BlocksToGet))
 	StartTime = time.Now()
 	get_blocks()
 	println("Sync now...")
-	BlockChain.Sync()
-	BlockChain.Close()
+	TheBlockChain.Sync()
+	TheBlockChain.Close()
 	println("AllBlocksDone after", time.Now().Sub(StartTime).String())
 
 	return

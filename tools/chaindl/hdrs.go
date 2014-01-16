@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	MemBlockChain *btc.Chain
+
 	LastBlock struct {
 		sync.Mutex
 		node *btc.BlockTreeNode
@@ -48,7 +50,7 @@ func chkblock(bl *btc.Block) (er error) {
 		return
 	}
 
-	if prv, pres := BlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
+	if prv, pres := MemBlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
 		if prv.Parent == nil {
 			// This is genesis block
 			prv.Timestamp = bl.BlockTime
@@ -60,14 +62,14 @@ func chkblock(bl *btc.Block) (er error) {
 		}
 	}
 
-	prevblk, ok := BlockChain.BlockIndex[btc.NewUint256(bl.Parent).BIdx()]
+	prevblk, ok := MemBlockChain.BlockIndex[btc.NewUint256(bl.Parent).BIdx()]
 	if !ok {
 		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
 		return
 	}
 
 	// Check proof of work
-	gnwr := BlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
+	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
 	if bl.Bits != gnwr {
 		er = errors.New("CheckBlock: incorrect proof of work")
 	}
@@ -79,7 +81,7 @@ func chkblock(bl *btc.Block) (er error) {
 	cur.Bits = bl.Bits
 	cur.Timestamp = bl.BlockTime
 	prevblk.Childs = append(prevblk.Childs, cur)
-	BlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
+	MemBlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
 
 	LastBlock.Mutex.Lock()
 	if cur.Height > LastBlock.node.Height {
@@ -149,9 +151,9 @@ func (c *one_net_conn) headers(d []byte) {
 func get_headers() {
 	new_connection(FirstIp)
 	LastBlock.Mutex.Lock()
-	LastBlock.node = BlockChain.BlockTreeEnd
+	LastBlock.node = MemBlockChain.BlockTreeEnd
 	LastBlock.Mutex.Unlock()
-	//println("get_headers...")
+//println("get_headers...")
 	for !GetAllHeadersDone() {
 		time.Sleep(1e9)
 		LastBlock.Mutex.Lock()
@@ -159,28 +161,6 @@ func get_headers() {
 		LastBlock.Mutex.Unlock()
 	}
 	LastBlockHeight = LastBlock.node.Height
-}
-
-
-func download_headers() {
-	BlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	if btc.AbortNow || BlockChain==nil {
-		return
-	}
-
-	get_headers()
-	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
-
-	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
-	for n:=LastBlock.node; ; n=n.Parent {
-		BlocksToGet[n.Height] = n.BlockHash.Hash
-		if n.Height==0 {
-			break
-		}
-	}
-
-	BlockChain.Close()
-	BlockChain = nil
 }
 
 
@@ -213,4 +193,29 @@ func load_headers() {
 		BlocksToGet[i] = btg
 	}
 	LastBlockHeight = uint32(cnt-1)
+}
+
+
+func download_headers() {
+	os.RemoveAll("tmp/")
+	MemBlockChain = btc.NewChain("tmp/", TheBlockChain.BlockTreeEnd.BlockHash, false)
+	defer os.RemoveAll("tmp/")
+
+	*MemBlockChain.BlockTreeRoot = *TheBlockChain.BlockTreeEnd
+	println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
+		MemBlockChain.BlockTreeRoot.BlockHash.String())
+
+	get_headers()
+	println("AllHeadersDone after", time.Now().Sub(StartTime).String())
+
+	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
+	for n:=LastBlock.node; ; n=n.Parent {
+		BlocksToGet[n.Height] = n.BlockHash.Hash
+		if n.Height==0 {
+			break
+		}
+	}
+
+	MemBlockChain.Close()
+	MemBlockChain = nil
 }
