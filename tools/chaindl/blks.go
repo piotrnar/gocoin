@@ -344,6 +344,9 @@ func get_blocks() {
 				in = cu // reschedule once a second
 				BlocksMutex_Unlock()
 				time.Sleep(time.Millisecond)
+				if !GetDoBlocks() {
+					return
+				}
 				BlocksMutex_Lock()
 			}
 		}
