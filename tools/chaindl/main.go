@@ -88,10 +88,14 @@ func main() {
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
-	println("Sync DB Now...")
-	TheBlockChain.Sync()
-	TheBlockChain.Close()
 	println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
+
+	StartTime = time.Now()
+	println("All blocks done - defrag unspent...")
+	for i:=0; i<10e3; i++ {
+		TheBlockChain.Unspent.Idle()
+	}
+	println("Defrag unspent done in", time.Now().Sub(StartTime).String())
 
 	return
 }

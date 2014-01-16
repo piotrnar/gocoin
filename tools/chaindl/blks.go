@@ -112,7 +112,7 @@ func (c *one_net_conn) getnextblock() {
 
 		BlocksIndex++
 		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
-			println("wrap", BlocksIndex, BlocksComplete)
+			//println("wrap", BlocksIndex, BlocksComplete)
 			BlocksIndex = BlocksComplete
 		}
 
