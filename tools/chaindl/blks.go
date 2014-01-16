@@ -10,7 +10,9 @@ import (
 )
 
 const (
+	MIN_BLOCKS_AHEAD = 5
 	MAX_BLOCKS_AHEAD = 10e3
+
 	MAX_BLOCKS_IM_MEM = 512<<20 // Use up to 512MB of memory for block cache
 	BLOCK_TIMEOUT = 2*time.Second
 
@@ -29,6 +31,7 @@ var (
 	BlocksToGet map[uint32][32]byte
 	BlocksInProgress map[[32]byte] *one_bip
 	BlocksCached map[uint32] *btc.Block
+	BlocksCachedSize uint
 	BlocksMutex sync.Mutex
 	BlocksIndex uint32
 	BlocksComplete uint32
@@ -74,8 +77,10 @@ func (c *one_net_conn) getnextblock() {
 	blocks_from := BlocksIndex
 
 	avg_len := avg_block_size()
-	max_block_forward := uint32(MAX_BLOCKS_IM_MEM / avg_len)
-	if max_block_forward > MAX_BLOCKS_AHEAD {
+	max_block_forward := uint32((MAX_BLOCKS_IM_MEM-BlocksCachedSize) / uint(avg_len))
+	if max_block_forward < MIN_BLOCKS_AHEAD {
+		max_block_forward = MIN_BLOCKS_AHEAD
+	} else if max_block_forward > MAX_BLOCKS_AHEAD {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
@@ -200,6 +205,7 @@ func (c *one_net_conn) block(d []byte) {
 		return
 	}
 
+	BlocksCachedSize += uint(len(d))
 	BlocksCached[bip.Height] = bl
 	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, h.Hash)
@@ -290,7 +296,7 @@ func get_blocks() {
 	}
 
 	BlocksInProgress = make(map[[32]byte] *one_bip)
-	BlocksCached = make(map[uint32] *btc.Block, len(BlocksToGet))
+	BlocksCached = make(map[uint32] *btc.Block)
 
 	//println("opening connections")
 	DlStartTime = time.Now()
@@ -311,6 +317,7 @@ func get_blocks() {
 			if BlocksComplete > BlocksIndex {
 				BlocksIndex = BlocksComplete
 			}
+			BlocksCachedSize -= uint(len(bl.Raw))
 			delete(BlocksCached, BlocksComplete)
 			if false {
 				er, _, _ := BlockChain.CheckBlock(bl)
