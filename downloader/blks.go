@@ -355,14 +355,14 @@ func get_blocks() {
 				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			}
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
-			if in.Add(time.Second).After(time.Now()) {
+			if time.Now().After(in.Add(time.Second)) {
 				break // reschedule once a second
 			}
 		}
 		inpr := len(BlocksInProgress)
 		BlocksMutex.Unlock()
 
-		if !hadblock && inpr>10 {
+		if !hadblock && inpr > 10 {
 			TheBlockChain.Unspent.Idle()
 			COUNTER("IDLE")
 		}
