@@ -13,7 +13,7 @@ const (
 	MIN_BLOCKS_AHEAD = 5
 	MAX_BLOCKS_AHEAD = 10e3
 
-	MAX_BLOCKS_IM_MEM = 512<<20 // Use up to 512MB of memory for block cache
+	MAX_BLOCKS_IM_MEM = 256<<20 // Use up to 256MB of memory for block cache
 	BLOCK_TIMEOUT = 2*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
@@ -327,7 +327,7 @@ func get_blocks() {
 					BlockChain.AcceptBlock(bl)
 				}
 			} else {
-				//BlockChain.Blocks.BlockAdd(BlocksComplete, bl)
+				BlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			}
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
             cu := time.Now().Unix()
@@ -342,9 +342,17 @@ func get_blocks() {
 
 		time.Sleep(1e8)
 
-		if ct - lastdrop > 15 {
-			lastdrop = ct  // drop slowest peers once for awhile
-			drop_slowest_peers()
+		// drop slowest peers once for awhile
+		occ := open_connection_count()
+		if occ > 0 {
+			occ = 1200 / occ // For 20 open connections: drop one per minute
+			if occ < 3 {
+				occ = 3 // .. drop not more often then once sper 3 seconds
+			}
+			if ct - lastdrop > int64(occ) {
+				lastdrop = ct
+				drop_slowest_peers()
+			}
 		}
 
 		add_new_connections()
