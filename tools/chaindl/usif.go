@@ -106,7 +106,9 @@ func do_usif() {
 						AddrMutex.Unlock()
 
 					case "q":
-						SetAllHeadersDone(true)
+						if !GetAllHeadersDone() {
+							os.Exit(0)
+						}
 						SetRunPings(false)
 						SetDoBlocks(false)
 						return
