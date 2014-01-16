@@ -68,11 +68,12 @@ func show_inprogress() {
 
 
 func (c *one_net_conn) getnextblock() {
-	var cnt, lensofar, xxx int
+	var cnt, lensofar int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
 	BlocksMutex_Lock()
+	time_in := time.Now().Unix()
 
 	if BlocksComplete > BlocksIndex {
 		println("dupa", BlocksComplete, BlocksIndex)
@@ -89,8 +90,12 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	for secondloop:=false; xxx<100e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
-		xxx++
+	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop=true {
+		if (time.Now().Unix() - time_in) > 10 {
+			println("timeout in getnextblock", cnt, lensofar, secondloop, blocks_from, BlocksIndex,
+				BlocksComplete == LastBlockHeight)
+			break
+		}
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
 				SetDoBlocks(false)
