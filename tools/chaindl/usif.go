@@ -32,7 +32,7 @@ func show_connections() {
 			v.Lock()
 			ss[i] += fmt.Sprintf(" %6.1fmin", time.Now().Sub(v.connected_at).Minutes())
 			if GetRunPings() {
-				ss[i] += fmt.Sprintf(" %6sms", v.avg_ping())
+				ss[i] += fmt.Sprintf(" %6dms", v.avg_ping())
 			} else {
 				ss[i] += fmt.Sprintf(" %6.2fKB/s", v.bps()/1e3)
 			}
