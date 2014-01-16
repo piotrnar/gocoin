@@ -47,6 +47,7 @@ func main() {
 			GocoinHomeDir += string(os.PathSeparator)
 		}
 	}
+	println("GocoinHomeDir:", GocoinHomeDir)
 
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
