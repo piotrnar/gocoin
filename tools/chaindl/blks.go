@@ -100,10 +100,14 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	println("timeout...", cnt, blocks_from, BlocksIndex, BlocksComplete, LastBlockHeight)
+	println("timeout...", max_block_forward, blocks_from, BlocksIndex, BlocksComplete, LastBlockHeight)
 
-	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; BlocksIndex++ {
-		secondloop = true
+	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
+		BlocksIndex++
+		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
+			BlocksIndex = BlocksComplete
+		}
+
 		if (time.Now().Unix() - time_in) > 10 {
 			println("timeout in getnextblock", cnt, lensofar, secondloop, blocks_from, BlocksIndex,
 				BlocksComplete == LastBlockHeight)
@@ -114,15 +118,11 @@ func (c *one_net_conn) getnextblock() {
 				SetDoBlocks(false)
 				println("all blocks done")
 			} else {
-				//println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
+				println("BlocksIndex", BlocksIndex, blocks_from, BlocksComplete)
 				COUNTER("WRAP")
 				time.Sleep(1e8)
 			}
 			break
-		}
-
-		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
-			BlocksIndex = BlocksComplete
 		}
 
 		if _, done := BlocksCached[BlocksIndex]; done {
