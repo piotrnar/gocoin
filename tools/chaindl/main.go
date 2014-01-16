@@ -48,12 +48,6 @@ func main() {
 	go do_usif()
 
 	download_headers()
-	/*if false {
-		download_headers()
-		save_headers()
-	} else {
-		load_headers()
-	}*/
 
 	StartTime = time.Now()
 	if false {

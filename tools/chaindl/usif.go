@@ -125,8 +125,10 @@ func do_usif() {
 					case "n":
 						show_connections()
 
-					case "c":
+					case "i":
 						print_stats()
+
+					case "c":
 						print_counters()
 
 					case "s":
