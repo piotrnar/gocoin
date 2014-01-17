@@ -80,6 +80,7 @@ func host_init() {
 	sto := time.Now().UnixNano()
 	if btc.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
+		common.BlockChain.Close()
 		utils.UnlockDatabaseDir()
 		os.Exit(1)
 	}
