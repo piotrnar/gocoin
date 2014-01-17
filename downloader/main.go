@@ -22,7 +22,6 @@ const (
 
 var (
 	MAX_CONNECTIONS uint32 = 20
-	killchan chan os.Signal = make(chan os.Signal)
 	Magic [4]byte
 	StartTime time.Time
 	GocoinHomeDir string
@@ -32,6 +31,7 @@ var (
 	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString(LastTrusted)
 	TrustUpTo uint32
 	GlobalExit bool
+	killchan chan os.Signal = make(chan os.Signal)
 )
 
 
@@ -61,7 +61,6 @@ func main() {
 	defer utils.UnlockDatabaseDir()
 
 	// Disable Ctrl+C
-	killchan := make(chan os.Signal)
 	signal.Notify(killchan, os.Interrupt, os.Kill)
 	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
 	__exit := make(chan bool)
