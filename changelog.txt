@@ -1,3 +1,7 @@
+0.9.0
+* The "downloader" (use it to download blockchain for the first time)
+* Performance optimizations
+
 0.8.7
 * Added a special wallet "ADRESSES" that contains the address book (for MakeTx tab)
 * Support for "virgin" addresses in the wallet files (put space before the address).
