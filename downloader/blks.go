@@ -348,9 +348,8 @@ func get_blocks() {
 				if er != nil {
 					fmt.Println(er.Error())
 					return
-				} else {
-					TheBlockChain.AcceptBlock(bl)
 				}
+				TheBlockChain.AcceptBlock(bl)
 			} else {
 				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			}
