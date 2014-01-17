@@ -28,12 +28,14 @@ import (
 type KeyType uint64
 
 // defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
-var DefragPercentVal uint64 = 50
+var (
+	DefragPercentVal uint32 = 50
+	MaxPending uint32 = 512
+	MaxPendingNoSync uint32 = 8192
+)
 
 const (
 	KeySize = 8
-	MaxPending = 512
-	MaxPendingNoSync = 8192
 
 	NO_BROWSE = 0x00000001
 	NO_CACHE  = 0x00000002
@@ -224,7 +226,7 @@ func (db *DB) Del(key KeyType) {
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag() (doing bool) {
 	db.mutex.Lock()
-	doing = db.idx.extra_space_used > (DefragPercentVal*db.idx.disk_space_needed/100)
+	doing = db.idx.extra_space_used > (uint64(DefragPercentVal)*db.idx.disk_space_needed/100)
 	if doing {
 		cnt("DefragYes")
 		go func() {
@@ -346,11 +348,11 @@ func (db *DB) Flush() {
 
 
 func (db *DB) syncneeded() bool {
-	if len(db.pending_recs) > MaxPendingNoSync {
+	if len(db.pending_recs) > int(MaxPendingNoSync) {
 		cnt("SyncNeedBig")
 		return true
 	}
-	if !db.nosync && len(db.pending_recs) > MaxPending {
+	if !db.nosync && len(db.pending_recs) > int(MaxPending) {
 		cnt("SyncNeedSmall")
 		return true
 	}
@@ -359,6 +361,12 @@ func (db *DB) syncneeded() bool {
 
 
 // Defrag files on disk if we waste more than this percent of disk space
-func DefragPercent(val uint64) {
-	atomic.StoreUint64(&DefragPercentVal, val)
+func SetDefragPercent(val uint32) {
+	atomic.StoreUint32(&DefragPercentVal, val)
+}
+
+// How many records to buffer in memory before writing them to disk
+func SetMaxPending(sync uint32, nosync uint32) {
+	atomic.StoreUint32(&MaxPending, sync)
+	atomic.StoreUint32(&MaxPendingNoSync, nosync)
 }
