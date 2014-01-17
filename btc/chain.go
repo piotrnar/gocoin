@@ -21,6 +21,7 @@ type Chain struct {
 	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
 
 	DoNotSync bool // do not flush all the files after each block
+	DoNotUnwind bool
 }
 
 

@@ -38,13 +38,15 @@ func (db UnspentDB) GetLastBlockHash() ([]byte) {
 }
 
 
-func (db UnspentDB) CommitBlockTxs(changes *btc.BlockChanges, blhash []byte) (e error) {
+func (db UnspentDB) CommitBlockTxs(changes *btc.BlockChanges, blhash []byte, sync bool, dounwind bool) (e error) {
 	// First the unwind data
 	db.nosync()
 	db.unspent.lastHeight = changes.Height
-	db.unwind.commit(changes, blhash)
+	db.unwind.commit(changes, blhash, dounwind)
 	db.unspent.commit(changes)
-	db.sync()
+	if sync {
+		db.sync()
+	}
 	return
 }
 
@@ -64,6 +66,7 @@ func (db UnspentDB) sync() {
 	db.unwind.sync()
 	db.unspent.sync()
 }
+
 
 func (db UnspentDB) nosync() {
 	db.unwind.nosync()

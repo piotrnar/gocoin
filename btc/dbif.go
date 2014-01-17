@@ -12,7 +12,7 @@ type BlockChanges struct {
 type TxNotifyFunc func (*TxPrevOut, *TxOut)
 
 type UnspentDB interface {
-	CommitBlockTxs(*BlockChanges, []byte) error
+	CommitBlockTxs(*BlockChanges, []byte, bool, bool) error
 	UndoBlockTransactions(uint32)
 	GetLastBlockHash() []byte
 
