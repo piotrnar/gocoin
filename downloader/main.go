@@ -64,7 +64,8 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	debug.SetGCPercent(100)
-	qdb.DefragPercent(100)
+	qdb.SetDefragPercent(100)
+	qdb.SetMaxPending(1000, 10000)
 
 	add_ip_str("46.253.195.50") // seed node
 	load_ips() // other seed nodes
