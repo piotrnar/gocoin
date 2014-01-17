@@ -182,16 +182,6 @@ func do_usif() {
 					case "m":
 						show_free_mem()
 
-					case "dp":
-						if len(ll)>1 {
-							n, e := strconv.ParseUint(ll[1], 10, 64)
-							if e == nil {
-								qdb.DefragPercent(n)
-							}
-						}
-						fmt.Println(qdb.DefragPercentVal)
-
-
 					case "mc":
 						if len(ll)>1 {
 							n, e := strconv.ParseUint(ll[1], 10, 32)
