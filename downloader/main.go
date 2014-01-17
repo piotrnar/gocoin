@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
@@ -16,7 +17,7 @@ import (
 
 const (
 	TheGenesis  = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
-	LastTrusted = "00000000000000015fba0ce44dae9ebc974d3b7d49349711149314a8cdd9fadc" // #280880
+	LastTrusted = "00000000000000004df8b69bd821277e3737a87befc56ab0d418669b863a37e1" // #280930
 )
 
 
@@ -62,7 +63,8 @@ func main() {
 	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
 
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-	debug.SetGCPercent(30)
+	debug.SetGCPercent(100)
+	qdb.DefragPercent(100)
 
 	add_ip_str("46.253.195.50") // seed node
 	load_ips() // other seed nodes
