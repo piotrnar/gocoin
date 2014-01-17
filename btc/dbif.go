@@ -3,6 +3,7 @@ package btc
 // Used to pass block's changes to UnspentDB
 type BlockChanges struct {
 	Height uint32
+	LastKnownHeight uint32
 	AddedTxs map[TxPrevOut] *TxOut
 	DeledTxs map[TxPrevOut] *TxOut
 }
@@ -12,7 +13,7 @@ type BlockChanges struct {
 type TxNotifyFunc func (*TxPrevOut, *TxOut)
 
 type UnspentDB interface {
-	CommitBlockTxs(*BlockChanges, []byte, bool, bool) error
+	CommitBlockTxs(*BlockChanges, []byte) error
 	UndoBlockTransactions(uint32)
 	GetLastBlockHash() []byte
 

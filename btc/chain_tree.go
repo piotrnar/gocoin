@@ -22,7 +22,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var b []byte
 	var er error
 	var trusted bool
-	var nosyncs int
 
 	prv := time.Now().UnixNano()
 	for !AbortNow && ch.BlockTreeEnd != end {
@@ -66,13 +65,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}
 
-		if nosyncs==32 || end==nxt {
-			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:], true, end.Height-ch.BlockTreeEnd.Height<5000)
-			nosyncs = 0
-		} else {
-			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:], false, true)
-			nosyncs++
-		}
+		changes.LastKnownHeight = end.Height
+		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 
 		ch.BlockTreeEnd = nxt
 	}

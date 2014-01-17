@@ -151,7 +151,7 @@ func (db *unwindDb) undo(height uint32, unsp *unspentDb) {
 }
 
 
-func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte, unwind bool) {
+func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 	if db.lastBlockHeight+1 != changes.Height {
 		println(db.lastBlockHeight+1, changes.Height)
 		panic("Unexpected height")
@@ -161,7 +161,7 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte, unwind bool
 
 	f := new(bytes.Buffer)
 	f.Write(blhash[0:32])
-	if unwind {
+	if changes.LastKnownHeight - changes.Height < UnwindBufferMaxHistory {
 		for k, _ := range changes.AddedTxs {
 			writeSpent(f, &k, nil)
 		}
