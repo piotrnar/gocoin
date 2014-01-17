@@ -323,6 +323,7 @@ func get_blocks() {
 	lastdrop := ct
 	laststat := ct
 	TheBlockChain.DoNotSync = true
+	var blks2do []*btc.Block
 	for GetDoBlocks() {
 		BlocksMutex.Lock()
 		if BlocksComplete>=LastBlockHeight {
@@ -330,7 +331,6 @@ func get_blocks() {
 			break
 		}
 
-		in := time.Now()
 		for {
 			bl, hadblock = BlocksCached[BlocksComplete+1]
 			if !hadblock {
@@ -343,29 +343,61 @@ func get_blocks() {
 			BlocksCachedSize -= uint(len(bl.Raw))
 			delete(BlocksCached, BlocksComplete)
 			bl.Trusted = BlocksComplete<=TrustUpTo
-			er, _, _ := TheBlockChain.CheckBlock(bl)
-			if er != nil {
-				fmt.Println(er.Error())
-				return
-			}
-			if _, ok := BlocksCached[BlocksComplete+1]; ok {
+			blks2do = append(blks2do, bl)
+			/*if _, ok := BlocksCached[BlocksComplete+1]; ok {
 				bl.LastKnownHeight = BlocksComplete+1
 			} else {
 				bl.LastKnownHeight = BlocksComplete
 			}
-			TheBlockChain.AcceptBlock(bl)
+			TheBlockChain.AcceptBlock(bl)*/
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
-			if time.Now().After(in.Add(time.Second)) {
-				break // reschedule once a second
-			}
 		}
-		inpr := len(BlocksInProgress)
+		//inpr := len(BlocksInProgress)
 		BlocksMutex.Unlock()
 
-		if !hadblock && inpr > 10 {
+		if len(blks2do) > 0 {
+			for idx := range blks2do {
+				er, _, _ := TheBlockChain.CheckBlock(blks2do[idx])
+				if er != nil {
+					fmt.Println(er.Error())
+					return
+				}
+				blks2do[idx].LastKnownHeight = BlocksComplete
+				TheBlockChain.AcceptBlock(blks2do[idx])
+			}
+			blks2do = nil
+		} else {
 			TheBlockChain.Unspent.Idle()
 			COUNTER("IDLE")
 		}
+		/*if len(blks2do) > 0 {
+			in := time.Now()
+			idx := 0
+			for idx < len(blks2do) {
+				er, _, _ := TheBlockChain.CheckBlock(blks2do[idx])
+				if er != nil {
+					fmt.Println(er.Error())
+					return
+				}
+				blks2do[idx].LastKnownHeight = BlocksComplete
+				TheBlockChain.AcceptBlock(blks2do[idx])
+				idx++
+
+				if time.Now().After(in.Add(time.Second)) {
+					break // reschedule once a second
+				}
+			}
+			if idx==len(blks2do) {
+				blks2do = nil
+			} else {
+				blks2do = blks2do[idx:]
+			}
+		}*/
+
+		/*if !hadblock && inpr > 10 {
+			TheBlockChain.Unspent.Idle()
+			COUNTER("IDLE")
+		}*/
 
 		time.Sleep(1e8)
 
