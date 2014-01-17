@@ -93,7 +93,7 @@ func main() {
 
 	download_headers()
 	if GlobalExit {
-		return
+		goto finito
 	}
 
 	//do_pings()
@@ -119,15 +119,17 @@ func main() {
 
 finito:
 	StartTime = time.Now()
-	fmt.Print("All blocks done - defrag unspent...")
+	fmt.Print("All blocks done - defrag unspent")
 	for {
 		if !TheBlockChain.Unspent.Idle() {
 			break
 		}
-		fmt.Println(".")
+		fmt.Print(".")
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Close()
+
+	qdb_stats()
 
 	return
 }
