@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 	"bytes"
-	//"runtime"
+	"runtime"
 	"os/signal"
 	//"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/qdb"
+	//"github.com/piotrnar/gocoin/qdb"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
