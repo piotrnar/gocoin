@@ -35,6 +35,29 @@ var (
 )
 
 
+func open_blockchain() (abort bool) {
+	// Disable Ctrl+C
+	signal.Notify(killchan, os.Interrupt, os.Kill)
+	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
+	__exit := make(chan bool)
+	go func() {
+		for {
+			select {
+				case s := <-killchan:
+					fmt.Println(s)
+					abort = true
+					btc.AbortNow = true
+				case <-__exit:
+					return
+			}
+		}
+	}()
+	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	__exit <- true
+	return
+}
+
+
 func main() {
 	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
 
@@ -60,35 +83,10 @@ func main() {
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
 
-	// Disable Ctrl+C
-	signal.Notify(killchan, os.Interrupt, os.Kill)
-	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
-	__exit := make(chan bool)
-	__done := make(chan bool)
-	go func() {
-		for {
-			select {
-				case s := <-killchan:
-					fmt.Println(s)
-					btc.AbortNow = true
-				case <-__exit:
-					__done <- true
-					return
-			}
-		}
-	}()
-	sta := time.Now().UnixNano()
-	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
-	sto := time.Now().UnixNano()
-	if btc.AbortNow {
-		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
+	if open_blockchain() {
+		fmt.Printf("Blockchain opening aborted\n")
 		goto finito
-		return
 	}
-	__exit <- true
-	_ = <- __done
-	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-
 	go do_usif()
 
 	download_headers()
