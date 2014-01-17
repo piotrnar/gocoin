@@ -21,6 +21,7 @@ type UnspentDB interface {
 	GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx
 
 	Idle() bool
+	Sync()
 	Save()
 	Close()
 	GetStats() (string)

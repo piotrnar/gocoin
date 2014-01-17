@@ -76,6 +76,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
 	}
+	ch.Unspent.Sync()
 	ch.Save()
 }
 

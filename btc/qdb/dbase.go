@@ -68,6 +68,11 @@ func (db UnspentDB) sync() {
 }
 
 
+func (db UnspentDB) Sync() {
+	db.sync()
+}
+
+
 func (db UnspentDB) nosync() {
 	db.unwind.nosync()
 	db.unspent.nosync()
