@@ -82,14 +82,14 @@ func main() {
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
 
-	go do_usif()
-
 	StartTime = time.Now()
 	if open_blockchain() {
 		fmt.Printf("Blockchain opening aborted\n")
 		goto finito
 	}
 	fmt.Println("Blockchain open in", time.Now().Sub(StartTime))
+
+	go do_usif()
 
 	download_headers()
 	if GlobalExit {
@@ -128,8 +128,6 @@ finito:
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Close()
-
-	qdb_stats()
 
 	return
 }
