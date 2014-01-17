@@ -32,8 +32,8 @@ var DefragPercentVal uint64 = 50
 
 const (
 	KeySize = 8
-	MaxPending = 1000
-	MaxPendingNoSync = 10000
+	MaxPending = 512
+	MaxPendingNoSync = 8192
 
 	NO_BROWSE = 0x00000001
 	NO_CACHE  = 0x00000002
