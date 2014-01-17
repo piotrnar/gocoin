@@ -30,8 +30,8 @@ type KeyType uint64
 // defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
 var (
 	DefragPercentVal uint32 = 50
-	MaxPending uint32 = 512
-	MaxPendingNoSync uint32 = 8192
+	MaxPending uint32       = 1000
+	MaxPendingNoSync uint32 = 10000
 )
 
 const (
