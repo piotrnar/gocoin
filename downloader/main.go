@@ -6,6 +6,7 @@ import (
 	"time"
 	"bytes"
 	"runtime"
+	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
@@ -59,7 +60,35 @@ func main() {
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
 
+	// Disable Ctrl+C
+	killchan := make(chan os.Signal)
+	signal.Notify(killchan, os.Interrupt, os.Kill)
+	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
+	__exit := make(chan bool)
+	__done := make(chan bool)
+	go func() {
+		for {
+			select {
+				case s := <-killchan:
+					fmt.Println(s)
+					btc.AbortNow = true
+				case <-__exit:
+					__done <- true
+					return
+			}
+		}
+	}()
+	sta := time.Now().UnixNano()
 	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	sto := time.Now().UnixNano()
+	if btc.AbortNow {
+		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
+		goto finito
+		return
+	}
+	__exit <- true
+	_ = <- __done
+	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
 
 	go do_usif()
 
@@ -97,6 +126,7 @@ func main() {
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
 
+finito:
 	StartTime = time.Now()
 	fmt.Print("All blocks done - defrag unspent")
 	for {
@@ -106,7 +136,6 @@ func main() {
 		fmt.Print(".")
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
-	TheBlockChain.Sync()
 	TheBlockChain.Close()
 
 	return

@@ -349,6 +349,7 @@ func get_blocks() {
 					fmt.Println(er.Error())
 					return
 				}
+				TheBlockChain.DoNotUnwind = LastBlockHeight-BlocksComplete > 5000
 				TheBlockChain.AcceptBlock(bl)
 			} else {
 				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
