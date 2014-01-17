@@ -79,6 +79,11 @@ func show_free_mem() {
 }
 
 
+func qdb_stats() {
+	fmt.Print(qdb.GetStats())
+}
+
+
 func usif_prompt() {
 	print("cmd> ")
 }
@@ -126,7 +131,7 @@ func do_usif() {
 						}
 
 					case "db":
-						fmt.Print(qdb.GetStats())
+						qdb_stats()
 
 					case "n":
 						show_connections()
@@ -176,6 +181,16 @@ func do_usif() {
 
 					case "m":
 						show_free_mem()
+
+					case "dp":
+						if len(ll)>1 {
+							n, e := strconv.ParseUint(ll[1], 10, 64)
+							if e == nil {
+								qdb.DefragPercent(n)
+							}
+						}
+						fmt.Println(qdb.DefragPercentVal)
+
 
 					case "mc":
 						if len(ll)>1 {
