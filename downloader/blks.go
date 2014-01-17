@@ -14,7 +14,7 @@ const (
 	MIN_BLOCKS_AHEAD = 5
 	MAX_BLOCKS_AHEAD = 10e3
 
-	MAX_BLOCKS_IM_MEM = 128<<20 // How much memory to use for caching blocks
+	MAX_BLOCKS_IM_MEM = 512<<20 // How much memory to use for caching blocks
 	BLOCK_TIMEOUT = 10*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
