@@ -9,8 +9,9 @@ import (
 	"strings"
 	"strconv"
 	"runtime"
-	"runtime/debug"
 	"sync/atomic"
+	"runtime/debug"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 
@@ -123,6 +124,9 @@ func do_usif() {
 						if TheBlockChain!=nil {
 							fmt.Println(TheBlockChain.Stats())
 						}
+
+					case "db":
+						fmt.Print(qdb.GetStats())
 
 					case "n":
 						show_connections()

@@ -61,9 +61,8 @@ func open_blockchain() (abort bool) {
 func main() {
 	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
 
-	StartTime = time.Now()
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-	debug.SetGCPercent(50)
+	debug.SetGCPercent(30)
 
 	add_ip_str("46.253.195.50") // seed node
 	load_ips() // other seed nodes
@@ -83,26 +82,21 @@ func main() {
 	utils.LockDatabaseDir(GocoinHomeDir)
 	defer utils.UnlockDatabaseDir()
 
+	go do_usif()
+
+	StartTime = time.Now()
 	if open_blockchain() {
 		fmt.Printf("Blockchain opening aborted\n")
 		goto finito
 	}
-	go do_usif()
+	fmt.Println("Blockchain open in", time.Now().Sub(StartTime))
 
 	download_headers()
 	if GlobalExit {
 		return
 	}
 
-	/*
-	fmt.Println("tuning to the fastest peers... (enter 'g' to continue)")
-	StartTime = time.Now()
-	usif_prompt()
-	do_pings()
-	if GlobalExit {
-		return
-	}
-	*/
+	//do_pings()
 
 	for k, h := range BlocksToGet {
 		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
@@ -125,12 +119,12 @@ func main() {
 
 finito:
 	StartTime = time.Now()
-	fmt.Print("All blocks done - defrag unspent")
+	fmt.Print("All blocks done - defrag unspent...")
 	for {
 		if !TheBlockChain.Unspent.Idle() {
 			break
 		}
-		fmt.Print(".")
+		fmt.Println(".")
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Close()
