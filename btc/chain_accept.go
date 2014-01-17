@@ -65,6 +65,7 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
+			changes.LastKnownHeight = bl.LastKnownHeight
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 			if !ch.DoNotSync {
 				ch.Blocks.Sync()

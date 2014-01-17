@@ -20,6 +20,7 @@ type Block struct {
 
 	// if the block is trusted, we do not check signatures and some other things...
 	Trusted bool
+	LastKnownHeight uint32
 }
 
 

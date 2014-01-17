@@ -342,18 +342,18 @@ func get_blocks() {
 			}
 			BlocksCachedSize -= uint(len(bl.Raw))
 			delete(BlocksCached, BlocksComplete)
-			if true {
-				bl.Trusted = BlocksComplete<=TrustUpTo
-				er, _, _ := TheBlockChain.CheckBlock(bl)
-				if er != nil {
-					fmt.Println(er.Error())
-					return
-				}
-				TheBlockChain.DoNotUnwind = LastBlockHeight-BlocksComplete > 5000
-				TheBlockChain.AcceptBlock(bl)
-			} else {
-				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
+			bl.Trusted = BlocksComplete<=TrustUpTo
+			er, _, _ := TheBlockChain.CheckBlock(bl)
+			if er != nil {
+				fmt.Println(er.Error())
+				return
 			}
+			if _, ok := BlocksCached[BlocksComplete+1]; ok {
+				bl.LastKnownHeight = BlocksComplete+1
+			} else {
+				bl.LastKnownHeight = BlocksComplete
+			}
+			TheBlockChain.AcceptBlock(bl)
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 			if time.Now().After(in.Add(time.Second)) {
 				break // reschedule once a second
