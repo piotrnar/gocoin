@@ -66,7 +66,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}
 
-		if nosyncs==256 || end==nxt {
+		if nosyncs==32 || end==nxt {
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:], true, end.Height-ch.BlockTreeEnd.Height<5000)
 			nosyncs = 0
 		} else {
