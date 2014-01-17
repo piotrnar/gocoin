@@ -22,9 +22,13 @@ import (
 	"fmt"
 	"sync"
 	"bytes"
+	"sync/atomic"
 )
 
 type KeyType uint64
+
+// defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
+var DefragPercentVal uint64 = 50
 
 const (
 	KeySize = 8
@@ -220,7 +224,7 @@ func (db *DB) Del(key KeyType) {
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag() (doing bool) {
 	db.mutex.Lock()
-	doing = db.idx.extra_space_used > (db.idx.disk_space_needed/2) // defrag if we waste more than 50%
+	doing = db.idx.extra_space_used > (DefragPercentVal*db.idx.disk_space_needed/100)
 	if doing {
 		cnt("DefragYes")
 		go func() {
@@ -228,6 +232,7 @@ func (db *DB) Defrag() (doing bool) {
 			db.mutex.Unlock()
 		}()
 	} else {
+		cnt("DefragNo")
 		db.mutex.Unlock()
 	}
 	return
@@ -236,7 +241,6 @@ func (db *DB) Defrag() (doing bool) {
 
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
-	cnt("NoSync")
 	db.mutex.Lock()
 	db.nosync = true
 	db.mutex.Unlock()
@@ -246,7 +250,6 @@ func (db *DB) NoSync() {
 // Write all the pending changes to disk now.
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
-	cnt("Sync")
 	db.mutex.Lock()
 	db.nosync = false
 	go func() {
@@ -352,4 +355,10 @@ func (db *DB) syncneeded() bool {
 		return true
 	}
 	return false
+}
+
+
+// Defrag files on disk if we waste more than this percent of disk space
+func DefragPercent(val uint64) {
+	atomic.StoreUint64(&DefragPercentVal, val)
 }
