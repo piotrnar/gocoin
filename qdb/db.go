@@ -344,7 +344,6 @@ func (db *DB) Flush() {
 
 func (db *DB) syncneeded() bool {
 	if len(db.pending_recs) > MaxPendingNoSync {
-		println("SyncNeedBig")
 		cnt("SyncNeedBig")
 		return true
 	}
