@@ -308,7 +308,6 @@ func drop_slowest_peers() {
 
 
 func get_blocks() {
-	var hadblock bool
 	var bl *btc.Block
 	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block)
@@ -332,8 +331,8 @@ func get_blocks() {
 		}
 
 		for {
-			bl, hadblock = BlocksCached[BlocksComplete+1]
-			if !hadblock {
+			bl = BlocksCached[BlocksComplete+1]
+			if bl==nil {
 				break
 			}
 			BlocksComplete++
@@ -344,15 +343,8 @@ func get_blocks() {
 			delete(BlocksCached, BlocksComplete)
 			bl.Trusted = BlocksComplete<=TrustUpTo
 			blks2do = append(blks2do, bl)
-			/*if _, ok := BlocksCached[BlocksComplete+1]; ok {
-				bl.LastKnownHeight = BlocksComplete+1
-			} else {
-				bl.LastKnownHeight = BlocksComplete
-			}
-			TheBlockChain.AcceptBlock(bl)*/
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 		}
-		//inpr := len(BlocksInProgress)
 		BlocksMutex.Unlock()
 
 		if len(blks2do) > 0 {
@@ -370,34 +362,6 @@ func get_blocks() {
 			TheBlockChain.Unspent.Idle()
 			COUNTER("IDLE")
 		}
-		/*if len(blks2do) > 0 {
-			in := time.Now()
-			idx := 0
-			for idx < len(blks2do) {
-				er, _, _ := TheBlockChain.CheckBlock(blks2do[idx])
-				if er != nil {
-					fmt.Println(er.Error())
-					return
-				}
-				blks2do[idx].LastKnownHeight = BlocksComplete
-				TheBlockChain.AcceptBlock(blks2do[idx])
-				idx++
-
-				if time.Now().After(in.Add(time.Second)) {
-					break // reschedule once a second
-				}
-			}
-			if idx==len(blks2do) {
-				blks2do = nil
-			} else {
-				blks2do = blks2do[idx:]
-			}
-		}*/
-
-		/*if !hadblock && inpr > 10 {
-			TheBlockChain.Unspent.Idle()
-			COUNTER("IDLE")
-		}*/
 
 		time.Sleep(1e8)
 
