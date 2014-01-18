@@ -161,7 +161,8 @@ func (db *unwindDb) commit(changes *btc.BlockChanges, blhash []byte) {
 
 	f := new(bytes.Buffer)
 	f.Write(blhash[0:32])
-	if changes.LastKnownHeight - changes.Height < UnwindBufferMaxHistory {
+	// cast uin32 to int to properly discover negative diffs:
+	if int(changes.LastKnownHeight) - int(changes.Height) < UnwindBufferMaxHistory {
 		for k, _ := range changes.AddedTxs {
 			writeSpent(f, &k, nil)
 		}
