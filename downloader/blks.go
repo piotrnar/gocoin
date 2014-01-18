@@ -100,7 +100,15 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
+	var prot int
 	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
+		if prot==20e3 {
+			println("stuck in getnextblock()", BlocksIndex, blocks_from, BlocksComplete, LastBlockHeight,
+				_DoBlocks, secondloop)
+			break
+		}
+		prot++
+
 		if secondloop && BlocksIndex==blocks_from {
 			if BlocksComplete == LastBlockHeight {
 				_DoBlocks = false
