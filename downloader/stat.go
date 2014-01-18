@@ -40,14 +40,14 @@ func print_counters() {
 }
 
 func print_stats() {
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 	indx := BlocksIndex
 	inpr := len(BlocksInProgress)
 	cach := len(BlocksCached)
 	toge := len(BlocksToGet)
 	bcmp := BlocksComplete
 	camb := BlocksCachedSize>>20
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e6
 	fmt.Printf("Block:%d/%d/%d  Pending:%d  InProgress:%d  Memory:%d/%dMB  Conns:%d  Dload:%.0fKB/s  Output:%.0fKB/s  AvgSize:%d  %.1fmin  EC_Ver:%d\n",
 		bcmp, indx, LastBlockHeight, toge, inpr, cach, camb, open_connection_count(),

@@ -43,22 +43,22 @@ var (
 
 
 func GetDoBlocks() (res bool) {
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 	res = _DoBlocks
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 	return
 }
 
 func SetDoBlocks(res bool) {
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 	_DoBlocks = res
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 }
 
 
 func show_pending() {
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
 	fmt.Println("bocks pending:")
 	for k, v := range BlocksToGet {
 		fmt.Println(k, hex.EncodeToString(v[:]))
@@ -67,8 +67,8 @@ func show_pending() {
 
 
 func show_inprogress() {
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
 	fmt.Println("bocks in progress:")
 	cnt := 0
 	for _, v := range BlocksInProgress {
@@ -83,7 +83,7 @@ func (c *one_net_conn) getnextblock() {
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
-	BlocksMutex.Lock()
+	BlocksMutex_Lock()
 
 	if BlocksComplete > BlocksIndex {
 		fmt.Println("dupa", BlocksComplete, BlocksIndex)
@@ -148,7 +148,7 @@ func (c *one_net_conn) getnextblock() {
 		cnt++
 		lensofar += avg_len
 	}
-	BlocksMutex.Unlock()
+	BlocksMutex_Unlock()
 
 	btc.WriteVlen(vl, uint32(cnt))
 
@@ -194,8 +194,8 @@ func avg_block_size() (le int) {
 
 
 func (c *one_net_conn) block(d []byte) {
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
+	BlocksMutex_Lock()
+	defer BlocksMutex_Unlock()
 	h := btc.NewSha2Hash(d[:80])
 
 	c.Lock()
@@ -324,9 +324,9 @@ func get_blocks() {
 	TheBlockChain.DoNotSync = true
 	var blks2do []*btc.Block
 	for GetDoBlocks() {
-		BlocksMutex.Lock()
+		BlocksMutex_Lock()
 		if BlocksComplete>=LastBlockHeight {
-			BlocksMutex.Unlock()
+			BlocksMutex_Unlock()
 			break
 		}
 
@@ -345,7 +345,7 @@ func get_blocks() {
 			blks2do = append(blks2do, bl)
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 		}
-		BlocksMutex.Unlock()
+		BlocksMutex_Unlock()
 
 		if len(blks2do) > 0 {
 			for idx := range blks2do {

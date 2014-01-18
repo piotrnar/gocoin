@@ -280,7 +280,7 @@ func (c *one_net_conn) cleanup() {
 		AddrMutex.Unlock()
 
 		// Remove from pending blocks
-		BlocksMutex.Lock()
+		BlocksMutex_Lock()
 		bi := BlocksIndex
 		for k, v := range BlocksInProgress {
 			if v.Conns[c.id] {
@@ -299,7 +299,7 @@ func (c *one_net_conn) cleanup() {
 			BlocksIndex = bi
 			COUNTER("REWI")
 		}
-		BlocksMutex.Unlock()
+		BlocksMutex_Unlock()
 	}
 }
 
