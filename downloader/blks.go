@@ -100,8 +100,9 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
-	if BlocksComplete+max_block_forward >= blocks_from {
+	if BlocksComplete+max_block_forward < blocks_from {
 		COUNTER("DUPA")
+		println("dupa-A", max_block_forward, blocks_from-BlocksComplete+1)
 		max_block_forward = blocks_from-BlocksComplete+1
 	}
 
