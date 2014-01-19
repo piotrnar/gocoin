@@ -22,7 +22,6 @@ const (
 
 
 var (
-	MAX_CONNECTIONS uint32 = 20
 	Magic [4]byte = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	StartTime time.Time
 	TheBlockChain *btc.Chain
@@ -32,10 +31,28 @@ var (
 	GlobalExit bool
 
 	// CommandLineSwitches
-	LastTrustedBlock = "auto"
-	GocoinHomeDir string
-	OnlyStoreBlocks bool
+	LastTrustedBlock string     // -t
+	GocoinHomeDir string        // -d
+	OnlyStoreBlocks bool        // -b
+	MaxNetworkConns uint        // -n
 )
+
+
+func parse_command_line() {
+	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
+
+	var help bool
+	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
+	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
+	flag.StringVar(&LastTrustedBlock, "t", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
+	flag.BoolVar(&help, "h", false, "Show this help")
+	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
+	flag.Parse()
+	if help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+}
 
 
 func open_blockchain() (abort bool) {
@@ -72,22 +89,6 @@ func close_blockchain() {
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Close()
-}
-
-
-func parse_command_line() {
-	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
-
-	var help bool
-	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
-	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
-	flag.StringVar(&LastTrustedBlock, "t", LastTrustedBlock, "Specify the highest trusted block hash (use \"all\" for all)")
-	flag.BoolVar(&help, "h", false, "Show this help")
-	flag.Parse()
-	if help {
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
 }
 
 

@@ -90,9 +90,9 @@ func load_ips() {
 	f.Close()
 }
 
-func open_connection_count() (res uint32) {
+func open_connection_count() (res uint) {
 	open_connection_mutex.Lock()
-	res = uint32(len(open_connection_list))
+	res = uint(len(open_connection_list))
 	open_connection_mutex.Unlock()
 	return
 }

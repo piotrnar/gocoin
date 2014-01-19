@@ -9,7 +9,6 @@ import (
 	"strings"
 	"strconv"
 	"runtime"
-	"sync/atomic"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/qdb"
 )
@@ -186,8 +185,8 @@ func do_usif() {
 						if len(ll)>1 {
 							n, e := strconv.ParseUint(ll[1], 10, 32)
 							if e == nil {
-								atomic.StoreUint32(&MAX_CONNECTIONS, uint32(n))
-								fmt.Println("MAX_CONNECTIONS set to", n)
+								MaxNetworkConns = uint(n)
+								fmt.Println("MaxNetworkConns set to", n)
 							}
 						}
 

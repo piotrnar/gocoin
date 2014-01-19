@@ -437,14 +437,14 @@ func new_connection(ip4 [4]byte) *one_net_conn {
 
 
 func add_new_connections() bool {
-	if open_connection_count() < MAX_CONNECTIONS {
+	if open_connection_count() < MaxNetworkConns {
 		AddrMutex.Lock()
 		defer AddrMutex.Unlock()
 		for k, v := range AddrDatbase {
 			if !v {
 				new_connection(k)
 				COUNTER("CONN")
-				if open_connection_count() >= MAX_CONNECTIONS {
+				if open_connection_count() >= MaxNetworkConns {
 					return true
 				}
 			}

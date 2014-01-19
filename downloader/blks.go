@@ -139,7 +139,7 @@ func (c *one_net_conn) getnextblock() {
 		cbip := BlocksInProgress[bh]
 		if cbip==nil {
 			cbip = &one_bip{Height:BlocksIndex, Count:1}
-			cbip.Conns = make(map[uint32]bool, MAX_CONNECTIONS)
+			cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
 		} else {
 			if cbip.Conns[c.id] {
 				//fmt.Println(" cbip.Conns ->", c.id)
@@ -263,7 +263,7 @@ func (c *one_net_conn) blk_idle() {
 
 
 func drop_slowest_peers() {
-	if open_connection_count() < MAX_CONNECTIONS {
+	if open_connection_count() < MaxNetworkConns {
 		return
 	}
 	open_connection_mutex.Lock()
@@ -379,11 +379,11 @@ func get_blocks() {
 
 		ct = time.Now().Unix()
 
-		if open_connection_count() > MAX_CONNECTIONS {
+		if open_connection_count() > MaxNetworkConns {
 			drop_slowest_peers()
 		} else {
 			// drop slowest peers once for awhile
-			occ := MAX_CONNECTIONS
+			occ := MaxNetworkConns
 			if occ > 0 {
 				occ = 1200 / occ // For 20 open connections: drop one per minute
 				if occ < 3 {
