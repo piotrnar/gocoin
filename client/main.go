@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/tools/utils"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -79,7 +80,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 			textui.ShowPrompt()
 		}
 	} else {
-		println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
+		fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 	}
 	return
 }
@@ -97,20 +98,20 @@ func retry_cached_blocks() bool {
 			common.Busy("Cache.AcceptBlock "+v.Block.Hash.String())
 			e := LocalAcceptBlock(v.Block, v.Conn)
 			if e == nil {
-				//println("*** Old block accepted", common.BlockChain.BlockTreeEnd.Height)
+				//fmt.Println("*** Old block accepted", common.BlockChain.BlockTreeEnd.Height)
 				common.CountSafe("BlocksFromCache")
 				delete(network.CachedBlocks, k)
 				accepted_cnt++
 				break // One at a time should be enough
 			} else {
-				println("retry AcceptBlock:", e.Error())
+				fmt.Println("retry AcceptBlock:", e.Error())
 				common.CountSafe("CachedBlocksDOS")
 				v.Conn.DoS()
 				delete(network.CachedBlocks, k)
 			}
 		} else {
 			if !maybelater {
-				println("retry CheckBlock:", e.Error())
+				fmt.Println("retry CheckBlock:", e.Error())
 				common.CountSafe("BadCachedBlocks")
 				if dos {
 					v.Conn.DoS()
@@ -134,7 +135,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		if maybelater {
 			network.AddBlockToCache(bl, newbl.Conn)
 		} else {
-			println(dos, e.Error())
+			fmt.Println(dos, e.Error())
 			if dos {
 				newbl.Conn.DoS()
 			}
@@ -145,7 +146,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		if e == nil {
 			retryCachedBlocks = retry_cached_blocks()
 		} else {
-			println("AcceptBlock:", e.Error())
+			fmt.Println("AcceptBlock:", e.Error())
 			newbl.Conn.DoS()
 		}
 	}
@@ -153,7 +154,20 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 
 func defrag_db() {
-	println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
+	qdb.SetDefragPercent(1)
+	fmt.Print("Defragmenting UTXO database")
+	os.Stdout.Sync()
+	for {
+		if !common.BlockChain.Unspent.Idle() {
+			break
+		}
+		fmt.Print(".")
+		os.Stdout.Sync()
+	}
+	fmt.Println("done")
+	os.Stdout.Sync()
+
+	fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
 	os.RemoveAll(common.GocoinHomeDir+"defrag")
 	defragdb := btc.NewBlockDB(common.GocoinHomeDir+"defrag")
 	fmt.Println("Defragmenting the database...")
@@ -171,12 +185,12 @@ func defrag_db() {
 		}
 		bl, trusted, er := common.BlockChain.Blocks.BlockGet(blk.BlockHash)
 		if er != nil {
-			println("FATAL ERROR during BlockGet:", er.Error())
+			fmt.Println("FATAL ERROR during BlockGet:", er.Error())
 			break
 		}
 		nbl, er := btc.NewBlock(bl)
 		if er != nil {
-			println("FATAL ERROR during NewBlock:", er.Error())
+			fmt.Println("FATAL ERROR during NewBlock:", er.Error())
 			break
 		}
 		nbl.Trusted = trusted
@@ -207,8 +221,8 @@ func main() {
 			if !ok {
 				err = fmt.Errorf("pkg: %v", r)
 			}
-			println("main panic recovered:", err.Error())
-			println(debug.Stack())
+			fmt.Println("main panic recovered:", err.Error())
+			fmt.Println(debug.Stack())
 			network.NetCloseAll()
 			common.CloseBlockChain()
 			network.ClosePeerDB()
