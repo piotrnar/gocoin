@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"flag"
 	"bytes"
 	"runtime"
 	"os/signal"
@@ -22,9 +23,8 @@ const (
 
 var (
 	MAX_CONNECTIONS uint32 = 20
-	Magic [4]byte
+	Magic [4]byte = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	StartTime time.Time
-	GocoinHomeDir string
 	TheBlockChain *btc.Chain
 
 	GenesisBlock *btc.Uint256 = btc.NewUint256FromString(TheGenesis)
@@ -33,6 +33,7 @@ var (
 
 	// CommandLineSwitches
 	LastTrustedBlock = "00000000000000021b07704899dd81d92bb288b47a95004f3ef82565a55ffb1f" // #281296
+	GocoinHomeDir string
 	OnlyStoreBlocks bool
 )
 
@@ -60,10 +61,36 @@ func open_blockchain() (abort bool) {
 	return
 }
 
+func close_blockchain() {
+	StartTime = time.Now()
+	fmt.Print("All blocks done - defrag unspent")
+	for {
+		if !TheBlockChain.Unspent.Idle() {
+			break
+		}
+		fmt.Print(".")
+	}
+	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
+	TheBlockChain.Close()
+}
+
 
 func main() {
 	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
 
+	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
+
+	var help bool
+	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
+	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
+	flag.BoolVar(&help, "h", false, "Show this help")
+	flag.Parse()
+	if help {
+		flag.PrintDefaults()
+		return
+	}
+
+	// Setup runtime variables
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	//debug.SetGCPercent(100)
 	//qdb.SetDefragPercent(100)
@@ -72,37 +99,19 @@ func main() {
 	add_ip_str("46.253.195.50") // seed node
 	load_ips() // other seed nodes
 
-	Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
-	if len(os.Args)<2 {
-		GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
-	} else {
-		GocoinHomeDir = os.Args[1]
-		if GocoinHomeDir[0]!=os.PathSeparator {
-			GocoinHomeDir += string(os.PathSeparator)
-		}
+	if len(GocoinHomeDir)>0 && GocoinHomeDir[len(GocoinHomeDir)-1]!=os.PathSeparator {
+		GocoinHomeDir += string(os.PathSeparator)
 	}
 	GocoinHomeDir += "btcnet" + string(os.PathSeparator)
 	fmt.Println("GocoinHomeDir:", GocoinHomeDir)
 
 	utils.LockDatabaseDir(GocoinHomeDir)
-
-	defer func() {
-		StartTime = time.Now()
-		fmt.Print("All blocks done - defrag unspent")
-		for {
-			if !TheBlockChain.Unspent.Idle() {
-				break
-			}
-			fmt.Print(".")
-		}
-		fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
-		TheBlockChain.Close()
-		utils.UnlockDatabaseDir()
-	}()
+	defer utils.UnlockDatabaseDir()
 
 	StartTime = time.Now()
 	if open_blockchain() {
 		fmt.Printf("Blockchain opening aborted\n")
+		close_blockchain()
 		return
 	}
 	fmt.Println("Blockchain open in", time.Now().Sub(StartTime))
@@ -111,6 +120,7 @@ func main() {
 
 	download_headers()
 	if GlobalExit {
+		close_blockchain()
 		return
 	}
 
@@ -129,12 +139,16 @@ func main() {
 		blocksize_update(int(n.BlockSize))
 	}
 
+	go BlocksMutex_Monitor()
+
 	fmt.Println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
+
+	close_blockchain()
 
 	return
 }

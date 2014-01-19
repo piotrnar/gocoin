@@ -13,21 +13,19 @@ var (
 	BlockMutexTime int64
 )
 
-func init() {
-	time.Sleep(60e9)
+func BlocksMutex_Monitor() {
 	fir := true
-	go func() {
+	for {
 		time.Sleep(10e9)
 		whe := atomic.LoadInt64(&BlockMutexTime)
-		now := time.Now().UnixNano()
-		if time.Duration(now-whe) > time.Minute {
+		if time.Duration(time.Now().UnixNano()-whe) > time.Minute {
 			if fir {
 				fir = false
 				fmt.Println("\007\007\007")
 			}
 			fmt.Println("Mutex locked for too long", BlockMutexFile, BlockMutexLine)
 		}
-	}()
+	}
 }
 
 func BlocksMutex_Lock() {
