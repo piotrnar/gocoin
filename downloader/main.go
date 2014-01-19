@@ -81,13 +81,16 @@ func open_blockchain() (abort bool) {
 func close_blockchain() {
 	StartTime = time.Now()
 	fmt.Print("All blocks done - defrag unspent")
+	os.Stdout.Sync()
 	for {
 		if !TheBlockChain.Unspent.Idle() {
 			break
 		}
 		fmt.Print(".")
+		os.Stdout.Sync()
 	}
 	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
+	os.Stdout.Sync()
 	TheBlockChain.Close()
 }
 
