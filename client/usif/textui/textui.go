@@ -567,7 +567,7 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
-	newUi("defrag", true, defrag_blocks, "Defragment blocks database and quit (purges orphaned blocks)")
+	newUi("defrag", true, defrag_blocks, "Defragment databases (UTXO + Blocks) on disk and exits")
 
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
