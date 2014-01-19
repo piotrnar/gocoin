@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"runtime"
 	"os/signal"
-	//"runtime/debug"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	//"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc/qdb"
@@ -35,6 +35,7 @@ var (
 	GocoinHomeDir string        // -d
 	OnlyStoreBlocks bool        // -b
 	MaxNetworkConns uint        // -n
+	GCPerc int                  // -g
 )
 
 
@@ -45,8 +46,9 @@ func parse_command_line() {
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "t", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
-	flag.BoolVar(&help, "h", false, "Show this help")
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
+	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
+	flag.BoolVar(&help, "h", false, "Show this help")
 	flag.Parse()
 	if help {
 		flag.PrintDefaults()
@@ -98,7 +100,9 @@ func close_blockchain() {
 func setup_runtime_vars() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 	qdb.MinBrowsableOutValue = 0
-	//debug.SetGCPercent(100)
+	if GCPerc>0 {
+		debug.SetGCPercent(GCPerc)
+	}
 	//qdb.SetDefragPercent(100)
 	//qdb.SetMaxPending(1000, 10000)
 }
