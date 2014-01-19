@@ -1,4 +1,3 @@
-* Fix some deadlock on BlocksMutex...
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
 * Do something with the fixed 129.132.230.0/24
