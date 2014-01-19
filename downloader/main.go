@@ -17,7 +17,6 @@ import (
 
 const (
 	TheGenesis  = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
-	LastTrusted = "00000000000000004df8b69bd821277e3737a87befc56ab0d418669b863a37e1" // #280930
 )
 
 
@@ -29,15 +28,18 @@ var (
 	TheBlockChain *btc.Chain
 
 	GenesisBlock *btc.Uint256 = btc.NewUint256FromString(TheGenesis)
-	HighestTrustedBlock *btc.Uint256 = btc.NewUint256FromString(LastTrusted)
 	TrustUpTo uint32
 	GlobalExit bool
-	killchan chan os.Signal = make(chan os.Signal)
+
+	// CommandLineSwitches
+	LastTrustedBlock = "00000000000000021b07704899dd81d92bb288b47a95004f3ef82565a55ffb1f" // #281296
+	OnlyStoreBlocks bool
 )
 
 
 func open_blockchain() (abort bool) {
 	// Disable Ctrl+C
+	killchan := make(chan os.Signal)
 	signal.Notify(killchan, os.Interrupt, os.Kill)
 	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
 	__exit := make(chan bool)
@@ -83,12 +85,25 @@ func main() {
 	fmt.Println("GocoinHomeDir:", GocoinHomeDir)
 
 	utils.LockDatabaseDir(GocoinHomeDir)
-	defer utils.UnlockDatabaseDir()
+
+	defer func() {
+		StartTime = time.Now()
+		fmt.Print("All blocks done - defrag unspent")
+		for {
+			if !TheBlockChain.Unspent.Idle() {
+				break
+			}
+			fmt.Print(".")
+		}
+		fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
+		TheBlockChain.Close()
+		utils.UnlockDatabaseDir()
+	}()
 
 	StartTime = time.Now()
 	if open_blockchain() {
 		fmt.Printf("Blockchain opening aborted\n")
-		goto finito
+		return
 	}
 	fmt.Println("Blockchain open in", time.Now().Sub(StartTime))
 
@@ -96,11 +111,12 @@ func main() {
 
 	download_headers()
 	if GlobalExit {
-		goto finito
+		return
 	}
 
 	//do_pings()
 
+	HighestTrustedBlock := btc.NewUint256FromString(LastTrustedBlock)
 	for k, h := range BlocksToGet {
 		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
 			TrustUpTo = k
@@ -119,18 +135,6 @@ func main() {
 	get_blocks()
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
-
-finito:
-	StartTime = time.Now()
-	fmt.Print("All blocks done - defrag unspent")
-	for {
-		if !TheBlockChain.Unspent.Idle() {
-			break
-		}
-		fmt.Print(".")
-	}
-	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
-	TheBlockChain.Close()
 
 	return
 }
