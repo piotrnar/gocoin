@@ -174,8 +174,6 @@ func main() {
 		blocksize_update(int(n.BlockSize))
 	}
 
-	go BlocksMutex_Monitor()
-
 	fmt.Println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
 	usif_prompt()
 	StartTime = time.Now()

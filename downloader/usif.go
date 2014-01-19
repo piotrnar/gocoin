@@ -118,11 +118,11 @@ func do_usif() {
 						return
 
 					case "bm":
-						fmt.Println("Trying BlocksMutex_..")
-						BlocksMutex_Lock()
-						fmt.Println("BlocksMutex locked.")
-						BlocksMutex_Unlock()
-						fmt.Println("BlocksMutex unlocked.")
+						fmt.Println("Trying BlocksMutex")
+						BlocksMutex.Lock()
+						fmt.Println("BlocksMutex locked")
+						BlocksMutex.Unlock()
+						fmt.Println("BlocksMutex unlocked")
 
 					case "b":
 						if TheBlockChain!=nil {

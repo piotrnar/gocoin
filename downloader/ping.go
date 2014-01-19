@@ -126,7 +126,7 @@ func (c *one_net_conn) ping_idle() {
 		} else {
 			b := new(bytes.Buffer)
 			btc.WriteVlen(b, PING_FETCH_BLOCKS)
-			BlocksMutex_Lock()
+			BlocksMutex.Lock()
 			for i:=uint32(1); ; i++ {
 				binary.Write(b, binary.LittleEndian, uint32(2))
 				btg := BlocksToGet[i]
@@ -136,7 +136,7 @@ func (c *one_net_conn) ping_idle() {
 					break;
 				}
 			}
-			BlocksMutex_Unlock()
+			BlocksMutex.Unlock()
 			c.ping.bytes = 0
 			c.ping.Unlock()
 			c.sendmsg("getdata", b.Bytes())
