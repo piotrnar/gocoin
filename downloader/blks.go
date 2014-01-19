@@ -103,8 +103,8 @@ func (c *one_net_conn) getnextblock() {
 	var prot int
 	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
 		if prot==20e3 {
-			println("stuck in getnextblock()", BlocksIndex, blocks_from, BlocksComplete, LastBlockHeight,
-				_DoBlocks, secondloop)
+			println("stuck in getnextblock()", BlocksIndex, blocks_from, max_block_forward,
+				BlocksComplete, LastBlockHeight, _DoBlocks, secondloop)
 			break
 		}
 		prot++
