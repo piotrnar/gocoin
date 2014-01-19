@@ -100,11 +100,22 @@ func (c *one_net_conn) getnextblock() {
 		max_block_forward = MAX_BLOCKS_AHEAD
 	}
 
+	if BlocksComplete+max_block_forward >= blocks_from {
+		println("dupa2")
+		blocks_from = BlocksComplete
+	}
+
 	var prot int
 	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
 		if prot==20e3 {
 			println("stuck in getnextblock()", BlocksIndex, blocks_from, max_block_forward,
 				BlocksComplete, LastBlockHeight, _DoBlocks, secondloop)
+			// stuck in getnextblock()
+			// BlocksComplete = 242330 -> 242548
+			// BlocksIndex = 242400
+			// blocks_from = 242552
+			// max_block_forward = 218
+			// LastBlockHeight = 281312 true true
 			break
 		}
 		prot++
