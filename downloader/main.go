@@ -11,7 +11,7 @@ import (
 	//"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	//"github.com/piotrnar/gocoin/qdb"
-	_ "github.com/piotrnar/gocoin/btc/qdb"
+	"github.com/piotrnar/gocoin/btc/qdb"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
 
@@ -32,7 +32,7 @@ var (
 	GlobalExit bool
 
 	// CommandLineSwitches
-	LastTrustedBlock = "00000000000000021b07704899dd81d92bb288b47a95004f3ef82565a55ffb1f" // #281296
+	LastTrustedBlock = "auto"
 	GocoinHomeDir string
 	OnlyStoreBlocks bool
 )
@@ -75,26 +75,35 @@ func close_blockchain() {
 }
 
 
-func main() {
-	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
-
+func parse_command_line() {
 	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
 
 	var help bool
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
+	flag.StringVar(&LastTrustedBlock, "t", LastTrustedBlock, "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.BoolVar(&help, "h", false, "Show this help")
 	flag.Parse()
 	if help {
 		flag.PrintDefaults()
-		return
+		os.Exit(0)
 	}
+}
 
-	// Setup runtime variables
+
+func setup_runtime_vars() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
+	qdb.MinBrowsableOutValue = 0
 	//debug.SetGCPercent(100)
 	//qdb.SetDefragPercent(100)
 	//qdb.SetMaxPending(1000, 10000)
+}
+
+
+func main() {
+	fmt.Println("Gocoin blockchain downloader version", btc.SourcesTag)
+	parse_command_line()
+	setup_runtime_vars()
 
 	add_ip_str("46.253.195.50") // seed node
 	load_ips() // other seed nodes
@@ -126,13 +135,31 @@ func main() {
 
 	//do_pings()
 
-	HighestTrustedBlock := btc.NewUint256FromString(LastTrustedBlock)
-	for k, h := range BlocksToGet {
-		if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
-			TrustUpTo = k
-			fmt.Println("All the blocks up to", TrustUpTo, "are assumed trusted")
-			break
+	var HighestTrustedBlock *btc.Uint256
+	if LastTrustedBlock=="all" {
+		HighestTrustedBlock = TheBlockChain.BlockTreeEnd.BlockHash
+		fmt.Println("Assume all blocks trusted")
+	} else if LastTrustedBlock=="auto" {
+		if LastBlockHeight>6 {
+			ha := BlocksToGet[LastBlockHeight]
+			HighestTrustedBlock = btc.NewUint256(ha[:])
+			fmt.Println("Assume last trusted block as", HighestTrustedBlock.String())
+		} else {
+			fmt.Println("-t=auto ignored since LastBlockHeight is only", LastBlockHeight)
 		}
+	} else if LastTrustedBlock!="" {
+		HighestTrustedBlock = btc.NewUint256FromString(LastTrustedBlock)
+	}
+	if HighestTrustedBlock != nil {
+		for k, h := range BlocksToGet {
+			if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
+				TrustUpTo = k
+				fmt.Println("All the blocks up to", TrustUpTo, "are assumed trusted")
+				break
+			}
+		}
+	} else {
+		fmt.Println("None of the blocks is to be assumed trusted (it will be very slow).")
 	}
 
 	for n:=TheBlockChain.BlockTreeEnd; n!=nil && n.Height>TheBlockChain.BlockTreeEnd.Height-BSLEN; n=n.Parent {
