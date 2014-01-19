@@ -348,10 +348,14 @@ func get_blocks() {
 				BlocksIndex = BlocksComplete
 			}
 			BlocksCachedSize -= uint(len(bl.Raw))
-			delete(BlocksCached, BlocksComplete)
-			bl.Trusted = BlocksComplete<=TrustUpTo
-			blks2do = append(blks2do, bl)
-			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
+			if OnlyStoreBlocks {
+				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
+			} else {
+				delete(BlocksCached, BlocksComplete)
+				bl.Trusted = BlocksComplete<=TrustUpTo
+				blks2do = append(blks2do, bl)
+				atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
+			}
 		}
 		BlocksMutex_Unlock()
 
