@@ -14,7 +14,6 @@ const (
 	MIN_BLOCKS_AHEAD = 5
 	MAX_BLOCKS_AHEAD = 10e3
 
-	MAX_BLOCKS_IM_MEM = 256<<20 // How much memory to use for caching blocks
 	BLOCK_TIMEOUT = 10*time.Second
 
 	GETBLOCKS_BYTES_ONCE = 250e3
@@ -93,7 +92,7 @@ func (c *one_net_conn) getnextblock() {
 	blocks_from := BlocksIndex
 
 	avg_len := avg_block_size()
-	max_block_forward := uint32((MAX_BLOCKS_IM_MEM-BlocksCachedSize) / uint(avg_len))
+	max_block_forward := uint32((MemForBlocks-BlocksCachedSize) / uint(avg_len))
 	if max_block_forward < MIN_BLOCKS_AHEAD {
 		max_block_forward = MIN_BLOCKS_AHEAD
 	} else if max_block_forward > MAX_BLOCKS_AHEAD {

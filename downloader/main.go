@@ -38,13 +38,13 @@ var (
 	GCPerc int                  // -g
 	SeedNode string             // -s
 	DoThePings bool             // -p
+	MemForBlocks uint           // -m (in megabytes)
 )
 
 
 func parse_command_line() {
 	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
 
-	var help bool
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "t", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
@@ -52,12 +52,18 @@ func parse_command_line() {
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 	flag.BoolVar(&DoThePings, "p", false, "Execute the pings procedure first to find the fastest peers")
+
+	flag.UintVar(&MemForBlocks, "m", 64, "Set memory buffer for cached block data (value in megabytes)")
+
+	var help bool
 	flag.BoolVar(&help, "h", false, "Show this help")
 	flag.Parse()
 	if help {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+
+	MemForBlocks <<= 20 // Convert megabytes to bytes
 }
 
 
