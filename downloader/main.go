@@ -149,6 +149,7 @@ func main() {
 	if DoThePings {
 		fmt.Println("Tuning to other peers and trying to find the fastest ones.")
 		fmt.Println("Execute command 'g' to continue to block chain download.")
+		fmt.Println("Otherwise it will auto-continue after 15 minutes.")
 		usif_prompt()
 		do_pings()
 		fmt.Println("Pings done.")
