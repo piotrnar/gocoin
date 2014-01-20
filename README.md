@@ -5,6 +5,12 @@ The two basic components of the software are:
 * **client** - a bitcoin node that must be connected to Internet
 * **wallet** - a wallet app, that is designed to be used offline
 
+In addition to the **client** there is an app called **downloader** that is able to download
+the block chain for the client with quite a decent speed.
+The downloader can be used before you run the client for the first time, but also any time later,
+e.g. if you had it closed for some time and need to quickly sync it up to the current state.
+
+
 # Webpage
 The official webpage of the project:
 
