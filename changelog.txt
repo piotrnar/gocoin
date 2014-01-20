@@ -1,5 +1,5 @@
 0.9.0
-* The "downloader" app (use it to download blockchain for the first time)
+* The "downloader" app which can download the entire blockchain in less than 2 hours
 * Major performance improvement of UTX reindexing (rebuilding) functionality
 
 0.8.7
