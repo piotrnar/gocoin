@@ -23,10 +23,13 @@ On that webpage you can find all the information from this file, plus much much 
 # Requirements
 
 ## Hardware
-It is recommended to have at least 4GB of system memory on the PC where you run the online client node.
-Because of the required memory space, the node will likely crash on a 32-bit system, so build it using 64-bit Go compiler.
-The entire block chain is stored in one large file, so your file system must support files larger than 4GB.
 
+### Online node
+At least 4GB of system memory is required, though 8GB is highly recommended.
+Because of the memory requirements you need to build it with 64 bit Go compiler (and thus have 64 bit host OS).
+The file system where you store the database must support files larger than 4GB.
+
+### Offline wallet
 The wallet app has very little requirements and should work on any platform with a working Go compiler.
 For security reasons, use an encrypted swap file.
 If you decide to store a password in the `.secret` file, do it on an encrypted disc.
