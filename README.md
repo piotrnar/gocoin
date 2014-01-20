@@ -34,9 +34,8 @@ The file system where you store the database must support files larger than 4GB.
 ### Offline wallet
 The wallet app has very little requirements and should work on any platform with a working Go compiler.
 
-For security reasons, use an encrypted swap file.
-
-If you decide to store a password in the `.secret` file, do it on an encrypted disc.
+For security reasons, use an encrypted swap file and if you decide to store a password in the `.secret` file,
+do it on an encrypted disc.
 
 ## Software
 Since no binaries are provided, in order to build Gocoin youself, you will need the following tools installed in your system:
