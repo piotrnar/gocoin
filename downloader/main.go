@@ -149,8 +149,10 @@ func main() {
 	if DoThePings {
 		fmt.Println("Tuning to other peers and trying to find the fastest ones.")
 		fmt.Println("Execute command 'g' to continue to block chain download.")
+		usif_prompt()
 		do_pings()
 		fmt.Println("Pings done.")
+		usif_prompt()
 	}
 
 	var HighestTrustedBlock *btc.Uint256
