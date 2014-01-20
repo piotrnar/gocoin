@@ -70,10 +70,21 @@ Go to the `client/` folder and execute `go build` there.
 ## Compile wallet
 Go to the `wallet/` folder and execute `go build` there.
 
+## Compile downloader
+Go to the `downloader/` folder and execute `go build` there.
+
+## Compile all the tools
+Go to the `tools/` folder and execute:
+	go build btcversig.go
+	go build compressdb.go
+	go build fetchbal.go
+	go build fetchtx.go
+	go build importblocks.go
+	go build type2determ.go
+
 
 # Pull request
 I am sorry to inform you that I will not merge in any pull requests.
 The reason is that I want to stay the only author of this software and therefore the only holder of the copyrights.
-I could have told you that I can pull your changes, if you waive the rights to your pieces of code, but that would be just rude.
-So please fork and develop your own repo, if you want your code in.
-Again, sorry about that.
+If you are missing some functionality that you'd want in, just describe me what you need and I will see what I can do.
+If you want your specific code in though, please fork and develop your own repo.
