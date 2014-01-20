@@ -36,6 +36,7 @@ var (
 	OnlyStoreBlocks bool        // -b
 	MaxNetworkConns uint        // -n
 	GCPerc int                  // -g
+	SeedNode string             // -s
 )
 
 
@@ -46,6 +47,7 @@ func parse_command_line() {
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "t", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
+	flag.StringVar(&SeedNode, "s", "46.253.195.50", "Specify IP of the seed node to start from")
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 	flag.BoolVar(&help, "h", false, "Show this help")
@@ -113,7 +115,7 @@ func main() {
 	parse_command_line()
 	setup_runtime_vars()
 
-	add_ip_str("46.253.195.50") // seed node
+	add_ip_str(SeedNode) // seed node
 	load_ips() // other seed nodes
 
 	if len(GocoinHomeDir)>0 && GocoinHomeDir[len(GocoinHomeDir)-1]!=os.PathSeparator {
