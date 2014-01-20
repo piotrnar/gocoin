@@ -201,7 +201,7 @@ func do_pings() {
 
 	next_drop := time.Now().Add(DROP_SLOW_EVERY)
 
-	ping_timeout := time.Now().Add(1*time.Minute)
+	ping_timeout := time.Now().Add(15*time.Minute)  // auto continue after 15 minutes
 	for GetRunPings() {
 		if !add_new_connections() {
 			time.Sleep(2e8)

@@ -37,6 +37,7 @@ var (
 	MaxNetworkConns uint        // -n
 	GCPerc int                  // -g
 	SeedNode string             // -s
+	DoThePings bool             // -p
 )
 
 
@@ -50,6 +51,7 @@ func parse_command_line() {
 	flag.StringVar(&SeedNode, "s", "46.253.195.50", "Specify IP of the seed node to start from")
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
+	flag.BoolVar(&DoThePings, "p", false, "Execute the pings procedure first to find the fastest peers")
 	flag.BoolVar(&help, "h", false, "Show this help")
 	flag.Parse()
 	if help {
@@ -137,13 +139,19 @@ func main() {
 
 	go do_usif()
 
+	fmt.Println("Downloading headers from the seed peer", SeedNode)
 	download_headers()
 	if GlobalExit {
 		close_blockchain()
 		return
 	}
 
-	//do_pings()
+	if DoThePings {
+		fmt.Println("Tuning to other peers and trying to find the fastest ones.")
+		fmt.Println("Execute command 'g' to continue to block chain download.")
+		do_pings()
+		fmt.Println("Pings done.")
+	}
 
 	var HighestTrustedBlock *btc.Uint256
 	if LastTrustedBlock=="all" {

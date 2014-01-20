@@ -77,6 +77,8 @@ func load_ips() {
 	f, er := os.Open("ips.txt")
 	if er != nil {
 		fmt.Println(er.Error())
+		fmt.Println("You can store more seed peers in file named ips.txt")
+		fmt.Println("(execute 's' command to store the currently connected peers there)")
 		return
 	}
 	rd := bufio.NewReader(f)
