@@ -75,6 +75,7 @@ Go to the `downloader/` folder and execute `go build` there.
 
 ## Compile all the tools
 Go to the `tools/` folder and execute:
+
 	go build btcversig.go
 	go build compressdb.go
 	go build fetchbal.go
