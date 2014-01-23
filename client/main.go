@@ -222,7 +222,7 @@ func main() {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			fmt.Println("main panic recovered:", err.Error())
-			fmt.Println(debug.Stack())
+			fmt.Println(string(debug.Stack()))
 			network.NetCloseAll()
 			common.CloseBlockChain()
 			network.ClosePeerDB()
