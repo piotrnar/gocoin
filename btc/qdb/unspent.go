@@ -123,7 +123,8 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 }
 
 
-func bin2unspent(v []byte, ad *btc.BtcAddr) (nr btc.OneUnspentTx) {
+func bin2unspent(v []byte, ad *btc.BtcAddr) (nr *btc.OneUnspentTx) {
+	nr = new(btc.OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
 	nr.Value = binary.LittleEndian.Uint64(v[36:44])

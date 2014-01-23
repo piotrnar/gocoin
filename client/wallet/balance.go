@@ -21,8 +21,14 @@ var (
 
 	CachedAddrs map[[20]byte] *OneCachedAddrBalance = make(map[[20]byte] *OneCachedAddrBalance)
 	CacheUnspent [] *OneCachedUnspent
-	CacheUnspentIdx map[uint64] [2]uint = make(map[uint64] [2]uint)
+	CacheUnspentIdx map[uint64] *OneCachedUnspentIdx = make(map[uint64] *OneCachedUnspentIdx)
 )
+
+
+type OneCachedUnspentIdx struct {
+	Index uint
+	Record *btc.OneUnspentTx
+}
 
 
 type OneCachedUnspent struct {
@@ -51,7 +57,7 @@ func po2idx(po *btc.TxPrevOut) uint64 {
 }
 
 
-// This is called while accepting the block (from teh chain's thread)
+// This is called while accepting the block (from the chain's thread)
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	var update_wallet bool
 
@@ -67,10 +73,13 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 
 		if rec, ok := CachedAddrs[adr.Hash160]; ok {
 			rec.Value += valpk.Value
-			utxo := btc.OneUnspentTx{TxPrevOut:*idx, Value:valpk.Value,
-					MinedAt:valpk.BlockHeight, BtcAddr:CacheUnspent[rec.CacheIndex].BtcAddr}
+			utxo := new(btc.OneUnspentTx)
+			utxo.TxPrevOut = *idx
+			utxo.Value = valpk.Value
+			utxo.MinedAt = valpk.BlockHeight
+			utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
-			CacheUnspentIdx[po2idx(idx)] = [2]uint{rec.CacheIndex, uint(len(CacheUnspent[rec.CacheIndex].AllUnspentTx))-1}
+			CacheUnspentIdx[po2idx(idx)] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
 			if rec.InWallet {
 				update_wallet = true
 			}
@@ -78,16 +87,23 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	} else {
 		ii := po2idx(idx)
 		if ab, present := CacheUnspentIdx[ii]; present {
-			adrec := CacheUnspent[ab[0]]
-
+			adrec := CacheUnspent[ab.Index]
+			println("removing", idx.String())
 			rec := CachedAddrs[adrec.BtcAddr.Hash160]
-			rec.Value -= adrec.AllUnspentTx[ab[1]].Value
+			if rec==nil {
+				panic("rec not found for " + adrec.BtcAddr.String())
+			}
+			rec.Value -= ab.Record.Value
 			if rec.InWallet {
 				update_wallet = true
 			}
-
-			adrec.AllUnspentTx = append(adrec.AllUnspentTx[:ab[1]], adrec.AllUnspentTx[ab[1]+1:]...)
-
+			for j := range adrec.AllUnspentTx {
+				if adrec.AllUnspentTx[j] == ab.Record {
+					println("found it at index", j)
+					adrec.AllUnspentTx = append(adrec.AllUnspentTx[:j], adrec.AllUnspentTx[j+1:]...)
+					break
+				}
+			}
 			delete(CacheUnspentIdx, ii)
 		}
 	}
@@ -244,8 +260,7 @@ func UpdateBalance() {
 			rec := CachedAddrs[new_addrs[i].BtcAddr.Hash160]
 			rec.Value += new_addrs[i].Value
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, new_addrs[i])
-			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] =
-				[2]uint{rec.CacheIndex, uint(len(CacheUnspent[rec.CacheIndex].AllUnspentTx))-1}
+			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
 		}
 		MyBalance = append(MyBalance, new_addrs...)
 	}

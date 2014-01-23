@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-type AllUnspentTx []OneUnspentTx
+type AllUnspentTx []*OneUnspentTx
 
 // Returned by GetUnspentFromPkScr
 type OneUnspentTx struct {
