@@ -89,7 +89,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		ii := po2idx(idx)
 		if ab, present := CacheUnspentIdx[ii]; present {
 			adrec := CacheUnspent[ab.Index]
-			println("removing", idx.String())
+			//println("removing", idx.String())
 			rec := CachedAddrs[adrec.BtcAddr.Hash160]
 			if rec==nil {
 				panic("rec not found for " + adrec.BtcAddr.String())
@@ -100,7 +100,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 			}
 			for j := range adrec.AllUnspentTx {
 				if adrec.AllUnspentTx[j] == ab.Record {
-					println("found it at index", j)
+					//println("found it at index", j)
 					adrec.AllUnspentTx = append(adrec.AllUnspentTx[:j], adrec.AllUnspentTx[j+1:]...)
 					break
 				}
