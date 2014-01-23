@@ -2,6 +2,8 @@
 * The "downloader" app which can download the entire blockchain in less than 2 hours
 * Major performance improvement of UTX reindexing (rebuilding) functionality
 * Bugfix: the blance cache could cause panic when two outputs were being spent from the same address
+* Pre-cache all the addresses from all the wallet files at startup
+* Banned IP range 129.132.230.0/24 changed to 129.132.230.70 - 129.132.230.100
 
 0.8.7
 * Added a special wallet "ADRESSES" that contains the address book (for MakeTx tab)

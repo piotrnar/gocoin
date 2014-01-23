@@ -1,8 +1,6 @@
-* Test client: few unspent outpus being spent from the same address to a new address
-* Fix downloader: Last Header Height: 0 ...
+* Fix downloader getting stuck at Last Header Height: 0"
+* Make downloader to work woth gocoion.cfg file
 * Add support to P2SH & multisig transactions to the wallet
-* Complete "chaindl" tool - a dedicated blockchain downloader
-* Do something with the fixed 129.132.230.0/24
 * Improve the database folder locking in Linux
 * Try to make own (faster) implementation of sha256 and rimp160
 * Try to improve initial chain download speed

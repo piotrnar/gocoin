@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -296,5 +297,40 @@ func LoadWallet(fn string) {
 	MyWallet = NewWallet(fn)
 	if MyWallet != nil {
 		UpdateBalance()
+	}
+}
+
+func FetchAllBalances() {
+	dir := common.GocoinHomeDir + "wallet" + string(os.PathSeparator)
+	fis, er := ioutil.ReadDir(dir)
+	if er == nil {
+		for i := range fis {
+			if !fis[i].IsDir() && fis[i].Size()>1 {
+				fpath := dir + fis[i].Name()
+				//println("pre-cache wallet", fpath)
+				if MyWallet==nil {
+					LoadWallet(fpath)
+				} else {
+					tmp := NewWallet(fpath)
+					for an := range tmp.Addrs {
+						var fnd bool
+						for ao := range MyWallet.Addrs {
+							if MyWallet.Addrs[ao].Hash160==tmp.Addrs[an].Hash160 {
+								fnd = true
+								break
+							}
+						}
+						if !fnd {
+							MyWallet.Addrs = append(MyWallet.Addrs, tmp.Addrs[an])
+						}
+					}
+				}
+			}
+		}
+	}
+	if MyWallet!=nil && len(MyWallet.Addrs)>0 {
+		//println("Fetching balance of", len(MyWallet.Addrs), "addresses")
+		UpdateBalance()
+		//fmt.Printf("Total balance: %.8f BTC in %d unspent outputs\n", float64(LastBalance)/1e8, len(MyBalance))
 	}
 }

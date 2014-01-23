@@ -235,7 +235,9 @@ func main() {
 
 	// Clean up the DB lock file on exit
 
-	// load default wallet and its balance
+	// cache the current balance of all the addresses from the current wallet files
+	wallet.FetchAllBalances()
+	// ... and now switch to the dafault wallet
 	wallet.LoadWallet(common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
 	if wallet.MyWallet==nil {
 		wallet.LoadWallet(common.GocoinHomeDir+"wallet.txt")
