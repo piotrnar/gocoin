@@ -22,6 +22,9 @@ var (
 		Testnet bool
 		ConnectOnly string
 		Datadir string
+		TextUI struct {
+			Enabled bool
+		}
 		WebUI struct {
 			Interface string
 			AllowedIP string // comma separated
@@ -87,6 +90,8 @@ func init() {
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
 
+	CFG.TextUI.Enabled = true
+
 	CFG.WebUI.Interface = "127.0.0.1:8833"
 	CFG.WebUI.AllowedIP = "127.0.0.1"
 	CFG.WebUI.ShowBlocks = 25
@@ -131,6 +136,7 @@ func init() {
 	flag.StringVar(&CFG.Beeps.MinerID, "miner", CFG.Beeps.MinerID, "Monitor new blocks with the string in their coinbase TX")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
+	flag.BoolVar(&CFG.TextUI.Enabled, "textui", CFG.TextUI.Enabled, "Enable processing TextUI commands (from stdin)")
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()

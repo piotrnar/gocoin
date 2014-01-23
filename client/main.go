@@ -260,7 +260,10 @@ func main() {
 		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
 	}
 
-	go textui.MainThread()
+	if common.CFG.TextUI.Enabled {
+		go textui.MainThread()
+	}
+
 	if common.CFG.WebUI.Interface!="" {
 		fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
 		go webui.ServerThread(common.CFG.WebUI.Interface)
