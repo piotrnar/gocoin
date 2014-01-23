@@ -329,8 +329,8 @@ func FetchAllBalances() {
 		}
 	}
 	if MyWallet!=nil && len(MyWallet.Addrs)>0 {
-		//println("Fetching balance of", len(MyWallet.Addrs), "addresses")
+		println("Fetching balance of", len(MyWallet.Addrs), "addresses")
 		UpdateBalance()
-		//fmt.Printf("Total balance: %.8f BTC in %d unspent outputs\n", float64(LastBalance)/1e8, len(MyBalance))
+		fmt.Printf("Total cached balance: %.8f BTC in %d unspent outputs\n", float64(LastBalance)/1e8, len(MyBalance))
 	}
 }
