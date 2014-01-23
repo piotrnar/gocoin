@@ -1,4 +1,5 @@
-* Fix:  Last Header Height: 0 ...
+* Test client: few unspent outpus being spent from the same address to a new address
+* Fix downloader: Last Header Height: 0 ...
 * Add support to P2SH & multisig transactions to the wallet
 * Complete "chaindl" tool - a dedicated blockchain downloader
 * Do something with the fixed 129.132.230.0/24
