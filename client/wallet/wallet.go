@@ -9,6 +9,8 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
+var PrecachingComplete bool
+
 type OneWallet struct {
 	FileName string
 	Addrs []*btc.BtcAddr
@@ -43,19 +45,27 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 					ifn := strings.Trim(l[1:], " \n\t\t")
 					addrs = append(addrs, LoadWalfile(waldir+ifn, included+1)...)
 				}
-			} else if l[0]!='#' {
-				ls := strings.SplitN(l, " ", 2)
-				if len(ls)>0 {
-					a, e := btc.NewAddrFromString(ls[0])
-					if e != nil {
-						println(fmt.Sprint(fn, ":", linenr), e.Error())
-					} else {
-						a.Extra.Wallet = walname
-						if len(ls)>1 {
-							a.Extra.Label = ls[1]
+			} else {
+				var s string
+				if l[0]!='#' {
+					s = l
+				} else if !PrecachingComplete && len(l)>10 && l[1]=='1' {
+					s = l[1:] // While pre-caching addresses, include ones that are commented out
+				}
+				if s!="" {
+					ls := strings.SplitN(s, " ", 2)
+					if len(ls)>0 {
+						a, e := btc.NewAddrFromString(ls[0])
+						if e != nil {
+							println(fmt.Sprint(fn, ":", linenr), e.Error())
+						} else {
+							a.Extra.Wallet = walname
+							if len(ls)>1 {
+								a.Extra.Label = ls[1]
+							}
+							a.Extra.Virgin = space_first
+							addrs = append(addrs, a)
 						}
-						a.Extra.Virgin = space_first
-						addrs = append(addrs, a)
 					}
 				}
 			}

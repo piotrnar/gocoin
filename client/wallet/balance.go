@@ -333,4 +333,5 @@ func FetchAllBalances() {
 		UpdateBalance()
 		fmt.Printf("Total cached balance: %.8f BTC in %d unspent outputs\n", float64(LastBalance)/1e8, len(MyBalance))
 	}
+	PrecachingComplete = true
 }
