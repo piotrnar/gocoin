@@ -83,6 +83,7 @@ func load_others() {
 			}
 
 			priv_keys = append(priv_keys, key)
+			compressed_key = append(compressed_key, compr)
 			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
 			if len(pk)>1 {
 				labels = append(labels, pk[1])
@@ -153,6 +154,7 @@ func make_wallet() {
 				copy(seed_key, prv_key)
 			}
 			priv_keys = append(priv_keys, prv_key)
+			compressed_key = append(compressed_key, !*uncompressed)
 			pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
 			if er == nil {
 				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
