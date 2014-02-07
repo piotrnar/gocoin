@@ -59,6 +59,7 @@ var (
 	priv_keys [][]byte
 	labels []string
 	publ_addrs []*btc.BtcAddr
+	compressed_key []bool
 
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
