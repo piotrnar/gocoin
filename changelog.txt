@@ -1,4 +1,5 @@
 0.9.1
+* Fix: wallet is not able to properly "-sign" with imported (un)compressed addresses
 * Pre-caching of all the wallets' balances include commented out addresses
 * "Discus Fish" added to the mining pools
 
