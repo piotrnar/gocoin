@@ -2,6 +2,7 @@ package newec
 
 import (
 	"testing"
+	"crypto/rand"
 )
 
 
@@ -12,5 +13,46 @@ func TestFeInv(t *testing.T) {
 	in.inv(&out)
 	if !out.equal(&exp) {
 		t.Error("fe.inv() failed")
+	}
+}
+
+func BenchmarkFieldSqrt(b *testing.B) {
+	var dat [32]byte
+	var f, tmp fe_t
+	rand.Read(dat[:])
+	f.set_b32(dat[:])
+	for i := 0; i < b.N; i++ {
+		f.sqrt(&tmp)
+	}
+}
+
+func BenchmarkFieldSqrtSipa(b *testing.B) {
+	var dat [32]byte
+	var f, tmp fe_t
+	rand.Read(dat[:])
+	f.set_b32(dat[:])
+	for i := 0; i < b.N; i++ {
+		f.sqrt_sipa(&tmp)
+	}
+}
+
+
+func BenchmarkFieldInv(b *testing.B) {
+	var dat [32]byte
+	var f, tmp fe_t
+	rand.Read(dat[:])
+	f.set_b32(dat[:])
+	for i := 0; i < b.N; i++ {
+		f.inv(&tmp)
+	}
+}
+
+func BenchmarkFieldInvSipa(b *testing.B) {
+	var dat [32]byte
+	var f, tmp fe_t
+	rand.Read(dat[:])
+	f.set_b32(dat[:])
+	for i := 0; i < b.N; i++ {
+		f.inv_sipa(&tmp)
 	}
 }
