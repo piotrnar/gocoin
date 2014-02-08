@@ -3,7 +3,8 @@ package newec
 import (
 )
 
-// New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19
+
+/* New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19 */
 func (a *fe_t) inv(r *fe_t) {
 	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 fe_t
 	var j int
@@ -85,7 +86,7 @@ func (a *fe_t) inv(r *fe_t) {
 }
 
 
-// New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19
+/* New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19 */
 func (a *fe_t) sqrt(r *fe_t) {
 	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 fe_t
 	var j int
@@ -171,9 +172,8 @@ func (a *fe_t) inv_var(r *fe_t) {
 	r.set_bytes(n.Bytes())
 }
 
-
-/* Original algo by sipa:
-func (a *fe_t) inv(r *fe_t) {
+/* Original algo by sipa (currently obsolete) */
+func (a *fe_t) inv_sipa(r *fe_t) {
 	// calculate a^p, with p={45,63,1019,1023}
 	var x, a2, a3, a4, a5, a10, a11, a21, a42, a45, a63, a126, a252, a504, a1008, a1019, a1023 fe_t
 	var i, j int
@@ -215,11 +215,10 @@ func (a *fe_t) inv(r *fe_t) {
 	}
 	x.mul(r, &a45)
 }
-*/
 
 
-/* Original algo by sipa
-func (a *fe_t) sqrt(r *fe_t) {
+/* Original algo by sipa  (currently obsolete)  */
+func (a *fe_t) sqrt_sipa(r *fe_t) {
 	var x, a2, a3, a6, a12, a15, a30, a60, a120, a240, a255, a510, a750, a780, a1020, a1022, a1023 fe_t
 	var i, j int
 	// calculate a^p, with p={15,780,1022,1023}
@@ -261,4 +260,3 @@ func (a *fe_t) sqrt(r *fe_t) {
 	}
 	x.mul(r, &a780)
 }
-*/
