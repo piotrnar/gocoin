@@ -1,4 +1,5 @@
-* Fix downloader getting stuck at Last Header Height: 0"
+* client shall be able to create a hash to be signed (via MakeTx) & wallet shall be able to sign a hash
+* Fix downloader getting stuck at "Last Header Height: 0"
 * Make downloader to work woth gocoion.cfg file
 * Add support to P2SH & multisig transactions to the wallet
 * Improve the database folder locking in Linux
