@@ -7,7 +7,7 @@ import (
 var MinerIds = [][2]string{
 	{"BTC_Guild", "BTC Guild"},
 	{"ASICMiner", "ASICMiner"},
-	{"50BTC", "50BTC.com"},
+	{"50BTC", "50BTC"},
 	{"Slush", "/slush/"},
 	// Dont know how to do Deepbit
 	{"EclipseMC", "EMC "},
@@ -20,7 +20,7 @@ var MinerIds = [][2]string{
 	{"SatoshiSys", "Satoshi Systems"},
 	{"ST_Mining", "st mining corp"},
 	{"GHash.IO", "\x80\xad\x90\xd4\x03\x58\x1f\xa3\xbf\x46\x08\x6a\x91\xb2\xd9\xd4\x12\x5d\xb6\xc1"}, // 1CjPR7Z5ZSyWk6WtXvSFgkptmpoi4UM9BC
-	{"Discus Fish", "Mined by user"},
+	{"Discus Fish", "Mined by "},
 }
 
 func MinedBy(bl []byte, id string) bool {
