@@ -48,6 +48,21 @@ func apply_to_balance(tx *btc.Tx) {
 }
 
 
+// dump hashes to be signed
+func dump_hashes_to_sign(tx *btc.Tx) {
+	for in := range tx.TxIn {
+		uo := UO(unspentOuts[in])
+		if uo==nil {
+			println("Unknown content of unspent input number", in)
+			os.Exit(1)
+		}
+		pubad := btc.NewAddrFromPkScript(uo.Pk_script, *testnet)
+		hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
+		fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
+	}
+}
+
+
 // prepare a signed transaction
 func sign_tx(tx *btc.Tx) {
 	for in := range tx.TxIn {
@@ -128,24 +143,36 @@ func make_signed_tx() {
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: chad.OutScript()})
 	}
 
-	sign_tx(tx)
+	if *hashes {
+		dump_hashes_to_sign(tx)
+	} else {
+		sign_tx(tx)
+		write_tx_file(tx)
 
-	write_tx_file(tx)
-
-	if *apply2bal {
-		apply_to_balance(tx)
+		if *apply2bal {
+			apply_to_balance(tx)
+		}
 	}
 }
 
 
-// sign raw transaction with all the keys we have
-func sing_raw_tx() {
+// sign raw transaction with all the keys we have (or just dump hashes to be signed)
+func process_raw_tx() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
 		fmt.Println("ERROR: Cannot decode the raw transaction")
 		return
 	}
 
-	sign_tx(tx)
-	write_tx_file(tx)
+	if len(unspentOuts) < len(tx.TxIn) {
+		println("Insuffcient number of provided unspent outputs", len(unspentOuts), len(tx.TxIn))
+		return
+	}
+
+	if *hashes {
+		dump_hashes_to_sign(tx)
+	} else {
+		sign_tx(tx)
+		write_tx_file(tx)
+	}
 }
