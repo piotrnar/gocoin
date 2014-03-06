@@ -18,11 +18,11 @@ func main() {
 	var testnet bool
 
 	if len(os.Args) < 3 {
-		fmt.Println("Specify A_public_key and B_secret (and optionaly number of addresses you want)")
+		fmt.Println("Specify B_secret, A_public_key and optionaly number of addresses you want.")
 		fmt.Println("Use a negative value for number of addresses, to work with Testnet addresses.")
 		return
 	}
-	A_public_key, er := hex.DecodeString(os.Args[1])
+	A_public_key, er := hex.DecodeString(os.Args[2])
 	if er != nil {
 		println("Error parsing A_public_key:", er.Error())
 		os.Exit(1)
@@ -35,7 +35,7 @@ func main() {
 	}
 	compressed := len(A_public_key)==33
 
-	B_secret, er := hex.DecodeString(os.Args[2])
+	B_secret, er := hex.DecodeString(os.Args[1])
 	if er != nil {
 		println("Error parsing B_secret:", er.Error())
 		os.Exit(1)
