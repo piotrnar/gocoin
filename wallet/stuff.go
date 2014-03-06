@@ -57,10 +57,12 @@ func getpass() string {
 		fmt.Print("Enter your wallet's seed password: ")
 		pass := readpass()
 		if pass!="" && *dump {
-			fmt.Print("Re-enter the seed password (to be sure): ")
-			if pass!=readpass() {
-				println("The two passwords you entered do not match")
-				os.Exit(1)
+			if !*singleask {
+				fmt.Print("Re-enter the seed password (to be sure): ")
+				if pass!=readpass() {
+					println("The two passwords you entered do not match")
+					os.Exit(1)
+				}
 			}
 			// Maybe he wants to save the password?
 			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
