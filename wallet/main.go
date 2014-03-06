@@ -43,9 +43,13 @@ var (
 
 	// Sign raw TX
 	rawtx *string  = flag.String("raw", "", "Sign a raw transaction (use hex-encoded string)")
+	hashes *bool = flag.Bool("hashes", false, "Instead of signing, just print hashes to be signed")
 
 	// Decode raw tx
 	dumptxfn *string  = flag.String("d", "", "Decode raw transaction from the specified file")
+
+	// Sign raw message
+	signhash *string  = flag.String("hash", "", "Sign a raw hash (use together with -sign parameter)")
 
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
@@ -108,11 +112,10 @@ func main() {
 		}
 	}
 
-	// If no dump, then it should be send money
 
 	if *rawtx!="" {
 		load_balance(false)
-		sing_raw_tx()
+		process_raw_tx()
 		return
 	}
 
