@@ -15,11 +15,11 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("Specify A_public_key and B_secret to get the next Type-2 deterministic address")
+		fmt.Println("Specify B_secret and A_public_key to get the next Type-2 deterministic address")
 		fmt.Println("Add -t as the third argument to work with Testnet addresses.")
 		return
 	}
-	A_public_key, er := hex.DecodeString(os.Args[1])
+	A_public_key, er := hex.DecodeString(os.Args[2])
 	if er != nil {
 		println("Error parsing A_public_key:", er.Error())
 		os.Exit(1)
@@ -32,7 +32,7 @@ func main() {
 	}
 	compressed := len(A_public_key)==33
 
-	B_secret, er := hex.DecodeString(os.Args[2])
+	B_secret, er := hex.DecodeString(os.Args[1])
 	if er != nil {
 		println("Error parsing B_secret:", er.Error())
 		os.Exit(1)
