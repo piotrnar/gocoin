@@ -83,7 +83,7 @@ func dump_sigscript(d []byte) {
 }
 
 
-// sign raw transaction with all the keys we have
+// dump raw transaction
 func dump_raw_tx() {
 	tx := raw_tx_from_file(*dumptxfn)
 	if tx == nil {
