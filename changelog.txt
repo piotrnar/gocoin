@@ -1,4 +1,6 @@
 0.9.2
+* Order of B_secret and A_public_key arguments swapped for "type2determ" tool
+* A new tool "type2next" to calculate a next type-2 deterministic public key/address
 * Wallet can print hashes of each transaction's input to be signed ("-raw <txfile> -hashes")
 * Wallet can sign a raw hash ("-hash <hash>") with a given key ("-sign <pubadr>")
 * A new tool "txaddsig" for inserting signature + public key into a raw transaction
