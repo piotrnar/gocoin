@@ -92,25 +92,20 @@ func main() {
 		return
 	}
 
-	if *hashes && *rawtx!="" {
-		load_balance(false)
-		process_raw_tx()
-		return
-	}
-
-	make_wallet()
-
 	if *dump {
+		make_wallet()
 		dump_addrs()
 		return
 	}
 
 	if *dumppriv!="" {
+		make_wallet()
 		dump_prvkey()
 		return
 	}
 
 	if *signaddr!="" {
+		make_wallet()
 		sign_message()
 		if *send=="" {
 			// Don't load_balance if he did not want to spend coins as well
@@ -120,13 +115,19 @@ func main() {
 
 
 	if *rawtx!="" {
+		if !*hashes {
+			make_wallet()
+		}
 		load_balance(false)
 		process_raw_tx()
 		return
 	}
 
 	if send_request() {
-		load_balance(true)
+		if !*hashes {
+			make_wallet()
+		}
+		load_balance(!*hashes)
 		if spendBtc + feeBtc > totBtc {
 			fmt.Println("ERROR: You are trying to spend more than you own")
 			return
@@ -136,5 +137,6 @@ func main() {
 	}
 
 	// If no command specified, just print the balance
+	make_wallet()
 	load_balance(true)
 }
