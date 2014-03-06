@@ -6,15 +6,32 @@ import (
 	"math/big"
 	"io/ioutil"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/base64"
 	"github.com/piotrnar/gocoin/btc"
 )
 
 
+// this function signs either a message or a raw transaction hash
 func sign_message() {
+	var hash []byte
+
+	if *signhash!="" {
+		var er error
+		hash, er = hex.DecodeString(*signhash)
+		if er != nil {
+			println("Incorrect content of -hash parameter")
+			println(er.Error())
+			return
+		}
+	}
+
 	ad2s, e := btc.NewAddrFromString(*signaddr)
 	if e != nil {
 		println(e.Error())
+		if *signhash!="" {
+			println("Always use -sign <addr> along with -hash <msghash>")
+		}
 		return
 	}
 
@@ -32,6 +49,21 @@ func sign_message() {
 			privkey.PublicKey = pub.PublicKey
 			privkey.D = new(big.Int).SetBytes(priv_keys[i][:])
 			compr = compressed_key[i]
+
+			// Sign raw hash?
+			if hash!=nil {
+				txsig := new(btc.Signature)
+				txsig.HashType = 0x01
+				txsig.R, txsig.S, e = btc.EcdsaSign(privkey, hash)
+				if e != nil {
+					println(e.Error())
+					return
+				}
+				fmt.Println("PublicKey:", hex.EncodeToString(publ_addrs[i].Pubkey))
+				fmt.Println(hex.EncodeToString(txsig.Bytes()))
+				return
+			}
+
 			break
 		}
 	}
@@ -40,6 +72,7 @@ func sign_message() {
 		return
 	}
 
+
 	var msg []byte
 	if *message=="" {
 		msg, _ = ioutil.ReadAll(os.Stdin)
@@ -47,7 +80,7 @@ func sign_message() {
 		msg = []byte(*message)
 	}
 
-	hash := make([]byte, 32)
+	hash = make([]byte, 32)
 	btc.HashFromMessage(msg, hash)
 
 	btcsig := new(btc.Signature)
