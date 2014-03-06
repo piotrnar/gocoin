@@ -92,6 +92,12 @@ func main() {
 		return
 	}
 
+	if *hashes && *rawtx!="" {
+		load_balance(false)
+		process_raw_tx()
+		return
+	}
+
 	make_wallet()
 
 	if *dump {
