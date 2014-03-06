@@ -18,6 +18,7 @@ var (
 
 	// Wallet options
 	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
+	singleask *bool = flag.Bool("1", false, "Do not re-ask for the password (when used along with -l)")
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
 	keycnt *uint = flag.Uint("n", 50, "Set the number of keys to be used")
 	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
