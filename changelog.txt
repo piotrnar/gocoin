@@ -1,3 +1,9 @@
+0.9.2
+* Wallet can print hashes of each transaction's input to be signed ("-raw <txfile> -hashes")
+* Wallet can sign a raw hash ("-hash <hash>") with a given key ("-sign <pubadr>")
+* A new tool "txaddsig" for inserting signature + public key into a raw transaction
+* Small changes in WebUI
+
 0.9.1
 * Little faster algos (by peterdettman) for field's sqrt() and inv() (in "btc/newec")
 * Fix: wallet is not able to properly "-sign" with imported (un)compressed addresses
