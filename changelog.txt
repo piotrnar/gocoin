@@ -2,7 +2,7 @@
 * Wallet can print hashes of each transaction's input to be signed ("-raw <txfile> -hashes")
 * Wallet can sign a raw hash ("-hash <hash>") with a given key ("-sign <pubadr>")
 * A new tool "txaddsig" for inserting signature + public key into a raw transaction
-* Small changes in WebUI
+* Show entire content of the current wallet in MakeTx tab, if the book would be empty
 
 0.9.1
 * Little faster algos (by peterdettman) for field's sqrt() and inv() (in "btc/newec")
