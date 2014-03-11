@@ -67,7 +67,6 @@ func main() {
 	buf.WriteByte(0xae)
 
 	p2sh := buf.Bytes()
-	println("dupa", len(p2sh))
 	addr := btc.NewAddrFromPubkey(p2sh, btc.AddrVerScript(testnet))
 
 	rec := "{\n"
