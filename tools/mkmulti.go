@@ -56,6 +56,7 @@ func main() {
 			return
 		}
 		pkeys++
+		buf.WriteByte(byte(len(d)))
 		buf.Write(d)
 		if ads!="" {
 			ads += ", "
