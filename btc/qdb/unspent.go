@@ -147,6 +147,10 @@ func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.All
 					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
 						res = append(res, bin2unspent(v[:48], ad))
 					}
+				} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[2:2+8])]; ok {
+						res = append(res, bin2unspent(v[:48], ad))
+					}
 				}
 				return 0
 			})
