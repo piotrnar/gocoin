@@ -225,13 +225,23 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 
 
 func (a *BtcAddr) OutScript() (res []byte) {
-	res = make([]byte, 25)
-	res[0] = 0x76
-	res[1] = 0xa9
-	res[2] = 20
-	copy(res[3:23], a.Hash160[:])
-	res[23] = 0x88
-	res[24] = 0xac
+	if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) {
+		res = make([]byte, 25)
+		res[0] = 0x76
+		res[1] = 0xa9
+		res[2] = 20
+		copy(res[3:23], a.Hash160[:])
+		res[23] = 0x88
+		res[24] = 0xac
+	} else if a.Version==AddrVerScript(false) || a.Version==AddrVerScript(true) {
+		res = make([]byte, 23)
+		res[0] = 0xa9
+		res[1] = 20
+		copy(res[2:22], a.Hash160[:])
+		res[22] = 0x87
+	} else {
+		panic(fmt.Sprint("OutScript - unsupported version byte: ", a.Version))
+	}
 	return
 }
 
