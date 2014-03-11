@@ -62,7 +62,7 @@ func main() {
 		}
 		ads += "\"" + btc.NewAddrFromPubkey(d, btc.AddrVerPubkey(testnet)).String() + "\""
 	}
-	buf.WriteByte(pkeys)
+	buf.WriteByte(0x50+pkeys)
 
 	p2sh := buf.Bytes()
 	addr := btc.NewAddrFromHash160(p2sh, btc.AddrVerScript(testnet))
