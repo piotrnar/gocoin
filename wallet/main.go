@@ -52,6 +52,9 @@ var (
 	// Sign raw message
 	signhash *string  = flag.String("hash", "", "Sign a raw hash (use together with -sign parameter)")
 
+	// Print a public key of a give bitcoin address
+	pubkey *string  = flag.String("pubkey", "", "Print public key of the give bitcoin address")
+
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string
@@ -90,6 +93,11 @@ func main() {
 	if *dumptxfn!="" {
 		load_balance(false)
 		dump_raw_tx()
+		return
+	}
+
+	if *pubkey!="" {
+		make_wallet()
 		return
 	}
 

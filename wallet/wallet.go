@@ -157,7 +157,12 @@ func make_wallet() {
 			compressed_key = append(compressed_key, !*uncompressed)
 			pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
 			if er == nil {
-				publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
+				adr := btc.NewAddrFromPubkey(pub, verbyte)
+				if *pubkey!="" && *pubkey==adr.String() {
+					fmt.Println(adr.String(), "=>", hex.EncodeToString(pub))
+					return
+				}
+				publ_addrs = append(publ_addrs, adr)
 				labels = append(labels, fmt.Sprint(lab, " ", i+1))
 				i++
 			} else {
