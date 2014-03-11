@@ -40,6 +40,7 @@ func main() {
 	buf.WriteByte(byte(0x50+cnt))
 	fmt.Println("Trying to prepare multisig address for", cnt, "out of", len(os.Args)-2, "public keys ...")
 	var pkeys byte
+	var ads string
 	for i:=2; i<len(os.Args); i++ {
 		if pkeys==16 {
 			println("Oh, give me a break. You don't need more than 16 public keys - stopping here!")
@@ -56,6 +57,10 @@ func main() {
 		}
 		pkeys++
 		buf.Write(d)
+		if ads!="" {
+			ads += ", "
+		}
+		ads += "\"" + btc.NewAddrFromPubkey(d, btc.AddrVerPubkey(testnet)).String() + "\""
 	}
 	buf.WriteByte(pkeys)
 
@@ -67,7 +72,8 @@ func main() {
 	rec += fmt.Sprintf("\t\"scriptPubKey\" : \"a914%s87\",\n", hex.EncodeToString(addr.Hash160[:]))
 	rec += fmt.Sprintf("\t\"keysRequired\" : \"%d\",\n", cnt)
 	rec += fmt.Sprintf("\t\"keysProvided\" : \"%d\",\n", pkeys)
-	rec += fmt.Sprintf("\t\"redeemScript\" : \"%s\"\n", hex.EncodeToString(p2sh))
+	rec += fmt.Sprintf("\t\"redeemScript\" : \"%s\",\n", hex.EncodeToString(p2sh))
+	rec += fmt.Sprintf("\t\"listOfAddres\" : [%s]\n", ads)
 	rec += "}\n"
 	fname := addr.String()+".json"
 	ioutil.WriteFile(fname, []byte(rec), 0666)
