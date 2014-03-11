@@ -64,14 +64,6 @@ func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
 }
 
 
-func NewAddrFromP2SH(in []byte, ver byte) (a *BtcAddr) {
-	a = new(BtcAddr)
-	a.Version = ver
-	copy(a.Hash160[:], in[:])
-	return
-}
-
-
 func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	a = new(BtcAddr)
 	a.Pubkey = make([]byte, len(in))
