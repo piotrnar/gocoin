@@ -1,3 +1,7 @@
+0.9.3
+* Wallet can give the public key of a given bitcoin address ("-pubkey <addr>")
+* BtcAddr.OutScript() now outputs P2SH address, if the version byte requires it
+
 0.9.2
 * Order of B_secret and A_public_key arguments swapped for "type2determ" tool
 * A new tool "type2next" to calculate a next type-2 deterministic public key/address
