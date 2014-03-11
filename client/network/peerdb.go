@@ -296,7 +296,7 @@ func InitPeers(dir string) {
 				initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
 					/*"dnsseed.bitcoin.dashjr.org",*/ "bitseed.xf2.org"}, 8333)
 			} else {
-				initSeeds([]string{"bitcoin.petertodd.org", "testnet-seed.bitcoin.petertodd.org",
+				initSeeds([]string{/*"bitcoin.petertodd.org",*/ "testnet-seed.bitcoin.petertodd.org",
 					/*"bluematt.me",*/ "testnet-seed.bluematt.me"}, 18333)
 			}
 		}()
