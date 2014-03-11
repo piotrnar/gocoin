@@ -64,9 +64,11 @@ func main() {
 		ads += "\"" + btc.NewAddrFromPubkey(d, btc.AddrVerPubkey(testnet)).String() + "\""
 	}
 	buf.WriteByte(0x50+pkeys)
+	buf.WriteByte(0xae)
 
 	p2sh := buf.Bytes()
-	addr := btc.NewAddrFromHash160(p2sh, btc.AddrVerScript(testnet))
+	println("dupa", len(p2sh))
+	addr := btc.NewAddrFromPubkey(p2sh, btc.AddrVerScript(testnet))
 
 	rec := "{\n"
 	rec += fmt.Sprintf("\t\"multiAddress\" : \"%s\",\n", addr.String())
