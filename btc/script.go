@@ -160,7 +160,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		fExec := vfExec.nofalse()
 
 		// Read instruction
-		opcode, vchPushValue, n, e := getOpcode(p[idx:])
+		opcode, vchPushValue, n, e := GetOpcode(p[idx:])
 		if e!=nil {
 			println(e.Error())
 			return false
@@ -887,7 +887,7 @@ func delSig(where, sig []byte) (res []byte) {
 	sig = bb.Bytes()
 	var idx int
 	for idx < len(where) {
-		_, _, n, e := getOpcode(where[idx:])
+		_, _, n, e := GetOpcode(where[idx:])
 		if e!=nil {
 			return
 		}
@@ -900,10 +900,10 @@ func delSig(where, sig []byte) (res []byte) {
 }
 
 
-func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
+func GetOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 	// Read instruction
 	if pc+1 > len(b) {
-		e = errors.New("getOpcode error 1")
+		e = errors.New("GetOpcode error 1")
 		return
 	}
 	opcode = int(b[pc])
@@ -916,21 +916,21 @@ func getOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 		}
 		if opcode == OP_PUSHDATA1 {
 			if pc+1 > len(b) {
-				e = errors.New("getOpcode error 2")
+				e = errors.New("GetOpcode error 2")
 				return
 			}
 			nSize = int(b[pc])
 			pc++
 		} else if opcode == OP_PUSHDATA2 {
 			if pc+2 > len(b) {
-				e = errors.New("getOpcode error 3")
+				e = errors.New("GetOpcode error 3")
 				return
 			}
 			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+2]))
 			pc += 2
 		} else if opcode == OP_PUSHDATA4 {
 			if pc+4 > len(b) {
-				e = errors.New("getOpcode error 4")
+				e = errors.New("GetOpcode error 4")
 				return
 			}
 			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+4]))
