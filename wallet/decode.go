@@ -29,8 +29,8 @@ func dump_raw_sigscript(d []byte) {
 		println(er.Error())
 		return
 	}
-	p2sh := len(ss)>=2 && ss[0]=="OP_FALSE"
-	fmt.Println("       SigScript:")
+	p2sh := len(ss)>=2 && d[0]==0
+	fmt.Println("       SigScript:", p2sh)
 	for i := range ss {
 		if p2sh && i==len(ss)-1 {
 			// Print p2sh script
