@@ -23,6 +23,34 @@ func hex_dump(d []byte) (s string) {
 }
 
 
+func dump_raw_sigscript(d []byte) {
+	ss, er := btc.ScriptToText(d)
+	if er != nil {
+		println(er.Error())
+		return
+	}
+	p2sh := len(ss)>=2 && ss[0]=="OP_FALSE"
+	fmt.Println("       SigScript:")
+	for i := range ss {
+		if p2sh && i==len(ss)-1 {
+			// Print p2sh script
+			d, _ = hex.DecodeString(ss[i])
+			s2, er := btc.ScriptToText(d)
+			if er != nil {
+				println(er.Error())
+				return
+			}
+			fmt.Println("        P2SH spend script:")
+			for j := range s2 {
+				fmt.Println("        ", s2[j])
+			}
+		} else {
+			fmt.Println("       ", ss[i])
+		}
+	}
+}
+
+
 func dump_sigscript(d []byte) {
 	if len(d) < 10 + 34 { // at least 10 bytes for sig and 34 bytes key
 		fmt.Println("       WARNING: Short sigScript")
@@ -33,17 +61,19 @@ func dump_sigscript(d []byte) {
 
 	// ECDSA Signature
 	le, _ := rd.ReadByte()
+	if le<0x40 {
+		dump_raw_sigscript(d)
+		return
+	}
 	sd := make([]byte, le)
 	_, er := rd.Read(sd)
 	if er != nil {
-		fmt.Println("       WARNING: Signature too short", er.Error())
-		fmt.Print(hex_dump(d))
+		dump_raw_sigscript(d)
 		return
 	}
 	sig, er := btc.NewSignature(sd)
 	if er != nil {
-		fmt.Println("       WARNING: Signature broken", er.Error())
-		fmt.Print(hex_dump(d))
+		dump_raw_sigscript(d)
 		return
 	}
 	fmt.Printf("       R = %64s\n", hex.EncodeToString(sig.R.Bytes()))
@@ -57,6 +87,7 @@ func dump_sigscript(d []byte) {
 		fmt.Print(hex_dump(d))
 		return
 	}
+
 	sd = make([]byte, le)
 	_, er = rd.Read(sd)
 	if er != nil {
@@ -64,6 +95,7 @@ func dump_sigscript(d []byte) {
 		fmt.Print(hex_dump(d))
 		return
 	}
+
 	fmt.Printf("       PublicKeyType = %02x\n", sd[0])
 	key, er := btc.NewPublicKey(sd)
 	if er != nil {
