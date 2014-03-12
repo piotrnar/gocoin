@@ -28,4 +28,5 @@ const (
 
 	OP_EQUAL = 0x87
 	OP_HASH160 = 0xa9
+	OP_CHECKMULTISIG = 0xae
 )
