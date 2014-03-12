@@ -1,8 +1,6 @@
-* Make the dowloader to figure out a proper IP of a hub node
+* Make "-msign" option for the wallet to put the signature always in the right place
+* Make the dowloader to figure out a proper IP of a hub node / work with gocoion.cfg file
 * Fix downloader getting stuck at "Last Header Height: 0"
-* Make downloader to work woth gocoion.cfg file
-* Add support to P2SH & multisig transactions to the wallet
 * Improve the database folder locking in Linux
 * Try to make own (faster) implementation of sha256 and rimp160
-* Try to improve initial chain download speed
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
