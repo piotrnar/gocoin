@@ -11,7 +11,6 @@ import (
 const (
 	PassSeedFilename = ".secret"
 	RawKeysFilename = ".others"
-	MultiToSignOut = "multi2sign.txt"
 )
 
 var (
@@ -58,6 +57,7 @@ var (
 
 	// Print a public key of a give bitcoin address
 	p2sh *string  = flag.String("p2sh", "", "Prepare a transaction for multisig signing (use together with -raw)")
+	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
@@ -130,6 +130,11 @@ func main() {
 	if *rawtx!="" {
 		if *p2sh!="" {
 			make_p2sh()
+			return
+		}
+
+		if *multisign!="" {
+			multisig_sign()
 			return
 		}
 
