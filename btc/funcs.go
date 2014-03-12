@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"math/big"
 	"encoding/base64"
+	"encoding/binary"
 )
 
 func allzeros(b []byte) bool {
@@ -144,6 +145,26 @@ func WriteVlen(b io.Writer, var_len uint32) {
 	}
 	b.Write([]byte{0xfe, byte(var_len), byte(var_len>>8), byte(var_len>>16), byte(var_len>>24)})
 }
+
+// Writes opcode to put a specific number of bytes to stack
+func WritePutLen(b io.Writer, data_len uint32) {
+	switch {
+		case data_len <= OP_PUSHDATA1:
+			b.Write([]byte{byte(data_len)})
+
+		case data_len < 0x100:
+			b.Write([]byte{OP_PUSHDATA1,byte(data_len)})
+
+		case data_len < 0x10000:
+			b.Write([]byte{OP_PUSHDATA2})
+			binary.Write(b, binary.LittleEndian, uint16(data_len))
+
+		default:
+			b.Write([]byte{OP_PUSHDATA4})
+			binary.Write(b, binary.LittleEndian, uint32(data_len))
+	}
+}
+
 
 // Read bitcoin protocol string
 func ReadString(rd io.Reader) (s string, e error) {
