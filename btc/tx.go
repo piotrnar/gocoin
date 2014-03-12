@@ -108,7 +108,7 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 	var idx int
 	var nd []byte
 	for idx < len(scriptCode) {
-		op, _, n, e := getOpcode(scriptCode[idx:])
+		op, _, n, e := GetOpcode(scriptCode[idx:])
 		if e!=nil {
 			break
 		}
