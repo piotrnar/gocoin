@@ -29,6 +29,49 @@ func NewMultiSigFromP2SH(p []byte) (*MultiSig, error) {
 }
 
 
+func NewMultiSigFromScript(p []byte) (*MultiSig, error) {
+	r := new(MultiSig)
+
+	var idx, stage int
+	for idx < len(p) {
+		opcode, pv, n, er := GetOpcode(p[idx:])
+		if er != nil {
+			return nil, errors.New("NewMultiSigFromScript: " + er.Error())
+		}
+		idx+= n
+
+		switch stage {
+			case 0: // look for OP_FALSE
+				if opcode!=0 {
+					return nil, errors.New("NewMultiSigFromScript: first opcode must be OP_0")
+				}
+				stage = 1
+
+			case 1: // look for signatures
+				sig, _ := NewSignature(pv)
+				if sig!=nil {
+					r.Signatures = append(r.Signatures, sig)
+					break
+				}
+				er := r.ApplyP2SH(pv)
+				if er != nil {
+					return nil, er
+				}
+				stage = 6
+
+			default:
+				return nil, errors.New(fmt.Sprintf("NewMultiSigFromScript: Unexpected opcode 0x%02X at the end of script", opcode))
+		}
+	}
+
+	if stage != 6 {
+		return nil, errors.New("NewMultiSigFromScript:  script too short")
+	}
+
+	return r, nil
+}
+
+
 func (r *MultiSig) ApplyP2SH(p []byte) (error) {
 	var idx, stage int
 	stage = 2
@@ -75,49 +118,6 @@ func (r *MultiSig) ApplyP2SH(p []byte) (error) {
 	}
 
 	return nil
-}
-
-
-func NewMultiSigFromScript(p []byte) (*MultiSig, error) {
-	r := new(MultiSig)
-
-	var idx, stage int
-	for idx < len(p) {
-		opcode, pv, n, er := GetOpcode(p[idx:])
-		if er != nil {
-			return nil, errors.New("NewMultiSigFromScript: " + er.Error())
-		}
-		idx+= n
-
-		switch stage {
-			case 0: // look for OP_FALSE
-				if opcode!=0 {
-					return nil, errors.New("NewMultiSigFromScript: first opcode must be OP_0")
-				}
-				stage = 1
-
-			case 1: // look for signatures
-				sig, _ := NewSignature(pv)
-				if sig!=nil {
-					r.Signatures = append(r.Signatures, sig)
-					break
-				}
-				er := r.ApplyP2SH(pv)
-				if er != nil {
-					return nil, er
-				}
-				stage = 6
-
-			default:
-				return nil, errors.New(fmt.Sprintf("NewMultiSigFromScript: Unexpected opcode 0x%02X at the end of script", opcode))
-		}
-	}
-
-	if stage != 6 {
-		return nil, errors.New("NewMultiSigFromScript:  script too short")
-	}
-
-	return r, nil
 }
 
 
