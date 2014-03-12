@@ -11,6 +11,7 @@ import (
 const (
 	PassSeedFilename = ".secret"
 	RawKeysFilename = ".others"
+	MultiToSignOut = "multi2sign.txt"
 )
 
 var (
