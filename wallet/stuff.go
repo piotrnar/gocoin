@@ -4,11 +4,9 @@ import (
 	"os"
 	"fmt"
 	"bufio"
-	"bytes"
 	"strings"
 	"io/ioutil"
 	"encoding/hex"
-	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -206,50 +204,4 @@ func raw_tx_from_file(fn string) *btc.Tx {
 	}
 
 	return tx
-}
-
-
-// add P2SH pre-signing data into a raw tx
-func make_p2sh() {
-	tx := raw_tx_from_file(*rawtx)
-	if tx == nil {
-		fmt.Println("ERROR: Cannot decode the raw transaction")
-		return
-	}
-
-	d, er := hex.DecodeString(*p2sh)
-	if er != nil {
-		println("P2SH hex data:", er.Error())
-	}
-	var pkscr [23]byte
-	pkscr[0] = 0xa9
-	pkscr[1] = 20
-	btc.RimpHash(d, pkscr[2:22])
-	pkscr[22] = 0x87
-
-	fmt.Println("The P2SH data points to address", btc.NewAddrFromHash160(pkscr[2:22], btc.AddrVerScript(*testnet)))
-
-	for i := range tx.TxIn {
-		if len(tx.TxIn[i].ScriptSig) > 0 {
-			fmt.Println("WARNING: Input at index", i, "already has a sigScript - owerwrite!")
-		}
-		buf := new(bytes.Buffer)
-		buf.WriteByte(0x00) // push OP_FALSE (must be there for P2SH transaction)
-		if len(d) > 0x4b {
-			if len(d) > 0xff {
-				buf.WriteByte(btc.OP_PUSHDATA2)
-				binary.Write(buf, binary.LittleEndian, uint16(len(d)))
-			} else {
-				buf.WriteByte(btc.OP_PUSHDATA1)
-				buf.WriteByte(byte(len(d)))
-			}
-		} else {
-			buf.WriteByte(byte(len(d)))
-		}
-		buf.Write(d)
-		tx.TxIn[i].ScriptSig = buf.Bytes()
-		fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(tx.SignatureHash(d, i, btc.SIGHASH_ALL)))
-	}
-	ioutil.WriteFile(MultiToSignOut, []byte(hex.EncodeToString(tx.Serialize())), 0666)
-	fmt.Println("Transaction with", len(tx.TxIn), "inputs ready for multi-signing, stored in", MultiToSignOut)
 }
