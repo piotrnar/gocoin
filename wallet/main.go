@@ -133,14 +133,15 @@ func main() {
 			return
 		}
 
+		if !*hashes {
+			make_wallet()
+		}
+
 		if *multisign!="" {
 			multisig_sign()
 			return
 		}
 
-		if !*hashes {
-			make_wallet()
-		}
 		load_balance(false)
 		process_raw_tx()
 		return
