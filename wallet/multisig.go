@@ -78,7 +78,7 @@ func multisig_sign() {
 	}
 
 	if privkey==nil {
-		println("You do not know a key fro address", ad2s.String())
+		println("You do not know a key for address", ad2s.String())
 		return
 	}
 
@@ -89,7 +89,7 @@ func multisig_sign() {
 			return
 		}
 		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
-		fmt.Println("Input number", i, len(ms.Signatures), " - hash to sign:", hex.EncodeToString(hash))
+		//fmt.Println("Input number", i, len(ms.Signatures), " - hash to sign:", hex.EncodeToString(hash))
 
 		btcsig := &btc.Signature{HashType:0x01}
 		btcsig.R, btcsig.S, e = btc.EcdsaSign(privkey, hash)
@@ -101,5 +101,39 @@ func multisig_sign() {
 		ms.Signatures = append(ms.Signatures, btcsig)
 		tx.TxIn[i].ScriptSig = ms.Bytes()
 	}
+
+	// Now re-order the signatures as they shall be:
+	for i := range tx.TxIn {
+		ms, er := btc.NewMultiSigFromScript(tx.TxIn[i].ScriptSig)
+		if er != nil {
+			println(er.Error())
+			return
+		}
+		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
+		//fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(hash))
+		//fmt.Println(" ... number of signatures:", len(ms.Signatures))
+
+		var sigs []*btc.Signature
+		for ki := range ms.PublicKeys {
+			//pk := btc.NewPublicKey(ms.PublicKeys[ki])
+			//fmt.Println(ki, hex.EncodeToString(ms.PublicKeys[ki]))
+			var sig *btc.Signature
+			for si := range ms.Signatures {
+				if btc.EcdsaVerify(ms.PublicKeys[ki], ms.Signatures[si].Bytes(), hash) {
+					//fmt.Println("Key number", ki, "has signature number", si)
+					sig = ms.Signatures[si]
+					break
+				}
+			}
+			if sig != nil {
+				sigs = append(sigs, sig)
+			} else if *verbose {
+				fmt.Println("WARNING: Key number", ki, "has no matching signature")
+			}
+		}
+		ms.Signatures = sigs
+		tx.TxIn[i].ScriptSig = ms.Bytes()
+	}
+
 	write_tx_file(tx)
 }
