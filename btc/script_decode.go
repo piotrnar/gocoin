@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"fmt"
 	"bytes"
 	"errors"
 	"strconv"
@@ -194,6 +195,71 @@ func DecodeScript(pk string) (out []byte, e error) {
 				}
 			}
 		}
+	}
+	return
+}
+
+
+func ScriptToText(p []byte) (out []string, e error) {
+	var opcnt, idx int
+	for idx < len(p) {
+		opcode, vchPushValue, n, er := GetOpcode(p[idx:])
+
+		if er!=nil {
+			e = errors.New("ScriptToText: " + er.Error())
+			return
+		}
+		idx+= n
+
+		if vchPushValue!=nil && len(vchPushValue) > MAX_SCRIPT_ELEMENT_SIZE {
+			e = errors.New(fmt.Sprint("ScriptToText: vchPushValue too long ", len(vchPushValue)))
+			return
+		}
+
+		if opcode > 0x60 {
+			opcnt++
+			if opcnt > 201 {
+				e = errors.New("ScriptToText: evalScript has too many opcodes")
+				return
+			}
+		}
+
+		if opcode == 0x7e/*OP_CAT*/ ||
+			opcode == 0x7f/*OP_SUBSTR*/ ||
+			opcode == 0x80/*OP_LEFT*/ ||
+			opcode == 0x81/*OP_RIGHT*/ ||
+			opcode == 0x83/*OP_INVERT*/ ||
+			opcode == 0x84/*OP_AND*/ ||
+			opcode == 0x85/*OP_OR*/ ||
+			opcode == 0x86/*OP_XOR*/ ||
+			opcode == 0x8d/*OP_2MUL*/ ||
+			opcode == 0x8e/*OP_2DIV*/ ||
+			opcode == 0x95/*OP_MUL*/ ||
+			opcode == 0x96/*OP_DIV*/ ||
+			opcode == 0x97/*OP_MOD*/ ||
+			opcode == 0x98/*OP_LSHIFT*/ ||
+			opcode == 0x99/*OP_RSHIFT*/ {
+			e = errors.New(fmt.Sprint("ScriptToText: Unsupported opcode ", opcode))
+			return
+		}
+
+		var sel string
+		if 0<=opcode && opcode<=OP_PUSHDATA4 {
+			if len(vchPushValue)==0 {
+				sel = "OP_FALSE"
+			} else {
+				sel = hex.EncodeToString(vchPushValue)
+			}
+		} else {
+			switch {
+				case opcode==0x4f: sel = "1NEGATE"
+				case opcode>=0x50 && opcode<=0x60: sel = fmt.Sprint(opcode-0x50)
+				case opcode==0xae: sel = "CHECKMULTISIG"
+				default: sel = fmt.Sprintf("0x%02X", opcode)
+			}
+			sel = "OP_"+sel
+		}
+		out = append(out, sel)
 	}
 	return
 }
