@@ -55,6 +55,9 @@ var (
 	// Print a public key of a give bitcoin address
 	pubkey *string  = flag.String("pubkey", "", "Print public key of the give bitcoin address")
 
+	// Print a public key of a give bitcoin address
+	p2sh *string  = flag.String("p2sh", "", "Prepare a transaction for multisig signing (use together with -raw)")
+
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string
@@ -124,6 +127,11 @@ func main() {
 
 
 	if *rawtx!="" {
+		if *p2sh!="" {
+			make_p2sh()
+			return
+		}
+
 		if !*hashes {
 			make_wallet()
 		}
