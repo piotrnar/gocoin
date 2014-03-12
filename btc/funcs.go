@@ -196,7 +196,7 @@ func IsPayToScript(scr []byte) bool {
 func IsPushOnly(scr []byte) bool {
 	idx := 0
 	for idx<len(scr) {
-		op, _, n, e := getOpcode(scr[idx:])
+		op, _, n, e := GetOpcode(scr[idx:])
 		if e != nil {
 			return false
 		}
