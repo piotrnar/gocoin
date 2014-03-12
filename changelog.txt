@@ -1,4 +1,5 @@
 0.9.3
+* Wallet has a new option "-p2sh" that prepares a raw transaction for P2SH type signing
 * A new tool "mkmulti", to generate a multisig address record files
 * Wallet can give the public key of a given bitcoin address ("-pubkey <addr>")
 * Wallet can now send money to P2SH-type addresses
