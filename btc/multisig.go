@@ -116,3 +116,19 @@ func (ms *MultiSig) Bytes() []byte {
 	buf.Write(p2sh)
 	return buf.Bytes()
 }
+
+
+func (ms *MultiSig) PkScript() (pkscr []byte) {
+	pkscr = make([]byte, 23)
+	pkscr[0] = 0xa9
+	pkscr[1] = 20
+	RimpHash(ms.P2SH(), pkscr[2:22])
+	pkscr[22] = 0x87
+	return
+}
+
+func (ms *MultiSig) BtcAddr(testnet bool) *BtcAddr {
+	var h [20]byte
+	RimpHash(ms.P2SH(), h[:])
+	return NewAddrFromHash160(h[:], AddrVerScript(testnet))
+}
