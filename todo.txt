@@ -1,4 +1,3 @@
-* Make "-msign" option for the wallet to put the signature always in the right place
 * Make the dowloader to figure out a proper IP of a hub node / work with gocoion.cfg file
 * Fix downloader getting stuck at "Last Header Height: 0"
 * Improve the database folder locking in Linux
