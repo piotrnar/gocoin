@@ -19,6 +19,64 @@ func NewMultiSig(n uint) (res *MultiSig) {
 	return
 }
 
+func NewMultiSigFromP2SH(p []byte) (*MultiSig, error) {
+	res := new(MultiSig)
+	er := res.ApplyP2SH(p)
+	if er != nil {
+		return nil, er
+	}
+	return res, nil
+}
+
+
+func (r *MultiSig) ApplyP2SH(p []byte) (error) {
+	var idx, stage int
+	stage = 2
+	for idx < len(p) {
+		opcode, pv, n, er := GetOpcode(p[idx:])
+		if er != nil {
+			return errors.New("ApplyP2SH: " + er.Error())
+		}
+		idx+= n
+
+		switch stage {
+			case 2: // Look for number of required signatures
+				if opcode<OP_1 || opcode>OP_16 {
+					return errors.New(fmt.Sprint("ApplyP2SH: Unexpected number of required signatures ", opcode-OP_1+1))
+				}
+				r.SigsNeeded = uint(opcode-OP_1+1)
+				stage = 3
+
+			case 3: // Look for public keys
+				if len(pv)==33 && (pv[0]|1)==3 || len(pv)==65 && pv[0]==4 {
+					r.PublicKeys = append(r.PublicKeys, pv)
+					break
+				}
+				stage = 4
+				fallthrough
+
+			case 4: // Look for number of public keys
+				if opcode-OP_1+1 != len(r.PublicKeys) {
+					return errors.New(fmt.Sprint("ApplyP2SH: Number of public keys mismatch ", opcode-OP_1+1, "/", len(r.PublicKeys)))
+				}
+				stage = 5
+
+			case 5:
+				if opcode==OP_CHECKMULTISIG {
+					stage = 6
+				} else {
+					return errors.New(fmt.Sprintf("ApplyP2SH: Unexpected opcode 0x%02X at the end of script", opcode))
+				}
+		}
+	}
+
+	if stage != 6 {
+		return errors.New("ApplyP2SH:  script too short")
+	}
+
+	return nil
+}
+
 
 func NewMultiSigFromScript(p []byte) (*MultiSig, error) {
 	r := new(MultiSig)
@@ -44,40 +102,14 @@ func NewMultiSigFromScript(p []byte) (*MultiSig, error) {
 					r.Signatures = append(r.Signatures, sig)
 					break
 				}
-				if idx != len(p) {
-					return nil, errors.New("NewMultiSigFromScript: unexpected extra data at the end of script")
+				er := r.ApplyP2SH(pv)
+				if er != nil {
+					return nil, er
 				}
-				p = pv
-				idx = 0
-				stage = 2
+				stage = 6
 
-			case 2: // Look for number of required signatures
-				if opcode<OP_1 || opcode>OP_16 {
-					return nil, errors.New(fmt.Sprint("NewMultiSigFromScript: Unexpected number of required signatures ", opcode-OP_1+1))
-				}
-				r.SigsNeeded = uint(opcode-OP_1+1)
-				stage = 3
-
-			case 3: // Look for public keys
-				if len(pv)==33 && (pv[0]|1)==3 || len(pv)==65 && pv[0]==4 {
-					r.PublicKeys = append(r.PublicKeys, pv)
-					break
-				}
-				stage = 4
-				fallthrough
-
-			case 4: // Look for number of public keys
-				if opcode-OP_1+1 != len(r.PublicKeys) {
-					return nil, errors.New(fmt.Sprint("NewMultiSigFromScript: Number of public keys mismatch ", opcode-OP_1+1, "/", len(r.PublicKeys)))
-				}
-				stage = 5
-
-			case 5:
-				if opcode==OP_CHECKMULTISIG {
-					stage = 6
-				} else {
-					return nil, errors.New(fmt.Sprintf("NewMultiSigFromScript: Unexpected opcode 0x%02X at the end of script", opcode))
-				}
+			default:
+				return nil, errors.New(fmt.Sprintf("NewMultiSigFromScript: Unexpected opcode 0x%02X at the end of script", opcode))
 		}
 	}
 
