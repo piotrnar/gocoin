@@ -1,10 +1,10 @@
 0.9.3
 * Wallet has a new option "-msign" that signs a multisig transaction with a single key
-* Wallet has a new option "-p2sh" that prepares a raw transaction for P2SH type signing
-* A new tool "mkmulti", to generate a multisig address record files
-* Wallet can give the public key of a given bitcoin address ("-pubkey <addr>")
-* Wallet can now send money to P2SH-type addresses
-* BtcAddr.OutScript() now outputs P2SH address, if the version byte requires it
+* Wallet has a new option "-p2sh" to prepare a raw transaction for multisig processsing
+* Wallet can print public key of a given bitcoin address ("-pub <addr>")
+* Wallet can now properly send money to P2SH-type addresses
+* The new tool "mkmulti" that can be used for generating multisig addresses
+* Few improvements around handling P2SH-type scripts and addresses
 
 0.9.2
 * Order of B_secret and A_public_key arguments swapped for "type2determ" tool
