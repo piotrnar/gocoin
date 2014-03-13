@@ -53,7 +53,7 @@ var (
 	signhash *string  = flag.String("hash", "", "Sign a raw hash (use together with -sign parameter)")
 
 	// Print a public key of a give bitcoin address
-	pubkey *string  = flag.String("pubkey", "", "Print public key of the give bitcoin address")
+	pubkey *string  = flag.String("pub", "", "Print public key of the give bitcoin address")
 
 	// Print a public key of a give bitcoin address
 	p2sh *string  = flag.String("p2sh", "", "Prepare a transaction for multisig signing (use together with -raw)")
