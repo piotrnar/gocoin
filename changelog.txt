@@ -1,4 +1,5 @@
 0.9.3
+* Fixed a critical bug in parsing OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
 * Wallet has a new option "-msign" that signs a multisig transaction with a single key
 * Wallet has a new option "-p2sh" to prepare a raw transaction for multisig processsing
 * Wallet can print public key of a given bitcoin address ("-pub <addr>")
