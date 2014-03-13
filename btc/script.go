@@ -128,7 +128,6 @@ func b2i(b bool) int64 {
 }
 
 func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
-
 	if don(DBG_SCRIPT) {
 		println("script len", len(p))
 	}
@@ -793,12 +792,18 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						}
 						return false
 					}
+
+					xxx := p[sta:]
+					for k:=0; k<int(sigscnt); k++ {
+						xxx = delSig(xxx, stack.top(-isig-k))
+					}
+
 					success := true
 					for sigscnt > 0 {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
 						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
-							sh := tx.SignatureHash(delSig(p[sta:], si), inp, si[len(si)-1])
+							sh := tx.SignatureHash(xxx, inp, si[len(si)-1])
 							if EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--
