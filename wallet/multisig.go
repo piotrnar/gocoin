@@ -131,8 +131,11 @@ func multisig_sign() {
 				fmt.Println("WARNING: Key number", ki, "has no matching signature")
 			}
 		}
-		if len(ms.Signatures) != len(sigs) {
-			fmt.Println("WARNING: Some signatures are obsolete and will be removed", len(ms.Signatures), len(sigs))
+
+		if len(ms.Signatures) > len(sigs) {
+			fmt.Println("WARNING: Some signatures are obsolete and will be removed", len(ms.Signatures), "=>", len(sigs))
+		} else if len(ms.Signatures) < len(sigs) {
+			fmt.Println("It appears that same key is re-used.", len(sigs)-len(ms.Signatures), "more signatures were added")
 		}
 		ms.Signatures = sigs
 		tx.TxIn[i].ScriptSig = ms.Bytes()
