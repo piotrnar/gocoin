@@ -1,3 +1,4 @@
+* Make the client's wallet files to work with multisig json address description files
 * Make the dowloader to figure out a proper IP of a hub node / work with gocoion.cfg file
 * Fix downloader getting stuck at "Last Header Height: 0"
 * Improve the database folder locking in Linux
