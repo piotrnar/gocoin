@@ -12,7 +12,7 @@ import (
 
 // load the content of the "balance/" folder
 func load_balance(showbalance bool) {
-	var unknownInputs int
+	var unknownInputs, multisigInputs int
 	f, e := os.Open("balance/unspent.txt")
 	if e != nil {
 		println(e.Error())
@@ -69,26 +69,31 @@ func load_balance(showbalance bool) {
 			uo := UO(uns)
 			totBtc += UO(uns).Value
 
-			fnd := false
-			for j := range publ_addrs {
-				if publ_addrs[j].Owns(uo.Pk_script) {
-					fnd = true
-					break
+			if !btc.IsP2SH(uo.Pk_script) {
+				fnd := false
+				for j := range publ_addrs {
+					if publ_addrs[j].Owns(uo.Pk_script) {
+						fnd = true
+						break
+					}
 				}
-			}
 
-			if showbalance && !fnd {
-				unknownInputs++
-				if *verbose {
-					ss := uns.String()
-					ss = ss[:8]+"..."+ss[len(ss)-12:]
-					fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
+				if showbalance && !fnd {
+					unknownInputs++
+					if *verbose {
+						ss := uns.String()
+						ss = ss[:8]+"..."+ss[len(ss)-12:]
+						fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
+					}
 				}
+			} else {
+				multisigInputs++
 			}
 		}
 	}
 	f.Close()
-	fmt.Printf("You have %.8f BTC in %d unspent outputs\n", float64(totBtc)/1e8, len(unspentOuts))
+	fmt.Printf("You have %.8f BTC in %d unspent outputs. %d inputs are multisig type\n",
+		float64(totBtc)/1e8, len(unspentOuts), multisigInputs)
 	if showbalance {
 		if unknownInputs > 0 {
 			fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);

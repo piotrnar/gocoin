@@ -130,6 +130,11 @@ func multisig_sign() {
 			} else if *verbose {
 				fmt.Println("WARNING: Key number", ki, "has no matching signature")
 			}
+
+			if !*allowextramsigns && uint(len(sigs))>=ms.SigsNeeded {
+				break
+			}
+
 		}
 
 		if len(ms.Signatures) > len(sigs) {

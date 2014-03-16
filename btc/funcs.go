@@ -273,3 +273,8 @@ func StringToSatoshis(s string) (val uint64, er error) {
 func UintToBtc(val uint64) (string) {
 	return fmt.Sprintf("%d.%08d", val/1e8, val%1e8)
 }
+
+// Return true if the given PK_script is a standard P2SH
+func IsP2SH(d []byte) bool {
+	return len(d)==23 && d[0]==0xa9 && d[1]==20 && d[22]==0x87
+}
