@@ -83,10 +83,15 @@ func load_balance(showbalance bool) {
 					if *verbose {
 						ss := uns.String()
 						ss = ss[:8]+"..."+ss[len(ss)-12:]
-						fmt.Println("WARNING:", ss, "does not belong to your wallet (cannot sign it)")
+						fmt.Println(ss, "does not belong to your wallet (cannot sign it)")
 					}
 				}
 			} else {
+				if *verbose {
+					ss := uns.String()
+					ss = ss[:8]+"..."+ss[len(ss)-12:]
+					fmt.Println(ss, "belongs to a multisig address")
+				}
 				multisigInputs++
 			}
 		}
@@ -96,7 +101,7 @@ func load_balance(showbalance bool) {
 		float64(totBtc)/1e8, len(unspentOuts), multisigInputs)
 	if showbalance {
 		if unknownInputs > 0 {
-			fmt.Printf("WARNING: Some inputs (%d) cannot be spent (-v to print them)\n", unknownInputs);
+			fmt.Printf("WARNING: Some inputs (%d) cannot be spent with this password (-v to print them)\n", unknownInputs);
 		}
 	}
 }
