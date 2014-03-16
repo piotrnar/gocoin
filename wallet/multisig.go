@@ -28,7 +28,7 @@ func make_p2sh() {
 
 	ms, er := btc.NewMultiSigFromP2SH(d)
 	if er != nil {
-		println(er.Error())
+		println("Decode P2SH:", er.Error())
 		return
 	}
 
@@ -55,7 +55,7 @@ func multisig_sign() {
 
 	ad2s, e := btc.NewAddrFromString(*multisign)
 	if e != nil {
-		println(e.Error())
+		println("BTC addr:", e.Error())
 		return
 	}
 
@@ -67,7 +67,7 @@ func multisig_sign() {
 			privkey = new(ecdsa.PrivateKey)
 			pub, e := btc.NewPublicKey(publ_addrs[i].Pubkey)
 			if e != nil {
-				println(e.Error())
+				println("PubKey:", e.Error())
 				return
 			}
 			privkey.PublicKey = pub.PublicKey
@@ -85,8 +85,8 @@ func multisig_sign() {
 	for i := range tx.TxIn {
 		ms, er := btc.NewMultiSigFromScript(tx.TxIn[i].ScriptSig)
 		if er != nil {
-			println(er.Error())
-			return
+			println("WARNING: Input", i, "- not multisig:", er.Error())
+			continue
 		}
 		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
 		//fmt.Println("Input number", i, len(ms.Signatures), " - hash to sign:", hex.EncodeToString(hash))
@@ -106,8 +106,8 @@ func multisig_sign() {
 	for i := range tx.TxIn {
 		ms, er := btc.NewMultiSigFromScript(tx.TxIn[i].ScriptSig)
 		if er != nil {
-			println(er.Error())
-			return
+			//println(er.Error())
+			continue
 		}
 		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
 		//fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(hash))
