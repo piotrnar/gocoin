@@ -1,3 +1,6 @@
+0.9.4
+* The client can work with multisig address description JSON files (place them in "wallet/multusig")
+
 0.9.3
 * Fixed a critical bug in parsing OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
 * Wallet has a new option "-msign" that signs a multisig transaction with a single key
