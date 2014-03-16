@@ -171,18 +171,8 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				1+common.Last.Block.Height-thisbal[i].MinedAt)
 		}
 
-		// pay_cmd.bat
-		if pay_cmd!="" {
-			fz, _ = zi.Create(common.CFG.PayCommandName)
-			fz.Write([]byte(pay_cmd))
-		}
-
-		// Raw transaction
-		fz, _ = zi.Create("tx2sign.txt")
-		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
-
-		// Raw multisig transaction (if applicable)
 		if len(addrs_to_msign) > 0 {
+			// Multisig (or mixed) transaction ...
 			for i := range multisig_input {
 				if multisig_input[i] == nil {
 					continue
@@ -206,7 +196,15 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			for k, _ := range addrs_to_msign {
 				fz.Write([]byte("wallet -msign " + k + " -raw ... \n"))
 			}
+		} else {
+			// Non-multisig transaction ...
+			fz, _ = zi.Create("tx2sign.txt")
+			fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
 
+			if pay_cmd!="" {
+				fz, _ = zi.Create(common.CFG.PayCommandName)
+				fz.Write([]byte(pay_cmd))
+			}
 		}
 
 		zi.Close()

@@ -2,7 +2,7 @@
 * The client can work with multisig address description JSON files (place them in "wallet/multisig")
 * Having the files in "wallet/multisig", MakeTx tab of client's WebUI can now create "multi2sign.txt"
   ... for the wallet, even properly mixing inputs from different addresses and address types.
-* "payment.zip" from client may now contain "multi2sign.txt" and "multi_pay_cmd", for multisig txs
+* For multisig payments, "payment.zip" from the client contains "multi2sign.txt" and "multi_pay_cmd"
 * The wallet can now deal with mixed (multisig and regular) inputs
 
 0.9.3
