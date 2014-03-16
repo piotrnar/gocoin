@@ -56,7 +56,7 @@ var (
 	pubkey *string  = flag.String("pub", "", "Print public key of the give bitcoin address")
 
 	// Print a public key of a give bitcoin address
-	p2sh *string  = flag.String("p2sh", "", "Prepare a transaction for multisig signing (use together with -raw)")
+	p2sh *string  = flag.String("p2sh", "", "Insert P2SH script into each transaction input (use together with -raw)")
 	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 
 	// set in load_balance():
