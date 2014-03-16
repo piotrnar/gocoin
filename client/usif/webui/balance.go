@@ -143,6 +143,19 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
 			ad = strings.Replace(ad, "<!--WAL_WALLET-->", html.EscapeString(wallet.MyWallet.Addrs[i].Extra.Wallet), 1)
 			ad = strings.Replace(ad, "<!--WAL_LABEL-->", html.EscapeString(lab), 1)
+
+			ms, msr := wallet.IsMultisig(wallet.MyWallet.Addrs[i])
+			if ms {
+				if msr != nil {
+					ad = strings.Replace(ad, "<!--WAL_MULTISIG-->",
+						fmt.Sprintf("%d of %d", msr.KeysRequired, msr.KeysProvided), 1)
+				} else {
+					ad = strings.Replace(ad, "<!--WAL_MULTISIG-->", "Yes", 1)
+				}
+			} else {
+				ad = strings.Replace(ad, "<!--WAL_MULTISIG-->", "No", 1)
+			}
+
 			if btc, cnt := getbal(wallet.MyWallet.Addrs[i]); btc > 0 {
 				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
 				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)

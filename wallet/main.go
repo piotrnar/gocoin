@@ -82,9 +82,10 @@ var (
 
 
 func main() {
-	fmt.Println("Gocoin Wallet version", btc.SourcesTag)
-	fmt.Println("This program comes with ABSOLUTELY NO WARRANTY")
-	fmt.Println()
+	// Print the logo to stderr
+	println("Gocoin Wallet version", btc.SourcesTag)
+	println("This program comes with ABSOLUTELY NO WARRANTY")
+	println()
 
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
