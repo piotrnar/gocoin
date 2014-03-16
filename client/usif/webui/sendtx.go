@@ -28,6 +28,9 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		var pay_cmd string
 		var totalinput, spentsofar uint64
 		var change_addr *btc.BtcAddr
+		var multisig_input []*wallet.MultisigAddr
+
+		addrs_to_msign := make(map[string]bool)
 
 		tx := new(btc.Tx)
 		tx.Version = 1
@@ -54,8 +57,19 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 								tin.Sequence = 0xffffffff
 								tx.TxIn = append(tx.TxIn, tin)
 
+								// Add new multisig address description
+								_, msi := wallet.IsMultisig(wallet.MyBalance[j].BtcAddr)
+								multisig_input = append(multisig_input, msi)
+								if msi != nil {
+									for ai := range msi.ListOfAddres {
+										addrs_to_msign[msi.ListOfAddres[ai]] = true
+									}
+								}
+
+								// Add the value to total input value
 								totalinput += wallet.MyBalance[j].Value
 
+								// If no change specified, use the first input addr as it
 								if change_addr == nil {
 									change_addr = wallet.MyBalance[j].BtcAddr
 								}
@@ -166,6 +180,34 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		// Raw transaction
 		fz, _ = zi.Create("tx2sign.txt")
 		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
+
+		// Raw multisig transaction (if applicable)
+		if len(addrs_to_msign) > 0 {
+			for i := range multisig_input {
+				if multisig_input[i] == nil {
+					continue
+				}
+				d, er := hex.DecodeString(multisig_input[i].RedeemScript)
+				if er != nil {
+					println("ERROR parsing hex RedeemScript:", er.Error())
+					continue
+				}
+				ms, er := btc.NewMultiSigFromP2SH(d)
+				if er != nil {
+					println("ERROR parsing bin RedeemScript:", er.Error())
+					continue
+				}
+				tx.TxIn[i].ScriptSig = ms.Bytes()
+			}
+			fz, _ = zi.Create("multi2sign.txt")
+			fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
+
+			fz, _ = zi.Create("multi_" + common.CFG.PayCommandName)
+			for k, _ := range addrs_to_msign {
+				fz.Write([]byte("wallet -msign " + k + " -raw ... \n"))
+			}
+
+		}
 
 		zi.Close()
 		w.Header()["Content-Type"] = []string{"application/zip"}
