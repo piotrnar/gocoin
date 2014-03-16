@@ -1,5 +1,8 @@
 0.9.4
-* The client can work with multisig address description JSON files (place them in "wallet/multusig")
+* The client can work with multisig address description JSON files (place them in "wallet/multisig")
+* Having the files in "wallet/multisig", MakeTx tab of client's WebUI can now create "multi2sign.txt"
+  ... for the wallet, even properly mixing inputs from different addresses and address types.
+* The wallet can now deal with mixed (multisig and regular) inputs
 
 0.9.3
 * Fixed a critical bug in parsing OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
