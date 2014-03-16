@@ -72,8 +72,8 @@ func main() {
 	rec := "{\n"
 	rec += fmt.Sprintf("\t\"multiAddress\" : \"%s\",\n", addr.String())
 	rec += fmt.Sprintf("\t\"scriptPubKey\" : \"a914%s87\",\n", hex.EncodeToString(addr.Hash160[:]))
-	rec += fmt.Sprintf("\t\"keysRequired\" : \"%d\",\n", cnt)
-	rec += fmt.Sprintf("\t\"keysProvided\" : \"%d\",\n", pkeys)
+	rec += fmt.Sprintf("\t\"keysRequired\" : %d,\n", cnt)
+	rec += fmt.Sprintf("\t\"keysProvided\" : %d,\n", pkeys)
 	rec += fmt.Sprintf("\t\"redeemScript\" : \"%s\",\n", hex.EncodeToString(p2sh))
 	rec += fmt.Sprintf("\t\"listOfAddres\" : [%s]\n", ads)
 	rec += "}\n"
