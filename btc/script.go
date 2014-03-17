@@ -162,6 +162,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		opcode, vchPushValue, n, e := GetOpcode(p[idx:])
 		if e!=nil {
 			println(e.Error())
+			println("A", idx, hex.EncodeToString(p))
 			return false
 		}
 		idx+= n
@@ -894,6 +895,8 @@ func delSig(where, sig []byte) (res []byte) {
 	for idx < len(where) {
 		_, _, n, e := GetOpcode(where[idx:])
 		if e!=nil {
+			println(e.Error())
+			println("B", idx, hex.EncodeToString(where))
 			return
 		}
 		if !bytes.Equal(where[idx:idx+n], sig) {
@@ -940,6 +943,10 @@ func GetOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 			}
 			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+4]))
 			pc += 4
+		}
+		if pc+nSize > len(b) {
+			e = errors.New(fmt.Sprint("GetOpcode size to fetch exceeds remainig data left: ", pc+nSize, "/", len(b)))
+			return
 		}
 		pvchRet = b[pc:pc+nSize]
 		pc += nSize
