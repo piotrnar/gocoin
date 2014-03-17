@@ -207,6 +207,7 @@ func ScriptToText(p []byte) (out []string, e error) {
 
 		if er!=nil {
 			e = errors.New("ScriptToText: " + er.Error())
+			println("C", idx, hex.EncodeToString(p))
 			return
 		}
 		idx+= n
