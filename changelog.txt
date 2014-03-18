@@ -1,4 +1,5 @@
 0.9.4
+* The "-d" option of the wallet can not proparly decode coinbase transactions
 * The client can work with multisig address description JSON files (place them in "wallet/multisig")
 * Having the files in "wallet/multisig", MakeTx tab of client's WebUI can now create "multi2sign.txt"
   ... for the wallet, even properly mixing inputs from different addresses and address types.
