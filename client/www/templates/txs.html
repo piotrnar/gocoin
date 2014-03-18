@@ -208,9 +208,9 @@ function decode_tx() {
 				}
 				var bl = xval(is[i], "block")
 				if (bl==0) {
-					s += " (not mined yet)"
+					s += " (unconfirmed yet)"
 				} else {
-					s += " (mined in block "+xval(is[i], "block")+")"
+					s += " (confirmed in #"+xval(is[i], "block")+")"
 				}
 				s += "\n"
 			}
