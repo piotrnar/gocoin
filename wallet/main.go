@@ -97,7 +97,7 @@ func main() {
 	flag.Parse()
 
 	if *dumptxfn!="" {
-		load_balance(false)
+		//load_balance(false)
 		dump_raw_tx()
 		return
 	}

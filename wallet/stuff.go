@@ -194,7 +194,9 @@ func raw_tx_from_file(fn string) *btc.Tx {
 
 	dat, er := hex.DecodeString(string(d))
 	if er != nil {
-		fmt.Println("hex.DecodeString failed - assume binary transaction file")
+		if *verbose {
+			fmt.Println("hex.DecodeString failed - assume binary transaction file")
+		}
 		dat = d
 	}
 	tx, txle := btc.NewTx(dat)

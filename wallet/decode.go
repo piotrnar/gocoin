@@ -125,15 +125,35 @@ func dump_raw_tx() {
 
 	var unsigned int
 
-	fmt.Println("Version:", tx.Version)
-	fmt.Println("TX IN cnt:", len(tx.TxIn))
-	for i := range tx.TxIn {
-		fmt.Printf("%4d) %s sl=%d seq=%08x\n", i, tx.TxIn[i].Input.String(),
-			len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
-		if len(tx.TxIn[i].ScriptSig) > 0 {
-			dump_sigscript(tx.TxIn[i].ScriptSig)
+	fmt.Println("Tx Version:", tx.Version)
+	if tx.IsCoinBase() {
+		if len(tx.TxIn[0].ScriptSig) >= 4 && tx.TxIn[0].ScriptSig[0]==3 {
+			fmt.Println("Coinbase TX from block height", uint(tx.TxIn[0].ScriptSig[1]) |
+				uint(tx.TxIn[0].ScriptSig[2])<<8 | uint(tx.TxIn[0].ScriptSig[3])<<16)
 		} else {
-			unsigned++
+			fmt.Println("Coinbase TX from an unknown block")
+		}
+		s := hex.EncodeToString(tx.TxIn[0].ScriptSig)
+		for len(s)>0 {
+			i := len(s)
+			if i>64 {
+				i = 64
+			}
+			fmt.Println("  ", s[:i])
+			s = s[i:]
+		}
+		//fmt.Println()
+	} else {
+		fmt.Println("TX IN cnt:", len(tx.TxIn))
+		for i := range tx.TxIn {
+			fmt.Printf("%4d) %s sl=%d seq=%08x\n", i, tx.TxIn[i].Input.String(),
+				len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
+
+			if len(tx.TxIn[i].ScriptSig) > 0 {
+				dump_sigscript(tx.TxIn[i].ScriptSig)
+			} else {
+				unsigned++
+			}
 		}
 	}
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
@@ -147,9 +167,12 @@ func dump_raw_tx() {
 		}
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)
-	if unsigned>0 {
-		fmt.Println("Number of unsigned inputs:", unsigned)
-	} else {
-		fmt.Println("All the inputs seems to be signed")
+
+	if !tx.IsCoinBase() {
+		if unsigned>0 {
+			fmt.Println("Number of unsigned inputs:", unsigned)
+		} else {
+			fmt.Println("All the inputs seems to be signed")
+		}
 	}
 }
