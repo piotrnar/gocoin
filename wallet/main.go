@@ -31,7 +31,7 @@ var (
 	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
 
 	// Spending money options
-	fee *float64 = flag.Float64("fee", 0.0001, "Transaction fee")
+	fee *float64 = flag.Float64("fee", 0.00001, "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	batch *string  = flag.String("batch", "", "Send money as per the given batch file (each line: address=amount)")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
