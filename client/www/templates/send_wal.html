@@ -59,9 +59,11 @@ function recalc_to_pay() {
 	if (isNaN(v)) {
 		txfee.classList.add('err')
 		butdisabled = true
+		txfee_mbtc.value = ''
 	} else {
 		txfee.classList.remove('err')
 		totsend = v
+		txfee_mbtc.value = val2str(1000*v)
 	}
 	for (var idx=1; idx<outtab.rows.length-3; idx++) {
 		el = document.getElementById('out'+idx)
@@ -69,13 +71,16 @@ function recalc_to_pay() {
 		if (isNaN(v)) {
 			el.classList.add('err')
 			butdisabled = true
+			document.getElementById('mbtc_out'+idx).value = ''
 		} else {
 			el.classList.remove('err')
 			totsend += v
+			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
 		}
 	}
 	var chval = selected_value-totsend
 	changeval.value = val2str(chval)
+	changeval_mbtc.value = val2str(1000*chval)
 	if (chval<0) {
 		changeval.style.color = 'red'
 		butdisabled = true
@@ -193,6 +198,7 @@ function add_new_output() {
 	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
 	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
 
+	// amount BTC
 	c = r.insertCell(-1)
 	val = document.createElement('input')
 	val.type = 'text'
@@ -203,6 +209,16 @@ function add_new_output() {
 	val.onkeyup = recalc_to_pay
 	val.className = 'mono r'
 	val.value = ''
+	c.appendChild(val)
+
+	// amount mBTC
+	c = r.insertCell(-1)
+	val = document.createElement('input')
+	val.type = 'text'
+	val.size = 13
+	val.id = 'mbtc_out'+idx
+	val.className = 'mono r dis'
+	val.readOnly = true
 	c.appendChild(val)
 }
 
@@ -243,6 +259,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<th>&nbsp;
 	<th>Pay to address
 	<th>Amount BTC
+	<th><i>... mBTC</i>
 </tr>
 
 <tr>
@@ -251,7 +268,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td><a href="javascript:add_new_output()">+ another output</a>
 	<td align="right">Transaction fee:
     </table>
-    <td><input id="txfee" name="txfee" size="13" class="mono r" value="0.00001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+    <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.00001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+    <td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly">
 </tr>
 
 <tr title="Transaction change">
@@ -260,11 +278,13 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 			<option value="">The first input's address</option>
 		</select>
 	<td class="r">
-	<input type="text" class="mono" id="changeval" size="13" readonly="readonly" style="text-align:right" onclick="this.select()">
+	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
+    <td class="r">
+    <input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly">
 </tr>
 
 <tr>
-	<td colspan="3" align="center">
+	<td colspan="4" align="center">
 		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
 	</td>
 </tr>

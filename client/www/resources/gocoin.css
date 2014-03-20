@@ -95,6 +95,10 @@ tr.hov:hover {
 	background-color:#ff8080
 }
 
+.dis {
+	background-color:#dddddd;
+}
+
 input[type=button], input[type=submit] {
 	background-color:#dddddd;
 	font-weight:bold;

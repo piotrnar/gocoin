@@ -1,3 +1,6 @@
+0.9.5
+* "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
+
 0.9.4
 * Change the default fee from 0.0001 to 0.00001 BTC
 * The "-d" option of the wallet can not proparly decode coinbase transactions
