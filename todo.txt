@@ -1,3 +1,4 @@
+* Try to add some estimator for the final (singed) transaction's size to MakeTx tab of WebUI
 * Make the dowloader to figure out a proper IP of a hub node / work with gocoion.cfg file
 * Fix downloader getting stuck at "Last Header Height: 0"
 * Improve the database folder locking in Linux
