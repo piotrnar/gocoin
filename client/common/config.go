@@ -99,14 +99,14 @@ func init() {
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
-	CFG.TXPool.FeePerByte = 10
+	CFG.TXPool.FeePerByte = 1
 	CFG.TXPool.MaxTxSize = 10e3
 	CFG.TXPool.MinVoutValue = 0
 	CFG.TXPool.TxExpireMinPerKB = 100
 	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
-	CFG.TXRoute.FeePerByte = 10
+	CFG.TXRoute.FeePerByte = 1
 	CFG.TXRoute.MaxTxSize = 10e3
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
