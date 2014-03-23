@@ -59,7 +59,7 @@ func parse_addr(pl []byte) {
 }
 
 
-func add_ip_str(s string) {
+func add_ip_str(s string) bool {
 	ip := net.ParseIP(s)
 	if len(ip)==16 {
 		var ip4 [4]byte
@@ -68,8 +68,10 @@ func add_ip_str(s string) {
 			FirstIp = ip4
 		}
 		AddrDatbase[ip4] = false
+		return true
 	} else {
 		fmt.Println("IP syntax error:", s)
+		return false
 	}
 }
 
