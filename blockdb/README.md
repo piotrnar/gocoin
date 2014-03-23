@@ -1,0 +1,1 @@
+This package can be used for reading blocks from the storage of the reference (satoshi's) client.
