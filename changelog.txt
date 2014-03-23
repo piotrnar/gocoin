@@ -1,5 +1,7 @@
 0.9.5
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
+* The downloader does not have a default seed node anymore (you need to find one by youself)
+* Do not block connections from 129.132.230.70-100 anymore
 
 0.9.4
 * Change the default fee from 0.0001 to 0.00001 BTC
