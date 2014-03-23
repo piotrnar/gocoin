@@ -4,7 +4,7 @@
 * Do not block connections from 129.132.230.70-100 anymore
 
 0.9.4
-* Change the default fee from 0.0001 to 0.00001 BTC
+* The default "FeePerByte" changed from 10 to 1 (like they have done it in the reference client)
 * The "-d" option of the wallet can not proparly decode coinbase transactions
 * The client can work with multisig address description JSON files (place them in "wallet/multisig")
 * Having the files in "wallet/multisig", MakeTx tab of client's WebUI can now create "multi2sign.txt"
