@@ -29,7 +29,7 @@ func dump_raw_sigscript(d []byte) {
 		println(er.Error())
 		return
 	}
-	p2sh := len(ss)>=2 && d[0]==0
+	p2sh := len(ss)>=2 && d[0]==0 && false
 	fmt.Println("       SigScript:", p2sh)
 	for i := range ss {
 		if p2sh && i==len(ss)-1 {
@@ -38,7 +38,10 @@ func dump_raw_sigscript(d []byte) {
 			s2, er := btc.ScriptToText(d)
 			if er != nil {
 				println(er.Error())
-				return
+				p2sh = false
+				fmt.Println("       ", ss[i])
+				continue
+				//return
 			}
 			fmt.Println("        P2SH spend script:")
 			for j := range s2 {
@@ -163,7 +166,16 @@ func dump_raw_tx() {
 		if addr != nil {
 			fmt.Println("address", addr.String())
 		} else {
-			fmt.Println("Pk_script", hex.EncodeToString(tx.TxOut[i].Pk_script))
+			fmt.Println("Pk_script:")
+			ss, er := btc.ScriptToText(tx.TxOut[i].Pk_script)
+			if er == nil {
+				for i := range ss {
+					fmt.Println("       ", ss[i])
+				}
+			} else {
+				fmt.Println(hex.EncodeToString(tx.TxOut[i].Pk_script))
+				fmt.Println(er.Error())
+			}
 		}
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)
