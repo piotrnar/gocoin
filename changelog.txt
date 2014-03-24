@@ -2,6 +2,7 @@
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
 * The downloader does not have a default seed node anymore (you need to find one by youself)
 * Do not block connections from 129.132.230.70-100 anymore
+* Some changes in wallet's decode transaction functionality to better deal with non stardard txs
 
 0.9.4
 * The default "FeePerByte" changed from 10 to 1 (like they have done it in the reference client)
