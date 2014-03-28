@@ -1,4 +1,7 @@
-0.9.5
+0.9.6
+* Client has a hammering protection (bans peers that keep trying to reconnect)
+
+0.9.5 (2014-03-28)
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
 * The downloader does not have a default seed node anymore (you need to find one by youself)
 * Do not block connections from 129.132.230.70-100 anymore
