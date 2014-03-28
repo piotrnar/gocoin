@@ -57,6 +57,8 @@ func (v *OneConnection) Stats() (s string) {
 			s += fmt.Sprintln("Node common.Version:", v.Node.Version)
 			s += fmt.Sprintln("User Agent:", v.Node.Agent)
 			s += fmt.Sprintln("Chain Height:", v.Node.Height)
+			s += fmt.Sprintf("Reported IP: %d.%d.%d.%d", byte(v.Node.ReportedIp4>>24), byte(v.Node.ReportedIp4>>16),
+				byte(v.Node.ReportedIp4>>8), byte(v.Node.ReportedIp4))
 		}
 		s += fmt.Sprintln("Last data got:", time.Now().Sub(v.LastDataGot).String())
 		s += fmt.Sprintln("Last data sent:", time.Now().Sub(v.Send.LastSent).String())

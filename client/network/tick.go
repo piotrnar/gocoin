@@ -144,6 +144,7 @@ func DoNetwork(ad *onePeer) {
 var (
 	TCPServerStarted bool
 	next_drop_slowest time.Time
+	next_clean_hammers time.Time
 )
 
 
@@ -173,37 +174,59 @@ func tcp_server() {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
+				var terminate bool
+
 				if common.DebugLevel>0 {
 					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
 				}
 				ad, e := NewIncommingPeer(tc.RemoteAddr().String())
 				if e == nil {
-					conn := NewConnection(ad)
-					conn.ConnectedAt = time.Now()
-					conn.Incomming = true
-					conn.NetConn = tc
-					Mutex_net.Lock()
-					if _, ok := OpenCons[ad.UniqID()]; ok {
-						//fmt.Println(ad.Ip(), "already connected")
-						common.CountSafe("SameIpReconnect")
-						Mutex_net.Unlock()
-					} else {
-						OpenCons[ad.UniqID()] = conn
-						InConsActive++
-						Mutex_net.Unlock()
-						go func () {
-							conn.Run()
-							Mutex_net.Lock()
-							delete(OpenCons, ad.UniqID())
-							InConsActive--
+					// Hammering protection
+					HammeringMutex.Lock()
+					ti, ok := RecentlyDisconencted[ad.NetAddr.Ip4]
+					HammeringMutex.Unlock()
+					if ok && time.Now().Sub(ti) < HammeringMinReconnect {
+						println(ad.Ip(), "is hammering within", time.Now().Sub(ti).String())
+						common.CountSafe("InConnHammer")
+						ad.Ban()
+						terminate = true
+					}
+
+					if !terminate {
+						// Incomming IP passed all the initial checks - talk to it
+						conn := NewConnection(ad)
+						conn.ConnectedAt = time.Now()
+						conn.Incomming = true
+						conn.NetConn = tc
+						Mutex_net.Lock()
+						if _, ok := OpenCons[ad.UniqID()]; ok {
+							//fmt.Println(ad.Ip(), "already connected")
+							common.CountSafe("SameIpReconnect")
 							Mutex_net.Unlock()
-						}()
+							terminate = true
+						} else {
+							OpenCons[ad.UniqID()] = conn
+							InConsActive++
+							Mutex_net.Unlock()
+							go func () {
+								conn.Run()
+								Mutex_net.Lock()
+								delete(OpenCons, ad.UniqID())
+								InConsActive--
+								Mutex_net.Unlock()
+							}()
+						}
 					}
 				} else {
 					if common.DebugLevel>0 {
 						println("NewIncommingPeer:", e.Error())
 					}
 					common.CountSafe("InConnRefused")
+					terminate = true
+				}
+
+				// had any error occured - close teh TCP connection
+				if terminate {
 					tc.Close()
 				}
 			}
@@ -245,6 +268,20 @@ func NetworkTick() {
 			drop_slowest_peer()
 			next_drop_slowest = time.Now().Add(DropSlowestEvery)
 		}
+	}
+
+	// hammering protection - expire recently disconnected
+	if next_clean_hammers.IsZero() {
+		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
+	} else if time.Now().After(next_clean_hammers) {
+		HammeringMutex.Lock()
+		for k, t := range RecentlyDisconencted {
+			if time.Now().Sub(t) >= HammeringMinReconnect {
+				delete(RecentlyDisconencted, k)
+			}
+		}
+		HammeringMutex.Unlock()
+		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	}
 
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
@@ -389,6 +426,10 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
+	} else if c.Incomming {
+		HammeringMutex.Lock()
+		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
+		HammeringMutex.Unlock()
 	}
 	if common.DebugLevel>0 {
 		println("Disconnected from", c.PeerAddr.Ip())

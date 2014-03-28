@@ -58,8 +58,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Mutex.Unlock()
 		if ValidIp4(pl[40:44]) {
 			ExternalIpMutex.Lock()
-			ip4 := binary.BigEndian.Uint32(pl[40:44])
-			ExternalIp4[ip4] = [2]uint{ExternalIp4[ip4][0]+1, uint(time.Now().Unix())}
+			c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
+			ExternalIp4[c.Node.ReportedIp4] = [2]uint{ExternalIp4[c.Node.ReportedIp4][0]+1, uint(time.Now().Unix())}
 			ExternalIpMutex.Unlock()
 		}
 		if len(pl) >= 86 {

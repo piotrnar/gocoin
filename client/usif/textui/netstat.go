@@ -3,6 +3,7 @@ package textui
 import (
 	"fmt"
 	"sort"
+	"time"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -95,6 +96,15 @@ func net_stats(par string) {
 	}
 
 	network.Mutex_net.Unlock()
+
+	fmt.Print("RecentlyDisconencted:")
+	network.HammeringMutex.Lock()
+	for ip, ti := range network.RecentlyDisconencted {
+		fmt.Printf(" %d.%d.%d.%d-%s", ip[0], ip[1], ip[2], ip[3], time.Now().Sub(ti).String())
+	}
+	network.HammeringMutex.Unlock()
+	fmt.Println()
+
 	common.PrintStats()
 }
 

@@ -40,6 +40,8 @@ const (
 	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
 
 	MIN_PROTO_VERSION = 209
+
+	HammeringMinReconnect = 60*time.Second // If any incomming peer reconnects in below this time, ban it
 )
 
 
@@ -49,6 +51,10 @@ var (
 	InConsActive, OutConsActive uint32
 	LastConnId uint32
 	nonce [8]byte
+
+	// Hammering protection (peers that keep re-connecting) map IPv4 => UnixTime
+	HammeringMutex sync.Mutex
+	RecentlyDisconencted map[[4]byte] time.Time = make(map[[4]byte] time.Time)
 )
 
 
@@ -78,6 +84,7 @@ type OneConnection struct {
 		Height uint32
 		Agent string
 		DoNotRelayTxs bool
+		ReportedIp4 uint32
 	}
 
 	// Messages reception state machine:
