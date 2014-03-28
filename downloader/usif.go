@@ -177,6 +177,7 @@ func do_usif() {
 						show_free_mem()
 						debug.FreeOSMemory()
 						show_free_mem()
+						fmt.Println("To free more memory, quit (q command) and relaunch the downloader")
 
 					case "m":
 						show_free_mem()
@@ -190,8 +191,28 @@ func do_usif() {
 							}
 						}
 
+					case "h":
+						fallthrough
+					case "?":
+						fmt.Println("Available commands:")
+						fmt.Println(" g - go to next phase")
+						fmt.Println(" a - show addressess of the peers")
+						fmt.Println(" q - quite the downloader")
+						fmt.Println(" b - show blockchin stats")
+						fmt.Println(" db - show database stats")
+						fmt.Println(" n - show network connections")
+						fmt.Println(" i - show general info")
+						fmt.Println(" c - show counters")
+						fmt.Println(" s - save peers")
+						fmt.Println(" pr - show blocks in progress")
+						fmt.Println(" pe - show pending blocks ")
+						fmt.Println(" d [conid] - drop one connection")
+						fmt.Println(" f - free memory")
+						fmt.Println(" m - show mem heap info")
+						fmt.Println(" mc <CNT> - set maximum number of connections")
+
 					default:
-						fmt.Println("unknown command:", ll[0])
+						fmt.Println("Unknown command:", ll[0], " (h or ? - to see help)")
 				}
 			}
 			usif_prompt()
