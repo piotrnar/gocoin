@@ -1,5 +1,6 @@
 0.9.6
 * Client has a hammering protection (bans peers that keep trying to reconnect)
+* Miners tab of WebUI does not show crap anymore is the chain isn't up do date.
 
 0.9.5 (2014-03-28)
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
