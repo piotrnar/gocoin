@@ -184,6 +184,15 @@ func download_headers() {
 	get_headers()
 	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
+	AddrMutex.Lock()
+	for len(AddrDatbase) < 60 {
+		fmt.Println(len(AddrDatbase), "known peers at the moment - wait for more...")
+		AddrMutex.Unlock()
+		time.Sleep(3e9)
+		AddrMutex.Lock()
+	}
+	AddrMutex.Unlock()
+
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {
 		BlocksToGet[n.Height] = n.BlockHash.Hash
