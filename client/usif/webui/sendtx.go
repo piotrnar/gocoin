@@ -15,6 +15,12 @@ import (
 )
 
 
+const (
+	AvgSignatureSize = 73
+	AvgPublicKeySize = 34 /*Assumine compressed key*/
+)
+
+
 func dl_payment(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -243,11 +249,26 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			if wallet.MyBalance[i].BtcAddr.Extra.Virgin {
 				lab += " ***"
 			}
+
+			var estimated_sig_size uint
+			ms, msr := wallet.IsMultisig(wallet.MyBalance[i].BtcAddr)
+			if ms {
+				if msr != nil {
+					estimated_sig_size = msr.KeysRequired*AvgSignatureSize + msr.KeysProvided*AvgPublicKeySize
+				} else {
+					estimated_sig_size = 2*AvgSignatureSize + 3*AvgPublicKeySize
+				}
+			} else {
+				estimated_sig_size = AvgSignatureSize + AvgPublicKeySize
+			}
+
+
 			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(lab), 1)
 			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
 			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(wallet.MyBalance[i].MinedAt), 1)
 			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), -1)
 			row = strings.Replace(row, "{TX_VOUT}", fmt.Sprint(wallet.MyBalance[i].TxPrevOut.Vout), -1)
+			row = strings.Replace(row, "{TX_SIGSIZ}", fmt.Sprint(estimated_sig_size), -1)
 			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(wallet.MyBalance[i].Value)/1e8), 1)
 			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(wallet.MyBalance[i].Value), 1)
 			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].BtcAddr.String(), 1)
