@@ -16,22 +16,18 @@ import (
 )
 
 
-const (
-	TheGenesis  = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
-)
-
 
 var (
 	Magic [4]byte = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	StartTime time.Time
 	TheBlockChain *btc.Chain
 
-	GenesisBlock *btc.Uint256 = btc.NewUint256FromString(TheGenesis)
+	GenesisBlock *btc.Uint256 = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 	TrustUpTo uint32
 	GlobalExit bool
 
 	// CommandLineSwitches
-	LastTrustedBlock string     // -t
+	LastTrustedBlock string     // -trust
 	GocoinHomeDir string        // -d
 	OnlyStoreBlocks bool        // -b
 	MaxNetworkConns uint        // -n
@@ -39,6 +35,7 @@ var (
 	SeedNode string             // -s
 	DoThePings bool             // -p
 	MemForBlocks uint           // -m (in megabytes)
+	Testnet bool                // -t
 )
 
 
@@ -46,8 +43,9 @@ func parse_command_line() {
 	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
 
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
+	flag.BoolVar(&Testnet, "t", false, "Use Testnet3")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
-	flag.StringVar(&LastTrustedBlock, "t", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
+	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
@@ -133,7 +131,15 @@ func main() {
 	if len(GocoinHomeDir)>0 && GocoinHomeDir[len(GocoinHomeDir)-1]!=os.PathSeparator {
 		GocoinHomeDir += string(os.PathSeparator)
 	}
-	GocoinHomeDir += "btcnet" + string(os.PathSeparator)
+	if Testnet {
+		GocoinHomeDir += "tstnet" + string(os.PathSeparator)
+		Magic = [4]byte{0x0B,0x11,0x09,0x07}
+		DefaultTcpPort = 18333
+		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
+		fmt.Println("Using testnet3")
+	} else {
+		GocoinHomeDir += "btcnet" + string(os.PathSeparator)
+	}
 	fmt.Println("GocoinHomeDir:", GocoinHomeDir)
 
 	utils.LockDatabaseDir(GocoinHomeDir)
