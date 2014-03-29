@@ -71,7 +71,9 @@ func chkblock(bl *btc.Block) (er error) {
 	// Check proof of work
 	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
 	if bl.Bits != gnwr {
-		er = errors.New("CheckBlock: incorrect proof of work")
+		if !Testnet || ((prevblk.Height+1)%2016)!=0 {
+			er = errors.New(fmt.Sprint("CheckBlock: Incorrect proof of work at block", prevblk.Height+1))
+		}
 	}
 
 	cur := new(btc.BlockTreeNode)
@@ -174,6 +176,7 @@ func download_headers() {
 	MemBlockChain = btc.NewChain("tmp/", TheBlockChain.BlockTreeEnd.BlockHash, false)
 	defer os.RemoveAll("tmp/")
 
+	MemBlockChain.Genesis = GenesisBlock
 	*MemBlockChain.BlockTreeRoot = *TheBlockChain.BlockTreeEnd
 	fmt.Println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
 		MemBlockChain.BlockTreeRoot.BlockHash.String())
