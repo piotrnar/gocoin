@@ -186,7 +186,7 @@ func tcp_server() {
 					ti, ok := RecentlyDisconencted[ad.NetAddr.Ip4]
 					HammeringMutex.Unlock()
 					if ok && time.Now().Sub(ti) < HammeringMinReconnect {
-						println(ad.Ip(), "is hammering within", time.Now().Sub(ti).String())
+						//println(ad.Ip(), "is hammering within", time.Now().Sub(ti).String())
 						common.CountSafe("InConnHammer")
 						ad.Ban()
 						terminate = true
