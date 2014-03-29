@@ -1,6 +1,11 @@
-* Try to add some estimator for the final (singed) transaction's size to MakeTx tab of WebUI
+Downloader:
+* Make the dowloader to work with testnet
 * Make the dowloader to figure out a proper IP of a hub node / work with gocoion.cfg file
 * Fix downloader getting stuck at "Last Header Height: 0"
+
+Client:
 * Improve the database folder locking in Linux
+
+Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
