@@ -1,8 +1,11 @@
 <script>
 const addrbook_lab = "Address Book"
 
+const AvgOutputSize = 34
+
 var values = new Array({UNSPENT_OUTS})
 var selected_value = 0
+var ets_inputs = 0
 var selected_cnt = 0
 var total_to_pay = 0
 var cur_but = null
@@ -36,10 +39,12 @@ function build_change_list() {
 function recalc_inputs() {
 	selected_value = 0
 	selected_cnt = 0
+	ets_inputs = 0
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (document.getElementById('txout'+i).checked) {
 			selected_value += values[i]
 			selected_cnt++
+			ets_inputs += 36+1+parseInt(document.getElementById('txsigsiz'+i).value)+4
 		}
 	}
 
@@ -51,9 +56,11 @@ function recalc_inputs() {
 	recalc_to_pay()
 }
 
+
 function recalc_to_pay() {
 	var el, v, totsend=0
 	var butdisabled = false
+	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
 
 	v = val2int(txfee.value)
 	if (isNaN(v)) {
@@ -76,6 +83,7 @@ function recalc_to_pay() {
 			el.classList.remove('err')
 			totsend += v
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
+			ets_bytes += AvgOutputSize
 		}
 	}
 	var chval = selected_value-totsend
@@ -86,10 +94,13 @@ function recalc_to_pay() {
 		butdisabled = true
 	} else if (chval>0) {
 		changeval.style.color = 'green'
+		ets_bytes += AvgOutputSize
 	} else {
 		changeval.style.color = ''
 	}
 	paybut.disabled = butdisabled
+
+	ets.innerText = (ets_bytes/1000).toFixed(2)
 }
 
 
@@ -265,7 +276,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 <tr>
 	<td colspan="2">
 	<table width="100%"><tr>
-	<td><a href="javascript:add_new_output()">+ another output</a>
+	<td><a href="javascript:add_new_output()">+ add output</a>
+	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> KB
 	<td align="right">Transaction fee:
     </table>
     <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.00001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
