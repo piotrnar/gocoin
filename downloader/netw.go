@@ -25,6 +25,7 @@ var (
 	open_connection_list map[[4]byte] *one_net_conn = make(map [[4]byte] *one_net_conn)
 	open_connection_mutex sync.Mutex
 	curid uint32
+	DefaultTcpPort uint16 = 8333
 )
 
 
@@ -152,7 +153,7 @@ func (c *one_net_conn) sendver() {
 	binary.Write(b, binary.LittleEndian, Services)
 	b.Write(bytes.Repeat([]byte{0}, 12)) // ip6
 	b.Write(bytes.Repeat([]byte{0}, 4)) // ip4
-	binary.Write(b, binary.LittleEndian, uint16(8333)) // port
+	binary.Write(b, binary.LittleEndian, uint16(DefaultTcpPort)) // port
 
 	b.Write(bytes.Repeat([]byte{0}, 26)) // Local Addr
 	b.Write(bytes.Repeat([]byte{0}, 8)) // nonce
@@ -401,19 +402,21 @@ func (c *one_net_conn) run_send() {
 
 
 func (res *one_net_conn) connect() {
-	con, er := net.DialTimeout("tcp4", res.peerip+":8333", DIAL_TIMEOUT)
+	addr := fmt.Sprint(res.peerip,":",DefaultTcpPort)
+	//fmt.Println("connecting to", addr)
+	con, er := net.DialTimeout("tcp4", addr, DIAL_TIMEOUT)
 	if er != nil {
 		COUNTER("CERR")
 		res.setbroken(true)
 		res.closed_r = true
 		res.closed_s = true
 		res.cleanup()
-		//fmt.Println(er.Error())
+		//fmt.Println(addr, er.Error())
 		return
 	}
 	res.Mutex.Lock()
 	res.Conn = con
-	//fmt.Println(res.peerip, "connected")
+	//fmt.Println(addr, "connected")
 	go res.run_send()
 	go res.run_recv()
 	res.connected_at = time.Now()
