@@ -86,6 +86,14 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		totbts += uint64(len(bl))
 		end = end.Parent
 	}
+
+	if cnt==0 {
+		write_html_head(w, r)
+		w.Write([]byte(fmt.Sprint("No blocks in last ", common.CFG.MiningStatHours, " hours")))
+		write_html_tail(w)
+		return
+	}
+
 	srt := make(onemiernstat, len(m))
 	i := 0
 	for k, v := range m {
