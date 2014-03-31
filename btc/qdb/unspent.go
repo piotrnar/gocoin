@@ -187,7 +187,14 @@ func (db *unspentDb) stats() (s string) {
 	for i := range db.tdb {
 		tot += uint64(db.dbN(i).Count())
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			sum += binary.LittleEndian.Uint64(v[36:44])
+			val := binary.LittleEndian.Uint64(v[36:44])
+			/*
+			if val>=10e3*1e8 { // Look for outputs with over 10k BTC on them
+				fmt.Println(val/1e8, "BTC in", binary.LittleEndian.Uint32(v[44:48]), "at",
+					btc.NewUint256(v[0:32]).String(), binary.LittleEndian.Uint32(v[32:36]))
+			}
+			*/
+			sum += val
 			cnt++
 			return 0
 		})
