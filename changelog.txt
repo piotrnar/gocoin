@@ -3,8 +3,8 @@
 * Miners tab of WebUI does not show crap anymore is the chain isn't up do date.
 * MakeTx tab of WebUI calculates estimated transaction size after signed (assumes compressed keys)
 * Downloader can work with testnet and got a fix around an empty peers db after the headers stage
-* New function GetTxFromBlockrIo() in "tools/utils", to download raw tx data from blockr.io
-* FetchBal goes to blockr.io if unable to fetch a raw transaction from blockexplorer.com
+* New function "tools/utils/fetchtx.go", to download raw tx data from other websites
+* If neccessary, FetchBal and FetchTx try several websites to fetch a raw transaction data
 
 0.9.5 (2014-03-28)
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
