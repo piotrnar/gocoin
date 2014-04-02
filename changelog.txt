@@ -1,4 +1,4 @@
-0.9.6
+0.9.6 - 2014-04-02
 * Client has a hammering protection (bans peers that keep trying to reconnect)
 * Miners tab of WebUI does not show crap anymore is the chain isn't up do date.
 * MakeTx tab of WebUI calculates estimated transaction size after signed (assumes compressed keys)
