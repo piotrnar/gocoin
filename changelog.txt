@@ -6,14 +6,14 @@
 * New function "tools/utils/fetchtx.go", to download raw tx data from other websites
 * If neccessary, FetchBal and FetchTx try several websites to fetch a raw transaction data
 
-0.9.5 (2014-03-28)
+0.9.5 - 2014-03-24
 * "MakeTx" tab of WebUI automatically recalculates the payment values to mBTC (for verification)
 * The downloader does not have a default seed node anymore (you need to find one by youself)
 * Do not block connections from 129.132.230.70-100 anymore
 * Some changes in wallet's decode transaction functionality to better deal with non stardard txs
 * "wallet -d <txfile.txt>" ignores spaces, tabs and EOLs in the hexdump of the transaction
 
-0.9.4
+0.9.4 - 2014-03-20
 * The default "FeePerByte" changed from 10 to 1 (like they have done it in the reference client)
 * The "-d" option of the wallet can now proparly decode coinbase transactions
 * The client can work with multisig address description JSON files (place them in "wallet/multisig")
@@ -22,7 +22,7 @@
 * For multisig payments, "payment.zip" from the client contains "multi2sign.txt" and "multi_pay_cmd"
 * The wallet can now deal with mixed (multisig and regular) inputs
 
-0.9.3
+0.9.3 - 2014-03-14
 * Fixed a critical bug in parsing OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
 * Wallet has a new option "-msign" that signs a multisig transaction with a single key
 * Wallet has a new option "-p2sh" to prepare a raw transaction for multisig processsing
@@ -31,7 +31,7 @@
 * The new tool "mkmulti" that can be used for generating multisig addresses
 * Few improvements around handling P2SH-type scripts and addresses
 
-0.9.2
+0.9.2 - 2014-03-06
 * Order of B_secret and A_public_key arguments swapped for "type2determ" tool
 * A new tool "type2next" to calculate a next type-2 deterministic public key/address
 * Wallet has a new option "-1" that used along with "-l" does not re-ask for password
@@ -40,13 +40,13 @@
 * A new tool "txaddsig" for inserting signature + public key into a raw transaction
 * Show entire content of the current wallet in MakeTx tab, if the book would be empty
 
-0.9.1
+0.9.1 - 2014-03-01
 * Little faster algos (by peterdettman) for field's sqrt() and inv() (in "btc/newec")
 * Fix: wallet is not able to properly "-sign" with imported (un)compressed addresses
 * Pre-caching of all the wallets' balances include commented out addresses
 * "Discus Fish" added to the mining pools
 
-0.9.0
+0.9.0 - 2014-01-23
 * The "downloader" app which can download the entire blockchain in less than 2 hours
 * Major performance improvement of UTX reindexing (rebuilding) functionality
 * Bugfix: the blance cache could cause panic when two outputs were being spent from the same address
@@ -54,12 +54,11 @@
 * Banned IP range 129.132.230.0/24 changed to 129.132.230.70 - 129.132.230.100
 * No TexUI mode for apps with no access to stdin (use "-textui=false" switch)
 
-0.8.7
 * Added a special wallet "ADRESSES" that contains the address book (for MakeTx tab)
 * Support for "virgin" addresses in the wallet files (put space before the address).
   (virgin addresses are hidden the wallet tab as long as their balance is zero)
 
-0.8.6
+0.8.6 - 2013-12-30
 * Added "Load TX" to the top menu in WebUI
 * Allow for hidden wallets (start filename with ".") and a nested sub-wallets (up to 3 levels deep)
 * Fix: after changing a label in a wallet file it get changed in the unspent list as well
@@ -69,12 +68,12 @@
 * Expire external IPs after one hour from last seen
 * Added new fields "Nonce", "TxCount", and "TxOffset" to "btc.Block" (set in "btc.NewBlock")
 
-0.8.5
+0.8.5 - 2013-12-18
 * From now on every "payment.zip" contains also the unsigned raw transaction file ("tx2sign.txt")
 * Added a cache for address balances to speed up switching between wallets
 * Building the wallet for Windows does not require mingw anymore (now it uses msvcrt.dll for _getch)
 
-0.8.4
+0.8.4 - 2013-12-14
 * Support for JoinCoin sort of transaction in the wallet
 * We do not add mined txs to TransactionsRejected map (or at least try to)
 * WebUI cosmetic here and there...
@@ -83,18 +82,18 @@
 * Fixed decoding of P2SH-type addresses in btc.NewAddrFromPkScript()
 * Added support for relay=0 received from peers (do not send tx invs to them)
 
-0.8.3
+0.8.3 - 2013-11-28
 * Support for GOCOIN_WALLET_CONFIG env variable (enforces the wallet's config file)
 * Added CFG.PayCommandName so you could e.g. make it .bat or .sh (the default is "pay_cmd.txt")
 * The home tab shows time next to each unspent outputs
 * Cosmetic here and there...
 
-0.8.2
+0.8.2 - 2013-11-10
 * "fetchbal" can work via tor now (set env variable TOR=localhost:9150)
 * Any own tx can now be sent to only a single random peer (privacy feature)
 * You can include another wallet inside a text wallet file (use "@filename")
 
-0.8.1
+0.8.1 - 2013-11-06
 * "fetchbalance" renamed "fetchbal" and now it works with coinbase txs properly
 * New tool fetchtx to downlaod raw tx from blockexplorer.com
 * Block subnet 129.132.230.0/24 (fixed for now)
@@ -102,157 +101,127 @@
 * Some minor changes in fetchbalance
 * Disconnect & Ban peers that have not sent a single inv to us for 15 min since connecting
 
-0.8.0
+0.8.0 - 2013-10-26
 * Souce code of the client hugely restructured
 * A new tool "fetchbalance" that can fetch the ballance from blockchain.info & blockexplorer.com
 
-0.7.8
+0.7.8 - 2013-10-12
 * Password chars are hidden when being input (if wallet does not build, delete "wallet/hidepass.go").
-
-0.7.7
 * "MakeTx" tab is precise now converting between Satoshi and BTC values
 
-0.7.6
+0.7.6 - 2013-09-29
 * "MakeTx" tab in WebUI (to pre-make the command for the wallet app)
 * Droppig a peer (from TextUI or WebUI) bans its IP by the way
 * Added "-useallinputs" switch to the wallet app
-
-0.7.5
 * Added CFG.MiningStatHours so minig stats are not fixed to 24 hours anymore
 
-0.7.4
+0.7.4 - 2013-09-20
 * A new port of sipa's secp256k1 lib, based on the 10x26 filed implemetnation (btc/newec)
 * The new btc/newec speedup enabled by default.
 * The old native speedup's source code removed.
 
-0.7.3
+0.7.3 - 2013-09-19
 * A new (native Go) EC_Verify speedup, based on sipa's secp256k1 code (client/speedup/mygonat.go)
 * Cosmetic chanegs in WebUI
-
-0.7.2
 * A new (DLL based) EC_Verify speedup for Windows (client/speedup/sipadll.go)
 
-0.7.1
+0.7.1 - 2013-09-10
 * Wallet's random numbers (used for ECDSA_Sign) don't rely on security of "crypt/random" package
 
-0.7.0
+0.7.0 - 2013-09-03
 * A major rewrite around shared memory access, in the network client
-
-0.6.7
 * Added some protection against racing conditions
 * Do not switch off GC while verifying a block
 * Added UI command "defrag" that purges and recompresses the block database
 * Added snappy compression for the block database (its faster than gzip)
 
-0.6.6
+0.6.6 - 2013-08-27
 * Added support for wallet.cfg to specify some default values
 * Wallet's "-t2" and "-t3" command line swiches replaced with "-type=X"
 * Labels returned in balance.xml are HTML escaped
 
-0.6.5
+0.6.5 - 2013-08-25
 * Fixed a critical bug in script parsing (0x00 at top of the stack was not considered as "if true")
 * Fetch seed peers in a background and save peers DB to disk before quiting
 * Ctrl+C works now also during rescan and allows to continue later from where stopped.
 
-0.6.4
+0.6.4 - 2013-08-15
 * Support for deterministic wallet Type-3 (keeps other keys safe, if one got compromised)
 * The wallet can export private key now, in the satoshi's base58 format (-dump switch)
 
-0.6.3
+0.6.3 - 2013-08-09
 * Show balance of per address at the Wallets tab
-
-0.6.2
 * Added support for WebUI switchable wallets
-
-0.6.1
 * Improved script_test.go, so it works directly with satoshi's json files
 
-0.6.0
+0.6.0 - 2013-07-27
 * Added support for verifying (rejecting) P2SH transactions
 * Added handling of OP_1ADD script opcopde and fixed some other opcodes
 * UI cmd "unspent" returns outputs sorted by block height
 
-0.5.8
+0.5.8 - 2013-07-25
 * Added some more satoshi-script-evaluation compatiblity patches (and unit tests)
-
-0.5.7
 * By default, don't download same block from more than 3 peers simultaneously (CFG.Net.MaxBlockAtOnce)
 * Fixed a critical blockchain parsing issue, with SIGHASH_SINGLE sigs (was rejecting valid blocks)
 
-0.5.5
+0.5.5 - 2013-07-20
 * The wallet now supports Type-2 deterministic keys (use "-t2" switch)
 * Make the node's beeping setup configurable though gocoin.conf
 * Allow to decode (display) a transaction's details (only txs that are in memory pool)
 * Minor improvements in net module (i.e. shrink send buffer after each write)
 
-0.5.3
+0.5.3 - 2013-07-11
 * XSS protection on WebUI and IP access control
 * Some new network security features
 * Like Satoshi client, do not process incoming messages having more than 1MB in send buffer
 * Some changes around qdb database (improved syncs for unspent db, added counters)
 
-0.5.2
+0.5.2 - 2013-07-07
 * WebUI improvements
-
-0.5.1
 * Yet more improved "qdb" is now a part of the repo
 
-0.5.0
+0.5.0 - 2013-07-04
 * Requires new "qdb" ... much imporved statrup times.
 * Never keeps unwind records in memory (only on disk)
 * Allows to not keep old unspent outputs in mem. Modify "UTXOCacheBlks" in the config to switch it on.
 
-0.4.8
+0.4.8 - 2013-07-02
 * Added new blocks' timing stats to the WebUI
 * New tool "importblocks" for importing blocks from Satoshi's DB
-
-0.4.7
 * Improvements in tx memory pool
-
-0.4.6
 * Big rework in the network module
-
-0.4.4
 * Allow sorting of transaction tables in WebUI
 
-0.4.3
+0.4.3 - 2013-06-27
 * Some more WebUI templates, and further extensions
 * Fixed a bug with checking new block height in block_check.go
-
-0.4.2
 * Allows loading and broadcasting of local txs via WebUI
 * Allows to download the balance folder via WebUI
 * More WebUI templates
 
-0.4.1
+0.4.1 - 2013-06-25
 * Do not route txs that have any output lower than a fee for 0.5KB
 * Added support for a config file
 * Fixed a bug introduced in 0.4.0 that was removing own txs from the pool
 * Templates for WebUI
 
-0.4.0
+0.4.0 - 2013-06-24
 * Added tx routing (you can switch it off with "-txr=false")
 * Further WebUI extensions
 * A bunch of other code changes, that I don't remember now
 
-0.3.5
+0.3.5 - 2013-06-23
 * Addded WebUI - by default on http://127.0.0.1:8833/
 * Improved framework for mining stats
 * Changed the way "getblocks" is requested, plus some other hard to describe net related changes
 
-0.3.4
+0.3.4 - 2013-06-20
 * Arithmetic script opcodes check for the 4 bytes limit at input values
-
-0.3.3
 * Better external IP address discovery and droping connections to self
-
-0.3.2
 * Added a memory cache for blocks database (in btc/blockdb.go)
-
-0.3.0
 * Added sipasec cgo for EC_Verify (over 5 times faster than openssl)
 
-0.2.15
+0.2.15 - 2013-06-18
 * Support for gzip compressed blocks inside blockchain.dat
 * A tool to compress blockchain.dat (tools/compressdb.go)
 * Rejects blocks that would cause forks long ago in a past
