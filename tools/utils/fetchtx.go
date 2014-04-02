@@ -122,3 +122,36 @@ func GetTxFromBlockrIo(txid *btc.Uint256) (raw []byte) {
 	}
 	return
 }
+
+// Download raw transaction from webbtc.com
+func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
+	url := "http://webbtc.com/tx/" + txid.String() + ".bin"
+	r, er := http.Get(url)
+	if er == nil && r.StatusCode == 200 {
+		raw, _ = ioutil.ReadAll(r.Body)
+		r.Body.Close()
+	}
+	return
+}
+
+// Download raw transaction from a web server (try one after another)
+func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromWebBTC - OK")
+		return
+	}
+
+	raw = GetTxFromBlockrIo(txid)
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromBlockrIo - OK")
+		return
+	}
+
+	raw, _ = GetTxFromExplorer(txid)
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromExplorer - OK")
+		return
+	}
+
+	return
+}
