@@ -1,37 +1,35 @@
 package utils
 
 import (
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
 	"io/ioutil"
 	"net/http"
 )
 
-
 type onetx struct {
-	Hasg string
-	Ver uint32
+	Hasg      string
+	Ver       uint32
 	Lock_time uint32
-	Size uint
-	In []struct {
+	Size      uint
+	In        []struct {
 		Prev_out struct {
 			Hash string
-			N uint32
+			N    uint32
 		}
 		ScriptSig string
-		Coinbase string
-		Sequence uint32
+		Coinbase  string
+		Sequence  uint32
 	}
 	Out []struct {
-		Value string
+		Value        string
 		ScriptPubKey string
 	}
 }
 
-
-
+// Download (and re-assemble) raw transaction from blockexplorer.com
 func GetTxFromExplorer(txid *btc.Uint256) ([]byte, []byte) {
 	url := "http://blockexplorer.com/rawtx/" + txid.String()
 	r, er := http.Get(url)
@@ -55,8 +53,8 @@ func GetTxFromExplorer(txid *btc.Uint256) ([]byte, []byte) {
 				tx.TxIn[i] = new(btc.TxIn)
 				tx.TxIn[i].Input.Hash = btc.NewUint256FromString(txx.In[i].Prev_out.Hash).Hash
 				tx.TxIn[i].Input.Vout = txx.In[i].Prev_out.N
-				if txx.In[i].Prev_out.N==0xffffffff &&
-					txx.In[i].Prev_out.Hash=="0000000000000000000000000000000000000000000000000000000000000000" {
+				if txx.In[i].Prev_out.N == 0xffffffff &&
+					txx.In[i].Prev_out.Hash == "0000000000000000000000000000000000000000000000000000000000000000" {
 					tx.TxIn[i].ScriptSig, _ = hex.DecodeString(txx.In[i].Coinbase)
 				} else {
 					tx.TxIn[i].ScriptSig, _ = btc.DecodeScript(txx.In[i].ScriptSig)
@@ -97,4 +95,30 @@ func GetTxFromExplorer(txid *btc.Uint256) ([]byte, []byte) {
 		}
 	}
 	return nil, nil
+}
+
+
+// Download raw transaction from blockr.io
+func GetTxFromBlockrIo(txid *btc.Uint256) (raw []byte) {
+	url := "http://btc.blockr.io/api/v1/tx/raw/" + txid.String()
+	r, er := http.Get(url)
+	if er == nil && r.StatusCode == 200 {
+		defer r.Body.Close()
+		c, _ := ioutil.ReadAll(r.Body)
+		var txx struct {
+			Status string
+			Data   struct {
+				Tx struct {
+					Hex string
+				}
+			}
+		}
+		er = json.Unmarshal(c[:], &txx)
+		if er == nil {
+			raw, _ = hex.DecodeString(txx.Data.Tx.Hex)
+		} else {
+			println("er", er.Error())
+		}
+	}
+	return
 }
