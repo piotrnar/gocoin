@@ -186,6 +186,9 @@ func main() {
 				if txidlsb != nil {
 					txid := btc.NewUint256(txidlsb)
 					rawtx, _ := utils.GetTxFromExplorer(txid)
+					if rawtx == nil {
+						rawtx = utils.GetTxFromBlockrIo(txid) // try form a different service
+					}
 					if rawtx != nil {
 						ioutil.WriteFile("balance/"+txid.String()+".tx", rawtx, 0666)
 						fmt.Fprintf(unsp, "%s-%03d # %.8f @ %s, %d confs\n",
