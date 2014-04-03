@@ -7,7 +7,10 @@ import (
 	"strings"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/client/common"
 )
+
+const UnusedFileName = "UNUSED"
 
 var PrecachingComplete bool
 
@@ -87,4 +90,60 @@ func NewWallet(fn string) (wal *OneWallet) {
 		wal.Addrs = addrs
 	}
 	return
+}
+
+
+func MoveToUnused(addr, walfil string) bool {
+	frwal := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + walfil
+	towal := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + UnusedFileName
+	f, er := os.Open(frwal)
+	if er != nil {
+		println(er.Error())
+		return false
+	}
+	var foundline string
+	var srcwallet []string
+	rd := bufio.NewReader(f)
+	if rd != nil {
+		for {
+			ln, _, er := rd.ReadLine()
+			if er !=nil {
+				break
+			}
+			if foundline=="" && strings.HasPrefix(string(ln), addr) {
+				foundline = string(ln)
+			} else {
+				srcwallet = append(srcwallet, string(ln))
+			}
+		}
+	}
+	f.Close()
+
+	if foundline=="" {
+		println(addr, "not found in", frwal)
+		return false
+	}
+
+	f, er = os.OpenFile(towal, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if er != nil {
+		println(er.Error())
+		return false
+	}
+	fmt.Fprintln(f, foundline)
+	f.Close()
+
+	os.Rename(frwal, frwal+".bak")
+
+	f, er = os.Create(frwal)
+	if er != nil {
+		println(er.Error())
+		return false
+	}
+	for i := range srcwallet {
+		fmt.Fprintln(f, srcwallet[i])
+	}
+	f.Close()
+
+	os.Remove(frwal+".bak")
+	return true
 }
