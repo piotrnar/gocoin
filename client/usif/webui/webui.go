@@ -17,7 +17,7 @@ import (
 
 var webuimenu = [][2]string {
 	{"/", "Home"},
-	{"/wal", "Wallets"},
+	{"/wal", "Wallet"},
 	{"/snd", "MakeTx"},
 	{"/net", "Network"},
 	{"/txs", "Transactions"},
