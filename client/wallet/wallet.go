@@ -83,12 +83,9 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 
 // Load public wallet from a text file
 func NewWallet(fn string) (wal *OneWallet) {
-	addrs := LoadWalfile(fn, 0)
-	if len(addrs)>0 {
-		wal = new(OneWallet)
-		wal.FileName = fn
-		wal.Addrs = addrs
-	}
+	wal = new(OneWallet)
+	wal.FileName = fn
+	wal.Addrs = LoadWalfile(fn, 0)
 	return
 }
 
