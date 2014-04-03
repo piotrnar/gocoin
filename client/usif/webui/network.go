@@ -87,7 +87,6 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	r.ParseForm()
 	if len(r.Form["id"])==0 {
 		fmt.Println("No id given")
 		return

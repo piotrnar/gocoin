@@ -104,8 +104,6 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
-
 	if checksid(r) {
 		if len(r.Form["wal"])>0 {
 			wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
@@ -178,7 +176,9 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 				// Do not display virgin addresses with zero balance
 				continue
 			} else if wallet.MyWallet.Addrs[i].Extra.Wallet!=wallet.UnusedFileName {
-				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprint("<a href=\"javascript:setunused(", i, ")\">Set Unused</a>"), 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->",
+					fmt.Sprint("<a href=\"javascript:setunused(", i, ")\" title=\"Move to " +
+					wallet.UnusedFileName + "\"><img src=\"webui/del.png\"></a>"), 1)
 			}
 			page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
 		}

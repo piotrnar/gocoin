@@ -146,8 +146,6 @@ func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
-
 	if checksid(r) {
 		if len(r.Form["del"])>0 {
 			tid := btc.NewUint256FromString(r.Form["del"][0])
@@ -277,7 +275,6 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	r.ParseForm()
 	if len(r.Form["id"])==0 {
 		fmt.Println("No id given")
 		return

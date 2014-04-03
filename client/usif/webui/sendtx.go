@@ -28,7 +28,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 	var err string
 
-	r.ParseForm()
 	if len(r.Form["outcnt"])==1 {
 		var thisbal btc.AllUnspentTx
 		var pay_cmd string

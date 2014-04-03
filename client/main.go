@@ -6,6 +6,7 @@ import (
 	"time"
 	"unsafe"
 	"runtime"
+	"io/ioutil"
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
@@ -233,15 +234,28 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
-	// Clean up the DB lock file on exit
+	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT"
+	fi, _ := os.Stat(default_wallet_fn)
+	if fi==nil || fi.IsDir() {
+		fmt.Println("DEFAULT wallet not found")
+
+		old_wallet_location := common.GocoinHomeDir+"wallet.txt"
+		// If there is wallet.txt rename it to DEFAULT.
+		fi, _ := os.Stat(old_wallet_location)
+		if fi!=nil && !fi.IsDir() {
+			fmt.Println("Taking wallet.txt as the DEFAULT wallet")
+			os.Rename(old_wallet_location, default_wallet_fn)
+		} else {
+			fmt.Println("Creating an empty default wallet", old_wallet_location, fi)
+			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
+		}
+	}
 
 	// cache the current balance of all the addresses from the current wallet files
 	wallet.FetchAllBalances()
-	// ... and now switch to the dafault wallet
-	wallet.LoadWallet(common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT")
-	if wallet.MyWallet==nil {
-		wallet.LoadWallet(common.GocoinHomeDir+"wallet.txt")
-	}
+
+	// ... and now load the dafault wallet
+	wallet.LoadWallet(default_wallet_fn)
 	if wallet.MyWallet!=nil {
 		wallet.UpdateBalance()
 		fmt.Print(wallet.DumpBalance(nil, false))

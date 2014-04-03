@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"os"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/wallet"
 )
 
 var webuimenu = [][2]string {
@@ -41,6 +43,7 @@ func ipchecker(r *http.Request) bool {
 	addr := (a<<24) | (b<<16) | (c<<8) | d
 	for i := range common.WebUIAllowed {
 		if (addr&common.WebUIAllowed[i].Mask)==common.WebUIAllowed[i].Addr {
+			r.ParseForm()
 			return true
 		}
 	}
@@ -104,6 +107,13 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name:"sid", Value:sessid})
 	}
 
+	// Quick switch wallet
+	if checksid(r) && len(r.Form["qwalsel"])>0 {
+		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["qwalsel"][0])
+		http.Redirect(w, r, r.URL.Path, http.StatusFound)
+		return
+	}
+
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
@@ -129,6 +139,24 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "{MENU_LEFT}", x+"{MENU_LEFT}", 1)
 		}
 	}
+
+	// Quick wallet switch
+	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
+	if er == nil {
+		for i := range fis {
+			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
+				var ow string
+				if wallet.MyWallet!=nil && strings.HasSuffix(wallet.MyWallet.FileName,
+					string(os.PathSeparator) + fis[i].Name()) {
+					ow = "<option selected>"+fis[i].Name()+"</option>"
+				} else {
+					ow = "<option>"+fis[i].Name()+"</option>"
+				}
+				s = templ_add(s, "<!--QUICK_WALLET_SELECT-->", ow)
+			}
+		}
+	}
+
 	w.Write([]byte(s))
 }
 

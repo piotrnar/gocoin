@@ -18,7 +18,6 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
 	common.LockCfg()
 	defer common.UnlockCfg()
 

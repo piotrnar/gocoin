@@ -3,13 +3,23 @@
 <link rel="stylesheet" href="webui/gocoin.css" type="text/css">
 <script>
 var sid='{SESSION_ID}'
+function quickswitchwallet() {
+	var sel = document.getElementById('qswal')
+	document.location='?sid='+sid+'&qwalsel='+sel.options[sel.selectedIndex].value
+}
 </script>
 </head>
 <body>
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%"><tr>
-		<td>{MENU_LEFT}
-		<td align="center"><a href="javascript:pushtx()">Load TX</a>
-		<td align="right">{MENU_RIGHT}
+		<td>{MENU_LEFT}</td>
+		<td align="center">Switch wallet:
+		<select id="qswal" onchange="quickswitchwallet()">
+		<!--QUICK_WALLET_SELECT-->
+        </select>
+        <img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
+		</td>
+		<td align="center"><a href="javascript:pushtx()">Load TX</a></td>
+		<td align="right">{MENU_RIGHT}</td>
 	</tr></table>
 <hr>
