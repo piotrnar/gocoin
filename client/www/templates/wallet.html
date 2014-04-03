@@ -6,6 +6,15 @@ function shwwal() {
 	showwal.style.display='none'
 	formwal.style.display='block'
 }
+function setunused(idx) {
+	var tr = document.getElementById('walrow'+idx)
+	var adr = tr.cells[0].innerText
+	var lab = tr.cells[2].innerText
+	var wal = tr.cells[1].innerText
+	if (confirm("Move " + adr + " (" + lab + ") from wallet " + wal + "to UNUSED?")) {
+		document.location='?sid='+sid+'&setunused='+idx
+	}
+}
 </script>
 <h2>Your wallet</h2>
 Balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs (<a href="balance.zip">balance.zip</a>)<br>
