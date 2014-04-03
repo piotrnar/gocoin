@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"bytes"
+	"strconv"
 	"strings"
 	"net/http"
 	"io/ioutil"
@@ -105,10 +106,23 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 
-	if checksid(r) && len(r.Form["wal"])>0 {
-		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
-		http.Redirect(w, r, "/wal", http.StatusFound)
-		return
+	if checksid(r) {
+		if len(r.Form["wal"])>0 {
+			wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
+			http.Redirect(w, r, "/wal", http.StatusFound)
+			return
+		}
+
+		if len(r.Form["setunused"])>0 {
+			i, er := strconv.ParseUint(r.Form["setunused"][0], 10, 32)
+			if er==nil && int(i)<len(wallet.MyWallet.Addrs) {
+				if wallet.MoveToUnused(wallet.MyWallet.Addrs[i].Enc58str, wallet.MyWallet.Addrs[i].Extra.Wallet) {
+					wallet.LoadWallet(wallet.MyWallet.FileName)
+				}
+			}
+			http.Redirect(w, r, "/wal", http.StatusFound)
+			return
+		}
 	}
 
 	page := load_template("wallet.html")
@@ -140,6 +154,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				lab += " ***"
 			}
+			ad = strings.Replace(ad, "<!--WAL_ROW_IDX-->", fmt.Sprint(i), 1)
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
 			ad = strings.Replace(ad, "<!--WAL_WALLET-->", html.EscapeString(wallet.MyWallet.Addrs[i].Extra.Wallet), 1)
 			ad = strings.Replace(ad, "<!--WAL_LABEL-->", html.EscapeString(lab), 1)
@@ -162,6 +177,8 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			} else if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				// Do not display virgin addresses with zero balance
 				continue
+			} else if wallet.MyWallet.Addrs[i].Extra.Wallet!=wallet.UnusedFileName {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprint("<a href=\"javascript:setunused(", i, ")\">Set Unused</a>"), 1)
 			}
 			page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
 		}
