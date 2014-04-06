@@ -284,7 +284,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Address Book
-		book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/ADDRESS", 0)
+		book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/"+wallet.AddrBookFileName, 0)
 		for i := range book {
 			row := "addrbook.push({'addr':'" + book[i].Enc58str + "', " +
 				"'label':'" + book[i].Extra.Label + "', " +

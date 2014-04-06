@@ -10,7 +10,11 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-const UnusedFileName = "UNUSED"
+const (
+	UnusedFileName = "UNUSED"
+	DefaultFileName = "DEFAULT"
+	AddrBookFileName = "ADDRESS"
+)
 
 var PrecachingComplete bool
 

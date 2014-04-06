@@ -3,6 +3,7 @@ Downloader:
 
 Client:
 * Improve the database folder locking in Linux
+* Make the address book separate from the wallets
 
 Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160

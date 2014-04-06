@@ -114,6 +114,14 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If currently selected wallet is address book and we are not on the wallet page - switch to default
+	if r.URL.Path!="/wal" && wallet.MyWallet!=nil &&
+		strings.HasSuffix(wallet.MyWallet.FileName, string(os.PathSeparator) + wallet.AddrBookFileName) {
+		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + wallet.DefaultFileName)
+		http.Redirect(w, r, r.URL.Path, http.StatusFound)
+		return
+	}
+
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
@@ -144,7 +152,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
 	if er == nil {
 		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
+			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' && fis[i].Name()!=wallet.AddrBookFileName {
 				var ow string
 				if wallet.MyWallet!=nil && strings.HasSuffix(wallet.MyWallet.FileName,
 					string(os.PathSeparator) + fis[i].Name()) {

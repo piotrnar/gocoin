@@ -234,19 +234,19 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
-	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"DEFAULT"
+	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+wallet.DefaultFileName
 	fi, _ := os.Stat(default_wallet_fn)
 	if fi==nil || fi.IsDir() {
-		fmt.Println("DEFAULT wallet not found")
+		fmt.Println(default_wallet_fn, "not found")
 
 		old_wallet_location := common.GocoinHomeDir+"wallet.txt"
-		// If there is wallet.txt rename it to DEFAULT.
+		// If there is wallet.txt rename it to default.
 		fi, _ := os.Stat(old_wallet_location)
 		if fi!=nil && !fi.IsDir() {
-			fmt.Println("Taking wallet.txt as the DEFAULT wallet")
+			fmt.Println("Taking wallet.txt as", default_wallet_fn)
 			os.Rename(old_wallet_location, default_wallet_fn)
 		} else {
-			fmt.Println("Creating an empty default wallet", old_wallet_location, fi)
+			fmt.Println("Creating empty default wallet at", default_wallet_fn)
 			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
 		}
 	}
