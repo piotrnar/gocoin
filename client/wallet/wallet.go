@@ -26,9 +26,6 @@ type OneWallet struct {
 
 func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	waldir, walname := filepath.Split(fn)
-	if walname[0]=='.' {
-		walname = walname[1:] // remove trailing dot (from hidden wallets)
-	}
 	f, e := os.Open(fn)
 	if e != nil {
 		println(e.Error())
