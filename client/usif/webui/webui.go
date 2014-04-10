@@ -221,7 +221,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/counts", p_counts)
 	http.HandleFunc("/cfg", p_cfg)
 
-	http.HandleFunc("/txs2s.xml", xmp_txs2s)
+	http.HandleFunc("/txs2s.xml", xml_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
@@ -230,6 +230,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/raw_net", raw_net)
 	http.HandleFunc("/balance.zip", dl_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
+	http.HandleFunc("/addrs.xml", xml_addrs)
 
 	http.HandleFunc("/", p_home)
 

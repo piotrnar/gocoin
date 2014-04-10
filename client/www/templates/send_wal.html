@@ -11,7 +11,6 @@ var total_to_pay = 0
 var cur_but = null
 
 var wallet = new Array()
-var addrbook = new Array()
 
 /*WALLET_ENTRY_JS*/
 
@@ -104,97 +103,120 @@ function recalc_to_pay() {
 }
 
 
+function refresh_address_book(done_callback) {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			var addrbook = new Array()
+			var els = xmlHttp.responseXML.getElementsByTagName('entry')
+			for (var i=0; i<els.length; i++) {
+				addrbook.push({'addr':xval(els[i], "addr"), 'label':xval(els[i], "label"),
+					'wallet':xval(els[i], "wallet")})
+			}
+
+			done_callback(addrbook)
+		}
+	}
+	xmlHttp.open("GET","addrs.xml", true)
+	xmlHttp.send(null)
+}
+
+
 function open_address_book(idx) {
 	if (cur_but!=null) {
 		cur_but.click()
 	}
 
-	var c = outtab.rows[idx].cells[1]
-	var inadr = document.getElementById('inadr'+idx)
-	var div = document.createElement("div")
-	c.style.position="realitive"
-	div.style.position="absolute"
+	refresh_address_book( function(addrbook) {
+		var c = outtab.rows[idx].cells[1]
+		var inadr = document.getElementById('inadr'+idx)
+		var div = document.createElement("div")
+		c.style.position="realitive"
+		div.style.position="absolute"
 
 
-	var sel = document.createElement("select")
-	sel.style.width = '100%'
-	sel.size = ADDR_LIST_SIZE
+		var sel = document.createElement("select")
+		sel.style.width = '100%'
+		sel.size = ADDR_LIST_SIZE
 
-	for (var i=0; i<addrbook.length; i++) {
-		var op = document.createElement("option")
-		op.text += addrbook[i].wallet + ": "
-		op.text += addrbook[i].label
-		op.text += " - " + addrbook[i].addr
-		op.value = addrbook[i].addr
-		op.selected = inadr.value==op.value
-		op["addr_label"] = addrbook[i].label
-		sel.add(op)
-	}
-
-	for (var i=0; i<wallet.length; i++) {
-		if (wallet[i].virgin) {
+		for (var i=0; i<addrbook.length; i++) {
 			var op = document.createElement("option")
-			op.text += wallet[i].wallet + ": "
-			op.text += wallet[i].label
-			op.text += " - " + wallet[i].addr
-			op.value = wallet[i].addr
+			op.text += addrbook[i].wallet + ": "
+			op.text += addrbook[i].label
+			op.text += " - " + addrbook[i].addr
+			op.value = addrbook[i].addr
 			op.selected = inadr.value==op.value
-			op["addr_label"] = wallet[i].label
+			op["addr_label"] = addrbook[i].label
 			sel.add(op)
 		}
-	}
 
-	if (sel.options.length==0) {
-		// add all the addresses from the current wallet
 		for (var i=0; i<wallet.length; i++) {
-			var op = document.createElement("option")
-			op.text += wallet[i].wallet + ": "
-			op.text += wallet[i].label
-			op.text += " - " + wallet[i].addr
-			op.value = wallet[i].addr
-			op.selected = inadr.value==op.value
-			op["addr_label"] = wallet[i].label
-			sel.add(op)
+			if (wallet[i].virgin) {
+				var op = document.createElement("option")
+				op.text += wallet[i].wallet + ": "
+				op.text += wallet[i].label
+				op.text += " - " + wallet[i].addr
+				op.value = wallet[i].addr
+				op.selected = inadr.value==op.value
+				op["addr_label"] = wallet[i].label
+				sel.add(op)
+			}
 		}
-	}
-	div.appendChild(sel)
-	c.appendChild(div)
 
-	var but = document.getElementById("addrbook"+idx)
-	var prv_valu = but.value
-	var prv_oncl = but.onclick
-	but.value = "Close the list"
-	cur_but = but
-	but.onclick = sel.onchange = function() {
-		c.removeChild(div)
-		but.onclick = prv_oncl
-		if (sel.selectedIndex!=-1) {
-			inadr.value = sel.options[sel.selectedIndex].value
-			but.value = sel.options[sel.selectedIndex].addr_label
-		} else {
-			but.value = addrbook_lab
+		if (sel.options.length==0) {
+			// add all the addresses from the current wallet
+			for (var i=0; i<wallet.length; i++) {
+				var op = document.createElement("option")
+				op.text += wallet[i].wallet + ": "
+				op.text += wallet[i].label
+				op.text += " - " + wallet[i].addr
+				op.value = wallet[i].addr
+				op.selected = inadr.value==op.value
+				op["addr_label"] = wallet[i].label
+				sel.add(op)
+			}
 		}
-		cur_but = null
-	}
+		div.appendChild(sel)
+		c.appendChild(div)
+
+		var but = document.getElementById("addrbook"+idx)
+		var prv_valu = but.value
+		var prv_oncl = but.onclick
+		but.value = "Close the list"
+		cur_but = but
+		but.onclick = sel.onchange = function() {
+			c.removeChild(div)
+			but.onclick = prv_oncl
+			if (sel.selectedIndex!=-1) {
+				inadr.value = sel.options[sel.selectedIndex].value
+				but.value = sel.options[sel.selectedIndex].addr_label
+			} else {
+				but.value = addrbook_lab
+			}
+			cur_but = null
+		}
+	})
 }
 
 
 function reslab(idx) {
 	var val = document.getElementById("inadr"+idx).value
 	var but = document.getElementById("addrbook"+idx)
-	for (var i=0; i<addrbook.length; i++) {
-		if (val==addrbook[i].addr) {
-			but.value = addrbook[i].label
-			return
+	refresh_address_book( function(addrbook) {
+		for (var i=0; i<addrbook.length; i++) {
+			if (val==addrbook[i].addr) {
+				but.value = addrbook[i].label
+				return
+			}
 		}
-	}
-	for (var i=0; i<wallet.length; i++) {
-		if (val==wallet[i].addr) {
-			but.value = wallet[i].label
-			return
+		for (var i=0; i<wallet.length; i++) {
+			if (val==wallet[i].addr) {
+				but.value = wallet[i].label
+				return
+			}
 		}
-	}
-	but.value = addrbook_lab
+		but.value = addrbook_lab
+	})
 }
 
 

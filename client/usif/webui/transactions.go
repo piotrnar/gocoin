@@ -141,7 +141,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 }
 
 
-func xmp_txs2s(w http.ResponseWriter, r *http.Request) {
+func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}

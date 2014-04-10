@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"archive/zip"
+	"encoding/xml"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -191,4 +192,30 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	write_html_head(w, r)
 	w.Write([]byte(page))
 	write_html_tail(w)
+}
+
+
+func xml_addrs(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"text/xml"}
+
+
+	w.Write([]byte("<addrbook>"))
+	// Address Book
+	book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/"+wallet.AddrBookFileName, 0)
+	for i := range book {
+		w.Write([]byte("<entry>"))
+		w.Write([]byte("<addr>" + book[i].Enc58str + "</addr>" ))
+		w.Write([]byte("<label>"))
+		xml.EscapeText(w, []byte(book[i].Extra.Label))
+		w.Write([]byte("</label>"))
+		w.Write([]byte("<wallet>"))
+		xml.EscapeText(w, []byte(book[i].Extra.Wallet))
+		w.Write([]byte("</wallet>"))
+		w.Write([]byte("</entry>"))
+	}
+	w.Write([]byte("</addrbook>"))
 }

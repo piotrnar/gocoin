@@ -283,14 +283,6 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
 		}
 
-		// Address Book
-		book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/"+wallet.AddrBookFileName, 0)
-		for i := range book {
-			row := "addrbook.push({'addr':'" + book[i].Enc58str + "', " +
-				"'label':'" + book[i].Extra.Label + "', " +
-				"'wallet':'" + book[i].Extra.Wallet + "'})\n"
-			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
-		}
 		wal = strings.Replace(wal, "/*WALLET_ENTRY_JS*/", "const ADDR_LIST_SIZE = " + fmt.Sprint(common.CFG.WebUI.AddrListLen), 1)
 
 		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
