@@ -116,8 +116,20 @@ func make_wallet() {
 	load_others()
 
 	pass := getpass()
+	if pass=="" {
+		return
+	}
+
 	seed_key := make([]byte, 32)
 	btc.ShaHash([]byte(pass), seed_key)
+
+	defer func() {
+		// clan up seed_key data in RAM before exiting this function
+		for i := range seed_key {
+			seed_key[i] = 0
+		}
+	}()
+
 	if *waltype==3 {
 		lab = "TypC"
 	} else if *waltype==2 {
@@ -137,41 +149,40 @@ func make_wallet() {
 	} else {
 		lab = "TypA"
 	}
-	if pass!="" {
-		if *verbose {
-			fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+
+	if *verbose {
+		fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+	}
+	for i:=uint(0); i < *keycnt; {
+		prv_key := make([]byte, 32)
+		if *waltype==3 {
+			btc.ShaHash(seed_key, prv_key)
+			seed_key = append(seed_key, byte(i))
+		} else if *waltype==2 {
+			seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
+			copy(prv_key, seed_key)
+		} else {
+			btc.ShaHash(seed_key, prv_key)
+			copy(seed_key, prv_key)
 		}
-		for i:=uint(0); i < *keycnt; {
-			prv_key := make([]byte, 32)
-			if *waltype==3 {
-				btc.ShaHash(seed_key, prv_key)
-				seed_key = append(seed_key, byte(i))
-			} else if *waltype==2 {
-				seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
-				copy(prv_key, seed_key)
-			} else {
-				btc.ShaHash(seed_key, prv_key)
-				copy(seed_key, prv_key)
+		priv_keys = append(priv_keys, prv_key)
+		compressed_key = append(compressed_key, !*uncompressed)
+		pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
+		if er == nil {
+			adr := btc.NewAddrFromPubkey(pub, verbyte)
+			if *pubkey!="" && *pubkey==adr.String() {
+				fmt.Println(adr.String(), "=>", hex.EncodeToString(pub))
+				return
 			}
-			priv_keys = append(priv_keys, prv_key)
-			compressed_key = append(compressed_key, !*uncompressed)
-			pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
-			if er == nil {
-				adr := btc.NewAddrFromPubkey(pub, verbyte)
-				if *pubkey!="" && *pubkey==adr.String() {
-					fmt.Println(adr.String(), "=>", hex.EncodeToString(pub))
-					return
-				}
-				publ_addrs = append(publ_addrs, adr)
-				labels = append(labels, fmt.Sprint(lab, " ", i+1))
-				i++
-			} else {
-				println("PublicFromPrivate:", er.Error())
-			}
+			publ_addrs = append(publ_addrs, adr)
+			labels = append(labels, fmt.Sprint(lab, " ", i+1))
+			i++
+		} else {
+			println("PublicFromPrivate:", er.Error())
 		}
-		if *verbose {
-			fmt.Println("Private keys re-generated")
-		}
+	}
+	if *verbose {
+		fmt.Println("Private keys re-generated")
 	}
 }
 
