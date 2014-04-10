@@ -39,12 +39,12 @@
 <table width="100%"><tr>
 <td valign="top" width="*">
 	<table>
-		<tr><td>Accepted transactions:<td><input type="button" value=" {T2S_CNT} " onclick="show_txs2s('')">
+		<tr><td>Accepted transactions:<td><input type="button" id="but2s" value=" {T2S_CNT} " onclick="show_txs2s('')">
 		<b>{T2S_SIZE}</b>
 		<tr><td>UTXOs spent in memory:<td><b>{SPENT_OUTS_CNT}</b>
-		<tr><td>Rejected ransactions:<td><input type="button" value=" {TRE_CNT} " onclick="show_txsre()">
+		<tr><td>Rejected ransactions:<td><input type="button" id="butre" value=" {TRE_CNT} " onclick="show_txsre()">
 		<b>{TRE_SIZE}</b>
-		<tr><td>Transactions waiting for inputs:<td><input type="button" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
+		<tr><td>Transactions waiting for inputs:<td><input type="button" id="butw4i" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
 		<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
 	</table>
 <td valign="top" width="*">
@@ -259,6 +259,7 @@ function show_txs2s(extrapar) {
 		if(xmlHttp.readyState==4) {
 			while (txs2s.rows.length>1)  txs2s.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
+			but2s.value = ' ' + txs.length + ' '
 			for (var i=0; i<txs.length; i++) {
 				var c,row
 				var own = parseInt(xval(txs[i], 'own'))
@@ -348,6 +349,7 @@ function show_txsre() {
 		if(xmlHttp.readyState==4) {
 			while (txsre.rows.length>1)  txsre.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
+			butre.value = ' ' + txs.length + ' '
 			for (var i=0; i<txs.length; i++) {
 				var t,c,row = txsre.insertRow(-1)
 
@@ -385,6 +387,7 @@ function show_txw4i() {
 			while (txw4i.rows.length>1)  txw4i.deleteRow(1)
 			wait4s = aj.responseXML.getElementsByTagName('wait4')
 			var idx=0
+			butw4i.value = ' ' + wait4s.length + ' '
 			for (var i=0; i<wait4s.length; i++) {
 				pendtxs = wait4s[i].getElementsByTagName('tx')
 				idx++
