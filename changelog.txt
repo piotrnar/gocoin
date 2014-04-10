@@ -1,6 +1,7 @@
 0.9.7
 * Wallets tab of WebUI has an option to move an empty address to UNUSED wallet
 * A user can quickly switch wallet being at any tab of the WebUI, as well as to reload it
+* SendTx tab of WebUI refreshed Address Book using Ajax and addrs.xml
 
 0.9.6 - 2014-04-02
 * Client has a hammering protection (bans peers that keep trying to reconnect)
