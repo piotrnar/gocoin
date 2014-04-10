@@ -102,6 +102,18 @@ func main() {
 		return
 	}
 
+	defer func() {
+		// cleanup private keys in RAM before exiting
+		if *verbose {
+			fmt.Println("Cleaning up private keys")
+		}
+		for k := range priv_keys {
+			for l := range priv_keys[k] {
+				priv_keys[k][l] = 0
+			}
+		}
+	}()
+
 	if *pubkey!="" {
 		make_wallet()
 		return
