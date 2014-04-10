@@ -176,7 +176,8 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			} else if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				// Do not display virgin addresses with zero balance
 				continue
-			} else if wallet.MyWallet.Addrs[i].Extra.Wallet!=wallet.UnusedFileName {
+			} else if wallet.MyWallet.Addrs[i].Extra.Wallet!=wallet.UnusedFileName &&
+				wallet.MyWallet.Addrs[i].Extra.Wallet!=wallet.AddrBookFileName {
 				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->",
 					fmt.Sprint("<a href=\"javascript:setunused(", i, ")\" title=\"Move to " +
 					wallet.UnusedFileName + "\"><img src=\"webui/del.png\"></a>"), 1)
