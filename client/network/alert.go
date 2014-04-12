@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"sync"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -28,7 +29,12 @@ func (c *OneConnection) HandleAlert(b []byte) {
 	a, e := btc.NewAlert(b, AlertPubKey)
 	if e != nil {
 		println(c.PeerAddr.String(), "- sent us a broken alert:", e.Error())
-		c.DoS()
+		if a == nil {
+			println("With apparently broken signature - so ban it!")
+			c.DoS()
+		} else {
+			println(hex.EncodeToString(b))
+		}
 		return
 	}
 
