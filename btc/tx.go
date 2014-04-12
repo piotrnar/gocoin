@@ -101,7 +101,7 @@ func (t *Tx) Serialize() ([]byte) {
 
 
 // Return the transaction's hash, that is about to get signed/verified
-func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
+func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) {
 	var buf [9]byte
 
 	// Remove any OP_CODESEPARATOR
@@ -192,9 +192,8 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType byte) ([]byte) {
 		}
 	}
 
-	binary.LittleEndian.PutUint32(buf[:4], t.Lock_time)
-	sha.Write(buf[:4])
-	sha.Write([]byte{hashType,0,0,0})
+	binary.Write(sha, binary.LittleEndian, t.Lock_time)
+	binary.Write(sha, binary.LittleEndian, hashType)
 	tmp := sha.Sum(nil)
 	sha.Reset()
 	sha.Write(tmp)
@@ -219,7 +218,7 @@ func (tx *Tx) Sign(in int, pk_script []byte, hash_type byte, pubkey, priv_key []
 	key.PublicKey = pub_key.PublicKey
 
 	//Calculate proper transaction hash
-	h := tx.SignatureHash(pk_script, in, hash_type)
+	h := tx.SignatureHash(pk_script, in, int32(hash_type))
 
 	// Sign
 	r, s, er := EcdsaSign(&key, h)

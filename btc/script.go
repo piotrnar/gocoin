@@ -733,7 +733,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 					pk := stack.pop()
 					si := stack.pop()
 					if len(si) > 9 {
-						sh := tx.SignatureHash(delSig(p[sta:], si), inp, si[len(si)-1])
+						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
 						ok = EcdsaVerify(pk, si, sh)
 						if !ok && don(DBG_SCRERR) {
 							println("EcdsaVerify fail 1")
@@ -804,7 +804,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
 						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
-							sh := tx.SignatureHash(xxx, inp, si[len(si)-1])
+							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
 							if EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--

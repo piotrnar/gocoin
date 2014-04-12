@@ -299,3 +299,42 @@ func TestInvalidTransactions(t *testing.T) {
 		}
 	}
 }
+
+
+func TestSighash(t *testing.T) {
+	var arr [][]interface{}
+
+	dat, er := ioutil.ReadFile("test/sighash.json")
+	if er != nil {
+		println(er.Error())
+		return
+	}
+
+	r := bytes.NewBuffer(dat)
+	d := json.NewDecoder(r)
+	d.UseNumber()
+
+	er = d.Decode(&arr)
+	if er != nil {
+		println(er.Error())
+		return
+	}
+	for i := range arr {
+		if len(arr[i])==5 {
+			tmp, _ := hex.DecodeString(arr[i][0].(string))
+			tx, _ := NewTx(tmp)
+			if tx == nil {
+				t.Error("Cannot decode tx from text number", i)
+				continue
+			}
+			tmp, _ = hex.DecodeString(arr[i][1].(string)) // script
+			iidx, _ := arr[i][2].(json.Number).Int64()
+			htype, _ := arr[i][3].(json.Number).Int64()
+			got := tx.SignatureHash(tmp, int(iidx), int32(htype))
+			exp := NewUint256FromString(arr[i][4].(string))
+			if !bytes.Equal(exp.Hash[:], got) {
+				t.Error("SignatureHash mismatch at index", i)
+			}
+		}
+	}
+}
