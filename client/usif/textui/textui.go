@@ -555,7 +555,7 @@ func list_alerst(p string) {
 		fmt.Println(" Cancel:", v.Cancel)
 		fmt.Print(" SetCancel: [")
 		for i := range v.SetCancel {
-			fmt.Print(v.SetCancel[i])
+			fmt.Print(" ", v.SetCancel[i])
 		}
 		fmt.Println("]")
 		fmt.Println(" MinVer:", v.MinVer)
