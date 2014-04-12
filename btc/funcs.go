@@ -102,7 +102,7 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 
 	n, e = b.Read(buf[:1])
 	if e != nil {
-		println("ReadVLen1 error:", e.Error())
+		//println("ReadVLen1 error:", e.Error())
 		return
 	}
 
