@@ -548,8 +548,26 @@ func show_addresses(par string) {
 func list_alerst(p string) {
 	network.Alert_access.Lock()
 	for _, v := range network.Alerts {
-		fmt.Println(v.Version, v.RelayUntil, v.Expiration, v.ID, v.Cancel,
-			v.MinVer, v.MaxVer, v.Priority, v.Comment, v.StatusBar, v.Reserved)
+		fmt.Println("===", v.ID)
+		fmt.Println(" Version:", v.Version)
+		fmt.Println(" RelayUntil:", time.Unix(v.RelayUntil, 0).Format("2006-01-02 15:04:05"))
+		fmt.Println(" Expiration:", time.Unix(v.Expiration, 0).Format("2006-01-02 15:04:05"))
+		fmt.Println(" Cancel:", v.Cancel)
+		fmt.Print(" SetCancel: [")
+		for i := range v.SetCancel {
+			fmt.Print(v.SetCancel[i])
+		}
+		fmt.Println("]")
+		fmt.Println(" MinVer:", v.MinVer)
+		fmt.Println(" MaxVer:", v.MaxVer)
+		fmt.Println(" SetSubVer:")
+		for i := range v.SetSubVer {
+			fmt.Println("    ", v.SetSubVer[i])
+		}
+		fmt.Println(" Priority:", v.Priority)
+		fmt.Println(" Comment:", v.Comment)
+		fmt.Println(" StatusBar:", v.StatusBar)
+		fmt.Println(" Reserved:", v.Reserved)
 	}
 	network.Alert_access.Unlock()
 }
