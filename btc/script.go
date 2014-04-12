@@ -161,8 +161,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		// Read instruction
 		opcode, vchPushValue, n, e := GetOpcode(p[idx:])
 		if e!=nil {
-			println(e.Error())
-			println("A", idx, hex.EncodeToString(p))
+			//println(e.Error())
+			//println("A", idx, hex.EncodeToString(p))
 			return false
 		}
 		idx+= n
