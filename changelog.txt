@@ -3,6 +3,7 @@
 * A user can quickly switch wallet being at any tab of the WebUI, as well as to reload it
 * SendTx tab of WebUI refreshed Address Book using Ajax and addrs.xml
 * Fixes and additional test cases around parsing of alert messages
+* Added unit tests for "sighash.json" from the satoshi's repo and some more unit test rework
 
 0.9.6 - 2014-04-02
 * Client has a hammering protection (bans peers that keep trying to reconnect)
