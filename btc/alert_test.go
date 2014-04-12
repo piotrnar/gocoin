@@ -1,6 +1,8 @@
 package btc
 
 import (
+	"bytes"
+	"io/ioutil"
 	"testing"
 	"encoding/hex"
 )
@@ -45,5 +47,38 @@ func TestAlert(t *testing.T) {
 	}
 	if a.Reserved!="" {
 		t.Error("Incorrect Reserved")
+	}
+
+	dat, _ = hex.DecodeString("7d01000000111a4853000000005d235c53000000001104000010040000007211010072110100010f2f5361746f7368693a302e392e302f881300000040555247454e543a20557067726164652072657175697265643a207365652068747470733a2f2f7777772e626974636f696e2e6f72672f6865617274626c656564004630440220108a795ab2fcc2c6b1e538b2e48f63042b5e16939e3ef5faefd8c154b38a40c502200feacb829d61f1912a529b0812db846501c09556e61ab679c824b53b201999bf")
+	a, e = NewAlert(dat, apk)
+	if e != nil {
+		t.Error(e.Error())
+	}
+
+	fl, _ := ioutil.ReadFile("test/alertTests.raw")
+	if fl != nil {
+		rd := bytes.NewReader(fl)
+		for {
+			s1, e := ReadString(rd)
+			if e != nil {
+				break
+			}
+			s2, e := ReadString(rd)
+			if e != nil {
+				t.Error(e.Error())
+				break
+			}
+			al := new(bytes.Buffer)
+			WriteVlen(al, uint32(len(s1)))
+			al.Write([]byte(s1))
+			WriteVlen(al, uint32(len(s2)))
+			al.Write([]byte(s2))
+			a, e = NewAlert(al.Bytes(), apk)
+			if e != nil {
+				t.Error(e.Error())
+			}
+		}
+	} else {
+		t.Log("test/alertTests.raw missing")
 	}
 }
