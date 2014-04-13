@@ -126,7 +126,7 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 }
 
 
-// Handle incomming "tx" msg
+// Handle incoming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
 	tid := btc.NewSha2Hash(pl)
 	NeedThisTx(tid, func() {

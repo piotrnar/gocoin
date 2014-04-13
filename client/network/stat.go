@@ -45,7 +45,7 @@ func Look4conn(par string) (c *OneConnection) {
 
 func (v *OneConnection) Stats() (s string) {
 	s += fmt.Sprintf("Connection ID %d:\n", v.ConnID)
-	if v.Incomming {
+	if v.Incoming {
 		s += fmt.Sprintln("Comming from", v.PeerAddr.Ip())
 	} else {
 		s += fmt.Sprintln("Going to", v.PeerAddr.Ip())

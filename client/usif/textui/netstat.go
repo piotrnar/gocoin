@@ -31,7 +31,7 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad, er := network.NewIncommingPeer(par)
+	ad, er := network.NewIncomingPeer(par)
 	if er != nil {
 		fmt.Println(par, er.Error())
 		return
@@ -65,7 +65,7 @@ func net_stats(par string) {
 		v.Mutex.Lock()
 		fmt.Printf("%8d) ", v.ConnID)
 
-		if v.Incomming {
+		if v.Incoming {
 			fmt.Print("<- ")
 		} else {
 			fmt.Print(" ->")

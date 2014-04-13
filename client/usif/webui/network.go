@@ -41,7 +41,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 
 		v.Mutex.Lock()
 		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), -1)
-		if v.Incomming {
+		if v.Incoming {
 			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/incoming.png\">", 1)
 		} else {
 			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/outgoing.png\">", 1)

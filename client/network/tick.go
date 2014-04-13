@@ -177,9 +177,9 @@ func tcp_server() {
 				var terminate bool
 
 				if common.DebugLevel>0 {
-					fmt.Println("Incomming connection from", tc.RemoteAddr().String())
+					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
-				ad, e := NewIncommingPeer(tc.RemoteAddr().String())
+				ad, e := NewIncomingPeer(tc.RemoteAddr().String())
 				if e == nil {
 					// Hammering protection
 					HammeringMutex.Lock()
@@ -193,10 +193,10 @@ func tcp_server() {
 					}
 
 					if !terminate {
-						// Incomming IP passed all the initial checks - talk to it
+						// Incoming IP passed all the initial checks - talk to it
 						conn := NewConnection(ad)
 						conn.ConnectedAt = time.Now()
-						conn.Incomming = true
+						conn.Incoming = true
 						conn.NetConn = tc
 						Mutex_net.Lock()
 						if _, ok := OpenCons[ad.UniqID()]; ok {
@@ -219,7 +219,7 @@ func tcp_server() {
 					}
 				} else {
 					if common.DebugLevel>0 {
-						println("NewIncommingPeer:", e.Error())
+						println("NewIncomingPeer:", e.Error())
 					}
 					common.CountSafe("InConnRefused")
 					terminate = true
@@ -236,7 +236,7 @@ func tcp_server() {
 	}
 	Mutex_net.Lock()
 	for _, c := range OpenCons {
-		if c.Incomming {
+		if c.Incoming {
 			c.Disconnect()
 		}
 	}
@@ -426,7 +426,7 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
-	} else if c.Incomming {
+	} else if c.Incoming {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()

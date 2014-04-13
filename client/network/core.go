@@ -41,7 +41,7 @@ const (
 
 	MIN_PROTO_VERSION = 209
 
-	HammeringMinReconnect = 60*time.Second // If any incomming peer reconnects in below this time, ban it
+	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
 )
 
 
@@ -69,7 +69,7 @@ type OneConnection struct {
 	banit bool // Ban this client after disconnecting
 
 	// TCP connection data:
-	Incomming bool
+	Incoming bool
 	NetConn net.Conn
 
 	// Handshake data
