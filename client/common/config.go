@@ -46,7 +46,7 @@ var (
 			FeePerByte uint64
 			MaxTxSize uint32
 			MinVoutValue uint64
-			// If somethign is 1KB big, it expires after this many minutes.
+			// If something is 1KB big, it expires after this many minutes.
 			// Otherwise expiration time will be proportionally different.
 			TxExpireMinPerKB uint
 			TxExpireMaxHours uint
