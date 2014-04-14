@@ -12,6 +12,8 @@ import (
 
 
 func (c *OneConnection) ProcessGetData(pl []byte) {
+	var notfound []byte
+
 	//println(c.PeerAddr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
@@ -21,49 +23,53 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 	}
 	for i:=0; i<int(cnt); i++ {
 		var typ uint32
-		var h [32]byte
-
-		e = binary.Read(b, binary.LittleEndian, &typ)
-		if e != nil {
-			println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
-			return
-		}
+		var h [36]byte
 
 		n, _ := b.Read(h[:])
-		if n!=32 {
+		if n!=36 {
 			println("ProcessGetData: pl too short", c.PeerAddr.Ip())
 			return
 		}
 
+		typ = binary.LittleEndian.Uint32(h[:4])
+
 		common.CountSafe(fmt.Sprint("GetdataType",typ))
 		if typ == 2 {
-			uh := btc.NewUint256(h[:])
+			uh := btc.NewUint256(h[4:])
 			bl, _, er := common.BlockChain.Blocks.BlockGet(uh)
 			if er == nil {
 				c.SendRawMsg("block", bl)
 			} else {
-				//println("block", uh.String(), er.Error())
+				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == 1 {
 			// transaction
-			uh := btc.NewUint256(h[:])
+			uh := btc.NewUint256(h[4:])
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[uh.Hash]; ok && tx.Blocked==0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()
 				c.SendRawMsg("tx", tx.Data)
-				if common.DebugLevel > 0 {
-					println("sent tx to", c.PeerAddr.Ip())
-				}
 			} else {
 				TxMutex.Unlock()
+				notfound = append(notfound, h[:]...)
 			}
 		} else {
 			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")
 			}
+			if typ>0 && typ<=3 /*3 is a filtered block(we dont support it)*/ {
+				notfound = append(notfound, h[:]...)
+			}
 		}
+	}
+
+	if len(notfound)>0 {
+		buf := new(bytes.Buffer)
+		btc.WriteVlen(buf, uint32(len(notfound)/36))
+		buf.Write(notfound)
+		c.SendRawMsg("notfound", buf.Bytes())
 	}
 }
 
