@@ -79,10 +79,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	ch.Save()
 }
 
-func (n *BlockTreeNode) ParenHash() *Uint256 {
-	return NewUint256(n.BlockHeader[4:36])
-}
-
 func (n *BlockTreeNode) Timestamp() (uint32) {
 	if n.Height==0 {
 		return GenesisBlockTime

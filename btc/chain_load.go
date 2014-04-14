@@ -39,9 +39,10 @@ func (ch *Chain)loadBlockIndex() {
 			// skip root block (should be only one)
 			continue
 		}
-		par, ok := ch.BlockIndex[v.ParenHash().BIdx()]
+
+		par, ok := ch.BlockIndex[NewUint256(v.BlockHeader[4:36]).BIdx()]
 		if !ok {
-			panic(v.BlockHash.String()+" has no Parent "+v.ParenHash().String())
+			panic(v.BlockHash.String()+" has no Parent "+NewUint256(v.BlockHeader[4:36]).String())
 		}
 		/*if par.Height+1 != v.Height {
 			panic("height mismatch")
