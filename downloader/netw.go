@@ -353,6 +353,7 @@ func (c *one_net_conn) run_recv() {
 				parse_addr(msg.pl)
 
 			case "inv":
+			case "alert":
 
 			case "pong":
 				if GetRunPings() {
