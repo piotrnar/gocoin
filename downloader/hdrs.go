@@ -45,7 +45,7 @@ func SetAllHeadersDone(res bool) {
 
 func chkblock(bl *btc.Block) (er error) {
 	// Check timestamp (must not be higher than now +2 hours)
-	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
+	if int64(bl.BlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
 		er = errors.New("CheckBlock() : block timestamp too far in the future")
 		return
 	}
@@ -53,8 +53,6 @@ func chkblock(bl *btc.Block) (er error) {
 	if prv, pres := MemBlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
 		if prv.Parent == nil {
 			// This is genesis block
-			prv.Timestamp = bl.BlockTime
-			prv.Bits = bl.Bits
 			er = errors.New("Genesis")
 			return
 		} else {
@@ -62,15 +60,15 @@ func chkblock(bl *btc.Block) (er error) {
 		}
 	}
 
-	prevblk, ok := MemBlockChain.BlockIndex[btc.NewUint256(bl.Parent).BIdx()]
+	prevblk, ok := MemBlockChain.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
 		return
 	}
 
 	// Check proof of work
-	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime)
-	if bl.Bits != gnwr {
+	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime())
+	if bl.Bits() != gnwr {
 		if !Testnet || ((prevblk.Height+1)%2016)!=0 {
 			er = errors.New(fmt.Sprint("CheckBlock: Incorrect proof of work at block", prevblk.Height+1))
 		}
@@ -80,8 +78,8 @@ func chkblock(bl *btc.Block) (er error) {
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
-	cur.Bits = bl.Bits
-	cur.Timestamp = bl.BlockTime
+	cur.TxCount = uint32(bl.TxCount)
+	copy(cur.BlockHeader[:], bl.Raw[:80])
 	prevblk.Childs = append(prevblk.Childs, cur)
 	MemBlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
 

@@ -157,3 +157,94 @@ func blockWanted(h []byte) (yes bool) {
 	}
 	return
 }
+
+// Read VLen followed by the number of locators
+// parse the payload of getblocks and getheaders messages
+func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint256, er error) {
+	var cnt uint64
+	var h [32]byte
+	var ver uint32
+
+	b := bytes.NewReader(pl)
+
+	// version
+	if er = binary.Read(b, binary.LittleEndian, &ver); er != nil {
+		return
+	}
+
+	// hash count
+	cnt, er = btc.ReadVLen(b)
+	if er != nil {
+		return
+	}
+
+	// block locator hashes
+	if cnt>0 {
+		h2get = make([]*btc.Uint256, cnt)
+		for i:=0; i<int(cnt); i++ {
+			if _, er = b.Read(h[:]); er!=nil {
+				return
+			}
+			h2get[i] = btc.NewUint256(h[:])
+		}
+	}
+
+	// hash_stop
+	if _, er = b.Read(h[:]); er!=nil {
+		return
+	}
+	hashstop = btc.NewUint256(h[:])
+
+	return
+}
+
+
+// Handle getheaders protocol command
+// https://en.bitcoin.it/wiki/Protocol_specification#getheaders
+func (c *OneConnection) GetHeaders(pl []byte) {
+	h2get, hashstop, e := parseLocatorsPayload(pl)
+	if e != nil || hashstop==nil {
+		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip())
+		common.CountSafe("GetHdrsBadPayload")
+		c.DoS()
+		return
+	}
+
+	if common.DebugLevel > 1 {
+		println("GetHeaders", len(h2get), hashstop.String())
+	}
+
+	var best_block, last_block *btc.BlockTreeNode
+
+	common.BlockChain.BlockIndexAccess.Lock()
+	if len(h2get) > 0 {
+		for i := range h2get {
+			if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
+				if best_block==nil || bl.Height > best_block.Height {
+					best_block = bl
+				}
+			}
+		}
+	} else {
+		best_block = common.BlockChain.BlockIndex[hashstop.BIdx()]
+	}
+	last_block = common.BlockChain.BlockTreeEnd
+	common.BlockChain.BlockIndexAccess.Unlock()
+
+	var resp []byte
+	var cnt uint32
+	for cnt<2000 {
+		best_block = best_block.FindPathTo(last_block)
+		if best_block==nil {
+			break
+		}
+		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero
+		cnt++
+	}
+
+	out := new(bytes.Buffer)
+	btc.WriteVlen(out, cnt)
+	out.Write(resp)
+	c.SendRawMsg("headers", out.Bytes())
+	return
+}

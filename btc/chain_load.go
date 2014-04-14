@@ -4,21 +4,18 @@ import (
 )
 
 
-func nextBlock(ch *Chain, hash, prev []byte, height, bits, timestamp, blen uint32) {
+func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 	bh := NewUint256(hash[:])
-	if have, ok := ch.BlockIndex[bh.BIdx()]; ok {
+	if _, ok := ch.BlockIndex[bh.BIdx()]; ok {
 		println("nextBlock:", bh.String(), "- already in")
-		have.Bits = bits
-		have.Timestamp = timestamp
 		return
 	}
 	v := new(BlockTreeNode)
 	v.BlockHash = bh
-	v.parenHash = NewUint256(prev[:])
 	v.Height = height
-	v.Bits = bits
-	v.Timestamp = timestamp
 	v.BlockSize = blen
+	v.TxCount = txs
+	copy(v.BlockHeader[:], header)
 	ch.BlockIndex[v.BlockHash.BIdx()] = v
 }
 
@@ -28,7 +25,6 @@ func (ch *Chain)loadBlockIndex() {
 	ch.BlockIndex = make(map[[Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
-	ch.BlockTreeRoot.Bits = nProofOfWorkLimit
 	ch.BlockIndex[ch.Genesis.BIdx()] = ch.BlockTreeRoot
 
 
@@ -43,16 +39,15 @@ func (ch *Chain)loadBlockIndex() {
 			// skip root block (should be only one)
 			continue
 		}
-		par, ok := ch.BlockIndex[v.parenHash.BIdx()]
+		par, ok := ch.BlockIndex[v.ParenHash().BIdx()]
 		if !ok {
-			panic(v.BlockHash.String()+" has no Parent "+v.parenHash.String())
+			panic(v.BlockHash.String()+" has no Parent "+v.ParenHash().String())
 		}
 		/*if par.Height+1 != v.Height {
 			panic("height mismatch")
 		}*/
 		v.Parent = par
 		v.Parent.addChild(v)
-		v.parenHash = nil // we wont need this anymore
 	}
 	if tlb == nil {
 		//println("No last block - full rescan will be needed")

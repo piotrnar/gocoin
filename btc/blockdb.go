@@ -25,7 +25,7 @@ const (
 
 /*
 	blockchain.dat - contains raw blocks data, no headers, nothing
-	blockchain.idx - contains records of 93 bytes (all values LSB):
+	blockchain.idx - DEPRECATED - contains records of 92 bytes (all values LSB):
 		[0] - flags:
 			bit(0) - "trusted" flag - this block's scripts have been verified
 			bit(1) - "invalid" flag - this block's scripts have failed
@@ -38,6 +38,19 @@ const (
 		[76:80] - 32-bit block's bits
 		[80:88] - 64-bit block pos in blockchain.dat file
 		[88:92] - 32-bit block lenght in bytes
+
+	blockchain.new - contains records of 136 bytes (all values LSB):
+		[0] - flags:
+			bit(0) - "trusted" flag - this block's scripts have been verified
+			bit(1) - "invalid" flag - this block's scripts have failed
+			bit(2) - "compressed" flag - this block's data is compressed
+			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
+		[4:36]  - 256-bit block hash
+		[36:40] - 32-bit block height (genesis is 0)
+		[40:48] - 64-bit block pos in blockchain.dat file
+		[48:52] - 32-bit block lenght in bytes
+		[52:56] - 32-bit number of transaction in the block
+		[56:136] - 80 bytes blocks header
 */
 
 
@@ -67,6 +80,8 @@ type BlockDB struct {
 
 
 func NewBlockDB(dir string) (db *BlockDB) {
+	BlockDBConvertIndexFile(dir)
+
 	db = new(BlockDB)
 	db.dirname = dir
 	if db.dirname!="" && db.dirname[len(db.dirname )-1]!='/' && db.dirname[len(db.dirname )-1]!='\\' {
@@ -78,12 +93,96 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.blockdata == nil {
 		panic("Cannot open blockchain.dat")
 	}
-	db.blockindx, _ = os.OpenFile(db.dirname+"blockchain.idx", os.O_RDWR|os.O_CREATE, 0660)
+
+	db.blockindx, _ = os.OpenFile(db.dirname+"blockchain.new", os.O_RDWR|os.O_CREATE, 0660)
 	if db.blockindx == nil {
-		panic("Cannot open blockchain.idx")
+		panic("Cannot open blockchain.new")
 	}
 	db.cache = make(map[[Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
 	return
+}
+
+
+func BlockDBConvertIndexFile(dir string) {
+	f, _ := os.Open(dir + "blockchain.idx")
+	if f == nil {
+		return // nothing to convert
+	}
+	fmt.Println("Converting Block Database to the new format - please be patient!")
+	id, _ := ioutil.ReadAll(f)
+	f.Close()
+
+	fmt.Println(len(id)/92, "blocks in the index")
+
+	f, _ = os.Open(dir + "blockchain.dat")
+	if f == nil {
+		panic("blockchain.dat not found")
+	}
+	defer f.Close()
+
+	var (
+		datlen, sofar, sf2, tmp int64
+		fl, le, he uint32
+		po uint64
+		buf [2*1024*1024]byte  // pre-allocate two 2MB buffers
+		blk []byte
+	)
+
+	if fi, _ := f.Stat(); fi != nil {
+		datlen = fi.Size()
+	} else {
+		panic("Stat() failed on blockchain.dat")
+	}
+
+
+	nidx := new(bytes.Buffer)
+
+	for i:=0; i+92<=len(id); i+=92 {
+		fl = binary.LittleEndian.Uint32(id[i:i+4])
+		he = binary.LittleEndian.Uint32(id[i+68:i+72])
+		po = binary.LittleEndian.Uint64(id[i+80:i+88])
+		le = binary.LittleEndian.Uint32(id[i+88:i+92])
+
+		f.Seek(int64(po), os.SEEK_SET)
+		if _, er := f.Read(buf[:le]); er != nil {
+			panic(er.Error())
+		}
+		if (fl&BLOCK_COMPRSD) != 0 {
+			if (fl&BLOCK_SNAPPED) != 0 {
+				blk, _ = snappy.Decode(nil, buf[:le])
+			} else {
+				gz, _ := gzip.NewReader(bytes.NewReader(buf[:le]))
+				blk, _ = ioutil.ReadAll(gz)
+				gz.Close()
+			}
+		} else {
+			blk = buf[:le]
+		}
+
+		tx_n, _ := VLen(blk[80:])
+
+		binary.Write(nidx, binary.LittleEndian, fl)
+		nidx.Write(id[i+4:i+36])
+		binary.Write(nidx, binary.LittleEndian, he)
+		binary.Write(nidx, binary.LittleEndian, po)
+		binary.Write(nidx, binary.LittleEndian, le)
+		binary.Write(nidx, binary.LittleEndian, uint32(tx_n))
+		nidx.Write(blk[:80])
+
+		sf2 += int64(len(blk))
+		tmp = sofar + int64(le)
+		if ((tmp^sofar) >> 20) != 0 {
+			fmt.Printf("\r%d / %d MB processed so far (%d)  ", tmp>>20, datlen>>20, sf2>>20)
+		}
+		sofar = tmp
+	}
+	fmt.Println()
+
+	fmt.Println("Almost there - just save the new index file... don't you dare to stop now!")
+	ioutil.WriteFile(dir+"blockchain.new", nidx.Bytes(), 0666)
+	os.Rename(dir+"blockchain.idx", dir+"blockchain_backup.idx")
+	fmt.Println("The old index backed up at blockchain_backup.dat")
+	fmt.Println("Conversion done and will not be neded again, unless you downgrade.")
 }
 
 
@@ -147,12 +246,11 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 	}
 	db.blockindx.Write(flagz[:])
 	db.blockindx.Write(bl.Hash.Hash[0:32])
-	db.blockindx.Write(bl.Raw[4:36])
 	binary.Write(db.blockindx, binary.LittleEndian, uint32(height))
-	binary.Write(db.blockindx, binary.LittleEndian, uint32(bl.BlockTime))
-	binary.Write(db.blockindx, binary.LittleEndian, uint32(bl.Bits))
 	binary.Write(db.blockindx, binary.LittleEndian, uint64(pos))
 	binary.Write(db.blockindx, binary.LittleEndian, blksize)
+	binary.Write(db.blockindx, binary.LittleEndian, uint32(bl.TxCount))
+	db.blockindx.Write(bl.Raw[:80])
 
 	db.mutex.Lock()
 	db.blockIndex[bl.Hash.BIdx()] = &oneBl{fpos:uint64(pos),
@@ -271,8 +369,9 @@ func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
 }
 
 
-func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []byte, h, bits, tim, blen uint32)) (e error) {
-	var b [92]byte
+func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []byte, height, blen, txs uint32)) (e error) {
+	var b [136]byte
+	var bh, txs uint32
 	var maxdatfilepos int64
 	validpos, _ := db.blockindx.Seek(0, os.SEEK_SET)
 	for !AbortNow {
@@ -290,10 +389,11 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 		ob.trusted = (b[0]&BLOCK_TRUSTED) != 0
 		ob.compressed = (b[0]&BLOCK_COMPRSD) != 0
 		ob.snappied = (b[0]&BLOCK_SNAPPED) != 0
-		ob.fpos = binary.LittleEndian.Uint64(b[80:88])
-		ob.blen = binary.LittleEndian.Uint32(b[88:92])
+		bh = binary.LittleEndian.Uint32(b[36:40])
+		ob.fpos = binary.LittleEndian.Uint64(b[40:48])
+		ob.blen = binary.LittleEndian.Uint32(b[48:52])
+		txs = binary.LittleEndian.Uint32(b[52:56])
 		ob.ipos = validpos
-
 
 		BlockHash := b[4:36]
 		db.blockIndex[NewUint256(BlockHash).BIdx()] = ob
@@ -302,10 +402,8 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, prv []by
 			maxdatfilepos = int64(ob.fpos)+int64(ob.blen)
 		}
 
-		walk(ch, BlockHash, b[36:68], binary.LittleEndian.Uint32(b[68:72]),
-			binary.LittleEndian.Uint32(b[76:80]), binary.LittleEndian.Uint32(b[72:76]),
-			ob.blen)
-		validpos += 92
+		walk(ch, b[4:36], b[56:136], bh, ob.blen, txs)
+		validpos += 136
 	}
 	// In case if there was some trash at the end of data or index file, this should truncate it:
 	db.blockindx.Seek(validpos, os.SEEK_SET)

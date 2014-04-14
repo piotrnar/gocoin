@@ -58,18 +58,18 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 		if ch.testnet() {
 			// If the new block's timestamp is more than 2* 10 minutes
 			// then allow mining of a min-difficulty block.
-			if ts > lst.Timestamp + nTargetSpacing*2 {
+			if ts > lst.Timestamp() + nTargetSpacing*2 {
 				return nProofOfWorkLimit;
 			} else {
 				// Return the last non-special-min-difficulty-rules-block
 				prv := lst
-				for prv.Parent!=nil && (prv.Height%nInterval)!=0 && prv.Bits==nProofOfWorkLimit {
+				for prv.Parent!=nil && (prv.Height%nInterval)!=0 && prv.Bits()==nProofOfWorkLimit {
 					prv = prv.Parent
 				}
-				return prv.Bits
+				return prv.Bits()
 			}
 		}
-		return lst.Bits
+		return lst.Bits()
 	}
 
 	prv := lst
@@ -77,7 +77,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 		prv = prv.Parent
 	}
 
-	nActualTimespan := int64(lst.Timestamp - prv.Timestamp)
+	nActualTimespan := int64(lst.Timestamp() - prv.Timestamp())
 
 	if nActualTimespan < nTargetTimespan/4 {
 		nActualTimespan = nTargetTimespan/4
@@ -87,7 +87,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 	}
 
 	// Retarget
-	bnNew := SetCompact(prv.Bits)
+	bnNew := SetCompact(prv.Bits())
 	bnNew.Mul(bnNew, big.NewInt(nActualTimespan))
 	bnNew.Div(bnNew, big.NewInt(nTargetTimespan))
 

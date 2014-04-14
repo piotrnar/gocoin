@@ -109,58 +109,15 @@ func addInvBlockBranch(inv map[[32]byte] bool, bl *btc.BlockTreeNode, stop *btc.
 }
 
 
-func (c *OneConnection) ProcessGetBlocks(pl []byte) {
-	b := bytes.NewReader(pl)
-	var ver uint32
-	e := binary.Read(b, binary.LittleEndian, &ver)
-	if e != nil {
-		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
-		common.CountSafe("GetblksNoVer")
-		c.DoS()
-		return
-	}
-	cnt, e := btc.ReadVLen(b)
-	if e != nil {
-		println("ProcessGetBlocks:", e.Error(), c.PeerAddr.Ip())
-		common.CountSafe("GetblksNoVlen")
-		c.DoS()
-		return
-	}
+func (c *OneConnection) GetBlocks(pl []byte) {
+	h2get, hashstop, e := parseLocatorsPayload(pl)
 
-	if cnt<1 {
-		println("ProcessGetBlocks: empty inv list", c.PeerAddr.Ip())
-		common.CountSafe("GetblksNoInvs")
+	if e!=nil || len(h2get)<1 || hashstop==nil {
+		println("GetBlocks: error parsing payload from", c.PeerAddr.Ip())
+		common.CountSafe("GetBlksBadPayload")
 		c.DoS()
 		return
 	}
-
-	h2get := make([]*btc.Uint256, cnt)
-	var h [32]byte
-	for i:=0; i<int(cnt); i++ {
-		n, _ := b.Read(h[:])
-		if n != 32 {
-			if common.DebugLevel>0 {
-				println("getblocks too short", c.PeerAddr.Ip())
-			}
-			common.CountSafe("GetblksTooShort")
-			c.DoS()
-			return
-		}
-		h2get[i] = btc.NewUint256(h[:])
-		if common.DebugLevel>2 {
-			println(c.PeerAddr.Ip(), "getbl", h2get[i].String())
-		}
-	}
-	n, _ := b.Read(h[:])
-	if n != 32 {
-		if common.DebugLevel>0 {
-			println("getblocks does not have hash_stop", c.PeerAddr.Ip())
-		}
-		common.CountSafe("GetblksNoStop")
-		c.DoS()
-		return
-	}
-	hashstop := btc.NewUint256(h[:])
 
 	invs := make(map[[32]byte] bool, 500)
 	for i := range h2get {

@@ -236,7 +236,7 @@ func (c *one_net_conn) block(d []byte) {
 	}
 
 	bl.BuildTxList()
-	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot) {
+	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
 		fmt.Println(c.peerip, " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return

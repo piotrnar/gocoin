@@ -60,15 +60,15 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	next_diff_change := 2016-end.Height%2016
 
 	for ; end!=nil; cnt++ {
-		if now-int64(end.Timestamp) > int64(common.CFG.MiningStatHours)*3600 {
+		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
 			break
 		}
-		lastts = int64(end.Timestamp)
+		lastts = int64(end.Timestamp())
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return
 		}
-		diff += btc.GetDifficulty(end.Bits)
+		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.BlocksMiner(bl)
 		if miner!="" {
 			om = m[miner]

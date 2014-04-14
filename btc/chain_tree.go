@@ -3,20 +3,19 @@ package btc
 import (
 	"fmt"
 	"time"
+	"encoding/binary"
 )
 
 
 type BlockTreeNode struct {
 	BlockHash *Uint256
 	Height uint32
-	Bits uint32
-	Timestamp uint32
-	parenHash *Uint256
 	Parent *BlockTreeNode
 	Childs []*BlockTreeNode
 	BlockSize uint32
+	TxCount uint32
+	BlockHeader [80]byte
 }
-
 
 func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var b []byte
@@ -80,6 +79,25 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	ch.Save()
 }
 
+func (n *BlockTreeNode) ParenHash() *Uint256 {
+	return NewUint256(n.BlockHeader[4:36])
+}
+
+func (n *BlockTreeNode) Timestamp() (uint32) {
+	if n.Height==0 {
+		return GenesisBlockTime
+	} else {
+		return binary.LittleEndian.Uint32(n.BlockHeader[68:72])
+	}
+}
+
+func (n *BlockTreeNode) Bits() (uint32) {
+	if n.Height==0 {
+		return nProofOfWorkLimit
+	} else {
+		return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
+	}
+}
 
 // Looks for the fartherst node
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {

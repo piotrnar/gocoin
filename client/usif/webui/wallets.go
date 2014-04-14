@@ -29,7 +29,7 @@ func raw_balance(w http.ResponseWriter, r *http.Request) {
 func get_block_time(height uint32) (res uint32) {
 	common.Last.Mutex.Lock()
 	for bl:=common.Last.Block; bl!=nil && bl.Height>=height; bl=bl.Parent {
-		res = bl.Timestamp
+		res = bl.Timestamp()
 	}
 	common.Last.Mutex.Unlock()
 	return

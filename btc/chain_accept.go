@@ -27,7 +27,7 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 // to its branch later on.
 func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
-	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
+	prevblk, ok := ch.BlockIndex[NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		panic("This should not happen")
 	}
@@ -37,8 +37,8 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
-	cur.Bits = bl.Bits
-	cur.Timestamp = bl.BlockTime
+	cur.TxCount = uint32(bl.TxCount)
+	copy(cur.BlockHeader[:], bl.Raw[:80])
 
 	// Add this block to the block index
 	ch.BlockIndexAccess.Lock()
@@ -184,7 +184,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					done <- true
 				} else {
 				    go func (sig []byte, prv []byte, i int, tx *Tx) {
-						done <- VerifyTxScript(sig, prv, i, tx, bl.BlockTime>=BIP16SwitchTime)
+						done <- VerifyTxScript(sig, prv, i, tx, bl.BlockTime()>=BIP16SwitchTime)
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 

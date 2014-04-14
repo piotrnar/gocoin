@@ -37,7 +37,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 			network.TxMined(bl.Txs[i].Hash)
 		}
 
-		if int64(bl.BlockTime) > time.Now().Add(-10*time.Minute).Unix() {
+		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
 			common.Busy("NetRouteInv")
 			network.NetRouteInv(2, bl.Hash, from)
@@ -268,10 +268,10 @@ func main() {
 	network.InitPeers(common.GocoinHomeDir)
 
 	common.Last.Block = common.BlockChain.BlockTreeEnd
-	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp), 0)
+	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
 
 	for k, v := range common.BlockChain.BlockIndex {
-		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp), 0)}
+		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
 	}
 
 	if common.CFG.TextUI.Enabled {

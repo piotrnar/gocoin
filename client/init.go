@@ -46,7 +46,7 @@ func host_init() {
 	os.MkdirAll(common.GocoinHomeDir+"wallet", 0770)
 	utils.LockDatabaseDir(common.GocoinHomeDir)
 
-	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.idx")
+	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.dat")
 	if e!=nil {
 		os.RemoveAll(common.GocoinHomeDir)
 		fmt.Println("You seem to be running Gocoin for the fist time on this PC")

@@ -39,8 +39,8 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	common.Last.Mutex.Lock()
 	s = strings.Replace(s, "{LAST_BLOCK_HASH}", common.Last.Block.BlockHash.String(), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(common.Last.Block.Height), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_TIME}", time.Unix(int64(common.Last.Block.Timestamp), 0).Format("2006/01/02 15:04:05"), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", common.NumberToString(btc.GetDifficulty(common.Last.Block.Bits)), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_TIME}", time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"), 1)
+	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", common.NumberToString(btc.GetDifficulty(common.Last.Block.Bits())), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(common.Last.Time).String(), 1)
 	common.Last.Mutex.Unlock()
 

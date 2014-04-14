@@ -386,7 +386,7 @@ func (c *OneConnection) Run() {
 				netBlockReceived(c, cmd.pl)
 
 			case "getblocks":
-				c.ProcessGetBlocks(cmd.pl)
+				c.GetBlocks(cmd.pl)
 
 			case "getdata":
 				c.ProcessGetData(cmd.pl)
@@ -410,6 +410,9 @@ func (c *OneConnection) Run() {
 				} else {
 					common.CountSafe("PongMismatch")
 				}
+
+			case "getheaders":
+				c.GetHeaders(cmd.pl)
 
 			case "notfound":
 				common.CountSafe("NotFound")

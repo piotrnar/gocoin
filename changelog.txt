@@ -1,4 +1,12 @@
-0.9.7
+0.9.8
+* The block database uses a different index file ("blockchain.new" instead of "blockchain.idx")
+  The client will convert the old index into the new one, during the first start.
+  Going back to a previous version (after coversion), rename blockchain_backup.idx to blockchain.idx
+  If you don't plan to go back to a previous version anymore, delete blockchain_backup.idx
+* Added support for "getheaders" command
+* Some code in the btc lib has been restructured (now ther are functions in place of fields)
+
+0.9.7 - 2014-04-13
 * Wallets tab of WebUI has an option to move an empty address to UNUSED wallet
 * A user can quickly switch wallet being at any tab of the WebUI, as well as to reload it
 * SendTx tab of WebUI refreshed Address Book using Ajax and addrs.xml

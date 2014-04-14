@@ -25,7 +25,7 @@ func do_mining(s string) {
 	common.Last.Mutex.Unlock()
 	cnt, diff := 0, float64(0)
 	tot_blocks, tot_blocks_len := 0, 0
-	for end.Timestamp >= lim {
+	for end.Timestamp() >= lim {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			println(cnt, e.Error())
@@ -38,14 +38,14 @@ func do_mining(s string) {
 		}
 		tot_blocks++
 		tot_blocks_len += len(bl)
-		diff += btc.GetDifficulty(block.Bits)
+		diff += btc.GetDifficulty(block.Bits())
 		if common.MinedByUs(bl) {
 			block.BuildTxList()
 			totbtc += block.Txs[0].TxOut[0].Value
 			cnt++
 			fmt.Printf("%4d) %6d %s %s  %5.2f => %5.2f BTC total, %d txs, %.1f KB\n",
 				cnt, end.Height, end.BlockHash.String(),
-				time.Unix(int64(end.Timestamp), 0).Format("2006-01-02 15:04:05"),
+				time.Unix(int64(end.Timestamp()), 0).Format("2006-01-02 15:04:05"),
 				float64(block.Txs[0].TxOut[0].Value)/1e8, float64(totbtc)/1e8,
 				len(block.Txs), float64(len(bl))/1e3)
 		}

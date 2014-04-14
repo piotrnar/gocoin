@@ -9,17 +9,8 @@ type Block struct {
 	Raw []byte
 	Hash *Uint256
 	Txs []*Tx
-
-	Version uint32
-	Parent []byte
-	MerkleRoot []byte
-	BlockTime uint32
-	Bits uint32
-	Nonce uint32
 	TxCount, TxOffset int  // Number of transactions and byte offset to the first one
-
-	// if the block is trusted, we do not check signatures and some other things...
-	Trusted bool
+	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
 }
 
@@ -32,18 +23,29 @@ func NewBlock(data []byte) (*Block, error) {
 	var bl Block
 	bl.Hash = NewSha2Hash(data[:80])
 	bl.Raw = data
-	bl.Version = binary.LittleEndian.Uint32(data[0:4])
-	bl.Parent = data[4:36]
-	bl.MerkleRoot = data[36:68]
-	bl.BlockTime = binary.LittleEndian.Uint32(data[68:72])
-	bl.Bits = binary.LittleEndian.Uint32(data[72:76])
-	bl.Nonce = binary.LittleEndian.Uint32(data[76:80])
 	bl.TxCount, bl.TxOffset = VLen(data[80:])
 	if bl.TxOffset == 0 {
 		return nil, errors.New("Block's txn_count field corrupt")
 	}
 	bl.TxOffset += 80
 	return &bl, nil
+}
+
+
+func (bl *Block)ParentHash() []byte {
+	return bl.Raw[4:36]
+}
+
+func (bl *Block)MerkleRoot() []byte {
+	return bl.Raw[36:68]
+}
+
+func (bl *Block)BlockTime() uint32 {
+	return binary.LittleEndian.Uint32(bl.Raw[68:72])
+}
+
+func (bl *Block)Bits() uint32 {
+	return binary.LittleEndian.Uint32(bl.Raw[72:76])
 }
 
 

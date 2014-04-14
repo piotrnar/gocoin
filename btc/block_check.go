@@ -16,7 +16,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	}
 
 	// Check timestamp (must not be higher than now +2 hours)
-	if int64(bl.BlockTime) > time.Now().Unix() + 2 * 60 * 60 {
+	if int64(bl.BlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
 		er = errors.New("CheckBlock() : block timestamp too far in the future")
 		dos = true
 		return
@@ -25,8 +25,6 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	if prv, pres := ch.BlockIndex[bl.Hash.BIdx()]; pres {
 		if prv.Parent == nil {
 			// This is genesis block
-			prv.Timestamp = bl.BlockTime
-			prv.Bits = bl.Bits
 			er = errors.New("Genesis")
 			return
 		} else {
@@ -35,7 +33,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		}
 	}
 
-	prevblk, ok := ch.BlockIndex[NewUint256(bl.Parent).BIdx()]
+	prevblk, ok := ch.BlockIndex[NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
 		maybelater = true
@@ -46,13 +44,13 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(prevblk.Height+1)>=MovingCheckopintDepth {
 		er = errors.New(fmt.Sprint("CheckBlock: Block ", bl.Hash.String(),
 			" hooks too deep into the chain: ", prevblk.Height+1, "/", ch.BlockTreeEnd.Height, " ",
-			NewUint256(bl.Parent).String()))
+			NewUint256(bl.ParentHash()).String()))
 		return
 	}
 
 	// Check proof of work
-	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime)
-	if bl.Bits != gnwr {
+	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime())
+	if bl.Bits() != gnwr {
 		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
 			" exp:", gnwr)
 
@@ -81,7 +79,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		}
 
 		// Check Merkle Root - that's importnant
-		if !bytes.Equal(GetMerkel(bl.Txs), bl.MerkleRoot) {
+		if !bytes.Equal(GetMerkel(bl.Txs), bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch")
 			dos = true
 			return

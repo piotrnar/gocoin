@@ -151,8 +151,8 @@ func show_info(par string) {
 	fmt.Println("Last Block:", common.Last.Block.BlockHash.String())
 	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
 		common.Last.Block.Height,
-		time.Unix(int64(common.Last.Block.Timestamp), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits), time.Now().Sub(common.Last.Time).String())
+		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
+		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
@@ -231,7 +231,7 @@ func ui_dbg(par string) {
 
 func show_cached(par string) {
 	for _, v := range network.CachedBlocks {
-		fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.Parent).String())
+		fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
 	}
 }
 
