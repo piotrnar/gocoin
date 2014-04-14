@@ -3,7 +3,7 @@
   The client will convert the old index into the new one, during the first start.
   Going back to a previous version (after coversion), rename blockchain_backup.idx to blockchain.idx
   If you don't plan to go back to a previous version anymore, delete blockchain_backup.idx
-* Added support for "getheaders" command
+* Added support for "getheaders" and "notfound" commands
 * Some code in the btc lib has been restructured (now ther are functions in place of fields)
 
 0.9.7 - 2014-04-13
