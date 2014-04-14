@@ -5,7 +5,6 @@ Client:
 * Improve the database folder locking in Linux
 * Make the address book separate from the wallets
 * Implement "notfound"
-* Implement "getheaders"
 * Implement "mempool"
 
 Core lib:
