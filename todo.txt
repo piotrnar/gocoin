@@ -3,7 +3,6 @@ Downloader:
 
 Client:
 * Improve the database folder locking in Linux
-* Make the address book separate from the wallets
 * Implement "mempool"
 
 Core lib:
