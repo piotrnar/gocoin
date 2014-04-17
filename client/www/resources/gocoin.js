@@ -77,3 +77,7 @@ function pushtx() {
 		form.submit()
 	}
 }
+
+function savecfg() {
+	document.location='/cfg?savecfg&sid='+sid
+}

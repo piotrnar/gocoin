@@ -45,6 +45,15 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if checksid(r) && len(r.Form["savecfg"])>0 {
+		dat, _ := json.Marshal(&common.CFG)
+		if dat != nil {
+			ioutil.WriteFile(common.ConfigFile, dat, 0660)
+		}
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
 	if checksid(r) && len(r.Form["freemem"])>0 {
 		debug.FreeOSMemory()
 		http.Redirect(w, r, "/", http.StatusFound)

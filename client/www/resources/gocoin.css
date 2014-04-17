@@ -105,6 +105,11 @@ tr.hov:hover {
 	color:#006000;
 }
 
+.note {
+	font-style:italic;
+	background-color:#eeeeff;
+}
+
 .but {
 	color:#442200;
 	background-color:#ddeeff;

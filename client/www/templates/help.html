@@ -1,19 +1,4 @@
-<h1>WebUI</h1>
-The web interface of the client node (otherwise known as WebUI) is a convenient way to interact
-with the node from a web browser launched at a local, as well as a remote host.
-It is tested with Google Chrome, but should be compatible with any modern HTML5 browser.<br>
-<br>
-By default it is accessible at TCP port <b>8833</b> and the access is restricted to local connection
-only, so you can access it only from the node's PC loading
-<a href="http://localhost:8833/">localhost:8833</a><br>
-<br>
-Note that the web interface never refreshes any data without your explicit request.<br>
-<br>
-The web interface has a main menu at the top. No matter which page you are at, the top level
-menu is always visible.<br>
-
-<hr>
-<a name="/" href="/"><h2>Home</h2></a>
+<a href="/"><h2>Home</h2></a>
 
 Pressing this link takes you to the home page of the web interface.
 
@@ -32,18 +17,23 @@ Network related information and statistics, concerning the node.
 Some other data related to your running node.<br>
 In this section you can also order the node (its garbage collector engine) to free as much memory as possible.
 
-<h3>Editing configuration file</h3>
-Press the button <span class="but">Show configuration JSON data</span> - the text area will appear with JSON encoded content of the gocoin client config file.<br>
-Change the values you need an press either <span class="but">Apply</span> or <span class="but">Apply & Save</span>.
-If you do not save the changes will not be permanent (will get undone when you shutdown the node).<br>
-To cancel editing, just reload the page, without pressing any of the two buttons.<br>
+<h3>Show configuration JSON data</h3>
+If you press this button a text area will appear with JSON encoded content of the gocoin client configuration file.
+See some help about its content <a href="http://www.assets-otc.com/gocoin/manual/client-node/config" target="_blank">here</a>.
+<br>
+Change the values you need an press either <span class="but">Apply</span> or <span class="but">Apply & Save</span>.<br>
+If you do not save, the changes will not be permanent and will get undone at the next shut down of the node.<br>
+To cancel editing, just reload the page without pressing any of the two buttons.<br>
+
+<h3>Save configuration</h3>
+Whenever you have made any changes to a running node and you want to apply they permanently, press this button to do so.
 
 <h3>Shutting down the node</h3>
 Press the <span class="but">Shutdown Node</span> button and confirm to shut down the node.<br>
-Note that after the node is off, you will not be able to launch it from the web interface (it will shut down as well).
+<span class="note">Note that after the node is off, you will not be able to launch it from the web interface (it will shut down as well).</span>
 
 <hr>
-<a name=/wal" href=/wal"><h2>Wallet</h2></a>
+<a name="wal" href=/wal"><h2>Wallet</h2></a>
 
 At this page you can check a balance of each address of you currently selected wallet, as well as quickly switch between all your available wallets.
 
@@ -83,7 +73,7 @@ You can include a content (addressees) of one wallet in another. In order to do 
 The wallets you include can be of a hidden type. In fact, including hidden wallets inside parent wallets is their only meaning of their existence.
 
 <hr>
-<a name="/snd" href="/snd"><h2>MakeTx</h2></a>
+<a name="snd" href="/snd"><h2>MakeTx</h2></a>
 
 Create a transaction to be further signed by gocoin's wallet.<br>
 It will also crate a raw transaction, which you can sign by any other wallet (e.g. bitcoin-qt).
@@ -107,84 +97,106 @@ Otherwise press it to download <b>payment.zip</b>, which you will need to extrac
 Then execute the payment command (by default it will be in file <span class="cod">pay_cmd.txt</span>) and the wallet shall create and sign the transaction, just as you have defined it here.<br>
 
 <hr>
-<a name="/net" href="/net"><h2>Network</h2></a>
+<a name="net" href="/net"><h2>Network</h2></a>
 
 The current network connections to other bitcoin peers.
 
 <h3>Incoming connections</h3>
-Click in the link [Switch ON/OFF] (right from the label "Listening for incoming TCP connections") to switch between allowing or blocking remote connections coming to your node from internet.<br>
-Note: You will need to save the config file (at the Home page) to make the change permanent.<br>
+Click in the link [<a>Switch ON/OFF</a>] (right from the label
+<span class="but">Listening for incoming TCP connections</span>)
+to switch between allowing or blocking remote connections coming to your node from internet.<br>
 <br>
-Note that switching this network on does not automatically mean that peers will be able to connect to your node. In most cases you will also need to configure your network gateway to allow incoming connections at the desired TCP port and route them to the host running the node. Also note that none of the recent versions of the satoshi's client will connect on any TCP port other then the default one (that is 8333, or 18333 for testnet).
+<span class="note">Note that switching on this does not automatically mean that peers will be able to connect to your node.
+In most cases you will also need to configure your network gateway to allow incoming connections at the desired TCP port and route them to the host running the node.
+Also mind that the recent versions of Satoshi client will not connect to your node on any port other then the default one (that is 8333, or 18333 for testnet).</span><br>
+<br>
+<span class="note">Note that you need to save configuration at the <a href="/">Home</a> page to make the change permanent.</span><br>
 
 <h3>Peer statistics</h3>
 Click on any row in the network connections table to see detailed info about each peer.<br>
 The info appears as a text box, below the table.
 
 <h3>Drop a connection</h3>
-Click on the red X icon at the right column of a row describing  a peer connection to disconnect from it.
+Click on <img src="webui/del.png"> icon at the right column of a row describing  a peer connection to disconnect from it.
 
 
 <hr>
-<a name="/txs" href="/txs"><h2>Transactions</h2></a>
+<a name="txs" href="/txs"><h2>Transactions</h2></a>
 
 Transactions memory pool, broadcasting and routing control.
 
 <h3>Memory pool</h3>
 If the memory pool is disabled the node only operates on the full blocks and never downloads any transactions.<br>
 <br>
-To enable/disable memory pool click the [Switch ON/OFF] link next to the "Memory pool" label.<br>
-Note: You will need to save the config file (at the Home page) to make the change permanent.
+To enable/disable memory pool click the [<a>Switch ON/OFF</a>] link next to the "Memory pool" label.<br>
+<br>
+<span class="note">Note that you need to save configuration at the <a href="/">Home</a> page to make the change permanent.</span><br>
 
 <h3>Relay transactions</h3>
 Having the memory pool enabled, you can setup your node to either relay incoming transactions, or not.<br>
 <br>
-Press the link right from the label to switch this option on/off.<br>
-Note: You will need to save the config file (at the Home page) to make the change permanent.
+Press the [<a>Switch ON/OFF</a>] link right from the label to switch this option on/off.<br>
+<br>
+<span class="note">Note that you need to save configuration at the <a href="/">Home</a> page to make the change permanent.</span><br>
 
 <h3>Accepted transactions</h3>
-The value on the button show how many transactions are there in the memory pool. Click on it to see the list. Your own transaction (loaded locally) will appear on the top of the list. The Sent column in the table says to how many times the transaction's data was sent to a peer and (after slash) how many times the inv was sent out. If the transaction was blocked from being relayed (assuming that the relaying was enabled), the Extras column will show the reason.
+The value on the button shows how many transactions are there in the memory pool - click on it to see the list.<br>
+Your own transaction (loaded locally) always appear on the top of the list.<br>
+The <b>Sent</b> column in the table says to how many times the transaction's data was sent to a peer and (after slash) how many times the inv was sent out.<br>
+If the transaction was blocked from being relayed (assuming that the relaying was enabled), the <b>Extras</b> column will show the reason.
 
 <h3>Own transactions</h3>
 Locally loaded transactions appear on a light-red background and they have three special icons at the right side of the row.<br>
-The first icon orders the node to broadcast a transaction to one random peer (useful for privacy purposes)<br>
-The second icon broadcast the transaction it to all the currently connected peers.<br>
-The third icon removes (unloads) the transaction from the memory pool.<br>
+ &bull; Clicking on <img src="webui/send_once.png"> - orders the node to broadcast a transaction to one random peer (useful for privacy purposes)<br>
+ &bull; Clicking on <img src="webui/send.png"> - broadcasts the transaction to all the currently connected peers.<br>
+ &bull; Clicking on <img src="webui/del.png"> - removes (unloads) the transaction from the memory pool.<br>
 <br>
 In most cases own transactions should get removed from the memory pool automatically when they get mined into a block.<br>
-It might not be a case thought, if a transaction was a subject to a so-called transaction malleability disturbance, in which case it will get mined, but the node will not remove it from the list. It is not a security problem, but had such a thing happened, just remove the transaction from the pool manually, because the node never expires own transactions.
+It may not be a case thought, if a transaction has been a subject to a so-called <i>transaction malleability</i> disturbance.
+In such case your transaction will get mined with a different TxID and your node will not automatically remove it from the list.
+It is not a security problem, but had such a thing happened, just remove the transaction from your pool manually, because the node never expires own transactions.
 
 <h3>Rejected transactions</h3>
 The value of the button next to the label shows you how many transactions were not accepted into the memory pool. You will see their list when clicking the button, along with the reason of the rejection.
 
 
 <hr>
-<a name="/blocks" href="/blocks"><h2>Blocks</h2></a>
+<a name="blocks" href="/blocks"><h2>Blocks</h2></a>
 
-This page shows an information about the recent blocks added to the block chain.
-
+This page shows an information about the recent blocks added to the block chain.<br>
+<br>
+Explanation of the timing statistics:<br>
+ &bull; <b>dload</b> - how many milliseconds it took to download the block<br>
+ &bull; <b>verif</b> - how many milliseconds it took to verify the block<br>
+ &bull; <b>ohd</b> - how many peers sent the block's data, after we had already got it (from the first one)<br>
+ 
 
 <hr>
-<a name="/miners" href="/miners"><h2>Miners</h2></a>
+<a name="miners" href="/miners"><h2>Miners</h2></a>
 
 This page shows an information about the block chain mining statistic.<br>
-Clicking on the link in the Monitor column will cause a beep, each time the selected pool would mine a new block.<br>
 <br>
-Note: You will need to save the config file (at the Home page) to make the change permanent.
+Clicking on the link in the <b>Monitor</b> column will cause a beep, each time the selected pool would mine a new block.<br>
+<br>
+<span class="note">Note that you need to save configuration at the <a href="/">Home</a> page to make the change permanent.</span><br>
 
 <hr>
 <h2>Switch wallet</h2>
 
-Allows to quickly switch a wallet, while being on any page of the WebUI.
+Allows to quickly switch a wallet, while being on any page of the WebUI.<br>
+<br>
+Just select the desired wallet from the list and it should load automatically.
 
 <hr>
 <h2>Load TX</h2>
 
 Allows to quickly import own transaction to the memory pool.<br>
 The transaction must be in a raw (hex-encoded) format with no spaces, nor any other characters except hex digits.<br>
-If the operation succeeds you will end up in Transactions page that will display the decoded transaction data.<br>
-In order to send you transaction out, make sure to broadcast it after loading.
+If the operation succeeds you will end up in <a href="txs">Transactions</a> page that will display the decoded transaction data.<br>
+<br>
+<span class="note">In order to send you transaction out, make sure to broadcast it after loading.</span>
 
-<a name="/counters" href="/counters"><h2>Stats</h2></a>
+<hr>
+<a name="counters" href="/counters"><h2>Stats</h2></a>
 
-Lots of node's internal real time counters and statistics.
+The node's internal real time counters and statistics.
