@@ -31,11 +31,11 @@
 
 
 	<h2>Last Block</h2><table>
-	<tr><td>Hash:<td><b>{LAST_BLOCK_HASH}</b>
-	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+	<tr><td>Hash:<td colspan="3"><b>{LAST_BLOCK_HASH}</b>
 	<tr><td>Timestamp:<td><b>{LAST_BLOCK_TIME}</b>
-	<tr><td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
-	<tr><td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+		<td>Received:<td><b>{LAST_BLOCK_RCVD}</b> ago
+	<tr><td>Height:<td><b>{LAST_BLOCK_HEIGHT}</b>
+		<td>Difficulty:<td><b>{LAST_BLOCK_DIFF}</b>
 	</table>
 </td>
 </tr>
@@ -43,24 +43,22 @@
 <tr><td valign="top">
 	<h2>Network</h2>
 	<table>
-	<tr><td>Downloading at:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
-	<tr><td>Uploading at:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
-	<tr><td>Net queue len:<td><b>{NET_TX_QSIZE}</b> txs,
-	&nbsp;
-	<b>{NET_BLOCK_QSIZE}</b> blocks
-	<tr><td nowrap="nowrap">Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incoming)
+	<tr><td>Hash Rate:<td><b><--NETWORK_HASHRATE--></b>
+	<tr><td nowrap="nowrap">Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incoming)
+	<tr><td>Downloading:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
+	<tr><td>Uploading:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
 	<tr><td>Extrenal IPs:<td><!--ONE_EXTERNAL_IP-->
-	<tr><td>Hashrate:<td><b><--NETWORK_HASHRATE--></b>
+	<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
 	</table>
 <td valign="top">
 	<h2>Others</h2>
 	<table>
 	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
-	<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
 	<tr><td>Node's Uptime:<td><b>{NODE_UPTIME}</b>
 	<tr><td>Mem Used MB:<td><b title="Alloc">{HEAP_SIZE_MB}</b> /
 		<b title="HeapInuse"><!--HEAPSYS_MB--></b> /
 		<b title="Sys">{SYSMEM_USED_MB}</b> &nbsp;[<a href="javascript:config('freemem')">FREE</a>]
+	<tr><td>NetMsgQueue:<td><b>{NET_TX_QSIZE}</b> txs,&nbsp;<b>{NET_BLOCK_QSIZE}</b> blocks
 	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b>{ECDSA_VERIFY_COUNT}</b>
 	<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
 	</table>

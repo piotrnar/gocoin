@@ -25,20 +25,6 @@ const (
 
 /*
 	blockchain.dat - contains raw blocks data, no headers, nothing
-	blockchain.idx - DEPRECATED - contains records of 92 bytes (all values LSB):
-		[0] - flags:
-			bit(0) - "trusted" flag - this block's scripts have been verified
-			bit(1) - "invalid" flag - this block's scripts have failed
-			bit(2) - "compressed" flag - this block's data is compressed
-			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-		[4:36]  - 256-bit block hash
-		[36:68] - 256-bit block's Parent hash
-		[68:72] - 32-bit block height (genesis is 0)
-		[72:76] - 32-bit block's timestamp
-		[76:80] - 32-bit block's bits
-		[80:88] - 64-bit block pos in blockchain.dat file
-		[88:92] - 32-bit block lenght in bytes
-
 	blockchain.new - contains records of 136 bytes (all values LSB):
 		[0] - flags:
 			bit(0) - "trusted" flag - this block's scripts have been verified
@@ -51,6 +37,21 @@ const (
 		[48:52] - 32-bit block lenght in bytes
 		[52:56] - 32-bit number of transaction in the block
 		[56:136] - 80 bytes blocks header
+
+DEPRECATED from version 0.9.8:
+	blockchain.idx - used to contain records of 92 bytes (all values LSB):
+		[0] - flags:
+			bit(0) - "trusted" flag - this block's scripts have been verified
+			bit(1) - "invalid" flag - this block's scripts have failed
+			bit(2) - "compressed" flag - this block's data is compressed
+			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
+		[4:36]  - 256-bit block hash
+		[36:68] - 256-bit block's Parent hash
+		[68:72] - 32-bit block height (genesis is 0)
+		[72:76] - 32-bit block's timestamp
+		[76:80] - 32-bit block's bits
+		[80:88] - 64-bit block pos in blockchain.dat file
+		[88:92] - 32-bit block lenght in bytes
 */
 
 
@@ -103,9 +104,13 @@ func NewBlockDB(dir string) (db *BlockDB) {
 }
 
 
+// TODO: at some point this function will become obsolete
 func BlockDBConvertIndexFile(dir string) {
 	f, _ := os.Open(dir + "blockchain.idx")
 	if f == nil {
+		if fi, _ := os.Stat(dir+"blockchain_backup.idx"); fi != nil && fi.Size()>0 {
+			fmt.Println("If you don't plan to go back to a version prior 0.9.8, delete this file:\n", dir+"blockchain_backup.idx")
+		}
 		return // nothing to convert
 	}
 	fmt.Println("Converting Block Database to the new format - please be patient!")
