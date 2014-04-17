@@ -13,7 +13,6 @@ function quickswitchwallet() {
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%"><tr>
 		<td>{MENU_LEFT}</td>
-		<td align="center"><a target="_blank" href="http://www.assets-otc.com/gocoin/manual/client-node/web-interface">Manual</>
 		<td align="center">Switch wallet:
 		<select id="qswal" onchange="quickswitchwallet()">
 		<!--QUICK_WALLET_SELECT-->
@@ -21,6 +20,7 @@ function quickswitchwallet() {
         <img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
 		</td>
 		<td align="center"><a href="javascript:pushtx()">Load TX</a></td>
-		<td align="right">{MENU_RIGHT}</td>
+		<td align="right">{MENU_RIGHT} |
+		<a href="help#{HELPTAB}">Help</a></td>
 	</tr></table>
 <hr>

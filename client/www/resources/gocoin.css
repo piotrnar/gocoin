@@ -99,6 +99,19 @@ tr.hov:hover {
 	background-color:#dddddd;
 }
 
+.cod {
+	font-family: monospace;
+	background-color:#eeeeee;
+	color:#006000;
+}
+
+.but {
+	color:#442200;
+	background-color:#ddeeff;
+	padding:4px;
+	//font-weight:bold;
+}
+
 input[type=button], input[type=submit] {
 	background-color:#dddddd;
 	font-weight:bold;

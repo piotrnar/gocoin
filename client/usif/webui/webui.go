@@ -23,7 +23,7 @@ var webuimenu = [][2]string {
 	{"/txs", "Transactions"},
 	{"/blocks", "Blocks"},
 	{"/miners", "Miners"},
-	{"/counts", "Counters"},
+	{"/counts", "Stats"},
 }
 
 const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
@@ -125,6 +125,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
+	s = strings.Replace(s, "{HELPTAB}", r.URL.Path, 1)
 	if common.Testnet {
 		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
 	} else {
@@ -210,6 +211,18 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func p_help(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	page := load_template("help.html")
+	write_html_head(w, r)
+	w.Write([]byte(page))
+	write_html_tail(w)
+}
+
+
 func ServerThread(iface string) {
 	http.HandleFunc("/webui/", p_webui)
 	http.HandleFunc("/wal", p_wal)
@@ -220,6 +233,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/miners", p_miners)
 	http.HandleFunc("/counts", p_counts)
 	http.HandleFunc("/cfg", p_cfg)
+	http.HandleFunc("/help", p_help)
 
 	http.HandleFunc("/txs2s.xml", xml_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
