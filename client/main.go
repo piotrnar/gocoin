@@ -307,6 +307,10 @@ func main() {
 			case newtx := <-network.NetTxs:
 				network.HandleNetTx(newtx, false)
 
+			case newal := <-network.NetAlerts:
+				fmt.Println("\007" + newal)
+				textui.ShowPrompt()
+
 			case cmd := <-usif.UiChannel:
 				common.Busy("UI command")
 				cmd.Handler(cmd.Param)

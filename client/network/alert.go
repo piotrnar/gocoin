@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"sync"
 	"encoding/hex"
 	"encoding/binary"
@@ -12,6 +11,7 @@ var (
 	Alerts map[uint64] *btc.Alert = make(map[uint64] *btc.Alert)
 	Alert_access sync.Mutex
 	AlertPubKey []byte  // set in init.go
+	NetAlerts chan string = make(chan string, 1)
 )
 
 func (c *OneConnection) HandleAlert(b []byte) {
@@ -39,7 +39,6 @@ func (c *OneConnection) HandleAlert(b []byte) {
 	}
 
 	Alerts[alidx] = a
-	fmt.Println("\007New alert:", a.StatusBar)
-	//ui_show_prompt()
+	NetAlerts <- a.StatusBar
 	return
 }
