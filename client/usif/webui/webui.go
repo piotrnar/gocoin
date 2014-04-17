@@ -126,7 +126,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
 	if r.URL.Path!="/" {
-		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[:1], 1)
+		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[1:], 1)
 	} else {
 		s = strings.Replace(s, "{HELPURL}", "help", 1)
 	}
