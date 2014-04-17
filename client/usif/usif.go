@@ -140,6 +140,31 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	return
 }
 
+
+func GetNetworkHashRate() string {
+	hours := common.CFG.HashrateHours
+	common.Last.Mutex.Lock()
+	end := common.Last.Block
+	common.Last.Mutex.Unlock()
+	now := time.Now().Unix()
+	cnt := 0
+	var diff float64
+	for ; end!=nil; cnt++ {
+		if now-int64(end.Timestamp()) > int64(hours)*3600 {
+			break
+		}
+		diff += btc.GetDifficulty(end.Bits())
+		end = end.Parent
+	}
+	if cnt==0 {
+		return "0"
+	}
+	diff /= float64(cnt)
+	bph := float64(cnt)/float64(hours)
+	return common.HashrateToString(bph/6 * diff * 7158278.826667)
+}
+
+
 func init() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 }

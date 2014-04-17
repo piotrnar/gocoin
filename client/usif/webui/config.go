@@ -54,6 +54,12 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if checksid(r) && len(r.Form["beepblock"])>0 {
+		common.CFG.Beeps.NewBlock = !common.CFG.Beeps.NewBlock
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
 	if checksid(r) && len(r.Form["freemem"])>0 {
 		debug.FreeOSMemory()
 		http.Redirect(w, r, "/", http.StatusFound)

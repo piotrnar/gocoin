@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
@@ -43,6 +44,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", common.NumberToString(btc.GetDifficulty(common.Last.Block.Bits())), 1)
 	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(common.Last.Time).String(), 1)
 	common.Last.Mutex.Unlock()
+	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
 
 	s = strings.Replace(s, "{BLOCKS_CACHED}", fmt.Sprint(len(network.CachedBlocks)), 1)
 	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(network.PeerDB.Count()), 1)
@@ -83,6 +85,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "<!--HEAPSYS_MB-->", fmt.Sprint(ms.HeapInuse>>20), 1)
 	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
 	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
+	s = strings.Replace(s, "<!--NEW_BLOCK_BEEP-->", fmt.Sprint(common.CFG.Beeps.NewBlock), 1)
 
 	common.LockCfg()
 	dat, _ := json.Marshal(&common.CFG)

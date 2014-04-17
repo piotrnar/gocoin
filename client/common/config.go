@@ -69,6 +69,7 @@ var (
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
 		MiningStatHours uint
+		HashrateHours uint
 		UserAgent string
 		PayCommandName string
 	}
@@ -113,6 +114,7 @@ func init() {
 	CFG.Memory.GCPercTrshold = 100 // 100%
 
 	CFG.MiningStatHours = 24
+	CFG.HashrateHours = 6
 	CFG.UserAgent = DefaultUserAgent
 	CFG.PayCommandName = "pay_cmd.txt"
 

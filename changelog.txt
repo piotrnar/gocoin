@@ -1,5 +1,6 @@
 0.9.8
 * Added locally served "Help" page to WebUI
+* Some additional features on WebUI's "Home" page (e.g. network's hasharate)
 * The block database uses a different index file ("blockchain.new" instead of "blockchain.idx")
   The client will convert the old index into the new one, during the first start.
   Going back to a previous version (after coversion), rename blockchain_backup.idx to blockchain.idx

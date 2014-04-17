@@ -50,17 +50,19 @@
 	<b>{NET_BLOCK_QSIZE}</b> blocks
 	<tr><td nowrap="nowrap">Open Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incoming)
 	<tr><td>Extrenal IPs:<td><!--ONE_EXTERNAL_IP-->
+	<tr><td>Hashrate:<td><b><--NETWORK_HASHRATE--></b>
 	</table>
 <td valign="top">
 	<h2>Others</h2>
 	<table>
-	<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
+	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
 	<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
-	<tr><td>Node's uptime:<td><b>{NODE_UPTIME}</b>
+	<tr><td>Node's Uptime:<td><b>{NODE_UPTIME}</b>
 	<tr><td>Mem Used MB:<td><b title="Alloc">{HEAP_SIZE_MB}</b> /
 		<b title="HeapInuse"><!--HEAPSYS_MB--></b> /
 		<b title="Sys">{SYSMEM_USED_MB}</b> &nbsp;[<a href="javascript:config('freemem')">FREE</a>]
-	<tr><td nowrap="nowrap">ECDSA sig checks:<td><b>{ECDSA_VERIFY_COUNT}</b>
+	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b>{ECDSA_VERIFY_COUNT}</b>
+	<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
 	</table>
 </table>
 
