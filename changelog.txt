@@ -1,4 +1,4 @@
-0.9.8
+0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI
 * Some additional features on WebUI's "Home" page (e.g. network's hasharate)
 * The block database uses a different index file ("blockchain.new" instead of "blockchain.idx")
