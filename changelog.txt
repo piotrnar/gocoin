@@ -2,14 +2,14 @@
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
 * Client: proper removing (from the memory pool) transactions altered by the malleability
-* Client: Relevant records are removed from SpentOutputs while expiring txs (was causing memleaks)
+* Client: Relevant records are removed from SpentOutputs while expiring txs (was causing mem leaks)
 
 0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI
 * Some additional features on WebUI's "Home" page (e.g. network's hasharate)
 * The block database uses a different index file ("blockchain.new" instead of "blockchain.idx")
   The client will convert the old index into the new one, during the first start.
-  Going back to a previous version (after coversion), rename blockchain_backup.idx to blockchain.idx
+  Going back to a previous version (after conversion), rename blockchain_backup.idx to blockchain.idx
   If you don't plan to go back to a previous version anymore, delete blockchain_backup.idx
 * Added support for "getheaders" and "notfound" commands
 * Some code in the btc lib has been restructured (now ther are functions in place of fields)
