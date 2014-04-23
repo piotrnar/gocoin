@@ -150,15 +150,26 @@ Locally loaded transactions appear on a light-red background and they have three
  &bull; Clicking on <img src="webui/send_once.png"> - orders the node to broadcast a transaction to one random peer (useful for privacy purposes)<br>
  &bull; Clicking on <img src="webui/send.png"> - broadcasts the transaction to all the currently connected peers.<br>
  &bull; Clicking on <img src="webui/del.png"> - removes (unloads) the transaction from the memory pool.<br>
-<br>
-In most cases own transactions should get removed from the memory pool automatically when they get mined into a block.<br>
-It may not be a case thought, if a transaction has been a subject to a so-called <i>transaction malleability</i> disturbance.
-In such case your transaction will get mined with a different TxID and your node will not automatically remove it from the list.
-It is not a security problem, but had such a thing happened, just remove the transaction from your pool manually, because the node never expires own transactions.
 
+
+<h3>UTXOs spent in memory</h3>
+The number shows how many inputs are currently considered <i>spent</i> by the transactions that have been accepted into the memory pool.
+When an input is on this list any new transaction that tries to re-use it will be rejected as a <i>double-spend</i>.
+ 
 <h3>Rejected transactions</h3>
-The value of the button next to the label shows you how many transactions were not accepted into the memory pool. You will see their list when clicking the button, along with the reason of the rejection.
+The value of the button next to the label shows you how many transactions were not accepted into the memory pool.
+You will see their list when clicking the button, along with the reason of the rejection.
+The node maintains this list to avoid downloading transactions that it had already rejected once. 
+Transactions are removed from this list either when they get mined into a block or when the node decides to expire them.
 
+<h3>Transactions waiting for inputs</h3>
+Here you can check transactions that are waiting for inputs, assuming that you allowed such transaction into memory pool,
+which is controlled by configuration parameter <span class="mono">TXPool.AllowMemInputs</span>.
+
+<h3>Transactions being processed</h3>
+Number of transaction in the network queue.
+These are transactions that are already received from the network (via <b>tx</b> command), but have not been yet processed by the memory pool handler.
+In most cases both the number should be equal.
 
 <hr>
 <a name="blocks" href="/blocks"><h2>Blocks</h2></a>
