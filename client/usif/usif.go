@@ -35,7 +35,8 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 		s += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
 		var po *btc.TxOut
 
-		if txinmem, ok := network.TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
+		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
 			s += fmt.Sprint(" mempool")
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				s += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
@@ -106,10 +107,10 @@ func LoadRawTx(buf []byte) (s string) {
 
 	network.TxMutex.Lock()
 	if missinginp {
-		network.TransactionsToSend[tx.Hash.Hash] = &network.OneTxToSend{Tx:tx, Data:txd, Own:2, Firstseen:time.Now(),
+		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:2, Firstseen:time.Now(),
 			Volume:totout}
 	} else {
-		network.TransactionsToSend[tx.Hash.Hash] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
+		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
 			Volume:totinp, Fee:totinp-totout}
 	}
 	network.TxMutex.Unlock()

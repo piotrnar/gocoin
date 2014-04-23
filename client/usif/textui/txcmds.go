@@ -37,7 +37,7 @@ func send_tx(par string) {
 		return
 	}
 	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.Hash]; ok {
+	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		network.TxMutex.Unlock()
 		cnt := network.NetRouteInv(1, txid, nil)
 		ptx.Invsentcnt += cnt
@@ -59,7 +59,7 @@ func send1_tx(par string) {
 		return
 	}
 	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.Hash]; ok {
+	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		network.TxMutex.Unlock()
 		usif.SendInvToRandomPeer(1, txid)
 		ptx.Invsentcnt++
@@ -81,13 +81,13 @@ func del_tx(par string) {
 		return
 	}
 	network.TxMutex.Lock()
-	if _, ok := network.TransactionsToSend[txid.Hash]; !ok {
+	if _, ok := network.TransactionsToSend[txid.BIdx()]; !ok {
 		network.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 		return
 	}
-	delete(network.TransactionsToSend, txid.Hash)
+	delete(network.TransactionsToSend, txid.BIdx())
 	network.TxMutex.Unlock()
 	fmt.Println("Transaction", txid.String(), "removed from the memory pool")
 }
@@ -100,7 +100,7 @@ func dec_tx(par string) {
 		list_txs("")
 		return
 	}
-	if tx, ok := network.TransactionsToSend[txid.Hash]; ok {
+	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
 		fmt.Println(s)
 	} else {
@@ -113,7 +113,7 @@ func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
 	network.TxMutex.Lock()
-	for k, v := range network.TransactionsToSend {
+	for _, v := range network.TransactionsToSend {
 		cnt++
 		var oe, snt string
 		if v.Own!=0 {
@@ -130,8 +130,7 @@ func list_txs(par string) {
 			snt = fmt.Sprintf("TX sent %d times, last %s ago", v.SentCnt,
 				time.Now().Sub(v.Lastsent).String())
 		}
-		fmt.Printf("%5d) %s - %d bytes - %s%s\n", cnt,
-			btc.NewUint256(k[:]).String(), len(v.Data), snt, oe)
+		fmt.Printf("%5d) %s - %d bytes - %s%s\n", cnt, v.Tx.Hash.String(), len(v.Data), snt, oe)
 	}
 	network.TxMutex.Unlock()
 }

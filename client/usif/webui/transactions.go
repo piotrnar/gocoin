@@ -95,14 +95,15 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 	txid := btc.NewUint256FromString(id)
 	w.Write([]byte("<tx>"))
 	fmt.Fprint(w, "<id>", id, "</id>")
-	if t2s, ok := network.TransactionsToSend[txid.Hash]; ok {
+	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		w.Write([]byte("<status>OK</status>"))
 		tx := t2s.Tx
 		w.Write([]byte("<inputs>"))
 		for i := range tx.TxIn {
 			w.Write([]byte("<input>"))
 			var po *btc.TxOut
-			if txinmem, ok := network.TransactionsToSend[tx.TxIn[i].Input.Hash]; ok {
+			inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
+			if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
 				if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
 					po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 				}
@@ -156,7 +157,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			tid := btc.NewUint256FromString(r.Form["del"][0])
 			if tid!=nil {
 				network.TxMutex.Lock()
-				delete(network.TransactionsToSend, tid.Hash)
+				delete(network.TransactionsToSend, tid.BIdx())
 				network.TxMutex.Unlock()
 			}
 		}
@@ -165,7 +166,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			tid := btc.NewUint256FromString(r.Form["send"][0])
 			if tid!=nil {
 				network.TxMutex.Lock()
-				if ptx, ok := network.TransactionsToSend[tid.Hash]; ok {
+				if ptx, ok := network.TransactionsToSend[tid.BIdx()]; ok {
 					network.TxMutex.Unlock()
 					cnt := network.NetRouteInv(1, tid, nil)
 					ptx.Invsentcnt += cnt
@@ -177,7 +178,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			tid := btc.NewUint256FromString(r.Form["sendone"][0])
 			if tid!=nil {
 				network.TxMutex.Lock()
-				if ptx, ok := network.TransactionsToSend[tid.Hash]; ok {
+				if ptx, ok := network.TransactionsToSend[tid.BIdx()]; ok {
 					network.TxMutex.Unlock()
 					usif.SendInvToRandomPeer(1, tid)
 					ptx.Invsentcnt++
@@ -196,9 +197,9 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("<txpool>"))
 	network.TxMutex.Lock()
-	for k, v := range network.TransactionsToSend {
+	for _, v := range network.TransactionsToSend {
 		w.Write([]byte("<tx>"))
-		fmt.Fprint(w, "<id>", btc.NewUint256(k[:]).String(), "</id>")
+		fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
 		fmt.Fprint(w, "<len>", len(v.Data), "</len>")
 		fmt.Fprint(w, "<own>", v.Own, "</own>")
@@ -287,7 +288,7 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 
 	txid := btc.NewUint256FromString(r.Form["id"][0])
 	fmt.Fprintln(w, "TxID:", txid.String())
-	if tx, ok := network.TransactionsToSend[txid.Hash]; ok {
+	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
 		w.Write([]byte(s))
 	} else {

@@ -46,7 +46,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			// transaction
 			uh := btc.NewUint256(h[4:])
 			TxMutex.Lock()
-			if tx, ok := TransactionsToSend[uh.Hash]; ok && tx.Blocked==0 {
+			if tx, ok := TransactionsToSend[uh.BIdx()]; ok && tx.Blocked==0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()

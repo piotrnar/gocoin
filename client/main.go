@@ -34,7 +34,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 		network.MutexRcv.Unlock()
 
 		for i:=1; i<len(bl.Txs); i++ {
-			network.TxMined(bl.Txs[i].Hash)
+			network.TxMined(bl.Txs[i])
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {

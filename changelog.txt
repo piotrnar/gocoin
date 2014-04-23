@@ -1,6 +1,7 @@
 0.9.9
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
+* Proper removing of malleabled transactions from the memory pool
 
 0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI
