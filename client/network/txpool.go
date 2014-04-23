@@ -405,7 +405,10 @@ func TxMined(tx *btc.Tx) {
 	TxMutex.Lock()
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedToSend")
-		deleteToSend(rec)
+		for i := range rec.Spent {
+			delete(SpentOutputs, rec.Spent[i])
+		}
+		delete(TransactionsToSend, h.BIdx())
 	}
 	if _, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafe("TxMinedRejected")
@@ -416,13 +419,19 @@ func TxMined(tx *btc.Tx) {
 		delete(TransactionsPending, h.BIdx())
 	}
 
+	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
 	for i := range tx.TxIn {
 		idx := VoutIdx(&tx.TxIn[i].Input)
 		if val, ok := SpentOutputs[idx]; ok {
-			rec := TransactionsToSend[val]
-			println("\007TxMined as", tx.Hash.String(), "instead of", rec.Tx.Hash.String())
-			deleteToSend(rec)
-			common.CountSafe("TxMinedMalleabled")
+			if rec, _ := TransactionsToSend[val]; rec != nil {
+				println("\007TxMined as", tx.Hash.String(), "instead of", rec.Tx.Hash.String())
+				delete(TransactionsToSend, val)
+				common.CountSafe("TxMinedMalleabled")
+			} else {
+				println("\007TxMined as", tx.Hash.String(), "but wasnt in mempool?")
+				common.CountSafe("TxMinedInconsistent")
+			}
+			delete(SpentOutputs, idx)
 		}
 	}
 
