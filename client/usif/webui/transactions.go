@@ -130,7 +130,12 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 		for i := range tx.TxOut {
 			w.Write([]byte("<output>"))
 			fmt.Fprint(w, "<value>", tx.TxOut[i].Value, "</value>")
-			fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet).String(), "</addr>")
+			adr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet)
+			if adr != nil {
+				fmt.Fprint(w, "<addr>", adr.String(), "</addr>")
+			} else {
+				fmt.Fprint(w, "<addr>", "scr:"+hex.EncodeToString(tx.TxOut[i].Pk_script), "</addr>")
+			}
 			w.Write([]byte("</output>"))
 		}
 		w.Write([]byte("</outputs>"))
