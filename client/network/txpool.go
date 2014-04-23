@@ -400,15 +400,14 @@ func deleteToSend(rec *OneTxToSend) {
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
+
+// This function is called for each tx mined in a new block
 func TxMined(tx *btc.Tx) {
 	h := tx.Hash
 	TxMutex.Lock()
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedToSend")
-		for i := range rec.Spent {
-			delete(SpentOutputs, rec.Spent[i])
-		}
-		delete(TransactionsToSend, h.BIdx())
+		deleteToSend(rec)
 	}
 	if _, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafe("TxMinedRejected")
@@ -425,7 +424,7 @@ func TxMined(tx *btc.Tx) {
 		if val, ok := SpentOutputs[idx]; ok {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
 				println("\007TxMined as", tx.Hash.String(), "instead of", rec.Tx.Hash.String())
-				delete(TransactionsToSend, val)
+				deleteToSend(rec)
 				common.CountSafe("TxMinedMalleabled")
 			} else {
 				println("\007TxMined as", tx.Hash.String(), "but wasnt in mempool?")
@@ -498,9 +497,9 @@ func ExpireTxs() {
 	var cnt1a, cnt1b, cnt2 uint64
 
 	TxMutex.Lock()
-	for k, v := range TransactionsToSend {
+	for _, v := range TransactionsToSend {
 		if v.Own==0 && v.Firstseen.Before(expireTime(len(v.Data))) {  // Do not expire own txs
-			delete(TransactionsToSend, k)
+			deleteToSend(v)
 			if v.Blocked==0 {
 				cnt1a++
 			} else {
