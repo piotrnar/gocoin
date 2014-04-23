@@ -6,7 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"encoding/hex"
-	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -86,10 +85,6 @@ type OneWaitingList struct {
 	Ids map[[btc.Uint256IdxLen]byte] time.Time  // List of pending tx ids
 }
 
-
-func VoutIdx(po *btc.TxPrevOut) (uint64) {
-	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
-}
 
 // Return false if we do not want to receive a data for this tx
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
@@ -215,7 +210,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
-		spent[i] = VoutIdx(&tx.TxIn[i].Input)
+		spent[i] = tx.TxIn[i].Input.UIdx()
 
 		if _, ok := SpentOutputs[spent[i]]; ok {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
@@ -420,7 +415,7 @@ func TxMined(tx *btc.Tx) {
 
 	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
 	for i := range tx.TxIn {
-		idx := VoutIdx(&tx.TxIn[i].Input)
+		idx := tx.TxIn[i].Input.UIdx()
 		if val, ok := SpentOutputs[idx]; ok {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
 				println("\007TxMined as", tx.Hash.String(), "instead of", rec.Tx.Hash.String())

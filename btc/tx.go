@@ -55,6 +55,11 @@ type AddrValue struct {
 }
 
 
+func (po *TxPrevOut) UIdx() uint64 {
+	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
+}
+
+
 func (to *TxOut) String(testnet bool) (s string) {
 	s = fmt.Sprintf("%.8f BTC", float64(to.Value)/1e8)
 	s += fmt.Sprint(" in block ", to.BlockHeight)

@@ -74,7 +74,7 @@ func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
 
 
 func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
-	ind := getUnspIndex(po)
+	ind := qdb.KeyType(po.UIdx())
 	val := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
 	if val==nil {
 		e = errors.New("Unspent not found")
@@ -104,7 +104,7 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
 	copy(v[48:], Val_Pk.Pk_script)
-	ind := getUnspIndex(idx)
+	ind := qdb.KeyType(idx.UIdx())
 	var flgz uint32
 	if Val_Pk.Value<MinBrowsableOutValue {
 		flgz = qdb.NO_CACHE | qdb.NO_BROWSE
@@ -119,7 +119,7 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 	if db.notifyTx!=nil {
 		db.notifyTx(idx, nil)
 	}
-	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(getUnspIndex(idx))
+	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(qdb.KeyType(idx.UIdx()))
 }
 
 
