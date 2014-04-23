@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"bytes"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -141,6 +142,15 @@ func make_signed_tx() {
 			fmt.Println("Sending change", changeBtc, "to", chad.String())
 		}
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: chad.OutScript()})
+	}
+
+	if *message!="" {
+		// Add NULL output with an arbitrary message
+		scr := new(bytes.Buffer)
+		scr.WriteByte(0x6a) // OP_RETURN
+		btc.WritePutLen(scr, uint32(len(*message)))
+		scr.Write([]byte(*message))
+		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: 0, Pk_script: scr.Bytes()})
 	}
 
 	if *hashes {

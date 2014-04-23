@@ -255,6 +255,7 @@ func ScriptToText(p []byte) (out []string, e error) {
 			switch {
 				case opcode==0x4f: sel = "1NEGATE"
 				case opcode>=0x50 && opcode<=0x60: sel = fmt.Sprint(opcode-0x50)
+				case opcode==0x6a: sel = "RETURN"
 				case opcode==0xae: sel = "CHECKMULTISIG"
 				default: sel = fmt.Sprintf("0x%02X", opcode)
 			}
