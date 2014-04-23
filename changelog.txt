@@ -2,7 +2,7 @@
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
 * Client: proper removing (from the memory pool) transactions altered by the malleability
-* Client: Relevant records are removed from SpentOutputs while expiring txs (was causing mem leaks)
+* Client: Relevant records are removed from SpentOutputs when expiring txs from mempool (memleak fix)
 
 0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI
