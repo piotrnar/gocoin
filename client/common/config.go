@@ -103,7 +103,7 @@ func init() {
 	CFG.TXPool.FeePerByte = 1
 	CFG.TXPool.MaxTxSize = 10e3
 	CFG.TXPool.MinVoutValue = 0
-	CFG.TXPool.TxExpireMinPerKB = 120
+	CFG.TXPool.TxExpireMinPerKB = 180
 	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
