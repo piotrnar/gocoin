@@ -98,13 +98,19 @@ func checksid(r *http.Request) bool {
 }
 
 
+func new_session_id(w http.ResponseWriter) (sessid string) {
+	var sid [16]byte
+	rand.Read(sid[:])
+	sessid = hex.EncodeToString(sid[:])
+	http.SetCookie(w, &http.Cookie{Name:"sid", Value:sessid})
+	return
+}
+
+
 func write_html_head(w http.ResponseWriter, r *http.Request) {
 	sessid := sid(r)
 	if sessid=="" {
-		var sid [16]byte
-		rand.Read(sid[:])
-		sessid = hex.EncodeToString(sid[:])
-		http.SetCookie(w, &http.Cookie{Name:"sid", Value:sessid})
+		sessid = new_session_id(w)
 	}
 
 	// Quick switch wallet
@@ -249,6 +255,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/balance.zip", dl_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
 	http.HandleFunc("/addrs.xml", xml_addrs)
+	http.HandleFunc("/wallets.xml", xml_wallets)
 
 	http.HandleFunc("/", p_home)
 
