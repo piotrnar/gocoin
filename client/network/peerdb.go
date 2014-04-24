@@ -7,13 +7,11 @@ import (
 	"time"
 	"sync"
 	"sort"
-	"bytes"
 	"errors"
 	"strings"
-	"hash/crc64"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/tools/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -23,37 +21,24 @@ const (
 
 var (
 	PeerDB *qdb.DB
-	crctab = crc64.MakeTable(crc64.ISO)
-
 	proxyPeer *onePeer // when this is not nil we should only connect to this single node
 	peerdb_mutex sync.Mutex
 )
 
 type onePeer struct {
-	btc.NetAddr
-
-	Time uint32  // When seen last time
-	Banned uint32 // time when this address baned or zero if never
+	*utils.OnePeer
 }
 
 
-func NewPeer(v []byte) (p *onePeer) {
-	//println("newad:", hex.EncodeToString(v))
-	if len(v) < 30 {
-		println("NewPeer: unexpected length", len(v))
-		return
-	}
+func NewEmptyPeer() (p *onePeer) {
 	p = new(onePeer)
-	p.Time = binary.LittleEndian.Uint32(v[0:4])
-	p.Services = binary.LittleEndian.Uint64(v[4:12])
-	copy(p.Ip6[:], v[12:24])
-	copy(p.Ip4[:], v[24:28])
-	p.Port = binary.BigEndian.Uint16(v[28:30])
+	p.OnePeer = new(utils.OnePeer)
+	return
+}
 
-	if len(v) == 34 {
-		p.Banned = binary.LittleEndian.Uint32(v[30:34])
-	}
-
+func NewPeer(v []byte) (p *onePeer) {
+	p = new(onePeer)
+	p.OnePeer = utils.NewPeer(v)
 	return
 }
 
@@ -69,7 +54,7 @@ func NewIncomingPeer(ipstr string) (p *onePeer, e error) {
 			e = errors.New(ipstr+" is blocked")
 			return
 		}
-		p = new(onePeer)
+		p = NewEmptyPeer()
 		copy(p.Ip4[:], ip[12:16])
 		p.Services = common.Services
 		copy(p.Ip6[:], ip[:12])
@@ -85,18 +70,6 @@ func NewIncomingPeer(ipstr string) (p *onePeer, e error) {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
 	}
 	return
-}
-
-
-func (p *onePeer) Bytes() []byte {
-	b := new(bytes.Buffer)
-	binary.Write(b, binary.LittleEndian, p.Time)
-	binary.Write(b, binary.LittleEndian, p.Services)
-	b.Write(p.Ip6[:])
-	b.Write(p.Ip4[:])
-	binary.Write(b, binary.BigEndian, p.Port)
-	binary.Write(b, binary.LittleEndian, p.Banned)
-	return b.Bytes()
 }
 
 
@@ -166,15 +139,6 @@ func (p *onePeer) String() (s string) {
 		s += fmt.Sprintf("  Seen %3d min ago", (now-p.Time)/60)
 	}
 	return
-}
-
-
-func (p *onePeer) UniqID() (uint64) {
-	h := crc64.New(crctab)
-	h.Write(p.Ip6[:])
-	h.Write(p.Ip4[:])
-	h.Write([]byte{byte(p.Port>>8),byte(p.Port)})
-	return h.Sum64()
 }
 
 
@@ -254,7 +218,7 @@ func initSeeds(seeds []string, port uint16) {
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip)==16 {
-					p := new(onePeer)
+					p := NewEmptyPeer()
 					p.Time = uint32(time.Now().Unix())
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
@@ -284,7 +248,7 @@ func InitPeers(dir string) {
 			println(e.Error())
 			os.Exit(1)
 		}
-		proxyPeer = new(onePeer)
+		proxyPeer = NewEmptyPeer()
 		proxyPeer.Services = common.Services
 		copy(proxyPeer.Ip4[:], oa.IP[0:4])
 		proxyPeer.Port = uint16(oa.Port)
