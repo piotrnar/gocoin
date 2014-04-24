@@ -196,6 +196,26 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func xml_wallets(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<wallets>"))
+	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
+	if er == nil {
+		for i := range fis {
+			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
+				w.Write([]byte("<wallet>"))
+				xml.EscapeText(w, []byte(fis[i].Name()))
+				w.Write([]byte("</wallet>"))
+			}
+		}
+	}
+	w.Write([]byte("</wallets>"))
+}
+
+
 func xml_addrs(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
