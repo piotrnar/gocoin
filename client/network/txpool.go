@@ -418,12 +418,16 @@ func TxMined(tx *btc.Tx) {
 		idx := tx.TxIn[i].Input.UIdx()
 		if val, ok := SpentOutputs[idx]; ok {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
-				println("\007TxMined as", tx.Hash.String(), "instead of", rec.Tx.Hash.String())
+				if rec.Own!=0 {
+					common.CountSafe("TxMinedMalleabled")
+					NetAlerts <- fmt.Sprint("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
+				} else {
+					common.CountSafe("TxMinedOtherSpend")
+				}
 				deleteToSend(rec)
-				common.CountSafe("TxMinedMalleabled")
 			} else {
-				println("\007TxMined as", tx.Hash.String(), "but wasnt in mempool?")
-				common.CountSafe("TxMinedInconsistent")
+				common.CountSafe("TxMinedSpentERROR")
+				NetAlerts <- fmt.Sprint("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
 			}
 			delete(SpentOutputs, idx)
 		}
