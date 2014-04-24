@@ -2,7 +2,6 @@ package utils
 
 import (
 	"hash/crc64"
-	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -58,7 +57,6 @@ func (p *OnePeer) Bytes() (res []byte) {
 	copy(res[12:24], p.Ip6[:])
 	copy(res[24:28], p.Ip4[:])
 	binary.BigEndian.PutUint16(res[28:30], p.Port)
-	println(hex.EncodeToString(res))
 	return
 }
 
