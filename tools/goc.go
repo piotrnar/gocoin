@@ -32,7 +32,7 @@ func http_get(url string) (res []byte) {
 		for i := range r.Cookies() {
 			if r.Cookies()[i].Name=="sid" {
 				SID = r.Cookies()[i].Value
-				fmt.Println("sid", SID)
+				//fmt.Println("sid", SID)
 			}
 		}
 	}
@@ -101,7 +101,6 @@ func switch_to_wallet(s string) {
 	ps.Add("qwalsel", s)
 	u.RawQuery = ps.Encode()
 	http_get(u.String())
-	println(u.String())
 }
 
 
