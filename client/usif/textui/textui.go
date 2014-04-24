@@ -541,6 +541,8 @@ func show_addresses(par string) {
 		}
 	} else {
 		fmt.Println("Use 'peers list' to list them")
+		fmt.Println("Use 'peers ban' to list the benned ones")
+		fmt.Println("Use 'peers <number>' to show the most recent ones")
 	}
 }
 
@@ -574,32 +576,26 @@ func list_alerst(p string) {
 
 
 func init() {
-	newUi("help h ?", false, show_help, "Shows this help")
-	newUi("info i", false, show_info, "Shows general info about the node")
-	newUi("counters c", false, show_counters, "Show all kind of debug counters")
-	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("cache", false, show_cached, "Show blocks cached in memory")
-	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
-	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
-	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
-	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
-	newUi("defrag", true, defrag_blocks, "Defragment databases (UTXO + Blocks) on disk and exits")
-
-	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
-
-	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
-
-	newUi("configsave cs", false, save_config, "Save current settings to a common file")
-	newUi("configload cl", false, load_config, "Re-load settings from the common file")
-	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
-
+	newUi("alerts a", false, list_alerst, "Show received alerts")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 	newUi("balstat", true, show_balance_stats, "Show balance cache statistics")
-
+	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("cache", false, show_cached, "Show blocks cached in memory")
+	newUi("configload cl", false, load_config, "Re-load settings from the common file")
+	newUi("configsave cs", false, save_config, "Save current settings to a common file")
+	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
+	newUi("counters c", false, show_counters, "Show all kind of debug counters")
+	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
+	newUi("defrag", true, defrag_blocks, "Defragment databases (UTXO + Blocks) on disk and exits")
+	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
+	newUi("help h ?", false, show_help, "Shows this help")
+	newUi("info i", false, show_info, "Shows general info about the node")
+	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (warning: may be long)")
-
-	newUi("alerts a", false, list_alerst, "Show received alerts")
+	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
+	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
+	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
+	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
+	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
 }
