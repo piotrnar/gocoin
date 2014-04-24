@@ -157,26 +157,6 @@ func (mp manyPeers) Swap(i, j int) {
 }
 
 
-// Discard any IP that may refer to a local network
-func ValidIp4(ip []byte) bool {
-	// local host
-	if ip[0]==0 || ip[0]==127 {
-		return false
-	}
-
-	// RFC1918
-	if ip[0]==10 || ip[0]==192 && ip[1]==168 || ip[0]==172 && ip[1]>=16 && ip[1]<=31 {
-		return false
-	}
-
-	//RFC3927
-	if ip[0]==169 && ip[1]==254 {
-		return false
-	}
-
-	return true
-}
-
 // Fetch a given number of best (most recenty seen) peers.
 // Set unconnected to true to only get those that we are not connected to.
 func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
@@ -190,7 +170,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.Banned==0 && ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
+		if ad.Banned==0 && utils.ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
 			if !unconnected || !ConnectionActive(ad) {
 				tmp = append(tmp, ad)
 			}
