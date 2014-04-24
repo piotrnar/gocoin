@@ -74,7 +74,10 @@ func fetch_balance() {
 func list_wallets() {
 	d := http_get(HOST+"wallets.xml")
 	var wls struct {
-		Wallet []string `xml:"wallet"`
+		Wallet [] struct {
+			Name string
+			Selected bool
+		}
 	}
 	er := xml.Unmarshal(d, &wls)
 	if er != nil {
@@ -82,7 +85,11 @@ func list_wallets() {
 		os.Exit(1)
 	}
 	for i := range wls.Wallet {
-		fmt.Println(wls.Wallet[i])
+		fmt.Print(wls.Wallet[i].Name)
+		if wls.Wallet[i].Selected {
+			fmt.Print(" (selected)")
+		}
+		fmt.Println()
 	}
 }
 

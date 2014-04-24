@@ -201,18 +201,23 @@ func xml_wallets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<wallets>"))
+	w.Write([]byte("<Wallets>"))
 	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
 	if er == nil {
 		for i := range fis {
 			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
-				w.Write([]byte("<wallet>"))
+				w.Write([]byte("<Wallet>"))
+				w.Write([]byte("<Name>"))
 				xml.EscapeText(w, []byte(fis[i].Name()))
-				w.Write([]byte("</wallet>"))
+				w.Write([]byte("</Name>"))
+				selected := wallet.MyWallet!=nil &&
+					strings.HasSuffix(wallet.MyWallet.FileName, string(os.PathSeparator) + fis[i].Name())
+				w.Write([]byte("<Selected>" + fmt.Sprint(selected) + "</Selected>"))
+				w.Write([]byte("</Wallet>"))
 			}
 		}
 	}
-	w.Write([]byte("</wallets>"))
+	w.Write([]byte("</Wallets>"))
 }
 
 
