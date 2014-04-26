@@ -5,6 +5,7 @@
 * Client: Relevant records are removed from SpentOutputs when expiring txs from mempool (memleak fix)
 * goc - a new tool to control the node from a remote console, using a WebUI interface
 * peers - a new tool to display content of the peers database
+* base58 - a new tool to encode/decode base58 strings
 
 0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI
