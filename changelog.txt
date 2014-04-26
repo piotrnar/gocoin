@@ -6,6 +6,7 @@
 * goc - a new tool to control the node from a remote console, using a WebUI interface
 * peers - a new tool to display content of the peers database
 * base58 - a new tool to encode/decode base58 strings
+* Added "restore leading zeros" to btc.Decodeb58(), to reflect behaviour from the satoshi's code
 
 0.9.8 - 2014-04-22
 * Added locally served "Help" page to WebUI

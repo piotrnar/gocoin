@@ -275,7 +275,7 @@ func Encodeb58(a []byte) (s string) {
 	return
 }
 
-func Decodeb58(s string) []byte {
+func Decodeb58(s string) (res []byte) {
 	bn := big.NewInt(0)
 	for i := range s {
 		v := b58chr2int(byte(s[i]))
@@ -285,5 +285,15 @@ func Decodeb58(s string) []byte {
 		bn = bn.Mul(bn, bn58)
 		bn = bn.Add(bn, big.NewInt(int64(v)))
 	}
-	return bn.Bytes()
+
+	// We want to "restore leading zeros" as satoshi's implementation does:
+	var i int
+	for i<len(s) && s[i]==b58set[0] {
+		i++
+	}
+	if i > 0 {
+		res = make([]byte, i)
+	}
+	res = append(res, bn.Bytes()...)
+	return
 }

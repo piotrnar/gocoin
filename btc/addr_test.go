@@ -1,7 +1,11 @@
 package btc
 
 import (
+	"bytes"
 	"testing"
+	"io/ioutil"
+	"encoding/hex"
+	"encoding/json"
 )
 
 func TestAddr(t *testing.T) {
@@ -97,6 +101,28 @@ func TestAddr(t *testing.T) {
 				t.Error("NewAddrFromHash160 failed")
 				return
 			}
+		}
+	}
+}
+
+func TestBase58(t *testing.T) {
+	d, _ := ioutil.ReadFile("test/base58_encode_decode.json")
+	var vecs [][2]string
+	e := json.Unmarshal(d, &vecs)
+	if e != nil {
+		t.Fatal(e.Error())
+		return
+	}
+	for i := range vecs {
+		bin, _ := hex.DecodeString(vecs[i][0])
+		str := Encodeb58(bin)
+		if str!=vecs[i][1] {
+			t.Error("Encode mismatch at vector", i, vecs[i][0], vecs[i][1])
+		}
+
+		d = Decodeb58(vecs[i][1])
+		if !bytes.Equal(bin, d) {
+			t.Error("Decode mismatch at vector", i, vecs[i][0], vecs[i][1])
 		}
 	}
 }
