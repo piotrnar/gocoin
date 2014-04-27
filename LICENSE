@@ -4,30 +4,34 @@ Copyright (c) 2013-2014 Piotr Narewski
 
 NON-COMMERCIAL USE
 -----------------------
-As the explicit author of this software I grant a permission to use it in either an original or
-a modified form, free of charge and without a need for an explicit permission, but only for a 
-non-commercial purposes and only to individuals (physical persons), not to any legal entities.
+As the explicit author of this software I grant a permission to use it in
+either an original or a modified form, free of charge and without a need
+for an explicit permission, but only for a non-commercial purposes and only to
+physical persons, not to any kind of legal entities.
+
+A non-profit community projects are also welcome to use this software for free,
+without an explicit permission.
 
 
 COMMERCIAL USE
 -----------------------
-If you want to use this software in a commercial application I can sell you any type of license.
-The price depends on a type of your business and a kind of the license you need.
-A license may also come with a technical support, if you can afford it.
-I can also turn this code into any application for your business, including closed source apps.
+If you want to use this software in a commercial application (top make money)
+you need to acquire a license. The price depends on a type of your business and
+a kind of the license you need.
+Shall you be interested, contact me for a quotation: tonikt@assets-otc.com
 
 
 secp256k1
 -----------------------
-The implementation of the native ECDSA speedup package "btc/newec" is based on the code created 
-by Pieter Wuille. The code itself has been completely rewritten, but the original author deserves
-a credit for all the algorithms.
+The implementation of the native ECDSA speedup package "btc/newec" is based on
+the code created by Pieter Wuille. The code itself has been completely
+rewritten, but the original author deserves a credit for all the algorithms.
  * https://github.com/sipa/secp256k1/blob/master/COPYING
 
 
 bitcoin-qt
 -----------------------
-Some parts of the source code (e.g. "btc/target.go") and some test vectors ("btc/test/*.json")
-were taken from the original (satoshi's) bitcoin client.
+Some parts of the source code (e.g. "btc/target.go") and some test vectors
+("btc/test/*.json") were taken from the original (satoshi's) bitcoin client.
  * https://github.com/bitcoin/bitcoin/blob/master/COPYING
 
