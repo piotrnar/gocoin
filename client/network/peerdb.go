@@ -113,8 +113,12 @@ func (p *onePeer) Ban() {
 
 
 func (p *onePeer) Alive() {
-	p.Time = uint32(time.Now().Unix())
-	p.Save()
+	prv := int64(p.Time)
+	now := time.Now().Unix()
+	p.Time = uint32(now)
+	if now-prv >= 60 {
+		p.Save() // Do not save more often than once per minute
+	}
 }
 
 
