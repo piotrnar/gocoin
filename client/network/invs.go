@@ -114,8 +114,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 
 	if e!=nil || len(h2get)<1 || hashstop==nil {
 		println("GetBlocks: error parsing payload from", c.PeerAddr.Ip())
-		common.CountSafe("GetBlksBadPayload")
-		c.DoS()
+		c.DoS("BadGetBlks")
 		return
 	}
 

@@ -147,21 +147,18 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 		}
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
-			common.CountSafe("TxParseError")
 			RejectTx(tid, len(pl), TX_REJECTED_FORMAT)
-			c.DoS()
+			c.DoS("TxBroken")
 			return
 		}
 		if le != len(pl) {
-			common.CountSafe("TxParseLength")
 			RejectTx(tid, len(pl), TX_REJECTED_LEN_MISMATCH)
-			c.DoS()
+			c.DoS("TxLenMismatch")
 			return
 		}
 		if len(tx.TxIn)<1 {
-			common.CountSafe("TxParseEmpty")
 			RejectTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
-			c.DoS()
+			c.DoS("TxNoInputs")
 			return
 		}
 
@@ -291,8 +288,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if totout > totinp {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_OVERSPEND)
 		TxMutex.Unlock()
-		ntx.conn.DoS()
-		common.CountSafe("TxRejectedOverspend")
+		ntx.conn.DoS("TxOverspend")
 		return
 	}
 
@@ -310,8 +306,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if !btc.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx, true) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
-			common.CountSafe("TxRejectedScriptFail")
-			ntx.conn.DoS()
+			ntx.conn.DoS("TxScriptFail")
 			return
 		}
 	}

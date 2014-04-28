@@ -94,7 +94,7 @@ func (c *OneConnection) GetBlockData(h []byte) {
 func netBlockReceived(conn *OneConnection, b []byte) {
 	bl, e := btc.NewBlock(b)
 	if e != nil {
-		conn.DoS()
+		conn.DoS("BrokenBlock")
 		println("NewBlock:", e.Error())
 		return
 	}
@@ -211,8 +211,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 	if e != nil || hashstop==nil {
 		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip())
-		common.CountSafe("GetHdrsBadPayload")
-		c.DoS()
+		c.DoS("BadGetHdrs")
 		return
 	}
 

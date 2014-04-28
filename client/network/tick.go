@@ -18,8 +18,7 @@ func (c *OneConnection) Tick() {
 
 	// Disconnect and ban useless peers (sych that don't send invs)
 	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
-		common.CountSafe("NetUselessPeer")
-		c.DoS()
+		c.DoS("PeerUseless")
 		return
 	}
 

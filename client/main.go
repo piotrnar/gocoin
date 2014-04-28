@@ -106,8 +106,7 @@ func retry_cached_blocks() bool {
 				break // One at a time should be enough
 			} else {
 				fmt.Println("retry AcceptBlock:", e.Error())
-				common.CountSafe("CachedBlocksDOS")
-				v.Conn.DoS()
+				v.Conn.DoS("BadCachedBlock1")
 				delete(network.CachedBlocks, k)
 			}
 		} else {
@@ -115,8 +114,7 @@ func retry_cached_blocks() bool {
 				fmt.Println("retry CheckBlock:", e.Error())
 				common.CountSafe("BadCachedBlocks")
 				if dos {
-					v.Conn.DoS()
-					common.CountSafe("CachedBlocksDoS")
+					v.Conn.DoS("BadCachedBlock2")
 				}
 				delete(network.CachedBlocks, k)
 			}
@@ -138,7 +136,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		} else {
 			fmt.Println(dos, e.Error())
 			if dos {
-				newbl.Conn.DoS()
+				newbl.Conn.DoS("CheckBlock")
 			}
 		}
 	} else {
@@ -148,7 +146,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 			retryCachedBlocks = retry_cached_blocks()
 		} else {
 			fmt.Println("AcceptBlock:", e.Error())
-			newbl.Conn.DoS()
+			newbl.Conn.DoS("LocalAcceptBl")
 		}
 	}
 }

@@ -10,13 +10,7 @@ import (
 
 
 func net_drop(par string) {
-	c := network.Look4conn(par)
-	if c!=nil {
-		c.DoS()
-		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped and the peer is banned")
-	} else {
-		fmt.Println("There is no such an active connection")
-	}
+	network.DropPeer(par)
 }
 
 

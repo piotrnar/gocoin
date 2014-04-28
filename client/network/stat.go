@@ -102,7 +102,7 @@ func (v *OneConnection) Stats() (s string) {
 func DropPeer(ip string) {
 	c := Look4conn(ip)
 	if c!=nil {
-		c.DoS()
+		c.DoS("FromUI")
 		fmt.Println("The connection with", c.PeerAddr.Ip(), "is being dropped and the peer is banned")
 	} else {
 		fmt.Println("There is no such an active connection")

@@ -30,8 +30,8 @@ func (c *OneConnection) HandleAlert(b []byte) {
 	if e != nil {
 		println(c.PeerAddr.String(), "- sent us a broken alert:", e.Error())
 		if a == nil {
-			println("With apparently broken signature - so ban it!")
-			c.DoS()
+			//println("With apparently broken signature - so ban it!")
+			c.DoS("BrokenAlert")
 		} else {
 			println(hex.EncodeToString(b))
 		}

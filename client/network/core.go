@@ -211,8 +211,8 @@ func (c *OneConnection) IsBroken() (res bool) {
 }
 
 
-func (c *OneConnection) DoS() {
-	common.CountSafe("BannedNodes")
+func (c *OneConnection) DoS(why string) {
+	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
@@ -273,8 +273,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			msi := maxmsgsize(c.recv.cmd)
 			if c.recv.pl_len > msi {
 				//println(c.PeerAddr.Ip(), "Command", c.recv.cmd, "is going to be too big", c.recv.pl_len, msi)
-				c.DoS()
-				common.CountSafe("NetMsgSizeTooBig")
+				c.DoS("MsgTooBig")
 				return nil
 			}
 			c.Mutex.Lock()
@@ -290,8 +289,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 				c.Mutex.Unlock()
 				if c.recv.datlen > c.recv.pl_len {
 					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have", c.recv.datlen, c.recv.pl_len)
-					c.DoS()
-					common.CountSafe("NetMsgSizeIncorrect")
+					c.DoS("MsgSizeMismatch")
 					return nil
 				}
 			}
@@ -308,8 +306,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	sh := btc.Sha2Sum(c.recv.dat)
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
 		//println(c.PeerAddr.Ip(), "Msg checksum error")
-		common.CountSafe("NetBadChksum")
-		c.DoS()
+		c.DoS("MsgBadChksum")
 		return nil
 	}
 
