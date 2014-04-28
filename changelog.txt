@@ -3,6 +3,7 @@
 * Client: fixed a crash when loading a transaction with an output that has no standard address
 * Client: proper removing (from the memory pool) transactions altered by the malleability
 * Client: Relevant records are removed from SpentOutputs when expiring txs from mempool (memleak fix)
+* Client: Do not save connected (alive) peer's record into DB more often than once per minute
 * goc - a new tool to control the node from a remote console, using a WebUI interface
 * peers - a new tool to display content of the peers database
 * base58 - a new tool to encode/decode base58 strings
