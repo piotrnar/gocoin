@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"archive/zip"
 	"encoding/xml"
+	"encoding/hex"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 var (
@@ -108,6 +110,46 @@ func show_help() {
 	fmt.Println("Specify the command and (optionally) its arguments:")
 	fmt.Println("  wal [wallet_name] - switch to a given wallet (or list them)")
 	fmt.Println("  bal - creates balance/ folder for current wallet")
+	fmt.Println("  ptx <rawtx> - pushes raw tx into the network")
+}
+
+
+func push_tx(rawtx string) {
+	dat, er := hex.DecodeString(rawtx)
+	if er != nil {
+		println(er.Error())
+		os.Exit(1)
+	}
+
+	val := make(url.Values)
+	val["rawtx"] = []string{rawtx}
+
+	r, er := http.PostForm(HOST+"txs", val)
+	if er != nil {
+		println(er.Error())
+		os.Exit(1)
+	}
+	if r.StatusCode == 200 {
+		defer r.Body.Close()
+		res, _ := ioutil.ReadAll(r.Body)
+		if len(res)>100 {
+			txid := btc.NewSha2Hash(dat)
+			fmt.Println("TxID", txid.String(), "loaded")
+
+			http_get(HOST+"cfg") // get SID
+			//fmt.Println("sid", SID)
+
+			u, _ := url.Parse(HOST+"txs2s.xml")
+			ps := url.Values{}
+			ps.Add("sid", SID)
+			ps.Add("send", txid.String())
+			u.RawQuery = ps.Encode()
+			http_get(u.String())
+		}
+	} else {
+		println("http.Post returned code", r.StatusCode)
+		os.Exit(1)
+	}
 }
 
 
@@ -140,6 +182,9 @@ func main() {
 
 		case "bal":
 			fetch_balance()
+
+		case "pushtx":
+			push_tx(os.Args[2])
 
 		default:
 			show_help()
