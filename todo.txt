@@ -2,6 +2,7 @@ Downloader:
 * Make it to work with gocoion.cfg file
 
 Client:
+* Add support for messages attached to transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
