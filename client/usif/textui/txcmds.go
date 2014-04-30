@@ -155,7 +155,7 @@ func send_all_tx(par string) {
 		if v.Own!=0 {
 			cnt := network.NetRouteInv(1, btc.NewUint256(k[:]), nil)
 			v.Invsentcnt += cnt
-			fmt.Println("INV for TxID", btc.NewUint256(k[:]).String(), "sent to", cnt, "node(s)")
+			fmt.Println("INV for TxID", v.Hash.String(), "sent to", cnt, "node(s)")
 		}
 	}
 	network.TxMutex.Unlock()
