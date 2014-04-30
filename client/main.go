@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"bytes"
 	"unsafe"
 	"runtime"
 	"io/ioutil"
@@ -25,6 +26,19 @@ var killchan chan os.Signal = make(chan os.Signal)
 var retryCachedBlocks bool
 
 
+func contains_message(tx *btc.Tx) []byte {
+	for i := range tx.TxOut {
+		if len(tx.TxOut[i].Pk_script)>=2 && tx.TxOut[i].Pk_script[0]==0x6a /*OP_RETURN*/ {
+			s, e := btc.ReadString(bytes.NewBuffer(tx.TxOut[i].Pk_script[1:]))
+			if e==nil {
+				return []byte(s)
+			}
+		}
+	}
+	return nil
+}
+
+
 func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 	sta := time.Now()
 	e = common.BlockChain.AcceptBlock(bl)
@@ -35,6 +49,15 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
+			if msg:=contains_message(bl.Txs[i]); msg!=nil {
+				for xx:=range msg {
+					if msg[xx]<' ' || msg[xx]>127 {
+						msg[xx] = '.'
+					}
+				}
+				fmt.Println("TX", bl.Txs[i].Hash.String(), "says:", "'" + string(msg) + "'")
+				textui.ShowPrompt()
+			}
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
