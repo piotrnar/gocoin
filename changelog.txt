@@ -1,4 +1,4 @@
-0.9.9
+0.9.9 - 2014-04-30
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
 * Client: proper removing (from the memory pool) transactions altered by the malleability
