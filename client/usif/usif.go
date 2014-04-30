@@ -98,6 +98,13 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 	tx.Hash = btc.NewSha2Hash(txd)
 
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+	if _, ok := network.TransactionsToSend[tx.Hash.BIdx()]; ok {
+		s += fmt.Sprintln("TxID", tx.Hash.String(), "was already in the pool")
+		return
+	}
+
 	var missinginp bool
 	var totinp, totout uint64
 	s, missinginp, totinp, totout, er = DecodeTx(tx)
@@ -105,7 +112,6 @@ func LoadRawTx(buf []byte) (s string) {
 		return
 	}
 
-	network.TxMutex.Lock()
 	if missinginp {
 		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:2, Firstseen:time.Now(),
 			Volume:totout}
@@ -113,7 +119,6 @@ func LoadRawTx(buf []byte) (s string) {
 		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
 			Volume:totinp, Fee:totinp-totout}
 	}
-	network.TxMutex.Unlock()
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
 	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
 	return
