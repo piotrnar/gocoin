@@ -106,14 +106,6 @@ func switch_to_wallet(s string) {
 }
 
 
-func show_help() {
-	fmt.Println("Specify the command and (optionally) its arguments:")
-	fmt.Println("  wal [wallet_name] - switch to a given wallet (or list them)")
-	fmt.Println("  bal - creates balance/ folder for current wallet")
-	fmt.Println("  ptx <rawtx> - pushes raw tx into the network")
-}
-
-
 func push_tx(rawtx string) {
 	dat, er := hex.DecodeString(rawtx)
 	if er != nil {
@@ -150,6 +142,14 @@ func push_tx(rawtx string) {
 		println("http.Post returned code", r.StatusCode)
 		os.Exit(1)
 	}
+}
+
+
+func show_help() {
+	fmt.Println("Specify the command and (optionally) its arguments:")
+	fmt.Println("  wal [wallet_name] - switch to a given wallet (or list them)")
+	fmt.Println("  bal - creates balance/ folder for current wallet")
+	fmt.Println("  pushtx <rawtx> - pushes raw tx into the network")
 }
 
 
