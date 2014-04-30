@@ -39,9 +39,9 @@
 <table width="100%"><tr>
 <td valign="top" width="*">
 	<table>
-		<tr><td>Accepted transactions:<td><input type="button" id="but2s" value=" {T2S_CNT} " onclick="show_txs2s('')">
+		<tr><td>Accepted transactions:<td><input type="button" id="but2s" onclick="show_txs2s('')">
 		<b>{T2S_SIZE}</b>
-		<tr><td>UTXOs spent in memory:<td><b>{SPENT_OUTS_CNT}</b>
+		<tr><td>UTXOs spent in memory:<td><b id="outspent"></b> (avg. <b id="avgoutspertx"></b> / tx)
 		<tr><td>Rejected transactions:<td><input type="button" id="butre" value=" {TRE_CNT} " onclick="show_txsre()">
 		<b>{TRE_SIZE}</b>
 		<tr><td>Transactions waiting for inputs:<td><input type="button" id="butw4i" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
@@ -424,5 +424,12 @@ function show_txw4i() {
 	xmlHttp.open("GET","txw4i.xml", true);
 	xmlHttp.send(null);
 }
+
+var t2s_cnt = {T2S_CNT}
+var spent_outs_cnt = {SPENT_OUTS_CNT}
+
+but2s.value = t2s_cnt
+outspent.innerText = spent_outs_cnt
+avgoutspertx.innerText = (spent_outs_cnt/t2s_cnt).toFixed(2)
 
 </script>
