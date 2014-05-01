@@ -78,6 +78,17 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 			break
 		}
 	}
+	// remove duplicated addresses
+	for i:=0; i<len(addrs)-1; i++ {
+		for j:=i+1; j<len(addrs); {
+			if addrs[i].Hash160==addrs[j].Hash160 {
+				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
+				addrs = append(addrs[:j], addrs[j+1:]...)
+			} else {
+				j++
+			}
+		}
+	}
 	return
 }
 
