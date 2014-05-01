@@ -1,3 +1,6 @@
+0.9.10
+* Client: an address listed more than once in a wallet gets removed (was showing wrong balance)
+
 0.9.9 - 2014-04-30
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
