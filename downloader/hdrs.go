@@ -183,7 +183,7 @@ func download_headers() {
 	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
 	AddrMutex.Lock()
-	for len(AddrDatbase) < 60 {
+	for !GlobalExit && len(AddrDatbase) < 60 {
 		fmt.Println(len(AddrDatbase), "known peers at the moment - wait for more...")
 		AddrMutex.Unlock()
 		time.Sleep(3e9)
