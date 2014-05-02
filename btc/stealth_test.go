@@ -230,3 +230,22 @@ func TestStealthDH(t *testing.T) {
 		}
 	}
 }
+
+
+func TestStealthAddr(t *testing.T) {
+	var adrs = []string {
+		"waPX7opcFsJo5B9iJjiXjsmBY2oETSyCCBuDXBjxGXrH4pQCiyNXXRiN73VHBx9otWzxsEcErY5eGaKmUKqJHT7rBXpVE34zB1gV8h",
+		"vJmyoyfHgvkW2fRbqpANQircWiWDFMHtzyUxbcGsnUCX6z1jEjfArypDBNMeQdmsczkLVoSwYRZ5pS8YAxxQY7Q2m8SUXB2sZWjB6q",
+	}
+
+	for i := range adrs {
+		a, e := NewStealthAddrFromString(adrs[i])
+		if e != nil || a==nil {
+			t.Error(i, e.Error())
+		}
+	}
+	a, e := NewStealthAddrFromString("1"+adrs[0])
+	if e==nil || a!=nil {
+			t.Error("Error expected")
+	}
+}

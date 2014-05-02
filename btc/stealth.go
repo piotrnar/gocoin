@@ -1,6 +1,8 @@
 package btc
 
 import (
+	"bytes"
+	"errors"
 	"math/big"
 	"crypto/sha256"
 )
@@ -150,6 +152,86 @@ func (a *xyz_t) mul(r *xyz_t, k *big.Int) {
 	return
 }
 
+
+func StealthAddressVersion(testnet bool) byte {
+	if testnet {
+		return 43
+	} else {
+		return 42
+	}
+}
+
+
+type StealthAddr struct {
+	Version byte
+	Options byte
+	ScanKey [33]byte
+	SpendKeys [][33]byte
+	Sigs byte
+	Prefix []byte
+	Checksum []byte
+}
+
+
+func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
+	var tmp byte
+	var s string
+
+	dec := Decodeb58(hs)
+	if dec == nil {
+		e = errors.New("StealthAddr: Cannot decode b58 string *"+hs+"*")
+		return
+	}
+	if (len(dec)<2+33+33+1+1+4) {
+		e = errors.New("StealthAddr: data too short")
+		return
+	}
+
+	sh := Sha2Sum(dec[0:len(dec)-4])
+	if !bytes.Equal(sh[:4], dec[len(dec)-4:len(dec)]) {
+		e = errors.New("StealthAddr: Checksum error")
+		return
+	}
+
+	a = new(StealthAddr)
+	a.Checksum = sh[:4]
+
+	b := bytes.NewBuffer(dec[0:len(dec)-4])
+
+	if a.Version, e = b.ReadByte(); e != nil {
+		a = nil
+		return
+	}
+	if a.Options, e = b.ReadByte(); e != nil {
+		a = nil
+		return
+	}
+	if _, e = b.Read(a.ScanKey[:]); e != nil {
+		a = nil
+		return
+	}
+	if tmp, e = b.ReadByte(); e != nil {
+		a = nil
+		return
+	}
+	a.SpendKeys = make([][33]byte, int(tmp))
+	for i := range a.SpendKeys {
+		if _, e = b.Read(a.SpendKeys[i][:]); e != nil {
+			a = nil
+			return
+		}
+	}
+	if a.Sigs, e = b.ReadByte(); e != nil {
+		a = nil
+		return
+	}
+	if s, e = ReadString(b); e != nil {
+		a = nil
+		return
+	}
+	a.Prefix = []byte(s)
+	return
+}
 
 // Calculate the stealth difference
 func StealthDH(pub, priv []byte) []byte {
