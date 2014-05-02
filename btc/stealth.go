@@ -62,7 +62,7 @@ func (a *xyz_t) twice(r *xyz_t) {
 
 
 
-func (a *xyz_t) fp_add(r, b *xyz_t) {
+func (a *xyz_t) add(r, b *xyz_t) {
 	x1 := a.x
 	x2 := b.x
 	y1 := a.y
@@ -127,7 +127,7 @@ func (a *xyz_t) fp_add(r, b *xyz_t) {
 
 // Simple NAF (Non-Adjacent Form) multiplication algorithm
 // (whatever that is).
-func (a *xyz_t) fp_mul(r *xyz_t, k *big.Int) {
+func (a *xyz_t) mul(r *xyz_t, k *big.Int) {
 	var neg xyz_t
 
 	*r = *a
@@ -140,11 +140,27 @@ func (a *xyz_t) fp_mul(r *xyz_t, k *big.Int) {
 		hb := h.Bit(i)
 		if hb != k.Bit(i) {
 			if hb!=0 {
-				r.fp_add(r, a)
+				r.add(r, a)
 			} else {
-				r.fp_add(r, &neg)
+				r.add(r, &neg)
 			}
 		}
 	}
 	return
+}
+
+
+// Calculate the stealth difference
+func StealthDiff(pub, priv []byte) []byte {
+	pk, er := NewPublicKey(pub)
+	if er != nil {
+		println(er.Error())
+		return nil
+	}
+	var p, res xyz_t
+	p.x = new(big.Int).Set(pk.X)
+	p.y = new(big.Int).Set(pk.Y)
+	p.z = new(big.Int).SetInt64(1)
+	p.mul(&res, new(big.Int).SetBytes(priv))
+	return res.x.Bytes()
 }
