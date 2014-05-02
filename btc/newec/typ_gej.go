@@ -472,7 +472,7 @@ func (a *gej_t) fp_add(r, b *gej_t) {
 
 // Simple NAF (Non-Adjacent Form) multiplication algorithm
 // (whatever that is).
-func (a *gej_t) mul(r *gej_t, k *num_t) {
+func (a *gej_t) fp_mul(r *gej_t, k *num_t) {
 	var h num_t
 	var neg gej_t
 

@@ -156,7 +156,7 @@ func TestGejFpMult(t *testing.T) {
 		exp.x.set_hex(vecs[i][3])
 		exp.y.set_hex(vecs[i][4])
 		exp.z.set_hex(vecs[i][5])
-		a.mul(&r, &k)
+		a.fp_mul(&r, &k)
 		if !r.equal(&exp) {
 			r.print("got")
 			exp.print("exp")
@@ -165,12 +165,3 @@ func TestGejFpMult(t *testing.T) {
 	}
 }
 
-/*
-*************** FpMultiply ************** bitcoinjs.js:10961
-a.x 79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798 bitcoinjs.js:10962
-a.y 483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8 bitcoinjs.js:10963
-k   ac5e6a9ad86a9f31a37201887d9c9b0f3e183d230ffcf2e31137cb00acc1c105 bitcoinjs.js:10965
-->x 3628a0d7d8621b1d6c60293b3aaea5fcebc6360f4e3252094267dae1ec831a60 bitcoinjs.js:10985
-->y e0c2e6fa2b164a0aa7ce31f37e7cc1d2d4431a13cef69559f0f62931066fdbff bitcoinjs.js:10986
-->z cc0764cb49940d20edda6b87178c102e1a949a44ea8524110657dce311e6270d
-*/
