@@ -169,7 +169,6 @@ type StealthAddr struct {
 	SpendKeys [][33]byte
 	Sigs byte
 	Prefix []byte
-	Checksum []byte
 }
 
 
@@ -193,7 +192,6 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 	}
 
 	a = new(StealthAddr)
-	a.Checksum = sh[:4]
 
 	b := bytes.NewBuffer(dec[0:len(dec)-4])
 
@@ -227,6 +225,24 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 	a.Prefix = b.Bytes()
 	return
 }
+
+
+func (a *StealthAddr) String() (string) {
+	b := new(bytes.Buffer)
+	b.WriteByte(a.Version)
+	b.WriteByte(a.Options)
+	b.Write(a.ScanKey[:])
+	b.WriteByte(byte(len(a.SpendKeys)))
+	for i:=range a.SpendKeys {
+		b.Write(a.SpendKeys[i][:])
+	}
+	b.WriteByte(a.Sigs)
+	b.Write(a.Prefix)
+	sh := Sha2Sum(b.Bytes())
+	b.Write(sh[:4])
+	return Encodeb58(b.Bytes())
+}
+
 
 // Calculate the stealth difference
 func StealthDH(pub, priv []byte) []byte {

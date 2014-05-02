@@ -243,6 +243,10 @@ func TestStealthAddr(t *testing.T) {
 		if e != nil || a==nil {
 			t.Error(i, e.Error())
 		}
+		s := a.String()
+		if s != adrs[i] {
+			t.Error(i, "Re-encode mismatch")
+		}
 	}
 	a, e := NewStealthAddrFromString("1"+adrs[0])
 	if e==nil || a!=nil {
