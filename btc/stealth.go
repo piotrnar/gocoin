@@ -175,7 +175,6 @@ type StealthAddr struct {
 
 func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 	var tmp byte
-	var s string
 
 	dec := Decodeb58(hs)
 	if dec == nil {
@@ -225,11 +224,7 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 		a = nil
 		return
 	}
-	if s, e = ReadString(b); e != nil {
-		a = nil
-		return
-	}
-	a.Prefix = []byte(s)
+	a.Prefix = b.Bytes()
 	return
 }
 
