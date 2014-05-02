@@ -2,6 +2,7 @@ package btc
 
 import (
 	"math/big"
+	"crypto/sha256"
 )
 
 type xyz_t struct {
@@ -151,7 +152,7 @@ func (a *xyz_t) mul(r *xyz_t, k *big.Int) {
 
 
 // Calculate the stealth difference
-func StealthDiff(pub, priv []byte) []byte {
+func StealthDH(pub, priv []byte) []byte {
 	pk, er := NewPublicKey(pub)
 	if er != nil {
 		println(er.Error())
@@ -162,5 +163,9 @@ func StealthDiff(pub, priv []byte) []byte {
 	p.y = new(big.Int).Set(pk.Y)
 	p.z = new(big.Int).SetInt64(1)
 	p.mul(&res, new(big.Int).SetBytes(priv))
-	return res.x.Bytes()
+
+	s := sha256.New()
+	s.Write([]byte{0x03})
+	s.Write(res.x.Bytes())
+	return s.Sum(nil)
 }
