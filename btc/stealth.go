@@ -5,7 +5,7 @@ import (
 )
 
 type xyz_t struct {
-	x, y, z big.Int
+	x, y, z *big.Int
 }
 
 var (
@@ -13,11 +13,16 @@ var (
 )
 
 
-func (a *xyz_t) twice(r *xyz_t) {
-	x1 := &a.x
-	y1 := &a.y
+func (a *xyz_t) equal(b *xyz_t) bool {
+	return a.x.Cmp(b.x)==0 && a.y.Cmp(b.y)==0  && a.z.Cmp(b.z)==0
+}
 
-	y1z1 := new(big.Int).Mul(y1, &a.z)
+
+func (a *xyz_t) twice(r *xyz_t) {
+	x1 := a.x
+	y1 := a.y
+
+	y1z1 := new(big.Int).Mul(y1, a.z)
 
 	y1sqz1 := new(big.Int).Mul(y1z1, y1)
 	y1sqz1.Mod(y1sqz1, secp256k1.P)
@@ -50,20 +55,20 @@ func (a *xyz_t) twice(r *xyz_t) {
     z3.Lsh(z3, 3)
 	z3.Mod(z3, secp256k1.P) // mod
 
-	r.x.Set(x3)
-	r.y.Set(y3)
-	r.z.Set(z3)
+	r.x = x3
+	r.y = y3
+	r.z = z3
 }
 
 
 
 func (a *xyz_t) fp_add(r, b *xyz_t) {
-	x1 := &a.x
-	x2 := &b.x
-	y1 := &a.y
-	y2 := &b.y
-	z1 := &a.z
-	z2 := &b.z
+	x1 := a.x
+	x2 := b.x
+	y1 := a.y
+	y2 := b.y
+	z1 := a.z
+	z2 := b.z
 
 	// u = Y2 * Z1 - Y1 * Z2
 	u := new(big.Int).Sub(new(big.Int).Mul(y2, z1), new(big.Int).Mul(y1, z2))
@@ -112,9 +117,9 @@ func (a *xyz_t) fp_add(r, b *xyz_t) {
 	z3.Mul(z3, z2)
 	z3.Mod(z3, secp256k1.P)
 
-	r.x.Set(x3)
-	r.y.Set(y3)
-	r.z.Set(z3)
+	r.x = x3
+	r.y = y3
+	r.z = z3
 }
 
 
@@ -127,9 +132,9 @@ func (a *xyz_t) fp_mul(r *xyz_t, k *big.Int) {
 
 	*r = *a
 	h := new(big.Int).Mul(k, BigInt3)
-	neg.x.Set(&a.x)
-	neg.y.Neg(&a.y)
-	neg.z.Set(&a.z)
+	neg.x = new(big.Int).Set(a.x)
+	neg.y = new(big.Int).Neg(a.y)
+	neg.z = new(big.Int).Set(a.z)
 	for i:=h.BitLen()-2; i>0; i-- {
 		r.twice(r)
 		hb := h.Bit(i)
