@@ -2,6 +2,7 @@ package newec
 
 import (
 	"fmt"
+	"math/big"
 	"encoding/hex"
 )
 
@@ -19,6 +20,15 @@ func (a *fe_t) String() string {
 
 func (a *fe_t) print(lab string) {
 	fmt.Println(lab + ":", a.String())
+}
+
+func (a *fe_t) get_big() (r *big.Int) {
+	a.normalize()
+	r = new(big.Int)
+	var tmp [32]byte
+	a.get_b32(tmp[:])
+	r.SetBytes(tmp[:])
+	return
 }
 
 func (r *fe_t) set_b32(a []byte) {
@@ -200,5 +210,3 @@ func (a *fe_t) negate(r *fe_t, m uint32) {
 	r.n[8] = 0x3FFFFFF * (m + 1) - a.n[8]
 	r.n[9] = 0x03FFFFF * (m + 1) - a.n[9]
 }
-
-

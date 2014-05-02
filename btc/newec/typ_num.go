@@ -8,6 +8,7 @@ import (
 
 var (
 	BigInt1 *big.Int = new(big.Int).SetInt64(1)
+	BigInt3 *big.Int = new(big.Int).SetInt64(3)
 )
 
 type num_t struct {
