@@ -6,10 +6,9 @@ package btc
 */
 
 import (
-	"crypto/elliptic"
 	"io"
 	"math/big"
-	"sync"
+	"crypto/elliptic"
 )
 
 // A BitCurve represents a Koblitz Curve with a=0.
