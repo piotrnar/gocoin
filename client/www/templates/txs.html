@@ -430,6 +430,10 @@ var spent_outs_cnt = {SPENT_OUTS_CNT}
 
 but2s.value = t2s_cnt
 outspent.innerText = spent_outs_cnt
-avgoutspertx.innerText = (spent_outs_cnt/t2s_cnt).toFixed(2)
+if (t2s_cnt>0) {
+	avgoutspertx.innerText = (spent_outs_cnt/t2s_cnt).toFixed(2)
+} else {
+	avgoutspertx.innerText = '?'
+}
 
 </script>
