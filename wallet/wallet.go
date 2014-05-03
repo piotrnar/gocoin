@@ -166,10 +166,38 @@ func make_wallet() {
 			copy(seed_key, prv_key)
 		}
 		priv_keys = append(priv_keys, prv_key)
+		if *scankey!="" {
+			sk, er := hex.DecodeString(*scankey)
+			if er != nil {
+				println(er.Error())
+				return
+			}
+			if len(sk)!=33 || sk[0]!=2 && sk[0]!=3 {
+				println("scankey must be a compressed public key (33 bytes long)")
+				return
+			}
+			pub, er := btc.PublicFromPrivate(prv_key, true)
+			if er != nil {
+				println(er.Error())
+				return
+			}
+
+			sa := new(btc.StealthAddr)
+			sa.Version = btc.StealthAddressVersion(*testnet)
+			sa.Options = 0
+			copy(sa.ScanKey[:], sk)
+			sa.SpendKeys = make([][33]byte, 1)
+			copy(sa.SpendKeys[0][:], pub)
+			sa.Sigs = 1
+			sa.Prefix = []byte{0}
+			fmt.Println(sa.String())
+			return
+		}
 		compressed_key = append(compressed_key, !*uncompressed)
 		pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
 		if er == nil {
 			adr := btc.NewAddrFromPubkey(pub, verbyte)
+
 			if *pubkey!="" && *pubkey==adr.String() {
 				fmt.Println(adr.String(), "=>", hex.EncodeToString(pub))
 				return
