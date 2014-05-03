@@ -262,7 +262,6 @@ func (BitCurve *BitCurve) Unmarshal(data []byte) (x, y *big.Int) {
 //curve parameters taken from:
 //http://www.secg.org/collateral/sec2_final.pdf
 
-var initonce sync.Once
 var secp256k1 *BitCurve
 var Qplus1div4 *big.Int  // This is used by key.go:decompressPoint()
 
