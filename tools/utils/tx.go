@@ -23,7 +23,7 @@ func is_hex_string(s []byte) (string) {
 // reads tx from the file or (if there is no such a file) decodes the text
 func GetRawData(fn string) (dat []byte) {
 	d, er := ioutil.ReadFile(fn)
-	if er != nil {
+	if er == nil {
 		hexdump := is_hex_string(d)
 		if len(hexdump)>=2 || (len(hexdump)&1)==1 {
 			dat, _ = hex.DecodeString(hexdump)
