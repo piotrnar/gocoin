@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"archive/zip"
 	"encoding/xml"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
@@ -110,10 +111,11 @@ func push_tx(rawtx string) {
 	dat := utils.GetRawData(rawtx)
 	if dat == nil {
 		println("Cannot fetch the raw transaction data (specify hexdump or filename)")
+		return
 	}
 
 	val := make(url.Values)
-	val["rawtx"] = []string{rawtx}
+	val["rawtx"] = []string{hex.EncodeToString(dat)}
 
 	r, er := http.PostForm(HOST+"txs", val)
 	if er != nil {
