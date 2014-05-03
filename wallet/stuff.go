@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"bufio"
 	"strings"
-	"io/ioutil"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/tools/utils"
 )
 
 var secrespass func() string
@@ -185,43 +184,15 @@ func dump_prvkey() {
 }
 
 
-func is_hex_string(s []byte) (string) {
-	var res string
-	for i := range s {
-		c := byte(s[i])
-		if c<='9' && c>='0' || c<='f' && c>='a' || c<='F' && c>='A' {
-			res += string(c)
-		} else if c!=' ' && c!='\n' && c!='\r' && c!='\t' {
-			return ""
-		}
-	}
-	return res
-}
-
-
 func raw_tx_from_file(fn string) *btc.Tx {
-	d, er := ioutil.ReadFile(fn)
-	if er != nil {
-		fmt.Println(er.Error())
+	dat := utils.GetRawData(fn)
+	if dat==nil {
+		fmt.Println("Cannot fetch raw transaction data")
 		return nil
 	}
-
-	var dat []byte
-	hexdump := is_hex_string(d)
-	if len(hexdump)>=2 || (len(hexdump)&1)==1 {
-		dat, _ = hex.DecodeString(hexdump)
-	} else {
-		if *verbose {
-			fmt.Println("Assume binary transaction file")
-		}
-		dat = d
-	}
-
 	tx, txle := btc.NewTx(dat)
-
 	if tx != nil && txle != len(dat) {
 		fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
 	}
-
 	return tx
 }
