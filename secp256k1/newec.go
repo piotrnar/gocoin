@@ -72,43 +72,13 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 // xy - is the standarized public key format (33 or 65 bytes long)
 // out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
 func Multiply(xy, k, out []byte) bool {
-	var B, r XYZ_t
 	var pk XY_t
-
 	if !pk.pubkey_parse(xy) {
 		return false
 	}
+	return pk.multi(k, out)
+}
 
-	B.set_ge(&pk)
-	r = B
-
-	seen := false
-	for _, byte := range k {
-		for bitNum := 0; bitNum < 8; bitNum++ {
-			if seen {
-				r.double(&r)
-			}
-			if byte&0x80 == 0x80 {
-				if !seen {
-					seen = true
-				} else {
-					r.add(&r, &B)
-				}
-			}
-			byte <<= 1
-		}
-	}
-
-	if !seen {
-		return false
-	}
-
-	pk.set_gej(&r)
-	pk.x.GetB32(out[1:])
-	if pk.y.IsOdd() {
-		out[0] = 0x03
-	} else {
-		out[0] = 0x02
-	}
-	return true
+func BaseMultiply(k, out []byte) bool {
+	return TheCurve.G.multi(k, out)
 }

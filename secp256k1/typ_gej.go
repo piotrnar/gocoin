@@ -6,13 +6,13 @@ import (
 )
 
 
-type gej_t struct {
+type XYZ_t struct {
 	x, y, z Fe_t
-	infinity bool
+	Infinity bool
 }
 
-func (gej gej_t) Print(lab string) {
-	if gej.infinity {
+func (gej XYZ_t) Print(lab string) {
+	if gej.Infinity {
 		fmt.Println(lab + " - INFINITY")
 		return
 	}
@@ -22,19 +22,19 @@ func (gej gej_t) Print(lab string) {
 }
 
 
-func (r *gej_t) set_ge(a *ge_t) {
-	r.infinity = a.infinity
+func (r *XYZ_t) set_ge(a *XY_t) {
+	r.Infinity = a.Infinity
 	r.x = a.x
 	r.y = a.y
 	r.z.SetInt(1)
 }
 
-func (r *gej_t) is_infinity() bool {
-	return r.infinity
+func (r *XYZ_t) is_infinity() bool {
+	return r.Infinity
 }
 
-func (a *gej_t) is_valid() bool {
-	if a.infinity {
+func (a *XYZ_t) is_valid() bool {
+	if a.Infinity {
 		return false
 	}
 	var y2, x3, z2, z6 Fe_t
@@ -49,21 +49,21 @@ func (a *gej_t) is_valid() bool {
 	return y2.Equals(&x3)
 }
 
-func (a *gej_t) get_x(r *Fe_t) {
+func (a *XYZ_t) get_x(r *Fe_t) {
 	var zi2 Fe_t
 	a.z.inv_var(&zi2)
 	zi2.sqr(&zi2)
 	a.x.mul(r, &zi2)
 }
 
-func (a *gej_t) Normalize() {
+func (a *XYZ_t) Normalize() {
 	a.x.Normalize()
 	a.y.Normalize()
 	a.z.Normalize()
 }
 
-func (a *gej_t) Equals(b *gej_t) bool {
-	if a.infinity != b.infinity {
+func (a *XYZ_t) Equals(b *XYZ_t) bool {
+	if a.Infinity != b.Infinity {
 		return false
 	}
 	// TODO: check it it does not affect performance
@@ -73,9 +73,9 @@ func (a *gej_t) Equals(b *gej_t) bool {
 }
 
 
-func (a *gej_t) precomp(w int) (pre []gej_t) {
-	var d gej_t
-	pre = make([]gej_t, (1 << (uint(w)-2)))
+func (a *XYZ_t) precomp(w int) (pre []XYZ_t) {
+	var d XYZ_t
+	pre = make([]XYZ_t, (1 << (uint(w)-2)))
 	pre[0] = *a;
 	pre[0].double(&d)
 	for i:=1 ; i<len(pre); i++ {
@@ -85,7 +85,7 @@ func (a *gej_t) precomp(w int) (pre []gej_t) {
 }
 
 
-func (a *gej_t) ecmult(r *gej_t, na, ng *Number) {
+func (a *XYZ_t) ecmult(r *XYZ_t, na, ng *Number) {
 	var na_1, na_lam, ng_1, ng_128 Number
 
 	// split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit)
@@ -102,7 +102,7 @@ func (a *gej_t) ecmult(r *gej_t, na, ng *Number) {
 	bits_ng_128 := ecmult_wnaf(wnaf_ng_128[:], &ng_128, WINDOW_G)
 
 	// calculate a_lam = a*lambda
-	var a_lam gej_t
+	var a_lam XYZ_t
 	a.mul_lambda(&a_lam)
 
 	// calculate odd multiples of a and a_lam
@@ -120,10 +120,10 @@ func (a *gej_t) ecmult(r *gej_t, na, ng *Number) {
 		bits = bits_ng_128
 	}
 
-	r.infinity = true
+	r.Infinity = true
 
-	var tmpj gej_t
-	var tmpa ge_t
+	var tmpj XYZ_t
+	var tmpa XY_t
 	var n int
 
 	for i:=bits-1; i>=0; i-- {
@@ -172,8 +172,8 @@ func (a *gej_t) ecmult(r *gej_t, na, ng *Number) {
 }
 
 
-func (a *gej_t) neg(r *gej_t) {
-	r.infinity = a.infinity
+func (a *XYZ_t) neg(r *XYZ_t) {
+	r.Infinity = a.Infinity
 	r.x = a.x
 	r.y = a.y
 	r.z = a.z
@@ -181,19 +181,19 @@ func (a *gej_t) neg(r *gej_t) {
 	r.y.Negate(&r.y, 1)
 }
 
-func (a *gej_t) mul_lambda(r *gej_t) {
+func (a *XYZ_t) mul_lambda(r *XYZ_t) {
 	*r = *a
 	r.x.mul(&r.x, &TheCurve.beta)
 }
 
 
-func (a *gej_t) double(r *gej_t) {
+func (a *XYZ_t) double(r *XYZ_t) {
 	var t1, t2, t3, t4, t5 Fe_t
 
 	t5 = a.y
 	t5.Normalize()
-	if (a.infinity || t5.IsZero()) {
-		r.infinity = true
+	if (a.Infinity || t5.IsZero()) {
+		r.Infinity = true
 		return
 	}
 
@@ -217,23 +217,23 @@ func (a *gej_t) double(r *gej_t) {
 	t1.mul(&r.y, &t3)
 	t4.Negate(&t2, 2)
 	r.y.set_add(&t2)
-	r.infinity = false
+	r.Infinity = false
 }
 
 
-func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
-	if a.infinity {
-		r.infinity = b.infinity
+func (a *XYZ_t) add_ge(r *XYZ_t, b *XY_t) {
+	if a.Infinity {
+		r.Infinity = b.Infinity
 		r.x = b.x
 		r.y = b.y
 		r.z.SetInt(1)
 		return
 	}
-	if b.infinity {
+	if b.Infinity {
 		*r = *a
 		return
 	}
-	r.infinity = false
+	r.Infinity = false
 	var z12, u1, u2, s1, s2 Fe_t
 	a.z.sqr(&z12)
 	u1 = a.x
@@ -252,7 +252,7 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 		if (s1.Equals(&s2)) {
 			a.double(r)
 		} else {
-			r.infinity = true
+			r.Infinity = true
 		}
 		return
 	}
@@ -282,16 +282,16 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 }
 
 
-func (a *gej_t) add(r, b *gej_t) {
-	if a.infinity {
+func (a *XYZ_t) add(r, b *XYZ_t) {
+	if a.Infinity {
 		*r = *b
 		return
 	}
-	if b.infinity {
+	if b.Infinity {
 		*r = *a
 		return
 	}
-	r.infinity = false
+	r.Infinity = false
 	var z22, z12, u1, u2, s1, s2 Fe_t
 
 	b.z.sqr(&z22)
@@ -310,7 +310,7 @@ func (a *gej_t) add(r, b *gej_t) {
 		if s1.Equals(&s2) {
 			a.double(r)
 		} else {
-			r.infinity = true
+			r.Infinity = true
 		}
 		return
 	}

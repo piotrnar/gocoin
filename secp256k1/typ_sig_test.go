@@ -26,7 +26,7 @@ func TestSigRecover(t *testing.T) {
 	}
 
 	var sig Signature
-	var pubkey, exp ge_t
+	var pubkey, exp XY_t
 	var msg Number
 
 	for i := range vs {
@@ -78,7 +78,7 @@ func TestSign(t *testing.T) {
 func BenchmarkVerify(b *testing.B) {
 	var msg Number
 	var sig Signature
-	var key ge_t
+	var key XY_t
 	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
 	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")

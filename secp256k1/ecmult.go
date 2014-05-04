@@ -6,24 +6,24 @@ import (
 
 
 var (
-	pre_g, pre_g_128 []ge_t
-	prec [64][16]ge_t
-	fin ge_t
+	pre_g, pre_g_128 []XY_t
+	prec [64][16]XY_t
+	fin XY_t
 )
 
 
 func ecmult_start() {
-	g := TheCurve.g
+	g := TheCurve.G
 
 	// calculate 2^128*generator
-	var g_128j gej_t
+	var g_128j XYZ_t
 	g_128j.set_ge(&g)
 
 	for i := 0; i < 128; i++ {
 		g_128j.double(&g_128j)
 	}
 
-	var g_128 ge_t
+	var g_128 XY_t
 	g_128.set_gej(&g_128j)
 
     // precompute the tables with odd multiples
@@ -31,11 +31,11 @@ func ecmult_start() {
 	pre_g_128 = g_128.precomp(WINDOW_G)
 
 	// compute prec and fin
-	var gg gej_t
+	var gg XYZ_t
 	gg.set_ge(&g)
 	ad := g
-	var fn gej_t
-	fn.infinity = true
+	var fn XYZ_t
+	fn.Infinity = true
 	for j:=0; j<64; j++ {
 		prec[j][0].set_gej(&gg)
 		fn.add(&fn, &gg)
@@ -78,7 +78,7 @@ func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 	return
 }
 
-func ecmult_gen(r *gej_t, gn *Number) {
+func ecmult_gen(r *XYZ_t, gn *Number) {
 	var n Number;
 	n.Set(&gn.Int)
 	r.set_ge(&prec[0][n.rsh_x(4)])

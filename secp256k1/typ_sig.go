@@ -33,20 +33,20 @@ func (r *Signature) sig_parse(sig []byte) bool {
 	return true
 }
 
-func (r *Signature) Verify(pubkey *ge_t, message *Number) (ret bool) {
+func (r *Signature) Verify(pubkey *XY_t, message *Number) (ret bool) {
 	var r2 Number
 	ret = r.recompute(&r2, pubkey, message) && r.R.Cmp(&r2.Int) == 0
 	return
 }
 
-func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
+func (sig *Signature) recompute(r2 *Number, pubkey *XY_t, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
 	sn.mod_inv(&sig.S, &TheCurve.Order)
 	u1.mod_mul(&sn, message, &TheCurve.Order)
 	u2.mod_mul(&sn, &sig.R, &TheCurve.Order)
 
-	var pr, pubkeyj gej_t
+	var pr, pubkeyj XYZ_t
 	pubkeyj.set_ge(pubkey)
 
 	pubkeyj.ecmult(&pr, &u2, &u1)
@@ -64,11 +64,11 @@ func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret 
 	return
 }
 
-func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
+func (sig *Signature) recover(pubkey *XY_t, m *Number, recid int) (ret bool) {
 	var rx, rn, u1, u2 Number
 	var fx Fe_t
-	var x ge_t
-	var xj, qj gej_t
+	var x XY_t
+	var xj, qj XYZ_t
 
 	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
 		return false
@@ -106,8 +106,8 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 
 
 func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
-	var r ge_t
-	var rp gej_t
+	var r XY_t
+	var rp XYZ_t
 	var n Number
 	var b [32]byte
 
