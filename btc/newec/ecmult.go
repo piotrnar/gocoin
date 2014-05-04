@@ -77,3 +77,13 @@ func ecmult_wnaf(wnaf []int, a *num_t, w uint) (ret int) {
 	}
 	return
 }
+
+func ecmult_gen(r *gej_t, gn *num_t) {
+	var n num_t;
+	n.set(gn)
+	r.set_ge(&prec[0][gn.rsh_x(4)])
+	for j:=1; j<64; j++ {
+		r.add_ge(r, &prec[j][gn.rsh_x(4)])
+	}
+	r.add_ge(r, &fin)
+}
