@@ -85,7 +85,7 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDB(dir string, load bool) (db *DB, e error) {
+func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32) (db *DB, e error) {
 	cnt("NewDB")
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
@@ -97,10 +97,19 @@ func NewDB(dir string, load bool) (db *DB, e error) {
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
 	db.idx = NewDBidx(db)
 	if load {
-		db.idx.load()
+		db.idx.load(walk)
 	}
 	db.datseq = db.idx.max_dat_seq+1
 	return
+}
+
+
+func NewDBrowse(dir string, walk func(key KeyType, value []byte) uint32) (db *DB, e error) {
+	return NewDBExt(dir, true, walk)
+}
+
+func NewDB(dir string, load bool) (db *DB, e error) {
+	return NewDBExt(dir, load, nil)
 }
 
 

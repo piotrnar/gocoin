@@ -45,7 +45,7 @@ func TestDatabase(t *testing.T) {
 	os.RemoveAll(dbname)
 	mr.Seed(time.Now().UnixNano())
 
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot create db")
 		return
@@ -62,7 +62,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, defrag and close
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -84,7 +84,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, add oneRound more records and Close
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -108,7 +108,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, defrag and close
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -125,7 +125,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -140,7 +140,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen, delete 100 records, close...
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if e != nil {
 		t.Error("Cannot reopen db")
 		return
@@ -161,14 +161,14 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
 	}
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	db.Defrag()
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
@@ -176,7 +176,7 @@ func TestDatabase(t *testing.T) {
 	db.Close()
 
 	// Reopen DB, verify, close...
-	db, e = NewDB(dbname, true)
+	db, e = NewDB(dbname, true, nil)
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
 	}

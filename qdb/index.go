@@ -34,10 +34,10 @@ func NewDBidx(db *DB) (idx *dbidx) {
 }
 
 
-func (idx *dbidx) load() {
+func (idx *dbidx) load(walk func(key KeyType, value []byte) uint32) {
 	dats := make(map[uint32] []byte)
 	idx.browse(func(k KeyType, v *oneIdx) bool {
-		if (v.flags&NO_CACHE)==0 {
+		if walk!=nil || (v.flags&NO_CACHE)==0 {
 			dat := dats[v.datseq]
 			if dat == nil {
 				dat, _ = ioutil.ReadFile(idx.db.seq2fn(v.datseq))
@@ -49,6 +49,9 @@ func (idx *dbidx) load() {
 			}
 			v.data = make([]byte, v.datlen)
 			copy(v.data, dat[v.datpos:v.datpos+v.datlen])
+			if walk!=nil {
+				walk(k, v.data)
+			}
 		}
 		return true
 	})
