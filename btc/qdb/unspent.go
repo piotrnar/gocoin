@@ -3,6 +3,7 @@ package qdb
 import (
 	"fmt"
 	"errors"
+//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
@@ -38,12 +39,14 @@ type unspentDb struct {
 	nosyncinprogress bool
 	notifyTx btc.TxNotifyFunc
 	lastHeight uint32
+	stealthOuts map[qdb.KeyType] qdb.KeyType
 }
 
 func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.lastHeight = lasth
+	db.stealthOuts = make(map[qdb.KeyType] qdb.KeyType)
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -53,13 +56,24 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 		}
 	}
 	fmt.Print("\r                                                              \r")
+	println(len(db.stealthOuts), "stalth unspent outputs found")
+
 	return
 }
 
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("%06d", i), true)
+		db.tdb[i], _ = qdb.NewDBrowse(db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
+				scr := v[48:]
+				if len(scr)==40 && scr[0]==0x6a && scr[1]==0x26 && scr[2]==0x06 {
+					pk := uint64(k)
+					vo := uint64(binary.LittleEndian.Uint32(v[32:36]))
+					pk = pk ^ vo ^ (vo+1)
+					db.stealthOuts[k] = qdb.KeyType(pk)
+				}
+				return 0
+			})
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -134,12 +148,17 @@ func bin2unspent(v []byte, ad *btc.BtcAddr) (nr *btc.OneUnspentTx) {
 }
 
 
+func (db *unspentDb) buildAddrMap(addr []*btc.BtcAddr) (addrs map[uint64]*btc.BtcAddr) {
+	addrs = make(map[uint64]*btc.BtcAddr, len(addr))
+	for i := range addr {
+		addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = addr[i]
+	}
+	return
+}
+
 func (db *unspentDb) GetAllUnspent(addr []*btc.BtcAddr, quick bool) (res btc.AllUnspentTx) {
 	if quick {
-		addrs := make(map[uint64]*btc.BtcAddr, len(addr))
-		for i := range addr {
-			addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = addr[i]
-		}
+		addrs := db.buildAddrMap(addr)
 		for i := range db.tdb {
 			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 				scr := v[48:]
