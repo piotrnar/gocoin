@@ -56,9 +56,9 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	var sig Signature
 	var pubkey ge_t
 	var msg Number
-	sig.r.set_bytes(r)
-	sig.s.set_bytes(s)
-	msg.set_bytes(h)
+	sig.r.SetBytes(r)
+	sig.s.SetBytes(s)
+	msg.SetBytes(h)
 	if !sig.recover(&pubkey, &msg, recid) {
 		return false
 	}
