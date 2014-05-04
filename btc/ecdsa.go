@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/sha512"
+	"github.com/piotrnar/gocoin/btc/newec"
+//	"encoding/hex"
 )
 
 var (
@@ -33,7 +35,7 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	if EC_Verify!=nil {
 		return EC_Verify(kd, sd, hash)
 	}
-	return GoVerify(kd, sd, hash)
+	return newec.Verify(kd, sd, hash)
 }
 
 
@@ -63,3 +65,5 @@ func EcdsaSign(priv *ecdsa.PrivateKey, hash []byte) (r, s *big.Int, err error) {
 
 	return ecdsa.Sign(radrd, priv, hash)
 }
+
+
