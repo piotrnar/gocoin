@@ -8,27 +8,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha512"
 	"github.com/piotrnar/gocoin/btc/newec"
-//	"encoding/hex"
 )
 
 var (
 	EcdsaVerifyCnt uint64
 	EC_Verify func(k, s, h []byte) bool
 )
-
-// Use crypto/ecdsa
-func GoVerify(kd []byte, sd []byte, h []byte) bool {
-	pk, e := NewPublicKey(kd)
-	if e != nil {
-		return false
-	}
-	s, e := NewSignature(sd)
-	if e != nil {
-		return false
-	}
-	return ecdsa.Verify(&pk.PublicKey, h, s.R, s.S)
-}
-
 
 func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	atomic.AddUint64(&EcdsaVerifyCnt, 1)
@@ -65,5 +50,3 @@ func EcdsaSign(priv *ecdsa.PrivateKey, hash []byte) (r, s *big.Int, err error) {
 
 	return ecdsa.Sign(radrd, priv, hash)
 }
-
-
