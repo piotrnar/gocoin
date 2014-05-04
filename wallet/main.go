@@ -8,7 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 )
 
-const (
+var (
 	PassSeedFilename = ".secret"
 	RawKeysFilename = ".others"
 )
