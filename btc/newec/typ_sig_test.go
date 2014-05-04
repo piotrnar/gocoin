@@ -38,10 +38,10 @@ func TestSigRecover(t *testing.T) {
 		exp.y.set_hex(vs[i][5])
 
 		if sig.recover(&pubkey, &msg, int(rid)) {
-			if exp.x.String()!=pubkey.x.String() {
+			if !exp.x.equal(&pubkey.x) {
 				t.Error("x mismatch at vector", i)
 			}
-			if exp.y.String()!=pubkey.y.String() {
+			if !exp.y.equal(&pubkey.y) {
 				t.Error("y mismatch at vector", i)
 			}
 		} else {

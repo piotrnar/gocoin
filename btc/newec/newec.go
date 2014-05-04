@@ -66,3 +66,44 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	pubkey.y.get_b32(y)
 	return true
 }
+
+
+func Multiply(xy, k, xout, yout []byte) bool {
+	var B, r gej_t
+	var pk ge_t
+
+	if !pk.pubkey_parse(xy) {
+		return false
+	}
+
+	B.set_ge(&pk)
+	r = B
+
+	seen := false
+	for _, byte := range k {
+		for bitNum := 0; bitNum < 8; bitNum++ {
+			if seen {
+				r.double(&r)
+			}
+			if byte&0x80 == 0x80 {
+				if !seen {
+					seen = true
+				} else {
+					r.add(&r, &B)
+				}
+			}
+			byte <<= 1
+		}
+	}
+
+	if !seen {
+		return false
+	}
+
+	pk.set_gej(&r)
+	pk.x.get_b32(xout)
+	if yout!=nil {
+		pk.y.get_b32(yout)
+	}
+	return true
+}
