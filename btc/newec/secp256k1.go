@@ -4,11 +4,11 @@ const WINDOW_A = 5
 const WINDOW_G = 14
 
 var secp256k1 struct {
-	order, half_order num_t
+	order, half_order Number
 	g ge_t
 	beta fe_t
-	lambda, a1b2, b1, a2 num_t
-	p num_t
+	lambda, a1b2, b1, a2 Number
+	p Number
 }
 
 

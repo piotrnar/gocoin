@@ -85,8 +85,8 @@ func (a *gej_t) precomp(w int) (pre []gej_t) {
 }
 
 
-func (a *gej_t) ecmult(r *gej_t, na, ng *num_t) {
-	var na_1, na_lam, ng_1, ng_128 num_t
+func (a *gej_t) ecmult(r *gej_t, na, ng *Number) {
+	var na_1, na_lam, ng_1, ng_128 Number
 
 	// split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit)
 	na.split_exp(&na_1, &na_lam)

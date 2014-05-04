@@ -25,9 +25,9 @@ func TestSigRecover(t *testing.T) {
 		},
 	}
 
-	var sig sig_t
+	var sig Signature
 	var pubkey, exp ge_t
-	var msg num_t
+	var msg Number
 
 	for i := range vs {
 		sig.r.set_hex(vs[i][0])
@@ -51,13 +51,13 @@ func TestSigRecover(t *testing.T) {
 }
 
 func TestSign(t *testing.T) {
-	var sec, msg, non num_t
-	var sig sig_t
+	var sec, msg, non Number
+	var sig Signature
 	var recid int
 	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
 	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
-	res := sig.sign(&sec, &msg, &non, &recid)
+	res := sig.Sign(&sec, &msg, &non, &recid)
 	if res != 1 {
 		t.Error("res failed", res)
 	}
@@ -76,8 +76,8 @@ func TestSign(t *testing.T) {
 
 
 func BenchmarkVerify(b *testing.B) {
-	var msg num_t
-	var sig sig_t
+	var msg Number
+	var sig Signature
 	var key ge_t
 	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	sig.r.set_hex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
@@ -94,14 +94,14 @@ func BenchmarkVerify(b *testing.B) {
 
 
 func BenchmarkSign(b *testing.B) {
-	var sec, msg, non num_t
-	var sig sig_t
+	var sec, msg, non Number
+	var sig Signature
 	var recid int
 	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
 	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sig.sign(&sec, &msg, &non, &recid)
+		sig.Sign(&sec, &msg, &non, &recid)
 	}
 }

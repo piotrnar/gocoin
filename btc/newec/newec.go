@@ -1,8 +1,8 @@
 package newec
 
 func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
-	var m num_t
-	var s sig_t
+	var m Number
+	var s Signature
 	m.SetBytes(msg)
 
 	var q ge_t
@@ -53,9 +53,9 @@ func DecompressPoint(x []byte, off bool, y []byte) {
 
 
 func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
-	var sig sig_t
+	var sig Signature
 	var pubkey ge_t
-	var msg num_t
+	var msg Number
 	sig.r.set_bytes(r)
 	sig.s.set_bytes(s)
 	msg.set_bytes(h)

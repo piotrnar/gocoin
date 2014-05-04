@@ -166,7 +166,7 @@ func (a *fe_t) inv_var(r *fe_t) {
 	c = *a
 	c.normalize()
 	c.get_b32(b[:])
-	var n num_t
+	var n Number
 	n.SetBytes(b[:])
 	n.mod_inv(&n, &secp256k1.p)
 	r.set_bytes(n.Bytes())

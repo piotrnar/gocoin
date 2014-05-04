@@ -6,7 +6,7 @@ import (
 
 
 func TestECmult(t *testing.T) {
-	var u1, u2 num_t
+	var u1, u2 Number
 	var pubkeyj, expres, pr gej_t
 
 	pubkeyj.x.set_hex("0EAEBCD1DF2DF853D66CE0E1B0FDA07F67D1CABEFDE98514AAD795B86A6EA66D")
@@ -55,7 +55,7 @@ func TestWNAF(t *testing.T) {
 		},
 	}
 	for idx := range testvcs {
-		var xxx num_t
+		var xxx Number
 		xxx.set_hex(testvcs[idx].inp)
 		bits := ecmult_wnaf(wnaf[:], &xxx, testvcs[idx].w)
 		if bits != len(testvcs[idx].exp) {
@@ -104,7 +104,7 @@ func TestPrecompileGej(t *testing.T) {
 
 
 func TestMultGen(t *testing.T) {
-	var nonce  num_t
+	var nonce  Number
 	var ex, ey, ez fe_t
 	var r gej_t
 	nonce.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
