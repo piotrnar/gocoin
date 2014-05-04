@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"crypto/sha256"
+	"github.com/piotrnar/gocoin/btc/newec"
 )
 
 
@@ -100,27 +101,37 @@ func (a *StealthAddr) String() (string) {
 
 // Calculate the stealth difference
 func StealthDH(pub, priv []byte) []byte {
-	pk, er := NewPublicKey(pub)
-	if er != nil {
-		println(er.Error())
+	var x [32]byte
+	var i int
+
+	if !newec.Multiply(pub, priv, x[:], nil) {
 		return nil
 	}
-	x, _ := secp256k1.ScalarMult(pk.X, pk.Y, priv)
+
+	// skip leading zeros
+	for i<32 && x[i]==0 {
+		i++
+	}
+
 	s := sha256.New()
 	s.Write([]byte{0x03})
-	s.Write(x.Bytes())
+	s.Write(x[i:])
 	return s.Sum(nil)
 }
 
 
 // Calculate the stealth difference
-func StealthPub(pub, priv []byte) []byte {
-	pk, er := NewPublicKey(pub)
-	if er != nil {
-		println(er.Error())
-		return nil
+func StealthPub(pub, priv []byte) (res []byte) {
+	var y [32]byte
+	res = make([]byte, 33)
+	if newec.Multiply(pub, priv, res[1:], y[:]) {
+		if (y[31]&1) != 0 {
+			res[0] = 0x03
+		} else {
+			res[0] = 0x02
+		}
+	} else {
+		res = nil
 	}
-	x, y := secp256k1.ScalarMult(pk.X, pk.Y, priv)
-
-	return append([]byte{2+byte(y.Bit(0))}, x.Bytes()...)
+	return
 }
