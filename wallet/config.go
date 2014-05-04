@@ -97,6 +97,12 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 				}
 
+			case "secret":
+				PassSeedFilename = ll[1]
+
+			case "others":
+				RawKeysFilename = ll[1]
+
 		}
 	}
 }
