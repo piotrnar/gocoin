@@ -101,3 +101,27 @@ func TestPrecompileGej(t *testing.T) {
 		t.Error("Unexpcted value")
 	}
 }
+
+
+func TestMultGen(t *testing.T) {
+	var nonce  num_t
+	var ex, ey, ez fe_t
+	var r gej_t
+	nonce.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
+	ecmult_gen(&r, &nonce)
+	ex.set_hex("02D1BF36D37ACD68E4DD00DB3A707FD176A37E42F81AEF9386924032D3428FF0")
+	ey.set_hex("FD52E285D33EC835230EA69F89D9C38673BD5B995716A4063C893AF02F938454")
+	ez.set_hex("4C6ACE7C8C062A1E046F66FD8E3981DC4E8E844ED856B5415C62047129268C1B")
+	r.x.normalize()
+	r.y.normalize()
+	r.z.normalize()
+	if !ex.equal(&r.x) {
+		t.Error("Bad X")
+	}
+	if !ey.equal(&r.y) {
+		t.Error("Bad Y")
+	}
+	if !ez.equal(&r.z) {
+		t.Error("Bad Y")
+	}
+}
