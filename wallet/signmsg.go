@@ -3,9 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
-	"math/big"
 	"io/ioutil"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/base64"
 	"github.com/piotrnar/gocoin/btc"
@@ -35,19 +33,12 @@ func sign_message() {
 		return
 	}
 
-	var privkey *ecdsa.PrivateKey
+	var privkey []byte
 	var compr bool
 
 	for i := range publ_addrs {
 		if publ_addrs[i].Hash160==ad2s.Hash160 {
-			privkey = new(ecdsa.PrivateKey)
-			pub, e := btc.NewPublicKey(publ_addrs[i].Pubkey)
-			if e != nil {
-				println(e.Error())
-				return
-			}
-			privkey.PublicKey = pub.PublicKey
-			privkey.D = new(big.Int).SetBytes(priv_keys[i][:])
+			privkey = priv_keys[i][:]
 			compr = compressed_key[i]
 
 			// Sign raw hash?

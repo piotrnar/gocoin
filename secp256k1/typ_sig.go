@@ -5,12 +5,12 @@ import (
 )
 
 type Signature struct {
-	r, s Number
+	R, S Number
 }
 
 func (s *Signature) Print(lab string) {
-	fmt.Println(lab + ".R:", s.r.String())
-	fmt.Println(lab + ".S:", s.s.String())
+	fmt.Println(lab + ".R:", s.R.String())
+	fmt.Println(lab + ".S:", s.S.String())
 }
 
 func (r *Signature) sig_parse(sig []byte) bool {
@@ -28,23 +28,23 @@ func (r *Signature) sig_parse(sig []byte) bool {
 		return false
 	}
 
-	r.r.SetBytes(sig[4 : 4+lenr])
-	r.s.SetBytes(sig[6+lenr : 6+lenr+lens])
+	r.R.SetBytes(sig[4 : 4+lenr])
+	r.S.SetBytes(sig[6+lenr : 6+lenr+lens])
 	return true
 }
 
 func (r *Signature) Verify(pubkey *ge_t, message *Number) (ret bool) {
 	var r2 Number
-	ret = r.recompute(&r2, pubkey, message) && r.r.Cmp(&r2.Int) == 0
+	ret = r.recompute(&r2, pubkey, message) && r.R.Cmp(&r2.Int) == 0
 	return
 }
 
 func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
-	sn.mod_inv(&sig.s, &TheCurve.order)
+	sn.mod_inv(&sig.S, &TheCurve.order)
 	u1.mod_mul(&sn, message, &TheCurve.order)
-	u2.mod_mul(&sn, &sig.r, &TheCurve.order)
+	u2.mod_mul(&sn, &sig.R, &TheCurve.order)
 
 	var pr, pubkeyj gej_t
 	pubkeyj.set_ge(pubkey)
@@ -70,14 +70,14 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 	var x ge_t
 	var xj, qj gej_t
 
-	if sig.r.Sign()<=0 || sig.s.Sign()<=0 {
+	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
 		return false
 	}
-	if sig.r.Cmp(&TheCurve.order.Int)>=0 || sig.s.Cmp(&TheCurve.order.Int)>=0 {
+	if sig.R.Cmp(&TheCurve.order.Int)>=0 || sig.S.Cmp(&TheCurve.order.Int)>=0 {
 		return false
 	}
 
-	rx.Set(&sig.r.Int)
+	rx.Set(&sig.R.Int)
 	if (recid&2)!=0 {
 		rx.Add(&rx.Int, &TheCurve.order.Int)
 		if rx.Cmp(&TheCurve.p.Int) >= 0 {
@@ -94,10 +94,10 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 
 
 	xj.set_ge(&x)
-	rn.mod_inv(&sig.r, &TheCurve.order)
+	rn.mod_inv(&sig.R, &TheCurve.order)
 	u1.mod_mul(&rn, m, &TheCurve.order)
 	u1.Sub(&TheCurve.order.Int, &u1.Int)
-	u2.mod_mul(&rn, &sig.s, &TheCurve.order)
+	u2.mod_mul(&rn, &sig.S, &TheCurve.order)
 	xj.ecmult(&qj, &u2, &u1)
 	pubkey.set_gej(&qj)
 
@@ -116,27 +116,27 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	r.x.Normalize()
 	r.y.Normalize()
 	r.x.GetB32(b[:])
-	sig.r.SetBytes(b[:])
+	sig.R.SetBytes(b[:])
 	if recid != nil {
 		*recid = 0
-		if sig.r.Cmp(&TheCurve.order.Int) >= 0 {
+		if sig.R.Cmp(&TheCurve.order.Int) >= 0 {
 			*recid |= 2
 		}
 		if r.y.IsOdd() {
 			*recid |= 1
 		}
 	}
-	sig.r.mod(&TheCurve.order)
-	n.mod_mul(&sig.r, seckey, &TheCurve.order)
+	sig.R.mod(&TheCurve.order)
+	n.mod_mul(&sig.R, seckey, &TheCurve.order)
 	n.Add(&n.Int, &message.Int)
 	n.mod(&TheCurve.order)
-	sig.s.mod_inv(nonce, &TheCurve.order)
-	sig.s.mod_mul(&sig.s, &n, &TheCurve.order)
-	if sig.s.Sign()==0 {
+	sig.S.mod_inv(nonce, &TheCurve.order)
+	sig.S.mod_mul(&sig.S, &n, &TheCurve.order)
+	if sig.S.Sign()==0 {
 		return 0
 	}
-	if sig.s.IsOdd() {
-		sig.s.Sub(&TheCurve.order.Int, &sig.s.Int)
+	if sig.S.IsOdd() {
+		sig.S.Sub(&TheCurve.order.Int, &sig.S.Int)
 		if recid!=nil {
 			*recid ^= 1
 		}

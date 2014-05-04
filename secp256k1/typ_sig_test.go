@@ -30,8 +30,8 @@ func TestSigRecover(t *testing.T) {
 	var msg Number
 
 	for i := range vs {
-		sig.r.SetHex(vs[i][0])
-		sig.s.SetHex(vs[i][1])
+		sig.R.SetHex(vs[i][0])
+		sig.S.SetHex(vs[i][1])
 		msg.SetHex(vs[i][2])
 		rid, _ := strconv.ParseInt(vs[i][3], 10, 32)
 		exp.x.SetHex(vs[i][4])
@@ -65,12 +65,12 @@ func TestSign(t *testing.T) {
 		t.Error("recid failed", recid)
 	}
 	non.SetHex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
-	if sig.r.Cmp(&non.Int)!=0 {
-		t.Error("R failed", sig.r.String())
+	if sig.R.Cmp(&non.Int)!=0 {
+		t.Error("R failed", sig.R.String())
 	}
 	non.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
-	if sig.s.Cmp(&non.Int)!=0 {
-		t.Error("S failed", sig.s.String())
+	if sig.S.Cmp(&non.Int)!=0 {
+		t.Error("S failed", sig.S.String())
 	}
 }
 
@@ -80,8 +80,8 @@ func BenchmarkVerify(b *testing.B) {
 	var sig Signature
 	var key ge_t
 	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
-	sig.r.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
-	sig.s.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
+	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
 	key.x.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
 	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
 	b.ResetTimer()

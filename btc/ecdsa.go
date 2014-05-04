@@ -2,11 +2,9 @@ package btc
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 	"sync/atomic"
-	"crypto/rand"
-	"crypto/ecdsa"
-	"crypto/sha512"
 	"github.com/piotrnar/gocoin/secp256k1"
 )
 
@@ -34,19 +32,15 @@ func (rdr *rand256) Read(p []byte) (n int, err error) {
 }
 
 
-func EcdsaSign(priv *ecdsa.PrivateKey, hash []byte) (r, s *big.Int, err error) {
-	h := sha512.New()
-	h.Write(hash)
-	h.Write(priv.D.Bytes())
+func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
+	var sig secp256k1.Signature
+	var sec, msg, nonce secp256k1.Number
 
-	// Even if RNG is broken, this should not hurt:
-	var buf [64]byte
-	rand.Read(buf[:])
-	h.Write(buf[:])
-
-	// Now turn the 64 bytes long result of the hash to the source of random bytes
-	radrd := new(rand256)
-	radrd.Buffer = bytes.NewBuffer(h.Sum(nil))
-
-	return ecdsa.Sign(radrd, priv, hash)
+	sec.SetBytes(priv)
+	msg.SetBytes(hash)
+	nonce.SetBytes(hash)
+	if sig.Sign(&sec, &msg, &nonce, nil)!=1 {
+		err = errors.New("ESCDS Sign error()")
+	}
+	return &sig.R.Int, &sig.S.Int, nil
 }

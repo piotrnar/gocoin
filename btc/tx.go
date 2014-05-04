@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
-	"math/big"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"crypto/sha256"
 	"encoding/binary"
@@ -212,21 +210,11 @@ func (tx *Tx) Sign(in int, pk_script []byte, hash_type byte, pubkey, priv_key []
 		return errors.New("tx.Sign() - input index overflow")
 	}
 
-	pub_key, er := NewPublicKey(pubkey)
-	if er != nil {
-		return er
-	}
-
-	// Load the key (private and public)
-	var key ecdsa.PrivateKey
-	key.D = new(big.Int).SetBytes(priv_key)
-	key.PublicKey = pub_key.PublicKey
-
 	//Calculate proper transaction hash
 	h := tx.SignatureHash(pk_script, in, int32(hash_type))
 
 	// Sign
-	r, s, er := EcdsaSign(&key, h)
+	r, s, er := EcdsaSign(priv_key, h)
 	if er != nil {
 		return er
 	}
