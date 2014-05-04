@@ -6,33 +6,11 @@ import (
 	"math/big"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/piotrnar/gocoin/btc/newec"
 )
 
 type PublicKey struct {
 	ecdsa.PublicKey
-}
-
-
-/*
- Thanks @Zeilap
- https://bitcointalk.org/index.php?topic=171314.msg1781562#msg1781562
-*/
-func DecompressPoint(x *big.Int, off bool)  (y *big.Int) {
-	x3 := new(big.Int).Mul(x, x) //x^2
-	x3.Mul(x3, x)                //x^3
-
-	y2 := new(big.Int).Add(x3, secp256k1.B)
-
-	y = new(big.Int).Exp(y2, Qplus1div4, secp256k1.P)
-
-	bts := y.Bytes()
-	odd := (bts[len(bts)-1]&1)!=0
-
-	if odd != off {
-		y = new(big.Int).Sub(secp256k1.P, y)
-	}
-
-	return
 }
 
 
@@ -46,7 +24,7 @@ or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 	switch len(buf) {
 		case 65:
-			/*if buf[0]==4*/ {
+			if buf[0]==4 {
 				res = new(PublicKey)
 				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
@@ -54,11 +32,13 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 				return
 			}
 		case 33:
-			/*if buf[0]==2 || buf[0]==3*/ {
+			if buf[0]==2 || buf[0]==3 {
+				var y [32]byte
+				newec.DecompressPoint(buf[1:33], buf[0]==0x03, y[:])
 				res = new(PublicKey)
 				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
-				res.Y = DecompressPoint(res.X, buf[0]==3)
+				res.Y = new(big.Int).SetBytes(y[:])
 				return
 			}
 	}
@@ -182,30 +162,14 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 }
 
 
-/*
-Thanks to jackjack for providing me with this nice solution:
-https://bitcointalk.org/index.php?topic=162805.msg2112936#msg2112936
-*/
+// Recoved public key form a signature
 func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
-	x := new(big.Int).Set(secp256k1.N)
-	x.Mul(x, big.NewInt(int64(recid/2)))
-	x.Add(x, sig.R)
-
-	y := DecompressPoint(x, (recid&1)!=0)
-
-	e := new(big.Int).SetBytes(msg)
-	new(big.Int).DivMod(e.Neg(e), secp256k1.N, e)
-
-	_x, _y := secp256k1.ScalarMult(x, y, sig.S.Bytes())
-	x, y = secp256k1.ScalarMult(secp256k1.Gx, secp256k1.Gy, e.Bytes())
-	_x, _y = secp256k1.Add(_x, _y, x, y)
-	x, y = secp256k1.ScalarMult(_x, _y, new(big.Int).ModInverse(sig.R, secp256k1.N).Bytes())
-
-	key = new(PublicKey)
-	key.Curve = secp256k1
-	key.X = x
-	key.Y = y
-
+	var x, y [32]byte
+	if newec.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, x[:], y[:]) {
+		key = new(PublicKey)
+		key.X = new(big.Int).SetBytes(x[:])
+		key.Y = new(big.Int).SetBytes(y[:])
+	}
 	return
 }
 
