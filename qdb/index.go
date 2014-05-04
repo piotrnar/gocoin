@@ -50,9 +50,8 @@ func (idx *dbidx) load(walk func(key KeyType, value []byte) uint32) {
 			v.data = make([]byte, v.datlen)
 			copy(v.data, dat[v.datpos:v.datpos+v.datlen])
 			if walk!=nil {
-				ret := walk(k, v.data)
-				if (ret&YES_CACHE) != 0 {
-				}
+				res := walk(k, v.data)
+				applyBrowsingFlags(res, v)
 			}
 		}
 		return true
