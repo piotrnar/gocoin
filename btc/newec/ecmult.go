@@ -53,9 +53,9 @@ func ecmult_start() {
 func ecmult_wnaf(wnaf []int, a *num_t, w uint) (ret int) {
 	var zeroes uint
 	var x num_t
-	x.Set(a.big())
+	x.set(a)
 
-	for x.Sign()!=0 {
+	for x.sign()!=0 {
 		for x.Bit(0)==0 {
 			zeroes++
 			x.rsh(1)

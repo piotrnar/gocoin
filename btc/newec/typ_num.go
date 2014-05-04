@@ -37,6 +37,14 @@ func (a *num_t) set_hex(s string) {
 	a.SetString(s, 16)
 }
 
+func (a *num_t) set_bytes(b []byte) {
+	a.SetBytes(b)
+}
+
+func (a *num_t) bytes() []byte {
+	return a.Bytes()
+}
+
 func (num *num_t) mask_bits(bits uint) {
 	mask := new(big.Int).Lsh(BigInt1, bits)
 	mask.Sub(mask, BigInt1)
@@ -84,4 +92,35 @@ func (num *num_t) rsh_x(bits uint) (res int) {
 	res = int(new(big.Int).And(&num.Int, new(big.Int).SetUint64((1<<bits)-1)).Uint64())
 	num.Rsh(&num.Int, bits)
 	return
+}
+
+func (num *num_t) add(a *num_t, b *num_t) {
+	num.Add(&a.Int, &b.Int)
+}
+
+func (num *num_t) sub(a *num_t, b *num_t) {
+	num.Sub(&a.Int, &b.Int)
+}
+
+func (num *num_t) cmp(b *num_t) int {
+	return num.Cmp(&b.Int)
+}
+
+func (num *num_t) set(b *num_t) {
+	num.Set(&b.Int)
+}
+
+func (num *num_t) sign() int {
+	return num.Sign()
+}
+
+func (num *num_t) get_bin(le int) ([]byte) {
+	bts := num.Bytes()
+	if len(bts) > le {
+		panic("buffer too small")
+	}
+	if len(bts) == le {
+		return bts
+	}
+	return append(make([]byte, le-len(bts)), bts...)
 }

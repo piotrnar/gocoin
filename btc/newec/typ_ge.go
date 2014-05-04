@@ -108,17 +108,3 @@ func (r *ge_t) set_xo(x *fe_t, odd bool) {
 	}
 }
 
-/*
-void secp256k1_ge_set_xo(secp256k1_ge_t *r, const secp256k1_fe_t *x, int odd) {
-    r->x = *x
-    secp256k1_fe_t x2; secp256k1_fe_sqr(&x2, x)
-    secp256k1_fe_t x3; secp256k1_fe_mul(&x3, x, &x2)
-    r->infinity = 0
-    secp256k1_fe_t c; secp256k1_fe_set_int(&c, 7)
-    secp256k1_fe_add(&c, &x3)
-    secp256k1_fe_sqrt(&r->y, &c)
-    secp256k1_fe_normalize(&r->y)
-    if (secp256k1_fe_is_odd(&r->y) != odd)
-        secp256k1_fe_negate(&r->y, &r->y, 1)
-}
-*/
