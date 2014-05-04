@@ -261,22 +261,22 @@ func (BitCurve *BitCurve) Unmarshal(data []byte) (x, y *big.Int) {
 //curve parameters taken from:
 //http://www.secg.org/collateral/sec2_final.pdf
 
-var secp256k1 *BitCurve
+var temp_secp256k1 *BitCurve
 var Qplus1div4 *big.Int  // This is used by key.go:decompressPoint()
 
 func init() {
 	// See SEC 2 section 2.7.1
-	secp256k1 = new(BitCurve)
-	secp256k1.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
-	secp256k1.N, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
-	secp256k1.B, _ = new(big.Int).SetString("0000000000000000000000000000000000000000000000000000000000000007", 16)
-	secp256k1.Gx, _ = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
-	secp256k1.Gy, _ = new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
-	secp256k1.BitSize = 256
-	Qplus1div4 = new(big.Int).Div(new(big.Int).Add(secp256k1.P, big.NewInt(1)), big.NewInt(4))
+	temp_secp256k1 = new(BitCurve)
+	temp_secp256k1.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
+	temp_secp256k1.N, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+	temp_secp256k1.B, _ = new(big.Int).SetString("0000000000000000000000000000000000000000000000000000000000000007", 16)
+	temp_secp256k1.Gx, _ = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
+	temp_secp256k1.Gy, _ = new(big.Int).SetString("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
+	temp_secp256k1.BitSize = 256
+	Qplus1div4 = new(big.Int).Div(new(big.Int).Add(temp_secp256k1.P, big.NewInt(1)), big.NewInt(4))
 }
 
-// S256 returns a BitCurve which implements secp256k1 (see SEC 2 section 2.7.1)
+// S256 returns a BitCurve which implements temp_secp256k1 (see SEC 2 section 2.7.1)
 func S256() *BitCurve {
-	return secp256k1
+	return temp_secp256k1
 }

@@ -11,7 +11,7 @@ import (
 
 // Get ECDSA public key in bitcoin protocol format, from the give private key
 func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
-	x, y := secp256k1.ScalarBaseMult(priv_key)
+	x, y := temp_secp256k1.ScalarBaseMult(priv_key)
 	xd := x.Bytes()
 
 	if len(xd)>32 {
@@ -59,7 +59,7 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 		return errors.New("pubkey value is zero")
 	}
 
-	if key.D.Cmp(secp256k1.N) != -1 {
+	if key.D.Cmp(temp_secp256k1.N) != -1 {
 		return errors.New("pubkey value is too big")
 	}
 
@@ -78,14 +78,14 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 // B_private_key = ( A_private_key + secret ) % N
 // Used for implementing Type-2 determinitic keys
 func DeriveNextPrivate(prv, secret *big.Int) *big.Int {
-	return new(big.Int).Mod(new(big.Int).Add(prv, secret), secp256k1.N)
+	return new(big.Int).Mod(new(big.Int).Add(prv, secret), temp_secp256k1.N)
 }
 
 
 // B_public_key = G * secret + A_public_key
 // Used for implementing Type-2 determinitic keys
 func DeriveNextPublic(prvx, prvy, secret *big.Int) (x, y *big.Int) {
-	gsx, gsy := secp256k1.ScalarBaseMult(secret.Bytes())
-	x, y = secp256k1.Add(prvx, prvy, gsx, gsy)
+	gsx, gsy := temp_secp256k1.ScalarBaseMult(secret.Bytes())
+	x, y = temp_secp256k1.Add(prvx, prvy, gsx, gsy)
 	return
 }

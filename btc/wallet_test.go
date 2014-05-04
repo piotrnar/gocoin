@@ -30,7 +30,7 @@ func TestDeterministicWalletType2(t *testing.T) {
 	//println("p", hex.EncodeToString(A_private_key.Bytes()))
 	//println("q", hex.EncodeToString(secret.Bytes()))
 
-	x, y := secp256k1.ScalarBaseMult(A_private_key.Bytes())
+	x, y := temp_secp256k1.ScalarBaseMult(A_private_key.Bytes())
 	//println("x", hex.EncodeToString(x.Bytes()))
 	//println("y", hex.EncodeToString(y.Bytes()))
 	//println(hex.EncodeToString(xy2pk(x, y)))
@@ -41,7 +41,7 @@ func TestDeterministicWalletType2(t *testing.T) {
 		bX, bY := DeriveNextPublic(x, y, secret)
 
 		// verify the public key matching the private key
-		xB, yB := secp256k1.ScalarBaseMult(private_key_B.Bytes())
+		xB, yB := temp_secp256k1.ScalarBaseMult(private_key_B.Bytes())
 		if bX.Cmp(xB)!=0 {
 			t.Error(i, "x error", hex.EncodeToString(bX.Bytes()))
 		}
