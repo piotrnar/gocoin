@@ -86,7 +86,7 @@ func BenchmarkVerify(b *testing.B) {
 	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if !sig.sig_verify(&key, &msg) {
+		if !sig.Verify(&key, &msg) {
 			b.Fatal("sig_verify failed")
 		}
 	}

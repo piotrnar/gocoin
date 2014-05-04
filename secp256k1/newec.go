@@ -14,7 +14,7 @@ func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
 		return -2
 	}
 
-	if !s.sig_verify(&q, &m) {
+	if !s.Verify(&q, &m) {
 		return 0
 	}
 	return 1

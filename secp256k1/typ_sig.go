@@ -33,7 +33,7 @@ func (r *Signature) sig_parse(sig []byte) bool {
 	return true
 }
 
-func (r *Signature) sig_verify(pubkey *ge_t, message *Number) (ret bool) {
+func (r *Signature) Verify(pubkey *ge_t, message *Number) (ret bool) {
 	var r2 Number
 	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(&r2.Int) == 0
 	return
