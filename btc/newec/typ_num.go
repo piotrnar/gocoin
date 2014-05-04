@@ -95,10 +95,6 @@ func (num *Number) rsh_x(bits uint) (res int) {
 	return
 }
 
-func (num *Number) cmp(b *Number) int {
-	return num.Cmp(&b.Int)
-}
-
 func (num *Number) set(b *Number) {
 	num.Set(&b.Int)
 }

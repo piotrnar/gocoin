@@ -73,14 +73,14 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 	if sig.r.Sign()<=0 || sig.s.Sign()<=0 {
 		return false
 	}
-	if sig.r.cmp(&secp256k1.order)>=0 || sig.s.cmp(&secp256k1.order)>=0 {
+	if sig.r.Cmp(&secp256k1.order.Int)>=0 || sig.s.Cmp(&secp256k1.order.Int)>=0 {
 		return false
 	}
 
 	rx.Set(&sig.r.Int)
 	if (recid&2)!=0 {
 		rx.Add(&rx.Int, &secp256k1.order.Int)
-		if rx.cmp(&secp256k1.p) >= 0 {
+		if rx.Cmp(&secp256k1.p.Int) >= 0 {
 			return false
 		}
 	}
@@ -119,7 +119,7 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	sig.r.set_bytes(b[:])
 	if recid != nil {
 		*recid = 0
-		if sig.r.cmp(&secp256k1.order) >= 0 {
+		if sig.r.Cmp(&secp256k1.order.Int) >= 0 {
 			*recid |= 2
 		}
 		if r.y.is_odd() {

@@ -65,11 +65,11 @@ func TestSign(t *testing.T) {
 		t.Error("recid failed", recid)
 	}
 	non.set_hex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
-	if sig.r.cmp(&non)!=0 {
+	if sig.r.Cmp(&non.Int)!=0 {
 		t.Error("R failed", sig.r.String())
 	}
 	non.set_hex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
-	if sig.s.cmp(&non)!=0 {
+	if sig.s.Cmp(&non.Int)!=0 {
 		t.Error("S failed", sig.s.String())
 	}
 }
