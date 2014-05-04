@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/tools/utils"
 )
 
 
@@ -115,19 +116,13 @@ func make_wallet() {
 	}
 	load_others()
 
-	pass := getpass()
-	if pass=="" {
-		return
+	seed_key := make([]byte, 32)
+	if !getseed(seed_key) {
+		os.Exit(0)
 	}
 
-	seed_key := make([]byte, 32)
-	btc.ShaHash([]byte(pass), seed_key)
-
 	defer func() {
-		// clan up seed_key data in RAM before exiting this function
-		for i := range seed_key {
-			seed_key[i] = 0
-		}
+		utils.ClearBuffer(seed_key)
 	}()
 
 	if *waltype==3 {
@@ -141,8 +136,8 @@ func make_wallet() {
 			}
 			type2_secret = new(big.Int).SetBytes(d)
 		} else {
-			var buf [32]byte
-			btc.ShaHash([]byte(pass+pass), buf[:])
+			var buf [20]byte
+			btc.RimpHash(seed_key, buf[:])
 			type2_secret = new(big.Int).SetBytes(buf[:])
 		}
 		lab = "TypB"

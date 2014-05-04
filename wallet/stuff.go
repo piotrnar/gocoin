@@ -4,13 +4,12 @@ import (
 	"os"
 	"fmt"
 	"bufio"
+	"bytes"
 	"strings"
+	"io/ioutil"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
-
-var secrespass func() string
-
 
 // Get TxOut record, by the given TxPrevOut
 func UO(uns *btc.TxPrevOut) *btc.TxOut {
@@ -23,15 +22,6 @@ func UO(uns *btc.TxPrevOut) *btc.TxOut {
 func getline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 	return string(li)
-}
-
-
-// Reads a password from stdin
-func readpass() string {
-	if secrespass != nil {
-		return secrespass()
-	}
-	return getline()
 }
 
 
@@ -48,53 +38,59 @@ func ask_yes_no(msg string) bool {
 	return false
 }
 
+
 // Input the password (that is the secret seed to your wallet)
-func getpass() string {
+func getseed(seed []byte) bool {
+	var pass [1024]byte
+	var n int
+
 	f, e := os.Open(PassSeedFilename)
-	if e != nil {
-		fmt.Println("Seed file", PassSeedFilename, "not found")
-		fmt.Print("Enter your wallet's seed password: ")
-		pass := readpass()
-		if pass!="" && *dump {
-			if !*singleask {
-				fmt.Print("Re-enter the seed password (to be sure): ")
-				if pass!=readpass() {
-					println("The two passwords you entered do not match")
-					os.Exit(1)
-				}
+	if e == nil {
+		n, e = f.Read(pass[:])
+		f.Close()
+		if n <= 0 {
+			return false
+		}
+		goto calc_seed
+	}
+
+	fmt.Println("Seed file", PassSeedFilename, "not found")
+	fmt.Print("Enter your wallet's seed password: ")
+	n = utils.ReadPassword(pass[:])
+	if n<=0 {
+		return false
+	}
+
+	if *dump {
+		if !*singleask {
+			fmt.Print("Re-enter the seed password (to be sure): ")
+			var pass2 [1024]byte
+			p2len := utils.ReadPassword(pass2[:])
+			if p2len!=n || !bytes.Equal(pass[:n], pass2[:p2len]) {
+				utils.ClearBuffer(pass2[:p2len])
+				println("The two passwords you entered do not match")
+				return false
 			}
-			// Maybe he wants to save the password?
-			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
-				f, e = os.Create(PassSeedFilename)
-				if e == nil {
-					f.Write([]byte(pass))
-					f.Close()
-				} else {
-					println("Could not save the password:", e.Error())
-				}
+			utils.ClearBuffer(pass2[:p2len])
+		}
+		// Maybe he wants to save the password?
+		if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
+			e = ioutil.WriteFile(PassSeedFilename, pass[:n], 0466)
+			if e != nil {
+				fmt.Println("WARNING: Could not save the password", e.Error())
 			}
 		}
-		return pass
 	}
-	le, _ := f.Seek(0, os.SEEK_END)
-	buf := make([]byte, le)
-	f.Seek(0, os.SEEK_SET)
-	n, e := f.Read(buf[:])
-	if e != nil {
-		println("Reading secret file:", e.Error())
-		os.Exit(1)
-	}
-	if int64(n)!=le {
-		println("Something is wrong with the password file. Aborting.")
-		os.Exit(1)
-	}
-	for i := range buf {
-		if buf[i]<' ' || buf[i]>126 {
+calc_seed:
+	for i:=0; i<n; i++ {
+		if pass[i]<' ' || pass[i]>126 {
 			fmt.Println("WARNING: Your secret contains non-printable characters")
 			break
 		}
 	}
-	return string(buf)
+	btc.ShaHash(pass[:n], seed)
+	utils.ClearBuffer(pass[:n])
+	return true
 }
 
 
