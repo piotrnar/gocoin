@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc/newec"
+	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 var CNT int = 25*250
@@ -15,7 +15,7 @@ func main() {
 
 	sta := time.Now()
 	for i:=0; i<CNT; i++ {
-		if !newec.Verify(key, sig, msg) {
+		if !secp256k1.Verify(key, sig, msg) {
 			println("Verify error")
 			return
 		}

@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 //	"fmt"
@@ -13,7 +13,7 @@ var (
 
 
 func ecmult_start() {
-	g := secp256k1.g
+	g := TheCurve.g
 
 	// calculate 2^128*generator
 	var g_128j gej_t

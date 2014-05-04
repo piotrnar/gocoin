@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc/newec"
+	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 type PublicKey struct {
@@ -34,7 +34,7 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 		case 33:
 			if buf[0]==2 || buf[0]==3 {
 				var y [32]byte
-				newec.DecompressPoint(buf[1:33], buf[0]==0x03, y[:])
+				secp256k1.DecompressPoint(buf[1:33], buf[0]==0x03, y[:])
 				res = new(PublicKey)
 				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
@@ -165,7 +165,7 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 // Recoved public key form a signature
 func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 	var x, y [32]byte
-	if newec.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, x[:], y[:]) {
+	if secp256k1.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, x[:], y[:]) {
 		key = new(PublicKey)
 		key.X = new(big.Int).SetBytes(x[:])
 		key.Y = new(big.Int).SetBytes(y[:])

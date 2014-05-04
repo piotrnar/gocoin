@@ -1,6 +1,6 @@
-package newec
+package secp256k1
 
-func (a *fe_t) sqr(r *fe_t) {
+func (a *Fe_t) sqr(r *Fe_t) {
 	var c, d uint64
 	var t0, t1, t2, t3, t4, t5, t6 uint64
 	var t7, t8, t9, t10, t11, t12, t13 uint64

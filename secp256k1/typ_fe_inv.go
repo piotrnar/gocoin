@@ -1,12 +1,12 @@
-package newec
+package secp256k1
 
 import (
 )
 
 
-/* New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19 */
-func (a *fe_t) inv(r *fe_t) {
-	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 fe_t
+/* New algo by peterdettman - https://github.com/sipa/TheCurve/pull/19 */
+func (a *Fe_t) inv(r *Fe_t) {
+	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 Fe_t
 	var j int
 
 	a.sqr(&x2)
@@ -86,9 +86,9 @@ func (a *fe_t) inv(r *fe_t) {
 }
 
 
-/* New algo by peterdettman - https://github.com/sipa/secp256k1/pull/19 */
-func (a *fe_t) sqrt(r *fe_t) {
-	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 fe_t
+/* New algo by peterdettman - https://github.com/sipa/TheCurve/pull/19 */
+func (a *Fe_t) sqrt(r *Fe_t) {
+	var x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1 Fe_t
 	var j int
 
 	a.sqr(&x2)
@@ -160,15 +160,15 @@ func (a *fe_t) sqrt(r *fe_t) {
 }
 
 
-func (a *fe_t) inv_var(r *fe_t) {
+func (a *Fe_t) inv_var(r *Fe_t) {
 	var b [32]byte
-	var c fe_t
+	var c Fe_t
 	c = *a
-	c.normalize()
-	c.get_b32(b[:])
+	c.Normalize()
+	c.GetB32(b[:])
 	var n Number
 	n.SetBytes(b[:])
-	n.mod_inv(&n, &secp256k1.p)
-	r.set_bytes(n.Bytes())
+	n.mod_inv(&n, &TheCurve.p)
+	r.SetBytes(n.Bytes())
 }
 

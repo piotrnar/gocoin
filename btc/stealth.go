@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"crypto/sha256"
-	"github.com/piotrnar/gocoin/btc/newec"
+	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 
@@ -104,7 +104,7 @@ func StealthDH(pub, priv []byte) []byte {
 	var res [33]byte
 	var i int
 
-	if !newec.Multiply(pub, priv, res[:]) {
+	if !secp256k1.Multiply(pub, priv, res[:]) {
 		return nil
 	}
 
@@ -122,7 +122,7 @@ func StealthDH(pub, priv []byte) []byte {
 // Calculate the stealth difference
 func StealthPub(pub, priv []byte) (res []byte) {
 	res = make([]byte, 33)
-	if newec.Multiply(pub, priv, res) {
+	if secp256k1.Multiply(pub, priv, res) {
 	} else {
 		res = nil
 	}

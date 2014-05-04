@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/sha512"
-	"github.com/piotrnar/gocoin/btc/newec"
+	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 var (
@@ -20,7 +20,7 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	if EC_Verify!=nil {
 		return EC_Verify(kd, sd, hash)
 	}
-	return newec.Verify(kd, sd, hash)
+	return secp256k1.Verify(kd, sd, hash)
 }
 
 

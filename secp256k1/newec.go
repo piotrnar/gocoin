@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
 	var m Number
@@ -35,19 +35,19 @@ func init() {
 }
 
 func DecompressPoint(x []byte, off bool, y []byte) {
-	var rx, ry, c, x2, x3 fe_t
-	rx.set_b32(x)
+	var rx, ry, c, x2, x3 Fe_t
+	rx.SetB32(x)
 	rx.sqr(&x2)
 	rx.mul(&x3, &x2)
-	c.set_int(7)
+	c.SetInt(7)
 	c.set_add(&x3)
 	c.sqrt(&ry)
-	ry.normalize()
-	if ry.is_odd() != off {
-		ry.negate(&ry, 1)
+	ry.Normalize()
+	if ry.IsOdd() != off {
+		ry.Negate(&ry, 1)
 	}
-	ry.normalize()
-	ry.get_b32(y)
+	ry.Normalize()
+	ry.GetB32(y)
 	return
 }
 
@@ -62,8 +62,8 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	if !sig.recover(&pubkey, &msg, recid) {
 		return false
 	}
-	pubkey.x.get_b32(x)
-	pubkey.y.get_b32(y)
+	pubkey.x.GetB32(x)
+	pubkey.y.GetB32(y)
 	return true
 }
 
@@ -104,8 +104,8 @@ func Multiply(xy, k, out []byte) bool {
 	}
 
 	pk.set_gej(&r)
-	pk.x.get_b32(out[1:])
-	if pk.y.is_odd() {
+	pk.x.GetB32(out[1:])
+	if pk.y.IsOdd() {
 		out[0] = 0x03
 	} else {
 		out[0] = 0x02

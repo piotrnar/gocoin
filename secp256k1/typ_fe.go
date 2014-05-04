@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"fmt"
@@ -6,32 +6,32 @@ import (
 	"encoding/hex"
 )
 
-type fe_t struct {
+type Fe_t struct {
 	n [10]uint32
 }
 
-func (a *fe_t) String() string {
+func (a *Fe_t) String() string {
 	var tmp [32]byte
 	b := *a
-	b.normalize()
-	b.get_b32(tmp[:])
+	b.Normalize()
+	b.GetB32(tmp[:])
 	return hex.EncodeToString(tmp[:])
 }
 
-func (a *fe_t) print(lab string) {
+func (a *Fe_t) Print(lab string) {
 	fmt.Println(lab + ":", a.String())
 }
 
-func (a *fe_t) get_big() (r *big.Int) {
-	a.normalize()
+func (a *Fe_t) GetBig() (r *big.Int) {
+	a.Normalize()
 	r = new(big.Int)
 	var tmp [32]byte
-	a.get_b32(tmp[:])
+	a.GetB32(tmp[:])
 	r.SetBytes(tmp[:])
 	return
 }
 
-func (r *fe_t) set_b32(a []byte) {
+func (r *Fe_t) SetB32(a []byte) {
 	r.n[0] = 0; r.n[1] = 0; r.n[2] = 0; r.n[3] = 0; r.n[4] = 0;
 	r.n[5] = 0; r.n[6] = 0; r.n[7] = 0; r.n[8] = 0; r.n[9] = 0;
 	for i:=uint(0); i<32; i++ {
@@ -43,39 +43,39 @@ func (r *fe_t) set_b32(a []byte) {
 	}
 }
 
-func (r *fe_t) set_bytes(a []byte) {
+func (r *Fe_t) SetBytes(a []byte) {
 	if len(a)>32 {
 		panic("too many bytes to set")
 	}
 	if len(a)==32 {
-		r.set_b32(a)
+		r.SetB32(a)
 	} else {
 		var buf [32]byte
 		copy(buf[32-len(a):], a)
-		r.set_b32(buf[:])
+		r.SetB32(buf[:])
 	}
 }
 
-func (r *fe_t) set_hex(s string) {
+func (r *Fe_t) SetHex(s string) {
 	d, _ := hex.DecodeString(s)
-	r.set_bytes(d)
+	r.SetBytes(d)
 }
 
-func (a *fe_t) is_odd() bool {
+func (a *Fe_t) IsOdd() bool {
 	return (a.n[0]&1) != 0
 }
 
-func (a *fe_t) is_zero() bool {
+func (a *Fe_t) IsZero() bool {
 	return (a.n[0] == 0 && a.n[1] == 0 && a.n[2] == 0 && a.n[3] == 0 && a.n[4] == 0 && a.n[5] == 0 && a.n[6] == 0 && a.n[7] == 0 && a.n[8] == 0 && a.n[9] == 0)
 }
 
 
-func (r *fe_t) set_int(a uint32) {
+func (r *Fe_t) SetInt(a uint32) {
 	r.n[0] = a; r.n[1] = 0; r.n[2] = 0; r.n[3] = 0; r.n[4] = 0;
 	r.n[5] = 0; r.n[6] = 0; r.n[7] = 0; r.n[8] = 0; r.n[9] = 0;
 }
 
-func (r *fe_t) normalize() {
+func (r *Fe_t) Normalize() {
 	c := r.n[0]
 	t0 := c & 0x3FFFFFF
 	c = (c >> 26) + r.n[1]
@@ -153,7 +153,7 @@ func (r *fe_t) normalize() {
 	r.n[8] = t8; r.n[9] = t9
 }
 
-func (a *fe_t) get_b32(r []byte) {
+func (a *Fe_t) GetB32(r []byte) {
 	var i, j, c, limb, shift uint32
 	for i=0; i<32; i++ {
 		c = 0
@@ -166,12 +166,12 @@ func (a *fe_t) get_b32(r []byte) {
 	}
 }
 
-func (a *fe_t) equal(b *fe_t) bool {
+func (a *Fe_t) Equals(b *Fe_t) bool {
 	return (a.n[0] == b.n[0] && a.n[1] == b.n[1] && a.n[2] == b.n[2] && a.n[3] == b.n[3] && a.n[4] == b.n[4] &&
 			a.n[5] == b.n[5] && a.n[6] == b.n[6] && a.n[7] == b.n[7] && a.n[8] == b.n[8] && a.n[9] == b.n[9])
 }
 
-func (r *fe_t) set_add(a *fe_t) {
+func (r *Fe_t) set_add(a *Fe_t) {
 	r.n[0] += a.n[0]
 	r.n[1] += a.n[1]
 	r.n[2] += a.n[2]
@@ -184,7 +184,7 @@ func (r *fe_t) set_add(a *fe_t) {
 	r.n[9] += a.n[9]
 }
 
-func (r *fe_t) mul_int(a uint32) {
+func (r *Fe_t) MulInt(a uint32) {
 	r.n[0] *= a
 	r.n[1] *= a
 	r.n[2] *= a
@@ -198,7 +198,7 @@ func (r *fe_t) mul_int(a uint32) {
 }
 
 
-func (a *fe_t) negate(r *fe_t, m uint32) {
+func (a *Fe_t) Negate(r *Fe_t, m uint32) {
 	r.n[0] = 0x3FFFC2F * (m + 1) - a.n[0]
 	r.n[1] = 0x3FFFFBF * (m + 1) - a.n[1]
 	r.n[2] = 0x3FFFFFF * (m + 1) - a.n[2]

@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 
 
 type gej_t struct {
-	x, y, z fe_t
+	x, y, z Fe_t
 	infinity bool
 }
 
-func (gej gej_t) print(lab string) {
+func (gej gej_t) Print(lab string) {
 	if gej.infinity {
 		fmt.Println(lab + " - INFINITY")
 		return
@@ -26,7 +26,7 @@ func (r *gej_t) set_ge(a *ge_t) {
 	r.infinity = a.infinity
 	r.x = a.x
 	r.y = a.y
-	r.z.set_int(1)
+	r.z.SetInt(1)
 }
 
 func (r *gej_t) is_infinity() bool {
@@ -37,39 +37,39 @@ func (a *gej_t) is_valid() bool {
 	if a.infinity {
 		return false
 	}
-	var y2, x3, z2, z6 fe_t
+	var y2, x3, z2, z6 Fe_t
 	a.y.sqr(&y2)
 	a.x.sqr(&x3); x3.mul(&x3, &a.x)
 	a.z.sqr(&z2)
 	z2.sqr(&z6); z6.mul(&z6, &z2)
-	z6.mul_int(7)
+	z6.MulInt(7)
 	x3.set_add(&z6)
-	y2.normalize()
-	x3.normalize()
-	return y2.equal(&x3)
+	y2.Normalize()
+	x3.Normalize()
+	return y2.Equals(&x3)
 }
 
-func (a *gej_t) get_x(r *fe_t) {
-	var zi2 fe_t
+func (a *gej_t) get_x(r *Fe_t) {
+	var zi2 Fe_t
 	a.z.inv_var(&zi2)
 	zi2.sqr(&zi2)
 	a.x.mul(r, &zi2)
 }
 
-func (a *gej_t) normalize() {
-	a.x.normalize()
-	a.y.normalize()
-	a.z.normalize()
+func (a *gej_t) Normalize() {
+	a.x.Normalize()
+	a.y.Normalize()
+	a.z.Normalize()
 }
 
-func (a *gej_t) equal(b *gej_t) bool {
+func (a *gej_t) Equals(b *gej_t) bool {
 	if a.infinity != b.infinity {
 		return false
 	}
 	// TODO: check it it does not affect performance
-	a.normalize()
-	b.normalize()
-	return a.x.equal(&b.x) && a.y.equal(&b.y) && a.z.equal(&b.z)
+	a.Normalize()
+	b.Normalize()
+	return a.x.Equals(&b.x) && a.y.Equals(&b.y) && a.z.Equals(&b.z)
 }
 
 
@@ -177,45 +177,45 @@ func (a *gej_t) neg(r *gej_t) {
 	r.x = a.x
 	r.y = a.y
 	r.z = a.z
-	r.y.normalize()
-	r.y.negate(&r.y, 1)
+	r.y.Normalize()
+	r.y.Negate(&r.y, 1)
 }
 
 func (a *gej_t) mul_lambda(r *gej_t) {
 	*r = *a
-	r.x.mul(&r.x, &secp256k1.beta)
+	r.x.mul(&r.x, &TheCurve.beta)
 }
 
 
 func (a *gej_t) double(r *gej_t) {
-	var t1, t2, t3, t4, t5 fe_t
+	var t1, t2, t3, t4, t5 Fe_t
 
 	t5 = a.y
-	t5.normalize()
-	if (a.infinity || t5.is_zero()) {
+	t5.Normalize()
+	if (a.infinity || t5.IsZero()) {
 		r.infinity = true
 		return
 	}
 
 	t5.mul(&r.z, &a.z)
-	r.z.mul_int(2)
+	r.z.MulInt(2)
 	a.x.sqr(&t1)
-	t1.mul_int(3)
+	t1.MulInt(3)
 	t1.sqr(&t2)
 	t5.sqr(&t3)
-	t3.mul_int(2)
+	t3.MulInt(2)
 	t3.sqr(&t4)
-	t4.mul_int(2)
+	t4.MulInt(2)
 	a.x.mul(&t3, &t3)
 	r.x = t3
-	r.x.mul_int(4)
-	r.x.negate(&r.x, 4)
+	r.x.MulInt(4)
+	r.x.Negate(&r.x, 4)
 	r.x.set_add(&t2)
-	t2.negate(&t2, 1)
-	t3.mul_int(6)
+	t2.Negate(&t2, 1)
+	t3.MulInt(6)
 	t3.set_add(&t2)
 	t1.mul(&r.y, &t3)
-	t4.negate(&t2, 2)
+	t4.Negate(&t2, 2)
 	r.y.set_add(&t2)
 	r.infinity = false
 }
@@ -226,7 +226,7 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 		r.infinity = b.infinity
 		r.x = b.x
 		r.y = b.y
-		r.z.set_int(1)
+		r.z.SetInt(1)
 		return
 	}
 	if b.infinity {
@@ -234,22 +234,22 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 		return
 	}
 	r.infinity = false
-	var z12, u1, u2, s1, s2 fe_t
+	var z12, u1, u2, s1, s2 Fe_t
 	a.z.sqr(&z12)
 	u1 = a.x
-	u1.normalize()
+	u1.Normalize()
 	b.x.mul(&u2, &z12)
 	s1 = a.y
-	s1.normalize()
+	s1.Normalize()
 	b.y.mul(&s2, &z12)
 	s2.mul(&s2, &a.z)
-	u1.normalize()
-	u2.normalize()
+	u1.Normalize()
+	u2.Normalize()
 
-	if u1.equal(&u2) {
-		s1.normalize()
-		s2.normalize()
-		if (s1.equal(&s2)) {
+	if u1.Equals(&u2) {
+		s1.Normalize()
+		s2.Normalize()
+		if (s1.Equals(&s2)) {
 			a.double(r)
 		} else {
 			r.infinity = true
@@ -257,10 +257,10 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 		return
 	}
 
-	var h, i, i2, h2, h3, t fe_t
-	u1.negate(&h, 1)
+	var h, i, i2, h2, h3, t Fe_t
+	u1.Negate(&h, 1)
 	h.set_add(&u2)
-	s1.negate(&i, 1)
+	s1.Negate(&i, 1)
 	i.set_add(&s2)
 	i.sqr(&i2)
 	h.sqr(&h2)
@@ -269,15 +269,15 @@ func (a *gej_t) add_ge(r *gej_t, b *ge_t) {
 	r.z.mul(&r.z, &h)
 	u1.mul(&t, &h2)
 	r.x = t
-	r.x.mul_int(2)
+	r.x.MulInt(2)
 	r.x.set_add(&h3)
-	r.x.negate(&r.x, 3)
+	r.x.Negate(&r.x, 3)
 	r.x.set_add(&i2)
-	r.x.negate(&r.y, 5)
+	r.x.Negate(&r.y, 5)
 	r.y.set_add(&t)
 	r.y.mul(&r.y, &i)
 	h3.mul(&h3, &s1)
-	h3.negate(&h3, 1)
+	h3.Negate(&h3, 1)
 	r.y.set_add(&h3)
 }
 
@@ -292,7 +292,7 @@ func (a *gej_t) add(r, b *gej_t) {
 		return
 	}
 	r.infinity = false
-	var z22, z12, u1, u2, s1, s2 fe_t
+	var z22, z12, u1, u2, s1, s2 Fe_t
 
 	b.z.sqr(&z22)
 	a.z.sqr(&z12)
@@ -302,23 +302,23 @@ func (a *gej_t) add(r, b *gej_t) {
 	s1.mul(&s1, &b.z)
 	b.y.mul(&s2, &z12)
 	s2.mul(&s2, &a.z)
-	u1.normalize()
-	u2.normalize()
-	if u1.equal(&u2) {
-		s1.normalize()
-		s2.normalize()
-		if s1.equal(&s2) {
+	u1.Normalize()
+	u2.Normalize()
+	if u1.Equals(&u2) {
+		s1.Normalize()
+		s2.Normalize()
+		if s1.Equals(&s2) {
 			a.double(r)
 		} else {
 			r.infinity = true
 		}
 		return
 	}
-	var h, i, i2, h2, h3, t fe_t
+	var h, i, i2, h2, h3, t Fe_t
 
-	u1.negate(&h, 1)
+	u1.Negate(&h, 1)
 	h.set_add(&u2)
-	s1.negate(&i, 1)
+	s1.Negate(&i, 1)
 	i.set_add(&s2)
 	i.sqr(&i2)
 	h.sqr(&h2)
@@ -327,14 +327,14 @@ func (a *gej_t) add(r, b *gej_t) {
 	r.z.mul(&r.z, &h)
 	u1.mul(&t, &h2)
 	r.x = t
-	r.x.mul_int(2)
+	r.x.MulInt(2)
 	r.x.set_add(&h3)
-	r.x.negate(&r.x, 3)
+	r.x.Negate(&r.x, 3)
 	r.x.set_add(&i2)
-	r.x.negate(&r.y, 5)
+	r.x.Negate(&r.y, 5)
 	r.y.set_add(&t)
 	r.y.mul(&r.y, &i)
 	h3.mul(&h3, &s1)
-	h3.negate(&h3, 1)
+	h3.Negate(&h3, 1)
 	r.y.set_add(&h3)
 }

@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"strconv"
@@ -30,18 +30,18 @@ func TestSigRecover(t *testing.T) {
 	var msg Number
 
 	for i := range vs {
-		sig.r.set_hex(vs[i][0])
-		sig.s.set_hex(vs[i][1])
-		msg.set_hex(vs[i][2])
+		sig.r.SetHex(vs[i][0])
+		sig.s.SetHex(vs[i][1])
+		msg.SetHex(vs[i][2])
 		rid, _ := strconv.ParseInt(vs[i][3], 10, 32)
-		exp.x.set_hex(vs[i][4])
-		exp.y.set_hex(vs[i][5])
+		exp.x.SetHex(vs[i][4])
+		exp.y.SetHex(vs[i][5])
 
 		if sig.recover(&pubkey, &msg, int(rid)) {
-			if !exp.x.equal(&pubkey.x) {
+			if !exp.x.Equals(&pubkey.x) {
 				t.Error("x mismatch at vector", i)
 			}
-			if !exp.y.equal(&pubkey.y) {
+			if !exp.y.Equals(&pubkey.y) {
 				t.Error("y mismatch at vector", i)
 			}
 		} else {
@@ -54,9 +54,9 @@ func TestSign(t *testing.T) {
 	var sec, msg, non Number
 	var sig Signature
 	var recid int
-	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
-	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
-	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
+	sec.SetHex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
+	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	non.SetHex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
 	res := sig.Sign(&sec, &msg, &non, &recid)
 	if res != 1 {
 		t.Error("res failed", res)
@@ -64,11 +64,11 @@ func TestSign(t *testing.T) {
 	if recid != 1 {
 		t.Error("recid failed", recid)
 	}
-	non.set_hex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
+	non.SetHex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
 	if sig.r.Cmp(&non.Int)!=0 {
 		t.Error("R failed", sig.r.String())
 	}
-	non.set_hex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	non.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
 	if sig.s.Cmp(&non.Int)!=0 {
 		t.Error("S failed", sig.s.String())
 	}
@@ -79,11 +79,11 @@ func BenchmarkVerify(b *testing.B) {
 	var msg Number
 	var sig Signature
 	var key ge_t
-	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
-	sig.r.set_hex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
-	sig.s.set_hex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
-	key.x.set_hex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
-	key.y.set_hex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
+	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	sig.r.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
+	sig.s.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	key.x.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
+	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if !sig.sig_verify(&key, &msg) {
@@ -97,9 +97,9 @@ func BenchmarkSign(b *testing.B) {
 	var sec, msg, non Number
 	var sig Signature
 	var recid int
-	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
-	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
-	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
+	sec.SetHex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
+	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	non.SetHex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sig.Sign(&sec, &msg, &non, &recid)

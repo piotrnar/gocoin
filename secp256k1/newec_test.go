@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"testing"

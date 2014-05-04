@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ type Signature struct {
 	r, s Number
 }
 
-func (s *Signature) print(lab string) {
+func (s *Signature) Print(lab string) {
 	fmt.Println(lab + ".R:", s.r.String())
 	fmt.Println(lab + ".S:", s.s.String())
 }
@@ -42,22 +42,22 @@ func (r *Signature) sig_verify(pubkey *ge_t, message *Number) (ret bool) {
 func (sig *Signature) sig_recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
-	sn.mod_inv(&sig.s, &secp256k1.order)
-	u1.mod_mul(&sn, message, &secp256k1.order)
-	u2.mod_mul(&sn, &sig.r, &secp256k1.order)
+	sn.mod_inv(&sig.s, &TheCurve.order)
+	u1.mod_mul(&sn, message, &TheCurve.order)
+	u2.mod_mul(&sn, &sig.r, &TheCurve.order)
 
 	var pr, pubkeyj gej_t
 	pubkeyj.set_ge(pubkey)
 
 	pubkeyj.ecmult(&pr, &u2, &u1)
 	if !pr.is_infinity() {
-		var xr fe_t
+		var xr Fe_t
 		pr.get_x(&xr)
-		xr.normalize()
+		xr.Normalize()
 		var xrb [32]byte
-		xr.get_b32(xrb[:])
+		xr.GetB32(xrb[:])
 		r2.SetBytes(xrb[:])
-		r2.Mod(&r2.Int, &secp256k1.order.Int)
+		r2.Mod(&r2.Int, &TheCurve.order.Int)
 		ret = true
 	}
 
@@ -66,26 +66,26 @@ func (sig *Signature) sig_recompute(r2 *Number, pubkey *ge_t, message *Number) (
 
 func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 	var rx, rn, u1, u2 Number
-	var fx fe_t
+	var fx Fe_t
 	var x ge_t
 	var xj, qj gej_t
 
 	if sig.r.Sign()<=0 || sig.s.Sign()<=0 {
 		return false
 	}
-	if sig.r.Cmp(&secp256k1.order.Int)>=0 || sig.s.Cmp(&secp256k1.order.Int)>=0 {
+	if sig.r.Cmp(&TheCurve.order.Int)>=0 || sig.s.Cmp(&TheCurve.order.Int)>=0 {
 		return false
 	}
 
 	rx.Set(&sig.r.Int)
 	if (recid&2)!=0 {
-		rx.Add(&rx.Int, &secp256k1.order.Int)
-		if rx.Cmp(&secp256k1.p.Int) >= 0 {
+		rx.Add(&rx.Int, &TheCurve.order.Int)
+		if rx.Cmp(&TheCurve.p.Int) >= 0 {
 			return false
 		}
 	}
 
-	fx.set_b32(rx.get_bin(32))
+	fx.SetB32(rx.get_bin(32))
 
 	x.set_xo(&fx, (recid&1)!=0)
 	if !x.is_valid() {
@@ -94,10 +94,10 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 
 
 	xj.set_ge(&x)
-	rn.mod_inv(&sig.r, &secp256k1.order)
-	u1.mod_mul(&rn, m, &secp256k1.order)
-	u1.Sub(&secp256k1.order.Int, &u1.Int)
-	u2.mod_mul(&rn, &sig.s, &secp256k1.order)
+	rn.mod_inv(&sig.r, &TheCurve.order)
+	u1.mod_mul(&rn, m, &TheCurve.order)
+	u1.Sub(&TheCurve.order.Int, &u1.Int)
+	u2.mod_mul(&rn, &sig.s, &TheCurve.order)
 	xj.ecmult(&qj, &u2, &u1)
 	pubkey.set_gej(&qj)
 
@@ -113,30 +113,30 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 
 	ecmult_gen(&rp, nonce)
 	r.set_gej(&rp)
-	r.x.normalize()
-	r.y.normalize()
-	r.x.get_b32(b[:])
-	sig.r.set_bytes(b[:])
+	r.x.Normalize()
+	r.y.Normalize()
+	r.x.GetB32(b[:])
+	sig.r.SetBytes(b[:])
 	if recid != nil {
 		*recid = 0
-		if sig.r.Cmp(&secp256k1.order.Int) >= 0 {
+		if sig.r.Cmp(&TheCurve.order.Int) >= 0 {
 			*recid |= 2
 		}
-		if r.y.is_odd() {
+		if r.y.IsOdd() {
 			*recid |= 1
 		}
 	}
-	sig.r.mod(&secp256k1.order)
-	n.mod_mul(&sig.r, seckey, &secp256k1.order)
+	sig.r.mod(&TheCurve.order)
+	n.mod_mul(&sig.r, seckey, &TheCurve.order)
 	n.Add(&n.Int, &message.Int)
-	n.mod(&secp256k1.order)
-	sig.s.mod_inv(nonce, &secp256k1.order)
-	sig.s.mod_mul(&sig.s, &n, &secp256k1.order)
+	n.mod(&TheCurve.order)
+	sig.s.mod_inv(nonce, &TheCurve.order)
+	sig.s.mod_mul(&sig.s, &n, &TheCurve.order)
 	if sig.s.Sign()==0 {
 		return 0
 	}
-	if sig.s.is_odd() {
-		sig.s.Sub(&secp256k1.order.Int, &sig.s.Int)
+	if sig.s.IsOdd() {
+		sig.s.Sub(&TheCurve.order.Int, &sig.s.Int)
 		if recid!=nil {
 			*recid ^= 1
 		}

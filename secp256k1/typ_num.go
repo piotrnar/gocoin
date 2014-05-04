@@ -1,4 +1,4 @@
-package newec
+package secp256k1
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type Number struct {
 	big.Int
 }
 
-func (a *Number) print(label string) {
+func (a *Number) Print(label string) {
 	fmt.Println(label, hex.EncodeToString(a.Bytes()))
 }
 
@@ -34,16 +34,8 @@ func (r *Number) mod(a *Number) {
 	return
 }
 
-func (a *Number) set_hex(s string) {
+func (a *Number) SetHex(s string) {
 	a.SetString(s, 16)
-}
-
-func (a *Number) set_bytes(b []byte) {
-	a.SetBytes(b)
-}
-
-func (a *Number) bytes() []byte {
-	return a.Bytes()
 }
 
 func (num *Number) mask_bits(bits uint) {
@@ -55,23 +47,23 @@ func (num *Number) mask_bits(bits uint) {
 func (a *Number) split_exp(r1, r2 *Number) {
 	var bnc1, bnc2, bnn2, bnt1, bnt2 Number
 
-	bnn2.Int.Rsh(&secp256k1.order.Int, 1)
+	bnn2.Int.Rsh(&TheCurve.order.Int, 1)
 
-	bnc1.Mul(&a.Int, &secp256k1.a1b2.Int)
+	bnc1.Mul(&a.Int, &TheCurve.a1b2.Int)
 	bnc1.Add(&bnc1.Int, &bnn2.Int)
-	bnc1.Div(&bnc1.Int, &secp256k1.order.Int)
+	bnc1.Div(&bnc1.Int, &TheCurve.order.Int)
 
-	bnc2.Mul(&a.Int, &secp256k1.b1.Int)
+	bnc2.Mul(&a.Int, &TheCurve.b1.Int)
 	bnc2.Add(&bnc2.Int, &bnn2.Int)
-	bnc2.Div(&bnc2.Int, &secp256k1.order.Int)
+	bnc2.Div(&bnc2.Int, &TheCurve.order.Int)
 
-	bnt1.Mul(&bnc1.Int, &secp256k1.a1b2.Int)
-	bnt2.Mul(&bnc2.Int, &secp256k1.a2.Int)
+	bnt1.Mul(&bnc1.Int, &TheCurve.a1b2.Int)
+	bnt2.Mul(&bnc2.Int, &TheCurve.a2.Int)
 	bnt1.Add(&bnt1.Int, &bnt2.Int)
 	r1.Sub(&a.Int, &bnt1.Int)
 
-	bnt1.Mul(&bnc1.Int, &secp256k1.b1.Int)
-	bnt2.Mul(&bnc2.Int, &secp256k1.a1b2.Int)
+	bnt1.Mul(&bnc1.Int, &TheCurve.b1.Int)
+	bnt2.Mul(&bnc2.Int, &TheCurve.a1b2.Int)
 	r2.Sub(&bnt1.Int, &bnt2.Int)
 }
 
@@ -95,7 +87,7 @@ func (num *Number) rsh_x(bits uint) (res int) {
 	return
 }
 
-func (num *Number) is_odd() bool {
+func (num *Number) IsOdd() bool {
 	return num.Bit(0)!=0;
 }
 
