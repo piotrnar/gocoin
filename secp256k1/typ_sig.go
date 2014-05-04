@@ -35,11 +35,11 @@ func (r *Signature) sig_parse(sig []byte) bool {
 
 func (r *Signature) Verify(pubkey *ge_t, message *Number) (ret bool) {
 	var r2 Number
-	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(&r2.Int) == 0
+	ret = r.recompute(&r2, pubkey, message) && r.r.Cmp(&r2.Int) == 0
 	return
 }
 
-func (sig *Signature) sig_recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
+func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
 	sn.mod_inv(&sig.s, &TheCurve.order)
