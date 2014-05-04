@@ -35,7 +35,7 @@ func (r *Signature) sig_parse(sig []byte) bool {
 
 func (r *Signature) sig_verify(pubkey *ge_t, message *Number) (ret bool) {
 	var r2 Number
-	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(r2.big()) == 0
+	ret = r.sig_recompute(&r2, pubkey, message) && r.r.Cmp(&r2.Int) == 0
 	return
 }
 
@@ -57,7 +57,7 @@ func (sig *Signature) sig_recompute(r2 *Number, pubkey *ge_t, message *Number) (
 		var xrb [32]byte
 		xr.get_b32(xrb[:])
 		r2.SetBytes(xrb[:])
-		r2.Mod(r2.big(), secp256k1.order.big())
+		r2.Mod(&r2.Int, &secp256k1.order.Int)
 		ret = true
 	}
 
@@ -77,7 +77,7 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 		return false
 	}
 
-	rx.Set(sig.r.big())
+	rx.Set(&sig.r.Int)
 	if (recid&2)!=0 {
 		rx.Add(&rx.Int, &secp256k1.order.Int)
 		if rx.cmp(&secp256k1.p) >= 0 {
@@ -96,7 +96,7 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 	xj.set_ge(&x)
 	rn.mod_inv(&sig.r, &secp256k1.order)
 	u1.mod_mul(&rn, m, &secp256k1.order)
-	u1.Sub(secp256k1.order.big(), u1.big())
+	u1.Sub(&secp256k1.order.Int, &u1.Int)
 	u2.mod_mul(&rn, &sig.s, &secp256k1.order)
 	xj.ecmult(&qj, &u2, &u1)
 	pubkey.set_gej(&qj)

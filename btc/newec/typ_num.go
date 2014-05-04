@@ -18,10 +18,6 @@ func (a *Number) print(label string) {
 	fmt.Println(label, hex.EncodeToString(a.Bytes()))
 }
 
-func (a *Number) big() *big.Int {
-	return &a.Int
-}
-
 func (r *Number) mod_mul(a, b, m *Number) {
 	r.Mul(&a.Int, &b.Int)
 	r.Mod(&r.Int, &m.Int)
@@ -59,15 +55,15 @@ func (num *Number) mask_bits(bits uint) {
 func (a *Number) split_exp(r1, r2 *Number) {
 	var bnc1, bnc2, bnn2, bnt1, bnt2 Number
 
-	bnn2.Int.Rsh(secp256k1.order.big(), 1)
+	bnn2.Int.Rsh(&secp256k1.order.Int, 1)
 
 	bnc1.Mul(&a.Int, &secp256k1.a1b2.Int)
 	bnc1.Add(&bnc1.Int, &bnn2.Int)
-	bnc1.Div(&bnc1.Int, secp256k1.order.big())
+	bnc1.Div(&bnc1.Int, &secp256k1.order.Int)
 
 	bnc2.Mul(&a.Int, &secp256k1.b1.Int)
 	bnc2.Add(&bnc2.Int, &bnn2.Int)
-	bnc2.Div(&bnc2.Int, secp256k1.order.big())
+	bnc2.Div(&bnc2.Int, &secp256k1.order.Int)
 
 	bnt1.Mul(&bnc1.Int, &secp256k1.a1b2.Int)
 	bnt2.Mul(&bnc2.Int, &secp256k1.a2.Int)
