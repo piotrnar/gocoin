@@ -88,9 +88,9 @@ func getline(buf []byte) (n int) {
 		ClearBuffer(buf)
 		return -1
 	}
-	for n>0 && buf[n]<' ' {
-		buf[n] = 0
+	for n>0 && buf[n-1]<' ' {
 		n--
+		buf[n] = 0
 	}
 	return n
 }
