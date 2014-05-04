@@ -56,7 +56,6 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 		}
 	}
 	fmt.Print("\r                                                              \r")
-	println(len(db.stealthOuts), "stalth unspent outputs found")
 
 	return
 }
@@ -133,7 +132,9 @@ func (db *unspentDb) del(idx *btc.TxPrevOut) {
 	if db.notifyTx!=nil {
 		db.notifyTx(idx, nil)
 	}
-	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(qdb.KeyType(idx.UIdx()))
+	key := qdb.KeyType(idx.UIdx())
+	delete(db.stealthOuts, key)
+	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(key)
 }
 
 
@@ -218,7 +219,8 @@ func (db *unspentDb) stats() (s string) {
 			return 0
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs.\n", float64(sum)/1e8, cnt, tot)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
+		float64(sum)/1e8, cnt, tot, len(db.stealthOuts))
 	s += fmt.Sprintf(" Defrags:%d  Height:%d  NocacheBelow:%d  MinOut:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
 	return
