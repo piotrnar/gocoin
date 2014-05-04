@@ -5,7 +5,7 @@ func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
 	var s Signature
 	m.SetBytes(msg)
 
-	var q ge_t
+	var q XY_t
 	if !q.pubkey_parse(pubkey) {
 		return -1
 	}
@@ -54,7 +54,7 @@ func DecompressPoint(x []byte, off bool, y []byte) {
 
 func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	var sig Signature
-	var pubkey ge_t
+	var pubkey XY_t
 	var msg Number
 	sig.R.SetBytes(r)
 	sig.S.SetBytes(s)
@@ -72,8 +72,8 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 // xy - is the standarized public key format (33 or 65 bytes long)
 // out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
 func Multiply(xy, k, out []byte) bool {
-	var B, r gej_t
-	var pk ge_t
+	var B, r XYZ_t
+	var pk XY_t
 
 	if !pk.pubkey_parse(xy) {
 		return false
