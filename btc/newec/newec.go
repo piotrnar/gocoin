@@ -68,7 +68,10 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 }
 
 
-func Multiply(xy, k, xout, yout []byte) bool {
+// Standard EC multiplacation k(xy)
+// xy - is the standarized public key format (33 or 65 bytes long)
+// out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
+func Multiply(xy, k, out []byte) bool {
 	var B, r gej_t
 	var pk ge_t
 
@@ -101,9 +104,11 @@ func Multiply(xy, k, xout, yout []byte) bool {
 	}
 
 	pk.set_gej(&r)
-	pk.x.get_b32(xout)
-	if yout!=nil {
-		pk.y.get_b32(yout)
+	pk.x.get_b32(out[1:])
+	if pk.y.is_odd() {
+		out[0] = 0x03
+	} else {
+		out[0] = 0x02
 	}
 	return true
 }
