@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"errors"
 	"math/big"
-	"crypto/rand"
-	"crypto/ecdsa"
+	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 
@@ -43,34 +42,31 @@ func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
 // Verify the secret key's range and if a test message signed with it verifies OK
 // Returns nil if everything looks OK
 func VerifyKeyPair(priv []byte, publ []byte) error {
+	var e error
+	var sig Signature
+
 	const TestMessage = "Just some test message..."
 	hash := Sha2Sum([]byte(TestMessage))
 
-	pub_key, e := NewPublicKey(publ)
-	if e != nil {
-		return e
-	}
+	D := new(big.Int).SetBytes(priv)
 
-	var key ecdsa.PrivateKey
-	key.D = new(big.Int).SetBytes(priv)
-	key.PublicKey = pub_key.PublicKey
-
-	if key.D.Cmp(big.NewInt(0)) == 0 {
+	if D.Cmp(big.NewInt(0)) == 0 {
 		return errors.New("pubkey value is zero")
 	}
 
-	if key.D.Cmp(temp_secp256k1.N) != -1 {
+	if D.Cmp(&secp256k1.TheCurve.Order.Int) != -1 {
 		return errors.New("pubkey value is too big")
 	}
 
-	r, s, err := ecdsa.Sign(rand.Reader, &key, hash[:])
-	if err != nil {
-		return errors.New("ecdsa.Sign failed: " + err.Error())
+
+	sig.R, sig.S, e = EcdsaSign(priv, hash[:])
+	if e != nil {
+		return errors.New("EcdsaSign failed: " + e.Error())
 	}
 
-	ok := ecdsa.Verify(&key.PublicKey, hash[:], r, s)
+	ok := EcdsaVerify(publ, sig.Bytes(), hash[:])
 	if !ok {
-		return errors.New("ecdsa.Sign Verify")
+		return errors.New("EcdsaVerify failed")
 	}
 	return nil
 }

@@ -47,15 +47,15 @@ func (num *Number) mask_bits(bits uint) {
 func (a *Number) split_exp(r1, r2 *Number) {
 	var bnc1, bnc2, bnn2, bnt1, bnt2 Number
 
-	bnn2.Int.Rsh(&TheCurve.order.Int, 1)
+	bnn2.Int.Rsh(&TheCurve.Order.Int, 1)
 
 	bnc1.Mul(&a.Int, &TheCurve.a1b2.Int)
 	bnc1.Add(&bnc1.Int, &bnn2.Int)
-	bnc1.Div(&bnc1.Int, &TheCurve.order.Int)
+	bnc1.Div(&bnc1.Int, &TheCurve.Order.Int)
 
 	bnc2.Mul(&a.Int, &TheCurve.b1.Int)
 	bnc2.Add(&bnc2.Int, &bnn2.Int)
-	bnc2.Div(&bnc2.Int, &TheCurve.order.Int)
+	bnc2.Div(&bnc2.Int, &TheCurve.Order.Int)
 
 	bnt1.Mul(&bnc1.Int, &TheCurve.a1b2.Int)
 	bnt2.Mul(&bnc2.Int, &TheCurve.a2.Int)

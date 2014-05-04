@@ -4,13 +4,12 @@ import (
 	"errors"
 	"bytes"
 	"math/big"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 type PublicKey struct {
-	ecdsa.PublicKey
+	X, Y *big.Int
 }
 
 
@@ -26,7 +25,6 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 		case 65:
 			if buf[0]==4 {
 				res = new(PublicKey)
-				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
 				res.Y = new(big.Int).SetBytes(buf[33:65])
 				return
@@ -36,7 +34,6 @@ func NewPublicKey(buf []byte) (res *PublicKey, e error) {
 				var y [32]byte
 				secp256k1.DecompressPoint(buf[1:33], buf[0]==0x03, y[:])
 				res = new(PublicKey)
-				res.Curve = S256()
 				res.X = new(big.Int).SetBytes(buf[1:33])
 				res.Y = new(big.Int).SetBytes(y[:])
 				return

@@ -42,9 +42,9 @@ func (r *Signature) Verify(pubkey *ge_t, message *Number) (ret bool) {
 func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
-	sn.mod_inv(&sig.S, &TheCurve.order)
-	u1.mod_mul(&sn, message, &TheCurve.order)
-	u2.mod_mul(&sn, &sig.R, &TheCurve.order)
+	sn.mod_inv(&sig.S, &TheCurve.Order)
+	u1.mod_mul(&sn, message, &TheCurve.Order)
+	u2.mod_mul(&sn, &sig.R, &TheCurve.Order)
 
 	var pr, pubkeyj gej_t
 	pubkeyj.set_ge(pubkey)
@@ -57,7 +57,7 @@ func (sig *Signature) recompute(r2 *Number, pubkey *ge_t, message *Number) (ret 
 		var xrb [32]byte
 		xr.GetB32(xrb[:])
 		r2.SetBytes(xrb[:])
-		r2.Mod(&r2.Int, &TheCurve.order.Int)
+		r2.Mod(&r2.Int, &TheCurve.Order.Int)
 		ret = true
 	}
 
@@ -73,13 +73,13 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
 		return false
 	}
-	if sig.R.Cmp(&TheCurve.order.Int)>=0 || sig.S.Cmp(&TheCurve.order.Int)>=0 {
+	if sig.R.Cmp(&TheCurve.Order.Int)>=0 || sig.S.Cmp(&TheCurve.Order.Int)>=0 {
 		return false
 	}
 
 	rx.Set(&sig.R.Int)
 	if (recid&2)!=0 {
-		rx.Add(&rx.Int, &TheCurve.order.Int)
+		rx.Add(&rx.Int, &TheCurve.Order.Int)
 		if rx.Cmp(&TheCurve.p.Int) >= 0 {
 			return false
 		}
@@ -94,10 +94,10 @@ func (sig *Signature) recover(pubkey *ge_t, m *Number, recid int) (ret bool) {
 
 
 	xj.set_ge(&x)
-	rn.mod_inv(&sig.R, &TheCurve.order)
-	u1.mod_mul(&rn, m, &TheCurve.order)
-	u1.Sub(&TheCurve.order.Int, &u1.Int)
-	u2.mod_mul(&rn, &sig.S, &TheCurve.order)
+	rn.mod_inv(&sig.R, &TheCurve.Order)
+	u1.mod_mul(&rn, m, &TheCurve.Order)
+	u1.Sub(&TheCurve.Order.Int, &u1.Int)
+	u2.mod_mul(&rn, &sig.S, &TheCurve.Order)
 	xj.ecmult(&qj, &u2, &u1)
 	pubkey.set_gej(&qj)
 
@@ -119,24 +119,24 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	sig.R.SetBytes(b[:])
 	if recid != nil {
 		*recid = 0
-		if sig.R.Cmp(&TheCurve.order.Int) >= 0 {
+		if sig.R.Cmp(&TheCurve.Order.Int) >= 0 {
 			*recid |= 2
 		}
 		if r.y.IsOdd() {
 			*recid |= 1
 		}
 	}
-	sig.R.mod(&TheCurve.order)
-	n.mod_mul(&sig.R, seckey, &TheCurve.order)
+	sig.R.mod(&TheCurve.Order)
+	n.mod_mul(&sig.R, seckey, &TheCurve.Order)
 	n.Add(&n.Int, &message.Int)
-	n.mod(&TheCurve.order)
-	sig.S.mod_inv(nonce, &TheCurve.order)
-	sig.S.mod_mul(&sig.S, &n, &TheCurve.order)
+	n.mod(&TheCurve.Order)
+	sig.S.mod_inv(nonce, &TheCurve.Order)
+	sig.S.mod_mul(&sig.S, &n, &TheCurve.Order)
 	if sig.S.Sign()==0 {
 		return 0
 	}
 	if sig.S.IsOdd() {
-		sig.S.Sub(&TheCurve.order.Int, &sig.S.Int)
+		sig.S.Sub(&TheCurve.Order.Int, &sig.S.Int)
 		if recid!=nil {
 			*recid ^= 1
 		}
