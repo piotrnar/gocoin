@@ -40,6 +40,7 @@ const (
 	NO_BROWSE = 0x00000001
 	NO_CACHE  = 0x00000002
 	BR_ABORT  = 0x00000004
+	YES_CACHE = 0x00000008
 )
 
 
@@ -122,6 +123,19 @@ func (db *DB) Count() (l int) {
 }
 
 
+func applyBrowsingFlags(res uint32, v *oneIdx) {
+	if (res&NO_BROWSE)!=0 {
+		v.flags |= NO_BROWSE
+	}
+	if (res&NO_CACHE)!=0 {
+		v.flags |= NO_CACHE
+		v.data = nil
+	} else if (res&YES_CACHE)!=0 {
+		v.flags &= NO_CACHE^0xffffffff
+	}
+}
+
+
 // Browses through all the DB records calling the walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
 func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
@@ -134,13 +148,7 @@ func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 			db.loadrec(v)
 		}
 		res := walk(k, v.data)
-		if (res&NO_BROWSE)!=0 {
-			v.flags |= NO_BROWSE
-		}
-		if (res&NO_CACHE)!=0 {
-			v.flags |= NO_CACHE
-			v.data = nil
-		}
+		applyBrowsingFlags(res, v)
 		return (res&BR_ABORT)==0
 	})
 	//println("br", db.dir, "done")
@@ -156,9 +164,7 @@ func (db *DB) BrowseAll(walk func(key KeyType, value []byte) uint32) {
 			db.loadrec(v)
 		}
 		res := walk(k, v.data)
-		if (v.flags&NO_CACHE)!=0 {
-			v.data = nil
-		}
+		applyBrowsingFlags(res, v)
 		return (res&BR_ABORT)==0
 	})
 	//println("br", db.dir, "done")
