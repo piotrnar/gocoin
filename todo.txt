@@ -7,6 +7,8 @@ Client:
 * Implement "mempool"
 
 Core lib:
+* Get rid of ec256k1.go
+* Make a common password reader
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
