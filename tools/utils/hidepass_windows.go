@@ -35,6 +35,7 @@ func enterpassext(b []byte) (n int) {
 		if chr=='\b' {
 			if n>0 {
 				n--
+				b[n] = 0
 				fmt.Print("\b \b")
 			} else {
 				fmt.Print("\007")
