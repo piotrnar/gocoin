@@ -95,10 +95,6 @@ func (num *Number) rsh_x(bits uint) (res int) {
 	return
 }
 
-func (num *Number) set(b *Number) {
-	num.Set(&b.Int)
-}
-
 func (num *Number) is_odd() bool {
 	return num.Bit(0)!=0;
 }

@@ -53,7 +53,7 @@ func ecmult_start() {
 func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 	var zeroes uint
 	var x Number
-	x.set(a)
+	x.Set(&a.Int)
 
 	for x.Sign()!=0 {
 		for x.Bit(0)==0 {
@@ -80,7 +80,7 @@ func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 
 func ecmult_gen(r *gej_t, gn *Number) {
 	var n Number;
-	n.set(gn)
+	n.Set(&gn.Int)
 	r.set_ge(&prec[0][n.rsh_x(4)])
 	for j:=1; j<64; j++ {
 		r.add_ge(r, &prec[j][n.rsh_x(4)])
