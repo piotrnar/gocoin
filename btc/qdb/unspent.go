@@ -3,7 +3,7 @@ package qdb
 import (
 	"fmt"
 	"errors"
-//	"encoding/hex"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
@@ -39,14 +39,14 @@ type unspentDb struct {
 	nosyncinprogress bool
 	notifyTx btc.TxNotifyFunc
 	lastHeight uint32
-	stealthOuts map[qdb.KeyType] qdb.KeyType
+	stealthOuts map[qdb.KeyType] *stealthRec
 }
 
 func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.lastHeight = lasth
-	db.stealthOuts = make(map[qdb.KeyType] qdb.KeyType)
+	db.stealthOuts = make(map[qdb.KeyType] *stealthRec)
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -61,15 +61,57 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 }
 
 
+type stealthRec struct {
+	key qdb.KeyType
+	dbidx int
+	pkey []byte
+	txid []byte
+	vout uint32
+}
+
+
+func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
+	if len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06 {
+		res = new(stealthRec)
+		vo := binary.LittleEndian.Uint32(v[32:36])
+		res.key = qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1))
+		res.dbidx = int(v[31]) % NumberOfUnspentSubDBs
+		res.pkey = v[55:]
+		res.txid = v[:32]
+		res.vout = vo
+	}
+	return
+}
+
+
+func (db UnspentDB) ScanStealth(sec []byte) {
+	var remd uint
+	for k, v := range db.unspent.stealthOuts {
+		tx := db.unspent.dbN(v.dbidx).Get(v.key)
+		if tx==nil {
+			//fmt.Println(" ** No Output **")
+			delete(db.unspent.stealthOuts, k)
+			remd++
+		} else {
+			fmt.Println("TXID", btc.NewUint256(v.txid).String())
+			fmt.Println("  pkey", hex.EncodeToString(v.pkey))
+			fmt.Printf("   %s BTC to %s\n\n", btc.UintToBtc(binary.LittleEndian.Uint64(tx[36:44])),
+				btc.NewAddrFromPkScript(tx[48:], true))
+		}
+	}
+	if remd>0 {
+		fmt.Println(remd, "obsolete outputs have been removed")
+	}
+	//db.unspent.scanStealth(sec)
+}
+
+
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDBrowse(db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
-				scr := v[48:]
-				if len(scr)==40 && scr[0]==0x6a && scr[1]==0x26 && scr[2]==0x06 {
-					pk := uint64(k)
-					vo := uint64(binary.LittleEndian.Uint32(v[32:36]))
-					pk = pk ^ vo ^ (vo+1)
-					db.stealthOuts[k] = qdb.KeyType(pk)
+				idx := stealthIndexTo(k, v)
+				if idx != nil {
+					db.stealthOuts[k] = idx
 				}
 				return 0
 			})
@@ -119,10 +161,16 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	copy(v[48:], Val_Pk.Pk_script)
 	ind := qdb.KeyType(idx.UIdx())
 	var flgz uint32
-	if Val_Pk.Value<MinBrowsableOutValue {
+	sidx := stealthIndexTo(ind, v)
+	if sidx != nil {
+		db.stealthOuts[ind] = sidx
 		flgz = qdb.NO_CACHE | qdb.NO_BROWSE
-	} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
-		flgz = qdb.NO_CACHE
+	} else {
+		if Val_Pk.Value<MinBrowsableOutValue {
+			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
+		} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
+			flgz = qdb.NO_CACHE
+		}
 	}
 	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).PutExt(ind, v, flgz)
 }

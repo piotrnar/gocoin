@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"runtime"
 	"io/ioutil"
+	"encoding/hex"
 	"encoding/json"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
@@ -575,6 +576,16 @@ func list_alerst(p string) {
 }
 
 
+func scan_stealth(p string) {
+	sec, e := hex.DecodeString(p)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	common.BlockChain.Unspent.ScanStealth(sec)
+}
+
+
 func init() {
 	newUi("alerts a", false, list_alerst, "Show received alerts")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
@@ -595,6 +606,7 @@ func init() {
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
+	newUi("scan", true, scan_stealth, "Scan unspend database for stealth addresses matching the given key")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")
