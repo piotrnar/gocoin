@@ -26,16 +26,6 @@ func BenchmarkFieldSqrt(b *testing.B) {
 	}
 }
 
-func BenchmarkFieldSqrtSipa(b *testing.B) {
-	var dat [32]byte
-	var f, tmp fe_t
-	rand.Read(dat[:])
-	f.set_b32(dat[:])
-	for i := 0; i < b.N; i++ {
-		f.sqrt_sipa(&tmp)
-	}
-}
-
 
 func BenchmarkFieldInv(b *testing.B) {
 	var dat [32]byte
@@ -47,12 +37,3 @@ func BenchmarkFieldInv(b *testing.B) {
 	}
 }
 
-func BenchmarkFieldInvSipa(b *testing.B) {
-	var dat [32]byte
-	var f, tmp fe_t
-	rand.Read(dat[:])
-	f.set_b32(dat[:])
-	for i := 0; i < b.N; i++ {
-		f.inv_sipa(&tmp)
-	}
-}
