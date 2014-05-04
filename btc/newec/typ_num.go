@@ -33,6 +33,11 @@ func (r *num_t) mod_inv(a, b *num_t) {
 	return
 }
 
+func (r *num_t) mod(a *num_t) {
+	r.Mod(&r.Int, &a.Int)
+	return
+}
+
 func (a *num_t) set_hex(s string) {
 	a.SetString(s, 16)
 }
@@ -109,6 +114,11 @@ func (num *num_t) cmp(b *num_t) int {
 func (num *num_t) set(b *num_t) {
 	num.Set(&b.Int)
 }
+
+func (num *num_t) is_odd() bool {
+	return num.Bit(0)!=0;
+}
+
 
 func (num *num_t) sign() int {
 	return num.Sign()

@@ -1,11 +1,16 @@
 package newec
 
 import (
-//	"fmt"
+	"fmt"
 )
 
 type sig_t struct {
 	r, s num_t
+}
+
+func (s *sig_t) print(lab string) {
+	fmt.Println(lab + ".R:", s.r.String())
+	fmt.Println(lab + ".S:", s.s.String())
 }
 
 func (r *sig_t) sig_parse(sig []byte) bool {
@@ -101,36 +106,40 @@ func (sig *sig_t) recover(pubkey *ge_t, m *num_t, recid int) (ret bool) {
 
 
 func (sig *sig_t) sign(seckey, message, nonce *num_t, recid *int) int {
-/*
 	var r ge_t
 	var rp gej_t
-    secp256k1_gej_t rp;
-    secp256k1_ecmult_gen(&rp, nonce);
-    secp256k1_ge_t r;
-    secp256k1_ge_set_gej(&r, &rp);
-    unsigned char b[32];
-    secp256k1_fe_normalize(&r.x);
-    secp256k1_fe_normalize(&r.y);
-    secp256k1_fe_get_b32(b, &r.x);
-    secp256k1_num_set_bin(&sig->r, b, 32);
-    if (recid)
-        *recid = (secp256k1_num_cmp(&sig->r, &c->order) >= 0 ? 2 : 0) | (secp256k1_fe_is_odd(&r.y) ? 1 : 0);
-    secp256k1_num_mod(&sig->r, &c->order);
-    secp256k1_num_t n;
-    secp256k1_num_init(&n);
-    secp256k1_num_mod_mul(&n, &sig->r, seckey, &c->order);
-    secp256k1_num_add(&n, &n, message);
-    secp256k1_num_mod(&n, &c->order);
-    secp256k1_num_mod_inverse(&sig->s, nonce, &c->order);
-    secp256k1_num_mod_mul(&sig->s, &sig->s, &n, &c->order);
-    secp256k1_num_free(&n);
-    if (secp256k1_num_is_zero(&sig->s))
-        return 0;
-    if (secp256k1_num_cmp(&sig->s, &c->half_order) > 0) {
-        secp256k1_num_sub(&sig->s, &c->order, &sig->s);
-        if (recid)
-            *recid ^= 1;
-    }
-*/
+	var n num_t
+	var b [32]byte
+
+	ecmult_gen(&rp, nonce)
+	r.set_gej(&rp)
+	r.x.normalize()
+	r.y.normalize()
+	r.x.get_b32(b[:])
+	sig.r.set_bytes(b[:])
+	if recid != nil {
+		*recid = 0
+		if sig.r.cmp(&secp256k1.order) >= 0 {
+			*recid |= 2
+		}
+		if r.y.is_odd() {
+			*recid |= 1
+		}
+	}
+	sig.r.mod(&secp256k1.order)
+	n.mod_mul(&sig.r, seckey, &secp256k1.order)
+	n.add(&n, message)
+	n.mod(&secp256k1.order)
+	sig.s.mod_inv(nonce, &secp256k1.order)
+	sig.s.mod_mul(&sig.s, &n, &secp256k1.order)
+	if sig.s.sign()==0 {
+		return 0
+	}
+	if sig.s.is_odd() {
+		sig.s.sub(&secp256k1.order, &sig.s)
+		if recid!=nil {
+			*recid ^= 1
+		}
+	}
 	return 1
 }

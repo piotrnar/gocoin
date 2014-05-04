@@ -49,3 +49,27 @@ func TestSigRecover(t *testing.T) {
 		}
 	}
 }
+
+func TestSign(t *testing.T) {
+	var sec, msg, non num_t
+	var sig sig_t
+	var recid int
+	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
+	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
+	res := sig.sign(&sec, &msg, &non, &recid)
+	if res != 1 {
+		t.Error("res failed", res)
+	}
+	if recid != 1 {
+		t.Error("recid failed", recid)
+	}
+	non.set_hex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
+	if sig.r.cmp(&non)!=0 {
+		t.Error("R failed", sig.r.String())
+	}
+	non.set_hex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	if sig.s.cmp(&non)!=0 {
+		t.Error("S failed", sig.s.String())
+	}
+}
