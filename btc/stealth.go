@@ -101,35 +101,28 @@ func (a *StealthAddr) String() (string) {
 
 // Calculate the stealth difference
 func StealthDH(pub, priv []byte) []byte {
-	var x [32]byte
+	var res [33]byte
 	var i int
 
-	if !newec.Multiply(pub, priv, x[:], nil) {
+	if !newec.Multiply(pub, priv, res[:]) {
 		return nil
 	}
 
-	// skip leading zeros
-	for i<32 && x[i]==0 {
-		i++
+	for i=1; i<33 && res[i]==0; {
+		i++ // remove leading zeros (TODO: make sure that this is required)
 	}
 
 	s := sha256.New()
 	s.Write([]byte{0x03})
-	s.Write(x[i:])
+	s.Write(res[i:])
 	return s.Sum(nil)
 }
 
 
 // Calculate the stealth difference
 func StealthPub(pub, priv []byte) (res []byte) {
-	var y [32]byte
 	res = make([]byte, 33)
-	if newec.Multiply(pub, priv, res[1:], y[:]) {
-		if (y[31]&1) != 0 {
-			res[0] = 0x03
-		} else {
-			res[0] = 0x02
-		}
+	if newec.Multiply(pub, priv, res) {
 	} else {
 		res = nil
 	}
