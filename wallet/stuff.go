@@ -75,7 +75,7 @@ func getseed(seed []byte) bool {
 		}
 		// Maybe he wants to save the password?
 		if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
-			e = ioutil.WriteFile(PassSeedFilename, pass[:n], 0466)
+			e = ioutil.WriteFile(PassSeedFilename, pass[:n], 0600)
 			if e != nil {
 				fmt.Println("WARNING: Could not save the password", e.Error())
 			}
