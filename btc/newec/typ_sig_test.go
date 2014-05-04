@@ -73,3 +73,35 @@ func TestSign(t *testing.T) {
 		t.Error("S failed", sig.s.String())
 	}
 }
+
+
+func BenchmarkVerify(b *testing.B) {
+	var msg num_t
+	var sig sig_t
+	var key ge_t
+	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	sig.r.set_hex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
+	sig.s.set_hex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	key.x.set_hex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
+	key.y.set_hex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !sig.sig_verify(&key, &msg) {
+			b.Fatal("sig_verify failed")
+		}
+	}
+}
+
+
+func BenchmarkSign(b *testing.B) {
+	var sec, msg, non num_t
+	var sig sig_t
+	var recid int
+	sec.set_hex("73641C99F7719F57D8F4BEB11A303AFCD190243A51CED8782CA6D3DBE014D146")
+	msg.set_hex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	non.set_hex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sig.sign(&sec, &msg, &non, &recid)
+	}
+}
