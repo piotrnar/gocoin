@@ -1,6 +1,7 @@
 package btc
 
 import (
+//	"math/big"
 	"encoding/hex"
 	"testing"
 )
@@ -210,20 +211,19 @@ func TestVerifyMessage(t *testing.T) {
 			nv -= 4
 		}
 
+		var verified_ok bool
 		pub := sig.RecoverPublicKey(hash[:], int(nv-27))
-		if pub == nil {
-			t.Error("RecoverPublicKey failed")
+		if pub != nil {
+			sa := NewAddrFromPubkey(pub.Bytes(compressed), ad.Version)
+			if sa != nil {
+				verified_ok = ad.Hash160==sa.Hash160
+			} else {
+				t.Error("NewAddrFromPubkey failed")
+			}
 		}
-
-		sa := NewAddrFromPubkey(pub.Bytes(compressed), ad.Version)
-
-		if sa == nil {
-			t.Error("NewAddrFromPubkey failed")
-		}
-		/*verified_ok := ad.Hash160==sa.Hash160 && pub.Verify(hash[:], sig)
 		if verified_ok != testvcs[i].expected {
-			t.Error("Tesult different than expected at index", i)
-		}*/
+			t.Error("Result different than expected at index", i, verified_ok, testvcs[i].expected)
+		}
 	}
 }
 
@@ -235,3 +235,4 @@ func BenchmarkRecoverKey(b *testing.B) {
 		sig.RecoverPublicKey(hash[:], int(nv-27))
 	}
 }
+
