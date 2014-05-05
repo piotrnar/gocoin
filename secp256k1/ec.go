@@ -101,9 +101,3 @@ func BaseMultiply(k, out []byte) bool {
 }
 
 
-// Checks if the given value is bigger than zero and lower than the curve's order
-func ValidCoord(val []byte) bool {
-	var x Number
-	x.SetBytes(val)
-	return x.Sign()>0 && x.Cmp(&TheCurve.Order.Int)<0
-}

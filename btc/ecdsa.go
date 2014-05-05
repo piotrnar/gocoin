@@ -26,11 +26,13 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sec, msg, nonce secp256k1.Number
 	var nv [32]byte
 
+	ShaHash(hash, nv[:])
 	for {
-		ShaHash(hash, nv[:])
+		nonce.SetBytes(nv[:])
 		if secp256k1.ValidCoord(nv[:]) {
 			break
 		}
+		ShaHash(nv, nv[:])
 	}
 
 	sec.SetBytes(priv)
