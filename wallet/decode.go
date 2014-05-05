@@ -106,9 +106,9 @@ func dump_sigscript(d []byte) {
 		fmt.Print(hex_dump(d))
 		return
 	}
-	fmt.Printf("       X = %64s\n", hex.EncodeToString(key.X.Bytes()))
+	fmt.Printf("       X = %64s\n", key.X.String())
 	if le>=65 {
-		fmt.Printf("       Y = %64s\n", hex.EncodeToString(key.Y.Bytes()))
+		fmt.Printf("       Y = %64s\n", key.Y.String())
 	}
 
 	if rd.Len() != 0 {

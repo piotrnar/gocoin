@@ -82,12 +82,14 @@ func multisig_sign() {
 		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
 		//fmt.Println("Input number", i, len(ms.Signatures), " - hash to sign:", hex.EncodeToString(hash))
 
-		btcsig := &btc.Signature{HashType:0x01}
-		btcsig.R, btcsig.S, e = btc.EcdsaSign(privkey, hash)
+		r, s, e := btc.EcdsaSign(privkey, hash)
 		if e != nil {
 			println(e.Error())
 			return
 		}
+		btcsig := &btc.Signature{HashType:0x01}
+		btcsig.R.Set(r)
+		btcsig.S.Set(s)
 
 		ms.Signatures = append(ms.Signatures, btcsig)
 		tx.TxIn[i].ScriptSig = ms.Bytes()

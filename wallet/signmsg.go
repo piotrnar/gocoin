@@ -45,11 +45,13 @@ func sign_message() {
 			if hash!=nil {
 				txsig := new(btc.Signature)
 				txsig.HashType = 0x01
-				txsig.R, txsig.S, e = btc.EcdsaSign(privkey, hash)
+				r, s, e := btc.EcdsaSign(privkey, hash)
 				if e != nil {
 					println(e.Error())
 					return
 				}
+				txsig.R.Set(r)
+				txsig.S.Set(s)
 				fmt.Println("PublicKey:", hex.EncodeToString(publ_addrs[i].Pubkey))
 				fmt.Println(hex.EncodeToString(txsig.Bytes()))
 				return
@@ -81,11 +83,13 @@ func sign_message() {
 		sb[0] += 4
 	}
 
-	btcsig.R, btcsig.S, e = btc.EcdsaSign(privkey, hash)
+	r, s, e := btc.EcdsaSign(privkey, hash)
 	if e != nil {
 		println(e.Error())
 		return
 	}
+	btcsig.R.Set(r)
+	btcsig.S.Set(s)
 
 	rd := btcsig.R.Bytes()
 	sd := btcsig.S.Bytes()
