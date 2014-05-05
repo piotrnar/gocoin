@@ -36,6 +36,27 @@ func (elem *XY) ParsePubkey(pub []byte) bool {
 }
 
 
+// Returns serialized key in uncompressed format "<04> <X> <Y>"
+// ... or in compressed format: "<02> <X>", eventually "<03> <X>"
+func (pub *XY) Bytes(compressed bool) (raw []byte) {
+	if compressed {
+		raw = make([]byte, 33)
+		if pub.Y.IsOdd() {
+			raw[0] = 0x03
+		} else {
+			raw[0] = 0x03
+		}
+		pub.X.GetB32(raw[1:])
+	} else {
+		raw = make([]byte, 65)
+		raw[0] = 0x04
+		pub.X.GetB32(raw[1:33])
+		pub.Y.GetB32(raw[33:65])
+	}
+	return
+}
+
+
 func (r *XY) SetXY(X, Y *Field) {
 	r.Infinity = false
 	r.X = *X
