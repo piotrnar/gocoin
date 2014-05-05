@@ -4,10 +4,8 @@ import (
 	"os"
 	"fmt"
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
 )
 
 
@@ -133,42 +131,12 @@ func make_signed_tx() {
 
 	// Build transaction outputs:
 	for o := range sendTo {
-		tmp_addr := sendTo[o].addr
-
 		if sendTo[o].addr.StealthAddr != nil {
-			sa := sendTo[o].addr.StealthAddr
-			if sa.Version != btc.StealthAddressVersion(*testnet) {
-				fmt.Println("ERROR: Unsupported version of a stealth address", sendTo[o].addr.Version)
-				os.Exit(1)
-			}
-
-			if len(sa.SpendKeys) != 1 {
-				fmt.Println("ERROR: Currently only non-multisig stealth addresses are supported", len(sa.SpendKeys))
-				os.Exit(1)
-			}
-
-			var e [32]byte
-			rand.Read(e[:])
-			fmt.Println("e", hex.EncodeToString(e[:]))
-			scan_key := btc.StealthPub(sa.ScanKey[:], e[:])
-			send_key := btc.StealthPub(sa.SpendKeys[0][:], e[:])
-			utils.ClearBuffer(e[:])
-
-			fmt.Println("scan_key", hex.EncodeToString(scan_key))
-			fmt.Println("send_key", hex.EncodeToString(send_key))
-			tmp_addr = btc.NewAddrFromPubkey(send_key, btc.AddrVerPubkey(*testnet))
-
-			pk_scr := make([]byte, 40)
-			pk_scr[0] = 0x6a // OP_RETURN
-			pk_scr[1] = 38
-			pk_scr[2] = 6
-			rand.Read(pk_scr[3:7])
-			copy(pk_scr[7:40], scan_key)
-
-			tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: 0, Pk_script: pk_scr})
+			tx.TxOut = append(tx.TxOut, stealth_txout(sendTo[o].addr.StealthAddr, sendTo[o].amount)...)
+		} else {
+			tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: sendTo[o].amount,
+				Pk_script: sendTo[o].addr.OutScript()})
 		}
-
-		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: sendTo[o].amount, Pk_script: tmp_addr.OutScript()})
 	}
 
 	if changeBtc > 0 {
