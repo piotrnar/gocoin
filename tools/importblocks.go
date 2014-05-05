@@ -7,8 +7,8 @@ import (
 	"time"
 	"github.com/piotrnar/gocoin/btc"
 	_ "github.com/piotrnar/gocoin/btc/qdb"
-	"github.com/piotrnar/gocoin/blockdb"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/blockdb"
+	"github.com/piotrnar/gocoin/others/utils"
 )
 
 const Trust = true  // Set this to false if you want to re-check all scripts

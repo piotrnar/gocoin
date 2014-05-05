@@ -10,7 +10,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/cgo/openssl"
+	"github.com/piotrnar/gocoin/others/cgo/openssl"
 	"github.com/piotrnar/gocoin/btc"
 )
 

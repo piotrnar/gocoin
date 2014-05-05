@@ -8,7 +8,7 @@ import (
 	"strings"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/utils"
 )
 
 var type2_secret []byte // used to type-2 wallets

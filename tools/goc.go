@@ -12,7 +12,7 @@ import (
 	"encoding/xml"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/utils"
 )
 
 var (

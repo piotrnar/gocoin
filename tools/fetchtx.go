@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
 	"io/ioutil"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/utils"
 	"os"
 )
 

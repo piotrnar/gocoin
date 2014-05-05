@@ -12,7 +12,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/cgo/sipasec"
+	"github.com/piotrnar/gocoin/others/cgo/sipasec"
 	"github.com/piotrnar/gocoin/btc"
 )
 

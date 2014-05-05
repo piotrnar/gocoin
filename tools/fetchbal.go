@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/wallet"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/utils"
 	"io"
 	"io/ioutil"
 	"net"

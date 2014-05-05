@@ -11,7 +11,7 @@ import (
 	"strings"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/tools/utils"
+	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
