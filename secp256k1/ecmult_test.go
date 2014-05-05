@@ -7,7 +7,7 @@ import (
 
 func TestECmult(t *testing.T) {
 	var u1, u2 Number
-	var pubkeyj, expres, pr XYZ_t
+	var pubkeyj, expres, pr XYZ
 
 	pubkeyj.X.SetHex("0EAEBCD1DF2DF853D66CE0E1B0FDA07F67D1CABEFDE98514AAD795B86A6EA66D")
 	pubkeyj.Y.SetHex("BEB26B67D7A00E2447BAECCC8A4CEF7CD3CAD67376AC1C5785AEEBB4F6441C16")
@@ -71,7 +71,7 @@ func TestWNAF(t *testing.T) {
 
 
 func TestPrecompileGej(t *testing.T) {
-	var exp, a XYZ_t
+	var exp, a XYZ
 
 	a.X.SetHex("0eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66d")
 	a.Y.SetHex("beb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16")
@@ -105,8 +105,8 @@ func TestPrecompileGej(t *testing.T) {
 
 func TestMultGen(t *testing.T) {
 	var nonce  Number
-	var ex, ey, ez Fe_t
-	var r XYZ_t
+	var ex, ey, ez Field
+	var r XYZ
 	nonce.SetHex("9E3CD9AB0F32911BFDE39AD155F527192CE5ED1F51447D63C4F154C118DA598E")
 	ecmult_gen(&r, &nonce)
 	ex.SetHex("02D1BF36D37ACD68E4DD00DB3A707FD176A37E42F81AEF9386924032D3428FF0")

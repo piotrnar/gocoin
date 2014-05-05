@@ -46,12 +46,12 @@ func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bo
 	u1.mod_mul(&sn, message, &TheCurve.Order)
 	u2.mod_mul(&sn, &sig.R, &TheCurve.Order)
 
-	var pr, pubkeyj XYZ_t
+	var pr, pubkeyj XYZ
 	pubkeyj.set_ge(pubkey)
 
 	pubkeyj.ecmult(&pr, &u2, &u1)
-	if !pr.is_infinity() {
-		var xr Fe_t
+	if !pr.IsInfinity() {
+		var xr Field
 		pr.get_x(&xr)
 		xr.Normalize()
 		var xrb [32]byte
@@ -66,9 +66,9 @@ func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bo
 
 func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 	var rx, rn, u1, u2 Number
-	var fx Fe_t
+	var fx Field
 	var X XY
-	var xj, qj XYZ_t
+	var xj, qj XYZ
 
 	rx.Set(&sig.R.Int)
 	if (recid&2)!=0 {
@@ -100,7 +100,7 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 
 func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	var r XY
-	var rp XYZ_t
+	var rp XYZ
 	var n Number
 	var b [32]byte
 

@@ -16,11 +16,11 @@ func ecmult_start() {
 	g := TheCurve.G
 
 	// calculate 2^128*generator
-	var g_128j XYZ_t
+	var g_128j XYZ
 	g_128j.set_ge(&g)
 
 	for i := 0; i < 128; i++ {
-		g_128j.double(&g_128j)
+		g_128j.Double(&g_128j)
 	}
 
 	var g_128 XY
@@ -31,22 +31,22 @@ func ecmult_start() {
 	pre_g_128 = g_128.precomp(WINDOW_G)
 
 	// compute prec and fin
-	var gg XYZ_t
+	var gg XYZ
 	gg.set_ge(&g)
 	ad := g
-	var fn XYZ_t
+	var fn XYZ
 	fn.Infinity = true
 	for j:=0; j<64; j++ {
 		prec[j][0].set_gej(&gg)
-		fn.add(&fn, &gg)
+		fn.Add(&fn, &gg)
 		for i:=1; i<16; i++ {
-			gg.add_ge(&gg, &ad)
+			gg.AddXY(&gg, &ad)
 			prec[j][i].set_gej(&gg)
 		}
 		ad = prec[j][15]
 	}
 	fin.set_gej(&fn)
-	fin.neg(&fin)
+	fin.Neg(&fin)
 }
 
 
@@ -78,12 +78,12 @@ func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 	return
 }
 
-func ecmult_gen(r *XYZ_t, gn *Number) {
+func ecmult_gen(r *XYZ, gn *Number) {
 	var n Number;
 	n.Set(&gn.Int)
 	r.set_ge(&prec[0][n.rsh_x(4)])
 	for j:=1; j<64; j++ {
-		r.add_ge(r, &prec[j][n.rsh_x(4)])
+		r.AddXY(r, &prec[j][n.rsh_x(4)])
 	}
-	r.add_ge(r, &fin)
+	r.AddXY(r, &fin)
 }

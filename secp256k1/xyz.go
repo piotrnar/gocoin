@@ -6,12 +6,12 @@ import (
 )
 
 
-type XYZ_t struct {
-	X, Y, Z Fe_t
+type XYZ struct {
+	X, Y, Z Field
 	Infinity bool
 }
 
-func (gej XYZ_t) Print(lab string) {
+func (gej XYZ) Print(lab string) {
 	if gej.Infinity {
 		fmt.Println(lab + " - INFINITY")
 		return
@@ -22,47 +22,47 @@ func (gej XYZ_t) Print(lab string) {
 }
 
 
-func (r *XYZ_t) set_ge(a *XY) {
+func (r *XYZ) set_ge(a *XY) {
 	r.Infinity = a.Infinity
 	r.X = a.X
 	r.Y = a.Y
 	r.Z.SetInt(1)
 }
 
-func (r *XYZ_t) is_infinity() bool {
+func (r *XYZ) IsInfinity() bool {
 	return r.Infinity
 }
 
-func (a *XYZ_t) IsValid() bool {
+func (a *XYZ) IsValid() bool {
 	if a.Infinity {
 		return false
 	}
-	var y2, x3, z2, z6 Fe_t
-	a.Y.sqr(&y2)
-	a.X.sqr(&x3); x3.mul(&x3, &a.X)
-	a.Z.sqr(&z2)
-	z2.sqr(&z6); z6.mul(&z6, &z2)
+	var y2, x3, z2, z6 Field
+	a.Y.Sqr(&y2)
+	a.X.Sqr(&x3); x3.Mul(&x3, &a.X)
+	a.Z.Sqr(&z2)
+	z2.Sqr(&z6); z6.Mul(&z6, &z2)
 	z6.MulInt(7)
-	x3.set_add(&z6)
+	x3.SetAdd(&z6)
 	y2.Normalize()
 	x3.Normalize()
 	return y2.Equals(&x3)
 }
 
-func (a *XYZ_t) get_x(r *Fe_t) {
-	var zi2 Fe_t
-	a.Z.inv_var(&zi2)
-	zi2.sqr(&zi2)
-	a.X.mul(r, &zi2)
+func (a *XYZ) get_x(r *Field) {
+	var zi2 Field
+	a.Z.InvVar(&zi2)
+	zi2.Sqr(&zi2)
+	a.X.Mul(r, &zi2)
 }
 
-func (a *XYZ_t) Normalize() {
+func (a *XYZ) Normalize() {
 	a.X.Normalize()
 	a.Y.Normalize()
 	a.Z.Normalize()
 }
 
-func (a *XYZ_t) Equals(b *XYZ_t) bool {
+func (a *XYZ) Equals(b *XYZ) bool {
 	if a.Infinity != b.Infinity {
 		return false
 	}
@@ -73,19 +73,19 @@ func (a *XYZ_t) Equals(b *XYZ_t) bool {
 }
 
 
-func (a *XYZ_t) precomp(w int) (pre []XYZ_t) {
-	var d XYZ_t
-	pre = make([]XYZ_t, (1 << (uint(w)-2)))
+func (a *XYZ) precomp(w int) (pre []XYZ) {
+	var d XYZ
+	pre = make([]XYZ, (1 << (uint(w)-2)))
 	pre[0] = *a;
-	pre[0].double(&d)
+	pre[0].Double(&d)
 	for i:=1 ; i<len(pre); i++ {
-		d.add(&pre[i], &pre[i-1])
+		d.Add(&pre[i], &pre[i-1])
 	}
 	return
 }
 
 
-func (a *XYZ_t) ecmult(r *XYZ_t, na, ng *Number) {
+func (a *XYZ) ecmult(r *XYZ, na, ng *Number) {
 	var na_1, na_lam, ng_1, ng_128 Number
 
 	// split na into na_1 and na_lam (where na = na_1 + na_lam*lambda, and na_1 and na_lam are ~128 bit)
@@ -102,7 +102,7 @@ func (a *XYZ_t) ecmult(r *XYZ_t, na, ng *Number) {
 	bits_ng_128 := ecmult_wnaf(wnaf_ng_128[:], &ng_128, WINDOW_G)
 
 	// calculate a_lam = a*lambda
-	var a_lam XYZ_t
+	var a_lam XYZ
 	a.mul_lambda(&a_lam)
 
 	// calculate odd multiples of a and a_lam
@@ -122,57 +122,57 @@ func (a *XYZ_t) ecmult(r *XYZ_t, na, ng *Number) {
 
 	r.Infinity = true
 
-	var tmpj XYZ_t
+	var tmpj XYZ
 	var tmpa XY
 	var n int
 
 	for i:=bits-1; i>=0; i-- {
-		r.double(r)
+		r.Double(r)
 
 		if i < bits_na_1 {
 			n = wnaf_na_1[i]
 			if n > 0 {
-				r.add(r, &pre_a_1[((n)-1)/2])
+				r.Add(r, &pre_a_1[((n)-1)/2])
 			} else if n != 0 {
-				pre_a_1[(-(n)-1)/2].neg(&tmpj)
-				r.add(r, &tmpj)
+				pre_a_1[(-(n)-1)/2].Neg(&tmpj)
+				r.Add(r, &tmpj)
 			}
 		}
 
 		if i < bits_na_lam {
 			n = wnaf_na_lam[i]
 			if n > 0 {
-				r.add(r, &pre_a_lam[((n)-1)/2])
+				r.Add(r, &pre_a_lam[((n)-1)/2])
 			} else if n != 0 {
-				pre_a_lam[(-(n)-1)/2].neg(&tmpj)
-				r.add(r, &tmpj)
+				pre_a_lam[(-(n)-1)/2].Neg(&tmpj)
+				r.Add(r, &tmpj)
 			}
 		}
 
 		if i < bits_ng_1 {
 			n = wnaf_ng_1[i]
 			if n > 0 {
-				r.add_ge(r, &pre_g[((n)-1)/2])
+				r.AddXY(r, &pre_g[((n)-1)/2])
 			} else if n != 0 {
-				pre_g[(-(n)-1)/2].neg(&tmpa)
-				r.add_ge(r, &tmpa)
+				pre_g[(-(n)-1)/2].Neg(&tmpa)
+				r.AddXY(r, &tmpa)
 			}
 		}
 
 		if i < bits_ng_128 {
 			n = wnaf_ng_128[i]
 			if n > 0 {
-				r.add_ge(r, &pre_g_128[((n)-1)/2])
+				r.AddXY(r, &pre_g_128[((n)-1)/2])
 			} else if n != 0 {
-				pre_g_128[(-(n)-1)/2].neg(&tmpa)
-				r.add_ge(r, &tmpa)
+				pre_g_128[(-(n)-1)/2].Neg(&tmpa)
+				r.AddXY(r, &tmpa)
 			}
 		}
 	}
 }
 
 
-func (a *XYZ_t) neg(r *XYZ_t) {
+func (a *XYZ) Neg(r *XYZ) {
 	r.Infinity = a.Infinity
 	r.X = a.X
 	r.Y = a.Y
@@ -181,14 +181,14 @@ func (a *XYZ_t) neg(r *XYZ_t) {
 	r.Y.Negate(&r.Y, 1)
 }
 
-func (a *XYZ_t) mul_lambda(r *XYZ_t) {
+func (a *XYZ) mul_lambda(r *XYZ) {
 	*r = *a
-	r.X.mul(&r.X, &TheCurve.beta)
+	r.X.Mul(&r.X, &TheCurve.beta)
 }
 
 
-func (a *XYZ_t) double(r *XYZ_t) {
-	var t1, t2, t3, t4, t5 Fe_t
+func (a *XYZ) Double(r *XYZ) {
+	var t1, t2, t3, t4, t5 Field
 
 	t5 = a.Y
 	t5.Normalize()
@@ -197,31 +197,31 @@ func (a *XYZ_t) double(r *XYZ_t) {
 		return
 	}
 
-	t5.mul(&r.Z, &a.Z)
+	t5.Mul(&r.Z, &a.Z)
 	r.Z.MulInt(2)
-	a.X.sqr(&t1)
+	a.X.Sqr(&t1)
 	t1.MulInt(3)
-	t1.sqr(&t2)
-	t5.sqr(&t3)
+	t1.Sqr(&t2)
+	t5.Sqr(&t3)
 	t3.MulInt(2)
-	t3.sqr(&t4)
+	t3.Sqr(&t4)
 	t4.MulInt(2)
-	a.X.mul(&t3, &t3)
+	a.X.Mul(&t3, &t3)
 	r.X = t3
 	r.X.MulInt(4)
 	r.X.Negate(&r.X, 4)
-	r.X.set_add(&t2)
+	r.X.SetAdd(&t2)
 	t2.Negate(&t2, 1)
 	t3.MulInt(6)
-	t3.set_add(&t2)
-	t1.mul(&r.Y, &t3)
+	t3.SetAdd(&t2)
+	t1.Mul(&r.Y, &t3)
 	t4.Negate(&t2, 2)
-	r.Y.set_add(&t2)
+	r.Y.SetAdd(&t2)
 	r.Infinity = false
 }
 
 
-func (a *XYZ_t) add_ge(r *XYZ_t, b *XY) {
+func (a *XYZ) AddXY(r *XYZ, b *XY) {
 	if a.Infinity {
 		r.Infinity = b.Infinity
 		r.X = b.X
@@ -234,15 +234,15 @@ func (a *XYZ_t) add_ge(r *XYZ_t, b *XY) {
 		return
 	}
 	r.Infinity = false
-	var z12, u1, u2, s1, s2 Fe_t
-	a.Z.sqr(&z12)
+	var z12, u1, u2, s1, s2 Field
+	a.Z.Sqr(&z12)
 	u1 = a.X
 	u1.Normalize()
-	b.X.mul(&u2, &z12)
+	b.X.Mul(&u2, &z12)
 	s1 = a.Y
 	s1.Normalize()
-	b.Y.mul(&s2, &z12)
-	s2.mul(&s2, &a.Z)
+	b.Y.Mul(&s2, &z12)
+	s2.Mul(&s2, &a.Z)
 	u1.Normalize()
 	u2.Normalize()
 
@@ -250,39 +250,39 @@ func (a *XYZ_t) add_ge(r *XYZ_t, b *XY) {
 		s1.Normalize()
 		s2.Normalize()
 		if (s1.Equals(&s2)) {
-			a.double(r)
+			a.Double(r)
 		} else {
 			r.Infinity = true
 		}
 		return
 	}
 
-	var h, i, i2, h2, h3, t Fe_t
+	var h, i, i2, h2, h3, t Field
 	u1.Negate(&h, 1)
-	h.set_add(&u2)
+	h.SetAdd(&u2)
 	s1.Negate(&i, 1)
-	i.set_add(&s2)
-	i.sqr(&i2)
-	h.sqr(&h2)
-	h.mul(&h3, &h2)
+	i.SetAdd(&s2)
+	i.Sqr(&i2)
+	h.Sqr(&h2)
+	h.Mul(&h3, &h2)
 	r.Z = a.Z
-	r.Z.mul(&r.Z, &h)
-	u1.mul(&t, &h2)
+	r.Z.Mul(&r.Z, &h)
+	u1.Mul(&t, &h2)
 	r.X = t
 	r.X.MulInt(2)
-	r.X.set_add(&h3)
+	r.X.SetAdd(&h3)
 	r.X.Negate(&r.X, 3)
-	r.X.set_add(&i2)
+	r.X.SetAdd(&i2)
 	r.X.Negate(&r.Y, 5)
-	r.Y.set_add(&t)
-	r.Y.mul(&r.Y, &i)
-	h3.mul(&h3, &s1)
+	r.Y.SetAdd(&t)
+	r.Y.Mul(&r.Y, &i)
+	h3.Mul(&h3, &s1)
 	h3.Negate(&h3, 1)
-	r.Y.set_add(&h3)
+	r.Y.SetAdd(&h3)
 }
 
 
-func (a *XYZ_t) add(r, b *XYZ_t) {
+func (a *XYZ) Add(r, b *XYZ) {
 	if a.Infinity {
 		*r = *b
 		return
@@ -292,49 +292,49 @@ func (a *XYZ_t) add(r, b *XYZ_t) {
 		return
 	}
 	r.Infinity = false
-	var z22, z12, u1, u2, s1, s2 Fe_t
+	var z22, z12, u1, u2, s1, s2 Field
 
-	b.Z.sqr(&z22)
-	a.Z.sqr(&z12)
-	a.X.mul(&u1, &z22)
-	b.X.mul(&u2, &z12)
-	a.Y.mul(&s1, &z22)
-	s1.mul(&s1, &b.Z)
-	b.Y.mul(&s2, &z12)
-	s2.mul(&s2, &a.Z)
+	b.Z.Sqr(&z22)
+	a.Z.Sqr(&z12)
+	a.X.Mul(&u1, &z22)
+	b.X.Mul(&u2, &z12)
+	a.Y.Mul(&s1, &z22)
+	s1.Mul(&s1, &b.Z)
+	b.Y.Mul(&s2, &z12)
+	s2.Mul(&s2, &a.Z)
 	u1.Normalize()
 	u2.Normalize()
 	if u1.Equals(&u2) {
 		s1.Normalize()
 		s2.Normalize()
 		if s1.Equals(&s2) {
-			a.double(r)
+			a.Double(r)
 		} else {
 			r.Infinity = true
 		}
 		return
 	}
-	var h, i, i2, h2, h3, t Fe_t
+	var h, i, i2, h2, h3, t Field
 
 	u1.Negate(&h, 1)
-	h.set_add(&u2)
+	h.SetAdd(&u2)
 	s1.Negate(&i, 1)
-	i.set_add(&s2)
-	i.sqr(&i2)
-	h.sqr(&h2)
-	h.mul(&h3, &h2)
-	a.Z.mul(&r.Z, &b.Z)
-	r.Z.mul(&r.Z, &h)
-	u1.mul(&t, &h2)
+	i.SetAdd(&s2)
+	i.Sqr(&i2)
+	h.Sqr(&h2)
+	h.Mul(&h3, &h2)
+	a.Z.Mul(&r.Z, &b.Z)
+	r.Z.Mul(&r.Z, &h)
+	u1.Mul(&t, &h2)
 	r.X = t
 	r.X.MulInt(2)
-	r.X.set_add(&h3)
+	r.X.SetAdd(&h3)
 	r.X.Negate(&r.X, 3)
-	r.X.set_add(&i2)
+	r.X.SetAdd(&i2)
 	r.X.Negate(&r.Y, 5)
-	r.Y.set_add(&t)
-	r.Y.mul(&r.Y, &i)
-	h3.mul(&h3, &s1)
+	r.Y.SetAdd(&t)
+	r.Y.Mul(&r.Y, &i)
+	h3.Mul(&h3, &s1)
 	h3.Negate(&h3, 1)
-	r.Y.set_add(&h3)
+	r.Y.SetAdd(&h3)
 }

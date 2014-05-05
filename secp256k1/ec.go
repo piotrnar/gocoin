@@ -35,13 +35,13 @@ func init() {
 }
 
 func DecompressPoint(X []byte, off bool, Y []byte) {
-	var rx, ry, c, x2, x3 Fe_t
+	var rx, ry, c, x2, x3 Field
 	rx.SetB32(X)
-	rx.sqr(&x2)
-	rx.mul(&x3, &x2)
+	rx.Sqr(&x2)
+	rx.Mul(&x3, &x2)
 	c.SetInt(7)
-	c.set_add(&x3)
-	c.sqrt(&ry)
+	c.SetAdd(&x3)
+	c.Sqrt(&ry)
 	ry.Normalize()
 	if ry.IsOdd() != off {
 		ry.Negate(&ry, 1)
