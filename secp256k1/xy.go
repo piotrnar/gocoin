@@ -22,7 +22,7 @@ func (ge *XY) Print(lab string) {
 func (elem *XY) ParsePubkey(pub []byte) bool {
 	if len(pub) == 33 && (pub[0] == 0x02 || pub[0] == 0x03) {
 		elem.X.SetB32(pub[1:33])
-		elem.set_xo(&elem.X, pub[0]==0x03)
+		elem.SetXO(&elem.X, pub[0]==0x03)
 	} else if len(pub) == 65 && (pub[0] == 0x04 || pub[0] == 0x06 || pub[0] == 0x07) {
 		elem.X.SetB32(pub[1:33])
 		elem.Y.SetB32(pub[33:65])
@@ -58,7 +58,7 @@ func (a *XY) IsValid() bool {
 }
 
 
-func (r *XY) set_gej(a *XYZ) {
+func (r *XY) SetXYZ(a *XYZ) {
 	var z2, z3 Field;
 	a.Z.InvVar(&a.Z)
 	a.Z.Sqr(&z2)
@@ -75,11 +75,11 @@ func (a *XY) precomp(w int) (pre []XY) {
 	pre = make([]XY, (1 << (uint(w)-2)))
 	pre[0] = *a;
 	var X, d, tmp XYZ
-	X.set_ge(a)
+	X.SetXY(a)
 	X.Double(&d)
 	for i:=1 ; i<len(pre); i++ {
 		d.AddXY(&tmp, &pre[i-1])
-		pre[i].set_gej(&tmp)
+		pre[i].SetXYZ(&tmp)
 	}
 	return
 }
@@ -93,7 +93,7 @@ func (a *XY) Neg(r *XY) {
 }
 
 
-func (r *XY) set_xo(X *Field, odd bool) {
+func (r *XY) SetXO(X *Field, odd bool) {
 	var c, x2, x3 Field
 	r.X = *X
 	X.Sqr(&x2)
@@ -111,23 +111,17 @@ func (r *XY) set_xo(X *Field, odd bool) {
 
 func (pk *XY) AddXY(a *XY) {
 	var xyz XYZ
-	xyz.set_ge(pk)
+	xyz.SetXY(pk)
 	xyz.AddXY(&xyz, a)
-	pk.set_gej(&xyz)
+	pk.SetXYZ(&xyz)
 }
 
-/*
-func (BitCurve *BitCurve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
-	Z := new(big.Int).SetInt64(1)
-	return BitCurve.affineFromJacobian(BitCurve.addJacobian(x1, y1, Z, x2, y2, Z))
-}
-*/
 
 // TODO: think about optimizing this one
 func (pk *XY) Multi(k []byte) bool {
 	var B, r XYZ
 
-	B.set_ge(pk)
+	B.SetXY(pk)
 	r = B
 
 	seen := false
@@ -151,7 +145,7 @@ func (pk *XY) Multi(k []byte) bool {
 		return false
 	}
 
-	pk.set_gej(&r)
+	pk.SetXYZ(&r)
 	return true
 }
 

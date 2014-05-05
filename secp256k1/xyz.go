@@ -22,7 +22,7 @@ func (gej XYZ) Print(lab string) {
 }
 
 
-func (r *XYZ) set_ge(a *XY) {
+func (r *XYZ) SetXY(a *XY) {
 	r.Infinity = a.Infinity
 	r.X = a.X
 	r.Y = a.Y

@@ -17,14 +17,14 @@ func ecmult_start() {
 
 	// calculate 2^128*generator
 	var g_128j XYZ
-	g_128j.set_ge(&g)
+	g_128j.SetXY(&g)
 
 	for i := 0; i < 128; i++ {
 		g_128j.Double(&g_128j)
 	}
 
 	var g_128 XY
-	g_128.set_gej(&g_128j)
+	g_128.SetXYZ(&g_128j)
 
     // precompute the tables with odd multiples
 	pre_g = g.precomp(WINDOW_G)
@@ -32,20 +32,20 @@ func ecmult_start() {
 
 	// compute prec and fin
 	var gg XYZ
-	gg.set_ge(&g)
+	gg.SetXY(&g)
 	ad := g
 	var fn XYZ
 	fn.Infinity = true
 	for j:=0; j<64; j++ {
-		prec[j][0].set_gej(&gg)
+		prec[j][0].SetXYZ(&gg)
 		fn.Add(&fn, &gg)
 		for i:=1; i<16; i++ {
 			gg.AddXY(&gg, &ad)
-			prec[j][i].set_gej(&gg)
+			prec[j][i].SetXYZ(&gg)
 		}
 		ad = prec[j][15]
 	}
-	fin.set_gej(&fn)
+	fin.SetXYZ(&fn)
 	fin.Neg(&fin)
 }
 
@@ -81,7 +81,7 @@ func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 func ecmult_gen(r *XYZ, gn *Number) {
 	var n Number;
 	n.Set(&gn.Int)
-	r.set_ge(&prec[0][n.rsh_x(4)])
+	r.SetXY(&prec[0][n.rsh_x(4)])
 	for j:=1; j<64; j++ {
 		r.AddXY(r, &prec[j][n.rsh_x(4)])
 	}
