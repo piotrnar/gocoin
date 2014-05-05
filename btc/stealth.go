@@ -27,14 +27,9 @@ type StealthAddr struct {
 }
 
 
-func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
+func NewStealthAddr(dec []byte) (a *StealthAddr, e error) {
 	var tmp byte
 
-	dec := Decodeb58(hs)
-	if dec == nil {
-		e = errors.New("StealthAddr: Cannot decode b58 string *"+hs+"*")
-		return
-	}
 	if (len(dec)<2+33+33+1+1+4) {
 		e = errors.New("StealthAddr: data too short")
 		return
@@ -79,6 +74,16 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 	}
 	a.Prefix = b.Bytes()
 	return
+}
+
+
+func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
+	dec := Decodeb58(hs)
+	if dec == nil {
+		e = errors.New("StealthAddr: Cannot decode b58 string *"+hs+"*")
+		return
+	}
+	return NewStealthAddr(dec)
 }
 
 
