@@ -1,8 +1,8 @@
-0.9.11:
+0.9.11 - 2014-05-05
 * Huge refactor of the entire repo
-* Wallet: Support for "-p" switch that gorces asking for password
+* Wallet: support for "-p" switch that forces asking for seed password
 
-0.9.10:
+0.9.10 (intermediate checkpoint tag)
 * Client: an address listed more than once in a wallet gets removed (was showing wrong balance)
 * Wallet: can generate a stealth address. Use "-scankey <key>". Uses the first private key for spend.
 * Wallet: now you can specify/overwrite the path to the secret files, in the configuration file
