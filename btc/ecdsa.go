@@ -35,10 +35,18 @@ func (rdr *rand256) Read(p []byte) (n int, err error) {
 func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sig secp256k1.Signature
 	var sec, msg, nonce secp256k1.Number
+	var nv [32]byte
+
+	for {
+		ShaHash(hash, nv[:])
+		if secp256k1.ValidCoord(nv[:]) {
+			break
+		}
+	}
 
 	sec.SetBytes(priv)
 	msg.SetBytes(hash)
-	nonce.SetBytes(hash)
+	nonce.SetBytes(nv[:])
 	if sig.Sign(&sec, &msg, &nonce, nil)!=1 {
 		err = errors.New("ESCDS Sign error()")
 	}

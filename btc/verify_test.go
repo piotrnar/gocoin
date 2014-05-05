@@ -72,11 +72,23 @@ func BenchmarkNewSignature(b *testing.B) {
 }
 
 
-func BenchmarkVerify(b *testing.B) {
+func BenchmarkEcdsaSign(b *testing.B) {
+	var sec, msg [32]byte
+	ShaHash([]byte("sec"), sec[:])
+	ShaHash([]byte("msg"), msg[:])
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		EcdsaSign(sec[:], msg[:])
+	}
+}
+
+
+func BenchmarkEcdsaVerify(b *testing.B) {
 	key, _ := hex.DecodeString(ta[0][0])
 	sig, _ := hex.DecodeString(ta[0][1])
 	ptr, _ := hex.DecodeString(ta[0][2] + "01000000")
 	h := NewSha2Hash(ptr[:])
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if !EcdsaVerify(key, sig, h.Hash[:]) {
 			b.Error("Verify failed")
