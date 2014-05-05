@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
 	"sync/atomic"
