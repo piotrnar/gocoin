@@ -13,4 +13,5 @@ Core lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Wallet:
+* FIX: You do not own the address of the first input (does not go to the next one)
 * Do not update changes to balance/unspent.txt if a signing was not complete
