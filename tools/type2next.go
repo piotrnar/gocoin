@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"math/big"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
@@ -15,39 +14,38 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("Specify B_secret and A_public_key to get the next Type-2 deterministic address")
+		fmt.Println("Specify secret and public_key to get the next Type-2 deterministic address")
 		fmt.Println("Add -t as the third argument to work with Testnet addresses.")
 		return
 	}
-	A_public_key, er := hex.DecodeString(os.Args[2])
+	public_key, er := hex.DecodeString(os.Args[2])
 	if er != nil {
-		println("Error parsing A_public_key:", er.Error())
+		println("Error parsing public_key:", er.Error())
 		os.Exit(1)
 	}
 
-	pubk, er := btc.NewPublicKey(A_public_key)
-	if er != nil {
-		println("Invalid valid public key:", er.Error())
-		os.Exit(1)
+	if len(public_key)==33 && (public_key[0]==2 || public_key[0]==3) {
+		fmt.Println("Compressed")
+	} else if len(public_key)==65 && (public_key[0]==4) {
+		fmt.Println("Uncompressed")
+	} else {
+		println("Incorrect public key")
 	}
-	compressed := len(A_public_key)==33
 
-	B_secret, er := hex.DecodeString(os.Args[1])
+	secret, er := hex.DecodeString(os.Args[1])
 	if er != nil {
-		println("Error parsing B_secret:", er.Error())
+		println("Error parsing secret:", er.Error())
 		os.Exit(1)
 	}
-	sec := new(big.Int).SetBytes(B_secret)
 
 	testnet := len(os.Args) > 3 && os.Args[3]=="-t"
 
 	// Old address
-	fmt.Print(btc.NewAddrFromPubkey(pubk.Bytes(compressed), btc.AddrVerPubkey(testnet)).String(), " => ")
-	pubk.X, pubk.Y = btc.DeriveNextPublic(pubk.X, pubk.Y, sec)
+	public_key = btc.DeriveNextPublic(public_key, secret)
 
 	// New address
-	fmt.Println(btc.NewAddrFromPubkey(pubk.Bytes(compressed), btc.AddrVerPubkey(testnet)).String())
+	fmt.Println(btc.NewAddrFromPubkey(public_key, btc.AddrVerPubkey(testnet)).String())
 	// New key
-	fmt.Println(hex.EncodeToString(pubk.Bytes(compressed)))
+	fmt.Println(hex.EncodeToString(public_key))
 
 }
