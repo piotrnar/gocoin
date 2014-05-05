@@ -15,7 +15,7 @@ func ecdsa_verify(pubkey, sig, msg []byte) int {
 		return -1
 	}
 
-	if !s.sig_parse(sig) {
+	if s.ParseBytes(sig)<0 {
 		return -2
 	}
 

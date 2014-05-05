@@ -15,24 +15,24 @@ func (s *Signature) Print(lab string) {
 	fmt.Println(lab + ".S:", hex.EncodeToString(s.S.Bytes()))
 }
 
-func (r *Signature) sig_parse(sig []byte) bool {
+func (r *Signature) ParseBytes(sig []byte) int {
 	if sig[0] != 0x30 || len(sig) < 5 {
-		return false
+		return -1
 	}
 
 	lenr := int(sig[3])
 	if lenr == 0 || 5+lenr >= len(sig) || sig[lenr+4] != 0x02 {
-		return false
+		return -1
 	}
 
 	lens := int(sig[lenr+5])
 	if lens == 0 || int(sig[1]) != lenr+lens+4 || lenr+lens+6 > len(sig) || sig[2] != 0x02 {
-		return false
+		return -1
 	}
 
 	r.R.SetBytes(sig[4 : 4+lenr])
 	r.S.SetBytes(sig[6+lenr : 6+lenr+lens])
-	return true
+	return 6+lenr+lens
 }
 
 func (r *Signature) Verify(pubkey *XY, message *Number) (ret bool) {
