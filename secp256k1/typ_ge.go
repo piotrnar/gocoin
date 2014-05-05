@@ -160,7 +160,7 @@ func (pk *XY) GetPublicKey(out []byte) {
 	pk.X.GetB32(out[1:33])
 	if len(out)==65 {
 		out[0] = 0x04
-		pk.X.GetB32(out[33:65])
+		pk.Y.GetB32(out[33:65])
 	} else {
 		if pk.Y.IsOdd() {
 			out[0] = 0x03
