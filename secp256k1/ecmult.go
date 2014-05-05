@@ -78,9 +78,10 @@ func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 	return
 }
 
-func ecmult_gen(r *XYZ, gn *Number) {
+// r = a*G
+func ECmultGen(r *XYZ, a *Number) {
 	var n Number;
-	n.Set(&gn.Int)
+	n.Set(&a.Int)
 	r.SetXY(&prec[0][n.rsh_x(4)])
 	for j:=1; j<64; j++ {
 		r.AddXY(r, &prec[j][n.rsh_x(4)])

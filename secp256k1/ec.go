@@ -91,13 +91,12 @@ func Multiply(xy, k, out []byte) bool {
 
 
 func BaseMultiply(k, out []byte) bool {
+	var r XYZ
+	var n Number
 	var pk XY
-	pk = TheCurve.G
-	if !pk.Multi(k) {
-		return false
-	}
+	n.SetBytes(k)
+	ECmultGen(&r, &n)
+	pk.SetXYZ(&r)
 	pk.GetPublicKey(out)
 	return true
 }
-
-
