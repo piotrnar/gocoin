@@ -60,3 +60,20 @@ func TestDeterministicWalletType2(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkPrivToPubCompr(b *testing.B) {
+	var prv [32]byte
+	for i:=0; i<b.N; i++ {
+		ShaHash(prv[:], prv[:])
+		PublicFromPrivate(prv[:], true)
+	}
+}
+
+
+func BenchmarkPrivToPubUncom(b *testing.B) {
+	var prv [32]byte
+	for i:=0; i<b.N; i++ {
+		ShaHash(prv[:], prv[:])
+		PublicFromPrivate(prv[:], false)
+	}
+}
