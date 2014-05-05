@@ -107,19 +107,14 @@ func (a *StealthAddr) String() (string) {
 // Calculate the stealth difference
 func StealthDH(pub, priv []byte) []byte {
 	var res [33]byte
-	var i int
 
 	if !secp256k1.Multiply(pub, priv, res[:]) {
 		return nil
 	}
 
-	for i=1; i<33 && res[i]==0; {
-		i++ // remove leading zeros (TODO: make sure that this is required)
-	}
-
 	s := sha256.New()
 	s.Write([]byte{0x03})
-	s.Write(res[i:])
+	s.Write(res[:])
 	return s.Sum(nil)
 }
 
