@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"flag"
-	"math/big"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -79,8 +78,6 @@ var (
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo
-
-	type2_secret *big.Int // used to type-2 wallets
 )
 
 

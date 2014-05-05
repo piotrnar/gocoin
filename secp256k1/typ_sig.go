@@ -67,7 +67,7 @@ func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bo
 func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 	var rx, rn, u1, u2 Number
 	var fx Fe_t
-	var x XY
+	var X XY
 	var xj, qj XYZ_t
 
 	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
@@ -87,13 +87,13 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 
 	fx.SetB32(rx.get_bin(32))
 
-	x.set_xo(&fx, (recid&1)!=0)
-	if !x.IsValid() {
+	X.set_xo(&fx, (recid&1)!=0)
+	if !X.IsValid() {
 		return false
 	}
 
 
-	xj.set_ge(&x)
+	xj.set_ge(&X)
 	rn.mod_inv(&sig.R, &TheCurve.Order)
 	u1.mod_mul(&rn, m, &TheCurve.Order)
 	u1.Sub(&TheCurve.Order.Int, &u1.Int)
@@ -113,16 +113,16 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 
 	ecmult_gen(&rp, nonce)
 	r.set_gej(&rp)
-	r.x.Normalize()
-	r.y.Normalize()
-	r.x.GetB32(b[:])
+	r.X.Normalize()
+	r.Y.Normalize()
+	r.X.GetB32(b[:])
 	sig.R.SetBytes(b[:])
 	if recid != nil {
 		*recid = 0
 		if sig.R.Cmp(&TheCurve.Order.Int) >= 0 {
 			*recid |= 2
 		}
-		if r.y.IsOdd() {
+		if r.Y.IsOdd() {
 			*recid |= 1
 		}
 	}

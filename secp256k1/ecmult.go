@@ -52,22 +52,22 @@ func ecmult_start() {
 
 func ecmult_wnaf(wnaf []int, a *Number, w uint) (ret int) {
 	var zeroes uint
-	var x Number
-	x.Set(&a.Int)
+	var X Number
+	X.Set(&a.Int)
 
-	for x.Sign()!=0 {
-		for x.Bit(0)==0 {
+	for X.Sign()!=0 {
+		for X.Bit(0)==0 {
 			zeroes++
-			x.rsh(1)
+			X.rsh(1)
 		}
-		word := x.rsh_x(w)
+		word := X.rsh_x(w)
 		for zeroes > 0 {
 			wnaf[ret] = 0
 			ret++
 			zeroes--
 		}
 		if (word & (1 << (w-1))) != 0 {
-			x.inc()
+			X.inc()
 			wnaf[ret] = (word - (1 << w))
 		} else {
 			wnaf[ret] = word

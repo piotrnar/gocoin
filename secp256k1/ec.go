@@ -34,9 +34,9 @@ func init() {
 	ecmult_start()
 }
 
-func DecompressPoint(x []byte, off bool, y []byte) {
+func DecompressPoint(X []byte, off bool, Y []byte) {
 	var rx, ry, c, x2, x3 Fe_t
-	rx.SetB32(x)
+	rx.SetB32(X)
 	rx.sqr(&x2)
 	rx.mul(&x3, &x2)
 	c.SetInt(7)
@@ -47,12 +47,12 @@ func DecompressPoint(x []byte, off bool, y []byte) {
 		ry.Negate(&ry, 1)
 	}
 	ry.Normalize()
-	ry.GetB32(y)
+	ry.GetB32(Y)
 	return
 }
 
 
-func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
+func RecoverPublicKey(r, s, h []byte, recid int, X, Y []byte) bool {
 	var sig Signature
 	var pubkey XY
 	var msg Number
@@ -62,8 +62,8 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	if !sig.recover(&pubkey, &msg, recid) {
 		return false
 	}
-	pubkey.x.GetB32(x)
-	pubkey.y.GetB32(y)
+	pubkey.X.GetB32(X)
+	pubkey.Y.GetB32(Y)
 	return true
 }
 

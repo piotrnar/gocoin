@@ -6,11 +6,12 @@ import (
 	"bytes"
 	"bufio"
 	"strings"
-	"math/big"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/tools/utils"
 )
+
+var type2_secret []byte // used to type-2 wallets
 
 
 func load_others() {
@@ -134,11 +135,10 @@ func make_wallet() {
 				println("t2sec error:", e.Error())
 				os.Exit(1)
 			}
-			type2_secret = new(big.Int).SetBytes(d)
+			type2_secret = d
 		} else {
-			var buf [20]byte
-			btc.RimpHash(seed_key, buf[:])
-			type2_secret = new(big.Int).SetBytes(buf[:])
+			type2_secret = make([]byte, 20)
+			btc.RimpHash(seed_key, type2_secret)
 		}
 		lab = "TypB"
 	} else {
@@ -154,7 +154,7 @@ func make_wallet() {
 			btc.ShaHash(seed_key, prv_key)
 			seed_key = append(seed_key, byte(i))
 		} else if *waltype==2 {
-			seed_key = btc.DeriveNextPrivate(new(big.Int).SetBytes(seed_key), type2_secret).Bytes()
+			seed_key = btc.DeriveNextPrivate(seed_key, type2_secret)
 			copy(prv_key, seed_key)
 		} else {
 			btc.ShaHash(seed_key, prv_key)
@@ -217,7 +217,7 @@ func dump_addrs() {
 	fmt.Fprintln(f, "# Deterministic Walet Type", *waltype)
 	if type2_secret!=nil {
 		fmt.Fprintln(f, "#", hex.EncodeToString(publ_addrs[0].Pubkey))
-		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret.Bytes()))
+		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
 	}
 	for i := range publ_addrs {
 		if !*noverify {

@@ -35,15 +35,15 @@ func TestSigRecover(t *testing.T) {
 		sig.S.SetHex(vs[i][1])
 		msg.SetHex(vs[i][2])
 		rid, _ := strconv.ParseInt(vs[i][3], 10, 32)
-		exp.x.SetHex(vs[i][4])
-		exp.y.SetHex(vs[i][5])
+		exp.X.SetHex(vs[i][4])
+		exp.Y.SetHex(vs[i][5])
 
 		if sig.recover(&pubkey, &msg, int(rid)) {
-			if !exp.x.Equals(&pubkey.x) {
-				t.Error("x mismatch at vector", i)
+			if !exp.X.Equals(&pubkey.X) {
+				t.Error("X mismatch at vector", i)
 			}
-			if !exp.y.Equals(&pubkey.y) {
-				t.Error("y mismatch at vector", i)
+			if !exp.Y.Equals(&pubkey.Y) {
+				t.Error("Y mismatch at vector", i)
 			}
 		} else {
 			t.Error("sig.recover fialed")
@@ -68,8 +68,8 @@ func TestSigVerify(t *testing.T) {
 	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
 	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
-	key.x.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
-	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
+	key.X.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
+	key.Y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
 	if !sig.Verify(&key, &msg) {
 		t.Error("sig.Verify 1")
 	}
@@ -117,8 +117,8 @@ func BenchmarkVerify(b *testing.B) {
 	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
 	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
-	key.x.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
-	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
+	key.X.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
+	key.Y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if !sig.Verify(&key, &msg) {

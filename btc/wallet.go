@@ -56,14 +56,30 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 
 // B_private_key = ( A_private_key + secret ) % N
 // Used for implementing Type-2 determinitic keys
-func DeriveNextPrivate(prv, secret *big.Int) *big.Int {
-	return new(big.Int).Mod(new(big.Int).Add(prv, secret), temp_secp256k1.N)
+func DeriveNextPrivate(p, s []byte) []byte {
+	var prv, secret big.Int
+	prv.SetBytes(p)
+	secret.SetBytes(s)
+	return new(big.Int).Mod(new(big.Int).Add(&prv, &secret), temp_secp256k1.N).Bytes()
 }
 
 
 // B_public_key = G * secret + A_public_key
 // Used for implementing Type-2 determinitic keys
-func DeriveNextPublic(prvx, prvy, secret *big.Int) (x, y *big.Int) {
+func DeriveNextPublic(public, secret []byte) (out []byte) {
+	var pub secp256k1.XY
+	if !pub.ParsePubkey(public) {
+		return
+	}
+	pub.Multi(secret)
+	pub.AddXY(&secp256k1.TheCurve.G)
+	out = make([]byte, len(public))
+	pub.GetPublicKey(out)
+	return
+}
+
+
+func DeriveNextPublicOld(prvx, prvy, secret *big.Int) (x, y *big.Int) {
 	gsx, gsy := temp_secp256k1.ScalarBaseMult(secret.Bytes())
 	x, y = temp_secp256k1.Add(prvx, prvy, gsx, gsy)
 	return
