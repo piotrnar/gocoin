@@ -57,7 +57,13 @@ func RecoverPublicKey(r, s, h []byte, recid int, X, Y []byte) bool {
 	var pubkey XY
 	var msg Number
 	sig.R.SetBytes(r)
+	if sig.R.Sign()<=0 || sig.R.Cmp(&TheCurve.Order.Int)>=0 {
+		return false
+	}
 	sig.S.SetBytes(s)
+	if sig.S.Sign()<=0 || sig.S.Cmp(&TheCurve.Order.Int)>=0 {
+		return false
+	}
 	msg.SetBytes(h)
 	if !sig.recover(&pubkey, &msg, recid) {
 		return false
@@ -92,4 +98,12 @@ func BaseMultiply(k, out []byte) bool {
 	}
 	pk.GetPublicKey(out)
 	return true
+}
+
+
+// Checks if the given value is bigger than zero and lower than the curve's order
+func ValidCoord(val []byte) bool {
+	var x Number
+	x.SetBytes(val)
+	return x.Sign()>0 && x.Cmp(&TheCurve.Order.Int)<0
 }

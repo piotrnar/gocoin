@@ -70,13 +70,6 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 	var X XY
 	var xj, qj XYZ_t
 
-	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
-		return false
-	}
-	if sig.R.Cmp(&TheCurve.Order.Int)>=0 || sig.S.Cmp(&TheCurve.Order.Int)>=0 {
-		return false
-	}
-
 	rx.Set(&sig.R.Int)
 	if (recid&2)!=0 {
 		rx.Add(&rx.Int, &TheCurve.Order.Int)
