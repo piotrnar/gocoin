@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"sync/atomic"
+	"crypto/rand"
 	"crypto/sha256"
 	"github.com/piotrnar/gocoin/secp256k1"
 )
@@ -32,7 +33,9 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	sha := sha256.New()
 	sha.Write(priv)
 	for {
-		sha.Write(hash)
+		var buf [32]byte
+		rand.Read(buf[:])
+		sha.Write(buf[:])
 		nonce.SetBytes(sha.Sum(nil))
 		if nonce.Sign()>0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int)<0 {
 			break
