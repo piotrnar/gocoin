@@ -22,16 +22,6 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 }
 
 
-// Signing...
-type rand256 struct {
-	*bytes.Buffer
-}
-
-func (rdr *rand256) Read(p []byte) (n int, err error) {
-	return rdr.Buffer.Read(p)
-}
-
-
 func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sig secp256k1.Signature
 	var sec, msg, nonce secp256k1.Number
