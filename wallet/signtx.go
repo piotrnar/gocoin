@@ -150,7 +150,6 @@ func make_signed_tx() {
 			var e [32]byte
 			rand.Read(e[:])
 			fmt.Println("e", hex.EncodeToString(e[:]))
-			c := btc.StealthDH(sa.ScanKey[:], e[:])
 			scan_key := btc.StealthPub(sa.ScanKey[:], e[:])
 			send_key := btc.StealthPub(sa.SpendKeys[0][:], e[:])
 			utils.ClearBuffer(e[:])
