@@ -3,6 +3,7 @@ package secp256k1
 import (
 	"fmt"
 	"bytes"
+	"encoding/hex"
 )
 
 type Signature struct {
@@ -10,8 +11,8 @@ type Signature struct {
 }
 
 func (s *Signature) Print(lab string) {
-	fmt.Println(lab + ".R:", s.R.String())
-	fmt.Println(lab + ".S:", s.S.String())
+	fmt.Println(lab + ".R:", hex.EncodeToString(s.R.Bytes()))
+	fmt.Println(lab + ".S:", hex.EncodeToString(s.S.Bytes()))
 }
 
 func (r *Signature) sig_parse(sig []byte) bool {
