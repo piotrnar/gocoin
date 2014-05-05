@@ -150,7 +150,7 @@ func show_help() {
 	fmt.Println("Specify the command and (optionally) its arguments:")
 	fmt.Println("  wal [wallet_name] - switch to a given wallet (or list them)")
 	fmt.Println("  bal - creates balance/ folder for current wallet")
-	fmt.Println("  pushtx <rawtx> - pushes raw tx into the network")
+	fmt.Println("  ptx <rawtx> - pushes raw tx into the network")
 }
 
 
@@ -184,7 +184,7 @@ func main() {
 		case "bal":
 			fetch_balance()
 
-		case "pushtx":
+		case "ptx":
 			push_tx(os.Args[2])
 
 		default:
