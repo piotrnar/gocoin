@@ -79,17 +79,21 @@ func RecoverPublicKey(r, s, h []byte, recid int, X, Y []byte) bool {
 // out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
 func Multiply(xy, k, out []byte) bool {
 	var pk XY
+	var xyz XYZ
+	var na, ng Number
 	if !pk.ParsePubkey(xy) {
 		return false
 	}
-	if !pk.Multi(k) {
-		return false
-	}
+	xyz.SetXY(&pk)
+	na.SetBytes(k)
+	xyz.ECmult(&xyz, &na, &ng)
+	pk.SetXYZ(&xyz)
 	pk.GetPublicKey(out)
 	return true
 }
 
-
+// Multiply k by G
+// out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
 func BaseMultiply(k, out []byte) bool {
 	var r XYZ
 	var n Number
