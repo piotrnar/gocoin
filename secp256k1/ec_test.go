@@ -60,30 +60,25 @@ func TestVerify1(t *testing.T) {
 		sign, _ := hex.DecodeString(ta[i][1])
 		hasz, _ := hex.DecodeString(ta[i][2])
 
-		res := EC_Verify(pkey, sign, hasz)
+		res := ecdsa_verify(pkey, sign, hasz)
 		if res!=1 {
-			t.Error("Verify failed at", i)
-		}
-
-		res = secp256k1_ecdsa_verify(hasz, sign, pkey)
-		if res!=1 {
-			t.Error("secp256k1_ecdsa_verify failed at", i)
+			t.Fatal("Verify failed at", i)
 		}
 
 		hasz[0]++
-		res = EC_Verify(pkey, sign, hasz)
+		res = ecdsa_verify(pkey, sign, hasz)
 		if res!=0 {
 			t.Error("Verify not failed while it should", i)
 		}
-		res = EC_Verify(pkey[:1], sign, hasz)
+		res = ecdsa_verify(pkey[:1], sign, hasz)
 		if res>=0 {
 			t.Error("Negative result expected", res, i)
 		}
-		res = EC_Verify(pkey, sign[:1], hasz)
+		res = ecdsa_verify(pkey, sign[:1], hasz)
 		if res>=0 {
 			t.Error("Yet negative result expected", res, i)
 		}
-		res = EC_Verify(pkey, sign, hasz[:1])
+		res = ecdsa_verify(pkey, sign, hasz[:1])
 		if res!=0 {
 			t.Error("Zero expected", res, i)
 		}
@@ -97,7 +92,7 @@ func BenchmarkVerifyUncompressed(b *testing.B) {
 	msg, _ := hex.DecodeString("3382219555ddbb5b00e0090f469e590ba1eae03c7f28ab937de330aa60294ed6")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		EC_Verify(key, sig, msg)
+		ecdsa_verify(key, sig, msg)
 	}
 }
 
@@ -107,6 +102,6 @@ func BenchmarkVerifyCompressed(b *testing.B) {
 	msg, _ := hex.DecodeString("3382219555ddbb5b00e0090f469e590ba1eae03c7f28ab937de330aa60294ed6")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		EC_Verify(key_compr, sig, msg)
+		ecdsa_verify(key_compr, sig, msg)
 	}
 }

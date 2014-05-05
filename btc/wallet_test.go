@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"bytes"
 	"testing"
 	"math/big"
 	"crypto/rand"
@@ -18,8 +19,17 @@ func xy2pk(x, y *big.Int) (res []byte) {
 	return
 }
 
+func TestGetPublic(t *testing.T) {
+	prv, _ := hex.DecodeString("bb87a5e3e786ecd05f4901ef7ef32726570bfd176ada37a31ef2861db2834d7e")
+	pub, _ := hex.DecodeString("02a60d70cfba37177d8239d018185d864b2bdd0caf5e175fd4454cc006fd2d75ac")
+	pk, _ := PublicFromPrivate(prv, true)
+	if !bytes.Equal(pub, pk) {
+		t.Error("PublicFromPrivate failed")
+	}
+}
 
-func TestDeterministicWalletType2(t *testing.T) {
+
+func _TestDeterministicWalletType2(t *testing.T) {
 	var buf [32]byte
 	rand.Read(buf[:])
 	secret := new(big.Int).SetBytes(buf[:])

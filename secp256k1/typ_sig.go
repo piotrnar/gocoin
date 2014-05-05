@@ -33,13 +33,13 @@ func (r *Signature) sig_parse(sig []byte) bool {
 	return true
 }
 
-func (r *Signature) Verify(pubkey *XY_t, message *Number) (ret bool) {
+func (r *Signature) Verify(pubkey *XY, message *Number) (ret bool) {
 	var r2 Number
 	ret = r.recompute(&r2, pubkey, message) && r.R.Cmp(&r2.Int) == 0
 	return
 }
 
-func (sig *Signature) recompute(r2 *Number, pubkey *XY_t, message *Number) (ret bool) {
+func (sig *Signature) recompute(r2 *Number, pubkey *XY, message *Number) (ret bool) {
 	var sn, u1, u2 Number
 
 	sn.mod_inv(&sig.S, &TheCurve.Order)
@@ -64,10 +64,10 @@ func (sig *Signature) recompute(r2 *Number, pubkey *XY_t, message *Number) (ret 
 	return
 }
 
-func (sig *Signature) recover(pubkey *XY_t, m *Number, recid int) (ret bool) {
+func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 	var rx, rn, u1, u2 Number
 	var fx Fe_t
-	var x XY_t
+	var x XY
 	var xj, qj XYZ_t
 
 	if sig.R.Sign()<=0 || sig.S.Sign()<=0 {
@@ -88,7 +88,7 @@ func (sig *Signature) recover(pubkey *XY_t, m *Number, recid int) (ret bool) {
 	fx.SetB32(rx.get_bin(32))
 
 	x.set_xo(&fx, (recid&1)!=0)
-	if !x.is_valid() {
+	if !x.IsValid() {
 		return false
 	}
 
@@ -106,7 +106,7 @@ func (sig *Signature) recover(pubkey *XY_t, m *Number, recid int) (ret bool) {
 
 
 func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
-	var r XY_t
+	var r XY
 	var rp XYZ_t
 	var n Number
 	var b [32]byte

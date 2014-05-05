@@ -5,7 +5,7 @@ const WINDOW_G = 14
 
 var TheCurve struct {
 	Order, half_order Number
-	G XY_t
+	G XY
 	beta Fe_t
 	lambda, a1b2, b1, a2 Number
 	p Number

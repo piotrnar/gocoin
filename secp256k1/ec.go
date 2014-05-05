@@ -1,12 +1,17 @@
 package secp256k1
 
-func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
+import (
+	//"encoding/hex"
+)
+
+
+func ecdsa_verify(pubkey, sig, msg []byte) int {
 	var m Number
 	var s Signature
 	m.SetBytes(msg)
 
-	var q XY_t
-	if !q.pubkey_parse(pubkey) {
+	var q XY
+	if !q.ParsePubkey(pubkey) {
 		return -1
 	}
 
@@ -20,13 +25,8 @@ func secp256k1_ecdsa_verify(msg, sig, pubkey []byte) int {
 	return 1
 }
 
-// Verify ECDSA signature
-func EC_Verify(pkey, sign, hash []byte) int {
-	return secp256k1_ecdsa_verify(hash, sign, pkey)
-}
-
 func Verify(k, s, m []byte) bool {
-	return secp256k1_ecdsa_verify(m, s, k)==1
+	return ecdsa_verify(k, s, m)==1
 }
 
 func init() {
@@ -54,7 +54,7 @@ func DecompressPoint(x []byte, off bool, y []byte) {
 
 func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 	var sig Signature
-	var pubkey XY_t
+	var pubkey XY
 	var msg Number
 	sig.R.SetBytes(r)
 	sig.S.SetBytes(s)
@@ -72,13 +72,24 @@ func RecoverPublicKey(r, s, h []byte, recid int, x, y []byte) bool {
 // xy - is the standarized public key format (33 or 65 bytes long)
 // out - should be the buffer for 33 bytes (1st byte will be set to either 02 or 03)
 func Multiply(xy, k, out []byte) bool {
-	var pk XY_t
-	if !pk.pubkey_parse(xy) {
+	var pk XY
+	if !pk.ParsePubkey(xy) {
 		return false
 	}
-	return pk.multi(k, out)
+	if !pk.Multi(k) {
+		return false
+	}
+	pk.GetPublicKey(out)
+	return true
 }
 
+
 func BaseMultiply(k, out []byte) bool {
-	return TheCurve.G.multi(k, out)
+	var pk XY
+	pk = TheCurve.G
+	if !pk.Multi(k) {
+		return false
+	}
+	pk.GetPublicKey(out)
+	return true
 }

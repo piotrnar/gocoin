@@ -3,6 +3,7 @@ package secp256k1
 import (
 	"strconv"
 	"testing"
+	"encoding/hex"
 )
 
 func TestSigRecover(t *testing.T) {
@@ -26,7 +27,7 @@ func TestSigRecover(t *testing.T) {
 	}
 
 	var sig Signature
-	var pubkey, exp XY_t
+	var pubkey, exp XY
 	var msg Number
 
 	for i := range vs {
@@ -50,7 +51,41 @@ func TestSigRecover(t *testing.T) {
 	}
 }
 
-func TestSign(t *testing.T) {
+func TestSigVerify(t *testing.T) {
+	var msg Number
+	var sig Signature
+	var key XY
+
+	msg.SetHex("3382219555ddbb5b00e0090f469e590ba1eae03c7f28ab937de330aa60294ed6")
+	sig.R.SetHex("fe00e013c244062847045ae7eb73b03fca583e9aa5dbd030a8fd1c6dfcf11b10")
+	sig.S.SetHex("7d0d04fed8fa1e93007468d5a9e134b0a7023b6d31db4e50942d43a250f4d07c")
+	xy, _ := hex.DecodeString("040eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66dbeb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16")
+	key.ParsePubkey(xy)
+	if !sig.Verify(&key, &msg) {
+		t.Error("sig.Verify 0")
+	}
+
+	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
+	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
+	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	key.x.SetHex("7d709f85a331813f9ae6046c56b3a42737abf4eb918b2e7afee285070e968b93")
+	key.y.SetHex("26150d1a63b342986c373977b00131950cb5fc194643cad6ea36b5157eba4602")
+	if !sig.Verify(&key, &msg) {
+		t.Error("sig.Verify 1")
+	}
+
+	msg.SetHex("2c43a883f4edc2b66c67a7a355b9312a565bb3d33bb854af36a06669e2028377")
+	sig.R.SetHex("6b2fa9344462c958d4a674c2a42fbedf7d6159a5276eb658887e2e1b3915329b")
+	sig.S.SetHex("eddc6ea7f190c14a0aa74e41519d88d2681314f011d253665f301425caf86b86")
+	xy, _ = hex.DecodeString("02a60d70cfba37177d8239d018185d864b2bdd0caf5e175fd4454cc006fd2d75ac")
+	key.ParsePubkey(xy)
+	if !sig.Verify(&key, &msg) {
+		t.Error("sig.Verify 2")
+	}
+}
+
+
+func TestSigSign(t *testing.T) {
 	var sec, msg, non Number
 	var sig Signature
 	var recid int
@@ -78,7 +113,7 @@ func TestSign(t *testing.T) {
 func BenchmarkVerify(b *testing.B) {
 	var msg Number
 	var sig Signature
-	var key XY_t
+	var key XY
 	msg.SetHex("D474CBF2203C1A55A411EEC4404AF2AFB2FE942C434B23EFE46E9F04DA8433CA")
 	sig.R.SetHex("98F9D784BA6C5C77BB7323D044C0FC9F2B27BAA0A5B0718FE88596CC56681980")
 	sig.S.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")

@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"fmt"
 	"errors"
 	"math/big"
 	"github.com/piotrnar/gocoin/secp256k1"
@@ -10,31 +9,17 @@ import (
 
 // Get ECDSA public key in bitcoin protocol format, from the give private key
 func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
-	x, y := temp_secp256k1.ScalarBaseMult(priv_key)
-	xd := x.Bytes()
+	if compressed {
+		res = make([]byte, 33)
+	} else {
+		res = make([]byte, 65)
+	}
 
-	if len(xd)>32 {
-		e = errors.New(fmt.Sprint("PublicFromPrivate: x is too long", len(xd)))
+	if !secp256k1.BaseMultiply(priv_key, res) {
+		e = errors.New("BaseMultiply failed")
+		res = nil
 		return
 	}
-
-	if !compressed {
-		yd := y.Bytes()
-		if len(yd)>32 {
-			e = errors.New(fmt.Sprint("PublicFromPrivate: y is too long", len(yd)))
-			return
-		}
-
-		res = make([]byte, 65)
-		res[0] = 4
-		copy(res[1+32-len(xd):33], xd)
-		copy(res[33+32-len(yd):65], yd)
-	} else {
-		res = make([]byte, 33)
-		res[0] = 2+byte(y.Bit(0)) // 02 for even Y values, 03 for odd..
-		copy(res[1+32-len(xd):33], xd)
-	}
-
 	return
 }
 
@@ -58,12 +43,10 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 		return errors.New("pubkey value is too big")
 	}
 
-
 	sig.R, sig.S, e = EcdsaSign(priv, hash[:])
 	if e != nil {
 		return errors.New("EcdsaSign failed: " + e.Error())
 	}
-
 	ok := EcdsaVerify(publ, sig.Bytes(), hash[:])
 	if !ok {
 		return errors.New("EcdsaVerify failed")

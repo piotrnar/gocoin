@@ -22,7 +22,7 @@ func (gej XYZ_t) Print(lab string) {
 }
 
 
-func (r *XYZ_t) set_ge(a *XY_t) {
+func (r *XYZ_t) set_ge(a *XY) {
 	r.Infinity = a.Infinity
 	r.x = a.x
 	r.y = a.y
@@ -33,7 +33,7 @@ func (r *XYZ_t) is_infinity() bool {
 	return r.Infinity
 }
 
-func (a *XYZ_t) is_valid() bool {
+func (a *XYZ_t) IsValid() bool {
 	if a.Infinity {
 		return false
 	}
@@ -123,7 +123,7 @@ func (a *XYZ_t) ecmult(r *XYZ_t, na, ng *Number) {
 	r.Infinity = true
 
 	var tmpj XYZ_t
-	var tmpa XY_t
+	var tmpa XY
 	var n int
 
 	for i:=bits-1; i>=0; i-- {
@@ -221,7 +221,7 @@ func (a *XYZ_t) double(r *XYZ_t) {
 }
 
 
-func (a *XYZ_t) add_ge(r *XYZ_t, b *XY_t) {
+func (a *XYZ_t) add_ge(r *XYZ_t, b *XY) {
 	if a.Infinity {
 		r.Infinity = b.Infinity
 		r.x = b.x

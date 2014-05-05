@@ -5,12 +5,12 @@ import (
 )
 
 
-type XY_t struct {
+type XY struct {
 	x, y Fe_t
 	Infinity bool
 }
 
-func (ge *XY_t) Print(lab string) {
+func (ge *XY) Print(lab string) {
 	if ge.Infinity {
 		fmt.Println(lab + " - Infinity")
 		return
@@ -19,7 +19,7 @@ func (ge *XY_t) Print(lab string) {
 	fmt.Println(lab + ".y:", ge.y.String())
 }
 
-func (elem *XY_t) pubkey_parse(pub []byte) bool {
+func (elem *XY) ParsePubkey(pub []byte) bool {
 	if len(pub) == 33 && (pub[0] == 0x02 || pub[0] == 0x03) {
 		elem.x.SetB32(pub[1:33])
 		elem.set_xo(&elem.x, pub[0]==0x03)
@@ -32,18 +32,18 @@ func (elem *XY_t) pubkey_parse(pub []byte) bool {
 	} else {
 		return false
 	}
-	return elem.is_valid()
+	return true
 }
 
 
-func (r *XY_t) set_xy(x, y *Fe_t) {
+func (r *XY) SetXY(x, y *Fe_t) {
 	r.Infinity = false
 	r.x = *x
 	r.y = *y
 }
 
 
-func (a *XY_t) is_valid() bool {
+func (a *XY) IsValid() bool {
 	if a.Infinity {
 		return false
 	}
@@ -58,7 +58,7 @@ func (a *XY_t) is_valid() bool {
 }
 
 
-func (r *XY_t) set_gej(a *XYZ_t) {
+func (r *XY) set_gej(a *XYZ_t) {
 	var z2, z3 Fe_t;
 	a.z.inv_var(&a.z)
 	a.z.sqr(&z2)
@@ -71,8 +71,8 @@ func (r *XY_t) set_gej(a *XYZ_t) {
 	r.y = a.y
 }
 
-func (a *XY_t) precomp(w int) (pre []XY_t) {
-	pre = make([]XY_t, (1 << (uint(w)-2)))
+func (a *XY) precomp(w int) (pre []XY) {
+	pre = make([]XY, (1 << (uint(w)-2)))
 	pre[0] = *a;
 	var x, d, tmp XYZ_t
 	x.set_ge(a)
@@ -84,7 +84,7 @@ func (a *XY_t) precomp(w int) (pre []XY_t) {
 	return
 }
 
-func (a *XY_t) neg(r *XY_t) {
+func (a *XY) neg(r *XY) {
 	r.Infinity = a.Infinity
 	r.x = a.x
 	r.y = a.y
@@ -93,7 +93,7 @@ func (a *XY_t) neg(r *XY_t) {
 }
 
 
-func (r *XY_t) set_xo(x *Fe_t, odd bool) {
+func (r *XY) set_xo(x *Fe_t, odd bool) {
 	var c, x2, x3 Fe_t
 	r.x = *x
 	x.sqr(&x2)
@@ -110,7 +110,7 @@ func (r *XY_t) set_xo(x *Fe_t, odd bool) {
 
 
 // TODO: think about optimizing this one
-func (pk *XY_t) multi(k, out []byte) bool {
+func (pk *XY) Multi(k []byte) bool {
 	var B, r XYZ_t
 
 	B.set_ge(pk)
@@ -138,9 +138,14 @@ func (pk *XY_t) multi(k, out []byte) bool {
 	}
 
 	pk.set_gej(&r)
+	return true
+}
+
+
+func (pk *XY) GetPublicKey(out []byte) {
 	pk.x.GetB32(out[1:33])
 	if len(out)==65 {
-		out[0] = 0x05
+		out[0] = 0x04
 		pk.x.GetB32(out[33:65])
 	} else {
 		if pk.y.IsOdd() {
@@ -149,5 +154,4 @@ func (pk *XY_t) multi(k, out []byte) bool {
 			out[0] = 0x02
 		}
 	}
-	return true
 }

@@ -15,6 +15,9 @@ func TestAlert(t *testing.T) {
 	if e != nil {
 		t.Error(e.Error())
 	}
+	if a==nil {
+		t.Fatal("Alert is nil")
+	}
 	if a.Version!=1 {
 		t.Error("Incorrect version")
 	}

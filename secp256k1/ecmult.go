@@ -6,9 +6,9 @@ import (
 
 
 var (
-	pre_g, pre_g_128 []XY_t
-	prec [64][16]XY_t
-	fin XY_t
+	pre_g, pre_g_128 []XY
+	prec [64][16]XY
+	fin XY
 )
 
 
@@ -23,7 +23,7 @@ func ecmult_start() {
 		g_128j.double(&g_128j)
 	}
 
-	var g_128 XY_t
+	var g_128 XY
 	g_128.set_gej(&g_128j)
 
     // precompute the tables with odd multiples
