@@ -1,5 +1,6 @@
 0.9.11:
 * Huge refactor of the entire repo
+* Wallet: Support for "-p" switch that gorces asking for password
 
 0.9.10
 * Client: an address listed more than once in a wallet gets removed (was showing wrong balance)
