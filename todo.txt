@@ -1,3 +1,5 @@
+DeriveNextPublic - use the optimized finction!
+
 Downloader:
 * Make it to work with gocoion.cfg file
 
