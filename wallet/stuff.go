@@ -43,18 +43,23 @@ func ask_yes_no(msg string) bool {
 func getseed(seed []byte) bool {
 	var pass [1024]byte
 	var n int
+	var e error
+	var f *os.File
 
-	f, e := os.Open(PassSeedFilename)
-	if e == nil {
-		n, e = f.Read(pass[:])
-		f.Close()
-		if n <= 0 {
-			return false
+	if !*ask4pass {
+		f, e = os.Open(PassSeedFilename)
+		if e == nil {
+			n, e = f.Read(pass[:])
+			f.Close()
+			if n <= 0 {
+				return false
+			}
+			goto calc_seed
 		}
-		goto calc_seed
+
+		fmt.Println("Seed file", PassSeedFilename, "not found")
 	}
 
-	fmt.Println("Seed file", PassSeedFilename, "not found")
 	fmt.Print("Enter your wallet's seed password: ")
 	n = utils.ReadPassword(pass[:])
 	if n<=0 {

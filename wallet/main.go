@@ -24,6 +24,7 @@ var (
 	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
+	ask4pass *bool = flag.Bool("p", false, "Force the wallet to ask for seed password")
 
 	waltype *uint = flag.Uint("type", 3, "Choose a type of the deterministic wallet (1, 2 or 3)")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
