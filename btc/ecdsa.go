@@ -29,7 +29,7 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	sec.SetBytes(priv)
 	msg.SetBytes(hash)
 
-	ShaHash(hash, nv[:])
+	ShaHash(append(hash, priv...), nv[:])
 	for {
 		nonce.SetBytes(nv[:])
 		if nonce.Sign()>0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int)<0 {
