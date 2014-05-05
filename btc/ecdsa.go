@@ -26,18 +26,18 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sec, msg, nonce secp256k1.Number
 	var nv [32]byte
 
+	sec.SetBytes(priv)
+	msg.SetBytes(hash)
+
 	ShaHash(hash, nv[:])
 	for {
 		nonce.SetBytes(nv[:])
-		if secp256k1.ValidCoord(nv[:]) {
+		if nonce.Sign()>0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int)<0 {
 			break
 		}
-		ShaHash(nv, nv[:])
+		ShaHash(nv[:], nv[:])
 	}
 
-	sec.SetBytes(priv)
-	msg.SetBytes(hash)
-	nonce.SetBytes(nv[:])
 	if sig.Sign(&sec, &msg, &nonce, nil)!=1 {
 		err = errors.New("ESCDS Sign error()")
 	}
