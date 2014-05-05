@@ -3,7 +3,7 @@ package btc
 import "runtime"
 
 const(
-	SourcesTag = "0.9.10"
+	SourcesTag = "0.9.11"
 
 	MAX_BLOCK_SIZE = 1e6
 	COIN = 1e8
