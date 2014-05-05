@@ -32,6 +32,7 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 
 	sha := sha256.New()
 	sha.Write(priv)
+	sha.Write(hash)
 	for {
 		var buf [32]byte
 		rand.Read(buf[:])
