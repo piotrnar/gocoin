@@ -199,7 +199,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 			fz, _ = zi.Create("multi_" + common.CFG.PayCommandName)
 			for k, _ := range addrs_to_msign {
-				fz.Write([]byte("wallet -msign " + k + " -raw ... \n"))
+				fmt.Fprintln(fz, "wallet -msign", k, " -raw _")
 			}
 		} else {
 			// Non-multisig transaction ...
