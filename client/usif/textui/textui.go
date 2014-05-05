@@ -577,12 +577,23 @@ func list_alerst(p string) {
 
 
 func scan_stealth(p string) {
-	sec, e := hex.DecodeString(p)
-	if e != nil {
-		println(e.Error())
+	ll := strings.Split(p, " ")
+	if len(ll)!=2 {
+		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
+	}
+
+	sec, _ := hex.DecodeString(ll[0])
+	if len(sec)==0 {
+		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
 		return
 	}
-	common.BlockChain.Unspent.ScanStealth(sec)
+
+	pub, _ := hex.DecodeString(ll[1])
+	if len(pub)==0 {
+		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
+		return
+	}
+	common.BlockChain.Unspent.ScanStealth(sec, pub)
 }
 
 

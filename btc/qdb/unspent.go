@@ -2,8 +2,9 @@ package qdb
 
 import (
 	"fmt"
+	"bytes"
 	"errors"
-	"encoding/hex"
+//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
@@ -84,8 +85,8 @@ func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
 }
 
 
-func (db UnspentDB) ScanStealth(sec []byte) {
-	var remd uint
+func (db UnspentDB) ScanStealth(d, P []byte) {
+	var remd, rem2, okd, mine uint
 	for k, v := range db.unspent.stealthOuts {
 		tx := db.unspent.dbN(v.dbidx).Get(v.key)
 		if tx==nil {
@@ -93,14 +94,40 @@ func (db UnspentDB) ScanStealth(sec []byte) {
 			delete(db.unspent.stealthOuts, k)
 			remd++
 		} else {
-			fmt.Println("TXID", btc.NewUint256(v.txid).String())
-			fmt.Println("  pkey", hex.EncodeToString(v.pkey))
-			fmt.Printf("   %s BTC to %s\n\n", btc.UintToBtc(binary.LittleEndian.Uint64(tx[36:44])),
-				btc.NewAddrFromPkScript(tx[48:], true))
+			scr := tx[48:]
+			if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+				var h160 [20]byte
+				c := btc.StealthDH(v.pkey, d)
+				spen_exp := btc.DeriveNextPublic(P, c)
+				btc.RimpHash(spen_exp, h160[:])
+				if bytes.Equal(scr[3:23], h160[:]) {
+					fmt.Printf("%15s BTC to %s/%s in %s",
+						btc.UintToBtc(binary.LittleEndian.Uint64(tx[36:44])),
+						btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(false)).String(),
+						btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(true)).String(),
+						btc.NewUint256(v.txid).String())
+					fmt.Println()
+					mine++
+				}
+				okd++
+			} else {
+				delete(db.unspent.stealthOuts, k)
+				rem2++
+			}
+
+			/*s := btc.NewUint256(v.txid).String()
+			if s=="f66f52899c1fd935db5b4cf2191a16b91d582ef953860e7486eb42ab4c706de6" ||
+				s=="286c0d4f1efb3a74a577b7be9057815e9ca16b6cefad7b6aeeb572fee1d0f082" {
+				fmt.Println("TXID", btc.NewUint256(v.txid).String())
+				fmt.Println("  pkey", hex.EncodeToString(v.pkey))
+				fmt.Printf("   %s BTC to %s\n\n", btc.UintToBtc(binary.LittleEndian.Uint64(tx[36:44])),
+					btc.NewAddrFromPkScript(tx[48:], true))
+			}*/
 		}
 	}
 	if remd>0 {
-		fmt.Println(remd, "obsolete outputs have been removed")
+		fmt.Println(okd, "stealth outputs.", mine, "yours")
+		fmt.Println(remd, "+", rem2, "obsolete outputs have been removed")
 	}
 	//db.unspent.scanStealth(sec)
 }

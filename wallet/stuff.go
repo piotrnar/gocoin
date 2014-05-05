@@ -120,7 +120,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 		}
 	}
 
-	fmt.Println("You do not own the address of the first input")
+	fmt.Println("You do not own the address of the first input, nor specified -change")
 	os.Exit(1)
 	return
 }

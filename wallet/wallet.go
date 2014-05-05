@@ -78,9 +78,9 @@ func load_others() {
 			}
 
 			key := pkb[1:33]
-			pub, er := btc.PublicFromPrivate(key, compr)
-			if er != nil {
-				println("PublicFromPrivate:", e.Error())
+			pub := btc.PublicFromPrivate(key, compr)
+			if pub == nil {
+				println("PublicFromPrivate failed")
 				os.Exit(1)
 			}
 
@@ -171,9 +171,9 @@ func make_wallet() {
 				println("scankey must be a compressed public key (33 bytes long)")
 				return
 			}
-			pub, er := btc.PublicFromPrivate(prv_key, true)
-			if er != nil {
-				println(er.Error())
+			pub := btc.PublicFromPrivate(prv_key, true)
+			if pub == nil {
+				println("PublicFromPrivate error 2")
 				return
 			}
 
@@ -189,8 +189,8 @@ func make_wallet() {
 			return
 		}
 		compressed_key = append(compressed_key, !*uncompressed)
-		pub, er := btc.PublicFromPrivate(prv_key, !*uncompressed)
-		if er == nil {
+		pub := btc.PublicFromPrivate(prv_key, !*uncompressed)
+		if pub != nil {
 			adr := btc.NewAddrFromPubkey(pub, verbyte)
 
 			if *pubkey!="" && *pubkey==adr.String() {
@@ -201,7 +201,7 @@ func make_wallet() {
 			labels = append(labels, fmt.Sprint(lab, " ", i+1))
 			i++
 		} else {
-			println("PublicFromPrivate:", er.Error())
+			println("PublicFromPrivate error 3")
 		}
 	}
 	if *verbose {

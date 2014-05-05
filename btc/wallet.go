@@ -8,7 +8,7 @@ import (
 
 
 // Get ECDSA public key in bitcoin protocol format, from the give private key
-func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
+func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte) {
 	if compressed {
 		res = make([]byte, 33)
 	} else {
@@ -16,9 +16,7 @@ func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
 	}
 
 	if !secp256k1.BaseMultiply(priv_key, res) {
-		e = errors.New("BaseMultiply failed")
 		res = nil
-		return
 	}
 	return
 }

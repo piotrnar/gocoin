@@ -11,7 +11,7 @@ import (
 func TestGetPublic(t *testing.T) {
 	prv, _ := hex.DecodeString("bb87a5e3e786ecd05f4901ef7ef32726570bfd176ada37a31ef2861db2834d7e")
 	pub, _ := hex.DecodeString("02a60d70cfba37177d8239d018185d864b2bdd0caf5e175fd4454cc006fd2d75ac")
-	pk, _ := PublicFromPrivate(prv, true)
+	pk := PublicFromPrivate(prv, true)
 	if !bytes.Equal(pub, pk) {
 		t.Error("PublicFromPrivate failed")
 	}
@@ -36,7 +36,7 @@ func TestDeterministicWalletType2(t *testing.T) {
 	private_key := make([]byte, 32)
 	rand.Read(private_key)
 
-	public_key, _ := PublicFromPrivate(private_key, true)
+	public_key := PublicFromPrivate(private_key, true)
 	for i:=0; i<50; i++ {
 		private_key = DeriveNextPrivate(private_key, secret)
 		if private_key==nil {
@@ -49,7 +49,7 @@ func TestDeterministicWalletType2(t *testing.T) {
 		}
 
 		// verify the public key matching the private key
-		pub2, _ := PublicFromPrivate(private_key, true)
+		pub2 := PublicFromPrivate(private_key, true)
 		if !bytes.Equal(public_key, pub2) {
 			t.Error(i, "public key mismatch", hex.EncodeToString(pub2), hex.EncodeToString(public_key))
 		}

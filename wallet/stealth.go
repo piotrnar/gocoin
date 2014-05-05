@@ -29,7 +29,7 @@ func stealth_txout(sa *btc.StealthAddr, value uint64) (res []*btc.TxOut) {
 	e := make([]byte, 32)
 	rand.Read(e)
 	defer utils.ClearBuffer(e)
-	ephemkey, _ := btc.PublicFromPrivate(e, true)
+	ephemkey := btc.PublicFromPrivate(e, true)
 	fmt.Println("e", hex.EncodeToString(e))
 	fmt.Println("ephemkey", hex.EncodeToString(ephemkey))
 
@@ -47,6 +47,7 @@ func stealth_txout(sa *btc.StealthAddr, value uint64) (res []*btc.TxOut) {
 	// 9. Now use ECC multiplication to calculate e*Q where Q = scan_pubkey
 	// an e = privkey to ephemkey and then hash it.
 	c := btc.StealthDH(sa.ScanKey[:], e)
+	fmt.Println("c", hex.EncodeToString(c))
 
 	// 10. That hash is now "c". use ECC multiplication and addition to
 	// calculate D + (c*G) where D = spend_pubkey, and G is the reference
