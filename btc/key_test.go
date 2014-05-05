@@ -60,12 +60,12 @@ func TestPbkyues(t *testing.T) {
 			t.Error("error new k2")
 			return
 		}
-		if k1.X.Cmp(k2.X)!=0 {
-			t.Error("X error")
+		if !k1.X.Equals(&k2.X) {
+			t.Error("X error", i)
 			return
 		}
-		if k1.Y.Cmp(k2.Y)!=0 {
-			t.Error("Y error")
+		if !k1.Y.Equals(&k2.Y) {
+			t.Error("Y error", i)
 			return
 		}
 	}
@@ -235,4 +235,3 @@ func BenchmarkRecoverKey(b *testing.B) {
 		sig.RecoverPublicKey(hash[:], int(nv-27))
 	}
 }
-

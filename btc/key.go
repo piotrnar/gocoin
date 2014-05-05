@@ -1,15 +1,14 @@
 package btc
 
 import (
-	"errors"
 	"bytes"
-	"math/big"
+	"errors"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/secp256k1"
 )
 
 type PublicKey struct {
-	X, Y *big.Int
+	secp256k1.XY
 }
 
 
@@ -21,51 +20,17 @@ or in compressed form given as <sign> <x> where <sign> is 0x02 if y is even and 
 */
 
 func NewPublicKey(buf []byte) (res *PublicKey, e error) {
-	switch len(buf) {
-		case 65:
-			if buf[0]==4 {
-				res = new(PublicKey)
-				res.X = new(big.Int).SetBytes(buf[1:33])
-				res.Y = new(big.Int).SetBytes(buf[33:65])
-				return
-			}
-		case 33:
-			if buf[0]==2 || buf[0]==3 {
-				var y [32]byte
-				secp256k1.DecompressPoint(buf[1:33], buf[0]==0x03, y[:])
-				res = new(PublicKey)
-				res.X = new(big.Int).SetBytes(buf[1:33])
-				res.Y = new(big.Int).SetBytes(y[:])
-				return
-			}
-	}
-	e = errors.New("NewPublicKey: Unknown format: "+hex.EncodeToString(buf[:]))
-	return
-}
-
-
-// Returns serialized key in uncompressed format "<04> <X> <Y>"
-// ... or in compressed format: "<02> <X>", eventually "<03> <X>"
-func (pub *PublicKey) Bytes(compressed bool) (raw []byte) {
-	if compressed {
-		raw = make([]byte, 33)
-		raw[0] = byte(2+pub.Y.Bit(0))
-		x := pub.X.Bytes()
-		copy(raw[1+32-len(x):], x)
-	} else {
-		raw = make([]byte, 65)
-		raw[0] = 4
-		x := pub.X.Bytes()
-		y := pub.Y.Bytes()
-		copy(raw[1+32-len(x):], x)
-		copy(raw[1+64-len(y):], y)
+	res = new(PublicKey)
+	if !res.XY.ParsePubkey(buf) {
+		e = errors.New("NewPublicKey: Unknown format: "+hex.EncodeToString(buf[:]))
+		res = nil
 	}
 	return
 }
 
 
 type Signature struct {
-	R, S *big.Int
+	secp256k1.Signature
 	HashType byte
 }
 
@@ -136,8 +101,8 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	}
 
 	sig = new(Signature)
-	sig.R = new(big.Int).SetBytes(Rdat[:])
-	sig.S = new(big.Int).SetBytes(Sdat[:])
+	sig.R.SetBytes(Rdat[:])
+	sig.S.SetBytes(Sdat[:])
 
 	/*
 	   It seems the implementation in the original bitcoin client has been fucked up.
@@ -158,14 +123,11 @@ func NewSignature(buf []byte) (sig *Signature, e error) {
 	return
 }
 
-
 // Recoved public key form a signature
 func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
-	var x, y [32]byte
-	if secp256k1.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, x[:], y[:]) {
-		key = new(PublicKey)
-		key.X = new(big.Int).SetBytes(x[:])
-		key.Y = new(big.Int).SetBytes(y[:])
+	key = new(PublicKey)
+	if !secp256k1.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, &key.XY) {
+		key = nil
 	}
 	return
 }
@@ -173,23 +135,5 @@ func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 
 // Returns serialized canoncal signature
 func (sig *Signature) Bytes() []byte {
-	r := sig.R.Bytes()
-	if r[0]>=0x80 {
-		r = append([]byte{0}, r...)
-	}
-	s := sig.S.Bytes()
-	if s[0]>=0x80 {
-		s = append([]byte{0}, s...)
-	}
-	res := new(bytes.Buffer)
-	res.WriteByte(0x30)
-	res.WriteByte(byte(4+len(r)+len(s)))
-	res.WriteByte(0x02)
-	res.WriteByte(byte(len(r)))
-	res.Write(r)
-	res.WriteByte(0x02)
-	res.WriteByte(byte(len(s)))
-	res.Write(s)
-	res.WriteByte(sig.HashType)
-	return res.Bytes()
+	return append(sig.Signature.Bytes(), sig.HashType)
 }

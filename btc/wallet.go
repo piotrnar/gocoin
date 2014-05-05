@@ -27,7 +27,6 @@ func PublicFromPrivate(priv_key []byte, compressed bool) (res []byte, e error) {
 // Verify the secret key's range and if a test message signed with it verifies OK
 // Returns nil if everything looks OK
 func VerifyKeyPair(priv []byte, publ []byte) error {
-	var e error
 	var sig Signature
 
 	const TestMessage = "Just some test message..."
@@ -43,10 +42,13 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 		return errors.New("pubkey value is too big")
 	}
 
-	sig.R, sig.S, e = EcdsaSign(priv, hash[:])
+	r, s, e := EcdsaSign(priv, hash[:])
 	if e != nil {
 		return errors.New("EcdsaSign failed: " + e.Error())
 	}
+
+	sig.R.Set(r)
+	sig.S.Set(s)
 	ok := EcdsaVerify(publ, sig.Bytes(), hash[:])
 	if !ok {
 		return errors.New("EcdsaVerify failed")

@@ -52,9 +52,8 @@ func DecompressPoint(X []byte, off bool, Y []byte) {
 }
 
 
-func RecoverPublicKey(r, s, h []byte, recid int, X, Y []byte) bool {
+func RecoverPublicKey(r, s, h []byte, recid int, pubkey *XY) bool {
 	var sig Signature
-	var pubkey XY
 	var msg Number
 	sig.R.SetBytes(r)
 	if sig.R.Sign()<=0 || sig.R.Cmp(&TheCurve.Order.Int)>=0 {
@@ -65,11 +64,9 @@ func RecoverPublicKey(r, s, h []byte, recid int, X, Y []byte) bool {
 		return false
 	}
 	msg.SetBytes(h)
-	if !sig.recover(&pubkey, &msg, recid) {
+	if !sig.recover(pubkey, &msg, recid) {
 		return false
 	}
-	pubkey.X.GetB32(X)
-	pubkey.Y.GetB32(Y)
 	return true
 }
 
