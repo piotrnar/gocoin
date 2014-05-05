@@ -25,6 +25,7 @@ var (
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
 	ask4pass *bool = flag.Bool("p", false, "Force the wallet to ask for seed password")
+	onlvalid *bool = flag.Bool("o", false, "Process only P2KH outputs that you have a key for")
 
 	waltype *uint = flag.Uint("type", 3, "Choose a type of the deterministic wallet (1, 2 or 3)")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")

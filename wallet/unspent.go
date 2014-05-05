@@ -62,12 +62,10 @@ func load_balance(showbalance bool) {
 				}
 			}
 
-			unspentOuts = append(unspentOuts, uns)
-			unspentOutsLabel = append(unspentOutsLabel, lab)
-
 			// Sum up all the balance and check if we have private key for this input
 			uo := UO(uns)
-			totBtc += UO(uns).Value
+
+			add_it := true
 
 			if !btc.IsP2SH(uo.Pk_script) {
 				fnd := false
@@ -78,21 +76,35 @@ func load_balance(showbalance bool) {
 					}
 				}
 
-				if showbalance && !fnd {
-					unknownInputs++
-					if *verbose {
-						ss := uns.String()
-						ss = ss[:8]+"..."+ss[len(ss)-12:]
-						fmt.Println(ss, "does not belong to your wallet (cannot sign it)")
+				if !fnd {
+					if *onlvalid {
+						add_it = false
+					}
+					if showbalance {
+						unknownInputs++
+						if *verbose {
+							ss := uns.String()
+							ss = ss[:8]+"..."+ss[len(ss)-12:]
+							fmt.Println(ss, "does not belong to your wallet (cannot sign it)")
+						}
 					}
 				}
 			} else {
+				if *onlvalid {
+					add_it = false
+				}
 				if *verbose {
 					ss := uns.String()
 					ss = ss[:8]+"..."+ss[len(ss)-12:]
 					fmt.Println(ss, "belongs to a multisig address")
 				}
 				multisigInputs++
+			}
+
+			if add_it {
+				unspentOuts = append(unspentOuts, uns)
+				unspentOutsLabel = append(unspentOutsLabel, lab)
+				totBtc += UO(uns).Value
 			}
 		}
 	}

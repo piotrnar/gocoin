@@ -19,7 +19,7 @@ type UnspentDB interface {
 
 	UnspentGet(out *TxPrevOut) (*TxOut, error)
 	GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx
-	ScanStealth([]byte, []byte)
+	ScanStealth(func([]byte,[]byte,uint32,[]byte,uint64)bool)
 
 	Idle() bool
 	Sync()

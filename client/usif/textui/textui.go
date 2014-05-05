@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"sort"
+	"bytes"
 	"bufio"
 	"strings"
 	"strconv"
@@ -580,20 +581,37 @@ func scan_stealth(p string) {
 	ll := strings.Split(p, " ")
 	if len(ll)!=2 {
 		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
+		return
 	}
 
-	sec, _ := hex.DecodeString(ll[0])
-	if len(sec)==0 {
+	d, _ := hex.DecodeString(ll[0])
+	if len(d)==0 {
 		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
 		return
 	}
 
-	pub, _ := hex.DecodeString(ll[1])
-	if len(pub)==0 {
+	P, _ := hex.DecodeString(ll[1])
+	if len(P)==0 {
 		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
 		return
 	}
-	common.BlockChain.Unspent.ScanStealth(sec, pub)
+	common.BlockChain.Unspent.ScanStealth(func(eth, txid []byte, vout uint32, scr []byte, val uint64) bool {
+		if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+			var h160 [20]byte
+			c := btc.StealthDH(eth, d)
+			spen_exp := btc.DeriveNextPublic(P, c)
+			btc.RimpHash(spen_exp, h160[:])
+			if bytes.Equal(scr[3:23], h160[:]) {
+				fmt.Printf("%15s BTC to %s in %s-%03d", btc.UintToBtc(val),
+					btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
+					btc.NewUint256(txid).String(), vout)
+				fmt.Println()
+			}
+			return true
+		} else {
+			return false
+		}
+	})
 }
 
 
