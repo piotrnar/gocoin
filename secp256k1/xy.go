@@ -44,7 +44,7 @@ func (pub *XY) Bytes(compressed bool) (raw []byte) {
 		if pub.Y.IsOdd() {
 			raw[0] = 0x03
 		} else {
-			raw[0] = 0x03
+			raw[0] = 0x02
 		}
 		pub.X.GetB32(raw[1:])
 	} else {
