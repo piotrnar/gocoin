@@ -1,18 +1,13 @@
 package btc
 
 import (
-	"bytes"
 	"fmt"
-	"math/big"
+	"bytes"
 	"errors"
+	"math/big"
+	"encoding/hex"
 )
 
-/*
-const (
-	ADDRVER_BTC = byte(0x00)
-	ADDRVER_TESTNET = byte(0x6F)
-)
-*/
 
 type BtcAddr struct {
 	Version byte
@@ -20,6 +15,8 @@ type BtcAddr struct {
 	Checksum []byte
 	Pubkey []byte
 	Enc58str string
+
+	*StealthAddr // if this is not nil, means that this is aa stealth address
 
 	// This is normally not used, unless for GetAllUnspent() purposes
 	Extra struct {
@@ -36,7 +33,8 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 		return
 	}
 	if (len(dec)<25) {
-		dec = append(bytes.Repeat([]byte{0}, 25-len(dec)), dec...)
+		e = errors.New("Address too short "+hex.EncodeToString(dec))
+		return
 	}
 	if (len(dec)==25) {
 		sh := Sha2Sum(dec[0:21])
@@ -51,7 +49,18 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 			a.Enc58str = hs
 		}
 	} else {
-		e = errors.New(fmt.Sprintf("Unsupported hash length %d", len(dec)))
+		var sa *StealthAddr
+		sa, e = NewStealthAddr(dec)
+		if e!=nil {
+			e = errors.New("Unrecognized address payload " + hex.EncodeToString(dec))
+			return
+		}
+		a = new(BtcAddr)
+		a.Version = sa.Version
+		a.Checksum = make([]byte, 4)
+		copy(a.Checksum, dec[21:25])
+		a.Enc58str = hs
+		a.StealthAddr = sa
 	}
 	return
 }
