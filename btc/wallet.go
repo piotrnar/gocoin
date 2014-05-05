@@ -60,27 +60,24 @@ func DeriveNextPrivate(p, s []byte) []byte {
 	var prv, secret big.Int
 	prv.SetBytes(p)
 	secret.SetBytes(s)
-	return new(big.Int).Mod(new(big.Int).Add(&prv, &secret), temp_secp256k1.N).Bytes()
+	return new(big.Int).Mod(new(big.Int).Add(&prv, &secret), &secp256k1.TheCurve.Order.Int).Bytes()
 }
 
 
 // B_public_key = G * secret + A_public_key
 // Used for implementing Type-2 determinitic keys
 func DeriveNextPublic(public, secret []byte) (out []byte) {
+	var ppk secp256k1.XY
+	ppk = secp256k1.TheCurve.G
+	if !ppk.Multi(secret) {
+		return
+	}
 	var pub secp256k1.XY
 	if !pub.ParsePubkey(public) {
 		return
 	}
-	pub.Multi(secret)
-	pub.AddXY(&secp256k1.TheCurve.G)
+	ppk.AddXY(&pub)
 	out = make([]byte, len(public))
-	pub.GetPublicKey(out)
-	return
-}
-
-
-func DeriveNextPublicOld(prvx, prvy, secret *big.Int) (x, y *big.Int) {
-	gsx, gsy := temp_secp256k1.ScalarBaseMult(secret.Bytes())
-	x, y = temp_secp256k1.Add(prvx, prvy, gsx, gsy)
+	ppk.GetPublicKey(out)
 	return
 }
