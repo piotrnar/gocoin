@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"sync/atomic"
+	"crypto/sha256"
 	"github.com/piotrnar/gocoin/secp256k1"
 )
 
@@ -24,18 +25,18 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sig secp256k1.Signature
 	var sec, msg, nonce secp256k1.Number
-	var nv [32]byte
 
 	sec.SetBytes(priv)
 	msg.SetBytes(hash)
 
-	ShaHash(append(hash, priv...), nv[:])
+	sha := sha256.New()
+	sha.Write(priv)
 	for {
-		nonce.SetBytes(nv[:])
+		sha.Write(hash)
+		nonce.SetBytes(sha.Sum(nil))
 		if nonce.Sign()>0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int)<0 {
 			break
 		}
-		ShaHash(nv[:], nv[:])
 	}
 
 	if sig.Sign(&sec, &msg, &nonce, nil)!=1 {
