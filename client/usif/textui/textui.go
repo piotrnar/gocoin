@@ -463,7 +463,7 @@ func save_config(s string) {
 
 func show_balance(p string) {
 	if p=="sum" {
-		fmt.Print(wallet.DumpBalance(nil, false))
+		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false))
 		return
 	}
 	if p!="" {
@@ -595,6 +595,11 @@ func scan_stealth(p string) {
 		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
 		return
 	}
+
+	var pos []*btc.TxPrevOut
+	cs := make(map[uint64][]byte)
+	as := make(map[uint64]*btc.BtcAddr)
+
 	common.BlockChain.Unspent.ScanStealth(func(eth, txid []byte, vout uint32, scr []byte, val uint64) bool {
 		if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 			var h160 [20]byte
@@ -602,16 +607,46 @@ func scan_stealth(p string) {
 			spen_exp := btc.DeriveNextPublic(P, c)
 			btc.RimpHash(spen_exp, h160[:])
 			if bytes.Equal(scr[3:23], h160[:]) {
-				fmt.Printf("%15s BTC to %s in %s-%03d", btc.UintToBtc(val),
+				po := new(btc.TxPrevOut)
+				copy(po.Hash[:], txid)
+				po.Vout = vout+1
+				pos = append(pos, po)
+				cs[po.UIdx()] = c
+				as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+				/*fmt.Printf("%15s BTC to %s with c=%s", btc.UintToBtc(val),
 					btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
-					btc.NewUint256(txid).String(), vout)
-				fmt.Println()
+					hex.EncodeToString(c))
+				fmt.Println()*/
 			}
 			return true
 		} else {
 			return false
 		}
 	})
+
+	var unsp btc.AllUnspentTx
+	for i := range pos {
+		po, e := common.BlockChain.Unspent.UnspentGet(pos[i])
+		if e != nil {
+			println("UnspentGet:", e.Error())
+			println("This should not happen - please, report a bug.")
+			println("You can probably fix it by launching the client with -rescan")
+			os.Exit(1)
+		}
+		//fmt.Println(btc.NewUint256(pos[i].Hash[:]), pos[i].Vout+1, hex.EncodeToString(cs[pos[i].UIdx()]))
+		one := &btc.OneUnspentTx{
+			TxPrevOut: *pos[i],
+			Value: po.Value,
+			MinedAt: po.BlockHeight,
+			BtcAddr: as[pos[i].UIdx()],
+			StealthC: cs[pos[i].UIdx()]}
+		unsp = append(unsp, one)
+	}
+	sort.Sort(unsp)
+	os.RemoveAll("balance")
+	os.MkdirAll("balance/", 0770)
+	utxt, _ := os.Create("balance/unspent.txt")
+	fmt.Print(wallet.DumpBalance(unsp, utxt, true))
 }
 
 

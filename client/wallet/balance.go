@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 	"io/ioutil"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -167,18 +168,18 @@ func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) boo
 
 
 // Call it only from the Chain thread
-func DumpBalance(utxt *os.File, details bool) (s string) {
+func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details bool) (s string) {
 	var sum uint64
 	mutex_bal.Lock()
 	defer mutex_bal.Unlock()
 
-	for i := range MyBalance {
-		sum += MyBalance[i].Value
+	for i := range mybal {
+		sum += mybal[i].Value
 
 		if details {
 			if i<100 {
-				s += fmt.Sprintf("%7d %s\n", 1+common.Last.Block.Height-MyBalance[i].MinedAt,
-					MyBalance[i].String())
+				s += fmt.Sprintf("%7d %s\n", 1+common.Last.Block.Height-mybal[i].MinedAt,
+					mybal[i].String())
 			} else if i==100 {
 				s += fmt.Sprintln("List of unspent outputs truncated to 100 records")
 			}
@@ -186,7 +187,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 
 		// update the balance/ folder
 		if utxt != nil {
-			po, e := common.BlockChain.Unspent.UnspentGet(&MyBalance[i].TxPrevOut)
+			po, e := common.BlockChain.Unspent.UnspentGet(&mybal[i].TxPrevOut)
 			if e != nil {
 				println("UnspentGet:", e.Error())
 				println("This should not happen - please, report a bug.")
@@ -194,12 +195,16 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 				os.Exit(1)
 			}
 
-			txid := btc.NewUint256(MyBalance[i].TxPrevOut.Hash[:])
+			txid := btc.NewUint256(mybal[i].TxPrevOut.Hash[:])
 
 			// Store the unspent line in balance/unspent.txt
-			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs\n", MyBalance[i].TxPrevOut.String(),
-				float64(MyBalance[i].Value)/1e8, MyBalance[i].BtcAddr.StringLab(),
-				1+common.Last.Block.Height-MyBalance[i].MinedAt)
+			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs", mybal[i].TxPrevOut.String(),
+				float64(mybal[i].Value)/1e8, mybal[i].BtcAddr.StringLab(),
+				1+common.Last.Block.Height-mybal[i].MinedAt)
+			if mybal[i].StealthC!=nil {
+				fmt.Fprint(utxt, ", _StealthC:", hex.EncodeToString(mybal[i].StealthC))
+			}
+			fmt.Fprintln(utxt)
 
 			// store the entire transactiojn in balance/<txid>.tx
 			fn := "balance/"+txid.String()[:64]+".tx"
@@ -217,7 +222,7 @@ func DumpBalance(utxt *os.File, details bool) (s string) {
 		}
 	}
 	LastBalance = sum
-	s += fmt.Sprintf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(MyBalance))
+	s += fmt.Sprintf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(mybal))
 	if utxt != nil {
 		utxt.Close()
 	}
@@ -290,7 +295,7 @@ func UpdateBalanceFolder() string {
 		UpdateBalance()
 	}
 	utxt, _ := os.Create("balance/unspent.txt")
-	return DumpBalance(utxt, true)
+	return DumpBalance(MyBalance, utxt, true)
 }
 
 func LoadWallet(fn string) {

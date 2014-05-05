@@ -13,6 +13,7 @@ type OneUnspentTx struct {
 	Value uint64
 	MinedAt uint32
 	*BtcAddr
+	StealthC []byte
 }
 
 func (x AllUnspentTx) Len() int {

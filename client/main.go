@@ -100,7 +100,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 		if wallet.BalanceChanged {
 			wallet.BalanceChanged = false
 			fmt.Println("Your balance has just changed")
-			fmt.Print(wallet.DumpBalance(nil, false))
+			fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false))
 			textui.ShowPrompt()
 		}
 	} else {
@@ -276,7 +276,7 @@ func main() {
 	wallet.LoadWallet(default_wallet_fn)
 	if wallet.MyWallet!=nil {
 		wallet.UpdateBalance()
-		fmt.Print(wallet.DumpBalance(nil, false))
+		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false))
 	}
 
 	peersTick := time.Tick(5*time.Minute)
