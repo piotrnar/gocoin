@@ -19,7 +19,7 @@ var (
 	labels []string
 	publ_addrs []*btc.BtcAddr
 	compressed_key []bool
-	curFee uint64
+	curFee uint64 = 1000 // default fee
 )
 
 

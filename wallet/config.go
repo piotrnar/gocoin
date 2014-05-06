@@ -79,12 +79,7 @@ func parse_config() {
 			// case "secrand": <-- deprecated
 
 			case "fee":
-				fi, e := btc.StringToSatoshis(ll[1])
-				if e != nil {
-					println("wallet.cfg: Incorrect fee value", ll[1])
-					os.Exit(1)
-				}
-				curFee = fi
+				*fee = ll[1]
 
 			case "apply2bal":
 				v, e := strconv.ParseBool(ll[1])
