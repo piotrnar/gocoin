@@ -66,7 +66,7 @@ func (a *XYZ) Equals(b *XYZ) bool {
 	if a.Infinity != b.Infinity {
 		return false
 	}
-	// TODO: check it it does not affect performance
+	// TODO: is the normalize really needed here?
 	a.Normalize()
 	b.Normalize()
 	return a.X.Equals(&b.X) && a.Y.Equals(&b.Y) && a.Z.Equals(&b.Z)
