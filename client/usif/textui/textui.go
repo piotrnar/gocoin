@@ -628,7 +628,7 @@ func scan_stealth(p string) {
 			if bytes.Equal(scr[3:23], h160[:]) {
 				po := new(btc.TxPrevOut)
 				copy(po.Hash[:], txid)
-				po.Vout = vout+1
+				po.Vout = vout
 				pos = append(pos, po)
 				cs[po.UIdx()] = c
 				as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
@@ -644,7 +644,7 @@ func scan_stealth(p string) {
 		}
 	})
 
-	fmt.Println(len(pos), "outputs, out of", ncnt, "notifications belonged to out wallet")
+	fmt.Println(len(pos), "outputs, out of", ncnt, "notifications belonged to our wallet")
 
 	var unsp btc.AllUnspentTx
 	for i := range pos {
