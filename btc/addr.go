@@ -114,40 +114,23 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 }
 
 
-func NewAddrFromDataWithSum(in []byte, ver byte) (a *BtcAddr, e error) {
-	var ad [25]byte
-	ad[0] = ver
-	copy(ad[1:25], in[:])
-	sh := Sha2Sum(ad[0:21])
-	if !bytes.Equal(in[20:24], sh[:4]) {
-		e = errors.New("Address Checksum error")
-		return
-	}
-
-	copy(ad[21:25], sh[:4])
-
-	a = new(BtcAddr)
-	a.Version = ver
-	copy(a.Hash160[:], in[:])
-
-	a.Checksum = make([]byte, 4)
-	copy(a.Checksum, sh[:4])
-	return
-}
-
 // Base58 encoded address
 func (a *BtcAddr) String() string {
 	if a.Enc58str=="" {
-		var ad [25]byte
-		ad[0] = a.Version
-		copy(ad[1:21], a.Hash160[:])
-		if a.Checksum==nil {
-			sh := Sha2Sum(ad[0:21])
-			a.Checksum = make([]byte, 4)
-			copy(a.Checksum, sh[:4])
+		if a.StealthAddr!=nil {
+			a.Enc58str = a.StealthAddr.String()
+		} else {
+			var ad [25]byte
+			ad[0] = a.Version
+			copy(ad[1:21], a.Hash160[:])
+			if a.Checksum==nil {
+				sh := Sha2Sum(ad[0:21])
+				a.Checksum = make([]byte, 4)
+				copy(a.Checksum, sh[:4])
+			}
+			copy(ad[21:25], a.Checksum[:])
+			a.Enc58str = Encodeb58(ad[:])
 		}
-		copy(ad[21:25], a.Checksum[:])
-		a.Enc58str = Encodeb58(ad[:])
 	}
 	return a.Enc58str
 }
