@@ -1,9 +1,11 @@
 package btc
 
 import (
+	"fmt"
 	"bytes"
 	"testing"
 	"encoding/hex"
+	"encoding/binary"
 )
 
 
@@ -64,5 +66,38 @@ func BenchmarkStealthDH(b *testing.B) {
 	b.ResetTimer()
 	for j := 0; j < b.N; j++ {
 		StealthDH(xy, e)
+	}
+}
+
+
+func TestCheckPrefix(t *testing.T) {
+	var px [5]byte
+	var pat [4]byte
+	sa := new(StealthAddr)
+	mask := uint32(0xffffffff)
+	for i:=byte(0); i<32; i++ {
+		px[0] = i
+		sa.Prefix = px[:1+(byte(i+7)>>3)]
+
+		val := uint32(0xdeadbeef)
+		binary.BigEndian.PutUint32(px[1:], val)
+
+		nval := val^mask
+		binary.BigEndian.PutUint32(pat[:], nval)
+		if !sa.CheckPrefix(pat[:]) {
+			t.Fatal(fmt.Sprintf("CheckPrefix failed. i=%d  val=0x%08x  pat=0x%08x  msk=0x%08x", i, val, nval, mask))
+		}
+
+		nval ^= uint32(uint64(0x100000000)>>i)
+		binary.BigEndian.PutUint32(pat[:], nval)
+		if sa.CheckPrefix(pat[:]) {
+			if i!=0 {
+				t.Fatal(fmt.Sprintf("CheckPrefix not failed. i=%d  val=0x%08x  pat=0x%08x  msk=0x%08x", i, val, nval, mask))
+			}
+		} else if i==0 {
+			t.Fatal(fmt.Sprintf("CheckPrefix failed. i=%d  val=0x%08x  pat=0x%08x  msk=0x%08x", i, val, nval, mask))
+		}
+
+		mask >>= 1
 	}
 }

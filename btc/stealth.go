@@ -128,3 +128,34 @@ func StealthPub(pub, priv []byte) (res []byte) {
 	}
 	return
 }
+
+
+// Calculate the stealth difference
+func (sa *StealthAddr) CheckPrefix(cur []byte) bool {
+	var idx, plen, byt, mask, match byte
+	if len(sa.Prefix)==0 {
+		return true
+	}
+	plen = sa.Prefix[0]
+	if plen > 0 {
+		mask = 0x80
+		match = cur[0]^sa.Prefix[1]
+		for {
+			if (match&mask) != 0 {
+				return false
+			}
+			if idx==(plen-1) {
+				break
+			}
+			idx++
+			if mask==0x01 {
+				byt++
+				mask = 0x80
+				match = cur[byt]^sa.Prefix[byt+1]
+			} else {
+				mask >>= 1
+			}
+		}
+	}
+	return true
+}
