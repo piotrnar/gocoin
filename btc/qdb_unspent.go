@@ -28,6 +28,14 @@ var (
 	MinBrowsableOutValue uint64 = 1e6 // Zero means: browse throutgh all
 )
 
+type stealthRec struct {
+	key qdb.KeyType
+	prefix [4]byte
+	pkey [33]byte
+	dbidx byte
+	txid []byte
+	vout uint32
+}
 
 type unspentDb struct {
 	dir string
@@ -39,6 +47,7 @@ type unspentDb struct {
 	lastHeight uint32
 	stealthOuts map[qdb.KeyType] *stealthRec
 }
+
 
 func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
@@ -56,54 +65,6 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	fmt.Print("\r                                                              \r")
 
 	return
-}
-
-
-type stealthRec struct {
-	key qdb.KeyType
-	prefix [4]byte
-	pkey [33]byte
-	dbidx byte
-	txid []byte
-	vout uint32
-}
-
-
-func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
-	if len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06 {
-		res = new(stealthRec)
-		vo := binary.LittleEndian.Uint32(v[32:36])
-		res.key = qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1))
-		res.dbidx = v[31] % NumberOfUnspentSubDBs
-		copy(res.prefix[:], v[51:55])
-		copy(res.pkey[:], v[55:])
-		res.txid = v[:32]
-		res.vout = vo
-	}
-	return
-}
-
-
-func (db UnspentDB) ScanStealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte,uint64)bool) {
-	var remd, rem2, okd uint
-	for k, v := range db.unspent.stealthOuts {
-		tx := db.unspent.dbN(int(v.dbidx)).Get(v.key)
-		if tx==nil {
-			delete(db.unspent.stealthOuts, k)
-			remd++
-		} else if sa.CheckPrefix(v.prefix[:]) {
-			if walk(v.pkey[:], v.txid, v.vout, tx[48:],binary.LittleEndian.Uint64(tx[36:44])) {
-				okd++
-			} else {
-				delete(db.unspent.stealthOuts, k)
-				rem2++
-			}
-		}
-	}
-	if remd>0 {
-		fmt.Println(okd, "stealth outputs")
-		fmt.Println(remd, "+", rem2, "obsolete outputs have been removed")
-	}
 }
 
 
@@ -324,3 +285,19 @@ func (db *unspentDb) idle() bool {
 	}
 	return false
 }
+
+
+func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
+	if len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06 {
+		res = new(stealthRec)
+		vo := binary.LittleEndian.Uint32(v[32:36])
+		res.key = qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1))
+		res.dbidx = v[31] % NumberOfUnspentSubDBs
+		copy(res.prefix[:], v[51:55])
+		copy(res.pkey[:], v[55:])
+		res.txid = v[:32]
+		res.vout = vo
+	}
+	return
+}
+
