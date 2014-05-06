@@ -282,7 +282,7 @@ func (db *unspentDb) scanstealth(sa *StealthAddr, walk func([]byte,[]byte,uint32
 				spend_v := db.dbN(i).GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
 				if spend_v==nil {
 					return qdb.NO_CACHE|qdb.NO_BROWSE
-				} else if sa.CheckPrefix(v[51:55]) {
+				} else if sa.CheckNonce(v[51:]) {
 					if !walk(v[55:], spend_v[0:32], vo+1, spend_v[48:]) {
 						return qdb.NO_CACHE|qdb.NO_BROWSE
 					}
