@@ -40,7 +40,6 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 		space_first := len(l)>0 && l[0]==' '
 		l = strings.Trim(l, " \t\r\n")
 		linenr++
-		//println(fmt.Sprint(fn, ":", linenr), "...")
 		if len(l)>0 {
 			if l[0]=='@' {
 				if included>3 {
@@ -78,10 +77,11 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 			break
 		}
 	}
+
 	// remove duplicated addresses
 	for i:=0; i<len(addrs)-1; i++ {
 		for j:=i+1; j<len(addrs); {
-			if addrs[i].Hash160==addrs[j].Hash160 {
+			if addrs[i].String()==addrs[j].String() {
 				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
 				addrs = append(addrs[:j], addrs[j+1:]...)
 			} else {
