@@ -1,4 +1,5 @@
 0.9.12
+* First support for stealth addresses (check clients ui command "scan")
 
 0.9.11 - 2014-05-05
 * Huge refactor of the entire repo
