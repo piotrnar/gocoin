@@ -45,6 +45,7 @@ func load_balance(showbalance bool) {
 				} else {
 					// add a new key to the wallet
 					sec := btc.DeriveNextPrivate(first_seed[:], c)
+					is_stealth[len(priv_keys)] = true
 					priv_keys = append(priv_keys, sec)
 					labels = append(labels, lab)
 					pub_key := btc.PublicFromPrivate(sec, true)

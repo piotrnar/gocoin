@@ -115,6 +115,10 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	uo := UO(unspentOuts[0])
 	for j := range publ_addrs {
 		if publ_addrs[j].Owns(uo.Pk_script) {
+			if is_stealth[j] {
+				println("Cannot send change to a stealth address. Use -change param")
+				os.Exit(1)
+			}
 			chng = publ_addrs[j]
 			return
 		}
