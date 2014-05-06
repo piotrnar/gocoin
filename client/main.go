@@ -287,6 +287,9 @@ func main() {
 
 	common.Last.Block = common.BlockChain.BlockTreeEnd
 	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
+	if common.Last.Time.After(time.Now()) {
+		common.Last.Time = time.Now()
+	}
 
 	for k, v := range common.BlockChain.BlockIndex {
 		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
