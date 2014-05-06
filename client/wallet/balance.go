@@ -168,9 +168,8 @@ func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) boo
 
 
 // Call it only from the Chain thread
-func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details bool) (s string) {
+func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance bool) (s string) {
 	var sum uint64
-	var stealth bool
 	mutex_bal.Lock()
 	defer mutex_bal.Unlock()
 
@@ -204,7 +203,6 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details bool) (s string)
 				1+common.Last.Block.Height-mybal[i].MinedAt)
 			if mybal[i].StealthC!=nil {
 				fmt.Fprint(utxt, ", _StealthC:", hex.EncodeToString(mybal[i].StealthC))
-				stealth = true
 			}
 			fmt.Fprintln(utxt)
 
@@ -223,7 +221,7 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details bool) (s string)
 			txf.Close()
 		}
 	}
-	if !stealth {
+	if update_balance {
 		LastBalance = sum
 	}
 	s += fmt.Sprintf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(mybal))
@@ -299,7 +297,7 @@ func UpdateBalanceFolder() string {
 		UpdateBalance()
 	}
 	utxt, _ := os.Create("balance/unspent.txt")
-	return DumpBalance(MyBalance, utxt, true)
+	return DumpBalance(MyBalance, utxt, true, false)
 }
 
 func LoadWallet(fn string) {

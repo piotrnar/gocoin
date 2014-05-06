@@ -464,7 +464,7 @@ func save_config(s string) {
 
 func show_balance(p string) {
 	if p=="sum" {
-		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false))
+		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
 		return
 	}
 	if p!="" {
@@ -669,7 +669,7 @@ func scan_stealth(p string) {
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)
 	utxt, _ := os.Create("balance/unspent.txt")
-	fmt.Print(wallet.DumpBalance(unsp, utxt, true))
+	fmt.Print(wallet.DumpBalance(unsp, utxt, true, false))
 }
 
 

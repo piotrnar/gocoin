@@ -55,7 +55,7 @@ pick_different_e:
 	// (probably make the while condition include "or prefix = null" or something to that nature.
 	look4pref = len(sa.Prefix)>0 && sa.Prefix[0]>0
 	if look4pref {
-		fmt.Print("Prefix is ", sa.Prefix[0], ":", hex.EncodeToString(sa.Prefix[1:]), " - looking for nonce")
+		fmt.Print("Prefix is ", sa.Prefix[0], ":", hex.EncodeToString(sa.Prefix[1:]), " - looking for nonce...")
 	}
 	binary.Read(rand.Reader, binary.LittleEndian, &nonce_from)
 	nonce = nonce_from
@@ -70,7 +70,7 @@ pick_different_e:
 
 		nonce++
 		if nonce==nonce_from {
-			fmt.Println("END")
+			fmt.Println("EOF")
 			goto pick_different_e
 		}
 
@@ -79,8 +79,7 @@ pick_different_e:
 		}
 	}
 	if look4pref {
-		fmt.Println()
-		fmt.Println("Found prefix", hex.EncodeToString(sha.Sum(nil)[:4]))
+		fmt.Println(uint32(nonce-nonce_from))
 	}
 
 	// 8. Once you have the nonce and the ephemkey, you can create the first output, which is
