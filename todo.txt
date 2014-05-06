@@ -14,4 +14,5 @@ Core lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Wallet:
+* Not brute force the nonce for stealth address prefix?
 * Do not update changes to balance/unspent.txt if a signing was not complete
