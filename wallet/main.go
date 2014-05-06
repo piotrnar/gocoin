@@ -62,8 +62,6 @@ var (
 	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 	allowextramsigns *bool = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 
-	scankey *string = flag.String("scankey", "", "Generate a new stealth using this public scan-key")
-
 	// set in load_balance():
 	unspentOuts []*btc.TxPrevOut
 	unspentOutsLabel []string

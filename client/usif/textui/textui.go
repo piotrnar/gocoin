@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -578,33 +579,51 @@ func list_alerst(p string) {
 
 
 func scan_stealth(p string) {
-	ll := strings.Split(p, " ")
-	if len(ll)!=2 {
-		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
+	sa, _ := btc.NewStealthAddrFromString(p)
+	if sa==nil {
+		fmt.Println("Specify base58 encoded stealth address")
+		return
+	}
+	if sa.Version!=btc.StealthAddressVersion(common.CFG.Testnet) {
+		fmt.Println("Incorrect version of the stealth address")
+		return
+	}
+	if len(sa.SpendKeys)!=1 {
+		fmt.Println("Currently only single spend keys are supported. This address has", len(sa.SpendKeys))
 		return
 	}
 
-	d, _ := hex.DecodeString(ll[0])
-	if len(d)==0 {
-		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
-		return
+	//fmt.Println("scankey", hex.EncodeToString(sa.ScanKey[:]))
+	if len(sa.Prefix)==0 {
+		fmt.Println("prefix not present in the address")
+	} else {
+		fmt.Println("prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
 	}
 
-	P, _ := hex.DecodeString(ll[1])
-	if len(P)==0 {
-		fmt.Println("Specify secpret_scankey and public_spenkey (as hexdump)")
+	d := utils.GetRawData(".stealth")
+	if d==nil {
+		fmt.Println("Place the secret scankey in file .stealth")
+		return
+	}
+	//fmt.Println("scansec", hex.EncodeToString(d))
+	expscan := btc.PublicFromPrivate(d, true)
+	if !bytes.Equal(expscan, sa.ScanKey[:]) {
+		fmt.Println("The secret in .stealth does not match scankey from the adress",
+			hex.EncodeToString(expscan))
 		return
 	}
 
 	var pos []*btc.TxPrevOut
 	cs := make(map[uint64][]byte)
 	as := make(map[uint64]*btc.BtcAddr)
+	var ncnt uint
 
-	common.BlockChain.Unspent.ScanStealth(func(eth, txid []byte, vout uint32, scr []byte, val uint64) bool {
+	common.BlockChain.Unspent.ScanStealth(sa, func(eth, txid []byte, vout uint32, scr []byte, val uint64) bool {
 		if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 			var h160 [20]byte
+			//yes := btc.NewUint256(txid).String()=="9cc90ff2528b49dfd9c53e5e90c98a1fd45d577af7f3a9e7a9f8a86b52fb0280"
 			c := btc.StealthDH(eth, d)
-			spen_exp := btc.DeriveNextPublic(P, c)
+			spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
 			btc.RimpHash(spen_exp, h160[:])
 			if bytes.Equal(scr[3:23], h160[:]) {
 				po := new(btc.TxPrevOut)
@@ -613,16 +632,19 @@ func scan_stealth(p string) {
 				pos = append(pos, po)
 				cs[po.UIdx()] = c
 				as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
-				/*fmt.Printf("%15s BTC to %s with c=%s", btc.UintToBtc(val),
-					btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
-					hex.EncodeToString(c))
-				fmt.Println()*/
 			}
+			ncnt++
+			/*fmt.Printf("%15s BTC to %s with c=%s", btc.UintToBtc(val),
+				btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
+				hex.EncodeToString(c))
+			fmt.Println()*/
 			return true
 		} else {
 			return false
 		}
 	})
+
+	fmt.Println(len(pos), "outputs, out of", ncnt, "notifications belonged to out wallet")
 
 	var unsp btc.AllUnspentTx
 	for i := range pos {
@@ -670,7 +692,7 @@ func init() {
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("scan", true, scan_stealth, "Scan unspend database for stealth addresses matching the given key")
+	newUi("scan", true, scan_stealth, "Get balance of a stealth address")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")

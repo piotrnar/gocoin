@@ -62,8 +62,9 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 
 type stealthRec struct {
 	key qdb.KeyType
-	dbidx int
-	pkey []byte
+	prefix [4]byte
+	pkey [33]byte
+	dbidx byte
 	txid []byte
 	vout uint32
 }
@@ -74,8 +75,9 @@ func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
 		res = new(stealthRec)
 		vo := binary.LittleEndian.Uint32(v[32:36])
 		res.key = qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1))
-		res.dbidx = int(v[31]) % NumberOfUnspentSubDBs
-		res.pkey = v[55:]
+		res.dbidx = v[31] % NumberOfUnspentSubDBs
+		copy(res.prefix[:], v[51:55])
+		copy(res.pkey[:], v[55:])
 		res.txid = v[:32]
 		res.vout = vo
 	}
@@ -83,15 +85,15 @@ func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
 }
 
 
-func (db UnspentDB) ScanStealth(walk func([]byte,[]byte,uint32,[]byte,uint64)bool) {
+func (db UnspentDB) ScanStealth(sa *btc.StealthAddr, walk func([]byte,[]byte,uint32,[]byte,uint64)bool) {
 	var remd, rem2, okd uint
 	for k, v := range db.unspent.stealthOuts {
-		tx := db.unspent.dbN(v.dbidx).Get(v.key)
+		tx := db.unspent.dbN(int(v.dbidx)).Get(v.key)
 		if tx==nil {
 			delete(db.unspent.stealthOuts, k)
 			remd++
-		} else {
-			if walk(v.pkey, v.txid, v.vout, tx[48:],binary.LittleEndian.Uint64(tx[36:44])) {
+		} else if sa.CheckPrefix(v.prefix[:]) {
+			if walk(v.pkey[:], v.txid, v.vout, tx[48:],binary.LittleEndian.Uint64(tx[36:44])) {
 				okd++
 			} else {
 				delete(db.unspent.stealthOuts, k)

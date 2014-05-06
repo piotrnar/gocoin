@@ -73,6 +73,12 @@ func NewStealthAddr(dec []byte) (a *StealthAddr, e error) {
 		return
 	}
 	a.Prefix = b.Bytes()
+
+	if len(a.Prefix)>0 && a.Prefix[0]>32 {
+		e = errors.New("StealthAddr: Prefix out of range")
+		a = nil
+	}
+
 	return
 }
 
