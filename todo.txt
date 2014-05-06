@@ -3,7 +3,8 @@ Downloader:
 
 Client:
 * Add support for multiple scan keys in .stealth file
-* Add better support for messages attached to transactions (after OP_RETURN)
+* Add support for stealth addresses in wallet files
+* Add better support for text messages insode transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
