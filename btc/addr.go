@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"fmt"
 	"bytes"
 	"errors"
 	"math/big"
@@ -210,20 +209,6 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	return
 }
 
-/*
-	Just for information:
-
-	// P2SH transaction
-	if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
-		return
-	}
-
-	// Escrow
-	if len(scr)==201 && scr[0]==0x51 && scr[1]==0x41 && scr[199]==0x53 && scr[200]==0xae {
-		return
-	}
-*/
-
 
 func (a *BtcAddr) OutScript() (res []byte) {
 	if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) {
@@ -240,8 +225,6 @@ func (a *BtcAddr) OutScript() (res []byte) {
 		res[1] = 20
 		copy(res[2:22], a.Hash160[:])
 		res[22] = 0x87
-	} else {
-		panic(fmt.Sprint("OutScript - unsupported version byte: ", a.Version))
 	}
 	return
 }
