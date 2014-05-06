@@ -34,7 +34,7 @@ func stealth_txout(sa *btc.StealthAddr, value uint64) (res []*btc.TxOut) {
 	// Make two outpus
 	res = make([]*btc.TxOut, 2)
 	var e, ephemkey, pkscr []byte
-	var nonce uint32
+	var nonce, nonce_from uint32
 	var look4pref bool
 	sha := sha256.New()
 
@@ -57,7 +57,8 @@ pick_different_e:
 	if look4pref {
 		fmt.Print("Prefix is ", sa.Prefix[0], ":", hex.EncodeToString(sa.Prefix[1:]), " - looking for nonce")
 	}
-	nonce = 0
+	binary.Read(rand.Reader, binary.LittleEndian, &nonce_from)
+	nonce = nonce_from
 	for {
 		binary.Write(sha, binary.LittleEndian, nonce)
 		sha.Write(ephemkey)
@@ -67,10 +68,12 @@ pick_different_e:
 		}
 		sha.Reset()
 
-		if nonce==0xffffffff {
+		nonce++
+		if nonce==nonce_from {
+			fmt.Println("END")
 			goto pick_different_e
 		}
-		nonce++
+
 		if (nonce&0xfffff)==0 {
 			fmt.Print(".")
 		}
