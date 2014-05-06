@@ -77,13 +77,13 @@ func RecoverPublicKey(r, s, h []byte, recid int, pubkey *XY) bool {
 func Multiply(xy, k, out []byte) bool {
 	var pk XY
 	var xyz XYZ
-	var na, ng Number
+	var na, nzero Number
 	if !pk.ParsePubkey(xy) {
 		return false
 	}
 	xyz.SetXY(&pk)
 	na.SetBytes(k)
-	xyz.ECmult(&xyz, &na, &ng)
+	xyz.ECmult(&xyz, &na, &nzero)
 	pk.SetXYZ(&xyz)
 	pk.GetPublicKey(out)
 	return true
@@ -97,6 +97,23 @@ func BaseMultiply(k, out []byte) bool {
 	var pk XY
 	n.SetBytes(k)
 	ECmultGen(&r, &n)
+	pk.SetXYZ(&r)
+	pk.GetPublicKey(out)
+	return true
+}
+
+
+// out = G*k + xy
+func BaseMultiplyAdd(xy, k, out []byte) bool {
+	var r XYZ
+	var n Number
+	var pk XY
+	if !pk.ParsePubkey(xy) {
+		return false
+	}
+	n.SetBytes(k)
+	ECmultGen(&r, &n)
+	r.AddXY(&r, &pk)
 	pk.SetXYZ(&r)
 	pk.GetPublicKey(out)
 	return true

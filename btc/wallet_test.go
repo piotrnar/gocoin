@@ -77,3 +77,27 @@ func BenchmarkPrivToPubUncom(b *testing.B) {
 		PublicFromPrivate(prv[:], false)
 	}
 }
+
+
+func BenchmarkDeriveNextPrivate(b *testing.B) {
+	var sec [32]byte
+	prv := make([]byte, 32)
+	ShaHash(sec[:], prv)
+	ShaHash(prv, sec[:])
+	b.ResetTimer()
+	for i:=0; i<b.N; i++ {
+		prv = DeriveNextPrivate(prv, sec[:])
+	}
+}
+
+
+func BenchmarkDeriveNextPublic(b *testing.B) {
+	var prv, sec [32]byte
+	ShaHash(prv[:], prv[:])
+	ShaHash(prv[:], sec[:])
+	pub := PublicFromPrivate(prv[:], true)
+	b.ResetTimer()
+	for i:=0; i<b.N; i++ {
+		pub = DeriveNextPublic(pub, sec[:])
+	}
+}

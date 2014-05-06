@@ -67,17 +67,7 @@ func DeriveNextPrivate(p, s []byte) []byte {
 // B_public_key = G * secret + A_public_key
 // Used for implementing Type-2 determinitic keys
 func DeriveNextPublic(public, secret []byte) (out []byte) {
-	var ppk secp256k1.XY
-	ppk = secp256k1.TheCurve.G
-	if !ppk.Multi(secret) {
-		return
-	}
-	var pub secp256k1.XY
-	if !pub.ParsePubkey(public) {
-		return
-	}
-	ppk.AddXY(&pub)
 	out = make([]byte, len(public))
-	ppk.GetPublicKey(out)
+	secp256k1.BaseMultiplyAdd(public, secret, out)
 	return
 }

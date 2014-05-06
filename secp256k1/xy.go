@@ -138,39 +138,6 @@ func (pk *XY) AddXY(a *XY) {
 }
 
 
-// TODO: think about optimizing this one
-func (pk *XY) Multi(k []byte) bool {
-	var B, r XYZ
-
-	B.SetXY(pk)
-	r = B
-
-	seen := false
-	for _, byte := range k {
-		for bitNum := 0; bitNum < 8; bitNum++ {
-			if seen {
-				r.Double(&r)
-			}
-			if byte&0x80 == 0x80 {
-				if !seen {
-					seen = true
-				} else {
-					r.Add(&r, &B)
-				}
-			}
-			byte <<= 1
-		}
-	}
-
-	if !seen {
-		return false
-	}
-
-	pk.SetXYZ(&r)
-	return true
-}
-
-
 func (pk *XY) GetPublicKey(out []byte) {
 	pk.X.GetB32(out[1:33])
 	if len(out)==65 {
