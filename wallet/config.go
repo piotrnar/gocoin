@@ -79,7 +79,9 @@ func parse_config() {
 			// case "secrand": <-- deprecated
 
 			case "fee":
-				*fee = ll[1]
+				if *fee=="" {
+					*fee = ll[1]
+				}
 
 			case "apply2bal":
 				v, e := strconv.ParseBool(ll[1])
