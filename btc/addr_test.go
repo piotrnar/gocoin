@@ -85,17 +85,6 @@ func TestAddr(t *testing.T) {
 				return
 			}
 
-			b24 := append(a.Hash160[:], a.Checksum[:]...)
-			a2, e := NewAddrFromDataWithSum(b24[:], a.Version)
-			if e != nil {
-				t.Error("NewAddrFromDataWithSum caused error", e.Error())
-				return
-			}
-			if a2.String()!=ta[i] {
-				t.Error("NewAddrFromDataWithSum failed")
-				return
-			}
-
 			a3 := NewAddrFromHash160(a.Hash160[:], a.Version)
 			if a3.String()!=ta[i] {
 				t.Error("NewAddrFromHash160 failed")
