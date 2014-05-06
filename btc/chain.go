@@ -11,7 +11,7 @@ var AbortNow bool  // set it to true to abort any activity
 
 type Chain struct {
 	Blocks *BlockDB      // blockchain.dat and blockchain.idx
-	Unspent UnspentDB    // unspent folder
+	Unspent *UnspentDB    // unspent folder
 
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode

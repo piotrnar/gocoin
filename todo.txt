@@ -2,7 +2,7 @@ Downloader:
 * Make it to work with gocoion.cfg file
 
 Client:
-* Make btc/qdb an internal part of btc
+* Add support for multiple scan keys in .stealth file
 * Add better support for messages attached to transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
@@ -12,5 +12,4 @@ Core lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Wallet:
-* FIX: You do not own the address of the first input (does not go to the next one)
 * Do not update changes to balance/unspent.txt if a signing was not complete

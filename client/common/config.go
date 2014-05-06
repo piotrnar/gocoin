@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/btc/qdb"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 var (
@@ -156,8 +156,8 @@ func Reset() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	qdb.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
-	qdb.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
+	btc.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
+	btc.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {

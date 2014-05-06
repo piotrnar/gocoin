@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 	"github.com/piotrnar/gocoin/btc"
-	_ "github.com/piotrnar/gocoin/btc/qdb"
 	"github.com/piotrnar/gocoin/others/blockdb"
 	"github.com/piotrnar/gocoin/others/utils"
 )
