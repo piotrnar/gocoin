@@ -85,7 +85,7 @@ pick_different_e:
 	pkscr[0] = 0x6a // OP_RETURN
 	pkscr[1] = 38 // length
 	pkscr[2] = 0x06 // always 6
-	copy(pkscr[3:7], sha.Sum(nil)[:4])
+	binary.LittleEndian.PutUint32(pkscr[3:7], nonce)
 	copy(pkscr[7:40], ephemkey)
 	res[0] = &btc.TxOut{Pk_script: pkscr}
 
