@@ -600,15 +600,15 @@ func scan_stealth(p string) {
 		fmt.Println("prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
 	}
 
-	d := utils.GetRawData(".stealth")
+	d := utils.GetRawData(common.CFG.StealthKeysFile)
 	if d==nil {
-		fmt.Println("Place the secret scankey in file .stealth")
+		fmt.Println("Place the secret scankey in file", common.CFG.StealthKeysFile)
 		return
 	}
 	//fmt.Println("scansec", hex.EncodeToString(d))
 	expscan := btc.PublicFromPrivate(d, true)
 	if !bytes.Equal(expscan, sa.ScanKey[:]) {
-		fmt.Println("The secret in .stealth does not match scankey from the adress",
+		fmt.Println("The secret in", common.CFG.StealthKeysFile, "does not match scankey from the adress",
 			hex.EncodeToString(expscan))
 		return
 	}
@@ -618,7 +618,7 @@ func scan_stealth(p string) {
 	as := make(map[uint64]*btc.BtcAddr)
 	var ncnt uint
 
-	common.BlockChain.Unspent.ScanStealth(sa, func(eth, txid []byte, vout uint32, scr []byte, val uint64) bool {
+	common.BlockChain.Unspent.ScanStealth(sa, func(eth, txid []byte, vout uint32, scr []byte) bool {
 		if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 			var h160 [20]byte
 			//yes := btc.NewUint256(txid).String()=="9cc90ff2528b49dfd9c53e5e90c98a1fd45d577af7f3a9e7a9f8a86b52fb0280"
@@ -634,7 +634,7 @@ func scan_stealth(p string) {
 				as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
 			}
 			ncnt++
-			/*fmt.Printf("%15s BTC to %s with c=%s", btc.UintToBtc(val),
+			/*fmt.Printf("%s with c=%s",
 				btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
 				hex.EncodeToString(c))
 			fmt.Println()*/

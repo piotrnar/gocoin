@@ -2,8 +2,8 @@ package btc
 
 import (
 	"os"
-	"fmt"
-	"encoding/binary"
+//	"fmt"
+//	"encoding/binary"
 )
 
 
@@ -29,8 +29,6 @@ func NewUnspentDb(dir string, init bool) *UnspentDB {
 		return nil
 	}
 	db.unspent = newUnspentDB(dir+"unspent3"+string(os.PathSeparator), db.unwind.lastBlockHeight)
-
-	fmt.Println("Number of cached stealth outputs:", len(db.unspent.stealthOuts))
 
 	return db
 }
@@ -117,26 +115,6 @@ func (db *UnspentDB) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentT
 	return db.unspent.GetAllUnspent(addr, quick)
 }
 
-
-func (db *UnspentDB) ScanStealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte,uint64)bool) {
-	var remd, rem2, okd uint
-	fmt.Println("Going through", len(db.unspent.stealthOuts), "...")
-	for k, v := range db.unspent.stealthOuts {
-		spend_v := db.unspent.dbN(int(v.dbidx)).Get(v.key)
-		if spend_v==nil {
-			delete(db.unspent.stealthOuts, k)
-			remd++
-		} else if sa.CheckPrefix(v.prefix[:]) {
-			if walk(v.pkey[:], spend_v[0:32], binary.LittleEndian.Uint32(spend_v[32:36]),
-				spend_v[48:], binary.LittleEndian.Uint64(spend_v[36:44])) {
-				okd++
-			} else {
-				delete(db.unspent.stealthOuts, k)
-				rem2++
-			}
-		}
-	}
-	if remd>0 || rem2>0 {
-		fmt.Println(remd, "+", rem2, "stealth outputs have been removed")
-	}
+func (db *UnspentDB) ScanStealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte)bool) {
+	db.unspent.scanstealth(sa, walk)
 }

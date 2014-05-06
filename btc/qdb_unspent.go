@@ -28,14 +28,6 @@ var (
 	MinBrowsableOutValue uint64 = 1e6 // Zero means: browse throutgh all
 )
 
-type stealthRec struct {
-	key qdb.KeyType
-	prefix [4]byte
-	pkey [33]byte
-	dbidx byte
-	//txid []byte
-	//vout uint32
-}
 
 type unspentDb struct {
 	dir string
@@ -45,7 +37,6 @@ type unspentDb struct {
 	nosyncinprogress bool
 	notifyTx TxNotifyFunc
 	lastHeight uint32
-	stealthOuts map[qdb.KeyType] *stealthRec
 }
 
 
@@ -53,7 +44,6 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.lastHeight = lasth
-	db.stealthOuts = make(map[qdb.KeyType] *stealthRec)
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -71,11 +61,11 @@ func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		db.tdb[i], _ = qdb.NewDBrowse(db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
-				idx := stealthIndexTo(k, v)
-				if idx != nil {
-					db.stealthOuts[k] = idx
+				if stealthIndex(v) {
+					return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
+				} else {
+					return 0
 				}
-				return 0
 			})
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
@@ -123,10 +113,8 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 	copy(v[48:], Val_Pk.Pk_script)
 	ind := qdb.KeyType(idx.UIdx())
 	var flgz uint32
-	sidx := stealthIndexTo(ind, v)
-	if sidx != nil {
-		db.stealthOuts[ind] = sidx
-		flgz = qdb.NO_CACHE | qdb.NO_BROWSE
+	if stealthIndex(v) {
+		flgz = qdb.YES_CACHE|qdb.YES_BROWSE
 	} else {
 		if Val_Pk.Value<MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
@@ -143,7 +131,6 @@ func (db *unspentDb) del(idx *TxPrevOut) {
 		db.notifyTx(idx, nil)
 	}
 	key := qdb.KeyType(idx.UIdx())
-	delete(db.stealthOuts, key)
 	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(key)
 }
 
@@ -213,24 +200,21 @@ func (db *unspentDb) commit(changes *BlockChanges) {
 
 
 func (db *unspentDb) stats() (s string) {
-	var tot, cnt, sum uint64
+	var tot, cnt, sum, stealth_cnt uint64
 	for i := range db.tdb {
 		tot += uint64(db.dbN(i).Count())
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			val := binary.LittleEndian.Uint64(v[36:44])
-			/*
-			if val>=10e3*1e8 { // Look for outputs with over 10k BTC on them
-				fmt.Println(val/1e8, "BTC in", binary.LittleEndian.Uint32(v[44:48]), "at",
-					NewUint256(v[0:32]).String(), binary.LittleEndian.Uint32(v[32:36]))
+			if stealthIndex(v) {
+				stealth_cnt++
 			}
-			*/
+			val := binary.LittleEndian.Uint64(v[36:44])
 			sum += val
 			cnt++
 			return 0
 		})
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
-		float64(sum)/1e8, cnt, tot, len(db.stealthOuts))
+		float64(sum)/1e8, cnt, tot, stealth_cnt)
 	s += fmt.Sprintf(" Defrags:%d  Height:%d  NocacheBelow:%d  MinOut:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
 	return
@@ -286,17 +270,25 @@ func (db *unspentDb) idle() bool {
 	return false
 }
 
+func stealthIndex(v []byte) bool {
+	return len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06
+}
 
-func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
-	if len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06 {
-		res = new(stealthRec)
-		vo := binary.LittleEndian.Uint32(v[32:36])
-		res.key = qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1))
-		res.dbidx = v[31] % NumberOfUnspentSubDBs
-		copy(res.prefix[:], v[51:55])
-		copy(res.pkey[:], v[55:])
-		//res.txid = v[:32]
-		//res.vout = vo
+func (db *unspentDb) scanstealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte)bool) {
+	for i := range db.tdb {
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			if stealthIndex(v) {
+				vo := binary.LittleEndian.Uint32(v[32:36])
+				spend_v := db.dbN(i).GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
+				if spend_v==nil {
+					return qdb.NO_CACHE|qdb.NO_BROWSE
+				} else if sa.CheckPrefix(v[51:55]) {
+					if !walk(v[55:], spend_v[0:32], vo+1, spend_v[48:]) {
+						return qdb.NO_CACHE|qdb.NO_BROWSE
+					}
+				}
+			}
+			return 0
+		})
 	}
-	return
 }

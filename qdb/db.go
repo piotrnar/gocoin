@@ -37,10 +37,11 @@ var (
 const (
 	KeySize = 8
 
-	NO_BROWSE = 0x00000001
-	NO_CACHE  = 0x00000002
-	BR_ABORT  = 0x00000004
-	YES_CACHE = 0x00000008
+	NO_BROWSE  = 0x00000001
+	NO_CACHE   = 0x00000002
+	BR_ABORT   = 0x00000004
+	YES_CACHE  = 0x00000008
+	YES_BROWSE = 0x00000010
 )
 
 
@@ -126,7 +127,10 @@ func (db *DB) Count() (l int) {
 func applyBrowsingFlags(res uint32, v *oneIdx) {
 	if (res&NO_BROWSE)!=0 {
 		v.flags |= NO_BROWSE
+	} else if (res&YES_BROWSE)!=0 {
+		v.flags &= NO_BROWSE^0xffffffff
 	}
+
 	if (res&NO_CACHE)!=0 {
 		v.flags |= NO_CACHE
 		v.data = nil
@@ -183,6 +187,20 @@ func (db *DB) Get(key KeyType) (value []byte) {
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	db.mutex.Unlock()
+	return
+}
+
+
+// Use this one inside Browse
+func (db *DB) GetNoMutex(key KeyType) (value []byte) {
+	idx := db.idx.get(key)
+	if idx!=nil {
+		if idx.data == nil {
+			db.loadrec(idx)
+		}
+		value = idx.data
+	}
+	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	return
 }
 
