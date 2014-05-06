@@ -2,6 +2,7 @@ Downloader:
 * Make it to work with gocoion.cfg file
 
 Client:
+* Replace GetAllUnspent() and ScanStealth() with BrowseUTXO()
 * Add support for multiple scan keys in .stealth file
 * Add support for stealth addresses in wallet files
 * Add better support for text messages insode transactions (after OP_RETURN)
