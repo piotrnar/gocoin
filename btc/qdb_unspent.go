@@ -33,8 +33,8 @@ type stealthRec struct {
 	prefix [4]byte
 	pkey [33]byte
 	dbidx byte
-	txid []byte
-	vout uint32
+	//txid []byte
+	//vout uint32
 }
 
 type unspentDb struct {
@@ -295,9 +295,8 @@ func stealthIndexTo(k qdb.KeyType, v []byte) (res *stealthRec) {
 		res.dbidx = v[31] % NumberOfUnspentSubDBs
 		copy(res.prefix[:], v[51:55])
 		copy(res.pkey[:], v[55:])
-		res.txid = v[:32]
-		res.vout = vo
+		//res.txid = v[:32]
+		//res.vout = vo
 	}
 	return
 }
-

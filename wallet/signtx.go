@@ -91,7 +91,7 @@ func write_tx_file(tx *btc.Tx) {
 	tx.Hash = btc.NewSha2Hash(signedrawtx)
 
 	hs := tx.Hash.String()
-	fmt.Println(hs)
+	fmt.Println("TxID", hs)
 
 	f, _ := os.Create(hs[:8]+".txt")
 	if f != nil {

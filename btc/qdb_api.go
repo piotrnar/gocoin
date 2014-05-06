@@ -122,12 +122,13 @@ func (db *UnspentDB) ScanStealth(sa *StealthAddr, walk func([]byte,[]byte,uint32
 	var remd, rem2, okd uint
 	fmt.Println("Going through", len(db.unspent.stealthOuts), "...")
 	for k, v := range db.unspent.stealthOuts {
-		tx := db.unspent.dbN(int(v.dbidx)).Get(v.key)
-		if tx==nil {
+		spend_v := db.unspent.dbN(int(v.dbidx)).Get(v.key)
+		if spend_v==nil {
 			delete(db.unspent.stealthOuts, k)
 			remd++
 		} else if sa.CheckPrefix(v.prefix[:]) {
-			if walk(v.pkey[:], v.txid, v.vout, tx[48:],binary.LittleEndian.Uint64(tx[36:44])) {
+			if walk(v.pkey[:], spend_v[0:32], binary.LittleEndian.Uint32(spend_v[32:36]),
+				spend_v[48:], binary.LittleEndian.Uint64(spend_v[36:44])) {
 				okd++
 			} else {
 				delete(db.unspent.stealthOuts, k)
