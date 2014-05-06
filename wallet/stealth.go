@@ -10,6 +10,7 @@ import (
 )
 
 
+// Thanks @dabura667 - https://bitcointalk.org/index.php?topic=590349.msg6560332#msg6560332
 func stealth_txout(sa *btc.StealthAddr, value uint64) (res []*btc.TxOut) {
 	if sa.Version != btc.StealthAddressVersion(*testnet) {
 		fmt.Println("ERROR: Unsupported version of a stealth address", sa.Version)
