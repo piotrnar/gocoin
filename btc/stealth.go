@@ -165,3 +165,10 @@ func (sa *StealthAddr) CheckPrefix(cur []byte) bool {
 	}
 	return true
 }
+
+
+func (sa *StealthAddr) CheckNonce(payload []byte) bool {
+	sha := sha256.New()
+	sha.Write(payload)
+	return sa.CheckPrefix(sha.Sum(nil)[:4])
+}
