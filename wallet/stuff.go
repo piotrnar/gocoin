@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"strings"
 	"io/ioutil"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/others/utils"
 )
@@ -176,11 +177,15 @@ func dump_prvkey() {
 		}
 		for i := range priv_keys {
 			if publ_addrs[i].Hash160==a.Hash160 {
+				fmt.Println("Public address:", publ_addrs[i].String(), labels[i])
+				fmt.Println("Public hexdump:", hex.EncodeToString(publ_addrs[i].Pubkey))
+				fmt.Println("Public compressed:", len(publ_addrs[i].Pubkey)==33)
 				if len(publ_addrs[i].Pubkey)==33 {
-					fmt.Println(sec2b58com(priv_keys[i]), publ_addrs[i].String(), labels[i])
+					fmt.Println("Private encoded:", sec2b58com(priv_keys[i]))
 				} else {
-					fmt.Println(sec2b58unc(priv_keys[i]), publ_addrs[i].String(), labels[i])
+					fmt.Println("Private encoded:", sec2b58unc(priv_keys[i]))
 				}
+				fmt.Println("Private hexdump:", hex.EncodeToString(priv_keys[i]))
 				return
 			}
 		}

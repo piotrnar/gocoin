@@ -608,8 +608,9 @@ func scan_stealth(p string) {
 	//fmt.Println("scansec", hex.EncodeToString(d))
 	expscan := btc.PublicFromPrivate(d, true)
 	if !bytes.Equal(expscan, sa.ScanKey[:]) {
-		fmt.Println("The secret in", common.CFG.StealthKeysFile, "does not match scankey from the adress",
-			hex.EncodeToString(expscan))
+		fmt.Println("The secret in", common.CFG.StealthKeysFile, "does not match scankey from the adress")
+		fmt.Println(hex.EncodeToString(expscan))
+		fmt.Println(hex.EncodeToString(sa.ScanKey[:]))
 		return
 	}
 
