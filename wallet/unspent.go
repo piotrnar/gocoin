@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"strconv"
 	"strings"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 )
 
@@ -34,6 +35,22 @@ func load_balance(showbalance bool) {
 			lab := ""
 			if len(rst)>1 {
 				lab = rst[1]
+			}
+
+			str := string(l)
+			if sti:=strings.Index(str, "_StealthC:"); sti!=-1 {
+				c, e := hex.DecodeString(str[sti+10:sti+10+64])
+				if e != nil {
+					fmt.Println("ERROR at stealth", txid.String(), vout, e.Error())
+				} else {
+					// add a new key to the wallet
+					sec := btc.DeriveNextPrivate(first_seed[:], c)
+					priv_keys = append(priv_keys, sec)
+					labels = append(labels, lab)
+					pub_key := btc.PublicFromPrivate(sec, true)
+					publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub_key, btc.AddrVerPubkey(*testnet)))
+					compressed_key = append(compressed_key, true) // stealth keys are always compressed
+				}
 			}
 
 			if _, ok := loadedTxs[txid.Hash]; !ok {

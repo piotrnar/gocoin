@@ -26,13 +26,14 @@ var (
 	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
 	ask4pass *bool = flag.Bool("p", false, "Force the wallet to ask for seed password")
 	onlvalid *bool = flag.Bool("o", false, "Process only P2KH outputs that you have a key for")
+	subfee *bool = flag.Bool("f", false, "Substract fee from the first value")
 
 	waltype *uint = flag.Uint("type", 3, "Choose a type of the deterministic wallet (1, 2 or 3)")
 	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
 	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
 
 	// Spending money options
-	fee *float64 = flag.Float64("fee", 0.00001, "Transaction fee")
+	fee *string = flag.String("fee", "0.00001", "Transaction fee")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	batch *string  = flag.String("batch", "", "Send money as per the given batch file (each line: address=amount)")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
@@ -70,12 +71,6 @@ var (
 	totBtc uint64
 
 	verbyte, privver byte  // address version for public and private key
-
-	// set in make_wallet():
-	priv_keys [][]byte
-	labels []string
-	publ_addrs []*btc.BtcAddr
-	compressed_key []bool
 
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64

@@ -35,6 +35,9 @@ func parse_spend() {
 			println("Incorrect amount: ", tmp[1], er.Error())
 			os.Exit(1)
 		}
+		if *subfee {
+			am -= curFee
+		}
 
 		sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
 		spendBtc += am
@@ -86,7 +89,7 @@ func parse_batch() {
 
 
 func send_request() bool {
-	feeBtc = uint64(*fee*1e8)
+	feeBtc = curFee
 	if *send!="" {
 		parse_spend()
 	}

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"io/ioutil"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 func parse_config() {
@@ -78,16 +79,12 @@ func parse_config() {
 			// case "secrand": <-- deprecated
 
 			case "fee":
-				v, e := strconv.ParseFloat(ll[1], 64)
-				if e == nil {
-					if v>=0 {
-						*fee = v
-					} else {
-						println(i, "wallet.cfg: incorrect fee value", v)
-					}
-				} else {
-					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+				fi, e := btc.StringToSatoshis(ll[1])
+				if e != nil {
+					println("wallet.cfg: Incorrect fee value", ll[1])
+					os.Exit(1)
 				}
+				curFee = fi
 
 			case "apply2bal":
 				v, e := strconv.ParseBool(ll[1])
@@ -104,5 +101,13 @@ func parse_config() {
 				RawKeysFilename = ll[1]
 
 		}
+	}
+	if *fee!="" {
+		fi, e := btc.StringToSatoshis(*fee)
+		if e != nil {
+			println("Incorrect fee value", *fee)
+			os.Exit(1)
+		}
+		curFee = fi
 	}
 }

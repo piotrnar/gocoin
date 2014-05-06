@@ -11,7 +11,16 @@ import (
 	"github.com/piotrnar/gocoin/others/utils"
 )
 
-var type2_secret []byte // used to type-2 wallets
+var (
+	type2_secret []byte // used to type-2 wallets
+	first_seed [32]byte
+	// set in make_wallet():
+	priv_keys [][]byte
+	labels []string
+	publ_addrs []*btc.BtcAddr
+	compressed_key []bool
+	curFee uint64
+)
 
 
 func load_others() {
@@ -187,6 +196,11 @@ func make_wallet() {
 			sa.Prefix = []byte{0}
 			fmt.Println(sa.String())
 			return
+		}
+
+		// for stealth keys
+		if i==0 {
+			copy(first_seed[:], prv_key)
 		}
 		compressed_key = append(compressed_key, !*uncompressed)
 		pub := btc.PublicFromPrivate(prv_key, !*uncompressed)
