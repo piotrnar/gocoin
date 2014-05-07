@@ -578,7 +578,7 @@ func list_alerst(p string) {
 }
 
 
-func scan_stealth(p string) {
+func do_scan_stealth(p string, ignore_prefix bool) {
 	sa, _ := btc.NewStealthAddrFromString(p)
 	if sa==nil {
 		fmt.Println("Specify base58 encoded stealth address")
@@ -594,23 +594,36 @@ func scan_stealth(p string) {
 	}
 
 	//fmt.Println("scankey", hex.EncodeToString(sa.ScanKey[:]))
-	if len(sa.Prefix)==0 {
-		fmt.Println("prefix not present in the address")
+	if ignore_prefix {
+		sa.Prefix = []byte{0}
+		fmt.Println("Ignoring Prefix inside the address")
+	} else if len(sa.Prefix)==0 {
+		fmt.Println("Prefix not present in the address")
 	} else {
-		fmt.Println("prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
+		fmt.Println("Prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
 	}
 
-	d := utils.GetRawData(common.CFG.StealthKeysFile)
-	if d==nil {
-		fmt.Println("Place the secret scankey in file", common.CFG.StealthKeysFile)
+	ds := wallet.FetchStealthKeys()
+	if len(ds)==0 {
 		return
 	}
-	//fmt.Println("scansec", hex.EncodeToString(d))
-	expscan := btc.PublicFromPrivate(d, true)
-	if !bytes.Equal(expscan, sa.ScanKey[:]) {
-		fmt.Println("The secret in", common.CFG.StealthKeysFile, "does not match scankey from the adress")
-		fmt.Println(hex.EncodeToString(expscan))
-		fmt.Println(hex.EncodeToString(sa.ScanKey[:]))
+
+	defer func() {
+		for i := range ds {
+			utils.ClearBuffer(ds[i])
+		}
+	}() // clear the keys in mem after all
+
+	var d []byte
+
+	for i := range ds {
+		if bytes.Equal(btc.PublicFromPrivate(ds[i], true), sa.ScanKey[:]) {
+			d = ds[i]
+		}
+	}
+
+	if d==nil {
+		fmt.Println("No matching secret found your wallet/stealth folder")
 		return
 	}
 
@@ -673,6 +686,15 @@ func scan_stealth(p string) {
 }
 
 
+func scan_stealth(p string) {
+	do_scan_stealth(p, false)
+}
+
+func scan_all_stealth(p string) {
+	do_scan_stealth(p, true)
+}
+
+
 func init() {
 	newUi("alerts a", false, list_alerst, "Show received alerts")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
@@ -694,6 +716,7 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("scan", true, scan_stealth, "Get balance of a stealth address")
+	newUi("scan0", true, scan_all_stealth, "Get balance of a stealth address. Ignore the prefix")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("unspent u", true, list_unspent, "Shows unpent outputs for a given address")
 	newUi("wallet wal", true, load_wallet, "Load wallet from given file (or re-load the last one) and display its addrs")

@@ -72,7 +72,6 @@ var (
 		HashrateHours uint
 		UserAgent string
 		PayCommandName string
-		StealthKeysFile string
 	}
 
 	mutex_cfg sync.Mutex
@@ -118,8 +117,6 @@ func init() {
 	CFG.HashrateHours = 6
 	CFG.UserAgent = DefaultUserAgent
 	CFG.PayCommandName = "pay_cmd.txt"
-
-	CFG.StealthKeysFile = ".stealth"
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil {
