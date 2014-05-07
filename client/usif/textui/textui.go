@@ -337,21 +337,69 @@ func blchain_stats(par string) {
 
 func list_unspent(addr string) {
 	fmt.Println("Checking unspent coins for addr", addr)
-	var a[1] *btc.BtcAddr
+	var ad *btc.BtcAddr
 	var e error
-	a[0], e = btc.NewAddrFromString(addr)
+	ad, e = btc.NewAddrFromString(addr)
 	if e != nil {
 		println(e.Error())
 		return
 	}
-	exp_scr := a[0].OutScript()
+	sa := ad.StealthAddr
+	exp_scr := ad.OutScript()
+	var walk btc.FunctionWalkUnspent
 	var unsp btc.AllUnspentTx
-	common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
-		if bytes.Equal(rec.Script(), exp_scr) {
-			unsp = append(unsp, rec.ToUnspent(a[0]))
+
+	if sa==nil {
+		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+			if bytes.Equal(rec.Script(), exp_scr) {
+				unsp = append(unsp, rec.ToUnspent(ad))
+			}
+			return 0
 		}
-		return 0
-	})
+	} else {
+		d := wallet.FindStealthSecret(sa)
+		if d==nil {
+			fmt.Println("No matching secret found your wallet/stealth folder")
+			return
+		}
+		defer utils.ClearBuffer(d)
+
+		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+			if rec.IsStealthIdx() {
+				sth_scr := rec.Script()
+				if !sa.CheckNonce(sth_scr[3:]) {
+					return 0
+				}
+				// get the spending output
+				vo := rec.VOut()
+				spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
+				if spend_v==nil {
+					return btc.WALK_NOMORE
+				}
+				rec = btc.NewWalkRecord(spend_v)
+
+				if rec.IsP2KH() {
+					var h160 [20]byte
+					c := btc.StealthDH(sth_scr[7:40], d)
+					spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+					btc.RimpHash(spen_exp, h160[:])
+					if bytes.Equal(rec.Script()[3:23], h160[:]) {
+						na := btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+						na.Extra = ad.Extra
+						na.Extra.Label += " *STEALTH*"
+						unsp = append(unsp, rec.ToUnspent(na))
+					}
+					return 0
+				} else {
+					println(hex.EncodeToString(rec.Script()))
+					return btc.WALK_NOMORE
+				}
+			}
+			return 0
+		}
+	}
+	common.BlockChain.Unspent.BrowseUTXO(false, walk)
+
 	sort.Sort(unsp)
 	var sum uint64
 	for i := range unsp {
@@ -361,7 +409,7 @@ func list_unspent(addr string) {
 		sum += unsp[i].Value
 	}
 	fmt.Printf("Total %.8f unspent BTC in %d outputs at address %s\n",
-		float64(sum)/1e8, len(unsp), a[0].String());
+		float64(sum)/1e8, len(unsp), ad.String());
 }
 
 func qdb_stats(par string) {
@@ -610,29 +658,12 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		fmt.Println("Prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
 	}
 
-	ds := wallet.FetchStealthKeys()
-	if len(ds)==0 {
-		return
-	}
-
-	defer func() {
-		for i := range ds {
-			utils.ClearBuffer(ds[i])
-		}
-	}() // clear the keys in mem after all
-
-	var d []byte
-
-	for i := range ds {
-		if bytes.Equal(btc.PublicFromPrivate(ds[i], true), sa.ScanKey[:]) {
-			d = ds[i]
-		}
-	}
-
+	d := wallet.FindStealthSecret(sa)
 	if d==nil {
 		fmt.Println("No matching secret found your wallet/stealth folder")
 		return
 	}
+	defer utils.ClearBuffer(d)
 
 	var pos []*btc.TxPrevOut
 	cs := make(map[uint64][]byte)

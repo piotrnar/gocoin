@@ -3,9 +3,9 @@ package wallet
 import (
 	"os"
 	"fmt"
+	"bytes"
 	"io/ioutil"
-	//"encoding/json"
-	//"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -31,6 +31,22 @@ func FetchStealthKeys() (res [][]byte) {
 		fmt.Println("Place secrets of your stealth keys in", dir)
 	} else {
 		fmt.Println(len(res), "stealth keys found in", dir)
+	}
+	return
+}
+
+
+func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
+	ds := FetchStealthKeys()
+	if len(ds)==0 {
+		return
+	}
+	for i := range ds {
+		if d==nil && bytes.Equal(btc.PublicFromPrivate(ds[i], true), sa.ScanKey[:]) {
+			d = ds[i]
+		} else {
+			utils.ClearBuffer(ds[i])
+		}
 	}
 	return
 }
