@@ -128,6 +128,7 @@ func dump_raw_tx() {
 
 	var unsigned int
 
+	fmt.Println("ID:", tx.Hash.String())
 	fmt.Println("Tx Version:", tx.Version)
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) >= 4 && tx.TxIn[0].ScriptSig[0]==3 {
