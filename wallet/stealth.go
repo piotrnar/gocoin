@@ -25,7 +25,7 @@ func stealth_txout(sa *btc.StealthAddr, value uint64) (res []*btc.TxOut) {
 		os.Exit(1)
 	}
 
-	if len(sa.SpendKeys) != 1 {
+	if len(sa.SpendKeys) != 1 || sa.Sigs != 1 {
 		fmt.Println("ERROR: Currently only non-multisig stealth addresses are supported",
 			len(sa.SpendKeys))
 		os.Exit(1)
