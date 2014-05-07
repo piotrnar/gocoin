@@ -115,6 +115,7 @@ func (db *UnspentDB) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentT
 	return db.unspent.GetAllUnspent(addr, quick)
 }
 
-func (db *UnspentDB) ScanStealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte)bool) {
-	db.unspent.scanstealth(sa, walk)
+func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
+	db.unspent.browse(walk, quick)
 }
+

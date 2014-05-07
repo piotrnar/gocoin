@@ -344,7 +344,14 @@ func list_unspent(addr string) {
 		println(e.Error())
 		return
 	}
-	unsp := common.BlockChain.GetAllUnspent(a[:], false)
+	exp_scr := a[0].OutScript()
+	var unsp btc.AllUnspentTx
+	common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		if bytes.Equal(rec.Script(), exp_scr) {
+			unsp = append(unsp, rec.ToUnspent(a[0]))
+		}
+		return 0
+	})
 	sort.Sort(unsp)
 	var sum uint64
 	for i := range unsp {
@@ -632,30 +639,42 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	as := make(map[uint64]*btc.BtcAddr)
 	var ncnt uint
 
-	common.BlockChain.Unspent.ScanStealth(sa, func(eth, txid []byte, vout uint32, scr []byte) bool {
-		if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
-			var h160 [20]byte
-			//yes := btc.NewUint256(txid).String()=="9cc90ff2528b49dfd9c53e5e90c98a1fd45d577af7f3a9e7a9f8a86b52fb0280"
-			c := btc.StealthDH(eth, d)
-			spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
-			btc.RimpHash(spen_exp, h160[:])
-			if bytes.Equal(scr[3:23], h160[:]) {
-				po := new(btc.TxPrevOut)
-				copy(po.Hash[:], txid)
-				po.Vout = vout
-				pos = append(pos, po)
-				cs[po.UIdx()] = c
-				as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		if rec.IsStealthIdx() {
+			sth_scr := rec.Script()
+			if !sa.CheckNonce(sth_scr[3:]) {
+				return 0
 			}
 			ncnt++
-			/*fmt.Printf("%s with c=%s",
-				btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)).String(),
-				hex.EncodeToString(c))
-			fmt.Println()*/
-			return true
-		} else {
-			return false
+
+			// get the spending output
+			vo := rec.VOut()
+			spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
+			if spend_v==nil {
+				return btc.WALK_NOMORE
+			}
+			rec = btc.NewWalkRecord(spend_v)
+
+			if rec.IsP2KH() {
+				var h160 [20]byte
+				c := btc.StealthDH(sth_scr[7:40], d)
+				spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+				btc.RimpHash(spen_exp, h160[:])
+				if bytes.Equal(rec.Script()[3:23], h160[:]) {
+					po := new(btc.TxPrevOut)
+					copy(po.Hash[:], rec.TxID())
+					po.Vout = rec.VOut()
+					pos = append(pos, po)
+					cs[po.UIdx()] = c
+					as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+				}
+				return 0
+			} else {
+				println(hex.EncodeToString(rec.Script()))
+				return btc.WALK_NOMORE
+			}
 		}
+		return 0
 	})
 
 	fmt.Println(len(pos), "outputs, out of", ncnt, "notifications belonged to our wallet")

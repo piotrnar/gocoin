@@ -21,6 +21,8 @@ Eech value is variable length:
 const (
 	prevOutIdxLen = qdb.KeySize
 	NumberOfUnspentSubDBs = 0x10
+
+	SCR_OFFS = 48
 )
 
 var (
@@ -88,15 +90,15 @@ func (db *unspentDb) get(po *TxPrevOut) (res *TxOut, e error) {
 		return
 	}
 
-	if len(val)<48 {
+	if len(val)<SCR_OFFS {
 		panic(fmt.Sprint("unspent record too short:", len(val)))
 	}
 
 	res = new(TxOut)
 	res.Value = binary.LittleEndian.Uint64(val[36:44])
 	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
-	res.Pk_script = make([]byte, len(val)-48)
-	copy(res.Pk_script, val[48:])
+	res.Pk_script = make([]byte, len(val)-SCR_OFFS)
+	copy(res.Pk_script, val[SCR_OFFS:])
 	return
 }
 
@@ -105,12 +107,12 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 	if db.notifyTx!=nil {
 		db.notifyTx(idx, Val_Pk)
 	}
-	v := make([]byte, 48+len(Val_Pk.Pk_script))
+	v := make([]byte, SCR_OFFS+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
 	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
-	copy(v[48:], Val_Pk.Pk_script)
+	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
 	ind := qdb.KeyType(idx.UIdx())
 	var flgz uint32
 	if stealthIndex(v) {
@@ -159,14 +161,14 @@ func (db *unspentDb) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentT
 		addrs := db.buildAddrMap(addr)
 		for i := range db.tdb {
 			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-				scr := v[48:]
+				scr := v[SCR_OFFS:]
 				if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
-						res = append(res, bin2unspent(v[:48], ad))
+						res = append(res, bin2unspent(v[:SCR_OFFS], ad))
 					}
 				} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
 					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[2:2+8])]; ok {
-						res = append(res, bin2unspent(v[:48], ad))
+						res = append(res, bin2unspent(v[:SCR_OFFS], ad))
 					}
 				}
 				return 0
@@ -176,8 +178,8 @@ func (db *unspentDb) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentT
 		for i := range db.tdb {
 			db.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
 				for a := range addr {
-					if addr[a].Owns(v[48:]) {
-						res = append(res, bin2unspent(v[:48], addr[a]))
+					if addr[a].Owns(v[SCR_OFFS:]) {
+						res = append(res, bin2unspent(v[:SCR_OFFS], addr[a]))
 					}
 				}
 				return 0
@@ -271,24 +273,77 @@ func (db *unspentDb) idle() bool {
 }
 
 func stealthIndex(v []byte) bool {
-	return len(v)==48+40 && v[48]==0x6a && v[49]==0x26 && v[50]==0x06
+	return len(v)==SCR_OFFS+40 && v[SCR_OFFS]==0x6a && v[49]==0x26 && v[50]==0x06
 }
 
-func (db *unspentDb) scanstealth(sa *StealthAddr, walk func([]byte,[]byte,uint32,[]byte)bool) {
-	for i := range db.tdb {
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			if stealthIndex(v) {
-				vo := binary.LittleEndian.Uint32(v[32:36])
-				spend_v := db.dbN(i).GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
-				if spend_v==nil {
-					return qdb.NO_CACHE|qdb.NO_BROWSE
-				} else if sa.CheckNonce(v[51:]) {
-					if !walk(v[55:], spend_v[0:32], vo+1, spend_v[48:]) {
-						return qdb.NO_CACHE|qdb.NO_BROWSE
-					}
-				}
-			}
-			return 0
-		})
+
+func (db *unspentDb) browse(walk FunctionWalkUnspent, quick bool) {
+	var i int
+	brfn := func(k qdb.KeyType, v []byte) (fl uint32) {
+		res := walk(db.dbN(i), k, NewWalkRecord(v))
+		if (res&WALK_ABORT)!=0 {
+			fl |= qdb.BR_ABORT
+		}
+		if (res&WALK_NOMORE)!=0 {
+			fl |= qdb.NO_CACHE|qdb.NO_BROWSE
+		}
+		return
 	}
+
+	if quick {
+		for i = range db.tdb {
+			db.dbN(i).Browse(brfn)
+		}
+	} else {
+		for i = range db.tdb {
+			db.dbN(i).BrowseAll(brfn)
+		}
+	}
+}
+
+type OneWalkRecord struct {
+	v []byte
+}
+
+func NewWalkRecord(v []byte) (r *OneWalkRecord) {
+	r = new(OneWalkRecord)
+	r.v = v
+	return
+}
+
+func (r *OneWalkRecord) IsStealthIdx() bool {
+	return len(r.v)==SCR_OFFS+40 &&
+		r.v[SCR_OFFS]==0x6a && r.v[49]==0x26 && r.v[50]==0x06
+}
+
+func (r *OneWalkRecord) IsP2KH() bool {
+	return len(r.v)==SCR_OFFS+25 &&
+		r.v[SCR_OFFS+0]==0x76 && r.v[SCR_OFFS+1]==0xa9 && r.v[SCR_OFFS+2]==0x14 &&
+		r.v[SCR_OFFS+23]==0x88 && r.v[SCR_OFFS+24]==0xac
+}
+
+func (r *OneWalkRecord) IsP2SH() bool {
+	return len(r.v)==SCR_OFFS+23 && r.v[SCR_OFFS+0]==0xa9 && r.v[SCR_OFFS+1]==0x14 && r.v[SCR_OFFS+22]==0x87
+}
+
+func (r *OneWalkRecord) Script() []byte {
+	return r.v[SCR_OFFS:]
+}
+
+func (r *OneWalkRecord) VOut() uint32 {
+	return binary.LittleEndian.Uint32(r.v[32:36])
+}
+
+func (r *OneWalkRecord) TxID() []byte {
+	return r.v[0:32]
+}
+
+func (r *OneWalkRecord) ToUnspent(ad *BtcAddr) (nr *OneUnspentTx) {
+	nr = new(OneUnspentTx)
+	copy(nr.TxPrevOut.Hash[:], r.v[0:32])
+	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(r.v[32:36])
+	nr.Value = binary.LittleEndian.Uint64(r.v[36:44])
+	nr.MinedAt = binary.LittleEndian.Uint32(r.v[44:48])
+	nr.BtcAddr = ad
+	return
 }
