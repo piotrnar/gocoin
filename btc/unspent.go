@@ -40,6 +40,9 @@ func (ou *OneUnspentTx) String() (s string) {
 	if ou.BtcAddr!=nil {
 		s += "  " + ou.BtcAddr.StringLab()
 	}
+	if ou.StealthC!=nil {
+		s += "  *STEALTH*"
+	}
 	if ou.MinedAt != 0 {
 		s += fmt.Sprint("  ", ou.MinedAt)
 	}

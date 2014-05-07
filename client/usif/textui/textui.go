@@ -365,37 +365,11 @@ func list_unspent(addr string) {
 		defer utils.ClearBuffer(d)
 
 		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
-			if rec.IsStealthIdx() {
-				sth_scr := rec.Script()
-				if !sa.CheckNonce(sth_scr[3:]) {
-					return 0
-				}
-				// get the spending output
-				vo := rec.VOut()
-				spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
-				if spend_v==nil {
-					return btc.WALK_NOMORE
-				}
-				rec = btc.NewWalkRecord(spend_v)
-
-				if rec.IsP2KH() {
-					var h160 [20]byte
-					c := btc.StealthDH(sth_scr[7:40], d)
-					spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
-					btc.RimpHash(spen_exp, h160[:])
-					if bytes.Equal(rec.Script()[3:23], h160[:]) {
-						na := btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
-						na.Extra = ad.Extra
-						na.Extra.Label += " *STEALTH*"
-						unsp = append(unsp, rec.ToUnspent(na))
-					}
-					return 0
-				} else {
-					println(hex.EncodeToString(rec.Script()))
-					return btc.WALK_NOMORE
-				}
+			fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
+			if uo!=nil {
+				unsp = append(unsp, uo)
 			}
-			return 0
+			return fl
 		}
 	}
 	common.BlockChain.Unspent.BrowseUTXO(false, walk)
@@ -665,69 +639,16 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	}
 	defer utils.ClearBuffer(d)
 
-	var pos []*btc.TxPrevOut
-	cs := make(map[uint64][]byte)
-	as := make(map[uint64]*btc.BtcAddr)
-	var ncnt uint
+	var unsp btc.AllUnspentTx
 
 	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
-		if rec.IsStealthIdx() {
-			sth_scr := rec.Script()
-			if !sa.CheckNonce(sth_scr[3:]) {
-				return 0
-			}
-			ncnt++
-
-			// get the spending output
-			vo := rec.VOut()
-			spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
-			if spend_v==nil {
-				return btc.WALK_NOMORE
-			}
-			rec = btc.NewWalkRecord(spend_v)
-
-			if rec.IsP2KH() {
-				var h160 [20]byte
-				c := btc.StealthDH(sth_scr[7:40], d)
-				spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
-				btc.RimpHash(spen_exp, h160[:])
-				if bytes.Equal(rec.Script()[3:23], h160[:]) {
-					po := new(btc.TxPrevOut)
-					copy(po.Hash[:], rec.TxID())
-					po.Vout = rec.VOut()
-					pos = append(pos, po)
-					cs[po.UIdx()] = c
-					as[po.UIdx()] = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
-				}
-				return 0
-			} else {
-				println(hex.EncodeToString(rec.Script()))
-				return btc.WALK_NOMORE
-			}
+		fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
+		if uo!=nil {
+			unsp = append(unsp, uo)
 		}
-		return 0
+		return fl
 	})
 
-	fmt.Println(len(pos), "outputs, out of", ncnt, "notifications belonged to our wallet")
-
-	var unsp btc.AllUnspentTx
-	for i := range pos {
-		po, e := common.BlockChain.Unspent.UnspentGet(pos[i])
-		if e != nil {
-			println("UnspentGet:", e.Error())
-			println("This should not happen - please, report a bug.")
-			println("You can probably fix it by launching the client with -rescan")
-			os.Exit(1)
-		}
-		//fmt.Println(btc.NewUint256(pos[i].Hash[:]), pos[i].Vout+1, hex.EncodeToString(cs[pos[i].UIdx()]))
-		one := &btc.OneUnspentTx{
-			TxPrevOut: *pos[i],
-			Value: po.Value,
-			MinedAt: po.BlockHeight,
-			BtcAddr: as[pos[i].UIdx()],
-			StealthC: cs[pos[i].UIdx()]}
-		unsp = append(unsp, one)
-	}
 	sort.Sort(unsp)
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)

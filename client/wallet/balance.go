@@ -199,9 +199,8 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 			txid := btc.NewUint256(mybal[i].TxPrevOut.Hash[:])
 
 			// Store the unspent line in balance/unspent.txt
-			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, %d confs", mybal[i].TxPrevOut.String(),
-				float64(mybal[i].Value)/1e8, mybal[i].BtcAddr.StringLab(),
-				1+common.Last.Block.Height-mybal[i].MinedAt)
+			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, block %d", mybal[i].TxPrevOut.String(),
+				float64(mybal[i].Value)/1e8, mybal[i].BtcAddr.StringLab(), mybal[i].MinedAt)
 			if mybal[i].StealthC!=nil {
 				fmt.Fprint(utxt, ", _StealthC:", hex.EncodeToString(mybal[i].StealthC))
 			}
