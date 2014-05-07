@@ -120,7 +120,7 @@ func StealthDH(pub, priv []byte) []byte {
 
 	s := sha256.New()
 	s.Write([]byte{0x03})
-	s.Write(res[:])
+	s.Write(res[1:])
 	return s.Sum(nil)
 }
 
