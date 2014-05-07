@@ -15,9 +15,9 @@ type BtcAddr struct {
 	Pubkey []byte
 	Enc58str string
 
-	*StealthAddr // if this is not nil, means that this is aa stealth address
+	*StealthAddr // if this is not nil, means that this is a stealth address
 
-	// This is normally not used, unless for GetAllUnspent() purposes
+	// This is used only by the client
 	Extra struct {
 		Label string
 		Wallet string

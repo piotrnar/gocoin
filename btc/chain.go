@@ -108,14 +108,6 @@ func (ch *Chain) Close() {
 }
 
 
-// Returns list of unspent output from given address
-// In the quick mode we only look for: 76 a9 14 [HASH160] 88 AC
-func (ch *Chain) GetAllUnspent(addr []*BtcAddr, quick bool) AllUnspentTx {
-	unsp := ch.Unspent.GetAllUnspent(addr, quick)
-	return unsp
-}
-
-
 // Returns true if we are on Testnet3 chain
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works

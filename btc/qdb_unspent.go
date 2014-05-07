@@ -148,48 +148,6 @@ func bin2unspent(v []byte, ad *BtcAddr) (nr *OneUnspentTx) {
 }
 
 
-func (db *unspentDb) buildAddrMap(addr []*BtcAddr) (addrs map[uint64]*BtcAddr) {
-	addrs = make(map[uint64]*BtcAddr, len(addr))
-	for i := range addr {
-		addrs[binary.LittleEndian.Uint64(addr[i].Hash160[0:8])] = addr[i]
-	}
-	return
-}
-
-func (db *unspentDb) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentTx) {
-	if quick {
-		addrs := db.buildAddrMap(addr)
-		for i := range db.tdb {
-			db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-				scr := v[SCR_OFFS:]
-				if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
-					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[3:3+8])]; ok {
-						res = append(res, bin2unspent(v[:SCR_OFFS], ad))
-					}
-				} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
-					if ad, ok := addrs[binary.LittleEndian.Uint64(scr[2:2+8])]; ok {
-						res = append(res, bin2unspent(v[:SCR_OFFS], ad))
-					}
-				}
-				return 0
-			})
-		}
-	} else {
-		for i := range db.tdb {
-			db.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
-				for a := range addr {
-					if addr[a].Owns(v[SCR_OFFS:]) {
-						res = append(res, bin2unspent(v[:SCR_OFFS], addr[a]))
-					}
-				}
-				return 0
-			})
-		}
-	}
-	return
-}
-
-
 func (db *unspentDb) commit(changes *BlockChanges) {
 	// Now ally the unspent changes
 	for k, v := range changes.AddedTxs {

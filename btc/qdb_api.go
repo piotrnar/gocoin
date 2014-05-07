@@ -111,11 +111,6 @@ func (db *UnspentDB) UnspentGet(po *TxPrevOut) (res *TxOut, e error) {
 	return db.unspent.get(po)
 }
 
-func (db *UnspentDB) GetAllUnspent(addr []*BtcAddr, quick bool) (res AllUnspentTx) {
-	return db.unspent.GetAllUnspent(addr, quick)
-}
-
 func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 	db.unspent.browse(walk, quick)
 }
-

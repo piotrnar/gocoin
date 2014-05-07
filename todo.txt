@@ -1,18 +1,16 @@
-Downloader:
-* Make it to work with gocoion.cfg file
-
 Client:
-* Replace GetAllUnspent() and ScanStealth() with BrowseUTXO()
-* Add support for multiple scan keys in .stealth file
-* Add support for stealth addresses in wallet files
-* Add better support for text messages insode transactions (after OP_RETURN)
+* Add support for realtime tracing of stealth addresses balance
+* Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
-
-Core lib:
-* Try to make own (faster) implementation of sha256 and rimp160
-* The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Wallet:
 * Not brute force the nonce for stealth address prefix?
 * Do not update changes to balance/unspent.txt if a signing was not complete
+
+Downloader:
+* Make it to work with gocoion.cfg file
+
+Core lib:
+* Try to make own (faster) implementation of sha256 and rimp160
+* The best chain should be decided on the amount of hashing work, not the length - SetBestChain()

@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -245,6 +246,10 @@ func UpdateBalance() {
 	}
 
 	for i := range MyWallet.Addrs {
+		if MyWallet.Addrs[i].StealthAddr!=nil {
+			continue // Ignore stealth addresses for now
+		}
+
 		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
 			rec.InWallet = true
 			for j := range CacheUnspent[rec.CacheIndex].AllUnspentTx {
@@ -263,7 +268,23 @@ func UpdateBalance() {
 	if len(tofetch)>0 {
 		//fmt.Println("Fetching a new blance for", len(tofetch))
 		// There are new addresses which we have not monitored yet
-		new_addrs := common.BlockChain.GetAllUnspent(tofetch, true)
+		var new_addrs btc.AllUnspentTx
+		addrs := make(map[uint64]*btc.BtcAddr, len(tofetch))
+		for i := range tofetch {
+			addrs[binary.LittleEndian.Uint64(tofetch[i].Hash160[:8])] = tofetch[i]
+		}
+		common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+			if rec.IsP2KH() {
+				if ad, ok := addrs[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
+					new_addrs = append(new_addrs, rec.ToUnspent(ad))
+				}
+			} else if rec.IsP2SH() {
+				if ad, ok := addrs[binary.LittleEndian.Uint64(rec.Script()[2:2+8])]; ok {
+					new_addrs = append(new_addrs, rec.ToUnspent(ad))
+				}
+			}
+			return 0
+		})
 		for i := range new_addrs {
 			rec := CachedAddrs[new_addrs[i].BtcAddr.Hash160]
 			rec.Value += new_addrs[i].Value
