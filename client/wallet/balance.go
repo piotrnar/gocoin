@@ -201,8 +201,9 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 			txid := btc.NewUint256(mybal[i].TxPrevOut.Hash[:])
 
 			// Store the unspent line in balance/unspent.txt
-			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s, block %d", mybal[i].TxPrevOut.String(),
-				float64(mybal[i].Value)/1e8, mybal[i].BtcAddr.StringLab(), mybal[i].MinedAt)
+			fmt.Fprintf(utxt, "%s # %.8f BTC @ %s%s, block %d", mybal[i].TxPrevOut.String(),
+				float64(mybal[i].Value)/1e8, mybal[i].DestinationAddr, mybal[i].BtcAddr.Label(),
+				mybal[i].MinedAt)
 			if mybal[i].StealthC!=nil {
 				fmt.Fprint(utxt, ", _StealthC:", hex.EncodeToString(mybal[i].StealthC))
 			}
@@ -237,9 +238,10 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 func UpdateBalance() {
 	var tofetch_stealh []*btc.StealthAddr
 	var tofetch_secrets [][]byte
-	var stealth_secrets [][]byte
 	var skip_stealths bool
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
+
+	FetchStealthKeys()
 
 	mutex_bal.Lock()
 	defer mutex_bal.Unlock()
@@ -264,18 +266,13 @@ func UpdateBalance() {
 			if MyWallet.Addrs[i].StealthAddr==nil {
 				tofetch_regular[MyWallet.Addrs[i].AIdx()] = MyWallet.Addrs[i]
 			} else if !skip_stealths {
-				if stealth_secrets==nil {
-					stealth_secrets = FetchStealthKeys()
-					skip_stealths = len(stealth_secrets)==0
-				}
-
 				sa := MyWallet.Addrs[i].StealthAddr
 				for j:=0; ; { // check if we have a matching stealth secret
-					if bytes.Equal(btc.PublicFromPrivate(stealth_secrets[j], true), sa.ScanKey[:]) {
+					if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[j], true), sa.ScanKey[:]) {
 						tofetch_stealh = append(tofetch_stealh, sa)
-						tofetch_secrets = append(tofetch_secrets, stealth_secrets[j])
+						tofetch_secrets = append(tofetch_secrets, StealthSecrets[j])
 						break
-					} else if j==len(stealth_secrets)-1 {
+					} else if j==len(StealthSecrets)-1 {
 						fmt.Println("No matching secret for", sa.String())
 						add_it = false
 						break
@@ -288,12 +285,6 @@ func UpdateBalance() {
 				CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
 			}
 		}
-	}
-	if stealth_secrets!=nil {
-		for i := range stealth_secrets {
-			utils.ClearBuffer(stealth_secrets[i])
-		}
-		stealth_secrets = nil
 	}
 
 	if len(tofetch_regular)>0 || len(tofetch_stealh)>0 {
@@ -340,21 +331,23 @@ func UpdateBalance() {
 				continue
 			}
 
-			rec := CachedAddrs[new_addrs[i].BtcAddr.Hash160]
+			var rec *OneCachedAddrBalance
+			if new_addrs[i].BtcAddr.StealthAddr!=nil {
+				var h160 [20]byte
+				copy(h160[:], new_addrs[i].BtcAddr.StealthAddr.Hash160())
+				rec = CachedAddrs[h160]
+			} else {
+				rec = CachedAddrs[new_addrs[i].BtcAddr.Hash160]
+			}
 			if rec==nil {
-				panic("This should not happen")
+				println("Hash160 not in CachedAddrs for", new_addrs[i].BtcAddr.String())
+				continue
 			}
 			rec.Value += new_addrs[i].Value
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, new_addrs[i])
 			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
 		}
 		MyBalance = append(MyBalance, new_addrs...)
-	}
-
-	if stealth_secrets!=nil {
-		for i := range stealth_secrets {
-			utils.ClearBuffer(stealth_secrets[i])
-		}
 	}
 
 	sort_and_sum()

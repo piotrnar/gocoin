@@ -358,6 +358,7 @@ func list_unspent(addr string) {
 			return 0
 		}
 	} else {
+		wallet.FetchStealthKeys()
 		d := wallet.FindStealthSecret(sa)
 		if d==nil {
 			fmt.Println("No matching secret found your wallet/stealth folder")
@@ -448,7 +449,7 @@ func load_wallet(fn string) {
 	}
 
 	for i := range wallet.MyWallet.Addrs {
-		fmt.Println(" ", wallet.MyWallet.Addrs[i].StringLab())
+		fmt.Println(" ", wallet.MyWallet.Addrs[i].String(), wallet.MyWallet.Addrs[i].Label())
 	}
 }
 
@@ -636,6 +637,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		fmt.Println("Prefix", sa.Prefix[0], hex.EncodeToString(sa.Prefix[1:]))
 	}
 
+	wallet.FetchStealthKeys()
 	d := wallet.FindStealthSecret(sa)
 	if d==nil {
 		fmt.Println("No matching secret found your wallet/stealth folder")

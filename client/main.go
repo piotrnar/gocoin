@@ -41,6 +41,7 @@ func contains_message(tx *btc.Tx) []byte {
 
 
 func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
+	wallet.FetchStealthKeys()
 	sta := time.Now()
 	e = common.BlockChain.AcceptBlock(bl)
 	if e == nil {

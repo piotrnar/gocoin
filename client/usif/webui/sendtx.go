@@ -176,9 +176,9 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		fz, _ := zi.Create("balance/unspent.txt")
 		for i := range thisbal {
-			fmt.Fprintf(fz, "%s # %.8f BTC @ %s, %d confs\n", thisbal[i].TxPrevOut.String(),
-				float64(thisbal[i].Value)/1e8, thisbal[i].BtcAddr.StringLab(),
-				1+common.Last.Block.Height-thisbal[i].MinedAt)
+			fmt.Fprintf(fz, "%s # %.8f BTC @ %s%s, %d confs\n", thisbal[i].TxPrevOut.String(),
+				float64(thisbal[i].Value)/1e8, thisbal[i].BtcAddr.String(),
+				thisbal[i].BtcAddr.Label(), 1+common.Last.Block.Height-thisbal[i].MinedAt)
 		}
 
 		if len(addrs_to_msign) > 0 {

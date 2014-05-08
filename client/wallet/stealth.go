@@ -11,7 +11,18 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-func FetchStealthKeys() (res [][]byte) {
+var StealthSecrets [][]byte
+
+
+func FreeStealthSecrets() {
+	for i:=range StealthSecrets {
+		utils.ClearBuffer(StealthSecrets[i])
+	}
+	StealthSecrets = nil
+}
+
+func FetchStealthKeys() {
+	FreeStealthSecrets()
 	dir := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"stealth"+string(os.PathSeparator)
 	fis, er := ioutil.ReadDir(dir)
 	if er == nil {
@@ -21,32 +32,27 @@ func FetchStealthKeys() (res [][]byte) {
 				if len(d)!=32 {
 					fmt.Println("Error reading key from", dir+fis[i].Name(), len(d))
 				} else {
-					res = append(res, d)
+					StealthSecrets = append(StealthSecrets, d)
 				}
 			}
 		}
 	} else {
 		println("ioutil.ReadDir", er.Error())
 	}
-	if len(res)==0 {
+	if len(StealthSecrets)==0 {
 		fmt.Println("Place secrets of your stealth keys in", dir)
 	} else {
-		fmt.Println(len(res), "stealth keys found in", dir)
+		fmt.Println(len(StealthSecrets), "stealth keys found in", dir)
 	}
 	return
 }
 
 
 func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
-	ds := FetchStealthKeys()
-	if len(ds)==0 {
-		return
-	}
-	for i := range ds {
-		if d==nil && bytes.Equal(btc.PublicFromPrivate(ds[i], true), sa.ScanKey[:]) {
-			d = ds[i]
+	for i := range StealthSecrets {
+		if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[i], true), sa.ScanKey[:]) {
+			return StealthSecrets[i]
 		}
-		utils.ClearBuffer(ds[i])
 	}
 	return
 }
@@ -68,8 +74,11 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 				spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
 				btc.RimpHash(spen_exp, h160[:])
 				if bytes.Equal(rec.Script()[3:23], h160[:]) {
-					uo = rec.ToUnspent(btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)))
+					adr := btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+					uo = rec.ToUnspent(adr)
+					adr.StealthAddr = sa
 					uo.StealthC = c
+					uo.DestinationAddr = "@"+uo.DestinationAddr // mark as stealth
 				}
 			} else {
 				fl = btc.WALK_NOMORE
