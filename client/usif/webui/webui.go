@@ -10,7 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"path/filepath"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/others/ver"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -129,7 +129,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := load_template("page_head.html")
-	s = strings.Replace(s, "{VERSION}", btc.SourcesTag, 1)
+	s = strings.Replace(s, "{VERSION}", ver.SourcesTag, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
 	if r.URL.Path!="/" {
 		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[1:], 1)
