@@ -1,5 +1,6 @@
-0.9.12
+0.9.12 - 2014-05-08
 * First support for stealth addresses (check client's TextUI command "scan")
+* Further refactor of the entire repo
 
 0.9.11 - 2014-05-05
 * Huge refactor of the entire repo
@@ -10,7 +11,7 @@
 * Wallet: can generate a stealth address. Use "-scankey <key>". Uses the first private key for spend.
 * Wallet: now you can specify/overwrite the path to the secret files, in the configuration file
 
-0.9.9 - 2014-04-30
+0.9.9 - 2014-04-30 *LAST_STABLE*
 * Wallet: if you specify "-msg <text>" parameter it adds a null output with the text to the tx
 * Client: fixed a crash when loading a transaction with an output that has no standard address
 * Client: proper removing (from the memory pool) transactions altered by the malleability
