@@ -90,6 +90,13 @@ func main() {
 
 	parse_config()
 	flag.Parse()
+	if *fee!="" {
+		var e error
+		if curFee, e = btc.StringToSatoshis(*fee); e != nil {
+			println("Incorrect fee value", *fee)
+			os.Exit(1)
+		}
+	}
 
 	if *dumptxfn!="" {
 		//load_balance(false)
