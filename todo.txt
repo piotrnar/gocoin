@@ -1,3 +1,4 @@
+Fix realtime address update when receiving a second outpyt for a stealth addrs
 Allow to do multisig -> stealth spending
 
 Client:
