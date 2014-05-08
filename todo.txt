@@ -1,5 +1,6 @@
+Allow to do multisig -> stealth spending
+
 Client:
-* Add support for realtime updatng of stealth addresses balance
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
