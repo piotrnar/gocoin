@@ -52,7 +52,7 @@ func (ou *OneUnspentTx) String() (s string) {
 func (ou *OneUnspentTx) UnspentTextLine() (s string) {
 	s = fmt.Sprintf("%s # %.8f BTC @ %s%s, block %d", ou.TxPrevOut.String(),
 		float64(ou.Value)/1e8, ou.DestinationAddr, ou.BtcAddr.Label(), ou.MinedAt)
-	if ou!=nil {
+	if ou.StealthC!=nil {
 		s += ", _StealthC:" + hex.EncodeToString(ou.StealthC)
 	}
 	return
