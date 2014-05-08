@@ -15,7 +15,7 @@ type OneUnspentTx struct {
 	MinedAt uint32
 	*BtcAddr
 	StealthC []byte
-	DestinationAddr string
+	destAddr string
 }
 
 func (x AllUnspentTx) Len() int {
@@ -40,7 +40,11 @@ func (x AllUnspentTx) Swap(i, j int) {
 func (ou *OneUnspentTx) String() (s string) {
 	s = fmt.Sprintf("%15.8f  ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
 	if ou.BtcAddr!=nil {
-		s += " " + ou.DestinationAddr + ou.BtcAddr.Label()
+		s += " "
+		if ou.StealthC!=nil {
+			s += "@"
+		}
+		s += ou.destAddr + ou.BtcAddr.Label()
 	}
 	if ou.MinedAt != 0 {
 		s += fmt.Sprint("  ", ou.MinedAt)
@@ -51,9 +55,16 @@ func (ou *OneUnspentTx) String() (s string) {
 
 func (ou *OneUnspentTx) UnspentTextLine() (s string) {
 	s = fmt.Sprintf("%s # %.8f BTC @ %s%s, block %d", ou.TxPrevOut.String(),
-		float64(ou.Value)/1e8, ou.DestinationAddr, ou.BtcAddr.Label(), ou.MinedAt)
+		float64(ou.Value)/1e8, ou.destAddr, ou.BtcAddr.Label(), ou.MinedAt)
 	if ou.StealthC!=nil {
 		s += ", _StealthC:" + hex.EncodeToString(ou.StealthC)
 	}
 	return
+}
+
+func (ou *OneUnspentTx) DestAddr() (string) {
+	if ou.destAddr=="" {
+		return ou.BtcAddr.String()
+	}
+	return ou.destAddr
 }

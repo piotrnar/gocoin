@@ -102,7 +102,8 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 					uo = rec.ToUnspent(adr)
 					adr.StealthAddr = sa
 					uo.StealthC = c
-					uo.DestinationAddr = "@"+uo.DestinationAddr // mark as stealth
+					// TODO: reciver a proper label here
+					println("TODO: reciver a proper label here")
 				}
 			} else {
 				fl = btc.WALK_NOMORE

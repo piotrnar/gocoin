@@ -275,7 +275,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			row = strings.Replace(row, "{TX_SIGSIZ}", fmt.Sprint(estimated_sig_size), -1)
 			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(wallet.MyBalance[i].Value)/1e8), 1)
 			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(wallet.MyBalance[i].Value), 1)
-			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].DestinationAddr, 1)
+			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].DestAddr(), 1)
 			row = strings.Replace(row, "<!--BTC_ADDR_TITLE-->", wallet.MyBalance[i].BtcAddr.String(), 1)
 			wal = templ_add(wal, "<!--UTXOROW-->", row)
 		}
