@@ -233,7 +233,8 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 
 
 func UpdateBalance() {
-	var tofetch []*btc.BtcAddr
+	var tofetch_stealh []*btc.StealthAddr
+	tofetch_regular := make(map[uint64]*btc.BtcAddr)
 
 	mutex_bal.Lock()
 	defer mutex_bal.Unlock()
@@ -245,10 +246,6 @@ func UpdateBalance() {
 	}
 
 	for i := range MyWallet.Addrs {
-		if MyWallet.Addrs[i].StealthAddr!=nil {
-			continue // Ignore stealth addresses for now
-		}
-
 		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
 			rec.InWallet = true
 			for j := range CacheUnspent[rec.CacheIndex].AllUnspentTx {
@@ -260,32 +257,46 @@ func UpdateBalance() {
 			// Add a new address to the balance cache
 			CachedAddrs[MyWallet.Addrs[i].Hash160] = &OneCachedAddrBalance{InWallet:true, CacheIndex:uint(len(CacheUnspent))}
 			CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
-			tofetch = append(tofetch, MyWallet.Addrs[i])
+			if MyWallet.Addrs[i].StealthAddr==nil {
+				tofetch_regular[MyWallet.Addrs[i].AIdx()] = MyWallet.Addrs[i]
+			} else {
+				tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i].StealthAddr)
+			}
 		}
 	}
 
-	if len(tofetch)>0 {
-		//fmt.Println("Fetching a new blance for", len(tofetch))
+	if len(tofetch_regular)>0 || len(tofetch_stealh)>0 {
+		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
 		var new_addrs btc.AllUnspentTx
-		addrs := make(map[uint64]*btc.BtcAddr, len(tofetch))
-		for i := range tofetch {
-			addrs[binary.LittleEndian.Uint64(tofetch[i].Hash160[:8])] = tofetch[i]
-		}
+		var ste uint
+
 		common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
 			if rec.IsP2KH() {
-				if ad, ok := addrs[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
+				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
 					new_addrs = append(new_addrs, rec.ToUnspent(ad))
 				}
 			} else if rec.IsP2SH() {
-				if ad, ok := addrs[binary.LittleEndian.Uint64(rec.Script()[2:2+8])]; ok {
+				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[2:2+8])]; ok {
 					new_addrs = append(new_addrs, rec.ToUnspent(ad))
 				}
+			} else if rec.IsStealthIdx() {
+				ste++
 			}
 			return 0
 		})
+		fmt.Println(ste, "stealth recodrs found")
 		for i := range new_addrs {
+			poi := po2idx(&new_addrs[i].TxPrevOut)
+			if _, ok := CacheUnspentIdx[poi]; ok {
+				fmt.Println(new_addrs[i].TxPrevOut.String(), "- already on the list")
+				continue
+			}
+
 			rec := CachedAddrs[new_addrs[i].BtcAddr.Hash160]
+			if rec==nil {
+				panic("This should not happen")
+			}
 			rec.Value += new_addrs[i].Value
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, new_addrs[i])
 			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
@@ -336,7 +347,7 @@ func FetchAllBalances() {
 				fpath := dir + fis[i].Name()
 				//println("pre-cache wallet", fpath)
 				if MyWallet==nil {
-					LoadWallet(fpath)
+					MyWallet = NewWallet(fpath)
 				} else {
 					tmp := NewWallet(fpath)
 					for an := range tmp.Addrs {

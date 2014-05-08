@@ -3,8 +3,6 @@ package btc
 import "runtime"
 
 const(
-	SourcesTag = "0.9.12"
-
 	MAX_BLOCK_SIZE = 1e6
 	COIN = 1e8
 	MAX_MONEY = 21000000 * COIN

@@ -5,13 +5,14 @@ import (
 	"sync"
 	"time"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/others/ver"
 )
 
 const (
 	ConfigFile = "gocoin.conf"
 
 	Version = 70001
-	DefaultUserAgent = "/Gocoin:"+btc.SourcesTag+"/"
+	DefaultUserAgent = "/Gocoin:"+ver.SourcesTag+"/"
 	Services = uint64(0x00000001)
 
 	MaxCachedBlocks = 600

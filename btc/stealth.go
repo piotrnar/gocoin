@@ -5,6 +5,7 @@ import (
 	"errors"
 	"crypto/sha256"
 	"github.com/piotrnar/gocoin/secp256k1"
+	"code.google.com/p/go.crypto/ripemd160"
 )
 
 
@@ -93,7 +94,7 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 }
 
 
-func (a *StealthAddr) String() (string) {
+func (a *StealthAddr) Bytes(checksum bool) []byte {
 	b := new(bytes.Buffer)
 	b.WriteByte(a.Version)
 	b.WriteByte(a.Options)
@@ -104,9 +105,24 @@ func (a *StealthAddr) String() (string) {
 	}
 	b.WriteByte(a.Sigs)
 	b.Write(a.Prefix)
-	sh := Sha2Sum(b.Bytes())
-	b.Write(sh[:4])
-	return Encodeb58(b.Bytes())
+	if checksum {
+		sh := Sha2Sum(b.Bytes())
+		b.Write(sh[:4])
+	}
+	return b.Bytes()
+}
+
+
+func (a *StealthAddr) String() (string) {
+	return Encodeb58(a.Bytes(true))
+}
+
+
+// Calculate a unique 200-bits long hash of the address
+func (a *StealthAddr) Hash160() []byte {
+	rim := ripemd160.New()
+	rim.Write(a.Bytes(false))
+	return rim.Sum(nil)
 }
 
 

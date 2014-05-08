@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"flag"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/others/ver"
 )
 
 var (
@@ -78,7 +79,7 @@ var (
 
 func main() {
 	// Print the logo to stderr
-	println("Gocoin Wallet version", btc.SourcesTag)
+	println("Gocoin Wallet version", ver.SourcesTag)
 	println("This program comes with ABSOLUTELY NO WARRANTY")
 	println()
 

@@ -5,14 +5,15 @@ import (
 	"errors"
 	"math/big"
 	"encoding/hex"
+	"encoding/binary"
 )
 
 
 type BtcAddr struct {
 	Version byte
-	Hash160 [20]byte
-	Checksum []byte
-	Pubkey []byte
+	Hash160 [20]byte // For a stealth address: it's HASH160
+	Checksum []byte  // Unused for a stealth address
+	Pubkey []byte    // Unused for a stealth address
 	Enc58str string
 
 	*StealthAddr // if this is not nil, means that this is a stealth address
@@ -56,8 +57,7 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 		}
 		a = new(BtcAddr)
 		a.Version = sa.Version
-		a.Checksum = make([]byte, 4)
-		copy(a.Checksum, dec[21:25])
+		copy(a.Hash160[:], sa.Hash160())
 		a.Enc58str = hs
 		a.StealthAddr = sa
 	}
@@ -211,6 +211,12 @@ func (a *BtcAddr) OutScript() (res []byte) {
 	}
 	return
 }
+
+
+func (a *BtcAddr) AIdx() (uint64) {
+	return binary.LittleEndian.Uint64(a.Hash160[:8])
+}
+
 
 var b58set []byte = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 

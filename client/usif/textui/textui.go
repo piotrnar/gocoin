@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/ver"
 	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
@@ -186,7 +187,7 @@ func show_info(par string) {
 		"   NumGC:", gs.NumGC,
 		"   PauseTotal:", gs.PauseTotal.String())
 
-	fmt.Println("Gocoin:", btc.SourcesTag,
+	fmt.Println("Gocoin:", ver.SourcesTag,
 		"  Threads:", btc.UseThreads,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
