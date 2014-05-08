@@ -44,7 +44,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 
-		wallet.LockBal()
+		wallet.BalanceMutex.Lock()
 		for i:=1; i<=int(outcnt); i++ {
 			is := fmt.Sprint(i)
 			if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
@@ -85,7 +85,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		wallet.UnlockBal()
+		wallet.BalanceMutex.Unlock()
 
 		for i:=1; ; i++ {
 			adridx := fmt.Sprint("adr", i)
@@ -240,7 +240,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("send.html")
 
-	wallet.LockBal()
+	wallet.BalanceMutex.Lock()
 	if wallet.MyWallet!=nil && len(wallet.MyBalance)>0 {
 		wal := load_template("send_wal.html")
 		row_tmp := load_template("send_wal_row.html")
@@ -299,7 +299,7 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "<!--WALLET-->", "Your current wallet is empty", 1)
 		}
 	}
-	wallet.UnlockBal()
+	wallet.BalanceMutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(s))

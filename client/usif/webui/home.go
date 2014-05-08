@@ -22,7 +22,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("home.html")
 
-	wallet.LockBal()
+	wallet.BalanceMutex.Lock()
 	if len(wallet.MyBalance)>0 {
 		wal := load_template("home_wal.html")
 		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(wallet.LastBalance)/1e8), 1)
@@ -35,7 +35,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "<!--WALLET-->", "Your balance is <b>zero</b>", 1)
 		}
 	}
-	wallet.UnlockBal()
+	wallet.BalanceMutex.Unlock()
 
 	common.Last.Mutex.Lock()
 	s = strings.Replace(s, "{LAST_BLOCK_HASH}", common.Last.Block.BlockHash.String(), 1)

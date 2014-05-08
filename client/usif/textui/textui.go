@@ -525,7 +525,7 @@ func show_balance_stats(p string) {
 	println("CacheUnspentIdx count:", len(wallet.CacheUnspentIdx))
 	println("CacheUnspent count:", len(wallet.CacheUnspent))
 	if p!="" {
-		wallet.LockBal()
+		wallet.BalanceMutex.Lock()
 		for i := range wallet.CacheUnspent {
 			fmt.Printf("%5d) %35s - %d unspent output(s)\n", i, wallet.CacheUnspent[i].BtcAddr.String(),
 				len(wallet.CacheUnspent[i].AllUnspentTx))
@@ -533,7 +533,7 @@ func show_balance_stats(p string) {
 				fmt.Printf(" %5d) %s\n", j, wallet.CacheUnspent[i].AllUnspentTx[j].String())
 			}*/
 		}
-		wallet.UnlockBal()
+		wallet.BalanceMutex.Unlock()
 	}
 }
 

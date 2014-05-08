@@ -43,7 +43,7 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<unspent>"))
 
-	wallet.LockBal()
+	wallet.BalanceMutex.Lock()
 	for i := range wallet.MyBalance {
 		w.Write([]byte("<output>"))
 		fmt.Fprint(w, "<txid>", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), "</txid>")
@@ -58,7 +58,7 @@ func xml_balance(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<virgin>", fmt.Sprint(wallet.MyBalance[i].BtcAddr.Extra.Virgin), "</virgin>")
 		w.Write([]byte("</output>"))
 	}
-	wallet.UnlockBal()
+	wallet.BalanceMutex.Unlock()
 	w.Write([]byte("</unspent>"))
 }
 
@@ -142,6 +142,9 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	wallet.BalanceMutex.Lock()
+	defer wallet.BalanceMutex.Unlock()
+
 	if wallet.MyWallet!=nil {
 		page = strings.Replace(page, "<!--WALLET_FILENAME-->", wallet.MyWallet.FileName, 1)
 		wc, er := ioutil.ReadFile(wallet.MyWallet.FileName)
@@ -171,9 +174,32 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 				ad = strings.Replace(ad, "<!--WAL_MULTISIG-->", "No", 1)
 			}
 
-			if btc, cnt := getbal(wallet.MyWallet.Addrs[i]); btc > 0 {
-				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(btc)/1e8), 1)
-				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(cnt), 1)
+			rec := wallet.CachedAddrs[wallet.MyWallet.Addrs[i].Hash160]
+			if rec == nil {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", "?", 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", "?", 1)
+				page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
+				continue
+			}
+
+			if !rec.InWallet {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", "WTF", 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", "-2", 1)
+				page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
+				continue
+			}
+
+			ucu := wallet.CacheUnspent[rec.CacheIndex]
+			if ucu==nil {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", "WTF", 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", "-3", 1)
+				page = templ_add(page, "<!--ONE_WALLET_ADDR-->", ad)
+				continue
+			}
+
+			if len(ucu.AllUnspentTx) > 0 {
+				ad = strings.Replace(ad, "<!--WAL_BALANCE-->", fmt.Sprintf("%.8f", float64(rec.Value)/1e8), 1)
+				ad = strings.Replace(ad, "<!--WAL_OUTCNT-->", fmt.Sprint(len(ucu.AllUnspentTx)), 1)
 			} else if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				// Do not display virgin addresses with zero balance
 				continue

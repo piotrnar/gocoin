@@ -11,12 +11,11 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
 var (
-	mutex_bal sync.Mutex
+	BalanceMutex sync.Mutex
 	MyBalance btc.AllUnspentTx  // unspent outputs that can be removed
 	MyWallet *OneWallet     // addresses that cann be poped up
 	LastBalance uint64
@@ -47,15 +46,6 @@ type OneCachedAddrBalance struct {
 }
 
 
-func LockBal() {
-	mutex_bal.Lock()
-}
-
-func UnlockBal() {
-	mutex_bal.Unlock()
-}
-
-
 func po2idx(po *btc.TxPrevOut) uint64 {
 	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
 }
@@ -65,8 +55,8 @@ func po2idx(po *btc.TxPrevOut) uint64 {
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	var update_wallet bool
 
-	mutex_bal.Lock()
-	defer mutex_bal.Unlock()
+	BalanceMutex.Lock()
+	defer BalanceMutex.Unlock()
 
 	if valpk!=nil {
 		// Extract hash160 from pkscript
@@ -112,10 +102,27 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		}
 	}
 
-	if MyWallet!=nil && update_wallet {
+	if update_wallet {
+		SyncWallet()
+	}
+}
+
+
+func SyncWallet() {
+	if MyWallet!=nil {
 		MyBalance = nil
 		for i := range MyWallet.Addrs {
-			rec, _ := CachedAddrs[MyWallet.Addrs[i].Hash160]
+			var rec *OneCachedAddrBalance
+			if MyWallet.Addrs[i].StealthAddr!=nil {
+				var h160 [20]byte
+				copy(h160[:], MyWallet.Addrs[i].StealthAddr.Hash160())
+				rec = CachedAddrs[h160]
+			} else {
+				rec = CachedAddrs[MyWallet.Addrs[i].Hash160]
+			}
+			if rec==nil {
+				println("his should not happen: No record in the cache", MyWallet.Addrs[i].String())
+			}
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		}
 		sort_and_sum()
@@ -172,8 +179,8 @@ func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) boo
 // Call it only from the Chain thread
 func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance bool) (s string) {
 	var sum uint64
-	mutex_bal.Lock()
-	defer mutex_bal.Unlock()
+	BalanceMutex.Lock()
+	defer BalanceMutex.Unlock()
 
 	for i := range mybal {
 		sum += mybal[i].Value
@@ -234,16 +241,16 @@ func UpdateBalance() {
 	var skip_stealths bool
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
 
-	FetchStealthKeys()
-
-	mutex_bal.Lock()
-	defer mutex_bal.Unlock()
+	BalanceMutex.Lock()
+	defer BalanceMutex.Unlock()
 
 	MyBalance = nil
 
 	for _, v := range CachedAddrs {
 		v.InWallet = false
 	}
+
+	FetchStealthKeys()
 
 	for i := range MyWallet.Addrs {
 		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
@@ -264,9 +271,16 @@ func UpdateBalance() {
 					if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[j], true), sa.ScanKey[:]) {
 						tofetch_stealh = append(tofetch_stealh, sa)
 						tofetch_secrets = append(tofetch_secrets, StealthSecrets[j])
+						var rec stealthCacheRec
+						rec.sa = sa
+						copy(rec.d[:], StealthSecrets[j])
+						copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
+						StealthAdCache = append(StealthAdCache, rec)
 						break
 					} else if j==len(StealthSecrets)-1 {
-						fmt.Println("No matching secret for", sa.String())
+						if !PrecachingComplete {
+							fmt.Println("No matching secret for", sa.String())
+						}
 						add_it = false
 						break
 					}
@@ -284,7 +298,6 @@ func UpdateBalance() {
 		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
 		var new_addrs btc.AllUnspentTx
-		var ste, ste2, ste3 uint
 
 		common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
 			if rec.IsP2KH() {
@@ -296,15 +309,12 @@ func UpdateBalance() {
 					new_addrs = append(new_addrs, rec.ToUnspent(ad))
 				}
 			} else if rec.IsStealthIdx() {
-				ste++
 				for i := range tofetch_stealh {
-					fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i])
+					fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i], true)
 					if fl != 0 {
 						return fl
 					}
-					ste2++
 					if uo!=nil {
-						ste3++
 						new_addrs = append(new_addrs, uo)
 						break
 					}
@@ -312,10 +322,6 @@ func UpdateBalance() {
 			}
 			return 0
 		})
-		fmt.Println(ste, ste2, ste3, "stealth recodrs found")
-		for i := range tofetch_secrets {
-			utils.ClearBuffer(tofetch_secrets[i])
-		}
 
 		for i := range new_addrs {
 			poi := po2idx(&new_addrs[i].TxPrevOut)
