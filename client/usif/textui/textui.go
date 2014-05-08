@@ -91,7 +91,7 @@ func ShowPrompt() {
 
 func MainThread() {
 	var prompt bool = true
-	time.Sleep(1e8)
+	time.Sleep(1e9) // hold on for 1 sencond before showing the prompt
 	for {
 		if prompt {
 			ShowPrompt()
@@ -361,16 +361,14 @@ func list_unspent(addr string) {
 		wallet.FetchStealthKeys()
 		d := wallet.FindStealthSecret(sa)
 		if d==nil {
-			fmt.Println("No matching secret found your wallet/stealth folder")
+			fmt.Println("No matching secret found in your wallet/stealth folder")
 			return
 		}
-		defer utils.ClearBuffer(d)
-
 		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
 			if !rec.IsStealthIdx() {
 				return 0
 			}
-			fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
+			fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d, true)
 			if uo!=nil {
 				unsp = append(unsp, uo)
 			}
@@ -640,7 +638,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	wallet.FetchStealthKeys()
 	d := wallet.FindStealthSecret(sa)
 	if d==nil {
-		fmt.Println("No matching secret found your wallet/stealth folder")
+		fmt.Println("No matching secret found in your wallet/stealth folder")
 		return
 	}
 	defer utils.ClearBuffer(d)
@@ -651,7 +649,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		if !rec.IsStealthIdx() {
 			return 0
 		}
-		fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
+		fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d, true)
 		if uo!=nil {
 			unsp = append(unsp, uo)
 		}
@@ -673,7 +671,6 @@ func scan_stealth(p string) {
 func scan_all_stealth(p string) {
 	do_scan_stealth(p, true)
 }
-
 
 func init() {
 	newUi("alerts a", false, list_alerst, "Show received alerts")
