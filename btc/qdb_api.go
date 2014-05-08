@@ -13,7 +13,7 @@ type UnspentDB struct {
 }
 
 
-func NewUnspentDb(dir string, init bool) *UnspentDB {
+func NewUnspentDb(dir string, init bool, ch *Chain) *UnspentDB {
 	db := new(UnspentDB)
 
 	if init {
@@ -28,7 +28,7 @@ func NewUnspentDb(dir string, init bool) *UnspentDB {
 	if AbortNow {
 		return nil
 	}
-	db.unspent = newUnspentDB(dir+"unspent3"+string(os.PathSeparator), db.unwind.lastBlockHeight)
+	db.unspent = newUnspentDB(dir+"unspent3"+string(os.PathSeparator), db.unwind.lastBlockHeight, ch)
 
 	return db
 }
@@ -57,10 +57,6 @@ func (db *UnspentDB) GetStats() (s string) {
 	return
 }
 
-
-func (db *UnspentDB) SetTxNotify(fn TxNotifyFunc) {
-	db.unspent.notifyTx = fn
-}
 
 // Flush all the data to files
 func (db *UnspentDB) sync() {

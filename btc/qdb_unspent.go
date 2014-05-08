@@ -37,15 +37,16 @@ type unspentDb struct {
 	defragIndex int
 	defragCount uint64
 	nosyncinprogress bool
-	notifyTx TxNotifyFunc
 	lastHeight uint32
+	ch *Chain
 }
 
 
-func newUnspentDB(dir string, lasth uint32) (db *unspentDb) {
+func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.lastHeight = lasth
+	db.ch = ch
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -104,33 +105,37 @@ func (db *unspentDb) get(po *TxPrevOut) (res *TxOut, e error) {
 
 
 func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
-	if db.notifyTx!=nil {
-		db.notifyTx(idx, Val_Pk)
-	}
 	v := make([]byte, SCR_OFFS+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
 	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
 	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
-	ind := qdb.KeyType(idx.UIdx())
+	k := qdb.KeyType(idx.UIdx())
 	var flgz uint32
+	dbN := db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs)
 	if stealthIndex(v) {
+		if db.ch.NotifyStealthTx!=nil {
+			db.ch.NotifyStealthTx(dbN, k, NewWalkRecord(v))
+		}
 		flgz = qdb.YES_CACHE|qdb.YES_BROWSE
 	} else {
+		if db.ch.NotifyTx!=nil {
+			db.ch.NotifyTx(idx, Val_Pk)
+		}
 		if Val_Pk.Value<MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
 		} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
 			flgz = qdb.NO_CACHE
 		}
 	}
-	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).PutExt(ind, v, flgz)
+	dbN.PutExt(k, v, flgz)
 }
 
 
 func (db *unspentDb) del(idx *TxPrevOut) {
-	if db.notifyTx!=nil {
-		db.notifyTx(idx, nil)
+	if db.ch.NotifyTx!=nil {
+		db.ch.NotifyTx(idx, nil)
 	}
 	key := qdb.KeyType(idx.UIdx())
 	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(key)

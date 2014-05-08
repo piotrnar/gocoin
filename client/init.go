@@ -85,7 +85,8 @@ func host_init() {
 		os.Exit(1)
 	}
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
-	common.BlockChain.Unspent.SetTxNotify(wallet.TxNotify)
+	common.BlockChain.NotifyTx = wallet.TxNotify
+	common.BlockChain.NotifyStealthTx = wallet.StealthNotify
 	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done

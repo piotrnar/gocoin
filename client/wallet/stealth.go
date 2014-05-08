@@ -11,7 +11,14 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
+type pendingSI struct {
+	db *qdb.DB
+	k qdb.KeyType
+	rec *btc.OneWalkRecord
+}
+
 var StealthSecrets [][]byte
+var newStealthIndexes []pendingSI
 
 
 func FreeStealthSecrets() {
@@ -88,4 +95,20 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 		}
 	}
 	return
+}
+
+
+func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) {
+	println("new stealth index")
+	newStealthIndexes = append(newStealthIndexes, pendingSI{db:db, k:k, rec:rec})
+}
+
+
+// Go through all the stealth indexes found in the last block
+func BlockAccepted() {
+	if len(newStealthIndexes) > 0 {
+		println(len(newStealthIndexes), "new stealth outputs found")
+		FetchStealthKeys()
+		newStealthIndexes = nil
+	}
 }

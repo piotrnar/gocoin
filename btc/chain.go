@@ -3,6 +3,7 @@ package btc
 import (
 	"fmt"
 	"sync"
+	"github.com/piotrnar/gocoin/qdb"
 )
 
 
@@ -21,6 +22,11 @@ type Chain struct {
 	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
 
 	DoNotSync bool // do not flush all the files after each block
+
+	// If NotifyTx is set, it will be called each time a new unspent
+	// output is being added or removed. When being removed, TxOut is nil.
+	NotifyTx func (*TxPrevOut, *TxOut)
+	NotifyStealthTx func (*qdb.DB, qdb.KeyType, *OneWalkRecord)
 }
 
 
@@ -30,7 +36,7 @@ func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
 	ch.Blocks = NewBlockDB(dbrootdir)
-	ch.Unspent = NewUnspentDb(dbrootdir, rescan)
+	ch.Unspent = NewUnspentDb(dbrootdir, rescan, ch)
 
 	if AbortNow {
 		return

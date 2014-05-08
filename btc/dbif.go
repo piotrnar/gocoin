@@ -19,6 +19,3 @@ type BlockChanges struct {
 	DeledTxs map[TxPrevOut] *TxOut
 }
 
-// If TxNotifyFunc is set, it will be called each time a new unspent
-// output is being added or removed. When being removed, TxOut is nil.
-type TxNotifyFunc func (*TxPrevOut, *TxOut)
