@@ -2,6 +2,7 @@ package btc
 
 import (
 	"fmt"
+	"encoding/hex"
 	"encoding/binary"
 )
 
@@ -14,6 +15,7 @@ type OneUnspentTx struct {
 	MinedAt uint32
 	*BtcAddr
 	StealthC []byte
+	DestinationAddr string
 }
 
 func (x AllUnspentTx) Len() int {
@@ -38,13 +40,20 @@ func (x AllUnspentTx) Swap(i, j int) {
 func (ou *OneUnspentTx) String() (s string) {
 	s = fmt.Sprintf("%15.8f  ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
 	if ou.BtcAddr!=nil {
-		s += "  " + ou.BtcAddr.StringLab()
-	}
-	if ou.StealthC!=nil {
-		s += "  *STEALTH*"
+		s += " " + ou.DestinationAddr + ou.BtcAddr.Label()
 	}
 	if ou.MinedAt != 0 {
 		s += fmt.Sprint("  ", ou.MinedAt)
+	}
+	return
+}
+
+
+func (ou *OneUnspentTx) UnspentTextLine() (s string) {
+	s = fmt.Sprintf("%s # %.8f BTC @ %s%s, block %d", ou.TxPrevOut.String(),
+		float64(ou.Value)/1e8, ou.DestinationAddr, ou.BtcAddr.Label(), ou.MinedAt)
+	if ou!=nil {
+		s += ", _StealthC:" + hex.EncodeToString(ou.StealthC)
 	}
 	return
 }

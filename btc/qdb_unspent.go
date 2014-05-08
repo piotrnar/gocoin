@@ -303,5 +303,6 @@ func (r *OneWalkRecord) ToUnspent(ad *BtcAddr) (nr *OneUnspentTx) {
 	nr.Value = binary.LittleEndian.Uint64(r.v[36:44])
 	nr.MinedAt = binary.LittleEndian.Uint32(r.v[44:48])
 	nr.BtcAddr = ad
+	nr.DestinationAddr = ad.String()
 	return
 }

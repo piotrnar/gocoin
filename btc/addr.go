@@ -136,9 +136,7 @@ func (a *BtcAddr) String() string {
 }
 
 // String with a label
-func (a *BtcAddr) StringLab() (s string) {
-	s = a.String()
-
+func (a *BtcAddr) Label() (s string) {
 	if a.Extra.Wallet!="" {
 		s += " " + a.Extra.Wallet + ":"
 	}

@@ -99,11 +99,4 @@ func parse_config() {
 
 		}
 	}
-	if *fee!="" {
-		curFee, e = btc.StringToSatoshis(*fee)
-		if e != nil {
-			println("Incorrect fee value", *fee)
-			os.Exit(1)
-		}
-	}
 }

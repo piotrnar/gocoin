@@ -263,10 +263,10 @@ function allchange(t) {
 }
 
 function selectadr(idx) {
-	var addr = unspent.rows[idx].cells[5].innerText
+	var addr = unspent.rows[idx].cells[5].title
 	var chkd = document.getElementById('txout'+idx).checked
 	for (var i=1; i<unspent.rows.length; i++) {
-		if (unspent.rows[i].cells[5].innerText==addr) {
+		if (unspent.rows[i].cells[5].title==addr) {
 			document.getElementById('txout'+i).checked = !chkd
 		}
 	}

@@ -176,9 +176,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		fz, _ := zi.Create("balance/unspent.txt")
 		for i := range thisbal {
-			fmt.Fprintf(fz, "%s # %.8f BTC @ %s%s, %d confs\n", thisbal[i].TxPrevOut.String(),
-				float64(thisbal[i].Value)/1e8, thisbal[i].BtcAddr.String(),
-				thisbal[i].BtcAddr.Label(), 1+common.Last.Block.Height-thisbal[i].MinedAt)
+			fmt.Fprintln(fz, thisbal[i].UnspentTextLine())
 		}
 
 		if len(addrs_to_msign) > 0 {
@@ -277,7 +275,8 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 			row = strings.Replace(row, "{TX_SIGSIZ}", fmt.Sprint(estimated_sig_size), -1)
 			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(wallet.MyBalance[i].Value)/1e8), 1)
 			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(wallet.MyBalance[i].Value), 1)
-			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].BtcAddr.String(), 1)
+			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].DestinationAddr, 1)
+			row = strings.Replace(row, "<!--BTC_ADDR_TITLE-->", wallet.MyBalance[i].BtcAddr.String(), 1)
 			wal = templ_add(wal, "<!--UTXOROW-->", row)
 		}
 
