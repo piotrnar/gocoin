@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"bytes"
 	"io/ioutil"
 	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -234,6 +236,9 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 
 func UpdateBalance() {
 	var tofetch_stealh []*btc.StealthAddr
+	var tofetch_secrets [][]byte
+	var stealth_secrets [][]byte
+	var skip_stealths bool
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
 
 	mutex_bal.Lock()
@@ -254,22 +259,48 @@ func UpdateBalance() {
 			}
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		} else {
+			add_it := true
 			// Add a new address to the balance cache
-			CachedAddrs[MyWallet.Addrs[i].Hash160] = &OneCachedAddrBalance{InWallet:true, CacheIndex:uint(len(CacheUnspent))}
-			CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
 			if MyWallet.Addrs[i].StealthAddr==nil {
 				tofetch_regular[MyWallet.Addrs[i].AIdx()] = MyWallet.Addrs[i]
-			} else {
-				tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i].StealthAddr)
+			} else if !skip_stealths {
+				if stealth_secrets==nil {
+					stealth_secrets = FetchStealthKeys()
+					skip_stealths = len(stealth_secrets)==0
+				}
+
+				sa := MyWallet.Addrs[i].StealthAddr
+				for j:=0; ; { // check if we have a matching stealth secret
+					if bytes.Equal(btc.PublicFromPrivate(stealth_secrets[j], true), sa.ScanKey[:]) {
+						tofetch_stealh = append(tofetch_stealh, sa)
+						tofetch_secrets = append(tofetch_secrets, stealth_secrets[j])
+						break
+					} else if j==len(stealth_secrets)-1 {
+						fmt.Println("No matching secret for", sa.String())
+						add_it = false
+						break
+					}
+					j++
+				}
+			}
+			if add_it {
+				CachedAddrs[MyWallet.Addrs[i].Hash160] = &OneCachedAddrBalance{InWallet:true, CacheIndex:uint(len(CacheUnspent))}
+				CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
 			}
 		}
+	}
+	if stealth_secrets!=nil {
+		for i := range stealth_secrets {
+			utils.ClearBuffer(stealth_secrets[i])
+		}
+		stealth_secrets = nil
 	}
 
 	if len(tofetch_regular)>0 || len(tofetch_stealh)>0 {
 		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
 		var new_addrs btc.AllUnspentTx
-		var ste uint
+		var ste, ste2, ste3 uint
 
 		common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
 			if rec.IsP2KH() {
@@ -282,10 +313,26 @@ func UpdateBalance() {
 				}
 			} else if rec.IsStealthIdx() {
 				ste++
+				for i := range tofetch_stealh {
+					fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i])
+					if fl != 0 {
+						return fl
+					}
+					ste2++
+					if uo!=nil {
+						ste3++
+						new_addrs = append(new_addrs, uo)
+						break
+					}
+				}
 			}
 			return 0
 		})
-		fmt.Println(ste, "stealth recodrs found")
+		fmt.Println(ste, ste2, ste3, "stealth recodrs found")
+		for i := range tofetch_secrets {
+			utils.ClearBuffer(tofetch_secrets[i])
+		}
+
 		for i := range new_addrs {
 			poi := po2idx(&new_addrs[i].TxPrevOut)
 			if _, ok := CacheUnspentIdx[poi]; ok {
@@ -302,6 +349,12 @@ func UpdateBalance() {
 			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
 		}
 		MyBalance = append(MyBalance, new_addrs...)
+	}
+
+	if stealth_secrets!=nil {
+		for i := range stealth_secrets {
+			utils.ClearBuffer(stealth_secrets[i])
+		}
 	}
 
 	sort_and_sum()

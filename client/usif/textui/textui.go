@@ -366,6 +366,9 @@ func list_unspent(addr string) {
 		defer utils.ClearBuffer(d)
 
 		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+			if !rec.IsStealthIdx() {
+				return 0
+			}
 			fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
 			if uo!=nil {
 				unsp = append(unsp, uo)
@@ -643,6 +646,9 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	var unsp btc.AllUnspentTx
 
 	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		if !rec.IsStealthIdx() {
+			return 0
+		}
 		fl, uo := wallet.CheckStealthRec(db, k, rec, sa, d)
 		if uo!=nil {
 			unsp = append(unsp, uo)

@@ -45,39 +45,37 @@ func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
 	for i := range ds {
 		if d==nil && bytes.Equal(btc.PublicFromPrivate(ds[i], true), sa.ScanKey[:]) {
 			d = ds[i]
-		} else {
-			utils.ClearBuffer(ds[i])
 		}
+		utils.ClearBuffer(ds[i])
 	}
 	return
 }
 
 
+// It is assumed that you call this function onlu after rec.IsStealthIdx() was true
 func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 	sa *btc.StealthAddr, d []byte) (fl uint32, uo *btc.OneUnspentTx) {
-	if rec.IsStealthIdx() {
-		sth_scr := rec.Script()
-		if sa.CheckNonce(sth_scr[3:]) {
-			vo := rec.VOut() // get the spending output
-			spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
-			if spend_v!=nil {
-				rec = btc.NewWalkRecord(spend_v)
+	sth_scr := rec.Script()
+	if sa.CheckNonce(sth_scr[3:]) {
+		vo := rec.VOut() // get the spending output
+		spend_v := db.GetNoMutex(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
+		if spend_v!=nil {
+			rec = btc.NewWalkRecord(spend_v)
 
-				if rec.IsP2KH() {
-					var h160 [20]byte
-					c := btc.StealthDH(sth_scr[7:40], d)
-					spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
-					btc.RimpHash(spen_exp, h160[:])
-					if bytes.Equal(rec.Script()[3:23], h160[:]) {
-						uo = rec.ToUnspent(btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)))
-						uo.StealthC = c
-					}
-				} else {
-					fl = btc.WALK_NOMORE
+			if rec.IsP2KH() {
+				var h160 [20]byte
+				c := btc.StealthDH(sth_scr[7:40], d)
+				spen_exp := btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+				btc.RimpHash(spen_exp, h160[:])
+				if bytes.Equal(rec.Script()[3:23], h160[:]) {
+					uo = rec.ToUnspent(btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet)))
+					uo.StealthC = c
 				}
 			} else {
 				fl = btc.WALK_NOMORE
 			}
+		} else {
+			fl = btc.WALK_NOMORE
 		}
 	}
 	return
