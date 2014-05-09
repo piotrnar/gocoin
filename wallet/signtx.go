@@ -102,6 +102,18 @@ func write_tx_file(tx *btc.Tx) {
 }
 
 
+// returns one or two (for stealth) TxOut records
+func new_spend_outputs(addr *btc.BtcAddr, amount uint64) []*btc.TxOut {
+	if addr.StealthAddr != nil {
+		return stealth_txout(addr.StealthAddr, amount)
+	} else {
+		out := new(btc.TxOut)
+		out.Value = amount
+		out.Pk_script = addr.OutScript()
+		return []*btc.TxOut{out}
+	}
+}
+
 // prepare a signed transaction
 func make_signed_tx() {
 	// Make an empty transaction
@@ -131,12 +143,7 @@ func make_signed_tx() {
 
 	// Build transaction outputs:
 	for o := range sendTo {
-		if sendTo[o].addr.StealthAddr != nil {
-			tx.TxOut = append(tx.TxOut, stealth_txout(sendTo[o].addr.StealthAddr, sendTo[o].amount)...)
-		} else {
-			tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: sendTo[o].amount,
-				Pk_script: sendTo[o].addr.OutScript()})
-		}
+		tx.TxOut = append(tx.TxOut, new_spend_outputs(sendTo[o].addr, sendTo[o].amount)...)
 	}
 
 	if changeBtc > 0 {
@@ -145,7 +152,7 @@ func make_signed_tx() {
 		if *verbose {
 			fmt.Println("Sending change", changeBtc, "to", chad.String())
 		}
-		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: changeBtc, Pk_script: chad.OutScript()})
+		tx.TxOut = append(tx.TxOut, new_spend_outputs(chad, changeBtc)...)
 	}
 
 	if *message!="" {
