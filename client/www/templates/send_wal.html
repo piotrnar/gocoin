@@ -2,6 +2,7 @@
 const addrbook_lab = "Address Book"
 
 const AvgOutputSize = 34
+const StealthIndexLen = 49
 
 var values = new Array({UNSPENT_OUTS})
 var selected_value = 0
@@ -83,6 +84,9 @@ function recalc_to_pay() {
 			totsend += v
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
 			ets_bytes += AvgOutputSize
+			if (document.getElementById('inadr'+idx).value.length > 50) {
+				ets_bytes += StealthIndexLen // long string = stealth address
+			}
 		}
 	}
 	var chval = selected_value-totsend
@@ -194,6 +198,7 @@ function open_address_book(idx) {
 				but.value = addrbook_lab
 			}
 			cur_but = null
+			recalc_to_pay()
 		}
 	})
 }
