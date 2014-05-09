@@ -23,13 +23,32 @@ func hex_dump(d []byte) (s string) {
 }
 
 
-func dump_raw_sigscript(d []byte) {
+func dump_raw_sigscript(d []byte) bool {
 	ss, er := btc.ScriptToText(d)
 	if er != nil {
 		println(er.Error())
-		return
+		return false
 	}
-	p2sh := len(ss)>=2 && d[0]==0 && false
+
+	p2sh := len(ss)>=2 && d[0]==0
+	if p2sh {
+		ms, er := btc.NewMultiSigFromScript(d)
+		if er==nil {
+			fmt.Println("       Multisig script", ms.SigsNeeded, "of", len(ms.PublicKeys))
+			for i := range ms.PublicKeys {
+				fmt.Printf("       pkey%d = %s\n", i+1, hex.EncodeToString(ms.PublicKeys[i]))
+			}
+			for i := range ms.Signatures {
+				fmt.Printf("       R%d = %64s\n", i+1, hex.EncodeToString(ms.Signatures[i].R.Bytes()))
+				fmt.Printf("       S%d = %64s\n", i+1, hex.EncodeToString(ms.Signatures[i].S.Bytes()))
+				fmt.Printf("       HashType%d = %02x\n", i+1, ms.Signatures[i].HashType)
+			}
+			return len(ms.Signatures)>=int(ms.SigsNeeded)
+		} else {
+			println(er.Error())
+		}
+	}
+
 	fmt.Println("       SigScript:", p2sh)
 	for i := range ss {
 		if p2sh && i==len(ss)-1 {
@@ -51,33 +70,31 @@ func dump_raw_sigscript(d []byte) {
 			fmt.Println("       ", ss[i])
 		}
 	}
+	return true
 }
 
 
-func dump_sigscript(d []byte) {
+func dump_sigscript(d []byte) bool {
 	if len(d) < 10 + 34 { // at least 10 bytes for sig and 34 bytes key
 		fmt.Println("       WARNING: Short sigScript")
 		fmt.Print(hex_dump(d))
-		return
+		return false
 	}
 	rd := bytes.NewReader(d)
 
 	// ECDSA Signature
 	le, _ := rd.ReadByte()
 	if le<0x40 {
-		dump_raw_sigscript(d)
-		return
+		return dump_raw_sigscript(d)
 	}
 	sd := make([]byte, le)
 	_, er := rd.Read(sd)
 	if er != nil {
-		dump_raw_sigscript(d)
-		return
+		return dump_raw_sigscript(d)
 	}
 	sig, er := btc.NewSignature(sd)
 	if er != nil {
-		dump_raw_sigscript(d)
-		return
+		return dump_raw_sigscript(d)
 	}
 	fmt.Printf("       R = %64s\n", hex.EncodeToString(sig.R.Bytes()))
 	fmt.Printf("       S = %64s\n", hex.EncodeToString(sig.S.Bytes()))
@@ -88,7 +105,7 @@ func dump_sigscript(d []byte) {
 	if er != nil {
 		fmt.Println("       WARNING: PublicKey not present")
 		fmt.Print(hex_dump(d))
-		return
+		return false
 	}
 
 	sd = make([]byte, le)
@@ -96,7 +113,7 @@ func dump_sigscript(d []byte) {
 	if er != nil {
 		fmt.Println("       WARNING: PublicKey too short", er.Error())
 		fmt.Print(hex_dump(d))
-		return
+		return false
 	}
 
 	fmt.Printf("       PublicKeyType = %02x\n", sd[0])
@@ -104,7 +121,7 @@ func dump_sigscript(d []byte) {
 	if er != nil {
 		fmt.Println("       WARNING: PublicKey broken", er.Error())
 		fmt.Print(hex_dump(d))
-		return
+		return false
 	}
 	fmt.Printf("       X = %64s\n", key.X.String())
 	if le>=65 {
@@ -115,6 +132,7 @@ func dump_sigscript(d []byte) {
 		fmt.Println("       WARNING: Extra bytes at the end of sigScript")
 		fmt.Print(hex_dump(d[len(d)-rd.Len():]))
 	}
+	return true
 }
 
 
@@ -154,7 +172,9 @@ func dump_raw_tx() {
 				len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
 
 			if len(tx.TxIn[i].ScriptSig) > 0 {
-				dump_sigscript(tx.TxIn[i].ScriptSig)
+				if !dump_sigscript(tx.TxIn[i].ScriptSig) {
+					unsigned++
+				}
 			} else {
 				unsigned++
 			}
@@ -191,9 +211,9 @@ func dump_raw_tx() {
 
 	if !tx.IsCoinBase() {
 		if unsigned>0 {
-			fmt.Println("Number of unsigned inputs:", unsigned)
+			fmt.Println("WARNING: The transaction has", unsigned, "unsigned inputs, out of", len(tx.TxIn))
 		} else {
-			fmt.Println("All the inputs seem to be signed, but watch out for multi signatures required")
+			fmt.Println("All", len(tx.TxIn), "transaction inputs seem to be signed")
 		}
 	}
 }
