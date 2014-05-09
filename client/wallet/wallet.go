@@ -82,6 +82,10 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	for i:=0; i<len(addrs)-1; i++ {
 		for j:=i+1; j<len(addrs); {
 			if addrs[i].String()==addrs[j].String() {
+				if addrs[i].Extra.Wallet==AddrBookFileName {
+					// Overwrite wallet name if is was ADDRESS (book)
+					addrs[i].Extra.Wallet = addrs[j].Extra.Wallet
+				}
 				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
 				addrs = append(addrs[:j], addrs[j+1:]...)
 			} else {

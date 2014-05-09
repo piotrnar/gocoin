@@ -211,7 +211,7 @@ func dump_raw_tx() {
 
 	if !tx.IsCoinBase() {
 		if unsigned>0 {
-			fmt.Println("WARNING: The transaction has", unsigned, "unsigned inputs, out of", len(tx.TxIn))
+			fmt.Println("WARNING:", unsigned, "out of", len(tx.TxIn), "inputs are not signed or signed only patially")
 		} else {
 			fmt.Println("All", len(tx.TxIn), "transaction inputs seem to be signed")
 		}

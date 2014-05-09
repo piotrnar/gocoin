@@ -1,5 +1,3 @@
-Allow to do multisig -> stealth spending
-
 Client:
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
