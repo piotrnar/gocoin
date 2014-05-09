@@ -236,7 +236,7 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 
 
 func UpdateBalance() {
-	var tofetch_stealh []*btc.StealthAddr
+	var tofetch_stealh []*btc.BtcAddr
 	var tofetch_secrets [][]byte
 	var skip_stealths bool
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
@@ -269,10 +269,10 @@ func UpdateBalance() {
 				sa := MyWallet.Addrs[i].StealthAddr
 				for j:=0; ; { // check if we have a matching stealth secret
 					if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[j], true), sa.ScanKey[:]) {
-						tofetch_stealh = append(tofetch_stealh, sa)
+						tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i])
 						tofetch_secrets = append(tofetch_secrets, StealthSecrets[j])
 						var rec stealthCacheRec
-						rec.sa = sa
+						rec.addr = MyWallet.Addrs[i]
 						copy(rec.d[:], StealthSecrets[j])
 						copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
 						StealthAdCache = append(StealthAdCache, rec)

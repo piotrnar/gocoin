@@ -19,7 +19,7 @@ type pendingSI struct {
 
 type stealthCacheRec struct {
 	h160 [20]byte
-	sa *btc.StealthAddr
+	addr *btc.BtcAddr
 	d [32]byte
 }
 
@@ -79,8 +79,9 @@ func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
 
 // It is assumed that you call this function onlu after rec.IsStealthIdx() was true
 func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
-	sa *btc.StealthAddr, d []byte, inbrowse bool) (fl uint32, uo *btc.OneUnspentTx) {
+	addr *btc.BtcAddr, d []byte, inbrowse bool) (fl uint32, uo *btc.OneUnspentTx) {
 	sth_scr := rec.Script()
+	sa := addr.StealthAddr
 	if sa.CheckNonce(sth_scr[3:]) {
 		vo := rec.VOut() // get the spending output
 		var spend_v []byte
@@ -101,9 +102,8 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 					adr := btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
 					uo = rec.ToUnspent(adr)
 					adr.StealthAddr = sa
+					adr.Extra = addr.Extra
 					uo.StealthC = c
-					// TODO: reciver a proper label here
-					println("TODO: reciver a proper label here")
 				}
 			} else {
 				fl = btc.WALK_NOMORE
@@ -131,7 +131,7 @@ func BlockAccepted() {
 		for i := range newStealthIndexes {
 			for ai := range StealthAdCache {
 				fl, uo := CheckStealthRec(newStealthIndexes[i].db, newStealthIndexes[i].k,
-					newStealthIndexes[i].rec, StealthAdCache[ai].sa, StealthAdCache[ai].d[:], false)
+					newStealthIndexes[i].rec, StealthAdCache[ai].addr, StealthAdCache[ai].d[:], false)
 				if fl!=0 {
 					break
 				}
