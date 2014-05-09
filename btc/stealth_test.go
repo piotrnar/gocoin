@@ -14,7 +14,7 @@ var _stealth_vecs = [][7]string { // x, y, k ->  DH
 		"d5b3853bbee336b551ff999b0b1d656e65a7649037ae0dcb02b3c4ff5f29e5be",
 		"b389c8d94e6e8326b82367aee08d93f06bb4b344a40a2fe7024ffdcbab699f0f",
 		"fa63521e333e4b9f6a98a142680d3aef4d8e7f79723ce0043691db55c36bd905",
-		"e8fa3814fa662a8ade1cce233333c1eaa29046b6cdc46e44ad4f7e8bd8e6f98e", /*DH*/
+		"2a7a04b8d095a27e2161b623fbd11dca0a35e56f66d3794421f007a62857cfb6", /*DH*/
 	},
 }
 
