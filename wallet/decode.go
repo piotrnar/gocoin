@@ -195,7 +195,11 @@ func dump_raw_tx() {
 			fmt.Println("Stealth", hex.EncodeToString(tx.TxOut[i].Pk_script[3:7]),
 				hex.EncodeToString(tx.TxOut[i].Pk_script[7:]))
 		} else {
-			fmt.Println("to Pk_script:")
+			if tx.TxOut[i].Value > 0 {
+				fmt.Println("WARNING!!! These coins go to non-standard Pk_script:")
+			} else {
+				fmt.Println("NULL output to Pk_script:")
+			}
 			ss, er := btc.ScriptToText(tx.TxOut[i].Pk_script)
 			if er == nil {
 				for i := range ss {
