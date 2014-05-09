@@ -151,10 +151,12 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		if totalinput > spentsofar {
 			// Add change output
-			tout := new(btc.TxOut)
-			tout.Value = totalinput - spentsofar
-			tout.Pk_script = change_addr.OutScript()
-			tx.TxOut = append(tx.TxOut, tout)
+			outs, er := btc.NewSpendOutputs(change_addr, totalinput - spentsofar, common.CFG.Testnet)
+			if er != nil {
+				err = er.Error()
+				goto error
+			}
+			tx.TxOut = append(tx.TxOut, outs...)
 		}
 
 		buf := new(bytes.Buffer)
