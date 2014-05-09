@@ -57,8 +57,12 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 				return
 			}
 			totinp += po.Value
-			s += fmt.Sprintf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8,
-				btc.NewAddrFromPkScript(po.Pk_script, common.Testnet).String())
+
+			ads := "???"
+			if ad:=btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad!=nil {
+				ads = ad.String()
+			}
+			s += fmt.Sprintf(" %15.8f BTC @ %s\n", float64(po.Value)/1e8, ads)
 		} else {
 			s += fmt.Sprintln(" - UNKNOWN INPUT")
 			missinginp = true

@@ -118,7 +118,11 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 					w.Write([]byte("<status>OK</status>"))
 				}
 				fmt.Fprint(w, "<value>", po.Value, "</value>")
-				fmt.Fprint(w, "<addr>", btc.NewAddrFromPkScript(po.Pk_script, common.Testnet).String(), "</addr>")
+				ads := "???"
+				if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
+					ads = ad.String()
+				}
+				fmt.Fprint(w, "<addr>", ads, "</addr>")
 				fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
 			} else {
 				w.Write([]byte("<status>UNKNOWN INPUT</status>"))

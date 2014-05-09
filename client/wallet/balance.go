@@ -255,9 +255,11 @@ func UpdateBalance() {
 	for i := range MyWallet.Addrs {
 		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
 			rec.InWallet = true
-			for j := range CacheUnspent[rec.CacheIndex].AllUnspentTx {
+			cu := CacheUnspent[rec.CacheIndex]
+			cu.BtcAddr = MyWallet.Addrs[i]
+			for j := range cu.AllUnspentTx {
 				// update BtcAddr in each of AllUnspentTx to reflect the latest label
-				CacheUnspent[rec.CacheIndex].AllUnspentTx[j].BtcAddr = MyWallet.Addrs[i]
+				cu.AllUnspentTx[j].BtcAddr = MyWallet.Addrs[i]
 			}
 			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		} else {
