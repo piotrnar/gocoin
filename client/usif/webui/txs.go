@@ -169,7 +169,13 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 				if ptx, ok := network.TransactionsToSend[tid.BIdx()]; ok {
 					network.TxMutex.Unlock()
 					cnt := network.NetRouteInv(1, tid, nil)
-					ptx.Invsentcnt += cnt
+					if cnt==0 {
+						usif.SendInvToRandomPeer(1, tid)
+					} else {
+						ptx.Invsentcnt += cnt
+					}
+				} else {
+					network.TxMutex.Unlock()
 				}
 			}
 		}
@@ -182,6 +188,8 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 					network.TxMutex.Unlock()
 					usif.SendInvToRandomPeer(1, tid)
 					ptx.Invsentcnt++
+				} else {
+					network.TxMutex.Unlock()
 				}
 			}
 		}
