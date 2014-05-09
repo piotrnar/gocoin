@@ -1,9 +1,12 @@
 package btc
 
 import (
+	"fmt"
 	"bytes"
 	"errors"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/secp256k1"
 	"code.google.com/p/go.crypto/ripemd160"
 )
@@ -187,4 +190,82 @@ func (sa *StealthAddr) CheckNonce(payload []byte) bool {
 	sha := sha256.New()
 	sha.Write(payload)
 	return sa.CheckPrefix(sha.Sum(nil)[:4])
+}
+
+
+// Thanks @dabura667 - https://bitcointalk.org/index.php?topic=590349.msg6560332#msg6560332
+func MakeStealthTxOuts(sa *StealthAddr, value uint64, testnet bool) (res []*TxOut, er error) {
+	if sa.Version != StealthAddressVersion(testnet) {
+		er = errors.New(fmt.Sprint("ERROR: Unsupported version of a stealth address", sa.Version))
+		return
+	}
+
+	if len(sa.SpendKeys) != 1 || sa.Sigs != 1 {
+		er = errors.New(fmt.Sprint("ERROR: Currently only non-multisig stealth addresses are supported",
+			len(sa.SpendKeys)))
+		return
+	}
+
+	// Make two outpus
+	res = make([]*TxOut, 2)
+	var e, ephemkey, pkscr []byte
+	var nonce, nonce_from uint32
+	sha := sha256.New()
+
+	// 6. create a new pub/priv keypair (lets call its pubkey "ephemkey" and privkey "e")
+pick_different_e:
+	e = make([]byte, 32)
+	rand.Read(e)
+	ephemkey = PublicFromPrivate(e, true)
+
+	// 7. IF there is a prefix in the stealth address, brute force a nonce such
+	// that SHA256(nonce.concate(ephemkey)) first 4 bytes are equal to the prefix.
+	// IF NOT, then just run through the loop once and pickup a random nonce.
+	// (probably make the while condition include "or prefix = null" or something to that nature.
+	binary.Read(rand.Reader, binary.LittleEndian, &nonce_from)
+	nonce = nonce_from
+	for {
+		binary.Write(sha, binary.LittleEndian, nonce)
+		sha.Write(ephemkey)
+
+		if sa.CheckPrefix(sha.Sum(nil)[:4]) {
+			break
+		}
+		sha.Reset()
+
+		nonce++
+		if nonce==nonce_from {
+			fmt.Println("EOF")
+			goto pick_different_e
+		}
+
+		if (nonce&0xfffff)==0 {
+			fmt.Print(".")
+		}
+	}
+
+	// 8. Once you have the nonce and the ephemkey, you can create the first output, which is
+	pkscr = make([]byte, 40)
+	pkscr[0] = 0x6a // OP_RETURN
+	pkscr[1] = 38 // length
+	pkscr[2] = 0x06 // always 6
+	binary.LittleEndian.PutUint32(pkscr[3:7], nonce)
+	copy(pkscr[7:40], ephemkey)
+	res[0] = &TxOut{Pk_script: pkscr}
+
+	// 9. Now use ECC multiplication to calculate e*Q where Q = scan_pubkey
+	// an e = privkey to ephemkey and then hash it.
+	c := StealthDH(sa.ScanKey[:], e)
+	rand.Read(e) // clear ephemkey private key from memory
+
+	// 10. That hash is now "c". use ECC multiplication and addition to
+	// calculate D + (c*G) where D = spend_pubkey, and G is the reference
+	// point for secp256k1. This will give you a new pubkey. (we'll call it D')
+	Dpr := DeriveNextPublic(sa.SpendKeys[0][:], c)
+
+	// 11. Create a normal P2KH output spending to D' as public key.
+	adr := NewAddrFromPubkey(Dpr, AddrVerPubkey(testnet))
+	res[1] = &TxOut{Value: value, Pk_script: adr.OutScript() }
+
+	return
 }

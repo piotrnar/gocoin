@@ -34,7 +34,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		var totalinput, spentsofar uint64
 		var change_addr *btc.BtcAddr
 		var multisig_input []*wallet.MultisigAddr
-		var invalid_tx bool
 
 		addrs_to_msign := make(map[string]bool)
 
@@ -107,14 +106,12 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 						}
 						pay_cmd += addr.Enc58str + "=" + btc.UintToBtc(am)
 
-						tout := new(btc.TxOut)
-						tout.Value = am
-						tout.Pk_script = addr.OutScript()
-						if tout.Pk_script!=nil {
-							tx.TxOut = append(tx.TxOut, tout)
-						} else {
-							invalid_tx = true
+						outs, er := btc.NewSpendOutputs(addr, am, common.CFG.Testnet)
+						if er != nil {
+							err = er.Error()
+							goto error
 						}
+						tx.TxOut = append(tx.TxOut, outs...)
 
 						spentsofar += am
 					} else {
@@ -206,10 +203,8 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// Non-multisig transaction ...
-			if !invalid_tx {
-				fz, _ = zi.Create("tx2sign.txt")
-				fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
-			}
+			fz, _ = zi.Create("tx2sign.txt")
+			fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
 
 			if pay_cmd!="" {
 				fz, _ = zi.Create(common.CFG.PayCommandName)
