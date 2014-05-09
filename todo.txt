@@ -1,7 +1,6 @@
 Allow to do multisig -> stealth spending
 
 Client:
-* MakeTX - adjust estimated tx size for stealth outputs
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
