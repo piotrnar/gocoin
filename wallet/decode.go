@@ -162,12 +162,20 @@ func dump_raw_tx() {
 	}
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
 	for i := range tx.TxOut {
-		fmt.Printf("%4d) %20s BTC to ", i, btc.UintToBtc(tx.TxOut[i].Value))
+		fmt.Printf("%4d) %20s BTC ", i, btc.UintToBtc(tx.TxOut[i].Value))
 		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, *testnet)
 		if addr != nil {
-			fmt.Println("address", addr.String())
+			if addr.Version==btc.AddrVerScript(*testnet) {
+				fmt.Println("to scriptH", addr.String())
+			} else {
+				fmt.Println("to address", addr.String())
+			}
+		} else if len(tx.TxOut[i].Pk_script)==40 && tx.TxOut[i].Pk_script[0]==0x6a &&
+			tx.TxOut[i].Pk_script[1]==0x26 && tx.TxOut[i].Pk_script[2]==0x06 {
+			fmt.Println("Stealth", hex.EncodeToString(tx.TxOut[i].Pk_script[3:7]),
+				hex.EncodeToString(tx.TxOut[i].Pk_script[7:]))
 		} else {
-			fmt.Println("Pk_script:")
+			fmt.Println("to Pk_script:")
 			ss, er := btc.ScriptToText(tx.TxOut[i].Pk_script)
 			if er == nil {
 				for i := range ss {
@@ -185,7 +193,7 @@ func dump_raw_tx() {
 		if unsigned>0 {
 			fmt.Println("Number of unsigned inputs:", unsigned)
 		} else {
-			fmt.Println("All the inputs seems to be signed")
+			fmt.Println("All the inputs seem to be signed, but watch out for multi signatures required")
 		}
 	}
 }
