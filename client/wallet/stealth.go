@@ -139,7 +139,7 @@ func BlockAccepted() {
 					if rec, ok := CachedAddrs[StealthAdCache[ai].h160]; ok {
 						rec.Value += uo.Value
 						CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, uo)
-						CacheUnspentIdx[po2idx(&uo.TxPrevOut)] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: uo}
+						CacheUnspentIdx[uo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: uo}
 						if rec.InWallet {
 							update_wallet = true
 						}
