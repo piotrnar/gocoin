@@ -117,7 +117,9 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 
 
 func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) {
+	BalanceMutex.Lock()
 	newStealthIndexes = append(newStealthIndexes, pendingSI{db:db, k:k, rec:rec})
+	BalanceMutex.Unlock()
 }
 
 
@@ -126,7 +128,6 @@ func BlockAccepted() {
 	if len(newStealthIndexes) > 0 {
 		var update_wallet bool
 		BalanceMutex.Lock()
-		defer BalanceMutex.Unlock()
 		FetchStealthKeys()
 		for i := range newStealthIndexes {
 			for ai := range StealthAdCache {
@@ -152,7 +153,8 @@ func BlockAccepted() {
 		}
 		newStealthIndexes = nil
 		if update_wallet {
-			SyncWallet()
+			sync_wallet()
 		}
+		BalanceMutex.Unlock()
 	}
 }

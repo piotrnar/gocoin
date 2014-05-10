@@ -51,26 +51,23 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	var update_wallet bool
 
 	BalanceMutex.Lock()
-	defer BalanceMutex.Unlock()
 
 	if valpk!=nil {
 		// Extract hash160 from pkscript
 		adr := btc.NewAddrFromPkScript(valpk.Pk_script, common.Testnet)
-		if adr==nil {
-			return // We do not monitor this address
-		}
-
-		if rec, ok := CachedAddrs[adr.Hash160]; ok {
-			rec.Value += valpk.Value
-			utxo := new(btc.OneUnspentTx)
-			utxo.TxPrevOut = *idx
-			utxo.Value = valpk.Value
-			utxo.MinedAt = valpk.BlockHeight
-			utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
-			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
-			CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
-			if rec.InWallet {
-				update_wallet = true
+		if adr!=nil {
+			if rec, ok := CachedAddrs[adr.Hash160]; ok {
+				rec.Value += valpk.Value
+				utxo := new(btc.OneUnspentTx)
+				utxo.TxPrevOut = *idx
+				utxo.Value = valpk.Value
+				utxo.MinedAt = valpk.BlockHeight
+				utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
+				CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
+				CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
+				if rec.InWallet {
+					update_wallet = true
+				}
 			}
 		}
 	} else {
@@ -98,12 +95,14 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	}
 
 	if update_wallet {
-		SyncWallet()
+		sync_wallet()
 	}
+	BalanceMutex.Unlock()
 }
 
 
-func SyncWallet() {
+// make sure to call it with locked BalanceMutex
+func sync_wallet() {
 	if MyWallet!=nil {
 		MyBalance = nil
 		for i := range MyWallet.Addrs {
@@ -175,8 +174,6 @@ func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) boo
 func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance bool) (s string) {
 	var sum uint64
 	BalanceMutex.Lock()
-	defer BalanceMutex.Unlock()
-
 	for i := range mybal {
 		sum += mybal[i].Value
 
@@ -222,6 +219,7 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 	if update_balance {
 		LastBalance = sum
 	}
+	BalanceMutex.Unlock()
 	s += fmt.Sprintf("Total balance: %.8f BTC in %d unspent outputs\n", float64(sum)/1e8, len(mybal))
 	if utxt != nil {
 		utxt.Close()
@@ -237,7 +235,6 @@ func UpdateBalance() {
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
 
 	BalanceMutex.Lock()
-	defer BalanceMutex.Unlock()
 
 	MyBalance = nil
 
@@ -347,10 +344,12 @@ func UpdateBalance() {
 	}
 
 	sort_and_sum()
+	BalanceMutex.Unlock()
 }
 
 
-// Calculate total balance and sort MyBalnace by block height
+// Calculate total balance and sort MyBalance by block height
+// make sure to call it with locked BalanceMutex
 func sort_and_sum() {
 	LastBalance = 0
 	if len(MyBalance) > 0 {
