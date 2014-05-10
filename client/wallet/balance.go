@@ -46,11 +46,6 @@ type OneCachedAddrBalance struct {
 }
 
 
-func po2idx(po *btc.TxPrevOut) uint64 {
-	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
-}
-
-
 // This is called while accepting the block (from the chain's thread)
 func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	var update_wallet bool
@@ -73,13 +68,13 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 			utxo.MinedAt = valpk.BlockHeight
 			utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
-			CacheUnspentIdx[po2idx(idx)] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
+			CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
 			if rec.InWallet {
 				update_wallet = true
 			}
 		}
 	} else {
-		ii := po2idx(idx)
+		ii := idx.UIdx()
 		if ab, present := CacheUnspentIdx[ii]; present {
 			adrec := CacheUnspent[ab.Index]
 			//println("removing", idx.String())
@@ -326,7 +321,7 @@ func UpdateBalance() {
 		})
 
 		for i := range new_addrs {
-			poi := po2idx(&new_addrs[i].TxPrevOut)
+			poi := new_addrs[i].TxPrevOut.UIdx()
 			if _, ok := CacheUnspentIdx[poi]; ok {
 				fmt.Println(new_addrs[i].TxPrevOut.String(), "- already on the list")
 				continue
@@ -346,7 +341,7 @@ func UpdateBalance() {
 			}
 			rec.Value += new_addrs[i].Value
 			CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, new_addrs[i])
-			CacheUnspentIdx[po2idx(&new_addrs[i].TxPrevOut)] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
+			CacheUnspentIdx[new_addrs[i].TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index:rec.CacheIndex, Record:new_addrs[i]}
 		}
 		MyBalance = append(MyBalance, new_addrs...)
 	}
