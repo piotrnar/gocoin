@@ -28,10 +28,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 				common.Reset()
 			}
 			if len(r.Form["save"])>0 {
-				dat, _ := json.Marshal(&common.CFG)
-				if dat != nil {
-					ioutil.WriteFile(common.ConfigFile, dat, 0660)
-				}
+				common.SaveConfig()
 			}
 			http.Redirect(w, r, "/", http.StatusFound)
 			return

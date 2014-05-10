@@ -119,12 +119,16 @@ func init() {
 	CFG.PayCommandName = "pay_cmd.txt"
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
-	if e == nil {
+	if e==nil && len(cfgfilecontent)>0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
 		if e != nil {
 			println("Error in", ConfigFile, e.Error())
 			os.Exit(1)
 		}
+	} else {
+		// Create default config file
+		SaveConfig()
+		println("Stored default configuration in", ConfigFile)
 	}
 
 	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild the unspent DB (fixes 'Unknown input TxID' errors)")
@@ -149,6 +153,16 @@ func init() {
 	Reset()
 }
 
+
+func SaveConfig() bool {
+	dat, _ := json.Marshal(&CFG)
+	if dat == nil {
+		return false
+	}
+	ioutil.WriteFile(ConfigFile, dat, 0660)
+	return true
+
+}
 
 func Reset() {
 	UploadLimit = CFG.Net.MaxUpKBps << 10

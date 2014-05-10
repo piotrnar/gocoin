@@ -403,9 +403,7 @@ func load_config(s string) {
 
 
 func save_config(s string) {
-	dat, _ := json.Marshal(&common.CFG)
-	if dat != nil {
-		ioutil.WriteFile(common.ConfigFile, dat, 0660)
+	if common.SaveConfig() {
 		fmt.Println("Current settings saved to", common.ConfigFile)
 	}
 }
