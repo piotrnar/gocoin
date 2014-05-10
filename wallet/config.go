@@ -74,7 +74,6 @@ func parse_config() {
 				if e == nil {
 					if v>1 {
 						keycnt = uint(v)
-						println("keycnt", keycnt)
 					} else {
 						println(i, "wallet.cfg: incorrect key count", v)
 						os.Exit(1)
