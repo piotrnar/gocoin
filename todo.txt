@@ -4,8 +4,6 @@ Client:
 * Implement "mempool"
 
 Wallet:
-* Not brute force the nonce for stealth address prefix?
-* Do not update changes to balance/unspent.txt if a signing was not complete
 
 Downloader:
 * Make it to work with gocoion.cfg file

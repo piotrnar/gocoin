@@ -3,6 +3,7 @@
 * Support for stealth addresses
 * Wallet: support for "-p" switch that forces asking for seed password
 * Wallet: support for "-f" swicth, to exclude fee from the fist output's value
+* Wallet: many other changes
 
 0.9.10 (intermediate checkpoint tag)
 * Client: an address listed more than once in a wallet gets removed (was showing wrong balance)
