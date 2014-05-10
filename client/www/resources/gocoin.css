@@ -43,7 +43,8 @@ table.txs {
 }
 
 table.wal {
-	font-size:80%
+	font-size:80%;
+	width:100%;
 }
 
 #unspent {
@@ -136,4 +137,13 @@ table.blocks {
 }
 
 table.netcons {
+}
+
+.addr_long {
+	font-size:10px;
+	font-weight:bold;
+}
+
+.addr_norm {
+	font-weight:bold;
 }

@@ -160,6 +160,11 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			}
 			ad = strings.Replace(ad, "<!--WAL_ROW_IDX-->", fmt.Sprint(i), 1)
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
+			if len(wallet.MyWallet.Addrs[i].Enc58str) > 80 {
+				ad = strings.Replace(ad, "<!--WAL_ADDR_STYLE-->", "addr_long", 1)
+			} else {
+				ad = strings.Replace(ad, "<!--WAL_ADDR_STYLE-->", "addr_norm", 1)
+			}
 			ad = strings.Replace(ad, "<!--WAL_WALLET-->", html.EscapeString(wallet.MyWallet.Addrs[i].Extra.Wallet), 1)
 			ad = strings.Replace(ad, "<!--WAL_LABEL-->", html.EscapeString(lab), 1)
 
