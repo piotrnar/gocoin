@@ -57,7 +57,7 @@ func dump_hashes_to_sign(tx *btc.Tx) {
 			println("Unknown content of unspent input number", in)
 			os.Exit(1)
 		}
-		pubad := btc.NewAddrFromPkScript(uo.Pk_script, *testnet)
+		pubad := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
 		hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
 		fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
 	}
@@ -65,15 +65,17 @@ func dump_hashes_to_sign(tx *btc.Tx) {
 
 
 // prepare a signed transaction
-func sign_tx(tx *btc.Tx) {
+func sign_tx(tx *btc.Tx) (all_signed bool) {
+	all_signed = true
 	for in := range tx.TxIn {
 		uo := UO(unspentOuts[in])
 		var found bool
 		for j := range publ_addrs {
 			if publ_addrs[j].Owns(uo.Pk_script) {
-				found = true
 				er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, publ_addrs[j].Pubkey, priv_keys[j][:])
-				if er != nil {
+				if er == nil {
+					found = true
+				} else {
 					fmt.Println("Error signing input", in, "of", len(tx.TxIn))
 					fmt.Println("...", er.Error())
 				}
@@ -82,8 +84,10 @@ func sign_tx(tx *btc.Tx) {
 		}
 		if !found {
 			fmt.Println("WARNING: You do not have key for", hex.EncodeToString(uo.Pk_script))
+			all_signed = false
 		}
 	}
+	return
 }
 
 func write_tx_file(tx *btc.Tx) {
@@ -131,7 +135,7 @@ func make_signed_tx() {
 
 	// Build transaction outputs:
 	for o := range sendTo {
-		outs, er := btc.NewSpendOutputs(sendTo[o].addr, sendTo[o].amount, *testnet)
+		outs, er := btc.NewSpendOutputs(sendTo[o].addr, sendTo[o].amount, testnet)
 		if er != nil {
 			fmt.Println("ERROR:", er.Error())
 			os.Exit(1)
@@ -145,7 +149,7 @@ func make_signed_tx() {
 		if *verbose {
 			fmt.Println("Sending change", changeBtc, "to", chad.String())
 		}
-		outs, er := btc.NewSpendOutputs(chad, changeBtc, *testnet)
+		outs, er := btc.NewSpendOutputs(chad, changeBtc, testnet)
 		if er != nil {
 			fmt.Println("ERROR:", er.Error())
 			os.Exit(1)
@@ -165,10 +169,10 @@ func make_signed_tx() {
 	if *hashes {
 		dump_hashes_to_sign(tx)
 	} else {
-		sign_tx(tx)
+		signed := sign_tx(tx)
 		write_tx_file(tx)
 
-		if *apply2bal {
+		if apply2bal && signed {
 			apply_to_balance(tx)
 		}
 	}

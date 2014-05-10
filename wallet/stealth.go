@@ -44,7 +44,7 @@ func new_stealth_address(prv_key []byte) {
 	}
 
 	sa := new(btc.StealthAddr)
-	sa.Version = btc.StealthAddressVersion(*testnet)
+	sa.Version = btc.StealthAddressVersion(testnet)
 	sa.Options = 0
 	copy(sa.ScanKey[:], sk)
 	sa.SpendKeys = make([][33]byte, 1)

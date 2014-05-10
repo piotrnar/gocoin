@@ -20,21 +20,14 @@ var (
 	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
 	singleask *bool = flag.Bool("1", false, "Do not re-ask for the password (when used along with -l)")
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
-	keycnt *uint = flag.Uint("n", 50, "Set the number of keys to be used")
-	uncompressed *bool = flag.Bool("u", false, "Use uncompressed public keys")
-	testnet *bool = flag.Bool("t", false, "Force work with testnet addresses")
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
-	apply2bal *bool = flag.Bool("a", true, "Apply changes to the balance folder")
 	ask4pass *bool = flag.Bool("p", false, "Force the wallet to ask for seed password")
 	onlvalid *bool = flag.Bool("o", false, "Process only P2KH outputs that you have a key for")
 	subfee *bool = flag.Bool("f", false, "Substract fee from the first value")
 
-	waltype *uint = flag.Uint("type", 3, "Choose a type of the deterministic wallet (1, 2 or 3)")
-	type2sec *string  = flag.String("t2sec", "", "Enforce using this secret for Type-2 method (hex encoded)")
 	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
 
 	// Spending money options
-	fee *string = flag.String("fee", "", "Transaction fee (otherwise default fee will be used)")
 	send *string  = flag.String("send", "", "Send money to list of comma separated pairs: address=amount")
 	batch *string  = flag.String("batch", "", "Send money as per the given batch file (each line: address=amount)")
 	change *string  = flag.String("change", "", "Send any change to this address (otherwise return to 1st input)")
@@ -83,19 +76,19 @@ func main() {
 	println("This program comes with ABSOLUTELY NO WARRANTY")
 	println()
 
+	parse_config()
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
-	parse_config()
 	flag.Parse()
-	if *fee!="" {
-		var e error
-		if curFee, e = btc.StringToSatoshis(*fee); e != nil {
-			println("Incorrect fee value", *fee)
-			os.Exit(1)
-		}
+
+	if val, e := btc.StringToSatoshis(fee); e != nil {
+		println("Incorrect fee value", fee)
+		os.Exit(1)
+	} else {
+		curFee = val
 	}
 
 	if *dumptxfn!="" {

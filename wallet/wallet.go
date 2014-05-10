@@ -19,7 +19,7 @@ var (
 	labels []string
 	publ_addrs []*btc.BtcAddr
 	compressed_key []bool
-	curFee uint64 = 1000 // default fee
+	curFee uint64
 )
 
 
@@ -113,11 +113,11 @@ func load_others() {
 }
 
 
-// Get the secret seed and generate "*keycnt" key pairs (both private and public)
+// Get the secret seed and generate "keycnt" key pairs (both private and public)
 func make_wallet() {
 	var lab string
 
-	if *testnet {
+	if testnet {
 		verbyte = 0x6f
 		privver = 0xef
 	} else {
@@ -135,34 +135,42 @@ func make_wallet() {
 		utils.ClearBuffer(seed_key)
 	}()
 
-	if *waltype==3 {
-		lab = "TypC"
-	} else if *waltype==2 {
-		if *type2sec!="" {
-			d, e := hex.DecodeString(*type2sec)
-			if e!=nil {
-				println("t2sec error:", e.Error())
-				os.Exit(1)
+	switch waltype {
+		case 1:
+			lab = "TypA"
+			println("WARNING: Wallet Type 1 is obsolete")
+
+		case 2:
+			lab = "TypB"
+			if type2sec!="" {
+				d, e := hex.DecodeString(type2sec)
+				if e!=nil {
+					println("t2sec error:", e.Error())
+					os.Exit(1)
+				}
+				type2_secret = d
+			} else {
+				type2_secret = make([]byte, 20)
+				btc.RimpHash(seed_key, type2_secret)
 			}
-			type2_secret = d
-		} else {
-			type2_secret = make([]byte, 20)
-			btc.RimpHash(seed_key, type2_secret)
-		}
-		lab = "TypB"
-	} else {
-		lab = "TypA"
+
+		case 3:
+			lab = "TypC"
+
+		default:
+			println("ERROR: Unsupported wallet type", waltype)
+			os.Exit(0)
 	}
 
 	if *verbose {
-		fmt.Println("Generating", *keycnt, "keys, version", verbyte,"...")
+		fmt.Println("Generating", keycnt, "keys, version", verbyte,"...")
 	}
-	for i:=uint(0); i < *keycnt; {
+	for i:=uint(0); i < keycnt; {
 		prv_key := make([]byte, 32)
-		if *waltype==3 {
+		if waltype==3 {
 			btc.ShaHash(seed_key, prv_key)
 			seed_key = append(seed_key, byte(i))
-		} else if *waltype==2 {
+		} else if waltype==2 {
 			seed_key = btc.DeriveNextPrivate(seed_key, type2_secret)
 			copy(prv_key, seed_key)
 		} else {
@@ -179,13 +187,14 @@ func make_wallet() {
 		if i==0 {
 			copy(first_seed[:], prv_key)
 		}
-		compressed_key = append(compressed_key, !*uncompressed)
-		pub := btc.PublicFromPrivate(prv_key, !*uncompressed)
+		compressed_key = append(compressed_key, !uncompressed)
+		pub := btc.PublicFromPrivate(prv_key, !uncompressed)
 		if pub != nil {
 			adr := btc.NewAddrFromPubkey(pub, verbyte)
 
 			if *pubkey!="" && *pubkey==adr.String() {
-				fmt.Println(adr.String(), "=>", hex.EncodeToString(pub))
+				fmt.Println("Public address:", adr.String())
+				fmt.Println("Public hexdump:", hex.EncodeToString(pub))
 				return
 			}
 			publ_addrs = append(publ_addrs, adr)
@@ -205,7 +214,7 @@ func make_wallet() {
 func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
 
-	fmt.Fprintln(f, "# Deterministic Walet Type", *waltype)
+	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
 	if type2_secret!=nil {
 		fmt.Fprintln(f, "#", hex.EncodeToString(publ_addrs[0].Pubkey))
 		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
