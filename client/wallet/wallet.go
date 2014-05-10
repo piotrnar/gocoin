@@ -90,23 +90,18 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
 				addrs = append(addrs[:j], addrs[j+1:]...)
 			} else {
-				j++
-
 				// look for same stealth address with different prefix
-				if addrs[i].StealthAddr!=nil && addrs[j].StealthAddr!=nil &&
-					!bytes.Equal(addrs[i].StealthAddr.Prefix, addrs[j].StealthAddr.Prefix) {
+				if addrs[i].StealthAddr!=nil && addrs[j].StealthAddr!=nil {
 					a1 := addrs[i].StealthAddr
 					a2 := addrs[j].StealthAddr
-					a1.Prefix = nil
-					a2.Prefix = nil
-					if a1.String()==a2.String() {
-						fmt.Println("WARNING: You have two identical stealth addresses with different prefixes")
-						fmt.Println(" 1st :", a1.String())
-						fmt.Println(" 2nd :", a1.String())
-						fmt.Println("The balance of any of these adresses will not be showed properly.")
+					if bytes.Equal(a1.BytesNoPrefix(), a2.BytesNoPrefix()) {
+						fmt.Println("WARNING: Two identical stealth addresses with different prefixes - fetching their balance will be broken!!!")
+						fmt.Println(" *", a1.PrefixLen(), a1.String())
+						fmt.Println(" *", a2.PrefixLen(), a2.String())
 					}
 				}
 
+				j++
 			}
 		}
 	}

@@ -97,7 +97,7 @@ func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 }
 
 
-func (a *StealthAddr) Bytes(checksum bool) []byte {
+func (a *StealthAddr) BytesNoPrefix() []byte {
 	b := new(bytes.Buffer)
 	b.WriteByte(a.Version)
 	b.WriteByte(a.Options)
@@ -107,6 +107,21 @@ func (a *StealthAddr) Bytes(checksum bool) []byte {
 		b.Write(a.SpendKeys[i][:])
 	}
 	b.WriteByte(a.Sigs)
+	return b.Bytes()
+}
+
+
+func (a *StealthAddr) PrefixLen() byte {
+	if len(a.Prefix)==0 {
+		return 0
+	}
+	return a.Prefix[0]
+}
+
+
+func (a *StealthAddr) Bytes(checksum bool) []byte {
+	b := new(bytes.Buffer)
+	b.Write(a.BytesNoPrefix())
 	b.Write(a.Prefix)
 	if checksum {
 		sh := Sha2Sum(b.Bytes())
