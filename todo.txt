@@ -13,3 +13,4 @@ Downloader:
 Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
+* Check occasional "incorrect proof of work" problem in testnet
