@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"bufio"
+	"bytes"
 	"strings"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/btc"
@@ -90,6 +91,22 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 				addrs = append(addrs[:j], addrs[j+1:]...)
 			} else {
 				j++
+
+				// look for same stealth address with different prefix
+				if addrs[i].StealthAddr!=nil && addrs[j].StealthAddr!=nil &&
+					!bytes.Equal(addrs[i].StealthAddr.Prefix, addrs[j].StealthAddr.Prefix) {
+					a1 := addrs[i].StealthAddr
+					a2 := addrs[j].StealthAddr
+					a1.Prefix = nil
+					a2.Prefix = nil
+					if a1.String()==a2.String() {
+						fmt.Println("WARNING: You have two identical stealth addresses with different prefixes")
+						fmt.Println(" 1st :", a1.String())
+						fmt.Println(" 2nd :", a1.String())
+						fmt.Println("The balance of any of these adresses will not be showed properly.")
+					}
+				}
+
 			}
 		}
 	}
