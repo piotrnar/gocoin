@@ -8,9 +8,9 @@ package qdb
 #include <stdlib.h>
 #include <strings.h>
 
-void *alloc_ptr(void *c, int l) {
+void *alloc_ptr(void *c, size_t l) {
 	void *ptr = malloc(l);
-	memcpy(ptr, c, l);
+	memcpy(ptr, (const void *)c, l);
 	return ptr;
 }
 
@@ -43,7 +43,7 @@ func (v *oneIdx) Slice() (res []byte) {
 
 func newIdx(v []byte, f uint32) (r *oneIdx) {
 	r = new(oneIdx)
-	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.int(len(v))))
+	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.size_t(len(v))))
 	r.datlen = uint32(len(v))
 	r.flags = f
 	return
@@ -53,7 +53,7 @@ func (r *oneIdx) SetData(v []byte) {
 	if r.data!=nil {
 		C.free(unsafe.Pointer(r.data))
 	}
-	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.int(len(v))))
+	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.size_t(len(v))))
 }
 
 func (v *oneIdx) LoadData(f *os.File) {
