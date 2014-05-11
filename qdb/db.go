@@ -87,7 +87,7 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32) (db *DB, e error) {
+func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32, recs uint) (db *DB, e error) {
 	cnt("NewDB")
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
@@ -97,7 +97,7 @@ func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32
 	db.dir = dir
 	db.rdfile = make(map[uint32] *os.File)
 	db.pending_recs = make(map[KeyType] bool, MaxPending)
-	db.idx = NewDBidx(db)
+	db.idx = NewDBidx(db, recs)
 	if load {
 		db.idx.load(walk)
 	}
@@ -107,13 +107,16 @@ func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32
 
 
 func NewDBrowse(dir string, walk func(key KeyType, value []byte) uint32) (db *DB, e error) {
-	return NewDBExt(dir, true, walk)
+	return NewDBExt(dir, true, walk, 0)
 }
 
 func NewDB(dir string, load bool) (db *DB, e error) {
-	return NewDBExt(dir, load, nil)
+	return NewDBExt(dir, load, nil, 0)
 }
 
+func NewDBCnt(dir string, load bool, recs uint) (db *DB, e error) {
+	return NewDBExt(dir, load, nil, recs)
+}
 
 // Returns number of records in the DB
 func (db *DB) Count() (l int) {
