@@ -31,6 +31,7 @@ const (
 var (
 	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
 	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
+	UnspentDBSaveMemory bool
 )
 
 
@@ -78,7 +79,9 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
-		sys.FreeMem()
+		if UnspentDBSaveMemory {
+			sys.FreeMem()
+		}
 	}
 	return db.tdb[i]
 }
