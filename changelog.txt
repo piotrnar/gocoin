@@ -1,5 +1,4 @@
 0.9.14
-* Qdb: Uses malloc() and free() from libc, to optimize usage of system memory
 
 0.9.13 - 2014-05-10 (1.0.0-rc1)
 * Huge refactor of the entire repo
