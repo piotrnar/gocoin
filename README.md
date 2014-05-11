@@ -76,7 +76,8 @@ Not having gcc, trying to build the client you will see such an error:
 	# github.com/piotrnar/gocoin/qdb
 	exec: "gcc": executable file not found in %PATH%
 
-Not having a working gcc in you system, you can still compile the package.
+You can still compile the problematic package...
+
 To fix the problem just copy file "qdb/no_gcc/membind.go" one folder up, overwriting the original "qdb/membind.go"
 
 ## Compile client
