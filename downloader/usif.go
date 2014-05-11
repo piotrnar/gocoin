@@ -8,8 +8,6 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
-	"runtime"
-	"runtime/debug"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/others/sys"
 )
@@ -175,7 +173,7 @@ func do_usif() {
 
 					case "f":
 						show_free_mem()
-						debug.FreeOSMemory()
+						sys.FreeMem()
 						show_free_mem()
 						fmt.Println("To free more memory, quit (q command) and relaunch the downloader")
 

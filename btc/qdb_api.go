@@ -12,7 +12,7 @@ const (
 	WALK_NOMORE  = 0x00000002 // Do not browse through it anymore
 
 	// Unspent DB
-	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000
+	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000, but not for testnet
 	prevOutIdxLen = qdb.KeySize
 	NumberOfUnspentSubDBs = 0x10
 	SCR_OFFS = 48

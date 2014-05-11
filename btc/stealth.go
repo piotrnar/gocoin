@@ -77,6 +77,10 @@ func NewStealthAddr(dec []byte) (a *StealthAddr, e error) {
 		return
 	}
 	a.Prefix = b.Bytes()
+	if len(a.Prefix)==0 {
+		a = nil
+		e = errors.New("StealthAddr: Missing prefix")
+	}
 
 	if len(a.Prefix)>0 && a.Prefix[0]>32 {
 		e = errors.New("StealthAddr: Prefix out of range")
@@ -139,7 +143,7 @@ func (a *StealthAddr) String() (string) {
 // Calculate a unique 200-bits long hash of the address
 func (a *StealthAddr) Hash160() []byte {
 	rim := ripemd160.New()
-	rim.Write(a.Bytes(false))
+	rim.Write(a.BytesNoPrefix())
 	return rim.Sum(nil)
 }
 
