@@ -69,6 +69,8 @@ Is is recommended to have gcc complier installed in your system, to get advantag
 
 For Windows install mingw, or rather mingw64 since the client node needs 64-bit architecture.
 
+### Not having gcc
+
 Not having gcc, trying to build the client you will see such an error:
 
 	# github.com/piotrnar/gocoin/qdb
