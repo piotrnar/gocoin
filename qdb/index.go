@@ -21,11 +21,15 @@ type dbidx struct {
 	extra_space_used uint64
 }
 
-func NewDBidx(db *DB) (idx *dbidx) {
+func NewDBidx(db *DB, recs uint) (idx *dbidx) {
 	idx = new(dbidx)
 	idx.db = db
 	idx.path = db.dir+"qdbidx."
-	idx.index = make(map[KeyType] *oneIdx)
+	if recs==0 {
+		idx.index = make(map[KeyType] *oneIdx)
+	} else {
+		idx.index = make(map[KeyType] *oneIdx, recs)
+	}
 	used := make(map[uint32]bool, 10)
 	idx.loaddat(used)
 	idx.loadlog(used)
