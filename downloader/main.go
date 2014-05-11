@@ -11,7 +11,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/others/ver"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 
@@ -39,7 +39,7 @@ var (
 
 
 func parse_command_line() {
-	GocoinHomeDir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator)
+	GocoinHomeDir = sys.BitcoinHome() + "gocoin" + string(os.PathSeparator)
 
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
 	flag.BoolVar(&Testnet, "t", false, "Use Testnet3")
@@ -141,8 +141,8 @@ func main() {
 	}
 	fmt.Println("GocoinHomeDir:", GocoinHomeDir)
 
-	utils.LockDatabaseDir(GocoinHomeDir)
-	defer utils.UnlockDatabaseDir()
+	sys.LockDatabaseDir(GocoinHomeDir)
+	defer sys.UnlockDatabaseDir()
 
 	StartTime = time.Now()
 	if open_blockchain() {
