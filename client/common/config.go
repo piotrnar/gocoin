@@ -61,7 +61,6 @@ var (
 			MinBrowsableVal uint64
 			NoCacheBefore uint
 			GCPercTrshold int
-			UnspentDBSaveMemory bool // DB engine can use less memory, at a cost of performance
 		}
 		Beeps struct {
 			NewBlock bool  // beep when a new block has been mined
@@ -173,7 +172,6 @@ func Reset() {
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	btc.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
 	btc.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
-	btc.UnspentDBSaveMemory = CFG.Memory.UnspentDBSaveMemory
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {

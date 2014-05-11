@@ -68,9 +68,6 @@ func newUnwindDB(dir string) (db *unwindDb) {
 		if AbortNow {
 			return
 		}
-		if UnspentDBSaveMemory {
-			sys.FreeMem()
-		}
 	}
 	return
 }

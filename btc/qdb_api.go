@@ -21,7 +21,6 @@ const (
 var (
 	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
 	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
-	UnspentDBSaveMemory bool // DB engine can use less memory, at a cost of performance
 )
 
 type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32
@@ -78,9 +77,6 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.unspent.commit(changes)
 	if changes.Height >= changes.LastKnownHeight {
 		db.Sync()
-	}
-	if UnspentDBSaveMemory {
-		sys.FreeMem()
 	}
 	return
 }

@@ -63,9 +63,6 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
-		if UnspentDBSaveMemory {
-			sys.FreeMem()
-		}
 	}
 	return db.tdb[i]
 }

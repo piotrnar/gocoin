@@ -35,7 +35,6 @@ var (
 	DoThePings bool             // -p
 	MemForBlocks uint           // -m (in megabytes)
 	Testnet bool                // -t
-	FreeTheMem bool             // -f
 )
 
 
@@ -50,7 +49,6 @@ func parse_command_line() {
 	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 	flag.BoolVar(&DoThePings, "p", false, "Execute the pings procedure first to find the fastest peers")
-	flag.BoolVar(&FreeTheMem, "f", false, "Free memory as parsing blocks (worse performance, but lower mem usage)")
 
 	flag.UintVar(&MemForBlocks, "m", 64, "Set memory buffer for cached block data (value in megabytes)")
 
@@ -112,7 +110,6 @@ func setup_runtime_vars() {
 	if GCPerc>0 {
 		debug.SetGCPercent(GCPerc)
 	}
-	btc.UnspentDBSaveMemory = FreeTheMem
 	//qdb.SetDefragPercent(100)
 	//qdb.SetMaxPending(1000, 10000)
 }
