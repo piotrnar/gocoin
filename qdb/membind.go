@@ -6,11 +6,11 @@ package qdb
 
 /*
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 void *alloc_ptr(void *c, size_t l) {
 	void *ptr = malloc(l);
-	memcpy(ptr, (const void *)c, l);
+	memcpy(ptr, c, l);
 	return ptr;
 }
 
