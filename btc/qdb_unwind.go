@@ -10,15 +10,17 @@ import (
 
 
 /*
-The spent record:
- [0] - 1-added / 0 - deleted
- [1:33] - TxPrevOut.Hash
- [33:37] - TxPrevOut.Vout LSB
- These only for delted:
-  [37:45] - Value
-  [45:49] - PK_Script length
-  [49:] - PK_Script
- [X:X+4] - crc32
+Ine block record:
+ * Tndex is the block height (64 bits)
+ * 32 bytes of block's hash
+ * Number of spent record:
+   [0] - 1-added / 0 - deleted
+   [1:33] - TxPrevOut.Hash
+   [33:37] - TxPrevOut.Vout LSB
+   Now optional ([0]==0):
+     [37:45] - Value
+     [45:49] - PK_Script length
+     [49:] - PK_Script
 */
 
 
@@ -38,9 +40,9 @@ type unwindDb struct {
 }
 
 func (db *unwindDb) dbH(i int) (*qdb.DB) {
-	i &= 0xff
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDB(db.dir+fmt.Sprintf("unw%03d", i), true)
+		db.tdb[i], _ = qdb.NewDBCnt(db.dir+fmt.Sprintf("unw%03d", i), true,
+			(UnwindBufferMaxHistory+NumberOfUnwindSubDBs-1)/NumberOfUnwindSubDBs)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -54,7 +56,7 @@ func newUnwindDB(dir string) (db *unwindDb) {
 	db.dir = dir
 	for i := range db.tdb {
 		// Load each of the sub-DBs into memory and try to find the highest block
-		db.dbH(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+		db.dbH(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
 			h := uint32(k)
 			if h > db.lastBlockHeight {
 				db.lastBlockHeight = h
