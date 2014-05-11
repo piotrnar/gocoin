@@ -67,6 +67,17 @@ Make sure that the all sources are placed in a proper location within your GOPAT
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
 
+### With no gcc
+Is is highly recommended to have gcc complier installed in your system.
+In case of Windows install mingw, or mingw64 for 64 bit OS.
+
+Not having gcc, trying to build the client you will see such an error:
+	# github.com/piotrnar/gocoin/qdb
+	exec: "gcc": executable file not found in %PATH%
+
+Not having a working gcc in you system, you can still compile the package.
+To fix the problem just copy file "qdb/no_gcc/membind.go" one folder up, overwriting the original "qdb/membind.go"
+
 ## Compile wallet
 Go to the `wallet/` folder and execute `go build` there.
 
