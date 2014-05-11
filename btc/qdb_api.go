@@ -3,7 +3,6 @@ package btc
 import (
 	"os"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/others/sys"
 )
 
 // Used during BrowseUTXO()
