@@ -1,7 +1,8 @@
-package utils
+package sys
 
 import (
 	"os"
+	"runtime"
 	"io/ioutil"
 	"crypto/rand"
 	"encoding/hex"
@@ -102,4 +103,12 @@ func ReadPassword(buf []byte) (n int) {
 		return secrespass(buf)
 	}
 	return getline(buf)
+}
+
+
+// Returns Alloc and Sys (how much memory is used)
+func MemUsed() (uint64, uint64) {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	return ms.Alloc, ms.Sys
 }
