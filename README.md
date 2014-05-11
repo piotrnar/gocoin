@@ -64,7 +64,7 @@ You can also use `go get` to fetch the gocoin sources from GitHub for you:
 
 Make sure that the all sources are placed in a proper location within your GOPATH folder, before compiling them (`go get` should take care of this).
 
-## With no gcc
+## Have gcc if you can
 Is is recommended to have gcc complier installed in your system, to get advantage of performance improvements.
 
 For Windows install mingw, or rather mingw64 since the client node needs 64-bit architecture.
