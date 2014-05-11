@@ -82,7 +82,15 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	// remove duplicated addresses
 	for i:=0; i<len(addrs)-1; i++ {
 		for j:=i+1; j<len(addrs); {
-			if addrs[i].String()==addrs[j].String() {
+			if addrs[i].Hash160==addrs[j].Hash160 {
+				if addrs[i].StealthAddr!=nil && !bytes.Equal(addrs[i].Prefix, addrs[j].Prefix) {
+					fmt.Println("WARNING: duplicate stealth addresses with different prefixes. Merging them into one with null-prefix")
+					fmt.Println(" -", addrs[i].PrefixLen(), addrs[i].String())
+					fmt.Println(" -", addrs[j].PrefixLen(), addrs[j].String())
+					addrs[i].Prefix = []byte{0}
+					addrs[i].Enc58str = addrs[i].StealthAddr.String()
+					fmt.Println(" +", addrs[i].PrefixLen(), addrs[i].String())
+				}
 				if addrs[i].Extra.Wallet==AddrBookFileName {
 					// Overwrite wallet name if is was ADDRESS (book)
 					addrs[i].Extra.Wallet = addrs[j].Extra.Wallet
@@ -90,17 +98,6 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
 				addrs = append(addrs[:j], addrs[j+1:]...)
 			} else {
-				// look for same stealth address with different prefix
-				if addrs[i].StealthAddr!=nil && addrs[j].StealthAddr!=nil {
-					a1 := addrs[i].StealthAddr
-					a2 := addrs[j].StealthAddr
-					if bytes.Equal(a1.BytesNoPrefix(), a2.BytesNoPrefix()) {
-						fmt.Println("WARNING: Two identical stealth addresses with different prefixes - fetching their balance will be broken!!!")
-						fmt.Println(" *", a1.PrefixLen(), a1.String())
-						fmt.Println(" *", a2.PrefixLen(), a2.String())
-					}
-				}
-
 				j++
 			}
 		}
