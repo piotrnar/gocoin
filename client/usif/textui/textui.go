@@ -15,6 +15,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/others/ver"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -171,13 +172,10 @@ func show_info(par string) {
 	common.PrintStats()
 
 	// Memory used
-	var ms runtime.MemStats
-	var gs debug.GCStats
-	runtime.ReadMemStats(&ms)
-	fmt.Println("Go version:", runtime.Version(),
-		"   Heap size:", ms.Alloc>>20, "MB",
-		"   Sys mem used", ms.Sys>>20, "MB")
+	al, sy := sys.MemUsed()
+	fmt.Println("Go version:", runtime.Version(), "   Heap size:", al>>20, "MB", "   Sys mem used", sy>>20, "MB")
 
+	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
 	fmt.Println("LastGC:", time.Now().Sub(gs.LastGC).String(),
 		"   NumGC:", gs.NumGC,

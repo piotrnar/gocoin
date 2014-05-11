@@ -53,7 +53,8 @@ func FetchStealthKeys() {
 			}
 		}
 	} else {
-		println("ioutil.ReadDir", er.Error())
+		//println("ioutil.ReadDir", er.Error())
+		os.MkdirAll(dir, 0700)
 	}
 
 	if !PrecachingComplete {

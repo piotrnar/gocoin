@@ -106,8 +106,8 @@ func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32
 }
 
 
-func NewDBrowse(dir string, walk func(key KeyType, value []byte) uint32) (db *DB, e error) {
-	return NewDBExt(dir, true, walk, 0)
+func NewDBrowse(dir string, walk func(key KeyType, value []byte) uint32, recs uint) (db *DB, e error) {
+	return NewDBExt(dir, true, walk, recs)
 }
 
 func NewDB(dir string, load bool) (db *DB, e error) {

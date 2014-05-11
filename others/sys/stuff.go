@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"crypto/rand"
 	"encoding/hex"
+	"runtime/debug"
 )
 
 
@@ -105,10 +106,15 @@ func ReadPassword(buf []byte) (n int) {
 	return getline(buf)
 }
 
-
 // Returns Alloc and Sys (how much memory is used)
 func MemUsed() (uint64, uint64) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	return ms.Alloc, ms.Sys
+}
+
+// Run GC and free as much mem as possible
+func FreeMem() {
+	//runtime.GC()
+	debug.FreeOSMemory()
 }

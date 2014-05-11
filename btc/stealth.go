@@ -162,8 +162,7 @@ func StealthDH(pub, priv []byte) []byte {
 // Calculate the stealth difference
 func StealthPub(pub, priv []byte) (res []byte) {
 	res = make([]byte, 33)
-	if secp256k1.Multiply(pub, priv, res) {
-	} else {
+	if !secp256k1.Multiply(pub, priv, res) {
 		res = nil
 	}
 	return

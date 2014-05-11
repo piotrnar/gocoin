@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 
@@ -67,6 +68,7 @@ func newUnwindDB(dir string) (db *unwindDb) {
 		if AbortNow {
 			return
 		}
+		sys.FreeMem()
 	}
 	return
 }

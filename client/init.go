@@ -84,7 +84,9 @@ func host_init() {
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
-	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
+	al, sy := sys.MemUsed()
+	fmt.Printf("Blockchain open in %.3f seconds.  %d / %d MB of memory used\n",
+		float64(sto-sta)/1e9, al>>20, sy>>20)
 	common.BlockChain.NotifyTx = wallet.TxNotify
 	common.BlockChain.NotifyStealthTx = wallet.StealthNotify
 	common.StartTime = time.Now()

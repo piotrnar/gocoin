@@ -5,6 +5,7 @@ import (
 	"errors"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 /*
@@ -19,6 +20,8 @@ Eech value is variable length:
 
 
 const (
+	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000
+
 	prevOutIdxLen = qdb.KeySize
 	NumberOfUnspentSubDBs = 0x10
 
@@ -26,8 +29,8 @@ const (
 )
 
 var (
-	NocacheBlocksBelow uint // Do not keep in memory blocks older than this height
-	MinBrowsableOutValue uint64 = 1e6 // Zero means: browse throutgh all
+	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
+	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
 )
 
 
@@ -66,13 +69,16 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 		db.tdb[i], _ = qdb.NewDBrowse(db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
 				if stealthIndex(v) {
 					return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
+				} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
+					return qdb.NO_CACHE
 				} else {
 					return 0
 				}
-			})
+			}, SingeIndexSize)
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
+		sys.FreeMem()
 	}
 	return db.tdb[i]
 }
@@ -165,23 +171,34 @@ func (db *unspentDb) commit(changes *BlockChanges) {
 
 
 func (db *unspentDb) stats() (s string) {
-	var tot, cnt, sum, stealth_cnt uint64
+	var tot, brcnt, sum, stealth_cnt uint64
+	var mincnt, maxcnt uint64
 	for i := range db.tdb {
-		tot += uint64(db.dbN(i).Count())
+		dbcnt := uint64(db.dbN(i).Count())
+		if i==0 {
+			mincnt, maxcnt = dbcnt, dbcnt
+		} else if dbcnt < mincnt {
+			mincnt = dbcnt
+		} else if dbcnt > maxcnt {
+			maxcnt = dbcnt
+		}
+		tot += dbcnt
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 			if stealthIndex(v) {
 				stealth_cnt++
 			}
 			val := binary.LittleEndian.Uint64(v[36:44])
 			sum += val
-			cnt++
+			brcnt++
 			return 0
 		})
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
-		float64(sum)/1e8, cnt, tot, stealth_cnt)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d  NocacheBelow:%d  MinOut:%d\n",
+		float64(sum)/1e8, brcnt, tot, stealth_cnt)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d  MinBrowsableVal:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
+	s += fmt.Sprintf(" Tecords per index : %d..%d   (config:%d)\n",
+		mincnt, maxcnt, SingeIndexSize)
 	return
 }
 

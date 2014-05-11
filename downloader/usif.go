@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 
@@ -72,9 +73,8 @@ func save_peers() {
 }
 
 func show_free_mem() {
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	fmt.Println("HEAP size", ms.Alloc>>20, "MB,  SysMEM used", ms.Sys>>20, "MB")
+	al, sy := sys.MemUsed()
+	fmt.Println("HEAP size", al>>20, "MB,  SysMEM used", sy>>20, "MB")
 }
 
 
