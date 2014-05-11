@@ -4,6 +4,10 @@ Client:
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
+
+Qdb:
+* Implement it in C
+
 Wallet:
 
 Downloader:
