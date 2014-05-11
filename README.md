@@ -78,7 +78,7 @@ Not having gcc, trying to build the client you will see such an error:
 
 You can still compile the problematic package...
 
-To fix the problem just copy file "qdb/no_gcc/membind.go" one folder up (overwriting the original "qdb/membind.go")
+To fix the problem just copy file `qdb/no_gcc/membind.go` one folder up (overwriting the original `qdb/membind.go`).
 
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
