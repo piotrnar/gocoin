@@ -7,7 +7,7 @@ import (
 	"time"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/others/blockdb"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 const Trust = true  // Set this to false if you want to re-check all scripts
@@ -117,7 +117,7 @@ func exists(fn string) bool {
 func main() {
 	if len(os.Args)<2 {
 		fmt.Println("Specify at least one parameter - a path to the blk0000?.dat files.")
-		fmt.Println("By default it should be:", utils.BitcoinHome()+"blocks")
+		fmt.Println("By default it should be:", sys.BitcoinHome()+"blocks")
 		fmt.Println()
 		fmt.Println("If you specify a second parameter, that's where output data will be stored.")
 		fmt.Println("Otherwise the output data will go to Gocoin's default data folder.")
@@ -142,7 +142,7 @@ func main() {
 	if len(os.Args)>2 {
 		GocoinHomeDir = RemoveLastSlash(os.Args[2])+string(os.PathSeparator)
 	} else {
-		GocoinHomeDir = utils.BitcoinHome()+"gocoin"+string(os.PathSeparator)
+		GocoinHomeDir = sys.BitcoinHome()+"gocoin"+string(os.PathSeparator)
 	}
 
 	if Magic==[4]byte{0x0B,0x11,0x09,0x07} {

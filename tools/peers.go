@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/others/utils"
 )
 
@@ -30,7 +31,7 @@ func main() {
 	if len(os.Args)>1 {
 		dir = os.Args[1]
 	} else {
-		dir = utils.BitcoinHome() + "gocoin" + string(os.PathSeparator) + "btcnet" + string(os.PathSeparator) + "peers3"
+		dir = sys.BitcoinHome() + "gocoin" + string(os.PathSeparator) + "btcnet" + string(os.PathSeparator) + "peers3"
 	}
 
 	db, er := qdb.NewDB(dir, true)
@@ -49,7 +50,7 @@ func main() {
 	cnt := 0
 	db.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		np := utils.NewPeer(v)
-		if !utils.ValidIp4(np.Ip4[:]) {
+		if !sys.ValidIp4(np.Ip4[:]) {
 			return 0
 		}
 		if cnt < len(tmp) {

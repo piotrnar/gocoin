@@ -12,7 +12,7 @@ import (
 	"encoding/xml"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 var (
@@ -108,7 +108,7 @@ func switch_to_wallet(s string) {
 
 
 func push_tx(rawtx string) {
-	dat := utils.GetRawData(rawtx)
+	dat := sys.GetRawData(rawtx)
 	if dat == nil {
 		println("Cannot fetch the raw transaction data (specify hexdump or filename)")
 		return
