@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 // Get TxOut record, by the given TxPrevOut
@@ -62,7 +62,7 @@ func getseed(seed []byte) bool {
 	}
 
 	fmt.Print("Enter your wallet's seed password: ")
-	n = utils.ReadPassword(pass[:])
+	n = sys.ReadPassword(pass[:])
 	if n<=0 {
 		return false
 	}
@@ -71,13 +71,13 @@ func getseed(seed []byte) bool {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
-			p2len := utils.ReadPassword(pass2[:])
+			p2len := sys.ReadPassword(pass2[:])
 			if p2len!=n || !bytes.Equal(pass[:n], pass2[:p2len]) {
-				utils.ClearBuffer(pass2[:p2len])
+				sys.ClearBuffer(pass2[:p2len])
 				println("The two passwords you entered do not match")
 				return false
 			}
-			utils.ClearBuffer(pass2[:p2len])
+			sys.ClearBuffer(pass2[:p2len])
 		}
 		if *dump {
 			// Maybe he wants to save the password?
@@ -99,7 +99,7 @@ calc_seed:
 		}
 	}
 	btc.ShaHash(pass[:n], seed)
-	utils.ClearBuffer(pass[:n])
+	sys.ClearBuffer(pass[:n])
 	return true
 }
 
@@ -199,7 +199,7 @@ func dump_prvkey() {
 
 
 func raw_tx_from_file(fn string) *btc.Tx {
-	dat := utils.GetRawData(fn)
+	dat := sys.GetRawData(fn)
 	if dat==nil {
 		fmt.Println("Cannot fetch raw transaction data")
 		return nil

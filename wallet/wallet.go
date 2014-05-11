@@ -8,7 +8,7 @@ import (
 	"strings"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 var (
@@ -132,7 +132,7 @@ func make_wallet() {
 	}
 
 	defer func() {
-		utils.ClearBuffer(seed_key)
+		sys.ClearBuffer(seed_key)
 	}()
 
 	switch waltype {
