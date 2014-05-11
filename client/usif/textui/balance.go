@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -180,7 +180,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		fmt.Println("No matching secret found in your wallet/stealth folder")
 		return
 	}
-	defer utils.ClearBuffer(d)
+	defer sys.ClearBuffer(d)
 
 	var unsp btc.AllUnspentTx
 

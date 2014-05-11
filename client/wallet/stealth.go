@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -32,7 +32,7 @@ var (
 
 func FreeStealthSecrets() {
 	for i:=range StealthSecrets {
-		utils.ClearBuffer(StealthSecrets[i])
+		sys.ClearBuffer(StealthSecrets[i])
 	}
 	StealthSecrets = nil
 }
@@ -44,7 +44,7 @@ func FetchStealthKeys() {
 	if er == nil {
 		for i := range fis {
 			if !fis[i].IsDir() && fis[i].Size()>=32 {
-				d := utils.GetRawData(dir+fis[i].Name())
+				d := sys.GetRawData(dir+fis[i].Name())
 				if len(d)!=32 {
 					fmt.Println("Error reading key from", dir+fis[i].Name(), len(d))
 				} else {

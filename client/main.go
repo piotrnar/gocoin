@@ -12,7 +12,7 @@ import (
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/others/ver"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
@@ -250,7 +250,7 @@ func main() {
 			network.NetCloseAll()
 			common.CloseBlockChain()
 			network.ClosePeerDB()
-			utils.UnlockDatabaseDir()
+			sys.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
@@ -372,5 +372,5 @@ func main() {
 	}
 
 	common.CloseBlockChain()
-	utils.UnlockDatabaseDir()
+	sys.UnlockDatabaseDir()
 }

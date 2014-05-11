@@ -11,6 +11,7 @@ import (
 	"strings"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -174,7 +175,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.Banned==0 && utils.ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
+		if ad.Banned==0 && sys.ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
 			if !unconnected || !ConnectionActive(ad) {
 				tmp = append(tmp, ad)
 			}

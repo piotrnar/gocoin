@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -103,7 +103,7 @@ func ParseAddr(pl []byte) {
 			break
 		}
 		a := NewPeer(buf[:])
-		if !utils.ValidIp4(a.Ip4[:]) {
+		if !sys.ValidIp4(a.Ip4[:]) {
 			common.CountSafe("AddrInvalid")
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {

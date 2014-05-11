@@ -6,7 +6,7 @@ import (
 	"errors"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -57,7 +57,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Mutex.Unlock()
-		if utils.ValidIp4(pl[40:44]) {
+		if sys.ValidIp4(pl[40:44]) {
 			ExternalIpMutex.Lock()
 			c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
 			ExternalIp4[c.Node.ReportedIp4] = [2]uint{ExternalIp4[c.Node.ReportedIp4][0]+1, uint(time.Now().Unix())}

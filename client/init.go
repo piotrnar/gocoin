@@ -11,13 +11,13 @@ import (
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif/textui"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/others/sys"
 )
 
 
 func host_init() {
 	var e error
-	BtcRootDir := utils.BitcoinHome()
+	BtcRootDir := sys.BitcoinHome()
 
 	if common.CFG.Datadir == "" {
 		common.GocoinHomeDir = BtcRootDir+"gocoin"+string(os.PathSeparator)
@@ -44,7 +44,7 @@ func host_init() {
 	// Lock the folder
 	os.MkdirAll(common.GocoinHomeDir, 0770)
 	os.MkdirAll(common.GocoinHomeDir+"wallet", 0770)
-	utils.LockDatabaseDir(common.GocoinHomeDir)
+	sys.LockDatabaseDir(common.GocoinHomeDir)
 
 	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.dat")
 	if e!=nil {
@@ -81,7 +81,7 @@ func host_init() {
 	if btc.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
 		common.BlockChain.Close()
-		utils.UnlockDatabaseDir()
+		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
 	fmt.Printf("Blockchain open in %.3f seconds\n", float64(sto-sta)/1e9)
