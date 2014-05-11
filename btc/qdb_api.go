@@ -12,6 +12,7 @@ const (
 	WALK_ABORT   = 0x00000001 // Abort browsing
 	WALK_NOMORE  = 0x00000002 // Do not browse through it anymore
 )
+
 type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32
 
 // Used to pass block's changes to UnspentDB
@@ -67,7 +68,9 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	if changes.Height >= changes.LastKnownHeight {
 		db.Sync()
 	}
-	sys.FreeMem()
+	if UnspentDBSaveMemory {
+		sys.FreeMem()
+	}
 	return
 }
 
