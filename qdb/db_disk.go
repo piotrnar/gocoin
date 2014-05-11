@@ -53,9 +53,7 @@ func (db *DB) loadrec(idx *oneIdx) {
 		}
 		db.rdfile[idx.datseq] = f
 	}
-	f.Seek(int64(idx.datpos), os.SEEK_SET)
-	idx.data = make([]byte, idx.datlen)
-	f.Read(idx.data)
+	idx.LoadData(f)
 }
 
 

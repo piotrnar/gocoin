@@ -67,7 +67,7 @@ type DB struct {
 
 
 type oneIdx struct {
-	data []byte
+	data data_ptr_t
 
 	datseq uint32 // data file index
 	datpos uint32 // position of the record in the data file
@@ -77,17 +77,20 @@ type oneIdx struct {
 }
 
 
+type QdbWalkFunction func(key KeyType, val []byte) uint32
+
+
 func (i oneIdx) String() string {
 	if i.data==nil {
 		return fmt.Sprintf("Nodata:%d:%d:%d", i.datseq, i.datpos, i.datlen)
 	} else {
-		return fmt.Sprintf("Len(%d):%d:%d:%d", len(i.data), i.datseq, i.datpos, i.datlen)
+		return fmt.Sprintf("YesData:%d:%d:%d", i.datseq, i.datpos, i.datlen)
 	}
 }
 
 
 // Creates or opens a new database in the specified folder.
-func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32, recs uint) (db *DB, e error) {
+func NewDBExt(dir string, load bool, walk QdbWalkFunction, recs uint) (db *DB, e error) {
 	cnt("NewDB")
 	db = new(DB)
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
@@ -106,7 +109,7 @@ func NewDBExt(dir string, load bool, walk func(key KeyType, value []byte) uint32
 }
 
 
-func NewDBrowse(dir string, walk func(key KeyType, value []byte) uint32, recs uint) (db *DB, e error) {
+func NewDBrowse(dir string, walk QdbWalkFunction, recs uint) (db *DB, e error) {
 	return NewDBExt(dir, true, walk, recs)
 }
 
@@ -136,7 +139,7 @@ func applyBrowsingFlags(res uint32, v *oneIdx) {
 
 	if (res&NO_CACHE)!=0 {
 		v.flags |= NO_CACHE
-		v.data = nil
+		v.FreeData()
 	} else if (res&YES_CACHE)!=0 {
 		v.flags &= NO_CACHE^0xffffffff
 	}
@@ -145,7 +148,7 @@ func applyBrowsingFlags(res uint32, v *oneIdx) {
 
 // Browses through all the DB records calling the walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
-func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
+func (db *DB) Browse(walk QdbWalkFunction) {
 	db.mutex.Lock()
 	db.idx.browse(func(k KeyType, v *oneIdx) bool {
 		if (v.flags&NO_BROWSE)!=0 {
@@ -154,7 +157,7 @@ func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 		if v.data == nil {
 			db.loadrec(v)
 		}
-		res := walk(k, v.data)
+		res := walk(k, v.Slice())
 		applyBrowsingFlags(res, v)
 		return (res&BR_ABORT)==0
 	})
@@ -164,13 +167,13 @@ func (db *DB) Browse(walk func(key KeyType, value []byte) uint32) {
 
 
 // works almost like normal browse except that it also returns non-browsable records
-func (db *DB) BrowseAll(walk func(key KeyType, value []byte) uint32) {
+func (db *DB) BrowseAll(walk QdbWalkFunction) {
 	db.mutex.Lock()
 	db.idx.browse(func(k KeyType, v *oneIdx) bool {
 		if v.data == nil {
 			db.loadrec(v)
 		}
-		res := walk(k, v.data)
+		res := walk(k, v.Slice())
 		applyBrowsingFlags(res, v)
 		return (res&BR_ABORT)==0
 	})
@@ -186,7 +189,7 @@ func (db *DB) Get(key KeyType) (value []byte) {
 		if idx.data == nil {
 			db.loadrec(idx)
 		}
-		value = idx.data
+		value = idx.Slice()
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	db.mutex.Unlock()
@@ -201,7 +204,7 @@ func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 		if idx.data == nil {
 			db.loadrec(idx)
 		}
-		value = idx.data
+		value = idx.Slice()
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
 	return
@@ -211,7 +214,7 @@ func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 // Adds or updates record with a given key.
 func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
-	db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value))})
+	db.idx.memput(key, newIdx(value, 0))
 	db.pending_recs[key] = true
 	if db.syncneeded() {
 		go func() {
@@ -228,7 +231,7 @@ func (db *DB) Put(key KeyType, value []byte) {
 func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
 	db.mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
-	db.idx.memput(key, &oneIdx{data:value, datlen:uint32(len(value)), flags:flags})
+	db.idx.memput(key, newIdx(value, flags))
 	db.pending_recs[key] = true
 	if db.syncneeded() {
 		go func() {
@@ -327,7 +330,7 @@ func (db *DB) defrag() {
 		if rec.data==nil {
 			db.loadrec(rec)
 		}
-		rec.datpos = uint32(db.addtolog(nil, key, rec.data))
+		rec.datpos = uint32(db.addtolog(nil, key, rec.Slice()))
 		rec.datseq = db.datseq
 		used[rec.datseq] = true
 		return true
@@ -352,13 +355,13 @@ func (db *DB) sync() {
 		for k, _ := range db.pending_recs {
 			rec := db.idx.get(k)
 			if rec != nil {
-				fpos := db.addtolog(nil, k, rec.data)
-				rec.datlen = uint32(len(rec.data))
+				fpos := db.addtolog(nil, k, rec.Slice())
+				//rec.datlen = uint32(len(rec.data))
 				rec.datpos = uint32(fpos)
 				rec.datseq = db.datseq
 				db.idx.addtolog(bidx, k, rec)
 				if (rec.flags&NO_CACHE)!=0 {
-					rec.data = nil
+					rec.FreeData()
 				}
 			} else {
 				db.idx.deltolog(bidx, k)

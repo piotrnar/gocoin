@@ -38,7 +38,7 @@ func NewDBidx(db *DB, recs uint) (idx *dbidx) {
 }
 
 
-func (idx *dbidx) load(walk func(key KeyType, value []byte) uint32) {
+func (idx *dbidx) load(walk QdbWalkFunction) {
 	dats := make(map[uint32] []byte)
 	idx.browse(func(k KeyType, v *oneIdx) bool {
 		if walk!=nil || (v.flags&NO_CACHE)==0 {
@@ -51,10 +51,9 @@ func (idx *dbidx) load(walk func(key KeyType, value []byte) uint32) {
 				}
 				dats[v.datseq] = dat
 			}
-			v.data = make([]byte, v.datlen)
-			copy(v.data, dat[v.datpos:v.datpos+v.datlen])
+			v.SetData(dat[v.datpos:v.datpos+v.datlen])
 			if walk!=nil {
-				res := walk(k, v.data)
+				res := walk(k, v.Slice())
 				applyBrowsingFlags(res, v)
 			}
 		}
