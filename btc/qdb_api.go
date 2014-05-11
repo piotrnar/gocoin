@@ -6,11 +6,22 @@ import (
 	"github.com/piotrnar/gocoin/others/sys"
 )
 
-
 // Used during BrowseUTXO()
 const (
 	WALK_ABORT   = 0x00000001 // Abort browsing
 	WALK_NOMORE  = 0x00000002 // Do not browse through it anymore
+
+	// Unspent DB
+	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000
+	prevOutIdxLen = qdb.KeySize
+	NumberOfUnspentSubDBs = 0x10
+	SCR_OFFS = 48
+)
+
+var (
+	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
+	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
+	UnspentDBSaveMemory bool // DB engine can use less memory, at a cost of performance
 )
 
 type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32

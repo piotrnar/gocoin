@@ -19,22 +19,6 @@ Eech value is variable length:
 */
 
 
-const (
-	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000
-
-	prevOutIdxLen = qdb.KeySize
-	NumberOfUnspentSubDBs = 0x10
-
-	SCR_OFFS = 48
-)
-
-var (
-	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
-	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
-	UnspentDBSaveMemory bool
-)
-
-
 type unspentDb struct {
 	dir string
 	tdb [NumberOfUnspentSubDBs] *qdb.DB
