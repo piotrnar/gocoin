@@ -26,8 +26,10 @@ import (
 type data_ptr_t unsafe.Pointer
 
 func (v *oneIdx) FreeData() {
-	C.free(unsafe.Pointer(v.data))
-	v.data = nil
+	if v.data!=nil {
+		C.free(unsafe.Pointer(v.data))
+		v.data = nil
+	}
 }
 
 func (v *oneIdx) Slice() (res []byte) {
