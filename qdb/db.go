@@ -32,6 +32,7 @@ var (
 	DefragPercentVal uint32 = 50
 	MaxPending uint32       = 1000
 	MaxPendingNoSync uint32 = 10000
+	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
 )
 
 const (

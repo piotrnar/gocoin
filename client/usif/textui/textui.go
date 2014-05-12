@@ -173,7 +173,9 @@ func show_info(par string) {
 
 	// Memory used
 	al, sy := sys.MemUsed()
-	fmt.Println("Go version:", runtime.Version(), "   Heap size:", al>>20, "MB", "   Sys mem used", sy>>20, "MB")
+	fmt.Println("Go version:", runtime.Version())
+	fmt.Println("Heap size:", al>>20, "MB    Sys mem used", sy>>20, "MB",
+		"   QDB Extra mem:", qdb.ExtraMemoryConsumed>>20, "MB")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
@@ -251,33 +253,18 @@ func show_help(par string) {
 
 
 func show_mem(p string) {
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	fmt.Println("Alloc       :", ms.Alloc)
-	fmt.Println("TotalAlloc  :", ms.TotalAlloc)
-	fmt.Println("Sys         :", ms.Sys)
-	fmt.Println("Lookups     :", ms.Lookups)
-	fmt.Println("Mallocs     :", ms.Mallocs)
-	fmt.Println("Frees       :", ms.Frees)
-	fmt.Println("HeapAlloc   :", ms.HeapAlloc)
-	fmt.Println("HeapSys     :", ms.HeapSys)
-	fmt.Println("HeapIdle    :", ms.HeapIdle)
-	fmt.Println("HeapInuse   :", ms.HeapInuse)
-	fmt.Println("HeapReleased:", ms.HeapReleased)
-	fmt.Println("HeapObjects :", ms.HeapObjects)
-	fmt.Println("StackInuse  :", ms.StackInuse)
-	fmt.Println("StackSys    :", ms.StackSys)
-	fmt.Println("MSpanInuse  :", ms.MSpanInuse)
-	fmt.Println("MSpanSys    :", ms.MSpanSys)
-	fmt.Println("MCacheInuse :", ms.MCacheInuse)
-	fmt.Println("MCacheSys   :", ms.MCacheSys)
-	fmt.Println("BuckHashSys :", ms.BuckHashSys)
+	al, sy := sys.MemUsed()
+
+	fmt.Println("Allocated:", al>>20, "MB")
+	fmt.Println("SystemMem:", sy>>20, "MB")
+	fmt.Println("QDB Extra:", qdb.ExtraMemoryConsumed>>20, "MB")
+
 	if p=="" {
 		return
 	}
 	if p=="free" {
 		fmt.Println("Freeing the mem...")
-		debug.FreeOSMemory()
+		sys.FreeMem()
 		show_mem("")
 		return
 	}

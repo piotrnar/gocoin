@@ -155,7 +155,7 @@ func (db *unspentDb) commit(changes *BlockChanges) {
 
 func (db *unspentDb) stats() (s string) {
 	var tot, brcnt, sum, stealth_cnt uint64
-	var mincnt, maxcnt uint64
+	var mincnt, maxcnt, totdatasize uint64
 	for i := range db.tdb {
 		dbcnt := uint64(db.dbN(i).Count())
 		if i==0 {
@@ -172,6 +172,7 @@ func (db *unspentDb) stats() (s string) {
 			}
 			val := binary.LittleEndian.Uint64(v[36:44])
 			sum += val
+			totdatasize += uint64(len(v))
 			brcnt++
 			return 0
 		})
@@ -180,8 +181,8 @@ func (db *unspentDb) stats() (s string) {
 		float64(sum)/1e8, brcnt, tot, stealth_cnt)
 	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d  MinBrowsableVal:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
-	s += fmt.Sprintf(" Tecords per index : %d..%d   (config:%d)\n",
-		mincnt, maxcnt, SingeIndexSize)
+	s += fmt.Sprintf(" Tecords per index : %d..%d   (config:%d)   TotalData:%dMB\n",
+		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
 	return
 }
 

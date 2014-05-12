@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 	"strings"
-	"runtime"
 	"net/http"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -79,11 +80,10 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	}
 	network.ExternalIpMutex.Unlock()
 
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	s = strings.Replace(s, "{HEAP_SIZE_MB}", fmt.Sprint(ms.Alloc>>20), 1)
-	s = strings.Replace(s, "<!--HEAPSYS_MB-->", fmt.Sprint(ms.HeapInuse>>20), 1)
-	s = strings.Replace(s, "{SYSMEM_USED_MB}", fmt.Sprint(ms.Sys>>20), 1)
+	al, sy := sys.MemUsed()
+	s = strings.Replace(s, "<!--HEAP_SIZE_MB-->", fmt.Sprint(al>>20), 1)
+	s = strings.Replace(s, "<!--HEAPSYS_MB-->", fmt.Sprint(sy>>20), 1)
+	s = strings.Replace(s, "<!--WDB_EXTRA_MB-->", fmt.Sprint(qdb.ExtraMemoryConsumed>>20), 1)
 	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
 	s = strings.Replace(s, "<!--NEW_BLOCK_BEEP-->", fmt.Sprint(common.CFG.Beeps.NewBlock), 1)
 

@@ -21,6 +21,7 @@ import (
 	"os"
 	"unsafe"
 	"reflect"
+	"sync/atomic"
 )
 
 type data_ptr_t unsafe.Pointer
@@ -29,6 +30,7 @@ func (v *oneIdx) FreeData() {
 	if v.data!=nil {
 		C.free(unsafe.Pointer(v.data))
 		v.data = nil
+		atomic.AddInt64(&ExtraMemoryConsumed, -int64(v.datlen))
 	}
 }
 
@@ -41,15 +43,17 @@ func newIdx(v []byte, f uint32) (r *oneIdx) {
 	r = new(oneIdx)
 	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.size_t(len(v))))
 	r.datlen = uint32(len(v))
+	atomic.AddInt64(&ExtraMemoryConsumed, int64(r.datlen))
 	r.flags = f
 	return
 }
 
 func (r *oneIdx) SetData(v []byte) {
 	if r.data!=nil {
-		C.free(unsafe.Pointer(r.data))
+		panic("This should not happen")
 	}
 	r.data = data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.size_t(len(v))))
+	atomic.AddInt64(&ExtraMemoryConsumed, int64(r.datlen))
 }
 
 func (v *oneIdx) LoadData(f *os.File) {
@@ -57,6 +61,7 @@ func (v *oneIdx) LoadData(f *os.File) {
 		C.free(unsafe.Pointer(v.data))
 	}
 	v.data = data_ptr_t(C.malloc(C.size_t(v.datlen)))
+	atomic.AddInt64(&ExtraMemoryConsumed, int64(v.datlen))
 	f.Seek(int64(v.datpos), os.SEEK_SET)
 	f.Read(*(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(v.data), Len:int(v.datlen), Cap:int(v.datlen)})))
 }
