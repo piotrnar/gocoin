@@ -142,9 +142,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	/* TODO: make sure that this mutex lock does not cause deadlocks */
 	wallet.BalanceMutex.Lock()
-	defer wallet.BalanceMutex.Unlock()
 
 	if wallet.MyWallet!=nil {
 		page = strings.Replace(page, "<!--WALLET_FILENAME-->", wallet.MyWallet.FileName, 1)
@@ -222,6 +220,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		strings.Replace(page, "<!--WALLET_FILENAME-->", "<i>no wallet loaded</i>", 1)
 		page = strings.Replace(page, "{WALLET_NAME}", "", -1)
 	}
+	wallet.BalanceMutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(page))
