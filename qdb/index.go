@@ -76,6 +76,7 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 	if prv, ok := idx.index[k]; !ok {
 		idx.cnt++
 	} else {
+		prv.FreeData()
 		dif := uint64(24+prv.datlen)
 		idx.extra_space_used += dif
 		idx.disk_space_needed -= dif
@@ -90,6 +91,7 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 
 func (idx *dbidx) memdel(k KeyType) {
 	if cur, ok := idx.index[k]; ok {
+		cur.FreeData()
 		idx.cnt--
 		dif := uint64(12+cur.datlen)
 		idx.extra_space_used += dif
