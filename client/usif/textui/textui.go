@@ -174,7 +174,7 @@ func show_info(par string) {
 	// Memory used
 	al, sy := sys.MemUsed()
 	fmt.Println("Go version:", runtime.Version())
-	fmt.Println("Heap size:", al>>20, "MB    Sys mem used", sy>>20, "MB",
+	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB",
 		"   QDB Extra mem:", qdb.ExtraMemoryConsumed>>20, "MB")
 
 	var gs debug.GCStats
