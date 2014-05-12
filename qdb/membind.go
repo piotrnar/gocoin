@@ -33,12 +33,6 @@ func (v *oneIdx) FreeData() {
 }
 
 func (v *oneIdx) Slice() (res []byte) {
-	/*
-	res = make([]byte, v.datlen)
-	for i := range res {
-		res[i] = *(*byte)(unsafe.Pointer(uintptr(v.data)+uintptr(i)))
-	}
-	*/
 	res = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(v.data), Len:int(v.datlen), Cap:int(v.datlen)}))
 	return
 }
