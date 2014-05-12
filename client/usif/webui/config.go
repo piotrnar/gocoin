@@ -117,9 +117,4 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(r.Form["qwalsel"])>0 {
-		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["qwalsel"][0])
-		return
-	}
-
 }
