@@ -25,11 +25,11 @@ On that webpage you can find all the information from this file, plus much much 
 ## Hardware
 
 ### Online node
-At least 4GB of system memory is required, though 8GB is highly recommended.
-
 You need to build it using 64 bit Go compiler and run it on 64 bit OS.
 
 The file system where you store the database must support files larger than 4GB.
+
+At least 4GB of system memory is required, unless you want to put your swap file on fire.
 
 ### Offline wallet
 The wallet app has very little requirements and should work on any platform with a working Go compiler.
