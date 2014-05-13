@@ -22,7 +22,7 @@ var webuimenu = [][2]string {
 	{"/txs", "Transactions"},
 	{"/blocks", "Blocks"},
 	{"/miners", "Miners"},
-	{"/counts", "Counts"},
+	{"/counts", "Counters"},
 }
 
 const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
