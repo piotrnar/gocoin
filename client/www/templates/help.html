@@ -155,11 +155,11 @@ Locally loaded transactions appear on a light-red background and they have three
 <h3>UTXOs spent in memory</h3>
 The number shows how many inputs are currently considered <i>spent</i> by the transactions that have been accepted into the memory pool.
 When an input is on this list any new transaction that tries to re-use it will be rejected as a <i>double-spend</i>.
- 
+
 <h3>Rejected transactions</h3>
 The value of the button next to the label shows you how many transactions were not accepted into the memory pool.
 You will see their list when clicking the button, along with the reason of the rejection.
-The node maintains this list to avoid downloading transactions that it had already rejected once. 
+The node maintains this list to avoid downloading transactions that it had already rejected once.
 Transactions are removed from this list either when they get mined into a block or when the node decides to expire them.
 
 <h3>Transactions waiting for inputs</h3>
@@ -208,6 +208,6 @@ If the operation succeeds you will end up in <a href="txs">Transactions</a> page
 <span class="note">In order to send you transaction out, make sure to broadcast it after loading.</span>
 
 <hr>
-<a name="counters" href="/counters"><h2>Stats</h2></a>
+<a name="counters" href="/counters"><h2>Counts</h2></a>
 
 The node's internal real time counters and statistics.

@@ -1,0 +1,64 @@
+<style>
+td.gennam {}
+td.genval {text-align:right}
+td.txsnam {}
+td.txsval {text-align:right}
+td.netnam {}
+td.netcnt {text-align:right}
+td.netbts {text-align:right}
+td.netcnt {text-align:right}
+td.netbts {text-align:right}
+td.netcnt {text-align:right}
+td.netbts {text-align:right}
+div.tablab {
+	font-weight:bold;
+	margin-bottom:10px;
+}
+</style>
+<table width="100%">
+	<col width="22%">
+	<col width="22%">
+	<col width="56%">
+<tr>
+<td valign="top" align="center">
+	<div class="tablab">Generic counters</div>
+	<table class="mono bord" width="100%">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	<!--GEN_ROW-->
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Transaction counters</div>
+	<table class="mono bord" width="100%">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	<!--TXS_ROW-->
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Network counters</div>
+	<table class="mono bord" width="100%">
+	<tr>
+		<th rowspan="2">Network Message
+		<th colspan="2">Received
+		<th colspan="2">Sent
+		<th colspan="2">Hold
+	</tr>
+	<tr>
+		<th>Times
+		<th>Bytes
+		<th>Times
+		<th>Bytes
+		<th>Times
+		<th>Bytes
+	</tr>
+	<!--NET_ROW-->
+    </table>
+</td>
+</tr>
+</table>

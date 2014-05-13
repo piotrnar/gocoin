@@ -3,7 +3,6 @@ package webui
 import (
 	"os"
 	"fmt"
-	"sort"
 	"strings"
 	"net/http"
 	"io/ioutil"
@@ -23,7 +22,7 @@ var webuimenu = [][2]string {
 	{"/txs", "Transactions"},
 	{"/blocks", "Blocks"},
 	{"/miners", "Miners"},
-	{"/counts", "Stats"},
+	{"/counts", "Counts"},
 }
 
 const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
@@ -183,43 +182,6 @@ func write_html_tail(w http.ResponseWriter) {
 	dat, _ := ioutil.ReadFile("webht/page_tail.html")
 	w.Write(dat)
 }
-
-func p_counts(w http.ResponseWriter, r *http.Request) {
-	write_html_head(w, r)
-	common.CounterMutex.Lock()
-	ck := make([]string, 0)
-	for k, _ := range common.Counter {
-		ck = append(ck, k)
-	}
-	sort.Strings(ck)
-	fmt.Fprint(w, "<table class=\"mono\"><tr>")
-	fmt.Fprint(w, "<td valign=\"top\"><table class=\"bord\"><tr><th colspan=\"2\">Generic Counters")
-	prv_ := ""
-	for i := range ck {
-		if ck[i][4]=='_' {
-			if ck[i][:4]!=prv_ {
-				prv_ = ck[i][:4]
-				fmt.Fprint(w, "</table><td valign=\"top\"><table class=\"bord\"><tr><th colspan=\"2\">")
-				switch prv_ {
-					case "rbts": fmt.Fprintln(w, "Received bytes")
-					case "rcvd": fmt.Fprintln(w, "Received msgs")
-					case "sbts": fmt.Fprintln(w, "Sent bytes")
-					case "sent": fmt.Fprintln(w, "Sent msgs")
-					case "hbts": fmt.Fprintln(w, "Hold bytes")
-					case "hold": fmt.Fprintln(w, "Hold msgs")
-					default: fmt.Fprintln(w, prv_)
-				}
-			}
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", ck[i][5:], common.Counter[ck[i]])
-		} else {
-			fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", ck[i], common.Counter[ck[i]])
-		}
-	}
-	fmt.Fprint(w, "</table></table>")
-	common.CounterMutex.Unlock()
-	write_html_tail(w)
-}
-
 
 func p_help(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
