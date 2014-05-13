@@ -212,7 +212,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if _, ok := SpentOutputs[spent[i]]; ok {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
 			TxMutex.Unlock()
-			common.CountSafe("TxRejectedDoubleSpend")
+			common.CountSafe("TxRjctdDoubleSpnd")
 			return
 		}
 
@@ -221,7 +221,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
-				common.CountSafe("TxRejectedBadInput")
+				common.CountSafe("TxRjctdBadInput")
 				return
 			}
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
@@ -235,7 +235,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				if !common.CFG.TXPool.AllowMemInputs {
 					RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
 					TxMutex.Unlock()
-					common.CountSafe("TxRejectedMemInput")
+					common.CountSafe("TxRjctdMemInput")
 					return
 				}
 				// In this case, let's "save" it for later...
@@ -259,9 +259,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 				TxMutex.Unlock()
 				if newone {
-					common.CountSafe("TxRejectedNoInputNew")
+					common.CountSafe("TxRjctdNoInputN")
 				} else {
-					common.CountSafe("TxRejectedNoInputOld")
+					common.CountSafe("TxTxRjctdNoInputO")
 				}
 				return
 			}
@@ -275,7 +275,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if tx.TxOut[i].Value < atomic.LoadUint64(&common.CFG.TXPool.MinVoutValue) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DUST)
 			TxMutex.Unlock()
-			common.CountSafe("TxRejectedDust")
+			common.CountSafe("TxRjctdDust")
 			return
 		}
 		if tx.TxOut[i].Value < minout {
@@ -297,7 +297,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if fee < (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte)) {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
-		common.CountSafe("TxRejectedLowFee")
+		common.CountSafe("TxRjctdLowFee")
 		return
 	}
 
