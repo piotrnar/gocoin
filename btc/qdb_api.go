@@ -143,3 +143,5 @@ func (db *UnspentDB) UnspentGet(po *TxPrevOut) (res *TxOut, e error) {
 func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 	db.unspent.browse(walk, quick)
 }
+
+

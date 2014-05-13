@@ -466,7 +466,12 @@ func list_alerst(p string) {
 }
 
 
+func coins_age(s string) {
+	common.BlockChain.Unspent.PrintCoinAge()
+}
+
 func init() {
+	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("alerts a", false, list_alerst, "Show received alerts")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")

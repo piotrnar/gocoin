@@ -203,11 +203,16 @@ func (db *unwindDb) GetLastBlockHash() (val []byte) {
 
 func (db *unwindDb) stats() (s string) {
 	var cnt int
+	var totdatasize uint64
 	for i := range db.tdb {
 		cnt += db.dbH(i).Count()
+		db.dbH(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			totdatasize += uint64(len(v))
+			return 0
+		})
 	}
-	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d/%d\n",
-		cnt, db.lastBlockHeight, db.defragCount, db.defragIndex)
+	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d/%d  TotalData:%dMB\n",
+		cnt, db.lastBlockHeight, db.defragCount, db.defragIndex, totdatasize>>20)
 	s += "Last block: " + NewUint256(db.lastBlockHash[:]).String() + "\n"
 	return
 }

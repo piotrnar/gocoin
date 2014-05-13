@@ -153,40 +153,6 @@ func (db *unspentDb) commit(changes *BlockChanges) {
 }
 
 
-func (db *unspentDb) stats() (s string) {
-	var tot, brcnt, sum, stealth_cnt uint64
-	var mincnt, maxcnt, totdatasize uint64
-	for i := range db.tdb {
-		dbcnt := uint64(db.dbN(i).Count())
-		if i==0 {
-			mincnt, maxcnt = dbcnt, dbcnt
-		} else if dbcnt < mincnt {
-			mincnt = dbcnt
-		} else if dbcnt > maxcnt {
-			maxcnt = dbcnt
-		}
-		tot += dbcnt
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			if stealthIndex(v) {
-				stealth_cnt++
-			}
-			val := binary.LittleEndian.Uint64(v[36:44])
-			sum += val
-			totdatasize += uint64(len(v))
-			brcnt++
-			return 0
-		})
-	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
-		float64(sum)/1e8, brcnt, tot, stealth_cnt)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d  MinBrowsableVal:%d\n",
-		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
-	s += fmt.Sprintf(" Tecords per index : %d..%d   (config:%d)   TotalData:%dMB\n",
-		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
-	return
-}
-
-
 func (db *unspentDb) sync() {
 	db.nosyncinprogress = false
 	for i := range db.tdb {
@@ -311,4 +277,74 @@ func (r *OneWalkRecord) ToUnspent(ad *BtcAddr) (nr *OneUnspentTx) {
 	nr.BtcAddr = ad
 	nr.destAddr = ad.String()
 	return
+}
+
+
+func (db *unspentDb) stats() (s string) {
+	var tot, brcnt, sum, stealth_cnt uint64
+	var mincnt, maxcnt, totdatasize uint64
+	for i := range db.tdb {
+		dbcnt := uint64(db.dbN(i).Count())
+		if i==0 {
+			mincnt, maxcnt = dbcnt, dbcnt
+		} else if dbcnt < mincnt {
+			mincnt = dbcnt
+		} else if dbcnt > maxcnt {
+			maxcnt = dbcnt
+		}
+		tot += dbcnt
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			if stealthIndex(v) {
+				stealth_cnt++
+			}
+			val := binary.LittleEndian.Uint64(v[36:44])
+			sum += val
+			totdatasize += uint64(len(v))
+			brcnt++
+			return 0
+		})
+	}
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
+		float64(sum)/1e8, brcnt, tot, stealth_cnt)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d  MinBrowsableVal:%d\n",
+		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
+	s += fmt.Sprintf(" Tecords per index : %d..%d   (config:%d)   TotalData:%dMB\n",
+		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
+	return
+}
+
+
+func (db *UnspentDB) PrintCoinAge() {
+	const chunk = 25000
+	var maxbl uint32
+	type rec struct {
+		cnt, bts, val uint64
+	}
+	age := make(map[uint32] *rec)
+	for i := range db.unspent.tdb {
+		db.unspent.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			a := binary.LittleEndian.Uint32(v[44:48])
+			if a>maxbl {
+				maxbl = a
+			}
+			a /= chunk
+			tmp := age[a]
+			if tmp==nil {
+				tmp = new(rec)
+			}
+			tmp.val += binary.LittleEndian.Uint64(v[36:44])
+			tmp.cnt++
+			tmp.bts += uint64(len(v))
+			age[a] = tmp
+			return 0
+		})
+	}
+	for i:=uint32(0); i<=(maxbl/chunk); i++ {
+		tb := (i+1)*chunk-1
+		if tb>maxbl {
+			tb = maxbl
+		}
+		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s BTC\n",
+			i*chunk, tb, age[i].cnt, age[i].bts>>20, UintToBtc(age[i].val))
+	}
 }
