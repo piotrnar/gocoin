@@ -1,5 +1,5 @@
 Client:
-* Deal with same stealth addresses that have different prefix length
+* network.CachedBlocks - expire stuff from it
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
