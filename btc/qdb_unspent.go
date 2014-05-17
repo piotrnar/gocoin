@@ -315,7 +315,7 @@ func (db *unspentDb) stats() (s string) {
 
 
 func (db *UnspentDB) PrintCoinAge() {
-	const chunk = 25000
+	const chunk = 10000
 	var maxbl uint32
 	type rec struct {
 		cnt, bts, val uint64
@@ -344,7 +344,9 @@ func (db *UnspentDB) PrintCoinAge() {
 		if tb>maxbl {
 			tb = maxbl
 		}
-		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s BTC\n",
-			i*chunk, tb, age[i].cnt, age[i].bts>>20, UintToBtc(age[i].val))
+		cnt := uint64(tb-i*chunk)+1
+		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
+			i*chunk, tb, age[i].cnt, age[i].bts>>20, UintToBtc(age[i].val),
+			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), UintToBtc(age[i].val/cnt))
 	}
 }
