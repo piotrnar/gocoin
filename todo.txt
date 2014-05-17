@@ -4,7 +4,7 @@ Client:
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
-
+* Add "arm" and "unarm" commands (for stealth addresses)
 
 Qdb:
 * Implement it in C
