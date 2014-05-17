@@ -266,9 +266,9 @@ func unarm_stealth(p string) {
 		listarmkeys("")
 		return
 	}
-	if (s=="*" || p=="all") {
+	if (p=="*" || p=="all") {
 		for i:=range wallet.ArmedStealthSecrets {
-			sys.ClearBuffer(wallet.ArmedStealthSecrets[v])
+			sys.ClearBuffer(wallet.ArmedStealthSecrets[i])
 		}
 		wallet.ArmedStealthSecrets = nil
 		fmt.Println("Removed all armed stealth keys")
