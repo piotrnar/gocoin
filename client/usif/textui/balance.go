@@ -212,7 +212,9 @@ func scan_all_stealth(p string) {
 }
 
 func arm_stealth(p string) {
-	var buf [256]byte
+	var buf, b2 [256]byte
+
+	create := p!=""
 
 	fmt.Print("Enter seed password of the stealth key (empty line to abort) : ")
 	le := sys.ReadPassword(buf[:])
@@ -220,13 +222,32 @@ func arm_stealth(p string) {
 		fmt.Println("Aborted")
 		return
 	}
+	if create {
+		fmt.Print("Re-enter the seed password : ")
+		l := sys.ReadPassword(b2[:])
+		if l!=le && !bytes.Equal(buf[:le], b2[:l]) {
+			sys.ClearBuffer(buf[:le])
+			sys.ClearBuffer(b2[:l])
+			fmt.Println("The passwords you entered do not match")
+			return
+		}
+	}
+
 	nw := make([]byte, 32)
 	btc.ShaHash(buf[:le], nw)  // seed
 	sys.ClearBuffer(buf[:le])
 	btc.ShaHash(nw, nw)        // 1st key
 	wallet.ArmedStealthSecrets = append(wallet.ArmedStealthSecrets, nw)
+	if create {
+		fmt.Println("You have created a new stealth scan-key. Make sure to not forget this password!")
+		pk := btc.PublicFromPrivate(nw, true)
+		fmt.Println("Public hexdump:", hex.EncodeToString(pk))
+		fmt.Println(" Go to your wallet machine and execute:")
+		fmt.Println("   wallet -scankey", hex.EncodeToString(pk), "-prefix 0")
+		fmt.Println("   (change the prefix to a different value if you want)")
+	}
 	fmt.Println("Stealth key number", len(wallet.ArmedStealthSecrets)-1, "has been stored in memory")
-	fmt.Print("Reloading the current wallet...")
+	fmt.Println("Reloading the current wallet...")
 	usif.ExecUiReq(&usif.OneUiReq{Handler:func(p string) {
 		wallet.LoadWallet(wallet.MyWallet.FileName)
 	}})
@@ -239,8 +260,11 @@ func listarmkeys(p string) {
 			fmt.Println("Persistent secret scan keys:")
 			for i := range wallet.StealthSecrets {
 				pk := btc.PublicFromPrivate(wallet.StealthSecrets[i], true)
-				fmt.Println("", i, ":", hex.EncodeToString(pk),
-					btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+				fmt.Print(" #", i, "  ", hex.EncodeToString(pk))
+				if p=="addr" {
+					fmt.Print("  ", btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+				}
+				fmt.Println()
 			}
 		} else {
 			fmt.Println("You have no persistent secret scan keys")
@@ -248,14 +272,17 @@ func listarmkeys(p string) {
 	}
 	if p!="file" {
 		if len(wallet.ArmedStealthSecrets)>0 {
-			fmt.Println("Armed secret scan keys:")
+			fmt.Println("Volatile secret scan keys:")
 			for i := range wallet.ArmedStealthSecrets {
 				pk := btc.PublicFromPrivate(wallet.ArmedStealthSecrets[i], true)
-				fmt.Println("", i, ":", hex.EncodeToString(pk),
-					btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+				fmt.Print(" #", i, "  ", hex.EncodeToString(pk))
+				if p=="addr" {
+					fmt.Print("  ", btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+				}
+				fmt.Println()
 			}
 		} else {
-			fmt.Println("You have no armed secret scan keys")
+			fmt.Println("You have no volatile secret scan keys")
 		}
 	}
 }
@@ -292,7 +319,7 @@ func unarm_stealth(p string) {
 
 
 func init() {
-	newUi("arm", false, arm_stealth, "Arm the client with a private stealth secret")
+	newUi("arm", false, arm_stealth, "Arm the client with a private stealth secret. Add switch -c when creating a new key")
 	newUi("armed", false, listarmkeys, "Show currently armed private stealth keys. Optionally use param seed or file")
 	newUi("unarm ua", false, unarm_stealth, "Purge an armed private stealth secret from memory. Specify number or * for all")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
