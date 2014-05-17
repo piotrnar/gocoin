@@ -55,6 +55,8 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 					return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
 				} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
 					return qdb.NO_CACHE
+				} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
+					return qdb.NO_CACHE | qdb.NO_BROWSE
 				} else {
 					return 0
 				}
