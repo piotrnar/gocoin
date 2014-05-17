@@ -64,6 +64,7 @@ func FetchStealthKeys() {
 		} else {
 			fmt.Println(len(StealthSecrets), "stealth keys found in", dir)
 		}
+		fmt.Println("You may also use UI command 'arm' to apply (load) a stealth scan secret from a seed-password")
 	}
 	return
 }
