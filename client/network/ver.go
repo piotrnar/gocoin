@@ -79,7 +79,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			c.Mutex.Unlock()
 		}
 	} else {
-		return errors.New("common.Version message too short")
+		return errors.New("version message too short")
 	}
 	c.SendRawMsg("verack", []byte{})
 	return nil
