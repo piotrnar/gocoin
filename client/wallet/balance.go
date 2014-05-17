@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"bytes"
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
@@ -261,24 +260,19 @@ func UpdateBalance() {
 				tofetch_regular[MyWallet.Addrs[i].AIdx()] = MyWallet.Addrs[i]
 			} else if !skip_stealths {
 				sa := MyWallet.Addrs[i].StealthAddr
-				for j:=0; ; { // check if we have a matching stealth secret
-					if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[j], true), sa.ScanKey[:]) {
-						tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i])
-						tofetch_secrets = append(tofetch_secrets, StealthSecrets[j])
-						var rec stealthCacheRec
-						rec.addr = MyWallet.Addrs[i]
-						copy(rec.d[:], StealthSecrets[j])
-						copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
-						StealthAdCache = append(StealthAdCache, rec)
-						break
-					} else if j==len(StealthSecrets)-1 {
-						if !PrecachingComplete {
-							fmt.Println("No matching secret for", sa.String())
-						}
-						add_it = false
-						break
+				if ssecret:=FindStealthSecret(sa); ssecret!=nil {
+					tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i])
+					tofetch_secrets = append(tofetch_secrets, ssecret)
+					var rec stealthCacheRec
+					rec.addr = MyWallet.Addrs[i]
+					copy(rec.d[:], ssecret)
+					copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
+					StealthAdCache = append(StealthAdCache, rec)
+				} else {
+					if !PrecachingComplete {
+						fmt.Println("No matching secret for", sa.String())
 					}
-					j++
+					add_it = false
 				}
 			}
 			if add_it {

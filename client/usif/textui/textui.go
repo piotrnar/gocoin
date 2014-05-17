@@ -28,7 +28,10 @@ type oneUiCmd struct {
 	handler func(pars string)
 }
 
-var uiCmds []*oneUiCmd
+var (
+	uiCmds []*oneUiCmd
+	show_prompt bool = true
+)
 
 // add a new UI commend handler
 func newUi(cmds string, sync bool, hn func(string), help string) {
@@ -87,13 +90,12 @@ func ShowPrompt() {
 
 
 func MainThread() {
-	var prompt bool = true
-	time.Sleep(1e9) // hold on for 1 sencond before showing the prompt
+	time.Sleep(1e9) // hold on for 1 sencond before showing the show_prompt
 	for {
-		if prompt {
+		if show_prompt {
 			ShowPrompt()
 		}
-		prompt = true
+		show_prompt = true
 		li := strings.Trim(readline(), " \n\t\r")
 		if len(li) > 0 {
 			cmdpar := strings.SplitN(li, " ", 2)
@@ -108,23 +110,8 @@ func MainThread() {
 					if cmd==uiCmds[i].cmds[j] {
 						found = true
 						if uiCmds[i].sync {
-							common.Busy_mutex.Lock()
-							if common.BusyWith!="" {
-								print("now common.BusyWith with ", common.BusyWith)
-							}
-							common.Busy_mutex.Unlock()
-							println("...")
-							sta := time.Now().UnixNano()
-							req := &usif.OneUiReq{Param:param, Handler:uiCmds[i].handler}
-							req.Done.Add(1)
-							usif.UiChannel <- req
-							go func() {
-								req.Done.Wait()
-								sto := time.Now().UnixNano()
-								fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
-								fmt.Print("> ")
-							}()
-							prompt = false
+							usif.ExecUiReq(&usif.OneUiReq{Param:param, Handler:uiCmds[i].handler})
+							show_prompt = false
 						} else {
 							uiCmds[i].handler(param)
 						}
@@ -137,6 +124,7 @@ func MainThread() {
 		}
 	}
 }
+
 
 
 func show_info(par string) {

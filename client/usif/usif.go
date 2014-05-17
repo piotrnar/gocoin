@@ -179,6 +179,25 @@ func GetNetworkHashRate() string {
 }
 
 
+func ExecUiReq(req *OneUiReq) {
+	common.Busy_mutex.Lock()
+	if common.BusyWith!="" {
+		fmt.Print("now common.BusyWith with ", common.BusyWith)
+	}
+	common.Busy_mutex.Unlock()
+	fmt.Println("...")
+	sta := time.Now().UnixNano()
+	req.Done.Add(1)
+	UiChannel <- req
+	go func() {
+		req.Done.Wait()
+		sto := time.Now().UnixNano()
+		fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
+		fmt.Print("> ")
+	}()
+}
+
+
 func init() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 }

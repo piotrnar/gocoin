@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"sort"
 	"bytes"
+	"strconv"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 	"github.com/piotrnar/gocoin/others/sys"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -70,6 +72,10 @@ func load_wallet(fn string) {
 	if fn=="." {
 		fmt.Println("Default wallet from", common.GocoinHomeDir+"wallet/DEFAULT")
 		wallet.LoadWallet(common.GocoinHomeDir+"wallet/DEFAULT")
+	} else if fn == "-" {
+		fmt.Println("Reloading wallet from", wallet.MyWallet.FileName)
+		wallet.LoadWallet(wallet.MyWallet.FileName)
+		fmt.Println("Dumping current wallet from", wallet.MyWallet.FileName)
 	} else if fn != "" {
 		fmt.Println("Switching to wallet from", fn)
 		wallet.LoadWallet(fn)
@@ -78,12 +84,6 @@ func load_wallet(fn string) {
 	if wallet.MyWallet==nil {
 		fmt.Println("No wallet loaded")
 		return
-	}
-
-	if fn == "-" {
-		fmt.Println("Reloading wallet from", wallet.MyWallet.FileName)
-		wallet.LoadWallet(wallet.MyWallet.FileName)
-		fmt.Println("Dumping current wallet from", wallet.MyWallet.FileName)
 	}
 
 	for i := range wallet.MyWallet.Addrs {
@@ -155,7 +155,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		fmt.Println("Specify base58 encoded stealth address")
 		return
 	}
-	if sa.Version!=btc.StealthAddressVersion(common.CFG.Testnet) {
+	if sa.Version!=btc.StealthAddressVersion(common.Testnet) {
 		fmt.Println("Incorrect version of the stealth address")
 		return
 	}
@@ -211,7 +211,90 @@ func scan_all_stealth(p string) {
 	do_scan_stealth(p, true)
 }
 
+func arm_stealth(p string) {
+	var buf [256]byte
+
+	fmt.Print("Enter seed password of the stealth key (empty line to abort):")
+	le := sys.ReadPassword(buf[:])
+	if le<=0 {
+		fmt.Println("Aborted")
+		return
+	}
+	nw := make([]byte, 32)
+	btc.ShaHash(buf[:le], nw)  // seed
+	sys.ClearBuffer(buf[:le])
+	btc.ShaHash(nw, nw)        // 1st key
+	wallet.ArmedStealthSecrets = append(wallet.ArmedStealthSecrets, nw)
+	fmt.Println("Stealth key number", len(wallet.ArmedStealthSecrets)-1, "has been stored in memory")
+	fmt.Print("Reloading the current wallet...")
+	usif.ExecUiReq(&usif.OneUiReq{Handler:func(p string) {
+		wallet.LoadWallet(wallet.MyWallet.FileName)
+	}})
+	show_prompt = false
+}
+
+func listarmkeys(p string) {
+	if p!="seed" {
+		if len(wallet.StealthSecrets)>0 {
+			fmt.Println("Pesistent secret scan keys:")
+			for i := range wallet.StealthSecrets {
+				pk := btc.PublicFromPrivate(wallet.StealthSecrets[i], true)
+				fmt.Println("", i, ":", hex.EncodeToString(pk),
+					btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+			}
+		} else {
+			fmt.Println("You have no pesistent secret scan keys")
+		}
+	}
+	if p!="file" {
+		if len(wallet.ArmedStealthSecrets)>0 {
+			fmt.Println("Armed secret scan keys:")
+			for i := range wallet.ArmedStealthSecrets {
+				pk := btc.PublicFromPrivate(wallet.ArmedStealthSecrets[i], true)
+				fmt.Println("", i, ":", hex.EncodeToString(pk),
+					btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
+			}
+		} else {
+			fmt.Println("You have no armed secret scan keys")
+		}
+	}
+}
+
+func unarm_stealth(p string) {
+	if len(wallet.ArmedStealthSecrets)==0 {
+		fmt.Println("You have no armed seed keys")
+		listarmkeys("")
+		return
+	}
+	if (s=="*" || p=="all") {
+		for i:=range wallet.ArmedStealthSecrets {
+			sys.ClearBuffer(wallet.ArmedStealthSecrets[v])
+		}
+		wallet.ArmedStealthSecrets = nil
+		fmt.Println("Removed all armed stealth keys")
+		return
+	}
+	v, e := strconv.ParseUint(p, 10, 32)
+	if e != nil {
+		println(e.Error())
+		fmt.Println("Specify a valid armed seed key index. Type 'armed seed' to list them.")
+		return
+	}
+	if v >= uint64(len(wallet.ArmedStealthSecrets)) {
+		fmt.Println("Specify a valid armed seed key index. Type 'armed seed' to list them.")
+		return
+	}
+	sys.ClearBuffer(wallet.ArmedStealthSecrets[v])
+	wallet.ArmedStealthSecrets = append(wallet.ArmedStealthSecrets[:v],
+		wallet.ArmedStealthSecrets[v+1:len(wallet.ArmedStealthSecrets)]...)
+	fmt.Println("Removed armed stealth key number", v)
+}
+
+
 func init() {
+	newUi("arm", false, arm_stealth, "Arm the client with a private stealth secret")
+	newUi("armed", false, listarmkeys, "Show currently armed private stealth keys. Optionally use param seed or file")
+	newUi("unarm", false, unarm_stealth, "Purge an armed private stealth secret from memory. Specify number or * for all")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 	newUi("balstat", true, show_balance_stats, "Show balance cache statistics")
 	newUi("scan", true, scan_stealth, "Get balance of a stealth address")

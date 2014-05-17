@@ -24,6 +24,7 @@ type stealthCacheRec struct {
 }
 
 var (
+	ArmedStealthSecrets [][]byte
 	StealthSecrets [][]byte
 	newStealthIndexes []pendingSI
 
@@ -72,6 +73,11 @@ func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
 	for i := range StealthSecrets {
 		if bytes.Equal(btc.PublicFromPrivate(StealthSecrets[i], true), sa.ScanKey[:]) {
 			return StealthSecrets[i]
+		}
+	}
+	for i := range ArmedStealthSecrets {
+		if bytes.Equal(btc.PublicFromPrivate(ArmedStealthSecrets[i], true), sa.ScanKey[:]) {
+			return ArmedStealthSecrets[i]
 		}
 	}
 	return

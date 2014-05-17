@@ -1,4 +1,7 @@
-0.9.14
+0.9.15 (1.0.0-rc3)
+* Client: new TextUI commands ("arm", "unarm", "armed") help to secure your stealth addresses' scan-keys
+
+0.9.14 - 2014-05-13 (1.0.0-rc2)
 * Qdb: Uses malloc() and free() from libc, to optimize usage of system memory (skips garbage collector)
 * Client: improved statistics page of WebUI and renamed from Stats to Counters
 * Client: added new command "age" to TextUI
