@@ -1,5 +1,4 @@
 Client:
-* BUG: it seems that BalanceMutex sometimes gets into a deadlock
 * Deal with same stealth addresses that have different prefix length
 * Add better support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
@@ -15,6 +14,7 @@ Downloader:
 * Make it to work with gocoion.cfg file
 
 Core lib:
+* Lock_time - implemnt a check for it when verifying a transaction
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Check occasional "incorrect proof of work" problem in testnet
