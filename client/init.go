@@ -62,7 +62,8 @@ func host_init() {
 	// cache the current balance of all the addresses from the current wallet files
 	wallet.LoadAllWallets()
 
-	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
+	fmt.Println("Loading UTXO database while checking balance of", len(wallet.MyWallet.Addrs),
+		"addresses... (press Ctrl-C to interrupt)")
 
 	__exit := make(chan bool)
 	__done := make(chan bool)

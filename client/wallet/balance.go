@@ -434,8 +434,6 @@ func LoadAllWallets() {
 			}
 		}
 	}
-
-	fmt.Println("Pre-caching", len(MyWallet.Addrs), "addresses...")
 }
 
 // This function is only used when loading UTXO database
