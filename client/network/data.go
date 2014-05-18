@@ -104,7 +104,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		MutexRcv.Unlock()
-		common.CountSafe("SameBlockReceived")
+		common.CountSafe("BlockSameRcvd")
 		return
 	}
 	orb := &OneReceivedBlock{Time:time.Now()}

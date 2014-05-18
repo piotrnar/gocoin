@@ -328,16 +328,24 @@ func main() {
 				continue
 
 			case newbl := <-network.NetBlocks:
+				common.CountSafe("MainNetBlock")
 				HandleNetBlock(newbl)
 
 			case newtx := <-network.NetTxs:
+				common.CountSafe("MainNetTx")
 				network.HandleNetTx(newtx, false)
 
 			case newal := <-network.NetAlerts:
+				common.CountSafe("MainNetAlert")
 				fmt.Println("\007" + newal)
 				textui.ShowPrompt()
 
+			case <-netTick:
+				common.CountSafe("MainNetTick")
+				network.NetworkTick()
+
 			case cmd := <-usif.UiChannel:
+				common.CountSafe("MainUICmd")
 				common.Busy("UI command")
 				cmd.Handler(cmd.Param)
 				cmd.Done.Done()
@@ -349,19 +357,16 @@ func main() {
 			case <-txPoolTick:
 				network.ExpireTxs()
 
-			case <-netTick:
-				network.NetworkTick()
-
 			case <-time.After(time.Second/2):
 				common.CountSafe("MainThreadTouts")
 				if !retryCachedBlocks {
 					common.Busy("common.BlockChain.Idle()")
-					common.BlockChain.Idle()
+					if common.BlockChain.Idle() {
+						common.CountSafe("ChainIdleUsed")
+					}
 				}
 				continue
 		}
-
-		common.CountSafe("NetMessagesGot")
 	}
 
 	network.NetCloseAll()

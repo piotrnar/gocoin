@@ -54,7 +54,7 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 				if stealthIndex(v) {
 					return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
 				} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
-					return qdb.NO_CACHE
+					return qdb.NO_CACHE | qdb.NO_BROWSE
 				} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 					return qdb.NO_CACHE | qdb.NO_BROWSE
 				} else {
@@ -117,7 +117,7 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 		if Val_Pk.Value<MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
 		} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
-			flgz = qdb.NO_CACHE
+			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
 		}
 	}
 	dbN.PutExt(k, v, flgz)

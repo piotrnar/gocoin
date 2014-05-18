@@ -33,6 +33,7 @@ var (
 	MaxPending uint32       = 1000
 	MaxPendingNoSync uint32 = 10000
 	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
+	ExtraMemoryAllocCnt int64  // if we are using the glibc memory manager
 )
 
 const (
@@ -131,22 +132,6 @@ func (db *DB) Count() (l int) {
 }
 
 
-func applyBrowsingFlags(res uint32, v *oneIdx) {
-	if (res&NO_BROWSE)!=0 {
-		v.flags |= NO_BROWSE
-	} else if (res&YES_BROWSE)!=0 {
-		v.flags &= NO_BROWSE^0xffffffff
-	}
-
-	if (res&NO_CACHE)!=0 {
-		v.flags |= NO_CACHE
-		v.FreeData()
-	} else if (res&YES_CACHE)!=0 {
-		v.flags &= NO_CACHE^0xffffffff
-	}
-}
-
-
 // Browses through all the DB records calling the walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
 func (db *DB) Browse(walk QdbWalkFunction) {
@@ -155,11 +140,10 @@ func (db *DB) Browse(walk QdbWalkFunction) {
 		if (v.flags&NO_BROWSE)!=0 {
 			return true
 		}
-		if v.data == nil {
-			db.loadrec(v)
-		}
+		db.loadrec(v)
 		res := walk(k, v.Slice())
-		applyBrowsingFlags(res, v)
+		v.aply_browsing_flags(res)
+		v.freerec()
 		return (res&BR_ABORT)==0
 	})
 	//println("br", db.dir, "done")
@@ -171,11 +155,10 @@ func (db *DB) Browse(walk QdbWalkFunction) {
 func (db *DB) BrowseAll(walk QdbWalkFunction) {
 	db.mutex.Lock()
 	db.idx.browse(func(k KeyType, v *oneIdx) bool {
-		if v.data == nil {
-			db.loadrec(v)
-		}
+		db.loadrec(v)
 		res := walk(k, v.Slice())
-		applyBrowsingFlags(res, v)
+		v.aply_browsing_flags(res)
+		v.freerec()
 		return (res&BR_ABORT)==0
 	})
 	//println("br", db.dir, "done")
@@ -187,9 +170,8 @@ func (db *DB) Get(key KeyType) (value []byte) {
 	db.mutex.Lock()
 	idx := db.idx.get(key)
 	if idx!=nil {
-		if idx.data == nil {
-			db.loadrec(idx)
-		}
+		db.loadrec(idx)
+		idx.aply_browsing_flags(YES_CACHE)  // we are giving out the pointer, so keep it in cache
 		value = idx.Slice()
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
@@ -202,9 +184,7 @@ func (db *DB) Get(key KeyType) (value []byte) {
 func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 	idx := db.idx.get(key)
 	if idx!=nil {
-		if idx.data == nil {
-			db.loadrec(idx)
-		}
+		db.loadrec(idx)
 		value = idx.Slice()
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
@@ -328,12 +308,11 @@ func (db *DB) defrag() {
 	db.checklogfile()
 	used := make(map[uint32]bool, 10)
 	db.idx.browse(func(key KeyType, rec *oneIdx) bool {
-		if rec.data==nil {
-			db.loadrec(rec)
-		}
+		db.loadrec(rec)
 		rec.datpos = uint32(db.addtolog(nil, key, rec.Slice()))
 		rec.datseq = db.datseq
 		used[rec.datseq] = true
+		rec.freerec()
 		return true
 	})
 
@@ -409,4 +388,26 @@ func SetDefragPercent(val uint32) {
 func SetMaxPending(sync uint32, nosync uint32) {
 	atomic.StoreUint32(&MaxPending, sync)
 	atomic.StoreUint32(&MaxPendingNoSync, nosync)
+}
+
+
+func (idx *oneIdx) freerec() {
+	if (idx.flags&NO_CACHE) != 0 {
+		idx.FreeData()
+	}
+}
+
+
+func (v *oneIdx) aply_browsing_flags(res uint32) {
+	if (res&NO_BROWSE)!=0 {
+		v.flags |= NO_BROWSE
+	} else if (res&YES_BROWSE)!=0 {
+		v.flags &= ^uint32(NO_BROWSE)
+	}
+
+	if (res&NO_CACHE)!=0 {
+		v.flags |= NO_CACHE
+	} else if (res&YES_CACHE)!=0 {
+		v.flags &= ^uint32(NO_CACHE)
+	}
 }

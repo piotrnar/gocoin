@@ -84,7 +84,7 @@ func (c *OneConnection) Tick() {
 	// Timeout getdata for blocks in progress, so the map does not grow to infinity
 	for k, v := range c.GetBlockInProgress {
 		if time.Now().After(v.start.Add(GetBlockTimeout)) {
-			common.CountSafe("GetBlockTimeout")
+			common.CountSafe("BlockGetTimeout")
 			c.Mutex.Lock()
 			delete(c.GetBlockInProgress, k)
 			c.Mutex.Unlock()
@@ -246,8 +246,6 @@ func tcp_server() {
 
 
 func NetworkTick() {
-	common.CountSafe("NetTicks")
-
 	if common.CFG.Net.ListenTCP {
 		if !TCPServerStarted {
 			TCPServerStarted = true

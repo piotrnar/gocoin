@@ -152,14 +152,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		}
 	}()
 
-	var vfExec scrStack
+	var exestack scrStack
 	var altstack scrStack
 	sta, idx, opcnt := 0, 0, 0
 	for idx < len(p) {
-		fExec := vfExec.nofalse()
+		inexec := exestack.nofalse()
 
 		// Read instruction
-		opcode, vchPushValue, n, e := GetOpcode(p[idx:])
+		opcode, pushval, n, e := GetOpcode(p[idx:])
 		if e!=nil {
 			//println(e.Error())
 			//println("A", idx, hex.EncodeToString(p))
@@ -168,14 +168,14 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		idx+= n
 
 		if don(DBG_SCRIPT) {
-			fmt.Printf("\nExecuting opcode 0x%02x  n=%d  fExec:%t  push:%s..\n",
-				opcode, n, fExec, hex.EncodeToString(vchPushValue))
+			fmt.Printf("\nExecuting opcode 0x%02x  n=%d  inexec:%t  push:%s..\n",
+				opcode, n, inexec, hex.EncodeToString(pushval))
 			stack.print()
 		}
 
-		if vchPushValue!=nil && len(vchPushValue) > MAX_SCRIPT_ELEMENT_SIZE {
+		if pushval!=nil && len(pushval) > MAX_SCRIPT_ELEMENT_SIZE {
 			if don(DBG_SCRERR) {
-				println("vchPushValue too long", len(vchPushValue))
+				println("pushval too long", len(pushval))
 			}
 			return false
 		}
@@ -211,12 +211,12 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 			return false
 		}
 
-		if fExec && 0<=opcode && opcode<=OP_PUSHDATA4 {
-			stack.push(vchPushValue)
+		if inexec && 0<=opcode && opcode<=OP_PUSHDATA4 {
+			stack.push(pushval)
 			if don(DBG_SCRIPT) {
-				fmt.Println("pushed", len(vchPushValue), "bytes")
+				fmt.Println("pushed", len(pushval), "bytes")
 			}
-		} else if fExec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
+		} else if inexec || (0x63/*OP_IF*/ <= opcode && opcode <= 0x68/*OP_ENDIF*/) {
 			switch {
 				case opcode==0x4f: // OP_1NEGATE
 					stack.pushInt(-1)
@@ -233,8 +233,8 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 
 				case opcode==0x63 || opcode==0x64: //OP_IF || OP_NOTIF
 					// <expression> if [statements] [else [statements]] endif
-					fValue := false
-					if fExec {
+					val := false
+					if inexec {
 						if (stack.size() < 1) {
 							if don(DBG_SCRERR) {
 								println("Stack too short for", opcode)
@@ -242,35 +242,35 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 							return false
 						}
 						if opcode == 0x63/*OP_IF*/ {
-							fValue = stack.popBool()
+							val = stack.popBool()
 						} else {
-							fValue = !stack.popBool()
+							val = !stack.popBool()
 						}
 					}
 					if don(DBG_SCRERR) {
-						println(fExec, "if pushing", fValue, "...")
+						println(inexec, "if pushing", val, "...")
 					}
-					vfExec.pushBool(fValue)
+					exestack.pushBool(val)
 
 				/* - not handled
 				    OP_VERIF = 0x65,
 				    OP_VERNOTIF = 0x66,
 				*/
 				case opcode==0x67: //OP_ELSE
-					if vfExec.size()==0 {
+					if exestack.size()==0 {
 						if don(DBG_SCRERR) {
-							println("vfExec empty in OP_ELSE")
+							println("exestack empty in OP_ELSE")
 						}
 					}
-					vfExec.pushBool(!vfExec.popBool())
+					exestack.pushBool(!exestack.popBool())
 
 				case opcode==0x68: //OP_ENDIF
-					if vfExec.size()==0 {
+					if exestack.size()==0 {
 						if don(DBG_SCRERR) {
-							println("vfExec empty in OP_ENDIF")
+							println("exestack empty in OP_ENDIF")
 						}
 					}
-					vfExec.pop()
+					exestack.pop()
 
 				case opcode==0x69: //OP_VERIFY
 					if stack.size()<1 {
@@ -863,7 +863,7 @@ func evalScript(p []byte, stack *scrStack, tx *Tx, inp int) bool {
 		stack.print()
 	}
 
-	if vfExec.size()>0 {
+	if exestack.size()>0 {
 		if don(DBG_SCRERR) {
 			println("Unfinished if..")
 		}
@@ -908,7 +908,7 @@ func delSig(where, sig []byte) (res []byte) {
 }
 
 
-func GetOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
+func GetOpcode(b []byte) (opcode int, ret []byte, pc int, e error) {
 	// Read instruction
 	if pc+1 > len(b) {
 		e = errors.New("GetOpcode error 1")
@@ -918,38 +918,38 @@ func GetOpcode(b []byte) (opcode int, pvchRet []byte, pc int, e error) {
 	pc++
 
 	if opcode <= OP_PUSHDATA4 {
-		nSize := 0
+		size := 0
 		if opcode < OP_PUSHDATA1 {
-			nSize = opcode
+			size = opcode
 		}
 		if opcode == OP_PUSHDATA1 {
 			if pc+1 > len(b) {
 				e = errors.New("GetOpcode error 2")
 				return
 			}
-			nSize = int(b[pc])
+			size = int(b[pc])
 			pc++
 		} else if opcode == OP_PUSHDATA2 {
 			if pc+2 > len(b) {
 				e = errors.New("GetOpcode error 3")
 				return
 			}
-			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+2]))
+			size = int(binary.LittleEndian.Uint16(b[pc:pc+2]))
 			pc += 2
 		} else if opcode == OP_PUSHDATA4 {
 			if pc+4 > len(b) {
 				e = errors.New("GetOpcode error 4")
 				return
 			}
-			nSize = int(binary.LittleEndian.Uint16(b[pc:pc+4]))
+			size = int(binary.LittleEndian.Uint16(b[pc:pc+4]))
 			pc += 4
 		}
-		if pc+nSize > len(b) {
-			e = errors.New(fmt.Sprint("GetOpcode size to fetch exceeds remainig data left: ", pc+nSize, "/", len(b)))
+		if pc+size > len(b) {
+			e = errors.New(fmt.Sprint("GetOpcode size to fetch exceeds remainig data left: ", pc+size, "/", len(b)))
 			return
 		}
-		pvchRet = b[pc:pc+nSize]
-		pc += nSize
+		ret = b[pc:pc+size]
+		pc += size
 	}
 
 	return

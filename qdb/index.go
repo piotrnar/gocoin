@@ -54,7 +54,8 @@ func (idx *dbidx) load(walk QdbWalkFunction) {
 			v.SetData(dat[v.datpos:v.datpos+v.datlen])
 			if walk!=nil {
 				res := walk(k, v.Slice())
-				applyBrowsingFlags(res, v)
+				v.aply_browsing_flags(res)
+				v.freerec()
 			}
 		}
 		return true

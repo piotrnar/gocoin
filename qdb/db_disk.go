@@ -42,20 +42,22 @@ func (db *DB) checklogfile() {
 }
 
 
+// load record from disk, if not loaded yet
 func (db *DB) loadrec(idx *oneIdx) {
-	var f *os.File
-	if f, _ = db.rdfile[idx.datseq]; f==nil {
-		fn := db.seq2fn(idx.datseq)
-		f, _ = os.Open(fn)
-		if f==nil {
-			println("file", fn, "not found")
-			os.Exit(1)
+	if idx.data == nil {
+		var f *os.File
+		if f, _ = db.rdfile[idx.datseq]; f==nil {
+			fn := db.seq2fn(idx.datseq)
+			f, _ = os.Open(fn)
+			if f==nil {
+				println("file", fn, "not found")
+				os.Exit(1)
+			}
+			db.rdfile[idx.datseq] = f
 		}
-		db.rdfile[idx.datseq] = f
+		idx.LoadData(f)
 	}
-	idx.LoadData(f)
 }
-
 
 // add record at the end of the log
 func (db *DB) addtolog(f io.Writer, key KeyType, val []byte) (fpos int64) {

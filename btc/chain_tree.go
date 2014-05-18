@@ -89,7 +89,7 @@ func (n *BlockTreeNode) Timestamp() (uint32) {
 
 func (n *BlockTreeNode) Bits() (uint32) {
 	if n.Height==0 {
-		return nProofOfWorkLimit
+		return MaxPOWBits
 	} else {
 		return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
 	}
