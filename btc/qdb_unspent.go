@@ -64,7 +64,7 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else {
-				return 0
+				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it one now
 			}
 		}, SingeIndexSize)
 
