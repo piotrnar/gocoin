@@ -19,9 +19,9 @@ const (
 	BLOCK_INVALID = 0x02
 	BLOCK_COMPRSD = 0x04
 	BLOCK_SNAPPED = 0x08
-
-	MaxCachedBlocks = 500
 )
+
+var MaxCachedBlocks uint = 500
 
 /*
 	blockchain.dat - contains raw blocks data, no headers, nothing
@@ -196,7 +196,7 @@ func (db *BlockDB) addToCache(h *Uint256, bl []byte) {
 		rec.used = time.Now()
 		return
 	}
-	if len(db.cache) >= MaxCachedBlocks {
+	if uint(len(db.cache)) >= MaxCachedBlocks {
 		var oldest_t time.Time
 		var oldest_k [Uint256IdxLen]byte
 		for k, v := range db.cache {

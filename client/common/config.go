@@ -61,6 +61,7 @@ var (
 			MinBrowsableVal uint64
 			NoCacheBefore uint
 			GCPercTrshold int
+			MaxCachedBlocks uint
 		}
 		Beeps struct {
 			NewBlock bool  // beep when a new block has been mined
@@ -112,6 +113,7 @@ func init() {
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
+	CFG.Memory.MaxCachedBlocks = 500
 
 	CFG.MiningStatHours = 24
 	CFG.HashrateHours = 6
@@ -172,6 +174,7 @@ func Reset() {
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	btc.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
 	btc.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
+	btc.MaxCachedBlocks = CFG.Memory.MaxCachedBlocks
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {
