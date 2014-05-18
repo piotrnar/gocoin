@@ -81,6 +81,12 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 }
 
 
+// Commit the given add/del transactions to UTXO and Wnwind DBs
+func (db *UnspentDB) IndexToQdb(i int) *qdb.DB {
+	return db.unspent.dbN(i)
+}
+
+
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	s += db.unspent.stats()
@@ -143,5 +149,3 @@ func (db *UnspentDB) UnspentGet(po *TxPrevOut) (res *TxOut, e error) {
 func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 	db.unspent.browse(walk, quick)
 }
-
-

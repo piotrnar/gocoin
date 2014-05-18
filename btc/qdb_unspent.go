@@ -41,6 +41,9 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 		if AbortNow {
 			return
 		}
+		if db.ch.CB.LoadFlush!=nil {
+			db.ch.CB.LoadFlush()
+		}
 	}
 	fmt.Print("\r                                                              \r")
 
@@ -50,17 +53,21 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		db.tdb[i], _ = qdb.NewDBrowse(db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
-				if stealthIndex(v) {
-					return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
-				} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
-					return qdb.NO_CACHE | qdb.NO_BROWSE
-				} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
-					return qdb.NO_CACHE | qdb.NO_BROWSE
-				} else {
-					return 0
-				}
-			}, SingeIndexSize)
+		qdb.NewDBrowse(&db.tdb[i], db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
+			if db.ch.CB.LoadWalk!=nil {
+				db.ch.CB.LoadWalk(db.tdb[i], k, NewWalkRecord(v))
+			}
+			if stealthIndex(v) {
+				return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
+			} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
+				return qdb.NO_CACHE | qdb.NO_BROWSE
+			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
+				return qdb.NO_CACHE | qdb.NO_BROWSE
+			} else {
+				return 0
+			}
+		}, SingeIndexSize)
+
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()
 		}
@@ -104,15 +111,15 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
 	k := qdb.KeyType(idx.UIdx())
 	var flgz uint32
-	dbN := db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs)
+	dbN := db.dbN(int(idx.Hash[31]) % NumberOfUnspentSubDBs)
 	if stealthIndex(v) {
-		if db.ch.NotifyStealthTx!=nil {
-			db.ch.NotifyStealthTx(dbN, k, NewWalkRecord(v))
+		if db.ch.CB.NotifyStealthTx!=nil {
+			db.ch.CB.NotifyStealthTx(dbN, k, NewWalkRecord(v))
 		}
 		flgz = qdb.YES_CACHE|qdb.YES_BROWSE
 	} else {
-		if db.ch.NotifyTx!=nil {
-			db.ch.NotifyTx(idx, Val_Pk)
+		if db.ch.CB.NotifyTx!=nil {
+			db.ch.CB.NotifyTx(idx, Val_Pk)
 		}
 		if Val_Pk.Value<MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
@@ -125,8 +132,8 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 
 
 func (db *unspentDb) del(idx *TxPrevOut) {
-	if db.ch.NotifyTx!=nil {
-		db.ch.NotifyTx(idx, nil)
+	if db.ch.CB.NotifyTx!=nil {
+		db.ch.CB.NotifyTx(idx, nil)
 	}
 	key := qdb.KeyType(idx.UIdx())
 	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(key)
@@ -212,7 +219,7 @@ func stealthIndex(v []byte) bool {
 func (db *unspentDb) browse(walk FunctionWalkUnspent, quick bool) {
 	var i int
 	brfn := func(k qdb.KeyType, v []byte) (fl uint32) {
-		res := walk(db.dbN(i), k, NewWalkRecord(v))
+		res := walk(db.tdb[i], k, NewWalkRecord(v))
 		if (res&WALK_ABORT)!=0 {
 			fl |= qdb.BR_ABORT
 		}
@@ -270,6 +277,21 @@ func (r *OneWalkRecord) TxID() []byte {
 	return r.v[0:32]
 }
 
+func (r *OneWalkRecord) BlockHeight() uint32 {
+	return binary.LittleEndian.Uint32(r.v[44:48])
+}
+
+func (r *OneWalkRecord) Value() uint64 {
+	return binary.LittleEndian.Uint64(r.v[36:44])
+}
+
+func (r *OneWalkRecord) TxPrevOut() (res *TxPrevOut) {
+	res = new(TxPrevOut)
+	copy(res.Hash[:], r.v[0:32])
+	res.Vout = binary.LittleEndian.Uint32(r.v[32:36])
+	return
+}
+
 func (r *OneWalkRecord) ToUnspent(ad *BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], r.v[0:32])
@@ -324,7 +346,7 @@ func (db *UnspentDB) PrintCoinAge() {
 	}
 	age := make(map[uint32] *rec)
 	for i := range db.unspent.tdb {
-		db.unspent.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+		db.unspent.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
 			a := binary.LittleEndian.Uint32(v[44:48])
 			if a>maxbl {
 				maxbl = a

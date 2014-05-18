@@ -113,13 +113,14 @@ func sync_wallet() {
 			} else {
 				rec = CachedAddrs[MyWallet.Addrs[i].Hash160]
 			}
-			if rec==nil {
-				println("his should not happen: No record in the cache", MyWallet.Addrs[i].String())
+			if rec!=nil {
+				MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
+			} else {
+				println("No record in the cache for", MyWallet.Addrs[i].String())
 			}
-			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 		}
 		sort_and_sum()
-		BalanceChanged = true
+		BalanceChanged = PrecachingComplete
 	}
 }
 
@@ -230,7 +231,6 @@ func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance 
 func UpdateBalance() {
 	var tofetch_stealh []*btc.BtcAddr
 	var tofetch_secrets [][]byte
-	var skip_stealths bool
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
 
 	BalanceMutex.Lock()
@@ -258,7 +258,7 @@ func UpdateBalance() {
 			// Add a new address to the balance cache
 			if MyWallet.Addrs[i].StealthAddr==nil {
 				tofetch_regular[MyWallet.Addrs[i].AIdx()] = MyWallet.Addrs[i]
-			} else if !skip_stealths {
+			} else {
 				sa := MyWallet.Addrs[i].StealthAddr
 				if ssecret:=FindStealthSecret(sa); ssecret!=nil {
 					tofetch_stealh = append(tofetch_stealh, MyWallet.Addrs[i])
@@ -269,9 +269,7 @@ func UpdateBalance() {
 					copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
 					StealthAdCache = append(StealthAdCache, rec)
 				} else {
-					if !PrecachingComplete {
-						fmt.Println("No matching secret for", sa.String())
-					}
+					fmt.Println("No matching secret for", sa.String())
 					add_it = false
 				}
 			}
@@ -373,7 +371,10 @@ func LoadWallet(fn string) {
 	}
 }
 
-func FetchAllBalances() {
+// Loads adressses from all the wallets into the cache
+func LoadAllWallets() {
+	fmt.Println("Loading all wallets...")
+
 	dir := common.GocoinHomeDir + "wallet" + string(os.PathSeparator)
 	fis, er := ioutil.ReadDir(dir)
 	if er == nil {
@@ -401,10 +402,72 @@ func FetchAllBalances() {
 			}
 		}
 	}
-	if MyWallet!=nil && len(MyWallet.Addrs)>0 {
-		println("Fetching balance of", len(MyWallet.Addrs), "addresses")
-		UpdateBalance()
-		fmt.Printf("Total cached balance: %.8f BTC in %d unspent outputs\n", float64(LastBalance)/1e8, len(MyBalance))
+
+	FetchStealthKeys()
+
+	// All wallets loaded - setup the cache structures
+	for i := range MyWallet.Addrs {
+		if rec, pres := CachedAddrs[MyWallet.Addrs[i].Hash160]; pres {
+			cu := CacheUnspent[rec.CacheIndex]
+			cu.BtcAddr = MyWallet.Addrs[i]
+			for j := range cu.AllUnspentTx {
+				// update BtcAddr in each of AllUnspentTx to reflect the latest label
+				cu.AllUnspentTx[j].BtcAddr = MyWallet.Addrs[i]
+			}
+			MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
+		} else {
+			add_it := true
+			// Add a new address to the balance cache
+			if sa:=MyWallet.Addrs[i].StealthAddr; sa!=nil {
+				if ssecret:=FindStealthSecret(sa); ssecret!=nil {
+					var rec stealthCacheRec
+					rec.addr = MyWallet.Addrs[i]
+					copy(rec.d[:], ssecret)
+					copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
+					StealthAdCache = append(StealthAdCache, rec)
+				} else {
+					fmt.Println("No matching secret for", sa.String())
+					add_it = false
+				}
+			}
+			if add_it {
+				CachedAddrs[MyWallet.Addrs[i].Hash160] = &OneCachedAddrBalance{CacheIndex:uint(len(CacheUnspent))}
+				CacheUnspent = append(CacheUnspent, &OneCachedUnspent{BtcAddr:MyWallet.Addrs[i]})
+			}
+		}
 	}
+
+	fmt.Println("Pre-caching", len(MyWallet.Addrs), "addresses...")
+}
+
+// This function is only used when loading UTXO database
+func NewUTXO(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+	if rec.IsP2KH() || rec.IsP2SH() {
+		if adr:=btc.NewAddrFromPkScript(rec.Script(), common.Testnet); adr!=nil {
+			if crec, ok := CachedAddrs[adr.Hash160]; ok {
+				value := rec.Value()
+				idx := rec.TxPrevOut()
+				crec.Value += value
+				utxo := new(btc.OneUnspentTx)
+				utxo.TxPrevOut = *idx
+				utxo.Value = value
+				utxo.MinedAt = rec.BlockHeight()
+				utxo.BtcAddr = CacheUnspent[crec.CacheIndex].BtcAddr
+				CacheUnspent[crec.CacheIndex].AllUnspentTx = append(CacheUnspent[crec.CacheIndex].AllUnspentTx, utxo)
+				CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: crec.CacheIndex, Record: utxo}
+			}
+		}
+	} else if len(StealthAdCache)>0 && rec.IsStealthIdx() {
+		StealthNotify(db, k, rec)
+	}
+
+	return 0
+}
+
+
+func ChainInitDone() {
+	println("ChainInitDone. Stealth indexes to check:", len(newStealthIndexes), "...")
+	DoPendingStealths()
+	sync_wallet()
 	PrecachingComplete = true
 }

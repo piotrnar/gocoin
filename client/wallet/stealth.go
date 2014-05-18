@@ -85,7 +85,7 @@ func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
 }
 
 
-// It is assumed that you call this function onlu after rec.IsStealthIdx() was true
+// It is assumed that you call this function only after rec.IsStealthIdx() was true
 func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 	addr *btc.BtcAddr, d []byte, inbrowse bool) (fl uint32, uo *btc.OneUnspentTx) {
 	sth_scr := rec.Script()
@@ -124,24 +124,27 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 }
 
 
-func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) {
+func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) uint32 {
 	BalanceMutex.Lock()
 	newStealthIndexes = append(newStealthIndexes, pendingSI{db:db, k:k, rec:rec})
 	BalanceMutex.Unlock()
+	return 0
 }
 
 
 // Go through all the stealth indexes found in the last block
-func BlockAccepted() {
+func DoPendingStealths() {
 	if len(newStealthIndexes) > 0 {
 		var update_wallet bool
 		BalanceMutex.Lock()
-		FetchStealthKeys()
 		for i := range newStealthIndexes {
 			for ai := range StealthAdCache {
-				fl, uo := CheckStealthRec(newStealthIndexes[i].db, newStealthIndexes[i].k,
-					newStealthIndexes[i].rec, StealthAdCache[ai].addr, StealthAdCache[ai].d[:], false)
+				db := newStealthIndexes[i].db
+				key := newStealthIndexes[i].k
+				fl, uo := CheckStealthRec(db, key, newStealthIndexes[i].rec, StealthAdCache[ai].addr,
+					StealthAdCache[ai].d[:], false)
 				if fl!=0 {
+					db.ApplyFlags(key, qdb.NO_CACHE|qdb.NO_BROWSE)
 					break
 				}
 				if uo != nil {

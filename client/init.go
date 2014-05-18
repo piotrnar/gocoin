@@ -59,6 +59,9 @@ func host_init() {
 		}
 	}
 
+	// cache the current balance of all the addresses from the current wallet files
+	wallet.LoadAllWallets()
+
 	fmt.Println("Opening blockchain... (Ctrl-C to interrupt)")
 
 	__exit := make(chan bool)
@@ -75,8 +78,13 @@ func host_init() {
 			}
 		}
 	}()
+
+	ext := &btc.NewChanOpts{NotifyTx: wallet.TxNotify,
+		NotifyStealthTx: wallet.StealthNotify,
+		LoadWalk: wallet.NewUTXO, LoadFlush: wallet.DoPendingStealths}
+
 	sta := time.Now().UnixNano()
-	common.BlockChain = btc.NewChain(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan)
+	common.BlockChain = btc.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	sto := time.Now().UnixNano()
 	if btc.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
@@ -84,11 +92,10 @@ func host_init() {
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
+	wallet.ChainInitDone()
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %.3f seconds.  %d / %d MB of memory used\n",
 		float64(sto-sta)/1e9, al>>20, sy>>20)
-	common.BlockChain.NotifyTx = wallet.TxNotify
-	common.BlockChain.NotifyStealthTx = wallet.StealthNotify
 	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done

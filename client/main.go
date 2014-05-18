@@ -45,7 +45,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 	sta := time.Now()
 	e = common.BlockChain.AcceptBlock(bl)
 	if e == nil {
-		wallet.BlockAccepted()
+		wallet.DoPendingStealths()
 		network.MutexRcv.Lock()
 		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
 		network.MutexRcv.Unlock()
@@ -273,9 +273,6 @@ func main() {
 			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
 		}
 	}
-
-	// cache the current balance of all the addresses from the current wallet files
-	wallet.FetchAllBalances()
 
 	// ... and now load the dafault wallet
 	wallet.LoadWallet(default_wallet_fn)

@@ -3,7 +3,6 @@ package btc
 import (
 	"fmt"
 	"sync"
-	"github.com/piotrnar/gocoin/qdb"
 )
 
 
@@ -23,18 +22,33 @@ type Chain struct {
 
 	DoNotSync bool // do not flush all the files after each block
 
+	CB NewChanOpts // callbacks used by Unspent database
+}
+
+type NewChanOpts struct {
 	// If NotifyTx is set, it will be called each time a new unspent
 	// output is being added or removed. When being removed, TxOut is nil.
 	NotifyTx func (*TxPrevOut, *TxOut)
-	NotifyStealthTx func (*qdb.DB, qdb.KeyType, *OneWalkRecord)
+	NotifyStealthTx FunctionWalkUnspent
+
+	// These two are used only during loading
+	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
+	LoadFlush func() // this one is called after each UTXO sub-database is finished
+}
+
+
+func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
+	return NewChainExt(dbrootdir, genesis, rescan, nil)
 }
 
 
 // This is the very first function one should call in order to use this package
-func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
-
+func NewChainExt(dbrootdir string, genesis *Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
+	if opts != nil {
+		ch.CB = *opts
+	}
 	ch.Blocks = NewBlockDB(dbrootdir)
 	ch.Unspent = NewUnspentDb(dbrootdir, rescan, ch)
 

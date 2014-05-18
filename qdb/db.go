@@ -92,9 +92,10 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDBExt(dir string, load bool, walk QdbWalkFunction, recs uint) (db *DB, e error) {
+func NewDBExt(_db **DB, dir string, load bool, walk QdbWalkFunction, recs uint) (e error) {
 	cnt("NewDB")
-	db = new(DB)
+	db := new(DB)
+	*_db = db
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
 		dir += string(os.PathSeparator)
 	}
@@ -111,16 +112,20 @@ func NewDBExt(dir string, load bool, walk QdbWalkFunction, recs uint) (db *DB, e
 }
 
 
-func NewDBrowse(dir string, walk QdbWalkFunction, recs uint) (db *DB, e error) {
-	return NewDBExt(dir, true, walk, recs)
+func NewDBrowse(db **DB, dir string, walk QdbWalkFunction, recs uint) (e error) {
+	return NewDBExt(db, dir, true, walk, recs)
 }
 
-func NewDB(dir string, load bool) (db *DB, e error) {
-	return NewDBExt(dir, load, nil, 0)
+func NewDB(dir string, load bool) (*DB, error) {
+	var db *DB
+	e := NewDBExt(&db, dir, load, nil, 0)
+	return db, e
 }
 
-func NewDBCnt(dir string, load bool, recs uint) (db *DB, e error) {
-	return NewDBExt(dir, load, nil, recs)
+func NewDBCnt(dir string, load bool, recs uint) (*DB, error) {
+	var db *DB
+	e := NewDBExt(&db, dir, load, nil, recs)
+	return db, e
 }
 
 // Returns number of records in the DB
@@ -240,6 +245,16 @@ func (db *DB) Del(key KeyType) {
 		db.mutex.Unlock()
 	}
 }
+
+
+func (db *DB) ApplyFlags(key KeyType, fl uint32) {
+	db.mutex.Lock()
+	if idx:=db.idx.get(key); idx!=nil {
+		idx.aply_browsing_flags(fl)
+	}
+	db.mutex.Unlock()
+}
+
 
 
 // Defragments the DB on the disk.
