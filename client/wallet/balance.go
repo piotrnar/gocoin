@@ -373,8 +373,6 @@ func LoadWallet(fn string) {
 
 // Loads adressses from all the wallets into the cache
 func LoadAllWallets() {
-	fmt.Println("Loading all wallets...")
-
 	dir := common.GocoinHomeDir + "wallet" + string(os.PathSeparator)
 	fis, er := ioutil.ReadDir(dir)
 	if er == nil {
