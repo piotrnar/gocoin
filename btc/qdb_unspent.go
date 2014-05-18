@@ -63,8 +63,10 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
+			} else if IsUsefullOutScript(v[SCR_OFFS:]) {
+				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it such now
 			} else {
-				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it one now
+				return qdb.NO_CACHE | qdb.NO_BROWSE // useluess output - do not waste mem for it
 			}
 		}, SingeIndexSize)
 
