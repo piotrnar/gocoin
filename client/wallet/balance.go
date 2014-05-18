@@ -285,7 +285,7 @@ func UpdateBalance() {
 		// There are new addresses which we have not monitored yet
 		var new_addrs btc.AllUnspentTx
 
-		common.BlockChain.Unspent.BrowseUTXO(false, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
 			if rec.IsP2KH() {
 				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
 					new_addrs = append(new_addrs, rec.ToUnspent(ad))
