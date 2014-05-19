@@ -1,0 +1,79 @@
+<h2>Spending BTC</h2>
+Spending money is a secured process that requires several steps and moving files between your
+online client PC and your offline wallet machine. USB flash disk is probably the most convenient
+medium to use for this purpose.<br>
+<br>
+Never move any files others than the ones that you actually need to move, which are:<ul>
+<li>The balance/ folder containing your unspent outputs - you move it from client to wallet<br>
+<li>Text files with signed transactions - these you move from wallet to client
+</ul>
+Assuming that you would not sign a wrong transaction, nothing in the files you move between
+the two points is security sensitive, so you do not need to worry about protecting the medium
+(USB disk).<br>
+<br>
+
+<h3>1. Export your balance</h3>
+
+From the moment when <span class="cod">wallet.txt</span> (or its renamed version) is properly
+loaded into your client, you can check and export your balance.
+In order to spend your coins you will need to copy the balance folder (containing
+<span class="cod">unspent.txt</span> and one or more <span class="cod">&lt;txid&gt;.tx</span>
+files) to the PC that runs your wallet.<br>
+Use <a href="/">Home</a> page to download
+<a href="balance.zip">balance.zip</a> file. Just extract the zip file to
+get the <span class="cod">balance</span> folder.<br>
+<br>
+<a href="/snd">MakeTx</a> page allows you to use a so-called <b>coin control</b> feature.
+There you can manually assemble a transaction in quite a convenient and interactive way.
+After you fill in all the transaction details, it will give you payment.zip with the exact
+command that you shall execute at the wallet machine.<br>
+<br>
+
+<h3>2. Sign your transaction</h3>
+If you have <b>payment.zip</b> created via <a href="/snd">MakeTx</a>
+page (as opposite to <b>balance.zip</b>), then only need to extract the archive at your wallet machine
+and execute the exact command from the payment command file. Otherwise follow the steps below.<br>
+
+<br>
+To spend your money move <a href="balance.zip">balance.zip</a> to your wallet machine and extract it.
+Now when you execute <span class="cod">wallet</span> without any parameters (in the same folder where the
+<span class="cod">balnace/</span> is placed), it should show you how much BTC you are able to spend,
+from your current balance.
+To spend your coins, order the wallet to make and sign a new transaction, using a command like:<br>
+<span class="cod" style="margin-left:20px">wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=0.01</span><br>
+Note no spaces between the address, the equal sign and the value.
+The value represents the amount in BTC, which you request to send to the given address.<br>
+<br>
+There are command line switches that you may find useful when running <span class="cod">wallet</span>
+(i.e. a fee control). Run <span class="cod">wallet -h</span> to see them all.<br>
+<br>
+
+<h3>3. Verify signed transaction</h3>
+If everything goes well with the wallet <span class="cod">-send ...</span> command,
+it will create a text file with a signed transaction. The file is named like
+<span class="cod">01234567.txt</span> - this is the file you need to
+move to your online node in order to notify the network about your payment, but
+before doing so, use wallet tool to decode the transaction and double check whether
+it actually does what you intended:<br>
+<span class="cod" style="margin-left:20px">wallet -d 01234567.txt</span><br>
+<br>
+If the decoded outputs look OK, move the transaction file to your online node.<br>
+<br>
+
+
+<h3>4. Broadcast transaction</h3>
+Press <a href="javascript:pushtx()">Load TX</a> to open a dialog where you should
+paste the content of the signed transaction file.
+After pressing OK, you will be taken to the <a href="/txs">Transactions</a> page
+where the details of your transaction will be shown.
+Verify them again, this time also making sure that the fee is not too big.<br>
+<br>
+If everything looks OK here, you can broadcast the transaction to the bitcoin network
+using one of the icons: <img src="/webui/send_once.png"> <img src="/webui/send.png">
+<br>
+If not, delete the transaction from the node's memory: <img src="/webui/del.png"><br>
+<br>
+<h4>Re-broadcasting transactions</h4>
+The client never broadcasts transactions unrequested, so if your transaction does not get confirmed soon enough, you may want to
+re-broadcast it, using the same method as for the initial broadcasting. There may of course be other reasons why your transaction
+does not get confirmed (usually because the fee was to low), in which case re-broadcasting it will not help you much.
