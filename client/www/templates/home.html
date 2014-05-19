@@ -57,9 +57,9 @@
 	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
 	<tr><td>Node's Uptime:<td><b>{NODE_UPTIME}</b>
 	<tr><td>Mem Used MB:<td>
-		<b title="Sys mem taken"><!--HEAPSYS_MB--></b> +
+		<b title="Go heap size"><!--HEAP_SIZE_MB--></b> +
 		<b title="Extra mem taken by QDB"><!--WDB_EXTRA_MB--></b>
-		(<b title="Go heap size"><!--HEAP_SIZE_MB--></b>)
+		(<b title="Sys mem taken by Go"><!--HEAPSYS_MB--></b>)
 		&nbsp;[<a href="javascript:config('freemem')">FREE</a>]
 	<tr><td>NetMsgQueue:<td><b>{NET_TX_QSIZE}</b> txs,&nbsp;<b>{NET_BLOCK_QSIZE}</b> blocks
 	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b>{ECDSA_VERIFY_COUNT}</b>
