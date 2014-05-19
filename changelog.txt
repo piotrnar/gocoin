@@ -3,6 +3,7 @@
 * Client: the balance of all the wallets gets pre-cached while opening UTXO database
 * Client: configuring "Memory.NoCacheBefore" can now lower mem usage with no much visible performance drop
 * Client: "NoCacheBefore" can have a negative value, that will define an offset from the highest known block
+* Client: More help topics in WebUI
 * Further refactor of the code
 
 0.9.14 - 2014-05-13 (1.0.0-rc2)
