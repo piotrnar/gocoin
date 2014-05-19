@@ -20,6 +20,8 @@ const (
 var (
 	NocacheBlocksBelow int = 0 // Do not keep in memory blocks older than this height
 	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
+
+	UTXOAgedCount uint64
 )
 
 type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32
@@ -75,6 +77,17 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.unwind.commit(changes, blhash)
 	db.unspent.commit(changes)
 	if changes.Height >= changes.LastKnownHeight {
+		if NocacheBlocksBelow < -1 { // Remove old records from unspent database
+			if target := int(changes.Height) + NocacheBlocksBelow + 1; target > 0 {
+				db.unspent.browse(func(db *qdb.DB, k qdb.KeyType, rec *OneWalkRecord) uint32 {
+					if int(rec.BlockHeight())<=target && !rec.IsStealthIdx() {
+						UTXOAgedCount++
+						return WALK_NOMORE
+					}
+					return 0
+				}, true)
+			}
+		}
 		db.Sync()
 	}
 	return

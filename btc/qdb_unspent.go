@@ -349,8 +349,8 @@ func (db *unspentDb) stats() (s string) {
 		float64(sum)/1e8, brcnt, tot, stealth_cnt)
 	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue)
-	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%dMB\n",
-		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
+	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%.1fMB  AgedRecs:%d\n",
+		mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6, UTXOAgedCount)
 	return
 }
 

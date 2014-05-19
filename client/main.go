@@ -102,18 +102,6 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 		common.Last.Block = common.BlockChain.BlockTreeEnd
 		common.Last.Mutex.Unlock()
 
-		if common.CFG.Memory.NoCacheBefore < 0 { // Remove old records from unspent database
-			if target := int(common.Last.Block.Height) + common.CFG.Memory.NoCacheBefore + 1; target > 0 {
-				common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) uint32 {
-					if int(rec.BlockHeight()) <= target && !rec.IsStealthIdx() {
-						common.CountSafe("BlockUTXOAged")
-						return btc.WALK_NOMORE
-					}
-					return 0
-				})
-			}
-		}
-
 		if wallet.BalanceChanged {
 			wallet.BalanceChanged = false
 			fmt.Println("Your balance has just changed")
