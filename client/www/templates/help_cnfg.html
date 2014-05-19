@@ -3,4 +3,219 @@
 The online node a config file named <b>gocoin.conf</b><br>
 The client application looks for this file in the folder where it is being launched from.<br>
 The config file is in JSON encoded format, so in general the order of the fields does not matter, but their types do.<br>
+<br>
+<table class="bord" width="100%">
+<tr>
+	<th>Filed name
+	<th>Type
+	<th>Default value (if absent)
+	<th>Description
 
+<tr>
+	<td>Testnet
+	<td>bool
+	<td>false
+	<td>Use testnet3 if true
+<tr>
+	<td>ConnectOnly
+	<td>string
+	<td>""
+	<td>Connect only to this host/IP (and nowhere else)
+<tr>
+	<td>Datadir
+	<td>string
+	<td>Windows main net:<br>
+		&nbsp;"%APPDATA%\Bitcoin\gocoin\btcnet"<br>
+		Windows test net:<br>
+		&nbsp;"%APPDATA%\Bitcoin\gocoin\tstnet"<br>
+		Non-Windows main net:<br>
+		&nbsp;"~/.bitcoin/gocoin/btcnet"<br>
+		Non-Windows main net:<br>
+		&nbsp;"~/.bitcoin/gocoin/tstnet"
+	<td>The data folder for the gocoin client node.<br>
+		<br>
+		The data dir contains:<br>
+		 * Block database: blockchain.dat, blockchain.idx files.<br>
+		 * UTXO database: unspent3/ folder.<br>
+		 * Known peers database: peers3/ folder.<br>
+		 * Wallet files: wallet/ folder.
+<tr>
+	<td>TextUI.Enabled
+	<td>bool
+	<td>true
+	<td>Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).
+<tr>
+	<td>WebUI.Interface
+	<td>string
+	<td>"127.0.0.1:8833"
+	<td>Bind WebUI server to this interface. Change it to ":8833" in order to allow external connections.
+<tr>
+	<td>WebUI.AllowedIP
+	<td>string
+	<td>"127.0.0.1"
+	<td>List of IP addresses that are allowed to access WebUI. Use "0.0.0.0/0" to let everyone in.
+<tr>
+	<td>WebUI.ShowBlocks
+	<td>uint32
+	<td>25
+	<td>How many recent blocks to show at the Blocks page.
+<tr>
+	<td>WebUI.AddrListLen
+	<td>uint32
+	<td>15
+	<td>How many addresses to show (at the same time) in the address book that pops up at MakeTx page.
+<tr>
+	<td>Net.ListenTCP
+	<td>bool
+	<td>true
+	<td>Accept incoming TCP connections.
+<tr>
+	<td>Net.TCPPort
+	<td>uint16
+	<td>8333 - for main net<br>
+		18333 - for test net
+	<td>Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.
+<tr>
+	<td>Net.MaxOutCons
+	<td>uint32
+	<td>9
+	<td>Maximum number of outgoing TCP connections.
+<tr>
+	<td>Net.MaxInCons
+	<td>uint32
+	<td>10
+	<td>Maximum number of incoming TCP connections.
+<tr>
+	<td>Net.MaxUpKBps
+	<td>uint
+	<td>0
+	<td>Maximum upload speed in kilobytes per second. 0 means unlimited.
+<tr>
+	<td>Net.MaxDownKBps
+	<td>uint
+	<td>0
+	<td>Maximum download speed in kilobytes per second. 0 means unlimited.
+<tr>
+	<td>Net.MaxBlockAtOnce
+	<td>uint32
+	<td>3
+	<td>When a new block appears, (up to) how many peers to ask for its data at the same time.
+<tr>
+	<td>TXPool.Enabled
+	<td>bool
+	<td>true
+	<td>Enable memory pool (for transactions).
+<tr>
+	<td>TXPool.AllowMemInputs
+	<td>bool
+	<td>true
+	<td>Accept transactions with unconfirmed inputs to the memory pool.
+<tr>
+	<td>TXPool.FeePerByte
+	<td>uint64
+	<td>1
+	<td>Required minimum fee per byte to accept a transaction to the memory pool.
+<tr>
+	<td>TXPool.MaxTxSize
+	<td>uint32
+	<td>10000
+	<td>Maximum size of a transaction that would be accepted to the memory pool.
+<tr>
+	<td>TXPool.MinVoutValue
+	<td>uint64
+	<td>0
+	<td>Required minimum value (checked separately for each output) to accept a transaction to the memory pool. 0 - no restriction.
+<tr>
+	<td>TXPool.TxExpireMinPerKB
+	<td>uint
+	<td>180
+	<td>If something is 1KB big, it expires after this many minutes. Otherwise expiration time will be proportionally different.
+<tr>
+	<td>TXPool.TxExpireMaxHours
+	<td>uint
+	<td>12
+	<td>Expire from memory pool any transaction that stays unconfirmed for so may hours.
+<tr>
+	<td>TXRoute.Enabled
+	<td>bool
+	<td>true
+	<td>Enable routing of transactions (memory pool must be enabled as well).
+<tr>
+	<td>TXRoute.FeePerByte
+	<td>uint64
+	<td>1
+	<td>Required minimum fee per byte to route a transaction.
+<tr>
+	<td>TXRoute.MaxTxSize
+	<td>uint32
+	<td>10000
+	<td>Maximum size of a transaction that will be routed to other peers.
+<tr>
+	<td>TXRoute.MinVoutValue
+	<td>uint64
+	<td>500
+	<td>Required minimum value (checked separately for each output) to route a transaction. 0 for no restriction.
+<tr>
+	<td>Memory.MinBrowsableVal
+	<td>uint64
+	<td>0
+	<td>Do not store in memory UTXO records containing value lower than this. 0 means store everything.
+<tr>
+	<td>Memory.NoCacheBefore
+	<td>int
+	<td>0
+	<td>Do not store in memory UTXO records confirmed in blocks with height lower than this. 0 means: store everything.<br>>
+		Use  negative value to define an offset from the highest known block. -1 means: do not store anything.
+<tr>
+	<td>Memory.GCPercTrshold
+	<td>int
+	<td>100
+	<td>A threshold (in percent) to trigger Go's garbage collector engine.
+<tr>
+	<td>Memory.MaxCachedBlocks
+	<td>uint
+	<td>500
+	<td>How many (recently used) blocks shall be kept in RAM.
+<tr>
+	<td>Beeps.NewBlock
+	<td>bool
+	<td>false
+	<td>Beep when a  new block is added to the top of the chain (someone has mined a new one).
+<tr>
+	<td>Beeps.ActiveFork
+	<td>bool
+	<td>false
+	<td>Triple beep when there is a fork in the block chain.
+<tr>
+	<td>Beeps.NewBalance
+	<td>bool
+	<td>false
+	<td>Been when a balance of the currently selected wallet has changed.
+<tr>
+	<td>Beeps.MinerID
+	<td>string
+	<td>""
+	<td>Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.
+<tr>
+	<td>MiningStatHours
+	<td>uint
+	<td>24
+	<td>How many hours the mining statistics (at WebUI's Miners page) should look back.
+<tr>
+	<td>HashrateHours
+	<td>uint
+	<td>6
+	<td>How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)
+<tr>
+	<td>UserAgent
+	<td>string
+	<td>"/Gocoin:?.?.?/"
+	<td>Which string shall be reported by the node as User-Agent (in the version messages).
+<tr>
+	<td>PayCommandName
+	<td>string
+	<td>"pay_cmd.txt"
+	<td>The file name of the pay script command inside the payment.zip (created at MakeTx page).
+		Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.
+
+</table>
