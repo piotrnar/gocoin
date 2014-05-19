@@ -188,7 +188,18 @@ func p_help(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page := load_template("help.html")
+	fname := "help.html"
+	if len(r.Form["topic"])>0 && len(r.Form["topic"][0])==4 {
+		for i:=0; i<4; i++ {
+			if r.Form["topic"][0][i]<'a' || r.Form["topic"][0][i]>'z' {
+				goto broken_topic  // we only accept 4 locase characters
+			}
+		}
+		fname = "help_" + r.Form["topic"][0] + ".html"
+	}
+broken_topic:
+
+	page := load_template(fname)
 	write_html_head(w, r)
 	w.Write([]byte(page))
 	write_html_tail(w)

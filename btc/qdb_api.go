@@ -71,7 +71,7 @@ func (db *UnspentDB) GetLastBlockHash() ([]byte) {
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	// First the unwind data
 	db.nosync()
-	db.unspent.lastHeight = changes.Height
+	db.unspent.setHeight(changes.Height)
 	db.unwind.commit(changes, blhash)
 	db.unspent.commit(changes)
 	if changes.Height >= changes.LastKnownHeight {

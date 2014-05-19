@@ -25,6 +25,7 @@ type unspentDb struct {
 	defragCount uint64
 	nosyncinprogress bool
 	lastHeight uint32
+	noCacheBefore uint32
 	ch *Chain
 }
 
@@ -32,8 +33,8 @@ type unspentDb struct {
 func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
-	db.lastHeight = lasth
 	db.ch = ch
+	db.setHeight(lasth)
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -50,6 +51,20 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 	return
 }
 
+func (db *unspentDb) setHeight(lasth uint32) {
+	db.lastHeight = lasth
+	if NocacheBlocksBelow < 0 {
+		res := int(db.lastHeight) + NocacheBlocksBelow + 1
+		if res > 0 {
+			db.noCacheBefore = uint32(res)
+		} else {
+			db.noCacheBefore = 0
+		}
+	} else {
+		db.noCacheBefore = uint32(NocacheBlocksBelow)
+	}
+}
+
 
 func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
@@ -59,7 +74,7 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 			}
 			if stealthIndex(v) {
 				return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
-			} else if binary.LittleEndian.Uint32(v[44:48]) <= db.maxCachedBlock() {
+			} else if binary.LittleEndian.Uint32(v[44:48]) <= db.noCacheBefore {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
@@ -125,7 +140,7 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 		}
 		if Val_Pk.Value < MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
-		} else if Val_Pk.BlockHeight <= db.maxCachedBlock() {
+		} else if NocacheBlocksBelow==-1 {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
 		}
 	}
@@ -332,22 +347,11 @@ func (db *unspentDb) stats() (s string) {
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
 		float64(sum)/1e8, brcnt, tot, stealth_cnt)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d  MinBrowsableVal:%d\n",
-		db.defragCount, db.lastHeight, NocacheBlocksBelow, MinBrowsableOutValue)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d\n",
+		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue)
 	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%dMB\n",
 		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
 	return
-}
-
-func (db *unspentDb) maxCachedBlock() uint32 {
-	if NocacheBlocksBelow < 0 {
-		res := int(db.lastHeight) + NocacheBlocksBelow
-		if res<0 {
-			return 0
-		}
-		return uint32(res)
-	}
-	return uint32(NocacheBlocksBelow)
 }
 
 
