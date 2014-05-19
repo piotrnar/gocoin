@@ -1,4 +1,5 @@
 0.9.15 (1.0.0-rc3)
+* Wallet: you can add "seed" param to the config file, as a potential countermeasure against keyboard loggers
 * Client: new TextUI commands ("arm", "unarm", "armed") help to secure your stealth addresses' scan-keys
 * Client: the balance of all the wallets gets pre-cached while opening UTXO database
 * Client: configuring "Memory.NoCacheBefore" can now lower mem usage with no much visible performance drop
