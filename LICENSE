@@ -4,34 +4,60 @@ Copyright (c) 2013-2014 Piotr Narewski
 
 NON-COMMERCIAL USE
 -----------------------
-As the explicit author of this software I grant a permission to use it in
-either an original or a modified form, free of charge and without a need for
-an explicit permission, but only for a non-commercial purposes and only to
-physical persons, not to any kind of legal entities.
+Author of this software grants permission to use it in either
+original or modified form, free of charge, with no need for an
+explicit permission, but only for non-commercial purposes and
+only to physical people, not to any kind of legal entities.
 
-A non-profit community projects are also welcome to use this software for free,
-without an explicit permission.
+A non-profit community projects can also use this software for
+free, without a need for an explicit permission.
 
 
 COMMERCIAL USE
 -----------------------
-If you want to use this software in a commercial application (to make money)
-you need to acquire a license. The price depends on a type of your business and
-a kind of the license you need.
-Shall you be interested, contact me for a quotation: tonikt@assets-otc.com
+If you want to use this software in a commercial application you
+need to acquire an explicit license. The price depends on a type
+of your business and a kind of the license you need.
+
+If you just want to try this software, ask for a free temporary
+license.
 
 
-secp256k1
 -----------------------
-The implementation of the native ECDSA speedup package "btc/newec" is based on
-the code created by Pieter Wuille. The code itself has been completely
-rewritten, but the original author deserves a credit for all the algorithms.
- * https://github.com/sipa/secp256k1/blob/master/COPYING
+tonikt@assets-otc.com
 
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2.0.22 (MingW32)
 
-bitcoin-qt
------------------------
-Some parts of the source code (e.g. "btc/target.go") and some test vectors
-("btc/test/*.json") were taken from the original (satoshi's) bitcoin client.
- * https://github.com/bitcoin/bitcoin/blob/master/COPYING
-
+mQENBE9sejYBCADOvsyvIo6kAcI/h4g6Sa6wYJmEVGUqRcO0C5SMn1OLvZ9towro
+HsbC4m9hLu/Jqz1fOo7FHIBghNmaTc7omi+Dd6IWPDhBcbg2SXzmyUiupS/eEalV
+kU1iz2IxeQrUBkcWB4a2tMboqoNhNX/a59+1bUZRlsaSqGzKEhEH54n7a/V8k9qI
+UhALMOnpPvAZAr3IXioaNB/H3qSpD5N7xmbe9zIKzMibPvTCUtfgOzf1XlvucdJl
+9V1eoTEzLjiay43t3eUF4L9MzjwoH4cLwywaaWFWZmyQ1aYDDoPH31MUlZOBHt4Q
+u0hDHrCVrzm9CkpFPSDqe76fcUGAxnlPoVqdABEBAAG0LVBpb3RyIE5hcmV3c2tp
+IChiaXRjb2luKSA8cGlvdHJuYXJAZ21haWwuY29tPokBOwQTAQIAJQIbDwYLCQgH
+AwIGFQgCCQoLBBYCAwECHgECF4AFAlNxN+gCGQEACgkQG+e1Rc3z/Q53YQgAuE1n
+rGnP9VqXYUIFo70gV5PeCEtWdugV8R4XBFpaLRTUfUNPuFjS6wqqn1i96rtPSkSm
+m24Dviim2YaUJpbvJ6BohtT2CDM1cP4oVZLiElYu5aHxrujtIVO58Q7DUt4osW2R
+ANJbIiWQT0GOtYWkmTGhR9GAcfBLcs3RIr/sfIJTQIy+VvphGr2LiA8gQuh4iSU8
+tEgZNCAdQQkHLkZVowC5BC0D9Mx4mypm3d4KmG3Qbxw7kN4n8DMPP9Ek1VFbBFta
+4q1jFE2qqbPTfRahYeGwvkCr3hx4gEIRU/4l8OLxTFfrtFPCFcQOD8tquSK0bK3d
+IiDJY2nM4admGNvL6rQgUGlvdHIgTi4gPHRvbmlrdEBhc3NldHMtb3RjLmNvbT6J
+ATkEEwECACMFAlNxOeUCGw8HCwkIBwMCAQYVCAIJCgsEFgIDAQIeAQIXgAAKCRAb
+57VFzfP9DrjXB/48qvOGXCZ/J6N19XZAtlwAyWl+X3tpSQYXuQfV7J5cJ04PFx6Q
+lWxF2NwJo65FPSzz2BPbGIMpUjE+BfUZr/m8XWNhWsvC4Qgx89oFwu2yXU89sXH1
+VpLo1cyDTQFPid0s2wA+jLZ9mxgx5OOg1Mktq1T80ZEZVxut3/7twjdb4b7Lbhws
+/A59+rkuhApxeACXmg1vwKEka9xL4hYnPNVsF7ifuEChzhBHc/pNL5JvZOTja0+Y
+irS19G9Qqi7GHGmO/gDWY0xf57+HtcU1pl7i45U60GUBKs4pV8mjYRndUj9SnumK
+o6TK3mkAM/X+nSswVl+C2k7hE/O6XJ7VG3vZtHxCVEMgc3RlYWx0aCBhZGRyZXNz
+ICh2Sm14QjdlZ2Q3cjYydWJiNDVKM0J6cWtNZW1RdjVIMmRucEtUQzczNWlRdXV4
+WVhGTUE3Q3Jlb3VvdTdxWkRwZjc0b3BneGZZaFhTcm03YlA1NDlDaUd6UEZRbmpN
+YWFoc3VWdXcpiQE5BBMBAgAjBQJTcToKAhsPBwsJCAcDAgEGFQgCCQoLBBYCAwEC
+HgECF4AACgkQG+e1Rc3z/Q5CWQf+Pe5EXTLIUR7nMuFRyjY68+RT86tXSVc83arL
+F3WnO3iNoLyZ4hLD3If/6K7RXiyWFO1ezaZ5ZmYuFkZvmfdpOSjO1DDJkIpFKfRj
+QcpBbgbSCIFe7lJErGJvNd8+y/TBtZDdGCTXrjyfiHDDvZ3/3NCg+UOHUoXzerFp
+oXErVdt/JocVotxGokOLLn5HCd/K8iatkh4F+D8ELVzo/7SfNQWWCq+qvCXw8qYQ
+xPRp7bvF/Fvwefhl8k9naBw1FkkN07JnQ8gGAvAYkzoeuw9axGvBi1AFWyGoAMce
+vO0TqyrkDDDG0J0UmqcK8TpeUK7HcMbBNycRFsCn9B35KeHmQw==
+=JjWK
+-----END PGP PUBLIC KEY BLOCK-----
