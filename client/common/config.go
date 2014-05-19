@@ -59,7 +59,7 @@ var (
 		}
 		Memory struct {
 			MinBrowsableVal uint64
-			NoCacheBefore uint
+			NoCacheBefore int // Use negetive value to not cache from the last block height plus it
 			GCPercTrshold int
 			MaxCachedBlocks uint
 		}

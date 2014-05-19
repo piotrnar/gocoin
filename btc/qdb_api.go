@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	NocacheBlocksBelow uint = 0 // Do not keep in memory blocks older than this height
+	NocacheBlocksBelow int = 0 // Do not keep in memory blocks older than this height
 	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
 )
 

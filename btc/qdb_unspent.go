@@ -59,7 +59,7 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 			}
 			if stealthIndex(v) {
 				return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
-			} else if binary.LittleEndian.Uint32(v[44:48]) < uint32(NocacheBlocksBelow) {
+			} else if binary.LittleEndian.Uint32(v[44:48]) <= db.maxCachedBlock() {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
@@ -123,9 +123,9 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 		if db.ch.CB.NotifyTx!=nil {
 			db.ch.CB.NotifyTx(idx, Val_Pk)
 		}
-		if Val_Pk.Value<MinBrowsableOutValue {
+		if Val_Pk.Value < MinBrowsableOutValue {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
-		} else if uint(Val_Pk.BlockHeight)<NocacheBlocksBelow {
+		} else if Val_Pk.BlockHeight <= db.maxCachedBlock() {
 			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
 		}
 	}
@@ -337,6 +337,17 @@ func (db *unspentDb) stats() (s string) {
 	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%dMB\n",
 		mincnt, maxcnt, SingeIndexSize, totdatasize>>20)
 	return
+}
+
+func (db *unspentDb) maxCachedBlock() uint32 {
+	if NocacheBlocksBelow < 0 {
+		res := int(db.lastHeight) + NocacheBlocksBelow
+		if res<0 {
+			return 0
+		}
+		return uint32(res)
+	}
+	return uint32(NocacheBlocksBelow)
 }
 
 
