@@ -14,7 +14,7 @@ import (
 	"encoding/binary"
 )
 
-var (
+const (
 	Public      = uint32(0x0488B21E)
 	Private     = uint32(0x0488ADE4)
 	TestPublic  = uint32(0x043587CF)
