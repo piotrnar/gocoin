@@ -17,6 +17,7 @@ var (
 	uncompressed bool = false
 	fee string = "0.00001"
 	apply2bal bool = true
+	secret_seed []byte
 )
 
 func parse_config() {
@@ -110,6 +111,9 @@ func parse_config() {
 
 				case "others":
 					RawKeysFilename = ll[1]
+
+				case "seed":
+					secret_seed = []byte(strings.Trim(ll[1], " \t\n\r"))
 
 			}
 		}
