@@ -150,6 +150,7 @@ func DoPendingStealths() {
 				if uo != nil {
 					if rec, ok := CachedAddrs[StealthAdCache[ai].h160]; ok {
 						rec.Value += uo.Value
+						uo.BtcAddr = StealthAdCache[ai].addr
 						CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, uo)
 						CacheUnspentIdx[uo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: uo}
 						if rec.InWallet {
