@@ -98,7 +98,14 @@ calc_seed:
 			break
 		}
 	}
-	btc.ShaHash(pass[:n], seed)
+	if len(secret_seed)>0 {
+		x := append(secret_seed, pass[:n]...)
+		sys.ClearBuffer(secret_seed)
+		btc.ShaHash(x, seed)
+		sys.ClearBuffer(x)
+	} else {
+		btc.ShaHash(pass[:n], seed)
+	}
 	sys.ClearBuffer(pass[:n])
 	return true
 }
