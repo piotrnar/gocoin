@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
-	"runtime/debug"
+	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
@@ -101,7 +101,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["freemem"])>0 {
-		debug.FreeOSMemory()
+		sys.FreeMem()
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
