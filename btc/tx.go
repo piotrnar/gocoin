@@ -305,6 +305,31 @@ func (tx *Tx) CheckTransaction() error {
 }
 
 
+func (tx *Tx) IsFinal(blockheight, timestamp uint32) bool {
+	if tx.Lock_time == 0 {
+		return true
+	}
+
+	if tx.Lock_time < LOCKTIME_THRESHOLD {
+		if tx.Lock_time < blockheight {
+			return true
+		}
+	} else {
+		if tx.Lock_time < timestamp {
+			return true
+		}
+	}
+
+	for i := range tx.TxIn {
+		if tx.TxIn[i].Sequence != 0xffffffff {
+			return false
+		}
+	}
+
+	return true
+}
+
+
 // Decode a raw transaction output from a given bytes slice.
 // Returns the output and the size it took in the buffer.
 func NewTxOut(b []byte) (txout *TxOut, offs int) {

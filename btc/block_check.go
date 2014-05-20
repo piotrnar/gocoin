@@ -89,8 +89,12 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		for i:=0; i<len(bl.Txs); i++ {
 			er = bl.Txs[i].CheckTransaction()
 			if er!=nil {
-				er = errors.New("CheckBlock() : CheckTransaction failed\n"+er.Error())
+				er = errors.New("CheckBlock() : CheckTransaction failed: "+er.Error())
 				dos = true
+				return
+			}
+			if !bl.Txs[i].IsFinal(prevblk.Height+1, bl.BlockTime()) {
+				er = errors.New("CheckBlock() : Contains transaction that is not final")
 				return
 			}
 		}

@@ -16,6 +16,8 @@ const(
 	GenesisBlockTime = 1231006505
 
 	BIP16SwitchTime = 1333238400 // BIP16 didn't become active until Apr 1 2012
+
+	LOCKTIME_THRESHOLD = 500000000
 )
 
 // Increase the number of threads to optimize txs verification time,
