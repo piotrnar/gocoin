@@ -9,7 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"path/filepath"
-	"github.com/piotrnar/gocoin/others/ver"
+	"github.com/piotrnar/gocoin/lib/others/ver"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )

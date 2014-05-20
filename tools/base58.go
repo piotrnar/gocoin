@@ -7,7 +7,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (

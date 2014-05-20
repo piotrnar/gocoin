@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
@@ -111,7 +112,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 				po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			}
 			if po != nil {
-				ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx, true)
+				ok := script.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx, true)
 				if !ok {
 					w.Write([]byte("<status>Script FAILED</status>"))
 				} else {

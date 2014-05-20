@@ -8,7 +8,8 @@ import (
 	"math/rand"
 	"encoding/hex"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 )
@@ -50,7 +51,7 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 			}
 		}
 		if po != nil {
-			ok := btc.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx, true)
+			ok := script.VerifyTxScript(tx.TxIn[i].ScriptSig, po.Pk_script, i, tx, true)
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
 				e = errors.New("Invalid signature")

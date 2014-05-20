@@ -8,8 +8,8 @@ import (
 	"strings"
 	"io/ioutil"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/sys"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 // Get TxOut record, by the given TxPrevOut

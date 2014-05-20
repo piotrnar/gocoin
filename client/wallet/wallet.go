@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"strings"
 	"path/filepath"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
 

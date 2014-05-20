@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 

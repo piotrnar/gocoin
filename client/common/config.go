@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/chain"
+	"github.com/piotrnar/gocoin/lib/chain"
 )
 
 var (

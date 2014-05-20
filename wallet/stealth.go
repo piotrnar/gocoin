@@ -6,7 +6,7 @@ import (
 	"flag"
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (

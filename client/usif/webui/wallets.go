@@ -12,7 +12,7 @@ import (
 	"archive/zip"
 	"encoding/xml"
 	"path/filepath"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )

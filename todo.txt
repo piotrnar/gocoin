@@ -9,6 +9,7 @@ Qdb:
 * Implement it in C
 
 Wallet:
+* Needs a lot of time to run (on Parpberry Pi), because of secp256k1 init
 * Add Type-4 as HD Wallet
 
 Downloader:

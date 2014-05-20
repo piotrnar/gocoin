@@ -4,7 +4,7 @@ import (
 	"os"
 	"fmt"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func main() {

@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"encoding/base64"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 

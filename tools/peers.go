@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 	"github.com/piotrnar/gocoin/qdb"
-	"github.com/piotrnar/gocoin/others/sys"
-	"github.com/piotrnar/gocoin/others/utils"
+	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 type manyPeers []*utils.OnePeer

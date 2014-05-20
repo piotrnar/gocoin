@@ -4,7 +4,7 @@ import (
 	"sync"
 	"encoding/hex"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (

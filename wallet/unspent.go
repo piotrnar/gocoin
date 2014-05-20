@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 // load the content of the "balance/" folder

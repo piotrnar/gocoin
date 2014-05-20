@@ -4,7 +4,7 @@ import (
 	"os"
 	"io/ioutil"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
 

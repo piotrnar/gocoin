@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/others/sys"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"

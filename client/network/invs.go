@@ -5,8 +5,8 @@ import (
 	"time"
 	"bytes"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/chain"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -192,8 +192,8 @@ func (c *OneConnection) getblocksNeeded() bool {
 		common.Last.Mutex.Lock()
 		GetBlocksAskBack := int(time.Now().Sub(common.Last.Time) / time.Minute)
 		common.Last.Mutex.Unlock()
-		if GetBlocksAskBack >= btc.MovingCheckopintDepth {
-			GetBlocksAskBack = btc.MovingCheckopintDepth
+		if GetBlocksAskBack >= chain.MovingCheckopintDepth {
+			GetBlocksAskBack = chain.MovingCheckopintDepth
 		}
 
 		b := make([]byte, 37)

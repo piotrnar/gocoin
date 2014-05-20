@@ -5,9 +5,9 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"github.com/piotrnar/gocoin/btc"
-	"github.com/piotrnar/gocoin/others/blockdb"
-	"github.com/piotrnar/gocoin/others/sys"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/blockdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 const Trust = true  // Set this to false if you want to re-check all scripts
