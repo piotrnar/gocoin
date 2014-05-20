@@ -1,4 +1,5 @@
 0.9.15 (1.0.0-rc3)
+* Btc: added API functions for HDWallets (see "wallethd.go")
 * Wallet: you can add "seed" param to the config file, as a potential countermeasure against keyboard loggers
 * Client: new TextUI commands ("arm", "unarm", "armed") help to secure your stealth addresses' scan-keys
 * Client: the balance of all the wallets gets pre-cached while opening UTXO database

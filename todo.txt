@@ -1,15 +1,14 @@
 Client:
-* If CFG.Memory.NoCacheBefore is negative remove UTXO records from RAM with each new block
 * network.CachedBlocks - expire stuff from it
 * Add some support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
-* Add "arm" and "unarm" commands (for stealth addresses)
 
 Qdb:
 * Implement it in C
 
 Wallet:
+* Add Type-4 as HD Wallet
 
 Downloader:
 * Make it to work with gocoion.cfg file
