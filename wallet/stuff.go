@@ -67,7 +67,7 @@ func getseed(seed []byte) bool {
 		return false
 	}
 
-	if *dump || *pubkey!="" || *scankey!="" {
+	if *dump || || *scankey!="" {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
