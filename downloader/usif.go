@@ -8,7 +8,7 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
-	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 

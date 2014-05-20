@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
 

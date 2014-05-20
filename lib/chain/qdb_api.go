@@ -3,7 +3,7 @@ package chain
 import (
 	"os"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
 // Used during BrowseUTXO()

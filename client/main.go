@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/ver"
 	"github.com/piotrnar/gocoin/lib/others/sys"

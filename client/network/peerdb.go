@@ -10,7 +10,7 @@ import (
 	"errors"
 	"strings"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 	"github.com/piotrnar/gocoin/client/common"
