@@ -3,6 +3,7 @@ Client:
 * Add some support for text messages inside transactions (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
+* TextUI scan destroyes persistent scan keys
 
 Qdb:
 * Implement it in C
