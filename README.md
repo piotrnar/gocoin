@@ -73,12 +73,12 @@ For Windows install mingw, or rather mingw64 since the client node needs 64-bit 
 
 Not having gcc, trying to build the client you will see such an error:
 
-	# github.com/piotrnar/gocoin/qdb
+	# github.com/piotrnar/gocoin/lib/qdb
 	exec: "gcc": executable file not found in %PATH%
 
 You can still compile the problematic package...
 
-To fix the problem just copy file `qdb/no_gcc/membind.go` one folder up (overwriting the original `qdb/membind.go`).
+To fix the problem just copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
