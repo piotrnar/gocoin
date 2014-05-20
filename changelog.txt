@@ -1,5 +1,6 @@
 0.9.15 (1.0.0-rc3)
-* Source files and packeges moved around like im hell. Don't evmn ask, but it was a change for good.
+* secp256k1 uses precomputed constants instead of calculating them during initialization (wallet starts faster)
+* Source files and packeges moved around like hell. Don't even ask, but it was a change for good.
 * Btc: added API functions for HDWallets (see "wallethd.go")
 * Wallet: you can add "seed" param to the config file, as a potential countermeasure against keyboard loggers
 * Client: new TextUI commands ("arm", "unarm", "armed") help to secure your stealth addresses' scan-keys
