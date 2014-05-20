@@ -1,11 +1,12 @@
-package btc
+package chain
 
 import (
+	"github.com/piotrnar/gocoin/btc"
 )
 
 
 func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
-	bh := NewUint256(hash[:])
+	bh := btc.NewUint256(hash[:])
 	if _, ok := ch.BlockIndex[bh.BIdx()]; ok {
 		println("nextBlock:", bh.String(), "- already in")
 		return
@@ -22,7 +23,7 @@ func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 
 // Loads block index from the disk
 func (ch *Chain)loadBlockIndex() {
-	ch.BlockIndex = make(map[[Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
+	ch.BlockIndex = make(map[[btc.Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
 	ch.BlockIndex[ch.Genesis.BIdx()] = ch.BlockTreeRoot
@@ -40,9 +41,9 @@ func (ch *Chain)loadBlockIndex() {
 			continue
 		}
 
-		par, ok := ch.BlockIndex[NewUint256(v.BlockHeader[4:36]).BIdx()]
+		par, ok := ch.BlockIndex[btc.NewUint256(v.BlockHeader[4:36]).BIdx()]
 		if !ok {
-			panic(v.BlockHash.String()+" has no Parent "+NewUint256(v.BlockHeader[4:36]).String())
+			panic(v.BlockHash.String()+" has no Parent "+btc.NewUint256(v.BlockHeader[4:36]).String())
 		}
 		/*if par.Height+1 != v.Height {
 			panic("height mismatch")
@@ -56,9 +57,9 @@ func (ch *Chain)loadBlockIndex() {
 		return
 	} else {
 		var ok bool
-		ch.BlockTreeEnd, ok = ch.BlockIndex[NewUint256(tlb).BIdx()]
+		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {
-			panic("Last Block Hash not found")
+			panic("Last btc.Block Hash not found")
 		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/ver"
 	"github.com/piotrnar/gocoin/others/sys"
 )
@@ -19,7 +20,7 @@ import (
 var (
 	Magic [4]byte = [4]byte{0xF9,0xBE,0xB4,0xD9}
 	StartTime time.Time
-	TheBlockChain *btc.Chain
+	TheBlockChain *chain.Chain
 
 	GenesisBlock *btc.Uint256 = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
 	TrustUpTo uint32
@@ -76,13 +77,13 @@ func open_blockchain() (abort bool) {
 				case s := <-killchan:
 					fmt.Println(s)
 					abort = true
-					btc.AbortNow = true
+					chain.AbortNow = true
 				case <-__exit:
 					return
 			}
 		}
 	}()
-	TheBlockChain = btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	TheBlockChain = chain.NewChain(GocoinHomeDir, GenesisBlock, false)
 	__exit <- true
 	return
 }
@@ -106,7 +107,7 @@ func close_blockchain() {
 
 func setup_runtime_vars() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-	btc.MinBrowsableOutValue = 0
+	chain.MinBrowsableOutValue = 0
 	if GCPerc>0 {
 		debug.SetGCPercent(GCPerc)
 	}

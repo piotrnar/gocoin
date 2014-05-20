@@ -1,8 +1,9 @@
-package btc
+package chain
 
 import (
 	"fmt"
 	"sync"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 
@@ -15,10 +16,10 @@ type Chain struct {
 
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
-	Genesis *Uint256
+	Genesis *btc.Uint256
 
 	BlockIndexAccess sync.Mutex
-	BlockIndex map[[Uint256IdxLen]byte] *BlockTreeNode
+	BlockIndex map[[btc.Uint256IdxLen]byte] *BlockTreeNode
 
 	DoNotSync bool // do not flush all the files after each block
 
@@ -27,8 +28,8 @@ type Chain struct {
 
 type NewChanOpts struct {
 	// If NotifyTx is set, it will be called each time a new unspent
-	// output is being added or removed. When being removed, TxOut is nil.
-	NotifyTx func (*TxPrevOut, *TxOut)
+	// output is being added or removed. When being removed, btc.TxOut is nil.
+	NotifyTx func (*btc.TxPrevOut, *btc.TxOut)
 	NotifyStealthTx FunctionWalkUnspent
 
 	// These two are used only during loading
@@ -37,13 +38,13 @@ type NewChanOpts struct {
 }
 
 
-func NewChain(dbrootdir string, genesis *Uint256, rescan bool) (ch *Chain) {
+func NewChain(dbrootdir string, genesis *btc.Uint256, rescan bool) (ch *Chain) {
 	return NewChainExt(dbrootdir, genesis, rescan, nil)
 }
 
 
 // This is the very first function one should call in order to use this package
-func NewChainExt(dbrootdir string, genesis *Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
+func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
 	if opts != nil {
@@ -100,7 +101,7 @@ func (ch *Chain) Save() {
 
 
 // Returns detauils of an unspent output, it there is such.
-func (ch *Chain) PickUnspent(txin *TxPrevOut) (*TxOut) {
+func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
 	o, e := ch.Unspent.UnspentGet(txin)
 	if e == nil {
 		return o
@@ -132,3 +133,5 @@ func (ch *Chain) Close() {
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
 }
+
+

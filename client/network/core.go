@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -116,7 +117,7 @@ type OneConnection struct {
 
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
 
-	LastBlocksFrom *btc.BlockTreeNode // what the last getblocks was based un
+	LastBlocksFrom *chain.BlockTreeNode // what the last getblocks was based un
 	NextBlocksAsk time.Time           // when the next getblocks should be needed
 
 	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl

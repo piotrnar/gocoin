@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 )
 
 var (
@@ -172,9 +172,9 @@ func Reset() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	btc.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
-	btc.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
-	btc.MaxCachedBlocks = CFG.Memory.MaxCachedBlocks
+	chain.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
+	chain.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
+	chain.MaxCachedBlocks = CFG.Memory.MaxCachedBlocks
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {

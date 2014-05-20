@@ -1,7 +1,8 @@
-package btc
+package chain
 
 import (
 	"os"
+	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 )
 
@@ -30,8 +31,8 @@ type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32
 type BlockChanges struct {
 	Height uint32
 	LastKnownHeight uint32  // put here zero to disable this feature
-	AddedTxs map[TxPrevOut] *TxOut
-	DeledTxs map[TxPrevOut] *TxOut
+	AddedTxs map[btc.TxPrevOut] *btc.TxOut
+	DeledTxs map[btc.TxPrevOut] *btc.TxOut
 }
 
 
@@ -153,7 +154,7 @@ func (db *UnspentDB) UndoBlockTransactions(height uint32) {
 
 
 // Get ne unspent output
-func (db *UnspentDB) UnspentGet(po *TxPrevOut) (res *TxOut, e error) {
+func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	return db.unspent.get(po)
 }
 

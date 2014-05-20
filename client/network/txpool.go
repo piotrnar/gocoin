@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -456,7 +457,7 @@ func txChecker(h *btc.Uint256) bool {
 
 
 func init() {
-	btc.TrustedTxChecker = txChecker
+	chain.TrustedTxChecker = txChecker
 }
 
 

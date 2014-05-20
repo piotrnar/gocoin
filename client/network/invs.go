@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -98,7 +99,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 
 
 // Call this function only when BlockIndexAccess is locked
-func addInvBlockBranch(inv map[[32]byte] bool, bl *btc.BlockTreeNode, stop *btc.Uint256) {
+func addInvBlockBranch(inv map[[32]byte] bool, bl *chain.BlockTreeNode, stop *btc.Uint256) {
 	if len(inv)>=500 || bl.BlockHash.Equal(stop) {
 		return
 	}

@@ -9,14 +9,15 @@ import (
 	"errors"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 )
 
 var (
-	MemBlockChain *btc.Chain
+	MemBlockChain *chain.Chain
 
 	LastBlock struct {
 		sync.Mutex
-		node *btc.BlockTreeNode
+		node *chain.BlockTreeNode
 	}
 	LastBlockHeight uint32
 
@@ -74,7 +75,7 @@ func chkblock(bl *btc.Block) (er error) {
 		}
 	}
 
-	cur := new(btc.BlockTreeNode)
+	cur := new(chain.BlockTreeNode)
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
@@ -171,7 +172,7 @@ func get_headers() {
 
 func download_headers() {
 	os.RemoveAll("tmp/")
-	MemBlockChain = btc.NewChain("tmp/", TheBlockChain.BlockTreeEnd.BlockHash, false)
+	MemBlockChain = chain.NewChain("tmp/", TheBlockChain.BlockTreeEnd.BlockHash, false)
 	defer os.RemoveAll("tmp/")
 
 	MemBlockChain.Genesis = GenesisBlock

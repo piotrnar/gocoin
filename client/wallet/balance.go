@@ -10,12 +10,13 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
 var (
 	BalanceMutex sync.Mutex
-	MyBalance btc.AllUnspentTx  // unspent outputs that can be removed
+	MyBalance chain.AllUnspentTx  // unspent outputs that can be removed
 	MyWallet *OneWallet     // addresses that cann be poped up
 	LastBalance uint64
 	BalanceChanged bool
@@ -29,13 +30,13 @@ var (
 
 type OneCachedUnspentIdx struct {
 	Index uint
-	Record *btc.OneUnspentTx
+	Record *chain.OneUnspentTx
 }
 
 
 type OneCachedUnspent struct {
 	*btc.BtcAddr
-	btc.AllUnspentTx  // a cache for unspent outputs (from different wallets)
+	chain.AllUnspentTx  // a cache for unspent outputs (from different wallets)
 }
 
 type OneCachedAddrBalance struct {
@@ -57,7 +58,7 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 		if adr!=nil {
 			if rec, ok := CachedAddrs[adr.Hash160]; ok {
 				rec.Value += valpk.Value
-				utxo := new(btc.OneUnspentTx)
+				utxo := new(chain.OneUnspentTx)
 				utxo.TxPrevOut = *idx
 				utxo.Value = valpk.Value
 				utxo.MinedAt = valpk.BlockHeight
@@ -171,7 +172,7 @@ func GetRawTransaction(BlockHeight uint32, txid *btc.Uint256, txf io.Writer) boo
 
 
 // Call it only from the Chain thread
-func DumpBalance(mybal btc.AllUnspentTx, utxt *os.File, details, update_balance bool) (s string) {
+func DumpBalance(mybal chain.AllUnspentTx, utxt *os.File, details, update_balance bool) (s string) {
 	var sum uint64
 	BalanceMutex.Lock()
 	for i := range mybal {
@@ -283,9 +284,9 @@ func UpdateBalance() {
 	if len(tofetch_regular)>0 || len(tofetch_stealh)>0 {
 		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
-		var new_addrs btc.AllUnspentTx
+		var new_addrs chain.AllUnspentTx
 
-		common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 			if rec.IsP2KH() {
 				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
 					new_addrs = append(new_addrs, rec.ToUnspent(ad))
@@ -437,14 +438,14 @@ func LoadAllWallets() {
 }
 
 // This function is only used when loading UTXO database
-func NewUTXO(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+func NewUTXO(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 	if rec.IsP2KH() || rec.IsP2SH() {
 		if adr:=btc.NewAddrFromPkScript(rec.Script(), common.Testnet); adr!=nil {
 			if crec, ok := CachedAddrs[adr.Hash160]; ok {
 				value := rec.Value()
 				idx := rec.TxPrevOut()
 				crec.Value += value
-				utxo := new(btc.OneUnspentTx)
+				utxo := new(chain.OneUnspentTx)
 				utxo.TxPrevOut = *idx
 				utxo.Value = value
 				utxo.MinedAt = rec.BlockHeight()

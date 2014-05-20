@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -14,7 +15,7 @@ import (
 type pendingSI struct {
 	db *qdb.DB
 	k qdb.KeyType
-	rec *btc.OneWalkRecord
+	rec *chain.OneWalkRecord
 }
 
 type stealthCacheRec struct {
@@ -86,8 +87,8 @@ func FindStealthSecret(sa *btc.StealthAddr) (d []byte) {
 
 
 // It is assumed that you call this function only after rec.IsStealthIdx() was true
-func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
-	addr *btc.BtcAddr, d []byte, inbrowse bool) (fl uint32, uo *btc.OneUnspentTx) {
+func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord,
+	addr *btc.BtcAddr, d []byte, inbrowse bool) (fl uint32, uo *chain.OneUnspentTx) {
 	sth_scr := rec.Script()
 	sa := addr.StealthAddr
 	if sa.CheckNonce(sth_scr[3:]) {
@@ -99,7 +100,7 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 			spend_v = db.Get(qdb.KeyType(uint64(k) ^ uint64(vo) ^ uint64(vo+1)))
 		}
 		if spend_v!=nil {
-			rec = btc.NewWalkRecord(spend_v)
+			rec = chain.NewWalkRecord(spend_v)
 
 			if rec.IsP2KH() {
 				var h160 [20]byte
@@ -114,17 +115,17 @@ func CheckStealthRec(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord,
 					uo.StealthC = c
 				}
 			} else {
-				fl = btc.WALK_NOMORE
+				fl = chain.WALK_NOMORE
 			}
 		} else {
-			fl = btc.WALK_NOMORE
+			fl = chain.WALK_NOMORE
 		}
 	}
 	return
 }
 
 
-func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) uint32 {
+func StealthNotify(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) uint32 {
 	BalanceMutex.Lock()
 	newStealthIndexes = append(newStealthIndexes, pendingSI{db:db, k:k, rec:rec})
 	BalanceMutex.Unlock()

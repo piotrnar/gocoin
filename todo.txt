@@ -1,6 +1,3 @@
-Split btc package into parts so the wallet would not have to include qdb
-
-
 Client:
 * network.CachedBlocks - expire stuff from it
 * Add some support for text messages inside transactions (after OP_RETURN)

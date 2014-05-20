@@ -1,4 +1,4 @@
-package btc
+package chain
 
 import (
 	"os"
@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"compress/gzip"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/btc"
 	"code.google.com/p/snappy-go/snappy"
 )
 
@@ -72,11 +73,11 @@ type cacheRecord struct {
 
 type BlockDB struct {
 	dirname string
-	blockIndex map[[Uint256IdxLen]byte] *oneBl
+	blockIndex map[[btc.Uint256IdxLen]byte] *oneBl
 	blockdata *os.File
 	blockindx *os.File
 	mutex sync.Mutex
-	cache map[[Uint256IdxLen]byte] *cacheRecord
+	cache map[[btc.Uint256IdxLen]byte] *cacheRecord
 }
 
 
@@ -88,7 +89,7 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.dirname!="" && db.dirname[len(db.dirname )-1]!='/' && db.dirname[len(db.dirname )-1]!='\\' {
 		db.dirname += "/"
 	}
-	db.blockIndex = make(map[[Uint256IdxLen]byte] *oneBl)
+	db.blockIndex = make(map[[btc.Uint256IdxLen]byte] *oneBl)
 	os.MkdirAll(db.dirname, 0770)
 	db.blockdata, _ = os.OpenFile(db.dirname+"blockchain.dat", os.O_RDWR|os.O_CREATE, 0660)
 	if db.blockdata == nil {
@@ -99,7 +100,7 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.new")
 	}
-	db.cache = make(map[[Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
+	db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
 	return
 }
 
@@ -113,7 +114,7 @@ func BlockDBConvertIndexFile(dir string) {
 		}
 		return // nothing to convert
 	}
-	fmt.Println("Converting Block Database to the new format - please be patient!")
+	fmt.Println("Converting btc.Block Database to the new format - please be patient!")
 	id, _ := ioutil.ReadAll(f)
 	f.Close()
 
@@ -164,7 +165,7 @@ func BlockDBConvertIndexFile(dir string) {
 			blk = buf[:le]
 		}
 
-		tx_n, _ := VLen(blk[80:])
+		tx_n, _ := btc.VLen(blk[80:])
 
 		binary.Write(nidx, binary.LittleEndian, fl)
 		nidx.Write(id[i+4:i+36])
@@ -191,14 +192,14 @@ func BlockDBConvertIndexFile(dir string) {
 }
 
 
-func (db *BlockDB) addToCache(h *Uint256, bl []byte) {
+func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
 	if rec, ok := db.cache[h.BIdx()]; ok {
 		rec.used = time.Now()
 		return
 	}
 	if uint(len(db.cache)) >= MaxCachedBlocks {
 		var oldest_t time.Time
-		var oldest_k [Uint256IdxLen]byte
+		var oldest_k [btc.Uint256IdxLen]byte
 		for k, v := range db.cache {
 			if oldest_t.IsZero() || v.used.Before(oldest_t) {
 				oldest_t = v.used
@@ -219,13 +220,13 @@ func (db *BlockDB) GetStats() (s string) {
 }
 
 
-func hash2idx (h []byte) (idx [Uint256IdxLen]byte) {
-	copy(idx[:], h[:Uint256IdxLen])
+func hash2idx (h []byte) (idx [btc.Uint256IdxLen]byte) {
+	copy(idx[:], h[:btc.Uint256IdxLen])
 	return
 }
 
 
-func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
+func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	var pos int64
 	var flagz [4]byte
 
@@ -268,7 +269,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *Block) (e error) {
 
 
 func (db *BlockDB) BlockInvalid(hash []byte) {
-	idx := NewUint256(hash).BIdx()
+	idx := btc.NewUint256(hash).BIdx()
 	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
@@ -276,7 +277,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 		println("BlockInvalid: no such block")
 		return
 	}
-	println("mark", NewUint256(hash).String(), "as invalid")
+	println("mark", btc.NewUint256(hash).String(), "as invalid")
 	if cur.trusted {
 		panic("if it is trusted - how can be invalid?")
 	}
@@ -287,7 +288,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 
 
 func (db *BlockDB) BlockTrusted(hash []byte) {
-	idx := NewUint256(hash).BIdx()
+	idx := btc.NewUint256(hash).BIdx()
 	db.mutex.Lock()
 	cur, ok := db.blockIndex[idx]
 	if !ok {
@@ -296,7 +297,7 @@ func (db *BlockDB) BlockTrusted(hash []byte) {
 		return
 	}
 	if !cur.trusted {
-		//fmt.Println("mark", NewUint256(hash).String(), "as trusted")
+		//fmt.Println("mark", btc.NewUint256(hash).String(), "as trusted")
 		db.setBlockFlag(cur, BLOCK_TRUSTED)
 	}
 	db.mutex.Unlock()
@@ -326,12 +327,12 @@ func (db *BlockDB) Close() {
 }
 
 
-func (db *BlockDB) BlockGet(hash *Uint256) (bl []byte, trusted bool, e error) {
+func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error) {
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
 		db.mutex.Unlock()
-		e = errors.New("Block not in the index")
+		e = errors.New("btc.Block not in the index")
 		return
 	}
 
@@ -401,7 +402,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		ob.ipos = validpos
 
 		BlockHash := b[4:36]
-		db.blockIndex[NewUint256(BlockHash).BIdx()] = ob
+		db.blockIndex[btc.NewUint256(BlockHash).BIdx()] = ob
 
 		if int64(ob.fpos)+int64(ob.blen) > maxdatfilepos {
 			maxdatfilepos = int64(ob.fpos)+int64(ob.blen)

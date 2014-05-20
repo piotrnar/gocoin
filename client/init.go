@@ -6,6 +6,7 @@ import (
 	"time"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/blockdb"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -72,7 +73,7 @@ func host_init() {
 			select {
 				case s := <-killchan:
 					fmt.Println(s)
-					btc.AbortNow = true
+					chain.AbortNow = true
 				case <-__exit:
 					__done <- true
 					return
@@ -80,14 +81,14 @@ func host_init() {
 		}
 	}()
 
-	ext := &btc.NewChanOpts{NotifyTx: wallet.TxNotify,
+	ext := &chain.NewChanOpts{NotifyTx: wallet.TxNotify,
 		NotifyStealthTx: wallet.StealthNotify,
 		LoadWalk: wallet.NewUTXO, LoadFlush: wallet.DoPendingStealths}
 
 	sta := time.Now().UnixNano()
-	common.BlockChain = btc.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
+	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	sto := time.Now().UnixNano()
-	if btc.AbortNow {
+	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
@@ -120,7 +121,7 @@ func import_blockchain(dir string) {
 	trust := !textui.AskYesNo("Do you want to verify scripts while importing (will be slow)?")
 
 	BlockDatabase := blockdb.NewBlockDB(dir, common.Magic)
-	chain := btc.NewChain(common.GocoinHomeDir, common.GenesisBlock, false)
+	chain := chain.NewChain(common.GocoinHomeDir, common.GenesisBlock, false)
 
 	var bl *btc.Block
 	var er error

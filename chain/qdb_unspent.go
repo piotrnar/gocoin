@@ -1,17 +1,18 @@
-package btc
+package chain
 
 import (
 	"fmt"
 	"errors"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 )
 
 /*
 Each unspent key is prevOutIdxLen bytes long - thats part of the tx hash xored witth vout
 Eech value is variable length:
-  [0:32] - TxPrevOut.Hash
-  [32:36] - TxPrevOut.Vout LSB
+  [0:32] - btc.TxPrevOut.Hash
+  [32:36] - btc.TxPrevOut.Vout LSB
   [36:44] - Value LSB
   [44:48] - BlockHeight LSB (where mined)
   [48:] - Pk_script (in DBfile first 4 bytes are LSB length)
@@ -78,7 +79,7 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
-			} else if IsUsefullOutScript(v[SCR_OFFS:]) {
+			} else if btc.IsUsefullOutScript(v[SCR_OFFS:]) {
 				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it such now
 			} else {
 				return qdb.NO_CACHE | qdb.NO_BROWSE // useluess output - do not waste mem for it
@@ -93,12 +94,12 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 }
 
 
-func getUnspIndex(po *TxPrevOut) (qdb.KeyType) {
+func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
 	return qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout))
 }
 
 
-func (db *unspentDb) get(po *TxPrevOut) (res *TxOut, e error) {
+func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := qdb.KeyType(po.UIdx())
 	val := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
 	if val==nil {
@@ -110,7 +111,7 @@ func (db *unspentDb) get(po *TxPrevOut) (res *TxOut, e error) {
 		panic(fmt.Sprint("unspent record too short:", len(val)))
 	}
 
-	res = new(TxOut)
+	res = new(btc.TxOut)
 	res.Value = binary.LittleEndian.Uint64(val[36:44])
 	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
 	res.Pk_script = make([]byte, len(val)-SCR_OFFS)
@@ -119,7 +120,7 @@ func (db *unspentDb) get(po *TxPrevOut) (res *TxOut, e error) {
 }
 
 
-func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
+func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	v := make([]byte, SCR_OFFS+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
@@ -148,7 +149,7 @@ func (db *unspentDb) add(idx *TxPrevOut, Val_Pk *TxOut) {
 }
 
 
-func (db *unspentDb) del(idx *TxPrevOut) {
+func (db *unspentDb) del(idx *btc.TxPrevOut) {
 	if db.ch.CB.NotifyTx!=nil {
 		db.ch.CB.NotifyTx(idx, nil)
 	}
@@ -157,7 +158,7 @@ func (db *unspentDb) del(idx *TxPrevOut) {
 }
 
 
-func bin2unspent(v []byte, ad *BtcAddr) (nr *OneUnspentTx) {
+func bin2unspent(v []byte, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
@@ -302,21 +303,21 @@ func (r *OneWalkRecord) Value() uint64 {
 	return binary.LittleEndian.Uint64(r.v[36:44])
 }
 
-func (r *OneWalkRecord) TxPrevOut() (res *TxPrevOut) {
-	res = new(TxPrevOut)
+func (r *OneWalkRecord) TxPrevOut() (res *btc.TxPrevOut) {
+	res = new(btc.TxPrevOut)
 	copy(res.Hash[:], r.v[0:32])
 	res.Vout = binary.LittleEndian.Uint32(r.v[32:36])
 	return
 }
 
-func (r *OneWalkRecord) ToUnspent(ad *BtcAddr) (nr *OneUnspentTx) {
+func (r *OneWalkRecord) ToUnspent(ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], r.v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(r.v[32:36])
 	nr.Value = binary.LittleEndian.Uint64(r.v[36:44])
 	nr.MinedAt = binary.LittleEndian.Uint32(r.v[44:48])
 	nr.BtcAddr = ad
-	nr.destAddr = ad.String()
+	nr.destString = ad.String()
 	return
 }
 
@@ -387,7 +388,7 @@ func (db *UnspentDB) PrintCoinAge() {
 		}
 		cnt := uint64(tb-i*chunk)+1
 		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
-			i*chunk, tb, age[i].cnt, age[i].bts>>20, UintToBtc(age[i].val),
-			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), UintToBtc(age[i].val/cnt))
+			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val),
+			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), btc.UintToBtc(age[i].val/cnt))
 	}
 }

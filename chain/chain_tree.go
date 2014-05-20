@@ -1,14 +1,15 @@
-package btc
+package chain
 
 import (
 	"fmt"
 	"time"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 
 type BlockTreeNode struct {
-	BlockHash *Uint256
+	BlockHash *btc.Uint256
 	Height uint32
 	Parent *BlockTreeNode
 	Childs []*BlockTreeNode
@@ -40,7 +41,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			panic("Db.BlockGet(): "+er.Error())
 		}
 
-		bl, er := NewBlock(b)
+		bl, er := btc.NewBlock(b)
 		if er != nil {
 			ch.DeleteBranch(nxt)
 			break

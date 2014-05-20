@@ -1,15 +1,16 @@
-package btc
+package chain
 
 import (
 	"fmt"
 	"time"
 	"bytes"
 	"errors"
+	"github.com/piotrnar/gocoin/btc"
 )
 
-func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
+func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
-	if len(bl.Raw)<81 || len(bl.Raw)>MAX_BLOCK_SIZE {
+	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE {
 		er = errors.New("CheckBlock() : size limits failed")
 		dos = true
 		return
@@ -33,7 +34,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		}
 	}
 
-	prevblk, ok := ch.BlockIndex[NewUint256(bl.ParentHash()).BIdx()]
+	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
 		maybelater = true
@@ -42,9 +43,9 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 
 	// Reject the block if it reaches into the chain deeper than our unwind buffer
 	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(prevblk.Height+1)>=MovingCheckopintDepth {
-		er = errors.New(fmt.Sprint("CheckBlock: Block ", bl.Hash.String(),
+		er = errors.New(fmt.Sprint("CheckBlock: btc.Block ", bl.Hash.String(),
 			" hooks too deep into the chain: ", prevblk.Height+1, "/", ch.BlockTreeEnd.Height, " ",
-			NewUint256(bl.ParentHash()).String()))
+			btc.NewUint256(bl.ParentHash()).String()))
 		return
 	}
 
@@ -79,7 +80,7 @@ func (ch *Chain) CheckBlock(bl *Block) (er error, dos bool, maybelater bool) {
 		}
 
 		// Check Merkle Root - that's importnant
-		if !bytes.Equal(GetMerkel(bl.Txs), bl.MerkleRoot()) {
+		if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch")
 			dos = true
 			return

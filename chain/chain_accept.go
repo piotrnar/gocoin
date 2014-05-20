@@ -1,20 +1,21 @@
-package btc
+package chain
 
 import (
 	"fmt"
 	"errors"
+	"github.com/piotrnar/gocoin/btc"
 )
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
 // been verified already by the client while being taken to its memory pool
-var TrustedTxChecker func(*Uint256) bool
+var TrustedTxChecker func(*btc.Uint256) bool
 
 
-func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *BlockChanges, e error) {
+func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height uint32) (changes *BlockChanges, e error) {
 	changes = new(BlockChanges)
 	changes.Height = height
-	changes.DeledTxs = make(map[TxPrevOut]*TxOut)
-	changes.AddedTxs = make(map[TxPrevOut]*TxOut)
+	changes.DeledTxs = make(map[btc.TxPrevOut]*btc.TxOut)
+	changes.AddedTxs = make(map[btc.TxPrevOut]*btc.TxOut)
 	e = ch.commitTxs(bl, changes)
 	return
 }
@@ -25,9 +26,9 @@ func (ch *Chain) ProcessBlockTransactions(bl *Block, height uint32) (changes *Bl
 // If the block does is not the heighest, it is added to the chain, but maked
 // as an orphan - its transaction will be verified only if the chain would swap
 // to its branch later on.
-func (ch *Chain)AcceptBlock(bl *Block) (e error) {
+func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 
-	prevblk, ok := ch.BlockIndex[NewUint256(bl.ParentHash()).BIdx()]
+	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		panic("This should not happen")
 	}
@@ -82,8 +83,6 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 		// ... move the coin state into a new branch.
 		if cur.Height > ch.BlockTreeEnd.Height {
 			ch.MoveToBlock(cur)
-		} else if don(DBG_BLOCKS|DBG_ORPHAS) {
-			fmt.Printf("Orphan block %s @ %d\n", cur.BlockHash.String(), cur.Height)
 		}
 	}
 
@@ -92,8 +91,8 @@ func (ch *Chain)AcceptBlock(bl *Block) (e error) {
 
 
 // This isusually the most time consuming process when applying a new block
-func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
-	sumblockin := GetBlockReward(changes.Height)
+func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
+	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
 	if don(DBG_TX) {
@@ -101,9 +100,9 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 	}
 
 	// Add each tx outs from the current block to the temporary pool
-	blUnsp := make(map[[32]byte] []*TxOut, len(bl.Txs))
+	blUnsp := make(map[[32]byte] []*btc.TxOut, len(bl.Txs))
 	for i := range bl.Txs {
-		outs := make([]*TxOut, len(bl.Txs[i].TxOut))
+		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
 		for j := range bl.Txs[i].TxOut {
 			bl.Txs[i].TxOut[j].BlockHeight = changes.Height
 			outs[j] = bl.Txs[i].TxOut[j]
@@ -147,7 +146,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 					}
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
-						e = errors.New("Unknown input TxID: " + NewUint256(inp.Hash[:]).String())
+						e = errors.New("Unknown input TxID: " + btc.NewUint256(inp.Hash[:]).String())
 						break
 					}
 
@@ -183,8 +182,8 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				if tx_trusted {
 					done <- true
 				} else {
-				    go func (sig []byte, prv []byte, i int, tx *Tx) {
-						done <- VerifyTxScript(sig, prv, i, tx, bl.BlockTime()>=BIP16SwitchTime)
+				    go func (sig []byte, prv []byte, i int, tx *btc.Tx) {
+						done <- btc.VerifyTxScript(sig, prv, i, tx, bl.BlockTime()>=BIP16SwitchTime)
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
@@ -232,7 +231,7 @@ func (ch *Chain)commitTxs(bl *Block, changes *BlockChanges) (e error) {
 				fmt.Printf("  out %d: %12.8f\n", j+1, float64(bl.Txs[i].TxOut[j].Value)/1e8)
 			}
 			txoutsum += bl.Txs[i].TxOut[j].Value
-			txa := new(TxPrevOut)
+			txa := new(btc.TxPrevOut)
 			copy(txa.Hash[:], bl.Txs[i].Hash.Hash[:])
 			txa.Vout = uint32(j)
 			_, spent := changes.DeledTxs[*txa]

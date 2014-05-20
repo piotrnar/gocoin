@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/ver"
 )
 
@@ -19,14 +20,14 @@ const (
 )
 
 var (
-	BlockChain *btc.Chain
+	BlockChain *chain.Chain
 	GenesisBlock *btc.Uint256
 	Magic [4]byte
 	Testnet bool
 
 	Last struct {
 		sync.Mutex // use it for writing and reading from non-chain thread
-		Block *btc.BlockTreeNode
+		Block *chain.BlockTreeNode
 		time.Time
 	}
 

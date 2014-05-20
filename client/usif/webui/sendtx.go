@@ -10,6 +10,7 @@ import (
 	"archive/zip"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -29,7 +30,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 	var err string
 
 	if len(r.Form["outcnt"])==1 {
-		var thisbal btc.AllUnspentTx
+		var thisbal chain.AllUnspentTx
 		var pay_cmd string
 		var totalinput, spentsofar uint64
 		var change_addr *btc.BtcAddr

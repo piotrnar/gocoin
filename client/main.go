@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/ver"
 	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
@@ -196,7 +197,7 @@ func defrag_db() {
 
 	fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
 	os.RemoveAll(common.GocoinHomeDir+"defrag")
-	defragdb := btc.NewBlockDB(common.GocoinHomeDir+"defrag")
+	defragdb := chain.NewBlockDB(common.GocoinHomeDir+"defrag")
 	fmt.Println("Defragmenting the database...")
 	blk := common.BlockChain.BlockTreeRoot
 	for {

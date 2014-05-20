@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
@@ -26,11 +27,11 @@ func list_unspent(addr string) {
 	}
 	sa := ad.StealthAddr
 	exp_scr := ad.OutScript()
-	var walk btc.FunctionWalkUnspent
-	var unsp btc.AllUnspentTx
+	var walk chain.FunctionWalkUnspent
+	var unsp chain.AllUnspentTx
 
 	if sa==nil {
-		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		walk = func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 			if bytes.Equal(rec.Script(), exp_scr) {
 				unsp = append(unsp, rec.ToUnspent(ad))
 			}
@@ -43,7 +44,7 @@ func list_unspent(addr string) {
 			fmt.Println("No matching secret found in your wallet/stealth folder")
 			return
 		}
-		walk = func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+		walk = func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 			if !rec.IsStealthIdx() {
 				return 0
 			}
@@ -182,9 +183,9 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	}
 	defer sys.ClearBuffer(d)
 
-	var unsp btc.AllUnspentTx
+	var unsp chain.AllUnspentTx
 
-	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *btc.OneWalkRecord) (uint32) {
+	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 		if !rec.IsStealthIdx() {
 			return 0
 		}

@@ -1,10 +1,11 @@
-package btc
+package chain
 
 import (
 	"io"
 	"fmt"
 	"bytes"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/btc"
 	"github.com/piotrnar/gocoin/qdb"
 )
 
@@ -15,8 +16,8 @@ Ine block record:
  * 32 bytes of block's hash
  * Number of spent record:
    [0] - 1-added / 0 - deleted
-   [1:33] - TxPrevOut.Hash
-   [33:37] - TxPrevOut.Vout LSB
+   [1:33] - btc.TxPrevOut.Hash
+   [33:37] - btc.TxPrevOut.Vout LSB
    Now optional ([0]==0):
      [37:45] - Value
      [45:49] - PK_Script length
@@ -213,11 +214,11 @@ func (db *unwindDb) stats() (s string) {
 	}
 	s = fmt.Sprintf("UNWIND: len:%d  last:%d  defrags:%d/%d  TotalData:%dMB\n",
 		cnt, db.lastBlockHeight, db.defragCount, db.defragIndex, totdatasize>>20)
-	s += "Last block: " + NewUint256(db.lastBlockHash[:]).String() + "\n"
+	s += "Last block: " + btc.NewUint256(db.lastBlockHash[:]).String() + "\n"
 	return
 }
 
-func writeSpent(f io.Writer, po *TxPrevOut, to *TxOut) {
+func writeSpent(f io.Writer, po *btc.TxPrevOut, to *btc.TxOut) {
 	if to == nil {
 		// added
 		f.Write([]byte{1})
@@ -235,13 +236,13 @@ func writeSpent(f io.Writer, po *TxPrevOut, to *TxOut) {
 }
 
 
-func readSpent(f io.Reader) (po *TxPrevOut, to *TxOut) {
+func readSpent(f io.Reader) (po *btc.TxPrevOut, to *btc.TxOut) {
 	var buf [49]byte
 	n, e := f.Read(buf[:37])
 	if n!=37 || e!=nil || buf[0]>1 {
 		return
 	}
-	po = new(TxPrevOut)
+	po = new(btc.TxPrevOut)
 	copy(po.Hash[:], buf[1:33])
 	po.Vout = binary.LittleEndian.Uint32(buf[33:37])
 	if buf[0]==0 {
@@ -249,7 +250,7 @@ func readSpent(f io.Reader) (po *TxPrevOut, to *TxOut) {
 		if n!=12 || e!=nil {
 			panic("Unexpected end of file")
 		}
-		to = new(TxOut)
+		to = new(btc.TxOut)
 		to.Value = binary.LittleEndian.Uint64(buf[37:45])
 		to.Pk_script = make([]byte, binary.LittleEndian.Uint32(buf[45:49]))
 		f.Read(to.Pk_script[:])

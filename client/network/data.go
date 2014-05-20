@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/btc"
+	"github.com/piotrnar/gocoin/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -219,7 +220,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		println("GetHeaders", len(h2get), hashstop.String())
 	}
 
-	var best_block, last_block *btc.BlockTreeNode
+	var best_block, last_block *chain.BlockTreeNode
 
 	common.BlockChain.BlockIndexAccess.Lock()
 	if len(h2get) > 0 {
