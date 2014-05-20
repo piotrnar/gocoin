@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/blockdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -36,7 +37,7 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 
 func import_blockchain(dir string) {
 	BlockDatabase := blockdb.NewBlockDB(dir, Magic)
-	chain := btc.NewChain(GocoinHomeDir, GenesisBlock, false)
+	chain := chain.NewChain(GocoinHomeDir, GenesisBlock, false)
 
 	var bl *btc.Block
 	var er error
