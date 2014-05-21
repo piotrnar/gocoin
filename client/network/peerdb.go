@@ -242,11 +242,18 @@ func InitPeers(dir string) {
 	} else {
 		go func() {
 			if !common.CFG.Testnet {
-				initSeeds([]string{"seed.bitcoin.sipa.be", "dnsseed.bluematt.me",
-					/*"dnsseed.bitcoin.dashjr.org",*/ "bitseed.xf2.org"}, 8333)
+				initSeeds([]string{
+					"seed.bitcoin.sipa.be",
+					"dnsseed.bluematt.me",
+					"seed.bitcoinstats.com",
+					"seed.bitnodes.io",
+					"bitseed.xf2.org",
+					}, 8333)
 			} else {
-				initSeeds([]string{/*"bitcoin.petertodd.org",*/ "testnet-seed.bitcoin.petertodd.org",
-					/*"bluematt.me",*/ "testnet-seed.bluematt.me"}, 18333)
+				initSeeds([]string{
+					//"testnet-seed.bitcoin.petertodd.org",
+					"testnet-seed.bluematt.me",
+					}, 18333)
 			}
 		}()
 	}
