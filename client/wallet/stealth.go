@@ -61,11 +61,10 @@ func FetchStealthKeys() {
 
 	if !PrecachingComplete {
 		if len(StealthSecrets)==0 {
-			fmt.Println("Place secrets of your stealth keys in", dir)
+			fmt.Println("Place secrets of your stealth keys in", dir, " (use 'arm' to load more)")
 		} else {
-			fmt.Println(len(StealthSecrets), "stealth keys found in", dir)
+			fmt.Println(len(StealthSecrets), "stealth keys found in", dir, " (use 'arm' to load more)")
 		}
-		fmt.Println("You may also use UI command 'arm' to apply (load) a stealth scan secret from a seed-password")
 	}
 	return
 }
