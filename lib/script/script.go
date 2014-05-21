@@ -81,7 +81,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 			stP2SH.print()
 		}
 
-		if DBG_ERR {
+		if DBG_SCR {
 			fmt.Println("sigScr len", len(sigScr), hex.EncodeToString(sigScr))
 		}
 		if !IsPushOnly(sigScr) {
