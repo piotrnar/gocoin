@@ -117,7 +117,9 @@ func sync_wallet() {
 			if rec!=nil {
 				MyBalance = append(MyBalance, CacheUnspent[rec.CacheIndex].AllUnspentTx...)
 			} else {
-				println("No record in the cache for", MyWallet.Addrs[i].String())
+				if MyWallet.Addrs[i].Extra.Wallet != AddrBookFileName {
+					fmt.Println("No record in the cache for", MyWallet.Addrs[i].String())
+				}
 			}
 		}
 		sort_and_sum()
@@ -270,7 +272,9 @@ func UpdateBalance() {
 					copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
 					StealthAdCache = append(StealthAdCache, rec)
 				} else {
-					fmt.Println("No matching secret for", sa.String())
+					if MyWallet.Addrs[i].Extra.Wallet != AddrBookFileName {
+						fmt.Println("No matching secret for", sa.String())
+					}
 					add_it = false
 				}
 			}
@@ -425,7 +429,9 @@ func LoadAllWallets() {
 					copy(rec.h160[:], MyWallet.Addrs[i].Hash160[:])
 					StealthAdCache = append(StealthAdCache, rec)
 				} else {
-					fmt.Println("No matching secret for", sa.String())
+					if MyWallet.Addrs[i].Extra.Wallet != AddrBookFileName {
+						fmt.Println("No matching secret for", sa.String())
+					}
 					add_it = false
 				}
 			}
@@ -463,8 +469,6 @@ func NewUTXO(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
 
 
 func ChainInitDone() {
-	println("ChainInitDone. Stealth indexes to check:", len(newStealthIndexes), "...")
-	DoPendingStealths()
 	sync_wallet()
 	PrecachingComplete = true
 }
