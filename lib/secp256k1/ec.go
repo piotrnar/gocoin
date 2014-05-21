@@ -29,9 +29,6 @@ func Verify(k, s, m []byte) bool {
 	return ecdsa_verify(k, s, m)==1
 }
 
-func init() {
-	init_contants()
-}
 
 func DecompressPoint(X []byte, off bool, Y []byte) {
 	var rx, ry, c, x2, x3 Field
