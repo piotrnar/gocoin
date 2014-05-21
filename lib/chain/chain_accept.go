@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
-	"github.com/piotrnar/gocoin/lib/others/dbg"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -52,9 +51,6 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 
 	if ch.BlockTreeEnd==prevblk {
 		// The head of out chain - apply the transactions
-		if dbg.IsOn(dbg.BLOCKS) {
-			fmt.Printf("Adding block %s @ %d\n", cur.BlockHash.String(), cur.Height)
-		}
 		var changes *BlockChanges
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height)
 		if e != nil {
@@ -98,10 +94,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
-	if dbg.IsOn(dbg.TX) {
-		fmt.Printf("Commiting %d transactions\n", len(bl.Txs))
-	}
-
 	// Add each tx outs from the current block to the temporary pool
 	blUnsp := make(map[[32]byte] []*btc.TxOut, len(bl.Txs))
 	for i := range bl.Txs {
@@ -117,9 +109,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	done := make(chan bool, sys.UseThreads)
 
 	for i := range bl.Txs {
-		if dbg.IsOn(dbg.TX) {
-			fmt.Printf("tx %d/%d:\n", i+1, len(bl.Txs))
-		}
 		txoutsum, txinsum = 0, 0
 
 		// Check each tx for a valid input, except from the first one
@@ -144,9 +133,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				}
 				tout := ch.PickUnspent(inp)
 				if tout==nil {
-					if dbg.IsOn(dbg.TX) {
-						println("PickUnspent failed")
-					}
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
 						e = errors.New("Unknown input TxID: " + btc.NewUint256(inp.Hash[:]).String())
@@ -167,13 +153,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
-					if dbg.IsOn(dbg.TX) {
-						println("TxInput from the current block", inp.String())
-					}
-				} else {
-					if dbg.IsOn(dbg.TX) {
-						println("PickUnspent OK")
-					}
 				}
 
 				if !(<-done) {
@@ -193,12 +172,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				// Verify Transaction script:
 				txinsum += tout.Value
 				changes.DeledTxs[*inp] = tout
-
-				if dbg.IsOn(dbg.TX) {
-					fmt.Printf("  in %d: %.8f BTC @ %s\n", j+1, float64(tout.Value)/1e8,
-						bl.Txs[i].TxIn[j].Input.String())
-				}
-
 			}
 
 			if scripts_ok {
@@ -218,9 +191,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				return errors.New("VerifyScripts failed")
 			}
 		} else {
-			if dbg.IsOn(dbg.TX) {
-				fmt.Printf("  mined %.8f\n", float64(sumblockin)/1e8)
-			}
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
 			if len(bl.Txs[0].TxIn[0].ScriptSig)<2 || len(bl.Txs[0].TxIn[0].ScriptSig)>100 {
@@ -230,9 +200,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		sumblockin += txinsum
 
 		for j := range bl.Txs[i].TxOut {
-			if dbg.IsOn(dbg.TX) {
-				fmt.Printf("  out %d: %12.8f\n", j+1, float64(bl.Txs[i].TxOut[j].Value)/1e8)
-			}
 			txoutsum += bl.Txs[i].TxOut[j].Value
 			txa := new(btc.TxPrevOut)
 			copy(txa.Hash[:], bl.Txs[i].Hash.Hash[:])
@@ -246,15 +213,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		}
 		sumblockout += txoutsum
 
-		if dbg.IsOn(dbg.TX) {
-			fmt.Sprintf("  %12.8f -> %12.8f  (%.8f)\n",
-				float64(txinsum)/1e8, float64(txoutsum)/1e8,
-				float64(txinsum-txoutsum)/1e8)
-		}
-
-		if dbg.IsOn(dbg.TX) && i>0 {
-			fmt.Printf(" fee : %.8f\n", float64(txinsum-txoutsum)/1e8)
-		}
 		if e != nil {
 			return // If any input fails, do not continue
 		}
@@ -266,8 +224,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 	if sumblockin < sumblockout {
 		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
-	} else if dbg.IsOn(dbg.WASTED) && sumblockin != sumblockout {
-		fmt.Printf("%.8f BTC wasted in block %d\n", float64(sumblockin-sumblockout)/1e8, changes.Height)
 	}
 
 	return nil

@@ -9,7 +9,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/others/utils"
-	"github.com/piotrnar/gocoin/lib/others/ver"
+	"github.com/piotrnar/gocoin/lib"
 	"io"
 	"io/ioutil"
 	"net"
@@ -109,7 +109,7 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 }
 
 func main() {
-	fmt.Println("Gocoin FetchBalance version", ver.SourcesTag)
+	fmt.Println("Gocoin FetchBalance version", lib.Version)
 
 	proxy = os.Getenv("TOR")
 	if proxy != "" {

@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"crypto/sha256"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/others/dbg"
 )
 
 const (
@@ -168,11 +167,7 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) 
 	} else if ht==SIGHASH_SINGLE {
 		nOut := nIn
 		if nOut >= len(t.TxOut) {
-			if dbg.IsOn(dbg.SCRERR) {
-				println("ERROR: SignatureHash(SIGHASH_SINGLE) : out of range in tx",
-					nOut, len(t.TxOut), t.Hash.String())
-			}
-			// Return 1 as the satoshi client (dbg.IsOn't ask me why 1, and not something else)
+			// Return 1 as the satoshi client (utils.IsOn't ask me why 1, and not something else)
 			return []byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 		}
 
@@ -276,7 +271,7 @@ func (tx *Tx) IsCoinBase() bool {
 
 
 func (tx *Tx) CheckTransaction() error {
-	// Basic checks that dbg.IsOn't depend on any context
+	// Basic checks that utils.IsOn't depend on any context
 	if len(tx.TxIn)==0 {
 		return errors.New("CheckTransaction() : vin empty")
 	}

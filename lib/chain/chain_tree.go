@@ -5,7 +5,6 @@ import (
 	"time"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/dbg"
 )
 
 
@@ -148,10 +147,6 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 
 
 func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
-	if dbg.IsOn(dbg.ORPHAS) {
-		fmt.Printf("MoveToBlock: %d -> %d\n", ch.BlockTreeEnd.Height, dst.Height)
-	}
-
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
 		cur = cur.Parent
@@ -161,16 +156,9 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 		if AbortNow {
 			return
 		}
-		if dbg.IsOn(dbg.ORPHAS) {
-			fmt.Printf("->orph block %s @ %d\n", ch.BlockTreeEnd.BlockHash.String(),
-				ch.BlockTreeEnd.Height)
-		}
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		cur = cur.Parent
-	}
-	if dbg.IsOn(dbg.ORPHAS) {
-		fmt.Printf("Reached common node @ %d\n", ch.BlockTreeEnd.Height)
 	}
 	ch.ParseTillBlock(dst)
 }

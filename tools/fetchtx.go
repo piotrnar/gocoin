@@ -5,13 +5,13 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/others/utils"
-	"github.com/piotrnar/gocoin/lib/others/ver"
+	"github.com/piotrnar/gocoin/lib"
 	"os"
 )
 
 
 func main() {
-	fmt.Println("Gocoin FetchTx version", ver.SourcesTag)
+	fmt.Println("Gocoin FetchTx version", lib.Version)
 
 	if len(os.Args) < 2 {
 		fmt.Println("Specify transaction id on the command line (MSB).")

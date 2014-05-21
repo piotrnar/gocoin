@@ -11,7 +11,7 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/ver"
+	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -117,7 +117,7 @@ func setup_runtime_vars() {
 
 
 func main() {
-	fmt.Println("Gocoin blockchain downloader version", ver.SourcesTag)
+	fmt.Println("Gocoin blockchain downloader version", lib.Version)
 	parse_command_line()
 	setup_runtime_vars()
 
