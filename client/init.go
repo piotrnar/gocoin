@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/blockdb"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -96,8 +97,8 @@ func host_init() {
 	}
 	wallet.ChainInitDone()
 	al, sy := sys.MemUsed()
-	fmt.Printf("Blockchain open in %.3f seconds.  %d / %d MB of memory used\n",
-		float64(sto-sta)/1e9, al>>20, sy>>20)
+	fmt.Printf("Blockchain open in %.3f seconds.  %d + %d MB of RAM used (%d)\n",
+		float64(sto-sta)/1e9, al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
 	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done
