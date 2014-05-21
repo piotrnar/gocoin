@@ -46,6 +46,11 @@ Switch wallet: <!--ONEWALLET-->
 <form method="post" action="cfg">
 <tr><td colspan="2">
 	<textarea name="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
+	<i>
+	Empty lines are ignored.<br>
+	Put <b>#</b> character in front of a line, to comment it out.<br>
+	Put <b>@</b> character followed by filename in front of a line, to include content of another wallet.<br>
+	</i>
 <tr>
 	<td align="left">
 		File Name: <input type="edit" name="walletfname" value="{WALLET_NAME}" class="mono">

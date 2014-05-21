@@ -6,6 +6,7 @@ import (
 	"sort"
 	"bytes"
 	"strconv"
+	"io/ioutil"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
@@ -181,7 +182,6 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		fmt.Println("No matching secret found in your wallet/stealth folder")
 		return
 	}
-	defer sys.ClearBuffer(d)
 
 	var unsp chain.AllUnspentTx
 
@@ -280,11 +280,25 @@ func listarmkeys(p string) {
 				if p=="addr" {
 					fmt.Print("  ", btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet)).String())
 				}
+				if p=="save" {
+					fn := common.GocoinHomeDir + "wallet/stealth/" + hex.EncodeToString(pk)
+					if fi, er := os.Stat(fn); er==nil && fi.Size()>=32 {
+						fmt.Print("  already on disk")
+					} else {
+						ioutil.WriteFile(fn, wallet.ArmedStealthSecrets[i], 0600)
+						fmt.Print("  saved")
+					}
+					sys.ClearBuffer(wallet.ArmedStealthSecrets[i])
+				}
 				fmt.Println()
 			}
 		} else {
 			fmt.Println("You have no volatile secret scan keys")
 		}
+	}
+	if p=="save" {
+		wallet.ArmedStealthSecrets = nil
+		wallet.FetchStealthKeys()
 	}
 }
 
@@ -321,7 +335,7 @@ func unarm_stealth(p string) {
 
 func init() {
 	newUi("arm", false, arm_stealth, "Arm the client with a private stealth secret. Add switch -c when creating a new key")
-	newUi("armed", false, listarmkeys, "Show currently armed private stealth keys. Optionally use param seed or file")
+	newUi("armed", false, listarmkeys, "Show currently armed private stealth keys. Optional param: seed, file, addr, save")
 	newUi("unarm ua", false, unarm_stealth, "Purge an armed private stealth secret from memory. Specify number or * for all")
 	newUi("balance bal", true, show_balance, "Show & save balance of currently loaded or a specified wallet")
 	newUi("balstat", true, show_balance_stats, "Show balance cache statistics")
