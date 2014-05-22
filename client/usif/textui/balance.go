@@ -19,6 +19,14 @@ import (
 
 func list_unspent(addr string) {
 	fmt.Println("Checking unspent coins for addr", addr)
+
+	defer func() { // in case if ad.OutScript() would panic
+		if r := recover(); r != nil {
+			err := r.(error)
+			fmt.Println("main panic recovered:", err.Error())
+		}
+	}()
+
 	var ad *btc.BtcAddr
 	var e error
 	ad, e = btc.NewAddrFromString(addr)

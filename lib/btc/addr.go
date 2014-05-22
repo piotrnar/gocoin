@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"fmt"
 	"bytes"
 	"errors"
 	"math/big"
@@ -206,6 +207,8 @@ func (a *BtcAddr) OutScript() (res []byte) {
 		res[1] = 20
 		copy(res[2:22], a.Hash160[:])
 		res[22] = 0x87
+	} else {
+		panic(fmt.Sprint("Cannot create OutScript for address version ", a.Version))
 	}
 	return
 }
