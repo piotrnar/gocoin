@@ -1,4 +1,4 @@
-0.9.15 (1.0.0-rc3)
+1.0.0rc4 - 2014-05-22
 * secp256k1 uses precomputed constants instead of calculating them during initialization (wallet starts faster)
 * Source files and packeges moved around like hell. Don't even ask, but it was a change for good.
 * Btc: added API functions for HDWallets (see "wallethd.go")
