@@ -188,6 +188,9 @@ func dump_raw_tx() {
 			if addr.Version==AddrVerScript() {
 				fmt.Println("to scriptH", addr.String())
 			} else {
+				if litecoin {
+					addr.Version = LTC_ADDR_VERSION
+				}
 				fmt.Println("to address", addr.String())
 			}
 		} else if len(tx.TxOut[i].Pk_script)==40 && tx.TxOut[i].Pk_script[0]==0x6a &&
