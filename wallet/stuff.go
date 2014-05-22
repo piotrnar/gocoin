@@ -12,6 +12,8 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
+const LTC_ADDR_VERSION = 48
+
 // Get TxOut record, by the given TxPrevOut
 func UO(uns *btc.TxPrevOut) *btc.TxOut {
 	tx, _ := loadedTxs[uns.Hash]
@@ -224,7 +226,7 @@ func raw_tx_from_file(fn string) *btc.Tx {
 
 func AddrVerPubkey() byte {
 	if litecoin && !testnet {
-		return 48
+		return LTC_ADDR_VERSION
 	}
 	// litecoin's testnet has the same byty as btc's
 	return btc.AddrVerPubkey(testnet)
