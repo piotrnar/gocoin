@@ -2,6 +2,7 @@
 * WebUI: shows page generation time
 * WebUI: fixed non-existing page tails
 * Wallet: added litcoin mode ("-ltc" switch)
+* New tool "ltcbal" - fetch a balance of a litecoin address
 
 1.0.0rc4 - 2014-05-22
 * secp256k1 uses precomputed constants instead of calculating them during initialization (wallet starts faster)
