@@ -192,7 +192,7 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 
 
 func (a *BtcAddr) OutScript() (res []byte) {
-	if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) {
+	if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) || a.Version==48 /*Litecoin*/ {
 		res = make([]byte, 25)
 		res[0] = 0x76
 		res[1] = 0xa9
