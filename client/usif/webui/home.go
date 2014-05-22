@@ -21,6 +21,11 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The handler also gets called for /favicon.ico
+	if r.URL.Path!="/" {
+		http.NotFound(w, r)
+	}
+
 	s := load_template("home.html")
 
 	wallet.BalanceMutex.Lock()

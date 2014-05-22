@@ -147,3 +147,10 @@ table.netcons {
 .addr_norm {
 	font-weight:bold;
 }
+
+div.footer {
+	margin-top:20px;
+	font-style:italic;
+	text-align:left;
+	font-size:11px;
+}

@@ -3,6 +3,7 @@ package webui
 import (
 	"os"
 	"fmt"
+	"time"
 	"strings"
 	"net/http"
 	"io/ioutil"
@@ -24,6 +25,8 @@ var webuimenu = [][2]string {
 	{"/miners", "Miners"},
 	{"/counts", "Counters"},
 }
+
+var start_time time.Time
 
 const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
 <link rel="stylesheet" href="webui/gocoin.css" type="text/css"></head><body>
@@ -72,6 +75,8 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 				case ".css": w.Header()["Content-Type"] = []string{"text/css"}
 			}
 			w.Write(dat)
+		} else {
+			http.NotFound(w, r)
 		}
 	}
 }
@@ -107,6 +112,8 @@ func new_session_id(w http.ResponseWriter) (sessid string) {
 
 
 func write_html_head(w http.ResponseWriter, r *http.Request) {
+	start_time = time.Now()
+
 	sessid := sid(r)
 	if sessid=="" {
 		sessid = new_session_id(w)
@@ -179,8 +186,9 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 }
 
 func write_html_tail(w http.ResponseWriter) {
-	dat, _ := ioutil.ReadFile("webht/page_tail.html")
-	w.Write(dat)
+	s := load_template("page_tail.html")
+	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Now().Sub(start_time).String(), 1)
+	w.Write([]byte(s))
 }
 
 func p_help(w http.ResponseWriter, r *http.Request) {
