@@ -62,8 +62,6 @@ var (
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 	totBtc uint64
 
-	verbyte, privver byte  // address version for public and private key
-
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo

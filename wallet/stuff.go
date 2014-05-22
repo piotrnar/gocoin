@@ -145,7 +145,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 // Uncompressed private key
 func sec2b58unc(pk []byte) string {
 	var dat [37]byte
-	dat[0] = privver
+	dat[0] = AddrVerSecret()
 	copy(dat[1:33], pk)
 	sh := btc.Sha2Sum(dat[0:33])
 	copy(dat[33:37], sh[:4])
@@ -156,7 +156,7 @@ func sec2b58unc(pk []byte) string {
 // Compressed private key
 func sec2b58com(pk []byte) string {
 	var dat [38]byte
-	dat[0] = privver
+	dat[0] = AddrVerSecret()
 	copy(dat[1:33], pk)
 	dat[33] = 1 // compressed
 	sh := btc.Sha2Sum(dat[0:34])
@@ -182,8 +182,8 @@ func dump_prvkey() {
 			println("Dump Private Key:", e.Error())
 			return
 		}
-		if a.Version != verbyte {
-			println("Dump Private Key: Version byte mismatch", a.Version, verbyte)
+		if a.Version != AddrVerPubkey() {
+			println("Dump Private Key: Version byte mismatch", a.Version, AddrVerPubkey())
 			return
 		}
 		for i := range priv_keys {
@@ -219,4 +219,30 @@ func raw_tx_from_file(fn string) *btc.Tx {
 		}
 	}
 	return tx
+}
+
+
+func AddrVerPubkey() byte {
+	if litecoin && !testnet {
+		return 48
+	}
+	// litecoin's testnet has the same byty as btc's
+	return btc.AddrVerPubkey(testnet)
+}
+
+
+func AddrVerScript() byte {
+	// for litecoin the version is identical
+	return btc.AddrVerScript(testnet)
+}
+
+func AddrVerSecret() byte {
+	if litecoin {
+		return AddrVerPubkey() + 128
+	}
+	if testnet {
+		return 0xef
+	} else {
+		return 0x6f
+	}
 }

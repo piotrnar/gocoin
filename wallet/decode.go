@@ -185,7 +185,7 @@ func dump_raw_tx() {
 		fmt.Printf("%4d) %20s BTC ", i, btc.UintToBtc(tx.TxOut[i].Value))
 		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, testnet)
 		if addr != nil {
-			if addr.Version==btc.AddrVerScript(testnet) {
+			if addr.Version==AddrVerScript() {
 				fmt.Println("to scriptH", addr.String())
 			} else {
 				fmt.Println("to address", addr.String())

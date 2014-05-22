@@ -18,6 +18,7 @@ var (
 	fee string = "0.00001"
 	apply2bal bool = true
 	secret_seed []byte
+	litecoin bool = false
 )
 
 func parse_config() {
@@ -115,15 +116,25 @@ func parse_config() {
 				case "seed":
 					secret_seed = []byte(strings.Trim(ll[1], " \t\n\r"))
 
+				case "litecoin":
+					v, e := strconv.ParseBool(ll[1])
+					if e == nil {
+						litecoin = v
+					} else {
+						println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+						os.Exit(1)
+					}
+
 			}
 		}
 	}
 
 	flag.UintVar(&keycnt, "n", keycnt, "Set the number of keys to be used")
-	flag.BoolVar(&testnet, "t", testnet, "Force work with testnet addresses")
+	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
 	flag.UintVar(&waltype, "type", waltype, "Type of deterministic wallet (1, 2 or 3)")
 	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Use uncompressed public keys (not advised)")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder")
+	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
 }

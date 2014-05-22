@@ -33,6 +33,9 @@ func load_others() {
 			if li == nil {
 				break
 			}
+			if len(li)==0 {
+				continue
+			}
 			pk := strings.SplitN(strings.Trim(string(li), " "), " ", 2)
 			if pk[0][0]=='#' {
 				continue // Just a comment-line
@@ -41,7 +44,12 @@ func load_others() {
 			pkb := btc.Decodeb58(pk[0])
 
 			if pkb == nil {
-				println("Decodeb58 failed:", pk[0][:6])
+				println("Decodeb58 failed:", pk[0])
+				continue
+			}
+
+			if len(pkb) < 6 {
+				println("Syntax error in the raw keys file:", pk[0])
 				continue
 			}
 
@@ -51,14 +59,10 @@ func load_others() {
 				continue
 			}
 
-			if pkb[0]!=privver {
-				println(pk[0][:6], "has version", pkb[0], "while we expect", privver)
-				if pkb[0]==0xef {
-					fmt.Println("You probably meant testnet, so use -t switch")
-					os.Exit(0)
-				} else {
-					continue
-				}
+			if pkb[0]!=AddrVerSecret() {
+				println(pk[0][:6], "has version", pkb[0], "while we expect", AddrVerSecret())
+				fmt.Println("You may want to play with -t or -ltc switch")
+				continue
 			}
 
 			var sh [32]byte
@@ -95,7 +99,7 @@ func load_others() {
 
 			priv_keys = append(priv_keys, key)
 			compressed_key = append(compressed_key, compr)
-			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, verbyte))
+			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, AddrVerPubkey()))
 			if len(pk)>1 {
 				labels = append(labels, pk[1])
 			} else {
@@ -117,13 +121,6 @@ func load_others() {
 func make_wallet() {
 	var lab string
 
-	if testnet {
-		verbyte = 0x6f
-		privver = 0xef
-	} else {
-		// verbyte is be zero by definition
-		privver = 0x80
-	}
 	load_others()
 
 	seed_key := make([]byte, 32)
@@ -163,7 +160,7 @@ func make_wallet() {
 	}
 
 	if *verbose {
-		fmt.Println("Generating", keycnt, "keys, version", verbyte,"...")
+		fmt.Println("Generating", keycnt, "keys, version", AddrVerPubkey(),"...")
 	}
 	for i:=uint(0); i < keycnt; {
 		prv_key := make([]byte, 32)
@@ -190,7 +187,7 @@ func make_wallet() {
 		compressed_key = append(compressed_key, !uncompressed)
 		pub := btc.PublicFromPrivate(prv_key, !uncompressed)
 		if pub != nil {
-			adr := btc.NewAddrFromPubkey(pub, verbyte)
+			adr := btc.NewAddrFromPubkey(pub, AddrVerPubkey())
 
 			if *pubkey!="" && *pubkey==adr.String() {
 				fmt.Println("Public address:", adr.String())
