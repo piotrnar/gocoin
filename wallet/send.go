@@ -20,7 +20,7 @@ func parse_spend() {
 	for i := range outs {
 		tmp := strings.Split(strings.Trim(outs[i], " "), "=")
 		if len(tmp)!=2 {
-			println("The otputs must be in a format address1=amount1[,addressN=amountN]")
+			println("The outputs must be in a format address1=amount1[,addressN=amountN]")
 			os.Exit(1)
 		}
 
