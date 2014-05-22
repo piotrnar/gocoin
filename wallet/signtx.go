@@ -58,8 +58,16 @@ func dump_hashes_to_sign(tx *btc.Tx) {
 			os.Exit(1)
 		}
 		pubad := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
-		hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
-		fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
+		if pubad!=nil {
+			if litecoin && pubad.Version==0 {
+				pubad.Version = LTC_ADDR_VERSION
+			}
+			hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
+			fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
+		} else {
+			println("Cannot decode pkscript of unspent input number", in)
+			os.Exit(1)
+		}
 	}
 }
 
