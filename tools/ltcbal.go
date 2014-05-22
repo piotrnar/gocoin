@@ -44,8 +44,8 @@ type mulitiadd struct {
 
 func print_help() {
 	fmt.Println("Specify at lest one parameter on the command line.")
-	fmt.Println("  Name of one text file containing bitcoin addresses,")
-	fmt.Println("... or space separteted bitcoin addresses themselves.")
+	fmt.Println("  Name of one text file containing litecoin addresses,")
+	fmt.Println("... or space separteted litecoin addresses themselves.")
 	fmt.Println()
 	fmt.Println("To use Tor, setup environment variable TOR=host:port")
 	fmt.Println("The host:port should point to your Tor's SOCKS proxy.")
@@ -246,7 +246,7 @@ func main() {
 			}
 			unsp.Close()
 			if outcnt > 0 {
-				fmt.Printf("Total %.8f BTC in %d unspent outputs.\n", float64(sum)/1e8, outcnt)
+				fmt.Printf("Total %.8f LTC in %d unspent outputs.\n", float64(sum)/1e8, outcnt)
 				fmt.Println("The data has been stored in 'balance' folder.")
 				fmt.Println("Use it with the wallet app to spend any of it.")
 			} else {
