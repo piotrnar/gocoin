@@ -109,7 +109,8 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 }
 
 func main() {
-	fmt.Println("Gocoin FetchBalance version", lib.Version)
+	fmt.Println("Gocoin FetchBal version", lib.Version)
+	fmt.Println("WARNING: This tool is deprecated. Use balio instead.")
 
 	proxy = os.Getenv("TOR")
 	if proxy != "" {
