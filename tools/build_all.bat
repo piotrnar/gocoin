@@ -1,4 +1,5 @@
 @echo off
+go build balio.go
 go build base58.go
 go build fetchbal.go
 go build importblocks.go

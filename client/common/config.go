@@ -85,7 +85,8 @@ type oneAllowedAddr struct {
 
 var WebUIAllowed []oneAllowedAddr
 
-func init() {
+
+func InitConfig() {
 	// Fill in default values
 	CFG.Net.ListenTCP = true
 	CFG.Net.MaxOutCons = 9

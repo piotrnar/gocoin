@@ -3,7 +3,7 @@
 * WebUI: shows page generation time
 * WebUI: fixed non-existing page tails
 * Wallet: added litcoin mode ("-ltc" switch)
-* New tool "ltcbal" - fetch balance of Litecoin address(es) from "http://ltc.blockr.io/"
+* New tool: "balio". Like "fetchbal", but also works with Testnet and Litecoin. Uses only "http://blockr.io/"
 
 1.0.0rc4 - 2014-05-22
 * secp256k1 uses precomputed constants instead of calculating them during initialization (wallet starts faster)

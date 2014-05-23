@@ -256,6 +256,7 @@ func main() {
 		}
 	}()
 
+	common.InitConfig()
 	host_init() // This will create the DB lock file and keep it open
 
 	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+wallet.DefaultFileName

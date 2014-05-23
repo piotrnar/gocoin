@@ -1,51 +1,60 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
-var proxy string
+var (
+	proxy string
+	ltc   bool
+	tbtc  bool
+)
 
 type prvout struct {
 	Address string
 	Unspent []struct {
-		Tx string
-		N uint32
-		Amount string
+		Tx            string
+		N             uint32
+		Amount        string
+		Confirmations uint
 	}
 }
 
 type singleadd struct {
-	Status string
-	Data prvout
-	Code int
+	Status  string
+	Data    prvout
+	Code    int
 	Message string
 }
 
 type mulitiadd struct {
-	Status string
-	Data []prvout
-	Code int
+	Status  string
+	Data    []prvout
+	Code    int
 	Message string
 }
 
 func print_help() {
+	fmt.Println()
 	fmt.Println("Specify at lest one parameter on the command line.")
 	fmt.Println("  Name of one text file containing litecoin addresses,")
 	fmt.Println("... or space separteted litecoin addresses themselves.")
+	fmt.Println()
+	fmt.Println("Add -ltc at the command line, to fetch Litecoin balance.")
 	fmt.Println()
 	fmt.Println("To use Tor, setup environment variable TOR=host:port")
 	fmt.Println("The host:port should point to your Tor's SOCKS proxy.")
@@ -118,10 +127,9 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 	return
 }
 
-
 // Download raw transaction from blockr.io
-func GetTxFromBlockrIo(txid string) (raw []byte) {
-	url := "http://ltc.blockr.io/api/v1/tx/raw/" + txid
+func het_raw_tx(txid string) (raw []byte) {
+	url := base_url() + "tx/raw/" + txid
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
 		defer r.Body.Close()
@@ -144,8 +152,67 @@ func GetTxFromBlockrIo(txid string) (raw []byte) {
 	return
 }
 
+func base_url() string {
+	if tbtc {
+		return "http://tbtc.blockr.io/api/v1/"
+	}
+	if ltc {
+		return "http://ltc.blockr.io/api/v1/"
+	}
+	return "http://btc.blockr.io/api/v1/"
+}
+
+func curr_unit() string {
+	if ltc {
+		return "LTC"
+	} else {
+		return "BTC"
+	}
+}
+
+func load_wallet(fn string) (addrs []*btc.BtcAddr) {
+	f, e := os.Open(fn)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	linenr := 0
+	for {
+		var l string
+		l, e = rd.ReadString('\n')
+		l = strings.Trim(l, " \t\r\n")
+		linenr++
+		if len(l) > 0 {
+			if l[0] == '@' {
+				fmt.Println("netsted wallet in line", linenr, "- ignore it")
+			} else if l[0] != '#' {
+				ls := strings.SplitN(l, " ", 2)
+				if len(ls) > 0 {
+					a, e := btc.NewAddrFromString(ls[0])
+					if e != nil {
+						println(fmt.Sprint(fn, ":", linenr), e.Error())
+					} else {
+						addrs = append(addrs, a)
+					}
+				}
+			}
+		}
+		if e != nil {
+			break
+		}
+	}
+	return
+}
+
 func main() {
-	fmt.Println("Gocoin LTCbal version", lib.Version)
+	fmt.Println("Gocoin bal.io version", lib.Version)
+
+	if len(os.Args) < 2 {
+		print_help()
+		return
+	}
 
 	proxy = os.Getenv("TOR")
 	if proxy != "" {
@@ -155,29 +222,34 @@ func main() {
 		fmt.Println("WARNING: not using Tor (setup TOR variable, if you want)")
 	}
 
-	if len(os.Args) < 2 {
-		print_help()
-		return
-	}
-
 	var addrs []*btc.BtcAddr
 
-	if len(os.Args) == 2 {
-		fi, er := os.Stat(os.Args[1])
+	var argz []string
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i] == "-ltc" {
+			ltc = true
+		} else if os.Args[i] == "-t" {
+			tbtc = true
+		} else {
+			argz = append(argz, os.Args[i])
+		}
+	}
+
+	if len(argz) == 1 {
+		fi, er := os.Stat(argz[0])
 		if er == nil && fi.Size() > 10 && !fi.IsDir() {
-			wal := wallet.NewWallet(os.Args[1])
-			if wal != nil {
-				fmt.Println("Found", len(wal.Addrs), "address(es) in", wal.FileName)
-				addrs = wal.Addrs
+			addrs = load_wallet(argz[0])
+			if addrs != nil {
+				fmt.Println("Found", len(addrs), "address(es) in", argz[0])
 			}
 		}
 	}
 
 	if len(addrs) == 0 {
-		for i := 1; i < len(os.Args); i++ {
-			a, e := btc.NewAddrFromString(os.Args[i])
+		for i := range argz {
+			a, e := btc.NewAddrFromString(argz[i])
 			if e != nil {
-				println(os.Args[i], ": ", e.Error())
+				println(argz[i], ": ", e.Error())
 				return
 			} else {
 				addrs = append(addrs, a)
@@ -190,7 +262,21 @@ func main() {
 		return
 	}
 
-	url := "http://ltc.blockr.io/api/v1/address/unspent/"
+	for i := range addrs {
+		switch addrs[i].Version {
+		case 48:
+			ltc = true
+		case 111:
+			tbtc = true
+		}
+	}
+
+	if tbtc && ltc {
+		println("Litecoin's testnet is not suppported")
+		return
+	}
+
+	url := base_url() + "address/unspent/"
 	for i := range addrs {
 		if i > 0 {
 			url += ","
@@ -206,7 +292,7 @@ func main() {
 		c, _ := ioutil.ReadAll(r.Body)
 		var r mulitiadd
 
-		if len(addrs)==1 {
+		if len(addrs) == 1 {
 			var s singleadd
 			er = json.Unmarshal(c[:], &s)
 			if er == nil {
@@ -221,14 +307,11 @@ func main() {
 		if er == nil {
 			os.RemoveAll("balance/")
 			os.Mkdir("balance/", 0700)
-
-			println(r.Status, r.Code, r.Message, len(r.Data))
-
 			unsp, _ := os.Create("balance/unspent.txt")
-			for i :=  range r.Data {
+			for i := range r.Data {
 				for j := range r.Data[i].Unspent {
-					txraw := GetTxFromBlockrIo(r.Data[i].Unspent[j].Tx)
-					if len(txraw)>0 {
+					txraw := het_raw_tx(r.Data[i].Unspent[j].Tx)
+					if len(txraw) > 0 {
 						ioutil.WriteFile("balance/"+r.Data[i].Unspent[j].Tx+".tx", txraw, 0666)
 					} else {
 						println("ERROR: cannot fetch raw tx data for", r.Data[i].Unspent[j].Tx)
@@ -239,14 +322,15 @@ func main() {
 					val, _ := btc.StringToSatoshis(r.Data[i].Unspent[j].Amount)
 					sum += val
 					outcnt++
-					fmt.Fprintf(unsp, "%s-%03d # %s @ %s", r.Data[i].Unspent[j].Tx, r.Data[i].Unspent[j].N,
-						r.Data[i].Unspent[j].Amount, r.Data[i].Address)
+					fmt.Fprintf(unsp, "%s-%03d # %s @ %s, %d confs", r.Data[i].Unspent[j].Tx,
+						r.Data[i].Unspent[j].N, r.Data[i].Unspent[j].Amount, r.Data[i].Address,
+						r.Data[i].Unspent[j].Confirmations)
 					fmt.Fprintln(unsp)
 				}
 			}
 			unsp.Close()
 			if outcnt > 0 {
-				fmt.Printf("Total %.8f LTC in %d unspent outputs.\n", float64(sum)/1e8, outcnt)
+				fmt.Printf("Total %.8f %s in %d unspent outputs.\n", float64(sum)/1e8, curr_unit(), outcnt)
 				fmt.Println("The data has been stored in 'balance' folder.")
 				fmt.Println("Use it with the wallet app to spend any of it.")
 			} else {
