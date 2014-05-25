@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/base64"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/ltc"
 )
 
 
@@ -74,7 +75,11 @@ func sign_message() {
 	}
 
 	hash = make([]byte, 32)
-	btc.HashFromMessage(msg, hash)
+	if litecoin {
+		ltc.HashFromMessage(msg, hash)
+	} else {
+		btc.HashFromMessage(msg, hash)
+	}
 
 	btcsig := new(btc.Signature)
 	var sb [65]byte
