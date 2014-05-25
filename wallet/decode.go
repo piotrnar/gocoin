@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/ltc"
 )
 
 // hex dump with max 32 bytes per line
@@ -183,14 +184,16 @@ func dump_raw_tx() {
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
 	for i := range tx.TxOut {
 		fmt.Printf("%4d) %20s BTC ", i, btc.UintToBtc(tx.TxOut[i].Value))
-		addr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, testnet)
+		var addr *btc.BtcAddr
+		if litecoin {
+			addr = ltc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, testnet)
+		} else {
+			addr = btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, testnet)
+		}
 		if addr != nil {
 			if addr.Version==AddrVerScript() {
 				fmt.Println("to scriptH", addr.String())
 			} else {
-				if litecoin {
-					addr.Version = LTC_ADDR_VERSION
-				}
 				fmt.Println("to address", addr.String())
 			}
 		} else if len(tx.TxOut[i].Pk_script)==40 && tx.TxOut[i].Pk_script[0]==0x6a &&
