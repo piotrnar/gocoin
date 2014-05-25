@@ -1,6 +1,5 @@
 Client:
-* network.CachedBlocks - expire stuff from it
-* Add some support for text messages inside transactions (after OP_RETURN)
+* Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
@@ -8,7 +7,7 @@ Wallet:
 * Add Type-4 as HD Wallet
 
 Downloader:
-* Make it to work with gocoion.cfg file
+* Make it to work with gocoin.cfg file
 
 Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160
