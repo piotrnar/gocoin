@@ -69,7 +69,7 @@ func load_others() {
 			var compr bool
 
 			if len(pkb)==37 {
-				// compressed key
+				// old/uncompressed key
 				sh = btc.Sha2Sum(pkb[0:33])
 				if !bytes.Equal(sh[:4], pkb[33:37]) {
 					println(pk[0][:6], "checksum error")
