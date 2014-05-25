@@ -8,6 +8,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/ltc"
 )
 
 
@@ -18,6 +19,7 @@ var (
 	mfil = flag.String("f", "", "the filename containing a signed message (optional)")
 	unix = flag.Bool("u", false, "remove all \\r characters from the message (optional)")
 	help = flag.Bool("h", false, "print this help")
+	litecoin = flag.Bool("ltc", false, "litecoin mode")
 )
 
 func main() {
@@ -31,6 +33,9 @@ func main() {
 	}
 
 	ad, er := btc.NewAddrFromString(*addr)
+	if !*litecoin && ad!=nil && ad.Version==ltc.AddrVerPubkey(false) {
+		*litecoin = true
+	}
 	if er != nil {
 		println("Address:", er.Error())
 		flag.PrintDefaults()
@@ -62,7 +67,11 @@ func main() {
 	}
 
 	hash := make([]byte, 32)
-	btc.HashFromMessage(msg, hash)
+	if *litecoin {
+		ltc.HashFromMessage(msg, hash)
+	} else {
+		btc.HashFromMessage(msg, hash)
+	}
 
 	compressed := false
 	if nv >= 31 {
