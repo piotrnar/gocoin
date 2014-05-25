@@ -239,12 +239,5 @@ func AddrVerScript() byte {
 }
 
 func AddrVerSecret() byte {
-	if litecoin {
-		return AddrVerPubkey() + 128
-	}
-	if testnet {
-		return 0xef
-	} else {
-		return 0x6f
-	}
+	return AddrVerPubkey() + 0x80
 }
