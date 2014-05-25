@@ -278,6 +278,7 @@ func NetworkTick() {
 			}
 		}
 		HammeringMutex.Unlock()
+		ExpireCachedBlocks()
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	}
 

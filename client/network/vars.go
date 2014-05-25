@@ -55,7 +55,18 @@ func AddBlockToCache(bl *btc.Block, conn *OneConnection) {
 			}
 		}
 		delete(CachedBlocks, todel)
-		common.CountSafe("CacheBlocksExpired")
+		common.CountSafe("BlockCacheFull")
 	}
 	CachedBlocks[bl.Hash.BIdx()] = OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
+}
+
+
+// Expire cached blocks
+func ExpireCachedBlocks() {
+	for k, v := range CachedBlocks {
+		if v.Time.Add(ExpireCachedAfter).Before(time.Now()) {
+			delete(CachedBlocks, k)
+			common.CountSafe("BlockExpired")
+		}
+	}
 }

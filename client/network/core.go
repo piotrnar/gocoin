@@ -43,6 +43,8 @@ const (
 	MIN_PROTO_VERSION = 209
 
 	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
+
+	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache fro that long, drop it*/
 )
 
 
