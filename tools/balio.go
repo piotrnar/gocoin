@@ -18,6 +18,8 @@ import (
 	"strings"
 )
 
+const MAX_UNSPENT_AT_ONCE = 20
+
 var (
 	proxy string
 	ltc   bool
@@ -128,7 +130,7 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 }
 
 // Download raw transaction from blockr.io
-func het_raw_tx(txid string) (raw []byte) {
+func get_raw_tx(txid string) (raw []byte) {
 	url := base_url() + "tx/raw/" + txid
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
@@ -150,6 +152,51 @@ func het_raw_tx(txid string) (raw []byte) {
 		}
 	}
 	return
+}
+
+func get_unspent(addrs []*btc.BtcAddr) []prvout {
+	if len(addrs) == 0 {
+		panic("no addresses to fetch")
+	}
+
+	if len(addrs) > MAX_UNSPENT_AT_ONCE {
+		panic("too many addresses")
+	}
+
+	url := base_url() + "address/unspent/" + addrs[0].String()
+	for i := 1; i < len(addrs); i++ {
+		url += "," + addrs[i].String()
+	}
+
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode != 200 {
+			println("get_unspent: StatusCode", r.StatusCode)
+			return nil
+		}
+
+		c, _ := ioutil.ReadAll(r.Body)
+		r.Body.Close()
+
+		if len(addrs) == 1 {
+			var s singleadd
+			er = json.Unmarshal(c, &s)
+			if er == nil {
+				return []prvout{s.Data}
+			}
+		} else {
+			var r mulitiadd
+			er = json.Unmarshal(c, &r)
+			if er == nil {
+				return r.Data
+			}
+		}
+	}
+
+	if er != nil {
+		println("get_unspent:", er.Error())
+	}
+	return nil
 }
 
 func base_url() string {
@@ -207,7 +254,7 @@ func load_wallet(fn string) (addrs []*btc.BtcAddr) {
 }
 
 func main() {
-	fmt.Println("Gocoin bal.io version", lib.Version)
+	fmt.Println("Gocoin BalIO version", lib.Version)
 
 	if len(os.Args) < 2 {
 		print_help()
@@ -284,66 +331,51 @@ func main() {
 		url += addrs[i].String()
 	}
 
+	if len(addrs) == 0 {
+		println("No addresses to fetch balance for")
+		return
+	}
+
 	var sum, outcnt uint64
-	r, er := http.Get(url)
-	//println(url)
-	if er == nil && r.StatusCode == 200 {
-		defer r.Body.Close()
-		c, _ := ioutil.ReadAll(r.Body)
-		var r mulitiadd
 
-		if len(addrs) == 1 {
-			var s singleadd
-			er = json.Unmarshal(c[:], &s)
-			if er == nil {
-				r.Status = s.Status
-				r.Data = []prvout{s.Data}
-				r.Code = s.Code
-				r.Message = s.Message
-			}
+	os.RemoveAll("balance/")
+	os.Mkdir("balance/", 0700)
+	unsp, _ := os.Create("balance/unspent.txt")
+	for off := 0; off < len(addrs); off += MAX_UNSPENT_AT_ONCE {
+		var r []prvout
+		if off+MAX_UNSPENT_AT_ONCE < len(addrs) {
+			r = get_unspent(addrs[off : off+MAX_UNSPENT_AT_ONCE])
 		} else {
-			er = json.Unmarshal(c[:], &r)
+			r = get_unspent(addrs[off:])
 		}
-		if er == nil {
-			os.RemoveAll("balance/")
-			os.Mkdir("balance/", 0700)
-			unsp, _ := os.Create("balance/unspent.txt")
-			for i := range r.Data {
-				for j := range r.Data[i].Unspent {
-					txraw := het_raw_tx(r.Data[i].Unspent[j].Tx)
-					if len(txraw) > 0 {
-						ioutil.WriteFile("balance/"+r.Data[i].Unspent[j].Tx+".tx", txraw, 0666)
-					} else {
-						println("ERROR: cannot fetch raw tx data for", r.Data[i].Unspent[j].Tx)
-						os.Exit(1)
-					}
-					println(r.Data[i].Unspent[j].Tx, len(txraw))
-
-					val, _ := btc.StringToSatoshis(r.Data[i].Unspent[j].Amount)
-					sum += val
-					outcnt++
-					fmt.Fprintf(unsp, "%s-%03d # %s @ %s, %d confs", r.Data[i].Unspent[j].Tx,
-						r.Data[i].Unspent[j].N, r.Data[i].Unspent[j].Amount, r.Data[i].Address,
-						r.Data[i].Unspent[j].Confirmations)
-					fmt.Fprintln(unsp)
+		if r == nil {
+			return
+		}
+		for i := range r {
+			for j := range r[i].Unspent {
+				txraw := get_raw_tx(r[i].Unspent[j].Tx)
+				if len(txraw) > 0 {
+					ioutil.WriteFile("balance/"+r[i].Unspent[j].Tx+".tx", txraw, 0666)
+				} else {
+					println("ERROR: cannot fetch raw tx data for", r[i].Unspent[j].Tx)
+					os.Exit(1)
 				}
+
+				val, _ := btc.StringToSatoshis(r[i].Unspent[j].Amount)
+				sum += val
+				outcnt++
+				fmt.Fprintf(unsp, "%s-%03d # %s @ %s, %d confs", r[i].Unspent[j].Tx,
+					r[i].Unspent[j].N, r[i].Unspent[j].Amount, r[i].Address, r[i].Unspent[j].Confirmations)
+				fmt.Fprintln(unsp)
 			}
-			unsp.Close()
-			if outcnt > 0 {
-				fmt.Printf("Total %.8f %s in %d unspent outputs.\n", float64(sum)/1e8, curr_unit(), outcnt)
-				fmt.Println("The data has been stored in 'balance' folder.")
-				fmt.Println("Use it with the wallet app to spend any of it.")
-			} else {
-				fmt.Println("The fateched balance is empty.")
-			}
-		} else {
-			fmt.Println("Unspent json.Unmarshal", er.Error())
 		}
+	}
+	unsp.Close()
+	if outcnt > 0 {
+		fmt.Printf("Total %.8f %s in %d unspent outputs.\n", float64(sum)/1e8, curr_unit(), outcnt)
+		fmt.Println("The data has been stored in 'balance' folder.")
+		fmt.Println("Use it with the wallet app to spend any of it.")
 	} else {
-		if er != nil {
-			fmt.Println("Unspent ", er.Error())
-		} else {
-			fmt.Println("Unspent HTTP StatusCode", r.StatusCode)
-		}
+		fmt.Println("The fateched balance is empty.")
 	}
 }
