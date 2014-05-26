@@ -5,7 +5,7 @@ import (
 	"os"
 	"fmt"
 	"flag"
-	"strings"
+	"bytes"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/ltc"
@@ -68,7 +68,7 @@ func main() {
 		if *verb {
 			fmt.Println("Enforcing Unix text format")
 		}
-		msg = []byte(strings.Replace(string(msg), "\r", "", -1))
+		msg = bytes.Replace(msg, []byte{'\r'}, nil, -1)
 	}
 
 	hash := make([]byte, 32)
@@ -95,6 +95,9 @@ func main() {
 			sa := btc.NewAddrFromPubkey(pk, ad.Version)
 			if ad.Hash160!=sa.Hash160 {
 				fmt.Println("BAD signature for", ad.String())
+				if bytes.IndexByte(msg, '\r') != -1 {
+					fmt.Println("You have CR chars in the message. Try to verify with -u switch.")
+				}
 				os.Exit(1)
 			} else {
 				fmt.Println("Signature OK")
