@@ -1,4 +1,5 @@
 Client:
+* Apparently a single metadata index can have more than one ephemkey
 * Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
