@@ -3,6 +3,9 @@ Client:
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
+Tools:
+* balio should work with long wallets as well
+
 Wallet:
 * Add Type-4 as HD Wallet
 
