@@ -97,7 +97,7 @@ func main() {
 				fmt.Println("BAD signature for", ad.String())
 				os.Exit(1)
 			} else {
-				fmt.Println("OK")
+				fmt.Println("Signature OK")
 			}
 		} else {
 			println("BAD signature")
