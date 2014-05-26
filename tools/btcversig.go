@@ -57,7 +57,7 @@ func main() {
 			return
 		}
 	} else {
-		fmt.Println("Enter the message:")
+		//fmt.Println("Enter the message:")
 		msg, _ = ioutil.ReadAll(os.Stdin)
 	}
 
