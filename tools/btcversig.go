@@ -19,6 +19,7 @@ var (
 	mfil = flag.String("f", "", "the filename containing a signed message (optional)")
 	unix = flag.Bool("u", false, "remove all \\r characters from the message (optional)")
 	help = flag.Bool("h", false, "print this help")
+	verb = flag.Bool("v", false, "verbose mode")
 	litecoin = flag.Bool("ltc", false, "litecoin mode")
 )
 
@@ -57,12 +58,16 @@ func main() {
 			return
 		}
 	} else {
-		//fmt.Println("Enter the message:")
+		if *verb {
+			fmt.Println("Enter the message:")
+		}
 		msg, _ = ioutil.ReadAll(os.Stdin)
 	}
 
 	if *unix {
-		fmt.Println("Enforcing Unix text format")
+		if *verb {
+			fmt.Println("Enforcing Unix text format")
+		}
 		msg = []byte(strings.Replace(string(msg), "\r", "", -1))
 	}
 
@@ -75,7 +80,9 @@ func main() {
 
 	compressed := false
 	if nv >= 31 {
-		//println("compressed key")
+		if *verb {
+			fmt.Println("compressed key")
+		}
 		nv -= 4
 		compressed = true
 	}
@@ -90,7 +97,7 @@ func main() {
 				fmt.Println("BAD signature for", ad.String())
 				os.Exit(1)
 			} else {
-				fmt.Println("Good signature for", sa.String())
+				fmt.Println("OK")
 			}
 		} else {
 			println("BAD signature")
