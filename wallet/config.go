@@ -114,7 +114,9 @@ func parse_config() {
 					RawKeysFilename = ll[1]
 
 				case "seed":
-					secret_seed = []byte(strings.Trim(ll[1], " \t\n\r"))
+					if !*nosseed {
+						secret_seed = []byte(strings.Trim(ll[1], " \t\n\r"))
+					}
 
 				case "litecoin":
 					v, e := strconv.ParseBool(ll[1])
