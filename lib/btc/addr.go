@@ -136,6 +136,16 @@ func (a *BtcAddr) String() string {
 	return a.Enc58str
 }
 
+func (a *BtcAddr) IsCompressed() bool {
+	if len(a.Pubkey)==33 {
+		return true
+	}
+	if len(a.Pubkey)!=65 {
+		panic("Cannot determine whether the key was compressed")
+	}
+	return false
+}
+
 // String with a label
 func (a *BtcAddr) Label() (s string) {
 	if a.Extra.Wallet!="" {
