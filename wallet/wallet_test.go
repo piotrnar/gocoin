@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"testing"
 	"io/ioutil"
 )
@@ -17,12 +18,14 @@ const (
 
 func start() error {
 	PassSeedFilename = SECRET
+	RawKeysFilename = OTHERS
 	os.Setenv("GOCOIN_WALLET_CONFIG", CONFIG_FILE)
 	return ioutil.WriteFile(SECRET, []byte(SEED_PASS), 0600)
 }
 
 func reset_wallet() {
 	keys = nil
+	type2_secret = nil
 }
 
 func stop() {
@@ -98,7 +101,24 @@ func TestMakeWallet(t *testing.T) {
 }
 
 
-func TestExportPriv(t *testing.T) {
+func import_check(t *testing.T, pk, exp string) {
+	ioutil.WriteFile(OTHERS, []byte(fmt.Sprintln(pk, exp+"lab")), 0600)
+	reset_wallet()
+	make_wallet()
+	if int(keycnt)+1 != len(keys) {
+		t.Error("keys - wrong number")
+	}
+	if keys[0].label != exp+"lab" {
+		t.Error("Expected label mismatch", keys[0].addr.String(), exp)
+	}
+
+	if keys[0].addr.String() != exp {
+		t.Error("Expected address mismatch", keys[0].addr.String(), exp)
+	}
+}
+
+
+func TestImportPriv(t *testing.T) {
 	defer stop()
 	if start() != nil {
 		t.Error("start failed")
@@ -107,7 +127,17 @@ func TestExportPriv(t *testing.T) {
 	waltype = 3
 	uncompressed = false
 	testnet = false
-	mkwal_check(t, "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
-	*dumppriv  = "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R"
-	dump_prvkey()
+	keycnt = 1
+
+	// compressed key
+	import_check(t, "KzAqX6gJsmvZmJjNrHk3UDZrgDytgF88KzE21TnGVXPC6e3zRHGi", "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
+	if !keys[0].compr {
+		t.Error("Should be compressed")
+	}
+
+	// uncompressed key
+	import_check(t, "5HqNqndG7xYfJu8KkkJ7AjVUfVsiWxT5AyLUpBsi2Upe5c2WaRj", "1AV28sMrWe81SgBK21o3KjznwUd5dTngnp")
+	if keys[0].compr {
+		t.Error("Should be uncompressed")
+	}
 }
