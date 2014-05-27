@@ -18,7 +18,7 @@ var (
 	// Command line switches
 
 	// Wallet options
-	dump *bool = flag.Bool("l", false, "List public addressses from the wallet")
+	list *bool = flag.Bool("l", false, "List public addressses from the wallet")
 	singleask *bool = flag.Bool("1", false, "Do not re-ask for the password (when used along with -l)")
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
@@ -78,6 +78,7 @@ func main() {
 
 	flag.Parse()
 
+	// convert string fee to uint64
 	if val, e := btc.StringToSatoshis(fee); e != nil {
 		println("Incorrect fee value", fee)
 		os.Exit(1)
@@ -85,12 +86,14 @@ func main() {
 		curFee = val
 	}
 
+	// decode raw transaction?
 	if *dumptxfn!="" {
 		//load_balance(false)
 		dump_raw_tx()
 		return
 	}
 
+	// call it before exiting to clean up private data from memory
 	defer func() {
 		// cleanup private keys in RAM before exiting
 		if *verbose {
@@ -102,23 +105,27 @@ func main() {
 		sys.ClearBuffer(type2_secret)
 	}()
 
+	// dump public key or secret scan key?
 	if *pubkey!="" || *scankey!="" {
 		make_wallet()
 		return
 	}
 
-	if *dump {
+	// list public addresses?
+	if *list {
 		make_wallet()
 		dump_addrs()
 		return
 	}
 
+	// dump privete key?
 	if *dumppriv!="" {
 		make_wallet()
 		dump_prvkey()
 		return
 	}
 
+	// sign a message or a hash?
 	if *signaddr!="" {
 		make_wallet()
 		sign_message()
@@ -128,27 +135,32 @@ func main() {
 		}
 	}
 
-
+	// raw transaction?
 	if *rawtx!="" {
+		// add p2sh sript to it?
 		if *p2sh!="" {
 			make_p2sh()
 			return
 		}
 
+		// dump the hashes to be signed?
 		if !*hashes {
 			make_wallet()
 		}
 
+		// multisig sign with a specific key?
 		if *multisign!="" {
 			multisig_sign()
 			return
 		}
 
+		// this must be signing of a raw trasnaction
 		load_balance(false)
 		process_raw_tx()
 		return
 	}
 
+	// send command?
 	if send_request() {
 		if !*hashes {
 			make_wallet()
