@@ -6,6 +6,7 @@ import (
 	"flag"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
@@ -101,9 +102,9 @@ func main() {
 			fmt.Println("Cleaning up private keys")
 		}
 		for k := range priv_keys {
-			for l := range priv_keys[k] {
-				priv_keys[k][l] = 0
-			}
+			sys.ClearBuffer(first_seed[:])
+			sys.ClearBuffer(type2_secret)
+			sys.ClearBuffer(priv_keys[k])
 		}
 	}()
 
