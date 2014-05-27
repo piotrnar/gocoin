@@ -224,6 +224,33 @@ func raw_tx_from_file(fn string) *btc.Tx {
 }
 
 
+func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
+	fn := "balance/" + txid.String() + ".tx"
+	buf, er := ioutil.ReadFile(fn)
+	if er==nil && buf!=nil {
+		var th [32]byte
+		btc.ShaHash(buf, th[:])
+		if txid.Hash==th {
+			tx, _ = btc.NewTx(buf)
+			if error_is_fatal && tx == nil {
+				println("Transaction is corrupt:", txid.String())
+				os.Exit(1)
+			}
+		} else if error_is_fatal {
+			println("Transaction file is corrupt:", txid.String())
+			os.Exit(1)
+		}
+	} else if error_is_fatal {
+		println("Error reading transaction file:", fn)
+		if er != nil {
+			println(er.Error())
+		}
+		os.Exit(1)
+	}
+	return
+}
+
+
 func AddrVerPubkey() byte {
 	if litecoin {
 		return ltc.AddrVerPubkey(testnet)
