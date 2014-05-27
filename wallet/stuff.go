@@ -144,26 +144,18 @@ func get_change_addr() (chng *btc.BtcAddr) {
 }
 
 
-// Uncompressed private key
-func sec2b58unc(pk []byte) string {
-	var dat [37]byte
-	dat[0] = AddrVerSecret()
-	copy(dat[1:33], pk)
-	sh := btc.Sha2Sum(dat[0:33])
-	copy(dat[33:37], sh[:4])
-	return btc.Encodeb58(dat[:])
-}
-
-
-// Compressed private key
-func sec2b58com(pk []byte) string {
-	var dat [38]byte
-	dat[0] = AddrVerSecret()
-	copy(dat[1:33], pk)
-	dat[33] = 1 // compressed
-	sh := btc.Sha2Sum(dat[0:34])
-	copy(dat[34:38], sh[:4])
-	return btc.Encodeb58(dat[:])
+// Returns base58 encoded private key (bitcoin format, with checksum)
+func encodedPriv(i int) string {
+	var ha [32]byte
+	buf := new(bytes.Buffer)
+	buf.WriteByte(AddrVerSecret())
+	buf.Write(keys[i].priv)
+	if keys[i].addr.IsCompressed() {
+		buf.WriteByte(1)
+	}
+	btc.ShaHash(buf.Bytes(), ha[:])
+	buf.Write(ha[:4])
+	return btc.Encodeb58(buf.Bytes())
 }
 
 
@@ -171,11 +163,7 @@ func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
 		for i := range keys {
-			if len(keys[i].addr.Pubkey)==33 {
-				fmt.Println(sec2b58com(keys[i].priv), keys[i].addr.String(), keys[i].label)
-			} else {
-				fmt.Println(sec2b58unc(keys[i].priv), keys[i].addr.String(), keys[i].label)
-			}
+			fmt.Println(encodedPriv(i), keys[i].addr.String(), keys[i].label)
 		}
 	} else {
 		// single key
@@ -192,12 +180,8 @@ func dump_prvkey() {
 			if keys[i].addr.Hash160==a.Hash160 {
 				fmt.Println("Public address:", keys[i].addr.String(), keys[i].label)
 				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].addr.Pubkey))
-				fmt.Println("Public compressed:", len(keys[i].addr.Pubkey)==33)
-				if len(keys[i].addr.Pubkey)==33 {
-					fmt.Println("Private encoded:", sec2b58com(keys[i].priv))
-				} else {
-					fmt.Println("Private encoded:", sec2b58unc(keys[i].priv))
-				}
+				fmt.Println("Public compressed:", keys[i].addr.IsCompressed())
+				fmt.Println("Private encoded:", encodedPriv(i))
 				fmt.Println("Private hexdump:", hex.EncodeToString(keys[i].priv))
 				return
 			}
