@@ -158,7 +158,7 @@ func apply_to_balance(tx *btc.Tx) {
 		for out := range tx.TxOut {
 			for j := range keys {
 				if keys[j].BtcAddr.Owns(tx.TxOut[out].Pk_script) {
-					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
+					fmt.Fprintf(f, "%s-%03d # %.8f BTC @ %s\n", tx.Hash.String(), out,
 						float64(tx.TxOut[out].Value)/1e8, keys[j].BtcAddr.String())
 					addback++
 				}

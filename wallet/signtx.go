@@ -134,7 +134,7 @@ func make_signed_tx() {
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
 	for inpcnt:=0; inpcnt<len(unspentOuts); inpcnt++ {
-		uo := getUO(&tx.TxIn[inpcnt].Input)
+		uo := UO(unspentOuts[inpcnt])
 		// add the input to our transaction:
 		tin := new(btc.TxIn)
 		tin.Input = *unspentOuts[inpcnt]
