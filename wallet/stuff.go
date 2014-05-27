@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"strings"
 	"io/ioutil"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/ltc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -134,28 +133,6 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	fmt.Println("You do not own the address of the first input, nor specified -change")
 	os.Exit(1)
 	return
-}
-
-
-func dump_prvkey() {
-	if *dumppriv=="*" {
-		// Dump all private keys
-		for i := range keys {
-			fmt.Println(keys[i].String(), keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
-		}
-	} else {
-		// single key
-		k := address_to_key(*dumppriv)
-		if k != nil {
-			fmt.Println("Public address:", k.BtcAddr.String(), k.BtcAddr.Extra.Label)
-			fmt.Println("Public hexdump:", hex.EncodeToString(k.BtcAddr.Pubkey))
-			fmt.Println("Public compressed:", k.BtcAddr.IsCompressed())
-			fmt.Println("Private encoded:", k.String())
-			fmt.Println("Private hexdump:", hex.EncodeToString(k.Key))
-		} else {
-			println("Dump Private Key:", *dumppriv, "not found it the wallet")
-		}
-	}
 }
 
 

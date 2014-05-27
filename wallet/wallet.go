@@ -210,3 +210,24 @@ func address_to_key(addr string) *btc.PrivateAddr {
 	return hash_to_key(a.Hash160)
 }
 
+
+func dump_prvkey() {
+	if *dumppriv=="*" {
+		// Dump all private keys
+		for i := range keys {
+			fmt.Println(keys[i].String(), keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
+		}
+	} else {
+		// single key
+		k := address_to_key(*dumppriv)
+		if k != nil {
+			fmt.Println("Public address:", k.BtcAddr.String(), k.BtcAddr.Extra.Label)
+			fmt.Println("Public hexdump:", hex.EncodeToString(k.BtcAddr.Pubkey))
+			fmt.Println("Public compressed:", k.BtcAddr.IsCompressed())
+			fmt.Println("Private encoded:", k.String())
+			fmt.Println("Private hexdump:", hex.EncodeToString(k.Key))
+		} else {
+			println("Dump Private Key:", *dumppriv, "not found it the wallet")
+		}
+	}
+}
