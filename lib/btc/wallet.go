@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
@@ -83,4 +84,65 @@ func NewSpendOutputs(addr *BtcAddr, amount uint64, testnet bool) ([]*TxOut, erro
 		out.Pk_script = addr.OutScript()
 		return []*TxOut{out}, nil
 	}
+}
+
+
+// Base58 encoded private address with checksum and it's corresponding public key/address
+type PrivateAddr struct {
+	Version byte
+	Key []byte
+	*BtcAddr
+}
+
+
+func NewPrivateAddr(key []byte, ver byte, compr bool) (ad *PrivateAddr) {
+	ad = new(PrivateAddr)
+	ad.Version = ver
+	ad.Key = key
+	pub := PublicFromPrivate(key, compr)
+	if pub == nil {
+		panic("PublicFromPrivate error")
+	}
+	ad.BtcAddr = NewAddrFromPubkey(pub, ver-0x80)
+	return
+}
+
+
+func DecodePrivateAddr(s string) (*PrivateAddr, error) {
+	pkb := Decodeb58(s)
+
+	if pkb == nil {
+		return nil, errors.New("Decodeb58 failed")
+	}
+
+	if len(pkb) < 37 {
+		return nil, errors.New("Decoded data too short")
+	}
+
+	if len(pkb)>38 {
+		return nil, errors.New("Decoded data too long")
+	}
+
+	var sh [32]byte
+	ShaHash(pkb[:len(pkb)-4], sh[:])
+	if !bytes.Equal(sh[:4], pkb[len(pkb)-4:]) {
+		return nil, errors.New("Checksum error")
+	}
+
+	return NewPrivateAddr(pkb[1:33], pkb[0], len(pkb)==38 && pkb[33]==1), nil
+}
+
+
+// Returns base58 encoded private key (with checksum)
+func (ad *PrivateAddr) String() string {
+	var ha [32]byte
+	buf := new(bytes.Buffer)
+	buf.WriteByte(ad.Version)
+	buf.Write(ad.Key)
+	if ad.BtcAddr.IsCompressed() {
+		buf.WriteByte(1)
+	}
+	ShaHash(buf.Bytes(), ha[:])
+	buf.Write(ha[:4])
+	return Encodeb58(buf.Bytes())
 }
