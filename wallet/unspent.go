@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"bytes"
 	"bufio"
 	"strconv"
 	"strings"
@@ -56,29 +55,8 @@ func load_balance(showbalance bool) {
 			}
 
 			if _, ok := loadedTxs[txid.Hash]; !ok {
-				tf, _ := os.Open("balance/"+txid.String()+".tx")
-				if tf != nil {
-					siz, _ := tf.Seek(0, os.SEEK_END)
-					tf.Seek(0, os.SEEK_SET)
-					buf := make([]byte, siz)
-					tf.Read(buf)
-					tf.Close()
-					th := btc.Sha2Sum(buf)
-					if bytes.Equal(th[:], txid.Hash[:]) {
-						tx, _ := btc.NewTx(buf)
-						if tx != nil {
-							loadedTxs[txid.Hash] = tx
-						} else {
-							println("transaction is corrupt:", txid.String())
-						}
-					} else {
-						println("transaction file is corrupt:", txid.String())
-						os.Exit(1)
-					}
-				} else {
-					println("transaction file not found:", txid.String())
-					os.Exit(1)
-				}
+				tx := tx_from_balance(txid, true)
+				loadedTxs[txid.Hash] = tx
 			}
 
 			// Sum up all the balance and check if we have private key for this input
