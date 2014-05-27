@@ -101,3 +101,61 @@ func BenchmarkDeriveNextPublic(b *testing.B) {
 		pub = DeriveNextPublic(pub, sec[:])
 	}
 }
+
+
+func TestDecodePrivateKey(t *testing.T) {
+	// mainnet compressed
+	pk, er := DecodePrivateAddr("L2zsCZKchUMJ9BS7MVyo8gLGV26rYtgFZskSitwkptk4F1g3KtjN")
+	if er != nil {
+		t.Error(er.Error())
+	}
+	if pk.Version != 128 {
+		t.Error("Bad version")
+	}
+	if !pk.IsCompressed() {
+		t.Error("Should be compressed")
+	}
+	if pk.BtcAddr.String()!="179nPBZhnSRM9HB7RM9bJztRAb8ciPitVr" {
+		t.Error("Bad address")
+	}
+	if pk.String() != "L2zsCZKchUMJ9BS7MVyo8gLGV26rYtgFZskSitwkptk4F1g3KtjN" {
+		t.Error("Unexpected endode result")
+	}
+
+	// testnet uncompressed
+	pk, er = DecodePrivateAddr("92fqqcuu2iSqjfAFifVJ7yxDAkUgFEMgu19YgzLxUqXmbJQRrWp")
+	if er != nil {
+		t.Error(er.Error())
+	}
+	if pk.Version != 128+0x6f {
+		t.Error("Bad version")
+	}
+	if pk.IsCompressed() {
+		t.Error("Should not be compressed")
+	}
+	if pk.BtcAddr.String()!="mj12iv73R4V5bbyhZg6TTQHfd7bL7rzu2v" {
+		t.Error("Bad address")
+	}
+	if pk.String() != "92fqqcuu2iSqjfAFifVJ7yxDAkUgFEMgu19YgzLxUqXmbJQRrWp" {
+		t.Error("Unexpected endode result")
+	}
+
+	// litecoin compressed
+	pk, er = DecodePrivateAddr("TAtSTnmpQFUKRH56MN7mn6iU8tJpcok7uCP2Hcab599H2pyDZKfY")
+	if er != nil {
+		t.Error(er.Error())
+	}
+	if pk.Version != 128+48 {
+		t.Error("Bad version")
+	}
+	if !pk.IsCompressed() {
+		t.Error("Should be compressed")
+	}
+	if pk.BtcAddr.String()!="LMJoWKLk69uXn9joK5LmciyPwiVxAat7Ua" {
+		t.Error("Bad address")
+	}
+	if pk.String() != "TAtSTnmpQFUKRH56MN7mn6iU8tJpcok7uCP2Hcab599H2pyDZKfY" {
+		t.Error("Unexpected endode result")
+	}
+
+}
