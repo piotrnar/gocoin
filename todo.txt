@@ -5,6 +5,7 @@ Client:
 * Implement "mempool"
 
 Wallet:
+* Write some automated tests
 * Add Type-4 as HD Wallet
 
 Downloader:
