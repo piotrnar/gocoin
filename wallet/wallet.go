@@ -22,9 +22,21 @@ var (
 	type2_secret []byte // used to type-2 wallets
 	first_seed []byte
 	// set in make_wallet():
-	keys []walrec
+	keys []*walrec
 	curFee uint64
 )
+
+
+func NewWalrec(key []byte, compr bool) (wr *walrec) {
+	wr = new(walrec)
+	wr.priv = key
+	pub := btc.PublicFromPrivate(key, compr)
+	if pub == nil {
+		panic("PublicFromPrivate error")
+	}
+	wr.addr = btc.NewAddrFromPubkey(pub, AddrVerPubkey())
+	return wr
+}
 
 
 func load_others() {
@@ -95,15 +107,7 @@ func load_others() {
 			}
 
 			key := pkb[1:33]
-			pub := btc.PublicFromPrivate(key, compr)
-			if pub == nil {
-				println("PublicFromPrivate failed")
-				os.Exit(1)
-			}
-
-			var rec walrec
-			rec.priv = key
-			rec.addr = btc.NewAddrFromPubkey(pub, AddrVerPubkey())
+			rec := NewWalrec(key, compr)
 			if len(pk)>1 {
 				rec.addr.Extra.Label = pk[1]
 			} else {
@@ -188,21 +192,15 @@ func make_wallet() {
 		if i==0 {
 			first_seed = prv_key
 		}
-		pub := btc.PublicFromPrivate(prv_key, !uncompressed)
-		if pub == nil {
-			println("PublicFromPrivate error 3")
-			continue
-		}
-		adr := btc.NewAddrFromPubkey(pub, AddrVerPubkey())
-		if *pubkey!="" && *pubkey==adr.String() {
-			fmt.Println("Public address:", adr.String())
-			fmt.Println("Public hexdump:", hex.EncodeToString(pub))
+
+		rec := NewWalrec(prv_key, !uncompressed)
+
+		if *pubkey!="" && *pubkey==rec.addr.String() {
+			fmt.Println("Public address:", rec.addr.String())
+			fmt.Println("Public hexdump:", hex.EncodeToString(rec.addr.Pubkey))
 			return
 		}
 
-		var rec walrec
-		rec.priv = prv_key
-		rec.addr = adr
 		rec.addr.Extra.Label = fmt.Sprint(lab, " ", i+1)
 		keys = append(keys, rec)
 		i++

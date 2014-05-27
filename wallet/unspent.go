@@ -45,10 +45,7 @@ func load_balance(showbalance bool) {
 					// add a new key to the wallet
 					sec := btc.DeriveNextPrivate(first_seed, c)
 					is_stealth[len(keys)] = true
-					pub_key := btc.PublicFromPrivate(sec, true) // stealth keys are always compressed
-					var rec walrec
-					rec.priv = sec
-					rec.addr = btc.NewAddrFromPubkey(pub_key, AddrVerPubkey())
+					rec := NewWalrec(sec, true) // stealth keys are always compressed
 					rec.addr.Extra.Label = lab
 					keys = append(keys, rec)
 				}
