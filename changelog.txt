@@ -1,5 +1,6 @@
 1.0.0rc6
-* Wallet: lots of cleanign and some basic tests added
+* Stealth addresses: fixed the ephemkey's 03 issue (makes it incompatible with current DW)
+* Wallet: lots of reorganizing, cleaing and some basic tests added
 
 1.0.0rc5 - 2014-05-26
 * btcversig tool: added Litecoin support (specify LTC address or add "-ltc" switch for testnet)
