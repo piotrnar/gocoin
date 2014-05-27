@@ -103,7 +103,7 @@ func main() {
 			fmt.Println("Cleaning up private keys")
 		}
 		for k := range keys {
-			sys.ClearBuffer(keys[k].priv)
+			sys.ClearBuffer(keys[k].Key)
 		}
 		sys.ClearBuffer(type2_secret)
 	}()

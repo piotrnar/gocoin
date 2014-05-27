@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"bytes"
 	"bufio"
 	"strings"
 	"encoding/hex"
@@ -12,31 +11,13 @@ import (
 )
 
 
-type walrec struct {
-	priv []byte
-	addr *btc.BtcAddr
-}
-
-
 var (
 	type2_secret []byte // used to type-2 wallets
-	first_seed []byte
+	first_determ_idx int
 	// set in make_wallet():
-	keys []*walrec
+	keys []*btc.PrivateAddr
 	curFee uint64
 )
-
-
-func NewWalrec(key []byte, compr bool) (wr *walrec) {
-	wr = new(walrec)
-	wr.priv = key
-	pub := btc.PublicFromPrivate(key, compr)
-	if pub == nil {
-		panic("PublicFromPrivate error")
-	}
-	wr.addr = btc.NewAddrFromPubkey(pub, AddrVerPubkey())
-	return wr
-}
 
 
 func load_others() {
@@ -57,61 +38,22 @@ func load_others() {
 				continue // Just a comment-line
 			}
 
-			pkb := btc.Decodeb58(pk[0])
-
-			if pkb == nil {
-				println("Decodeb58 failed:", pk[0])
+			rec, er := btc.DecodePrivateAddr(pk[0])
+			if er != nil {
+				println("DecodePrivateAddr error:", er.Error())
+				if *verbose {
+					println(pk[0])
+				}
 				continue
 			}
-
-			if len(pkb) < 6 {
-				println("Syntax error in the raw keys file:", pk[0])
-				continue
-			}
-
-			if len(pkb)!=37 && len(pkb)!=38 {
-				println(pk[0][:6], "has wrong key", len(pkb))
-				println(hex.EncodeToString(pkb))
-				continue
-			}
-
-			if pkb[0]!=AddrVerSecret() {
-				println(pk[0][:6], "has version", pkb[0], "while we expect", AddrVerSecret())
+			if rec.Version!=AddrVerSecret() {
+				println(pk[0][:6], "has version", rec.Version, "while we expect", AddrVerSecret())
 				fmt.Println("You may want to play with -t or -ltc switch")
-				continue
 			}
-
-			var sh [32]byte
-			var compr bool
-
-			if len(pkb)==37 {
-				// old/uncompressed key
-				sh = btc.Sha2Sum(pkb[0:33])
-				if !bytes.Equal(sh[:4], pkb[33:37]) {
-					println(pk[0][:6], "checksum error")
-					continue
-				}
-				compr = false
-			} else {
-				if pkb[33]!=1 {
-					println(pk[0][:6], "a key of length 38 bytes must be compressed")
-					continue
-				}
-
-				sh = btc.Sha2Sum(pkb[0:34])
-				if !bytes.Equal(sh[:4], pkb[34:38]) {
-					println(pk[0][:6], "checksum error")
-					continue
-				}
-				compr = true
-			}
-
-			key := pkb[1:33]
-			rec := NewWalrec(key, compr)
 			if len(pk)>1 {
-				rec.addr.Extra.Label = pk[1]
+				rec.BtcAddr.Extra.Label = pk[1]
 			} else {
-				rec.addr.Extra.Label = fmt.Sprint("Other ", len(keys))
+				rec.BtcAddr.Extra.Label = fmt.Sprint("Other ", len(keys))
 			}
 			keys = append(keys, rec)
 		}
@@ -120,7 +62,7 @@ func load_others() {
 		}
 	} else {
 		if *verbose {
-			fmt.Println("You can also have some dumped (b58 encoded) priv keys in file", RawKeysFilename)
+			fmt.Println("You can also have some dumped (b58 encoded) Key keys in file", RawKeysFilename)
 		}
 	}
 }
@@ -190,18 +132,18 @@ func make_wallet() {
 
 		// for stealth keys
 		if i==0 {
-			first_seed = prv_key
+			first_determ_idx = len(keys)
 		}
 
-		rec := NewWalrec(prv_key, !uncompressed)
+		rec := btc.NewPrivateAddr(prv_key, AddrVerSecret(), !uncompressed)
 
-		if *pubkey!="" && *pubkey==rec.addr.String() {
-			fmt.Println("Public address:", rec.addr.String())
-			fmt.Println("Public hexdump:", hex.EncodeToString(rec.addr.Pubkey))
+		if *pubkey!="" && *pubkey==rec.BtcAddr.String() {
+			fmt.Println("Public address:", rec.BtcAddr.String())
+			fmt.Println("Public hexdump:", hex.EncodeToString(rec.BtcAddr.Pubkey))
 			return
 		}
 
-		rec.addr.Extra.Label = fmt.Sprint(lab, " ", i+1)
+		rec.BtcAddr.Extra.Label = fmt.Sprint(lab, " ", i+1)
 		keys = append(keys, rec)
 		i++
 	}
@@ -217,19 +159,19 @@ func dump_addrs() {
 
 	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
 	if type2_secret!=nil {
-		fmt.Fprintln(f, "#", hex.EncodeToString(keys[0].addr.Pubkey))
+		fmt.Fprintln(f, "#", hex.EncodeToString(keys[0].BtcAddr.Pubkey))
 		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
 	}
 	for i := range keys {
 		if !*noverify {
-			if er := btc.VerifyKeyPair(keys[i].priv, keys[i].addr.Pubkey); er!=nil {
+			if er := btc.VerifyKeyPair(keys[i].Key, keys[i].BtcAddr.Pubkey); er!=nil {
 				println("Something wrong with key at index", i, " - abort!", er.Error())
 				os.Exit(1)
 			}
 		}
-		fmt.Println(keys[i].addr.String(), keys[i].addr.Extra.Label)
+		fmt.Println(keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
 		if f != nil {
-			fmt.Fprintln(f, keys[i].addr.String(), keys[i].addr.Extra.Label)
+			fmt.Fprintln(f, keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
 		}
 	}
 	if f != nil {

@@ -128,12 +128,12 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	// If change address not specified, send it back to the first input
 	uo := UO(unspentOuts[0])
 	for j := range keys {
-		if keys[j].addr.Owns(uo.Pk_script) {
+		if keys[j].BtcAddr.Owns(uo.Pk_script) {
 			if is_stealth[j] {
 				println("Cannot send change to a stealth address. Use -change param")
 				os.Exit(1)
 			}
-			chng = keys[j].addr
+			chng = keys[j].BtcAddr
 			return
 		}
 	}
@@ -144,26 +144,11 @@ func get_change_addr() (chng *btc.BtcAddr) {
 }
 
 
-// Returns base58 encoded private key (bitcoin format, with checksum)
-func encodedPriv(i int) string {
-	var ha [32]byte
-	buf := new(bytes.Buffer)
-	buf.WriteByte(AddrVerSecret())
-	buf.Write(keys[i].priv)
-	if keys[i].addr.IsCompressed() {
-		buf.WriteByte(1)
-	}
-	btc.ShaHash(buf.Bytes(), ha[:])
-	buf.Write(ha[:4])
-	return btc.Encodeb58(buf.Bytes())
-}
-
-
 func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
 		for i := range keys {
-			fmt.Println(encodedPriv(i), keys[i].addr.String(), keys[i].addr.Extra.Label)
+			fmt.Println(keys[i].String(), keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
 		}
 	} else {
 		// single key
@@ -177,12 +162,12 @@ func dump_prvkey() {
 			return
 		}
 		for i := range keys {
-			if keys[i].addr.Hash160==a.Hash160 {
-				fmt.Println("Public address:", keys[i].addr.String(), keys[i].addr.Extra.Label)
-				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].addr.Pubkey))
-				fmt.Println("Public compressed:", keys[i].addr.IsCompressed())
-				fmt.Println("Private encoded:", encodedPriv(i))
-				fmt.Println("Private hexdump:", hex.EncodeToString(keys[i].priv))
+			if keys[i].BtcAddr.Hash160==a.Hash160 {
+				fmt.Println("Public address:", keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
+				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].BtcAddr.Pubkey))
+				fmt.Println("Public compressed:", keys[i].BtcAddr.IsCompressed())
+				fmt.Println("Private encoded:", keys[i].String())
+				fmt.Println("Private hexdump:", hex.EncodeToString(keys[i].Key))
 				return
 			}
 		}

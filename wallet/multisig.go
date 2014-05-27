@@ -60,8 +60,8 @@ func multisig_sign() {
 	var privkey []byte
 
 	for i := range keys {
-		if keys[i].addr.Hash160==ad2s.Hash160 {
-			privkey = keys[i].priv
+		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
+			privkey = keys[i].Key
 			break
 		}
 	}

@@ -38,9 +38,9 @@ func sign_message() {
 	var compr bool
 
 	for i := range keys {
-		if keys[i].addr.Hash160==ad2s.Hash160 {
-			privkey = keys[i].priv
-			compr = keys[i].addr.IsCompressed()
+		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
+			privkey = keys[i].Key
+			compr = keys[i].BtcAddr.IsCompressed()
 
 			// Sign raw hash?
 			if hash!=nil {
@@ -53,7 +53,7 @@ func sign_message() {
 				}
 				txsig.R.Set(r)
 				txsig.S.Set(s)
-				fmt.Println("PublicKey:", hex.EncodeToString(keys[i].addr.Pubkey))
+				fmt.Println("PublicKey:", hex.EncodeToString(keys[i].BtcAddr.Pubkey))
 				fmt.Println(hex.EncodeToString(txsig.Bytes()))
 				return
 			}

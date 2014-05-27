@@ -40,8 +40,8 @@ func mkwal_check(t *testing.T, exp string) {
 	if int(keycnt) != len(keys) {
 		t.Error("keys - wrong number")
 	}
-	if keys[keycnt-1].addr.String() != exp {
-		t.Error("Expected address mismatch", keys[keycnt-1].addr.String(), exp)
+	if keys[keycnt-1].BtcAddr.String() != exp {
+		t.Error("Expected address mismatch", keys[keycnt-1].BtcAddr.String(), exp)
 	}
 }
 
@@ -108,12 +108,12 @@ func import_check(t *testing.T, pk, exp string) {
 	if int(keycnt)+1 != len(keys) {
 		t.Error("keys - wrong number")
 	}
-	if keys[0].addr.Extra.Label != exp+"lab" {
-		t.Error("Expected label mismatch", keys[0].addr.String(), exp)
+	if keys[0].BtcAddr.Extra.Label != exp+"lab" {
+		t.Error("Expected label mismatch", keys[0].BtcAddr.String(), exp)
 	}
 
-	if keys[0].addr.String() != exp {
-		t.Error("Expected address mismatch", keys[0].addr.String(), exp)
+	if keys[0].BtcAddr.String() != exp {
+		t.Error("Expected address mismatch", keys[0].BtcAddr.String(), exp)
 	}
 }
 
@@ -131,13 +131,13 @@ func TestImportPriv(t *testing.T) {
 
 	// compressed key
 	import_check(t, "KzAqX6gJsmvZmJjNrHk3UDZrgDytgF88KzE21TnGVXPC6e3zRHGi", "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
-	if !keys[0].addr.IsCompressed() {
+	if !keys[0].BtcAddr.IsCompressed() {
 		t.Error("Should be compressed")
 	}
 
 	// uncompressed key
 	import_check(t, "5HqNqndG7xYfJu8KkkJ7AjVUfVsiWxT5AyLUpBsi2Upe5c2WaRj", "1AV28sMrWe81SgBK21o3KjznwUd5dTngnp")
-	if keys[0].addr.IsCompressed() {
+	if keys[0].BtcAddr.IsCompressed() {
 		t.Error("Should be uncompressed")
 	}
 }
