@@ -100,7 +100,7 @@ calc_seed:
 			break
 		}
 	}
-	if len(secret_seed)>0 {
+	if !*nosseed && len(secret_seed)>0 {
 		x := append(secret_seed, pass[:n]...)
 		sys.ClearBuffer(secret_seed)
 		btc.ShaHash(x, seed)
