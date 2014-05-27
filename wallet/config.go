@@ -137,6 +137,6 @@ func parse_config() {
 	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Use uncompressed public keys (not advised)")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
-	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder")
+	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
 }

@@ -65,7 +65,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 		} else {
 			uo := getUO(&tx.TxIn[in].Input)
 			if uo==nil {
-				println("ERROR: Unkown input. Missing balance folder?")
+				println("ERROR: Unkown input:", tx.TxIn[in].Input.String(), "- missing balance folder?")
 				all_signed = false
 				continue
 			}
