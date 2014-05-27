@@ -249,7 +249,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
 							val = !stack.popBool()
 						}
 					}
-					if DBG_ERR {
+					if DBG_SCR {
 						println(inexec, "if pushing", val, "...")
 					}
 					exestack.pushBool(val)
