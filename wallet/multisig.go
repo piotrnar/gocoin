@@ -58,12 +58,10 @@ func multisig_sign() {
 	}
 
 	var privkey []byte
-	//var compr bool
 
-	for i := range publ_addrs {
-		if publ_addrs[i].Hash160==ad2s.Hash160 {
-			privkey = priv_keys[i][:]
-			//compr = compressed_key[i]
+	for i := range keys {
+		if keys[i].addr.Hash160==ad2s.Hash160 {
+			privkey = keys[i].priv
 			break
 		}
 	}

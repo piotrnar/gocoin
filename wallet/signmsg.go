@@ -37,10 +37,10 @@ func sign_message() {
 	var privkey []byte
 	var compr bool
 
-	for i := range publ_addrs {
-		if publ_addrs[i].Hash160==ad2s.Hash160 {
-			privkey = priv_keys[i][:]
-			compr = compressed_key[i]
+	for i := range keys {
+		if keys[i].addr.Hash160==ad2s.Hash160 {
+			privkey = keys[i].priv
+			compr = keys[i].compr
 
 			// Sign raw hash?
 			if hash!=nil {
@@ -53,7 +53,7 @@ func sign_message() {
 				}
 				txsig.R.Set(r)
 				txsig.S.Set(s)
-				fmt.Println("PublicKey:", hex.EncodeToString(publ_addrs[i].Pubkey))
+				fmt.Println("PublicKey:", hex.EncodeToString(keys[i].addr.Pubkey))
 				fmt.Println(hex.EncodeToString(txsig.Bytes()))
 				return
 			}

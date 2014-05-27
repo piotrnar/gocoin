@@ -101,10 +101,10 @@ func main() {
 		if *verbose {
 			fmt.Println("Cleaning up private keys")
 		}
-		for k := range priv_keys {
+		for k := range keys {
 			sys.ClearBuffer(first_seed[:])
 			sys.ClearBuffer(type2_secret)
-			sys.ClearBuffer(priv_keys[k])
+			sys.ClearBuffer(keys[k].priv)
 		}
 	}()
 

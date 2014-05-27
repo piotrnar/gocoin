@@ -45,12 +45,14 @@ func load_balance(showbalance bool) {
 				} else {
 					// add a new key to the wallet
 					sec := btc.DeriveNextPrivate(first_seed[:], c)
-					is_stealth[len(priv_keys)] = true
-					priv_keys = append(priv_keys, sec)
-					labels = append(labels, lab)
+					is_stealth[len(keys)] = true
 					pub_key := btc.PublicFromPrivate(sec, true)
-					publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub_key, AddrVerPubkey()))
-					compressed_key = append(compressed_key, true) // stealth keys are always compressed
+					var rec walrec
+					rec.priv = sec
+					rec.label = lab
+					rec.compr = true // stealth keys are always compressed
+					rec.addr = btc.NewAddrFromPubkey(pub_key, AddrVerPubkey())
+					keys = append(keys, rec)
 				}
 			}
 
@@ -87,8 +89,8 @@ func load_balance(showbalance bool) {
 
 			if !btc.IsP2SH(uo.Pk_script) {
 				fnd := false
-				for j := range publ_addrs {
-					if publ_addrs[j].Owns(uo.Pk_script) {
+				for j := range keys {
+					if keys[j].addr.Owns(uo.Pk_script) {
 						fnd = true
 						break
 					}

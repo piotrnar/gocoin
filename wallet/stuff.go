@@ -127,13 +127,13 @@ func get_change_addr() (chng *btc.BtcAddr) {
 
 	// If change address not specified, send it back to the first input
 	uo := UO(unspentOuts[0])
-	for j := range publ_addrs {
-		if publ_addrs[j].Owns(uo.Pk_script) {
+	for j := range keys {
+		if keys[j].addr.Owns(uo.Pk_script) {
 			if is_stealth[j] {
 				println("Cannot send change to a stealth address. Use -change param")
 				os.Exit(1)
 			}
-			chng = publ_addrs[j]
+			chng = keys[j].addr
 			return
 		}
 	}
@@ -170,11 +170,11 @@ func sec2b58com(pk []byte) string {
 func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
-		for i := range priv_keys {
-			if len(publ_addrs[i].Pubkey)==33 {
-				fmt.Println(sec2b58com(priv_keys[i]), publ_addrs[i].String(), labels[i])
+		for i := range keys {
+			if len(keys[i].addr.Pubkey)==33 {
+				fmt.Println(sec2b58com(keys[i].priv), keys[i].addr.String(), keys[i].label)
 			} else {
-				fmt.Println(sec2b58unc(priv_keys[i]), publ_addrs[i].String(), labels[i])
+				fmt.Println(sec2b58unc(keys[i].priv), keys[i].addr.String(), keys[i].label)
 			}
 		}
 	} else {
@@ -188,17 +188,17 @@ func dump_prvkey() {
 			println("Dump Private Key: Version byte mismatch", a.Version, AddrVerPubkey())
 			return
 		}
-		for i := range priv_keys {
-			if publ_addrs[i].Hash160==a.Hash160 {
-				fmt.Println("Public address:", publ_addrs[i].String(), labels[i])
-				fmt.Println("Public hexdump:", hex.EncodeToString(publ_addrs[i].Pubkey))
-				fmt.Println("Public compressed:", len(publ_addrs[i].Pubkey)==33)
-				if len(publ_addrs[i].Pubkey)==33 {
-					fmt.Println("Private encoded:", sec2b58com(priv_keys[i]))
+		for i := range keys {
+			if keys[i].addr.Hash160==a.Hash160 {
+				fmt.Println("Public address:", keys[i].addr.String(), keys[i].label)
+				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].addr.Pubkey))
+				fmt.Println("Public compressed:", len(keys[i].addr.Pubkey)==33)
+				if len(keys[i].addr.Pubkey)==33 {
+					fmt.Println("Private encoded:", sec2b58com(keys[i].priv))
 				} else {
-					fmt.Println("Private encoded:", sec2b58unc(priv_keys[i]))
+					fmt.Println("Private encoded:", sec2b58unc(keys[i].priv))
 				}
-				fmt.Println("Private hexdump:", hex.EncodeToString(priv_keys[i]))
+				fmt.Println("Private hexdump:", hex.EncodeToString(keys[i].priv))
 				return
 			}
 		}

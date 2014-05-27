@@ -26,10 +26,10 @@ func apply_to_balance(tx *btc.Tx) {
 
 		var addback int
 		for out := range tx.TxOut {
-			for j := range publ_addrs {
-				if publ_addrs[j].Owns(tx.TxOut[out].Pk_script) {
+			for j := range keys {
+				if keys[j].addr.Owns(tx.TxOut[out].Pk_script) {
 					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
-						float64(tx.TxOut[out].Value)/1e8, publ_addrs[j].String())
+						float64(tx.TxOut[out].Value)/1e8, keys[j].addr.String())
 					addback++
 				}
 			}
@@ -81,9 +81,9 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 	for in := range tx.TxIn {
 		uo := UO(unspentOuts[in])
 		var found bool
-		for j := range publ_addrs {
-			if publ_addrs[j].Owns(uo.Pk_script) {
-				er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, publ_addrs[j].Pubkey, priv_keys[j][:])
+		for j := range keys {
+			if keys[j].addr.Owns(uo.Pk_script) {
+				er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, keys[j].addr.Pubkey, keys[j].priv)
 				if er == nil {
 					found = true
 				} else {

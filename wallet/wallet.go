@@ -11,14 +11,20 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
+
+type walrec struct {
+	priv []byte
+	label string
+	compr bool
+	addr *btc.BtcAddr
+}
+
+
 var (
 	type2_secret []byte // used to type-2 wallets
 	first_seed [32]byte
 	// set in make_wallet():
-	priv_keys [][]byte
-	labels []string
-	publ_addrs []*btc.BtcAddr
-	compressed_key []bool
+	keys []walrec
 	curFee uint64
 )
 
@@ -97,17 +103,19 @@ func load_others() {
 				os.Exit(1)
 			}
 
-			priv_keys = append(priv_keys, key)
-			compressed_key = append(compressed_key, compr)
-			publ_addrs = append(publ_addrs, btc.NewAddrFromPubkey(pub, AddrVerPubkey()))
+			var rec walrec
+			rec.priv = key
+			rec.compr = compr
 			if len(pk)>1 {
-				labels = append(labels, pk[1])
+				rec.label = pk[1]
 			} else {
-				labels = append(labels, fmt.Sprint("Other ", len(priv_keys)))
+				rec.label = fmt.Sprint("Other ", len(keys))
 			}
+			rec.addr = btc.NewAddrFromPubkey(pub, AddrVerPubkey())
+			keys = append(keys, rec)
 		}
 		if *verbose {
-			fmt.Println(len(priv_keys), "keys imported from", RawKeysFilename)
+			fmt.Println(len(keys), "keys imported from", RawKeysFilename)
 		}
 	} else {
 		if *verbose {
@@ -174,7 +182,6 @@ func make_wallet() {
 			btc.ShaHash(seed_key, prv_key)
 			copy(seed_key, prv_key)
 		}
-		priv_keys = append(priv_keys, prv_key)
 		if *scankey!="" {
 			new_stealth_address(prv_key)
 			return
@@ -184,22 +191,25 @@ func make_wallet() {
 		if i==0 {
 			copy(first_seed[:], prv_key)
 		}
-		compressed_key = append(compressed_key, !uncompressed)
 		pub := btc.PublicFromPrivate(prv_key, !uncompressed)
-		if pub != nil {
-			adr := btc.NewAddrFromPubkey(pub, AddrVerPubkey())
-
-			if *pubkey!="" && *pubkey==adr.String() {
-				fmt.Println("Public address:", adr.String())
-				fmt.Println("Public hexdump:", hex.EncodeToString(pub))
-				return
-			}
-			publ_addrs = append(publ_addrs, adr)
-			labels = append(labels, fmt.Sprint(lab, " ", i+1))
-			i++
-		} else {
+		if pub == nil {
 			println("PublicFromPrivate error 3")
+			continue
 		}
+		adr := btc.NewAddrFromPubkey(pub, AddrVerPubkey())
+		if *pubkey!="" && *pubkey==adr.String() {
+			fmt.Println("Public address:", adr.String())
+			fmt.Println("Public hexdump:", hex.EncodeToString(pub))
+			return
+		}
+
+		var rec walrec
+		rec.priv = prv_key
+		rec.compr = !uncompressed
+		rec.addr = adr
+		rec.label = fmt.Sprint(lab, " ", i+1)
+		keys = append(keys, rec)
+		i++
 	}
 	if *verbose {
 		fmt.Println("Private keys re-generated")
@@ -213,19 +223,19 @@ func dump_addrs() {
 
 	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
 	if type2_secret!=nil {
-		fmt.Fprintln(f, "#", hex.EncodeToString(publ_addrs[0].Pubkey))
+		fmt.Fprintln(f, "#", hex.EncodeToString(keys[0].addr.Pubkey))
 		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
 	}
-	for i := range publ_addrs {
+	for i := range keys {
 		if !*noverify {
-			if er := btc.VerifyKeyPair(priv_keys[i], publ_addrs[i].Pubkey); er!=nil {
+			if er := btc.VerifyKeyPair(keys[i].priv, keys[i].addr.Pubkey); er!=nil {
 				println("Something wrong with key at index", i, " - abort!", er.Error())
 				os.Exit(1)
 			}
 		}
-		fmt.Println(publ_addrs[i].String(), labels[i])
+		fmt.Println(keys[i].addr.String(), keys[i].label)
 		if f != nil {
-			fmt.Fprintln(f, publ_addrs[i].String(), labels[i])
+			fmt.Fprintln(f, keys[i].addr.String(), keys[i].label)
 		}
 	}
 	if f != nil {

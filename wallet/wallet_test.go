@@ -9,6 +9,7 @@ import (
 const (
 	SECRET = "test_secret"
 	SEED_PASS = "qwerty12345"
+	CONFIG_FILE = "test_wallet.cfg"
 
 	OTHERS = "test_others"
 )
@@ -16,14 +17,12 @@ const (
 
 func start() error {
 	PassSeedFilename = SECRET
+	os.Setenv("GOCOIN_WALLET_CONFIG", CONFIG_FILE)
 	return ioutil.WriteFile(SECRET, []byte(SEED_PASS), 0600)
 }
 
 func reset_wallet() {
-	publ_addrs = nil
-	compressed_key = nil
-	labels = nil
-	priv_keys = nil
+	keys = nil
 }
 
 func stop() {
@@ -35,20 +34,11 @@ func stop() {
 func mkwal_check(t *testing.T, exp string) {
 	reset_wallet()
 	make_wallet()
-	if int(keycnt) != len(publ_addrs) {
-		t.Error("publ_addrs - wrong number", len(publ_addrs))
+	if int(keycnt) != len(keys) {
+		t.Error("keys - wrong number")
 	}
-	if int(keycnt) != len(compressed_key) {
-		t.Error("compressed_key - wrong number")
-	}
-	if int(keycnt) != len(labels) {
-		t.Error("labels - wrong number")
-	}
-	if int(keycnt) != len(priv_keys) {
-		t.Error("priv_keys - wrong number")
-	}
-	if publ_addrs[keycnt-1].String() != exp {
-		t.Error("Expected address mismatch", publ_addrs[keycnt-1].String(), exp)
+	if keys[keycnt-1].addr.String() != exp {
+		t.Error("Expected address mismatch", keys[keycnt-1].addr.String(), exp)
 	}
 }
 
@@ -105,4 +95,19 @@ func TestMakeWallet(t *testing.T) {
 
 	testnet = false
 	mkwal_check(t, "19LYstQNGATfFoa8KsPK4N37Z6tojngQaX")
+}
+
+
+func TestExportPriv(t *testing.T) {
+	defer stop()
+	if start() != nil {
+		t.Error("start failed")
+	}
+
+	waltype = 3
+	uncompressed = false
+	testnet = false
+	mkwal_check(t, "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
+	*dumppriv  = "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R"
+	dump_prvkey()
 }
