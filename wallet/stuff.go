@@ -180,7 +180,7 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 }
 
 
-func AddrVerPubkey() byte {
+func ver_pubkey() byte {
 	if litecoin {
 		return ltc.AddrVerPubkey(testnet)
 	} else {
@@ -189,11 +189,11 @@ func AddrVerPubkey() byte {
 }
 
 
-func AddrVerScript() byte {
+func ver_script() byte {
 	// for litecoin the version is identical
 	return btc.AddrVerScript(testnet)
 }
 
-func AddrVerSecret() byte {
-	return AddrVerPubkey() + 0x80
+func ver_secret() byte {
+	return ver_pubkey() + 0x80
 }

@@ -48,8 +48,8 @@ func load_others() {
 				}
 				continue
 			}
-			if rec.Version!=AddrVerSecret() {
-				println(pk[0][:6], "has version", rec.Version, "while we expect", AddrVerSecret())
+			if rec.Version!=ver_secret() {
+				println(pk[0][:6], "has version", rec.Version, "while we expect", ver_secret())
 				fmt.Println("You may want to play with -t or -ltc switch")
 			}
 			if len(pk)>1 {
@@ -113,7 +113,7 @@ func make_wallet() {
 	}
 
 	if *verbose {
-		fmt.Println("Generating", keycnt, "keys, version", AddrVerPubkey(),"...")
+		fmt.Println("Generating", keycnt, "keys, version", ver_pubkey(),"...")
 	}
 
 	first_determ_idx = len(keys)
@@ -134,7 +134,7 @@ func make_wallet() {
 			return
 		}
 
-		rec := btc.NewPrivateAddr(prv_key, AddrVerSecret(), !uncompressed)
+		rec := btc.NewPrivateAddr(prv_key, ver_secret(), !uncompressed)
 
 		if *pubkey!="" && *pubkey==rec.BtcAddr.String() {
 			fmt.Println("Public address:", rec.BtcAddr.String())
