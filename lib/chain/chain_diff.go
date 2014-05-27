@@ -30,7 +30,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 			// If the new block's timestamp is more than 2* 10 minutes
 			// then allow mining of a min-difficulty block.
 			if ts > lst.Timestamp() + TargetSpacing*2 {
-				return MaxPOWBits;
+				return MaxPOWBits
 			} else {
 				// Return the last non-special-min-difficulty-rules-block
 				prv := lst
