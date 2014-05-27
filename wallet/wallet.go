@@ -190,17 +190,22 @@ func public_to_key(pubkey []byte) *btc.PrivateAddr {
 }
 
 
+func hash_to_key(h160 [20]byte) *btc.PrivateAddr {
+	for i := range keys {
+		if keys[i].BtcAddr.Hash160==h160 {
+			return keys[i]
+		}
+	}
+	return nil
+}
+
+
 func address_to_key(addr string) *btc.PrivateAddr {
-	ad2s, e := btc.NewAddrFromString(addr)
+	a, e := btc.NewAddrFromString(addr)
 	if e != nil {
 		println("Cannot Decode address", addr)
 		println(e.Error())
 		os.Exit(1)
 	}
-	for i := range keys {
-		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
-			return keys[i]
-		}
-	}
-	return nil
+	return hash_to_key(a.Hash160)
 }

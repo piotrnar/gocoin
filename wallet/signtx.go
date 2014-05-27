@@ -80,21 +80,22 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 	all_signed = true
 	for in := range tx.TxIn {
 		uo := UO(unspentOuts[in])
-		var found bool
-		for j := range keys {
-			if keys[j].BtcAddr.Owns(uo.Pk_script) {
-				er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, keys[j].BtcAddr.Pubkey, keys[j].Key)
-				if er == nil {
-					found = true
-				} else {
-					fmt.Println("Error signing input", in, "of", len(tx.TxIn))
-					fmt.Println("...", er.Error())
-				}
-				break
-			}
+		adr := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
+		if adr == nil {
+			fmt.Println("WARNING: Downt know how to sign input number", in)
+			fmt.Println(" Pk_script:", hex.EncodeToString(uo.Pk_script))
+			all_signed = false
+			continue
 		}
-		if !found {
-			fmt.Println("WARNING: You do not have key for", hex.EncodeToString(uo.Pk_script))
+		k := hash_to_key(adr.Hash160)
+		if k == nil {
+			fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
+			all_signed = false
+			continue
+		}
+		er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+		if er != nil {
+			fmt.Println("ERROR: Sign failed for input number", in, er.Error())
 			all_signed = false
 		}
 	}
