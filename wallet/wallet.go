@@ -21,7 +21,7 @@ type walrec struct {
 
 var (
 	type2_secret []byte // used to type-2 wallets
-	first_seed [32]byte
+	first_seed []byte
 	// set in make_wallet():
 	keys []walrec
 	curFee uint64
@@ -187,7 +187,7 @@ func make_wallet() {
 
 		// for stealth keys
 		if i==0 {
-			copy(first_seed[:], prv_key)
+			first_seed = prv_key
 		}
 		pub := btc.PublicFromPrivate(prv_key, !uncompressed)
 		if pub == nil {

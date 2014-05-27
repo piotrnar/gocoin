@@ -44,7 +44,7 @@ func load_balance(showbalance bool) {
 					fmt.Println("ERROR at stealth", txid.String(), vout, e.Error())
 				} else {
 					// add a new key to the wallet
-					sec := btc.DeriveNextPrivate(first_seed[:], c)
+					sec := btc.DeriveNextPrivate(first_seed, c)
 					is_stealth[len(keys)] = true
 					pub_key := btc.PublicFromPrivate(sec, true) // stealth keys are always compressed
 					var rec walrec

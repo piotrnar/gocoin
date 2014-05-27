@@ -102,10 +102,9 @@ func main() {
 			fmt.Println("Cleaning up private keys")
 		}
 		for k := range keys {
-			sys.ClearBuffer(first_seed[:])
-			sys.ClearBuffer(type2_secret)
 			sys.ClearBuffer(keys[k].priv)
 		}
+		sys.ClearBuffer(type2_secret)
 	}()
 
 	if *pubkey!="" || *scankey!="" {
