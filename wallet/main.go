@@ -58,12 +58,6 @@ var (
 	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 	allowextramsigns *bool = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 
-	// set in load_balance():
-	unspentOuts []*btc.TxPrevOut
-	unspentOutsLabel []string
-	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
-	totBtc uint64
-
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
 	sendTo []oneSendTo

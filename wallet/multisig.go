@@ -43,39 +43,56 @@ func make_p2sh() {
 }
 
 
-// sign a given TxIn with all the keys whet we kave in the wallet
-/*
-func multisig_sign_input(in *btc.TxIn, n int) (signed int) {
-	ms, er := btc.NewMultiSigFromScript(in.ScriptSig)
-	if er != nil {
-		return -1 // non-multisig input
-	}
+// reorder signatures to meet order of the keys
+// remove signatuers made by the same keys
+// remove exessive signatures (keeps transaction size down)
+func multisig_reorder(tx *btc.Tx) (all_signed bool) {
+	all_signed = true
+	for i := range tx.TxIn {
+		ms, _ := btc.NewMultiSigFromScript(tx.TxIn[i].ScriptSig)
+		if ms == nil {
+			continue
+		}
+		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
 
-	for ki := range ms.PublicKeys {
-		for i := range keys {
-			if bytes.Equal(ms.PublicKeys[ki], keys[i].BtcAddr.Pubkey) {
-				hash := tx.SignatureHash(ms.P2SH(), n, btc.SIGHASH_ALL)
-				r, s, e := btc.EcdsaSign(privkey, hash)
-				if e != nil {
-					println(e.Error())
-					return
+		var sigs []*btc.Signature
+		for ki := range ms.PublicKeys {
+			var sig *btc.Signature
+			for si := range ms.Signatures {
+				if btc.EcdsaVerify(ms.PublicKeys[ki], ms.Signatures[si].Bytes(), hash) {
+					//fmt.Println("Key number", ki, "has signature number", si)
+					sig = ms.Signatures[si]
+					break
 				}
-				btcsig := &btc.Signature{HashType:0x01}
-				btcsig.R.Set(r)
-				btcsig.S.Set(s)
-				ms.Signatures = append(ms.Signatures, btcsig)
-				signed++
+			}
+			if sig != nil {
+				sigs = append(sigs, sig)
+			} else if *verbose {
+				fmt.Println("WARNING: Key number", ki, "has no matching signature")
+			}
+
+			if !*allowextramsigns && uint(len(sigs))>=ms.SigsNeeded {
+				break
 			}
 		}
-	}
 
-	if signed > 0 {
-		in.ScriptSig = ms.Bytes()
-	}
+		if *verbose {
+			if len(ms.Signatures) > len(sigs) {
+				fmt.Println("WARNING: Some signatures are obsolete and will be removed", len(ms.Signatures), "=>", len(sigs))
+			} else if len(ms.Signatures) < len(sigs) {
+				fmt.Println("It appears that same key is re-used.", len(sigs)-len(ms.Signatures), "more signatures were added")
+			}
+		}
 
+		ms.Signatures = sigs
+		tx.TxIn[i].ScriptSig = ms.Bytes()
+
+		if len(sigs) < int(ms.SigsNeeded) {
+			all_signed = false
+		}
+	}
 	return
 }
-*/
 
 // sign a multisig transaction with a specific key
 func multisig_sign() {
@@ -115,48 +132,7 @@ func multisig_sign() {
 	}
 
 	// Now re-order the signatures as they shall be:
-	for i := range tx.TxIn {
-		ms, er := btc.NewMultiSigFromScript(tx.TxIn[i].ScriptSig)
-		if er != nil {
-			//println(er.Error())
-			continue
-		}
-		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
-		//fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(hash))
-		//fmt.Println(" ... number of signatures:", len(ms.Signatures))
-
-		var sigs []*btc.Signature
-		for ki := range ms.PublicKeys {
-			//pk := btc.NewPublicKey(ms.PublicKeys[ki])
-			//fmt.Println(ki, hex.EncodeToString(ms.PublicKeys[ki]))
-			var sig *btc.Signature
-			for si := range ms.Signatures {
-				if btc.EcdsaVerify(ms.PublicKeys[ki], ms.Signatures[si].Bytes(), hash) {
-					//fmt.Println("Key number", ki, "has signature number", si)
-					sig = ms.Signatures[si]
-					break
-				}
-			}
-			if sig != nil {
-				sigs = append(sigs, sig)
-			} else if *verbose {
-				fmt.Println("WARNING: Key number", ki, "has no matching signature")
-			}
-
-			if !*allowextramsigns && uint(len(sigs))>=ms.SigsNeeded {
-				break
-			}
-
-		}
-
-		if len(ms.Signatures) > len(sigs) {
-			fmt.Println("WARNING: Some signatures are obsolete and will be removed", len(ms.Signatures), "=>", len(sigs))
-		} else if len(ms.Signatures) < len(sigs) {
-			fmt.Println("It appears that same key is re-used.", len(sigs)-len(ms.Signatures), "more signatures were added")
-		}
-		ms.Signatures = sigs
-		tx.TxIn[i].ScriptSig = ms.Bytes()
-	}
+	multisig_reorder(tx)
 
 	write_tx_file(tx)
 }

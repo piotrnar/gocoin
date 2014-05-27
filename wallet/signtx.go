@@ -10,50 +10,10 @@ import (
 )
 
 
-// apply the chnages to the balance folder
-func apply_to_balance(tx *btc.Tx) {
-	fmt.Println("Applying the transaction to the balance/ folder...")
-	f, _ := os.Create("balance/unspent.txt")
-	if f != nil {
-		for j:=0; j<len(unspentOuts); j++ {
-			if j>len(tx.TxIn) {
-				fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
-			}
-		}
-		if *verbose {
-			fmt.Println(len(tx.TxIn), "spent output(s) removed from 'balance/unspent.txt'")
-		}
-
-		var addback int
-		for out := range tx.TxOut {
-			for j := range keys {
-				if keys[j].BtcAddr.Owns(tx.TxOut[out].Pk_script) {
-					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
-						float64(tx.TxOut[out].Value)/1e8, keys[j].BtcAddr.String())
-					addback++
-				}
-			}
-		}
-		f.Close()
-
-		if addback > 0 {
-			f, _ = os.Create("balance/"+tx.Hash.String()+".tx")
-			if f != nil {
-				f.Write(tx.Serialize())
-				f.Close()
-			}
-			if *verbose {
-				fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
-			}
-		}
-	}
-}
-
-
 // dump hashes to be signed
 func dump_hashes_to_sign(tx *btc.Tx) {
 	for in := range tx.TxIn {
-		uo := UO(unspentOuts[in])
+		uo := getUO(&tx.TxIn[in].Input)
 		if uo==nil {
 			println("Unknown content of unspent input number", in)
 			os.Exit(1)
@@ -77,28 +37,68 @@ func dump_hashes_to_sign(tx *btc.Tx) {
 
 // prepare a signed transaction
 func sign_tx(tx *btc.Tx) (all_signed bool) {
+	var multisig_done bool
 	all_signed = true
+
+	// go througch each input
 	for in := range tx.TxIn {
-		uo := UO(unspentOuts[in])
-		adr := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
-		if adr == nil {
-			fmt.Println("WARNING: Downt know how to sign input number", in)
-			fmt.Println(" Pk_script:", hex.EncodeToString(uo.Pk_script))
-			all_signed = false
-			continue
-		}
-		k := hash_to_key(adr.Hash160)
-		if k == nil {
-			fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
-			all_signed = false
-			continue
-		}
-		er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
-		if er != nil {
-			fmt.Println("ERROR: Sign failed for input number", in, er.Error())
-			all_signed = false
+		if ms, _ := btc.NewMultiSigFromScript(tx.TxIn[in].ScriptSig); ms != nil {
+			hash := tx.SignatureHash(ms.P2SH(), in, btc.SIGHASH_ALL)
+			for ki := range ms.PublicKeys {
+				k := public_to_key(ms.PublicKeys[ki])
+				if k != nil {
+					r, s, e := btc.EcdsaSign(k.Key, hash)
+					if e != nil {
+						println("ERROR in sign_tx:", e.Error())
+						all_signed = false
+					} else {
+						btcsig := &btc.Signature{HashType:0x01}
+						btcsig.R.Set(r)
+						btcsig.S.Set(s)
+
+						ms.Signatures = append(ms.Signatures, btcsig)
+						tx.TxIn[in].ScriptSig = ms.Bytes()
+						multisig_done = true
+					}
+				}
+			}
+		} else {
+			uo := getUO(&tx.TxIn[in].Input)
+			if uo==nil {
+				println("ERROR: Unkown input. Missing balance folder?")
+				all_signed = false
+				continue
+			}
+			adr := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
+			if adr == nil {
+				fmt.Println("WARNING: Don't know how to sign input number", in)
+				fmt.Println(" Pk_script:", hex.EncodeToString(uo.Pk_script))
+				all_signed = false
+				continue
+			}
+			k := hash_to_key(adr.Hash160)
+			if k == nil {
+				fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
+				all_signed = false
+				continue
+			}
+			er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+			if er != nil {
+				fmt.Println("ERROR: Sign failed for input number", in, er.Error())
+				all_signed = false
+			}
 		}
 	}
+
+	// reorder signatures if we signed any multisig inputs
+	if multisig_done && !multisig_reorder(tx) {
+		all_signed = false
+	}
+
+	if !all_signed {
+		fmt.Println("WARNING: Not all the inputs have been signed")
+	}
+
 	return
 }
 
@@ -120,6 +120,12 @@ func write_tx_file(tx *btc.Tx) {
 
 // prepare a signed transaction
 func make_signed_tx() {
+
+	if len(unspentOuts)==0 {
+		println("ERROR: balance/ folder does not contain any unspent outputs")
+		os.Exit(1)
+	}
+
 	// Make an empty transaction
 	tx := new(btc.Tx)
 	tx.Version = 1
@@ -128,7 +134,7 @@ func make_signed_tx() {
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
 	for inpcnt:=0; inpcnt<len(unspentOuts); inpcnt++ {
-		uo := UO(unspentOuts[inpcnt])
+		uo := getUO(&tx.TxIn[inpcnt].Input)
 		// add the input to our transaction:
 		tin := new(btc.TxIn)
 		tin.Input = *unspentOuts[inpcnt]
@@ -196,11 +202,6 @@ func process_raw_tx() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
 		fmt.Println("ERROR: Cannot decode the raw transaction")
-		return
-	}
-
-	if len(unspentOuts) < len(tx.TxIn) {
-		println("Insuffcient number of provided unspent outputs", len(unspentOuts), len(tx.TxIn))
 		return
 	}
 

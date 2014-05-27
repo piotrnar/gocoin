@@ -10,6 +10,15 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+var (
+	// set in load_balance():
+	unspentOuts []*btc.TxPrevOut
+	unspentOutsLabel []string
+	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
+	totBtc uint64
+)
+
+
 // load the content of the "balance/" folder
 func load_balance(showbalance bool) {
 	var unknownInputs, multisigInputs int
@@ -108,6 +117,64 @@ func load_balance(showbalance bool) {
 	if showbalance {
 		if unknownInputs > 0 {
 			fmt.Printf("WARNING: Some inputs (%d) cannot be spent with this password (-v to print them)\n", unknownInputs);
+		}
+	}
+}
+
+// Get TxOut record, by the given TxPrevOut
+func UO(uns *btc.TxPrevOut) *btc.TxOut {
+	tx, _ := loadedTxs[uns.Hash]
+	if tx==nil {
+		println("Unknown content of input", uns.String())
+		os.Exit(1)
+	}
+	return tx.TxOut[uns.Vout]
+}
+
+// Look for specific TxPrevOut in unspentOuts
+func getUO(pto *btc.TxPrevOut) *btc.TxOut {
+	for i := range unspentOuts {
+		if unspentOuts[i].Hash==pto.Hash && unspentOuts[i].Vout==pto.Vout {
+			return UO(unspentOuts[i])
+		}
+	}
+	return nil
+}
+
+
+// apply the chnages to the balance folder
+func apply_to_balance(tx *btc.Tx) {
+	fmt.Println("Applying the transaction to the balance/ folder...")
+	f, _ := os.Create("balance/unspent.txt")
+	if f != nil {
+		for j:=len(tx.TxIn); j<len(unspentOuts); j++ {
+			fmt.Fprintln(f, unspentOuts[j], unspentOutsLabel[j])
+		}
+		if *verbose {
+			fmt.Println(len(tx.TxIn), "spent output(s) removed from 'balance/unspent.txt'")
+		}
+
+		var addback int
+		for out := range tx.TxOut {
+			for j := range keys {
+				if keys[j].BtcAddr.Owns(tx.TxOut[out].Pk_script) {
+					fmt.Fprintf(f, "%s-%03d # %.8f / %s\n", tx.Hash.String(), out,
+						float64(tx.TxOut[out].Value)/1e8, keys[j].BtcAddr.String())
+					addback++
+				}
+			}
+		}
+		f.Close()
+
+		if addback > 0 {
+			f, _ = os.Create("balance/"+tx.Hash.String()+".tx")
+			if f != nil {
+				f.Write(tx.Serialize())
+				f.Close()
+			}
+			if *verbose {
+				fmt.Println(addback, "new output(s) appended to 'balance/unspent.txt'")
+			}
 		}
 	}
 }

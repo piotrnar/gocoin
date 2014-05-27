@@ -14,13 +14,6 @@ import (
 )
 
 
-// Get TxOut record, by the given TxPrevOut
-func UO(uns *btc.TxPrevOut) *btc.TxOut {
-	tx, _ := loadedTxs[uns.Hash]
-	return tx.TxOut[uns.Vout]
-}
-
-
 // Read a line from stdin
 func getline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()

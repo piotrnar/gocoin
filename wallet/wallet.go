@@ -209,3 +209,4 @@ func address_to_key(addr string) *btc.PrivateAddr {
 	}
 	return hash_to_key(a.Hash160)
 }
+
