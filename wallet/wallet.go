@@ -20,6 +20,7 @@ var (
 )
 
 
+// load private keys fo .others file
 func load_others() {
 	f, e := os.Open(RawKeysFilename)
 	if e == nil {
@@ -113,6 +114,8 @@ func make_wallet() {
 	if *verbose {
 		fmt.Println("Generating", keycnt, "keys, version", AddrVerPubkey(),"...")
 	}
+
+	first_determ_idx = len(keys)
 	for i:=uint(0); i < keycnt; {
 		prv_key := make([]byte, 32)
 		if waltype==3 {
@@ -128,11 +131,6 @@ func make_wallet() {
 		if *scankey!="" {
 			new_stealth_address(prv_key)
 			return
-		}
-
-		// for stealth keys
-		if i==0 {
-			first_determ_idx = len(keys)
 		}
 
 		rec := btc.NewPrivateAddr(prv_key, AddrVerSecret(), !uncompressed)
