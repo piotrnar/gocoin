@@ -23,6 +23,7 @@ var (
 	noverify *bool = flag.Bool("q", false, "Do not verify keys while listing them")
 	verbose *bool = flag.Bool("v", false, "Verbose version (print more info)")
 	ask4pass *bool = flag.Bool("p", false, "Force the wallet to ask for seed password")
+	nosseed *bool = flag.Bool("is", false, "Ignore seed from the config file")
 	onlvalid *bool = flag.Bool("o", false, "Process only P2KH outputs that you have a key for")
 	subfee *bool = flag.Bool("f", false, "Substract fee from the first value")
 
