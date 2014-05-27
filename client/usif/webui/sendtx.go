@@ -197,23 +197,22 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				}
 				tx.TxIn[i].ScriptSig = ms.Bytes()
 			}
-			fz, _ = zi.Create("multi2sign.txt")
-			fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
-
 			fz, _ = zi.Create("multi_" + common.CFG.PayCommandName)
+			fmt.Fprintln(fz, "wallet -raw tx2sign.txt")
 			for k, _ := range addrs_to_msign {
 				fmt.Fprintln(fz, "wallet -msign", k, "-raw ...")
 			}
 		} else {
-			// Non-multisig transaction ...
-			fz, _ = zi.Create("tx2sign.txt")
-			fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
-
 			if pay_cmd!="" {
 				fz, _ = zi.Create(common.CFG.PayCommandName)
 				fz.Write([]byte(pay_cmd))
 			}
 		}
+
+		// Non-multisig transaction ...
+		fz, _ = zi.Create("tx2sign.txt")
+		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
+
 
 		zi.Close()
 		w.Header()["Content-Type"] = []string{"application/zip"}
