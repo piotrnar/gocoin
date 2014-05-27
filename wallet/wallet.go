@@ -159,7 +159,7 @@ func dump_addrs() {
 
 	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
 	if type2_secret!=nil {
-		fmt.Fprintln(f, "#", hex.EncodeToString(keys[0].BtcAddr.Pubkey))
+		fmt.Fprintln(f, "#", hex.EncodeToString(keys[first_determ_idx].BtcAddr.Pubkey))
 		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
 	}
 	for i := range keys {
