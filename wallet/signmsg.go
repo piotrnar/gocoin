@@ -16,37 +16,33 @@ func sign_message() {
 	var hash []byte
 	var signkey *btc.PrivateAddr
 
-	if *signhash!="" {
-		var er error
-		hash, er = hex.DecodeString(*signhash)
-		if er != nil {
-			println("Incorrect content of -hash parameter")
-			println(er.Error())
-			return
-		}
-	}
-
 	signkey = address_to_key(*signaddr)
 	if signkey==nil {
 		println("You do not have a private key for", *signaddr)
 		return
 	}
 
-	if hash!=nil { // special case for signing a hash (not message)
-		txsig := new(btc.Signature)
-		txsig.HashType = 0x01
-		r, s, e := btc.EcdsaSign(signkey.Key, hash)
-		if e != nil {
-			println(e.Error())
+	if *signhash!="" {
+		hash, er := hex.DecodeString(*signhash)
+		if er != nil {
+			println("Incorrect content of -hash parameter")
+			println(er.Error())
+			return
+		} else if len(hash)>0 {
+			txsig := new(btc.Signature)
+			txsig.HashType = 0x01
+			r, s, e := btc.EcdsaSign(signkey.Key, hash)
+			if e != nil {
+				println(e.Error())
+				return
+			}
+			txsig.R.Set(r)
+			txsig.S.Set(s)
+			fmt.Println("PublicKey:", hex.EncodeToString(signkey.BtcAddr.Pubkey))
+			fmt.Println(hex.EncodeToString(txsig.Bytes()))
 			return
 		}
-		txsig.R.Set(r)
-		txsig.S.Set(s)
-		fmt.Println("PublicKey:", hex.EncodeToString(signkey.BtcAddr.Pubkey))
-		fmt.Println(hex.EncodeToString(txsig.Bytes()))
-		return
 	}
-
 
 	var msg []byte
 	if *message=="" {
