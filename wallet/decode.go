@@ -172,10 +172,10 @@ func dump_raw_tx() {
 			fmt.Printf("%4d) %s sl=%d seq=%08x\n", i, tx.TxIn[i].Input.String(),
 				len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
 
-			if intx := tx_from_balance(btc.NewUint256(tx.TxIn[i].Input.Hash[:]), true); intx != nil {
+			if intx := tx_from_balance(btc.NewUint256(tx.TxIn[i].Input.Hash[:]), false); intx != nil {
 				val := intx.TxOut[tx.TxIn[i].Input.Vout].Value
 				totin += val
-				fmt.Printf("      + %15s BTC\n", btc.UintToBtc(val))
+				fmt.Printf("%15s BTC\n", btc.UintToBtc(val))
 			} else {
 				noins++
 			}
@@ -228,12 +228,12 @@ func dump_raw_tx() {
 	}
 	fmt.Println("Lock Time:", tx.Lock_time)
 
-	fmt.Println("Total (accounted) input volume:", btc.UintToBtc(totin), "BTC")
-	fmt.Println("Total output volume:", btc.UintToBtc(totout), "BTC")
+	fmt.Println("Output volume:", btc.UintToBtc(totout), "BTC")
 	if noins==0 {
-		fmt.Println("Calculated fee:", btc.UintToBtc(totin-totout), "BTC")
+		fmt.Println("Input volume :", btc.UintToBtc(totin), "BTC")
+		fmt.Println("Transact. fee:", btc.UintToBtc(totin-totout), "BTC")
 	} else {
-		fmt.Println("Warning: cannot calculate the fee")
+		fmt.Println("WARNING: Unable to figure out what the fee is")
 	}
 
 	if !tx.IsCoinBase() {
