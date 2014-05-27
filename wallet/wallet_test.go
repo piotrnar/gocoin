@@ -131,13 +131,13 @@ func TestImportPriv(t *testing.T) {
 
 	// compressed key
 	import_check(t, "KzAqX6gJsmvZmJjNrHk3UDZrgDytgF88KzE21TnGVXPC6e3zRHGi", "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
-	if !keys[0].compr {
+	if !keys[0].addr.IsCompressed() {
 		t.Error("Should be compressed")
 	}
 
 	// uncompressed key
 	import_check(t, "5HqNqndG7xYfJu8KkkJ7AjVUfVsiWxT5AyLUpBsi2Upe5c2WaRj", "1AV28sMrWe81SgBK21o3KjznwUd5dTngnp")
-	if keys[0].compr {
+	if keys[0].addr.IsCompressed() {
 		t.Error("Should be uncompressed")
 	}
 }

@@ -40,7 +40,7 @@ func sign_message() {
 	for i := range keys {
 		if keys[i].addr.Hash160==ad2s.Hash160 {
 			privkey = keys[i].priv
-			compr = keys[i].compr
+			compr = keys[i].addr.IsCompressed()
 
 			// Sign raw hash?
 			if hash!=nil {

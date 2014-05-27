@@ -15,7 +15,6 @@ import (
 type walrec struct {
 	priv []byte
 	label string
-	compr bool
 	addr *btc.BtcAddr
 }
 
@@ -105,7 +104,6 @@ func load_others() {
 
 			var rec walrec
 			rec.priv = key
-			rec.compr = compr
 			if len(pk)>1 {
 				rec.label = pk[1]
 			} else {
@@ -205,7 +203,6 @@ func make_wallet() {
 
 		var rec walrec
 		rec.priv = prv_key
-		rec.compr = !uncompressed
 		rec.addr = adr
 		rec.label = fmt.Sprint(lab, " ", i+1)
 		keys = append(keys, rec)
