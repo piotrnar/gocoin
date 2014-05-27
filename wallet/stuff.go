@@ -163,7 +163,7 @@ func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
 		for i := range keys {
-			fmt.Println(encodedPriv(i), keys[i].addr.String(), keys[i].label)
+			fmt.Println(encodedPriv(i), keys[i].addr.String(), keys[i].addr.Extra.Label)
 		}
 	} else {
 		// single key
@@ -178,7 +178,7 @@ func dump_prvkey() {
 		}
 		for i := range keys {
 			if keys[i].addr.Hash160==a.Hash160 {
-				fmt.Println("Public address:", keys[i].addr.String(), keys[i].label)
+				fmt.Println("Public address:", keys[i].addr.String(), keys[i].addr.Extra.Label)
 				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].addr.Pubkey))
 				fmt.Println("Public compressed:", keys[i].addr.IsCompressed())
 				fmt.Println("Private encoded:", encodedPriv(i))

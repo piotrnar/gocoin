@@ -48,8 +48,8 @@ func load_balance(showbalance bool) {
 					pub_key := btc.PublicFromPrivate(sec, true) // stealth keys are always compressed
 					var rec walrec
 					rec.priv = sec
-					rec.label = lab
 					rec.addr = btc.NewAddrFromPubkey(pub_key, AddrVerPubkey())
+					rec.addr.Extra.Label = lab
 					keys = append(keys, rec)
 				}
 			}

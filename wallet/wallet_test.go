@@ -108,7 +108,7 @@ func import_check(t *testing.T, pk, exp string) {
 	if int(keycnt)+1 != len(keys) {
 		t.Error("keys - wrong number")
 	}
-	if keys[0].label != exp+"lab" {
+	if keys[0].addr.Extra.Label != exp+"lab" {
 		t.Error("Expected label mismatch", keys[0].addr.String(), exp)
 	}
 

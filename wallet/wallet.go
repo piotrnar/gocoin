@@ -14,7 +14,6 @@ import (
 
 type walrec struct {
 	priv []byte
-	label string
 	addr *btc.BtcAddr
 }
 
@@ -104,12 +103,12 @@ func load_others() {
 
 			var rec walrec
 			rec.priv = key
-			if len(pk)>1 {
-				rec.label = pk[1]
-			} else {
-				rec.label = fmt.Sprint("Other ", len(keys))
-			}
 			rec.addr = btc.NewAddrFromPubkey(pub, AddrVerPubkey())
+			if len(pk)>1 {
+				rec.addr.Extra.Label = pk[1]
+			} else {
+				rec.addr.Extra.Label = fmt.Sprint("Other ", len(keys))
+			}
 			keys = append(keys, rec)
 		}
 		if *verbose {
@@ -204,7 +203,7 @@ func make_wallet() {
 		var rec walrec
 		rec.priv = prv_key
 		rec.addr = adr
-		rec.label = fmt.Sprint(lab, " ", i+1)
+		rec.addr.Extra.Label = fmt.Sprint(lab, " ", i+1)
 		keys = append(keys, rec)
 		i++
 	}
@@ -230,9 +229,9 @@ func dump_addrs() {
 				os.Exit(1)
 			}
 		}
-		fmt.Println(keys[i].addr.String(), keys[i].label)
+		fmt.Println(keys[i].addr.String(), keys[i].addr.Extra.Label)
 		if f != nil {
-			fmt.Fprintln(f, keys[i].addr.String(), keys[i].label)
+			fmt.Fprintln(f, keys[i].addr.String(), keys[i].addr.Extra.Label)
 		}
 	}
 	if f != nil {
