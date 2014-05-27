@@ -62,7 +62,7 @@ func getseed(seed []byte) bool {
 		return false
 	}
 
-	if *dump || *scankey!="" {
+	if *list || *scankey!="" {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
@@ -74,7 +74,7 @@ func getseed(seed []byte) bool {
 			}
 			sys.ClearBuffer(pass2[:p2len])
 		}
-		if *dump {
+		if *list {
 			// Maybe he wants to save the password?
 			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
 				e = ioutil.WriteFile(PassSeedFilename, pass[:n], 0600)
