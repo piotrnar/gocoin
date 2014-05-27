@@ -152,26 +152,16 @@ func dump_prvkey() {
 		}
 	} else {
 		// single key
-		a, e := btc.NewAddrFromString(*dumppriv)
-		if e!=nil {
-			println("Dump Private Key:", e.Error())
-			return
+		k := address_to_key(*dumppriv)
+		if k != nil {
+			fmt.Println("Public address:", k.BtcAddr.String(), k.BtcAddr.Extra.Label)
+			fmt.Println("Public hexdump:", hex.EncodeToString(k.BtcAddr.Pubkey))
+			fmt.Println("Public compressed:", k.BtcAddr.IsCompressed())
+			fmt.Println("Private encoded:", k.String())
+			fmt.Println("Private hexdump:", hex.EncodeToString(k.Key))
+		} else {
+			println("Dump Private Key:", *dumppriv, "not found it the wallet")
 		}
-		if a.Version != AddrVerPubkey() {
-			println("Dump Private Key: Version byte mismatch", a.Version, AddrVerPubkey())
-			return
-		}
-		for i := range keys {
-			if keys[i].BtcAddr.Hash160==a.Hash160 {
-				fmt.Println("Public address:", keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
-				fmt.Println("Public hexdump:", hex.EncodeToString(keys[i].BtcAddr.Pubkey))
-				fmt.Println("Public compressed:", keys[i].BtcAddr.IsCompressed())
-				fmt.Println("Private encoded:", keys[i].String())
-				fmt.Println("Private hexdump:", hex.EncodeToString(keys[i].Key))
-				return
-			}
-		}
-		println("Dump Private Key:", a.String(), "not found it the wallet")
 	}
 }
 

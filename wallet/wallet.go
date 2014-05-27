@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"bufio"
+	"bytes"
 	"strings"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -176,4 +177,30 @@ func dump_addrs() {
 		f.Close()
 		fmt.Println("You can find all the addresses in wallet.txt file")
 	}
+}
+
+
+func public_to_key(pubkey []byte) *btc.PrivateAddr {
+	for i := range keys {
+		if bytes.Equal(pubkey, keys[i].BtcAddr.Pubkey) {
+			return keys[i]
+		}
+	}
+	return nil
+}
+
+
+func address_to_key(addr string) *btc.PrivateAddr {
+	ad2s, e := btc.NewAddrFromString(addr)
+	if e != nil {
+		println("Cannot Decode address", addr)
+		println(e.Error())
+		os.Exit(1)
+	}
+	for i := range keys {
+		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
+			return keys[i]
+		}
+	}
+	return nil
 }

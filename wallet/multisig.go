@@ -43,6 +43,41 @@ func make_p2sh() {
 }
 
 
+// sign a given TxIn with all the keys whet we kave in the wallet
+/*
+func multisig_sign_input(in *btc.TxIn, n int) (signed int) {
+	ms, er := btc.NewMultiSigFromScript(in.ScriptSig)
+	if er != nil {
+		return -1 // non-multisig input
+	}
+
+	for ki := range ms.PublicKeys {
+		for i := range keys {
+			if bytes.Equal(ms.PublicKeys[ki], keys[i].BtcAddr.Pubkey) {
+				hash := tx.SignatureHash(ms.P2SH(), n, btc.SIGHASH_ALL)
+				r, s, e := btc.EcdsaSign(privkey, hash)
+				if e != nil {
+					println(e.Error())
+					return
+				}
+				btcsig := &btc.Signature{HashType:0x01}
+				btcsig.R.Set(r)
+				btcsig.S.Set(s)
+				ms.Signatures = append(ms.Signatures, btcsig)
+				signed++
+			}
+		}
+	}
+
+	if signed > 0 {
+		in.ScriptSig = ms.Bytes()
+	}
+
+	return
+}
+*/
+
+// sign a multisig transaction with a specific key
 func multisig_sign() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
@@ -51,23 +86,9 @@ func multisig_sign() {
 		return
 	}
 
-	ad2s, e := btc.NewAddrFromString(*multisign)
-	if e != nil {
-		println("BTC addr:", e.Error())
-		return
-	}
-
-	var privkey []byte
-
-	for i := range keys {
-		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
-			privkey = keys[i].Key
-			break
-		}
-	}
-
-	if privkey==nil {
-		println("You do not know a key for address", ad2s.String())
+	k := address_to_key(*multisign)
+	if k==nil {
+		println("You do not know a key for address", *multisign)
 		return
 	}
 
@@ -80,7 +101,7 @@ func multisig_sign() {
 		hash := tx.SignatureHash(ms.P2SH(), i, btc.SIGHASH_ALL)
 		//fmt.Println("Input number", i, len(ms.Signatures), " - hash to sign:", hex.EncodeToString(hash))
 
-		r, s, e := btc.EcdsaSign(privkey, hash)
+		r, s, e := btc.EcdsaSign(k.Key, hash)
 		if e != nil {
 			println(e.Error())
 			return

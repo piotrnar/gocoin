@@ -26,24 +26,9 @@ func sign_message() {
 		}
 	}
 
-	ad2s, e := btc.NewAddrFromString(*signaddr)
-	if e != nil {
-		println(e.Error())
-		if *signhash!="" {
-			println("Always use -sign <addr> along with -hash <msghash>")
-		}
-		return
-	}
-
-
-	for i := range keys {
-		if keys[i].BtcAddr.Hash160==ad2s.Hash160 {
-			signkey = keys[i]
-			break
-		}
-	}
+	signkey = address_to_key(*signaddr)
 	if signkey==nil {
-		println("You do not have a private key for", ad2s.String())
+		println("You do not have a private key for", *signaddr)
 		return
 	}
 
@@ -98,15 +83,15 @@ func sign_message() {
 	copy(sb[1+64-len(sd):], sd)
 
 	rpk := btcsig.RecoverPublicKey(hash[:], 0)
-	sa := btc.NewAddrFromPubkey(rpk.Bytes(signkey.IsCompressed()), ad2s.Version)
-	if sa.Hash160==ad2s.Hash160 {
+	sa := btc.NewAddrFromPubkey(rpk.Bytes(signkey.IsCompressed()), signkey.BtcAddr.Version)
+	if sa.Hash160==signkey.BtcAddr.Hash160 {
 		fmt.Println(base64.StdEncoding.EncodeToString(sb[:]))
 		return
 	}
 
 	rpk = btcsig.RecoverPublicKey(hash[:], 1)
-	sa = btc.NewAddrFromPubkey(rpk.Bytes(signkey.IsCompressed()), ad2s.Version)
-	if sa.Hash160==ad2s.Hash160 {
+	sa = btc.NewAddrFromPubkey(rpk.Bytes(signkey.IsCompressed()), signkey.BtcAddr.Version)
+	if sa.Hash160==signkey.BtcAddr.Hash160 {
 		sb[0]++
 		fmt.Println(base64.StdEncoding.EncodeToString(sb[:]))
 		return
