@@ -1,4 +1,5 @@
 1.0.0rc7
+* Wallet: more reorganizing and cleaing
 
 1.0.0rc6 - 2014-05-28
 * Wallet: "-raw" command can now sign also multisig inputs (if they already have the script)
