@@ -82,7 +82,6 @@ func main() {
 
 	// decode raw transaction?
 	if *dumptxfn!="" {
-		//load_balance(false)
 		dump_raw_tx()
 		return
 	}
@@ -146,14 +145,14 @@ func main() {
 		}
 
 		// this must be signing of a raw trasnaction
-		load_balance(true)
+		load_balance()
 		process_raw_tx()
 		return
 	}
 
 	// make the wallet nad print balance
 	make_wallet()
-	load_balance(true)
+	load_balance()
 
 	// send command?
 	if send_request() {
@@ -164,4 +163,6 @@ func main() {
 		make_signed_tx()
 		return
 	}
+
+	show_balance()
 }
