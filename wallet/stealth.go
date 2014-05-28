@@ -30,7 +30,7 @@ func new_stealth_address(prv_key []byte) {
 
 	if *prefix>16 {
 		if *prefix>24 {
-			fmt.Println("The stealth prefix cannot be bigger than 32", *prefix)
+			fmt.Println("The stealth prefix cannot be bigger than 24", *prefix)
 			os.Exit(1)
 		}
 		fmt.Println("WARNING: You chose a prifix length of", *prefix)
