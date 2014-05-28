@@ -28,7 +28,7 @@ func parse_config() {
 	}
 	d, e := ioutil.ReadFile(cfgfn)
 	if e != nil {
-		fmt.Println("wallet.cfg not found")
+		fmt.Println(cfgfn, "not found")
 	} else {
 		lines := strings.Split(string(d), "\n")
 		for i := range lines {
