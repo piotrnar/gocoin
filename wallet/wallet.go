@@ -211,6 +211,17 @@ func address_to_key(addr string) *btc.PrivateAddr {
 }
 
 
+// suuports only P2KH scripts
+func pkscr_to_key(scr []byte) *btc.PrivateAddr {
+	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+		var h [20]byte
+		copy(h[:], scr[3:23])
+		return hash_to_key(h)
+	}
+	return nil
+}
+
+
 func dump_prvkey() {
 	if *dumppriv=="*" {
 		// Dump all private keys
