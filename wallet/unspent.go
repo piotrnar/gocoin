@@ -54,19 +54,21 @@ func NewUnspRec(l []byte) (uns *unspRec) {
 		uns.label = rst[1]
 	}
 
-	str := string(l)
-	if sti:=strings.Index(str, "_StealthC:"); sti!=-1 {
-		c, e := hex.DecodeString(str[sti+10:sti+10+64])
-		if e != nil {
-			fmt.Println("ERROR at stealth", txid.String(), vout, e.Error())
-		} else {
-			// add a new key to the wallet
-			sec := btc.DeriveNextPrivate(keys[first_determ_idx].Key, c)
-			rec := btc.NewPrivateAddr(sec, ver_secret(), true) // stealth keys are always compressed
-			rec.BtcAddr.Extra.Label = uns.label
-			keys = append(keys, rec)
-			uns.stealth = true
-			uns.key = rec
+	if first_determ_idx < len(keys) {
+		str := string(l)
+		if sti:=strings.Index(str, "_StealthC:"); sti!=-1 {
+			c, e := hex.DecodeString(str[sti+10:sti+10+64])
+			if e != nil {
+				fmt.Println("ERROR at stealth", txid.String(), vout, e.Error())
+			} else {
+				// add a new key to the wallet
+				sec := btc.DeriveNextPrivate(keys[first_determ_idx].Key, c)
+				rec := btc.NewPrivateAddr(sec, ver_secret(), true) // stealth keys are always compressed
+				rec.BtcAddr.Extra.Label = uns.label
+				keys = append(keys, rec)
+				uns.stealth = true
+				uns.key = rec
+			}
 		}
 	}
 

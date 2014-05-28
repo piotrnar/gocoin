@@ -155,12 +155,14 @@ func main() {
 		return
 	}
 
+	if *hashes {
+		println("ERROR: You can do -hashes only on a raw transaction")
+		return
+	}
+
 	// send command?
 	if send_request() {
-		if !*hashes {
-			make_wallet()
-		}
-		load_balance(!*hashes)
+		load_balance(true)
 		if spendBtc + feeBtc > totBtc {
 			fmt.Println("ERROR: You are trying to spend more than you own")
 			return
