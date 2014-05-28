@@ -12,7 +12,6 @@ import (
 var (
 	scankey *string = flag.String("scankey", "", "Generate a new stealth using this public scan-key")
 	prefix *uint = flag.Uint("prefix", 0, "Stealth prefix length in bits (maximum 24)")
-	is_stealth map[int] bool = make(map[int]bool)
 )
 
 
