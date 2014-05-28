@@ -41,7 +41,6 @@ var (
 
 	// Sign raw TX
 	rawtx *string  = flag.String("raw", "", "Sign a raw transaction (use hex-encoded string)")
-	hashes *bool = flag.Bool("hashes", false, "Instead of signing, just print hashes to be signed")
 
 	// Decode raw tx
 	dumptxfn *string  = flag.String("d", "", "Decode raw transaction from the specified file")
@@ -138,10 +137,7 @@ func main() {
 			return
 		}
 
-		// dump the hashes to be signed?
-		if !*hashes {
-			make_wallet()
-		}
+		make_wallet()
 
 		// multisig sign with a specific key?
 		if *multisign!="" {
@@ -150,19 +146,17 @@ func main() {
 		}
 
 		// this must be signing of a raw trasnaction
-		load_balance(false)
+		load_balance(true)
 		process_raw_tx()
 		return
 	}
 
-	if *hashes {
-		println("ERROR: You can do -hashes only on a raw transaction")
-		return
-	}
+	// make the wallet nad print balance
+	make_wallet()
+	load_balance(true)
 
 	// send command?
 	if send_request() {
-		load_balance(true)
 		if spendBtc + feeBtc > totBtc {
 			fmt.Println("ERROR: You are trying to spend more than you own")
 			return
@@ -170,8 +164,4 @@ func main() {
 		make_signed_tx()
 		return
 	}
-
-	// If no command specified, just print the balance
-	make_wallet()
-	load_balance(true)
 }
