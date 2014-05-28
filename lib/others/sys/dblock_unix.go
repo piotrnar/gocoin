@@ -29,7 +29,7 @@ func LockDatabaseDir(GocoinHomeDir string) {
 error:
 	println(e.Error())
 	println("Could not lock the databse folder for writing. Another instance might be running.")
-	println("If it is not the case, just delete this file:", DbLockFileName)
+	println("If it is not the case, remove this file:", DbLockFileName)
 	os.Exit(1)
 }
 
