@@ -34,7 +34,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 	var multisig_done bool
 	all_signed = true
 
-	// go througch each input
+	// go through each input
 	for in := range tx.TxIn {
 		if ms, _ := btc.NewMultiSigFromScript(tx.TxIn[in].ScriptSig); ms != nil {
 			hash := tx.SignatureHash(ms.P2SH(), in, btc.SIGHASH_ALL)
@@ -127,15 +127,19 @@ func make_signed_tx() {
 
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
-	for inpcnt:=0; inpcnt<len(unspentOuts); inpcnt++ {
-		uo := UO(unspentOuts[inpcnt])
+	for i := range unspentOuts {
+		if unspentOuts[i].key == nil {
+			continue
+		}
+		uo := UO(unspentOuts[i])
 		// add the input to our transaction:
 		tin := new(btc.TxIn)
-		tin.Input = *unspentOuts[inpcnt]
+		tin.Input = unspentOuts[i].TxPrevOut
 		tin.Sequence = 0xffffffff
 		tx.TxIn = append(tx.TxIn, tin)
 
 		btcsofar += uo.Value
+		unspentOuts[i].spent = true
 		if !*useallinputs && ( btcsofar >= spendBtc + feeBtc ) {
 			break
 		}
