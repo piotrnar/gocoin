@@ -13,6 +13,12 @@ type oneSendTo struct {
 	amount uint64
 }
 
+var (
+	// set in parse_spend():
+	spendBtc, feeBtc, changeBtc uint64
+	sendTo []oneSendTo
+)
+
 // parse the "-send ..." parameter
 func parse_spend() {
 	outs := strings.Split(*send, ",")
@@ -45,7 +51,7 @@ func parse_spend() {
 	}
 }
 
-
+// parse the "-batch ..." parameter
 func parse_batch() {
 	f, e := os.Open(*batch)
 	if e == nil {
@@ -89,7 +95,7 @@ func parse_batch() {
 	}
 }
 
-
+// returns true if spend operation has been requested
 func send_request() bool {
 	feeBtc = curFee
 	if *send!="" {

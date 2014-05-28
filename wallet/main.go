@@ -57,10 +57,6 @@ var (
 	p2sh *string  = flag.String("p2sh", "", "Insert P2SH script into each transaction input (use together with -raw)")
 	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 	allowextramsigns *bool = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
-
-	// set in parse_spend():
-	spendBtc, feeBtc, changeBtc uint64
-	sendTo []oneSendTo
 )
 
 
