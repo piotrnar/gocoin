@@ -24,7 +24,8 @@ var (
 	// set in load_balance():
 	unspentOuts []*unspRec
 	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
-	totBtc uint64
+	totBtc, msBtc uint64
+	knownInputs, unknownInputs, multisigInputs uint
 )
 
 func (u *unspRec) String() string {
@@ -81,8 +82,7 @@ func NewUnspRec(l []byte) (uns *unspRec) {
 
 
 // load the content of the "balance/" folder
-func load_balance(showbalance bool) {
-	var unknownInputs int
+func load_balance() {
 	f, e := os.Open("balance/unspent.txt")
 	if e != nil {
 		println(e.Error())
@@ -97,16 +97,22 @@ func load_balance(showbalance bool) {
 
 		if uns:=NewUnspRec(l); uns!=nil {
 			uo := UO(uns)
-			if uns.key==nil {
-				uns.key = pkscr_to_key(uo.Pk_script)
-			}
-			// Sum up all the balance and check if we have private key for this input
-			if uns.key!=nil {
-				totBtc += uo.Value
+			if btc.IsP2SH(uo.Pk_script) {
+				msBtc += uo.Value
+				multisigInputs++
 			} else {
-				unknownInputs++
-				if *verbose {
-					fmt.Println("WARNING: Don't know how to sign", uns.TxPrevOut.String())
+				if uns.key==nil {
+					uns.key = pkscr_to_key(uo.Pk_script)
+				}
+				// Sum up all the balance and check if we have private key for this input
+				if uns.key!=nil {
+					totBtc += uo.Value
+					knownInputs++
+				} else {
+					unknownInputs++
+					if *verbose {
+						fmt.Println("WARNING: Don't know how to sign", uns.TxPrevOut.String())
+					}
 				}
 			}
 			unspentOuts = append(unspentOuts, uns)
@@ -115,12 +121,19 @@ func load_balance(showbalance bool) {
 		}
 	}
 	f.Close()
-	fmt.Printf("You have %.8f BTC in %d unspent outputs\n",
-		float64(totBtc)/1e8, len(unspentOuts)-unknownInputs)
-	if showbalance && unknownInputs > 0 {
-		fmt.Println("WARNING:", unknownInputs, "unspendable input(s). Add -v switch to print them.")
+}
+
+
+func show_balance() {
+	fmt.Printf("You have %.8f BTC in %d P2KH outputs\n", float64(totBtc)/1e8, knownInputs)
+	if multisigInputs>0 {
+		fmt.Printf("There is %.8f BTC in %d multisig outputs\n", float64(msBtc)/1e8, multisigInputs)
+	}
+	if unknownInputs > 0 {
+		fmt.Println("WARNING:", unknownInputs, "unspendable inputs (-v to print them).")
 	}
 }
+
 
 // Get TxOut record, by the given TxPrevOut
 func UO(rec *unspRec) *btc.TxOut {
@@ -132,6 +145,7 @@ func UO(rec *unspRec) *btc.TxOut {
 	}
 	return tx.TxOut[uns.Vout]
 }
+
 
 // Look for specific TxPrevOut in unspentOuts
 func getUO(pto *btc.TxPrevOut) *btc.TxOut {
