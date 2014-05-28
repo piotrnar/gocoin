@@ -9,36 +9,6 @@ import (
 )
 
 
-// dump hashes to be signed
-func dump_hashes_to_sign(tx *btc.Tx) {
-	for in := range tx.TxIn {
-		var hash []byte
-		fmt.Printf("Input #%d:\n", in)
-		if ms, _ := btc.NewMultiSigFromScript(tx.TxIn[in].ScriptSig); ms != nil {
-			hash = tx.SignatureHash(ms.P2SH(), in, btc.SIGHASH_ALL)
-			for i := range ms.PublicKeys {
-				fmt.Printf(" wallet -sign %s -hash %s\n",
-					btc.NewAddrFromPubkey(ms.PublicKeys[i], ver_pubkey()),
-					hex.EncodeToString(hash))
-			}
-		} else {
-			uo := getUO(&tx.TxIn[in].Input)
-			if uo==nil {
-				println("Unknown content of unspent input number", in)
-				os.Exit(1)
-			}
-			pubad := addr_from_pkscr(uo.Pk_script)
-			if pubad==nil {
-				println("Cannot decode pkscript of unspent input number", in)
-				os.Exit(1)
-			}
-			hash = tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
-			fmt.Printf(" wallet -sign %s -hash %s\n", pubad.String(), hex.EncodeToString(hash))
-		}
-	}
-}
-
-
 // prepare a signed transaction
 func sign_tx(tx *btc.Tx) (all_signed bool) {
 	var multisig_done bool
@@ -192,20 +162,16 @@ func make_signed_tx() {
 		tx.TxOut = append(tx.TxOut, &btc.TxOut{Value: 0, Pk_script: scr.Bytes()})
 	}
 
-	if *hashes {
-		dump_hashes_to_sign(tx)
-	} else {
-		signed := sign_tx(tx)
-		write_tx_file(tx)
+	signed := sign_tx(tx)
+	write_tx_file(tx)
 
-		if apply2bal && signed {
-			apply_to_balance(tx)
-		}
+	if apply2bal && signed {
+		apply_to_balance(tx)
 	}
 }
 
 
-// sign raw transaction with all the keys we have (or just dump hashes to be signed)
+// sign raw transaction with all the keys we have
 func process_raw_tx() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
@@ -213,10 +179,6 @@ func process_raw_tx() {
 		return
 	}
 
-	if *hashes {
-		dump_hashes_to_sign(tx)
-	} else {
-		sign_tx(tx)
-		write_tx_file(tx)
-	}
+	sign_tx(tx)
+	write_tx_file(tx)
 }
