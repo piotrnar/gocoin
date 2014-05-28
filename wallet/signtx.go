@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/ltc"
 )
 
 
@@ -18,12 +17,7 @@ func dump_hashes_to_sign(tx *btc.Tx) {
 			println("Unknown content of unspent input number", in)
 			os.Exit(1)
 		}
-		var pubad *btc.BtcAddr
-		if litecoin {
-			pubad = ltc.NewAddrFromPkScript(uo.Pk_script, testnet)
-		} else {
-			pubad = btc.NewAddrFromPkScript(uo.Pk_script, testnet)
-		}
+		pubad := addr_from_pkscr(uo.Pk_script)
 		if pubad!=nil {
 			hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
 			fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
@@ -69,7 +63,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 				all_signed = false
 				continue
 			}
-			adr := btc.NewAddrFromPkScript(uo.Pk_script, testnet)
+			adr := addr_from_pkscr(uo.Pk_script)
 			if adr == nil {
 				fmt.Println("WARNING: Don't know how to sign input number", in)
 				fmt.Println(" Pk_script:", hex.EncodeToString(uo.Pk_script))

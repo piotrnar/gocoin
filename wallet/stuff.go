@@ -114,23 +114,24 @@ func get_change_addr() (chng *btc.BtcAddr) {
 			println("Change address:", e.Error())
 			os.Exit(1)
 		}
+		assert_address_version(chng)
 		return
 	}
 
 	// If change address not specified, send it back to the first input
-	uo := UO(unspentOuts[0])
-	for j := range keys {
-		if keys[j].BtcAddr.Owns(uo.Pk_script) {
-			if is_stealth[j] {
-				println("Cannot send change to a stealth address. Use -change param")
-				os.Exit(1)
+	for idx := range unspentOuts {
+		uo := UO(unspentOuts[idx])
+		for j := range keys {
+			if keys[j].BtcAddr.Owns(uo.Pk_script) {
+				if !is_stealth[j] {
+					chng = keys[j].BtcAddr
+					return
+				}
 			}
-			chng = keys[j].BtcAddr
-			return
 		}
 	}
 
-	fmt.Println("You do not own the address of the first input, nor specified -change")
+	fmt.Println("ERROR: Could not determine address where to send change. Add -change switch")
 	os.Exit(1)
 	return
 }
@@ -179,7 +180,6 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 	return
 }
 
-
 func ver_pubkey() byte {
 	if litecoin {
 		return ltc.AddrVerPubkey(testnet)
@@ -188,12 +188,30 @@ func ver_pubkey() byte {
 	}
 }
 
-
 func ver_script() byte {
 	// for litecoin the version is identical
 	return btc.AddrVerScript(testnet)
 }
 
+func ver_stealth() byte {
+	return btc.StealthAddressVersion(testnet)
+}
+
 func ver_secret() byte {
 	return ver_pubkey() + 0x80
+}
+
+func addr_from_pkscr(scr []byte) *btc.BtcAddr {
+	if litecoin {
+		return ltc.NewAddrFromPkScript(scr, testnet)
+	} else {
+		return btc.NewAddrFromPkScript(scr, testnet)
+	}
+}
+
+func assert_address_version(a *btc.BtcAddr) {
+	if a.Version!=ver_pubkey() && a.Version!=ver_script() && a.Version!=ver_stealth() {
+		println("Sending address", a.String(), "has an incorrect version", a.Version)
+		os.Exit(1)
+	}
 }
