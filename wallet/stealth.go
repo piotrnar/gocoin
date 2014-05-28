@@ -33,8 +33,8 @@ func new_stealth_address(prv_key []byte) {
 			fmt.Println("The stealth prefix cannot be bigger than 24", *prefix)
 			os.Exit(1)
 		}
-		fmt.Println("WARNING: You chose a prifix length of", *prefix)
-		fmt.Println("WARNING: Big prefixes endanger your anonymity.")
+		fmt.Println("WARNING: You chose a prefix length of", *prefix)
+		fmt.Println(" Long prefixes endanger anonymity of stealth address.")
 	}
 
 	pub := btc.PublicFromPrivate(prv_key, true)
