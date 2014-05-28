@@ -4,6 +4,9 @@ Client:
 * Improve the database folder locking in Linux
 * Implement "mempool"
 
+Tools:
+* txaddsig - make it to work with multisig
+
 Wallet:
 * Write some automated tests
 * Add Type-4 as HD Wallet

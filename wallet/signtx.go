@@ -12,18 +12,28 @@ import (
 // dump hashes to be signed
 func dump_hashes_to_sign(tx *btc.Tx) {
 	for in := range tx.TxIn {
-		uo := getUO(&tx.TxIn[in].Input)
-		if uo==nil {
-			println("Unknown content of unspent input number", in)
-			os.Exit(1)
-		}
-		pubad := addr_from_pkscr(uo.Pk_script)
-		if pubad!=nil {
-			hash := tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
-			fmt.Printf("Input #%d:\n\tHash : %s\n\tAddr : %s\n", in, hex.EncodeToString(hash), pubad.String())
+		var hash []byte
+		fmt.Printf("Input #%d:\n", in)
+		if ms, _ := btc.NewMultiSigFromScript(tx.TxIn[in].ScriptSig); ms != nil {
+			hash = tx.SignatureHash(ms.P2SH(), in, btc.SIGHASH_ALL)
+			for i := range ms.PublicKeys {
+				fmt.Printf(" wallet -sign %s -hash %s\n",
+					btc.NewAddrFromPubkey(ms.PublicKeys[i], ver_pubkey()),
+					hex.EncodeToString(hash))
+			}
 		} else {
-			println("Cannot decode pkscript of unspent input number", in)
-			os.Exit(1)
+			uo := getUO(&tx.TxIn[in].Input)
+			if uo==nil {
+				println("Unknown content of unspent input number", in)
+				os.Exit(1)
+			}
+			pubad := addr_from_pkscr(uo.Pk_script)
+			if pubad==nil {
+				println("Cannot decode pkscript of unspent input number", in)
+				os.Exit(1)
+			}
+			hash = tx.SignatureHash(uo.Pk_script, in, btc.SIGHASH_ALL)
+			fmt.Printf(" wallet -sign %s -hash %s\n", pubad.String(), hex.EncodeToString(hash))
 		}
 	}
 }

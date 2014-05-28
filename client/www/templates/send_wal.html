@@ -234,7 +234,8 @@ function add_new_output() {
 
 	c = r.insertCell(-1)
 	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
-	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')">'
+	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+
+		addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')" tabindex="-1">'
 
 	// amount BTC
 	c = r.insertCell(-1)
@@ -246,6 +247,8 @@ function add_new_output() {
 	val.onchange = recalc_to_pay
 	val.onkeyup = recalc_to_pay
 	val.className = 'mono r'
+	val.setAttribute("autocomplete","off")
+	val.autoComplete = false
 	val.value = ''
 	c.appendChild(val)
 
@@ -257,6 +260,7 @@ function add_new_output() {
 	val.id = 'mbtc_out'+idx
 	val.className = 'mono r dis'
 	val.readOnly = true
+	val.tabIndex = -1
 	c.appendChild(val)
 }
 
@@ -308,7 +312,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td align="right">Transaction fee:
     </table>
     <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.00001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
-    <td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly">
+    <td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr title="Transaction change">
@@ -319,7 +323,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
     <td class="r">
-    <input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly">
+    <input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>
