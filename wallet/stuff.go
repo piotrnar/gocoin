@@ -120,14 +120,13 @@ func get_change_addr() (chng *btc.BtcAddr) {
 
 	// If change address not specified, send it back to the first input
 	for idx := range unspentOuts {
+		if unspentOuts[idx].stealth {
+			continue // cannot send change to a stelath address since we don't know the scankey
+		}
 		uo := UO(unspentOuts[idx])
-		for j := range keys {
-			if keys[j].BtcAddr.Owns(uo.Pk_script) {
-				if !is_stealth[j] {
-					chng = keys[j].BtcAddr
-					return
-				}
-			}
+		if k := pkscr_to_key(uo.Pk_script); k!=nil {
+			chng = k.BtcAddr
+			return
 		}
 	}
 
