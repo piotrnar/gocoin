@@ -11,8 +11,8 @@ The downloader can be used before you run the client for the first time, but als
 e.g. if you had your node inactive for some time and want to quickly sync it up with the network.
 
 
-# Webpage
-The official webpage of the project:
+# Website
+The official web page of the project:
 
 * http://www.assets-otc.com/gocoin
 
