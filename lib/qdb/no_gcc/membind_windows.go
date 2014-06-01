@@ -1,5 +1,5 @@
 /*
-If you cannot compile this file, just replace it with the one from no_gcc/ folder
+Sometimes this does not quite work (just experimental)
 */
 
 package qdb
