@@ -10,7 +10,6 @@ func (v *oneIdx) FreeData() {
 
 func (v *oneIdx) Slice() (res []byte) {
 	return v.data
-	return
 }
 
 func newIdx(v []byte, f uint32) (r *oneIdx) {
