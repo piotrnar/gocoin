@@ -27,20 +27,20 @@ func parse_spend() {
 		tmp := strings.Split(strings.Trim(outs[i], " "), "=")
 		if len(tmp)!=2 {
 			println("The outputs must be in a format address1=amount1[,addressN=amountN]")
-			os.Exit(1)
+			cleanExit(1)
 		}
 
 		a, e := btc.NewAddrFromString(tmp[0])
 		if e != nil {
 			println("NewAddrFromString:", e.Error())
-			os.Exit(1)
+			cleanExit(1)
 		}
 		assert_address_version(a)
 
 		am, er := btc.StringToSatoshis(tmp[1])
 		if er != nil {
 			println("Incorrect amount: ", tmp[1], er.Error())
-			os.Exit(1)
+			cleanExit(1)
 		}
 		if *subfee {
 			am -= curFee
@@ -67,7 +67,7 @@ func parse_batch() {
 			tmp := strings.SplitN(strings.Trim(string(li), " "), "=", 2)
 			if len(tmp)<2 {
 				println("Error in the batch file line", lcnt)
-				os.Exit(1)
+				cleanExit(1)
 			}
 			if tmp[0][0]=='#' {
 				continue // Just a comment-line
@@ -76,14 +76,14 @@ func parse_batch() {
 			a, e := btc.NewAddrFromString(tmp[0])
 			if e != nil {
 				println("NewAddrFromString:", e.Error())
-				os.Exit(1)
+				cleanExit(1)
 			}
 			assert_address_version(a)
 
 			am, e := btc.StringToSatoshis(tmp[1])
 			if e != nil {
 				println("StringToSatoshis:", e.Error())
-				os.Exit(1)
+				cleanExit(1)
 			}
 
 			sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
@@ -91,7 +91,7 @@ func parse_batch() {
 		}
 	} else {
 		println(e.Error())
-		os.Exit(1)
+		cleanExit(1)
 	}
 }
 

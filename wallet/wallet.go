@@ -78,7 +78,7 @@ func make_wallet() {
 
 	seed_key := make([]byte, 32)
 	if !getseed(seed_key) {
-		os.Exit(0)
+		cleanExit(0)
 	}
 
 	defer func() {
@@ -96,7 +96,7 @@ func make_wallet() {
 				d, e := hex.DecodeString(type2sec)
 				if e!=nil {
 					println("t2sec error:", e.Error())
-					os.Exit(1)
+					cleanExit(1)
 				}
 				type2_secret = d
 			} else {
@@ -109,7 +109,7 @@ func make_wallet() {
 
 		default:
 			println("ERROR: Unsupported wallet type", waltype)
-			os.Exit(0)
+			cleanExit(1)
 	}
 
 	if *verbose {
@@ -165,7 +165,7 @@ func dump_addrs() {
 		if !*noverify {
 			if er := btc.VerifyKeyPair(keys[i].Key, keys[i].BtcAddr.Pubkey); er!=nil {
 				println("Something wrong with key at index", i, " - abort!", er.Error())
-				os.Exit(1)
+				cleanExit(1)
 			}
 		}
 		fmt.Println(keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
@@ -205,7 +205,7 @@ func address_to_key(addr string) *btc.PrivateAddr {
 	if e != nil {
 		println("Cannot Decode address", addr)
 		println(e.Error())
-		os.Exit(1)
+		cleanExit(1)
 	}
 	return hash_to_key(a.Hash160)
 }

@@ -23,9 +23,6 @@ type unspRec struct {
 var (
 	// set in load_balance():
 	unspentOuts []*unspRec
-	loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
-	totBtc, msBtc uint64
-	knownInputs, unknownInputs, multisigInputs uint
 )
 
 func (u *unspRec) String() string {
@@ -73,20 +70,15 @@ func NewUnspRec(l []byte) (uns *unspRec) {
 		}
 	}
 
-	if _, ok := loadedTxs[txid.Hash]; !ok {
-		loadedTxs[txid.Hash] = tx_from_balance(txid, true)
-	}
-
 	return
 }
 
 
 // load the content of the "balance/" folder
-func load_balance() {
+func load_balance() error {
 	f, e := os.Open("balance/unspent.txt")
-	if e != nil {
-		println(e.Error())
-		return
+	if e!=nil {
+		return e
 	}
 	rd := bufio.NewReader(f)
 	for {
@@ -94,26 +86,9 @@ func load_balance() {
 		if len(l)==0 && e!=nil {
 			break
 		}
-
 		if uns:=NewUnspRec(l); uns!=nil {
-			uo := UO(uns)
-			if btc.IsP2SH(uo.Pk_script) {
-				msBtc += uo.Value
-				multisigInputs++
-			} else {
-				if uns.key==nil {
-					uns.key = pkscr_to_key(uo.Pk_script)
-				}
-				// Sum up all the balance and check if we have private key for this input
-				if uns.key!=nil {
-					totBtc += uo.Value
-					knownInputs++
-				} else {
-					unknownInputs++
-					if *verbose {
-						fmt.Println("WARNING: Don't know how to sign", uns.TxPrevOut.String())
-					}
-				}
+			if uns.key==nil {
+				uns.key = pkscr_to_key(getUO(&uns.TxPrevOut).Pk_script)
 			}
 			unspentOuts = append(unspentOuts, uns)
 		} else {
@@ -121,10 +96,30 @@ func load_balance() {
 		}
 	}
 	f.Close()
+	return nil
 }
 
 
 func show_balance() {
+	var totBtc, msBtc, knownInputs, unknownInputs, multisigInputs uint64
+	for i := range unspentOuts {
+		uo := getUO(&unspentOuts[i].TxPrevOut)
+		if btc.IsP2SH(uo.Pk_script) {
+			msBtc += uo.Value
+			multisigInputs++
+		} else {
+			// Sum up all the balance and check if we have private key for this input
+			if unspentOuts[i].key!=nil {
+				totBtc += uo.Value
+				knownInputs++
+			} else {
+				unknownInputs++
+				if *verbose {
+					fmt.Println("WARNING: Don't know how to sign", unspentOuts[i].TxPrevOut.String())
+				}
+			}
+		}
+	}
 	fmt.Printf("You have %.8f BTC in %d P2KH outputs\n", float64(totBtc)/1e8, knownInputs)
 	if multisigInputs>0 {
 		fmt.Printf("There is %.8f BTC in %d multisig outputs\n", float64(msBtc)/1e8, multisigInputs)
@@ -132,29 +127,6 @@ func show_balance() {
 	if unknownInputs > 0 {
 		fmt.Println("WARNING:", unknownInputs, "unspendable inputs (-v to print them).")
 	}
-}
-
-
-// Get TxOut record, by the given TxPrevOut
-func UO(rec *unspRec) *btc.TxOut {
-	uns := rec.TxPrevOut
-	tx, _ := loadedTxs[uns.Hash]
-	if tx==nil {
-		println("Unknown content of input", uns.String())
-		os.Exit(1)
-	}
-	return tx.TxOut[uns.Vout]
-}
-
-
-// Look for specific TxPrevOut in unspentOuts
-func getUO(pto *btc.TxPrevOut) *btc.TxOut {
-	for i := range unspentOuts {
-		if unspentOuts[i].Hash==pto.Hash && unspentOuts[i].Vout==pto.Vout {
-			return UO(unspentOuts[i])
-		}
-	}
-	return nil
 }
 
 

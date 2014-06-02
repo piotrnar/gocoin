@@ -58,6 +58,21 @@ var (
 )
 
 
+// exit after cleaning up private data from memory
+func cleanExit(code int) {
+	if *verbose {
+		fmt.Println("Cleaning up private keys")
+	}
+	for k := range keys {
+		sys.ClearBuffer(keys[k].Key)
+	}
+	if type2_secret != nil {
+		sys.ClearBuffer(type2_secret)
+	}
+	os.Exit(code)
+}
+
+
 func main() {
 	// Print the logo to stderr
 	println("Gocoin Wallet version", lib.Version)
@@ -86,36 +101,24 @@ func main() {
 		return
 	}
 
-	// call it before exiting to clean up private data from memory
-	defer func() {
-		// cleanup private keys in RAM before exiting
-		if *verbose {
-			fmt.Println("Cleaning up private keys")
-		}
-		for k := range keys {
-			sys.ClearBuffer(keys[k].Key)
-		}
-		sys.ClearBuffer(type2_secret)
-	}()
-
 	// dump public key or secret scan key?
 	if *pubkey!="" || *scankey!="" {
 		make_wallet()
-		return
+		cleanExit(0)
 	}
 
 	// list public addresses?
 	if *list {
 		make_wallet()
 		dump_addrs()
-		return
+		cleanExit(0)
 	}
 
 	// dump privete key?
 	if *dumppriv!="" {
 		make_wallet()
 		dump_prvkey()
-		return
+		cleanExit(0)
 	}
 
 	// sign a message or a hash?
@@ -124,7 +127,7 @@ func main() {
 		sign_message()
 		if *send=="" {
 			// Don't load_balance if he did not want to spend coins as well
-			return
+			cleanExit(0)
 		}
 	}
 
@@ -133,7 +136,7 @@ func main() {
 		// add p2sh sript to it?
 		if *p2sh!="" {
 			make_p2sh()
-			return
+			cleanExit(0)
 		}
 
 		make_wallet()
@@ -141,28 +144,28 @@ func main() {
 		// multisig sign with a specific key?
 		if *multisign!="" {
 			multisig_sign()
-			return
+			cleanExit(0)
 		}
 
 		// this must be signing of a raw trasnaction
 		load_balance()
 		process_raw_tx()
-		return
+		cleanExit(0)
 	}
 
 	// make the wallet nad print balance
 	make_wallet()
-	load_balance()
+	if e := load_balance(); e != nil {
+		fmt.Println("ERROR:", e.Error())
+		cleanExit(1)
+	}
 
 	// send command?
 	if send_request() {
-		if spendBtc + feeBtc > totBtc {
-			fmt.Println("ERROR: You are trying to spend more than you own")
-			return
-		}
 		make_signed_tx()
-		return
+		cleanExit(0)
 	}
 
 	show_balance()
+	cleanExit(0)
 }

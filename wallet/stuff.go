@@ -12,6 +12,9 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
+// Cache for txs from already loaded from balance/ folder
+var loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
+
 
 // Read a line from stdin
 func getline() string {
@@ -112,7 +115,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 		chng, e = btc.NewAddrFromString(*change)
 		if e != nil {
 			println("Change address:", e.Error())
-			os.Exit(1)
+			cleanExit(1)
 		}
 		assert_address_version(chng)
 		return
@@ -123,7 +126,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 		if unspentOuts[idx].stealth {
 			continue // cannot send change to a stelath address since we don't know the scankey
 		}
-		uo := UO(unspentOuts[idx])
+		uo := getUO(&unspentOuts[idx].TxPrevOut)
 		if k := pkscr_to_key(uo.Pk_script); k!=nil {
 			chng = k.BtcAddr
 			return
@@ -131,7 +134,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	}
 
 	fmt.Println("ERROR: Could not determine address where to send change. Add -change switch")
-	os.Exit(1)
+	cleanExit(1)
 	return
 }
 
@@ -152,8 +155,11 @@ func raw_tx_from_file(fn string) *btc.Tx {
 	return tx
 }
 
-
+// Get tx with given id from the balance folder, of from cache
 func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
+	if tx=loadedTxs[txid.Hash]; tx!=nil {
+		return // we have it in cache already
+	}
 	fn := "balance/" + txid.String() + ".tx"
 	buf, er := ioutil.ReadFile(fn)
 	if er==nil && buf!=nil {
@@ -163,22 +169,32 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 			tx, _ = btc.NewTx(buf)
 			if error_is_fatal && tx == nil {
 				println("Transaction is corrupt:", txid.String())
-				os.Exit(1)
+				cleanExit(1)
 			}
 		} else if error_is_fatal {
 			println("Transaction file is corrupt:", txid.String())
-			os.Exit(1)
+			cleanExit(1)
 		}
 	} else if error_is_fatal {
 		println("Error reading transaction file:", fn)
 		if er != nil {
 			println(er.Error())
 		}
-		os.Exit(1)
+		cleanExit(1)
 	}
+	loadedTxs[txid.Hash] = tx // store it in the cache
 	return
 }
 
+// Look for specific TxPrevOut in the balance folder
+func getUO(pto *btc.TxPrevOut) *btc.TxOut {
+	if _, ok := loadedTxs[pto.Hash]; !ok {
+		loadedTxs[pto.Hash] = tx_from_balance(btc.NewUint256(pto.Hash[:]), true)
+	}
+	return loadedTxs[pto.Hash].TxOut[pto.Vout]
+}
+
+// version byte for P2KH addresses
 func ver_pubkey() byte {
 	if litecoin {
 		return ltc.AddrVerPubkey(testnet)
@@ -187,19 +203,23 @@ func ver_pubkey() byte {
 	}
 }
 
+// version byte for P2SH addresses
 func ver_script() byte {
 	// for litecoin the version is identical
 	return btc.AddrVerScript(testnet)
 }
 
+// version byte for stealth addresses
 func ver_stealth() byte {
 	return btc.StealthAddressVersion(testnet)
 }
 
+// version byte for private key addresses
 func ver_secret() byte {
 	return ver_pubkey() + 0x80
 }
 
+// get BtcAddr from pk_script
 func addr_from_pkscr(scr []byte) *btc.BtcAddr {
 	if litecoin {
 		return ltc.NewAddrFromPkScript(scr, testnet)
@@ -208,9 +228,10 @@ func addr_from_pkscr(scr []byte) *btc.BtcAddr {
 	}
 }
 
+// make sure the version byte in the given address is what we expect
 func assert_address_version(a *btc.BtcAddr) {
 	if a.Version!=ver_pubkey() && a.Version!=ver_script() && a.Version!=ver_stealth() {
 		println("Sending address", a.String(), "has an incorrect version", a.Version)
-		os.Exit(1)
+		cleanExit(1)
 	}
 }

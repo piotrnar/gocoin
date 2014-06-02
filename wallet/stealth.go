@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"flag"
 	"crypto/rand"
@@ -20,17 +19,17 @@ func new_stealth_address(prv_key []byte) {
 	sk, er := hex.DecodeString(*scankey)
 	if er != nil {
 		println(er.Error())
-		os.Exit(1)
+		cleanExit(1)
 	}
 	if len(sk)!=33 || sk[0]!=2 && sk[0]!=3 {
 		println("scankey must be a compressed public key (33 bytes long)")
-		os.Exit(1)
+		cleanExit(1)
 	}
 
 	if *prefix>16 {
 		if *prefix>24 {
 			fmt.Println("The stealth prefix cannot be bigger than 24", *prefix)
-			os.Exit(1)
+			cleanExit(1)
 		}
 		fmt.Println("WARNING: You chose a prefix length of", *prefix)
 		fmt.Println(" Long prefixes endanger anonymity of stealth address.")
@@ -39,7 +38,7 @@ func new_stealth_address(prv_key []byte) {
 	pub := btc.PublicFromPrivate(prv_key, true)
 	if pub == nil {
 		println("PublicFromPrivate error 2")
-		os.Exit(1)
+		cleanExit(1)
 	}
 
 	sa := new(btc.StealthAddr)

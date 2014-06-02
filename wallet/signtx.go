@@ -94,12 +94,6 @@ func write_tx_file(tx *btc.Tx) {
 
 // prepare a signed transaction
 func make_signed_tx() {
-
-	if len(unspentOuts)==0 {
-		println("ERROR: balance/ folder does not contain any unspent outputs")
-		os.Exit(1)
-	}
-
 	// Make an empty transaction
 	tx := new(btc.Tx)
 	tx.Version = 1
@@ -111,7 +105,7 @@ func make_signed_tx() {
 		if unspentOuts[i].key == nil {
 			continue
 		}
-		uo := UO(unspentOuts[i])
+		uo := getUO(&unspentOuts[i].TxPrevOut)
 		// add the input to our transaction:
 		tin := new(btc.TxIn)
 		tin.Input = unspentOuts[i].TxPrevOut
@@ -124,6 +118,11 @@ func make_signed_tx() {
 			break
 		}
 	}
+	if btcsofar < (spendBtc + feeBtc) {
+		fmt.Println("ERROR: You have", btc.UintToBtc(btcsofar), "BTC, but you need",
+			btc.UintToBtc(spendBtc + feeBtc), "BTC for the transaction")
+		cleanExit(1)
+	}
 	changeBtc = btcsofar - (spendBtc + feeBtc)
 	if *verbose {
 		fmt.Printf("Spending %d out of %d outputs...\n", len(tx.TxIn), len(unspentOuts))
@@ -134,7 +133,7 @@ func make_signed_tx() {
 		outs, er := btc.NewSpendOutputs(sendTo[o].addr, sendTo[o].amount, testnet)
 		if er != nil {
 			fmt.Println("ERROR:", er.Error())
-			os.Exit(1)
+			cleanExit(1)
 		}
 		tx.TxOut = append(tx.TxOut, outs...)
 	}
@@ -148,7 +147,7 @@ func make_signed_tx() {
 		outs, er := btc.NewSpendOutputs(chad, changeBtc, testnet)
 		if er != nil {
 			fmt.Println("ERROR:", er.Error())
-			os.Exit(1)
+			cleanExit(1)
 		}
 		tx.TxOut = append(tx.TxOut, outs...)
 	}
