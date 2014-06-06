@@ -41,10 +41,12 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 		return
 	}
 
+	height := prevblk.Height+1
+
 	// Reject the block if it reaches into the chain deeper than our unwind buffer
-	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(prevblk.Height+1)>=MovingCheckopintDepth {
+	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(height)>=MovingCheckopintDepth {
 		er = errors.New(fmt.Sprint("CheckBlock: btc.Block ", bl.Hash.String(),
-			" hooks too deep into the chain: ", prevblk.Height+1, "/", ch.BlockTreeEnd.Height, " ",
+			" hooks too deep into the chain: ", height, "/", ch.BlockTreeEnd.Height, " ",
 			btc.NewUint256(bl.ParentHash()).String()))
 		return
 	}
@@ -52,11 +54,10 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	// Check proof of work
 	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime())
 	if bl.Bits() != gnwr {
-		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", prevblk.Height+1,
-			" exp:", gnwr)
+		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", height, " exp:", gnwr)
 
 		// Here is a "solution" for whatever shit there is in testnet3, that nobody can explain me:
-		if !ch.testnet() || ((prevblk.Height+1)%2016)!=0 {
+		if !ch.testnet() || (height%2016)!=0 {
 			er = errors.New("CheckBlock: incorrect proof of work")
 			dos = true
 			return
@@ -72,6 +73,30 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	}
 
 	if !bl.Trusted {
+		if bl.Version()==0 || (height>=ForceBlockVer2From && !ch.testnet() && bl.Version()<2) {
+			er = errors.New("CheckBlock() : Block version too low: "+bl.Hash.String())
+			dos = true
+			return
+		}
+
+		if bl.Version()>=2 {
+			var exp []byte
+			if height >= 0x800000 {
+				if height >= 0x80000000 {
+					exp = []byte{5, byte(height), byte(height>>8), byte(height>>16), byte(height>>24), 0}
+				} else {
+					exp = []byte{4, byte(height), byte(height>>8), byte(height>>16), byte(height>>24)}
+				}
+			} else {
+				exp = []byte{3, byte(height), byte(height>>8), byte(height>>16)}
+			}
+			if len(bl.Txs[0].TxIn[0].ScriptSig)<len(exp) || !bytes.Equal(exp, bl.Txs[0].TxIn[0].ScriptSig[:len(exp)]) {
+				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String())
+				dos = true
+				return
+			}
+		}
+
 		// This is a stupid check, but well, we need to be satoshi compatible
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
@@ -94,7 +119,7 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 				dos = true
 				return
 			}
-			if !bl.Txs[i].IsFinal(prevblk.Height+1, bl.BlockTime()) {
+			if !bl.Txs[i].IsFinal(height, bl.BlockTime()) {
 				er = errors.New("CheckBlock() : Contains transaction that is not final")
 				return
 			}
