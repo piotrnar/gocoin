@@ -33,6 +33,10 @@ func NewBlock(data []byte) (*Block, error) {
 }
 
 
+func (bl *Block)Version() uint32 {
+	return binary.LittleEndian.Uint32(bl.Raw[0:4])
+}
+
 func (bl *Block)ParentHash() []byte {
 	return bl.Raw[4:36]
 }
