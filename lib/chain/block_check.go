@@ -112,17 +112,10 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 		}
 
 		// Check transactions - this is the most time consuming task
-		for i:=0; i<len(bl.Txs); i++ {
-			er = bl.Txs[i].CheckTransaction()
-			if er!=nil {
-				er = errors.New("CheckBlock() : CheckTransaction failed: "+er.Error())
-				dos = true
-				return
-			}
-			if !bl.Txs[i].IsFinal(height, bl.BlockTime()) {
-				er = errors.New("CheckBlock() : Contains transaction that is not final")
-				return
-			}
+		if !CheckTransactions(bl.Txs, height, bl.BlockTime()) {
+			er = errors.New("CheckBlock() : CheckTransactions() failed")
+			dos = true
+			return
 		}
 	}
 
