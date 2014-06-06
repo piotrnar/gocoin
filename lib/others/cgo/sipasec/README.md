@@ -8,15 +8,9 @@ Unix
 1. Execute "sudo apt-get install libgmp3-dev"
 
 2. Download secp256k1:
- * https://github.com/sipa/secp256k1
+ * https://github.com/bitcoin/secp256k1
 
-3. Execute "./configure" inside "secp256k1/"
-
-4. Execute "make" to build "libsecp256k1.a"
-
-5. Edit "sipasec.go" and fix the paths to "libsecp256k1.a", "libgmp.a" and "include/secp256k1.h"
-
-6. Both "go build" and "go test" shoudl be working from now on.
+3. Follow "Build steps" section from README.md, iuncluding the install part
 
 
 
