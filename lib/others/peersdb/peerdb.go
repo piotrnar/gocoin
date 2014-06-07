@@ -9,6 +9,7 @@ import (
 	"sort"
 	"errors"
 	"strings"
+	"strconv"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -27,11 +28,18 @@ var (
 	Testnet bool
 	ConnectOnly string
 	Services uint64 = 1
-	DefaultTcpPort uint16 = 8333
 )
 
 type PeerAddr struct {
 	*utils.OnePeer
+}
+
+func DefaultTcpPort() uint16 {
+	if Testnet {
+		return 18333
+	} else {
+		return 8333
+	}
 }
 
 func NewEmptyPeer() (p *PeerAddr) {
@@ -48,8 +56,19 @@ func NewPeer(v []byte) (p *PeerAddr) {
 
 
 func NewPeerFromString(ipstr string) (p *PeerAddr, e error) {
+	port := DefaultTcpPort()
 	x := strings.Index(ipstr, ":")
-	if x != -1 {
+	if x!=-1 {
+		v, er := strconv.ParseUint(ipstr[x+1:], 10, 32)
+		if er != nil {
+			e = er
+			return
+		}
+		if v>0xffff {
+			e = errors.New("Port number too big")
+			return
+		}
+		port = uint16(v)
 		ipstr = ipstr[:x] // remove port number
 	}
 	ip := net.ParseIP(ipstr)
@@ -62,7 +81,7 @@ func NewPeerFromString(ipstr string) (p *PeerAddr, e error) {
 		copy(p.Ip4[:], ip[12:16])
 		p.Services = Services
 		copy(p.Ip6[:], ip[:12])
-		p.Port = DefaultTcpPort
+		p.Port = port
 		if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
 			e = errors.New(p.Ip() + " is banned")
 			p = nil
@@ -248,6 +267,18 @@ func InitPeers(dir string) {
 					"bitseed.xf2.org",
 					}, 8333)
 			} else {
+				for j := range testnet_seeds {
+					ip := net.ParseIP(testnet_seeds[j])
+					if ip != nil && len(ip)==16 {
+						p := NewEmptyPeer()
+						p.Time = uint32(time.Now().Unix())
+						p.Services = 1
+						copy(p.Ip6[:], ip[:12])
+						copy(p.Ip4[:], ip[12:16])
+						p.Port = 18333
+						p.Save()
+					}
+				}
 				initSeeds([]string{
 					//"testnet-seed.bitcoin.petertodd.org",
 					"testnet-seed.bluematt.me",
