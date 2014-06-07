@@ -9,6 +9,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -67,7 +68,7 @@ func BestExternalAddr() []byte {
 
 
 func (c *OneConnection) SendAddr() {
-	pers := GetBestPeers(MaxAddrsPerMessage, false)
+	pers := peersdb.GetBestPeers(MaxAddrsPerMessage, nil)
 	if len(pers)>0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, uint32(len(pers)))
@@ -102,17 +103,17 @@ func ParseAddr(pl []byte) {
 			//println("ParseAddr:", n, e)
 			break
 		}
-		a := NewPeer(buf[:])
+		a := peersdb.NewPeer(buf[:])
 		if !sys.ValidIp4(a.Ip4[:]) {
 			common.CountSafe("AddrInvalid")
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
-			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(ExpirePeerAfter)) {
+			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
-				v := PeerDB.Get(k)
+				v := peersdb.PeerDB.Get(k)
 				if v != nil {
-					a.Banned = NewPeer(v[:]).Banned
+					a.Banned = peersdb.NewPeer(v[:]).Banned
 				}
-				PeerDB.Put(k, a.Bytes())
+				peersdb.PeerDB.Put(k, a.Bytes())
 			} else {
 				common.CountSafe("AddrStale")
 			}

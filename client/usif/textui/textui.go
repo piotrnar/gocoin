@@ -19,6 +19,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 type oneUiCmd struct {
@@ -146,7 +147,7 @@ func show_info(par string) {
 
 	network.Mutex_net.Lock()
 	fmt.Printf("BlocksCached: %d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(network.CachedBlocks), len(network.NetBlocks), len(network.OpenCons), network.PeerDB.Count())
+		len(network.CachedBlocks), len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
@@ -383,18 +384,18 @@ func save_config(s string) {
 
 
 func show_addresses(par string) {
-	fmt.Println(network.PeerDB.Count(), "peers in the database")
+	fmt.Println(peersdb.PeerDB.Count(), "peers in the database")
 	if par=="list" {
 		cnt :=  0
-		network.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			cnt++
-			fmt.Printf("%4d) %s\n", cnt, network.NewPeer(v).String())
+			fmt.Printf("%4d) %s\n", cnt, peersdb.NewPeer(v).String())
 			return 0
 		})
 	} else if par=="ban" {
 		cnt :=  0
-		network.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-			pr := network.NewPeer(v)
+		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+			pr := peersdb.NewPeer(v)
 			if pr.Banned != 0 {
 				cnt++
 				fmt.Printf("%4d) %s\n", cnt, pr.String())
@@ -410,7 +411,7 @@ func show_addresses(par string) {
 			fmt.Println("Specify number of best peers to display")
 			return
 		}
-		prs := network.GetBestPeers(uint(limit), false)
+		prs := peersdb.GetBestPeers(uint(limit), nil)
 		for i := range prs {
 			fmt.Printf("%4d) %s", i+1, prs[i].String())
 			if network.ConnectionActive(prs[i]) {

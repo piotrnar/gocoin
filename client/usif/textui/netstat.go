@@ -6,6 +6,7 @@ import (
 	"time"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -25,7 +26,7 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad, er := network.NewIncomingPeer(par)
+	ad, er := peersdb.NewIncomingPeer(par)
 	if er != nil {
 		fmt.Println(par, er.Error())
 		return

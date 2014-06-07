@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"sync/atomic"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -65,7 +66,7 @@ func (c *OneConnection) Tick() {
 
 	// Ask node for new addresses...?
 	if time.Now().After(c.NextGetAddr) {
-		if PeerDB.Count() > common.MaxPeersNeeded {
+		if peersdb.PeerDB.Count() > common.MaxPeersNeeded {
 			// If we have a lot of peers, do not ask for more, to save bandwidth
 			common.CountSafe("AddrEnough")
 		} else {
@@ -101,7 +102,7 @@ func (c *OneConnection) Tick() {
 }
 
 
-func DoNetwork(ad *onePeer) {
+func DoNetwork(ad *peersdb.PeerAddr) {
 	var e error
 	conn := NewConnection(ad)
 	Mutex_net.Lock()
@@ -178,7 +179,7 @@ func tcp_server() {
 				if common.DebugLevel>0 {
 					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
-				ad, e := NewIncomingPeer(tc.RemoteAddr().String())
+				ad, e := peersdb.NewIncomingPeer(tc.RemoteAddr().String())
 				if e == nil {
 					// Hammering protection
 					HammeringMutex.Lock()
@@ -283,7 +284,7 @@ func NetworkTick() {
 	}
 
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
-		adrs := GetBestPeers(16, true)
+		adrs := peersdb.GetBestPeers(16, ConnectionActive)
 		if len(adrs)==0 {
 			common.LockCfg()
 			if common.CFG.ConnectOnly=="" && common.DebugLevel>0 {

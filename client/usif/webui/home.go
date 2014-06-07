@@ -13,6 +13,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -53,7 +54,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
 
 	s = strings.Replace(s, "{BLOCKS_CACHED}", fmt.Sprint(len(network.CachedBlocks)), 1)
-	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(network.PeerDB.Count()), 1)
+	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(peersdb.PeerDB.Count()), 1)
 	s = strings.Replace(s, "{NODE_UPTIME}", time.Now().Sub(common.StartTime).String(), 1)
 	s = strings.Replace(s, "{NET_BLOCK_QSIZE}", fmt.Sprint(len(network.NetBlocks)), 1)
 	s = strings.Replace(s, "{NET_TX_QSIZE}", fmt.Sprint(len(network.NetTxs)), 1)

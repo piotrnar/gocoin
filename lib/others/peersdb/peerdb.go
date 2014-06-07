@@ -1,4 +1,4 @@
-package network
+package peersdb
 
 import (
 	"os"
@@ -22,29 +22,29 @@ const (
 
 var (
 	PeerDB *qdb.DB
-	proxyPeer *onePeer // when this is not nil we should only connect to this single node
+	proxyPeer *PeerAddr // when this is not nil we should only connect to this single node
 	peerdb_mutex sync.Mutex
 )
 
-type onePeer struct {
+type PeerAddr struct {
 	*utils.OnePeer
 }
 
 
-func NewEmptyPeer() (p *onePeer) {
-	p = new(onePeer)
+func NewEmptyPeer() (p *PeerAddr) {
+	p = new(PeerAddr)
 	p.OnePeer = new(utils.OnePeer)
 	return
 }
 
-func NewPeer(v []byte) (p *onePeer) {
-	p = new(onePeer)
+func NewPeer(v []byte) (p *PeerAddr) {
+	p = new(PeerAddr)
 	p.OnePeer = utils.NewPeer(v)
 	return
 }
 
 
-func NewIncomingPeer(ipstr string) (p *onePeer, e error) {
+func NewIncomingPeer(ipstr string) (p *PeerAddr, e error) {
 	x := strings.Index(ipstr, ":")
 	if x != -1 {
 		ipstr = ipstr[:x] // remove port number
@@ -102,18 +102,18 @@ func ExpirePeers() {
 }
 
 
-func (p *onePeer) Save() {
+func (p *PeerAddr) Save() {
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
 }
 
 
-func (p *onePeer) Ban() {
+func (p *PeerAddr) Ban() {
 	p.Banned = uint32(time.Now().Unix())
 	p.Save()
 }
 
 
-func (p *onePeer) Alive() {
+func (p *PeerAddr) Alive() {
 	prv := int64(p.Time)
 	now := time.Now().Unix()
 	p.Time = uint32(now)
@@ -123,18 +123,18 @@ func (p *onePeer) Alive() {
 }
 
 
-func (p *onePeer) Dead() {
+func (p *PeerAddr) Dead() {
 	p.Time -= 600 // make it 10 min older
 	p.Save()
 }
 
 
-func (p *onePeer) Ip() (string) {
+func (p *PeerAddr) Ip() (string) {
 	return fmt.Sprintf("%d.%d.%d.%d:%d", p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port)
 }
 
 
-func (p *onePeer) String() (s string) {
+func (p *PeerAddr) String() (s string) {
 	s = fmt.Sprintf("%21s", p.Ip())
 
 	now := uint32(time.Now().Unix())
@@ -147,7 +147,7 @@ func (p *onePeer) String() (s string) {
 }
 
 
-type manyPeers []*onePeer
+type manyPeers []*PeerAddr
 
 func (mp manyPeers) Len() int {
 	return len(mp)
@@ -163,10 +163,9 @@ func (mp manyPeers) Swap(i, j int) {
 
 
 // Fetch a given number of best (most recenty seen) peers.
-// Set unconnected to true to only get those that we are not connected to.
-func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
+func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
 	if proxyPeer!=nil {
-		if !unconnected || !ConnectionActive(proxyPeer) {
+		if isConnected==nil || !isConnected(proxyPeer) {
 			return manyPeers{proxyPeer}
 		}
 		return manyPeers{}
@@ -176,7 +175,7 @@ func GetBestPeers(limit uint, unconnected bool) (res manyPeers) {
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
 		if ad.Banned==0 && sys.ValidIp4(ad.Ip4[:]) && !common.IsIPBlocked(ad.Ip4[:]) {
-			if !unconnected || !ConnectionActive(ad) {
+			if isConnected==nil || !isConnected(ad) {
 				tmp = append(tmp, ad)
 			}
 		}

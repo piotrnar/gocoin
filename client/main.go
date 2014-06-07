@@ -20,6 +20,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -250,7 +251,7 @@ func main() {
 			fmt.Println(string(debug.Stack()))
 			network.NetCloseAll()
 			common.CloseBlockChain()
-			network.ClosePeerDB()
+			peersdb.ClosePeerDB()
 			sys.UnlockDatabaseDir()
 			os.Exit(1)
 		}
@@ -287,7 +288,7 @@ func main() {
 	txPoolTick := time.Tick(time.Minute)
 	netTick := time.Tick(time.Second)
 
-	network.InitPeers(common.GocoinHomeDir)
+	peersdb.InitPeers(common.GocoinHomeDir)
 
 	common.Last.Block = common.BlockChain.BlockTreeEnd
 	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
@@ -351,7 +352,7 @@ func main() {
 				continue
 
 			case <-peersTick:
-				network.ExpirePeers()
+				peersdb.ExpirePeers()
 
 			case <-txPoolTick:
 				network.ExpireTxs()
@@ -369,7 +370,7 @@ func main() {
 	}
 
 	network.NetCloseAll()
-	network.ClosePeerDB()
+	peersdb.ClosePeerDB()
 
 	if usif.DefragBlocksDB {
 		defrag_db()

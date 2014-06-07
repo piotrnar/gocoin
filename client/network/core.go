@@ -14,6 +14,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -63,7 +64,7 @@ var (
 
 type OneConnection struct {
 	// Source of this IP:
-	PeerAddr *onePeer
+	*peersdb.PeerAddr
 	ConnID uint32
 
 	sync.Mutex // protects concurent access to any fields inside this structure
@@ -145,7 +146,7 @@ type BCmsg struct {
 }
 
 
-func NewConnection(ad *onePeer) (c *OneConnection) {
+func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
 	c.PeerAddr = ad
 	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
@@ -327,7 +328,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 }
 
 
-func ConnectionActive(ad *onePeer) (yes bool) {
+func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 	Mutex_net.Lock()
 	_, yes = OpenCons[ad.UniqID()]
 	Mutex_net.Unlock()
