@@ -5,6 +5,7 @@
 * Check the block height from coinbase to match expected height value (for blocks version >=2)
 * Check transactions for consistency and finality in parallel
 * PeersDB extrancted from "client/network" to "lib/others/peersdb"
+* Downloader: the seed node is optional now
 
 1.0.0rc6 - 2014-05-28
 * Wallet: "-raw" command can now sign also multisig inputs (if they already have the script)
