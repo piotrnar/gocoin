@@ -402,7 +402,7 @@ func (c *one_net_conn) run_send() {
 
 
 func (res *one_net_conn) connect() {
-	fmt.Println("connecting to", res.Ip())
+	//fmt.Println("connecting to", res.Ip())
 	con, er := net.DialTimeout("tcp4", res.Ip(), DIAL_TIMEOUT)
 	if er != nil {
 		COUNTER("CERR")
