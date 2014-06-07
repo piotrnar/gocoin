@@ -26,7 +26,7 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad, er := peersdb.NewIncomingPeer(par)
+	ad, er := peersdb.NewPeerFromString(par)
 	if er != nil {
 		fmt.Println(par, er.Error())
 		return

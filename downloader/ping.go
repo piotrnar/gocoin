@@ -93,7 +93,7 @@ func (c *one_net_conn) block_pong(d []byte) {
 			c.ping.bytes += uint(len(d))
 			h := btc.NewSha2Hash(d[:80])
 			if h.Equal(c.ping.lastBlock) {
-				//fmt.Println(c.peerip, "bl_pong", c.ping.seq, c.ping.bytes, time.Now().Sub(c.ping.timeSent))
+				//fmt.Println(c.Ip(), "bl_pong", c.ping.seq, c.ping.bytes, time.Now().Sub(c.ping.timeSent))
 				c.ping.lastBlock = nil
 				c.ping.bytes = 0
 				c.store_ping_result()
@@ -109,13 +109,13 @@ func (c *one_net_conn) ping_idle() {
 		if time.Now().After(c.ping.timeSent.Add(PING_TIMEOUT)) {
 			c.store_ping_result()
 			c.ping.Unlock()
-			//fmt.Println(c.peerip, "ping timeout", c.ping.seq)
+			//fmt.Println(c.Ip(), "ping timeout", c.ping.seq)
 		} else {
 			c.ping.Unlock()
 			time.Sleep(time.Millisecond)
 		}
 	} else if c.ping.now {
-		//fmt.Println("ping", c.peerip, c.ping.seq)
+		//fmt.Println("ping", c.Ip(), c.ping.seq)
 		c.ping.inProgress = true
 		c.ping.timeSent = time.Now()
 		c.ping.now = false
@@ -161,7 +161,7 @@ func drop_longest_ping() {
 		}
 	}
 	if conn2drop!=nil {
-		//fmt.Println(conn2drop.peerip, "- slowest")
+		//fmt.Println(conn2drop.Ip(), "- slowest")
 		COUNTER("PDRO")
 		conn2drop.setbroken(true)
 	}

@@ -179,7 +179,7 @@ func tcp_server() {
 				if common.DebugLevel>0 {
 					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
-				ad, e := peersdb.NewIncomingPeer(tc.RemoteAddr().String())
+				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String())
 				if e == nil {
 					// Hammering protection
 					HammeringMutex.Lock()
@@ -219,7 +219,7 @@ func tcp_server() {
 					}
 				} else {
 					if common.DebugLevel>0 {
-						println("NewIncomingPeer:", e.Error())
+						println("NewPeerFromString:", e.Error())
 					}
 					common.CountSafe("InConnRefused")
 					terminate = true

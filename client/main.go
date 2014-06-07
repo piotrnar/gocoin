@@ -6,7 +6,6 @@ import (
 	"time"
 	"unsafe"
 	"runtime"
-	"io/ioutil"
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -260,34 +259,13 @@ func main() {
 	common.InitConfig()
 	host_init() // This will create the DB lock file and keep it open
 
-	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+wallet.DefaultFileName
-	fi, _ := os.Stat(default_wallet_fn)
-	if fi==nil || fi.IsDir() {
-		fmt.Println(default_wallet_fn, "not found")
-
-		old_wallet_location := common.GocoinHomeDir+"wallet.txt"
-		// If there is wallet.txt rename it to default.
-		fi, _ := os.Stat(old_wallet_location)
-		if fi!=nil && !fi.IsDir() {
-			fmt.Println("Taking wallet.txt as", default_wallet_fn)
-			os.Rename(old_wallet_location, default_wallet_fn)
-		} else {
-			fmt.Println("Creating empty default wallet at", default_wallet_fn)
-			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
-		}
-	}
-
-	// ... and now load the dafault wallet
-	wallet.LoadWallet(default_wallet_fn)
-	if wallet.MyWallet!=nil {
-		wallet.UpdateBalance()
-		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
-	}
-
 	peersTick := time.Tick(5*time.Minute)
 	txPoolTick := time.Tick(time.Minute)
 	netTick := time.Tick(time.Second)
 
+	peersdb.Testnet = common.Testnet
+	peersdb.ConnectOnly = common.CFG.ConnectOnly
+	peersdb.Services = common.Services
 	peersdb.InitPeers(common.GocoinHomeDir)
 
 	common.Last.Block = common.BlockChain.BlockTreeEnd

@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 var (
@@ -150,12 +151,21 @@ func (c *one_net_conn) headers(d []byte) {
 
 
 func get_headers() {
-	new_connection(FirstIp)
+	if SeedNode!="" {
+		pr, e := peersdb.NewPeerFromString(SeedNode)
+		if e!=nil {
+			fmt.Println("Seed node error:", e.Error())
+		} else {
+			fmt.Println("Seed node:", pr.Ip())
+			new_connection(pr)
+		}
+	}
 	LastBlock.Mutex.Lock()
 	LastBlock.node = MemBlockChain.BlockTreeEnd
 	LastBlock.Mutex.Unlock()
 	lt := time.Now().Unix()
 	for !GetAllHeadersDone() {
+		add_new_connections()
 		time.Sleep(1e8)
 		ct := time.Now().Unix()
 		if ct-lt > 5 {
@@ -183,15 +193,6 @@ func download_headers() {
 	get_headers()
 	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
-	AddrMutex.Lock()
-	for !GlobalExit && len(AddrDatbase) < 60 {
-		fmt.Println(len(AddrDatbase), "known peers at the moment - wait for more...")
-		AddrMutex.Unlock()
-		time.Sleep(3e9)
-		AddrMutex.Lock()
-	}
-	AddrMutex.Unlock()
-
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {
 		BlocksToGet[n.Height] = n.BlockHash.Hash
@@ -200,7 +201,7 @@ func download_headers() {
 		}
 	}
 
-	close_all_connections()
+	//close_all_connections()
 
 	MemBlockChain.Close()
 	MemBlockChain = nil

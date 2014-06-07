@@ -230,14 +230,14 @@ func (c *one_net_conn) block(d []byte) {
 
 	bl, er := btc.NewBlock(d)
 	if er != nil {
-		fmt.Println(c.peerip, "-", er.Error())
+		fmt.Println(c.Ip(), "-", er.Error())
 		c.setbroken(true)
 		return
 	}
 
 	bl.BuildTxList()
 	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
-		fmt.Println(c.peerip, " - MerkleRoot mismatch at block", bip.Height)
+		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return
 	}
@@ -296,7 +296,7 @@ func drop_slowest_peers() {
 			v.Unlock()
 			// if zero bytes received after 3 seconds - drop it!
 			v.setbroken(true)
-			//fmt.Println(" -", v.peerip, "- idle")
+			//fmt.Println(" -", v.Ip(), "- idle")
 			COUNTER("IDLE")
 			continue
 		}
@@ -310,7 +310,7 @@ func drop_slowest_peers() {
 		}
 	}
 	if minbps_rec!=nil {
-		//fmt.Printf(" - %s - slowest (%.3f KBps, %d KB)\n", minbps_rec.peerip, min_bps/1e3, minbps_rec.bytes_received>>10)
+		//fmt.Printf(" - %s - slowest (%.3f KBps, %d KB)\n", minbps_rec.Ip(), min_bps/1e3, minbps_rec.bytes_received>>10)
 		COUNTER("SLOW")
 		minbps_rec.setbroken(true)
 	}

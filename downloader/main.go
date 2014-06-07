@@ -13,6 +13,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -121,20 +122,12 @@ func main() {
 	parse_command_line()
 	setup_runtime_vars()
 
-	if !add_ip_str(SeedNode) {
-		println("You need to specify IP address of a fast seed node.")
-		println("For example run it like this: downloader -s 89.31.102.237")
-		return
-	}
-	load_ips() // other seed nodes
-
 	if len(GocoinHomeDir)>0 && GocoinHomeDir[len(GocoinHomeDir)-1]!=os.PathSeparator {
 		GocoinHomeDir += string(os.PathSeparator)
 	}
 	if Testnet {
 		GocoinHomeDir += "tstnet" + string(os.PathSeparator)
 		Magic = [4]byte{0x0B,0x11,0x09,0x07}
-		DefaultTcpPort = 18333
 		GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		fmt.Println("Using testnet3")
 	} else {
@@ -144,6 +137,9 @@ func main() {
 
 	sys.LockDatabaseDir(GocoinHomeDir)
 	defer sys.UnlockDatabaseDir()
+
+	peersdb.Testnet = Testnet
+	peersdb.InitPeers(GocoinHomeDir)
 
 	StartTime = time.Now()
 	if open_blockchain() {
@@ -210,6 +206,7 @@ func main() {
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
 
+	peersdb.ClosePeerDB()
 	close_blockchain()
 
 	return

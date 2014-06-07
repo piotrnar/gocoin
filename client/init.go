@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"io/ioutil"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -61,6 +62,24 @@ func host_init() {
 		}
 	}
 
+	// Create default wallet file if does not exist
+	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+wallet.DefaultFileName
+	fi, _ = os.Stat(default_wallet_fn)
+	if fi==nil || fi.IsDir() {
+		fmt.Println(default_wallet_fn, "not found")
+
+		old_wallet_location := common.GocoinHomeDir+"wallet.txt"
+		// If there is wallet.txt rename it to default.
+		fi, _ := os.Stat(old_wallet_location)
+		if fi!=nil && !fi.IsDir() {
+			fmt.Println("Taking wallet.txt as", default_wallet_fn)
+			os.Rename(old_wallet_location, default_wallet_fn)
+		} else {
+			fmt.Println("Creating empty default wallet at", default_wallet_fn)
+			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
+		}
+	}
+
 	// cache the current balance of all the addresses from the current wallet files
 	wallet.LoadAllWallets()
 
@@ -102,6 +121,14 @@ func host_init() {
 	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done
+
+
+	// ... and now load the dafault wallet
+	wallet.LoadWallet(default_wallet_fn)
+	if wallet.MyWallet!=nil {
+		wallet.UpdateBalance()
+		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
+	}
 }
 
 

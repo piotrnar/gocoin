@@ -61,7 +61,7 @@ func main() {
 	})
 
 	sort.Sort(tmp[:cnt])
-	for cnt=0; cnt<len(tmp)&&cnt<25; cnt++ {
+	for cnt=0; cnt<len(tmp)&&cnt<2500; cnt++ {
 		ad := tmp[cnt]
 		fmt.Printf("%3d) %16s   %5d  - seen %5d min ago\n", cnt+1,
 			fmt.Sprintf("%d.%d.%d.%d", ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3]),

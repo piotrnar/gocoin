@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
@@ -24,7 +25,7 @@ func show_connections() {
 	ss := make([]string, len(open_connection_list))
 	i := 0
 	for _, v := range open_connection_list {
-		ss[i] = fmt.Sprintf("%6d  %15s", v.id, v.peerip)
+		ss[i] = fmt.Sprintf("%6d  %15s", v.id, v.Ip())
 		if !v.isconnected() {
 			ss[i] += fmt.Sprint(" - Connecting...")
 		} else {
@@ -53,22 +54,6 @@ func show_connections() {
 	}
 }
 
-
-func save_peers() {
-	f, _ := os.Create("ips.txt")
-	fmt.Fprintf(f, "%d.%d.%d.%d\n", FirstIp[0], FirstIp[1], FirstIp[2], FirstIp[3])
-	ccc := 1
-	AddrMutex.Lock()
-	for k, v := range AddrDatbase {
-		if k!=FirstIp && v {
-			fmt.Fprintf(f, "%d.%d.%d.%d\n", k[0], k[1], k[2], k[3])
-			ccc++
-		}
-	}
-	AddrMutex.Unlock()
-	f.Close()
-	fmt.Println(ccc, "peers saved")
-}
 
 func show_free_mem() {
 	al, sy := sys.MemUsed()
@@ -104,9 +89,7 @@ func do_usif() {
 						}
 
 					case "a":
-						AddrMutex.Lock()
-						fmt.Println(len(AddrDatbase), "addressess in the database")
-						AddrMutex.Unlock()
+						fmt.Println(peersdb.PeerDB.Count(), "addressess in the database")
 
 					case "q":
 						GlobalExit = true
@@ -139,9 +122,6 @@ func do_usif() {
 					case "c":
 						print_counters()
 
-					case "s":
-						save_peers()
-
 					case "pr":
 						show_inprogress()
 
@@ -162,7 +142,9 @@ func do_usif() {
 								open_connection_mutex.Unlock()
 							}
 						} else {
-							if GetRunPings() {
+							if !GetAllHeadersDone() {
+								switch_to_next_peer = true
+							} else if GetRunPings() {
 								fmt.Println("dropping longest ping")
 								drop_longest_ping()
 							} else {
@@ -201,7 +183,6 @@ func do_usif() {
 						fmt.Println(" n - show network connections")
 						fmt.Println(" i - show general info")
 						fmt.Println(" c - show counters")
-						fmt.Println(" s - save peers")
 						fmt.Println(" pr - show blocks in progress")
 						fmt.Println(" pe - show pending blocks ")
 						fmt.Println(" d [conid] - drop one connection")
