@@ -27,14 +27,14 @@ There you can find extended documentation, including <a href="http://www.assets-
 
 ## Hardware
 
-**client** and **downloader**
+**client** / **downloader**:
 
 * At least 4GB of system memory.
 * 64-bit architecture OS and Go compiler.
 * File system where you store the database must support files larger than 4GB.
 
 
-**wallet**
+**wallet**:
 
 * An any platform that you can make your Go (cross)compiler to build for (e.g. Raspberry Pi).
 * For security reasons make sure to use encrypted swap file, if there is a swap file.
