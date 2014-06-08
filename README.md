@@ -27,18 +27,19 @@ There you can find more documentation, including <a href="http://www.assets-otc.
 
 ## Hardware
 
-### Online node
+### client & downloader
 At least 4GB of system memory.
 
 64-bit architecture OS and Go compiler.
 
 File system where you store the database must support files larger than 4GB.
 
-### Offline wallet
-The wallet app has very little requirements and should work on any platform with a working Go compiler.
+### wallet
+The wallet app has very low requirements and should work on any platform with a working Go compiler.
+It has been successfully tested on Raspberry Pi model A.
 
-For security reasons, use an encrypted swap file and if you decide to store a password in the `.secret` file,
-do it on an encrypted disc.
+For security reasons, make sure to use encrypted swap file.
+If you decide to store your password in a file, keep it on encrypted disc.
 
 ## Software
 
