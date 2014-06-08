@@ -101,9 +101,9 @@ Not having a compatible `gcc` installed in your system, trying to build the clie
 	# github.com/piotrnar/gocoin/lib/qdb
 	exec: "gcc": executable file not found in %PATH%
 
-You can still compile the problematic package...
+You can go on without `gcc`, although your running client (and downloader) will then need some more system memory.
 
-To work around the problem, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
+To go on without *gcc*, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Compile wallet
 Go to the `wallet/` folder and execute `go build` there.
