@@ -5,8 +5,8 @@ The software's architecture is focused on maximum security and good performance.
 
 The **client** (p2p node) is an application independent from the **wallet**.
 
-The **wallet** is deterministic and password seeded - as long as you remember the password,
-it does not require any backups.
+The **wallet** is deterministic and password seeded.
+As long as you remember the password, you do not need any backups of your wallet.
 
 There is additional tool tool called **downloader**.
 The **downloader** can quickly sync (download) the blockchain state from the p2p network.
