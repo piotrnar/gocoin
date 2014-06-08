@@ -74,6 +74,9 @@ For Windows install `mingw`, or rather `mingw64` since the client node needs 64-
 
 # Getting sources
 
+Use `go get` to fecth and install the source code files.
+Note that source files get installed within your GOPATH folder.
+
 ## Dependencies
 
 Two extra packages are needed, which are not included in the standard set of Go libraries.
@@ -88,7 +91,6 @@ Use `go get` to fetch and install Gocoin sources for you:
 
 	go get github.com/piotrnar/gocoin
 
-_Note: the sources will be installed within your GOPATH folder._
 
 # Building
 
