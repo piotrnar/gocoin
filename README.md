@@ -69,6 +69,8 @@ It is recommended to have `gcc` complier installed in your system, to get advant
 
 For Windows install `mingw`, or rather `mingw64` since the client node needs 64-bit architecture.
 
+ * http://mingw-w64.sourceforge.net/
+
 
 # Building
 
