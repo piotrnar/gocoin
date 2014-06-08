@@ -1,5 +1,5 @@
-**Gocoin** is a full **Bitcoin** client solution written in Go language (golang).
-At the wallet level, it also supports **Litecoin**.
+**Gocoin** is a full **Bitcoin** solution written in Go language (golang).
+The wallet combined with **balio** tool provide also a **Litecoin** solution.
 
 The software's architecture is focused on maximum security and performance.
 
