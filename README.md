@@ -3,16 +3,18 @@ At the wallet level, it also supports **Litecoin**.
 
 The software's architecture is focused on maximum security and performance.
 
-The peer-to-peer bitcoin client node is an application that runs independently from the wallet.
-The wallet is deterministic and password seeded, so it does not require any backups, as long as you remember the password.
+The **client** (p2p node) is an application independent from the **wallet**.
 
-The basic components of the software are:
+The **wallet** is deterministic and password seeded - as long as you remember the password,
+it does not require any backups.
 
-* **client** - peer-to-peer bitcoin node with an interactive user interface (either text console or web browser)
-* **wallet** - the wallet application, designed to be run at a network-free machine (for security)
-* **downloader** - extra tool made to quickly sync (download) the blockchain state from the p2p network
+There is additional tool tool called **downloader**.
+The **downloader** can quickly sync (download) the blockchain state from the p2p network.
+Use it for the intial blockchain download, or to sync your **client** after keeping it offline for a longer time.
 
-In addition there is also a set of tools, inside the **tools** folder.
+In addition there is also a set of more and less useful tools.
+They are all inside the **tools** folder.
+Each source file is a separate tool (compiles to a different executable).
 
 
 # Website
