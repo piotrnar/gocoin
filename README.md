@@ -11,7 +11,7 @@ As long as you remember the password, you do not need any backups of your wallet
 
 There is additional tool called **downloader** that
 can quickly sync (download) the blockchain state from the p2p network.
-Use it for the intial blockchain download or to sync your **client** after having it offline for a longer time.
+Use it for the initial blockchain download or to sync your **client** after having it offline for a longer time.
 
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
