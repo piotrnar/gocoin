@@ -35,8 +35,8 @@ At least 4GB of system memory.
 File system where you store the database must support files larger than 4GB.
 
 ### wallet
-The wallet app has very low requirements and should work on any platform with a working Go compiler.
-It has been successfully tested on Raspberry Pi model A.
+This app has modest requirements and should work on any platform with a working Go (cross)compiler.
+For instance: it has been successfully tested on Raspberry Pi model A.
 
 For security reasons, make sure to use encrypted swap file.
 If you decide to store your password in a file, keep it on encrypted disc.
