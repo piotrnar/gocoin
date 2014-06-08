@@ -122,7 +122,7 @@ Go to the `tools/` folder and execute:
 	go build type2determ.go
 
 
-# Pull request
+# Gocoin development
 Although it is an open source project, I am sorry to inform you that I will not merge in any pull requests.
 The reason is that I want to stay an explicit author of this software, to keep a full control its licensing.
 If you are missing some functionality, just describe me your needs and I will see what I can do for you.
