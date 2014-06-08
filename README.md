@@ -13,8 +13,8 @@ It can quickly sync (download) the blockchain state from the p2p network.
 Use it for the intial blockchain download, or to sync your **client** after keeping it offline for a longer time.
 
 In addition there is also a set of more and less useful tools.
-They are all inside the **tools** folder.
-Each source file is a separate tool (compiles to a different executable).
+They are all inside the `tools/` folder.
+Each source file in that folder is a separate tool.
 
 
 # Website
