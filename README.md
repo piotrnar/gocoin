@@ -94,7 +94,6 @@ Use `go get` to fetch and install Gocoin sources for you:
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
 
-### Not having gcc
 
 Not having a compatible `gcc` installed in your system, trying to build the client, you will likely see an error like this:
 
@@ -102,7 +101,6 @@ Not having a compatible `gcc` installed in your system, trying to build the clie
 	exec: "gcc": executable file not found in %PATH%
 
 You can go on without `gcc`, although your running client (and downloader) will then need some more system memory.
-
 To go on without *gcc*, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Compile wallet
