@@ -31,7 +31,7 @@ There you can find extended documentation, including <a href="http://www.assets-
 
 * At least 4GB of system memory.
 * 64-bit architecture OS and Go compiler.
-* File system where you store the database must support files larger than 4GB.
+* File system supporting files larger than 4GB.
 
 
 **wallet**:
