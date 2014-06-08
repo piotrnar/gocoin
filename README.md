@@ -9,7 +9,7 @@ The **wallet** is deterministic and password seeded.
 As long as you remember the password, you do not need any backups of your wallet.
 
 There is additional tool tool called **downloader**.
-The **downloader** can quickly sync (download) the blockchain state from the p2p network.
+It can quickly sync (download) the blockchain state from the p2p network.
 Use it for the intial blockchain download, or to sync your **client** after keeping it offline for a longer time.
 
 In addition there is also a set of more and less useful tools.
