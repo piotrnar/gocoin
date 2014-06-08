@@ -36,7 +36,7 @@ There you can find extended documentation, including <a href="http://www.assets-
 
 **wallet**:
 
-* An any platform that you can make your Go (cross)compiler to build for (e.g. Raspberry Pi).
+* Any platform that you can make your Go (cross)compiler to build for.
 * For security reasons make sure to use encrypted swap file, if there is a swap file.
 * If you decide to store your password in a file, have the disk encrypted (in case gets stolen).
 
