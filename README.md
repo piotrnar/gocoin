@@ -55,7 +55,7 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify a full path to the executables.
 
 
-Optionally: **gcc**
+#### **gcc** (optionally)
 
 It is recommended to have `gcc` complier installed in your system, to get advantage of performance improvements and memory usage optimizations.
 
