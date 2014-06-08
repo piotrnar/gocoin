@@ -91,7 +91,7 @@ Use `go get` to fetch and install Gocoin sources for you:
 
 # Building
 
-## Compile client
+## Client node
 Go to the `client/` folder and execute `go build` there.
 
 
@@ -104,24 +104,19 @@ You can go on without *gcc*, although your running client (and downloader) will 
 
 To go on without *gcc*, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
-## Compile wallet
+## Wallet and downloader
 Go to the `wallet/` folder and execute `go build` there.
 
-## Compile downloader
 Go to the `downloader/` folder and execute `go build` there.
 
-## Compile tools
+## Tools
 Go to the `tools/` folder and execute:
 
 	go build btcversig.go
-	go build compressdb.go
-	go build fetchbal.go
-	go build fetchtx.go
-	go build importblocks.go
-	go build type2determ.go
 
+Repeat the `go build` for each source file of the tool you want to build.
 
-# Gocoin development
+# Development
 Although it is an open source project, I am sorry to inform you that I will not merge in any pull requests.
 The reason is that I want to stay an explicit author of this software, to keep a full control its licensing.
 If you are missing some functionality, just describe me your needs and I will see what I can do for you.
