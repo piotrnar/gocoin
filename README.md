@@ -75,7 +75,7 @@ For Windows install `mingw`, or rather `mingw64` since the client node needs 64-
 # Building
 
 Two extra  packages are needed, that are not included in the default set of Go libraries.
-You need to download them, before building Gocoin.
+You need to install them, before building Gocoin.
 In order to do this, simply execute the following commands:
 
 	go get code.google.com/p/go.crypto/ripemd160
