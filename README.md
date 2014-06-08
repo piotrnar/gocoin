@@ -27,25 +27,25 @@ There you can find extended documentation, including <a href="http://www.assets-
 
 ## Hardware
 
-### client & downloader
-At least 4GB of system memory.
+**client** and **downloader**
 
-64-bit architecture OS and Go compiler.
+* At least 4GB of system memory.
+* 64-bit architecture OS and Go compiler.
+* File system where you store the database must support files larger than 4GB.
 
-File system where you store the database must support files larger than 4GB.
 
-### wallet
-This app has modest requirements and should work on any platform with a working Go (cross)compiler.
-For instance: it has been successfully tested on Raspberry Pi model A.
+**wallet**
 
-For security reasons, make sure to use encrypted swap file.
-If you decide to store your password in a file, keep it on encrypted disc.
+* Should work on any platform with a working Go (cross)compiler. For instance: it has been successfully tested on Raspberry Pi model A.
+* For security reasons, make sure to use encrypted swap file.
+* If you decide to store your password in a file, keep it on encrypted disc.
+
 
 ## Software
 
 ### Operating System
-The software should work on any OS that has a working Go compiler.
-Currently that would be one of the following:
+Having hardware requirements met, any target OS supported by your Go compiler will do.
+Currently that can be at least one of the following:
 
 * Windows
 * Linux
@@ -53,7 +53,6 @@ Currently that would be one of the following:
 * Free BSD
 
 ### Additional software
-
 Since no binaries are provided, in order to build Gocoin yourself, you will need the following tools installed in your system:
 
 * **Go** (version 1.2 or higher) - http://golang.org/doc/install
