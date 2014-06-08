@@ -54,9 +54,9 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 
 If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify a full path to the executables.
 
-Note: Git and Mercurial are only needed for `go get` command to work, which automates installing of the packages.
+_Note: Git and Mercurial are only needed for `go get` command to work, which automates installing of the packages.
 You can replace `go get` with certain manual steps, in which case you would not need these two tools.
-But if you are not familiar with go framework and environment, it is recommended to just have these two tools installed and let `go get` to do the job for you.
+But if you are not familiar with go framework and environment, it is recommended to just have these two tools installed and let `go get` to do the job for you._
 
 
 # Building
