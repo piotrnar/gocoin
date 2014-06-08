@@ -11,7 +11,7 @@ In addition there is also a set of tools, inside the **tools** folder.
 
 
 # Website
-The official web page of the project is served at <a href="http://www.assets-otc.com/gocoin">www.assets-otc.com</a>.
+The official web page of the project is served at <a href="http://www.assets-otc.com/gocoin">www.assets-otc.com/gocoin</a>.
 
 There you can find more documentation, including <a href="http://www.assets-otc.com/gocoin/manual">User Manual</a>.
 
@@ -54,9 +54,12 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 
 If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify a full path to the executables.
 
-_Note: Git and Mercurial are only needed for `go get` command to work, which automates installing of the packages.
-You can replace `go get` with certain manual steps, in which case you would not need these two tools.
-But if you are not familiar with go framework and environment, it is recommended to just have these two tools installed and let `go get` to do the job for you._
+
+**If you can, have gcc**
+
+It is recommended to have `gcc` complier installed in your system, to get advantage of performance improvements and memory usage optimizations.
+
+For Windows install `mingw`, or rather `mingw64` since the client node needs 64-bit architecture.
 
 
 # Building
@@ -64,27 +67,20 @@ But if you are not familiar with go framework and environment, it is recommended
 ## Download sources
 Two extra  packages are needed, that are not included in the default set of Go libraries.
 You need to download them, before building Gocoin.
-In order to do this (having Mercurial installed in your system), simply execute the following commands:
+In order to do this, simply execute the following commands:
 
 	go get code.google.com/p/go.crypto/ripemd160
 	go get code.google.com/p/snappy-go/snappy
 
-Assuming that you also have Git installed, use `go get` to fetch and install (in the right place, inside your GOPATH) Gocoin sources for you:
+Now use `go get` to fetch and install Gocoin sources for you:
 
 	go get github.com/piotrnar/gocoin
 
-
-Note: if you do not have Mercurial and/or Git installed, you can download the three packages manually, but then make sure to have them extracted
-in the right location within your GOPATH folder.
-
-## If you can, have gcc
-It is recommended to have gcc complier installed in your system, to get advantage of performance improvements and memory usage optimizations.
-
-For Windows install mingw, or rather mingw64 since the client node needs 64-bit architecture.
+_Note: the sources will be installed within your GOPATH folder._
 
 ### Not having gcc
 
-Not having a compatible gcc installed in your system, trying to build the software, you will likely see an error like this:
+Not having a compatible `gcc` installed in your system, trying to build the software, you will likely see an error like this:
 
 	# github.com/piotrnar/gocoin/lib/qdb
 	exec: "gcc": executable file not found in %PATH%
