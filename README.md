@@ -41,9 +41,7 @@ There you can find extended documentation, including <a href="http://www.assets-
 * If you decide to store your password in a file, have the disk encrypted (in case it gets stolen).
 
 
-## Software
-
-### Operating System
+## Operating System
 Having hardware requirements met, any target OS supported by your Go compiler will do.
 Currently that can be at least one of the following:
 
@@ -52,7 +50,7 @@ Currently that can be at least one of the following:
 * OS X
 * Free BSD
 
-### Build environment
+## Build environment
 Since no binaries are provided, in order to build Gocoin yourself, you will need the following tools installed in your system:
 
 * **Go** (version 1.2 or higher) - http://golang.org/doc/install
@@ -62,7 +60,7 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify a full path to the executables.
 
 
-#### Optionally: gcc
+### Optionally
 
 It is recommended to have `gcc` complier installed in your system, to get advantage of performance improvements and memory usage optimizations.
 
