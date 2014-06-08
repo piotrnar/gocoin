@@ -58,7 +58,8 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 * **Git** - http://git-scm.com/downloads
 * **Mercurial** - http://mercurial.selenic.com/
 
-If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg` from your OS's command prompt without a need to specify a full path to the executables.
+If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg`
+from your OS's command prompt without a need to specify full path to the executables.
 
 
 ### Optionally
