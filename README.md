@@ -87,7 +87,7 @@ Not having a compatible `gcc` installed in your system, trying to build the soft
 
 You can still compile the problematic package...
 
-To fix the problem just copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
+To work around the problem, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Compile client
 Go to the `client/` folder and execute `go build` there.
