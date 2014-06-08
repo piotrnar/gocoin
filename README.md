@@ -111,7 +111,7 @@ Go to the `wallet/` folder and execute `go build` there.
 ## Compile downloader
 Go to the `downloader/` folder and execute `go build` there.
 
-## Compile all the tools
+## Compile tools
 Go to the `tools/` folder and execute:
 
 	go build btcversig.go
