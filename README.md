@@ -1,9 +1,9 @@
 Gocoin is a full bitcoin client solution (node + wallet) written in Go language (golang).
 
-The two basic components of the software are:
+The basic components of the software are:
 
 * **downloader** - tool to quickly sync (download) your local blockchain state from the bitcoin p2p network
-* **client** - peer-to-peer bitcoin node with an interactive user interface (operated either through console or web browser)
+* **client** - peer-to-peer bitcoin node with an interactive user interface (console or web browser)
 * **wallet** - bitcoin/litecoin wallet, designed to be run at off-line PC, for security.
 
 In addition there is also a set of tools, inside the **tools** folder.
