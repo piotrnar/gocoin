@@ -4,7 +4,7 @@ At the wallet level, it also supports Litecoin.
 The basic components of the software are:
 
 * **downloader** - tool to quickly sync (download) your local blockchain state from the bitcoin p2p network
-* **client** - peer-to-peer bitcoin node with an interactive user interface (console or web browser)
+* **client** - peer-to-peer bitcoin node with an interactive user interface (from console or web browser)
 * **wallet** - a deterministic (password seeded) wallet. For security it is designed to be run off-line
 
 In addition there is also a set of tools, inside the **tools** folder.
