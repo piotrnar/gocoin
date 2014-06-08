@@ -101,6 +101,7 @@ Not having a compatible `gcc` installed in your system, you will likely see an e
 	exec: "gcc": executable file not found in %PATH%
 
 You can go on without *gcc*, although your running client (and downloader) will then need some more system memory.
+
 To go on without *gcc* copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Compile wallet
