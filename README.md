@@ -95,7 +95,9 @@ Use `go get` to fetch and install Gocoin sources for you:
 Go to the `client/` folder and execute `go build` there.
 
 
-Not having a compatible `gcc` installed in your system, trying to build the client, you will likely see an error like this:
+**gcc problem**
+
+Not having a compatible `gcc` installed in your system, you will likely see an error like this:
 
 	# github.com/piotrnar/gocoin/lib/qdb
 	exec: "gcc": executable file not found in %PATH%
