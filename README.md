@@ -49,7 +49,7 @@ Currently that would be one of the following:
 * Windows
 * Linux
 * OS X
-* FreeBSD.
+* Free BSD
 
 ### Additional software
 
