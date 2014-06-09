@@ -156,6 +156,8 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 		if AbortNow {
 			return
 		}
+		fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
+			" size:", ch.BlockTreeEnd.BlockSize>>20, "MB")
 		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		cur = cur.Parent

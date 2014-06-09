@@ -6,6 +6,7 @@
 * Check transactions for consistency and finality in parallel
 * PeersDB extrancted from "client/network" to "lib/others/peersdb"
 * Downloader: the seed node is optional now
+* Client: print the size of blocks which are being orphaned
 
 1.0.0rc6 - 2014-05-28
 * Wallet: "-raw" command can now sign also multisig inputs (if they already have the script)
