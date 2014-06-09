@@ -62,6 +62,7 @@ func TestScritpsValid(t *testing.T) {
 func TestScritpsInvalid(t *testing.T) {
 	var vecs [][]string
 
+	DBG_ERR = false
 	dat, er := ioutil.ReadFile("../test/script_invalid.json")
 	if er != nil {
 		t.Error(er.Error())
