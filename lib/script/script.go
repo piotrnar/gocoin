@@ -27,7 +27,9 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 	var st, stP2SH scrStack
 	if !evalScript(sigScr, &st, tx, i) {
 		if DBG_ERR {
-			fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
+			if tx != nil {
+				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
+			}
 			fmt.Println("sigScript failed :", hex.EncodeToString(sigScr[:]))
 			fmt.Println("pkScript:", hex.EncodeToString(pkScr[:]))
 		}
