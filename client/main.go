@@ -86,7 +86,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 				bln := common.BlockChain.BlockIndex[bl.Hash.BIdx()]
 				commonNode := common.Last.Block.FirstCommonParent(bln)
 				forkDepth := bln.Height - commonNode.Height
-				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String(), ", size ", bln.BlockSize>>20, "MB")
+				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String(), ", size:", bln.BlockSize>>10, "KB")
 				if forkDepth > 1 {
 					fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
 				}
