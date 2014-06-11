@@ -33,6 +33,7 @@ type TxOut struct {
 	Value uint64
 	BlockHeight uint32
 	Pk_script []byte
+	WasCoinbase bool
 }
 
 type Tx struct {
