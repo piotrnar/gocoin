@@ -102,7 +102,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		for j := range bl.Txs[i].TxOut {
 			bl.Txs[i].TxOut[j].BlockHeight = changes.Height
 			outs[j] = bl.Txs[i].TxOut[j]
-			outs[j].WasCoinbase = j==0
 		}
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
