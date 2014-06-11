@@ -13,10 +13,12 @@ Each unspent key is prevOutIdxLen bytes long - thats part of the tx hash xored w
 Eech value is variable length:
   [0:32] - btc.TxPrevOut.Hash
   [32:36] - btc.TxPrevOut.Vout LSB
-  [36:44] - Value LSB
+  [36:44] - Value LSB  (If COINBASE_VALBIT is set => it was coinbase TX, ignore it for the value)
   [44:48] - BlockHeight LSB (where mined)
   [48:] - Pk_script (in DBfile first 4 bytes are LSB length)
 */
+
+const COINBASE_VALBIT = uint64(0x8000000000000000)
 
 
 type unspentDb struct {
@@ -113,6 +115,10 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 
 	res = new(btc.TxOut)
 	res.Value = binary.LittleEndian.Uint64(val[36:44])
+	if (res.Value&COINBASE_VALBIT)!=0 {
+		res.Value &= ^COINBASE_VALBIT
+		res.WasCoinbase = true
+	}
 	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
 	res.Pk_script = make([]byte, len(val)-SCR_OFFS)
 	copy(res.Pk_script, val[SCR_OFFS:])
@@ -124,7 +130,11 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	v := make([]byte, SCR_OFFS+len(Val_Pk.Pk_script))
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
-	binary.LittleEndian.PutUint64(v[36:44], Val_Pk.Value)
+	val := Val_Pk.Value
+	if Val_Pk.WasCoinbase {
+		val |= COINBASE_VALBIT
+	}
+	binary.LittleEndian.PutUint64(v[36:44], val)
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
 	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
 	k := qdb.KeyType(idx.UIdx())
