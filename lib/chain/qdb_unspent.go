@@ -370,10 +370,10 @@ func (db *unspentDb) stats() (s string) {
 			return 0
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase. %d stealth outupts\n",
-		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8, stealth_cnt)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d\n",
-		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
+		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d  Stealths:%d\n",
+		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue, stealth_cnt)
 	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%.1fMB  AgedRecs:%d\n",
 		mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6, UTXOAgedCount)
 	return
@@ -415,7 +415,7 @@ func (db *UnspentDB) PrintCoinAge() {
 			tb = maxbl
 		}
 		cnt := uint64(tb-i*chunk)+1
-		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s/%18s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
+		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s/%16s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
 			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val), btc.UintToBtc(age[i].valcb),
 			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), btc.UintToBtc(age[i].val/cnt))
 	}
