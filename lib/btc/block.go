@@ -82,6 +82,10 @@ func (bl *Block) BuildTxList() (e error) {
 		offs += n
 	}
 
+	for i := range bl.Txs[0].TxOut {
+		bl.Txs[0].TxOut[i].WasCoinbase = true
+	}
+
 	// Wait for all the pending missions to complete...
 	for i:=0; i<sys.UseThreads; i++ {
 		_ = <- done
