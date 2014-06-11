@@ -1,3 +1,6 @@
+1.0.0rc8
+* Lib: add to UTXO records info about it coming from a coinbase
+
 1.0.0rc7 - 2014-06-11
 * Wallet: more reorganizing and cleaning
 * Wallet: removed "-hashes" option (added in 0.9.2)
