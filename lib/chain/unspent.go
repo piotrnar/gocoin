@@ -17,6 +17,7 @@ type OneUnspentTx struct {
 	*btc.BtcAddr
 	StealthC []byte
 	destString string
+	Coinbase bool
 }
 
 func (x AllUnspentTx) Len() int {

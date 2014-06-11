@@ -13,12 +13,11 @@ Each unspent key is prevOutIdxLen bytes long - thats part of the tx hash xored w
 Eech value is variable length:
   [0:32] - btc.TxPrevOut.Hash
   [32:36] - btc.TxPrevOut.Vout LSB
-  [36:44] - Value LSB  (If COINBASE_VALBIT is set => it was coinbase TX, ignore it for the value)
+  [36:44] - Value LSB  (If [43]&0x80 set => it was coinbase TX, ignore it for the value)
   [44:48] - BlockHeight LSB (where mined)
   [48:] - Pk_script (in DBfile first 4 bytes are LSB length)
 */
 
-const COINBASE_VALBIT = uint64(0x8000000000000000)
 
 
 type unspentDb struct {
@@ -77,9 +76,9 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 			}
 			if stealthIndex(v) {
 				return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
-			} else if binary.LittleEndian.Uint32(v[44:48]) <= db.noCacheBefore {
+			} else if decBlk(v) <= db.noCacheBefore {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
-			} else if binary.LittleEndian.Uint64(v[36:44]) < MinBrowsableOutValue {
+			} else if decVal(v) < MinBrowsableOutValue {
 				return qdb.NO_CACHE | qdb.NO_BROWSE
 			} else if btc.IsUsefullOutScript(v[SCR_OFFS:]) {
 				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it such now
@@ -101,6 +100,19 @@ func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
 }
 
 
+func decVal(v []byte) uint64 {
+	return binary.LittleEndian.Uint64(v[36:44])&0x7fffffffffffffff
+}
+
+func decBlk(v []byte) uint32 {
+	return binary.LittleEndian.Uint32(v[44:48])
+}
+
+func decBase(v []byte) bool {
+	return (v[43]&0x80)!=0
+}
+
+
 func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := qdb.KeyType(po.UIdx())
 	val := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
@@ -114,12 +126,9 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	}
 
 	res = new(btc.TxOut)
-	res.Value = binary.LittleEndian.Uint64(val[36:44])
-	if (res.Value&COINBASE_VALBIT)!=0 {
-		res.Value &= ^COINBASE_VALBIT
-		res.WasCoinbase = true
-	}
-	res.BlockHeight = binary.LittleEndian.Uint32(val[44:48])
+	res.Value = decVal(val)
+	res.WasCoinbase = decBase(val)
+	res.BlockHeight = decBlk(val)
 	res.Pk_script = make([]byte, len(val)-SCR_OFFS)
 	copy(res.Pk_script, val[SCR_OFFS:])
 	return
@@ -131,10 +140,10 @@ func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
 	copy(v[0:32], idx.Hash[:])
 	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
 	val := Val_Pk.Value
-	if Val_Pk.WasCoinbase {
-		val |= COINBASE_VALBIT
-	}
 	binary.LittleEndian.PutUint64(v[36:44], val)
+	if Val_Pk.WasCoinbase {
+		v[43] |= 0x80
+	}
 	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
 	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
 	k := qdb.KeyType(idx.UIdx())
@@ -172,8 +181,9 @@ func bin2unspent(v []byte, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
-	nr.Value = binary.LittleEndian.Uint64(v[36:44])
-	nr.MinedAt = binary.LittleEndian.Uint32(v[44:48])
+	nr.Value = decVal(v)
+	nr.Coinbase = decBase(v)
+	nr.MinedAt = decBlk(v)
 	nr.BtcAddr = ad
 	return
 }
@@ -306,11 +316,11 @@ func (r *OneWalkRecord) TxID() []byte {
 }
 
 func (r *OneWalkRecord) BlockHeight() uint32 {
-	return binary.LittleEndian.Uint32(r.v[44:48])
+	return decBlk(r.v)
 }
 
-func (r *OneWalkRecord) Value() uint64 {
-	return binary.LittleEndian.Uint64(r.v[36:44])
+func (r *OneWalkRecord) Value() (uint64) {
+	return decVal(r.v)
 }
 
 func (r *OneWalkRecord) TxPrevOut() (res *btc.TxPrevOut) {
@@ -324,8 +334,9 @@ func (r *OneWalkRecord) ToUnspent(ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	copy(nr.TxPrevOut.Hash[:], r.v[0:32])
 	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(r.v[32:36])
-	nr.Value = binary.LittleEndian.Uint64(r.v[36:44])
-	nr.MinedAt = binary.LittleEndian.Uint32(r.v[44:48])
+	nr.Value = decVal(r.v)
+	nr.Coinbase = decBase(r.v)
+	nr.MinedAt = decBlk(r.v)
 	nr.BtcAddr = ad
 	nr.destString = ad.String()
 	return
@@ -333,7 +344,7 @@ func (r *OneWalkRecord) ToUnspent(ad *btc.BtcAddr) (nr *OneUnspentTx) {
 
 
 func (db *unspentDb) stats() (s string) {
-	var tot, brcnt, sum, stealth_cnt uint64
+	var tot, brcnt, sum, stealth_cnt, sumcb uint64
 	var mincnt, maxcnt, totdatasize uint64
 	for i := range db.tdb {
 		dbcnt := uint64(db.dbN(i).Count())
@@ -349,15 +360,18 @@ func (db *unspentDb) stats() (s string) {
 			if stealthIndex(v) {
 				stealth_cnt++
 			}
-			val := binary.LittleEndian.Uint64(v[36:44])
+			val := decVal(v)
 			sum += val
+			if decBase(v) {
+				sumcb += val
+			}
 			totdatasize += uint64(len(v))
 			brcnt++
 			return 0
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %d stealth outupts\n",
-		float64(sum)/1e8, brcnt, tot, stealth_cnt)
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase. %d stealth outupts\n",
+		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8, stealth_cnt)
 	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d\n",
 		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue)
 	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%.1fMB  AgedRecs:%d\n",
@@ -370,12 +384,12 @@ func (db *UnspentDB) PrintCoinAge() {
 	const chunk = 10000
 	var maxbl uint32
 	type rec struct {
-		cnt, bts, val uint64
+		cnt, bts, val, valcb uint64
 	}
 	age := make(map[uint32] *rec)
 	for i := range db.unspent.tdb {
 		db.unspent.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
-			a := binary.LittleEndian.Uint32(v[44:48])
+			a := decBlk(v)
 			if a>maxbl {
 				maxbl = a
 			}
@@ -384,7 +398,11 @@ func (db *UnspentDB) PrintCoinAge() {
 			if tmp==nil {
 				tmp = new(rec)
 			}
-			tmp.val += binary.LittleEndian.Uint64(v[36:44])
+			val := decVal(v)
+			tmp.val += val
+			if decBase(v) {
+				tmp.valcb += val
+			}
 			tmp.cnt++
 			tmp.bts += uint64(len(v))
 			age[a] = tmp
@@ -397,8 +415,8 @@ func (db *UnspentDB) PrintCoinAge() {
 			tb = maxbl
 		}
 		cnt := uint64(tb-i*chunk)+1
-		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
-			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val),
+		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s/%18s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
+			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val), btc.UintToBtc(age[i].valcb),
 			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), btc.UintToBtc(age[i].val/cnt))
 	}
 }
