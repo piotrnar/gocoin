@@ -1,4 +1,4 @@
-1.0.0rc7
+1.0.0rc7 - 2014-06-11
 * Wallet: more reorganizing and cleaning
 * Wallet: removed "-hashes" option (added in 0.9.2)
 * Reject blocks version < 2 of main chain's height >= 200000
