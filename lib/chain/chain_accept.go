@@ -160,8 +160,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
 				} else if tout.WasCoinbase && changes.Height - tout.BlockHeight < COINBASE_MATURITY {
-					e = errors.New("Tried to spend prematured coinbase in TxID: " +
-						btc.NewUint256(inp.Hash[:]).String())
+					e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
 					break
 				}
 
