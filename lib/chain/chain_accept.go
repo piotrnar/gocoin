@@ -40,6 +40,7 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
+	cur.BlockSize = uint32(len(bl.Raw))
 	cur.TxCount = uint32(bl.TxCount)
 	copy(cur.BlockHeader[:], bl.Raw[:80])
 
