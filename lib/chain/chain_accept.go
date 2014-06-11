@@ -141,11 +141,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 						break
 					}
 
-					if t.WasCoinbase {
-						e = errors.New("Cannot spend block's own coinbase in TxID: " + btc.NewUint256(inp.Hash[:]).String())
-						break
-					}
-
 					if inp.Vout>=uint32(len(t)) {
 						println("Vout too big", len(t), inp.String())
 						e = errors.New("Vout too big")
@@ -155,6 +150,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					if t[inp.Vout] == nil {
 						println("Vout already spent", inp.String())
 						e = errors.New("Vout already spent")
+						break
+					}
+
+					if t[inp.Vout].WasCoinbase {
+						e = errors.New("Cannot spend block's own coinbase in TxID: " + btc.NewUint256(inp.Hash[:]).String())
 						break
 					}
 
