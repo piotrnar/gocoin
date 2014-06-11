@@ -15,6 +15,7 @@ Downloader:
 * Make it to work with gocoin.cfg file
 
 Core lib:
+* Try to store all UTXO coming from one TX in a single QDB record
 * Do not allow generated coins to be spent before 120 confirmations
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
