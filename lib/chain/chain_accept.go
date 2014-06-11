@@ -102,6 +102,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		for j := range bl.Txs[i].TxOut {
 			bl.Txs[i].TxOut[j].BlockHeight = changes.Height
 			outs[j] = bl.Txs[i].TxOut[j]
+			outs[j].WasCoinbase = j==0
 		}
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
@@ -140,7 +141,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 						break
 					}
 
-					if inp.Hash==bl.Txs[0].Hash.Hash {
+					if t.WasCoinbase {
 						e = errors.New("Cannot spend block's own coinbase in TxID: " + btc.NewUint256(inp.Hash[:]).String())
 						break
 					}
