@@ -1,5 +1,6 @@
 1.0.0rc8
 * Lib: add to UTXO records info about it coming from a coinbase
+* Lib: bct.WriteVlen trakes 64-bit value now (previously 32)
 
 1.0.0rc7 - 2014-06-11
 * Wallet: more reorganizing and cleaning
