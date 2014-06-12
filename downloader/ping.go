@@ -125,7 +125,7 @@ func (c *one_net_conn) ping_idle() {
 			c.sendmsg("ping", c.ping.pattern[:])
 		} else {
 			b := new(bytes.Buffer)
-			btc.WriteVlen(b, PING_FETCH_BLOCKS)
+			btc.WriteVlen(b, uint64(PING_FETCH_BLOCKS))
 			BlocksMutex.Lock()
 			for i:=uint32(1); ; i++ {
 				binary.Write(b, binary.LittleEndian, uint32(2))

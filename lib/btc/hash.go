@@ -46,9 +46,9 @@ func Rimp160AfterSha256(b []byte) (out [20]byte) {
 // The second paramater must point to a 32-bytes buffer, where hash will be stored.
 func HashFromMessage(msg []byte, out []byte) {
 	b := new(bytes.Buffer)
-	WriteVlen(b, uint32(len(MessageMagic)))
+	WriteVlen(b, uint64(len(MessageMagic)))
 	b.Write([]byte(MessageMagic))
-	WriteVlen(b, uint32(len(msg)))
+	WriteVlen(b, uint64(len(msg)))
 	b.Write(msg)
 	ShaHash(b.Bytes(), out)
 }

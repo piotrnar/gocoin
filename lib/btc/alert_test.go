@@ -72,9 +72,9 @@ func TestAlert(t *testing.T) {
 				break
 			}
 			al := new(bytes.Buffer)
-			WriteVlen(al, uint32(len(s1)))
+			WriteVlen(al, uint64(len(s1)))
 			al.Write([]byte(s1))
-			WriteVlen(al, uint32(len(s2)))
+			WriteVlen(al, uint64(len(s2)))
 			al.Write([]byte(s2))
 			a, e = NewAlert(al.Bytes(), apk)
 			if e != nil {

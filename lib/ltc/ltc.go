@@ -12,9 +12,9 @@ const LTC_ADDR_VERSION = 48
 func HashFromMessage(msg []byte, out []byte) {
 	const MessageMagic = "Litecoin Signed Message:\n"
 	b := new(bytes.Buffer)
-	btc.WriteVlen(b, uint32(len(MessageMagic)))
+	btc.WriteVlen(b, uint64(len(MessageMagic)))
 	b.Write([]byte(MessageMagic))
-	btc.WriteVlen(b, uint32(len(msg)))
+	btc.WriteVlen(b, uint64(len(msg)))
 	b.Write(msg)
 	btc.ShaHash(b.Bytes(), out)
 }

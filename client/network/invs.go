@@ -43,7 +43,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 
 	if len(blinv2ask)>0 {
 		bu := new(bytes.Buffer)
-		btc.WriteVlen(bu, uint32(len(blinv2ask)/32))
+		btc.WriteVlen(bu, uint64(len(blinv2ask)/32))
 		for i:=0; i<len(blinv2ask); i+=32 {
 			bh := btc.NewUint256(blinv2ask[i:i+32])
 			c.Mutex.Lock()
@@ -142,7 +142,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 						common.BlockChain.BlockIndexAccess.Unlock()
 
 						inv := new(bytes.Buffer)
-						btc.WriteVlen(inv, uint32(len(invs)))
+						btc.WriteVlen(inv, uint64(len(invs)))
 						for k, _ := range invs {
 							binary.Write(inv, binary.LittleEndian, uint32(2))
 							inv.Write(k[:])
@@ -165,7 +165,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 	b := new(bytes.Buffer)
 	c.Mutex.Lock()
 	if len(c.PendingInvs)>0 {
-		btc.WriteVlen(b, uint32(len(c.PendingInvs)))
+		btc.WriteVlen(b, uint64(len(c.PendingInvs)))
 		for i := range c.PendingInvs {
 			b.Write((*c.PendingInvs[i])[:])
 		}

@@ -68,7 +68,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 
 	if len(notfound)>0 {
 		buf := new(bytes.Buffer)
-		btc.WriteVlen(buf, uint32(len(notfound)/36))
+		btc.WriteVlen(buf, uint64(len(notfound)/36))
 		buf.Write(notfound)
 		c.SendRawMsg("notfound", buf.Bytes())
 	}
@@ -249,7 +249,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	}
 
 	out := new(bytes.Buffer)
-	btc.WriteVlen(out, cnt)
+	btc.WriteVlen(out, uint64(cnt))
 	out.Write(resp)
 	c.SendRawMsg("headers", out.Bytes())
 	return

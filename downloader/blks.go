@@ -162,7 +162,7 @@ func (c *one_net_conn) getnextblock() {
 	}
 	BlocksMutex.Unlock()
 
-	btc.WriteVlen(vl, uint32(cnt))
+	btc.WriteVlen(vl, uint64(cnt))
 
 	c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
 	c.last_blk_rcvd = time.Now()

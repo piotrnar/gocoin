@@ -126,7 +126,7 @@ func (ms *MultiSig) P2SH() []byte {
 	buf.WriteByte(byte(ms.SigsNeeded-1+OP_1))
 	for i := range ms.PublicKeys {
 		pk := ms.PublicKeys[i]
-		WriteVlen(buf, uint32(len(pk)))
+		WriteVlen(buf, uint64(len(pk)))
 		buf.Write(pk)
 	}
 	buf.WriteByte(byte(len(ms.PublicKeys)-1+OP_1))
@@ -140,7 +140,7 @@ func (ms *MultiSig) Bytes() []byte {
 	buf.WriteByte(OP_FALSE)
 	for i := range ms.Signatures {
 		sb := ms.Signatures[i].Bytes()
-		WriteVlen(buf, uint32(len(sb)))
+		WriteVlen(buf, uint64(len(sb)))
 		buf.Write(sb)
 	}
 	p2sh := ms.P2SH()

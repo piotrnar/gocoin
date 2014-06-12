@@ -71,7 +71,7 @@ func (c *OneConnection) SendAddr() {
 	pers := peersdb.GetBestPeers(MaxAddrsPerMessage, nil)
 	if len(pers)>0 {
 		buf := new(bytes.Buffer)
-		btc.WriteVlen(buf, uint32(len(pers)))
+		btc.WriteVlen(buf, uint64(len(pers)))
 		for i := range pers {
 			binary.Write(buf, binary.LittleEndian, pers[i].Time)
 			buf.Write(pers[i].NetAddr.Bytes())
@@ -84,7 +84,7 @@ func (c *OneConnection) SendAddr() {
 func (c *OneConnection) SendOwnAddr() {
 	if ExternalAddrLen()>0 {
 		buf := new(bytes.Buffer)
-		btc.WriteVlen(buf, 1)
+		btc.WriteVlen(buf, uint64(1))
 		binary.Write(buf, binary.LittleEndian, uint32(time.Now().Unix()))
 		buf.Write(BestExternalAddr())
 		c.SendRawMsg("addr", buf.Bytes())

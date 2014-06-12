@@ -87,9 +87,9 @@ func main() {
 	}
 
 	buf := new(bytes.Buffer)
-	btc.WriteVlen(buf, uint32(len(sig)))
+	btc.WriteVlen(buf, uint64(len(sig)))
 	buf.Write(sig)
-	btc.WriteVlen(buf, uint32(len(pk)))
+	btc.WriteVlen(buf, uint64(len(pk)))
 	buf.Write(pk)
 
 	tx.TxIn[in].ScriptSig = buf.Bytes()

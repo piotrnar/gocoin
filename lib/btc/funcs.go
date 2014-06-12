@@ -133,16 +133,23 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 }
 
 // Writes var_length field into the given writer
-func WriteVlen(b io.Writer, var_len uint32) {
+func WriteVlen(b io.Writer, var_len uint64) {
 	if var_len < 0xfd {
 		b.Write([]byte{byte(var_len)})
 		return
 	}
 	if var_len < 0x10000 {
-		b.Write([]byte{0xfd, byte(var_len), byte(var_len>>8)})
+		b.Write([]byte{0xfd})
+		binary.Write(b, binary.LittleEndian, uint16(var_len))
 		return
 	}
-	b.Write([]byte{0xfe, byte(var_len), byte(var_len>>8), byte(var_len>>16), byte(var_len>>24)})
+	if var_len < 0x1000000000000 {
+		b.Write([]byte{0xfe})
+		binary.Write(b, binary.LittleEndian, uint32(var_len))
+		return
+	}
+	b.Write([]byte{0xff})
+	binary.Write(b, binary.LittleEndian, var_len)
 }
 
 // Writes opcode to put a specific number of bytes to stack
