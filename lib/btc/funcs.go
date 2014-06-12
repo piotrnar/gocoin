@@ -143,7 +143,7 @@ func WriteVlen(b io.Writer, var_len uint64) {
 		binary.Write(b, binary.LittleEndian, uint16(var_len))
 		return
 	}
-	if var_len < 0x1000000000000 {
+	if var_len < 0x100000000 {
 		b.Write([]byte{0xfe})
 		binary.Write(b, binary.LittleEndian, uint32(var_len))
 		return
