@@ -157,7 +157,15 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 		}
 		fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
 			ch.BlockTreeEnd.BlockSize>>10, "KB")
-		println("Not implemented")
+		println("UndoBlockTransactions - Not implemented")
+		/*
+		Here you will have to:
+		 1. Fetch the block that is being undone from BlockDB
+		 2. Build its tx list
+		 3. changes.AddList <= UndoData from the unspent file
+		 4. changes.DeledTxs <= all the outputs found in point 2
+		 5. ch.Unspent.CommitBlockTxs(changes)
+		*/
 		//ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		cur = cur.Parent
