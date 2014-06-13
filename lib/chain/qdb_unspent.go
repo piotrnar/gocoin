@@ -26,7 +26,7 @@ type BlockChanges struct {
 	LastKnownHeight uint32  // put here zero to disable this feature
 	AddList []*QdbRec
 	DeledTxs map[[32]byte] []bool
-	UndoData *bytes.Buffer
+	UndoData map[[32]byte] *QdbRec
 }
 
 
@@ -96,17 +96,94 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.LastBlockHeight = changes.Height
 
 	if changes.UndoData!=nil || (changes.Height%UnwindBufferMaxHistory)==0 {
-		f, _ := os.Create(fmt.Sprint(db.dir, changes.Height))
-		f.Write(blhash)
+		bu := new(bytes.Buffer)
+		bu.Write(blhash)
 		if changes.UndoData != nil {
-			f.Write(changes.UndoData.Bytes())
+			for _, xx := range changes.UndoData {
+				bin := xx.Serialize(true)
+				btc.WriteVlen(bu, uint64(len(bin)))
+				bu.Write(bin)
+			}
 		}
-		f.Close()
+		ioutil.WriteFile(fmt.Sprint(db.dir, changes.Height), bu.Bytes(), 0666)
 	}
 
 	if changes.Height>UnwindBufferMaxHistory {
 		os.Remove(fmt.Sprint(db.dir, changes.Height-UnwindBufferMaxHistory))
 	}
+	return
+}
+
+
+func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
+	println("UndoBlockTxs niot implemented")
+/*
+	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
+	dat, er := ioutil.ReadFile(fn)
+	if er!=nil {
+		panic(er.Error())
+	}
+
+	var changes BlockChanges
+	// Build the deleted list
+	changes.DeledTxs = make(map[[32]byte][]bool, len(bl.Txs))
+	for _, tx := range bl.Txs {
+		lst := make([]bool, len(bl.Txs))
+		for i := range bl.Txs {
+			lst[i] = true
+		}
+		changes.DeledTxs[tx.Hash.Hash] = lst
+	}
+
+	rd := bytes.NewReader(dat)
+	rd.Seek(32, os.SEEK_SET) // skip block hash
+	for {
+		rec = new(QdbRec)
+		if n, _ := rd.Read(rec.TxID[:]) != 32 {
+			break
+		}
+		cbase, _ := rd.ReadByte()
+		vout, _ := ReadVLen(rd)
+		val, _ := ReadVLen(rd)
+		scrlen, _ := ReadVLen(rd)
+		src := make([]byte, int(scrlen))
+		for len(rec.Outs) < int(vout) {
+			rec.Outs = append(rec.Outs, nil)
+		}
+		rec.Outs = append(rec.Outs, nil)
+	}
+
+	db.commit(&changes)
+	os.Remove(fn)
+	db.LastBlockHeight--
+	copy(db.LastBlockHash, newhash)
+*/
+}
+
+
+func (db *UnspentDB) loadUndoRecs() (res []*QdbRec) {
+	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
+
+	dat, er := ioutil.ReadFile(fn)
+	if er!=nil {
+		panic(er.Error())
+	}
+
+	if !bytes.Equal(dat[:32], db.LastBlockHash) {
+		panic("Endo file does not match expected Block hash")
+	}
+
+	off := 32  // ship the block hash
+	for off < len(dat) {
+		le, n := btc.VLen(dat[off:])
+		off += n
+
+		qr := FullQdbRec(dat[off:off+le])
+		off += le
+
+		res = append(res, qr)
+	}
+
 	return
 }
 

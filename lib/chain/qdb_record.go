@@ -37,6 +37,10 @@ type QdbTxOut struct {
 }
 
 
+func FullQdbRec(dat []byte) *QdbRec {
+	return NewQdbRec(qdb.KeyType(binary.LittleEndian.Uint64(dat[:8])), dat[8:])
+}
+
 func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
 	var off, n, i int
 	var u64, idx uint64
@@ -75,9 +79,13 @@ func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
 }
 
 
-func (rec *QdbRec) Bytes() []byte {
+func (rec *QdbRec) Serialize(full bool) []byte {
 	bu := new(bytes.Buffer)
-	bu.Write(rec.TxID[8:])
+	if full {
+		bu.Write(rec.TxID[:])
+	} else {
+		bu.Write(rec.TxID[8:])
+	}
 	btc.WriteVlen(bu, uint64(rec.InBlock))
 	if rec.Coinbase {
 		btc.WriteVlen(bu, uint64(len(rec.Outs)<<1)|1)
@@ -95,6 +103,12 @@ func (rec *QdbRec) Bytes() []byte {
 	//println("enc:", hex.EncodeToString(bu.Bytes()))
 	return bu.Bytes()
 }
+
+
+func (rec *QdbRec) Bytes() []byte {
+	return rec.Serialize(false)
+}
+
 
 func (r *QdbRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)

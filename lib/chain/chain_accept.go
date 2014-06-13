@@ -2,7 +2,6 @@ package chain
 
 import (
 	"fmt"
-	"bytes"
 	"errors"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -96,7 +95,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	var txoutsum, txinsum, sumblockout uint64
 
 	if int(changes.Height)+UnwindBufferMaxHistory >= int(changes.LastKnownHeight) {
-		changes.UndoData = new(bytes.Buffer)
+		changes.UndoData = make(map[[32]byte] *QdbRec)
 	}
 
 	// Add each tx outs from the current block to the temporary pool
@@ -177,11 +176,17 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					spendrec[inp.Vout] = true
 
 					if changes.UndoData != nil {
-						changes.UndoData.Write(inp.Hash[:])
-						btc.WriteVlen(changes.UndoData, uint64(inp.Vout))
-						btc.WriteVlen(changes.UndoData, tout.Value)
-						btc.WriteVlen(changes.UndoData, uint64(len(tout.Pk_script)))
-						changes.UndoData.Write(tout.Pk_script)
+						var urec *QdbRec
+						urec = changes.UndoData[inp.Hash]
+						if urec == nil {
+							urec = new(QdbRec)
+							urec.TxID = inp.Hash
+							urec.Coinbase = tout.WasCoinbase
+							urec.InBlock = tout.BlockHeight
+							urec.Outs = make([]*QdbTxOut, tout.VoutCount)
+							changes.UndoData[inp.Hash] = urec
+						}
+						urec.Outs[inp.Vout] = &QdbTxOut{Value:tout.Value, PKScr:tout.Pk_script}
 					}
 				}
 
