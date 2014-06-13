@@ -55,7 +55,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		bl.Trusted = trusted
 
-		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height)
+		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
 			println("ProcessBlockTransactions", nxt.Height, er.Error())
 			ch.DeleteBranch(nxt)
@@ -65,7 +65,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}
 
-		changes.LastKnownHeight = end.Height
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 
 		ch.BlockTreeEnd = nxt
@@ -158,7 +157,8 @@ func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
 		}
 		fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
 			ch.BlockTreeEnd.BlockSize>>10, "KB")
-		ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
+		println("Not implemented")
+		//ch.Unspent.UndoBlockTransactions(ch.BlockTreeEnd.Height)
 		ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
 		cur = cur.Parent
 	}

@@ -2,6 +2,7 @@ package chain
 
 import (
 	"fmt"
+	"bytes"
 	"errors"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -13,9 +14,10 @@ import (
 var TrustedTxChecker func(*btc.Uint256) bool
 
 
-func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height uint32) (changes *BlockChanges, e error) {
+func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *BlockChanges, e error) {
 	changes = new(BlockChanges)
 	changes.Height = height
+	changes.LastKnownHeight = lknown
 	changes.DeledTxs = make(map[[32]byte][]bool)
 	e = ch.commitTxs(bl, changes)
 	return
@@ -52,7 +54,7 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 	if ch.BlockTreeEnd==prevblk {
 		// The head of out chain - apply the transactions
 		var changes *BlockChanges
-		changes, e = ch.ProcessBlockTransactions(bl, cur.Height)
+		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
 		if e != nil {
 			// ProcessBlockTransactions failed, so trash the block.
 			println("ProcessBlockTransactions ", cur.BlockHash.String(), cur.Height, e.Error())
@@ -65,7 +67,6 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
-			changes.LastKnownHeight = bl.LastKnownHeight
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 			if !ch.DoNotSync {
 				ch.Blocks.Sync()
@@ -93,6 +94,8 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
+
+	changes.UndoData = new(bytes.Buffer)
 
 	// Add each tx outs from the current block to the temporary pool
 	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
@@ -170,6 +173,20 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 						changes.DeledTxs[inp.Hash] = spendrec
 					}
 					spendrec[inp.Vout] = true
+					/* One undo record:
+						32-bytes btc.TxPrevOut.Hash
+						var_int btc.TxPrevOut.Vout
+						var_int value
+						var_int PK_Script_len
+						PK_Script_len bytes - PK_Script
+					*/
+					if changes.Height >= changes.LastKnownHeight {
+						changes.UndoData.Write(inp.Hash[:])
+						btc.WriteVlen(changes.UndoData, uint64(inp.Vout))
+						btc.WriteVlen(changes.UndoData, tout.Value)
+						btc.WriteVlen(changes.UndoData, uint64(len(tout.Pk_script)))
+						changes.UndoData.Write(tout.Pk_script)
+					}
 				}
 
 				if !(<-done) {

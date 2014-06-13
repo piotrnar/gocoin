@@ -30,7 +30,7 @@ func (ch *Chain)loadBlockIndex() {
 
 
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
-	tlb := ch.Unspent.GetLastBlockHash()
+	tlb := ch.Unspent.LastBlockHash
 	//println("Building tree from", len(ch.BlockIndex), "nodes")
 	for _, v := range ch.BlockIndex {
 		if AbortNow {
@@ -52,10 +52,11 @@ func (ch *Chain)loadBlockIndex() {
 		v.Parent.addChild(v)
 	}
 	if tlb == nil {
-		//println("No last block - full rescan will be needed")
+		println("No last block - full rescan will be needed")
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 		return
 	} else {
+		println("Last Blcok Hash:", btc.NewUint256(tlb).String())
 		var ok bool
 		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {

@@ -16,16 +16,14 @@ type unspentDb struct {
 	defragIndex int
 	defragCount uint64
 	nosyncinprogress bool
-	lastHeight uint32
 	ch *Chain
 }
 
 
-func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
+func newUnspentDB(dir string, ch *Chain) (db *unspentDb) {
 	db = new(unspentDb)
 	db.dir = dir
 	db.ch = ch
-	db.setHeight(lasth)
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading new unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -37,10 +35,6 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 	fmt.Print("\r                                                              \r")
 
 	return
-}
-
-func (db *unspentDb) setHeight(lasth uint32) {
-	db.lastHeight = lasth
 }
 
 
@@ -222,8 +216,8 @@ func (db *unspentDb) stats() (s string) {
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d Recs/db : %d..%d   (config:%d)   TotalData:%.1fMB\n",
-		db.defragCount, db.lastHeight, mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6)
+	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   (config:%d)   TotalData:%.1fMB\n",
+		db.defragCount, mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6)
 	return
 }
 
