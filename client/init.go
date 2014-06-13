@@ -101,7 +101,7 @@ func host_init() {
 		}
 	}()
 
-	ext := &chain.NewChanOpts{NotifyTx: wallet.TxNotify,
+	ext := &chain.NewChanOpts{NotifyTxAdd: wallet.TxNotifyAdd, NotifyTxDel: wallet.TxNotifyDel,
 		/*NotifyStealthTx: wallet.StealthNotify,*/
 		LoadWalk: wallet.NewUTXO/*, LoadFlush: wallet.DoPendingStealths*/}
 

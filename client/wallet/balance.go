@@ -47,50 +47,71 @@ type OneCachedAddrBalance struct {
 
 
 // This is called while accepting the block (from the chain's thread)
-func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
+func TxNotifyAdd (tx *chain.QdbRec) {
 	var update_wallet bool
-
 	BalanceMutex.Lock()
 
-	if valpk!=nil {
+	for idx, out := range tx.Outs {
+		if out == nil {
+			continue
+		}
+
 		// Extract hash160 from pkscript
-		adr := btc.NewAddrFromPkScript(valpk.Pk_script, common.Testnet)
+		adr := btc.NewAddrFromPkScript(out.PKScr, common.Testnet)
 		if adr!=nil {
 			if rec, ok := CachedAddrs[adr.Hash160]; ok {
-				rec.Value += valpk.Value
+				rec.Value += out.Value
 				utxo := new(chain.OneUnspentTx)
-				utxo.TxPrevOut = *idx
-				utxo.Value = valpk.Value
-				utxo.MinedAt = valpk.BlockHeight
+				utxo.TxPrevOut.Hash = tx.TxID
+				utxo.TxPrevOut.Vout = uint32(idx)
+				utxo.Value = out.Value
+				utxo.MinedAt = tx.InBlock
 				utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
 				CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
-				CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
+				CacheUnspentIdx[utxo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
 				if rec.InWallet {
 					update_wallet = true
 				}
 			}
 		}
-	} else {
-		ii := idx.UIdx()
-		if ab, present := CacheUnspentIdx[ii]; present {
-			adrec := CacheUnspent[ab.Index]
-			//println("removing", idx.String())
-			rec := CachedAddrs[adrec.BtcAddr.Hash160]
-			if rec==nil {
-				panic("rec not found for " + adrec.BtcAddr.String())
-			}
-			rec.Value -= ab.Record.Value
-			if rec.InWallet {
-				update_wallet = true
-			}
-			for j := range adrec.AllUnspentTx {
-				if adrec.AllUnspentTx[j] == ab.Record {
-					//println("found it at index", j)
-					adrec.AllUnspentTx = append(adrec.AllUnspentTx[:j], adrec.AllUnspentTx[j+1:]...)
-					break
+	}
+
+	if update_wallet {
+		println("upd bal", tx.InBlock)
+		sync_wallet()
+	}
+	BalanceMutex.Unlock()
+}
+
+
+func TxNotifyDel (txid []byte, outs []bool) {
+	var update_wallet bool
+	BalanceMutex.Lock()
+
+	var uidx btc.TxPrevOut
+	copy(uidx.Hash[:], txid)
+	for uidx.Vout=0; uidx.Vout<uint32(len(outs)); uidx.Vout++ {
+		if outs[uidx.Vout] {
+			ii := uidx.UIdx()
+			if ab, present := CacheUnspentIdx[ii]; present {
+				adrec := CacheUnspent[ab.Index]
+				rec := CachedAddrs[adrec.BtcAddr.Hash160]
+				if rec==nil {
+					panic("rec not found for " + adrec.BtcAddr.String())
 				}
+				rec.Value -= ab.Record.Value
+				if rec.InWallet {
+					update_wallet = true
+				}
+				for j := range adrec.AllUnspentTx {
+					if adrec.AllUnspentTx[j] == ab.Record {
+						//println("found it at index", j)
+						adrec.AllUnspentTx = append(adrec.AllUnspentTx[:j], adrec.AllUnspentTx[j+1:]...)
+						break
+					}
+				}
+				delete(CacheUnspentIdx, ii)
 			}
-			delete(CacheUnspentIdx, ii)
 		}
 	}
 
@@ -99,7 +120,6 @@ func TxNotify (idx *btc.TxPrevOut, valpk *btc.TxOut) {
 	}
 	BalanceMutex.Unlock()
 }
-
 
 // make sure to call it with locked BalanceMutex
 func sync_wallet() {

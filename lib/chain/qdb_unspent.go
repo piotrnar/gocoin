@@ -79,9 +79,6 @@ func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 
 
 func (db *unspentDb) del(hash []byte, outs []bool) {
-	/*if db.ch.CB.NotifyTx!=nil {
-		db.ch.CB.NotifyTx(idx, nil)
-	}*/
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
 	_db := db.dbN(int(hash[31])%NumberOfUnspentSubDBs)
 	v := _db.Get(ind)
@@ -110,9 +107,15 @@ func (db *unspentDb) commit(changes *BlockChanges) {
 	for _, rec := range changes.AddList {
 		ind := qdb.KeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
 		db.dbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
+		if db.ch.CB.NotifyTxAdd!=nil {
+			db.ch.CB.NotifyTxAdd(rec)
+		}
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)
+		if db.ch.CB.NotifyTxDel!=nil {
+			db.ch.CB.NotifyTxDel(k[:], v)
+		}
 	}
 }
 

@@ -29,7 +29,8 @@ type Chain struct {
 type NewChanOpts struct {
 	// If NotifyTx is set, it will be called each time a new unspent
 	// output is being added or removed. When being removed, btc.TxOut is nil.
-	NotifyTx func (*btc.TxPrevOut, *btc.TxOut)
+	NotifyTxAdd func (*QdbRec)
+	NotifyTxDel func ([]byte, []bool)
 
 	// These two are used only during loading
 	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
