@@ -95,7 +95,9 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
-	changes.UndoData = new(bytes.Buffer)
+	if int(changes.Height)+UnwindBufferMaxHistory >= int(changes.LastKnownHeight) {
+		changes.UndoData = new(bytes.Buffer)
+	}
 
 	// Add each tx outs from the current block to the temporary pool
 	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
@@ -173,14 +175,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 						changes.DeledTxs[inp.Hash] = spendrec
 					}
 					spendrec[inp.Vout] = true
-					/* One undo record:
-						32-bytes btc.TxPrevOut.Hash
-						var_int btc.TxPrevOut.Vout
-						var_int value
-						var_int PK_Script_len
-						PK_Script_len bytes - PK_Script
-					*/
-					if changes.Height >= changes.LastKnownHeight {
+
+					if changes.UndoData != nil {
 						changes.UndoData.Write(inp.Hash[:])
 						btc.WriteVlen(changes.UndoData, uint64(inp.Vout))
 						btc.WriteVlen(changes.UndoData, tout.Value)
