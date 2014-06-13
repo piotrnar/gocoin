@@ -30,11 +30,9 @@ type NewChanOpts struct {
 	// If NotifyTx is set, it will be called each time a new unspent
 	// output is being added or removed. When being removed, btc.TxOut is nil.
 	NotifyTx func (*btc.TxPrevOut, *btc.TxOut)
-	NotifyStealthTx FunctionWalkUnspent
 
 	// These two are used only during loading
 	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
-	LoadFlush func() // this one is called after each UTXO sub-database is finished
 }
 
 
@@ -133,5 +131,3 @@ func (ch *Chain) Close() {
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
 }
-
-

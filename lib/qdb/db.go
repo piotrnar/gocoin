@@ -29,9 +29,9 @@ type KeyType uint64
 
 // defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
 var (
-	DefragPercentVal uint32 = 50
+	DefragPercentVal uint32 = 150
 	MaxPending uint32       = 1000
-	MaxPendingNoSync uint32 = 10000
+	MaxPendingNoSync uint32 = 100000
 	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
 	ExtraMemoryAllocCnt int64  // if we are using the glibc memory manager
 )

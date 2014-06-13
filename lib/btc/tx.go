@@ -31,8 +31,9 @@ type TxIn struct {
 
 type TxOut struct {
 	Value uint64
-	BlockHeight uint32
 	Pk_script []byte
+	BlockHeight uint32
+	VoutCount uint32 // number of outputs in the transaction that it came from
 	WasCoinbase bool
 }
 

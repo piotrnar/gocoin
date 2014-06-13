@@ -102,8 +102,8 @@ func host_init() {
 	}()
 
 	ext := &chain.NewChanOpts{NotifyTx: wallet.TxNotify,
-		NotifyStealthTx: wallet.StealthNotify,
-		LoadWalk: wallet.NewUTXO, LoadFlush: wallet.DoPendingStealths}
+		/*NotifyStealthTx: wallet.StealthNotify,*/
+		LoadWalk: wallet.NewUTXO/*, LoadFlush: wallet.DoPendingStealths*/}
 
 	sta := time.Now().UnixNano()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)

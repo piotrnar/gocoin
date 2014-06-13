@@ -4,7 +4,7 @@ import (
 	"io"
 	"fmt"
 	"bytes"
-	"encoding/binary"
+//	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
 )
@@ -12,16 +12,14 @@ import (
 
 /*
 Ine block record:
- * Tndex is the block height (64 bits)
+ * Index is the block height (64 bits)
  * 32 bytes of block's hash
  * Number of spent record:
-   [0] - 1-added / 0 - deleted
-   [1:33] - btc.TxPrevOut.Hash
-   [33:37] - btc.TxPrevOut.Vout LSB
-   Now optional ([0]==0):
-     [37:45] - Value
-     [45:49] - PK_Script length
-     [49:] - PK_Script
+   [0:32] - btc.TxPrevOut.Hash
+   [32:36] - btc.TxPrevOut.Vout LSB
+   [36:44] - Value
+   [44:48] - PK_Script length
+   [48:] - PK_Script
 */
 
 
@@ -74,19 +72,7 @@ func newUnwindDB(dir string) (db *unwindDb) {
 
 
 func unwindFromReader(f io.Reader, unsp *unspentDb) {
-	for {
-		po, to := readSpent(f)
-		if po == nil {
-			break
-		}
-		if to != nil {
-			// record deleted - so add it
-			unsp.add(po, to)
-		} else {
-			// record added - so delete it
-			unsp.del(po)
-		}
-	}
+	panic("todo")
 }
 
 
@@ -177,15 +163,13 @@ func (db *unwindDb) commit(changes *BlockChanges, blhash []byte) {
 
 	f := new(bytes.Buffer)
 	f.Write(blhash[0:32])
-	// cast uin32 to int to properly discover negative diffs:
+	// cast uint32 to int to properly discover negative diffs:
+	/*TODO:
 	if int(changes.LastKnownHeight) - int(changes.Height) < UnwindBufferMaxHistory {
-		for k, _ := range changes.AddedTxs {
-			writeSpent(f, &k, nil)
-		}
-		for k, v := range changes.DeledTxs {
+		for _, v := range changes.RemovedOuts {
 			writeSpent(f, &k, v)
 		}
-	}
+	}*/
 	db.dbH(int(changes.Height)%NumberOfUnwindSubDBs).PutExt(qdb.KeyType(changes.Height), f.Bytes(), qdb.NO_CACHE)
 	if changes.Height >= UnwindBufferMaxHistory {
 		db.del(changes.Height-UnwindBufferMaxHistory)
@@ -218,42 +202,12 @@ func (db *unwindDb) stats() (s string) {
 	return
 }
 
+/*
 func writeSpent(f io.Writer, po *btc.TxPrevOut, to *btc.TxOut) {
-	if to == nil {
-		// added
-		f.Write([]byte{1})
-		f.Write(po.Hash[:])
-		binary.Write(f, binary.LittleEndian, uint32(po.Vout))
-	} else {
-		// deleted
-		f.Write([]byte{0})
-		f.Write(po.Hash[:])
-		binary.Write(f, binary.LittleEndian, uint32(po.Vout))
-		binary.Write(f, binary.LittleEndian, uint64(to.Value))
-		binary.Write(f, binary.LittleEndian, uint32(len(to.Pk_script)))
-		f.Write(to.Pk_script[:])
-	}
+	f.Write(po.Hash[:])
+	binary.Write(f, binary.LittleEndian, uint32(po.Vout))
+	binary.Write(f, binary.LittleEndian, uint64(to.Value))
+	binary.Write(f, binary.LittleEndian, uint32(len(to.Pk_script)))
+	f.Write(to.Pk_script[:])
 }
-
-
-func readSpent(f io.Reader) (po *btc.TxPrevOut, to *btc.TxOut) {
-	var buf [49]byte
-	n, e := f.Read(buf[:37])
-	if n!=37 || e!=nil || buf[0]>1 {
-		return
-	}
-	po = new(btc.TxPrevOut)
-	copy(po.Hash[:], buf[1:33])
-	po.Vout = binary.LittleEndian.Uint32(buf[33:37])
-	if buf[0]==0 {
-		n, e = f.Read(buf[37:49])
-		if n!=12 || e!=nil {
-			panic("Unexpected end of file")
-		}
-		to = new(btc.TxOut)
-		to.Value = binary.LittleEndian.Uint64(buf[37:45])
-		to.Pk_script = make([]byte, binary.LittleEndian.Uint32(buf[45:49]))
-		f.Read(to.Pk_script[:])
-	}
-	return
-}
+*/

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
@@ -40,11 +39,12 @@ func list_unspent(addr string) {
 	var unsp chain.AllUnspentTx
 
 	if sa==nil {
-		walk = func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
-			if bytes.Equal(rec.Script(), exp_scr) {
-				unsp = append(unsp, rec.ToUnspent(ad))
+		walk = func(tx *chain.QdbRec) {
+			for idx, rec := range tx.Outs {
+				if rec!=nil && bytes.Equal(rec.PKScr, exp_scr) {
+					unsp = append(unsp, tx.ToUnspent(uint32(idx), ad))
+				}
 			}
-			return 0
 		}
 	} else {
 		wallet.FetchStealthKeys()
@@ -53,16 +53,29 @@ func list_unspent(addr string) {
 			fmt.Println("No matching secret found in your wallet/stealth folder")
 			return
 		}
-		walk = func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
-			if !rec.IsStealthIdx() {
-				return 0
-			}
-			fl, uo := wallet.CheckStealthRec(db, k, rec, ad, d, true)
-			if uo!=nil {
-				unsp = append(unsp, uo)
+		println("stealth unpent not implemented")
+		return
+		/*walk = func(tx *chain.QdbRec) (uint32) {
+			for idx, rec := range tx.Outs {
+				if rec==nil {
+					continue
+				}
+
+				if !rec.IsStealthIdx() {
+					return 0
+				}
+				fl, uo := wallet.CheckStealthRec(db, k, rec, ad, d, true)
+				if uo!=nil {
+					unsp = append(unsp, uo)
+				}
+
+
+				&& bytes.Equal(rec.PKScr, exp_scr) {
+					unsp = append(unsp, tx.ToUnspent(uint32(idx), ad))
+				}
 			}
 			return fl
-		}
+		}*/
 	}
 	common.BlockChain.Unspent.BrowseUTXO(false, walk)
 
@@ -191,6 +204,9 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		return
 	}
 
+	println("do_scan_stealth not implemented")
+	return
+	/*
 	var unsp chain.AllUnspentTx
 
 	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
@@ -208,7 +224,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)
 	utxt, _ := os.Create("balance/unspent.txt")
-	fmt.Print(wallet.DumpBalance(unsp, utxt, true, false))
+	fmt.Print(wallet.DumpBalance(unsp, utxt, true, false))*/
 }
 
 

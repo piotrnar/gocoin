@@ -16,8 +16,7 @@ var TrustedTxChecker func(*btc.Uint256) bool
 func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height uint32) (changes *BlockChanges, e error) {
 	changes = new(BlockChanges)
 	changes.Height = height
-	changes.DeledTxs = make(map[btc.TxPrevOut]*btc.TxOut)
-	changes.AddedTxs = make(map[btc.TxPrevOut]*btc.TxOut)
+	changes.DeledTxs = make(map[[32]byte][]bool)
 	e = ch.commitTxs(bl, changes)
 	return
 }
@@ -96,18 +95,18 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	var txoutsum, txinsum, sumblockout uint64
 
 	// Add each tx outs from the current block to the temporary pool
-	blUnsp := make(map[[32]byte] []*btc.TxOut, len(bl.Txs))
+	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
 	for i := range bl.Txs {
 		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
-		for j := range bl.Txs[i].TxOut {
-			bl.Txs[i].TxOut[j].BlockHeight = changes.Height
-			outs[j] = bl.Txs[i].TxOut[j]
-		}
+		copy(outs, bl.Txs[i].TxOut)
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
 
 	// create a channnel to receive results from VerifyScript threads:
 	done := make(chan bool, sys.UseThreads)
+
+	now := changes.Height==381 && false
+	//println("pr", changes.Height)
 
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
@@ -127,7 +126,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 			for j:=0; j<len(bl.Txs[i].TxIn) /*&& e==nil*/; j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
-				if _, ok := changes.DeledTxs[*inp]; ok {
+				spendrec, waspent := changes.DeledTxs[inp.Hash]
+				if waspent && spendrec[inp.Vout] {
 					println("txin", inp.String(), "already spent in this block")
 					e = errors.New("Input spent more then once in same block")
 					break
@@ -159,9 +159,17 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
-				} else if tout.WasCoinbase && changes.Height - tout.BlockHeight < COINBASE_MATURITY {
-					e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
-					break
+				} else {
+					if tout.WasCoinbase && changes.Height - tout.BlockHeight < COINBASE_MATURITY {
+						e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
+						break
+					}
+					// it is confirmed already so delete it later
+					if !waspent {
+						spendrec = make([]bool, tout.VoutCount)
+						changes.DeledTxs[inp.Hash] = spendrec
+					}
+					spendrec[inp.Vout] = true
 				}
 
 				if !(<-done) {
@@ -179,8 +187,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				}
 
 				// Verify Transaction script:
+				if now {
+					println("+", inp.String(), tout.Value)
+				}
 				txinsum += tout.Value
-				changes.DeledTxs[*inp] = tout
 			}
 
 			if scripts_ok {
@@ -210,15 +220,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 		for j := range bl.Txs[i].TxOut {
 			txoutsum += bl.Txs[i].TxOut[j].Value
-			txa := new(btc.TxPrevOut)
-			copy(txa.Hash[:], bl.Txs[i].Hash.Hash[:])
-			txa.Vout = uint32(j)
-			_, spent := changes.DeledTxs[*txa]
-			if spent {
-				delete(changes.DeledTxs, *txa)
-			} else {
-				changes.AddedTxs[*txa] = bl.Txs[i].TxOut[j]
-			}
 		}
 		sumblockout += txoutsum
 
@@ -233,6 +234,26 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 	if sumblockin < sumblockout {
 		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
+	}
+
+	var rec *QdbRec
+	for k, v := range blUnsp {
+		for i := range v {
+			if v[i]!=nil {
+				if rec==nil {
+					rec = new(QdbRec)
+					rec.TxID = k
+					rec.Coinbase = v[i].WasCoinbase
+					rec.InBlock = changes.Height
+					rec.Outs = make([]*QdbTxOut, len(v))
+				}
+				rec.Outs[i] = &QdbTxOut{Value:v[i].Value, PKScr:v[i].Pk_script}
+			}
+		}
+		if rec!=nil {
+			changes.AddList = append(changes.AddList, rec)
+			rec = nil
+		}
 	}
 
 	return nil

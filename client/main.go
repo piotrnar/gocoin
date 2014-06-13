@@ -46,7 +46,6 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 	sta := time.Now()
 	e = common.BlockChain.AcceptBlock(bl)
 	if e == nil {
-		wallet.DoPendingStealths()
 		network.MutexRcv.Lock()
 		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
 		network.MutexRcv.Unlock()

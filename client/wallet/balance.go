@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	//"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -290,28 +290,32 @@ func UpdateBalance() {
 		// There are new addresses which we have not monitored yet
 		var new_addrs chain.AllUnspentTx
 
-		common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
-			if rec.IsP2KH() {
-				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[3:3+8])]; ok {
-					new_addrs = append(new_addrs, rec.ToUnspent(ad))
+		common.BlockChain.Unspent.BrowseUTXO(true, func(tx *chain.QdbRec) {
+			for idx, rec := range tx.Outs {
+				if rec == nil {
+					continue
 				}
-			} else if rec.IsP2SH() {
-				if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.Script()[2:2+8])]; ok {
-					new_addrs = append(new_addrs, rec.ToUnspent(ad))
-				}
-			} else if rec.IsStealthIdx() {
-				for i := range tofetch_stealh {
-					fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i], true)
-					if fl != 0 {
-						return fl
+				if rec.IsP2KH() {
+					if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.PKScr[3:3+8])]; ok {
+						new_addrs = append(new_addrs, tx.ToUnspent(uint32(idx), ad))
 					}
-					if uo!=nil {
-						new_addrs = append(new_addrs, uo)
-						break
+				} else if rec.IsP2SH() {
+					if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.PKScr[2:2+8])]; ok {
+						new_addrs = append(new_addrs, tx.ToUnspent(uint32(idx), ad))
 					}
-				}
+				} /*else if rec.IsStealthIdx() {
+					for i := range tofetch_stealh {
+						fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i], true)
+						if fl != 0 {
+							return fl
+						}
+						if uo!=nil {
+							new_addrs = append(new_addrs, uo)
+							break
+						}
+					}
+				}*/
 			}
-			return 0
 		})
 
 		for i := range new_addrs {
@@ -444,27 +448,30 @@ func LoadAllWallets() {
 }
 
 // This function is only used when loading UTXO database
-func NewUTXO(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
-	if rec.IsP2KH() || rec.IsP2SH() {
-		if adr:=btc.NewAddrFromPkScript(rec.Script(), common.Testnet); adr!=nil {
-			if crec, ok := CachedAddrs[adr.Hash160]; ok {
-				value := rec.Value()
-				idx := rec.TxPrevOut()
-				crec.Value += value
-				utxo := new(chain.OneUnspentTx)
-				utxo.TxPrevOut = *idx
-				utxo.Value = value
-				utxo.MinedAt = rec.BlockHeight()
-				utxo.BtcAddr = CacheUnspent[crec.CacheIndex].BtcAddr
-				CacheUnspent[crec.CacheIndex].AllUnspentTx = append(CacheUnspent[crec.CacheIndex].AllUnspentTx, utxo)
-				CacheUnspentIdx[idx.UIdx()] = &OneCachedUnspentIdx{Index: crec.CacheIndex, Record: utxo}
-			}
+func NewUTXO(tx *chain.QdbRec) {
+	for idx, rec := range tx.Outs {
+		if rec == nil {
+			continue
 		}
-	} else if len(StealthAdCache)>0 && rec.IsStealthIdx() {
-		StealthNotify(db, k, rec)
+		if rec.IsP2KH() || rec.IsP2SH() {
+			if adr:=btc.NewAddrFromPkScript(rec.PKScr, common.Testnet); adr!=nil {
+				if crec, ok := CachedAddrs[adr.Hash160]; ok {
+					value := rec.Value
+					crec.Value += value
+					utxo := new(chain.OneUnspentTx)
+					utxo.TxPrevOut.Hash = tx.TxID
+					utxo.TxPrevOut.Vout = uint32(idx)
+					utxo.Value = value
+					utxo.MinedAt = tx.InBlock
+					utxo.BtcAddr = CacheUnspent[crec.CacheIndex].BtcAddr
+					CacheUnspent[crec.CacheIndex].AllUnspentTx = append(CacheUnspent[crec.CacheIndex].AllUnspentTx, utxo)
+					CacheUnspentIdx[utxo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: crec.CacheIndex, Record: utxo}
+				}
+			}
+		/*TODO } else if len(StealthAdCache)>0 && rec.IsStealthIdx() {
+			StealthNotify(db, k, rec)*/
+		}
 	}
-
-	return 0
 }
 
 

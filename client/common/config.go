@@ -58,8 +58,6 @@ var (
 			MinVoutValue uint64
 		}
 		Memory struct {
-			MinBrowsableVal uint64
-			NoCacheBefore int // Use negetive value to not cache from the last block height plus it
 			GCPercTrshold int
 			MaxCachedBlocks uint
 		}
@@ -173,8 +171,6 @@ func Reset() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	chain.NocacheBlocksBelow = CFG.Memory.NoCacheBefore
-	chain.MinBrowsableOutValue = uint64(CFG.Memory.MinBrowsableVal)
 	chain.MaxCachedBlocks = CFG.Memory.MaxCachedBlocks
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)

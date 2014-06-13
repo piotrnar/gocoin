@@ -8,16 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
-/*
-Each unspent key is prevOutIdxLen bytes long - thats part of the tx hash xored witth vout
-Eech value is variable length:
-  [0:32] - btc.TxPrevOut.Hash
-  [32:36] - btc.TxPrevOut.Vout LSB
-  [36:44] - Value LSB  (If [43]&0x80 set => it was coinbase TX, ignore it for the value)
-  [44:48] - BlockHeight LSB (where mined)
-  [48:] - Pk_script (in DBfile first 4 bytes are LSB length)
-*/
-
 
 
 type unspentDb struct {
@@ -27,7 +17,6 @@ type unspentDb struct {
 	defragCount uint64
 	nosyncinprogress bool
 	lastHeight uint32
-	noCacheBefore uint32
 	ch *Chain
 }
 
@@ -39,13 +28,10 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 	db.setHeight(lasth)
 
 	for i := range db.tdb {
-		fmt.Print("\rLoading unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
+		fmt.Print("\rLoading new unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
 		db.dbN(i) // Load each of the sub-DBs into memory
 		if AbortNow {
 			return
-		}
-		if db.ch.CB.LoadFlush!=nil {
-			db.ch.CB.LoadFlush()
 		}
 	}
 	fmt.Print("\r                                                              \r")
@@ -55,16 +41,6 @@ func newUnspentDB(dir string, lasth uint32, ch *Chain) (db *unspentDb) {
 
 func (db *unspentDb) setHeight(lasth uint32) {
 	db.lastHeight = lasth
-	if NocacheBlocksBelow < 0 {
-		res := int(db.lastHeight) + NocacheBlocksBelow + 1
-		if res > 0 {
-			db.noCacheBefore = uint32(res)
-		} else {
-			db.noCacheBefore = 0
-		}
-	} else {
-		db.noCacheBefore = uint32(NocacheBlocksBelow)
-	}
 }
 
 
@@ -72,19 +48,9 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		qdb.NewDBrowse(&db.tdb[i], db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
 			if db.ch.CB.LoadWalk!=nil {
-				db.ch.CB.LoadWalk(db.tdb[i], k, NewWalkRecord(v))
+				db.ch.CB.LoadWalk(NewQdbRec(k, v))
 			}
-			if stealthIndex(v) {
-				return qdb.YES_BROWSE|qdb.YES_CACHE // stealth output description
-			} else if decBlk(v) <= db.noCacheBefore {
-				return qdb.NO_CACHE | qdb.NO_BROWSE
-			} else if decVal(v) < MinBrowsableOutValue {
-				return qdb.NO_CACHE | qdb.NO_BROWSE
-			} else if btc.IsUsefullOutScript(v[SCR_OFFS:]) {
-				return qdb.YES_BROWSE|qdb.YES_CACHE // if it was non-browsable, make it such now
-			} else {
-				return qdb.NO_CACHE | qdb.NO_BROWSE // useluess output - do not waste mem for it
-			}
+			return 0
 		}, SingeIndexSize)
 
 		if db.nosyncinprogress {
@@ -95,107 +61,64 @@ func (db *unspentDb) dbN(i int) (*qdb.DB) {
 }
 
 
-func getUnspIndex(po *btc.TxPrevOut) (qdb.KeyType) {
-	return qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout))
-}
-
-
-func decVal(v []byte) uint64 {
-	return binary.LittleEndian.Uint64(v[36:44])&0x7fffffffffffffff
-}
-
-func decBlk(v []byte) uint32 {
-	return binary.LittleEndian.Uint32(v[44:48])
-}
-
-func decBase(v []byte) bool {
-	return (v[43]&0x80)!=0
-}
-
-
 func (db *unspentDb) get(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
-	ind := qdb.KeyType(po.UIdx())
-	val := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
-	if val==nil {
-		e = errors.New("Unspent not found")
+	ind := qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
+	v := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
+	if v==nil {
+		e = errors.New("Unspent TX not found")
 		return
 	}
 
-	if len(val)<SCR_OFFS {
-		panic(fmt.Sprint("unspent record too short:", len(val)))
+	rec := NewQdbRec(ind, v)
+	if len(rec.Outs)<int(po.Vout) || rec.Outs[po.Vout]==nil {
+		e = errors.New("Unspent VOut not found")
+		return
 	}
-
 	res = new(btc.TxOut)
-	res.Value = decVal(val)
-	res.WasCoinbase = decBase(val)
-	res.BlockHeight = decBlk(val)
-	res.Pk_script = make([]byte, len(val)-SCR_OFFS)
-	copy(res.Pk_script, val[SCR_OFFS:])
+	res.VoutCount = uint32(len(rec.Outs))
+	res.WasCoinbase = rec.Coinbase
+	res.BlockHeight = rec.InBlock
+	res.Value = rec.Outs[po.Vout].Value
+	res.Pk_script = rec.Outs[po.Vout].PKScr
 	return
 }
 
 
-func (db *unspentDb) add(idx *btc.TxPrevOut, Val_Pk *btc.TxOut) {
-	v := make([]byte, SCR_OFFS+len(Val_Pk.Pk_script))
-	copy(v[0:32], idx.Hash[:])
-	binary.LittleEndian.PutUint32(v[32:36], idx.Vout)
-	val := Val_Pk.Value
-	binary.LittleEndian.PutUint64(v[36:44], val)
-	if Val_Pk.WasCoinbase {
-		v[43] |= 0x80
-	}
-	binary.LittleEndian.PutUint32(v[44:48], Val_Pk.BlockHeight)
-	copy(v[SCR_OFFS:], Val_Pk.Pk_script)
-	k := qdb.KeyType(idx.UIdx())
-	var flgz uint32
-	dbN := db.dbN(int(idx.Hash[31]) % NumberOfUnspentSubDBs)
-	if stealthIndex(v) {
-		if db.ch.CB.NotifyStealthTx!=nil {
-			db.ch.CB.NotifyStealthTx(dbN, k, NewWalkRecord(v))
-		}
-		flgz = qdb.YES_CACHE|qdb.YES_BROWSE
-	} else {
-		if db.ch.CB.NotifyTx!=nil {
-			db.ch.CB.NotifyTx(idx, Val_Pk)
-		}
-		if Val_Pk.Value < MinBrowsableOutValue {
-			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
-		} else if NocacheBlocksBelow==-1 {
-			flgz = qdb.NO_CACHE | qdb.NO_BROWSE
-		}
-	}
-	dbN.PutExt(k, v, flgz)
-}
-
-
-func (db *unspentDb) del(idx *btc.TxPrevOut) {
-	if db.ch.CB.NotifyTx!=nil {
+func (db *unspentDb) del(hash []byte, outs []bool) {
+	/*if db.ch.CB.NotifyTx!=nil {
 		db.ch.CB.NotifyTx(idx, nil)
+	}*/
+	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
+	_db := db.dbN(int(hash[31])%NumberOfUnspentSubDBs)
+	v := _db.Get(ind)
+	if v==nil {
+		panic("Cannot delete this")
 	}
-	key := qdb.KeyType(idx.UIdx())
-	db.dbN(int(idx.Hash[31])%NumberOfUnspentSubDBs).Del(key)
-}
-
-
-func bin2unspent(v []byte, ad *btc.BtcAddr) (nr *OneUnspentTx) {
-	nr = new(OneUnspentTx)
-	copy(nr.TxPrevOut.Hash[:], v[0:32])
-	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(v[32:36])
-	nr.Value = decVal(v)
-	nr.Coinbase = decBase(v)
-	nr.MinedAt = decBlk(v)
-	nr.BtcAddr = ad
-	return
+	rec := NewQdbRec(ind, v)
+	var anyout bool
+	for i, rm := range outs {
+		if rm {
+			rec.Outs[i] = nil
+		} else if rec.Outs[i] != nil {
+			anyout = true
+		}
+	}
+	if anyout {
+		_db.Put(ind, rec.Bytes())
+	} else {
+		_db.Del(ind)
+	}
 }
 
 
 func (db *unspentDb) commit(changes *BlockChanges) {
-	// Now ally the unspent changes
-	for k, v := range changes.AddedTxs {
-		db.add(&k, v)
+	// Now aplly the unspent changes
+	for _, rec := range changes.AddList {
+		ind := qdb.KeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
+		db.dbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
 	}
-	for k, _ := range changes.DeledTxs {
-		db.del(&k)
+	for k, v := range changes.DeledTxs {
+		db.del(k[:], v)
 	}
 }
 
@@ -249,21 +172,11 @@ func (db *unspentDb) idle() bool {
 	return false
 }
 
-func stealthIndex(v []byte) bool {
-	return len(v)==SCR_OFFS+40 && v[SCR_OFFS]==0x6a && v[49]==0x26 && v[50]==0x06
-}
-
 
 func (db *unspentDb) browse(walk FunctionWalkUnspent, quick bool) {
 	var i int
 	brfn := func(k qdb.KeyType, v []byte) (fl uint32) {
-		res := walk(db.tdb[i], k, NewWalkRecord(v))
-		if (res&WALK_ABORT)!=0 {
-			fl |= qdb.BR_ABORT
-		}
-		if (res&WALK_NOMORE)!=0 {
-			fl |= qdb.NO_CACHE|qdb.NO_BROWSE
-		}
+		walk(NewQdbRec(k, v))
 		return
 	}
 
@@ -278,73 +191,9 @@ func (db *unspentDb) browse(walk FunctionWalkUnspent, quick bool) {
 	}
 }
 
-type OneWalkRecord struct {
-	v []byte
-}
-
-func NewWalkRecord(v []byte) (r *OneWalkRecord) {
-	r = new(OneWalkRecord)
-	r.v = v
-	return
-}
-
-func (r *OneWalkRecord) IsStealthIdx() bool {
-	return len(r.v)==SCR_OFFS+40 &&
-		r.v[SCR_OFFS]==0x6a && r.v[49]==0x26 && r.v[50]==0x06
-}
-
-func (r *OneWalkRecord) IsP2KH() bool {
-	return len(r.v)==SCR_OFFS+25 &&
-		r.v[SCR_OFFS+0]==0x76 && r.v[SCR_OFFS+1]==0xa9 && r.v[SCR_OFFS+2]==0x14 &&
-		r.v[SCR_OFFS+23]==0x88 && r.v[SCR_OFFS+24]==0xac
-}
-
-func (r *OneWalkRecord) IsP2SH() bool {
-	return len(r.v)==SCR_OFFS+23 && r.v[SCR_OFFS+0]==0xa9 && r.v[SCR_OFFS+1]==0x14 && r.v[SCR_OFFS+22]==0x87
-}
-
-func (r *OneWalkRecord) Script() []byte {
-	return r.v[SCR_OFFS:]
-}
-
-func (r *OneWalkRecord) VOut() uint32 {
-	return binary.LittleEndian.Uint32(r.v[32:36])
-}
-
-func (r *OneWalkRecord) TxID() []byte {
-	return r.v[0:32]
-}
-
-func (r *OneWalkRecord) BlockHeight() uint32 {
-	return decBlk(r.v)
-}
-
-func (r *OneWalkRecord) Value() (uint64) {
-	return decVal(r.v)
-}
-
-func (r *OneWalkRecord) TxPrevOut() (res *btc.TxPrevOut) {
-	res = new(btc.TxPrevOut)
-	copy(res.Hash[:], r.v[0:32])
-	res.Vout = binary.LittleEndian.Uint32(r.v[32:36])
-	return
-}
-
-func (r *OneWalkRecord) ToUnspent(ad *btc.BtcAddr) (nr *OneUnspentTx) {
-	nr = new(OneUnspentTx)
-	copy(nr.TxPrevOut.Hash[:], r.v[0:32])
-	nr.TxPrevOut.Vout = binary.LittleEndian.Uint32(r.v[32:36])
-	nr.Value = decVal(r.v)
-	nr.Coinbase = decBase(r.v)
-	nr.MinedAt = decBlk(r.v)
-	nr.BtcAddr = ad
-	nr.destString = ad.String()
-	return
-}
-
 
 func (db *unspentDb) stats() (s string) {
-	var tot, brcnt, sum, stealth_cnt, sumcb uint64
+	var tot, brcnt, sum, sumcb uint64
 	var mincnt, maxcnt, totdatasize uint64
 	for i := range db.tdb {
 		dbcnt := uint64(db.dbN(i).Count())
@@ -357,25 +206,24 @@ func (db *unspentDb) stats() (s string) {
 		}
 		tot += dbcnt
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			if stealthIndex(v) {
-				stealth_cnt++
-			}
-			val := decVal(v)
-			sum += val
-			if decBase(v) {
-				sumcb += val
-			}
 			totdatasize += uint64(len(v))
 			brcnt++
+			rec := NewQdbRec(k, v)
+			for idx := range rec.Outs {
+				if rec.Outs[idx]!=nil {
+					sum += rec.Outs[idx].Value
+					if rec.Coinbase {
+						sumcb += rec.Outs[idx].Value
+					}
+				}
+			}
 			return 0
 		})
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Height:%d  NoCacheBelow:%d/%d  MinBrowsableVal:%d  Stealths:%d\n",
-		db.defragCount, db.lastHeight, NocacheBlocksBelow, db.noCacheBefore, MinBrowsableOutValue, stealth_cnt)
-	s += fmt.Sprintf(" Records per index : %d..%d   (config:%d)   TotalData:%.1fMB  AgedRecs:%d\n",
-		mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6, UTXOAgedCount)
+	s += fmt.Sprintf(" Defrags:%d  Height:%d Recs/db : %d..%d   (config:%d)   TotalData:%.1fMB\n",
+		db.defragCount, db.lastHeight, mincnt, maxcnt, SingeIndexSize, float64(totdatasize)/1e6)
 	return
 }
 
@@ -383,27 +231,31 @@ func (db *unspentDb) stats() (s string) {
 func (db *UnspentDB) PrintCoinAge() {
 	const chunk = 10000
 	var maxbl uint32
-	type rec struct {
+	type onerec struct {
 		cnt, bts, val, valcb uint64
 	}
-	age := make(map[uint32] *rec)
+	age := make(map[uint32] *onerec)
 	for i := range db.unspent.tdb {
 		db.unspent.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
-			a := decBlk(v)
+			rec := NewQdbRec(k, v)
+			a := rec.InBlock
 			if a>maxbl {
 				maxbl = a
 			}
 			a /= chunk
 			tmp := age[a]
 			if tmp==nil {
-				tmp = new(rec)
+				tmp = new(onerec)
 			}
-			val := decVal(v)
-			tmp.val += val
-			if decBase(v) {
-				tmp.valcb += val
+			for _, ou := range rec.Outs {
+				if ou!=nil {
+					tmp.val += ou.Value
+					if rec.Coinbase {
+						tmp.valcb += ou.Value
+					}
+					tmp.cnt++
+				}
 			}
-			tmp.cnt++
 			tmp.bts += uint64(len(v))
 			age[a] = tmp
 			return 0

@@ -3,7 +3,6 @@ package chain
 import (
 	"os"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
 // Used during BrowseUTXO()
@@ -13,26 +12,17 @@ const (
 
 	// Unspent DB
 	SingeIndexSize = uint(700e3) // This should be optimal for realnet block #~300000, but not for testnet
-	prevOutIdxLen = qdb.KeySize
 	NumberOfUnspentSubDBs = 0x10
-	SCR_OFFS = 48
 )
 
-var (
-	NocacheBlocksBelow int = 0 // Do not keep in memory blocks older than this height
-	MinBrowsableOutValue uint64 = 0 // Zero means: browse throutgh all
-
-	UTXOAgedCount uint64
-)
-
-type FunctionWalkUnspent func(*qdb.DB, qdb.KeyType, *OneWalkRecord) uint32
+type FunctionWalkUnspent func(*QdbRec)
 
 // Used to pass block's changes to UnspentDB
 type BlockChanges struct {
 	Height uint32
 	LastKnownHeight uint32  // put here zero to disable this feature
-	AddedTxs map[btc.TxPrevOut] *btc.TxOut
-	DeledTxs map[btc.TxPrevOut] *btc.TxOut
+	AddList []*QdbRec
+	DeledTxs map[[32]byte] []bool
 }
 
 
@@ -46,19 +36,19 @@ func NewUnspentDb(dir string, init bool, ch *Chain) *UnspentDB {
 	db := new(UnspentDB)
 
 	if init {
-		os.RemoveAll(dir+"unspent3")
+		os.RemoveAll(dir+"unspent4")
 	}
 
 	if AbortNow {
 		return nil
 	}
-	db.unwind = newUnwindDB(dir+"unspent3"+string(os.PathSeparator))
+	db.unwind = newUnwindDB(dir+"unspent4"+string(os.PathSeparator))
 
 	if AbortNow {
 		return nil
 	}
 
-	db.unspent = newUnspentDB(dir+"unspent3"+string(os.PathSeparator), db.unwind.lastBlockHeight, ch)
+	db.unspent = newUnspentDB(dir+"unspent4"+string(os.PathSeparator), db.unwind.lastBlockHeight, ch)
 
 	return db
 }
@@ -78,26 +68,9 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.unwind.commit(changes, blhash)
 	db.unspent.commit(changes)
 	if changes.Height >= changes.LastKnownHeight {
-		if NocacheBlocksBelow < -1 { // Remove old records from unspent database
-			if target := int(changes.Height) + NocacheBlocksBelow + 1; target > 0 {
-				db.unspent.browse(func(db *qdb.DB, k qdb.KeyType, rec *OneWalkRecord) uint32 {
-					if int(rec.BlockHeight())<=target && !rec.IsStealthIdx() {
-						UTXOAgedCount++
-						return WALK_NOMORE
-					}
-					return 0
-				}, true)
-			}
-		}
 		db.Sync()
 	}
 	return
-}
-
-
-// Commit the given add/del transactions to UTXO and Wnwind DBs
-func (db *UnspentDB) IndexToQdb(i int) *qdb.DB {
-	return db.unspent.dbN(i)
 }
 
 
@@ -146,6 +119,7 @@ func (db *UnspentDB) Save() {
 }
 
 func (db *UnspentDB) UndoBlockTransactions(height uint32) {
+	panic("Undo not implemented")
 	db.nosync()
 	db.unwind.undo(height, db.unspent)
 	db.unspent.lastHeight = height-1

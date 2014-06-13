@@ -46,29 +46,30 @@ func PutVlen(b []byte, vl int) uint32 {
 // Returns length and number of bytes that the var_int took
 // If there is not enough bytes in the buffer 0, 0 gets returned
 func VLen(b []byte) (le int, var_int_siz int) {
-	if len(b)==0 {
-		return // better to quit with zeros than to cause a panic
+	switch b[0] {
+		case 0xfd:
+			return int(binary.LittleEndian.Uint16(b[1:3])), 3
+		case 0xfe:
+			return int(binary.LittleEndian.Uint32(b[1:5])), 5
+		case 0xff:
+			return int(binary.LittleEndian.Uint64(b[1:9])), 9
+		default:
+			return int(b[0]), 1
 	}
-	c := b[0]
-	if c < 0xfd {
-		return int(c), 1
-	}
-	var_int_siz = 1 + (2 << (2-(0xff-c)))
-	if len(b)<1+var_int_siz {
-		return // better to quit with zeros than to cause a panic
-	}
+}
 
-	var res uint64
-	for i:=1; i<var_int_siz; i++ {
-		res |= (uint64(b[i]) << uint64(8*(i-1)))
-	}
 
-	if res>0x7fffffff {
-		panic("This should never happen")
+func VULe(b []byte) (le uint64, var_int_siz int) {
+	switch b[0] {
+		case 0xfd:
+			return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
+		case 0xfe:
+			return uint64(binary.LittleEndian.Uint32(b[1:5])), 5
+		case 0xff:
+			return binary.LittleEndian.Uint64(b[1:9]), 9
+		default:
+			return uint64(b[0]), 1
 	}
-
-	le = int(res)
-	return
 }
 
 
