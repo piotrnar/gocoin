@@ -108,7 +108,6 @@ func close_blockchain() {
 
 func setup_runtime_vars() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
-	chain.MinBrowsableOutValue = 0
 	if GCPerc>0 {
 		debug.SetGCPercent(GCPerc)
 	}
