@@ -1,4 +1,5 @@
 1.0.0rc8
+* unspent4: new format of UTXO database (lower memory and disk usage)
 * Lib: add to UTXO records info about it coming from a coinbase
 * Lib: bct.WriteVlen trakes 64-bit value now (previously 32)
 
