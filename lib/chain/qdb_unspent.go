@@ -42,7 +42,6 @@ type UnspentDB struct {
 	ch *Chain
 }
 
-
 func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB) {
 	db = new(UnspentDB)
 	db.dir = dir+"unspent4"+string(os.PathSeparator)
@@ -171,6 +170,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 func (db *UnspentDB) GetStats() (s string) {
 	var tot, brcnt, sum, sumcb uint64
 	var mincnt, maxcnt, totdatasize uint64
+	var maxouts int
 	for i := range db.tdb {
 		dbcnt := uint64(db.dbN(i).Count())
 		if i==0 {
@@ -184,7 +184,10 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 			totdatasize += uint64(len(v))
 			brcnt++
-			rec := NewQdbRec(k, v)
+			rec := NewQdbRecStatic(k, v)
+			if len(rec.Outs)>maxouts {
+				maxouts = len(rec.Outs)
+			}
 			for idx := range rec.Outs {
 				if rec.Outs[idx]!=nil {
 					sum += rec.Outs[idx].Value
@@ -198,8 +201,8 @@ func (db *UnspentDB) GetStats() (s string) {
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB\n",
-		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6)
+	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxVoutsInTx:%d\n",
+		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, maxouts)
 	s += fmt.Sprintf(" Last Block : %s with height of %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return
@@ -322,7 +325,7 @@ func (db *UnspentDB) dbN(i int) (*qdb.DB) {
 				db.ch.CB.LoadWalk(NewQdbRec(k, v))
 			}
 			return 0
-		}, 20000/*size of pre-allocated map*/)
+		}, 200000/*size of pre-allocated map*/)
 
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()

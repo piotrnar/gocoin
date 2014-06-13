@@ -41,6 +41,64 @@ func FullQdbRec(dat []byte) *QdbRec {
 	return NewQdbRec(qdb.KeyType(binary.LittleEndian.Uint64(dat[:8])), dat[8:])
 }
 
+
+var (
+	sta_rec QdbRec
+	rec_outs = make([]*QdbTxOut, 3075)
+	rec_pool = make([]QdbTxOut, 3075)
+)
+
+
+func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
+	var off, n, i int
+	var u64, idx, exp_idx uint64
+
+	binary.LittleEndian.PutUint64(sta_rec.TxID[:8], uint64(key))
+	copy(sta_rec.TxID[8:], dat[:24])
+	off = 24
+
+	u64, n = btc.VULe(dat[off:])
+	off += n
+	sta_rec.InBlock = uint32(u64)
+
+	u64, n = btc.VULe(dat[off:])
+	off += n
+
+	sta_rec.Coinbase = (u64&1) != 0
+	u64 >>= 1
+	if len(rec_outs) < int(u64) {
+		rec_outs = make([]*QdbTxOut, u64)
+		rec_pool = make([]QdbTxOut, u64)
+	}
+	sta_rec.Outs = rec_outs[:u64]
+
+	for off < len(dat) {
+		idx, n = btc.VULe(dat[off:])
+		off += n
+
+		for exp_idx < idx {
+			sta_rec.Outs[exp_idx] = nil
+			exp_idx++
+		}
+		sta_rec.Outs[idx] = &rec_pool[idx]
+
+		u64, n = btc.VULe(dat[off:])
+		off += n
+		sta_rec.Outs[idx].Value = uint64(u64)
+
+		i, n = btc.VLen(dat[off:])
+		off += n
+
+		sta_rec.Outs[idx].PKScr = dat[off:off+i]
+		off += i
+
+		exp_idx = idx+1
+	}
+
+	return &sta_rec
+}
+
+
 func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
 	var off, n, i int
 	var u64, idx uint64
