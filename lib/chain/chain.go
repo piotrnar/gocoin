@@ -73,6 +73,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	if end.Height > ch.BlockTreeEnd.Height {
 		ch.ParseTillBlock(end)
 	}
+	ch.Unspent.LastBlockHeight = end.Height
 
 	return
 }

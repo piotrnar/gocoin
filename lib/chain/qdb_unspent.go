@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strconv"
 	"io/ioutil"
+//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
@@ -116,75 +117,46 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
-	println("UndoBlockTxs niot implemented")
-/*
-	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
-	dat, er := ioutil.ReadFile(fn)
-	if er!=nil {
-		panic(er.Error())
-	}
-
-	var changes BlockChanges
-	// Build the deleted list
-	changes.DeledTxs = make(map[[32]byte][]bool, len(bl.Txs))
 	for _, tx := range bl.Txs {
-		lst := make([]bool, len(bl.Txs))
-		for i := range bl.Txs {
+		lst := make([]bool, len(tx.TxOut))
+		for i := range lst {
 			lst[i] = true
 		}
-		changes.DeledTxs[tx.Hash.Hash] = lst
+		println("del", len(lst), "outs in", tx.Hash.String())
+		//db.del(tx.Hash.Hash[:], lst)
 	}
 
-	rd := bytes.NewReader(dat)
-	rd.Seek(32, os.SEEK_SET) // skip block hash
-	for {
-		rec = new(QdbRec)
-		if n, _ := rd.Read(rec.TxID[:]) != 32 {
-			break
-		}
-		cbase, _ := rd.ReadByte()
-		vout, _ := ReadVLen(rd)
-		val, _ := ReadVLen(rd)
-		scrlen, _ := ReadVLen(rd)
-		src := make([]byte, int(scrlen))
-		for len(rec.Outs) < int(vout) {
-			rec.Outs = append(rec.Outs, nil)
-		}
-		rec.Outs = append(rec.Outs, nil)
-	}
-
-	db.commit(&changes)
-	os.Remove(fn)
-	db.LastBlockHeight--
-	copy(db.LastBlockHash, newhash)
-*/
-}
-
-
-func (db *UnspentDB) loadUndoRecs() (res []*QdbRec) {
 	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
+	println(fn)
+	var addback []*QdbRec
 
 	dat, er := ioutil.ReadFile(fn)
 	if er!=nil {
 		panic(er.Error())
-	}
-
-	if !bytes.Equal(dat[:32], db.LastBlockHash) {
-		panic("Endo file does not match expected Block hash")
 	}
 
 	off := 32  // ship the block hash
 	for off < len(dat) {
 		le, n := btc.VLen(dat[off:])
 		off += n
-
 		qr := FullQdbRec(dat[off:off+le])
 		off += le
-
-		res = append(res, qr)
+		addback = append(addback, qr)
 	}
 
+	for i := range addback {
+		for j := range addback[i].Outs {
+			if addback[i].Outs[j]!=nil {
+				println(" + add back", btc.NewUint256(addback[i].TxID[:]).String(), "out", j)
+			}
+		}
+	}
 	return
+
+	//db.commit(&changes)
+	os.Remove(fn)
+	db.LastBlockHeight--
+	copy(db.LastBlockHash, newhash)
 }
 
 
@@ -221,6 +193,8 @@ func (db *UnspentDB) GetStats() (s string) {
 		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
 	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB\n",
 		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6)
+	s += fmt.Sprintf(" Last Block : %s with height of %d\n", btc.NewUint256(db.LastBlockHash).String(),
+		db.LastBlockHeight)
 	return
 }
 
@@ -237,7 +211,6 @@ func (db *UnspentDB) Sync() {
 		fn := fmt.Sprint(db.dir, db.LastBlockHeight)
 		fi, er := os.Stat(fn)
 		if er!=nil || fi.Size()<32 {
-			fmt.Println("Saving last block's hash")
 			ioutil.WriteFile(fn, db.LastBlockHash, 0666)
 		}
 	}
@@ -353,6 +326,9 @@ func (db *UnspentDB) dbN(i int) (*qdb.DB) {
 
 
 func (db *UnspentDB) del(hash []byte, outs []bool) {
+	if db.ch.CB.NotifyTxDel!=nil {
+		db.ch.CB.NotifyTxDel(hash, outs)
+	}
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
 	_db := db.dbN(int(hash[31])%NumberOfUnspentSubDBs)
 	v := _db.Get(ind)
@@ -387,9 +363,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)
-		if db.ch.CB.NotifyTxDel!=nil {
-			db.ch.CB.NotifyTxDel(k[:], v)
-		}
 	}
 }
 
