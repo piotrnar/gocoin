@@ -122,12 +122,10 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		for i := range lst {
 			lst[i] = true
 		}
-		println("del", len(lst), "outs in", tx.Hash.String())
-		//db.del(tx.Hash.Hash[:], lst)
+		db.del(tx.Hash.Hash[:], lst)
 	}
 
 	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
-	println(fn)
 	var addback []*QdbRec
 
 	dat, er := ioutil.ReadFile(fn)
@@ -144,16 +142,25 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		addback = append(addback, qr)
 	}
 
-	for i := range addback {
-		for j := range addback[i].Outs {
-			if addback[i].Outs[j]!=nil {
-				println(" + add back", btc.NewUint256(addback[i].TxID[:]).String(), "out", j)
+	for _, tx := range addback {
+		if db.ch.CB.NotifyTxAdd!=nil {
+			db.ch.CB.NotifyTxAdd(tx)
+		}
+
+		ind := qdb.KeyType(binary.LittleEndian.Uint64(tx.TxID[:8]))
+		_db := db.dbN(int(tx.TxID[31])%NumberOfUnspentSubDBs)
+		v := _db.Get(ind)
+		if v != nil {
+			oldrec := NewQdbRec(ind, v)
+			for a := range tx.Outs {
+				if tx.Outs[a]==nil {
+					tx.Outs[a] = oldrec.Outs[a]
+				}
 			}
 		}
+		_db.PutExt(ind, tx.Bytes(), 0)
 	}
-	return
 
-	//db.commit(&changes)
 	os.Remove(fn)
 	db.LastBlockHeight--
 	copy(db.LastBlockHash, newhash)
@@ -333,7 +340,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	_db := db.dbN(int(hash[31])%NumberOfUnspentSubDBs)
 	v := _db.Get(ind)
 	if v==nil {
-		panic("Cannot delete this")
+		return // no such txid in UTXO (just ignorde delete request)
 	}
 	rec := NewQdbRec(ind, v)
 	var anyout bool
@@ -356,10 +363,10 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
 		ind := qdb.KeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
-		db.dbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
 		if db.ch.CB.NotifyTxAdd!=nil {
 			db.ch.CB.NotifyTxAdd(rec)
 		}
+		db.dbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)

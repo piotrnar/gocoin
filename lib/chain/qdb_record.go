@@ -80,6 +80,7 @@ func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
 
 
 func (rec *QdbRec) Serialize(full bool) []byte {
+	var any_out bool
 	bu := new(bytes.Buffer)
 	if full {
 		bu.Write(rec.TxID[:])
@@ -98,10 +99,13 @@ func (rec *QdbRec) Serialize(full bool) []byte {
 			btc.WriteVlen(bu, rec.Outs[i].Value)
 			btc.WriteVlen(bu, uint64(len(rec.Outs[i].PKScr)))
 			bu.Write(rec.Outs[i].PKScr)
+			any_out = true
 		}
 	}
-	//println("enc:", hex.EncodeToString(bu.Bytes()))
-	return bu.Bytes()
+	if any_out {
+		return bu.Bytes()
+	}
+	return nil
 }
 
 
