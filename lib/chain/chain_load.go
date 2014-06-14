@@ -56,7 +56,7 @@ func (ch *Chain)loadBlockIndex() {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 		return
 	} else {
-		println("Last Blcok Hash:", btc.NewUint256(tlb).String())
+		println("Last Block Hash:", btc.NewUint256(tlb).String())
 		var ok bool
 		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {
