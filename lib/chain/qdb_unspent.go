@@ -322,7 +322,7 @@ func (db *UnspentDB) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		qdb.NewDBrowse(&db.tdb[i], db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
 			if db.ch.CB.LoadWalk!=nil {
-				db.ch.CB.LoadWalk(NewQdbRec(k, v))
+				db.ch.CB.LoadWalk(NewQdbRecStatic(k, v))
 			}
 			return 0
 		}, 200000/*size of pre-allocated map*/)
