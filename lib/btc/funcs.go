@@ -43,6 +43,28 @@ func PutVlen(b []byte, vl int) uint32 {
 }
 
 
+func PutULe(b []byte, uvl uint64) int {
+	if uvl<0xfd {
+		b[0] = byte(uvl)
+		return 1
+	}
+	if uvl<0x10000 {
+		b[0] = 0xfd
+		binary.LittleEndian.PutUint16(b[1:3], uint16(uvl))
+		return 3
+	}
+	if uvl<0x100000000 {
+		b[0] = 0xfe
+		binary.LittleEndian.PutUint32(b[1:5], uint32(uvl))
+		return 5
+	}
+	b[0] = 0xff
+	binary.LittleEndian.PutUint64(b[1:9], uvl)
+	return 9
+}
+
+
+
 // Returns length and number of bytes that the var_int took
 // If there is not enough bytes in the buffer 0, 0 gets returned
 func VLen(b []byte) (le int, var_int_siz int) {
