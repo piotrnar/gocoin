@@ -1,8 +1,6 @@
 package chain
 
 import (
-	"bytes"
-	//"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
@@ -136,34 +134,70 @@ func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
 	return &rec
 }
 
+func vlen2size(uvl uint64) int {
+	if uvl<0xfd {
+		return 1
+	} else if uvl<0x10000 {
+		return 3
+	} else if uvl<0x100000000 {
+		return 5
+	}
+	return 9
+}
 
-func (rec *QdbRec) Serialize(full bool) []byte {
+
+func (rec *QdbRec) Serialize(full bool) (buf []byte) {
+	var le, of int
 	var any_out bool
-	bu := new(bytes.Buffer)
-	if full {
-		bu.Write(rec.TxID[:])
-	} else {
-		bu.Write(rec.TxID[8:])
-	}
-	btc.WriteVlen(bu, uint64(rec.InBlock))
+
+	outcnt := uint64(len(rec.Outs)<<1)
 	if rec.Coinbase {
-		btc.WriteVlen(bu, uint64(len(rec.Outs)<<1)|1)
-	} else {
-		btc.WriteVlen(bu, uint64(len(rec.Outs)<<1))
+		outcnt |= 1
 	}
+
+	if full {
+		le = 32
+	} else {
+		le = 24
+	}
+
+	le += vlen2size(uint64(rec.InBlock))  // block length
+	le += vlen2size(outcnt)  // out count
+
 	for i := range rec.Outs {
 		if rec.Outs[i] != nil {
-			btc.WriteVlen(bu, uint64(i))
-			btc.WriteVlen(bu, rec.Outs[i].Value)
-			btc.WriteVlen(bu, uint64(len(rec.Outs[i].PKScr)))
-			bu.Write(rec.Outs[i].PKScr)
+			le += vlen2size(uint64(i))
+			le += vlen2size(rec.Outs[i].Value)
+			le += vlen2size(uint64(len(rec.Outs[i].PKScr)))
+			le += len(rec.Outs[i].PKScr)
 			any_out = true
 		}
 	}
-	if any_out {
-		return bu.Bytes()
+	if !any_out {
+		return
 	}
-	return nil
+
+	buf = make([]byte, le)
+	if full {
+		copy(buf[:32], rec.TxID[:])
+		of = 32
+	} else {
+		copy(buf[:24], rec.TxID[8:])
+		of = 24
+	}
+
+	of += btc.PutULe(buf[of:], uint64(rec.InBlock))
+	of += btc.PutULe(buf[of:], outcnt)
+	for i := range rec.Outs {
+		if rec.Outs[i] != nil {
+			of += btc.PutULe(buf[of:], uint64(i))
+			of += btc.PutULe(buf[of:], rec.Outs[i].Value)
+			of += btc.PutULe(buf[of:], uint64(len(rec.Outs[i].PKScr)))
+			copy(buf[of:], rec.Outs[i].PKScr)
+			of += len(rec.Outs[i].PKScr)
+		}
+	}
+	return
 }
 
 
