@@ -96,16 +96,30 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.LastBlockHeight = changes.Height
 
 	if changes.UndoData!=nil || (changes.Height%UnwindBufferMaxHistory)==0 {
-		bu := new(bytes.Buffer)
-		bu.Write(blhash)
-		if changes.UndoData != nil {
-			for _, xx := range changes.UndoData {
-				bin := xx.Serialize(true)
-				btc.WriteVlen(bu, uint64(len(bin)))
-				bu.Write(bin)
+		if true {
+			// let's see if linux still crashes with this "work around"
+			// https://code.google.com/p/go/issues/detail?id=8210
+			f, _ := os.Create(fmt.Sprint(db.dir, changes.Height))
+			if changes.UndoData != nil {
+				for _, xx := range changes.UndoData {
+					bin := xx.Serialize(true)
+					btc.WriteVlen(f, uint64(len(bin)))
+					f.Write(bin)
+				}
 			}
+			f.Close()
+		} else {
+			bu := new(bytes.Buffer)
+			bu.Write(blhash)
+			if changes.UndoData != nil {
+				for _, xx := range changes.UndoData {
+					bin := xx.Serialize(true)
+					btc.WriteVlen(bu, uint64(len(bin)))
+					bu.Write(bin)
+				}
+			}
+			ioutil.WriteFile(fmt.Sprint(db.dir, changes.Height), bu.Bytes(), 0666)
 		}
-		ioutil.WriteFile(fmt.Sprint(db.dir, changes.Height), bu.Bytes(), 0666)
 	}
 
 	if changes.Height>UnwindBufferMaxHistory {
