@@ -13,6 +13,7 @@ Wallet:
 * Add Type-4 as HD Wallet
 
 Downloader:
+* Avid re-building of UTXO-db while using "-b"
 * Make it to work with gocoin.cfg file
 
 Core lib:
