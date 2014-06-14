@@ -186,7 +186,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 							urec.Outs = make([]*QdbTxOut, tout.VoutCount)
 							changes.UndoData[inp.Hash] = urec
 						}
-						urec.Outs[inp.Vout] = &QdbTxOut{Value:tout.Value, PKScr:tout.Pk_script}
+						tmp := new(QdbTxOut)
+						tmp.Value = tout.Value
+						tmp.PKScr = make([]byte, len(tout.Pk_script))
+						copy(tmp.PKScr, tout.Pk_script)
+						urec.Outs[inp.Vout] = tmp
 					}
 				}
 
