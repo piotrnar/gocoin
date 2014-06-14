@@ -46,11 +46,8 @@ type OneCachedAddrBalance struct {
 }
 
 
-// This is called while accepting the block (from the chain's thread)
-func TxNotifyAdd (tx *chain.QdbRec) {
-	var update_wallet bool
-	BalanceMutex.Lock()
-
+// This function is only used when loading UTXO database
+func newUTXO(tx *chain.QdbRec) (update_wallet bool) {
 	for idx, out := range tx.Outs {
 		if out == nil {
 			continue
@@ -75,15 +72,25 @@ func TxNotifyAdd (tx *chain.QdbRec) {
 			}
 		}
 	}
+	return
+}
 
-	if update_wallet {
+// External function used for UTXO db loading (to ignore return value from newUTXO)
+func NewUTXO(tx *chain.QdbRec) {
+	newUTXO(tx)
+}
+
+// This is called while accepting the block (from the chain's thread)
+func TxNotifyAdd (tx *chain.QdbRec) {
+	BalanceMutex.Lock()
+	if newUTXO(tx) {
 		println("upd bal", tx.InBlock)
 		sync_wallet()
 	}
 	BalanceMutex.Unlock()
 }
 
-
+// This is called while accepting the block (from the chain's thread)
 func TxNotifyDel (txid []byte, outs []bool) {
 	var update_wallet bool
 	BalanceMutex.Lock()
@@ -466,34 +473,6 @@ func LoadAllWallets() {
 		}
 	}
 }
-
-// This function is only used when loading UTXO database
-func NewUTXO(tx *chain.QdbRec) {
-	for idx, rec := range tx.Outs {
-		if rec == nil {
-			continue
-		}
-		if rec.IsP2KH() || rec.IsP2SH() {
-			if adr:=btc.NewAddrFromPkScript(rec.PKScr, common.Testnet); adr!=nil {
-				if crec, ok := CachedAddrs[adr.Hash160]; ok {
-					value := rec.Value
-					crec.Value += value
-					utxo := new(chain.OneUnspentTx)
-					utxo.TxPrevOut.Hash = tx.TxID
-					utxo.TxPrevOut.Vout = uint32(idx)
-					utxo.Value = value
-					utxo.MinedAt = tx.InBlock
-					utxo.BtcAddr = CacheUnspent[crec.CacheIndex].BtcAddr
-					CacheUnspent[crec.CacheIndex].AllUnspentTx = append(CacheUnspent[crec.CacheIndex].AllUnspentTx, utxo)
-					CacheUnspentIdx[utxo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: crec.CacheIndex, Record: utxo}
-				}
-			}
-		/*TODO } else if len(StealthAdCache)>0 && rec.IsStealthIdx() {
-			StealthNotify(db, k, rec)*/
-		}
-	}
-}
-
 
 func ChainInitDone() {
 	sync_wallet()
