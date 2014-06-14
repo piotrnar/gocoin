@@ -49,7 +49,7 @@ var (
 
 func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
 	var off, n, i int
-	var u64, idx, exp_idx uint64
+	var u64, idx uint64
 
 	binary.LittleEndian.PutUint64(sta_rec.TxID[:8], uint64(key))
 	copy(sta_rec.TxID[8:], dat[:24])
@@ -69,15 +69,14 @@ func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
 		rec_pool = make([]QdbTxOut, u64)
 	}
 	sta_rec.Outs = rec_outs[:u64]
+	for i := range sta_rec.Outs {
+		sta_rec.Outs[i] = nil
+	}
 
 	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
 
-		for exp_idx < idx {
-			sta_rec.Outs[exp_idx] = nil
-			exp_idx++
-		}
 		sta_rec.Outs[idx] = &rec_pool[idx]
 
 		u64, n = btc.VULe(dat[off:])
@@ -89,8 +88,6 @@ func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
 
 		sta_rec.Outs[idx].PKScr = dat[off:off+i]
 		off += i
-
-		exp_idx = idx+1
 	}
 
 	return &sta_rec
