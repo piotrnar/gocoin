@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"bytes"
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	//"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -316,6 +316,9 @@ func UpdateBalance() {
 		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
 		var new_addrs chain.AllUnspentTx
+		var c, spen_exp []byte
+		var out *chain.QdbTxOut
+		var h160 [20]byte
 
 		common.BlockChain.Unspent.BrowseUTXO(true, func(tx *chain.QdbRec) {
 			for idx, rec := range tx.Outs {
@@ -330,18 +333,40 @@ func UpdateBalance() {
 					if ad, ok := tofetch_regular[binary.LittleEndian.Uint64(rec.PKScr[2:2+8])]; ok {
 						new_addrs = append(new_addrs, tx.ToUnspent(uint32(idx), ad))
 					}
-				} /*else if rec.IsStealthIdx() {
-					for i := range tofetch_stealh {
-						fl, uo := CheckStealthRec(db, k, rec, tofetch_stealh[i], tofetch_secrets[i], true)
-						if fl != 0 {
-							return fl
-						}
-						if uo!=nil {
-							new_addrs = append(new_addrs, uo)
-							break
+				} else if idx<len(tx.Outs)-1 {
+					// check for stealth
+					if out = tx.Outs[idx+1]; out==nil {
+						continue
+					}
+					if !rec.IsStealthIdx() || !out.IsP2KH() {
+						continue
+					}
+
+				stealth_check:
+					for _, ad := range tofetch_stealh {
+						if sa := ad.StealthAddr; sa.CheckNonce(rec.PKScr[3:7]) {
+							for _, d := range tofetch_secrets {
+								c = btc.StealthDH(rec.PKScr[7:40], d)
+								spen_exp = btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+								btc.RimpHash(spen_exp, h160[:])
+								if bytes.Equal(out.PKScr[3:23], h160[:]) {
+									uo := new(chain.OneUnspentTx)
+									uo.TxPrevOut.Hash = tx.TxID
+									uo.TxPrevOut.Vout = uint32(idx+1)
+									uo.Value = out.Value
+									uo.MinedAt = tx.InBlock
+									uo.BtcAddr = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+									uo.FixDestString()
+									uo.BtcAddr.StealthAddr = sa
+									uo.BtcAddr.Extra = ad.Extra
+									uo.StealthC = c
+									new_addrs = append(new_addrs, uo)
+									break stealth_check
+								}
+							}
 						}
 					}
-				}*/
+				}
 			}
 		})
 
