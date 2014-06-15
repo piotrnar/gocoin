@@ -312,7 +312,14 @@ func qdb_stats(par string) {
 
 
 func defrag_blocks(par string) {
-	usif.DefragBlocksDB = true
+	switch par {
+		case "utxo": usif.DefragBlocksDB = 1
+		case "blks": usif.DefragBlocksDB = 2
+		case "all": usif.DefragBlocksDB = 3
+		default:
+			fmt.Println("Specify what to defragment: utxo, blks or all")
+			return
+	}
 	usif.Exit_now = true
 }
 
@@ -469,12 +476,12 @@ func init() {
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("defrag", true, defrag_blocks, "Defragment databases (UTXO + Blocks) on disk and exits")
+	newUi("defrag", true, defrag_blocks, "Defragment database files on disk (use with: utxo | blks | all)")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("peers", false, show_addresses, "Dump pers database (warning: may be long)")
+	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")

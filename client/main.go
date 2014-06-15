@@ -181,50 +181,51 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 
 func defrag_db() {
-	qdb.SetDefragPercent(1)
-	fmt.Print("Defragmenting UTXO database")
-	os.Stdout.Sync()
-	for {
-		if !common.BlockChain.Unspent.Idle() {
-			break
+	if (usif.DefragBlocksDB&1) != 0 {
+		qdb.SetDefragPercent(1)
+		fmt.Print("Defragmenting UTXO database")
+		for {
+			if !common.BlockChain.Unspent.Idle() {
+				break
+			}
+			fmt.Print(".")
 		}
-		fmt.Print(".")
-		os.Stdout.Sync()
+		fmt.Println("done")
 	}
-	fmt.Println("done")
-	os.Stdout.Sync()
 
-	fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
-	os.RemoveAll(common.GocoinHomeDir+"defrag")
-	defragdb := chain.NewBlockDB(common.GocoinHomeDir+"defrag")
-	fmt.Println("Defragmenting the database...")
-	blk := common.BlockChain.BlockTreeRoot
-	for {
-		blk = blk.FindPathTo(common.BlockChain.BlockTreeEnd)
-		if blk==nil {
-			fmt.Println("Database defragmenting finished successfully")
-			fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
-			break
+	if (usif.DefragBlocksDB&2) != 0 {
+		fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
+		os.RemoveAll(common.GocoinHomeDir+"defrag")
+		defragdb := chain.NewBlockDB(common.GocoinHomeDir+"defrag")
+		fmt.Println("Defragmenting the database...")
+		blk := common.BlockChain.BlockTreeRoot
+		for {
+			blk = blk.FindPathTo(common.BlockChain.BlockTreeEnd)
+			if blk==nil {
+				fmt.Println("Database defragmenting finished successfully")
+				fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
+				break
+			}
+			if (blk.Height&0xff)==0 {
+				fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, common.BlockChain.BlockTreeEnd.Height,
+					100 * blk.Height / common.BlockChain.BlockTreeEnd.Height)
+			}
+			bl, trusted, er := common.BlockChain.Blocks.BlockGet(blk.BlockHash)
+			if er != nil {
+				fmt.Println("FATAL ERROR during BlockGet:", er.Error())
+				break
+			}
+			nbl, er := btc.NewBlock(bl)
+			if er != nil {
+				fmt.Println("FATAL ERROR during NewBlock:", er.Error())
+				break
+			}
+			nbl.Trusted = trusted
+			defragdb.BlockAdd(blk.Height, nbl)
 		}
-		if (blk.Height&0xff)==0 {
-			fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, common.BlockChain.BlockTreeEnd.Height,
-				100 * blk.Height / common.BlockChain.BlockTreeEnd.Height)
-		}
-		bl, trusted, er := common.BlockChain.Blocks.BlockGet(blk.BlockHash)
-		if er != nil {
-			fmt.Println("FATAL ERROR during BlockGet:", er.Error())
-			break
-		}
-		nbl, er := btc.NewBlock(bl)
-		if er != nil {
-			fmt.Println("FATAL ERROR during NewBlock:", er.Error())
-			break
-		}
-		nbl.Trusted = trusted
-		defragdb.BlockAdd(blk.Height, nbl)
+		defragdb.Sync()
+		defragdb.Close()
 	}
-	defragdb.Sync()
-	defragdb.Close()
 }
 
 
@@ -349,7 +350,7 @@ func main() {
 	network.NetCloseAll()
 	peersdb.ClosePeerDB()
 
-	if usif.DefragBlocksDB {
+	if usif.DefragBlocksDB!=0 {
 		defrag_db()
 	}
 
