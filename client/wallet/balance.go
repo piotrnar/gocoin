@@ -263,7 +263,6 @@ func DumpBalance(mybal chain.AllUnspentTx, utxt *os.File, details, update_balanc
 
 		// update the balance/ folder
 		if utxt != nil {
-			println("Getting", mybal[i].TxPrevOut.String())
 			po, e := common.BlockChain.Unspent.UnspentGet(&mybal[i].TxPrevOut)
 			if e != nil {
 				println("UnspentGet:", e.Error())
