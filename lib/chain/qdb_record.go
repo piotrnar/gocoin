@@ -225,5 +225,5 @@ func (r *QdbTxOut) IsP2SH() bool {
 }
 
 func (r *QdbTxOut) IsStealthIdx() bool {
-	return len(r.PKScr)==40 && r.PKScr[0]==0x6a && r.PKScr[49]==0x26 && r.PKScr[50]==0x06
+	return len(r.PKScr)==40 && r.PKScr[0]==0x6a && r.PKScr[1]==0x26 && r.PKScr[2]==0x06
 }
