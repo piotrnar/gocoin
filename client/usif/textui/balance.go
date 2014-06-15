@@ -81,6 +81,7 @@ func list_unspent(addr string) {
 					uo.Value = out.Value
 					uo.MinedAt = tx.InBlock
 					uo.BtcAddr = ad
+					uo.StealthC = c
 					unsp = append(unsp, uo)
 				}
 			}
