@@ -303,7 +303,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 	var i int
 	brfn := func(k qdb.KeyType, v []byte) (fl uint32) {
-		walk(NewQdbRec(k, v))
+		walk(NewQdbRecStatic(k, v))
 		return
 	}
 
