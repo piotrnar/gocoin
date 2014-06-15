@@ -29,7 +29,8 @@ type KeyType uint64
 
 // defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
 var (
-	DefragPercentVal uint32 = 100
+	DefragPercentVal uint32 = 50 // Defrag() will not be done if we waste less disk space
+	ForcedDefragPerc uint32 = 300 // forced defrag when extra disk usage goes above this
 	MaxPending uint32       = 1000
 	MaxPendingNoSync uint32 = 10000
 	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
@@ -363,10 +364,15 @@ func (db *DB) sync() {
 			}
 		}
 		db.idx.writebuf(bidx.Bytes())
+		db.pending_recs = make(map[KeyType] bool, MaxPending)
+
+		if db.idx.extra_space_used > (uint64(ForcedDefragPerc)*db.idx.disk_space_needed/100) {
+			cnt("DefragNow")
+			db.defrag()
+		}
 	} else {
 		cnt("SyncNO")
 	}
-	db.pending_recs = make(map[KeyType] bool, MaxPending)
 }
 
 
