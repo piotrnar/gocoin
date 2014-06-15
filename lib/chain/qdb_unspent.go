@@ -166,49 +166,6 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 }
 
 
-// Return DB statistics
-func (db *UnspentDB) GetStats() (s string) {
-	var tot, brcnt, sum, sumcb uint64
-	var mincnt, maxcnt, totdatasize uint64
-	var maxouts int
-	for i := range db.tdb {
-		dbcnt := uint64(db.dbN(i).Count())
-		if i==0 {
-			mincnt, maxcnt = dbcnt, dbcnt
-		} else if dbcnt < mincnt {
-			mincnt = dbcnt
-		} else if dbcnt > maxcnt {
-			maxcnt = dbcnt
-		}
-		tot += dbcnt
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			totdatasize += uint64(len(v))
-			brcnt++
-			rec := NewQdbRecStatic(k, v)
-			if len(rec.Outs)>maxouts {
-				maxouts = len(rec.Outs)
-			}
-			for idx := range rec.Outs {
-				if rec.Outs[idx]!=nil {
-					sum += rec.Outs[idx].Value
-					if rec.Coinbase {
-						sumcb += rec.Outs[idx].Value
-					}
-				}
-			}
-			return 0
-		})
-	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
-		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxVoutsInTx:%d\n",
-		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, maxouts)
-	s += fmt.Sprintf(" Last Block : %s with height of %d\n", btc.NewUint256(db.LastBlockHash).String(),
-		db.LastBlockHeight)
-	return
-}
-
-
 // Flush all the data to files
 func (db *UnspentDB) Sync() {
 	db.nosyncinprogress = false
@@ -420,4 +377,48 @@ func (db *UnspentDB) PrintCoinAge() {
 			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val), btc.UintToBtc(age[i].valcb),
 			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), btc.UintToBtc(age[i].val/cnt))
 	}
+}
+
+// Return DB statistics
+func (db *UnspentDB) GetStats() (s string) {
+	var tot, brcnt, sum, sumcb, stealth_uns, stealth_tot uint64
+	var mincnt, maxcnt, totdatasize uint64
+	for i := range db.tdb {
+		dbcnt := uint64(db.dbN(i).Count())
+		if i==0 {
+			mincnt, maxcnt = dbcnt, dbcnt
+		} else if dbcnt < mincnt {
+			mincnt = dbcnt
+		} else if dbcnt > maxcnt {
+			maxcnt = dbcnt
+		}
+		tot += dbcnt
+		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+			totdatasize += uint64(len(v))
+			brcnt++
+			rec := NewQdbRecStatic(k, v)
+			for idx := range rec.Outs {
+				if rec.Outs[idx]!=nil {
+					sum += rec.Outs[idx].Value
+					if rec.Coinbase {
+						sumcb += rec.Outs[idx].Value
+					}
+					if rec.Outs[idx].IsStealthIdx() && idx+1<len(rec.Outs) {
+						if rec.Outs[idx+1]!=nil {
+							stealth_uns++
+						}
+						stealth_tot++
+					}
+				}
+			}
+			return 0
+		})
+	}
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
+		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
+	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxVoutsInTx:%d  StealthIdxs:%d/%d\n",
+		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, len(rec_outs), stealth_uns, stealth_tot)
+	s += fmt.Sprintf(" Last Block : %s with height of %d\n", btc.NewUint256(db.LastBlockHash).String(),
+		db.LastBlockHeight)
+	return
 }
