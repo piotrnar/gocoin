@@ -93,7 +93,7 @@ func open_blockchain() (abort bool) {
 func close_blockchain() {
 	StartTime = time.Now()
 	fmt.Print("All blocks done - defrag unspent")
-	qdb.SetDefragPercent(10)
+	qdb.SetDefragPercent(50)
 	for {
 		if !TheBlockChain.Unspent.Idle() {
 			break
