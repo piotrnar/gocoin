@@ -68,7 +68,7 @@ check_next_address:
 			}
 
 			for _, ad := range StealthAdCache {
-				if sa := ad.addr.StealthAddr; sa.CheckNonce(rec.PKScr[3:7]) {
+				if sa := ad.addr.StealthAddr; sa.CheckNonce(rec.PKScr[3:40]) {
 					c = btc.StealthDH(rec.PKScr[7:40], ad.d[:])
 					spen_exp = btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
 					btc.RimpHash(spen_exp, h160[:])
@@ -389,7 +389,7 @@ func UpdateBalance() {
 
 				stealth_check:
 					for _, ad := range tofetch_stealh {
-						if sa := ad.StealthAddr; sa.CheckNonce(rec.PKScr[3:7]) {
+						if sa := ad.StealthAddr; sa.CheckNonce(rec.PKScr[3:40]) {
 							for _, d := range tofetch_secrets {
 								c = btc.StealthDH(rec.PKScr[7:40], d)
 								spen_exp = btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
