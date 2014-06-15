@@ -386,7 +386,7 @@ func (db *UnspentDB) PrintCoinAge() {
 	age := make(map[uint32] *onerec)
 	for i := range db.tdb {
 		db.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
-			rec := NewQdbRec(k, v)
+			rec := NewQdbRecStatic(k, v)
 			a := rec.InBlock
 			if a>maxbl {
 				maxbl = a
