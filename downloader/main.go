@@ -9,9 +9,10 @@ import (
 	"runtime"
 	"os/signal"
 	"runtime/debug"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
@@ -111,7 +112,7 @@ func setup_runtime_vars() {
 	if GCPerc>0 {
 		debug.SetGCPercent(GCPerc)
 	}
-	//qdb.SetDefragPercent(100)
+	qdb.SetDefragPercent(300)
 	//qdb.SetMaxPending(1000, 10000)
 }
 
