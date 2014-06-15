@@ -59,16 +59,13 @@ func list_unspent(addr string) {
 		}
 		walk = func(tx *chain.QdbRec) {
 			for i:=0; i<len(tx.Outs)-1; i++ {
-				if tx.Outs[i]==nil || tx.Outs[i+1]==nil {
+				if rec = tx.Outs[i]; rec==nil {
 					continue
 				}
-				if rec = tx.Outs[i]; !rec.IsStealthIdx() {
+				if out = tx.Outs[i+1]; out==nil {
 					continue
 				}
-				if out = tx.Outs[i+1]; !out.IsP2KH() {
-					continue
-				}
-				if !ad.StealthAddr.CheckNonce(rec.PKScr[3:7]) {
+				if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:7]) {
 					continue
 				}
 				c = btc.StealthDH(rec.PKScr[7:40], d)
@@ -80,7 +77,10 @@ func list_unspent(addr string) {
 					uo.TxPrevOut.Vout = uint32(i+1)
 					uo.Value = out.Value
 					uo.MinedAt = tx.InBlock
-					uo.BtcAddr = ad
+					uo.BtcAddr = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+					uo.FixDestString()
+					uo.BtcAddr.StealthAddr = sa
+					uo.BtcAddr.Extra = ad.Extra
 					uo.StealthC = c
 					unsp = append(unsp, uo)
 				}
@@ -214,27 +214,46 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 		return
 	}
 
-	println("do_scan_stealth not implemented")
-	return
-	/*
 	var unsp chain.AllUnspentTx
+	var c, spen_exp []byte
+	var rec, out *chain.QdbTxOut
+	var h160 [20]byte
 
-	common.BlockChain.Unspent.BrowseUTXO(true, func(db *qdb.DB, k qdb.KeyType, rec *chain.OneWalkRecord) (uint32) {
-		if !rec.IsStealthIdx() {
-			return 0
+	common.BlockChain.Unspent.BrowseUTXO(true, func(tx *chain.QdbRec) {
+		for i:=0; i<len(tx.Outs)-1; i++ {
+			if rec = tx.Outs[i]; rec==nil {
+				continue
+			}
+			if out = tx.Outs[i+1]; out==nil {
+				continue
+			}
+			if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:7]) {
+				continue
+			}
+			c = btc.StealthDH(rec.PKScr[7:40], d)
+			spen_exp = btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+			btc.RimpHash(spen_exp, h160[:])
+			if bytes.Equal(out.PKScr[3:23], h160[:]) {
+				uo := new(chain.OneUnspentTx)
+				uo.TxPrevOut.Hash = tx.TxID
+				uo.TxPrevOut.Vout = uint32(i+1)
+				uo.Value = out.Value
+				uo.MinedAt = tx.InBlock
+				uo.BtcAddr = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+				uo.FixDestString()
+				uo.BtcAddr.StealthAddr = sa
+				uo.BtcAddr.Extra = ad.Extra
+				uo.StealthC = c
+				unsp = append(unsp, uo)
+			}
 		}
-		fl, uo := wallet.CheckStealthRec(db, k, rec, ad, d, true)
-		if uo!=nil {
-			unsp = append(unsp, uo)
-		}
-		return fl
 	})
 
 	sort.Sort(unsp)
 	os.RemoveAll("balance")
 	os.MkdirAll("balance/", 0770)
 	utxt, _ := os.Create("balance/unspent.txt")
-	fmt.Print(wallet.DumpBalance(unsp, utxt, true, false))*/
+	fmt.Print(wallet.DumpBalance(unsp, utxt, true, false))
 }
 
 
