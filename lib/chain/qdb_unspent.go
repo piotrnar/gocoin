@@ -394,7 +394,7 @@ func (db *UnspentDB) GetStats() (s string) {
 		}
 		tot += dbcnt
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			totdatasize += uint64(len(v))
+			totdatasize += uint64(len(v)+8)
 			brcnt++
 			rec := NewQdbRecStatic(k, v)
 			for idx := range rec.Outs {
