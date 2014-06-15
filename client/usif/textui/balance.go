@@ -65,7 +65,7 @@ func list_unspent(addr string) {
 				if out = tx.Outs[i+1]; out==nil {
 					continue
 				}
-				if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:7]) {
+				if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:40]) {
 					continue
 				}
 				c = btc.StealthDH(rec.PKScr[7:40], d)
@@ -227,7 +227,7 @@ func do_scan_stealth(p string, ignore_prefix bool) {
 			if out = tx.Outs[i+1]; out==nil {
 				continue
 			}
-			if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:7]) {
+			if !rec.IsStealthIdx() || !out.IsP2KH() || !ad.StealthAddr.CheckNonce(rec.PKScr[3:40]) {
 				continue
 			}
 			c = btc.StealthDH(rec.PKScr[7:40], d)
