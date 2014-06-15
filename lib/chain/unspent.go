@@ -50,6 +50,9 @@ func (ou *OneUnspentTx) String() (s string) {
 	return
 }
 
+func (ou *OneUnspentTx) FixDestString() {
+	ou.destString = ou.BtcAddr.String()
+}
 
 func (ou *OneUnspentTx) UnspentTextLine() (s string) {
 	s = fmt.Sprintf("%s # %.8f BTC @ %s%s, block %d", ou.TxPrevOut.String(),
