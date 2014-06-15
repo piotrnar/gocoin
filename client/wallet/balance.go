@@ -48,25 +48,70 @@ type OneCachedAddrBalance struct {
 
 // This function is only used when loading UTXO database
 func newUTXO(tx *chain.QdbRec) (update_wallet bool) {
+	var c, spen_exp []byte
+	var rec *chain.QdbTxOut
+	var h160 [20]byte
+
+check_next_address:
 	for idx, out := range tx.Outs {
 		if out == nil {
 			continue
 		}
 
+		// check for stealth
+		if idx>0 {
+			if rec = tx.Outs[idx-1]; rec==nil {
+				goto not_stealth
+			}
+			if !rec.IsStealthIdx() || !out.IsP2KH() {
+				goto not_stealth
+			}
+
+			for _, ad := range StealthAdCache {
+				if sa := ad.addr.StealthAddr; sa.CheckNonce(rec.PKScr[3:7]) {
+					c = btc.StealthDH(rec.PKScr[7:40], ad.d[:])
+					spen_exp = btc.DeriveNextPublic(sa.SpendKeys[0][:], c)
+					btc.RimpHash(spen_exp, h160[:])
+					if bytes.Equal(out.PKScr[3:23], h160[:]) {
+						uo := new(chain.OneUnspentTx)
+						uo.TxPrevOut.Hash = tx.TxID
+						uo.TxPrevOut.Vout = uint32(idx)
+						uo.Value = out.Value
+						uo.MinedAt = tx.InBlock
+						uo.BtcAddr = btc.NewAddrFromHash160(h160[:], btc.AddrVerPubkey(common.CFG.Testnet))
+						uo.FixDestString()
+						uo.BtcAddr.StealthAddr = sa
+						uo.BtcAddr.Extra = ad.addr.Extra
+						uo.StealthC = c
+
+						carec := CachedAddrs[ad.h160]
+						carec.Value += uo.Value
+						CacheUnspent[carec.CacheIndex].AllUnspentTx = append(CacheUnspent[carec.CacheIndex].AllUnspentTx, uo)
+						CacheUnspentIdx[uo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: carec.CacheIndex, Record: uo}
+						if carec.InWallet {
+							update_wallet = true
+						}
+						continue check_next_address // it it was setalth, cannot be enythign else
+					}
+				}
+			}
+		}
+
+	not_stealth:
 		// Extract hash160 from pkscript
 		adr := btc.NewAddrFromPkScript(out.PKScr, common.Testnet)
 		if adr!=nil {
-			if rec, ok := CachedAddrs[adr.Hash160]; ok {
-				rec.Value += out.Value
+			if carec, ok := CachedAddrs[adr.Hash160]; ok {
+				carec.Value += out.Value
 				utxo := new(chain.OneUnspentTx)
 				utxo.TxPrevOut.Hash = tx.TxID
 				utxo.TxPrevOut.Vout = uint32(idx)
 				utxo.Value = out.Value
 				utxo.MinedAt = tx.InBlock
-				utxo.BtcAddr = CacheUnspent[rec.CacheIndex].BtcAddr
-				CacheUnspent[rec.CacheIndex].AllUnspentTx = append(CacheUnspent[rec.CacheIndex].AllUnspentTx, utxo)
-				CacheUnspentIdx[utxo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: rec.CacheIndex, Record: utxo}
-				if rec.InWallet {
+				utxo.BtcAddr = CacheUnspent[carec.CacheIndex].BtcAddr
+				CacheUnspent[carec.CacheIndex].AllUnspentTx = append(CacheUnspent[carec.CacheIndex].AllUnspentTx, utxo)
+				CacheUnspentIdx[utxo.TxPrevOut.UIdx()] = &OneCachedUnspentIdx{Index: carec.CacheIndex, Record: utxo}
+				if carec.InWallet {
 					update_wallet = true
 				}
 			}
@@ -218,6 +263,7 @@ func DumpBalance(mybal chain.AllUnspentTx, utxt *os.File, details, update_balanc
 
 		// update the balance/ folder
 		if utxt != nil {
+			println("Getting", mybal[i].TxPrevOut.String())
 			po, e := common.BlockChain.Unspent.UnspentGet(&mybal[i].TxPrevOut)
 			if e != nil {
 				println("UnspentGet:", e.Error())
