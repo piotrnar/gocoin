@@ -277,10 +277,12 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 		println("BlockInvalid: no such block")
 		return
 	}
-	println("mark", btc.NewUint256(hash).String(), "as invalid")
 	if cur.trusted {
-		panic("if it is trusted - how can be invalid?")
+		println("Looks like your UTXO database is corrupt")
+		println("To rebuild it, remove: "+db.dirname+"/unspent4/")
+		panic("Trusted block cannot be invalid")
 	}
+	//println("mark", btc.NewUint256(hash).String(), "as invalid")
 	db.setBlockFlag(cur, BLOCK_INVALID)
 	delete(db.blockIndex, idx)
 	db.mutex.Unlock()
