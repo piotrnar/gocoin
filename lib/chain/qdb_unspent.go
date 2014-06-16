@@ -112,7 +112,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 	db.nosync()
 	db.commit(changes)
-	if changes.UndoData!=nil {
+	if changes.LastKnownHeight<=changes.Height {
 		db.Sync()
 	}
 
