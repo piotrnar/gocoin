@@ -44,13 +44,14 @@ func NewChain(dbrootdir string, genesis *btc.Uint256, rescan bool) (ch *Chain) {
 
 // This is the very first function one should call in order to use this package
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
+	var undo_last_block bool
 	ch = new(Chain)
 	ch.Genesis = genesis
 	if opts != nil {
 		ch.CB = *opts
 	}
 	ch.Blocks = NewBlockDB(dbrootdir)
-	ch.Unspent = NewUnspentDb(dbrootdir, rescan, ch)
+	ch.Unspent, undo_last_block = NewUnspentDb(dbrootdir, rescan, ch)
 
 	if AbortNow {
 		return
@@ -68,6 +69,13 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	if AbortNow {
 		return
 	}
+
+	if undo_last_block {
+		fmt.Println("Undo last block after the previous commit was interrupted..")
+		ch.UndoLastBlock()
+		fmt.Println("DONE")
+	}
+
 	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {

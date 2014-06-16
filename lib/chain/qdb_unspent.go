@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"errors"
 	"strconv"
+	"strings"
 	"io/ioutil"
-//	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
@@ -42,7 +42,8 @@ type UnspentDB struct {
 	ch *Chain
 }
 
-func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB) {
+func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB, undo_last_block bool) {
+	var maxbl_fn string
 	db = new(UnspentDB)
 	db.dir = dir+"unspent4"+string(os.PathSeparator)
 
@@ -50,20 +51,29 @@ func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB) {
 		os.RemoveAll(db.dir)
 	} else {
 		fis, _ := ioutil.ReadDir(db.dir)
-		var maxbl int
+		var maxbl, undobl int
 		for _, fi := range fis {
 			if !fi.IsDir() && fi.Size()>=32 {
-				cb, er := strconv.ParseUint(fi.Name(), 10, 32)
+				ss := strings.SplitN(fi.Name(), ".", 2)
+				cb, er := strconv.ParseUint(ss[0], 10, 32)
 				if er == nil && int(cb) > maxbl {
 					maxbl = int(cb)
+					maxbl_fn = db.dir + fi.Name()
+					if len(ss)==2 && ss[1]=="tmp" {
+						undobl = maxbl
+					}
 				}
 			}
 		}
 		if maxbl!=0 {
-			f, _ := os.Open(fmt.Sprint(db.dir, maxbl))
+			db.LastBlockHeight = uint32(maxbl)
 			db.LastBlockHash = make([]byte, 32)
+			f, _ := os.Open(maxbl_fn)
 			f.Read(db.LastBlockHash)
 			f.Close()
+			if undobl==maxbl {
+				undo_last_block = true
+			}
 		}
 	}
 
@@ -84,16 +94,7 @@ func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB) {
 
 // Commit the given add/del transactions to UTXO and Wnwind DBs
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
-	db.nosync()
-	db.commit(changes)
-	if changes.Height >= changes.LastKnownHeight {
-		db.Sync()
-	}
-	if db.LastBlockHash==nil {
-		db.LastBlockHash = make([]byte, 32)
-	}
-	copy(db.LastBlockHash, blhash)
-	db.LastBlockHeight = changes.Height
+	undo_fn := fmt.Sprint(db.dir, changes.Height)
 
 	if changes.UndoData!=nil || (changes.Height%UnwindBufferMaxHistory)==0 {
 		bu := new(bytes.Buffer)
@@ -105,8 +106,24 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 				bu.Write(bin)
 			}
 		}
-		ioutil.WriteFile(fmt.Sprint(db.dir, changes.Height), bu.Bytes(), 0666)
+		ioutil.WriteFile(db.dir+"tmp", bu.Bytes(), 0666)
+		os.Rename(db.dir+"tmp", undo_fn+".tmp")
 	}
+
+	db.nosync()
+	db.commit(changes)
+	if changes.Height >= changes.LastKnownHeight {
+		db.Sync()
+	}
+
+	os.Rename(undo_fn+".tmp", undo_fn)
+
+
+	if db.LastBlockHash==nil {
+		db.LastBlockHash = make([]byte, 32)
+	}
+	copy(db.LastBlockHash, blhash)
+	db.LastBlockHeight = changes.Height
 
 	if changes.Height>UnwindBufferMaxHistory {
 		os.Remove(fmt.Sprint(db.dir, changes.Height-UnwindBufferMaxHistory))
@@ -126,6 +143,10 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 
 	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
 	var addback []*QdbRec
+
+	if _, er := os.Stat(fn); er != nil {
+		fn += ".tmp"
+	}
 
 	dat, er := ioutil.ReadFile(fn)
 	if er!=nil {
