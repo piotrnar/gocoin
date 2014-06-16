@@ -8,6 +8,7 @@ import (
 	"time"
 	"strings"
 	"io/ioutil"
+	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -195,6 +196,7 @@ func Reset() {
 	if len(WebUIAllowed)==0 {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
+	SetListenTCP(CFG.Net.ListenTCP, false)
 }
 
 
@@ -235,5 +237,25 @@ func CloseBlockChain() {
 		BlockChain.Save()
 		BlockChain.Close()
 		BlockChain = nil
+	}
+}
+
+
+var listen_tcp uint32
+
+func IsListenTCP() bool {
+	return atomic.LoadUint32(&listen_tcp)!=0
+}
+
+func SetListenTCP(yes bool, global bool) {
+	if yes {
+		atomic.StoreUint32(&listen_tcp, 1)
+	} else {
+		atomic.StoreUint32(&listen_tcp, 0)
+	}
+	if global {
+		mutex_cfg.Lock()
+		CFG.Net.ListenTCP = yes
+		mutex_cfg.Unlock()
 	}
 }

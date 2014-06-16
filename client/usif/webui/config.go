@@ -74,7 +74,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["lonoff"])>0 {
-		common.CFG.Net.ListenTCP = !common.CFG.Net.ListenTCP
+		common.SetListenTCP(common.IsListenTCP(), true)
 		http.Redirect(w, r, "net", http.StatusFound)
 		return
 	}

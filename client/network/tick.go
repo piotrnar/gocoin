@@ -165,7 +165,7 @@ func tcp_server() {
 
 	//fmt.Println("TCP server started at", ad.String())
 
-	for common.CFG.Net.ListenTCP {
+	for common.IsListenTCP() {
 		common.CountSafe("NetServerLoops")
 		Mutex_net.Lock()
 		ica := InConsActive
@@ -247,7 +247,7 @@ func tcp_server() {
 
 
 func NetworkTick() {
-	if common.CFG.Net.ListenTCP {
+	if common.IsListenTCP() {
 		if !TCPServerStarted {
 			TCPServerStarted = true
 			go tcp_server()
@@ -366,7 +366,7 @@ func (c *OneConnection) Run() {
 
 			case "verack":
 				c.VerackReceived = true
-				if common.CFG.Net.ListenTCP {
+				if common.IsListenTCP() {
 					c.SendOwnAddr()
 				}
 

@@ -354,7 +354,7 @@ func NetCloseAll() {
 	println("Closing network")
 	common.NetworkClosed = true
 	common.LockCfg()
-	common.CFG.Net.ListenTCP = false
+	common.SetListenTCP(false, false)
 	common.UnlockCfg()
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
