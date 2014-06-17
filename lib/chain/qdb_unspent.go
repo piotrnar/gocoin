@@ -195,6 +195,11 @@ func (db *UnspentDB) Sync() {
 			db.tdb[i].Sync()
 		}
 	}
+	db.syncUnpent()
+}
+
+
+func (db *UnspentDB) syncUnpent() {
 	if db.LastBlockHash!=nil {
 		fn := fmt.Sprint(db.dir, db.LastBlockHeight)
 		fi, er := os.Stat(fn)
@@ -203,7 +208,6 @@ func (db *UnspentDB) Sync() {
 		}
 	}
 }
-
 
 // Hold on writing data to disk untill next sync is called
 func (db *UnspentDB) nosync() {
@@ -218,13 +222,13 @@ func (db *UnspentDB) nosync() {
 
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
-	db.Sync()
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Close()
 			db.tdb[i] = nil
 		}
 	}
+	db.syncUnpent()
 }
 
 
@@ -246,12 +250,12 @@ func (db *UnspentDB) Idle() bool {
 
 // Flush all the data to disk
 func (db *UnspentDB) Save() {
-	db.Sync()
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Flush()
 		}
 	}
+	db.syncUnpent()
 }
 
 
