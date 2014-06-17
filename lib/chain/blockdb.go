@@ -279,7 +279,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 	}
 	if cur.trusted {
 		println("Looks like your UTXO database is corrupt")
-		println("To rebuild it, remove: "+db.dirname+"/unspent4/")
+		println("To rebuild it, remove folder: "+db.dirname+"unspent4")
 		panic("Trusted block cannot be invalid")
 	}
 	//println("mark", btc.NewUint256(hash).String(), "as invalid")
