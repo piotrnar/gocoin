@@ -91,6 +91,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 func (ch *Chain) Sync() {
 	ch.DoNotSync = false
 	ch.Blocks.Sync()
+	ch.Unspent.Sync()
 }
 
 
