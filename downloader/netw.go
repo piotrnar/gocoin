@@ -277,23 +277,18 @@ func (c *one_net_conn) cleanup() {
 
 		// Remove from pending blocks
 		BlocksMutex.Lock()
-		bi := BlocksIndex
 		for k, v := range BlocksInProgress {
 			if v.Conns[c.id] {
 				delete(v.Conns, c.id)
 				if v.Count==1 {
 					delete(BlocksInProgress, k)
-					if v.Height-1<bi {
-						bi = bi-1
+					if len(BlocksInProgress)==0 {
+						EmptyInProgressCnt++
 					}
 				} else {
 					v.Count--
 				}
 			}
-		}
-		if BlocksIndex!=bi {
-			BlocksIndex = bi
-			COUNTER("REWI")
 		}
 		BlocksMutex.Unlock()
 	}
@@ -360,7 +355,7 @@ func (c *one_net_conn) run_recv() {
 				}
 
 			default:
-				fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
+				//fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
 		}
 	}
 	//fmt.Println(c.Ip(), "closing receiver")
@@ -451,7 +446,7 @@ func add_new_connections() bool {
 			}
 		}
 	}
-	if open_connection_count() < MaxNetworkConns {
+	for open_connection_count() < MaxNetworkConns {
 		pr := get_best_peer()
 		if pr != nil {
 			new_connection(pr)

@@ -11,12 +11,18 @@ import (
 )
 
 const (
+	MEM_CACHE = 32<<20
+
 	MIN_BLOCKS_AHEAD = 10
-	MAX_BLOCKS_AHEAD = 20e3
+	MAX_BLOCKS_AHEAD = 10e3
 
-	BLOCK_TIMEOUT = 20*time.Second
+	BLOCK_TIMEOUT = 10*time.Second
 
-	GETBLOCKS_BYTES_ONCE = 1e6
+	DROP_PEER_EVERY_SEC = 10
+
+	MAX_BLOCKS_AT_ONCE = 1000
+
+	MAX_SAME_BLOCKS_AT_ONCE = 3
 )
 
 
@@ -33,8 +39,8 @@ var (
 	BlocksCached map[uint32] *btc.Block
 	BlocksCachedSize uint
 	BlocksMutex sync.Mutex
-	BlocksIndex uint32
 	BlocksComplete uint32
+	FetchBlocksTo uint32
 
 	DlStartTime time.Time
 	DlBytesProcesses, DlBytesDownloaded uint64
@@ -78,79 +84,48 @@ func show_inprogress() {
 
 
 func (c *one_net_conn) getnextblock() {
-	var cnt, lensofar int
+	var cnt int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
 	BlocksMutex.Lock()
 
-	if BlocksComplete > BlocksIndex {
-		fmt.Println("dupa", BlocksComplete, BlocksIndex)
-		BlocksIndex = BlocksComplete
+	FetchBlocksTo = BlocksComplete + uint32(MEM_CACHE / avg_block_size())
+	if FetchBlocksTo > LastBlockHeight {
+		FetchBlocksTo = LastBlockHeight
 	}
 
-	blocks_from := BlocksIndex
-
-	avg_len := avg_block_size()
-	max_block_forward := uint32((MemForBlocks-BlocksCachedSize) / uint(avg_len))
-	if max_block_forward < MIN_BLOCKS_AHEAD {
-		max_block_forward = MIN_BLOCKS_AHEAD
-	} else if max_block_forward > MAX_BLOCKS_AHEAD {
-		max_block_forward = MAX_BLOCKS_AHEAD
-	}
-
-	if BlocksComplete+max_block_forward < blocks_from {
-		COUNTER("BGAP")
-		max_block_forward = blocks_from-BlocksComplete+1
-	}
-
-	var prot int
-	for secondloop:=false; cnt<10e3 && lensofar<GETBLOCKS_BYTES_ONCE; secondloop = true {
-		if prot==20e3 {
-			println("stuck in getnextblock()", BlocksIndex, blocks_from, max_block_forward,
-				BlocksComplete, LastBlockHeight, _DoBlocks, secondloop)
-			break
-		}
-		prot++
-
-		if secondloop && BlocksIndex==blocks_from {
-			if BlocksComplete == LastBlockHeight {
-				_DoBlocks = false
-			} else {
-				COUNTER("WRAP")
-				time.Sleep(1e8)
+	bl_stage := uint32(0)
+	for curblk:=BlocksComplete; cnt<MAX_BLOCKS_AT_ONCE; curblk++ {
+		if curblk>FetchBlocksTo {
+			if bl_stage==MAX_SAME_BLOCKS_AT_ONCE {
+				break
 			}
-			break
+			bl_stage++
+			curblk = BlocksComplete
 		}
-
-		BlocksIndex++
-		if BlocksIndex > BlocksComplete+max_block_forward || BlocksIndex > LastBlockHeight {
-			//fmt.Println("wrap", BlocksIndex, BlocksComplete)
-			BlocksIndex = BlocksComplete
-		}
-
-		if _, done := BlocksCached[BlocksIndex]; done {
-			//fmt.Println(" cached ->", BlocksIndex)
+		if _, done := BlocksCached[curblk]; done {
 			continue
 		}
 
-		bh, ok := BlocksToGet[BlocksIndex]
+		bh, ok := BlocksToGet[curblk]
 		if !ok {
-			//fmt.Println(" toget ->", BlocksIndex)
 			continue
 		}
 
 		cbip := BlocksInProgress[bh]
 		if cbip==nil {
-			cbip = &one_bip{Height:BlocksIndex, Count:1}
+			// if not in progress then we always take it
+			cbip = &one_bip{Height:curblk}
 			cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
-		} else {
-			if cbip.Conns[c.id] {
-				//fmt.Println(" cbip.Conns ->", c.id)
-				continue
-			}
-			cbip.Count++
+		} else if cbip.Count!=bl_stage || cbip.Conns[c.id]{
+			continue
 		}
+		if LastBlockAsked < curblk {
+			LastBlockAsked = curblk
+		}
+
+		cbip.Count = bl_stage+1
 		cbip.Conns[c.id] = true
 		c.inprogress++
 		BlocksInProgress[bh] = cbip
@@ -158,13 +133,16 @@ func (c *one_net_conn) getnextblock() {
 		b.Write([]byte{2,0,0,0})
 		b.Write(bh[:])
 		cnt++
-		lensofar += avg_len
 	}
 	BlocksMutex.Unlock()
 
-	btc.WriteVlen(vl, uint64(cnt))
-
-	c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
+	if cnt > 0 {
+		btc.WriteVlen(vl, uint64(cnt))
+		c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
+	} else {
+		COUNTER("FULL")
+		time.Sleep(1e8)
+	}
 	c.last_blk_rcvd = time.Now()
 }
 
@@ -216,10 +194,11 @@ func (c *one_net_conn) block(d []byte) {
 
 	bip := BlocksInProgress[h.Hash]
 	if bip==nil || !bip.Conns[c.id] {
-		COUNTER("UNEX")
+		COUNTER("BNOT")
 		//fmt.Println(h.String(), "- already received", bip)
 		return
 	}
+	COUNTER("BYES")
 
 	delete(bip.Conns, c.id)
 	c.Lock()
@@ -246,6 +225,9 @@ func (c *one_net_conn) block(d []byte) {
 	BlocksCached[bip.Height] = bl
 	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, h.Hash)
+	if len(BlocksInProgress)==0 {
+		EmptyInProgressCnt++
+	}
 
 	//fmt.Println("  got block", height)
 }
@@ -327,7 +309,6 @@ func get_blocks() {
 	//fmt.Println("opening connections")
 	DlStartTime = time.Now()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
-	BlocksIndex = BlocksComplete
 
 	SetDoBlocks(true)
 	ct := time.Now().Unix()
@@ -335,28 +316,48 @@ func get_blocks() {
 	laststat := ct
 	TheBlockChain.DoNotSync = true
 	var blks2do []*btc.Block
+	var prv_ct int64
+
+main_loop:
 	for GetDoBlocks() {
+		ct = time.Now().Unix()
+		if ct != prv_ct {
+			prv_ct = ct
+			if open_connection_count() > MaxNetworkConns {
+				drop_slowest_peers()
+			} else {
+				// drop slowest peer every few seconds
+				if ct - lastdrop > DROP_PEER_EVERY_SEC {
+					lastdrop = ct
+					drop_slowest_peers()
+				}
+			}
+			add_new_connections()
+			if ct - laststat >= 5 {
+				laststat = ct
+				print_stats()
+				usif_prompt()
+			}
+		}
+
 		BlocksMutex.Lock()
 		if BlocksComplete>=LastBlockHeight {
 			BlocksMutex.Unlock()
 			break
 		}
-
 		for {
 			bl = BlocksCached[BlocksComplete+1]
 			if bl==nil {
 				break
 			}
 			BlocksComplete++
-			if BlocksComplete > BlocksIndex {
-				BlocksIndex = BlocksComplete
-			}
 			bl.Trusted = BlocksComplete<=TrustUpTo
 			if OnlyStoreBlocks {
 				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
 			} else {
 				blks2do = append(blks2do, bl)
 			}
+
 			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
 			delete(BlocksCached, BlocksComplete)
 			BlocksCachedSize -= uint(len(bl.Raw))
@@ -371,41 +372,32 @@ func get_blocks() {
 					return
 				}
 				blks2do[idx].LastKnownHeight = BlocksComplete
+				if BlocksComplete==TheBlockChain.BlockTreeEnd.Height+1 {
+					StallCount++
+				}
 				TheBlockChain.AcceptBlock(blks2do[idx])
+
+				if have_new_blocks() {
+					//println("new after", idx+1)
+					blks2do = blks2do[idx+1:]
+					continue main_loop
+				}
 			}
 			blks2do = nil
 		} else {
-			TheBlockChain.Unspent.Idle()
-			COUNTER("IDLE")
-		}
-
-		time.Sleep(1e8)
-
-		ct = time.Now().Unix()
-
-		if open_connection_count() > MaxNetworkConns {
-			drop_slowest_peers()
-		} else {
-			// drop slowest peers once for awhile
-			occ := MaxNetworkConns
-			if occ > 0 {
-				occ = 1200 / occ // For 20 open connections: drop one per minute
-				if occ < 3 {
-					occ = 3 // .. drop not more often then once sper 3 seconds
-				}
-				if ct - lastdrop > int64(occ) {
-					lastdrop = ct
-					drop_slowest_peers()
-				}
+			time.Sleep(1e8)
+			if !have_new_blocks() {
+				TheBlockChain.Unspent.Idle()
+				COUNTER("IDLE")
 			}
 		}
-
-		add_new_connections()
-
-		if ct - laststat >= 5 {
-			laststat = ct
-			print_stats()
-			usif_prompt()
-		}
 	}
+}
+
+
+func have_new_blocks() (ex bool) {
+	BlocksMutex.Lock()
+	ex = BlocksComplete < LastBlockHeight && BlocksCached[BlocksComplete+1]!=nil
+	BlocksMutex.Unlock()
+	return
 }

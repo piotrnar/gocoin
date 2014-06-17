@@ -123,7 +123,7 @@ func (c *one_net_conn) headers(d []byte) {
 	if er != nil {
 		return
 	}
-	if cnt==0 /*|| LastBlock.node.Height>=10e3*/ {
+	if cnt==0 /*|| LastBlock.node.Height>=150e3*/ {
 		SetAllHeadersDone(true)
 		return
 	}

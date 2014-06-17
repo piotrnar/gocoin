@@ -172,9 +172,10 @@ func main() {
 		fmt.Println("Assume all blocks trusted")
 	} else if LastTrustedBlock=="auto" {
 		if LastBlockHeight>6 {
-			ha := BlocksToGet[LastBlockHeight]
+			use := LastBlockHeight-6
+			ha := BlocksToGet[use]
 			HighestTrustedBlock = btc.NewUint256(ha[:])
-			fmt.Println("Assume last trusted block as", HighestTrustedBlock.String())
+			fmt.Println("Assume last trusted block as", HighestTrustedBlock.String(), "at", use)
 		} else {
 			fmt.Println("-t=auto ignored since LastBlockHeight is only", LastBlockHeight)
 		}
