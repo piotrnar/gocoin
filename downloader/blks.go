@@ -373,4 +373,5 @@ func get_blocks() {
 				TheBlockChain.Unspent.Idle()
 		}
 	}
+	TheBlockChain.Sync()
 }
