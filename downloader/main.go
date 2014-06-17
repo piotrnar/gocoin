@@ -49,7 +49,7 @@ func parse_command_line() {
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
-	flag.UintVar(&MaxNetworkConns, "n", 20, "Set maximum number of network connections for chain download")
+	flag.UintVar(&MaxNetworkConns, "n", 10, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 	flag.BoolVar(&DoThePings, "p", false, "Execute the pings procedure first to find the fastest peers")
 
