@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	MEM_CACHE = 32<<20
+	MEM_CACHE = 64<<20
+	MAX_GET_FROM_PEER = 2e6
 
 	MIN_BLOCKS_AHEAD = 10
 	MAX_BLOCKS_AHEAD = 10e3
@@ -73,20 +74,94 @@ func show_inprogress() {
 }
 
 
+func (c *one_net_conn) block(d []byte) {
+	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
+
+	BlocksMutex.Lock()
+	defer BlocksMutex.Unlock()
+	h := btc.NewSha2Hash(d[:80])
+
+	c.Lock()
+	c.last_blk_rcvd = time.Now()
+	c.Unlock()
+
+	bip := BlocksInProgress[h.Hash]
+	if bip==nil || !bip.Conns[c.id] {
+		COUNTER("BNOT")
+		//fmt.Println(h.String(), "- already received", bip)
+		return
+	}
+	//fmt.Println(h.String(), "- new", bip.Height)
+	COUNTER("BYES")
+
+	delete(bip.Conns, c.id)
+	c.Lock()
+	c.inprogress--
+	c.Unlock()
+	blocksize_update(len(d))
+
+	bl, er := btc.NewBlock(d)
+	if er != nil {
+		fmt.Println(c.Ip(), "-", er.Error())
+		c.setbroken(true)
+		return
+	}
+
+	bl.BuildTxList()
+	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
+		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
+		c.setbroken(true)
+		return
+	}
+
+	delete(BlocksToGet, bip.Height)
+	delete(BlocksInProgress, h.Hash)
+	if len(BlocksInProgress)==0 {
+		EmptyInProgressCnt++
+	}
+
+	//println("got-", bip.Height, BlocksComplete+1)
+	if BlocksComplete+1==bip.Height {
+		BlocksComplete++
+		BlockQueue <- bl
+		for {
+			bl = BlocksCached[BlocksComplete+1]
+			if bl == nil {
+				break
+			}
+			BlocksComplete++
+			delete(BlocksCached, BlocksComplete)
+			BlocksCachedSize -= uint64(len(bl.Raw))
+			BlockQueue <- bl
+		}
+	} else {
+		BlocksCached[bip.Height] = bl
+		BlocksCachedSize += uint64(len(d))
+	}
+}
+
+
 func (c *one_net_conn) getnextblock() {
 	var cnt int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
+	avs := avg_block_size()
+	blks_to_get := uint32(MEM_CACHE / avs)
+	max_cnt_to_get := (MAX_GET_FROM_PEER / avs) + 1
+	if max_cnt_to_get > MAX_BLOCKS_AT_ONCE {
+		max_cnt_to_get = MAX_BLOCKS_AT_ONCE
+	}
+
 	BlocksMutex.Lock()
 
-	FetchBlocksTo = BlocksComplete + uint32(MEM_CACHE / avg_block_size())
+	FetchBlocksTo = BlocksComplete + blks_to_get
 	if FetchBlocksTo > LastBlockHeight {
 		FetchBlocksTo = LastBlockHeight
 	}
 
 	bl_stage := uint32(0)
-	for curblk:=BlocksComplete; cnt<MAX_BLOCKS_AT_ONCE; curblk++ {
+	for curblk:=BlocksComplete; cnt<max_cnt_to_get; curblk++ {
 		if curblk>FetchBlocksTo {
 			if bl_stage==MAX_SAME_BLOCKS_AT_ONCE {
 				break
@@ -174,73 +249,6 @@ func avg_block_size() (le int) {
 }
 
 
-func (c *one_net_conn) block(d []byte) {
-	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
-
-	BlocksMutex.Lock()
-	defer BlocksMutex.Unlock()
-	h := btc.NewSha2Hash(d[:80])
-
-	c.Lock()
-	c.last_blk_rcvd = time.Now()
-	c.Unlock()
-
-	bip := BlocksInProgress[h.Hash]
-	if bip==nil || !bip.Conns[c.id] {
-		COUNTER("BNOT")
-		//fmt.Println(h.String(), "- already received", bip)
-		return
-	}
-	//fmt.Println(h.String(), "- new", bip.Height)
-	COUNTER("BYES")
-
-	delete(bip.Conns, c.id)
-	c.Lock()
-	c.inprogress--
-	c.Unlock()
-	blocksize_update(len(d))
-
-	bl, er := btc.NewBlock(d)
-	if er != nil {
-		fmt.Println(c.Ip(), "-", er.Error())
-		c.setbroken(true)
-		return
-	}
-
-	bl.BuildTxList()
-	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
-		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
-		c.setbroken(true)
-		return
-	}
-
-	delete(BlocksToGet, bip.Height)
-	delete(BlocksInProgress, h.Hash)
-	if len(BlocksInProgress)==0 {
-		EmptyInProgressCnt++
-	}
-
-	//println("got-", bip.Height, BlocksComplete+1)
-	if BlocksComplete+1==bip.Height {
-		BlocksComplete++
-		BlockQueue <- bl
-		for {
-			bl = BlocksCached[BlocksComplete+1]
-			if bl == nil {
-				break
-			}
-			BlocksComplete++
-			delete(BlocksCached, BlocksComplete)
-			BlocksCachedSize -= uint64(len(bl.Raw))
-			BlockQueue <- bl
-		}
-	} else {
-		BlocksCached[bip.Height] = bl
-		BlocksCachedSize += uint64(len(d))
-	}
-}
-
-
 func (c *one_net_conn) blk_idle() {
 	c.Lock()
 	doit := c.inprogress==0
@@ -323,7 +331,7 @@ func get_blocks() {
 
 	tickSec := time.Tick(time.Second)
 	tickDrop := time.Tick(DROP_PEER_EVERY_SEC*time.Second)
-	tickStat := time.Tick(3*time.Second)
+	tickStat := time.Tick(6*time.Second)
 
 	for !GlobalExit && CurrentBlockHeight<=LastBlockHeight {
 		select {
