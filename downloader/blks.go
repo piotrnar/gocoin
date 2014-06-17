@@ -35,8 +35,8 @@ type one_bip struct {
 
 var (
 	BlocksToGet map[uint32][32]byte
-	BlocksInProgress map[[32]byte] *one_bip
-	BlocksCached map[uint32] *btc.Block
+	BlocksInProgress map[[32]byte] *one_bip = make(map[[32]byte] *one_bip, 300e3)
+	BlocksCached map[uint32] *btc.Block = make(map[uint32] *btc.Block, 300e3)
 	BlocksCachedSize uint64
 	BlocksMutex sync.Mutex
 	BlocksComplete uint32
@@ -48,7 +48,7 @@ var (
 	DlStartTime time.Time
 	DlBytesProcessed, DlBytesDownloaded uint64
 
-	BlockQueue chan *btc.Block
+	BlockQueue chan *btc.Block = make(chan *btc.Block, 100e3)
 )
 
 
@@ -142,6 +142,12 @@ func (c *one_net_conn) block(d []byte) {
 
 
 func (c *one_net_conn) getnextblock() {
+	if len(BlockQueue)*avg_block_size() > MEM_CACHE {
+		COUNTER("FULL")
+		time.Sleep(100*time.Millisecond)
+		return
+	}
+
 	var cnt int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
@@ -206,8 +212,8 @@ func (c *one_net_conn) getnextblock() {
 		c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
 		COUNTER("GDAT")
 	} else {
-		COUNTER("FULL")
-		time.Sleep(250*time.Millisecond)
+		COUNTER("IDLE")
+		time.Sleep(100*time.Millisecond)
 	}
 	c.last_blk_rcvd = time.Now()
 }
@@ -319,13 +325,10 @@ func drop_slowest_peers() {
 
 func get_blocks() {
 	var bl *btc.Block
-	BlocksInProgress = make(map[[32]byte] *one_bip)
-	BlocksCached = make(map[uint32] *btc.Block)
 
 	DlStartTime = time.Now()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
 	CurrentBlockHeight := BlocksComplete+1
-	BlockQueue = make(chan *btc.Block, LastBlockHeight-TheBlockChain.BlockTreeEnd.Height)
 
 	TheBlockChain.DoNotSync = true
 
@@ -361,7 +364,7 @@ func get_blocks() {
 						fmt.Println("CheckBlock:", er.Error())
 						return
 					} else {
-						bl.LastKnownHeight = BlocksComplete
+						bl.LastKnownHeight = CurrentBlockHeight + uint32(len(BlockQueue))
 						TheBlockChain.AcceptBlock(bl)
 					}
 				}
