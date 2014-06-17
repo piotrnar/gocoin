@@ -43,19 +43,12 @@ func print_counters() {
 }
 
 func print_stats() {
-	BlocksMutex.Lock()
-	inpr := len(BlocksInProgress)
-	lask := LastBlockAsked
-	blto := FetchBlocksTo
-	cach := len(BlocksCached)
-	toge := len(BlocksToGet)
-	bcmp := BlocksComplete
-	camb := BlocksCachedSize>>20
-	BlocksMutex.Unlock()
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e6
-	fmt.Printf("Block:%d/%d/%d/%d  Pending:%d  InProgress:%d  Memory:%d/%dMB  "+
-		"Conns:%d  Dload:%.0fKB/s  Output:%.0fKB/s  AvgSize:%d  EC_Ver:%d  Stall:%d/%d  %.1fmin  \n",
-		bcmp, lask, blto, LastBlockHeight, toge, inpr, cach, camb, open_connection_count(),
-		float64(DlBytesDownloaded)/sec, float64(DlBytesProcesses)/sec, avg_block_size(),
+	fmt.Printf("Block:%d/%d/%d/%d (%d)  Pending:%d  InProgress:%d  ImMem:%d (%dMB)  "+
+		"Conns:%d  [%.0f => %.0f KBps]  AvgSize:%d  EC_Ver:%d  Stall:%d/%d  %.1fmin  \n",
+		TheBlockChain.BlockTreeEnd.Height, BlocksComplete, BlocksComplete, FetchBlocksTo,
+		len(BlockQueue), len(BlocksToGet), len(BlocksInProgress), len(BlocksCached), BlocksCachedSize>>20,
+		open_connection_count(),
+		float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec, avg_block_size(),
 		btc.EcdsaVerifyCnt, StallCount, EmptyInProgressCnt, time.Now().Sub(StartTime).Minutes())
 }

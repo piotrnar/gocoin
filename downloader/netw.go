@@ -309,7 +309,7 @@ func (c *one_net_conn) run_recv() {
 				if GetRunPings() {
 					c.ping_idle()
 				}
-				if GetDoBlocks() {
+				if BlocksInProgress!=nil {
 					c.blk_idle()
 				}
 			}

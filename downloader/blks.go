@@ -22,7 +22,7 @@ const (
 
 	MAX_BLOCKS_AT_ONCE = 1000
 
-	MAX_SAME_BLOCKS_AT_ONCE = 3
+	MAX_SAME_BLOCKS_AT_ONCE = 2
 )
 
 
@@ -33,32 +33,22 @@ type one_bip struct {
 }
 
 var (
-	_DoBlocks bool
 	BlocksToGet map[uint32][32]byte
 	BlocksInProgress map[[32]byte] *one_bip
 	BlocksCached map[uint32] *btc.Block
-	BlocksCachedSize uint
+	BlocksCachedSize uint64
 	BlocksMutex sync.Mutex
 	BlocksComplete uint32
+
+	LastBlockNotified uint32
+
 	FetchBlocksTo uint32
 
 	DlStartTime time.Time
-	DlBytesProcesses, DlBytesDownloaded uint64
+	DlBytesProcessed, DlBytesDownloaded uint64
+
+	BlockQueue chan *btc.Block
 )
-
-
-func GetDoBlocks() (res bool) {
-	BlocksMutex.Lock()
-	res = _DoBlocks
-	BlocksMutex.Unlock()
-	return
-}
-
-func SetDoBlocks(res bool) {
-	BlocksMutex.Lock()
-	_DoBlocks = res
-	BlocksMutex.Unlock()
-}
 
 
 func show_pending() {
@@ -139,9 +129,10 @@ func (c *one_net_conn) getnextblock() {
 	if cnt > 0 {
 		btc.WriteVlen(vl, uint64(cnt))
 		c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
+		COUNTER("GDAT")
 	} else {
 		COUNTER("FULL")
-		time.Sleep(1e8)
+		time.Sleep(250*time.Millisecond)
 	}
 	c.last_blk_rcvd = time.Now()
 }
@@ -184,6 +175,8 @@ func avg_block_size() (le int) {
 
 
 func (c *one_net_conn) block(d []byte) {
+	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
+
 	BlocksMutex.Lock()
 	defer BlocksMutex.Unlock()
 	h := btc.NewSha2Hash(d[:80])
@@ -198,13 +191,13 @@ func (c *one_net_conn) block(d []byte) {
 		//fmt.Println(h.String(), "- already received", bip)
 		return
 	}
+	//fmt.Println(h.String(), "- new", bip.Height)
 	COUNTER("BYES")
 
 	delete(bip.Conns, c.id)
 	c.Lock()
 	c.inprogress--
 	c.Unlock()
-	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
 	blocksize_update(len(d))
 
 	bl, er := btc.NewBlock(d)
@@ -221,15 +214,30 @@ func (c *one_net_conn) block(d []byte) {
 		return
 	}
 
-	BlocksCachedSize += uint(len(d))
-	BlocksCached[bip.Height] = bl
 	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, h.Hash)
 	if len(BlocksInProgress)==0 {
 		EmptyInProgressCnt++
 	}
 
-	//fmt.Println("  got block", height)
+	//println("got-", bip.Height, BlocksComplete+1)
+	if BlocksComplete+1==bip.Height {
+		BlocksComplete++
+		BlockQueue <- bl
+		for {
+			bl = BlocksCached[BlocksComplete+1]
+			if bl == nil {
+				break
+			}
+			BlocksComplete++
+			delete(BlocksCached, BlocksComplete)
+			BlocksCachedSize -= uint64(len(bl.Raw))
+			BlockQueue <- bl
+		}
+	} else {
+		BlocksCached[bip.Height] = bl
+		BlocksCachedSize += uint64(len(d))
+	}
 }
 
 
@@ -306,98 +314,55 @@ func get_blocks() {
 	BlocksInProgress = make(map[[32]byte] *one_bip)
 	BlocksCached = make(map[uint32] *btc.Block)
 
-	//fmt.Println("opening connections")
 	DlStartTime = time.Now()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
+	CurrentBlockHeight := BlocksComplete+1
+	BlockQueue = make(chan *btc.Block, LastBlockHeight-TheBlockChain.BlockTreeEnd.Height)
 
-	SetDoBlocks(true)
-	ct := time.Now().Unix()
-	lastdrop := ct
-	laststat := ct
 	TheBlockChain.DoNotSync = true
-	var blks2do []*btc.Block
-	var prv_ct int64
 
-main_loop:
-	for GetDoBlocks() {
-		ct = time.Now().Unix()
-		if ct != prv_ct {
-			prv_ct = ct
-			if open_connection_count() > MaxNetworkConns {
-				drop_slowest_peers()
-			} else {
-				// drop slowest peer every few seconds
-				if ct - lastdrop > DROP_PEER_EVERY_SEC {
-					lastdrop = ct
+	tickSec := time.Tick(time.Second)
+	tickDrop := time.Tick(DROP_PEER_EVERY_SEC*time.Second)
+	tickStat := time.Tick(3*time.Second)
+
+	for !GlobalExit && CurrentBlockHeight<=LastBlockHeight {
+		select {
+			case <-tickSec:
+				cc := open_connection_count()
+				if cc > MaxNetworkConns {
+					drop_slowest_peers()
+				} else if cc < MaxNetworkConns {
+					add_new_connections()
+				}
+
+			case <-tickStat:
+				print_stats()
+
+			case <-tickDrop:
+				if open_connection_count() >= MaxNetworkConns {
 					drop_slowest_peers()
 				}
-			}
-			add_new_connections()
-			if ct - laststat >= 5 {
-				laststat = ct
-				print_stats()
-				usif_prompt()
-			}
-		}
 
-		BlocksMutex.Lock()
-		if BlocksComplete>=LastBlockHeight {
-			BlocksMutex.Unlock()
-			break
-		}
-		for {
-			bl = BlocksCached[BlocksComplete+1]
-			if bl==nil {
-				break
-			}
-			BlocksComplete++
-			bl.Trusted = BlocksComplete<=TrustUpTo
-			if OnlyStoreBlocks {
-				TheBlockChain.Blocks.BlockAdd(BlocksComplete, bl)
-			} else {
-				blks2do = append(blks2do, bl)
-			}
-
-			atomic.AddUint64(&DlBytesProcesses, uint64(len(bl.Raw)))
-			delete(BlocksCached, BlocksComplete)
-			BlocksCachedSize -= uint(len(bl.Raw))
-		}
-		BlocksMutex.Unlock()
-
-		if len(blks2do) > 0 {
-			for idx := range blks2do {
-				er, _, _ := TheBlockChain.CheckBlock(blks2do[idx])
-				if er != nil {
-					fmt.Println(er.Error())
-					return
+			case bl = <-BlockQueue:
+				bl.Trusted = CurrentBlockHeight <= TrustUpTo
+				if OnlyStoreBlocks {
+					TheBlockChain.Blocks.BlockAdd(CurrentBlockHeight, bl)
+				} else {
+					er, _, _ := TheBlockChain.CheckBlock(bl)
+					if er != nil {
+						fmt.Println("CheckBlock:", er.Error())
+						return
+					} else {
+						bl.LastKnownHeight = BlocksComplete
+						TheBlockChain.AcceptBlock(bl)
+					}
 				}
-				blks2do[idx].LastKnownHeight = BlocksComplete
-				if BlocksComplete==TheBlockChain.BlockTreeEnd.Height+1 {
-					StallCount++
-				}
-				TheBlockChain.AcceptBlock(blks2do[idx])
+				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
+				CurrentBlockHeight++
 
-				if have_new_blocks() {
-					//println("new after", idx+1)
-					blks2do = blks2do[idx+1:]
-					continue main_loop
-				}
-			}
-			blks2do = nil
-		} else {
-			time.Sleep(1e8)
-			if !have_new_blocks() {
+			case <-time.After(100*time.Millisecond):
+				StallCount++
 				TheBlockChain.Unspent.Idle()
-				COUNTER("IDLE")
-			}
 		}
 	}
-}
-
-
-func have_new_blocks() (ex bool) {
-	BlocksMutex.Lock()
-	ex = BlocksComplete < LastBlockHeight && BlocksCached[BlocksComplete+1]!=nil
-	BlocksMutex.Unlock()
-	return
 }

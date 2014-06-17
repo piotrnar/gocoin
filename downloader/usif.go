@@ -94,7 +94,6 @@ func do_usif() {
 					case "q":
 						GlobalExit = true
 						SetRunPings(false)
-						SetDoBlocks(false)
 						SetAllHeadersDone(true)
 						return
 
