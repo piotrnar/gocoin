@@ -218,6 +218,7 @@ func (db *UnspentDB) nosync() {
 
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
+	db.Sync()
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Close()
@@ -245,6 +246,7 @@ func (db *UnspentDB) Idle() bool {
 
 // Flush all the data to disk
 func (db *UnspentDB) Save() {
+	db.Sync()
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
 			db.tdb[i].Flush()
