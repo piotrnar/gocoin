@@ -59,7 +59,7 @@ check_next_address:
 		}
 
 		// check for stealth
-		if idx>0 {
+		if len(StealthAdCache)>0 && idx>0 {
 			if rec = tx.Outs[idx-1]; rec==nil {
 				goto not_stealth
 			}
