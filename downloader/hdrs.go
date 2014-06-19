@@ -224,7 +224,6 @@ func download_headers() {
 
 	MemBlockChainMutex.Lock()
 	MemBlockChain.Close()
-	println("MemBlockChain closed")
 	MemBlockChain = nil
 	MemBlockChainMutex.Unlock()
 }

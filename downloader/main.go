@@ -169,12 +169,11 @@ func main() {
 		for k, h := range BlocksToGet {
 			if bytes.Equal(h[:], HighestTrustedBlock.Hash[:]) {
 				TrustUpTo = k
-				fmt.Println("All the blocks up to", TrustUpTo, "are assumed trusted")
 				break
 			}
 		}
 	} else {
-		fmt.Println("None of the blocks is to be assumed trusted (it will be very slow).")
+		fmt.Println("WARNING: The trusted block not found (it will be very slow).")
 	}
 
 	for n:=TheBlockChain.BlockTreeEnd; n!=nil && n.Height>TheBlockChain.BlockTreeEnd.Height-BSLEN; n=n.Parent {
