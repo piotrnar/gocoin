@@ -24,9 +24,6 @@ var (
 	}
 	LastBlockHeight uint32
 
-	PendingHdrs map[[32]byte] bool = make(map[[32]byte] bool)
-	PendingHdrsLock sync.Mutex
-
 	allheadersdone uint32
 	AllHeadersMutex sync.Mutex
 )
