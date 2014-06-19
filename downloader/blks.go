@@ -144,7 +144,7 @@ func (c *one_net_conn) block(d []byte) {
 
 func (c *one_net_conn) getnextblock() {
 	if len(BlockQueue)*avg_block_size() > MEM_CACHE {
-		COUNTER("FULL")
+		COUNTER("GDFU")
 		time.Sleep(100*time.Millisecond)
 		return
 	}
@@ -211,9 +211,9 @@ func (c *one_net_conn) getnextblock() {
 	if cnt > 0 {
 		btc.WriteVlen(vl, uint64(cnt))
 		c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
-		COUNTER("GD_1")
+		COUNTER("GDYE")
 	} else {
-		COUNTER("GD_0")
+		COUNTER("GDNO")
 		time.Sleep(100*time.Millisecond)
 	}
 	c.Lock()
@@ -264,7 +264,7 @@ func (c *one_net_conn) blk_idle() {
 	if !doit && !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
 		c.inprogress = 0
 		doit = true
-		COUNTER("TOUT")
+		COUNTER("BTOU")
 	}
 	c.Unlock()
 	if doit {
@@ -304,7 +304,7 @@ func drop_slowest_peers() {
 			// if zero bytes received after 3 seconds - drop it!
 			v.setbroken(true)
 			//fmt.Println(" -", v.Ip(), "- idle")
-			COUNTER("ZERO")
+			COUNTER("CNOD")
 			continue
 		}
 
@@ -318,7 +318,7 @@ func drop_slowest_peers() {
 	}
 	if minbps_rec!=nil {
 		//fmt.Printf(" - %s - slowest (%.3f KBps, %d KB)\n", minbps_rec.Ip(), min_bps/1e3, minbps_rec.bytes_received>>10)
-		COUNTER("SLOW")
+		COUNTER("CSLO")
 		minbps_rec.setbroken(true)
 	}
 
