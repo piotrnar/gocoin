@@ -408,8 +408,8 @@ func (db *UnspentDB) PrintCoinAge() {
 
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
-	var tot, brcnt, sum, sumcb, stealth_uns, stealth_tot uint64
-	var mincnt, maxcnt, totdatasize uint64
+	var tot, outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
+	var mincnt, maxcnt, totdatasize, unspendable uint64
 	for i := range db.tdb {
 		dbcnt := uint64(db.dbN(i).Count())
 		if i==0 {
@@ -422,15 +422,18 @@ func (db *UnspentDB) GetStats() (s string) {
 		tot += dbcnt
 		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 			totdatasize += uint64(len(v)+8)
-			brcnt++
 			rec := NewQdbRecStatic(k, v)
-			for idx := range rec.Outs {
-				if rec.Outs[idx]!=nil {
-					sum += rec.Outs[idx].Value
+			for idx, r := range rec.Outs {
+				if r!=nil {
+					outcnt++
+					sum += r.Value
 					if rec.Coinbase {
-						sumcb += rec.Outs[idx].Value
+						sumcb += r.Value
 					}
-					if rec.Outs[idx].IsStealthIdx() && idx+1<len(rec.Outs) {
+					if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
+						unspendable++
+					}
+					if r.IsStealthIdx() && idx+1<len(rec.Outs) {
 						if rec.Outs[idx+1]!=nil {
 							stealth_uns++
 						}
@@ -441,11 +444,13 @@ func (db *UnspentDB) GetStats() (s string) {
 			return 0
 		})
 	}
-	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d/%d outputs. %.8f BTC in coinbase.\n",
-		float64(sum)/1e8, brcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxVoutsInTx:%d  StealthIdxs:%d/%d\n",
-		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, len(rec_outs), stealth_uns, stealth_tot)
-	s += fmt.Sprintf(" Last Block : %s with height of %d\n", btc.NewUint256(db.LastBlockHash).String(),
+	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
+		float64(sum)/1e8, outcnt, tot, float64(sumcb)/1e8)
+	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxTxOutCnt:%d \n",
+		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, len(rec_outs))
+	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
+	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Bumber of stealth indexes: %d / %d spent\n",
+		unspendable, stealth_uns, stealth_tot)
 	return
 }
