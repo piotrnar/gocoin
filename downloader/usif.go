@@ -31,11 +31,7 @@ func show_connections() {
 		} else {
 			v.Lock()
 			ss[i] += fmt.Sprintf(" %6.1fmin", time.Now().Sub(v.connected_at).Minutes())
-			if GetRunPings() {
-				ss[i] += fmt.Sprintf(" %6dms", v.avg_ping())
-			} else {
-				ss[i] += fmt.Sprintf(" %6.2fKB/s", v.bps()/1e3)
-			}
+			ss[i] += fmt.Sprintf(" %6.2fKB/s", v.bps()/1e3)
 			if !v.last_blk_rcvd.IsZero() {
 				ss[i] += fmt.Sprintf(" %6.1fsec, %4d bl_in_pr",
 					time.Now().Sub(v.last_blk_rcvd).Seconds(), v.inprogress)
@@ -79,22 +75,11 @@ func do_usif() {
 			ll := strings.Split(cmd, " ")
 			if len(ll)>0 {
 				switch ll[0] {
-					case "g":
-						if GetRunPings() {
-							SetRunPings(false)
-							fmt.Println("Goto download phase...")
-							time.Sleep(3e8)
-						} else {
-							fmt.Println("Already in download phase?")
-						}
-
 					case "a":
 						fmt.Println(peersdb.PeerDB.Count(), "addressess in the database")
 
 					case "q":
-						GlobalExit = true
-						SetRunPings(false)
-						SetAllHeadersDone(true)
+						Exit()
 						return
 
 					case "bm":
@@ -141,15 +126,8 @@ func do_usif() {
 								open_connection_mutex.Unlock()
 							}
 						} else {
-							if !GetAllHeadersDone() {
-								switch_to_next_peer = true
-							} else if GetRunPings() {
-								fmt.Println("dropping longest ping")
-								drop_longest_ping()
-							} else {
-								fmt.Println("dropping slowest peers")
-								drop_slowest_peers()
-							}
+							fmt.Println("dropping slowest peer")
+							drop_slowest_peers()
 						}
 
 					case "f":
@@ -174,20 +152,19 @@ func do_usif() {
 						fallthrough
 					case "?":
 						fmt.Println("Available commands:")
-						fmt.Println(" g - go to next phase")
 						fmt.Println(" a - show addressess of the peers")
-						fmt.Println(" q - quite the downloader")
 						fmt.Println(" b - show blockchin stats")
-						fmt.Println(" db - show database stats")
-						fmt.Println(" n - show network connections")
-						fmt.Println(" i - show general info")
+						fmt.Println(" q - quite the downloader")
 						fmt.Println(" c - show counters")
-						fmt.Println(" pr - show blocks in progress")
-						fmt.Println(" pe - show pending blocks ")
 						fmt.Println(" d [conid] - drop one connection")
+						fmt.Println(" db - show database stats")
 						fmt.Println(" f - free memory")
+						fmt.Println(" i - show general info")
 						fmt.Println(" m - show mem heap info")
 						fmt.Println(" mc <CNT> - set maximum number of connections")
+						fmt.Println(" n - show network connections")
+						fmt.Println(" pe - show pending blocks ")
+						fmt.Println(" pr - show blocks in progress")
 
 					default:
 						fmt.Println("Unknown command:", ll[0], " (h or ? - to see help)")

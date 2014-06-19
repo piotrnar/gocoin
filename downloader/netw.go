@@ -20,6 +20,8 @@ const (
 	Services = uint64(0x00000001)
 
 	DIAL_TIMEOUT = 3*time.Second
+
+	PING_SAMPLES = 8
 )
 
 var (
@@ -262,14 +264,6 @@ func (c *one_net_conn) cleanup() {
 	if c.closed_r && c.closed_s {
 		COUNTER("DROP")
 
-		// Cleanup pending ping
-		PingMutex.Lock()
-		if c.id==PingInProgress {
-			fmt.Println(c.Ip(), "abort ping")
-			PingInProgress = 0
-		}
-		PingMutex.Unlock()
-
 		// Remove from open connections
 		open_connection_mutex.Lock()
 		delete(open_connection_list, c.Ip4)
@@ -306,9 +300,6 @@ func (c *one_net_conn) run_recv() {
 		}
 		if verackgot {
 			if !c.hdr_idle() {
-				if GetRunPings() {
-					c.ping_idle()
-				}
 				if BlocksInProgress!=nil {
 					c.blk_idle()
 				}
@@ -329,30 +320,20 @@ func (c *one_net_conn) run_recv() {
 				}
 
 			case "headers":
-				if !GetAllHeadersDone() && c.gethdrsinprogress() {
-					c.sethdrsinprogress(false)
+				c.Mutex.Lock()
+				if c._hdrsinprogress {
 					c.headers(msg.pl)
+					c._hdrsinprogress = false
 				}
+				c.Mutex.Unlock()
 
 			case "block":
-				if GetRunPings() {
-					c.block_pong(msg.pl)
-				} else {
-					c.block(msg.pl)
-				}
+				c.block(msg.pl)
 
 			case "version":
 
 			case "addr":
 				parse_addr(msg.pl)
-
-			case "inv":
-			case "alert":
-
-			case "pong":
-				if GetRunPings() {
-					c.pong(msg.pl)
-				}
 
 			default:
 				//fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
@@ -360,6 +341,7 @@ func (c *one_net_conn) run_recv() {
 	}
 	//fmt.Println(c.Ip(), "closing receiver")
 	c.Mutex.Lock()
+	c._hdrsinprogress = false
 	c.closed_r = true
 	c.cleanup()
 	c.Mutex.Unlock()
@@ -466,6 +448,14 @@ func close_all_connections() {
 	for open_connection_count()>0 {
 		time.Sleep(1e8)
 	}
+}
+
+func mark_all_hdrs_done() {
+	open_connection_mutex.Lock()
+	for _, c := range open_connection_list {
+		c.sethdrsinprogress(false)
+	}
+	open_connection_mutex.Unlock()
 }
 
 func is_connected(p *peersdb.PeerAddr) (yes bool) {

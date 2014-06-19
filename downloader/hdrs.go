@@ -7,6 +7,7 @@ import (
 	"sync"
 	"bytes"
 	"errors"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -15,6 +16,7 @@ import (
 
 var (
 	MemBlockChain *chain.Chain
+	MemBlockChainMutex sync.Mutex
 
 	LastBlock struct {
 		sync.Mutex
@@ -25,23 +27,22 @@ var (
 	PendingHdrs map[[32]byte] bool = make(map[[32]byte] bool)
 	PendingHdrsLock sync.Mutex
 
-	_AllHeadersDone bool
+	allheadersdone uint32
 	AllHeadersMutex sync.Mutex
 )
 
 
 func GetAllHeadersDone() (res bool) {
-	AllHeadersMutex.Lock()
-	res = _AllHeadersDone
-	AllHeadersMutex.Unlock()
-	return
+	return atomic.LoadUint32(&allheadersdone) != 0
 }
 
 
 func SetAllHeadersDone(res bool) {
-	AllHeadersMutex.Lock()
-	_AllHeadersDone = res
-	AllHeadersMutex.Unlock()
+	if res {
+		atomic.StoreUint32(&allheadersdone, 1)
+	} else {
+		atomic.StoreUint32(&allheadersdone, 0)
+	}
 }
 
 
@@ -52,7 +53,9 @@ func chkblock(bl *btc.Block) (er error) {
 		return
 	}
 
+	MemBlockChainMutex.Lock()
 	if prv, pres := MemBlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
+		MemBlockChainMutex.Unlock()
 		if prv.Parent == nil {
 			// This is genesis block
 			er = errors.New("Genesis")
@@ -72,7 +75,9 @@ func chkblock(bl *btc.Block) (er error) {
 	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime())
 	if bl.Bits() != gnwr {
 		if !Testnet || ((prevblk.Height+1)%2016)!=0 {
+			MemBlockChainMutex.Unlock()
 			er = errors.New(fmt.Sprint("CheckBlock: Incorrect proof of work at block", prevblk.Height+1))
+			return
 		}
 	}
 
@@ -84,6 +89,7 @@ func chkblock(bl *btc.Block) (er error) {
 	copy(cur.BlockHeader[:], bl.Raw[:80])
 	prevblk.Childs = append(prevblk.Childs, cur)
 	MemBlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
+	MemBlockChainMutex.Unlock()
 
 	LastBlock.Mutex.Lock()
 	if cur.Height > LastBlock.node.Height {
@@ -163,20 +169,22 @@ func get_headers() {
 	LastBlock.Mutex.Lock()
 	LastBlock.node = MemBlockChain.BlockTreeEnd
 	LastBlock.Mutex.Unlock()
-	lt := time.Now().Unix()
-	for !GetAllHeadersDone() {
-		add_new_connections()
-		time.Sleep(1e8)
-		ct := time.Now().Unix()
-		if ct-lt > 5 {
-			lt = ct
-			LastBlock.Mutex.Lock()
-			fmt.Println("Last Header Height:", LastBlock.node.Height, "...")
-			LastBlock.Mutex.Unlock()
-			usif_prompt()
+
+	tickTick := time.Tick(100*time.Millisecond)
+	tickStat := time.Tick(6*time.Second)
+
+	for !GlobalExit() && !GetAllHeadersDone() {
+		select {
+			case <-tickTick:
+				add_new_connections()
+
+			case <-tickStat:
+				LastBlock.Mutex.Lock()
+				fmt.Println("Last Header Height:", LastBlock.node.Height, "...")
+				LastBlock.Mutex.Unlock()
+				usif_prompt()
 		}
 	}
-	LastBlockHeight = LastBlock.node.Height
 }
 
 
@@ -190,9 +198,19 @@ func download_headers() {
 	fmt.Println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
 		MemBlockChain.BlockTreeRoot.BlockHash.String())
 
+	atomic.StoreUint32(&LastStoredBlock, MemBlockChain.BlockTreeRoot.Height)
+
+	fmt.Println("Downloading headers...")
 	get_headers()
+
+	if GlobalExit() {
+		fmt.Println("Fetching headers aborted")
+		return
+	}
 	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
+	BlocksMutex.Lock()
+	LastBlock.Mutex.Lock()
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
 	for n:=LastBlock.node; ; n=n.Parent {
 		BlocksToGet[n.Height] = n.BlockHash.Hash
@@ -200,9 +218,16 @@ func download_headers() {
 			break
 		}
 	}
+	LastBlockHeight = LastBlock.node.Height
+	LastBlock.Mutex.Unlock()
+	BlocksMutex.Unlock()
 
-	//close_all_connections()
+	SetAllHeadersDone(true)
+	mark_all_hdrs_done()
 
+	MemBlockChainMutex.Lock()
 	MemBlockChain.Close()
+	println("MemBlockChain closed")
 	MemBlockChain = nil
+	MemBlockChainMutex.Unlock()
 }

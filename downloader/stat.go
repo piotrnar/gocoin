@@ -5,13 +5,13 @@ import (
 	"sync"
 	"sort"
 	"time"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (
 	_CNT map[string] uint = make(map[string] uint)
 	cnt_mut sync.Mutex
-	StallCount uint64
 	EmptyInProgressCnt uint64
 	LastBlockAsked uint32
 )
@@ -44,11 +44,19 @@ func print_counters() {
 
 func print_stats() {
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e6
-	fmt.Printf("Block:%d/%d/%d/%d (%d)  Pending:%d  InProgress:%d  ImMem:%d (%dMB)  "+
-		"Conns:%d  [%.0f => %.0f KBps]  AvgSize:%d  EC_Ver:%d  Stall:%d/%d  %.1fmin  \n",
-		TheBlockChain.BlockTreeEnd.Height, BlocksComplete, BlocksComplete, FetchBlocksTo,
-		len(BlockQueue), len(BlocksToGet), len(BlocksInProgress), len(BlocksCached), BlocksCachedSize>>20,
-		open_connection_count(),
-		float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec, avg_block_size(),
-		btc.EcdsaVerifyCnt, StallCount, EmptyInProgressCnt, time.Now().Sub(StartTime).Minutes())
+	BlocksMutex.Lock()
+	s := fmt.Sprintf("Block:%d/%d/%d/"+
+		"%d (%d)  Pending:%d  "+
+		"InProgress:%d (Empty:%d)  "+
+		"ImMem:%d (%dMB)  AvgBLen:%d  "+
+		"Conns:%d  [%.0f => %.0f KBps]  "+
+		"ECnt:%d  %.1fmin",
+		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, FetchBlocksTo,
+		LastBlockHeight, len(BlockQueue), len(BlocksToGet),
+		len(BlocksInProgress), EmptyInProgressCnt,
+		len(BlocksCached), BlocksCachedSize>>20, avg_block_size(),
+		open_connection_count(), float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec,
+		btc.EcdsaVerifyCnt, time.Now().Sub(StartTime).Minutes())
+	BlocksMutex.Unlock()
+	fmt.Println(s)
 }

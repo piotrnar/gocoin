@@ -52,11 +52,11 @@ func (ch *Chain)loadBlockIndex() {
 		v.Parent.addChild(v)
 	}
 	if tlb == nil {
-		println("No last block - full rescan will be needed")
+		//println("No last block - full rescan will be needed")
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 		return
 	} else {
-		println("Last Block Hash:", btc.NewUint256(tlb).String())
+		//println("Last Block Hash:", btc.NewUint256(tlb).String())
 		var ok bool
 		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {

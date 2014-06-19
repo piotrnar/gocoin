@@ -42,6 +42,7 @@ var (
 	BlocksComplete uint32
 
 	LastBlockNotified uint32
+	LastStoredBlock uint32
 
 	FetchBlocksTo uint32
 
@@ -210,12 +211,14 @@ func (c *one_net_conn) getnextblock() {
 	if cnt > 0 {
 		btc.WriteVlen(vl, uint64(cnt))
 		c.sendmsg("getdata", append(vl.Bytes(), b.Bytes()...))
-		COUNTER("GDAT")
+		COUNTER("GD_1")
 	} else {
-		COUNTER("IDLE")
+		COUNTER("GD_0")
 		time.Sleep(100*time.Millisecond)
 	}
+	c.Lock()
 	c.last_blk_rcvd = time.Now()
+	c.Unlock()
 }
 
 
@@ -301,7 +304,7 @@ func drop_slowest_peers() {
 			// if zero bytes received after 3 seconds - drop it!
 			v.setbroken(true)
 			//fmt.Println(" -", v.Ip(), "- idle")
-			COUNTER("IDLE")
+			COUNTER("ZERO")
 			continue
 		}
 
@@ -327,8 +330,10 @@ func get_blocks() {
 	var bl *btc.Block
 
 	DlStartTime = time.Now()
+	BlocksMutex.Lock()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
 	CurrentBlockHeight := BlocksComplete+1
+	BlocksMutex.Unlock()
 
 	TheBlockChain.DoNotSync = true
 
@@ -336,7 +341,7 @@ func get_blocks() {
 	tickDrop := time.Tick(DROP_PEER_EVERY_SEC*time.Second)
 	tickStat := time.Tick(6*time.Second)
 
-	for !GlobalExit && CurrentBlockHeight<=LastBlockHeight {
+	for !GlobalExit() && CurrentBlockHeight<=LastBlockHeight {
 		select {
 			case <-tickSec:
 				cc := open_connection_count()
@@ -348,6 +353,7 @@ func get_blocks() {
 
 			case <-tickStat:
 				print_stats()
+				usif_prompt()
 
 			case <-tickDrop:
 				if open_connection_count() >= MaxNetworkConns {
@@ -368,11 +374,12 @@ func get_blocks() {
 						TheBlockChain.AcceptBlock(bl)
 					}
 				}
+				atomic.StoreUint32(&LastStoredBlock, CurrentBlockHeight)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
 				CurrentBlockHeight++
 
 			case <-time.After(100*time.Millisecond):
-				StallCount++
+				COUNTER("IDLE")
 				TheBlockChain.Unspent.Idle()
 		}
 	}
