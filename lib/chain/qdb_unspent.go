@@ -450,7 +450,7 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, len(rec_outs))
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Bumber of stealth indexes: %d / %d spent\n",
+	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Number of stealth indexes: %d / %d spent\n",
 		unspendable, stealth_uns, stealth_tot)
 	return
 }
