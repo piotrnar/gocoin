@@ -1,3 +1,6 @@
+1.0.0rc9
+* Cosmetics
+
 1.0.0rc8 - 2014-06-19
 * Wallet: shows hashed value of stealth prefixes (in decoded tx)
 * Client: unspent4 - new format of UTXO database (lower memory and disk usage)
