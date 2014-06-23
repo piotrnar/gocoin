@@ -197,6 +197,7 @@ func Reset() {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
 	SetListenTCP(CFG.Net.ListenTCP, false)
+	ReloadMiners()
 }
 
 

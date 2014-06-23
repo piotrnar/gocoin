@@ -1,16 +1,18 @@
 <script>
 var curmid='{MINER_MON_IDX}'
 function inerton(id) {
-	if (id<0) {
-		if (curmid>=0) {
+	if (id>=0) {
+		if (id!=curmid) {
+			document.write('<a href="cfg?mid='+id+'&sid='+sid+'">Turn ON</a>')
+		} else {
 			document.write('<a href="cfg?mid=off&sid='+sid+'">Turn OFF</a>')
 		}
-	} else if (id!=curmid) {
-		document.write('<a href="cfg?mid='+id+'&sid='+sid+'">Turn ON</a>')
 	}
 }
 document.addEventListener('DOMContentLoaded', function() {
-	document.getElementById('midrow'+curmid).className = "own"
+	if (curmid>=0) {
+		document.getElementById('midrow'+curmid).className = "own"
+	}
 })
 </script>
 Data from last <b>{MINING_HOURS}</b> hours.

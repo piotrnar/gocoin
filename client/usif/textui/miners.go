@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"strconv"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -77,9 +78,10 @@ func do_mining(s string) {
 
 func set_miner(p string) {
 	if p=="" {
+		common.ReloadMiners()
 		fmt.Println("Specify MinerID string or one of the numberic values:")
 		for i := range common.MinerIds {
-			fmt.Printf("%3d - %s\n", i, common.MinerIds[i][0])
+			fmt.Printf("%3d - %s %s\n", i, common.MinerIds[i].Name, hex.EncodeToString(common.MinerIds[i].Tag))
 		}
 		return
 	}
@@ -97,7 +99,7 @@ func set_miner(p string) {
 	if e!=nil {
 		common.CFG.Beeps.MinerID = p
 	} else if int(v)<len(common.MinerIds) {
-		common.CFG.Beeps.MinerID = common.MinerIds[v][1]
+		common.CFG.Beeps.MinerID = string(common.MinerIds[v].Tag)
 	} else {
 		fmt.Println("The number is too big. Max is", len(common.MinerIds)-1)
 	}

@@ -41,8 +41,10 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	common.ReloadMiners()
+
 	m := make(map[string] omv, 20)
-	var unkn, om omv
+	var om omv
 	cnt := 0
 	common.Last.Mutex.Lock()
 	end := common.Last.Block
@@ -70,18 +72,16 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		}
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.BlocksMiner(bl)
-		if miner!="" {
-			om = m[miner]
-			om.cnt++
-			om.bts+= uint64(len(bl))
-			om.mid = mid
-			m[miner] = om
-			if current_mid==-1 && minerid==common.MinerIds[mid][1] {
-				current_mid = mid
-			}
-		} else {
-			unkn.cnt++
-			unkn.bts+= uint64(len(bl))
+		if mid==-1 {
+			miner = "<i>" + miner + "</i>"
+		}
+		om = m[miner]
+		om.cnt++
+		om.bts+= uint64(len(bl))
+		om.mid = mid
+		m[miner] = om
+		if mid!=-1 && current_mid==-1 && minerid==string(common.MinerIds[mid].Tag) {
+			current_mid = mid
 		}
 		totbts += uint64(len(bl))
 		end = end.Parent
@@ -129,14 +129,6 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 	}
-
-	onerow = strings.Replace(onerow, "{MINER_NAME}", "<i>Unknown</i>", 1)
-	onerow = strings.Replace(onerow, "{BLOCK_COUNT}", fmt.Sprint(unkn.cnt), 1)
-	onerow = strings.Replace(onerow, "{TOTAL_PERCENT}", fmt.Sprintf("%.0f", 100*float64(unkn.cnt)/float64(cnt)), 1)
-	onerow = strings.Replace(onerow, "{MINER_HASHRATE}", common.HashrateToString(hrate*float64(unkn.cnt)/float64(cnt)), 1)
-	onerow = strings.Replace(onerow, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(unkn.bts)/float64(unkn.cnt)/1000), 1)
-	onerow = strings.Replace(onerow, "{MINER_ID}", "-1", -1)
-	mnrs = templ_add(mnrs, "<!--MINER_ROW-->", onerow)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))

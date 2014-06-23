@@ -2,33 +2,25 @@ package common
 
 import (
 	"bytes"
+	"io/ioutil"
+	"encoding/json"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-var MinerIds = [][2]string{
-	{"BTC_Guild", "BTC Guild"},
-	{"ASICMiner", "ASICMiner"},
-	{"50BTC", "50BTC"},
-	{"Slush", "/slush/"},
-	// Dont know how to do Deepbit
-	{"EclipseMC", "EMC "},
-	{"Eligius", "Eligius"},
-	{"BitMinter", "BitMinter"},
-	{"Bitparking", "bitparking"},
-	{"CoinLab", "CoinLab"},
-	{"Triplemin", "Triplemining.com"},
-	{"Ozcoin", "ozcoin"},
-	{"SatoshiSys", "Satoshi Systems"},
-	{"ST_Mining", "st mining corp"},
-	{"GHash.IO", "\x80\xad\x90\xd4\x03\x58\x1f\xa3\xbf\x46\x08\x6a\x91\xb2\xd9\xd4\x12\x5d\xb6\xc1"}, // 1CjPR7Z5ZSyWk6WtXvSFgkptmpoi4UM9BC
-	{"Discus Fish", "Mined by "},
+type oneMinerId struct {
+	Name string
+	Tag []byte
 }
 
-func MinedBy(bl []byte, id string) bool {
+var MinerIds []oneMinerId
+
+
+func MinedBy(bl []byte, tag []byte) bool {
 	max2search := 0x200
 	if len(bl)<max2search {
 		max2search = len(bl)
 	}
-	return bytes.Index(bl[0x51:max2search], []byte(id))!=-1
+	return bytes.Index(bl[0x51:max2search], tag)!=-1
 }
 
 
@@ -39,14 +31,46 @@ func MinedByUs(bl []byte) bool {
 	if minid=="" {
 		return false
 	}
-	return MinedBy(bl, minid)
+	return MinedBy(bl, []byte(minid))
 }
 
 func BlocksMiner(bl []byte) (string, int) {
-	for i := range MinerIds {
-		if MinedBy(bl, MinerIds[i][1]) {
-			return MinerIds[i][0], i
+	for i, m := range MinerIds {
+		if MinedBy(bl, m.Tag) {
+			return m.Name, i
 		}
 	}
+	bt, _ := btc.NewBlock(bl)
+	cbtx, _ := btc.NewTx(bl[bt.TxOffset:])
+	adr := btc.NewAddrFromPkScript(cbtx.TxOut[0].Pk_script, Testnet)
+	if adr!=nil {
+		return adr.String(), -1
+	}
 	return "", -1
+}
+
+func ReloadMiners() {
+	d, _ := ioutil.ReadFile("miners.json")
+	if d!=nil {
+		var MinerIdFile [][3]string
+		e := json.Unmarshal(d, &MinerIdFile)
+		if e != nil {
+			println("miners.json", e.Error())
+			return
+		}
+		MinerIds = nil
+		for _, r := range MinerIdFile {
+			var rec oneMinerId
+			rec.Name = r[0]
+			if r[1]!="" {
+				rec.Tag = []byte(r[1])
+				MinerIds = append(MinerIds, rec)
+			} else {
+				if a, _ := btc.NewAddrFromString(r[2]); a != nil {
+					rec.Tag = a.OutScript()
+					MinerIds = append(MinerIds, rec)
+				}
+			}
+		}
+	}
 }

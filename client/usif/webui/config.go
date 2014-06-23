@@ -108,7 +108,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["mid"])>0 {
 		v, e := strconv.ParseUint(r.Form["mid"][0], 10, 32)
 		if e == nil && v < uint64(len(common.MinerIds)) {
-			common.CFG.Beeps.MinerID = common.MinerIds[v][1]
+			common.CFG.Beeps.MinerID = string(common.MinerIds[v].Tag)
 		} else {
 			common.CFG.Beeps.MinerID = ""
 		}
