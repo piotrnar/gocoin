@@ -1,5 +1,5 @@
 1.0.0rc9
-* Cosmetics
+* Mining pool tags are now in miners.json - can be changed without restarting the node
 
 1.0.0rc8 - 2014-06-19
 * Wallet: shows hashed value of stealth prefixes (in decoded tx)
