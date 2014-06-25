@@ -1,6 +1,7 @@
 Client:
+* Allow to label an address from WebUI
+* Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
 * Do not list unmatured coinbase outputs in the balance
-* Apparently a single metadata index can have more than one ephemkey
 * Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
