@@ -129,7 +129,6 @@ func NewUTXO(tx *chain.QdbRec) {
 func TxNotifyAdd (tx *chain.QdbRec) {
 	BalanceMutex.Lock()
 	if newUTXO(tx) {
-		println("upd bal", tx.InBlock)
 		sync_wallet()
 	}
 	BalanceMutex.Unlock()
