@@ -1,5 +1,7 @@
 1.0.0rc9
 * Mining pool tags are now in miners.json - can be changed without restarting the node
+* Allows to edit label of a wallet's address directly from WebUI
+* Allows to select a hidden wallet at the Wallet tab of WebUI (so you can edit it)
 
 1.0.0rc8 - 2014-06-19
 * Wallet: shows hashed value of stealth prefixes (in decoded tx)
