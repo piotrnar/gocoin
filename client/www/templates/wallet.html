@@ -2,6 +2,11 @@
 function switchwallet(fn) {
 	document.location='?sid='+sid+'&wal='+encodeURIComponent(fn)
 }
+function switch2wallet(idx) {
+	var tr = document.getElementById('walrow'+idx)
+	var wal = tr.cells[1].innerText
+	document.location='?sid='+sid+'&wal='+encodeURIComponent(wal)
+}
 function shwwal() {
 	showwal.style.display='none'
 	formwal.style.display='block'
@@ -13,6 +18,16 @@ function setunused(idx) {
 	var wal = tr.cells[1].innerText
 	if (confirm("Move " + adr + " (" + lab + ") from wallet " + wal + "to UNUSED?")) {
 		document.location='?sid='+sid+'&setunused='+idx
+	}
+}
+function edit_label(idx) {
+	var tr = document.getElementById('walrow'+idx)
+	var adr = tr.cells[0].innerText
+	var lab = tr.cells[2].innerText
+	var wal = tr.cells[1].innerText
+	var newlab = prompt("Edit label in " + wal + " for:\n" + adr, lab)
+	if (newlab) {
+		document.location='?sid='+sid+'&setlabel='+idx+'&lab='+encodeURIComponent(newlab)
 	}
 }
 </script>

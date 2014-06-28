@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"strings"
+	"io/ioutil"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -167,5 +168,50 @@ func MoveToUnused(addr, walfil string) bool {
 	f.Close()
 
 	os.Remove(frwal+".bak")
+	return true
+}
+
+
+func SetLabel(i int, lab string) bool {
+	if MyWallet==nil || i<0 || i>=len(MyWallet.Addrs) {
+		return false
+	}
+
+	addr := MyWallet.Addrs[i].Enc58str
+	walfn := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + MyWallet.Addrs[i].Extra.Wallet
+	f, er := os.Open(walfn)
+	if er != nil {
+		println(er.Error())
+		return false
+	}
+
+	var foundline bool
+	var outfile string
+
+	rd := bufio.NewReader(f)
+	if rd != nil {
+		for {
+			ln, _, er := rd.ReadLine()
+			if er !=nil {
+				break
+			}
+			if foundline || !strings.HasPrefix(string(ln), addr) {
+				outfile += fmt.Sprintln(string(ln))
+			} else {
+				lls := strings.SplitN(string(ln), " ", 2)
+				outfile += fmt.Sprintln(lls[0], lab)
+				foundline = true
+			}
+		}
+	}
+	f.Close()
+
+	if !foundline {
+		return false
+	}
+
+	os.Rename(walfn, walfn+".bak")
+	ioutil.WriteFile(walfn, []byte(outfile), 0666)
+	os.Remove(walfn+".bak")
 	return true
 }

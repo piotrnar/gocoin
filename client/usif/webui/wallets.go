@@ -123,6 +123,17 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/wal", http.StatusFound)
 			return
 		}
+
+		if len(r.Form["setlabel"])>0 && len(r.Form["lab"])>0 {
+			i, er := strconv.ParseUint(r.Form["setlabel"][0], 10, 32)
+			if er==nil && int(i)<len(wallet.MyWallet.Addrs) {
+				if wallet.SetLabel(int(i), r.Form["lab"][0]) {
+					wallet.LoadWallet(wallet.MyWallet.FileName)
+				}
+			}
+			http.Redirect(w, r, "/wal", http.StatusFound)
+			return
+		}
 	}
 
 	page := load_template("wallet.html")
@@ -156,7 +167,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			if wallet.MyWallet.Addrs[i].Extra.Virgin {
 				lab += " ***"
 			}
-			ad = strings.Replace(ad, "<!--WAL_ROW_IDX-->", fmt.Sprint(i), 1)
+			ad = strings.Replace(ad, "<!--WAL_ROW_IDX-->", fmt.Sprint(i), -1)
 			ad = strings.Replace(ad, "<!--WAL_ADDR-->", wallet.MyWallet.Addrs[i].Enc58str, 1)
 			if len(wallet.MyWallet.Addrs[i].Enc58str) > 80 {
 				ad = strings.Replace(ad, "<!--WAL_ADDR_STYLE-->", "addr_long", 1)

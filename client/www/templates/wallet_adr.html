@@ -1,7 +1,8 @@
 <tr class="hov" id="walrow<!--WAL_ROW_IDX-->">
 <td class="<!--WAL_ADDR_STYLE-->"><!--WAL_ADDR-->
-<td nowrap="nowrap" class="mono">&nbsp;<!--WAL_WALLET-->&nbsp;
-<td nowrap="nowrap" ><i><!--WAL_LABEL--></i>
+<td nowrap="nowrap" class="mono hand" style="padding-right:10px"
+ onclick="switch2wallet(<!--WAL_ROW_IDX-->)" title="See only this wallet"><!--WAL_WALLET-->
+<td nowrap="nowrap" onclick="edit_label(<!--WAL_ROW_IDX-->)" class="hand" title="Edit label"><i><!--WAL_LABEL--></i>
 <td nowrap="nowrap" align="center"><!--WAL_MULTISIG-->
 <td align="right"><b class="mono" style="font-size:110%"><!--WAL_BALANCE--></b>
 <td width="30" align="right" title="Number of unspent outputs"><i><!--WAL_OUTCNT--></i>
