@@ -3,6 +3,7 @@ package script
 import (
 	"fmt"
 	"bytes"
+	"strings"
 	"testing"
 	"io/ioutil"
 	"encoding/hex"
@@ -21,6 +22,7 @@ type testvector struct {
 	inps []oneinp
 	tx string
 	p2sh bool
+	nulldummy bool
 }
 
 var last_descr string
@@ -49,7 +51,9 @@ func parserec(vv []interface{}) (ret *testvector) {
 		}
 	}
 	ret.tx = vv[1].(string)
-	ret.p2sh = vv[2].(bool)
+	params := vv[2].(string)
+	ret.p2sh = strings.Index(params, "P2SH")!=-1
+	ret.nulldummy = strings.Index(params, "NULLDUMMY")!=-1
 	return
 }
 
@@ -168,7 +172,9 @@ func TestValidTransactions(t *testing.T) {
 			case []interface{}:
 				if len(vv)==3 {
 					tv := parserec(vv)
-					if !execute_test_tx(t, tv) {
+					if tv.nulldummy {
+						//println("Ignore nulldummy test case")
+					} else if !execute_test_tx(t, tv) {
 						t.Error("Failed transaction:", last_descr)
 					}
 				} else if len(vv)==1 {
@@ -200,7 +206,9 @@ func TestInvalidTransactions(t *testing.T) {
 				if len(vv)==3 {
 					cnt++
 					tv := parserec(vv)
-					if execute_test_tx(t, tv) {
+					if tv.nulldummy {
+						//println("Ignore nulldummy test case")
+					} else if execute_test_tx(t, tv) {
 						t.Error(cnt, "NOT failed transaction:", last_descr)
 						return
 					}
