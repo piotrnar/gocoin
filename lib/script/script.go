@@ -771,7 +771,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
 					}
 					opcnt += int(keyscnt)
 					if opcnt > 201 {
-						println("evalScript: too many opcodes B")
+						if DBG_ERR {
+							println("evalScript: too many opcodes B")
+						}
 						return false
 					}
 					i++
