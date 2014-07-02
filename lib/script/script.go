@@ -740,7 +740,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
 						ok = btc.EcdsaVerify(pk, si, sh)
 						if !ok && DBG_ERR {
-							println("btc.EcdsaVerify fail 1")
+							println("EcdsaVerify fail 1")
 						}
 					}
 					if DBG_SCR {
