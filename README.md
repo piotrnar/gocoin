@@ -30,9 +30,9 @@ There you can find extended documentation, including <a href="http://www.assets-
 
 **client** / **downloader**:
 
-* At least 4GB of system memory.
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
+* At least 4GB of system memory highly recommended.
 
 
 **wallet**:
