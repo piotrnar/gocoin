@@ -39,7 +39,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{BLOCK_TIMESTAMP}",
 			time.Unix(int64(block.BlockTime()), 0).Format("Mon 15:04:05"), 1)
 		s = strings.Replace(s, "{BLOCK_HASH}", end.BlockHash.String(), 1)
-		s = strings.Replace(s, "{BLOCK_TXS}", fmt.Sprint(len(block.Txs)), 1)
+		s = strings.Replace(s, "{BLOCK_TXS}", fmt.Sprint(block.TxCount), 1)
 		s = strings.Replace(s, "{BLOCK_SIZE}", fmt.Sprintf("%.1f", float64(len(bl))/1000), 1)
 		var rew uint64
 		for o := range cbasetx.TxOut {
