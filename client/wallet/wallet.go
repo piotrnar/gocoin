@@ -195,10 +195,11 @@ func SetLabel(i int, lab string) bool {
 			if er !=nil {
 				break
 			}
-			if foundline || !strings.HasPrefix(string(ln), addr) {
-				outfile += fmt.Sprintln(string(ln))
+			ss := strings.TrimSpace(string(ln))
+			if foundline || !strings.HasPrefix(ss, addr) {
+				outfile += fmt.Sprintln(string(ln)) // if not this line, just copy iy as-is
 			} else {
-				lls := strings.SplitN(string(ln), " ", 2)
+				lls := strings.SplitN(ss, " ", 2) // ... remove the trailing spaces is setting the label
 				outfile += fmt.Sprintln(lls[0], lab)
 				foundline = true
 			}
