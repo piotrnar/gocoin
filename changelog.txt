@@ -1,4 +1,4 @@
-1.0.0rc9
+1.0.0 - 2014-08-07
 * Updated script/transaction test cases with the most recent files from bitcoin core
 * Mining pool tags are now in miners.json - can be changed without restarting the node
 * Allows to edit label of a wallet's address directly from WebUI
