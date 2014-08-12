@@ -1,3 +1,10 @@
+# Binaries 1.0.0
+
+Download Windows or Linux (amd64) binaries for Gocoin release 1.0.0:
+
+ * https://sourceforge.net/projects/gocoin/files/?source=directory
+
+
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
 
 The wallet combined with `balio` tool also provides a working solution for **Litecoin**.
