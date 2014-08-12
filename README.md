@@ -4,6 +4,7 @@ Download Windows or Linux (amd64) binaries for Gocoin release 1.0.0:
 
  * https://sourceforge.net/projects/gocoin/files/?source=directory
 
+# About Gocoin
 
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
 
