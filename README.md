@@ -1,6 +1,6 @@
-# Binaries 1.0.0
+# Binaries
 
-Download Windows or Linux (amd64) binaries for Gocoin release 1.0.0:
+Windows or Linux (amd64) binaries of Gocoin release 1.0.0 available for download
 
  * https://sourceforge.net/projects/gocoin/files/?source=directory
 
