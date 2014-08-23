@@ -88,7 +88,7 @@ func main() {
 	tmp := btc.NewSha2Hash(gen_bin[:80])
 	if genesis_block_hash.Equal(tmp) {
 		println("Bitcoin genesis block")
-		magic = []byte{0x0B,0x11,0x09,0x07}
+		magic = []byte{0xF9,0xBE,0xB4,0xD9}
 	}
 
 
@@ -97,7 +97,7 @@ func main() {
 		tmp = btc.NewSha2Hash(gen_bin[:80])
 		if genesis_block_hash.Equal(tmp) {
 			println("Testnet3 genesis block")
-			magic = []byte{0xF9,0xBE,0xB4,0xD9}
+			magic = []byte{0x0B,0x11,0x09,0x07}
 		}
 	}
 
