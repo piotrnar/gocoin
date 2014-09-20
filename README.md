@@ -128,6 +128,6 @@ Repeat the `go build` for each source file of the tool you want to build.
 
 # Development
 Although it is an open source project, I am sorry to inform you that I will not merge in any pull requests.
-The reason is that I want to stay an explicit author of this software, to keep a full control its licensing.
-If you are missing some functionality, just describe me your needs and I will see what I can do for you.
-But if you want your specific code in, please fork and develop your own repo.
+The reason is that I want to stay an explicit author of this software, to keep a full control over its
+licensing. If you are missing some functionality, just describe me your needs and I will see what I can do
+for you. But if you want your specific code in, please fork and develop your own repo.
