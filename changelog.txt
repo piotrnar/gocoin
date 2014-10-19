@@ -1,4 +1,4 @@
-1.0.1
+1.0.1 - 2014-08-07
 * Parallel processing switched back on (was accidentally disabled in "lib/others/sys/const.go")
 
 1.0.0 - 2014-08-07
