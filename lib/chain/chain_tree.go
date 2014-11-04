@@ -122,11 +122,13 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	}
 
 	if end.Height <= n.Height {
-		panic("End block is not higher then current")
+		println("FindPathTo: End block is not higher then current", end.Height, n.Height)
+		return nil
 	}
 
 	if len(n.Childs)==0 {
-		panic("Unknown path to block " + end.BlockHash.String() )
+		println("FindPathTo: Unknown path to block", end.BlockHash.String())
+		return nil
 	}
 
 	if len(n.Childs)==1 {
