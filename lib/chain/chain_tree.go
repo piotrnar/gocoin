@@ -116,19 +116,17 @@ func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
 
 
 // Returns the next node that leads to the given destiantion
-func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
+func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	if n==end {
 		return nil
 	}
 
 	if end.Height <= n.Height {
-		println("FindPathTo: End block is not higher then current", end.Height, n.Height)
-		return nil
+		panic("FindPathTo: End block is not higher then current")
 	}
 
 	if len(n.Childs)==0 {
-		println("FindPathTo: Unknown path to block", end.BlockHash.String())
-		return nil
+		panic("FindPathTo: Unknown path to block " + end.BlockHash.String())
 	}
 
 	if len(n.Childs)==1 {
@@ -136,7 +134,7 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	}
 
 	for {
-		// more then one children: go fomr the end until you reach the current node
+		// more then one children: go from the end until you reach the current node
 		if end.Parent==n {
 			return end
 		}
@@ -147,7 +145,7 @@ func (n *BlockTreeNode)FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 }
 
 
-func (ch *Chain)MoveToBlock(dst *BlockTreeNode) {
+func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
 		cur = cur.Parent

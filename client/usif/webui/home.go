@@ -102,3 +102,24 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(s))
 	write_html_tail(w)
 }
+
+
+func p_status(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"text/xml"}
+	w.Write([]byte("<status>"))
+
+	w.Write([]byte("<lastblock>"))
+	common.Last.Mutex.Lock()
+	w.Write([]byte(fmt.Sprint("<height>", common.Last.Block.Height, "</height>")))
+	w.Write([]byte(fmt.Sprint("<hash>", common.Last.Block.BlockHash.String(), "</hash>")))
+	w.Write([]byte(fmt.Sprint("<time>", common.Last.Block.Timestamp(), "</time>")))
+	w.Write([]byte(fmt.Sprint("<diff>", btc.GetDifficulty(common.Last.Block.Bits()), "</diff>")))
+	common.Last.Mutex.Unlock()
+	w.Write([]byte("</lastblock>"))
+
+	w.Write([]byte("</status>"))
+}

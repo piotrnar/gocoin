@@ -239,6 +239,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/wallets.xml", xml_wallets)
 
 	http.HandleFunc("/", p_home)
+	http.HandleFunc("/status.xml", p_status)
 
 	http.ListenAndServe(iface, nil)
 }

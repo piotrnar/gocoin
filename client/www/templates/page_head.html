@@ -19,8 +19,34 @@ function quickswitchwallet() {
         </select>
         <img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
 		</td>
-		<td align="center"><a href="javascript:pushtx()">Load TX</a></td>
-		<td align="right">{MENU_RIGHT} |
+		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
+		<td align="right">
+		<b id="blno">...</b> |
+		{MENU_RIGHT} |
 		<a href="{HELPURL}">Help</a></td>
 	</tr></table>
 <hr>
+<script>
+function refreshblock() {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			console.log(aj.responseXML, xval(aj.responseXML, "height"), "aa")
+			var cur_height = parseInt(xval(aj.responseXML, "height"))
+			if (isNaN(cur_height)) {
+				blno.title = ''
+				blno.innerText = "???"
+			} else {
+				blno.title = 'Diff ' + (parseFloat(xval(aj.responseXML, "diff"))/1e6).toFixed(0) + "M" +
+					" changing in " + (2016-(cur_height%2016)) + " blocks"
+				blno.innerText = cur_height
+			}
+		}
+	}
+	aj.open("GET","status.xml",true)
+	aj.send(null)
+}
+refreshblock()
+setInterval(refreshblock, 10000)
+
+</script>

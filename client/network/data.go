@@ -223,6 +223,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	var best_block, last_block *chain.BlockTreeNode
 
 	common.BlockChain.BlockIndexAccess.Lock()
+	println("GetHeaders", len(h2get), hashstop.String())
 	if len(h2get) > 0 {
 		for i := range h2get {
 			if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
@@ -234,6 +235,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	} else {
 		best_block = common.BlockChain.BlockIndex[hashstop.BIdx()]
 	}
+
+	if best_block==nil {
+		println("GetHeaders: best_block not found", best_block.BlockHash.String())
+		common.CountSafe("GetHeadersBadBlock")
+		return
+	}
+
 	last_block = common.BlockChain.BlockTreeEnd
 	common.BlockChain.BlockIndexAccess.Unlock()
 
@@ -242,6 +250,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	for cnt<2000 {
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
+			println("best_block.FindPathTo failed", last_block.BlockHash.String(), best_block.Height)
 			break
 		}
 		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero
