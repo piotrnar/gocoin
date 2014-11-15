@@ -55,20 +55,22 @@ func NewPeer(v []byte) (p *PeerAddr) {
 }
 
 
-func NewPeerFromString(ipstr string) (p *PeerAddr, e error) {
+func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	port := DefaultTcpPort()
 	x := strings.Index(ipstr, ":")
 	if x!=-1 {
-		v, er := strconv.ParseUint(ipstr[x+1:], 10, 32)
-		if er != nil {
-			e = er
-			return
+		if !force_default_port {
+			v, er := strconv.ParseUint(ipstr[x+1:], 10, 32)
+			if er != nil {
+				e = er
+				return
+			}
+			if v>0xffff {
+				e = errors.New("Port number too big")
+				return
+			}
+			port = uint16(v)
 		}
-		if v>0xffff {
-			e = errors.New("Port number too big")
-			return
-		}
-		port = uint16(v)
 		ipstr = ipstr[:x] // remove port number
 	}
 	ip := net.ParseIP(ipstr)
