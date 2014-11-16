@@ -28,7 +28,6 @@ func parse_addr(pl []byte) {
 		n, e := b.Read(buf[:])
 		if n!=len(buf) || e!=nil {
 			COUNTER("ADER")
-			//println("ParseAddr:", n, e)
 			break
 		}
 		a := peersdb.NewPeer(buf[:])

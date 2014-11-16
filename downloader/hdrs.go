@@ -155,7 +155,7 @@ func (c *one_net_conn) headers(d []byte) {
 
 func get_headers() {
 	if SeedNode!="" {
-		pr, e := peersdb.NewPeerFromString(SeedNode)
+		pr, e := peersdb.NewPeerFromString(SeedNode, false)
 		if e!=nil {
 			fmt.Println("Seed node error:", e.Error())
 		} else {

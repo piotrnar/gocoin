@@ -1,5 +1,4 @@
 Client:
-* Fix: baning of incomming peers seems to not ignore the port number
 * Bug: "client/usif/webui/wallets.go" can crash with "index out of range" at "wallet.MyWallet.Addrs[i].Extra.Label"
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
 * Do not list unmatured coinbase outputs in the balance
