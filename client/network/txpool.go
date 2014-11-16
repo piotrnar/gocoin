@@ -160,7 +160,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 		}
 		if len(tx.TxIn)<1 {
 			RejectTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
-			c.DoS("TxNoInputs")
+			c.Misbehave("TxNoInputs", 20)
 			return
 		}
 

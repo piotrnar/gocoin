@@ -250,7 +250,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	for cnt<2000 {
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
-			println("best_block.FindPathTo failed", last_block.BlockHash.String(), best_block.Height)
+			println("best_block.FindPathTo failed", last_block.BlockHash.String())
 			break
 		}
 		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero

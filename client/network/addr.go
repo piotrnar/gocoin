@@ -92,7 +92,7 @@ func (c *OneConnection) SendOwnAddr() {
 }
 
 // Parese network's "addr" message
-func ParseAddr(pl []byte) {
+func (c *OneConnection) ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -100,12 +100,13 @@ func ParseAddr(pl []byte) {
 		n, e := b.Read(buf[:])
 		if n!=len(buf) || e!=nil {
 			common.CountSafe("AddrError")
+			c.DoS("AddrError")
 			//println("ParseAddr:", n, e)
 			break
 		}
 		a := peersdb.NewPeer(buf[:])
 		if !sys.ValidIp4(a.Ip4[:]) {
-			common.CountSafe("AddrInvalid")
+			c.Misbehave("AddrLocal", 2)
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
@@ -118,7 +119,7 @@ func ParseAddr(pl []byte) {
 				common.CountSafe("AddrStale")
 			}
 		} else {
-			common.CountSafe("AddrInFuture")
+			c.Misbehave("AddrFuture", 5)
 		}
 	}
 }

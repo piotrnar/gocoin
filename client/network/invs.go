@@ -15,7 +15,7 @@ import (
 func (c *OneConnection) ProcessInv(pl []byte) {
 	if len(pl) < 37 {
 		println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
-		c.DoS("InvEmpty")
+		c.Misbehave("InvEmpty", 20)
 		return
 	}
 	c.InvsRecieved++

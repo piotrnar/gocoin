@@ -179,7 +179,8 @@ func tcp_server() {
 				if common.DebugLevel>0 {
 					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
-				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String())
+				// set port to default, for incomming connections
+				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
 				if e == nil {
 					// Hammering protection
 					HammeringMutex.Lock()
@@ -379,7 +380,7 @@ func (c *OneConnection) Run() {
 				}
 
 			case "addr":
-				ParseAddr(cmd.pl)
+				c.ParseAddr(cmd.pl)
 
 			case "block": //block received
 				netBlockReceived(c, cmd.pl)

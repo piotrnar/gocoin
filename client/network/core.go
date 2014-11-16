@@ -71,6 +71,7 @@ type OneConnection struct {
 
 	broken bool // flag that the conenction has been broken / shall be disconnected
 	banit bool // Ban this client after disconnecting
+	misbehave int // When it reaches 100, ban it
 
 	// TCP connection data:
 	Incoming bool
@@ -220,6 +221,19 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
+	c.Mutex.Unlock()
+}
+
+
+func (c *OneConnection) Misbehave(why string, how_much int) {
+	common.CountSafe("Bad"+why)
+	c.Mutex.Lock()
+	c.misbehave += how_much
+	if c.misbehave >= 100 {
+		common.CountSafe("BanMisbehave")
+		c.banit = true
+		c.broken = true
+	}
 	c.Mutex.Unlock()
 }
 
