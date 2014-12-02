@@ -5,6 +5,7 @@ import (
 	"time"
 	"bytes"
 	"sync/atomic"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -223,11 +224,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	var best_block, last_block *chain.BlockTreeNode
 
 	common.BlockChain.BlockIndexAccess.Lock()
+
 	println("GetHeaders", len(h2get), hashstop.String())
 	if len(h2get) > 0 {
 		for i := range h2get {
 			if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
 				if best_block==nil || bl.Height > best_block.Height {
+					println(" ... bbl", i, bl.Height, bl.BlockHash.String())
 					best_block = bl
 				}
 			}
@@ -238,24 +241,26 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 
 	if best_block==nil {
 		println("GetHeaders: best_block not found", best_block.BlockHash.String())
+		common.BlockChain.BlockIndexAccess.Unlock()
 		common.CountSafe("GetHeadersBadBlock")
 		return
 	}
 
 	last_block = common.BlockChain.BlockTreeEnd
-	common.BlockChain.BlockIndexAccess.Unlock()
 
 	var resp []byte
 	var cnt uint32
 	for cnt<2000 {
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
-			println("best_block.FindPathTo failed", last_block.BlockHash.String())
+			println("FindPathTo failed", last_block.BlockHash.String(), cnt)
+			println("resp:", hex.EncodeToString(resp))
 			break
 		}
 		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero
 		cnt++
 	}
+	common.BlockChain.BlockIndexAccess.Unlock()
 
 	out := new(bytes.Buffer)
 	btc.WriteVlen(out, uint64(cnt))
