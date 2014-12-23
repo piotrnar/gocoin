@@ -240,7 +240,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	}
 
 	if best_block==nil {
-		println("GetHeaders: best_block not found", best_block.BlockHash.String())
+		println("GetHeaders: best_block not found")
 		common.BlockChain.BlockIndexAccess.Unlock()
 		common.CountSafe("GetHeadersBadBlock")
 		return
