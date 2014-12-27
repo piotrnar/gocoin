@@ -303,11 +303,15 @@ func DumpBalance(mybal chain.AllUnspentTx, utxt *os.File, details, update_balanc
 
 
 func UpdateBalance() {
+	BalanceMutex.Lock()
+	update_balance()
+	BalanceMutex.Unlock()
+}
+
+func update_balance() {
 	var tofetch_stealh []*btc.BtcAddr
 	var tofetch_secrets [][]byte
 	tofetch_regular := make(map[uint64]*btc.BtcAddr)
-
-	BalanceMutex.Lock()
 
 	MyBalance = nil
 
@@ -441,7 +445,6 @@ func UpdateBalance() {
 	}
 
 	sort_and_sum()
-	BalanceMutex.Unlock()
 }
 
 
@@ -470,10 +473,12 @@ func UpdateBalanceFolder() string {
 }
 
 func LoadWallet(fn string) {
+	BalanceMutex.Lock()
 	MyWallet = NewWallet(fn)
 	if MyWallet != nil {
-		UpdateBalance()
+		update_balance()
 	}
+	BalanceMutex.Unlock()
 }
 
 // Loads adressses from all the wallets into the cache
