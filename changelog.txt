@@ -1,4 +1,4 @@
-1.0.2
+1.0.2 - 2015-01-02
 * Fix: GetHeaders for unknown block does not cause panic anymore
 * Fix: Index out of range in "client/usif/webui/wallets.go" seen when quickly switching wallets
 * Baning of incomming peers ignores the remote port number (only checks IP)
