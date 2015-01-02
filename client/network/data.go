@@ -5,7 +5,7 @@ import (
 	"time"
 	"bytes"
 	"sync/atomic"
-	"encoding/hex"
+	//"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
