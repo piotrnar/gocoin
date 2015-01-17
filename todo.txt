@@ -1,4 +1,5 @@
 Client:
+* Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
 * Do not list unmatured coinbase outputs in the balance
 * Add some support for showing text messages attached to incomming coins (after OP_RETURN)
