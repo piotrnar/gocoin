@@ -250,6 +250,24 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 
 	var resp []byte
 	var cnt uint32
+
+	defer func() {
+		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
+		if r := recover(); r != nil {
+			common.CountSafe("GetHeadersOrphBlk")
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
+			}
+			fmt.Println("GetHeaders panic recovered:", err.Error())
+		}
+		// send the response
+		out := new(bytes.Buffer)
+		btc.WriteVlen(out, uint64(cnt))
+		out.Write(resp)
+		c.SendRawMsg("headers", out.Bytes())
+	}()
+
 	for cnt<2000 {
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
@@ -262,9 +280,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	}
 	common.BlockChain.BlockIndexAccess.Unlock()
 
-	out := new(bytes.Buffer)
-	btc.WriteVlen(out, uint64(cnt))
-	out.Write(resp)
-	c.SendRawMsg("headers", out.Bytes())
+	// Note: the deferred function will be called before exiting
+
 	return
 }
