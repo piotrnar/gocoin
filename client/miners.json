@@ -21,11 +21,10 @@
 ["Bitparking", "bitparking", ""],
 ["mmpool", "mmpool", ""],
 ["Polmine", "by polmine.pl", ""],
-["Discus Fish", "discusfish", ""],
 ["KnCMiner", "KnCMiner", ""],
 ["Bitalo", "Bitalo", ""],
 ["AntPool", "Mined by AntPool", ""],
-["Discus Fish", "Mined by ", ""],
+["F2Pool", "Mined by ", ""],
 ["HHTT", "HHTT", ""],
 ["Megabigpower", "megabigpower.com", ""],
 ["Mt Red", "/mtred/", ""],
@@ -36,10 +35,11 @@
 ["Slush", "", "1AqTMY7kmHZxBuLUR5wJjPFUvqGs23sesr"],
 ["BitMinter", "", "19PkHafEN18mquJ9ChwZt5YEFoCdPP5vYB"],
 ["EclipseMC", "", "15xiShqUqerfjFdyfgBH1K7Gwp6cbYmsTW"],
-["Discus Fish", "", "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY"],
+["F2Pool", "", "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY"],
 ["CloudHashing", "", "1ALA5v7h49QT7WYLcRsxcXqXUqEqaWmkvw"],
 ["Bitalo", "", "1HTejfsPZQGi3afCMEZTn2xdmoNzp13n3F"],
 ["BTCChina", "BTCChina Pool", ""],
 ["MegaBigPower", "", "1K7znxRfkS8R1hcmyMvHDum1hAQreS4VQ4"],
-["Bitcoin Affiliate Network", "/mining.bitcoinaffiliatenetwork.com/", ""]
+["Bitcoin Affiliate Network", "/mining.bitcoinaffiliatenetwork.com/", ""],
+["BW Pool", "BW Pool", ""]
 ]
