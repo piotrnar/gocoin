@@ -1,5 +1,6 @@
 1.0.3
 * Fix: GetHeaders for orphaned block does not cause panic anymore
+* Fix: Github issue #11 (panic when first time run client)
 
 1.0.2 - 2015-01-02
 * Fix: GetHeaders for unknown block does not cause panic anymore
