@@ -46,7 +46,6 @@ func host_init() {
 
 	// Lock the folder
 	os.MkdirAll(common.GocoinHomeDir, 0770)
-	os.MkdirAll(common.GocoinHomeDir+"wallet", 0770)
 	sys.LockDatabaseDir(common.GocoinHomeDir)
 
 	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.dat")
@@ -63,6 +62,7 @@ func host_init() {
 	}
 
 	// Create default wallet file if does not exist
+	os.MkdirAll(common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"stealth", 0770)
 	default_wallet_fn := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+wallet.DefaultFileName
 	fi, _ = os.Stat(default_wallet_fn)
 	if fi==nil || fi.IsDir() {
