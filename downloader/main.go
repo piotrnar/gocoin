@@ -7,8 +7,10 @@ import (
 	"flag"
 	"bytes"
 	"runtime"
+	"io/ioutil"
 	"os/signal"
 	"sync/atomic"
+	"encoding/json"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -51,10 +53,27 @@ func Exit() {
 
 
 func parse_command_line() {
+	var CFG struct { // Options that can come from either command line or common file
+		Testnet bool
+		Datadir string
+	}
+
 	GocoinHomeDir = sys.BitcoinHome() + "gocoin" + string(os.PathSeparator)
 
+	cfgfilecontent, e := ioutil.ReadFile("gocoin.conf")
+	if e != nil {
+		cfgfilecontent, e = ioutil.ReadFile(".." + string(os.PathSeparator) +
+			"client" + string(os.PathSeparator) + "gocoin.conf")
+	}
+	if e == nil {
+		e = json.Unmarshal(cfgfilecontent, &CFG)
+		if e == nil {
+			GocoinHomeDir = CFG.Datadir + string(os.PathSeparator)
+		}
+	}
+
 	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
-	flag.BoolVar(&Testnet, "t", false, "Use Testnet3")
+	flag.BoolVar(&Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
