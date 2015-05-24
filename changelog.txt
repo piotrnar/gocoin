@@ -1,5 +1,6 @@
 1.1.0:
 * Client: configuring "Walletdir" to allow improved privacy of the wallets
+* Downloader: look for "Datadir" in "gocoin.conf" or "../client/gocoin.conf"
 
 1.0.3 - 2015-03-27
 * Fix: GetHeaders for orphaned block does not cause panic anymore
