@@ -22,7 +22,7 @@ func IsMultisig(ad *btc.BtcAddr) (yes bool, rec *MultisigAddr) {
 		return
 	}
 
-	fn := common.GocoinHomeDir + "wallet" +
+	fn := common.CFG.Walletdir +
 		string(os.PathSeparator) + "multisig" +
 		string(os.PathSeparator) + ad.String() + ".json"
 

@@ -33,7 +33,7 @@ func FreeStealthSecrets() {
 
 func FetchStealthKeys() {
 	FreeStealthSecrets()
-	dir := common.GocoinHomeDir+"wallet"+string(os.PathSeparator)+"stealth"+string(os.PathSeparator)
+	dir := common.CFG.Walletdir + string(os.PathSeparator) + "stealth" + string(os.PathSeparator)
 	fis, er := ioutil.ReadDir(dir)
 	if er == nil {
 		for i := range fis {

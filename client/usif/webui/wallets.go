@@ -108,7 +108,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 
 	if checksid(r) {
 		if len(r.Form["wal"])>0 {
-			wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["wal"][0])
+			wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + r.Form["wal"][0])
 			http.Redirect(w, r, "/wal", http.StatusFound)
 			return
 		}
@@ -143,7 +143,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(wallet.LastBalance)/1e8), 1)
 	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(wallet.MyBalance)), 1)
 
-	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
+	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
 	if er == nil {
 		for i := range fis {
 			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
@@ -245,7 +245,7 @@ func xml_wallets(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<Wallets>"))
-	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
+	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
 	if er == nil {
 		for i := range fis {
 			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
@@ -274,7 +274,7 @@ func xml_addrs(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("<addrbook>"))
 	// Address Book
-	book := wallet.LoadWalfile(common.GocoinHomeDir+"wallet/"+wallet.AddrBookFileName, 0)
+	book := wallet.LoadWalfile(common.CFG.Walletdir+string(os.PathSeparator)+wallet.AddrBookFileName, 0)
 	for i := range book {
 		w.Write([]byte("<entry>"))
 		w.Write([]byte("<addr>" + book[i].Enc58str + "</addr>" ))

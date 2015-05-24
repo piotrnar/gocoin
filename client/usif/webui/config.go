@@ -37,7 +37,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		if len(r.Form["walletdata"])>0 && len(r.Form["walletfname"])>0 {
 			fn := r.Form["walletfname"][0]
 			if fn!="" {
-				fn = common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + fn
+				fn = common.CFG.Walletdir + string(os.PathSeparator) + fn
 				ioutil.WriteFile(fn, []byte(r.Form["walletdata"][0]), 0660)
 				wallet.LoadWallet(fn)
 			}

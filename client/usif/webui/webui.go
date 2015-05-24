@@ -121,7 +121,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 
 	// Quick switch wallet
 	if checksid(r) && len(r.Form["qwalsel"])>0 {
-		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + r.Form["qwalsel"][0])
+		wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + r.Form["qwalsel"][0])
 		http.Redirect(w, r, r.URL.Path, http.StatusFound)
 		return
 	}
@@ -129,7 +129,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	// If currently selected wallet is address book and we are not on the wallet page - switch to default
 	if r.URL.Path!="/wal" && wallet.MyWallet!=nil &&
 		strings.HasSuffix(wallet.MyWallet.FileName, string(os.PathSeparator) + wallet.AddrBookFileName) {
-		wallet.LoadWallet(common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + wallet.DefaultFileName)
+		wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + wallet.DefaultFileName)
 		http.Redirect(w, r, r.URL.Path, http.StatusFound)
 		return
 	}
@@ -166,7 +166,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Quick wallet switch
-	fis, er := ioutil.ReadDir(common.GocoinHomeDir+"wallet/")
+	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
 	if er == nil {
 		for i := range fis {
 			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' && fis[i].Name()!=wallet.AddrBookFileName {

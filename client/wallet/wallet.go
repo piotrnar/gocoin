@@ -117,8 +117,8 @@ func NewWallet(fn string) (wal *OneWallet) {
 
 
 func MoveToUnused(addr, walfil string) bool {
-	frwal := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + walfil
-	towal := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + UnusedFileName
+	frwal := common.CFG.Walletdir + string(os.PathSeparator) + walfil
+	towal := common.CFG.Walletdir + string(os.PathSeparator) + UnusedFileName
 	f, er := os.Open(frwal)
 	if er != nil {
 		println(er.Error())
@@ -178,7 +178,7 @@ func SetLabel(i int, lab string) bool {
 	}
 
 	addr := MyWallet.Addrs[i].Enc58str
-	walfn := common.GocoinHomeDir + "wallet" + string(os.PathSeparator) + MyWallet.Addrs[i].Extra.Wallet
+	walfn := common.CFG.Walletdir + string(os.PathSeparator) + MyWallet.Addrs[i].Extra.Wallet
 	f, er := os.Open(walfn)
 	if er != nil {
 		println(er.Error())

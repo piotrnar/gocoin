@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
@@ -23,6 +24,7 @@ var (
 		Testnet bool
 		ConnectOnly string
 		Datadir string
+		Walletdir string
 		TextUI struct {
 			Enabled bool
 		}
@@ -146,6 +148,14 @@ func InitConfig() {
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
 	flag.BoolVar(&CFG.TextUI.Enabled, "textui", CFG.TextUI.Enabled, "Enable processing TextUI commands (from stdin)")
 
+	if CFG.Datadir == "" {
+		CFG.Datadir = sys.BitcoinHome() + "gocoin"
+	}
+
+	if CFG.Walletdir == "" {
+		CFG.Walletdir = CFG.Datadir + string(os.PathSeparator) + DataSubdir() + string(os.PathSeparator) + "wallet"
+	}
+
 	if flag.Lookup("h") != nil {
 		flag.PrintDefaults()
 		os.Exit(0)
@@ -153,6 +163,15 @@ func InitConfig() {
 	flag.Parse()
 
 	Reset()
+}
+
+
+func DataSubdir() string {
+	if CFG.Testnet {
+		return "tstnet"
+	} else {
+		return "btcnet"
+	}
 }
 
 
