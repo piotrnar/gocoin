@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"net/http"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -61,6 +62,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	next_diff_change := 2016-end.Height%2016
 
+	block_versions := make(map[uint32]uint)
+
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
 			break
@@ -70,6 +73,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return
 		}
+		block_versions[binary.LittleEndian.Uint32(bl[0:4])]++
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.BlocksMiner(bl)
 		if mid==-1 {
@@ -129,6 +133,15 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 	}
+
+	var bv string
+	for k, v := range block_versions {
+		if bv!="" {
+			bv += " + "
+		}
+		bv += fmt.Sprintf("%dx%d", v, k)
+	}
+	mnrs = strings.Replace(mnrs, "<!--BLOCK_VERSIONS-->", bv, 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))

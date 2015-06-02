@@ -19,7 +19,7 @@ Downloader:
 * Avoid re-building of UTXO-db while using "-b"
 
 Core lib:
-* Implement bip-0066
+* Implement bip-0066 (restriction in blocks version 3)
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Address the occasional "incorrect proof of work" problem in testnet:
