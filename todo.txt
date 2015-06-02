@@ -12,13 +12,14 @@ Tools:
 Wallet:
 * Write some automated tests
 * Add Type-4 as HD Wallet
+* Add a wallet type with more heavy hashing
 
 Downloader:
 * Check a possibility to speed it up by disabling the sync
 * Avoid re-building of UTXO-db while using "-b"
-* Make it to work with gocoin.cfg file
 
 Core lib:
+* Implement bip-0066
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Address the occasional "incorrect proof of work" problem in testnet:
