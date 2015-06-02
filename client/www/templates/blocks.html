@@ -29,12 +29,12 @@
 </table>
 <script>
 function hlminer(row) {
-	var mid = row.cells[9].innerHTML
+	var mid = row.cells[7].innerHTML
 	if (row.className.indexOf("own")!=-1) {
 		mid = null
 	}
 	for (var i=1; i<blkstab.rows.length; i++) {
-		if (blkstab.rows[i].cells[9].innerHTML==mid) {
+		if (blkstab.rows[i].cells[7].innerHTML==mid) {
 			//blkstab.rows[i].style.backgroundColor="#ffd0d0";
 			blkstab.rows[i].className = "own hand"
 		} else {
