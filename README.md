@@ -27,9 +27,9 @@ Each source file in that folder is a separate tool.
 
 
 # Documentation
-The official web page of the project is served at <a href="http://www.assets-otc.com/gocoin">www.assets-otc.com/gocoin</a>.
+The official web page of the project is served at <a href="http://gocoin.pl">www.assets-otc.com/gocoin</a>.
 
-There you can find extended documentation, including <a href="http://www.assets-otc.com/gocoin/manual">User Manual</a>.
+There you can find extended documentation, including <a href="http://gocoin.pl/manual">User Manual</a>.
 
 
 # Requirements
