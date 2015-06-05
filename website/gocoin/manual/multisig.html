@@ -1,0 +1,153 @@
+Support for a multiple signature (otherwise known as multisig) addresses is a very useful feature of the existing Bitcoin protocol, though it requires some background knowledge in order to use it.<br>
+<br>
+<div>Most of the existing bitcoin wallets have no problems with sending money to multisig addresses, even if they don't support spending money from such.&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">Gocoin can handle both.</span>
+<div><br>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>What a multisig address is</b></span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">A multisig address defines a set of public keys that are authorized to spend money from it and the minimum number of signatures needed to spend the money.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">Obviously each of these needed signatures must be made with a different key from the predefined set.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">Saying otherwise: multisig address states how many of the keys must sign a specific transaction, in order for it to be valid.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Multisig address </span><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">looks just like a regular bitcoin address, except that it doesn't start with 1, but (usually) with 3.</span></font></span></div>
+<div><br>
+</div>
+<b>Escrow</b>
+<div>An example user case for a multisig address would be an escrow transaction.</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Alice wants to send some coins to Bob, but only after Bob delivers a certain thing. So they find a&nbsp;</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">third person who would act as the escrow judge - let's call him Carl.</span></div>
+<div><span style="background-color:transparent;font-size:10pt;line-height:1.6">They need a multisig address that requires 2 signatures out of 3 addresses.</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">So each of the three parties provides a public key from its private wallet: pubA, pubB, pubC - and they make a multisig address out of these 3 keys, that requires 2 signatures.</span></div>
+<div>Now Alice sends coins to this address and waits for Bob to deliver the certain thing...</div>
+<div>What is important here is that any two of the three can spend the money from this multisig address.</div>
+<div>So if Alice and Bob do not want to bother Carl - they can just finalize the transaction by themselves.</div>
+<div>But if either Alice or Bob would not be willing to cooperate any further - the other person can still spend the coins, deposited at the escrow address, if only Carl helps by providing his signature.</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><b>Multiple authentications</b></span></div>
+<div>Another useful feature of the multisig addresses is a possibility to protect coins with several different wallets.<br>
+The simplest scenario would be 2 signatures out of 2 addresses - both are needed in order to spend the coins.<br>
+You have one wallet on one device (e.g. your PC) and a second wallet on a different device (a smartphone) - to spend the money you must sign the transaction with both your wallets.<br>
+So if a wallet on any of the two devices gets stolen, or otherwise compromised, your coins should still be safe because the attacker needs both the wallets to spend the money.<br>
+You can also think of combinations like 2 out of of 3, or even 3 out of 5 - making it not only more secure, but also safer for you in case if you'd loose access to one of the wallets.<br>
+<span style="line-height:1.6;font-size:10pt;background-color:transparent">Multiple authentications can be of course also applied to different people holding the wallets - e.g. employees of a certain organization.</span></div>
+<div><br>
+</div>
+<div>
+<h2>Make multisig address</h2>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">To create a multisig address you are going to need the public keys which will be entitled to spend a money from it.&nbsp;</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Obviously each of the keys would come from a different wallet (otherwise using multisig doesn't make any sense).</span></div>
+<div><br>
+</div>
+<div><b><br>
+</b></div>
+<div><b>Gather the public keys</b></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Below we describe how to extract a public key from a Gocoin wallet, but of course a public key can come from any wallet software, not necessarily the one that is a part of Gocoin.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">To fetch a public key from an existing Gocoin wallet, just execute:</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>wallet -pub 1EqUmBY4wHQ5TmrPqWRCU5Etf6jo9yLwnu</code></span></div>
+<div>This will print you a line like this:</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>1EqUmBY4wHQ5TmrPqWRCU5Etf6jo9yLwnu =&gt; 0361e5c0bff39f18621693da42cd343d60e3e14b4e9eb46b220eb310a484fcebab</code></span></div>
+<div><i>(0361e5c0bff39f18621693da42cd343d60e3e14b4e9eb46b220eb310a484fcebab - this is the public key)</i></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Now repeat the "-pub &lt;address&gt;" operation, for each of the wallets that you want to participate in the multisig address, writing down each public key it returned.</span></div>
+<div><br>
+</div>
+<div><b>Create multisig address</b></div>
+<div>Having all the public keys (each as a hexdump) just bring them all together and use the <b>mkmulti</b> tool (tools/mkmulti.go) to crate the multisig address:</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>mkmulti &lt;number_of_sigs_needed_for_spending&gt; &lt;pubkey1&gt; &lt;pubkey2&gt; &lt;pubkey3&gt; ...</code></span></div>
+<div><i>(for testnet, just use a negative number)</i></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">For example:</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>mkmulti 2 0361e5c0bff39f18621693da42cd343d60e3e14b4e9eb46b220eb310a484fcebab 032ff4e2041a4525404ec76bb6f2328f906d28b6222344771c991659d0efc79b58 \</code></span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>0263e98b52afddeeb81c7e6e0bcb89e1c23c12c809da7f6cb16d899eda8554ec1b</code></span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">This will create a file named 3DAHwsGVN5wQnhR3Ax9AXw5czZbk83z2CV.json containing all kind of useful info.</span></div>
+<div>Store this file for the future. It doesn't contain big secrets (just the public keys), so you should not need to hide it quite much.</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">This address (3DAHwsGVN5wQnhR3Ax9AXw5czZbk83z2CV) is an actual bitcoin address and you can send money to it.</span></div>
+<div><br>
+</div>
+<div>
+<div><b style="background-color:transparent"><font size="2"><span style="line-height:1.6">It is advised to&nbsp;</span><span style="line-height:1.6">copy the JSON file to "multisig" folder</span></font></b></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">If you are not&nbsp;</span></font>paranoid<font size="2"><span style="line-height:1.6">&nbsp;about the secrecy of the public keys, it is highly recommended to create a folder named&nbsp;</span></font></span><code style="line-height:1.6;font-size:10pt;background-color:transparent">multisig/</code>,<span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;inside your online client's&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">wallet/</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;folder and c</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">opy there all the JSON files generated by&nbsp;</span><b style="line-height:1.6;font-size:10pt;background-color:transparent">mkmulti</b><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;tool.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Having the JSON files in the node's <code>wallet/multisig/</code> folder makes it&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">much easier to&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">spend money from your multisig addresses</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">.</span></div>
+</div>
+<div><br>
+</div>
+<h2>Add multisig address to your wallet</h2>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">You can add multisig addresses to the client's wallet file, just like any other address.</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">To do this u</span><span style="font-size:10pt;line-height:1.6;background-color:transparent">se a text editor, or the </span><b style="font-size:10pt;line-height:1.6;background-color:transparent">Edit</b><span style="font-size:10pt;line-height:1.6;background-color:transparent"> button on the </span><b style="font-size:10pt;line-height:1.6;background-color:transparent">Wallet</b><span style="font-size:10pt;line-height:1.6;background-color:transparent"> page of the WebUI.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Like with the regular addresses&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">you can also append a label to multisig address, after a space.</span></div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
+</i></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent"><i>Note: in order to use Gocoin for spending anything from a multisig address, you will need to have the address added to your currently selected wallet file.</i></span></div>
+<div><br>
+</div>
+<h2>Spend from your multisig address</h2>
+<div>Make sure that the currently selected wallet has the multisig address in it and the address itself has some unspent coins.</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Now go to&nbsp;<b>MakeTx</b> tab of the WebUI.</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><br>
+</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">At this point you have two different ways to proceed - both are described below.</span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">Whichever way you chose, you will need to pass your transaction through all the parties/wallets that are supposed to sign it. The output transaction from one party/wallet becomes an input transaction for the next one. The output from the last wallet should already be a&nbsp;</span><span style="line-height:20.799999237060547px">sufficiently</span><span style="line-height:1.6">&nbsp;signed transaction that only needs to be </span></font><font size="2" style="font-size:10pt;line-height:1.6"><span style="line-height:1.6">sent&nbsp;to the network. S</span></font></span><span style="line-height:1.6;font-size:10pt;background-color:transparent">end it out using&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">the same way as for regular (non multisig) transactions.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
+</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">At any moment when signing your transaction it may be useful to look inside it by executing:</span></div>
+<div><span style="color:rgb(0,96,0);font-family:monospace">wallet -d 012345678.txt</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent"><b>Note</b>:&nbsp;</i><i style="font-size:10pt;line-height:1.6;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6">Singing of multisig inputs does not require the&nbsp;</span></font>balance<font size="2"><span style="line-height:1.6">&nbsp;folder. You only need to pass a raw transaction file through the multisig signing wallets.<br>
+</span></font></font></i></div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6"><br>
+</span></font></font></i></div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6"><br>
+</span></font></font></i></div>
+<div><span style="line-height:1.6;background-color:transparent"><b><font size="3">1. The convenient way: having the JSON files in wallet/multisig</font></b></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><b>A) Download payment.zip</b></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">First select the inputs you want to spend, fill in the transaction outputs and download the </span><b style="line-height:1.6;font-size:10pt;background-color:transparent">payment.zip</b><span style="line-height:1.6;font-size:10pt;background-color:transparent">, just like you'd be doing any other spend via <b>MakeTx</b> tab.</span></div>
+<div><font style="font-size:10pt;background-color:transparent"><span style="line-height:1.6"><br>
+</span></font></div>
+<div><font style="font-size:10pt;background-color:transparent"><span style="line-height:1.6"><b>B) Do the multisig signing</b></span></font></div>
+<div><font style="line-height:1.6;font-size:10pt;background-color:transparent"><span style="line-height:1.6">For each required multisig address, take the most recently created transaction file (starting from the initial&nbsp;</span></font><code style="line-height:1.6;font-size:10pt;background-color:transparent">tx2sign.txt</code><font style="line-height:1.6;font-size:10pt;background-color:transparent"><span style="line-height:1.6">) to a desired wallet machine and execute there:</span></font></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code>&nbsp; &nbsp; wallet -raw &lt;the_tx_file.txt&gt;</code><br>
+</span></div>
+</div>
+</div>
+</div>
+<div>
+<div>
+<div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
+</i></div>
+<div><i style="font-size:10pt;line-height:1.6;background-color:transparent">Note: If you do not want to sign with all the private keys known to the wallet, specify which key should be used by adding "</i><span style="background-color:transparent"><i><code>-msign &lt;signing_bitcoin_address&gt;</code>"&nbsp;</i></span><i style="line-height:1.6;font-size:10pt;background-color:transparent">parameter.&nbsp;</i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6"><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font style="background-color:transparent;line-height:1.6;font-size:10pt"><span style="line-height:1.6">Inside&nbsp;</span></font><b style="background-color:transparent;line-height:1.6;font-size:10pt">payment.zip</b><font style="background-color:transparent;line-height:1.6;font-size:10pt"><span style="line-height:1.6">&nbsp;there is an extra text file, containing the commands that you shall executed for each specific address</span></font><font style="background-color:transparent;line-height:1.6;font-size:10pt"><span style="line-height:1.6">.&nbsp;</span></font></i></span></font></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6">Find the line with a matching address and execute it at the wallet owning private key for it (replace&nbsp;</span></font></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2">"</font></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><code style="font-size:10pt;line-height:1.6">...</code></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2">"&nbsp;</font></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif" style="background-color:transparent"><font size="2"><span style="line-height:1.6">with a proper file name).&nbsp;</span></font></font></i><i style="line-height:1.6;font-size:10pt;background-color:transparent">D<i><font style="line-height:1.6;font-size:10pt;background-color:transparent"><span style="line-height:1.6">epending how many signatures you need, y</span></font></i>ou may not always need all these commands.</i></div>
+</div>
+</div>
+</div>
+<div>
+<div><font color="#444444" face="Arial, Verdana, sans-serif" style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</font></div>
+<div><b style="font-size:10pt;line-height:1.6;background-color:transparent">C) Optional: only if you chose any non-multisig inputs at step A</b></div>
+<div><font color="#444444" face="Arial, Verdana, sans-serif" style="line-height:1.6;font-size:10pt;background-color:transparent">Take the&nbsp;<span style="font-size:small;line-height:20.799999237060547px">most recently created transaction file and the balance folder&nbsp;</span>to the proper location/wallet.</font></div>
+<div><font color="#444444" face="Arial, Verdana, sans-serif" style="line-height:1.6;font-size:10pt;background-color:transparent">Sign the non-multisig outputs with command like this:&nbsp;<span style="font-size:10pt;line-height:1.6;background-color:transparent"><code>wallet -raw&nbsp;</code></span></font><code style="line-height:1.6;font-size:10pt;background-color:transparent">&lt;the_most_recently_signed_tx_file.txt&gt;</code></div>
+<div><code style="line-height:1.6;font-size:10pt;background-color:transparent"><font color="#444444" face="Arial, Verdana, sans-serif">You can also do this operation at the&nbsp;begging&nbsp;(before adding multisig signatures), or at any moment in between.</font></code></div>
+<div><span style="font-size:small;line-height:1.6;background-color:transparent"><br>
+</span></div>
+<div><span style="font-size:small;line-height:1.6;background-color:transparent"><br>
+</span></div>
+<div><b><font size="3">2. The paranoid way: not having the JSON files in wallet/multisig</font></b></div>
+<div><b><br>
+</b>Select the input you want to spend&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">In <b>MakeTx</b> page</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">. You can select several inputs from the same address, but do not mix different addresses here.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Fill in the payment details as usually and download the </span><b style="line-height:1.6;font-size:10pt;background-color:transparent">payment.zip</b></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">What you need at this moment is just the </span><b style="line-height:1.6;font-size:10pt;background-color:transparent">tx2sign.txt</b><span style="line-height:1.6;font-size:10pt;background-color:transparent"> from the zip.</span></div>
+<div><br>
+</div>
+<div>Now take the value (the hexdump) of "redeemScript" from the .json file describing the address that you are spending money from&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">(created before with </span><code style="line-height:1.6;font-size:10pt;background-color:transparent">mkmulti</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">)</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">.</span></div>
+<div>It doesn't quite matter on which PC you would execute this command, but since you are paranoid already, better do it in a cold storage:</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>wallet -raw tx2sign.txt -p2sh &lt;hexdump_value_of_redeemScript&gt;</code></span></div>
+<div>This command should produce file <b><code>multi2sign.txt</code></b> - that is the file you will need to sing now.</div>
+<div><br>
+</div>
+<div>So take <code>multi2sign.txt</code> to your first wallet machine and execute:</div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><code><span>&nbsp;&nbsp; &nbsp;</span>wallet </code></span><span style="color:rgb(0,96,0);font-family:monospace;line-height:1.6;font-size:10pt;background-color:transparent">-raw multi2sign.txt</span></div>
+</div>
+<div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">This should create a new raw transaction file (named like </span><code style="font-size:10pt;line-height:1.6;background-color:transparent">01234567.txt</code><span style="font-size:10pt;line-height:1.6;background-color:transparent">) that already has the fist required signature inside.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">If you need more signatures, just keep repeating the "<code>wallet -raw &lt;txfile.txt&gt;</code>" command at other wallets that are entitled to sign it.&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">Remember&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">to always use the most recently created raw transaction file.</span></div>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div><i><font size="2"><b>Note:</b>&nbsp;You can specify a specific signing key by adding <code>-msign &lt;addr&gt;</code>&nbsp;switch. Otherwise all keys known to the wallet will be used.</font></i></div>

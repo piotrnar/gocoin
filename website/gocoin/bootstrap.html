@@ -1,0 +1,61 @@
+<div>Since Gocoin's client is a so-called <i>full node</i>,&nbsp;the initial block chain synchronization is quite a time consuming operation.</div>
+<div>In the best case scenario it may take you about one hour, though you need to use a certain tricks in order to achieve such a short time.</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">If you just start the client and let it to download the blocks, it may take days, so using the tricks is certainly worth it.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<h2>Import from Satoshi</h2>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">When you run the client node for the first time, it will look for the satoshi's client (otherwise known as: <i>bitcoin-qt</i>, <i>bitcoind</i> or <i>bitcoin core</i>) database in its default location (e.g. <code>~/.bitcoin/blocks</code> or <code>%appdata%\Bitcoin\blocks</code>).</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><br>
+</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">If found, it will ask you whether you want to import these blocks - you should say 'yes'.</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Choosing to verify the scripts is not recommended, since then it will take much more time while the satoshi's database should only contain verified blocks anyway.</span></div>
+<div><br>
+</div>
+<div>There is also a separate tool called <b>importblocks</b> that you can use to do the same thing</div>
+<div>Start the tool without parameters and it will tell you how to use it.</div>
+<div>While importing the blockchain using this tool, make sure that your node is not running.</div>
+<div><br>
+</div>
+<div>In both cases, the operation might take like an hour, or even more, but it is one time only.</div>
+<div><br>
+</div>
+<h2>Use the downloader</h2>
+<div><font size="2"><span style="line-height:20.799999237060547px">In case if you don't have the satoshi's client, with up to date database.</span></font></div>
+<div><font style="font-size:10pt;background-color:transparent"><span style="line-height:1.6">There is a special tool called <b>downloader</b> that can&nbsp;</span></font><span style="line-height:1.6;font-size:10pt;background-color:transparent">download</span><font style="font-size:10pt;background-color:transparent"><span style="line-height:1.6">&nbsp;block chain at quite an impressive speed, directly from bitcoin peer-to-peer network.</span></font></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">Running the downloader make sure the client is not running at the same time, since both the apps are supposed to operate on the same database files.</span></font></span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6"><br>
+</span></font></span></div>
+<div><span style="background-color:transparent"><font size="2"><b>Seed node</b></font></span></div>
+<div><span style="background-color:transparent"><font size="2">If you want, for additional security, you may s</font></span><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2">pecify IP of the node from which blocks' headers will be downloaded.</font></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2">To do so, use&nbsp;</font></span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">"</span><span style="color:rgb(0,96,0);font-family:monospace;font-size:small;line-height:19.200000762939453px;background-color:transparent">-s &lt;IP&gt;</span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">" command line switch&nbsp;</span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent"><br>
+</span></div>
+<div><font size="2"><span style="line-height:20.799999237060547px"><b>Highest trusted block</b></span></font></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">One important thing that the downloader gets&nbsp;</span>advantage<span style="line-height:1.6">&nbsp;of is assuming all the blocks up to a certain one as trusted, thus saving time on verifying scripts inside them.</span></font></span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">You can specify the hash of the highest block you trust, using "<code>-trust &lt;block_hash&gt;</code>" command line switch.</span></font></span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent"><br>
+</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6"><b>Skip building UTXO db</b></span></font></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">If you have a limited system memory, you may want to use&nbsp;</span><i style="line-height:1.6">downloader</i><span style="line-height:1.6">&nbsp;with "<code>-b</code>" switch to skip updating of the unspent database.</span></font></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">The downloading process will go much faster then, but later you will need to wait for the unspent database to built itself up,</span></font></span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">&nbsp;</span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">anyway</span><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2">.</font></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6"><br>
+</span></font></span></div>
+<div><span style="background-color:transparent;line-height:20.799999237060547px"><font size="2"><b>Excessive</b></font></span><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6"><b>&nbsp;memory usage</b></span></font></span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">Another thing that can help with&nbsp;</span>excessive<span style="line-height:1.6">&nbsp;memory consumption is decreasing the garbage collector&nbsp;</span></font></span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">threshold</span><span style="font-size:small;line-height:1.6;background-color:transparent">&nbsp;- e.g. set it to 25% by using "<code>-g 25</code>" switch.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">It sometimes also helps to quit the&nbsp;</span>downloader<span style="line-height:1.6">&nbsp;("q" text command) and start it again, just to free the memory</span></font></span><span style="font-size:small;line-height:1.6;background-color:transparent">.&nbsp;</span></div>
+<div><span style="font-size:small;line-height:1.6;background-color:transparent">While the&nbsp;</span><span style="font-size:small;line-height:1.6;background-color:transparent">downloaded</span><span style="font-size:small;line-height:1.6;background-color:transparent">&nbsp;is running you may monitor its memory consumption using the text command "m".</span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent"><br>
+</span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent"><b>Other command line options</b></span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent">To see more available command line switches, execute:</span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6"><span>&nbsp; &nbsp; <code>downloader -h</code></span><br>
+</span></font></span></div>
+<div><br>
+</div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent"><b>Verify last trusted block</b></span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">When run, after fetching all the blocks' headers, the downloader prints hash of the last block it is going to assume as trusted.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">For security you can verify this hash against any blockchain reference you want (e.g. look it up in <a href="http://blockchain.info">blockchain.info</a>).</span></div>
+<div><br>
+</div>

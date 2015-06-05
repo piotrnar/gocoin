@@ -1,0 +1,64 @@
+<h2><span style="line-height:1.6;background-color:transparent"><font size="5">Memory usage</font></span></h2>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">The amount of required system memory for the online node is not something to be neglected.</span></div>
+<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">At the other hand, having enough of it you should see this software performing better than any other full bitcoin node out there.</span></div>
+<div><br>
+</div>
+<div>If you would like to decrease memory consumption, you can try any (or all) of the following tips.</div>
+<div>Shut down your node, open your&nbsp;<b style="line-height:1.6;font-size:10pt;background-color:transparent">goconf.cfg</b><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">file in a text editor and set:</span></div>
+<div>
+<ul><li><b style="line-height:1.6;font-size:10pt;background-color:transparent">NoCacheBefore</b><span style="line-height:1.6;font-size:10pt;background-color:transparent"> </span><span style="line-height:1.6;font-size:10pt;background-color:transparent">to <b>-1</b></span></li>
+<li><span style="line-height:1.6;font-size:10pt;background-color:transparent"><b>GCPercTrshold</b><font size="2"><span style="line-height:1.6">&nbsp;</span></font></span><span style="line-height:1.6;font-size:10pt;background-color:transparent">to <b>25</b> or less</span></li>
+<li><b style="line-height:1.6;font-size:10pt;background-color:transparent">MaxCachedBlocks</b><span style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2">&nbsp;to <b>25</b> or less</font></span></li></ul>
+</div>
+<div>Save the new config and start the client.&nbsp;</div>
+<div><br>
+<h2>No gcc compiler</h2>
+The database engine<span style="font-size:small;line-height:1.6;background-color:transparent">&nbsp;uses some C code to&nbsp;</span><span style="font-size:small;line-height:1.6;background-color:transparent">optimize</span><span style="font-size:small;line-height:1.6;background-color:transparent">&nbsp;system memory usage.&nbsp;</span><span style="font-size:small;line-height:1.6;background-color:transparent">If you do not have a proper gcc compiler installed in your system, you will not be able to build it.&nbsp;</span><font style="font-size:10pt;background-color:transparent"><span style="line-height:20.799999237060547px">To work around this issue copy file <code>gocoin/lib/qdb/no_gcc/membind.go</code> one folder up (overwriting the original&nbsp;</span></font><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent"><code>gocoin/</code></span><span style="color:rgb(0,96,0);font-family:monospace;line-height:20.799999237060547px;font-size:10pt;background-color:transparent">lib/</span><code style="line-height:20.799999237060547px;font-size:10pt;background-color:transparent">qdb/membind.go</code><span style="line-height:20.799999237060547px;font-size:10pt;background-color:transparent">).</span></div>
+<div><font size="2"><span style="line-height:20.799999237060547px"><br>
+</span></font></div>
+<div><font size="2"><span style="line-height:20.799999237060547px">Still, if you can make it, it is recommended to install gcc in your system, because it will decrease the node's memory usage.</span></font></div>
+<div><font size="2"><span style="line-height:20.799999237060547px"><br>
+</span></font></div>
+<div><i><font size="2"><span style="line-height:20.799999237060547px"><b>Note:</b> for Windows you will need mingw64. After installing it (</span></font><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">before running "go build"),&nbsp;</span><font style="font-size:10pt;background-color:transparent"><span style="line-height:20.799999237060547px">m</span></font><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">ake sure that the path to gcc.exe is in the system's PATH.</span></i></div>
+<div><br>
+<h2>Database locking problems</h2>
+You must not run two instances of the client node at the same time, unless they would operate on a different database folders (running real-net and test-net nodes simultaneously is fine).<br>
+<br>
+<span style="font-size:10pt;line-height:1.6;background-color:transparent">There is a built-in protection against running two clients which operate on the same database, but it has not been well tested.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">That is why you should be careful and make sure by yourself to not execute a client more then once at the same time, b</span><span style="font-size:10pt;line-height:1.6;background-color:transparent">ecause if there is something wrong with this protection mechanism, it will likely corrupt your database, meaning that you may need to re-download the entire block chain.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
+</span></div>
+<div>Moreover there is a known issue with the database locking on Linux, though rather a minor one.</div>
+<div>If you do not shut down your node gracefully, next time you try to launch it, it will complain that the database folder is locked and refuse to start.</div>
+<div>In order to fix it, you will need to remove the file it mentions.</div>
+<div><br>
+</div>
+<h2>Duplicate stealth addresses</h2>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">If you add the same stealth address (same scan-key and same spend-key), but with different prefixes, to one or more of your wallets (including the ADDRESS file), </span></font><font size="2"><span style="line-height:1.6">the node will merge them into one stealth address with null prefix</span></font></span><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">. This will likely cause a&nbsp;</span></font>performance<font size="2"><span style="line-height:1.6">&nbsp;drop.</span></font></span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6"><br>
+</span></font></span></div>
+<div>
+<h2>Coinbase maturity</h2>
+<div>According to the block chain protocol, generated coins can be spent only after 100 confirmations.</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Users should be aware that fetching a wallet's balance from the client returns&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">also</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">immature coinbase transactions.</span></div>
+<div>If you provide such coins to the gocoin wallet, the network will not mine your signed transaction until the coinbase inputs that you included inside it get 100 confirmations.</div>
+<div><br>
+</div>
+</div>
+<h2>Possible unspent database corruption</h2>
+<div><i><span style="background-color:transparent;line-height:1.6;font-size:10pt">Note: this issue has&nbsp;</span><span style="font-size:10pt;line-height:1.6;background-color:transparent">not been observed for a long time already.</span></i></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
+</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">Theoretically it may happen that sometimes when you kill a client node (instead of quitting it gracefully), the unspent outputs database gets corrupt.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">In that case, when you start your node the next time, it will malfunction (i.e. panic or do not process any new blocks).</span></div>
+<div><br>
+</div>
+<div>To fix this issue you need to rebuild the unspent database. In order to do this, start the client with "-r" switch (<code>client -r</code>).</div>
+<div><br>
+</div>
+<div>The UTXO rebuild operation takes awhile, so it may be worth to have a backup of some recent version of this database.</div>
+<div>Then you won't need to rebuild it all, but only the part that came after your backup.</div>
+<div>What you need to backup is the entire folder named <code>unspent4/</code>, in gocoin's data folder.</div>
+<div><i>Note: After you had recovered a backup, do not use "-r" switch.</i></div>
+<div><br>
+</div>

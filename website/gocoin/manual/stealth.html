@@ -1,0 +1,140 @@
+Stealth addresses are another useful feature of the bitcoin protocol.
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">The idea is that you have only one&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">stealth address - you do not need more.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">Whatever payment is being made to your stealth address cannot be detected by looking into the block chain.</span></div>
+<div>Only the person who made the payment (and of course you - the owner of the stealth address) will know that a payment was made to your stealth address.</div>
+<div>
+<div><br>
+</div>
+<div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">A stealth address is much longer that a regular bitcoin address - it may look like this:</span></div>
+<div><b>vJmxB7egd7r62ubb45J3BzqkMemQv5H2dnpKTC735iQuuxYXFMA7Creouou7qZDpf74opgxfYhXSrm7bP549CiGzPFQnjMaahsuVuw</b></div>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">You can use the tool, called <b>stealth</b> (<code>tools/stealth.go</code>) to see what is inside such a string.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">For the given example, the tool would print:</span></div>
+<div>
+<div style="background-color:transparent"><code>&nbsp;Version: 0x2a = 42</code></div>
+<div style="background-color:transparent"><code>&nbsp;Options: 0x00 = 0</code></div>
+<div style="background-color:transparent"><code>&nbsp;scanKey: 0346fb8874b3ed3917b88bf9cfefb17f66a99942f4ce5f96c17c492c84f5c784cc</code></div>
+<div style="background-color:transparent"><code>&nbsp;spndKey: 0268ac2033722fa594d4f70ecc15e8a2a2585dd8d74f8ba399471608b5d3fbae3b</code></div>
+<div style="background-color:transparent"><code>&nbsp;sigNeed: 1</code></div>
+<div style="background-color:transparent"><code>&nbsp;Prefix : /0</code></div>
+<br>
+The latest version of Gocoin supports payments to stealth addresses.<br>
+Just put a stealth address in place of a regular one and the wallet will take care of making a proper transaction.</div>
+<div><br>
+<h2>Create your own stealth address</h2>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">To create your own stealth address first you need a secret key that will be used in the online node to monitor the blockchain for coins coming to this address.</span></div>
+</div>
+<div>This secret key will need to be kept on your online machine, so by definition it will not be as secured as your cold storage wallet.</div>
+<div>Although if a secret scan key gets stolen, it only compromises anonymity of your stealth address, but does not endanger coins kept at the stealth address.</div>
+<div><br>
+</div>
+<h3>Create a scan key</h3>
+In reality you can use use any 32 bytes of a random data as a private scan-key. The public key gets calculated from it.<br>
+For convenience it is advised to create the scan key from a seed password, so you would be able to re-create it in a future in case if you'd loose it.<br>
+<div><br>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Creating a scan-key using the node's TextUI is simple. Just e</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">xecute such a text command:</span></div>
+<div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code>&nbsp;arm -c</code></span></div>
+<div><span style="background-color:transparent"><font size="2">The node will ask you to enter the key's seed password and then re-enter it for verification.</font></span></div>
+<div>This password should obviously be different from the actual password that you use in the wallet machine, but make sure to not forget it.</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">After you re-enter the same password, a secret scan-key is created out of it and&nbsp;</span><span style="font-size:10pt;line-height:1.6;background-color:transparent">automatically stored in the node's memory.</span></div>
+<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">The secret key will stay in the node's memory until you shut down the node or remove it using TextUI's:</span></div>
+<div><code style="font-size:10pt;line-height:1.6;background-color:transparent">&nbsp;unarm *</code></div>
+<div><span style="background-color:transparent"><font size="2"><br>
+</font></span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">The node will also output the command that you should execute on your wallet machine&nbsp;</span></font><font size="2"><span style="line-height:1.6">(that's the same one as described in the next section).</span></font></span></div>
+<div><span style="line-height:1.6;font-size:small;background-color:transparent">The example procedure should look like this:</span></div>
+<div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;&gt; arm -c</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Enter seed password of the stealth key (empty line to abort) : ***</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Re-enter the seed password : ***</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;You have created a new stealth scan-key. Make sure to not forget this password!</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Public hexdump: 031ffc0c7b5767561587482fca6fe794275b17874914d45aec3615ee650cbb6b16</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp; Go to your wallet machine and execute:</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp; &nbsp; wallet -scankey 031ffc0c7b5767561587482fca6fe794275b17874914d45aec3615ee650cbb6b16 -prefix 0</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp; &nbsp; (change the prefix to a different value if you want)</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Stealth key number 0 has been stored in memory</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Reloading the current wallet...</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;...</font></code></span></div>
+<div><span style="line-height:20.799999237060547px"><code><font size="1">&nbsp;Ready in 0.004s</font></code></span></div>
+</div>
+<div><font size="2"><br>
+</font></div>
+<div><font size="2"><br>
+</font></div>
+<div><b>Save you secret scan key if you want</b></div>
+</div>
+<div><br>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">You can save your generated scan key(s) on disk.</span></div>
+<div>
+<div>Remember that&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">if the saved file gets compromised, i</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">t will exposes anonymity of your stealth address.</span></div>
+<div>At the other hand, having the key saved is much more convenient, because you do not need to re-arm your node with the secret seed each time you start it.</div>
+<div><br>
+</div>
+</div>
+<div>To save all your scan keys to disk, execute TextUI command:</div>
+<div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code>&nbsp;armed save</code></span></div>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code><br>
+</code></span></div>
+<div>If you decide to not save, each time after launching the node execute the <code>arm</code> command (this time with no parameter) and re-type the seed password.</div>
+<div><br>
+</div>
+<div><i><b>Note:</b>&nbsp;without the arming or having the key saved, you won't be able to monitor balance at your stealth address.</i></div>
+<div><br>
+</div>
+<div>
+<div>
+<div>
+<h2>Create the stealth address at your wallet machine</h2>
+Tak<span style="line-height:1.6;font-size:10pt;background-color:transparent">e the line&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">printed previously by "<code>arm -c</code></span>"<span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;to your wallet machine and execute there:</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code>&nbsp;wallet -scankey&nbsp;</code></span><span style="background-color:transparent"><code>031ffc0c7b5767561587482fca6fe794275b17874914d45aec3615ee650cbb6b16 -prefix 0</code></span></div>
+<div><span style="background-color:transparent">Now you will need to enter your actual wallet's seed password - the one that you will use to spend the coins.</span></div>
+<div><span style="background-color:transparent">Assuming that your wallet's seed password is e.g. <b>my_wallets_seed_password</b>, you will get such a stealth address:</span></div>
+<div><span style="background-color:transparent"><b>&nbsp;vJmwbjGCDDbUZh2shn9hZLPi3X7bSpwCuZtStNuc7XmR1A66zv5iTarBL3s51bp6QmG6qej82Zau2Fs9kHXhY8rLHZRpdrdbsi7Pt4</b></span></div>
+<div><span style="background-color:transparent">This is the address that you can give to other people in order to receive stealth payments.</span></div>
+<div><span style="background-color:transparent"><br>
+</span></div>
+<div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><i><b>Note:</b>&nbsp;do not use stealth addresses that come from same keys, but use different prefixes - it would likely cause performance issues.</i></span></div>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><i><br>
+</i></span></div>
+<div><i><b>Note:</b></i></div>
+<div><i>You can specify the prefix other than 0. The bigger prefix you choose, the less work your node will have trying to find transactions coming to your stealth address, but the more it will expose your anonymity.</i></div>
+<div><i>Also note that some wallets do not yet support sending coins to stealth addresses with prefixes other than 0, nor this functionality was tested with any other wallets than Gocoin itself.</i></div>
+<div><br>
+</div>
+<h2>Add stealth address to wallet</h2>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">To monitor a balance of the stealth address you need to a</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">dd it to any of the text files in your node's&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">wallet/</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;folder - just put there a new line:</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><code>&nbsp;vJmwbjGCDDbUZh2shn9hZLPi3X7bSpwCuZtStNuc7XmR1A66zv5iTarBL3s51bp6QmG6qej82Zau2Fs9kHXhY8rLHZRpdrdbsi7Pt4 My stealth key</code></span></div>
+</div>
+</div>
+<blockquote style="margin:0 0 0 40px;border:none;padding:0px">
+<div>
+<div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><i>Note: you can add a label in the same line after space.</i></span></div>
+</div>
+</div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent"><i><br>
+</i></span></div>
+</blockquote>
+<div>
+<div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">Obviously you will need to select the wallet that contains a stealth address to see its balance.</span></font></span></div>
+<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">Also, as mentioned before, keep in mind that your node needs to be armed with the&nbsp;</span></font>secret<font size="2"><span style="line-height:1.6">&nbsp;of the scan key.</span></font></span></div>
+<div><font size="2"><span style="line-height:20.799999237060547px">To list the currently "known" stealth keys use TextUI command:</span></font></div>
+<div><font size="2"><span style="line-height:20.799999237060547px"><code>&nbsp;armed</code></span></font></div>
+<div><b style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
+</b></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">As soon as your node knows a secret scan-key of a specific stealth address </span><span style="line-height:1.6;font-size:10pt;background-color:transparent">it keeps monitoring its balance.</span></div>
+<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Y</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">ou will be able to select coins sent to this stealth addresses in WebUI's&nbsp;<b>MakeTx</b> tab and t</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">hey will be returned when fetching the balance.</span></div>
+<div><br>
+</div>
+</div>
+</div>
