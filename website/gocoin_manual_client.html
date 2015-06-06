@@ -4,39 +4,37 @@
 </head>
 <body>
 <h1>Client node</h1>
-<div>Run <code>client -h</code> to see all available command line switches. Some example ones are:</div>
-<div><br>
-</div>
-<blockquote style="margin:0 0 0 40px;border:none;padding:0px">
-<div><span style="font-style:normal"><code>-t - use Testnet (instead of regular bitcoin network)</code></span></div>
-<div><span style="font-style:normal"><code>-ul=NN - set maximum upload speed to NN kilobytes per second</code></span></div>
-<div><span style="font-style:normal"><code>-dl=NN - set maximum download speed to NN kilobytes per second</code></span></div>
-</blockquote>
-<div><br>
-</div>
+Run <code>client -h</code> to see all available command line switches. Some example ones are:
+<br>
+<br>
+<code>-t - use Testnet (instead of regular bitcoin network)<br>
+-ul=NN - set maximum upload speed to NN kilobytes per second<br>
+-dl=NN - set maximum download speed to NN kilobytes per second<br>
+</code>
+<br>
 <h2>TextUI</h2>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">When the client is already running you have an interactive, text command based interface, on the console.</span></div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Type <code>help</code> to see the possible commands.</span></div>
-<div><br>
-</div>
+When the client is already running you have an interactive, text command based interface, on the console.<br>
+Type <code>help</code> to see the possible commands.
+<br>
+
 <h2>WebUI</h2>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">There is also a web interface that you can operate with a web browser.</span></div>
-<div><br>
-</div>
-<div>Make sure that wherever you launch the client executable from, there is the <code>www/</code> folder, along with its content. The folder contains web&nbsp;<span style="background-color:transparent;line-height:1.6;font-size:10pt">resources</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">&nbsp;and&nbsp;</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">templates which are an important part of the WebUI application. You can modify these files to satisfy your look&amp;feel preferences, but even to add a new functionality to the web app.</span></div>
-<div><br>
-</div>
-<div>By default (for security reasons) WebUI is available only from a local host, via <a href="http://127.0.0.1:8833/">http://127.0.0.1:8833/</a></div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">If you want to have access to it from different computers:</span></div>
-<div>
-<ul><li><span style="background-color:transparent;line-height:1.6;font-size:10pt">Open <code>gocoin.conf</code> file in a text editor (or edit it at the <b>Home</b> page of the WebUI).</span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt">Change <code>Interface</code> value in the config file to <code>:8833</code></span>&nbsp;(<i>Note: this binds the web service to all network interfaces).</i></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt">Change <code>AllowedIP</code> value to allow access from all the addresses you need - e.g. <code>127.0.0.1,192.168.0.0/16</code>&nbsp;(<i>Note: <code>0.0.0.0/0</code>&nbsp;allows to connect from anywhere).</i></span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt">Remember to save the new config and then restart your node.</span></li></ul>
-<div>Read more about the config file at the&nbsp;<a href="config.html">Config</a>&nbsp;page.</div>
-</div>
-<div><br>
-</div>
-<div>Being able to access the&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">web interface, see the&nbsp;</span><a href="webui.html" style="line-height:1.6;font-size:10pt;background-color:transparent">WebUI</a><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;page of this manual for further help.</span></div>
+There is also a web interface that you can operate with a web browser.<br>
+<br>
+
+Make sure that wherever you launch the client executable from, there is the <code>www/</code> folder, along with its content. The folder contains web templates which are an important part of the WebUI application. You can modify these files to satisfy your look&amp;feel preferences, but even to add a new functionality to the web app.<br>
+<br>
+By default (for security reasons) WebUI is available only from a local host, via <a target="_blank" href="http://127.0.0.1:8833/">http://127.0.0.1:8833/</a><br>
+<br>
+If you want to have access to it from different computers:<br>
+<ul><li>Open <code>gocoin.conf</code> file in a text editor (or edit it at the <b>Home</b> page of the WebUI).</li>
+<li>Change <code>Interface</code> value in the config file to <code>:8833</code> (<i>Note: this binds the web service to all network interfaces).</i></li>
+<li>Change <code>AllowedIP</code> value to allow access from all the addresses you need - e.g. <code>127.0.0.1,192.168.0.0/16</code> (<i>Note: <code>0.0.0.0/0</code> allows to connect from anywhere).</i></li>
+<li>Remember to save the new config and then restart your node.</li></ul>
+<br>
+Read more about the config file at the <a href="gocoin_manual_client_config.html">Config</a> page.
+<br>
+<br>
+
+Being able to access the  page of this manual for further help.
 </body>
 </html>
