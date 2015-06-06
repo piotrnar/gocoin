@@ -4,161 +4,148 @@
 </head>
 <body>
 <h1>Spending BTC</h1>
-<div>Spending money is a secured process that requires several steps and moving files between your online client PC and your offline wallet machine. USB flash disk is probably the most convenient medium to use for this purpose.</div>
-<div><br>
-</div>
-<div>Never move any files others than the ones that you actually need to move, which are:</div>
-<div>
-<ul><li><span style="background-color:transparent;line-height:1.6;font-size:10pt">The <code>balance/</code> folder containing your unspent outputs - you move it from client to wallet</span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt">Text files with signed transactions - these you move from wallet to client</span></li></ul>
-</div>
-<div>Assuming that you would not sign a wrong transaction, nothing in the files you move between the two points is security sensitive, so you do not need to worry about protecting the medium (USB disk).</div>
-<div><br>
-</div>
-<div>
-<h2><b>1. Export your balance</b></h2>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">In order to spend your coins you will need to&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">copy t</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">he</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">balance</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">folder</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;(containing&nbsp;<code>unspent.txt</code> and one or more <code>&lt;txid&gt;.tx</code></span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;files) to the PC that runs your wallet.</span></div>
-</div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><br>
-</span></div>
-<h3><span style="font-size:large;background-color:transparent;line-height:1.6">1.1. Use balio tool</span></h3>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">There is a tool&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent"><b>balio</b>&nbsp;that can&nbsp;fetch&nbsp;a balance of your wallet from a public block explorer (specifically from&nbsp;</span><span style="background-color:transparent"><b>blockr.io</b></span><span style="font-size:small;line-height:20.799999237060547px;background-color:transparent">)</span></div>
-<div><span style="background-color:transparent">
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">Run the tool from a command line with a path to your wallet file or the list of&nbsp;</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">(space separated)</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">&nbsp;</span><span style="background-color:transparent;line-height:1.6;font-size:10pt">public addresses for which you want to fetch the&nbsp;balance.</span></div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">It should create the&nbsp;</span><code style="background-color:transparent;line-height:1.6;font-size:10pt">balance/</code><span style="background-color:transparent;line-height:1.6;font-size:10pt">&nbsp;folder in the current directory, ready to be provided to your wallet.</span></div>
-<div>
-<div><i style="line-height:1.6;font-size:10pt;background-color:transparent"><b><br>
-</b></i></div>
-<div><i style="line-height:1.6;font-size:10pt;background-color:transparent"><b>Note: balio</b>&nbsp;can also fetch balance of&nbsp;<b>Litecoin</b>&nbsp;addresses. You can then spent your Litecoins using gocoin wallet, along with&nbsp;<code>-ltc</code>&nbsp;switch.</i></div>
-</div>
-<div><i style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
-</i></div>
-<div><font style="line-height:1.6;font-size:10pt;background-color:transparent"><i><font size="2"><span style="line-height:1.6"><b>Note:</b>&nbsp;</span></font></i></font><span style="font-size:10pt;line-height:20.799999237060547px;background-color:transparent"><font size="2"><i>fetching the balance this way exposes your privacy.</i></font></span></div>
-<div><span style="font-size:10pt;line-height:20.799999237060547px;background-color:transparent"><font size="2"><i>To&nbsp;</i></font></span><i style="font-size:small;line-height:20.799999237060547px;background-color:transparent">use <b>balio</b>&nbsp;through <b>Tor</b>, set TOR environment variable in your system, pointing it to your tor's socks proxy (e.g. <code>TOR=localhost:9050</code>).</i></div>
-<div><i style="font-size:small;line-height:20.799999237060547px;background-color:transparent">Additionally, despite of using Tor, t</i><i style="line-height:1.6;font-size:10pt;background-color:transparent"><font size="2"><span style="line-height:1.6">o further protect your privacy try fetch balance of single&nbsp;</span></font>addresses<font size="2"><span style="line-height:1.6">&nbsp;instead of entire wallets.</span></font></i></div>
-<div><br>
-</div>
-<div><br>
-</div>
-<h3>1.2. Use client node</h3>
-<div><span style="font-size:10pt;line-height:1.6;background-color:transparent">From the moment when&nbsp;</span><code style="font-size:10pt;line-height:1.6;background-color:transparent">wallet.txt</code><span style="font-size:10pt;line-height:1.6;background-color:transparent">&nbsp;(or its renamed version) is properly loaded into your client, you can check and export your balance.</span></div>
-<div>
-<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">There are two ways to do so. A third way is a special kind that allows you to assemble the&nbsp;</span></font>transaction<font size="2">&nbsp;using a&nbsp;convenient&nbsp;interactive way.</font></span></div>
-</div>
-</span>
-<div><br>
-</div>
-<div>
-<div>
-<div><b>1.2.1.&nbsp;</b><b>TextUI</b></div>
-<div><b><br>
-</b><span style="font-size:10pt;line-height:1.6;background-color:transparent">Each time you execute TextUI&nbsp;</span><code style="font-size:10pt;line-height:1.6;background-color:transparent">bal</code><span style="font-size:10pt;line-height:1.6;background-color:transparent">&nbsp;command, a directory&nbsp;</span><code style="font-size:10pt;line-height:1.6;background-color:transparent">balance/</code><span style="font-size:10pt;line-height:1.6;background-color:transparent">&nbsp;is (re)created, in the folder where you run your client from.&nbsp;</span></div>
-<div><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">That is the folder you need to move to your wallet&nbsp;</span></font>environment<font size="2"><span style="line-height:1.6">.</span></font></span></div>
-</div>
-<div><span style="font-size:10pt;line-height:1.6;background-color:transparent"><br>
-</span></div>
-<b>1.2.2. WebUI</b></div>
-<div><b><br>
-</b><span style="line-height:1.6;font-size:10pt;background-color:transparent">Use the&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">home page</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;of the&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">WebUI to download</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">balance.zip</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">file.</span></div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Extract the zip file to get </span><span style="line-height:1.6;font-size:10pt;background-color:transparent">the</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">balance</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">folder</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">.</span></div>
-<b>
-<div><b><br>
-</b></div>
-1.2.3. WebUI / MakeTx (Coin Control)</b></div>
-<div><b><br>
-</b>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">WebUI has &nbsp;<b>MakeTx</b> page that allows you to assemble a transaction using quite a convenient, interactive way.</span></div>
-<div>After you fill in all the transaction details, it will give you <code>payment.zip</code> with the exact command that you shall execute at the wallet machine.</div>
-<div><br>
-</div>
-<div>MakeTx tab is currently the only way to spend coins from multisig addresses (TextUI does not support it)</div>
-<div><br>
-</div>
-</div>
-<div><span style="background-color:transparent">
-<div>
-<h3><b style="background-color:transparent;line-height:1.6"><font size="5">2. Sign your transaction</font></b></h3>
-</div>
-</span><span style="background-color:transparent"><span style="background-color:transparent">
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balnace/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.</span></div>
-<div><br>
-</div>
-<div>To spend your coins, order the wallet to make and sign a new transaction, using a command like:</div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><span>&nbsp;&nbsp; &nbsp;</span><code>wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=0.01</code></span></div>
-<div>Please note no spaces between the address, the equal sign and the value. The value represents the amount in BTC, which you request to send to the given address.</div>
-<div><br>
-</div>
-<div>There are also other switches which you may find useful at this stage (i.e. a fee control). To see all your options, just run <code>wallet -h</code></div>
-<div><br>
-</div>
-<div>
-<h2><b>3. Verify signed transaction</b></h2>
-</div>
-<div><span style="background-color:transparent;font-size:10pt;line-height:1.6">If everything goes well with the wallet </span><code style="background-color:transparent;font-size:10pt;line-height:1.6">-send ...</code><span style="background-color:transparent;font-size:10pt;line-height:1.6"> command, it will create a text file with a signed transaction. The file is named like </span><code style="background-color:transparent;font-size:10pt;line-height:1.6">01234567.txt</code><span style="background-color:transparent;font-size:10pt;line-height:1.6"> - this is the file you need to move to your online node in order to notify the network about your payment.&nbsp;</span><span style="background-color:transparent;line-height:1.6;font-size:10pt"><font size="2"><span style="line-height:1.6">Before you broadcast your signed transaction to the network, verify carefully it does exactly what you&nbsp;</span></font>intended<font size="2"><span style="line-height:1.6">. You can do it in a several ways. In any case, first m</span></font></span><span style="background-color:transparent;line-height:1.6;font-size:10pt">ove the signed transaction file to your online PC.</span></div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt"><br>
-</span></div>
-<div><span style="font-size:1.4em;background-color:transparent;line-height:1.6">3.1. Wallet</span></div>
-</span><span style="background-color:transparent">
-<div><br>
-</div>
-</span></span><span style="background-color:transparent"><span style="background-color:transparent">
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">To see a decoded content of a transaction, e</span>xecute:</div>
-<div><code>&nbsp; wallet -d rawtxdata.txt</code></div>
-<div><br>
-</div>
-</span></span>
-<h3><span style="font-size:large;line-height:1.6;background-color:transparent">3.2.</span><span style="font-size:large;line-height:1.6;background-color:transparent">&nbsp;</span><span style="font-size:large;line-height:1.6;background-color:transparent">TextUI</span></h3>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Use the node's TextUI to execute</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">tx 01234567.txt</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;(where&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">01234567.txt</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).</span></div>
-<div><br>
-</div>
-<h3 style="background-color:transparent"><span style="background-color:transparent;line-height:1.6"><font size="4">3.3. WebUI</font></span></h3>
-<div style="background-color:transparent"><span style="background-color:transparent;line-height:1.6;font-size:10pt">Use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.</span></div>
-<div style="background-color:transparent"><span style="line-height:1.6;font-size:10pt;background-color:transparent">Alternatively, you can click the&nbsp;</span><b style="line-height:1.6;font-size:10pt;background-color:transparent">Load TX</b><span style="line-height:1.6;font-size:10pt;background-color:transparent"> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.</span></div>
+Spending money is a secured process that requires several steps and moving files between your online client PC and your offline wallet machine. USB flash disk is probably the most convenient medium to use for this purpose.
 <br>
+
+Never move any files others than the ones that you actually need to move, which are:
+
+<ul><li>The <code>balance/</code> folder containing your unspent outputs - you move it from client to wallet</li>
+<li>Text files with signed transactions - these you move from wallet to client</li></ul>
+
+Assuming that you would not sign a wrong transaction, nothing in the files you move between the two points is security sensitive, so you do not need to worry about protecting the medium (USB disk).
+<br>
+
+
+<h2><b>1. Export your balance</b></h2>
+In order to spend your coins you will need to copy the <code>balance</code> folder (containing <code>unspent.txt</code> and one or more <code>&lt;txid&gt;.tx</code> files) to the PC that runs your wallet.
+
+<br><br>
+
+<h3>1.1. Use balio tool</h3>
+There is a tool <b>balio</b> that can fetch a balance of your wallet from a public block explorer (specifically from <b>blockr.io</b>)<br>
+<br>
+Run the tool from a command line with a path to your wallet file or the list of (space separated) public addresses for which you want to fetch the balance.<br>
+It should create the <code>balance/</code> folder in the current directory, ready to be provided to your wallet.<br>
+<br>
+<i><b>Note: balio</b> can also fetch balance of <b>Litecoin</b> addresses. You can then spent your Litecoins using gocoin wallet, along with <code>-ltc</code> switch.</i><br>
+<br>
+<i><b>Note:</b>fetching the balance this way exposes your privacy.</i><br>
+<i>To </i><i>use <b>balio</b> through <b>Tor</b>, set TOR environment variable in your system, pointing it to your tor's socks proxy (e.g. <code>TOR=localhost:9050</code>).</i><br>
+<i>Additionally, despite of using Tor, to further protect your privacy try fetch balance of single addresses instead of entire wallets.</i>
+<br>
+
+<br>
+
+<h3>1.2. Use client node</h3>
+From the moment when <code>wallet.txt</code> (or its renamed version) is properly loaded into your client, you can check and export your balance.<br>
+<br>
+There are two ways to do so. A third way is a special kind that allows you to assemble the transaction using a convenient interactive way.<br>
+
+
+<br>
+
+
+
+<b>1.2.1. </b><b>TextUI</b><br>
+<br>
+Each time you execute TextUI <code>bal</code> command, a directory <code>balance/</code> is (re)created, in the folder where you run your client from.<br>
+That is the folder you need to move to your wallet environment.<br>
+<br>
+
+<b>1.2.2. WebUI</b><br>
+<br>
+Use the home page of the WebUI to download <code>balance.zip</code> file.<br>
+Extract the zip file to get the <code>balance</code> folder.<br>
+<br>
+<b>1.2.3. WebUI / MakeTx (Coin Control)</b><br>
+<br>
+WebUI has  <b>MakeTx</b> page that allows you to assemble a transaction using quite a convenient, interactive way.<br>
+After you fill in all the transaction details, it will give you <code>payment.zip</code> with the exact command that you shall execute at the wallet machine.<br>
+<br>
+
+MakeTx tab is currently the only way to spend coins from multisig addresses (TextUI does not support it)<br>
+<br>
+
+
+
+
+<h3><b>2. Sign your transaction</b></h3>
+
+
+As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balnace/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.<br>
+<br>
+
+To spend your coins, order the wallet to make and sign a new transaction, using a command like:<br>
+<code>&nbsp;&nbsp;&nbsp;&nbsp;wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=0.01</code><br>
+Please note no spaces between the address, the equal sign and the value. The value represents the amount in BTC, which you request to send to the given address.<br>
+<br>
+
+There are also other switches which you may find useful at this stage (i.e. a fee control). To see all your options, just run <code>wallet -h</code>
+<br>
+
+
+<h2><b>3. Verify signed transaction</b></h2>
+
+If everything goes well with the wallet <code>-send ...</code> command, it will create a text file with a signed transaction. The file is named like <code>01234567.txt</code> - this is the file you need to move to your online node in order to notify the network about your payment. Before you broadcast your signed transaction to the network, verify carefully it does exactly what you intended. You can do it in a several ways. In any case, first move the signed transaction file to your online PC.
+<br>
+
+<h3>3.1. Wallet</h3>
+
+
+To see a decoded content of a transaction, execute:
+<code>  wallet -d rawtxdata.txt</code>
+<br>
+
+
+<h3>3.2. TextUI</h3>
+Use the node's TextUI to execute <code>tx 01234567.txt</code> (where <code>01234567.txt</code> is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
+<br>
+
+<h3>3.3. WebUI</h3>
+Use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.<br>
+Alternatively, you can click the <b>Load TX</b> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.<br>
 <br>
 <i><b>Note: always verify transaction before broadcasting it!</b><br>
-Verify that the decoded content of a transaction matches exactly what you intended to spend.</i></div>
-<div><i>If what you see would not be what you wanted, do not broadcast the transaction, but destroy the transaction file&nbsp;immediately.<br>
+Verify that the decoded content of a transaction matches exactly what you intended to spend.</i>
+<i>If what you see would not be what you wanted, do not broadcast the transaction, but destroy the transaction file immediately.<br>
 </i>
-<div><i style="line-height:1.6;font-size:10pt;background-color:transparent">If you follow this simple rule, your money will be safe, even in case if there was a critical bug in the wallet application that would otherwise destroy your coins (which we hope there isn't).</i></div>
-<div><i>Additionally this step allows you to double check that you did not make any mistake making the transaction, giving you the last chance to fix it.</i></div>
-<div style="background-color:transparent"><br>
-</div>
-<h2 style="background-color:transparent"><b>4. Broadcast the transaction</b></h2>
-<div style="background-color:transparent"><span style="background-color:transparent;line-height:1.6;font-size:10pt">After making sure that the transaction does indeed what you intended, you must broadcast it to the network, in order to actually move your coins.</span></div>
-<div style="background-color:transparent"><br>
-</div>
+<i>If you follow this simple rule, your money will be safe, even in case if there was a critical bug in the wallet application that would otherwise destroy your coins (which we hope there isn't).</i>
+<i>Additionally this step allows you to double check that you did not make any mistake making the transaction, giving you the last chance to fix it.</i>
+<br>
+<br>
+<h2><b>4. Broadcast the transaction</b></h2>
+After making sure that the transaction does indeed what you intended, you must broadcast it to the network, in order to actually move your coins.<br>
+<br>
+
 <h3>4.1. WebUI</h3>
-<div style="background-color:transparent">Load the transaction using the client's WebUI.&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">Click on the envelope icon with a green arrow to broadcast a loaded transaction to the network. Coming back to&nbsp;</span><i style="line-height:1.6;font-size:10pt;background-color:transparent">Transactions</i><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;tab later, press the button in the "Accepted transactions" row, to see all the transactions you've loaded (those with a red background are yours). You can also unload a previously loaded transaction by clicking on the red X icon.</span></div>
-<div style="background-color:transparent"><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
-</span></div>
-<div style="background-color:transparent">
-<div style="background-color:transparent"><span style="font-size:1.4em;line-height:1.6;background-color:transparent">4.2. TextUI</span></div>
-<div style="background-color:transparent"><span style="line-height:1.6;font-size:10pt;background-color:transparent"><br>
-</span></div>
-<div style="background-color:transparent"><span style="line-height:1.6;font-size:10pt;background-color:transparent">Use</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">stx</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">command with the transaction ID as its parameter (you had the ID printed, when loading it).</span></div>
-</div>
-<div><span style="background-color:transparent"><br>
-</span></div>
-<h3 style="background-color:transparent">4.3. Web services</h3>
-<div style="background-color:transparent"><span style="background-color:transparent">Use any web page that allows you to push a raw transaction to the bitcoin network.</span></div>
-<div style="background-color:transparent"><span style="background-color:transparent">For instance</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">:&nbsp;</span><a href="https://blockchain.info/pushtx" style="line-height:1.6;font-size:10pt;background-color:transparent">https://blockchain.info/pushtx</a></div>
-<div style="background-color:transparent"><br>
-</div>
-<div style="background-color:transparent">Just copy the text from the transaction file, paste it into the form and push the button.</div>
-<div style="background-color:transparent"><br>
-</div>
-<div style="background-color:transparent"><i><b>Note:</b>&nbsp;you may want to access a web page via Tor, being concerned about exposing your IP.</i></div>
-<div style="background-color:transparent"><i><br>
-</i></div>
-<div style="background-color:transparent">
-<h3><span style="font-size:large;line-height:1.6;background-color:transparent">Re-broadcasting transactions</span></h3>
-</div>
-<span style="background-color:transparent">
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">The client never broadcasts transactions unrequested, so if your transaction does not appear in the chain soon enough, you may want to re-broadcast it, using the same method as for the initial broadcasting. There may of course be other reasons why your transaction does not get confirmed (usually because the fee was to low), in which case re-broadcasting it will not help you much.</span></div>
-<div><br>
-</div>
-<div>There is also a TextUI command <code>stxa</code> that re-broadcasts all the transaction that have been loaded, but not yet confirmed by the network. Note that when a transaction gets mined into a block it gets removed from the list automatically.</div>
-</span></div>
+Load the transaction using the client's WebUI. Click on the envelope icon with a green arrow to broadcast a loaded transaction to the network. Coming back to <i>Transactions</i> tab later, press the button in the "Accepted transactions" row, to see all the transactions you've loaded (those with a red background are yours). You can also unload a previously loaded transaction by clicking on the red X icon.<br>
+<br>
+
+
+<h3>4.2. TextUI</h3>
+Use <code>stx</code> command with the transaction ID as its parameter (you had the ID printed, when loading it).<br>
+
+<br>
+
+<h3>4.3. Web services</h3>
+Use any web page that allows you to push a raw transaction to the bitcoin network.<br>
+For instance: <a href="https://blockchain.info/pushtx">https://blockchain.info/pushtx</a><br>
+<br>
+
+Just copy the text from the transaction file, paste it into the form and push the button.<br>
+<br>
+
+<i><b>Note:</b> you may want to access a web page via Tor, being concerned about exposing your IP.</i><br>
+<i><br>
+</i>
+
+<h3>Re-broadcasting transactions</h3>
+
+
+The client never broadcasts transactions unrequested, so if your transaction does not appear in the chain soon enough, you may want to re-broadcast it, using the same method as for the initial broadcasting. There may of course be other reasons why your transaction does not get confirmed (usually because the fee was to low), in which case re-broadcasting it will not help you much.<br>
+<br>
+
+There is also a TextUI command <code>stxa</code> that re-broadcasts all the transaction that have been loaded, but not yet confirmed by the network. Note that when a transaction gets mined into a block it gets removed from the list automatically.
+
 </body>
 </html>
