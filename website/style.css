@@ -1,0 +1,25 @@
+a {
+	color:blue;
+	text-decoration:none;
+}
+
+a:visited {
+	color:blue;
+	text-decoration:none;
+}
+
+a:hover {
+	background-color:yellow;
+}
+
+a.selected {
+	background-color:pink;
+}
+
+code {
+	color: #006000;
+}
+
+ul {
+	padding-left:20px;
+}
