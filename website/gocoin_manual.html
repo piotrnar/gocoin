@@ -5,56 +5,54 @@
 <body>
 <h1>User Manual</h1>
 <h2>Node and wallet</h2>
-<h2><span style="background-color:transparent;font-size:10pt;line-height:1.6">The two basic components of the software are:</span></h2>
-<div>
-<div>
-<ul><li><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>client</b> - a bitcoin node that must be connected to Internet</span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>wallet</b> - a wallet app, that is designed to be used (for security) on a network-free PC</span></li></ul>
-</div>
-<div><br>
-</div>
+The two basic components of the software are:
+<ul><li><b>client</b> - a bitcoin node that must be connected to Internet</li>
+<li><b>wallet</b> - a wallet app, that is designed to be used (for security) on a network-free PC</li>
+</ul>
+<br>
+
 <h2>Blockchain downloader</h2>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">There is an app called <b>dowloader</b> that is designed to quickly sync the blockchain database (for the client node) from the bitcoin network.</span></div>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">You can use it&nbsp;</span><span style="background-color:transparent">before running the client for the first time, but also any time later - e.g. if you had your node inactive for some time and want to quickly sync it up with the network.</span></div>
-<div><br>
-</div>
+There is an app called <b>dowloader</b> that is designed to quickly sync the blockchain database (for the client node) from the bitcoin network.
+You can use it before running the client for the first time, but also any time later - e.g. if you had your node inactive for some time and want to quickly sync it up with the network.
+<br>
+
 <h2>Other tools</h2>
-<div>
-<div>There are also some additional tools:</div>
-<div>
-<ul><li><span style="background-color:transparent"><b>base58</b>&nbsp;- encode / decode base58 data</span></li>
-<li><span style="background-color:transparent"><b>bootdat_qt</b> - convert gocoin's block database to&nbsp;<code>bootstrap.dat</code>&nbsp;file (for bitcoin-qt)</span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>btcversig</b>&nbsp;- verify a messages signed with bitcoin address.</span></li>
-<li><span style="background-color:transparent"><b>fetchbal</b>&nbsp;- fetch your balance (in a format recognized by the wallet) from block explorers</span></li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>fetchtx</b>&nbsp;- downloads a raw transaction from&nbsp;</span>blockexplorer.com, storing it in a binary file</li>
+
+There are also some additional tools:
+
+<ul><li><b>base58</b> - encode / decode base58 data</li>
+<li><b>bootdat_qt</b> - convert gocoin's block database to <code>bootstrap.dat</code> file (for bitcoin-qt)</li>
+<li><b>btcversig</b> - verify a messages signed with bitcoin address.</li>
+<li><b>fetchbal</b> - fetch your balance (in a format recognized by the wallet) from block explorers</li>
+<li><b>fetchtx</b> - downloads a raw transaction from blockexplorer.com, storing it in a binary file</li>
 <li><b>goc</b> - command line client to remote control the client node via its web interface (with no browser required)</li>
-<li><span style="background-color:transparent;line-height:1.6;font-size:10pt"><b>importblocks</b>&nbsp;- import block database from the satoshi client</span></li>
-<li><b>mkmulti</b>&nbsp;- create a multisig address</li>
+<li><b>importblocks</b> - import block database from the satoshi client</li>
+<li><b>mkmulti</b> - create a multisig address</li>
 <li><b>peers</b> - display a content of gocoin's peers database</li>
 <li><b>stealth</b> - decode a stealth address</li>
-<li><b>txaddsig</b>&nbsp;- add a signature (generated somewhere else) to a raw transaction</li>
-<li><span style="background-color:transparent"><b style="font-size:10pt;line-height:1.6">type2determ</b><span style="font-size:10pt;line-height:1.6">,</span><b style="font-size:10pt;line-height:1.6">&nbsp;</b><b>type2next</b><font size="2"><span style="line-height:1.6">&nbsp;- generate public addresses for type-2 deterministic wallets</span></font></span></li></ul>
-</div>
-</div>
-<div><br>
-</div>
+<li><b>txaddsig</b> - add a signature (generated somewhere else) to a raw transaction</li>
+<li><b>type2determ</b>, </b><b>type2next</b> - generate public addresses for type-2 deterministic wallets</li></ul>
+
+
+<br>
+
 <h2>Using wallet without a node</h2>
-<div>It is also possible to use the wallet without the client.</div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">For this purpose there is a tool called&nbsp;</span><span style="background-color:transparent"><b>balio</b><font size="2"><span style="line-height:1.6">.</span></font></span></div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">It</span><span style="line-height:1.6;font-size:10pt;background-color:transparent">&nbsp;can fetch the balance of your wallet from popular block explorers and save it in the format recognized by gocoin's wallet.</span></div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">You can find it in the </span><code style="line-height:1.6;font-size:10pt;background-color:transparent">tools/</code><span style="line-height:1.6;font-size:10pt;background-color:transparent"> folder.</span></div>
-<div><span style="line-height:1.6;font-size:10pt;background-color:transparent">Execute "</span><code style="line-height:1.6;font-size:10pt;background-color:transparent">go build&nbsp;balio.go</code><span style="line-height:1.6;font-size:10pt;background-color:transparent">" to compile it, or run it without compiling with: </span><code style="line-height:1.6;font-size:10pt;background-color:transparent">go run&nbsp;</code><span style="background-color:transparent"><code>balio<font size="3"><span style="line-height:1.6">.go &lt;your_bitcoin_addresses&gt;</span></font></code></span></div>
-<div><br>
-</div>
-<div><i>Note: This tool does not support fetching balances of stealth addresses.&nbsp;<span style="line-height:1.6;font-size:10pt;background-color:transparent">You need the client node to fetch a balance of a stealth addresses.</span></i></div>
-<div><br>
-</div>
+It is also possible to use the wallet without the client.
+For this purpose there is a tool called <b>balio</b>.
+It can fetch the balance of your wallet from popular block explorers and save it in the format recognized by gocoin's wallet.
+You can find it in the <code>tools/</code> folder.
+Execute "<code>go build balio.go</code>" to compile it, or run it without compiling with: <code>go run </code><code>balio.go &lt;your_bitcoin_addresses&gt;</code>
+<br>
+<br>
+<i>Note: This tool does not support fetching balances of stealth addresses. You need the client node to fetch a balance of a stealth addresses.</i>
+<br>
+
 <h2>User interface</h2>
-<div><span style="background-color:transparent;line-height:1.6;font-size:10pt">All the applications are console only (no GUI window), though t</span><span style="background-color:transparent"><font size="2"><span style="line-height:1.6">he client node has a fairly functional and quite&nbsp;</span></font>convenient<font size="2"><span style="line-height:1.6">&nbsp;<a href="client/webui.html">web interface</a> (to be controlled via a web browser).</span></font></span></div>
-</div>
-<div>
-<div><br>
-</div>
-</div>
+All the applications are console only (no GUI window), though the client node has a fairly functional and quite convenient <a href="gocoin_manual_client_webui.html">web interface</a> (to be controlled via a web browser).
+
+
+<br>
+
+
 </body>
 </html>
