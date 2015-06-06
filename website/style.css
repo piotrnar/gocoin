@@ -42,3 +42,8 @@ ul {
 .cfg_info {
 	font-style: italic;
 }
+
+pre {
+	background-color:#d0d0d0;
+	font-size:80%;
+}
