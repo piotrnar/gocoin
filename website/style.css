@@ -25,3 +25,16 @@ ul {
 	margin-top:0px;
 	margin-bottom:0px;
 }
+
+.cfg_name {
+	font-family: monospace;
+	font-weight: bold;
+}
+
+.cfg_type {
+	font-weight: bold;
+}
+
+.cfg_info {
+	font-style: italic;
+}

@@ -4,262 +4,262 @@
 </head>
 <body>
 <h1>Config</h1>
-The online node configuration file is named&nbsp;<b>gocoin.conf</b>
-<div>Client application looks for this file in the folder where it is being launched from.</div>
-<div>The config file is in JSON encoded format, so in general the order of the fields does not matter, but their types do.</div>
-<div><br>
-</div>
-<div>
-<table border="1" bordercolor="#888" cellspacing="0" style="border-collapse:collapse;border-color:rgb(136,136,136);border-width:1px">
+The online node configuration file is named <b>gocoin.conf</b><br>
+Client application looks for this file in the folder where it is being launched from.<br>
+The config file is in JSON encoded format, so in general the order of the fields does not matter, but their types do.<br>
+<br>
+
+
+<table border="1" cellspacing="0" cellpadding="5">
 <tbody>
-<tr>
-<td style="width:232px;height:19px">&nbsp;<font color="#0000ff">Filed name</font></td>
-<td style="width:86px;height:19px"><font color="#0000ff">&nbsp;Type</font></td>
-<td style="width:230px;height:19px"><font color="#0000ff">&nbsp;Default value (if not specified)</font></td>
-<td style="width:746px;height:19px"><font color="#0000ff">&nbsp;Description</font></td>
+<tr style="color:blue">
+<td>Filed name</td>
+<td> Type</td>
+<td> Default value (if not specified)</td>
+<td> Description</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Testnet</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;false</td>
-<td style="width:746px;height:19px">&nbsp;Use testnet3 if true</td>
+<td class="cfg_name"> Testnet</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Use testnet3 if true</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;ConnectOnly</td>
-<td style="width:86px;height:19px">&nbsp;string</td>
-<td style="width:230px;height:19px">&nbsp;""</td>
-<td style="width:746px;height:19px">&nbsp;Connect only to this host/IP (and nowhere else)</td>
+<td class="cfg_name"> ConnectOnly</td>
+<td class="cfg_type"> string</td>
+<td> ""</td>
+<td class="cfg_info"> Connect only to this host/IP (and nowhere else)</td>
 </tr>
 <tr>
-<td style="width:232px;height:159px">&nbsp;Datadir</td>
-<td style="width:86px;height:159px">&nbsp;string</td>
-<td style="width:230px;height:159px">Windows main net:<br>
-&nbsp;"%APPDATA%\Bitcoin\gocoin\btcnet"<br>
+<td class="cfg_name"> Datadir</td>
+<td class="cfg_type"> string</td>
+<td>Windows main net:<br>
+ "%APPDATA%\Bitcoin\gocoin\btcnet"<br>
 Windows test net:<br>
-&nbsp;"%APPDATA%\Bitcoin\gocoin\tstnet"<br>
+ "%APPDATA%\Bitcoin\gocoin\tstnet"<br>
 Non-Windows main net:<br>
-&nbsp;"~/.bitcoin/gocoin/btcnet"<br>
+ "~/.bitcoin/gocoin/btcnet"<br>
 Non-Windows main net:<br>
-&nbsp;"~/.bitcoin/gocoin/tstnet"</td>
-<td style="width:746px;height:159px">&nbsp;The data folder for the gocoin client node.<br>
+ "~/.bitcoin/gocoin/tstnet"</td>
+<td class="cfg_info"> The data folder for the gocoin client node.<br>
 <br>
 The data dir contains:<br>
-&nbsp;* Block database: blockchain.dat, blockchain.idx files.<br>
-&nbsp;* UTXO database: unspent3/ folder.<br>
-&nbsp;* Known peers database: peers3/ folder.<br>
-&nbsp;* Wallet files: wallet/ folder.</td>
+ * Block database: blockchain.dat, blockchain.idx files.<br>
+ * UTXO database: unspent3/ folder.<br>
+ * Known peers database: peers3/ folder.<br>
+ * Wallet files: wallet/ folder.</td>
 </tr>
 <tr>
-<td>&nbsp;Walletdir</td>
-<td>&nbsp;string</td>
-<td>&nbsp;&lt;Datadir&gt;/wallet</td>
-<td>&nbsp;Specify where the wallet files (containing public addresses) are stored. <br>
-&nbsp;By default it is a sub-folder in the data directory, but it can be changed to increase privacy.</td>
+<td class="cfg_name"> Walletdir</td>
+<td class="cfg_type"> string</td>
+<td> &lt;Datadir&gt;/wallet</td>
+<td class="cfg_info"> Specify where the wallet files (containing public addresses) are stored. <br>
+ By default it is a sub-folder in the data directory, but it can be changed to increase privacy.</td>
 </tr>
 <tr>
-<td style="width:232px;height:34px">&nbsp;TextUI.Enabled</td>
-<td style="width:86px;height:34px">&nbsp;bool</td>
-<td style="width:230px;height:34px">&nbsp;true</td>
-<td style="width:746px;height:34px">&nbsp;Enable TextUI.&nbsp;You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
+<td class="cfg_name"> TextUI.Enabled</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;WebUI.Interface</td>
-<td style="width:86px;height:19px">&nbsp;string</td>
-<td style="width:230px;height:19px">&nbsp;"127.0.0.1:8833"</td>
-<td style="width:746px;height:19px">&nbsp;Bind WebUI server to this interface.&nbsp;Change it to ":8833" in order to allow external connections.<br>
+<td class="cfg_name"> WebUI.Interface</td>
+<td class="cfg_type"> string</td>
+<td> "127.0.0.1:8833"</td>
+<td class="cfg_info"> Bind WebUI server to this interface. Change it to ":8833" in order to allow external connections.<br>
 </td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;WebUI.AllowedIP&nbsp;</td>
-<td style="width:86px;height:19px">&nbsp;string</td>
-<td style="width:230px;height:19px">&nbsp;"127.0.0.1"</td>
-<td style="width:746px;height:19px">&nbsp;List of IP addresses that are allowed to access WebUI. Use "0.0.0.0/0" to let everyone in.</td>
+<td class="cfg_name"> WebUI.AllowedIP </td>
+<td class="cfg_type"> string</td>
+<td> "127.0.0.1"</td>
+<td class="cfg_info"> List of IP addresses that are allowed to access WebUI. Use "0.0.0.0/0" to let everyone in.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;WebUI.ShowBlocks</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;25</td>
-<td style="width:746px;height:19px">&nbsp;How many recent blocks to show at the Blocks page.</td>
+<td class="cfg_name"> WebUI.ShowBlocks</td>
+<td class="cfg_type"> uint32</td>
+<td> 25</td>
+<td class="cfg_info"> How many recent blocks to show at the Blocks page.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;WebUI.AddrListLen</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;15</td>
-<td style="width:746px;height:19px">&nbsp;How many addresses to show (at the same time) in the address book that pops up at MakeTx page.</td>
+<td class="cfg_name"> WebUI.AddrListLen</td>
+<td class="cfg_type"> uint32</td>
+<td> 15</td>
+<td class="cfg_info"> How many addresses to show (at the same time) in the address book that pops up at MakeTx page.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.ListenTCP</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;true</td>
-<td style="width:746px;height:19px">&nbsp;Accept incoming TCP connections.</td>
+<td class="cfg_name"> Net.ListenTCP</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Accept incoming TCP connections.</td>
 </tr>
 <tr>
-<td style="width:232px;height:39px">&nbsp;Net.TCPPort</td>
-<td style="width:86px;height:39px">&nbsp;uint16</td>
-<td style="width:230px;height:39px">&nbsp;8333 - for main net<br>
-&nbsp;18333 - for test net</td>
-<td style="width:746px;height:39px">&nbsp;Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
+<td class="cfg_name"> Net.TCPPort</td>
+<td class="cfg_type"> uint16</td>
+<td> 8333 - for main net<br>
+ 18333 - for test net</td>
+<td class="cfg_info"> Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.MaxOutCons</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;9</td>
-<td style="width:746px;height:19px">&nbsp;Maximum number of outgoing TCP connections.</td>
+<td class="cfg_name"> Net.MaxOutCons</td>
+<td class="cfg_type"> uint32</td>
+<td> 9</td>
+<td class="cfg_info"> Maximum number of outgoing TCP connections.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.MaxInCons</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;10</td>
-<td style="width:746px;height:19px">&nbsp;Maximum number of incoming TCP connections.</td>
+<td class="cfg_name"> Net.MaxInCons</td>
+<td class="cfg_type"> uint32</td>
+<td> 10</td>
+<td class="cfg_info"> Maximum number of incoming TCP connections.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.MaxUpKBps</td>
-<td style="width:86px;height:19px">&nbsp;uint</td>
-<td style="width:230px;height:19px">&nbsp;0</td>
-<td style="width:746px;height:19px">&nbsp;Maximum upload speed in kilobytes per second. 0 means unlimited.</td>
+<td class="cfg_name"> Net.MaxUpKBps</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Maximum upload speed in kilobytes per second. 0 means unlimited.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.MaxDownKBps</td>
-<td style="width:86px;height:19px">&nbsp;uint</td>
-<td style="width:230px;height:19px">&nbsp;0</td>
-<td style="width:746px;height:19px">&nbsp;Maximum download speed in kilobytes per second. 0 means unlimited.&nbsp;</td>
+<td class="cfg_name"> Net.MaxDownKBps</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Maximum download speed in kilobytes per second. 0 means unlimited. </td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Net.MaxBlockAtOnce</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;3</td>
-<td style="width:746px;height:19px">&nbsp;When a new block appears, (up to) how many peers to ask for its data at the same time.</td>
+<td class="cfg_name"> Net.MaxBlockAtOnce</td>
+<td class="cfg_type"> uint32</td>
+<td> 3</td>
+<td class="cfg_info"> When a new block appears, (up to) how many peers to ask for its data at the same time.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.Enabled</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;true</td>
-<td style="width:746px;height:19px">&nbsp;Enable memory pool (for transactions).</td>
+<td class="cfg_name"> TXPool.Enabled</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Enable memory pool (for transactions).</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.AllowMemInputs</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;true</td>
-<td style="width:746px;height:19px">&nbsp;Accept transactions with unconfirmed inputs to the memory pool.</td>
+<td class="cfg_name"> TXPool.AllowMemInputs</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Accept transactions with unconfirmed inputs to the memory pool.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.FeePerByte</td>
-<td style="width:86px;height:19px">&nbsp;uint64</td>
-<td style="width:230px;height:19px">&nbsp;1</td>
-<td style="width:746px;height:19px">&nbsp;Required minimum fee per byte to accept a transaction to&nbsp;the memory pool.</td>
+<td class="cfg_name"> TXPool.FeePerByte</td>
+<td class="cfg_type"> uint64</td>
+<td> 1</td>
+<td class="cfg_info"> Required minimum fee per byte to accept a transaction to the memory pool.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.MaxTxSize</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;10000</td>
-<td style="width:746px;height:19px">&nbsp;Maximum size of a transaction that would be accepted&nbsp;to&nbsp;the memory pool.</td>
+<td class="cfg_name"> TXPool.MaxTxSize</td>
+<td class="cfg_type"> uint32</td>
+<td> 10000</td>
+<td class="cfg_info"> Maximum size of a transaction that would be accepted to the memory pool.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.MinVoutValue</td>
-<td style="width:86px;height:19px">&nbsp;uint64</td>
-<td style="width:230px;height:19px">&nbsp;0</td>
-<td style="width:746px;height:19px">&nbsp;Required minimum value (checked separately for each output) to accept a transaction to&nbsp;the memory pool. 0 - no restriction.</td>
+<td class="cfg_name"> TXPool.MinVoutValue</td>
+<td class="cfg_type"> uint64</td>
+<td> 0</td>
+<td class="cfg_info"> Required minimum value (checked separately for each output) to accept a transaction to the memory pool. 0 - no restriction.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.TxExpireMinPerKB</td>
-<td style="width:86px;height:19px">&nbsp;uint</td>
-<td style="width:230px;height:19px">&nbsp;180</td>
-<td style="width:746px;height:19px">&nbsp;If something is 1KB big, it expires after this many minutes.&nbsp;Otherwise expiration time will be proportionally different.</td>
+<td class="cfg_name"> TXPool.TxExpireMinPerKB</td>
+<td class="cfg_type"> uint</td>
+<td> 180</td>
+<td class="cfg_info"> If something is 1KB big, it expires after this many minutes. Otherwise expiration time will be proportionally different.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXPool.TxExpireMaxHours</td>
-<td style="width:86px;height:19px">&nbsp;uint</td>
-<td style="width:230px;height:19px">&nbsp;12</td>
-<td style="width:746px;height:19px">&nbsp;Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
+<td class="cfg_name"> TXPool.TxExpireMaxHours</td>
+<td class="cfg_type"> uint</td>
+<td> 12</td>
+<td class="cfg_info"> Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXRoute.Enabled</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;true</td>
-<td style="width:746px;height:19px">&nbsp;Enable routing of transactions (memory pool must be enabled as well).</td>
+<td class="cfg_name"> TXRoute.Enabled</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Enable routing of transactions (memory pool must be enabled as well).</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXRoute.FeePerByte</td>
-<td style="width:86px;height:19px">&nbsp;uint64</td>
-<td style="width:230px;height:19px">&nbsp;1</td>
-<td style="width:746px;height:19px">&nbsp;Required minimum fee per byte to route a transaction.</td>
+<td class="cfg_name"> TXRoute.FeePerByte</td>
+<td class="cfg_type"> uint64</td>
+<td> 1</td>
+<td class="cfg_info"> Required minimum fee per byte to route a transaction.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXRoute.MaxTxSize</td>
-<td style="width:86px;height:19px">&nbsp;uint32</td>
-<td style="width:230px;height:19px">&nbsp;10000</td>
-<td style="width:746px;height:19px">&nbsp;Maximum size of a transaction that will be routed to other peers.</td>
+<td class="cfg_name"> TXRoute.MaxTxSize</td>
+<td class="cfg_type"> uint32</td>
+<td> 10000</td>
+<td class="cfg_info"> Maximum size of a transaction that will be routed to other peers.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;TXRoute.MinVoutValue</td>
-<td style="width:86px;height:19px">&nbsp;uint64</td>
-<td style="width:230px;height:19px">&nbsp;500</td>
-<td style="width:746px;height:19px">&nbsp;Required minimum value (checked separately for each output) to route a transaction. 0 for no restriction.</td>
+<td class="cfg_name"> TXRoute.MinVoutValue</td>
+<td class="cfg_type"> uint64</td>
+<td> 500</td>
+<td class="cfg_info"> Required minimum value (checked separately for each output) to route a transaction. 0 for no restriction.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Memory.GCPercTrshold</td>
-<td style="width:86px;height:19px">&nbsp;int&nbsp;</td>
-<td style="width:230px;height:19px">&nbsp;100</td>
-<td style="width:746px;height:19px">&nbsp;A threshold (in percent) to trigger Go's garbage collector engine.</td>
+<td class="cfg_name"> Memory.GCPercTrshold</td>
+<td class="cfg_type"> int </td>
+<td> 100</td>
+<td class="cfg_info"> A threshold (in percent) to trigger Go's garbage collector engine.</td>
 </tr>
 <tr>
-<td>&nbsp;Memory.MaxCachedBlocks</td>
-<td>&nbsp;uint</td>
-<td>&nbsp;500</td>
-<td>&nbsp;How many (recently used) blocks shall be kept in RAM.</td>
+<td class="cfg_name"> Memory.MaxCachedBlocks</td>
+<td class="cfg_type"> uint</td>
+<td> 500</td>
+<td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Beeps.NewBlock</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;false</td>
-<td style="width:746px;height:19px">&nbsp;Beep when a &nbsp;new block is added to the top of the chain (someone has mined a new one).</td>
+<td class="cfg_name"> Beeps.NewBlock</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Beep when a  new block is added to the top of the chain (someone has mined a new one).</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Beeps.ActiveFork</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;false</td>
-<td style="width:746px;height:19px">&nbsp;Triple beep when there is a fork in the block chain.</td>
+<td class="cfg_name"> Beeps.ActiveFork</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Triple beep when there is a fork in the block chain.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Beeps.NewBalance</td>
-<td style="width:86px;height:19px">&nbsp;bool</td>
-<td style="width:230px;height:19px">&nbsp;false</td>
-<td style="width:746px;height:19px">&nbsp;Been when a balance of the currently selected wallet has changed.</td>
+<td class="cfg_name"> Beeps.NewBalance</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Been when a balance of the currently selected wallet has changed.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;Beeps.MinerID</td>
-<td style="width:86px;height:19px">&nbsp;string</td>
-<td style="width:230px;height:19px">&nbsp;""</td>
-<td style="width:746px;height:19px">&nbsp;Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.</td>
+<td class="cfg_name"> Beeps.MinerID</td>
+<td class="cfg_type"> string</td>
+<td> ""</td>
+<td class="cfg_info"> Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;MiningStatHours</td>
-<td style="width:86px;height:19px">&nbsp;uint</td>
-<td style="width:230px;height:19px">&nbsp;24</td>
-<td style="width:746px;height:19px">&nbsp;How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
+<td class="cfg_name"> MiningStatHours</td>
+<td class="cfg_type"> uint</td>
+<td> 24</td>
+<td class="cfg_info"> How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
 </tr>
 <tr>
-<td>&nbsp;HashrateHours</td>
-<td>&nbsp;uint</td>
-<td>&nbsp;6</td>
-<td>&nbsp;How many hours&nbsp;to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
+<td class="cfg_name"> HashrateHours</td>
+<td class="cfg_type"> uint</td>
+<td> 6</td>
+<td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
 </tr>
 <tr>
-<td style="width:232px;height:19px">&nbsp;UserAgent</td>
-<td style="width:86px;height:19px">&nbsp;string</td>
-<td style="width:230px;height:19px">&nbsp;"/Gocoin:<i>?.?.?</i>/"</td>
-<td style="width:746px;height:19px">&nbsp;Which string shall be reported by the node as User-Agent (in the version messages).</td>
+<td class="cfg_name"> UserAgent</td>
+<td class="cfg_type"> string</td>
+<td> "/Gocoin:<i>?.?.?</i>/"</td>
+<td class="cfg_info"> Which string shall be reported by the node as User-Agent (in the version messages).</td>
 </tr>
 <tr>
-<td style="width:232px;height:39px">&nbsp;PayCommandName</td>
-<td style="width:86px;height:39px">&nbsp;string</td>
-<td style="width:230px;height:39px">&nbsp;"pay_cmd.txt"</td>
-<td style="width:746px;height:39px">&nbsp;The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
-&nbsp;Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
+<td class="cfg_name"> PayCommandName</td>
+<td class="cfg_type"> string</td>
+<td> "pay_cmd.txt"</td>
+<td class="cfg_info"> The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
+ Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
 </tr>
 </tbody>
 </table>
 <br>
-</div>
+
 </body>
 </html>
