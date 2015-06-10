@@ -11,7 +11,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"code.google.com/p/snappy-go/snappy"
+	"github.com/golang/snappy/snappy"
 )
 
 

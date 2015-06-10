@@ -90,7 +90,7 @@ You need to install them before building Gocoin.
 In order to do this, simply execute the following commands:
 
 	go get code.google.com/p/go.crypto/ripemd160
-	go get code.google.com/p/snappy-go/snappy
+	go get github.com/golang/snappy/snappy
 
 ## Gocoin
 Use `go get` to fetch and install Gocoin sources for you:
