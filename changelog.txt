@@ -1,4 +1,4 @@
-1.1.0:
+1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets
 * Downloader: look for "Datadir" in "gocoin.conf" or "../client/gocoin.conf"
 * Client: the Blocks page of WebUI shows version of the recent blocks
