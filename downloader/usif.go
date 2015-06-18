@@ -154,7 +154,7 @@ func do_usif() {
 						fmt.Println("Available commands:")
 						fmt.Println(" a - show addressess of the peers")
 						fmt.Println(" b - show blockchin stats")
-						fmt.Println(" q - quite the downloader")
+						fmt.Println(" q - quit the downloader")
 						fmt.Println(" c - show counters")
 						fmt.Println(" d [conid] - drop one connection")
 						fmt.Println(" db - show database stats")
