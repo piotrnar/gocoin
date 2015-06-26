@@ -1,4 +1,5 @@
 Client:
+* Fix: peers DB getting empty after disconnecting the network
 * Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
 * Do not list unmatured coinbase outputs in the balance
