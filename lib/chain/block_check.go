@@ -73,7 +73,8 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	}
 
 	if !bl.Trusted {
-		if bl.Version()==0 || (height>=ForceBlockVer2From && !ch.testnet() && bl.Version()<2) {
+		if bl.Version()==0 || (height>=ForceBlockVer2From && !ch.testnet() && bl.Version()<2) ||
+				(height>=ForceBlockVer3From && !ch.testnet() && bl.Version()<3) {
 			er = errors.New("CheckBlock() : Block version too low: "+bl.Hash.String())
 			dos = true
 			return
