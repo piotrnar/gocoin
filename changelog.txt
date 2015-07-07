@@ -1,3 +1,9 @@
+1.1.1
+* Lib: enforce blocks version 3, starting from #364000
+* WebUI: LoadTx shows only own transactions
+* WebUI: Fixed transaction upload form at the Home tab
+* WebUI: Transactions tab has an option to only show "own" transactions
+
 1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets
 * Downloader: look for "Datadir" in "gocoin.conf" or "../client/gocoin.conf"
