@@ -1,4 +1,5 @@
 Client:
+* Remove confirned TXs from the rejected list
 * Fix: AcceptBlock sometimes hangs (check "NetTxsFULL" counter)
 * Fix: peers DB getting empty after disconnecting the network
 * Build the downloader into the client
