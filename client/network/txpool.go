@@ -170,6 +170,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 				TransactionsPending[tid.BIdx()] = true
 			default:
 				common.CountSafe("NetTxsFULL")
+				println("NetTxsFULL")
 		}
 	})
 }

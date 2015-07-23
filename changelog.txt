@@ -3,6 +3,7 @@
 * WebUI: LoadTx shows only own transactions
 * WebUI: Fixed transaction upload form at the Home tab
 * WebUI: Transactions tab has an option to only show "own" transactions
+* WebUI: Miners tab shows fee statistics
 
 1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets

@@ -15,6 +15,7 @@ type omv struct {
 	cnt int
 	bts uint64
 	mid int
+	fees uint64
 }
 
 type onemiernstat []struct {
@@ -53,6 +54,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	var lastts int64
 	var diff float64
 	var totbts uint64
+	var totfees uint64
 	current_mid := -1
 	now := time.Now().Unix()
 
@@ -83,6 +85,21 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		om.cnt++
 		om.bts+= uint64(len(bl))
 		om.mid = mid
+
+		// Blocks reward
+		block, e := btc.NewBlock(bl)
+		if e==nil {
+			var rew uint64
+			cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
+			for o := range cbasetx.TxOut {
+				rew += cbasetx.TxOut[o].Value
+			}
+			om.fees += rew - btc.GetBlockReward(end.Height)
+		} else {
+			println("p_miners: btc.NewBlock failed!")
+		}
+
+
 		m[miner] = om
 		if mid!=-1 && current_mid==-1 && minerid==string(common.MinerIds[mid].Tag) {
 			current_mid = mid
@@ -131,8 +148,14 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{MINER_HASHRATE}", common.HashrateToString(hrate*float64(srt[i].cnt)/float64(cnt)), 1)
 		s = strings.Replace(s, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(srt[i].bts)/float64(srt[i].cnt)/1000), 1)
 		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
+		s = strings.Replace(s, "<!--TOTAL_FEES-->", btc.UintToBtc(srt[i].fees), -1)
+		s = strings.Replace(s, "<!--FEE_PER_BYTE-->", fmt.Sprintf("%.2f", float64(srt[i].fees)/float64(srt[i].bts)), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
+		totfees += srt[i].fees
 	}
+
+	mnrs = strings.Replace(mnrs, "<!--TOTAL_MINING_FEES-->", btc.UintToBtc(totfees), 1)
+	mnrs = strings.Replace(mnrs, "<!--AVERAGE_FEE_PER_BYTE-->", fmt.Sprintf("%.1f", float64(totfees)/float64(totbts)), 1)
 
 	var bv string
 	for k, v := range block_versions {
