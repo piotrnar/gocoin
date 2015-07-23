@@ -4,6 +4,7 @@
 * WebUI: Fixed transaction upload form at the Home tab
 * WebUI: Transactions tab has an option to only show "own" transactions
 * WebUI: Miners tab shows fee statistics
+* Fix: peers DB getting empty after disconnecting the network (keep at least 256 records)
 
 1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets
