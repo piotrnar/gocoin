@@ -149,13 +149,13 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{AVG_BLOCK_SIZE}", fmt.Sprintf("%.1fKB", float64(srt[i].bts)/float64(srt[i].cnt)/1000), 1)
 		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
 		s = strings.Replace(s, "<!--TOTAL_FEES-->", btc.UintToBtc(srt[i].fees), -1)
-		s = strings.Replace(s, "<!--FEE_PER_BYTE-->", fmt.Sprintf("%.2f", float64(srt[i].fees)/float64(srt[i].bts)), -1)
+		s = strings.Replace(s, "<!--FEE_PER_BYTE-->", fmt.Sprint(srt[i].fees/srt[i].bts), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 		totfees += srt[i].fees
 	}
 
 	mnrs = strings.Replace(mnrs, "<!--TOTAL_MINING_FEES-->", btc.UintToBtc(totfees), 1)
-	mnrs = strings.Replace(mnrs, "<!--AVERAGE_FEE_PER_BYTE-->", fmt.Sprintf("%.1f", float64(totfees)/float64(totbts)), 1)
+	mnrs = strings.Replace(mnrs, "<!--AVERAGE_FEE_PER_BYTE-->", fmt.Sprint(totfees/totbts), 1)
 
 	var bv string
 	for k, v := range block_versions {

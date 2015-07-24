@@ -18,6 +18,7 @@ import (
 
 const (
 	ExpirePeerAfter = (3*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	MinPeersInDB = 256 // Do not expire peers if we have less than this
 )
 
 var (
@@ -112,7 +113,7 @@ func ExpirePeers() {
 		return 0
 	})
 	if delcnt > 0 {
-		for delcnt > 0 {
+		for delcnt > 0 && PeerDB.Count() > MinPeersInDB {
 			delcnt--
 			PeerDB.Del(todel[delcnt])
 		}
