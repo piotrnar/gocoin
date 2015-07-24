@@ -1,6 +1,5 @@
 Client:
 * Remove confirned TXs from the rejected list
-* Fix: AcceptBlock sometimes hangs (check "NetTxsFULL" counter)
 * Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
 * Do not list unmatured coinbase outputs in the balance
