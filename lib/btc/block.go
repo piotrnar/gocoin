@@ -13,6 +13,10 @@ type Block struct {
 	TxCount, TxOffset int  // Number of transactions and byte offset to the first one
 	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
+
+	Majority struct { // This is used to speed up the vestion checks inside the majority window
+		V2, V3 uint // These fields are set by CheckBlock
+	}
 }
 
 

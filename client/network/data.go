@@ -252,6 +252,8 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	var cnt uint32
 
 	defer func() {
+		common.BlockChain.BlockIndexAccess.Unlock()
+
 		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
 		if r := recover(); r != nil {
 			common.CountSafe("GetHeadersOrphBlk")
@@ -278,7 +280,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero
 		cnt++
 	}
-	common.BlockChain.BlockIndexAccess.Unlock()
 
 	// Note: the deferred function will be called before exiting
 

@@ -5,6 +5,8 @@
 * WebUI: Transactions tab has an option to only show "own" transactions
 * WebUI: Miners tab shows fee statistics
 * Fix: peers DB getting empty after disconnecting the network (keep at least 256 records)
+* Fix: BlockChain.BlockIndexAccess wasn't being unlocked when a panic from FindPathTo() was handled
+* Lib: reject old version blocks based on the super-majority principles
 
 1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets

@@ -24,6 +24,10 @@ type Chain struct {
 	DoNotSync bool // do not flush all the files after each block
 
 	CB NewChanOpts // callbacks used by Unspent database
+
+	Consensus struct {
+		Window, EnforceUpgrade, RejectBlock uint
+	}
 }
 
 type NewChanOpts struct {
@@ -50,6 +54,17 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	if opts != nil {
 		ch.CB = *opts
 	}
+
+	if ch.testnet() {
+		ch.Consensus.Window = 100
+		ch.Consensus.EnforceUpgrade = 51
+		ch.Consensus.RejectBlock = 75
+	} else {
+		ch.Consensus.Window = 1000
+		ch.Consensus.EnforceUpgrade = 750
+		ch.Consensus.RejectBlock = 950
+	}
+
 	ch.Blocks = NewBlockDB(dbrootdir)
 	ch.Unspent, undo_last_block = NewUnspentDb(dbrootdir, rescan, ch)
 
