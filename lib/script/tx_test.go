@@ -145,7 +145,11 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		if tv.inps[j].vout>=0 {
 			ss = tx.TxIn[i].ScriptSig
 		}
-		if VerifyTxScript(ss, pk, i, tx, tv.p2sh) {
+		var fl uint32
+		if tv.p2sh {
+			fl |= VER_P2SH
+		}
+		if VerifyTxScript(ss, pk, i, tx, fl) {
 			oks++
 		}
 	}

@@ -16,8 +16,13 @@ var (
 	DBG_ERR = true
 )
 
+const (
+	VER_P2SH = 1<<0
+	VER_DERSIG = 1<<1
+)
 
-func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) bool {
+
+func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) bool {
 	if DBG_SCR {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -25,7 +30,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 	}
 
 	var st, stP2SH scrStack
-	if !evalScript(sigScr, &st, tx, i) {
+	if !evalScript(sigScr, &st, tx, i, ver_flags) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -51,7 +56,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 		}
 	}
 
-	if !evalScript(pkScr, &st, tx, i) {
+	if !evalScript(pkScr, &st, tx, i, ver_flags) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -75,7 +80,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 	}
 
 	// Additional validation for spend-to-script-hash transactions:
-	if p2sh && btc.IsPayToScript(pkScr) {
+	if (ver_flags&VER_P2SH)!=0 && btc.IsPayToScript(pkScr) {
 		if DBG_SCR {
 			fmt.Println()
 			fmt.Println()
@@ -98,7 +103,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, p2sh bool) b
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, &stP2SH, tx, i) {
+		if !evalScript(pubKey2, &stP2SH, tx, i, ver_flags) {
 			if DBG_ERR {
 				println("P2SH extra verification failed")
 			}
@@ -131,7 +136,7 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
+func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32) bool {
 	if DBG_SCR {
 		println("script len", len(p))
 	}
@@ -736,6 +741,13 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
 					var ok bool
 					pk := stack.pop()
 					si := stack.pop()
+
+					// BIP-0066
+					if (ver_flags&VER_DERSIG)!=0 && !IsValidSignatureEncoding(si) {
+						println("Invalid Signature Encoding A")
+						return false
+					}
+
 					if len(si) > 9 {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
 						ok = btc.EcdsaVerify(pk, si, sh)
@@ -809,6 +821,13 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int) bool {
 					for sigscnt > 0 {
 						pk := stack.top(-ikey)
 						si := stack.top(-isig)
+
+						// BIP-0066
+						if (ver_flags&VER_DERSIG)!=0 && !IsValidSignatureEncoding(si) {
+							println("Invalid Signature Encoding B")
+							return false
+						}
+
 						if len(si)>9 && ((len(pk)==65 && pk[0]==4) || (len(pk)==33 && (pk[0]|1)==3)) {
 							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
 							if btc.EcdsaVerify(pk, si, sh) {
@@ -926,5 +945,87 @@ func IsPushOnly(scr []byte) bool {
 		}
 		idx += n
 	}
+	return true
+}
+
+
+func IsValidSignatureEncoding(sig []byte) bool {
+	// Minimum and maximum size constraints.
+	if len(sig) < 9 {
+		return false
+	}
+	if len(sig) > 73 {
+		return false
+	}
+
+	// A signature is of type 0x30 (compound).
+	if sig[0] != 0x30 {
+		return false
+	}
+
+	// Make sure the length covers the entire signature.
+	if int(sig[1]) != len(sig)-3 {
+		return false
+	}
+
+	// Extract the length of the R element.
+	lenR := uint(sig[3])
+
+	// Make sure the length of the S element is still inside the signature.
+	if 5+lenR >= uint(len(sig)) {
+		return false
+	}
+
+	// Extract the length of the S element.
+	lenS := uint(sig[5+lenR])
+
+	// Verify that the length of the signature matches the sum of the length
+	// of the elements.
+	if lenR+lenS+7 != uint(len(sig)) {
+		return false
+	}
+
+	// Check whether the R element is an integer.
+	if sig[2]!=0x02 {
+		return false
+	}
+
+	// Zero-length integers are not allowed for R.
+	if lenR == 0 {
+		return false
+	}
+
+	// Negative numbers are not allowed for R.
+	if (sig[4]&0x80)!=0 {
+		return false
+	}
+
+	// Null bytes at the start of R are not allowed, unless R would
+	// otherwise be interpreted as a negative number.
+	if lenR>1 && sig[4]==0x00 && (sig[5]&0x80)==0 {
+		return false
+	}
+
+	// Check whether the S element is an integer.
+	if sig[lenR+4]!=0x02 {
+		return false
+	}
+
+	// Zero-length integers are not allowed for S.
+	if lenS==0 {
+		return false
+	}
+
+	// Negative numbers are not allowed for S.
+	if (sig[lenR+6]&0x80)!=0 {
+		return false
+	}
+
+	// Null bytes at the start of S are not allowed, unless S would otherwise be
+	// interpreted as a negative number.
+	if lenS>1 && (sig[lenR+6]==0x00) && (sig[lenR+7]&0x80)==0 {
+		return false
+	}
+
 	return true
 }

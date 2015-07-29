@@ -306,7 +306,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Verify scripts
 	for i := range tx.TxIn {
-		if !script.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx, true) {
+		if !script.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx, script.VER_P2SH|script.VER_DERSIG) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")

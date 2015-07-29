@@ -49,7 +49,7 @@ func TestScritpsValid(t *testing.T) {
 				return
 			}
 
-			res := VerifyTxScript(s1, s2, 0, dummy_tx, true)
+			res := VerifyTxScript(s1, s2, 0, dummy_tx, VER_P2SH)
 			if !res {
 				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1])
 				return
@@ -90,7 +90,7 @@ func TestScritpsInvalid(t *testing.T) {
 				return
 			}
 
-			res := VerifyTxScript(s1, s2, 0, dummy_tx, true)
+			res := VerifyTxScript(s1, s2, 0, dummy_tx, VER_P2SH)
 			if res {
 				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1])
 				return

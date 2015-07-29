@@ -1,4 +1,4 @@
-1.1.1
+1.2.0
 * Lib: enforce blocks version 3, starting from #364000
 * WebUI: LoadTx shows only own transactions
 * WebUI: Fixed transaction upload form at the Home tab
@@ -7,6 +7,7 @@
 * Fix: peers DB getting empty after disconnecting the network (keep at least 256 records)
 * Fix: BlockChain.BlockIndexAccess wasn't being unlocked when a panic from FindPathTo() was handled
 * Lib: reject old version blocks based on the super-majority principles
+* Lib: implemented BIT-0066
 
 1.1.0 - 2015-06-12
 * Client: configuring "Walletdir" to allow improved privacy of the wallets

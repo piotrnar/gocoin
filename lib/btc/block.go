@@ -14,9 +14,7 @@ type Block struct {
 	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
 
-	Majority struct { // This is used to speed up the vestion checks inside the majority window
-		V2, V3 uint // These fields are set by CheckBlock
-	}
+	VerifyFlags uint32 // These flags are set by chain.CheckBlock and used by script.VerifyTxScript
 }
 
 
