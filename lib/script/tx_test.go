@@ -3,7 +3,6 @@ package script
 import (
 	"fmt"
 	"bytes"
-	"strings"
 	"testing"
 	"io/ioutil"
 	"encoding/hex"
@@ -21,8 +20,8 @@ type oneinp struct {
 type testvector struct {
 	inps []oneinp
 	tx string
-	p2sh bool
-	nulldummy bool
+	ver_flags uint32
+	skip string
 }
 
 var last_descr string
@@ -33,7 +32,7 @@ func (tv *testvector) String() (s string) {
 		s += fmt.Sprintf(" %3d) %s-%03d\n", i, tv.inps[i].txid, tv.inps[i].vout)
 		s += fmt.Sprintf("      %s\n", tv.inps[i].pkscr)
 	}
-	s += fmt.Sprintf(" tx_len:%d   p2sh:%t\n", len(tv.tx), tv.p2sh)
+	s += fmt.Sprintf(" tx_len:%d   flags:0x%x\n", len(tv.tx), tv.ver_flags)
 	return
 }
 
@@ -52,8 +51,11 @@ func parserec(vv []interface{}) (ret *testvector) {
 	}
 	ret.tx = vv[1].(string)
 	params := vv[2].(string)
-	ret.p2sh = strings.Index(params, "P2SH")!=-1
-	ret.nulldummy = strings.Index(params, "NULLDUMMY")!=-1
+	var e error
+	ret.ver_flags, e = decode_flags(params)  // deifned in script_test.go
+	if e != nil {
+		ret.skip = e.Error()
+	}
 	return
 }
 
@@ -145,11 +147,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		if tv.inps[j].vout>=0 {
 			ss = tx.TxIn[i].ScriptSig
 		}
-		var fl uint32
-		if tv.p2sh {
-			fl |= VER_P2SH
-		}
-		if VerifyTxScript(ss, pk, i, tx, fl) {
+		if VerifyTxScript(ss, pk, i, tx, tv.ver_flags) {
 			oks++
 		}
 	}
@@ -176,8 +174,8 @@ func TestValidTransactions(t *testing.T) {
 			case []interface{}:
 				if len(vv)==3 {
 					tv := parserec(vv)
-					if tv.nulldummy {
-						//println("Ignore nulldummy test case")
+					if tv.skip!="" {
+						//println(tv.skip)
 					} else if !execute_test_tx(t, tv) {
 						t.Error("Failed transaction:", last_descr)
 					}
@@ -210,8 +208,8 @@ func TestInvalidTransactions(t *testing.T) {
 				if len(vv)==3 {
 					cnt++
 					tv := parserec(vv)
-					if tv.nulldummy {
-						//println("Ignore nulldummy test case")
+					if tv.skip!="" {
+						//println(tv.skip)
 					} else if execute_test_tx(t, tv) {
 						t.Error(cnt, "NOT failed transaction:", last_descr)
 						return

@@ -113,6 +113,7 @@ func decode_flags(s string) (fl uint32, e error) {
 	for i := range ss {
 		switch ss[i] {
 			case "": // ignore
+			case "NONE": // ignore
 				break
 			case "P2SH":
 				fl |= VER_P2SH
