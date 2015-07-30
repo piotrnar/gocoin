@@ -1,15 +1,14 @@
 package script
 
 import (
+	"fmt"
+	"errors"
 	"testing"
 	"strings"
 	"io/ioutil"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
-
-var NotSupported = []string {"DISCOURAGE_UPGRADABLE_NOPS", "MINIMALDATA", /*"DERSIG", */
-"LOW_S", "STRICTENC", "NULLDUMMY", "SIGPUSHONLY", "CLEANSTACK"}
 
 // use some dummy tx
 var input_tx *btc.Tx
@@ -46,17 +45,6 @@ func TestScritpsValid(t *testing.T) {
 	tot := 0
 	for i := range vecs {
 		if len(vecs[i])>=3 {
-			ok := true
-			for k := range NotSupported {
-				if strings.Contains(vecs[i][2], NotSupported[k]) {
-					ok = false
-					break
-				}
-			}
-			if !ok {
-				continue
-			}
-
 			tot++
 
 			s1, e := btc.DecodeScript(vecs[i][0])
@@ -70,12 +58,10 @@ func TestScritpsValid(t *testing.T) {
 				return
 			}
 
-			var flags uint32
-			if strings.Contains(vecs[i][2], "P2SH") {
-				flags |= VER_P2SH
-			}
-			if strings.Contains(vecs[i][2], "DERSIG") {
-				flags |= VER_DERSIG
+			flags, e := decode_flags(vecs[i][2])
+			if e != nil {
+				fmt.Println("InvalidScript", tot, e.Error())
+				continue
 			}
 
 			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
@@ -107,17 +93,6 @@ func TestScritpsInvalid(t *testing.T) {
 	tot := 0
 	for i := range vecs {
 		if len(vecs[i])>=3 {
-			ok := true
-			for k := range NotSupported {
-				if strings.Contains(vecs[i][2], NotSupported[k]) {
-					ok = false
-					break
-				}
-			}
-			if !ok {
-				continue
-			}
-
 			tot++
 
 			s1, e := btc.DecodeScript(vecs[i][0])
@@ -131,12 +106,10 @@ func TestScritpsInvalid(t *testing.T) {
 				return
 			}
 
-			var flags uint32
-			if strings.Contains(vecs[i][2], "P2SH") {
-				flags |= VER_P2SH
-			}
-			if strings.Contains(vecs[i][2], "DERSIG") {
-				flags |= VER_DERSIG
+			flags, e := decode_flags(vecs[i][2])
+			if e != nil {
+				fmt.Println("InvalidScript", tot, e.Error())
+				continue
 			}
 
 			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
@@ -147,6 +120,26 @@ func TestScritpsInvalid(t *testing.T) {
 		}
 	}
 }
+
+
+func decode_flags(s string) (fl uint32, e error) {
+	ss := strings.Split(s, ",")
+	for i := range ss {
+		switch ss[i] {
+			case "": // ignore
+				break
+			case "P2SH":
+				fl |= VER_P2SH
+			case "DERSIG":
+				fl |= VER_DERSIG
+			default:
+				e = errors.New("Unsupported flag "+ss[i])
+				return
+		}
+	}
+	return
+}
+
 
 func mk_out_tx(s1, s2 []byte) (output_tx *btc.Tx) {
 	input_tx.TxOut[0].Pk_script = s2

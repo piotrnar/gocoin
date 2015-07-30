@@ -19,7 +19,7 @@ var (
 
 const (
 	VER_P2SH = 1<<0
-	VER_DERSIG = 1<<1
+	VER_DERSIG = 1<<2
 )
 
 
@@ -1040,7 +1040,7 @@ func IsValidSignatureEncoding(sig []byte) bool {
 	return true
 }
 
-// We only check for VER_DERSIG as no other flags are used ATM
+// We only check for VER_DERSIG from BIP66. BIP62 has not been implemented
 func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 	// Empty signature. Not strictly DER encoded, but allowed to provide a
 	// compact way to provide an invalid signature for use with CHECK(MULTI)SIG
@@ -1052,3 +1052,5 @@ func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 	}
 	return true
 }
+
+
