@@ -20,7 +20,6 @@ Downloader:
 * Avoid re-building of UTXO-db while using "-b"
 
 Core lib:
-* Merge the latest test vectors from the satoshi client (to verify bip-0066 implementation)
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 * Address the occasional "incorrect proof of work" problem in testnet:
