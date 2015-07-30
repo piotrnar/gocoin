@@ -1,7 +1,7 @@
 package script
 
 import (
-	"fmt"
+	//"fmt"
 	"errors"
 	"testing"
 	"strings"
@@ -10,25 +10,11 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-// use some dummy tx
-var input_tx *btc.Tx
-
-func init() {
-	input_tx = new(btc.Tx)
-	input_tx.Version = 1
-	input_tx.TxIn = make([]*btc.TxIn, 1)
-	input_tx.TxIn[0] = &btc.TxIn{}
-	input_tx.TxIn[0].Input.Vout = 0xffffffff
-	input_tx.TxIn[0].ScriptSig = []byte{0,0}
-	input_tx.TxIn[0].Sequence = 0xffffffff
-	input_tx.TxOut = make([]*btc.TxOut, 1)
-	input_tx.TxOut[0] = &btc.TxOut{}
-	input_tx.Lock_time = 0
-}
-
 
 
 func TestScritpsValid(t *testing.T) {
+	DBG_ERR = false
+
 	dat, er := ioutil.ReadFile("../test/script_valid.json")
 	if er != nil {
 		t.Error(er.Error())
@@ -60,7 +46,7 @@ func TestScritpsValid(t *testing.T) {
 
 			flags, e := decode_flags(vecs[i][2])
 			if e != nil {
-				fmt.Println("InvalidScript", tot, e.Error())
+				//fmt.Println("InvalidScript", tot, e.Error())
 				continue
 			}
 
@@ -108,7 +94,7 @@ func TestScritpsInvalid(t *testing.T) {
 
 			flags, e := decode_flags(vecs[i][2])
 			if e != nil {
-				fmt.Println("InvalidScript", tot, e.Error())
+				//fmt.Println("InvalidScript", tot, e.Error())
 				continue
 			}
 
@@ -142,6 +128,14 @@ func decode_flags(s string) (fl uint32, e error) {
 
 
 func mk_out_tx(s1, s2 []byte) (output_tx *btc.Tx) {
+	input_tx := new(btc.Tx)
+	input_tx.Version = 1
+	input_tx.TxIn = []*btc.TxIn{ &btc.TxIn{Input:btc.TxPrevOut{Vout:0xffffffff}, ScriptSig:[]byte{0,0}, Sequence:0xffffffff} }
+
+	input_tx.TxOut = make([]*btc.TxOut, 1)
+	input_tx.TxOut[0] = &btc.TxOut{}
+	input_tx.Lock_time = 0
+
 	input_tx.TxOut[0].Pk_script = s2
 	rd := input_tx.Serialize()
 	input_tx.Size = uint32(len(rd))
