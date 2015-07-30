@@ -2,22 +2,31 @@ package script
 
 import (
 	"testing"
+	"strings"
 	"io/ioutil"
-	"encoding/hex"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+var NotSupported = []string {"DISCOURAGE_UPGRADABLE_NOPS", "MINIMALDATA", /*"DERSIG", */
+"LOW_S", "STRICTENC", "NULLDUMMY", "SIGPUSHONLY", "CLEANSTACK"}
+
 // use some dummy tx
-var dummy_tx *btc.Tx
+var input_tx *btc.Tx
 
 func init() {
-	rd, _ := hex.DecodeString("0100000001b14bdcbc3e01bdaad36cc08e81e69c82e1060bc14e518db2b49aa43ad90ba26000000000490047304402203f16c6f40162ab686621ef3000b04e75418a0c0cb2d8aebeac894ae360ac1e780220ddc15ecdfc3507ac48e1681a33eb60996631bf6bf5bc0a0682c4db743ce7ca2b01ffffffff0140420f00000000001976a914660d4ef3a743e3e696ad990364e555c271ad504b88ac00000000")
-	dummy_tx, _ := btc.NewTx(rd)
-	dummy_tx.Size = uint32(len(rd))
-	ha := btc.Sha2Sum(rd)
-	dummy_tx.Hash = btc.NewUint256(ha[:])
+	input_tx = new(btc.Tx)
+	input_tx.Version = 1
+	input_tx.TxIn = make([]*btc.TxIn, 1)
+	input_tx.TxIn[0] = &btc.TxIn{}
+	input_tx.TxIn[0].Input.Vout = 0xffffffff
+	input_tx.TxIn[0].ScriptSig = []byte{0,0}
+	input_tx.TxIn[0].Sequence = 0xffffffff
+	input_tx.TxOut = make([]*btc.TxOut, 1)
+	input_tx.TxOut[0] = &btc.TxOut{}
+	input_tx.Lock_time = 0
 }
+
 
 
 func TestScritpsValid(t *testing.T) {
@@ -33,9 +42,21 @@ func TestScritpsValid(t *testing.T) {
 		return
 	}
 
+
 	tot := 0
 	for i := range vecs {
-		if len(vecs[i])>=2 {
+		if len(vecs[i])>=3 {
+			ok := true
+			for k := range NotSupported {
+				if strings.Contains(vecs[i][2], NotSupported[k]) {
+					ok = false
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+
 			tot++
 
 			s1, e := btc.DecodeScript(vecs[i][0])
@@ -49,14 +70,23 @@ func TestScritpsValid(t *testing.T) {
 				return
 			}
 
-			res := VerifyTxScript(s1, s2, 0, dummy_tx, VER_P2SH)
+			var flags uint32
+			if strings.Contains(vecs[i][2], "P2SH") {
+				flags |= VER_P2SH
+			}
+			if strings.Contains(vecs[i][2], "DERSIG") {
+				flags |= VER_DERSIG
+			}
+
+			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
 			if !res {
-				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1])
+				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
 				return
 			}
 		}
 	}
 }
+
 
 
 func TestScritpsInvalid(t *testing.T) {
@@ -76,7 +106,18 @@ func TestScritpsInvalid(t *testing.T) {
 
 	tot := 0
 	for i := range vecs {
-		if len(vecs[i])>=2 {
+		if len(vecs[i])>=3 {
+			ok := true
+			for k := range NotSupported {
+				if strings.Contains(vecs[i][2], NotSupported[k]) {
+					ok = false
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+
 			tot++
 
 			s1, e := btc.DecodeScript(vecs[i][0])
@@ -90,11 +131,44 @@ func TestScritpsInvalid(t *testing.T) {
 				return
 			}
 
-			res := VerifyTxScript(s1, s2, 0, dummy_tx, VER_P2SH)
+			var flags uint32
+			if strings.Contains(vecs[i][2], "P2SH") {
+				flags |= VER_P2SH
+			}
+			if strings.Contains(vecs[i][2], "DERSIG") {
+				flags |= VER_DERSIG
+			}
+
+			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
 			if res {
-				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1])
+				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], "/", vecs[i][3])
 				return
 			}
 		}
 	}
+}
+
+func mk_out_tx(s1, s2 []byte) (output_tx *btc.Tx) {
+	input_tx.TxOut[0].Pk_script = s2
+	rd := input_tx.Serialize()
+	input_tx.Size = uint32(len(rd))
+	ha := btc.Sha2Sum(rd)
+	input_tx.Hash = btc.NewUint256(ha[:])
+
+	output_tx = new(btc.Tx)
+	output_tx.Version = 1
+	output_tx.TxIn = make([]*btc.TxIn, 1)
+	output_tx.TxIn[0] = &btc.TxIn{}
+	output_tx.TxIn[0].Input.Hash = input_tx.Hash.Hash
+	output_tx.TxIn[0].Input.Vout = 0
+	output_tx.TxIn[0].ScriptSig = s1
+	output_tx.TxIn[0].Sequence = 0xffffffff
+	output_tx.TxOut = make([]*btc.TxOut, 1)
+	output_tx.TxOut[0] = &btc.TxOut{}
+	output_tx.Lock_time = 0
+	rd = output_tx.Serialize()
+	output_tx.Size = uint32(len(rd))
+	ha = btc.Sha2Sum(rd)
+	output_tx.Hash = btc.NewUint256(ha[:])
+	return
 }
