@@ -1,4 +1,4 @@
-1.2.0
+1.2.0 - 2015-07-31
 * Lib: enforce blocks version 3, starting from #364000
 * WebUI: LoadTx shows only own transactions
 * WebUI: Fixed transaction upload form at the Home tab
