@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
+	"regexp"
 )
 
 type omv struct {
@@ -66,6 +67,12 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	block_versions := make(map[uint32]uint)
 
+	// bip100
+	bip100_voting := make(map[string]uint)
+	//var bip100, bip100v uint64
+	bip100x := regexp.MustCompile("/BV{0,1}[0-9]+[M]{0,1}/")
+	//bip100rx := regexp.MustCompile("/B[0-9]+[M]{0,1}/")
+
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
 			break
@@ -95,6 +102,12 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 				rew += cbasetx.TxOut[o].Value
 			}
 			om.fees += rew - btc.GetBlockReward(end.Height)
+
+			// bip-100
+			res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
+			if res!=nil {
+				bip100_voting[string(res)]++
+			}
 		} else {
 			println("p_miners: btc.NewBlock failed!")
 		}
@@ -165,6 +178,17 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		bv += fmt.Sprintf("%dx%d", v, k)
 	}
 	mnrs = strings.Replace(mnrs, "<!--BLOCK_VERSIONS-->", bv, 1)
+
+	// bip100
+	bv = ""
+	for k, v := range bip100_voting {
+		if bv!="" {
+			bv += " + "
+		}
+		bv += fmt.Sprintf("%sx%d", k, v)
+	}
+
+	mnrs = strings.Replace(mnrs, "<!--BLOCKSIZE_VOTES-->", bv, 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))
