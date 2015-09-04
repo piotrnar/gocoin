@@ -1,0 +1,4 @@
+This single package (secp256k1) is distributed with the same license as
+the original C implementation by sipa:
+
+ * https://github.com/bitcoin/secp256k1/blob/master/COPYING
