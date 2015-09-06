@@ -1,5 +1,6 @@
 1.2.1
 * peersdb: MinPeersInDB changed form 256 to 512
+* Client: add BIP100 stats to the mining UI
 
 1.2.0 - 2015-07-31
 * Lib: enforce blocks version 3, starting from #364000
