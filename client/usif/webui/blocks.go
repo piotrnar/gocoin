@@ -47,7 +47,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		}
 		s = strings.Replace(s, "<!--BLOCK_VERSION-->", fmt.Sprint(block.Version()), 1)
 		s = strings.Replace(s, "{BLOCK_REWARD}", fmt.Sprintf("%.2f", float64(rew)/1e8), 1)
-		mi, _ := common.BlocksMiner(bl)
+		mi, _ := common.TxMiner(cbasetx)
 		if len(mi)>10 {
 			mi = mi[:10]
 		}

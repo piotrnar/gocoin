@@ -15,39 +15,21 @@ type oneMinerId struct {
 var MinerIds []oneMinerId
 
 
-func MinedBy(bl []byte, tag []byte) bool {
-	max2search := 0x200
-	if len(bl)<max2search {
-		max2search = len(bl)
-	}
-	return bytes.Index(bl[0x51:max2search], tag)!=-1
-}
-
-
-func MinedByUs(bl []byte) bool {
-	LockCfg()
-	minid := CFG.Beeps.MinerID
-	UnlockCfg()
-	if minid=="" {
-		return false
-	}
-	return MinedBy(bl, []byte(minid))
-}
-
-func BlocksMiner(bl []byte) (string, int) {
+// return miner ID of the given coinbase transaction
+func TxMiner(cbtx *btc.Tx) (string, int) {
+	txdat := cbtx.Serialize()
 	for i, m := range MinerIds {
-		if MinedBy(bl, m.Tag) {
+		if bytes.Contains(txdat, m.Tag) {
 			return m.Name, i
 		}
 	}
-	bt, _ := btc.NewBlock(bl)
-	cbtx, _ := btc.NewTx(bl[bt.TxOffset:])
 	adr := btc.NewAddrFromPkScript(cbtx.TxOut[0].Pk_script, Testnet)
 	if adr!=nil {
 		return adr.String(), -1
 	}
 	return "", -1
 }
+
 
 func ReloadMiners() {
 	d, _ := ioutil.ReadFile("miners.json")

@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"bytes"
 	"unsafe"
 	"runtime"
 	"os/signal"
@@ -75,9 +76,12 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 				textui.ShowPrompt()
 			}
 
-			if common.MinedByUs(bl.Raw) {
-				fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
-				textui.ShowPrompt()
+			if common.CFG.Beeps.MinerID!="" {
+				//_, rawtxlen := btc.NewTx(bl[bl.TxOffset:])
+				if bytes.Contains(bl.Txs[0].Serialize(), []byte(common.CFG.Beeps.MinerID)) {
+					fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
+					textui.ShowPrompt()
+				}
 			}
 
 			if common.CFG.Beeps.ActiveFork && common.Last.Block == common.BlockChain.BlockTreeEnd {

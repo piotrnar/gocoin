@@ -82,9 +82,13 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return
 		}
+
+		block, e := btc.NewBlock(bl)
+		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
+
 		block_versions[binary.LittleEndian.Uint32(bl[0:4])]++
 		diff += btc.GetDifficulty(end.Bits())
-		miner, mid := common.BlocksMiner(bl)
+		miner, mid := common.TxMiner(cbasetx)
 		if mid==-1 {
 			miner = "<i>" + miner + "</i>"
 		}
@@ -94,22 +98,16 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		om.mid = mid
 
 		// Blocks reward
-		block, e := btc.NewBlock(bl)
-		if e==nil {
-			var rew uint64
-			cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
-			for o := range cbasetx.TxOut {
-				rew += cbasetx.TxOut[o].Value
-			}
-			om.fees += rew - btc.GetBlockReward(end.Height)
+		var rew uint64
+		for o := range cbasetx.TxOut {
+			rew += cbasetx.TxOut[o].Value
+		}
+		om.fees += rew - btc.GetBlockReward(end.Height)
 
-			// bip-100
-			res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
-			if res!=nil {
-				bip100_voting[string(res)]++
-			}
-		} else {
-			println("p_miners: btc.NewBlock failed!")
+		// bip-100
+		res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
+		if res!=nil {
+			bip100_voting[string(res)]++
 		}
 
 

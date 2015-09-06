@@ -3,6 +3,8 @@ package textui
 import (
 	"fmt"
 	"time"
+	"bytes"
+	"regexp"
 	"strconv"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -26,6 +28,10 @@ func do_mining(s string) {
 	common.Last.Mutex.Unlock()
 	cnt, diff := 0, float64(0)
 	tot_blocks, tot_blocks_len := 0, 0
+
+	bip100_voting := make(map[string]uint)
+	bip100x := regexp.MustCompile("/BV{0,1}[0-9]+[M]{0,1}/")
+
 	for end.Timestamp() >= lim {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
@@ -37,10 +43,16 @@ func do_mining(s string) {
 			println("btc.NewBlock failed", e.Error())
 			return
 		}
+
+		bt, _ := btc.NewBlock(bl)
+		cbasetx, cbtxlen := btc.NewTx(bl[bt.TxOffset:])
+
 		tot_blocks++
 		tot_blocks_len += len(bl)
 		diff += btc.GetDifficulty(block.Bits())
-		if common.MinedByUs(bl) {
+		common.LockCfg()
+		if common.CFG.Beeps.MinerID!="" &&
+			bytes.Contains(bl[bt.TxOffset:bt.TxOffset+cbtxlen], []byte(common.CFG.Beeps.MinerID)) {
 			block.BuildTxList()
 			totbtc += block.Txs[0].TxOut[0].Value
 			cnt++
@@ -50,6 +62,15 @@ func do_mining(s string) {
 				float64(block.Txs[0].TxOut[0].Value)/1e8, float64(totbtc)/1e8,
 				len(block.Txs), float64(len(bl))/1e3)
 		}
+		common.UnlockCfg()
+
+		res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
+		if res!=nil {
+			bip100_voting[string(res)]++
+			nimer, _ := common.TxMiner(cbasetx)
+			fmt.Println("      block", end.Height, "by", nimer, "voting", string(res), " total:", bip100_voting[string(res)])
+		}
+
 		end = end.Parent
 	}
 	if tot_blocks == 0 {
