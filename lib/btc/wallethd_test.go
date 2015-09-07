@@ -42,17 +42,14 @@ var (
     )
 
 func testChild(t *testing.T, key, ref_key string, i uint32) {
-    child_key,err := StringChild(key, i)
-    if err != nil {
-        t.Errorf("%s should have been nil",err.Error())
-    }
+    child_key := StringChild(key, i)
     if child_key != ref_key {
         t.Errorf("\n%s\nsupposed to be\n%s",child_key,ref_key)
     }
 }
 
 func testMasterKey(t *testing.T, seed []byte, ref_key string) {
-    masterprv := MasterKey(seed).String()
+    masterprv := MasterKey(seed, false).String()
     if masterprv != ref_key {
         t.Errorf("\n%s\nsupposed to be\n%s",masterprv,ref_key)
     }
@@ -166,7 +163,7 @@ func TestAddress(t *testing.T) {
     if err != nil {
         t.Errorf("%s should have been nil",err.Error())
     }
-    expected_addr := "1AEg9dFEw29kMgaN4BNHALu7AzX5XUfzSU"
+    expected_addr := "1JEoxevbLLG8cVqeoGKQiAwoWbNYSUyYjg"
     if addr != expected_addr {
         t.Errorf("\n%s\nshould be\n%s",addr,expected_addr)
     }

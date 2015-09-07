@@ -34,12 +34,12 @@ type HDWallet struct {
 // Child returns the ith child of wallet w. Values of i >= 2^31
 // signify private key derivation. Attempting private key derivation
 // with a public key will throw an error.
-func (w *HDWallet) Child(i uint32) (*HDWallet, error) {
+func (w *HDWallet) Child(i uint32) (res *HDWallet) {
 	var ha, newkey []byte
 	var chksum [20]byte
 
 	if w.Prefix==Private || w.Prefix==TestPrivate {
-		pub := PublicFromPrivate(w.Key, true)
+		pub := PublicFromPrivate(w.Key[1:], true)
 		mac := hmac.New(sha512.New, w.ChCode)
 		if i >= uint32(0x80000000) {
 			mac.Write(w.Key)
@@ -48,12 +48,12 @@ func (w *HDWallet) Child(i uint32) (*HDWallet, error) {
 		}
 		binary.Write(mac, binary.BigEndian, i)
 		ha = mac.Sum(nil)
-		newkey = append([]byte{0}, DeriveNextPrivate(ha[:32], w.Key)...)
-		RimpHash(PublicFromPrivate(w.Key, true), chksum[:])
+		newkey = append([]byte{0}, DeriveNextPrivate(ha[:32], w.Key[1:])...)
+		RimpHash(pub, chksum[:])
 	} else if w.Prefix==Public || w.Prefix==TestPublic {
 		mac := hmac.New(sha512.New, w.ChCode)
 		if i >= uint32(0x80000000) {
-			return &HDWallet{}, errors.New("Child: Private derivation on Public key")
+			panic("HDWallet.Child(): Private derivation on Public key")
 		}
 		mac.Write(w.Key)
 		binary.Write(mac, binary.BigEndian, i)
@@ -61,16 +61,16 @@ func (w *HDWallet) Child(i uint32) (*HDWallet, error) {
 		newkey = DeriveNextPublic(w.Key, ha[:32])
 		RimpHash(w.Key, chksum[:])
 	} else {
-		return nil, errors.New("Child: Unexpected Prefix")
+		panic("HDWallet.Child(): Unexpected Prefix")
 	}
-	res := new(HDWallet)
+	res = new(HDWallet)
 	res.Prefix = w.Prefix
 	res.Depth = w.Depth+1
 	copy(res.Checksum[:], chksum[:4])
 	res.I = i
 	res.ChCode = ha[32:]
 	res.Key = newkey
-	return res, nil
+	return
 }
 
 // Serialize returns the serialized form of the wallet.
@@ -117,28 +117,24 @@ func StringWallet(data string) (*HDWallet, error) {
 // Pub returns a new wallet which is the public key version of w.
 // If w is a public key, Pub returns a copy of w
 func (w *HDWallet) Pub() *HDWallet {
-	if w.Prefix==Public {
+	if w.Prefix==Public || w.Prefix==TestPublic {
 		r := new(HDWallet)
 		*r = *w
 		return r
 	} else {
 		return &HDWallet{Prefix:Public, Depth:w.Depth, Checksum:w.Checksum,
-			I:w.I, ChCode:w.ChCode, Key:PublicFromPrivate(w.Key, true)}
+			I:w.I, ChCode:w.ChCode, Key:PublicFromPrivate(w.Key[1:], true)}
 	}
 }
 
 // StringChild returns the ith base58-encoded extended key of a base58-encoded extended key.
-func StringChild(data string, i uint32) (string, error) {
+func StringChild(data string, i uint32) (string) {
 	w, err := StringWallet(data)
 	if err != nil {
-		return "", err
+		return ""
 	} else {
-		w, err = w.Child(i)
-		if err != nil {
-			return "", err
-		} else {
-			return w.String(), nil
-		}
+		w = w.Child(i)
+		return w.String()
 	}
 }
 
@@ -149,24 +145,33 @@ func StringAddress(data string) (string, error) {
 		return "", err
 	}
 
-	// WTF the testvectors expect address made from uncompreessed public key?
-	tnet := w.Prefix==TestPublic || w.Prefix==TestPrivate
-	if false {
-		return NewAddrFromPubkey(w.Key, AddrVerPubkey(tnet)).String(), nil
+	return NewAddrFromPubkey(w.Key, AddrVerPubkey(w.Prefix==TestPublic || w.Prefix==TestPrivate)).String(), nil
+}
+
+// PublicAddress returns base58 encoded public address of the given HD key
+func (w *HDWallet) PubAddr() *BtcAddr {
+	var pub []byte
+	if w.Prefix==Private || w.Prefix==TestPrivate {
+		pub = PublicFromPrivate(w.Key[1:], true)
 	} else {
-		var xy secp256k1.XY
-		xy.ParsePubkey(w.Key)
-		return NewAddrFromPubkey(xy.Bytes(false), AddrVerPubkey(tnet)).String(), nil
+		pub = w.Key
 	}
+	return NewAddrFromPubkey(pub, AddrVerPubkey(w.Prefix==TestPublic || w.Prefix==TestPrivate))
 }
 
 // MasterKey returns a new wallet given a random seed.
-func MasterKey(seed []byte) *HDWallet {
+func MasterKey(seed []byte, testnet bool) *HDWallet {
 	key := []byte("Bitcoin seed")
 	mac := hmac.New(sha512.New, key)
 	mac.Write(seed)
 	I := mac.Sum(nil)
-	return &HDWallet{Prefix:Private, ChCode:I[len(I)/2:], Key:append([]byte{0}, I[:len(I)/2]...)}
+	res := &HDWallet{ChCode:I[len(I)/2:], Key:append([]byte{0}, I[:len(I)/2]...)}
+	if testnet {
+		res.Prefix = TestPrivate
+	} else {
+		res.Prefix = Private
+	}
+	return res
 }
 
 // StringCheck is a validation check of a base58-encoded extended key.
