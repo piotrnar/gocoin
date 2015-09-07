@@ -76,22 +76,30 @@ func make_wallet() {
 
 	load_others()
 
-	seed_key := make([]byte, 32)
-	if !getseed(seed_key) {
-		cleanExit(0)
-	}
+	var seed_key []byte
+	var hdwal *btc.HDWallet
 
 	defer func() {
 		sys.ClearBuffer(seed_key)
+		if hdwal!=nil {
+			sys.ClearBuffer(hdwal.Key)
+			sys.ClearBuffer(hdwal.ChCode)
+		}
 	}()
 
-	switch waltype {
-		case 1:
-			lab = "TypA"
-			println("WARNING: Wallet Type 1 is obsolete")
+	pass := getpass()
+	if pass==nil {
+		cleanExit(0)
+	}
 
-		case 2:
-			lab = "TypB"
+	if waltype>=1 && waltype<=3 {
+		seed_key = make([]byte, 32)
+		btc.ShaHash(pass, seed_key)
+		sys.ClearBuffer(pass)
+		lab = fmt.Sprintf("Typ%c", 'A'+waltype-1)
+		if waltype==1 {
+			println("WARNING: Wallet Type 1 is obsolete")
+		} else if waltype==2 {
 			if type2sec!="" {
 				d, e := hex.DecodeString(type2sec)
 				if e!=nil {
@@ -103,13 +111,16 @@ func make_wallet() {
 				type2_secret = make([]byte, 20)
 				btc.RimpHash(seed_key, type2_secret)
 			}
-
-		case 3:
-			lab = "TypC"
-
-		default:
-			println("ERROR: Unsupported wallet type", waltype)
-			cleanExit(1)
+		}
+	} else if waltype==4 {
+		lab = "TypHD"
+		hdwal = btc.MasterKey(pass, testnet)
+		sys.ClearBuffer(pass)
+		println(hdwal.String())
+	} else {
+		sys.ClearBuffer(pass)
+		println("ERROR: Unsupported wallet type", waltype)
+		cleanExit(1)
 	}
 
 	if *verbose {
@@ -125,9 +136,15 @@ func make_wallet() {
 		} else if waltype==2 {
 			seed_key = btc.DeriveNextPrivate(seed_key, type2_secret)
 			copy(prv_key, seed_key)
-		} else {
+		} else if waltype==1 {
 			btc.ShaHash(seed_key, prv_key)
 			copy(seed_key, prv_key)
+		} else /*if waltype==4*/ {
+			// HD wallet
+			_hd := hdwal.Child(uint32(0x80000000|i))
+			copy(prv_key, _hd.Key[1:])
+			sys.ClearBuffer(_hd.Key)
+			sys.ClearBuffer(_hd.ChCode)
 		}
 		if *scankey!="" {
 			new_stealth_address(prv_key)

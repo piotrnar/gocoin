@@ -26,6 +26,7 @@ func parse_config() {
 	if cfgfn=="" {
 		cfgfn = "wallet.cfg"
 	}
+	fmt.Println("Using config file", cfgfn)
 	d, e := ioutil.ReadFile(cfgfn)
 	if e != nil {
 		fmt.Println(cfgfn, "not found")
@@ -56,7 +57,7 @@ func parse_config() {
 				case "type":
 					v, e := strconv.ParseUint(ll[1], 10, 32)
 					if e == nil {
-						if v>=1 && v<=3 {
+						if v>=1 && v<=4 {
 							waltype = uint(v)
 						} else {
 							println(i, "wallet.cfg: incorrect wallet type", v)
@@ -133,7 +134,7 @@ func parse_config() {
 
 	flag.UintVar(&keycnt, "n", keycnt, "Set the number of keys to be used")
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
-	flag.UintVar(&waltype, "type", waltype, "Type of deterministic wallet (1, 2 or 3)")
+	flag.UintVar(&waltype, "type", waltype, "Type of deterministic wallet (1 to 4)")
 	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Use uncompressed public keys (not advised)")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")

@@ -37,8 +37,7 @@ func ask_yes_no(msg string) bool {
 }
 
 
-// Input the password (that is the secret seed to your wallet)
-func getseed(seed []byte) bool {
+func getpass() []byte {
 	var pass [1024]byte
 	var n int
 	var e error
@@ -50,9 +49,9 @@ func getseed(seed []byte) bool {
 			n, e = f.Read(pass[:])
 			f.Close()
 			if n <= 0 {
-				return false
+				return nil
 			}
-			goto calc_seed
+			goto check_pass
 		}
 
 		fmt.Println("Seed file", PassSeedFilename, "not found")
@@ -61,7 +60,7 @@ func getseed(seed []byte) bool {
 	fmt.Print("Enter your wallet's seed password: ")
 	n = sys.ReadPassword(pass[:])
 	if n<=0 {
-		return false
+		return nil
 	}
 
 	if *list || *scankey!="" {
@@ -70,9 +69,10 @@ func getseed(seed []byte) bool {
 			var pass2 [1024]byte
 			p2len := sys.ReadPassword(pass2[:])
 			if p2len!=n || !bytes.Equal(pass[:n], pass2[:p2len]) {
+				sys.ClearBuffer(pass[:n])
 				sys.ClearBuffer(pass2[:p2len])
 				println("The two passwords you entered do not match")
-				return false
+				return nil
 			}
 			sys.ClearBuffer(pass2[:p2len])
 		}
@@ -88,23 +88,20 @@ func getseed(seed []byte) bool {
 			}
 		}
 	}
-calc_seed:
+check_pass:
 	for i:=0; i<n; i++ {
 		if pass[i]<' ' || pass[i]>126 {
 			fmt.Println("WARNING: Your secret contains non-printable characters")
 			break
 		}
 	}
+	outpass := make([]byte, n+len(secret_seed))
 	if len(secret_seed)>0 {
-		x := append(secret_seed, pass[:n]...)
-		sys.ClearBuffer(secret_seed)
-		btc.ShaHash(x, seed)
-		sys.ClearBuffer(x)
-	} else {
-		btc.ShaHash(pass[:n], seed)
+		copy(outpass, secret_seed)
 	}
+	copy(outpass[len(secret_seed):], pass[:n])
 	sys.ClearBuffer(pass[:n])
-	return true
+	return outpass
 }
 
 

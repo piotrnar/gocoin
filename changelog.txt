@@ -1,6 +1,8 @@
-1.2.1
+1.3.0
 * peersdb: MinPeersInDB changed form 256 to 512
-* Client: add BIP100 stats to the mining UI
+* Client: Added BIP100 stats to the mining UI
+* Wallet: Added support for Type-4 wallet, which is based on BIP-32 keys derivation (HD wallets)
+* Lib: Some changes to btc.WalletHD API
 
 1.2.0 - 2015-07-31
 * Lib: enforce blocks version 3, starting from #364000
