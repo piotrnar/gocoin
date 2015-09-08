@@ -76,22 +76,6 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 }
 
 
-func (c *OneConnection) GetBlockData(h []byte) {
-	var b [1+4+32]byte
-	b[0] = 1 // One inv
-	b[1] = 2 // Block
-	copy(b[5:37], h[:32])
-	if common.DebugLevel > 1 {
-		println("GetBlockData", btc.NewUint256(h).String())
-	}
-	bh := btc.NewUint256(h)
-	c.Mutex.Lock()
-	c.GetBlockInProgress[bh.BIdx()] = &oneBlockDl{hash:bh, start:time.Now()}
-	c.Mutex.Unlock()
-	c.SendRawMsg("getdata", b[:])
-}
-
-
 // This function is called from a net conn thread
 func netBlockReceived(conn *OneConnection, b []byte) {
 	bl, e := btc.NewBlock(b)
