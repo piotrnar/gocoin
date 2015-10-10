@@ -143,24 +143,24 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 	NeedThisTx(tid, func() {
 		// This body is called with a locked TxMutex
 		if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
-			common.CountSafe("TxTooBig")
+			common.CountSafe("TxRejectedBig")
 			RejectTx(tid, len(pl), TX_REJECTED_TOO_BIG)
 			return
 		}
 		tx, le := btc.NewTx(pl)
 		if tx == nil {
 			RejectTx(tid, len(pl), TX_REJECTED_FORMAT)
-			c.DoS("TxBroken")
+			c.DoS("TxRejectedBroken")
 			return
 		}
 		if le != len(pl) {
 			RejectTx(tid, len(pl), TX_REJECTED_LEN_MISMATCH)
-			c.DoS("TxLenMismatch")
+			c.DoS("TxRejectedLenMismatch")
 			return
 		}
 		if len(tx.TxIn)<1 {
 			RejectTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
-			c.Misbehave("TxNoInputs", 20)
+			c.Misbehave("TxRejectedNoInputs", 20)
 			return
 		}
 
