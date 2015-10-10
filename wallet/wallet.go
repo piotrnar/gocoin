@@ -116,7 +116,6 @@ func make_wallet() {
 		lab = "TypHD"
 		hdwal = btc.MasterKey(pass, testnet)
 		sys.ClearBuffer(pass)
-		println(hdwal.String())
 	} else {
 		sys.ClearBuffer(pass)
 		println("ERROR: Unsupported wallet type", waltype)
