@@ -239,7 +239,8 @@ func ServerThread(iface string) {
 	http.HandleFunc("/wallets.xml", xml_wallets)
 
 	http.HandleFunc("/", p_home)
-	http.HandleFunc("/status.xml", p_status)
+	http.HandleFunc("/status.json", json_status)
+	http.HandleFunc("/counts.json", json_counts)
 
 	http.ListenAndServe(iface, nil)
 }

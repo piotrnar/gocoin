@@ -29,6 +29,20 @@ func (c many_counters) Swap(i, j int) {
 }
 
 func p_counts(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	s := load_template("counts.html")
+	write_html_head(w, r)
+	w.Write([]byte(s))
+	write_html_tail(w)
+}
+
+
+func json_counts(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
 	var net []string
 	var gen, txs many_counters
 	common.CounterMutex.Lock()
@@ -54,51 +68,38 @@ func p_counts(w http.ResponseWriter, r *http.Request) {
 	sort.Sort(txs)
 	sort.Strings(net)
 
-	s := load_template("counts.html")
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Write([]byte("{\n"))
 
+	w.Write([]byte(" \"gen\":["))
 	for i := range gen {
-		row := "<tr class=\"hov\">"
-		row += fmt.Sprint("<td class=\"gennam\">", gen[i].key, "</td>")
-		row += fmt.Sprint("<td class=\"genval\">", gen[i].cnt, "</td>")
-		row += "</tr>"
-		s = templ_add(s, "<!--GEN_ROW-->", row)
+		w.Write([]byte(fmt.Sprint("{\"var\":\"", gen[i].key, "\",\"cnt\":", gen[i].cnt, "}")))
+		if i<len(gen)-1 {
+			w.Write([]byte(","))
+		}
 	}
+	w.Write([]byte("],\n \"txs\":["))
 
 	for i := range txs {
-		row := "<tr class=\"hov\">"
-		row += fmt.Sprint("<td class=\"tsxnam\">", txs[i].key, "</td>")
-		row += fmt.Sprint("<td class=\"txsval\">", txs[i].cnt, "</td>")
-		row += "</tr>"
-		s = templ_add(s, "<!--TXS_ROW-->", row)
+		w.Write([]byte(fmt.Sprint("{\"var\":\"", txs[i].key, "\",\"cnt\":", txs[i].cnt, "}")))
+		if i<len(txs)-1 {
+			w.Write([]byte(","))
+		}
 	}
+	w.Write([]byte("],\n \"net\":["))
 
 	for i := range net {
 		fin := "_"+net[i]
-		row := "<tr class=\"hov\">"
-		row += fmt.Sprint("<td class=\"netnam\">", net[i], "</td>")
-		if cnt:=common.Counter["rcvd"+fin]; cnt>0 {
-			row += fmt.Sprint("<td class=\"netbts\">", cnt, "</td>")
-			row += fmt.Sprint("<td class=\"netcnt\">", common.Counter["rbts"+fin], "</td>")
-		} else {
-			row += "<td><td>"
+		w.Write([]byte("{\"var\":\"" + net[i] + "\","))
+		w.Write([]byte(fmt.Sprint("\"rcvd\":", common.Counter["rcvd"+fin], ",")))
+		w.Write([]byte(fmt.Sprint("\"rbts\":", common.Counter["rbts"+fin], ",")))
+		w.Write([]byte(fmt.Sprint("\"sent\":", common.Counter["sent"+fin], ",")))
+		w.Write([]byte(fmt.Sprint("\"sbts\":", common.Counter["sbts"+fin], ",")))
+		w.Write([]byte(fmt.Sprint("\"hold\":", common.Counter["hold"+fin], ",")))
+		w.Write([]byte(fmt.Sprint("\"hbts\":", common.Counter["hbts"+fin], "}")))
+		if i<len(net)-1 {
+			w.Write([]byte(","))
 		}
-		if cnt:=common.Counter["sent"+fin]; cnt>0 {
-			row += fmt.Sprint("<td class=\"netbts\">", cnt, "</td>")
-			row += fmt.Sprint("<td class=\"netcnt\">", common.Counter["sbts"+fin], "</td>")
-		} else {
-			row += "<td><td>"
-		}
-		if cnt:=common.Counter["hold"+fin]; cnt>0 {
-			row += fmt.Sprint("<td class=\"netbts\">", cnt, "</td>")
-			row += fmt.Sprint("<td class=\"netcnt\">", common.Counter["hbts"+fin], "</td>")
-		} else {
-			row += "<td><td>"
-		}
-		row += "</tr>"
-		s = templ_add(s, "<!--NET_ROW-->", row)
 	}
-
-	write_html_head(w, r)
-	w.Write([]byte(s))
-	write_html_tail(w)
+	w.Write([]byte("]\n}\n"))
 }

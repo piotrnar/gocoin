@@ -104,22 +104,19 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func p_status(w http.ResponseWriter, r *http.Request) {
+func json_status(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
-	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<status>"))
+	w.Header()["Content-Type"] = []string{"application/json"}
 
-	w.Write([]byte("<lastblock>"))
+	w.Write([]byte("{"))
 	common.Last.Mutex.Lock()
-	w.Write([]byte(fmt.Sprint("<height>", common.Last.Block.Height, "</height>")))
-	w.Write([]byte(fmt.Sprint("<hash>", common.Last.Block.BlockHash.String(), "</hash>")))
-	w.Write([]byte(fmt.Sprint("<time>", common.Last.Block.Timestamp(), "</time>")))
-	w.Write([]byte(fmt.Sprint("<diff>", btc.GetDifficulty(common.Last.Block.Bits()), "</diff>")))
+	w.Write([]byte(fmt.Sprint("\"height\":", common.Last.Block.Height, ",")))
+	w.Write([]byte(fmt.Sprint("\"hash\":\"", common.Last.Block.BlockHash.String(), "\",")))
+	w.Write([]byte(fmt.Sprint("\"time\":", common.Last.Block.Timestamp(), ",")))
+	w.Write([]byte(fmt.Sprint("\"diff\":", btc.GetDifficulty(common.Last.Block.Bits()))))
 	common.Last.Mutex.Unlock()
-	w.Write([]byte("</lastblock>"))
-
-	w.Write([]byte("</status>"))
+	w.Write([]byte("}"))
 }

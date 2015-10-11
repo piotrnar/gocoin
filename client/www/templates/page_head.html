@@ -30,24 +30,27 @@ function quickswitchwallet() {
 <script>
 function refreshblock() {
 	var aj = ajax()
-	aj.onreadystatechange=function() {
-		if(aj.readyState==4) {
-			var cur_height = parseInt(xval(aj.responseXML, "height"))
-			if (isNaN(cur_height)) {
-				blno.title = ''
-				blno.innerText = "???"
-			} else {
-				blno.title = 'Diff ' + (parseFloat(xval(aj.responseXML, "diff"))/1e6).toFixed(0) + "M" +
-					" changing in " + (2016-(cur_height%2016)) + " blocks"
-				blno.innerText = cur_height
-				document.title = doc_title + ' @ ' + cur_height
-			}
-		}
+	aj.onerror=function() {
+		blno.innerText = "XXX"
+		setTimeout(refreshblock, 10000)
 	}
-	aj.open("GET","status.xml",true)
+	aj.onload=function() {
+		try {
+			var stat = JSON.parse(aj.responseText)
+			blno.title = 'Diff ' + (stat.diff/1e6).toFixed(0) + "M" +
+				" changing in " + (2016-(stat.height%2016)) + " blocks"
+			blno.innerText = stat.height
+			document.title = doc_title + ' @ ' + stat.height
+		} catch(e) {
+			blno.title = ''
+			blno.innerText = "???"
+			console.log(e)
+		}
+		setTimeout(refreshblock, 1000)
+	}
+	aj.open("GET","status.json",true)
 	aj.send(null)
 }
 refreshblock()
-setInterval(refreshblock, 10000)
 
 </script>
