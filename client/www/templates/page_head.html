@@ -37,14 +37,28 @@ function refreshblock() {
 	aj.onload=function() {
 		try {
 			var stat = JSON.parse(aj.responseText)
-			blno.title = 'Diff ' + (stat.diff/1e6).toFixed(0) + "M" +
-				" changing in " + (2016-(stat.height%2016)) + " blocks"
+			var difftxt = " changing in " + (2016-(stat.height%2016)) + " blocks"
 			blno.innerText = stat.height
+			blno.title = difftxt
 			document.title = doc_title + ' @ ' + stat.height
+			if (typeof(last_block_hash)!="undefined") {
+				console.log(stat)
+				last_block_hash.innerText = stat.hash
+				last_block_timestamp.innerText = tim2str(stat.timestamp)
+				last_block_height.innerText = stat.height
+				last_block_difficulty.innerText = bignum(stat.diff)
+				last_block_difficulty.title = difftxt
+				var ago = stat.time_now - stat.received
+				if (ago<120) {
+					last_block_received.innerText = ago + ' sec'
+				} else if (ago<2*3600) {
+					last_block_received.innerText = (ago/60.0).toFixed(1) + ' min'
+				}
+			}
 		} catch(e) {
-			blno.title = ''
+			blno.title = e
 			blno.innerText = "???"
-			console.log(e)
+			//console.log()
 		}
 		setTimeout(refreshblock, 1000)
 	}

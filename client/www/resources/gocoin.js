@@ -81,3 +81,21 @@ function pushtx() {
 function savecfg() {
 	document.location='/cfg?savecfg&sid='+sid
 }
+
+function bignum(n) {
+	if (n<10e3) {
+		return n
+	}
+	if (n<10e6) {
+		return (n/1e3).toFixed(2) + " K"
+	}
+	if (n<10e9) {
+		return (n/1e6).toFixed(2) + " M"
+	}
+	if (n<10e12) {
+		return (n/1e9).toFixed(2) + " G"
+	}
+	if (n<10e15) {
+		return (n/1e12).toFixed(2) + " P"
+	}
+}
