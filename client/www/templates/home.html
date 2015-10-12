@@ -50,8 +50,8 @@
 		<col width="30%">
 	</colgroup>
 	<tr><td>Hash Rate:
-		<td colspan="3"><b><--NETWORK_HASHRATE--></b> (see also <a href="http://bitcoin.sipa.be/"
-			target="_blank">bitcoin.sipa.be</a>)
+		<td colspan="1" align="right"><b><--NETWORK_HASHRATE--></b>
+		<td colspan="2" align="left"> - see <a href="http://bitcoin.sipa.be/" target="_blank">bitcoin.sipa.be</a>
 	<tr><td nowrap="nowrap">Connections:
 		<td align="right"><b id="bw_open_conns_total"></b>
 		<td align="right">outgoing <b id="bw_open_conns_out"></b>
@@ -66,22 +66,22 @@
 		<td align="right"><b id="bw_ul_total"></b> tot
 	<tr><td>Extrenal IPs:
 		<td colspan="3"><!--ONE_EXTERNAL_IP-->
-	<tr><td>Known Peers:
-		<td colspan="3"><b id="si_known_peers"></b>
 	</table>
 <td valign="top">
 	<h2>Others</h2>
 	<table>
 	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
+	<tr><td>Known Peers:<td><b id="si_known_peers"></b>
 	<tr><td>Node's Uptime:<td><b id="si_node_uptime"></b>
 	<tr><td>Mem Used MB:<td>
 		<b title="Go heap size" id="si_heap_size"></b> +
 		<b title="Extra mem taken by QDB" id="si_qdb_extramem"></b>
 		(<b title="Sys mem taken by Go" id="si_heap_sysmem"></b>)
 		&nbsp;[<a href="javascript:config('freemem')">FREE</a>]
-	<tr><td>NetMsgQueue:<td><b id="si_net_tx_qsize"></b> txs,&nbsp;<b id="si_net_block_qsize"></b> blocks
+	<tr><td>NetMsgQueue:<td><b id="si_net_tx_qsize"></b> txs,
+		&nbsp;<b id="si_net_block_qsize"></b> blocks,
+		&nbsp;<b id="si_blocks_cached"></b> cached
 	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b id="si_ecdsa_verify_cnt"></b>
-	<tr><td>Blocks Cached:<td><b id="si_blocks_cached"></b>
 	</table>
 </table>
 
