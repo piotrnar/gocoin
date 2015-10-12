@@ -35,7 +35,7 @@
 	<tr><td>Timestamp:<td><b id="last_block_timestamp"></b>
 		<td>Received:<td><b id="last_block_received"></b> ago
 	<tr><td>Height:<td><b id="last_block_height"></b>
-		<td>Difficulty:<td><b id="last_block_difficulty">{LAST_BLOCK_DIFF}</b>
+		<td>Difficulty:<td><b id="last_block_difficulty"></b>
 	</table>
 </td>
 </tr>
@@ -43,27 +43,27 @@
 <tr><td valign="top">
 	<h2>Network</h2>
 	<table>
-    <tr><td>Hash Rate:<td><b><--NETWORK_HASHRATE--></b> (see also <a href="http://bitcoin.sipa.be/"
-    target="_blank">bitcoin.sipa.be</a>)
+	<tr><td>Hash Rate:<td><b><--NETWORK_HASHRATE--></b> (see also <a href="http://bitcoin.sipa.be/"
+	target="_blank">bitcoin.sipa.be</a>)
 	<tr><td nowrap="nowrap">Connections:<td><b>{OPEN_CONNS_TOTAL}</b> (<b>{OPEN_CONNS_OUT}</b> outgoing + <b>{OPEN_CONNS_IN}</b> incoming)
 	<tr><td>Downloading:<td><b>{DL_SPEED_NOW}/{DL_SPEED_MAX}</b> KB/s, <b>{DL_TOTAL}</b> total
 	<tr><td>Uploading:<td><b>{UL_SPEED_NOW}/{UL_SPEED_MAX}</b> KB/s, <b>{UL_TOTAL}</b> total
 	<tr><td>Extrenal IPs:<td><!--ONE_EXTERNAL_IP-->
-	<tr><td>Known Peers:<td><b>{KNOWN_PEERS}</b>
+	<tr><td>Known Peers:<td><b id="si_known_peers"></b>
 	</table>
 <td valign="top">
 	<h2>Others</h2>
 	<table>
 	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
-	<tr><td>Node's Uptime:<td><b>{NODE_UPTIME}</b>
+	<tr><td>Node's Uptime:<td><b id="si_node_uptime"></b>
 	<tr><td>Mem Used MB:<td>
-		<b title="Go heap size"><!--HEAP_SIZE_MB--></b> +
-		<b title="Extra mem taken by QDB"><!--WDB_EXTRA_MB--></b>
-		(<b title="Sys mem taken by Go"><!--HEAPSYS_MB--></b>)
+		<b title="Go heap size" id="si_heap_size"></b> +
+		<b title="Extra mem taken by QDB" id="si_qdb_extramem"></b>
+		(<b title="Sys mem taken by Go" id="si_heap_sysmem"></b>)
 		&nbsp;[<a href="javascript:config('freemem')">FREE</a>]
-	<tr><td>NetMsgQueue:<td><b>{NET_TX_QSIZE}</b> txs,&nbsp;<b>{NET_BLOCK_QSIZE}</b> blocks
-	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b>{ECDSA_VERIFY_COUNT}</b>
-	<tr><td>Blocks Cached:<td><b>{BLOCKS_CACHED}</b>
+	<tr><td>NetMsgQueue:<td><b id="si_net_tx_qsize"></b> txs,&nbsp;<b id="si_net_block_qsize"></b> blocks
+	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b id="si_ecdsa_verify_cnt"></b>
+	<tr><td>Blocks Cached:<td><b id="si_blocks_cached"></b>
 	</table>
 </table>
 
@@ -71,4 +71,4 @@
 <br>
 <input type="button" value="Edit configuration" onclick="shwcfg()">
 </div>
-<div id="formcfg" style="display:none"><h2>Configuration</h2><a href="help?topic=cnfg">Help page for the format of the configuration data</a><br><table width="90%"><form method="post" action="cfg"><tr><td colspan="2">	<textarea name="configjson" style="width:100%" rows="9">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be applied.	<td align="right">	<input type="button" value="Cancel" onclick="location.reload()">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></form></table></div><script>function shwcfg() {	showcfg.style.display='none'	formcfg.style.display='block'}</script><div style="text-align:right"><br><form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');"><input type="button" value="Save configuration" onclick="savecfg()"><input type="hidden" name="shutdown" value="1"><input type="submit" value="Shutdown Node"></form></div>
+<div id="formcfg" style="display:none"><h2>Configuration</h2><a href="help?topic=cnfg">Help page for the format of the configuration data</a><br><table width="90%"><form method="post" action="cfg"><tr><td colspan="2">	<textarea name="configjson" style="width:100%" rows="9">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be applied.	<td align="right">	<input type="button" value="Cancel" onclick="location.reload()">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></form></table></div><script>function shwcfg() {	showcfg.style.display='none'	formcfg.style.display='block'}blno.addEventListener("lastblock", function(e) {	var stat = e.block	if (last_block_height.innerText != stat.height) {		last_block_hash.innerText = stat.hash		last_block_timestamp.innerText = tim2str(stat.timestamp)		last_block_height.innerText = stat.height		last_block_difficulty.innerText = bignum(stat.diff)	}	var ago = stat.time_now - stat.received	if (ago<120) {		last_block_received.innerText = ago + ' sec'	} else if (ago<2*3600) {		last_block_received.innerText = (ago/60.0).toFixed(1) + ' min'	}})</script><div style="text-align:right"><br><form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');"><input type="button" value="Save configuration" onclick="savecfg()"><input type="hidden" name="shutdown" value="1"><input type="submit" value="Shutdown Node"></form></div><script>function refreshsysinfo() {	var aj = ajax()	aj.onerror=function() {		setTimeout(refreshsysinfo, 5000)	}	aj.onload=function() {		try {			var si = JSON.parse(aj.responseText)			si_known_peers.innerText = si.known_peers			si_heap_size.innerText = si.heap_size>>20			si_heap_sysmem.innerText = si.heap_sysmem>>20			si_qdb_extramem.innerText = si.qdb_extramem>>20			si_net_block_qsize.innerText = si.net_block_qsize			si_net_tx_qsize.innerText = si.net_tx_qsize			si_ecdsa_verify_cnt.innerText = si.ecdsa_verify_cnt			si_blocks_cached.innerText = si.blocks_cached			var upsec = parseInt(si.node_uptime)			var hrs = parseInt(upsec/3600)			var mins = parseInt((upsec%3600)/60)			si_node_uptime.innerText = hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)		} catch(e) {			console.log(e)		}		setTimeout(refreshsysinfo, 1000)	}	aj.open("GET","system.json",true)	aj.send(null)}refreshsysinfo()</script>

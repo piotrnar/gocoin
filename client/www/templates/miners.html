@@ -44,3 +44,15 @@ with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 <br>
 Block versions: <!--BLOCK_VERSIONS--><br>
 Block size votes: <!--BLOCKSIZE_VOTES--><br>
+
+<script>
+// reaload page on new block
+var _lblo = 0
+blno.addEventListener("lastblock", function(e) {
+	if (_lblo==0) {
+		_lblo = e.block.height
+	} else if (e.block.height!=_lblo) {
+		location.reload()
+	}
+})
+</script>

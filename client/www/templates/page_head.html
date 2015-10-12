@@ -22,7 +22,7 @@ function quickswitchwallet() {
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">
-		<b id="blno">...</b> |
+		<b id="blno"></b> |
 		{MENU_RIGHT} |
 		<a href="{HELPURL}">Help</a></td>
 	</tr></table>
@@ -37,23 +37,16 @@ function refreshblock() {
 	aj.onload=function() {
 		try {
 			var stat = JSON.parse(aj.responseText)
-			var difftxt = " changing in " + (2016-(stat.height%2016)) + " blocks"
-			blno.innerText = stat.height
-			blno.title = difftxt
-			document.title = doc_title + ' @ ' + stat.height
-			if (typeof(last_block_hash)!="undefined") {
-				console.log(stat)
-				last_block_hash.innerText = stat.hash
-				last_block_timestamp.innerText = tim2str(stat.timestamp)
-				last_block_height.innerText = stat.height
-				last_block_difficulty.innerText = bignum(stat.diff)
-				last_block_difficulty.title = difftxt
-				var ago = stat.time_now - stat.received
-				if (ago<120) {
-					last_block_received.innerText = ago + ' sec'
-				} else if (ago<2*3600) {
-					last_block_received.innerText = (ago/60.0).toFixed(1) + ' min'
-				}
+			var e = document.createEvent("Event")
+			e.initEvent("lastblock", false, false)
+			e.block = stat
+			blno.dispatchEvent(e)
+
+			if (blno.innerText != stat.height) {
+				var difftxt = "Difficulty changing in " + (2016-(stat.height%2016)) + " blocks"
+				blno.innerText = stat.height
+				blno.title = difftxt
+				document.title = doc_title + ' @ ' + stat.height
 			}
 		} catch(e) {
 			blno.title = e

@@ -73,7 +73,7 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		} else {
 			s = strings.Replace(s, "{WASTED_BLOCKS}", "", 1)
 		}
-		s = strings.Replace(s, "{TIME_RECEIVED_SEC}", fmt.Sprint(rb.Time.Unix()), 1)
+		s = strings.Replace(s, "{TIME_RECEIVED}", rb.Time.Format("15:04:05"), 1)
 
 		blks = templ_add(blks, "<!--BLOCK_ROW-->", s)
 

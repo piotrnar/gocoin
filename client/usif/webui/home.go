@@ -44,20 +44,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	}
 	wallet.BalanceMutex.Unlock()
 
-	common.Last.Mutex.Lock()
-	s = strings.Replace(s, "{LAST_BLOCK_HASH}", common.Last.Block.BlockHash.String(), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_HEIGHT}", fmt.Sprint(common.Last.Block.Height), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_TIME}", time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_DIFF}", common.NumberToString(btc.GetDifficulty(common.Last.Block.Bits())), 1)
-	s = strings.Replace(s, "{LAST_BLOCK_RCVD}", time.Now().Sub(common.Last.Time).String(), 1)
-	common.Last.Mutex.Unlock()
 	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
-
-	s = strings.Replace(s, "{BLOCKS_CACHED}", fmt.Sprint(len(network.CachedBlocks)), 1)
-	s = strings.Replace(s, "{KNOWN_PEERS}", fmt.Sprint(peersdb.PeerDB.Count()), 1)
-	s = strings.Replace(s, "{NODE_UPTIME}", time.Now().Sub(common.StartTime).String(), 1)
-	s = strings.Replace(s, "{NET_BLOCK_QSIZE}", fmt.Sprint(len(network.NetBlocks)), 1)
-	s = strings.Replace(s, "{NET_TX_QSIZE}", fmt.Sprint(len(network.NetTxs)), 1)
 
 	network.Mutex_net.Lock()
 	s = strings.Replace(s, "{OPEN_CONNS_TOTAL}", fmt.Sprint(len(network.OpenCons)), 1)
@@ -86,11 +73,6 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	}
 	network.ExternalIpMutex.Unlock()
 
-	al, sy := sys.MemUsed()
-	s = strings.Replace(s, "<!--HEAP_SIZE_MB-->", fmt.Sprint(al>>20), 1)
-	s = strings.Replace(s, "<!--HEAPSYS_MB-->", fmt.Sprint(sy>>20), 1)
-	s = strings.Replace(s, "<!--WDB_EXTRA_MB-->", fmt.Sprint(qdb.ExtraMemoryConsumed>>20), 1)
-	s = strings.Replace(s, "{ECDSA_VERIFY_COUNT}", fmt.Sprint(btc.EcdsaVerifyCnt), 1)
 	s = strings.Replace(s, "<!--NEW_BLOCK_BEEP-->", fmt.Sprint(common.CFG.Beeps.NewBlock), 1)
 
 	common.LockCfg()
@@ -121,4 +103,27 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"diff\":", btc.GetDifficulty(common.Last.Block.Bits()))))
 	common.Last.Mutex.Unlock()
 	w.Write([]byte("}"))
+}
+
+
+func json_system(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Write([]byte("{"))
+
+	al, sy := sys.MemUsed()
+	w.Write([]byte(fmt.Sprint("\"blocks_cached\":", len(network.CachedBlocks), ",")))
+	w.Write([]byte(fmt.Sprint("\"known_peers\":", peersdb.PeerDB.Count(), ",")))
+	w.Write([]byte(fmt.Sprint("\"node_uptime\":", time.Now().Sub(common.StartTime).Seconds(), ",")))
+	w.Write([]byte(fmt.Sprint("\"net_block_qsize\":\"", len(network.NetBlocks), "\",")))
+	w.Write([]byte(fmt.Sprint("\"net_tx_qsize\":\"", len(network.NetTxs), "\",")))
+	w.Write([]byte(fmt.Sprint("\"heap_size\":", al, ",")))
+	w.Write([]byte(fmt.Sprint("\"heap_sysmem\":", sy, ",")))
+	w.Write([]byte(fmt.Sprint("\"qdb_extramem\":", qdb.ExtraMemoryConsumed, ",")))
+	w.Write([]byte(fmt.Sprint("\"ecdsa_verify_cnt\":", btc.EcdsaVerifyCnt, "")))
+
+	w.Write([]byte("}\n"))
 }

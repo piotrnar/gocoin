@@ -241,6 +241,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
 	http.HandleFunc("/counts.json", json_counts)
+	http.HandleFunc("/system.json", json_system)
 
 	http.ListenAndServe(iface, nil)
 }

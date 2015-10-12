@@ -74,3 +74,15 @@ Switch wallet: <!--ONEWALLET-->
 </form>
 </table>
 </div>
+
+<script>
+// reaload page on new block
+var _lblo = 0
+blno.addEventListener("lastblock", function(e) {
+	if (_lblo==0) {
+		_lblo = e.block.height
+	} else if (e.block.height!=_lblo) {
+		location.reload()
+	}
+})
+</script>
