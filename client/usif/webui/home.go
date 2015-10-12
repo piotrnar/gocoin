@@ -46,24 +46,6 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
 
-	network.Mutex_net.Lock()
-	s = strings.Replace(s, "{OPEN_CONNS_TOTAL}", fmt.Sprint(len(network.OpenCons)), 1)
-	s = strings.Replace(s, "{OPEN_CONNS_OUT}", fmt.Sprint(network.OutConsActive), 1)
-	s = strings.Replace(s, "{OPEN_CONNS_IN}", fmt.Sprint(network.InConsActive), 1)
-	network.Mutex_net.Unlock()
-
-	common.LockBw()
-	common.TickRecv()
-	common.TickSent()
-	s = strings.Replace(s, "{DL_SPEED_NOW}", fmt.Sprint(common.DlBytesPrevSec>>10), 1)
-	s = strings.Replace(s, "{DL_SPEED_MAX}", fmt.Sprint(common.DownloadLimit>>10), 1)
-	s = strings.Replace(s, "{DL_TOTAL}", common.BytesToString(common.DlBytesTotal), 1)
-	s = strings.Replace(s, "{UL_SPEED_NOW}", fmt.Sprint(common.UlBytesPrevSec>>10), 1)
-	s = strings.Replace(s, "{UL_SPEED_MAX}", fmt.Sprint(common.UploadLimit>>10), 1)
-	s = strings.Replace(s, "{UL_TOTAL}", common.BytesToString(common.UlBytesTotal), 1)
-	common.UnlockBw()
-
-
 	network.ExternalIpMutex.Lock()
 	for ip, rec := range network.ExternalIp4 {
 		ips := fmt.Sprintf("<b title=\"%d times. Last seen %d min ago\">%d.%d.%d.%d</b> ",
@@ -124,6 +106,35 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"heap_sysmem\":", sy, ",")))
 	w.Write([]byte(fmt.Sprint("\"qdb_extramem\":", qdb.ExtraMemoryConsumed, ",")))
 	w.Write([]byte(fmt.Sprint("\"ecdsa_verify_cnt\":", btc.EcdsaVerifyCnt, "")))
+
+	w.Write([]byte("}\n"))
+}
+
+
+func json_bwidth(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Write([]byte("{"))
+
+	common.LockBw()
+	common.TickRecv()
+	common.TickSent()
+	w.Write([]byte(fmt.Sprint("\"dl_speed_now\":", common.DlBytesPrevSec, ",")))
+	w.Write([]byte(fmt.Sprint("\"dl_speed_max\":", common.DownloadLimit, ",")))
+	w.Write([]byte(fmt.Sprint("\"dl_total\":", common.DlBytesTotal, ",")))
+	w.Write([]byte(fmt.Sprint("\"ul_speed_now\":\"", common.UlBytesPrevSec, "\",")))
+	w.Write([]byte(fmt.Sprint("\"ul_speed_max\":\"", common.UploadLimit, "\",")))
+	w.Write([]byte(fmt.Sprint("\"ul_total\":", common.UlBytesTotal, ",")))
+	common.UnlockBw()
+
+	network.Mutex_net.Lock()
+	w.Write([]byte(fmt.Sprint("\"open_conns_total\":", len(network.OpenCons), ",")))
+	w.Write([]byte(fmt.Sprint("\"open_conns_out\":", network.OutConsActive, ",")))
+	w.Write([]byte(fmt.Sprint("\"open_conns_in\":", network.InConsActive, "")))
+	network.Mutex_net.Unlock()
 
 	w.Write([]byte("}\n"))
 }
