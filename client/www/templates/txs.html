@@ -38,14 +38,25 @@
 <h2>Memory Pool:</h2>
 <table width="100%"><tr>
 <td valign="top" width="*">
-	<table>
-		<tr><td>Accepted transactions:<td><input type="button" id="but2s" onclick="show_txs2s('')">
-		<b>{T2S_SIZE}</b> [<a href="javascript:show_txs2s('?ownonly=1')">own</a>]
-		<tr><td>UTXOs spent in memory:<td><b id="outspent"></b> (avg. <b id="avgoutspertx"></b> / tx)
-		<tr><td>Rejected transactions:<td><input type="button" id="butre" value=" {TRE_CNT} " onclick="show_txsre()">
-		<b>{TRE_SIZE}</b>
-		<tr><td>Transactions waiting for inputs:<td><input type="button" id="butw4i" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
-		<tr><td>Transactions being processed:<td><b>{PTR1_CNT}</b> / <b>{PTR2_CNT}</b>
+	<table width="85%">
+	<colgroup>
+		<col width="50%">
+		<col width="25%">
+		<col width="25%">
+	</colgroup>
+		<tr><td>Accepted transactions:
+			<td><input type="button" id="but2s" onclick="show_txs2s('')">
+			<td align="right"><b id="ts_t2s_size"></b>
+		<tr><td>UTXOs spent in memory:
+			<td><b id="outspent"></b>
+			<td align="right">avg. <b id="avgoutspertx"></b> / tx
+		<tr><td>Rejected transactions:
+			<td><input type="button" id="butre" value="" onclick="show_txsre()">
+			<td align="right"><b id="ts_tre_size"></b>
+		<tr><td>Waiting for inputs:<td colspan="2"><input type="button" id="butw4i" value=" {AWAITING_INPUTS} " onclick="show_txw4i()">
+		<tr><td>Being processed:
+			<td><b id="ts_ptr1_cnt"></b> / <b id="ts_ptr2_cnt"></b>
+			<td><input type="button" onclick="show_txs2s('?ownonly=1')" value="Own TXs">
 	</table>
 <td valign="top" width="*">
 	<table>
@@ -425,15 +436,37 @@ function show_txw4i() {
 	xmlHttp.send(null);
 }
 
-var t2s_cnt = {T2S_CNT}
-var spent_outs_cnt = {SPENT_OUTS_CNT}
+</script>
 
-but2s.value = t2s_cnt
-outspent.innerText = spent_outs_cnt
-if (t2s_cnt>0) {
-	avgoutspertx.innerText = (spent_outs_cnt/t2s_cnt).toFixed(2)
-} else {
-	avgoutspertx.innerText = '?'
+<script>
+function refreshtxstat() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshtxstat, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var ts = JSON.parse(aj.responseText)
+			ts_t2s_size.innerText = bignum(ts.t2s_size)+'B'
+			but2s.value = ts.t2s_cnt
+			outspent.innerText = ts.spent_outs_cnt
+			if (ts.t2s_cnt>0) {
+				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
+			} else {
+				avgoutspertx.innerText = '?'
+			}
+			butre.value = ts.tre_cnt
+			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
+			butw4i.value = ts.awaiting_inputs
+			ts_ptr1_cnt.innerText = ts.ptr1_cnt
+			ts_ptr2_cnt.innerText = ts.ptr2_cnt
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshtxstat, 1000)
+	}
+	aj.open("GET","txstat.json",true)
+	aj.send(null)
 }
-
+refreshtxstat()
 </script>

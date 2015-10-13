@@ -37,6 +37,7 @@ var (
 	// The actual memory pool:
 	TransactionsToSend map[[btc.Uint256IdxLen]byte] *OneTxToSend =
 		make(map[[btc.Uint256IdxLen]byte] *OneTxToSend)
+	TransactionsToSendSize uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
 	SpentOutputs map[uint64] [btc.Uint256IdxLen]byte =
@@ -45,7 +46,7 @@ var (
 	// Transactions that we downloaded, but rejected:
 	TransactionsRejected map[[btc.Uint256IdxLen]byte] *OneTxRejected =
 		make(map[[btc.Uint256IdxLen]byte] *OneTxRejected)
-
+	TransactionsRejectedSize uint64
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
 	TransactionsPending map[[btc.Uint256IdxLen]byte] bool =
@@ -133,6 +134,7 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 	rec.Size = uint32(size)
 	rec.Reason = why
 	TransactionsRejected[id.BIdx()] = rec
+	TransactionsRejectedSize += uint64(rec.Size)
 	return rec
 }
 
@@ -316,6 +318,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp, Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
+	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {
 		SpentOutputs[spent[i]] = tx.Hash.BIdx()
 	}
@@ -390,6 +393,7 @@ func deleteToSend(rec *OneTxToSend) {
 	for i := range rec.Spent {
 		delete(SpentOutputs, rec.Spent[i])
 	}
+	TransactionsToSendSize -= uint64(len(rec.Data))
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
@@ -485,6 +489,7 @@ func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
 				delete(WaitingForInputs, tr.Wait4Input.missingTx.BIdx())
 			}
 		}
+		TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
 		delete(TransactionsRejected, bidx)
 	}
 }

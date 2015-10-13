@@ -45,27 +45,6 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := load_template("txs.html")
-	network.TxMutex.Lock()
-
-	var sum uint64
-	for _, v := range network.TransactionsToSend {
-		sum += uint64(len(v.Data))
-	}
-	s = strings.Replace(s, "{T2S_CNT}", fmt.Sprint(len(network.TransactionsToSend)), 1)
-	s = strings.Replace(s, "{T2S_SIZE}", common.BytesToString(sum), 1)
-
-	sum = 0
-	for _, v := range network.TransactionsRejected {
-		sum += uint64(v.Size)
-	}
-	s = strings.Replace(s, "{TRE_CNT}", fmt.Sprint(len(network.TransactionsRejected)), 1)
-	s = strings.Replace(s, "{TRE_SIZE}", common.BytesToString(sum), 1)
-	s = strings.Replace(s, "{PTR1_CNT}", fmt.Sprint(len(network.TransactionsPending)), 1)
-	s = strings.Replace(s, "{PTR2_CNT}", fmt.Sprint(len(network.NetTxs)), 1)
-	s = strings.Replace(s, "{SPENT_OUTS_CNT}", fmt.Sprint(len(network.SpentOutputs)), 1)
-	s = strings.Replace(s, "{AWAITING_INPUTS}", fmt.Sprint(len(network.WaitingForInputs)), 1)
-
-	network.TxMutex.Unlock()
 
 	wg.Wait()
 	if txloadresult!="" {
@@ -310,4 +289,28 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintln(w, "Not found")
 	}
+}
+
+
+func json_txstat(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Write([]byte("{"))
+
+	network.TxMutex.Lock()
+
+	w.Write([]byte(fmt.Sprint("\"t2s_cnt\":", len(network.TransactionsToSend), ",")))
+	w.Write([]byte(fmt.Sprint("\"t2s_size\":", network.TransactionsToSendSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(network.TransactionsRejected), ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_size\":", network.TransactionsRejectedSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(network.TransactionsPending), ",")))
+	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
+	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(network.SpentOutputs), ",")))
+	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(network.WaitingForInputs), "")))
+
+	network.TxMutex.Unlock()
+
+	w.Write([]byte("}\n"))
 }
