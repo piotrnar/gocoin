@@ -1,5 +1,4 @@
 Client:
-* Check for missing "if !ipchecker(r) ..." in WebUI page handlers
 * Remove confirned TXs from the rejected list
 * Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
