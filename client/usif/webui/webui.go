@@ -66,6 +66,10 @@ func templ_add(tmpl string, id string, val string) string {
 
 
 func p_webui(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
 	if len(pth)==2 {
 		dat, _ := ioutil.ReadFile("www/resources/"+pth[1])
