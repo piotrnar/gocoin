@@ -274,8 +274,7 @@ func SetListenTCP(yes bool, global bool) {
 		atomic.StoreUint32(&listen_tcp, 0)
 	}
 	if global {
-		mutex_cfg.Lock()
+		// Make sure mutex_cfg is locked while calling this one
 		CFG.Net.ListenTCP = yes
-		mutex_cfg.Unlock()
 	}
 }

@@ -4,6 +4,7 @@
 * Wallet: Added support for Type-4 wallet, which is based on BIP-32 keys derivation (HD wallets)
 * Lib: Some changes to btc.WalletHD API
 * WebUI: Real time UI refresh (without reloading the pages)
+* Client/WebUI: Fixed double bug that occurred when switching "Listening for incoming TCP connections" on/off
 
 1.2.0 - 2015-07-31
 * Lib: enforce blocks version 3, starting from #364000
