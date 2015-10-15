@@ -2,7 +2,7 @@ package secp256k1
 
 const WINDOW_A = 5
 const WINDOW_G = 14
-const FORCE_LOW_S = true
+const FORCE_LOW_S = true // At the output of the Sign() function
 
 var TheCurve struct {
 	Order, half_order Number
