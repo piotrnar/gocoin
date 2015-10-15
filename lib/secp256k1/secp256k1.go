@@ -2,6 +2,7 @@ package secp256k1
 
 const WINDOW_A = 5
 const WINDOW_G = 14
+const FORCE_LOW_S = true
 
 var TheCurve struct {
 	Order, half_order Number

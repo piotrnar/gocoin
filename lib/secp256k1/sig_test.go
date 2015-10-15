@@ -96,14 +96,24 @@ func TestSigSign(t *testing.T) {
 	if res != 1 {
 		t.Error("res failed", res)
 	}
-	if recid != 1 {
-		t.Error("recid failed", recid)
+	if FORCE_LOW_S {
+		if recid != 0 {
+			t.Error("recid failed", recid)
+		}
+	} else {
+		if recid != 1 {
+			t.Error("recid failed", recid)
+		}
 	}
 	non.SetHex("98f9d784ba6c5c77bb7323d044c0fc9f2b27baa0a5b0718fe88596cc56681980")
 	if sig.R.Cmp(&non.Int)!=0 {
 		t.Error("R failed", sig.R.String())
 	}
-	non.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	if FORCE_LOW_S {
+		non.SetHex("1ca662aaefd6cc958ba4604fea999db133a75bf34c13334dabac7124ff0cfcc1")
+	} else {
+		non.SetHex("E3599D551029336A745B9FB01566624D870780F363356CEE1425ED67D1294480")
+	}
 	if sig.S.Cmp(&non.Int)!=0 {
 		t.Error("S failed", sig.S.String())
 	}

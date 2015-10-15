@@ -5,6 +5,7 @@
 * Lib: Some changes to btc.WalletHD API
 * WebUI: Real time UI refresh (without reloading the pages)
 * Client/WebUI: Fixed double bug that occurred when switching "Listening for incoming TCP connections" on/off
+* secp256k1: Force Low S values in ECDSA Sign function
 
 1.2.0 - 2015-07-31
 * Lib: enforce blocks version 3, starting from #364000
