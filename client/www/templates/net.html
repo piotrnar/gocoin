@@ -1,11 +1,15 @@
 <script>
+var raw_timer = null
 function raw_load(id) {
+	if (raw_timer!=null) {
+		clearTimeout(raw_timer)
+		raw_timer = null
+	}
 	var aj = ajax()
-	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
-			document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
-			location.href = "#rawdiv";
-		}
+	aj.onload=function() {
+		document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
+		location.href = "#rawdiv";
+		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
 	xmlHttp.open("GET","raw_net?id="+id, true);
 	xmlHttp.send(null);
