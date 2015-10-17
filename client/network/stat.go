@@ -54,7 +54,7 @@ func (v *OneConnection) Stats() (s string) {
 		v.Mutex.Lock()
 		s += fmt.Sprintln("Connected at", v.ConnectedAt.Format("2006-01-02 15:04:05"))
 		if v.Node.Version!=0 {
-			s += fmt.Sprintln("Node common.Version:", v.Node.Version)
+			s += fmt.Sprintln("Node Version:", v.Node.Version)
 			s += fmt.Sprintln("User Agent:", v.Node.Agent)
 			s += fmt.Sprintln("Chain Height:", v.Node.Height)
 			s += fmt.Sprintf("Reported IP: %d.%d.%d.%d\n", byte(v.Node.ReportedIp4>>24), byte(v.Node.ReportedIp4>>16),
