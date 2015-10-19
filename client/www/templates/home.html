@@ -89,4 +89,114 @@
 <br>
 <input type="button" value="Edit configuration" onclick="shwcfg()">
 </div>
-<div id="formcfg" style="display:none"><h2>Configuration</h2><a href="help?topic=cnfg">Help page for the format of the configuration data</a><br><table width="90%"><form method="post" action="cfg"><tr><td colspan="2">	<textarea name="configjson" style="width:100%" rows="9">{CONFIG_FILE}</textarea><tr><td align="center">	<i>Please note that some config params require a restart in order to be applied.	<td align="right">	<input type="button" value="Cancel" onclick="location.reload()">	<input type="submit" name="apply" value="Apply">	<input type="submit" name="save" value="Apply & Save"></form></table></div><script>function shwcfg() {	showcfg.style.display='none'	formcfg.style.display='block'}blno.addEventListener("lastblock", function(e) {	var stat = e.block	if (last_block_height.innerText != stat.height) {		last_block_hash.innerText = stat.hash		last_block_timestamp.innerText = tim2str(stat.timestamp)		last_block_height.innerText = stat.height		last_block_difficulty.innerText = bignum(stat.diff)	}	var ago = stat.time_now - stat.received	if (ago<120) {		last_block_received.innerText = ago + ' sec'	} else if (ago<2*3600) {		last_block_received.innerText = (ago/60.0).toFixed(1) + ' min'	}})</script><div style="text-align:right"><br><form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');"><input type="button" value="Save configuration" onclick="savecfg()"><input type="hidden" name="shutdown" value="1"><input type="submit" value="Shutdown Node"></form></div><script>function refreshsysinfo() {	var aj = ajax()	aj.onerror=function() {		setTimeout(refreshsysinfo, 5000)	}	aj.onload=function() {		try {			console.log(aj.responseText)			var si = JSON.parse(aj.responseText)			si_known_peers.innerText = si.known_peers			si_heap_size.innerText = (si.heap_size/0x100000).toFixed(0)			si_heap_sysmem.innerText = (si.heap_sysmem/0x100000).toFixed(0)			si_qdb_extramem.innerText = (si.qdb_extramem/0x100000).toFixed(0)			si_net_block_qsize.innerText = si.net_block_qsize			si_net_tx_qsize.innerText = si.net_tx_qsize			si_ecdsa_verify_cnt.innerText = si.ecdsa_verify_cnt			si_blocks_cached.innerText = si.blocks_cached			var upsec = parseInt(si.node_uptime)			var hrs = parseInt(upsec/3600)			var mins = parseInt((upsec%3600)/60)			si_node_uptime.innerText = hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)		} catch(e) {			console.log(e)		}		setTimeout(refreshsysinfo, 1000)	}	aj.open("GET","system.json",true)	aj.send(null)}refreshsysinfo()</script><script>function refreshbwinfo() {	var aj = ajax()	aj.onerror=function() {		setTimeout(refreshbwinfo, 5000)	}	aj.onload=function() {		try {			var bw = JSON.parse(aj.responseText)			bw_open_conns_total.innerText = bw.open_conns_total			bw_open_conns_out.innerText = bw.open_conns_out			bw_open_conns_in.innerText = bw.open_conns_in			bw_dl_speed_now.innerText = bw.dl_speed_now >> 10			bw_dl_speed_max.innerText = bw.dl_speed_max >> 10			bw_dl_total.innerText = bignum(bw.dl_total)+'B'			bw_ul_speed_now.innerText = bw.ul_speed_now >> 10			bw_ul_speed_max.innerText = bw.ul_speed_max >> 10			bw_ul_total.innerText = bignum(bw.ul_total)+'B'		} catch(e) {			console.log(e)		}		setTimeout(refreshbwinfo, 1000)	}	aj.open("GET","bwidth.json",true)	aj.send(null)}refreshbwinfo()</script>
+<div id="formcfg" style="display:none">
+<h2>Configuration</h2>
+<a href="help?topic=cnfg">Help page for the format of the configuration data</a><br>
+<table width="90%">
+<form method="post" action="cfg">
+<tr><td colspan="2">
+	<textarea name="configjson" style="width:100%" rows="9">{CONFIG_FILE}</textarea>
+<tr><td align="center">
+	<i>Please note that some config params require a restart in order to be applied.
+	<td align="right">
+	<input type="button" value="Cancel" onclick="location.reload()">
+	<input type="submit" name="apply" value="Apply">
+	<input type="submit" name="save" value="Apply & Save">
+</form>
+</table>
+</div>
+<script>
+function shwcfg() {
+	showcfg.style.display='none'
+	formcfg.style.display='block'
+}
+
+
+blno.addEventListener("lastblock", function(e) {
+	var stat = e.block
+	if (last_block_height.innerText != stat.height) {
+		last_block_hash.innerText = stat.hash
+		last_block_timestamp.innerText = tim2str(stat.timestamp)
+		last_block_height.innerText = stat.height
+		last_block_difficulty.innerText = bignum(stat.diff)
+	}
+	var ago = stat.time_now - stat.received
+	if (ago<120) {
+		last_block_received.innerText = ago + ' sec'
+	} else if (ago<2*3600) {
+		last_block_received.innerText = (ago/60.0).toFixed(1) + ' min'
+	}
+})
+
+</script>
+<div style="text-align:right">
+<br>
+<form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
+<input type="button" value="Save configuration" onclick="savecfg()">
+<input type="hidden" name="shutdown" value="1">
+<input type="submit" value="Shutdown Node">
+</form>
+</div>
+
+<script>
+function refreshsysinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshsysinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			console.log(aj.responseText)
+			var si = JSON.parse(aj.responseText)
+			si_known_peers.innerText = si.known_peers
+			si_heap_size.innerText = (si.heap_size/0x100000).toFixed(0)
+			si_heap_sysmem.innerText = (si.heap_sysmem/0x100000).toFixed(0)
+			si_qdb_extramem.innerText = (si.qdb_extramem/0x100000).toFixed(0)
+			si_net_block_qsize.innerText = si.net_block_qsize
+			si_net_tx_qsize.innerText = si.net_tx_qsize
+			si_ecdsa_verify_cnt.innerText = si.ecdsa_verify_cnt
+			si_blocks_cached.innerText = si.blocks_cached
+
+			var upsec = parseInt(si.node_uptime)
+			var hrs = parseInt(upsec/3600)
+			var mins = parseInt((upsec%3600)/60)
+			si_node_uptime.innerText = hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshsysinfo, 1000)
+	}
+	aj.open("GET","system.json",true)
+	aj.send(null)
+}
+refreshsysinfo()
+</script>
+
+<script>
+function refreshbwinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshbwinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var bw = JSON.parse(aj.responseText)
+			bw_open_conns_total.innerText = bw.open_conns_total
+			bw_open_conns_out.innerText = bw.open_conns_out
+			bw_open_conns_in.innerText = bw.open_conns_in
+			bw_dl_speed_now.innerText = bw.dl_speed_now >> 10
+			bw_dl_speed_max.innerText = bw.dl_speed_max >> 10
+			bw_dl_total.innerText = bignum(bw.dl_total)+'B'
+			bw_ul_speed_now.innerText = bw.ul_speed_now >> 10
+			bw_ul_speed_max.innerText = bw.ul_speed_max >> 10
+			bw_ul_total.innerText = bignum(bw.ul_total)+'B'
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshbwinfo, 1000)
+	}
+	aj.open("GET","bwidth.json",true)
+	aj.send(null)
+}
+refreshbwinfo()
+</script>
