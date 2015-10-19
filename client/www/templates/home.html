@@ -146,7 +146,6 @@ function refreshsysinfo() {
 	}
 	aj.onload=function() {
 		try {
-			console.log(aj.responseText)
 			var si = JSON.parse(aj.responseText)
 			si_known_peers.innerText = si.known_peers
 			si_heap_size.innerText = (si.heap_size/0x100000).toFixed(0)
