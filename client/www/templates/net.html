@@ -177,7 +177,7 @@ function refreshconnections() {
 			}
 
 			if (curr_monitor_id!=-1 && !id_found) {
-				console.log(curr_monitor_id, "not found - hide")
+				//console.log(curr_monitor_id, "not found - hide")
 				hide_peer_info()
 			}
 
@@ -186,7 +186,7 @@ function refreshconnections() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(refreshconnections, 1000)
+		setTimeout(refreshconnections, 2500)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
