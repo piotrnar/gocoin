@@ -1,10 +1,23 @@
 <script>
 var raw_timer = null
-function raw_load(id) {
+var curr_monitor_id = -1
+
+function hide_peer_info() {
 	if (raw_timer!=null) {
 		clearTimeout(raw_timer)
 		raw_timer = null
 	}
+	document.getElementById('rawdiv').innerHTML = ''
+	curr_monitor_id = -1
+}
+
+function raw_load(id) {
+	//console.log(this)
+	if (raw_timer!=null) {
+		clearTimeout(raw_timer)
+		raw_timer = null
+	}
+	curr_monitor_id = id
 	var aj = ajax()
 	aj.onload=function() {
 		document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
@@ -14,26 +27,15 @@ function raw_load(id) {
 	xmlHttp.open("GET","raw_net?id="+id, true);
 	xmlHttp.send(null);
 }
+
 function net_drop(id) {
 	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
 		document.location = 'cfg?drop='+id+'&sid='+sid
 	}
+	return false
 }
-document.addEventListener('DOMContentLoaded', function() {
-	function onc(c,id) {
-		c.onclick = function() {raw_load(id)}
-	}
-	for (var r=1; r<netcons.rows.length; r++) {
-		var id=parseInt(netcons.rows[r].id)
-		for (var c=0; c<12; c++) {
-			netcons.rows[r].cells[c].title="Connection Details"
-			netcons.rows[r].cells[c].style.cursor="pointer"
-			onc(netcons.rows[r].cells[c], id)
-		}
-	}
-})
 </script>
-<b>{OUT_CONNECTIONS}</b> outgoing and <b>{IN_CONNECTIONS}</b> incoming connections<br>
+<b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
  &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
@@ -48,8 +50,8 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="80"> <!--total rcvd-->
 <col width="80"> <!--total sent-->
 <col width="50"> <!--vers-->
-<col width="100"> <!--agent-->
 <col> <!--agent-->
+<col width="50"> <!--blocks in progress-->
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
@@ -63,4 +65,131 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 </tr>
 <!--PEER_ROW-->
 </table>
-<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
+<a name="rawdiv"></a><pre id="rawdiv" class="mono" onclick="hide_peer_info()" title="Click to hide"></pre>
+<script>
+function refreshconnections() {
+	function onc(c,id) {
+		c.onclick = function() {raw_load(id)}
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshconnections, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var cs = JSON.parse(aj.responseText)
+			//console.log(cs)
+			while (netcons.rows.length>1) netcons.deleteRow(1)
+
+			var ins=0, outs=0
+			var id_found = false
+
+			for (var i=0; i<cs.length; i++) {
+				var td, row = netcons.insertRow(-1)
+				var id = cs[i].Id
+
+				if (curr_monitor_id==id) {
+					id_found = true
+				}
+
+				row.id = id
+				row.className = 'hov small'
+
+				// id
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = '&nbsp;<b>'+id+'</b>&nbsp;'
+
+				// addr
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].PeerIp
+
+				// direction
+				td = row.insertCell(-1)
+				if (cs[i].Incomming) {
+					td.innerHTML = "<img src=\"webui/incoming.png\">"
+					ins++
+				} else {
+					td.innerHTML = "<img src=\"webui/outgoing.png\">"
+					outs++
+				}
+
+				// ping
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = '<i>'+cs[i].Ping+'&nbsp;ms</i>'
+
+				// last_bts_rcvd
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].LastBtsRcvd
+
+				// last_cmd_rcvd
+				td = row.insertCell(-1)
+				td.className = 'mono'
+				td.innerHTML = cs[i].LastCmdRcvd
+
+				// last_bts_sent
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].LastBtsSent
+
+				// last_cmd_sent
+				td = row.insertCell(-1)
+				td.className = 'mono'
+				td.innerHTML = cs[i].LastCmdSent
+
+				// total_rcvd
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
+
+				// total_sent
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = bignum(cs[i].BytesSent)+'B'
+
+				// node_version
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].Node.Version
+
+				// user agent
+				td = row.insertCell(-1)
+				td.style.overay = 'auto'
+				td.innerHTML = cs[i].Node.Agent
+
+				// blocks in progress
+				td = row.insertCell(-1)
+				td.innerHTML = cs[i].BlksInProgress + ' ' + cs[i].SendBufLen
+
+				// drop conn
+				td = row.insertCell(-1)
+				td.style.width = '20px'
+				td.style.textAlign = 'right'
+				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')">'
+
+				onc(row, id)
+				row.title = "Connection Details"
+				row.style.cursor = 'pointer'
+			}
+
+			if (curr_monitor_id!=-1 && !id_found) {
+				console.log(curr_monitor_id, "not found - hide")
+				hide_peer_info()
+			}
+
+			in_connections.innerText = ins
+			out_connections.innerText = outs
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshconnections, 1000)
+	}
+	aj.open("GET","netcon.json",true)
+	aj.send(null)
+}
+refreshconnections()
+</script>

@@ -53,7 +53,7 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
-			/*
+			/* dupa
 			if msg:=contains_message(bl.Txs[i]); msg!=nil {
 				for xx:=range msg {
 					if msg[xx]<' ' || msg[xx]>127 {

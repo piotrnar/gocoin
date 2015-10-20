@@ -46,5 +46,6 @@
 ["21 Inc.", "", "1CdJi2xRTXJF6CEJqNHYyQDNEcM3X7fUhD"],
 ["CKPool", "ckpool", ""],
 ["Telco 214", "", "1DXRoTT67mCbhdHHL1it4J1xsSZHHnFxYR"],
-["Stratum", "nodeStratum", ""]
+["Stratum", "nodeStratum", ""],
+["P2Pool", "_p2pool_", ""]
 ]

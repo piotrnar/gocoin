@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"net/http"
+	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -17,7 +18,46 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	}
 
 	net_page := load_template("net.html")
-	net_row := load_template("net_row.html")
+
+	network.Mutex_net.Lock()
+	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(common.IsListenTCP(), network.TCPServerStarted), 1)
+	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(network.BestExternalAddr()).String(), 1)
+
+	network.Mutex_net.Unlock()
+
+	write_html_head(w, r)
+	w.Write([]byte(net_page))
+	write_html_tail(w)
+}
+
+
+type one_net_con struct {
+	Id uint32
+	Incomming bool
+	PeerIp string
+	Ping int
+	LastBtsRcvd uint32
+	LastCmdRcvd string
+	LastBtsSent uint32
+	LastCmdSent string
+	BytesReceived, BytesSent uint64
+	Node struct {
+		Version uint32
+		Services uint64
+		Timestamp uint64
+		Height uint32
+		Agent string
+		DoNotRelayTxs bool
+		ReportedIp4 uint32
+	}
+	SendBufLen int
+	BlksInProgress int
+}
+
+func json_netcon(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
 
 	network.Mutex_net.Lock()
 	srt := make(network.SortedKeys, len(network.OpenCons))
@@ -30,49 +70,38 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sort.Sort(srt)
-	net_page = strings.Replace(net_page, "{OUT_CONNECTIONS}", fmt.Sprint(network.OutConsActive), 1)
-	net_page = strings.Replace(net_page, "{IN_CONNECTIONS}", fmt.Sprint(network.InConsActive), 1)
-	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(common.IsListenTCP(), network.TCPServerStarted), 1)
-	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(network.BestExternalAddr()).String(), 1)
+
+	net_cons := make([]one_net_con, cnt)
 
 	for idx := range srt {
 		v := network.OpenCons[srt[idx].Key]
-		s := net_row
 
 		v.Mutex.Lock()
-		s = strings.Replace(s, "{CONNID}", fmt.Sprint(v.ConnID), -1)
-		if v.Incoming {
-			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/incoming.png\">", 1)
-		} else {
-			s = strings.Replace(s, "{CONN_DIR_ICON}", "<img src=\"webui/outgoing.png\">", 1)
-		}
-
-		s = strings.Replace(s, "{PEER_ADDR}", v.PeerAddr.Ip(), 1)
-		s = strings.Replace(s, "{PERR_PING}", fmt.Sprint(v.GetAveragePing()), 1)
-		s = strings.Replace(s, "{LAST_RCVD_LEN}", fmt.Sprint(v.LastBtsRcvd), 1)
-		s = strings.Replace(s, "{LAST_RCVD_CMD}", v.LastCmdRcvd, 1)
-		s = strings.Replace(s, "{LAST_SENT_LEN}", fmt.Sprint(v.LastBtsSent), 1)
-		s = strings.Replace(s, "{LAST_SENT_CNT}", v.LastCmdSent, 1)
-		s = strings.Replace(s, "{TOTAL_RCVD}", common.BytesToString(v.BytesReceived), 1)
-		s = strings.Replace(s, "{TOTAL_SENT}", common.BytesToString(v.BytesSent), 1)
-		s = strings.Replace(s, "{NODE_VERSION}", fmt.Sprint(v.Node.Version), 1)
-		s = strings.Replace(s, "{USER_AGENT}", v.Node.Agent, 1)
-		if v.Send.Buf != nil {
-			s = strings.Replace(s, "<!--SENDBUF-->", common.BytesToString(uint64(len(v.Send.Buf))), 1)
-		}
-		if len(v.GetBlockInProgress)>0 {
-			s = strings.Replace(s, "<!--BLKSINPROG-->", fmt.Sprint(len(v.GetBlockInProgress), "blks "), 1)
-		}
-
+		net_cons[idx].Id = v.ConnID
+		net_cons[idx].Incomming = v.Incoming
+		net_cons[idx].PeerIp = v.PeerAddr.Ip()
+		net_cons[idx].Ping = v.GetAveragePing()
+		net_cons[idx].LastBtsRcvd = v.LastBtsRcvd
+		net_cons[idx].LastCmdRcvd = v.LastCmdRcvd
+		net_cons[idx].LastBtsSent = v.LastBtsSent
+		net_cons[idx].LastCmdSent = v.LastCmdSent
+		net_cons[idx].BytesReceived = v.BytesReceived
+		net_cons[idx].BytesSent = v.BytesSent
+		net_cons[idx].Node = v.Node
+		net_cons[idx].SendBufLen = len(v.Send.Buf)
+		net_cons[idx].BlksInProgress = len(v.GetBlockInProgress)
 		v.Mutex.Unlock()
-
-		net_page = templ_add(net_page, "<!--PEER_ROW-->", s)
 	}
 	network.Mutex_net.Unlock()
 
-	write_html_head(w, r)
-	w.Write([]byte(net_page))
-	write_html_tail(w)
+	bx, er := json.Marshal(net_cons)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
+
 }
 
 
