@@ -221,20 +221,26 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
+	//print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	c.Mutex.Unlock()
 }
 
 
-func (c *OneConnection) Misbehave(why string, how_much int) {
-	common.CountSafe("Bad"+why)
+func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	c.misbehave += how_much
-	if c.misbehave >= 100 {
-		common.CountSafe("BanMisbehave")
-		c.banit = true
-		c.broken = true
+	if !c.banit {
+		common.CountSafe("Bad"+why)
+		c.misbehave += how_much
+		if c.misbehave >= 1000 {
+			common.CountSafe("BanMisbehave")
+			res = true
+			c.banit = true
+			c.broken = true
+			//print("Ban " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+		}
 	}
 	c.Mutex.Unlock()
+	return
 }
 
 
