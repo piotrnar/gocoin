@@ -1,4 +1,5 @@
 Client:
+* Lib: implement BIP-65 (CHECKLOCKTIMEVERIFY) and blocks version 4
 * Remove confirned TXs from the rejected list
 * Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
