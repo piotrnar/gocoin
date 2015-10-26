@@ -41,15 +41,7 @@ type one_net_con struct {
 	LastBtsSent uint32
 	LastCmdSent string
 	BytesReceived, BytesSent uint64
-	Node struct {
-		Version uint32
-		Services uint64
-		Timestamp uint64
-		Height uint32
-		Agent string
-		DoNotRelayTxs bool
-		ReportedIp4 uint32
-	}
+	Node network.NetworkNodeStruct
 	SendBufLen int
 	BlksInProgress int
 }
