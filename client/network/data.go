@@ -246,6 +246,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			fmt.Println("GetHeaders panic recovered:", err.Error())
+			fmt.Println("Cnt:", cnt, "  len(h2get):", len(h2get))
+			if best_block!=nil {
+				fmt.Println("BestBlock:", best_block.Height, best_block.BlockHash.String())
+			}
+			if last_block!=nil {
+				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String())
+			}
 		}
 		// send the response
 		out := new(bytes.Buffer)

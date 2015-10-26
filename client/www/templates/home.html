@@ -64,8 +64,9 @@
 		<td align="right"><b id="bw_ul_speed_now"></b> KB/s
 		<td align="right"><b id="bw_ul_speed_max"></b> KB/s max
 		<td align="right"><b id="bw_ul_total"></b> tot
-	<tr><td>Extrenal IPs:
-		<td colspan="3" align="right"><!--ONE_EXTERNAL_IP-->
+	<tr><td>Extrenal IP:
+		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
+		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic">
 	<tr><td>TX Mempool
 		<td align="right" title="Accepted" id="ts_t2s_size" style="font-weight:bold">
 		<td align="right" title="Rejected" id="ts_tre_size" style="font-weight:bold">
@@ -151,16 +152,16 @@ function refreshsysinfo() {
 	aj.onload=function() {
 		try {
 			var si = JSON.parse(aj.responseText)
-			si_known_peers.innerText = si.known_peers
-			si_heap_size.innerText = (si.heap_size/0x100000).toFixed(0)
-			si_heap_sysmem.innerText = (si.heap_sysmem/0x100000).toFixed(0)
-			si_qdb_extramem.innerText = (si.qdb_extramem/0x100000).toFixed(0)
-			si_net_block_qsize.innerText = si.net_block_qsize
-			si_net_tx_qsize.innerText = si.net_tx_qsize
-			si_ecdsa_verify_cnt.innerText = si.ecdsa_verify_cnt
-			si_blocks_cached.innerText = si.blocks_cached
+			si_known_peers.innerText = si.Known_peers
+			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
+			si_heap_sysmem.innerText = (si.Heap_sysmem/0x100000).toFixed(0)
+			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
+			si_net_block_qsize.innerText = si.Net_block_qsize
+			si_net_tx_qsize.innerText = si.Net_tx_qsize
+			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
+			si_blocks_cached.innerText = si.Blocks_cached
 
-			var upsec = parseInt(si.node_uptime)
+			var upsec = si.Node_uptime
 			var hrs = parseInt(upsec/3600)
 			var mins = parseInt((upsec%3600)/60)
 			si_node_uptime.innerText = hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)
@@ -184,15 +185,29 @@ function refreshbwinfo() {
 	aj.onload=function() {
 		try {
 			var bw = JSON.parse(aj.responseText)
-			bw_open_conns_total.innerText = bw.open_conns_total
-			bw_open_conns_out.innerText = bw.open_conns_out
-			bw_open_conns_in.innerText = bw.open_conns_in
-			bw_dl_speed_now.innerText = bw.dl_speed_now >> 10
-			bw_dl_speed_max.innerText = bw.dl_speed_max >> 10
-			bw_dl_total.innerText = bignum(bw.dl_total)+'B'
-			bw_ul_speed_now.innerText = bw.ul_speed_now >> 10
-			bw_ul_speed_max.innerText = bw.ul_speed_max >> 10
-			bw_ul_total.innerText = bignum(bw.ul_total)+'B'
+			bw_open_conns_total.innerText = bw.Open_conns_total
+			bw_open_conns_out.innerText = bw.Open_conns_out
+			bw_open_conns_in.innerText = bw.Open_conns_in
+			bw_dl_speed_now.innerText = bw.Dl_speed_now >> 10
+			bw_dl_speed_max.innerText = bw.Dl_speed_max >> 10
+			bw_dl_total.innerText = bignum(bw.Dl_total)+'B'
+			bw_ul_speed_now.innerText = bw.Ul_speed_now >> 10
+			bw_ul_speed_max.innerText = bw.Ul_speed_max >> 10
+			bw_ul_total.innerText = bignum(bw.Ul_total)+'B'
+
+			// external IP
+			bw.ExternalIP.sort(function(a,b){
+				return b.Timestamp - a.Timestamp
+			})
+			external_ip0.innerText = bw.ExternalIP[0].Ip
+			if (bw.ExternalIP.length>1) {
+				var ht=''
+				for (var i=1; i<bw.ExternalIP.length; i++) {
+                    ht += '&nbsp;<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
+					'">' + bw.ExternalIP[i].Ip + '</span>'
+				}
+				external_others.innerHTML = ht
+			}
 		} catch(e) {
 			console.log(e)
 		}

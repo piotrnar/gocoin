@@ -44,6 +44,7 @@ func (c *OneConnection) SendVersion() {
 
 func (c *OneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
+		var new_ext_ip bool
 		c.Mutex.Lock()
 		c.Node.Version = binary.LittleEndian.Uint32(pl[0:4])
 		if bytes.Equal(pl[72:80], nonce[:]) {
@@ -60,6 +61,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		if sys.ValidIp4(pl[40:44]) {
 			ExternalIpMutex.Lock()
 			c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
+			_, new_ext_ip = ExternalIp4[c.Node.ReportedIp4]
+			new_ext_ip = !new_ext_ip
 			ExternalIp4[c.Node.ReportedIp4] = [2]uint{ExternalIp4[c.Node.ReportedIp4][0]+1, uint(time.Now().Unix())}
 			ExternalIpMutex.Unlock()
 		}
@@ -77,6 +80,9 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				}
 			}
 			c.Mutex.Unlock()
+		}
+		if new_ext_ip {
+			print("New external IP from ", c.Node.Agent, "\n> ")
 		}
 	} else {
 		return errors.New("version message too short")
