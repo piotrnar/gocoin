@@ -61,6 +61,15 @@ var (
 	RecentlyDisconencted map[[4]byte] time.Time = make(map[[4]byte] time.Time)
 )
 
+struct NetworkNodeStruct struct {
+	Version uint32
+	Services uint64
+	Timestamp uint64
+	Height uint32
+	Agent string
+	DoNotRelayTxs bool
+	ReportedIp4 uint32
+}
 
 type OneConnection struct {
 	// Source of this IP:
@@ -81,16 +90,7 @@ type OneConnection struct {
 	ConnectedAt time.Time
 	VerackReceived bool
 
-	// Data from the version message
-	Node struct {
-		Version uint32
-		Services uint64
-		Timestamp uint64
-		Height uint32
-		Agent string
-		DoNotRelayTxs bool
-		ReportedIp4 uint32
-	}
+	Node NetworkNodeStruct // Data from the version message
 
 	// Messages reception state machine:
 	recv struct {
