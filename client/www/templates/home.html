@@ -65,7 +65,11 @@
 		<td align="right"><b id="bw_ul_speed_max"></b> KB/s max
 		<td align="right"><b id="bw_ul_total"></b> tot
 	<tr><td>Extrenal IPs:
-		<td colspan="3"><!--ONE_EXTERNAL_IP-->
+		<td colspan="3" align="right"><!--ONE_EXTERNAL_IP-->
+	<tr><td>TX Mempool
+		<td align="right" title="Accepted" id="ts_t2s_size" style="font-weight:bold">
+		<td align="right" title="Rejected" id="ts_tre_size" style="font-weight:bold">
+		<td align="right" title="UTXOs spent in memory" id="outspent" style="font-weight:bold">
 	</table>
 <td valign="top">
 	<h2>Others</h2>
@@ -198,4 +202,29 @@ function refreshbwinfo() {
 	aj.send(null)
 }
 refreshbwinfo()
+</script>
+
+<script>
+function refreshtxstat() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshtxstat, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var ts = JSON.parse(aj.responseText)
+			ts_t2s_size.innerText = bignum(ts.t2s_size)+'B'
+			ts_t2s_size.title = ts.t2s_cnt + ' transactions accepted'
+			outspent.innerText = ts.spent_outs_cnt
+			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
+			ts_tre_size.title = ts.tre_cnt + ' transactions rejected'
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshtxstat, 1000)
+	}
+	aj.open("GET","txstat.json",true)
+	aj.send(null)
+}
+refreshtxstat()
 </script>
