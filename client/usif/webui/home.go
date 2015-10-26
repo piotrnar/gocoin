@@ -62,18 +62,30 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header()["Content-Type"] = []string{"application/json"}
-
-	w.Write([]byte("{"))
+	var out struct {
+		Height uint32
+		Hash string
+		Timestamp uint32
+		Received int64
+		Time_now int64
+		Diff float64
+	}
 	common.Last.Mutex.Lock()
-	w.Write([]byte(fmt.Sprint("\"height\":", common.Last.Block.Height, ",")))
-	w.Write([]byte(fmt.Sprint("\"hash\":\"", common.Last.Block.BlockHash.String(), "\",")))
-	w.Write([]byte(fmt.Sprint("\"timestamp\":", common.Last.Block.Timestamp(), ",")))
-	w.Write([]byte(fmt.Sprint("\"received\":", common.Last.Time.Unix(), ",")))
-	w.Write([]byte(fmt.Sprint("\"time_now\":", time.Now().Unix(), ",")))
-	w.Write([]byte(fmt.Sprint("\"diff\":", btc.GetDifficulty(common.Last.Block.Bits()))))
+	out.Height = common.Last.Block.Height
+	out.Hash =  common.Last.Block.BlockHash.String()
+	out.Timestamp =  common.Last.Block.Timestamp()
+	out.Received =  common.Last.Time.Unix()
+	out.Time_now =  time.Now().Unix()
+	out.Diff =  btc.GetDifficulty(common.Last.Block.Bits())
 	common.Last.Mutex.Unlock()
-	w.Write([]byte("}"))
+
+	bx, er := json.Marshal(out)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
 }
 
 

@@ -28,6 +28,7 @@ function quickswitchwallet() {
 	</tr></table>
 <hr>
 <script>
+var time_now
 function refreshblock() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -40,13 +41,14 @@ function refreshblock() {
 			var e = document.createEvent("Event")
 			e.initEvent("lastblock", false, false)
 			e.block = stat
+			time_now = stat.Time_now
 			blno.dispatchEvent(e)
 
-			if (blno.innerText != stat.height) {
-				var difftxt = "Difficulty changing in " + (2016-(stat.height%2016)) + " blocks"
-				blno.innerText = stat.height
+			if (blno.innerText != stat.Height) {
+				var difftxt = "Difficulty changing in " + (2016-(stat.Height%2016)) + " blocks"
+				blno.innerText = stat.Height
 				blno.title = difftxt
-				document.title = doc_title + ' @ ' + stat.height
+				document.title = doc_title + ' @ ' + stat.Height
 			}
 		} catch(e) {
 			blno.title = e
