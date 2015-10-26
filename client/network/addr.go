@@ -106,7 +106,11 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		}
 		a := peersdb.NewPeer(buf[:])
 		if !sys.ValidIp4(a.Ip4[:]) {
-			c.Misbehave("AddrLocal", 2)
+			//common.CountSafe("AddrLocal")
+			if c.Misbehave("AddrLocal", 1) {
+				break
+			}
+			//print(c.PeerAddr.Ip(), " ", c.Node.Agent, " ", c.Node.Version, " addr local ", a.String(), "\n> ")
 		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
@@ -119,7 +123,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				common.CountSafe("AddrStale")
 			}
 		} else {
-			c.Misbehave("AddrFuture", 5)
+			if c.Misbehave("AddrFuture", 50) {
+				break
+			}
 		}
 	}
 }
