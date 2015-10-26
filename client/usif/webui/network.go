@@ -128,3 +128,61 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(v.Stats()))
 	}
 }
+
+
+func json_bwidth(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	type one_ext_ip struct {
+		Ip string
+		Count, Timestamp uint
+	}
+
+	var out struct {
+		Open_conns_total int
+		Open_conns_out uint32
+		Open_conns_in uint32
+		Dl_speed_now uint64
+		Dl_speed_max uint
+		Dl_total uint64
+		Ul_speed_now uint64
+		Ul_speed_max uint
+		Ul_total uint64
+		ExternalIP []one_ext_ip
+	}
+
+	common.LockBw()
+	common.TickRecv()
+	common.TickSent()
+	out.Dl_speed_now = common.DlBytesPrevSec
+	out.Dl_speed_max = common.DownloadLimit
+	out.Dl_total = common.DlBytesTotal
+	out.Ul_speed_now = common.UlBytesPrevSec
+	out.Ul_speed_max = common.UploadLimit
+	out.Ul_total = common.UlBytesTotal
+	common.UnlockBw()
+
+	network.Mutex_net.Lock()
+	out.Open_conns_total = len(network.OpenCons)
+	out.Open_conns_out = network.OutConsActive
+	out.Open_conns_in = network.InConsActive
+	network.Mutex_net.Unlock()
+
+	network.ExternalIpMutex.Lock()
+	for ip, rec := range network.ExternalIp4 {
+		out.ExternalIP = append(out.ExternalIP, one_ext_ip{
+			Ip : fmt.Sprintf("%d.%d.%d.%d", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip)),
+			Count:rec[0], Timestamp:rec[1]})
+	}
+	network.ExternalIpMutex.Unlock()
+
+	bx, er := json.Marshal(out)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
+}
