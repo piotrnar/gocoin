@@ -154,7 +154,7 @@ function refreshconnections() {
 				// node_version
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].Node.Version
+				td.innerHTML = cs[i].Node.Version + (cs[i].Node.DoNotRelayTxs ? '*' : '')
 
 				// user agent
 				td = row.insertCell(-1)
