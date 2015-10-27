@@ -203,7 +203,8 @@ function refreshbwinfo() {
 			if (bw.ExternalIP.length>1) {
 				var ht=''
 				for (var i=1; i<bw.ExternalIP.length; i++) {
-                    ht += '&nbsp;<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
+					if (i>1) ht += ',&nbsp;'
+					ht += '<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
 					'">' + bw.ExternalIP[i].Ip + '</span>'
 				}
 				external_others.innerHTML = ht
