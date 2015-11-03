@@ -207,6 +207,10 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 
 	var best_block, last_block *chain.BlockTreeNode
 
+	common.Last.Mutex.Lock()
+	last_block = common.Last.Block
+	common.Last.Mutex.Unlock()
+
 	common.BlockChain.BlockIndexAccess.Lock()
 
 	//println("GetHeaders", len(h2get), hashstop.String())
@@ -230,14 +234,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		return
 	}
 
-	last_block = common.BlockChain.BlockTreeEnd
+	best_bl_ch := len(best_block.Childs)
+	//last_block = common.BlockChain.BlockTreeEnd
 
 	var resp []byte
 	var cnt uint32
 
 	defer func() {
-		common.BlockChain.BlockIndexAccess.Unlock()
-
 		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
 		if r := recover(); r != nil {
 			common.CountSafe("GetHeadersOrphBlk")
@@ -246,14 +249,19 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 				err = fmt.Errorf("pkg: %v", r)
 			}
 			fmt.Println("GetHeaders panic recovered:", err.Error())
+			fmt.Println("THIS SHOULD NOT HAPPEN - PLEASE REPORT")
 			fmt.Println("Cnt:", cnt, "  len(h2get):", len(h2get))
 			if best_block!=nil {
-				fmt.Println("BestBlock:", best_block.Height, best_block.BlockHash.String())
+				fmt.Println("BestBlock:", best_block.Height, best_block.BlockHash.String(),
+					len(best_block.Childs), best_bl_ch)
 			}
 			if last_block!=nil {
-				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String())
+				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String(), len(last_block.Childs))
 			}
 		}
+
+		common.BlockChain.BlockIndexAccess.Unlock()
+
 		// send the response
 		out := new(bytes.Buffer)
 		btc.WriteVlen(out, uint64(cnt))
