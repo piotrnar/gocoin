@@ -61,7 +61,7 @@ var (
 	RecentlyDisconencted map[[4]byte] time.Time = make(map[[4]byte] time.Time)
 )
 
-struct NetworkNodeStruct struct {
+type NetworkNodeStruct struct {
 	Version uint32
 	Services uint64
 	Timestamp uint64
