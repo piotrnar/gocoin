@@ -73,7 +73,7 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	}
 
 	// Count block versions within the Majority Window
-	var majority_v2, majority_v3 uint
+	var majority_v2, majority_v3, majority_v4 uint
 	n := prevblk
 	for cnt:=uint(0); cnt<ch.Consensus.Window && n!=nil; cnt++ {
 		ver := binary.LittleEndian.Uint32(n.BlockHeader[0:4])
@@ -81,6 +81,9 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 			majority_v2++
 			if ver >= 3 {
 				majority_v3++
+				if ver >= 4 {
+					majority_v4++
+				}
 			}
 		}
 		n = n.Parent
@@ -94,6 +97,12 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 
 	if bl.Version()<3 && majority_v3>=ch.Consensus.RejectBlock {
 		er = errors.New("CheckBlock() : Rejected nVersion=2 block")
+		dos = true
+		return
+	}
+
+	if bl.Version()<4 && majority_v4>=ch.Consensus.RejectBlock {
+		er = errors.New("CheckBlock() : Rejected nVersion=3 block")
 		dos = true
 		return
 	}
@@ -155,6 +164,10 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 
 	if majority_v3>=ch.Consensus.EnforceUpgrade {
 		bl.VerifyFlags |= script.VER_DERSIG
+	}
+
+	if bl.Version()>=4 && majority_v4>=ch.Consensus.EnforceUpgrade {
+		bl.VerifyFlags |= script.VER_CLTV
 	}
 
 	return
