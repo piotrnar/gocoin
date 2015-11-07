@@ -20,6 +20,10 @@ var (
 const (
 	VER_P2SH = 1<<0
 	VER_DERSIG = 1<<2
+	VER_MINDATA = 1<<6
+	VER_CLTV = 1<<7
+
+	LOCKTIME_THRESHOLD = 500000000
 )
 
 
@@ -28,6 +32,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
 		fmt.Println("_pkScript:", hex.EncodeToString(pkScr))
+		fmt.Printf("flagz:%x\n", ver_flags)
 	}
 
 	var st, stP2SH scrStack
@@ -166,6 +171,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 	var exestack scrStack
 	var altstack scrStack
 	sta, idx, opcnt := 0, 0, 0
+	checkMinVals := (ver_flags&VER_MINDATA)!=0
 	for idx < len(p) {
 		inexec := exestack.nofalse()
 
@@ -223,6 +229,12 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 		}
 
 		if inexec && 0<=opcode && opcode<=btc.OP_PUSHDATA4 {
+			if checkMinVals && !is_minimal(pushval) {
+				if DBG_ERR {
+					fmt.Println("Push value not in a minimal format", hex.EncodeToString(pushval))
+				}
+				//return false
+			}
 			stack.push(pushval)
 			if DBG_SCR {
 				fmt.Println("pushed", len(pushval), "bytes")
@@ -460,7 +472,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					n := stack.popInt()
+					n := stack.popInt(checkMinVals)
 					if n < 0 || n >= int64(stack.size()) {
 						if DBG_ERR {
 							fmt.Println("Wrong n for opcode", opcode)
@@ -558,7 +570,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					stack.pushInt(stack.popInt()+1)
+					stack.pushInt(stack.popInt(checkMinVals)+1)
 
 				case opcode==0x8c: //OP_1SUB
 					if stack.size()<1 {
@@ -567,7 +579,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					stack.pushInt(stack.popInt()-1)
+					stack.pushInt(stack.popInt(checkMinVals)-1)
 
 				case opcode==0x8f: //OP_NEGATE
 					if stack.size()<1 {
@@ -576,7 +588,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					stack.pushInt(-stack.popInt())
+					stack.pushInt(-stack.popInt(checkMinVals))
 
 				case opcode==0x90: //OP_ABS
 					if stack.size()<1 {
@@ -585,7 +597,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					a := stack.popInt()
+					a := stack.popInt(checkMinVals)
 					if a<0 {
 						stack.pushInt(-a)
 					} else {
@@ -599,7 +611,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					stack.pushBool(stack.popInt()==0)
+					stack.pushBool(stack.popInt(checkMinVals)==0)
 
 				case opcode==0x92: //OP_0NOTEQUAL
 					if stack.size()<1 {
@@ -628,8 +640,8 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					bn2 := stack.popInt()
-					bn1 := stack.popInt()
+					bn2 := stack.popInt(checkMinVals)
+					bn1 := stack.popInt(checkMinVals)
 					var bn int64
 					switch opcode {
 						case 0x93: bn = bn1 + bn2 // OP_ADD
@@ -672,9 +684,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					bn3 := stack.popInt()
-					bn2 := stack.popInt()
-					bn1 := stack.popInt()
+					bn3 := stack.popInt(checkMinVals)
+					bn2 := stack.popInt(checkMinVals)
+					bn1 := stack.popInt(checkMinVals)
 					stack.pushBool(bn2 <= bn1 && bn1 < bn3)
 
 				case opcode==0xa6: //OP_RIPEMD160
@@ -868,7 +880,77 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						stack.pushBool(success)
 					}
 
-				case opcode>=0xb0 && opcode<=0xb9: //OP_NOP
+				case opcode>=0xb1: //OP_NOP2 or OP_CHECKLOCKTIMEVERIFY
+					if DBG_SCR {
+						println("OP_NOP2...")
+					}
+
+					if (ver_flags&VER_CLTV) == 0 {
+						break // Just do NOP2
+					}
+
+					if DBG_SCR {
+						println("OP_CHECKLOCKTIMEVERIFY...")
+					}
+
+					if stack.size()<1 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: Stack too short")
+						}
+						return false
+					}
+
+					d := stack.top(-1)
+					if len(d)>5 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: locktime field too long", len(d))
+						}
+						return false
+					}
+
+					if DBG_SCR {
+						fmt.Println("val from stack", hex.EncodeToString(d))
+					}
+
+					locktime := bts2int_ext(d, 5, checkMinVals)
+					if locktime < 0 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: negative locktime")
+						}
+						return false
+					}
+
+					if (! ((tx.Lock_time <  LOCKTIME_THRESHOLD && locktime <  LOCKTIME_THRESHOLD) ||
+						(tx.Lock_time >= LOCKTIME_THRESHOLD && locktime >= LOCKTIME_THRESHOLD) )) {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: broken lock value")
+						}
+						return false
+					}
+
+					if DBG_SCR {
+						println("locktime > int64(tx.Lock_time)", locktime, int64(tx.Lock_time))
+						println(" ... seq", len(tx.TxIn), inp, tx.TxIn[inp].Sequence)
+					}
+
+					// Actually compare the specified lock time with the transaction.
+					if locktime > int64(tx.Lock_time) {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: Locktime requirement not satisfied")
+						}
+						return false
+					}
+
+					if tx.TxIn[inp].Sequence == 0xffffffff  {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKLOCKTIMEVERIFY: TxIn final")
+						}
+						return false
+					}
+
+					// OP_CHECKLOCKTIMEVERIFY passed successfully
+
+				case opcode>=0xb0 || opcode>=0xb2 && opcode<=0xb9: //OP_NOP1 || OP_NOP3..OP_NOP10
 					// just do nothing
 
 				default:
@@ -1052,5 +1134,3 @@ func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 	}
 	return true
 }
-
-
