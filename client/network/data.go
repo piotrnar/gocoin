@@ -270,6 +270,9 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	}()
 
 	for cnt<2000 {
+		if last_block.Height <= best_block.Height {
+			break
+		}
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
 			//println("FindPathTo failed", last_block.BlockHash.String(), cnt)
