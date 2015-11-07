@@ -80,6 +80,37 @@ func bts2int(d []byte) (res int64) {
 }
 
 
+func bts2int_ext(d []byte, max_bytes int, forcemin bool) (res int64) {
+	if len(d) > max_bytes {
+		panic("bts2int_ext: Int on the stack is too long")
+		// Make sure this panic is captured in evalScript (cause the script to fail, not crash)
+	}
+
+	if len(d)==0 {
+		return
+	}
+
+	if forcemin && !is_minimal(d) {
+		panic("bts2int_ext: Not a minimal length")
+	}
+
+	var i int
+	for i<len(d)-1 {
+		res |= int64(d[i]) << uint(i*8)
+		i++
+	}
+
+	if (d[i]&0x80)!=0 {
+		res |= int64(d[i]&0x7f) << uint(i*8)
+		res = -res
+	} else {
+		res |= int64(d[i]) << uint(i*8)
+	}
+
+	return
+}
+
+
 func bts2bool(d []byte) bool {
 	if len(d)==0 {
 		return false
@@ -93,8 +124,33 @@ func bts2bool(d []byte) bool {
 }
 
 
-func (s *scrStack) popInt() int64 {
-	return bts2int(s.pop())
+func is_minimal(d []byte) bool {
+	// Check that the number is encoded with the minimum possible
+	// number of bytes.
+	if len(d)>0 {
+		// If the most-significant-byte - excluding the sign bit - is zero
+		// then we're not minimal. Note how this test also rejects the
+		// negative-zero encoding, 0x80.
+		if (d[len(d)-1] & 0x7f) == 0 {
+			// One exception: if there's more than one byte and the most
+			// significant bit of the second-most-significant-byte is set
+			// it would conflict with the sign bit. An example of this case
+			// is +-255, which encode to 0xff00 and 0xff80 respectively.
+			// (big-endian).
+			if len(d)<=1 || (d[len(d)-2]&0x80) == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (s *scrStack) popInt(check_for_min bool) int64 {
+	d := s.pop()
+	if check_for_min && !is_minimal(d) {
+		panic("Not minimal value")
+	}
+	return bts2int(d)
 }
 
 func (s *scrStack) popBool() bool {
