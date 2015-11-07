@@ -124,6 +124,14 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		return false
 	}
 
+	if !tx.IsCoinBase() {
+		for i := range tx.TxIn {
+			if tx.TxIn[i].Input.IsNull() {
+				return false
+			}
+		}
+	}
+
 	oks := 0
 	for i := range tx.TxIn {
 		var j int
@@ -169,15 +177,17 @@ func TestValidTransactions(t *testing.T) {
 		return
 	}
 	m := str.([]interface{})
+	cnt := 0
 	for _, v := range m {
 		switch vv := v.(type) {
 			case []interface{}:
 				if len(vv)==3 {
+					cnt++
 					tv := parserec(vv)
 					if tv.skip!="" {
 						//println(tv.skip)
 					} else if !execute_test_tx(t, tv) {
-						t.Error("Failed transaction:", last_descr)
+						t.Error(cnt, "Failed transaction:", last_descr)
 					}
 				} else if len(vv)==1 {
 					last_descr = vv[0].(string)
