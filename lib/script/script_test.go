@@ -98,20 +98,19 @@ func TestScritpsInvalid(t *testing.T) {
 				continue
 			}
 
-			if (flags&VER_MINDATA) != 0 {
-				// I diont know why these scripts are expected to fail
-				// https://bitcointalk.org/index.php?topic=1240385.0
-				/*println(tot, "skip VER_MINDATA")
-				if len(vecs[i])>3 {
-					println(" ...", vecs[i][3])
-				}*/
-				continue
-			}
-
 			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
 			if res {
-				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], "/", vecs[i][3])
-				return
+				if (flags&VER_MINDATA) != 0 {
+					// https://bitcointalk.org/index.php?topic=1240385.0
+					print(tot, " Warning: failed ", vecs[i][2], " check: ")
+					if len(vecs[i])>3 {
+						println(vecs[i][3])
+					} else {
+						println(vecs[i][0], "->", vecs[i][1])
+					}
+				} else {
+					t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
+				}
 			}
 		}
 	}
