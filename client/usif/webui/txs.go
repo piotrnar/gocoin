@@ -77,6 +77,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 	fmt.Fprint(w, "<id>", id, "</id>")
 	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		w.Write([]byte("<status>OK</status>"))
+		w.Write([]byte(fmt.Sprint("<len>", len(t2s.Data), "</len>")))
 		tx := t2s.Tx
 		w.Write([]byte("<inputs>"))
 		for i := range tx.TxIn {
