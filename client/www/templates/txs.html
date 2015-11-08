@@ -203,6 +203,8 @@ function decode_tx() {
 
 			var tin=0, tout=0, s = ''
 
+			var len = xval(aj.responseXML,  "len")
+
 			var is = aj.responseXML.getElementsByTagName('input')
 			for (var i=0; i<is.length; i++) {
 				s += (i+1) + ") "
@@ -237,7 +239,11 @@ function decode_tx() {
 			}
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
 			s += "\n"
-			s += "Fee: " + (parseFloat(tin-tout)/1e8).toFixed(8) + " BTC\n"
+			var fee = tin-tout
+			s += 'Len: ' + len + ' bytes\n'
+			var len = xval(aj.responseXML,  "len")
+			s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
+			s += '  ==> ' + parseFloat(fee/len).toFixed(1) + ' Satoshis per byte\n'
 
 			rawdiv.innerHTML = s
 			prvpos = document.body.scrollTop
