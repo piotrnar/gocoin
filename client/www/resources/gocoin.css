@@ -32,6 +32,10 @@ a.menuat {
 	font-style:italic;
 }
 
+.font11 {
+	font-size:11px;
+}
+
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;

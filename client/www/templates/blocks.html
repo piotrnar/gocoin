@@ -25,36 +25,122 @@
 	<th align="right">verif
 	<th>ohd
 </tr>
-<!--BLOCK_ROW-->
 </table>
 <script>
-function hlminer(row) {
-	var mid = row.cells[7].innerHTML
+
+var mid = null
+
+function hlminer(i) {
+	console.log(i)
+	var row = blkstab.rows[2+i]
+	mid = row.cells[7].innerHTML
 	if (row.className.indexOf("own")!=-1) {
 		mid = null
 	}
-	for (var i=1; i<blkstab.rows.length; i++) {
+	for (var i=2; i<blkstab.rows.length; i++) {
 		if (blkstab.rows[i].cells[7].innerHTML==mid) {
-			//blkstab.rows[i].style.backgroundColor="#ffd0d0";
-			blkstab.rows[i].className = "own hand"
+			blkstab.rows[i].classList.add("own")
 		} else {
-			blkstab.rows[i].className = "hov hand"
-			//blkstab.rows[i].classList.add("own")
-			//blkstab.rows[i].style.backgroundColor="#ffffff";
+			blkstab.rows[i].classList.remove("own")
 		}
 	}
 }
-</script>
 
-<script>
-// reaload page on new block
-var _lblo = 0
-blno.addEventListener("lastblock", function(e) {
-	if (_lblo==0) {
-		_lblo = e.block.height
-	} else if (e.block.height!=_lblo) {
-		console.log('reload', e.block.height, _lblo)
-		location.reload()
+
+function refreshblocks() {
+	function onc(c,id) {
+		c.onclick = function() {hlminer(id)}
 	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshblocks, 1000)
+	}
+	aj.onload=function() {
+		try {
+			var cs = JSON.parse(aj.responseText)
+
+			while (blkstab.rows.length>2) blkstab.deleteRow(2)
+
+			for (var i=0; i<cs.length; i++) {
+				var td, row = blkstab.insertRow(-1)
+
+				row.className = 'hov hand'
+				row.title = "Received at " + tim2str(cs[i].Received, true)
+
+				td = row.insertCell(-1)
+				td.className = 'bold'
+				td.style.textAlign = 'center'
+				td.innerText = cs[i].Height
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.className = 'i'
+				td.innerText = tim2str(cs[i].Timestamp, true)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.className = 'mono font11'
+				td.innerText = cs[i].Hash
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerText = cs[i].TxCnt
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'bold'
+				td.innerText = (cs[i].Size/1024.0).toFixed(1)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.innerText = cs[i].Version
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.innerText = (cs[i].Reward/1e8).toFixed(2)
+
+				var miner = cs[i].Miner.substr(0,11)
+				td = row.insertCell(-1)
+				td.className = "i"
+				td.innerText = miner
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i'
+				if (cs[i].TimeDl>=0) td.innerText = cs[i].TimeDl
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i'
+				if (cs[i].TimeVer>=0) td.innerText = cs[i].TimeVer
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i'
+				if (cs[i].TimeVer>0) td.innerText = cs[i].WasteCnt
+
+				onc(row, i)
+			}
+
+			if (mid!=null) {
+				for (var i=2; i<blkstab.rows.length; i++) {
+					if (blkstab.rows[i].cells[7].innerHTML==mid) {
+						blkstab.rows[i].classList.add("own")
+					}
+				}
+			}
+		} catch(e) {
+			console.log(e)
+		}
+	}
+	aj.open("GET","blocks.json",true)
+	aj.send(null)
+}
+
+
+blno.addEventListener("lastblock", function(e) {
+	refreshblocks() // refersh the tbale for each new block notifiaction
 })
+
 </script>
