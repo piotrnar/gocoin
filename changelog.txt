@@ -1,4 +1,6 @@
-1.4.0
+1.4.
+
+1.4.0 - 2015-11-09
 * peersdb: MinPeersInDB changed from 256 to 512
 * Client: Added BIP100 stats to the mining UI
 * Wallet: Added support for Type-4 wallet, which is based on BIP-32 keys derivation (HD wallets)
