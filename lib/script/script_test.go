@@ -52,8 +52,11 @@ func TestScritpsValid(t *testing.T) {
 
 			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
 			if !res {
-				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
-				return
+				ex := ""
+				if len(vecs[i])>3 {
+					ex = "/ " + vecs[i][3]
+				}
+				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], ex)
 			}
 		}
 	}
@@ -100,17 +103,7 @@ func TestScritpsInvalid(t *testing.T) {
 
 			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
 			if res {
-				if (flags&VER_MINDATA) != 0 {
-					// https://bitcointalk.org/index.php?topic=1240385.0
-					print(tot, " Warning: failed ", vecs[i][2], " check: ")
-					if len(vecs[i])>3 {
-						println(vecs[i][3])
-					} else {
-						println(vecs[i][0], "->", vecs[i][1])
-					}
-				} else {
-					t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
-				}
+				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
 			}
 		}
 	}

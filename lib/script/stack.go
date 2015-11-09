@@ -161,8 +161,12 @@ func (s *scrStack) top(idx int) (d []byte) {
 	return s.data[len(s.data)+idx]
 }
 
-func (s *scrStack) topInt(idx int) int64 {
-	return bts2int(s.data[len(s.data)+idx])
+func (s *scrStack) topInt(idx int, check_for_min bool) int64 {
+	d := s.data[len(s.data)+idx]
+	if check_for_min && !is_minimal(d) {
+		panic("Not minimal value")
+	}
+	return bts2int(d)
 }
 
 func (s *scrStack) topBool(idx int) bool {

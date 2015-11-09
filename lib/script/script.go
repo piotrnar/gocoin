@@ -229,11 +229,11 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 		}
 
 		if inexec && 0<=opcode && opcode<=btc.OP_PUSHDATA4 {
-			if checkMinVals && !is_minimal(pushval) {
+			if checkMinVals && !checkMinimalPush(pushval, opcode) {
 				if DBG_ERR {
 					fmt.Println("Push value not in a minimal format", hex.EncodeToString(pushval))
 				}
-				//return false
+				return false
 			}
 			stack.push(pushval)
 			if DBG_SCR {
@@ -620,7 +620,14 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					stack.pushBool(stack.popBool())
+					d := stack.pop()
+					if checkMinVals && len(d)>1 {
+						if DBG_ERR {
+							fmt.Println("Not minimal bool value", hex.EncodeToString(d))
+						}
+						return false
+					}
+					stack.pushBool(bts2bool(d))
 
 				case opcode==0x93 || //OP_ADD
 					opcode==0x94 || //OP_SUB
@@ -796,7 +803,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						return false
 					}
 					i := 1
-					keyscnt := stack.topInt(-i)
+					keyscnt := stack.topInt(-i, checkMinVals)
 					if keyscnt < 0 || keyscnt > 20 {
 						fmt.Println("OP_CHECKMULTISIG: Wrong number of keys")
 						return false
@@ -817,7 +824,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					sigscnt := stack.topInt(-i)
+					sigscnt := stack.topInt(-i, checkMinVals)
 					if sigscnt < 0 || sigscnt > keyscnt {
 						fmt.Println("OP_CHECKMULTISIG: sigscnt error")
 						return false
@@ -1132,5 +1139,51 @@ func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 	if (flags&VER_DERSIG)!=0 && !IsValidSignatureEncoding(sig) {
 		return false
 	}
+	return true
+}
+
+// https://bitcointalk.org/index.php?topic=1240385.0
+func checkMinimalPush(d []byte, opcode int) bool {
+	if DBG_SCR {
+		fmt.Printf("checkMinimalPush %02x %s\n", opcode, hex.EncodeToString(d))
+	}
+	if len(d) == 0 {
+		// Could have used OP_0.
+		if DBG_SCR {
+			fmt.Println("Could have used OP_0.")
+		}
+		return opcode == 0x00
+	} else if len(d) == 1 && d[0] >= 1 && d[0] <= 16 {
+		// Could have used OP_1 .. OP_16.
+		if DBG_SCR {
+			fmt.Println("Could have used OP_1 .. OP_16.", 0x01 + int(d[0] - 1), 0x01, int(d[0] - 1))
+		}
+		return opcode == 0x51 + int(d[0]) - 1
+	} else if len(d) == 1 && d[0] == 0x81 {
+		// Could have used OP_1NEGATE.
+		if DBG_SCR {
+			fmt.Println("Could have used OP_1NEGATE.")
+		}
+		return opcode == 0x4f
+	} else if len(d) <= 75 {
+		// Could have used a direct push (opcode indicating number of bytes pushed + those bytes).
+		if DBG_SCR {
+			fmt.Println("Could have used a direct push (opcode indicating number of bytes pushed + those bytes).")
+		}
+		return opcode == len(d)
+	} else if len(d) <= 255 {
+		// Could have used OP_PUSHDATA.
+		if DBG_SCR {
+			fmt.Println("Could have used OP_PUSHDATA.")
+		}
+		return opcode == 0x4c
+	} else if len(d) <= 65535 {
+		// Could have used OP_PUSHDATA2.
+		if DBG_SCR {
+			fmt.Println("Could have used OP_PUSHDATA2.")
+		}
+		return opcode == 0x4d
+	}
+	fmt.Println("All checks passed")
 	return true
 }
