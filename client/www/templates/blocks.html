@@ -14,7 +14,7 @@
 	<th colspan="3">Timing in <i>ms</i>
 <tr>
 	<th>Height
-	<th>Time
+	<th>Received
 	<th>Hash
 	<th align="right">TXs
 	<th align="right">kB
@@ -46,6 +46,11 @@ function hlminer(i) {
 }
 
 
+function do_rcvd_time(td) {
+	td.innerText = ((time_now-parseInt(td.name))/60.0).toFixed(1) + ' min'
+}
+
+
 function refreshblocks() {
 	function onc(c,id) {
 		c.onclick = function() {hlminer(id)}
@@ -65,7 +70,7 @@ function refreshblocks() {
 				var td, row = blkstab.insertRow(-1)
 
 				row.className = 'hov hand'
-				row.title = "Received at " + tim2str(cs[i].Received, true)
+				row.title = "Rcvd at " + tim2str(cs[i].Received, true) + " with TS " + tim2str(cs[i].Timestamp)
 
 				td = row.insertCell(-1)
 				td.className = 'bold'
@@ -73,9 +78,10 @@ function refreshblocks() {
 				td.innerText = cs[i].Height
 
 				td = row.insertCell(-1)
-				td.style.textAlign = 'center'
+				td.style.textAlign = 'right'
 				td.className = 'i'
-				td.innerText = tim2str(cs[i].Timestamp, true)
+				td.name = cs[i].Received
+				do_rcvd_time(td)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
@@ -138,8 +144,18 @@ function refreshblocks() {
 }
 
 
+
+var _lblo = 0
+
 blno.addEventListener("lastblock", function(e) {
-	refreshblocks() // refersh the tbale for each new block notifiaction
+	if (e.block.height!=_lblo) {
+		_lblo = e.block.height
+		refreshblocks() // refersh the tbale for each new block notifiaction
+	} else {
+		for (var i=2; i<blkstab.rows.length; i++) {
+			do_rcvd_time(blkstab.rows[i].cells[1])
+		}
+	}
 })
 
 </script>
