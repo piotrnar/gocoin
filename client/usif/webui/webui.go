@@ -249,6 +249,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/bwidth.json", json_bwidth)
 	http.HandleFunc("/txstat.json", json_txstat)
 	http.HandleFunc("/netcon.json", json_netcon)
+	http.HandleFunc("/blocks.json", json_blocks)
 
 	http.ListenAndServe(iface, nil)
 }
