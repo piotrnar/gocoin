@@ -89,7 +89,7 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'bold'
-				td.innerText = (cs[i].Size/1024.0).toFixed(1)
+				td.innerText = (cs[i].Size/1000.0).toFixed(1)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
