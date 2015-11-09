@@ -171,9 +171,9 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 	var bv string
 	for k, v := range block_versions {
 		if bv!="" {
-			bv += " + "
+			bv += ",&nbsp;&nbsp;"
 		}
-		bv += fmt.Sprintf("%dx%d", v, k)
+		bv += fmt.Sprintf("%d (%d%%) x <b>v%d</b>", v, 100*int(v)/cnt, k)
 	}
 	mnrs = strings.Replace(mnrs, "<!--BLOCK_VERSIONS-->", bv, 1)
 
