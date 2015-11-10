@@ -148,9 +148,9 @@ function refreshblocks() {
 var _lblo = 0
 
 blno.addEventListener("lastblock", function(e) {
-	if (e.block.height!=_lblo) {
-		_lblo = e.block.height
-		refreshblocks() // refersh the tbale for each new block notifiaction
+	if (e.block.Height!=_lblo) {
+		_lblo = e.block.Height
+		refreshblocks() // refersh the table for each new block notifiaction
 	} else {
 		for (var i=2; i<blkstab.rows.length; i++) {
 			do_rcvd_time(blkstab.rows[i].cells[1])

@@ -50,8 +50,8 @@ Block size votes: <!--BLOCKSIZE_VOTES--><br>
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
 	if (_lblo==0) {
-		_lblo = e.block.height
-	} else if (e.block.height!=_lblo) {
+		_lblo = e.block.Height
+	} else if (e.block.Height!=_lblo) {
 		location.reload()
 	}
 })
