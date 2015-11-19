@@ -36,6 +36,7 @@ function refreshblock() {
 		setTimeout(refreshblock, 10000)
 	}
 	aj.onload=function() {
+		var new_block = false
 		try {
 			var stat = JSON.parse(aj.responseText)
 			var e = document.createEvent("Event")
@@ -45,6 +46,7 @@ function refreshblock() {
 			blno.dispatchEvent(e)
 
 			if (blno.innerText != stat.Height) {
+				new_block = true
 				var difftxt = "Difficulty changing in " + (2016-(stat.Height%2016)) + " blocks"
 				blno.innerText = stat.Height
 				blno.title = difftxt
@@ -55,7 +57,7 @@ function refreshblock() {
 			blno.innerText = "???"
 			//console.log()
 		}
-		setTimeout(refreshblock, 6000)
+		setTimeout(refreshblock, new_block?1000:6000)
 	}
 	aj.open("GET","status.json",true)
 	aj.send(null)
