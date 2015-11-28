@@ -45,6 +45,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	wallet.BalanceMutex.Unlock()
 
 	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
+	s = strings.Replace(s, "<!--NEW_BLOCK_BEEP-->", fmt.Sprint(common.CFG.Beeps.NewBlock), 1)
 
 	common.LockCfg()
 	dat, _ := json.Marshal(&common.CFG)
