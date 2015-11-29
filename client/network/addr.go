@@ -30,7 +30,7 @@ func ExternalAddrLen() (res int) {
 
 func BestExternalAddr() []byte {
 	var best_ip, worst_ip uint32
-	var best_cnt, worst_tim uint
+	var worst_tim, best_tim uint
 
 	ExternalIpMutex.Lock()
 
@@ -40,9 +40,10 @@ func BestExternalAddr() []byte {
 				worst_tim = rec[1]
 				worst_ip = ip
 			}
-			if rec[0] > best_cnt {
-				best_cnt = rec[0]
+			if best_ip==0 || (rec[1]>best_tim && rec[0]>3) {
+				/*If newer timestamp and more than 3 counts */
 				best_ip = ip
+				best_tim = rec[1]
 			} else if rec[1] < worst_tim {
 				worst_tim = rec[1]
 				worst_ip = ip

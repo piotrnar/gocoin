@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"time"
 	"bytes"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
+var IgnoreExternalIpFrom = []string{"/Snoopy:0.1/", "/libbitcoin:2.0.0/"}
 
 func (c *OneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
@@ -44,7 +46,6 @@ func (c *OneConnection) SendVersion() {
 
 func (c *OneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
-		var new_ext_ip bool
 		c.Mutex.Lock()
 		c.Node.Version = binary.LittleEndian.Uint32(pl[0:4])
 		if bytes.Equal(pl[72:80], nonce[:]) {
@@ -57,17 +58,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		}
 		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
-		c.Mutex.Unlock()
-		if sys.ValidIp4(pl[40:44]) {
-			ExternalIpMutex.Lock()
-			c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
-			_, new_ext_ip = ExternalIp4[c.Node.ReportedIp4]
-			new_ext_ip = !new_ext_ip
-			ExternalIp4[c.Node.ReportedIp4] = [2]uint{ExternalIp4[c.Node.ReportedIp4][0]+1, uint(time.Now().Unix())}
-			ExternalIpMutex.Unlock()
-		}
+		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
 		if len(pl) >= 86 {
-			c.Mutex.Lock()
 			le, of := btc.VLen(pl[80:])
 			of += 80
 			c.Node.Agent = string(pl[of:of+le])
@@ -79,10 +71,31 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					c.Node.DoNotRelayTxs = true
 				}
 			}
-			c.Mutex.Unlock()
 		}
-		if new_ext_ip {
-			print("New external IP from ", c.Node.Agent, "\n> ")
+		c.Mutex.Unlock()
+
+		if sys.ValidIp4(pl[40:44]) {
+			ExternalIpMutex.Lock()
+			_, use_this_ip := ExternalIp4[c.Node.ReportedIp4]
+			if !use_this_ip { // New IP
+				use_this_ip = true
+				for x, v := range IgnoreExternalIpFrom {
+					if c.Node.Agent==v {
+						use_this_ip = false
+						common.CountSafe(fmt.Sprint("IgnoreExtIP", x))
+						break
+					}
+				}
+				if use_this_ip {
+					fmt.Printf("New external IP %d.%d.%d.%d from %s\n> ",
+						pl[40], pl[41], pl[42], pl[43], c.Node.Agent)
+				}
+			}
+			if use_this_ip {
+				ExternalIp4[c.Node.ReportedIp4] = [2]uint {ExternalIp4[c.Node.ReportedIp4][0]+1,
+					uint(time.Now().Unix())}
+			}
+			ExternalIpMutex.Unlock()
 		}
 	} else {
 		return errors.New("version message too short")
