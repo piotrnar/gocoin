@@ -210,7 +210,7 @@ function refreshbwinfo() {
 				var ht=''
 				if (bw.ExternalIP.length>1) {
 					for (var i=1; i<bw.ExternalIP.length; i++) {
-						if (i>1) ht += ',&nbsp;'
+						if (i>1) ht += ', '
 						ht += '<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
 						'">' + bw.ExternalIP[i].Ip + '</span>'
 					}
