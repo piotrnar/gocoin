@@ -1,5 +1,6 @@
 1.4.1
 * WebUI: More of teal time UI refresh (without reloading the pages)
+* secp256k1: Fixed issue #15 - BaseMultiply returning wrong result for certain input values
 
 1.4.0 - 2015-11-09
 * peersdb: MinPeersInDB changed from 256 to 512
