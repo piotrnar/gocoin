@@ -139,9 +139,11 @@ func (pk *XY) AddXY(a *XY) {
 
 
 func (pk *XY) GetPublicKey(out []byte) {
+	pk.X.Normalize()  // See GitHub issue #15
 	pk.X.GetB32(out[1:33])
 	if len(out)==65 {
 		out[0] = 0x04
+		pk.Y.Normalize()
 		pk.Y.GetB32(out[33:65])
 	} else {
 		if pk.Y.IsOdd() {
