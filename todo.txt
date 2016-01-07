@@ -1,4 +1,5 @@
 Client:
+* WebUI: hoe screen shows some bad numbers in the "TX Mempool" with MemPool off and a local TX submited
 * Remove confirned TXs from the rejected list
 * Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
