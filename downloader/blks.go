@@ -17,7 +17,7 @@ const (
 	MIN_BLOCKS_AHEAD = 10
 	MAX_BLOCKS_AHEAD = 10e3
 
-	BLOCK_TIMEOUT = 10*time.Second
+	BLOCK_TIMEOUT = 120*time.Second
 
 	DROP_PEER_EVERY_SEC = 10
 
