@@ -1,4 +1,5 @@
 Client:
+* Client: sendind own TX to all peers does not work with Mempool disabled
 * WebUI: hoe screen shows some bad numbers in the "TX Mempool" with MemPool off and a local TX submited
 * Remove confirned TXs from the rejected list
 * Build the downloader into the client
