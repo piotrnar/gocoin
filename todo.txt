@@ -1,4 +1,12 @@
+Downloader:
+* After a lower block time outs, retry it instead of trying higher one
+* AvgBLen is not calclated properly
+* Check a possibility to speed it up by disabling the sync
+* Avoid re-building of UTXO-db while using "-b"
+
 Client:
+* At slow connections it gets stuck (new blocks stop being downloaded)
+* At slow connections block timeout (15s) is too low
 * Client: sendind own TX to all peers does not work with Mempool disabled
 * WebUI: hoe screen shows some bad numbers in the "TX Mempool" with MemPool off and a local TX submited
   (network.TransactionsToSendSize is not increased when loading a local tx into the mempool)
@@ -16,10 +24,6 @@ Tools:
 Wallet:
 * Write some automated tests
 * Add a wallet type with more heavy hashing
-
-Downloader:
-* Check a possibility to speed it up by disabling the sync
-* Avoid re-building of UTXO-db while using "-b"
 
 Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160
