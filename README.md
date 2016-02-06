@@ -80,7 +80,7 @@ For Windows install `mingw`, or rather `mingw64` since the client node needs 64-
 
 # Getting sources
 
-Use `go get` to fecth and install the source code files.
+Use `go get` to fetch and install the source code files.
 Note that source files get installed within your GOPATH folder.
 
 ## Dependencies
