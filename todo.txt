@@ -1,11 +1,11 @@
 Downloader:
 * After a lower block time outs, retry it instead of trying higher one
-* AvgBLen is not calclated properly
+* AvgBLen is not calclated properly (it shoudl be over last N blocks, not since block #1)
 * Check a possibility to speed it up by disabling the sync
 * Avoid re-building of UTXO-db while using "-b"
 
 Client:
-* At slow connections it gets stuck (new blocks stop being downloaded)
+* At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * At slow connections block timeout (15s) is too low
 * Client: sendind own TX to all peers does not work with Mempool disabled
 * WebUI: hoe screen shows some bad numbers in the "TX Mempool" with MemPool off and a local TX submited
