@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 	"bytes"
@@ -11,13 +12,12 @@ import (
 )
 
 const (
-	MEM_CACHE = 64<<20
-	MAX_GET_FROM_PEER = 2e6
+	MAX_GET_FROM_PEER = 2e6 // two full size (1MB) blocks
 
 	MIN_BLOCKS_AHEAD = 10
 	MAX_BLOCKS_AHEAD = 10e3
 
-	BLOCK_TIMEOUT = 120*time.Second
+	BLOCKSIZE_AVERAGE_DAYS = 7
 
 	DROP_PEER_EVERY_SEC = 10
 
@@ -44,8 +44,6 @@ var (
 	LastBlockNotified uint32
 	LastStoredBlock uint32
 
-	FetchBlocksTo uint32
-
 	DlStartTime time.Time
 	DlBytesProcessed, DlBytesDownloaded uint64
 
@@ -67,10 +65,45 @@ func show_inprogress() {
 	BlocksMutex.Lock()
 	defer BlocksMutex.Unlock()
 	fmt.Println("bocks in progress:")
+
+	heights := make([]int, len(BlocksInProgress))
 	cnt := 0
 	for _, v := range BlocksInProgress {
+		heights[cnt] = int(v.Height)
 		cnt++
-		fmt.Println(cnt, v.Height, v.Count)
+	}
+	sort.Ints(heights)
+
+	for cnt = range heights {
+		fmt.Print(cnt, ") ", heights[cnt])
+		for _, v := range BlocksInProgress {
+			if int(v.Height)==heights[cnt] {
+				fmt.Print(" in progress by:")
+				for cid, _ := range v.Conns {
+					fmt.Print(" ", cid)
+				}
+			}
+		}
+		fmt.Println()
+	}
+}
+
+
+func show_cached() {
+	BlocksMutex.Lock()
+	defer BlocksMutex.Unlock()
+	fmt.Println("bocks in memory:")
+
+	heights := make([]int, len(BlocksCached))
+	cnt := 0
+	for he, _ := range BlocksCached {
+		heights[cnt] = int(he)
+		cnt++
+	}
+	sort.Ints(heights)
+
+	for cnt = range heights {
+		fmt.Println(cnt, ")", heights[cnt], "  len:", len(BlocksCached[uint32(heights[cnt])].Raw))
 	}
 }
 
@@ -99,7 +132,6 @@ func (c *one_net_conn) block(d []byte) {
 	c.Lock()
 	c.inprogress--
 	c.Unlock()
-	blocksize_update(len(d))
 
 	bl, er := btc.NewBlock(d)
 	if er != nil {
@@ -118,7 +150,7 @@ func (c *one_net_conn) block(d []byte) {
 	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, h.Hash)
 	if len(BlocksInProgress)==0 {
-		EmptyInProgressCnt++
+		println("EmptyInProgress")
 	}
 
 	//println("got-", bip.Height, BlocksComplete+1)
@@ -142,40 +174,21 @@ func (c *one_net_conn) block(d []byte) {
 }
 
 
-func (c *one_net_conn) getnextblock() {
-	if len(BlockQueue)*avg_block_size() > MEM_CACHE {
-		COUNTER("GDFU")
-		time.Sleep(100*time.Millisecond)
-		return
-	}
 
+// returns true if block has been added to the queue
+func (c *one_net_conn) get_more_blocks() {
 	var cnt int
 	b := new(bytes.Buffer)
 	vl := new(bytes.Buffer)
 
-	avs := avg_block_size()
-	blks_to_get := uint32(MEM_CACHE / avs)
-	max_cnt_to_get := (MAX_GET_FROM_PEER / avs) + 1
-	if max_cnt_to_get > MAX_BLOCKS_AT_ONCE {
-		max_cnt_to_get = MAX_BLOCKS_AT_ONCE
-	}
-
 	BlocksMutex.Lock()
 
-	FetchBlocksTo = BlocksComplete + blks_to_get
-	if FetchBlocksTo > LastBlockHeight {
-		FetchBlocksTo = LastBlockHeight
-	}
-
-	bl_stage := uint32(0)
-	for curblk:=BlocksComplete; cnt<max_cnt_to_get; curblk++ {
-		if curblk>FetchBlocksTo {
-			if bl_stage==MAX_SAME_BLOCKS_AT_ONCE {
-				break
-			}
-			bl_stage++
-			curblk = BlocksComplete
+	//bl_stage := uint32(0)
+	for curblk:=BlocksComplete; curblk<=LastBlockHeight; curblk++ {
+		if (c.inprogress+1) * avg_block_size() > MAX_GET_FROM_PEER {
+			break
 		}
+
 		if _, done := BlocksCached[curblk]; done {
 			continue
 		}
@@ -186,18 +199,14 @@ func (c *one_net_conn) getnextblock() {
 		}
 
 		cbip := BlocksInProgress[bh]
-		if cbip==nil {
-			// if not in progress then we always take it
-			cbip = &one_bip{Height:curblk}
-			cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
-		} else if cbip.Count!=bl_stage || cbip.Conns[c.id]{
+		if cbip!=nil {
 			continue
 		}
-		if LastBlockAsked < curblk {
-			LastBlockAsked = curblk
-		}
 
-		cbip.Count = bl_stage+1
+		// if not in progress then we always take it
+		cbip = &one_bip{Height:curblk}
+		cbip.Count++
+		cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
 		cbip.Conns[c.id] = true
 		c.inprogress++
 		BlocksInProgress[bh] = cbip
@@ -225,51 +234,26 @@ func (c *one_net_conn) getnextblock() {
 const BSLEN = 0x1000
 
 var (
-	BSMut sync.Mutex
-	BSSum int
-	BSCnt int
-	BSIdx int
-	BSLen [BSLEN]int
+	BSAvg uint32
 )
 
 
-func blocksize_update(le int) {
-	BSMut.Lock()
-	BSLen[BSIdx] = le
-	BSSum += le
-	if BSCnt<BSLEN {
-		BSCnt++
+func calc_new_block_size() {
+	var cnt, tlen int
+	for n:=TheBlockChain.BlockTreeEnd; n!=nil && cnt<BLOCKSIZE_AVERAGE_DAYS*24*6; n=n.Parent {
+		tlen += int(n.BlockSize)
+		cnt++
 	}
-	BSIdx = (BSIdx+1) % BSLEN
-	BSSum -= BSLen[BSIdx]
-	BSMut.Unlock()
+	atomic.StoreUint32(&BSAvg, uint32(tlen/cnt))
 }
 
 
 func avg_block_size() (le int) {
-	BSMut.Lock()
-	if BSCnt>0 {
-		le = BSSum/BSCnt
-	} else {
-		le = 220
+	le = int(atomic.LoadUint32(&BSAvg))
+	if le < 1024 {
+		le = 1024
 	}
-	BSMut.Unlock()
 	return
-}
-
-
-func (c *one_net_conn) blk_idle() {
-	c.Lock()
-	doit := c.inprogress==0
-	if !doit && !c.last_blk_rcvd.Add(BLOCK_TIMEOUT).After(time.Now()) {
-		c.inprogress = 0
-		doit = true
-		COUNTER("BTOU")
-	}
-	c.Unlock()
-	if doit {
-		c.getnextblock()
-	}
 }
 
 
@@ -378,7 +362,7 @@ func get_blocks() {
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
 				CurrentBlockHeight++
 
-			case <-time.After(100*time.Millisecond):
+			case <-time.After(1000*time.Millisecond):
 				COUNTER("IDLE")
 				TheBlockChain.Unspent.Idle()
 		}

@@ -77,7 +77,7 @@ func parse_command_line() {
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
-	flag.UintVar(&MaxNetworkConns, "n", 10, "Set maximum number of network connections for chain download")
+	flag.UintVar(&MaxNetworkConns, "n", 5, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 
 	flag.UintVar(&MemForBlocks, "m", 64, "Set memory buffer for cached block data (value in megabytes)")
@@ -195,11 +195,9 @@ func main() {
 		fmt.Println("WARNING: The trusted block not found (it will be very slow).")
 	}
 
-	for n:=TheBlockChain.BlockTreeEnd; n!=nil && n.Height>TheBlockChain.BlockTreeEnd.Height-BSLEN; n=n.Parent {
-		blocksize_update(int(n.BlockSize))
-	}
+	calc_new_block_size()
 
-	fmt.Println("Downloading blocks - BlocksToGet:", len(BlocksToGet), "  avg_size:", avg_block_size())
+	fmt.Println("Downloading blocks - ", len(BlocksToGet), "blocks to get / up to", LastBlockHeight)
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()

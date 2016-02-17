@@ -15,7 +15,7 @@ import (
 
 
 const (
-	UserAgent = "/Satoshi:0.8.5/"
+	UserAgent = "/Satoshi:0.11.1/"
 	Version = 70001
 	Services = uint64(0x00000001)
 
@@ -68,7 +68,7 @@ type one_net_conn struct {
 		buf []byte
 	}
 
-	inprogress uint32
+	inprogress int
 
 	last_blk_rcvd time.Time
 	connected_at time.Time
@@ -276,9 +276,6 @@ func (c *one_net_conn) cleanup() {
 				delete(v.Conns, c.id)
 				if v.Count==1 {
 					delete(BlocksInProgress, k)
-					if len(BlocksInProgress)==0 {
-						EmptyInProgressCnt++
-					}
 				} else {
 					v.Count--
 				}
@@ -301,7 +298,7 @@ func (c *one_net_conn) run_recv() {
 		if verackgot {
 			if !c.hdr_idle() {
 				if BlocksInProgress!=nil {
-					c.blk_idle()
+					c.get_more_blocks()
 				}
 			}
 		}
@@ -329,8 +326,13 @@ func (c *one_net_conn) run_recv() {
 
 			case "block":
 				c.block(msg.pl)
+				c.get_more_blocks()
 
 			case "version":
+
+			case "notfound":
+				COUNTER("NFND")
+				c.setbroken(true)
 
 			case "addr":
 				parse_addr(msg.pl)

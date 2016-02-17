@@ -21,6 +21,7 @@ func readline() string {
 
 
 func show_connections() {
+	var totbps float64
 	open_connection_mutex.Lock()
 	ss := make([]string, len(open_connection_list))
 	i := 0
@@ -31,7 +32,9 @@ func show_connections() {
 		} else {
 			v.Lock()
 			ss[i] += fmt.Sprintf(" %6.1fmin", time.Now().Sub(v.connected_at).Minutes())
-			ss[i] += fmt.Sprintf(" %6.2fKB/s", v.bps()/1e3)
+			bps := v.bps()
+			totbps += bps
+			ss[i] += fmt.Sprintf(" %6.2fKB/s", bps/1e3)
 			if !v.last_blk_rcvd.IsZero() {
 				ss[i] += fmt.Sprintf(" %6.1fsec, %4d bl_in_pr",
 					time.Now().Sub(v.last_blk_rcvd).Seconds(), v.inprogress)
@@ -48,6 +51,7 @@ func show_connections() {
 	for i = range ss {
 		fmt.Printf("%5d) %s\n", i+1, ss[i])
 	}
+	fmt.Printf("Total downloading speed %.2f KBps\n", totbps/1e3)
 }
 
 
@@ -112,6 +116,9 @@ func do_usif() {
 					case "pe":
 						show_pending()
 
+					case "ca":
+						show_cached()
+
 					case "d":
 						if len(ll)>1 {
 							n, e := strconv.ParseUint(ll[1], 10, 32)
@@ -165,6 +172,7 @@ func do_usif() {
 						fmt.Println(" n - show network connections")
 						fmt.Println(" pe - show pending blocks ")
 						fmt.Println(" pr - show blocks in progress")
+						fmt.Println(" ca - show cached blocks")
 
 					default:
 						fmt.Println("Unknown command:", ll[0], " (h or ? - to see help)")

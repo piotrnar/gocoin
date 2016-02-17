@@ -45,16 +45,17 @@ func print_counters() {
 func print_stats() {
 	sec := float64(time.Now().Sub(DlStartTime)) / 1e6
 	BlocksMutex.Lock()
-	s := fmt.Sprintf("Block:%d/%d/%d/"+
-		"%d (%d)  Pending:%d  "+
-		"InProgress:%d (Empty:%d)  "+
-		"ImMem:%d (%dMB)  AvgBLen:%d  "+
-		"Conns:%d  [%.0f => %.0f KBps]  "+
-		"ECnt:%d  %.1fmin",
-		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, FetchBlocksTo,
-		LastBlockHeight, len(BlockQueue), len(BlocksToGet),
-		len(BlocksInProgress), EmptyInProgressCnt,
-		len(BlocksCached), BlocksCachedSize>>20, avg_block_size(),
+	var max_block_height_in_progress uint32
+	for _, v := range BlocksInProgress {
+		if v.Height>max_block_height_in_progress {
+			max_block_height_in_progress = v.Height
+		}
+	}
+	s := fmt.Sprintf("Block:%d/%d/%d/%d  Pending:%d  Processing:%d  Downloading:%d  "+
+		"Cached:%d (%dMB)  AvgBL:%dKB  Conns:%d  [%.0f => %.0f KBps]  ECnt:%d  %.1fmin",
+		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, max_block_height_in_progress,
+		LastBlockHeight, len(BlocksToGet), len(BlockQueue),len(BlocksInProgress),
+		len(BlocksCached), BlocksCachedSize>>20, avg_block_size()>>10,
 		open_connection_count(), float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec,
 		btc.EcdsaVerifyCnt, time.Now().Sub(StartTime).Minutes())
 	BlocksMutex.Unlock()
