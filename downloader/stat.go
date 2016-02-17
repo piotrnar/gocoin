@@ -52,10 +52,10 @@ func print_stats() {
 		}
 	}
 	s := fmt.Sprintf("Block:%d/%d/%d/%d  Pending:%d  Processing:%d  Downloading:%d  "+
-		"Cached:%d (%dMB)  AvgBL:%dKB  Conns:%d  [%.0f => %.0f KBps]  ECnt:%d  %.1fmin",
+		"Cached:%d (%dMB)  AvgSize:%dkB  Conns:%d  [%.0f => %.0f KBps]  ECnt:%d  %.1fmin",
 		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, max_block_height_in_progress,
 		LastBlockHeight, len(BlocksToGet), len(BlockQueue),len(BlocksInProgress),
-		len(BlocksCached), BlocksCachedSize>>20, avg_block_size()>>10,
+		len(BlocksCached), BlocksCachedSize>>20, avg_block_size()/1000,
 		open_connection_count(), float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec,
 		btc.EcdsaVerifyCnt, time.Now().Sub(StartTime).Minutes())
 	BlocksMutex.Unlock()

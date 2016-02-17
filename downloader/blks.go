@@ -17,7 +17,7 @@ const (
 	MIN_BLOCKS_AHEAD = 10
 	MAX_BLOCKS_AHEAD = 10e3
 
-	BLOCKSIZE_AVERAGE_DAYS = 7
+	BLOCKSIZE_AVERAGE_DAYS = 1
 
 	DROP_PEER_EVERY_SEC = 10
 
@@ -250,8 +250,8 @@ func calc_new_block_size() {
 
 func avg_block_size() (le int) {
 	le = int(atomic.LoadUint32(&BSAvg))
-	if le < 1024 {
-		le = 1024
+	if le < 1000 {
+		le = 1000
 	}
 	return
 }
@@ -360,6 +360,7 @@ func get_blocks() {
 				}
 				atomic.StoreUint32(&LastStoredBlock, CurrentBlockHeight)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
+				calc_new_block_size()
 				CurrentBlockHeight++
 
 			case <-time.After(1000*time.Millisecond):

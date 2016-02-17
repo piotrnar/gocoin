@@ -34,7 +34,7 @@ func show_connections() {
 			ss[i] += fmt.Sprintf(" %6.1fmin", time.Now().Sub(v.connected_at).Minutes())
 			bps := v.bps()
 			totbps += bps
-			ss[i] += fmt.Sprintf(" %6.2fKB/s", bps/1e3)
+			ss[i] += fmt.Sprintf(" %6.2fkB/s", bps/1e3)
 			if !v.last_blk_rcvd.IsZero() {
 				ss[i] += fmt.Sprintf(" %6.1fsec, %4d bl_in_pr",
 					time.Now().Sub(v.last_blk_rcvd).Seconds(), v.inprogress)
@@ -51,7 +51,7 @@ func show_connections() {
 	for i = range ss {
 		fmt.Printf("%5d) %s\n", i+1, ss[i])
 	}
-	fmt.Printf("Total downloading speed %.2f KBps\n", totbps/1e3)
+	fmt.Printf("Total downloading speed %.2f kB/s\n", totbps/1e3)
 }
 
 
