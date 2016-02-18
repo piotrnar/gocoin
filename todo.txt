@@ -5,6 +5,7 @@ Downloader:
 * Avoid re-building of UTXO-db while using "-b"
 
 Client:
+* Implement RBF in teh mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * At slow connections block timeout (15s) is too low
 * Client: sendind own TX to all peers does not work with Mempool disabled
