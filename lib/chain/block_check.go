@@ -10,7 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
-func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
+func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
 	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE {
 		er = errors.New("CheckBlock() : size limits failed")
@@ -49,12 +49,12 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 		return
 	}
 
-	height := prevblk.Height+1
+	bl.Height = prevblk.Height+1
 
 	// Reject the block if it reaches into the chain deeper than our unwind buffer
-	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(height)>=MovingCheckopintDepth {
+	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(bl.Height)>=MovingCheckopintDepth {
 		er = errors.New(fmt.Sprint("CheckBlock: btc.Block ", bl.Hash.String(),
-			" hooks too deep into the chain: ", height, "/", ch.BlockTreeEnd.Height, " ",
+			" hooks too deep into the chain: ", bl.Height, "/", ch.BlockTreeEnd.Height, " ",
 			btc.NewUint256(bl.ParentHash()).String()))
 		return
 	}
@@ -62,10 +62,10 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	// Check proof of work
 	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime())
 	if bl.Bits() != gnwr {
-		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", height, " exp:", gnwr)
+		println("AcceptBlock() : incorrect proof of work ", bl.Bits," at block", bl.Height, " exp:", gnwr)
 
 		// Here is a "solution" for whatever shit there is in testnet3, that nobody can explain me:
-		if !ch.testnet() || (height%2016)!=0 {
+		if !ch.testnet() || (bl.Height%2016)!=0 {
 			er = errors.New("CheckBlock: incorrect proof of work")
 			dos = true
 			return
@@ -73,63 +73,64 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 	}
 
 	// Count block versions within the Majority Window
-	var majority_v2, majority_v3, majority_v4 uint
 	n := prevblk
 	for cnt:=uint(0); cnt<ch.Consensus.Window && n!=nil; cnt++ {
 		ver := binary.LittleEndian.Uint32(n.BlockHeader[0:4])
 		if ver >= 2 {
-			majority_v2++
+			bl.Majority_v2++
 			if ver >= 3 {
-				majority_v3++
+				bl.Majority_v3++
 				if ver >= 4 {
-					majority_v4++
+					bl.Majority_v4++
 				}
 			}
 		}
 		n = n.Parent
 	}
 
-	if bl.Version()<2 && majority_v2>=ch.Consensus.RejectBlock {
+	if bl.Version()<2 && bl.Majority_v2>=ch.Consensus.RejectBlock {
 		er = errors.New("CheckBlock() : Rejected nVersion=1 block")
 		dos = true
 		return
 	}
 
-	if bl.Version()<3 && majority_v3>=ch.Consensus.RejectBlock {
+	if bl.Version()<3 && bl.Majority_v3>=ch.Consensus.RejectBlock {
 		er = errors.New("CheckBlock() : Rejected nVersion=2 block")
 		dos = true
 		return
 	}
 
-	if bl.Version()<4 && majority_v4>=ch.Consensus.RejectBlock {
+	if bl.Version()<4 && bl.Majority_v4>=ch.Consensus.RejectBlock {
 		er = errors.New("CheckBlock() : Rejected nVersion=3 block")
 		dos = true
 		return
 	}
+	return
+}
 
+
+func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 	if bl.Txs==nil {
 		er = bl.BuildTxList()
 		if er != nil {
-			dos = true
 			return
 		}
 	}
 
 	if !bl.Trusted {
-		if bl.Version()>=2 && majority_v2>=ch.Consensus.EnforceUpgrade {
+		if bl.Version()>=2 && bl.Majority_v2>=ch.Consensus.EnforceUpgrade {
 			var exp []byte
-			if height >= 0x800000 {
-				if height >= 0x80000000 {
-					exp = []byte{5, byte(height), byte(height>>8), byte(height>>16), byte(height>>24), 0}
+			if bl.Height >= 0x800000 {
+				if bl.Height >= 0x80000000 {
+					exp = []byte{5, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16), byte(bl.Height>>24), 0}
 				} else {
-					exp = []byte{4, byte(height), byte(height>>8), byte(height>>16), byte(height>>24)}
+					exp = []byte{4, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16), byte(bl.Height>>24)}
 				}
 			} else {
-				exp = []byte{3, byte(height), byte(height>>8), byte(height>>16)}
+				exp = []byte{3, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16)}
 			}
 			if len(bl.Txs[0].TxIn[0].ScriptSig)<len(exp) || !bytes.Equal(exp, bl.Txs[0].TxIn[0].ScriptSig[:len(exp)]) {
 				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String())
-				dos = true
 				return
 			}
 		}
@@ -137,21 +138,18 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 		// This is a stupid check, but well, we need to be satoshi compatible
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
-			dos = true
 			return
 		}
 
 		// Check Merkle Root - that's importnant
 		if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch")
-			dos = true
 			return
 		}
 
 		// Check transactions - this is the most time consuming task
-		if !CheckTransactions(bl.Txs, height, bl.BlockTime()) {
+		if !CheckTransactions(bl.Txs, bl.Height, bl.BlockTime()) {
 			er = errors.New("CheckBlock() : CheckTransactions() failed")
-			dos = true
 			return
 		}
 	}
@@ -162,13 +160,25 @@ func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool)
 		bl.VerifyFlags = 0
 	}
 
-	if majority_v3>=ch.Consensus.EnforceUpgrade {
+	if bl.Majority_v3>=ch.Consensus.EnforceUpgrade {
 		bl.VerifyFlags |= script.VER_DERSIG
 	}
 
-	if bl.Version()>=4 && majority_v4>=ch.Consensus.EnforceUpgrade {
+	if bl.Version()>=4 && bl.Majority_v4>=ch.Consensus.EnforceUpgrade {
 		bl.VerifyFlags |= script.VER_CLTV
 	}
 
+	return
+}
+
+
+func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
+	er, dos, maybelater = ch.PreCheckBlock(bl)
+	if er != nil {
+		er = ch.PostCheckBlock(bl)
+		if er != nil { // all post-check errors are DoS kind
+			dos = true
+		}
+	}
 	return
 }

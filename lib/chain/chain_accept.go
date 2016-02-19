@@ -28,15 +28,23 @@ func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) 
 // If the block does is not the heighest, it is added to the chain, but maked
 // as an orphan - its transaction will be verified only if the chain would swap
 // to its branch later on.
-func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
+func (ch *Chain) AcceptBlock(bl *btc.Block) (e error) {
+	ch.BlockIndexAccess.Lock()
+	cur := ch.AcceptHeader(bl)
+	ch.BlockIndexAccess.Unlock()
+	return ch.CommitBlock(bl, cur)
+}
 
+
+// Make sure to call this function with ch.BlockIndexAccess locked
+func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		panic("This should not happen")
 	}
 
 	// create new BlockTreeNode
-	cur := new(BlockTreeNode)
+	cur = new(BlockTreeNode)
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
@@ -45,12 +53,15 @@ func (ch *Chain)AcceptBlock(bl *btc.Block) (e error) {
 	copy(cur.BlockHeader[:], bl.Raw[:80])
 
 	// Add this block to the block index
-	ch.BlockIndexAccess.Lock()
 	prevblk.addChild(cur)
 	ch.BlockIndex[cur.BlockHash.BIdx()] = cur
-	ch.BlockIndexAccess.Unlock()
 
-	if ch.BlockTreeEnd==prevblk {
+	return
+}
+
+
+func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
+	if ch.BlockTreeEnd==cur.Parent {
 		// The head of out chain - apply the transactions
 		var changes *BlockChanges
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)

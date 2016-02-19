@@ -1,3 +1,6 @@
+1.5.0
+* Headers-first blockchain sync
+
 1.4.1
 * WebUI: More of teal time UI refresh (without reloading the pages)
 * secp256k1: Fixed issue #15 - BaseMultiply returning wrong result for certain input values

@@ -14,7 +14,10 @@ type Block struct {
 	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
 
-	VerifyFlags uint32 // These flags are set by chain.CheckBlock and used by script.VerifyTxScript
+	// These flags are set during chain.(Pre/Post)CheckBlock and used later (e.g. by script.VerifyTxScript):
+	VerifyFlags uint32
+	Majority_v2, Majority_v3, Majority_v4 uint
+	Height uint32
 }
 
 
@@ -59,6 +62,14 @@ func (bl *Block)Bits() uint32 {
 // Parses block's transactions and adds them to the structure, calculating hashes BTW.
 // It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 func (bl *Block) BuildTxList() (e error) {
+	if bl.TxCount==0 {
+		bl.TxCount, bl.TxOffset = VLen(bl.Raw[80:])
+		if bl.TxOffset == 0 {
+			e = errors.New("Block's txn_count field corrupt")
+			return
+		}
+		bl.TxOffset += 80
+	}
 	bl.Txs = make([]*Tx, bl.TxCount)
 
 	offs := bl.TxOffset
