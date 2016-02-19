@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/chain"
 )
 
 type OneReceivedBlock struct {
@@ -17,6 +17,7 @@ type OneReceivedBlock struct {
 type BlockRcvd struct {
 	Conn *OneConnection
 	*btc.Block
+	*chain.BlockTreeNode
 }
 
 type TxRcvd struct {
@@ -25,48 +26,21 @@ type TxRcvd struct {
 	raw []byte
 }
 
+type OneBlockToGet struct {
+	*btc.Block
+	*chain.BlockTreeNode
+	InProgress uint
+}
+
 var (
-	ReceivedBlocks map[[btc.Uint256IdxLen]byte] *OneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *OneReceivedBlock, 300e3)
+	ReceivedBlocks map[[btc.Uint256IdxLen]byte] *OneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *OneReceivedBlock, 400e3)
+	BlocksToGet map[[btc.Uint256IdxLen]byte] *OneBlockToGet = make(map[[btc.Uint256IdxLen]byte] *OneBlockToGet)
+	LastCommitedHeader *chain.BlockTreeNode
 	MutexRcv sync.Mutex
-	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, 1000)
+
+	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD+10)
 	NetTxs chan *TxRcvd = make(chan *TxRcvd, 1000)
 
-	CachedBlocks map[[btc.Uint256IdxLen]byte] OneCachedBlock = make(map[[btc.Uint256IdxLen]byte] OneCachedBlock, common.MaxCachedBlocks)
+	CachedBlocks []*BlockRcvd
 )
 
-type OneCachedBlock struct {
-	time.Time
-	*btc.Block
-	Conn *OneConnection
-}
-
-
-// This one shall only be called from the chain thread (this no protection)
-func AddBlockToCache(bl *btc.Block, conn *OneConnection) {
-	// we use CachedBlocks only from one therad so no need for a mutex
-	if len(CachedBlocks)==common.MaxCachedBlocks {
-		// Remove the oldest one
-		oldest := time.Now()
-		var todel [btc.Uint256IdxLen]byte
-		for k, v := range CachedBlocks {
-			if v.Time.Before(oldest) {
-				oldest = v.Time
-				todel = k
-			}
-		}
-		delete(CachedBlocks, todel)
-		common.CountSafe("BlockCacheFull")
-	}
-	CachedBlocks[bl.Hash.BIdx()] = OneCachedBlock{Time:time.Now(), Block:bl, Conn:conn}
-}
-
-
-// Expire cached blocks
-func ExpireCachedBlocks() {
-	for k, v := range CachedBlocks {
-		if v.Time.Add(ExpireCachedAfter).Before(time.Now()) {
-			delete(CachedBlocks, k)
-			common.CountSafe("BlockExpired")
-		}
-	}
-}

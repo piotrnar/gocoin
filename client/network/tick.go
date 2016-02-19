@@ -82,25 +82,39 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	// Timeout getdata for blocks in progress, so the map does not grow to infinity
-	for k, v := range c.GetBlockInProgress {
-		if time.Now().After(v.start.Add(GetBlockTimeout)) {
-			common.CountSafe("BlockGetTimeout")
-			c.Mutex.Lock()
-			delete(c.GetBlockInProgress, k)
-			c.Mutex.Unlock()
+	if c.GetBlocksDataNow {
+		c.GetBlocksDataNow = false
+		c.LastFetchTried = time.Now()
+		if c.GetBlockData() {
+			return
 		}
 	}
 
-	// Need to send getblocks...?
-	if len(c.GetBlockInProgress)==0 && c.getblocksNeeded() {
+	MutexRcv.Lock()
+	blocks_to_get := len(BlocksToGet)
+	MutexRcv.Unlock()
+
+	if !c.AllHeadersReceived && !c.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD {
+			//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
+			c.sendGetHeaders()
+			return
+		}
+		c.HoldHeaders++
+	}
+
+	if !c.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+		// Ping if we dont do anything
+		c.TryPing()
+		if blocks_to_get > 0 && time.Now().Sub(c.LastFetchTried) > time.Second {
+			c.GetBlocksDataNow = true
+		}
 		return
 	}
 
-	// Ping if we dont do anything
-	c.TryPing()
+	// if we got here, means we had nothing to send - just wait for a moment
+	time.Sleep(150*time.Millisecond)
 }
-
 
 func DoNetwork(ad *peersdb.PeerAddr) {
 	var e error
@@ -122,12 +136,12 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
 		if e == nil {
 			conn.ConnectedAt = time.Now()
-			if common.DebugLevel>0 {
+			if common.DebugLevel!=0 {
 				println("Connected to", ad.Ip())
 			}
 			conn.Run()
 		} else {
-			if common.DebugLevel>0 {
+			if common.DebugLevel!=0 {
 				println("Could not connect to", ad.Ip())
 			}
 			//println(e.Error())
@@ -280,7 +294,6 @@ func NetworkTick() {
 			}
 		}
 		HammeringMutex.Unlock()
-		ExpireCachedBlocks()
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	}
 
@@ -308,9 +321,10 @@ func (c *OneConnection) Run() {
 
 	c.Mutex.Lock()
 	c.LastDataGot = time.Now()
-	c.NextBlocksAsk = time.Now() // ask for blocks ASAP
 	c.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
+	c.AllHeadersReceived = false
+
 	c.Mutex.Unlock()
 
 	for !c.IsBroken() {
@@ -417,13 +431,28 @@ func (c *OneConnection) Run() {
 			case "notfound":
 				common.CountSafe("NotFound")
 
+			case "headers":
+				c.HandleHeaders(cmd.pl)
+
 			default:
 				if common.DebugLevel>0 {
 					println(cmd.cmd, "from", c.PeerAddr.Ip())
 				}
 		}
 	}
+
+
 	c.Mutex.Lock()
+	MutexRcv.Lock()
+	for k, _ := range c.GetBlockInProgress {
+		if rec, ok := BlocksToGet[k] ; ok {
+			rec.InProgress--
+		} else {
+			//println("ERROR! Block", bip.hash.String(), "in progress, but not in BlocksToGet")
+		}
+	}
+	MutexRcv.Unlock()
+
 	ban := c.banit
 	c.Mutex.Unlock()
 	if ban {
@@ -434,7 +463,7 @@ func (c *OneConnection) Run() {
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()
 	}
-	if common.DebugLevel>0 {
+	if common.DebugLevel!=0 {
 		println("Disconnected from", c.PeerAddr.Ip())
 	}
 	c.NetConn.Close()

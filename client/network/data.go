@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"time"
 	"bytes"
-	"sync/atomic"
 	//"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -78,77 +76,85 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 
 // This function is called from a net conn thread
 func netBlockReceived(conn *OneConnection, b []byte) {
-	bl, e := btc.NewBlock(b)
-	if e != nil {
-		conn.DoS("BrokenBlock")
-		println("NewBlock:", e.Error())
+
+	if len(b)<100 {
+		conn.DoS("ShortBlock")
 		return
 	}
 
-	idx := bl.Hash.BIdx()
+	hash := btc.NewSha2Hash(b[:80])
+	idx := hash.BIdx()
+	//println("got block data", hash.String())
+
 	MutexRcv.Lock()
+
+	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		MutexRcv.Unlock()
 		common.CountSafe("BlockSameRcvd")
-		return
-	}
-	orb := &OneReceivedBlock{Time:time.Now()}
-	if bip, ok := conn.GetBlockInProgress[idx]; ok {
-		orb.TmDownload = orb.Time.Sub(bip.start)
 		conn.Mutex.Lock()
 		delete(conn.GetBlockInProgress, idx)
 		conn.Mutex.Unlock()
-	} else {
-		common.CountSafe("UnxpectedBlockRcvd")
+		return
 	}
-	ReceivedBlocks[idx] = orb
-	MutexRcv.Unlock()
 
-	NetBlocks <- &BlockRcvd{Conn:conn, Block:bl}
-}
+	// remove from BlocksToGet:
+	rec := BlocksToGet[idx]
+	if rec==nil {
+		MutexRcv.Unlock()
+		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), " was not expected")
 
-
-// It goes through all the netowrk connections and checks
-// ... how many of them have a given block download in progress
-// Returns true if it's at the max already - don't want another one.
-func blocksLimitReached(idx [btc.Uint256IdxLen]byte) (res bool) {
-	var cnt uint32
-	Mutex_net.Lock()
-	for _, v := range OpenCons {
-		v.Mutex.Lock()
-		_, ok := v.GetBlockInProgress[idx]
-		v.Mutex.Unlock()
-		if ok {
-			if cnt+1 >= atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce) {
-				res = true
-				break
-			}
-			cnt++
+		if _, got := ReceivedBlocks[idx]; got {
+			println("Already received it")
 		}
-	}
-	Mutex_net.Unlock()
-	return
-}
 
-// Called from network threads
-func blockWanted(h []byte) (yes bool) {
-	idx := btc.NewUint256(h).BIdx()
-	MutexRcv.Lock()
-	_, ok := ReceivedBlocks[idx]
-	MutexRcv.Unlock()
-	if !ok {
-		if atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce)==0 || !blocksLimitReached(idx) {
-			yes = true
-			common.CountSafe("BlockWanted")
+		bip := conn.GetBlockInProgress[idx]
+		if bip != nil {
+			println("... but is in progress")
 		} else {
-			common.CountSafe("BlockInProgress")
+			println("... NOT in progress")
 		}
-	} else {
-		common.CountSafe("BlockUnwanted")
+
+		conn.Disconnect()
+		return
 	}
-	return
+
+	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
+	rec.InProgress--
+	rec.Block.Raw = b
+
+	er := common.BlockChain.PostCheckBlock(rec.Block)
+	if er!=nil {
+		MutexRcv.Unlock()
+		println("Corrupt block received from", conn.PeerAddr.Ip())
+		conn.DoS("BadBlock")
+		return
+	}
+
+	orb := &OneReceivedBlock{Time:time.Now()}
+	conn.Mutex.Lock()
+	bip := conn.GetBlockInProgress[idx]
+	if bip==nil {
+		conn.Mutex.Unlock()
+		MutexRcv.Unlock()
+		println("unexpected block received from", conn.PeerAddr.Ip())
+		common.CountSafe("UnxpectedBlockRcvd")
+		conn.DoS("UnexpBlock")
+		return
+	}
+
+	orb.TmDownload = orb.Time.Sub(bip.start)
+	delete(conn.GetBlockInProgress, idx)
+	conn.Mutex.Unlock()
+
+	ReceivedBlocks[idx] = orb
+	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+	MutexRcv.Unlock()
+
+	NetBlocks <- &BlockRcvd{Conn:conn, Block:rec.Block, BlockTreeNode:rec.BlockTreeNode}
 }
+
 
 // Read VLen followed by the number of locators
 // parse the payload of getblocks and getheaders messages
@@ -191,99 +197,90 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 }
 
 
-// Handle getheaders protocol command
-// https://en.bitcoin.it/wiki/Protocol_specification#getheaders
-func (c *OneConnection) GetHeaders(pl []byte) {
-	h2get, hashstop, e := parseLocatorsPayload(pl)
-	if e != nil || hashstop==nil {
-		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip())
-		c.DoS("BadGetHdrs")
-		return
+// Call it with locked MutexRcv
+func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (lowest_found *OneBlockToGet) {
+	for _, v := range BlocksToGet {
+		if v.InProgress==cnt_in_progress && v.Block.Height <= max_height &&
+			(lowest_found==nil || v.Block.Height < lowest_found.Block.Height) {
+				lowest_found = v
+		}
 	}
+	return
+}
 
-	if common.DebugLevel > 1 {
-		println("GetHeaders", len(h2get), hashstop.String())
-	}
+func (c *OneConnection) GetBlockData() (yes bool) {
+	//MAX_GETDATA_FORWARD
+	avg_block_size := common.GetAverageBlockSize()
 
-	var best_block, last_block *chain.BlockTreeNode
+	// Need to send getdata...?
+	MutexRcv.Lock()
+	if len(BlocksToGet)>0 && uint(len(c.GetBlockInProgress)+1)*avg_block_size <= MAX_GETDATA_FORWARD {
+		//uint32(len(c.GetBlockInProgress)) < atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce)
+		// We can issue getdata for this peer
+		// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
-	common.Last.Mutex.Lock()
-	last_block = common.Last.Block
-	common.Last.Mutex.Unlock()
+		common.Last.Mutex.Lock()
+		max_height := common.Last.Block.Height + MAX_BLOCKS_FORWARD
+		common.Last.Mutex.Unlock()
+		if max_height > c.Node.Height {
+			max_height = c.Node.Height
+		}
 
-	common.BlockChain.BlockIndexAccess.Lock()
+		invs := new(bytes.Buffer)
+		var cnt uint64
+		var cnt_in_progress uint
+		for {
+			var lowest_found *OneBlockToGet
 
-	//println("GetHeaders", len(h2get), hashstop.String())
-	if len(h2get) > 0 {
-		for i := range h2get {
-			if bl, ok := common.BlockChain.BlockIndex[h2get[i].BIdx()]; ok {
-				if best_block==nil || bl.Height > best_block.Height {
-					//println(" ... bbl", i, bl.Height, bl.BlockHash.String())
-					best_block = bl
+			// Get block to fetch:
+
+			for _, v := range BlocksToGet {
+				if v.InProgress==cnt_in_progress && v.Block.Height <= max_height &&
+					(lowest_found==nil || v.Block.Height < lowest_found.Block.Height) {
+						c.Mutex.Lock()
+						if _, ok := c.GetBlockInProgress[v.BlockHash.BIdx()]; !ok {
+							lowest_found = v
+						}
+						c.Mutex.Unlock()
 				}
 			}
-		}
-	} else {
-		best_block = common.BlockChain.BlockIndex[hashstop.BIdx()]
-	}
 
-	if best_block==nil {
-		println("GetHeaders: best_block not found")
-		common.BlockChain.BlockIndexAccess.Unlock()
-		common.CountSafe("GetHeadersBadBlock")
-		return
-	}
-
-	best_bl_ch := len(best_block.Childs)
-	//last_block = common.BlockChain.BlockTreeEnd
-
-	var resp []byte
-	var cnt uint32
-
-	defer func() {
-		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
-		if r := recover(); r != nil {
-			common.CountSafe("GetHeadersOrphBlk")
-			err, ok := r.(error)
-			if !ok {
-				err = fmt.Errorf("pkg: %v", r)
+			if lowest_found==nil {
+				cnt_in_progress++
+				if cnt_in_progress==uint(common.CFG.Net.MaxBlockAtOnce) {
+					break
+				}
+				continue
 			}
-			fmt.Println("GetHeaders panic recovered:", err.Error())
-			fmt.Println("THIS SHOULD NOT HAPPEN - PLEASE REPORT")
-			fmt.Println("Cnt:", cnt, "  len(h2get):", len(h2get))
-			if best_block!=nil {
-				fmt.Println("BestBlock:", best_block.Height, best_block.BlockHash.String(),
-					len(best_block.Childs), best_bl_ch)
-			}
-			if last_block!=nil {
-				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String(), len(last_block.Childs))
+
+			binary.Write(invs, binary.LittleEndian, uint32(2))
+			invs.Write(lowest_found.BlockHash.Hash[:])
+			lowest_found.InProgress++
+			cnt++
+
+			c.Mutex.Lock()
+			c.GetBlockInProgress[lowest_found.BlockHash.BIdx()] =
+				&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now()}
+			c.Mutex.Unlock()
+
+			if len(c.GetBlockInProgress)*int(avg_block_size) >= MAX_GETDATA_FORWARD || cnt==2000 {
+				break
 			}
 		}
 
-		common.BlockChain.BlockIndexAccess.Unlock()
-
-		// send the response
-		out := new(bytes.Buffer)
-		btc.WriteVlen(out, uint64(cnt))
-		out.Write(resp)
-		c.SendRawMsg("headers", out.Bytes())
-	}()
-
-	for cnt<2000 {
-		if last_block.Height <= best_block.Height {
-			break
+		if cnt > 0 {
+			bu := new(bytes.Buffer)
+			btc.WriteVlen(bu, uint64(cnt))
+			pl := append(bu.Bytes(), invs.Bytes()...)
+			//println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
+			c.SendRawMsg("getdata", pl)
+			yes = true
+		} else {
+			//println("fetch nothing from", c.PeerAddr.Ip())
+			c.FetchNothing++
 		}
-		best_block = best_block.FindPathTo(last_block)
-		if best_block==nil {
-			//println("FindPathTo failed", last_block.BlockHash.String(), cnt)
-			//println("resp:", hex.EncodeToString(resp))
-			break
-		}
-		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero
-		cnt++
 	}
-
-	// Note: the deferred function will be called before exiting
+	MutexRcv.Unlock()
 
 	return
 }

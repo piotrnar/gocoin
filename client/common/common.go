@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib"
@@ -12,7 +13,7 @@ import (
 const (
 	ConfigFile = "gocoin.conf"
 
-	Version = 70001
+	Version = uint32(70002)
 	DefaultUserAgent = "/Gocoin:"+lib.Version+"/"
 	Services = uint64(0x00000001)
 
@@ -49,6 +50,8 @@ var (
 	Busy_mutex sync.Mutex
 
 	NetworkClosed bool
+
+	averageBlockSize uint32 = 0
 )
 
 
@@ -107,3 +110,26 @@ func HashrateToString(hr float64) string {
 }
 
 
+// This is supposed to return average block size at the current blockchain height
+func GetAverageBlockSize() uint {
+	height := atomic.LoadUint32(&BlockChain.BlockTreeEnd.Height)
+	if height<100e3 {
+		return 2500
+	}
+	if height<120e3 {
+		return 10e3
+	}
+	if height<185e3 {
+		return 100e3
+	}
+	if height<285e3 {
+		return 200e3
+	}
+	if height<330e3 {
+		return 300e3
+	}
+	if height<380e3 {
+		return 500e3
+	}
+	return 700e3
+}

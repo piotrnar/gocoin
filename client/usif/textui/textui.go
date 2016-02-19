@@ -137,6 +137,10 @@ func show_info(par string) {
 	}
 	common.Busy_mutex.Unlock()
 
+	network.MutexRcv.Lock()
+	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	network.MutexRcv.Unlock()
+
 	common.Last.Mutex.Lock()
 	fmt.Println("Last Block:", common.Last.Block.BlockHash.String())
 	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
@@ -146,8 +150,8 @@ func show_info(par string) {
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("BlocksCached: %d,  NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(network.CachedBlocks), len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
+	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
+		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
@@ -217,9 +221,9 @@ func ui_dbg(par string) {
 }
 
 
-func show_cached(par string) {
-	for _, v := range network.CachedBlocks {
-		fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
+func show_pending(par string) {
+	for _, v := range network.BlocksToGet {
+		fmt.Printf(" * %d / %s / %d in progress\n", v.Block.Height, v.Block.Hash.String(), v.InProgress)
 	}
 }
 
@@ -465,6 +469,22 @@ func coins_age(s string) {
 	common.BlockChain.Unspent.PrintCoinAge()
 }
 
+func show_cached(par string) {
+	var hi, lo uint32
+	for _, v := range network.CachedBlocks {
+		//fmt.Printf(" * %s -> %s\n", v.Hash.String(), btc.NewUint256(v.ParentHash()).String())
+		if hi==0 {
+			hi = v.Block.Height
+			lo = v.Block.Height
+		} else if v.Block.Height>hi {
+			hi = v.Block.Height
+		} else if v.Block.Height<lo {
+			lo = v.Block.Height
+		}
+	}
+	fmt.Println(len(network.CachedBlocks), "block cached with heights", lo, "to", hi, hi-lo)
+}
+
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("alerts a", false, list_alerst, "Show received alerts")
@@ -481,6 +501,7 @@ func init() {
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
+	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("qdbstats qs", false, qdb_stats, "Show statistics of QDB engine")
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")

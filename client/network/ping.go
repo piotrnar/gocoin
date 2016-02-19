@@ -68,14 +68,14 @@ func drop_slowest_peer() {
 }
 
 
-func (c *OneConnection) TryPing() {
+func (c *OneConnection) TryPing() bool {
 	if c.Node.Version>60000 && c.PingInProgress == nil && time.Now().After(c.NextPing) {
-		/*&&len(c.Send.Buf)==0 && len(c.GetBlocksInProgress)==0*/
 		c.PingInProgress = make([]byte, 8)
 		rand.Read(c.PingInProgress[:])
 		c.SendRawMsg("ping", c.PingInProgress)
 		c.LastPingSent = time.Now()
 		//println(c.PeerAddr.Ip(), "ping...")
-		return
+		return true
 	}
+	return false
 }

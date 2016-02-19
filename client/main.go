@@ -28,24 +28,10 @@ var killchan chan os.Signal = make(chan os.Signal)
 var retryCachedBlocks bool
 
 
-/* this would print text messages for transactions that are being processed
-func contains_message(tx *btc.Tx) []byte {
-	for i := range tx.TxOut {
-		if len(tx.TxOut[i].Pk_script)>=2 && tx.TxOut[i].Pk_script[0]==0x6a {
-			s, e := btc.ReadString(bytes.NewBuffer(tx.TxOut[i].Pk_script[1:]))
-			if e==nil {
-				return []byte(s)
-			}
-		}
-	}
-	return nil
-}
-*/
-
-
-func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
+func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	sta := time.Now()
-	e = common.BlockChain.AcceptBlock(bl)
+	bl := newbl.Block
+	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
 		network.MutexRcv.Lock()
 		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
@@ -53,23 +39,12 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
-			/* dupa
-			if msg:=contains_message(bl.Txs[i]); msg!=nil {
-				for xx:=range msg {
-					if msg[xx]<' ' || msg[xx]>127 {
-						msg[xx] = '.'
-					}
-				}
-				fmt.Println("TX", bl.Txs[i].Hash.String(), "says:", "'" + string(msg) + "'")
-				textui.ShowPrompt()
-			}
-			*/
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
 			common.Busy("NetRouteInv")
-			network.NetRouteInv(2, bl.Hash, from)
+			network.NetRouteInv(2, bl.Hash, newbl.Conn)
 
 			if common.CFG.Beeps.NewBlock {
 				fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
@@ -120,67 +95,49 @@ func LocalAcceptBlock(bl *btc.Block, from *network.OneConnection) (e error) {
 
 
 func retry_cached_blocks() bool {
-	if len(network.CachedBlocks)==0 {
-		return false
-	}
-	accepted_cnt := 0
-	for k, v := range network.CachedBlocks {
-		common.Busy("Cache.CheckBlock "+v.Block.Hash.String())
-		e, dos, maybelater := common.BlockChain.CheckBlock(v.Block)
-		if e == nil {
-			common.Busy("Cache.AcceptBlock "+v.Block.Hash.String())
-			e := LocalAcceptBlock(v.Block, v.Conn)
-			if e == nil {
-				//fmt.Println("*** Old block accepted", common.BlockChain.BlockTreeEnd.Height)
-				common.CountSafe("BlocksFromCache")
-				delete(network.CachedBlocks, k)
-				accepted_cnt++
-				break // One at a time should be enough
-			} else {
-				fmt.Println("retry AcceptBlock:", e.Error())
-				v.Conn.DoS("BadCachedBlock1")
-				delete(network.CachedBlocks, k)
+	var idx int
+	common.CountSafe("RedoCachedBlks")
+	for idx < len(network.CachedBlocks) {
+		newbl := network.CachedBlocks[idx]
+		if newbl.Block.Height==common.BlockChain.BlockTreeEnd.Height+1 {
+			common.Busy("Cache.LocalAcceptBlock "+newbl.Block.Hash.String())
+			e := LocalAcceptBlock(newbl)
+			if e != nil {
+				fmt.Println("AcceptBlock:", e.Error())
+				newbl.Conn.DoS("LocalAcceptBl")
 			}
+			// remove it from cache
+			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
+			return len(network.CachedBlocks)>0
 		} else {
-			if !maybelater {
-				fmt.Println("retry CheckBlock:", e.Error())
-				common.CountSafe("BadCachedBlocks")
-				if dos {
-					v.Conn.DoS("BadCachedBlock2")
-				}
-				delete(network.CachedBlocks, k)
-			}
+			idx++
 		}
 	}
-	return accepted_cnt>0 && len(network.CachedBlocks)>0
+	return false
 }
 
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	common.CountSafe("HandleNetBlock")
-	bl := newbl.Block
-	common.Busy("CheckBlock "+bl.Hash.String())
-	e, dos, maybelater := common.BlockChain.CheckBlock(bl)
-	if e != nil {
-		if maybelater {
-			network.AddBlockToCache(bl, newbl.Conn)
-		} else {
-			fmt.Println(dos, e.Error())
-			if dos {
-				newbl.Conn.DoS("CheckBlock")
-			}
-		}
-	} else {
-		common.Busy("LocalAcceptBlock "+bl.Hash.String())
-		e = LocalAcceptBlock(bl, newbl.Conn)
-		if e == nil {
-			retryCachedBlocks = retry_cached_blocks()
-		} else {
-			fmt.Println("AcceptBlock:", e.Error())
-			newbl.Conn.DoS("LocalAcceptBl")
-		}
+	if int(newbl.Block.Height)-int(common.BlockChain.BlockTreeEnd.Height) > 1 {
+		// it's not linking - keep it for later
+		//println("try block", newbl.Block.Height, "later as now we are at", common.BlockChain.BlockTreeEnd.Height)
+		//network.NetBlocks <- newbl
+		network.CachedBlocks = append(network.CachedBlocks, newbl)
+		common.CountSafe("BlockPostone")
+		return
 	}
+
+	common.Busy("LocalAcceptBlock "+newbl.Hash.String())
+	e := LocalAcceptBlock(newbl)
+	if e != nil {
+		fmt.Println("AcceptBlock:", e.Error())
+		newbl.Conn.DoS("LocalAcceptBl")
+	} else {
+		//println("block", newbl.Block.Height, "accepted")
+		retryCachedBlocks = retry_cached_blocks()
+	}
+
 }
 
 
@@ -281,6 +238,7 @@ func main() {
 	for k, v := range common.BlockChain.BlockIndex {
 		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
 	}
+	network.LastCommitedHeader = common.Last.Block
 
 	if common.CFG.TextUI.Enabled {
 		go textui.MainThread()

@@ -67,10 +67,8 @@ func (v *OneConnection) Stats() (s string) {
 		s += fmt.Sprintln("Bytes received:", v.BytesReceived)
 		s += fmt.Sprintln("Bytes sent:", v.BytesSent)
 		s += fmt.Sprintln("Invs recieved:", v.InvsRecieved)
-		s += fmt.Sprintln("Next getbocks sending in", v.NextBlocksAsk.Sub(time.Now()).String())
-		if v.LastBlocksFrom != nil {
-			s += fmt.Sprintln("Last block asked:", v.LastBlocksFrom.Height, v.LastBlocksFrom.BlockHash.String())
-		}
+		s += fmt.Sprintln("AllHeadersReceived:", v.AllHeadersReceived)
+		s += fmt.Sprintln("GetHeadersInProgress:", v.GetHeadersInProgress)
 		s += fmt.Sprintln("Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
 		if v.Send.Buf != nil {
 			s += fmt.Sprintln("Bytes to send:", len(v.Send.Buf))
@@ -80,6 +78,9 @@ func (v *OneConnection) Stats() (s string) {
 		}
 
 		s += fmt.Sprintln("GetBlockInProgress:", len(v.GetBlockInProgress))
+		s += fmt.Sprintln("GetBlocksDataNow:", v.GetBlocksDataNow)
+		s += fmt.Sprintln("FetchNothing:", v.FetchNothing)
+		s += fmt.Sprintln("HoldHeaders:", v.HoldHeaders)
 
 		// Display ping stats
 		s += fmt.Sprint("Ping history:")

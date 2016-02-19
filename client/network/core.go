@@ -12,7 +12,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
+	//"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
@@ -25,8 +25,6 @@ const (
 	NoDataTimeout = 2*time.Minute
 	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
 	SendBufSizeHoldOn = 1000*1000 // If you have more than this in the send buffer do not process any commands
-
-	NewBlocksAskDuration = 5*time.Minute  // Ask each connection for new blocks every X minutes
 
 	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
 
@@ -46,6 +44,9 @@ const (
 	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
 
 	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache fro that long, drop it*/
+
+	MAX_BLOCKS_FORWARD = 5000 // Never ask for a block  higher than current top + this value
+	MAX_GETDATA_FORWARD = 2e6 // 2 times maximum block size
 )
 
 
@@ -121,10 +122,13 @@ type OneConnection struct {
 
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
 
-	LastBlocksFrom *chain.BlockTreeNode // what the last getblocks was based un
-	NextBlocksAsk time.Time           // when the next getblocks should be needed
-
 	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
+	AllHeadersReceived bool // keep sending getheaders until this is not set
+	GetHeadersInProgress bool
+	GetBlocksDataNow bool
+	FetchNothing, HoldHeaders uint
+
+	LastFetchTried time.Time
 
 	// Ping stats
 	PingHistory [PingHistoryLength]int
@@ -137,7 +141,6 @@ type OneConnection struct {
 type oneBlockDl struct {
 	hash *btc.Uint256
 	start time.Time
-	head bool
 }
 
 
@@ -221,7 +224,9 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
-	//print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+	if common.DebugLevel!=0 {
+		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+	}
 	c.Mutex.Unlock()
 }
 
@@ -296,7 +301,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 		if c.recv.dat == nil {
 			msi := maxmsgsize(c.recv.cmd)
 			if c.recv.pl_len > msi {
-				//println(c.PeerAddr.Ip(), "Command", c.recv.cmd, "is going to be too big", c.recv.pl_len, msi)
+				println(c.PeerAddr.Ip(), "Command", c.recv.cmd, "is going to be too big", c.recv.pl_len, msi)
 				c.DoS("MsgTooBig")
 				return nil
 			}
@@ -359,12 +364,13 @@ func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 // Returns maximum accepted payload size of a given type of message
 func maxmsgsize(cmd string) uint32 {
 	switch cmd {
-		case "inv": return 3+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		case "inv": return 3+50000*36 // the spec says "max 50000 entries"
 		case "tx": return 100e3 // max tx size 100KB
 		case "addr": return 3+1000*30 // max 1000 addrs
 		case "block": return 1e6 // max block size 1MB
 		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
-		case "getdata": return 3+1000*36 // the spec says "max 50000 entries", but we reject more than 1000
+		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
+		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }

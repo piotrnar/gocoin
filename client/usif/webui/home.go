@@ -97,6 +97,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 
 	var out struct {
 		Blocks_cached int
+		BlocksToGet int
 		Known_peers int
 		Node_uptime uint64
 		Net_block_qsize int
@@ -108,6 +109,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
+	out.BlocksToGet = len(network.BlocksToGet)
 	out.Known_peers = peersdb.PeerDB.Count()
 	out.Node_uptime = uint64(time.Now().Sub(common.StartTime).Seconds())
 	out.Net_block_qsize = len(network.NetBlocks)
