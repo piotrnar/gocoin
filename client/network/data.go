@@ -76,6 +76,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 
 // This function is called from a net conn thread
 func netBlockReceived(conn *OneConnection, b []byte) {
+    now := time.Now()
 
 	if len(b)<100 {
 		conn.DoS("ShortBlock")
@@ -132,7 +133,6 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	orb := &OneReceivedBlock{Time:time.Now()}
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]
 	if bip==nil {
@@ -144,7 +144,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	orb.TmDownload = orb.Time.Sub(bip.start)
+	orb := &OneReceivedBlock{Time:bip.start, TmDownload:now.Sub(bip.start)}
 	delete(conn.GetBlockInProgress, idx)
 	conn.Mutex.Unlock()
 
