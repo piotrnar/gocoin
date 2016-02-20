@@ -11,7 +11,7 @@
 	<th colspan="3">Block info
 	<th colspan="2">Block size
 	<th colspan="3">Mining info
-	<th colspan="3">Timing in <i>ms</i>
+	<th colspan="4">Timing in <i>ms</i>
 <tr>
 	<th>Height
 	<th>Received
@@ -21,8 +21,9 @@
 	<th>Ver
 	<th>BTC
 	<th align="left">Miner
-	<th align="right">dload
-	<th align="right">verif
+	<th align="right">dld
+	<th align="right">que
+	<th align="right">ver
 	<th>ohd
 </tr>
 </table>
@@ -114,6 +115,11 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'i'
 				if (cs[i].TimeDl>=0) td.innerText = cs[i].TimeDl
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i'
+				if (cs[i].TimeDl>=0) td.innerText = cs[i].TimeQue
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
