@@ -32,7 +32,7 @@ func (ch *Chain)loadBlockIndex() {
 	ch.Blocks.LoadBlockIndex(ch, nextBlock)
 	tlb := ch.Unspent.LastBlockHash
 	//println("Building tree from", len(ch.BlockIndex), "nodes")
-	for _, v := range ch.BlockIndex {
+	for k, v := range ch.BlockIndex {
 		if AbortNow {
 			return
 		}
@@ -43,11 +43,11 @@ func (ch *Chain)loadBlockIndex() {
 
 		par, ok := ch.BlockIndex[btc.NewUint256(v.BlockHeader[4:36]).BIdx()]
 		if !ok {
-			panic(v.BlockHash.String()+" has no Parent "+btc.NewUint256(v.BlockHeader[4:36]).String())
+			println("ERROR: Block", v.Height, v.BlockHash.String(), "has no Parent")
+			println("...", btc.NewUint256(v.BlockHeader[4:36]).String(), "- removing it from blocksDB")
+			delete(ch.BlockIndex, k)
+			continue
 		}
-		/*if par.Height+1 != v.Height {
-			panic("height mismatch")
-		}*/
 		v.Parent = par
 		v.Parent.addChild(v)
 	}

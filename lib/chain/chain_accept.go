@@ -48,8 +48,6 @@ func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 	cur.BlockHash = bl.Hash
 	cur.Parent = prevblk
 	cur.Height = prevblk.Height + 1
-	cur.BlockSize = uint32(len(bl.Raw))
-	cur.TxCount = uint32(bl.TxCount)
 	copy(cur.BlockHeader[:], bl.Raw[:80])
 
 	// Add this block to the block index
@@ -61,6 +59,8 @@ func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 
 
 func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
+	cur.BlockSize = uint32(len(bl.Raw))
+	cur.TxCount = uint32(bl.TxCount)
 	if ch.BlockTreeEnd==cur.Parent {
 		// The head of out chain - apply the transactions
 		var changes *BlockChanges

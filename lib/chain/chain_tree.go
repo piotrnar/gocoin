@@ -13,8 +13,10 @@ type BlockTreeNode struct {
 	Height uint32
 	Parent *BlockTreeNode
 	Childs []*BlockTreeNode
-	BlockSize uint32
+
+	BlockSize uint32 // if this is zero, only header is known so far
 	TxCount uint32
+
 	BlockHeader [80]byte
 }
 
@@ -33,6 +35,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		nxt := ch.BlockTreeEnd.FindPathTo(end)
 		if nxt == nil {
+			break
+		}
+
+		if nxt.BlockSize==0 {
+			println("ParseTillBlock: ", nxt.Height, nxt.BlockHash.String(), "- not yet commited")
 			break
 		}
 
