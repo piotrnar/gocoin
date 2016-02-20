@@ -37,7 +37,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Miner string
 
 		Received uint32
-		TimeDl, TimeVer int
+		TimeDl, TimeVer, TimeQue int
 		WasteCnt uint
 	}
 
@@ -82,6 +82,12 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 			b.TimeDl = int(rb.TmDownload/time.Millisecond)
 		} else {
 			b.TimeDl = -1
+		}
+
+		if rb.TmQueuing!=0 {
+			b.TimeQue = int(rb.TmQueuing/time.Millisecond)
+		} else {
+			b.TimeQue = -1
 		}
 
 		if rb.TmAccept!=0 {
