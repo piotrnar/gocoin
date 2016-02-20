@@ -34,7 +34,13 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
+		// new block accepted
 		newbl.TmAccept = time.Now().Sub(sta)
+
+		if (newbl.Block.Height%32)==0 {
+			// recalculate average block size every 32 blocks
+			common.RecalcAverageBlockSize()
+		}
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
@@ -218,6 +224,7 @@ func main() {
 
 	common.InitConfig()
 	host_init() // This will create the DB lock file and keep it open
+	common.RecalcAverageBlockSize()
 
 	peersTick := time.Tick(5*time.Minute)
 	txPoolTick := time.Tick(time.Minute)

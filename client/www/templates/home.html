@@ -87,6 +87,7 @@
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> cached,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
+	<tr><td nowrap="nowrap">Avg. block size:<td><b id="si_avg_block_size"></b>
 	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b id="si_ecdsa_verify_cnt"></b>
 	</table>
 </table>
@@ -160,6 +161,7 @@ function refreshsysinfo() {
 			si_net_block_qsize.innerText = si.Net_block_qsize
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
+			si_avg_block_size.innerText = si.Average_block_size
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 

@@ -51,7 +51,7 @@ var (
 
 	NetworkClosed bool
 
-	averageBlockSize uint32 = 0
+	AverageBlockSize uint32 = 215
 )
 
 
@@ -111,25 +111,23 @@ func HashrateToString(hr float64) string {
 
 
 // This is supposed to return average block size at the current blockchain height
-func GetAverageBlockSize() uint {
-	height := atomic.LoadUint32(&BlockChain.BlockTreeEnd.Height)
-	if height<100e3 {
-		return 2500
+func GetAverageBlockSize() (res uint) {
+	res = uint(atomic.LoadUint32(&AverageBlockSize))
+	return
+}
+
+// Calculates average blocks size over the last 144 blocks (about one day)
+// Only call from blockchian thread
+func RecalcAverageBlockSize() {
+	n := BlockChain.BlockTreeEnd
+	var sum, cnt uint
+	for maxcnt := 144; maxcnt>0 && n!=nil; maxcnt-- {
+		sum += uint(n.BlockSize)
+		cnt++
+		n = n.Parent
 	}
-	if height<120e3 {
-		return 10e3
+	if cnt>0 {
+		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)
+		atomic.StoreUint32(&AverageBlockSize, uint32(sum/cnt))
 	}
-	if height<185e3 {
-		return 100e3
-	}
-	if height<285e3 {
-		return 200e3
-	}
-	if height<330e3 {
-		return 300e3
-	}
-	if height<380e3 {
-		return 500e3
-	}
-	return 700e3
 }
