@@ -9,8 +9,9 @@ import (
 
 type OneReceivedBlock struct {
 	time.Time
-	TmDownload time.Duration
-	TmAccept time.Duration
+	TmDownload time.Duration // how long it took to dowlod this block
+	TmQueuing time.Duration  // how long it took to start processing
+	TmAccept time.Duration   // how long it took to commit this block
 	Cnt uint
 }
 
@@ -18,6 +19,7 @@ type BlockRcvd struct {
 	Conn *OneConnection
 	*btc.Block
 	*chain.BlockTreeNode
+	*OneReceivedBlock
 }
 
 type TxRcvd struct {
@@ -43,4 +45,3 @@ var (
 
 	CachedBlocks []*BlockRcvd
 )
-
