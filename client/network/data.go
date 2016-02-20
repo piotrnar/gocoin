@@ -152,7 +152,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 	MutexRcv.Unlock()
 
-	NetBlocks <- &BlockRcvd{Conn:conn, Block:rec.Block, BlockTreeNode:rec.BlockTreeNode}
+	NetBlocks <- &BlockRcvd{Conn:conn, Block:rec.Block,
+		BlockTreeNode:rec.BlockTreeNode, OneReceivedBlock:orb}
 }
 
 
