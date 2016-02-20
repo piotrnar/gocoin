@@ -142,7 +142,9 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			tid := btc.NewUint256FromString(r.Form["del"][0])
 			if tid!=nil {
 				network.TxMutex.Lock()
-				delete(network.TransactionsToSend, tid.BIdx())
+				if tts, ok := network.TransactionsToSend[tid.BIdx()]; ok {
+					network.DeleteToSend(tts)
+				}
 				network.TxMutex.Unlock()
 			}
 		}

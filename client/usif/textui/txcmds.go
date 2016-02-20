@@ -81,14 +81,15 @@ func del_tx(par string) {
 		return
 	}
 	network.TxMutex.Lock()
-	if _, ok := network.TransactionsToSend[txid.BIdx()]; !ok {
+	defer network.TxMutex.Unlock()
+	tx, ok := network.TransactionsToSend[txid.BIdx()]
+	if !ok {
 		network.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 		return
 	}
-	delete(network.TransactionsToSend, txid.BIdx())
-	network.TxMutex.Unlock()
+	network.DeleteToSend(tx)
 	fmt.Println("Transaction", txid.String(), "removed from the memory pool")
 }
 

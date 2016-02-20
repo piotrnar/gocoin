@@ -5,16 +5,11 @@ Downloader:
 * Avoid re-building of UTXO-db while using "-b"
 
 Client:
-* Implement RBF in teh mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
+* Implement RBF in the mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
-* At slow connections block timeout (15s) is too low
-* Client: sendind own TX to all peers does not work with Mempool disabled
-* WebUI: hoe screen shows some bad numbers in the "TX Mempool" with MemPool off and a local TX submited
-  (network.TransactionsToSendSize is not increased when loading a local tx into the mempool)
 * Remove confirned TXs from the rejected list
-* Build the downloader into the client
 * Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
-* Do not list unmatured coinbase outputs in the balance
+* Do not list unmatured coinbase outputs in the balance (???)
 * Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 * Improve the database folder locking in Linux
 * Implement "mempool"
@@ -24,7 +19,6 @@ Tools:
 
 Wallet:
 * Write some automated tests
-* Add a wallet type with more heavy hashing
 
 Core lib:
 * Try to make own (faster) implementation of sha256 and rimp160

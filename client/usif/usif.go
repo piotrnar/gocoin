@@ -124,6 +124,7 @@ func LoadRawTx(buf []byte) (s string) {
 		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
 			Volume:totinp, Fee:totinp-totout}
 	}
+	network.TransactionsToSendSize += uint64(len(txd))
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
 	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
 	return

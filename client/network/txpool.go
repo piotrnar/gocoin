@@ -389,7 +389,7 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 
 
 // Make sure to call it with locked TxMutex
-func deleteToSend(rec *OneTxToSend) {
+func DeleteToSend(rec *OneTxToSend) {
 	for i := range rec.Spent {
 		delete(SpentOutputs, rec.Spent[i])
 	}
@@ -397,14 +397,13 @@ func deleteToSend(rec *OneTxToSend) {
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
-
 // This function is called for each tx mined in a new block
 func TxMined(tx *btc.Tx) {
 	h := tx.Hash
 	TxMutex.Lock()
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedToSend")
-		deleteToSend(rec)
+		DeleteToSend(rec)
 	}
 	if _, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafe("TxMinedRejected")
@@ -426,7 +425,7 @@ func TxMined(tx *btc.Tx) {
 				} else {
 					common.CountSafe("TxMinedOtherSpend")
 				}
-				deleteToSend(rec)
+				DeleteToSend(rec)
 			} else {
 				common.CountSafe("TxMinedSpentERROR")
 				NetAlerts <- fmt.Sprint("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
@@ -501,7 +500,7 @@ func ExpireTxs() {
 	TxMutex.Lock()
 	for _, v := range TransactionsToSend {
 		if v.Own==0 && v.Firstseen.Before(expireTime(len(v.Data))) {  // Do not expire own txs
-			deleteToSend(v)
+			DeleteToSend(v)
 			if v.Blocked==0 {
 				cnt1a++
 			} else {
