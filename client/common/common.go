@@ -51,7 +51,7 @@ var (
 
 	NetworkClosed bool
 
-	AverageBlockSize uint32 = 215
+	AverageBlockSize uint32
 )
 
 
@@ -126,8 +126,10 @@ func RecalcAverageBlockSize() {
 		cnt++
 		n = n.Parent
 	}
-	if cnt>0 {
+	if sum>0 && cnt>0 {
 		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)
 		atomic.StoreUint32(&AverageBlockSize, uint32(sum/cnt))
+	} else {
+		atomic.StoreUint32(&AverageBlockSize, uint32(204))
 	}
 }
