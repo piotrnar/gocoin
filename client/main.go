@@ -30,12 +30,11 @@ var retryCachedBlocks bool
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	sta := time.Now()
+	newbl.TmQueuing = sta.Sub(newbl.Time) - newbl.TmDownload
 	bl := newbl.Block
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
-		network.MutexRcv.Lock()
-		network.ReceivedBlocks[bl.Hash.BIdx()].TmAccept = time.Now().Sub(sta)
-		network.MutexRcv.Unlock()
+		newbl.TmAccept = time.Now().Sub(sta)
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
