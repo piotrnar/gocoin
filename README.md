@@ -68,15 +68,6 @@ If the tools mentioned above are all properly installed, you should be able to e
 from your OS's command prompt without a need to specify full path to the executables.
 
 
-### Optionally
-
-It is recommended to have `gcc` complier installed in your system, to get advantage of performance improvements and memory usage optimizations.
-
-For Windows install `mingw`, or rather `mingw64` since the client node needs 64-bit architecture.
-
- * http://mingw-w64.sourceforge.net/
-
-
 # Getting sources
 
 Use `go get` to fetch and install the source code files.
@@ -90,15 +81,6 @@ Note that source files get installed within your GOPATH folder.
 ## Client node
 Go to the `client/` folder and execute `go build` there.
 
-
-Not having a compatible `gcc` installed in your system, you will likely see an error like this:
-
-	# github.com/piotrnar/gocoin/lib/qdb
-	exec: "gcc": executable file not found in %PATH%
-
-You can go on without *gcc*, although your running client (and downloader) will then need some more system memory.
-
-To go on without *gcc*, copy file `lib/qdb/no_gcc/membind.go` one folder up (overwriting the original `lib/qdb/membind.go`).
 
 ## Wallet and downloader
 Go to the `wallet/` folder and execute `go build` there.
