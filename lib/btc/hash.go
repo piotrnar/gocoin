@@ -3,7 +3,7 @@ package btc
 import (
 	"bytes"
 	"crypto/sha256"
-	"code.google.com/p/go.crypto/ripemd160"
+	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 )
 
 

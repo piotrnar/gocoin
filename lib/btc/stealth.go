@@ -8,7 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
-	"code.google.com/p/go.crypto/ripemd160"
+	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 )
 
 
