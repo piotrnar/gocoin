@@ -11,7 +11,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/golang/snappy"
+	"github.com/piotrnar/gocoin/lib/others/snappy"
 )
 
 
@@ -236,7 +236,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	}
 
 	flagz[0] |= BLOCK_COMPRSD|BLOCK_SNAPPED // gzip compression is deprecated
-	cbts := snappy.Encode(nil, bl.Raw)
+	cbts, _ := snappy.Encode(nil, bl.Raw)
 
 	blksize := uint32(len(cbts))
 

@@ -82,17 +82,6 @@ For Windows install `mingw`, or rather `mingw64` since the client node needs 64-
 Use `go get` to fetch and install the source code files.
 Note that source files get installed within your GOPATH folder.
 
-## Dependencies
-
-One extra package is needed, which is not included in the standard set of Go libraries.
-You need to install it before building Gocoin.
-In order to do this, simply execute the following commands:
-
-	go get github.com/golang/snappy
-
-## Gocoin
-Use `go get` to fetch and install Gocoin sources for you:
-
 	go get github.com/piotrnar/gocoin
 
 
