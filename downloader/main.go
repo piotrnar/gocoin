@@ -67,7 +67,7 @@ func parse_command_line() {
 	}
 	if e == nil {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
-		if e == nil {
+		if e == nil && CFG.Datadir!="" {
 			GocoinHomeDir = CFG.Datadir + string(os.PathSeparator)
 		}
 	}
