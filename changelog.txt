@@ -1,5 +1,6 @@
 1.5.0
 * Headers-first blockchain sync
+* ripemd160 lib included in the sources (since it's gone code.google.com)
 
 1.4.1
 * WebUI: More of teal time UI refresh (without reloading the pages)
