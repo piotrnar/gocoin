@@ -63,9 +63,8 @@ Since no binaries are provided, in order to build Gocoin yourself, you will need
 
 * **Go** (version 1.2 or higher) - http://golang.org/doc/install
 * **Git** - http://git-scm.com/downloads
-* **Mercurial** - http://mercurial.selenic.com/
 
-If the tools mentioned above are all properly installed, you should be able to execute `go`, `git` and `hg`
+If the tools mentioned above are all properly installed, you should be able to execute `go` and `git`
 from your OS's command prompt without a need to specify full path to the executables.
 
 
@@ -85,8 +84,8 @@ Note that source files get installed within your GOPATH folder.
 
 ## Dependencies
 
-Two extra packages are needed, which are not included in the standard set of Go libraries.
-You need to install them before building Gocoin.
+One extra package is needed, which is not included in the standard set of Go libraries.
+You need to install it before building Gocoin.
 In order to do this, simply execute the following commands:
 
 	go get github.com/golang/snappy/snappy
