@@ -88,7 +88,7 @@ One extra package is needed, which is not included in the standard set of Go lib
 You need to install it before building Gocoin.
 In order to do this, simply execute the following commands:
 
-	go get github.com/golang/snappy/snappy
+	go get github.com/golang/snappy
 
 ## Gocoin
 Use `go get` to fetch and install Gocoin sources for you:
