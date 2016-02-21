@@ -89,7 +89,6 @@ Two extra packages are needed, which are not included in the standard set of Go 
 You need to install them before building Gocoin.
 In order to do this, simply execute the following commands:
 
-	go get code.google.com/p/go.crypto/ripemd160
 	go get github.com/golang/snappy/snappy
 
 ## Gocoin
