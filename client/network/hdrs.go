@@ -52,7 +52,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					bl, er := btc.NewBlock(hdr[:])
 					if er == nil {
 						common.BlockChain.BlockIndexAccess.Lock()
-						er, dos, later := common.BlockChain.PreCheckBlock(bl)
+						er, dos, _ := common.BlockChain.PreCheckBlock(bl)
 						if er == nil {
 							number_of_new_blocks++
 							node := common.BlockChain.AcceptHeader(bl)
