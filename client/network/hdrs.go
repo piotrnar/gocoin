@@ -63,7 +63,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 							}
 							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
 						} else {
-							println("dupa", later, er.Error())
+							common.CountSafe("HeaderCheckFail")
 						}
 						common.BlockChain.BlockIndexAccess.Unlock()
 						if dos {
