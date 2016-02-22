@@ -223,103 +223,117 @@ func main() {
 	}()
 
 	common.InitConfig()
+
+	if common.FLAG.Rescan {
+		qdb.VolatimeMode = true
+		fmt.Println("WARNING! Rebuilding UTXO database in a volatile mode. If you interrupt the process, the db will be corrupt.")
+	}
+
 	host_init() // This will create the DB lock file and keep it open
-	common.RecalcAverageBlockSize()
 
-	peersTick := time.Tick(5*time.Minute)
-	txPoolTick := time.Tick(time.Minute)
-	netTick := time.Tick(time.Second)
+	if common.FLAG.Rescan {
 
-	peersdb.Testnet = common.Testnet
-	peersdb.ConnectOnly = common.CFG.ConnectOnly
-	peersdb.Services = common.Services
-	peersdb.InitPeers(common.GocoinHomeDir)
+		fmt.Println("UTXO database rebuilt complete. Flush it to disk and exit...")
 
-	common.Last.Block = common.BlockChain.BlockTreeEnd
-	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
-	if common.Last.Time.After(time.Now()) {
-		common.Last.Time = time.Now()
-	}
+	} else {
 
-	for k, v := range common.BlockChain.BlockIndex {
-		network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
-	}
-	network.LastCommitedHeader = common.Last.Block
+		common.RecalcAverageBlockSize()
 
-	if common.CFG.TextUI.Enabled {
-		go textui.MainThread()
-	}
+		peersTick := time.Tick(5*time.Minute)
+		txPoolTick := time.Tick(time.Minute)
+		netTick := time.Tick(time.Second)
 
-	if common.CFG.WebUI.Interface!="" {
-		fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
-		go webui.ServerThread(common.CFG.WebUI.Interface)
-	}
+		peersdb.Testnet = common.Testnet
+		peersdb.ConnectOnly = common.CFG.ConnectOnly
+		peersdb.Services = common.Services
+		peersdb.InitPeers(common.GocoinHomeDir)
 
-	for !usif.Exit_now {
-		common.CountSafe("MainThreadLoops")
-		for retryCachedBlocks {
-			retryCachedBlocks = retry_cached_blocks()
-			// We have done one per loop - now do something else if pending...
-			if len(network.NetBlocks)>0 || len(usif.UiChannel)>0 {
-				break
+		common.Last.Block = common.BlockChain.BlockTreeEnd
+		common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
+		if common.Last.Time.After(time.Now()) {
+			common.Last.Time = time.Now()
+		}
+
+		for k, v := range common.BlockChain.BlockIndex {
+			network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
+		}
+		network.LastCommitedHeader = common.Last.Block
+
+		if common.CFG.TextUI.Enabled {
+			go textui.MainThread()
+		}
+
+		if common.CFG.WebUI.Interface!="" {
+			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
+			go webui.ServerThread(common.CFG.WebUI.Interface)
+		}
+
+		for !usif.Exit_now {
+			common.CountSafe("MainThreadLoops")
+			for retryCachedBlocks {
+				retryCachedBlocks = retry_cached_blocks()
+				// We have done one per loop - now do something else if pending...
+				if len(network.NetBlocks)>0 || len(usif.UiChannel)>0 {
+					break
+				}
+			}
+
+			common.Busy("")
+
+			select {
+				case s := <-killchan:
+					fmt.Println("Got signal:", s)
+					usif.Exit_now = true
+					continue
+
+				case newbl := <-network.NetBlocks:
+					common.CountSafe("MainNetBlock")
+					HandleNetBlock(newbl)
+
+				case newtx := <-network.NetTxs:
+					common.CountSafe("MainNetTx")
+					network.HandleNetTx(newtx, false)
+
+				case newal := <-network.NetAlerts:
+					common.CountSafe("MainNetAlert")
+					fmt.Println("\007" + newal)
+					textui.ShowPrompt()
+
+				case <-netTick:
+					common.CountSafe("MainNetTick")
+					network.NetworkTick()
+
+				case cmd := <-usif.UiChannel:
+					common.CountSafe("MainUICmd")
+					common.Busy("UI command")
+					cmd.Handler(cmd.Param)
+					cmd.Done.Done()
+					continue
+
+				case <-peersTick:
+					peersdb.ExpirePeers()
+
+				case <-txPoolTick:
+					network.ExpireTxs()
+
+				case <-time.After(time.Second/2):
+					common.CountSafe("MainThreadTouts")
+					if !retryCachedBlocks {
+						common.Busy("common.BlockChain.Idle()")
+						if common.BlockChain.Idle() {
+							common.CountSafe("ChainIdleUsed")
+						}
+					}
+					continue
 			}
 		}
 
-		common.Busy("")
+		network.NetCloseAll()
+		peersdb.ClosePeerDB()
 
-		select {
-			case s := <-killchan:
-				fmt.Println("Got signal:", s)
-				usif.Exit_now = true
-				continue
-
-			case newbl := <-network.NetBlocks:
-				common.CountSafe("MainNetBlock")
-				HandleNetBlock(newbl)
-
-			case newtx := <-network.NetTxs:
-				common.CountSafe("MainNetTx")
-				network.HandleNetTx(newtx, false)
-
-			case newal := <-network.NetAlerts:
-				common.CountSafe("MainNetAlert")
-				fmt.Println("\007" + newal)
-				textui.ShowPrompt()
-
-			case <-netTick:
-				common.CountSafe("MainNetTick")
-				network.NetworkTick()
-
-			case cmd := <-usif.UiChannel:
-				common.CountSafe("MainUICmd")
-				common.Busy("UI command")
-				cmd.Handler(cmd.Param)
-				cmd.Done.Done()
-				continue
-
-			case <-peersTick:
-				peersdb.ExpirePeers()
-
-			case <-txPoolTick:
-				network.ExpireTxs()
-
-			case <-time.After(time.Second/2):
-				common.CountSafe("MainThreadTouts")
-				if !retryCachedBlocks {
-					common.Busy("common.BlockChain.Idle()")
-					if common.BlockChain.Idle() {
-						common.CountSafe("ChainIdleUsed")
-					}
-				}
-				continue
+		if usif.DefragBlocksDB!=0 {
+			defrag_db()
 		}
-	}
-
-	network.NetCloseAll()
-	peersdb.ClosePeerDB()
-
-	if usif.DefragBlocksDB!=0 {
-		defrag_db()
 	}
 
 	common.CloseBlockChain()
