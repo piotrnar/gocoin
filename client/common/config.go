@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
+	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -33,6 +34,7 @@ var (
 			AllowedIP string // comma separated
 			ShowBlocks uint32
 			AddrListLen uint32 // size of address list in MakeTx tab popups
+			Title string
 		}
 		Net struct {
 			ListenTCP bool
@@ -100,6 +102,7 @@ func InitConfig() {
 	CFG.WebUI.AllowedIP = "127.0.0.1"
 	CFG.WebUI.ShowBlocks = 25
 	CFG.WebUI.AddrListLen = 15
+	CFG.WebUI.Title = "Gocoin " + lib.Version
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true

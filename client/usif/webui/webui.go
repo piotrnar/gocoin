@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"path/filepath"
-	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -139,7 +138,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := load_template("page_head.html")
-	s = strings.Replace(s, "{VERSION}", lib.Version, 1)
+	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
 	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
 	if r.URL.Path!="/" {
 		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[1:], 1)
@@ -147,7 +146,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{HELPURL}", "help", 1)
 	}
 	if common.Testnet {
-		s = strings.Replace(s, "{TESTNET}", "Testnet ", 1)
+		s = strings.Replace(s, "{TESTNET}", " Testnet ", 1)
 	} else {
 		s = strings.Replace(s, "{TESTNET}", "", 1)
 	}
