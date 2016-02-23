@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -102,7 +101,7 @@ func InitConfig() {
 	CFG.WebUI.AllowedIP = "127.0.0.1"
 	CFG.WebUI.ShowBlocks = 25
 	CFG.WebUI.AddrListLen = 15
-	CFG.WebUI.Title = "Gocoin " + lib.Version
+	CFG.WebUI.Title = "Gocoin"
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
