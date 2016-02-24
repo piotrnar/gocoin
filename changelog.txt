@@ -1,4 +1,5 @@
 1.5.0
+* Client: Implemented BIP 130 - Direct headers announcement
 * Qdb: added "volatile mode" in which records are being written to disk only when closing the database
 * Client: "client -r" rebuilds UTXO database in a volatile mode (should be much faster) and exits
 * Headers-first blockchain sync

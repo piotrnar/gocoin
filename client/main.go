@@ -288,10 +288,12 @@ func main() {
 
 				case newbl := <-network.NetBlocks:
 					common.CountSafe("MainNetBlock")
+					common.Busy("HandleNetBlock()")
 					HandleNetBlock(newbl)
 
 				case newtx := <-network.NetTxs:
 					common.CountSafe("MainNetTx")
+					common.Busy("network.HandleNetTx()")
 					network.HandleNetTx(newtx, false)
 
 				case newal := <-network.NetAlerts:
@@ -301,6 +303,7 @@ func main() {
 
 				case <-netTick:
 					common.CountSafe("MainNetTick")
+					common.Busy("network.NetworkTick()")
 					network.NetworkTick()
 
 				case cmd := <-usif.UiChannel:
@@ -311,15 +314,17 @@ func main() {
 					continue
 
 				case <-peersTick:
+					common.Busy("peersdb.ExpirePeers()")
 					peersdb.ExpirePeers()
 
 				case <-txPoolTick:
+					common.Busy("network.ExpireTxs()")
 					network.ExpireTxs()
 
 				case <-time.After(time.Second/2):
 					common.CountSafe("MainThreadTouts")
 					if !retryCachedBlocks {
-						common.Busy("common.BlockChain.Idle()")
+						common.Busy("BlockChain.Idle()")
 						if common.BlockChain.Idle() {
 							common.CountSafe("ChainIdleUsed")
 						}

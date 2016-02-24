@@ -173,19 +173,42 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 
 
 func (c *OneConnection) SendInvs() (res bool) {
-	b := new(bytes.Buffer)
+	b_txs := new(bytes.Buffer)
+	b_blk := new(bytes.Buffer)
+
 	c.Mutex.Lock()
 	if len(c.PendingInvs)>0 {
-		btc.WriteVlen(b, uint64(len(c.PendingInvs)))
 		for i := range c.PendingInvs {
-			b.Write((*c.PendingInvs[i])[:])
+			if c.Node.SendHeaders && binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
+				// convert block inv to block header
+				common.BlockChain.BlockIndexAccess.Lock()
+				bl := common.BlockChain.BlockIndex[btc.NewUint256((*c.PendingInvs[i])[4:]).BIdx()]
+				if bl != nil {
+					b_blk.Write(bl.BlockHeader[:])
+					b_blk.Write([]byte{0}) // 0 txs
+				}
+				common.BlockChain.BlockIndexAccess.Unlock()
+			} else {
+				b_txs.Write((*c.PendingInvs[i])[:])
+			}
 		}
 		res = true
 	}
 	c.PendingInvs = nil
 	c.Mutex.Unlock()
-	if res {
-		c.SendRawMsg("inv", b.Bytes())
+
+	if b_blk.Len() > 0 {
+		b := new(bytes.Buffer)
+		btc.WriteVlen(b, uint64(b_blk.Len()/81))
+		c.SendRawMsg("headers", append(b.Bytes(), b_blk.Bytes()...))
+		println("sent block's header(s)", b_blk.Len(), uint64(b_blk.Len()/81))
 	}
+
+	if b_txs.Len() > 0 {
+		b := new(bytes.Buffer)
+		btc.WriteVlen(b, uint64(b_blk.Len()/36))
+		c.SendRawMsg("inv", append(b.Bytes(), b_txs.Bytes()...))
+	}
+
 	return
 }
