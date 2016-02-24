@@ -123,6 +123,14 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		sessid = new_session_id(w)
 	}
 
+	if r.Method=="POST" {
+		if len(r.Form["webwalletload"])>0 {
+			wallet.LoadWebWallet([]byte(r.Form["webwalletload"][0]))
+			http.Redirect(w, r, r.URL.Path, http.StatusFound)
+			return
+		}
+	}
+
 	// Quick switch wallet
 	if checksid(r) && len(r.Form["qwalsel"])>0 {
 		wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + r.Form["qwalsel"][0])

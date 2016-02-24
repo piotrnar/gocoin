@@ -119,6 +119,16 @@ func load_wallet(fn string) {
 		return
 	}
 
+	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+		fmt.Println("Web wallet loaded")
+		return
+	}
+
+	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+		fmt.Println("Web wallet loaded")
+		return
+	}
+
 	for i := range wallet.MyWallet.Addrs {
 		fmt.Println(" ", wallet.MyWallet.Addrs[i].String(), wallet.MyWallet.Addrs[i].Label())
 	}
@@ -137,6 +147,11 @@ func show_balance(p string) {
 
 	if wallet.MyWallet==nil {
 		println("You have no loaded wallet")
+		return
+	}
+
+	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+		fmt.Println("Web wallet loaded")
 		return
 	}
 

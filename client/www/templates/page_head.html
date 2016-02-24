@@ -4,9 +4,34 @@
 <script>
 var sid='{SESSION_ID}'
 var doc_title = document.title
+
+var firstWebWalletIndex = 0
+
+function webWalletSelected() {
+	return (qswal.selectedIndex >= firstWebWalletIndex)
+}
+
 function quickswitchwallet() {
 	var sel = document.getElementById('qswal')
-	document.location='?sid='+sid+'&qwalsel='+sel.options[sel.selectedIndex].value
+	if (webWalletSelected()) {
+		var name = sel.options[sel.selectedIndex].text
+		localStorage.setItem("gocoinWalletSelected", name)
+
+		var form = document.createElement("form")
+		form.method = "post"
+		form.style.display = 'none'
+		var hf = document.createElement("textarea")
+		hf.name = "webwalletload"
+		var walcontext = localStorage.getItem("gocoinWal_"+name)
+		hf.value = walcontext
+		form.appendChild(hf)
+
+		//document.body.appendChild(form)
+		form.submit()
+	} else {
+		localStorage.removeItem("gocoinWalletSelected")
+		document.location='?sid='+sid+'&qwalsel='+sel.options[sel.selectedIndex].value
+	}
 }
 </script>
 </head>
@@ -64,4 +89,35 @@ function refreshblock() {
 }
 refreshblock()
 
+</script>
+
+<script>
+function load_web_wallets() {
+	var names = localStorage.gocoinWallets.split('|')
+	var s = ''
+	for (i=0; i<names.length; i++) {
+		if (names[i]!="") {
+			var o = document.createElement("option")
+			if ((localStorage.getItem("gocoinWal_"+names[i])+'').length > 30) {
+				o.text = names[i]
+				qswal.add(o)
+				if (localStorage.gocoinWalletSelected==names[i]) {
+					qswal.selectedIndex = qswal.length-1
+				}
+				if (s!='') s+='|'
+				s += names[i]
+			} else {
+				console.log("removing webwallet", names[i])
+			}
+		}
+	}
+	localStorage.gocoinWallets = s
+}
+
+firstWebWalletIndex = qswal.options.length
+if (typeof(localStorage.gocoinWallets)=="string") {
+	load_web_wallets()
+} else {
+	localStorage.gocoinWallets = ""
+}
 </script>

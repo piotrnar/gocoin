@@ -8,6 +8,10 @@ function switch2wallet(idx) {
 	document.location='?sid='+sid+'&wal='+encodeURIComponent(wal)
 }
 function shwwal() {
+	if (webWalletSelected()) {
+		var name = qswal.options[qswal.selectedIndex].text
+		walletdata.value = localStorage.getItem("gocoinWal_"+name)
+	}
 	showwal.style.display='none'
 	formwal.style.display='block'
 }
@@ -29,6 +33,39 @@ function edit_label(idx) {
 	if (newlab) {
 		document.location='?sid='+sid+'&setlabel='+idx+'&lab='+encodeURIComponent(newlab)
 	}
+}
+function close_editor() {
+	showwal.style.display='block'
+	formwal.style.display='none'
+}
+function save_web_wallet() {
+	var name = walletfname.value
+	var names = localStorage.gocoinWallets.split('|')
+	var i;
+	for (i=0; i<names.length; i++) {
+		if (names[i]==name) {
+			break
+		}
+	}
+	if (i==names.length) {
+		localStorage.gocoinWallets += '|'+name
+		var o = document.createElement("option")
+		o.text = name
+		qswal.add(o)
+	}
+	localStorage.setItem("gocoinWal_"+name, walletdata.value)
+	console.log("saved web wallet as "+name)
+	close_editor()
+
+	// select saved wallet now
+			if (localStorage.gocoinWalletSelected==names[i]) {
+				qswal.selectedIndex = qswal.length-1
+			}
+}
+function del_webwallet() {
+	var name = walletfname.value
+	localStorage.removeItem("gocoinWal_"+name)
+	document.location.reload()
 }
 </script>
 <h2>Your wallet</h2>
@@ -60,7 +97,7 @@ Switch wallet: <!--ONEWALLET-->
 <table width="90%">
 <form method="post" action="cfg">
 <tr><td colspan="2">
-	<textarea name="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
+	<textarea name="walletdata" id="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
 	<i>
 	Empty lines are ignored.<br>
 	Put <b>#</b> character in front of a line, to comment it out.<br>
@@ -68,8 +105,11 @@ Switch wallet: <!--ONEWALLET-->
 	</i>
 <tr>
 	<td align="left">
-		File Name: <input type="edit" name="walletfname" value="{WALLET_NAME}" class="mono">
+		File Name: <input type="edit" id="walletfname" name="walletfname" value="{WALLET_NAME}" class="mono">
+		<input type="button" value="Delete Web Wallet" onclick="del_webwallet()">
 	<td align="right">
+		<input type="button" value="Cancel" onclick="close_editor()">
+		<input type="button" value="Save only in browser" onclick="save_web_wallet()">
 		<input type="submit" name="save" value="Save wallet & Recalc balance">
 </form>
 </table>

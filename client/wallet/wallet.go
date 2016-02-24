@@ -16,6 +16,8 @@ const (
 	UnusedFileName = "UNUSED"
 	DefaultFileName = "DEFAULT"
 	AddrBookFileName = "ADDRESS"
+
+	WEB_FILENAME = "WebWallet"
 )
 
 var PrecachingComplete bool
@@ -107,11 +109,87 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 }
 
 
+func LoadRawWallet(dat []byte) (addrs []*btc.BtcAddr) {
+	rd := bufio.NewReader(bytes.NewBuffer(dat))
+	linenr := 0
+	for {
+		l, e := rd.ReadString('\n')
+		space_first := len(l)>0 && l[0]==' '
+		l = strings.Trim(l, " \t\r\n")
+		linenr++
+		if len(l)>0 {
+			if l[0]=='@' {
+				println("LoadRawWallet: Includes not supported in web wallets")
+			} else {
+				var s string
+				if l[0]!='#' {
+					s = l
+				} else if !PrecachingComplete && len(l)>10 && l[1]=='1' {
+					s = l[1:] // While pre-caching addresses, include ones that are commented out
+				}
+				if s!="" {
+					ls := strings.SplitN(s, " ", 2)
+					if len(ls)>0 {
+						a, e := btc.NewAddrFromString(ls[0])
+						if e != nil {
+							println(fmt.Sprint("LoadRawWallet:", linenr), e.Error())
+						} else {
+							a.Extra.Wallet = "WebUI"
+							if len(ls)>1 {
+								a.Extra.Label = ls[1]
+							}
+							a.Extra.Virgin = space_first
+							addrs = append(addrs, a)
+						}
+					}
+				}
+			}
+		}
+		if e != nil {
+			break
+		}
+	}
+
+	// remove duplicated addresses
+	for i:=0; i<len(addrs)-1; i++ {
+		for j:=i+1; j<len(addrs); {
+			if addrs[i].Hash160==addrs[j].Hash160 {
+				if addrs[i].StealthAddr!=nil && !bytes.Equal(addrs[i].Prefix, addrs[j].Prefix) {
+					fmt.Println("WARNING: duplicate stealth addresses with different prefixes. Merging them into one with null-prefix")
+					fmt.Println(" -", addrs[i].PrefixLen(), addrs[i].String())
+					fmt.Println(" -", addrs[j].PrefixLen(), addrs[j].String())
+					addrs[i].Prefix = []byte{0}
+					addrs[i].Enc58str = addrs[i].StealthAddr.String()
+					fmt.Println(" +", addrs[i].PrefixLen(), addrs[i].String())
+				}
+				if addrs[i].Extra.Wallet==AddrBookFileName {
+					// Overwrite wallet name if is was ADDRESS (book)
+					addrs[i].Extra.Wallet = addrs[j].Extra.Wallet
+				}
+				addrs[i].Extra.Label += "*"+addrs[j].Extra.Label
+				addrs = append(addrs[:j], addrs[j+1:]...)
+			} else {
+				j++
+			}
+		}
+	}
+	return
+}
+
 // Load public wallet from a text file
 func NewWallet(fn string) (wal *OneWallet) {
 	wal = new(OneWallet)
 	wal.FileName = fn
 	wal.Addrs = LoadWalfile(fn, 0)
+	return
+}
+
+
+// Load public wallet from a text file
+func NewWebWallet(dat []byte) (wal *OneWallet) {
+	wal = new(OneWallet)
+	wal.FileName = WEB_FILENAME
+	wal.Addrs = LoadRawWallet(dat)
 	return
 }
 

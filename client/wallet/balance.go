@@ -481,6 +481,15 @@ func LoadWallet(fn string) {
 	BalanceMutex.Unlock()
 }
 
+func LoadWebWallet(data []byte) {
+	BalanceMutex.Lock()
+	MyWallet = NewWebWallet(data)
+	if MyWallet != nil {
+		update_balance()
+	}
+	BalanceMutex.Unlock()
+}
+
 // Loads adressses from all the wallets into the cache
 func LoadAllWallets() {
 	dir := common.CFG.Walletdir + string(os.PathSeparator)
