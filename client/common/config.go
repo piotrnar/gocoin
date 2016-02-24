@@ -105,22 +105,22 @@ func InitConfig() {
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
-	CFG.TXPool.FeePerByte = 1
-	CFG.TXPool.MaxTxSize = 10e3
+	CFG.TXPool.FeePerByte = 20
+	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.MinVoutValue = 0
 	CFG.TXPool.TxExpireMinPerKB = 180
 	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
-	CFG.TXRoute.FeePerByte = 1
-	CFG.TXRoute.MaxTxSize = 10e3
+	CFG.TXRoute.FeePerByte = 25
+	CFG.TXRoute.MaxTxSize = 100e3
 	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
 	CFG.Memory.MaxCachedBlocks = 500
 
-	CFG.MiningStatHours = 24
-	CFG.HashrateHours = 6
+	CFG.MiningStatHours = 48
+	CFG.HashrateHours = 12
 	CFG.UserAgent = DefaultUserAgent
 	CFG.PayCommandName = "pay_cmd.txt"
 
