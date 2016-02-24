@@ -46,7 +46,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			if c.AllHeadersReceived && !blockReceived(bhash) && !blockPending(bhash) {
 				common.CountSafe("BlockInvTaken")
 				c.AllHeadersReceived = false
-				//println("possibly new block", bhash.String())
+				println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 			} else {
 				common.CountSafe("BlockInvIgnored")
 			}

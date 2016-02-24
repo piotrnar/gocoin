@@ -21,11 +21,19 @@ function raw_load(id) {
 	var aj = ajax()
 	aj.onload=function() {
 		document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
-		location.href = "#rawdiv";
+		//location.href = "#rawdiv";
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
 	xmlHttp.open("GET","raw_net?id="+id, true);
 	xmlHttp.send(null);
+}
+
+function row_clicked(id) {
+	if (id==curr_monitor_id) { // hide when clicked again
+		hide_peer_info()
+	} else {
+		raw_load(id)
+	}
 }
 
 function net_drop(id) {
@@ -69,7 +77,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <script>
 function refreshconnections() {
 	function onc(c,id) {
-		c.onclick = function() {raw_load(id)}
+		c.onclick = function() {row_clicked(id)}
 	}
 
 	var aj = ajax()

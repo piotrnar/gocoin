@@ -70,6 +70,7 @@ type NetworkNodeStruct struct {
 	Agent string
 	DoNotRelayTxs bool
 	ReportedIp4 uint32
+	SendHeaders bool
 }
 
 type OneConnection struct {

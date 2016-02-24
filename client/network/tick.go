@@ -378,6 +378,9 @@ func (c *OneConnection) Run() {
 					println("version:", er.Error())
 					c.Disconnect()
 				}
+				if c.Node.Version >= 70012 {
+					c.SendRawMsg("sendheaders", nil)
+				}
 
 			case "verack":
 				c.VerackReceived = true
@@ -433,6 +436,9 @@ func (c *OneConnection) Run() {
 
 			case "headers":
 				c.HandleHeaders(cmd.pl)
+
+			case "sendheaders":
+				c.Node.SendHeaders = true
 
 			default:
 				if common.DebugLevel>0 {

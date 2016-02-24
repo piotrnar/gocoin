@@ -49,7 +49,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
 			common.Busy("NetRouteInv")
-			network.NetRouteInv(2, bl.Hash, newbl.Conn)
+			network.NetRouteInv(2, bl.Hash, newbl.Conn, bl.)
 
 			if common.CFG.Beeps.NewBlock {
 				fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)

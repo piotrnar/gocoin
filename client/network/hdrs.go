@@ -85,7 +85,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			c.AllHeadersReceived = true
 		}
 	} else {
-		//println(number_of_new_blocks, "new blocks got from", c.PeerAddr.Ip())
+		println(number_of_new_blocks, "new blocks got from", c.PeerAddr.Ip(), c.Node.Version)
 		c.GetBlocksDataNow = true
 	}
 }
