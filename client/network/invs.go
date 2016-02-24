@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"time"
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -46,7 +47,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			if c.AllHeadersReceived && !blockReceived(bhash) && !blockPending(bhash) {
 				common.CountSafe("BlockInvTaken")
 				c.AllHeadersReceived = false
-				println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+				println(time.Now().String(), c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 			} else {
 				common.CountSafe("BlockInvIgnored")
 			}
