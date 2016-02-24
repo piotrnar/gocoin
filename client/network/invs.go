@@ -207,7 +207,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 
 	if b_txs.Len() > 0 {
 		b := new(bytes.Buffer)
-		btc.WriteVlen(b, uint64(b_blk.Len()/36))
+		btc.WriteVlen(b, uint64(b_txs.Len()/36))
 		c.SendRawMsg("inv", append(b.Bytes(), b_txs.Bytes()...))
 	}
 
