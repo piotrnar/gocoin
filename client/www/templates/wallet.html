@@ -1,4 +1,5 @@
 <script>
+var edit_in_progress = false
 function switchwallet_button_click_server() {
 	switch_to_server_wallet(encodeURIComponent(this.value))
 }
@@ -17,6 +18,7 @@ function edit_wallet() {
 	}
 	showwal.style.display='none'
 	formwal.style.display='block'
+	edit_in_progress = true
 }
 function setunused(idx) {
 	var tr = document.getElementById('walrow'+idx)
@@ -78,6 +80,7 @@ function edit_label(idx) {
 function close_editor() {
 	showwal.style.display='block'
 	formwal.style.display='none'
+	edit_in_progress = false
 }
 function save_web_wallet() {
 	var name = walletfname.value
@@ -220,7 +223,7 @@ var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
 	if (_lblo==0) {
 		_lblo = e.block.Height
-	} else if (e.block.Height!=_lblo) {
+	} else if (!edit_in_progress && e.block.Height!=_lblo) {
 		location.reload()
 	}
 })
