@@ -481,9 +481,9 @@ func LoadWallet(fn string) {
 	BalanceMutex.Unlock()
 }
 
-func LoadWebWallet(data []byte) {
+func LoadWebWallet(id string, data []byte) {
 	BalanceMutex.Lock()
-	MyWallet = NewWebWallet(data)
+	MyWallet = NewWebWallet(id, data)
 	if MyWallet != nil {
 		update_balance()
 	}

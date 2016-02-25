@@ -124,8 +124,8 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method=="POST" {
-		if len(r.Form["webwalletload"])>0 {
-			wallet.LoadWebWallet([]byte(r.Form["webwalletload"][0]))
+		if len(r.Form["webwalletload"])>0 && len(r.Form["id"][0])>0 {
+			wallet.LoadWebWallet(r.Form["id"][0], []byte(r.Form["webwalletload"][0]))
 			http.Redirect(w, r, r.URL.Path, http.StatusFound)
 			return
 		}
@@ -177,23 +177,6 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 			s = strings.Replace(s, "{MENU_RIGHT}", x, 1)
 		} else {
 			s = strings.Replace(s, "{MENU_LEFT}", x+"{MENU_LEFT}", 1)
-		}
-	}
-
-	// Quick wallet switch
-	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
-	if er == nil {
-		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' && fis[i].Name()!=wallet.AddrBookFileName {
-				var ow string
-				if wallet.MyWallet!=nil && strings.HasSuffix(wallet.MyWallet.FileName,
-					string(os.PathSeparator) + fis[i].Name()) {
-					ow = "<option selected>"+fis[i].Name()+"</option>"
-				} else {
-					ow = "<option>"+fis[i].Name()+"</option>"
-				}
-				s = templ_add(s, "<!--QUICK_WALLET_SELECT-->", ow)
-			}
 		}
 	}
 

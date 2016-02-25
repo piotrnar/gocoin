@@ -103,3 +103,26 @@ function bignum(n) {
 		return (n/1e12).toFixed(2) + " P"
 	}
 }
+
+function switch_to_webwallet(name) {
+	localStorage.setItem("gocoinWalletSelected", name)
+	var form = document.createElement("form")
+	var id = Math.random().toString(36).substring(7)
+	var hf = document.createElement("input")
+
+	console.log('loading web wallet', name, id)
+
+	form.method = "post"
+	hf.name = "id"
+	hf.value = id
+	form.appendChild(hf)
+
+	hf = document.createElement("textarea")
+	hf.name = "webwalletload"
+	var walcontext = localStorage.getItem("gocoinWal_"+name)
+	hf.value = walcontext
+	form.appendChild(hf)
+
+	localStorage.setItem("gocoinWalletId", id)
+	form.submit()
+}

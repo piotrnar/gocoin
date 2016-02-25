@@ -8,8 +8,6 @@ import (
 	"strings"
 	"io/ioutil"
 	"path/filepath"
-	"encoding/hex"
-	"crypto/rand"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -18,14 +16,13 @@ const (
 	UnusedFileName = "UNUSED"
 	DefaultFileName = "DEFAULT"
 	AddrBookFileName = "ADDRESS"
-
-	WEB_FILENAME = "WebWallet"
 )
 
 var PrecachingComplete bool
 
 type OneWallet struct {
 	FileName string
+	WebWallet bool
 	Addrs []*btc.BtcAddr
 }
 
@@ -181,6 +178,7 @@ func LoadRawWallet(dat []byte) (addrs []*btc.BtcAddr) {
 // Load public wallet from a text file
 func NewWallet(fn string) (wal *OneWallet) {
 	wal = new(OneWallet)
+	wal.WebWallet = false
 	wal.FileName = fn
 	wal.Addrs = LoadWalfile(fn, 0)
 	return
@@ -188,11 +186,10 @@ func NewWallet(fn string) (wal *OneWallet) {
 
 
 // Load public wallet from a text file
-func NewWebWallet(dat []byte) (wal *OneWallet) {
-	var rb [8]byte
+func NewWebWallet(id string, dat []byte) (wal *OneWallet) {
 	wal = new(OneWallet)
-	rand.Read(rb[:])
-	wal.FileName = WEB_FILENAME + "-" + hex.EncodeToString(rb[:])
+	wal.WebWallet = true
+	wal.FileName = id
 	wal.Addrs = LoadRawWallet(dat)
 	return
 }

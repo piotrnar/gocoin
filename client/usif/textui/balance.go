@@ -119,12 +119,12 @@ func load_wallet(fn string) {
 		return
 	}
 
-	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+	if wallet.MyWallet.WebWallet {
 		fmt.Println("Web wallet loaded")
 		return
 	}
 
-	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+	if wallet.MyWallet.WebWallet {
 		fmt.Println("Web wallet loaded")
 		return
 	}
@@ -150,7 +150,7 @@ func show_balance(p string) {
 		return
 	}
 
-	if wallet.MyWallet.FileName==wallet.WEB_FILENAME {
+	if wallet.MyWallet.WebWallet {
 		fmt.Println("Web wallet loaded")
 		return
 	}

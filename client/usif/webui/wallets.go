@@ -298,10 +298,12 @@ func xml_addrs(w http.ResponseWriter, r *http.Request) {
 
 func json_wallet_string() string {
 	var out struct {
+		Web_wallet bool
 		Seleced_wallet string
 		Wallets []string
 	}
 
+	out.Web_wallet = wallet.MyWallet.WebWallet
 	out.Seleced_wallet = wallet.MyWallet.FileName
 
 	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))

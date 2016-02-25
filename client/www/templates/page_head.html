@@ -12,25 +12,12 @@ function webWalletSelected() {
 }
 
 function quickswitchwallet() {
-	var sel = document.getElementById('qswal')
 	if (webWalletSelected()) {
-		var name = sel.options[sel.selectedIndex].text
-		localStorage.setItem("gocoinWalletSelected", name)
-
-		var form = document.createElement("form")
-		form.method = "post"
-		form.style.display = 'none'
-		var hf = document.createElement("textarea")
-		hf.name = "webwalletload"
-		var walcontext = localStorage.getItem("gocoinWal_"+name)
-		hf.value = walcontext
-		form.appendChild(hf)
-
-		//document.body.appendChild(form)
-		form.submit()
+		switch_to_webwallet(qswal.options[qswal.selectedIndex].text)
 	} else {
 		localStorage.removeItem("gocoinWalletSelected")
-		document.location='?sid='+sid+'&qwalsel='+sel.options[sel.selectedIndex].value
+		localStorage.removeItem("gocoinWalletId")
+		document.location='?sid='+sid+'&qwalsel='+qswal.options[qswal.selectedIndex].value
 	}
 }
 </script>
@@ -40,10 +27,8 @@ function quickswitchwallet() {
 	<table width="100%"><tr>
 		<td>{MENU_LEFT}</td>
 		<td align="center">Switch wallet:
-		<select id="qswal" onchange="quickswitchwallet()">
-		<!--QUICK_WALLET_SELECT-->
-        </select>
-        <img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
+		<select id="qswal" onchange="quickswitchwallet()"></select>
+		<img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">
@@ -92,14 +77,34 @@ refreshblock()
 </script>
 
 <script>
-function load_web_wallets() {
+function build_wallet_list() {
+	//current_wallets = {"Web_wallet":false,"Seleced_wallet":"C:\\GoodSync\\BC\\wallet\\DEFAULT","Wallets":["ADDRESS","DEFAULT","Gotowka","Offline","UNUSED","svngz"]}
+	var gvi = localStorage.getItem("gocoinWalletId")
+	if (gvi!=null && gvi!=current_wallets.Seleced_wallet) {
+		switch_to_webwallet(localStorage.getItem("gocoinWalletSelected"))
+		return
+	}
+
+	var i
+
+	for (i=0; i<current_wallets.Wallets.length; i++) {
+		var o = document.createElement("option")
+		var na = current_wallets.Wallets[i]
+		o.value = o.text = na
+		if (!current_wallets.Web_wallet && current_wallets.Seleced_wallet.endsWith(na)) {
+			o.selected = true
+		}
+		qswal.add(o)
+	}
+	firstWebWalletIndex = i
+
 	var names = localStorage.gocoinWallets.split('|')
 	var s = ''
 	for (i=0; i<names.length; i++) {
 		if (names[i]!="") {
 			var o = document.createElement("option")
 			if ((localStorage.getItem("gocoinWal_"+names[i])+'').length > 30) {
-				o.text = names[i]
+				o.value = o.text = names[i]
 				qswal.add(o)
 				if (localStorage.gocoinWalletSelected==names[i]) {
 					qswal.selectedIndex = qswal.length-1
@@ -116,7 +121,7 @@ function load_web_wallets() {
 
 firstWebWalletIndex = qswal.options.length
 if (typeof(localStorage.gocoinWallets)=="string") {
-	load_web_wallets()
+	build_wallet_list()
 } else {
 	localStorage.gocoinWallets = ""
 }
