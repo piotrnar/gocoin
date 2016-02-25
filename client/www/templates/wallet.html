@@ -9,21 +9,39 @@ function switch2wallet(idx) {
 	var tr = document.getElementById('walrow'+idx)
 	switch_to_server_wallet(encodeURIComponent(tr.cells[1].innerText))
 }
-function shwwal() {
+function edit_wallet() {
+	var name = qswal.options[qswal.selectedIndex].text
+	walletfname.value = name
 	if (webWalletSelected()) {
-		var name = qswal.options[qswal.selectedIndex].text
 		walletdata.value = localStorage.getItem("gocoinWal_"+name)
 	}
 	showwal.style.display='none'
 	formwal.style.display='block'
 }
 function setunused(idx) {
+	var name = qswal.options[qswal.selectedIndex].text
 	var tr = document.getElementById('walrow'+idx)
 	var adr = tr.cells[0].innerText
-	var lab = tr.cells[2].innerText
-	var wal = tr.cells[1].innerText
-	if (confirm("Move " + adr + " (" + lab + ") from wallet " + wal + "to UNUSED?")) {
-		document.location='?sid='+sid+'&setunused='+idx
+
+	if (current_wallets.Web_wallet) {
+		if (confirm("Remove " + adr + " from the current wallet?")) {
+			lines = localStorage.getItem("gocoinWal_"+name).split('\n')
+			console.log(lines.length, "lines in the wallet")
+			var s = ''
+			for (var i=0; i<lines.length; i++) {
+				if (lines[i].indexOf(adr)==-1) {
+					s += lines[i]+'\n'
+				}
+			}
+			localStorage.setItem("gocoinWal_"+name, s)
+			switch_to_webwallet(name)
+		}
+	} else {
+		var lab = tr.cells[2].innerText
+		var wal = tr.cells[1].innerText
+		if (confirm("Move " + adr + " (" + lab + ") from wallet " + wal + "to UNUSED?")) {
+			document.location='?sid='+sid+'&setunused='+idx
+		}
 	}
 }
 function edit_label(idx) {
@@ -42,39 +60,51 @@ function close_editor() {
 }
 function save_web_wallet() {
 	var name = walletfname.value
-	var names = localStorage.gocoinWallets.split('|')
+	var curr_wallets = localStorage.getItem("gocoinWallets")
+	var names = curr_wallets.split('|')
 	var i;
+	console.log("saving", name)
 	for (i=0; i<names.length; i++) {
 		if (names[i]==name) {
+			console.log("foud at", i)
 			break
 		}
 	}
 	if (i==names.length) {
-		localStorage.gocoinWallets += '|'+name
-		var o = document.createElement("option")
-		o.text = name
-		qswal.add(o)
+		console.log("not found")
+		localStorage.setItem("gocoinWallets", curr_wallets+"|"+name)
 	}
+
 	localStorage.setItem("gocoinWal_"+name, walletdata.value)
 	console.log("saved web wallet as "+name)
 	close_editor()
 
-	// select saved wallet now
-			if (localStorage.gocoinWalletSelected==names[i]) {
-				qswal.selectedIndex = qswal.length-1
-			}
-}
-function del_webwallet() {
-	var name = walletfname.value
-	localStorage.removeItem("gocoinWal_"+name)
-	document.location.reload()
+	switch_to_webwallet(name)
 }
 
-
-
+function delete_wallet() {
+	var name = qswal.options[qswal.selectedIndex].text
+	if (current_wallets.Web_wallet) {
+		if (confirm("Delete wallet "+name+" from the browser?")) {
+			localStorage.removeItem("gocoinWal_"+name)
+			switch_to_server_wallet("DEFAULT")
+		}
+	} else if (name!="DEFAULT") {
+		if (confirm("Delete file "+current_wallets.Seleced_wallet+" from the server?")) {
+			document.location='?sid='+sid+'&delete_file'
+		}
+	}
+}
 
 function create_switch_buttons() {
 	var i
+
+	cur_wallet_type.innerText = qswal.selectedIndex<firstWebWalletIndex ? "Server" : "Browser"
+	var wal_name = qswal.options[qswal.selectedIndex].text
+	cur_wallet_name.innerText = wal_name
+	if (wal_name=="DEFAULT") {
+		delwal_button.disabled = true
+	}
 
 	for (i=0; i<qswal.options.length; i++) {
 		var na = qswal.options[i].value
@@ -90,39 +120,31 @@ function create_switch_buttons() {
 			browser_wallets.appendChild(but)
 		}
 	}
-
-
-	//firstWebWalletIndex = i
-	/*
-	var names = localStorage.gocoinWallets.split('|')
-	var s = ''
-	for (i=0; i<names.length; i++) {
-		if (names[i]!="") {
-			var o = document.createElement("option")
-			if ((localStorage.getItem("gocoinWal_"+names[i])+'').length > 30) {
-				o.value = o.text = names[i]
-				qswal.add(o)
-				if (localStorage.gocoinWalletSelected==names[i]) {
-					qswal.selectedIndex = qswal.length-1
-				}
-				if (s!='') s+='|'
-				s += names[i]
-			} else {
-				console.log("removing webwallet", names[i])
-			}
-		}
-	}
-	localStorage.gocoinWallets = s
-	*/
 }
 document.addEventListener('DOMContentLoaded', function() {
 	create_switch_buttons()
 })
 
 
+function check_editor_form() {
+	if (confirm("Save this wallet on the server as "+walletfname.value+"?")) {
+		walletfname.disabled = false
+		wallet_edit_form.submit()
+	}
+}
+
+function allow_name_change_clicked() {
+	walletfname.disabled = !allow_name_change.checked
+	if (allow_name_change.checked) {
+		walletfname.select()
+		walletfname.focus()
+	}
+}
 
 </script>
-<h2>Your wallet</h2>
+<h2><span id="cur_wallet_type"></span> wallet: <span id="cur_wallet_name"></span>
+<input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
+</h2>
 Balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs (<a href="balance.zip">balance.zip</a>)<br>
 <br>
 Selected wallet: <b class="mono"><!--WALLET_FILENAME--></b><br>
@@ -135,7 +157,7 @@ Selected wallet: <b class="mono"><!--WALLET_FILENAME--></b><br>
 <hr>
 <div id="showwal">
 <h2>Current wallet
-<input style="float:right" type="button" value="Edit" onclick="shwwal()"></h2>
+<input style="float:right" type="button" value="Edit This Wallet" onclick="edit_wallet()"></h2>
 <table class="wal bord">
 <tr>
 <th>Address
@@ -149,24 +171,25 @@ Selected wallet: <b class="mono"><!--WALLET_FILENAME--></b><br>
 
 
 <div id="formwal" style="display:none">
-<h2>Edit wallet</h2>
-<table width="90%">
-<form method="post" action="cfg">
+<h2>Edit wallet
+<input style="float:right" type="button" value="Cancel" onclick="close_editor()">
+</h2>
+<table width="100%">
+<form method="post" id="wallet_edit_form" action="cfg" onsubmit="return false;">
+<tr>
+	<td align="left">
+		<input type="checkbox" id="allow_name_change" onchange="allow_name_change_clicked()">
+		Choose new name: <input type="text" disabled="true" id="walletfname" name="walletfname" value="" class="mono">
+	<td align="right">
+		<input type="button" value="Save In Browser" onclick="save_web_wallet()">
+		<input type="button" name="save" value="Save On Server" onclick="check_editor_form()">
 <tr><td colspan="2">
 	<textarea name="walletdata" id="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
 	<i>
 	Empty lines are ignored.<br>
 	Put <b>#</b> character in front of a line, to comment it out.<br>
-	Put <b>@</b> character followed by filename in front of a line, to include content of another wallet.<br>
+	Put <b>@</b> character followed by filename in front of a line, to include content of another server wallet.<br>
 	</i>
-<tr>
-	<td align="left">
-		File Name: <input type="edit" id="walletfname" name="walletfname" value="{WALLET_NAME}" class="mono">
-		<input type="button" value="Delete Web Wallet" onclick="del_webwallet()">
-	<td align="right">
-		<input type="button" value="Cancel" onclick="close_editor()">
-		<input type="button" value="Save only in browser" onclick="save_web_wallet()">
-		<input type="submit" name="save" value="Save wallet & Recalc balance">
 </form>
 </table>
 </div>

@@ -135,6 +135,13 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/wal", http.StatusFound)
 			return
 		}
+
+		if len(r.Form["delete_file"])>0 {
+			os.Remove(wallet.MyWallet.FileName)
+			wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + wallet.DefaultFileName)
+			http.Redirect(w, r, "/wal", http.StatusFound)
+			return
+		}
 	}
 
 	page := load_template("wallet.html")
