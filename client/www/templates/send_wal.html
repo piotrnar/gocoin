@@ -58,19 +58,19 @@ function recalc_inputs() {
 
 
 function recalc_to_pay() {
-	var el, v, totsend=0
+	var el, v, f, totsend=0
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
 
-	v = val2int(txfee.value)
-	if (isNaN(v)) {
+	f = val2int(txfee.value)
+	if (isNaN(f)) {
 		txfee.classList.add('err')
 		butdisabled = true
 		txfee_mbtc.value = ''
 	} else {
 		txfee.classList.remove('err')
-		totsend = v
-		txfee_mbtc.value = val2str(1000*v)
+		totsend = f
+		txfee_mbtc.value = val2str(1000*f)
 	}
 	for (var idx=1; idx<outtab.rows.length-3; idx++) {
 		el = document.getElementById('out'+idx)
@@ -104,6 +104,13 @@ function recalc_to_pay() {
 	paybut.disabled = butdisabled
 
 	ets.innerText = (ets_bytes/1000).toFixed(2)
+
+	if (ets_bytes<60 || isNaN(f)) {
+		feeperbyte.innerHTML = ''
+	} else {
+		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(f/ets_bytes).toFixed(1)+'</b>'
+	}
+
 }
 
 
@@ -309,9 +316,10 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<table width="100%"><tr>
 	<td><a href="javascript:add_new_output()">+ add output</a>
 	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> KB
+	<span id="feeperbyte"></span>
 	<td align="right">Transaction fee:
     </table>
-    <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.00001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+    <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
     <td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
 </tr>
 
