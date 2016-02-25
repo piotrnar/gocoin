@@ -2,7 +2,7 @@ package network
 
 import (
 	"fmt"
-	"time"
+	//"time"
 	"bytes"
 	//"sync/atomic"
 	//"encoding/hex"
@@ -60,8 +60,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 							//println("checked ok - height", node.Height)
 							if node.Height > c.Node.Height {
 								c.Node.Height = node.Height
-								println(time.Now().String(), c.PeerAddr.Ip(), c.Node.Version, "- new block",
-									bh.String(), "@", node.Height)
+								//println(time.Now().String(), c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
 							}
 							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
 						} else {
@@ -89,7 +88,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 	} else {
 		if number_of_new_blocks==1 {
 		} else {
-			println(number_of_new_blocks, "new blocks got from", c.PeerAddr.Ip(), c.Node.Version)
+			//println(number_of_new_blocks, "new blocks got from", c.PeerAddr.Ip(), c.Node.Version)
 		}
 		c.GetBlocksDataNow = true
 	}

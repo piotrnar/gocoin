@@ -19,14 +19,13 @@ function edit_wallet() {
 	formwal.style.display='block'
 }
 function setunused(idx) {
-	var name = qswal.options[qswal.selectedIndex].text
 	var tr = document.getElementById('walrow'+idx)
 	var adr = tr.cells[0].innerText
 
 	if (current_wallets.Web_wallet) {
-		if (confirm("Remove " + adr + " from the current wallet?")) {
+		var name = qswal.options[qswal.selectedIndex].text
+		if (confirm("Remove " + adr + " from the current browser wallet?")) {
 			lines = localStorage.getItem("gocoinWal_"+name).split('\n')
-			console.log(lines.length, "lines in the wallet")
 			var s = ''
 			for (var i=0; i<lines.length; i++) {
 				if (lines[i].indexOf(adr)==-1) {
@@ -48,10 +47,32 @@ function edit_label(idx) {
 	var tr = document.getElementById('walrow'+idx)
 	var adr = tr.cells[0].innerText
 	var lab = tr.cells[2].innerText
-	var wal = tr.cells[1].innerText
-	var newlab = prompt("Edit label in " + wal + " for:\n" + adr, lab)
-	if (newlab) {
-		document.location='?sid='+sid+'&setlabel='+idx+'&lab='+encodeURIComponent(newlab)
+
+	if (current_wallets.Web_wallet) {
+		var newlab = prompt("Edit label in the current browser wallet for:\n" + adr, lab)
+		if (newlab) {
+			var name = qswal.options[qswal.selectedIndex].text
+			lines = localStorage.getItem("gocoinWal_"+name).split('\n')
+			var s = ''
+			console.log(lines.length, "aa", adr)
+			for (var i=0; i<lines.length; i++) {
+				var found = lines[i].indexOf(adr)
+				if (found==-1) {
+					s += lines[i] + '\n'
+				} else {
+					s += lines[i].substr(found, found+adr.length+1) + newlab + '\n'
+				}
+			}
+			console.log(s)
+			localStorage.setItem("gocoinWal_"+name, s)
+			switch_to_webwallet(name)
+		}
+	} else {
+		var wal = tr.cells[1].innerText
+		var newlab = prompt("Edit label in " + wal + " for:\n" + adr, lab)
+		if (newlab) {
+			document.location='?sid='+sid+'&setlabel='+idx+'&lab='+encodeURIComponent(newlab)
+		}
 	}
 }
 function close_editor() {
