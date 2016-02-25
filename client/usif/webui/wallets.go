@@ -138,21 +138,10 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page := load_template("wallet.html")
-	wal1 := load_template("wallet_qsw.html")
 	addr := load_template("wallet_adr.html")
 
 	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(wallet.LastBalance)/1e8), 1)
 	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(wallet.MyBalance)), 1)
-
-	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
-	if er == nil {
-		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
-				s := strings.Replace(wal1, "{WALLET_NAME}", fis[i].Name(), -1)
-				page = templ_add(page, "<!--ONEWALLET-->", s)
-			}
-		}
-	}
 
 	wallet.BalanceMutex.Lock()
 

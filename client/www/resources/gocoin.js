@@ -126,3 +126,13 @@ function switch_to_webwallet(name) {
 	localStorage.setItem("gocoinWalletId", id)
 	form.submit()
 }
+
+function clear_web_wallet() {
+	localStorage.removeItem("gocoinWalletSelected")
+	localStorage.removeItem("gocoinWalletId")
+}
+
+function switch_to_server_wallet(name) {
+	clear_web_wallet()
+	document.location='?sid='+sid+'&wal='+name
+}

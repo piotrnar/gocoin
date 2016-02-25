@@ -15,8 +15,7 @@ function quickswitchwallet() {
 	if (webWalletSelected()) {
 		switch_to_webwallet(qswal.options[qswal.selectedIndex].text)
 	} else {
-		localStorage.removeItem("gocoinWalletSelected")
-		localStorage.removeItem("gocoinWalletId")
+		clear_web_wallet()
 		document.location='?sid='+sid+'&qwalsel='+qswal.options[qswal.selectedIndex].value
 	}
 }
