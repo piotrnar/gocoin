@@ -148,7 +148,9 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
-	s = strings.Replace(s, "{SESSION_ID}", sessid, 1)
+	s = strings.Replace(s, "/*_SESSION_ID_*/", "var sid = '"+sessid+"'", 1)
+	s = strings.Replace(s, "/*_CURRENT_WALLETS_*/", "var current_wallets = "+json_wallet_string(), 1)
+
 	if r.URL.Path!="/" {
 		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[1:], 1)
 	} else {
@@ -259,6 +261,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txstat.json", json_txstat)
 	http.HandleFunc("/netcon.json", json_netcon)
 	http.HandleFunc("/blocks.json", json_blocks)
+	http.HandleFunc("/wallet.json", json_wallet)
 
 	http.ListenAndServe(iface, nil)
 }

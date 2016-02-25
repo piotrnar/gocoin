@@ -8,6 +8,8 @@ import (
 	"strings"
 	"io/ioutil"
 	"path/filepath"
+	"encoding/hex"
+	"crypto/rand"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -187,8 +189,10 @@ func NewWallet(fn string) (wal *OneWallet) {
 
 // Load public wallet from a text file
 func NewWebWallet(dat []byte) (wal *OneWallet) {
+	var rb [8]byte
 	wal = new(OneWallet)
-	wal.FileName = WEB_FILENAME
+	rand.Read(rb[:])
+	wal.FileName = WEB_FILENAME + "-" + hex.EncodeToString(rb[:])
 	wal.Addrs = LoadRawWallet(dat)
 	return
 }

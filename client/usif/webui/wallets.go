@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"archive/zip"
 	"encoding/xml"
+	"encoding/json"
 	"path/filepath"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -245,6 +246,11 @@ func xml_wallets(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<Wallets>"))
+	w.Write([]byte("<Current>"))
+	if wallet.MyWallet!=nil {
+		w.Write([]byte(wallet.MyWallet.FileName))
+	}
+	w.Write([]byte("</Current>"))
 	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
 	if er == nil {
 		for i := range fis {
@@ -287,4 +293,38 @@ func xml_addrs(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("</entry>"))
 	}
 	w.Write([]byte("</addrbook>"))
+}
+
+
+func json_wallet_string() string {
+	var out struct {
+		Seleced_wallet string
+		Wallets []string
+	}
+
+	out.Seleced_wallet = wallet.MyWallet.FileName
+
+	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
+	if er == nil {
+		for i := range fis {
+			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
+				out.Wallets = append(out.Wallets, fis[i].Name())
+			}
+		}
+	}
+
+	bx, er := json.Marshal(out)
+	if er == nil {
+		return string(bx)
+	}
+	return er.Error()
+}
+
+
+func json_wallet(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Write([]byte(json_wallet_string()))
 }
