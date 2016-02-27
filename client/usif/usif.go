@@ -156,7 +156,6 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	return
 }
 
-
 func GetNetworkHashRate() string {
 	hours := common.CFG.HashrateHours
 	common.Last.Mutex.Lock()

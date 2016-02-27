@@ -73,6 +73,7 @@ var (
 		}
 		MiningStatHours uint
 		HashrateHours uint
+		AverageFeeBlocks uint
 		UserAgent string
 		PayCommandName string
 	}
@@ -121,6 +122,7 @@ func InitConfig() {
 
 	CFG.MiningStatHours = 48
 	CFG.HashrateHours = 12
+	CFG.AverageFeeBlocks = 4*6 /*last 4 hours*/
 	CFG.UserAgent = DefaultUserAgent
 	CFG.PayCommandName = "pay_cmd.txt"
 

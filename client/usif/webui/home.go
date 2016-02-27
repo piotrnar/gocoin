@@ -107,6 +107,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Qdb_extramem int64
 		Ecdsa_verify_cnt uint64
 		Average_block_size uint
+		Average_fee float64
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
@@ -119,6 +120,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Qdb_extramem = qdb.ExtraMemoryConsumed
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt
 	out.Average_block_size = common.GetAverageBlockSize()
+	out.Average_fee = common.GetAverageFee()
 
 	bx, er := json.Marshal(out)
 	if er == nil {

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"sync"
 	"bytes"
 	"io/ioutil"
 	"encoding/json"
@@ -64,4 +65,65 @@ func ReloadMiners() {
 			MinerIds = append(MinerIds, rec)
 		}
 	}
+}
+
+
+var (
+	AverageFeeMutex sync.Mutex
+	AverageFeeBytes uint64
+	AverageFeeTotal uint64
+	AverageFee_SPB float64
+	averageFeeLastBlock uint32 = 0xffffffff
+	averageFeeLastCount uint = 0xffffffff
+)
+
+
+func GetAverageFee() (float64) {
+	Last.Mutex.Lock()
+	end := Last.Block
+	Last.Mutex.Unlock()
+
+	LockCfg()
+	blocks := CFG.AverageFeeBlocks
+	UnlockCfg()
+	if blocks<=0 {
+		blocks = 1 // at leats one block
+	}
+
+	AverageFeeMutex.Lock()
+	defer AverageFeeMutex.Unlock()
+
+	if end.Height == averageFeeLastBlock && averageFeeLastCount == blocks {
+		return AverageFee_SPB // we've already calculated for this block
+	}
+
+	averageFeeLastBlock = end.Height
+	averageFeeLastCount = blocks
+
+	AverageFeeBytes = 0
+	AverageFeeTotal = 0
+
+	for blocks>0 {
+		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
+		if e != nil {
+			return 0
+		}
+		block, e := btc.NewBlock(bl)
+		if e!=nil {
+			return 0
+		}
+
+		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
+		for o := range cbasetx.TxOut {
+			AverageFeeTotal += cbasetx.TxOut[o].Value
+		}
+		AverageFeeTotal -= btc.GetBlockReward(end.Height)
+
+		AverageFeeBytes += uint64(len(bl))
+
+		blocks--
+		end = end.Parent
+	}
+	AverageFee_SPB = float64(AverageFeeTotal)/float64(AverageFeeBytes)
+	return AverageFee_SPB
 }
