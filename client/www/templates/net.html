@@ -171,6 +171,7 @@ function refreshconnections() {
 
 				// blocks in progress
 				td = row.insertCell(-1)
+				td.noWrap = true
 				td.innerHTML = cs[i].BlksInProgress + ' ' + cs[i].SendBufLen
 
 				// drop conn
