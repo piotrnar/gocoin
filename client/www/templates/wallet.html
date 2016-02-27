@@ -56,7 +56,6 @@ function edit_label(idx) {
 			var name = qswal.options[qswal.selectedIndex].text
 			lines = localStorage.getItem("gocoinWal_"+name).split('\n')
 			var s = ''
-			console.log(lines.length, "aa", adr)
 			for (var i=0; i<lines.length; i++) {
 				var found = lines[i].indexOf(adr)
 				if (found==-1) {
@@ -65,7 +64,6 @@ function edit_label(idx) {
 					s += lines[i].substr(found, found+adr.length+1) + newlab + '\n'
 				}
 			}
-			console.log(s)
 			localStorage.setItem("gocoinWal_"+name, s)
 			switch_to_webwallet(name)
 		}
