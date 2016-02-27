@@ -62,45 +62,62 @@ function recalc_to_pay() {
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
 
-	f = val2int(txfee.value)
-	if (isNaN(f)) {
-		txfee.classList.add('err')
-		butdisabled = true
-		txfee_mbtc.value = ''
-	} else {
-		txfee.classList.remove('err')
-		totsend = f
-		txfee_mbtc.value = val2str(1000*f)
-	}
-	for (var idx=1; idx<outtab.rows.length-3; idx++) {
-		el = document.getElementById('out'+idx)
-		v = val2int(el.value)
-		if (isNaN(v)) {
-			el.classList.add('err')
-			butdisabled = true
-			document.getElementById('mbtc_out'+idx).value = ''
-		} else {
-			el.classList.remove('err')
-			totsend += v
-			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
-			ets_bytes += AvgOutputSize
-			if (document.getElementById('inadr'+idx).value.length > 50) {
-				ets_bytes += StealthIndexLen // long string = stealth address
+	var first_loop = true
+
+	while (1) {
+		if (first_loop) {
+			f = val2int(txfee.value)
+
+			if (isNaN(f)) {
+				txfee.classList.add('err')
+				butdisabled = true
+				txfee_mbtc.value = ''
+			} else {
+				txfee.classList.remove('err')
+				totsend = f
+				txfee_mbtc.value = val2str(1000*f)
+			}
+			for (var idx=1; idx<outtab.rows.length-3; idx++) {
+				el = document.getElementById('out'+idx)
+				v = val2int(el.value)
+				if (isNaN(v)) {
+					el.classList.add('err')
+					butdisabled = true
+					document.getElementById('mbtc_out'+idx).value = ''
+				} else {
+					el.classList.remove('err')
+					totsend += v
+					document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
+					ets_bytes += AvgOutputSize
+					if (document.getElementById('inadr'+idx).value.length > 50) {
+						ets_bytes += StealthIndexLen // long string = stealth address
+					}
+				}
+			}
+			var chval = selected_value-totsend
+			changeval.value = val2str(chval)
+			changeval_mbtc.value = val2str(1000*chval)
+			if (chval<0) {
+				changeval.style.color = 'red'
+				butdisabled = true
+			} else if (chval>0) {
+				changeval.style.color = 'green'
+				ets_bytes += AvgOutputSize
+			} else {
+				changeval.style.color = ''
 			}
 		}
+
+		if (first_loop && auto_adjust_fee.checked) {
+			f = parseInt(ets_bytes*avg_fee_spb+1)
+			txfee.value = val2str(f)
+			first_loop = false
+			// goto go_again
+		} else {
+			break
+		}
 	}
-	var chval = selected_value-totsend
-	changeval.value = val2str(chval)
-	changeval_mbtc.value = val2str(1000*chval)
-	if (chval<0) {
-		changeval.style.color = 'red'
-		butdisabled = true
-	} else if (chval>0) {
-		changeval.style.color = 'green'
-		ets_bytes += AvgOutputSize
-	} else {
-		changeval.style.color = ''
-	}
+
 	paybut.disabled = butdisabled
 
 	ets.innerText = (ets_bytes/1000).toFixed(2)
@@ -110,6 +127,7 @@ function recalc_to_pay() {
 	} else {
 		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(f/ets_bytes).toFixed(1)+'</b>'
 	}
+
 
 }
 
@@ -318,9 +336,10 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> KB
 	<span id="feeperbyte"></span>
 	<td align="right">Transaction fee:
-    </table>
-    <td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
-    <td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
+	<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked">
+	</table>
+	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr title="Transaction change">
@@ -330,8 +349,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		</select>
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
-    <td class="r">
-    <input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
+	<td class="r">
+	<input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>

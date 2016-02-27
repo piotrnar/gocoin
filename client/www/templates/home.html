@@ -76,7 +76,6 @@
 	<h2>Others</h2>
 	<table>
 	<tr><td>Beep NewBlock:<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
-	<tr><td>Known Peers:<td><b id="si_known_peers"></b>
 	<tr><td>Node's Uptime:<td><b id="si_node_uptime"></b>
 	<tr><td>Mem Used MB:<td>
 		<b title="Go heap size" id="si_heap_size"></b> +
@@ -87,8 +86,9 @@
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> cached,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
-	<tr><td nowrap="nowrap">Avg. block size:<td><b id="si_avg_block_size"></b>
-	<tr><td nowrap="nowrap">ECDSA Verifs:<td><b id="si_ecdsa_verify_cnt"></b>
+	<tr><td colspan="2"><b id="si_known_peers"></b> known peers,
+		<b id="si_ecdsa_verify_cnt"></b> ECDSA verify opts
+	<tr><td nowrap="nowrap" colspan="2">Average fee is <b id="si_avg_fee_spb"></b> @ blocksize <b id="si_avg_block_size"></b>
 	</table>
 </table>
 
@@ -161,7 +161,8 @@ function refreshsysinfo() {
 			si_net_block_qsize.innerText = si.Net_block_qsize
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
-			si_avg_block_size.innerText = si.Average_block_size
+			si_avg_block_size.innerText = (si.Average_block_size/1024).toFixed(1) + "KB"
+			si_avg_fee_spb.innerText = si.Average_fee.toFixed(1) + "spb"
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 
