@@ -127,8 +127,13 @@ function recalc_to_pay() {
 	} else {
 		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(f/ets_bytes).toFixed(1)+'</b>'
 	}
+}
 
 
+function auto_adjust_fee_clicked() {
+	if (auto_adjust_fee.checked) {
+		recalc_to_pay()
+	}
 }
 
 
@@ -336,7 +341,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> KB
 	<span id="feeperbyte"></span>
 	<td align="right">Transaction fee:
-	<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked">
+    <input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
 	</table>
 	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
 	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
