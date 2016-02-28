@@ -182,8 +182,8 @@ function refreshsysinfo() {
 			si_net_block_qsize.innerText = si.Net_block_qsize
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
-			si_avg_block_size.innerText = (si.Average_block_size/1024).toFixed(1) + ' KB'
-			si_avg_fee_spb.innerText = si.Average_fee.toFixed(1)
+			si_avg_block_size.innerText = (si.Average_block_size/1000).toFixed(1) + ' kB'
+			si_avg_fee_spb.innerText = si.Average_fee.toFixed(2)
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 

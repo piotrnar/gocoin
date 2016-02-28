@@ -113,17 +113,24 @@ func GetAverageFee() (float64) {
 			return 0
 		}
 
-		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
+		cbasetx, cbasetxlen := btc.NewTx(bl[block.TxOffset:])
 		for o := range cbasetx.TxOut {
 			AverageFeeTotal += cbasetx.TxOut[o].Value
 		}
 		AverageFeeTotal -= btc.GetBlockReward(end.Height)
 
-		AverageFeeBytes += uint64(len(bl))
+		AverageFeeBytes += uint64(len(bl)-block.TxOffset-cbasetxlen) /*do not count block header and conibase tx */
 
 		blocks--
 		end = end.Parent
 	}
-	AverageFee_SPB = float64(AverageFeeTotal)/float64(AverageFeeBytes)
+	if AverageFeeBytes==0 {
+		if AverageFeeTotal!=0 {
+			panic("Impossible that miner gest a fee with no transactions in the block")
+		}
+		AverageFee_SPB = 0
+	} else {
+		AverageFee_SPB = float64(AverageFeeTotal)/float64(AverageFeeBytes)
+	}
 	return AverageFee_SPB
 }
