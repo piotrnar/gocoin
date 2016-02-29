@@ -138,6 +138,11 @@ func list_txs(par string) {
 	var totlen uint64
 	for cnt=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
+		totlen += uint64(len(v.Data))
+
+		if par!="all" && totlen>1000000 {
+			break
+		}
 
 		var oe, snt string
 		if v.Own!=0 {
@@ -156,9 +161,9 @@ func list_txs(par string) {
 		}
 
 		spb := float64(v.Fee)/float64(len(v.Data))
-		totlen += uint64(len(v.Data))
 
 		fmt.Printf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s\n", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe)
+
 	}
 }
 
@@ -195,6 +200,6 @@ func init () {
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
 	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
-	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool")
+	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space (or add 'all')")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 }
