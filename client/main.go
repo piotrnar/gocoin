@@ -37,7 +37,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// new block accepted
 		newbl.TmAccept = time.Now().Sub(sta)
 
-		common.RecalcAverageBlockSize()
+		common.RecalcAverageBlockSize(false)
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
@@ -234,7 +234,7 @@ func main() {
 
 	} else {
 
-		common.RecalcAverageBlockSize()
+		common.RecalcAverageBlockSize(true)
 
 		peersTick := time.Tick(5*time.Minute)
 		txPoolTick := time.Tick(time.Minute)

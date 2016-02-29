@@ -118,13 +118,22 @@ func GetAverageBlockSize() (res uint) {
 
 // Calculates average blocks size over the last 144 blocks (about one day)
 // Only call from blockchian thread
-func RecalcAverageBlockSize() {
+func RecalcAverageBlockSize(fix_sizes bool) {
 	n := BlockChain.BlockTreeEnd
-	var sum, cnt uint
+	var sum, cnt, orgsum uint
 	for maxcnt := CFG.AverageBlockSizeBlocks; maxcnt>0 && n!=nil; maxcnt-- {
+		if fix_sizes {
+			bl, _, _ := BlockChain.Blocks.BlockGet(n.BlockHash)
+			orgsum += uint(n.BlockSize)
+			n.BlockSize = uint32(len(bl))
+		}
 		sum += uint(n.BlockSize)
 		cnt++
 		n = n.Parent
+	}
+	if fix_sizes {
+		fmt.Printf("The last %d blocks are compressed to occupy %.1f%% of their original size\n",
+			cnt, 100.0*float64(orgsum)/float64(sum))
 	}
 	if sum>0 && cnt>0 {
 		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)
