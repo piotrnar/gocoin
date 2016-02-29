@@ -35,6 +35,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Version uint32
 		Reward uint64
 		Miner string
+		FeeSPB float64
 
 		Received uint32
 		TimeDl, TimeVer, TimeQue int
@@ -65,12 +66,15 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Size = len(bl)
 		b.Version = block.Version()
 
-		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
+		cbasetx, cbaselen := btc.NewTx(bl[block.TxOffset:])
 		for o := range cbasetx.TxOut {
 			b.Reward += cbasetx.TxOut[o].Value
 		}
 
 		b.Miner, _ = common.TxMiner(cbasetx)
+		if len(bl)-block.TxOffset-cbaselen != 0 {
+			b.FeeSPB = float64(b.Reward-btc.GetBlockReward(end.Height)) / float64(len(bl)-block.TxOffset-cbaselen)
+		}
 
 		network.MutexRcv.Lock()
 		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]

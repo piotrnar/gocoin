@@ -10,7 +10,7 @@
 <tr>
 	<th colspan="3">Block info
 	<th colspan="2">Block size
-	<th colspan="3">Mining info
+	<th colspan="4">Mining info
 	<th colspan="4">Timing in <i>ms</i>
 <tr>
 	<th>Height
@@ -18,8 +18,9 @@
 	<th>Hash
 	<th align="right">TXs
 	<th align="right">kB
-	<th>Ver
 	<th>BTC
+	<th>SPB
+	<th>Ver
 	<th align="left">Miner
 	<th align="right">dld
 	<th align="right">que
@@ -100,11 +101,15 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
-				td.innerText = cs[i].Version
+				td.innerText = (cs[i].Reward/1e8).toFixed(2)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
-				td.innerText = (cs[i].Reward/1e8).toFixed(2)
+				td.innerText = cs[i].FeeSPB.toFixed(1)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.innerText = cs[i].Version
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
