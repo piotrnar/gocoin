@@ -122,6 +122,33 @@ func (tl the_tx_list) Less(i, j int) bool {
 }
 
 
+func mempool_stats(par string) {
+	fmt.Println("Memory pool sorted by fee's SPB:")
+	cnt := 0
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	sorted := make(the_tx_list, len(network.TransactionsToSend))
+	for _, v := range network.TransactionsToSend {
+		sorted[cnt] = v
+		cnt++
+	}
+	sort.Sort(sorted)
+
+	var totlen uint64
+	for cnt=0; cnt<len(sorted); cnt++ {
+		v := sorted[cnt]
+		newlen := totlen+uint64(len(v.Data))
+
+		if cnt==0 || cnt+1==len(sorted) || (newlen/100e3)!=(totlen/100e3) {
+			spb := float64(v.Fee)/float64(len(v.Data))
+			println(fmt.Sprintf(" %9d bytes, %6d txs @ fee %6.1f Satoshis / byte", totlen, cnt+1, spb))
+		}
+
+		totlen = newlen
+	}
+}
+
 func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
@@ -162,7 +189,7 @@ func list_txs(par string) {
 
 		spb := float64(v.Fee)/float64(len(v.Data))
 
-		fmt.Printf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s\n", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe)
+		println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe))
 
 	}
 }
@@ -202,4 +229,5 @@ func init () {
 	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
 	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space (or add 'all')")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
+	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
 }
