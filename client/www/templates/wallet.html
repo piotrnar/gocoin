@@ -61,7 +61,7 @@ function edit_label(idx) {
 				if (found==-1) {
 					s += lines[i] + '\n'
 				} else {
-					s += lines[i].substr(found, found+adr.length+1) + newlab + '\n'
+					s += lines[i].substr(found, adr.length) + ' ' + newlab + '\n'
 				}
 			}
 			localStorage.setItem("gocoinWal_"+name, s)
