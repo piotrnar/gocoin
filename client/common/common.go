@@ -121,7 +121,7 @@ func GetAverageBlockSize() (res uint) {
 func RecalcAverageBlockSize() {
 	n := BlockChain.BlockTreeEnd
 	var sum, cnt uint
-	for maxcnt := 144; maxcnt>0 && n!=nil; maxcnt-- {
+	for maxcnt := CFG.AverageBlockSizeBlocks; maxcnt>0 && n!=nil; maxcnt-- {
 		sum += uint(n.BlockSize)
 		cnt++
 		n = n.Parent

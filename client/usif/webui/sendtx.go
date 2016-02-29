@@ -197,14 +197,14 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 				}
 				tx.TxIn[i].ScriptSig = ms.Bytes()
 			}
-			fz, _ = zi.Create("multi_" + common.CFG.PayCommandName)
+			fz, _ = zi.Create("multi_" + common.CFG.WebUI.PayCommandName)
 			fmt.Fprintln(fz, "wallet -raw tx2sign.txt")
 			for k, _ := range addrs_to_msign {
 				fmt.Fprintln(fz, "wallet -msign", k, "-raw ...")
 			}
 		} else {
 			if pay_cmd!="" {
-				fz, _ = zi.Create(common.CFG.PayCommandName)
+				fz, _ = zi.Create(common.CFG.WebUI.PayCommandName)
 				fz.Write([]byte(pay_cmd))
 			}
 		}

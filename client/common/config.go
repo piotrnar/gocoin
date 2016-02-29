@@ -34,6 +34,7 @@ var (
 			ShowBlocks uint32
 			AddrListLen uint32 // size of address list in MakeTx tab popups
 			Title string
+			PayCommandName string
 		}
 		Net struct {
 			ListenTCP bool
@@ -71,11 +72,11 @@ var (
 			NewBalance bool // been when a balance has changed
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
-		MiningStatHours uint
 		HashrateHours uint
+		MiningStatHours uint
 		AverageFeeBlocks uint
+		AverageBlockSizeBlocks uint
 		UserAgent string
-		PayCommandName string
 	}
 
 	mutex_cfg sync.Mutex
@@ -103,6 +104,7 @@ func InitConfig() {
 	CFG.WebUI.ShowBlocks = 25
 	CFG.WebUI.AddrListLen = 15
 	CFG.WebUI.Title = "Gocoin"
+	CFG.WebUI.PayCommandName = "pay_cmd.txt"
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
@@ -120,11 +122,11 @@ func InitConfig() {
 	CFG.Memory.GCPercTrshold = 100 // 100%
 	CFG.Memory.MaxCachedBlocks = 500
 
-	CFG.MiningStatHours = 48
 	CFG.HashrateHours = 12
+	CFG.MiningStatHours = 48
 	CFG.AverageFeeBlocks = 4*6 /*last 4 hours*/
+	CFG.AverageBlockSizeBlocks = 12*6 /*half a day*/
 	CFG.UserAgent = DefaultUserAgent
-	CFG.PayCommandName = "pay_cmd.txt"
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e==nil && len(cfgfilecontent)>0 {

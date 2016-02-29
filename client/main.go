@@ -37,10 +37,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// new block accepted
 		newbl.TmAccept = time.Now().Sub(sta)
 
-		if (newbl.Block.Height%32)==0 {
-			// recalculate average block size every 32 blocks
-			common.RecalcAverageBlockSize()
-		}
+		common.RecalcAverageBlockSize()
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])

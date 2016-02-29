@@ -94,6 +94,13 @@ The data dir contains:<br>
 <td class="cfg_info"> Title of the WebUI window as seen in the browser.</td>
 </tr>
 <tr>
+<td class="cfg_name"> WebUI.PayCommandName</td>
+<td class="cfg_type"> string</td>
+<td> "pay_cmd.txt"</td>
+<td class="cfg_info"> The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
+ Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
+</tr>
+<tr>
 <td class="cfg_name"> Net.ListenTCP</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
@@ -102,9 +109,9 @@ The data dir contains:<br>
 <tr>
 <td class="cfg_name"> Net.TCPPort</td>
 <td class="cfg_type"> uint16</td>
-<td> 8333 - for main net<br>
- 18333 - for test net</td>
-<td class="cfg_info"> Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
+<td> 0 </td>
+<td class="cfg_info"> Zero value means to use the default port, which is 8333 for main net and 18333 for test net.<br>
+Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
 </tr>
 <tr>
 <td class="cfg_name"> Net.MaxOutCons</td>
@@ -151,13 +158,13 @@ The data dir contains:<br>
 <tr>
 <td class="cfg_name"> TXPool.FeePerByte</td>
 <td class="cfg_type"> uint64</td>
-<td> 1</td>
+<td> 20</td>
 <td class="cfg_info"> Required minimum fee per byte to accept a transaction to the memory pool.</td>
 </tr>
 <tr>
 <td class="cfg_name"> TXPool.MaxTxSize</td>
 <td class="cfg_type"> uint32</td>
-<td> 10000</td>
+<td> 100000</td>
 <td class="cfg_info"> Maximum size of a transaction that would be accepted to the memory pool.</td>
 </tr>
 <tr>
@@ -187,19 +194,19 @@ The data dir contains:<br>
 <tr>
 <td class="cfg_name"> TXRoute.FeePerByte</td>
 <td class="cfg_type"> uint64</td>
-<td> 1</td>
+<td> 25</td>
 <td class="cfg_info"> Required minimum fee per byte to route a transaction.</td>
 </tr>
 <tr>
 <td class="cfg_name"> TXRoute.MaxTxSize</td>
 <td class="cfg_type"> uint32</td>
-<td> 10000</td>
+<td> 100000</td>
 <td class="cfg_info"> Maximum size of a transaction that will be routed to other peers.</td>
 </tr>
 <tr>
 <td class="cfg_name"> TXRoute.MinVoutValue</td>
 <td class="cfg_type"> uint64</td>
-<td> 500</td>
+<td> 12500</td>
 <td class="cfg_info"> Required minimum value (checked separately for each output) to route a transaction. 0 for no restriction.</td>
 </tr>
 <tr>
@@ -239,29 +246,34 @@ The data dir contains:<br>
 <td class="cfg_info"> Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.</td>
 </tr>
 <tr>
+<td class="cfg_name"> HashrateHours</td>
+<td class="cfg_type"> uint</td>
+<td> 12</td>
+<td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
+</tr>
+<tr>
 <td class="cfg_name"> MiningStatHours</td>
 <td class="cfg_type"> uint</td>
-<td> 24</td>
+<td> 48</td>
 <td class="cfg_info"> How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
 </tr>
 <tr>
-<td class="cfg_name"> HashrateHours</td>
+<td class="cfg_name"> AverageFeeBlocks</td>
 <td class="cfg_type"> uint</td>
-<td> 6</td>
-<td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
+<td> 24</td>
+<td class="cfg_info"> How many block down the chain to look for calculating the current average transaction fee.</td>
+</tr>
+<tr>
+<td class="cfg_name"> AverageBlockSizeBlocks</td>
+<td class="cfg_type"> uint</td>
+<td> 72</td>
+<td class="cfg_info"> How many block down the chain to look for calculating the current average block size.</td>
 </tr>
 <tr>
 <td class="cfg_name"> UserAgent</td>
 <td class="cfg_type"> string</td>
 <td> "/Gocoin:<i>?.?.?</i>/"</td>
 <td class="cfg_info"> Which string shall be reported by the node as User-Agent (in the version messages).</td>
-</tr>
-<tr>
-<td class="cfg_name"> PayCommandName</td>
-<td class="cfg_type"> string</td>
-<td> "pay_cmd.txt"</td>
-<td class="cfg_info"> The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
- Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
 </tr>
 </tbody>
 </table>
