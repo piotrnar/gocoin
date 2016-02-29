@@ -142,7 +142,14 @@ func mempool_stats(par string) {
 
 		if cnt==0 || cnt+1==len(sorted) || (newlen/100e3)!=(totlen/100e3) {
 			spb := float64(v.Fee)/float64(len(v.Data))
-			println(fmt.Sprintf(" %9d bytes, %6d txs @ fee %6.1f Satoshis / byte", totlen, cnt+1, spb))
+			toprint := newlen
+			if cnt!=0 && cnt+1!=len(sorted) {
+				toprint = newlen/100e3*100e3
+			}
+			println(fmt.Sprintf(" %9d bytes, %6d txs @ fee %8.1f Satoshis / byte", toprint, cnt+1, spb))
+		}
+		if (newlen/1e6)!=(totlen/1e6) {
+			println("===========================================================")
 		}
 
 		totlen = newlen
