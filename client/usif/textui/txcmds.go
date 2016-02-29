@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"sort"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/network"
@@ -110,12 +111,34 @@ func dec_tx(par string) {
 }
 
 
+type the_tx_list []*network.OneTxToSend
+
+func (tl the_tx_list) Len() int {return len(tl)}
+func (tl the_tx_list) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
+func (tl the_tx_list) Less(i, j int) bool {
+	spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
+	spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
+	return spb_j < spb_i
+}
+
+
 func list_txs(par string) {
 	fmt.Println("Transactions in the memory pool:")
 	cnt := 0
 	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	sorted := make(the_tx_list, len(network.TransactionsToSend))
 	for _, v := range network.TransactionsToSend {
+		sorted[cnt] = v
 		cnt++
+	}
+	sort.Sort(sorted)
+
+	var totlen uint64
+	for cnt=0; cnt<len(sorted); cnt++ {
+		v := sorted[cnt]
+
 		var oe, snt string
 		if v.Own!=0 {
 			oe = " *OWN*"
@@ -126,14 +149,17 @@ func list_txs(par string) {
 		snt = fmt.Sprintf("INV sent %d times,   ", v.Invsentcnt)
 
 		if v.SentCnt==0 {
-			snt = "TX never sent"
+			snt = "never sent"
 		} else {
-			snt = fmt.Sprintf("TX sent %d times, last %s ago", v.SentCnt,
+			snt = fmt.Sprintf("sent %d times, last %s ago", v.SentCnt,
 				time.Now().Sub(v.Lastsent).String())
 		}
-		fmt.Printf("%5d) %s - %d bytes - %s%s\n", cnt, v.Tx.Hash.String(), len(v.Data), snt, oe)
+
+		spb := float64(v.Fee)/float64(len(v.Data))
+		totlen += uint64(len(v.Data))
+
+		fmt.Printf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s\n", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe)
 	}
-	network.TxMutex.Unlock()
 }
 
 
