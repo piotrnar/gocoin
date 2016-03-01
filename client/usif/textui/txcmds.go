@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"sort"
+	"strconv"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/network"
@@ -111,58 +112,18 @@ func dec_tx(par string) {
 }
 
 
-type the_tx_list []*network.OneTxToSend
-
-func (tl the_tx_list) Len() int {return len(tl)}
-func (tl the_tx_list) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
-func (tl the_tx_list) Less(i, j int) bool {
-	spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
-	spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
-	return spb_j < spb_i
-}
-
-
 func mempool_stats(par string) {
-	fmt.Println("Memory pool sorted by fee's SPB:")
-	cnt := 0
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
-
-	sorted := make(the_tx_list, len(network.TransactionsToSend))
-	for _, v := range network.TransactionsToSend {
-		sorted[cnt] = v
-		cnt++
-	}
-	sort.Sort(sorted)
-
-	var totlen uint64
-	for cnt=0; cnt<len(sorted); cnt++ {
-		v := sorted[cnt]
-		newlen := totlen+uint64(len(v.Data))
-
-		if cnt==0 || cnt+1==len(sorted) || (newlen/100e3)!=(totlen/100e3) {
-			spb := float64(v.Fee)/float64(len(v.Data))
-			toprint := newlen
-			if cnt!=0 && cnt+1!=len(sorted) {
-				toprint = newlen/100e3*100e3
-			}
-			println(fmt.Sprintf(" %9d bytes, %6d txs @ fee %8.1f Satoshis / byte", toprint, cnt+1, spb))
-		}
-		if (newlen/1e6)!=(totlen/1e6) {
-			println("===========================================================")
-		}
-
-		totlen = newlen
-	}
+	fmt.Print(usif.MemoryPoolFees())
 }
 
 func list_txs(par string) {
-	fmt.Println("Transactions in the memory pool:")
+	limitbytes, _ := strconv.ParseUint(par, 10, 64)
+	fmt.Println("Transactions in the memory pool:", limitbytes)
 	cnt := 0
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	sorted := make(the_tx_list, len(network.TransactionsToSend))
+	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
 	for _, v := range network.TransactionsToSend {
 		sorted[cnt] = v
 		cnt++
@@ -174,7 +135,7 @@ func list_txs(par string) {
 		v := sorted[cnt]
 		totlen += uint64(len(v.Data))
 
-		if par!="all" && totlen>1000000 {
+		if limitbytes!=0 && totlen>limitbytes {
 			break
 		}
 
@@ -196,7 +157,7 @@ func list_txs(par string) {
 
 		spb := float64(v.Fee)/float64(len(v.Data))
 
-		println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe))
+		fmt.Println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe))
 
 	}
 }
@@ -234,7 +195,7 @@ func init () {
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
 	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
-	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space (or add 'all')")
+	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space <max_size>")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
 }

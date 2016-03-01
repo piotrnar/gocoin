@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
+	"sort"
 	"errors"
 	"math/rand"
 	"encoding/hex"
@@ -196,6 +197,53 @@ func ExecUiReq(req *OneUiReq) {
 		fmt.Printf("Ready in %.3fs\n", float64(sto-sta)/1e9)
 		fmt.Print("> ")
 	}()
+}
+
+
+type SortedTxToSend []*network.OneTxToSend
+
+func (tl SortedTxToSend) Len() int {return len(tl)}
+func (tl SortedTxToSend) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
+func (tl SortedTxToSend) Less(i, j int) bool {
+	spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
+	spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
+	return spb_j < spb_i
+}
+
+
+func MemoryPoolFees() (res string) {
+	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
+	cnt := 0
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	sorted := make(SortedTxToSend, len(network.TransactionsToSend))
+	for _, v := range network.TransactionsToSend {
+		sorted[cnt] = v
+		cnt++
+	}
+	sort.Sort(sorted)
+
+	var totlen uint64
+	for cnt=0; cnt<len(sorted); cnt++ {
+		v := sorted[cnt]
+		newlen := totlen+uint64(len(v.Data))
+
+		if cnt==0 || cnt+1==len(sorted) || (newlen/100e3)!=(totlen/100e3) {
+			spb := float64(v.Fee)/float64(len(v.Data))
+			toprint := newlen
+			if cnt!=0 && cnt+1!=len(sorted) {
+				toprint = newlen/100e3*100e3
+			}
+			res += fmt.Sprintf(" %9d bytes, %6d txs @ fee %8.1f Satoshis / byte\n", toprint, cnt+1, spb)
+		}
+		if (newlen/1e6)!=(totlen/1e6) {
+			res += "===========================================================\n"
+		}
+
+		totlen = newlen
+	}
+	return
 }
 
 

@@ -3,8 +3,10 @@ package webui
 import (
 	"fmt"
 	"time"
+	"sort"
 	"sync"
 	"strings"
+	"strconv"
 	"net/http"
 	"io/ioutil"
 	"encoding/hex"
@@ -132,8 +134,48 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 }
 
 
+/* memory pool transaction sorting stuff */
+type sortedTxList []*network.OneTxToSend
+
+func (tl sortedTxList) Len() int {return len(tl)}
+func (tl sortedTxList) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
+func (tl sortedTxList) Less(i, j int) bool {
+	var res bool
+	switch txs2s_sort {
+		case "age":
+			res = tl[j].Firstseen.UnixNano() > tl[i].Firstseen.UnixNano()
+		case "len":
+			res = len(tl[j].Data) < len(tl[i].Data)
+		case "btc":
+			res = tl[j].Volume < tl[i].Volume
+		case "fee":
+			res = tl[j].Fee < tl[i].Fee
+		default: /*spb*/
+			spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
+			spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
+			res = spb_j < spb_i
+	}
+	if txs2s_sort_desc {
+		return res
+	} else {
+		return !res
+	}
+}
+
+var txs2s_count int = 1000
+var txs2s_sort string = "spb"
+var txs2s_sort_desc bool = true
+
+
 func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"text/xml"}
+
+	if len(r.Form["id"])>0 {
+		output_tx_xml(w, r.Form["id"][0])
 		return
 	}
 
@@ -181,18 +223,34 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		if len(r.Form["cnt"])>0 {
+			u, e := strconv.ParseUint(r.Form["cnt"][0], 10, 32)
+			if e==nil && u>0 && u<10e3 {
+				txs2s_count = int(u)
+			}
+		}
+
+		if len(r.Form["sort"])>0 && len(r.Form["sort"][0])==3 {
+			txs2s_sort = r.Form["sort"][0]
+		}
+
+		txs2s_sort_desc = len(r.Form["descending"])>0
 	}
 
-	w.Header()["Content-Type"] = []string{"text/xml"}
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
 
-	if len(r.Form["id"])>0 {
-		output_tx_xml(w, r.Form["id"][0])
-		return
+	sorted := make(sortedTxList, len(network.TransactionsToSend))
+	var cnt int
+	for _, v := range network.TransactionsToSend {
+		sorted[cnt] = v
+		cnt++
 	}
+	sort.Sort(sorted)
 
 	w.Write([]byte("<txpool>"))
-	network.TxMutex.Lock()
-	for _, v := range network.TransactionsToSend {
+	for cnt=0; cnt<len(sorted) && cnt<txs2s_count; cnt++ {
+		v := sorted[cnt]
 		if len(r.Form["ownonly"])>0 && v.Own==0 {
 			continue
 		}
@@ -210,7 +268,6 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
 		w.Write([]byte("</tx>"))
 	}
-	network.TxMutex.Unlock()
 	w.Write([]byte("</txpool>"))
 }
 
@@ -316,4 +373,13 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	network.TxMutex.Unlock()
 
 	w.Write([]byte("}\n"))
+}
+
+
+func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	w.Header()["Content-Type"] = []string{"text/plain"}
+	w.Write([]byte(usif.MemoryPoolFees()))
 }

@@ -247,5 +247,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/blocks.json", json_blocks)
 	http.HandleFunc("/wallet.json", json_wallet)
 
+	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
+
 	http.ListenAndServe(iface, nil)
 }

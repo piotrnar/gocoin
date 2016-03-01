@@ -63,7 +63,8 @@ tr {
 	border-bottom: 1px solid #000;
 }
 
-#rawdiv {
+
+#rawdiv, #mempool_fees {
 	font-family: monospace;
 	background-color:#e0e0e0;
 	width: 100%;

@@ -37,16 +37,19 @@
 </div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
 <table width="100%"><tr>
-<td valign="top" width="*">
-	<table width="85%">
+<td valign="top">
+	<table>
 	<colgroup>
-		<col width="50%">
-		<col width="25%">
-		<col width="25%">
+		<col width="200">
+		<col width="100">
+		<col width="100">
 	</colgroup>
-		<tr><td>Accepted transactions:
-			<td><input type="button" id="but2s" onclick="show_txs2s('')">
-			<td align="right"><b id="ts_t2s_size"></b>
+		<tr><td>Memory pool size:
+			<td colspan="2">
+			<input type="button" id="ts_t2s_size" onclick="show_mempool_fees()"
+				title="Click to see mempool fee statistics"
+				style="width:100%">
+			<td align="right">
 		<tr><td>UTXOs spent in memory:
 			<td><b id="outspent"></b>
 			<td align="right">avg. <b id="avgoutspertx"></b> / tx
@@ -56,9 +59,9 @@
 		<tr><td>Waiting for inputs:<td colspan="2"><input type="button" id="butw4i" value="" onclick="show_txw4i()">
 		<tr><td>Being processed:
 			<td><b id="ts_ptr1_cnt"></b> / <b id="ts_ptr2_cnt"></b>
-			<td><input type="button" onclick="show_txs2s('?ownonly=1')" value="Own TXs">
+			<td><input type="button" onclick="show_txs2s('ownonly=1')" value="Own TXs">
 	</table>
-<td valign="top" width="*">
+<td valign="top">
 	<table>
 		<col width="150">
 		<col width="100">
@@ -85,19 +88,47 @@
 				| <a href="http://eligius.st/~wizkid057/newstats/pushtxn.php" target="_blank">eligius.st</a>
 				to push it.
 	</table>
+
+<tr>
+<td colspan="2">
+Up to
+	<select id="mp_show_cnt">
+		<option>50</option>
+		<option>100</option>
+		<option selected>250</option>
+		<option>500</option>
+		<option>1000</option>
+		<option>2000</option>
+		<option>5000</option>
+		<option>10000</option>
+	</select>
+mempool transactions,
+sorted
+	<input id="mp_show_sort_desc" type="checkbox" checked="checked"> descending
+by
+	<select id="mp_show_sort">
+		<option value="age">age</option>
+		<option value="len">size</option>
+		<option value="btc">volume</option>
+		<option value="fee">fee amount</option>
+		<option value="spb" selected>fee per byte</option>
+	</select>
+- <input type="button" value="show me now..." onclick="show_txs2s('')">
 </table>
+
 
 <!--TX_LOAD-->
 <table class="txs bord" id="txs2s" style="display:none" width="100%">
 	<tr>
 		<th width="20" align="right">#
+		<th width="20" align="right">totlen
 		<th>Transaction ID
-		<th onclick="sorttab('txs2s', 2)" style="cursor:pointer" width="60" align="right">Maturity
-		<th onclick="sorttab('txs2s', 3)" style="cursor:pointer" width="60" align="right">Size
-		<th onclick="sorttab('txs2s', 4)" style="cursor:pointer" width="40" align="right">Sent
-		<th onclick="sorttab('txs2s', 5)" style="cursor:pointer" width="90" align="right">Total BTC
-		<th onclick="sorttab('txs2s', 6)" style="cursor:pointer" width="80" align="right">Fee BTC
-		<th onclick="sorttab('txs2s', 7)" style="cursor:pointer" width="60" align="right">Fee/Byte
+		<th onclick="sortclick('age')" style="cursor:pointer" width="60" align="right">Maturity
+		<th onclick="sortclick('len')" style="cursor:pointer" width="60" align="right">Size
+		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
+		<th onclick="sortclick('fee')" style="cursor:pointer" width="80" align="right">Fee BTC
+		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">Fee/Byte
+		<th width="40" align="right">Sent
 		<th width="60" align="right">Extras
 	</tr>
 </table>
@@ -116,8 +147,24 @@
 		<th>Pending Tx
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
-
+<pre id="mempool_fees" class="mono" style="display:none">
+</pre>
 <script>
+
+function sortclick(type) {
+	var os = mp_show_sort.options
+	if (os[mp_show_sort.selectedIndex].value!=type) {
+		for (var i=0; i<os.length; i++) {
+			if (os[i].value==type) {
+				mp_show_sort.selectedIndex = i
+				break
+			}
+		}
+	} else {
+		mp_show_sort_desc.checked = !mp_show_sort_desc.checked
+	}
+	show_txs2s('')
+}
 
 function sorter(a,b) {
 	return a.val<b.val
@@ -144,7 +191,11 @@ function sorttab(tid,col) {
 }
 
 function get_maturity(t) {
-	return ((((new Date()).getTime()/1000) - parseInt(t))/60).toFixed(0) + '&nbsp;min'
+	var secs = parseInt(((new Date()).getTime()/1000) - parseInt(t))
+	var hours = parseInt(secs/3600)
+	var mins = parseInt(secs/60)%60
+	secs = secs%60
+	return hours + ":" + leftpad(mins, "0", 2) + ":" + leftpad(secs, "0", 2)
 }
 
 function val2reason(r) {
@@ -169,19 +220,19 @@ function val2reason(r) {
 
 function send1tx_click(id) {
 	if (confirm("Send TX "+id+" to one random peer")) {
-		show_txs2s('?sendone='+id+'&ownonly=1&sid='+sid)
+		show_txs2s('&sendone='+id+'&ownonly=1')
 	}
 }
 
 function sendtx_click(id) {
 	if (confirm("Broadcast TX "+id)) {
-		show_txs2s('?send='+id+'&ownonly=1&sid='+sid)
+		show_txs2s('&send='+id+'&ownonly=1')
 	}
 }
 
 function deltx_click(id) {
 	if (confirm("Delete TX "+id)) {
-		show_txs2s('?del='+id+'&ownonly=1&sid='+sid)
+		show_txs2s('&del='+id+'&ownonly=1')
 	}
 	txrawdata.innerText = ''
 }
@@ -258,7 +309,7 @@ function decode_tx() {
 			fade.style.display='block'
 		}
 	}
-	xmlHttp.open("GET","txs2s.xml?id="+txid, true);
+	xmlHttp.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
 	xmlHttp.send(null);
 }
 
@@ -268,15 +319,14 @@ function closepopup() {
 	window.scrollTo(0,prvpos)
 }
 
+
 function show_txs2s(extrapar) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
 			while (txs2s.rows.length>1)  txs2s.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
-			if (extrapar.indexOf('ownonly=1')==-1) {
-				but2s.value = ' ' + txs.length + ' '
-			}
+			var lensofar = 0
 			for (var i=0; i<txs.length; i++) {
 				var c,row
 				var own = parseInt(xval(txs[i], 'own'))
@@ -291,8 +341,14 @@ function show_txs2s(extrapar) {
 					row.className='hov'
 				}
 
+				var len = parseInt(xval(txs[i], 'len'))
+				lensofar += len
+
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = lensofar
 
 				c = row.insertCell(-1)
 				c.className ='mono'
@@ -305,15 +361,7 @@ function show_txs2s(extrapar) {
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'len')
-
-				c=row.insertCell(-1);c.align='right'
-				var sc = xval(txs[i], 'sentcnt')
-				c.innerHTML = sc + "/" + xval(txs[i], 'invsentcnt')
-				if (sc>0) {
-					var tim = new Date(xval(txs[i], 'sentlast')*1000)
-					c.title = "Last sent at "+tim.getHours()+":"+leftpad(tim.getMinutes(),'0',2)+":"+leftpad(tim.getSeconds(),'0',2)
-				}
+				c.innerHTML = len
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
@@ -332,6 +380,14 @@ function show_txs2s(extrapar) {
 
 					c=row.insertCell(-1);c.align='right'
 					c.innerHTML = '<i>unknown</i>'
+				}
+
+				c=row.insertCell(-1);c.align='right'
+				var sc = xval(txs[i], 'sentcnt')
+				c.innerHTML = sc + "/" + xval(txs[i], 'invsentcnt')
+				if (sc>0) {
+					var tim = new Date(xval(txs[i], 'sentlast')*1000)
+					c.title = "Last sent at "+tim.getHours()+":"+leftpad(tim.getMinutes(),'0',2)+":"+leftpad(tim.getSeconds(),'0',2)
 				}
 
 				c=row.insertCell(-1);c.align='right'
@@ -354,8 +410,14 @@ function show_txs2s(extrapar) {
 			txs2s.style.display = 'table'
 		}
 	}
-	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
-	xmlHttp.open("GET","txs2s.xml"+extrapar, true);
+	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+
+	extrapar += '&cnt='+mp_show_cnt.options[mp_show_cnt.selectedIndex].value
+	extrapar += '&sort='+mp_show_sort.options[mp_show_sort.selectedIndex].value
+	if (mp_show_sort_desc.checked) {
+		extrapar += '&descending'
+	}
+	xmlHttp.open("GET","txs2s.xml?sid="+sid+extrapar, true);
 	xmlHttp.send(null);
 }
 
@@ -392,7 +454,7 @@ function show_txsre() {
 			txsre.style.display = 'table'
 		}
 	}
-	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txsre.xml", true);
 	xmlHttp.send(null);
 }
@@ -437,8 +499,21 @@ function show_txw4i() {
 			txw4i.style.display = 'table'
 		}
 	}
-	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txw4i.xml", true);
+	xmlHttp.send(null);
+}
+
+function show_mempool_fees() {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(xmlHttp.readyState==4) {
+			mempool_fees.style.display = 'block'
+			mempool_fees.innerText = aj.responseText
+		}
+	}
+	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	xmlHttp.open("GET","mempool_fees.txt", true);
 	xmlHttp.send(null);
 }
 
@@ -453,8 +528,8 @@ function refreshtxstat() {
 	aj.onload=function() {
 		try {
 			var ts = JSON.parse(aj.responseText)
-			ts_t2s_size.innerText = bignum(ts.t2s_size)+'B'
-			but2s.value = ts.t2s_cnt
+
+			ts_t2s_size.value = bignum(ts.t2s_size)+'B in ' + ts.t2s_cnt + ' txs'
 			outspent.innerText = ts.spent_outs_cnt
 			if (ts.t2s_cnt>0) {
 				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
