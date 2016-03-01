@@ -102,6 +102,13 @@ function bignum(n) {
 	if (n<10e15) {
 		return (n/1e12).toFixed(2) + " P"
 	}
+	if (n<10e18) {
+		return (n/1e15).toFixed(2) + " E"
+	}
+	if (n<10e21) {
+		return (n/1e18).toFixed(2) + " Z"
+	}
+	return (n/1e21).toFixed(2) + " Y"
 }
 
 function switch_to_webwallet(name) {
