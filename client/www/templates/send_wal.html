@@ -58,74 +58,70 @@ function recalc_inputs() {
 
 
 function recalc_to_pay() {
-	var el, v, f, totsend=0
+	var el, v, fee, totsend=0
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
 
-	var first_loop = true
+	fee = val2int(txfee.value)
 
-	while (1) {
-		if (first_loop) {
-			f = val2int(txfee.value)
-
-			if (isNaN(f)) {
-				txfee.classList.add('err')
-				butdisabled = true
-				txfee_mbtc.value = ''
-			} else {
-				txfee.classList.remove('err')
-				totsend = f
-				txfee_mbtc.value = val2str(1000*f)
-			}
-			for (var idx=1; idx<outtab.rows.length-3; idx++) {
-				el = document.getElementById('out'+idx)
-				v = val2int(el.value)
-				if (isNaN(v)) {
-					el.classList.add('err')
-					butdisabled = true
-					document.getElementById('mbtc_out'+idx).value = ''
-				} else {
-					el.classList.remove('err')
-					totsend += v
-					document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
-					ets_bytes += AvgOutputSize
-					if (document.getElementById('inadr'+idx).value.length > 50) {
-						ets_bytes += StealthIndexLen // long string = stealth address
-					}
-				}
-			}
-			var chval = selected_value-totsend
-			changeval.value = val2str(chval)
-			changeval_mbtc.value = val2str(1000*chval)
-			if (chval<0) {
-				changeval.style.color = 'red'
-				butdisabled = true
-			} else if (chval>0) {
-				changeval.style.color = 'green'
-				ets_bytes += AvgOutputSize
-			} else {
-				changeval.style.color = ''
-			}
-		}
-
-		if (first_loop && auto_adjust_fee.checked) {
-			f = parseInt(ets_bytes*avg_fee_spb+1)
-			txfee.value = val2str(f)
-			first_loop = false
-			// goto go_again
+	if (isNaN(fee)) {
+		txfee.classList.add('err')
+		butdisabled = true
+		txfee_mbtc.value = ''
+	} else {
+		txfee.classList.remove('err')
+		txfee_mbtc.value = val2str(1000*fee)
+	}
+	for (var idx=1; idx<outtab.rows.length-3; idx++) {
+		el = document.getElementById('out'+idx)
+		v = val2int(el.value)
+		if (isNaN(v)) {
+			el.classList.add('err')
+			butdisabled = true
+			document.getElementById('mbtc_out'+idx).value = ''
 		} else {
-			break
+			el.classList.remove('err')
+			totsend += v
+			console.log(' totsend', v, totsend)
+			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
+			if (document.getElementById('inadr'+idx).value.length > 50) {
+				ets_bytes += StealthIndexLen // long string = stealth address
+			}
 		}
+		if (document.getElementById('include_output_in_size_'+idx).checked) {
+			ets_bytes += AvgOutputSize
+		}
+	}
+
+	if (include_fee_output_in_size_calculation.checked) {
+		ets_bytes += AvgOutputSize
+	}
+
+	if (auto_adjust_fee.checked) {
+		fee = parseInt(ets_bytes*avg_fee_spb+1)
+		txfee.value = val2str(fee)
+	}
+
+	var chval = selected_value-totsend-fee
+	changeval.value = val2str(chval)
+	changeval_mbtc.value = val2str(1000*chval)
+	if (chval<0) {
+		changeval.style.color = 'red'
+		butdisabled = true
+	} else if (chval>0) {
+		changeval.style.color = 'green'
+	} else {
+		changeval.style.color = ''
 	}
 
 	paybut.disabled = butdisabled
 
-	ets.innerText = (ets_bytes/1000).toFixed(2)
+	ets.innerText = ets_bytes//1000).toFixed(2)
 
-	if (ets_bytes<60 || isNaN(f)) {
+	if (ets_bytes<60 || isNaN(fee)) {
 		feeperbyte.innerHTML = ''
 	} else {
-		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(f/ets_bytes).toFixed(1)+'</b>'
+		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(fee/ets_bytes).toFixed(1)+'</b>'
 	}
 }
 
@@ -255,12 +251,29 @@ function reslab(idx) {
 }
 
 
+function del_last_output() {
+	if (outtab.rows.length<=5) {
+		alert('You cannot remove the only output')
+		return
+	}
+	if (confirm('Remove the last output?')) {
+		outtab.deleteRow(outtab.rows.length-4)
+		recalc_to_pay()
+	}
+}
+
 function add_new_output() {
 	var idx = outtab.rows.length-3
 	var val, c, r = outtab.insertRow(idx)
 
 	c = r.insertCell(-1)
 	c.innerHTML = 'Out#'+idx
+	if (idx>1) {
+		c.style.cursor = 'pointer'
+		c.title = 'Click to delete this output'
+		c.id = idx
+		c.onclick = function() {del_output(idx)}
+	}
 
 	c = r.insertCell(-1)
 	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="44" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
@@ -282,6 +295,15 @@ function add_new_output() {
 	val.value = ''
 	c.appendChild(val)
 
+	c = r.insertCell(-1)
+	val = document.createElement('input')
+	val.type = 'checkbox'
+	val.id = 'include_output_in_size_'+idx
+	val.title = "Include in size calculation"
+	val.onchange = recalc_to_pay
+	val.checked = true
+	c.appendChild(val)
+
 	// amount mBTC
 	c = r.insertCell(-1)
 	val = document.createElement('input')
@@ -292,6 +314,8 @@ function add_new_output() {
 	val.readOnly = true
 	val.tabIndex = -1
 	c.appendChild(val)
+
+	recalc_to_pay()
 }
 
 function allchange(t) {
@@ -331,19 +355,22 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<th>&nbsp;
 	<th>Pay to address
 	<th>Amount BTC
+    <th>
 	<th><i>... mBTC</i>
 </tr>
 
 <tr>
 	<td colspan="2">
 	<table width="100%"><tr>
-	<td><a href="javascript:add_new_output()">+ add output</a>
-	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> KB
-	<span id="feeperbyte"></span>
+	<td><a href="javascript:add_new_output()" title="Add another output">+add</a>
+	|
+	<a href="javascript:del_last_output()" title="Remove last output">-del</a>
+	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> Bytes
+	<span id="feeperbyte"></span> SPB
 	<td align="right">Transaction fee:
-    <input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
 	</table>
 	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+	<td><input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
 	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
 </tr>
 
@@ -354,12 +381,13 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		</select>
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
+	<td><input type="checkbox" id="include_fee_output_in_size_calculation" checked="checked" title="Include in size calculation" onchange="recalc_to_pay()">
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>
-	<td colspan="4" align="center">
+	<td colspan="5" align="center">
 		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
 	</td>
 </tr>
