@@ -93,9 +93,9 @@
 <td colspan="2">
 Up to
 	<select id="mp_show_cnt">
-		<option>50</option>
+		<option selected>50</option>
 		<option>100</option>
-		<option selected>250</option>
+		<option>250</option>
 		<option>500</option>
 		<option>1000</option>
 		<option>2000</option>
@@ -103,16 +103,15 @@ Up to
 		<option>10000</option>
 	</select>
 mempool transactions,
-sorted
-	<input id="mp_show_sort_desc" type="checkbox" checked="checked"> descending
-by
+sorted by
 	<select id="mp_show_sort">
 		<option value="age">age</option>
 		<option value="len">size</option>
-		<option value="btc">volume</option>
+		<option value="btc">BTC volume</option>
 		<option value="fee">fee amount</option>
 		<option value="spb" selected>fee per byte</option>
 	</select>
+in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> order
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
 </table>
 
@@ -154,6 +153,7 @@ by
 function sortclick(type) {
 	var os = mp_show_sort.options
 	if (os[mp_show_sort.selectedIndex].value!=type) {
+		mp_show_sort_desc.checked = true
 		for (var i=0; i<os.length; i++) {
 			if (os[i].value==type) {
 				mp_show_sort.selectedIndex = i
