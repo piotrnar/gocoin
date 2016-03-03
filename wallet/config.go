@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
     "flag"
+    "time"
 	"strconv"
 	"strings"
 	"io/ioutil"
@@ -19,6 +20,7 @@ var (
 	apply2bal bool = true
 	secret_seed []byte
 	litecoin bool = false
+	sequence int
 )
 
 func parse_config() {
@@ -140,4 +142,5 @@ func parse_config() {
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
+	flag.IntVar(&sequence, "seq", int(time.Now().Unix()), "Use given RBF sequence number (-1 or -2 for final)")
 }

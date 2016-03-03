@@ -109,7 +109,7 @@ func make_signed_tx() {
 		// add the input to our transaction:
 		tin := new(btc.TxIn)
 		tin.Input = unspentOuts[i].TxPrevOut
-		tin.Sequence = 0xffffffff
+		tin.Sequence = uint32(sequence)
 		tx.TxIn = append(tx.TxIn, tin)
 
 		btcsofar += uo.Value
