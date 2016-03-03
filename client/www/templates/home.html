@@ -112,16 +112,23 @@
 </table>
 
 <div id="showcfg">
-<br>
-<input type="button" value="Edit configuration" onclick="shwcfg()">
+<form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
+<table width="100%"><tr>
+<td align="left"><input type="button" value="Edit configuration" onclick="shwcfg()">
+<td align="right">
+<input type="button" value="Save configuration" onclick="savecfg()">
+<input type="hidden" name="shutdown" value="1">
+<input type="submit" value="Shutdown Node">
+</form>
+</table>
 </div>
 <div id="formcfg" style="display:none">
 <h2>Configuration</h2>
-<table width="90%"><tr>
+<table width="100%"><tr>
 <td align="left">See <a href="http://gocoin.pl/gocoin_manual_client_config.html" target="_blank">help page</a> for the format of the configuration data.
 <td align="right">See also <a href="http://braincast.nl/samples/jsoneditor/" target="_blank">JSON Editor</a>
 </tr></table>
-<table width="90%">
+<table width="100%">
 <form method="post" action="cfg">
 <tr><td colspan="2">
 	<textarea name="configjson" style="width:100%" rows="9">{CONFIG_FILE}</textarea>
@@ -159,14 +166,6 @@ blno.addEventListener("lastblock", function(e) {
 })
 
 </script>
-<div style="text-align:right">
-<br>
-<form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
-<input type="button" value="Save configuration" onclick="savecfg()">
-<input type="hidden" name="shutdown" value="1">
-<input type="submit" value="Shutdown Node">
-</form>
-</div>
 
 <script>
 function refreshsysinfo() {
