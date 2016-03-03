@@ -131,7 +131,7 @@ func RecalcAverageBlockSize(fix_sizes bool) {
 		cnt++
 		n = n.Parent
 	}
-	if fix_sizes {
+	if fix_sizes && sum>0 {
 		fmt.Printf("The last %d blocks are compressed to occupy %.1f%% of their original size\n",
 			cnt, 100.0*float64(orgsum)/float64(sum))
 	}
