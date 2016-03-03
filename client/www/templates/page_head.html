@@ -72,11 +72,7 @@ function refreshblock() {
 	aj.open("GET","status.json",true)
 	aj.send(null)
 }
-refreshblock()
 
-</script>
-
-<script>
 function build_wallet_list() {
 	//current_wallets = {"Web_wallet":false,"Seleced_wallet":"C:\\GoodSync\\BC\\wallet\\DEFAULT","Wallets":["ADDRESS","DEFAULT","Gotowka","Offline","UNUSED","svngz"]}
 	var gvi = localStorage.getItem("gocoinWalletId")
@@ -122,9 +118,13 @@ function build_wallet_list() {
 }
 
 firstWebWalletIndex = qswal.options.length
-if (typeof(localStorage.gocoinWallets)=="string") {
-	build_wallet_list()
-} else {
-	localStorage.gocoinWallets = ""
-}
+
+document.addEventListener('DOMContentLoaded', function() {
+	refreshblock()
+	if (typeof(localStorage.gocoinWallets)=="string") {
+		build_wallet_list()
+	} else {
+		localStorage.gocoinWallets = ""
+	}
+})
 </script>

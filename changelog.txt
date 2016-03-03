@@ -1,4 +1,5 @@
 1.5.0
+* WebUI: Allows to specify the sequence number for Replace By Fee feature
 * Wallet: By default tx's sequence numbers are same as currrent unix time. Can be overwritten with "-seq <val"
 * Client: Additional mining statistics
 * Client: support for Web Wallets (volatile wallets provided by the browser, not kept on the server)

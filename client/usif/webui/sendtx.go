@@ -42,6 +42,12 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		tx.Version = 1
 		tx.Lock_time = 0
 
+		seq, er := strconv.ParseInt(r.Form["tx_seq"][0], 10, 64)
+		if er != nil || seq < -2 || seq > 0xffffffff {
+			err = "Incorrect Sequence value: " + r.Form["tx_seq"][0]
+			goto error
+		}
+
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 
 		wallet.BalanceMutex.Lock()
@@ -60,7 +66,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 								// Add the input to our tx
 								tin := new(btc.TxIn)
 								tin.Input = wallet.MyBalance[j].TxPrevOut
-								tin.Sequence = 0xffffffff
+								tin.Sequence = uint32(seq)
 								tx.TxIn = append(tx.TxIn, tin)
 
 								// Add new multisig address description
@@ -130,6 +136,8 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			err = "No inputs selected"
 			goto error
 		}
+
+		pay_cmd += fmt.Sprint(" -seq ", seq)
 
 		am, er := btc.StringToSatoshis(r.Form["txfee"][0])
 		if er != nil {

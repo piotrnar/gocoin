@@ -64,14 +64,6 @@ function recalc_to_pay() {
 
 	fee = val2int(txfee.value)
 
-	if (isNaN(fee)) {
-		txfee.classList.add('err')
-		butdisabled = true
-		txfee_mbtc.value = ''
-	} else {
-		txfee.classList.remove('err')
-		txfee_mbtc.value = val2str(1000*fee)
-	}
 	for (var idx=1; idx<outtab.rows.length-3; idx++) {
 		el = document.getElementById('out'+idx)
 		v = val2int(el.value)
@@ -88,9 +80,7 @@ function recalc_to_pay() {
 				ets_bytes += StealthIndexLen // long string = stealth address
 			}
 		}
-		if (document.getElementById('include_output_in_size_'+idx).checked) {
-			ets_bytes += AvgOutputSize
-		}
+		ets_bytes += AvgOutputSize
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {
@@ -98,8 +88,19 @@ function recalc_to_pay() {
 	}
 
 	if (auto_adjust_fee.checked) {
-		fee = parseInt(ets_bytes*avg_fee_spb+1)
+		var spb = parseFloat(spb_to_use.value)
+		if (isNaN(spb)) spb = 0
+		fee = parseInt(ets_bytes*spb)
 		txfee.value = val2str(fee)
+	}
+
+	if (isNaN(fee)) {
+		txfee.classList.add('err')
+		butdisabled = true
+		txfee_mbtc.value = ''
+	} else {
+		txfee.classList.remove('err')
+		txfee_mbtc.value = val2str(1000*fee)
 	}
 
 	var chval = selected_value-totsend-fee
@@ -108,20 +109,31 @@ function recalc_to_pay() {
 	if (chval<0) {
 		changeval.style.color = 'red'
 		butdisabled = true
+		include_fee_out_checkbox.classList.remove('err')
 	} else if (chval>0) {
 		changeval.style.color = 'green'
+		if (!include_fee_output_in_size_calculation.checked) {
+			include_fee_out_checkbox.classList.add('err')
+		} else {
+			include_fee_out_checkbox.classList.remove('err')
+		}
 	} else {
 		changeval.style.color = ''
+		if (include_fee_output_in_size_calculation.checked) {
+			include_fee_out_checkbox.classList.add('err')
+		} else {
+			include_fee_out_checkbox.classList.remove('err')
+		}
 	}
 
 	paybut.disabled = butdisabled
 
 	ets.innerText = ets_bytes//1000).toFixed(2)
 
-	if (ets_bytes<60 || isNaN(fee)) {
-		feeperbyte.innerHTML = ''
+	if (ets_bytes<1 || isNaN(fee)) {
+		feeperbyte.innerText = '???'
 	} else {
-		feeperbyte.innerHTML = ' ... <b title="Satoshis per byte">'+(fee/ets_bytes).toFixed(1)+'</b>'
+		feeperbyte.innerText = (fee/ets_bytes).toFixed(1)
 	}
 }
 
@@ -295,14 +307,8 @@ function add_new_output() {
 	val.value = ''
 	c.appendChild(val)
 
+	// empty cell between BTC and mBTC
 	c = r.insertCell(-1)
-	val = document.createElement('input')
-	val.type = 'checkbox'
-	val.id = 'include_output_in_size_'+idx
-	val.title = "Include in size calculation"
-	val.onchange = recalc_to_pay
-	val.checked = true
-	c.appendChild(val)
 
 	// amount mBTC
 	c = r.insertCell(-1)
@@ -341,6 +347,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	add_new_output()
 	txfee.onchange = recalc_to_pay
 	txfee.onkeyup = recalc_to_pay
+	spb_to_use.value = avg_fee_spb.toFixed(10).substr(0,7)
+	tx_seq.value = parseInt((new Date().getTime())/1000)
 	recalc_inputs()
 })
 
@@ -362,15 +370,14 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 <tr>
 	<td colspan="2">
 	<table width="100%"><tr>
-	<td><a href="javascript:add_new_output()" title="Add another output">+add</a>
+	<td><a href="javascript:add_new_output()" title="Add another output">+add output</a>
 	|
-	<a href="javascript:del_last_output()" title="Remove last output">-del</a>
-	<td align="center">Estimated tx size: <span id="ets" style="font-weight:bold">...</span> Bytes
-	<span id="feeperbyte"></span> SPB
+	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
+	<td align="center" title="Transaction sequence for RBF purpose">Sequence : <input name="tx_seq" id="tx_seq" class="mono r" size="10">
 	<td align="right">Transaction fee:
 	</table>
 	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
-	<td><input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
+	<td style="font-size:10px" title="Fee per byte"><b id="feeperbyte"></b><br>SPB
 	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
 </tr>
 
@@ -381,13 +388,19 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		</select>
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
-	<td><input type="checkbox" id="include_fee_output_in_size_calculation" checked="checked" title="Include in size calculation" onchange="recalc_to_pay()">
+	<td id="include_fee_out_checkbox"><input type="checkbox" id="include_fee_output_in_size_calculation" title="Include in size calculation" onchange="recalc_to_pay()">
 	<td class="r">
 	<input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>
-	<td colspan="5" align="center">
+	<td colspan="5" align="left">
+		<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
+		Auto-calc transaction fee using price of&nbsp;
+		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
+		&nbsp;&nbsp;&nbsp;
+		Estimated transaction size is <span id="ets" style="font-weight:bold"></span> Bytes.
+	<hr>
 		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
 	</td>
 </tr>
