@@ -95,8 +95,9 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.BlockTreeEnd.Height {
 		ch.ParseTillBlock(end)
+	} else {
+		ch.Unspent.LastBlockHeight = end.Height
 	}
-	ch.Unspent.LastBlockHeight = end.Height
 
 	return
 }

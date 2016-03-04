@@ -221,16 +221,16 @@ func main() {
 
 	common.InitConfig()
 
-	if common.FLAG.Rescan {
+	if common.FLAG.VolatileUTXO {
 		qdb.VolatimeMode = true
-		fmt.Println("WARNING! Rebuilding UTXO database in a volatile mode. If you interrupt the process, the db will be corrupt.")
+		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the client properly (do not kill it!)")
 	}
 
 	host_init() // This will create the DB lock file and keep it open
 
-	if common.FLAG.Rescan {
+	if common.FLAG.Rescan && common.FLAG.VolatileUTXO {
 
-		fmt.Println("UTXO database rebuilt complete. Flush it to disk and exit...")
+		fmt.Println("UTXO database rebuilt complete in the volatile mode, so flush DB to disk and exit...")
 
 	} else {
 

@@ -18,6 +18,7 @@ import (
 var (
 	FLAG struct { // Command line only options
 		Rescan bool
+		VolatileUTXO bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -141,7 +142,8 @@ func InitConfig() {
 		println("Stored default configuration in", ConfigFile)
 	}
 
-	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild the unspent DB (fixes 'Unknown input TxID' errors)")
+	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild UTXO database (fixes 'Unknown input TxID' errors)")
+	flag.BoolVar(&FLAG.VolatileUTXO, "v", false, "Use UTXO database in volatile mode (speeds up rebuilding)")
 	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&CFG.ConnectOnly, "c", CFG.ConnectOnly, "Connect only to this host and nowhere else")
 	flag.BoolVar(&CFG.Net.ListenTCP, "l", CFG.Net.ListenTCP, "Listen for incoming TCP connections (on default port)")
