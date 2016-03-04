@@ -161,6 +161,13 @@ func main() {
 	StartTime = time.Now()
 	if open_blockchain() {
 		fmt.Printf("Blockchain opening aborted\n")
+		if TheBlockChain != nil {
+			fmt.Printf("Saving chain state\n")
+			TheBlockChain.Sync()
+			TheBlockChain.Save()
+			TheBlockChain.Close()
+			TheBlockChain = nil
+		}
 		return
 	}
 	fmt.Println("Blockchain open in", time.Now().Sub(StartTime))
