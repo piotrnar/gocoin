@@ -72,12 +72,12 @@ func parse_command_line() {
 		}
 	}
 
-	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without parsing them into UTXO database")
+	flag.BoolVar(&OnlyStoreBlocks, "b", true, "Only store blocks, without parsing them into UTXO database")
 	flag.BoolVar(&Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
-	flag.UintVar(&MaxNetworkConns, "n", 5, "Set maximum number of network connections for chain download")
+	flag.UintVar(&MaxNetworkConns, "n", 10, "Set maximum number of network connections for chain download")
 	flag.IntVar(&GCPerc, "g", 0, "Set waste percentage treshold for Go's garbage collector")
 
 	flag.UintVar(&MemForBlocks, "m", 64, "Set memory buffer for cached block data (value in megabytes)")

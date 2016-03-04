@@ -6,6 +6,7 @@ import (
 	"time"
 	"sync"
 	"bytes"
+	//"runtime"
 	"strings"
 	"sync/atomic"
 	"encoding/binary"
@@ -15,8 +16,8 @@ import (
 
 
 const (
-	UserAgent = "/Satoshi:0.11.1/"
-	Version = 70001
+	UserAgent = "/Satoshi:0.12.0/"
+	Version = 70012
 	Services = uint64(0x00000001)
 
 	DIAL_TIMEOUT = 3*time.Second
@@ -47,7 +48,6 @@ type one_net_conn struct {
 
 	// Source of this IP:
 	_broken bool // flag that the conenction has been broken / shall be disconnected
-	closed_s bool
 	closed_r bool
 
 	net.Conn
@@ -112,6 +112,10 @@ func (c *one_net_conn) isbroken() (res bool) {
 
 func (c *one_net_conn) setbroken(res bool) {
 	c.Lock()
+	/*if res {
+		_, file, line, ok := runtime.Caller(1)
+		println("setbroken", c.PeerAddr.Ip(), file, line, ok)
+	}*/
 	c._broken = res
 	c.Unlock()
 }
@@ -126,6 +130,7 @@ func (c *one_net_conn) sendbuflen() (sbl int) {
 
 
 func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
+	//println(c.PeerAddr.Ip(), "sending", cmd, len(pl))
 	sbuf := make([]byte, 24+len(pl))
 
 	binary.LittleEndian.PutUint32(sbuf[0:4], Version)
@@ -182,6 +187,7 @@ func (c *one_net_conn) readmsg() *one_net_cmd {
 				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
 					//COUNTER("HDRT")
 				} else {
+					//println(e.Error())
 					c.setbroken(true)
 				}
 				return nil
@@ -261,7 +267,7 @@ func (c *one_net_conn) sethdrsinprogress(res bool) {
 
 
 func (c *one_net_conn) cleanup() {
-	if c.closed_r && c.closed_s {
+	if c.closed_r {
 		COUNTER("DROP")
 
 		// Remove from open connections
@@ -287,7 +293,9 @@ func (c *one_net_conn) cleanup() {
 
 
 func (c *one_net_conn) run_recv() {
-	var verackgot bool
+	var verackgot, veracksent bool
+
+	c.sendver()
 	for !c.isbroken() {
 		if switch_to_next_peer {
 			switch_to_next_peer = false
@@ -295,10 +303,34 @@ func (c *one_net_conn) run_recv() {
 			c.setbroken(true)
 			break
 		}
-		if verackgot {
-			if !c.hdr_idle() {
+
+		ll := c.sendbuflen()
+		if ll > 0 {
+			c.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
+			n, e := c.Write(c.send.buf)
+			if e != nil {
+				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
+					e = nil
+				} else {
+					//println(e.Error())
+					c.setbroken(true)
+				}
+			} else {
+				c.Mutex.Lock()
+				c.send.buf = c.send.buf[n:]
+				c.Mutex.Unlock()
+			}
+			continue
+		} else {
+			time.Sleep(10*time.Millisecond)
+		}
+
+		if verackgot && veracksent {
+			if !c.hdr_idle() && GetAllHeadersDone() && c.inprogress==0 {
 				if BlocksInProgress!=nil {
+					//println("get_more_blocks", c.inprogress)
 					c.get_more_blocks()
+					//println("=>", c.inprogress)
 				}
 			}
 		}
@@ -308,6 +340,7 @@ func (c *one_net_conn) run_recv() {
 			//time.Sleep(5*time.Millisecond)
 			continue
 		}
+		//fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
 
 		switch msg.cmd {
 			case "verack":
@@ -326,9 +359,10 @@ func (c *one_net_conn) run_recv() {
 
 			case "block":
 				c.block(msg.pl)
-				c.get_more_blocks()
 
 			case "version":
+				c.sendmsg("verack", nil)
+				veracksent = true
 
 			case "notfound":
 				COUNTER("NFND")
@@ -336,6 +370,11 @@ func (c *one_net_conn) run_recv() {
 
 			case "addr":
 				parse_addr(msg.pl)
+
+			/*case "ping":
+				re := make([]byte, len(msg.pl))
+				copy(re, msg.pl)
+				c.sendmsg("pong", re)*/
 
 			default:
 				//fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
@@ -350,36 +389,6 @@ func (c *one_net_conn) run_recv() {
 }
 
 
-func (c *one_net_conn) run_send() {
-	c.sendver()
-	for !c.isbroken() {
-		if c.sendbuflen() > 0 {
-			c.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
-			n, e := c.Write(c.send.buf)
-			if e != nil {
-				if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
-					e = nil
-				} else {
-					c.setbroken(true)
-				}
-			} else {
-				c.Mutex.Lock()
-				c.send.buf = c.send.buf[n:]
-				c.Mutex.Unlock()
-			}
-		} else {
-			time.Sleep(10*time.Millisecond)
-		}
-	}
-	//fmt.Println(c.Ip(), "closing sender")
-	c.Mutex.Lock()
-	c.closed_s = true
-	c.cleanup()
-	c.Mutex.Unlock()
-}
-
-
-
 func (res *one_net_conn) connect() {
 	//fmt.Println("connecting to", res.Ip())
 	con, er := net.DialTimeout("tcp4", res.Ip(), DIAL_TIMEOUT)
@@ -387,15 +396,13 @@ func (res *one_net_conn) connect() {
 		COUNTER("CERR")
 		res.setbroken(true)
 		res.closed_r = true
-		res.closed_s = true
 		res.cleanup()
 		//fmt.Println(addr, er.Error())
 		return
 	}
 	res.Mutex.Lock()
 	res.Conn = con
-	//fmt.Println(addr, "connected")
-	go res.run_send()
+	//fmt.Println(res.PeerAddr.Ip(), "connected")
 	go res.run_recv()
 	res.connected_at = time.Now()
 	res.Mutex.Unlock()

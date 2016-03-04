@@ -184,7 +184,7 @@ func (c *one_net_conn) get_more_blocks() {
 	BlocksMutex.Lock()
 
 	//bl_stage := uint32(0)
-	for curblk:=BlocksComplete; curblk<=LastBlockHeight; curblk++ {
+	for curblk:=BlocksComplete; cnt<150 && curblk<=LastBlockHeight; curblk++ {
 		if (c.inprogress+1) * avg_block_size() > MAX_GET_FROM_PEER {
 			break
 		}
