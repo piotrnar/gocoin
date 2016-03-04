@@ -24,6 +24,8 @@ const (
 	MAX_BLOCKS_AT_ONCE = 1000
 
 	MAX_SAME_BLOCKS_AT_ONCE = 1
+
+	AVERAGE_BLOCK_SIZE_BLOCKS_BACK = 7*144 /*one week*/
 )
 
 
@@ -231,20 +233,36 @@ func (c *one_net_conn) get_more_blocks() {
 }
 
 
-const BSLEN = 0x1000
-
 var (
-	BSAvg uint32
+	BSAvg uint32 = 219
+	bslen_history [AVERAGE_BLOCK_SIZE_BLOCKS_BACK]int
+	bslen_total int
+	bslen_count int
+	bslen_history_index int
 )
 
 
+func update_bslen_history(le int) {
+	if bslen_count==AVERAGE_BLOCK_SIZE_BLOCKS_BACK {
+		bslen_total -= bslen_history[bslen_history_index]
+	} else {
+		bslen_count++
+	}
+	bslen_history[bslen_history_index] = le
+	bslen_total += le
+	bslen_history_index++
+	if bslen_history_index==AVERAGE_BLOCK_SIZE_BLOCKS_BACK {
+		bslen_history_index = 0
+	}
+	atomic.StoreUint32(&BSAvg, uint32(bslen_total/bslen_count))
+}
+
 func calc_new_block_size() {
-	var cnt, tlen int
-	for n:=TheBlockChain.BlockTreeEnd; n!=nil && cnt<BLOCKSIZE_AVERAGE_DAYS*24*6; n=n.Parent {
-		tlen += int(n.BlockSize)
+	cnt := 0
+	for n:=TheBlockChain.BlockTreeEnd; n!=nil && cnt<AVERAGE_BLOCK_SIZE_BLOCKS_BACK; n=n.Parent {
+		update_bslen_history(int(n.BlockSize))
 		cnt++
 	}
-	atomic.StoreUint32(&BSAvg, uint32(tlen/cnt))
 }
 
 
@@ -346,6 +364,7 @@ func get_blocks() {
 
 			case bl = <-BlockQueue:
 				bl.Trusted = CurrentBlockHeight <= TrustUpTo
+				update_bslen_history(len(bl.Raw))
 				if OnlyStoreBlocks {
 					TheBlockChain.Blocks.BlockAdd(CurrentBlockHeight, bl)
 				} else {
@@ -360,7 +379,7 @@ func get_blocks() {
 				}
 				atomic.StoreUint32(&LastStoredBlock, CurrentBlockHeight)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
-				calc_new_block_size()
+				//calc_new_block_size()
 				CurrentBlockHeight++
 
 			case <-time.After(1000*time.Millisecond):

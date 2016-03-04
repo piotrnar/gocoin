@@ -40,6 +40,7 @@ var (
 	SeedNode string             // -s
 	MemForBlocks uint           // -m (in megabytes)
 	Testnet bool                // -t
+	QdbVolatileMode bool        // -v
 )
 
 
@@ -72,7 +73,8 @@ func parse_command_line() {
 		}
 	}
 
-	flag.BoolVar(&OnlyStoreBlocks, "b", true, "Only store blocks, without parsing them into UTXO database")
+	flag.BoolVar(&OnlyStoreBlocks, "b", true, "Only store blocks, without commiting them into UTXO database")
+	flag.BoolVar(&QdbVolatileMode, "v", true, "Use UTXO database in volatile mode (speeds up processing)")
 	flag.BoolVar(&Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
@@ -125,7 +127,10 @@ func setup_runtime_vars() {
 		debug.SetGCPercent(GCPerc)
 	}
 	qdb.SetDefragPercent(300)
-	//qdb.SetMaxPending(1000, 10000)
+	if QdbVolatileMode {
+		qdb.VolatimeMode = true
+		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the downloader properly (do not kill it!)")
+	}
 }
 
 

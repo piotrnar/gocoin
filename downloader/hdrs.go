@@ -1,12 +1,10 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"time"
 	"sync"
 	"bytes"
-	"errors"
 	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -15,9 +13,6 @@ import (
 )
 
 var (
-	MemBlockChain *chain.Chain
-	MemBlockChainMutex sync.Mutex
-
 	LastBlock struct {
 		sync.Mutex
 		node *chain.BlockTreeNode
@@ -40,61 +35,6 @@ func SetAllHeadersDone(res bool) {
 	} else {
 		atomic.StoreUint32(&allheadersdone, 0)
 	}
-}
-
-
-func chkblock(bl *btc.Block) (er error) {
-	// Check timestamp (must not be higher than now +2 hours)
-	if int64(bl.BlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
-		er = errors.New("CheckBlock() : block timestamp too far in the future")
-		return
-	}
-
-	MemBlockChainMutex.Lock()
-	if prv, pres := MemBlockChain.BlockIndex[bl.Hash.BIdx()]; pres {
-		MemBlockChainMutex.Unlock()
-		if prv.Parent == nil {
-			// This is genesis block
-			er = errors.New("Genesis")
-			return
-		} else {
-			return
-		}
-	}
-
-	prevblk, ok := MemBlockChain.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
-	if !ok {
-		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
-		return
-	}
-
-	// Check proof of work
-	gnwr := MemBlockChain.GetNextWorkRequired(prevblk, bl.BlockTime())
-	if bl.Bits() != gnwr {
-		if !Testnet || ((prevblk.Height+1)%2016)!=0 {
-			MemBlockChainMutex.Unlock()
-			er = errors.New(fmt.Sprint("CheckBlock: Incorrect proof of work at block", prevblk.Height+1))
-			return
-		}
-	}
-
-	cur := new(chain.BlockTreeNode)
-	cur.BlockHash = bl.Hash
-	cur.Parent = prevblk
-	cur.Height = prevblk.Height + 1
-	cur.TxCount = uint32(bl.TxCount)
-	copy(cur.BlockHeader[:], bl.Raw[:80])
-	prevblk.Childs = append(prevblk.Childs, cur)
-	MemBlockChain.BlockIndex[cur.BlockHash.BIdx()] = cur
-	MemBlockChainMutex.Unlock()
-
-	LastBlock.Mutex.Lock()
-	if cur.Height > LastBlock.node.Height {
-		LastBlock.node = cur
-	}
-	LastBlock.Mutex.Unlock()
-
-	return
 }
 
 
@@ -126,7 +66,7 @@ func (c *one_net_conn) headers(d []byte) {
 	if er != nil {
 		return
 	}
-	if cnt==0 /*|| LastBlock.node.Height>=150e3*/ {
+	if cnt==0 /*|| LastBlock.node.Height>=140e3*/ {
 		SetAllHeadersDone(true)
 		return
 	}
@@ -139,15 +79,15 @@ func (c *one_net_conn) headers(d []byte) {
 			continue
 		}
 		bl, er := btc.NewBlock(hdr[:])
+		TheBlockChain.BlockIndexAccess.Lock()
+		er, _, _ = TheBlockChain.PreCheckBlock(bl)
 		if er == nil {
-			er = chkblock(bl)
-			if er != nil {
-				fmt.Println(er.Error())
-				os.Exit(1)
-			}
-		} else {
-			fmt.Println(LastBlock.node.Height, er.Error())
+			node := TheBlockChain.AcceptHeader(bl)
+			LastBlock.Mutex.Lock()
+			LastBlock.node = node
+			LastBlock.Mutex.Unlock()
 		}
+		TheBlockChain.BlockIndexAccess.Unlock()
 	}
 	//fmt.Println("Height:", LastBlock.node.Height)
 }
@@ -164,7 +104,7 @@ func get_headers() {
 		}
 	}
 	LastBlock.Mutex.Lock()
-	LastBlock.node = MemBlockChain.BlockTreeEnd
+	LastBlock.node = TheBlockChain.BlockTreeEnd
 	LastBlock.Mutex.Unlock()
 
 	tickTick := time.Tick(100*time.Millisecond)
@@ -186,16 +126,10 @@ func get_headers() {
 
 
 func download_headers() {
-	os.RemoveAll("tmp/")
-	MemBlockChain = chain.NewChain("tmp/", TheBlockChain.BlockTreeEnd.BlockHash, false)
-	defer os.RemoveAll("tmp/")
+	fmt.Println("Loaded chain has height", TheBlockChain.BlockTreeEnd.Height,
+		TheBlockChain.BlockTreeEnd.BlockHash.String())
 
-	MemBlockChain.Genesis = GenesisBlock
-	*MemBlockChain.BlockTreeRoot = *TheBlockChain.BlockTreeEnd
-	fmt.Println("Loaded chain has height", MemBlockChain.BlockTreeRoot.Height,
-		MemBlockChain.BlockTreeRoot.BlockHash.String())
-
-	atomic.StoreUint32(&LastStoredBlock, MemBlockChain.BlockTreeRoot.Height)
+	atomic.StoreUint32(&LastStoredBlock, TheBlockChain.BlockTreeEnd.Height)
 
 	fmt.Println("Downloading headers...")
 	get_headers()
@@ -221,9 +155,4 @@ func download_headers() {
 
 	SetAllHeadersDone(true)
 	mark_all_hdrs_done()
-
-	MemBlockChainMutex.Lock()
-	MemBlockChain.Close()
-	MemBlockChain = nil
-	MemBlockChainMutex.Unlock()
 }
