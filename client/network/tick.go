@@ -12,6 +12,18 @@ import (
 )
 
 
+func (c *OneConnection) CheckGetBlockData() bool {
+	if c.GetBlocksDataNow {
+		c.GetBlocksDataNow = false
+		c.LastFetchTried = time.Now()
+		if c.GetBlockData() {
+			return true
+		}
+	}
+	return false
+}
+
+
 func (c *OneConnection) Tick() {
 	c.Mutex.Lock()
 	c.TicksCnt++
@@ -82,12 +94,8 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.GetBlocksDataNow {
-		c.GetBlocksDataNow = false
-		c.LastFetchTried = time.Now()
-		if c.GetBlockData() {
-			return
-		}
+	if c.CheckGetBlockData() {
+		return
 	}
 
 	MutexRcv.Lock()
@@ -390,6 +398,7 @@ func (c *OneConnection) Run() {
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
+				c.CheckGetBlockData()
 
 			case "tx":
 				if common.CFG.TXPool.Enabled {
@@ -436,6 +445,7 @@ func (c *OneConnection) Run() {
 
 			case "headers":
 				c.HandleHeaders(cmd.pl)
+				c.CheckGetBlockData()
 
 			case "sendheaders":
 				c.Node.SendHeaders = true
