@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"encoding/hex"
+	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/client/common"
@@ -383,4 +384,63 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header()["Content-Type"] = []string{"text/plain"}
 	w.Write([]byte(usif.MemoryPoolFees()))
+}
+
+
+func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
+	var cnt int
+	var division uint64 = 10e3
+
+	if !ipchecker(r) {
+		return
+	}
+
+	if len(r.Form["div"])>0 {
+		var e error
+		division, e := strconv.ParseUint(r.Form["div"][0], 10, 64)
+		if e!=nil || division<1e3 || division>100e3 {
+			division = 10e3
+		}
+	}
+
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
+	for _, v := range network.TransactionsToSend {
+		sorted[cnt] = v
+		cnt++
+	}
+	sort.Sort(sorted)
+
+	type one_stat_row struct {
+		Txs_so_far uint
+		Offset_in_block uint
+		Current_tx_length uint
+		Current_tx_spb float64
+	}
+	var mempool_stats []one_stat_row
+
+	var totlen uint64
+	for cnt=0; cnt<len(sorted); cnt++ {
+		v := sorted[cnt]
+		newlen := totlen+uint64(len(v.Data))
+
+		if cnt==0 || cnt+1==len(sorted) || (newlen/division)!=(totlen/division) {
+			mempool_stats = append(mempool_stats, one_stat_row{
+				Txs_so_far : uint(cnt),
+				Offset_in_block : uint(totlen),
+				Current_tx_length : uint(len(v.Data)),
+				Current_tx_spb : float64(v.Fee)/float64(len(v.Data))})
+		}
+		totlen = newlen
+	}
+
+	bx, er := json.Marshal(mempool_stats)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
 }
