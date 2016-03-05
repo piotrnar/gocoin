@@ -603,7 +603,6 @@ function show_mempool_fees() {
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","mempool_stats.json", true);
 	xmlHttp.send(null);
 }
