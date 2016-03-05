@@ -4,7 +4,7 @@
 
 <table width="100%">
 <tr><td colspan="2">
-<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" checked="checked"> Blocksize KB
+<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"> Blocksize KB
 &nbsp;&bull;&nbsp;
 <input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"> Transactions
 &nbsp;&bull;&nbsp;
@@ -130,6 +130,13 @@
 var previousPoint = null;
 var cs
 
+function remember_chart_setting() {
+	var mod = localStorage.getItem("home_chart")
+	if (mod.length!=3) mod = "siz"
+	document.getElementById('chart_type_'+mod).checked = true
+}
+remember_chart_setting()
+
 function showTooltip(x, y, contents) {
 	$('<div id="tooltip">' + contents + '</div>').css( {
 		position: 'absolute',
@@ -184,10 +191,13 @@ function draw_chart() {
 			if (chart_type_siz.checked) {
 				plot_data[0].color = 3
 				plot_options.yaxis.max = 1100
+				localStorage.setItem("home_chart", "siz")
 			} else if (chart_type_spb.checked) {
 				plot_data[0].color = 2
+				localStorage.setItem("home_chart", "spb")
 			} else {
 				plot_data[0].color = 4
+				localStorage.setItem("home_chart", "txs")
 			}
 
 			data = new Array()
