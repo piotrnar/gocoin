@@ -642,6 +642,9 @@ function refreshtxstat() {
 
 document.addEventListener('DOMContentLoaded', function() {
 	refreshtxstat()
+})
+
+blno.addEventListener("lastblock", function(e) {
 	show_mempool_fees()
 })
 
