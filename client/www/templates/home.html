@@ -200,7 +200,6 @@ function draw_chart() {
 				localStorage.setItem("home_chart", "txs")
 			}
 
-			data = new Array()
 			for (var i=0; i<cs.length; i++) {
 				if (chart_type_siz.checked) {
 					plot_data[0].data.push([cs[i].Received*1000, cs[i].Size/1000.0])
