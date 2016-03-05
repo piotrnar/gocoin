@@ -397,8 +397,8 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["div"])>0 {
 		var e error
-		division, e := strconv.ParseUint(r.Form["div"][0], 10, 64)
-		if e!=nil || division<1e3 || division>100e3 {
+		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
+		if e!=nil || division<1e3 || division>1e6 {
 			division = 10e3
 		}
 	}
