@@ -1,3 +1,6 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+
 <style>
 .black_overlay{
 	display: none;
@@ -36,7 +39,14 @@
 <pre id="rawdiv" style="background-color:white"></pre>
 </div><div id="fade" class="black_overlay"></div>
 <h2>Memory Pool:</h2>
-<table width="100%"><tr>
+<table width="100%">
+<tr>
+<td colspan="2">
+<div id="mempool_fees" style="height:300px;margin:5px"></div>
+</tr>
+
+
+<tr>
 <td valign="top">
 	<table>
 	<colgroup>
@@ -146,8 +156,6 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th>Pending Tx
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
-<pre id="mempool_fees" class="mono" style="display:none">
-</pre>
 <script>
 
 function sortclick(type) {
@@ -410,7 +418,7 @@ function show_txs2s(extrapar) {
 			txs2s.style.display = 'table'
 		}
 	}
-	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 
 	extrapar += '&cnt='+mp_show_cnt.options[mp_show_cnt.selectedIndex].value
 	extrapar += '&sort='+mp_show_sort.options[mp_show_sort.selectedIndex].value
@@ -454,7 +462,7 @@ function show_txsre() {
 			txsre.style.display = 'table'
 		}
 	}
-	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txsre.xml", true);
 	xmlHttp.send(null);
 }
@@ -499,27 +507,109 @@ function show_txw4i() {
 			txw4i.style.display = 'table'
 		}
 	}
-	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
 	xmlHttp.open("GET","txw4i.xml", true);
 	xmlHttp.send(null);
 }
+
+var previousPoint = null
+var mp = []
+
+function showTooltip(x, y, contents) {
+	$('<div id="tooltip">' + contents + '</div>').css( {
+		position: 'absolute',
+		display: 'none',
+		top: y - 30,
+		left: x + 5,
+		border: '2px solid #fdd',
+		padding: '5px',
+		'font-size' : '14px',
+		'background-color': '#fee',
+		opacity: 1
+	}).appendTo("body").fadeIn(200);
+}
+
+function handlehover(event, pos, item) {
+	if (item) {
+		if (previousPoint != item.dataIndex) {
+			previousPoint = item.dataIndex;
+			$("#tooltip").remove();
+
+			var rec = mp[item.dataIndex]
+			var str = ''
+
+			str += rec.Current_tx_spb.toFixed(2) + ' SPB'
+
+			str += ' -  Tx #'+(rec.Txs_so_far+1)
+			str += ' ('+rec.Current_tx_length+' bytes'
+			str += ' @ ' + rec.Offset_in_block+')'
+			showTooltip(item.pageX, item.pageY, str)
+		}
+	} else {
+		$("#tooltip").remove();
+		previousPoint = null;
+	}
+}
+
 
 function show_mempool_fees() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
-			mempool_fees.style.display = 'block'
-			mempool_fees.innerText = aj.responseText
+			mp = JSON.parse(aj.responseText)
+
+			var plot_data = [ { data : [], color : 1, points: { show:true }, lines: {show:true, fill:true}} ];
+			var plot_options = {
+				grid: {
+					markings: [ { xaxis: { from: 0, to: 1e6 }, color: "#e0ffe0" },
+						{ xaxis: { from: 1e6, to: 2e6 }, color: "#f0f0e0" },
+						{ xaxis: { from: 2e6 }, color: "#ffe0e0" },
+					 ],
+					hoverable: true,
+					clickable: true
+				},
+				xaxis: {
+					//tickLength : 1e6,
+					minTickSize : 1e5,
+					tickFormatter : function(a,b) {return (a/1e6).toFixed(1)}
+				},
+				yaxis : {
+					//position : "left"
+				}
+			}
+
+			var below_1mb_tot = 0
+			var below_1mb_cnt = 0
+			var max_spb = 0
+
+			for (var i=0; i<mp.length; i++) {
+				if (mp[i].Current_tx_spb>max_spb) {
+					max_spb = mp[i].Current_tx_spb
+				}
+				if (mp[i].Offset_in_block<1e6) {
+					below_1mb_tot += mp[i].Current_tx_spb
+					below_1mb_cnt++
+				}
+				plot_data[0].data.push([mp[i].Offset_in_block+mp[i].Current_tx_length, mp[i].Current_tx_spb])
+			}
+
+			// calculate 3 times the average in the first 1MB
+			below_1mb_tot = 3*below_1mb_tot/below_1mb_cnt
+			if (max_spb>below_1mb_tot) {
+				plot_options.yaxis.max = below_1mb_tot
+			}
+
+			$("#mempool_fees").bind("plothover", handlehover)
+			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	mempool_fees.style.display = txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
-	xmlHttp.open("GET","mempool_fees.txt", true);
+	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
+	xmlHttp.open("GET","mempool_stats.json", true);
 	xmlHttp.send(null);
 }
 
-</script>
 
-<script>
+
 function refreshtxstat() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -549,5 +639,10 @@ function refreshtxstat() {
 	aj.open("GET","txstat.json",true)
 	aj.send(null)
 }
-refreshtxstat()
+
+document.addEventListener('DOMContentLoaded', function() {
+	refreshtxstat()
+	show_mempool_fees()
+})
+
 </script>
