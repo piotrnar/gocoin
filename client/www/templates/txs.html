@@ -552,11 +552,19 @@ function handlehover(event, pos, item) {
 }
 
 
+var ccnt = 10000
+
 function show_mempool_fees() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(xmlHttp.readyState==4) {
 			mp = JSON.parse(aj.responseText)
+			if (mp.length>100) {
+				ccnt <<= 1
+				if (ccnt<1000) cnt=1000
+			} else if (mp.length<50) {
+				ccnt >>= 1
+			}
 
 			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
 			var plot_options = {
@@ -603,7 +611,7 @@ function show_mempool_fees() {
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	xmlHttp.open("GET","mempool_stats.json", true);
+	xmlHttp.open("GET","mempool_stats.json?div="+ccnt, true);
 	xmlHttp.send(null);
 }
 
