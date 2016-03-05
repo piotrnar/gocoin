@@ -64,7 +64,7 @@ tr {
 }
 
 
-#rawdiv, #mempool_fees {
+#rawdiv {
 	font-family: monospace;
 	background-color:#e0e0e0;
 	width: 100%;
