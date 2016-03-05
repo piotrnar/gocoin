@@ -102,7 +102,7 @@ func InitConfig() {
 
 	CFG.WebUI.Interface = "127.0.0.1:8833"
 	CFG.WebUI.AllowedIP = "127.0.0.1"
-	CFG.WebUI.ShowBlocks = 25
+	CFG.WebUI.ShowBlocks = 144
 	CFG.WebUI.AddrListLen = 15
 	CFG.WebUI.Title = "Gocoin"
 	CFG.WebUI.PayCommandName = "pay_cmd.txt"

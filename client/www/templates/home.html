@@ -1,36 +1,21 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
+
 <table width="100%">
-<tr><td valign="top">
-<h2>Wallet</h2>
-<!--WALLET-->
-<td width="400" valign="bottom">
-	<h2>Upload transaction</h2>
-	<form id="the-form" method="post" action="txs" enctype="multipart/form-data">
-		<input name="txfile" type="file">
-		<input type="submit" value="Upload" />
-	</form>
-	... or use
-	<a href="https://blockchain.info/pushtx" target="_blank">blockchain.info</a>
-	| <a href="https://coinb.in/send-raw-transaction.html" target="_blank">coinb.in</a>
-	| <a href="http://eligius.st/~wizkid057/newstats/pushtxn.php" target="_blank">eligius.st</a>
-	to push it.
-</td>
-</tr>
-
-<tr>
 <tr><td colspan="2">
-	<table vspace="10" id="unspent" style="display:none">
-	<tr>
-		<th width="20">#
-		<th width="40">Block
-		<th width="60">Timestamp
-		<th>TxID
-		<th width="30">Vout
-		<th width="80">BTC Value
-		<th width="210">Address
-	</table>
+<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" checked="checked"> Blocksize KB
+&nbsp;&bull;&nbsp;
+<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"> Transactions
+&nbsp;&bull;&nbsp;
+<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"> Fee SPB
+<div id="chart" style="height:200px;margin:5px"></div>
 
 
-	<h2>Last Block</h2><table border="0">
+<tr><td colspan="2">
+	<h2>Last Block</h2>
+
+<table border="0">
 	<col width="100">
 	<col width="240">
 	<col width="90">
@@ -142,6 +127,92 @@
 </table>
 </div>
 <script>
+var previousPoint = null;
+var cs
+
+function showTooltip(x, y, contents) {
+	$('<div id="tooltip">' + contents + '</div>').css( {
+		position: 'absolute',
+		display: 'none',
+		top: y - 30,
+		left: x + 5,
+		border: '2px solid #fdd',
+		padding: '5px',
+		'font-size' : '14px',
+		'background-color': '#fee',
+		opacity: 1
+	}).appendTo("body").fadeIn(200);
+}
+
+function handlehover(event, pos, item) {
+	if (item) {
+		if (previousPoint != item.dataIndex) {
+			previousPoint = item.dataIndex;
+			$("#tooltip").remove();
+
+			var rec = cs[item.dataIndex]
+			var str = 'Block #'+rec.Height+', Version '+rec.Version+'<br>'
+			str += tim2str(rec.Received)+' ... '+tim2str(rec.Timestamp, true)+'<br>'
+			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
+			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
+			str += 'Mined by ' + rec.Miner
+			showTooltip(item.pageX, item.pageY, str)
+		}
+	} else {
+		$("#tooltip").remove();
+		previousPoint = null;
+	}
+}
+
+
+function draw_chart() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshblocks, 1000)
+	}
+
+	aj.onload=function() {
+		try {
+			cs = JSON.parse(aj.responseText)
+			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}} ];
+			var plot_options = {
+				grid: { hoverable: true, clickable: true },
+				xaxis: { mode: 'time', timeformat: "%H:%M" },
+				yaxis : {labelWidth : 30, min : 0, position : "right"}
+			}
+
+			if (chart_type_siz.checked) {
+				plot_data[0].color = 3
+				plot_options.yaxis.max = 1100
+			} else if (chart_type_spb.checked) {
+				plot_data[0].color = 2
+			} else {
+				plot_data[0].color = 4
+			}
+
+			data = new Array()
+			for (var i=0; i<cs.length; i++) {
+				if (chart_type_siz.checked) {
+					plot_data[0].data.push([cs[i].Received*1000, cs[i].Size/1000.0])
+				} else if (chart_type_spb.checked) {
+					plot_data[0].data.push([cs[i].Received*1000, cs[i].FeeSPB])
+				} else {
+					plot_data[0].data.push([cs[i].Received*1000, cs[i].TxCnt])
+				}
+			}
+
+			$("#chart").bind("plothover", handlehover)
+			$.plot($("#chart"), plot_data, plot_options)
+
+		} catch(e) {
+			console.log(e)
+		}
+	}
+	aj.open("GET","blocks.json",true)
+	aj.send(null)
+}
+
+
 var last_block_height = -1
 
 function shwcfg() {
@@ -156,6 +227,7 @@ blno.addEventListener("lastblock", function(e) {
 		last_block_timestamp.innerText = tim2str(stat.Timestamp)
 		last_block_height = stat.Height
 		last_block_difficulty.innerText = bignum(stat.Diff)
+		draw_chart()
 	}
 	var ago = stat.Time_now - stat.Received
 	if (ago<120) {
