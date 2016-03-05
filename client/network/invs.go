@@ -44,10 +44,18 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		common.CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if c.AllHeadersReceived && !blockReceived(bhash) && !blockPending(bhash) {
-				common.CountSafe("BlockInvTaken")
-				c.AllHeadersReceived = false
-				//println(time.Now().String(), c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+			if c.AllHeadersReceived && !blockReceived(bhash) {
+				MutexRcv.Lock()
+				if _, ok := BlocksToGet[bhash.BIdx()]; ok {
+					common.CountSafe("BlockInvTakenOld")
+					println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", bhash.String())
+					c.GetBlocksDataNow = true
+				} else {
+					common.CountSafe("BlockInvTakenNew")
+					c.AllHeadersReceived = false
+					println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+				}
+				MutexRcv.Unlock()
 			} else {
 				common.CountSafe("BlockInvIgnored")
 			}

@@ -273,7 +273,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			bu := new(bytes.Buffer)
 			btc.WriteVlen(bu, uint64(cnt))
 			pl := append(bu.Bytes(), invs.Bytes()...)
-			//println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
+			println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
 			c.SendRawMsg("getdata", pl)
 			yes = true
 		} else {

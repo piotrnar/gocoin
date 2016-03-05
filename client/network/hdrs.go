@@ -25,7 +25,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		return
 	}
 
-	var number_of_new_blocks int
 	if cnt>0 {
 		for i:=0; i<int(cnt); i++ {
 			var hdr [81]byte
@@ -46,7 +45,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			bh := btc.NewSha2Hash(hdr[:80])
 			MutexRcv.Lock()
 			if _, ok := ReceivedBlocks[bh.BIdx()]; !ok {
-				if _, ok = BlocksToGet[bh.BIdx()]; !ok {
+				if _, ok := BlocksToGet[bh.BIdx()]; !ok {
 					//fmt.Println("", i, bh.String(), " - NEW!")
 
 					bl, er := btc.NewBlock(hdr[:])
@@ -54,13 +53,13 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 						common.BlockChain.BlockIndexAccess.Lock()
 						er, dos, _ := common.BlockChain.PreCheckBlock(bl)
 						if er == nil {
-							number_of_new_blocks++
+							c.GetBlocksDataNow = true
 							node := common.BlockChain.AcceptHeader(bl)
 							LastCommitedHeader = node
 							//println("checked ok - height", node.Height)
 							if node.Height > c.Node.Height {
 								c.Node.Height = node.Height
-								//println(time.Now().String(), c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
+								println(c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
 							}
 							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
 						} else {
@@ -72,25 +71,16 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 						}
 					}
 				} else {
-					//fmt.Println("", i, bh.String(), " not new")
+					fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
+					c.GetBlocksDataNow = true
 				}
 			} else {
 				//fmt.Println("", i, bh.String(), "-already received")
 			}
 			MutexRcv.Unlock()
 		}
-	}
-
-	if number_of_new_blocks==0 {
-		if cnt==0 {
-			c.AllHeadersReceived = true
-		}
 	} else {
-		if number_of_new_blocks==1 {
-		} else {
-			//println(number_of_new_blocks, "new blocks got from", c.PeerAddr.Ip(), c.Node.Version)
-		}
-		c.GetBlocksDataNow = true
+		c.AllHeadersReceived = true
 	}
 }
 
