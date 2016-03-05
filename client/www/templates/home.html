@@ -132,7 +132,7 @@ var cs
 
 function remember_chart_setting() {
 	var mod = localStorage.getItem("home_chart")
-	if (mod.length!=3) mod = "siz"
+	if ((mod+'').length!=3) mod = "siz"
 	document.getElementById('chart_type_'+mod).checked = true
 }
 remember_chart_setting()
