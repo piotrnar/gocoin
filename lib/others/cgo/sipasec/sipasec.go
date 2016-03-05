@@ -156,6 +156,7 @@ static int secp256k1_verify(unsigned char *msg, unsigned char *sig, int siglen, 
 		return -1;
 	}
 
+	secp256k1_ecdsa_signature_normalize(ctx, &_sig, &_sig);
 	result = secp256k1_ecdsa_verify(ctx, &_sig, msg, &pubkey);
 
 	return result;
