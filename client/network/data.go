@@ -277,11 +277,23 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			c.SendRawMsg("getdata", pl)
 			yes = true
 		} else {
-			//println("fetch nothing from", c.PeerAddr.Ip())
+			println("fetch nothing from", c.PeerAddr.Ip())
 			c.FetchNothing++
 		}
 	}
 	MutexRcv.Unlock()
 
 	return
+}
+
+
+func (c *OneConnection) CheckGetBlockData() bool {
+	if c.GetBlocksDataNow {
+		c.GetBlocksDataNow = false
+		c.LastFetchTried = time.Now()
+		if c.GetBlockData() {
+			return true
+		}
+	}
+	return false
 }
