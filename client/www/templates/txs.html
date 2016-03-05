@@ -558,7 +558,7 @@ function show_mempool_fees() {
 		if(xmlHttp.readyState==4) {
 			mp = JSON.parse(aj.responseText)
 
-			var plot_data = [ { data : [], color : 1, points: { show:true }, lines: {show:true, fill:true}} ];
+			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
 					markings: [ { xaxis: { from: 0, to: 1e6 }, color: "#e0ffe0" },
