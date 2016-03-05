@@ -12,18 +12,6 @@ import (
 )
 
 
-func (c *OneConnection) CheckGetBlockData() bool {
-	if c.GetBlocksDataNow {
-		c.GetBlocksDataNow = false
-		c.LastFetchTried = time.Now()
-		if c.GetBlockData() {
-			return true
-		}
-	}
-	return false
-}
-
-
 func (c *OneConnection) Tick() {
 	c.Mutex.Lock()
 	c.TicksCnt++
