@@ -121,7 +121,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
+	println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
 	rec.InProgress--
 	rec.Block.Raw = b
 
