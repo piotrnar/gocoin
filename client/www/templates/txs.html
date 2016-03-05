@@ -593,8 +593,8 @@ function show_mempool_fees() {
 				plot_data[0].data.push([mp[i].Offset_in_block+mp[i].Current_tx_length, mp[i].Current_tx_spb])
 			}
 
-			// calculate 3 times the average in the first 1MB
-			below_1mb_tot = 3*below_1mb_tot/below_1mb_cnt
+			// calculate 150% times the average in the first 1MB
+			below_1mb_tot = 1.5*below_1mb_tot/below_1mb_cnt
 			if (max_spb>below_1mb_tot) {
 				plot_options.yaxis.max = below_1mb_tot
 			}
