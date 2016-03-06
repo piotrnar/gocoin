@@ -51,12 +51,12 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						c.Node.Height = b2g.Block.Height
 					}
 					common.CountSafe("BlockInvTakenOld")
-					println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
+					//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
 					c.GetBlocksDataNow = true
 				} else {
 					common.CountSafe("BlockInvTakenNew")
 					c.AllHeadersReceived = false
-					println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+					//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 				}
 				MutexRcv.Unlock()
 			} else {
