@@ -566,11 +566,11 @@ function show_mempool_fees() {
 				if (mp_len>100) {
 					ccnt <<= 1
 					mp_len <<= 1
-					if (ccnt<1000) ccnt=1000
+					if (ccnt>1000000) ccnt=1000000
 				} else if (mp.length<50) {
 					ccnt >>= 1
 					mp_len >>= 1
-					if (ccnt>1000000) ccnt=1000000
+					if (ccnt<1000) ccnt=1000
 				}
 				if (oc==ccnt) break
 			}
