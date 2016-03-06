@@ -389,22 +389,29 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	var cnt int
-	var division uint64 = 10e3
+	var division uint64
 
 	if !ipchecker(r) {
 		return
 	}
 
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	division = network.TransactionsToSendSize/100
+
 	if len(r.Form["div"])>0 {
-		var e error
-		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
-		if e!=nil || division<1e3 || division>1e6 {
-			division = 10e3
+		d, e := strconv.ParseUint(r.Form["div"][0], 10, 64)
+		if e==nil {
+			division = d
 		}
 	}
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	if division<100 {
+		division = 100
+	} else if division>1e6 {
+		division = 1e6
+	}
 
 	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
 	for _, v := range network.TransactionsToSend {
