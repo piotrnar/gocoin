@@ -230,6 +230,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		invs := new(bytes.Buffer)
 		var cnt uint64
 		var cnt_in_progress uint
+
 		for {
 			var lowest_found *OneBlockToGet
 
@@ -248,7 +249,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 			if lowest_found==nil {
 				cnt_in_progress++
-				if cnt_in_progress==uint(common.CFG.Net.MaxBlockAtOnce) {
+				if cnt_in_progress>=uint(common.CFG.Net.MaxBlockAtOnce) {
 					break
 				}
 				continue
