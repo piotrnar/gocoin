@@ -45,7 +45,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			bh := btc.NewSha2Hash(hdr[:80])
 			MutexRcv.Lock()
 			if _, ok := ReceivedBlocks[bh.BIdx()]; !ok {
-				if _, ok := BlocksToGet[bh.BIdx()]; !ok {
+				if b2g, ok := BlocksToGet[bh.BIdx()]; !ok {
 					//fmt.Println("", i, bh.String(), " - NEW!")
 
 					bl, er := btc.NewBlock(hdr[:])
@@ -72,6 +72,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					}
 				} else {
 					fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
+					if c.Node.Height < b2g.Block.Height {
+						c.Node.Height = b2g.Block.Height
+					}
 					c.GetBlocksDataNow = true
 				}
 			} else {
