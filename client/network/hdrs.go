@@ -25,6 +25,8 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		return
 	}
 
+	var new_headers_got int
+
 	if cnt>0 {
 		for i:=0; i<int(cnt); i++ {
 			var hdr [81]byte
@@ -46,6 +48,8 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			MutexRcv.Lock()
 			if _, ok := ReceivedBlocks[bh.BIdx()]; !ok {
 				if b2g, ok := BlocksToGet[bh.BIdx()]; !ok {
+					common.CountSafe("HeaderNew")
+					new_headers_got++
 					//fmt.Println("", i, bh.String(), " - NEW!")
 
 					bl, er := btc.NewBlock(hdr[:])
@@ -71,6 +75,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 						}
 					}
 				} else {
+					common.CountSafe("HeaderFresh")
 					//fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
 					if c.Node.Height < b2g.Block.Height {
 						c.Node.Height = b2g.Block.Height
@@ -78,11 +83,14 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					c.GetBlocksDataNow = true
 				}
 			} else {
+				common.CountSafe("HeaderOld")
 				//fmt.Println("", i, bh.String(), "-already received")
 			}
 			MutexRcv.Unlock()
 		}
-	} else {
+	}
+
+	if new_headers_got==0 {
 		c.AllHeadersReceived = true
 	}
 }
