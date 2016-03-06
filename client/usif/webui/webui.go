@@ -28,10 +28,6 @@ var webuimenu = [][2]string {
 
 var start_time time.Time
 
-const htmlhead = `<script type="text/javascript" src="webui/gocoin.js"></script>
-<link rel="stylesheet" href="webui/gocoin.css" type="text/css"></head><body>
-<table align="center" width="990" cellpadding="0" cellspacing="0"><tr><td>
-`
 
 func ipchecker(r *http.Request) bool {
 	if common.NetworkClosed {
