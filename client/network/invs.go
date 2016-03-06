@@ -46,9 +46,12 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			bhash := btc.NewUint256(pl[of+4:of+36])
 			if c.AllHeadersReceived && !blockReceived(bhash) {
 				MutexRcv.Lock()
-				if _, ok := BlocksToGet[bhash.BIdx()]; ok {
+				if b2g, ok := BlocksToGet[bhash.BIdx()]; ok {
+					if c.Node.Height < b2g.Block.Height {
+						c.Node.Height = b2g.Block.Height
+					}
 					common.CountSafe("BlockInvTakenOld")
-					println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", bhash.String())
+					println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
 					c.GetBlocksDataNow = true
 				} else {
 					common.CountSafe("BlockInvTakenNew")
