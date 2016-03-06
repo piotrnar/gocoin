@@ -210,6 +210,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 	c.Mutex.Unlock()
 
 	if b_blk.Len() > 0 {
+		common.CountSafe("InvSentAsHeader")
 		b := new(bytes.Buffer)
 		btc.WriteVlen(b, uint64(b_blk.Len()/81))
 		c.SendRawMsg("headers", append(b.Bytes(), b_blk.Bytes()...))
