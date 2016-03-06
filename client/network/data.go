@@ -121,7 +121,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
+	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
 	rec.InProgress--
 	rec.Block.Raw = b
 
@@ -274,11 +274,11 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			bu := new(bytes.Buffer)
 			btc.WriteVlen(bu, uint64(cnt))
 			pl := append(bu.Bytes(), invs.Bytes()...)
-			println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
+			//println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
 			c.SendRawMsg("getdata", pl)
 			yes = true
 		} else {
-			println("fetch nothing from", c.PeerAddr.Ip())
+			//println("fetch nothing from", c.PeerAddr.Ip())
 			c.FetchNothing++
 		}
 	}
