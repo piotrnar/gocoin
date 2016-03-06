@@ -561,9 +561,10 @@ function show_mempool_fees() {
 			mp = JSON.parse(aj.responseText)
 			if (mp.length>100) {
 				ccnt <<= 1
-				if (ccnt<1000) cnt=1000
+				if (ccnt<1000) ccnt=1000
 			} else if (mp.length<50) {
 				ccnt >>= 1
+				if (ccnt>1000000) ccnt=1000000
 			}
 
 			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
