@@ -59,7 +59,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 							//println("checked ok - height", node.Height)
 							if node.Height > c.Node.Height {
 								c.Node.Height = node.Height
-								println(c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
+								//println(c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
 							}
 							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
 						} else {
@@ -71,7 +71,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 						}
 					}
 				} else {
-					fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
+					//fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
 					if c.Node.Height < b2g.Block.Height {
 						c.Node.Height = b2g.Block.Height
 					}
