@@ -50,17 +50,17 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 					if c.Node.Height < b2g.Block.Height {
 						c.Node.Height = b2g.Block.Height
 					}
-					common.CountSafe("BlockInvTakenOld")
+					common.CountSafe("InvBlockFresh")
 					//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
 					c.GetBlocksDataNow = true
 				} else {
-					common.CountSafe("BlockInvTakenNew")
+					common.CountSafe("InvBlockNew")
 					c.AllHeadersReceived = false
 					//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 				}
 				MutexRcv.Unlock()
 			} else {
-				common.CountSafe("BlockInvIgnored")
+				common.CountSafe("InvBlockOld")
 			}
 		} else if typ==1 {
 			if common.CFG.TXPool.Enabled {
