@@ -88,7 +88,7 @@ function savecfg() {
 
 function bignum(n) {
 	if (n<10e3) {
-		return n
+		return n + " "
 	}
 	if (n<10e6) {
 		return (n/1e3).toFixed(2) + " K"
