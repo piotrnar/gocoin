@@ -184,7 +184,7 @@ function draw_chart() {
 			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: { hoverable: true, clickable: true },
-				xaxis: { mode: 'time', timeformat: "%H:%M" },
+				xaxis: { mode: 'time', timeformat: "%H:%M", timezone: "browser" },
 				yaxis : {labelWidth : 30, min : 0, position : "right"}
 			}
 
