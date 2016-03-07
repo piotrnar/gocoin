@@ -36,8 +36,8 @@ var (
 	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
 	ExtraMemoryAllocCnt int64  // if we are using the glibc memory manager
 
-	VolatimeMode bool // this will only store database on disk when you close it
-	// Make sure to set VolatimeMode before doing any database operations. Never clear it once set.
+	VolatileMode bool // this will only store database on disk when you close it
+	// Make sure to set VolatileMode before doing any database operations. Never clear it once set.
 )
 
 const (
@@ -205,7 +205,8 @@ func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
 	db.idx.memput(key, newIdx(value, 0))
-	if VolatimeMode {
+	if VolatileMode {
+		db.nosync = true
 		db.mutex.Unlock()
 		return
 	}
@@ -226,7 +227,8 @@ func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
 	db.mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
 	db.idx.memput(key, newIdx(value, flags))
-	if VolatimeMode {
+	if VolatileMode {
+		db.nosync = true
 		db.mutex.Unlock()
 		return
 	}
@@ -247,7 +249,8 @@ func (db *DB) Del(key KeyType) {
 	//println("del", hex.EncodeToString(key[:]))
 	db.mutex.Lock()
 	db.idx.memdel(key)
-	if VolatimeMode {
+	if VolatileMode {
+		db.nosync = true
 		db.mutex.Unlock()
 		return
 	}
@@ -276,7 +279,7 @@ func (db *DB) ApplyFlags(key KeyType, fl uint32) {
 // Defragments the DB on the disk.
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag() (doing bool) {
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	db.mutex.Lock()
@@ -297,7 +300,7 @@ func (db *DB) Defrag() (doing bool) {
 
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	db.mutex.Lock()
@@ -309,7 +312,7 @@ func (db *DB) NoSync() {
 // Write all the pending changes to disk now.
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	db.mutex.Lock()
@@ -325,9 +328,11 @@ func (db *DB) Sync() {
 // Writes all the pending changes to disk.
 func (db *DB) Close() {
 	db.mutex.Lock()
-	if VolatimeMode {
+	if VolatileMode {
 		// flush all the data to disk when closing
-		db.defrag()
+		if db.nosync {
+			db.defrag()
+		}
 	} else {
 		db.sync()
 	}
@@ -373,7 +378,7 @@ func (db *DB) defrag() {
 
 
 func (db *DB) sync() {
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	if len(db.pending_recs)>0 {
@@ -409,7 +414,7 @@ func (db *DB) sync() {
 
 
 func (db *DB) Flush() {
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	cnt("Flush")
@@ -423,7 +428,7 @@ func (db *DB) Flush() {
 
 
 func (db *DB) syncneeded() bool {
-	if VolatimeMode {
+	if VolatileMode {
 		return false
 	}
 	if len(db.pending_recs) > int(MaxPendingNoSync) {

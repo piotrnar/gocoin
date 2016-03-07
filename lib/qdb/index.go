@@ -79,14 +79,14 @@ func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
 	} else {
 		prv.FreeData()
 		dif := uint64(24+prv.datlen)
-		if !VolatimeMode {
+		if !VolatileMode {
 			idx.extra_space_used += dif
 			idx.disk_space_needed -= dif
 		}
 	}
 	idx.index[k] = rec
 
-	if !VolatimeMode {
+	if !VolatileMode {
 		idx.disk_space_needed += uint64(24+rec.datlen)
 	}
 	if rec.datseq>idx.max_dat_seq {
@@ -100,7 +100,7 @@ func (idx *dbidx) memdel(k KeyType) {
 		cur.FreeData()
 		idx.cnt--
 		dif := uint64(12+cur.datlen)
-		if !VolatimeMode {
+		if !VolatileMode {
 			idx.extra_space_used += dif
 			idx.disk_space_needed -= dif
 		}
@@ -110,7 +110,7 @@ func (idx *dbidx) memdel(k KeyType) {
 
 func (idx *dbidx) put(k KeyType, rec *oneIdx) {
 	idx.memput(k, rec)
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	idx.addtolog(nil, k, rec)
@@ -119,7 +119,7 @@ func (idx *dbidx) put(k KeyType, rec *oneIdx) {
 
 func (idx *dbidx) del(k KeyType) {
 	idx.memdel(k)
-	if VolatimeMode {
+	if VolatileMode {
 		return
 	}
 	idx.deltolog(nil, k)
