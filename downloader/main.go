@@ -114,7 +114,7 @@ func open_blockchain() (abort bool) {
 			}
 		}
 	}()
-	TheBlockChain = chain.NewChain(GocoinHomeDir, GenesisBlock, false)
+	TheBlockChain = chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, &chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks})
 	__exit <- true
 	return
 }
@@ -128,7 +128,7 @@ func setup_runtime_vars() {
 	}
 	qdb.SetDefragPercent(300)
 	if QdbVolatileMode {
-		qdb.VolatimeMode = true
+		qdb.VolatileMode = true
 		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the downloader properly (do not kill it!)")
 	}
 }
@@ -218,16 +218,18 @@ func main() {
 
 	peersdb.ClosePeerDB()
 
-	StartTime = time.Now()
-	fmt.Print("All blocks done - defrag unspent")
-	qdb.SetDefragPercent(100)
-	for {
-		if !TheBlockChain.Unspent.Idle() {
-			break
+	if !OnlyStoreBlocks {
+		StartTime = time.Now()
+		fmt.Print("All blocks done - defrag unspent")
+		qdb.SetDefragPercent(100)
+		for {
+			if !TheBlockChain.Unspent.Idle() {
+				break
+			}
+			fmt.Print(".")
 		}
-		fmt.Print(".")
+		fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	}
-	fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
 	TheBlockChain.Close()
 
 	return

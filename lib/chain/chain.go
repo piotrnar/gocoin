@@ -38,6 +38,8 @@ type NewChanOpts struct {
 
 	// These two are used only during loading
 	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
+
+	DoNotParseTillEnd bool // Do not rebuild UTXO database up to the highest known block (used by the downloader)<F2>
 }
 
 
@@ -79,6 +81,11 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	if rescan {
 		ch.BlockTreeEnd = ch.BlockTreeRoot
+	}
+
+	if opts!=nil && opts.DoNotParseTillEnd {
+		ch.BlockTreeEnd, _ = ch.BlockTreeRoot.FindFarthestNode()
+		return
 	}
 
 	if AbortNow {
