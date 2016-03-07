@@ -203,11 +203,11 @@ function draw_chart() {
 
 			for (var i=0; i<cs.length; i++) {
 				if (chart_type_siz.checked) {
-					plot_data[0].data.push([cs[i].Received*1000, cs[i].Size/1000.0])
+					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].Size/1000.0])
 				} else if (chart_type_spb.checked) {
-					plot_data[0].data.push([cs[i].Received*1000, cs[i].FeeSPB])
+					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].FeeSPB])
 				} else {
-					plot_data[0].data.push([cs[i].Received*1000, cs[i].TxCnt])
+					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].TxCnt])
 				}
 			}
 
