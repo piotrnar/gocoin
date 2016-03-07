@@ -192,6 +192,7 @@ func BlockDBConvertIndexFile(dir string) {
 }
 
 
+// Make sure to call with the mutex locked
 func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
 	if rec, ok := db.cache[h.BIdx()]; ok {
 		rec.used = time.Now()
@@ -371,7 +372,9 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 		}
 	}
 
+	db.mutex.Lock()
 	db.addToCache(hash, bl)
+	db.mutex.Unlock()
 
 	return
 }
