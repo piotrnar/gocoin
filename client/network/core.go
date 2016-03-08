@@ -379,6 +379,7 @@ func maxmsgsize(cmd string) uint32 {
 func NetCloseAll() {
 	println("Closing network")
 	common.NetworkClosed = true
+	time.Sleep(1e9) // give one second for WebUI requests to complete
 	common.LockCfg()
 	common.SetListenTCP(false, false)
 	common.UnlockCfg()
