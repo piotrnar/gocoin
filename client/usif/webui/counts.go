@@ -95,9 +95,7 @@ func json_counts(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprint("\"rcvd\":", common.Counter["rcvd"+fin], ",")))
 		w.Write([]byte(fmt.Sprint("\"rbts\":", common.Counter["rbts"+fin], ",")))
 		w.Write([]byte(fmt.Sprint("\"sent\":", common.Counter["sent"+fin], ",")))
-		w.Write([]byte(fmt.Sprint("\"sbts\":", common.Counter["sbts"+fin], ",")))
-		w.Write([]byte(fmt.Sprint("\"hold\":", common.Counter["hold"+fin], ",")))
-		w.Write([]byte(fmt.Sprint("\"hbts\":", common.Counter["hbts"+fin], "}")))
+		w.Write([]byte(fmt.Sprint("\"sbts\":", common.Counter["sbts"+fin], "}")))
 		common.CounterMutex.Unlock()
 		if i<len(net)-1 {
 			w.Write([]byte(","))
