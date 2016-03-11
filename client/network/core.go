@@ -429,6 +429,20 @@ func NetCloseAll() {
 }
 
 
+func DropPeer(conid uint32) {
+	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+	for _, v := range OpenCons {
+		if uint32(conid)==v.ConnID {
+			v.DoS("FromUI")
+			fmt.Println("The connection with", v.PeerAddr.Ip(), "is being dropped and the peer is banned")
+			return
+		}
+	}
+	fmt.Println("DropPeer: There is no such an active connection", conid)
+}
+
+
 func init() {
 	rand.Read(nonce[:])
 }

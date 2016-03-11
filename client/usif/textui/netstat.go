@@ -4,23 +4,62 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	"strconv"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 
+type SortedKeys [] struct {
+	Key uint64
+	ConnID uint32
+}
+
+func (sk SortedKeys) Len() int {
+	return len(sk)
+}
+
+func (sk SortedKeys) Less(a, b int) bool {
+	return sk[a].ConnID<sk[b].ConnID
+}
+
+func (sk SortedKeys) Swap(a, b int) {
+	sk[a], sk[b] = sk[b], sk[a]
+}
+
+
 func net_drop(par string) {
-	network.DropPeer(par)
+	conid, e := strconv.ParseUint(par, 10, 32)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+	network.DropPeer(uint32(conid))
 }
 
 
 func node_info(par string) {
-	v := network.Look4conn(par)
-	if v == nil {
-		fmt.Println("There is no such an active connection")
-	} else {
-		fmt.Print(v.Stats())
+	conid, e := strconv.ParseUint(par, 10, 32)
+	if e != nil {
+		return
+	}
+
+	var res *network.ConnInfo
+
+	network.Mutex_net.Lock()
+
+	for _, v := range network.OpenCons {
+		if uint32(conid)==v.ConnID {
+			res = new(network.ConnInfo)
+			v.GetStats(res)
+			break
+		}
+	}
+	network.Mutex_net.Unlock()
+
+	if res != nil {
+		println("dupa")
 	}
 }
 
@@ -47,7 +86,7 @@ func net_stats(par string) {
 
 	network.Mutex_net.Lock()
 	fmt.Printf("%d active net connections, %d outgoing\n", len(network.OpenCons), network.OutConsActive)
-	srt := make(network.SortedKeys, len(network.OpenCons))
+	srt := make(SortedKeys, len(network.OpenCons))
 	cnt := 0
 	for k, v := range network.OpenCons {
 		srt[cnt].Key = k

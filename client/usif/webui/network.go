@@ -7,10 +7,26 @@ import (
 	"strconv"
 	"net/http"
 	"encoding/json"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 )
+
+type sorted_net_cons []network.ConnInfo
+
+func (sk sorted_net_cons) Len() int {
+	return len(sk)
+}
+
+func (sk sorted_net_cons) Less(a, b int) bool {
+	return sk[a].ID<sk[b].ID
+}
+
+func (sk sorted_net_cons) Swap(a, b int) {
+	sk[a], sk[b] = sk[b], sk[a]
+}
+
 
 
 func p_net(w http.ResponseWriter, r *http.Request) {
@@ -32,21 +48,6 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 }
 
 
-type one_net_con struct {
-	Id uint32
-	Incomming bool
-	PeerIp string
-	Ping int
-	LastBtsRcvd uint32
-	LastCmdRcvd string
-	LastBtsSent uint32
-	LastCmdSent string
-	BytesReceived, BytesSent uint64
-	Node network.NetworkNodeStruct
-	SendBufLen int
-	BlksInProgress int
-}
-
 func json_netcon(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -54,44 +55,25 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			println("json_netcon panic", r.(error).Error())
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
+			}
+			fmt.Println("json_netcon recovered:", err.Error())
+			fmt.Println(string(debug.Stack()))
 		}
 	}()
 
 	network.Mutex_net.Lock()
 	defer network.Mutex_net.Unlock()
-	srt := make(network.SortedKeys, len(network.OpenCons))
-	cnt := 0
-	for k, v := range network.OpenCons {
-		if !v.IsBroken() {
-			srt[cnt].Key = k
-			srt[cnt].ConnID = v.ConnID
-			cnt++
-		}
+
+	net_cons := make(sorted_net_cons, len(network.OpenCons))
+	var i int
+	for _, v := range network.OpenCons {
+		v.GetStats(&net_cons[i])
+		i++
 	}
-	sort.Sort(srt)
-
-	net_cons := make([]one_net_con, cnt)
-
-	for idx := range srt {
-		v := network.OpenCons[srt[idx].Key]
-
-		v.Mutex.Lock()
-		net_cons[idx].Id = v.ConnID
-		net_cons[idx].Incomming = v.X.Incomming
-		net_cons[idx].PeerIp = v.PeerAddr.Ip()
-		net_cons[idx].Ping = v.GetAveragePing()
-		net_cons[idx].LastBtsRcvd = v.X.LastBtsRcvd
-		net_cons[idx].LastCmdRcvd = v.X.LastCmdRcvd
-		net_cons[idx].LastBtsSent = v.X.LastBtsSent
-		net_cons[idx].LastCmdSent = v.X.LastCmdSent
-		net_cons[idx].BytesReceived = v.X.BytesReceived
-		net_cons[idx].BytesSent = v.X.BytesSent
-		net_cons[idx].Node = v.Node
-		net_cons[idx].SendBufLen = len(v.SendBuf)
-		net_cons[idx].BlksInProgress = len(v.GetBlockInProgress)
-		v.Mutex.Unlock()
-	}
+	sort.Sort(net_cons)
 
 	bx, er := json.Marshal(net_cons)
 	if er == nil {
@@ -101,32 +83,6 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 		println(er.Error())
 	}
 
-}
-
-
-func raw_net(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			println("raw_net panic", r.(error).Error())
-		}
-	}()
-
-	if len(r.Form["id"])==0 {
-		fmt.Println("No id given")
-		return
-	}
-
-	v := network.Look4conn(r.Form["id"][0])
-	if v == nil {
-		fmt.Fprintln(w, "There is no such an active connection")
-	} else {
-		w.Header()["Content-Type"] = []string{"text/plain"}
-		w.Write([]byte(v.Stats()))
-	}
 }
 
 

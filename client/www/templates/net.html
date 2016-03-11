@@ -114,7 +114,7 @@ function refreshconnections() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
-			//console.log(cs)
+			console.log(cs)
 			while (netcons.rows.length>1) netcons.deleteRow(1)
 
 			var ins=0, outs=0
@@ -122,7 +122,7 @@ function refreshconnections() {
 
 			for (var i=0; i<cs.length; i++) {
 				var td, row = netcons.insertRow(-1)
-				var id = cs[i].Id
+				var id = cs[i].ID
 
 				if (curr_monitor_id==id) {
 					id_found = true
@@ -154,7 +154,7 @@ function refreshconnections() {
 				// ping
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = '<i>'+cs[i].Ping+'&nbsp;ms</i>'
+				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
 
 				// last_bts_rcvd
 				td = row.insertCell(-1)
@@ -189,17 +189,17 @@ function refreshconnections() {
 				// node_version
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].Node.Version + (cs[i].Node.DoNotRelayTxs ? '*' : '')
+				td.innerHTML = cs[i].Version + (cs[i].DoNotRelayTxs ? '*' : '')
 
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
-				td.innerHTML = cs[i].Node.Agent
+				td.innerHTML = cs[i].Agent
 
 				// blocks in progress
 				td = row.insertCell(-1)
 				td.noWrap = true
-				td.innerHTML = cs[i].BlksInProgress + ' ' + cs[i].SendBufLen
+				td.innerHTML = cs[i].BlocksInProgress + ' ' + cs[i].BytesToSend
 
 				// drop conn
 				td = row.insertCell(-1)
