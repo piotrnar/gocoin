@@ -189,14 +189,15 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
 	if c.broken {
+		c.Mutex.Unlock()
 		return
 	}
 
 	if c.SendBuf!=nil {
 		// Before adding more data to the buffer, check the limit
 		if len(c.SendBuf)+len(pl) > MaxSendBufferSize {
+			c.Mutex.Unlock()
 			println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow @", cmd, len(pl), len(c.SendBuf))
 			c.Disconnect()
 			common.CountSafe("PeerSendOverflow")
@@ -228,6 +229,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		fmt.Println(cmd, len(c.SendBuf), "->", c.PeerAddr.Ip())
 	}
 	//println(len(c.SendBuf), "queued for seding to", c.PeerAddr.Ip())
+	c.Mutex.Unlock()
 	return
 }
 

@@ -45,21 +45,52 @@ func node_info(par string) {
 		return
 	}
 
-	var res *network.ConnInfo
+	var r *network.ConnInfo
 
 	network.Mutex_net.Lock()
 
 	for _, v := range network.OpenCons {
 		if uint32(conid)==v.ConnID {
-			res = new(network.ConnInfo)
-			v.GetStats(res)
+			r = new(network.ConnInfo)
+			v.GetStats(r)
 			break
 		}
 	}
 	network.Mutex_net.Unlock()
 
-	if res != nil {
-		println("dupa")
+	if r == nil {
+		return
+	}
+
+	fmt.Printf("Connection ID %d:\n", r.ID)
+	if r.Incomming {
+		fmt.Println("Comming from", r.PeerIp)
+	} else {
+		fmt.Println("Going to", r.PeerIp)
+	}
+	if !r.ConnectedAt.IsZero() {
+		fmt.Println("Connected at", r.ConnectedAt.Format("2006-01-02 15:04:05"))
+		if r.Version!=0 {
+			fmt.Println("Node Version:", r.Version, "/ Services:", fmt.Sprintf("0x%x", r.Services))
+			fmt.Println("User Agent:", r.Agent)
+			fmt.Println("Chain Height:", r.Height)
+			fmt.Printf("Reported IP: %d.%d.%d.%d\n", byte(r.ReportedIp4>>24), byte(r.ReportedIp4>>16),
+				byte(r.ReportedIp4>>8), byte(r.ReportedIp4))
+			fmt.Println("SendHeaders:", r.SendHeaders)
+		}
+		fmt.Println("Last data got:", time.Now().Sub(r.LastDataGot).String())
+		fmt.Println("Last data sent:", time.Now().Sub(r.LastSent).String())
+		fmt.Println("Last command received:", r.LastCmdRcvd, " ", r.LastBtsRcvd, "bytes")
+		fmt.Println("Last command sent:", r.LastCmdSent, " ", r.LastBtsSent, "bytes")
+		fmt.Println("Ticks:", r.TicksCnt, " Loops:", r.LoopCnt)
+		fmt.Print("Bytes  Received:", r.BytesReceived, "  Sent:", r.BytesSent, "\n")
+		fmt.Print("Invs  Recieved:", r.InvsRecieved, "  Pending:", r.InvsToSend, "\n")
+		fmt.Print("Bytes to send:", r.BytesToSend, " (", r.MaxSentBufSize, " max)\n")
+		fmt.Print("BlockInProgress:", r.BlocksInProgress, "  GetHeadersInProgress:", r.GetHeadersInProgress, "\n")
+		fmt.Print("GetBlocksDataNow:", r.GetBlocksDataNow, "  FetchNothing:", r.FetchNothing, "\n")
+		fmt.Print("AllHeadersReceived:", r.AllHeadersReceived, "  HoldHeaders:", r.HoldHeaders, "\n")
+	} else {
+		fmt.Println("Not yet connected")
 	}
 }
 
