@@ -20,12 +20,13 @@ function raw_load(id) {
 	curr_monitor_id = id
 	var aj = ajax()
 	aj.onload=function() {
-		document.getElementById('rawdiv').innerHTML = xmlHttp.responseText
+		document.getElementById('rawdiv').innerHTML = aj.responseText
+		// var ci = JSON.parse(aj.responseText)
 		//location.href = "#rawdiv";
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
-	xmlHttp.open("GET","raw_net?id="+id, true);
-	xmlHttp.send(null);
+	aj.open("GET","raw_net?id="+id, true);
+	aj.send(null);
 }
 
 function row_clicked(id) {
