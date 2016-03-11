@@ -82,13 +82,14 @@ func node_info(par string) {
 		fmt.Println("Last data sent:", time.Now().Sub(r.LastSent).String())
 		fmt.Println("Last command received:", r.LastCmdRcvd, " ", r.LastBtsRcvd, "bytes")
 		fmt.Println("Last command sent:", r.LastCmdSent, " ", r.LastBtsSent, "bytes")
-		fmt.Println("Ticks:", r.TicksCnt, " Loops:", r.LoopCnt)
-		fmt.Print("Bytes  Received:", r.BytesReceived, "  Sent:", r.BytesSent, "\n")
 		fmt.Print("Invs  Recieved:", r.InvsRecieved, "  Pending:", r.InvsToSend, "\n")
 		fmt.Print("Bytes to send:", r.BytesToSend, " (", r.MaxSentBufSize, " max)\n")
 		fmt.Print("BlockInProgress:", r.BlocksInProgress, "  GetHeadersInProgress:", r.GetHeadersInProgress, "\n")
-		fmt.Print("GetBlocksDataNow:", r.GetBlocksDataNow, "  FetchNothing:", r.FetchNothing, "\n")
-		fmt.Print("AllHeadersReceived:", r.AllHeadersReceived, "  HoldHeaders:", r.HoldHeaders, "\n")
+		fmt.Println("GetBlocksDataNow:", r.GetBlocksDataNow)
+		fmt.Println("AllHeadersReceived:", r.AllHeadersReceived)
+		for k, v := range r.Counters {
+			fmt.Println(k, ":", v)
+		}
 	} else {
 		fmt.Println("Not yet connected")
 	}
@@ -137,9 +138,7 @@ func net_stats(par string) {
 		}
 		fmt.Printf(" %21s %5dms %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
 			v.GetAveragePing(), v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
-		if (v.X.BytesReceived|v.X.BytesSent)!=0 {
-			fmt.Printf("%9s %9s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
-		}
+		fmt.Printf("%9s %9s", common.BytesToString(v.X.Counters["BytesReceived"]), common.BytesToString(v.X.Counters["BytesSent"]))
 		fmt.Print("  ", v.Node.Agent)
 		if v.SendBuf !=nil {
 			fmt.Print("  ", len(v.SendBuf))

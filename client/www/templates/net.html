@@ -48,6 +48,12 @@ function raw_load(id) {
 		}
 		s += ' -> ' + ci.AveragePing + ' ms\n'
 
+		for (var k in ci.Counters) {
+			s += k + ': ' + ci.Counters[k] + '\n'
+		}
+
+		//console.log("cnts", ci.Counters)
+
 		document.getElementById('rawdiv').innerHTML = s
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}

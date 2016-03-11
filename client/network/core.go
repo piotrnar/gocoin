@@ -76,18 +76,14 @@ type ConnectionStatus struct {
 	Incomming bool
 	ConnectedAt time.Time
 	VerackReceived bool
-	LoopCnt, TicksCnt uint  // just to see if the threads loop is alive
-	BytesReceived, BytesSent uint64
 	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
-	InvsRecieved uint64
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
 	NextGetAddr time.Time // When we shoudl issue "getaddr" again
 
 	AllHeadersReceived bool // keep sending getheaders until this is not set
 	GetHeadersInProgress bool
 	GetBlocksDataNow bool
-	FetchNothing, HoldHeaders uint
 	LastFetchTried time.Time
 
 	LastSent time.Time
@@ -95,6 +91,9 @@ type ConnectionStatus struct {
 
 	PingHistory [PingHistoryLength]int
 	PingHistoryIdx int
+	InvsRecieved uint64
+
+	Counters map[string]uint64
 }
 
 type ConnInfo struct {
@@ -150,6 +149,8 @@ type OneConnection struct {
 	NextPing time.Time
 	LastPingSent time.Time
 	PingInProgress []byte
+
+	counters map[string] uint64
 }
 
 type oneBlockDl struct {
@@ -169,7 +170,15 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.PeerAddr = ad
 	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
+	c.counters = make(map[string]uint64)
 	return
+}
+
+
+func (v *OneConnection) IncCnt(name string, val uint64) {
+	v.Mutex.Lock()
+	v.counters[name] += val
+	v.Mutex.Unlock()
 }
 
 
@@ -183,6 +192,12 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	res.BlocksInProgress = len(v.GetBlockInProgress)
 	res.InvsToSend = len(v.PendingInvs)
 	res.AveragePing = v.GetAveragePing()
+
+	res.Counters = make(map[string]uint64, len(v.counters))
+	for k, v := range v.counters {
+		res.Counters[k] = v
+	}
+
 	v.Mutex.Unlock()
 }
 
@@ -375,7 +390,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	c.Mutex.Lock()
 	c.recv.dat = nil
 	c.recv.hdr_len = 0
-	c.X.BytesReceived += uint64(24+len(ret.pl))
+	c.counters["BytesReceived"] += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
 
 	return ret
