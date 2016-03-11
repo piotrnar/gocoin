@@ -148,9 +148,9 @@ function auto_adjust_fee_clicked() {
 function refresh_address_book(done_callback) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			var addrbook = new Array()
-			var els = xmlHttp.responseXML.getElementsByTagName('entry')
+			var els = aj.responseXML.getElementsByTagName('entry')
 			for (var i=0; i<els.length; i++) {
 				addrbook.push({'addr':xval(els[i], "addr"), 'label':xval(els[i], "label"),
 					'wallet':xval(els[i], "wallet")})
@@ -159,8 +159,8 @@ function refresh_address_book(done_callback) {
 			done_callback(addrbook)
 		}
 	}
-	xmlHttp.open("GET","addrs.xml", true)
-	xmlHttp.send(null)
+	aj.open("GET","addrs.xml", true)
+	aj.send(null)
 }
 
 
