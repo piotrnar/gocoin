@@ -24,7 +24,6 @@ const (
 
 	NoDataTimeout = 2*time.Minute
 	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
-	SendBufSizeHoldOn = 1000*1000 // If you have more than this in the send buffer do not process any commands
 
 	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
 
@@ -108,6 +107,7 @@ type OneConnection struct {
 	Send struct {
 		Buf []byte
 		LastSent time.Time
+		MaxSize int
 	}
 
 	// Statistics:
