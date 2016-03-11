@@ -12,28 +12,11 @@ import (
 )
 
 
-func (c *OneConnection) Tick() {
-	c.Mutex.Lock()
-	c.TicksCnt++
-	c.Mutex.Unlock()
-
-	// Disconnect and ban useless peers (sych that don't send invs)
-	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
-		c.DoS("PeerUseless")
-		return
-	}
-
-	// Check no-data timeout
-	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
-		c.Disconnect()
-		common.CountSafe("NetNodataTout")
-		if common.DebugLevel>0 {
-			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
+func (c *OneConnection) SendPendingData() bool {
+	if len(c.Send.Buf)>0 {
+		if len(c.Send.Buf) > c.Send.MaxSize {
+			c.Send.MaxSize = len(c.Send.Buf)
 		}
-		return
-	}
-
-	if c.Send.Buf != nil {
 		n, e := common.SockWrite(c.NetConn, c.Send.Buf)
 		if n > 0 {
 			c.Mutex.Lock()
@@ -56,12 +39,44 @@ func (c *OneConnection) Tick() {
 			}
 			c.Disconnect()
 		}
+	}
+	return len(c.Send.Buf) > 0
+}
+
+
+func (c *OneConnection) Tick() {
+	c.Mutex.Lock()
+	c.TicksCnt++
+	c.Mutex.Unlock()
+
+	// Disconnect and ban useless peers (sych that don't send invs)
+	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
+		c.DoS("PeerUseless")
+		return
+	}
+
+	// Check no-data timeout
+	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
+		c.Disconnect()
+		common.CountSafe("NetNodataTout")
+		if common.DebugLevel>0 {
+			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
+		}
 		return
 	}
 
 	if !c.VerackReceived {
 		// If we have no ack, do nothing more.
 		return
+	}
+
+	// Timeout ping in progress
+	if c.PingInProgress!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
+		if common.DebugLevel > 0 {
+			println(c.PeerAddr.Ip(), "ping timeout")
+		}
+		common.CountSafe("PingTimeout")
+		c.HandlePong()  // this will set LastPingSent to nil
 	}
 
 	// Ask node for new addresses...?
@@ -328,19 +343,15 @@ func (c *OneConnection) Run() {
 		c.LoopCnt++
 		c.Mutex.Unlock()
 
-		cmd := c.FetchMessage()
 		if c.IsBroken() {
 			break
 		}
 
-		// Timeout ping in progress
-		if c.PingInProgress!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
-			if common.DebugLevel > 0 {
-				println(c.PeerAddr.Ip(), "ping timeout")
-			}
-			common.CountSafe("PingTimeout")
-			c.HandlePong()  // this will set LastPingSent to nil
+		if c.SendPendingData() {
+			continue // Do now read the socket if we have pending data to send
 		}
+
+		cmd := c.FetchMessage()
 
 		if cmd==nil {
 			c.Tick()
@@ -356,12 +367,6 @@ func (c *OneConnection) Run() {
 		c.PeerAddr.Alive()
 		if common.DebugLevel<0 {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
-		}
-
-		if c.Send.Buf != nil && len(c.Send.Buf) > SendBufSizeHoldOn {
-			common.CountSafe("hold_"+cmd.cmd)
-			common.CountSafeAdd("hbts_"+cmd.cmd, uint64(len(cmd.pl)))
-			continue
 		}
 
 		common.CountSafe("rcvd_"+cmd.cmd)
