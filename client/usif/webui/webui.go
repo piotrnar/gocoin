@@ -242,6 +242,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/netcon.json", json_netcon)
 	http.HandleFunc("/blocks.json", json_blocks)
 	http.HandleFunc("/wallet.json", json_wallet)
+	http.HandleFunc("/peerst.json", json_peerst)
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
