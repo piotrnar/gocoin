@@ -331,7 +331,6 @@ func main() {
 		}
 
 		network.NetCloseAll()
-		peersdb.ClosePeerDB()
 
 		if usif.DefragBlocksDB!=0 {
 			defrag_db()
@@ -339,5 +338,6 @@ func main() {
 	}
 
 	common.CloseBlockChain()
+	peersdb.ClosePeerDB()
 	sys.UnlockDatabaseDir()
 }
