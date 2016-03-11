@@ -32,13 +32,10 @@ function raw_load(id) {
 		s += 'SendHeaders: ' + ci.SendHeaders + '\n'
 		s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
 		s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
-		s += 'Ticks: ' + ci.TicksCnt + '  Loops: ' + ci.LoopCnt +  '\n'
-		s += 'Bytes  Received:' + ci.BytesReceived + '  Sent:' + ci.BytesSent +  '\n'
 		s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
 		s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
 		s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
-		s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  FetchNothing:' + ci.FetchNothing + '\n'
-		s += 'AllHeadersReceived:' + ci.AllHeadersReceived + '  HoldHeaders:' + ci.HoldHeaders + '\n'
+		s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
 		s += 'Ping history:'
 
 		var idx = ci.PingHistoryIdx
