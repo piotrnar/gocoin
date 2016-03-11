@@ -190,12 +190,14 @@ function refreshconnections() {
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = bignum(cs[i].Counters.BytesReceived)+'B'
+				var val = cs[i].Counters.BytesReceived; if (isNaN(val)) val=0
+				td.innerHTML = bignum(val)+'B'
 
 				// total_sent
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = bignum(cs[i].Counters.BytesSent)+'B'
+				var val = cs[i].Counters.BytesSent; if (isNaN(val)) val=0
+				td.innerHTML = bignum(val)+'B'
 
 				// node_version
 				td = row.insertCell(-1)
