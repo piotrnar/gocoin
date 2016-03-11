@@ -15,8 +15,8 @@ func (c *OneConnection) HandlePong() {
 		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
 	}
 	c.Mutex.Lock()
-	c.PingHistory[c.PingHistoryIdx] = int(ms)
-	c.PingHistoryIdx = (c.PingHistoryIdx+1)%PingHistoryLength
+	c.X.PingHistory[c.X.PingHistoryIdx] = int(ms)
+	c.X.PingHistoryIdx = (c.X.PingHistoryIdx+1)%PingHistoryLength
 	c.PingInProgress = nil
 	c.NextPing = time.Now().Add(PingPeriod)
 	c.Mutex.Unlock()
@@ -27,7 +27,7 @@ func (c *OneConnection) HandlePong() {
 func (c *OneConnection) GetAveragePing() int {
 	if c.Node.Version>60000 {
 		var pgs[PingHistoryLength] int
-		copy(pgs[:], c.PingHistory[:])
+		copy(pgs[:], c.X.PingHistory[:])
 		sort.Ints(pgs[:])
 		var sum int
 		for i:=0; i<PingHistoryValid; i++ {
@@ -45,8 +45,8 @@ func drop_slowest_peer() {
 	var worst_conn *OneConnection
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		if v.Incoming && InConsActive < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
-			// If this is an incoming connection, but we are not full yet, ignore it
+		if v.X.Incomming && InConsActive < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
+			// If this is an incomming connection, but we are not full yet, ignore it
 			continue
 		}
 		v.Mutex.Lock()

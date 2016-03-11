@@ -72,6 +72,44 @@ type NetworkNodeStruct struct {
 	SendHeaders bool
 }
 
+type ConnectionStatus struct {
+	Incomming bool
+	ConnectedAt time.Time
+	VerackReceived bool
+	LoopCnt, TicksCnt uint  // just to see if the threads loop is alive
+	BytesReceived, BytesSent uint64
+	LastBtsRcvd, LastBtsSent uint32
+	LastCmdRcvd, LastCmdSent string
+	InvsRecieved uint64
+	LastDataGot time.Time // if we have no data for some time, we abort this conenction
+	NextGetAddr time.Time // When we shoudl issue "getaddr" again
+
+	AllHeadersReceived bool // keep sending getheaders until this is not set
+	GetHeadersInProgress bool
+	GetBlocksDataNow bool
+	FetchNothing, HoldHeaders uint
+	LastFetchTried time.Time
+
+	LastSent time.Time
+	MaxSentBufSize int
+
+	PingHistory [PingHistoryLength]int
+	PingHistoryIdx int
+}
+
+type ConnInfo struct {
+	ID uint32
+	PeerIp string
+
+	NetworkNodeStruct
+	ConnectionStatus
+
+	BytesToSend int
+	BlocksInProgress int
+	InvsToSend int
+	AveragePing int
+}
+
 type OneConnection struct {
 	// Source of this IP:
 	*peersdb.PeerAddr
@@ -83,13 +121,10 @@ type OneConnection struct {
 	banit bool // Ban this client after disconnecting
 	misbehave int // When it reaches 100, ban it
 
-	// TCP connection data:
-	Incoming bool
-	NetConn net.Conn
+	net.Conn
 
-	// Handshake data
-	ConnectedAt time.Time
-	VerackReceived bool
+	// TCP connection data:
+	X ConnectionStatus
 
 	Node NetworkNodeStruct // Data from the version message
 
@@ -104,39 +139,17 @@ type OneConnection struct {
 	}
 
 	// Message sending state machine:
-	Send struct {
-		Buf []byte
-		LastSent time.Time
-		MaxSize int
-	}
+	SendBuf []byte
 
 	// Statistics:
-	LoopCnt, TicksCnt uint  // just to see if the threads loop is alive
-	BytesReceived, BytesSent uint64
-	LastBtsRcvd, LastBtsSent uint32
-	LastCmdRcvd, LastCmdSent string
-	InvsRecieved uint64
-
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
-	NextGetAddr time.Time // When we shoudl issue "getaddr" again
-
-	LastDataGot time.Time // if we have no data for some time, we abort this conenction
-
 	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
-	AllHeadersReceived bool // keep sending getheaders until this is not set
-	GetHeadersInProgress bool
-	GetBlocksDataNow bool
-	FetchNothing, HoldHeaders uint
-
-	LastFetchTried time.Time
 
 	// Ping stats
-	PingHistory [PingHistoryLength]int
-	PingHistoryIdx int
 	NextPing time.Time
-	PingInProgress []byte
 	LastPingSent time.Time
+	PingInProgress []byte
 }
 
 type oneBlockDl struct {
@@ -160,28 +173,46 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 }
 
 
+func (v *OneConnection) GetStats(res *ConnInfo) {
+	v.Mutex.Lock()
+	res.ID = v.ConnID
+	res.PeerIp = v.PeerAddr.Ip()
+	res.NetworkNodeStruct = v.Node
+	res.ConnectionStatus = v.X
+	res.BytesToSend = len(v.SendBuf)
+	res.BlocksInProgress = len(v.GetBlockInProgress)
+	res.InvsToSend = len(v.PendingInvs)
+	res.AveragePing = v.GetAveragePing()
+	v.Mutex.Unlock()
+}
+
+
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+	if c.broken {
+		return
+	}
 
-	if c.Send.Buf!=nil {
+	if c.SendBuf!=nil {
 		// Before adding more data to the buffer, check the limit
-		if len(c.Send.Buf)>MaxSendBufferSize {
+		if len(c.SendBuf)+len(pl) > MaxSendBufferSize {
 			c.Mutex.Unlock()
-			println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
+			println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow @", cmd, len(pl))
 			c.Disconnect()
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
 	} else {
-		c.Send.LastSent = time.Now()
+		c.X.LastSent = time.Now()
 	}
 
 	common.CountSafe("sent_"+cmd)
 	common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
 	sbuf := make([]byte, 24+len(pl))
 
-	c.LastCmdSent = cmd
-	c.LastBtsSent = uint32(len(pl))
+	c.X.LastCmdSent = cmd
+	c.X.LastBtsSent = uint32(len(pl))
 
 	binary.LittleEndian.PutUint32(sbuf[0:4], common.Version)
 	copy(sbuf[0:4], common.Magic[:])
@@ -192,13 +223,12 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	copy(sbuf[20:24], sh[:4])
 	copy(sbuf[24:], pl)
 
-	c.Send.Buf = append(c.Send.Buf, sbuf...)
+	c.SendBuf = append(c.SendBuf, sbuf...)
 
 	if common.DebugLevel<0 {
-		fmt.Println(cmd, len(c.Send.Buf), "->", c.PeerAddr.Ip())
+		fmt.Println(cmd, len(c.SendBuf), "->", c.PeerAddr.Ip())
 	}
-	c.Mutex.Unlock()
-	//println(len(c.Send.Buf), "queued for seding to", c.PeerAddr.Ip())
+	//println(len(c.SendBuf), "queued for seding to", c.PeerAddr.Ip())
 	return
 }
 
@@ -268,7 +298,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	var n int
 
 	for c.recv.hdr_len < 24 {
-		n, e = common.SockRead(c.NetConn, c.recv.hdr[c.recv.hdr_len:24])
+		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
 		c.Mutex.Lock()
 		c.recv.hdr_len += n
 		if e != nil {
@@ -309,7 +339,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			c.Mutex.Unlock()
 		}
 		for c.recv.datlen < c.recv.pl_len {
-			n, e = common.SockRead(c.NetConn, c.recv.dat[c.recv.datlen:])
+			n, e = common.SockRead(c.Conn, c.recv.dat[c.recv.datlen:])
 			if n > 0 {
 				c.Mutex.Lock()
 				c.recv.datlen += uint32(n)
@@ -344,7 +374,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	c.Mutex.Lock()
 	c.recv.dat = nil
 	c.recv.hdr_len = 0
-	c.BytesReceived += uint64(24+len(ret.pl))
+	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
 
 	return ret

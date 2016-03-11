@@ -16,7 +16,7 @@ import (
 
 func (c *OneConnection) HandleHeaders(pl []byte) {
 
-	c.GetHeadersInProgress = false
+	c.X.GetHeadersInProgress = false
 
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
@@ -57,7 +57,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 						common.BlockChain.BlockIndexAccess.Lock()
 						er, dos, _ := common.BlockChain.PreCheckBlock(bl)
 						if er == nil {
-							c.GetBlocksDataNow = true
+							c.X.GetBlocksDataNow = true
 							node := common.BlockChain.AcceptHeader(bl)
 							LastCommitedHeader = node
 							//println("checked ok - height", node.Height)
@@ -80,7 +80,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					if c.Node.Height < b2g.Block.Height {
 						c.Node.Height = b2g.Block.Height
 					}
-					c.GetBlocksDataNow = true
+					c.X.GetBlocksDataNow = true
 				}
 			} else {
 				common.CountSafe("HeaderOld")
@@ -91,7 +91,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 	}
 
 	if new_headers_got==0 {
-		c.AllHeadersReceived = true
+		c.X.AllHeadersReceived = true
 	}
 }
 
@@ -233,5 +233,5 @@ func (c *OneConnection) sendGetHeaders() {
 	btc.WriteVlen(bhdr, cnt)
 
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
-	c.GetHeadersInProgress = true
+	c.X.GetHeadersInProgress = true
 }

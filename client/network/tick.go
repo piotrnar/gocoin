@@ -13,24 +13,24 @@ import (
 
 
 func (c *OneConnection) SendPendingData() bool {
-	if len(c.Send.Buf)>0 {
-		if len(c.Send.Buf) > c.Send.MaxSize {
-			c.Send.MaxSize = len(c.Send.Buf)
+	if len(c.SendBuf)>0 {
+		if len(c.SendBuf) > c.X.MaxSentBufSize {
+			c.X.MaxSentBufSize = len(c.SendBuf)
 		}
-		n, e := common.SockWrite(c.NetConn, c.Send.Buf)
+		n, e := common.SockWrite(c.Conn, c.SendBuf)
 		if n > 0 {
 			c.Mutex.Lock()
-			c.Send.LastSent = time.Now()
-			c.BytesSent += uint64(n)
-			if n >= len(c.Send.Buf) {
-				c.Send.Buf = nil
+			c.X.LastSent = time.Now()
+			c.X.BytesSent += uint64(n)
+			if n >= len(c.SendBuf) {
+				c.SendBuf = nil
 			} else {
-				tmp := make([]byte, len(c.Send.Buf)-n)
-				copy(tmp, c.Send.Buf[n:])
-				c.Send.Buf = tmp
+				tmp := make([]byte, len(c.SendBuf)-n)
+				copy(tmp, c.SendBuf[n:])
+				c.SendBuf = tmp
 			}
 			c.Mutex.Unlock()
-		} else if time.Now().After(c.Send.LastSent.Add(AnySendTimeout)) {
+		} else if time.Now().After(c.X.LastSent.Add(AnySendTimeout)) {
 			common.CountSafe("PeerSendTimeout")
 			c.Disconnect()
 		} else if e != nil {
@@ -40,23 +40,23 @@ func (c *OneConnection) SendPendingData() bool {
 			c.Disconnect()
 		}
 	}
-	return len(c.Send.Buf) > 0
+	return len(c.SendBuf) > 0
 }
 
 
 func (c *OneConnection) Tick() {
 	c.Mutex.Lock()
-	c.TicksCnt++
+	c.X.TicksCnt++
 	c.Mutex.Unlock()
 
 	// Disconnect and ban useless peers (sych that don't send invs)
-	if c.InvsRecieved==0 && c.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
+	if c.X.InvsRecieved==0 && c.X.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
 		c.DoS("PeerUseless")
 		return
 	}
 
 	// Check no-data timeout
-	if c.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
+	if c.X.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
 		c.Disconnect()
 		common.CountSafe("NetNodataTout")
 		if common.DebugLevel>0 {
@@ -65,7 +65,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if !c.VerackReceived {
+	if !c.X.VerackReceived {
 		// If we have no ack, do nothing more.
 		return
 	}
@@ -80,7 +80,7 @@ func (c *OneConnection) Tick() {
 	}
 
 	// Ask node for new addresses...?
-	if time.Now().After(c.NextGetAddr) {
+	if time.Now().After(c.X.NextGetAddr) {
 		if peersdb.PeerDB.Count() > common.MaxPeersNeeded {
 			// If we have a lot of peers, do not ask for more, to save bandwidth
 			common.CountSafe("AddrEnough")
@@ -88,7 +88,7 @@ func (c *OneConnection) Tick() {
 			common.CountSafe("AddrWanted")
 			c.SendRawMsg("getaddr", nil)
 		}
-		c.NextGetAddr = time.Now().Add(AskAddrsEvery)
+		c.X.NextGetAddr = time.Now().Add(AskAddrsEvery)
 		return
 	}
 
@@ -105,20 +105,20 @@ func (c *OneConnection) Tick() {
 	blocks_to_get := len(BlocksToGet)
 	MutexRcv.Unlock()
 
-	if !c.AllHeadersReceived && !c.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+	if !c.X.AllHeadersReceived && !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
 		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD {
 			//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 			c.sendGetHeaders()
 			return
 		}
-		c.HoldHeaders++
+		c.X.HoldHeaders++
 	}
 
-	if !c.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
 		// Ping if we dont do anything
 		c.TryPing()
-		if blocks_to_get > 0 && time.Now().Sub(c.LastFetchTried) > time.Second {
-			c.GetBlocksDataNow = true
+		if blocks_to_get > 0 && time.Now().Sub(c.X.LastFetchTried) > time.Second {
+			c.X.GetBlocksDataNow = true
 		}
 		return
 	}
@@ -143,10 +143,10 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	OutConsActive++
 	Mutex_net.Unlock()
 	go func() {
-		conn.NetConn, e = net.DialTimeout("tcp4", fmt.Sprintf("%d.%d.%d.%d:%d",
+		conn.Conn, e = net.DialTimeout("tcp4", fmt.Sprintf("%d.%d.%d.%d:%d",
 			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
 		if e == nil {
-			conn.ConnectedAt = time.Now()
+			conn.X.ConnectedAt = time.Now()
 			if common.DebugLevel!=0 {
 				println("Connected to", ad.Ip())
 			}
@@ -221,9 +221,9 @@ func tcp_server() {
 					if !terminate {
 						// Incoming IP passed all the initial checks - talk to it
 						conn := NewConnection(ad)
-						conn.ConnectedAt = time.Now()
-						conn.Incoming = true
-						conn.NetConn = tc
+						conn.X.ConnectedAt = time.Now()
+						conn.X.Incomming = true
+						conn.Conn = tc
 						Mutex_net.Lock()
 						if _, ok := OpenCons[ad.UniqID()]; ok {
 							//fmt.Println(ad.Ip(), "already connected")
@@ -262,7 +262,7 @@ func tcp_server() {
 	}
 	Mutex_net.Lock()
 	for _, c := range OpenCons {
-		if c.Incoming {
+		if c.X.Incomming {
 			c.Disconnect()
 		}
 	}
@@ -331,16 +331,16 @@ func (c *OneConnection) Run() {
 	c.SendVersion()
 
 	c.Mutex.Lock()
-	c.LastDataGot = time.Now()
-	c.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
+	c.X.LastDataGot = time.Now()
+	c.X.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
-	c.AllHeadersReceived = false
+	c.X.AllHeadersReceived = false
 
 	c.Mutex.Unlock()
 
 	for !c.IsBroken() {
 		c.Mutex.Lock()
-		c.LoopCnt++
+		c.X.LoopCnt++
 		c.Mutex.Unlock()
 
 		if c.IsBroken() {
@@ -359,9 +359,9 @@ func (c *OneConnection) Run() {
 		}
 
 		c.Mutex.Lock()
-		c.LastDataGot = time.Now()
-		c.LastCmdRcvd = cmd.cmd
-		c.LastBtsRcvd = uint32(len(cmd.pl))
+		c.X.LastDataGot = time.Now()
+		c.X.LastCmdRcvd = cmd.cmd
+		c.X.LastBtsRcvd = uint32(len(cmd.pl))
 		c.Mutex.Unlock()
 
 		c.PeerAddr.Alive()
@@ -384,7 +384,7 @@ func (c *OneConnection) Run() {
 				}
 
 			case "verack":
-				c.VerackReceived = true
+				c.X.VerackReceived = true
 				if common.IsListenTCP() {
 					c.SendOwnAddr()
 				}
@@ -467,7 +467,7 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
-	} else if c.Incoming {
+	} else if c.X.Incomming {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()
@@ -475,5 +475,5 @@ func (c *OneConnection) Run() {
 	if common.DebugLevel!=0 {
 		println("Disconnected from", c.PeerAddr.Ip())
 	}
-	c.NetConn.Close()
+	c.Conn.Close()
 }

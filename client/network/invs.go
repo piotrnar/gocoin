@@ -32,7 +32,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.DoS("InvEmpty")
 		return
 	}
-	c.InvsRecieved++
+	c.X.InvsRecieved++
 
 	cnt, of := btc.VLen(pl)
 	if len(pl) != of + 36*cnt {
@@ -44,7 +44,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		common.CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if c.AllHeadersReceived && !blockReceived(bhash) {
+			if c.X.AllHeadersReceived && !blockReceived(bhash) {
 				MutexRcv.Lock()
 				if b2g, ok := BlocksToGet[bhash.BIdx()]; ok {
 					if c.Node.Height < b2g.Block.Height {
@@ -52,10 +52,10 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 					}
 					common.CountSafe("InvBlockFresh")
 					//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
-					c.GetBlocksDataNow = true
+					c.X.GetBlocksDataNow = true
 				} else {
 					common.CountSafe("InvBlockNew")
-					c.AllHeadersReceived = false
+					c.X.AllHeadersReceived = false
 					//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 				}
 				MutexRcv.Unlock()
@@ -100,7 +100,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 				// This node does not want tx inv (it came with its version message)
 				common.CountSafe("SendInvNoTxNode")
 			} else {
-				if fromConn==nil && v.InvsRecieved==0 {
+				if fromConn==nil && v.X.InvsRecieved==0 {
 					// Do not broadcast own txs to nodes that never sent any invs to us
 					common.CountSafe("SendInvOwnBlocked")
 				} else if len(v.PendingInvs)<500 {

@@ -279,7 +279,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			yes = true
 		} else {
 			//println("fetch nothing from", c.PeerAddr.Ip())
-			c.FetchNothing++
+			c.X.FetchNothing++
 		}
 	}
 	MutexRcv.Unlock()
@@ -289,9 +289,9 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 
 func (c *OneConnection) CheckGetBlockData() bool {
-	if c.GetBlocksDataNow {
-		c.GetBlocksDataNow = false
-		c.LastFetchTried = time.Now()
+	if c.X.GetBlocksDataNow {
+		c.X.GetBlocksDataNow = false
+		c.X.LastFetchTried = time.Now()
 		if c.GetBlockData() {
 			return true
 		}
