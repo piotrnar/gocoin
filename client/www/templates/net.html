@@ -60,7 +60,7 @@ function raw_load(id) {
 
 			document.getElementById('rawdiv').innerHTML = s
 		} catch (e) {
-			hide_peer_info()
+			hide_peer_info("Closing peer info because", e)
 		}
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
