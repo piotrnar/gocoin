@@ -167,9 +167,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		// Before adding more data to the buffer, check the limit
 		if len(c.Send.Buf)>MaxSendBufferSize {
 			c.Mutex.Unlock()
-			if common.DebugLevel > 0 {
-				println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
-			}
+			println(c.PeerAddr.Ip(), "Peer Send Buffer Overflow")
 			c.Disconnect()
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
