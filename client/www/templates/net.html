@@ -114,7 +114,6 @@ function refreshconnections() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
-			console.log(cs)
 			while (netcons.rows.length>1) netcons.deleteRow(1)
 
 			var ins=0, outs=0
