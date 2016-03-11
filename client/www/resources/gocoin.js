@@ -143,3 +143,11 @@ function switch_to_server_wallet(name) {
 	clear_web_wallet()
 	document.location='?sid='+sid+'&wal='+name
 }
+
+function int2ip(i) {
+	var a = (i>>24)&255
+	var b = (i>>16)&255
+	var c = (i>>8)&255
+	var d = i&255
+	return a+'.'+b+'.'+c+'.'+d
+}

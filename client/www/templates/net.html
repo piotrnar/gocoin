@@ -20,12 +20,38 @@ function raw_load(id) {
 	curr_monitor_id = id
 	var aj = ajax()
 	aj.onload=function() {
-		document.getElementById('rawdiv').innerHTML = aj.responseText
-		// var ci = JSON.parse(aj.responseText)
-		//location.href = "#rawdiv";
+		var ci = JSON.parse(aj.responseText)
+		var s = 'Connection ID ' + ci.ID + ':\n'
+
+		s += (ci.Incomming ? 'Coming from ' : 'Going to ') + ci.PeerIp + '\n'
+		s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
+		s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
+		s += 'User Agent: ' + ci.Agent + '\n'
+		s += 'Chain Height: ' + ci.Height + '\n'
+		s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+		s += 'SendHeaders: ' + ci.SendHeaders + '\n'
+		s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
+		s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
+		s += 'Ticks: ' + ci.TicksCnt + '  Loops: ' + ci.LoopCnt +  '\n'
+		s += 'Bytes  Received:' + ci.BytesReceived + '  Sent:' + ci.BytesSent +  '\n'
+		s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
+		s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+		s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
+		s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  FetchNothing:' + ci.FetchNothing + '\n'
+		s += 'AllHeadersReceived:' + ci.AllHeadersReceived + '  HoldHeaders:' + ci.HoldHeaders + '\n'
+		s += 'Ping history:'
+
+		var idx = ci.PingHistoryIdx
+		for (var i=0; i<ci.PingHistory.length; i++) {
+			s += ' ' + ci.PingHistory[idx]
+			idx = (idx+1)%ci.PingHistory.length
+		}
+		s += ' -> ' + ci.AveragePing + ' ms\n'
+
+		document.getElementById('rawdiv').innerHTML = s
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
-	aj.open("GET","raw_net?id="+id, true);
+	aj.open("GET","peerst.json?id="+id, true);
 	aj.send(null);
 }
 
