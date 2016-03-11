@@ -60,19 +60,19 @@ func net_stats(par string) {
 		v.Mutex.Lock()
 		fmt.Printf("%8d) ", v.ConnID)
 
-		if v.Incoming {
+		if v.X.Incomming {
 			fmt.Print("<- ")
 		} else {
 			fmt.Print(" ->")
 		}
 		fmt.Printf(" %21s %5dms %7d : %-16s %7d : %-16s", v.PeerAddr.Ip(),
-			v.GetAveragePing(), v.LastBtsRcvd, v.LastCmdRcvd, v.LastBtsSent, v.LastCmdSent)
-		if (v.BytesReceived|v.BytesSent)!=0 {
-			fmt.Printf("%9s %9s", common.BytesToString(v.BytesReceived), common.BytesToString(v.BytesSent))
+			v.GetAveragePing(), v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
+		if (v.X.BytesReceived|v.X.BytesSent)!=0 {
+			fmt.Printf("%9s %9s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
 		}
 		fmt.Print("  ", v.Node.Agent)
-		if v.Send.Buf !=nil {
-			fmt.Print("  ", len(v.Send.Buf))
+		if v.SendBuf !=nil {
+			fmt.Print("  ", len(v.SendBuf))
 		}
 		v.Mutex.Unlock()
 		fmt.Println()
