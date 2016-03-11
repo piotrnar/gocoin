@@ -65,23 +65,13 @@ func (v *OneConnection) Stats() (s string) {
 		s += fmt.Sprintln("Last data sent:", time.Now().Sub(v.Send.LastSent).String())
 		s += fmt.Sprintln("Last command received:", v.LastCmdRcvd, " ", v.LastBtsRcvd, "bytes")
 		s += fmt.Sprintln("Last command sent:", v.LastCmdSent, " ", v.LastBtsSent, "bytes")
-		s += fmt.Sprintln("Bytes received:", v.BytesReceived)
-		s += fmt.Sprintln("Bytes sent:", v.BytesSent)
-		s += fmt.Sprintln("Invs recieved:", v.InvsRecieved)
-		s += fmt.Sprintln("AllHeadersReceived:", v.AllHeadersReceived)
-		s += fmt.Sprintln("GetHeadersInProgress:", v.GetHeadersInProgress)
 		s += fmt.Sprintln("Ticks:", v.TicksCnt, " Loops:", v.LoopCnt)
-		if v.Send.Buf != nil {
-			s += fmt.Sprintln("Bytes to send:", len(v.Send.Buf))
-		}
-		if len(v.PendingInvs)>0 {
-			s += fmt.Sprintln("Invs to send:", len(v.PendingInvs))
-		}
-
-		s += fmt.Sprintln("GetBlockInProgress:", len(v.GetBlockInProgress))
-		s += fmt.Sprintln("GetBlocksDataNow:", v.GetBlocksDataNow)
-		s += fmt.Sprintln("FetchNothing:", v.FetchNothing)
-		s += fmt.Sprintln("HoldHeaders:", v.HoldHeaders)
+		s += fmt.Sprint("Bytes  Received:", v.BytesReceived, "  Sent:", v.BytesSent, "\n")
+		s += fmt.Sprint("Invs  Recieved:", v.InvsRecieved, "  Pending:", len(v.PendingInvs), "\n")
+		s += fmt.Sprint("Bytes to send:", len(v.Send.Buf), " (", v.Send.MaxSize, " max)\n")
+		s += fmt.Sprint("BlockInProgress:", len(v.GetBlockInProgress), "  GetHeadersInProgress:", v.GetHeadersInProgress, "\n")
+		s += fmt.Sprint("GetBlocksDataNow:", v.GetBlocksDataNow, "  FetchNothing:", v.FetchNothing, "\n")
+		s += fmt.Sprint("AllHeadersReceived:", v.AllHeadersReceived, "  HoldHeaders:", v.HoldHeaders, "\n")
 
 		// Display ping stats
 		s += fmt.Sprint("Ping history:")
