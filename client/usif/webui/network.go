@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"strconv"
 	"net/http"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -51,7 +52,14 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			println("json_netcon panic", r.(error).Error())
+		}
+	}()
+
 	network.Mutex_net.Lock()
+	defer network.Mutex_net.Unlock()
 	srt := make(network.SortedKeys, len(network.OpenCons))
 	cnt := 0
 	for k, v := range network.OpenCons {
@@ -70,21 +78,20 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 
 		v.Mutex.Lock()
 		net_cons[idx].Id = v.ConnID
-		net_cons[idx].Incomming = v.Incoming
+		net_cons[idx].Incomming = v.X.Incomming
 		net_cons[idx].PeerIp = v.PeerAddr.Ip()
 		net_cons[idx].Ping = v.GetAveragePing()
-		net_cons[idx].LastBtsRcvd = v.LastBtsRcvd
-		net_cons[idx].LastCmdRcvd = v.LastCmdRcvd
-		net_cons[idx].LastBtsSent = v.LastBtsSent
-		net_cons[idx].LastCmdSent = v.LastCmdSent
-		net_cons[idx].BytesReceived = v.BytesReceived
-		net_cons[idx].BytesSent = v.BytesSent
+		net_cons[idx].LastBtsRcvd = v.X.LastBtsRcvd
+		net_cons[idx].LastCmdRcvd = v.X.LastCmdRcvd
+		net_cons[idx].LastBtsSent = v.X.LastBtsSent
+		net_cons[idx].LastCmdSent = v.X.LastCmdSent
+		net_cons[idx].BytesReceived = v.X.BytesReceived
+		net_cons[idx].BytesSent = v.X.BytesSent
 		net_cons[idx].Node = v.Node
-		net_cons[idx].SendBufLen = len(v.Send.Buf)
+		net_cons[idx].SendBufLen = len(v.SendBuf)
 		net_cons[idx].BlksInProgress = len(v.GetBlockInProgress)
 		v.Mutex.Unlock()
 	}
-	network.Mutex_net.Unlock()
 
 	bx, er := json.Marshal(net_cons)
 	if er == nil {
@@ -104,7 +111,7 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintln(w, "Error")
+			println("raw_net panic", r.(error).Error())
 		}
 	}()
 
@@ -117,7 +124,46 @@ func raw_net(w http.ResponseWriter, r *http.Request) {
 	if v == nil {
 		fmt.Fprintln(w, "There is no such an active connection")
 	} else {
+		w.Header()["Content-Type"] = []string{"text/plain"}
 		w.Write([]byte(v.Stats()))
+	}
+}
+
+
+func json_peerst(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	if len(r.Form["id"])==0 {
+		return
+	}
+
+	conid, e := strconv.ParseUint(r.Form["id"][0], 10, 32)
+	if e != nil {
+		return
+	}
+
+	var res *network.ConnInfo
+
+	network.Mutex_net.Lock()
+	for _, v := range network.OpenCons {
+		if uint32(conid)==v.ConnID {
+			res = new(network.ConnInfo)
+			v.GetStats(res)
+			break
+		}
+	}
+	network.Mutex_net.Unlock()
+
+	if res != nil {
+		bx, er := json.Marshal(&res)
+		if er == nil {
+			w.Header()["Content-Type"] = []string{"application/json"}
+			w.Write(bx)
+		} else {
+			println(er.Error())
+		}
 	}
 }
 
