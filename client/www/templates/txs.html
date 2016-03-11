@@ -251,7 +251,7 @@ function decode_tx() {
 	var txid = this.id
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			var sta = xval(aj.responseXML,  "status")
 			if (sta!="OK") {
 				alert(sta)
@@ -317,8 +317,8 @@ function decode_tx() {
 			fade.style.display='block'
 		}
 	}
-	xmlHttp.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
-	xmlHttp.send(null);
+	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
+	aj.send(null);
 }
 
 function closepopup() {
@@ -331,7 +331,7 @@ function closepopup() {
 function show_txs2s(extrapar) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			while (txs2s.rows.length>1)  txs2s.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
 			var lensofar = 0
@@ -425,15 +425,15 @@ function show_txs2s(extrapar) {
 	if (mp_show_sort_desc.checked) {
 		extrapar += '&descending'
 	}
-	xmlHttp.open("GET","txs2s.xml?sid="+sid+extrapar, true);
-	xmlHttp.send(null);
+	aj.open("GET","txs2s.xml?sid="+sid+extrapar, true);
+	aj.send(null);
 }
 
 
 function show_txsre() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			while (txsre.rows.length>1)  txsre.deleteRow(1)
 			txs = aj.responseXML.getElementsByTagName('tx')
 			butre.value = ' ' + txs.length + ' '
@@ -463,14 +463,14 @@ function show_txsre() {
 		}
 	}
 	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
-	xmlHttp.open("GET","txsre.xml", true);
-	xmlHttp.send(null);
+	aj.open("GET","txsre.xml", true);
+	aj.send(null);
 }
 
 function show_txw4i() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			while (txw4i.rows.length>1)  txw4i.deleteRow(1)
 			wait4s = aj.responseXML.getElementsByTagName('wait4')
 			var idx=0
@@ -508,8 +508,8 @@ function show_txw4i() {
 		}
 	}
 	txs2s.style.display = txsre.style.display = txw4i.style.display = 'none'
-	xmlHttp.open("GET","txw4i.xml", true);
-	xmlHttp.send(null);
+	aj.open("GET","txw4i.xml", true);
+	aj.send(null);
 }
 
 var previousPoint = null
@@ -555,7 +555,7 @@ function handlehover(event, pos, item) {
 function show_mempool_fees() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
-		if(xmlHttp.readyState==4) {
+		if(aj.readyState==4) {
 			mp = JSON.parse(aj.responseText)
 
 			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
@@ -603,8 +603,8 @@ function show_mempool_fees() {
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	xmlHttp.open("GET","mempool_stats.json", true);
-	xmlHttp.send(null);
+	aj.open("GET","mempool_stats.json", true);
+	aj.send(null);
 }
 
 
