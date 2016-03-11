@@ -48,8 +48,14 @@ function raw_load(id) {
 		}
 		s += ' -> ' + ci.AveragePing + ' ms\n'
 
+		var first = true
 		for (var k in ci.Counters) {
-			s += k + ': ' + ci.Counters[k] + '\n'
+			if (!first) {
+				s += ', '
+			} else {
+				first = false
+			}
+			s += k + '=' + ci.Counters[k]
 		}
 
 		//console.log("cnts", ci.Counters)
@@ -184,12 +190,12 @@ function refreshconnections() {
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
+				td.innerHTML = bignum(cs[i].Counters.BytesReceived)+'B'
 
 				// total_sent
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerHTML = bignum(cs[i].BytesSent)+'B'
+				td.innerHTML = bignum(cs[i].Counters.BytesSent)+'B'
 
 				// node_version
 				td = row.insertCell(-1)
