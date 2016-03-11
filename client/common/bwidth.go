@@ -109,7 +109,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// Set timeout to prevent thread from getting stuck if the other end does not read
-		con.SetWriteDeadline(time.Now().Add(1000*time.Millisecond))
+		con.SetWriteDeadline(time.Now().Add(100*time.Millisecond))
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		UlBytesTotal += uint64(n)
