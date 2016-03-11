@@ -20,44 +20,48 @@ function raw_load(id) {
 	curr_monitor_id = id
 	var aj = ajax()
 	aj.onload=function() {
-		var ci = JSON.parse(aj.responseText)
-		var s = 'Connection ID ' + ci.ID + ':\n'
+		try {
+			var ci = JSON.parse(aj.responseText)
+			var s = 'Connection ID ' + ci.ID + ':\n'
 
-		s += (ci.Incomming ? 'Coming from ' : 'Going to ') + ci.PeerIp + '\n'
-		s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
-		s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
-		s += 'User Agent: ' + ci.Agent + '\n'
-		s += 'Chain Height: ' + ci.Height + '\n'
-		s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-		s += 'SendHeaders: ' + ci.SendHeaders + '\n'
-		s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
-		s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
-		s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
-		s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
-		s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
-		s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
-		s += 'Ping history:'
+			s += (ci.Incomming ? 'Coming from ' : 'Going to ') + ci.PeerIp + '\n'
+			s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
+			s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
+			s += 'User Agent: ' + ci.Agent + '\n'
+			s += 'Chain Height: ' + ci.Height + '\n'
+			s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+			s += 'SendHeaders: ' + ci.SendHeaders + '\n'
+			s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
+			s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
+			s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
+			s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+			s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
+			s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
+			s += 'Ping history:'
 
-		var idx = ci.PingHistoryIdx
-		for (var i=0; i<ci.PingHistory.length; i++) {
-			s += ' ' + ci.PingHistory[idx]
-			idx = (idx+1)%ci.PingHistory.length
-		}
-		s += ' -> ' + ci.AveragePing + ' ms\n'
-
-		var first = true
-		for (var k in ci.Counters) {
-			if (!first) {
-				s += ', '
-			} else {
-				first = false
+			var idx = ci.PingHistoryIdx
+			for (var i=0; i<ci.PingHistory.length; i++) {
+				s += ' ' + ci.PingHistory[idx]
+				idx = (idx+1)%ci.PingHistory.length
 			}
-			s += k + '=' + ci.Counters[k]
+			s += ' -> ' + ci.AveragePing + ' ms\n'
+
+			var first = true
+			for (var k in ci.Counters) {
+				if (!first) {
+					s += ', '
+				} else {
+					first = false
+				}
+				s += k + '=' + ci.Counters[k]
+			}
+
+			//console.log("cnts", ci.Counters)
+
+			document.getElementById('rawdiv').innerHTML = s
+		} catch (e) {
+			hide_peer_info()
 		}
-
-		//console.log("cnts", ci.Counters)
-
-		document.getElementById('rawdiv').innerHTML = s
 		raw_timer = setTimeout('raw_load('+id+')', 1000)
 	}
 	aj.open("GET","peerst.json?id="+id, true);
