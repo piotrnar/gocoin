@@ -6,10 +6,6 @@ td.txsval {text-align:right}
 td.netnam {}
 td.netcnt {text-align:right}
 td.netbts {text-align:right}
-td.netcnt {text-align:right}
-td.netbts {text-align:right}
-td.netcnt {text-align:right}
-td.netbts {text-align:right}
 div.tablab {
 	font-weight:bold;
 	margin-bottom:10px;
@@ -47,11 +43,8 @@ div.tablab {
 		<th rowspan="2">Network Message
 		<th colspan="2">Received
 		<th colspan="2">Sent
-		<th colspan="2">Hold
 	</tr>
 	<tr>
-		<th>Times
-		<th>Bytes
 		<th>Times
 		<th>Bytes
 		<th>Times
@@ -130,14 +123,6 @@ function ref_counters() {
 				col = row.insertCell(-1)
 				col.className = 'netcnt'
 				col.innerText = cts.net[i].sbts
-
-				col = row.insertCell(-1)
-				col.className = 'netbts'
-				col.innerText = cts.net[i].hold
-
-				col = row.insertCell(-1)
-				col.className = 'netcnt'
-				col.innerText = cts.net[i].hbts
 			}
 		} catch(e) {
 			console.log("error", e)
