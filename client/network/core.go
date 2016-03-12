@@ -118,7 +118,7 @@ type OneConnection struct {
 
 	broken bool // flag that the conenction has been broken / shall be disconnected
 	banit bool // Ban this client after disconnecting
-	misbehave int // When it reaches 100, ban it
+	misbehave int // When it reaches 1000, ban it
 
 	net.Conn
 
