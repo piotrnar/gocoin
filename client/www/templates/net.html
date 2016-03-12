@@ -105,11 +105,16 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th>ID
 	<th colspan="2">Peer Address
 	<th >Ping
-	<th colspan="2">Last received
+	<th colspan="2">Last rcvd
 	<th colspan="2">Last sent
 	<th >Tot In
 	<th >Tot Out
-	<th colspan="4">&nbsp;
+	<th>Proto
+	<th>Agent
+	<th title="Blocks in progress">BIP
+	<th title="Bytes waiting to be sent">ToSend
+	<th title="Max bytes waiting to be sent">MaxSend
+	<th>&nbsp;
 </tr>
 <!--PEER_ROW-->
 </table>
@@ -204,16 +209,28 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.innerHTML = cs[i].Version + (cs[i].DoNotRelayTxs ? '*' : '')
+				td.title = 'Services : 0x' + cs[i].Services.toString(16)
 
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
-				td.innerHTML = cs[i].Agent
+				td.innerHTML = cs[i].Agent.substr(0,20)
 
 				// blocks in progress
 				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
 				td.noWrap = true
-				td.innerHTML = cs[i].BlocksInProgress + ' ' + cs[i].BytesToSend
+				if (cs[i].BlocksInProgress>0) td.innerHTML = cs[i].BlocksInProgress
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].BytesToSend>0) td.innerHTML = cs[i].BytesToSend
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = cs[i].MaxSentBufSize
 
 				// drop conn
 				td = row.insertCell(-1)
