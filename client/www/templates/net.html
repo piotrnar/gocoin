@@ -11,6 +11,44 @@ function hide_peer_info() {
 	curr_monitor_id = -1
 }
 
+function update_connection_info(ci) {
+	var s = 'Connection ID ' + ci.ID + ':\n'
+
+	s += (ci.Incomming ? 'Coming from ' : 'Going to ') + ci.PeerIp + '\n'
+	s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
+	s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
+	s += 'User Agent: ' + ci.Agent + '\n'
+	s += 'Chain Height: ' + ci.Height + '\n'
+	s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+	s += 'SendHeaders: ' + ci.SendHeaders + '\n'
+	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
+	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
+	s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
+	s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+	s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
+	s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
+	s += 'Ping history:'
+
+	var idx = ci.PingHistoryIdx
+	for (var i=0; i<ci.PingHistory.length; i++) {
+		s += ' ' + ci.PingHistory[idx]
+		idx = (idx+1)%ci.PingHistory.length
+	}
+	s += ' -> ' + ci.AveragePing + ' ms\n'
+
+	var first = true
+	for (var k in ci.Counters) {
+		if (!first) {
+			s += ', '
+		} else {
+			first = false
+		}
+		s += k + '=' + ci.Counters[k]
+	}
+
+	document.getElementById('rawdiv').innerHTML = s
+}
+
 function raw_load(id) {
 	//console.log(this)
 	if (raw_timer!=null) {
@@ -22,47 +60,12 @@ function raw_load(id) {
 	aj.onload=function() {
 		try {
 			var ci = JSON.parse(aj.responseText)
-			var s = 'Connection ID ' + ci.ID + ':\n'
-
-			s += (ci.Incomming ? 'Coming from ' : 'Going to ') + ci.PeerIp + '\n'
-			s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
-			s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
-			s += 'User Agent: ' + ci.Agent + '\n'
-			s += 'Chain Height: ' + ci.Height + '\n'
-			s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-			s += 'SendHeaders: ' + ci.SendHeaders + '\n'
-			s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
-			s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
-			s += 'Invs  Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
-			s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
-			s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
-			s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
-			s += 'Ping history:'
-
-			var idx = ci.PingHistoryIdx
-			for (var i=0; i<ci.PingHistory.length; i++) {
-				s += ' ' + ci.PingHistory[idx]
-				idx = (idx+1)%ci.PingHistory.length
-			}
-			s += ' -> ' + ci.AveragePing + ' ms\n'
-
-			var first = true
-			for (var k in ci.Counters) {
-				if (!first) {
-					s += ', '
-				} else {
-					first = false
-				}
-				s += k + '=' + ci.Counters[k]
-			}
-
-			//console.log("cnts", ci.Counters)
-
-			document.getElementById('rawdiv').innerHTML = s
+			update_connection_info(ci)
 		} catch (e) {
-			hide_peer_info("Closing peer info because", e)
+			console.log("Closing peer info because", e)
+			hide_peer_info()
 		}
-		raw_timer = setTimeout('raw_load('+id+')', 1000)
+		raw_timer = setTimeout('raw_load('+id+')', 900)
 	}
 	aj.open("GET","peerst.json?id="+id, true);
 	aj.send(null);
@@ -142,6 +145,7 @@ function refreshconnections() {
 				var id = cs[i].ID
 
 				if (curr_monitor_id==id) {
+					update_connection_info(cs[i])
 					id_found = true
 				}
 
@@ -253,7 +257,7 @@ function refreshconnections() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(refreshconnections, 2500)
+		setTimeout(refreshconnections, 5000)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
