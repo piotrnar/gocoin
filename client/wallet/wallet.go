@@ -31,7 +31,7 @@ func LoadWalfile(fn string, included int) (addrs []*btc.BtcAddr) {
 	waldir, walname := filepath.Split(fn)
 	f, e := os.Open(fn)
 	if e != nil {
-		println(e.Error())
+		//println(e.Error())
 		return
 	}
 	defer f.Close()
