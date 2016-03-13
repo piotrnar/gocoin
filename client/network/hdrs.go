@@ -68,7 +68,11 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
 						} else {
 							common.CountSafe("HeaderCheckFail")
-							c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+							if dos {
+								c.DoS("BadHeader")
+							} else {
+								c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+							}
 						}
 						common.BlockChain.BlockIndexAccess.Unlock()
 						if dos {
