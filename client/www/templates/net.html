@@ -91,26 +91,34 @@ function update_connection_info(ci) {
 		s += 'Counters: ' + cnts + '\n'
 	}
 
-	s += '-----------------------------------------------------------------\n'
-	s += ' Network Message         Received                 Sent          \n'
-	s += '-----------------------------------------------------------------\n'
+	s += '----------------------------------------------------------------\n'
+	s += ' Network message     Received from peer          Sent to peer\n'
+	s += '----------------------------------------------------------------\n'
+	var kks = []
 	for (var k in msgs) {
+		kks.push(k)
+	}
+	kks.sort(kks)
+	console.log(kks)
+
+	for (var i=0; i<kks.length; i++) {
 		var v
+		var k = kks[i]
 		s += ' ' + rightpad(k,  ' ', 16) + ' '
-		v = msgs[k]["rcvd"]; if (isNaN(v)) v = 0
-		s += leftpad(v, ' ', 8)
-		v = msgs[k]["rbts"]; if (isNaN(v)) v = 0
-		s += ' ' + leftpad(v,  ' ', 12)
+		v = msgs[k]["rcvd"]
+		s += leftpad(isNaN(v)?' ':v, ' ', 8)
+		v = msgs[k]["rbts"]
+		s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
 		s += '   '
 
 
-		v = msgs[k]["sent"]; if (isNaN(v)) v = 0
-		s += leftpad(v, ' ', 8)
-		v = msgs[k]["sbts"]; if (isNaN(v)) v = 0
-		s += ' ' + leftpad(v,  ' ', 12)
+		v = msgs[k]["sent"]
+		s += leftpad(isNaN(v)?' ':v, ' ', 8)
+		v = msgs[k]["sbts"]
+		s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
 		s += '\n'
 	}
-	s += '-----------------------------------------------------------------\n'
+	s += '----------------------------------------------------------------\n'
 
 	document.getElementById('rawdiv').innerHTML = s
 }
