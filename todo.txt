@@ -5,7 +5,6 @@ Downloader:
 * Avoid re-building of UTXO-db while using "-b"
 
 Client:
-* Check a potential (insuficcient) COINBASE_MATURITY before accepting a TX to the mempool
 * Implement RBF in the mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * Remove confirned TXs from the rejected list

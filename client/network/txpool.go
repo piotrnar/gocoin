@@ -29,6 +29,7 @@ const (
 	TX_REJECTED_SCRIPT_FAIL  = 206
 	TX_REJECTED_BAD_INPUT    = 207
 	TX_REJECTED_NOT_MINED    = 208
+	TX_REJECTED_CB_INMATURE  = 209
 )
 
 var (
@@ -269,6 +270,19 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					common.CountSafe("TxRejectedNoInpOld")
 				}
 				return
+			} else {
+				if pos[i].WasCoinbase {
+					common.Last.Mutex.Lock()
+					last_height := common.Last.Block.Height
+					common.Last.Mutex.Unlock()
+					if last_height+1 - pos[i].BlockHeight < chain.COINBASE_MATURITY {
+						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_CB_INMATURE)
+						TxMutex.Unlock()
+						common.CountSafe("TxRejectedCBInmature")
+						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", last_height)
+						return
+					}
+				}
 			}
 		}
 		totinp += pos[i].Value
