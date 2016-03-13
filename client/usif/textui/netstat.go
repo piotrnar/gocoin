@@ -87,6 +87,7 @@ func node_info(par string) {
 		fmt.Print("BlockInProgress:", r.BlocksInProgress, "  GetHeadersInProgress:", r.GetHeadersInProgress, "\n")
 		fmt.Println("GetBlocksDataNow:", r.GetBlocksDataNow)
 		fmt.Println("AllHeadersReceived:", r.AllHeadersReceived)
+		fmt.Println("Total Received:", r.BytesReceived, " /  Sent:", r.BytesSent)
 		for k, v := range r.Counters {
 			fmt.Println(k, ":", v)
 		}

@@ -21,7 +21,7 @@ func (c *OneConnection) SendPendingData() bool {
 		if n > 0 {
 			c.Mutex.Lock()
 			c.X.LastSent = time.Now()
-			c.counters["BytesSent"] += uint64(n)
+			c.X.BytesSent += uint64(n)
 			if n >= len(c.SendBuf) {
 				c.SendBuf = nil
 			} else {
@@ -45,8 +45,6 @@ func (c *OneConnection) SendPendingData() bool {
 
 
 func (c *OneConnection) Tick() {
-	c.IncCnt("TicksCnt", 1)
-
 	// Disconnect and ban useless peers (sych that don't send invs)
 	if c.X.InvsRecieved==0 && c.X.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
 		c.DoS("PeerUseless")
@@ -337,8 +335,6 @@ func (c *OneConnection) Run() {
 	c.Mutex.Unlock()
 
 	for !c.IsBroken() {
-		c.IncCnt("LoopCnt", 1)
-
 		if c.IsBroken() {
 			break
 		}
@@ -355,6 +351,8 @@ func (c *OneConnection) Run() {
 		}
 
 		c.Mutex.Lock()
+		c.counters["rcvd_"+cmd.cmd]++
+		c.counters["rbts_"+cmd.cmd] += uint64(len(cmd.pl))
 		c.X.LastDataGot = time.Now()
 		c.X.LastCmdRcvd = cmd.cmd
 		c.X.LastBtsRcvd = uint32(len(cmd.pl))

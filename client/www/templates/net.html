@@ -1,3 +1,40 @@
+<b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
+Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
+ &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
+External address: <b>{EXTERNAL_ADDR}</b><br>
+<br>
+<table class="netcons bord" width="100%" id="netcons">
+<col width="30"> <!--#-->
+<col width="130"> <!--IP-->
+<col width="20"> <!--in/out icon-->
+<col width="60"> <!--ping-->
+<col width="40"><col width="60"> <!--Last rcvd-->
+<col width="40"><col width="60"> <!--Last sent-->
+<col width="80"> <!--total rcvd-->
+<col width="80"> <!--total sent-->
+<col width="50"> <!--vers-->
+<col> <!--agent-->
+<col width="50"> <!--blocks in progress-->
+<col width="20"> <!--agent-->
+<tr>
+	<th>ID
+	<th colspan="2">Peer Address
+	<th >Ping
+	<th colspan="2">Last rcvd
+	<th colspan="2">Last sent
+	<th >Tot In
+	<th >Tot Out
+	<th>Proto
+	<th>Agent
+	<th title="Blocks in progress">BIP
+	<th title="Bytes waiting to be sent">ToSend
+	<th title="Max bytes waiting to be sent">MaxSend
+	<th>&nbsp;
+</tr>
+<!--PEER_ROW-->
+</table>
+<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
+
 <script>
 var raw_timer = null
 var curr_monitor_id = -1
@@ -10,6 +47,7 @@ function hide_peer_info() {
 	document.getElementById('rawdiv').innerHTML = ''
 	curr_monitor_id = -1
 }
+
 
 function update_connection_info(ci) {
 	var s = 'Connection ID ' + ci.ID + ':\n'
@@ -27,6 +65,7 @@ function update_connection_info(ci) {
 	s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
 	s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
 	s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
+	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent +'\n'
 	s += 'Ping history:'
 
 	var idx = ci.PingHistoryIdx
@@ -36,15 +75,42 @@ function update_connection_info(ci) {
 	}
 	s += ' -> ' + ci.AveragePing + ' ms\n'
 
-	var first = true
+	var cnts = ''
+	var msgs = new Array()
+
 	for (var k in ci.Counters) {
-		if (!first) {
-			s += ', '
+		if (k[4]=='_') {
+			if (isNaN(msgs[k.substr(5)])) msgs[k.substr(5)] = new Array()
+			msgs[k.substr(5)][k.substr(0,4)] = ci.Counters[k]
 		} else {
-			first = false
+			if (cnts!='') cnts+=',  '
+			cnts += k + '=' + ci.Counters[k]
 		}
-		s += k + '=' + ci.Counters[k]
 	}
+	if (cnts!='') {
+		s += 'Counters: ' + cnts + '\n'
+	}
+
+	s += '-----------------------------------------------------------------\n'
+	s += ' Network Message         Received                 Sent          \n'
+	s += '-----------------------------------------------------------------\n'
+	for (var k in msgs) {
+		var v
+		s += ' ' + rightpad(k,  ' ', 16) + ' '
+		v = msgs[k]["rcvd"]; if (isNaN(v)) v = 0
+		s += leftpad(v, ' ', 8)
+		v = msgs[k]["rbts"]; if (isNaN(v)) v = 0
+		s += ' ' + leftpad(v,  ' ', 12)
+		s += '   '
+
+
+		v = msgs[k]["sent"]; if (isNaN(v)) v = 0
+		s += leftpad(v, ' ', 8)
+		v = msgs[k]["sbts"]; if (isNaN(v)) v = 0
+		s += ' ' + leftpad(v,  ' ', 12)
+		s += '\n'
+	}
+	s += '-----------------------------------------------------------------\n'
 
 	document.getElementById('rawdiv').innerHTML = s
 }
@@ -85,44 +151,7 @@ function net_drop(id) {
 	}
 	return false
 }
-</script>
-<b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
-Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
- &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
-External address: <b>{EXTERNAL_ADDR}</b><br>
-<br>
-<table class="netcons bord" width="100%" id="netcons">
-<col width="30"> <!--#-->
-<col width="130"> <!--IP-->
-<col width="20"> <!--in/out icon-->
-<col width="60"> <!--ping-->
-<col width="40"><col width="60"> <!--Last rcvd-->
-<col width="40"><col width="60"> <!--Last sent-->
-<col width="80"> <!--total rcvd-->
-<col width="80"> <!--total sent-->
-<col width="50"> <!--vers-->
-<col> <!--agent-->
-<col width="50"> <!--blocks in progress-->
-<col width="20"> <!--agent-->
-<tr>
-	<th>ID
-	<th colspan="2">Peer Address
-	<th >Ping
-	<th colspan="2">Last rcvd
-	<th colspan="2">Last sent
-	<th >Tot In
-	<th >Tot Out
-	<th>Proto
-	<th>Agent
-	<th title="Blocks in progress">BIP
-	<th title="Bytes waiting to be sent">ToSend
-	<th title="Max bytes waiting to be sent">MaxSend
-	<th>&nbsp;
-</tr>
-<!--PEER_ROW-->
-</table>
-<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
-<script>
+
 function refreshconnections() {
 	function onc(c,id) {
 		c.onclick = function() {row_clicked(id)}
@@ -200,14 +229,12 @@ function refreshconnections() {
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				var val = cs[i].Counters.BytesReceived; if (isNaN(val)) val=0
-				td.innerHTML = bignum(val)+'B'
+				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
 
 				// total_sent
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				var val = cs[i].Counters.BytesSent; if (isNaN(val)) val=0
-				td.innerHTML = bignum(val)+'B'
+				td.innerHTML = bignum(cs[i].BytesSent)+'B'
 
 				// node_version
 				td = row.insertCell(-1)

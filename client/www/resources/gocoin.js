@@ -28,6 +28,12 @@ function leftpad(v,c,n) {
 	return v
 }
 
+function rightpad(v,c,n) {
+	v = v.toString()
+	while (v.length<n) v=v+c
+	return v
+}
+
 function val2str(val) {
 	var i,neg
 	if (neg=(val<0)) val=-val

@@ -93,6 +93,7 @@ type ConnectionStatus struct {
 	PingHistoryIdx int
 	InvsRecieved uint64
 
+	BytesReceived, BytesSent uint64
 	Counters map[string]uint64
 }
 
@@ -221,6 +222,9 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	} else {
 		c.X.LastSent = time.Now()
 	}
+
+	c.counters["sent_"+cmd]++
+	c.counters["sbts_"+cmd] += uint64(len(pl))
 
 	common.CountSafe("sent_"+cmd)
 	common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
@@ -390,7 +394,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	c.Mutex.Lock()
 	c.recv.dat = nil
 	c.recv.hdr_len = 0
-	c.counters["BytesReceived"] += uint64(24+len(ret.pl))
+	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
 
 	return ret
