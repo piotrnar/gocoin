@@ -777,9 +777,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						ok = btc.EcdsaVerify(pk, si, sh)
 					}
 					if !ok && DBG_ERR {
-						if DBG_ERR {
-							fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
-						}
+						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
 					}
 
 					if DBG_SCR {
