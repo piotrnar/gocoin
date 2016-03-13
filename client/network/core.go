@@ -31,7 +31,7 @@ const (
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
 
 	PingPeriod = 60*time.Second
-	PingTimeout = 5*time.Second
+	PingTimeout = 30*time.Second
 	PingHistoryLength = 8
 	PingHistoryValid = (PingHistoryLength-4) // Ignore N longest pings
 	PingAssumedIfUnsupported = 999 // ms
