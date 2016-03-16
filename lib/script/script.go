@@ -774,6 +774,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 					if len(si)>0 {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
+						tx.Sigops++
 						ok = btc.EcdsaVerify(pk, si, sh)
 					}
 					if !ok && DBG_ERR {
@@ -857,6 +858,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 						if len(si) > 0 {
 							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
+							tx.Sigops++
 							if btc.EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--
