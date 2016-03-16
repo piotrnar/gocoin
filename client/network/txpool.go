@@ -68,6 +68,7 @@ type OneTxToSend struct {
 	Volume, Fee, Minout uint64
 	*btc.Tx
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
+	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
 }
 
 
@@ -330,7 +331,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp, Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout}
+	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
+		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {
