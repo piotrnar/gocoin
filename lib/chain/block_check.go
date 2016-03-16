@@ -11,7 +11,6 @@ import (
 )
 
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
-	println("PreCheckBlock")
 	// Size limits
 	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE {
 		er = errors.New("CheckBlock() : size limits failed")
@@ -44,7 +43,6 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	}
 
 	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
-	println("parent:", ok)
 	if !ok {
 		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
 		maybelater = true
