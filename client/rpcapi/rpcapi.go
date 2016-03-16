@@ -96,6 +96,9 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 					if resp_my.Result.Bits != resp_ok.Result.Bits {
 						println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
 					}
+					if resp_my.Result.Target != resp_ok.Result.Target {
+						println("\007Target:", resp_my.Result.Target, resp_ok.Result.Target)
+					}
 				}
 			}
 
