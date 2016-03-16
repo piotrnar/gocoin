@@ -167,7 +167,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		rb.TmAccept = time.Now().Sub(sta)
 	}
 	if e != nil {
-		common.CountSafe("RCPBlockError")
+		common.CountSafe("RPCBlockError")
 		msg.Error = e.Error()
 		msg.Done.Done()
 		return
@@ -179,7 +179,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		network.TxMined(msg.Block.Txs[i])
 	}
 
-	common.CountSafe("RCPBlockOK")
+	common.CountSafe("RPCBlockOK")
 	println("New mined block", msg.Block.Height, "accepted OK")
 
 	new_block_mined(msg.Block, nil)
@@ -322,8 +322,8 @@ func main() {
 			go webui.ServerThread(common.CFG.WebUI.Interface)
 		}
 
-		if common.CFG.RCP.Enabled {
-			go rpcapi.StartServer(common.RCPPort())
+		if common.CFG.RPC.Enabled {
+			go rpcapi.StartServer(common.RPCPort())
 		}
 
 		for !usif.Exit_now {
