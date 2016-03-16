@@ -60,6 +60,7 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 	if bs.Error != "" {
 		println("submiting block error:", bs.Error)
 		resp.Error = RpcError{Code: -10, Message: bs.Error}
+		resp.Result = "inconclusive"
 		return
 	}
 
