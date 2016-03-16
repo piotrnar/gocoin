@@ -1,4 +1,5 @@
 1.5.0
+* Client: Fixed maximul allowed message size for "getheaders" that was causing issues on testnet
 * Client: Do not allow into the mempool transactions spending inmature coinbase inputs
 * WebUI: Allows to specify the sequence number for Replace By Fee feature
 * Wallet: By default tx's sequence numbers are same as currrent unix time. Can be overwritten with "-seq <val>"
