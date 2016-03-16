@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 type RpcError struct {
@@ -30,9 +31,9 @@ type RpcCommand struct {
 }
 
 func process_rpc(b []byte) (out []byte) {
-	ioutil.WriteFile("rcp_cmd.json", b, 0777)
+	ioutil.WriteFile("rpc_cmd.json", b, 0777)
 	ex_cmd := exec.Command("C:\\Tools\\DEV\\Git\\mingw64\\bin\\curl.EXE",
-		"--user", "gocoinrpc:gocoinpwd", "--data-binary", "@rcp_cmd.json", "http://127.0.0.1:18332/")
+		"--user", "gocoinrpc:gocoinpwd", "--data-binary", "@rpc_cmd.json", "http://127.0.0.1:18332/")
 	out, _ = ex_cmd.Output()
 	return
 }
@@ -43,11 +44,11 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		println("No HTTP Authentication data")
 		return
 	}
-	if u != "gocoinrpc" {
+	if u != common.CFG.RPC.Username {
 		println("HTTP Authentication: bad username")
 		return
 	}
-	if p != "gocoinpwd" {
+	if p != common.CFG.RPC.Password {
 		println("HTTP Authentication: bad password")
 		return
 	}
@@ -138,8 +139,8 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartServer(port uint32) {
+	fmt.Println("Starting RPC server at port", port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", my_handler)
-	fmt.Println("waiting for RPC command...")
 	http.ListenAndServe(fmt.Sprint("127.0.0.1:",port), mux)
 }
