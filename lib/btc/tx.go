@@ -47,8 +47,9 @@ type Tx struct {
 	Size uint32
 	Hash *Uint256
 
-	// This field is only used when verifying transaction into memory pool
+	// This field is only updates when verifying transaction with "CountSOs" set
 	Sigops uint
+	CountSigops bool
 }
 
 
