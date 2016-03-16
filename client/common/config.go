@@ -37,6 +37,12 @@ var (
 			Title string
 			PayCommandName string
 		}
+		RCP struct {
+			Enabled bool
+			Username string
+			Password string
+			TCPPort uint32
+		}
 		Net struct {
 			ListenTCP bool
 			TCPPort uint16
@@ -106,6 +112,9 @@ func InitConfig() {
 	CFG.WebUI.AddrListLen = 15
 	CFG.WebUI.Title = "Gocoin"
 	CFG.WebUI.PayCommandName = "pay_cmd.txt"
+
+	CFG.RCP.Username = "gocoinrpc"
+	CFG.RCP.Password = "gocoinpwd"
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
@@ -225,6 +234,18 @@ func Reset() {
 	}
 	SetListenTCP(CFG.Net.ListenTCP, false)
 	ReloadMiners()
+}
+
+
+func RCPPort() uint32 {
+	if CFG.RCP.TCPPort != 0 {
+		return CFG.RCP.TCPPort
+	}
+	if CFG.Testnet {
+		return 18332
+	} else {
+		return 8332
+	}
 }
 
 
