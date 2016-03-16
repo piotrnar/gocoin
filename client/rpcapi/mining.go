@@ -69,7 +69,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Mutable = []string{"time","transactions","prevblock"}
 	r.Noncerange = "00000000ffffffff"
 	r.Sigoplimit = 20000
-	r.Sizelimit = 1000000
+	r.Sizelimit = btc.MAX_BLOCK_SIZE
 	r.Curtime = time_now
 	r.Bits = fmt.Sprintf("%08x", bits)
 	r.Height = uint(height)
@@ -90,7 +90,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 	defer network.TxMutex.Unlock()
 
 	sorted := make(sortedTxList, len(network.TransactionsToSend))
-	var cnt, totlen int
+	var cnt int
 	for _, v := range network.TransactionsToSend {
 		if v.MemInputs {
 			continue // skip meminput txs for now
@@ -102,11 +102,12 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 	sort.Sort(sorted)
 
 	res = make([]OneTransaction, len(sorted))
+	totlen := 1000
 	for cnt=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
 
-		if totlen+len(v.Data) > MAX_TXS_LEN {
-			println("max txs len exceeded")
+		if totlen+len(v.Data) > btc.MAX_BLOCK_SIZE {
+			println("Too many txs - limit to 999000 bytes")
 			res = res[:cnt]
 			return
 		}
