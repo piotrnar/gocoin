@@ -63,8 +63,6 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		return
 	}
 
-	println("submiting block done OK", bs.Error)
-
 	// cress check with bitcoind...
 	if false {
 		bitcoind_result := process_rpc(b)
@@ -73,6 +71,8 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 			case string:
 				println("\007Block rejected by bitcoind:", resp.Result.(string))
 				ioutil.WriteFile(fmt.Sprint(bs.Block.Height, "-", bs.Block.Hash.String()), bd, 0777)
+			default:
+				println("submiting block verified OK", bs.Error)
 		}
 	}
 }
