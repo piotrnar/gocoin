@@ -1,4 +1,7 @@
-1.5.0
+1.6.0
+* Client: RPC API for mining (supports "getblocktemplate", "validateaddress" and "submitblock")
+
+1.5.0 - 2016-03-16
 * Client: Fixed maximul allowed message size for "getheaders" that was causing issues on testnet
 * Client: Do not allow into the mempool transactions spending inmature coinbase inputs
 * WebUI: Allows to specify the sequence number for Replace By Fee feature
