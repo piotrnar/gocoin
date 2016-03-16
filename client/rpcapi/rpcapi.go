@@ -137,9 +137,9 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 	w.Write(append(b, 0x0a))
 }
 
-func StartServer() {
+func StartServer(port uint32) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", my_handler)
 	fmt.Println("waiting for RPC command...")
-	http.ListenAndServe("127.0.0.1:18322", mux)
+	http.ListenAndServe(fmt.Sprint("127.0.0.1:",port), mux)
 }
