@@ -1,0 +1,142 @@
+package rpcapi
+
+// test it with:
+// curl --user someuser:somepass --data-binary '{"method":"Arith.Add","params":[{"A":7,"B":1}],"id":0}' -H 'content-type: text/plain;' http://127.0.0.1:8222/
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os/exec"
+)
+
+type RpcError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type RpcResponse struct {
+	Id     interface{} `json:"id"`
+	Result interface{} `json:"result"`
+	Error  interface{} `json:"error"`
+}
+
+type RpcCommand struct {
+	Id     interface{} `json:"id"`
+	Method string      `json:"method"`
+	Params interface{} `json:"params"`
+}
+
+func process_rpc(b []byte) (out []byte) {
+	ioutil.WriteFile("rcp_cmd.json", b, 0777)
+	ex_cmd := exec.Command("C:\\Tools\\DEV\\Git\\mingw64\\bin\\curl.EXE",
+		"--user", "gocoinrpc:gocoinpwd", "--data-binary", "@rcp_cmd.json", "http://127.0.0.1:18332/")
+	out, _ = ex_cmd.Output()
+	return
+}
+
+func my_handler(w http.ResponseWriter, r *http.Request) {
+	u, p, ok := r.BasicAuth()
+	if !ok {
+		println("No HTTP Authentication data")
+		return
+	}
+	if u != "gocoinrpc" {
+		println("HTTP Authentication: bad username")
+		return
+	}
+	if p != "gocoinpwd" {
+		println("HTTP Authentication: bad password")
+		return
+	}
+	//fmt.Println("========================handler", r.Method, r.URL.String(), u, p, ok, "=================")
+	b, e := ioutil.ReadAll(r.Body)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+
+	var RpcCmd RpcCommand
+	jd := json.NewDecoder(bytes.NewReader(b))
+	jd.UseNumber()
+	e = jd.Decode(&RpcCmd)
+	if e != nil {
+		println(e.Error())
+	}
+
+	var resp RpcResponse
+	resp.Id = RpcCmd.Id
+	switch RpcCmd.Method {
+		case "getblocktemplate":
+			var resp_my RpcGetBlockTemplateResp
+
+			GetNextBlockTemplate(&resp_my.Result)
+
+			if false {
+				var resp_ok RpcGetBlockTemplateResp
+				bitcoind_result := process_rpc(b)
+				//ioutil.WriteFile("getblocktemplate_resp.json", bitcoind_result, 0777)
+
+				//fmt.Print("getblocktemplate...", sto.Sub(sta).String(), string(b))
+
+				jd = json.NewDecoder(bytes.NewReader(bitcoind_result))
+				jd.UseNumber()
+				e = jd.Decode(&resp_ok)
+
+				if resp_my.Result.PreviousBlockHash != resp_ok.Result.PreviousBlockHash {
+					println("satoshi @", resp_ok.Result.PreviousBlockHash, resp_ok.Result.Height)
+					println("gocoin  @", resp_my.Result.PreviousBlockHash, resp_my.Result.Height)
+				} else {
+					println(".", len(resp_my.Result.Transactions), resp_my.Result.Coinbasevalue)
+					if resp_my.Result.Mintime != resp_ok.Result.Mintime {
+						println("\007Mintime:", resp_my.Result.Mintime, resp_ok.Result.Mintime)
+					}
+					if resp_my.Result.Bits != resp_ok.Result.Bits {
+						println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
+					}
+				}
+			}
+
+			b, _ = json.Marshal(&resp_my)
+			//ioutil.WriteFile("json/"+RpcCmd.Method+"_resp_my.json", b, 0777)
+			w.Write(append(b, 0x0a))
+			return
+
+
+		case "validateaddress":
+			switch uu := RpcCmd.Params.(type) {
+			case []interface{}:
+				if len(uu) == 1 {
+					resp.Result = ValidateAddress(uu[0].(string))
+				}
+			default:
+				println("unexpected type", uu)
+			}
+
+		case "submitblock":
+			//ioutil.WriteFile("submitblock.json", b, 0777)
+			SubmitBlock(&RpcCmd, &resp, b)
+
+		default:
+			fmt.Println("Method:", RpcCmd.Method, len(b))
+			//w.Write(bitcoind_result)
+			resp.Error = RpcError{Code: -32601, Message: "Method not found"}
+	}
+
+	b, e = json.Marshal(&resp)
+	if e != nil {
+		println("json.Marshal(&resp):", e.Error())
+	}
+
+	//ioutil.WriteFile(RpcCmd.Method+"_resp.json", b, 0777)
+	w.Write(append(b, 0x0a))
+}
+
+func StartServer() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", my_handler)
+	fmt.Println("waiting for RPC command...")
+	http.ListenAndServe("127.0.0.1:18322", mux)
+}
