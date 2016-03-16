@@ -321,7 +321,10 @@ func main() {
 			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
 			go webui.ServerThread(common.CFG.WebUI.Interface)
 		}
-		go rpcapi.StartServer()
+
+		if common.CFG.RCP.Enabled {
+			go rpcapi.StartServer(common.RCPPort())
+		}
 
 		for !usif.Exit_now {
 			common.CountSafe("MainThreadLoops")
