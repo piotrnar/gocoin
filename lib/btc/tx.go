@@ -46,6 +46,9 @@ type Tx struct {
 	// These two fields should be set in block.go:
 	Size uint32
 	Hash *Uint256
+
+	// This field is only used when verifying transaction into memory pool
+	Sigops uint
 }
 
 
