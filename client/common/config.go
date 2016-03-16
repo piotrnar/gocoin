@@ -37,7 +37,7 @@ var (
 			Title string
 			PayCommandName string
 		}
-		RCP struct {
+		RPC struct {
 			Enabled bool
 			Username string
 			Password string
@@ -113,8 +113,8 @@ func InitConfig() {
 	CFG.WebUI.Title = "Gocoin"
 	CFG.WebUI.PayCommandName = "pay_cmd.txt"
 
-	CFG.RCP.Username = "gocoinrpc"
-	CFG.RCP.Password = "gocoinpwd"
+	CFG.RPC.Username = "gocoinrpc"
+	CFG.RPC.Password = "gocoinpwd"
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
@@ -237,9 +237,9 @@ func Reset() {
 }
 
 
-func RCPPort() uint32 {
-	if CFG.RCP.TCPPort != 0 {
-		return CFG.RCP.TCPPort
+func RPCPort() uint32 {
+	if CFG.RPC.TCPPort != 0 {
+		return CFG.RPC.TCPPort
 	}
 	if CFG.Testnet {
 		return 18332
