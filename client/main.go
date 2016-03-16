@@ -16,6 +16,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/client/rpcapi"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
@@ -45,37 +46,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
 			// Freshly mined block - do the inv and beeps...
-			common.Busy("NetRouteInv")
-			network.NetRouteInv(2, bl.Hash, newbl.Conn)
-
-			if common.CFG.Beeps.NewBlock {
-				fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
-				textui.ShowPrompt()
-			}
-
-			if common.CFG.Beeps.MinerID!="" {
-				//_, rawtxlen := btc.NewTx(bl[bl.TxOffset:])
-				if bytes.Contains(bl.Txs[0].Serialize(), []byte(common.CFG.Beeps.MinerID)) {
-					fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
-					textui.ShowPrompt()
-				}
-			}
-
-			if common.CFG.Beeps.ActiveFork && common.Last.Block == common.BlockChain.BlockTreeEnd {
-				// Last block has not changed, so it must have been an orphaned block
-				bln := common.BlockChain.BlockIndex[bl.Hash.BIdx()]
-				commonNode := common.Last.Block.FirstCommonParent(bln)
-				forkDepth := bln.Height - commonNode.Height
-				fmt.Println("Orphaned block:", bln.Height, bl.Hash.String(), bln.BlockSize>>10, "KB")
-				if forkDepth > 1 {
-					fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
-				}
-				textui.ShowPrompt()
-			}
-
-			if wallet.BalanceChanged && common.CFG.Beeps.NewBalance{
-				fmt.Print("\007")
-			}
+			new_block_mined(bl, newbl.Conn)
 		}
 
 		common.Last.Mutex.Lock()
@@ -139,7 +110,93 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
 	}
+}
 
+
+// Freshly mined block - do the inv and beeps... TODO: combine it with the other code
+func new_block_mined(bl *btc.Block, conn *network.OneConnection) {
+	common.Busy("NetRouteInv")
+	network.NetRouteInv(2, bl.Hash, conn)
+
+	if common.CFG.Beeps.NewBlock {
+		fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
+		textui.ShowPrompt()
+	}
+
+	if common.CFG.Beeps.MinerID!="" {
+		//_, rawtxlen := btc.NewTx(bl[bl.TxOffset:])
+		if bytes.Contains(bl.Txs[0].Serialize(), []byte(common.CFG.Beeps.MinerID)) {
+			fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
+			textui.ShowPrompt()
+		}
+	}
+
+	if common.CFG.Beeps.ActiveFork && common.Last.Block == common.BlockChain.BlockTreeEnd {
+		// Last block has not changed, so it must have been an orphaned block
+		bln := common.BlockChain.BlockIndex[bl.Hash.BIdx()]
+		commonNode := common.Last.Block.FirstCommonParent(bln)
+		forkDepth := bln.Height - commonNode.Height
+		fmt.Println("Orphaned block:", bln.Height, bl.Hash.String(), bln.BlockSize>>10, "KB")
+		if forkDepth > 1 {
+			fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
+		}
+		textui.ShowPrompt()
+	}
+
+	if wallet.BalanceChanged && common.CFG.Beeps.NewBalance{
+		fmt.Print("\007")
+	}
+
+}
+
+
+func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
+	network.MutexRcv.Lock()
+	rb := network.ReceivedBlocks[msg.Block.Hash.BIdx()]
+	network.MutexRcv.Unlock()
+	if rb == nil {
+		panic("Block " + msg.Block.Hash.String() + " not in ReceivedBlocks map")
+	}
+
+	sta := time.Now()
+	rb.TmQueuing = sta.Sub(rb.Time)
+
+	e, _, _ := common.BlockChain.CheckBlock(msg.Block)
+	if e == nil {
+		e = common.BlockChain.AcceptBlock(msg.Block)
+		rb.TmAccept = time.Now().Sub(sta)
+	}
+	if e != nil {
+		common.CountSafe("RCPBlockError")
+		msg.Error = e.Error()
+		msg.Done.Done()
+		return
+	}
+
+	common.RecalcAverageBlockSize(false)
+
+	for i:=1; i<len(msg.Block.Txs); i++ {
+		network.TxMined(msg.Block.Txs[i])
+	}
+
+	common.CountSafe("RCPBlockOK")
+	println("New mined block", msg.Block.Height, "accepted OK")
+
+	new_block_mined(msg.Block, nil)
+
+	common.Last.Mutex.Lock()
+	common.Last.Time = time.Now()
+	common.Last.Block = common.BlockChain.BlockTreeEnd
+	common.Last.Mutex.Unlock()
+
+	if wallet.BalanceChanged {
+		wallet.BalanceChanged = false
+		fmt.Println("Newly submited block has changed your balance")
+		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
+		textui.ShowPrompt()
+	}
+
+	msg.Done.Done()
 }
 
 
@@ -264,6 +321,7 @@ func main() {
 			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
 			go webui.ServerThread(common.CFG.WebUI.Interface)
 		}
+		go rpcapi.StartServer()
 
 		for !usif.Exit_now {
 			common.CountSafe("MainThreadLoops")
@@ -282,6 +340,11 @@ func main() {
 					fmt.Println("Got signal:", s)
 					usif.Exit_now = true
 					continue
+
+				case rpcbl := <-rpcapi.RpcBlocks:
+					common.CountSafe("RPCNewBlock")
+					common.Busy("HandleRpcBlock()")
+					HandleRpcBlock(rpcbl)
 
 				case newbl := <-network.NetBlocks:
 					common.CountSafe("MainNetBlock")
