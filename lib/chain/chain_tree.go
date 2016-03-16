@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"time"
+	"sort"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -101,6 +102,21 @@ func (n *BlockTreeNode) Bits() (uint32) {
 		return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
 	}
 }
+
+// Returns median time of the last 11 blocks
+func (pindex *BlockTreeNode) GetMedianTimePast() (uint32) {
+	var pmedian [MedianTimeSpan]int
+	pbegin := MedianTimeSpan
+	pend := MedianTimeSpan
+	for i:=0; i<MedianTimeSpan && pindex!=nil; i++ {
+		pbegin--
+		pmedian[pbegin] = int(pindex.Timestamp())
+		pindex = pindex.Parent
+	}
+	sort.Ints(pmedian[pbegin:pend])
+	return uint32(pmedian[pbegin+((pend - pbegin)/2)])
+}
+
 
 // Looks for the fartherst node
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
