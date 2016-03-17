@@ -327,6 +327,18 @@ func defrag_blocks(par string) {
 }
 
 
+func chain_snapshot(par string) {
+	v, e := strconv.ParseUint(par, 10, 32)
+	if e != nil {
+		fmt.Println("Specify block height")
+		return
+	}
+	usif.DefragBlocksDBHeight = uint32(v)
+	usif.DefragBlocksDB = 2
+	usif.Exit_now = true
+}
+
+
 func set_ulmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
@@ -510,6 +522,7 @@ func send_inv(par string) {
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("alerts a", false, list_alerst, "Show received alerts")
+	newUi("blocks", true, chain_snapshot, "Create block database snapshot up to the given block number")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
