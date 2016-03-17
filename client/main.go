@@ -52,6 +52,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.BlockTreeEnd
+		if false && common.Last.Block.Height==725676 {
+			fmt.Println("Reached block number", common.Last.Block.Height, "- exiting...")
+			usif.Exit_now = true
+		}
 		common.Last.Mutex.Unlock()
 
 		if wallet.BalanceChanged {
@@ -78,6 +82,9 @@ func retry_cached_blocks() bool {
 			if e != nil {
 				fmt.Println("AcceptBlock:", e.Error())
 				newbl.Conn.DoS("LocalAcceptBl")
+			}
+			if usif.Exit_now {
+				return false
 			}
 			// remove it from cache
 			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
@@ -217,7 +224,11 @@ func defrag_db() {
 		fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
 		os.RemoveAll(common.GocoinHomeDir+"defrag")
 		defragdb := chain.NewBlockDB(common.GocoinHomeDir+"defrag")
-		fmt.Println("Defragmenting the database...")
+		if usif.DefragBlocksDBHeight!=0 {
+			fmt.Println("Creating snapshot of blocks database up to block", usif.DefragBlocksDBHeight, "...")
+		} else {
+			fmt.Println("Defragmenting the database up to block...")
+		}
 		blk := common.BlockChain.BlockTreeRoot
 		for {
 			blk = blk.FindPathTo(common.BlockChain.BlockTreeEnd)
@@ -242,6 +253,10 @@ func defrag_db() {
 			}
 			nbl.Trusted = trusted
 			defragdb.BlockAdd(blk.Height, nbl)
+			if blk.Height==usif.DefragBlocksDBHeight {
+				fmt.Println("Database snapshot up to block", usif.DefragBlocksDBHeight, "created successfully")
+				break
+			}
 		}
 		defragdb.Sync()
 		defragdb.Close()
