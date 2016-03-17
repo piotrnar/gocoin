@@ -61,3 +61,8 @@ func GetCompact(b *big.Int) uint32 {
 	}
 	return compact
 }
+
+
+func CheckProofOfWork(hash *Uint256, bits uint32) bool {
+	return new(big.Int).SetBytes(hash.Hash[:]).Cmp(SetCompact(bits)) <= 0
+}
