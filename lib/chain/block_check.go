@@ -24,6 +24,13 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
+	// Check proof-of-work
+	if !btc.CheckProofOfWork(bl.Hash, bl.Bits()) {
+		er = errors.New("CheckBlock() : high-hash / proof of work")
+		dos = true
+		return
+	}
+
 	// Check timestamp (must not be higher than now +2 hours)
 	if int64(bl.BlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
 		er = errors.New("CheckBlock() : block timestamp too far in the future")
@@ -106,6 +113,7 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		dos = true
 		return
 	}
+
 	return
 }
 
