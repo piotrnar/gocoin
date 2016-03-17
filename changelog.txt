@@ -1,5 +1,7 @@
 1.6.0
 * Client: RPC API for mining (supports "getblocktemplate", "validateaddress" and "submitblock")
+* Lib: fixed a critical issue of accepting a block hash which does not match the bits field from teh header
+* Lib: fixed issue with recalculating difficulty each 2016 blocks that was appearing on testnet3
 
 1.5.0 - 2016-03-16
 * Client: Fixed maximul allowed message size for "getheaders" that was causing issues on testnet
