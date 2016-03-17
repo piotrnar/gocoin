@@ -209,7 +209,7 @@ func tcp_server() {
 					HammeringMutex.Unlock()
 					if ok && time.Now().Sub(ti) < HammeringMinReconnect {
 						//println(ad.Ip(), "is hammering within", time.Now().Sub(ti).String())
-						common.CountSafe("InConnHammer")
+						common.CountSafe("BanHammerIn")
 						ad.Ban()
 						terminate = true
 					}
