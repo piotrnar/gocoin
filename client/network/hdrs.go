@@ -181,7 +181,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		c.SendRawMsg("headers", out.Bytes())
 	}()
 
-	for cnt<100 {
+	for cnt<2000 {
 		if last_block.Height <= best_block.Height {
 			break
 		}
