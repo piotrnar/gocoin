@@ -69,15 +69,9 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	// Check proof of work
 	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime())
 	if bl.Bits() != gnwr {
-		fmt.Printf("PreCheckBlock: Incorrect PoW at block %d. Got diff %.0f / expected %.0f\n",
-			bl.Height, btc.GetDifficulty(bl.Bits()), btc.GetDifficulty(gnwr))
-
-		// Here is a "solution" for whatever shit there is in testnet3, that nobody can explain me:
-		if !ch.testnet() || (bl.Height%2016)!=0 {
-			er = errors.New("CheckBlock: incorrect proof of work")
-			dos = true
-			return
-		}
+		er = errors.New("CheckBlock: incorrect proof of work")
+		dos = true
+		return
 	}
 
 	// Count block versions within the Majority Window
