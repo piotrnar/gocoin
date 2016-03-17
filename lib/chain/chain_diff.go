@@ -58,7 +58,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 	}
 
 	// Retarget
-	bnewbn := btc.SetCompact(prv.Bits())
+	bnewbn := btc.SetCompact(lst.Bits())
 	bnewbn.Mul(bnewbn, big.NewInt(actualTimespan))
 	bnewbn.Div(bnewbn, big.NewInt(POWRetargetSpam))
 
