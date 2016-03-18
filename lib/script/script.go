@@ -23,6 +23,9 @@ const (
 	VER_MINDATA = 1<<6
 	VER_CLTV = 1<<7
 
+
+	COUNT_SIGOPS = 1<<31
+
 	LOCKTIME_THRESHOLD = 500000000
 )
 
@@ -774,7 +777,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 					if len(si)>0 {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
-						if tx.CountSigops {
+						if (ver_flags&COUNT_SIGOPS)!=0 {
 							tx.Sigops++
 						}
 						ok = btc.EcdsaVerify(pk, si, sh)
@@ -860,7 +863,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 						if len(si) > 0 {
 							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
-							if tx.CountSigops {
+							if (ver_flags&COUNT_SIGOPS)!=0 {
 								tx.Sigops++
 							}
 							if btc.EcdsaVerify(pk, si, sh) {

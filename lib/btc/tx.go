@@ -47,9 +47,8 @@ type Tx struct {
 	Size uint32
 	Hash *Uint256
 
-	// This field is only updates when verifying transaction with "CountSOs" set
+	// This field is updated when calling script.VerifyTxScript() with COUNT_SIGOPS flag
 	Sigops uint
-	CountSigops bool
 }
 
 
