@@ -13,27 +13,27 @@ import (
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
 	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE {
-		er = errors.New("CheckBlock() : size limits failed")
+		er = errors.New("CheckBlock() : size limits failed - RPC_Result:bad-blk-length")
 		dos = true
 		return
 	}
 
 	if bl.Version()==0 {
-		er = errors.New("CheckBlock() : Block version 0 not allowed")
+		er = errors.New("CheckBlock() : Block version 0 not allowed - RPC_Result:bad-version")
 		dos = true
 		return
 	}
 
 	// Check proof-of-work
 	if !btc.CheckProofOfWork(bl.Hash, bl.Bits()) {
-		er = errors.New("high-hash")
+		er = errors.New("CheckBlock() : proof of work failed - RPC_Result:high-hash")
 		dos = true
 		return
 	}
 
 	// Check timestamp (must not be higher than now +2 hours)
 	if int64(bl.BlockTime()) > time.Now().Unix() + 2 * 60 * 60 {
-		er = errors.New("CheckBlock() : block timestamp too far in the future")
+		er = errors.New("CheckBlock() : block timestamp too far in the future - RPC_Result:time-too-new")
 		dos = true
 		return
 	}
@@ -44,14 +44,14 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 			er = errors.New("Genesis")
 			return
 		} else {
-			er = errors.New("CheckBlock: "+bl.Hash.String()+" already in")
+			er = errors.New("CheckBlock: "+bl.Hash.String()+" already in - RPC_Result:duplicate")
 			return
 		}
 	}
 
 	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
-		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found")
+		er = errors.New("CheckBlock: "+bl.Hash.String()+" parent not found - RPC_Result:bad-prevblk")
 		maybelater = true
 		return
 	}
@@ -62,21 +62,21 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(bl.Height)>=MovingCheckopintDepth {
 		er = errors.New(fmt.Sprint("CheckBlock: btc.Block ", bl.Hash.String(),
 			" hooks too deep into the chain: ", bl.Height, "/", ch.BlockTreeEnd.Height, " ",
-			btc.NewUint256(bl.ParentHash()).String()))
+			btc.NewUint256(bl.ParentHash()).String(), " - RPC_Result:bad-prevblk"))
 		return
 	}
 
 	// Check proof of work
 	gnwr := ch.GetNextWorkRequired(prevblk, bl.BlockTime())
 	if bl.Bits() != gnwr {
-		er = errors.New("CheckBlock: incorrect proof of work")
+		er = errors.New("CheckBlock: incorrect proof of work - RPC_Result:bad-diffbits")
 		dos = true
 		return
 	}
 
 	// Check timestamp against prev
 	if bl.BlockTime() <= prevblk.GetMedianTimePast() {
-		er = errors.New("time-too-old")
+		er = errors.New("CheckBlock: block's timestamp is too early - RPC_Result:time-too-old")
 		dos = true
 		return
 	}
@@ -98,19 +98,19 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	}
 
 	if bl.Version()<2 && bl.Majority_v2>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=1 block")
+		er = errors.New("CheckBlock() : Rejected nVersion=1 block - RPC_Result:bad-version")
 		dos = true
 		return
 	}
 
 	if bl.Version()<3 && bl.Majority_v3>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=2 block")
+		er = errors.New("CheckBlock() : Rejected nVersion=2 block - RPC_Result:bad-version")
 		dos = true
 		return
 	}
 
 	if bl.Version()<4 && bl.Majority_v4>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=3 block")
+		er = errors.New("CheckBlock() : Rejected nVersion=3 block - RPC_Result:bad-version")
 		dos = true
 		return
 	}
@@ -140,26 +140,26 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 				exp = []byte{3, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16)}
 			}
 			if len(bl.Txs[0].TxIn[0].ScriptSig)<len(exp) || !bytes.Equal(exp, bl.Txs[0].TxIn[0].ScriptSig[:len(exp)]) {
-				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String())
+				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-height")
 				return
 			}
 		}
 
 		// This is a stupid check, but well, we need to be satoshi compatible
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
-			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String())
+			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-missing")
 			return
 		}
 
 		// Check Merkle Root - that's importnant
 		if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
-			er = errors.New("CheckBlock() : Merkle Root mismatch")
+			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
 			return
 		}
 
 		// Check transactions - this is the most time consuming task
 		if !CheckTransactions(bl.Txs, bl.Height, bl.BlockTime()) {
-			er = errors.New("CheckBlock() : CheckTransactions() failed")
+			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")
 			return
 		}
 	}
