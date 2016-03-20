@@ -175,7 +175,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 		res[cnt].Data = hex.EncodeToString(v.Data)
 		res[cnt].Hash = v.Tx.Hash.String()
 		res[cnt].Fee = v.Fee
-		res[cnt].Sigops = v.Tx.Sigops
+		res[cnt].Sigops = v.Sigops
 		res[cnt].Depends = v.depends
 		totfees += v.Fee
 		//println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat, "  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))
