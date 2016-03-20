@@ -75,9 +75,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 							}
 						}
 						common.BlockChain.BlockIndexAccess.Unlock()
-						if dos {
-							c.DoS("HdrErr3")
-						}
 					}
 				} else {
 					common.CountSafe("HeaderFresh")
