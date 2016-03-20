@@ -52,7 +52,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 
 	common.Last.Mutex.Lock()
 
-	r.Curtime = time_now
+	r.Curtime = uint(time.Now().Unix())
 	r.Mintime = uint(common.Last.Block.GetMedianTimePast()) + 1
 	if r.Curtime < r.Mintime {
 		println("adjust curtime", r.Curtime, "->", r.Mintime)
