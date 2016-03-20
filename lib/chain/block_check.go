@@ -152,7 +152,13 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 
 		// Check Merkle Root - that's importnant
-		if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
+		merkel, mutated := btc.GetMerkel(bl.Txs)
+		if mutated {
+			er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
+			return
+		}
+
+		if !bytes.Equal(merkel, bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
 			return
 		}
