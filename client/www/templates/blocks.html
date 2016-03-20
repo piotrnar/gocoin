@@ -105,7 +105,7 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.innerText = cs[i].TxCnt
+				if (cs[i].TxCnt>1)  td.innerText = cs[i].TxCnt
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
