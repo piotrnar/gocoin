@@ -23,6 +23,7 @@ Wallet:
 Core lib:
 * Check block for MAX_BLOCK_SIGOPS (similar for txs)
 * Add checking timestamps (everywhere) against GetMedianTimePast()
+* Add check for min and max coinbase size
 * CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")
 * Check for merkle tree malleability (CVE-2012-2459)
 * Verify if we dont need to check for "sigoplimit" in one transaciton
