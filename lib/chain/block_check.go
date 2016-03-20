@@ -74,6 +74,13 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
+	// Check timestamp against prev
+	if bl.BlockTime() <= prevblk.GetMedianTimePast() {
+		er = errors.New("CheckBlock() : time-too-old / block's timestamp is too early")
+		dos = true
+		return
+	}
+
 	// Count block versions within the Majority Window
 	n := prevblk
 	for cnt:=uint(0); cnt<ch.Consensus.Window && n!=nil; cnt++ {
