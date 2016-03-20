@@ -127,7 +127,7 @@ func InitConfig() {
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
-	CFG.TXRoute.MinVoutValue = 500*CFG.TXRoute.FeePerByte // Equivalent of 500 bytes tx fee
+	CFG.TXRoute.MinVoutValue = 0
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
 	CFG.Memory.MaxCachedBlocks = 500
