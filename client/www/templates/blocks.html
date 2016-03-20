@@ -1,6 +1,6 @@
 <table class="blocks bord" id="blkstab">
 	<col width="70">
-	<col width="120">
+	<col width="85">
 	<col>
 	<col width="50">
 	<col width="50">
@@ -14,7 +14,7 @@
 	<th colspan="4">Timing in <i>ms</i>
 <tr>
 	<th>Height
-	<th>Received
+	<th id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
 	<th>Hash
 	<th align="right">TXs
 	<th align="right">kB
@@ -29,6 +29,14 @@
 </tr>
 </table>
 <script>
+
+var show_timestamp = false
+
+function swap_time_mode() {
+	show_timestamp = !show_timestamp
+	ts_rcvd_lab.innerText = show_timestamp ? 'T.stamp' : 'Received'
+	refreshblocks()
+}
 
 var mid = null
 
@@ -72,7 +80,7 @@ function refreshblocks() {
 				var td, row = blkstab.insertRow(-1)
 
 				row.className = 'hov hand'
-				row.title = "Rcvd at " + tim2str(cs[i].Received, true) + " with TS " + tim2str(cs[i].Timestamp)
+				row.title = "Rcvd at " + tim2str(cs[i].Received) + " with TS " + tim2str(cs[i].Timestamp)
 
 				td = row.insertCell(-1)
 				td.className = 'bold'
@@ -83,7 +91,11 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'i'
 				td.name = cs[i].Received
-				do_rcvd_time(td)
+				if (show_timestamp) {
+					td.innerText = tim2str(cs[i].Timestamp, true)
+				} else {
+					do_rcvd_time(td)
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
@@ -162,7 +174,7 @@ blno.addEventListener("lastblock", function(e) {
 	if (e.block.Height!=_lblo) {
 		_lblo = e.block.Height
 		refreshblocks() // refersh the table for each new block notifiaction
-	} else {
+	} else if (!show_timestamp) {
 		for (var i=2; i<blkstab.rows.length; i++) {
 			do_rcvd_time(blkstab.rows[i].cells[1])
 		}
