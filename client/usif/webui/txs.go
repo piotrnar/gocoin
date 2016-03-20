@@ -263,7 +263,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<own>", v.Own, "</own>")
 		fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
 		fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
-		fmt.Fprint(w, "<sigops>", v.Tx.Sigops, "</sigops>")
+		fmt.Fprint(w, "<sigops>", v.Sigops, "</sigops>")
 		fmt.Fprint(w, "<sentcnt>", v.SentCnt, "</sentcnt>")
 		fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
 		fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
