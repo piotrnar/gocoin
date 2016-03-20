@@ -52,9 +52,13 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 
 	common.Last.Mutex.Lock()
 
-	time_now := uint(time.Now().Unix())
+	r.Curtime = time_now
+	r.Mintime = uint(common.Last.Block.GetMedianTimePast()) + 1
+	if r.Curtime < r.Mintime {
+		println("adjust curtime", r.Curtime, "->" r.Mintime)
+	}
 	height := common.Last.Block.Height+1
-	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(time_now))
+	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(r.Curtime))
 	target := btc.SetCompact(bits).Bytes()
 
 	r.Capabilities = []string{"proposal"}
@@ -65,14 +69,15 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Coinbaseaux.Flags = ""
 	r.Longpollid = r.PreviousBlockHash
 	r.Target = hex.EncodeToString(append(zer[:32-len(target)], target...))
-	r.Mintime = uint(common.Last.Block.GetMedianTimePast()) + 1
 	r.Mutable = []string{"time","transactions","prevblock"}
 	r.Noncerange = "00000000ffffffff"
 	r.Sigoplimit = 20000
 	r.Sizelimit = btc.MAX_BLOCK_SIZE
-	r.Curtime = time_now
 	r.Bits = fmt.Sprintf("%08x", bits)
 	r.Height = uint(height)
+
+	last_given_time = uint32(r.Curtime)
+	last_given_mintime = uint32(r.Mintime)
 
 	common.Last.Mutex.Unlock()
 }
