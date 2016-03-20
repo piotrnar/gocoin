@@ -77,12 +77,16 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 			b.FeeSPB = float64(b.Reward-btc.GetBlockReward(end.Height)) / float64(len(bl)-block.TxOffset-cbaselen)
 		}
 
+		common.BlockChain.BlockIndexAccess.Lock()
+		node := common.BlockChain.BlockIndex[end.BlockHash.BIdx()]
+		common.BlockChain.BlockIndexAccess.Unlock()
+
 		network.MutexRcv.Lock()
 		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]
 		network.MutexRcv.Unlock()
 
 		b.Received = uint32(rb.Time.Unix())
-		b.Sigops = rb.SigopCnt
+		b.Sigops = int(node.Sigops)
 
 		if rb.TmDownload!=0 {
 			b.TimeDl = int(rb.TmDownload/time.Millisecond)

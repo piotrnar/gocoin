@@ -13,7 +13,6 @@ type OneReceivedBlock struct {
 	TmQueuing time.Duration  // how long it took to start processing
 	TmAccept time.Duration   // how long it took to commit this block
 	Cnt uint
-	SigopCnt int
 }
 
 type BlockRcvd struct {
