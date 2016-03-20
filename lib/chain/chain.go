@@ -145,8 +145,8 @@ func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
 // Return blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
 	ch.BlockIndexAccess.Lock()
-	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d\n",
-		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height)
+	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d  MedianTime:%d\n",
+		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
