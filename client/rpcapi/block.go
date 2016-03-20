@@ -3,6 +3,7 @@ package rpcapi
 import (
 	"time"
 	"sync"
+	"strings"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/network"
@@ -59,9 +60,16 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 	RpcBlocks <- bs
 	bs.Done.Wait()
 	if bs.Error != "" {
-		println("submiting block error:", bs.Error)
 		//resp.Error = RpcError{Code: -10, Message: bs.Error}
-		resp.Result = bs.Error //"inconclusive"
+		idx := strings.Index(bs.Error, "- RPC_Result:")
+		if idx == -1 {
+			resp.Result = "inconclusive"
+		} else {
+			resp.Result = bs.Error[idx+13:]
+		}
+		println("submiting block error:", bs.Error)
+		println("submiting block result:", resp.Result)
+		
 		println("curre time:", time.Now().Unix())
 		println("block time:", bs.Block.BlockTime())
 		println("lastg time:", last_given_time)
