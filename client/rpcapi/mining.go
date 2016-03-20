@@ -109,7 +109,7 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 		if _, ok := txs_so_far[tx.Hash.Hash]; ok {
 			continue
 		}
-		
+
 		if totlen+len(v.Data) > btc.MAX_BLOCK_SIZE {
 			println("Too many txs - limit to 999000 bytes")
 			return
@@ -120,7 +120,7 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 		var depends []uint
 		for i := range tx.TxIn {
 			unsp, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-			if unsp==nil { 
+			if unsp==nil {
 				// not found in the confirmed blocks
 				// check if txid is in txs_so_far
 				if idx, ok := txs_so_far[tx.TxIn[i].Input.Hash]; !ok {
@@ -141,7 +141,7 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 }
 
 func GetTransactions() (res []OneTransaction, totfees uint64) {
-	
+
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
@@ -149,7 +149,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 	var sorted sortedTxList
 	txs_so_far = make(map[[32]byte]uint)
 	totlen = 0
-	println("\ngetting txs from the pool of", len(network.TransactionsToSend), "...")
+	//println("\ngetting txs from the pool of", len(network.TransactionsToSend), "...")
 	for {
 		new_piece := get_next_tranche_of_txs()
 		if new_piece.Len()==0 {
@@ -165,7 +165,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 		sorted = append(sorted, new_piece...)
 	}
 	if len(txs_so_far)!=len(network.TransactionsToSend) {
-		println("txs_so_far len", len(txs_so_far))
+		println("ERROR: txs_so_far len", len(txs_so_far), " - please report!")
 	}
 	txs_so_far = nil // leave it for the garbage collector
 
@@ -178,10 +178,9 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 		res[cnt].Sigops = v.Tx.Sigops
 		res[cnt].Depends = v.depends
 		totfees += v.Fee
-		println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat,
-			"  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))
+		//println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat, "  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))
 	}
 
-	println("returning transacitons:", totlen, len(res))
+	//println("returning transacitons:", totlen, len(res))
 	return
 }
