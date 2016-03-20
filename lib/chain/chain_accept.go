@@ -74,6 +74,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
 			ch.BlockIndexAccess.Unlock()
 		} else {
+			cur.Sigops = bl.Sigops
 			// ProcessBlockTransactions succeeded, so save the block as "trusted".
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)

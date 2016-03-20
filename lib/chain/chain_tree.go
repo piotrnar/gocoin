@@ -17,6 +17,7 @@ type BlockTreeNode struct {
 
 	BlockSize uint32 // if this is zero, only header is known so far
 	TxCount uint32
+	Sigops uint32
 
 	BlockHeader [80]byte
 }
@@ -69,6 +70,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.DeleteBranch(nxt)
 			break
 		}
+		nxt.Sigops = bl.Sigops
 		if !trusted {
 			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}
