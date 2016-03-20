@@ -143,7 +143,14 @@ func (c *one_net_conn) block(d []byte) {
 	}
 
 	bl.BuildTxList()
-	if !bytes.Equal(btc.GetMerkel(bl.Txs), bl.MerkleRoot()) {
+	merkel, mutated := btc.GetMerkel(bl.Txs)
+	if mutated {
+		fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
+		c.setbroken(true)
+		return
+	}
+
+	if !bytes.Equal(, bl.MerkleRoot()) {
 		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return
