@@ -17,7 +17,7 @@ type OneTransaction struct {
 	Hash string `json:"hash"`
 	Depends []uint `json:"depends"`
 	Fee uint64 `json:"fee"`
-	Sigops uint `json:"sigops"`
+	Sigops uint32 `json:"sigops"`
 }
 
 type GetBlockTemplateResp struct {
@@ -71,7 +71,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Target = hex.EncodeToString(append(zer[:32-len(target)], target...))
 	r.Mutable = []string{"time","transactions","prevblock"}
 	r.Noncerange = "00000000ffffffff"
-	r.Sigoplimit = 20000
+	r.Sigoplimit = btc.MAX_BLOCK_SIGOPS
 	r.Sizelimit = btc.MAX_BLOCK_SIZE
 	r.Bits = fmt.Sprintf("%08x", bits)
 	r.Height = uint(height)

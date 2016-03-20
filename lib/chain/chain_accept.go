@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"errors"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -212,7 +213,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					done <- true
 				} else {
 					go func (sig []byte, prv []byte, i int, tx *btc.Tx) {
-						done <- script.VerifyTxScript(sig, prv, i, tx, bl.VerifyFlags)
+						var sigops uint32
+						res := script.VerifyTxScriptExt(sig, prv, i, tx, bl.VerifyFlags, &sigops)
+						atomic.AddUint32(&bl.Sigops, uint32(sigops))
+						done <- res
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
@@ -260,6 +264,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 	if sumblockin < sumblockout {
 		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
+	}
+
+	if bl.Sigops > btc.MAX_BLOCK_SIGOPS {
+		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk")
 	}
 
 	var rec *QdbRec

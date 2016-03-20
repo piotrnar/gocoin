@@ -18,6 +18,7 @@ type Block struct {
 	VerifyFlags uint32
 	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
+	Sigops uint32
 }
 
 

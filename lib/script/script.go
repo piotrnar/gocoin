@@ -32,7 +32,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 }
 
 
-func VerifyTxScriptExt(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, sigops *uint) bool {
+func VerifyTxScriptExt(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, sigops *uint32) bool {
 	if DBG_SCR {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -147,7 +147,7 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigops *uint) bool {
+func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigops *uint32) bool {
 	if DBG_SCR {
 		fmt.Println("script len", len(p))
 	}

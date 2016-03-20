@@ -40,6 +40,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Received uint32
 		TimeDl, TimeVer, TimeQue int
 		WasteCnt uint
+		Sigops int
 	}
 
 	var blks []*one_block
@@ -81,6 +82,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		network.MutexRcv.Unlock()
 
 		b.Received = uint32(rb.Time.Unix())
+		b.Sigops = rb.SigopCnt
 
 		if rb.TmDownload!=0 {
 			b.TimeDl = int(rb.TmDownload/time.Millisecond)

@@ -69,7 +69,7 @@ type OneTxToSend struct {
 	*btc.Tx
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
-	Sigops uint
+	Sigops uint32
 }
 
 
@@ -323,7 +323,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	// Verify scripts
-	var sigopts uint
+	var sigopts uint32
 	for i := range tx.TxIn {
 		tx_ok := script.VerifyTxScriptExt(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx,
 			script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV, &sigopts)

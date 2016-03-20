@@ -37,6 +37,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	if e == nil {
 		// new block accepted
 		newbl.TmAccept = time.Now().Sub(sta)
+		newbl.SigopCnt = int(bl.Sigops)
 
 		common.RecalcAverageBlockSize(false)
 
@@ -172,6 +173,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	if e == nil {
 		e = common.BlockChain.AcceptBlock(msg.Block)
 		rb.TmAccept = time.Now().Sub(sta)
+		rb.SigopCnt = int(msg.Block.Sigops)
 	}
 	if e != nil {
 		common.CountSafe("RPCBlockError")
@@ -324,7 +326,7 @@ func main() {
 		}
 
 		for k, v := range common.BlockChain.BlockIndex {
-			network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
+			network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0), SigopCnt:-1}
 		}
 		network.LastCommitedHeader = common.Last.Block
 

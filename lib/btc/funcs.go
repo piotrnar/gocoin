@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/hex"
 )
 
 func allzeros(b []byte) bool {
