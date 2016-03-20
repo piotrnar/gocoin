@@ -54,6 +54,9 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 
 	r.Curtime = uint(time.Now().Unix())
 	r.Mintime = uint(common.Last.Block.GetMedianTimePast()) + 1
+	if r.Curtime < r.Mintime {
+		r.Curtime = r.Mintime
+	}
 	height := common.Last.Block.Height+1
 	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(r.Curtime))
 	target := btc.SetCompact(bits).Bytes()
