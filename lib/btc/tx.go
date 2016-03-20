@@ -46,9 +46,6 @@ type Tx struct {
 	// These two fields should be set in block.go:
 	Size uint32
 	Hash *Uint256
-
-	// This field is updated when calling script.VerifyTxScript() with COUNT_SIGOPS flag
-	Sigops uint
 }
 
 
