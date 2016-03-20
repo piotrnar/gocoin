@@ -60,8 +60,8 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 	bs.Done.Wait()
 	if bs.Error != "" {
 		println("submiting block error:", bs.Error)
-		resp.Error = RpcError{Code: -10, Message: bs.Error}
-		resp.Result = "inconclusive"
+		//resp.Error = RpcError{Code: -10, Message: bs.Error}
+		resp.Result = bs.Error //"inconclusive"
 		println("curre time:", time.Now().Unix())
 		println("block time:", bs.Block.BlockTime())
 		println("lastg time:", last_given_time)
