@@ -68,15 +68,16 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 			resp.Result = bs.Error[idx+13:]
 		}
 		println("submiting block error:", bs.Error)
-		println("submiting block result:", resp.Result)
+		println("submiting block result:", resp.Result.(string))
 		
-		println("curre time:", time.Now().Unix())
-		println("block time:", bs.Block.BlockTime())
-		println("lastg time:", last_given_time)
-		println("lastg mint:", last_given_mintime)
+		print("time_now:", time.Now().Unix())
+		print("  cur_block_ts:", bs.Block.BlockTime())
+		print("  last_given_now:", last_given_time)
+		print("  last_given_min:", last_given_mintime)
 		common.Last.Mutex.Lock()
-		println("prevb time:", common.Last.Block.Timestamp())
+		print("  prev_block_ts:", common.Last.Block.Timestamp())
 		common.Last.Mutex.Unlock()
+		println()
 
 		return
 	}
