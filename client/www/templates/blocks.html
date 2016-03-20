@@ -129,30 +129,38 @@ function refreshblocks() {
 				td.className = "i"
 				td.innerText = miner
 
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].Sigops>=0) td.innerText = cs[i].Sigops
+				if (cs[i].Sigops!=-1) {
+					td = row.insertCell(-1)
+					td.style.textAlign = 'right'
+					td.className = 'i'
+					td.innerText = cs[i].Sigops
 
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].TimeDl>=0) td.innerText = cs[i].TimeDl
+					td = row.insertCell(-1)
+					td.style.textAlign = 'right'
+					td.className = 'i'
+					td.innerText = cs[i].TimeDl
 
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].TimeDl>=0) td.innerText = cs[i].TimeQue
+					td = row.insertCell(-1)
+					td.style.textAlign = 'right'
+					td.className = 'i'
+					td.innerText = cs[i].TimeQue
 
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].TimeVer>=0) td.innerText = cs[i].TimeVer
+					td = row.insertCell(-1)
+					td.style.textAlign = 'right'
+					td.className = 'i'
+					td.innerText = cs[i].TimeVer
 
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].TimeVer>0) td.innerText = cs[i].WasteCnt
+					td = row.insertCell(-1)
+					td.style.textAlign = 'right'
+					td.className = 'i'
+					td.innerText = cs[i].WasteCnt
+				} else {
+					td = row.insertCell(-1)
+					td = row.insertCell(-1)
+					td = row.insertCell(-1)
+					td = row.insertCell(-1)
+					td = row.insertCell(-1)
+				}
 
 				onc(row, i)
 			}
