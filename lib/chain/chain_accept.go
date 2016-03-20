@@ -11,7 +11,7 @@ import (
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
 // been verified already by the client while being taken to its memory pool
-var TrustedTxChecker func(*btc.Uint256) bool
+var TrustedTxChecker func(*btc.Uint256, *uint32) bool
 
 
 func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *BlockChanges, e error) {
@@ -106,6 +106,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
+	var sigops uint32
 
 	if int(changes.Height)+UnwindBufferMaxHistory >= int(changes.LastKnownHeight) {
 		changes.UndoData = make(map[[32]byte] *QdbRec)
@@ -128,7 +129,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			tx_trusted := bl.Trusted
-			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash) {
+			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash, &sigops) {
+				atomic.AddUint32(&bl.Sigops, uint32(sigops))
 				tx_trusted = true
 			}
 
