@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"fmt"
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 type BlockSubmited struct {
@@ -61,6 +62,14 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		println("submiting block error:", bs.Error)
 		resp.Error = RpcError{Code: -10, Message: bs.Error}
 		resp.Result = "inconclusive"
+		println("curre time:", time.Now().Unix())
+		println("block time:", bs.Block.BlockTime())
+		println("lastg time:", last_given_time)
+		println("lastg mint:", last_given_mintime)
+		common.Last.Mutex.Lock()
+		println("prevb time:", common.Last.Block.Timestamp())
+		common.Last.Mutex.Unlock()
+
 		return
 	}
 
@@ -77,3 +86,5 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		}
 	}
 }
+
+var last_given_time, last_given_mintime uint32
