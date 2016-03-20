@@ -23,14 +23,16 @@ const (
 	VER_MINDATA = 1<<6
 	VER_CLTV = 1<<7
 
-
-	COUNT_SIGOPS = 1<<31
-
 	LOCKTIME_THRESHOLD = 500000000
 )
 
 
 func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) bool {
+	return VerifyTxScriptExt(sigScr, pkScr, i, tx, ver_flags, nil)
+}
+
+
+func VerifyTxScriptExt(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, sigops *uint) bool {
 	if DBG_SCR {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -39,7 +41,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 	}
 
 	var st, stP2SH scrStack
-	if !evalScript(sigScr, &st, tx, i, ver_flags) {
+	if !evalScript(sigScr, &st, tx, i, ver_flags, sigops) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -65,7 +67,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 		}
 	}
 
-	if !evalScript(pkScr, &st, tx, i, ver_flags) {
+	if !evalScript(pkScr, &st, tx, i, ver_flags, sigops) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -112,7 +114,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, &stP2SH, tx, i, ver_flags) {
+		if !evalScript(pubKey2, &stP2SH, tx, i, ver_flags, sigops) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
@@ -145,7 +147,7 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32) bool {
+func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigops *uint) bool {
 	if DBG_SCR {
 		fmt.Println("script len", len(p))
 	}
@@ -777,8 +779,8 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 					if len(si)>0 {
 						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
-						if (ver_flags&COUNT_SIGOPS)!=0 {
-							tx.Sigops++
+						if sigops!=nil {
+							*sigops++
 						}
 						ok = btc.EcdsaVerify(pk, si, sh)
 					}
@@ -863,8 +865,8 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 						if len(si) > 0 {
 							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
-							if (ver_flags&COUNT_SIGOPS)!=0 {
-								tx.Sigops++
+							if sigops!=nil {
+								*sigops++
 							}
 							if btc.EcdsaVerify(pk, si, sh) {
 								isig++
