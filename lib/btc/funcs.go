@@ -4,11 +4,13 @@ import (
 	"os"
 	"io"
 	"fmt"
+	"bytes"
 	"errors"
 	"strings"
 	"strconv"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 )
 
 func allzeros(b []byte) bool {
@@ -95,7 +97,7 @@ func VULe(b []byte) (le uint64, var_int_siz int) {
 }
 
 
-func GetMerkel(txs []*Tx) ([]byte) {
+func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
 	mtr := make([][]byte, len(txs))
 	for i := range txs {
 		mtr[i] = txs[i].Hash.Hash[:]
@@ -108,12 +110,16 @@ func GetMerkel(txs []*Tx) ([]byte) {
 			} else {
 				i2 = siz-1
 			}
+			if i!=i2 && bytes.Equal(mtr[j+i], mtr[j+i2]) {
+				mutated = true
+			}
 			h := Sha2Sum(append(mtr[j+i], mtr[j+i2]...))
 			mtr = append(mtr, h[:])
 		}
 		j += siz
 	}
-	return mtr[len(mtr)-1]
+	res = mtr[len(mtr)-1]
+	return
 }
 
 
