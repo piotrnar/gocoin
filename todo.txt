@@ -21,6 +21,7 @@ Wallet:
 * Write some automated tests
 
 Core lib:
+* Implement script.GetSigOpCount() and count sigops using it (instead of real ECDSA ops)
 * Add checking timestamps (everywhere) against GetMedianTimePast()
 * CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")
 * Verify if we dont need to check for "sigoplimit" in one transaciton
