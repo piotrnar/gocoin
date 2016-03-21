@@ -3,7 +3,6 @@ package chain
 import (
 	"fmt"
 	"errors"
-	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -221,7 +220,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				}
 
 				if btc.IsP2SH(tout.Pk_script) {
-					atomic.AddUint32(&bl.Sigops, uint32(btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig)))
+					bl.Sigops += uint32(btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
 				}
 
 				txinsum += tout.Value
