@@ -32,10 +32,6 @@ a.menuat {
 	font-style:italic;
 }
 
-.font11 {
-	font-size:11px;
-}
-
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;
@@ -139,7 +135,12 @@ input[type=button]:hover, input[type=submit]:hover {
 }
 
 table.blocks {
-	font-size:14px;
+	font-size:13px;
+	width:100%;
+}
+
+.block_hash {
+	font-size:10px;
 }
 
 table.netcons {
