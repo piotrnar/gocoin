@@ -270,7 +270,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	}
 
 	if bl.Sigops > btc.MAX_BLOCK_SIGOPS {
-		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk")
+		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 	}
 
 	var rec *QdbRec
