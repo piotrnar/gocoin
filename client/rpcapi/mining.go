@@ -111,7 +111,7 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 		}
 
 		if totlen+len(v.Data) > btc.MAX_BLOCK_SIZE {
-			println("Too many txs - limit to 999000 bytes")
+			//println("Too many txs - limit to 999000 bytes")
 			return
 		}
 		totlen += len(v.Data)
@@ -164,9 +164,9 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 
 		sorted = append(sorted, new_piece...)
 	}
-	if len(txs_so_far)!=len(network.TransactionsToSend) {
+	/*if len(txs_so_far)!=len(network.TransactionsToSend) {
 		println("ERROR: txs_so_far len", len(txs_so_far), " - please report!")
-	}
+	}*/
 	txs_so_far = nil // leave it for the garbage collector
 
 	res = make([]OneTransaction, len(sorted))
