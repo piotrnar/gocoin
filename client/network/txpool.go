@@ -69,7 +69,7 @@ type OneTxToSend struct {
 	*btc.Tx
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
-	Sigops uint32
+	Sigops uint
 }
 
 
@@ -323,21 +323,24 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	// Verify scripts
-	var sigopts uint32
+	sigops2 := tx.GetLegacySigOpCount()
 	for i := range tx.TxIn {
-		tx_ok := script.VerifyTxScriptExt(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx,
-			script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV, &sigopts)
-		if !tx_ok {
+		if !script.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx,
+			script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
 			return
 		}
+
+		if btc.IsP2SH(pos[i].Pk_script) {
+			sigops2 += btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
+		}
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
 		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem,
-		Sigops:sigopts}
+		Sigops:sigops2}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {
@@ -470,7 +473,7 @@ func txChecker(h *btc.Uint256, sigops *uint32) bool {
 	TxMutex.Lock()
 	rec, ok := TransactionsToSend[h.BIdx()]
 	if sigops!=nil && ok {
-		*sigops = rec.Sigops
+		*sigops = uint32(rec.Sigops)
 	}
 	TxMutex.Unlock()
 	if ok && rec.Own!=0 {

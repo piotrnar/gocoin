@@ -17,7 +17,7 @@ type OneTransaction struct {
 	Hash string `json:"hash"`
 	Depends []uint `json:"depends"`
 	Fee uint64 `json:"fee"`
-	Sigops uint32 `json:"sigops"`
+	Sigops uint `json:"sigops"`
 }
 
 type GetBlockTemplateResp struct {
