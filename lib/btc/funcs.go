@@ -357,3 +357,55 @@ func GetOpcode(b []byte) (opcode int, ret []byte, pc int, e error) {
 
 	return
 }
+
+func GetSigOpCount(scr []byte, fAccurate bool) (n uint) {
+	var pc int
+	var lastOpcode byte = 0xff
+	for pc < len(scr) {
+		opcode, _, le, e := GetOpcode(scr[pc:])
+		if e != nil {
+			break
+		}
+		pc += le
+		if opcode == 0xac/*OP_CHECKSIG*/ || opcode == 0xad/*OP_CHECKSIGVERIFY*/ {
+			n++
+		} else if opcode == 0xae/*OP_CHECKMULTISIG*/ || opcode == 0xaf/*OP_CHECKMULTISIGVERIFY*/ {
+			if fAccurate && lastOpcode >= 0x51/*OP_1*/ && lastOpcode <= 0x60/*OP_16*/ {
+				n += uint(DecodeOP_N(lastOpcode))
+			} else {
+				n += MAX_PUBKEYS_PER_MULTISIG
+			}
+		}
+		lastOpcode = byte(opcode)
+	}
+	return
+}
+
+func DecodeOP_N(opcode byte) int {
+	if opcode == 0x00/*OP_0*/ {
+		return 0
+	}
+	return int(opcode) - 0x50/*OP_1-1*/
+}
+
+
+func GetP2SHSigOpCount(scr []byte) uint {
+	// This is a pay-to-script-hash scriptPubKey;
+	// get the last item that the scr
+	// pushes onto the stack:
+	var pc, opcode, le int
+	var e error
+	var data []byte
+	for pc < len(scr) {
+		opcode, data, le, e = GetOpcode(scr[pc:])
+		if e != nil {
+			return 0
+		}
+		pc += le
+		if opcode > 0x60/*OP_16*/ {
+			return 0
+		}
+	}
+
+	return GetSigOpCount(data, true)
+}
