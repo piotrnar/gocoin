@@ -11,7 +11,7 @@ import (
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
 // been verified already by the client while being taken to its memory pool
-var TrustedTxChecker func(*btc.Uint256, *uint32) bool
+var TrustedTxChecker func(*btc.Uint256) bool
 
 
 func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *BlockChanges, e error) {
@@ -125,13 +125,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
 
+		bl.Sigops += uint32(bl.Txs[i].GetLegacySigOpCount())
+
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			tx_trusted := bl.Trusted
-			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash, &bl.Sigops) {
+			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash) {
 				tx_trusted = true
-			} else {
-				bl.Sigops = uint32(bl.Txs[i].GetLegacySigOpCount())
 			}
 
 			scripts_ok := true
@@ -216,11 +216,12 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					done <- true
 				} else {
 					go func (sig []byte, prv []byte, i int, tx *btc.Tx) {
-						if btc.IsP2SH(prv) {
-							atomic.AddUint32(&bl.Sigops, uint32(btc.GetP2SHSigOpCount(sig)))
-						}
 						done <- script.VerifyTxScript(sig, prv, i, tx, bl.VerifyFlags)
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
+				}
+
+				if btc.IsP2SH(tout.Pk_script) {
+					atomic.AddUint32(&bl.Sigops, uint32(btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig)))
 				}
 
 				txinsum += tout.Value

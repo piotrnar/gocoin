@@ -469,12 +469,9 @@ func TxMined(tx *btc.Tx) {
 }
 
 
-func txChecker(h *btc.Uint256, sigops *uint32) bool {
+func txChecker(h *btc.Uint256) bool {
 	TxMutex.Lock()
 	rec, ok := TransactionsToSend[h.BIdx()]
-	if sigops!=nil && ok {
-		*sigops = uint32(rec.Sigops)
-	}
 	TxMutex.Unlock()
 	if ok && rec.Own!=0 {
 		return false // Assume own txs as non-trusted
