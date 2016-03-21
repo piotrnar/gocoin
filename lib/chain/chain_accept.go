@@ -106,7 +106,6 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
-	var sigops uint32
 
 	if int(changes.Height)+UnwindBufferMaxHistory >= int(changes.LastKnownHeight) {
 		changes.UndoData = make(map[[32]byte] *QdbRec)
@@ -129,9 +128,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			tx_trusted := bl.Trusted
-			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash, &sigops) {
-				atomic.AddUint32(&bl.Sigops, uint32(sigops))
+			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash, &bl.Sigops) {
 				tx_trusted = true
+			} else {
+				bl.Sigops = uint32(bl.Txs[i].GetLegacySigOpCount())
 			}
 
 			scripts_ok := true
@@ -216,10 +216,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					done <- true
 				} else {
 					go func (sig []byte, prv []byte, i int, tx *btc.Tx) {
-						var sigops uint32
-						res := script.VerifyTxScriptExt(sig, prv, i, tx, bl.VerifyFlags, &sigops)
-						atomic.AddUint32(&bl.Sigops, uint32(sigops))
-						done <- res
+						if btc.IsP2SH(prv) {
+							atomic.AddUint32(&bl.Sigops, uint32(btc.GetP2SHSigOpCount(sig)))
+						}
+						done <- script.VerifyTxScript(sig, prv, i, tx, bl.VerifyFlags)
 					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
 				}
 
