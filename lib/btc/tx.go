@@ -440,3 +440,14 @@ func (txin *TxIn) GetKeyAndSig() (sig *Signature, key *PublicKey, e error) {
 	key, e = NewPublicKey(txin.ScriptSig[1+offs:1+offs+txin.ScriptSig[offs]])
 	return
 }
+
+
+func (tx *Tx) GetLegacySigOpCount() (nSigOps uint) {
+	for i:=0; i<len(tx.TxIn); i++ {
+		nSigOps += GetSigOpCount(tx.TxIn[i].ScriptSig, false)
+	}
+	for i:=0; i<len(tx.TxOut); i++ {
+		nSigOps += GetSigOpCount(tx.TxOut[i].Pk_script, false)
+	}
+	return
+}
