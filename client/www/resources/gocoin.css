@@ -139,8 +139,29 @@ table.blocks {
 	width:100%;
 }
 
-.block_hash {
+td.block_hash {
 	font-size:10px;
+}
+
+td.blstat {
+	font-size:10px;
+	font-style:italic;
+}
+
+td.blsigops {
+	color:#c00000
+}
+
+td.blreward {
+	color:#008000;
+	font-family: monospace;
+	text-align: right;
+}
+
+td.blspb {
+	color:#0000c0;
+	font-family: monospace;
+	text-align: right;
 }
 
 table.netcons {

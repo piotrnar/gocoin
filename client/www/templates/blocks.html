@@ -1,27 +1,30 @@
 <table class="blocks bord" id="blkstab">
 <tr>
 	<th colspan="3">Block info
-	<th colspan="2">Block size
+	<th colspan="3">Block size
 	<th colspan="4">Mining info
-	<th colspan="5">Timing in <i>ms</i>
+	<th>
+	<th colspan="3">Timing in <i>ms</i>
 <tr>
 	<th width="52">Height
 	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
 	<th>Hash
 	<th width="30" align="right">TXs
-	<th width="35" align="right">kB
+	<th width="20" align="right">SiOps
+	<th width="35" align="right">kByte
 	<th width="30">BTC
 	<th width="30">SPB
 	<th width="20">Ver
 	<th align="left">Miner
-	<th width="20" align="right">sig
+	<th width="10">
 	<th width="20" align="right">dld
 	<th width="20" align="right">que
 	<th width="20" align="right">ver
-	<th width="20">ohd
 </tr>
 </table>
 <script>
+const MINER_ID_COLUMN = 9
+
 var vermap = new Array()
 var current_version_index = 0
 var version_strings = [".", "*", "-", "#", "/"]
@@ -38,12 +41,12 @@ var mid = null
 
 function hlminer(i) {
 	var row = blkstab.rows[2+i]
-	mid = row.cells[8].innerHTML
+	mid = row.cells[MINER_ID_COLUMN].innerHTML
 	if (row.className.indexOf("own")!=-1) {
 		mid = null
 	}
 	for (var i=2; i<blkstab.rows.length; i++) {
-		if (blkstab.rows[i].cells[8].innerHTML==mid) {
+		if (blkstab.rows[i].cells[MINER_ID_COLUMN].innerHTML==mid) {
 			blkstab.rows[i].classList.add("own")
 		} else {
 			blkstab.rows[i].classList.remove("own")
@@ -104,15 +107,20 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
+				td.className = 'blsigops'
+				if (cs[i].Sigops>0)  td.innerText = cs[i].Sigops
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
 				td.className = 'bold'
 				td.innerText = (cs[i].Size/1000.0).toFixed(1)
 
 				td = row.insertCell(-1)
-				td.style.textAlign = 'center'
+				td.className = 'blreward'
 				td.innerText = (cs[i].Reward/1e8).toFixed(2)
 
 				td = row.insertCell(-1)
-				td.style.textAlign = 'center'
+				td.className = 'blspb'
 				td.innerText = cs[i].FeeSPB.toFixed(1)
 
 				td = row.insertCell(-1)
@@ -131,28 +139,23 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].Sigops>0)  td.innerText = cs[i].Sigops
+				td.className = 'blstat'
+				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
+				td.className = 'blstat'
 				if (cs[i].TimeDl>0)  td.innerText = cs[i].TimeDl
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
+				td.className = 'blstat'
 				if (cs[i].TimeQue>0)  td.innerText = cs[i].TimeQue
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
+				td.className = 'blstat'
 				if (cs[i].TimeVer>0)  td.innerText = cs[i].TimeVer
-
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'i'
-				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				onc(row, i)
 			}
