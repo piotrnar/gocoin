@@ -117,12 +117,12 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
-				td.title = cs[i].Version
 				var vx = vermap[cs[i].Version]
 				if (isNaN(vx)) {
 					vx = vermap[cs[i].Version] = current_version_index++
 				}
 				td.innerText = version_strings[vx]
+				td.title = '0x' + cs[i].Version.toString(16)
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
