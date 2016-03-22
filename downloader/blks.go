@@ -150,7 +150,7 @@ func (c *one_net_conn) block(d []byte) {
 		return
 	}
 
-	if !bytes.Equal(, bl.MerkleRoot()) {
+	if !bytes.Equal(merkel, bl.MerkleRoot()) {
 		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
 		c.setbroken(true)
 		return
