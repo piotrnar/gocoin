@@ -143,7 +143,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		return
 	}
 
-	best_bl_ch := len(best_block.Childs)
+	//best_bl_ch := len(best_block.Childs)
 	//last_block = common.BlockChain.BlockTreeEnd
 
 	var resp []byte
@@ -153,6 +153,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
 		if r := recover(); r != nil {
 			common.CountSafe("GetHeadersOrphBlk")
+			/*
 			err, ok := r.(error)
 			if !ok {
 				err = fmt.Errorf("pkg: %v", r)
@@ -167,6 +168,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 			if last_block!=nil {
 				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String(), len(last_block.Childs))
 			}
+			*/
 		}
 
 		common.BlockChain.BlockIndexAccess.Unlock()
