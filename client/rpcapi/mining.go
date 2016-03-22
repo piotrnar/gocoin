@@ -99,6 +99,7 @@ func (tl sortedTxList) Less(i, j int) bool { return tl[j].Fee < tl[i].Fee }
 
 var txs_so_far map[[32]byte] uint
 var totlen int
+var sigops uint
 
 func get_next_tranche_of_txs() (res sortedTxList) {
 	var unsp *btc.TxOut
@@ -115,6 +116,12 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 			return
 		}
 		totlen += len(v.Data)
+
+		if sigops + v.Sigops > btc.MAX_BLOCK_SIGOPS {
+			//println("Too many sigops - limit to 999000 bytes")
+			return
+		}
+		sigops += v.Sigops
 
 		all_inputs_found = true
 		var depends []uint
@@ -149,6 +156,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 	var sorted sortedTxList
 	txs_so_far = make(map[[32]byte]uint)
 	totlen = 0
+	sigops = 0
 	//println("\ngetting txs from the pool of", len(network.TransactionsToSend), "...")
 	for {
 		new_piece := get_next_tranche_of_txs()
