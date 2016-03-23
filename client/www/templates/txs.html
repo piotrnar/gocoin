@@ -284,6 +284,7 @@ function decode_tx() {
 				} else {
 					s += " (confirmed in #"+xval(is[i], "block")+")"
 				}
+				s += " seq=" + parseInt(xval(is[i], "sequence")).toString(16)
 				s += "\n"
 			}
 			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"

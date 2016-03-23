@@ -1,17 +1,14 @@
 Downloader:
-* After a lower block time outs, retry it instead of trying higher one
-* AvgBLen is not calclated properly (it shoudl be over last N blocks, not since block #1)
-* Check a possibility to speed it up by disabling the sync
-* Avoid re-building of UTXO-db while using "-b"
 
 Client:
 * Implement RBF in the mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
-* Remove confirned TXs from the rejected list
-* Seems that a single stealth metadata index can have more than one ephemkey (find out how to handle it)
-* Do not list unmatured coinbase outputs in the balance (???)
+* StealthAddr: seems that a single metadata index can have more than one ephemkey (find out how to handle it)
 * Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 * Improve the database folder locking in Linux
+
+ Probably not to do:
+* Do not list unmatured coinbase outputs in the balance
 * Implement "mempool" network command
 
 Tools:

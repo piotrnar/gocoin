@@ -111,6 +111,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 			} else {
 				w.Write([]byte("<status>UNKNOWN INPUT</status>"))
 			}
+			fmt.Fprint(w, "<sequence>", tx.TxIn[i].Sequence, "</sequence>")
 			w.Write([]byte("</input>"))
 		}
 		w.Write([]byte("</inputs>"))
