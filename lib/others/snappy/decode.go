@@ -13,8 +13,13 @@ import (
 var (
 	// ErrCorrupt reports that the input is invalid.
 	ErrCorrupt = errors.New("snappy: corrupt input")
+	// ErrTooLarge reports that the uncompressed length is too large.
+	ErrTooLarge = errors.New("snappy: decoded block is too large")
 	// ErrUnsupported reports that the input isn't supported.
 	ErrUnsupported = errors.New("snappy: unsupported input")
+
+	errUnsupportedCopy4Tag      = errors.New("snappy: unsupported COPY_4 tag")
+	errUnsupportedLiteralLength = errors.New("snappy: unsupported literal length")
 )
 
 // DecodedLen returns the length of the decoded block.
@@ -27,11 +32,13 @@ func DecodedLen(src []byte) (int, error) {
 // that the length header occupied.
 func decodedLen(src []byte) (blockLen, headerLen int, err error) {
 	v, n := binary.Uvarint(src)
-	if n == 0 {
+	if n <= 0 || v > 0xffffffff {
 		return 0, 0, ErrCorrupt
 	}
-	if uint64(int(v)) != v {
-		return 0, 0, errors.New("snappy: decoded block is too large")
+
+	const wordSize = 32 << (^uint(0) >> 32 & 1)
+	if wordSize == 32 && v > 0x7fffffff {
+		return 0, 0, ErrTooLarge
 	}
 	return int(v), n, nil
 }
@@ -56,35 +63,35 @@ func Decode(dst, src []byte) ([]byte, error) {
 			x := uint(src[s] >> 2)
 			switch {
 			case x < 60:
-				s += 1
+				s++
 			case x == 60:
 				s += 2
-				if s > len(src) {
+				if uint(s) > uint(len(src)) { // The uint conversions catch overflow from the previous line.
 					return nil, ErrCorrupt
 				}
 				x = uint(src[s-1])
 			case x == 61:
 				s += 3
-				if s > len(src) {
+				if uint(s) > uint(len(src)) { // The uint conversions catch overflow from the previous line.
 					return nil, ErrCorrupt
 				}
 				x = uint(src[s-2]) | uint(src[s-1])<<8
 			case x == 62:
 				s += 4
-				if s > len(src) {
+				if uint(s) > uint(len(src)) { // The uint conversions catch overflow from the previous line.
 					return nil, ErrCorrupt
 				}
 				x = uint(src[s-3]) | uint(src[s-2])<<8 | uint(src[s-1])<<16
 			case x == 63:
 				s += 5
-				if s > len(src) {
+				if uint(s) > uint(len(src)) { // The uint conversions catch overflow from the previous line.
 					return nil, ErrCorrupt
 				}
 				x = uint(src[s-4]) | uint(src[s-3])<<8 | uint(src[s-2])<<16 | uint(src[s-1])<<24
 			}
 			length = int(x + 1)
 			if length <= 0 {
-				return nil, errors.New("snappy: unsupported literal length")
+				return nil, errUnsupportedLiteralLength
 			}
 			if length > len(dst)-d || length > len(src)-s {
 				return nil, ErrCorrupt
@@ -111,14 +118,13 @@ func Decode(dst, src []byte) ([]byte, error) {
 			offset = int(src[s-2]) | int(src[s-1])<<8
 
 		case tagCopy4:
-			return nil, errors.New("snappy: unsupported COPY_4 tag")
+			return nil, errUnsupportedCopy4Tag
 		}
 
-		end := d + length
-		if offset > d || end > len(dst) {
+		if offset <= 0 || d < offset || length > len(dst)-d {
 			return nil, ErrCorrupt
 		}
-		for ; d < end; d++ {
+		for end := d + length; d != end; d++ {
 			dst[d] = dst[d-offset]
 		}
 	}
@@ -130,16 +136,16 @@ func Decode(dst, src []byte) ([]byte, error) {
 
 // NewReader returns a new Reader that decompresses from r, using the framing
 // format described at
-// https://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+// https://github.com/google/snappy/blob/master/framing_format.txt
 func NewReader(r io.Reader) *Reader {
 	return &Reader{
 		r:       r,
 		decoded: make([]byte, maxUncompressedChunkLen),
-		buf:     make([]byte, MaxEncodedLen(maxUncompressedChunkLen)+checksumSize),
+		buf:     make([]byte, maxEncodedLenOfMaxUncompressedChunkLen+checksumSize),
 	}
 }
 
-// Reader is an io.Reader than can read Snappy-compressed bytes.
+// Reader is an io.Reader that can read Snappy-compressed bytes.
 type Reader struct {
 	r       io.Reader
 	err     error
@@ -200,7 +206,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 		}
 
 		// The chunk types are specified at
-		// https://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+		// https://github.com/google/snappy/blob/master/framing_format.txt
 		switch chunkType {
 		case chunkTypeCompressedData:
 			// Section 4.2. Compressed data (chunk type 0x00).
@@ -280,13 +286,11 @@ func (r *Reader) Read(p []byte) (int, error) {
 			// Section 4.5. Reserved unskippable chunks (chunk types 0x02-0x7f).
 			r.err = ErrUnsupported
 			return 0, r.err
-
-		} else {
-			// Section 4.4 Padding (chunk type 0xfe).
-			// Section 4.6. Reserved skippable chunks (chunk types 0x80-0xfd).
-			if !r.readFull(r.buf[:chunkLen]) {
-				return 0, r.err
-			}
+		}
+		// Section 4.4 Padding (chunk type 0xfe).
+		// Section 4.6. Reserved skippable chunks (chunk types 0x80-0xfd).
+		if !r.readFull(r.buf[:chunkLen]) {
+			return 0, r.err
 		}
 	}
 }

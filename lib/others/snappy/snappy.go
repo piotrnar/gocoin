@@ -5,7 +5,7 @@
 // Package snappy implements the snappy block-based compression format.
 // It aims for very high speeds and reasonable compression.
 //
-// The C++ snappy implementation is at http://code.google.com/p/snappy/
+// The C++ snappy implementation is at https://github.com/google/snappy
 package snappy
 
 import (
@@ -46,9 +46,18 @@ const (
 	chunkHeaderSize = 4
 	magicChunk      = "\xff\x06\x00\x00" + magicBody
 	magicBody       = "sNaPpY"
-	// https://code.google.com/p/snappy/source/browse/trunk/framing_format.txt says
+	// https://github.com/google/snappy/blob/master/framing_format.txt says
 	// that "the uncompressed data in a chunk must be no longer than 65536 bytes".
 	maxUncompressedChunkLen = 65536
+
+	// maxEncodedLenOfMaxUncompressedChunkLen equals
+	// MaxEncodedLen(maxUncompressedChunkLen), but is hard coded to be a const
+	// instead of a variable, so that obufLen can also be a const. Their
+	// equivalence is confirmed by TestMaxEncodedLenOfMaxUncompressedChunkLen.
+	maxEncodedLenOfMaxUncompressedChunkLen = 76490
+
+	obufHeaderLen = len(magicChunk) + checksumSize + chunkHeaderSize
+	obufLen       = obufHeaderLen + maxEncodedLenOfMaxUncompressedChunkLen
 )
 
 const (
@@ -61,7 +70,7 @@ const (
 var crcTable = crc32.MakeTable(crc32.Castagnoli)
 
 // crc implements the checksum specified in section 3 of
-// https://code.google.com/p/snappy/source/browse/trunk/framing_format.txt
+// https://github.com/google/snappy/blob/master/framing_format.txt
 func crc(b []byte) uint32 {
 	c := crc32.Update(0, crcTable, b)
 	return uint32(c>>15|c<<17) + 0xa282ead8
