@@ -93,7 +93,7 @@ func main() {
 		}
 		datfilelen, _ := fo.Seek(0, os.SEEK_END)
 
-		fmt.Println("Appending", datfilelen, "bytes to blockchain.dat")
+		fmt.Println("Appending blocks data to blockchain.dat")
 		for {
 			var buf [1024*1024]byte
 			n, _ := f.Read(buf[:])
@@ -107,7 +107,7 @@ func main() {
 		fo.Close()
 		f.Close()
 
-		fmt.Println("OK. Now appending", len(dat)/136, "records to blockchain.new")
+		fmt.Println("Now appending", len(dat)/136, "records to blockchain.new")
 		fo, er = os.OpenFile(fl_dir+"blockchain.new", os.O_WRONLY, 0600)
 		if er != nil {
 			f.Close()
