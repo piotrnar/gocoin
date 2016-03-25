@@ -209,7 +209,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 
 func defrag_db() {
 	if (usif.DefragBlocksDB&1) != 0 {
-		qdb.SetDefragPercent(1)
+		qdb.SetDefragPercent(0)
 		fmt.Print("Defragmenting UTXO database")
 		for {
 			if !common.BlockChain.Unspent.Idle() {
