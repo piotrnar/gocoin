@@ -361,7 +361,7 @@ func update_balance() {
 	}
 
 	if len(tofetch_regular)>0 || len(tofetch_stealh)>0 {
-		fmt.Println("Fetching a new blance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
+		fmt.Println("Fetching a new balance for", len(tofetch_regular), "regular and", len(tofetch_stealh), "stealth addresses")
 		// There are new addresses which we have not monitored yet
 		var new_addrs chain.AllUnspentTx
 		var c, spen_exp []byte
