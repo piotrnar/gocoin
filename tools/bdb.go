@@ -26,7 +26,7 @@ import (
 */
 var (
 	fl_help bool
-	fl_block uint
+	fl_block, fl_stop uint
 	fl_dir string
 	fl_scan bool
 	fl_split string
@@ -49,8 +49,9 @@ func print_record(sl []byte) {
 
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
-	flag.UintVar(&fl_block, "block", 0, "Print hash(es) of the given block height")
+	flag.UintVar(&fl_block, "bl", 0, "Print hash(es) of the given block height")
 	flag.BoolVar(&fl_scan, "scan", false, "Scan database for first extra blocks")
+	flag.UintVar(&fl_stop, "stop", 0, "Stop after so many scan errors")
 	flag.StringVar(&fl_dir, "dir", "", "Use blockdb from this directory")
 	flag.StringVar(&fl_split, "split", "", "Split blockdb at this block's hash")
 	flag.UintVar(&fl_skip, "skip", 0, "Skip this many blocks when splitting")
@@ -136,20 +137,37 @@ func main() {
 
 	fmt.Println(len(dat)/136, "records")
 	if fl_scan {
+		var scan_errs uint
 		last_bl_height := binary.LittleEndian.Uint32(dat[36:40])
+		exp_offset := uint64(binary.LittleEndian.Uint32(dat[48:52]))
 		fmt.Println("Scanning database for first extra block(s)...")
 		fmt.Println("First block in the file has height", last_bl_height)
 		for off:=136; off<len(dat); off+=136 {
 			sl := dat[off:off+136]
 			height := binary.LittleEndian.Uint32(sl[36:40])
+			off_in_bl := binary.LittleEndian.Uint64(sl[40:48])
 
 			if height!=last_bl_height+1 {
-				fmt.Println("Unexpected", height, last_bl_height+1, "found at offset", off)
+				fmt.Println("Out of sequence block number", height, last_bl_height+1, "found at offset", off)
 				print_record(dat[off-136:off])
 				print_record(dat[off:off+136])
 				fmt.Println()
+				scan_errs++
 			}
+			if off_in_bl!=exp_offset {
+				fmt.Println("Spare data found just before block number", height, off_in_bl, exp_offset)
+				print_record(dat[off-136:off])
+				print_record(dat[off:off+136])
+				scan_errs++
+			}
+
+			if fl_stop!=0 && scan_errs>=fl_stop {
+				break
+			}
+
 			last_bl_height = height
+
+			exp_offset += uint64(binary.LittleEndian.Uint32(sl[48:52]))
 		}
 		return
 	}
