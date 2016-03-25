@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/signal"
 	"fmt"
 	"flag"
 	"io/ioutil"
@@ -24,17 +25,74 @@ import (
 		[52:56] - 32-bit number of transaction in the block
 		[56:136] - 80 bytes blocks header
 */
+
 var (
 	fl_help bool
 	fl_block, fl_stop uint
 	fl_dir string
-	fl_scan bool
+	fl_scan, fl_defrag bool
 	fl_split string
 	fl_skip uint
 	fl_append string
 	fl_trunc bool
 )
 
+
+/********************************************************/
+type one_idx_rec struct {
+	sl []byte
+}
+
+func new_sl(sl []byte) (r one_idx_rec) {
+	r.sl = sl
+	return
+}
+
+func (r one_idx_rec) Height() uint32 {
+	return binary.LittleEndian.Uint32(r.sl[36:40])
+}
+
+func (r one_idx_rec) DPos() uint64 {
+	return binary.LittleEndian.Uint64(r.sl[40:48])
+}
+
+func (r one_idx_rec) SetDPos(dp uint64) {
+	binary.LittleEndian.PutUint64(r.sl[40:48], dp)
+}
+
+func (r one_idx_rec) DLen() uint32 {
+	return binary.LittleEndian.Uint32(r.sl[48:52])
+}
+
+func (r one_idx_rec) Hash() []byte {
+	return r.sl[4:36]
+}
+
+func (r one_idx_rec) HIdx() [32]byte {
+	var h [32]byte
+	copy(h[:], r.sl[4:36])
+	return h
+}
+
+func (r one_idx_rec) Parent() []byte {
+	return r.sl[60:92]
+}
+
+func (r one_idx_rec) PIdx() [32]byte {
+	var h [32]byte
+	copy(h[:], r.sl[60:92])
+	return h
+}
+/********************************************************/
+
+type one_tree_node struct {
+	off int // offset in teh idx file
+	one_idx_rec
+	parent *one_tree_node
+	next *one_tree_node
+}
+
+/********************************************************/
 
 func print_record(sl []byte) {
 	bh := btc.NewSha2Hash(sl[56:136])
@@ -51,6 +109,7 @@ func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "bl", 0, "Print hash(es) of the given block height")
 	flag.BoolVar(&fl_scan, "scan", false, "Scan database for first extra blocks")
+	flag.BoolVar(&fl_defrag, "defrag", false, "Purge all the orphaned blocks")
 	flag.UintVar(&fl_stop, "stop", 0, "Stop after so many scan errors")
 	flag.StringVar(&fl_dir, "dir", "", "Use blockdb from this directory")
 	flag.StringVar(&fl_split, "split", "", "Split blockdb at this block's hash")
@@ -136,6 +195,7 @@ func main() {
 	}
 
 	fmt.Println(len(dat)/136, "records")
+
 	if fl_scan {
 		var scan_errs uint
 		last_bl_height := binary.LittleEndian.Uint32(dat[36:40])
@@ -171,6 +231,132 @@ func main() {
 		}
 		return
 	}
+
+	if fl_defrag {
+		blks := make(map[[32]byte]*one_tree_node, len(dat)/136)
+		for off:=0; off<len(dat); off+=136 {
+			sl := new_sl(dat[off:off+136])
+			blks[sl.HIdx()] = &one_tree_node{off:off, one_idx_rec:sl}
+		}
+		var maxbl uint32
+		var maxblptr *one_tree_node
+		for _, v := range blks {
+			v.parent = blks[v.PIdx()]
+			h := v.Height()
+			if h > maxbl {
+				maxbl = h
+				maxblptr = v
+			} else if h == maxbl {
+				maxblptr = nil
+			}
+		}
+		fmt.Println("Max block height =", maxbl)
+		if maxblptr==nil {
+			fmt.Println("More than one block at maximum height - cannot continue")
+			return
+		}
+		used := make(map[[32]byte] bool)
+		var first_block *one_tree_node
+		var max_dat_offs uint64
+		for n:=maxblptr; n!=nil; n=n.parent {
+			if n.parent!=nil {
+				n.parent.next = n
+			}
+			used[n.PIdx()] = true
+			if first_block==nil || first_block.Height() > n.Height() {
+				first_block = n
+			}
+			ddp := n.DPos()
+			if ddp > max_dat_offs {
+				max_dat_offs = ddp
+			}
+		}
+		if len(used) < len(blks) {
+			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
+			f, e := os.Create(fl_dir+"blockchain.tmp")
+			if e != nil {
+				println(e.Error())
+				return
+			}
+			var off int
+			for n:=first_block; n!=nil; n=n.next {
+				n.off = off
+				f.Write(n.sl)
+				off += len(n.sl)
+			}
+			f.Close()
+			os.Rename(fl_dir+"blockchain.tmp", fl_dir+"blockchain.new")
+		} else {
+			fmt.Println("The index file looks perfect")
+		}
+
+		fidx, er := os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
+		if er!=nil {
+			println(er.Error())
+			return
+		}
+
+		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
+		if er!=nil {
+			println(er.Error())
+			return
+		}
+
+		// Capture Ctrl+C
+		killchan := make(chan os.Signal, 1)
+		signal.Notify(killchan, os.Interrupt, os.Kill)
+
+		var doff uint64
+		var prv_perc uint64 = 101
+		buf := make([]byte, 0x100000)
+		for n:=first_block; n!=nil; n=n.next {
+			perc := 1000*doff/max_dat_offs
+			dp := n.DPos()
+			dl := n.DLen()
+			if perc != prv_perc {
+				fmt.Printf("\rDefragmenting data file - %.1f%% (%d bytes saved so far)...",
+					float64(perc)/10.0, dp - doff)
+				prv_perc = perc
+			}
+			if dp > doff {
+				if len(buf) < int(dl) {
+					println("WARNIGN: grow block buffer to ")
+					buf = make([]byte, dl)
+				}
+				fdat.Seek(int64(dp), os.SEEK_SET)
+				fdat.Read(buf[:int(dl)])
+
+				n.SetDPos(doff)
+
+				fdat.Seek(int64(doff), os.SEEK_SET)
+				fdat.Write(buf[:int(dl)])
+
+				fidx.Seek(int64(n.off), os.SEEK_SET)
+				fidx.Write(n.sl)
+			}
+			doff += uint64(dl)
+
+			select {
+				case <-killchan:
+					fmt.Println("interrupted")
+					fidx.Close()
+					fdat.Close()
+					fmt.Println("Database closed - should be still usable, but no space saved")
+					return
+				default:
+			}
+		}
+
+		fidx.Close()
+		fdat.Close()
+		fmt.Println()
+
+		fmt.Println("Truncating blockchain.dat at position", doff)
+		os.Truncate(fl_dir+"blockchain.dat", int64(doff))
+
+		return
+	}
+
 
 	if fl_block!=0 {
 		for off:=0; off<len(dat); off+=136 {
@@ -273,8 +459,8 @@ func main() {
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
 	for off:=136; off<len(dat); off+=136 {
-		sl := dat[off:off+136]
-		bh := binary.LittleEndian.Uint32(sl[36:40])
+		sl := new_sl(dat[off:off+136])
+		bh := sl.Height()
 		if bh>maxbh {
 			maxbh = bh
 		} else if bh<minbh {
