@@ -176,8 +176,9 @@ func main() {
 			height := binary.LittleEndian.Uint32(sl[36:40])
 			bh := btc.NewSha2Hash(sl[56:136])
 			if bh.Hash==th.Hash {
+				trunc_idx_offs := int64(off)
 				trunc_dat_offs := int64(binary.LittleEndian.Uint64(sl[40:48]))
-				fmt.Println("Truncate blockchain.new at offset", off)
+				fmt.Println("Truncate blockchain.new at offset", trunc_idx_offs)
 				fmt.Println("Truncate blockchain.dat at offset", trunc_dat_offs)
 				if !fl_trunc {
 					new_dir := fl_dir + fmt.Sprint(height) + string(os.PathSeparator)
@@ -242,7 +243,7 @@ func main() {
 					df.Close()
 				}
 
-				os.Truncate(fl_dir+"blockchain.new", int64(off))
+				os.Truncate(fl_dir+"blockchain.new", trunc_idx_offs)
 				os.Truncate(fl_dir+"blockchain.dat", trunc_dat_offs)
 				return
 			}
