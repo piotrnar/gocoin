@@ -257,7 +257,7 @@ func main() {
 		bh := binary.LittleEndian.Uint32(sl[36:40])
 		if bh>maxbh {
 			maxbh = bh
-		} else if bh<maxbh {
+		} else if bh<minbh {
 			minbh = bh
 		}
 	}
