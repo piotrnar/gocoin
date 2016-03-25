@@ -293,7 +293,7 @@ func main() {
 		}
 		used := make(map[[32]byte]bool)
 		var first_block *one_tree_node
-		var max_dat_offs uint64
+		var total_data_size uint64
 		for n := maxblptr; n != nil; n = n.parent {
 			if n.parent != nil {
 				n.parent.next = n
@@ -302,10 +302,7 @@ func main() {
 			if first_block == nil || first_block.Height() > n.Height() {
 				first_block = n
 			}
-			ddp := n.DPos()
-			if ddp > max_dat_offs {
-				max_dat_offs = ddp + uint64(n.DLen())
-			}
+			total_data_size += uint64(n.DLen())
 		}
 		if len(used) < len(blks) {
 			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
@@ -332,7 +329,7 @@ func main() {
 			return
 		}
 
-		if fl, _ := fdat.Seek(0, os.SEEK_END); uint64(fl) == max_dat_offs {
+		if fl, _ := fdat.Seek(0, os.SEEK_END); uint64(fl) == total_data_size {
 			fdat.Close()
 			fmt.Println("All good - blockchain.dat has an optimal length")
 			return
@@ -358,7 +355,7 @@ func main() {
 		var prv_perc uint64 = 101
 		buf := make([]byte, 0x100000)
 		for n := first_block; n != nil; n = n.next {
-			perc := 1000 * doff / max_dat_offs
+			perc := 1000 * doff / total_data_size
 			dp := n.DPos()
 			dl := n.DLen()
 			if perc != prv_perc {
