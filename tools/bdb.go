@@ -85,7 +85,7 @@ func main() {
 			return
 		}
 
-		fo, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
+		fo, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_APPEND|os.O_WRONLY, 0600)
 		if er != nil {
 			f.Close()
 			fmt.Println(er.Error())
@@ -108,12 +108,13 @@ func main() {
 		f.Close()
 
 		fmt.Println("OK. Now appending", len(dat)/136, "records to blockchain.new")
-		fo, er = os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
+		fo, er = os.OpenFile(fl_dir+"blockchain.new", os.O_APPEND|os.O_WRONLY, 0600)
 		if er != nil {
 			f.Close()
 			fmt.Println(er.Error())
 			return
 		}
+		fo.Seek(0, os.SEEK_END)
 
 		for off:=0; off<len(dat); off+=136 {
 			sl := dat[off:off+136]
