@@ -452,11 +452,11 @@ func main() {
 				blk = buf[:le]
 			}
 
+			done.Add(1)
 			go func(blk []byte, sl one_idx_rec, off int) {
 				verify_block(blk, sl, off)
 				done.Done()
 			}(blk, sl, off)
-			done.Add(1)
 
 			totlen += uint64(len(blk))
 		}
