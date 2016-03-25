@@ -38,12 +38,12 @@ var (
 
 func print_record(sl []byte) {
 	bh := btc.NewSha2Hash(sl[56:136])
-	fmt.Print(bh.String(), " #", binary.LittleEndian.Uint32(sl[36:40]),
-		" - ", binary.LittleEndian.Uint32(sl[48:52]), " Bytes @ ",
-		binary.LittleEndian.Uint64(sl[40:48]), " in dat file")
+	fmt.Print("Block ", bh.String(), " Height ", binary.LittleEndian.Uint32(sl[36:40]))
 	fmt.Println()
+	fmt.Println("  ...", binary.LittleEndian.Uint32(sl[48:52]), " Bytes @ ",
+		binary.LittleEndian.Uint64(sl[40:48]), " in dat file")
 	hdr := sl[56:136]
-	fmt.Println("   ... linking to", btc.NewUint256(hdr[4:36]).String())
+	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
 
 
@@ -85,7 +85,7 @@ func main() {
 			return
 		}
 
-		fo, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_APPEND, 0600)
+		fo, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
 		if er != nil {
 			f.Close()
 			fmt.Println(er.Error())
@@ -108,7 +108,7 @@ func main() {
 		f.Close()
 
 		fmt.Println("OK. Now appending", len(dat)/136, "records to blockchain.new")
-		fo, er = os.OpenFile(fl_dir+"blockchain.new", os.O_APPEND, 0600)
+		fo, er = os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
 		if er != nil {
 			f.Close()
 			fmt.Println(er.Error())
