@@ -1,13 +1,18 @@
 package main
 
 import (
+	"sync"
+	"bytes"
+	"compress/gzip"
+	"encoding/binary"
+	"flag"
+	"fmt"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/snappy"
+	"io/ioutil"
 	"os"
 	"os/signal"
-	"fmt"
-	"flag"
-	"io/ioutil"
-	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 /*
@@ -27,16 +32,16 @@ import (
 */
 
 var (
-	fl_help bool
-	fl_block, fl_stop uint
-	fl_dir string
-	fl_scan, fl_defrag bool
-	fl_split string
-	fl_skip uint
-	fl_append string
-	fl_trunc bool
+	fl_help              bool
+	fl_block, fl_stop    uint
+	fl_dir               string
+	fl_scan, fl_defrag   bool
+	fl_split             string
+	fl_skip              uint
+	fl_append            string
+	fl_trunc             bool
+	fl_commit, fl_verify bool
 )
-
 
 /********************************************************/
 type one_idx_rec struct {
@@ -46,6 +51,10 @@ type one_idx_rec struct {
 func new_sl(sl []byte) (r one_idx_rec) {
 	r.sl = sl
 	return
+}
+
+func (r one_idx_rec) Flags() uint32 {
+	return binary.LittleEndian.Uint32(r.sl[0:4])
 }
 
 func (r one_idx_rec) Height() uint32 {
@@ -83,13 +92,14 @@ func (r one_idx_rec) PIdx() [32]byte {
 	copy(h[:], r.sl[60:92])
 	return h
 }
+
 /********************************************************/
 
 type one_tree_node struct {
 	off int // offset in teh idx file
 	one_idx_rec
 	parent *one_tree_node
-	next *one_tree_node
+	next   *one_tree_node
 }
 
 /********************************************************/
@@ -105,9 +115,33 @@ func print_record(sl []byte) {
 }
 
 
+func verify_block(blk []byte, sl one_idx_rec, off int) {
+	bl, er := btc.NewBlock(blk)
+	if er != nil {
+		println("verify_block at off", off, er.Error())
+		return
+	}
+	if !bytes.Equal(bl.Hash.Hash[:], sl.Hash()) {
+		println("verify_block at off", off, "Header invalid")
+		return
+	}
+
+	er = bl.BuildTxList()
+	if er != nil {
+		println("verify_block at off", off, er.Error())
+		return
+	}
+
+	merk, _ := btc.GetMerkel(bl.Txs)
+	if !bytes.Equal(bl.MerkleRoot(), merk) {
+		println("verify_block at off", off, "Payload invalid")
+		return
+	}
+}
+
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
-	flag.UintVar(&fl_block, "bl", 0, "Print hash(es) of the given block height")
+	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
 	flag.BoolVar(&fl_scan, "scan", false, "Scan database for first extra blocks")
 	flag.BoolVar(&fl_defrag, "defrag", false, "Purge all the orphaned blocks")
 	flag.UintVar(&fl_stop, "stop", 0, "Stop after so many scan errors")
@@ -116,6 +150,8 @@ func main() {
 	flag.UintVar(&fl_skip, "skip", 0, "Skip this many blocks when splitting")
 	flag.StringVar(&fl_append, "append", "", "Append blocks from this folder to the database")
 	flag.BoolVar(&fl_trunc, "trunc", false, "Truncate insted of splitting")
+	flag.BoolVar(&fl_commit, "commit", false, "Optimize the size of the data file")
+	flag.BoolVar(&fl_verify, "verify", false, "Verify each block inside the database")
 
 	flag.Parse()
 
@@ -124,22 +160,22 @@ func main() {
 		return
 	}
 
-	if fl_dir!="" && fl_dir[len(fl_dir)-1]!=os.PathSeparator {
+	if fl_dir != "" && fl_dir[len(fl_dir)-1] != os.PathSeparator {
 		fl_dir += string(os.PathSeparator)
 	}
 
-	if fl_append!="" {
-		if fl_append[len(fl_append)-1]!=os.PathSeparator {
+	if fl_append != "" {
+		if fl_append[len(fl_append)-1] != os.PathSeparator {
 			fl_append += string(os.PathSeparator)
 		}
 		fmt.Println("Loading", fl_append+"blockchain.new")
-		dat, er := ioutil.ReadFile(fl_append+"blockchain.new")
+		dat, er := ioutil.ReadFile(fl_append + "blockchain.new")
 		if er != nil {
 			fmt.Println(er.Error())
 			return
 		}
 
-		f, er := os.Open(fl_append+"blockchain.dat")
+		f, er := os.Open(fl_append + "blockchain.dat")
 		if er != nil {
 			fmt.Println(er.Error())
 			return
@@ -155,12 +191,12 @@ func main() {
 
 		fmt.Println("Appending blocks data to blockchain.dat")
 		for {
-			var buf [1024*1024]byte
+			var buf [1024 * 1024]byte
 			n, _ := f.Read(buf[:])
-			if n>0 {
+			if n > 0 {
 				fo.Write(buf[:n])
 			}
-			if n!=len(buf) {
+			if n != len(buf) {
 				break
 			}
 		}
@@ -176,8 +212,8 @@ func main() {
 		}
 		fo.Seek(0, os.SEEK_END)
 
-		for off:=0; off<len(dat); off+=136 {
-			sl := dat[off:off+136]
+		for off := 0; off < len(dat); off += 136 {
+			sl := dat[off : off+136]
 			newoffs := binary.LittleEndian.Uint64(sl[40:48]) + uint64(datfilelen)
 			binary.LittleEndian.PutUint64(sl[40:48], newoffs)
 			fo.Write(sl)
@@ -188,7 +224,7 @@ func main() {
 	}
 
 	fmt.Println("Loading", fl_dir+"blockchain.new")
-	dat, er := ioutil.ReadFile(fl_dir+"blockchain.new")
+	dat, er := ioutil.ReadFile(fl_dir + "blockchain.new")
 	if er != nil {
 		fmt.Println(er.Error())
 		return
@@ -202,26 +238,26 @@ func main() {
 		exp_offset := uint64(binary.LittleEndian.Uint32(dat[48:52]))
 		fmt.Println("Scanning database for first extra block(s)...")
 		fmt.Println("First block in the file has height", last_bl_height)
-		for off:=136; off<len(dat); off+=136 {
-			sl := dat[off:off+136]
+		for off := 136; off < len(dat); off += 136 {
+			sl := dat[off : off+136]
 			height := binary.LittleEndian.Uint32(sl[36:40])
 			off_in_bl := binary.LittleEndian.Uint64(sl[40:48])
 
-			if height!=last_bl_height+1 {
+			if height != last_bl_height+1 {
 				fmt.Println("Out of sequence block number", height, last_bl_height+1, "found at offset", off)
-				print_record(dat[off-136:off])
-				print_record(dat[off:off+136])
+				print_record(dat[off-136 : off])
+				print_record(dat[off : off+136])
 				fmt.Println()
 				scan_errs++
 			}
-			if off_in_bl!=exp_offset {
+			if off_in_bl != exp_offset {
 				fmt.Println("Spare data found just before block number", height, off_in_bl, exp_offset)
-				print_record(dat[off-136:off])
-				print_record(dat[off:off+136])
+				print_record(dat[off-136 : off])
+				print_record(dat[off : off+136])
 				scan_errs++
 			}
 
-			if fl_stop!=0 && scan_errs>=fl_stop {
+			if fl_stop != 0 && scan_errs >= fl_stop {
 				break
 			}
 
@@ -234,9 +270,9 @@ func main() {
 
 	if fl_defrag {
 		blks := make(map[[32]byte]*one_tree_node, len(dat)/136)
-		for off:=0; off<len(dat); off+=136 {
-			sl := new_sl(dat[off:off+136])
-			blks[sl.HIdx()] = &one_tree_node{off:off, one_idx_rec:sl}
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+			blks[sl.HIdx()] = &one_tree_node{off: off, one_idx_rec: sl}
 		}
 		var maxbl uint32
 		var maxblptr *one_tree_node
@@ -251,35 +287,35 @@ func main() {
 			}
 		}
 		fmt.Println("Max block height =", maxbl)
-		if maxblptr==nil {
+		if maxblptr == nil {
 			fmt.Println("More than one block at maximum height - cannot continue")
 			return
 		}
-		used := make(map[[32]byte] bool)
+		used := make(map[[32]byte]bool)
 		var first_block *one_tree_node
 		var max_dat_offs uint64
-		for n:=maxblptr; n!=nil; n=n.parent {
-			if n.parent!=nil {
+		for n := maxblptr; n != nil; n = n.parent {
+			if n.parent != nil {
 				n.parent.next = n
 			}
 			used[n.PIdx()] = true
-			if first_block==nil || first_block.Height() > n.Height() {
+			if first_block == nil || first_block.Height() > n.Height() {
 				first_block = n
 			}
 			ddp := n.DPos()
 			if ddp > max_dat_offs {
-				max_dat_offs = ddp
+				max_dat_offs = ddp + uint64(n.DLen())
 			}
 		}
 		if len(used) < len(blks) {
 			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
-			f, e := os.Create(fl_dir+"blockchain.tmp")
+			f, e := os.Create(fl_dir + "blockchain.tmp")
 			if e != nil {
 				println(e.Error())
 				return
 			}
 			var off int
-			for n:=first_block; n!=nil; n=n.next {
+			for n := first_block; n != nil; n = n.next {
 				n.off = off
 				f.Write(n.sl)
 				off += len(n.sl)
@@ -290,14 +326,26 @@ func main() {
 			fmt.Println("The index file looks perfect")
 		}
 
-		fidx, er := os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
-		if er!=nil {
+		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
+		if er != nil {
 			println(er.Error())
 			return
 		}
 
-		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
-		if er!=nil {
+		if fl, _ := fdat.Seek(0, os.SEEK_END); uint64(fl) == max_dat_offs {
+			fdat.Close()
+			fmt.Println("All good - blockchain.dat has an optimal length")
+			return
+		}
+
+		if !fl_commit {
+			fdat.Close()
+			fmt.Println("Warning: blockchain.dat shall be defragmented. Use \"-defrag -commit\"")
+			return
+		}
+
+		fidx, er := os.OpenFile(fl_dir+"blockchain.new", os.O_RDWR, 0600)
+		if er != nil {
 			println(er.Error())
 			return
 		}
@@ -309,13 +357,13 @@ func main() {
 		var doff uint64
 		var prv_perc uint64 = 101
 		buf := make([]byte, 0x100000)
-		for n:=first_block; n!=nil; n=n.next {
-			perc := 1000*doff/max_dat_offs
+		for n := first_block; n != nil; n = n.next {
+			perc := 1000 * doff / max_dat_offs
 			dp := n.DPos()
 			dl := n.DLen()
 			if perc != prv_perc {
 				fmt.Printf("\rDefragmenting data file - %.1f%% (%d bytes saved so far)...",
-					float64(perc)/10.0, dp - doff)
+					float64(perc)/10.0, dp-doff)
 				prv_perc = perc
 			}
 			if dp > doff {
@@ -337,13 +385,13 @@ func main() {
 			doff += uint64(dl)
 
 			select {
-				case <-killchan:
-					fmt.Println("interrupted")
-					fidx.Close()
-					fdat.Close()
-					fmt.Println("Database closed - should be still usable, but no space saved")
-					return
-				default:
+			case <-killchan:
+				fmt.Println("interrupted")
+				fidx.Close()
+				fdat.Close()
+				fmt.Println("Database closed - should be still usable, but no space saved")
+				return
+			default:
 			}
 		}
 
@@ -357,29 +405,87 @@ func main() {
 		return
 	}
 
+	if fl_verify {
+		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
+		if er != nil {
+			println(er.Error())
+			return
+		}
 
-	if fl_block!=0 {
-		for off:=0; off<len(dat); off+=136 {
-			sl := dat[off:off+136]
+		dat_file_size, _ := fdat.Seek(0, os.SEEK_END)
+
+		buf := make([]byte, 0x100000)
+		var prv_perc int64 = -1
+		var totlen uint64
+		var blk []byte
+		var done sync.WaitGroup
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+
+			dp := int64(sl.DPos())
+			le := int(sl.DLen())
+			hei := uint(sl.Height())
+
+			perc := 1000 * dp / dat_file_size
+			if perc != prv_perc {
+				fmt.Printf("\rVerifying blocks data - %.1f%% @ %d / %dMB processed...",
+					float64(perc)/10.0, hei, totlen>>20)
+				prv_perc = perc
+			}
+
+			if fl_block!=0 && hei<fl_block {
+				continue
+			}
+
+			fdat.Seek(dp, os.SEEK_SET)
+			fdat.Read(buf[:le])
+
+			if fl := sl.Flags(); (fl & chain.BLOCK_COMPRSD)!=0 {
+				if (fl & chain.BLOCK_SNAPPED) != 0 {
+					blk, _ = snappy.Decode(nil, buf[:le])
+				} else {
+					gz, _ := gzip.NewReader(bytes.NewReader(buf[:le]))
+					blk, _ = ioutil.ReadAll(gz)
+					gz.Close()
+				}
+			} else {
+				blk = buf[:le]
+			}
+
+			go func(blk []byte, sl one_idx_rec, off int) {
+				verify_block(blk, sl, off)
+				done.Done()
+			}(blk, sl, off)
+			done.Add(1)
+
+			totlen += uint64(len(blk))
+		}
+		done.Wait()  // wait for all the goroutines to complete
+		return
+	}
+
+	if fl_block != 0 {
+		for off := 0; off < len(dat); off += 136 {
+			sl := dat[off : off+136]
 			height := binary.LittleEndian.Uint32(sl[36:40])
-			if uint(height)==fl_block {
-				print_record(dat[off:off+136])
+			if uint(height) == fl_block {
+				print_record(dat[off : off+136])
 			}
 		}
 		return
 	}
 
-	if fl_split!="" {
+	if fl_split != "" {
 		th := btc.NewUint256FromString(fl_split)
-		if th==nil {
+		if th == nil {
 			println("incorrect block hash")
 			return
 		}
-		for off:=0; off<len(dat); off+=136 {
-			sl := dat[off:off+136]
+		for off := 0; off < len(dat); off += 136 {
+			sl := dat[off : off+136]
 			height := binary.LittleEndian.Uint32(sl[36:40])
 			bh := btc.NewSha2Hash(sl[56:136])
-			if bh.Hash==th.Hash {
+			if bh.Hash == th.Hash {
 				trunc_idx_offs := int64(off)
 				trunc_dat_offs := int64(binary.LittleEndian.Uint64(sl[40:48]))
 				fmt.Println("Truncate blockchain.new at offset", trunc_idx_offs)
@@ -388,12 +494,12 @@ func main() {
 					new_dir := fl_dir + fmt.Sprint(height) + string(os.PathSeparator)
 					os.Mkdir(new_dir, os.ModePerm)
 
-					f, e := os.Open(fl_dir+"blockchain.dat")
+					f, e := os.Open(fl_dir + "blockchain.dat")
 					if e != nil {
 						fmt.Println(e.Error())
 						return
 					}
-					df, e := os.Create(new_dir+"blockchain.dat")
+					df, e := os.Create(new_dir + "blockchain.dat")
 					if e != nil {
 						f.Close()
 						fmt.Println(e.Error())
@@ -403,14 +509,14 @@ func main() {
 					f.Seek(trunc_dat_offs, os.SEEK_SET)
 
 					fmt.Println("But fist save the rest in", new_dir, "...")
-					if fl_skip!=0 {
+					if fl_skip != 0 {
 						fmt.Println("Skip", fl_skip, "blocks in the output file")
-						for fl_skip>0 {
+						for fl_skip > 0 {
 							skipbytes := binary.LittleEndian.Uint32(sl[48:52])
 							fmt.Println(" -", skipbytes, "bytes of block", binary.LittleEndian.Uint32(sl[36:40]))
-							off+=136
-							if off<len(dat) {
-								sl = dat[off:off+136]
+							off += 136
+							if off < len(dat) {
+								sl = dat[off : off+136]
 								fl_skip--
 							} else {
 								break
@@ -419,27 +525,27 @@ func main() {
 					}
 
 					for {
-						var buf [1024*1024]byte
+						var buf [1024 * 1024]byte
 						n, _ := f.Read(buf[:])
-						if n>0 {
+						if n > 0 {
 							df.Write(buf[:n])
 						}
-						if n!=len(buf) {
+						if n != len(buf) {
 							break
 						}
 					}
 					df.Close()
 					f.Close()
 
-					df, e = os.Create(new_dir+"blockchain.new")
+					df, e = os.Create(new_dir + "blockchain.new")
 					if e != nil {
 						f.Close()
 						fmt.Println(e.Error())
 						return
 					}
 					var off2 int
-					for off2=off; off2<len(dat); off2+=136 {
-						sl := dat[off2:off2+136]
+					for off2 = off; off2 < len(dat); off2 += 136 {
+						sl := dat[off2 : off2+136]
 						newoffs := binary.LittleEndian.Uint64(sl[40:48]) - uint64(trunc_dat_offs)
 						binary.LittleEndian.PutUint64(sl[40:48], newoffs)
 						df.Write(sl)
@@ -458,12 +564,12 @@ func main() {
 	var minbh, maxbh uint32
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
-	for off:=136; off<len(dat); off+=136 {
-		sl := new_sl(dat[off:off+136])
+	for off := 136; off < len(dat); off += 136 {
+		sl := new_sl(dat[off : off+136])
 		bh := sl.Height()
-		if bh>maxbh {
+		if bh > maxbh {
 			maxbh = bh
-		} else if bh<minbh {
+		} else if bh < minbh {
 			minbh = bh
 		}
 	}
