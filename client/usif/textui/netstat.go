@@ -141,8 +141,9 @@ func net_stats(par string) {
 			v.GetAveragePing(), v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
 		fmt.Printf("%9s %9s", common.BytesToString(v.X.Counters["BytesReceived"]), common.BytesToString(v.X.Counters["BytesSent"]))
 		fmt.Print("  ", v.Node.Agent)
-		if v.SendBuf !=nil {
-			fmt.Print("  ", len(v.SendBuf))
+
+		if b2s:=v.BytesToSent(); b2s>0 {
+			fmt.Print("  ", b2s)
 		}
 		v.Mutex.Unlock()
 		fmt.Println()

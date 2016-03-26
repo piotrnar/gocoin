@@ -13,21 +13,25 @@ import (
 
 
 func (c *OneConnection) SendPendingData() bool {
-	if len(c.SendBuf)>0 {
-		if len(c.SendBuf) > c.X.MaxSentBufSize {
-			c.X.MaxSentBufSize = len(c.SendBuf)
+	if c.SendBufProd!=c.SendBufCons {
+		bytes_to_send := c.SendBufProd-c.SendBufCons
+		if bytes_to_send<0 {
+			bytes_to_send += SendBufSize
 		}
-		n, e := common.SockWrite(c.Conn, c.SendBuf)
+		if c.SendBufCons+bytes_to_send > SendBufSize {
+			bytes_to_send = SendBufSize-c.SendBufCons
+		}
+
+		n, e := common.SockWrite(c.Conn, c.sendBuf[c.SendBufCons:c.SendBufCons+bytes_to_send])
 		if n > 0 {
 			c.Mutex.Lock()
 			c.X.LastSent = time.Now()
 			c.X.BytesSent += uint64(n)
-			if n >= len(c.SendBuf) {
-				c.SendBuf = nil
+			n += c.SendBufCons
+			if n >= SendBufSize {
+				c.SendBufCons = 0
 			} else {
-				tmp := make([]byte, len(c.SendBuf)-n)
-				copy(tmp, c.SendBuf[n:])
-				c.SendBuf = tmp
+				c.SendBufCons = n
 			}
 			c.Mutex.Unlock()
 		} else if time.Now().After(c.X.LastSent.Add(AnySendTimeout)) {
@@ -40,7 +44,7 @@ func (c *OneConnection) SendPendingData() bool {
 			c.Disconnect()
 		}
 	}
-	return len(c.SendBuf) > 0
+	return c.SendBufProd!=c.SendBufCons
 }
 
 

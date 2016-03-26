@@ -23,7 +23,7 @@ const (
 	MaxAddrsPerMessage = 500
 
 	NoDataTimeout = 2*time.Minute
-	MaxSendBufferSize = 16*1024*1024 // If you have more than this in the send buffer, disconnect
+	SendBufSize = 4*1024*1024 // If you'd this much in the send buffer, disconnect the peer
 
 	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
 
@@ -139,7 +139,8 @@ type OneConnection struct {
 	}
 
 	// Message sending state machine:
-	SendBuf []byte
+	sendBuf [SendBufSize]byte
+	SendBufProd, SendBufCons int
 
 	// Statistics:
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
@@ -183,13 +184,23 @@ func (v *OneConnection) IncCnt(name string, val uint64) {
 }
 
 
+// call it with locked mutex!
+func (v *OneConnection) BytesToSent() int {
+	if v.SendBufProd >= v.SendBufCons {
+		return v.SendBufProd - v.SendBufCons
+	} else {
+		return v.SendBufProd + SendBufSize - v.SendBufCons
+	}
+}
+
+
 func (v *OneConnection) GetStats(res *ConnInfo) {
 	v.Mutex.Lock()
 	res.ID = v.ConnID
 	res.PeerIp = v.PeerAddr.Ip()
 	res.NetworkNodeStruct = v.Node
 	res.ConnectionStatus = v.X
-	res.BytesToSend = len(v.SendBuf)
+	res.BytesToSend = v.BytesToSent()
 	res.BlocksInProgress = len(v.GetBlockInProgress)
 	res.InvsToSend = len(v.PendingInvs)
 	res.AveragePing = v.GetAveragePing()
@@ -210,17 +221,14 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		return
 	}
 
-	if c.SendBuf!=nil {
-		// Before adding more data to the buffer, check the limit
-		if len(c.SendBuf)+len(pl) > MaxSendBufferSize {
-			c.Mutex.Unlock()
-			//println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @", cmd, len(pl), len(c.SendBuf))
-			c.Disconnect()
-			common.CountSafe("PeerSendOverflow")
-			return errors.New("Send buffer overflow")
-		}
-	} else {
-		c.X.LastSent = time.Now()
+	// we never allow the buffer to be totally full because then producer would be equal consumer
+	if bytes_left:=SendBufSize-c.BytesToSent(); bytes_left<=len(pl)+24 {
+		c.Mutex.Unlock()
+		/*println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
+			cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())*/
+		c.Disconnect()
+		common.CountSafe("PeerSendOverflow")
+		return errors.New("Send buffer overflow")
 	}
 
 	c.counters["sent_"+cmd]++
@@ -228,7 +236,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	common.CountSafe("sent_"+cmd)
 	common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
-	sbuf := make([]byte, 24+len(pl))
+	var sbuf [24]byte
 
 	c.X.LastCmdSent = cmd
 	c.X.LastBtsSent = uint32(len(pl))
@@ -240,16 +248,36 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 	sh := btc.Sha2Sum(pl[:])
 	copy(sbuf[20:24], sh[:4])
-	copy(sbuf[24:], pl)
 
-	c.SendBuf = append(c.SendBuf, sbuf...)
+	c.append_to_send_buffer(sbuf[:])
+	c.append_to_send_buffer(pl)
 
-	if common.DebugLevel<0 {
-		fmt.Println(cmd, len(c.SendBuf), "->", c.PeerAddr.Ip())
+	if x:=c.BytesToSent(); x>c.X.MaxSentBufSize {
+		c.X.MaxSentBufSize = x
 	}
-	//println(len(c.SendBuf), "queued for seding to", c.PeerAddr.Ip())
+
 	c.Mutex.Unlock()
 	return
+}
+
+
+
+// this function assumes that there is enough room inside sendBuf
+func (c *OneConnection) append_to_send_buffer(d []byte) {
+	room_left := SendBufSize - c.SendBufProd
+	if room_left>=len(d) {
+		copy(c.sendBuf[c.SendBufProd:], d)
+		room_left = c.SendBufProd+len(d)
+		if room_left>=SendBufSize {
+			c.SendBufProd = 0
+		} else {
+			c.SendBufProd = room_left
+		}
+	} else {
+		copy(c.sendBuf[c.SendBufProd:], d[:room_left])
+		copy(c.sendBuf[:], d[room_left:])
+		c.SendBufProd = c.SendBufProd+len(d)-SendBufSize
+	}
 }
 
 
