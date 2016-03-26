@@ -6,7 +6,7 @@ Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
  &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
 <br>
-<div id="chart" style="height:150px;margin:5px"></div>
+<div id="chart" style="height:150px;margin:2px"></div>
 
 <br>
 <table class="netcons bord" width="100%" id="netcons">
@@ -307,11 +307,6 @@ function refreshconnections() {
 refreshconnections()
 
 
-function tickform(a,b) {
-	return bignum(a) + 'B/s'
-}
-
-
 function draw_chart() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -323,18 +318,18 @@ function draw_chart() {
 			cs = JSON.parse(aj.responseText)
 
 			var plot_data = [
-				{ data : [], label:"Downloading", color:3, lines: {show:true, fill:true} },
-				{ data : [], label:"Uploading",   color:2, lines: {show:true, fill:true} }
+				{ data : [], label:"Downloading KB/s", color:3, lines: {show:true, fill:true} },
+				{ data : [], label:"Uploading KB/s",   color:2, lines: {show:true, fill:true} }
 				];
 			var plot_options = {
-				xaxis: { show:false },
-				yaxis : {labelWidth : 85, min : 0, position : "left", tickFormatter : tickform},
+				xaxis: { tickSize:60,  tickFormatter : function(a,b) {return parseInt(-a/60) + 'min'} },
+				yaxis : {labelWidth : 40, min : 0, position : "right" },
 				legend: { position: 'nw' }
 			}
 
 			for (var i=0; i<256; i++) {
-				plot_data[0].data.push([255-i, cs.DL[i]])
-				plot_data[1].data.push([255-i, cs.UL[i]])
+				plot_data[0].data.push([-i, cs.DL[i]/1e3])
+				plot_data[1].data.push([-i, cs.UL[i]/1e3])
 			}
 
 			$.plot($("#chart"), plot_data, plot_options)
