@@ -5,8 +5,8 @@
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
  &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
-<br>
-<div id="chart" style="height:150px;margin:2px"></div>
+
+<div id="chart" style="height:180px;margin:2px"></div>
 
 <br>
 <table class="netcons bord" width="100%" id="netcons">
@@ -318,12 +318,12 @@ function draw_chart() {
 			cs = JSON.parse(aj.responseText)
 
 			var plot_data = [
-				{ data : [], label:"Downloading KB/s", color:3, lines: {show:true, fill:true} },
-				{ data : [], label:"Uploading KB/s",   color:2, lines: {show:true, fill:true} }
+				{ data : [], label:"Downloading in kB/s", color:3, lines: {show:true, fill:true} },
+				{ data : [], label:"Uploading in kB/s",   color:2, lines: {show:true, fill:true} }
 				];
 			var plot_options = {
-				xaxis: { tickSize:60,  tickFormatter : function(a,b) {return parseInt(-a/60) + 'min'} },
-				yaxis : {labelWidth : 40, min : 0, position : "right" },
+				xaxis: { tickSize:60,  tickFormatter : function(a,b) {return a ? (parseInt(-a/60) + 'min') : ''} },
+				yaxis : {labelWidth : 40, min : 0, position : "right",  label:"kB/s" },
 				legend: { position: 'nw' }
 			}
 
