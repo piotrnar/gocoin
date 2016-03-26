@@ -17,25 +17,25 @@
 
 <table border="0">
 	<col width="100">
-	<col width="240">
-	<col width="90">
-	<col width="150">
-	<col width="70">
-	<col width="180">
-	<col width="190">
+	<col width="200">
 	<col width="100">
+	<col width="200">
+	<col width="100">
+	<col width="150">
+	<col width="170">
+	<col width="120">
 	<tr><td align="right">Block Hash:<td colspan="5"><b id="last_block_hash"></b>
 		<td align="right">Beep New Block:
 			<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
 
 	<tr><td align="right">Timestamp:
 			<td><b id="last_block_timestamp"></b>
-		<td align="right">Difficulty:
-			<td><b id="last_block_difficulty"></b>
+		<td align="right">Median:
+			<td><b id="last_block_median"></b>
 		<td align="right">Received:
 			<td><b id="last_block_received"></b>
-		<td>&nbsp;
-			<td>&nbsp;
+		<td align="right">Difficulty:
+			<td><b id="last_block_difficulty"></b>
 	</table>
 </td>
 </tr>
@@ -175,7 +175,7 @@ function handlehover(event, pos, item) {
 function draw_chart() {
 	var aj = ajax()
 	aj.onerror=function() {
-		setTimeout(refreshblocks, 1000)
+		setTimeout(draw_chart, 1000)
 	}
 
 	aj.onload=function() {
@@ -237,6 +237,7 @@ blno.addEventListener("lastblock", function(e) {
 		last_block_timestamp.innerText = tim2str(stat.Timestamp)
 		last_block_height = stat.Height
 		last_block_difficulty.innerText = bignum(stat.Diff)
+		last_block_median.innerText = tim2str(stat.Median)
 		draw_chart()
 	}
 	var ago = stat.Time_now - stat.Received

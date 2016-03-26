@@ -13,7 +13,10 @@ var (
 	dl_last_sec int64
 	dl_bytes_so_far int
 
-	DlBytesPrevSec, dl_bytes_priod uint64
+	DlBytesPrevSec [0x100]uint64
+	DlBytesPrevSecIdx int
+
+	dl_bytes_priod uint64
 	DlBytesTotal uint64
 
 	UploadLimit uint
@@ -21,7 +24,10 @@ var (
 
 	ul_last_sec int64
 	ul_bytes_so_far int
-	UlBytesPrevSec, ul_bytes_priod uint64
+
+	UlBytesPrevSec [0x100]uint64
+	UlBytesPrevSecIdx int
+	ul_bytes_priod uint64
 	UlBytesTotal uint64
 )
 
@@ -31,10 +37,11 @@ func TickRecv() {
 	now := time.Now().Unix()
 	if now != dl_last_sec {
 		if now - dl_last_sec == 1 {
-			DlBytesPrevSec = dl_bytes_priod
+			DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
 		} else {
-			DlBytesPrevSec = 0
+			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
 		}
+		DlBytesPrevSecIdx = (DlBytesPrevSecIdx+1)&0xff
 		dl_bytes_priod = 0
 		dl_bytes_so_far = 0
 		dl_last_sec = now
@@ -46,10 +53,11 @@ func TickSent() {
 	now := time.Now().Unix()
 	if now != ul_last_sec {
 		if now - ul_last_sec == 1 {
-			UlBytesPrevSec = ul_bytes_priod
+			UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
 		} else {
-			UlBytesPrevSec = 0
+			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
 		}
+		UlBytesPrevSecIdx = (UlBytesPrevSecIdx+1)&0xff
 		ul_bytes_priod = 0
 		ul_bytes_so_far = 0
 		ul_last_sec = now
@@ -135,14 +143,30 @@ func UnlockBw() {
 	bw_mutex.Unlock()
 }
 
+func GetAvgBW(arr []uint64, idx int, cnt int) uint64 {
+	var sum uint64
+	if cnt<=0 {
+		return 0
+	}
+	for i:=0; i<cnt; i++ {
+		if idx==0 {
+			idx = len(arr)-1
+		} else {
+			idx--
+		}
+		sum += arr[idx]
+	}
+	return sum/uint64(cnt)
+}
+
 func PrintStats() {
 	bw_mutex.Lock()
 	TickRecv()
 	TickSent()
 	fmt.Printf("Downloading at %d/%d KB/s, %s total",
-		DlBytesPrevSec>>10, DownloadLimit>>10, BytesToString(DlBytesTotal))
+		GetAvgBW(DlBytesPrevSec[:], DlBytesPrevSecIdx, 5)>>10, DownloadLimit>>10, BytesToString(DlBytesTotal))
 	fmt.Printf("  |  Uploading at %d/%d KB/s, %s total\n",
-		UlBytesPrevSec>>10, UploadLimit>>10, BytesToString(UlBytesTotal))
+		GetAvgBW(UlBytesPrevSec[:], UlBytesPrevSecIdx, 5)>>10, UploadLimit>>10, BytesToString(UlBytesTotal))
 	bw_mutex.Unlock()
 	return
 }

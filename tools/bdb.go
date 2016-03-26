@@ -323,6 +323,13 @@ func main() {
 			fmt.Println("The index file looks perfect")
 		}
 
+		for n := first_block; n!=nil && n.next!=nil; n = n.next {
+			if n.next.DPos() < n.DPos() {
+				fmt.Println("There is a problem... swapped order in the data file!", n.off)
+				return
+			}
+		}
+
 		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
 		if er != nil {
 			println(er.Error())

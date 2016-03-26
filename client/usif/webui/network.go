@@ -150,10 +150,10 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	common.LockBw()
 	common.TickRecv()
 	common.TickSent()
-	out.Dl_speed_now = common.DlBytesPrevSec
+	out.Dl_speed_now = common.GetAvgBW(common.DlBytesPrevSec[:], common.DlBytesPrevSecIdx, 5)
 	out.Dl_speed_max = common.DownloadLimit
 	out.Dl_total = common.DlBytesTotal
-	out.Ul_speed_now = common.UlBytesPrevSec
+	out.Ul_speed_now = common.GetAvgBW(common.UlBytesPrevSec[:], common.UlBytesPrevSecIdx, 5)
 	out.Ul_speed_max = common.UploadLimit
 	out.Ul_total = common.UlBytesTotal
 	common.UnlockBw()
@@ -171,6 +171,50 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 			Count:rec[0], Timestamp:rec[1]})
 	}
 	network.ExternalIpMutex.Unlock()
+
+	bx, er := json.Marshal(out)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
+}
+
+func json_bwchar(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	var out struct {
+		DL [0x100]uint64
+		UL [0x100]uint64
+	}
+
+	common.LockBw()
+	common.TickRecv()
+	common.TickSent()
+
+	idx := common.DlBytesPrevSecIdx
+	for i:=0; i<0x100; i++ {
+		if idx==0 {
+			idx = 0xff
+		} else {
+			idx--
+		}
+		out.DL[i] = common.DlBytesPrevSec[idx]
+	}
+
+	idx = common.UlBytesPrevSecIdx
+	for i:=0; i<0x100; i++ {
+		if idx==0 {
+			idx = 0xff
+		} else {
+			idx--
+		}
+		out.UL[i] = common.UlBytesPrevSec[idx]
+	}
+
+	common.UnlockBw()
 
 	bx, er := json.Marshal(out)
 	if er == nil {

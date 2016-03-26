@@ -1,7 +1,13 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<table width="100%">
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
  &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
+<br>
+<div id="chart" style="height:150px;margin:5px"></div>
+
 <br>
 <table class="netcons bord" width="100%" id="netcons">
 <col width="30"> <!--#-->
@@ -34,6 +40,9 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <!--PEER_ROW-->
 </table>
 <a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
+
+
+</table>
 
 <script>
 var raw_timer = null
@@ -296,4 +305,50 @@ function refreshconnections() {
 	aj.send(null)
 }
 refreshconnections()
+
+
+function tickform(a,b) {
+	return bignum(a) + 'B/s'
+}
+
+
+function draw_chart() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(draw_chart, 1000)
+	}
+
+	aj.onload=function() {
+		try {
+			cs = JSON.parse(aj.responseText)
+
+			var plot_data = [
+				{ data : [], label:"Downloading", color:3, lines: {show:true, fill:true} },
+				{ data : [], label:"Uploading",   color:2, lines: {show:true, fill:true} }
+				];
+			var plot_options = {
+				xaxis: { show:false },
+				yaxis : {labelWidth : 75, min : 0, position : "left", tickFormatter : tickform},
+				legend: { position: 'nw' }
+			}
+
+			for (var i=0; i<256; i++) {
+				plot_data[0].data.push([255-i, cs.DL[i]])
+				plot_data[1].data.push([255-i, cs.UL[i]])
+			}
+
+			$.plot($("#chart"), plot_data, plot_options)
+
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(draw_chart, 1000)
+	}
+	aj.open("GET","bwchar.json",true)
+	aj.send(null)
+}
+
+
+draw_chart()
+
 </script>

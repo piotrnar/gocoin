@@ -147,6 +147,7 @@ func show_info(par string) {
 		common.Last.Block.Height,
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
+	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("2006/01/02 15:04:05"), ",   ")
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()

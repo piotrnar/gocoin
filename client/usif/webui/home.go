@@ -54,6 +54,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		Received int64
 		Time_now int64
 		Diff float64
+		Median uint32
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -62,6 +63,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Received =  common.Last.Time.Unix()
 	out.Time_now =  time.Now().Unix()
 	out.Diff =  btc.GetDifficulty(common.Last.Block.Bits())
+	out.Median =  common.Last.Block.GetMedianTimePast()
 	common.Last.Mutex.Unlock()
 
 	bx, er := json.Marshal(out)
