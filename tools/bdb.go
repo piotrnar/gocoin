@@ -41,6 +41,7 @@ var (
 	fl_append            string
 	fl_trunc             bool
 	fl_commit, fl_verify bool
+	fl_savebl            string
 )
 
 /********************************************************/
@@ -139,6 +140,21 @@ func verify_block(blk []byte, sl one_idx_rec, off int) {
 	}
 }
 
+func decomp_block(fl uint32, buf []byte) (blk []byte) {
+	if (fl & chain.BLOCK_COMPRSD)!=0 {
+		if (fl & chain.BLOCK_SNAPPED) != 0 {
+			blk, _ = snappy.Decode(nil, buf)
+		} else {
+			gz, _ := gzip.NewReader(bytes.NewReader(buf))
+			blk, _ = ioutil.ReadAll(gz)
+			gz.Close()
+		}
+	} else {
+		blk = buf
+	}
+	return
+}
+
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
@@ -152,6 +168,7 @@ func main() {
 	flag.BoolVar(&fl_trunc, "trunc", false, "Truncate insted of splitting")
 	flag.BoolVar(&fl_commit, "commit", false, "Optimize the size of the data file")
 	flag.BoolVar(&fl_verify, "verify", false, "Verify each block inside the database")
+	flag.StringVar(&fl_savebl, "savebl", "", "Save block with the given hash to disk")
 
 	flag.Parse()
 
@@ -421,7 +438,6 @@ func main() {
 		buf := make([]byte, 0x100000)
 		var prv_perc int64 = -1
 		var totlen uint64
-		var blk []byte
 		var done sync.WaitGroup
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
@@ -444,17 +460,7 @@ func main() {
 			fdat.Seek(dp, os.SEEK_SET)
 			fdat.Read(buf[:le])
 
-			if fl := sl.Flags(); (fl & chain.BLOCK_COMPRSD)!=0 {
-				if (fl & chain.BLOCK_SNAPPED) != 0 {
-					blk, _ = snappy.Decode(nil, buf[:le])
-				} else {
-					gz, _ := gzip.NewReader(bytes.NewReader(buf[:le]))
-					blk, _ = ioutil.ReadAll(gz)
-					gz.Close()
-				}
-			} else {
-				blk = buf[:le]
-			}
+			blk := decomp_block(sl.Flags(), buf[:le])
 
 			done.Add(1)
 			go func(blk []byte, sl one_idx_rec, off int) {
@@ -563,6 +569,33 @@ func main() {
 			}
 		}
 		fmt.Println("Block not found - nothing truncated")
+	}
+
+	if fl_savebl!="" {
+		bh := btc.NewUint256FromString(fl_savebl)
+		if bh == nil {
+			println("Incortrect block hash:", fl_savebl)
+			return
+		}
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+			if bytes.Equal(sl.Hash(), bh.Hash[:]) {
+				f, er := os.Open(fl_dir+"blockchain.dat")
+				if er != nil {
+					println(er.Error())
+					return
+				}
+				buf := make([]byte, int(sl.DLen()))
+				f.Seek(int64(sl.DPos()), os.SEEK_SET)
+				f.Read(buf)
+				f.Close()
+				ioutil.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), buf), 0600)
+				fmt.Println(bh.String()+".bin written to disk")
+				return
+			}
+		}
+		fmt.Println("Block", bh.String(), "not found in the database")
+		return
 	}
 
 	var minbh, maxbh uint32
