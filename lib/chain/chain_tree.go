@@ -174,8 +174,28 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
 		cur = cur.Parent
+
+		// if cur.TxCount is zero, it means we dont yet have this block's data
+		if cur.TxCount==0 {
+			fmt.Println("MoveToBlock cannot continue A")
+			fmt.Println("Trying to go:", dst.BlockHash.String())
+			fmt.Println("Cannot go at:", cur.BlockHash.String())
+			return
+		}
 	}
+
 	// At this point both "ch.BlockTreeEnd" and "cur" should be at the same height
+	for tmp := ch.BlockTreeEnd; tmp != cur; tmp = tmp.Parent {
+		if cur.Parent.TxCount==0 {
+			fmt.Println("MoveToBlock cannot continue B")
+			fmt.Println("Trying to go:", dst.BlockHash.String())
+			fmt.Println("Cannot go at:", cur.Parent.BlockHash.String())
+			return
+		}
+		cur = cur.Parent
+	}
+
+	// At this point "cur" is at the highest common block
 	for ch.BlockTreeEnd != cur {
 		if cur.Height != ch.BlockTreeEnd.Height {
 			panic("WTF??")
@@ -184,7 +204,6 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 			return
 		}
 		ch.UndoLastBlock()
-		cur = cur.Parent
 	}
 	ch.ParseTillBlock(dst)
 }
