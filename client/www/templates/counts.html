@@ -77,8 +77,7 @@ function ref_counters() {
 			var gen_b = new Array()
 
 			for (i=0; i<cts.gen.length; i++) {
-				var first_letter = cts.gen[i].var[0]
-				if (first_letter>='M' || first_letter=='B') {
+				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
 					gen_b.push(cts.gen[i])
 				} else {
 					gen_a.push(cts.gen[i])
