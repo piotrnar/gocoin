@@ -4,11 +4,11 @@
 
 <table width="100%">
 <tr><td colspan="2">
-<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"> Blocksize KB
+<span onclick="chart_type_siz.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"> Blocksize KB</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"> Transactions
+<span onclick="chart_type_txs.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"> Transactions</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"> Fee SPB
+<span onclick="chart_type_spb.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"> Fee SPB</span>
 <div id="chart" style="height:200px;margin:5px"></div>
 
 
