@@ -378,7 +378,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 		if c.recv.dat == nil {
 			msi := maxmsgsize(c.recv.cmd)
 			if c.recv.pl_len > msi {
-				c.DoS("MsgTooBig"+c.recv.cmd)
+				c.DoS("Big-"+c.recv.cmd)
 				return nil
 			}
 			c.Mutex.Lock()
