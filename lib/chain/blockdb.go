@@ -38,21 +38,6 @@ var MaxCachedBlocks uint = 500
 		[48:52] - 32-bit block lenght in bytes
 		[52:56] - 32-bit number of transaction in the block
 		[56:136] - 80 bytes blocks header
-
-DEPRECATED from version 0.9.8:
-	blockchain.idx - used to contain records of 92 bytes (all values LSB):
-		[0] - flags:
-			bit(0) - "trusted" flag - this block's scripts have been verified
-			bit(1) - "invalid" flag - this block's scripts have failed
-			bit(2) - "compressed" flag - this block's data is compressed
-			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-		[4:36]  - 256-bit block hash
-		[36:68] - 256-bit block's Parent hash
-		[68:72] - 32-bit block height (genesis is 0)
-		[72:76] - 32-bit block's timestamp
-		[76:80] - 32-bit block's bits
-		[80:88] - 64-bit block pos in blockchain.dat file
-		[88:92] - 32-bit block lenght in bytes
 */
 
 
