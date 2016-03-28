@@ -34,6 +34,7 @@ type BlockChanges struct {
 type UnspentDB struct {
 	LastBlockHash []byte
 	LastBlockHeight uint32
+	FullDefragOnClose bool
 	dir string
 	tdb [NumberOfUnspentSubDBs] *qdb.DB
 	defragIndex int
@@ -209,17 +210,6 @@ func (db *UnspentDB) Sync() {
 }
 
 
-func (db *UnspentDB) Defrag() {
-	for i := range db.tdb {
-		if db.tdb[i]!=nil {
-			db.tdb[i].Defrag(true)
-			db.tdb[i].Lock()
-			db.tdb[i].Unlock()
-		}
-	}
-}
-
-
 func (db *UnspentDB) syncUnpent() {
 	if db.LastBlockHash!=nil {
 		fn := fmt.Sprint(db.dir, db.LastBlockHeight)
@@ -245,6 +235,9 @@ func (db *UnspentDB) nosync() {
 func (db *UnspentDB) Close() {
 	for i := range db.tdb {
 		if db.tdb[i]!=nil {
+			if db.FullDefragOnClose {
+				db.tdb[i].Defrag(true)
+			}
 			db.tdb[i].Close()
 			db.tdb[i] = nil
 		}
