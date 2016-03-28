@@ -197,9 +197,6 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 	// At this point "cur" is at the highest common block
 	for ch.BlockTreeEnd != cur {
-		if cur.Height != ch.BlockTreeEnd.Height {
-			panic("WTF??")
-		}
 		if AbortNow {
 			return
 		}
