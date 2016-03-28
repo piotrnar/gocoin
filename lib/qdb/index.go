@@ -9,7 +9,7 @@ import (
 type dbidx struct {
 	db *DB
 	path string
-	logfile *os.File
+	file *os.File
 	datfile_idx int
 	version_seq uint32
 	max_dat_seq uint32
@@ -135,9 +135,9 @@ func (idx *dbidx) browse(walk func(key KeyType, idx *oneIdx) bool) {
 }
 
 func (idx *dbidx) close() {
-	if idx.logfile!= nil {
-		idx.logfile.Close()
-		idx.logfile = nil
+	if idx.file!= nil {
+		idx.file.Close()
+		idx.file = nil
 	}
 	idx.index = nil
 }

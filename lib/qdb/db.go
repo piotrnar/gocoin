@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 	"bytes"
+	"bufio"
 )
 
 type KeyType uint64
@@ -388,8 +389,8 @@ func (db *DB) Flush() {
 	if db.logfile!=nil {
 		db.logfile.Sync()
 	}
-	if db.idx.logfile!=nil {
-		db.idx.logfile.Sync()
+	if db.idx.file!=nil {
+		db.idx.file.Sync()
 	}
 }
 
@@ -401,10 +402,11 @@ func (db *DB) defrag() {
 		db.logfile = nil
 	}
 	db.checklogfile()
+	bufile := bufio.NewWriterSize(db.logfile, 0x100000)
 	used := make(map[uint32]bool, 10)
 	db.idx.browse(func(key KeyType, rec *oneIdx) bool {
 		db.loadrec(rec)
-		rec.datpos = uint32(db.addtolog(nil, key, rec.Slice()))
+		rec.datpos = uint32(db.addtolog(bufile, key, rec.Slice()))
 		rec.datseq = db.datseq
 		used[rec.datseq] = true
 		rec.freerec()
@@ -412,6 +414,7 @@ func (db *DB) defrag() {
 	})
 
 	// first write & flush the data file:
+	bufile.Flush()
 	db.logfile.Sync()
 
 	// now the index:

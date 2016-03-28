@@ -4,6 +4,8 @@ import (
 	"os"
 	"io"
 	"fmt"
+	//"bytes"
+	"bufio"
 	"io/ioutil"
 	"encoding/binary"
 )
@@ -111,22 +113,22 @@ func (idx *dbidx) loaddat(used map[uint32]bool) {
 
 
 func (idx *dbidx) loadlog(used map[uint32]bool) {
-	idx.logfile, _ = os.OpenFile(idx.path+"log", os.O_RDWR, 0660)
-	if idx.logfile==nil {
+	idx.file, _ = os.OpenFile(idx.path+"log", os.O_RDWR, 0660)
+	if idx.file==nil {
 		return
 	}
 
 	var iseq uint32
-	binary.Read(idx.logfile, binary.LittleEndian, &iseq)
+	binary.Read(idx.file, binary.LittleEndian, &iseq)
 	if iseq!=idx.version_seq {
 		println("incorrect seq in the log file", iseq, idx.version_seq)
-		idx.logfile.Close()
-		idx.logfile = nil
+		idx.file.Close()
+		idx.file = nil
 		os.Remove(idx.path+"log")
 		return
 	}
 
-	d, _ := ioutil.ReadAll(idx.logfile)
+	d, _ := ioutil.ReadAll(idx.file)
 	for pos:=0; pos+12<=len(d); {
 		key := KeyType(binary.LittleEndian.Uint64(d[pos:pos+8]))
 		fpos := binary.LittleEndian.Uint32(d[pos+8:pos+12])
@@ -152,9 +154,9 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 
 
 func (idx *dbidx) checklogfile() {
-	if idx.logfile == nil {
-		idx.logfile, _ = os.Create(idx.path+"log")
-		binary.Write(idx.logfile, binary.LittleEndian, uint32(idx.version_seq))
+	if idx.file == nil {
+		idx.file, _ = os.Create(idx.path+"log")
+		binary.Write(idx.file, binary.LittleEndian, uint32(idx.version_seq))
 	}
 	return
 }
@@ -163,7 +165,7 @@ func (idx *dbidx) checklogfile() {
 func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 	if wr == nil {
 		idx.checklogfile()
-		wr = idx.logfile
+		wr = idx.file
 	}
 	binary.Write(wr, binary.LittleEndian, k)
 	binary.Write(wr, binary.LittleEndian, rec.datpos)
@@ -176,7 +178,7 @@ func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
 	if wr == nil {
 		idx.checklogfile()
-		wr = idx.logfile
+		wr = idx.file
 	}
 	binary.Write(wr, binary.LittleEndian, k)
 	wr.Write([]byte{0,0,0,0})
@@ -186,7 +188,10 @@ func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
 func (idx *dbidx) writedatfile() {
 	idx.datfile_idx = 1-idx.datfile_idx
 	idx.version_seq++
-	f, _ := os.Create(fmt.Sprint(idx.path, idx.datfile_idx))
+
+	//f := new(bytes.Buffer)
+	ff, _ := os.Create(fmt.Sprint(idx.path, idx.datfile_idx))
+	f := bufio.NewWriterSize(ff, 0x100000)
 	binary.Write(f, binary.LittleEndian, idx.version_seq)
 	idx.browse(func(key KeyType, rec *oneIdx) bool {
 		binary.Write(f, binary.LittleEndian, key)
@@ -199,12 +204,15 @@ func (idx *dbidx) writedatfile() {
 	f.Write([]byte{0xff,0xff,0xff,0xff})
 	binary.Write(f, binary.LittleEndian, idx.version_seq)
 	f.Write([]byte("FINI"))
-	f.Close()
+
+	//ioutil.WriteFile(fmt.Sprint(idx.path, idx.datfile_idx), f.Bytes(), 0600)
+	f.Flush()
+	ff.Close()
 
 	// now delete the previous log
-	if idx.logfile!=nil {
-		idx.logfile.Close()
-		idx.logfile = nil
+	if idx.file!=nil {
+		idx.file.Close()
+		idx.file = nil
 	}
 	os.Remove(idx.path+"log")
 	os.Remove(fmt.Sprint(idx.path, 1-idx.datfile_idx))
@@ -213,5 +221,5 @@ func (idx *dbidx) writedatfile() {
 
 func (idx *dbidx) writebuf(d []byte) {
 	idx.checklogfile()
-	idx.logfile.Write(d)
+	idx.file.Write(d)
 }
