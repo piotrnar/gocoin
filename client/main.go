@@ -225,7 +225,7 @@ func main() {
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
 			network.NetCloseAll()
-			common.CloseBlockChain()
+			common.CloseBlockChain(false)
 			peersdb.ClosePeerDB()
 			sys.UnlockDatabaseDir()
 			os.Exit(1)
@@ -356,15 +356,16 @@ func main() {
 		}
 
 		network.NetCloseAll()
-
-		if usif.DefragUTXO {
-			fmt.Println("Defragmenting UTXO database...")
-			common.BlockChain.Unspent.Defrag()
-			fmt.Println("UTXO database done. Consider making a backup.")
-		}
 	}
 
-	common.CloseBlockChain()
+	if usif.DefragUTXO {
+		fmt.Println("Closing blockchain while defragmenting UTXO")
+	} else {
+		fmt.Println("Closing blockchain")
+	}
+	sta := time.Now()
+	common.CloseBlockChain(usif.DefragUTXO)
+	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
 	sys.UnlockDatabaseDir()
 }
