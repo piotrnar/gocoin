@@ -315,28 +315,8 @@ func qdb_stats(par string) {
 }
 
 
-func defrag_blocks(par string) {
-	switch par {
-		case "utxo": usif.DefragBlocksDB = 1
-		case "blks": usif.DefragBlocksDB = 2
-		case "all": usif.DefragBlocksDB = 3
-		default:
-			fmt.Println("Specify what to defragment: utxo, blks or all")
-			return
-	}
-	usif.Exit_now = true
-}
-
-
-func chain_snapshot(par string) {
-	v, e := strconv.ParseUint(par, 10, 32)
-	if e != nil {
-		fmt.Println("Specify block height")
-		return
-	}
-	usif.DefragBlocksDBHeight = uint32(v)
-	usif.DefragBlocksDB = 2
-	usif.Exit_now = true
+func defrag_utxo(par string) {
+	usif.DefragUTXO = true
 }
 
 
@@ -523,7 +503,6 @@ func send_inv(par string) {
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("alerts a", false, list_alerst, "Show received alerts")
-	newUi("blocks", true, chain_snapshot, "Create block database snapshot up to the given block number")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
@@ -531,7 +510,7 @@ func init() {
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("defrag", true, defrag_blocks, "Defragment database files on disk (use with: utxo | blks | all)")
+	newUi("defrag", true, defrag_utxo, "Defragment UTXO database (use tool bdb -defrag for blocks DB)")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")

@@ -10,8 +10,6 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
-	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
@@ -207,63 +205,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 }
 
 
-func defrag_db() {
-	if (usif.DefragBlocksDB&1) != 0 {
-		qdb.SetDefragPercent(0)
-		fmt.Print("Defragmenting UTXO database")
-		for {
-			if !common.BlockChain.Unspent.Idle() {
-				break
-			}
-			fmt.Print(".")
-		}
-		fmt.Println("done")
-	}
-
-	if (usif.DefragBlocksDB&2) != 0 {
-		fmt.Println("Creating empty database in", common.GocoinHomeDir+"defrag", "...")
-		os.RemoveAll(common.GocoinHomeDir+"defrag")
-		defragdb := chain.NewBlockDB(common.GocoinHomeDir+"defrag")
-		if usif.DefragBlocksDBHeight!=0 {
-			fmt.Println("Creating snapshot of blocks database up to block", usif.DefragBlocksDBHeight, "...")
-		} else {
-			fmt.Println("Defragmenting the database up to block...")
-		}
-		blk := common.BlockChain.BlockTreeRoot
-		for {
-			blk = blk.FindPathTo(common.BlockChain.BlockTreeEnd)
-			if blk==nil {
-				fmt.Println("Database defragmenting finished successfully")
-				fmt.Println("To use the new DB, move the two new files to a parent directory and restart the client")
-				break
-			}
-			if (blk.Height&0xff)==0 {
-				fmt.Printf("%d / %d blocks written (%d%%)\r", blk.Height, common.BlockChain.BlockTreeEnd.Height,
-					100 * blk.Height / common.BlockChain.BlockTreeEnd.Height)
-			}
-			bl, trusted, er := common.BlockChain.Blocks.BlockGet(blk.BlockHash)
-			if er != nil {
-				fmt.Println("FATAL ERROR during BlockGet:", er.Error())
-				break
-			}
-			nbl, er := btc.NewBlock(bl)
-			if er != nil {
-				fmt.Println("FATAL ERROR during NewBlock:", er.Error())
-				break
-			}
-			nbl.Trusted = trusted
-			defragdb.BlockAdd(blk.Height, nbl)
-			if blk.Height==usif.DefragBlocksDBHeight {
-				fmt.Println("Database snapshot up to block", usif.DefragBlocksDBHeight, "created successfully")
-				break
-			}
-		}
-		defragdb.Sync()
-		defragdb.Close()
-	}
-}
-
-
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -294,7 +235,6 @@ func main() {
 	common.InitConfig()
 
 	if common.FLAG.VolatileUTXO {
-		qdb.VolatileMode = true
 		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the client properly (do not kill it!)")
 	}
 
@@ -402,6 +342,10 @@ func main() {
 				case <-time.After(time.Second/2):
 					common.CountSafe("MainThreadTouts")
 					if !retryCachedBlocks {
+						if usif.DefragUTXO {
+							usif.Exit_now = true
+							break
+						}
 						common.Busy("BlockChain.Idle()")
 						if common.BlockChain.Idle() {
 							common.CountSafe("ChainIdleUsed")
@@ -413,8 +357,10 @@ func main() {
 
 		network.NetCloseAll()
 
-		if usif.DefragBlocksDB!=0 {
-			defrag_db()
+		if usif.DefragUTXO {
+			fmt.Println("Defragmenting UTXO database...")
+			common.BlockChain.Unspent.Defrag()
+			fmt.Println("UTXO database done. Consider making a backup.")
 		}
 	}
 

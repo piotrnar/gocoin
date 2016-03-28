@@ -117,7 +117,7 @@ func ExpirePeers() {
 			delcnt--
 			PeerDB.Del(todel[delcnt])
 		}
-		PeerDB.Defrag()
+		PeerDB.Defrag(false)
 	}
 	peerdb_mutex.Unlock()
 }
@@ -296,7 +296,7 @@ func ClosePeerDB() {
 	if PeerDB!=nil {
 		fmt.Println("Closing peer DB")
 		PeerDB.Sync()
-		PeerDB.Defrag()
+		PeerDB.Defrag(true)
 		PeerDB.Close()
 		PeerDB = nil
 	}

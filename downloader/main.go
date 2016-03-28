@@ -14,7 +14,6 @@ import (
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
@@ -41,6 +40,7 @@ var (
 	MemForBlocks uint           // -m (in megabytes)
 	Testnet bool                // -t
 	QdbVolatileMode bool        // -v
+	DefragUTXO bool             // -defrag
 )
 
 
@@ -76,6 +76,7 @@ func parse_command_line() {
 	flag.BoolVar(&OnlyStoreBlocks, "b", true, "Only store blocks, without commiting them into UTXO database")
 	flag.BoolVar(&QdbVolatileMode, "v", true, "Use UTXO database in volatile mode (speeds up processing)")
 	flag.BoolVar(&Testnet, "t", CFG.Testnet, "Use Testnet3")
+	flag.BoolVar(&DefragUTXO, "defrag", DefragUTXO, "Defragment UTXO before exiting")
 	flag.StringVar(&GocoinHomeDir, "d", GocoinHomeDir, "Specify the home directory")
 	flag.StringVar(&LastTrustedBlock, "trust", "auto", "Specify the highest trusted block hash (use \"all\" for all)")
 	flag.StringVar(&SeedNode, "s", "", "Specify IP of the node to fetch headers from")
@@ -114,7 +115,8 @@ func open_blockchain() (abort bool) {
 			}
 		}
 	}()
-	TheBlockChain = chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, &chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks})
+	TheBlockChain = chain.NewChainExt(GocoinHomeDir, GenesisBlock, false,
+		&chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks, UTXOVolatileMode:QdbVolatileMode})
 	__exit <- true
 	return
 }
@@ -126,9 +128,7 @@ func setup_runtime_vars() {
 	if GCPerc>0 {
 		debug.SetGCPercent(GCPerc)
 	}
-	qdb.SetDefragPercent(300)
 	if QdbVolatileMode {
-		qdb.VolatileMode = true
 		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the downloader properly (do not kill it!)")
 	}
 }
@@ -216,20 +216,14 @@ func main() {
 	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
 
+	fmt.Print("All blocks done - closing peerDB")
 	peersdb.ClosePeerDB()
 
-	if !OnlyStoreBlocks {
-		StartTime = time.Now()
-		fmt.Print("All blocks done - defrag unspent")
-		qdb.SetDefragPercent(100)
-		for {
-			if !TheBlockChain.Unspent.Idle() {
-				break
-			}
-			fmt.Print(".")
-		}
-		fmt.Println("\nDefrag unspent done in", time.Now().Sub(StartTime).String())
+	if !OnlyStoreBlocks && !QdbVolatileMode && DefragUTXO {
+		fmt.Print("Defragmenting UTXO database")
+		TheBlockChain.Unspent.Defrag()
 	}
+	fmt.Print("Closing blockchain")
 	TheBlockChain.Close()
 
 	return

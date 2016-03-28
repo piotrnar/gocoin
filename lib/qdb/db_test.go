@@ -80,7 +80,7 @@ func TestDatabase(t *testing.T) {
 	if db.Count() != oneRound {
 		t.Error("Wrong number of records", db.Count(), oneRound)
 	}
-	db.Defrag()
+	db.Defrag(false)
 	db.Close()
 
 	// Reopen DB, verify, add oneRound more records and Close
@@ -121,7 +121,7 @@ func TestDatabase(t *testing.T) {
 		t.Error("Wrong number of records", db.Count())
 		return
 	}
-	db.Defrag()
+	db.Defrag(true)
 	db.Close()
 
 	// Reopen DB, verify, close...
@@ -169,7 +169,7 @@ func TestDatabase(t *testing.T) {
 
 	// Reopen DB, verify, close...
 	db, e = NewDB(dbname, true)
-	db.Defrag()
+	db.Defrag(false)
 	if db.Count() != 2*oneRound-delRound {
 		t.Error("Wrong number of records", db.Count())
 	}

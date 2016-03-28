@@ -22,22 +22,13 @@ import (
 	"fmt"
 	"sync"
 	"bytes"
-	"sync/atomic"
 )
 
 type KeyType uint64
 
-// defrag if we waste more than this percent of disk space (use atomic functoin to modify it)
 var (
-	DefragPercentVal uint32 = 50 // Defrag() will not be done if we waste less disk space
-	ForcedDefragPerc uint32 = 300 // forced defrag when extra disk usage goes above this
-	MaxPending uint32       = 1000
-	MaxPendingNoSync uint32 = 10000
 	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
 	ExtraMemoryAllocCnt int64  // if we are using the glibc memory manager
-
-	VolatileMode bool // this will only store database on disk when you close it
-	// Make sure to set VolatileMode before doing any database operations. Never clear it once set.
 )
 
 const (
@@ -48,6 +39,11 @@ const (
 	BR_ABORT   = 0x00000004
 	YES_CACHE  = 0x00000008
 	YES_BROWSE = 0x00000010
+
+	DefaultDefragPercentVal = 50
+	DefaultForcedDefragPerc = 300
+	DefaultMaxPending = 1000
+	DefaultMaxPendingNoSync = 10000
 )
 
 
@@ -69,6 +65,10 @@ type DB struct {
 	pending_recs map[KeyType] bool
 
 	rdfile map[uint32] *os.File
+
+	O ExtraOpts
+
+	volatileMode bool // this will only store database on disk when you close it
 }
 
 
@@ -80,6 +80,23 @@ type oneIdx struct {
 	datlen uint32 // length of the record in the data file
 
 	flags uint32
+}
+
+type NewDBOpts struct {
+	Dir string
+	Records uint
+	WalkFunction QdbWalkFunction
+	LoadData bool
+	Volatile bool
+	*ExtraOpts
+}
+
+
+type ExtraOpts struct {
+	DefragPercentVal uint32 // Defrag() will not be done if we waste less disk space
+	ForcedDefragPerc uint32 // forced defrag when extra disk usage goes above this
+	MaxPending uint32
+	MaxPendingNoSync uint32
 }
 
 
@@ -96,39 +113,43 @@ func (i oneIdx) String() string {
 
 
 // Creates or opens a new database in the specified folder.
-func NewDBExt(_db **DB, dir string, load bool, walk QdbWalkFunction, recs uint) (e error) {
+func NewDBExt(_db **DB, opts *NewDBOpts) (e error) {
 	cnt("NewDB")
 	db := new(DB)
 	*_db = db
+	dir := opts.Dir
 	if len(dir)>0 && dir[len(dir)-1]!='\\' && dir[len(dir)-1]!='/' {
 		dir += string(os.PathSeparator)
 	}
+
+	db.volatileMode = opts.Volatile
+
+	if opts.ExtraOpts==nil {
+		db.O.DefragPercentVal = DefaultDefragPercentVal
+		db.O.ForcedDefragPerc = DefaultForcedDefragPerc
+		db.O.MaxPending = DefaultMaxPending
+		db.O.MaxPendingNoSync = DefaultMaxPendingNoSync
+	} else {
+		db.O = *opts.ExtraOpts
+	}
+
 	os.MkdirAll(dir, 0770)
 	db.dir = dir
 	db.rdfile = make(map[uint32] *os.File)
-	db.pending_recs = make(map[KeyType] bool, MaxPending)
-	db.idx = NewDBidx(db, recs)
-	if load {
-		db.idx.load(walk)
+	db.pending_recs = make(map[KeyType] bool, db.O.MaxPending)
+
+	db.idx = NewDBidx(db, opts.Records)
+	if opts.LoadData {
+		db.idx.load(opts.WalkFunction)
 	}
 	db.datseq = db.idx.max_dat_seq+1
 	return
 }
 
 
-func NewDBrowse(db **DB, dir string, walk QdbWalkFunction, recs uint) (e error) {
-	return NewDBExt(db, dir, true, walk, recs)
-}
-
 func NewDB(dir string, load bool) (*DB, error) {
 	var db *DB
-	e := NewDBExt(&db, dir, load, nil, 0)
-	return db, e
-}
-
-func NewDBCnt(dir string, load bool, recs uint) (*DB, error) {
-	var db *DB
-	e := NewDBExt(&db, dir, load, nil, recs)
+	e := NewDBExt(&db, &NewDBOpts{Dir:dir, LoadData:load})
 	return db, e
 }
 
@@ -205,7 +226,7 @@ func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 func (db *DB) Put(key KeyType, value []byte) {
 	db.mutex.Lock()
 	db.idx.memput(key, newIdx(value, 0))
-	if VolatileMode {
+	if db.volatileMode {
 		db.nosync = true
 		db.mutex.Unlock()
 		return
@@ -227,7 +248,7 @@ func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
 	db.mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
 	db.idx.memput(key, newIdx(value, flags))
-	if VolatileMode {
+	if db.volatileMode {
 		db.nosync = true
 		db.mutex.Unlock()
 		return
@@ -249,7 +270,7 @@ func (db *DB) Del(key KeyType) {
 	//println("del", hex.EncodeToString(key[:]))
 	db.mutex.Lock()
 	db.idx.memdel(key)
-	if VolatileMode {
+	if db.volatileMode {
 		db.nosync = true
 		db.mutex.Unlock()
 		return
@@ -278,12 +299,12 @@ func (db *DB) ApplyFlags(key KeyType, fl uint32) {
 
 // Defragments the DB on the disk.
 // Return true if defrag hes been performed, and false if was not needed.
-func (db *DB) Defrag() (doing bool) {
-	if VolatileMode {
+func (db *DB) Defrag(force bool) (doing bool) {
+	if db.volatileMode {
 		return
 	}
 	db.mutex.Lock()
-	doing = db.idx.extra_space_used > (uint64(DefragPercentVal)*db.idx.disk_space_needed/100)
+	doing = force || db.idx.extra_space_used > (uint64(db.O.DefragPercentVal)*db.idx.disk_space_needed/100)
 	if doing {
 		cnt("DefragYes")
 		go func() {
@@ -300,7 +321,7 @@ func (db *DB) Defrag() (doing bool) {
 
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
-	if VolatileMode {
+	if db.volatileMode {
 		return
 	}
 	db.mutex.Lock()
@@ -312,7 +333,7 @@ func (db *DB) NoSync() {
 // Write all the pending changes to disk now.
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
-	if VolatileMode {
+	if db.volatileMode {
 		return
 	}
 	db.mutex.Lock()
@@ -328,7 +349,7 @@ func (db *DB) Sync() {
 // Writes all the pending changes to disk.
 func (db *DB) Close() {
 	db.mutex.Lock()
-	if VolatileMode {
+	if db.volatileMode {
 		// flush all the data to disk when closing
 		if db.nosync {
 			db.defrag()
@@ -346,6 +367,30 @@ func (db *DB) Close() {
 		f.Close()
 	}
 	db.mutex.Unlock()
+}
+
+
+func (db *DB) Lock() {
+	db.mutex.Lock()
+}
+
+
+func (db *DB) Unlock() {
+	db.mutex.Unlock()
+}
+
+
+func (db *DB) Flush() {
+	if db.volatileMode {
+		return
+	}
+	cnt("Flush")
+	if db.logfile!=nil {
+		db.logfile.Sync()
+	}
+	if db.idx.logfile!=nil {
+		db.idx.logfile.Sync()
+	}
 }
 
 
@@ -378,7 +423,7 @@ func (db *DB) defrag() {
 
 
 func (db *DB) sync() {
-	if VolatileMode {
+	if db.volatileMode {
 		return
 	}
 	if len(db.pending_recs)>0 {
@@ -401,9 +446,9 @@ func (db *DB) sync() {
 			}
 		}
 		db.idx.writebuf(bidx.Bytes())
-		db.pending_recs = make(map[KeyType] bool, MaxPending)
+		db.pending_recs = make(map[KeyType] bool, db.O.MaxPending)
 
-		if db.idx.extra_space_used > (uint64(ForcedDefragPerc)*db.idx.disk_space_needed/100) {
+		if db.idx.extra_space_used > (uint64(db.O.ForcedDefragPerc)*db.idx.disk_space_needed/100) {
 			cnt("DefragNow")
 			db.defrag()
 		}
@@ -413,45 +458,19 @@ func (db *DB) sync() {
 }
 
 
-func (db *DB) Flush() {
-	if VolatileMode {
-		return
-	}
-	cnt("Flush")
-	if db.logfile!=nil {
-		db.logfile.Sync()
-	}
-	if db.idx.logfile!=nil {
-		db.idx.logfile.Sync()
-	}
-}
-
-
 func (db *DB) syncneeded() bool {
-	if VolatileMode {
+	if db.volatileMode {
 		return false
 	}
-	if len(db.pending_recs) > int(MaxPendingNoSync) {
+	if len(db.pending_recs) > int(db.O.MaxPendingNoSync) {
 		cnt("SyncNeedBig")
 		return true
 	}
-	if !db.nosync && len(db.pending_recs) > int(MaxPending) {
+	if !db.nosync && len(db.pending_recs) > int(db.O.MaxPending) {
 		cnt("SyncNeedSmall")
 		return true
 	}
 	return false
-}
-
-
-// Defrag files on disk if we waste more than this percent of disk space
-func SetDefragPercent(val uint32) {
-	atomic.StoreUint32(&DefragPercentVal, val)
-}
-
-// How many records to buffer in memory before writing them to disk
-func SetMaxPending(sync uint32, nosync uint32) {
-	atomic.StoreUint32(&MaxPending, sync)
-	atomic.StoreUint32(&MaxPendingNoSync, nosync)
 }
 
 

@@ -40,14 +40,24 @@ type UnspentDB struct {
 	defragCount uint64
 	nosyncinprogress bool
 	ch *Chain
+	volatimemode bool
 }
 
-func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB, undo_last_block bool) {
+type NewUnspentOpts struct {
+	Dir string
+	Chain *Chain
+	Rescan bool
+	VolatimeMode bool
+}
+
+func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
+//dir string, init bool, ch *Chain
 	var maxbl_fn string
 	db = new(UnspentDB)
-	db.dir = dir+"unspent4"+string(os.PathSeparator)
+	db.dir = opts.Dir+"unspent4"+string(os.PathSeparator)
+	db.volatimemode = opts.VolatimeMode
 
-	if init {
+	if opts.Rescan {
 		os.RemoveAll(db.dir)
 	} else {
 		fis, _ := ioutil.ReadDir(db.dir)
@@ -77,7 +87,7 @@ func NewUnspentDb(dir string, init bool, ch *Chain) (db *UnspentDB, undo_last_bl
 		}
 	}
 
-	db.ch = ch
+	db.ch = opts.Chain
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading new unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
@@ -199,6 +209,17 @@ func (db *UnspentDB) Sync() {
 }
 
 
+func (db *UnspentDB) Defrag() {
+	for i := range db.tdb {
+		if db.tdb[i]!=nil {
+			db.tdb[i].Defrag(true)
+			db.tdb[i].Lock()
+			db.tdb[i].Unlock()
+		}
+	}
+}
+
+
 func (db *UnspentDB) syncUnpent() {
 	if db.LastBlockHash!=nil {
 		fn := fmt.Sprint(db.dir, db.LastBlockHeight)
@@ -239,7 +260,7 @@ func (db *UnspentDB) Idle() bool {
 		if db.defragIndex >= len(db.tdb) {
 			db.defragIndex = 0
 		}
-		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag() {
+		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag(false) {
 			db.defragCount++
 			return true
 		}
@@ -304,12 +325,17 @@ func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 
 func (db *UnspentDB) dbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
-		qdb.NewDBrowse(&db.tdb[i], db.dir+fmt.Sprintf("%06d", i), func(k qdb.KeyType, v []byte) uint32 {
-			if db.ch.CB.LoadWalk!=nil {
-				db.ch.CB.LoadWalk(NewQdbRecStatic(k, v))
-			}
-			return 0
-		}, 200000/*size of pre-allocated map*/)
+		qdb.NewDBExt(&db.tdb[i], &qdb.NewDBOpts {
+			Dir : db.dir+fmt.Sprintf("%06d", i),
+			WalkFunction : func(k qdb.KeyType, v []byte) uint32 {
+				if db.ch.CB.LoadWalk!=nil {
+					db.ch.CB.LoadWalk(NewQdbRecStatic(k, v))
+				}
+				return 0
+			},
+			Records : 650e3/*size of pre-allocated map*/,
+			LoadData : true,
+			Volatile : db.volatimemode})
 
 		if db.nosyncinprogress {
 			db.tdb[i].NoSync()

@@ -26,8 +26,7 @@ var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
 
 	Exit_now bool
-	DefragBlocksDB int // 0-no, 1-only UTXO, 2-only blocks, 3-all
-	DefragBlocksDBHeight uint32
+	DefragUTXO bool
 )
 
 

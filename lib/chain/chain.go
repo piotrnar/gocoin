@@ -40,6 +40,8 @@ type NewChanOpts struct {
 	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
 
 	DoNotParseTillEnd bool // Do not rebuild UTXO database up to the highest known block (used by the downloader)<F2>
+
+	UTXOVolatileMode bool
 }
 
 
@@ -68,7 +70,8 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	}
 
 	ch.Blocks = NewBlockDB(dbrootdir)
-	ch.Unspent, undo_last_block = NewUnspentDb(dbrootdir, rescan, ch)
+	ch.Unspent, undo_last_block = NewUnspentDb(&NewUnspentOpts{
+		Dir:dbrootdir, Chain:ch, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode})
 
 	if AbortNow {
 		return

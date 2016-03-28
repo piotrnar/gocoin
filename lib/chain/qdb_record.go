@@ -42,8 +42,8 @@ func FullQdbRec(dat []byte) *QdbRec {
 
 var (
 	sta_rec QdbRec
-	rec_outs = make([]*QdbTxOut, 3075)
-	rec_pool = make([]QdbTxOut, 3075)
+	rec_outs = make([]*QdbTxOut, 13107)
+	rec_pool = make([]QdbTxOut, 13107)
 )
 
 
