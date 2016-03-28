@@ -42,6 +42,8 @@ type NewChanOpts struct {
 	DoNotParseTillEnd bool // Do not rebuild UTXO database up to the highest known block (used by the downloader)<F2>
 
 	UTXOVolatileMode bool
+
+	UndoBlocks uint // undo this many blocks when opening the chain
 }
 
 
@@ -99,6 +101,15 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		fmt.Println("Undo last block after the previous commit was interrupted..")
 		ch.UndoLastBlock()
 		fmt.Println("DONE")
+	}
+
+	if opts.UndoBlocks > 0 {
+		fmt.Println("Undo", opts.UndoBlocks, "block(s) and exit...")
+		for opts.UndoBlocks > 0 {
+			ch.UndoLastBlock()
+			opts.UndoBlocks--
+		}
+		return
 	}
 
 	// And now re-apply the blocks which you have just reverted :)
