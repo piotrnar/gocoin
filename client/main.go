@@ -240,11 +240,15 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
+	if common.FLAG.UndoBlocks > 0 {
+		usif.Exit_now = true
+	}
+
 	if common.FLAG.Rescan && common.FLAG.VolatileUTXO {
 
 		fmt.Println("UTXO database rebuilt complete in the volatile mode, so flush DB to disk and exit...")
 
-	} else {
+	} else if !usif.Exit_now {
 
 		common.RecalcAverageBlockSize(true)
 

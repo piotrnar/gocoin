@@ -19,6 +19,7 @@ var (
 	FLAG struct { // Command line only options
 		Rescan bool
 		VolatileUTXO bool
+		UndoBlocks uint
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -164,6 +165,7 @@ func InitConfig() {
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txp", CFG.TXPool.Enabled, "Enable Memory Pool")
 	flag.BoolVar(&CFG.TXRoute.Enabled, "txr", CFG.TXRoute.Enabled, "Enable Transaction Routing")
 	flag.BoolVar(&CFG.TextUI.Enabled, "textui", CFG.TextUI.Enabled, "Enable processing TextUI commands (from stdin)")
+	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
