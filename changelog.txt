@@ -1,4 +1,5 @@
 1.6.0
+* Client: new config "Net.Friends" - array of "ip:port" strings, peers to which the node always connects
 * Qdb: Writing the entire database content (e.g. during defrag) is much faster now
 * Client: peer's send buffer made as a static circular buffer (with max size of 4MB)
 * Client: improved bandwidth statistics

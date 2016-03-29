@@ -199,14 +199,28 @@ func tcp_server() {
 			lis.SetDeadline(time.Now().Add(time.Second))
 			tc, e := lis.AcceptTCP()
 			if e == nil {
-				var terminate bool
+				var terminate, friend bool
+				var conn *OneConnection
 
 				if common.DebugLevel>0 {
 					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
 				}
+
 				// set port to default, for incomming connections
 				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
-				if e == nil {
+				if e != nil {
+					if common.DebugLevel>0 {
+						println("NewPeerFromString:", e.Error())
+					}
+					common.CountSafe("InConnRefused")
+					terminate = true
+				}
+
+				if !terminate {
+					friend = common.IsFriend(ad)
+				}
+
+				if !terminate && !friend {
 					// Hammering protection
 					HammeringMutex.Lock()
 					ti, ok := RecentlyDisconencted[ad.NetAddr.Ip4]
@@ -217,38 +231,36 @@ func tcp_server() {
 						ad.Ban()
 						terminate = true
 					}
+				}
 
-					if !terminate {
-						// Incoming IP passed all the initial checks - talk to it
-						conn := NewConnection(ad)
-						conn.X.ConnectedAt = time.Now()
-						conn.X.Incomming = true
-						conn.Conn = tc
+				if !terminate {
+					// Incoming IP passed all the initial checks - talk to it
+					conn = NewConnection(ad)
+					conn.X.ConnectedAt = time.Now()
+					conn.X.Incomming = true
+					conn.Conn = tc
+
+					if !friend { // Do not reject friends reconnecting from same IP
 						Mutex_net.Lock()
 						if _, ok := OpenCons[ad.UniqID()]; ok {
-							//fmt.Println(ad.Ip(), "already connected")
 							common.CountSafe("SameIpReconnect")
 							Mutex_net.Unlock()
 							terminate = true
-						} else {
-							OpenCons[ad.UniqID()] = conn
-							InConsActive++
-							Mutex_net.Unlock()
-							go func () {
-								conn.Run()
-								Mutex_net.Lock()
-								delete(OpenCons, ad.UniqID())
-								InConsActive--
-								Mutex_net.Unlock()
-							}()
 						}
 					}
-				} else {
-					if common.DebugLevel>0 {
-						println("NewPeerFromString:", e.Error())
-					}
-					common.CountSafe("InConnRefused")
-					terminate = true
+				}
+
+				if !terminate {
+					OpenCons[ad.UniqID()] = conn
+					InConsActive++
+					Mutex_net.Unlock()
+					go func () {
+						conn.Run()
+						Mutex_net.Lock()
+						delete(OpenCons, ad.UniqID())
+						InConsActive--
+						Mutex_net.Unlock()
+					}()
 				}
 
 				// had any error occured - close teh TCP connection
@@ -308,14 +320,16 @@ func NetworkTick() {
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	}
 
-	for i:=0; i<len(common.FriendNodes); i++ {
+	common.LockCfg()
+	for k, v :=  range common.FriendNodes {
 		Mutex_net.Lock()
-		_, yes := OpenCons[common.FriendNodes[i].UniqID()]
+		_, yes := OpenCons[k]
 		Mutex_net.Unlock()
 		if !yes {
-			DoNetwork(common.FriendNodes[i])
+			DoNetwork(v)
 		}
 	}
+	common.UnlockCfg()
 
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 		adrs := peersdb.GetBestPeers(16, ConnectionActive)

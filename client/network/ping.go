@@ -49,6 +49,9 @@ func drop_slowest_peer() {
 			// If this is an incomming connection, but we are not full yet, ignore it
 			continue
 		}
+		if common.IsFriend(v.PeerAddr) {
+			continue // We do not drop friends
+		}
 		v.Mutex.Lock()
 		ap := v.GetAveragePing()
 		v.Mutex.Unlock()

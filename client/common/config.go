@@ -91,7 +91,7 @@ var (
 
 	mutex_cfg sync.Mutex
 
-	FriendNodes []*peersdb.PeerAddr
+	FriendNodes map[uint64] *peersdb.PeerAddr
 )
 
 
@@ -245,14 +245,24 @@ func Reset() {
 
 
 func UpdateFriends() {
-	FriendNodes = nil
+	mutex_cfg.Lock()
+	FriendNodes = make(map[uint64] *peersdb.PeerAddr, len(CFG.Net.Friends))
 	for i:=0; i<len(CFG.Net.Friends); i++ {
 		if ad, er := peersdb.VolatilePeerFromString(CFG.Net.Friends[i], false); er==nil {
-			FriendNodes = append(FriendNodes, ad)
+			FriendNodes[ad.UniqID()] = ad
 		} else {
 			println("Error parsing friend node address", CFG.Net.Friends[i])
 		}
 	}
+	mutex_cfg.Unlock()
+}
+
+
+func IsFriend(ad *peersdb.PeerAddr) (yes bool) {
+	mutex_cfg.Lock()
+	_, yes = FriendNodes[ad.UniqID()]
+	mutex_cfg.Unlock()
+	return
 }
 
 
