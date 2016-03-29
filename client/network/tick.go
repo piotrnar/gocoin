@@ -308,6 +308,15 @@ func NetworkTick() {
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	}
 
+	for i:=0; i<len(common.FriendNodes); i++ {
+		Mutex_net.Lock()
+		_, yes := OpenCons[common.FriendNodes[i].UniqID()]
+		Mutex_net.Unlock()
+		if !yes {
+			DoNetwork(common.FriendNodes[i])
+		}
+	}
+
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 		adrs := peersdb.GetBestPeers(16, ConnectionActive)
 		if len(adrs)==0 {
