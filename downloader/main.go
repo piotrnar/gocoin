@@ -220,10 +220,11 @@ func main() {
 	peersdb.ClosePeerDB()
 
 	if !OnlyStoreBlocks && !QdbVolatileMode && DefragUTXO {
-		fmt.Print("Defragmenting UTXO database")
-		TheBlockChain.Unspent.Defrag()
+		fmt.Print("Defragment UTXO database while closing")
+		TheBlockChain.Unspent.FullDefragOnClose = true
+	} else {
+		fmt.Print("Closing blockchain")
 	}
-	fmt.Print("Closing blockchain")
 	TheBlockChain.Close()
 
 	return
