@@ -92,7 +92,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 
 	for i := range db.tdb {
 		fmt.Print("\rLoading new unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
-		db.dbN(i) // Load each of the sub-DBs into memory
+		db.DbN(i) // Load each of the sub-DBs into memory
 		if AbortNow {
 			return
 		}
@@ -179,7 +179,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		}
 
 		ind := qdb.KeyType(binary.LittleEndian.Uint64(tx.TxID[:8]))
-		_db := db.dbN(int(tx.TxID[31])%NumberOfUnspentSubDBs)
+		_db := db.DbN(int(tx.TxID[31])%NumberOfUnspentSubDBs)
 		v := _db.Get(ind)
 		if v != nil {
 			oldrec := NewQdbRec(ind, v)
@@ -276,7 +276,7 @@ func (db *UnspentDB) Save() {
 // Get ne unspent output
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
-	v := db.dbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
+	v := db.DbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
 	if v==nil {
 		e = errors.New("Unspent TX not found")
 		return
@@ -307,16 +307,16 @@ func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
 
 	if quick {
 		for i = range db.tdb {
-			db.dbN(i).Browse(brfn)
+			db.DbN(i).Browse(brfn)
 		}
 	} else {
 		for i = range db.tdb {
-			db.dbN(i).BrowseAll(brfn)
+			db.DbN(i).BrowseAll(brfn)
 		}
 	}
 }
 
-func (db *UnspentDB) dbN(i int) (*qdb.DB) {
+func (db *UnspentDB) DbN(i int) (*qdb.DB) {
 	if db.tdb[i]==nil {
 		qdb.NewDBExt(&db.tdb[i], &qdb.NewDBOpts {
 			Dir : db.dir+fmt.Sprintf("%06d", i),
@@ -343,7 +343,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 		db.ch.CB.NotifyTxDel(hash, outs)
 	}
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
-	_db := db.dbN(int(hash[31])%NumberOfUnspentSubDBs)
+	_db := db.DbN(int(hash[31])%NumberOfUnspentSubDBs)
 	v := _db.Get(ind)
 	if v==nil {
 		return // no such txid in UTXO (just ignorde delete request)
@@ -372,7 +372,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		if db.ch.CB.NotifyTxAdd!=nil {
 			db.ch.CB.NotifyTxAdd(rec)
 		}
-		db.dbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
+		db.DbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)
@@ -388,7 +388,7 @@ func (db *UnspentDB) PrintCoinAge() {
 	}
 	age := make(map[uint32] *onerec)
 	for i := range db.tdb {
-		db.dbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
+		db.DbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
 			rec := NewQdbRecStatic(k, v)
 			a := rec.InBlock
 			if a>maxbl {
@@ -430,7 +430,7 @@ func (db *UnspentDB) GetStats() (s string) {
 	var tot, outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
 	var mincnt, maxcnt, totdatasize, unspendable uint64
 	for i := range db.tdb {
-		dbcnt := uint64(db.dbN(i).Count())
+		dbcnt := uint64(db.DbN(i).Count())
 		if i==0 {
 			mincnt, maxcnt = dbcnt, dbcnt
 		} else if dbcnt < mincnt {
@@ -439,7 +439,7 @@ func (db *UnspentDB) GetStats() (s string) {
 			maxcnt = dbcnt
 		}
 		tot += dbcnt
-		db.dbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
+		db.DbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
 			totdatasize += uint64(len(v)+8)
 			rec := NewQdbRecStatic(k, v)
 			for idx, r := range rec.Outs {
