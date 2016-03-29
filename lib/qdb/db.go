@@ -50,33 +50,33 @@ const (
 
 type DB struct {
 	// folder with the db files
-	dir string
+	Dir string
 
-	logfile *os.File
-	lastvalidlogpos int64
-	datseq uint32
+	LogFile *os.File
+	LastValidLogPos int64
+	DataSeq uint32
 
 	// access mutex:
-	mutex sync.Mutex
+	Mutex sync.Mutex
 
 	//index:
-	idx *dbidx
+	Idx *QdbIndex
 
-	nosync bool
-	pending_recs map[KeyType] bool
+	NoSyncMode bool
+	PendingRecords map[KeyType] bool
 
-	rdfile map[uint32] *os.File
+	DatFiles map[uint32] *os.File
 
 	O ExtraOpts
 
-	volatileMode bool // this will only store database on disk when you close it
+	VolatileMode bool // this will only store database on disk when you close it
 }
 
 
 type oneIdx struct {
 	data data_ptr_t
 
-	datseq uint32 // data file index
+	DataSeq uint32 // data file index
 	datpos uint32 // position of the record in the data file
 	datlen uint32 // length of the record in the data file
 
@@ -106,9 +106,9 @@ type QdbWalkFunction func(key KeyType, val []byte) uint32
 
 func (i oneIdx) String() string {
 	if i.data==nil {
-		return fmt.Sprintf("Nodata:%d:%d:%d", i.datseq, i.datpos, i.datlen)
+		return fmt.Sprintf("Nodata:%d:%d:%d", i.DataSeq, i.datpos, i.datlen)
 	} else {
-		return fmt.Sprintf("YesData:%d:%d:%d", i.datseq, i.datpos, i.datlen)
+		return fmt.Sprintf("YesData:%d:%d:%d", i.DataSeq, i.datpos, i.datlen)
 	}
 }
 
@@ -123,7 +123,7 @@ func NewDBExt(_db **DB, opts *NewDBOpts) (e error) {
 		dir += string(os.PathSeparator)
 	}
 
-	db.volatileMode = opts.Volatile
+	db.VolatileMode = opts.Volatile
 
 	if opts.ExtraOpts==nil {
 		db.O.DefragPercentVal = DefaultDefragPercentVal
@@ -135,15 +135,15 @@ func NewDBExt(_db **DB, opts *NewDBOpts) (e error) {
 	}
 
 	os.MkdirAll(dir, 0770)
-	db.dir = dir
-	db.rdfile = make(map[uint32] *os.File)
-	db.pending_recs = make(map[KeyType] bool, db.O.MaxPending)
+	db.Dir = dir
+	db.DatFiles = make(map[uint32] *os.File)
+	db.PendingRecords = make(map[KeyType] bool, db.O.MaxPending)
 
-	db.idx = NewDBidx(db, opts.Records)
+	db.Idx = NewDBidx(db, opts.Records)
 	if opts.LoadData {
-		db.idx.load(opts.WalkFunction)
+		db.Idx.load(opts.WalkFunction)
 	}
-	db.datseq = db.idx.max_dat_seq+1
+	db.DataSeq = db.Idx.MaxDatfileSequence+1
 	return
 }
 
@@ -156,9 +156,9 @@ func NewDB(dir string, load bool) (*DB, error) {
 
 // Returns number of records in the DB
 func (db *DB) Count() (l int) {
-	db.mutex.Lock()
-	l = db.idx.size()
-	db.mutex.Unlock()
+	db.Mutex.Lock()
+	l = db.Idx.size()
+	db.Mutex.Unlock()
 	return
 }
 
@@ -166,8 +166,8 @@ func (db *DB) Count() (l int) {
 // Browses through all the DB records calling the walk function for each record.
 // If the walk function returns false, it aborts the browsing and returns.
 func (db *DB) Browse(walk QdbWalkFunction) {
-	db.mutex.Lock()
-	db.idx.browse(func(k KeyType, v *oneIdx) bool {
+	db.Mutex.Lock()
+	db.Idx.browse(func(k KeyType, v *oneIdx) bool {
 		if (v.flags&NO_BROWSE)!=0 {
 			return true
 		}
@@ -177,43 +177,43 @@ func (db *DB) Browse(walk QdbWalkFunction) {
 		v.freerec()
 		return (res&BR_ABORT)==0
 	})
-	//println("br", db.dir, "done")
-	db.mutex.Unlock()
+	//println("br", db.Dir, "done")
+	db.Mutex.Unlock()
 }
 
 
 // works almost like normal browse except that it also returns non-browsable records
 func (db *DB) BrowseAll(walk QdbWalkFunction) {
-	db.mutex.Lock()
-	db.idx.browse(func(k KeyType, v *oneIdx) bool {
+	db.Mutex.Lock()
+	db.Idx.browse(func(k KeyType, v *oneIdx) bool {
 		db.loadrec(v)
 		res := walk(k, v.Slice())
 		v.aply_browsing_flags(res)
 		v.freerec()
 		return (res&BR_ABORT)==0
 	})
-	//println("br", db.dir, "done")
-	db.mutex.Unlock()
+	//println("br", db.Dir, "done")
+	db.Mutex.Unlock()
 }
 
 
 func (db *DB) Get(key KeyType) (value []byte) {
-	db.mutex.Lock()
-	idx := db.idx.get(key)
+	db.Mutex.Lock()
+	idx := db.Idx.get(key)
 	if idx!=nil {
 		db.loadrec(idx)
 		idx.aply_browsing_flags(YES_CACHE)  // we are giving out the pointer, so keep it in cache
 		value = idx.Slice()
 	}
 	//fmt.Printf("get %016x -> %s\n", key, hex.EncodeToString(value))
-	db.mutex.Unlock()
+	db.Mutex.Unlock()
 	return
 }
 
 
 // Use this one inside Browse
 func (db *DB) GetNoMutex(key KeyType) (value []byte) {
-	idx := db.idx.get(key)
+	idx := db.Idx.get(key)
 	if idx!=nil {
 		db.loadrec(idx)
 		value = idx.Slice()
@@ -225,43 +225,43 @@ func (db *DB) GetNoMutex(key KeyType) (value []byte) {
 
 // Adds or updates record with a given key.
 func (db *DB) Put(key KeyType, value []byte) {
-	db.mutex.Lock()
-	db.idx.memput(key, newIdx(value, 0))
-	if db.volatileMode {
-		db.nosync = true
-		db.mutex.Unlock()
+	db.Mutex.Lock()
+	db.Idx.memput(key, newIdx(value, 0))
+	if db.VolatileMode {
+		db.NoSyncMode = true
+		db.Mutex.Unlock()
 		return
 	}
-	db.pending_recs[key] = true
+	db.PendingRecords[key] = true
 	if db.syncneeded() {
 		go func() {
 			db.sync()
-			db.mutex.Unlock()
+			db.Mutex.Unlock()
 		}()
 	} else {
-		db.mutex.Unlock()
+		db.Mutex.Unlock()
 	}
 }
 
 
 // Adds or updates record with a given key.
 func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
-	db.mutex.Lock()
+	db.Mutex.Lock()
 	//fmt.Printf("put %016x %s\n", key, hex.EncodeToString(value))
-	db.idx.memput(key, newIdx(value, flags))
-	if db.volatileMode {
-		db.nosync = true
-		db.mutex.Unlock()
+	db.Idx.memput(key, newIdx(value, flags))
+	if db.VolatileMode {
+		db.NoSyncMode = true
+		db.Mutex.Unlock()
 		return
 	}
-	db.pending_recs[key] = true
+	db.PendingRecords[key] = true
 	if db.syncneeded() {
 		go func() {
 			db.sync()
-			db.mutex.Unlock()
+			db.Mutex.Unlock()
 		}()
 	} else {
-		db.mutex.Unlock()
+		db.Mutex.Unlock()
 	}
 }
 
@@ -269,31 +269,31 @@ func (db *DB) PutExt(key KeyType, value []byte, flags uint32) {
 // Removes record with a given key.
 func (db *DB) Del(key KeyType) {
 	//println("del", hex.EncodeToString(key[:]))
-	db.mutex.Lock()
-	db.idx.memdel(key)
-	if db.volatileMode {
-		db.nosync = true
-		db.mutex.Unlock()
+	db.Mutex.Lock()
+	db.Idx.memdel(key)
+	if db.VolatileMode {
+		db.NoSyncMode = true
+		db.Mutex.Unlock()
 		return
 	}
-	db.pending_recs[key] = true
+	db.PendingRecords[key] = true
 	if db.syncneeded() {
 		go func() {
 			db.sync()
-			db.mutex.Unlock()
+			db.Mutex.Unlock()
 		}()
 	} else {
-		db.mutex.Unlock()
+		db.Mutex.Unlock()
 	}
 }
 
 
 func (db *DB) ApplyFlags(key KeyType, fl uint32) {
-	db.mutex.Lock()
-	if idx:=db.idx.get(key); idx!=nil {
+	db.Mutex.Lock()
+	if idx:=db.Idx.get(key); idx!=nil {
 		idx.aply_browsing_flags(fl)
 	}
-	db.mutex.Unlock()
+	db.Mutex.Unlock()
 }
 
 
@@ -301,20 +301,20 @@ func (db *DB) ApplyFlags(key KeyType, fl uint32) {
 // Defragments the DB on the disk.
 // Return true if defrag hes been performed, and false if was not needed.
 func (db *DB) Defrag(force bool) (doing bool) {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return
 	}
-	db.mutex.Lock()
-	doing = force || db.idx.extra_space_used > (uint64(db.O.DefragPercentVal)*db.idx.disk_space_needed/100)
+	db.Mutex.Lock()
+	doing = force || db.Idx.ExtraSpaceUsed > (uint64(db.O.DefragPercentVal)*db.Idx.DiskSpaceNeeded/100)
 	if doing {
 		cnt("DefragYes")
 		go func() {
 			db.defrag()
-			db.mutex.Unlock()
+			db.Mutex.Unlock()
 		}()
 	} else {
 		cnt("DefragNo")
-		db.mutex.Unlock()
+		db.Mutex.Unlock()
 	}
 	return
 }
@@ -322,26 +322,26 @@ func (db *DB) Defrag(force bool) (doing bool) {
 
 // Disable writing changes to disk.
 func (db *DB) NoSync() {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return
 	}
-	db.mutex.Lock()
-	db.nosync = true
-	db.mutex.Unlock()
+	db.Mutex.Lock()
+	db.NoSyncMode = true
+	db.Mutex.Unlock()
 }
 
 
 // Write all the pending changes to disk now.
 // Re enable syncing if it has been disabled.
 func (db *DB) Sync() {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return
 	}
-	db.mutex.Lock()
-	db.nosync = false
+	db.Mutex.Lock()
+	db.NoSyncMode = false
 	go func() {
 		db.sync()
-		db.mutex.Unlock()
+		db.Mutex.Unlock()
 	}()
 }
 
@@ -349,109 +349,99 @@ func (db *DB) Sync() {
 // Close the database.
 // Writes all the pending changes to disk.
 func (db *DB) Close() {
-	db.mutex.Lock()
-	if db.volatileMode {
+	db.Mutex.Lock()
+	if db.VolatileMode {
 		// flush all the data to disk when closing
-		if db.nosync {
+		if db.NoSyncMode {
 			db.defrag()
 		}
 	} else {
 		db.sync()
 	}
-	if db.logfile!=nil {
-		db.logfile.Close()
-		db.logfile = nil
+	if db.LogFile!=nil {
+		db.LogFile.Close()
+		db.LogFile = nil
 	}
-	db.idx.close()
-	db.idx = nil
-	for _, f := range db.rdfile {
+	db.Idx.close()
+	db.Idx = nil
+	for _, f := range db.DatFiles {
 		f.Close()
 	}
-	db.mutex.Unlock()
-}
-
-
-func (db *DB) Lock() {
-	db.mutex.Lock()
-}
-
-
-func (db *DB) Unlock() {
-	db.mutex.Unlock()
+	db.Mutex.Unlock()
 }
 
 
 func (db *DB) Flush() {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return
 	}
 	cnt("Flush")
-	if db.logfile!=nil {
-		db.logfile.Sync()
+	if db.LogFile!=nil {
+		db.LogFile.Sync()
 	}
-	if db.idx.file!=nil {
-		db.idx.file.Sync()
+	if db.Idx.file!=nil {
+		db.Idx.file.Sync()
 	}
 }
 
 
 func (db *DB) defrag() {
-	db.datseq++
-	if db.logfile!=nil {
-		db.logfile.Close()
-		db.logfile = nil
+	db.DataSeq++
+	if db.LogFile!=nil {
+		db.LogFile.Close()
+		db.LogFile = nil
 	}
 	db.checklogfile()
-	bufile := bufio.NewWriterSize(db.logfile, 0x100000)
+	bufile := bufio.NewWriterSize(db.LogFile, 0x100000)
 	used := make(map[uint32]bool, 10)
-	db.idx.browse(func(key KeyType, rec *oneIdx) bool {
+	db.Idx.browse(func(key KeyType, rec *oneIdx) bool {
 		db.loadrec(rec)
 		rec.datpos = uint32(db.addtolog(bufile, key, rec.Slice()))
-		rec.datseq = db.datseq
-		used[rec.datseq] = true
+		rec.DataSeq = db.DataSeq
+		used[rec.DataSeq] = true
 		rec.freerec()
 		return true
 	})
 
 	// first write & flush the data file:
 	bufile.Flush()
-	db.logfile.Sync()
+	db.LogFile.Sync()
 
 	// now the index:
-	db.idx.writedatfile() // this will close the file
+	db.Idx.writedatfile() // this will close the file
 
 	db.cleanupold(used)
-	db.idx.extra_space_used = 0
+	db.Idx.ExtraSpaceUsed = 0
 }
 
 
 func (db *DB) sync() {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return
 	}
-	if len(db.pending_recs)>0 {
+	if len(db.PendingRecords)>0 {
 		cnt("SyncOK")
 		bidx := new(bytes.Buffer)
 		db.checklogfile()
-		for k, _ := range db.pending_recs {
-			rec := db.idx.get(k)
+		for k, _ := range db.PendingRecords {
+			rec := db.Idx.get(k)
 			if rec != nil {
 				fpos := db.addtolog(nil, k, rec.Slice())
 				//rec.datlen = uint32(len(rec.data))
 				rec.datpos = uint32(fpos)
-				rec.datseq = db.datseq
-				db.idx.addtolog(bidx, k, rec)
+				rec.DataSeq = db.DataSeq
+				db.Idx.addtolog(bidx, k, rec)
 				if (rec.flags&NO_CACHE)!=0 {
 					rec.FreeData()
 				}
 			} else {
-				db.idx.deltolog(bidx, k)
+				db.Idx.deltolog(bidx, k)
 			}
 		}
-		db.idx.writebuf(bidx.Bytes())
-		db.pending_recs = make(map[KeyType] bool, db.O.MaxPending)
+		db.Idx.writebuf(bidx.Bytes())
+		db.PendingRecords = make(map[KeyType] bool, db.O.MaxPending)
 
-		if db.idx.extra_space_used > (uint64(db.O.ForcedDefragPerc)*db.idx.disk_space_needed/100) {
+		if db.Idx.ExtraSpaceUsed > (uint64(db.O.ForcedDefragPerc)*db.Idx.DiskSpaceNeeded/100) {
 			cnt("DefragNow")
 			db.defrag()
 		}
@@ -462,14 +452,14 @@ func (db *DB) sync() {
 
 
 func (db *DB) syncneeded() bool {
-	if db.volatileMode {
+	if db.VolatileMode {
 		return false
 	}
-	if len(db.pending_recs) > int(db.O.MaxPendingNoSync) {
+	if len(db.PendingRecords) > int(db.O.MaxPendingNoSync) {
 		cnt("SyncNeedBig")
 		return true
 	}
-	if !db.nosync && len(db.pending_recs) > int(db.O.MaxPending) {
+	if !db.NoSyncMode && len(db.PendingRecords) > int(db.O.MaxPending) {
 		cnt("SyncNeedSmall")
 		return true
 	}

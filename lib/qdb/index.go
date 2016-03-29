@@ -6,29 +6,28 @@ import (
 )
 
 
-type dbidx struct {
+type QdbIndex struct {
 	db *DB
-	path string
+	IdxFilePath string
 	file *os.File
-	datfile_idx int
-	version_seq uint32
-	max_dat_seq uint32
+	DatfileIndex int
+	VersionSequence uint32
+	MaxDatfileSequence uint32
 
-	index map[KeyType] *oneIdx
-	cnt int
+	Index map[KeyType] *oneIdx
 
-	disk_space_needed uint64
-	extra_space_used uint64
+	DiskSpaceNeeded uint64
+	ExtraSpaceUsed uint64
 }
 
-func NewDBidx(db *DB, recs uint) (idx *dbidx) {
-	idx = new(dbidx)
+func NewDBidx(db *DB, recs uint) (idx *QdbIndex) {
+	idx = new(QdbIndex)
 	idx.db = db
-	idx.path = db.dir+"qdbidx."
+	idx.IdxFilePath = db.Dir+"qdbidx."
 	if recs==0 {
-		idx.index = make(map[KeyType] *oneIdx)
+		idx.Index = make(map[KeyType] *oneIdx)
 	} else {
-		idx.index = make(map[KeyType] *oneIdx, recs)
+		idx.Index = make(map[KeyType] *oneIdx, recs)
 	}
 	used := make(map[uint32]bool, 10)
 	idx.loaddat(used)
@@ -38,18 +37,18 @@ func NewDBidx(db *DB, recs uint) (idx *dbidx) {
 }
 
 
-func (idx *dbidx) load(walk QdbWalkFunction) {
+func (idx *QdbIndex) load(walk QdbWalkFunction) {
 	dats := make(map[uint32] []byte)
 	idx.browse(func(k KeyType, v *oneIdx) bool {
 		if walk!=nil || (v.flags&NO_CACHE)==0 {
-			dat := dats[v.datseq]
+			dat := dats[v.DataSeq]
 			if dat == nil {
-				dat, _ = ioutil.ReadFile(idx.db.seq2fn(v.datseq))
+				dat, _ = ioutil.ReadFile(idx.db.seq2fn(v.DataSeq))
 				if dat==nil {
-					println("Database corrupt - missing file:", idx.db.seq2fn(v.datseq))
+					println("Database corrupt - missing file:", idx.db.seq2fn(v.DataSeq))
 					os.Exit(1)
 				}
-				dats[v.datseq] = dat
+				dats[v.DataSeq] = dat
 			}
 			v.SetData(dat[v.datpos:v.datpos+v.datlen])
 			if walk!=nil {
@@ -63,81 +62,78 @@ func (idx *dbidx) load(walk QdbWalkFunction) {
 }
 
 
-func (idx *dbidx) size() int {
-	return idx.cnt
+func (idx *QdbIndex) size() int {
+	return len(idx.Index)
 }
 
 
-func (idx *dbidx) get(k KeyType) *oneIdx {
-	return idx.index[k]
+func (idx *QdbIndex) get(k KeyType) *oneIdx {
+	return idx.Index[k]
 }
 
 
-func (idx *dbidx) memput(k KeyType, rec *oneIdx) {
-	if prv, ok := idx.index[k]; !ok {
-		idx.cnt++
-	} else {
+func (idx *QdbIndex) memput(k KeyType, rec *oneIdx) {
+	if prv, ok := idx.Index[k]; ok {
 		prv.FreeData()
 		dif := uint64(24+prv.datlen)
-		if !idx.db.volatileMode {
-			idx.extra_space_used += dif
-			idx.disk_space_needed -= dif
+		if !idx.db.VolatileMode {
+			idx.ExtraSpaceUsed += dif
+			idx.DiskSpaceNeeded -= dif
 		}
 	}
-	idx.index[k] = rec
+	idx.Index[k] = rec
 
-	if !idx.db.volatileMode {
-		idx.disk_space_needed += uint64(24+rec.datlen)
+	if !idx.db.VolatileMode {
+		idx.DiskSpaceNeeded += uint64(24+rec.datlen)
 	}
-	if rec.datseq>idx.max_dat_seq {
-		idx.max_dat_seq = rec.datseq
+	if rec.DataSeq>idx.MaxDatfileSequence {
+		idx.MaxDatfileSequence = rec.DataSeq
 	}
 }
 
 
-func (idx *dbidx) memdel(k KeyType) {
-	if cur, ok := idx.index[k]; ok {
+func (idx *QdbIndex) memdel(k KeyType) {
+	if cur, ok := idx.Index[k]; ok {
 		cur.FreeData()
-		idx.cnt--
 		dif := uint64(12+cur.datlen)
-		if !idx.db.volatileMode {
-			idx.extra_space_used += dif
-			idx.disk_space_needed -= dif
+		if !idx.db.VolatileMode {
+			idx.ExtraSpaceUsed += dif
+			idx.DiskSpaceNeeded -= dif
 		}
-		delete(idx.index, k)
+		delete(idx.Index, k)
 	}
 }
 
-func (idx *dbidx) put(k KeyType, rec *oneIdx) {
+func (idx *QdbIndex) put(k KeyType, rec *oneIdx) {
 	idx.memput(k, rec)
-	if idx.db.volatileMode {
+	if idx.db.VolatileMode {
 		return
 	}
 	idx.addtolog(nil, k, rec)
 }
 
 
-func (idx *dbidx) del(k KeyType) {
+func (idx *QdbIndex) del(k KeyType) {
 	idx.memdel(k)
-	if idx.db.volatileMode {
+	if idx.db.VolatileMode {
 		return
 	}
 	idx.deltolog(nil, k)
 }
 
 
-func (idx *dbidx) browse(walk func(key KeyType, idx *oneIdx) bool) {
-	for k, v := range idx.index {
+func (idx *QdbIndex) browse(walk func(key KeyType, idx *oneIdx) bool) {
+	for k, v := range idx.Index {
 		if !walk(k, v) {
 			break
 		}
 	}
 }
 
-func (idx *dbidx) close() {
+func (idx *QdbIndex) close() {
 	if idx.file!= nil {
 		idx.file.Close()
 		idx.file = nil
 	}
-	idx.index = nil
+	idx.Index = nil
 }

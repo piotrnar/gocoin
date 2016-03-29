@@ -57,43 +57,43 @@ func read_and_check_file(fn string) (seq uint32, data []byte) {
 }
 
 
-func (idx *dbidx) loadneweridx() []byte {
-	s0, d0 := read_and_check_file(idx.path+"0")
-	s1, d1 := read_and_check_file(idx.path+"1")
+func (idx *QdbIndex) loadneweridx() []byte {
+	s0, d0 := read_and_check_file(idx.IdxFilePath+"0")
+	s1, d1 := read_and_check_file(idx.IdxFilePath+"1")
 
 	if d0 == nil && d1 == nil {
-		//println(idx.path, "- no valid file")
+		//println(idx.IdxFilePath, "- no valid file")
 		return nil
 	}
 
 	if d0!=nil && d1!=nil {
 		// Both files are valid - take the one with higher sequence
 		if int32(s0 - s1) >= 0 {
-			os.Remove(idx.path+"1")
-			idx.datfile_idx = 0
-			idx.version_seq = s0
+			os.Remove(idx.IdxFilePath+"1")
+			idx.DatfileIndex = 0
+			idx.VersionSequence = s0
 			return d0
 		} else {
-			os.Remove(idx.path+"0")
-			idx.datfile_idx = 1
-			idx.version_seq = s1
+			os.Remove(idx.IdxFilePath+"0")
+			idx.DatfileIndex = 1
+			idx.VersionSequence = s1
 			return d1
 		}
 	} else if d0==nil {
-		os.Remove(idx.path+"0")
-		idx.datfile_idx = 1
-		idx.version_seq = s1
+		os.Remove(idx.IdxFilePath+"0")
+		idx.DatfileIndex = 1
+		idx.VersionSequence = s1
 		return d1
 	} else {
-		os.Remove(idx.path+"1")
-		idx.datfile_idx = 0
-		idx.version_seq = s0
+		os.Remove(idx.IdxFilePath+"1")
+		idx.DatfileIndex = 0
+		idx.VersionSequence = s0
 		return d0
 	}
 }
 
 
-func (idx *dbidx) loaddat(used map[uint32]bool) {
+func (idx *QdbIndex) loaddat(used map[uint32]bool) {
 	d := idx.loadneweridx()
 	if d == nil {
 		return
@@ -105,26 +105,26 @@ func (idx *dbidx) loaddat(used map[uint32]bool) {
 		flen := binary.LittleEndian.Uint32(d[pos+12:pos+16])
 		fseq := binary.LittleEndian.Uint32(d[pos+16:pos+20])
 		flgz := binary.LittleEndian.Uint32(d[pos+20:pos+24])
-		idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq, flags:flgz})
+		idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, DataSeq:fseq, flags:flgz})
 		used[fseq] = true
 	}
 	return
 }
 
 
-func (idx *dbidx) loadlog(used map[uint32]bool) {
-	idx.file, _ = os.OpenFile(idx.path+"log", os.O_RDWR, 0660)
+func (idx *QdbIndex) loadlog(used map[uint32]bool) {
+	idx.file, _ = os.OpenFile(idx.IdxFilePath+"log", os.O_RDWR, 0660)
 	if idx.file==nil {
 		return
 	}
 
 	var iseq uint32
 	binary.Read(idx.file, binary.LittleEndian, &iseq)
-	if iseq!=idx.version_seq {
-		println("incorrect seq in the log file", iseq, idx.version_seq)
+	if iseq!=idx.VersionSequence {
+		println("incorrect seq in the log file", iseq, idx.VersionSequence)
 		idx.file.Close()
 		idx.file = nil
-		os.Remove(idx.path+"log")
+		os.Remove(idx.IdxFilePath+"log")
 		return
 	}
 
@@ -142,7 +142,7 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 			fseq := binary.LittleEndian.Uint32(d[pos+4:pos+8])
 			flgz := binary.LittleEndian.Uint32(d[pos+8:pos+12])
 			pos += 12
-			idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, datseq:fseq, flags:flgz})
+			idx.memput(key, &oneIdx{datpos:fpos, datlen:flen, DataSeq:fseq, flags:flgz})
 			used[fseq] = true
 		} else {
 			idx.memdel(key)
@@ -153,16 +153,16 @@ func (idx *dbidx) loadlog(used map[uint32]bool) {
 }
 
 
-func (idx *dbidx) checklogfile() {
+func (idx *QdbIndex) checklogfile() {
 	if idx.file == nil {
-		idx.file, _ = os.Create(idx.path+"log")
-		binary.Write(idx.file, binary.LittleEndian, uint32(idx.version_seq))
+		idx.file, _ = os.Create(idx.IdxFilePath+"log")
+		binary.Write(idx.file, binary.LittleEndian, uint32(idx.VersionSequence))
 	}
 	return
 }
 
 
-func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
+func (idx *QdbIndex) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 	if wr == nil {
 		idx.checklogfile()
 		wr = idx.file
@@ -170,12 +170,12 @@ func (idx *dbidx) addtolog(wr io.Writer, k KeyType, rec *oneIdx) {
 	binary.Write(wr, binary.LittleEndian, k)
 	binary.Write(wr, binary.LittleEndian, rec.datpos)
 	binary.Write(wr, binary.LittleEndian, rec.datlen)
-	binary.Write(wr, binary.LittleEndian, rec.datseq)
+	binary.Write(wr, binary.LittleEndian, rec.DataSeq)
 	binary.Write(wr, binary.LittleEndian, rec.flags)
 }
 
 
-func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
+func (idx *QdbIndex) deltolog(wr io.Writer, k KeyType) {
 	if wr == nil {
 		idx.checklogfile()
 		wr = idx.file
@@ -185,27 +185,27 @@ func (idx *dbidx) deltolog(wr io.Writer, k KeyType) {
 }
 
 
-func (idx *dbidx) writedatfile() {
-	idx.datfile_idx = 1-idx.datfile_idx
-	idx.version_seq++
+func (idx *QdbIndex) writedatfile() {
+	idx.DatfileIndex = 1-idx.DatfileIndex
+	idx.VersionSequence++
 
 	//f := new(bytes.Buffer)
-	ff, _ := os.Create(fmt.Sprint(idx.path, idx.datfile_idx))
+	ff, _ := os.Create(fmt.Sprint(idx.IdxFilePath, idx.DatfileIndex))
 	f := bufio.NewWriterSize(ff, 0x100000)
-	binary.Write(f, binary.LittleEndian, idx.version_seq)
+	binary.Write(f, binary.LittleEndian, idx.VersionSequence)
 	idx.browse(func(key KeyType, rec *oneIdx) bool {
 		binary.Write(f, binary.LittleEndian, key)
 		binary.Write(f, binary.LittleEndian, rec.datpos)
 		binary.Write(f, binary.LittleEndian, rec.datlen)
-		binary.Write(f, binary.LittleEndian, rec.datseq)
+		binary.Write(f, binary.LittleEndian, rec.DataSeq)
 		binary.Write(f, binary.LittleEndian, rec.flags)
 		return true
 	})
 	f.Write([]byte{0xff,0xff,0xff,0xff})
-	binary.Write(f, binary.LittleEndian, idx.version_seq)
+	binary.Write(f, binary.LittleEndian, idx.VersionSequence)
 	f.Write([]byte("FINI"))
 
-	//ioutil.WriteFile(fmt.Sprint(idx.path, idx.datfile_idx), f.Bytes(), 0600)
+	//ioutil.WriteFile(fmt.Sprint(idx.IdxFilePath, idx.DatfileIndex), f.Bytes(), 0600)
 	f.Flush()
 	ff.Close()
 
@@ -214,12 +214,12 @@ func (idx *dbidx) writedatfile() {
 		idx.file.Close()
 		idx.file = nil
 	}
-	os.Remove(idx.path+"log")
-	os.Remove(fmt.Sprint(idx.path, 1-idx.datfile_idx))
+	os.Remove(idx.IdxFilePath+"log")
+	os.Remove(fmt.Sprint(idx.IdxFilePath, 1-idx.DatfileIndex))
 }
 
 
-func (idx *dbidx) writebuf(d []byte) {
+func (idx *QdbIndex) writebuf(d []byte) {
 	idx.checklogfile()
 	idx.file.Write(d)
 }

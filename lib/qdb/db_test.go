@@ -30,7 +30,7 @@ func kim(v []byte) bool {
 
 func dumpidx(db *DB) {
 	println("index")
-	for k, v := range db.idx.index {
+	for k, v := range db.Idx.Index {
 		println(k2s(k), v.datpos, v.datlen)
 	}
 }
