@@ -33,7 +33,6 @@ var (
 
 type PeerAddr struct {
 	*utils.OnePeer
-	StoreInDB bool
 }
 
 func DefaultTcpPort() uint16 {
@@ -57,7 +56,7 @@ func NewPeer(v []byte) (p *PeerAddr) {
 }
 
 
-func VolatilePeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
+func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	port := DefaultTcpPort()
 	x := strings.Index(ipstr, ":")
 	if x!=-1 {
@@ -86,17 +85,6 @@ func VolatilePeerFromString(ipstr string, force_default_port bool) (p *PeerAddr,
 		p.Services = Services
 		copy(p.Ip6[:], ip[:12])
 		p.Port = port
-	} else {
-		e = errors.New("Error parsing IP '"+ipstr+"'")
-	}
-	return
-}
-
-
-func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
-	p, e = VolatilePeerFromString(ipstr, force_default_port)
-	if e==nil {
-		p.StoreInDB = true
 		if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
 			e = errors.New(p.Ip() + " is banned")
 			p = nil
@@ -104,6 +92,8 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 			p.Time = uint32(time.Now().Unix())
 			p.Save()
 		}
+	} else {
+		e = errors.New("Error parsing IP '"+ipstr+"'")
 	}
 	return
 }
@@ -134,9 +124,7 @@ func ExpirePeers() {
 
 
 func (p *PeerAddr) Save() {
-	if p.StoreInDB {
-		PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
-	}
+	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
 }
 
 

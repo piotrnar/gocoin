@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 var (
@@ -53,7 +52,6 @@ var (
 			MaxUpKBps uint
 			MaxDownKBps uint
 			MaxBlockAtOnce uint32
-			Friends []string // list of IP:port peers that the node shall always try connecting to
 		}
 		TXPool struct {
 			Enabled bool // Global on/off swicth
@@ -90,8 +88,6 @@ var (
 	}
 
 	mutex_cfg sync.Mutex
-
-	FriendNodes []*peersdb.PeerAddr
 )
 
 
@@ -239,20 +235,7 @@ func Reset() {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
 	SetListenTCP(CFG.Net.ListenTCP, false)
-	UpdateFriends()
 	ReloadMiners()
-}
-
-
-func UpdateFriends() {
-	FriendNodes = nil
-	for i:=0; i<len(CFG.Net.Friends); i++ {
-		if ad, er := peersdb.VolatilePeerFromString(CFG.Net.Friends[i], false); er==nil {
-			FriendNodes = append(FriendNodes, ad)
-		} else {
-			println("Error parsing friend node address", CFG.Net.Friends[i])
-		}
-	}
 }
 
 
