@@ -233,6 +233,7 @@ func tcp_server() {
 					}
 				}
 
+				Mutex_net.Lock()
 				if !terminate {
 					// Incoming IP passed all the initial checks - talk to it
 					conn = NewConnection(ad)
@@ -241,10 +242,8 @@ func tcp_server() {
 					conn.Conn = tc
 
 					if !friend { // Do not reject friends reconnecting from same IP
-						Mutex_net.Lock()
 						if _, ok := OpenCons[ad.UniqID()]; ok {
 							common.CountSafe("SameIpReconnect")
-							Mutex_net.Unlock()
 							terminate = true
 						}
 					}
@@ -253,7 +252,6 @@ func tcp_server() {
 				if !terminate {
 					OpenCons[ad.UniqID()] = conn
 					InConsActive++
-					Mutex_net.Unlock()
 					go func () {
 						conn.Run()
 						Mutex_net.Lock()
@@ -262,6 +260,7 @@ func tcp_server() {
 						Mutex_net.Unlock()
 					}()
 				}
+				Mutex_net.Unlock()
 
 				// had any error occured - close teh TCP connection
 				if terminate {
