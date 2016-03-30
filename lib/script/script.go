@@ -21,13 +21,15 @@ const (
 	VER_P2SH = 1<<0
 	VER_DERSIG = 1<<2
 	VER_MINDATA = 1<<6
-	VER_CLTV = 1<<7
+	VER_CLTV = 1<<9
 
 	LOCKTIME_THRESHOLD = 500000000
 )
 
 
-func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) bool {
+func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+	sigScr := tx.TxIn[i].ScriptSig
+
 	if DBG_SCR {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -44,7 +46,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 			fmt.Println("sigScript failed :", hex.EncodeToString(sigScr[:]))
 			fmt.Println("pkScript:", hex.EncodeToString(pkScr[:]))
 		}
-		return false
+		return
 	}
 	if DBG_SCR {
 		fmt.Println("\nsigScr verified OK")
@@ -68,21 +70,21 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 			fmt.Println("* sigScript:", hex.EncodeToString(sigScr[:]))
 		}
-		return false
+		return
 	}
 
 	if st.size()==0 {
 		if DBG_SCR {
 			fmt.Println("* stack empty after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
-		return false
+		return
 	}
 
 	if !st.popBool() {
 		if DBG_SCR {
 			fmt.Println("* FALSE on stack after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
-		return false
+		return
 	}
 
 	// Additional validation for spend-to-script-hash transactions:
@@ -101,7 +103,7 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 			if DBG_ERR {
 				fmt.Println("P2SH is not push only")
 			}
-			return false
+			return
 		}
 
 		pubKey2 := stP2SH.pop()
@@ -113,24 +115,25 @@ func VerifyTxScript(sigScr []byte, pkScr []byte, i int, tx *btc.Tx, ver_flags ui
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
-			return false
+			return
 		}
 
 		if stP2SH.size()==0 {
 			if DBG_SCR {
 				fmt.Println("* P2SH stack empty after executing script:", hex.EncodeToString(pubKey2))
 			}
-			return false
+			return
 		}
 
 		if !stP2SH.popBool() {
 			if DBG_SCR {
 				fmt.Println("* FALSE on stack after executing P2SH script:", hex.EncodeToString(pubKey2))
 			}
-			return false
+			return
 		}
 	}
 
+	result = true
 	return true
 }
 
