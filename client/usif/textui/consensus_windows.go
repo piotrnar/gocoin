@@ -1,3 +1,5 @@
+// +build windows
+
 // On Windows OS copy this file to gocoin\client\usif\textui to enable consensus checking
 // Make sure you have proper "libbitcoinconsensus-0.dll" in a folder where OS can find it.
 
@@ -70,7 +72,7 @@ func init() {
 		println("WARNING: Consensus verificatrion disabled.")
 		return
 	}
-	fmt.Println("Using", DllName, "to verify consensus rules.")
+	fmt.Println("Using", DllName, "to ensure consensus rules.")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
 }
