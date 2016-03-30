@@ -119,6 +119,7 @@ sorted by
 		<option value="len">size</option>
 		<option value="btc">BTC volume</option>
 		<option value="fee">fee amount</option>
+		<option value="ops">sigops count</option>
 		<option value="spb" selected>fee per byte</option>
 	</select>
 in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> order
@@ -137,7 +138,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
 		<th onclick="sortclick('fee')" style="cursor:pointer" width="80" align="right">Fee BTC
 		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">Fee/Byte
-		<th width="40" align="right">Sigops
+		<th onclick="sortclick('ops')" style="cursor:pointer" width="40" align="right">Sigops
 		<th width="40" align="right">Sent
 		<th width="60" align="right">Extras
 	</tr>
