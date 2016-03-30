@@ -1,5 +1,8 @@
 // +build linux
 
+// If this file does not build and you don't know what to do, just delete it
+// Or place the bitcoin consensus lib (libbitcoinconsensus.so) where OS can find it.
+
 package textui
 
 /*
