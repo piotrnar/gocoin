@@ -325,7 +325,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
 	for i := range tx.TxIn {
-		if !script.VerifyTxScript(tx.TxIn[i].ScriptSig, pos[i].Pk_script, i, tx,
+		if !script.VerifyTxScript(pos[i].Pk_script, i, tx,
 			script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
