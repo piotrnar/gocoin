@@ -13,27 +13,29 @@ var (
 )
 
 func LockDatabaseDir(GocoinHomeDir string) {
-	var e error
 	os.MkdirAll(GocoinHomeDir, 0770)
 	DbLockFileName = GocoinHomeDir+".lock"
-	DbLockFileHndl, e = os.OpenFile(DbLockFileName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0660)
-	if e != nil {
+	DbLockFileHndl, _ = os.Open(DbLockFileName)
+	if DbLockFileHndl==nil {
+		DbLockFileHndl, _ = os.Create(DbLockFileName)
+	}
+	if DbLockFileHndl==nil {
 		goto error
 	}
-	e = syscall.Flock(int(DbLockFileHndl.Fd()), syscall.LOCK_EX)
-	if e != nil {
+
+	if e:=syscall.Flock(int(DbLockFileHndl.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); e!=nil {
 		goto error
 	}
 	return
 
 error:
-	println(e.Error())
 	println("Could not lock the databse folder for writing. Another instance might be running.")
 	println("If it is not the case, remove this file:", DbLockFileName)
 	os.Exit(1)
 }
 
 func UnlockDatabaseDir() {
+	syscall.Flock(int(DbLockFileHndl.Fd()), syscall.LOCK_UN)
 	DbLockFileHndl.Close()
 	os.Remove(DbLockFileName)
 }
