@@ -50,7 +50,7 @@ func TestScritpsValid(t *testing.T) {
 				continue
 			}
 
-			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
+			res := VerifyTxScript(s2, 0, mk_out_tx(s1, s2), flags)
 			if !res {
 				ex := ""
 				if len(vecs[i])>3 {
@@ -101,7 +101,7 @@ func TestScritpsInvalid(t *testing.T) {
 				continue
 			}
 
-			res := VerifyTxScript(s1, s2, 0, mk_out_tx(s1, s2), flags)
+			res := VerifyTxScript(s2, 0, mk_out_tx(s1, s2), flags)
 			if res {
 				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
 			}
