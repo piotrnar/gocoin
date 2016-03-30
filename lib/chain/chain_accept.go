@@ -214,9 +214,9 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				if tx_trusted {
 					done <- true
 				} else {
-					go func (sig []byte, prv []byte, i int, tx *btc.Tx) {
-						done <- script.VerifyTxScript(sig, prv, i, tx, bl.VerifyFlags)
-					}(bl.Txs[i].TxIn[j].ScriptSig, tout.Pk_script, j, bl.Txs[i])
+					go func (prv []byte, i int, tx *btc.Tx) {
+						done <- script.VerifyTxScript(prv, i, tx, bl.VerifyFlags)
+					}(tout.Pk_script, j, bl.Txs[i])
 				}
 
 				if btc.IsP2SH(tout.Pk_script) {
