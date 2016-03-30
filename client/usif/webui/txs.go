@@ -152,6 +152,8 @@ func (tl sortedTxList) Less(i, j int) bool {
 			res = tl[j].Volume < tl[i].Volume
 		case "fee":
 			res = tl[j].Fee < tl[i].Fee
+		case "ops":
+			res = tl[j].Sigops < tl[i].Sigops
 		default: /*spb*/
 			spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
 			spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
