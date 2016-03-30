@@ -12,9 +12,14 @@ import (
 	"runtime/debug"
 )
 
+
+type VerifyConsensusFunction func(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool)
+
 var (
 	DBG_SCR = false
 	DBG_ERR = true
+
+	VerifyConsensus VerifyConsensusFunction
 )
 
 const (
@@ -28,6 +33,13 @@ const (
 
 
 func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+	if VerifyConsensus!=nil {
+		defer func() {
+			// We call CompareToConsensus inside another function to wait for final "result"
+			VerifyConsensus(pkScr, i, tx, ver_flags, result)
+		}()
+	}
+
 	sigScr := tx.TxIn[i].ScriptSig
 
 	if DBG_SCR {
