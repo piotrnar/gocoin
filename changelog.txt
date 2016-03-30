@@ -1,4 +1,4 @@
-1.6.0
+1.6.0 - 2016-03-30
 * Client: added option to use bitcoin's consensus lib for ensuring that scripts are processed properly
 * Qdb: Writing the entire database content (e.g. during defrag) is much faster now
 * Client: peer's send buffer made as a static circular buffer (with max size of 4MB)
