@@ -151,11 +151,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 			t.Error(er.Error())
 			continue
 		}
-		var ss []byte
-		if tv.inps[j].vout>=0 {
-			ss = tx.TxIn[i].ScriptSig
-		}
-		if VerifyTxScript(ss, pk, i, tx, tv.ver_flags) {
+		if VerifyTxScript(pk, i, tx, tv.ver_flags) {
 			oks++
 		}
 	}
