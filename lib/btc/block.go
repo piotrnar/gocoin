@@ -110,6 +110,7 @@ func (bl *Block) BuildTxList() (e error) {
 
 func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
 	tx_cnt, offs := VLen(bl.Raw[80:])
+	offs += 80
 
 	mtr := make([][]byte, tx_cnt)
 
@@ -118,7 +119,7 @@ func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
 		done <- false
 	}
 
-	for i:=0; i<bl.TxCount; i++ {
+	for i:=0; i<tx_cnt; i++ {
 		var n int
 		_, n = NewTx(bl.Raw[offs:])
 		if n==0 {
