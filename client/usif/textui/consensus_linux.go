@@ -55,15 +55,13 @@ var (
 )
 
 func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool) {
-	var pkscr_ptr *C.uchar
-	if pkScr != nil {
-		pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
-	}
-	txTo := tx.Serialize()
-	txo_ptr := (*C.uchar)(unsafe.Pointer(&txTo[0]))
-
-	go func(pkscr_ptr *C.uchar, pklen C.uint, txto *C.uchar, txto_len, i, ver_flags C.uint) {
-		r1 := int(C.bitcoinconsensus_verify_script(pkscr_ptr, pklen, txto, txto_len, i, ver_flags))
+	go func(pkScr []byte, txTo []byte, i int, ver_flags uint32, result bool) {
+		var pkscr_ptr *C.uchar
+		if pkScr != nil {
+			pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
+		}
+		r1 := int(C.bitcoinconsensus_verify_script(pkscr_ptr, C.uint(len(pkScr)),
+			(*C.uchar)(unsafe.Pointer(&txTo[0])), C.uint(len(txTo)), C.uint(i), C.uint(ver_flags)))
 		res := r1 == 1
 		atomic.AddUint64(&ConsensusChecks, 1)
 		if !result {
@@ -72,8 +70,14 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 		if res != result {
 			atomic.AddUint64(&ConsensusErrors, 1)
 			println("Compare to consensus failed!", res, result)
+			println("Gocoin", result)
+			println("ConsLIB", res)
+			println("pkScr", hex.EncodeToString(pkScr))
+			println("txTo", hex.EncodeToString(txTo))
+			println("i", i)
+			println("ver_flags", ver_flags)
 		}
-	}(pkscr_ptr, C.uint(len(pkScr)), txo_ptr, C.uint(len(txTo)), C.uint(i), C.uint(ver_flags))
+	}(pkScr, tx.Serialize(), i, ver_flags, result)
 }
 
 func consensus_stats(s string) {
