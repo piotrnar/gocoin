@@ -120,8 +120,7 @@ func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
 	}
 
 	for i:=0; i<tx_cnt; i++ {
-		var n int
-		_, n = NewTx(bl.Raw[offs:])
+		n := TxSize(bl.Raw[offs:])
 		if n==0 {
 			break
 		}

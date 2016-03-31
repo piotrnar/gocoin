@@ -431,6 +431,64 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 }
 
 
+func TxInSize(b []byte) int {
+	le, n := VLen(b[36:])
+	if n==0 {
+		return 0
+	}
+	return 36+n+le+4
+}
+
+
+func TxOutSize(b []byte) int {
+	le, n := VLen(b[8:])
+	if n==0 {
+		return 0
+	}
+	return 8+n+le
+}
+
+
+func TxSize(b []byte) (offs int) {
+	defer func() { // In case if the buffer was too short, to recover from a panic
+		if r := recover(); r != nil {
+			println("NewSize failed")
+			offs = 0
+		}
+	}()
+
+	var le, n int
+
+	offs = 4 // version
+
+	// TxIn
+	le, n = VLen(b[offs:])  // in_cnt
+	if n==0 {
+		return 0
+	}
+	offs += n
+	for ; le>0; le-- {
+		n = TxInSize(b[offs:])
+		offs += n
+	}
+
+	// TxOut
+	le, n = VLen(b[offs:])
+	if n==0 {
+		return 0
+	}
+	offs += n
+	for ; le>0; le-- {
+		n = TxOutSize(b[offs:])
+		offs += n
+	}
+
+	offs += 4  // Lock_time
+
+	return
+}
+
+
 func (txin *TxIn) GetKeyAndSig() (sig *Signature, key *PublicKey, e error) {
 	sig, e = NewSignature(txin.ScriptSig[1:1+txin.ScriptSig[0]])
 	if e != nil {
