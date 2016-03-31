@@ -22,7 +22,7 @@
 	top: 10%;
 	left: 15%;
 	width: 70%;
-	height: 300px;
+	height: 80%;
 	padding-left: 8px;
 	padding-right: 8px;
 	border: 5px solid #d0d0d0;
@@ -251,7 +251,10 @@ function deltx_click(id) {
 var prvpos
 
 function decode_tx() {
-	var txid = this.id
+	decode_tx_id(this.id)
+}
+
+function decode_tx_id(txid) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
@@ -286,6 +289,10 @@ function decode_tx() {
 					s += " (confirmed in #"+xval(is[i], "block")+")"
 				}
 				s += " seq=" + parseInt(xval(is[i], "sequence")).toString(16)
+				var sops = parseInt(xval(is[i], "input_sigops"))
+				if (!isNaN(sops)) {
+					s += "  + " + sops + ' sigops'
+				}
 				s += "\n"
 			}
 			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"
@@ -303,7 +310,7 @@ function decode_tx() {
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
 			s += "\n"
 			var fee = tin-tout
-			s += 'Len: ' + len + ' bytes\n'
+			s += 'Len: ' + len + ' bytes  /  Sigops: ' + xval(aj.responseXML,  "tx_sigops") + '\n'
 			var len = xval(aj.responseXML,  "len")
 			s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
 			s += '  ==> ' + parseFloat(fee/len).toFixed(1) + ' Satoshis per byte\n'
@@ -319,16 +326,22 @@ function decode_tx() {
 
 			light.style.display='block'
 			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
 		}
 	}
 	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
 	aj.send(null);
 }
 
+function noscroll() {
+	scroll(0,0)
+}
+
 function closepopup() {
 	light.style.display='none'
 	fade.style.display='none'
 	window.scrollTo(0,prvpos)
+	document.removeEventListener("scroll", noscroll)
 }
 
 
@@ -559,6 +572,12 @@ function handlehover(event, pos, item) {
 }
 
 
+function handleclick(event, pos, item) {
+	var rec = mp[item.dataIndex]
+	decode_tx_id(rec.Current_tx_id)
+}
+
+
 function show_mempool_fees() {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
@@ -607,6 +626,7 @@ function show_mempool_fees() {
 			}
 
 			$("#mempool_fees").bind("plothover", handlehover)
+			$("#mempool_fees").bind("plotclick", handleclick)
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}

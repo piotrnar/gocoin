@@ -108,6 +108,10 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 				}
 				fmt.Fprint(w, "<addr>", ads, "</addr>")
 				fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
+
+				if btc.IsP2SH(po.Pk_script) {
+					fmt.Fprint(w, "<input_sigops>", btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig), "</input_sigops>")
+				}
 			} else {
 				w.Write([]byte("<status>UNKNOWN INPUT</status>"))
 			}
@@ -129,6 +133,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 			w.Write([]byte("</output>"))
 		}
 		w.Write([]byte("</outputs>"))
+		fmt.Fprint(w, "<tx_sigops>", t2s.Sigops, "</tx_sigops>")
 	} else {
 		w.Write([]byte("<status>Not found</status>"))
 	}
@@ -429,6 +434,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		Offset_in_block uint
 		Current_tx_length uint
 		Current_tx_spb float64
+		Current_tx_id string
 	}
 	var mempool_stats []one_stat_row
 
@@ -442,7 +448,8 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Txs_so_far : uint(cnt),
 				Offset_in_block : uint(totlen),
 				Current_tx_length : uint(len(v.Data)),
-				Current_tx_spb : float64(v.Fee)/float64(len(v.Data))})
+				Current_tx_spb : float64(v.Fee)/float64(len(v.Data)),
+				Current_tx_id : v.Hash.String()})
 		}
 		totlen = newlen
 	}
