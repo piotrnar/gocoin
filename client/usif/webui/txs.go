@@ -76,6 +76,9 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 
 func output_tx_xml(w http.ResponseWriter, id string) {
 	txid := btc.NewUint256FromString(id)
+	if txid==nil {
+		return
+	}
 	w.Write([]byte("<tx>"))
 	fmt.Fprint(w, "<id>", id, "</id>")
 	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
