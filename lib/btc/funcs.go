@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"encoding/base64"
 	"encoding/binary"
+	"crypto/sha256"
 )
 
 func allzeros(b []byte) bool {
@@ -96,13 +97,9 @@ func VULe(b []byte) (le uint64, var_int_siz int) {
 }
 
 
-func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
-	mtr := make([][]byte, len(txs))
-	for i := range txs {
-		mtr[i] = txs[i].Hash.Hash[:]
-	}
+func CalcMerkel(mtr [][]byte) (res []byte, mutated bool) {
 	var j, i2 int
-	for siz:=len(txs); siz>1; siz=(siz+1)/2 {
+	for siz:=len(mtr); siz>1; siz=(siz+1)/2 {
 		for i := 0; i < siz; i += 2 {
 			if i+1 < siz-1 {
 				i2 = i+1
@@ -112,12 +109,27 @@ func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
 			if i!=i2 && bytes.Equal(mtr[j+i], mtr[j+i2]) {
 				mutated = true
 			}
-			h := Sha2Sum(append(mtr[j+i], mtr[j+i2]...))
-			mtr = append(mtr, h[:])
+			s := sha256.New()
+			s.Write(mtr[j+i])
+			s.Write(mtr[j+i2])
+			tmp := s.Sum(nil)
+			s.Reset()
+			s.Write(tmp)
+			mtr = append(mtr, s.Sum(nil))
 		}
 		j += siz
 	}
 	res = mtr[len(mtr)-1]
+	return
+}
+
+
+func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
+	mtr := make([][]byte, len(txs))
+	for i := range txs {
+		mtr[i] = txs[i].Hash.Hash[:]
+	}
+	res, mutated = CalcMerkel(mtr)
 	return
 }
 

@@ -108,6 +108,41 @@ func (bl *Block) BuildTxList() (e error) {
 }
 
 
+func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
+	tx_cnt, offs := VLen(bl.Raw[80:])
+
+	mtr := make([][]byte, tx_cnt)
+
+	done := make(chan bool, sys.UseThreads)
+	for i:=0; i<sys.UseThreads; i++ {
+		done <- false
+	}
+
+	for i:=0; i<bl.TxCount; i++ {
+		var n int
+		_, n = NewTx(bl.Raw[offs:])
+		if n==0 {
+			break
+		}
+		_ = <- done // wait here, if we have too many threads already
+		go func(i int, b []byte) {
+			mtr[i] = make([]byte, 32)
+			ShaHash(b, mtr[i])
+			done <- true // indicate mission completed
+		}(i, bl.Raw[offs:offs+n])
+		offs += n
+	}
+
+	// Wait for all the pending missions to complete...
+	for i:=0; i<sys.UseThreads; i++ {
+		_ = <- done
+	}
+
+	res, mutated = CalcMerkel(mtr)
+	return
+}
+
+
 func GetBlockReward(height uint32) (uint64) {
 	return 50e8 >> (height/210000)
 }
