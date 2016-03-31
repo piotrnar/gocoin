@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"unsafe"
+	"sync"
 )
 
 const (
@@ -27,6 +28,8 @@ var (
 	ConsensusChecks uint64
 	ConsensusExpErr uint64
 	ConsensusErrors uint64
+
+	mut sync.Mutex
 )
 
 
@@ -48,6 +51,7 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 		}
 		if res != result {
 			atomic.AddUint64(&ConsensusErrors, 1)
+			mut.Lock()
 			println("Compare to consensus failed!", res, result)
 			println("Gocoin", result)
 			println("ConsLIB", res)
@@ -55,6 +59,7 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 			println("txTo", hex.EncodeToString(txTo))
 			println("i", i)
 			println("ver_flags", ver_flags)
+			mut.Unlock()
 		}
 	}(pkScr, tx.Serialize(), i, ver_flags, result)
 }
