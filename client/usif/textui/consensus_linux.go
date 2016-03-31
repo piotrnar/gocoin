@@ -46,6 +46,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 	"sync/atomic"
 	"unsafe"
+	"encoding/hex"
 )
 
 var (
