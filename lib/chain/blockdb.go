@@ -85,7 +85,9 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.new")
 	}
-	db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
+	if MaxCachedBlocks>0 {
+		db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
+	}
 	return
 }
 
@@ -179,6 +181,9 @@ func BlockDBConvertIndexFile(dir string) {
 
 // Make sure to call with the mutex locked
 func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
+	if db.cache==nil {
+		return
+	}
 	if rec, ok := db.cache[h.BIdx()]; ok {
 		rec.used = time.Now()
 		return
@@ -200,7 +205,7 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
 
 func (db *BlockDB) GetStats() (s string) {
 	db.mutex.Lock()
-	s += fmt.Sprintf("BlockDB: %d blocks, %d in cache\n", len(db.blockIndex), len(db.cache))
+	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache\n", len(db.blockIndex), len(db.cache), MaxCachedBlocks)
 	db.mutex.Unlock()
 	return
 }
@@ -325,11 +330,13 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	}
 
 	trusted = rec.trusted
-	if crec, hit := db.cache[hash.BIdx()]; hit {
-		bl = crec.data
-		crec.used = time.Now()
-		db.mutex.Unlock()
-		return
+	if db.cache!=nil {
+		if crec, hit := db.cache[hash.BIdx()]; hit {
+			bl = crec.data
+			crec.used = time.Now()
+			db.mutex.Unlock()
+			return
+		}
 	}
 	db.mutex.Unlock()
 
