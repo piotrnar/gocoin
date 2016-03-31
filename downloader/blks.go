@@ -15,10 +15,11 @@ import (
 const (
 	MAX_GET_FROM_PEER = 2e6 // two full size (1MB) blocks
 	DROP_PEER_EVERY_SEC = 10
-	MAX_BLOCKS_AT_ONCE = 150
+	MAX_BLOCKS_AT_ONCE = 400
 	MAX_SAME_BLOCKS_AT_ONCE = 1
-	AVERAGE_BLOCK_SIZE_BLOCKS_BACK = 7*144 /*one week*/
+	AVERAGE_BLOCK_SIZE_BLOCKS_BACK = 144 /*one day*/
 	MIN_BLOCK_SIZE = 1000
+	MAX_QUEUED_DATA = 1e9 // 1GB
 )
 
 
@@ -43,6 +44,7 @@ var (
 	DlBytesProcessed, DlBytesDownloaded uint64
 
 	BlockQueue chan *btc.Block = make(chan *btc.Block, 100e3)
+	BlocksQueuedSize uint64
 )
 
 
@@ -104,17 +106,17 @@ func show_cached() {
 
 
 func submit_block(bl *btc.Block) {
+	for atomic.LoadUint64(&BlocksQueuedSize) + uint64(len(bl.Raw)) > MAX_QUEUED_DATA {
+		BlocksMutex.Unlock()
+		time.Sleep(1e9)
+		println(".")
+		BlocksMutex.Lock()
+	}
 	BlocksComplete++
 	bl.Trusted = bl.Height <= TrustUpTo
 	update_bslen_history(len(bl.Raw))
-	if OnlyStoreBlocks {
-		TheBlockChain.Blocks.BlockAdd(bl.Height, bl)
-		fill(bl.Raw, 'B')
-		atomic.StoreUint32(&LastStoredBlock, bl.Height)
-		atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
-	} else {
-		BlockQueue <- bl
-	}
+	atomic.AddUint64(&BlocksQueuedSize, uint64(len(bl.Raw)))
+	BlockQueue <- bl
 }
 
 func (c *one_net_conn) block(d []byte) {
@@ -382,15 +384,20 @@ func get_blocks() {
 				}
 
 			case bl = <-BlockQueue:
-				er, _, _ := TheBlockChain.CheckBlock(bl)
-				if er != nil {
-					fmt.Println("CheckBlock:", er.Error())
-					os.Exit(1)
+				if OnlyStoreBlocks {
+					TheBlockChain.Blocks.BlockAdd(bl.Height, bl)
+				} else {
+					er, _, _ := TheBlockChain.CheckBlock(bl)
+					if er != nil {
+						fmt.Println("CheckBlock:", er.Error())
+						os.Exit(1)
+					}
+					bl.LastKnownHeight = bl.Height + uint32(len(BlockQueue))
+					TheBlockChain.AcceptBlock(bl)
 				}
-				bl.LastKnownHeight = bl.Height + uint32(len(BlockQueue))
-				TheBlockChain.AcceptBlock(bl)
 				atomic.StoreUint32(&LastStoredBlock, bl.Height)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
+				atomic.AddUint64(&BlocksQueuedSize, uint64(-len(bl.Raw)))
 
 			case <-time.After(1000*time.Millisecond):
 				COUNTER("IDLE")
