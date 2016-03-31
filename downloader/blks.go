@@ -19,7 +19,7 @@ const (
 	MAX_SAME_BLOCKS_AT_ONCE = 1
 	AVERAGE_BLOCK_SIZE_BLOCKS_BACK = 144 /*one day*/
 	MIN_BLOCK_SIZE = 1000
-	MAX_QUEUED_DATA = 1e9 // 1GB
+	MAX_FORWARD_DATA = 1e9 // 1GB
 )
 
 
@@ -106,12 +106,6 @@ func show_cached() {
 
 
 func submit_block(bl *btc.Block) {
-	for atomic.LoadUint64(&BlocksQueuedSize) + uint64(len(bl.Raw)) > MAX_QUEUED_DATA {
-		BlocksMutex.Unlock()
-		time.Sleep(1e9)
-		println(".")
-		BlocksMutex.Lock()
-	}
 	BlocksComplete++
 	bl.Trusted = bl.Height <= TrustUpTo
 	update_bslen_history(len(bl.Raw))
@@ -207,8 +201,13 @@ func (c *one_net_conn) get_more_blocks() {
 
 	BlocksMutex.Lock()
 
-	//bl_stage := uint32(0)
-	for curblk:=BlocksComplete; cnt<MAX_BLOCKS_AT_ONCE && curblk<=LastBlockHeight; curblk++ {
+	//bl_stage := uint32(0)  - TODO
+	maxbl := LastBlockHeight
+	n := BlocksComplete + uint32(MAX_FORWARD_DATA/uint(atomic.LoadUint32(&BSAvg))) + 1
+	if maxbl > n {
+		maxbl = n
+	}
+	for curblk:=BlocksComplete; cnt<MAX_BLOCKS_AT_ONCE && curblk<=maxbl; curblk++ {
 		if (c.inprogress+1) * avg_block_size() > MAX_GET_FROM_PEER {
 			break
 		}
