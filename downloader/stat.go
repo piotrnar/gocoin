@@ -7,6 +7,7 @@ import (
 	"time"
 	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
@@ -51,13 +52,15 @@ func print_stats() {
 			max_block_height_in_progress = v.Height
 		}
 	}
-	s := fmt.Sprintf("Block:%d/%d/%d/%d  Pending:%d  Processing:%d  Downloading:%d  "+
-		"Cached:%d (%dMB)  AvgSize:%dkB  Conns:%d  [%.0f => %.0f KBps]  ECnt:%d  %.1fmin",
+	aloc, _ := sys.MemUsed()
+	s := fmt.Sprintf("Blck:%d/%d/%d/%d  Pend:%d  Proc:%d  Ding:%d  "+
+		"Cach:%d (%dMB)  BLen:%dkB  Cons:%d  [%.0f => %.0f KBps]  Mem:%dMB  EC:%d  %.1fmin",
 		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, max_block_height_in_progress,
 		LastBlockHeight, len(BlocksToGet), len(BlockQueue),len(BlocksInProgress),
 		len(BlocksCached), BlocksCachedSize>>20, avg_block_size()/1000,
-		open_connection_count(), float64(DlBytesDownloaded)/sec, float64(DlBytesProcessed)/sec,
-		btc.EcdsaVerifyCnt, time.Now().Sub(StartTime).Minutes())
+		open_connection_count(), float64(atomic.LoadUint64(&DlBytesDownloaded))/sec,
+		float64(atomic.LoadUint64(&DlBytesProcessed))/sec,
+		aloc>>20, btc.EcdsaVerifyCnt, time.Now().Sub(StartTime).Minutes())
 	BlocksMutex.Unlock()
 	fmt.Println(s)
 }

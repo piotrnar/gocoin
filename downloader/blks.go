@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"sort"
 	"sync"
@@ -13,19 +14,11 @@ import (
 
 const (
 	MAX_GET_FROM_PEER = 2e6 // two full size (1MB) blocks
-
-	MIN_BLOCKS_AHEAD = 10
-	MAX_BLOCKS_AHEAD = 10e3
-
-	BLOCKSIZE_AVERAGE_DAYS = 1
-
 	DROP_PEER_EVERY_SEC = 10
-
-	MAX_BLOCKS_AT_ONCE = 1000
-
+	MAX_BLOCKS_AT_ONCE = 150
 	MAX_SAME_BLOCKS_AT_ONCE = 1
-
 	AVERAGE_BLOCK_SIZE_BLOCKS_BACK = 7*144 /*one week*/
+	MIN_BLOCK_SIZE = 1000
 )
 
 
@@ -37,8 +30,8 @@ type one_bip struct {
 
 var (
 	BlocksToGet map[uint32][32]byte
-	BlocksInProgress map[[32]byte] *one_bip = make(map[[32]byte] *one_bip, 300e3)
-	BlocksCached map[uint32] *btc.Block = make(map[uint32] *btc.Block, 300e3)
+	BlocksInProgress map[[32]byte] *one_bip = make(map[[32]byte] *one_bip)
+	BlocksCached map[uint32] *btc.Block = make(map[uint32] *btc.Block)
 	BlocksCachedSize uint64
 	BlocksMutex sync.Mutex
 	BlocksComplete uint32
@@ -110,6 +103,20 @@ func show_cached() {
 }
 
 
+func submit_block(bl *btc.Block) {
+	BlocksComplete++
+	bl.Trusted = bl.Height <= TrustUpTo
+	update_bslen_history(len(bl.Raw))
+	if OnlyStoreBlocks {
+		TheBlockChain.Blocks.BlockAdd(bl.Height, bl)
+		fill(bl.Raw, 'B')
+		atomic.StoreUint32(&LastStoredBlock, bl.Height)
+		atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
+	} else {
+		BlockQueue <- bl
+	}
+}
+
 func (c *one_net_conn) block(d []byte) {
 	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
 
@@ -141,19 +148,27 @@ func (c *one_net_conn) block(d []byte) {
 		c.setbroken(true)
 		return
 	}
+	bl.Height = bip.Height
 
-	bl.BuildTxList()
-	merkel, mutated := btc.GetMerkel(bl.Txs)
-	if mutated {
-		fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
-		c.setbroken(true)
-		return
-	}
+	if OnlyStoreBlocks {
+		if !btc.CheckProofOfWork(bl.Hash, bl.Bits()) {
+			fmt.Println(c.Ip(), " - proof of work failed at block", bip.Height)
+			c.setbroken(true)
+			return
+		}
 
-	if !bytes.Equal(merkel, bl.MerkleRoot()) {
-		fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
-		c.setbroken(true)
-		return
+		merkel, mutated := bl.ComputeMerkel()
+		if mutated {
+			fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
+			c.setbroken(true)
+			return
+		}
+
+		if !bytes.Equal(merkel, bl.MerkleRoot()) {
+			fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
+			c.setbroken(true)
+			return
+		}
 	}
 
 	delete(BlocksToGet, bip.Height)
@@ -164,17 +179,15 @@ func (c *one_net_conn) block(d []byte) {
 
 	//println("got-", bip.Height, BlocksComplete+1)
 	if BlocksComplete+1==bip.Height {
-		BlocksComplete++
-		BlockQueue <- bl
+		submit_block(bl)
 		for {
-			bl = BlocksCached[BlocksComplete+1]
-			if bl == nil {
+			if bn:=BlocksCached[BlocksComplete+1]; bn!=nil {
+				delete(BlocksCached, BlocksComplete+1)
+				BlocksCachedSize -= uint64(len(bn.Raw))
+				submit_block(bn)
+			} else {
 				break
 			}
-			BlocksComplete++
-			delete(BlocksCached, BlocksComplete)
-			BlocksCachedSize -= uint64(len(bl.Raw))
-			BlockQueue <- bl
 		}
 	} else {
 		BlocksCached[bip.Height] = bl
@@ -193,7 +206,7 @@ func (c *one_net_conn) get_more_blocks() {
 	BlocksMutex.Lock()
 
 	//bl_stage := uint32(0)
-	for curblk:=BlocksComplete; cnt<150 && curblk<=LastBlockHeight; curblk++ {
+	for curblk:=BlocksComplete; cnt<MAX_BLOCKS_AT_ONCE && curblk<=LastBlockHeight; curblk++ {
 		if (c.inprogress+1) * avg_block_size() > MAX_GET_FROM_PEER {
 			break
 		}
@@ -241,7 +254,7 @@ func (c *one_net_conn) get_more_blocks() {
 
 
 var (
-	BSAvg uint32 = 219
+	BSAvg uint32 = MIN_BLOCK_SIZE
 	bslen_history [AVERAGE_BLOCK_SIZE_BLOCKS_BACK]int
 	bslen_total int
 	bslen_count int
@@ -275,8 +288,8 @@ func calc_new_block_size() {
 
 func avg_block_size() (le int) {
 	le = int(atomic.LoadUint32(&BSAvg))
-	if le < 1000 {
-		le = 1000
+	if le < MIN_BLOCK_SIZE {
+		le = MIN_BLOCK_SIZE
 	}
 	return
 }
@@ -341,7 +354,6 @@ func get_blocks() {
 	DlStartTime = time.Now()
 	BlocksMutex.Lock()
 	BlocksComplete = TheBlockChain.BlockTreeEnd.Height
-	CurrentBlockHeight := BlocksComplete+1
 	BlocksMutex.Unlock()
 
 	TheBlockChain.DoNotSync = true
@@ -350,7 +362,7 @@ func get_blocks() {
 	tickDrop := time.Tick(DROP_PEER_EVERY_SEC*time.Second)
 	tickStat := time.Tick(6*time.Second)
 
-	for !GlobalExit() && CurrentBlockHeight<=LastBlockHeight {
+	for !GlobalExit() && atomic.LoadUint32(&LastStoredBlock) < LastBlockHeight {
 		select {
 			case <-tickSec:
 				cc := open_connection_count()
@@ -370,24 +382,15 @@ func get_blocks() {
 				}
 
 			case bl = <-BlockQueue:
-				bl.Trusted = CurrentBlockHeight <= TrustUpTo
-				update_bslen_history(len(bl.Raw))
-				if OnlyStoreBlocks {
-					TheBlockChain.Blocks.BlockAdd(CurrentBlockHeight, bl)
-				} else {
-					er, _, _ := TheBlockChain.CheckBlock(bl)
-					if er != nil {
-						fmt.Println("CheckBlock:", er.Error())
-						return
-					} else {
-						bl.LastKnownHeight = CurrentBlockHeight + uint32(len(BlockQueue))
-						TheBlockChain.AcceptBlock(bl)
-					}
+				er, _, _ := TheBlockChain.CheckBlock(bl)
+				if er != nil {
+					fmt.Println("CheckBlock:", er.Error())
+					os.Exit(1)
 				}
-				atomic.StoreUint32(&LastStoredBlock, CurrentBlockHeight)
+				bl.LastKnownHeight = bl.Height + uint32(len(BlockQueue))
+				TheBlockChain.AcceptBlock(bl)
+				atomic.StoreUint32(&LastStoredBlock, bl.Height)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
-				//calc_new_block_size()
-				CurrentBlockHeight++
 
 			case <-time.After(1000*time.Millisecond):
 				COUNTER("IDLE")

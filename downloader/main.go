@@ -115,6 +115,7 @@ func open_blockchain() (abort bool) {
 			}
 		}
 	}()
+	chain.MaxCachedBlocks = 0
 	TheBlockChain = chain.NewChainExt(GocoinHomeDir, GenesisBlock, false,
 		&chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks, UTXOVolatileMode:QdbVolatileMode})
 	__exit <- true
@@ -213,7 +214,7 @@ func main() {
 	usif_prompt()
 	StartTime = time.Now()
 	get_blocks()
-	fmt.Println("Up to block", TheBlockChain.BlockTreeEnd.Height, "in", time.Now().Sub(StartTime).String())
+	fmt.Println("Up to block", LastBlockHeight, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
 
 	fmt.Print("All blocks done - closing peerDB")

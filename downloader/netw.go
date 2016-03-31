@@ -379,6 +379,8 @@ func (c *one_net_conn) run_recv() {
 			default:
 				//fmt.Println(c.Ip(), "received", msg.cmd, len(msg.pl))
 		}
+
+		fill(msg.pl, 'M')
 	}
 	//fmt.Println(c.Ip(), "closing receiver")
 	c.Mutex.Lock()
@@ -477,4 +479,11 @@ func is_connected(p *peersdb.PeerAddr) (yes bool) {
 	}
 	open_connection_mutex.Unlock()
 	return
+}
+
+
+func fill(b []byte, c byte) {
+	for i:=0; i<len(b); i++ {
+		b[i] = c
+	}
 }

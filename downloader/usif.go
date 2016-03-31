@@ -11,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"runtime/debug"
 )
 
 
@@ -118,6 +119,13 @@ func do_usif() {
 
 					case "ca":
 						show_cached()
+
+					case "hd":
+						f, _ := os.Create("heapdump.bin")
+						if f!=nil {
+							debug.WriteHeapDump(uintptr(f.Fd()))
+							f.Close()
+						}
 
 					case "d":
 						if len(ll)>1 {
