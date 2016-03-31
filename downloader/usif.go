@@ -8,10 +8,10 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"runtime/debug"
 )
 
 
@@ -71,6 +71,18 @@ func usif_prompt() {
 	print("cmd> ")
 }
 
+func dump_heap_profile() {
+	const hd_fn = "heapdump.bin"
+	f, er := os.Create(hd_fn)
+	if er!=nil {
+		println(er.Error())
+		return
+	}
+	debug.WriteHeapDump(f.Fd())
+	f.Close()
+	fmt.Println("HEAP dump stored in ", hd_fn)
+}
+
 func do_usif() {
 	time.Sleep(1e9)
 	usif_prompt()
@@ -121,11 +133,7 @@ func do_usif() {
 						show_cached()
 
 					case "hd":
-						f, _ := os.Create("heapdump.bin")
-						if f!=nil {
-							debug.WriteHeapDump(uintptr(f.Fd()))
-							f.Close()
-						}
+						dump_heap_profile()
 
 					case "d":
 						if len(ll)>1 {
@@ -174,6 +182,7 @@ func do_usif() {
 						fmt.Println(" d [conid] - drop one connection")
 						fmt.Println(" db - show database stats")
 						fmt.Println(" f - free memory")
+						fmt.Println(" hd - write heap dump")
 						fmt.Println(" i - show general info")
 						fmt.Println(" m - show mem heap info")
 						fmt.Println(" mc <CNT> - set maximum number of connections")

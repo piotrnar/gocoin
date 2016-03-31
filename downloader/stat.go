@@ -53,10 +53,11 @@ func print_stats() {
 		}
 	}
 	aloc, _ := sys.MemUsed()
-	s := fmt.Sprintf("Blck:%d/%d/%d/%d  Pend:%d  Proc:%d  Ding:%d  "+
-		"Cach:%d (%dMB)  BLen:%dkB  Cons:%d  [%.0f => %.0f KBps]  Mem:%dMB  EC:%d  %.1fmin",
+	s := fmt.Sprintf("Blck:%d/%d/%d/%d  Pend:%d  Que:%d (%dMB)  Dl:%d  "+
+		"Cach:%d (%dMB)  BLen:%dkB  Net:%d  [%.0f => %.0f KBps]  Mem:%dMB  EC:%d  %.1fmin",
 		atomic.LoadUint32(&LastStoredBlock), BlocksComplete, max_block_height_in_progress,
-		LastBlockHeight, len(BlocksToGet), len(BlockQueue),len(BlocksInProgress),
+		LastBlockHeight, len(BlocksToGet), len(BlockQueue),
+		atomic.LoadUint64(&BlocksQueuedSize)>>20, len(BlocksInProgress),
 		len(BlocksCached), BlocksCachedSize>>20, avg_block_size()/1000,
 		open_connection_count(), float64(atomic.LoadUint64(&DlBytesDownloaded))/sec,
 		float64(atomic.LoadUint64(&DlBytesProcessed))/sec,
