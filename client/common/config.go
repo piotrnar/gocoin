@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -210,7 +209,6 @@ func Reset() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	chain.MaxCachedBlocks = CFG.Memory.MaxCachedBlocks
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {

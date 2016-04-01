@@ -16,8 +16,6 @@ const (
 	Version = uint32(70012)
 	DefaultUserAgent = "/Gocoin:"+lib.Version+"/"
 	Services = uint64(0x00000001)
-
-	MaxCachedBlocks = 600
 )
 
 var (
