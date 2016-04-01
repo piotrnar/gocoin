@@ -44,6 +44,9 @@ type NewChanOpts struct {
 	UTXOVolatileMode bool
 
 	UndoBlocks uint // undo this many blocks when opening the chain
+
+	SetBlocksDBCacheSize bool
+	BlocksDBCacheSize int
 }
 
 
@@ -71,7 +74,11 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.RejectBlock = 950
 	}
 
-	ch.Blocks = NewBlockDB(dbrootdir)
+	if opts.SetBlocksDBCacheSize {
+		ch.Blocks = NewBlockDBExt(dbrootdir, &BlockDBOpts{MaxCachedBlocks:opts.BlocksDBCacheSize})
+	} else {
+		ch.Blocks = NewBlockDB(dbrootdir)
+	}
 	ch.Unspent, undo_last_block = NewUnspentDb(&NewUnspentOpts{
 		Dir:dbrootdir, Chain:ch, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode})
 
