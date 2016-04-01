@@ -138,6 +138,11 @@ func (c *one_net_conn) block(d []byte) {
 	c.inprogress--
 	c.Unlock()
 
+	delete(BlocksInProgress, h.Hash)
+	if len(BlocksInProgress)==0 {
+		COUNTER("EMPT")
+	}
+
 	bl, er := btc.NewBlock(d)
 	if er != nil {
 		fmt.Println(c.Ip(), "-", er.Error())
@@ -147,12 +152,7 @@ func (c *one_net_conn) block(d []byte) {
 	bl.Height = bip.Height
 
 	if OnlyStoreBlocks {
-		if !btc.CheckProofOfWork(bl.Hash, bl.Bits()) {
-			fmt.Println(c.Ip(), " - proof of work failed at block", bip.Height)
-			c.setbroken(true)
-			return
-		}
-
+		// only check if the payload matches MerkleRoot from the header
 		merkel, mutated := bl.ComputeMerkel()
 		if mutated {
 			fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
@@ -168,10 +168,6 @@ func (c *one_net_conn) block(d []byte) {
 	}
 
 	delete(BlocksToGet, bip.Height)
-	delete(BlocksInProgress, h.Hash)
-	if len(BlocksInProgress)==0 {
-		COUNTER("EMPT")
-	}
 
 	//println("got-", bip.Height, BlocksComplete+1)
 	if BlocksComplete+1==bip.Height {
