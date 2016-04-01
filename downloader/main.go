@@ -73,7 +73,7 @@ func parse_command_line() {
 		}
 	}
 
-	flag.BoolVar(&OnlyStoreBlocks, "b", true, "Only store blocks, without commiting them into UTXO database")
+	flag.BoolVar(&OnlyStoreBlocks, "b", false, "Only store blocks, without commiting them into UTXO database")
 	flag.BoolVar(&QdbVolatileMode, "v", true, "Use UTXO database in volatile mode (speeds up processing)")
 	flag.BoolVar(&Testnet, "t", CFG.Testnet, "Use Testnet3")
 	flag.BoolVar(&DefragUTXO, "defrag", DefragUTXO, "Defragment UTXO before exiting")

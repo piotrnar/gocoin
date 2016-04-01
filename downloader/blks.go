@@ -170,7 +170,7 @@ func (c *one_net_conn) block(d []byte) {
 	delete(BlocksToGet, bip.Height)
 	delete(BlocksInProgress, h.Hash)
 	if len(BlocksInProgress)==0 {
-		println("EmptyInProgress")
+		COUNTER("EMPT")
 	}
 
 	//println("got-", bip.Height, BlocksComplete+1)
@@ -203,7 +203,7 @@ func (c *one_net_conn) get_more_blocks() {
 
 	//bl_stage := uint32(0)  - TODO
 	maxbl := LastBlockHeight
-	n := BlocksComplete + uint32(MAX_FORWARD_DATA/uint(atomic.LoadUint32(&BSAvg))) + 1
+	n := atomic.LoadUint32(&LastStoredBlock) + uint32(MAX_FORWARD_DATA/uint(atomic.LoadUint32(&BSAvg))) + 1
 	if maxbl > n {
 		maxbl = n
 	}
@@ -275,7 +275,11 @@ func update_bslen_history(le int) {
 	if bslen_history_index==AVERAGE_BLOCK_SIZE_BLOCKS_BACK {
 		bslen_history_index = 0
 	}
-	atomic.StoreUint32(&BSAvg, uint32(bslen_total/bslen_count))
+	newval := uint32(bslen_total/bslen_count)
+	if newval < MIN_BLOCK_SIZE {
+		newval = MIN_BLOCK_SIZE
+	}
+	atomic.StoreUint32(&BSAvg, newval)
 }
 
 func calc_new_block_size() {
@@ -386,13 +390,24 @@ func get_blocks() {
 				if OnlyStoreBlocks {
 					TheBlockChain.Blocks.BlockAdd(bl.Height, bl)
 				} else {
-					er, _, _ := TheBlockChain.CheckBlock(bl)
+					TheBlockChain.BlockIndexAccess.Lock()
+					cur := TheBlockChain.BlockIndex[bl.Hash.BIdx()]
+					TheBlockChain.BlockIndexAccess.Unlock()
+					if cur==nil {
+						fmt.Println("Block", bl.Hash.String(), "unknown")
+						os.Exit(1)
+					}
+					er := TheBlockChain.PostCheckBlock(bl)
 					if er != nil {
 						fmt.Println("CheckBlock:", er.Error())
 						os.Exit(1)
 					}
-					bl.LastKnownHeight = bl.Height + uint32(len(BlockQueue))
-					TheBlockChain.AcceptBlock(bl)
+					bl.LastKnownHeight = TheBlockChain.BlockTreeEnd.Height
+					er = TheBlockChain.CommitBlock(bl, cur)
+					if er != nil {
+						fmt.Println("CommitBlock:", er.Error())
+						os.Exit(1)
+					}
 				}
 				atomic.StoreUint32(&LastStoredBlock, bl.Height)
 				atomic.AddUint64(&DlBytesProcessed, uint64(len(bl.Raw)))
