@@ -1,5 +1,5 @@
 1.6.1
-*
+* Downloader: excessive memory consumption shall no longer be an issue
 
 1.6.0 - 2016-03-30
 * Client: added option to use bitcoin's consensus lib for ensuring that scripts are processed properly
