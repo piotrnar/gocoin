@@ -217,7 +217,7 @@ func main() {
 	fmt.Println("Up to block", LastBlockHeight, "in", time.Now().Sub(StartTime).String())
 	close_all_connections()
 
-	fmt.Print("All blocks done - closing peerDB")
+	fmt.Println("All blocks done")
 	peersdb.ClosePeerDB()
 
 	if !OnlyStoreBlocks && !QdbVolatileMode && DefragUTXO {
