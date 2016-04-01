@@ -2,6 +2,7 @@ Downloader:
 * Running out of memory when only downloading the blocks
 
 Client:
+* Make volatile wallets really volatile (not stored in server's memory)
 * Implement RBF in the mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
 * Check how the "MoveToBlock cannot continue" solution works in reality
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
