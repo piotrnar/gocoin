@@ -22,8 +22,6 @@ const (
 	BLOCK_SNAPPED = 0x08
 )
 
-var MaxCachedBlocks uint = 500
-
 /*
 	blockchain.dat - contains raw blocks data, no headers, nothing
 	blockchain.new - contains records of 136 bytes (all values LSB):
@@ -56,17 +54,22 @@ type cacheRecord struct {
 	used time.Time
 }
 
+type BlockDBOpts struct {
+	MaxCachedBlocks int
+}
+
 type BlockDB struct {
 	dirname string
 	blockIndex map[[btc.Uint256IdxLen]byte] *oneBl
 	blockdata *os.File
 	blockindx *os.File
 	mutex sync.Mutex
+	max_cached_blocks int
 	cache map[[btc.Uint256IdxLen]byte] *cacheRecord
 }
 
 
-func NewBlockDB(dir string) (db *BlockDB) {
+func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 	BlockDBConvertIndexFile(dir)
 
 	db = new(BlockDB)
@@ -85,10 +88,16 @@ func NewBlockDB(dir string) (db *BlockDB) {
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.new")
 	}
-	if MaxCachedBlocks>0 {
-		db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, MaxCachedBlocks)
+	if opts.MaxCachedBlocks>0 {
+		db.max_cached_blocks = opts.MaxCachedBlocks
+		db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, db.max_cached_blocks)
 	}
 	return
+}
+
+
+func NewBlockDB(dir string) (db *BlockDB) {
+	return NewBlockDBExt(dir, &BlockDBOpts{MaxCachedBlocks:500})
 }
 
 
@@ -188,7 +197,7 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
 		rec.used = time.Now()
 		return
 	}
-	if uint(len(db.cache)) >= MaxCachedBlocks {
+	if len(db.cache) >= db.max_cached_blocks {
 		var oldest_t time.Time
 		var oldest_k [btc.Uint256IdxLen]byte
 		for k, v := range db.cache {
@@ -205,7 +214,7 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
 
 func (db *BlockDB) GetStats() (s string) {
 	db.mutex.Lock()
-	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache\n", len(db.blockIndex), len(db.cache), MaxCachedBlocks)
+	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache\n", len(db.blockIndex), len(db.cache), db.max_cached_blocks)
 	db.mutex.Unlock()
 	return
 }
