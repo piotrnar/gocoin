@@ -115,9 +115,9 @@ func open_blockchain() (abort bool) {
 			}
 		}
 	}()
-	chain.MaxCachedBlocks = 0
 	TheBlockChain = chain.NewChainExt(GocoinHomeDir, GenesisBlock, false,
-		&chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks, UTXOVolatileMode:QdbVolatileMode})
+		&chain.NewChanOpts{DoNotParseTillEnd:OnlyStoreBlocks, UTXOVolatileMode:QdbVolatileMode,
+			SetBlocksDBCacheSize:true, BlocksDBCacheSize:0})
 	__exit <- true
 	return
 }
