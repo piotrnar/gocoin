@@ -46,7 +46,7 @@ type NewChanOpts struct {
 	UndoBlocks uint // undo this many blocks when opening the chain
 
 	SetBlocksDBCacheSize bool
-	BlocksDBCacheSize int
+	BlocksDBCacheSize int // this value is only taken if SetBlocksDBCacheSize is true
 }
 
 
