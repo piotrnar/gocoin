@@ -604,25 +604,22 @@ function show_mempool_fees() {
 				}
 			}
 
-			var below_1mb_tot = 0
-			var below_1mb_cnt = 0
 			var max_spb = 0
+			var max_spb_corrected = 0
 
 			for (var i=0; i<mp.length; i++) {
 				if (mp[i].Current_tx_spb>max_spb) {
 					max_spb = mp[i].Current_tx_spb
 				}
-				if (mp[i].Offset_in_block<1e6) {
-					below_1mb_tot += mp[i].Current_tx_spb
-					below_1mb_cnt++
+				if (mp[i].Offset_in_block<500e3) {
+					max_spb_corrected = 3*mp[i].Current_tx_spb
 				}
 				plot_data[0].data.push([mp[i].Offset_in_block+mp[i].Current_tx_length, mp[i].Current_tx_spb])
 			}
 
-			// calculate 150% times the average in the first 1MB
-			below_1mb_tot = 1.5*below_1mb_tot/below_1mb_cnt
-			if (max_spb>below_1mb_tot) {
-				plot_options.yaxis.max = below_1mb_tot
+			// calculate 3 times the medium fee in the first 1MB
+			if (max_spb > max_spb_corrected) {
+				plot_options.yaxis.max = max_spb_corrected
 			}
 
 			$("#mempool_fees").bind("plothover", handlehover)
