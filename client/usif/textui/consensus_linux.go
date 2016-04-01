@@ -42,6 +42,7 @@ import "C"
 
 import (
 	"fmt"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 	"sync/atomic"
@@ -72,6 +73,7 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 		}
 		if res != result {
 			atomic.AddUint64(&ConsensusErrors, 1)
+			common.CountSafe("TxConsensusERR")
 			mut.Lock()
 			println("Compare to consensus failed!", res, result)
 			println("Gocoin", result)
