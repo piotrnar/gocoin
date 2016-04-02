@@ -73,3 +73,8 @@ func (v *oneIdx) LoadData(f *os.File) {
 	f.Seek(int64(v.datpos), os.SEEK_SET)
 	f.Read(*(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(v.data), Len:int(v.datlen), Cap:int(v.datlen)})))
 }
+
+
+func init() {
+	println("Using mem_gcc for qdb records. Replace qdb/membind.go with the git version if you see issues.")
+}
