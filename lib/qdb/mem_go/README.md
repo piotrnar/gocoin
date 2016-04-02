@@ -1,1 +1,0 @@
-This file here is just a backup of `membind.go` from one folder up (qdb/membind.go)
