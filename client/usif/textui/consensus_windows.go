@@ -35,6 +35,8 @@ var (
 
 
 func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool) {
+	tmp := make([]byte, len(pkScr))
+	copy(tmp, pkScr)
 	go func(pkScr []byte, txTo []byte, i int, ver_flags uint32, result bool) {
 		var pkscr_ptr uintptr
 		if pkScr != nil {
@@ -63,7 +65,7 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 			println("ver_flags", ver_flags)
 			mut.Unlock()
 		}
-	}(pkScr, tx.Serialize(), i, ver_flags, result)
+	}(tmp, tx.Serialize(), i, ver_flags, result)
 }
 
 func consensus_stats(s string) {
