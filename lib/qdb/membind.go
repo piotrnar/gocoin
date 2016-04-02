@@ -35,6 +35,6 @@ func (v *oneIdx) LoadData(f *os.File) {
 	f.Read(v.data)
 }
 
-func inti() {
+func init() {
 	println("Using Go native heap for qdb records. Try replacing qdb/membind.go with one form mem_gcc/ or mem_win/")
 }
