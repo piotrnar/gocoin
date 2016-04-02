@@ -36,5 +36,5 @@ func (v *oneIdx) LoadData(f *os.File) {
 }
 
 func init() {
-	println("Using Go native heap for qdb records. Try replacing qdb/membind.go with one form mem_gcc/ or mem_win/")
+	println("Using Go native heap for qdb records. Try replacing qdb/membind.go with one from mem_gcc/ or mem_win/")
 }
