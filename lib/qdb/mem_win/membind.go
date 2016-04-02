@@ -82,5 +82,5 @@ func (v *oneIdx) LoadData(f *os.File) {
 }
 
 func init() {
-	println("Using mem_win for qdb records. Replace qdb/membind.go with the git version if you see issues.")
+	println("Using mem_win for qdb records. Revert qdb/membind.go to the git version if you encounter issues.")
 }
