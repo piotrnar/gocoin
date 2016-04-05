@@ -55,11 +55,11 @@ function refreshblock() {
 			time_now = stat.Time_now
 			blno.dispatchEvent(e)
 
+			blno.title = "Received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
+
 			if (blno.innerText != stat.Height) {
 				new_block = true
-				var difftxt = "Difficulty changing in " + (2016-(stat.Height%2016)) + " blocks"
 				blno.innerText = stat.Height
-				blno.title = difftxt
 				document.title = doc_title + ' @ ' + stat.Height
 			}
 		} catch(e) {
