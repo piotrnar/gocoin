@@ -607,19 +607,24 @@ function show_mempool_fees() {
 
 			var max_spb = 0
 			var max_spb_corrected = 0
+			var half = 500e3
+
+			if (mp.length>1 && mp[mp.length-1].Offset_in_block<1e6) {
+				half = Math.round(mp[mp.length-1].Offset_in_block / 2)
+			}
 
 			for (var i=0; i<mp.length; i++) {
 				if (mp[i].Current_tx_spb>max_spb) {
 					max_spb = mp[i].Current_tx_spb
 				}
-				if (mp[i].Offset_in_block<500e3) {
+				if (mp[i].Offset_in_block<half) {
 					max_spb_corrected = 3*mp[i].Current_tx_spb
 				}
 				plot_data[0].data.push([mp[i].Offset_in_block+mp[i].Current_tx_length, mp[i].Current_tx_spb])
 			}
 
-			// calculate 3 times the medium fee in the first 1MB
-			if (max_spb > max_spb_corrected && mp[mp.length-1].Offset_in_block>1e6) {
+			// calculate 3 times the medium fee in the first block to be mined
+			if (max_spb > max_spb_corrected) {
 				plot_options.yaxis.max = max_spb_corrected
 			}
 
