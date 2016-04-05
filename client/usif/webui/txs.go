@@ -84,6 +84,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		w.Write([]byte("<status>OK</status>"))
 		w.Write([]byte(fmt.Sprint("<len>", len(t2s.Data), "</len>")))
+		w.Write([]byte(fmt.Sprint("<time_received>", t2s.Firstseen.Unix(), "</time_received>")))
 		tx := t2s.Tx
 		w.Write([]byte("<inputs>"))
 		for i := range tx.TxIn {
@@ -438,6 +439,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		Current_tx_length uint
 		Current_tx_spb float64
 		Current_tx_id string
+		Time_received uint
 	}
 	var mempool_stats []one_stat_row
 
@@ -452,7 +454,8 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Offset_in_block : uint(totlen),
 				Current_tx_length : uint(len(v.Data)),
 				Current_tx_spb : float64(v.Fee)/float64(len(v.Data)),
-				Current_tx_id : v.Hash.String()})
+				Current_tx_id : v.Hash.String(),
+				Time_received : uint(v.Firstseen.Unix())})
 		}
 		totlen = newlen
 	}

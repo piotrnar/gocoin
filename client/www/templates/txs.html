@@ -563,6 +563,7 @@ function handlehover(event, pos, item) {
 			str += ' -  Tx #'+(rec.Txs_so_far+1)
 			str += ' ('+rec.Current_tx_length+' bytes'
 			str += ' @ ' + rec.Offset_in_block+')'
+			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
 			showTooltip(item.pageX, item.pageY, str)
 		}
 	} else {
@@ -618,7 +619,7 @@ function show_mempool_fees() {
 			}
 
 			// calculate 3 times the medium fee in the first 1MB
-			if (max_spb > max_spb_corrected) {
+			if (max_spb > max_spb_corrected && mp[mp.length-1].Offset_in_block>1e6) {
 				plot_options.yaxis.max = max_spb_corrected
 			}
 

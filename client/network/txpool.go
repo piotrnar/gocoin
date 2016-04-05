@@ -174,8 +174,8 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 			case NetTxs <- &TxRcvd{conn:c, tx:tx, raw:pl}:
 				TransactionsPending[tid.BIdx()] = true
 			default:
-				common.CountSafe("NetTxsFULL")
-				println("NetTxsFULL")
+				common.CountSafe("TxRejectedFullQ")
+				//println("NetTxsFULL")
 		}
 	})
 }

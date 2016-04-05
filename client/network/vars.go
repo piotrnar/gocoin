@@ -41,7 +41,7 @@ var (
 	MutexRcv sync.Mutex
 
 	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD+10)
-	NetTxs chan *TxRcvd = make(chan *TxRcvd, 1000)
+	NetTxs chan *TxRcvd = make(chan *TxRcvd, 2000)
 
 	CachedBlocks []*BlockRcvd
 )
