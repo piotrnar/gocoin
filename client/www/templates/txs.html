@@ -201,11 +201,9 @@ function sorttab(tid,col) {
 }
 
 function get_maturity(t) {
-	var secs = parseInt(((new Date()).getTime()/1000) - parseInt(t))
-	var hours = parseInt(secs/3600)
-	var mins = parseInt(secs/60)%60
-	secs = secs%60
-	return hours + ":" + leftpad(mins, "0", 2) + ":" + leftpad(secs, "0", 2)
+	var mins = parseInt(((new Date()).getTime()/1000) - parseInt(t)) / 60
+	//if (mins<0) mins=0
+	return mins.toFixed(1) + ' min'
 }
 
 function val2reason(r) {
