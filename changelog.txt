@@ -1,4 +1,4 @@
-1.6.1
+1.6.1 - 2016-04-06
 * Client: network queue for txs processing increased to 2000
 * Client: WebUI/Transactions - The fees chart shows age of a transaction (on hovering)
 * Downloader: excessive memory consumption shall no longer be an issue
