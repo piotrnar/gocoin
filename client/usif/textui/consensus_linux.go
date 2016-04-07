@@ -99,7 +99,7 @@ func init() {
 	if C.init_bitcoinconsensus_so()==0 {
 		fmt.Println("libbitcoinconsensus.so not found")
 	}
-	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to ensure consensus rules.")
+	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to ensure consensus rules")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
 }
