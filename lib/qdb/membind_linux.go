@@ -1,4 +1,4 @@
-// +build linux
+// dupa +build linux
 
 /*
 If this file does not build and you don't know what to do, simply delete it and rebuild.
@@ -37,7 +37,8 @@ func gcc_HeapFree(ptr data_ptr_t) {
 }
 
 func gcc_AllocPtr(v []byte) data_ptr_t {
-	return data_ptr_t(C.alloc_ptr(unsafe.Pointer(&v[0]), C.ulong(len(v))))
+	ptr := unsafe.Pointer(&v[0]) // see https://github.com/golang/go/issues/15172
+	return data_ptr_t(C.alloc_ptr(ptr, C.ulong(len(v))))
 }
 
 func init() {
@@ -45,7 +46,6 @@ func init() {
 		panic("Another wrapper already initialized")
 	}
 	println("Using CGO for QDB memory. Remove file qdb/membind_linux.go if you encounter issues.")
-	println("If you use go 1.6, downgrade to 1.5.3 (https://github.com/golang/go/issues/15172).")
 	_HeapAlloc = gcc_HeapAlloc
 	_HeapFree = gcc_HeapFree
 	_AllocPtr = gcc_AllocPtr
