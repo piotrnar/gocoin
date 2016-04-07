@@ -46,8 +46,8 @@ func init() {
 		panic("Another wrapper already initialized")
 	}
 	println("Using malloc() qdb memory bindings")
-	_HeapAlloc = gcc_HeapAlloc
-	_HeapFree = gcc_HeapFree
-	_AllocPtr = gcc_AllocPtr
+	_heap_alloc = gcc_HeapAlloc
+	_heap_free = gcc_HeapFree
+	_heap_store = gcc_AllocPtr
 	membind_use_wrapper = true
 }

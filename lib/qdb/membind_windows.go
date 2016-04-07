@@ -44,8 +44,8 @@ func init() {
 		return
 	}
 	println("Using kernel32.dll for qdb memory bindings")
-	_HeapAlloc = win_HeapAlloc
-	_HeapFree = win_HeapFree
-	_AllocPtr = win_AllocPtr
+	_heap_alloc = win_HeapAlloc
+	_heap_free = win_HeapFree
+	_heap_store = win_AllocPtr
 	membind_use_wrapper = true
 }

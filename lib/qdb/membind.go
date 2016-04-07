@@ -9,9 +9,9 @@ import (
 
 var (
 	membind_use_wrapper bool
-	_HeapAlloc func(le uint32) data_ptr_t
-	_HeapFree func(ptr data_ptr_t)
-	_AllocPtr func(v []byte) data_ptr_t
+	_heap_alloc func(le uint32) data_ptr_t
+	_heap_free func(ptr data_ptr_t)
+	_heap_store func(v []byte) data_ptr_t
 )
 
 
@@ -19,7 +19,7 @@ type data_ptr_t unsafe.Pointer
 
 func (v *oneIdx) FreeData() {
 	if membind_use_wrapper {
-		_HeapFree(v.data)
+		_heap_free(v.data)
 		atomic.AddInt64(&ExtraMemoryConsumed, -int64(v.datlen))
 		atomic.AddInt64(&ExtraMemoryAllocCnt, -1)
 	}
@@ -38,20 +38,14 @@ func (v *oneIdx) Slice() (res []byte) {
 func newIdx(v []byte, f uint32) (r *oneIdx) {
 	r = new(oneIdx)
 	r.datlen = uint32(len(v))
-	if membind_use_wrapper {
-		r.data = _AllocPtr(v)
-		atomic.AddInt64(&ExtraMemoryConsumed, int64(r.datlen))
-		atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
-	} else {
-		r.data = data_ptr_t(&v)
-	}
+	r.SetData(v)
 	r.flags = f
 	return
 }
 
 func (r *oneIdx) SetData(v []byte) {
 	if membind_use_wrapper {
-		r.data = _AllocPtr(v)
+		r.data = _heap_store(v)
 		atomic.AddInt64(&ExtraMemoryConsumed, int64(r.datlen))
 		atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
 	} else {
@@ -61,7 +55,7 @@ func (r *oneIdx) SetData(v []byte) {
 
 func (v *oneIdx) LoadData(f *os.File) {
 	if membind_use_wrapper {
-		v.data = _HeapAlloc(v.datlen)
+		v.data = _heap_alloc(v.datlen)
 		atomic.AddInt64(&ExtraMemoryConsumed, int64(v.datlen))
 		atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
 		f.Seek(int64(v.datpos), os.SEEK_SET)
