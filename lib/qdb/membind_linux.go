@@ -1,4 +1,4 @@
-// dupa +build linux
+// +build linux
 
 /*
 If this file does not build and you don't know what to do, simply delete it and rebuild.
