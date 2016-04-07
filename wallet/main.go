@@ -35,7 +35,7 @@ var (
 
 	// Message signing options
 	signaddr *string  = flag.String("sign", "", "Request a sign operation with a given bitcoin address")
-	message *string  = flag.String("msg", "", "Defines a message to be signed (otherwise take it from stdin)")
+	message *string  = flag.String("msg", "", "Message to be signed or included into transaction")
 
 	useallinputs *bool = flag.Bool("useallinputs", false, "Use all the unspent outputs as the transaction inputs")
 
