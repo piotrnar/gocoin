@@ -1,8 +1,3 @@
-/*
-You can replace this file with either membind_gcc.go or membind_windows.go
-to possibly improve memory usage of your node.
-*/
-
 package qdb
 
 import (
