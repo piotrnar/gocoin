@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -162,7 +163,9 @@ func show_info(par string) {
 
 	// Memory used
 	al, sy := sys.MemUsed()
-	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB")
+	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
+		atomic.LoadInt64(&qdb.ExtraMemoryConsumed)>>20, "MB in",
+		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "records")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
