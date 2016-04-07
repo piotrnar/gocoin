@@ -45,7 +45,7 @@ func init() {
 	if membind_use_wrapper {
 		panic("Another wrapper already initialized")
 	}
-	println("Using CGO for QDB memory. Remove file qdb/membind_linux.go if you encounter issues.")
+	println("Using malloc() qdb memory bindings")
 	_HeapAlloc = gcc_HeapAlloc
 	_HeapFree = gcc_HeapFree
 	_AllocPtr = gcc_AllocPtr
