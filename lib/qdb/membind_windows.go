@@ -43,7 +43,7 @@ func init() {
 	if funcGlobalAlloc==nil || funcGlobalFree==nil {
 		return
 	}
-	println("Using Windows API for QDB memory. Remove file qdb/membind_win.go if you encounter issues.")
+	println("Using Windows API for QDB memory. Remove file qdb/membind_windows.go if you encounter issues.")
 	_HeapAlloc = win_HeapAlloc
 	_HeapFree = win_HeapFree
 	_AllocPtr = win_AllocPtr
