@@ -226,10 +226,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				txinsum += tout.Value
 			}
 
-			if scripts_ok {
-				scripts_ok = <- done
-			}
-			for j:=1; j<sys.UseThreads; j++ {
+			for j:=0; j<sys.UseThreads; j++ {
 				if !(<- done) {
 					println("VerifyScript error 2")
 					scripts_ok = false
