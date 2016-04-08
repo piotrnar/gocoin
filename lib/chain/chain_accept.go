@@ -235,9 +235,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					scripts_ok = false
 				}
 			}
-			if len(done) != 0 {
-				panic("ASSERT: The channel should be empty gere")
-			}
 
 			if !scripts_ok {
 				return errors.New("VerifyScripts failed")
