@@ -1,5 +1,7 @@
 1.6.2
 * Qdb: Memory bindings for Windows and Linux are being used automatically
+* Client: each input's script is checked in a parallell for accepting tx to mempool
+* Lib: simplified the way tx's inputs are checked in parallell goroutines
 
 1.6.1 - 2016-04-06
 * Client: network queue for txs processing increased to 2000

@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 
@@ -324,15 +325,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
+	done := make(chan bool, sys.UseThreads-1)
 	for i := range tx.TxIn {
-		if !script.VerifyTxScript(pos[i].Pk_script, i, tx,
-			script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV) {
+		go func (prv []byte, i int, tx *btc.Tx) {
+			done <- script.VerifyTxScript(prv, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+		}(pos[i].Pk_script, i, tx)
+	}
+
+	for i := range tx.TxIn {
+		if !(<- done) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
 			return
 		}
-
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops2 += btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 		}

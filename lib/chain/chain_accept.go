@@ -119,7 +119,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	}
 
 	// create a channnel to receive results from VerifyScript threads:
-	done := make(chan bool, sys.UseThreads)
+	done := make(chan bool, sys.UseThreads-1)
 
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
@@ -133,13 +133,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				tx_trusted = true
 			}
 
-			scripts_ok := true
-
-			for j:=0; j<sys.UseThreads; j++ {
-				done <- true
-			}
-
-			for j:=0; j<len(bl.Txs[i].TxIn) /*&& e==nil*/; j++ {
+			for j:=0; j<len(bl.Txs[i].TxIn); j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
 				spendrec, waspent := changes.DeledTxs[inp.Hash]
 				if waspent && spendrec[inp.Vout] {
@@ -205,15 +199,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					}
 				}
 
-				if !(<-done) {
-					println("VerifyScript error 1")
-					scripts_ok = false
-					break
-				}
-
-				if tx_trusted {
-					done <- true
-				} else {
+				if !tx_trusted { // run VerifyTxScript() in a parallel task
 					go func (prv []byte, i int, tx *btc.Tx) {
 						done <- script.VerifyTxScript(prv, i, tx, bl.VerifyFlags)
 					}(tout.Pk_script, j, bl.Txs[i])
@@ -226,15 +212,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				txinsum += tout.Value
 			}
 
-			for j:=0; j<sys.UseThreads; j++ {
-				if !(<- done) {
-					println("VerifyScript error 2")
-					scripts_ok = false
+			if !tx_trusted {
+				for _ = range bl.Txs[i].TxIn  {
+					if !(<- done) {
+						println("VerifyScript error 2")
+						return errors.New("VerifyScripts failed")
+					}
 				}
-			}
-
-			if !scripts_ok {
-				return errors.New("VerifyScripts failed")
 			}
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
