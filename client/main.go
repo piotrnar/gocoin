@@ -64,6 +64,16 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		}
 	} else {
 		fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
+		common.Last.Mutex.Lock()
+		common.Last.Block = common.BlockChain.BlockTreeEnd
+		common.Last.Mutex.Unlock()
+		// update network.LastCommitedHeader
+		network.MutexRcv.Lock()
+		if network.LastCommitedHeader != common.BlockChain.BlockTreeEnd {
+			network.LastCommitedHeader = common.BlockChain.BlockTreeEnd
+			println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
+		}
+		network.MutexRcv.Unlock()
 	}
 	return
 }
