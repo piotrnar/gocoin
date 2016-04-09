@@ -67,7 +67,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
 		if e != nil {
 			// ProcessBlockTransactions failed, so trash the block.
-			println("ProcessBlockTransactions ", cur.BlockHash.String(), cur.Height, e.Error())
+			println("ProcessBlockTransactionsA", cur.BlockHash.String(), cur.Height, e.Error())
 			ch.BlockIndexAccess.Lock()
 			cur.Parent.delChild(cur)
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
@@ -96,10 +96,6 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			ch.MoveToBlock(cur)
 			if ch.BlockTreeEnd!=cur {
 				e = errors.New("CommitBlock: MoveToBlock failed")
-				ch.BlockIndexAccess.Lock()
-				cur.Parent.delChild(cur)
-				delete(ch.BlockIndex, cur.BlockHash.BIdx())
-				ch.BlockIndexAccess.Unlock()
 			}
 		}
 	}
