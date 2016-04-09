@@ -274,7 +274,7 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 	cur, ok := db.blockIndex[idx]
 	if !ok {
 		db.mutex.Unlock()
-		println("BlockInvalid: no such block")
+		println("BlockInvalid: no such block", btc.NewUint256(hash).String())
 		return
 	}
 	if cur.trusted {
