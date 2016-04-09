@@ -18,6 +18,9 @@ var (
 type data_ptr_t unsafe.Pointer
 
 func (v *oneIdx) FreeData() {
+	if v.data==nil {
+		return
+	}
 	if membind_use_wrapper {
 		_heap_free(v.data)
 		atomic.AddInt64(&ExtraMemoryConsumed, -int64(v.datlen))
