@@ -590,7 +590,7 @@ func main() {
 				f.Read(buf)
 				f.Close()
 				ioutil.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), buf), 0600)
-				fmt.Println(bh.String()+".bin written to disk")
+				fmt.Println(bh.String()+".bin written to disk. It has height", sl.Height())
 				return
 			}
 		}
