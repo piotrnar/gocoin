@@ -139,31 +139,31 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				if waspent && spendrec[inp.Vout] {
 					println("txin", inp.String(), "already spent in this block")
 					e = errors.New("Input spent more then once in same block")
-					break
+					return
 				}
 				tout := ch.PickUnspent(inp)
 				if tout==nil {
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
 						e = errors.New("Unknown input TxID: " + btc.NewUint256(inp.Hash[:]).String())
-						break
+						return
 					}
 
 					if inp.Vout>=uint32(len(t)) {
 						println("Vout too big", len(t), inp.String())
 						e = errors.New("Vout too big")
-						break
+						return
 					}
 
 					if t[inp.Vout] == nil {
 						println("Vout already spent", inp.String())
 						e = errors.New("Vout already spent")
-						break
+						return
 					}
 
 					if t[inp.Vout].WasCoinbase {
 						e = errors.New("Cannot spend block's own coinbase in TxID: " + btc.NewUint256(inp.Hash[:]).String())
-						break
+						return
 					}
 
 					tout = t[inp.Vout]
@@ -171,7 +171,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				} else {
 					if tout.WasCoinbase && changes.Height - tout.BlockHeight < COINBASE_MATURITY {
 						e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
-						break
+						return
 					}
 					// it is confirmed already so delete it later
 					if !waspent {
