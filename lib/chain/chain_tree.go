@@ -253,12 +253,12 @@ func (cur *BlockTreeNode) delAllChildren(ch *Chain) {
 
 func (ch *Chain) DeleteBranch(cur *BlockTreeNode) {
 	// first disconnect it from the Parent
+	ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	ch.BlockIndexAccess.Lock()
 	delete(ch.BlockIndex, cur.BlockHash.BIdx())
 	cur.Parent.delChild(cur)
 	cur.delAllChildren(ch)
 	ch.BlockIndexAccess.Unlock()
-	ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	if !ch.DoNotSync {
 		ch.Blocks.Sync()
 	}
