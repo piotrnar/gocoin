@@ -36,6 +36,7 @@ var (
 	fl_block, fl_stop    uint
 	fl_dir               string
 	fl_scan, fl_defrag   bool
+	fl_resetflags        bool
 	fl_split             string
 	fl_skip              uint
 	fl_append            string
@@ -169,6 +170,7 @@ func main() {
 	flag.BoolVar(&fl_commit, "commit", false, "Optimize the size of the data file")
 	flag.BoolVar(&fl_verify, "verify", false, "Verify each block inside the database")
 	flag.StringVar(&fl_savebl, "savebl", "", "Save block with the given hash to disk")
+	flag.BoolVar(&fl_resetflags, "resetflags", false, "Reset all Invalid and Trusted flags when defragmenting")
 
 	flag.Parse()
 
@@ -321,7 +323,7 @@ func main() {
 			}
 			total_data_size += uint64(n.DLen())
 		}
-		if len(used) < len(blks) {
+		if len(used) < len(blks) || fl_resetflags {
 			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
 			f, e := os.Create(fl_dir + "blockchain.tmp")
 			if e != nil {
@@ -331,6 +333,7 @@ func main() {
 			var off int
 			for n := first_block; n != nil; n = n.next {
 				n.off = off
+				n.sl[0] = n.sl[0]&0xfc
 				f.Write(n.sl)
 				off += len(n.sl)
 			}
