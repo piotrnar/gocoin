@@ -94,6 +94,13 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		// ... move the coin state into a new branch.
 		if cur.Height > ch.BlockTreeEnd.Height {
 			ch.MoveToBlock(cur)
+			if ch.BlockTreeEnd!=cur {
+				e = errors.New("CommitBlock: MoveToBlock failed")
+				ch.BlockIndexAccess.Lock()
+				cur.Parent.delChild(cur)
+				delete(ch.BlockIndex, cur.BlockHash.BIdx())
+				ch.BlockIndexAccess.Unlock()
+			}
 		}
 	}
 
