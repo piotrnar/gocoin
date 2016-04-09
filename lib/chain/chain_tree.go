@@ -66,7 +66,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
-			println("ProcessBlockTransactions", nxt.Height, er.Error())
+			println("ProcessBlockTransactionsB", nxt.BlockHash.String(), nxt.Height, er.Error())
 			ch.DeleteBranch(nxt)
 			break
 		}
@@ -240,10 +240,14 @@ func (cur *BlockTreeNode)FirstCommonParent(dst *BlockTreeNode) *BlockTreeNode {
 }
 
 
-func (cur *BlockTreeNode) delAllChildren() {
+// make sure ch.BlockIndexAccess is locked before calling it
+func (cur *BlockTreeNode) delAllChildren(ch *Chain) {
 	for i := range cur.Childs {
-		cur.Childs[i].delAllChildren()
+		cur.Childs[i].delAllChildren(ch)
+		delete(ch.BlockIndex, cur.Childs[i].BlockHash.BIdx())
+		ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	}
+	cur.Childs = nil
 }
 
 
@@ -252,7 +256,7 @@ func (ch *Chain) DeleteBranch(cur *BlockTreeNode) {
 	ch.BlockIndexAccess.Lock()
 	delete(ch.BlockIndex, cur.BlockHash.BIdx())
 	cur.Parent.delChild(cur)
-	cur.delAllChildren()
+	cur.delAllChildren(ch)
 	ch.BlockIndexAccess.Unlock()
 	ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	if !ch.DoNotSync {
