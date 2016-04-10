@@ -44,23 +44,27 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		common.CountSafe(fmt.Sprint("InvGot",typ))
 		if typ==2 {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if c.X.AllHeadersReceived && !blockReceived(bhash) {
-				MutexRcv.Lock()
-				if b2g, ok := BlocksToGet[bhash.BIdx()]; ok {
-					if c.Node.Height < b2g.Block.Height {
-						c.Node.Height = b2g.Block.Height
-					}
-					common.CountSafe("InvBlockFresh")
-					//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
-					c.X.GetBlocksDataNow = true
-				} else {
-					common.CountSafe("InvBlockNew")
-					c.X.AllHeadersReceived = false
-					//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
-				}
-				MutexRcv.Unlock()
+			if !c.X.AllHeadersReceived {
+				common.CountSafe("InvBlockIgnored")
 			} else {
-				common.CountSafe("InvBlockOld")
+				if !blockReceived(bhash) {
+					MutexRcv.Lock()
+					if b2g, ok := BlocksToGet[bhash.BIdx()]; ok {
+						if c.Node.Height < b2g.Block.Height {
+							c.Node.Height = b2g.Block.Height
+						}
+						common.CountSafe("InvBlockFresh")
+						//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
+						c.X.GetBlocksDataNow = true
+					} else {
+						common.CountSafe("InvBlockNew")
+						c.X.AllHeadersReceived = false
+						//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
+					}
+					MutexRcv.Unlock()
+				} else {
+					common.CountSafe("InvBlockOld")
+				}
 			}
 		} else if typ==1 {
 			if common.CFG.TXPool.Enabled {
