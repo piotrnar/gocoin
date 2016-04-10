@@ -282,10 +282,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 func CheckTransactions(txs []*btc.Tx, height, btime uint32) bool {
 	ok := true
 	done := make(chan bool, sys.UseThreads)
-	for i:=0; i<sys.UseThreads; i++ {
-		done <- true
-	}
-	for i:= range txs {
+	for i := range txs {
 		go func(tx *btc.Tx) {
 			if tx.CheckTransaction() != nil {
 				done <- false // check transaction failed
@@ -293,12 +290,8 @@ func CheckTransactions(txs []*btc.Tx, height, btime uint32) bool {
 				done <- tx.IsFinal(height, btime)
 			}
 		}(txs[i])
-
-		if !(<-done) {
-			ok = false
-		}
 	}
-	for j:=1; j<sys.UseThreads; j++ {
+	for _ = range txs {
 		if !(<- done) {
 			ok = false
 		}
