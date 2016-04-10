@@ -65,7 +65,7 @@ func (bl *Block)Bits() uint32 {
 func (bl *Block) BuildTxList() (e error) {
 	if bl.TxCount==0 {
 		bl.TxCount, bl.TxOffset = VLen(bl.Raw[80:])
-		if bl.TxOffset == 0 {
+		if bl.TxCount==0 || bl.TxOffset==0 {
 			e = errors.New("Block's txn_count field corrupt")
 			return
 		}
