@@ -60,6 +60,13 @@ func (bl *Block)Bits() uint32 {
 }
 
 
+func (bl *Block) SerializedSize() int {
+	cnt, off := VLen(bl.Raw[80:])
+	return 80 + VLenSize(uint64(cnt)) + len(bl.Raw)-80-off
+}
+
+
+
 // Parses block's transactions and adds them to the structure, calculating hashes BTW.
 // It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 func (bl *Block) BuildTxList() (e error) {
