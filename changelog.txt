@@ -1,4 +1,5 @@
 1.6.2
+* Lib: Several compatibility fixes in the consensus checks on the block level
 * Client: getheadres uses genesis block if no locator has been found
 * Qdb: Memory bindings for Windows and Linux are being used automatically
 * Client: each input's script is checked in a parallell for accepting tx to mempool
