@@ -113,13 +113,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		changes.UndoData = make(map[[32]byte] *QdbRec)
 	}
 
-	// Add each tx outs from the current block to the temporary pool
 	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
-	for i := range bl.Txs {
-		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
-		copy(outs, bl.Txs[i].TxOut)
-		blUnsp[bl.Txs[i].Hash.Hash] = outs
-	}
 
 	// create a channnel to receive results from VerifyScript threads:
 	done := make(chan bool, sys.UseThreads-1)
@@ -244,6 +238,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 			return errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
 				float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
 		}
+
+		// Add each tx outs from the currently executed TX to the temporary pool
+		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
+		copy(outs, bl.Txs[i].TxOut)
+		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
 
 	if sumblockin < sumblockout {
