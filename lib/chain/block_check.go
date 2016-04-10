@@ -12,7 +12,7 @@ import (
 
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
-	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE {
+	if len(bl.Raw)<81 || len(bl.Raw)>btc.MAX_BLOCK_SIZE && bl.SerializedSize()>btc.MAX_BLOCK_SIZE {
 		er = errors.New("CheckBlock() : size limits failed - RPC_Result:bad-blk-length")
 		dos = true
 		return
