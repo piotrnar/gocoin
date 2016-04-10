@@ -145,10 +145,18 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 			}
 		}
 
-		// This is a stupid check, but well, we need to be satoshi compatible
+		// We need to be satoshi compatible
 		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-missing")
 			return
+		}
+
+		// And again...
+		for i:=1; i<len(bl.Txs); i++ {
+			if bl.Txs[i].IsCoinBase() {
+				er = errors.New("CheckBlock() : more than one coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-multiple")
+				return
+			}
 		}
 
 		// Check Merkle Root - that's importnant
