@@ -66,6 +66,20 @@ func PutULe(b []byte, uvl uint64) int {
 }
 
 
+// How many bytes would take to write this VLen
+func VLenSize(uvl uint64) int {
+	if uvl<0xfd {
+		return 1
+	}
+	if uvl<0x10000 {
+		return 3
+	}
+	if uvl<0x100000000 {
+		return 5
+	}
+	return 9
+}
+
 
 // Returns length and number of bytes that the var_int took
 // If there is not enough bytes in the buffer 0, 0 gets returned
