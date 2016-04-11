@@ -280,7 +280,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 // Check transactions for consistency and finality. Return true if OK
 func CheckTransactions(txs []*btc.Tx, height, btime uint32) bool {
 	ok := true
-	done := make(chan bool, sys.UseThreads)
+	done := make(chan bool, sys.UseThreads-1)
 	for i := range txs {
 		go func(tx *btc.Tx) {
 			if tx.CheckTransaction() != nil {
