@@ -59,12 +59,16 @@ var (
 )
 
 func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool) {
-	tmp := make([]byte, len(pkScr))
-	copy(tmp, pkScr)
+	var tmp []byte
+	if len(pkScr)!=0 {
+		tmp = make([]byte, len(pkScr))
+		copy(tmp, pkScr)
+	}
 	go func(pkScr []byte, txTo []byte, i int, ver_flags uint32, result bool) {
-		var pkscr_ptr *C.uchar
+		var pkscr_ptr, pkscr_len uintptr // default to 0/null
 		if pkScr != nil {
-			pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
+			pkscr_ptr = uintptr(unsafe.Pointer(&pkScr[0]))
+			pkscr_len = uintptr(len(pkScr))
 		}
 		r1 := int(C.bitcoinconsensus_verify_script(pkscr_ptr, C.uint(len(pkScr)),
 			(*C.uchar)(unsafe.Pointer(&txTo[0])), C.uint(len(txTo)), C.uint(i), C.uint(ver_flags)))
