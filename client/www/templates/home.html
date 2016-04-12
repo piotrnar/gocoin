@@ -180,10 +180,11 @@ function draw_chart() {
 
 	aj.onload=function() {
 		try {
-			cs = JSON.parse(aj.responseText)
-			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}} ];
+			_cs = JSON.parse(aj.responseText)
+			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}},
+							{ data : [], bars:{ show:true, fill:true,  lineWidth:5}, color:"black" } ];
 			var plot_options = {
-				grid: { hoverable: true, clickable: true },
+				grid: { hoverable: true, clickable: true,  markings:[] },
 				xaxis: { mode: 'time', timeformat: "%H:%M", timezone: "browser" },
 				yaxis : {labelWidth : 30, min : 0, position : "right"}
 			}
@@ -201,13 +202,21 @@ function draw_chart() {
 				localStorage.setItem("home_chart", "txs")
 			}
 
-			for (var i=0; i<cs.length; i++) {
+			cs = new Array()
+			for (var i=0; i<_cs.length; i++) {
+				if (_cs[i].TxCnt==1) {
+					//plot_data[1].data.push([_cs[i].Timestamp*1000, 100])
+					var tt = _cs[i].Timestamp*1000
+					plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: "#f0f0d0" })
+					continue // ignore blocks with a single conbase tx
+				}
+				cs.push(_cs[i])
 				if (chart_type_siz.checked) {
-					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].Size/1000.0])
+					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
 				} else if (chart_type_spb.checked) {
-					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].FeeSPB])
+					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
 				} else {
-					plot_data[0].data.push([cs[i].Timestamp*1000, cs[i].TxCnt])
+					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
 				}
 			}
 
