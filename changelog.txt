@@ -1,4 +1,4 @@
-1.6.2
+1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript
 * Lib: Several compatibility fixes in the consensus checks on the block level
 * Client: getheadres uses genesis block if no locator has been found
