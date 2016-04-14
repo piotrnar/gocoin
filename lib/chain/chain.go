@@ -3,6 +3,8 @@ package chain
 import (
 	"fmt"
 	"sync"
+	"math/big"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -27,6 +29,9 @@ type Chain struct {
 
 	Consensus struct {
 		Window, EnforceUpgrade, RejectBlock uint
+		MaxPOWBits uint32
+		MaxPOWValue *big.Int
+		GensisTimestamp uint32
 	}
 }
 
@@ -64,6 +69,9 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.CB = *opts
 	}
 
+	ch.Consensus.GensisTimestamp = 1231006505
+	ch.Consensus.MaxPOWBits = 0x1d00ffff
+	ch.Consensus.MaxPOWValue, _ = new(big.Int).SetString("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 	if ch.testnet() {
 		ch.Consensus.Window = 100
 		ch.Consensus.EnforceUpgrade = 51
@@ -128,6 +136,17 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	}
 
 	return
+}
+
+
+// Calculate an imaginary header of the genesis block (for Timestamp() and Bits() functions from chain_tree.go)
+func (ch *Chain) RebuildGenesisHeader() {
+	binary.LittleEndian.PutUint32(ch.BlockTreeRoot.BlockHeader[0:4], 1) // Version
+	// [4:36] - prev_block
+	// [36:68] - merkle_root
+	binary.LittleEndian.PutUint32(ch.BlockTreeRoot.BlockHeader[68:72], ch.Consensus.GensisTimestamp) // Timestamp
+	binary.LittleEndian.PutUint32(ch.BlockTreeRoot.BlockHeader[72:76], ch.Consensus.MaxPOWBits) // Bits
+	// [76:80] - nonce
 }
 
 

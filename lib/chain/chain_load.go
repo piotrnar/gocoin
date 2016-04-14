@@ -26,6 +26,7 @@ func (ch *Chain)loadBlockIndex() {
 	ch.BlockIndex = make(map[[btc.Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)
 	ch.BlockTreeRoot.BlockHash = ch.Genesis
+	ch.RebuildGenesisHeader()
 	ch.BlockIndex[ch.Genesis.BIdx()] = ch.BlockTreeRoot
 
 

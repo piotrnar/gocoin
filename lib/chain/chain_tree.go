@@ -90,19 +90,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 }
 
 func (n *BlockTreeNode) Timestamp() (uint32) {
-	if n.Height==0 {
-		return GenesisBlockTime
-	} else {
-		return binary.LittleEndian.Uint32(n.BlockHeader[68:72])
-	}
+	return binary.LittleEndian.Uint32(n.BlockHeader[68:72])
 }
 
 func (n *BlockTreeNode) Bits() (uint32) {
-	if n.Height==0 {
-		return MaxPOWBits
-	} else {
-		return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
-	}
+	return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
 }
 
 // Returns median time of the last 11 blocks
