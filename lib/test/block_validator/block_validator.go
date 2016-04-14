@@ -144,7 +144,9 @@ func main() {
 	BlockChain = chain.NewChainExt(DatabaseDir,
 		btc.NewUint256FromString("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"),
 		true, &chain.NewChanOpts{})
-	println("BlockChain:", BlockChain)
+
+	chain.MaxPOWBits = 0x207fffff
+	chain.MaxPOWValue, _ = new(big.Int).SetString("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
 
 	http.ListenAndServe("127.0.0.1:18444", new(my_handler))
 
