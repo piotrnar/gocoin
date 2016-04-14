@@ -16,7 +16,7 @@ import (
 
 const (
 	NumberOfUnspentSubDBs = 0x10
-	UnwindBufferMaxHistory = 256  // Let's keep unwind history for so may last blocks
+	UnwindBufferMaxHistory = 1200  // Let's keep unwind history for so may last blocks
 )
 
 type FunctionWalkUnspent func(*QdbRec)
