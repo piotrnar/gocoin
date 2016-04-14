@@ -56,8 +56,8 @@ func main() {
 	}
 
 	txt, _ := ioutil.ReadAll(httpresp.Body)
-	fmt.Println(string(txt))
 	if string(txt)!="ok" {
+		fmt.Println(string(txt))
 		os.Exit(1)
 	}
 
