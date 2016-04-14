@@ -16,7 +16,6 @@ import (
 
 const (
 	NumberOfUnspentSubDBs = 0x10
-	UnwindBufferMaxHistory = 1200  // Let's keep unwind history for so may last blocks
 )
 
 type FunctionWalkUnspent func(*QdbRec)
@@ -42,6 +41,7 @@ type UnspentDB struct {
 	nosyncinprogress bool
 	ch *Chain
 	volatimemode bool
+	UnwindBufLen uint32
 }
 
 type NewUnspentOpts struct {
@@ -49,6 +49,7 @@ type NewUnspentOpts struct {
 	Chain *Chain
 	Rescan bool
 	VolatimeMode bool
+	UnwindBufferLen uint32
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
@@ -57,6 +58,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	db = new(UnspentDB)
 	db.dir = opts.Dir+"unspent4"+string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
+	db.UnwindBufLen = 256
 
 	if opts.Rescan {
 		os.RemoveAll(db.dir)
@@ -107,7 +109,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	undo_fn := fmt.Sprint(db.dir, changes.Height)
 
-	if changes.UndoData!=nil || (changes.Height%UnwindBufferMaxHistory)==0 {
+	if changes.UndoData!=nil || (changes.Height%db.UnwindBufLen)==0 {
 		bu := new(bytes.Buffer)
 		bu.Write(blhash)
 		if changes.UndoData != nil {
@@ -136,8 +138,8 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	copy(db.LastBlockHash, blhash)
 	db.LastBlockHeight = changes.Height
 
-	if changes.Height>UnwindBufferMaxHistory {
-		os.Remove(fmt.Sprint(db.dir, changes.Height-UnwindBufferMaxHistory))
+	if changes.Height>db.UnwindBufLen {
+		os.Remove(fmt.Sprint(db.dir, changes.Height-db.UnwindBufLen))
 	}
 	return
 }

@@ -109,7 +109,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
-	if int(changes.Height)+UnwindBufferMaxHistory >= int(changes.LastKnownHeight) {
+	if changes.Height+ch.Unspent.UnwindBufLen >= changes.LastKnownHeight {
 		changes.UndoData = make(map[[32]byte] *QdbRec)
 	}
 
