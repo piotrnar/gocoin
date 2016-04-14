@@ -32,7 +32,7 @@ func NewBlock(data []byte) (*Block, error) {
 	bl.Raw = data
 	bl.TxCount, bl.TxOffset = VLen(data[80:])
 	if bl.TxOffset == 0 {
-		return nil, errors.New("Block's txn_count field corrupt")
+		return nil, errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
 	}
 	bl.TxOffset += 80
 	return &bl, nil
@@ -73,7 +73,7 @@ func (bl *Block) BuildTxList() (e error) {
 	if bl.TxCount==0 {
 		bl.TxCount, bl.TxOffset = VLen(bl.Raw[80:])
 		if bl.TxCount==0 || bl.TxOffset==0 {
-			e = errors.New("Block's txn_count field corrupt")
+			e = errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
 			return
 		}
 		bl.TxOffset += 80
