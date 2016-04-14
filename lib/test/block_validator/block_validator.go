@@ -7,19 +7,7 @@ import (
 	"strings"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-/*
-	"fmt"
-	"time"
-	"io/ioutil"
-	"encoding/hex"
-	"github.com/piotrnar/gocoin/lib/qdb"
-	"github.com/piotrnar/gocoin/lib/others/blockdb"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
-	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/usif/textui"
-	"github.com/piotrnar/gocoin/lib/others/sys"
-*/
+	"math/big"
 )
 
 const DatabaseDir = "chain/"
