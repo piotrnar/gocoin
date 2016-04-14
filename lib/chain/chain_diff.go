@@ -5,13 +5,15 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-var MaxPOWValue *big.Int // it's var but used as a constant
+var (
+	MaxPOWValue *big.Int // it's var but used as a constant
+	MaxPOWBits = uint32(0x1d00ffff)
+)
 
 const (
 	POWRetargetSpam = 14 * 24 * 60 * 60 // two weeks
 	TargetSpacing = 10 * 60
 	targetInterval = POWRetargetSpam / TargetSpacing
-	MaxPOWBits = 0x1d00ffff
 )
 
 func init() {
