@@ -1,6 +1,3 @@
-Downloader:
-* Running out of memory when only downloading the blocks
-
 Client:
 * Make volatile wallets really volatile (not stored in server's memory)
 * Implement RBF in the mempool - https://bitcointalk.org/index.php?topic=1331275.msg13921601#msg13921601
