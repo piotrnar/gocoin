@@ -124,6 +124,8 @@ sorted by
 	</select>
 in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> order
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
+&nbsp;&nbsp;&nbsp;
+<input type="button" value="Decode mempool TX" onclick="show_txid()">
 </table>
 
 
@@ -574,6 +576,13 @@ function handlehover(event, pos, item) {
 function handleclick(event, pos, item) {
 	var rec = mp[item.dataIndex]
 	decode_tx_id(rec.Current_tx_id)
+}
+
+function show_txid() {
+	var tid = prompt("Enter ID of the TX");
+	if (tid!=null) {
+		decode_tx_id(tid)
+	}
 }
 
 
