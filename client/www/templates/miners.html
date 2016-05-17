@@ -29,6 +29,9 @@ Total mining fees amount to <b><!--TOTAL_MINING_FEES--></b> BTC
 with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 
 <br>
+<table><tr>
+<td valign="top">
+
 <table class="bord" width="100%">
 	<tr>
 		<th width="120">Miner
@@ -42,7 +45,9 @@ with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 	</tr>
     <!--MINER_ROW-->
 </table>
-<br>
+
+</td>
+<td valign="top">
 
 <style>
 table#blockver_tab td.ver {
@@ -57,9 +62,13 @@ table#blockver_tab td.perc {
 }
 </style>
 <table class="bord" id="blockver_tab" align="right">
-<tr><th>Block version<th>Block count<th>Percentage
+<tr><th>Version<th>Count<th>Share
 </table>
-<br>
+
+</td>
+</tr>
+</table>
+
 <script>
 function blocks_version_stats() {
 	var key, st = new Array()
@@ -86,7 +95,7 @@ function blocks_version_stats() {
 		var row = blockver_tab.insertRow(-1)
 		var c = row.insertCell(-1)
 		c.className = 'ver'
-		c.innerText = sorted[i].ver.toString(16)
+		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
 
 		c = row.insertCell(-1)
 		c.className = 'cnt'
