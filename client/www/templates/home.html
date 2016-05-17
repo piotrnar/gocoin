@@ -286,7 +286,7 @@ function refreshsysinfo() {
 			var days = ''
 			if (hrs>=24) {
 				days = parseInt(hrs/24)
-				days = days + ' day' + ((days>1) ? 's ' : ' ')
+				days = days + ' day' + ((days>1) ? 's,  ' : ',  ')
 				hrs %= 24
 			}
 			si_node_uptime.innerText = days + hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)
