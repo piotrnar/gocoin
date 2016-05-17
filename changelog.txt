@@ -1,7 +1,7 @@
 1.6.3
 * Lib: Inteface to TheBlueMatt's block_validator tests - see https://github.com/piotrnar/btc_block_validator
 * WebUI/Miners: Removed BIP100 voting stats
-* WebUI/Miners: Block version numbers are passed in raw format (to be parsed in javascrip)
+* WebUI/Miners: Block version numbers are shown in a table, from a span of the consensus window
 
 1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript

@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
 		document.getElementById('midrow'+curmid).className = "own"
 	}
 })
-var block_versions = [/*BLOCK_VERSIONS*/]
 </script>
 Data from last <b>{MINING_HOURS}</b> hours.
  The oldest block starting at <b>{FIRST_BLOCK_TIME}</b><br>
@@ -28,7 +27,6 @@ which changes in <b>{DIFF_CHANGE_IN}</b> blocks<br>
 Total mining fees amount to <b><!--TOTAL_MINING_FEES--></b> BTC
 with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 
-<br>
 <table><tr>
 <td valign="top">
 
@@ -71,40 +69,57 @@ table#blockver_tab td.perc {
 
 <script>
 function blocks_version_stats() {
-	var key, st = new Array()
-	for (var i=0; i<block_versions.length; i++) {
-		key = block_versions[i]+""
-		if (isNaN(st[key])) {
-			st[key] = 1
-		} else {
-			st[key]++
+	function onc(c,id) {
+		c.onclick = function() {hlminer(id)}
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshblocks, 1000)
+	}
+	aj.onload=function() {
+		try {
+			var block_versions = JSON.parse(aj.responseText)
+			var key, st = new Array()
+			for (var i=0; i<block_versions.length; i++) {
+				key = block_versions[i]+""
+				if (isNaN(st[key])) {
+					st[key] = 1
+				} else {
+					st[key]++
+				}
+			}
+			var sorted = new Array()
+			for (key in st) {
+				sorted.push({ver:parseInt(key), cnt:st[key]})
+			}
+
+			sorted.sort(function(a,b){
+				if (a.cnt>b.cnt) return -1;
+				else if (a.cnt==b.cnt) return 0;
+				else return 1;
+			})
+
+			for (var i=0; i<sorted.length; i++) {
+				var row = blockver_tab.insertRow(-1)
+				var c = row.insertCell(-1)
+				c.className = 'ver'
+				c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
+
+				c = row.insertCell(-1)
+				c.className = 'cnt'
+				c.innerText = sorted[i].cnt
+
+				c = row.insertCell(-1)
+				c.className = 'perc'
+				c.innerText = Math.round(sorted[i].cnt*100/block_versions.length) + '%'
+			}
+		} catch (e) {
+			blockver_tab.style.display='none'
 		}
 	}
-	var sorted = new Array()
-	for (key in st) {
-		sorted.push({ver:parseInt(key), cnt:st[key]})
-	}
-
-	sorted.sort(function(a,b){
-		if (a.cnt>b.cnt) return -1;
-		else if (a.cnt==b.cnt) return 0;
-		else return 1;
-	})
-
-	for (var i=0; i<sorted.length; i++) {
-		var row = blockver_tab.insertRow(-1)
-		var c = row.insertCell(-1)
-		c.className = 'ver'
-		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
-
-		c = row.insertCell(-1)
-		c.className = 'cnt'
-		c.innerText = sorted[i].cnt
-
-		c = row.insertCell(-1)
-		c.className = 'perc'
-		c.innerText = Math.round(sorted[i].cnt*100/block_versions.length) + '%'
-	}
+	aj.open("GET","minver.json",true)
+	aj.send(null)
 }
 
 blocks_version_stats()

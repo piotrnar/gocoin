@@ -64,8 +64,6 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	next_diff_change := 2016-end.Height%2016
 
-	var block_versions string
-
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
 			break
@@ -78,8 +76,6 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 		block, e := btc.NewBlock(bl)
 		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
-
-		block_versions += fmt.Sprint(binary.LittleEndian.Uint32(bl[0:4])) + ","
 
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.TxMiner(cbasetx)
@@ -154,9 +150,36 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	mnrs = strings.Replace(mnrs, "<!--TOTAL_MINING_FEES-->", btc.UintToBtc(totfees), 1)
 	mnrs = strings.Replace(mnrs, "<!--AVERAGE_FEE_PER_BYTE-->", fmt.Sprint(totfees/totbts), 1)
-	mnrs = strings.Replace(mnrs, "/*BLOCK_VERSIONS*/", block_versions, 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))
 	write_html_tail(w)
+}
+
+
+func json_minver(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"application/json"}
+
+	common.Last.Mutex.Lock()
+	end := common.Last.Block
+	common.Last.Mutex.Unlock()
+
+	w.Write([]byte("["))
+	if end!=nil {
+		max_cnt := common.BlockChain.Consensus.Window
+		for {
+			w.Write([]byte(fmt.Sprint(binary.LittleEndian.Uint32(end.BlockHeader[0:4]))))
+			end = end.Parent
+			if end==nil || max_cnt<=1 {
+				break
+			}
+			max_cnt--
+			w.Write([]byte(","))
+		}
+	}
+	w.Write([]byte("]"))
 }
