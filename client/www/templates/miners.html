@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		document.getElementById('midrow'+curmid).className = "own"
 	}
 })
+var block_versions = [/*BLOCK_VERSIONS*/]
 </script>
 Data from last <b>{MINING_HOURS}</b> hours.
  The oldest block starting at <b>{FIRST_BLOCK_TIME}</b><br>
@@ -42,10 +43,65 @@ with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
     <!--MINER_ROW-->
 </table>
 <br>
-Block versions: <!--BLOCK_VERSIONS--><br>
-Block size votes: <!--BLOCKSIZE_VOTES--><br>
 
+<style>
+table#blockver_tab td.ver {
+	font-family: monospace;
+	text-align:right;
+}
+table#blockver_tab td.cnt {
+	text-align:right;
+}
+table#blockver_tab td.perc {
+	text-align:right;
+}
+</style>
+<table class="bord" id="blockver_tab" align="right">
+<tr><th>Block version<th>Block count<th>Percentage
+</table>
+<br>
 <script>
+function blocks_version_stats() {
+	var key, st = new Array()
+	for (var i=0; i<block_versions.length; i++) {
+		key = block_versions[i]+""
+		if (isNaN(st[key])) {
+			st[key] = 1
+		} else {
+			st[key]++
+		}
+	}
+	var sorted = new Array()
+	for (key in st) {
+		sorted.push({ver:parseInt(key), cnt:st[key]})
+	}
+
+	sorted.sort(function(a,b){
+		if (a.cnt>b.cnt) return -1;
+		else if (a.cnt==b.cnt) return 0;
+		else return 1;
+	})
+
+	for (var i=0; i<sorted.length; i++) {
+		var row = blockver_tab.insertRow(-1)
+		var c = row.insertCell(-1)
+		c.className = 'ver'
+		c.innerText = sorted[i].ver.toString(16)
+
+		c = row.insertCell(-1)
+		c.className = 'cnt'
+		c.innerText = sorted[i].cnt
+
+		c = row.insertCell(-1)
+		c.className = 'perc'
+		c.innerText = Math.round(sorted[i].cnt*100/block_versions.length) + '%'
+	}
+}
+
+blocks_version_stats()
+
+//Block versions: <!--BLOCK_VERSIONS--><br>
+
 // reaload page on new block
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {

@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
-	"regexp"
 )
 
 type omv struct {
@@ -65,13 +64,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	next_diff_change := 2016-end.Height%2016
 
-	block_versions := make(map[uint32]uint)
-
-	// bip100
-	bip100_voting := make(map[string]uint)
-	//var bip100, bip100v uint64
-	bip100x := regexp.MustCompile("/BV{0,1}[0-9]+[M]{0,1}/")
-	//bip100rx := regexp.MustCompile("/B[0-9]+[M]{0,1}/")
+	var block_versions string
 
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
@@ -86,7 +79,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		block, e := btc.NewBlock(bl)
 		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
 
-		block_versions[binary.LittleEndian.Uint32(bl[0:4])]++
+		block_versions += fmt.Sprint(binary.LittleEndian.Uint32(bl[0:4])) + ","
+
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.TxMiner(cbasetx)
 		if mid==-1 {
@@ -103,13 +97,6 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			rew += cbasetx.TxOut[o].Value
 		}
 		om.fees += rew - btc.GetBlockReward(end.Height)
-
-		// bip-100
-		res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
-		if res!=nil {
-			bip100_voting[string(res)]++
-		}
-
 
 		m[miner] = om
 		if mid!=-1 && current_mid==-1 && minerid==string(common.MinerIds[mid].Tag) {
@@ -167,26 +154,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	mnrs = strings.Replace(mnrs, "<!--TOTAL_MINING_FEES-->", btc.UintToBtc(totfees), 1)
 	mnrs = strings.Replace(mnrs, "<!--AVERAGE_FEE_PER_BYTE-->", fmt.Sprint(totfees/totbts), 1)
-
-	var bv string
-	for k, v := range block_versions {
-		if bv!="" {
-			bv += ",&nbsp;&nbsp;"
-		}
-		bv += fmt.Sprintf("%d (%d%%) x <b>v%d</b>", v, 100*int(v)/cnt, k)
-	}
-	mnrs = strings.Replace(mnrs, "<!--BLOCK_VERSIONS-->", bv, 1)
-
-	// bip100
-	bv = ""
-	for k, v := range bip100_voting {
-		if bv!="" {
-			bv += " + "
-		}
-		bv += fmt.Sprintf("%sx%d", k, v)
-	}
-
-	mnrs = strings.Replace(mnrs, "<!--BLOCKSIZE_VOTES-->", bv, 1)
+	mnrs = strings.Replace(mnrs, "/*BLOCK_VERSIONS*/", block_versions, 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(mnrs))
