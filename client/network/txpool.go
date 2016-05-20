@@ -31,6 +31,7 @@ const (
 	TX_REJECTED_BAD_INPUT    = 207
 	TX_REJECTED_NOT_MINED    = 208
 	TX_REJECTED_CB_INMATURE  = 209
+	TX_REJECTED_RBF_LOWFEE   = 210
 )
 
 var (
@@ -214,15 +215,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
+	rbf_tx_list := make(map[[btc.Uint256IdxLen]byte] bool)
+
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
 		spent[i] = tx.TxIn[i].Input.UIdx()
 
-		if _, ok := SpentOutputs[spent[i]]; ok {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
-			TxMutex.Unlock()
-			common.CountSafe("TxRejectedDoubleSpnd")
-			return
+		if so, ok := SpentOutputs[spent[i]]; ok {
+			rbf_tx_list[so] = true
 		}
 
 		inptx := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
@@ -323,6 +323,30 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
+	if len(rbf_tx_list)>0 {
+		var totlen int
+		var totfees uint64
+		for k, _ := range rbf_tx_list {
+			ctx := TransactionsToSend[k]
+			totlen += len(ctx.Data)
+			totfees += ctx.Fee
+		}
+		new_spb := float64(fee)/float64(len(ntx.raw))
+		old_spb := float64(totfees) / float64(totlen)
+
+		fmt.Printf("TX %s / %d, SPB %.1f -> %.1f, wants to replace %d tx(s) (%d B / %d sat)\n",
+			ntx.tx.Hash.String(), len(ntx.raw), old_spb, new_spb, len(rbf_tx_list), totlen, totfees)
+
+		if new_spb < 1.05*old_spb { // the new fee SPB must be at least 5% higher
+			fmt.Println("RBF failed - TX fee too low!")
+			fmt.Print("> ")
+			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
+			TxMutex.Unlock()
+			common.CountSafe("TxRejectedRBFLowFee")
+			return
+		}
+	}
+
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
 	done := make(chan bool, sys.UseThreads-1)
@@ -337,11 +361,30 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
+			if len(rbf_tx_list)>0 {
+				fmt.Println("RBF try script failed!")
+				fmt.Print("> ")
+			}
 			return
 		}
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops2 += btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 		}
+	}
+
+	if len(rbf_tx_list)>0 {
+		for k, _ := range rbf_tx_list {
+			ctx := TransactionsToSend[k]
+			fmt.Printf(" - TX %s with SPB %.1f @ len %d  - %.1f min old\n", ctx.Hash.String(),
+				float64(ctx.Fee)/float64(len(ctx.Data)), len(ctx.Data),
+				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)
+		}
+		fmt.Println("... but RBF is not implemented anyway")
+		fmt.Print("> ")
+		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
+		TxMutex.Unlock()
+		common.CountSafe("TxRejectedDoubleSpnd")
+		return
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
