@@ -125,7 +125,7 @@ func GetTxFromBlockrIo(txid *btc.Uint256) (raw []byte) {
 
 // Download raw transaction from webbtc.com
 func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
-	url := "http://webbtc.com/tx/" + txid.String() + ".bin"
+	url := "https://webbtc.com/tx/" + txid.String() + ".bin"
 	r, er := http.Get(url)
 	if er == nil && r.StatusCode == 200 {
 		raw, _ = ioutil.ReadAll(r.Body)
