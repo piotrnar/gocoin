@@ -323,23 +323,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
+	var new_spb, old_spb float64
+	var totlen int
+	var totfees uint64
+
 	if len(rbf_tx_list)>0 {
-		var totlen int
-		var totfees uint64
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
 			totlen += len(ctx.Data)
 			totfees += ctx.Fee
 		}
-		new_spb := float64(fee)/float64(len(ntx.raw))
-		old_spb := float64(totfees) / float64(totlen)
-
-		fmt.Printf("TX %s / %d, SPB %.1f -> %.1f, wants to replace %d tx(s) (%d B / %d sat)\n",
-			ntx.tx.Hash.String(), len(ntx.raw), old_spb, new_spb, len(rbf_tx_list), totlen, totfees)
+		new_spb = float64(fee)/float64(len(ntx.raw))
+		old_spb = float64(totfees) / float64(totlen)
 
 		if new_spb < 1.05*old_spb { // the new fee SPB must be at least 5% higher
-			fmt.Println("RBF failed - TX fee too low!")
-			fmt.Print("> ")
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
@@ -373,18 +370,22 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if len(rbf_tx_list)>0 {
+		fmt.Printf("TX %s / %d to replace %d tx(s) [%d/%d], SPB %.1f -> %.1f\n",
+			ntx.tx.Hash.String(), len(ntx.raw), len(rbf_tx_list), totlen, totfees, old_spb, new_spb)
+
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
 			fmt.Printf(" - TX %s with SPB %.1f @ len %d  - %.1f min old\n", ctx.Hash.String(),
 				float64(ctx.Fee)/float64(len(ctx.Data)), len(ctx.Data),
 				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)
+			DeleteToSend(ctx)
+			common.CountSafe("TxRBFRemoves")
 		}
-		fmt.Println("... but RBF is not implemented anyway")
-		fmt.Print("> ")
-		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
-		TxMutex.Unlock()
-		common.CountSafe("TxRejectedDoubleSpnd")
-		return
+		//fmt.Println("... but RBF is not implemented anyway")
+		//fmt.Print("> ")
+		//RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
+		//TxMutex.Unlock()
+		//return
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
