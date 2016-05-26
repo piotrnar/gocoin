@@ -141,8 +141,8 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sortclick('fee')" style="cursor:pointer" width="80" align="right">Fee BTC
 		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">SPB
 		<th onclick="sortclick('ops')" style="cursor:pointer" width="40" align="right">SOps
-		<th width="30" align="right">RPB
-		<th width="40" align="right">&#181;s
+		<th width="30" align="right" title="Transaction is not final">RPB
+		<th width="40" align="right" title="Verification time in ms">ms
 		<th width="40" align="right">Sent
 		<th align="right">Extras
 	</tr>
@@ -418,7 +418,7 @@ function show_txs2s(extrapar) {
 				c.innerHTML = xval(txs[i], 'final')=='true' ? '' : '&bull;'
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = Math.round(xval(txs[i], 'verify_time')/1000)
+				c.innerHTML = (xval(txs[i], 'verify_time')/1e6).toFixed(1)
 
 				c=row.insertCell(-1);c.align='right'
 				var sc = xval(txs[i], 'sentcnt')
