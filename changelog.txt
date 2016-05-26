@@ -7,6 +7,7 @@
 * WebUI/Transactions: Shows which processing time of the txs and which are RBF enabled (non-final)
 * Client: Implemented RBF; the new fee's SPB must be at least 5% higher
 * Removed support for "alert" messages
+* Tools/fetchtx: updated to the latest APIs
 
 1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript
