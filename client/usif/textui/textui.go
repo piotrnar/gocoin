@@ -405,33 +405,6 @@ func show_addresses(par string) {
 	}
 }
 
-func list_alerst(p string) {
-	network.Alert_access.Lock()
-	for _, v := range network.Alerts {
-		fmt.Println("===", v.ID)
-		fmt.Println(" Version:", v.Version)
-		fmt.Println(" RelayUntil:", time.Unix(v.RelayUntil, 0).Format("2006-01-02 15:04:05"))
-		fmt.Println(" Expiration:", time.Unix(v.Expiration, 0).Format("2006-01-02 15:04:05"))
-		fmt.Println(" Cancel:", v.Cancel)
-		fmt.Print(" SetCancel: [")
-		for i := range v.SetCancel {
-			fmt.Print(" ", v.SetCancel[i])
-		}
-		fmt.Println("]")
-		fmt.Println(" MinVer:", v.MinVer)
-		fmt.Println(" MaxVer:", v.MaxVer)
-		fmt.Println(" SetSubVer:")
-		for i := range v.SetSubVer {
-			fmt.Println("    ", v.SetSubVer[i])
-		}
-		fmt.Println(" Priority:", v.Priority)
-		fmt.Println(" Comment:", v.Comment)
-		fmt.Println(" StatusBar:", v.StatusBar)
-		fmt.Println(" Reserved:", v.Reserved)
-	}
-	network.Alert_access.Unlock()
-}
-
 func coins_age(s string) {
 	common.BlockChain.Unspent.PrintCoinAge()
 }
@@ -474,7 +447,6 @@ func send_inv(par string) {
 
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
-	newUi("alerts a", false, list_alerst, "Show received alerts")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")

@@ -411,9 +411,6 @@ func (c *OneConnection) Run() {
 			case "getaddr":
 				c.SendAddr()
 
-			case "alert":
-				c.HandleAlert(cmd.pl)
-
 			case "ping":
 				re := make([]byte, len(cmd.pl))
 				copy(re, cmd.pl)

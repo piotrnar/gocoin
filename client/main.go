@@ -328,11 +328,6 @@ func main() {
 					common.Busy("network.HandleNetTx()")
 					network.HandleNetTx(newtx, false)
 
-				case newal := <-network.NetAlerts:
-					common.CountSafe("MainNetAlert")
-					fmt.Println("\007" + newal)
-					textui.ShowPrompt()
-
 				case <-netTick:
 					common.CountSafe("MainNetTick")
 					common.Busy("network.NetworkTick()")

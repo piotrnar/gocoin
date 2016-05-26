@@ -511,14 +511,14 @@ func TxMined(tx *btc.Tx) {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
 				if rec.Own!=0 {
 					common.CountSafe("TxMinedMalleabled")
-					NetAlerts <- fmt.Sprint("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
+					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
 				} else {
 					common.CountSafe("TxMinedOtherSpend")
 				}
 				DeleteToSend(rec)
 			} else {
 				common.CountSafe("TxMinedSpentERROR")
-				NetAlerts <- fmt.Sprint("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
+				fmt.Println("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
 			}
 			delete(SpentOutputs, idx)
 		}

@@ -119,7 +119,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 	}
 	Mutex_net.Unlock()
 	if typ==1 && cnt==0 {
-		NetAlerts <- "WARNING: your tx has not been broadcasted to any peer"
+		fmt.Println("WARNING: your tx has not been broadcasted to any peer")
 	}
 	return
 }
