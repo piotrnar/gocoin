@@ -5,7 +5,7 @@
 * Wallet: use sequence value of 0 for RBF type transactions (instead of unix timestamp as before)
 * WebUI/MakeTx: Default sequence value changed to 0 and added "Final" checkbox
 * WebUI/Transactions: Shows which processing time of the txs and which are RBF enabled (non-final)
-* Client: Implemented RBF; the new fee's SPB must be at least 5% higher
+* Client: Implemented Replace-By-Fee for the memory pool
 * Removed support for "alert" messages
 * Tools/fetchtx: updated to the latest APIs
 * Lib/script: added support for OP_CHECKSEQUENCEVERIFY opcode (enabled by VER_CSV flag)

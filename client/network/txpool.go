@@ -236,6 +236,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 
 		inptx := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
+
 		if txinmem, ok := TransactionsToSend[inptx.BIdx()]; common.CFG.TXPool.AllowMemInputs && ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
@@ -335,24 +336,50 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	var new_spb, old_spb float64
 	var totlen int
-	var totfees uint64
+	var totfees, new_min_fee uint64
 
 	if len(rbf_tx_list)>0 {
+		for {
+			var new_records bool
+			for k, _ := range rbf_tx_list {
+				ctx := TransactionsToSend[k]
+				new_recs := findPendingTxs(ctx.Tx)
+				if len(rbf_tx_list) + len(new_recs) > 100 {
+					RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
+					TxMutex.Unlock()
+					common.CountSafe("TxRejectedRBF100+")
+					return
+				}
+				for _, id:=range new_recs {
+					if _, ok:=rbf_tx_list[id]; !ok {
+						rbf_tx_list[id] = true
+						new_records = true
+					}
+				}
+			}
+			if !new_records {
+				break
+			}
+		}
+
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
+
 			if ctx.Final {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedRBFFinal")
 				return
 			}
+
 			totlen += len(ctx.Data)
 			totfees += ctx.Fee
 		}
+		new_min_fee = totfees + (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte))
 		new_spb = float64(fee)/float64(len(ntx.raw))
 		old_spb = float64(totfees) / float64(totlen)
 
-		if new_spb < 1.05*old_spb { // the new fee SPB must be at least 5% higher
+		if fee < new_min_fee {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
@@ -429,6 +456,18 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	accepted = true
 	return
+}
+
+// Return txs in mempool that are spending any outputs form the given tx
+func findPendingTxs(tx *btc.Tx) (res [][btc.Uint256IdxLen]byte) {
+	var in btc.TxPrevOut
+	copy(in.Hash[:], tx.Hash.Hash[:])
+	for in.Vout=0; in.Vout<uint32(len(tx.TxOut)); in.Vout++ {
+		if r, ok:=SpentOutputs[in.UIdx()]; ok {
+			res = append(res, r)
+		}
+	}
+	return res
 }
 
 
