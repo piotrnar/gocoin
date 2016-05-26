@@ -117,10 +117,14 @@ sorted by
 	<select id="mp_show_sort">
 		<option value="age">age</option>
 		<option value="len">size</option>
+		<option value="inp">inputs count</option>
+		<option value="out">outputs count</option>
 		<option value="btc">BTC volume</option>
 		<option value="fee">fee amount</option>
 		<option value="ops">sigops count</option>
 		<option value="spb" selected>fee per byte</option>
+		<option value="rbf">RFB first</option>
+		<option value="ver">verify time</option>
 	</select>
 in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> order
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
@@ -136,13 +140,15 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th width="20" align="right">totlen
 		<th>Transaction ID
 		<th onclick="sortclick('age')" style="cursor:pointer" width="60" align="right">Maturity
-		<th onclick="sortclick('len')" style="cursor:pointer" width="60" align="right">Size
+		<th onclick="sortclick('len')" style="cursor:pointer" width="80" align="right">Size
+		<th onclick="sortclick('inp')" style="cursor:pointer" width="30" align="right">Inps
+		<th onclick="sortclick('out')" style="cursor:pointer" width="30" align="right">Outs
 		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
 		<th onclick="sortclick('fee')" style="cursor:pointer" width="80" align="right">Fee BTC
 		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">SPB
 		<th onclick="sortclick('ops')" style="cursor:pointer" width="40" align="right">SOps
-		<th width="30" align="right" title="Transaction is not final">RPB
-		<th width="40" align="right" title="Verification time in ms">ms
+		<th onclick="sortclick('rbf')" style="cursor:pointer" width="30" align="right" title="Transaction is not final">RPB
+		<th onclick="sortclick('ver')" style="cursor:pointer" width="40" align="right" title="Verification time in ms">ms
 		<th width="40" align="right">Sent
 		<th align="right">Extras
 	</tr>
@@ -318,6 +324,7 @@ function decode_tx_id(txid) {
 			var len = xval(aj.responseXML,  "len")
 			s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
 			s += '  ==> ' + parseFloat(fee/len).toFixed(1) + ' Satoshis per byte\n'
+			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
 
 			rawdiv.innerHTML = s
 			prvpos = document.body.scrollTop
@@ -393,6 +400,12 @@ function show_txs2s(extrapar) {
 				c.innerHTML = len
 
 				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = xval(txs[i], 'inputs')
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = xval(txs[i], 'outputs')
+
+				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
 
 				if (own!=2) {
@@ -415,10 +428,10 @@ function show_txs2s(extrapar) {
 				c.innerHTML = xval(txs[i], 'sigops')
 
 				c=row.insertCell(-1);c.align='center'
-				c.innerHTML = xval(txs[i], 'final')=='true' ? '' : '&bull;'
+				if (xval(txs[i], 'final')!='true') c.innerHTML = '*'
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = (xval(txs[i], 'verify_time')/1e6).toFixed(1)
+				c.innerHTML = (xval(txs[i], 'verify_us')/1e3).toFixed(1)
 
 				c=row.insertCell(-1);c.align='right'
 				var sc = xval(txs[i], 'sentcnt')

@@ -84,6 +84,8 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		w.Write([]byte("<status>OK</status>"))
 		w.Write([]byte(fmt.Sprint("<len>", len(t2s.Data), "</len>")))
+		fmt.Fprint(w, "<inputs>", len(t2s.TxIn), "</inputs>")
+		fmt.Fprint(w, "<outputs>", len(t2s.TxOut), "</outputs>")
 		w.Write([]byte(fmt.Sprint("<time_received>", t2s.Firstseen.Unix(), "</time_received>")))
 		tx := t2s.Tx
 		w.Write([]byte("<inputs>"))
@@ -139,7 +141,7 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 		w.Write([]byte("</outputs>"))
 		fmt.Fprint(w, "<tx_sigops>", t2s.Sigops, "</tx_sigops>")
 		fmt.Fprint(w, "<final>", t2s.Final, "</final>")
-		fmt.Fprint(w, "<verify_time>", uint(t2s.VerifyTime), "</verify_time>")
+		fmt.Fprint(w, "<verify_us>", uint(t2s.VerifyTime/time.Microsecond), "</verify_us>")
 	} else {
 		w.Write([]byte("<status>Not found</status>"))
 	}
@@ -159,12 +161,20 @@ func (tl sortedTxList) Less(i, j int) bool {
 			res = tl[j].Firstseen.UnixNano() > tl[i].Firstseen.UnixNano()
 		case "len":
 			res = len(tl[j].Data) < len(tl[i].Data)
+		case "inp":
+			res = len(tl[j].TxIn) < len(tl[i].TxIn)
+		case "out":
+			res = len(tl[j].TxOut) < len(tl[i].TxOut)
 		case "btc":
 			res = tl[j].Volume < tl[i].Volume
 		case "fee":
 			res = tl[j].Fee < tl[i].Fee
 		case "ops":
 			res = tl[j].Sigops < tl[i].Sigops
+		case "rbf":
+			res = !tl[j].Final && tl[i].Final
+		case "ver":
+			res = int(tl[j].VerifyTime) < int(tl[i].VerifyTime)
 		default: /*spb*/
 			spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
 			spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
@@ -274,6 +284,8 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
 		fmt.Fprint(w, "<len>", len(v.Data), "</len>")
+		fmt.Fprint(w, "<inputs>", len(v.TxIn), "</inputs>")
+		fmt.Fprint(w, "<outputs>", len(v.TxOut), "</outputs>")
 		fmt.Fprint(w, "<own>", v.Own, "</own>")
 		fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
 		fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
@@ -284,7 +296,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
 		fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
 		fmt.Fprint(w, "<final>", v.Final, "</final>")
-		fmt.Fprint(w, "<verify_time>", uint(v.VerifyTime), "</verify_time>")
+		fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
 		w.Write([]byte("</tx>"))
 	}
 	w.Write([]byte("</txpool>"))
