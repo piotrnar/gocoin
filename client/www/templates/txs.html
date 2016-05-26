@@ -139,10 +139,12 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sortclick('len')" style="cursor:pointer" width="60" align="right">Size
 		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
 		<th onclick="sortclick('fee')" style="cursor:pointer" width="80" align="right">Fee BTC
-		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">Fee/Byte
-		<th onclick="sortclick('ops')" style="cursor:pointer" width="40" align="right">Sigops
+		<th onclick="sortclick('spb')" style="cursor:pointer" width="60" align="right">SPB
+		<th onclick="sortclick('ops')" style="cursor:pointer" width="40" align="right">SOps
+		<th width="30" align="right">RPB
+		<th width="40" align="right">&#181;s
 		<th width="40" align="right">Sent
-		<th width="60" align="right">Extras
+		<th align="right">Extras
 	</tr>
 </table>
 <table class="txs bord" id="txsre" style="display:none" width="100%">
@@ -225,6 +227,7 @@ function val2reason(r) {
 		case 208: return "NOT_MINED"
 		case 209: return "CB_INMATURE"
 		case 210: return "RBF_LOWFEE"
+		case 211: return "RBF_FINAL"
 	}
 	return r
 }
@@ -410,6 +413,12 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'sigops')
+
+				c=row.insertCell(-1);c.align='center'
+				c.innerHTML = xval(txs[i], 'final')=='true' ? '' : '&bull;'
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML = Math.round(xval(txs[i], 'verify_time')/1000)
 
 				c=row.insertCell(-1);c.align='right'
 				var sc = xval(txs[i], 'sentcnt')

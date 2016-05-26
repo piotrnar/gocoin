@@ -138,6 +138,8 @@ func output_tx_xml(w http.ResponseWriter, id string) {
 		}
 		w.Write([]byte("</outputs>"))
 		fmt.Fprint(w, "<tx_sigops>", t2s.Sigops, "</tx_sigops>")
+		fmt.Fprint(w, "<final>", t2s.Final, "</final>")
+		fmt.Fprint(w, "<verify_time>", uint(t2s.VerifyTime), "</verify_time>")
 	} else {
 		w.Write([]byte("<status>Not found</status>"))
 	}
@@ -281,6 +283,8 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
 		fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
 		fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
+		fmt.Fprint(w, "<final>", v.Final, "</final>")
+		fmt.Fprint(w, "<verify_time>", uint(v.VerifyTime), "</verify_time>")
 		w.Write([]byte("</tx>"))
 	}
 	w.Write([]byte("</txpool>"))

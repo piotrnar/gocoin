@@ -32,6 +32,7 @@ const (
 	TX_REJECTED_NOT_MINED    = 208
 	TX_REJECTED_CB_INMATURE  = 209
 	TX_REJECTED_RBF_LOWFEE   = 210
+	TX_REJECTED_RBF_FINAL    = 211
 )
 
 var (
@@ -72,6 +73,8 @@ type OneTxToSend struct {
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
 	Sigops uint
+	Final bool // if true RFB will not work on it
+	VerifyTime time.Duration
 }
 
 
@@ -193,6 +196,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	common.CountSafe("HandleNetTx")
 
 	tx := ntx.tx
+	start_time := time.Now()
+	var final bool // set to true if any of the inpits has a final sequence
+
 	var totinp, totout uint64
 	var frommem bool
 
@@ -219,6 +225,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
+		if !final && tx.TxIn[i].Sequence>=0xfffffffe {
+			final = true
+		}
+
 		spent[i] = tx.TxIn[i].Input.UIdx()
 
 		if so, ok := SpentOutputs[spent[i]]; ok {
@@ -330,6 +340,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if len(rbf_tx_list)>0 {
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
+			if ctx.Final {
+				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
+				TxMutex.Unlock()
+				common.CountSafe("TxRejectedRBFFinal")
+				return
+			}
 			totlen += len(ctx.Data)
 			totfees += ctx.Fee
 		}
@@ -390,7 +406,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
 		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem,
-		Sigops:sigops2}
+		Sigops:sigops2, Final:final, VerifyTime:time.Now().Sub(start_time)}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {

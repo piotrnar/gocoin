@@ -4,7 +4,8 @@
 * WebUI/Miners: Block version numbers are shown in a table, from a span of the consensus window
 * Wallet: use sequence value of 0 for RBF type transactions (instead of unix timestamp as before)
 * WebUI/MakeTx: Default sequence value changed to 0 and added "Final" checkbox
-* Client: Implemented RBF; no sequence is being checked and the new fee's SPB must be at least 5% higher
+* WebUI/Transactions: Shows which processing time of the txs and which are RBF enabled (non-final)
+* Client: Implemented RBF; the new fee's SPB must be at least 5% higher
 
 1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript
