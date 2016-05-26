@@ -113,7 +113,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		return
 	}
 
-	if !stack.popBool() {
+	if !stack.topBool(-1) {
 		if DBG_SCR {
 			fmt.Println("* FALSE on stack after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
@@ -161,7 +161,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			return
 		}
 
-		if !stack.popBool() {
+		if !stack.topBool(-1) {
 			if DBG_SCR {
 				fmt.Println("* FALSE on stack after executing P2SH script:", hex.EncodeToString(pubKey2))
 			}
@@ -176,7 +176,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		if DBG_SCR {
 			println("stack size", stack.size())
 		}
-		if stack.size()!=0 {
+		if stack.size()!=1 {
 			if DBG_ERR {
 				fmt.Println("Stack not clean")
 			}
