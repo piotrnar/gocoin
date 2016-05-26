@@ -339,26 +339,23 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var totfees, new_min_fee uint64
 
 	if len(rbf_tx_list)>0 {
-		for {
-			var new_records bool
+		already_done := make(map[[btc.Uint256IdxLen]byte] bool)
+		for len(already_done)<len(rbf_tx_list) {
 			for k, _ := range rbf_tx_list {
-				ctx := TransactionsToSend[k]
-				new_recs := findPendingTxs(ctx.Tx)
-				if len(rbf_tx_list) + len(new_recs) > 100 {
-					RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
-					TxMutex.Unlock()
-					common.CountSafe("TxRejectedRBF100+")
-					return
-				}
-				for _, id:=range new_recs {
-					if _, ok:=rbf_tx_list[id]; !ok {
-						rbf_tx_list[id] = true
-						new_records = true
+				if _, yes := already_done[k]; !yes {
+					already_done[k] = true
+					if new_recs:=findPendingTxs(TransactionsToSend[k].Tx); len(new_recs)>0 {
+						if len(rbf_tx_list) + len(new_recs) > 100 {
+							RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
+							TxMutex.Unlock()
+							common.CountSafe("TxRejectedRBF100+")
+							return
+						}
+						for _, id := range new_recs {
+							rbf_tx_list[id] = true
+						}
 					}
 				}
-			}
-			if !new_records {
-				break
 			}
 		}
 
