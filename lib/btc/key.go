@@ -46,12 +46,6 @@ func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 	return
 }
 
-
-func (sig *Signature) IsLowS() bool {
-	return sig.S.Cmp(&secp256k1.TheCurve.HalfOrder.Int)<1
-}
-
-
 // Returns serialized canoncal signature followed by a hash type
 func (sig *Signature) Bytes() []byte {
 	return append(sig.Signature.Bytes(), sig.HashType)

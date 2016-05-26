@@ -74,8 +74,8 @@ func decode_flags(s string) (fl uint32, e error) {
 				fl |= VER_STRICTENC
 			case "DERSIG":
 				fl |= VER_DERSIG
-			case "LOW_S":
-				fl |= VER_LOW_S
+			/*case "LOW_S":
+				fl |= VER_LOW_S*/
 			case "NULLDUMMY":
 				fl |= VER_NULLDUMMY
 			case "SIGPUSHONLY":
