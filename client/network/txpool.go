@@ -386,6 +386,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if len(rbf_tx_list)>0 {
+		fmt.Println(time.Now().Format("2006/01/02 15:04:05"))
 		fmt.Printf("TX %s / %d to replace %d tx(s) [%d/%d], SPB %.1f -> %.1f\n",
 			ntx.tx.Hash.String(), len(ntx.raw), len(rbf_tx_list), totlen, totfees, old_spb, new_spb)
 
@@ -395,13 +396,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				float64(ctx.Fee)/float64(len(ctx.Data)), len(ctx.Data),
 				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)
 			DeleteToSend(ctx)
-			common.CountSafe("TxRBFRemoves")
+			common.CountSafe("TxRemovedByRBF")
 		}
-		//fmt.Println("... but RBF is not implemented anyway")
-		//fmt.Print("> ")
-		//RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DOUBLE_SPEND)
-		//TxMutex.Unlock()
-		//return
+		fmt.Print("> ")
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
