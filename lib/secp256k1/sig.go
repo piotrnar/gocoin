@@ -137,7 +137,7 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 		}
 	}
 
-	if FORCE_LOW_S && sig.S.Cmp(&TheCurve.half_order.Int)==1 {
+	if FORCE_LOW_S && sig.S.Cmp(&TheCurve.HalfOrder.Int)==1 {
 		sig.S.Sub(&TheCurve.Order.Int, &sig.S.Int)
 		if recid!=nil {
 			*recid ^= 1

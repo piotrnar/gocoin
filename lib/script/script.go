@@ -24,13 +24,19 @@ var (
 
 const (
 	VER_P2SH = 1<<0
+	VER_STRICTENC = 1<<1
 	VER_DERSIG = 1<<2
+	VER_LOW_S = 1<<2
 	VER_NULLDUMMY = 1<<4
+	VER_SIGPUSHONLY = 1<<5
 	VER_MINDATA = 1<<6
+	VER_BLOCK_OPS = 1<<7
+	VER_CLEANSTACK = 1<<8
 	VER_CLTV = 1<<9
 	VER_CSV = 1<<10
 
-	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_DERSIG | VER_NULLDUMMY | VER_MINDATA | VER_CLTV | VER_CSV
+	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
+		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV
 
 	LOCKTIME_THRESHOLD = 500000000
 	SEQUENCE_LOCKTIME_DISABLE_FLAG = 1<<31
@@ -50,6 +56,13 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 
 	sigScr := tx.TxIn[i].ScriptSig
 
+	if (ver_flags & VER_SIGPUSHONLY) != 0 && !IsPushOnly(sigScr) {
+		if DBG_ERR {
+			fmt.Println("Not push only")
+		}
+		return false
+	}
+
 	if DBG_SCR {
 		fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
 		fmt.Println("sigScript:", hex.EncodeToString(sigScr[:]))
@@ -57,8 +70,8 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		fmt.Printf("flagz:%x\n", ver_flags)
 	}
 
-	var st, stP2SH scrStack
-	if !evalScript(sigScr, &st, tx, i, ver_flags) {
+	var stack, stackCopy scrStack
+	if !evalScript(sigScr, &stack, tx, i, ver_flags) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -70,21 +83,21 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 	}
 	if DBG_SCR {
 		fmt.Println("\nsigScr verified OK")
-		//st.print()
+		//stack.print()
 		fmt.Println()
 	}
 
-	// copy the stack content to stP2SH
-	if st.size()>0 {
-		idx := -st.size()
-		for i:=0; i<st.size(); i++ {
-			x := st.top(idx)
-			stP2SH.push(x)
+	if (ver_flags&VER_P2SH)!=0 && stack.size()>0 {
+		// copy the stack content to stackCopy
+		idx := -stack.size()
+		for i:=0; i<stack.size(); i++ {
+			x := stack.top(idx)
+			stackCopy.push(x)
 			idx++
 		}
 	}
 
-	if !evalScript(pkScr, &st, tx, i, ver_flags) {
+	if !evalScript(pkScr, &stack, tx, i, ver_flags) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -93,14 +106,14 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		return
 	}
 
-	if st.size()==0 {
+	if stack.size()==0 {
 		if DBG_SCR {
 			fmt.Println("* stack empty after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
 		return
 	}
 
-	if !st.popBool() {
+	if !stack.popBool() {
 		if DBG_SCR {
 			fmt.Println("* FALSE on stack after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
@@ -113,7 +126,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			fmt.Println()
 			fmt.Println()
 			fmt.Println(" ******************* Looks like P2SH script ********************* ")
-			stP2SH.print()
+			stack.print()
 		}
 
 		if DBG_SCR {
@@ -126,28 +139,46 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			return
 		}
 
-		pubKey2 := stP2SH.pop()
+		// Restore stack.
+		stack = stackCopy
+
+		pubKey2 := stack.pop()
 		if DBG_SCR {
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, &stP2SH, tx, i, ver_flags) {
+		if !evalScript(pubKey2, &stack, tx, i, ver_flags) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
 			return
 		}
 
-		if stP2SH.size()==0 {
+		if stack.size()==0 {
 			if DBG_SCR {
 				fmt.Println("* P2SH stack empty after executing script:", hex.EncodeToString(pubKey2))
 			}
 			return
 		}
 
-		if !stP2SH.popBool() {
+		if !stack.popBool() {
 			if DBG_SCR {
 				fmt.Println("* FALSE on stack after executing P2SH script:", hex.EncodeToString(pubKey2))
+			}
+			return
+		}
+	}
+
+	if (ver_flags & VER_CLEANSTACK) != 0 {
+		if (ver_flags & VER_P2SH) == 0 {
+			panic("VER_CLEANSTACK without VER_P2SH")
+		}
+		if DBG_SCR {
+			println("stack size", stack.size())
+		}
+		if stack.size()!=0 {
+			if DBG_ERR {
+				fmt.Println("Stack not clean")
 			}
 			return
 		}
@@ -788,7 +819,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					si := stack.pop()
 
 					// BIP-0066
-					if !CheckSignatureEncoding(si, ver_flags) {
+					if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
 						if DBG_ERR {
 							fmt.Println("Invalid Signature Encoding A")
 						}
@@ -826,7 +857,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					i := 1
 					keyscnt := stack.topInt(-i, checkMinVals)
 					if keyscnt < 0 || keyscnt > 20 {
-						fmt.Println("OP_CHECKMULTISIG: Wrong number of keys")
+						if DBG_ERR {
+							fmt.Println("OP_CHECKMULTISIG: Wrong number of keys")
+						}
 						return false
 					}
 					opcnt += int(keyscnt)
@@ -847,7 +880,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 					sigscnt := stack.topInt(-i, checkMinVals)
 					if sigscnt < 0 || sigscnt > keyscnt {
-						fmt.Println("OP_CHECKMULTISIG: sigscnt error")
+						if DBG_ERR {
+							fmt.Println("OP_CHECKMULTISIG: sigscnt error")
+						}
 						return false
 					}
 					i++
@@ -871,7 +906,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						si := stack.top(-isig)
 
 						// BIP-0066
-						if !CheckSignatureEncoding(si, ver_flags) {
+						if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
 							if DBG_ERR {
 								fmt.Println("Invalid Signature Encoding B")
 							}
@@ -925,6 +960,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 				case opcode==0xb1: //OP_NOP2 or OP_CHECKLOCKTIMEVERIFY
 					if (ver_flags&VER_CLTV) == 0 {
+						if (ver_flags&VER_BLOCK_OPS)!=0 {
+							return false
+						}
 						break // Just do NOP2
 					}
 
@@ -991,6 +1029,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 				case opcode==0xb2: //OP_NOP3 or OP_CHECKSEQUENCEVERIFY
 					if (ver_flags&VER_CSV) == 0 {
+						if (ver_flags&VER_BLOCK_OPS)!=0 {
+							return false
+						}
 						break // Just do NOP3
 					}
 
@@ -1036,8 +1077,10 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						return false
 					}
 
-
-				case opcode>=0xb0 || opcode>=0xb3 && opcode<=0xb9: //OP_NOP1 || OP_NOP4..OP_NOP10
+				case opcode==0xb0 || opcode>=0xb3 && opcode<=0xb9: //OP_NOP1 || OP_NOP4..OP_NOP10
+					if (ver_flags&VER_BLOCK_OPS)!=0 {
+						return false
+					}
 					// just do nothing
 
 				default:
@@ -1209,14 +1252,64 @@ func IsValidSignatureEncoding(sig []byte) bool {
 	return true
 }
 
-// We only check for VER_DERSIG from BIP66. BIP62 has not been implemented
+func IsDefinedHashtypeSignature(sig []byte) bool {
+	if len(sig)==0 {
+		return false
+	}
+	htype := sig[len(sig)-1] & (btc.SIGHASH_ANYONECANPAY^0xff)
+	if htype < btc.SIGHASH_ALL || htype > btc.SIGHASH_SINGLE {
+		return false
+	}
+	return true
+}
+
+func IsLowS(sig []byte) bool {
+	if !IsValidSignatureEncoding(sig) {
+		return false
+	}
+
+	ss, e := btc.NewSignature(sig)
+	if e != nil {
+		return false
+	}
+
+	return ss.IsLowS()
+}
+
 func CheckSignatureEncoding(sig []byte, flags uint32) bool {
-	// Empty signature. Not strictly DER encoded, but allowed to provide a
-	// compact way to provide an invalid signature for use with CHECK(MULTI)SIG
 	if len(sig) == 0 {
 		return true
 	}
-	if (flags&VER_DERSIG)!=0 && !IsValidSignatureEncoding(sig) {
+	if (flags&(VER_DERSIG|VER_STRICTENC))!=0 && !IsValidSignatureEncoding(sig) {
+		return false
+	} else if (flags&VER_LOW_S)!=0 && !IsLowS(sig) {
+		return false
+	} else if (flags&VER_STRICTENC)!=0 && !IsDefinedHashtypeSignature(sig) {
+		return false
+	}
+	return true
+}
+
+func IsCompressedOrUncompressedPubKey(pk []byte) bool {
+	if len(pk) < 33 {
+		return false
+	}
+	if pk[0] == 0x04 {
+		if len(pk) != 65 {
+			return false
+		}
+	} else if pk[0] == 0x02 || pk[0] == 0x03 {
+		if len(pk) != 33 {
+			return false
+		}
+	} else {
+		return false
+	}
+	return true
+}
+
+func CheckPubKeyEncoding(pk []byte, flags uint32) bool {
+	if (flags&VER_STRICTENC)!=0 && !IsCompressedOrUncompressedPubKey(pk) {
 		return false
 	}
 	return true

@@ -1,6 +1,7 @@
 package script
 
 import (
+	//"os"
 	//"fmt"
 	"errors"
 	"testing"
@@ -11,64 +12,11 @@ import (
 )
 
 
-
-func TestScritpsValid(t *testing.T) {
-	DBG_ERR = false
-
-	dat, er := ioutil.ReadFile("../test/script_valid.json")
-	if er != nil {
-		t.Error(er.Error())
-		return
-	}
-	var vecs [][]string
-	er = json.Unmarshal(dat, &vecs)
-	if er != nil {
-		t.Error(er.Error())
-		return
-	}
-
-
-	tot := 0
-	for i := range vecs {
-		if len(vecs[i])>=3 {
-			tot++
-
-			s1, e := btc.DecodeScript(vecs[i][0])
-			if e!=nil {
-				t.Error(tot, "error A in", vecs[i][0], "->", vecs[i][1])
-				return
-			}
-			s2, e := btc.DecodeScript(vecs[i][1])
-			if e!=nil {
-				t.Error(tot, "error B in", vecs[i][0], "->", vecs[i][1])
-				return
-			}
-
-			flags, e := decode_flags(vecs[i][2])
-			if e != nil {
-				//fmt.Println("InvalidScript", tot, e.Error())
-				continue
-			}
-
-			res := VerifyTxScript(s2, 0, mk_out_tx(s1, s2), flags)
-			if !res {
-				ex := ""
-				if len(vecs[i])>3 {
-					ex = "/ " + vecs[i][3]
-				}
-				t.Error(tot, "VerifyTxScript failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], ex)
-			}
-		}
-	}
-}
-
-
-
-func TestScritpsInvalid(t *testing.T) {
+func TestScritps(t *testing.T) {
 	var vecs [][]string
 
 	DBG_ERR = false
-	dat, er := ioutil.ReadFile("../test/script_invalid.json")
+	dat, er := ioutil.ReadFile("../test/script_tests.json")
 	if er != nil {
 		t.Error(er.Error())
 		return
@@ -97,13 +45,16 @@ func TestScritpsInvalid(t *testing.T) {
 
 			flags, e := decode_flags(vecs[i][2])
 			if e != nil {
-				//fmt.Println("InvalidScript", tot, e.Error())
+				println("unknonw flag", tot, e.Error())
 				continue
 			}
 
+			exp_res := vecs[i][3]=="OK"
+
 			res := VerifyTxScript(s2, 0, mk_out_tx(s1, s2), flags)
-			if res {
-				t.Error(tot, "VerifyTxScript NOT failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2])
+
+			if res!=exp_res {
+				t.Error(tot, "TestScritps failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], res, vecs[i][3])
 			}
 		}
 	}
@@ -119,14 +70,24 @@ func decode_flags(s string) (fl uint32, e error) {
 				break
 			case "P2SH":
 				fl |= VER_P2SH
+			case "STRICTENC":
+				fl |= VER_STRICTENC
 			case "DERSIG":
 				fl |= VER_DERSIG
-			case "MINIMALDATA":
-				fl |= VER_MINDATA
-			case "CHECKLOCKTIMEVERIFY":
-				fl |= VER_CLTV
+			case "LOW_S":
+				fl |= VER_LOW_S
 			case "NULLDUMMY":
 				fl |= VER_NULLDUMMY
+			case "SIGPUSHONLY":
+				fl |= VER_SIGPUSHONLY
+			case "MINIMALDATA":
+				fl |= VER_MINDATA
+			case "DISCOURAGE_UPGRADABLE_NOPS":
+				fl |= VER_BLOCK_OPS
+			case "CLEANSTACK":
+				fl |= VER_CLEANSTACK
+			case "CHECKLOCKTIMEVERIFY":
+				fl |= VER_CLTV
 			case "CHECKSEQUENCEVERIFY":
 				fl |= VER_CSV
 			default:
