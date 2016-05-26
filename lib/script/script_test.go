@@ -125,6 +125,10 @@ func decode_flags(s string) (fl uint32, e error) {
 				fl |= VER_MINDATA
 			case "CHECKLOCKTIMEVERIFY":
 				fl |= VER_CLTV
+			case "NULLDUMMY":
+				fl |= VER_NULLDUMMY
+			case "CHECKSEQUENCEVERIFY":
+				fl |= VER_CSV
 			default:
 				e = errors.New("Unsupported flag "+ss[i])
 				return

@@ -8,6 +8,8 @@
 * Client: Implemented RBF; the new fee's SPB must be at least 5% higher
 * Removed support for "alert" messages
 * Tools/fetchtx: updated to the latest APIs
+* Lib/script: added support for OP_CHECKSEQUENCEVERIFY opcode (enabled by VER_CSV flag)
+* Lib/script: added support for NULLDUMMY checking (enabled by VER_NULLDUMMY flag)
 
 1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript

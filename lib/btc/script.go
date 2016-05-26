@@ -179,6 +179,7 @@ func DecodeScript(pk string) (out []byte, e error) {
 					case "NOP2": out = append(out, 0xb1)
 					case "CHECKLOCKTIMEVERIFY": out = append(out, 0xb1)
 					case "NOP3": out = append(out, 0xb2)
+					case "CHECKSEQUENCEVERIFY": out = append(out, 0xb2)
 					case "NOP4": out = append(out, 0xb3)
 					case "NOP5": out = append(out, 0xb4)
 					case "NOP6": out = append(out, 0xb5)

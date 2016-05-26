@@ -25,10 +25,18 @@ var (
 const (
 	VER_P2SH = 1<<0
 	VER_DERSIG = 1<<2
+	VER_NULLDUMMY = 1<<4
 	VER_MINDATA = 1<<6
 	VER_CLTV = 1<<9
+	VER_CSV = 1<<10
+
+	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_DERSIG | VER_NULLDUMMY | VER_MINDATA | VER_CLTV | VER_CSV
 
 	LOCKTIME_THRESHOLD = 500000000
+	SEQUENCE_LOCKTIME_DISABLE_FLAG = 1<<31
+
+	SEQUENCE_LOCKTIME_TYPE_FLAG = 1 << 22
+	SEQUENCE_LOCKTIME_MASK = 0x0000ffff
 )
 
 
@@ -888,10 +896,25 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 							break
 						}
 					}
-					for i > 0 {
+					for i > 1 {
 						i--
 						stack.pop()
 					}
+
+					if stack.size()<1 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKMULTISIG: Dummy element missing")
+						}
+						return false
+					}
+					if (ver_flags & VER_NULLDUMMY)!=0 && len(stack.top(-1))!=0 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKMULTISIG: NULLDUMMY verification failed")
+						}
+						return false
+					}
+					stack.pop()
+
 					if opcode==0xaf {
 						if !success { // OP_CHECKMULTISIGVERIFY
 							return false
@@ -900,11 +923,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						stack.pushBool(success)
 					}
 
-				case opcode>=0xb1: //OP_NOP2 or OP_CHECKLOCKTIMEVERIFY
-					if DBG_SCR {
-						println("OP_NOP2...")
-					}
-
+				case opcode==0xb1: //OP_NOP2 or OP_CHECKLOCKTIMEVERIFY
 					if (ver_flags&VER_CLTV) == 0 {
 						break // Just do NOP2
 					}
@@ -970,7 +989,55 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 
 					// OP_CHECKLOCKTIMEVERIFY passed successfully
 
-				case opcode>=0xb0 || opcode>=0xb2 && opcode<=0xb9: //OP_NOP1 || OP_NOP3..OP_NOP10
+				case opcode==0xb2: //OP_NOP3 or OP_CHECKSEQUENCEVERIFY
+					if (ver_flags&VER_CSV) == 0 {
+						break // Just do NOP3
+					}
+
+					if DBG_SCR {
+						println("OP_CHECKSEQUENCEVERIFY...")
+					}
+
+					if stack.size()<1 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKSEQUENCEVERIFY: Stack too short")
+						}
+						return false
+					}
+
+					d := stack.top(-1)
+					if len(d)>5 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKSEQUENCEVERIFY: sequence field too long", len(d))
+						}
+						return false
+					}
+
+					if DBG_SCR {
+						fmt.Println("seq from stack", hex.EncodeToString(d))
+					}
+
+					sequence := bts2int_ext(d, 5, checkMinVals)
+					if sequence < 0 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKSEQUENCEVERIFY: negative sequence")
+						}
+						return false
+					}
+
+					if (sequence & SEQUENCE_LOCKTIME_DISABLE_FLAG) != 0 {
+						break
+					}
+
+					if !CheckSequence(tx, inp, sequence) {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKSEQUENCEVERIFY: CheckSequence failed")
+						}
+						return false
+					}
+
+
+				case opcode>=0xb0 || opcode>=0xb3 && opcode<=0xb9: //OP_NOP1 || OP_NOP4..OP_NOP10
 					// just do nothing
 
 				default:
@@ -1198,5 +1265,37 @@ func checkMinimalPush(d []byte, opcode int) bool {
 		return opcode == 0x4d
 	}
 	fmt.Println("All checks passed")
+	return true
+}
+
+
+func CheckSequence(tx *btc.Tx, inp int, seq int64) bool {
+	if tx.Version < 2 {
+		return false
+	}
+
+	toseq := int64(tx.TxIn[inp].Sequence)
+
+	if (toseq & SEQUENCE_LOCKTIME_DISABLE_FLAG) != 0 {
+		return false
+	}
+
+	// Mask off any bits that do not have consensus-enforced meaning
+	// before doing the integer comparisons
+	const nLockTimeMask = SEQUENCE_LOCKTIME_TYPE_FLAG | SEQUENCE_LOCKTIME_MASK
+	txToSequenceMasked := toseq & nLockTimeMask
+	nSequenceMasked := seq & nLockTimeMask
+
+	if (!((txToSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG) ||
+		(txToSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG))) {
+		return false
+	}
+
+	// Now that we know we're comparing apples-to-apples, the
+	// comparison is a simple numeric one.
+	if nSequenceMasked > txToSequenceMasked {
+		return false
+	}
+
 	return true
 }

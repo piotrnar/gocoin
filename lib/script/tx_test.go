@@ -54,6 +54,7 @@ func parserec(vv []interface{}) (ret *testvector) {
 	var e error
 	ret.ver_flags, e = decode_flags(params)  // deifned in script_test.go
 	if e != nil {
+		println("skip", params)
 		ret.skip = e.Error()
 	}
 	return

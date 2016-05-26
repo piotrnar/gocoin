@@ -365,7 +365,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	done := make(chan bool, sys.UseThreads-1)
 	for i := range tx.TxIn {
 		go func (prv []byte, i int, tx *btc.Tx) {
-			done <- script.VerifyTxScript(prv, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			done <- script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS)
 		}(pos[i].Pk_script, i, tx)
 	}
 
