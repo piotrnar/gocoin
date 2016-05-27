@@ -8,7 +8,7 @@
 * Client: Implemented Replace-By-Fee for the memory pool
 * Removed support for "alert" messages
 * Tools/fetchtx: updated to the latest block explorers API
-* Lib/script: added support for OP_CHECKSEQUENCEVERIFY opcode (enabled by VER_CSV flag)
+* Lib/script: added support for OP_CHECKSEQUENCEVERIFY opcode (enabled by VER_CSV flag) - BIP-112
 * Lib/script: added support for all core's verification flags and updated the test suite to the latest one
 * New tool "verify_tx.go", usefull for debugging scripts
 
