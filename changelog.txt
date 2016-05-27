@@ -10,6 +10,7 @@
 * Tools/fetchtx: updated to the latest block explorers API
 * Lib/script: added support for OP_CHECKSEQUENCEVERIFY opcode (enabled by VER_CSV flag)
 * Lib/script: added support for all core's verification flags and updated the test suite to the latest one
+* New tool "verify_tx.go", usefull for debugging scripts
 
 1.6.2 - 2016-04-12
 * Client: fixed crash on calling the consensus lib with empty pkscript
