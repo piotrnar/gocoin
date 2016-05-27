@@ -389,11 +389,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	done := make(chan bool, sys.UseThreads-1)
 	for i := range tx.TxIn {
 		go func (prv []byte, i int, tx *btc.Tx) {
-			ok := script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS)
-			done <- ok
-			if !ok {
-				fmt.Print("VerifyTxScript fail ", tx.Hash.String(), "\n> ")
-			}
+			done <- script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS)
 		}(pos[i].Pk_script, i, tx)
 	}
 
@@ -402,6 +398,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
+			if len(rbf_tx_list)>0 {
+				fmt.Println("RBF try script failed!")
+				fmt.Print("> ")
+			}
 			return
 		}
 		if btc.IsP2SH(pos[i].Pk_script) {

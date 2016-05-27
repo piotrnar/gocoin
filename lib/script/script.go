@@ -26,7 +26,7 @@ const (
 	VER_P2SH = 1<<0
 	VER_STRICTENC = 1<<1
 	VER_DERSIG = 1<<2
-	//VER_LOW_S = 1<<2
+	VER_LOW_S = 1<<2
 	VER_NULLDUMMY = 1<<4
 	VER_SIGPUSHONLY = 1<<5
 	VER_MINDATA = 1<<6
@@ -35,7 +35,7 @@ const (
 	VER_CLTV = 1<<9
 	VER_CSV = 1<<10
 
-	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG |
+	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
 		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV
 
 	LOCKTIME_THRESHOLD = 500000000
@@ -1263,11 +1263,26 @@ func IsDefinedHashtypeSignature(sig []byte) bool {
 	return true
 }
 
+func IsLowS(sig []byte) bool {
+	if !IsValidSignatureEncoding(sig) {
+		return false
+	}
+
+	ss, e := btc.NewSignature(sig)
+	if e != nil {
+		return false
+	}
+
+	return ss.IsLowS()
+}
+
 func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 	if len(sig) == 0 {
 		return true
 	}
 	if (flags&(VER_DERSIG|VER_STRICTENC))!=0 && !IsValidSignatureEncoding(sig) {
+		return false
+	} else if (flags&VER_LOW_S)!=0 && !IsLowS(sig) {
 		return false
 	} else if (flags&VER_STRICTENC)!=0 && !IsDefinedHashtypeSignature(sig) {
 		return false
