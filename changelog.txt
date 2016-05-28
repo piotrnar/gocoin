@@ -1,4 +1,5 @@
 1.6.4
+* Changed the first parameter to NotifyTxDel() to be more descriptive (than just TxID)
 * Do not use VER_LOW_S for now (to verify mempool txs) as it is baning some peers
 
 1.6.3 - 2016-05-28
