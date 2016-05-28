@@ -341,9 +341,6 @@ func (db *UnspentDB) DbN(i int) (*qdb.DB) {
 
 
 func (db *UnspentDB) del(hash []byte, outs []bool) {
-	if db.ch.CB.NotifyTxDel!=nil {
-		db.ch.CB.NotifyTxDel(hash, outs)
-	}
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
 	_db := db.DbN(int(hash[31])%NumberOfUnspentSubDBs)
 	v := _db.Get(ind)
@@ -351,6 +348,9 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
 	rec := NewQdbRec(ind, v)
+	if db.ch.CB.NotifyTxDel!=nil {
+		db.ch.CB.NotifyTxDel(rec, outs)
+	}
 	var anyout bool
 	for i, rm := range outs {
 		if rm {
