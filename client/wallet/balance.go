@@ -126,7 +126,7 @@ func NewUTXO(tx *chain.QdbRec) {
 }
 
 // This is called while accepting the block (from the chain's thread)
-func TxNotifyAdd (tx *chain.QdbRec) {
+func TxNotifyAdd(tx *chain.QdbRec) {
 	BalanceMutex.Lock()
 	if newUTXO(tx) {
 		sync_wallet()
@@ -135,12 +135,12 @@ func TxNotifyAdd (tx *chain.QdbRec) {
 }
 
 // This is called while accepting the block (from the chain's thread)
-func TxNotifyDel (txid []byte, outs []bool) {
+func TxNotifyDel(tx *chain.QdbRec, outs []bool) {
 	var update_wallet bool
 	BalanceMutex.Lock()
 
 	var uidx btc.TxPrevOut
-	copy(uidx.Hash[:], txid)
+	copy(uidx.Hash[:], tx.TxID[:])
 	for uidx.Vout=0; uidx.Vout<uint32(len(outs)); uidx.Vout++ {
 		if outs[uidx.Vout] {
 			ii := uidx.UIdx()
