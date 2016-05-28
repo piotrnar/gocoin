@@ -1,3 +1,6 @@
+1.6.4
+* Do not use VER_LOW_S for now (to verify mempool txs) as it is baning some peers
+
 1.6.3 - 2016-05-28
 * Lib: Inteface to TheBlueMatt's block_validator tests - see https://github.com/piotrnar/btc_block_validator
 * WebUI/Miners: Removed BIP100 voting stats
