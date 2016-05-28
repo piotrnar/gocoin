@@ -1,4 +1,4 @@
-1.6.3
+1.6.3 - 2016-05-28
 * Lib: Inteface to TheBlueMatt's block_validator tests - see https://github.com/piotrnar/btc_block_validator
 * WebUI/Miners: Removed BIP100 voting stats
 * WebUI/Miners: Block version numbers are shown in a table, from a span of the consensus window
