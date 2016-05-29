@@ -3,32 +3,15 @@
 <link rel="stylesheet" href="webui/gocoin.css" type="text/css">
 <script>
 /*_SESSION_ID_*/
-/*_CURRENT_WALLETS_*/
 /*_AVERAGE_FEE_SPB_*/
 var doc_title = document.title
-var firstWebWalletIndex = 0
-
-function webWalletSelected() {
-	return (qswal.selectedIndex >= firstWebWalletIndex)
-}
-
-function quickswitchwallet() {
-	if (webWalletSelected()) {
-		switch_to_webwallet(qswal.options[qswal.selectedIndex].text)
-	} else {
-		clear_web_wallet()
-		document.location='?sid='+sid+'&qwalsel='+qswal.options[qswal.selectedIndex].value
-	}
-}
 </script>
 </head>
 <body>
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%"><tr>
 		<td>{MENU_LEFT}</td>
-		<td align="center">Switch wallet:
-		<select id="qswal" onchange="quickswitchwallet()"></select>
-		<img src="webui/refresh.png" class="hand" onclick="quickswitchwallet()" title="Reload current wallet">
+		<td align="center">Web Wallet Mode
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">

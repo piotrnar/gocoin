@@ -120,7 +120,6 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
 	s = strings.Replace(s, "/*_SESSION_ID_*/", "var sid = '"+sessid+"'", 1)
-	s = strings.Replace(s, "/*_CURRENT_WALLETS_*/", "var current_wallets = []", 1)
 	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", common.GetAverageFee()), 1)
 
 	if r.URL.Path!="/" {
