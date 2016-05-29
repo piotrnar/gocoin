@@ -48,9 +48,13 @@ type OneCachedAddrBalance struct {
 
 // This function is only used when loading UTXO database
 func newUTXO(tx *chain.QdbRec) (update_wallet bool) {
+	all_add_utxo(tx)
+	return
+
 	var c, spen_exp []byte
 	var rec *chain.QdbTxOut
 	var h160 [20]byte
+
 
 check_next_address:
 	for idx, out := range tx.Outs {
@@ -136,10 +140,14 @@ func TxNotifyAdd(tx *chain.QdbRec) {
 
 // This is called while accepting the block (from the chain's thread)
 func TxNotifyDel(tx *chain.QdbRec, outs []bool) {
+	all_del_utxos(tx, outs)
+	return
+
 	var update_wallet bool
 	BalanceMutex.Lock()
 
 	var uidx btc.TxPrevOut
+
 	copy(uidx.Hash[:], tx.TxID[:])
 	for uidx.Vout=0; uidx.Vout<uint32(len(outs)); uidx.Vout++ {
 		if outs[uidx.Vout] {
