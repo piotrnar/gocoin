@@ -13,7 +13,6 @@ import (
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/rpcapi"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
@@ -55,13 +54,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			usif.Exit_now = true
 		}
 		common.Last.Mutex.Unlock()
-
-		if wallet.BalanceChanged {
-			wallet.BalanceChanged = false
-			fmt.Println("Your balance has just changed")
-			fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
-			textui.ShowPrompt()
-		}
 	} else {
 		fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		common.Last.Mutex.Lock()
@@ -157,11 +149,6 @@ func new_block_mined(bl *btc.Block, conn *network.OneConnection) {
 		}
 		textui.ShowPrompt()
 	}
-
-	if wallet.BalanceChanged && common.CFG.Beeps.NewBalance{
-		fmt.Print("\007")
-	}
-
 }
 
 
@@ -203,13 +190,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.Last.Time = time.Now()
 	common.Last.Block = common.BlockChain.BlockTreeEnd
 	common.Last.Mutex.Unlock()
-
-	if wallet.BalanceChanged {
-		wallet.BalanceChanged = false
-		fmt.Println("Newly submited block has changed your balance")
-		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
-		textui.ShowPrompt()
-	}
 
 	msg.Done.Done()
 }

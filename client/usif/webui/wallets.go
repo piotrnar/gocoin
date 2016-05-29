@@ -1,74 +1,17 @@
 package webui
 
 import (
-	"os"
-	"fmt"
-	"html"
-	"bytes"
-	"strconv"
 	"strings"
 	"net/http"
-	"io/ioutil"
-	"archive/zip"
-	"encoding/xml"
-	"encoding/json"
-	"path/filepath"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
-
-
-func raw_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	w.Write([]byte(wallet.UpdateBalanceFolder()))
-}
-
-func get_block_time(height uint32) (res uint32) {
-	common.Last.Mutex.Lock()
-	for bl:=common.Last.Block; bl!=nil && bl.Height>=height; bl=bl.Parent {
-		res = bl.Timestamp()
-	}
-	common.Last.Mutex.Unlock()
-	return
-}
-
-func xml_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<unspent>"))
-
-	wallet.BalanceMutex.Lock()
-	for i := range wallet.MyBalance {
-		w.Write([]byte("<output>"))
-		fmt.Fprint(w, "<txid>", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), "</txid>")
-		fmt.Fprint(w, "<vout>", wallet.MyBalance[i].TxPrevOut.Vout, "</vout>")
-		fmt.Fprint(w, "<value>", wallet.MyBalance[i].Value, "</value>")
-		fmt.Fprint(w, "<inblock>", wallet.MyBalance[i].MinedAt, "</inblock>")
-		fmt.Fprint(w, "<blocktime>", get_block_time(wallet.MyBalance[i].MinedAt), "</blocktime>")
-		fmt.Fprint(w, "<addr>", wallet.MyBalance[i].DestAddr(), "</addr>")
-		fmt.Fprint(w, "<addrorg>", wallet.MyBalance[i].BtcAddr.String(), "</addrorg>")
-		fmt.Fprint(w, "<wallet>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Wallet), "</wallet>")
-		fmt.Fprint(w, "<label>", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Label), "</label>")
-		fmt.Fprint(w, "<virgin>", fmt.Sprint(wallet.MyBalance[i].BtcAddr.Extra.Virgin), "</virgin>")
-		w.Write([]byte("</output>"))
-	}
-	wallet.BalanceMutex.Unlock()
-	w.Write([]byte("</unspent>"))
-}
 
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
-
+	/*
 	wallet.UpdateBalanceFolder()
 	buf := new(bytes.Buffer)
 	zi := zip.NewWriter(buf)
@@ -88,17 +31,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write([]byte("Error"))
 	}
-}
-
-
-func getbal(a *btc.BtcAddr) (sum uint64, cnt int) {
-	for i := range wallet.MyBalance {
-		if wallet.MyBalance[i].BtcAddr.Hash160 == a.Hash160 {
-			sum += wallet.MyBalance[i].Value
-			cnt++
-		}
-	}
-	return
+	*/
 }
 
 
@@ -107,6 +40,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/*
 	if checksid(r) {
 		if len(r.Form["wal"])>0 {
 			wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + r.Form["wal"][0])
@@ -143,15 +77,17 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	*/
 
 	page := load_template("wallet.html")
-	addr := load_template("wallet_adr.html")
+	//addr := load_template("wallet_adr.html")
 
-	page = strings.Replace(page, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(wallet.LastBalance)/1e8), 1)
-	page = strings.Replace(page, "{UNSPENT_OUTS}", fmt.Sprint(len(wallet.MyBalance)), 1)
+	page = strings.Replace(page, "{TOTAL_BTC}", "???", 1)
+	page = strings.Replace(page, "{UNSPENT_OUTS}", "???", 1)
 
 	wallet.BalanceMutex.Lock()
 
+	/*
 	if wallet.MyWallet!=nil {
 		page = strings.Replace(page, "<!--WALLET_FILENAME-->", wallet.MyWallet.FileName, 1)
 		wc, er := ioutil.ReadFile(wallet.MyWallet.FileName)
@@ -228,101 +164,10 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		strings.Replace(page, "<!--WALLET_FILENAME-->", "<i>no wallet loaded</i>", 1)
 		page = strings.Replace(page, "{WALLET_NAME}", "", -1)
 	}
+	*/
 	wallet.BalanceMutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(page))
 	write_html_tail(w)
-}
-
-
-func xml_wallets(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-	w.Header()["Content-Type"] = []string{"text/xml"}
-	w.Write([]byte("<Wallets>"))
-	w.Write([]byte("<Current>"))
-	if wallet.MyWallet!=nil {
-		w.Write([]byte(wallet.MyWallet.FileName))
-	}
-	w.Write([]byte("</Current>"))
-	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
-	if er == nil {
-		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
-				w.Write([]byte("<Wallet>"))
-				w.Write([]byte("<Name>"))
-				xml.EscapeText(w, []byte(fis[i].Name()))
-				w.Write([]byte("</Name>"))
-				selected := wallet.MyWallet!=nil &&
-					strings.HasSuffix(wallet.MyWallet.FileName, string(os.PathSeparator) + fis[i].Name())
-				w.Write([]byte("<Selected>" + fmt.Sprint(selected) + "</Selected>"))
-				w.Write([]byte("</Wallet>"))
-			}
-		}
-	}
-	w.Write([]byte("</Wallets>"))
-}
-
-
-func xml_addrs(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	w.Header()["Content-Type"] = []string{"text/xml"}
-
-
-	w.Write([]byte("<addrbook>"))
-	// Address Book
-	book := wallet.LoadWalfile(common.CFG.Walletdir+string(os.PathSeparator)+wallet.AddrBookFileName, 0)
-	for i := range book {
-		w.Write([]byte("<entry>"))
-		w.Write([]byte("<addr>" + book[i].Enc58str + "</addr>" ))
-		w.Write([]byte("<label>"))
-		xml.EscapeText(w, []byte(book[i].Extra.Label))
-		w.Write([]byte("</label>"))
-		w.Write([]byte("<wallet>"))
-		xml.EscapeText(w, []byte(book[i].Extra.Wallet))
-		w.Write([]byte("</wallet>"))
-		w.Write([]byte("</entry>"))
-	}
-	w.Write([]byte("</addrbook>"))
-}
-
-
-func json_wallet_string() string {
-	var out struct {
-		Web_wallet bool
-		Seleced_wallet string
-		Wallets []string
-	}
-
-	out.Web_wallet = wallet.MyWallet.WebWallet
-	out.Seleced_wallet = wallet.MyWallet.FileName
-
-	fis, er := ioutil.ReadDir(common.CFG.Walletdir+string(os.PathSeparator))
-	if er == nil {
-		for i := range fis {
-			if !fis[i].IsDir() && fis[i].Size()>1 && fis[i].Name()[0]!='.' {
-				out.Wallets = append(out.Wallets, fis[i].Name())
-			}
-		}
-	}
-
-	bx, er := json.Marshal(out)
-	if er == nil {
-		return string(bx)
-	}
-	return er.Error()
-}
-
-
-func json_wallet(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-	w.Header()["Content-Type"] = []string{"application/json"}
-	w.Write([]byte(json_wallet_string()))
 }

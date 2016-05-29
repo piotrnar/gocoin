@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/qdb"
@@ -55,29 +54,8 @@ func host_init() {
 	// Create default wallet file if does not exist
 	println("wallet dir", common.CFG.Walletdir)
 	os.MkdirAll(common.CFG.Walletdir+string(os.PathSeparator)+"stealth", 0770)
-	default_wallet_fn := common.CFG.Walletdir + string(os.PathSeparator) + wallet.DefaultFileName
-	println("default_wallet_fn", default_wallet_fn)
-	fi, _ = os.Stat(default_wallet_fn)
-	if fi==nil || fi.IsDir() {
-		fmt.Println(default_wallet_fn, "not found")
 
-		old_wallet_location := common.GocoinHomeDir+"wallet.txt"
-		// If there is wallet.txt rename it to default.
-		fi, _ := os.Stat(old_wallet_location)
-		if fi!=nil && !fi.IsDir() {
-			fmt.Println("Taking wallet.txt as", default_wallet_fn)
-			os.Rename(old_wallet_location, default_wallet_fn)
-		} else {
-			fmt.Println("Creating empty default wallet at", default_wallet_fn)
-			ioutil.WriteFile(default_wallet_fn, []byte(fmt.Sprintln("# Put your wallet's public addresses here")), 0660)
-		}
-	}
-
-	// cache the current balance of all the addresses from the current wallet files
-	wallet.LoadAllWallets()
-
-	fmt.Println("Loading UTXO database while checking balance of", len(wallet.MyWallet.Addrs),
-		"addresses... (press Ctrl-C to interrupt)")
+	fmt.Println("Loading UTXO db while checking balances of all P2SH and P2KH addresses")
 
 	__exit := make(chan bool)
 	__done := make(chan bool)
@@ -109,7 +87,6 @@ func host_init() {
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
-	wallet.ChainInitDone()
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %.3f seconds.  %d + %d MB of RAM used (%d)\n",
 		float64(sto-sta)/1e9, al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
@@ -117,13 +94,6 @@ func host_init() {
 	__exit <- true
 	_ = <- __done
 
-
-	// ... and now load the dafault wallet
-	wallet.LoadWallet(default_wallet_fn)
-	if wallet.MyWallet!=nil {
-		wallet.UpdateBalance()
-		fmt.Print(wallet.DumpBalance(wallet.MyBalance, nil, false, true))
-	}
 }
 
 

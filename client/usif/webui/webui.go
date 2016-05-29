@@ -1,7 +1,6 @@
 package webui
 
 import (
-	"os"
 	"fmt"
 	"time"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"path/filepath"
 	"github.com/piotrnar/gocoin/lib"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
 )
 
 var webuimenu = [][2]string {
@@ -119,33 +117,10 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		sessid = new_session_id(w)
 	}
 
-	if r.Method=="POST" {
-		if len(r.Form["webwalletload"])>0 && len(r.Form["id"][0])>0 {
-			wallet.LoadWebWallet(r.Form["id"][0], []byte(r.Form["webwalletload"][0]))
-			http.Redirect(w, r, r.URL.Path, http.StatusFound)
-			return
-		}
-	}
-
-	// Quick switch wallet
-	if checksid(r) && len(r.Form["qwalsel"])>0 {
-		wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + r.Form["qwalsel"][0])
-		http.Redirect(w, r, r.URL.Path, http.StatusFound)
-		return
-	}
-
-	// If currently selected wallet is address book and we are not on the wallet page - switch to default
-	if r.URL.Path!="/wal" && wallet.MyWallet!=nil &&
-		strings.HasSuffix(wallet.MyWallet.FileName, string(os.PathSeparator) + wallet.AddrBookFileName) {
-		wallet.LoadWallet(common.CFG.Walletdir + string(os.PathSeparator) + wallet.DefaultFileName)
-		http.Redirect(w, r, r.URL.Path, http.StatusFound)
-		return
-	}
-
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
 	s = strings.Replace(s, "/*_SESSION_ID_*/", "var sid = '"+sessid+"'", 1)
-	s = strings.Replace(s, "/*_CURRENT_WALLETS_*/", "var current_wallets = "+json_wallet_string(), 1)
+	s = strings.Replace(s, "/*_CURRENT_WALLETS_*/", "var current_wallets = []", 1)
 	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", common.GetAverageFee()), 1)
 
 	if r.URL.Path!="/" {
@@ -225,12 +200,11 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txsre.xml", xml_txsre)
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
-	http.HandleFunc("/balance.xml", xml_balance)
-	http.HandleFunc("/raw_balance", raw_balance)
+	//http.HandleFunc("/raw_balance", raw_balance)
 	http.HandleFunc("/balance.zip", dl_balance)
-	http.HandleFunc("/payment.zip", dl_payment)
-	http.HandleFunc("/addrs.xml", xml_addrs)
-	http.HandleFunc("/wallets.xml", xml_wallets)
+	//http.HandleFunc("/payment.zip", dl_payment)
+	//http.HandleFunc("/addrs.xml", xml_addrs)
+	//http.HandleFunc("/wallets.xml", xml_wallets)
 
 	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
@@ -240,7 +214,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txstat.json", json_txstat)
 	http.HandleFunc("/netcon.json", json_netcon)
 	http.HandleFunc("/blocks.json", json_blocks)
-	http.HandleFunc("/wallet.json", json_wallet)
+	//http.HandleFunc("/wallet.json", json_wallet)
 	http.HandleFunc("/peerst.json", json_peerst)
 	http.HandleFunc("/bwchar.json", json_bwchar)
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)

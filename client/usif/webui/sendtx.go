@@ -1,17 +1,7 @@
 package webui
 
 import (
-	"fmt"
-	"html"
-	"bytes"
-	"strings"
-	"strconv"
 	"net/http"
-	"archive/zip"
-	"encoding/hex"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -27,6 +17,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/*
 	var err string
 
 	if len(r.Form["outcnt"])==1 {
@@ -235,6 +226,7 @@ error:
 	s = strings.Replace(s, "<!--ERROR_MSG-->", err, 1)
 	w.Write([]byte(s))
 	write_html_tail(w)
+	*/
 }
 
 
@@ -246,64 +238,6 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 	s := load_template("send.html")
 
 	wallet.BalanceMutex.Lock()
-	if wallet.MyWallet!=nil && len(wallet.MyBalance)>0 {
-		wal := load_template("send_wal.html")
-		row_tmp := load_template("send_wal_row.html")
-		wal = strings.Replace(wal, "{TOTAL_BTC}", fmt.Sprintf("%.8f", float64(wallet.LastBalance)/1e8), 1)
-		wal = strings.Replace(wal, "{UNSPENT_OUTS}", fmt.Sprint(len(wallet.MyBalance)), -1)
-		for i := range wallet.MyBalance {
-			row := row_tmp
-			row = strings.Replace(row, "{WALLET_FILE}", html.EscapeString(wallet.MyBalance[i].BtcAddr.Extra.Wallet), 1)
-			lab := wallet.MyBalance[i].BtcAddr.Extra.Label
-			if wallet.MyBalance[i].BtcAddr.Extra.Virgin {
-				lab += " ***"
-			}
-
-			var estimated_sig_size uint
-			ms, msr := wallet.IsMultisig(wallet.MyBalance[i].BtcAddr)
-			if ms {
-				if msr != nil {
-					estimated_sig_size = msr.KeysRequired*AvgSignatureSize + msr.KeysProvided*AvgPublicKeySize
-				} else {
-					estimated_sig_size = 2*AvgSignatureSize + 3*AvgPublicKeySize
-				}
-			} else {
-				estimated_sig_size = AvgSignatureSize + AvgPublicKeySize
-			}
-
-
-			row = strings.Replace(row, "{ADDR_LABEL}", html.EscapeString(lab), 1)
-			row = strings.Replace(row, "{ROW_NUMBER}", fmt.Sprint(i+1), -1)
-			row = strings.Replace(row, "{MINED_IN}", fmt.Sprint(wallet.MyBalance[i].MinedAt), 1)
-			row = strings.Replace(row, "{TX_ID}", btc.NewUint256(wallet.MyBalance[i].TxPrevOut.Hash[:]).String(), -1)
-			row = strings.Replace(row, "{TX_VOUT}", fmt.Sprint(wallet.MyBalance[i].TxPrevOut.Vout), -1)
-			row = strings.Replace(row, "{TX_SIGSIZ}", fmt.Sprint(estimated_sig_size), -1)
-			row = strings.Replace(row, "{BTC_AMOUNT}", fmt.Sprintf("%.8f", float64(wallet.MyBalance[i].Value)/1e8), 1)
-			row = strings.Replace(row, "{OUT_VALUE}", fmt.Sprint(wallet.MyBalance[i].Value), 1)
-			row = strings.Replace(row, "{BTC_ADDR}", wallet.MyBalance[i].DestAddr(), 1)
-			row = strings.Replace(row, "<!--BTC_ADDR_TITLE-->", wallet.MyBalance[i].BtcAddr.String(), 1)
-			wal = templ_add(wal, "<!--UTXOROW-->", row)
-		}
-
-		// Own wallet
-		for i := range wallet.MyWallet.Addrs {
-			row := "wallet.push({'addr':'" + wallet.MyWallet.Addrs[i].Enc58str + "', " +
-				"'label':'" + wallet.MyWallet.Addrs[i].Extra.Label + "', " +
-				"'wallet':'" + wallet.MyWallet.Addrs[i].Extra.Wallet + "', " +
-				"'virgin':" + fmt.Sprint(wallet.MyWallet.Addrs[i].Extra.Virgin) + "})\n"
-			wal = templ_add(wal, "/*WALLET_ENTRY_JS*/", row)
-		}
-
-		wal = strings.Replace(wal, "/*WALLET_ENTRY_JS*/", "const ADDR_LIST_SIZE = " + fmt.Sprint(common.CFG.WebUI.AddrListLen), 1)
-
-		s = strings.Replace(s, "<!--WALLET-->", wal, 1)
-	} else {
-		if wallet.MyWallet==nil {
-			s = strings.Replace(s, "<!--WALLET-->", "You have no wallet", 1)
-		} else {
-			s = strings.Replace(s, "<!--WALLET-->", "Your current wallet is empty", 1)
-		}
-	}
 	wallet.BalanceMutex.Unlock()
 
 	write_html_head(w, r)
