@@ -476,6 +476,9 @@ func NetCloseAll() {
 		}
 		time.Sleep(1e7)
 	}
+	for TCPServerStarted {
+		time.Sleep(1e7) // give one second for all the pending messages to get processed
+	}
 }
 
 
