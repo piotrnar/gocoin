@@ -2,7 +2,7 @@ Lib:
 * Implement BIP9
 
 Client:
-* Make volatile wallets really volatile (not stored in server's memory)
+* Make volatile wallets really volatile (not stored in server's memory). This will requite "AllBalances" mode
 * Check how the "MoveToBlock cannot continue" solution works in reality
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * StealthAddr: seems that a single metadata index can have more than one ephemkey (find out how to handle it)
