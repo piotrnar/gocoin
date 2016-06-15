@@ -1,3 +1,6 @@
+Lib:
+* Implement BIP9
+
 Client:
 * Make volatile wallets really volatile (not stored in server's memory)
 * Check how the "MoveToBlock cannot continue" solution works in reality
