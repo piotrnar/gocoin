@@ -192,6 +192,10 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		bl.VerifyFlags |= script.VER_CLTV
 	}
 
+	if ch.Consensus.Enforce_CSV!=0 && bl.Height>=ch.Consensus.Enforce_CSV {
+		bl.VerifyFlags |= script.VER_CSV
+	}
+
 	return
 }
 

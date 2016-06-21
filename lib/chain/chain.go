@@ -32,7 +32,7 @@ type Chain struct {
 		MaxPOWBits uint32
 		MaxPOWValue *big.Int
 		GensisTimestamp uint32
-		RuleChangeActivationThreshold uint
+		Enforce_CSV uint32 // if non zero CVS verifications will be enforced from this block onwards
 	}
 }
 
@@ -77,12 +77,11 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Window = 100
 		ch.Consensus.EnforceUpgrade = 51
 		ch.Consensus.RejectBlock = 75
-		ch.Consensus.RuleChangeActivationThreshold = 1513
 	} else {
 		ch.Consensus.Window = 1000
 		ch.Consensus.EnforceUpgrade = 750
 		ch.Consensus.RejectBlock = 950
-		ch.Consensus.RuleChangeActivationThreshold = 1916
+		ch.Consensus.Enforce_CSV = 417312
 	}
 
 	if opts.SetBlocksDBCacheSize {
