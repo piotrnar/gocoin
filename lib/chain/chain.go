@@ -81,7 +81,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Window = 1000
 		ch.Consensus.EnforceUpgrade = 750
 		ch.Consensus.RejectBlock = 950
-		ch.Consensus.Enforce_CSV = 417312
+		ch.Consensus.Enforce_CSV = 419328
 	}
 
 	if opts.SetBlocksDBCacheSize {
