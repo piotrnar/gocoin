@@ -19,6 +19,7 @@ type Block struct {
 	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
 	Sigops uint32
+	MedianPastTime uint32
 }
 
 
