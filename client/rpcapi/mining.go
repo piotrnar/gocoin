@@ -64,7 +64,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Capabilities = []string{"proposal"}
 	r.Version = 4
 	r.PreviousBlockHash = common.Last.Block.BlockHash.String()
-	r.Transactions, r.Coinbasevalue = GetTransactions()
+	r.Transactions, r.Coinbasevalue = GetTransactions(height, uint32(r.Mintime))
 	r.Coinbasevalue += btc.GetBlockReward(height)
 	r.Coinbaseaux.Flags = ""
 	r.Longpollid = r.PreviousBlockHash
@@ -101,13 +101,17 @@ var txs_so_far map[[32]byte] uint
 var totlen int
 var sigops uint
 
-func get_next_tranche_of_txs() (res sortedTxList) {
+func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 	var unsp *btc.TxOut
 	var all_inputs_found bool
 	for _, v := range network.TransactionsToSend {
 		tx := v.Tx
 
 		if _, ok := txs_so_far[tx.Hash.Hash]; ok {
+			continue
+		}
+
+		if !tx.IsFinal(height, timestamp) {
 			continue
 		}
 
@@ -147,7 +151,7 @@ func get_next_tranche_of_txs() (res sortedTxList) {
 	return
 }
 
-func GetTransactions() (res []OneTransaction, totfees uint64) {
+func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees uint64) {
 
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
@@ -159,7 +163,7 @@ func GetTransactions() (res []OneTransaction, totfees uint64) {
 	sigops = 0
 	//println("\ngetting txs from the pool of", len(network.TransactionsToSend), "...")
 	for {
-		new_piece := get_next_tranche_of_txs()
+		new_piece := get_next_tranche_of_txs(height, timestamp)
 		if new_piece.Len()==0 {
 			break
 		}
