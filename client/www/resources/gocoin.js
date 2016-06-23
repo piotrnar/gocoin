@@ -1,3 +1,6 @@
+const min_btc_addr_len = 27 // 1111111111111111111114oLvT2
+const b58set = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
 function ajax() {
 	try { xmlHttp=new XMLHttpRequest(); }
 	catch (e) {
@@ -119,25 +122,7 @@ function bignum(n) {
 
 function switch_to_webwallet(name) {
 	localStorage.setItem("gocoinWalletSelected", name)
-	var form = document.createElement("form")
-	var id = Math.random().toString(36).substring(7)
-	var hf = document.createElement("input")
-
-	console.log('loading web wallet', name, id)
-
-	form.method = "post"
-	hf.name = "id"
-	hf.value = id
-	form.appendChild(hf)
-
-	hf = document.createElement("textarea")
-	hf.name = "webwalletload"
-	var walcontext = localStorage.getItem("gocoinWal_"+name)
-	hf.value = walcontext
-	form.appendChild(hf)
-
-	localStorage.setItem("gocoinWalletId", id)
-	form.submit()
+	console.log("re-fetch the wallet")
 }
 
 function clear_web_wallet() {
@@ -156,4 +141,32 @@ function int2ip(i) {
 	var c = (i>>8)&255
 	var d = i&255
 	return a+'.'+b+'.'+c+'.'+d
+}
+
+function valid_btc_addr(s) {
+	if (s.length<min_btc_addr_len) return false
+	for (var i=0; i<s.length; s++) {
+		if (b58set.indexOf(s[i])==-1) {
+			return false
+		}
+	}
+	return true
+}
+
+function fetch_wallet_balance(name) {
+	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
+	var wallet = new Array()
+	console.log(cont.length)
+	for (var i=0; i<cont.length; i++) {
+		var ss = cont[i].trim().split(' ')
+		if (valid_btc_addr(ss[0])) {
+			console.log(ss[0])
+		}
+	}
+}
+
+function load_wallet_content() {
+	var name = qswal.options[qswal.selectedIndex].text
+	console.log(name)
+	fetch_wallet_balance(name)
 }

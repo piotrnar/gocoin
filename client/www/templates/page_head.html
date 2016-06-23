@@ -11,7 +11,9 @@ var doc_title = document.title
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%"><tr>
 		<td>{MENU_LEFT}</td>
-		<td align="center">Web Wallet Mode
+		<td align="center">Switch wallet:
+			<select id="qswal" onchange="load_wallet_content()"></select>
+			<img src="webui/refresh.png" class="hand" onclick="load_wallet_content()" title="Reload current wallet">
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">
@@ -57,25 +59,8 @@ function refreshblock() {
 }
 
 function build_wallet_list() {
-	//current_wallets = {"Web_wallet":false,"Seleced_wallet":"C:\\GoodSync\\BC\\wallet\\DEFAULT","Wallets":["ADDRESS","DEFAULT","Gotowka","Offline","UNUSED","svngz"]}
 	var gvi = localStorage.getItem("gocoinWalletId")
-	if (gvi!=null && gvi!=current_wallets.Seleced_wallet) {
-		switch_to_webwallet(localStorage.getItem("gocoinWalletSelected"))
-		return
-	}
-
 	var i
-
-	for (i=0; i<current_wallets.Wallets.length; i++) {
-		var o = document.createElement("option")
-		var na = current_wallets.Wallets[i]
-		o.value = o.text = na
-		if (!current_wallets.Web_wallet && current_wallets.Seleced_wallet.endsWith(na)) {
-			o.selected = true
-		}
-		qswal.add(o)
-	}
-	firstWebWalletIndex = i
 
 	var names = localStorage.getItem("gocoinWallets").split('|')
 	var s = ''
@@ -99,8 +84,6 @@ function build_wallet_list() {
 	}
 	localStorage.setItem("gocoinWallets", s)
 }
-
-firstWebWalletIndex = qswal.options.length
 
 document.addEventListener('DOMContentLoaded', function() {
 	refreshblock()
