@@ -160,13 +160,30 @@ function fetch_wallet_balance(name) {
 	for (var i=0; i<cont.length; i++) {
 		var ss = cont[i].trim().split(' ')
 		if (valid_btc_addr(ss[0])) {
-			console.log(ss[0])
+			wallet.push(ss[0])
 		}
 	}
+	console.log(name, wallet)
+
+	var aj = ajax()
+	aj.onerror=function() {
+		console.log("onerror")
+	}
+
+	aj.onload=function() {
+		try {
+			bal = JSON.parse(aj.responseText)
+			console.log(bal)
+		} catch (e) {
+			console.log(e)
+		}
+	}
+	aj.open("POST", "balance.json", true)
+	aj.send(JSON.stringify(wallet))
 }
 
 function load_wallet_content() {
 	var name = qswal.options[qswal.selectedIndex].text
-	console.log(name)
+	//console.log(name)
 	fetch_wallet_balance(name)
 }

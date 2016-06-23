@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -23,6 +24,25 @@ type OneAllAddrInp [1+8+4]byte
 type OneAllAddrBal struct {
 	Value uint64  // Highest bit of it means P2SH
 	Unsp []OneAllAddrInp
+}
+
+/*
+type QdbRec struct {
+	TxID [32]byte
+	Coinbase bool
+	InBlock uint32
+	Outs []*QdbTxOut
+}
+*/
+
+func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
+	ind := qdb.KeyType(binary.LittleEndian.Uint64(ur[1:9]))
+	v := common.BlockChain.Unspent.DbN(int(ur[0])).Get(ind)
+	if v != nil {
+		vout = binary.LittleEndian.Uint32(ur[9:13])
+		rec = chain.NewQdbRec(ind, v)
+	}
+	return
 }
 
 func NewUTXO(tx *chain.QdbRec) {

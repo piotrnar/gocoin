@@ -199,11 +199,6 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txsre.xml", xml_txsre)
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
-	//http.HandleFunc("/raw_balance", raw_balance)
-	http.HandleFunc("/balance.zip", dl_balance)
-	//http.HandleFunc("/payment.zip", dl_payment)
-	//http.HandleFunc("/addrs.xml", xml_addrs)
-	//http.HandleFunc("/wallets.xml", xml_wallets)
 
 	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
@@ -213,11 +208,11 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txstat.json", json_txstat)
 	http.HandleFunc("/netcon.json", json_netcon)
 	http.HandleFunc("/blocks.json", json_blocks)
-	//http.HandleFunc("/wallet.json", json_wallet)
 	http.HandleFunc("/peerst.json", json_peerst)
 	http.HandleFunc("/bwchar.json", json_bwchar)
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)
 	http.HandleFunc("/blkver.json", json_blkver)
+	http.HandleFunc("/balance.json", json_balance)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
