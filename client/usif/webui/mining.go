@@ -157,7 +157,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func json_minver(w http.ResponseWriter, r *http.Request) {
+func json_blkver(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
@@ -170,9 +170,9 @@ func json_minver(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("["))
 	if end!=nil {
-		max_cnt := common.BlockChain.Consensus.Window
+		max_cnt := 2*2016 //common.BlockChain.Consensus.Window
 		for {
-			w.Write([]byte(fmt.Sprint(binary.LittleEndian.Uint32(end.BlockHeader[0:4]))))
+			w.Write([]byte(fmt.Sprint("[", end.Height, ",", binary.LittleEndian.Uint32(end.BlockHeader[0:4]), "]")))
 			end = end.Parent
 			if end==nil || max_cnt<=1 {
 				break

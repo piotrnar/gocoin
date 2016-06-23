@@ -75,7 +75,8 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	}
 
 	// Check timestamp against prev
-	if bl.BlockTime() <= prevblk.GetMedianTimePast() {
+	bl.MedianPastTime = prevblk.GetMedianTimePast()
+	if bl.BlockTime() <= bl.MedianPastTime {
 		er = errors.New("CheckBlock: block's timestamp is too early - RPC_Result:time-too-old")
 		dos = true
 		return
@@ -170,12 +171,6 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
 			return
 		}
-
-		// Check transactions - this is the most time consuming task
-		if !CheckTransactions(bl.Txs, bl.Height, bl.BlockTime()) {
-			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")
-			return
-		}
 	}
 
 	if bl.BlockTime()>=BIP16SwitchTime {
@@ -192,6 +187,23 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		bl.VerifyFlags |= script.VER_CLTV
 	}
 
+	if ch.Consensus.Enforce_CSV!=0 && bl.Height>=ch.Consensus.Enforce_CSV {
+		bl.VerifyFlags |= script.VER_CSV
+	}
+
+	if !bl.Trusted {
+		var blockTime uint32
+		if (bl.VerifyFlags&script.VER_CSV) != 0 {
+			blockTime = bl.MedianPastTime
+		} else {
+			blockTime = bl.BlockTime()
+		}
+		// Check transactions - this is the most time consuming task
+		if !CheckTransactions(bl.Txs, bl.Height, blockTime) {
+			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")
+			return
+		}
+	}
 	return
 }
 

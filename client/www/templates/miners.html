@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 })
 </script>
+<table><tr>
+<td valign="top">
+
 Data from last <b>{MINING_HOURS}</b> hours.
  The oldest block starting at <b>{FIRST_BLOCK_TIME}</b><br>
 Total number of blocks was <b>{BLOCKS_COUNT}</b>,
@@ -26,9 +29,6 @@ which changes in <b>{DIFF_CHANGE_IN}</b> blocks<br>
 
 Total mining fees amount to <b><!--TOTAL_MINING_FEES--></b> BTC
 with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
-
-<table><tr>
-<td valign="top">
 
 <table class="bord" width="100%">
 	<tr>
@@ -48,18 +48,29 @@ with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 <td valign="top">
 
 <style>
-table#blockver_tab td.ver {
+td.bl_ver {
 	font-family: monospace;
 	text-align:right;
 }
-table#blockver_tab td.cnt {
+td.bl_cnt {
 	text-align:right;
 }
-table#blockver_tab td.perc {
+td.bl_perc {
 	text-align:right;
 }
 </style>
-<table class="bord" id="blockver_tab" align="right">
+<center>Last 1000 blocks:</center>
+<table class="bord" id="blockver_tab_a" align="right">
+<tr><th>Version<th>Count<th>Share
+</table>
+
+<center>Past period:</center>
+<table class="bord" id="blockver_tab_b" align="right">
+<tr><th>Version<th>Count<th>Share
+</table>
+
+<center>Current period:</center>
+<table class="bord" id="blockver_tab_c" align="right">
 <tr><th>Version<th>Count<th>Share
 </table>
 
@@ -68,6 +79,47 @@ table#blockver_tab td.perc {
 </table>
 
 <script>
+function do_table(blockver_tab, block_versions, max_block_number, min_block_number) {
+	var key, st = new Array()
+	var counted = 0;
+	for (var i=0; i<block_versions.length; i++) {
+		if (block_versions[i][0] > max_block_number) continue;
+		if (block_versions[i][0] < min_block_number) continue;
+		counted++;
+		key = block_versions[i][1]+""
+		if (isNaN(st[key])) {
+			st[key] = 1
+		} else {
+			st[key]++
+		}
+	}
+	var sorted = new Array()
+	for (key in st) {
+		sorted.push({ver:parseInt(key), cnt:st[key]})
+	}
+
+	sorted.sort(function(a,b){
+		if (a.cnt>b.cnt) return -1;
+		else if (a.cnt==b.cnt) return 0;
+		else return 1;
+	})
+
+	for (var i=0; i<sorted.length; i++) {
+		var row = blockver_tab.insertRow(-1)
+		var c = row.insertCell(-1)
+		c.className = 'bl_ver'
+		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
+
+		c = row.insertCell(-1)
+		c.className = 'bl_cnt'
+		c.innerText = sorted[i].cnt
+
+		c = row.insertCell(-1)
+		c.className = 'bl_perc'
+		c.innerText = Math.round(sorted[i].cnt*100/counted) + '%'
+	}
+}
+
 function blocks_version_stats() {
 	function onc(c,id) {
 		c.onclick = function() {hlminer(id)}
@@ -80,45 +132,18 @@ function blocks_version_stats() {
 	aj.onload=function() {
 		try {
 			var block_versions = JSON.parse(aj.responseText)
-			var key, st = new Array()
-			for (var i=0; i<block_versions.length; i++) {
-				key = block_versions[i]+""
-				if (isNaN(st[key])) {
-					st[key] = 1
-				} else {
-					st[key]++
-				}
-			}
-			var sorted = new Array()
-			for (key in st) {
-				sorted.push({ver:parseInt(key), cnt:st[key]})
-			}
+			var top_block_height = block_versions[0][0]
+			var last_epoch_change = Math.floor(top_block_height/2016) * 2016
 
-			sorted.sort(function(a,b){
-				if (a.cnt>b.cnt) return -1;
-				else if (a.cnt==b.cnt) return 0;
-				else return 1;
-			})
+			do_table(blockver_tab_a, block_versions, top_block_height, top_block_height-999)
+			do_table(blockver_tab_b, block_versions, last_epoch_change-1, last_epoch_change-2016)
+			do_table(blockver_tab_c, block_versions, top_block_height, last_epoch_change)
 
-			for (var i=0; i<sorted.length; i++) {
-				var row = blockver_tab.insertRow(-1)
-				var c = row.insertCell(-1)
-				c.className = 'ver'
-				c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
-
-				c = row.insertCell(-1)
-				c.className = 'cnt'
-				c.innerText = sorted[i].cnt
-
-				c = row.insertCell(-1)
-				c.className = 'perc'
-				c.innerText = Math.round(sorted[i].cnt*100/block_versions.length) + '%'
-			}
 		} catch (e) {
 			blockver_tab.style.display='none'
 		}
 	}
-	aj.open("GET","minver.json",true)
+	aj.open("GET","blkver.json",true)
 	aj.send(null)
 }
 
