@@ -1,7 +1,16 @@
 package webui
 
 import (
+	"fmt"
+	"bytes"
+	"strings"
+	"strconv"
 	"net/http"
+	"archive/zip"
+	"encoding/hex"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -17,7 +26,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
 	var err string
 
 	if len(r.Form["outcnt"])==1 {
@@ -47,6 +55,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
 				hash := btc.NewUint256FromString(r.Form["txid"+is][0])
 				if hash!=nil {
+					/*
 					vout, er := strconv.ParseUint(r.Form["txvout"+is][0], 10, 32)
 					if er==nil {
 						var po = btc.TxPrevOut{Hash:hash.Hash, Vout:uint32(vout)}
@@ -79,6 +88,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 							}
 						}
 					}
+					*/
 				}
 			}
 		}
@@ -226,7 +236,6 @@ error:
 	s = strings.Replace(s, "<!--ERROR_MSG-->", err, 1)
 	w.Write([]byte(s))
 	write_html_tail(w)
-	*/
 }
 
 
