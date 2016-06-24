@@ -17,15 +17,13 @@ function switchwallet_button_click_browser() {
 
 function edit_address_book() {
 	showade.style.display='block'
-	addrbook_button.value = "Save Address Book"
-	addrbook_button.onclick = function() { save_address_book() }
+	addrbook_button.style.display = 'none'
 }
 
 function save_address_book() {
 	localStorage.setItem("gocoinAddressBook", address_book.value)
 	showade.style.display='none'
-	addrbook_button.value = "Edit Address Book"
-	addrbook_button.onclick = function() { edit_address_book() }
+	addrbook_button.style.display = 'block'
 }
 
 function fetch_wallet_balance(name) {
@@ -67,7 +65,7 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "hand"
-				td.innerText = wallet[i].label + ( (xwallet[i].virgin && rec.Outs!=null) ? ' ***' : '' )
+				td.innerText = wallet[i].label + ( (wallet[i].virgin && rec.Outs!=null) ? ' ***' : '' )
 				td["row_idx"] = idxx
 				td.addEventListener('click', edit_label)
 
@@ -236,16 +234,9 @@ function allow_name_change_clicked() {
 </h2>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="balance.zip">balance.zip</a>)<br>
 <br>
-<div id="browser_wallets">Available wallets:
-
-<input style="float:right;" type="button" id="addrbook_button" value="Edit Address Book" onclick="edit_address_book()">
-</div>
+<div id="browser_wallets">Available wallets: </div>
 <br>
 
-<div id="showade" style="display:none">
-<h2>Address Book</h2>
-<textarea id="address_book" style="width:100%" rows="15"></textarea>
-</div>
 <hr>
 
 <div id="showwal">
@@ -261,6 +252,18 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 </table>
 </div>
 
+<div id="addrbook_button">
+<h2>
+<input style="float:right;" type="button" value="Edit Address Book" onclick="edit_address_book()">
+</h2>
+</div>
+
+<div id="showade" style="display:none">
+<h2>Address Book
+<input style="float:right;" type="button" value="Save Address Book" onclick="save_address_book()">
+</h2>
+<textarea id="address_book" style="width:100%" rows="15"></textarea>
+</div>
 
 <div id="formwal" style="display:none">
 <h2>Edit wallet
