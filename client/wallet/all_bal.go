@@ -26,15 +26,6 @@ type OneAllAddrBal struct {
 	Unsp []OneAllAddrInp
 }
 
-/*
-type QdbRec struct {
-	TxID [32]byte
-	Coinbase bool
-	InBlock uint32
-	Outs []*QdbTxOut
-}
-*/
-
 func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
 	ind := qdb.KeyType(binary.LittleEndian.Uint64(ur[1:9]))
 	v := common.BlockChain.Unspent.DbN(int(ur[0])).Get(ind)

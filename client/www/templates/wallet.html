@@ -11,13 +11,15 @@ td.outcnt {
 </style>
 <script>
 var edit_in_progress = false
+var wallet;
 function switchwallet_button_click_browser() {
 	switch_to_webwallet(this.value)
 }
 
 function fetch_wallet_balance(name) {
-	var wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
+	wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
+
 	for (var i=0; i<wallet.length; i++) {
 		wallet_addr.push(wallet[i].addr)
 	}
@@ -217,11 +219,39 @@ function allow_name_change_clicked() {
 	}
 }
 
+function get_balance_zip() {
+	var form = document.createElement("form")
+	form.setAttribute("method", "post")
+	form.setAttribute("action", "balance.zip")
+
+	var inp = document.createElement("input")
+	inp.type = "hidden"
+	inp.name = "addrcnt"
+	inp.value = wallet.length
+	form.appendChild(inp)
+
+	for (var i in wallet) {
+		inp = document.createElement("input")
+		inp.type = "hidden"
+		inp.name = "addr"+i
+		inp.value = wallet[i].addr
+		form.appendChild(inp)
+
+		inp = document.createElement("input")
+		inp.type = "hidden"
+		inp.name = "label"+i
+		inp.value = wallet[i].label
+		form.appendChild(inp)
+	}
+
+	form.submit()
+}
+
 </script>
 <h2><span id="cur_wallet_type"></span> wallet: <span id="cur_wallet_name"></span>
 <input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </h2>
-Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="balance.zip">balance.zip</a>)<br>
+Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)<br>
 <br>
 <div id="browser_wallets">Available wallets: </div>
 <br>

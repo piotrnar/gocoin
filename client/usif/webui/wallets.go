@@ -1,10 +1,15 @@
 package webui
 
 import (
-	"io/ioutil"
+	"fmt"
+	"bytes"
+	"strconv"
 	"net/http"
+	"io/ioutil"
+	"archive/zip"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -87,4 +92,90 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	} else {
 		println(er.Error())
 	}
+}
+
+func dl_balance(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	if r.Method!="POST" {
+		return
+	}
+
+	var addrs []string
+	var labels []string
+
+	if len(r.Form["addrcnt"])!=1 {
+		println("no addrcnt")
+		return
+	}
+	addrcnt, _ := strconv.ParseUint(r.Form["addrcnt"][0], 10, 32)
+
+	for i:=0; i<int(addrcnt); i++ {
+		is := fmt.Sprint(i)
+		if len(r.Form["addr"+is])==1 {
+			addrs = append(addrs, r.Form["addr"+is][0])
+			if len(r.Form["label"+is])==1 {
+				labels = append(labels, r.Form["label"+is][0])
+			} else {
+				labels = append(labels, "")
+			}
+		}
+	}
+
+	type one_unsp_rec struct {
+		btc.TxPrevOut
+		Value uint64
+		Addr string
+		MinedAt uint32
+		Coinbase bool
+	}
+
+	var thisbal chain.AllUnspentTx
+
+	wallet.BalanceMutex.Lock()
+	for idx, a := range addrs {
+		aa, e := btc.NewAddrFromString(a)
+		aa.Extra.Label = labels[idx]
+		if e==nil {
+			if rec, ok := wallet.AllBalances[aa.Hash160]; ok {
+				for _, v := range rec.Unsp {
+					if qr, vout := v.GetRec(); qr!=nil {
+						if oo := qr.Outs[vout]; oo!=nil {
+							unsp := &chain.OneUnspentTx{TxPrevOut:btc.TxPrevOut{Hash:qr.TxID, Vout:vout},
+								Value:oo.Value, MinedAt:qr.InBlock, Coinbase:qr.Coinbase, BtcAddr:aa}
+
+							thisbal = append(thisbal, unsp)
+						}
+					}
+				}
+			}
+		}
+	}
+	wallet.BalanceMutex.Unlock()
+
+	buf := new(bytes.Buffer)
+	zi := zip.NewWriter(buf)
+	was_tx := make(map [[32]byte] bool)
+
+	for i := range thisbal {
+		if was_tx[thisbal[i].TxPrevOut.Hash] {
+			continue
+		}
+		was_tx[thisbal[i].TxPrevOut.Hash] = true
+		txid := btc.NewUint256(thisbal[i].TxPrevOut.Hash[:])
+		fz, _ := zi.Create("balance/" + txid.String() + ".tx")
+		wallet.GetRawTransaction(thisbal[i].MinedAt, txid, fz)
+	}
+
+	fz, _ := zi.Create("balance/unspent.txt")
+	for i := range thisbal {
+		fmt.Fprintln(fz, thisbal[i].UnspentTextLine())
+	}
+
+	zi.Close()
+	w.Header()["Content-Type"] = []string{"application/zip"}
+	w.Write(buf.Bytes())
+
 }
