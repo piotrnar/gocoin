@@ -15,17 +15,6 @@ function switchwallet_button_click_browser() {
 	switch_to_webwallet(this.value)
 }
 
-function edit_address_book() {
-	showade.style.display='block'
-	addrbook_button.style.display = 'none'
-}
-
-function save_address_book() {
-	localStorage.setItem("gocoinAddressBook", address_book.value)
-	showade.style.display='none'
-	addrbook_button.style.display = 'block'
-}
-
 function fetch_wallet_balance(name) {
 	var wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
@@ -181,17 +170,17 @@ function save_web_wallet() {
 	}
 
 	localStorage.setItem("gocoinWal_"+name, walletdata.value)
-	console.log("saved web wallet as "+name)
 	close_editor()
 
-	switch_to_webwallet(name)
+	localStorage.setItem("gocoinWalletSelected", name)
+	location.reload()
 }
 
 function delete_wallet() {
 	var name = qswal.options[qswal.selectedIndex].text
 	if (confirm("Delete wallet "+name+" from the browser?")) {
 		localStorage.removeItem("gocoinWal_"+name)
-		switch_to_server_wallet("DEFAULT")
+		location.reload()
 	}
 }
 
@@ -242,7 +231,7 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 <div id="showwal">
 <h2>Current wallet
 
-<input style="float:right" type="button" value="Edit This Wallet" onclick="edit_wallet()">
+<input style="float:right" type="button" value="Edit Wallet" onclick="edit_wallet()">
 </h2>
 <table class="wal bord" id="walltab">
 <tr>
@@ -250,19 +239,6 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 <th align="left">Label
 <th colspan="2">Balance&nbsp;BTC
 </table>
-</div>
-
-<div id="addrbook_button">
-<h2>
-<input style="float:right;" type="button" value="Edit Address Book" onclick="edit_address_book()">
-</h2>
-</div>
-
-<div id="showade" style="display:none">
-<h2>Address Book
-<input style="float:right;" type="button" value="Save Address Book" onclick="save_address_book()">
-</h2>
-<textarea id="address_book" style="width:100%" rows="15"></textarea>
 </div>
 
 <div id="formwal" style="display:none">
@@ -287,6 +263,8 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 </form>
 </table>
 </div>
+
+
 <script>
 // reaload page on new block
 var _lblo = 0
@@ -302,6 +280,5 @@ qswal.addEventListener("loadwallet", function(e) {
 })
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
-	address_book.value = localStorage.getItem("gocoinAddressBook")
 })
 </script>

@@ -481,13 +481,35 @@ document.addEventListener('DOMContentLoaded', function() {
 	txfee.onkeyup = recalc_to_pay
 	spb_to_use.value = avg_fee_spb.toFixed(10).substr(0,7)
 	recalc_inputs()
+	address_book.value = localStorage.getItem("gocoinAddressBook")
 })
+
+function edit_address_book() {
+	addrr_book_div.style.display='block'
+	addrbook_button.value = "Save Address Book"
+	addrbook_button.onclick = function() {save_address_book()}
+}
+
+function save_address_book() {
+	localStorage.setItem("gocoinAddressBook", address_book.value)
+	addrr_book_div.style.display='none'
+	addrbook_button.value = "Edit Address Book"
+	addrbook_button.onclick = function() {edit_address_book()}
+}
 
 </script>
 
 <form method="post" action="payment.zip">
 <input type="hidden" id="outcnt_val" name="outcnt" value="">
-<h2>Payment details</h2>
+<h2>Payment details
+<input style="float:right;" id="addrbook_button" type="button" value="Edit Address Book" onclick="edit_address_book()">
+</h2>
+
+<div id="addrr_book_div" style="display:none">
+<textarea id="address_book" style="width:100%" rows="15"></textarea>
+<br><br>
+</div>
+
 Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
 <table class="bord" vspace="10" id="outtab">
 <tr>
