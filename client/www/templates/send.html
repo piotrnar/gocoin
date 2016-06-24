@@ -1,10 +1,15 @@
+<style>
+td.inpid {
+	text-align: right;
+	font-size: 80%;
+}
+</style>
 <script>
 const addrbook_lab = "Address Book"
 
 const AvgOutputSize = 34
 const StealthIndexLen = 49
 
-var values = new Array()
 var selected_value = 0
 var ets_inputs = 0
 var selected_cnt = 0
@@ -13,7 +18,7 @@ var cur_but = null
 
 var wallet = new Array()
 
-/*WALLET_ENTRY_JS*/
+const ADDR_LIST_SIZE = 15
 
 function build_change_list() {
 	var virgincounter = 0
@@ -35,6 +40,131 @@ function build_change_list() {
 	}
 }
 
+function fetch_wallet_balance(name) {
+	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
+
+	wallet = new Array()
+	var wallet_addr = new Array()
+	for (var i=0; i<cont.length; i++) {
+		var line = cont[i].trim()
+		var sp_idx = line.indexOf(' ')
+		var addr, label
+		if (sp_idx==-1) {
+			addr = line
+			label = ''
+		} else {
+			addr = line.substr(0, sp_idx)
+			label = line.substr(sp_idx+1)
+		}
+		if (valid_btc_addr(addr)) {
+			wallet.push({'addr':addr, 'label':label, 'virgin':cont[i][0]==' '})
+			wallet_addr.push(addr)
+		}
+	}
+
+	while (unspent.rows.length>1) {
+		unspent.deleteRow(1)
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		console.log("onerror")
+	}
+
+	aj.onload=function() {
+		try {
+			var totbtc = 0
+			var totouts = 0
+			bal = JSON.parse(aj.responseText)
+			var outs = new Array()
+			var i, ii
+			for (i in wallet) {
+				var rec = bal[wallet[i].addr]
+				if (rec.Outs!=null) {
+					totouts += rec.Outs.length
+					for (ii in rec.Outs) {
+						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
+							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
+							'addr':wallet[i].addr, 'label':wallet[i].label})
+					}
+				}
+				totbtc += rec.Value
+			}
+			outs.sort(function(a,b){
+				return a.Height < b.Height
+			})
+
+			outcnt_val.value = outs.length
+			for (i in outs) {
+				var row_number = parseInt(i)+1
+				var inp,  td, row = unspent.insertRow(-1)
+				row.className = "how"
+				row["addr"] = outs[i].addr
+				row["value"] = outs[i].value
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.name = "txid"+row_number
+				inp.value = outs[i].txid
+				row.appendChild(inp)
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.name = "txvout"+row_number
+				inp.value = outs[i].vout
+				row.appendChild(inp)
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.id = "txsigsiz"+row_number
+				inp.value = 107
+				row.appendChild(inp)
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.innerText = row_number
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.innerText = outs[i].block
+
+				td = row.insertCell(-1)
+				td.className = 'inpid'
+				td.innerText = outs[i].txid + ' - ' + outs[i].vout
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.className = 'mono bold'
+				td.innerText = val2str_pad(outs[i].value,true)
+
+				td = row.insertCell(-1)
+				td.className = 'bold hand'
+				td["row_number"] = row_number
+				td.addEventListener('click', selectadr)
+				td.innerText = outs[i].addr
+
+				td = row.insertCell(-1)
+				td.className = 'hand'
+				td["row_number"] = row_number
+				td.addEventListener('click', selectadr)
+				td.innerText = outs[i].label
+
+				td = row.insertCell(-1)
+				td.align = 'center'
+				td.innerHTML = '<input id="txout'+row_number+'" name="txout'+row_number+'" type="checkbox" onchange="recalc_inputs()">'
+
+			}
+
+			total_btc.innerText = val2str(totbtc)
+			outs_cnt.innerText = totouts
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	aj.open("POST", "balance.json", true)
+	aj.send(JSON.stringify(wallet_addr))
+}
 
 function recalc_inputs() {
 	selected_value = 0
@@ -42,7 +172,7 @@ function recalc_inputs() {
 	ets_inputs = 0
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (document.getElementById('txout'+i).checked) {
-			selected_value += values[i]
+			selected_value += unspent.rows[i].value
 			selected_cnt++
 			ets_inputs += 36+1+parseInt(document.getElementById('txsigsiz'+i).value)+4
 		}
@@ -165,6 +295,9 @@ function refresh_address_book(done_callback) {
 
 
 function open_address_book(idx) {
+	alert('address book nor supported')
+	return
+
 	if (cur_but!=null) {
 		cur_but.click()
 	}
@@ -331,11 +464,12 @@ function allchange(t) {
 	recalc_inputs()
 }
 
-function selectadr(idx) {
-	var addr = unspent.rows[idx].cells[5].title
+function selectadr() {
+	var idx = this.row_number
+	var addr = unspent.rows[idx].addr
 	var chkd = document.getElementById('txout'+idx).checked
 	for (var i=1; i<unspent.rows.length; i++) {
-		if (unspent.rows[i].cells[5].title==addr) {
+		if (unspent.rows[i].addr==addr) {
 			document.getElementById('txout'+i).checked = !chkd
 		}
 	}
@@ -366,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <form method="post" action="payment.zip">
-<input type="hidden" name="outcnt" value="{UNSPENT_OUTS}">
+<input type="hidden" id="outcnt_val" name="outcnt" value="">
 <h2>Payment details</h2>
 Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
 <table class="bord" vspace="10" id="outtab">
@@ -421,17 +555,25 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 <i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
 
 <h2>Select Inputs</h2>
-Total balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs.
+Total balance: <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
 <table vspace="10" id="unspent" width="100%">
 <tr>
 	<th width="20">#
 	<th width="40">Block
 	<th>TxID - VOut
 	<th width="80">BTC Value
-	<th colspan="3">Address
+	<th colspan="2">Address
 	<th><input type="checkbox" onchange="allchange(this)">
 </tr>
 <!--UTXOROW-->
 </table>
 
 </form>
+<script>
+qswal.addEventListener("loadwallet", function(e) {
+	fetch_wallet_balance(e.name)
+})
+document.addEventListener('DOMContentLoaded', function() {
+	quick_switch_wallet() // this is to force loading wallet after loading
+})
+</script>

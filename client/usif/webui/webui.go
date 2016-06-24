@@ -200,6 +200,8 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
 
+	http.HandleFunc("/payment.zip", dl_payment)
+
 	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
 	http.HandleFunc("/counts.json", json_counts)

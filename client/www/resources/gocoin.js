@@ -153,5 +153,4 @@ function quick_switch_wallet() {
 	e.initEvent("loadwallet", false, false)
 	e.name = name
 	qswal.dispatchEvent(e)
-	console.log("Send", e)
 }

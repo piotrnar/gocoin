@@ -3,7 +3,6 @@ package webui
 import (
 	"io/ioutil"
 	"net/http"
-	"encoding/hex"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -70,7 +69,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					if qr, vout := v.GetRec(); qr!=nil {
 						if oo := qr.Outs[vout]; oo!=nil {
 							newrec.Outs = append(newrec.Outs, OneOut{
-								TxId : hex.EncodeToString(qr.TxID[:]), Vout : vout,
+								TxId : btc.NewUint256(qr.TxID[:]).String(), Vout : vout,
 								Value : oo.Value, Height : qr.InBlock, Coinbase : qr.Coinbase})
 							}
 					}

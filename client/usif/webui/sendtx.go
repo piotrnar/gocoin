@@ -49,50 +49,56 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
 
-		wallet.BalanceMutex.Lock()
 		for i:=1; i<=int(outcnt); i++ {
 			is := fmt.Sprint(i)
 			if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
 				hash := btc.NewUint256FromString(r.Form["txid"+is][0])
 				if hash!=nil {
-					/*
 					vout, er := strconv.ParseUint(r.Form["txvout"+is][0], 10, 32)
 					if er==nil {
 						var po = btc.TxPrevOut{Hash:hash.Hash, Vout:uint32(vout)}
-						for j := range wallet.MyBalance {
-							if wallet.MyBalance[j].TxPrevOut==po {
-								thisbal = append(thisbal, wallet.MyBalance[j])
+						if res, er := common.BlockChain.Unspent.UnspentGet(&po); er==nil {
+							addr := btc.NewAddrFromPkScript(res.Pk_script, common.Testnet)
 
-								// Add the input to our tx
-								tin := new(btc.TxIn)
-								tin.Input = wallet.MyBalance[j].TxPrevOut
-								tin.Sequence = uint32(seq)
-								tx.TxIn = append(tx.TxIn, tin)
+							unsp := &chain.OneUnspentTx{TxPrevOut:po, Value:res.Value,
+								MinedAt:res.BlockHeight, Coinbase:res.WasCoinbase, BtcAddr:addr}
 
-								// Add new multisig address description
-								_, msi := wallet.IsMultisig(wallet.MyBalance[j].BtcAddr)
-								multisig_input = append(multisig_input, msi)
-								if msi != nil {
-									for ai := range msi.ListOfAddres {
-										addrs_to_msign[msi.ListOfAddres[ai]] = true
-									}
+							thisbal = append(thisbal, unsp)
+
+							// Add the input to our tx
+							tin := new(btc.TxIn)
+							tin.Input = po
+							tin.Sequence = uint32(seq)
+							tx.TxIn = append(tx.TxIn, tin)
+
+							// Add new multisig address description
+							_, msi := wallet.IsMultisig(addr)
+							multisig_input = append(multisig_input, msi)
+							if msi != nil {
+								for ai := range msi.ListOfAddres {
+									addrs_to_msign[msi.ListOfAddres[ai]] = true
 								}
+							}
 
-								// Add the value to total input value
-								totalinput += wallet.MyBalance[j].Value
+							// Add the value to total input value
+							totalinput += res.Value
 
-								// If no change specified, use the first input addr as it
-								if change_addr == nil {
-									change_addr = wallet.MyBalance[j].BtcAddr
-								}
+							// If no change specified, use the first input addr as it
+							if change_addr == nil {
+								change_addr = addr
 							}
 						}
 					}
-					*/
 				}
 			}
 		}
-		wallet.BalanceMutex.Unlock()
+
+		if change_addr == nil {
+			// There werte no inputs
+			return
+		}
+		//wallet.BalanceMutex.Lock()
+		//wallet.BalanceMutex.Unlock()
 
 		for i:=1; ; i++ {
 			adridx := fmt.Sprint("adr", i)
