@@ -41,25 +41,11 @@ function build_change_list() {
 }
 
 function fetch_wallet_balance(name) {
-	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
-
-	wallet = new Array()
+	var wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
-	for (var i=0; i<cont.length; i++) {
-		var line = cont[i].trim()
-		var sp_idx = line.indexOf(' ')
-		var addr, label
-		if (sp_idx==-1) {
-			addr = line
-			label = ''
-		} else {
-			addr = line.substr(0, sp_idx)
-			label = line.substr(sp_idx+1)
-		}
-		if (valid_btc_addr(addr)) {
-			wallet.push({'addr':addr, 'label':label, 'virgin':cont[i][0]==' '})
-			wallet_addr.push(addr)
-		}
+
+	for (var i=0; i<wallet.length; i++) {
+		wallet_addr.push(wallet[i].addr)
 	}
 
 	while (unspent.rows.length>1) {

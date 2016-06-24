@@ -16,27 +16,10 @@ function switchwallet_button_click_browser() {
 }
 
 function fetch_wallet_balance(name) {
-	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
-	var wallet = new Array()
-	var wallet_label = new Array()
-	var wallet_virgin = new Array()
-	for (var i=0; i<cont.length; i++) {
-		var line = cont[i].trim()
-		var sp_idx = line.indexOf(' ')
-		var addr, label
-		if (sp_idx==-1) {
-			addr = line
-			label = ''
-		} else {
-			addr = line.substr(0, sp_idx)
-			label = line.substr(sp_idx+1)
-		}
-		if (valid_btc_addr(addr)) {
-			//console.log(ss[0], ss)
-			wallet.push(addr)
-			wallet_label.push(label)
-			wallet_virgin.push(cont[i][0]==' ')
-		}
+	var wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
+	var wallet_addr = new Array()
+	for (var i=0; i<wallet.length; i++) {
+		wallet_addr.push(wallet[i].addr)
 	}
 
 	while (walltab.rows.length>1) {
@@ -54,10 +37,10 @@ function fetch_wallet_balance(name) {
 			var totouts = 0
 			bal = JSON.parse(aj.responseText)
 			var idxx = 0
-			for (var i in wallet) {
-				var rec = bal[wallet[i]]
+			for (var i in wallet_addr) {
+				var rec = bal[wallet_addr[i]]
 
-				if (rec.Outs==null && wallet_virgin[i]) {
+				if (rec.Outs==null && wallet[i].virgin) {
 					continue
 				}
 
@@ -66,12 +49,12 @@ function fetch_wallet_balance(name) {
 				row.id = 'walrow'+idxx
 
 				td = row.insertCell(-1)
-				td.className = (wallet[i].length>80) ? "addr_long" : "addr_norm"
-				td.innerText = wallet[i]
+				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
+				td.innerText = wallet_addr[i]
 
 				td = row.insertCell(-1)
 				td.className = "hand"
-				td.innerText = wallet_label[i]
+				td.innerText = wallet[i].label
 				td["row_idx"] = idxx
 				td.addEventListener('click', edit_label)
 
@@ -101,7 +84,7 @@ function fetch_wallet_balance(name) {
 	}
 
 	aj.open("POST", "balance.json", true)
-	aj.send(JSON.stringify(wallet))
+	aj.send(JSON.stringify(wallet_addr))
 }
 
 function switch_to_webwallet(name) {

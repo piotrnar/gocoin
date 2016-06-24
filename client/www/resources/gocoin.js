@@ -146,6 +146,27 @@ function valid_btc_addr(s) {
 	return true
 }
 
+function parse_wallet(s) {
+	var cont = s.split('\n')
+	var wallet = new Array()
+	for (var i=0; i<cont.length; i++) {
+		var line = cont[i].trim()
+		var sp_idx = line.indexOf(' ')
+		var addr, label
+		if (sp_idx==-1) {
+			addr = line
+			label = ''
+		} else {
+			addr = line.substr(0, sp_idx)
+			label = line.substr(sp_idx+1)
+		}
+		if (valid_btc_addr(addr)) {
+			wallet.push({'addr':addr, 'label':label, 'virgin':cont[i][0]==' '})
+		}
+	}
+	return wallet
+}
+
 function quick_switch_wallet() {
 	var name = qswal.options[qswal.selectedIndex].text
 	localStorage.setItem("gocoinWalletSelected", name)
