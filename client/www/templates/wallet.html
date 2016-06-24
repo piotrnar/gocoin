@@ -1,12 +1,120 @@
+<style>
+td.balbtc {
+	text-align: right;
+	font-family: monospace;
+	font-size: 110%;
+}
+td.outcnt {
+	text-align: right;
+	width: 30px;
+}
+</style>
 <script>
 var edit_in_progress = false
 function switchwallet_button_click_browser() {
 	switch_to_webwallet(this.value)
 }
-function switch2wallet(idx) {
-	var tr = document.getElementById('walrow'+idx)
-	switch_to_server_wallet(encodeURIComponent(tr.cells[1].innerText))
+
+function fetch_wallet_balance(name) {
+	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
+	var wallet = new Array()
+	var wallet_label = new Array()
+	var wallet_virgin = new Array()
+	for (var i=0; i<cont.length; i++) {
+		var line = cont[i].trim()
+		var sp_idx = line.indexOf(' ')
+		var addr, label
+		if (sp_idx==-1) {
+			addr = line
+			label = ''
+		} else {
+			addr = line.substr(0, sp_idx)
+			label = line.substr(sp_idx+1)
+		}
+		if (valid_btc_addr(addr)) {
+			//console.log(ss[0], ss)
+			wallet.push(addr)
+			wallet_label.push(label)
+			wallet_virgin.push(cont[i][0]==' ')
+		}
+	}
+
+	while (walltab.rows.length>1) {
+		walltab.deleteRow(1)
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		console.log("onerror")
+	}
+
+	aj.onload=function() {
+		try {
+			var totbtc = 0
+			var totouts = 0
+			bal = JSON.parse(aj.responseText)
+			var idxx = 0
+			for (var i in wallet) {
+				var rec = bal[wallet[i]]
+
+				if (rec.Outs==null && wallet_virgin[i]) {
+					continue
+				}
+
+				var td, row = walltab.insertRow(-1)
+				row.className = "how"
+				row.id = 'walrow'+idxx
+
+				td = row.insertCell(-1)
+				td.className = (wallet[i].length>80) ? "addr_long" : "addr_norm"
+				td.innerText = wallet[i]
+
+				td = row.insertCell(-1)
+				td.className = "hand"
+				td.innerText = wallet_label[i]
+				td["row_idx"] = idxx
+				td.addEventListener('click', edit_label)
+
+				td = row.insertCell(-1)
+				td.className = "balbtc"
+				if (rec.Outs!=null) {
+					td.innerText = val2str_pad(rec.Value,true)
+				}
+
+				td = row.insertCell(-1)
+				td.className = "outcnt"
+				if (rec.Outs!=null) {
+					td.innerText = rec.Outs.length
+					totouts += rec.Outs.length
+				} else {
+					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
+				}
+
+				totbtc += rec.Value
+				idxx++
+			}
+			total_btc.innerText = val2str(totbtc)
+			unspent_outs.innerText = totouts
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	aj.open("POST", "balance.json", true)
+	aj.send(JSON.stringify(wallet))
 }
+
+function switch_to_webwallet(name) {
+	localStorage.setItem("gocoinWalletSelected", name)
+	for (var i in qswal.options) {
+		if (qswal.options[i].text==name) {
+			qswal.selectedIndex = i
+			break
+		}
+	}
+	fetch_wallet_balance(name)
+}
+
 function edit_wallet() {
 	var name = qswal.options[qswal.selectedIndex].text
 	walletfname.value = name
@@ -32,10 +140,12 @@ function setunused(idx) {
 		switch_to_webwallet(name)
 	}
 }
-function edit_label(idx) {
+function edit_label() {
+	console.log(this)
+	var idx = this.row_idx
 	var tr = document.getElementById('walrow'+idx)
 	var adr = tr.cells[0].innerText
-	var lab = tr.cells[2].innerText
+	var lab = tr.cells[1].innerText
 
 	var newlab = prompt("Edit label in the current browser wallet for:\n" + adr, lab)
 	if (newlab) {
@@ -128,25 +238,19 @@ function allow_name_change_clicked() {
 <h2><span id="cur_wallet_type"></span> wallet: <span id="cur_wallet_name"></span>
 <input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </h2>
-Balance: <b>{TOTAL_BTC}</b> BTC in <b>{UNSPENT_OUTS}</b> outputs (<a href="balance.zip">balance.zip</a>)<br>
+Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="balance.zip">balance.zip</a>)<br>
 <br>
-Selected wallet: <b class="mono"><!--WALLET_FILENAME--></b><br>
-<br>
-<div id="server_wallets">Server wallets: </div>
-<br>
-<div id="browser_wallets">Browser wallets: </div>
+<div id="browser_wallets">Available wallets: </div>
 <br>
 
 <hr>
 <div id="showwal">
 <h2>Current wallet
 <input style="float:right" type="button" value="Edit This Wallet" onclick="edit_wallet()"></h2>
-<table class="wal bord" id="wallet">
+<table class="wal bord" id="walltab">
 <tr>
 <th>Address
-<th align="left">Wallet
 <th align="left">Label
-<th align="left">Multi
 <th colspan="2">Balance&nbsp;BTC
 </table>
 </div>
@@ -183,5 +287,11 @@ blno.addEventListener("lastblock", function(e) {
 	} else if (!edit_in_progress && e.block.Height!=_lblo) {
 		location.reload()
 	}
+})
+qswal.addEventListener("loadwallet", function(e) {
+	fetch_wallet_balance(e.name)
+})
+document.addEventListener('DOMContentLoaded', function() {
+	quick_switch_wallet() // this is to force loading wallet after loading
 })
 </script>

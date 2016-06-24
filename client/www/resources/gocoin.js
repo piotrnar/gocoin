@@ -37,19 +37,27 @@ function rightpad(v,c,n) {
 	return v
 }
 
-function val2str(val) {
+function val2str_pad(val,pad) {
 	var i,neg
 	if (neg=(val<0)) val=-val
 	var frac = (val%1e8).toString()
 	while (frac.length<8) frac='0'+frac
-	for (i=8; i>0 && frac[i-1]=='0'; i--);
-	if (i!=8) {
-		if (i>0) frac='.'+frac.substr(0,i)
-		else frac=''
-	} else frac='.'+frac
+	if (pad) {
+		frac='.'+frac
+	} else {
+		for (i=8; i>0 && frac[i-1]=='0'; i--);
+		if (i!=8) {
+			if (i>0) frac='.'+frac.substr(0,i)
+			else frac=''
+		} else frac='.'+frac
+	}
 	var btcs = Math.floor(val/1e8)
 	btcs=btcs.toString()+frac
 	return neg?('-'+btcs):btcs
+}
+
+function val2str(val) {
+	return val2str_pad(val,false)
 }
 
 function val2int(str) {
@@ -120,21 +128,6 @@ function bignum(n) {
 	return (n/1e21).toFixed(2) + " Y"
 }
 
-function switch_to_webwallet(name) {
-	localStorage.setItem("gocoinWalletSelected", name)
-	console.log("re-fetch the wallet")
-}
-
-function clear_web_wallet() {
-	localStorage.removeItem("gocoinWalletSelected")
-	localStorage.removeItem("gocoinWalletId")
-}
-
-function switch_to_server_wallet(name) {
-	clear_web_wallet()
-	document.location='?sid='+sid+'&wal='+name
-}
-
 function int2ip(i) {
 	var a = (i>>24)&255
 	var b = (i>>16)&255
@@ -153,37 +146,12 @@ function valid_btc_addr(s) {
 	return true
 }
 
-function fetch_wallet_balance(name) {
-	var cont = localStorage.getItem("gocoinWal_"+name).split('\n')
-	var wallet = new Array()
-	console.log(cont.length)
-	for (var i=0; i<cont.length; i++) {
-		var ss = cont[i].trim().split(' ')
-		if (valid_btc_addr(ss[0])) {
-			wallet.push(ss[0])
-		}
-	}
-	console.log(name, wallet)
-
-	var aj = ajax()
-	aj.onerror=function() {
-		console.log("onerror")
-	}
-
-	aj.onload=function() {
-		try {
-			bal = JSON.parse(aj.responseText)
-			console.log(bal)
-		} catch (e) {
-			console.log(e)
-		}
-	}
-	aj.open("POST", "balance.json", true)
-	aj.send(JSON.stringify(wallet))
-}
-
-function load_wallet_content() {
+function quick_switch_wallet() {
 	var name = qswal.options[qswal.selectedIndex].text
-	//console.log(name)
-	fetch_wallet_balance(name)
+	localStorage.setItem("gocoinWalletSelected", name)
+	var e = document.createEvent("Event")
+	e.initEvent("loadwallet", false, false)
+	e.name = name
+	qswal.dispatchEvent(e)
+	console.log("Send", e)
 }

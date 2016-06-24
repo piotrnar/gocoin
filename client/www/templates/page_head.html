@@ -12,8 +12,8 @@ var doc_title = document.title
 	<table width="100%"><tr>
 		<td>{MENU_LEFT}</td>
 		<td align="center">Switch wallet:
-			<select id="qswal" onchange="load_wallet_content()"></select>
-			<img src="webui/refresh.png" class="hand" onclick="load_wallet_content()" title="Reload current wallet">
+			<select id="qswal" onchange="quick_switch_wallet()"></select>
+			<img src="webui/refresh.png" class="hand" onclick="quick_switch_wallet()" title="Reload current wallet">
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">
