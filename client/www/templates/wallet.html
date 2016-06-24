@@ -15,6 +15,19 @@ function switchwallet_button_click_browser() {
 	switch_to_webwallet(this.value)
 }
 
+function edit_address_book() {
+	showade.style.display='block'
+	addrbook_button.value = "Save Address Book"
+	addrbook_button.onclick = function() { save_address_book() }
+}
+
+function save_address_book() {
+	localStorage.setItem("gocoinAddressBook", address_book.value)
+	showade.style.display='none'
+	addrbook_button.value = "Edit Address Book"
+	addrbook_button.onclick = function() { edit_address_book() }
+}
+
 function fetch_wallet_balance(name) {
 	var wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
@@ -54,7 +67,7 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "hand"
-				td.innerText = wallet[i].label
+				td.innerText = wallet[i].label + ( (xwallet[i].virgin && rec.Outs!=null) ? ' ***' : '' )
 				td["row_idx"] = idxx
 				td.addEventListener('click', edit_label)
 
@@ -223,13 +236,23 @@ function allow_name_change_clicked() {
 </h2>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="balance.zip">balance.zip</a>)<br>
 <br>
-<div id="browser_wallets">Available wallets: </div>
+<div id="browser_wallets">Available wallets:
+
+<input style="float:right;" type="button" id="addrbook_button" value="Edit Address Book" onclick="edit_address_book()">
+</div>
 <br>
 
+<div id="showade" style="display:none">
+<h2>Address Book</h2>
+<textarea id="address_book" style="width:100%" rows="15"></textarea>
+</div>
 <hr>
+
 <div id="showwal">
 <h2>Current wallet
-<input style="float:right" type="button" value="Edit This Wallet" onclick="edit_wallet()"></h2>
+
+<input style="float:right" type="button" value="Edit This Wallet" onclick="edit_wallet()">
+</h2>
 <table class="wal bord" id="walltab">
 <tr>
 <th>Address
@@ -276,5 +299,6 @@ qswal.addEventListener("loadwallet", function(e) {
 })
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
+	address_book.value = localStorage.getItem("gocoinAddressBook")
 })
 </script>
