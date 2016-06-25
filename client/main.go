@@ -318,6 +318,13 @@ func main() {
 					common.Busy("HandleRpcBlock()")
 					HandleRpcBlock(rpcbl)
 
+				case rec := <-usif.LocksChan:
+					common.CountSafe("MainLocks")
+					common.Busy("LockedByRequest")
+					rec.In.Done()
+					rec.Out.Wait()
+					continue
+
 				case newbl := <-network.NetBlocks:
 					common.CountSafe("MainNetBlock")
 					common.Busy("HandleNetBlock()")
