@@ -77,6 +77,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Window = 100
 		ch.Consensus.EnforceUpgrade = 51
 		ch.Consensus.RejectBlock = 75
+		ch.Consensus.Enforce_CSV = 786240
 	} else {
 		ch.Consensus.Window = 1000
 		ch.Consensus.EnforceUpgrade = 750

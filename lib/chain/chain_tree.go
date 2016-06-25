@@ -89,6 +89,10 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	ch.Save()
 }
 
+func (n *BlockTreeNode) BlockVersion() (uint32) {
+	return binary.LittleEndian.Uint32(n.BlockHeader[0:4])
+}
+
 func (n *BlockTreeNode) Timestamp() (uint32) {
 	return binary.LittleEndian.Uint32(n.BlockHeader[68:72])
 }

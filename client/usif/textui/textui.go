@@ -445,6 +445,33 @@ func send_inv(par string) {
 	fmt.Println("Inv sent to all peers")
 }
 
+func analyze_bip9(par string) {
+	n := common.BlockChain.BlockTreeRoot
+	for n!=nil {
+		var i uint
+		start_block := uint(n.Height)
+		bits := make(map[uint]uint)
+		for i=0; i<2016 && n!=nil; i++ {
+			ver := n.BlockVersion()
+			if (ver&0x20000000) != 0 {
+				for bit:=uint(0); bit<=28; bit++ {
+					if (ver & (1<<bit)) != 0 {
+						bits[bit]++
+					}
+				}
+			}
+			n = n.FindPathTo(common.BlockChain.BlockTreeEnd)
+		}
+		if len(bits)>0 {
+			fmt.Print("Blocks from ", start_block, " to ", start_block+i-1, " :")
+			for k, v := range bits {
+				fmt.Print(" ", v, ":bit(", k, ")")
+			}
+			fmt.Println()
+		}
+	}
+}
+
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
@@ -465,4 +492,5 @@ func init() {
 	newUi("quit q", true, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits")
 }
