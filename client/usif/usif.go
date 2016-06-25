@@ -22,8 +22,19 @@ type OneUiReq struct {
 	Done sync.WaitGroup
 }
 
+
+// A thread that wants to lock the main thread calls:
+// In.Add(1); Out.Add(1); [put msg into LocksChan]; In.Wait(); [do synchronized code]; Out.Done()
+// The main thread, upon receiving the message, does:
+// In.Done(); Out.Wait();
+type OneLock struct {
+	In sync.WaitGroup  // main thread calls Done() on this one and then Stop.Wait()
+	Out sync.WaitGroup   // the synchronized thread calls Done
+}
+
 var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
+	LocksChan chan *OneLock = make(chan *OneLock, 1)
 
 	Exit_now bool
 	DefragUTXO bool

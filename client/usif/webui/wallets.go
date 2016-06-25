@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -63,6 +64,12 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	out = make(map[string]OneOuts)
 
+	lck := new(usif.OneLock)
+	lck.In.Add(1)
+	lck.Out.Add(1)
+	usif.LocksChan <- lck
+	lck.In.Wait()
+
 	wallet.BalanceMutex.Lock()
 	for _, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
@@ -84,6 +91,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	wallet.BalanceMutex.Unlock()
+
+	lck.Out.Done()
 
 	bx, er := json.Marshal(out)
 	if er == nil {
@@ -134,6 +143,12 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 
 	var thisbal chain.AllUnspentTx
 
+	lck := new(usif.OneLock)
+	lck.In.Add(1)
+	lck.Out.Add(1)
+	usif.LocksChan <- lck
+	lck.In.Wait()
+
 	wallet.BalanceMutex.Lock()
 	for idx, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
@@ -154,6 +169,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	wallet.BalanceMutex.Unlock()
+	lck.Out.Done()
 
 	buf := new(bytes.Buffer)
 	zi := zip.NewWriter(buf)

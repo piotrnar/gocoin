@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
@@ -48,6 +49,13 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		}
 
 		outcnt, _ := strconv.ParseUint(r.Form["outcnt"][0], 10, 32)
+
+		lck := new(usif.OneLock)
+		lck.In.Add(1)
+		lck.Out.Add(1)
+		usif.LocksChan <- lck
+		lck.In.Wait()
+		defer lck.Out.Done()
 
 		for i:=1; i<=int(outcnt); i++ {
 			is := fmt.Sprint(i)
