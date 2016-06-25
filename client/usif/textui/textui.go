@@ -451,6 +451,7 @@ func analyze_bip9(par string) {
 	for n!=nil {
 		var i uint
 		start_block := uint(n.Height)
+		start_time := n.Timestamp()
 		bits := make(map[byte]uint32)
 		for i=0; i<2016 && n!=nil; i++ {
 			ver := n.BlockVersion()
@@ -467,11 +468,15 @@ func analyze_bip9(par string) {
 			var s string
 			for k, v := range bits {
 				if all || v >= common.BlockChain.Consensus.BIP9_Treshold {
-					s += fmt.Sprint(" | ", v, " x bit(", k, ")")
+					if s!="" {
+						s += " | "
+					}
+					s += fmt.Sprint(v, " x bit(", k, ")")
 				}
 			}
 			if s!="" {
-				fmt.Println("Blocks from", start_block, "to", start_block+i-1, ":", s)
+				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
+					" block #", start_block, "-", start_block+i-1, ":", s)
 			}
 		}
 	}
