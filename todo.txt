@@ -1,5 +1,6 @@
 Lib:
 * Implement BIP9
+* Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 
 Client:
 * Implement "Child Pays for Parent Merged" (mining feature)
