@@ -82,15 +82,6 @@ function build_wallet_list() {
 			}
 		}
 	}
-	if (s=='') {
-		// create default wallet
-		s = 'DEFAULT'
-		localStorage.setItem("gocoinWal_"+s, "# Empty Wallet")
-		localStorage.setItem("gocoinWalletSelected", "s")
-		var o = document.createElement("option")
-		o.value = o.text = s
-		qswal.add(o)
-	}
 	localStorage.setItem("gocoinWallets", s)
 }
 
