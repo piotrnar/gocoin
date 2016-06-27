@@ -1,4 +1,8 @@
-1.6.4
+1.6.5
+* WebUI: Import / export wallets form/to a JSON file
+
+1.6.4 - 2016-06-27
+* Use trully volatile, quickly switachable wallets from WebUI (requires 1.5GB more RAM)
 * Changed the first parameter to NotifyTxDel() to be more descriptive (than just TxID)
 * Do not use VER_LOW_S for now (to verify mempool txs) as it is baning some peers
 * Enforce CVS verification for blocks height 417312 or higher (not for testnet)

@@ -247,6 +247,48 @@ function get_balance_zip() {
 	form.submit()
 }
 
+function export_settings() {
+	var names = localStorage.getItem("gocoinWallets").split('|')
+	var settings = {}
+	for (var i=0; i<names.length; i++) {
+		if (names[i]!="") {
+			var content = localStorage.getItem("gocoinWal_"+names[i])
+			if (typeof(content)=="string" && content.length > 0) {
+				settings[names[i]] = content
+			}
+		}
+	}
+	var jsonstring = JSON.stringify(settings)
+	var a = document.createElement("a")
+	var file = new Blob([jsonstring], {type: 'application/json'})
+	a.href = URL.createObjectURL(file)
+	a.download = "wallets.json"
+	a.click()
+}
+
+function import_file_selected(e) {
+	var f = import_file.files[0]
+	var reader = new FileReader()
+	reader.onload = function(e) {
+		//console.log('aac', e, e.target.result)
+		try {
+			var sets = JSON.parse(e.target.result)
+			var wlts = ''
+			localStorage.clear()
+			for (var nam in sets) {
+				wlts += (wlts=='') ? nam : ('|'+nam)
+				localStorage.setItem("gocoinWal_"+nam, sets[nam])
+				localStorage.setItem("gocoinWallets", wlts)
+			}
+			location.reload()
+		} catch (ex) {
+			console.log(ex)
+		}
+	};
+	reader.readAsText(f)
+}
+
+
 </script>
 <h2><span id="cur_wallet_type"></span> wallet: <span id="cur_wallet_name"></span>
 <input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
@@ -255,7 +297,8 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 <br>
 <div id="browser_wallets">Available wallets: </div>
 <br>
-
+Import settings: <input type="file" id="import_file">
+<input style="float:right" type="button" value="Export settings" onclick="export_settings()">
 <hr>
 
 <div id="showwal">
@@ -310,5 +353,6 @@ qswal.addEventListener("loadwallet", function(e) {
 })
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
+	import_file.addEventListener('change', import_file_selected, false);
 })
 </script>
