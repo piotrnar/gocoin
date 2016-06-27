@@ -462,7 +462,12 @@ document.addEventListener('DOMContentLoaded', function() {
 	txfee.onkeyup = recalc_to_pay
 	spb_to_use.value = avg_fee_spb.toFixed(10).substr(0,7)
 	recalc_inputs()
-	address_book.value = localStorage.getItem("gocoinAddressBook")
+	var abc = localStorage.getItem("gocoinAddressBook")
+	if (typeof(abc)!="string") {
+		abc = "# Empty Address Book"
+		localStorage.setItem("gocoinAddressBook", abc)
+	}
+	address_book.value = abc
 })
 
 function edit_address_book() {
