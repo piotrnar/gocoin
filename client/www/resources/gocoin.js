@@ -178,6 +178,7 @@ function parse_wallet(s) {
 
 function quick_switch_wallet() {
 	try {
+		if (qswal.options.length==0 || qswal.selectedIndex<0 || qswal.options.length<=qswal.selectedIndex) return
 		var name = qswal.options[qswal.selectedIndex].text
 		localStorage.setItem("gocoinWalletSelected", name)
 		var e = document.createEvent("Event")
