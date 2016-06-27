@@ -66,12 +66,12 @@ function build_wallet_list() {
 	var s = ''
 	for (i=0; i<names.length; i++) {
 		if (names[i]!="") {
-			var o = document.createElement("option")
 			var content = localStorage.getItem("gocoinWal_"+names[i])
 			if (typeof(content)=="string" && content.length > 0) {
+				var o = document.createElement("option")
 				o.value = o.text = names[i]
 				qswal.add(o)
-				if (localStorage.gocoinWalletSelected==names[i]) {
+				if (localStorage.getItem("gocoinWalletSelected")==names[i]) {
 					qswal.selectedIndex = qswal.length-1
 				}
 				if (s!='') s+='|'
@@ -81,6 +81,15 @@ function build_wallet_list() {
 				localStorage.removeItem("gocoinWal_"+names[i])
 			}
 		}
+	}
+	if (s=='') {
+		// create default wallet
+		s = 'DEFAULT'
+		localStorage.setItem("gocoinWal_"+s, "# Empty Wallet")
+		localStorage.setItem("gocoinWalletSelected", "s")
+		var o = document.createElement("option")
+		o.value = o.text = s
+		qswal.add(o)
 	}
 	localStorage.setItem("gocoinWallets", s)
 }

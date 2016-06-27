@@ -250,11 +250,14 @@ function get_balance_zip() {
 function export_settings() {
 	var names = localStorage.getItem("gocoinWallets").split('|')
 	var settings = {}
+	settings["home_chart"] = localStorage.getItem("home_chart")
+	settings["gocoinAddressBook"] = localStorage.getItem("gocoinAddressBook")
+	settings["gocoinWallets"] = localStorage.getItem("gocoinWallets")
 	for (var i=0; i<names.length; i++) {
 		if (names[i]!="") {
 			var content = localStorage.getItem("gocoinWal_"+names[i])
 			if (typeof(content)=="string" && content.length > 0) {
-				settings[names[i]] = content
+				settings["gocoinWal_"+names[i]] = content
 			}
 		}
 	}
@@ -276,9 +279,7 @@ function import_file_selected(e) {
 			var wlts = ''
 			localStorage.clear()
 			for (var nam in sets) {
-				wlts += (wlts=='') ? nam : ('|'+nam)
-				localStorage.setItem("gocoinWal_"+nam, sets[nam])
-				localStorage.setItem("gocoinWallets", wlts)
+				localStorage.setItem(nam, sets[nam])
 			}
 			location.reload()
 		} catch (ex) {

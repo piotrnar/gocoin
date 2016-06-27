@@ -23,8 +23,6 @@ const ADDR_LIST_SIZE = 15
 
 function build_change_list() {
 	var virgincounter = 0
-	console.log('bcl', wallet.length, changeaddrsel.options.length)
-
 	while (changeaddrsel.options.length>1) changeaddrsel.remove(1)
 	//changeaddrsel.options = [changeaddrsel.options[0]]
 	for (var i=0; i<wallet.length; i++) {
