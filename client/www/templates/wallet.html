@@ -101,9 +101,13 @@ function switch_to_webwallet(name) {
 }
 
 function edit_wallet() {
-	var name = qswal.options[qswal.selectedIndex].text
-	walletfname.value = name
-	walletdata.value = localStorage.getItem("gocoinWal_"+name)
+	try {
+		walletfname.value = qswal.options[qswal.selectedIndex].text
+		walletdata.value = localStorage.getItem("gocoinWal_"+name)
+	} catch (e) {
+		walletfname.value = "DEFAULT"
+		walletdata.value = "# New empty wallet"
+	}
 	showwal.style.display='none'
 	formwal.style.display='block'
 	edit_in_progress = true
@@ -187,23 +191,22 @@ function delete_wallet() {
 }
 
 function create_switch_buttons() {
-	var i
+	try {
+		var wal_name = qswal.options[qswal.selectedIndex].text
+		cur_wallet_name.innerText = wal_name
 
-	cur_wallet_type.innerText = "Browser"
-	var wal_name = qswal.options[qswal.selectedIndex].text
-	cur_wallet_name.innerText = wal_name
-	if (wal_name=="DEFAULT") {
+		for (var i=0; i<qswal.options.length; i++) {
+			var na = qswal.options[i].value
+			var but = document.createElement("input")
+			but.type = "button"
+			but.value = na
+			but.style.margin = 5
+			but.onclick = switchwallet_button_click_browser
+			browser_wallets.appendChild(but)
+		}
+	} catch (e) {
+		cur_wallet_name.innerText = 'none (edit to create)'
 		delwal_button.disabled = true
-	}
-
-	for (i=0; i<qswal.options.length; i++) {
-		var na = qswal.options[i].value
-		var but = document.createElement("input")
-		but.type = "button"
-		but.value = na
-		but.style.margin = 5
-		but.onclick = switchwallet_button_click_browser
-		browser_wallets.appendChild(but)
 	}
 }
 document.addEventListener('DOMContentLoaded', function() {
@@ -291,14 +294,14 @@ function import_file_selected(e) {
 
 
 </script>
-<h2><span id="cur_wallet_type"></span> wallet: <span id="cur_wallet_name"></span>
+<h2>Current wallet: <span id="cur_wallet_name"></span>
 <input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </h2>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)<br>
 <br>
 <div id="browser_wallets">Available wallets: </div>
 <br>
-Import settings: <input type="file" id="import_file">
+Import settings: <input type="file" id="import_file" accept=".json">
 <input style="float:right" type="button" value="Export settings" onclick="export_settings()">
 <hr>
 
