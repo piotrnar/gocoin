@@ -137,41 +137,54 @@ function int2ip(i) {
 }
 
 function valid_btc_addr(s) {
-	if (s.length<min_btc_addr_len) return false
-	for (var i=0; i<s.length; s++) {
-		if (b58set.indexOf(s[i])==-1) {
-			return false
+	try {
+		if (s.length<min_btc_addr_len) return false
+		for (var i=0; i<s.length; s++) {
+			if (b58set.indexOf(s[i])==-1) {
+				return false
+			}
 		}
+		return true
+	} catch (e) {
+		console.log("valid_btc_addr:", e)
+		return false
 	}
-	return true
 }
 
 function parse_wallet(s) {
-	var cont = s.split('\n')
 	var wallet = new Array()
-	for (var i=0; i<cont.length; i++) {
-		var line = cont[i].trim()
-		var sp_idx = line.indexOf(' ')
-		var addr, label
-		if (sp_idx==-1) {
-			addr = line
-			label = ''
-		} else {
-			addr = line.substr(0, sp_idx)
-			label = line.substr(sp_idx+1)
+	try {
+		var cont = s.split('\n')
+		for (var i=0; i<cont.length; i++) {
+			var line = cont[i].trim()
+			var sp_idx = line.indexOf(' ')
+			var addr, label
+			if (sp_idx==-1) {
+				addr = line
+				label = ''
+			} else {
+				addr = line.substr(0, sp_idx)
+				label = line.substr(sp_idx+1)
+			}
+			if (valid_btc_addr(addr)) {
+				wallet.push({'addr':addr, 'label':label, 'virgin':cont[i][0]==' '})
+			}
 		}
-		if (valid_btc_addr(addr)) {
-			wallet.push({'addr':addr, 'label':label, 'virgin':cont[i][0]==' '})
-		}
+	} catch (e) {
+		console.log("parse_wallet:", e)
 	}
 	return wallet
 }
 
 function quick_switch_wallet() {
-	var name = qswal.options[qswal.selectedIndex].text
-	localStorage.setItem("gocoinWalletSelected", name)
-	var e = document.createEvent("Event")
-	e.initEvent("loadwallet", false, false)
-	e.name = name
-	qswal.dispatchEvent(e)
+	try {
+		var name = qswal.options[qswal.selectedIndex].text
+		localStorage.setItem("gocoinWalletSelected", name)
+		var e = document.createEvent("Event")
+		e.initEvent("loadwallet", false, false)
+		e.name = name
+		qswal.dispatchEvent(e)
+	} catch (e) {
+		console.log("quick_switch_wallet:", e)
+	}
 }
