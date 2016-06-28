@@ -25,7 +25,6 @@ var (
 		Testnet bool
 		ConnectOnly string
 		Datadir string
-		Walletdir string
 		TextUI struct {
 			Enabled bool
 		}
@@ -172,10 +171,6 @@ func InitConfig() {
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
-	}
-
-	if CFG.Walletdir == "" {
-		CFG.Walletdir = CFG.Datadir + string(os.PathSeparator) + DataSubdir() + string(os.PathSeparator) + "wallet"
 	}
 
 	if flag.Lookup("h") != nil {

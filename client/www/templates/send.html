@@ -193,7 +193,6 @@ function recalc_to_pay() {
 		} else {
 			el.classList.remove('err')
 			totsend += v
-			console.log(' totsend', v, totsend)
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
 			if (document.getElementById('inadr'+idx).value.length > 50) {
 				ets_bytes += StealthIndexLen // long string = stealth address

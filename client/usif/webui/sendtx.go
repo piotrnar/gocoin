@@ -22,6 +22,14 @@ const (
 )
 
 
+type MultisigAddr struct {
+	MultiAddress string
+	ScriptPubKey string
+	KeysRequired, KeysProvided uint
+	RedeemScript string
+	ListOfAddres []string
+}
+
 func dl_payment(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -34,9 +42,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		var pay_cmd string
 		var totalinput, spentsofar uint64
 		var change_addr *btc.BtcAddr
-		var multisig_input []*wallet.MultisigAddr
-
-		addrs_to_msign := make(map[string]bool)
 
 		tx := new(btc.Tx)
 		tx.Version = 1
@@ -78,15 +83,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 							tin.Input = po
 							tin.Sequence = uint32(seq)
 							tx.TxIn = append(tx.TxIn, tin)
-
-							// Add new multisig address description
-							_, msi := wallet.IsMultisig(addr)
-							multisig_input = append(multisig_input, msi)
-							if msi != nil {
-								for ai := range msi.ListOfAddres {
-									addrs_to_msign[msi.ListOfAddres[ai]] = true
-								}
-							}
 
 							// Add the value to total input value
 							totalinput += res.Value
@@ -206,34 +202,9 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(fz, thisbal[i].UnspentTextLine())
 		}
 
-		if len(addrs_to_msign) > 0 {
-			// Multisig (or mixed) transaction ...
-			for i := range multisig_input {
-				if multisig_input[i] == nil {
-					continue
-				}
-				d, er := hex.DecodeString(multisig_input[i].RedeemScript)
-				if er != nil {
-					println("ERROR parsing hex RedeemScript:", er.Error())
-					continue
-				}
-				ms, er := btc.NewMultiSigFromP2SH(d)
-				if er != nil {
-					println("ERROR parsing bin RedeemScript:", er.Error())
-					continue
-				}
-				tx.TxIn[i].ScriptSig = ms.Bytes()
-			}
-			fz, _ = zi.Create("multi_" + common.CFG.WebUI.PayCommandName)
-			fmt.Fprintln(fz, "wallet -raw tx2sign.txt")
-			for k, _ := range addrs_to_msign {
-				fmt.Fprintln(fz, "wallet -msign", k, "-raw ...")
-			}
-		} else {
-			if pay_cmd!="" {
-				fz, _ = zi.Create(common.CFG.WebUI.PayCommandName)
-				fz.Write([]byte(pay_cmd))
-			}
+		if pay_cmd!="" {
+			fz, _ = zi.Create(common.CFG.WebUI.PayCommandName)
+			fz.Write([]byte(pay_cmd))
 		}
 
 		// Non-multisig transaction ...

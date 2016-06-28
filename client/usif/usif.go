@@ -80,7 +80,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 
 			if btc.IsP2SH(po.Pk_script) {
 				so := btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
-				s += fmt.Sprintf("  + %s sigops", float64(po.Value)/1e8, ads)
+				s += fmt.Sprintf("  + %d sigops", so)
 				sigops += so
 			}
 

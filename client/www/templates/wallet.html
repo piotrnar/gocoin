@@ -13,6 +13,9 @@ td.outcnt {
 var edit_in_progress = false
 var wallet;
 function switchwallet_button_click_browser() {
+	if (edit_in_progress) {
+		close_editor()
+	}
 	switch_to_webwallet(this.value)
 }
 
@@ -334,9 +337,8 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <tr><td colspan="2">
 	<textarea name="walletdata" id="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
 	<i>
-	Empty lines are ignored.<br>
-	Put <b>#</b> character in front of a line, to comment it out.<br>
-	Put <b>@</b> character followed by filename in front of a line, to include content of another server wallet.<br>
+	Only list your wallet's <b>public adddresses</b> here!
+	Empty lines and lines starting with <b>#</b> are ignored.<br>
 	</i>
 </form>
 </table>
@@ -354,6 +356,9 @@ blno.addEventListener("lastblock", function(e) {
 	}
 })
 qswal.addEventListener("loadwallet", function(e) {
+	if (edit_in_progress) {
+		close_editor()
+	}
 	fetch_wallet_balance(e.name)
 })
 document.addEventListener('DOMContentLoaded', function() {

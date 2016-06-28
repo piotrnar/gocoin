@@ -77,13 +77,14 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		if e==nil {
 			var newrec OneOuts
 			if rec, ok := wallet.AllBalances[aa.Hash160]; ok {
-				newrec.Value = rec.Value
+				newrec.Value = rec.Value&^wallet.VALUE_P2SH_BIT
 				for _, v := range rec.Unsp {
 					if qr, vout := v.GetRec(); qr!=nil {
 						if oo := qr.Outs[vout]; oo!=nil {
 							newrec.Outs = append(newrec.Outs, OneOut{
 								TxId : btc.NewUint256(qr.TxID[:]).String(), Vout : vout,
-								Value : oo.Value, Height : qr.InBlock, Coinbase : qr.Coinbase})
+								Value : oo.Value,
+								Height : qr.InBlock, Coinbase : qr.Coinbase})
 							}
 					}
 				}
