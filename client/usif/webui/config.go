@@ -1,14 +1,12 @@
 package webui
 
 import (
-	"os"
 	"strconv"
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 )
@@ -31,17 +29,6 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 				common.SaveConfig()
 			}
 			http.Redirect(w, r, "/", http.StatusFound)
-			return
-		}
-
-		if len(r.Form["walletdata"])>0 && len(r.Form["walletfname"])>0 {
-			fn := r.Form["walletfname"][0]
-			if fn!="" {
-				fn = common.CFG.Walletdir + string(os.PathSeparator) + fn
-				ioutil.WriteFile(fn, []byte(r.Form["walletdata"][0]), 0660)
-				wallet.LoadWallet(fn)
-			}
-			http.Redirect(w, r, "/wal", http.StatusFound)
 			return
 		}
 

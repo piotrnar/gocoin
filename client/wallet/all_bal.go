@@ -12,7 +12,6 @@ import (
 
 
 const VALUE_P2SH_BIT = 1<<63
-const BAL_MIN_VALUE = 1
 
 var (
 	AllBalances map[[20]byte]*OneAllAddrBal = make(map[[20]byte]*OneAllAddrBal)
@@ -50,7 +49,7 @@ func NewUTXO(tx *chain.QdbRec) {
 		if out == nil {
 			continue
 		}
-		if out.Value < BAL_MIN_VALUE {
+		if out.Value < common.CFG.AllBalances.MinValue {
 			continue
 		}
 		if out.IsP2KH() {
@@ -90,7 +89,7 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 		if out == nil {
 			continue
 		}
-		if out.Value < BAL_MIN_VALUE {
+		if out.Value < common.CFG.AllBalances.MinValue {
 			continue
 		}
 		if out.IsP2KH() {
@@ -137,8 +136,4 @@ func TxNotifyDel(tx *chain.QdbRec, outs []bool) {
 	BalanceMutex.Lock()
 	all_del_utxos(tx, outs)
 	BalanceMutex.Unlock()
-}
-
-func LoadWallet(fn string) {
-	println("LoadWallet", fn, "- disabled!")
 }

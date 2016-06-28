@@ -11,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -182,7 +183,11 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		was_tx[thisbal[i].TxPrevOut.Hash] = true
 		txid := btc.NewUint256(thisbal[i].TxPrevOut.Hash[:])
 		fz, _ := zi.Create("balance/" + txid.String() + ".tx")
-		wallet.GetRawTransaction(thisbal[i].MinedAt, txid, fz)
+		if dat, er := common.BlockChain.GetRawTx(thisbal[i].MinedAt, txid); er == nil {
+			fz.Write(dat)
+		} else {
+			println(er.Error())
+		}
 	}
 
 	fz, _ := zi.Create("balance/unspent.txt")

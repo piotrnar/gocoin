@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"errors"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -64,4 +65,48 @@ func (ch *Chain)loadBlockIndex() {
 			panic("Last btc.Block Hash not found")
 		}
 	}
+}
+
+func (ch *Chain) GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, er error) {
+	// Find the block with the indicated Height in the main tree
+	ch.BlockIndexAccess.Lock()
+	n := ch.BlockTreeEnd
+	if n.Height < BlockHeight {
+		println(n.Height, BlockHeight)
+		ch.BlockIndexAccess.Unlock()
+		er = errors.New("GetRawTx: block height too big")
+		return
+	}
+	for n.Height > BlockHeight {
+		n = n.Parent
+	}
+	ch.BlockIndexAccess.Unlock()
+
+	bd, _, e := ch.Blocks.BlockGet(n.BlockHash)
+	if e != nil {
+		er = errors.New("GetRawTx: block not in the database")
+		return
+	}
+
+	bl, e := btc.NewBlock(bd)
+	if e != nil {
+		er = errors.New("GetRawTx: NewBlock failed")
+		return
+	}
+
+	e = bl.BuildTxList()
+	if e != nil {
+		er = errors.New("GetRawTx: BuildTxList failed")
+		return
+	}
+
+	// Find the transaction we need and store it in the file
+	for i := range bl.Txs {
+		if bl.Txs[i].Hash.Equal(txid) {
+			data = bl.Txs[i].Serialize()
+			return
+		}
+	}
+	er = errors.New("GetRawTx: BuildTxList failed")
+	return
 }

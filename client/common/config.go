@@ -84,6 +84,10 @@ var (
 		AverageFeeBlocks uint
 		AverageBlockSizeBlocks uint
 		UserAgent string
+		AllBalances struct {
+			Enabled bool     // Enable the node to keep database of all the P2SH and P2KH balances
+			MinValue uint64  // Do not keep balance records for values lower than this
+		}
 	}
 
 	mutex_cfg sync.Mutex
@@ -137,6 +141,9 @@ func InitConfig() {
 	CFG.AverageFeeBlocks = 4*6 /*last 4 hours*/
 	CFG.AverageBlockSizeBlocks = 12*6 /*half a day*/
 	CFG.UserAgent = DefaultUserAgent
+
+	CFG.AllBalances.Enabled = true
+	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e==nil && len(cfgfilecontent)>0 {

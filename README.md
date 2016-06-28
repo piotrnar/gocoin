@@ -41,8 +41,8 @@ where you can find extended documentation, including **User Manual**.
 **client** / **downloader**:
 
 * 64-bit architecture OS and Go compiler.
-* File system supporting files larger than 4GB.
-* At least 4GB of system memory, but 8GB highly recommended.
+* File system supporting files larger than 4GB
+* At least 8GB of system memory.
 
 
 **wallet**:
