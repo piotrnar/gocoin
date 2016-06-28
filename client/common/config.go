@@ -76,7 +76,7 @@ var (
 		Beeps struct {
 			NewBlock bool  // beep when a new block has been mined
 			ActiveFork bool  // triple beep when there is a fork
-			NewBalance bool // been when a balance has changed
+			NewBalance bool // Deprecated!
 			MinerID string // beep when a bew block is mined with this string in coinbase
 		}
 		HashrateHours uint
