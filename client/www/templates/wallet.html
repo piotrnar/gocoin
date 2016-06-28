@@ -102,7 +102,8 @@ function switch_to_webwallet(name) {
 
 function edit_wallet() {
 	try {
-		walletfname.value = qswal.options[qswal.selectedIndex].text
+		var name = qswal.options[qswal.selectedIndex].text
+		walletfname.value = name
 		walletdata.value = localStorage.getItem("gocoinWal_"+name)
 	} catch (e) {
 		walletfname.value = "DEFAULT"
