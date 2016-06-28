@@ -53,7 +53,7 @@ func host_init() {
 
 	// Create default wallet file if does not exist
 	println("wallet dir", common.CFG.Walletdir)
-	os.MkdirAll(common.CFG.Walletdir+string(os.PathSeparator)+"stealth", 0770)
+	os.MkdirAll(common.CFG.Walletdir+string(os.PathSeparator)+"multisig", 0770)
 
 	fmt.Println("Loading UTXO db while checking balances of all P2SH and P2KH addresses")
 

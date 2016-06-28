@@ -53,11 +53,11 @@ The data dir contains:<br>
 <td class="cfg_name"> Walletdir</td>
 <td class="cfg_type"> string</td>
 <td> &lt;Datadir&gt;/wallet</td>
-<td class="cfg_info"> Specify where the wallet files (containing public addresses) are stored. <br>
+<td class="cfg_info"> In versions up to 1.6.4 it would specify where the wallet files (containing public addresses) are stored. <br>
+For higher versions, it is only looking into "multisig/" sub-folder for the json files.<br>
  By default it is a sub-folder in the data directory, but it can be changed to increase privacy.</td>
 </tr>
-<tr>
-<td class="cfg_name"> TextUI.Enabled</td>
+<tr><td class="cfg_name"> TextUI.Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
@@ -237,7 +237,9 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Beeps.NewBalance</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Been when a balance of the currently selected wallet has changed.</td>
+<td class="cfg_info">
+Beep when a balance of the currently selected wallet has changed.
+<b>Deprecated since version 1.7.0</b>.</td>
 </tr>
 <tr>
 <td class="cfg_name"> Beeps.MinerID</td>
@@ -274,6 +276,12 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_type"> string</td>
 <td> "/Gocoin:<i>?.?.?</i>/"</td>
 <td class="cfg_info"> Which string shall be reported by the node as User-Agent (in the version messages).</td>
+</tr>
+<tr>
+<td class="cfg_name"> AllBalances.MinValue</td>
+<td class="cfg_type"> uint</td>
+<td> 10000</td>
+<td class="cfg_info"> The addresses balance database does not include inputs carrying value lover than this many Satoshis.</td>
 </tr>
 </tbody>
 </table>
