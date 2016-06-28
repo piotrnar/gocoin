@@ -94,29 +94,6 @@ At any moment when signing your transaction it may be useful to look inside it b
 <br>
 <br>
 
-<h3>1. The convenient way: having the JSON files in wallet/multisig</h3>
-
-<b>A) Download payment.zip</b><br>
-First select the inputs you want to spend, fill in the transaction outputs and download the <b>payment.zip</b>, just like you'd be doing any other spend via <b>MakeTx</b> tab.<br>
-<br>
-
-<b>B) Do the multisig signing</b><br>
-For each required multisig address, take the most recently created transaction file (starting from the initial <code style>tx2sign.txt</code>) to a desired wallet machine and execute there:<br>
-<code>&nbsp;&nbsp;&nbsp;&nbsp;wallet -raw &lt;the_tx_file.txt&gt;</code><br>
-<br>
-<i><b>Note</b>: If you do not want to sign with all the private keys known to the wallet, specify which key should be used by adding "<code>-msign &lt;signing_bitcoin_address&gt;</code>"
-parameter. Inside <b>payment.zip</b> there is an extra text file, containing the commands that you shall executed for each specific address.
-Find the line with a matching address and execute it at the wallet owning private key for it (replace <code>...</code>" with a proper file name).
-Depending how many signatures you need, you may not always need all these commands.</i><br>
-<br>
-
-<b>C) Optional: only if you chose any non-multisig inputs at step A</b><br>
-Take the most recently created transaction file and the balance folder to the proper location/wallet.<br>
-Sign the non-multisig outputs with command like this: <code>wallet -raw </code><code>&lt;the_most_recently_signed_tx_file.txt&gt;</code><br>
-<code>You can also do this operation at the begging (before adding multisig signatures), or at any moment in between.</code><br>
-<br>
-
-<h3>2. The paranoid way: not having the JSON files in wallet/multisig</h3>
 Select the input you want to spend In <b>MakeTx</b> page. You can select several inputs from the same address, but do not mix different addresses here.<br>
 Fill in the payment details as usually and download the <b>payment.zip</b><br>
 What you need at this moment is just the <b>tx2sign.txt</b> from the zip.<br>
@@ -124,7 +101,7 @@ What you need at this moment is just the <b>tx2sign.txt</b> from the zip.<br>
 
 Now take the value (the hexdump) of "redeemScript" from the .json file describing the address that you are spending money from (created before with
 <code>mkmulti</code>).<br>
-It doesn't quite matter on which PC you would execute this command, but since you are paranoid already, better do it in a cold storage:<br>
+It doesn't quite matter on which PC you would execute this command:<br>
 <code>&nbsp;&nbsp;&nbsp;&nbsp;wallet -raw tx2sign.txt -p2sh &lt;hexdump_value_of_redeemScript&gt;</code><br>
 This command should produce file <b><code>multi2sign.txt</code></b> - that is the file you will need to sing now.<br>
 <br>
