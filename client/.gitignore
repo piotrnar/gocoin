@@ -1,6 +1,6 @@
 *.txt
 balance/
 client
-gocoin.conf
+gocoin*.conf
 .stealth
 *.bat
