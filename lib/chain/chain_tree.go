@@ -166,6 +166,18 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 }
 
 
+// Check whether the given node has all its parent blocks already comitted
+func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
+	for dst!=ch.BlockTreeRoot {
+		dst = dst.Parent
+		if dst==nil || dst.TxCount==0 {
+			return false
+		}
+	}
+	return true
+}
+
+
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {

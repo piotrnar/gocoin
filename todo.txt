@@ -3,6 +3,7 @@ Lib:
 * Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 
 Client:
+* When CommitBlock() returns arror, discard all the headers that depend on it
 * Implement "Child Pays for Parent Merged" (mining feature)
 * Check how the "MoveToBlock cannot continue" solution works in reality
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.

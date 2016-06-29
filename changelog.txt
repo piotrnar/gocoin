@@ -2,6 +2,7 @@
 * AllBalances mode - enabled by config value AllBalances
 * WebUI: Import / export wallets form/to a JSON file
 * Switched off support for stealth addresses
+* Client: do not try to commit a block until all off its parents are done - added HasAllParents() method
 
 1.6.4 - 2016-06-27
 * Use trully volatile, quickly switachable wallets from WebUI (requires 1.5GB more RAM)

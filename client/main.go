@@ -99,10 +99,8 @@ func retry_cached_blocks() bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	if int(newbl.Block.Height)-int(common.BlockChain.BlockTreeEnd.Height) > 1 {
+	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
-		//println("try block", newbl.Block.Height, "later as now we are at", common.BlockChain.BlockTreeEnd.Height)
-		//network.NetBlocks <- newbl
 		network.CachedBlocks = append(network.CachedBlocks, newbl)
 		common.CountSafe("BlockPostone")
 		return
