@@ -168,13 +168,30 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 
 // Check whether the given node has all its parent blocks already comitted
 func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
-	for dst!=ch.BlockTreeRoot {
+	for {
 		dst = dst.Parent
+		if ch.OnActiveBranch(dst) {
+			return true
+		}
 		if dst==nil || dst.TxCount==0 {
 			return false
 		}
 	}
-	return true
+}
+
+
+// returns true if the given node is on the active branch
+func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
+	top := ch.BlockTreeEnd
+	for {
+		if dst==top {
+			return true
+		}
+		if dst.Height>=top.Height {
+			return false
+		}
+		top = top.Parent
+	}
 }
 
 
