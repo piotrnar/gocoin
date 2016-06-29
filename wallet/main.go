@@ -53,6 +53,7 @@ var (
 
 	// Print a public key of a give bitcoin address
 	p2sh *string  = flag.String("p2sh", "", "Insert P2SH script into each transaction input (use together with -raw)")
+	input *int  = flag.Int("input", -1, "Insert P2SH script only at this intput number (-1 for all inputs)")
 	multisign *string  = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 	allowextramsigns *bool = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 

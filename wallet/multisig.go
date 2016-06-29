@@ -35,8 +35,10 @@ func make_p2sh() {
 	sd := ms.Bytes()
 
 	for i := range tx.TxIn {
-		tx.TxIn[i].ScriptSig = sd
-		fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(tx.SignatureHash(d, i, btc.SIGHASH_ALL)))
+		if *input<0 || i==*input {
+			tx.TxIn[i].ScriptSig = sd
+			fmt.Println("Input number", i, " - hash to sign:", hex.EncodeToString(tx.SignatureHash(d, i, btc.SIGHASH_ALL)))
+		}
 	}
 	ioutil.WriteFile(MultiToSignOut, []byte(hex.EncodeToString(tx.Serialize())), 0666)
 	fmt.Println("Transaction with", len(tx.TxIn), "inputs ready for multi-signing, stored in", MultiToSignOut)
