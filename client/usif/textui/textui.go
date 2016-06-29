@@ -135,6 +135,8 @@ func show_info(par string) {
 
 	network.MutexRcv.Lock()
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	discarded := len(network.DiscardedBlocks)
+	cached := len(network.CachedBlocks)
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
@@ -176,7 +178,8 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", lib.Version,
 		"  Threads:", sys.UseThreads,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt)
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
+		"  cach:", cached, "  dis:", discarded)
 }
 
 func show_counters(par string) {

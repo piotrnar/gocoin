@@ -44,4 +44,5 @@ var (
 	NetTxs chan *TxRcvd = make(chan *TxRcvd, 2000)
 
 	CachedBlocks []*BlockRcvd
+	DiscardedBlocks map[[btc.Uint256IdxLen]byte] bool = make(map[[btc.Uint256IdxLen]byte] bool)
 )

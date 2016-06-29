@@ -9,8 +9,9 @@ import (
 	"runtime"
 	"os/signal"
 	"runtime/debug"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/rpcapi"
@@ -22,8 +23,10 @@ import (
 )
 
 
-var killchan chan os.Signal = make(chan os.Signal)
-var retryCachedBlocks bool
+var (
+	killchan chan os.Signal = make(chan os.Signal)
+	retryCachedBlocks bool
+)
 
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
@@ -65,6 +68,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			network.LastCommitedHeader = common.BlockChain.BlockTreeEnd
 			println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
 		}
+		network.DiscardedBlocks[newbl.Hash.BIdx()] = true
 		network.MutexRcv.Unlock()
 	}
 	return
@@ -76,7 +80,12 @@ func retry_cached_blocks() bool {
 	common.CountSafe("RedoCachedBlks")
 	for idx < len(network.CachedBlocks) {
 		newbl := network.CachedBlocks[idx]
-		if newbl.Block.Height==common.BlockChain.BlockTreeEnd.Height+1 {
+		if CheckParentDiscarded(newbl.BlockTreeNode) {
+			common.CountSafe("DiscardCachedBlock")
+			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
+			return len(network.CachedBlocks)>0
+		}
+		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 			common.Busy("Cache.LocalAcceptBlock "+newbl.Block.Hash.String())
 			e := LocalAcceptBlock(newbl)
 			if e != nil {
@@ -97,8 +106,26 @@ func retry_cached_blocks() bool {
 }
 
 
+// Return true iof the block's parent is on the DiscardedBlocks list
+// Add it to DiscardedBlocks, if returning true
+func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
+	network.MutexRcv.Lock()
+	defer network.MutexRcv.Unlock()
+	if network.DiscardedBlocks[n.Parent.BlockHash.BIdx()] {
+		network.DiscardedBlocks[n.BlockHash.BIdx()] = true
+		return true
+	}
+	return false
+}
+
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
+	if CheckParentDiscarded(newbl.BlockTreeNode) {
+		common.CountSafe("DiscardFreshBlockA")
+		retryCachedBlocks = len(network.CachedBlocks)>0
+		return
+	}
+
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
 		network.CachedBlocks = append(network.CachedBlocks, newbl)
@@ -109,6 +136,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	common.Busy("LocalAcceptBlock "+newbl.Hash.String())
 	e := LocalAcceptBlock(newbl)
 	if e != nil {
+		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock:", e.Error())
 		newbl.Conn.DoS("LocalAcceptBl")
 	} else {
