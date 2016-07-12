@@ -5,6 +5,7 @@
 * Client: do not try to commit a block until all off its parents are done - added HasAllParents() method
 * Client: CommitBlock() returns error, discard all the blocks that depend on it - added network.DiscardedBlocks
 * Wallet: "-p2sh <hex>" command can be used with "-input <int>" to alter only a single input of the transaction
+* WebUI: Option to show averaged value of the blocks' sizes, tx counts, SPBs
 
 1.6.4 - 2016-06-27
 * Use trully volatile, quickly switachable wallets from WebUI (requires 1.5GB more RAM)

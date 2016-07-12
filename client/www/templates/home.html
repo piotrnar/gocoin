@@ -4,11 +4,13 @@
 
 <table width="100%">
 <tr><td colspan="2">
-<span onclick="chart_type_siz.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"> Blocksize KB</span>
+<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span onclick="chart_type_siz.click()" style="cursor:pointer"> Blocksize KB</span>
 &nbsp;&bull;&nbsp;
-<span onclick="chart_type_txs.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"> Transactions</span>
+<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span onclick="chart_type_txs.click()" style="cursor:pointer"> Transactions</span>
 &nbsp;&bull;&nbsp;
-<span onclick="chart_type_spb.click()" style="cursor:pointer"><input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"> Fee SPB</span>
+<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"><span onclick="chart_type_spb.click()" style="cursor:pointer"> Fee SPB</span>
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span onclick="chart_type_avg.click()" style="cursor:pointer"> <span id="avg_size">.</span> blocks average</span>
 <div id="chart" style="height:200px;margin:5px"></div>
 
 
@@ -130,10 +132,14 @@
 var previousPoint = null;
 var cs
 
+const blks_average = 6
+
 function remember_chart_setting() {
 	var mod = localStorage.getItem("home_chart")
 	if ((mod+'').length!=3) mod = "siz"
 	document.getElementById('chart_type_'+mod).checked = true
+	chart_type_avg.checked = localStorage.getItem("home_chart_avg") == 'true'
+	avg_size.innerText = blks_average
 }
 remember_chart_setting()
 
@@ -171,7 +177,6 @@ function handlehover(event, pos, item) {
 	}
 }
 
-
 function draw_chart() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -201,6 +206,7 @@ function draw_chart() {
 				plot_data[0].color = 4
 				localStorage.setItem("home_chart", "txs")
 			}
+			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
 
 			cs = new Array()
 			for (var i=0; i<_cs.length; i++) {
@@ -211,12 +217,26 @@ function draw_chart() {
 					continue // ignore blocks with a single conbase tx
 				}
 				cs.push(_cs[i])
-				if (chart_type_siz.checked) {
-					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
-				} else if (chart_type_spb.checked) {
-					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
+				if (chart_type_avg.checked) {
+					var sum=0;
+					for (var ii=i-blks_average; ii<i; ii++) {
+						if (chart_type_siz.checked) {
+							sum += _cs[(ii<0)?0:ii].Size/1000.0
+						} else if (chart_type_spb.checked) {
+							sum += _cs[(ii<0)?0:ii].FeeSPB
+						} else {
+							sum += _cs[(ii<0)?0:ii].TxCnt
+						}
+					}
+					plot_data[0].data.push([_cs[i].Timestamp*1000, sum/blks_average])
 				} else {
-					plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
+					if (chart_type_siz.checked) {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
+					} else if (chart_type_spb.checked) {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
+					} else {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
+					}
 				}
 			}
 
