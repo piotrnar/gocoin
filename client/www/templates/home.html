@@ -219,7 +219,7 @@ function draw_chart() {
 				cs.push(_cs[i])
 				if (chart_type_avg.checked) {
 					var sum=0;
-					for (var ii=i-blks_average; ii<i; ii++) {
+					for (var ii=i-blks_average+1; ii<=i; ii++) {
 						if (chart_type_siz.checked) {
 							sum += _cs[(ii<0)?0:ii].Size/1000.0
 						} else if (chart_type_spb.checked) {
