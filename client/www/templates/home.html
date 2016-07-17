@@ -218,17 +218,23 @@ function draw_chart() {
 				}
 				cs.push(_cs[i])
 				if (chart_type_avg.checked) {
-					var sum=0;
-					for (var ii=i-blks_average+1; ii<=i; ii++) {
+					var sum=0, avgcnt=0;
+					for (var ii=i; avgcnt<blks_average && ii>=0; ii--) {
+						if (_cs[i].TxCnt==1) {
+							continue
+						}
+						avgcnt++;
 						if (chart_type_siz.checked) {
-							sum += _cs[(ii<0)?0:ii].Size/1000.0
+							sum += _cs[ii].Size/1000.0
 						} else if (chart_type_spb.checked) {
-							sum += _cs[(ii<0)?0:ii].FeeSPB
+							sum += _cs[ii].FeeSPB
 						} else {
-							sum += _cs[(ii<0)?0:ii].TxCnt
+							sum += _cs[ii].TxCnt
 						}
 					}
-					plot_data[0].data.push([_cs[i].Timestamp*1000, sum/blks_average])
+					if (avgcnt>0) {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, sum/avgcnt])
+					}
 				} else {
 					if (chart_type_siz.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
