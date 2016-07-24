@@ -1,4 +1,4 @@
-1.7.0
+1.7.0 - 2016-07-24
 * AllBalances mode - enabled by config value AllBalances
 * WebUI: Import / export wallets form/to a JSON file
 * Switched off support for stealth addresses
