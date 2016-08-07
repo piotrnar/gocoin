@@ -1,3 +1,6 @@
+1.7.1:
+* WebUI: new buttons "Move left" & "Move right" in "Wallet" tab, for sorting order of the wallets
+
 1.7.0 - 2016-07-24
 * AllBalances mode - enabled by config value AllBalances
 * WebUI: Import / export wallets form/to a JSON file

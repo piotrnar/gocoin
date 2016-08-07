@@ -97,10 +97,61 @@ function switch_to_webwallet(name) {
 	for (var i in qswal.options) {
 		if (qswal.options[i].text==name) {
 			qswal.selectedIndex = i
+			enable_move_buttons()
 			break
 		}
 	}
 	fetch_wallet_balance(name)
+}
+
+function enable_move_buttons() {
+	if (qswal.options.length>=2) {
+		move_left.disabled = qswal.selectedIndex < 1
+		move_right.disabled = qswal.selectedIndex > qswal.options.length-2
+	} else {
+		move_left.disabled = move_right.disabled = true
+	}
+}
+
+function move_wallet_left() {
+	console.log("move_wallet_left")
+	if (qswal.options.length<2) {
+		return
+	}
+	if (qswal.selectedIndex<1) {
+		return
+	}
+	var i, names = ''
+	for (i=0; i<qswal.selectedIndex-1; i++) {
+		names += '|' + qswal.options[i].text
+	}
+	names += '|' + qswal.options[qswal.selectedIndex].text
+	names += '|' + qswal.options[qswal.selectedIndex-1].text
+	for (i=qswal.selectedIndex+1; i<qswal.options.length; i++) {
+		names += '|' + qswal.options[i].text
+	}
+	localStorage.setItem("gocoinWallets", names.substr(1))
+	location.reload()
+}
+
+function move_wallet_right() {
+	if (qswal.options.length<2) {
+		return
+	}
+	if (qswal.selectedIndex > qswal.options.length-2) {
+		return
+	}
+	var i, names = ''
+	for (i=0; i<qswal.selectedIndex; i++) {
+		names += '|' + qswal.options[i].text
+	}
+	names += '|' + qswal.options[qswal.selectedIndex+1].text
+	names += '|' + qswal.options[qswal.selectedIndex].text
+	for (i=qswal.selectedIndex+2; i<qswal.options.length; i++) {
+		names += '|' + qswal.options[i].text
+	}
+	localStorage.setItem("gocoinWallets", names.substr(1))
+	location.reload()
 }
 
 function edit_wallet() {
@@ -215,6 +266,7 @@ function create_switch_buttons() {
 }
 document.addEventListener('DOMContentLoaded', function() {
 	create_switch_buttons()
+	enable_move_buttons()
 })
 
 
@@ -299,7 +351,11 @@ function import_file_selected(e) {
 
 </script>
 <h2>Current wallet: <span id="cur_wallet_name"></span>
-<input style="float:right" type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
+<span style="float:right" >
+<input id="move_left" type="button" value="Move left" onclick="move_wallet_left()">
+<input id="move_right" type="button" value="Move right"  onclick="move_wallet_right()">
+<input type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
+</span>
 </h2>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)<br>
 <br>
@@ -312,7 +368,9 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <div id="showwal">
 <h2>Current wallet
 
-<input style="float:right" type="button" value="Edit Wallet" onclick="edit_wallet()">
+<span style="float:right">
+<input type="button" value="Edit Wallet" onclick="edit_wallet()">
+</span>
 </h2>
 <table class="wal bord" id="walltab">
 <tr>
