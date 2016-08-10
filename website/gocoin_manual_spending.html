@@ -21,8 +21,15 @@ In order to spend your coins you will need to copy the <code>balance</code> fold
 
 <br><br>
 
-<h3>1.1. Use balio tool</h3>
-There is a tool <b>balio</b> that can fetch a balance of your wallet from a public block explorer (specifically from <b>blockr.io</b>)<br>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr>
+<td align="center"><b class="bigger">If you have no client: use balio tool</b>
+
+<td align="center"><b class="bigger">If you have a running client: use WebUI</b>
+
+<tr>
+<td valign="top">
+There is a tool <b>balio</b> that can fetch a balance of your wallet from a public block explorer<br>
 <br>
 Run the tool from a command line with a path to your wallet file or the list of (space separated) public addresses for which you want to fetch the balance.<br>
 It should create the <code>balance/</code> folder in the current directory, ready to be provided to your wallet.<br>
@@ -32,11 +39,9 @@ It should create the <code>balance/</code> folder in the current directory, read
 <i><b>Note:</b>fetching the balance this way exposes your privacy.</i><br>
 <i>To </i><i>use <b>balio</b> through <b>Tor</b>, set TOR environment variable in your system, pointing it to your tor's socks proxy (e.g. <code>TOR=localhost:9050</code>).</i><br>
 <i>Additionally, despite of using Tor, to further protect your privacy try fetch balance of single addresses instead of entire wallets.</i>
-<br>
 
-<br>
 
-<h3>1.2. Use client node's WebUI</h3>
+<td valign="top">
 From the moment when a content of <code>wallet.txt</code> file is properly stored in your browser, you can check and export your balance.<br>
 <br>
 There are two ways to do so. A third way is a special kind that allows you to assemble the transaction using a convenient interactive way.<br>
@@ -46,22 +51,33 @@ There are two ways to do so. A third way is a special kind that allows you to as
 
 
 
-<b>1.2.1. Download balance.zip / Wallet</b><br>
-<br>
+<table border="1" cellpadding="3" cellspacing="0">
+<tr>
+<td align="center" width="50%"><b>Wallet tab: download balance.zip</b>
+
+<td align="center" width="50%"><b>MakeTx tab: Use Coin Control</b>
+
+<tr>
+<td valign="top">
 Use <b>Wallet</b> page of WebUI to download <code>balance.zip</code> file.<br>
+<br>
 Extract the zip file to get the <code>balance</code> folder.<br>
 <br>
-<b>1.2.2. Use Coin Control / MakeTx</b><br>
-<br>
+
+
+<td valign="top">
 Use <b>MakeTx</b> page that allows you to assemble a transaction using a convenient, interactive way.<br>
+<br>
 After you fill in all the transaction details, it will give you <code>payment.zip</code> with the exact command that you shall execute at the wallet machine.<br>
 <br>
-<i><b>Note:</b> MakeTx tab is currently the only way to spend coins from multisig addresses.<br>
+<i><b>Note:</b> MakeTx tab is currently the only way to spend coins from multisig addresses.</i><br>
 
-<br>
+</table>
+</table>
 
 
-<h3><b>2. Sign your transaction</b></h3>
+
+<h2><b>2. Sign your transaction</b></h2>
 
 
 As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balnace/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.<br>
@@ -72,7 +88,9 @@ To spend your coins, order the wallet to make and sign a new transaction, using 
 Please note no spaces between the address, the equal sign and the value. The value represents the amount in BTC, which you request to send to the given address.<br>
 <br>
 
-There are also other switches which you may find useful at this stage (i.e. a fee control). To see all your options, just run <code>wallet -h</code>
+There are also other switches which you may find useful at this stage.
+One of them (<code>-fee</code>) allows you to control the transaction's' fee.
+To see all the wallt's options, just run <code>wallet -h</code>
 <br>
 <br>
 
@@ -80,22 +98,30 @@ There are also other switches which you may find useful at this stage (i.e. a fe
 
 If everything goes well with the wallet <code>-send ...</code> command, it will create a text file with a signed transaction. The file is named like <code>01234567.txt</code> - this is the file you need to move to your online node in order to notify the network about your payment. Before you broadcast your signed transaction to the network, verify carefully it does exactly what you intended. You can do it in a several ways. In any case, first move the signed transaction file to your online PC.
 <br>
+<br>
 
-<h3>3.1. Wallet</h3>
+<table border="1" cellpadding="3" cellspacing="0">
+<tr>
+<td align="center" width="30%"><b>Wallet</b>
+<td align="center" width="30%"><b>TextUI</b> (requires client)
+<td align="center" width="40%"><b>WebUI</b> (requires client)
 
 
+<tr>
+<td valign="top">
 To see a decoded content of a transaction, execute:
 <code>  wallet -d rawtxdata.txt</code>
-<br>
 
 
-<h3>3.2. TextUI</h3>
+<td valign="top">
 Use the node's TextUI to execute <code>tx 01234567.txt</code> (where <code>01234567.txt</code> is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
-<br>
 
-<h3>3.3. WebUI</h3>
+
+<td valign="top">
 Use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.<br>
 Alternatively, you can click the <b>Load TX</b> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.<br>
+</table>
+
 <br>
 <i><b>Note: always verify transaction before broadcasting it!</b><br>
 Verify that the decoded content of a transaction matches exactly what you intended to spend.</i>
@@ -109,19 +135,32 @@ Verify that the decoded content of a transaction matches exactly what you intend
 After making sure that the transaction does indeed what you intended, you must broadcast it to the network, in order to actually move your coins.<br>
 <br>
 
-<h3>4.1. WebUI</h3>
-Load the transaction using the client's WebUI. Click on the envelope icon with a green arrow to broadcast a loaded transaction to the network. Coming back to <i>Transactions</i> tab later, press the button in the "Accepted transactions" row, to see all the transactions you've loaded (those with a red background are yours). You can also unload a previously loaded transaction by clicking on the red X icon.<br>
-<br>
+
+<table border="1" cellpadding="5" cellspacing="0">
+<tr>
+<td align="center" width="35%"><b>WebUI</b> (requires client)
+<td align="center" width="35%"><b>TextUI</b> (requires client)
+<td align="center" width="30%"><b>Web services</b>
 
 
-<h3>4.2. TextUI</h3>
-Use <code>stx</code> command with the transaction ID as its parameter (you had the ID printed, when loading it).<br>
+<tr>
+<td valign="top">
+Load the transaction using the client's WebUI.
+Click on the envelope icon with a green arrow to broadcast a loaded transaction to the network.
+Coming back to <i>Transactions</i> tab later, press the button in the "Own TXs" row,
+to see all the transactions you've loaded (those with a red background are yours).
+You can also unload a previously loaded transaction by clicking on the red X icon.
 
-<br>
 
-<h3>4.3. Web services</h3>
+<td valign="top">
+Use <code>stx</code> command with the transaction ID as its parameter (you had the ID printed, when loading it).
+
+<td valign="top" rowspan="3">
 Use any web page that allows you to push a raw transaction to the bitcoin network.<br>
-For instance: <a href="https://blockchain.info/pushtx">https://blockchain.info/pushtx</a><br>
+For instance:<br>
+* <a href="https://blockchain.info/pushtx">https://blockchain.info/pushtx</a><br>
+* <a href="https://coinb.in/send-raw-transaction.html">https://coinb.in/send-raw-transaction.html</a><br>
+* <a href="http://eligius.st/~wizkid057/newstats/pushtxn.php">http://eligius.st/~wizkid057/newstats/pushtxn.php</a><br>
 <br>
 
 Just copy the text from the transaction file, paste it into the form and push the button.<br>
@@ -131,13 +170,19 @@ Just copy the text from the transaction file, paste it into the form and push th
 <i><br>
 </i>
 
-<h3>Re-broadcasting transactions</h3>
+<tr><td valign="top" colspan="2" align="center">
+<b>Re-broadcasting transactions</b>
 
-
+<tr><td valign="top" colspan="2">
 The client never broadcasts transactions unrequested, so if your transaction does not appear in the chain soon enough, you may want to re-broadcast it, using the same method as for the initial broadcasting. There may of course be other reasons why your transaction does not get confirmed (usually because the fee was to low), in which case re-broadcasting it will not help you much.<br>
 <br>
 
 There is also a TextUI command <code>stxa</code> that re-broadcasts all the transaction that have been loaded, but not yet confirmed by the network. Note that when a transaction gets mined into a block it gets removed from the list automatically.
+
+
+
+</table>
+
 
 </body>
 </html>
