@@ -1,4 +1,6 @@
 1.7.1:
+* Client: support for BIP 133 ("feefilter" messages)
+* Client: responds at most once to a getaddr request during the lifetime of a connection
 * Client: expire peer's GetBlockInProgress after one hour
 * WebUI: new buttons "Move left" & "Move right" in "Wallet" tab, for sorting order of the wallets
 

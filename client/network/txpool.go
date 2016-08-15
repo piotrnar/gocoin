@@ -447,7 +447,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
 	} else if isRoutable(rec) {
-		rec.Invsentcnt += NetRouteInv(1, tx.Hash, ntx.conn)
+		rec.Invsentcnt += NetRouteInvExt(1, tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.raw)))
 		common.CountSafe("TxRouteOK")
 	}
 
