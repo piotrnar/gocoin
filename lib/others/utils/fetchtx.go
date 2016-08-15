@@ -83,6 +83,26 @@ func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
 	return
 }
 
+// Download (and re-assemble) raw transaction from blockexplorer.com
+func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
+	url := "https://blockchain.info/tx/" + txid.String() + "?format=hex"
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode == 200 {
+			defer r.Body.Close()
+			rawhex, _ := ioutil.ReadAll(r.Body)
+			rawtx, er = hex.DecodeString(string(rawhex))
+		} else {
+			fmt.Println("blockchain.info StatusCode=", r.StatusCode)
+		}
+	}
+	if er != nil {
+		fmt.Println("blockexplorer.com:", er.Error())
+	}
+	return
+}
+
+
 // Download raw transaction from a web server (try one after another)
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid)
@@ -100,6 +120,12 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockrIo(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
 		println("GetTxFromBlockrIo - OK")
+		return
+	}
+
+	raw = GetTxFromBlockchainInfo(txid)
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		println("GetTxFromBlockchainInfo - OK")
 		return
 	}
 
