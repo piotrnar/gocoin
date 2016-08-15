@@ -338,7 +338,6 @@ func (c *OneConnection) Run() {
 
 	c.Mutex.Lock()
 	c.X.LastDataGot = time.Now()
-	c.X.NextGetAddr = time.Now()  // do getaddr ~10 seconds from now
 	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
 	c.X.AllHeadersReceived = false
 
