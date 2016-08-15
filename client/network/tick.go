@@ -81,10 +81,10 @@ func (c *OneConnection) Tick() {
 	}
 
 	// Ask node for new addresses...?
-	if !c.X.GetAddrDone && peersdb.PeerDB.Count() > common.MaxPeersNeeded {
+	if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() > common.MaxPeersNeeded {
 		common.CountSafe("AddrWanted")
 		c.SendRawMsg("getaddr", nil)
-		c.X.GetAddrDone = true
+		c.X.OurGetAddrDone = true
 		return
 	}
 
