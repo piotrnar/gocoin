@@ -122,8 +122,37 @@ func all_addrs(par string) {
 	}
 }
 
+func list_unspent(addr string) {
+	fmt.Println("Checking unspent coins for addr", addr)
+
+	ad, e := btc.NewAddrFromString(addr)
+	if e != nil {
+		println(e.Error())
+		return
+	}
+
+	if ad.Version!=btc.AddrVerPubkey(common.Testnet) && ad.Version!=btc.AddrVerScript(common.Testnet) {
+		fmt.Println("Only P2SH and P2KH address types are supported")
+		return
+	}
+
+	wallet.BalanceMutex.Lock()
+	rec := wallet.AllBalances[ad.Hash160]
+	if rec == nil {
+		fmt.Println(ad.String(), "has owns no coins")
+	} else {
+		fmt.Println(ad.String(), "has", btc.UintToBtc(rec.Value&0x7fffffffffff), "BTC in", len(rec.Unsp), "records")
+		for i := range rec.Unsp {
+			uns, vo := rec.Unsp[i].GetRec()
+			fmt.Println("", i+1, fmt.Sprint(btc.NewUint256(uns.TxID[:]).String(), "-", vo),
+				"from block", uns.InBlock, uns.Coinbase, btc.UintToBtc(uns.Outs[vo].Value), "BTC")
+		}
+	}
+	wallet.BalanceMutex.Unlock()
+}
 
 func init() {
 	newUi("richest r", true, best_val, "Show the richest addresses")
 	newUi("maxouts o", true, max_outs, "Show addresses with bniggest number of outputs")
+	newUi("unspent u", false, list_unspent, "List balance of given bitcoin address")
 }
