@@ -76,8 +76,16 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		aa, e := btc.NewAddrFromString(a)
 		if e==nil {
 			var newrec OneOuts
-			if rec, ok := wallet.AllBalances[aa.Hash160]; ok {
-				newrec.Value = rec.Value&^wallet.VALUE_P2SH_BIT
+			var rec *wallet.OneAllAddrBal
+			if aa.Version==btc.AddrVerPubkey(common.Testnet) {
+				rec = wallet.AllBalancesP2KH[aa.Hash160]
+			} else if aa.Version==btc.AddrVerScript(common.Testnet) {
+				rec = wallet.AllBalancesP2SH[aa.Hash160]
+			} else {
+				continue
+			}
+			if rec!=nil {
+				newrec.Value = rec.Value
 				for _, v := range rec.Unsp {
 					if qr, vout := v.GetRec(); qr!=nil {
 						if oo := qr.Outs[vout]; oo!=nil {
@@ -156,7 +164,15 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		aa, e := btc.NewAddrFromString(a)
 		aa.Extra.Label = labels[idx]
 		if e==nil {
-			if rec, ok := wallet.AllBalances[aa.Hash160]; ok {
+			var rec *wallet.OneAllAddrBal
+			if aa.Version==btc.AddrVerPubkey(common.Testnet) {
+				rec = wallet.AllBalancesP2KH[aa.Hash160]
+			} else if aa.Version==btc.AddrVerScript(common.Testnet) {
+				rec = wallet.AllBalancesP2SH[aa.Hash160]
+			} else {
+				continue
+			}
+			if rec!=nil {
 				for _, v := range rec.Unsp {
 					if qr, vout := v.GetRec(); qr!=nil {
 						if oo := qr.Outs[vout]; oo!=nil {
