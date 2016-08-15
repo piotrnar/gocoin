@@ -95,6 +95,9 @@ type ConnectionStatus struct {
 
 	BytesReceived, BytesSent uint64
 	Counters map[string]uint64
+
+	GetAddrDone bool
+	MinFeeSPKB int64  // BIP 133
 }
 
 type ConnInfo struct {

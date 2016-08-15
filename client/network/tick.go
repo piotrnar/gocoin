@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"math/rand"
 	"sync/atomic"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
@@ -389,6 +390,13 @@ func (c *OneConnection) Run() {
 				}
 				if c.Node.Version >= 70012 {
 					c.SendRawMsg("sendheaders", nil)
+					if c.Node.Version >= 70013 {
+						if common.CFG.TXPool.FeePerByte!=0 {
+							var pl [8]byte
+							binary.LittleEndian.PutUint64(pl[:], 1000*common.CFG.TXPool.FeePerByte)
+							c.SendRawMsg("feefilter", pl[:])
+						}
+					}
 				}
 
 			case "verack":
@@ -419,7 +427,12 @@ func (c *OneConnection) Run() {
 				c.ProcessGetData(cmd.pl)
 
 			case "getaddr":
-				c.SendAddr()
+				if !c.X.GetAddrDone {
+					c.SendAddr()
+					c.X.GetAddrDone = true
+				} else {
+					println(c.PeerAddr.Ip(), " duplicate getaddr")
+				}
 
 			case "ping":
 				re := make([]byte, len(cmd.pl))
@@ -447,6 +460,12 @@ func (c *OneConnection) Run() {
 
 			case "sendheaders":
 				c.Node.SendHeaders = true
+
+			case "feefilter":
+				if len(cmd.pl) >= 8 {
+					c.X.MinFeeSPKB = int64(binary.LittleEndian.Uint64(cmd.pl[:8]))
+					println(c.PeerAddr.Ip(), c.Node.Agent, " feefilter %d", c.X.MinFeeSPKB)
+				}
 
 			default:
 				if common.DebugLevel>0 {

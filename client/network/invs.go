@@ -86,8 +86,13 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 }
 
 
+func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint {
+	return NetRouteInvExt(typ, h, fromConn, 0)
+}
+
+
 // This function is called from the main thread (or from an UI)
-func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint) {
+func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint) {
 	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
 
 	// Prepare the inv
@@ -99,15 +104,22 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) (cnt uint)
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
 		if v != fromConn { // except the one that this inv came from
+			send_inv := true
 			v.Mutex.Lock()
-			if v.Node.DoNotRelayTxs && typ==1 {
-				// This node does not want tx inv (it came with its version message)
-				common.CountSafe("SendInvNoTxNode")
-			} else {
-				if fromConn==nil && v.X.InvsRecieved==0 {
-					// Do not broadcast own txs to nodes that never sent any invs to us
+			if typ==1 {
+				if v.Node.DoNotRelayTxs {
+					send_inv = false
+					common.CountSafe("SendInvNoTxNode")
+				} else if v.X.MinFeeSPKB>0 && uint64(v.X.MinFeeSPKB)>fee_spkb {
+					send_inv = false
+					common.CountSafe("SendInvFeeTooLow")
+				} else if fromConn==nil && v.X.InvsRecieved==0 {
+					send_inv = false
 					common.CountSafe("SendInvOwnBlocked")
-				} else if len(v.PendingInvs)<500 {
+				}
+			}
+			if send_inv {
+				if len(v.PendingInvs)<500 {
 					v.PendingInvs = append(v.PendingInvs, inv)
 					cnt++
 				} else {
