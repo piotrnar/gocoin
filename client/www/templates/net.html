@@ -75,6 +75,7 @@ function update_connection_info(ci) {
 	s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
 	s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
 	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent +'\n'
+	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB +'\n'
 	s += 'Ping history:'
 
 	var idx = ci.PingHistoryIdx
