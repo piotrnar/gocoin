@@ -123,6 +123,16 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
+	// Expire GetBlockInProgress after one hour
+	for k, v := range c.GetBlockInProgress {
+		if time.Now().After(v.start.Add(time.Hour)) {
+			delete(c.GetBlockInProgress, k)
+			common.CountSafe("BlockInprogTimeout")
+			println(c.PeerAddr.Ip(), "GetBlockInProgress timeout")
+			break
+		}
+	}
+
 	// if we got here, means we had nothing to send - just wait for a moment
 	time.Sleep(150*time.Millisecond)
 }

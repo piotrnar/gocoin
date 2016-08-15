@@ -1,4 +1,5 @@
 1.7.1:
+* Client: expire peer's GetBlockInProgress after one hour
 * WebUI: new buttons "Move left" & "Move right" in "Wallet" tab, for sorting order of the wallets
 
 1.7.0 - 2016-07-24
