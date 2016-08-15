@@ -391,18 +391,21 @@ func get_blocks() {
 					TheBlockChain.BlockIndexAccess.Unlock()
 					if cur==nil {
 						fmt.Println("Block", bl.Hash.String(), "unknown")
-						os.Exit(1)
+						Exit()
+						break
 					}
 					er := TheBlockChain.PostCheckBlock(bl)
 					if er != nil {
 						fmt.Println("CheckBlock:", er.Error())
-						os.Exit(1)
+						Exit()
+						break
 					}
 					bl.LastKnownHeight = TheBlockChain.BlockTreeEnd.Height
 					er = TheBlockChain.CommitBlock(bl, cur)
 					if er != nil {
 						fmt.Println("CommitBlock:", er.Error())
-						os.Exit(1)
+						Exit()
+						break
 					}
 				}
 				atomic.StoreUint32(&LastStoredBlock, bl.Height)
