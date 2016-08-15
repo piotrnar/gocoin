@@ -79,7 +79,7 @@ type ConnectionStatus struct {
 	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
-	NextGetAddr time.Time // When we shoudl issue "getaddr" again
+	GetAddrDone bool // Whether we shoudl issue another "getaddr"
 
 	AllHeadersReceived bool // keep sending getheaders until this is not set
 	GetHeadersInProgress bool
