@@ -94,7 +94,7 @@ func NewStealthAddr(dec []byte) (a *StealthAddr, e error) {
 func NewStealthAddrFromString(hs string) (a *StealthAddr, e error) {
 	dec := Decodeb58(hs)
 	if dec == nil {
-		e = errors.New("StealthAddr: Cannot decode b58 string *"+hs+"*")
+		e = errors.New("StealthAddr: Cannot decode b58 string '"+hs+"'")
 		return
 	}
 	return NewStealthAddr(dec)
