@@ -144,5 +144,5 @@ func list_unspent(addr string) {
 func init() {
 	newUi("richest r", true, best_val, "Show the richest addresses")
 	newUi("maxouts o", true, max_outs, "Show addresses with bniggest number of outputs")
-	newUi("unspent u", false, list_unspent, "List balance of given bitcoin address")
+	newUi("unspent u", true, list_unspent, "List balance of given bitcoin address")
 }
