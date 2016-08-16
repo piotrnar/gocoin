@@ -163,7 +163,8 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal chain.AllUnspentTx) {
 						var msg []byte
 						if qr.Outs[vout+1]!=nil && len(qr.Outs[vout+1].PKScr)>1 && qr.Outs[vout+1].PKScr[0]==0x6a {
 							msg = qr.Outs[vout+1].PKScr[1:]
-						} else if int(vout+1)!=len(qr.Outs) && len(qr.Outs[len(qr.Outs)-1].PKScr)>1 && qr.Outs[len(qr.Outs)-1].PKScr[0]==0x6a {
+						} else if int(vout+1)!=len(qr.Outs) && qr.Outs[len(qr.Outs)-1]!=nil &&
+							len(qr.Outs[len(qr.Outs)-1].PKScr)>1 && qr.Outs[len(qr.Outs)-1].PKScr[0]==0x6a {
 							msg = qr.Outs[len(qr.Outs)-1].PKScr[1:]
 						}
 						if msg!=nil {
