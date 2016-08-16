@@ -80,7 +80,8 @@ function fetch_wallet_balance(name) {
 				totbtc += rec.Value
 			}
 			outs.sort(function(a,b){
-				return a.Height < b.Height
+				if (a.block == b.block)  return 0
+				return (a.block > b.block) ? 1 : -1;
 			})
 
 			outcnt_val.value = outs.length
