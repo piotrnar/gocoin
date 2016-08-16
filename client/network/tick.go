@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"math/rand"
 	"sync/atomic"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
