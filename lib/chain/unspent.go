@@ -18,6 +18,7 @@ type OneUnspentTx struct {
 	StealthC []byte
 	destString string
 	Coinbase bool
+	Message []byte
 }
 
 func (x AllUnspentTx) Len() int {
@@ -46,6 +47,16 @@ func (ou *OneUnspentTx) String() (s string) {
 	}
 	if ou.MinedAt != 0 {
 		s += fmt.Sprint("  ", ou.MinedAt)
+	}
+	if ou.Message != nil {
+		s += "  "
+		for _, c := range ou.Message {
+			if c<' ' || c>127 {
+				s += fmt.Sprintf("\\x%02x", c)
+			} else {
+				s += string(c)
+			}
+		}
 	}
 	return
 }

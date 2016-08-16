@@ -66,6 +66,7 @@ function fetch_wallet_balance(name) {
 			var totbtc = 0
 			var totouts = 0
 			bal = JSON.parse(aj.responseText)
+			console.log(bal)
 			var outs = new Array()
 			var i, ii
 			for (i in wallet) {
@@ -75,7 +76,7 @@ function fetch_wallet_balance(name) {
 					for (ii in rec.Outs) {
 						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
 							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
-							'addr':wallet[i].addr, 'label':wallet[i].label})
+							'addr':wallet[i].addr, 'label':wallet[i].label, 'msg':rec.Outs[ii].Message})
 					}
 				}
 				totbtc += rec.Value
@@ -139,6 +140,15 @@ function fetch_wallet_balance(name) {
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
 				td.innerText = outs[i].label
+
+				td = row.insertCell(-1)
+				td.className = 'hand'
+				if (typeof(outs[i].msg)=='string' && outs[i].msg != '') {
+					var img = document.createElement("img")
+					img.src = 'webui/message.png'
+					img.title = outs[i].msg.substr(0,2)=='j0' ? ('*'+outs[i].msg.substr(2)) : outs[i].msg
+					td.appendChild(img)
+				}
 
 				td = row.insertCell(-1)
 				td.align = 'center'
@@ -560,6 +570,7 @@ Total balance: <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
 	<th>TxID - VOut
 	<th width="80">BTC Value
 	<th colspan="2">Address
+	<th>&nbsp;
 	<th><input type="checkbox" onchange="allchange(this)">
 </tr>
 <!--UTXOROW-->

@@ -3,6 +3,7 @@ package webui
 import (
 	"fmt"
 	"sort"
+	"html"
 	"bytes"
 	"strconv"
 	"net/http"
@@ -58,6 +59,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Value uint64
 		Height uint32
 		Coinbase bool
+		Message string
 	}
 
 	type OneOuts struct {
@@ -86,7 +88,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					if !summary {
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
-							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase})
+							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
+							Message: html.EscapeString(string(u.Message))})
 					}
 				}
 			}
