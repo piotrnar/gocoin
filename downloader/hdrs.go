@@ -49,13 +49,26 @@ func (c *one_net_conn) hdr_idle() bool {
 
 
 func (c *one_net_conn) getheaders() {
-	var b [4+1+32+32]byte
+	var b [4+1+32+32+32]byte
 	binary.LittleEndian.PutUint32(b[0:4], Version)
-	b[4] = 1 // one inv
+	b[4] = 2 // one inv(s)
 	LastBlock.Mutex.Lock()
 	copy(b[5:37], LastBlock.node.BlockHash.Hash[:])
+
+	// In case if the head is an orphaned block, this will help
+	var i int
+	var n *chain.BlockTreeNode
+	for n=LastBlock.node; n!=nil && i<2016; i++ {
+		n = n.Parent
+	}
+	if n==nil {
+		c.sendmsg("getheaders", b[:4+1+2*32])
+	} else {
+		copy(b[37:37+32], n.BlockHash.Hash[:])
+		c.sendmsg("getheaders", b[:])
+	}
+
 	LastBlock.Mutex.Unlock()
-	c.sendmsg("getheaders", b[:])
 }
 
 

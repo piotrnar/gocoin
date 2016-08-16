@@ -43,6 +43,7 @@ func show_connections() {
 			if len(v.send.buf) > 0 {
 				ss[i] += fmt.Sprintf("  sending %d", len(v.send.buf))
 			}
+			ss[i] += fmt.Sprint("  ", v.last_cmd_send)
 			v.Unlock()
 		}
 		i++

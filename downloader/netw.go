@@ -67,6 +67,7 @@ type one_net_conn struct {
 	send struct {
 		buf []byte
 	}
+	last_cmd_send string
 
 	inprogress int
 
@@ -144,6 +145,7 @@ func (c *one_net_conn) sendmsg(cmd string, pl []byte) (e error) {
 
 	c.Mutex.Lock()
 	c.send.buf = append(c.send.buf, sbuf...)
+	c.last_cmd_send = cmd
 	//fmt.Println("...", len(c.send.buf))
 	c.Mutex.Unlock()
 	return
