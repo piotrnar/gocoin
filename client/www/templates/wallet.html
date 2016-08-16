@@ -45,7 +45,7 @@ function fetch_wallet_balance(name) {
 			for (var i in wallet_addr) {
 				var rec = bal[wallet_addr[i]]
 
-				if (rec.Outs==null && wallet[i].virgin) {
+				if (rec.OutCnt==0 && wallet[i].virgin) {
 					continue
 				}
 
@@ -65,15 +65,15 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "balbtc"
-				if (rec.Outs!=null) {
+				if (rec.OutCnt>0) {
 					td.innerText = val2str_pad(rec.Value,true)
 				}
 
 				td = row.insertCell(-1)
 				td.className = "outcnt"
-				if (rec.Outs!=null) {
-					td.innerText = rec.Outs.length
-					totouts += rec.Outs.length
+				if (rec.OutCnt>0) {
+					td.innerText = rec.OutCnt
+					totouts += rec.OutCnt
 				} else {
 					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
@@ -88,7 +88,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
-	aj.open("POST", "balance.json", true)
+	aj.open("POST", "balance.json?summary", true)
 	aj.send(JSON.stringify(wallet_addr))
 }
 

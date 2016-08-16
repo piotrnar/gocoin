@@ -37,6 +37,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	summary := len(r.Form["summary"])>0
+
 	inp, er := ioutil.ReadAll(r.Body)
 	if er != nil {
 		println(er.Error())
@@ -60,6 +62,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	type OneOuts struct {
 		Value uint64
+		OutCnt int
 		Outs []OneOut
 	}
 
@@ -77,11 +80,14 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			unsp := wallet.GetAllUnspent(aa)
 			newrec := new(OneOuts)
 			if len(unsp) > 0 {
+				newrec.OutCnt = len(unsp)
 				for _, u := range unsp {
 					newrec.Value += u.Value
-					newrec.Outs = append(newrec.Outs, OneOut{
-						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
-						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase})
+					if !summary {
+						newrec.Outs = append(newrec.Outs, OneOut{
+							TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
+							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase})
+					}
 				}
 			}
 			out[aa.String()] = newrec
