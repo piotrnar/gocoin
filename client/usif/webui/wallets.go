@@ -2,6 +2,7 @@ package webui
 
 import (
 	"fmt"
+	"sort"
 	"bytes"
 	"strconv"
 	"net/http"
@@ -56,14 +57,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Height uint32
 		Coinbase bool
 	}
+
 	type OneOuts struct {
 		Value uint64
 		Outs []OneOut
 	}
 
-	var out map[string] OneOuts
-
-	out = make(map[string]OneOuts)
+	out := make(map[string] *OneOuts)
 
 	lck := new(usif.OneLock)
 	lck.In.Add(1)
@@ -71,36 +71,22 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	usif.LocksChan <- lck
 	lck.In.Wait()
 
-	wallet.BalanceMutex.Lock()
 	for _, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
 		if e==nil {
-			var newrec OneOuts
-			var rec *wallet.OneAllAddrBal
-			if aa.Version==btc.AddrVerPubkey(common.Testnet) {
-				rec = wallet.AllBalancesP2KH[aa.Hash160]
-			} else if aa.Version==btc.AddrVerScript(common.Testnet) {
-				rec = wallet.AllBalancesP2SH[aa.Hash160]
-			} else {
-				continue
-			}
-			if rec!=nil {
-				newrec.Value = rec.Value
-				for _, v := range rec.Unsp {
-					if qr, vout := v.GetRec(); qr!=nil {
-						if oo := qr.Outs[vout]; oo!=nil {
-							newrec.Outs = append(newrec.Outs, OneOut{
-								TxId : btc.NewUint256(qr.TxID[:]).String(), Vout : vout,
-								Value : oo.Value,
-								Height : qr.InBlock, Coinbase : qr.Coinbase})
-							}
-					}
+			unsp := wallet.GetAllUnspent(aa)
+			newrec := new(OneOuts)
+			if len(unsp) > 0 {
+				for _, u := range unsp {
+					newrec.Value += u.Value
+					newrec.Outs = append(newrec.Outs, OneOut{
+						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
+						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase})
 				}
 			}
 			out[aa.String()] = newrec
 		}
 	}
-	wallet.BalanceMutex.Unlock()
 
 	lck.Out.Done()
 
@@ -112,6 +98,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		println(er.Error())
 	}
 }
+
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
@@ -159,40 +146,23 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	usif.LocksChan <- lck
 	lck.In.Wait()
 
-	wallet.BalanceMutex.Lock()
 	for idx, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
 		aa.Extra.Label = labels[idx]
 		if e==nil {
-			var rec *wallet.OneAllAddrBal
-			if aa.Version==btc.AddrVerPubkey(common.Testnet) {
-				rec = wallet.AllBalancesP2KH[aa.Hash160]
-			} else if aa.Version==btc.AddrVerScript(common.Testnet) {
-				rec = wallet.AllBalancesP2SH[aa.Hash160]
-			} else {
-				continue
-			}
-			if rec!=nil {
-				for _, v := range rec.Unsp {
-					if qr, vout := v.GetRec(); qr!=nil {
-						if oo := qr.Outs[vout]; oo!=nil {
-							unsp := &chain.OneUnspentTx{TxPrevOut:btc.TxPrevOut{Hash:qr.TxID, Vout:vout},
-								Value:oo.Value, MinedAt:qr.InBlock, Coinbase:qr.Coinbase, BtcAddr:aa}
-
-							thisbal = append(thisbal, unsp)
-						}
-					}
-				}
+			newrecs := wallet.GetAllUnspent(aa)
+			if len(newrecs) > 0 {
+				thisbal = append(thisbal, newrecs...)
 			}
 		}
 	}
-	wallet.BalanceMutex.Unlock()
 	lck.Out.Done()
 
 	buf := new(bytes.Buffer)
 	zi := zip.NewWriter(buf)
 	was_tx := make(map [[32]byte] bool)
 
+	sort.Sort(thisbal)
 	for i := range thisbal {
 		if was_tx[thisbal[i].TxPrevOut.Hash] {
 			continue

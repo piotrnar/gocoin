@@ -142,3 +142,27 @@ func TxNotifyDel(tx *chain.QdbRec, outs []bool) {
 	all_del_utxos(tx, outs)
 	BalanceMutex.Unlock()
 }
+
+func GetAllUnspent(aa *btc.BtcAddr) (thisbal chain.AllUnspentTx) {
+	var rec *OneAllAddrBal
+	if aa.Version==btc.AddrVerPubkey(common.Testnet) {
+		rec = AllBalancesP2KH[aa.Hash160]
+	} else if aa.Version==btc.AddrVerScript(common.Testnet) {
+		rec = AllBalancesP2SH[aa.Hash160]
+	} else {
+		return
+	}
+	if rec!=nil {
+		for _, v := range rec.Unsp {
+			if qr, vout := v.GetRec(); qr!=nil {
+				if oo := qr.Outs[vout]; oo!=nil {
+					unsp := &chain.OneUnspentTx{TxPrevOut:btc.TxPrevOut{Hash:qr.TxID, Vout:vout},
+						Value:oo.Value, MinedAt:qr.InBlock, Coinbase:qr.Coinbase, BtcAddr:aa}
+
+					thisbal = append(thisbal, unsp)
+				}
+			}
+		}
+	}
+	return
+}

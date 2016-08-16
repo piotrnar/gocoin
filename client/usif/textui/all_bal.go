@@ -125,28 +125,18 @@ func list_unspent(addr string) {
 		return
 	}
 
-	wallet.BalanceMutex.Lock()
-	defer wallet.BalanceMutex.Unlock()
-
-	var rec *wallet.OneAllAddrBal
-
-	if ad.Version==btc.AddrVerPubkey(common.Testnet) {
-		rec = wallet.AllBalancesP2KH[ad.Hash160]
-	} else if ad.Version==btc.AddrVerScript(common.Testnet) {
-		rec = wallet.AllBalancesP2SH[ad.Hash160]
-	} else {
-		fmt.Println("Only P2SH and P2KH address types are supported")
-		return
-	}
-
-	if rec == nil {
+	unsp := wallet.GetAllUnspent(ad)
+	if len(unsp)==0 {
 		fmt.Println(ad.String(), "has no coins")
 	} else {
-		fmt.Println(ad.String(), "has", btc.UintToBtc(rec.Value&0x7fffffffffff), "BTC in", len(rec.Unsp), "records")
-		for i := range rec.Unsp {
-			uns, vo := rec.Unsp[i].GetRec()
-			fmt.Println("", i+1, fmt.Sprint(btc.NewUint256(uns.TxID[:]).String(), "-", vo),
-				"from block", uns.InBlock, uns.Coinbase, btc.UintToBtc(uns.Outs[vo].Value), "BTC")
+		var tot uint64
+		sort.Sort(unsp)
+		for i := range unsp {
+			tot += unsp[i].Value
+		}
+		fmt.Println(ad.String(), "has", btc.UintToBtc(tot), "BTC in", len(unsp), "records:")
+		for i := range unsp {
+			fmt.Println(unsp[i].String())
 		}
 	}
 }

@@ -1,4 +1,7 @@
 1.7.1:
+* Client: WebUI/MakeTX - fixed sorting of outputs by block height
+* Client: records in balance/unsepnt.txt (inside balance.zip) are sorted by block height
+* Client: New TextUI command "unspent"
 * Client: P2SH and P2KH balance indexes are kept in separate maps
 * Client: support for BIP 133 ("feefilter" messages)
 * Client: responds at most once to a getaddr request during the lifetime of a connection
