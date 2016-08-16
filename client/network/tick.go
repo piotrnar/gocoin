@@ -461,6 +461,9 @@ func (c *OneConnection) Run() {
 					println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
 				}
 
+			case "sendheaders":
+				println(c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+
 			default:
 				if common.DebugLevel>0 {
 					println(cmd.cmd, "from", c.PeerAddr.Ip())
