@@ -2,3 +2,5 @@ Implementation of this package has been based on source code created by Pieter W
 
  * https://github.com/bitcoin/secp256k1
 
+
+Use go compiler version 1.7 or higher, for significant performance boost.
