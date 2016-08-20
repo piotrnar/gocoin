@@ -126,6 +126,9 @@ func (c *OneConnection) Tick() {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
 			println(c.PeerAddr.Ip(), "GetBlockInProgress timeout")
+			c.Mutex.Lock()
+			c.counters["GetBlockTimeout"]++
+			c.Mutex.Unlock()
 			break
 		}
 	}
