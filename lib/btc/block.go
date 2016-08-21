@@ -23,22 +23,26 @@ type Block struct {
 }
 
 
-func NewBlock(data []byte) (*Block, error) {
-	if len(data)<81 {
-		return nil, errors.New("Block too short")
-	}
-
-	var bl Block
+func NewBlock(data []byte) (bl *Block, er error) {
+	bl = new(Block)
 	bl.Hash = NewSha2Hash(data[:80])
+	er = bl.UpdateContent(data)
+	return
+}
+
+
+func (bl *Block) UpdateContent(data []byte) error {
+	if len(data)<81 {
+		return errors.New("Block too short")
+	}
 	bl.Raw = data
 	bl.TxCount, bl.TxOffset = VLen(data[80:])
 	if bl.TxOffset == 0 {
-		return nil, errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
+		return errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
 	}
 	bl.TxOffset += 80
-	return &bl, nil
+	return nil
 }
-
 
 func (bl *Block)Version() uint32 {
 	return binary.LittleEndian.Uint32(bl.Raw[0:4])
