@@ -429,7 +429,12 @@ func (c *OneConnection) Run() {
 					c.SendAddr()
 					c.X.GetAddrDone = true
 				} else {
-					println(c.PeerAddr.Ip(), " duplicate getaddr")
+					c.Mutex.Lock()
+					c.counters["SecondGetAddr"]++
+					c.Mutex.Unlock()
+					if c.Misbehave("SecondGetAddr", 1000/20) {
+						break
+					}
 				}
 
 			case "ping":
