@@ -398,7 +398,7 @@ func get_blocks() {
 					}
 					er := TheBlockChain.PostCheckBlock(bl)
 					if er != nil {
-						fmt.Println("CheckBlock:", er.Error())
+						fmt.Println("CheckBlock", bl.Height, bl.Hash.String(), er.Error())
 						Exit()
 						break
 					}
