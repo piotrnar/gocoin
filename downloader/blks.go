@@ -23,9 +23,9 @@ const (
 
 
 type one_bip struct {
-	Height uint32
 	Count uint32
 	Conns map[uint32]bool
+	*btc.Block
 }
 
 var (
@@ -44,6 +44,8 @@ var (
 
 	BlockQueue chan *btc.Block = make(chan *btc.Block, 100e3)
 	BlocksQueuedSize uint64
+
+	BlStructCache map[[32]byte] *btc.Block = make(map[[32]byte] *btc.Block)
 )
 
 
@@ -142,13 +144,12 @@ func (c *one_net_conn) block(d []byte) {
 		COUNTER("EMPT")
 	}
 
-	bl, er := btc.NewBlock(d)
-	if er != nil {
+	bl := bip.Block
+	if er:=bl.UpdateContent(d); er!=nil {
 		fmt.Println(c.Ip(), "-", er.Error())
 		c.setbroken(true)
 		return
 	}
-	bl.Height = bip.Height
 
 	if OnlyStoreBlocks {
 		// only check if the payload matches MerkleRoot from the header
@@ -222,10 +223,12 @@ func (c *one_net_conn) get_more_blocks() {
 		}
 
 		// if not in progress then we always take it
-		cbip = &one_bip{Height:curblk}
+		cbip = new(one_bip)
 		cbip.Count++
 		cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
 		cbip.Conns[c.id] = true
+		cbip.Block = BlStructCache[bh]
+		delete(BlStructCache, bh)
 		c.inprogress++
 		BlocksInProgress[bh] = cbip
 
@@ -395,7 +398,7 @@ func get_blocks() {
 					}
 					er := TheBlockChain.PostCheckBlock(bl)
 					if er != nil {
-						fmt.Println("CheckBlock:", er.Error())
+						fmt.Println("CheckBlock", bl.Height, bl.Hash.String(), er.Error())
 						Exit()
 						break
 					}

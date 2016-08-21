@@ -99,6 +99,10 @@ func (c *one_net_conn) headers(d []byte) {
 			LastBlock.Mutex.Lock()
 			LastBlock.node = node
 			LastBlock.Mutex.Unlock()
+
+			BlocksMutex.Lock() // Keep bl structure for later use by PostCheckBlock
+			BlStructCache[bl.Hash.Hash] = bl
+			BlocksMutex.Unlock()
 		}
 		TheBlockChain.BlockIndexAccess.Unlock()
 	}
@@ -153,14 +157,23 @@ func download_headers() {
 	}
 	fmt.Println("AllHeadersDone after", time.Now().Sub(StartTime).String())
 
+
 	BlocksMutex.Lock()
 	LastBlock.Mutex.Lock()
 	BlocksToGet = make(map[uint32][32]byte, LastBlockHeight)
+	_BlStructCache := BlStructCache
+	BlStructCache = make(map[[32]byte] *btc.Block)
 	for n:=LastBlock.node; ; n=n.Parent {
-		BlocksToGet[n.Height] = n.BlockHash.Hash
 		if n.Height==TheBlockChain.BlockTreeEnd.Height {
 			break
 		}
+		BlocksToGet[n.Height] = n.BlockHash.Hash
+		BlStructCache[n.BlockHash.Hash] = _BlStructCache[n.BlockHash.Hash]
+	}
+
+	if len(BlStructCache)!=len(BlocksToGet) {
+		println("Inconsistency ERROR!!!", len(BlStructCache), len(BlocksToGet))
+		Exit()
 	}
 	LastBlockHeight = LastBlock.node.Height
 	LastBlock.Mutex.Unlock()
