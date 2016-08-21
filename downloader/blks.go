@@ -168,6 +168,7 @@ func (c *one_net_conn) block(d []byte) {
 	}
 
 	delete(BlocksToGet, bip.Height)
+	delete(BlStructCache, h.Hash)
 
 	//println("got-", bip.Height, BlocksComplete+1)
 	if BlocksComplete+1==bip.Height {
@@ -228,7 +229,6 @@ func (c *one_net_conn) get_more_blocks() {
 		cbip.Conns = make(map[uint32]bool, MaxNetworkConns)
 		cbip.Conns[c.id] = true
 		cbip.Block = BlStructCache[bh]
-		delete(BlStructCache, bh)
 		c.inprogress++
 		BlocksInProgress[bh] = cbip
 
