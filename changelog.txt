@@ -1,4 +1,5 @@
 1.7.1:
+* Client: WebUI/MakeTX - display raw transaction after clicking no the ID.
 * Client: "common.CFG.AllBalances.MinValue" is only applied during init now (change it restart to apply)
 * Downloader: fix loosing the content of *btc.Block structure between PreCheckBlock() and PostCheckBlock()
 * Client: shows text messages attached to transactions (the first push after OP_RETURN)
