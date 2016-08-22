@@ -584,5 +584,6 @@ qswal.addEventListener("loadwallet", function(e) {
 })
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
+	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
 })
 </script>
