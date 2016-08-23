@@ -1,3 +1,11 @@
+<div id="light" class="white_content">
+<table width="100%"><tr>
+<td><h3><b class="mono" id="disp_txid"></b></h3>
+<td align="right"><a href="javascript:closepopup()">X</a>
+</table>
+<pre id="rawdiv" style="background-color:white"></pre>
+</div><div id="fade" class="black_overlay"></div>
+
 <style>
 td.inpid {
 	text-align: right;
@@ -44,6 +52,58 @@ function build_change_list() {
 	}
 }
 
+function show_input_tx() {
+	var aj = ajax()
+	var vout = parseInt(this["vout"])
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			console.log(aj.responseXML)
+			var sta = xval(aj.responseXML,  "status")
+			if (sta!="OK") {
+				alert(sta)
+				return
+			}
+			disp_txid.innerHTML = xval(aj.responseXML,  "id")
+
+			var s = ''
+			var tout = 0
+
+			s += 'Len: ' + xval(aj.responseXML,  "len") + '\n'
+			s += "Total inputs: " + aj.responseXML.getElementsByTagName('input').length + "\n"
+			s += "\n"
+
+			var is = aj.responseXML.getElementsByTagName('output')
+			for (var i=0; i<is.length; i++) {
+				s += (i+1) + ") "
+				var val = parseInt(xval(is[i], "value"))
+				tout += val
+				s += (parseFloat(val)/1e8).toFixed(8)
+				s += " BTC => " + xval(is[i], "addr")
+				if (i==vout)  s += " <-------------------------------"
+				s += "\n"
+			}
+			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
+
+			console.log(s)
+
+			rawdiv.innerHTML = s
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+
+			// TODO: make it to happen only once
+			fade.addEventListener('click', closepopup)
+			fade.style.cursor = 'pointer'
+			fade.title = 'Click here to close the popup'
+
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+		}
+	}
+	aj.open("GET","txs2s.xml?minedid="+this["txid"]+'&minedat='+this["block"]+'&sid='+sid, true);
+	aj.send(null);
+}
+
 function fetch_wallet_balance(name) {
 	wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
@@ -66,7 +126,6 @@ function fetch_wallet_balance(name) {
 			var totbtc = 0
 			var totouts = 0
 			bal = JSON.parse(aj.responseText)
-			console.log(bal)
 			var outs = new Array()
 			var i, ii
 			for (i in wallet) {
@@ -123,6 +182,10 @@ function fetch_wallet_balance(name) {
 				td = row.insertCell(-1)
 				td.className = 'inpid'
 				td.innerText = outs[i].txid + ' - ' + outs[i].vout
+				td["txid"] = outs[i].txid
+				td["vout"] = outs[i].vout
+				td["block"] = outs[i].block
+				td.addEventListener('click', show_input_tx)
 
 				td = row.insertCell(-1)
 				td.align = 'right'
@@ -584,5 +647,6 @@ qswal.addEventListener("loadwallet", function(e) {
 })
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
+	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
 })
 </script>

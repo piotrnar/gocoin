@@ -467,7 +467,7 @@ func (c *OneConnection) Run() {
 			case "feefilter":
 				if len(cmd.pl) >= 8 {
 					c.X.MinFeeSPKB = int64(binary.LittleEndian.Uint64(cmd.pl[:8]))
-					println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
+					//println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
 				}
 
 			case "sendcmpct":

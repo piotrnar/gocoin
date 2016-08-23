@@ -50,6 +50,8 @@ var (
 	NetworkClosed bool
 
 	AverageBlockSize uint32
+
+	AllBalMinVal uint64
 )
 
 

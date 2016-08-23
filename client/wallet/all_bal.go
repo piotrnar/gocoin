@@ -46,7 +46,7 @@ func NewUTXO(tx *chain.QdbRec) {
 		if out == nil {
 			continue
 		}
-		if out.Value < common.CFG.AllBalances.MinValue {
+		if out.Value < common.AllBalMinVal {
 			continue
 		}
 		if out.IsP2KH() {
@@ -89,7 +89,7 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 		if out == nil {
 			continue
 		}
-		if out.Value < common.CFG.AllBalances.MinValue {
+		if out.Value < common.AllBalMinVal {
 			continue
 		}
 		if p2kh=out.IsP2KH(); p2kh {

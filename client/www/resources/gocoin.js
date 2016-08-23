@@ -189,3 +189,15 @@ function quick_switch_wallet() {
 		console.log("quick_switch_wallet:", e)
 	}
 }
+
+function noscroll() {
+	scroll(0,0)
+}
+
+function closepopup() {
+	light.style.display='none'
+	fade.style.display='none'
+	window.scrollTo(0,prvpos)
+	document.removeEventListener("scroll", noscroll)
+}
+

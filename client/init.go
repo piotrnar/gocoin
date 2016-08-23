@@ -51,8 +51,7 @@ func host_init() {
 		}
 	}
 
-	fmt.Println("Loading UTXO db and balances of P2SH/P2KH addrs, value at least",
-		btc.UintToBtc(common.CFG.AllBalances.MinValue), "BTC")
+	fmt.Println("Loading UTXO-db and P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
 
 
 	__exit := make(chan bool)
