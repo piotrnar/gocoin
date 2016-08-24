@@ -439,6 +439,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if btr!=nil {
 		fmt.Println(" Sending getblocktxn len", btr.Len())
 		c.SendRawMsg("getblocktxn", btr.Bytes())
+		fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
 	}
 
 	TxMutex.Unlock()
