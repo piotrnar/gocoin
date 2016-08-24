@@ -417,6 +417,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		fmt.Println(" None shortids_missing - we have the full block!")
 	}
 
+	var exp_index int
 	for n=0; n<len(collector.Txs); n++ {
 		if collector.Txs[n]==nil {
 			sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
@@ -426,7 +427,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 				} else {
 					fmt.Print(" ", n)
 					if btr!=nil {
-						btc.WriteVlen(btr, uint64(n))
+						btc.WriteVlen(btr, uint64(n-exp_index))
+						exp_index = n+1
 					}
 				}
 			} else {
