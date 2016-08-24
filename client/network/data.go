@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 	"bytes"
-	//"encoding/hex"
+	"encoding/hex"
+	"crypto/sha256"
 	"encoding/binary"
+	"github.com/dchest/siphash"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -297,4 +299,156 @@ func (c *OneConnection) CheckGetBlockData() bool {
 		}
 	}
 	return false
+}
+
+
+/*
+func txid2shortid(k0, k1 uint64, txid []byte) uint64 {
+	var shortid [8]byte
+	binary.LittleEndian.PutUint64(shortid[:], siphash.Hash(k0, k1, txid))
+	return shortid[:6]
+}
+*/
+
+
+func dec6byt(d []byte) uint64 {
+	return uint64(d[0]) | (uint64(d[1])<<8) | (uint64(d[2])<<16) |
+		(uint64(d[3])<<24) | (uint64(d[4])<<32) | (uint64(d[5])<<40)
+}
+
+func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
+	if len(pl)<90 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock A", hex.EncodeToString(pl))
+		c.DoS("CmpctBlkErrA")
+		return
+	}
+	var prefilledcnt, shortidscnt, idx uint64
+	var n, shortidx_idx int
+	var tx *btc.Tx
+
+	collector := new(CmpctBlockCollector)
+	copy(collector.Header[:], pl[:80])
+	collector.BlockHash = btc.NewSha2Hash(collector.Header[:])
+
+	fmt.Println()
+	fmt.Println("Compact Block", collector.BlockHash.String())
+	fmt.Println(" Nonce", hex.EncodeToString(pl[80:88]))
+
+	offs := 88
+	shortidscnt, n = btc.VULe(pl[offs:])
+	if n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock B", hex.EncodeToString(pl))
+		c.DoS("CmpctBlkErrB")
+		return
+	}
+	offs += n
+	shortidx_idx = offs
+	fmt.Println(" shortids_length", shortidscnt)
+	shortids := make(map[uint64] *OneTxToSend, shortidscnt)
+	for i:=0; i<int(shortidscnt); i++ {
+		shortids[dec6byt(pl[offs:offs+6])] = nil
+		offs += 6
+	}
+
+	prefilledcnt, n = btc.VULe(pl[offs:])
+	if n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock C", hex.EncodeToString(pl))
+		c.DoS("CmpctBlkErrC")
+		return
+	}
+	offs += n
+
+	collector.Txs = make([][]byte, prefilledcnt+shortidscnt)
+
+	fmt.Println(" prefilledtxn_length", prefilledcnt)
+	for i:=0; i<int(prefilledcnt); i++ {
+		idx, n = btc.VULe(pl[offs:])
+		if n>3 {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock D", hex.EncodeToString(pl))
+			c.DoS("CmpctBlkErrD")
+			return
+		}
+		offs += n
+		tx, n = btc.NewTx(pl[offs:])
+		if tx==nil {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock E", hex.EncodeToString(pl))
+			c.DoS("CmpctBlkErrE")
+			return
+		}
+		collector.Txs[idx] = make([]byte, n)
+		copy(collector.Txs[idx], pl[offs:offs+n])
+		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
+		offs += n
+		fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
+	}
+
+
+	//////////////////////////////////////////////////////////
+
+	sha := sha256.New()
+	sha.Write(pl[:88])
+	kks := sha.Sum(nil)
+	k0 := binary.LittleEndian.Uint64(kks[0:8])
+	k1 := binary.LittleEndian.Uint64(kks[8:16])
+
+	var cnt_found int
+	TxMutex.Lock()
+	for _, v := range TransactionsToSend {
+		sid := siphash.Hash(k0, k1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
+		if ptr, ok := shortids[sid]; ok {
+			if ptr!=nil {
+				println("   Same short ID - this hould not happen!!!")
+			}
+			shortids[sid] = v
+			cnt_found++
+		}
+	}
+	fmt.Println(" shortids_found", cnt_found)
+
+	var btr *bytes.Buffer
+
+	if len(shortids) - cnt_found > 0 {
+		missing := len(shortids) - cnt_found
+		fmt.Println(" shortids_missing", missing)
+		btr = new(bytes.Buffer)
+		btr.Write(collector.BlockHash.Hash[:])
+		btc.WriteVlen(btr, uint64(missing))
+	} else {
+		fmt.Println(" None shortids_missing - we have the full block!")
+	}
+
+	for n=0; n<len(collector.Txs); n++ {
+		if collector.Txs[n]==nil {
+			sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
+			if t2s, ok := shortids[sid]; ok {
+				if t2s!=nil {
+					collector.Txs[n] = t2s.Data
+				} else {
+					fmt.Print(" ", n)
+					if btr!=nil {
+						btc.WriteVlen(btr, uint64(n))
+					}
+				}
+			} else {
+				fmt.Println("   Tx idx", n, "is missing - this should not happen!!!")
+			}
+			shortidx_idx += 6
+		}
+	}
+
+	if btr!=nil {
+		fmt.Println(" Sending getblocktxn len", btr.Len())
+		c.SendRawMsg("getblocktxn", btr.Bytes())
+	}
+
+	TxMutex.Unlock()
+
+	fmt.Print("> ")
+}
+
+type CmpctBlockCollector struct {
+	Header [80]byte
+	BlockHash *btc.Uint256
+
+	Txs [][]byte
 }

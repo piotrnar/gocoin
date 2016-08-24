@@ -391,6 +391,9 @@ func (c *OneConnection) Run() {
 							binary.LittleEndian.PutUint64(pl[:], 1000*common.CFG.TXPool.FeePerByte)
 							c.SendRawMsg("feefilter", pl[:])
 						}
+						if c.Node.Version >= 70014 {
+							c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+						}
 					}
 				}
 
@@ -468,7 +471,21 @@ func (c *OneConnection) Run() {
 				}
 
 			case "sendcmpct":
-				println(c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+				if len(cmd.pl)>=9 && binary.LittleEndian.Uint64(cmd.pl[1:9])==1 {
+					println(c.ConnID, "sendcmpct", cmd.pl[0])
+					c.Node.SendCmpct = cmd.pl[0]==1
+				} else {
+					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+				}
+
+			case "cmpctblock":
+				c.ProcessCmpctBlock(cmd.pl)
+
+			case "getblocktxn":
+				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
+
+			case "blocktxn":
+				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			default:
 				if common.DebugLevel>0 {

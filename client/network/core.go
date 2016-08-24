@@ -70,6 +70,7 @@ type NetworkNodeStruct struct {
 	DoNotRelayTxs bool
 	ReportedIp4 uint32
 	SendHeaders bool
+	SendCmpct bool
 }
 
 type ConnectionStatus struct {
@@ -451,6 +452,9 @@ func maxmsgsize(cmd string) uint32 {
 		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
 		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
 		case "getheaders": return 4+3+500*32+32 // we allow up to 500 locator hashes
+		case "cmpctblock": return 1e6 // TODO
+		case "getblocktxn": return 1e6 // TODO
+		case "blocktxn": return 1e6 // TODO
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }

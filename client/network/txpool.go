@@ -334,7 +334,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
-	var new_spb, old_spb float64
+	//var new_spb, old_spb float64
 	var totlen int
 	var totfees, new_min_fee uint64
 
@@ -373,8 +373,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totfees += ctx.Fee
 		}
 		new_min_fee = totfees + (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte))
-		new_spb = float64(fee)/float64(len(ntx.raw))
-		old_spb = float64(totfees) / float64(totlen)
+		//new_spb = float64(fee)/float64(len(ntx.raw))
+		//old_spb = float64(totfees) / float64(totlen)
 
 		if fee < new_min_fee {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
@@ -410,19 +410,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if len(rbf_tx_list)>0 {
-		fmt.Println(time.Now().Format("2006/01/02 15:04:05"))
+		/*fmt.Println(time.Now().Format("2006/01/02 15:04:05"))
 		fmt.Printf("TX %s / %d to replace %d tx(s) [%d/%d], SPB %.1f -> %.1f\n",
 			ntx.tx.Hash.String(), len(ntx.raw), len(rbf_tx_list), totlen, totfees, old_spb, new_spb)
+		*/
 
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
-			fmt.Printf(" - TX %s with SPB %.1f @ len %d  - %.1f min old\n", ctx.Hash.String(),
+			/*fmt.Printf(" - TX %s with SPB %.1f @ len %d  - %.1f min old\n", ctx.Hash.String(),
 				float64(ctx.Fee)/float64(len(ctx.Data)), len(ctx.Data),
-				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)
+				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)*/
 			DeleteToSend(ctx)
 			common.CountSafe("TxRemovedByRBF")
 		}
-		fmt.Print("> ")
+		//fmt.Print("> ")
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
