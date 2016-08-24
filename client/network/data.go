@@ -316,6 +316,16 @@ func dec6byt(d []byte) uint64 {
 		(uint64(d[3])<<24) | (uint64(d[4])<<32) | (uint64(d[5])<<40)
 }
 
+
+type CmpctBlockCollector struct {
+	Header [80]byte
+	BlockHash *btc.Uint256
+
+	Txs [][]byte
+}
+
+
+
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if len(pl)<90 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock A", hex.EncodeToString(pl))
@@ -443,7 +453,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if btr!=nil {
 		fmt.Println(" Sending getblocktxn len", btr.Len())
 		c.SendRawMsg("getblocktxn", btr.Bytes())
-		fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
+		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
 	}
 
 	TxMutex.Unlock()
@@ -451,9 +461,18 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	fmt.Print("> ")
 }
 
-type CmpctBlockCollector struct {
-	Header [80]byte
-	BlockHash *btc.Uint256
-
-	Txs [][]byte
+func (c *OneConnection) ProcessBlockTxn(pl []byte) {
+	if len(pl)<33 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn A", hex.EncodeToString(pl))
+		c.DoS("BlkTxnErrA")
+		return
+	}
+	hash := btc.NewUint256(pl[:32])
+	le, n := btc.VULe(pl[32:])
+	if n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn B", hex.EncodeToString(pl))
+		c.DoS("BlkTxnErrB")
+		return
+	}
+	fmt.Println("Received", le, "new txs for block", hash.String())
 }
