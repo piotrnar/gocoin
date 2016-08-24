@@ -485,7 +485,8 @@ func (c *OneConnection) Run() {
 				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
 
 			case "blocktxn":
-				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
+				c.ProcessBlockTxn(cmd.pl)
+				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			default:
 				if common.DebugLevel>0 {
