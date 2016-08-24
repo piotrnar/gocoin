@@ -323,7 +323,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 	var prefilledcnt, shortidscnt, idx uint64
-	var n, shortidx_idx int
+	var n, shortidx_idx, exp_index int
 	var tx *btc.Tx
 
 	collector := new(CmpctBlockCollector)
@@ -368,6 +368,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			c.DoS("CmpctBlkErrD")
 			return
 		}
+		idx += uint64(exp_index)
 		offs += n
 		tx, n = btc.NewTx(pl[offs:])
 		if tx==nil {
@@ -380,6 +381,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
 		offs += n
 		fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
+		exp_index = int(idx)+1
 	}
 
 
@@ -417,7 +419,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		fmt.Println(" None shortids_missing - we have the full block!")
 	}
 
-	var exp_index int
+	exp_index = 0
 	for n=0; n<len(collector.Txs); n++ {
 		if collector.Txs[n]==nil {
 			sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
