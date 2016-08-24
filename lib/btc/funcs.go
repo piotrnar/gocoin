@@ -100,10 +100,19 @@ func VLen(b []byte) (le int, var_int_siz int) {
 func VULe(b []byte) (le uint64, var_int_siz int) {
 	switch b[0] {
 		case 0xfd:
+			if len(b)<3 {
+				panic("len<3")
+			}
 			return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
 		case 0xfe:
+			if len(b)<3 {
+				panic("len<5")
+			}
 			return uint64(binary.LittleEndian.Uint32(b[1:5])), 5
 		case 0xff:
+			if len(b)<3 {
+				panic("len<9")
+			}
 			return binary.LittleEndian.Uint64(b[1:9]), 9
 		default:
 			return uint64(b[0]), 1
