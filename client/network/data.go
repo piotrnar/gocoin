@@ -317,7 +317,11 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
-	sta, b2g := ProcessNewHeader(append(pl[:80], 0))
+	fmt.Println(c.ConnID, "compactblk", hex.EncodeToString(pl[:88]))
+
+	var tmp_hdr [81]byte
+	copy(tmp_hdr[:80], pl[:80])
+	sta, b2g := ProcessNewHeader(tmp_hdr[:])
 
 	if b2g==nil {
 		fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
@@ -403,6 +407,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	kks := sha.Sum(nil)
 	col.K0 = binary.LittleEndian.Uint64(kks[0:8])
 	col.K1 = binary.LittleEndian.Uint64(kks[8:16])
+
+	fmt.Printf("k0:%016x  k1:%0x16x  kks:%s\n", col.K0, col.K1, hex.EncodeToString(kks))
 
 	var cnt_found, cnt_not_found int
 
