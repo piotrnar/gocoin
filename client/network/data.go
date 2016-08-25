@@ -328,7 +328,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
-	sta, b2g := ProcessNewHeader(pl[:80])
+	sta, b2g := ProcessNewHeader(append(pl[:80], 0))
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
 		hex.EncodeToString(pl[80:88]), "->", sta)
 

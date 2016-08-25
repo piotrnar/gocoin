@@ -24,7 +24,7 @@ const (
 func ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	var ok bool
 	var b2g *OneBlockToGet
-	bl, _ := btc.NewBlock(hdr[:80])
+	bl, _ := btc.NewBlock(hdr)
 
 	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
 		common.CountSafe("HeaderOld")
@@ -46,6 +46,7 @@ func ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 
 	if er, dos, _ := common.BlockChain.PreCheckBlock(bl); er != nil {
 		common.CountSafe("HeaderCheckFail")
+		println("PreCheckBlock err", dos, er.Error())
 		if dos {
 			return PH_STATUS_FATAL, nil
 		} else {
@@ -96,25 +97,24 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			}
 
 
-			switch sta, b2g := ProcessNewHeader(hdr[:80]); sta {
-				case PH_STATUS_NEW:
-					new_headers_got++
-					fallthrough
-
-				case PH_STATUS_FRESH:
-					if c.Node.Height < b2g.Block.Height {
-						c.Node.Height = b2g.Block.Height
-					}
-					c.X.GetBlocksDataNow = true
-
-				case PH_STATUS_OLD:
-
-				case PH_STATUS_ERROR:
-					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
-
-				case PH_STATUS_FATAL:
+			sta, b2g := ProcessNewHeader(hdr[:])
+			if b2g==nil {
+				if sta==PH_STATUS_FATAL {
+					println("c.DoS(BadHeader)")
 					c.DoS("BadHeader")
 					return
+				} else if sta==PH_STATUS_ERROR {
+					println("c.Misbehave(BadHeader)")
+					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+				}
+			} else {
+				if sta==PH_STATUS_NEW {
+					new_headers_got++
+				}
+				if c.Node.Height < b2g.Block.Height {
+					c.Node.Height = b2g.Block.Height
+				}
+				c.X.GetBlocksDataNow = true
 			}
 		}
 	}
