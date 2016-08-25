@@ -522,24 +522,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	defer MutexRcv.Unlock()
 
 	idx := hash.BIdx()
-	b2g := BlocksToGet[idx]
-	if b2g==nil {
-		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for UNEXPECTED block", hash.String(), len(pl))
-		//common.CountSafe("BlockTxnUnexp")
-		//c.DoS("BlockTxnUnexp")
-		//fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
-		return
-	}
-	b2g.InProgress--
-
-	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block", hash.String(), b2g.Block.Height, len(pl))
-
-	if rb, ok := ReceivedBlocks[hash.BIdx()]; ok {
-		rb.Cnt++
-		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for OLD block", hash.String(), len(pl))
-		common.CountSafe("BlockTxnOld")
-		return
-	}
 
 	c.Mutex.Lock()
 	bip := c.GetBlockInProgress[idx]
@@ -550,8 +532,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("UnexpBlock2")
 		return
 	}
-	delete(c.GetBlockInProgress, idx)
-
 	col := bip.col
 	if col==nil {
 		c.Mutex.Unlock()
@@ -560,8 +540,26 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("UnexpBlockTxn")
 		return
 	}
-
+	delete(c.GetBlockInProgress, idx)
 	c.Mutex.Unlock()
+
+	// TODO: check if this is even needed:
+	if rb, ok := ReceivedBlocks[hash.BIdx()]; ok {
+		rb.Cnt++
+		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for received block", hash.String(), len(pl))
+		common.CountSafe("BlockTxnOld")
+		return
+	}
+
+	b2g := BlocksToGet[idx]
+	if b2g==nil {
+		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for ????? block", b2g.Block.Height, len(pl))
+		return
+	}
+	delete(BlocksToGet, idx)
+	//b2g.InProgress--
+
+	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block #", b2g.Block.Height, len(pl))
 
 	offs := 32+n
 	var tx *btc.Tx
@@ -597,7 +595,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	fmt.Println(c.ConnID, "PostCheckBlock OK!", time.Now().Sub(sta))
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start)}
 	ReceivedBlocks[idx] = orb
-	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }
 
