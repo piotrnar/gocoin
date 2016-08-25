@@ -335,9 +335,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
-	fmt.Println("==============================================================")
+	fmt.Println("============================", b2g.Block.Height, "==================================")
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
-		b2g.Block.Height, hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
+		hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
@@ -481,8 +481,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if missing==0 {
 		fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 		sta := time.Now()
-		raw_block := assemble_compact_block(col)
-		b2g.Block.Raw = raw_block
+		b2g.Block.UpdateContent(assemble_compact_block(col))
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
 			println(c.ConnID, "Corrupt CmpctBlk")
@@ -522,22 +521,26 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
-	if _, ok := ReceivedBlocks[hash.BIdx()]; ok {
-		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for OLD block", hash.String(), len(pl))
-		common.CountSafe("BlockTxnOld")
-		return
-	}
-
 	idx := hash.BIdx()
 	b2g := BlocksToGet[idx]
 	if b2g==nil {
 		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for UNEXPECTED block", hash.String(), len(pl))
-		common.CountSafe("BlockTxnUnexp")
+		//common.CountSafe("BlockTxnUnexp")
+		c.DoS("BlockTxnUnexp")
 		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
 		return
 	}
+	delete(c.GetBlockInProgress, idx)
+	b2g.InProgress--
 
 	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block", hash.String(), b2g.Block.Height, len(pl))
+
+	if rb, ok := ReceivedBlocks[hash.BIdx()]; ok {
+		rb.Cnt++
+		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for OLD block", hash.String(), len(pl))
+		common.CountSafe("BlockTxnOld")
+		return
+	}
 
 	c.Mutex.Lock()
 	bip := c.GetBlockInProgress[idx]
@@ -558,9 +561,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 
-	delete(c.GetBlockInProgress, idx)
 	c.Mutex.Unlock()
-	b2g.InProgress--
 
 	offs := 32+n
 	var tx *btc.Tx
@@ -586,8 +587,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 
 	fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 	sta := time.Now()
-	raw_block := assemble_compact_block(col)
-	b2g.Block.Raw = raw_block
+	b2g.Block.UpdateContent(assemble_compact_block(col))
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		println("Corrupt CmpctBlk")
