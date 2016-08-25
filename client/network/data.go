@@ -333,7 +333,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
-		b2g.Block.Height, hex.EncodeToString(pl[80:88]), "->", sta)
+		b2g.Block.Height, hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
