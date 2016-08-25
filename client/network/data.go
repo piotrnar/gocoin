@@ -304,15 +304,6 @@ func (c *OneConnection) CheckGetBlockData() bool {
 }
 
 
-/*
-func txid2shortid(k0, k1 uint64, txid []byte) uint64 {
-	var shortid [8]byte
-	binary.LittleEndian.PutUint64(shortid[:], siphash.Hash(k0, k1, txid))
-	return shortid[:6]
-}
-*/
-
-
 func dec6byt(d []byte) uint64 {
 	return uint64(d[0]) | (uint64(d[1])<<8) | (uint64(d[2])<<16) |
 		(uint64(d[3])<<24) | (uint64(d[4])<<32) | (uint64(d[5])<<40)
@@ -346,11 +337,16 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Node.Height = b2g.Block.Height
 	}
 
+	if sta!=PH_STATUS_NEW { // must be fresh
+		return
+	}
+
 	var prefilledcnt, shortidscnt, idx uint64
 	var n, shortidx_idx int
 	var tx *btc.Tx
 
-	collector := new(CmpctBlockCollector)
+	col := new(CmpctBlockCollector)
+	col.Header = b2g.Block.Raw[:80]
 
 	offs := 88
 	shortidscnt, n = btc.VULe(pl[offs:])
@@ -376,7 +372,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 	offs += n
 
-	collector.Txs = make([]interface{}, prefilledcnt+shortidscnt)
+	col.Txs = make([]interface{}, prefilledcnt+shortidscnt)
 
 	fmt.Println(" prefilledtxn_length", prefilledcnt)
 	exp := 0
@@ -397,7 +393,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		tmp := make([]byte, n)
 		copy(tmp, pl[offs:offs+n])
-		collector.Txs[idx] = tmp
+		col.Txs[idx] = tmp
 		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
 		offs += n
 		fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
@@ -409,15 +405,15 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	sha := sha256.New()
 	sha.Write(pl[:88])
 	kks := sha.Sum(nil)
-	collector.K0 = binary.LittleEndian.Uint64(kks[0:8])
-	collector.K1 = binary.LittleEndian.Uint64(kks[8:16])
+	col.K0 = binary.LittleEndian.Uint64(kks[0:8])
+	col.K1 = binary.LittleEndian.Uint64(kks[8:16])
 
 	var cnt_found int
 
 	TxMutex.Lock()
 
 	for _, v := range TransactionsToSend {
-		sid := siphash.Hash(collector.K0, collector.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
+		sid := siphash.Hash(col.K0, col.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
 				println("   Same short ID - this hould not happen!!!")
@@ -434,18 +430,20 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		msg.Write(b2g.Block.Hash.Hash[:])
 		btc.WriteVlen(msg, uint64(missing))
 		exp = 0
+		col.Sid2idx = make(map[uint64]int, missing)
 	}
-	for n=0; n<len(collector.Txs); n++ {
-		switch collector.Txs[n].(type) {
+	for n=0; n<len(col.Txs); n++ {
+		switch col.Txs[n].(type) {
 			case []byte: // prefilled transaction
 
 			default:
 				sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
 				if t2s, ok := shortids[sid]; ok {
 					if t2s!=nil {
-						collector.Txs[n] = t2s.Data
+						col.Txs[n] = t2s.Data
 					} else {
-						collector.Txs[n] = sid
+						col.Txs[n] = sid
+						col.Sid2idx[sid] = n
 						if missing > 0 {
 							btc.WriteVlen(msg, uint64(n-exp))
 							exp = n+1
@@ -459,19 +457,29 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 	TxMutex.Unlock()
 
-	b2g.collector = collector
-
 	if missing==0 {
-		commit_compact_block(b2g)
+		raw_block := assemble_compact_block(col)
+		b2g.Block.Raw = raw_block
+		er := common.BlockChain.PostCheckBlock(b2g.Block)
+		if er!=nil {
+			println("Corrupt CmpctBlk")
+			c.DoS("BadCmpctBlock")
+			return
+		}
+		idx := b2g.Block.Hash.BIdx()
+		orb := &OneReceivedBlock{Time:time.Now()}
+		ReceivedBlocks[idx] = orb
+		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
+		b2g.InProgress++
+		c.Mutex.Lock()
+		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
+		c.Mutex.Unlock()
 		fmt.Println(" Sending getblocktxn len", msg.Len())
 		c.SendRawMsg("getblocktxn", msg.Bytes())
 		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
 	}
-}
-
-func commit_compact_block(b2g *OneBlockToGet) {
-	fmt.Println("commit_compact_block - TODO", b2g.Block.Hash.String())
 }
 
 func (c *OneConnection) ProcessBlockTxn(pl []byte) {
@@ -498,12 +506,80 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 
-	b2g := BlocksToGet[hash.BIdx()]
+	idx := hash.BIdx()
+	b2g := BlocksToGet[idx]
 	if b2g==nil {
 		common.CountSafe("BlockTxnUnexp")
 		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
 		return
 	}
 
-	commit_compact_block(b2g)
+	c.Mutex.Lock()
+	bip := c.GetBlockInProgress[idx]
+	if bip==nil {
+		c.Mutex.Unlock()
+		println("unexpected compact block received from", c.PeerAddr.Ip())
+		common.CountSafe("UnxpectedBlockRcvd")
+		c.DoS("UnexpBlock2")
+		return
+	}
+
+	col := bip.col
+	if col==nil {
+		c.Mutex.Unlock()
+		println("BlockTxn not expected from this peer", c.PeerAddr.Ip())
+		common.CountSafe("UnxpectedBlockTxn")
+		c.DoS("UnexpBlockTxn")
+		return
+	}
+
+	delete(c.GetBlockInProgress, idx)
+	c.Mutex.Unlock()
+	b2g.InProgress--
+
+	offs := 32+n
+	var tx *btc.Tx
+	for offs < len(pl) {
+		tx, n = btc.NewTx(pl[offs:])
+		if n==0 {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn corrupt TX")
+			//c.DoS("BlkTxnErrX")
+			return
+		}
+		raw_tx := pl[offs:offs+n]
+		tx.Hash = btc.NewSha2Hash(raw_tx)
+		offs += n
+
+		sid := siphash.Hash(col.K0, col.K1, tx.Hash.Hash[:]) & 0xffffffffffff
+		if idx, ok := col.Sid2idx[sid]; ok {
+			col.Txs[idx] = raw_tx
+		} else {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn TX (short) ID unknown")
+			return
+		}
+	}
+
+	raw_block := assemble_compact_block(col)
+	b2g.Block.Raw = raw_block
+	er := common.BlockChain.PostCheckBlock(b2g.Block)
+	if er!=nil {
+		println("Corrupt CmpctBlk")
+		c.DoS("BadCmpctBlock")
+		return
+	}
+	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start)}
+	ReceivedBlocks[idx] = orb
+	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
+}
+
+
+func assemble_compact_block(col *CmpctBlockCollector) []byte {
+	bdat := new(bytes.Buffer)
+	bdat.Write(col.Header)
+	btc.WriteVlen(bdat, uint64(len(col.Txs)))
+	for _, txd := range col.Txs {
+		bdat.Write(txd.([]byte))
+	}
+	return bdat.Bytes()
 }
