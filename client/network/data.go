@@ -337,10 +337,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Node.Height = b2g.Block.Height
 	}
 
-	if sta!=PH_STATUS_NEW { // must be fresh
-		return
-	}
-
 	var prefilledcnt, shortidscnt, idx uint64
 	var n, shortidx_idx int
 	var tx *btc.Tx
