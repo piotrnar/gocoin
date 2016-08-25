@@ -302,7 +302,7 @@ func (c *OneConnection) CheckGetBlockData() bool {
 }
 
 
-func dec6byt(d []byte) uint64 {
+func ShortIDToU64(d []byte) uint64 {
 	return uint64(d[0]) | (uint64(d[1])<<8) | (uint64(d[2])<<16) |
 		(uint64(d[3])<<24) | (uint64(d[4])<<32) | (uint64(d[5])<<40)
 }
@@ -318,13 +318,16 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
+
 	var tmp_hdr [81]byte
 	copy(tmp_hdr[:80], pl[:80])
-	sta, b2g := ProcessNewHeader(tmp_hdr[:])
+	sta, b2g := ProcessNewHeader(tmp_hdr[:]) // ProcessNewHeader() needs byte(0) after the header,
+	// but don't try to change it to ProcessNewHeader(append(pl[:80], 0)) as it'd overwrite pl[80]
 
 	if b2g==nil {
-		fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
-			hex.EncodeToString(pl[80:88]), "->", sta)
+		/*fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
+			hex.EncodeToString(pl[80:88]), "->", sta)*/
+		common.CountSafe("CmpctBlockReject")
 		if sta==PH_STATUS_ERROR {
 			c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
@@ -332,6 +335,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
+	fmt.Println("==============================================================")
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
 		b2g.Block.Height, hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
@@ -358,7 +362,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	shortidx_idx = offs
 	shortids := make(map[uint64] *OneTxToSend, shortidscnt)
 	for i:=0; i<int(shortidscnt); i++ {
-		shortids[dec6byt(pl[offs:offs+6])] = nil
+		shortids[ShortIDToU64(pl[offs:offs+6])] = nil
 		offs += 6
 	}
 
@@ -394,7 +398,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		col.Txs[idx] = tmp
 		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
 		offs += n
-		fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
+		//fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
 		exp = int(idx)+1
 	}
 
@@ -420,7 +424,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			cnt_found++
 		}
 	}
-	fmt.Println(" shortids_found", cnt_found, "/ mempool cnt:", len(TransactionsToSend))
 	if cnt_found==0 {
 		fmt.Print("none found:")
 		for k, _ := range shortids {
@@ -434,6 +437,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	msg := new(bytes.Buffer)
 	missing := len(shortids) - cnt_found
+	fmt.Println(c.ConnID, "  short_ids", cnt_found, "/", shortidscnt, "  prefilled", prefilledcnt, "  missing", missing, "  mempool:", len(TransactionsToSend))
 	if missing > 0 {
 		msg.Write(b2g.Block.Hash.Hash[:])
 		btc.WriteVlen(msg, uint64(missing))
@@ -445,7 +449,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			case []byte: // prefilled transaction
 
 			default:
-				sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
+				sid := ShortIDToU64(pl[shortidx_idx:shortidx_idx+6])
 				if t2s, ok := shortids[sid]; ok {
 					if t2s!=nil {
 						col.Txs[n] = t2s.Data
@@ -466,14 +470,16 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Unlock()
 
 	if missing==0 {
+		fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 		raw_block := assemble_compact_block(col)
 		b2g.Block.Raw = raw_block
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
-			println("Corrupt CmpctBlk")
+			println(c.ConnID, "Corrupt CmpctBlk")
 			c.DoS("BadCmpctBlock")
 			return
 		}
+		fmt.Println(c.ConnID, "PostCheckBlock OK!")
 		idx := b2g.Block.Hash.BIdx()
 		orb := &OneReceivedBlock{Time:time.Now()}
 		ReceivedBlocks[idx] = orb
@@ -484,7 +490,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
-		fmt.Println(c.ConnID, "Sending getblocktxn for", missing, "missing txs")
+		fmt.Println(c.ConnID, "Sending getblocktxn for", missing, "missing txs.  Len", msg.Len())
 		c.SendRawMsg("getblocktxn", msg.Bytes())
 		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
 	}
@@ -568,7 +574,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
-	fmt.Println("Assembling block #", b2g.Block.Height)
+	fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 	raw_block := assemble_compact_block(col)
 	b2g.Block.Raw = raw_block
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
@@ -577,7 +583,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BadCmpctBlock")
 		return
 	}
-	fmt.Println("PostCheckBlock OK!")
+	fmt.Println(c.ConnID, "PostCheckBlock OK!")
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start)}
 	ReceivedBlocks[idx] = orb
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
