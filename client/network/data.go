@@ -318,10 +318,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 	sta, b2g := ProcessNewHeader(append(pl[:80], 0))
-	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
-		hex.EncodeToString(pl[80:88]), "->", sta)
 
 	if b2g==nil {
+		fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
+			hex.EncodeToString(pl[80:88]), "->", sta)
 		if sta==PH_STATUS_ERROR {
 			c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
@@ -329,6 +329,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
+	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
+		b2g.Block.Height, hex.EncodeToString(pl[80:88]), "->", sta)
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
@@ -402,7 +404,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	col.K0 = binary.LittleEndian.Uint64(kks[0:8])
 	col.K1 = binary.LittleEndian.Uint64(kks[8:16])
 
-	var cnt_found int
+	var cnt_found, cnt_not_found int
 
 	TxMutex.Lock()
 
@@ -414,9 +416,18 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			}
 			shortids[sid] = v
 			cnt_found++
+		} else {
+			cnt_not_found++
 		}
 	}
-	fmt.Println(" shortids_found", cnt_found)
+	fmt.Println(" shortids_found", cnt_found, "/", len(TransactionsToSend), cnt_not_found)
+	if cnt_found==0 {
+		fmt.Print("jebie:")
+		for k, _ := range shortids {
+			fmt.Printf(" %012x", k)
+		}
+		fmt.Println()
+	}
 
 	msg := new(bytes.Buffer)
 	missing := len(shortids) - cnt_found
@@ -489,24 +500,25 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BlkTxnErrB")
 		return
 	}
-	fmt.Println(c.ConnID, "Received", le, "new txs for block", hash.String(), len(pl))
-
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
 	if _, ok := ReceivedBlocks[hash.BIdx()]; ok {
+		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for OLD block", hash.String(), len(pl))
 		common.CountSafe("BlockTxnOld")
-		fmt.Println("BlockTxn", hash.String(), "-already received")
 		return
 	}
 
 	idx := hash.BIdx()
 	b2g := BlocksToGet[idx]
 	if b2g==nil {
+		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for UNEXPECTED block", hash.String(), len(pl))
 		common.CountSafe("BlockTxnUnexp")
 		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
 		return
 	}
+
+	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block", hash.String(), b2g.Block.Height, len(pl))
 
 	c.Mutex.Lock()
 	bip := c.GetBlockInProgress[idx]
