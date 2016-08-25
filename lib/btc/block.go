@@ -26,16 +26,20 @@ type Block struct {
 func NewBlock(data []byte) (bl *Block, er error) {
 	bl = new(Block)
 	bl.Hash = NewSha2Hash(data[:80])
-	er = bl.UpdateContent(data)
+	if len(data)==80 {
+		bl.Raw = data // only header
+	} else {
+		er = bl.UpdateContent(data)
+	}
 	return
 }
 
 
 func (bl *Block) UpdateContent(data []byte) error {
+	bl.Raw = data
 	if len(data)<81 {
 		return errors.New("Block too short")
 	}
-	bl.Raw = data
 	bl.TxCount, bl.TxOffset = VLen(data[80:])
 	if bl.TxOffset == 0 {
 		return errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")

@@ -32,6 +32,12 @@ type OneBlockToGet struct {
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint
+	collector *CmpctBlockCollector
+}
+
+type CmpctBlockCollector struct {
+	Txs []interface{} // either []byte of uint64
+	K0, K1 uint64
 }
 
 var (

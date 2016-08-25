@@ -126,6 +126,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
 	rec.InProgress--
 	rec.Block.Raw = b
+	println(" - rec.Block", rec.Block)
+	println(" - rec.Block.Txs", rec.Block.Txs)
 
 	er := common.BlockChain.PostCheckBlock(rec.Block)
 	if er!=nil {
@@ -317,32 +319,38 @@ func dec6byt(d []byte) uint64 {
 }
 
 
-type CmpctBlockCollector struct {
-	Header [80]byte
-	BlockHash *btc.Uint256
-
-	Txs [][]byte
-}
-
-
-
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if len(pl)<90 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock A", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrA")
 		return
 	}
+
+	MutexRcv.Lock()
+	defer MutexRcv.Unlock()
+	sta, b2g := ProcessNewHeader(pl[:80])
+	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
+		hex.EncodeToString(pl[80:88]), "->", sta)
+
+	if b2g==nil {
+		if sta==PH_STATUS_ERROR {
+			c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+		} else if sta==PH_STATUS_FATAL {
+			c.DoS("BadHeader")
+		}
+		return
+	}
+
+	// if we got here, we shall download this block
+	if c.Node.Height < b2g.Block.Height {
+		c.Node.Height = b2g.Block.Height
+	}
+
 	var prefilledcnt, shortidscnt, idx uint64
-	var n, shortidx_idx, exp_index int
+	var n, shortidx_idx int
 	var tx *btc.Tx
 
 	collector := new(CmpctBlockCollector)
-	copy(collector.Header[:], pl[:80])
-	collector.BlockHash = btc.NewSha2Hash(collector.Header[:])
-
-	fmt.Println()
-	fmt.Println("Compact Block", collector.BlockHash.String())
-	fmt.Println(" Nonce", hex.EncodeToString(pl[80:88]))
 
 	offs := 88
 	shortidscnt, n = btc.VULe(pl[offs:])
@@ -368,9 +376,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 	offs += n
 
-	collector.Txs = make([][]byte, prefilledcnt+shortidscnt)
+	collector.Txs = make([]interface{}, prefilledcnt+shortidscnt)
 
 	fmt.Println(" prefilledtxn_length", prefilledcnt)
+	exp := 0
 	for i:=0; i<int(prefilledcnt); i++ {
 		idx, n = btc.VULe(pl[offs:])
 		if n>3 {
@@ -378,7 +387,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			c.DoS("CmpctBlkErrD")
 			return
 		}
-		idx += uint64(exp_index)
+		idx += uint64(exp)
 		offs += n
 		tx, n = btc.NewTx(pl[offs:])
 		if tx==nil {
@@ -386,27 +395,29 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			c.DoS("CmpctBlkErrE")
 			return
 		}
-		collector.Txs[idx] = make([]byte, n)
-		copy(collector.Txs[idx], pl[offs:offs+n])
+		tmp := make([]byte, n)
+		copy(tmp, pl[offs:offs+n])
+		collector.Txs[idx] = tmp
 		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
 		offs += n
 		fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
-		exp_index = int(idx)+1
+		exp = int(idx)+1
 	}
 
 
-	//////////////////////////////////////////////////////////
-
+	// calculate K0 and K1 params for siphash-4-2
 	sha := sha256.New()
 	sha.Write(pl[:88])
 	kks := sha.Sum(nil)
-	k0 := binary.LittleEndian.Uint64(kks[0:8])
-	k1 := binary.LittleEndian.Uint64(kks[8:16])
+	collector.K0 = binary.LittleEndian.Uint64(kks[0:8])
+	collector.K1 = binary.LittleEndian.Uint64(kks[8:16])
 
 	var cnt_found int
+
 	TxMutex.Lock()
+
 	for _, v := range TransactionsToSend {
-		sid := siphash.Hash(k0, k1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
+		sid := siphash.Hash(collector.K0, collector.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
 				println("   Same short ID - this hould not happen!!!")
@@ -417,48 +428,50 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 	fmt.Println(" shortids_found", cnt_found)
 
-	var btr *bytes.Buffer
-
-	if len(shortids) - cnt_found > 0 {
-		missing := len(shortids) - cnt_found
-		fmt.Println(" shortids_missing", missing)
-		btr = new(bytes.Buffer)
-		btr.Write(collector.BlockHash.Hash[:])
-		btc.WriteVlen(btr, uint64(missing))
-	} else {
-		fmt.Println(" None shortids_missing - we have the full block!")
+	msg := new(bytes.Buffer)
+	missing := len(shortids) - cnt_found
+	if missing > 0 {
+		msg.Write(b2g.Block.Hash.Hash[:])
+		btc.WriteVlen(msg, uint64(missing))
+		exp = 0
 	}
-
-	exp_index = 0
 	for n=0; n<len(collector.Txs); n++ {
-		if collector.Txs[n]==nil {
-			sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
-			if t2s, ok := shortids[sid]; ok {
-				if t2s!=nil {
-					collector.Txs[n] = t2s.Data
-				} else {
-					fmt.Print(" ", n)
-					if btr!=nil {
-						btc.WriteVlen(btr, uint64(n-exp_index))
-						exp_index = n+1
+		switch collector.Txs[n].(type) {
+			case []byte: // prefilled transaction
+
+			default:
+				sid := dec6byt(pl[shortidx_idx:shortidx_idx+6])
+				if t2s, ok := shortids[sid]; ok {
+					if t2s!=nil {
+						collector.Txs[n] = t2s.Data
+					} else {
+						collector.Txs[n] = sid
+						if missing > 0 {
+							btc.WriteVlen(msg, uint64(n-exp))
+							exp = n+1
+						}
 					}
+				} else {
+					panic(fmt.Sprint("Tx idx ", n, " is missing - this should not happen!!!"))
 				}
-			} else {
-				fmt.Println("   Tx idx", n, "is missing - this should not happen!!!")
-			}
-			shortidx_idx += 6
+				shortidx_idx += 6
 		}
 	}
-
-	if btr!=nil {
-		fmt.Println(" Sending getblocktxn len", btr.Len())
-		c.SendRawMsg("getblocktxn", btr.Bytes())
-		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
-	}
-
 	TxMutex.Unlock()
 
-	fmt.Print("> ")
+	b2g.collector = collector
+
+	if missing==0 {
+		commit_compact_block(b2g)
+	} else {
+		fmt.Println(" Sending getblocktxn len", msg.Len())
+		c.SendRawMsg("getblocktxn", msg.Bytes())
+		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
+	}
+}
+
+func commit_compact_block(b2g *OneBlockToGet) {
+	fmt.Println("commit_compact_block - TODO", b2g.Block.Hash.String())
 }
 
 func (c *OneConnection) ProcessBlockTxn(pl []byte) {
@@ -474,5 +487,23 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BlkTxnErrB")
 		return
 	}
-	fmt.Println("Received", le, "new txs for block", hash.String())
+	fmt.Println(c.ConnID, "Received", le, "new txs for block", hash.String(), len(pl))
+
+	MutexRcv.Lock()
+	defer MutexRcv.Unlock()
+
+	if _, ok := ReceivedBlocks[hash.BIdx()]; ok {
+		common.CountSafe("BlockTxnOld")
+		fmt.Println("BlockTxn", hash.String(), "-already received")
+		return
+	}
+
+	b2g := BlocksToGet[hash.BIdx()]
+	if b2g==nil {
+		common.CountSafe("BlockTxnUnexp")
+		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
+		return
+	}
+
+	commit_compact_block(b2g)
 }

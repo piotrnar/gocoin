@@ -12,10 +12,58 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
+const (
+	PH_STATUS_NEW = 1
+	PH_STATUS_FRESH = 2
+	PH_STATUS_OLD = 3
+	PH_STATUS_ERROR = 4
+	PH_STATUS_FATAL = 5
+)
+
+
+func ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
+	var ok bool
+	var b2g *OneBlockToGet
+	bl, _ := btc.NewBlock(hdr[:80])
+
+	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
+		common.CountSafe("HeaderOld")
+		//fmt.Println("", i, bl.Hash.String(), "-already received")
+		return PH_STATUS_OLD, nil
+	}
+
+	if b2g, ok = BlocksToGet[bl.Hash.BIdx()]; ok {
+		common.CountSafe("HeaderFresh")
+		//fmt.Println(c.PeerAddr.Ip(), "block", bl.Hash.String(), " not new but get it")
+		return PH_STATUS_FRESH, b2g
+	}
+
+	common.CountSafe("HeaderNew")
+	//fmt.Println("", i, bl.Hash.String(), " - NEW!")
+
+	common.BlockChain.BlockIndexAccess.Lock()
+	defer common.BlockChain.BlockIndexAccess.Unlock()
+
+	if er, dos, _ := common.BlockChain.PreCheckBlock(bl); er != nil {
+		common.CountSafe("HeaderCheckFail")
+		if dos {
+			return PH_STATUS_FATAL, nil
+		} else {
+			return PH_STATUS_ERROR, nil
+		}
+	}
+
+	node := common.BlockChain.AcceptHeader(bl)
+	LastCommitedHeader = node
+	//println("checked ok - height", node.Height)
+	b2g = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
+	BlocksToGet[bl.Hash.BIdx()] = b2g
+
+	return PH_STATUS_NEW, b2g
+}
 
 
 func (c *OneConnection) HandleHeaders(pl []byte) {
-
 	c.X.GetHeadersInProgress = false
 
 	b := bytes.NewReader(pl)
@@ -28,6 +76,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 	var new_headers_got int
 
 	if cnt>0 {
+		MutexRcv.Lock()
+		defer MutexRcv.Unlock()
+
 		for i:=0; i<int(cnt); i++ {
 			var hdr [81]byte
 
@@ -44,51 +95,27 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 				return
 			}
 
-			bh := btc.NewSha2Hash(hdr[:80])
-			MutexRcv.Lock()
-			if _, ok := ReceivedBlocks[bh.BIdx()]; !ok {
-				if b2g, ok := BlocksToGet[bh.BIdx()]; !ok {
-					common.CountSafe("HeaderNew")
-					new_headers_got++
-					//fmt.Println("", i, bh.String(), " - NEW!")
 
-					bl, er := btc.NewBlock(hdr[:])
-					if er == nil {
-						common.BlockChain.BlockIndexAccess.Lock()
-						er, dos, _ := common.BlockChain.PreCheckBlock(bl)
-						if er == nil {
-							c.X.GetBlocksDataNow = true
-							node := common.BlockChain.AcceptHeader(bl)
-							LastCommitedHeader = node
-							//println("checked ok - height", node.Height)
-							if node.Height > c.Node.Height {
-								c.Node.Height = node.Height
-								//println(c.PeerAddr.Ip(), c.Node.Version, "- new block", bh.String(), "@", node.Height)
-							}
-							BlocksToGet[bh.BIdx()] = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
-						} else {
-							common.CountSafe("HeaderCheckFail")
-							if dos {
-								c.DoS("BadHeader")
-							} else {
-								c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
-							}
-						}
-						common.BlockChain.BlockIndexAccess.Unlock()
-					}
-				} else {
-					common.CountSafe("HeaderFresh")
-					//fmt.Println(c.PeerAddr.Ip(), "block", bh.String(), " not new but get it")
+			switch sta, b2g := ProcessNewHeader(hdr[:80]); sta {
+				case PH_STATUS_NEW:
+					new_headers_got++
+					fallthrough
+
+				case PH_STATUS_FRESH:
 					if c.Node.Height < b2g.Block.Height {
 						c.Node.Height = b2g.Block.Height
 					}
 					c.X.GetBlocksDataNow = true
-				}
-			} else {
-				common.CountSafe("HeaderOld")
-				//fmt.Println("", i, bh.String(), "-already received")
+
+				case PH_STATUS_OLD:
+
+				case PH_STATUS_ERROR:
+					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+
+				case PH_STATUS_FATAL:
+					c.DoS("BadHeader")
+					return
 			}
-			MutexRcv.Unlock()
 		}
 	}
 
