@@ -126,8 +126,6 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
 	rec.InProgress--
 	rec.Block.Raw = b
-	println(" - rec.Block", rec.Block)
-	println(" - rec.Block.Txs", rec.Block.Txs)
 
 	er := common.BlockChain.PostCheckBlock(rec.Block)
 	if er!=nil {
