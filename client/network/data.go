@@ -530,7 +530,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
 		return
 	}
-	delete(c.GetBlockInProgress, idx)
 	b2g.InProgress--
 
 	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block", hash.String(), b2g.Block.Height, len(pl))
@@ -551,6 +550,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("UnexpBlock2")
 		return
 	}
+	delete(c.GetBlockInProgress, idx)
 
 	col := bip.col
 	if col==nil {
