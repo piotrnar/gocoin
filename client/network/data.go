@@ -526,8 +526,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if b2g==nil {
 		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for UNEXPECTED block", hash.String(), len(pl))
 		//common.CountSafe("BlockTxnUnexp")
-		c.DoS("BlockTxnUnexp")
-		fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
+		//c.DoS("BlockTxnUnexp")
+		//fmt.Println("BlockTxn", hash.String(), "-unexpected!!!")
 		return
 	}
 	b2g.InProgress--
