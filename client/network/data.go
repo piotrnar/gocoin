@@ -353,7 +353,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	offs := 88
 	shortidscnt, n = btc.VULe(pl[offs:])
-	if n>3 {
+	if n==0 || n>3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock B", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrB")
 		return
@@ -362,12 +362,17 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	shortidx_idx = offs
 	shortids := make(map[uint64] *OneTxToSend, shortidscnt)
 	for i:=0; i<int(shortidscnt); i++ {
+		if len(pl[offs:offs+6])<6 {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock B", hex.EncodeToString(pl))
+			c.DoS("CmpctBlkErrB2")
+			return
+		}
 		shortids[ShortIDToU64(pl[offs:offs+6])] = nil
 		offs += 6
 	}
 
 	prefilledcnt, n = btc.VULe(pl[offs:])
-	if n>3 {
+	if n==0 || n>3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock C", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrC")
 		return
@@ -376,11 +381,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	col.Txs = make([]interface{}, prefilledcnt+shortidscnt)
 
-	fmt.Println(" shortids_length", shortidscnt, " prefilledtxn_length", prefilledcnt)
 	exp := 0
 	for i:=0; i<int(prefilledcnt); i++ {
 		idx, n = btc.VULe(pl[offs:])
-		if n>3 {
+		if n==0 || n>3 {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock D", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrD")
 			return
@@ -418,12 +422,14 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		sid := siphash.Hash(col.K0, col.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
-				println("   Same short ID - this hould not happen!!!")
+				common.CountSafe("SameShortID")
+				println("   Same short ID - this should not happen!!!")
 			}
 			shortids[sid] = v
 			cnt_found++
 		}
 	}
+	/*
 	if cnt_found==0 {
 		fmt.Print("none found:")
 		for k, _ := range shortids {
@@ -434,11 +440,14 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		fmt.Println()
 	}
+	*/
 
-	msg := new(bytes.Buffer)
+	var msg *bytes.Buffer
+
 	missing := len(shortids) - cnt_found
 	fmt.Println(c.ConnID, "  short_ids", cnt_found, "/", shortidscnt, "  prefilled", prefilledcnt, "  missing", missing, "  mempool:", len(TransactionsToSend))
 	if missing > 0 {
+		msg = new(bytes.Buffer)
 		msg.Write(b2g.Block.Hash.Hash[:])
 		btc.WriteVlen(msg, uint64(missing))
 		exp = 0
@@ -471,6 +480,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	if missing==0 {
 		fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
+		sta := time.Now()
 		raw_block := assemble_compact_block(col)
 		b2g.Block.Raw = raw_block
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
@@ -479,7 +489,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			c.DoS("BadCmpctBlock")
 			return
 		}
-		fmt.Println(c.ConnID, "PostCheckBlock OK!")
+		fmt.Println(c.ConnID, "PostCheckBlock OK!", time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
 		orb := &OneReceivedBlock{Time:time.Now()}
 		ReceivedBlocks[idx] = orb
@@ -504,7 +514,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	}
 	hash := btc.NewUint256(pl[:32])
 	le, n := btc.VULe(pl[32:])
-	if n>3 {
+	if n==0 || n>3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn B", hex.EncodeToString(pl))
 		c.DoS("BlkTxnErrB")
 		return
@@ -575,6 +585,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	}
 
 	fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
+	sta := time.Now()
 	raw_block := assemble_compact_block(col)
 	b2g.Block.Raw = raw_block
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
@@ -583,7 +594,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BadCmpctBlock")
 		return
 	}
-	fmt.Println(c.ConnID, "PostCheckBlock OK!")
+	fmt.Println(c.ConnID, "PostCheckBlock OK!", time.Now().Sub(sta))
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start)}
 	ReceivedBlocks[idx] = orb
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
