@@ -57,6 +57,8 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				TxMutex.Unlock()
 				notfound = append(notfound, h[:]...)
 			}
+		} else if typ == 4 {
+			fmt.Println(c.ConnID, "is asking for cmpctblock - IMPLEMENT IT!")
 		} else {
 			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")
@@ -531,7 +533,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		common.CountSafe("BlkTxnSameRcvd")
-		println(c.ConnID, "BlkTxn for", hash.String(),", but this block already received")
+		println(c.ConnID, "BlkTxn size", len(pl), "for", hex.EncodeToString(idx[:]),"but this block already received")
 		return
 	}
 
