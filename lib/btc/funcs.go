@@ -81,27 +81,15 @@ func VLenSize(uvl uint64) int {
 }
 
 
-// Returns length and number of bytes that the var_int took
-// If there is not enough bytes in the buffer 0, 0 gets returned
+// Returns var_int and number of bytes that the var_int took
+// If there is not enough bytes in the buffer, it will panic
 func VLen(b []byte) (le int, var_int_siz int) {
-	if len(b)==0 {
-		return -1, 0
-	}
 	switch b[0] {
 		case 0xfd:
-			if len(b)<3 {
-				return -1, 0
-			}
 			return int(binary.LittleEndian.Uint16(b[1:3])), 3
 		case 0xfe:
-			if len(b)<5 {
-				return -1, 0
-			}
 			return int(binary.LittleEndian.Uint32(b[1:5])), 5
 		case 0xff:
-			if len(b)<9 {
-				return -1, 0
-			}
 			return int(binary.LittleEndian.Uint64(b[1:9])), 9
 		default:
 			return int(b[0]), 1
@@ -109,25 +97,15 @@ func VLen(b []byte) (le int, var_int_siz int) {
 }
 
 
+// Returns var_uint and number of bytes that the var_uint took
+// If there is not enough bytes in the buffer, it will panic
 func VULe(b []byte) (le uint64, var_int_siz int) {
-	if len(b)==0 {
-		return 0, 0
-	}
 	switch b[0] {
 		case 0xfd:
-			if len(b)<3 {
-				return 0, 0
-			}
 			return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
 		case 0xfe:
-			if len(b)<5 {
-				return 0, 0
-			}
 			return uint64(binary.LittleEndian.Uint32(b[1:5])), 5
 		case 0xff:
-			if len(b)<9 {
-				return 0, 0
-			}
 			return binary.LittleEndian.Uint64(b[1:9]), 9
 		default:
 			return uint64(b[0]), 1
