@@ -120,12 +120,15 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	// Expire GetBlockInProgress after one hour
+	// Expire GetBlockInProgress after one minute, if they are not in BlocksToGet
 	for k, v := range c.GetBlockInProgress {
-		if time.Now().After(v.start.Add(time.Hour)) {
+		if _, ok := BlocksToGet[k]; ok {
+			continue
+		}
+		if time.Now().After(v.start.Add(time.Minute)) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
-			println(c.PeerAddr.Ip(), "GetBlockInProgress timeout")
+			println(c.ConnID, "GetBlockInProgress timeout")
 			break
 		}
 	}
