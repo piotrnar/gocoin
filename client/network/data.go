@@ -310,7 +310,7 @@ func ShortIDToU64(d []byte) uint64 {
 
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if len(pl)<90 {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock A", hex.EncodeToString(pl))
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error A", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrA")
 		return
 	}
@@ -327,15 +327,15 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if b2g==nil {
 		/*fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
 			hex.EncodeToString(pl[80:88]), "->", sta)*/
-		common.CountSafe("CmpctBlockReject")
+		common.CountSafe("CmpctBlockHdrNo")
 		if sta==PH_STATUS_ERROR {
-			c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
+			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
-			c.DoS("BadHeader")
+			c.DoS("BadCmpct")
 		}
 		return
 	}
-	fmt.Println("============================", b2g.Block.Height, "==================================")
+	fmt.Println("============================", b2g.Block.Height, len(pl), "==================================")
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
 		hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
@@ -344,17 +344,15 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Node.Height = b2g.Block.Height
 	}
 
-	var prefilledcnt, shortidscnt, idx uint64
-	var n, shortidx_idx int
-	var tx *btc.Tx
+	var n, idx, shortidscnt, shortidx_idx, prefilledcnt int
 
 	col := new(CmpctBlockCollector)
 	col.Header = b2g.Block.Raw[:80]
 
 	offs := 88
-	shortidscnt, n = btc.VULe(pl[offs:])
-	if n==0 || n>3 {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock B", hex.EncodeToString(pl))
+	shortidscnt, n = btc.VLen(pl[offs:])
+	if shortidscnt<0 || n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error B", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrB")
 		return
 	}
@@ -363,7 +361,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	shortids := make(map[uint64] *OneTxToSend, shortidscnt)
 	for i:=0; i<int(shortidscnt); i++ {
 		if len(pl[offs:offs+6])<6 {
-			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock B", hex.EncodeToString(pl))
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error B2", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrB2")
 			return
 		}
@@ -371,9 +369,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		offs += 6
 	}
 
-	prefilledcnt, n = btc.VULe(pl[offs:])
-	if n==0 || n>3 {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock C", hex.EncodeToString(pl))
+	prefilledcnt, n = btc.VLen(pl[offs:])
+	if prefilledcnt<0 || n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error C", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrC")
 		return
 	}
@@ -383,26 +381,23 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	exp := 0
 	for i:=0; i<int(prefilledcnt); i++ {
-		idx, n = btc.VULe(pl[offs:])
-		if n==0 || n>3 {
-			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock D", hex.EncodeToString(pl))
+		idx, n = btc.VLen(pl[offs:])
+		if idx<0 || n>3 {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error D", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrD")
 			return
 		}
-		idx += uint64(exp)
+		idx += exp
 		offs += n
-		tx, n = btc.NewTx(pl[offs:])
-		if tx==nil {
-			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock E", hex.EncodeToString(pl))
+		n = btc.TxSize(pl[offs:])
+		if n==0 {
+			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error E", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrE")
 			return
 		}
-		tmp := make([]byte, n)
-		copy(tmp, pl[offs:offs+n])
-		col.Txs[idx] = tmp
-		tx.Hash = btc.NewSha2Hash(pl[offs:offs+n])
+		col.Txs[idx] = pl[offs:offs+n]
+		//fmt.Println("  prefilledtxn", i, idx, ":", btc.NewSha2Hash(pl[offs:offs+n]).String())
 		offs += n
-		//fmt.Println("  prefilledtxn", i, idx, ":", tx.Hash.String())
 		exp = int(idx)+1
 	}
 
@@ -422,30 +417,19 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		sid := siphash.Hash(col.K0, col.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
-				common.CountSafe("SameShortID")
-				println("   Same short ID - this should not happen!!!")
+				common.CountSafe("ShortIDSame")
+				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Same short ID - abort")
+				return
 			}
 			shortids[sid] = v
 			cnt_found++
 		}
 	}
-	/*
-	if cnt_found==0 {
-		fmt.Print("none found:")
-		for k, _ := range shortids {
-			fmt.Printf(" %012x", k)
-			if k==20 {
-				break
-			}
-		}
-		fmt.Println()
-	}
-	*/
 
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
-	fmt.Println(c.ConnID, "  short_ids", cnt_found, "/", shortidscnt, "  prefilled", prefilledcnt, "  missing", missing, "  mempool:", len(TransactionsToSend))
+	fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
 	if missing > 0 {
 		msg = new(bytes.Buffer)
 		msg.Write(b2g.Block.Hash.Hash[:])
@@ -479,16 +463,17 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Unlock()
 
 	if missing==0 {
-		fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
+		fmt.Println(c.ConnID, "Instant Assembling block #", b2g.Block.Height)
 		sta := time.Now()
 		b2g.Block.UpdateContent(assemble_compact_block(col))
+		sto := time.Now()
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
-			println(c.ConnID, "Corrupt CmpctBlk")
-			c.DoS("BadCmpctBlock")
+			println(c.ConnID, "Corrupt CmpctBlkA")
+			c.DoS("BadCmpctBlockA")
 			return
 		}
-		fmt.Println(c.ConnID, "PostCheckBlock OK!", time.Now().Sub(sta))
+		fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
 		orb := &OneReceivedBlock{Time:time.Now()}
 		ReceivedBlocks[idx] = orb
@@ -499,23 +484,22 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
-		fmt.Println(c.ConnID, "Sending getblocktxn for", missing, "missing txs.  Len", msg.Len())
+		fmt.Println(c.ConnID, "Sending getblocktxn for", missing, "missing txs.  ", msg.Len(), "bytes")
 		c.SendRawMsg("getblocktxn", msg.Bytes())
-		//fmt.Println("getblocktxn", hex.EncodeToString(btr.Bytes()))
 	}
 }
 
 func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if len(pl)<33 {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn A", hex.EncodeToString(pl))
-		c.DoS("BlkTxnErrA")
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn error A", hex.EncodeToString(pl))
+		c.DoS("BlkTxnErrLen")
 		return
 	}
 	hash := btc.NewUint256(pl[:32])
-	le, n := btc.VULe(pl[32:])
-	if n==0 || n>3 {
-		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn B", hex.EncodeToString(pl))
-		c.DoS("BlkTxnErrB")
+	le, n := btc.VLen(pl[32:])
+	if le<0 || n>3 {
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn error B", hex.EncodeToString(pl))
+		c.DoS("BlkTxnErrCnt")
 		return
 	}
 	MutexRcv.Lock()
@@ -527,57 +511,56 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	bip := c.GetBlockInProgress[idx]
 	if bip==nil {
 		c.Mutex.Unlock()
-		println("unexpected compact block received from", c.PeerAddr.Ip())
-		common.CountSafe("UnxpectedBlockRcvd")
-		c.DoS("UnexpBlock2")
+		println(c.ConnID, "Unexpected BlkTxn1 received from", c.PeerAddr.Ip())
+		common.CountSafe("BlkTxnUnexp1")
+		c.DoS("BlkTxnErrBip")
 		return
 	}
 	col := bip.col
 	if col==nil {
 		c.Mutex.Unlock()
-		println("BlockTxn not expected from this peer", c.PeerAddr.Ip())
+		println("Unexpected BlockTxn2 not expected from this peer", c.PeerAddr.Ip())
 		common.CountSafe("UnxpectedBlockTxn")
-		c.DoS("UnexpBlockTxn")
+		c.DoS("BlkTxnErrCol")
 		return
 	}
 	delete(c.GetBlockInProgress, idx)
 	c.Mutex.Unlock()
 
-	// TODO: check if this is even needed:
-	if rb, ok := ReceivedBlocks[hash.BIdx()]; ok {
+	// the blocks seems to be fine
+	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
-		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for received block", hash.String(), len(pl))
-		common.CountSafe("BlockTxnOld")
+		common.CountSafe("BlkTxnSameRcvd")
 		return
 	}
 
 	b2g := BlocksToGet[idx]
 	if b2g==nil {
-		fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for ????? block", b2g.Block.Height, len(pl))
+		panic("BlockTxn: Block missing from BlocksToGet")
 		return
 	}
 	delete(BlocksToGet, idx)
 	//b2g.InProgress--
 
-	fmt.Println(c.ConnID, "BlockTxn -", le, "new txs for block #", b2g.Block.Height, len(pl))
+	fmt.Println(c.ConnID, "BlockTxn:", le, "new txs for block #", b2g.Block.Height, "   ", len(pl), "bytes")
 
 	offs := 32+n
-	var tx *btc.Tx
 	for offs < len(pl) {
-		tx, n = btc.NewTx(pl[offs:])
+		n = btc.TxSize(pl[offs:])
 		if n==0 {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn corrupt TX")
-			//c.DoS("BlkTxnErrX")
+			c.DoS("BlkTxnErrTx")
 			return
 		}
 		raw_tx := pl[offs:offs+n]
-		tx.Hash = btc.NewSha2Hash(raw_tx)
+		tx_hash := btc.NewSha2Hash(raw_tx)
 		offs += n
 
-		sid := siphash.Hash(col.K0, col.K1, tx.Hash.Hash[:]) & 0xffffffffffff
+		sid := siphash.Hash(col.K0, col.K1, tx_hash.Hash[:]) & 0xffffffffffff
 		if idx, ok := col.Sid2idx[sid]; ok {
 			col.Txs[idx] = raw_tx
 		} else {
+			common.CountSafe("ShortIDUnknown")
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn TX (short) ID unknown")
 			return
 		}
@@ -586,13 +569,14 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 	sta := time.Now()
 	b2g.Block.UpdateContent(assemble_compact_block(col))
+	sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
-		println("Corrupt CmpctBlk")
-		c.DoS("BadCmpctBlock")
+		println(c.ConnID, "Corrupt CmpctBlkB")
+		c.DoS("BadCmpctBlockB")
 		return
 	}
-	fmt.Println(c.ConnID, "PostCheckBlock OK!", time.Now().Sub(sta))
+	fmt.Println(c.ConnID, "PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start)}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
