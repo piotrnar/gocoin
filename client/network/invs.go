@@ -207,16 +207,26 @@ func (c *OneConnection) SendInvs() (res bool) {
 	c.Mutex.Lock()
 	if len(c.PendingInvs)>0 {
 		for i := range c.PendingInvs {
-			if c.Node.SendHeaders && binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
-				// convert block inv to block header
-				common.BlockChain.BlockIndexAccess.Lock()
-				bl := common.BlockChain.BlockIndex[btc.NewUint256((*c.PendingInvs[i])[4:]).BIdx()]
-				if bl != nil {
-					b_blk.Write(bl.BlockHeader[:])
-					b_blk.Write([]byte{0}) // 0 txs
+			var inv_sent_otherwise bool
+
+			if binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
+				if c.Node.SendCmpct {
+					fmt.Println(c.ConnID, "wants us to announce new block by cmpctblock - IMPLEMENT IT!")
 				}
-				common.BlockChain.BlockIndexAccess.Unlock()
-			} else {
+				if c.Node.SendHeaders {
+					// convert block inv to block header
+					common.BlockChain.BlockIndexAccess.Lock()
+					bl := common.BlockChain.BlockIndex[btc.NewUint256((*c.PendingInvs[i])[4:]).BIdx()]
+					if bl != nil {
+						b_blk.Write(bl.BlockHeader[:])
+						b_blk.Write([]byte{0}) // 0 txs
+					}
+					common.BlockChain.BlockIndexAccess.Unlock()
+					inv_sent_otherwise = true
+				}
+			}
+
+			if !inv_sent_otherwise {
 				b_txs.Write((*c.PendingInvs[i])[:])
 			}
 		}
