@@ -222,13 +222,7 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 }
 
 
-func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
-	c.Mutex.Lock()
-	if c.broken {
-		c.Mutex.Unlock()
-		return
-	}
-
+func (c *OneConnection) SendRawMsgNoMutex(cmd string, pl []byte) (e error) {
 	// we never allow the buffer to be totally full because then producer would be equal consumer
 	if bytes_left:=SendBufSize-c.BytesToSent(); bytes_left<=len(pl)+24 {
 		c.Mutex.Unlock()
@@ -263,7 +257,15 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	if x:=c.BytesToSent(); x>c.X.MaxSentBufSize {
 		c.X.MaxSentBufSize = x
 	}
+	return
+}
 
+
+func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
+	c.Mutex.Lock()
+	if !c.broken {
+		e = c.SendRawMsgNoMutex(cmd, pl)
+	}
 	c.Mutex.Unlock()
 	return
 }
