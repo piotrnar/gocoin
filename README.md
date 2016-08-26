@@ -1,6 +1,6 @@
 # Binaries
 
-Windows or Linux (amd64) binaries of can be downloaded from
+Windows or Linux (amd64) binaries can be downloaded from
 
  * https://sourceforge.net/projects/gocoin/files/?source=directory
 
