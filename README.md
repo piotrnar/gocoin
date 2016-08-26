@@ -76,7 +76,7 @@ from your OS's command prompt without a need to specify full path to the executa
 Use `go get` to fetch and install the source code files.
 Note that source files get installed within your GOPATH folder.
 
-	go get -d github.com/piotrnar/gocoin
+	go get github.com/piotrnar/gocoin
 
 
 # Building
