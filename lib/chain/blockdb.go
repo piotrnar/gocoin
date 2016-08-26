@@ -201,7 +201,9 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 	crec = db.cache[h.BIdx()]
 	if crec!=nil {
 		crec.Data = bl
-		crec.Block = str
+		if str!=nil {
+			crec.Block = str
+		}
 		crec.LastUsed = time.Now()
 		return
 	}
