@@ -198,8 +198,11 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 	if db.cache==nil {
 		return
 	}
-	if rec, ok := db.cache[h.BIdx()]; ok {
-		rec.LastUsed = time.Now()
+	crec = db.cache[h.BIdx()]
+	if crec!=nil {
+		crec.Data = bl
+		crec.Block = str
+		crec.LastUsed = time.Now()
 		return
 	}
 	if len(db.cache) >= db.max_cached_blocks {
