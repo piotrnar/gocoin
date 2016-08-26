@@ -531,6 +531,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		common.CountSafe("BlkTxnSameRcvd")
+		println(c.ConnID, "BlkTxn for", hash.String(),", but this block already received")
 		return
 	}
 
