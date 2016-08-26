@@ -38,8 +38,9 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		FeeSPB float64
 
 		Received uint32
-		TimeDl, TimeVer, TimeQue int
+		TimePre, TimeDl, TimeVer, TimeQue int
 		WasteCnt uint
+		MissedCnt uint
 		Sigops int
 	}
 
@@ -88,6 +89,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Received = uint32(rb.Time.Unix())
 		b.Sigops = int(node.Sigops)
 
+		b.TimePre = int(rb.TmPreproc/time.Millisecond)
+
 		if rb.TmDownload!=0 {
 			b.TimeDl = int(rb.TmDownload/time.Millisecond)
 		} else {
@@ -107,6 +110,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		}
 
 		b.WasteCnt = rb.Cnt
+		b.MissedCnt = rb.TxMissing
 
 		blks = append(blks, b)
 		end = end.Parent

@@ -144,6 +144,7 @@ type OneConnection struct {
 		dat []byte
 		datlen uint32
 	}
+	LastMsgTime time.Time
 
 	// Message sending state machine:
 	sendBuf [SendBufSize]byte
@@ -428,6 +429,8 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	c.recv.hdr_len = 0
 	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
+
+	c.LastMsgTime = time.Now()
 
 	return ret
 }

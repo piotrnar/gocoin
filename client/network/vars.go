@@ -9,10 +9,12 @@ import (
 
 type OneReceivedBlock struct {
 	time.Time
+	TmPreproc time.Duration // how long it took to start downloading this block
 	TmDownload time.Duration // how long it took to dowlod this block
 	TmQueuing time.Duration  // how long it took to start processing
 	TmAccept time.Duration   // how long it took to commit this block
 	Cnt uint
+	TxMissing uint
 }
 
 type BlockRcvd struct {

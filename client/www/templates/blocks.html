@@ -4,7 +4,7 @@
 	<th colspan="3">Block size
 	<th colspan="4">Mining info
 	<th>
-	<th colspan="3">Timing in <i>ms</i>
+	<th colspan="5">Timing in <i>ms</i>
 <tr>
 	<th width="52">Height
 	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
@@ -17,6 +17,8 @@
 	<th width="20">Ver
 	<th align="left">Miner
 	<th width="10">
+	<th width="10">
+	<th width="20" align="right">pre
 	<th width="20" align="right">dld
 	<th width="20" align="right">que
 	<th width="20" align="right">ver
@@ -141,6 +143,16 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat'
+				if (cs[i].MiddedCnt>0)  td.innerText = cs[i].MiddedCnt
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat'
+				if (cs[i].TimePre>0)  td.innerText = cs[i].TimePre
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
