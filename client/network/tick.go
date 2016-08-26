@@ -476,7 +476,8 @@ func (c *OneConnection) Run() {
 			case "sendcmpct":
 				if len(cmd.pl)>=9 && binary.LittleEndian.Uint64(cmd.pl[1:9])==1 {
 					//println(c.ConnID, "sendcmpct", cmd.pl[0])
-					c.Node.SendCmpct = cmd.pl[0]==1
+					c.Node.SendCmpct = true
+					c.Node.HighBandwidth = cmd.pl[0]==1
 				} else {
 					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
 				}
@@ -485,7 +486,8 @@ func (c *OneConnection) Run() {
 				c.ProcessCmpctBlock(cmd.pl)
 
 			case "getblocktxn":
-				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
+				c.ProcessGetBlockTxn(cmd.pl)
+				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
 
 			case "blocktxn":
 				c.ProcessBlockTxn(cmd.pl)

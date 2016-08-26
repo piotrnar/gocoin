@@ -70,7 +70,10 @@ type NetworkNodeStruct struct {
 	DoNotRelayTxs bool
 	ReportedIp4 uint32
 	SendHeaders bool
+
+	// BIP152:
 	SendCmpct bool
+	HighBandwidth bool
 }
 
 type ConnectionStatus struct {

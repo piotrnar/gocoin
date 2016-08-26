@@ -5,16 +5,16 @@ import (
 	"sync"
 	"time"
 	"sync/atomic"
+	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib"
 )
 
 const (
 	ConfigFile = "gocoin.conf"
 
 	Version = uint32(70014)
-	DefaultUserAgent = "/Gocoin:"+lib.Version+"/"
+	DefaultUserAgent = "/Gocoin:"+gocoin.Version+"/"
 	Services = uint64(0x00000001)
 )
 

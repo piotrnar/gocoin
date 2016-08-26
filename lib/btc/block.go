@@ -99,6 +99,7 @@ func (bl *Block) BuildTxList() (e error) {
 			e = errors.New("NewTx failed")
 			break
 		}
+		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
 		_ = <- done // wait here, if we have too many threads already
 		go func(h **Uint256, b []byte) {

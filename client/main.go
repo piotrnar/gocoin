@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"os/signal"
 	"runtime/debug"
-	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -227,7 +227,7 @@ func main() {
 		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
-	fmt.Println("Gocoin client version", lib.Version)
+	fmt.Println("Gocoin client version", gocoin.Version)
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
 	// Disable Ctrl+C

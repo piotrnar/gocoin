@@ -7,8 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
+	"golang.org/x/crypto/ripemd160"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
-	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 )
 
 

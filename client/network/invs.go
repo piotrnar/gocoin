@@ -210,10 +210,11 @@ func (c *OneConnection) SendInvs() (res bool) {
 			var inv_sent_otherwise bool
 
 			if binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
-				if c.Node.SendCmpct {
-					fmt.Println(c.ConnID, "wants us to announce new block by cmpctblock - IMPLEMENT IT!")
-				}
-				if c.Node.SendHeaders {
+				if c.Node.SendCmpct && c.Node.HighBandwidth {
+					fmt.Println(c.ConnID, "wants us to announce new block by cmpctblock")
+					c.SendCmpctBlk(btc.NewUint256((*c.PendingInvs[i])[4:]))
+					inv_sent_otherwise = true
+				} else if c.Node.SendHeaders {
 					// convert block inv to block header
 					common.BlockChain.BlockIndexAccess.Lock()
 					bl := common.BlockChain.BlockIndex[btc.NewUint256((*c.PendingInvs[i])[4:]).BIdx()]

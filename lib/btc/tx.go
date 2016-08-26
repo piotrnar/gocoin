@@ -43,7 +43,8 @@ type Tx struct {
 	TxOut []*TxOut
 	Lock_time uint32
 
-	// These two fields should be set in block.go:
+	// These three fields should be set in block.go:
+	Raw []byte
 	Size uint32
 	Hash *Uint256
 }
@@ -383,7 +384,7 @@ func NewTxIn(b []byte) (txin *TxIn, offs int) {
 
 // Decode a raw transaction from a given bytes slice.
 // Returns the transaction and the size it took in the buffer.
-// WARNING: This function does not set Tx.Hash neither Tx.Size
+// WARNING: This function does not set Tx.Hash, Tx.Size and Tx.Raw
 func NewTx(b []byte) (tx *Tx, offs int) {
 	defer func() { // In case if the buffer was too short, to recover from a panic
 		if r := recover(); r != nil {

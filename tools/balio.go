@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"io"
 	"io/ioutil"
@@ -254,7 +254,7 @@ func load_wallet(fn string) (addrs []*btc.BtcAddr) {
 }
 
 func main() {
-	fmt.Println("Gocoin BalIO version", lib.Version)
+	fmt.Println("Gocoin BalIO version", gocoin.Version)
 
 	if len(os.Args) < 2 {
 		print_help()

@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 	"compress/gzip"
 	"encoding/binary"
+	"github.com/golang/snappy"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/snappy"
 )
 
 
@@ -49,9 +49,14 @@ type oneBl struct {
 	snappied bool
 }
 
-type cacheRecord struct {
-	data []byte
-	used time.Time
+type BlckCachRec struct {
+	Data []byte
+	*btc.Block
+
+	// This is for BIP152
+	BIP152 []byte // 8 bytes of nonce || 8 bytes of K0 LSB || 8 bytes of K1 LSB
+
+	LastUsed time.Time
 }
 
 type BlockDBOpts struct {
@@ -65,7 +70,7 @@ type BlockDB struct {
 	blockindx *os.File
 	mutex sync.Mutex
 	max_cached_blocks int
-	cache map[[btc.Uint256IdxLen]byte] *cacheRecord
+	cache map[[btc.Uint256IdxLen]byte] *BlckCachRec
 }
 
 
@@ -90,7 +95,7 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 	}
 	if opts.MaxCachedBlocks>0 {
 		db.max_cached_blocks = opts.MaxCachedBlocks
-		db.cache = make(map[[btc.Uint256IdxLen]byte]*cacheRecord, db.max_cached_blocks)
+		db.cache = make(map[[btc.Uint256IdxLen]byte]*BlckCachRec, db.max_cached_blocks)
 	}
 	return
 }
@@ -189,26 +194,28 @@ func BlockDBConvertIndexFile(dir string) {
 
 
 // Make sure to call with the mutex locked
-func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte) {
+func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *BlckCachRec) {
 	if db.cache==nil {
 		return
 	}
 	if rec, ok := db.cache[h.BIdx()]; ok {
-		rec.used = time.Now()
+		rec.LastUsed = time.Now()
 		return
 	}
 	if len(db.cache) >= db.max_cached_blocks {
 		var oldest_t time.Time
 		var oldest_k [btc.Uint256IdxLen]byte
 		for k, v := range db.cache {
-			if oldest_t.IsZero() || v.used.Before(oldest_t) {
-				oldest_t = v.used
+			if oldest_t.IsZero() || v.LastUsed.Before(oldest_t) {
+				oldest_t = v.LastUsed
 				oldest_k = k
 			}
 		}
 		delete(db.cache, oldest_k)
 	}
-	db.cache[h.BIdx()] = &cacheRecord{used:time.Now(), data:bl}
+	crec = &BlckCachRec{LastUsed:time.Now(), Data:bl, Block:str}
+	db.cache[h.BIdx()] = crec
+	return
 }
 
 
@@ -261,7 +268,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	db.mutex.Lock()
 	db.blockIndex[bl.Hash.BIdx()] = &oneBl{fpos:uint64(pos),
 		blen:blksize, ipos:ipos, trusted:bl.Trusted, compressed:true, snappied:true}
-	db.addToCache(bl.Hash, bl.Raw)
+	db.addToCache(bl.Hash, bl.Raw, bl)
 	db.mutex.Unlock()
 	return
 }
@@ -329,7 +336,7 @@ func (db *BlockDB) Close() {
 }
 
 
-func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error) {
+func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, trusted bool, e error) {
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
@@ -341,15 +348,15 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	trusted = rec.trusted
 	if db.cache!=nil {
 		if crec, hit := db.cache[hash.BIdx()]; hit {
-			bl = crec.data
-			crec.used = time.Now()
+			cacherec = crec
+			crec.LastUsed = time.Now()
 			db.mutex.Unlock()
 			return
 		}
 	}
 	db.mutex.Unlock()
 
-	bl = make([]byte, rec.blen)
+	bl := make([]byte, rec.blen)
 
 	// we will re-open the data file, to not spoil the writting pointer
 	f, e := os.Open(db.dirname+"blockchain.dat")
@@ -374,9 +381,17 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	}
 
 	db.mutex.Lock()
-	db.addToCache(hash, bl)
+	cacherec = db.addToCache(hash, bl, nil)
 	db.mutex.Unlock()
 
+	return
+}
+
+
+func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error) {
+	var rec *BlckCachRec
+	rec, trusted, e = db.BlockGetExt(hash)
+	bl = rec.Data
 	return
 }
 

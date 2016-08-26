@@ -9,7 +9,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/others/utils"
-	"github.com/piotrnar/gocoin/lib"
+	"github.com/piotrnar/gocoin"
 	"io"
 	"io/ioutil"
 	"net"
@@ -109,7 +109,7 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 }
 
 func main() {
-	fmt.Println("Gocoin FetchBal version", lib.Version)
+	fmt.Println("Gocoin FetchBal version", gocoin.Version)
 	fmt.Println("NOTE: This tool is deprecated. Use balio instead.")
 
 	proxy = os.Getenv("TOR")
