@@ -99,8 +99,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	}
 
 	// remove from BlocksToGet:
-	rec := BlocksToGet[idx]
-	if rec==nil {
+	b2g := BlocksToGet[idx]
+	if b2g==nil {
 		MutexRcv.Unlock()
 		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), " was not expected")
 
@@ -119,11 +119,11 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	//println("block", rec.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), rec.InProgress)
-	rec.InProgress--
-	rec.Block.Raw = b
+	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
+	b2g.InProgress--
+	b2g.Block.Raw = b
 
-	er := common.BlockChain.PostCheckBlock(rec.Block)
+	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		MutexRcv.Unlock()
 		println("Corrupt block received from", conn.PeerAddr.Ip())
@@ -142,7 +142,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	orb := &OneReceivedBlock{Time:bip.start, TmDownload:conn.LastMsgTime.Sub(bip.start)}
+	orb := &OneReceivedBlock{Time:bip.start, TmDownload:conn.LastMsgTime.Sub(bip.start),
+		TmPreproc:b2g.TmPreproc}
 	delete(conn.GetBlockInProgress, idx)
 	conn.Mutex.Unlock()
 
@@ -150,8 +151,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 	MutexRcv.Unlock()
 
-	NetBlocks <- &BlockRcvd{Conn:conn, Block:rec.Block,
-		BlockTreeNode:rec.BlockTreeNode, OneReceivedBlock:orb}
+	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block,
+		BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }
 
 

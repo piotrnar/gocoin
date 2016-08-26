@@ -34,6 +34,7 @@ type OneBlockToGet struct {
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint
+	TmPreproc time.Duration // how long it took to start downloading this block
 }
 
 var (

@@ -39,7 +39,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	var tmp_hdr [81]byte
 	copy(tmp_hdr[:80], pl[:80])
-	sta, b2g := ProcessNewHeader(tmp_hdr[:]) // ProcessNewHeader() needs byte(0) after the header,
+	sta, b2g := c.ProcessNewHeader(tmp_hdr[:]) // ProcessNewHeader() needs byte(0) after the header,
 	// but don't try to change it to ProcessNewHeader(append(pl[:80], 0)) as it'd overwrite pl[80]
 
 	if b2g==nil {
@@ -199,12 +199,12 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
-		now := time.Now()
-		orb := &OneReceivedBlock{Time:now, TmPreproc:time.Now().Sub(now)}
+		orb := &OneReceivedBlock{Time:time.Now(), TmPreproc:time.Now().Sub(c.LastMsgTime)}
 		ReceivedBlocks[idx] = orb
 		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
+		b2g.TmPreproc = time.Now().Sub(c.LastMsgTime)
 		b2g.InProgress++
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
@@ -303,7 +303,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 	fmt.Println(c.ConnID, "PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
-	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start), TxMissing:col.Missing}
+	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start),
+		TxMissing:col.Missing, TmPreproc:b2g.TmPreproc}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }

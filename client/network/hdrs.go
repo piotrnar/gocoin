@@ -21,7 +21,7 @@ const (
 )
 
 
-func ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
+func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	var ok bool
 	var b2g *OneBlockToGet
 	bl, _ := btc.NewBlock(hdr)
@@ -97,7 +97,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			}
 
 
-			sta, b2g := ProcessNewHeader(hdr[:])
+			sta, b2g := c.ProcessNewHeader(hdr[:])
 			if b2g==nil {
 				if sta==PH_STATUS_FATAL {
 					println("c.DoS(BadHeader)")
