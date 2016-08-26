@@ -54,7 +54,10 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			}
 		} else if typ == 4 {
 			fmt.Println(c.ConnID, "is asking for cmpctblock")
+			c.Mutex.Lock()
 			c.SendCmpctBlk(btc.NewUint256(h[4:]))
+			c.Mutex.Unlock()
+			fmt.Println(c.ConnID, "cmpctblock processing finished")
 		} else {
 			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")

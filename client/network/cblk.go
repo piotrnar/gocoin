@@ -351,6 +351,7 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	return
 }
 
+// This must be called wit c.Mutex locked
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	//fmt.Println("SendCmpctBlk needs to be implemented")
 	crec := GetchBlockForBIP152(hash)
@@ -374,7 +375,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	msg.Write([]byte{1}) // one preffiled tx
 	msg.Write([]byte{0}) // coinbase - index 0
 	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
-	c.SendRawMsg("cmpctblock", msg.Bytes())
+	c.SendRawMsgNoMutex("cmpctblock", msg.Bytes())
 	fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
