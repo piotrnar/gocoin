@@ -1,5 +1,7 @@
 1.7.1
-* Client: support for BIP-152 (Compact Block Relay), but only for High Bandwidth mode
+* "Version" moved from "github.com/piotrnar/gocoin/lib" to "github.com/piotrnar/gocoin"
+* Leave external dependencies (siphash, snappy, ripemd160) to be dealt with by "go get"
+* Client: support for BIP-152 - "Compact Block Relay"
 
 1.7.1 - 2016-08-22
 * Client: WebUI/MakeTX - display raw transaction after clicking no the ID.
