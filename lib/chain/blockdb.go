@@ -391,7 +391,7 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error) {
 	var rec *BlckCachRec
 	rec, trusted, e = db.BlockGetExt(hash)
-	if rec!=nil
+	if rec!=nil {
 		bl = rec.Data
 	}
 	return
