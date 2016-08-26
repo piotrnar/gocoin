@@ -206,8 +206,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
-		fmt.Println(c.ConnID, "Sending getblocktxn for", missing, "missing txs.  ", msg.Len(), "bytes")
 		c.SendRawMsg("getblocktxn", msg.Bytes())
+		fmt.Println(c.ConnID, "Send getblocktxn for", missing, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
 
@@ -351,7 +351,6 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	return
 }
 
-// This must be called wit c.Mutex locked
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	//fmt.Println("SendCmpctBlk needs to be implemented")
 	crec := GetchBlockForBIP152(hash)
@@ -375,7 +374,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	msg.Write([]byte{1}) // one preffiled tx
 	msg.Write([]byte{0}) // coinbase - index 0
 	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
-	c.SendRawMsgNoMutex("cmpctblock", msg.Bytes())
+	c.SendRawMsg("cmpctblock", msg.Bytes())
 	fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
