@@ -340,6 +340,7 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	}
 
 	if len(crec.BIP152)!=24 {
+		crec.BIP152 = make([]byte, 24)
 		copy(crec.BIP152[:8], crec.Data[48:56]) // set the nonce to 8 middle-bytes of block's merkle_root
 		sha := sha256.New()
 		sha.Write(crec.Data[:80])
