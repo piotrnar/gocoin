@@ -34,13 +34,6 @@ type OneBlockToGet struct {
 	InProgress uint
 }
 
-type CmpctBlockCollector struct {
-	Header []byte
-	Txs []interface{} // either []byte of uint64
-	K0, K1 uint64
-	Sid2idx map[uint64]int
-}
-
 var (
 	ReceivedBlocks map[[btc.Uint256IdxLen]byte] *OneReceivedBlock = make(map[[btc.Uint256IdxLen]byte] *OneReceivedBlock, 400e3)
 	BlocksToGet map[[btc.Uint256IdxLen]byte] *OneBlockToGet = make(map[[btc.Uint256IdxLen]byte] *OneBlockToGet)
