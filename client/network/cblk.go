@@ -187,7 +187,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Unlock()
 
 	if missing==0 {
-		fmt.Println(c.ConnID, "Instant Assembling block #", b2g.Block.Height)
 		sta := time.Now()
 		b2g.Block.UpdateContent(assemble_compact_block(col))
 		sto := time.Now()
@@ -197,7 +196,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			c.DoS("BadCmpctBlockA")
 			return
 		}
-		fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
+		fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
 		orb := &OneReceivedBlock{Time:time.Now(), TmPreproc:time.Now().Sub(c.LastMsgTime)}
 		ReceivedBlocks[idx] = orb
@@ -292,7 +291,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
-	fmt.Println(c.ConnID, "Assembling block #", b2g.Block.Height)
 	sta := time.Now()
 	b2g.Block.UpdateContent(assemble_compact_block(col))
 	sto := time.Now()
@@ -302,7 +300,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BadCmpctBlockB")
 		return
 	}
-	fmt.Println(c.ConnID, "PostCheckBlock OK", sto.Sub(sta), time.Now().Sub(sta))
+	fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start),
 		TxMissing:col.Missing, TmPreproc:b2g.TmPreproc}
 	ReceivedBlocks[idx] = orb
