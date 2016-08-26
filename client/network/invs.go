@@ -203,6 +203,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 func (c *OneConnection) SendInvs() (res bool) {
 	b_txs := new(bytes.Buffer)
 	b_blk := new(bytes.Buffer)
+	var c_blk []*btc.Uint256
 
 	c.Mutex.Lock()
 	if len(c.PendingInvs)>0 {
@@ -211,8 +212,8 @@ func (c *OneConnection) SendInvs() (res bool) {
 
 			if binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
 				if c.Node.SendCmpct && c.Node.HighBandwidth {
+					c_blk = append(c_blk, btc.NewUint256((*c.PendingInvs[i])[4:]))
 					fmt.Println(c.ConnID, "wants us to announce new block by cmpctblock")
-					c.SendCmpctBlk(btc.NewUint256((*c.PendingInvs[i])[4:]))
 					inv_sent_otherwise = true
 				} else if c.Node.SendHeaders {
 					// convert block inv to block header
@@ -235,6 +236,12 @@ func (c *OneConnection) SendInvs() (res bool) {
 	}
 	c.PendingInvs = nil
 	c.Mutex.Unlock()
+
+	if len(c_blk) > 0 {
+		for _, h := range c_blk {
+			c.SendCmpctBlk(h)
+		}
+	}
 
 	if b_blk.Len() > 0 {
 		common.CountSafe("InvSentAsHeader")
