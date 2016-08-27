@@ -36,7 +36,7 @@ const (
 	PingHistoryValid = (PingHistoryLength-4) // Ignore N longest pings
 	PingAssumedIfUnsupported = 999 // ms
 
-	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
+	DropSlowestEvery = 1*time.Minute // Look for the slowest peer and drop it
 
 	MIN_PROTO_VERSION = 209
 

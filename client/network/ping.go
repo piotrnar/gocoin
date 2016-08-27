@@ -51,11 +51,11 @@ func drop_slowest_peer() {
 		}
 		v.Mutex.Lock()
 		ap := v.GetAveragePing()
-		v.Mutex.Unlock()
-		if ap > worst_ping {
+		if ap > worst_ping && v.Node.Version<70014 {
 			worst_ping = ap
 			worst_conn = v
 		}
+		v.Mutex.Unlock()
 	}
 	if worst_conn != nil {
 		if common.DebugLevel > 0 {

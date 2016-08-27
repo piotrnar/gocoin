@@ -296,7 +296,7 @@ func NetworkTick() {
 
 	if next_drop_slowest.IsZero() {
 		next_drop_slowest = time.Now().Add(DropSlowestEvery)
-	} else if conn_cnt >= atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
+	} else if conn_cnt >= atomic.LoadUint32(&common.CFG.Net.MaxOutCons)/2 {
 		// Having max number of outgoing connections, check to drop the slowest one
 		if time.Now().After(next_drop_slowest) {
 			drop_slowest_peer()
