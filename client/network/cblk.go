@@ -177,9 +177,11 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
+	/*
 	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
 	fmt.Println(c.ConnID, "Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
 		"#", b2g.Block.Height, sta_s[sta], " inp:", b2g.InProgress)
+	*/
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
@@ -187,7 +189,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 
 	if b2g.InProgress >= uint(common.CFG.Net.MaxBlockAtOnce) {
-		fmt.Println(c.ConnID, " - too many in progress")
+		common.CountSafe("CmpctBlockMaxInProg")
+		//fmt.Println(c.ConnID, " - too many in progress")
 		return
 	}
 
@@ -311,16 +314,16 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Unlock()
 
 	if missing==0 {
-		sta := time.Now()
+		//sta := time.Now()
 		b2g.Block.UpdateContent(col.Assemble())
-		sto := time.Now()
+		//sto := time.Now()
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
 			println(c.ConnID, "Corrupt CmpctBlkA")
 			c.DoS("BadCmpctBlockA")
 			return
 		}
-		fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
+		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
 		orb := &OneReceivedBlock{Time:time.Now(), TmPreproc:time.Now().Sub(c.LastMsgTime)}
 		ReceivedBlocks[idx] = orb
@@ -333,7 +336,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
 		c.SendRawMsg("getblocktxn", msg.Bytes())
-		fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
+		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
 
@@ -379,7 +382,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		common.CountSafe("BlkTxnSameRcvd")
-		fmt.Println(c.ConnID, "BlkTxn size", len(pl), "for", hash.String()[48:],"- already have")
+		//fmt.Println(c.ConnID, "BlkTxn size", len(pl), "for", hash.String()[48:],"- already have")
 		return
 	}
 
@@ -391,7 +394,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	delete(BlocksToGet, idx)
 	//b2g.InProgress--
 
-	fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
+	//fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
 
 	offs := 32+n
 	for offs < len(pl) {
@@ -415,16 +418,16 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
-	sta := time.Now()
+	//sta := time.Now()
 	b2g.Block.UpdateContent(col.Assemble())
-	sto := time.Now()
+	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		println(c.ConnID, "Corrupt CmpctBlkB")
 		c.DoS("BadCmpctBlockB")
 		return
 	}
-	fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
+	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start),
 		TxMissing:col.Missing, TmPreproc:b2g.TmPreproc}
 	ReceivedBlocks[idx] = orb
