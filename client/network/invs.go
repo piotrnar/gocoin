@@ -150,11 +150,13 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 				}
 			}
 			if send_inv {
-				if typ, ok := v.InvDone.Map[hash2invid(inv[4:36])]; ok {
-					common.CountSafe(fmt.Sprint("SendInvSame-", typ))
-				} else if len(v.PendingInvs) < 500 {
-					v.PendingInvs = append(v.PendingInvs, inv)
-					cnt++
+				if len(v.PendingInvs) < 500 {
+					if typ, ok := v.InvDone.Map[hash2invid(inv[4:36])]; ok {
+						common.CountSafe(fmt.Sprint("SendInvSame-", typ))
+					} else {
+						v.PendingInvs = append(v.PendingInvs, inv)
+						cnt++
+					}
 				} else {
 					common.CountSafe("SendInvFull")
 				}
@@ -163,9 +165,6 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 		}
 	}
 	Mutex_net.Unlock()
-	if typ==1 && cnt==0 {
-		fmt.Println("WARNING: your tx has not been broadcasted to any peer")
-	}
 	return
 }
 
