@@ -383,8 +383,13 @@ func (c *OneConnection) Run() {
 			case "version":
 				er := c.HandleVersion(cmd.pl)
 				if er != nil {
-					println("version:", er.Error())
+					println("version msg error:", er.Error())
 					c.Disconnect()
+					break
+				}
+				if if c.Node.DoNotRelayTxs {
+					c.DoS("SPV")
+					break
 				}
 				if c.Node.Version >= 70012 {
 					c.SendRawMsg("sendheaders", nil)
