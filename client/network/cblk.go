@@ -147,7 +147,7 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	c.SendRawMsg("blocktxn", msg.Bytes())
-	fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
+	//fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
