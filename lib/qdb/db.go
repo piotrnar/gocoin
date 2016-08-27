@@ -43,7 +43,7 @@ const (
 
 	DefaultDefragPercentVal = 50
 	DefaultForcedDefragPerc = 300
-	DefaultMaxPending = 1000
+	DefaultMaxPending = 2500
 	DefaultMaxPendingNoSync = 10000
 )
 
