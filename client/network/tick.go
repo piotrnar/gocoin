@@ -387,7 +387,7 @@ func (c *OneConnection) Run() {
 					c.Disconnect()
 					break
 				}
-				if if c.Node.DoNotRelayTxs {
+				if c.Node.DoNotRelayTxs {
 					c.DoS("SPV")
 					break
 				}
