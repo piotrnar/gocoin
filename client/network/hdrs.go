@@ -26,6 +26,10 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	var b2g *OneBlockToGet
 	bl, _ := btc.NewBlock(hdr)
 
+	c.Mutex.Lock()
+	c.InvStore(INV_BLOCK, bl.Hash.Hash[:])
+	c.Mutex.Unlock()
+
 	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
 		common.CountSafe("HeaderOld")
 		//fmt.Println("", i, bl.Hash.String(), "-already received")

@@ -78,6 +78,7 @@ func node_info(par string) {
 				byte(r.ReportedIp4>>8), byte(r.ReportedIp4))
 			fmt.Println("SendHeaders:", r.SendHeaders)
 		}
+		fmt.Println("Invs Done:", r.InvsDone)
 		fmt.Println("Last data got:", time.Now().Sub(r.LastDataGot).String())
 		fmt.Println("Last data sent:", time.Now().Sub(r.LastSent).String())
 		fmt.Println("Last command received:", r.LastCmdRcvd, " ", r.LastBtsRcvd, "bytes")

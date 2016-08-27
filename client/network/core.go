@@ -46,6 +46,8 @@ const (
 
 	MAX_BLOCKS_FORWARD = 5000 // Never ask for a block  higher than current top + this value
 	MAX_GETDATA_FORWARD = 2e6 // 2 times maximum block size
+
+	MAX_INV_HISTORY = 500
 )
 
 
@@ -115,6 +117,7 @@ type ConnInfo struct {
 	BlocksInProgress int
 	InvsToSend int
 	AveragePing int
+	InvsDone int
 }
 
 type OneConnection struct {
@@ -145,6 +148,12 @@ type OneConnection struct {
 		datlen uint32
 	}
 	LastMsgTime time.Time
+
+	InvDone struct {
+		Map map[uint64]uint32
+		History []uint64
+		Idx int
+	}
 
 	// Message sending state machine:
 	sendBuf [SendBufSize]byte
@@ -182,6 +191,7 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
+	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
 	return
 }
 
@@ -218,6 +228,8 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	for k, v := range v.counters {
 		res.Counters[k] = v
 	}
+
+	res.InvsDone = len(v.InvDone.History)
 
 	v.Mutex.Unlock()
 }

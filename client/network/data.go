@@ -31,16 +31,17 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		}
 
 		typ = binary.LittleEndian.Uint32(h[:4])
+		c.InvStore(typ, h[4:36])
 
 		common.CountSafe(fmt.Sprint("GetdataType",typ))
-		if typ == 2 {
+		if typ == INV_BLOCK {
 			bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
 			if er == nil {
 				c.SendRawMsg("block", bl)
 			} else {
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == 1 {
+		} else if typ == INV_TX {
 			// transaction
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked==0 {
@@ -52,7 +53,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				TxMutex.Unlock()
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == 4 {
+		} else if typ == INV_CMPCT_BLOCK {
 			c.SendCmpctBlk(btc.NewUint256(h[4:]))
 		} else {
 			if common.DebugLevel>0 {
