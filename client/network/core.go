@@ -498,7 +498,7 @@ func DropPeer(conid uint32) {
 	for _, v := range OpenCons {
 		if uint32(conid)==v.ConnID {
 			v.DoS("FromUI")
-			fmt.Println("The connection with", v.PeerAddr.Ip(), "is being dropped and the peer is banned")
+			//fmt.Println("The connection with", v.PeerAddr.Ip(), "is being dropped and the peer is banned")
 			return
 		}
 	}
