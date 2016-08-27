@@ -49,7 +49,7 @@ func best_val(par string) {
 
 
 func all_addrs(par string) {
-	var tot_val, tot_inps, ptsh_outs, ptsh_vals uint64
+	var ptkh_outs, ptkh_vals, ptsh_outs, ptsh_vals uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
 
@@ -63,24 +63,23 @@ func all_addrs(par string) {
 	defer wallet.BalanceMutex.Unlock()
 
 	for k, rec := range wallet.AllBalancesP2SH {
-		tot_val += rec.Value
-		tot_inps += uint64(len(rec.Unsp))
+		ptsh_vals += rec.Value
+		ptsh_outs += uint64(len(rec.Unsp))
 		if sort_by_cnt && len(rec.Unsp)>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
 			best = append(best, OneWalletAddrs{P2SH:true, Key:k, rec:rec})
 		}
 	}
-	ptsh_outs = tot_val
-	ptsh_vals = tot_inps
 
 	for k, rec := range wallet.AllBalancesP2KH {
-		tot_val += rec.Value
-		tot_inps += uint64(len(rec.Unsp))
+		ptkh_vals += rec.Value
+		ptkh_outs += uint64(len(rec.Unsp))
 		if sort_by_cnt && len(rec.Unsp)>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
 			best = append(best, OneWalletAddrs{Key:k, rec:rec})
 		}
 	}
-	fmt.Println(btc.UintToBtc(tot_val), "BTC in", tot_inps, "unspent records from", len(wallet.AllBalancesP2SH)+len(wallet.AllBalancesP2KH), "addresses")
-	fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "records from", len(wallet.AllBalancesP2SH), "P2SH addresses")
+
+	fmt.Println(btc.UintToBtc(ptkh_vals), "BTC in", ptkh_outs, "unspent recs from", len(wallet.AllBalancesP2KH), "P2KH addresses")
+	fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "unspent recs from", len(wallet.AllBalancesP2SH), "P2SH addresses")
 
 	if sort_by_cnt {
 		fmt.Println("Addrs with at least 1000 inps:", len(best))
