@@ -4,7 +4,7 @@
 	<th colspan="3">Block size
 	<th colspan="4">Mining info
 	<th>
-	<th colspan="5">Timing in <i>ms</i>
+	<th colspan="5">Block fetching stats
 <tr>
 	<th width="52">Height
 	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
@@ -16,12 +16,12 @@
 	<th width="30">SPB
 	<th width="20">Ver
 	<th align="left">Miner
-	<th width="10">C
-	<th width="10">M
-	<th width="20" align="right">pre
-	<th width="20" align="right">dld
-	<th width="20" align="right">que
-	<th width="20" align="right">ver
+	<th width="10" title="Missing TXs in cmpctblk">M
+	<th width="20" title="Pre-processing time ms" align="right">Pre
+	<th width="20" title="Download time ms" align="right">D/L
+	<th width="20" title="Queueing time ms" align="right">Que
+	<th width="20" title="Verification time ms" align="right">Ver
+	<th width="10" title="Extra times received">X
 </tr>
 </table>
 <script>
@@ -142,11 +142,6 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
-				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
-
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'blstat'
 				if (cs[i].MissedCnt>0)  td.innerText = cs[i].MissedCnt
 
 				td = row.insertCell(-1)
@@ -168,6 +163,11 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
 				if (cs[i].TimeVer>0)  td.innerText = cs[i].TimeVer
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat'
+				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				onc(row, i)
 			}
