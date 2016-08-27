@@ -45,8 +45,8 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	defer common.BlockChain.BlockIndexAccess.Unlock()
 
 	if er, dos, _ := common.BlockChain.PreCheckBlock(bl); er != nil {
-		common.CountSafe("HeaderCheckFail")
-		println("PreCheckBlock err", dos, er.Error())
+		common.CountSafe("PreCheckBlockFail")
+		//println("PreCheckBlock err", dos, er.Error())
 		if dos {
 			return PH_STATUS_FATAL, nil
 		} else {
@@ -100,11 +100,11 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 			sta, b2g := c.ProcessNewHeader(hdr[:])
 			if b2g==nil {
 				if sta==PH_STATUS_FATAL {
-					println("c.DoS(BadHeader)")
+					//println("c.DoS(BadHeader)")
 					c.DoS("BadHeader")
 					return
 				} else if sta==PH_STATUS_ERROR {
-					println("c.Misbehave(BadHeader)")
+					//println("c.Misbehave(BadHeader)")
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 				}
 			} else {
