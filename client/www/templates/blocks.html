@@ -153,8 +153,7 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
 				if (cs[i].TimeDl>0)  td.innerText = cs[i].TimeDl
-
-				if (cs[i].TimeDl==0 && cs[i].TimeVer>0) row.classList.add("bip152")
+				else if(cs[i].TimeVer>0) row.classList.add("bip152")
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
