@@ -53,9 +53,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == 4 {
-			fmt.Println(c.ConnID, "is asking for cmpctblock")
 			c.SendCmpctBlk(btc.NewUint256(h[4:]))
-			fmt.Println(c.ConnID, "getdata cmpctblock processing finished")
 		} else {
 			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")

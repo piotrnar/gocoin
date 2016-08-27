@@ -26,6 +26,130 @@ func ShortIDToU64(d []byte) uint64 {
 		(uint64(d[3])<<24) | (uint64(d[4])<<32) | (uint64(d[5])<<40)
 }
 
+func (col *CmpctBlockCollector) Assemble() []byte {
+	bdat := new(bytes.Buffer)
+	bdat.Write(col.Header)
+	btc.WriteVlen(bdat, uint64(len(col.Txs)))
+	for _, txd := range col.Txs {
+		bdat.Write(txd.([]byte))
+	}
+	return bdat.Bytes()
+}
+
+func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
+	crec, _, _ = common.BlockChain.Blocks.BlockGetExt(hash)
+
+	if crec==nil{
+		fmt.Println("BlockGetExt failed for", hash.String())
+		return
+	}
+
+	if crec.Block==nil {
+		crec.Block, _ = btc.NewBlock(crec.Data)
+		if crec.Block==nil {
+			fmt.Println("SendCmpctBlk: btc.NewBlock() failed for", hash.String())
+			return
+		}
+	}
+
+	if len(crec.Block.Txs)==0 {
+		if crec.Block.BuildTxList()!=nil {
+			fmt.Println("SendCmpctBlk: bl.BuildTxList() failed for", hash.String())
+			return
+		}
+	}
+
+	if len(crec.BIP152)!=24 {
+		crec.BIP152 = make([]byte, 24)
+		copy(crec.BIP152[:8], crec.Data[48:56]) // set the nonce to 8 middle-bytes of block's merkle_root
+		sha := sha256.New()
+		sha.Write(crec.Data[:80])
+		sha.Write(crec.BIP152[:8])
+		copy(crec.BIP152[8:24], sha.Sum(nil)[0:16])
+	}
+
+	return
+}
+
+func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
+	//fmt.Println("SendCmpctBlk needs to be implemented")
+	crec := GetchBlockForBIP152(hash)
+	if crec==nil {
+		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
+		return
+	}
+
+	k0 := binary.LittleEndian.Uint64(crec.BIP152[8:16])
+	k1 := binary.LittleEndian.Uint64(crec.BIP152[16:24])
+
+	var msg bytes.Buffer
+	msg.Write(crec.Data[:80])
+	msg.Write(crec.BIP152[:8])
+	btc.WriteVlen(&msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
+	for i:=1; i<len(crec.Block.Txs); i++ {
+		var lsb [8]byte
+		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, crec.Block.Txs[i].Hash.Hash[:]))
+		msg.Write(lsb[:6])
+	}
+	msg.Write([]byte{1}) // one preffiled tx
+	msg.Write([]byte{0}) // coinbase - index 0
+	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
+	c.SendRawMsg("cmpctblock", msg.Bytes())
+	fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
+}
+
+func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
+	if len(pl)<34 {
+		println(c.ConnID, "GetBlockTxnShort")
+		c.DoS("GetBlockTxnShort")
+		return
+	}
+	hash := btc.NewUint256(pl[:32])
+	crec := GetchBlockForBIP152(hash)
+	if crec==nil {
+		fmt.Println(c.ConnID, "GetBlockTxn aborting for", hash.String())
+		return
+	}
+
+	req := bytes.NewReader(pl[32:])
+	indexes_length, _ := btc.ReadVLen(req)
+	if indexes_length==0 {
+		println(c.ConnID, "GetBlockTxnEmpty")
+		c.DoS("GetBlockTxnEmpty")
+		return
+	}
+
+	var exp_idx uint64
+	var msg bytes.Buffer
+
+	msg.Write(hash.Hash[:])
+	btc.WriteVlen(&msg, indexes_length)
+
+	for {
+		idx, er := btc.ReadVLen(req)
+		if er != nil {
+			println(c.ConnID, "GetBlockTxnERR")
+			c.DoS("GetBlockTxnERR")
+			return
+		}
+		idx += exp_idx
+		if int(idx) >= len(crec.Block.Txs) {
+			println(c.ConnID, "GetBlockTxnIdx+")
+			c.DoS("GetBlockTxnIdx+")
+			return
+		}
+		msg.Write(crec.Block.Txs[idx].Raw)
+		if indexes_length==1 {
+			break
+		}
+		indexes_length--
+		exp_idx = idx+1
+	}
+
+	c.SendRawMsg("blocktxn", msg.Bytes())
+	fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
+}
+
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if len(pl)<90 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error A", hex.EncodeToString(pl))
@@ -54,10 +178,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
-	fmt.Println(c.ConnID, "NEW Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
+	fmt.Println(c.ConnID, "Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
 		"#", b2g.Block.Height, sta_s[sta], " inp:", b2g.InProgress)
-	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
-		hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
@@ -190,7 +312,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	if missing==0 {
 		sta := time.Now()
-		b2g.Block.UpdateContent(assemble_compact_block(col))
+		b2g.Block.UpdateContent(col.Assemble())
 		sto := time.Now()
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
@@ -294,7 +416,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	}
 
 	sta := time.Now()
-	b2g.Block.UpdateContent(assemble_compact_block(col))
+	b2g.Block.UpdateContent(col.Assemble())
 	sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
@@ -307,129 +429,4 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		TxMissing:col.Missing, TmPreproc:b2g.TmPreproc}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
-}
-
-
-func assemble_compact_block(col *CmpctBlockCollector) []byte {
-	bdat := new(bytes.Buffer)
-	bdat.Write(col.Header)
-	btc.WriteVlen(bdat, uint64(len(col.Txs)))
-	for _, txd := range col.Txs {
-		bdat.Write(txd.([]byte))
-	}
-	return bdat.Bytes()
-}
-
-func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
-	crec, _, _ = common.BlockChain.Blocks.BlockGetExt(hash)
-
-	if crec==nil{
-		fmt.Println("BlockGetExt failed for", hash.String())
-		return
-	}
-
-	if crec.Block==nil {
-		crec.Block, _ = btc.NewBlock(crec.Data)
-		if crec.Block==nil {
-			fmt.Println("SendCmpctBlk: btc.NewBlock() failed for", hash.String())
-			return
-		}
-	}
-
-	if len(crec.Block.Txs)==0 {
-		if crec.Block.BuildTxList()!=nil {
-			fmt.Println("SendCmpctBlk: bl.BuildTxList() failed for", hash.String())
-			return
-		}
-	}
-
-	if len(crec.BIP152)!=24 {
-		crec.BIP152 = make([]byte, 24)
-		copy(crec.BIP152[:8], crec.Data[48:56]) // set the nonce to 8 middle-bytes of block's merkle_root
-		sha := sha256.New()
-		sha.Write(crec.Data[:80])
-		sha.Write(crec.BIP152[:8])
-		copy(crec.BIP152[8:24], sha.Sum(nil)[0:16])
-	}
-
-	return
-}
-
-func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
-	//fmt.Println("SendCmpctBlk needs to be implemented")
-	crec := GetchBlockForBIP152(hash)
-	if crec==nil {
-		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
-		return
-	}
-
-	k0 := binary.LittleEndian.Uint64(crec.BIP152[8:16])
-	k1 := binary.LittleEndian.Uint64(crec.BIP152[16:24])
-
-	var msg bytes.Buffer
-	msg.Write(crec.Data[:80])
-	msg.Write(crec.BIP152[:8])
-	btc.WriteVlen(&msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
-	for i:=1; i<len(crec.Block.Txs); i++ {
-		var lsb [8]byte
-		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, crec.Block.Txs[i].Hash.Hash[:]))
-		msg.Write(lsb[:6])
-	}
-	msg.Write([]byte{1}) // one preffiled tx
-	msg.Write([]byte{0}) // coinbase - index 0
-	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
-	c.SendRawMsg("cmpctblock", msg.Bytes())
-	fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
-}
-
-func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
-	if len(pl)<34 {
-		println(c.ConnID, "GetBlockTxnShort")
-		c.DoS("GetBlockTxnShort")
-		return
-	}
-	hash := btc.NewUint256(pl[:32])
-	crec := GetchBlockForBIP152(hash)
-	if crec==nil {
-		fmt.Println(c.ConnID, "GetBlockTxn aborting for", hash.String())
-		return
-	}
-
-	req := bytes.NewReader(pl[32:])
-	indexes_length, _ := btc.ReadVLen(req)
-	if indexes_length==0 {
-		println(c.ConnID, "GetBlockTxnEmpty")
-		c.DoS("GetBlockTxnEmpty")
-		return
-	}
-
-	var exp_idx uint64
-	var msg bytes.Buffer
-
-	msg.Write(hash.Hash[:])
-	btc.WriteVlen(&msg, indexes_length)
-
-	for {
-		idx, er := btc.ReadVLen(req)
-		if er != nil {
-			println(c.ConnID, "GetBlockTxnERR")
-			c.DoS("GetBlockTxnERR")
-			return
-		}
-		idx += exp_idx
-		if int(idx) >= len(crec.Block.Txs) {
-			println(c.ConnID, "GetBlockTxnIdx+")
-			c.DoS("GetBlockTxnIdx+")
-			return
-		}
-		msg.Write(crec.Block.Txs[idx].Raw)
-		if indexes_length==1 {
-			break
-		}
-		indexes_length--
-		exp_idx = idx+1
-	}
-
-	c.SendRawMsg("blocktxn", msg.Bytes())
-	fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
