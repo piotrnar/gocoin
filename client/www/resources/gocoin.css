@@ -77,6 +77,10 @@ th {
 	color:yellow;
 }
 
+tr.bip152 {
+	background-color:#ffffdf;
+}
+
 tr.own {
 	background-color:#ffe0e0;
 }
