@@ -3,6 +3,7 @@ Lib:
 * Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 
 Client:
+* Make drop_slowest_peer feature switcheable
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
 * Check how the "MoveToBlock cannot continue" solution works in reality
