@@ -213,7 +213,6 @@ func (c *OneConnection) SendInvs() (res bool) {
 			if binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])==2 {
 				if c.Node.SendCmpct && c.Node.HighBandwidth {
 					c_blk = append(c_blk, btc.NewUint256((*c.PendingInvs[i])[4:]))
-					fmt.Println(c.ConnID, "wants us to announce new block by cmpctblock")
 					inv_sent_otherwise = true
 				} else if c.Node.SendHeaders {
 					// convert block inv to block header

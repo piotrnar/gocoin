@@ -53,7 +53,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
-	fmt.Println("============================ #", b2g.Block.Height, "/", len(pl), "bytes ==================================")
+	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
+	fmt.Println(c.ConnID, "NEW Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
+		"#", b2g.Block.Height, sta_s[sta], " inp:", b2g.InProgress)
 	fmt.Println(c.ConnID, "Process CompactBlk", btc.NewSha2Hash(pl[:80]),
 		hex.EncodeToString(pl[80:88]), "->", sta, "inp", b2g.InProgress)
 
@@ -63,7 +65,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 
 	if b2g.InProgress >= uint(common.CFG.Net.MaxBlockAtOnce) {
-		fmt.Println(c.ConnID, "InProgress is", b2g.InProgress)
+		fmt.Println(c.ConnID, " - too many in progress")
 		return
 	}
 
@@ -152,7 +154,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
-	fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
+	//fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
 	col.Missing = uint(missing)
 	if missing > 0 {
 		msg = new(bytes.Buffer)
@@ -209,7 +211,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
 		c.SendRawMsg("getblocktxn", msg.Bytes())
-		fmt.Println(c.ConnID, "Send getblocktxn for", missing, "missing txs.  ", msg.Len(), "bytes")
+		fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
 
@@ -255,7 +257,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
 		common.CountSafe("BlkTxnSameRcvd")
-		fmt.Println(c.ConnID, "BlkTxn size", len(pl), "for", hash.String(),"- already received")
+		fmt.Println(c.ConnID, "BlkTxn size", len(pl), "for", hash.String()[48:],"- already have")
 		return
 	}
 
@@ -267,7 +269,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	delete(BlocksToGet, idx)
 	//b2g.InProgress--
 
-	fmt.Println(c.ConnID, "BlockTxn:", le, "new txs for block #", b2g.Block.Height, "   ", len(pl), "bytes")
+	fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
 
 	offs := 32+n
 	for offs < len(pl) {
