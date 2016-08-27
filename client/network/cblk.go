@@ -95,7 +95,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	msg.Write([]byte{0}) // coinbase - index 0
 	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
 	c.SendRawMsg("cmpctblock", msg.Bytes())
-	fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
+	//fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
 func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
