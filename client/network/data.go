@@ -33,7 +33,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		typ = binary.LittleEndian.Uint32(h[:4])
 		c.InvStore(typ, h[4:36])
 
-		common.CountSafe(fmt.Sprint("GetdataType",typ))
+		common.CountSafe(fmt.Sprint("GetdataType-",typ))
 		if typ == INV_BLOCK {
 			bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
 			if er == nil {
