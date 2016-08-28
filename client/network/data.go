@@ -31,7 +31,9 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		}
 
 		typ = binary.LittleEndian.Uint32(h[:4])
+		c.Mutex.Lock()
 		c.InvStore(typ, h[4:36])
+		c.Mutex.Unlock()
 
 		common.CountSafe(fmt.Sprint("GetdataType-",typ))
 		if typ == MSG_BLOCK {
