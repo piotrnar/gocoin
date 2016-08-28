@@ -2,7 +2,7 @@ package network
 
 import (
 	"fmt"
-	//"time"
+	"time"
 	"bytes"
 	//"sync/atomic"
 	//"encoding/hex"
@@ -119,6 +119,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					c.Node.Height = b2g.Block.Height
 				}
 				c.X.GetBlocksDataNow = true
+				b2g.TmPreproc = time.Now()
 			}
 		}
 	}
