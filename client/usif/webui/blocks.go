@@ -40,7 +40,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Received uint32
 		TimePre, TimeDl, TimeVer, TimeQue int
 		WasteCnt uint
-		MissedCnt uint
+		MissedCnt int
 		Sigops int
 	}
 
@@ -86,27 +86,31 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]
 		network.MutexRcv.Unlock()
 
-		b.Received = uint32(rb.Time.Unix())
+		b.Received = uint32(rb.TmStart.Unix())
 		b.Sigops = int(node.Sigops)
 
-		b.TimePre = int(rb.TmPreproc/time.Millisecond)
-
-		if rb.TmDownload!=0 {
-			b.TimeDl = int(rb.TmDownload/time.Millisecond)
+		if rb.TmPreproc.IsZero() {
+			b.TimePre = -1
 		} else {
+			b.TimePre = int(rb.TmPreproc.Sub(rb.TmStart)/time.Millisecond)
+		}
+
+		if rb.TmDownload.IsZero() {
 			b.TimeDl = -1
+		} else {
+			b.TimeDl = int(rb.TmDownload.Sub(rb.TmStart)/time.Millisecond)
 		}
 
-		if rb.TmQueuing!=0 {
-			b.TimeQue = int(rb.TmQueuing/time.Millisecond)
-		} else {
+		if rb.TmQueue.IsZero() {
 			b.TimeQue = -1
+		} else {
+			b.TimeQue = int(rb.TmQueue.Sub(rb.TmStart)/time.Millisecond)
 		}
 
-		if rb.TmAccept!=0 {
-			b.TimeVer = int(rb.TmAccept/time.Millisecond)
-		} else {
+		if rb.TmAccepted.IsZero() {
 			b.TimeVer = -1
+		} else {
+			b.TimeVer = int(rb.TmAccepted.Sub(rb.TmStart)/time.Millisecond)
 		}
 
 		b.WasteCnt = rb.Cnt

@@ -18,7 +18,7 @@ type CmpctBlockCollector struct {
 	Txs []interface{} // either []byte of uint64
 	K0, K1 uint64
 	Sid2idx map[uint64]int
-	Missing uint
+	Missing int
 }
 
 func ShortIDToU64(d []byte) uint64 {
@@ -280,7 +280,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	missing := len(shortids) - cnt_found
 	//fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
-	col.Missing = uint(missing)
+	col.Missing = missing
 	if missing > 0 {
 		msg = new(bytes.Buffer)
 		msg.Write(b2g.Block.Hash.Hash[:])
@@ -325,12 +325,12 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
-		orb := &OneReceivedBlock{Time:time.Now(), TmPreproc:time.Now().Sub(c.LastMsgTime)}
+		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now()}
 		ReceivedBlocks[idx] = orb
 		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
-		b2g.TmPreproc = time.Now().Sub(c.LastMsgTime)
+		b2g.TmPreproc = time.Now()
 		b2g.InProgress++
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
@@ -428,8 +428,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
-	orb := &OneReceivedBlock{Time:bip.start, TmDownload:time.Now().Sub(bip.start),
-		TxMissing:col.Missing, TmPreproc:b2g.TmPreproc}
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
+		TmDownload:c.LastMsgTime, TxMissing:col.Missing}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }

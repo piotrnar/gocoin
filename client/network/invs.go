@@ -12,9 +12,9 @@ import (
 
 
 const (
-	INV_TX = 1
-	INV_BLOCK = 2
-	INV_CMPCT_BLOCK = 4
+	MSG_TX = 1
+	MSG_BLOCK = 2
+	MSG_CMPCT_BLOCK = 4
 )
 
 
@@ -73,7 +73,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.InvStore(typ, pl[of+4:of+36])
 		c.Mutex.Unlock()
 		common.CountSafe(fmt.Sprint("InvGot-",typ))
-		if typ==INV_BLOCK {
+		if typ==MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4:of+36])
 			if !c.X.AllHeadersReceived {
 				common.CountSafe("InvBlockIgnored")
@@ -97,7 +97,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 					common.CountSafe("InvBlockOld")
 				}
 			}
-		} else if typ==INV_TX {
+		} else if typ==MSG_TX {
 			if common.CFG.TXPool.Enabled {
 				MutexRcv.Lock()
 				pending_blocks := len(BlocksToGet) + len(CachedBlocks) + len(NetBlocks)
@@ -137,7 +137,7 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 		if v != fromConn { // except the one that this inv came from
 			send_inv := true
 			v.Mutex.Lock()
-			if typ==INV_TX {
+			if typ==MSG_TX {
 				if v.Node.DoNotRelayTxs {
 					send_inv = false
 					common.CountSafe("SendInvNoTxNode")
@@ -243,7 +243,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 			var inv_sent_otherwise bool
 			typ := binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])
 			c.InvStore(typ, (*c.PendingInvs[i])[4:36])
-			if typ==INV_BLOCK {
+			if typ==MSG_BLOCK {
 				if c.Node.SendCmpct && c.Node.HighBandwidth {
 					c_blk = append(c_blk, btc.NewUint256((*c.PendingInvs[i])[4:]))
 					inv_sent_otherwise = true

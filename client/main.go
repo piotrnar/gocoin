@@ -30,13 +30,12 @@ var (
 
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
-	sta := time.Now()
-	newbl.TmQueuing = sta.Sub(newbl.Time) - newbl.TmDownload
+	newbl.TmQueue = time.Now()
 	bl := newbl.Block
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
 		// new block accepted
-		newbl.TmAccept = time.Now().Sub(sta)
+		newbl.TmAccepted = time.Now()
 
 		common.RecalcAverageBlockSize(false)
 
@@ -186,13 +185,12 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		panic("Block " + msg.Block.Hash.String() + " not in ReceivedBlocks map")
 	}
 
-	sta := time.Now()
-	rb.TmQueuing = sta.Sub(rb.Time)
+	rb.TmQueue = time.Now()
 
 	e, _, _ := common.BlockChain.CheckBlock(msg.Block)
 	if e == nil {
 		e = common.BlockChain.AcceptBlock(msg.Block)
-		rb.TmAccept = time.Now().Sub(sta)
+		rb.TmAccepted = time.Now()
 	}
 	if e != nil {
 		common.CountSafe("RPCBlockError")
@@ -284,7 +282,7 @@ func main() {
 		}
 
 		for k, v := range common.BlockChain.BlockIndex {
-			network.ReceivedBlocks[k] = &network.OneReceivedBlock{Time: time.Unix(int64(v.Timestamp()), 0)}
+			network.ReceivedBlocks[k] = &network.OneReceivedBlock{TmStart: time.Unix(int64(v.Timestamp()), 0)}
 		}
 		network.LastCommitedHeader = common.Last.Block
 

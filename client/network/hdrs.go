@@ -27,7 +27,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	bl, _ := btc.NewBlock(hdr)
 
 	c.Mutex.Lock()
-	c.InvStore(INV_BLOCK, bl.Hash.Hash[:])
+	c.InvStore(MSG_BLOCK, bl.Hash.Hash[:])
 	c.Mutex.Unlock()
 
 	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
@@ -61,7 +61,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	node := common.BlockChain.AcceptHeader(bl)
 	LastCommitedHeader = node
 	//println("checked ok - height", node.Height)
-	b2g = &OneBlockToGet{Block:bl, BlockTreeNode:node, InProgress:0}
+	b2g = &OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0}
 	BlocksToGet[bl.Hash.BIdx()] = b2g
 
 	return PH_STATUS_NEW, b2g

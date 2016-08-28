@@ -52,7 +52,7 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 	}
 
 	network.MutexRcv.Lock()
-	network.ReceivedBlocks[bs.Block.Hash.BIdx()] = &network.OneReceivedBlock{Time: time.Now()}
+	network.ReceivedBlocks[bs.Block.Hash.BIdx()] = &network.OneReceivedBlock{TmStart: time.Now()}
 	network.MutexRcv.Unlock()
 
 	println("new block", bs.Block.Hash.String(), "len", len(bd), "- submitting...")
@@ -69,7 +69,7 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		}
 		println("submiting block error:", bs.Error)
 		println("submiting block result:", resp.Result.(string))
-		
+
 		print("time_now:", time.Now().Unix())
 		print("  cur_block_ts:", bs.Block.BlockTime())
 		print("  last_given_now:", last_given_time)

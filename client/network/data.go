@@ -34,14 +34,14 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		c.InvStore(typ, h[4:36])
 
 		common.CountSafe(fmt.Sprint("GetdataType-",typ))
-		if typ == INV_BLOCK {
+		if typ == MSG_BLOCK {
 			bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
 			if er == nil {
 				c.SendRawMsg("block", bl)
 			} else {
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == INV_TX {
+		} else if typ == MSG_TX {
 			// transaction
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked==0 {
@@ -53,7 +53,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				TxMutex.Unlock()
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == INV_CMPCT_BLOCK {
+		} else if typ == MSG_CMPCT_BLOCK {
 			c.SendCmpctBlk(btc.NewUint256(h[4:]))
 		} else {
 			if common.DebugLevel>0 {
@@ -141,8 +141,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	orb := &OneReceivedBlock{Time:bip.start, TmDownload:conn.LastMsgTime.Sub(bip.start),
-		TmPreproc:b2g.TmPreproc}
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc, TmDownload:conn.LastMsgTime, TxMissing:-1}
 	delete(conn.GetBlockInProgress, idx)
 	conn.Mutex.Unlock()
 

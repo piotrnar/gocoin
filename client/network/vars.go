@@ -8,13 +8,13 @@ import (
 )
 
 type OneReceivedBlock struct {
-	time.Time
-	TmPreproc time.Duration // how long it took to start downloading this block
-	TmDownload time.Duration // how long it took to dowlod this block
-	TmQueuing time.Duration  // how long it took to start processing
-	TmAccept time.Duration   // how long it took to commit this block
+	TmStart time.Time // when we receioved message letting us about this block
+	TmPreproc time.Time // when we added this block to BlocksToGet
+	TmDownload time.Time // when we finished dowloading of this block
+	TmQueue time.Time  // when we started comitting this block
+	TmAccepted time.Time  // when the block was commited to blockchain
 	Cnt uint
-	TxMissing uint
+	TxMissing int
 }
 
 type BlockRcvd struct {
@@ -31,10 +31,11 @@ type TxRcvd struct {
 }
 
 type OneBlockToGet struct {
+	Started time.Time
 	*btc.Block
 	*chain.BlockTreeNode
 	InProgress uint
-	TmPreproc time.Duration // how long it took to start downloading this block
+	TmPreproc time.Time // how long it took to start downloading this block
 }
 
 var (
