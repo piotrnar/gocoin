@@ -137,7 +137,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if bip==nil {
 		conn.Mutex.Unlock()
 		MutexRcv.Unlock()
-		println("unexpected block received from", conn.PeerAddr.Ip())
+		println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
 		common.CountSafe("UnxpectedBlockRcvd")
 		conn.DoS("UnexpBlock")
 		return
