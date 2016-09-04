@@ -14,7 +14,7 @@ const (
 	PingHistoryLength = 20
 	PingAssumedIfUnsupported = 4999 // ms
 
-	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
+	DropSlowestEvery = 5*time.Minute // Look for the worst peer and drop it
 )
 
 
