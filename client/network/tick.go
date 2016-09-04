@@ -316,7 +316,7 @@ func NetworkTick() {
 	}
 
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
-		adrs := peersdb.GetBestPeers(16, ConnectionActive)
+		adrs := peersdb.GetBestPeers(128, ConnectionActive)
 		if len(adrs)==0 {
 			common.LockCfg()
 			if common.CFG.ConnectOnly=="" && common.DebugLevel>0 {
