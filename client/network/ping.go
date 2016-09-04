@@ -104,17 +104,17 @@ func drop_worst_peer() {
 		return
 	}
 	sort.Sort(list)
-	for _, c = range list {
-		if c.X.Incomming {
+	for _, v := range list {
+		if v.c.X.Incomming {
 			if InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
-				c.Disconnect()
+				v.c.Disconnect()
 				return
 			}
 		} else {
 			if OutConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
-				c.Disconnect()
+				v.c.Disconnect()
 				return
 			}
 		}
