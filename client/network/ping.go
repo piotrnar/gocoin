@@ -39,32 +39,64 @@ func (c *OneConnection) GetAveragePing() int {
 	}
 }
 
+
+type conn_list_to_drop []struct {
+	c *OneConnection
+	ping int
+	blks uint64
+}
+
+func (l conn_list_to_drop) Len() int {
+	return len(l)
+}
+
+func (l conn_list_to_drop) Less(a, b int) bool {
+	if l[a].blks == l[b].blks {
+		return l[a].ping > l[b].ping
+	}
+	return l[a].blks < l[b].blks
+}
+
+func (l conn_list_to_drop) Swap(a, b int) {
+	l[a], l[b] = l[b], l[a]
+}
+
+
 // This function should be called only when OutConsActive >= MaxOutCons
-func drop_slowest_peer() {
-	var worst_ping int
-	var worst_conn *OneConnection
+func drop_worst_peer() {
+	var list conn_list_to_drop
+	var cnt int
+	var any_ping bool
 	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+	list = make(conn_list_to_drop, len(OpenCons))
 	for _, v := range OpenCons {
-		if v.X.Incomming && InConsActive < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
-			// If this is an incomming connection, but we are not full yet, ignore it
-			continue
-		}
 		v.Mutex.Lock()
-		ap := v.GetAveragePing()
-		if ap > worst_ping {
-			worst_ping = ap
-			worst_conn = v
+		list[cnt].c = v
+		list[cnt].ping = v.GetAveragePing()
+		list[cnt].blks = v.X.BlocksReceived
+		if list[cnt].ping>0 {
+			any_ping = true
 		}
 		v.Mutex.Unlock()
+		cnt++
 	}
-	if worst_conn != nil {
-		if common.DebugLevel > 0 {
-			println("Droping slowest peer", worst_conn.PeerAddr.Ip(), "/", worst_ping, "ms")
+	if !any_ping {
+		return
+	}
+	sort.Sort(list)
+	for cnt = range list {
+		var drop_now bool
+		if list[cnt].c.X.Incomming {
+			drop_now = InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons)
+		} else {
+			drop_now = OutConsActive+2> atomic.LoadUint32(&common.CFG.Net.MaxOutCons)
 		}
-		worst_conn.Disconnect()
-		common.CountSafe("PeersDropped")
+		if drop_now {
+			list[cnt].c.Disconnect()
+			return
+		}
 	}
-	Mutex_net.Unlock()
 }
 
 

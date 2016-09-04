@@ -178,7 +178,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 
 var (
 	TCPServerStarted bool
-	next_drop_slowest time.Time
+	next_drop_peer time.Time
 	next_clean_hammers time.Time
 )
 
@@ -294,14 +294,11 @@ func NetworkTick() {
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
 
-	if next_drop_slowest.IsZero() {
-		next_drop_slowest = time.Now().Add(DropSlowestEvery)
-	} else if conn_cnt >= atomic.LoadUint32(&common.CFG.Net.MaxOutCons)/2 {
-		// Having max number of outgoing connections, check to drop the slowest one
-		if time.Now().After(next_drop_slowest) {
-			drop_slowest_peer()
-			next_drop_slowest = time.Now().Add(DropSlowestEvery)
-		}
+	if next_drop_peer.IsZero() {
+		next_drop_peer = time.Now().Add(DropSlowestEvery)
+	} else if time.Now().After(next_drop_peer) {
+		drop_worst_peer()
+		next_drop_peer = time.Now().Add(DropSlowestEvery)
 	}
 
 	// hammering protection - expire recently disconnected

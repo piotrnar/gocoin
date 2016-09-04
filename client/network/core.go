@@ -100,6 +100,7 @@ type ConnectionStatus struct {
 	InvsRecieved uint64
 
 	BytesReceived, BytesSent uint64
+	BlocksReceived uint64
 	Counters map[string]uint64
 
 	GetAddrDone bool
