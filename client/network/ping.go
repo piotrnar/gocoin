@@ -8,11 +8,24 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
+const (
+	PingPeriod = 15*time.Second
+	PingTimeout = 10*time.Second
+	PingHistoryLength = 20
+	PingAssumedIfUnsupported = 4999 // ms
+
+	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
+)
+
 
 func (c *OneConnection) HandlePong() {
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
 	if common.DebugLevel>1 {
 		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
+	}
+	if ms==0 {
+		println(c.ConnID, "Ping returned after 0ms")
+		ms = 1
 	}
 	c.Mutex.Lock()
 	c.X.PingHistory[c.X.PingHistoryIdx] = int(ms)
@@ -23,17 +36,23 @@ func (c *OneConnection) HandlePong() {
 }
 
 
+// Returns (median) average ping
 // Make sure to called it within c.Mutex.Lock()
 func (c *OneConnection) GetAveragePing() int {
 	if c.Node.Version>60000 {
 		var pgs[PingHistoryLength] int
-		copy(pgs[:], c.X.PingHistory[:])
-		sort.Ints(pgs[:])
-		var sum int
-		for i:=0; i<PingHistoryValid; i++ {
-			sum += pgs[i]
+		var act_len int
+		for _, p := range c.X.PingHistory {
+			if p!=0 {
+				pgs[act_len] = p
+				act_len++
+			}
 		}
-		return sum/PingHistoryValid
+		if act_len==0 {
+			return 0
+		}
+		sort.Ints(pgs[:act_len])
+		return pgs[act_len/2]
 	} else {
 		return PingAssumedIfUnsupported
 	}

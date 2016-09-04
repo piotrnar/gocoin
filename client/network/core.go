@@ -30,14 +30,6 @@ const (
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
 
-	PingPeriod = 60*time.Second
-	PingTimeout = 30*time.Second
-	PingHistoryLength = 8
-	PingHistoryValid = (PingHistoryLength-4) // Ignore N longest pings
-	PingAssumedIfUnsupported = 999 // ms
-
-	DropSlowestEvery = 10*time.Minute // Look for the slowest peer and drop it
-
 	MIN_PROTO_VERSION = 209
 
 	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
