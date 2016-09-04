@@ -376,6 +376,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 	delete(c.GetBlockInProgress, idx)
+	c.counters["NewCBlock"]++
 	c.Mutex.Unlock()
 
 	// the blocks seems to be fine
@@ -429,7 +430,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	}
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-		TmDownload:c.LastMsgTime, TxMissing:col.Missing}
+		TmDownload:c.LastMsgTime, TxMissing:col.Missing, FromConID:c.ConnID}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }

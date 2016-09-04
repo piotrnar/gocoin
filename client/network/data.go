@@ -143,8 +143,10 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		return
 	}
 
-	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc, TmDownload:conn.LastMsgTime, TxMissing:-1}
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc, TmDownload:conn.LastMsgTime,
+		TxMissing:-1, FromConID:conn.ConnID}
 	delete(conn.GetBlockInProgress, idx)
+	conn.counters["NewBlock"]++
 	conn.Mutex.Unlock()
 
 	ReceivedBlocks[idx] = orb

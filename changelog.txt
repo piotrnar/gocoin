@@ -1,4 +1,4 @@
-1.7.1
+1.7.2
 * WebUI: "Blocks" tab shows some new statistics
 * Client: Keep per-peer list of the last 500 invs, to avoid duplicate sending
 * "Version" moved from "github.com/piotrnar/gocoin/lib" to "github.com/piotrnar/gocoin"

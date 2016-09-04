@@ -41,6 +41,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		TimePre, TimeDl, TimeVer, TimeQue int
 		WasteCnt uint
 		MissedCnt int
+		FromConID uint32
 		Sigops int
 	}
 
@@ -115,6 +116,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		b.WasteCnt = rb.Cnt
 		b.MissedCnt = rb.TxMissing
+		b.FromConID = rb.FromConID
 
 		blks = append(blks, b)
 		end = end.Parent

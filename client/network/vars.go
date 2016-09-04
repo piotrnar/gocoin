@@ -15,6 +15,7 @@ type OneReceivedBlock struct {
 	TmAccepted time.Time  // when the block was commited to blockchain
 	Cnt uint
 	TxMissing int
+	FromConID uint32
 }
 
 type BlockRcvd struct {
