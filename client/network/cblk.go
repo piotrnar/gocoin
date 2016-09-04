@@ -325,7 +325,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 		idx := b2g.Block.Hash.BIdx()
-		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now()}
+		c.Mutex.Lock()
+		c.counters["NewCBlock"]++
+		c.Mutex.Unlock()
+		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
 		ReceivedBlocks[idx] = orb
 		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
@@ -376,7 +379,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 	delete(c.GetBlockInProgress, idx)
-	c.counters["NewCBlock"]++
 	c.Mutex.Unlock()
 
 	// the blocks seems to be fine
@@ -429,6 +431,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		return
 	}
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
+	c.Mutex.Lock()
+	c.counters["NewTBlock"]++
+	c.Mutex.Unlock()
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
 		TmDownload:c.LastMsgTime, TxMissing:col.Missing, FromConID:c.ConnID}
 	ReceivedBlocks[idx] = orb
