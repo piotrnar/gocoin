@@ -260,7 +260,7 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.innerHTML = cs[i].Version + (cs[i].DoNotRelayTxs ? '*' : '')
 				td.title = 'Services : 0x' + cs[i].Services.toString(16)
-				if (parseInt(cs[i].Version)>=70014) row.classList.add("bip152")
+				if (cs[i].SendCmpct) row.classList.add("bip152")
 
 				// user agent
 				td = row.insertCell(-1)
