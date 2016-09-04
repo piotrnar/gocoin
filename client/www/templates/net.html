@@ -20,7 +20,8 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="80"> <!--total sent-->
 <col width="50"> <!--vers-->
 <col> <!--agent-->
-<col width="50"> <!--blocks in progress-->
+<col width="30"> <!--blocks received-->
+<col width="30"> <!--blocks in progress-->
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
@@ -32,7 +33,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th >Tot Out
 	<th>Proto
 	<th>Agent
-	<th title="Blocks in progress">BIP
+	<th colspan="2" title="Received / In Progress">Blks
 	<th title="Bytes waiting to be sent">ToSend
 	<th title="Max bytes waiting to be sent">MaxSend
 	<th>&nbsp;
@@ -263,6 +264,11 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
 				td.innerHTML = cs[i].Agent.substr(0,20)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].BlocksReceived>0) td.innerHTML = cs[i].BlocksReceived
 
 				// blocks in progress
 				td = row.insertCell(-1)
