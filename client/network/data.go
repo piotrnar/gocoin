@@ -139,16 +139,18 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		MutexRcv.Unlock()
 		println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
 		common.CountSafe("UnxpectedBlockRcvd")
-		conn.DoS("UnexpBlock")
-		return
+		conn.counters["NewBlock!"]++
+		//conn.DoS("UnexpBlock")
+		//return
+	} else {
+		delete(conn.GetBlockInProgress, idx)
+		conn.counters["NewBlock"]++
 	}
-
-	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc, TmDownload:conn.LastMsgTime,
-		TxMissing:-1, FromConID:conn.ConnID}
-	delete(conn.GetBlockInProgress, idx)
-	conn.counters["NewBlock"]++
 	conn.X.BlocksReceived++
 	conn.Mutex.Unlock()
+
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
+		TmDownload:conn.LastMsgTime, TxMissing:-1, FromConID:conn.ConnID}
 
 	ReceivedBlocks[idx] = orb
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
