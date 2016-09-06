@@ -135,8 +135,6 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]
 	if bip==nil {
-		conn.Mutex.Unlock()
-		MutexRcv.Unlock()
 		println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
 		common.CountSafe("UnxpectedBlockRcvd")
 		conn.counters["NewBlock!"]++
