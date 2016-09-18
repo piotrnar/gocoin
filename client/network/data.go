@@ -103,7 +103,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	b2g := BlocksToGet[idx]
 	if b2g==nil {
 		MutexRcv.Unlock()
-		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), " was not expected")
+		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
 		if _, got := ReceivedBlocks[idx]; got {
 			println("Already received it")
@@ -113,7 +113,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		if bip != nil {
 			println("... but is in progress")
 		} else {
-			println("... NOT in progress")
+			println("... NOT in progress - TODO: submit the header here...")
+			return;
 		}
 
 		conn.Disconnect()
