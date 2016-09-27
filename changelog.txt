@@ -1,4 +1,4 @@
-1.7.2
+1.7.2 - 2016-09-27
 * Client: drop_slowest_peer changed to drop_worst_peer - do not drop peers that send new blocks
 * WebUI: "Blocks" tab shows some new statistics
 * Client: Keep per-peer list of the last 500 invs, to avoid duplicate sending
