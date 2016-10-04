@@ -107,18 +107,29 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 		if _, got := ReceivedBlocks[idx]; got {
 			println("Already received it")
+			return
 		}
 
 		bip := conn.GetBlockInProgress[idx]
 		if bip != nil {
-			println("... but is in progress")
+			println("... but is in progress - take it!")
 		} else {
-			println("... NOT in progress - TODO: submit the header here...")
-			return;
+			var hdr [81]byte
+			var sta int
+			copy(hdr[:80], b[:80])
+			println("ProcessNewHeader...")
+			sta, b2g = conn.ProcessNewHeader(hdr[:])
+			println("ProcessNewHeader returns", sta, b2g)
+			if b2g==nil {
+				println("... is NOT in progress and ProcessNewHeader returns", sta)
+				if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
+					conn.DoS("UnexpBlock")
+				}
+				//conn.Disconnect()
+				return;
+			}
+			println("Taking this block - thanks!")
 		}
-
-		conn.Disconnect()
-		return
 	}
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
