@@ -103,7 +103,7 @@ func (c *OneConnection) Tick() {
 	MutexRcv.Unlock()
 
 	if !c.X.AllHeadersReceived && !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
-		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD {
+		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD_CNT {
 			//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 			c.sendGetHeaders()
 			return

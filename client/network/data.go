@@ -236,7 +236,10 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
 		common.Last.Mutex.Lock()
-		max_height := common.Last.Block.Height + MAX_BLOCKS_FORWARD
+		max_height := common.Last.Block.Height + uint32(MAX_BLOCKS_FORWARD_SIZ/avg_block_size)
+		if max_height > common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT {
+			max_height = common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT
+		}
 		common.Last.Mutex.Unlock()
 		if max_height > c.Node.Height {
 			max_height = c.Node.Height

@@ -2,8 +2,11 @@ Lib:
 * Implement BIP9
 * Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 
+Downloader:
+* If only e.g. 2 blocks are left, it is fetching them from a single peer
+
 Client:
-* Runs out of memory synchronizing chain after 4 weeks
+* Runs out of memory synchronizing chain after 4 weeks - just test it now with 4000+ blocks
 * Make drop_slowest_peer feature switcheable
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
