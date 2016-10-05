@@ -39,9 +39,8 @@ function build_change_list() {
 		if (wallet[i].virgin) {
 			op.text = "* "
 		}
-		op.text += wallet[i].wallet + ": "
 		op.text += wallet[i].label
-		op.text += " - " + wallet[i].addr //.substr(0,5) + "..." + wallet[i].addr.substr(-5)
+		op.text += " - " + wallet[i].addr
 		op.value = wallet[i].addr
 		if (wallet[i].virgin) {
 			virgincounter++
