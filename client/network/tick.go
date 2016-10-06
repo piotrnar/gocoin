@@ -77,7 +77,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	MutexRcv.Unlock()
 
 	// Expire BlocksReceived after two days
-	if len(c.blocksreceived)>0 && c.blocksreceived[0].Add(1*time.Hour).Before(now) {
+	if len(c.blocksreceived)>0 && c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Before(now) {
 		c.blocksreceived = c.blocksreceived[1:]
 		common.CountSafe("BlksRcvdExpired")
 	}
