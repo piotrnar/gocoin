@@ -77,9 +77,21 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	MutexRcv.Unlock()
 
 	// Expire BlocksReceived after two days
-	if len(c.blocksreceived)>0 && c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Before(now) {
-		c.blocksreceived = c.blocksreceived[1:]
-		common.CountSafe("BlksRcvdExpired")
+	if len(c.blocksreceived)>0 {
+		println(c.ConnID, " ?exp", len(c.blocksreceived),
+			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Before(now),
+			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Unix(), now.Unix())
+		var i int
+		for i=0; i<len(c.blocksreceived); i++ {
+			if c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).After(now) {
+				break
+			}
+			common.CountSafe("BlksRcvdExpired")
+		}
+		if i>0 {
+			println(c.ConnID, "expire", i, "block(s)")
+			c.blocksreceived = c.blocksreceived[i:]
+		}
 	}
 }
 
