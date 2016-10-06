@@ -42,6 +42,7 @@ const (
 
 	MAINTANENCE_PERIOD = time.Minute
 	NO_INV_TIMEOUT = 15*time.Minute
+	EXPIRE_BLKSRCVD_AFTER = 48*time.Hour
 
 	MAX_INV_HISTORY = 500
 )
