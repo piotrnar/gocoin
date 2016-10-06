@@ -162,7 +162,6 @@ type OneConnection struct {
 	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
 
 	// Ping stats
-	NextPing time.Time
 	LastPingSent time.Time
 	PingInProgress []byte
 

@@ -27,7 +27,6 @@ func (c *OneConnection) HandlePong() {
 	c.X.PingHistory[c.X.PingHistoryIdx] = int(ms)
 	c.X.PingHistoryIdx = (c.X.PingHistoryIdx+1)%PingHistoryLength
 	c.PingInProgress = nil
-	c.NextPing = time.Now().Add(common.PingPeerEvery)
 	c.Mutex.Unlock()
 }
 
@@ -119,13 +118,30 @@ func drop_worst_peer() {
 
 
 func (c *OneConnection) TryPing() bool {
-	if c.Node.Version>60000 && common.PingPeerEvery>0 && c.PingInProgress==nil && time.Now().After(c.NextPing) {
-		c.PingInProgress = make([]byte, 8)
-		rand.Read(c.PingInProgress[:])
-		c.SendRawMsg("ping", c.PingInProgress)
-		c.LastPingSent = time.Now()
-		//println(c.PeerAddr.Ip(), "ping...")
-		return true
+	if common.PingPeerEvery==0 {
+		return false // pinging disabled in global config
 	}
-	return false
+
+	if c.Node.Version<=60000 {
+		return false // insufficient protocol version
+	}
+
+	if time.Now().Before(c.LastPingSent.Add(common.PingPeerEvery)) {
+		return false // not yet...
+	}
+
+	if c.PingInProgress!=nil {
+		if common.DebugLevel > 0 {
+			println(c.PeerAddr.Ip(), "ping timeout")
+		}
+		common.CountSafe("PingTimeout")
+		c.HandlePong()  // this will set PingInProgress to nil
+	}
+
+	c.PingInProgress = make([]byte, 8)
+	rand.Read(c.PingInProgress[:])
+	c.SendRawMsg("ping", c.PingInProgress)
+	c.LastPingSent = time.Now()
+	//println(c.PeerAddr.Ip(), "ping...")
+	return true
 }

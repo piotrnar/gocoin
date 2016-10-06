@@ -116,15 +116,6 @@ func (c *OneConnection) Tick() {
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 	}
 
-	// Timeout ping in progress
-	if c.PingInProgress!=nil && now.After(c.LastPingSent.Add(3*common.PingPeerEvery/4)) {
-		if common.DebugLevel > 0 {
-			println(c.PeerAddr.Ip(), "ping timeout")
-		}
-		common.CountSafe("PingTimeout")
-		c.HandlePong()  // this will set LastPingSent to nil
-	}
-
 	if c.CheckGetBlockData() {
 		return
 	}
@@ -374,7 +365,7 @@ func (c *OneConnection) Run() {
 	now := time.Now()
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
-	c.NextPing = now.Add(5*time.Second)  // do first ping ~5 seconds from now
+	c.LastPingSent = now.Add(5*time.Second-common.PingPeerEvery) // do first ping ~5 seconds from now
 	c.X.AllHeadersReceived = false
 	c.Mutex.Unlock()
 
