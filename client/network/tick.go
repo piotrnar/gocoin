@@ -102,7 +102,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.nextMaintanence.After(now) {
+	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 	}
