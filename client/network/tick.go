@@ -78,9 +78,9 @@ func (c *OneConnection) Maintanence(now time.Time) {
 
 	// Expire BlocksReceived after two days
 	if len(c.blocksreceived)>0 {
-		println(c.ConnID, " ?exp", len(c.blocksreceived),
+		/*println(c.ConnID, " ?exp", len(c.blocksreceived),
 			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Before(now),
-			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Unix(), now.Unix())
+			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Unix(), now.Unix())*/
 		var i int
 		for i=0; i<len(c.blocksreceived); i++ {
 			if c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).After(now) {
