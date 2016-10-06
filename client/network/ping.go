@@ -62,7 +62,7 @@ func (c *OneConnection) GetAveragePing() int {
 type conn_list_to_drop []struct {
 	c *OneConnection
 	ping int
-	blks uint64
+	blks int
 }
 
 func (l conn_list_to_drop) Len() int {
@@ -93,7 +93,7 @@ func drop_worst_peer() {
 		v.Mutex.Lock()
 		list[cnt].c = v
 		list[cnt].ping = v.GetAveragePing()
-		list[cnt].blks = v.X.BlocksReceived
+		list[cnt].blks = len(v.blocksreceived)
 		if list[cnt].ping>0 {
 			any_ping = true
 		}

@@ -22,7 +22,7 @@ const (
 	AskAddrsEvery = (5*time.Minute)
 	MaxAddrsPerMessage = 500
 
-	NoDataTimeout = 2*time.Minute
+	NO_DATA_TIMEOUT = 2*time.Minute
 	SendBufSize = 4*1024*1024 // If you'd this much in the send buffer, disconnect the peer
 
 	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
@@ -39,6 +39,9 @@ const (
 	MAX_BLOCKS_FORWARD_CNT = 5000 // Never ask for a block higher than current top + this value
 	MAX_BLOCKS_FORWARD_SIZ = 50e6
 	MAX_GETDATA_FORWARD = 2e6 // 2 times maximum block size
+
+	MAINTANENCE_PERIOD = time.Minute
+	NO_INV_TIMEOUT = 15*time.Minute
 
 	MAX_INV_HISTORY = 500
 )
@@ -93,7 +96,6 @@ type ConnectionStatus struct {
 	InvsRecieved uint64
 
 	BytesReceived, BytesSent uint64
-	BlocksReceived uint64
 	Counters map[string]uint64
 
 	GetAddrDone bool
@@ -112,6 +114,7 @@ type ConnInfo struct {
 	InvsToSend int
 	AveragePing int
 	InvsDone int
+	BlocksReceived int
 }
 
 type OneConnection struct {
@@ -164,6 +167,9 @@ type OneConnection struct {
 	PingInProgress []byte
 
 	counters map[string] uint64
+
+	blocksreceived []time.Time
+	nextMaintanence time.Time
 }
 
 type oneBlockDl struct {
@@ -197,6 +203,14 @@ func (v *OneConnection) IncCnt(name string, val uint64) {
 }
 
 
+func (v *OneConnection) BlksInProgress() (res int) {
+	v.Mutex.Lock()
+	res = len(v.GetBlockInProgress)
+	v.Mutex.Unlock()
+	return
+}
+
+
 // call it with locked mutex!
 func (v *OneConnection) BytesToSent() int {
 	if v.SendBufProd >= v.SendBufCons {
@@ -224,6 +238,7 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	}
 
 	res.InvsDone = len(v.InvDone.History)
+	res.BlocksReceived = len(v.blocksreceived)
 
 	v.Mutex.Unlock()
 }

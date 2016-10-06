@@ -1,6 +1,9 @@
 1.7.3
-* Properly handle new blocks comming from Cornell-Falcon-Network:
-* Fixed excessive memory usage when synchronizing large amount of blocks
+* Client: Properly handle new blocks comming from Cornell-Falcon-Network
+* Client: Fixed excessive memory usage when synchronizing large amount of blocks
+* Client: Added mutex locks around reading of conn's GetBlockInProgress map
+* Client: Added OneConnection.Maintanence() method, to be called every minute
+* Client: Peer's BlocksReceived are now expired after 48 hours.
 
 1.7.2 - 2016-09-27
 * Client: drop_slowest_peer changed to drop_worst_peer - do not drop peers that send new blocks

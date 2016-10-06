@@ -327,7 +327,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		idx := b2g.Block.Hash.BIdx()
 		c.Mutex.Lock()
 		c.counters["NewCBlock"]++
-		c.X.BlocksReceived++
+		c.blocksreceived = append(c.blocksreceived, time.Now())
 		c.Mutex.Unlock()
 		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
 		ReceivedBlocks[idx] = orb
@@ -434,7 +434,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
 	c.counters["NewTBlock"]++
-	c.X.BlocksReceived++
+	c.blocksreceived = append(c.blocksreceived, time.Now())
 	c.Mutex.Unlock()
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
 		TmDownload:c.LastMsgTime, TxMissing:col.Missing, FromConID:c.ConnID}

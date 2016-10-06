@@ -50,19 +50,49 @@ func (c *OneConnection) SendPendingData() bool {
 }
 
 
-func (c *OneConnection) Tick() {
-	// Disconnect and ban useless peers (sych that don't send invs)
-	if c.X.InvsRecieved==0 && c.X.ConnectedAt.Add(15*time.Minute).Before(time.Now()) {
+// Call this once a minute
+func (c *OneConnection) Maintanence(now time.Time) {
+	// Disconnect and ban useless peers (such that don't send invs)
+	if c.X.InvsRecieved==0 && c.X.ConnectedAt.Add(NO_INV_TIMEOUT).Before(now) {
 		c.DoS("PeerUseless")
 		return
 	}
 
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+
+	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
+	MutexRcv.Lock()
+	for k, v := range c.GetBlockInProgress {
+		if _, ok := BlocksToGet[k]; ok {
+			continue
+		}
+		if now.After(v.start.Add(5*time.Minute)) {
+			delete(c.GetBlockInProgress, k)
+			common.CountSafe("BlockInprogTimeout")
+			println(c.ConnID, "GetBlockInProgress timeout")
+			break
+		}
+	}
+	MutexRcv.Unlock()
+
+	// Expire BlocksReceived after two days
+	if len(c.blocksreceived)>0 && c.blocksreceived[0].Add(1*time.Hour).Before(now) {
+		c.blocksreceived = c.blocksreceived[1:]
+		common.CountSafe("BlksRcvdExpired")
+	}
+}
+
+
+func (c *OneConnection) Tick() {
+	now := time.Now()
+
 	// Check no-data timeout
-	if c.X.LastDataGot.Add(NoDataTimeout).Before(time.Now()) {
+	if c.X.LastDataGot.Add(NO_DATA_TIMEOUT).Before(now) {
 		c.Disconnect()
 		common.CountSafe("NetNodataTout")
 		if common.DebugLevel>0 {
-			println(c.PeerAddr.Ip(), "no data for", NoDataTimeout/time.Second, "seconds - disconnect")
+			println(c.PeerAddr.Ip(), "no data for", NO_DATA_TIMEOUT/time.Second, "seconds - disconnect")
 		}
 		return
 	}
@@ -72,13 +102,22 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
+	if c.nextMaintanence.After(now) {
+		c.Maintanence(now)
+		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
+	}
+
 	// Timeout ping in progress
-	if c.PingInProgress!=nil && time.Now().After(c.LastPingSent.Add(PingTimeout)) {
+	if c.PingInProgress!=nil && now.After(c.LastPingSent.Add(PingTimeout)) {
 		if common.DebugLevel > 0 {
 			println(c.PeerAddr.Ip(), "ping timeout")
 		}
 		common.CountSafe("PingTimeout")
 		c.HandlePong()  // this will set LastPingSent to nil
+	}
+
+	if c.CheckGetBlockData() {
+		return
 	}
 
 	// Ask node for new addresses...?
@@ -94,15 +133,11 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.CheckGetBlockData() {
-		return
-	}
-
 	MutexRcv.Lock()
 	blocks_to_get := len(BlocksToGet)
 	MutexRcv.Unlock()
 
-	if !c.X.AllHeadersReceived && !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+	if !c.X.AllHeadersReceived && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
 		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD_CNT {
 			//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 			c.sendGetHeaders()
@@ -111,26 +146,13 @@ func (c *OneConnection) Tick() {
 		c.IncCnt("HoldHeaders", 1)
 	}
 
-	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+	if !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
 		// Ping if we dont do anything
 		c.TryPing()
-		if blocks_to_get > 0 && time.Now().Sub(c.X.LastFetchTried) > time.Second {
+		if blocks_to_get > 0 && now.Sub(c.X.LastFetchTried) > time.Second {
 			c.X.GetBlocksDataNow = true
 		}
 		return
-	}
-
-	// Expire GetBlockInProgress after one minute, if they are not in BlocksToGet
-	for k, v := range c.GetBlockInProgress {
-		if _, ok := BlocksToGet[k]; ok {
-			continue
-		}
-		if time.Now().After(v.start.Add(time.Minute)) {
-			delete(c.GetBlockInProgress, k)
-			common.CountSafe("BlockInprogTimeout")
-			println(c.ConnID, "GetBlockInProgress timeout")
-			break
-		}
 	}
 
 	// if we got here, means we had nothing to send - just wait for a moment
@@ -338,11 +360,13 @@ func (c *OneConnection) Run() {
 	c.SendVersion()
 
 	c.Mutex.Lock()
-	c.X.LastDataGot = time.Now()
-	c.NextPing = time.Now().Add(5*time.Second)  // do first ping ~5 seconds from now
+	now := time.Now()
+	c.X.LastDataGot = now
+	c.nextMaintanence = now.Add(time.Minute)
+	c.NextPing = now.Add(5*time.Second)  // do first ping ~5 seconds from now
 	c.X.AllHeadersReceived = false
-
 	c.Mutex.Unlock()
+
 
 	for !c.IsBroken() {
 		if c.IsBroken() {

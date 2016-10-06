@@ -75,6 +75,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 	}
 }
 
+
 // This function is called from a net conn thread
 func netBlockReceived(conn *OneConnection, b []byte) {
 	if len(b)<100 {
@@ -86,86 +87,89 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	idx := hash.BIdx()
 	//println("got block data", hash.String())
 
-	var b2g *OneBlockToGet
-	var orb *OneReceivedBlock
-	{
-		MutexRcv.Lock()
-		defer MutexRcv.Unlock()
+	MutexRcv.Lock()
 
-		// the blocks seems to be fine
-		if rb, got := ReceivedBlocks[idx]; got {
-			rb.Cnt++
-			common.CountSafe("BlockSameRcvd")
-			conn.Mutex.Lock()
-			delete(conn.GetBlockInProgress, idx)
-			conn.Mutex.Unlock()
-			return
-		}
+	// the blocks seems to be fine
+	if rb, got := ReceivedBlocks[idx]; got {
+		rb.Cnt++
+		common.CountSafe("BlockSameRcvd")
+		conn.Mutex.Lock()
+		delete(conn.GetBlockInProgress, idx)
+		conn.Mutex.Unlock()
+		MutexRcv.Unlock()
+		return
+	}
 
-		// remove from BlocksToGet:
-		b2g = BlocksToGet[idx]
-		if b2g==nil {
-			println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
+	// remove from BlocksToGet:
+	b2g := BlocksToGet[idx]
+	if b2g==nil {
+		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
-			if _, got := ReceivedBlocks[idx]; got {
-				println("Already received it")
-				return
-			}
-
-			bip := conn.GetBlockInProgress[idx]
-			if bip != nil {
-				println("... but is in progress - take it!")
-			} else {
-				var hdr [81]byte
-				var sta int
-				copy(hdr[:80], b[:80])
-				println("ProcessNewHeader...")
-				sta, b2g = conn.ProcessNewHeader(hdr[:])
-				println("ProcessNewHeader returns", sta, b2g)
-				if b2g==nil {
-					println("... is NOT in progress and ProcessNewHeader returns", sta)
-					if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
-						conn.DoS("UnexpBlock")
-					}
-					//conn.Disconnect()
-					return;
-				}
-				println("Taking this block - thanks!")
-			}
-		}
-
-		//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
-		b2g.InProgress--
-		b2g.Block.Raw = b
-
-		er := common.BlockChain.PostCheckBlock(b2g.Block)
-		if er!=nil {
-			println("Corrupt block received from", conn.PeerAddr.Ip())
-			conn.DoS("BadBlock")
+		if _, got := ReceivedBlocks[idx]; got {
+			println("Already received it")
+			MutexRcv.Unlock()
 			return
 		}
 
 		conn.Mutex.Lock()
 		bip := conn.GetBlockInProgress[idx]
-		if bip==nil {
-			println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
-			common.CountSafe("UnxpectedBlockRcvd")
-			conn.counters["NewBlock!"]++
-			//conn.DoS("UnexpBlock")
-			//return
-		} else {
-			delete(conn.GetBlockInProgress, idx)
-			conn.counters["NewBlock"]++
-		}
-		conn.X.BlocksReceived++
 		conn.Mutex.Unlock()
-
-		orb = &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-			TmDownload:conn.LastMsgTime, TxMissing:-1, FromConID:conn.ConnID}
-
-		ReceivedBlocks[idx] = orb
-		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+		if bip != nil {
+			println("... but is in progress - take it!")
+		} else {
+			var hdr [81]byte
+			var sta int
+			copy(hdr[:80], b[:80])
+			println("ProcessNewHeader...")
+			sta, b2g = conn.ProcessNewHeader(hdr[:])
+			println("ProcessNewHeader returns", sta, b2g)
+			if b2g==nil {
+				println("... is NOT in progress and ProcessNewHeader returns", sta)
+				if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
+					conn.DoS("UnexpBlock")
+				}
+				//conn.Disconnect()
+				MutexRcv.Unlock()
+				return;
+			}
+			println("Taking this block - thanks!")
+		}
 	}
+
+	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
+	b2g.InProgress--
+	b2g.Block.Raw = b
+
+	er := common.BlockChain.PostCheckBlock(b2g.Block)
+	if er!=nil {
+		println("Corrupt block received from", conn.PeerAddr.Ip())
+		conn.DoS("BadBlock")
+		MutexRcv.Unlock()
+		return
+	}
+
+	conn.Mutex.Lock()
+	bip := conn.GetBlockInProgress[idx]
+	if bip==nil {
+		println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
+		common.CountSafe("UnxpectedBlockRcvd")
+		conn.counters["NewBlock!"]++
+		//conn.DoS("UnexpBlock")
+		//MutexRcv.Unlock(); return
+	} else {
+		delete(conn.GetBlockInProgress, idx)
+		conn.counters["NewBlock"]++
+	}
+	conn.blocksreceived = append(conn.blocksreceived, time.Now())
+	conn.Mutex.Unlock()
+
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
+		TmDownload:conn.LastMsgTime, TxMissing:-1, FromConID:conn.ConnID}
+
+	ReceivedBlocks[idx] = orb
+	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+
+	MutexRcv.Unlock()
 
 	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block,
 		BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
@@ -230,8 +234,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	// Need to send getdata...?
 	MutexRcv.Lock()
-	if len(BlocksToGet)>0 && uint(len(c.GetBlockInProgress)+1)*avg_block_size <= MAX_GETDATA_FORWARD {
-		//uint32(len(c.GetBlockInProgress)) < atomic.LoadUint32(&common.CFG.Net.MaxBlockAtOnce)
+	if len(BlocksToGet)>0 && uint(c.BlksInProgress()+1)*avg_block_size <= MAX_GETDATA_FORWARD {
 		// We can issue getdata for this peer
 		// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
@@ -283,7 +286,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 				&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now()}
 			c.Mutex.Unlock()
 
-			if len(c.GetBlockInProgress)*int(avg_block_size) >= MAX_GETDATA_FORWARD || cnt==2000 {
+			if c.BlksInProgress()*int(avg_block_size) >= MAX_GETDATA_FORWARD || cnt==2000 {
 				break
 			}
 		}
