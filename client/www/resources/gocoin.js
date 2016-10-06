@@ -151,6 +151,24 @@ function valid_btc_addr(s) {
 	}
 }
 
+function period2str(upsec) {
+	if (upsec<120) {
+		return upsec + ' sec'
+	}
+	var mins = upsec/60
+	if (mins<120) {
+		return mins.toFixed(1) + ' min'
+	}
+
+	var hrs = mins/60
+	if (hrs<48) {
+		return hrs.toFixed(1) + ' hours'
+	}
+
+	var days = hrs/24
+	return days.toFixed(1) + ' days'
+}
+
 function parse_wallet(s) {
 	var wallet = new Array()
 	try {
@@ -200,4 +218,3 @@ function closepopup() {
 	window.scrollTo(0,prvpos)
 	document.removeEventListener("scroll", noscroll)
 }
-
