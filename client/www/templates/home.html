@@ -305,17 +305,7 @@ function refreshsysinfo() {
 			si_avg_fee_spb.innerText = si.Average_fee.toFixed(2)
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
-
-			var upsec = si.Node_uptime
-			var hrs = parseInt(upsec/3600)
-			var mins = parseInt((upsec%3600)/60)
-			var days = ''
-			if (hrs>=24) {
-				days = parseInt(hrs/24)
-				days = days + ' day' + ((days>1) ? 's,  ' : ',  ')
-				hrs %= 24
-			}
-			si_node_uptime.innerText = days + hrs + ":" + leftpad(mins,"0",2) + ":" + leftpad(upsec%60,"0",2)
+			si_node_uptime.innerText = period2str(si.Node_uptime)
 		} catch(e) {
 			console.log(e)
 		}
