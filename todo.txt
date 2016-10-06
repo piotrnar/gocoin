@@ -7,13 +7,10 @@ Downloader:
 
 Client:
 * Runs out of memory synchronizing chain after 4 weeks - just test it now with 4000+ blocks
-* Make drop_slowest_peer feature switcheable
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
-* Check how the "MoveToBlock cannot continue" solution works in reality
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * StealthAddr: seems that a single metadata index can have more than one ephemkey (find out how to handle it)
-* Add some support for showing text messages attached to incomming coins (after OP_RETURN)
 
  Probably not to do:
 * Do not list unmatured coinbase outputs in the balance
@@ -26,8 +23,6 @@ Wallet:
 * Write some automated tests
 
 Core lib:
-* Add checking timestamps (everywhere) against GetMedianTimePast()
 * CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")
-* Verify if we dont need to check for "sigoplimit" in one transaciton
 * Try to make own (faster) implementation of sha256 and rimp160
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
