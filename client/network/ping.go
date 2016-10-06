@@ -9,12 +9,8 @@ import (
 )
 
 const (
-	PingPeriod = 15*time.Second
-	PingTimeout = 10*time.Second
 	PingHistoryLength = 20
 	PingAssumedIfUnsupported = 4999 // ms
-
-	DropSlowestEvery = 5*time.Minute // Look for the worst peer and drop it
 )
 
 
@@ -31,7 +27,7 @@ func (c *OneConnection) HandlePong() {
 	c.X.PingHistory[c.X.PingHistoryIdx] = int(ms)
 	c.X.PingHistoryIdx = (c.X.PingHistoryIdx+1)%PingHistoryLength
 	c.PingInProgress = nil
-	c.NextPing = time.Now().Add(PingPeriod)
+	c.NextPing = time.Now().Add(common.PingPeerEvery)
 	c.Mutex.Unlock()
 }
 
@@ -123,7 +119,7 @@ func drop_worst_peer() {
 
 
 func (c *OneConnection) TryPing() bool {
-	if c.Node.Version>60000 && c.PingInProgress == nil && time.Now().After(c.NextPing) {
+	if c.Node.Version>60000 && common.PingPeerEvery>0 && c.PingInProgress==nil && time.Now().After(c.NextPing) {
 		c.PingInProgress = make([]byte, 8)
 		rand.Read(c.PingInProgress[:])
 		c.SendRawMsg("ping", c.PingInProgress)

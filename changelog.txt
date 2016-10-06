@@ -4,6 +4,7 @@
 * Client: Added mutex locks around reading of conn's GetBlockInProgress map
 * Client: Added OneConnection.Maintanence() method, to be called every minute
 * Client: Peer's BlocksReceived are now expired after 48 hours.
+* Client: Parameters for droping slowest peers are now configurable via gocoin.conf
 
 1.7.2 - 2016-09-27
 * Client: drop_slowest_peer changed to drop_worst_peer - do not drop peers that send new blocks

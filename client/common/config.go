@@ -85,6 +85,11 @@ var (
 		AllBalances struct {
 			MinValue uint64  // Do not keep balance records for values lower than this
 		}
+		DropPeers struct {
+			DropEachMinutes uint // zero for never
+			BlckExpireHours uint // zero for never
+			PingPeriodSec uint // zero to not ping
+		}
 	}
 
 	mutex_cfg sync.Mutex
@@ -140,6 +145,10 @@ func InitConfig() {
 	CFG.UserAgent = DefaultUserAgent
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
+
+	CFG.DropPeers.DropEachMinutes = 5 // minutes
+	CFG.DropPeers.BlckExpireHours = 48 // hours
+	CFG.DropPeers.PingPeriodSec = 15 // seconds
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e==nil && len(cfgfilecontent)>0 {
@@ -209,6 +218,9 @@ func Reset() {
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
 	AllBalMinVal = CFG.AllBalances.MinValue
+	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes)*time.Minute
+	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours)*time.Hour
+	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec)*time.Second
 	if CFG.Net.TCPPort != 0 {
 		DefaultTcpPort = uint16(CFG.Net.TCPPort)
 	} else {

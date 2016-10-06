@@ -78,12 +78,9 @@ func (c *OneConnection) Maintanence(now time.Time) {
 
 	// Expire BlocksReceived after two days
 	if len(c.blocksreceived)>0 {
-		/*println(c.ConnID, " ?exp", len(c.blocksreceived),
-			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Before(now),
-			c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).Unix(), now.Unix())*/
 		var i int
 		for i=0; i<len(c.blocksreceived); i++ {
-			if c.blocksreceived[0].Add(EXPIRE_BLKSRCVD_AFTER).After(now) {
+			if c.blocksreceived[i].Add(common.BlockExpireEvery).After(now) {
 				break
 			}
 			common.CountSafe("BlksRcvdExpired")
@@ -120,7 +117,7 @@ func (c *OneConnection) Tick() {
 	}
 
 	// Timeout ping in progress
-	if c.PingInProgress!=nil && now.After(c.LastPingSent.Add(PingTimeout)) {
+	if c.PingInProgress!=nil && now.After(c.LastPingSent.Add(3*common.PingPeerEvery/4)) {
 		if common.DebugLevel > 0 {
 			println(c.PeerAddr.Ip(), "ping timeout")
 		}
@@ -328,11 +325,13 @@ func NetworkTick() {
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
 
-	if next_drop_peer.IsZero() {
-		next_drop_peer = time.Now().Add(DropSlowestEvery)
-	} else if time.Now().After(next_drop_peer) {
-		drop_worst_peer()
-		next_drop_peer = time.Now().Add(DropSlowestEvery)
+	if common.CFG.DropPeers.DropEachMinutes!=0 {
+		if next_drop_peer.IsZero() {
+			next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+		} else if time.Now().After(next_drop_peer) {
+			drop_worst_peer()
+			next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+		}
 	}
 
 	// hammering protection - expire recently disconnected

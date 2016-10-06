@@ -52,6 +52,10 @@ var (
 	AverageBlockSize uint32
 
 	AllBalMinVal uint64
+
+	DropSlowestEvery time.Duration
+	BlockExpireEvery time.Duration
+	PingPeerEvery time.Duration
 )
 
 
