@@ -86,7 +86,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			common.CountSafe("BlksRcvdExpired")
 		}
 		if i>0 {
-			println(c.ConnID, "expire", i, "block(s)")
+			//println(c.ConnID, "expire", i, "block(s)")
 			c.blocksreceived = c.blocksreceived[i:]
 		}
 	}
