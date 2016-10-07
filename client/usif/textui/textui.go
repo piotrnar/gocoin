@@ -90,7 +90,7 @@ func ShowPrompt() {
 
 func MainThread() {
 	time.Sleep(1e9) // hold on for 1 sencond before showing the show_prompt
-	for {
+	for !usif.Exit_now {
 		if show_prompt {
 			ShowPrompt()
 		}
