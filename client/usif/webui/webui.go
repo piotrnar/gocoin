@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"path/filepath"
 	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -28,7 +29,7 @@ var start_time time.Time
 
 
 func ipchecker(r *http.Request) bool {
-	if common.NetworkClosed {
+	if common.NetworkClosed || usif.Exit_now {
 		return false
 	}
 	var a,b,c,d uint32
