@@ -175,9 +175,12 @@ function refreshblocks() {
 				td.className = 'blstat'
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
-				if ((cs[i].TimeDl<=0 || cs[i].MissedCnt>0) && cs[i].TimeVer>0) {
+				if (cs[i].MissedCnt<0 && cs[i].TimeDl<=0) {
+					row.classList.add("err")
+				} else if ((cs[i].TimeDl<=0 || cs[i].MissedCnt>0) && cs[i].TimeVer>0) {
 					row.classList.add("bip152")
 				}
+
 
 				onc(row, i)
 			}
