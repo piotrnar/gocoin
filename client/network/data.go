@@ -105,35 +105,22 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if b2g==nil {
 		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
-		if _, got := ReceivedBlocks[idx]; got {
-			println("Already received it")
-			MutexRcv.Unlock()
-			return
-		}
-
-		conn.Mutex.Lock()
-		bip := conn.GetBlockInProgress[idx]
-		conn.Mutex.Unlock()
-		if bip != nil {
-			println("... but is in progress - take it!")
-		} else {
-			var hdr [81]byte
-			var sta int
-			copy(hdr[:80], b[:80])
-			println("ProcessNewHeader...")
-			sta, b2g = conn.ProcessNewHeader(hdr[:])
-			println("ProcessNewHeader returns", sta, b2g)
-			if b2g==nil {
-				println("... is NOT in progress and ProcessNewHeader returns", sta)
-				if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
-					conn.DoS("UnexpBlock")
-				}
-				//conn.Disconnect()
-				MutexRcv.Unlock()
-				return;
+		var hdr [81]byte
+		var sta int
+		copy(hdr[:80], b[:80])
+		sta, b2g = conn.ProcessNewHeader(hdr[:])
+		if b2g==nil {
+			println("... ProcessNewHeader returns", sta)
+			if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
+				conn.DoS("UnexpBlock")
 			}
-			println("Taking this block - thanks!")
+			//conn.Disconnect()
+			MutexRcv.Unlock()
+			return;
 		}
+		//println(c.ConnID, " - taking this new block")
+		b2g.InProgress++
+		common.CountSafe("UnxpectedBlockNEW")
 	}
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
@@ -151,7 +138,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]
 	if bip==nil {
-		println(conn.ConnID, "unexpected block received -", conn.PeerAddr.Ip())
+		println(conn.ConnID, "unexpected block received: ", hash.String())
 		common.CountSafe("UnxpectedBlockRcvd")
 		conn.counters["NewBlock!"]++
 		//conn.DoS("UnexpBlock")
