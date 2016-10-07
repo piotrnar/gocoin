@@ -176,7 +176,7 @@ function refreshblocks() {
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				if (cs[i].MissedCnt<0 && cs[i].TimeDl<=0) {
-					row.classList.add("err")
+					row.classList.add("CFN") // Cornell-Falcon-Network
 				} else if ((cs[i].TimeDl<=0 || cs[i].MissedCnt>0) && cs[i].TimeVer>0) {
 					row.classList.add("bip152")
 				}
