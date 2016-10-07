@@ -175,12 +175,15 @@ function refreshblocks() {
 				td.className = 'blstat'
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
-				if (cs[i].MissedCnt<0 && cs[i].TimeDl<=0) {
-					row.classList.add("CFN") // Cornell-Falcon-Network
-				} else if ((cs[i].TimeDl<=0 || cs[i].MissedCnt>0) && cs[i].TimeVer>0) {
-					row.classList.add("bip152")
+				if (cs[i].TimeVer>=0) { // block received during this uptime
+					if (cs[i].MissedCnt>=0) {
+						row.classList.add("bip152")
+					} else {
+						if (cs[i].MissedCnt==-2) {
+							row.classList.add("CFN") // Cornell-Falcon-Network
+						}
+					}
 				}
-
 
 				onc(row, i)
 			}

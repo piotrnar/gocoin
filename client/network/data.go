@@ -119,47 +119,45 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 			return;
 		}
 		//println(c.ConnID, " - taking this new block")
-		b2g.InProgress++
 		common.CountSafe("UnxpectedBlockNEW")
 	}
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
-	b2g.InProgress--
 	b2g.Block.Raw = b
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
+		b2g.InProgress--
 		println("Corrupt block received from", conn.PeerAddr.Ip())
 		conn.DoS("BadBlock")
 		MutexRcv.Unlock()
 		return
 	}
 
+	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
+		TmDownload:conn.LastMsgTime, FromConID:conn.ConnID}
+
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]
 	if bip==nil {
-		println(conn.ConnID, "unexpected block received: ", hash.String())
-		common.CountSafe("UnxpectedBlockRcvd")
+		//println(conn.ConnID, "received unrequested block", hash.String())
+		common.CountSafe("UnreqBlockRcvd")
 		conn.counters["NewBlock!"]++
-		//conn.DoS("UnexpBlock")
-		//MutexRcv.Unlock(); return
+		orb.TxMissing = -2
 	} else {
 		delete(conn.GetBlockInProgress, idx)
 		conn.counters["NewBlock"]++
+		orb.TxMissing = -1
 	}
 	conn.blocksreceived = append(conn.blocksreceived, time.Now())
 	conn.Mutex.Unlock()
-
-	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-		TmDownload:conn.LastMsgTime, TxMissing:-1, FromConID:conn.ConnID}
 
 	ReceivedBlocks[idx] = orb
 	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
 
 	MutexRcv.Unlock()
 
-	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block,
-		BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
+	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }
 
 
