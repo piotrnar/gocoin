@@ -59,7 +59,7 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "hand"
-				td.innerText = wallet[i].label + ( (wallet[i].virgin && rec.Outs!=null) ? ' ***' : '' )
+				td.innerText = wallet[i].label + ( (wallet[i].virgin && rec.OutCnt>0) ? ' ***' : '' )
 				td["row_idx"] = idxx
 				td.addEventListener('click', edit_label)
 
