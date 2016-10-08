@@ -111,7 +111,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		sta, b2g = conn.ProcessNewHeader(hdr[:])
 		if b2g==nil {
 			println("... ProcessNewHeader returns", sta)
-			if sta==PH_STATUS_FATAL || sta==PH_STATUS_ERROR {
+			if sta==PH_STATUS_FATAL {
 				conn.DoS("UnexpBlock")
 			}
 			//conn.Disconnect()
