@@ -103,16 +103,18 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	// remove from BlocksToGet:
 	b2g := BlocksToGet[idx]
 	if b2g==nil {
-		println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
+		//println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
 		var hdr [81]byte
 		var sta int
 		copy(hdr[:80], b[:80])
 		sta, b2g = conn.ProcessNewHeader(hdr[:])
 		if b2g==nil {
-			println("... ProcessNewHeader returns", sta)
 			if sta==PH_STATUS_FATAL {
-				conn.DoS("UnexpBlock")
+				println("Unrequested Block: FAIL - Ban", conn.PeerAddr.Ip(), conn.Node.Agent)
+				conn.DoS("BadUnreqBlock")
+			} else {
+				common.CountSafe("ErrUnreqBlock")
 			}
 			//conn.Disconnect()
 			MutexRcv.Unlock()
