@@ -1,4 +1,4 @@
-1.7.3
+1.7.3 - 2016-10-18
 * Client: Properly handle new blocks comming from Cornell-Falcon-Network
 * Client: Fixed excessive memory usage when synchronizing large amount of blocks
 * Client: Added mutex locks around reading of conn's GetBlockInProgress map
