@@ -6,4 +6,4 @@ import (
 	_ "github.com/golang/snappy"
 	_ "golang.org/x/crypto/ripemd160"
 )
-const Version = "1.7.3"
+const Version = "1.7.4"

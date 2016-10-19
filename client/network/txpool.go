@@ -33,6 +33,7 @@ const (
 	TX_REJECTED_CB_INMATURE  = 209
 	TX_REJECTED_RBF_LOWFEE   = 210
 	TX_REJECTED_RBF_FINAL    = 211
+	TX_REJECTED_RBF_100      = 212
 )
 
 var (
@@ -346,7 +347,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					already_done[k] = true
 					if new_recs:=findPendingTxs(TransactionsToSend[k].Tx); len(new_recs)>0 {
 						if len(rbf_tx_list) + len(new_recs) > 100 {
-							RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
+							RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
 							TxMutex.Unlock()
 							common.CountSafe("TxRejectedRBF100+")
 							return
