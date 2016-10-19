@@ -131,7 +131,7 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'i'
-				if (cs[i].TimeVer>=0) {
+				if (cs[i].TimeVer>=0 && cs[i].TxCnt>1) {
 					td.innerText = (cs[i].MinFeeKSPB/1000).toFixed(1)
 					td.title = cs[i].MinFeeKSPB
 				}
