@@ -47,6 +47,9 @@ type Tx struct {
 	Raw []byte
 	Size uint32
 	Hash *Uint256
+
+	// This field is only set in chain's ProcessBlockTransactions:
+	Fee uint64
 }
 
 

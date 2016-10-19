@@ -234,9 +234,12 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		if e != nil {
 			return // If any input fails, do not continue
 		}
-		if i>0 && txoutsum > txinsum {
-			return errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
-				float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
+		if i>0 {
+			bl.Txs[i].Fee = txinsum - txoutsum
+			if txoutsum > txinsum {
+				return errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
+					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
+			}
 		}
 
 		// Add each tx outs from the currently executed TX to the temporary pool

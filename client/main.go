@@ -41,6 +41,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		for i:=1; i<len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
+			kspb := 1000*bl.Txs[i].Fee/uint64(bl.Txs[i].Size)
+			if i==1 || newbl.MinFeeKSPB > kspb {
+				newbl.MinFeeKSPB = kspb
+			}
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {

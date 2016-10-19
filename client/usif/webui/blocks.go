@@ -43,6 +43,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		MissedCnt int
 		FromConID uint32
 		Sigops int
+
+		MinFeeKSPB uint64
 	}
 
 	var blks []*one_block
@@ -117,6 +119,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.WasteCnt = rb.Cnt
 		b.MissedCnt = rb.TxMissing
 		b.FromConID = rb.FromConID
+
+		b.MinFeeKSPB = rb.MinFeeKSPB
 
 		blks = append(blks, b)
 		end = end.Parent

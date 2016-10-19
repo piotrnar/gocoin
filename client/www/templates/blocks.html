@@ -4,6 +4,7 @@
 	<th colspan="3">Block size
 	<th colspan="4">Mining info
 	<th>
+	<th>
 	<th colspan="6">Block fetch statistics
 <tr>
 	<th width="52">Height
@@ -14,6 +15,7 @@
 	<th width="35" align="right">kByte
 	<th width="30">BTC
 	<th width="30">SPB
+	<th width="20">&ge;
 	<th width="20">Ver
 	<th align="left">Miner
 	<th width="10" title="Received from ConnID">Id
@@ -125,6 +127,14 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.className = 'blspb'
 				td.innerText = cs[i].FeeSPB.toFixed(1)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i'
+				if (cs[i].TimeVer>=0) {
+					td.innerText = (cs[i].MinFeeKSPB/1000).toFixed(1)
+					td.title = cs[i].MinFeeKSPB
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
