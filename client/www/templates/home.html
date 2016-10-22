@@ -203,7 +203,7 @@ function draw_chart() {
 				plot_data[0].color = 2
 				localStorage.setItem("home_chart", "spb")
 				plot_data.push({ data:[], points:{show:true, fill:true}, lines: {show:true, fill:true}, color:3})
-				plot_options.yaxis.max = 100
+				//plot_options.yaxis.max = 100
 			} else {
 				plot_data[0].color = 4
 				localStorage.setItem("home_chart", "txs")
@@ -241,9 +241,11 @@ function draw_chart() {
 					if (chart_type_siz.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
 					} else if (chart_type_spb.checked) {
-						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
-						if (_cs[i].TimeVer>=0 && _cs[i].TxCnt>1) {
-							plot_data[2].data.push([_cs[i].Timestamp*1000, _cs[i].MinFeeKSPB/1000])
+						if (_cs[i].Size>20e3) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
+							if (_cs[i].TimeVer>=0 && _cs[i].TxCnt>1) {
+								plot_data[2].data.push([_cs[i].Timestamp*1000, _cs[i].MinFeeKSPB/1000])
+							}
 						}
 					} else {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
@@ -251,8 +253,6 @@ function draw_chart() {
 				}
 			}
 
-			//plot_data[2] = plot_data[0]
-			console.log(plot_data)
 			$("#chart").bind("plothover", handlehover)
 			$.plot($("#chart"), plot_data, plot_options)
 
