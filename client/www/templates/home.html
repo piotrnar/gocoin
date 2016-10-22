@@ -253,7 +253,6 @@ function draw_chart() {
 						} else {
 							var tt = _cs[i].Timestamp*1000
 							plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: "#d0f0f0" })
-							continue // ignore blocks with a single conbase tx
 						}
 					} else {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
