@@ -206,7 +206,7 @@ function draw_chart() {
 				plot_data[0].color = 2
 				localStorage.setItem("home_chart", "spb")
 				if (!chart_type_avg.checked) {
-					plot_data.push({ data:[], points:{show:true, fill:true}, lines: {show:true, fill:true}, color:3})
+					plot_data.push({ data:[], lines: {show:true, fill:true}, color:3})
 				}
 			} else {
 				plot_data[0].color = 4
