@@ -59,7 +59,11 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "hand"
-				td.innerText = wallet[i].label + ( (wallet[i].virgin && rec.OutCnt>0) ? ' ***' : '' )
+				td.innerText = wallet[i].label
+				if (wallet[i].virgin && rec.OutCnt>0) {
+					td.classList.add("i")
+				}
+				//? ' ***' : '' )
 				td["row_idx"] = idxx
 				td.addEventListener('click', edit_label)
 
@@ -196,13 +200,15 @@ function edit_label() {
 		var name = qswal.options[qswal.selectedIndex].text
 		lines = localStorage.getItem("gocoinWal_"+name).split('\n')
 		var s = ''
-		for (var i=0; i<lines.length; i++) {
+		for (var i=0; ; ) {
 			var found = lines[i].indexOf(adr)
 			if (found==-1) {
-				s += lines[i] + '\n'
+				s += lines[i]
 			} else {
-				s += lines[i].substr(found, adr.length) + ' ' + newlab + '\n'
+				s += lines[i].substr(found, adr.length) + ' ' + newlab
 			}
+			if (++i>=lines.length) break;
+			s += '\n'
 		}
 		localStorage.setItem("gocoinWal_"+name, s)
 		switch_to_webwallet(name)
