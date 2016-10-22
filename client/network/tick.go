@@ -502,10 +502,17 @@ func (c *OneConnection) Run() {
 				}
 
 			case "sendcmpct":
-				if len(cmd.pl)>=9 && binary.LittleEndian.Uint64(cmd.pl[1:9])==1 {
-					//println(c.ConnID, "sendcmpct", cmd.pl[0])
-					c.Node.SendCmpct = true
-					c.Node.HighBandwidth = cmd.pl[0]==1
+				if len(cmd.pl)>=9 {
+					version := binary.LittleEndian.Uint64(cmd.pl[1:9])
+					if version==1 {
+						//println(c.ConnID, "sendcmpct", cmd.pl[0])
+						c.Node.SendCmpct = true
+						c.Node.HighBandwidth = cmd.pl[0]==1
+					} else {
+						c.Mutex.Lock()
+						c.counters[fmt.Sprint("SendCmpctV", version)]++
+						c.Mutex.Unlock()
+					}
 				} else {
 					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
 				}
