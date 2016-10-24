@@ -129,6 +129,12 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 	}
 
 	if !bl.Trusted {
+		// We need to be satoshi compatible
+		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
+			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-missing")
+			return
+		}
+
 		if bl.Version()>=2 && bl.Majority_v2>=ch.Consensus.EnforceUpgrade {
 			var exp []byte
 			if bl.Height >= 0x800000 {
@@ -144,12 +150,6 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-height")
 				return
 			}
-		}
-
-		// We need to be satoshi compatible
-		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
-			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-missing")
-			return
 		}
 
 		// And again...
