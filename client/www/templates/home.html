@@ -245,7 +245,7 @@ function draw_chart() {
 					if (chart_type_siz.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
 					} else if (chart_type_spb.checked) {
-						if (_cs[i].Size>20e3) { // ignore small blocks
+						if (_cs[i].Size>250e3) { // ignore small blocks
 							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
 							if (_cs[i].TimeVer>=0 && _cs[i].TxCnt>1) {
 								plot_data[2].data.push([_cs[i].Timestamp*1000, _cs[i].MinFeeKSPB/1000])
