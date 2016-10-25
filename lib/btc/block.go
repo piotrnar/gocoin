@@ -5,7 +5,6 @@ import (
 	"errors"
 	"encoding/hex"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 type Block struct {
@@ -125,29 +124,24 @@ func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
 
 	mtr := make([][]byte, tx_cnt)
 
-	done := make(chan bool, sys.UseThreads)
-	for i:=0; i<sys.UseThreads; i++ {
-		done <- false
-	}
+	var wg sync.WaitGroup
 
 	for i:=0; i<tx_cnt; i++ {
 		n := TxSize(bl.Raw[offs:])
 		if n==0 {
 			break
 		}
-		_ = <- done // wait here, if we have too many threads already
+		wg.Add(1)
 		go func(i int, b []byte) {
 			mtr[i] = make([]byte, 32)
 			ShaHash(b, mtr[i])
-			done <- true // indicate mission completed
+			wg.Done() // indicate mission completed
 		}(i, bl.Raw[offs:offs+n])
 		offs += n
 	}
 
 	// Wait for all the pending missions to complete...
-	for i:=0; i<sys.UseThreads; i++ {
-		_ = <- done
-	}
+	wg.Wait()
 
 	res, mutated = CalcMerkel(mtr)
 	return
