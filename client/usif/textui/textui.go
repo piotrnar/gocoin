@@ -176,7 +176,6 @@ func show_info(par string) {
 		"   PauseTotal:", gs.PauseTotal.String())
 
 	fmt.Println("Gocoin:", gocoin.Version,
-		"  Threads:", sys.UseThreads,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
 		"  cach:", cached, "  dis:", discarded)
