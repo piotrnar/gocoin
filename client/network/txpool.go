@@ -10,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 
@@ -374,8 +373,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totfees += ctx.Fee
 		}
 		new_min_fee = totfees + (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte))
-		//new_spb = float64(fee)/float64(len(ntx.raw))
-		//old_spb = float64(totfees) / float64(totlen)
 
 		if fee < new_min_fee {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
@@ -387,44 +384,42 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
-	done := make(chan bool, sys.UseThreads-1)
+	var wg sync.WaitGroup
+	var ver_err_cnt uint32
 	for i := range tx.TxIn {
+		wg.Add(1)
 		go func (prv []byte, i int, tx *btc.Tx) {
-			done <- script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS)
+			if !script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS) {
+				atomic.AddUint32(&ver_err_cnt, 1)
+			}
 		}(pos[i].Pk_script, i, tx)
 	}
 
-	for i := range tx.TxIn {
-		if !(<- done) {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
-			TxMutex.Unlock()
-			ntx.conn.DoS("TxScriptFail")
-			if len(rbf_tx_list)>0 {
-				fmt.Println("RBF try script failed!")
-				fmt.Print("> ")
-			}
-			return
+	wg.Wait()
+	if ver_err_cnt > 0 {
+		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
+		TxMutex.Unlock()
+		ntx.conn.DoS("TxScriptFail")
+		if len(rbf_tx_list)>0 {
+			fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
+			fmt.Print("> ")
 		}
+		return
+	}
+
+	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops2 += btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 		}
 	}
 
 	if len(rbf_tx_list)>0 {
-		/*fmt.Println(time.Now().Format("2006/01/02 15:04:05"))
-		fmt.Printf("TX %s / %d to replace %d tx(s) [%d/%d], SPB %.1f -> %.1f\n",
-			ntx.tx.Hash.String(), len(ntx.raw), len(rbf_tx_list), totlen, totfees, old_spb, new_spb)
-		*/
 
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
-			/*fmt.Printf(" - TX %s with SPB %.1f @ len %d  - %.1f min old\n", ctx.Hash.String(),
-				float64(ctx.Fee)/float64(len(ctx.Data)), len(ctx.Data),
-				float64(time.Now().Unix()-ctx.Firstseen.Unix())/60.0)*/
 			DeleteToSend(ctx)
 			common.CountSafe("TxRemovedByRBF")
 		}
-		//fmt.Print("> ")
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
