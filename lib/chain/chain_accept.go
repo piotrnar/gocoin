@@ -2,10 +2,11 @@ package chain
 
 import (
 	"fmt"
+	"sync"
 	"errors"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
@@ -115,8 +116,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
 
-	// create a channnel to receive results from VerifyScript threads:
-	done := make(chan bool, sys.UseThreads-1)
+	var wg sync.WaitGroup
+	var ver_err_cnt uint32
 
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
@@ -197,8 +198,12 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 				}
 
 				if !tx_trusted { // run VerifyTxScript() in a parallel task
+					wg.Add(1)
 					go func (prv []byte, i int, tx *btc.Tx) {
-						done <- script.VerifyTxScript(prv, i, tx, bl.VerifyFlags)
+						if !script.VerifyTxScript(prv, i, tx, bl.VerifyFlags) {
+							atomic.AddUint32(&ver_err_cnt, 1)
+						}
+						wg.Done()
 					}(tout.Pk_script, j, bl.Txs[i])
 				}
 
@@ -210,11 +215,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 			}
 
 			if !tx_trusted {
-				for _ = range bl.Txs[i].TxIn  {
-					if !(<- done) {
-						println("VerifyScript error 2")
-						return errors.New("VerifyScripts failed")
-					}
+				wg.Wait()
+				if ver_err_cnt > 0 {
+					println("VerifyScript failed", ver_err_cnt, "time(s)")
+					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time(s)"))
 				}
 			}
 		} else {
@@ -282,21 +286,17 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 // Check transactions for consistency and finality. Return true if OK
 func CheckTransactions(txs []*btc.Tx, height, btime uint32) bool {
-	ok := true
-	done := make(chan bool, sys.UseThreads-1)
+	var wg sync.WaitGroup
+	var ver_err_cnt uint32
 	for i := range txs {
+		wg.Add(1)
 		go func(tx *btc.Tx) {
-			if tx.CheckTransaction() != nil {
-				done <- false // check transaction failed
-			} else {
-				done <- tx.IsFinal(height, btime)
+			if tx.CheckTransaction()!=nil || !tx.IsFinal(height, btime) {
+				atomic.AddUint32(&ver_err_cnt, 1)
 			}
+			wg.Done()
 		}(txs[i])
 	}
-	for _ = range txs {
-		if !(<- done) {
-			ok = false
-		}
-	}
-	return ok
+	wg.Wait()
+	return ver_err_cnt==0
 }
