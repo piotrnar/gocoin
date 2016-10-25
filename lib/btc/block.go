@@ -1,7 +1,9 @@
 package btc
 
 import (
+	"sync"
 	"errors"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -87,38 +89,32 @@ func (bl *Block) BuildTxList() (e error) {
 
 	offs := bl.TxOffset
 
-	done := make(chan bool, sys.UseThreads)
-	for i:=0; i<sys.UseThreads; i++ {
-		done <- false
-	}
+	var wg sync.WaitGroup
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		if bl.Txs[i] == nil || n==0 {
 			e = errors.New("NewTx failed")
+			println("txf", n, hex.EncodeToString(bl.Raw[offs:]))
 			break
 		}
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
-		_ = <- done // wait here, if we have too many threads already
+		if i==0 {
+			for _, ou := range bl.Txs[0].TxOut {
+				ou.WasCoinbase = true
+			}
+		}
+		wg.Add(1)
 		go func(h **Uint256, b []byte) {
 			*h = NewSha2Hash(b) // Calculate tx hash in a background
-			done <- true // indicate mission completed
+			wg.Done()
 		}(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
 		offs += n
 	}
 
-	if len(bl.Txs)>0 {
-		for i := range bl.Txs[0].TxOut {
-			bl.Txs[0].TxOut[i].WasCoinbase = true
-		}
-	}
-
-	// Wait for all the pending missions to complete...
-	for i:=0; i<sys.UseThreads; i++ {
-		_ = <- done
-	}
+	wg.Wait()
 	return
 }
 
