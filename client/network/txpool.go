@@ -392,6 +392,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			if !script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS) {
 				atomic.AddUint32(&ver_err_cnt, 1)
 			}
+			wg.Done()
 		}(pos[i].Pk_script, i, tx)
 	}
 
