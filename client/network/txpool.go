@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"encoding/hex"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -33,6 +34,7 @@ const (
 	TX_REJECTED_RBF_LOWFEE   = 210
 	TX_REJECTED_RBF_FINAL    = 211
 	TX_REJECTED_RBF_100      = 212
+	TX_REJECTED_SEGWIT       = 213
 )
 
 var (
@@ -125,7 +127,12 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1+4+32]byte
 		b[0] = 1 // One inv
-		b[1] = 1 // Tx
+		if (c.Node.Services&0x8) != 0 {
+			binary.LittleEndian.PutUint32(b[1:5], 0x40000001) // SegWit Tx
+			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
+		} else {
+			b[1] = 1 // Tx
+		}
 		copy(b[5:37], hash)
 		c.SendRawMsg("getdata", b[:])
 	}
@@ -161,6 +168,14 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 		if tx == nil {
 			RejectTx(tid, len(pl), TX_REJECTED_FORMAT)
 			c.DoS("TxRejectedBroken")
+			return
+		}
+		if tx.SegWit != nil {
+			println(c.ConnID, "SegWit", len(tx.SegWit), btc.NewSha2Hash(tx.Serialize()).String())
+			if len(tx.SegWit)<4 {
+				println(hex.EncodeToString(pl))
+			}
+			RejectTx(tid, len(pl), TX_REJECTED_SEGWIT)
 			return
 		}
 		if le != len(pl) {
