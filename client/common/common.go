@@ -15,7 +15,7 @@ const (
 
 	Version = uint32(70014)
 	DefaultUserAgent = "/Gocoin:"+gocoin.Version+"/"
-	Services = uint64(0x00000001)
+	Services = uint64(0x00000009)
 )
 
 var (
