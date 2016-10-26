@@ -395,8 +395,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		panic("BlockTxn: Block missing from BlocksToGet")
 		return
 	}
-	delete(BlocksToGet, idx)
-	//b2g.InProgress--
+	b2g.InProgress--
 
 	//fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
 
@@ -431,6 +430,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.DoS("BadCmpctBlockB")
 		return
 	}
+	delete(BlocksToGet, idx)
+
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
 	c.counters["NewTBlock"]++
