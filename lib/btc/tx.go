@@ -425,7 +425,6 @@ func NewTx(b []byte) (tx *Tx, offs int) {
 	offs += n
 	tx.TxIn = make([]*TxIn, le)
 	for i := range tx.TxIn {
-		println("doing in", i, len(tx.TxIn), "...")
 		tx.TxIn[i], n = NewTxIn(b[offs:])
 		offs += n
 	}
