@@ -129,10 +129,18 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 	var witnessversion int
 	var witnessprogram []byte
 	var hadWitness bool
+	var witness witness_ctx
+
 	if (ver_flags&VER_WITNESS) != 0 {
+		if tx.SegWit!=nil {
+			for _, wd := range tx.SegWit[i] {
+				witness.stack.push(wd)
+			}
+		}
+
 		witnessversion, witnessprogram = IsWitnessProgram(pkScr)
 		if DBG_SCR {
-			println("witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+			println("------------witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
 		}
 		if witnessprogram!=nil {
 			hadWitness = true
@@ -142,7 +150,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 				}
 				return
 			}
-			if !VerifyWitnessProgram(amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+			if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
 				if DBG_ERR {
 					fmt.Println("VerifyWitnessProgram failed A")
 				}
@@ -151,6 +159,10 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			// Bypass the cleanstack check at the end. The actual stack is obviously not clean
 			// for witness programs.
 			stack.resize(1);
+		} else {
+			if DBG_SCR {
+				println("No witness program")
+			}
 		}
 	} else {
 		if DBG_SCR {
@@ -207,19 +219,24 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		}
 
 		if (ver_flags & VER_WITNESS)!=0 {
-			witnessversion, witnessprogram = IsWitnessProgram(pkScr)
+			witnessversion, witnessprogram = IsWitnessProgram(pubKey2)
 			if DBG_SCR {
-				println("P2SH witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+				println("============witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
 			}
 			if witnessprogram!=nil {
 				hadWitness = true
-				if len(sigScr) != 0 {
+				bt := new(bytes.Buffer)
+				btc.WritePutLen(bt, uint32(len(pubKey2)))
+				bt.Write(pubKey2)
+				if !bytes.Equal(sigScr, bt.Bytes()) {
 					if DBG_ERR {
-						fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED B")
+						println(hex.EncodeToString(sigScr))
+						println(hex.EncodeToString(bt.Bytes()))
+						fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED_P2SH")
 					}
 					return
 				}
-				if !VerifyWitnessProgram(amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+				if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
 					if DBG_ERR {
 						fmt.Println("VerifyWitnessProgram failed B")
 					}
@@ -254,8 +271,8 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		if (ver_flags&VER_P2SH) == 0 {
 			panic("VER_WITNESS must be used with P2SH")
 		}
-		if !hadWitness && tx.SegWit==nil {
-			println("SCRIPT_ERR_WITNESS_UNEXPECTED")
+		if !hadWitness && !witness.IsNull() {
+			println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
 			return
 		}
 	}
