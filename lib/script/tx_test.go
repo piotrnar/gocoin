@@ -188,19 +188,11 @@ func TestValidTransactions(t *testing.T) {
 			case []interface{}:
 				if len(vv)==3 {
 					cnt++
-		println("----------- executing test", cnt)
-					if cnt==114 {
-						DBG_SCR = true
-					}
 					tv := parserec(vv)
 					if tv.skip!="" {
 						//println(tv.skip)
 					} else if !execute_test_tx(t, tv) {
 						t.Error(cnt, "Failed transaction:", last_descr)
-						return
-					}
-					if cnt==86111 {
-						return
 					}
 				} else if len(vv)==1 {
 					last_descr = vv[0].(string)
@@ -210,7 +202,7 @@ func TestValidTransactions(t *testing.T) {
 }
 
 
-func _TestInvalidTransactions(t *testing.T) {
+func TestInvalidTransactions(t *testing.T) {
 	var str interface{}
 	dat, er := ioutil.ReadFile("../test/tx_invalid.json")
 	if er != nil {
@@ -250,7 +242,7 @@ func _TestInvalidTransactions(t *testing.T) {
 }
 
 
-func _TestSighash(t *testing.T) {
+func TestSighash(t *testing.T) {
 	var arr [][]interface{}
 
 	dat, er := ioutil.ReadFile("../test/sighash.json")
