@@ -926,7 +926,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 							if DBG_SCR {
 								println("getting WitnessSigHash for inp", inp, "and htype", int32(si[len(si)-1]))
 							}
-							sh = tx.WitnessSigHash(delSig(p[sta:], si), amount, inp, int32(si[len(si)-1]))
+							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(si[len(si)-1]))
 						} else {
 							sh = tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
 						}
@@ -940,7 +940,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 							fmt.Println(" ->", ok)
 						}
 					}
-					if !ok && DBG_ERR {
+					if !ok && DBG_SCR {
 						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
 					}
 
@@ -1006,8 +1006,10 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					xxx := p[sta:]
-					for k:=0; k<int(sigscnt); k++ {
-						xxx = delSig(xxx, stack.top(-isig-k))
+					if !segwit {
+						for k:=0; k<int(sigscnt); k++ {
+							xxx = delSig(xxx, stack.top(-isig-k))
+						}
 					}
 
 					success := true
