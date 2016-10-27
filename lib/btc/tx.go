@@ -608,6 +608,7 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	sha.Write(tx.TxIn[nIn].Input.Hash[:])
 	binary.Write(sha, binary.LittleEndian, tx.TxIn[nIn].Input.Vout)
 
+	WritePutLen(sha, uint32(len(scriptCode)))
 	sha.Write(scriptCode)
 	binary.Write(sha, binary.LittleEndian, amount)
 	binary.Write(sha, binary.LittleEndian, tx.TxIn[nIn].Sequence)
