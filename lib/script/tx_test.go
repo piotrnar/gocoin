@@ -219,6 +219,9 @@ func TestInvalidTransactions(t *testing.T) {
 			case []interface{}:
 				if len(vv)==3 {
 					cnt++
+					if cnt==64000 {
+						DBG_SCR = true
+					}
 					tv := parserec(vv)
 					if tv.skip!="" {
 						//println(tv.skip)
@@ -227,6 +230,9 @@ func TestInvalidTransactions(t *testing.T) {
 						return
 					}
 					last_descr = ""
+					if cnt==64000 {
+						return
+					}
 				} else if len(vv)==1 {
 					if last_descr=="" {
 						last_descr = vv[0].(string)

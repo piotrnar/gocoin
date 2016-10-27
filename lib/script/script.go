@@ -140,7 +140,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 
 		witnessversion, witnessprogram = IsWitnessProgram(pkScr)
 		if DBG_SCR {
-			println("------------witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
+			fmt.Println("------------witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
 		}
 		if witnessprogram!=nil {
 			hadWitness = true
@@ -161,12 +161,12 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			stack.resize(1);
 		} else {
 			if DBG_SCR {
-				println("No witness program")
+				fmt.Println("No witness program")
 			}
 		}
 	} else {
 		if DBG_SCR {
-			println("Witness flag off")
+			fmt.Println("Witness flag off")
 		}
 	}
 
@@ -221,7 +221,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		if (ver_flags & VER_WITNESS)!=0 {
 			witnessversion, witnessprogram = IsWitnessProgram(pubKey2)
 			if DBG_SCR {
-				println("============witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
+				fmt.Println("============witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
 			}
 			if witnessprogram!=nil {
 				hadWitness = true
@@ -230,8 +230,8 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 				bt.Write(pubKey2)
 				if !bytes.Equal(sigScr, bt.Bytes()) {
 					if DBG_ERR {
-						println(hex.EncodeToString(sigScr))
-						println(hex.EncodeToString(bt.Bytes()))
+						fmt.Println(hex.EncodeToString(sigScr))
+						fmt.Println(hex.EncodeToString(bt.Bytes()))
 						fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED_P2SH")
 					}
 					return
@@ -254,7 +254,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			panic("VER_CLEANSTACK without VER_P2SH")
 		}
 		if DBG_SCR {
-			println("stack size", stack.size())
+			fmt.Println("stack size", stack.size())
 		}
 		if stack.size()!=1 {
 			if DBG_ERR {
@@ -272,7 +272,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			panic("VER_WITNESS must be used with P2SH")
 		}
 		if !hadWitness && !witness.IsNull() {
-			println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
+			fmt.Println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
 			return
 		}
 	}
@@ -924,7 +924,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 						var sh []byte
 						if segwit {
 							if DBG_SCR {
-								println("getting WitnessSigHash for inp", inp, "and htype", int32(si[len(si)-1]))
+								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(si[len(si)-1]))
 							}
 							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(si[len(si)-1]))
 						} else {
@@ -1085,7 +1085,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					if DBG_SCR {
-						println("OP_CHECKLOCKTIMEVERIFY...")
+						fmt.Println("OP_CHECKLOCKTIMEVERIFY...")
 					}
 
 					if stack.size()<1 {
@@ -1124,8 +1124,8 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					if DBG_SCR {
-						println("locktime > int64(tx.Lock_time)", locktime, int64(tx.Lock_time))
-						println(" ... seq", len(tx.TxIn), inp, tx.TxIn[inp].Sequence)
+						fmt.Println("locktime > int64(tx.Lock_time)", locktime, int64(tx.Lock_time))
+						fmt.Println(" ... seq", len(tx.TxIn), inp, tx.TxIn[inp].Sequence)
 					}
 
 					// Actually compare the specified lock time with the transaction.
@@ -1154,7 +1154,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					if DBG_SCR {
-						println("OP_CHECKSEQUENCEVERIFY...")
+						fmt.Println("OP_CHECKSEQUENCEVERIFY...")
 					}
 
 					if stack.size()<1 {

@@ -1,6 +1,7 @@
 package script
 
 import (
+	"fmt"
 	"bytes"
 	"encoding/hex"
 	"crypto/sha256"
@@ -34,14 +35,16 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 	var scriptPubKey []byte
 
 	if DBG_SCR {
-		println("*****************VerifyWitnessProgram", len(tx.SegWit), witness.stack.size(), len(program))
+		fmt.Println("*****************VerifyWitnessProgram", len(tx.SegWit), witversion, flags, witness.stack.size(), len(program))
 	}
 
 	if witversion == 0 {
 		if len(program) == 32 {
 			// Version 0 segregated witness program: SHA256(CScript) inside the program, CScript + inputs in witness
 			if witness.stack.size() == 0 {
-				println("SCRIPT_ERR_WITNESS_PROGRAM_WITNESS_EMPTY")
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_WITNESS_EMPTY")
+				}
 				return false
 			}
 			scriptPubKey = witness.stack.pop()
@@ -49,9 +52,11 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			sha.Write(scriptPubKey)
 			sum := sha.Sum(nil)
 			if !bytes.Equal(program, sum) {
-				println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
-				println(hex.EncodeToString(program))
-				println(hex.EncodeToString(sum))
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+					fmt.Println(hex.EncodeToString(program))
+					fmt.Println(hex.EncodeToString(sum))
+				}
 				return false
 			}
 			stack.copy_from(&witness.stack)
@@ -59,7 +64,9 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 		} else if len(program) == 20 {
 			// Special case for pay-to-pubkeyhash; signature + pubkey in witness
 			if (witness.stack.size() != 2) {
-				println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+				}
 				return false
 			}
 
@@ -72,11 +79,15 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			scriptPubKey[24] = 0xac
 			stack.copy_from(&witness.stack)
 		} else {
-			println("SCRIPT_ERR_WITNESS_PROGRAM_WRONG_LENGTH")
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_WRONG_LENGTH")
+			}
 			return false
 		}
 	} else if (flags&VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM) != 0 {
-		println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM")
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM")
+		}
 		return false
 	} else {
 		// Higher version witness scripts return true for future softfork compatibility
@@ -84,12 +95,14 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 	}
 
 	if DBG_SCR {
-		println("*****************", stack.size())
+		fmt.Println("*****************", stack.size())
 	}
 	// Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
 	for i:=0; i<stack.size(); i++ {
 		if len(stack.at(i)) > MAX_SCRIPT_ELEMENT_SIZE {
-			println("SCRIPT_ERR_PUSH_SIZE")
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_PUSH_SIZE")
+			}
 			return false
 		}
 	}
@@ -100,12 +113,16 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 
 	// Scripts inside witness implicitly require cleanstack behaviour
 	if stack.size() != 1 {
-		println("SCRIPT_ERR_EVAL_FALSE")
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_EVAL_FALSE")
+		}
 		return false
 	}
 
 	if !stack.topBool(-1) {
-		println("SCRIPT_ERR_EVAL_FALSE")
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_EVAL_FALSE")
+		}
 		return false
 	}
 	return true
