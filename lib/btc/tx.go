@@ -551,6 +551,7 @@ func (tx *Tx) GetLegacySigOpCount() (nSigOps uint) {
 
 
 func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType int32) ([]byte) {
+	var nullHash [32]byte
 	var hashPrevouts []byte
 	var hashSequence []byte
 	var hashOutputs []byte
@@ -567,7 +568,10 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 		sha.Write(hashPrevouts)
 		hashPrevouts = sha.Sum(nil)
 		sha.Reset()
+	} else {
+		hashPrevouts = nullHash[:]
 	}
+	//println("hashPrevouts", hex.EncodeToString(hashPrevouts))
 
 	if ((hashType & SIGHASH_ANYONECANPAY)==0 &&
 		(hashType & 0x1f) != SIGHASH_SINGLE && (hashType & 0x1f) != SIGHASH_NONE) {
@@ -579,7 +583,10 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 		sha.Write(hashSequence)
 		hashSequence = sha.Sum(nil)
 		sha.Reset()
+	} else {
+		hashSequence = nullHash[:]
 	}
+	//println("hashSequence", hex.EncodeToString(hashSequence))
 
 	if ((hashType & 0x1f) != SIGHASH_SINGLE && (hashType & 0x1f) != SIGHASH_NONE) {
 		for _, vout := range tx.TxOut {
@@ -594,13 +601,39 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 		sha.Reset()
 	} else if (hashType & 0x1f) == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
 		binary.Write(sha, binary.LittleEndian, tx.TxOut[nIn].Value)
+		WritePutLen(sha, uint32(len(tx.TxOut[nIn].Pk_script)))
 		sha.Write(tx.TxOut[nIn].Pk_script)
 		hashOutputs = sha.Sum(nil)
 		sha.Reset()
 		sha.Write(hashOutputs)
 		hashOutputs = sha.Sum(nil)
 		sha.Reset()
+	} else {
+		hashOutputs = nullHash[:]
 	}
+	//println("hashOutputs", hex.EncodeToString(hashOutputs))
+
+	/*
+	bla := new(bytes.Buffer)
+
+	binary.Write(bla, binary.LittleEndian, tx.Version)
+	bla.Write(hashPrevouts)
+	bla.Write(hashSequence)
+	bla.Write(tx.TxIn[nIn].Input.Hash[:])
+	binary.Write(bla, binary.LittleEndian, tx.TxIn[nIn].Input.Vout)
+
+	WritePutLen(bla, uint32(len(scriptCode)))
+	bla.Write(scriptCode)
+	binary.Write(bla, binary.LittleEndian, amount)
+	binary.Write(bla, binary.LittleEndian, tx.TxIn[nIn].Sequence)
+	bla.Write(hashOutputs)
+
+	binary.Write(bla, binary.LittleEndian, tx.Lock_time)
+	binary.Write(bla, binary.LittleEndian, hashType)
+	//println("to hasz:", hex.EncodeToString(bla.Bytes()))
+
+	sha.Write(bla.Bytes())
+	*/
 
 	binary.Write(sha, binary.LittleEndian, tx.Version)
 	sha.Write(hashPrevouts)
