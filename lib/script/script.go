@@ -34,19 +34,24 @@ const (
 	VER_CLEANSTACK = 1<<8
 	VER_CLTV = 1<<9
 	VER_CSV = 1<<10
+	VER_WITNESS = 1<<11
+	VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM = 1<<12
 
 	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | //VER_LOW_S |
-		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV
+		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV |
+		VER_WITNESS
 
 	LOCKTIME_THRESHOLD = 500000000
 	SEQUENCE_LOCKTIME_DISABLE_FLAG = 1<<31
 
 	SEQUENCE_LOCKTIME_TYPE_FLAG = 1 << 22
 	SEQUENCE_LOCKTIME_MASK = 0x0000ffff
+
+	MAX_SCRIPT_ELEMENT_SIZE = 520
 )
 
 
-func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
 	if VerifyConsensus!=nil {
 		defer func() {
 			// We call CompareToConsensus inside another function to wait for final "result"
@@ -71,7 +76,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 	}
 
 	var stack, stackCopy scrStack
-	if !evalScript(sigScr, &stack, tx, i, ver_flags) {
+	if !evalScript(sigScr, amount, &stack, tx, i, ver_flags, false) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -97,7 +102,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		}
 	}
 
-	if !evalScript(pkScr, &stack, tx, i, ver_flags) {
+	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, false) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -118,6 +123,39 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			fmt.Println("* FALSE on stack after executing scripts:", hex.EncodeToString(pkScr[:]))
 		}
 		return
+	}
+
+    // Bare witness programs
+	var witnessversion int
+	var witnessprogram []byte
+	var hadWitness bool
+	if (ver_flags&VER_WITNESS) != 0 {
+		witnessversion, witnessprogram = IsWitnessProgram(pkScr)
+		if DBG_SCR {
+			println("witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+		}
+		if witnessprogram!=nil {
+			hadWitness = true
+			if len(sigScr) != 0 {
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED")
+				}
+				return
+			}
+			if !VerifyWitnessProgram(amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+				if DBG_ERR {
+					fmt.Println("VerifyWitnessProgram failed A")
+				}
+				return false
+			}
+			// Bypass the cleanstack check at the end. The actual stack is obviously not clean
+			// for witness programs.
+			stack.resize(1);
+		}
+	} else {
+		if DBG_SCR {
+			println("Witness flag off")
+		}
 	}
 
 	// Additional validation for spend-to-script-hash transactions:
@@ -147,7 +185,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, &stack, tx, i, ver_flags) {
+		if !evalScript(pubKey2, amount, &stack, tx, i, ver_flags, false) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
@@ -167,6 +205,31 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			}
 			return
 		}
+
+		if (ver_flags & VER_WITNESS)!=0 {
+			witnessversion, witnessprogram = IsWitnessProgram(pkScr)
+			if DBG_SCR {
+				println("P2SH witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+			}
+			if witnessprogram!=nil {
+				hadWitness = true
+				if len(sigScr) != 0 {
+					if DBG_ERR {
+						fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED B")
+					}
+					return
+				}
+				if !VerifyWitnessProgram(amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+					if DBG_ERR {
+						fmt.Println("VerifyWitnessProgram failed B")
+					}
+					return false
+				}
+				// Bypass the cleanstack check at the end. The actual stack is obviously not clean
+				// for witness programs.
+				stack.resize(1);
+			}
+		}
 	}
 
 	if (ver_flags & VER_CLEANSTACK) != 0 {
@@ -184,6 +247,19 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		}
 	}
 
+	if (ver_flags&VER_WITNESS)!=0 {
+		// We can't check for correct unexpected witness data if P2SH was off, so require
+		// that WITNESS implies P2SH. Otherwise, going from WITNESS->P2SH+WITNESS would be
+		// possible, which is not a softfork.
+		if (ver_flags&VER_P2SH) == 0 {
+			panic("VER_WITNESS must be used with P2SH")
+		}
+		if !hadWitness && tx.SegWit==nil {
+			println("SCRIPT_ERR_WITNESS_UNEXPECTED")
+			return
+		}
+	}
+
 	result = true
 	return true
 }
@@ -196,9 +272,10 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32) bool {
+func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, segwit bool) bool {
 	if DBG_SCR {
-		fmt.Println("script len", len(p))
+		fmt.Println("evalScript len", len(p), "amount", amount, "inp", inp, "flagz", ver_flags, "segwit", segwit)
+		stack.print()
 	}
 
 
@@ -827,8 +904,24 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 
 					if len(si)>0 {
-						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
+						var sh []byte
+						if segwit {
+							if DBG_SCR {
+								println("getting WitnessSigHash for inp", inp, "and htype", int32(si[len(si)-1]))
+							}
+							sh = tx.WitnessSigHash(delSig(p[sta:], si), amount, inp, int32(si[len(si)-1]))
+						} else {
+							sh = tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
+						}
+						if DBG_SCR {
+							fmt.Println("EcdsaVerify", hex.EncodeToString(sh))
+							fmt.Println(" key:", hex.EncodeToString(pk))
+							fmt.Println(" sig:", hex.EncodeToString(si))
+						}
 						ok = btc.EcdsaVerify(pk, si, sh)
+						if DBG_SCR {
+							fmt.Println(" ->", ok)
+						}
 					}
 					if !ok && DBG_ERR {
 						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
@@ -914,7 +1007,13 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 
 						if len(si) > 0 {
-							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
+							var sh []byte
+
+							if segwit {
+								sh = tx.WitnessSigHash(xxx, amount, inp, int32(si[len(si)-1]))
+							} else {
+								sh = tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
+							}
 							if btc.EcdsaVerify(pk, si, sh) {
 								isig++
 								sigscnt--
