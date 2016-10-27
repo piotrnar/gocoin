@@ -199,12 +199,12 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 				if !tx_trusted { // run VerifyTxScript() in a parallel task
 					wg.Add(1)
-					go func (prv []byte, i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(prv, i, tx, bl.VerifyFlags) {
+					go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
+						if !script.VerifyTxScript(prv, amount, i, tx, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()
-					}(tout.Pk_script, j, bl.Txs[i])
+					}(tout.Pk_script, tout.Value, j, bl.Txs[i])
 				}
 
 				if btc.IsP2SH(tout.Pk_script) {
