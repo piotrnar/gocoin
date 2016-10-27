@@ -34,11 +34,12 @@ const (
 	TX_REJECTED_RBF_LOWFEE   = 210
 	TX_REJECTED_RBF_FINAL    = 211
 	TX_REJECTED_RBF_100      = 212
-	TX_REJECTED_SEGWIT       = 213
 )
 
 var (
 	TxMutex sync.Mutex
+
+	xxx sync.Mutex
 
 	// The actual memory pool:
 	TransactionsToSend map[[btc.Uint256IdxLen]byte] *OneTxToSend =
@@ -156,43 +157,35 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 
 // Handle incoming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
-	tid := btc.NewSha2Hash(pl)
-	NeedThisTx(tid, func() {
-		// This body is called with a locked TxMutex
-		if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
-			common.CountSafe("TxRejectedBig")
-			RejectTx(tid, len(pl), TX_REJECTED_TOO_BIG)
-			return
-		}
-		tx, le := btc.NewTx(pl)
-		if tx == nil {
-			RejectTx(tid, len(pl), TX_REJECTED_FORMAT)
-			c.DoS("TxRejectedBroken")
-			return
-		}
-		if tx.SegWit != nil {
-			println(c.ConnID, "SegWit", len(tx.SegWit), btc.NewSha2Hash(tx.Serialize()).String())
-			if len(tx.SegWit)<4 {
-				println(hex.EncodeToString(pl))
-			}
-			RejectTx(tid, len(pl), TX_REJECTED_SEGWIT)
-			return
-		}
-		if le != len(pl) {
-			RejectTx(tid, len(pl), TX_REJECTED_LEN_MISMATCH)
-			c.DoS("TxRejectedLenMismatch")
-			return
-		}
-		if len(tx.TxIn)<1 {
-			RejectTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
-			c.Misbehave("TxRejectedNoInputs", 100)
-			return
-		}
+	if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
+		common.CountSafe("TxRejectedBig")
+		return
+	}
+	tx, le := btc.NewTx(pl)
+	if tx == nil {
+		c.DoS("TxRejectedBroken")
+		return
+	}
+	if le != len(pl) {
+		c.DoS("TxRejectedLenMismatch")
+		return
+	}
+	if len(tx.TxIn)<1 {
+		c.Misbehave("TxRejectedNoInputs", 100)
+		return
+	}
 
-		tx.Hash = tid
+	if tx.SegWit != nil {
+		tx.Hash = btc.NewSha2Hash(tx.Serialize())
+	} else {
+		tx.Hash = btc.NewSha2Hash(pl)
+	}
+	NeedThisTx(tx.Hash, func() {
+		// This body is called with a locked TxMutex
+		tx.Raw = pl
 		select {
 			case NetTxs <- &TxRcvd{conn:c, tx:tx, raw:pl}:
-				TransactionsPending[tid.BIdx()] = true
+				TransactionsPending[tx.Hash.BIdx()] = true
 			default:
 				common.CountSafe("TxRejectedFullQ")
 				//println("NetTxsFULL")
@@ -397,21 +390,43 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
+	xxx.Lock()
+
+
+	if tx.SegWit != nil {
+		println("\n\n\nVerify SW tx", len(tx.SegWit), "...")
+		println(hex.EncodeToString(tx.Raw))
+		for ii, ss := range tx.SegWit {
+			println(" - sw", ii, "has", len(ss), "elements:")
+			for _, ggg := range ss {
+				println("    ", hex.EncodeToString(ggg))
+			}
+		}
+		script.DBG_SCR = true
+	}
+
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
 	for i := range tx.TxIn {
 		wg.Add(1)
-		go func (prv []byte, i int, tx *btc.Tx) {
-			if !script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS) {
+		/*go*/ func (prv []byte, amount uint64, i int, tx *btc.Tx) {
+			if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
 				atomic.AddUint32(&ver_err_cnt, 1)
 			}
 			wg.Done()
-		}(pos[i].Pk_script, i, tx)
+		}(pos[i].Pk_script, pos[i].Value, i, tx)
 	}
 
 	wg.Wait()
+	script.DBG_SCR = false
+
+	if tx.SegWit != nil {
+		println("Verify SW tx errors:", ver_err_cnt)
+	}
+	xxx.Unlock()
+
 	if ver_err_cnt > 0 {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 		TxMutex.Unlock()

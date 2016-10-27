@@ -88,7 +88,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		}
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			ok := script.VerifyTxScript(po.Pk_script, po.Value, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
 			if !ok {
 				w.Write([]byte("<status>Script FAILED</status>"))
 			} else {

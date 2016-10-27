@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"io/ioutil"
 	"encoding/hex"
 	"crypto/sha256"
 	"encoding/binary"
@@ -320,7 +321,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
 			println(c.ConnID, "Corrupt CmpctBlkA")
-			c.DoS("BadCmpctBlockA")
+			ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+			//c.DoS("BadCmpctBlockA")
 			return
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
@@ -395,7 +397,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		panic("BlockTxn: Block missing from BlocksToGet")
 		return
 	}
-	delete(BlocksToGet, idx)
 	//b2g.InProgress--
 
 	//fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
@@ -427,10 +428,11 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
-		println(c.ConnID, "Corrupt CmpctBlkB")
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
 		c.DoS("BadCmpctBlockB")
 		return
 	}
+	delete(BlocksToGet, idx)
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
 	c.counters["NewTBlock"]++
