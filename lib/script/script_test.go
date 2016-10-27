@@ -51,7 +51,7 @@ func TestScritps(t *testing.T) {
 
 			exp_res := vecs[i][3]=="OK"
 
-			res := VerifyTxScript(s2, 0, mk_out_tx(s1, s2), flags)
+			res := VerifyTxScript(s2, 1e8, 0, mk_out_tx(s1, s2), flags)
 
 			if res!=exp_res {
 				t.Error(tot, "TestScritps failed in", vecs[i][0], "->", vecs[i][1], "/", vecs[i][2], res, vecs[i][3])
@@ -90,6 +90,10 @@ func decode_flags(s string) (fl uint32, e error) {
 				fl |= VER_CLTV
 			case "CHECKSEQUENCEVERIFY":
 				fl |= VER_CSV
+			case "WITNESS":
+				fl |= VER_WITNESS
+			case "DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM":
+				fl |= VER_WITNESS
 			default:
 				e = errors.New("Unsupported flag "+ss[i])
 				return
