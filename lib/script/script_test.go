@@ -93,7 +93,7 @@ func decode_flags(s string) (fl uint32, e error) {
 			case "WITNESS":
 				fl |= VER_WITNESS
 			case "DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM":
-				fl |= VER_WITNESS
+				fl |= VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM
 			default:
 				e = errors.New("Unsupported flag "+ss[i])
 				return
