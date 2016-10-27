@@ -159,9 +159,6 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 
 		if VerifyTxScript(pk, tv.inps[j].value, i, tx, tv.ver_flags) {
 			oks++
-		} else {
-			println("dupa")
-			return false
 		}
 	}
 	return oks==len(tx.TxIn)
