@@ -1,0 +1,112 @@
+package script
+
+import (
+	"bytes"
+	"encoding/hex"
+	"crypto/sha256"
+	"github.com/piotrnar/gocoin/lib/btc"
+)
+
+func IsWitnessProgram(scr []byte) (version int, program []byte) {
+	if len(scr) < 4 || len(scr) > 42 {
+		return
+	}
+	if scr[0]!=btc.OP_0 && (scr[0]<btc.OP_1 || scr[0]>btc.OP_16) {
+		return
+	}
+	if int(scr[1]) + 2 == len(scr) {
+		version = btc.DecodeOP_N(scr[0])
+		program = scr[2:]
+	}
+	return
+}
+
+type witness_ctx struct {
+	stack scrStack
+}
+
+func (w *witness_ctx) IsNull() bool {
+	return w.stack.size()==0
+}
+
+func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp int, witversion int, program []byte, flags uint32) bool {
+	var stack scrStack
+	var scriptPubKey []byte
+
+	if DBG_SCR {
+		println("*****************VerifyWitnessProgram", len(tx.SegWit), witness.stack.size(), len(program))
+	}
+
+	if witversion == 0 {
+		if len(program) == 32 {
+			// Version 0 segregated witness program: SHA256(CScript) inside the program, CScript + inputs in witness
+			if witness.stack.size() == 0 {
+				println("SCRIPT_ERR_WITNESS_PROGRAM_WITNESS_EMPTY")
+				return false
+			}
+			scriptPubKey = witness.stack.pop()
+			sha := sha256.New()
+			sha.Write(scriptPubKey)
+			sum := sha.Sum(nil)
+			if !bytes.Equal(program, sum) {
+				println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+				println(hex.EncodeToString(program))
+				println(hex.EncodeToString(sum))
+				return false
+			}
+			stack.copy_from(&witness.stack)
+			witness.stack.push(scriptPubKey)
+		} else if len(program) == 20 {
+			// Special case for pay-to-pubkeyhash; signature + pubkey in witness
+			if (witness.stack.size() != 2) {
+				println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+				return false
+			}
+
+			scriptPubKey = make([]byte, 25)
+			scriptPubKey[0] = 0x76
+			scriptPubKey[1] = 0xa9
+			scriptPubKey[2] = 0x14
+			copy(scriptPubKey[3:23], program)
+			scriptPubKey[23] = 0x88
+			scriptPubKey[24] = 0xac
+			stack.copy_from(&witness.stack)
+		} else {
+			println("SCRIPT_ERR_WITNESS_PROGRAM_WRONG_LENGTH")
+			return false
+		}
+	} else if (flags&VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM) != 0 {
+		println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM")
+		return false
+	} else {
+		// Higher version witness scripts return true for future softfork compatibility
+		return true
+	}
+
+	if DBG_SCR {
+		println("*****************", stack.size())
+	}
+	// Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
+	for i:=0; i<stack.size(); i++ {
+		if len(stack.at(i)) > MAX_SCRIPT_ELEMENT_SIZE {
+			println("SCRIPT_ERR_PUSH_SIZE")
+			return false
+		}
+	}
+
+	if !evalScript(scriptPubKey, amount, &stack, tx, inp, flags, true) {
+		return false
+	}
+
+	// Scripts inside witness implicitly require cleanstack behaviour
+	if stack.size() != 1 {
+		println("SCRIPT_ERR_EVAL_FALSE")
+		return false
+	}
+
+	if !stack.topBool(-1) {
+		println("SCRIPT_ERR_EVAL_FALSE")
+		return false
+	}
+	return true
+}
