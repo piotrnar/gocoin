@@ -11,6 +11,14 @@ type scrStack struct {
 	data [][]byte
 }
 
+func (s *scrStack) copy_from(x *scrStack) {
+	s.data = make([][]byte, len(x.data))
+	for i := range x.data {
+		s.data[i] = make([]byte, len(x.data[i]))
+		copy(s.data[i], x.data[i])
+	}
+}
+
 func (s *scrStack) push(d []byte) {
 	s.data = append(s.data, d)
 }
@@ -161,6 +169,10 @@ func (s *scrStack) top(idx int) (d []byte) {
 	return s.data[len(s.data)+idx]
 }
 
+func (s *scrStack) at(idx int) (d []byte) {
+	return s.data[idx]
+}
+
 func (s *scrStack) topInt(idx int, check_for_min bool) int64 {
 	d := s.data[len(s.data)+idx]
 	if check_for_min && !is_minimal(d) {
@@ -201,4 +213,8 @@ func (s *scrStack) print() {
 	for i := range s.data {
 		fmt.Printf("%3d: len=%d, data:%s\n", i, len(s.data[i]), hex.EncodeToString(s.data[i]))
 	}
+}
+
+func (s *scrStack) resize(siz int) {
+	s.data = s.data[:siz]
 }
