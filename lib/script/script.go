@@ -36,6 +36,9 @@ const (
 	VER_CSV = 1<<10
 	VER_WITNESS = 1<<11
 	VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM = 1<<12
+	VER_MINIMALIF = 1<<13
+	VER_NULLFAIL = 1<<14
+	VER_WITNESS_PUBKEYTYPE = 1 << 15
 
 	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | //VER_LOW_S |
 		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV |
@@ -48,6 +51,9 @@ const (
 	SEQUENCE_LOCKTIME_MASK = 0x0000ffff
 
 	MAX_SCRIPT_ELEMENT_SIZE = 520
+
+	SIGVERSION_BASE = 0
+	SIGVERSION_WITNESS_V0 = 1
 )
 
 
@@ -76,7 +82,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 	}
 
 	var stack, stackCopy scrStack
-	if !evalScript(sigScr, amount, &stack, tx, i, ver_flags, false) {
+	if !evalScript(sigScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -102,7 +108,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		}
 	}
 
-	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, false) {
+	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -140,7 +146,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 
 		witnessversion, witnessprogram = IsWitnessProgram(pkScr)
 		if DBG_SCR {
-			fmt.Println("------------witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
+			fmt.Println("------------witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
 		}
 		if witnessprogram!=nil {
 			hadWitness = true
@@ -197,7 +203,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, amount, &stack, tx, i, ver_flags, false) {
+		if !evalScript(pubKey2, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
@@ -221,7 +227,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		if (ver_flags & VER_WITNESS)!=0 {
 			witnessversion, witnessprogram = IsWitnessProgram(pubKey2)
 			if DBG_SCR {
-				fmt.Println("============witnessversion:", witnessversion, "   witnessprogram:", witnessprogram, hex.EncodeToString(witnessprogram))
+				fmt.Println("============witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
 			}
 			if witnessprogram!=nil {
 				hadWitness = true
@@ -272,7 +278,9 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			panic("VER_WITNESS must be used with P2SH")
 		}
 		if !hadWitness && !witness.IsNull() {
-			fmt.Println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
+			}
 			return
 		}
 	}
@@ -289,9 +297,9 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, segwit bool) bool {
+func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigversion int) bool {
 	if DBG_SCR {
-		fmt.Println("evalScript len", len(p), "amount", amount, "inp", inp, "flagz", ver_flags, "segwit", segwit)
+		fmt.Println("evalScript len", len(p), "amount", amount, "inp", inp, "flagz", ver_flags, "sigver", sigversion)
 		stack.print()
 	}
 
@@ -412,10 +420,24 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 							}
 							return false
 						}
-						if opcode == 0x63/*OP_IF*/ {
-							val = stack.popBool()
-						} else {
-							val = !stack.popBool()
+						vch := stack.pop()
+						if sigversion==SIGVERSION_WITNESS_V0 && (ver_flags&VER_MINIMALIF)!=0 {
+							if len(vch)>1 {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_MINIMALIF-1")
+								}
+								return false
+							}
+							if len(vch)==1 && vch[0]!=1 {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_MINIMALIF-2")
+								}
+								return false
+							}
+						}
+						val = bts2bool(vch)
+						if opcode == 0x64/*OP_NOTIF*/ {
+							val = !val
 						}
 					}
 					if DBG_SCR {
@@ -908,51 +930,71 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 						}
 						return false
 					}
-					var ok bool
-					pk := stack.pop()
-					si := stack.pop()
+					var fSuccess bool
+					vchSig := stack.top(-2)
+					vchPubKey := stack.top(-1)
 
 					// BIP-0066
-					if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
+					rrr := CheckSignatureEncoding(vchSig, ver_flags)
+					if DBG_SCR {
+						println("CheckSignatureEncoding", rrr)
+						println("vchSig", hex.EncodeToString(vchSig))
+					}
+					xxx := CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion)
+					if DBG_SCR {
+						println("CheckPubKeyEncoding", xxx, ver_flags, sigversion)
+						println("vchPubKey", hex.EncodeToString(vchPubKey))
+					}
+					if !rrr || !xxx {
 						if DBG_ERR {
 							fmt.Println("Invalid Signature Encoding A")
 						}
 						return false
 					}
 
-					if len(si)>0 {
+					if len(vchSig)>0 {
 						var sh []byte
-						if segwit {
+						if sigversion==SIGVERSION_WITNESS_V0 {
 							if DBG_SCR {
-								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(si[len(si)-1]))
+								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(vchSig[len(vchSig)-1]))
 							}
-							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(si[len(si)-1]))
+							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(vchSig[len(vchSig)-1]))
 						} else {
-							sh = tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
+							sh = tx.SignatureHash(delSig(p[sta:], vchSig), inp, int32(vchSig[len(vchSig)-1]))
 						}
 						if DBG_SCR {
 							fmt.Println("EcdsaVerify", hex.EncodeToString(sh))
-							fmt.Println(" key:", hex.EncodeToString(pk))
-							fmt.Println(" sig:", hex.EncodeToString(si))
+							fmt.Println(" key:", hex.EncodeToString(vchPubKey))
+							fmt.Println(" sig:", hex.EncodeToString(vchSig))
 						}
-						ok = btc.EcdsaVerify(pk, si, sh)
+						fSuccess = btc.EcdsaVerify(vchPubKey, vchSig, sh)
 						if DBG_SCR {
-							fmt.Println(" ->", ok)
+							fmt.Println(" ->", fSuccess)
 						}
 					}
-					if !ok && DBG_SCR {
+					if !fSuccess && DBG_SCR {
 						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
 					}
 
+					if !fSuccess && (ver_flags&VER_NULLFAIL)!=0 && len(vchSig)>0 {
+						if DBG_ERR {
+							fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-1")
+						}
+						return false
+					}
+
+					stack.pop()
+					stack.pop()
+
 					if DBG_SCR {
-						fmt.Println("ver:", ok)
+						fmt.Println("ver:", fSuccess)
 					}
 					if opcode==0xad {
-						if !ok { // OP_CHECKSIGVERIFY
+						if !fSuccess { // OP_CHECKSIGVERIFY
 							return false
 						}
 					} else { // OP_CHECKSIG
-						stack.pushBool(ok)
+						stack.pushBool(fSuccess)
 					}
 
 				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
@@ -981,6 +1023,9 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 					i++
 					ikey := i
+					// ikey2 is the position of last non-signature item in the stack. Top stack item = 1.
+					// With SCRIPT_VERIFY_NULLFAIL, this is used for cleanup if operation fails.
+					ikey2 := keyscnt + 2
 					i += int(keyscnt)
 					if stack.size()<i {
 						if DBG_ERR {
@@ -1006,7 +1051,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					xxx := p[sta:]
-					if !segwit {
+					if sigversion!=SIGVERSION_WITNESS_V0 {
 						for k:=0; k<int(sigscnt); k++ {
 							xxx = delSig(xxx, stack.top(-isig-k))
 						}
@@ -1014,26 +1059,26 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 
 					success := true
 					for sigscnt > 0 {
-						pk := stack.top(-ikey)
-						si := stack.top(-isig)
+						vchPubKey := stack.top(-ikey)
+						vchSig := stack.top(-isig)
 
 						// BIP-0066
-						if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
+						if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
 							if DBG_ERR {
 								fmt.Println("Invalid Signature Encoding B")
 							}
 							return false
 						}
 
-						if len(si) > 0 {
+						if len(vchSig) > 0 {
 							var sh []byte
 
-							if segwit {
-								sh = tx.WitnessSigHash(xxx, amount, inp, int32(si[len(si)-1]))
+							if sigversion==SIGVERSION_WITNESS_V0 {
+								sh = tx.WitnessSigHash(xxx, amount, inp, int32(vchSig[len(vchSig)-1]))
 							} else {
-								sh = tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
+								sh = tx.SignatureHash(xxx, inp, int32(vchSig[len(vchSig)-1]))
 							}
-							if btc.EcdsaVerify(pk, si, sh) {
+							if btc.EcdsaVerify(vchPubKey, vchSig, sh) {
 								isig++
 								sigscnt--
 							}
@@ -1049,8 +1094,21 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 							break
 						}
 					}
+
+					// Clean up stack of actual arguments
 					for i > 1 {
 						i--
+
+						if !success && (ver_flags&VER_NULLFAIL)!=0 && ikey2==0 && len(stack.top(-1))>0 {
+							if DBG_ERR {
+								fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-2")
+							}
+							return false
+						}
+						if ikey2>0 {
+							ikey2--
+						}
+
 						stack.pop()
 					}
 
@@ -1426,8 +1484,22 @@ func IsCompressedOrUncompressedPubKey(pk []byte) bool {
 	return true
 }
 
-func CheckPubKeyEncoding(pk []byte, flags uint32) bool {
+func IsCompressedPubKey(pk []byte) bool {
+	if len(pk) != 33 {
+		return false
+	}
+	if pk[0] == 0x02 || pk[0] == 0x03 {
+		return true
+	}
+	return false
+}
+
+func CheckPubKeyEncoding(pk []byte, flags uint32, sigversion int) bool {
 	if (flags&VER_STRICTENC)!=0 && !IsCompressedOrUncompressedPubKey(pk) {
+		return false
+	}
+	// Only compressed keys are accepted in segwit
+	if (flags&VER_WITNESS_PUBKEYTYPE)!=0 && sigversion==SIGVERSION_WITNESS_V0 && !IsCompressedPubKey(pk) {
 		return false
 	}
 	return true
