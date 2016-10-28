@@ -56,6 +56,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
 					fmt.Println(hex.EncodeToString(program))
 					fmt.Println(hex.EncodeToString(sum))
+					fmt.Println(hex.EncodeToString(scriptPubKey))
 				}
 				return false
 			}
@@ -107,7 +108,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 		}
 	}
 
-	if !evalScript(scriptPubKey, amount, &stack, tx, inp, flags, true) {
+	if !evalScript(scriptPubKey, amount, &stack, tx, inp, flags, SIGVERSION_WITNESS_V0) {
 		return false
 	}
 
