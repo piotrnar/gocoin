@@ -51,6 +51,10 @@ type Tx struct {
 
 	// This field is only set in chain's ProcessBlockTransactions:
 	Fee uint64
+
+	hashPrevouts []byte
+	hashSequence []byte
+	hashOutputs []byte
 }
 
 
@@ -559,44 +563,52 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	sha := sha256.New()
 
 	if (hashType & SIGHASH_ANYONECANPAY)==0 {
-		for _, vin := range tx.TxIn {
-			sha.Write(vin.Input.Hash[:])
-			binary.Write(sha, binary.LittleEndian, vin.Input.Vout)
+		if tx.hashPrevouts==nil {
+			for _, vin := range tx.TxIn {
+				sha.Write(vin.Input.Hash[:])
+				binary.Write(sha, binary.LittleEndian, vin.Input.Vout)
+			}
+			hashPrevouts = sha.Sum(nil)
+			sha.Reset()
+			sha.Write(hashPrevouts)
+			tx.hashPrevouts = sha.Sum(nil)
+			sha.Reset()
 		}
-		hashPrevouts = sha.Sum(nil)
-		sha.Reset()
-		sha.Write(hashPrevouts)
-		hashPrevouts = sha.Sum(nil)
-		sha.Reset()
+		hashPrevouts = tx.hashPrevouts
 	} else {
 		hashPrevouts = nullHash[:]
 	}
 
-	if ((hashType & SIGHASH_ANYONECANPAY)==0 &&
-		(hashType & 0x1f) != SIGHASH_SINGLE && (hashType & 0x1f) != SIGHASH_NONE) {
-		for _, vin := range tx.TxIn {
-			binary.Write(sha, binary.LittleEndian, vin.Sequence)
+	if ((hashType & SIGHASH_ANYONECANPAY)==0 && (hashType & 0x1f) != SIGHASH_SINGLE && (hashType & 0x1f) != SIGHASH_NONE) {
+		if tx.hashSequence==nil {
+			for _, vin := range tx.TxIn {
+				binary.Write(sha, binary.LittleEndian, vin.Sequence)
+			}
+			hashSequence = sha.Sum(nil)
+			sha.Reset()
+			sha.Write(hashSequence)
+			tx.hashSequence = sha.Sum(nil)
+			sha.Reset()
 		}
-		hashSequence = sha.Sum(nil)
-		sha.Reset()
-		sha.Write(hashSequence)
-		hashSequence = sha.Sum(nil)
-		sha.Reset()
+		hashSequence = tx.hashSequence
 	} else {
 		hashSequence = nullHash[:]
 	}
 
 	if ((hashType & 0x1f) != SIGHASH_SINGLE && (hashType & 0x1f) != SIGHASH_NONE) {
-		for _, vout := range tx.TxOut {
-			binary.Write(sha, binary.LittleEndian, vout.Value)
-			WriteVlen(sha, uint64(len(vout.Pk_script)))
-			sha.Write(vout.Pk_script)
+		if tx.hashOutputs==nil {
+			for _, vout := range tx.TxOut {
+				binary.Write(sha, binary.LittleEndian, vout.Value)
+				WriteVlen(sha, uint64(len(vout.Pk_script)))
+				sha.Write(vout.Pk_script)
+			}
+			hashOutputs = sha.Sum(nil)
+			sha.Reset()
+			sha.Write(hashOutputs)
+			tx.hashOutputs = sha.Sum(nil)
+			sha.Reset()
 		}
-		hashOutputs = sha.Sum(nil)
-		sha.Reset()
-		sha.Write(hashOutputs)
-		hashOutputs = sha.Sum(nil)
-		sha.Reset()
+		hashOutputs = tx.hashOutputs
 	} else if (hashType & 0x1f) == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
 		binary.Write(sha, binary.LittleEndian, tx.TxOut[nIn].Value)
 		WriteVlen(sha, uint64(len(tx.TxOut[nIn].Pk_script)))
@@ -609,31 +621,6 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	} else {
 		hashOutputs = nullHash[:]
 	}
-
-/*
-	if true {
-		println("hashPrevouts", hex.EncodeToString(hashPrevouts))
-		println("hashSequence", hex.EncodeToString(hashSequence))
-		println("hashOutputs", hex.EncodeToString(hashOutputs))
-		bla := new(bytes.Buffer)
-
-		binary.Write(bla, binary.LittleEndian, tx.Version)
-		bla.Write(hashPrevouts)
-		bla.Write(hashSequence)
-		bla.Write(tx.TxIn[nIn].Input.Hash[:])
-		binary.Write(bla, binary.LittleEndian, tx.TxIn[nIn].Input.Vout)
-
-		WriteVlen(bla, uint64(len(scriptCode)))
-		bla.Write(scriptCode)
-		binary.Write(bla, binary.LittleEndian, amount)
-		binary.Write(bla, binary.LittleEndian, tx.TxIn[nIn].Sequence)
-		bla.Write(hashOutputs)
-
-		binary.Write(bla, binary.LittleEndian, tx.Lock_time)
-		binary.Write(bla, binary.LittleEndian, hashType)
-		println("to hasz:", hex.EncodeToString(bla.Bytes()))
-	}
-*/
 
 	binary.Write(sha, binary.LittleEndian, tx.Version)
 	sha.Write(hashPrevouts)
