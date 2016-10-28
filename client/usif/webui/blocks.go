@@ -45,6 +45,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Sigops int
 
 		MinFeeKSPB uint64
+		NonWitnessSize int
 	}
 
 	var blks []*one_block
@@ -121,6 +122,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.FromConID = rb.FromConID
 
 		b.MinFeeKSPB = rb.MinFeeKSPB
+		b.NonWitnessSize = rb.NonWitnessSize
 
 		blks = append(blks, b)
 		end = end.Parent

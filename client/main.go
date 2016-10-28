@@ -36,6 +36,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	if e == nil {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
+		newbl.NonWitnessSize = len(bl.OldData)
 
 		common.RecalcAverageBlockSize(false)
 

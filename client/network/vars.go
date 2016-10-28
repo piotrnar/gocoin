@@ -17,6 +17,7 @@ type OneReceivedBlock struct {
 	TxMissing int
 	FromConID uint32
 	MinFeeKSPB uint64
+	NonWitnessSize int
 }
 
 type BlockRcvd struct {

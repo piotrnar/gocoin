@@ -275,20 +275,22 @@ func dump_block(s string) {
 		println("Specify block's hash")
 		return
 	}
-	bl, _, e := common.BlockChain.Blocks.BlockGet(h)
-	if e != nil {
-		println(e.Error())
+	crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h.Hash[:]))
+	if er != nil {
+		println(er.Error())
 		return
 	}
-	fn := h.String() + ".bin"
-	f, e := os.Create(fn)
-	if e != nil {
-		println(e.Error())
-		return
+
+	ioutil.WriteFile(h.String() + ".bin", crec.Data, 0700)
+	if crec.Block==nil {
+		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
-	f.Write(bl)
-	f.Close()
-	fmt.Println("Block saved to file:", fn)
+	if crec.Block.OldData==nil {
+		crec.Block.BuildTxList()
+	}
+	ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+
+	fmt.Println("Block saved")
 }
 
 func ui_quit(par string) {

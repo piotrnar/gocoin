@@ -39,8 +39,6 @@ const (
 var (
 	TxMutex sync.Mutex
 
-	xxx sync.Mutex
-
 	// The actual memory pool:
 	TransactionsToSend map[[btc.Uint256IdxLen]byte] *OneTxToSend =
 		make(map[[btc.Uint256IdxLen]byte] *OneTxToSend)
@@ -128,8 +126,8 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1+4+32]byte
 		b[0] = 1 // One inv
-		if (c.Node.Services&0x8) != 0 {
-			binary.LittleEndian.PutUint32(b[1:5], 0x40000001) // SegWit Tx
+		if (c.Node.Services&SERVICE_SEGWIT) != 0 {
+			binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
 			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
 		} else {
 			b[1] = 1 // Tx
@@ -390,28 +388,13 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	xxx.Lock()
-
-
-	if tx.SegWit != nil {
-		println("\n\n\nVerify SW tx", len(tx.SegWit), "...")
-		println(hex.EncodeToString(tx.Raw))
-		for ii, ss := range tx.SegWit {
-			println(" - sw", ii, "has", len(ss), "elements:")
-			for _, ggg := range ss {
-				println("    ", hex.EncodeToString(ggg))
-			}
-		}
-		script.DBG_SCR = true
-	}
-
 	// Verify scripts
 	sigops2 := tx.GetLegacySigOpCount()
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
 	for i := range tx.TxIn {
 		wg.Add(1)
-		/*go*/ func (prv []byte, amount uint64, i int, tx *btc.Tx) {
+		go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
 			if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
 				atomic.AddUint32(&ver_err_cnt, 1)
 			}
@@ -420,12 +403,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	wg.Wait()
-	script.DBG_SCR = false
-
-	if tx.SegWit != nil {
-		println("Verify SW tx errors:", ver_err_cnt)
-	}
-	xxx.Unlock()
 
 	if ver_err_cnt > 0 {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)

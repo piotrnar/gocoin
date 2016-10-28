@@ -1,6 +1,7 @@
 package network
 
 import (
+	"io/ioutil"
 	"fmt"
 	"time"
 	"bytes"
@@ -35,22 +36,39 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		c.InvStore(typ, h[4:36])
 		c.Mutex.Unlock()
 
-		common.CountSafe(fmt.Sprint("GetdataType-",typ))
-		if typ == MSG_BLOCK {
-			bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
+		common.CountSafe(fmt.Sprintf("GetdataType-%x",typ))
+		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
+			crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h[4:]))
+			//bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
 			if er == nil {
+				bl := crec.Data
+				if typ == MSG_BLOCK {
+					// remove witness data from the block
+					if crec.Block==nil {
+						crec.Block, _ = btc.NewBlock(bl)
+					}
+					if crec.Block.OldData==nil {
+						crec.Block.BuildTxList()
+					}
+					println("block size", len(crec.Data), "->", len(bl))
+					bl = crec.Block.OldData
+				}
 				c.SendRawMsg("block", bl)
 			} else {
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == MSG_TX {
+		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
 			// transaction
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked==0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()
-				c.SendRawMsg("tx", tx.Data)
+				if tx.SegWit==nil || typ==MSG_WITNESS_TX {
+					c.SendRawMsg("tx", tx.Data)
+				} else {
+					c.SendRawMsg("tx", tx.Serialize())
+				}
 			} else {
 				TxMutex.Unlock()
 				notfound = append(notfound, h[:]...)
@@ -130,8 +148,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		b2g.InProgress--
-		println("Corrupt block received from", conn.PeerAddr.Ip())
-		conn.DoS("BadBlock")
+		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
+		ioutil.WriteFile(hash.String() + ".bin", b, 0700)
+		//conn.DoS("BadBlock")
 		MutexRcv.Unlock()
 		return
 	}
@@ -216,6 +235,14 @@ func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (l
 }
 
 func (c *OneConnection) GetBlockData() (yes bool) {
+	var block_type uint32
+
+	if (c.Node.Services&SERVICE_SEGWIT) != 0 {
+		block_type = MSG_WITNESS_BLOCK
+	} else {
+		block_type = MSG_BLOCK
+	}
+
 	//MAX_GETDATA_FORWARD
 	avg_block_size := common.GetAverageBlockSize()
 
@@ -263,7 +290,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 				continue
 			}
 
-			binary.Write(invs, binary.LittleEndian, uint32(2))
+			binary.Write(invs, binary.LittleEndian, block_type)
 			invs.Write(lowest_found.BlockHash.Hash[:])
 			lowest_found.InProgress++
 			cnt++
