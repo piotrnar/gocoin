@@ -21,6 +21,8 @@ type Block struct {
 	Height uint32
 	Sigops uint32
 	MedianPastTime uint32
+
+	SerializedSize int
 }
 
 
@@ -66,13 +68,6 @@ func (bl *Block)Bits() uint32 {
 }
 
 
-func (bl *Block) SerializedSize() int {
-	cnt, off := VLen(bl.Raw[80:])
-	return 80 + VLenSize(uint64(cnt)) + len(bl.Raw)-80-off
-}
-
-
-
 // Parses block's transactions and adds them to the structure, calculating hashes BTW.
 // It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 func (bl *Block) BuildTxList() (e error) {
@@ -85,10 +80,15 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.TxOffset += 80
 	}
 	bl.Txs = make([]*Tx, bl.TxCount)
+	bl.SerializedSize = 80 + VLenSize(uint64(bl.TxCount))
 
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
+	var data2hash []byte
+
+
+	cnt, off := VLen(bl.Raw[80:])
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
@@ -105,11 +105,17 @@ func (bl *Block) BuildTxList() (e error) {
 				ou.WasCoinbase = true
 			}
 		}
+		if bl.Txs[i].SegWit!=nil {
+			data2hash = bl.Txs[i].Serialize()
+		} else {
+			data2hash = bl.Txs[i].Raw
+		}
+		bl.SerializedSize += len(data2hash)
 		wg.Add(1)
 		go func(h **Uint256, b []byte) {
 			*h = NewSha2Hash(b) // Calculate tx hash in a background
 			wg.Done()
-		}(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
+		}(&bl.Txs[i].Hash, data2hash)
 		offs += n
 	}
 
