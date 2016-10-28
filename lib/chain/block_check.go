@@ -201,6 +201,10 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		bl.VerifyFlags |= script.VER_CSV
 	}
 
+	if ch.Consensus.Enforce_SEGWIT!=0 && bl.Height>=ch.Consensus.Enforce_SEGWIT {
+		bl.VerifyFlags |= script.VER_WITNESS | script.VER_NULLDUMMY
+	}
+
 	if !bl.Trusted {
 		var blockTime uint32
 		if (bl.VerifyFlags&script.VER_CSV) != 0 {
