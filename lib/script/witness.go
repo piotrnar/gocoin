@@ -85,7 +85,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			}
 			return false
 		}
-	} else if (flags&VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM) != 0 {
+	} else if (flags&VER_WITNESS_PROG) != 0 {
 		if DBG_ERR {
 			fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM")
 		}

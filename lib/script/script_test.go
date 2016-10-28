@@ -197,13 +197,13 @@ func decode_flags(s string) (fl uint32, e error) {
 			case "WITNESS":
 				fl |= VER_WITNESS
 			case "DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM":
-				fl |= VER_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM
+				fl |= VER_WITNESS_PROG
 			case "MINIMALIF":
 				fl |= VER_MINIMALIF
 			case "NULLFAIL":
 				fl |= VER_NULLFAIL
 			case "WITNESS_PUBKEYTYPE":
-				fl |= VER_WITNESS_PUBKEYTYPE
+				fl |= VER_WITNESS_PUBKEY
 			default:
 				e = errors.New("Unsupported flag "+ss[i])
 				return
