@@ -2,6 +2,7 @@ package btc
 
 import (
 	"sync"
+	"bytes"
 	"errors"
 	"encoding/hex"
 	"encoding/binary"
@@ -22,7 +23,7 @@ type Block struct {
 	Sigops uint32
 	MedianPastTime uint32
 
-	SerializedSize int
+	OldData []byte // all the block's transactions stripped from witnesses
 }
 
 
@@ -80,15 +81,15 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.TxOffset += 80
 	}
 	bl.Txs = make([]*Tx, bl.TxCount)
-	bl.SerializedSize = 80 + VLenSize(uint64(bl.TxCount))
 
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
 	var data2hash []byte
 
-
-	cnt, off := VLen(bl.Raw[80:])
+	old_format_block := new(bytes.Buffer)
+	old_format_block.Write(bl.Raw[:80])
+	WriteVlen(old_format_block, uint64(bl.TxCount))
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
@@ -110,7 +111,7 @@ func (bl *Block) BuildTxList() (e error) {
 		} else {
 			data2hash = bl.Txs[i].Raw
 		}
-		bl.SerializedSize += len(data2hash)
+		old_format_block.Write(data2hash)
 		wg.Add(1)
 		go func(h **Uint256, b []byte) {
 			*h = NewSha2Hash(b) // Calculate tx hash in a background
@@ -120,6 +121,9 @@ func (bl *Block) BuildTxList() (e error) {
 	}
 
 	wg.Wait()
+
+	bl.OldData = old_format_block.Bytes()
+
 	return
 }
 
