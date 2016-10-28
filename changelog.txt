@@ -1,3 +1,6 @@
+1.8.0
+* Suport for Segregated Witness
+
 1.7.4
 * Client: Added TX_REJECTED_RBF_100 to the rejection reasons
 * WebUI/Blocks: Show lowest fee's SPB in the recently processed blocks
