@@ -1,4 +1,5 @@
 1.7.4
+* Lib: Fixed rejecting of too big blocks
 * Client: Added TX_REJECTED_RBF_100 to the rejection reasons
 * WebUI/Blocks: Show lowest fee's SPB in the recently processed blocks
 
