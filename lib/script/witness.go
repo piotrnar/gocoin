@@ -8,20 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-func IsWitnessProgram(scr []byte) (version int, program []byte) {
-	if len(scr) < 4 || len(scr) > 42 {
-		return
-	}
-	if scr[0]!=btc.OP_0 && (scr[0]<btc.OP_1 || scr[0]>btc.OP_16) {
-		return
-	}
-	if int(scr[1]) + 2 == len(scr) {
-		version = btc.DecodeOP_N(scr[0])
-		program = scr[2:]
-	}
-	return
-}
-
 type witness_ctx struct {
 	stack scrStack
 }
