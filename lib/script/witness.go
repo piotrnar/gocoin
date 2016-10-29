@@ -53,7 +53,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			sum := sha.Sum(nil)
 			if !bytes.Equal(program, sum) {
 				if DBG_ERR {
-					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+					fmt.Println("32-SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
 					fmt.Println(hex.EncodeToString(program))
 					fmt.Println(hex.EncodeToString(sum))
 					fmt.Println(hex.EncodeToString(scriptPubKey))
@@ -66,7 +66,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			// Special case for pay-to-pubkeyhash; signature + pubkey in witness
 			if (witness.stack.size() != 2) {
 				if DBG_ERR {
-					fmt.Println("SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+					fmt.Println("20-SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH", tx.Hash.String())
 				}
 				return false
 			}
