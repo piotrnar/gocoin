@@ -207,6 +207,8 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 
 	if !bl.Trusted {
 		var blockTime uint32
+		var had_witness bool
+
 		if (bl.VerifyFlags&script.VER_CSV) != 0 {
 			blockTime = bl.MedianPastTime
 		} else {
@@ -214,15 +216,15 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 
 		// Verify merkle root of witness data
-		if (bl.VerifyFlags&script.VER_WITNESS) != 0 && bl.WitnessTxCount > 0 {
-			//println("Verify Witness merkle because", bl.WitnessTxCount, "/", bl.TxCount, "txs")
-
-			for i:=len(bl.Txs[0].TxOut)-1; i>=0; i-- {
+		if (bl.VerifyFlags&script.VER_WITNESS)!=0 {
+			var i int
+			for i=len(bl.Txs[0].TxOut)-1; i>=0; i-- {
 				o := bl.Txs[0].TxOut[i]
 				if len(o.Pk_script) >= 38 && bytes.Equal(o.Pk_script[:6], []byte{0x6a,0x24,0xaa,0x21,0xa9,0xed}) {
 					if len(bl.Txs[0].SegWit)!=1 || len(bl.Txs[0].SegWit[0])!=1 || len(bl.Txs[0].SegWit[0][0])!=32 {
 						er = errors.New("CheckBlock() : invalid witness nonce size - RPC_Result:bad-witness-nonce-size")
 						println(er.Error())
+						println(bl.Hash.String(), len(bl.Txs[0].SegWit))
 						return
 					}
 
@@ -237,17 +239,19 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 						return
 					}
 
+					had_witness = true
 					break
 				}
 			}
+		}
 
-			// TODO: check if the block shall not be rejected if there was no witness root
-			/*
-			if i<0 {
-				er = errors.New("CheckBlock(): Witness Merkle not present inside coinbase tx - RPC_Result:bad-witness-merkle-match")
-				return
+		if !had_witness {
+			for _, t := range bl.Txs {
+				if t.SegWit!=nil {
+					er = errors.New("CheckBlock(): unexpected witness data found - RPC_Result:unexpected-witness")
+					return
+				}
 			}
-			*/
 		}
 
 		// Check transactions - this is the most time consuming task
