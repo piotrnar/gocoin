@@ -211,6 +211,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					bl.SigopsCost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
 				}
 
+				bl.SigopsCost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
+
 				txinsum += tout.Value
 			}
 
