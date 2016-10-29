@@ -65,7 +65,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 
 	sigScr := tx.TxIn[i].ScriptSig
 
-	if (ver_flags & VER_SIGPUSHONLY) != 0 && !IsPushOnly(sigScr) {
+	if (ver_flags & VER_SIGPUSHONLY) != 0 && !btc.IsPushOnly(sigScr) {
 		if DBG_ERR {
 			fmt.Println("Not push only")
 		}
@@ -142,7 +142,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			}
 		}
 
-		witnessversion, witnessprogram = IsWitnessProgram(pkScr)
+		witnessversion, witnessprogram = btc.IsWitnessProgram(pkScr)
 		if DBG_SCR {
 			fmt.Println("------------witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
 		}
@@ -186,7 +186,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		if DBG_SCR {
 			fmt.Println("sigScr len", len(sigScr), hex.EncodeToString(sigScr))
 		}
-		if !IsPushOnly(sigScr) {
+		if !btc.IsPushOnly(sigScr) {
 			if DBG_ERR {
 				fmt.Println("P2SH is not push only")
 			}
@@ -223,7 +223,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		}
 
 		if (ver_flags & VER_WITNESS)!=0 {
-			witnessversion, witnessprogram = IsWitnessProgram(pubKey2)
+			witnessversion, witnessprogram = btc.IsWitnessProgram(pubKey2)
 			if DBG_SCR {
 				fmt.Println("============witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
 			}
@@ -1326,22 +1326,6 @@ func delSig(where, sig []byte) (res []byte) {
 		idx+= n
 	}
 	return
-}
-
-
-func IsPushOnly(scr []byte) bool {
-	idx := 0
-	for idx<len(scr) {
-		op, _, n, e := btc.GetOpcode(scr[idx:])
-		if e != nil {
-			return false
-		}
-		if op > btc.OP_16 {
-			return false
-		}
-		idx += n
-	}
-	return true
 }
 
 
