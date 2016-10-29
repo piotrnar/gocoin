@@ -150,6 +150,21 @@ func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
 }
 
 
+func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
+	mtr := make([][]byte, len(txs))
+	mtr[0] = make([]byte, 32) // null
+	for i:=1; i<len(txs); i++ {
+		if txs[i].WTxID==nil {
+			mtr[i] = txs[i].Hash.Hash[:]
+		} else {
+			mtr[i] = txs[i].WTxID.Hash[:]
+		}
+	}
+	res, mutated = CalcMerkel(mtr)
+	return
+}
+
+
 // Reads var_len from the given reader
 func ReadVLen(b io.Reader) (res uint64, e error) {
 	var buf [8]byte;
