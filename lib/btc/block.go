@@ -20,7 +20,7 @@ type Block struct {
 	VerifyFlags uint32
 	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
-	SigopsCost uint32
+	Sigops uint32
 	MedianPastTime uint32
 
 	OldData []byte // all the block's transactions stripped from witnesses
