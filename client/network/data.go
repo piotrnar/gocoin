@@ -272,6 +272,14 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			// Get block to fetch:
 
 			for _, v := range BlocksToGet {
+				if common.BlockChain.Consensus.Enforce_SEGWIT!=0 {
+					if (c.Node.Services&SERVICE_SEGWIT)==0 &&
+						v.Block.Height>=common.BlockChain.Consensus.Enforce_SEGWIT {
+						// We cannot get block data froim non-segwit peers
+						continue
+					}
+				}
+
 				if v.InProgress==cnt_in_progress && v.Block.Height <= max_height &&
 					(lowest_found==nil || v.Block.Height < lowest_found.Block.Height) {
 						c.Mutex.Lock()
