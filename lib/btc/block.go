@@ -140,7 +140,7 @@ func (bl *Block) BuildTxList() (e error) {
 }
 
 
-func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
+func (bl *Block) ComputeMerkle() (res []byte, mutated bool) {
 	tx_cnt, offs := VLen(bl.Raw[80:])
 	offs += 80
 
@@ -165,7 +165,7 @@ func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
 	// Wait for all the pending missions to complete...
 	wg.Wait()
 
-	res, mutated = CalcMerkel(mtr)
+	res, mutated = CalcMerkle(mtr)
 	return
 }
 
