@@ -100,7 +100,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 	}
 	// Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
 	for i:=0; i<stack.size(); i++ {
-		if len(stack.at(i)) > MAX_SCRIPT_ELEMENT_SIZE {
+		if len(stack.at(i)) > btc.MAX_SCRIPT_ELEMENT_SIZE {
 			if DBG_ERR {
 				fmt.Println("SCRIPT_ERR_PUSH_SIZE")
 			}
