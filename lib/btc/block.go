@@ -23,7 +23,6 @@ type Block struct {
 	MedianPastTime uint32
 
 	OldData []byte // all the block's transactions stripped from witnesses
-	SegWitTxCount int
 }
 
 
@@ -111,7 +110,6 @@ func (bl *Block) BuildTxList() (e error) {
 			bl.Txs[i].NoWitSize = uint32(len(data2hash))
 			if i>0 {
 				witness2hash = bl.Txs[i].Raw
-				bl.SegWitTxCount++
 			}
 		} else {
 			data2hash = bl.Txs[i].Raw
