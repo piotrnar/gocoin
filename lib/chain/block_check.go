@@ -171,13 +171,13 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 
 		// Check Merkle Root - that's importnant
-		merkel, mutated := btc.GetMerkel(bl.Txs)
+		merkle, mutated := btc.GetMerkle(bl.Txs)
 		if mutated {
 			er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
 			return
 		}
 
-		if !bytes.Equal(merkel, bl.MerkleRoot()) {
+		if !bytes.Equal(merkle, bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
 			return
 		}
@@ -212,6 +212,44 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		} else {
 			blockTime = bl.BlockTime()
 		}
+
+		// Verify merkle root of witness data
+		if (bl.VerifyFlags&script.VER_WITNESS) != 0 && bl.WitnessTxCount > 0 {
+			//println("Verify Witness merkle because", bl.WitnessTxCount, "/", bl.TxCount, "txs")
+
+			for i:=len(bl.Txs[0].TxOut)-1; i>=0; i-- {
+				o := bl.Txs[0].TxOut[i]
+				if len(o.Pk_script) >= 38 && bytes.Equal(o.Pk_script[:6], []byte{0x6a,0x24,0xaa,0x21,0xa9,0xed}) {
+					if len(bl.Txs[0].SegWit)!=1 || len(bl.Txs[0].SegWit[0])!=1 || len(bl.Txs[0].SegWit[0][0])!=32 {
+						er = errors.New("CheckBlock() : invalid witness nonce size - RPC_Result:bad-witness-nonce-size")
+						println(er.Error())
+						return
+					}
+
+					// The malleation check is ignored; as the transaction tree itself
+					// already does not permit it, it is impossible to trigger in the
+					// witness tree.
+					merkle, _ := btc.GetWitnessMerkle(bl.Txs)
+					with_nonce := btc.Sha2Sum(append(merkle, bl.Txs[0].SegWit[0][0]...))
+
+					if !bytes.Equal(with_nonce[:], o.Pk_script[6:38]) {
+						er = errors.New("CheckBlock(): Witness Merkle mismatch - RPC_Result:bad-witness-merkle-match")
+						return
+					}
+
+					break
+				}
+			}
+
+			// TODO: check if the block shall not be rejected if there was no witness root
+			/*
+			if i<0 {
+				er = errors.New("CheckBlock(): Witness Merkle not present inside coinbase tx - RPC_Result:bad-witness-merkle-match")
+				return
+			}
+			*/
+		}
+
 		// Check transactions - this is the most time consuming task
 		if !CheckTransactions(bl.Txs, bl.Height, blockTime) {
 			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")
