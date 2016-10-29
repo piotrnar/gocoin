@@ -84,6 +84,12 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 				sigops += so
 			}
 
+			swo := tx.CountWitnessSigOps(i, po.Pk_script)
+			if swo > 0 {
+				s += fmt.Sprintf("  + %d segops", swo)
+				sigops += swo
+			}
+
 			s += "\n"
 		} else {
 			s += fmt.Sprintln(" - UNKNOWN INPUT")
