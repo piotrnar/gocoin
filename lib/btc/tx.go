@@ -52,6 +52,8 @@ type Tx struct {
 	// This field is only set in chain's ProcessBlockTransactions:
 	Fee uint64
 
+	WTxID *Uint256
+
 	hashPrevouts []byte
 	hashSequence []byte
 	hashOutputs []byte
