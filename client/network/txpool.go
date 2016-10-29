@@ -389,7 +389,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	// Verify scripts
-	sigops2 := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
+	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
 	for i := range tx.TxIn {
@@ -417,8 +417,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
-			sigops2 += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
+			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 		}
+		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
 	if len(rbf_tx_list)>0 {
@@ -432,7 +433,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
 		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem,
-		SigopsCost:sigops2, Final:final, VerifyTime:time.Now().Sub(start_time)}
+		SigopsCost:sigops, Final:final, VerifyTime:time.Now().Sub(start_time)}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {
