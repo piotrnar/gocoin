@@ -50,7 +50,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 					if crec.Block.OldData==nil {
 						crec.Block.BuildTxList()
 					}
-					println("block size", len(crec.Data), "->", len(bl))
+					//println("block size", len(crec.Data), "->", len(bl))
 					bl = crec.Block.OldData
 				}
 				c.SendRawMsg("block", bl)
