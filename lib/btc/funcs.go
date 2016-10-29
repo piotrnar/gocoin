@@ -113,7 +113,7 @@ func VULe(b []byte) (le uint64, var_int_siz int) {
 }
 
 
-func CalcMerkel(mtr [][]byte) (res []byte, mutated bool) {
+func CalcMerkle(mtr [][]byte) (res []byte, mutated bool) {
 	var j, i2 int
 	for siz:=len(mtr); siz>1; siz=(siz+1)/2 {
 		for i := 0; i < siz; i += 2 {
@@ -140,12 +140,12 @@ func CalcMerkel(mtr [][]byte) (res []byte, mutated bool) {
 }
 
 
-func GetMerkel(txs []*Tx) (res []byte, mutated bool) {
+func GetMerkle(txs []*Tx) (res []byte, mutated bool) {
 	mtr := make([][]byte, len(txs))
 	for i := range txs {
 		mtr[i] = txs[i].Hash.Hash[:]
 	}
-	res, mutated = CalcMerkel(mtr)
+	res, mutated = CalcMerkle(mtr)
 	return
 }
 
@@ -160,7 +160,7 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 			mtr[i] = txs[i].WTxID.Hash[:]
 		}
 	}
-	res, mutated = CalcMerkel(mtr)
+	res, mutated = CalcMerkle(mtr)
 	return
 }
 
