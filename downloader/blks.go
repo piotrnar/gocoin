@@ -153,14 +153,14 @@ func (c *one_net_conn) block(d []byte) {
 
 	if OnlyStoreBlocks {
 		// only check if the payload matches MerkleRoot from the header
-		merkel, mutated := bl.ComputeMerkel()
+		merkle, mutated := bl.ComputeMerkle()
 		if mutated {
 			fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
 			c.setbroken(true)
 			return
 		}
 
-		if !bytes.Equal(merkel, bl.MerkleRoot()) {
+		if !bytes.Equal(merkle, bl.MerkleRoot()) {
 			fmt.Println(c.Ip(), " - MerkleRoot mismatch at block", bip.Height)
 			c.setbroken(true)
 			return
