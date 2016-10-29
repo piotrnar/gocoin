@@ -46,7 +46,7 @@ type Tx struct {
 
 	// These three fields should be set in block.go:
 	Raw []byte
-	Size uint32
+	Size, NoWitSize uint32
 	Hash *Uint256
 
 	// This field is only set in chain's ProcessBlockTransactions:
@@ -297,7 +297,7 @@ func (tx *Tx) CheckTransaction() error {
 	}
 
 	// Size limits
-	if tx.Size > MAX_BLOCK_SIZE {
+	if tx.NoWitSize > MAX_BLOCK_SIZE {
 		return errors.New("CheckTransaction() : size limits failed")
 	}
 
