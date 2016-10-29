@@ -105,6 +105,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			if btc.IsP2SH(po.Pk_script) {
 				fmt.Fprint(w, "<input_sigops>", btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig), "</input_sigops>")
 			}
+			fmt.Fprint(w, "<witness_sigops>", tx.CountWitnessSigOps(i, po.Pk_script), "</witness_sigops>")
 		} else {
 			w.Write([]byte("<status>UNKNOWN INPUT</status>"))
 		}
