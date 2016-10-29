@@ -20,10 +20,11 @@ type Block struct {
 	VerifyFlags uint32
 	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
-	Sigops uint32
+	SigopsCost uint32
 	MedianPastTime uint32
 
 	OldData []byte // all the block's transactions stripped from witnesses
+	WitnessTxCount int
 }
 
 
@@ -85,7 +86,7 @@ func (bl *Block) BuildTxList() (e error) {
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
-	var data2hash []byte
+	var data2hash, witness2hash []byte
 
 	old_format_block := new(bytes.Buffer)
 	old_format_block.Write(bl.Raw[:80])
@@ -102,6 +103,7 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
 		if i==0 {
+			bl.Txs[i].WTxID = new(Uint256) // all zeros
 			for _, ou := range bl.Txs[0].TxOut {
 				ou.WasCoinbase = true
 			}
@@ -109,16 +111,24 @@ func (bl *Block) BuildTxList() (e error) {
 		if bl.Txs[i].SegWit!=nil {
 			data2hash = bl.Txs[i].Serialize()
 			bl.Txs[i].NoWitSize = uint32(len(data2hash))
+			if i>0 {
+				witness2hash = bl.Txs[i].Raw
+			}
+			bl.WitnessTxCount++
 		} else {
 			data2hash = bl.Txs[i].Raw
 			bl.Txs[i].NoWitSize = bl.Txs[i].NoWitSize
+			witness2hash = nil
 		}
 		old_format_block.Write(data2hash)
 		wg.Add(1)
-		go func(h **Uint256, b []byte) {
-			*h = NewSha2Hash(b) // Calculate tx hash in a background
+		go func(tx *Tx, b, w []byte) {
+			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
+			if w!=nil {
+				tx.WTxID = NewSha2Hash(w)
+			}
 			wg.Done()
-		}(&bl.Txs[i].Hash, data2hash)
+		}(bl.Txs[i], data2hash, witness2hash)
 		offs += n
 	}
 
