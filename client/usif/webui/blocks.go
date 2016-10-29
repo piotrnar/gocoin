@@ -91,7 +91,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		network.MutexRcv.Unlock()
 
 		b.Received = uint32(rb.TmStart.Unix())
-		b.Sigops = int(node.Sigops)
+		b.Sigops = int(node.SigopsCost)
 
 		if rb.TmPreproc.IsZero() {
 			b.TimePre = -1
