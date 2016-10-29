@@ -452,3 +452,46 @@ func GetP2SHSigOpCount(scr []byte) uint {
 
 	return GetSigOpCount(data, true)
 }
+
+func IsWitnessProgram(scr []byte) (version int, program []byte) {
+	if len(scr) < 4 || len(scr) > 42 {
+		return
+	}
+	if scr[0]!=OP_0 && (scr[0]<OP_1 || scr[0]>OP_16) {
+		return
+	}
+	if int(scr[1]) + 2 == len(scr) {
+		version = DecodeOP_N(scr[0])
+		program = scr[2:]
+	}
+	return
+}
+
+func WitnessSigOps(witversion int, witprogram []byte, witness [][]byte) uint {
+	if witversion == 0 {
+		if len(witprogram)==20 {
+			return 1
+		}
+
+		if len(witprogram)==32 && len(witness) > 0 {
+			subscript := witness[len(witness)-1]
+			return GetSigOpCount(subscript, true)
+		}
+	}
+    return 0;
+}
+
+func IsPushOnly(scr []byte) bool {
+	idx := 0
+	for idx<len(scr) {
+		op, _, n, e := GetOpcode(scr[idx:])
+		if e != nil {
+			return false
+		}
+		if op > OP_16 {
+			return false
+		}
+		idx += n
+	}
+	return true
+}
