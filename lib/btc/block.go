@@ -108,8 +108,10 @@ func (bl *Block) BuildTxList() (e error) {
 		}
 		if bl.Txs[i].SegWit!=nil {
 			data2hash = bl.Txs[i].Serialize()
+			bl.Txs[i].NoWitSize = uint32(len(data2hash))
 		} else {
 			data2hash = bl.Txs[i].Raw
+			bl.Txs[i].NoWitSize = bl.Txs[i].NoWitSize
 		}
 		old_format_block.Write(data2hash)
 		wg.Add(1)
