@@ -644,3 +644,32 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	sha.Write(hashPrevouts)
 	return sha.Sum(nil)
 }
+
+func (tx *Tx) CountWitnessSigOps(inp int, scriptPubKey []byte) uint {
+	scriptSig := tx.TxIn[inp].ScriptSig
+	var witness [][]byte
+
+	if len(tx.SegWit) > inp {
+		witness = tx.SegWit[inp]
+	}
+
+	witnessversion, witnessprogram := IsWitnessProgram(scriptPubKey)
+	if witnessprogram!=nil {
+		return WitnessSigOps(witnessversion, witnessprogram, witness)
+	}
+
+	if IsP2SH(scriptPubKey) && IsPushOnly(scriptSig) {
+		var pc, n int
+		var data []byte
+		for pc < len(scriptSig) {
+			_, data, n, _ = GetOpcode(scriptSig[pc:])
+			pc += n
+		}
+		witnessversion, witnessprogram := IsWitnessProgram(data)
+		if witnessprogram!=nil {
+			return WitnessSigOps(witnessversion, witnessprogram, witness)
+		}
+	}
+
+	return 0
+}
