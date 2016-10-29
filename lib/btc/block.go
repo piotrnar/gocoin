@@ -4,7 +4,6 @@ import (
 	"sync"
 	"bytes"
 	"errors"
-	"encoding/hex"
 	"encoding/binary"
 )
 
@@ -24,7 +23,7 @@ type Block struct {
 	MedianPastTime uint32
 
 	OldData []byte // all the block's transactions stripped from witnesses
-	WitnessTxCount int
+	SegWitTxCount int
 }
 
 
@@ -97,7 +96,6 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		if bl.Txs[i] == nil || n==0 {
 			e = errors.New("NewTx failed")
-			println("txf", n, hex.EncodeToString(bl.Raw[offs:]))
 			break
 		}
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
@@ -113,8 +111,8 @@ func (bl *Block) BuildTxList() (e error) {
 			bl.Txs[i].NoWitSize = uint32(len(data2hash))
 			if i>0 {
 				witness2hash = bl.Txs[i].Raw
+				bl.SegWitTxCount++
 			}
-			bl.WitnessTxCount++
 		} else {
 			data2hash = bl.Txs[i].Raw
 			bl.Txs[i].NoWitSize = bl.Txs[i].NoWitSize
