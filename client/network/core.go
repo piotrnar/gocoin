@@ -72,7 +72,7 @@ type NetworkNodeStruct struct {
 	SendHeaders bool
 
 	// BIP152:
-	SendCmpct bool
+	SendCmpctVer uint64
 	HighBandwidth bool
 }
 

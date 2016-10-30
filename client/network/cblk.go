@@ -186,6 +186,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 	}
+	if c.Node.SendCmpctVer==2 {
+		println(c.ConnID, "CmpctBlock version 2 not supported yet")
+		return
+	}
 
 	/*
 	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}

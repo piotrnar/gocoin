@@ -248,7 +248,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 			typ := binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])
 			c.InvStore(typ, (*c.PendingInvs[i])[4:36])
 			if typ==MSG_BLOCK {
-				if c.Node.SendCmpct && c.Node.HighBandwidth {
+				if c.Node.SendCmpctVer>=1 && c.Node.HighBandwidth {
 					c_blk = append(c_blk, btc.NewUint256((*c.PendingInvs[i])[4:]))
 					inv_sent_otherwise = true
 				} else if c.Node.SendHeaders {

@@ -506,9 +506,9 @@ func (c *OneConnection) Run() {
 			case "sendcmpct":
 				if len(cmd.pl)>=9 {
 					version := binary.LittleEndian.Uint64(cmd.pl[1:9])
-					if version==1 {
+					if version > c.Node.SendCmpctVer {
 						//println(c.ConnID, "sendcmpct", cmd.pl[0])
-						c.Node.SendCmpct = true
+						c.Node.SendCmpctVer = version
 						c.Node.HighBandwidth = cmd.pl[0]==1
 					} else {
 						c.Mutex.Lock()
