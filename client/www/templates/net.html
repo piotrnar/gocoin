@@ -262,6 +262,7 @@ function refreshconnections() {
 				//Flags: X-compact blocks,  W - SegWit
 				td = row.insertCell(-1)
 				td.className = 'bold'
+				td.style.textAlign = 'center'
 				var s = ''
 				if (cs[i].SendHeaders) s += 'H'
 				if (cs[i].Services&4) s += 'B'
