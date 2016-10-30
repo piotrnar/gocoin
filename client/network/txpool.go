@@ -392,6 +392,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
+
+	prev_dbg_err := script.DBG_ERR
+	script.DBG_ERR = false // keep quiet for incorrect txs
 	for i := range tx.TxIn {
 		wg.Add(1)
 		go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
@@ -403,6 +406,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	wg.Wait()
+	script.DBG_ERR = prev_dbg_err
 
 	if ver_err_cnt > 0 {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
