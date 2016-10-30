@@ -52,7 +52,7 @@ type Tx struct {
 	// This field is only set in chain's ProcessBlockTransactions:
 	Fee uint64
 
-	WTxID *Uint256
+	wTxID *Uint256
 
 	hashPrevouts []byte
 	hashSequence []byte
@@ -672,4 +672,12 @@ func (tx *Tx) CountWitnessSigOps(inp int, scriptPubKey []byte) uint {
 	}
 
 	return 0
+}
+
+func (t *Tx) WTxID() *Uint256 {
+	if t.wTxID==nil {
+		return t.Hash
+	} else {
+		return t.wTxID
+	}
 }

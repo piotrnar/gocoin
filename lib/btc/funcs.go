@@ -154,11 +154,7 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 	mtr := make([][]byte, len(txs))
 	mtr[0] = make([]byte, 32) // null
 	for i:=1; i<len(txs); i++ {
-		if txs[i].WTxID==nil {
-			mtr[i] = txs[i].Hash.Hash[:]
-		} else {
-			mtr[i] = txs[i].WTxID.Hash[:]
-		}
+		mtr[i] = txs[i].WTxID().Hash[:]
 	}
 	res, mutated = CalcMerkle(mtr)
 	return
