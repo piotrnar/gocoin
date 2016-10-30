@@ -74,7 +74,7 @@ function update_connection_info(ci) {
 	s += 'User Agent: ' + ci.Agent + '\n'
 	s += 'Chain Height: ' + ci.Height + '\n'
 	s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpct: ' + ci.SendCmpct + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
+	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpctVer: ' + ci.SendCmpctVer + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
 	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
 	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
 	s += 'Invs  Done:' + ci.InvsDone + '   Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
