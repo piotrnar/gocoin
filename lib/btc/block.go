@@ -17,7 +17,6 @@ type Block struct {
 
 	// These flags are set during chain.(Pre/Post)CheckBlock and used later (e.g. by script.VerifyTxScript):
 	VerifyFlags uint32
-	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
 	SigopsCost uint32
 	MedianPastTime uint32

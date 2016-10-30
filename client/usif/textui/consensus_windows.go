@@ -19,12 +19,24 @@ import (
 
 const (
 	DllName = "libbitcoinconsensus-0.dll"
-	ProcName = "bitcoinconsensus_verify_script"
+	ProcName = "bitcoinconsensus_verify_script_with_amount"
 )
 
 
+/*
+EXPORT_SYMBOL int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
+                                                 const unsigned char *txTo        , unsigned int txToLen,
+                                                 unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err);
+
+EXPORT_SYMBOL int bitcoinconsensus_verify_script_with_amount(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, int64_t amount,
+                                    const unsigned char *txTo        , unsigned int txToLen,
+                                    unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err);
+
+*/
+
+
 var (
-	bitcoinconsensus_verify_script *syscall.Proc
+	bitcoinconsensus_verify_script_with_amount *syscall.Proc
 
 	ConsensusChecks uint64
 	ConsensusExpErr uint64
@@ -34,7 +46,7 @@ var (
 )
 
 
-func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool) {
+func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool) {
 	var tmp []byte
 	if len(pkScr)!=0 {
 		tmp = make([]byte, len(pkScr))
@@ -46,10 +58,10 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 			pkscr_ptr = uintptr(unsafe.Pointer(&pkScr[0]))
 			pkscr_len = uintptr(len(pkScr))
 		}
-		r1, _, _ := syscall.Syscall9(bitcoinconsensus_verify_script.Addr(), 7,
-			pkscr_ptr, pkscr_len,
+		r1, _, _ := syscall.Syscall9(bitcoinconsensus_verify_script_with_amount.Addr(), 8,
+			pkscr_ptr, pkscr_len, uintptr(amount),
 			uintptr(unsafe.Pointer(&txTo[0])), uintptr(len(txTo)),
-			uintptr(i), uintptr(ver_flags), 0, 0, 0)
+			uintptr(i), uintptr(ver_flags), 0, 0)
 
 		res := r1 == 1
 		atomic.AddUint64(&ConsensusChecks, 1)
@@ -85,7 +97,7 @@ func init() {
 		println("WARNING: Consensus verificatrion disabled")
 		return
 	}
-	bitcoinconsensus_verify_script, er = dll.FindProc(ProcName)
+	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc(ProcName)
 	if er!=nil {
 		println(er.Error())
 		println("WARNING: Consensus verificatrion disabled")

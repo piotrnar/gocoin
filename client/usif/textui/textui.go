@@ -480,7 +480,7 @@ func analyze_bip9(par string) {
 			}
 			if s!="" {
 				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
-					" block #", start_block, "-", start_block+i-1, ":", s)
+					" block #", start_block, "-", start_block+i-1, ":", s, " - active from", start_block+2*2016)
 			}
 		}
 	}

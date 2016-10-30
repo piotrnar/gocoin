@@ -13,7 +13,7 @@ import (
 )
 
 
-type VerifyConsensusFunction func(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool)
+type VerifyConsensusFunction func(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool)
 
 var (
 	DBG_SCR = false
@@ -59,7 +59,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 	if VerifyConsensus!=nil {
 		defer func() {
 			// We call CompareToConsensus inside another function to wait for final "result"
-			VerifyConsensus(pkScr, i, tx, ver_flags, result)
+			VerifyConsensus(pkScr, amount, i, tx, ver_flags, result)
 		}()
 	}
 
@@ -933,17 +933,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					vchPubKey := stack.top(-1)
 
 					// BIP-0066
-					rrr := CheckSignatureEncoding(vchSig, ver_flags)
-					if DBG_SCR {
-						println("CheckSignatureEncoding", rrr)
-						println("vchSig", hex.EncodeToString(vchSig))
-					}
-					xxx := CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion)
-					if DBG_SCR {
-						println("CheckPubKeyEncoding", xxx, ver_flags, sigversion)
-						println("vchPubKey", hex.EncodeToString(vchPubKey))
-					}
-					if !rrr || !xxx {
+					if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
 						if DBG_ERR {
 							fmt.Println("Invalid Signature Encoding A")
 						}
