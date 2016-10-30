@@ -1,7 +1,6 @@
 package network
 
 import (
-	"io/ioutil"
 	"fmt"
 	"time"
 	"bytes"
@@ -149,8 +148,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if er!=nil {
 		b2g.InProgress--
 		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
-		ioutil.WriteFile(hash.String() + ".bin", b, 0700)
-		//conn.DoS("BadBlock")
+		//ioutil.WriteFile(hash.String() + ".bin", b, 0700)
+		conn.DoS("BadBlock")
 		MutexRcv.Unlock()
 		return
 	}
