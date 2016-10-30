@@ -94,13 +94,14 @@ func init() {
 	dll, er := syscall.LoadDLL(DllName)
 	if er!=nil {
 		println(er.Error())
-		println("WARNING: Consensus verificatrion disabled")
+		println("WARNING: Consensus verification disabled")
 		return
 	}
 	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc(ProcName)
 	if er!=nil {
 		println(er.Error())
-		println("WARNING: Consensus verificatrion disabled")
+		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n");
+		println("WARNING: Consensus verification disabled")
 		return
 	}
 	fmt.Println("Using", DllName, "to ensure consensus rules")
