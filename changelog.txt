@@ -1,5 +1,7 @@
 1.8.0
-* Suport for Segregated Witness
+* Segregated Witness related functionality and many other changes here and there
+* Client: drop_worst_peer - do not drop peers that send new transactions
+* Client: requires new consensus lib (from bitcon-core 0.13.1)
 
 1.7.4
 * Client: Added TX_REJECTED_RBF_100 to the rejection reasons
