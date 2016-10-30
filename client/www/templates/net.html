@@ -266,7 +266,7 @@ function refreshconnections() {
 				var s = ''
 				if (cs[i].SendHeaders) s += 'H'
 				if (cs[i].Services&4) s += 'B'
-				if (cs[i].SendCmpct) s += 'X'
+				if (cs[i].SendCmpctVer) s += 'X'
 				if (cs[i].Services&8) s += 'W'
 				td.innerText = s
 
