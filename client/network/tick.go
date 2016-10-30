@@ -391,6 +391,9 @@ func (c *OneConnection) Run() {
 			continue
 		}
 
+		if c.X.VerackReceived {
+			c.PeerAddr.Alive()
+		}
 		c.Mutex.Lock()
 		c.counters["rcvd_"+cmd.cmd]++
 		c.counters["rbts_"+cmd.cmd] += uint64(len(cmd.pl))
@@ -434,7 +437,6 @@ func (c *OneConnection) Run() {
 				}
 
 			case "verack":
-				c.PeerAddr.Alive()
 				c.X.VerackReceived = true
 				if common.IsListenTCP() {
 					c.SendOwnAddr()
