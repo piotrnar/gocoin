@@ -79,7 +79,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		common.CountSafe(fmt.Sprint("InvGot-",typ))
 		if typ==MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if !c.X.AllHeadersReceived {
+			if c.X.AllHeadersReceived==0 {
 				common.CountSafe("InvBlockIgnored")
 			} else {
 				if !blockReceived(bhash) {
@@ -93,7 +93,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						c.X.GetBlocksDataNow = true
 					} else {
 						common.CountSafe("InvBlockNew")
-						c.X.AllHeadersReceived = false
+						c.X.AllHeadersReceived = 0
 						//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 					}
 					MutexRcv.Unlock()

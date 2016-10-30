@@ -95,6 +95,8 @@ func (c *OneConnection) Maintanence(now time.Time) {
 
 
 func (c *OneConnection) Tick() {
+	defer time.Sleep(20*time.Millisecond)
+
 	now := time.Now()
 
 	// Check no-data timeout
@@ -117,15 +119,27 @@ func (c *OneConnection) Tick() {
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
 	}
 
-	if c.CheckGetBlockData() {
-		return
-	}
-
 	// Ask node for new addresses...?
 	if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < common.MaxPeersNeeded {
 		common.CountSafe("AddrWanted")
 		c.SendRawMsg("getaddr", nil)
 		c.X.OurGetAddrDone = true
+		return
+	}
+
+	if c.X.AllHeadersReceived>0 {
+		if c.nextHdrsTime.After(time.Now()) {
+			c.X.AllHeadersReceived = 0
+		}
+	}
+
+	if c.CheckGetBlockData() {
+		return
+	}
+
+	if c.X.AllHeadersReceived==0 && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+		//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
+		c.sendGetHeaders()
 		return
 	}
 
@@ -138,15 +152,6 @@ func (c *OneConnection) Tick() {
 	blocks_to_get := len(BlocksToGet)
 	MutexRcv.Unlock()
 
-	if !c.X.AllHeadersReceived && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
-		if blocks_to_get+len(CachedBlocks)+len(NetBlocks) < MAX_BLOCKS_FORWARD_CNT {
-			//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
-			c.sendGetHeaders()
-			return
-		}
-		c.IncCnt("HoldHeaders", 1)
-	}
-
 	if !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
 		// Ping if we dont do anything
 		c.TryPing()
@@ -155,9 +160,6 @@ func (c *OneConnection) Tick() {
 		}
 		return
 	}
-
-	// if we got here, means we had nothing to send - just wait for a moment
-	time.Sleep(150*time.Millisecond)
 }
 
 func DoNetwork(ad *peersdb.PeerAddr) {
@@ -367,7 +369,7 @@ func (c *OneConnection) Run() {
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
 	c.LastPingSent = now.Add(5*time.Second-common.PingPeerEvery) // do first ping ~5 seconds from now
-	c.X.AllHeadersReceived = false
+	c.X.AllHeadersReceived = 0
 	c.Mutex.Unlock()
 
 
@@ -395,7 +397,6 @@ func (c *OneConnection) Run() {
 		c.X.LastBtsRcvd = uint32(len(cmd.pl))
 		c.Mutex.Unlock()
 
-		c.PeerAddr.Alive()
 		if common.DebugLevel<0 {
 			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
 		}
@@ -431,6 +432,7 @@ func (c *OneConnection) Run() {
 				}
 
 			case "verack":
+				c.PeerAddr.Alive()
 				c.X.VerackReceived = true
 				if common.IsListenTCP() {
 					c.SendOwnAddr()

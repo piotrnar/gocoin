@@ -85,7 +85,7 @@ type ConnectionStatus struct {
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction
 	OurGetAddrDone bool // Whether we shoudl issue another "getaddr"
 
-	AllHeadersReceived bool // keep sending getheaders until this is not set
+	AllHeadersReceived int // keep sending getheaders until this is not set
 	GetHeadersInProgress bool
 	GetBlocksDataNow bool
 	LastFetchTried time.Time
@@ -172,6 +172,7 @@ type OneConnection struct {
 
 	blocksreceived []time.Time
 	nextMaintanence time.Time
+	nextHdrsTime time.Time
 }
 
 type oneBlockDl struct {

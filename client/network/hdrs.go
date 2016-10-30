@@ -125,7 +125,12 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 	}
 
 	if new_headers_got==0 {
-		c.X.AllHeadersReceived = true
+		if c.X.AllHeadersReceived==0 {
+			c.X.AllHeadersReceived = 1
+		} else {
+			c.X.AllHeadersReceived <<= 1
+		}
+		c.nextHdrsTime = time.Now().Add(time.Duration(c.X.AllHeadersReceived)*time.Second)
 	}
 }
 
