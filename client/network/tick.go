@@ -127,9 +127,11 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.X.AllHeadersReceived>0 {
+	do_getheaders_now := c.X.AllHeadersReceived==0
+
+	if !do_getheaders_now {
 		if c.nextHdrsTime.After(time.Now()) {
-			c.X.AllHeadersReceived = 0
+			do_getheaders_now = true
 		}
 	}
 
@@ -137,7 +139,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.X.AllHeadersReceived==0 && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+	if do_getheaders_now && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
 		//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 		c.sendGetHeaders()
 		return
