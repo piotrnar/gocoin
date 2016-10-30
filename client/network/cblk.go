@@ -178,6 +178,15 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
+
+	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && (c.Node.Services&SERVICE_SEGWIT)==0 {
+		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
+			common.CountSafe("CmpctBlockIgnore")
+			println("Ignore compact block", b2g.Block.Height, "from non-segwit node", c.ConnID)
+			return
+		}
+	}
+
 	/*
 	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
 	fmt.Println(c.ConnID, "Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],

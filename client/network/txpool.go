@@ -458,7 +458,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if ntx.conn!=nil {
+		ntx.conn.Mutex.Lock()
 		ntx.conn.X.TxsReceived++
+		ntx.conn.Mutex.Unlock()
 	}
 
 	accepted = true
