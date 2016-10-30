@@ -70,7 +70,8 @@ func (c *OneConnection) Maintanence(now time.Time) {
 		if now.After(v.start.Add(5*time.Minute)) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
-			println(c.ConnID, "GetBlockInProgress timeout")
+			c.counters["BlockTimeout"]++
+			//println(c.ConnID, "GetBlockInProgress timeout")
 			break
 		}
 	}

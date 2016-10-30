@@ -102,6 +102,7 @@ type ConnectionStatus struct {
 
 	GetAddrDone bool
 	MinFeeSPKB int64  // BIP 133
+	TxsReceived int
 }
 
 type ConnInfo struct {

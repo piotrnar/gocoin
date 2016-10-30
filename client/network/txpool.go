@@ -457,6 +457,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRouteOK")
 	}
 
+	if ntx.conn!=nil {
+		ntx.conn.X.TxsReceived++
+	}
+
 	accepted = true
 	return
 }

@@ -14,26 +14,26 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="130"> <!--IP-->
 <col width="20"> <!--in/out icon-->
 <col width="60"> <!--ping-->
-<col width="40"><col width="60"> <!--Last rcvd-->
-<col width="40"><col width="60"> <!--Last sent-->
+<col width="60"> <!--Last rcvd-->
+<col width="60"> <!--Last sent-->
 <col width="80"> <!--total rcvd-->
 <col width="80"> <!--total sent-->
-<col width="50"> <!--vers-->
-<col> <!--agent-->
+<col> <!--node version & agent-->
 <col width="30"> <!--blocks received-->
 <col width="30"> <!--blocks in progress-->
+<col width="30"> <!--txs received-->
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
 	<th colspan="2">Peer Address
 	<th >Ping
-	<th colspan="2">Last rcvd
-	<th colspan="2">Last sent
+	<th>Rcvd
+	<th>Sent
 	<th >Tot In
 	<th >Tot Out
-	<th>Proto
-	<th>Agent
+	<th colspan="3">Node Version
 	<th colspan="2" title="Received / In Progress">Blks
+	<th >Txs
 	<th title="Bytes waiting to be sent">ToSend
 	<th title="Max bytes waiting to be sent">MaxSend
 	<th>&nbsp;
@@ -225,24 +225,16 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
 
-				// last_bts_rcvd
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].LastBtsRcvd
-
 				// last_cmd_rcvd
 				td = row.insertCell(-1)
 				td.className = 'mono'
+				td.title = cs[i].LastBtsRcvd
 				td.innerHTML = cs[i].LastCmdRcvd
-
-				// last_bts_sent
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].LastBtsSent
 
 				// last_cmd_sent
 				td = row.insertCell(-1)
 				td.className = 'mono'
+				td.title = cs[i].LastBtsSent
 				td.innerHTML = cs[i].LastCmdSent
 
 				// total_rcvd
@@ -262,6 +254,18 @@ function refreshconnections() {
 				td.title = 'Services : 0x' + cs[i].Services.toString(16)
 				if (cs[i].SendCmpct) row.classList.add("bip152")
 
+				//Flags: X-compact blocks,  W - SegWit
+				td = row.insertCell(-1)
+				td.className = 'bold'
+				var s = ''
+				if (cs[i].SendCmpct) {
+					s = 'X'
+				}
+				if (cs[i].Services&0x8) {
+					s += 'W'
+				}
+				td.innerText = s
+
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
@@ -277,6 +281,11 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				if (cs[i].BlocksInProgress>0) td.innerHTML = cs[i].BlocksInProgress
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].TxsReceived>0) td.innerHTML = cs[i].TxsReceived
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
