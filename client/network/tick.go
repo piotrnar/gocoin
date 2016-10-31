@@ -425,7 +425,12 @@ func (c *OneConnection) Run() {
 						}
 						if c.Node.Version >= 70014 {
 							if (c.Node.Services&SERVICE_SEGWIT)==0 {
-								c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+								// if the node does not support segwit, request compact blocks
+								// only if we have not achieved he segwit enforcement moment
+								if common.BlockChain.Consensus.Enforce_SEGWIT==0 ||
+									common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
+									c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+								}
 							} else {
 								c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
 							}

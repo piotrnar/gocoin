@@ -288,14 +288,11 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				return
 			} else {
 				if pos[i].WasCoinbase {
-					common.Last.Mutex.Lock()
-					last_height := common.Last.Block.Height
-					common.Last.Mutex.Unlock()
-					if last_height+1 - pos[i].BlockHeight < chain.COINBASE_MATURITY {
+					if common.Last.BlockHeight()+1 - pos[i].BlockHeight < chain.COINBASE_MATURITY {
 						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_CB_INMATURE)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedCBInmature")
-						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", last_height)
+						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
 						return
 					}
 				}
