@@ -184,11 +184,12 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 
-	fmt.Println()
+	/*fmt.Println()
 	fmt.Println(c.ConnID, "Received CmpctBlock  enf:", common.BlockChain.Consensus.Enforce_SEGWIT,
 		"   serwice:", (c.Node.Services&SERVICE_SEGWIT)!=0,
 		"   height:", b2g.Block.Height,
 		"   ver:", c.Node.SendCmpctVer)
+	*/
 	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && c.Node.SendCmpctVer < 2 {
 		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
 			common.CountSafe("CmpctBlockIgnore")
@@ -270,7 +271,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 		col.Txs[idx] = pl[offs:offs+n]
-		fmt.Println("  prefilledtxn", i, idx, ":", hex.EncodeToString(pl[offs:offs+n]))
+		//fmt.Println("  prefilledtxn", i, idx, ":", hex.EncodeToString(pl[offs:offs+n]))
 		//btc.NewSha2Hash(pl[offs:offs+n]).String())
 		offs += n
 		exp = int(idx)+1
@@ -309,7 +310,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
-	fmt.Println(c.ConnID, c.Node.SendCmpctVer, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
+	//fmt.Println(c.ConnID, c.Node.SendCmpctVer, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
 	col.Missing = missing
 	if missing > 0 {
 		msg = new(bytes.Buffer)
@@ -371,7 +372,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
 		c.SendRawMsg("getblocktxn", msg.Bytes())
-		fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
+		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
 
@@ -452,7 +453,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
-	println(c.ConnID, "Received the rest of compact block version", c.Node.SendCmpctVer)
+	//println(c.ConnID, "Received the rest of compact block version", c.Node.SendCmpctVer)
 
 	//sta := time.Now()
 	b2g.Block.UpdateContent(col.Assemble())
