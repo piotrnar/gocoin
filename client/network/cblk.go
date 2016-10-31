@@ -74,6 +74,7 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	if c.Node.SendCmpctVer==2 {
+		// TODO: SendCmpctBlk version 2 needs to be implemented
 		fmt.Println("SendCmpctBlk version 2 needs to be implemented")
 		return
 	}
