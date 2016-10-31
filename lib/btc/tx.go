@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"io"
 	"fmt"
 	"bytes"
 	"errors"
@@ -84,10 +85,8 @@ func (to *TxOut) String(testnet bool) (s string) {
 }
 
 
-func (t *Tx) Serialize() ([]byte) {
+func (t *Tx) WriteSerialized(wr io.Writer) {
 	var buf [9]byte
-	wr := new(bytes.Buffer)
-
 	// Version
 	binary.Write(wr, binary.LittleEndian, t.Version)
 
@@ -111,7 +110,12 @@ func (t *Tx) Serialize() ([]byte) {
 
 	//Lock_time
 	binary.Write(wr, binary.LittleEndian, t.Lock_time)
+}
 
+
+func (t *Tx) Serialize() ([]byte) {
+	wr := new(bytes.Buffer)
+	t.WriteSerialized(wr)
 	return wr.Bytes()
 }
 
@@ -695,6 +699,24 @@ func (tx *Tx) CountWitnessSigOps(inp int, scriptPubKey []byte) uint {
 	}
 
 	return 0
+}
+
+func (tx *Tx) SetHash(raw []byte) {
+	if raw==nil {
+		raw = tx.Raw
+	}
+	h := NewSha2Hash(raw)
+	if tx.SegWit != nil {
+		tx.wTxID = h
+		s := sha256.New()
+		tx.WriteSerialized(s)
+		tmp := s.Sum(nil)
+		s.Reset()
+		s.Write(tmp)
+		tx.Hash = NewUint256(s.Sum(nil))
+	} else {
+		tx.Hash = h
+	}
 }
 
 func (t *Tx) WTxID() *Uint256 {

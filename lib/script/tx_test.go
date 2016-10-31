@@ -122,8 +122,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		return false
 	}
 	tx.Size = uint32(len(rd))
-	ha := btc.Sha2Sum(rd)
-	tx.Hash = btc.NewUint256(ha[:])
+	tx.SetHash(rd)
 
 	if skip_broken_tests(tx) {
 		return false

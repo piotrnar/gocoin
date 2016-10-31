@@ -35,7 +35,7 @@ func raw_tx_from_file(fn string) *btc.Tx {
 
 func write_tx_file(tx *btc.Tx) {
 	signedrawtx := tx.Serialize()
-	tx.Hash = btc.NewSha2Hash(signedrawtx)
+	tx.SetHash(signedrawtx)
 
 	hs := tx.Hash.String()
 	fmt.Println(hs)

@@ -136,6 +136,12 @@ func (c *OneConnection) Tick() {
 		}
 	}
 
+	MutexRcv.Lock()
+	if len(BlocksToGet) > 0 && !c.X.GetBlocksDataNow && now.Sub(c.X.LastFetchTried) > time.Second {
+		c.X.GetBlocksDataNow = true
+	}
+	MutexRcv.Unlock()
+
 	c.CheckGetBlockData()
 
 	if do_getheaders_now {
@@ -146,16 +152,9 @@ func (c *OneConnection) Tick() {
 	// Need to send some invs...?
 	c.SendInvs()
 
-	MutexRcv.Lock()
-	blocks_to_get := len(BlocksToGet)
-	MutexRcv.Unlock()
-
 	if !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
 		// Ping if we dont do anything
 		c.TryPing()
-		if blocks_to_get > 0 && now.Sub(c.X.LastFetchTried) > time.Second {
-			c.X.GetBlocksDataNow = true
-		}
 	}
 }
 
@@ -426,7 +425,7 @@ func (c *OneConnection) Run() {
 						}
 						if c.Node.Version >= 70014 {
 							c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
-							//c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+							c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
 						}
 					}
 				}

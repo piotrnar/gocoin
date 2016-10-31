@@ -73,7 +73,11 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 }
 
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
-	//fmt.Println("SendCmpctBlk needs to be implemented")
+	if c.Node.SendCmpctVer==2 {
+		fmt.Println("SendCmpctBlk version 2 needs to be implemented")
+		return
+	}
+
 	crec := GetchBlockForBIP152(hash)
 	if crec==nil {
 		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
@@ -172,6 +176,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			hex.EncodeToString(pl[80:88]), "->", sta)*/
 		common.CountSafe("CmpctBlockHdrNo")
 		if sta==PH_STATUS_ERROR {
+			c.X.AllHeadersReceived = 0 // block doesn't connect so ask for the headers
 			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
 			c.DoS("BadCmpct")
@@ -179,16 +184,17 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 
-	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && (c.Node.Services&SERVICE_SEGWIT)==0 {
+	fmt.Println()
+	fmt.Println(c.ConnID, "Received CmpctBlock  enf:", common.BlockChain.Consensus.Enforce_SEGWIT,
+		"   serwice:", (c.Node.Services&SERVICE_SEGWIT)!=0,
+		"   height:", b2g.Block.Height,
+		"   ver:", c.Node.SendCmpctVer)
+	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && c.Node.SendCmpctVer < 2 {
 		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
 			common.CountSafe("CmpctBlockIgnore")
 			println("Ignore compact block", b2g.Block.Height, "from non-segwit node", c.ConnID)
 			return
 		}
-	}
-	if c.Node.SendCmpctVer==2 {
-		println(c.ConnID, "CmpctBlock version 2 not supported yet")
-		return
 	}
 
 	/*
@@ -260,11 +266,11 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 		col.Txs[idx] = pl[offs:offs+n]
-		//fmt.Println("  prefilledtxn", i, idx, ":", btc.NewSha2Hash(pl[offs:offs+n]).String())
+		fmt.Println("  prefilledtxn", i, idx, ":", hex.EncodeToString(pl[offs:offs+n]))
+		//btc.NewSha2Hash(pl[offs:offs+n]).String())
 		offs += n
 		exp = int(idx)+1
 	}
-
 
 	// calculate K0 and K1 params for siphash-4-2
 	sha := sha256.New()
@@ -278,7 +284,13 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Lock()
 
 	for _, v := range TransactionsToSend {
-		sid := siphash.Hash(col.K0, col.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
+		var hash2take *btc.Uint256
+		if c.Node.SendCmpctVer==2 {
+			hash2take = v.Tx.WTxID()
+		} else {
+			hash2take = v.Tx.Hash
+		}
+		sid := siphash.Hash(col.K0, col.K1, hash2take.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
 				common.CountSafe("ShortIDSame")
@@ -293,7 +305,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
-	//fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
+	fmt.Println(c.ConnID, c.Node.SendCmpctVer, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
 	col.Missing = missing
 	if missing > 0 {
 		msg = new(bytes.Buffer)
@@ -355,7 +367,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
 		c.Mutex.Unlock()
 		c.SendRawMsg("getblocktxn", msg.Bytes())
-		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
+		fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
 
@@ -436,13 +448,16 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
+	println(c.ConnID, "Received the rest of compact block version", c.Node.SendCmpctVer)
+
 	//sta := time.Now()
 	b2g.Block.UpdateContent(col.Assemble())
 	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
-		c.DoS("BadCmpctBlockB")
+		//c.DoS("BadCmpctBlockB")
+		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 		return
 	}
 	delete(BlocksToGet, idx)

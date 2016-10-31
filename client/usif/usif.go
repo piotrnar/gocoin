@@ -137,7 +137,7 @@ func LoadRawTx(buf []byte) (s string) {
 		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
 		return
 	}
-	tx.Hash = btc.NewSha2Hash(txd)
+	tx.SetHash(txd)
 
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()

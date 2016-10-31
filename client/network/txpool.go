@@ -173,11 +173,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 		return
 	}
 
-	if tx.SegWit != nil {
-		tx.Hash = btc.NewSha2Hash(tx.Serialize())
-	} else {
-		tx.Hash = btc.NewSha2Hash(pl)
-	}
+	tx.SetHash(pl)
 	NeedThisTx(tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl

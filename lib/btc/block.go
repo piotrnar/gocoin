@@ -117,6 +117,7 @@ func (bl *Block) BuildTxList() (e error) {
 		}
 		old_format_block.Write(data2hash)
 		wg.Add(1)
+		// TODO: use tx.SetHash() here
 		go func(tx *Tx, b, w []byte) {
 			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
 			if w!=nil {
@@ -135,6 +136,7 @@ func (bl *Block) BuildTxList() (e error) {
 }
 
 
+/*
 func (bl *Block) ComputeMerkle() (res []byte, mutated bool) {
 	tx_cnt, offs := VLen(bl.Raw[80:])
 	offs += 80
@@ -163,6 +165,7 @@ func (bl *Block) ComputeMerkle() (res []byte, mutated bool) {
 	res, mutated = CalcMerkle(mtr)
 	return
 }
+*/
 
 
 func GetBlockReward(height uint32) (uint64) {

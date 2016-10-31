@@ -221,7 +221,7 @@ func mk_credit_tx(pk_scr []byte, value uint64) (input_tx *btc.Tx) {
 		ScriptSig:[]byte{0,0}, Sequence:0xffffffff} }
 	input_tx.TxOut = []*btc.TxOut{ &btc.TxOut{Pk_script:pk_scr, Value:value} }
 	// Lock_time = 0
-	input_tx.Hash = btc.NewSha2Hash(input_tx.Serialize())
+	input_tx.SetHash(input_tx.Serialize())
 	return
 }
 
@@ -243,6 +243,6 @@ func mk_spend_tx(input_tx *btc.Tx, sig_scr []byte, witness [][]byte) (output_tx 
 			}
 		}
 	}
-	output_tx.Hash = btc.NewSha2Hash(output_tx.Serialize())
+	output_tx.SetHash(output_tx.Serialize())
 	return
 }
