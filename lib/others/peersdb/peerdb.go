@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ExpirePeerAfter = (3*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	ExpirePeerAfter = (24*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
 	MinPeersInDB = 512 // Do not expire peers if we have less than this
 )
 
