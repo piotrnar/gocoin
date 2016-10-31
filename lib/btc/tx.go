@@ -502,17 +502,23 @@ func TxSize(b []byte) (offs int) {
 		}
 	}()
 
-	var le, n int
+	var le, txincnt, n, lel int
+	var segwit bool
 
 	offs = 4 // version
 
+	if b[offs]==0 && b[offs+1]==1 {
+		segwit = true // flag is 0x01
+		offs += 2
+	}
+
 	// TxIn
-	le, n = VLen(b[offs:])  // in_cnt
+	txincnt, n = VLen(b[offs:])  // in_cnt
 	if n==0 {
 		return 0
 	}
 	offs += n
-	for ; le>0; le-- {
+	for le=txincnt; le>0; le-- {
 		n = TxInSize(b[offs:])
 		offs += n
 	}
@@ -526,6 +532,23 @@ func TxSize(b []byte) (offs int) {
 	for ; le>0; le-- {
 		n = TxOutSize(b[offs:])
 		offs += n
+	}
+
+	if segwit {
+		for ; txincnt>0; txincnt-- {
+			le, n = VLen(b[offs:])
+			if n==0 {
+				return 0
+			}
+			offs += n
+			for ; le>0; le-- {
+				lel, n = VLen(b[offs:])
+				if n==0 {
+					return 0
+				}
+				offs += n+lel
+			}
+		}
 	}
 
 	offs += 4  // Lock_time
