@@ -100,7 +100,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 				return
 			}
 
-
 			sta, b2g := c.ProcessNewHeader(hdr[:])
 			if b2g==nil {
 				if sta==PH_STATUS_FATAL {
@@ -125,12 +124,13 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 	}
 
 	if new_headers_got==0 {
-		if c.X.AllHeadersReceived==0 {
-			c.X.AllHeadersReceived = 1
-		} else {
-			c.X.AllHeadersReceived <<= 1
+		if c.X.AllHeadersReceived<600 {
+			c.X.AllHeadersReceived += 10 // ask again in 10 seconds
 		}
 		c.nextHdrsTime = time.Now().Add(time.Duration(c.X.AllHeadersReceived)*time.Second)
+		//println(c.ConnID, "AHR", c.X.AllHeadersReceived, c.nextHdrsTime.Sub(time.Now()).String())
+	} else {
+		c.X.AllHeadersReceived = 0
 	}
 }
 

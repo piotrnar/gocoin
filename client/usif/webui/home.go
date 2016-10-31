@@ -94,6 +94,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Ecdsa_verify_cnt uint64
 		Average_block_size uint
 		Average_fee float64
+		LastHeaderHeight uint32
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
@@ -107,6 +108,9 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt
 	out.Average_block_size = common.GetAverageBlockSize()
 	out.Average_fee = common.GetAverageFee()
+	network.MutexRcv.Lock()
+	out.LastHeaderHeight = network.LastCommitedHeader.Height
+	network.MutexRcv.Unlock()
 
 	bx, er := json.Marshal(out)
 	if er == nil {

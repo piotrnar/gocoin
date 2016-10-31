@@ -95,6 +95,8 @@
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> cached,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
+	<tr><td>Last Header:<td>
+		<b title="Last received header" id="si_last_hdr_height"></b>
 	</table>
 </table>
 
@@ -320,6 +322,7 @@ function refreshsysinfo() {
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 			si_node_uptime.innerText = period2str(si.Node_uptime)
+			si_last_hdr_height.innerText = si.LastHeaderHeight
 		} catch(e) {
 			console.log(e)
 		}

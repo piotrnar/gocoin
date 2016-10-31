@@ -32,7 +32,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th >Tot In
 	<th >Tot Out
 	<th colspan="3">Node Version
-	<th colspan="2" title="Received / In Progress">Blks
+	<th colspan="3" title="Received / In Progress">Blks
 	<th >Txs
 	<th title="Bytes waiting to be sent">ToSend
 	<th title="Max bytes waiting to be sent">MaxSend
@@ -286,6 +286,17 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				if (cs[i].BlocksInProgress>0) td.innerHTML = cs[i].BlocksInProgress
+
+				// headers in progress
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].GetHeadersInProgress) {
+					td.innerHTML += '*'
+				}
+				if (cs[i].AllHeadersReceived) {
+					td.innerHTML += ' '+cs[i].AllHeadersReceived
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'

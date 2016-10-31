@@ -32,6 +32,9 @@ var (
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	newbl.TmQueue = time.Now()
 	bl := newbl.Block
+	if common.FLAG.TrustAll {
+		bl.Trusted = true
+	}
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
 		// new block accepted
@@ -255,6 +258,10 @@ func main() {
 
 	if common.FLAG.VolatileUTXO {
 		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the client properly (do not kill it!)")
+	}
+
+	if common.FLAG.TrustAll {
+		fmt.Println("WARNING! Assuming all scripts inside new blocks to PASS. Verify the last block's hash when finished.")
 	}
 
 	host_init() // This will create the DB lock file and keep it open

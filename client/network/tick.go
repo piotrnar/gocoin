@@ -95,7 +95,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 
 
 func (c *OneConnection) Tick() {
-	defer time.Sleep(20*time.Millisecond)
+	defer time.Sleep(50*time.Millisecond)
 
 	now := time.Now()
 
@@ -124,31 +124,27 @@ func (c *OneConnection) Tick() {
 		common.CountSafe("AddrWanted")
 		c.SendRawMsg("getaddr", nil)
 		c.X.OurGetAddrDone = true
-		return
 	}
 
-	do_getheaders_now := c.X.AllHeadersReceived==0
+	do_getheaders_now := c.X.AllHeadersReceived==0 && !c.X.GetHeadersInProgress
 
-	if !do_getheaders_now {
-		if c.nextHdrsTime.After(time.Now()) {
+	if !do_getheaders_now && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+		if now.After(c.nextHdrsTime) {
+			//println(c.ConnID, "RetryHeaders", c.X.AllHeadersReceived)
 			do_getheaders_now = true
+			c.IncCnt("RetryHeaders", 1)
 		}
 	}
 
-	if c.CheckGetBlockData() {
-		return
-	}
+	c.CheckGetBlockData()
 
-	if do_getheaders_now && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+	if do_getheaders_now {
 		//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 		c.sendGetHeaders()
-		return
 	}
 
 	// Need to send some invs...?
-	if c.SendInvs() {
-		return
-	}
+	c.SendInvs()
 
 	MutexRcv.Lock()
 	blocks_to_get := len(BlocksToGet)
@@ -160,7 +156,6 @@ func (c *OneConnection) Tick() {
 		if blocks_to_get > 0 && now.Sub(c.X.LastFetchTried) > time.Second {
 			c.X.GetBlocksDataNow = true
 		}
-		return
 	}
 }
 
