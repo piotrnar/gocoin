@@ -287,7 +287,7 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				if (cs[i].BlocksInProgress>0) {
-					td.innerHTML = cs[i].BlocksInProgress + ( GetHeadersInProgress ? '*' : '')
+					td.innerHTML = cs[i].BlocksInProgress + ( cs[i].GetHeadersInProgress ? '*' : '')
 				}
 
 				td = row.insertCell(-1)
