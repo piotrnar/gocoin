@@ -105,7 +105,10 @@ function savecfg() {
 
 function bignum(n) {
 	if (n<10e3) {
-		return parseFloat(n).toFixed(1) + " "
+		if ((n%1)===0) {
+			return n + ' '
+		}
+		return n.toFixed(1) + " "
 	}
 	if (n<10e6) {
 		return (n/1e3).toFixed(1) + " K"
