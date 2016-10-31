@@ -95,7 +95,12 @@ func (c *OneConnection) Maintanence(now time.Time) {
 
 
 func (c *OneConnection) Tick() {
-	defer time.Sleep(50*time.Millisecond)
+	defer func() {
+		if c.BytesToSent() > 0 {
+			// TODO: wait here for awhile unless a data appears on the socket
+			time.Sleep(2*time.Millisecond)
+		}
+	}()
 
 	now := time.Now()
 
