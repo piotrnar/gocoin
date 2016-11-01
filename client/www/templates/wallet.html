@@ -181,7 +181,8 @@ function setunused(idx) {
 		var s = ''
 		for (var i=0; i<lines.length; i++) {
 			if (lines[i].indexOf(adr)==-1) {
-				s += lines[i]+'\n'
+				s += lines[i]
+				if (i+1<lines.length)  s += '\n'
 			}
 		}
 		localStorage.setItem("gocoinWal_"+name, s)
