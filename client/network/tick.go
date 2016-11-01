@@ -140,6 +140,8 @@ func (c *OneConnection) Tick() {
 
 	if !do_getheaders_now && !c.X.GetHeadersInProgress {
 		c.CheckGetBlockData()
+	} else {
+		c.IncCnt("FetchNoNo", 1)
 	}
 
 	if do_getheaders_now && c.BlksInProgress()==0 {
