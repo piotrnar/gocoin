@@ -184,7 +184,9 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
-				if (cs[i].TimeVer>0)  td.innerText = cs[i].TimeVer
+				if (cs[i].TimeVer>0) {
+					td.innerText = cs[i].TimeVer - cs[i].TimeQue
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
