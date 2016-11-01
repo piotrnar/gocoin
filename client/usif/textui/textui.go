@@ -487,6 +487,15 @@ func analyze_bip9(par string) {
 	}
 }
 
+func switch_trust(par string) {
+	if par=="0" {
+		common.FLAG.TrustAll = false
+	} else if par=="1" {
+		common.FLAG.TrustAll = true
+	}
+	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
+}
+
 func init() {
 	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
@@ -508,4 +517,5 @@ func init() {
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
+	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 }
