@@ -133,12 +133,6 @@ func show_info(par string) {
 	}
 	common.Busy_mutex.Unlock()
 
-	network.MutexRcv.Lock()
-	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
-	discarded := len(network.DiscardedBlocks)
-	cached := len(network.CachedBlocks)
-	network.MutexRcv.Unlock()
-
 	common.Last.Mutex.Lock()
 	fmt.Println("Last Block:", common.Last.Block.BlockHash.String())
 	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
@@ -152,6 +146,13 @@ func show_info(par string) {
 	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
 		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
 	network.Mutex_net.Unlock()
+
+	network.MutexRcv.Lock()
+	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	discarded := len(network.DiscardedBlocks)
+	cached := len(network.CachedBlocks)
+	fmt.Println("BlocksToGet:", len(network.BlocksToGet), "    Indexes:", len(network.IndexToBlocksToGet))
+	network.MutexRcv.Unlock()
 
 	network.TxMutex.Lock()
 	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
