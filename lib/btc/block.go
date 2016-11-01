@@ -117,7 +117,6 @@ func (bl *Block) BuildTxList() (e error) {
 		}
 		old_format_block.Write(data2hash)
 		wg.Add(1)
-		// TODO: use tx.SetHash() here
 		go func(tx *Tx, b, w []byte) {
 			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
 			if w!=nil {
