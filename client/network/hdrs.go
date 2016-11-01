@@ -59,10 +59,8 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	node := common.BlockChain.AcceptHeader(bl)
+	AddB2G(&OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0})
 	LastCommitedHeader = node
-	//println("checked ok - height", node.Height)
-	b2g = &OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0}
-	BlocksToGet[bl.Hash.BIdx()] = b2g
 
 	return PH_STATUS_NEW, b2g
 }

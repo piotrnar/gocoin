@@ -36,6 +36,7 @@ const (
 
 	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache fro that long, drop it*/
 
+	MAX_PEERS_BLOCKS_IN_PROGRESS = 500
 	MAX_BLOCKS_FORWARD_CNT = 5000 // Never ask for a block higher than current top + this value
 	MAX_BLOCKS_FORWARD_SIZ = 50e6
 	MAX_GETDATA_FORWARD = 2e6 // 2 times maximum block size
@@ -121,6 +122,7 @@ type ConnInfo struct {
 }
 
 type OneConnection struct {
+	nextGetData time.Time
 	// Source of this IP:
 	*peersdb.PeerAddr
 	ConnID uint32
@@ -162,7 +164,7 @@ type OneConnection struct {
 	// Statistics:
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
-	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
+	GetBlockInProgress map[BIDX] *oneBlockDl
 
 	// Ping stats
 	LastPingSent time.Time
@@ -174,6 +176,8 @@ type OneConnection struct {
 	nextMaintanence time.Time
 	nextHdrsTime time.Time
 }
+
+type BIDX [btc.Uint256IdxLen]byte
 
 type oneBlockDl struct {
 	hash *btc.Uint256
@@ -191,7 +195,7 @@ type BCmsg struct {
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
 	c.PeerAddr = ad
-	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
+	c.GetBlockInProgress = make(map[BIDX] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)

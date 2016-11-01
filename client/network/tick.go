@@ -126,11 +126,11 @@ func (c *OneConnection) Tick() {
 
 	do_getheaders_now := c.X.AllHeadersReceived==0 && !c.X.GetHeadersInProgress
 
-	if !do_getheaders_now && !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+	if !do_getheaders_now && !c.X.GetHeadersInProgress {
 		if now.After(c.nextHdrsTime) {
 			//println(c.ConnID, "RetryHeaders", c.X.AllHeadersReceived)
 			do_getheaders_now = true
-			c.IncCnt("RetryHeaders", 1)
+			//c.IncCnt("RetryHeaders", 1)
 		}
 	}
 
@@ -140,9 +140,11 @@ func (c *OneConnection) Tick() {
 	}
 	MutexRcv.Unlock()
 
-	c.CheckGetBlockData()
+	if !do_getheaders_now && !c.X.GetHeadersInProgress && now.After(c.nextGetData) {
+		c.CheckGetBlockData()
+	}
 
-	if do_getheaders_now {
+	if do_getheaders_now && c.BlksInProgress()==0 {
 		//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
 		c.sendGetHeaders()
 	}

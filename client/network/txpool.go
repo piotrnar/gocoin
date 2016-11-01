@@ -40,26 +40,26 @@ var (
 	TxMutex sync.Mutex
 
 	// The actual memory pool:
-	TransactionsToSend map[[btc.Uint256IdxLen]byte] *OneTxToSend =
-		make(map[[btc.Uint256IdxLen]byte] *OneTxToSend)
+	TransactionsToSend map[BIDX] *OneTxToSend =
+		make(map[BIDX] *OneTxToSend)
 	TransactionsToSendSize uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
-	SpentOutputs map[uint64] [btc.Uint256IdxLen]byte =
-		make(map[uint64] [btc.Uint256IdxLen]byte)
+	SpentOutputs map[uint64] BIDX =
+		make(map[uint64] BIDX)
 
 	// Transactions that we downloaded, but rejected:
-	TransactionsRejected map[[btc.Uint256IdxLen]byte] *OneTxRejected =
-		make(map[[btc.Uint256IdxLen]byte] *OneTxRejected)
+	TransactionsRejected map[BIDX] *OneTxRejected =
+		make(map[BIDX] *OneTxRejected)
 	TransactionsRejectedSize uint64
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
-	TransactionsPending map[[btc.Uint256IdxLen]byte] bool =
-		make(map[[btc.Uint256IdxLen]byte] bool)
+	TransactionsPending map[BIDX] bool =
+		make(map[BIDX] bool)
 
 	// Transactions that are waiting for inputs:
-	WaitingForInputs map[[btc.Uint256IdxLen]byte] *OneWaitingList =
-		make(map[[btc.Uint256IdxLen]byte] *OneWaitingList)
+	WaitingForInputs map[BIDX] *OneWaitingList =
+		make(map[BIDX] *OneWaitingList)
 )
 
 
@@ -94,7 +94,7 @@ type OneTxRejected struct {
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
-	Ids map[[btc.Uint256IdxLen]byte] time.Time  // List of pending tx ids
+	Ids map[BIDX] time.Time  // List of pending tx ids
 }
 
 
@@ -188,7 +188,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 }
 
 
-func bidx2str(idx [btc.Uint256IdxLen]byte) string {
+func bidx2str(idx BIDX) string {
 	return hex.EncodeToString(idx[:])
 }
 
@@ -223,7 +223,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
-	rbf_tx_list := make(map[[btc.Uint256IdxLen]byte] bool)
+	rbf_tx_list := make(map[BIDX] bool)
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
@@ -272,7 +272,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()]; rec==nil {
 						rec = new(OneWaitingList)
 						rec.TxID = nrtx.Wait4Input.missingTx
-						rec.Ids = make(map[[btc.Uint256IdxLen]byte] time.Time)
+						rec.Ids = make(map[BIDX] time.Time)
 						newone = true
 					}
 					rec.Ids[tx.Hash.BIdx()] = time.Now()
@@ -338,7 +338,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var totfees, new_min_fee uint64
 
 	if len(rbf_tx_list)>0 {
-		already_done := make(map[[btc.Uint256IdxLen]byte] bool)
+		already_done := make(map[BIDX] bool)
 		for len(already_done)<len(rbf_tx_list) {
 			for k, _ := range rbf_tx_list {
 				if _, yes := already_done[k]; !yes {
@@ -465,7 +465,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 }
 
 // Return txs in mempool that are spending any outputs form the given tx
-func findPendingTxs(tx *btc.Tx) (res [][btc.Uint256IdxLen]byte) {
+func findPendingTxs(tx *btc.Tx) (res []BIDX) {
 	var in btc.TxPrevOut
 	copy(in.Hash[:], tx.Hash.Hash[:])
 	for in.Vout=0; in.Vout<uint32(len(tx.TxOut)); in.Vout++ {
@@ -611,7 +611,7 @@ func expireTime(size int) (t time.Time) {
 
 
 // Make sure to call it with locked TxMutex
-func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
+func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
 		if tr.Wait4Input!=nil {
 			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx.BIdx()]

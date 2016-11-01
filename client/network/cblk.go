@@ -364,7 +364,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Mutex.Unlock()
 		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
 		ReceivedBlocks[idx] = orb
-		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+		DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
 		b2g.TmPreproc = time.Now()
@@ -466,7 +466,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 		return
 	}
-	delete(BlocksToGet, idx)
+	DelB2G(idx)
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
 	c.counters["NewTBlock"]++
