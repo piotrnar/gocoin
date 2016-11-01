@@ -60,6 +60,12 @@ func AddB2G(b2g *OneBlockToGet) {
 	BlocksToGet[bidx] = b2g
 	bh := b2g.BlockTreeNode.Height
 	IndexToBlocksToGet[bh] = append(IndexToBlocksToGet[bh], bidx)
+
+	Mutex_net.Lock()
+	for _, v := range OpenCons {
+		v.X.GetBlocksDataNow = true
+	}
+	Mutex_net.Unlock()
 }
 
 func DelB2G(idx BIDX) {
