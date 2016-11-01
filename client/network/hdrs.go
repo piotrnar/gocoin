@@ -123,7 +123,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 
 	if new_headers_got==0 {
 		if c.X.AllHeadersReceived<600 {
-			c.X.AllHeadersReceived += 10 // ask again in 10 seconds
+			c.X.AllHeadersReceived = (c.X.AllHeadersReceived+1) + (c.X.AllHeadersReceived>>1)
 		}
 		c.nextHdrsTime = time.Now().Add(time.Duration(c.X.AllHeadersReceived)*time.Second)
 		//println(c.ConnID, "AHR", c.X.AllHeadersReceived, c.nextHdrsTime.Sub(time.Now()).String())
