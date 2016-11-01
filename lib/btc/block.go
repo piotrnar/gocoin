@@ -136,38 +136,6 @@ func (bl *Block) BuildTxList() (e error) {
 }
 
 
-/*
-func (bl *Block) ComputeMerkle() (res []byte, mutated bool) {
-	tx_cnt, offs := VLen(bl.Raw[80:])
-	offs += 80
-
-	mtr := make([][]byte, tx_cnt)
-
-	var wg sync.WaitGroup
-
-	for i:=0; i<tx_cnt; i++ {
-		n := TxSize(bl.Raw[offs:])
-		if n==0 {
-			break
-		}
-		wg.Add(1)
-		go func(i int, b []byte) {
-			mtr[i] = make([]byte, 32)
-			ShaHash(b, mtr[i])
-			wg.Done() // indicate mission completed
-		}(i, bl.Raw[offs:offs+n])
-		offs += n
-	}
-
-	// Wait for all the pending missions to complete...
-	wg.Wait()
-
-	res, mutated = CalcMerkle(mtr)
-	return
-}
-*/
-
-
 func GetBlockReward(height uint32) (uint64) {
 	return 50e8 >> (height/210000)
 }

@@ -114,6 +114,36 @@ func submit_block(bl *btc.Block) {
 	BlockQueue <- bl
 }
 
+func ComputeMerkle(bl *btc.Block) (res []byte, mutated bool) {
+	tx_cnt, offs := btc.VLen(bl.Raw[80:])
+	offs += 80
+
+	mtr := make([][]byte, tx_cnt)
+
+	var wg sync.WaitGroup
+
+	for i:=0; i<tx_cnt; i++ {
+		n := btc.TxSize(bl.Raw[offs:])
+		if n==0 {
+			break
+		}
+		wg.Add(1)
+		go func(i int, b []byte) {
+			mtr[i] = make([]byte, 32)
+			btc.ShaHash(b, mtr[i])
+			wg.Done() // indicate mission completed
+		}(i, bl.Raw[offs:offs+n])
+		offs += n
+	}
+
+	// Wait for all the pending missions to complete...
+	wg.Wait()
+
+	res, mutated = btc.CalcMerkle(mtr)
+	return
+}
+
+
 func (c *one_net_conn) block(d []byte) {
 	atomic.AddUint64(&DlBytesDownloaded, uint64(len(d)))
 
@@ -153,7 +183,7 @@ func (c *one_net_conn) block(d []byte) {
 
 	if OnlyStoreBlocks {
 		// only check if the payload matches MerkleRoot from the header
-		merkle, mutated := bl.ComputeMerkle()
+		merkle, mutated := ComputeMerkle(bl)
 		if mutated {
 			fmt.Println(c.Ip(), " - MerkleRoot mutated at block", bip.Height)
 			c.setbroken(true)

@@ -134,13 +134,11 @@ func (c *OneConnection) Tick() {
 		}
 	}
 
-	MutexRcv.Lock()
-	if len(BlocksToGet) > 0 && !c.X.GetBlocksDataNow && now.Sub(c.X.LastFetchTried) > time.Second {
+	if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 		c.X.GetBlocksDataNow = true
 	}
-	MutexRcv.Unlock()
 
-	if !do_getheaders_now && !c.X.GetHeadersInProgress && now.After(c.nextGetData) {
+	if !do_getheaders_now && !c.X.GetHeadersInProgress {
 		c.CheckGetBlockData()
 	}
 

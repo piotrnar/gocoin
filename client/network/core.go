@@ -89,7 +89,6 @@ type ConnectionStatus struct {
 	AllHeadersReceived int // keep sending getheaders until this is not set
 	GetHeadersInProgress bool
 	GetBlocksDataNow bool
-	LastFetchTried time.Time
 
 	LastSent time.Time
 	MaxSentBufSize int
@@ -122,7 +121,6 @@ type ConnInfo struct {
 }
 
 type OneConnection struct {
-	nextGetData time.Time
 	// Source of this IP:
 	*peersdb.PeerAddr
 	ConnID uint32
@@ -175,6 +173,7 @@ type OneConnection struct {
 	blocksreceived []time.Time
 	nextMaintanence time.Time
 	nextHdrsTime time.Time
+	nextGetData time.Time
 }
 
 type BIDX [btc.Uint256IdxLen]byte
