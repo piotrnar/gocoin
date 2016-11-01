@@ -62,11 +62,13 @@ func AddB2G(b2g *OneBlockToGet) {
 	IndexToBlocksToGet[bh] = append(IndexToBlocksToGet[bh], bidx)
 
 	// Trigger each connection to as the peer for block data
+	/*
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
 		v.X.GetBlocksDataNow = true
 	}
 	Mutex_net.Unlock()
+	*/
 }
 
 func DelB2G(idx BIDX) {

@@ -446,7 +446,6 @@ func (c *OneConnection) Run() {
 
 			case "inv":
 				c.ProcessInv(cmd.pl)
-				c.CheckGetBlockData()
 
 			case "tx":
 				if common.CFG.TXPool.Enabled {
@@ -500,7 +499,6 @@ func (c *OneConnection) Run() {
 
 			case "headers":
 				c.HandleHeaders(cmd.pl)
-				c.CheckGetBlockData()
 
 			case "sendheaders":
 				c.Node.SendHeaders = true
