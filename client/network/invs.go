@@ -29,13 +29,6 @@ func blockReceived(bh *btc.Uint256) (ok bool) {
 	return
 }
 
-func blockPending(bh *btc.Uint256) (ok bool) {
-	MutexRcv.Lock()
-	_, ok = BlocksToGet[bh.BIdx()]
-	MutexRcv.Unlock()
-	return
-}
-
 func hash2invid(hash []byte) uint64 {
 	return binary.LittleEndian.Uint64(hash[4:12])
 }
