@@ -73,12 +73,6 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 }
 
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
-	if c.Node.SendCmpctVer==2 {
-		// TODO: SendCmpctBlk version 2 needs to be implemented
-		fmt.Println("SendCmpctBlk version 2 needs to be implemented")
-		return
-	}
-
 	crec := GetchBlockForBIP152(hash)
 	if crec==nil {
 		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
@@ -88,20 +82,32 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	k0 := binary.LittleEndian.Uint64(crec.BIP152[8:16])
 	k1 := binary.LittleEndian.Uint64(crec.BIP152[16:24])
 
-	var msg bytes.Buffer
+	msg := new(bytes.Buffer)
 	msg.Write(crec.Data[:80])
 	msg.Write(crec.BIP152[:8])
-	btc.WriteVlen(&msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
+	btc.WriteVlen(msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
 	for i:=1; i<len(crec.Block.Txs); i++ {
 		var lsb [8]byte
-		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, crec.Block.Txs[i].Hash.Hash[:]))
+		var hasz *btc.Uint256
+		if c.Node.SendCmpctVer==2 {
+			hasz = crec.Block.Txs[i].WTxID()
+		} else {
+			hasz = crec.Block.Txs[i].Hash
+		}
+		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, hasz.Hash[:]))
 		msg.Write(lsb[:6])
 	}
 	msg.Write([]byte{1}) // one preffiled tx
 	msg.Write([]byte{0}) // coinbase - index 0
-	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
+	if c.Node.SendCmpctVer==2 {
+		msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
+	} else {
+		crec.Block.Txs[0].WriteSerialized(msg) // coinbase - index 0
+	}
 	c.SendRawMsg("cmpctblock", msg.Bytes())
-	//fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
+	if c.Node.SendCmpctVer==2 {
+		fmt.Println(c.ConnID, "cmpctblock v2 sent for", hash.String(), "   ", msg.Len(), "bytes")
+	}
 }
 
 func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
@@ -126,10 +132,10 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	var exp_idx uint64
-	var msg bytes.Buffer
+	msg := new(bytes.Buffer)
 
 	msg.Write(hash.Hash[:])
-	btc.WriteVlen(&msg, indexes_length)
+	btc.WriteVlen(msg, indexes_length)
 
 	for {
 		idx, er := btc.ReadVLen(req)
@@ -144,7 +150,11 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 			c.DoS("GetBlockTxnIdx+")
 			return
 		}
-		msg.Write(crec.Block.Txs[idx].Raw)
+		if c.Node.SendCmpctVer==2 {
+			msg.Write(crec.Block.Txs[idx].Raw) // coinbase - index 0
+		} else {
+			crec.Block.Txs[idx].WriteSerialized(msg) // coinbase - index 0
+		}
 		if indexes_length==1 {
 			break
 		}
@@ -153,7 +163,9 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	c.SendRawMsg("blocktxn", msg.Bytes())
-	//fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
+	if c.Node.SendCmpctVer==2 {
+		fmt.Println(c.ConnID, "blocktxn V2 sent for", hash.String(), "   ", msg.Len(), "bytes")
+	}
 }
 
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
