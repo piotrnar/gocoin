@@ -133,26 +133,26 @@ func show_info(par string) {
 	}
 	common.Busy_mutex.Unlock()
 
+	network.MutexRcv.Lock()
+	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	discarded := len(network.DiscardedBlocks)
+	cached := len(network.CachedBlocks)
+	b2g_len := len(network.BlocksToGet)
+	b2g_idx_len := len(network.IndexToBlocksToGet)
+	network.MutexRcv.Unlock()
+
 	common.Last.Mutex.Lock()
-	fmt.Println("Last Block:", common.Last.Block.BlockHash.String())
-	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
-		common.Last.Block.Height,
+	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
+	fmt.Printf("Timestamp: %s,  Diff: %.0f,  Got: %s ago\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
 	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("2006/01/02 15:04:05"), ",   ")
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
+	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d,  B2G: %d/%d\n",
+		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len)
 	network.Mutex_net.Unlock()
-
-	network.MutexRcv.Lock()
-	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
-	discarded := len(network.DiscardedBlocks)
-	cached := len(network.CachedBlocks)
-	fmt.Println("BlocksToGet:", len(network.BlocksToGet), "    Indexes:", len(network.IndexToBlocksToGet))
-	network.MutexRcv.Unlock()
 
 	network.TxMutex.Lock()
 	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
@@ -168,7 +168,7 @@ func show_info(par string) {
 	al, sy := sys.MemUsed()
 	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
 		atomic.LoadInt64(&qdb.ExtraMemoryConsumed)>>20, "MB in",
-		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "records")
+		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "recs")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
