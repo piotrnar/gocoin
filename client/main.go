@@ -27,6 +27,7 @@ import (
 var (
 	killchan          chan os.Signal = make(chan os.Signal)
 	retryCachedBlocks bool
+	syncNow           chan bool = make(chan bool, 1)
 )
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
@@ -34,6 +35,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll {
 		bl.Trusted = true
+	}
+	if !common.BlockChain.DoNotSync {
+		common.BlockChain.DoNotSync = true
+		syncNow <- true
 	}
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
@@ -359,6 +364,11 @@ func main() {
 				common.CountSafe("MainNetBlock")
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
+
+			case <-syncNow:
+				common.CountSafe("MainChainSync")
+				common.Busy("BlockChain.Sync()")
+				common.BlockChain.Sync()
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("MainNetTx")
