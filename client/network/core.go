@@ -91,6 +91,7 @@ type ConnectionStatus struct {
 	TotalNewHeadersCount int
 	GetHeadersInProgress bool
 	GetHeadersTimeout time.Time
+	LastHeadersHeightAsk uint32
 	GetBlocksDataNow bool
 
 	LastSent time.Time

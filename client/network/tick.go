@@ -334,8 +334,8 @@ func NetworkTick() {
 	if cnt_headers_in_progress==0 {
 		if _v!=nil {
 			common.CountSafe("GetHeadersPush")
-			println("No headers_in_progress, so take it from", _v.ConnID,
-				_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)
+			/*println("No headers_in_progress, so take it from", _v.ConnID,
+				_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
 			_v.Mutex.Lock()
 			_v.X.AllHeadersReceived = false
 			_v.Mutex.Unlock()

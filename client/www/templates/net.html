@@ -33,6 +33,8 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th >Tot Out
 	<th colspan="3">Node Version
 	<th colspan="2" title="Received / In Progress">Blks
+	<th >TotHdr
+	<th >LHE
 	<th >Txs
 	<th title="Bytes waiting to be sent">ToSend
 	<th title="Max bytes waiting to be sent">MaxSend
@@ -246,11 +248,13 @@ function refreshconnections() {
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
+				td.noWrap = true
 				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
 
 				// total_sent
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
+				td.noWrap = true
 				td.innerHTML = bignum(cs[i].BytesSent)+'B'
 
 				// node_version
@@ -291,7 +295,19 @@ function refreshconnections() {
 				td.noWrap = true
 				if (cs[i].BlocksInProgress>0) {
 					td.innerHTML = cs[i].BlocksInProgress + ( cs[i].GetHeadersInProgress ? '*' : '')
+				} else if (cs[i].GetHeadersInProgress) {
+					td.innerHTML = '*'
 				}
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = cs[i].TotalNewHeadersCount
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].LastHeadersEmpty
+				td.title = cs[i].LastHeadersHeightAsk
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'

@@ -68,7 +68,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 
 
 func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
-	var new_or_fresh_cnt int
+	var highest_block_found uint32
 
 	c.X.GetHeadersInProgress = false
 
@@ -110,9 +110,11 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 				}
 			} else {
-				new_or_fresh_cnt++
 				if sta==PH_STATUS_NEW {
 					new_headers_got++
+				}
+				if b2g.Block.Height > highest_block_found {
+					highest_block_found = b2g.Block.Height
 				}
 				if c.Node.Height < b2g.Block.Height {
 					c.Node.Height = b2g.Block.Height
@@ -124,7 +126,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 	}
 
 	c.Mutex.Lock()
-	c.X.LastHeadersEmpty = new_or_fresh_cnt==0
+	c.X.LastHeadersEmpty = highest_block_found <= c.X.LastHeadersHeightAsk
 	c.X.TotalNewHeadersCount += new_headers_got
 	if new_headers_got==0 {
 		c.X.AllHeadersReceived = true
@@ -279,6 +281,7 @@ func (c *OneConnection) sendGetHeaders() {
 	btc.WriteVlen(bhdr, cnt)
 
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
+	c.X.LastHeadersHeightAsk = lb.Height
 	c.X.GetHeadersInProgress = true
 	c.X.GetHeadersTimeout = time.Now().Add(NO_DATA_TIMEOUT)
 }
