@@ -139,19 +139,21 @@ func show_info(par string) {
 	cached := len(network.CachedBlocks)
 	b2g_len := len(network.BlocksToGet)
 	b2g_idx_len := len(network.IndexToBlocksToGet)
+	lb2g := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
 	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
-	fmt.Printf("Timestamp: %s,  Diff: %.0f,  Got: %s ago\n",
+	fmt.Printf("Timestamp: %s,  Diff: %.0f,  Got: %s ago,  ToGetFrom: %d\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
+		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String(),
+		lb2g)
 	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("2006/01/02 15:04:05"), ",   ")
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d,  B2G: %d/%d\n",
-		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len)
+	fmt.Printf("NetQueueSize:%d, NetConns:%d, Peers:%d, B2G:%d/%d\n", len(network.NetBlocks),
+		len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len)
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()

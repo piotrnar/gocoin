@@ -45,6 +45,7 @@ var (
 	ReceivedBlocks map[BIDX] *OneReceivedBlock = make(map[BIDX] *OneReceivedBlock, 400e3)
 	BlocksToGet map[BIDX] *OneBlockToGet = make(map[BIDX] *OneBlockToGet)
 	IndexToBlocksToGet map[uint32][]BIDX = make(map[uint32][]BIDX)
+	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader *chain.BlockTreeNode
 	MutexRcv sync.Mutex
 
@@ -60,6 +61,9 @@ func AddB2G(b2g *OneBlockToGet) {
 	BlocksToGet[bidx] = b2g
 	bh := b2g.BlockTreeNode.Height
 	IndexToBlocksToGet[bh] = append(IndexToBlocksToGet[bh], bidx)
+	if LowestIndexToBlocksToGet==0 || bh<LowestIndexToBlocksToGet {
+		LowestIndexToBlocksToGet = bh
+	}
 
 	// Trigger each connection to as the peer for block data
 	Mutex_net.Lock()
@@ -94,6 +98,17 @@ func DelB2G(idx BIDX) {
 			println("DelB2G - index not matching")
 		}
 		delete(IndexToBlocksToGet, bh)
+		if bh==LowestIndexToBlocksToGet {
+			if len(IndexToBlocksToGet)>0 {
+				for LowestIndexToBlocksToGet++; ; LowestIndexToBlocksToGet++ {
+					if _, ok := IndexToBlocksToGet[LowestIndexToBlocksToGet]; ok {
+						break
+					}
+				}
+			} else {
+				LowestIndexToBlocksToGet = 0
+			}
+		}
 	}
 
 	delete(BlocksToGet, idx)

@@ -239,7 +239,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
-	if len(BlocksToGet)==0 {
+	if LowestIndexToBlocksToGet==0 || len(BlocksToGet)==0 {
 		c.IncCnt("FetchNoBlocksToGet", 1)
 		// wake up in one minute, just in case
 		c.nextGetData = time.Now().Add(60*time.Second)
@@ -309,7 +309,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 		// Get block to fetch:
 
-		for bh := common.Last.Block.Height+1; bh<=max_height; bh++ {
+		for bh := LowestIndexToBlocksToGet; bh<=max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
