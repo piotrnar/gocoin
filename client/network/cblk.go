@@ -189,7 +189,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			hex.EncodeToString(pl[80:88]), "->", sta)*/
 		common.CountSafe("CmpctBlockHdrNo")
 		if sta==PH_STATUS_ERROR {
-			c.X.AllHeadersReceived = 0 // block doesn't connect so ask for the headers
+			c.ReceiveHeadersNow() // block doesn't connect so ask for the headers
 			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
 			c.DoS("BadCmpct")

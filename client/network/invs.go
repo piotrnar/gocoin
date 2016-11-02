@@ -68,11 +68,12 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		c.Mutex.Lock()
 		c.InvStore(typ, pl[of+4:of+36])
+		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
 		common.CountSafe(fmt.Sprint("InvGot-",typ))
 		if typ==MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if c.X.AllHeadersReceived==0 {
+			if !ahr {
 				common.CountSafe("InvBlockIgnored")
 			} else {
 				if !blockReceived(bhash) {
@@ -86,7 +87,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						c.X.GetBlocksDataNow = true
 					} else {
 						common.CountSafe("InvBlockNew")
-						c.X.AllHeadersReceived = 0
+						c.ReceiveHeadersNow()
 						//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 					}
 					MutexRcv.Unlock()

@@ -59,14 +59,17 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	node := common.BlockChain.AcceptHeader(bl)
-	AddB2G(&OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0})
+	b2g = &OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0}
+	AddB2G(b2g)
 	LastCommitedHeader = node
 
 	return PH_STATUS_NEW, b2g
 }
 
 
-func (c *OneConnection) HandleHeaders(pl []byte) {
+func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
+	var new_or_fresh_cnt int
+
 	c.X.GetHeadersInProgress = false
 
 	b := bytes.NewReader(pl)
@@ -75,8 +78,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		println("HandleHeaders:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
-
-	var new_headers_got int
 
 	if cnt>0 {
 		MutexRcv.Lock()
@@ -109,6 +110,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 					c.Misbehave("BadHeader", 50) // do it 20 times and you are banned
 				}
 			} else {
+				new_or_fresh_cnt++
 				if sta==PH_STATUS_NEW {
 					new_headers_got++
 				}
@@ -121,15 +123,22 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		}
 	}
 
+	c.Mutex.Lock()
+	c.X.LastHeadersEmpty = new_or_fresh_cnt==0
+	c.X.TotalNewHeadersCount += new_headers_got
 	if new_headers_got==0 {
-		if c.X.AllHeadersReceived<600 {
-			c.X.AllHeadersReceived = (c.X.AllHeadersReceived+1) + (c.X.AllHeadersReceived>>1)
-		}
-		c.nextHdrsTime = time.Now().Add(time.Duration(c.X.AllHeadersReceived)*time.Second)
-		//println(c.ConnID, "AHR", c.X.AllHeadersReceived, c.nextHdrsTime.Sub(time.Now()).String())
-	} else {
-		c.X.AllHeadersReceived = 0
+		c.X.AllHeadersReceived = true
 	}
+	c.Mutex.Unlock()
+
+	return
+}
+
+
+func (c *OneConnection) ReceiveHeadersNow() {
+	c.Mutex.Lock()
+	c.X.AllHeadersReceived = false
+	c.Mutex.Unlock()
 }
 
 
@@ -271,4 +280,5 @@ func (c *OneConnection) sendGetHeaders() {
 
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
 	c.X.GetHeadersInProgress = true
+	c.X.GetHeadersTimeout = time.Now().Add(NO_DATA_TIMEOUT)
 }

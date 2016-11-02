@@ -371,12 +371,3 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 }
 
 
-func (c *OneConnection) CheckGetBlockData() bool {
-	if c.X.GetBlocksDataNow {
-		c.X.GetBlocksDataNow = false
-		if c.GetBlockData() {
-			return true
-		}
-	}
-	return false
-}

@@ -112,6 +112,13 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
+	if c.X.GetHeadersInProgress && now.After(c.X.GetHeadersTimeout) {
+		//println(c.ConnID, "- GetHdrs Timeout")
+		c.DoS("GetHdrsTimeout")
+		common.CountSafe("NetNodataTout")
+		return
+	}
+
 	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
@@ -124,29 +131,22 @@ func (c *OneConnection) Tick() {
 		c.X.OurGetAddrDone = true
 	}
 
-	do_getheaders_now := c.X.AllHeadersReceived==0 && !c.X.GetHeadersInProgress
+	c.Mutex.Lock()
+	ahr := c.X.AllHeadersReceived
+	c.Mutex.Unlock()
 
-	if !do_getheaders_now && !c.X.GetHeadersInProgress {
-		if now.After(c.nextHdrsTime) {
-			//println(c.ConnID, "RetryHeaders", c.X.AllHeadersReceived)
-			do_getheaders_now = true
-			//c.IncCnt("RetryHeaders", 1)
-		}
-	}
-
-	if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
-		c.X.GetBlocksDataNow = true
-	}
-
-	if !do_getheaders_now && !c.X.GetHeadersInProgress {
-		c.CheckGetBlockData()
-	} else {
-		c.IncCnt("FetchNoNo", 1)
-	}
-
-	if do_getheaders_now && c.BlksInProgress()==0 {
-		//println("fetch new headers from", c.PeerAddr.Ip(), blocks_to_get, len(NetBlocks))
+	if !c.X.GetHeadersInProgress && !ahr && c.BlksInProgress()==0 {
 		c.sendGetHeaders()
+	}
+
+	if ahr {
+		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
+			c.X.GetBlocksDataNow = true
+		}
+		if c.X.GetBlocksDataNow {
+			c.X.GetBlocksDataNow = false
+			c.GetBlockData()
+		}
 	}
 
 	// Need to send some invs...?
@@ -311,9 +311,38 @@ func NetworkTick() {
 		}
 	}
 
+	// Push GetHeaders if not in progress
 	Mutex_net.Lock()
+	var cnt_headers_in_progress int
+	var max_headers_got_cnt int
+	var _v *OneConnection
+	for _, v := range OpenCons {
+		v.Mutex.Lock()
+		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
+			cnt_headers_in_progress++
+		} else if !v.X.LastHeadersEmpty {
+			if _v==nil || v.X.TotalNewHeadersCount > max_headers_got_cnt {
+				max_headers_got_cnt = v.X.TotalNewHeadersCount
+				_v = v
+			}
+		}
+		v.Mutex.Unlock()
+	}
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
+
+	if cnt_headers_in_progress==0 {
+		if _v!=nil {
+			common.CountSafe("GetHeadersPush")
+			println("No headers_in_progress, so take it from", _v.ConnID,
+				_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)
+			_v.Mutex.Lock()
+			_v.X.AllHeadersReceived = false
+			_v.Mutex.Unlock()
+		} else {
+			common.CountSafe("GetHeadersNone")
+		}
+	}
 
 	if common.CFG.DropPeers.DropEachMinutes!=0 {
 		if next_drop_peer.IsZero() {
@@ -365,7 +394,6 @@ func (c *OneConnection) Run() {
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
 	c.LastPingSent = now.Add(5*time.Second-common.PingPeerEvery) // do first ping ~5 seconds from now
-	c.X.AllHeadersReceived = 0
 	c.Mutex.Unlock()
 
 
@@ -498,7 +526,9 @@ func (c *OneConnection) Run() {
 				common.CountSafe("NotFound")
 
 			case "headers":
-				c.HandleHeaders(cmd.pl)
+				if c.HandleHeaders(cmd.pl) > 0 {
+					c.sendGetHeaders()
+				}
 
 			case "sendheaders":
 				c.Node.SendHeaders = true
