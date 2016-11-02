@@ -64,14 +64,15 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	MutexRcv.Lock()
 	for k, v := range c.GetBlockInProgress {
-		if _, ok := BlocksToGet[k]; ok {
-			continue
-		}
 		if now.After(v.start.Add(5*time.Minute)) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
 			//println(c.ConnID, "GetBlockInProgress timeout")
+			if bip, ok := BlocksToGet[k]; ok {
+				bip.InProgress--
+				continue
+			}
 			break
 		}
 	}
