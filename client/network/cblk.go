@@ -105,9 +105,6 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 		crec.Block.Txs[0].WriteSerialized(msg) // coinbase - index 0
 	}
 	c.SendRawMsg("cmpctblock", msg.Bytes())
-	if c.Node.SendCmpctVer==2 {
-		fmt.Println(c.ConnID, "cmpctblock v2 sent for", hash.String(), "   ", msg.Len(), "bytes")
-	}
 }
 
 func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
@@ -163,9 +160,6 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	c.SendRawMsg("blocktxn", msg.Bytes())
-	if c.Node.SendCmpctVer==2 {
-		fmt.Println(c.ConnID, "blocktxn V2 sent for", hash.String(), "   ", msg.Len(), "bytes")
-	}
 }
 
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
