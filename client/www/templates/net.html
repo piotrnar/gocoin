@@ -1,3 +1,11 @@
+<style>
+td.agent {
+	//max-width: 50px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap
+}
+</style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <table width="100%">
@@ -278,8 +286,10 @@ function refreshconnections() {
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
-				td.noWrap = true
-				td.innerHTML = cs[i].Agent.substr(0,20)
+				//td.noWrap = true
+				//td.width = 50
+				td.className = 'agent'
+				td.innerHTML = cs[i].Agent//.substr(0,20)
 
 				// blocks received
 				td = row.insertCell(-1)
