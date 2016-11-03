@@ -480,7 +480,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "inv": return 3+50000*36 // the spec says "max 50000 entries"
 		case "tx": return 100e3 // max tx size 100KB
 		case "addr": return 3+1000*30 // max 1000 addrs
-		case "block": return 10e6+4 // max block size 3MB
+		case "block": return 5e6+4 // max segwit block size 5MB
 		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
 		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
 		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
