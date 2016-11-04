@@ -45,6 +45,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Sigops int
 
 		MinFeeKSPB uint64
+		NonWitnessSize int
 	}
 
 	var blks []*one_block
@@ -90,7 +91,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		network.MutexRcv.Unlock()
 
 		b.Received = uint32(rb.TmStart.Unix())
-		b.Sigops = int(node.Sigops)
+		b.Sigops = int(node.SigopsCost)
 
 		if rb.TmPreproc.IsZero() {
 			b.TimePre = -1
@@ -121,6 +122,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.FromConID = rb.FromConID
 
 		b.MinFeeKSPB = rb.MinFeeKSPB
+		b.NonWitnessSize = rb.NonWitnessSize
 
 		blks = append(blks, b)
 		end = end.Parent

@@ -16,6 +16,9 @@ var (
 
 func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	atomic.AddUint64(&EcdsaVerifyCnt, 1)
+	if len(kd)==0 || len(sd)==0 {
+		return false
+	}
 	if EC_Verify!=nil {
 		return EC_Verify(kd, sd, hash)
 	}

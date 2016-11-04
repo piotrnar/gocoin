@@ -44,7 +44,7 @@ var (
 func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {
 	s += fmt.Sprintln("Transaction details (for your information):")
 	s += fmt.Sprintln(len(tx.TxIn), "Input(s):")
-	sigops = tx.GetLegacySigOpCount()
+	sigops = btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
 	for i := range tx.TxIn {
 		s += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
 		var po *btc.TxOut
@@ -64,7 +64,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 			}
 		}
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			ok := script.VerifyTxScript(po.Pk_script, po.Value, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
 				e = errors.New("Invalid signature")
@@ -79,9 +79,15 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 			s += fmt.Sprintf(" %15.8f BTC @ %s", float64(po.Value)/1e8, ads)
 
 			if btc.IsP2SH(po.Pk_script) {
-				so := btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
+				so := btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 				s += fmt.Sprintf("  + %d sigops", so)
 				sigops += so
+			}
+
+			swo := tx.CountWitnessSigOps(i, po.Pk_script)
+			if swo > 0 {
+				s += fmt.Sprintf("  + %d segops", swo)
+				sigops += swo
 			}
 
 			s += "\n"
@@ -131,7 +137,7 @@ func LoadRawTx(buf []byte) (s string) {
 		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
 		return
 	}
-	tx.Hash = btc.NewSha2Hash(txd)
+	tx.SetHash(txd)
 
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
@@ -150,10 +156,10 @@ func LoadRawTx(buf []byte) (s string) {
 
 	if missinginp {
 		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:2, Firstseen:time.Now(),
-			Volume:totout, Sigops:sigops}
+			Volume:totout, SigopsCost:sigops}
 	} else {
 		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
-			Volume:totinp, Fee:totinp-totout, Sigops:sigops}
+			Volume:totinp, Fee:totinp-totout, SigopsCost:sigops}
 	}
 	network.TransactionsToSendSize += uint64(len(txd))
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")

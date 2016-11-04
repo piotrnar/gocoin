@@ -71,7 +71,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Target = hex.EncodeToString(append(zer[:32-len(target)], target...))
 	r.Mutable = []string{"time","transactions","prevblock"}
 	r.Noncerange = "00000000ffffffff"
-	r.Sigoplimit = btc.MAX_BLOCK_SIGOPS
+	r.Sigoplimit = btc.MAX_BLOCK_SIGOPS_COST / btc.WITNESS_SCALE_FACTOR
 	r.Sizelimit = btc.MAX_BLOCK_SIZE
 	r.Bits = fmt.Sprintf("%08x", bits)
 	r.Height = uint(height)
@@ -121,11 +121,11 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 		}
 		totlen += len(v.Data)
 
-		if sigops + v.Sigops > btc.MAX_BLOCK_SIGOPS {
+		if sigops + v.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
 			//println("Too many sigops - limit to 999000 bytes")
 			return
 		}
-		sigops += v.Sigops
+		sigops += v.SigopsCost
 
 		all_inputs_found = true
 		var depends []uint
@@ -187,7 +187,7 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 		res[cnt].Data = hex.EncodeToString(v.Data)
 		res[cnt].Hash = v.Tx.Hash.String()
 		res[cnt].Fee = v.Fee
-		res[cnt].Sigops = v.Sigops
+		res[cnt].Sigops = v.SigopsCost
 		res[cnt].Depends = v.depends
 		totfees += v.Fee
 		//println("", cnt+1, v.Tx.Hash.String(), "  turn:", v.startat, "  spb:", int(v.Fee)/len(v.Data), "  depend:", fmt.Sprint(v.depends))

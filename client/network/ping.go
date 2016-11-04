@@ -58,6 +58,7 @@ type conn_list_to_drop []struct {
 	c *OneConnection
 	ping int
 	blks int
+	txs int
 }
 
 func (l conn_list_to_drop) Len() int {
@@ -66,7 +67,10 @@ func (l conn_list_to_drop) Len() int {
 
 func (l conn_list_to_drop) Less(a, b int) bool {
 	if l[a].blks == l[b].blks {
-		return l[a].ping > l[b].ping
+		if l[a].txs == l[b].txs {
+			return l[a].ping > l[b].ping
+		}
+		return l[a].txs < l[b].txs
 	}
 	return l[a].blks < l[b].blks
 }
@@ -89,6 +93,7 @@ func drop_worst_peer() {
 		list[cnt].c = v
 		list[cnt].ping = v.GetAveragePing()
 		list[cnt].blks = len(v.blocksreceived)
+		list[cnt].txs = v.X.TxsReceived
 		if list[cnt].ping>0 {
 			any_ping = true
 		}

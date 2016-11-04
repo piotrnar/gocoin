@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"encoding/hex"
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -39,26 +40,26 @@ var (
 	TxMutex sync.Mutex
 
 	// The actual memory pool:
-	TransactionsToSend map[[btc.Uint256IdxLen]byte] *OneTxToSend =
-		make(map[[btc.Uint256IdxLen]byte] *OneTxToSend)
+	TransactionsToSend map[BIDX] *OneTxToSend =
+		make(map[BIDX] *OneTxToSend)
 	TransactionsToSendSize uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
-	SpentOutputs map[uint64] [btc.Uint256IdxLen]byte =
-		make(map[uint64] [btc.Uint256IdxLen]byte)
+	SpentOutputs map[uint64] BIDX =
+		make(map[uint64] BIDX)
 
 	// Transactions that we downloaded, but rejected:
-	TransactionsRejected map[[btc.Uint256IdxLen]byte] *OneTxRejected =
-		make(map[[btc.Uint256IdxLen]byte] *OneTxRejected)
+	TransactionsRejected map[BIDX] *OneTxRejected =
+		make(map[BIDX] *OneTxRejected)
 	TransactionsRejectedSize uint64
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
-	TransactionsPending map[[btc.Uint256IdxLen]byte] bool =
-		make(map[[btc.Uint256IdxLen]byte] bool)
+	TransactionsPending map[BIDX] bool =
+		make(map[BIDX] bool)
 
 	// Transactions that are waiting for inputs:
-	WaitingForInputs map[[btc.Uint256IdxLen]byte] *OneWaitingList =
-		make(map[[btc.Uint256IdxLen]byte] *OneWaitingList)
+	WaitingForInputs map[BIDX] *OneWaitingList =
+		make(map[BIDX] *OneWaitingList)
 )
 
 
@@ -72,7 +73,7 @@ type OneTxToSend struct {
 	*btc.Tx
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
-	Sigops uint
+	SigopsCost uint
 	Final bool // if true RFB will not work on it
 	VerifyTime time.Duration
 }
@@ -93,7 +94,7 @@ type OneTxRejected struct {
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
-	Ids map[[btc.Uint256IdxLen]byte] time.Time  // List of pending tx ids
+	Ids map[BIDX] time.Time  // List of pending tx ids
 }
 
 
@@ -125,7 +126,12 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1+4+32]byte
 		b[0] = 1 // One inv
-		b[1] = 1 // Tx
+		if (c.Node.Services&SERVICE_SEGWIT) != 0 {
+			binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
+			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
+		} else {
+			b[1] = 1 // Tx
+		}
 		copy(b[5:37], hash)
 		c.SendRawMsg("getdata", b[:])
 	}
@@ -149,35 +155,31 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 
 // Handle incoming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
-	tid := btc.NewSha2Hash(pl)
-	NeedThisTx(tid, func() {
-		// This body is called with a locked TxMutex
-		if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
-			common.CountSafe("TxRejectedBig")
-			RejectTx(tid, len(pl), TX_REJECTED_TOO_BIG)
-			return
-		}
-		tx, le := btc.NewTx(pl)
-		if tx == nil {
-			RejectTx(tid, len(pl), TX_REJECTED_FORMAT)
-			c.DoS("TxRejectedBroken")
-			return
-		}
-		if le != len(pl) {
-			RejectTx(tid, len(pl), TX_REJECTED_LEN_MISMATCH)
-			c.DoS("TxRejectedLenMismatch")
-			return
-		}
-		if len(tx.TxIn)<1 {
-			RejectTx(tid, len(pl), TX_REJECTED_EMPTY_INPUT)
-			c.Misbehave("TxRejectedNoInputs", 100)
-			return
-		}
+	if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
+		common.CountSafe("TxRejectedBig")
+		return
+	}
+	tx, le := btc.NewTx(pl)
+	if tx == nil {
+		c.DoS("TxRejectedBroken")
+		return
+	}
+	if le != len(pl) {
+		c.DoS("TxRejectedLenMismatch")
+		return
+	}
+	if len(tx.TxIn)<1 {
+		c.Misbehave("TxRejectedNoInputs", 100)
+		return
+	}
 
-		tx.Hash = tid
+	tx.SetHash(pl)
+	NeedThisTx(tx.Hash, func() {
+		// This body is called with a locked TxMutex
+		tx.Raw = pl
 		select {
 			case NetTxs <- &TxRcvd{conn:c, tx:tx, raw:pl}:
-				TransactionsPending[tid.BIdx()] = true
+				TransactionsPending[tx.Hash.BIdx()] = true
 			default:
 				common.CountSafe("TxRejectedFullQ")
 				//println("NetTxsFULL")
@@ -186,7 +188,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 }
 
 
-func bidx2str(idx [btc.Uint256IdxLen]byte) string {
+func bidx2str(idx BIDX) string {
 	return hex.EncodeToString(idx[:])
 }
 
@@ -221,7 +223,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
-	rbf_tx_list := make(map[[btc.Uint256IdxLen]byte] bool)
+	rbf_tx_list := make(map[BIDX] bool)
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
@@ -270,7 +272,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()]; rec==nil {
 						rec = new(OneWaitingList)
 						rec.TxID = nrtx.Wait4Input.missingTx
-						rec.Ids = make(map[[btc.Uint256IdxLen]byte] time.Time)
+						rec.Ids = make(map[BIDX] time.Time)
 						newone = true
 					}
 					rec.Ids[tx.Hash.BIdx()] = time.Now()
@@ -286,14 +288,11 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				return
 			} else {
 				if pos[i].WasCoinbase {
-					common.Last.Mutex.Lock()
-					last_height := common.Last.Block.Height
-					common.Last.Mutex.Unlock()
-					if last_height+1 - pos[i].BlockHeight < chain.COINBASE_MATURITY {
+					if common.Last.BlockHeight()+1 - pos[i].BlockHeight < chain.COINBASE_MATURITY {
 						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_CB_INMATURE)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedCBInmature")
-						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", last_height)
+						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
 						return
 					}
 				}
@@ -339,7 +338,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var totfees, new_min_fee uint64
 
 	if len(rbf_tx_list)>0 {
-		already_done := make(map[[btc.Uint256IdxLen]byte] bool)
+		already_done := make(map[BIDX] bool)
 		for len(already_done)<len(rbf_tx_list) {
 			for k, _ := range rbf_tx_list {
 				if _, yes := already_done[k]; !yes {
@@ -383,20 +382,25 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	// Verify scripts
-	sigops2 := tx.GetLegacySigOpCount()
+	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
+
+	prev_dbg_err := script.DBG_ERR
+	script.DBG_ERR = false // keep quiet for incorrect txs
 	for i := range tx.TxIn {
 		wg.Add(1)
-		go func (prv []byte, i int, tx *btc.Tx) {
-			if !script.VerifyTxScript(prv, i, tx, script.STANDARD_VERIFY_FLAGS) {
+		go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
+			if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
 				atomic.AddUint32(&ver_err_cnt, 1)
 			}
 			wg.Done()
-		}(pos[i].Pk_script, i, tx)
+		}(pos[i].Pk_script, pos[i].Value, i, tx)
 	}
 
 	wg.Wait()
+	script.DBG_ERR = prev_dbg_err
+
 	if ver_err_cnt > 0 {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 		TxMutex.Unlock()
@@ -410,8 +414,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
-			sigops2 += btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
+			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
 		}
+		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
 	if len(rbf_tx_list)>0 {
@@ -425,7 +430,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
 		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem,
-		Sigops:sigops2, Final:final, VerifyTime:time.Now().Sub(start_time)}
+		SigopsCost:sigops, Final:final, VerifyTime:time.Now().Sub(start_time)}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
 	for i := range spent {
@@ -449,12 +454,18 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRouteOK")
 	}
 
+	if ntx.conn!=nil {
+		ntx.conn.Mutex.Lock()
+		ntx.conn.X.TxsReceived++
+		ntx.conn.Mutex.Unlock()
+	}
+
 	accepted = true
 	return
 }
 
 // Return txs in mempool that are spending any outputs form the given tx
-func findPendingTxs(tx *btc.Tx) (res [][btc.Uint256IdxLen]byte) {
+func findPendingTxs(tx *btc.Tx) (res []BIDX) {
 	var in btc.TxPrevOut
 	copy(in.Hash[:], tx.Hash.Hash[:])
 	for in.Vout=0; in.Vout<uint32(len(tx.TxOut)); in.Vout++ {
@@ -600,7 +611,7 @@ func expireTime(size int) (t time.Time) {
 
 
 // Make sure to call it with locked TxMutex
-func deleteRejected(bidx [btc.Uint256IdxLen]byte) {
+func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
 		if tr.Wait4Input!=nil {
 			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx.BIdx()]

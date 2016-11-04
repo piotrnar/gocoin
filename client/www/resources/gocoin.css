@@ -157,7 +157,8 @@ td.blstat {
 }
 
 td.blsigops {
-	color:#c00000
+	color:#c00000;
+	font-size:9px;
 }
 
 td.blreward {

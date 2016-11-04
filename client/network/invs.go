@@ -12,22 +12,19 @@ import (
 
 
 const (
+	MSG_WITNESS_FLAG = 0x40000000
+
 	MSG_TX = 1
 	MSG_BLOCK = 2
 	MSG_CMPCT_BLOCK = 4
+	MSG_WITNESS_TX = MSG_TX | MSG_WITNESS_FLAG
+	MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG
 )
 
 
 func blockReceived(bh *btc.Uint256) (ok bool) {
 	MutexRcv.Lock()
 	_, ok = ReceivedBlocks[bh.BIdx()]
-	MutexRcv.Unlock()
-	return
-}
-
-func blockPending(bh *btc.Uint256) (ok bool) {
-	MutexRcv.Lock()
-	_, ok = BlocksToGet[bh.BIdx()]
 	MutexRcv.Unlock()
 	return
 }
@@ -71,11 +68,12 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		typ := binary.LittleEndian.Uint32(pl[of:of+4])
 		c.Mutex.Lock()
 		c.InvStore(typ, pl[of+4:of+36])
+		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
 		common.CountSafe(fmt.Sprint("InvGot-",typ))
 		if typ==MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4:of+36])
-			if !c.X.AllHeadersReceived {
+			if !ahr {
 				common.CountSafe("InvBlockIgnored")
 			} else {
 				if !blockReceived(bhash) {
@@ -89,7 +87,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						c.X.GetBlocksDataNow = true
 					} else {
 						common.CountSafe("InvBlockNew")
-						c.X.AllHeadersReceived = false
+						c.ReceiveHeadersNow()
 						//println(c.PeerAddr.Ip(), c.Node.Version, "possibly new block", bhash.String())
 					}
 					MutexRcv.Unlock()
@@ -244,7 +242,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 			typ := binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])
 			c.InvStore(typ, (*c.PendingInvs[i])[4:36])
 			if typ==MSG_BLOCK {
-				if c.Node.SendCmpct && c.Node.HighBandwidth {
+				if c.Node.SendCmpctVer>=1 && c.Node.HighBandwidth {
 					c_blk = append(c_blk, btc.NewUint256((*c.PendingInvs[i])[4:]))
 					inv_sent_otherwise = true
 				} else if c.Node.SendHeaders {

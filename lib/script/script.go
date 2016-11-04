@@ -13,7 +13,7 @@ import (
 )
 
 
-type VerifyConsensusFunction func(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool)
+type VerifyConsensusFunction func(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool)
 
 var (
 	DBG_SCR = false
@@ -30,33 +30,42 @@ const (
 	VER_NULLDUMMY = 1<<4
 	VER_SIGPUSHONLY = 1<<5
 	VER_MINDATA = 1<<6
-	VER_BLOCK_OPS = 1<<7
+	VER_BLOCK_OPS = 1<<7 // othewise known as DISCOURAGE_UPGRADABLE_NOPS
 	VER_CLEANSTACK = 1<<8
 	VER_CLTV = 1<<9
 	VER_CSV = 1<<10
+	VER_WITNESS = 1<<11
+	VER_WITNESS_PROG = 1<<12 // DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM
+	VER_MINIMALIF = 1<<13
+	VER_NULLFAIL = 1<<14
+	VER_WITNESS_PUBKEY = 1 << 15 // WITNESS_PUBKEYTYPE
 
-	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | //VER_LOW_S |
-		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV
+	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
+		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV |
+		VER_WITNESS | VER_WITNESS_PROG | VER_MINIMALIF | VER_NULLFAIL | VER_WITNESS_PUBKEY
 
 	LOCKTIME_THRESHOLD = 500000000
 	SEQUENCE_LOCKTIME_DISABLE_FLAG = 1<<31
 
 	SEQUENCE_LOCKTIME_TYPE_FLAG = 1 << 22
 	SEQUENCE_LOCKTIME_MASK = 0x0000ffff
+
+	SIGVERSION_BASE = 0
+	SIGVERSION_WITNESS_V0 = 1
 )
 
 
-func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
 	if VerifyConsensus!=nil {
 		defer func() {
 			// We call CompareToConsensus inside another function to wait for final "result"
-			VerifyConsensus(pkScr, i, tx, ver_flags, result)
+			VerifyConsensus(pkScr, amount, i, tx, ver_flags, result)
 		}()
 	}
 
 	sigScr := tx.TxIn[i].ScriptSig
 
-	if (ver_flags & VER_SIGPUSHONLY) != 0 && !IsPushOnly(sigScr) {
+	if (ver_flags & VER_SIGPUSHONLY) != 0 && !btc.IsPushOnly(sigScr) {
 		if DBG_ERR {
 			fmt.Println("Not push only")
 		}
@@ -71,7 +80,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 	}
 
 	var stack, stackCopy scrStack
-	if !evalScript(sigScr, &stack, tx, i, ver_flags) {
+	if !evalScript(sigScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -97,7 +106,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		}
 	}
 
-	if !evalScript(pkScr, &stack, tx, i, ver_flags) {
+	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -120,6 +129,51 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		return
 	}
 
+    // Bare witness programs
+	var witnessversion int
+	var witnessprogram []byte
+	var hadWitness bool
+	var witness witness_ctx
+
+	if (ver_flags&VER_WITNESS) != 0 {
+		if tx.SegWit!=nil {
+			for _, wd := range tx.SegWit[i] {
+				witness.stack.push(wd)
+			}
+		}
+
+		witnessversion, witnessprogram = btc.IsWitnessProgram(pkScr)
+		if DBG_SCR {
+			fmt.Println("------------witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+		}
+		if witnessprogram!=nil {
+			hadWitness = true
+			if len(sigScr) != 0 {
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED")
+				}
+				return
+			}
+			if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+				if DBG_ERR {
+					fmt.Println("VerifyWitnessProgram failed A")
+				}
+				return false
+			}
+			// Bypass the cleanstack check at the end. The actual stack is obviously not clean
+			// for witness programs.
+			stack.resize(1);
+		} else {
+			if DBG_SCR {
+				fmt.Println("No witness program")
+			}
+		}
+	} else {
+		if DBG_SCR {
+			fmt.Println("Witness flag off")
+		}
+	}
+
 	// Additional validation for spend-to-script-hash transactions:
 	if (ver_flags&VER_P2SH)!=0 && btc.IsPayToScript(pkScr) {
 		if DBG_SCR {
@@ -132,7 +186,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 		if DBG_SCR {
 			fmt.Println("sigScr len", len(sigScr), hex.EncodeToString(sigScr))
 		}
-		if !IsPushOnly(sigScr) {
+		if !btc.IsPushOnly(sigScr) {
 			if DBG_ERR {
 				fmt.Println("P2SH is not push only")
 			}
@@ -147,7 +201,7 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, &stack, tx, i, ver_flags) {
+		if !evalScript(pubKey2, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
@@ -167,6 +221,36 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			}
 			return
 		}
+
+		if (ver_flags & VER_WITNESS)!=0 {
+			witnessversion, witnessprogram = btc.IsWitnessProgram(pubKey2)
+			if DBG_SCR {
+				fmt.Println("============witnessversion:", witnessversion, "   witnessprogram:", hex.EncodeToString(witnessprogram))
+			}
+			if witnessprogram!=nil {
+				hadWitness = true
+				bt := new(bytes.Buffer)
+				btc.WritePutLen(bt, uint32(len(pubKey2)))
+				bt.Write(pubKey2)
+				if !bytes.Equal(sigScr, bt.Bytes()) {
+					if DBG_ERR {
+						fmt.Println(hex.EncodeToString(sigScr))
+						fmt.Println(hex.EncodeToString(bt.Bytes()))
+						fmt.Println("SCRIPT_ERR_WITNESS_MALLEATED_P2SH")
+					}
+					return
+				}
+				if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+					if DBG_ERR {
+						fmt.Println("VerifyWitnessProgram failed B")
+					}
+					return false
+				}
+				// Bypass the cleanstack check at the end. The actual stack is obviously not clean
+				// for witness programs.
+				stack.resize(1);
+			}
+		}
 	}
 
 	if (ver_flags & VER_CLEANSTACK) != 0 {
@@ -174,11 +258,26 @@ func VerifyTxScript(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32) (result b
 			panic("VER_CLEANSTACK without VER_P2SH")
 		}
 		if DBG_SCR {
-			println("stack size", stack.size())
+			fmt.Println("stack size", stack.size())
 		}
 		if stack.size()!=1 {
 			if DBG_ERR {
 				fmt.Println("Stack not clean")
+			}
+			return
+		}
+	}
+
+	if (ver_flags&VER_WITNESS)!=0 {
+		// We can't check for correct unexpected witness data if P2SH was off, so require
+		// that WITNESS implies P2SH. Otherwise, going from WITNESS->P2SH+WITNESS would be
+		// possible, which is not a softfork.
+		if (ver_flags&VER_P2SH) == 0 {
+			panic("VER_WITNESS must be used with P2SH")
+		}
+		if !hadWitness && !witness.IsNull() {
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_WITNESS_UNEXPECTED", len(tx.SegWit))
 			}
 			return
 		}
@@ -196,9 +295,10 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32) bool {
+func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigversion int) bool {
 	if DBG_SCR {
-		fmt.Println("script len", len(p))
+		fmt.Println("evalScript len", len(p), "amount", amount, "inp", inp, "flagz", ver_flags, "sigver", sigversion)
+		stack.print()
 	}
 
 
@@ -318,10 +418,24 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 							}
 							return false
 						}
-						if opcode == 0x63/*OP_IF*/ {
-							val = stack.popBool()
-						} else {
-							val = !stack.popBool()
+						vch := stack.pop()
+						if sigversion==SIGVERSION_WITNESS_V0 && (ver_flags&VER_MINIMALIF)!=0 {
+							if len(vch)>1 {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_MINIMALIF-1")
+								}
+								return false
+							}
+							if len(vch)==1 && vch[0]!=1 {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_MINIMALIF-2")
+								}
+								return false
+							}
+						}
+						val = bts2bool(vch)
+						if opcode == 0x64/*OP_NOTIF*/ {
+							val = !val
 						}
 					}
 					if DBG_SCR {
@@ -814,35 +928,61 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 						}
 						return false
 					}
-					var ok bool
-					pk := stack.pop()
-					si := stack.pop()
+					var fSuccess bool
+					vchSig := stack.top(-2)
+					vchPubKey := stack.top(-1)
 
 					// BIP-0066
-					if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
+					if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
 						if DBG_ERR {
 							fmt.Println("Invalid Signature Encoding A")
 						}
 						return false
 					}
 
-					if len(si)>0 {
-						sh := tx.SignatureHash(delSig(p[sta:], si), inp, int32(si[len(si)-1]))
-						ok = btc.EcdsaVerify(pk, si, sh)
+					if len(vchSig)>0 {
+						var sh []byte
+						if sigversion==SIGVERSION_WITNESS_V0 {
+							if DBG_SCR {
+								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(vchSig[len(vchSig)-1]))
+							}
+							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(vchSig[len(vchSig)-1]))
+						} else {
+							sh = tx.SignatureHash(delSig(p[sta:], vchSig), inp, int32(vchSig[len(vchSig)-1]))
+						}
+						if DBG_SCR {
+							fmt.Println("EcdsaVerify", hex.EncodeToString(sh))
+							fmt.Println(" key:", hex.EncodeToString(vchPubKey))
+							fmt.Println(" sig:", hex.EncodeToString(vchSig))
+						}
+						fSuccess = btc.EcdsaVerify(vchPubKey, vchSig, sh)
+						if DBG_SCR {
+							fmt.Println(" ->", fSuccess)
+						}
 					}
-					if !ok && DBG_ERR {
+					if !fSuccess && DBG_SCR {
 						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
 					}
 
+					if !fSuccess && (ver_flags&VER_NULLFAIL)!=0 && len(vchSig)>0 {
+						if DBG_ERR {
+							fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-1")
+						}
+						return false
+					}
+
+					stack.pop()
+					stack.pop()
+
 					if DBG_SCR {
-						fmt.Println("ver:", ok)
+						fmt.Println("ver:", fSuccess)
 					}
 					if opcode==0xad {
-						if !ok { // OP_CHECKSIGVERIFY
+						if !fSuccess { // OP_CHECKSIGVERIFY
 							return false
 						}
 					} else { // OP_CHECKSIG
-						stack.pushBool(ok)
+						stack.pushBool(fSuccess)
 					}
 
 				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
@@ -871,6 +1011,9 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 					i++
 					ikey := i
+					// ikey2 is the position of last non-signature item in the stack. Top stack item = 1.
+					// With SCRIPT_VERIFY_NULLFAIL, this is used for cleanup if operation fails.
+					ikey2 := keyscnt + 2
 					i += int(keyscnt)
 					if stack.size()<i {
 						if DBG_ERR {
@@ -896,26 +1039,34 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 
 					xxx := p[sta:]
-					for k:=0; k<int(sigscnt); k++ {
-						xxx = delSig(xxx, stack.top(-isig-k))
+					if sigversion!=SIGVERSION_WITNESS_V0 {
+						for k:=0; k<int(sigscnt); k++ {
+							xxx = delSig(xxx, stack.top(-isig-k))
+						}
 					}
 
 					success := true
 					for sigscnt > 0 {
-						pk := stack.top(-ikey)
-						si := stack.top(-isig)
+						vchPubKey := stack.top(-ikey)
+						vchSig := stack.top(-isig)
 
 						// BIP-0066
-						if !CheckSignatureEncoding(si, ver_flags) || !CheckPubKeyEncoding(pk, ver_flags) {
+						if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
 							if DBG_ERR {
 								fmt.Println("Invalid Signature Encoding B")
 							}
 							return false
 						}
 
-						if len(si) > 0 {
-							sh := tx.SignatureHash(xxx, inp, int32(si[len(si)-1]))
-							if btc.EcdsaVerify(pk, si, sh) {
+						if len(vchSig) > 0 {
+							var sh []byte
+
+							if sigversion==SIGVERSION_WITNESS_V0 {
+								sh = tx.WitnessSigHash(xxx, amount, inp, int32(vchSig[len(vchSig)-1]))
+							} else {
+								sh = tx.SignatureHash(xxx, inp, int32(vchSig[len(vchSig)-1]))
+							}
+							if btc.EcdsaVerify(vchPubKey, vchSig, sh) {
 								isig++
 								sigscnt--
 							}
@@ -931,8 +1082,21 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 							break
 						}
 					}
+
+					// Clean up stack of actual arguments
 					for i > 1 {
 						i--
+
+						if !success && (ver_flags&VER_NULLFAIL)!=0 && ikey2==0 && len(stack.top(-1))>0 {
+							if DBG_ERR {
+								fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-2")
+							}
+							return false
+						}
+						if ikey2>0 {
+							ikey2--
+						}
+
 						stack.pop()
 					}
 
@@ -967,7 +1131,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 
 					if DBG_SCR {
-						println("OP_CHECKLOCKTIMEVERIFY...")
+						fmt.Println("OP_CHECKLOCKTIMEVERIFY...")
 					}
 
 					if stack.size()<1 {
@@ -1006,8 +1170,8 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 
 					if DBG_SCR {
-						println("locktime > int64(tx.Lock_time)", locktime, int64(tx.Lock_time))
-						println(" ... seq", len(tx.TxIn), inp, tx.TxIn[inp].Sequence)
+						fmt.Println("locktime > int64(tx.Lock_time)", locktime, int64(tx.Lock_time))
+						fmt.Println(" ... seq", len(tx.TxIn), inp, tx.TxIn[inp].Sequence)
 					}
 
 					// Actually compare the specified lock time with the transaction.
@@ -1036,7 +1200,7 @@ func evalScript(p []byte, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32
 					}
 
 					if DBG_SCR {
-						println("OP_CHECKSEQUENCEVERIFY...")
+						fmt.Println("OP_CHECKSEQUENCEVERIFY...")
 					}
 
 					if stack.size()<1 {
@@ -1152,22 +1316,6 @@ func delSig(where, sig []byte) (res []byte) {
 		idx+= n
 	}
 	return
-}
-
-
-func IsPushOnly(scr []byte) bool {
-	idx := 0
-	for idx<len(scr) {
-		op, _, n, e := btc.GetOpcode(scr[idx:])
-		if e != nil {
-			return false
-		}
-		if op > btc.OP_16 {
-			return false
-		}
-		idx += n
-	}
-	return true
 }
 
 
@@ -1308,8 +1456,22 @@ func IsCompressedOrUncompressedPubKey(pk []byte) bool {
 	return true
 }
 
-func CheckPubKeyEncoding(pk []byte, flags uint32) bool {
+func IsCompressedPubKey(pk []byte) bool {
+	if len(pk) != 33 {
+		return false
+	}
+	if pk[0] == 0x02 || pk[0] == 0x03 {
+		return true
+	}
+	return false
+}
+
+func CheckPubKeyEncoding(pk []byte, flags uint32, sigversion int) bool {
 	if (flags&VER_STRICTENC)!=0 && !IsCompressedOrUncompressedPubKey(pk) {
+		return false
+	}
+	// Only compressed keys are accepted in segwit
+	if (flags&VER_WITNESS_PUBKEY)!=0 && sigversion==SIGVERSION_WITNESS_V0 && !IsCompressedPubKey(pk) {
 		return false
 	}
 	return true

@@ -36,6 +36,7 @@ const (
 
 	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache fro that long, drop it*/
 
+	MAX_PEERS_BLOCKS_IN_PROGRESS = 500
 	MAX_BLOCKS_FORWARD_CNT = 5000 // Never ask for a block higher than current top + this value
 	MAX_BLOCKS_FORWARD_SIZ = 50e6
 	MAX_GETDATA_FORWARD = 2e6 // 2 times maximum block size
@@ -44,6 +45,8 @@ const (
 	NO_INV_TIMEOUT = 15*time.Minute
 
 	MAX_INV_HISTORY = 500
+
+	SERVICE_SEGWIT = 0x8
 )
 
 
@@ -70,7 +73,7 @@ type NetworkNodeStruct struct {
 	SendHeaders bool
 
 	// BIP152:
-	SendCmpct bool
+	SendCmpctVer uint64
 	HighBandwidth bool
 }
 
@@ -84,9 +87,12 @@ type ConnectionStatus struct {
 	OurGetAddrDone bool // Whether we shoudl issue another "getaddr"
 
 	AllHeadersReceived bool // keep sending getheaders until this is not set
+	LastHeadersEmpty bool
+	TotalNewHeadersCount int
 	GetHeadersInProgress bool
+	GetHeadersTimeout time.Time
+	LastHeadersHeightAsk uint32
 	GetBlocksDataNow bool
-	LastFetchTried time.Time
 
 	LastSent time.Time
 	MaxSentBufSize int
@@ -100,6 +106,7 @@ type ConnectionStatus struct {
 
 	GetAddrDone bool
 	MinFeeSPKB int64  // BIP 133
+	TxsReceived int
 }
 
 type ConnInfo struct {
@@ -159,7 +166,7 @@ type OneConnection struct {
 	// Statistics:
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 
-	GetBlockInProgress map[[btc.Uint256IdxLen]byte] *oneBlockDl
+	GetBlockInProgress map[BIDX] *oneBlockDl
 
 	// Ping stats
 	LastPingSent time.Time
@@ -169,7 +176,10 @@ type OneConnection struct {
 
 	blocksreceived []time.Time
 	nextMaintanence time.Time
+	nextGetData time.Time
 }
+
+type BIDX [btc.Uint256IdxLen]byte
 
 type oneBlockDl struct {
 	hash *btc.Uint256
@@ -187,7 +197,7 @@ type BCmsg struct {
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
 	c.PeerAddr = ad
-	c.GetBlockInProgress = make(map[[btc.Uint256IdxLen]byte] *oneBlockDl)
+	c.GetBlockInProgress = make(map[BIDX] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
@@ -470,7 +480,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "inv": return 3+50000*36 // the spec says "max 50000 entries"
 		case "tx": return 100e3 // max tx size 100KB
 		case "addr": return 3+1000*30 // max 1000 addrs
-		case "block": return 1e6+4 // max block size 1MB
+		case "block": return 5e6+4 // max segwit block size 5MB
 		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
 		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
 		case "headers": return 3+50000*36 // the spec says "max 50000 entries"

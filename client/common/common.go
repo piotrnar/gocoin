@@ -15,7 +15,7 @@ const (
 
 	Version = uint32(70014)
 	DefaultUserAgent = "/Gocoin:"+gocoin.Version+"/"
-	Services = uint64(0x00000001)
+	Services = uint64(0x00000009)
 )
 
 var (
@@ -24,11 +24,7 @@ var (
 	Magic [4]byte
 	Testnet bool
 
-	Last struct {
-		sync.Mutex // use it for writing and reading from non-chain thread
-		Block *chain.BlockTreeNode
-		time.Time
-	}
+	Last TheLastBlock
 
 	GocoinHomeDir string
 	StartTime time.Time
@@ -57,6 +53,21 @@ var (
 	BlockExpireEvery time.Duration
 	PingPeerEvery time.Duration
 )
+
+
+type TheLastBlock struct {
+	sync.Mutex // use it for writing and reading from non-chain thread
+	Block *chain.BlockTreeNode
+	time.Time
+}
+
+
+func (b *TheLastBlock) BlockHeight() (res uint32) {
+	b.Mutex.Lock()
+	res = b.Block.Height
+	b.Mutex.Unlock()
+	return
+}
 
 
 func CountSafe(k string) {

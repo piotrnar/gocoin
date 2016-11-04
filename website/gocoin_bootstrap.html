@@ -5,10 +5,15 @@
 <body>
 <h1>Bootstraping</h1>
 Since Gocoin's client is a so-called <i>full node</i>,&nbsp;the initial block chain synchronization is quite a time consuming operation.<br>
-In the best case scenario it may take you about one hour, though you need to use a certain tricks in order to achieve such a short time.<br>
 <br>
-If you just start the client and let it to download the blocks, it may take days, so using the tricks is certainly worth it.<br>
+With a good internet connection you may speed up the process quite much by starting the client with <code>-v -trust</code> switches.<br>
 <br>
+Switch <code>-v</code> causes the node to only maintain UTXO database in memory.
+It writes the content of the database to disk when you are shutting down the client properly.
+<br>
+<br>
+Switch <code>-trust</code> makes the node to treat each new downloaded block as trusted, thus not verifying the scripts inside its transactions.
+After syncing your chain with this switch on, it is important to check the hash of the last received block (e.g. comparing it with a value from a trusted block explorer).
 
 <h2>Import from Satoshi</h2>
 When you run the client node for the first time, it will look for the satoshi's client (otherwise known as: <i>bitcoin-qt</i>, <i>bitcoind</i> or <i>bitcoin core</i>) database in its default location (e.g. <code>~/.bitcoin/blocks</code> or <code>%appdata%\Bitcoin\blocks</code>).<br>
@@ -20,45 +25,7 @@ There is also a separate tool called <b>importblocks</b> that you can use to do 
 Start the tool without parameters and it will tell you how to use it.<br>
 While importing the blockchain using this tool, make sure that your node is not running.<br>
 <br>
-In both cases, the operation might take like an hour, or even more, but it is one time only.<br>
-<br>
-
-<h2>Use the downloader</h2>
-In case if you don't have the satoshi's client, with up to date database.<br>
-There is a special tool called <b>downloader</b> that can&nbsp;download&nbsp;block chain at quite an impressive speed, directly from bitcoin peer-to-peer network.<br>
-Running the downloader make sure the client is not running at the same time, since both the apps are supposed to operate on the same database files.<br>
-<br>
-
-<b>Seed node</b><br>
-If you want, for additional security, you may specify IP of the node from which blocks' headers will be downloaded.<br>
-To do so, use&nbsp;"-s &lt;IP&gt;" command line switch&nbsp;<br>
-<br>
-
-<b>Highest trusted block</b><br>
-One important thing that the downloader gets&nbsp;advantage&nbsp;of is assuming all the blocks up to a certain one as trusted, thus saving time on verifying scripts inside them.<br>
-You can specify the hash of the highest block you trust, using "<code>-trust &lt;block_hash&gt;</code>" command line switch.<br>
-<br>
-
-<b>Skip building UTXO db</b><br>
-If you have a limited system memory, you may want to use&nbsp;<i>downloader</i>&nbsp;with "<code>-b</code>" switch to skip updating of the unspent database.<br>
-The downloading process will go much faster then, but later you will need to wait for the unspent database to built itself up,&nbsp;anyway.<br>
-<br>
-
-<b>Excessive</b><b>&nbsp;memory usage</b><br>
-Another thing that can help with&nbsp;excessive&nbsp;memory consumption is decreasing the garbage collector&nbsp;threshold&nbsp;- e.g. set it to 25% by using "<code>-g 25</code>" switch.<br>
-It sometimes also helps to quit the&nbsp;downloader&nbsp;("q" text command) and start it again, just to free the memory.&nbsp;<br>
-While the&nbsp;downloaded&nbsp;is running you may monitor its memory consumption using the text command "m".<br>
-<br>
-
-<b>Other command line options</b><br>
-To see more available command line switches, execute:<br>
-&nbsp; &nbsp; <code>downloader -h</code><br>
-<br>
-
-<b>Verify last trusted block</b><br>
-When run, after fetching all the blocks' headers, the downloader prints hash of the last block it is going to assume as trusted.<br>
-For security you can verify this hash against any blockchain reference you want (e.g. look it up in <a href="http://blockchain.info">blockchain.info</a>).<br>
-<br>
+In both cases, the operation might take a long time, but it is one time only.<br>
 
 </body>
 </html>

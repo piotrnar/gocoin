@@ -1,3 +1,10 @@
+1.8.0
+* Segregated Witness related functionality and many other changes here and there
+* Client: drop_worst_peer - do not drop peers that send new transactions
+* Client: Requires new consensus lib (from bitcon-core 0.13.1)
+* Client: Added "-trust" switch, with which client should be as fast as downloader
+* Downloader: replaced by "client -trust" and removed from the source base
+
 1.7.4
 * Lib: Fixed rejecting of too big blocks
 * Client: Added TX_REJECTED_RBF_100 to the rejection reasons

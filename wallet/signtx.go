@@ -78,7 +78,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 
 func write_tx_file(tx *btc.Tx) {
 	signedrawtx := tx.Serialize()
-	tx.Hash = btc.NewSha2Hash(signedrawtx)
+	tx.SetHash(signedrawtx)
 
 	hs := tx.Hash.String()
 	fmt.Println("TxID", hs)

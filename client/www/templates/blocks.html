@@ -119,6 +119,12 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'bold'
 				td.innerText = (cs[i].Size/1000.0).toFixed(1)
+				if (cs[i].NonWitnessSize>0 && cs[i].NonWitnessSize!=cs[i].Size) {
+					td.style.color = 'blue'
+					td.title = cs[i].Size + ' -> ' + cs[i].NonWitnessSize
+					//(cs[i].NonWitnessSize/1000.0).toFixed(1)
+				}
+
 
 				td = row.insertCell(-1)
 				td.className = 'blreward'
@@ -178,7 +184,9 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'blstat'
-				if (cs[i].TimeVer>0)  td.innerText = cs[i].TimeVer
+				if (cs[i].TimeVer>0) {
+					td.innerText = cs[i].TimeVer - cs[i].TimeQue
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'

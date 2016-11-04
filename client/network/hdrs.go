@@ -59,16 +59,17 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	node := common.BlockChain.AcceptHeader(bl)
-	LastCommitedHeader = node
-	//println("checked ok - height", node.Height)
 	b2g = &OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0}
-	BlocksToGet[bl.Hash.BIdx()] = b2g
+	AddB2G(b2g)
+	LastCommitedHeader = node
 
 	return PH_STATUS_NEW, b2g
 }
 
 
-func (c *OneConnection) HandleHeaders(pl []byte) {
+func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
+	var highest_block_found uint32
+
 	c.X.GetHeadersInProgress = false
 
 	b := bytes.NewReader(pl)
@@ -77,8 +78,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		println("HandleHeaders:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
-
-	var new_headers_got int
 
 	if cnt>0 {
 		MutexRcv.Lock()
@@ -100,7 +99,6 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 				return
 			}
 
-
 			sta, b2g := c.ProcessNewHeader(hdr[:])
 			if b2g==nil {
 				if sta==PH_STATUS_FATAL {
@@ -115,6 +113,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 				if sta==PH_STATUS_NEW {
 					new_headers_got++
 				}
+				if b2g.Block.Height > highest_block_found {
+					highest_block_found = b2g.Block.Height
+				}
 				if c.Node.Height < b2g.Block.Height {
 					c.Node.Height = b2g.Block.Height
 				}
@@ -124,9 +125,22 @@ func (c *OneConnection) HandleHeaders(pl []byte) {
 		}
 	}
 
+	c.Mutex.Lock()
+	c.X.LastHeadersEmpty = highest_block_found <= c.X.LastHeadersHeightAsk
+	c.X.TotalNewHeadersCount += new_headers_got
 	if new_headers_got==0 {
 		c.X.AllHeadersReceived = true
 	}
+	c.Mutex.Unlock()
+
+	return
+}
+
+
+func (c *OneConnection) ReceiveHeadersNow() {
+	c.Mutex.Lock()
+	c.X.AllHeadersReceived = false
+	c.Mutex.Unlock()
 }
 
 
@@ -267,5 +281,7 @@ func (c *OneConnection) sendGetHeaders() {
 	btc.WriteVlen(bhdr, cnt)
 
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
+	c.X.LastHeadersHeightAsk = lb.Height
 	c.X.GetHeadersInProgress = true
+	c.X.GetHeadersTimeout = time.Now().Add(NO_DATA_TIMEOUT)
 }

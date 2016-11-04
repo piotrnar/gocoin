@@ -2,8 +2,8 @@ package btc
 
 import (
 	"sync"
+	"bytes"
 	"errors"
-	"encoding/hex"
 	"encoding/binary"
 )
 
@@ -17,10 +17,11 @@ type Block struct {
 
 	// These flags are set during chain.(Pre/Post)CheckBlock and used later (e.g. by script.VerifyTxScript):
 	VerifyFlags uint32
-	Majority_v2, Majority_v3, Majority_v4 uint
 	Height uint32
-	Sigops uint32
+	SigopsCost uint32
 	MedianPastTime uint32
+
+	OldData []byte // all the block's transactions stripped from witnesses
 }
 
 
@@ -66,13 +67,6 @@ func (bl *Block)Bits() uint32 {
 }
 
 
-func (bl *Block) SerializedSize() int {
-	cnt, off := VLen(bl.Raw[80:])
-	return 80 + VLenSize(uint64(cnt)) + len(bl.Raw)-80-off
-}
-
-
-
 // Parses block's transactions and adds them to the structure, calculating hashes BTW.
 // It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 func (bl *Block) BuildTxList() (e error) {
@@ -89,61 +83,54 @@ func (bl *Block) BuildTxList() (e error) {
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
+	var data2hash, witness2hash []byte
+
+	old_format_block := new(bytes.Buffer)
+	old_format_block.Write(bl.Raw[:80])
+	WriteVlen(old_format_block, uint64(bl.TxCount))
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		if bl.Txs[i] == nil || n==0 {
 			e = errors.New("NewTx failed")
-			println("txf", n, hex.EncodeToString(bl.Raw[offs:]))
 			break
 		}
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
 		if i==0 {
+			bl.Txs[i].wTxID = new(Uint256) // all zeros
 			for _, ou := range bl.Txs[0].TxOut {
 				ou.WasCoinbase = true
 			}
 		}
-		wg.Add(1)
-		go func(h **Uint256, b []byte) {
-			*h = NewSha2Hash(b) // Calculate tx hash in a background
-			wg.Done()
-		}(&bl.Txs[i].Hash, bl.Raw[offs:offs+n])
-		offs += n
-	}
-
-	wg.Wait()
-	return
-}
-
-
-func (bl *Block) ComputeMerkel() (res []byte, mutated bool) {
-	tx_cnt, offs := VLen(bl.Raw[80:])
-	offs += 80
-
-	mtr := make([][]byte, tx_cnt)
-
-	var wg sync.WaitGroup
-
-	for i:=0; i<tx_cnt; i++ {
-		n := TxSize(bl.Raw[offs:])
-		if n==0 {
-			break
+		if bl.Txs[i].SegWit!=nil {
+			data2hash = bl.Txs[i].Serialize()
+			bl.Txs[i].NoWitSize = uint32(len(data2hash))
+			if i>0 {
+				witness2hash = bl.Txs[i].Raw
+			}
+		} else {
+			data2hash = bl.Txs[i].Raw
+			bl.Txs[i].NoWitSize = bl.Txs[i].NoWitSize
+			witness2hash = nil
 		}
+		old_format_block.Write(data2hash)
 		wg.Add(1)
-		go func(i int, b []byte) {
-			mtr[i] = make([]byte, 32)
-			ShaHash(b, mtr[i])
-			wg.Done() // indicate mission completed
-		}(i, bl.Raw[offs:offs+n])
+		go func(tx *Tx, b, w []byte) {
+			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
+			if w!=nil {
+				tx.wTxID = NewSha2Hash(w)
+			}
+			wg.Done()
+		}(bl.Txs[i], data2hash, witness2hash)
 		offs += n
 	}
 
-	// Wait for all the pending missions to complete...
 	wg.Wait()
 
-	res, mutated = CalcMerkel(mtr)
+	bl.OldData = old_format_block.Bytes()
+
 	return
 }
 

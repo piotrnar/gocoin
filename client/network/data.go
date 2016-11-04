@@ -35,22 +35,39 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		c.InvStore(typ, h[4:36])
 		c.Mutex.Unlock()
 
-		common.CountSafe(fmt.Sprint("GetdataType-",typ))
-		if typ == MSG_BLOCK {
-			bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
+		common.CountSafe(fmt.Sprintf("GetdataType-%x",typ))
+		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
+			crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h[4:]))
+			//bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
 			if er == nil {
+				bl := crec.Data
+				if typ == MSG_BLOCK {
+					// remove witness data from the block
+					if crec.Block==nil {
+						crec.Block, _ = btc.NewBlock(bl)
+					}
+					if crec.Block.OldData==nil {
+						crec.Block.BuildTxList()
+					}
+					//println("block size", len(crec.Data), "->", len(bl))
+					bl = crec.Block.OldData
+				}
 				c.SendRawMsg("block", bl)
 			} else {
 				notfound = append(notfound, h[:]...)
 			}
-		} else if typ == MSG_TX {
+		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
 			// transaction
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked==0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()
-				c.SendRawMsg("tx", tx.Data)
+				if tx.SegWit==nil || typ==MSG_WITNESS_TX {
+					c.SendRawMsg("tx", tx.Data)
+				} else {
+					c.SendRawMsg("tx", tx.Serialize())
+				}
 			} else {
 				TxMutex.Unlock()
 				notfound = append(notfound, h[:]...)
@@ -130,7 +147,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
 		b2g.InProgress--
-		println("Corrupt block received from", conn.PeerAddr.Ip())
+		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
+		//ioutil.WriteFile(hash.String() + ".bin", b, 0700)
 		conn.DoS("BadBlock")
 		MutexRcv.Unlock()
 		return
@@ -155,7 +173,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	conn.Mutex.Unlock()
 
 	ReceivedBlocks[idx] = orb
-	delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
 	MutexRcv.Unlock()
 
@@ -217,92 +235,139 @@ func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (l
 
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
-	avg_block_size := common.GetAverageBlockSize()
-
 	// Need to send getdata...?
 	MutexRcv.Lock()
-	if len(BlocksToGet)>0 && uint(c.BlksInProgress()+1)*avg_block_size <= MAX_GETDATA_FORWARD {
-		// We can issue getdata for this peer
-		// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
+	defer MutexRcv.Unlock()
 
-		common.Last.Mutex.Lock()
-		max_height := common.Last.Block.Height + uint32(MAX_BLOCKS_FORWARD_SIZ/avg_block_size)
-		if max_height > common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT {
-			max_height = common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT
-		}
-		common.Last.Mutex.Unlock()
-		if max_height > c.Node.Height {
-			max_height = c.Node.Height
-		}
+	if LowestIndexToBlocksToGet==0 || len(BlocksToGet)==0 {
+		c.IncCnt("FetchNoBlocksToGet", 1)
+		// wake up in one minute, just in case
+		c.nextGetData = time.Now().Add(60*time.Second)
+		return
+	}
 
-		invs := new(bytes.Buffer)
-		var cnt uint64
-		var cnt_in_progress uint
+	cbip := c.BlksInProgress()
+	if cbip>=MAX_PEERS_BLOCKS_IN_PROGRESS {
+		c.IncCnt("FetchMaxCountInProgress", 1)
+		// wake up in a few seconds, maybe some blocks will complete by then
+		c.nextGetData = time.Now().Add(5*time.Second)
+		return
+	}
 
-		for {
-			var lowest_found *OneBlockToGet
+	avg_block_size := int(common.GetAverageBlockSize())
+	block_data_in_progress := cbip * avg_block_size
 
-			// Get block to fetch:
+	if block_data_in_progress+avg_block_size > MAX_GETDATA_FORWARD {
+		c.IncCnt("FetchMaxBytesInProgress", 1)
+		// wake up in a few seconds, maybe some blocks will complete by then
+		c.nextGetData = time.Now().Add(5*time.Second) // wait for some blocks to complete
+		return
+	}
 
-			for _, v := range BlocksToGet {
-				if v.InProgress==cnt_in_progress && v.Block.Height <= max_height &&
-					(lowest_found==nil || v.Block.Height < lowest_found.Block.Height) {
-						c.Mutex.Lock()
-						if _, ok := c.GetBlockInProgress[v.BlockHash.BIdx()]; !ok {
-							lowest_found = v
-						}
-						c.Mutex.Unlock()
-				}
+
+	var cnt uint64
+	var block_type uint32
+
+	if (c.Node.Services&SERVICE_SEGWIT) != 0 {
+		block_type = MSG_WITNESS_BLOCK
+	} else {
+		block_type = MSG_BLOCK
+	}
+
+	// We can issue getdata for this peer
+	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
+
+	common.Last.Mutex.Lock()
+	max_height := common.Last.Block.Height + uint32(MAX_BLOCKS_FORWARD_SIZ/avg_block_size)
+	if max_height > common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT {
+		max_height = common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT
+	}
+	common.Last.Mutex.Unlock()
+	if max_height > c.Node.Height {
+		max_height = c.Node.Height
+	}
+	if max_height > LastCommitedHeader.Height {
+		max_height = LastCommitedHeader.Height
+	}
+
+	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && (c.Node.Services&SERVICE_SEGWIT)==0 { // no segwit node
+		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
+			max_height = common.BlockChain.Consensus.Enforce_SEGWIT-1
+			if max_height <= common.Last.Block.Height {
+				c.IncCnt("FetchNoWitness", 1)
+				c.nextGetData = time.Now().Add(3600*time.Second) // never do getdata
+				return
 			}
-
-			if lowest_found==nil {
-				cnt_in_progress++
-				if cnt_in_progress>=uint(common.CFG.Net.MaxBlockAtOnce) {
-					break
-				}
-				continue
-			}
-
-			binary.Write(invs, binary.LittleEndian, uint32(2))
-			invs.Write(lowest_found.BlockHash.Hash[:])
-			lowest_found.InProgress++
-			cnt++
-
-			c.Mutex.Lock()
-			c.GetBlockInProgress[lowest_found.BlockHash.BIdx()] =
-				&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now()}
-			c.Mutex.Unlock()
-
-			if c.BlksInProgress()*int(avg_block_size) >= MAX_GETDATA_FORWARD || cnt==2000 {
-				break
-			}
-		}
-
-		if cnt > 0 {
-			bu := new(bytes.Buffer)
-			btc.WriteVlen(bu, uint64(cnt))
-			pl := append(bu.Bytes(), invs.Bytes()...)
-			//println("fetching", cnt, "blocks from", c.PeerAddr.Ip(), len(invs.Bytes()), "...")
-			c.SendRawMsg("getdata", pl)
-			yes = true
-		} else {
-			//println("fetch nothing from", c.PeerAddr.Ip())
-			c.counters["FetchNothing"]++
 		}
 	}
-	MutexRcv.Unlock()
+
+	invs := new(bytes.Buffer)
+	var cnt_in_progress uint
+
+	for {
+		var lowest_found *OneBlockToGet
+
+		// Get block to fetch:
+
+		for bh := LowestIndexToBlocksToGet; bh<=max_height; bh++ {
+			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
+				for _, idx := range idxlst {
+					v := BlocksToGet[idx]
+					if v.InProgress==cnt_in_progress && (lowest_found==nil || v.Block.Height < lowest_found.Block.Height) {
+							c.Mutex.Lock()
+							if _, ok := c.GetBlockInProgress[idx]; !ok {
+								lowest_found = v
+							}
+							c.Mutex.Unlock()
+					}
+				}
+			}
+		}
+
+		if lowest_found==nil {
+			cnt_in_progress++
+			if cnt_in_progress>=uint(common.CFG.Net.MaxBlockAtOnce) {
+				break
+			}
+			continue
+		}
+
+		binary.Write(invs, binary.LittleEndian, block_type)
+		invs.Write(lowest_found.BlockHash.Hash[:])
+		lowest_found.InProgress++
+		cnt++
+
+		c.Mutex.Lock()
+		c.GetBlockInProgress[lowest_found.BlockHash.BIdx()] =
+			&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now()}
+		cbip = len(c.GetBlockInProgress)
+		c.Mutex.Unlock()
+
+		if cbip>=MAX_PEERS_BLOCKS_IN_PROGRESS {
+			break  // no more than 2000 blocks in progress / peer
+		}
+		block_data_in_progress += avg_block_size
+		if block_data_in_progress > MAX_GETDATA_FORWARD {
+			break
+		}
+	}
+
+	if cnt == 0 {
+		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.Block.Height, cnt_in_progress)
+		c.IncCnt("FetchNothing", 1)
+		// wake up in a few seconds, maybe it will be different next time
+		c.nextGetData = time.Now().Add(5*time.Second)
+		return
+	}
+
+	bu := new(bytes.Buffer)
+	btc.WriteVlen(bu, uint64(cnt))
+	pl := append(bu.Bytes(), invs.Bytes()...)
+	//println(c.ConnID, "fetching", cnt, "new blocks ->", cbip)
+	c.SendRawMsg("getdata", pl)
+	yes = true
 
 	return
 }
 
 
-func (c *OneConnection) CheckGetBlockData() bool {
-	if c.X.GetBlocksDataNow {
-		c.X.GetBlocksDataNow = false
-		c.X.LastFetchTried = time.Now()
-		if c.GetBlockData() {
-			return true
-		}
-	}
-	return false
-}

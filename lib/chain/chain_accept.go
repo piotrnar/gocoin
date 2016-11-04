@@ -74,7 +74,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
 			ch.BlockIndexAccess.Unlock()
 		} else {
-			cur.Sigops = bl.Sigops
+			cur.SigopsCost = bl.SigopsCost
 			// ProcessBlockTransactions succeeded, so save the block as "trusted".
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
@@ -122,7 +122,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
 
-		bl.Sigops += uint32(bl.Txs[i].GetLegacySigOpCount())
+		bl.SigopsCost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
 
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
@@ -199,17 +199,19 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 
 				if !tx_trusted { // run VerifyTxScript() in a parallel task
 					wg.Add(1)
-					go func (prv []byte, i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(prv, i, tx, bl.VerifyFlags) {
+					go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
+						if !script.VerifyTxScript(prv, amount, i, tx, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()
-					}(tout.Pk_script, j, bl.Txs[i])
+					}(tout.Pk_script, tout.Value, j, bl.Txs[i])
 				}
 
 				if btc.IsP2SH(tout.Pk_script) {
-					bl.Sigops += uint32(btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
+					bl.SigopsCost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
 				}
+
+				bl.SigopsCost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
 
 				txinsum += tout.Value
 			}
@@ -256,7 +258,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
 	}
 
-	if bl.Sigops > btc.MAX_BLOCK_SIGOPS {
+	if bl.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
 		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 	}
 

@@ -137,20 +137,23 @@ func show_info(par string) {
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
 	discarded := len(network.DiscardedBlocks)
 	cached := len(network.CachedBlocks)
+	b2g_len := len(network.BlocksToGet)
+	b2g_idx_len := len(network.IndexToBlocksToGet)
+	lb2g := network.LowestIndexToBlocksToGet
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
-	fmt.Println("Last Block:", common.Last.Block.BlockHash.String())
-	fmt.Printf("Height: %d @ %s,  Diff: %.0f,  Got: %s ago\n",
-		common.Last.Block.Height,
+	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
+	fmt.Printf("Timestamp: %s,  Diff: %.0f,  Got: %s ago,  ToGetFrom: %d\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
+		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String(),
+		lb2g)
 	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("2006/01/02 15:04:05"), ",   ")
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("NetQueueSize: %d,  NetConns: %d,  Peers: %d\n",
-		len(network.NetBlocks), len(network.OpenCons), peersdb.PeerDB.Count())
+	fmt.Printf("NetQueueSize:%d, NetConns:%d, Peers:%d, B2G:%d/%d\n", len(network.NetBlocks),
+		len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len)
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
@@ -167,7 +170,7 @@ func show_info(par string) {
 	al, sy := sys.MemUsed()
 	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
 		atomic.LoadInt64(&qdb.ExtraMemoryConsumed)>>20, "MB in",
-		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "records")
+		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "recs")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
@@ -275,20 +278,22 @@ func dump_block(s string) {
 		println("Specify block's hash")
 		return
 	}
-	bl, _, e := common.BlockChain.Blocks.BlockGet(h)
-	if e != nil {
-		println(e.Error())
+	crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h.Hash[:]))
+	if er != nil {
+		println(er.Error())
 		return
 	}
-	fn := h.String() + ".bin"
-	f, e := os.Create(fn)
-	if e != nil {
-		println(e.Error())
-		return
+
+	ioutil.WriteFile(h.String() + ".bin", crec.Data, 0700)
+	if crec.Block==nil {
+		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
-	f.Write(bl)
-	f.Close()
-	fmt.Println("Block saved to file:", fn)
+	if crec.Block.OldData==nil {
+		crec.Block.BuildTxList()
+	}
+	ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+
+	fmt.Println("Block saved")
 }
 
 func ui_quit(par string) {
@@ -478,10 +483,19 @@ func analyze_bip9(par string) {
 			}
 			if s!="" {
 				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
-					" block #", start_block, "-", start_block+i-1, ":", s)
+					" block #", start_block, "-", start_block+i-1, ":", s, " - active from", start_block+2*2016)
 			}
 		}
 	}
+}
+
+func switch_trust(par string) {
+	if par=="0" {
+		common.FLAG.TrustAll = false
+	} else if par=="1" {
+		common.FLAG.TrustAll = true
+	}
+	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
 }
 
 func init() {
@@ -505,4 +519,5 @@ func init() {
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
+	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 }

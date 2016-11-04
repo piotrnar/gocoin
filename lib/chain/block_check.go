@@ -13,7 +13,7 @@ import (
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
 	if len(bl.Raw)<81 {
-		er = errors.New("CheckBlock() : size limits failed low - RPC_Result:bad-blk-length")
+		er = errors.New("CheckBlock() : size limits failed - RPC_Result:bad-blk-length")
 		dos = true
 		return
 	}
@@ -82,53 +82,33 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
-	// Count block versions within the Majority Window
-	n := prevblk
-	for cnt:=uint(0); cnt<ch.Consensus.Window && n!=nil; cnt++ {
-		ver := binary.LittleEndian.Uint32(n.BlockHeader[0:4])
-		if ver >= 2 {
-			bl.Majority_v2++
-			if ver >= 3 {
-				bl.Majority_v3++
-				if ver >= 4 {
-					bl.Majority_v4++
-				}
-			}
-		}
-		n = n.Parent
-	}
-
-	if bl.Version()<2 && bl.Majority_v2>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=1 block - RPC_Result:bad-version")
+	if bl.Version() < 2 && bl.Height >= ch.Consensus.BIP34Height ||
+		bl.Version() < 3 && bl.Height >= ch.Consensus.BIP66Height ||
+		bl.Version() < 4 && bl.Height >= ch.Consensus.BIP65Height {
+		// bad block version
+		erstr := fmt.Sprintf("0x%08x", bl.Version())
+		er = errors.New("CheckBlock() : Rejected Version="+erstr+" blolck - RPC_Result:bad-version("+erstr+")")
 		dos = true
 		return
 	}
-
-	if bl.Version()<3 && bl.Majority_v3>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=2 block - RPC_Result:bad-version")
-		dos = true
-		return
-	}
-
-	if bl.Version()<4 && bl.Majority_v4>=ch.Consensus.RejectBlock {
-		er = errors.New("CheckBlock() : Rejected nVersion=3 block - RPC_Result:bad-version")
-		dos = true
-		return
-	}
-
 	return
 }
 
 
 func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
-	if len(bl.Raw)>btc.MAX_BLOCK_SIZE && bl.SerializedSize()>btc.MAX_BLOCK_SIZE {
-		er = errors.New("CheckBlock() : size limits failed high - RPC_Result:bad-blk-length")
+	// Size limits
+	if len(bl.Raw)<81 {
+		er = errors.New("CheckBlock() : size limits failed low - RPC_Result:bad-blk-length")
 		return
 	}
 
 	if bl.Txs==nil {
 		er = bl.BuildTxList()
 		if er != nil {
+			return
+		}
+		if len(bl.OldData) > btc.MAX_BLOCK_SIZE {
+			er = errors.New("CheckBlock() : size limits failed high - RPC_Result:bad-blk-length")
 			return
 		}
 	}
@@ -140,18 +120,20 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 			return
 		}
 
-		if bl.Version()>=2 && bl.Majority_v2>=ch.Consensus.EnforceUpgrade {
-			var exp []byte
-			if bl.Height >= 0x800000 {
-				if bl.Height >= 0x80000000 {
-					exp = []byte{5, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16), byte(bl.Height>>24), 0}
-				} else {
-					exp = []byte{4, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16), byte(bl.Height>>24)}
+		// Enforce rule that the coinbase starts with serialized block height
+		if bl.Height>=ch.Consensus.BIP34Height {
+			var exp [6]byte
+			var exp_len int
+			binary.LittleEndian.PutUint32(exp[1:5], bl.Height)
+			for exp_len=5; exp_len>1; exp_len-- {
+				if exp[exp_len]!=0 || exp[exp_len-1]>=0x80 {
+					break
 				}
-			} else {
-				exp = []byte{3, byte(bl.Height), byte(bl.Height>>8), byte(bl.Height>>16)}
 			}
-			if len(bl.Txs[0].TxIn[0].ScriptSig)<len(exp) || !bytes.Equal(exp, bl.Txs[0].TxIn[0].ScriptSig[:len(exp)]) {
+			exp[0] = byte(exp_len)
+			exp_len++
+
+			if !bytes.HasPrefix(bl.Txs[0].TxIn[0].ScriptSig, exp[:exp_len]) {
 				er = errors.New("CheckBlock() : Unexpected block number in coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-height")
 				return
 			}
@@ -166,13 +148,13 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 
 		// Check Merkle Root - that's importnant
-		merkel, mutated := btc.GetMerkel(bl.Txs)
+		merkle, mutated := btc.GetMerkle(bl.Txs)
 		if mutated {
 			er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
 			return
 		}
 
-		if !bytes.Equal(merkel, bl.MerkleRoot()) {
+		if !bytes.Equal(merkle, bl.MerkleRoot()) {
 			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
 			return
 		}
@@ -184,11 +166,11 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		bl.VerifyFlags = 0
 	}
 
-	if bl.Majority_v3>=ch.Consensus.EnforceUpgrade {
+	if bl.Height >= ch.Consensus.BIP66Height {
 		bl.VerifyFlags |= script.VER_DERSIG
 	}
 
-	if bl.Version()>=4 && bl.Majority_v4>=ch.Consensus.EnforceUpgrade {
+	if bl.Height >= ch.Consensus.BIP65Height {
 		bl.VerifyFlags |= script.VER_CLTV
 	}
 
@@ -196,13 +178,59 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		bl.VerifyFlags |= script.VER_CSV
 	}
 
+	if ch.Consensus.Enforce_SEGWIT!=0 && bl.Height>=ch.Consensus.Enforce_SEGWIT {
+		bl.VerifyFlags |= script.VER_WITNESS | script.VER_NULLDUMMY
+	}
+
 	if !bl.Trusted {
 		var blockTime uint32
+		var had_witness bool
+
 		if (bl.VerifyFlags&script.VER_CSV) != 0 {
 			blockTime = bl.MedianPastTime
 		} else {
 			blockTime = bl.BlockTime()
 		}
+
+		// Verify merkle root of witness data
+		if (bl.VerifyFlags&script.VER_WITNESS)!=0 {
+			var i int
+			for i=len(bl.Txs[0].TxOut)-1; i>=0; i-- {
+				o := bl.Txs[0].TxOut[i]
+				if len(o.Pk_script) >= 38 && bytes.Equal(o.Pk_script[:6], []byte{0x6a,0x24,0xaa,0x21,0xa9,0xed}) {
+					if len(bl.Txs[0].SegWit)!=1 || len(bl.Txs[0].SegWit[0])!=1 || len(bl.Txs[0].SegWit[0][0])!=32 {
+						er = errors.New("CheckBlock() : invalid witness nonce size - RPC_Result:bad-witness-nonce-size")
+						println(er.Error())
+						println(bl.Hash.String(), len(bl.Txs[0].SegWit))
+						return
+					}
+
+					// The malleation check is ignored; as the transaction tree itself
+					// already does not permit it, it is impossible to trigger in the
+					// witness tree.
+					merkle, _ := btc.GetWitnessMerkle(bl.Txs)
+					with_nonce := btc.Sha2Sum(append(merkle, bl.Txs[0].SegWit[0][0]...))
+
+					if !bytes.Equal(with_nonce[:], o.Pk_script[6:38]) {
+						er = errors.New("CheckBlock(): Witness Merkle mismatch - RPC_Result:bad-witness-merkle-match")
+						return
+					}
+
+					had_witness = true
+					break
+				}
+			}
+		}
+
+		if !had_witness {
+			for _, t := range bl.Txs {
+				if t.SegWit!=nil {
+					er = errors.New("CheckBlock(): unexpected witness data found - RPC_Result:unexpected-witness")
+					return
+				}
+			}
+		}
+
 		// Check transactions - this is the most time consuming task
 		if !CheckTransactions(bl.Txs, bl.Height, blockTime) {
 			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")

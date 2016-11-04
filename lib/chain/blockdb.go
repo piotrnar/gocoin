@@ -75,8 +75,6 @@ type BlockDB struct {
 
 
 func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
-	BlockDBConvertIndexFile(dir)
-
 	db = new(BlockDB)
 	db.dirname = dir
 	if db.dirname!="" && db.dirname[len(db.dirname )-1]!='/' && db.dirname[len(db.dirname )-1]!='\\' {
@@ -103,93 +101,6 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 
 func NewBlockDB(dir string) (db *BlockDB) {
 	return NewBlockDBExt(dir, &BlockDBOpts{MaxCachedBlocks:500})
-}
-
-
-// TODO: at some point this function will become obsolete
-func BlockDBConvertIndexFile(dir string) {
-	f, _ := os.Open(dir + "blockchain.idx")
-	if f == nil {
-		if fi, _ := os.Stat(dir+"blockchain_backup.idx"); fi != nil && fi.Size()>0 {
-			fmt.Println("If you don't plan to go back to a version prior 0.9.8, delete this file:\n", dir+"blockchain_backup.idx")
-		}
-		return // nothing to convert
-	}
-	fmt.Println("Converting btc.Block Database to the new format - please be patient!")
-	id, _ := ioutil.ReadAll(f)
-	f.Close()
-
-	fmt.Println(len(id)/92, "blocks in the index")
-
-	f, _ = os.Open(dir + "blockchain.dat")
-	if f == nil {
-		panic("blockchain.dat not found")
-	}
-	defer f.Close()
-
-	var (
-		datlen, sofar, sf2, tmp int64
-		fl, le, he uint32
-		po uint64
-		buf [2*1024*1024]byte  // pre-allocate two 2MB buffers
-		blk []byte
-	)
-
-	if fi, _ := f.Stat(); fi != nil {
-		datlen = fi.Size()
-	} else {
-		panic("Stat() failed on blockchain.dat")
-	}
-
-
-	nidx := new(bytes.Buffer)
-
-	for i:=0; i+92<=len(id); i+=92 {
-		fl = binary.LittleEndian.Uint32(id[i:i+4])
-		he = binary.LittleEndian.Uint32(id[i+68:i+72])
-		po = binary.LittleEndian.Uint64(id[i+80:i+88])
-		le = binary.LittleEndian.Uint32(id[i+88:i+92])
-
-		f.Seek(int64(po), os.SEEK_SET)
-		if _, er := f.Read(buf[:le]); er != nil {
-			panic(er.Error())
-		}
-		if (fl&BLOCK_COMPRSD) != 0 {
-			if (fl&BLOCK_SNAPPED) != 0 {
-				blk, _ = snappy.Decode(nil, buf[:le])
-			} else {
-				gz, _ := gzip.NewReader(bytes.NewReader(buf[:le]))
-				blk, _ = ioutil.ReadAll(gz)
-				gz.Close()
-			}
-		} else {
-			blk = buf[:le]
-		}
-
-		tx_n, _ := btc.VLen(blk[80:])
-
-		binary.Write(nidx, binary.LittleEndian, fl)
-		nidx.Write(id[i+4:i+36])
-		binary.Write(nidx, binary.LittleEndian, he)
-		binary.Write(nidx, binary.LittleEndian, po)
-		binary.Write(nidx, binary.LittleEndian, le)
-		binary.Write(nidx, binary.LittleEndian, uint32(tx_n))
-		nidx.Write(blk[:80])
-
-		sf2 += int64(len(blk))
-		tmp = sofar + int64(le)
-		if ((tmp^sofar) >> 20) != 0 {
-			fmt.Printf("\r%d / %d MB processed so far (%d)  ", tmp>>20, datlen>>20, sf2>>20)
-		}
-		sofar = tmp
-	}
-	fmt.Println()
-
-	fmt.Println("Almost there - just save the new index file... don't you dare to stop now!")
-	ioutil.WriteFile(dir+"blockchain.new", nidx.Bytes(), 0666)
-	os.Rename(dir+"blockchain.idx", dir+"blockchain_backup.idx")
-	fmt.Println("The old index backed up at blockchain_backup.dat")
-	fmt.Println("Conversion done and will not be neded again, unless you downgrade.")
 }
 
 

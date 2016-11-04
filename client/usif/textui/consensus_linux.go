@@ -11,16 +11,19 @@ package textui
 #include <stdio.h>
 #include <dlfcn.h>
 
+
+typedef signed long long int64_t;
+
 unsigned int (*_bitcoinconsensus_version)();
 
-int (*_bitcoinconsensus_verify_script)(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
+int (*_bitcoinconsensus_verify_script_with_amount)(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, int64_t amount,
                                     const unsigned char *txTo        , unsigned int txToLen,
                                     unsigned int nIn, unsigned int flags, void* err);
 
-int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
+int bitcoinconsensus_verify_script_with_amount(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen, int64_t amount,
                                     const unsigned char *txTo        , unsigned int txToLen,
                                     unsigned int nIn, unsigned int flags) {
-	return _bitcoinconsensus_verify_script(scriptPubKey, scriptPubKeyLen, txTo, txToLen, nIn, flags, NULL);
+	return _bitcoinconsensus_verify_script_with_amount(scriptPubKey, scriptPubKeyLen, amount, txTo, txToLen, nIn, flags, NULL);
 }
 
 unsigned int bitcoinconsensus_version() {
@@ -31,8 +34,16 @@ int init_bitcoinconsensus_so() {
 	void *so = dlopen("libbitcoinconsensus.so", RTLD_LAZY);
 	if (so) {
 		*(void **)(&_bitcoinconsensus_version) = dlsym(so, "bitcoinconsensus_version");
-		*(void **)(&_bitcoinconsensus_verify_script) = dlsym(so, "bitcoinconsensus_verify_script");
-		return _bitcoinconsensus_version && _bitcoinconsensus_verify_script;
+		*(void **)(&_bitcoinconsensus_verify_script_with_amount) = dlsym(so, "bitcoinconsensus_verify_script_with_amount");
+		if (!_bitcoinconsensus_version) {
+			printf("libbitcoinconsensus.so not found\n");
+			return 0;
+		}
+		if (!_bitcoinconsensus_verify_script_with_amount) {
+			printf("libbitcoinconsensus.so is too old. Use one of bitcoin-core 0.13.1\n");
+			return 0;
+		}
+		return 1;
 	}
 	return 0;
 }
@@ -58,20 +69,20 @@ var (
 	mut sync.Mutex
 )
 
-func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result bool) {
+func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool) {
 	var tmp []byte
 	if len(pkScr)!=0 {
 		tmp = make([]byte, len(pkScr))
 		copy(tmp, pkScr)
 	}
-	go func(pkScr []byte, txTo []byte, i int, ver_flags uint32, result bool) {
+	go func(pkScr []byte, txTo []byte, amount uint64, i int, ver_flags uint32, result bool) {
 		var pkscr_ptr *C.uchar // default to null
 		var pkscr_len C.uint // default to 0
 		if pkScr != nil {
 			pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
 			pkscr_len = C.uint(len(pkScr))
 		}
-		r1 := int(C.bitcoinconsensus_verify_script(pkscr_ptr, pkscr_len,
+		r1 := int(C.bitcoinconsensus_verify_script_with_amount(pkscr_ptr, pkscr_len, C.int64_t(amount),
 			(*C.uchar)(unsafe.Pointer(&txTo[0])), C.uint(len(txTo)), C.uint(i), C.uint(ver_flags)))
 		res := r1 == 1
 		atomic.AddUint64(&ConsensusChecks, 1)
@@ -91,7 +102,7 @@ func check_consensus(pkScr []byte, i int, tx *btc.Tx, ver_flags uint32, result b
 			println("ver_flags", ver_flags)
 			mut.Unlock()
 		}
-	}(tmp, tx.Serialize(), i, ver_flags, result)
+	}(tmp, tx.Serialize(), amount, i, ver_flags, result)
 }
 
 func consensus_stats(s string) {
@@ -102,7 +113,7 @@ func consensus_stats(s string) {
 
 func init() {
 	if C.init_bitcoinconsensus_so()==0 {
-		fmt.Println("libbitcoinconsensus.so not found")
+		fmt.Println("Not using libbitcoinconsensus.so to ensure consensus rules")
 		return
 	}
 	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to ensure consensus rules")

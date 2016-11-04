@@ -1,3 +1,11 @@
+<style>
+td.agent {
+	//max-width: 50px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap
+}
+</style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <table width="100%">
@@ -14,32 +22,38 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="130"> <!--IP-->
 <col width="20"> <!--in/out icon-->
 <col width="60"> <!--ping-->
-<col width="40"><col width="60"> <!--Last rcvd-->
-<col width="40"><col width="60"> <!--Last sent-->
+<col width="60"> <!--Last rcvd-->
+<col width="60"> <!--Last sent-->
 <col width="80"> <!--total rcvd-->
 <col width="80"> <!--total sent-->
-<col width="50"> <!--vers-->
-<col> <!--agent-->
+<col> <!--node version & agent-->
 <col width="30"> <!--blocks received-->
 <col width="30"> <!--blocks in progress-->
+<col width="30"> <!--txs received-->
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
 	<th colspan="2">Peer Address
 	<th >Ping
-	<th colspan="2">Last rcvd
-	<th colspan="2">Last sent
+	<th>Rcvd
+	<th>Sent
 	<th >Tot In
 	<th >Tot Out
-	<th>Proto
-	<th>Agent
+	<th colspan="3">Node Version
 	<th colspan="2" title="Received / In Progress">Blks
+	<th >Txs
 	<th title="Bytes waiting to be sent">ToSend
 	<th title="Max bytes waiting to be sent">MaxSend
 	<th>&nbsp;
 </tr>
 <!--PEER_ROW-->
 </table>
+<br>
+Node Version Legend:<br>
+&bull; <b>H</b> - Supports BIP130<br>
+&bull; <b>B</b> - Supports Bloom Filtering<br>
+&bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
+&bull; <b>W</b> - Supports Segregate Witness<br>
 <a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
 
 
@@ -68,7 +82,7 @@ function update_connection_info(ci) {
 	s += 'User Agent: ' + ci.Agent + '\n'
 	s += 'Chain Height: ' + ci.Height + '\n'
 	s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpct: ' + ci.SendCmpct + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
+	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpctVer: ' + ci.SendCmpctVer + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
 	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
 	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
 	s += 'Invs  Done:' + ci.InvsDone + '   Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
@@ -225,34 +239,28 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
 
-				// last_bts_rcvd
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].LastBtsRcvd
-
 				// last_cmd_rcvd
 				td = row.insertCell(-1)
 				td.className = 'mono'
+				td.title = cs[i].LastBtsRcvd
 				td.innerHTML = cs[i].LastCmdRcvd
-
-				// last_bts_sent
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.innerHTML = cs[i].LastBtsSent
 
 				// last_cmd_sent
 				td = row.insertCell(-1)
 				td.className = 'mono'
+				td.title = cs[i].LastBtsSent
 				td.innerHTML = cs[i].LastCmdSent
 
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
+				td.noWrap = true
 				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
 
 				// total_sent
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
+				td.noWrap = true
 				td.innerHTML = bignum(cs[i].BytesSent)+'B'
 
 				// node_version
@@ -260,13 +268,30 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.innerHTML = cs[i].Version + (cs[i].DoNotRelayTxs ? '*' : '')
 				td.title = 'Services : 0x' + cs[i].Services.toString(16)
-				if (cs[i].SendCmpct) row.classList.add("bip152")
+
+				//Flags: X-compact blocks,  W - SegWit
+				td = row.insertCell(-1)
+				td.className = 'bold'
+				td.style.textAlign = 'center'
+				var s = ''
+				if (cs[i].SendHeaders) s += 'H'
+				if (cs[i].Services&4) s += 'B'
+				if (cs[i].SendCmpctVer) {
+					s += cs[i].SendCmpctVer
+					if (cs[i].HighBandwidth)  s += '+'
+				}
+				if (cs[i].Services&8) s += 'W'
+				td.innerText = s
 
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
-				td.innerHTML = cs[i].Agent.substr(0,20)
+				//td.noWrap = true
+				//td.width = 50
+				td.className = 'agent'
+				td.innerHTML = cs[i].Agent//.substr(0,20)
 
+				// blocks received
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.noWrap = true
@@ -276,7 +301,28 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.noWrap = true
-				if (cs[i].BlocksInProgress>0) td.innerHTML = cs[i].BlocksInProgress
+				if (cs[i].BlocksInProgress>0) {
+					td.innerHTML = cs[i].BlocksInProgress + ( cs[i].GetHeadersInProgress ? '*' : '')
+				} else if (cs[i].GetHeadersInProgress) {
+					td.innerHTML = '*'
+				}
+
+				/*
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = cs[i].TotalNewHeadersCount
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].LastHeadersEmpty
+				td.title = cs[i].LastHeadersHeightAsk
+				*/
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].TxsReceived>0) td.innerHTML = cs[i].TxsReceived
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
@@ -309,7 +355,7 @@ function refreshconnections() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(refreshconnections, 5000)
+		setTimeout(refreshconnections, 1000)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)

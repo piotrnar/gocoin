@@ -144,7 +144,7 @@ func raw_tx_from_file(fn string) *btc.Tx {
 	}
 	tx, txle := btc.NewTx(dat)
 	if tx != nil {
-		tx.Hash = btc.NewSha2Hash(dat)
+		tx.SetHash(dat)
 		if txle != len(dat) {
 			fmt.Println("WARNING: Raw transaction length mismatch", txle, len(dat))
 		}

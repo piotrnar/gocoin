@@ -15,6 +15,7 @@ type oneinp struct {
 	txid *btc.Uint256
 	vout int
 	pkscr string
+	value uint64
 }
 
 type testvector struct {
@@ -43,8 +44,11 @@ func parserec(vv []interface{}) (ret *testvector) {
 		switch uu := u.(type) {
 			case []interface{}:
 				txid := btc.NewUint256FromString(uu[0].(string))
-				ret.inps = append(ret.inps, oneinp{txid:txid,
-					vout:int(uu[1].(float64)), pkscr:uu[2].(string)})
+				newrec := oneinp{txid:txid, vout:int(uu[1].(float64)), pkscr:uu[2].(string)}
+				if len(uu)>3 {
+					newrec.value = uint64(uu[3].(float64))
+				}
+				ret.inps = append(ret.inps, newrec)
 			default:
 				fmt.Printf(" - %d is of a type %T\n", i, uu)
 		}
@@ -118,8 +122,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		return false
 	}
 	tx.Size = uint32(len(rd))
-	ha := btc.Sha2Sum(rd)
-	tx.Hash = btc.NewUint256(ha[:])
+	tx.SetHash(rd)
 
 	if skip_broken_tests(tx) {
 		return false
@@ -152,7 +155,8 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 			t.Error(er.Error())
 			continue
 		}
-		if VerifyTxScript(pk, i, tx, tv.ver_flags) {
+
+		if VerifyTxScript(pk, tv.inps[j].value, i, tx, tv.ver_flags) {
 			oks++
 		}
 	}
@@ -214,6 +218,9 @@ func TestInvalidTransactions(t *testing.T) {
 			case []interface{}:
 				if len(vv)==3 {
 					cnt++
+					if cnt==64000 {
+						DBG_SCR = true
+					}
 					tv := parserec(vv)
 					if tv.skip!="" {
 						//println(tv.skip)
@@ -222,6 +229,9 @@ func TestInvalidTransactions(t *testing.T) {
 						return
 					}
 					last_descr = ""
+					if cnt==64000 {
+						return
+					}
 				} else if len(vv)==1 {
 					if last_descr=="" {
 						last_descr = vv[0].(string)

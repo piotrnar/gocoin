@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ExpirePeerAfter = (3*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	ExpirePeerAfter = (24*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
 	MinPeersInDB = 512 // Do not expire peers if we have less than this
 )
 
@@ -160,9 +160,9 @@ func (p *PeerAddr) String() (s string) {
 
 	now := uint32(time.Now().Unix())
 	if p.Banned != 0 {
-		s += fmt.Sprintf("  *BAN %3d min ago", (now-p.Banned)/60)
+		s += fmt.Sprintf("  *BAN %5d sec ago", int(now)-int(p.Time))
 	} else {
-		s += fmt.Sprintf("  Seen %3d min ago", (now-p.Time)/60)
+		s += fmt.Sprintf("  Seen %5d sec ago", int(now)-int(p.Time))
 	}
 	return
 }
@@ -224,7 +224,7 @@ func initSeeds(seeds []string, port uint16) {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip)==16 {
 					p := NewEmptyPeer()
-					p.Time = uint32(time.Now().Unix())
+					p.Time = uint32(time.Now().Add(-3600*time.Second).Unix())
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
@@ -270,18 +270,6 @@ func InitPeers(dir string) {
 					"bitseed.xf2.org",
 					}, 8333)
 			} else {
-				for j := range testnet_seeds {
-					ip := net.ParseIP(testnet_seeds[j])
-					if ip != nil && len(ip)==16 {
-						p := NewEmptyPeer()
-						p.Time = uint32(time.Now().Unix())
-						p.Services = 1
-						copy(p.Ip6[:], ip[:12])
-						copy(p.Ip4[:], ip[12:16])
-						p.Port = 18333
-						p.Save()
-					}
-				}
 				initSeeds([]string{
 					//"testnet-seed.bitcoin.petertodd.org",
 					"testnet-seed.bluematt.me",

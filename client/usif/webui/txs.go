@@ -88,7 +88,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		}
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			ok := script.VerifyTxScript(po.Pk_script, po.Value, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
 			if !ok {
 				w.Write([]byte("<status>Script FAILED</status>"))
 			} else {
@@ -103,8 +103,9 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
 
 			if btc.IsP2SH(po.Pk_script) {
-				fmt.Fprint(w, "<input_sigops>", btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig), "</input_sigops>")
+				fmt.Fprint(w, "<input_sigops>", btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig), "</input_sigops>")
 			}
+			fmt.Fprint(w, "<witness_sigops>", tx.CountWitnessSigOps(i, po.Pk_script), "</witness_sigops>")
 		} else {
 			w.Write([]byte("<status>UNKNOWN INPUT</status>"))
 		}
@@ -177,7 +178,7 @@ func output_mempool_tx_xml(w http.ResponseWriter, id string) {
 		fmt.Fprint(w, "<outputs>", len(t2s.TxOut), "</outputs>")
 		w.Write([]byte(fmt.Sprint("<time_received>", t2s.Firstseen.Unix(), "</time_received>")))
 		output_tx_xml(w, t2s.Tx)
-		fmt.Fprint(w, "<tx_sigops>", t2s.Sigops, "</tx_sigops>")
+		fmt.Fprint(w, "<tx_sigops>", t2s.SigopsCost, "</tx_sigops>")
 		fmt.Fprint(w, "<final>", t2s.Final, "</final>")
 		fmt.Fprint(w, "<verify_us>", uint(t2s.VerifyTime/time.Microsecond), "</verify_us>")
 	} else {
@@ -208,7 +209,7 @@ func (tl sortedTxList) Less(i, j int) bool {
 		case "fee":
 			res = tl[j].Fee < tl[i].Fee
 		case "ops":
-			res = tl[j].Sigops < tl[i].Sigops
+			res = tl[j].SigopsCost < tl[i].SigopsCost
 		case "rbf":
 			res = !tl[j].Final && tl[i].Final
 		case "ver":
@@ -332,7 +333,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<own>", v.Own, "</own>")
 		fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
 		fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
-		fmt.Fprint(w, "<sigops>", v.Sigops, "</sigops>")
+		fmt.Fprint(w, "<sigops>", v.SigopsCost, "</sigops>")
 		fmt.Fprint(w, "<sentcnt>", v.SentCnt, "</sentcnt>")
 		fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
 		fmt.Fprint(w, "<volume>", v.Volume, "</volume>")

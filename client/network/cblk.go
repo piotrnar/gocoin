@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"io/ioutil"
 	"encoding/hex"
 	"crypto/sha256"
 	"encoding/binary"
@@ -72,7 +73,6 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 }
 
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
-	//fmt.Println("SendCmpctBlk needs to be implemented")
 	crec := GetchBlockForBIP152(hash)
 	if crec==nil {
 		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
@@ -82,20 +82,29 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	k0 := binary.LittleEndian.Uint64(crec.BIP152[8:16])
 	k1 := binary.LittleEndian.Uint64(crec.BIP152[16:24])
 
-	var msg bytes.Buffer
+	msg := new(bytes.Buffer)
 	msg.Write(crec.Data[:80])
 	msg.Write(crec.BIP152[:8])
-	btc.WriteVlen(&msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
+	btc.WriteVlen(msg, uint64(len(crec.Block.Txs)-1)) // all except coinbase
 	for i:=1; i<len(crec.Block.Txs); i++ {
 		var lsb [8]byte
-		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, crec.Block.Txs[i].Hash.Hash[:]))
+		var hasz *btc.Uint256
+		if c.Node.SendCmpctVer==2 {
+			hasz = crec.Block.Txs[i].WTxID()
+		} else {
+			hasz = crec.Block.Txs[i].Hash
+		}
+		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, hasz.Hash[:]))
 		msg.Write(lsb[:6])
 	}
 	msg.Write([]byte{1}) // one preffiled tx
 	msg.Write([]byte{0}) // coinbase - index 0
-	msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
+	if c.Node.SendCmpctVer==2 {
+		msg.Write(crec.Block.Txs[0].Raw) // coinbase - index 0
+	} else {
+		crec.Block.Txs[0].WriteSerialized(msg) // coinbase - index 0
+	}
 	c.SendRawMsg("cmpctblock", msg.Bytes())
-	//fmt.Println(c.ConnID, "cmpctblock sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
 func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
@@ -120,10 +129,10 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	var exp_idx uint64
-	var msg bytes.Buffer
+	msg := new(bytes.Buffer)
 
 	msg.Write(hash.Hash[:])
-	btc.WriteVlen(&msg, indexes_length)
+	btc.WriteVlen(msg, indexes_length)
 
 	for {
 		idx, er := btc.ReadVLen(req)
@@ -138,7 +147,11 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 			c.DoS("GetBlockTxnIdx+")
 			return
 		}
-		msg.Write(crec.Block.Txs[idx].Raw)
+		if c.Node.SendCmpctVer==2 {
+			msg.Write(crec.Block.Txs[idx].Raw) // coinbase - index 0
+		} else {
+			crec.Block.Txs[idx].WriteSerialized(msg) // coinbase - index 0
+		}
 		if indexes_length==1 {
 			break
 		}
@@ -147,7 +160,6 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	}
 
 	c.SendRawMsg("blocktxn", msg.Bytes())
-	//fmt.Println(c.ConnID, "blocktxn sent for", hash.String(), "   ", msg.Len(), "bytes")
 }
 
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
@@ -171,12 +183,32 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			hex.EncodeToString(pl[80:88]), "->", sta)*/
 		common.CountSafe("CmpctBlockHdrNo")
 		if sta==PH_STATUS_ERROR {
+			c.ReceiveHeadersNow() // block doesn't connect so ask for the headers
 			c.Misbehave("BadCmpct", 50) // do it 20 times and you are banned
 		} else if sta==PH_STATUS_FATAL {
 			c.DoS("BadCmpct")
 		}
 		return
 	}
+
+	/*fmt.Println()
+	fmt.Println(c.ConnID, "Received CmpctBlock  enf:", common.BlockChain.Consensus.Enforce_SEGWIT,
+		"   serwice:", (c.Node.Services&SERVICE_SEGWIT)!=0,
+		"   height:", b2g.Block.Height,
+		"   ver:", c.Node.SendCmpctVer)
+	*/
+	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && c.Node.SendCmpctVer < 2 {
+		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
+			common.CountSafe("CmpctBlockIgnore")
+			println("Ignore compact block", b2g.Block.Height, "from non-segwit node", c.ConnID)
+			if (c.Node.Services&SERVICE_SEGWIT)!=0 {
+				// it only makes sense to ask this node for block's data, if it supports segwit
+				c.X.GetBlocksDataNow = true
+			}
+			return
+		}
+	}
+
 	/*
 	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
 	fmt.Println(c.ConnID, "Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
@@ -246,11 +278,11 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 		col.Txs[idx] = pl[offs:offs+n]
-		//fmt.Println("  prefilledtxn", i, idx, ":", btc.NewSha2Hash(pl[offs:offs+n]).String())
+		//fmt.Println("  prefilledtxn", i, idx, ":", hex.EncodeToString(pl[offs:offs+n]))
+		//btc.NewSha2Hash(pl[offs:offs+n]).String())
 		offs += n
 		exp = int(idx)+1
 	}
-
 
 	// calculate K0 and K1 params for siphash-4-2
 	sha := sha256.New()
@@ -264,7 +296,13 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	TxMutex.Lock()
 
 	for _, v := range TransactionsToSend {
-		sid := siphash.Hash(col.K0, col.K1, v.Tx.Hash.Hash[:]) & 0xffffffffffff
+		var hash2take *btc.Uint256
+		if c.Node.SendCmpctVer==2 {
+			hash2take = v.Tx.WTxID()
+		} else {
+			hash2take = v.Tx.Hash
+		}
+		sid := siphash.Hash(col.K0, col.K1, hash2take.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
 			if ptr!=nil {
 				common.CountSafe("ShortIDSame")
@@ -279,7 +317,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	var msg *bytes.Buffer
 
 	missing := len(shortids) - cnt_found
-	//fmt.Println(c.ConnID, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
+	//fmt.Println(c.ConnID, c.Node.SendCmpctVer, "ShortIDs", cnt_found, "/", shortidscnt, "  Prefilled", prefilledcnt, "  Missing", missing, "  MemPool:", len(TransactionsToSend))
 	col.Missing = missing
 	if missing > 0 {
 		msg = new(bytes.Buffer)
@@ -320,7 +358,8 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
 			println(c.ConnID, "Corrupt CmpctBlkA")
-			c.DoS("BadCmpctBlockA")
+			ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+			//c.DoS("BadCmpctBlockA")
 			return
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
@@ -331,7 +370,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.Mutex.Unlock()
 		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
 		ReceivedBlocks[idx] = orb
-		delete(BlocksToGet, idx) //remove it from BlocksToGet if no more pending downloads
+		DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
 		b2g.TmPreproc = time.Now()
@@ -395,7 +434,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		panic("BlockTxn: Block missing from BlocksToGet")
 		return
 	}
-	b2g.InProgress--
+	//b2g.InProgress--
 
 	//fmt.Println(c.ConnID, "BlockTxn size", len(pl), "-", le, "new txs for block #", b2g.Block.Height)
 
@@ -421,17 +460,19 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		}
 	}
 
+	//println(c.ConnID, "Received the rest of compact block version", c.Node.SendCmpctVer)
+
 	//sta := time.Now()
 	b2g.Block.UpdateContent(col.Assemble())
 	//sto := time.Now()
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
-		println(c.ConnID, "Corrupt CmpctBlkB")
-		c.DoS("BadCmpctBlockB")
+		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
+		//c.DoS("BadCmpctBlockB")
+		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
 		return
 	}
-	delete(BlocksToGet, idx)
-
+	DelB2G(idx)
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
 	c.counters["NewTBlock"]++
