@@ -286,10 +286,8 @@ function refreshconnections() {
 				// user agent
 				td = row.insertCell(-1)
 				td.style.overay = 'auto'
-				//td.noWrap = true
-				//td.width = 50
 				td.className = 'agent'
-				td.innerHTML = cs[i].Agent//.substr(0,20)
+				td.title = td.innerText = cs[i].Agent//.substr(0,20)
 
 				// blocks received
 				td = row.insertCell(-1)
