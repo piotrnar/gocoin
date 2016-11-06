@@ -98,12 +98,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 
 	if (ver_flags&VER_P2SH)!=0 && stack.size()>0 {
 		// copy the stack content to stackCopy
-		idx := -stack.size()
-		for i:=0; i<stack.size(); i++ {
-			x := stack.top(idx)
-			stackCopy.push(x)
-			idx++
-		}
+		stackCopy.copy_from(&stack)
 	}
 
 	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
