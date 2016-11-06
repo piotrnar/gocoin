@@ -11,17 +11,17 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
+	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"unsafe"
-	"sync"
 )
 
 const (
-	DllName = "libbitcoinconsensus-0.dll"
+	DllName  = "libbitcoinconsensus-0.dll"
 	ProcName = "bitcoinconsensus_verify_script_with_amount"
 )
-
 
 /*
 EXPORT_SYMBOL int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned int scriptPubKeyLen,
@@ -34,7 +34,6 @@ EXPORT_SYMBOL int bitcoinconsensus_verify_script_with_amount(const unsigned char
 
 */
 
-
 var (
 	bitcoinconsensus_verify_script_with_amount *syscall.Proc
 
@@ -45,12 +44,15 @@ var (
 	mut sync.Mutex
 )
 
-
 func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool) {
 	var tmp []byte
-	if len(pkScr)!=0 {
+	if len(pkScr) != 0 {
 		tmp = make([]byte, len(pkScr))
 		copy(tmp, pkScr)
+	}
+	tx_raw := tx.Raw
+	if tx_raw == nil {
+		tx_raw = tx.Serialize()
 	}
 	go func(pkScr []byte, txTo []byte, i int, ver_flags uint32, result bool) {
 		var pkscr_ptr, pkscr_len uintptr // default to 0/null
@@ -77,11 +79,13 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 			println("ConsLIB", res)
 			println("pkScr", hex.EncodeToString(pkScr))
 			println("txTo", hex.EncodeToString(txTo))
+			println("amount", amount)
 			println("i", i)
 			println("ver_flags", ver_flags)
+			println(string(debug.Stack()))
 			mut.Unlock()
 		}
-	}(tmp, tx.Serialize(), i, ver_flags, result)
+	}(tmp, tx_raw, i, ver_flags, result)
 }
 
 func consensus_stats(s string) {
@@ -92,15 +96,15 @@ func consensus_stats(s string) {
 
 func init() {
 	dll, er := syscall.LoadDLL(DllName)
-	if er!=nil {
+	if er != nil {
 		println(er.Error())
 		println("WARNING: Consensus verification disabled")
 		return
 	}
 	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc(ProcName)
-	if er!=nil {
+	if er != nil {
 		println(er.Error())
-		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n");
+		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n")
 		println("WARNING: Consensus verification disabled")
 		return
 	}
