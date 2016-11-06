@@ -56,6 +56,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
+	"runtime/debug"
 	"sync/atomic"
 	"unsafe"
 	"encoding/hex"
@@ -74,6 +75,10 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 	if len(pkScr)!=0 {
 		tmp = make([]byte, len(pkScr))
 		copy(tmp, pkScr)
+	}
+	tx_raw := tx.Raw
+	if tx_raw == nil {
+		tx_raw = tx.Serialize()
 	}
 	go func(pkScr []byte, txTo []byte, amount uint64, i int, ver_flags uint32, result bool) {
 		var pkscr_ptr *C.uchar // default to null
@@ -100,9 +105,10 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 			println("txTo", hex.EncodeToString(txTo))
 			println("i", i)
 			println("ver_flags", ver_flags)
+			println(string(debug.Stack()))
 			mut.Unlock()
 		}
-	}(tmp, tx.Serialize(), amount, i, ver_flags, result)
+	}(tmp, tx_raw, amount, i, ver_flags, result)
 }
 
 func consensus_stats(s string) {
