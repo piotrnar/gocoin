@@ -6,12 +6,14 @@ Downloader:
 * If only e.g. 2 blocks are left, it is fetching them from a single peer
 
 Client:
-* Remove the functionality to reject transactions because of the "dust"
-* Runs out of memory synchronizing chain after 4 weeks - just test it now with 4000+ blocks
+* Implement SegWit addresses handling and fetching balances from segwit addresses
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * StealthAddr: seems that a single metadata index can have more than one ephemkey (find out how to handle it)
+
+Wallet:
+* Implement sending coins to/from segwit addresses
 
  Probably not to do:
 * Do not list unmatured coinbase outputs in the balance

@@ -24,7 +24,7 @@ const (
 
 	TX_REJECTED_DOUBLE_SPEND = 201
 	TX_REJECTED_NO_TXOU      = 202
-	TX_REJECTED_DUST         = 203
+	//TX_REJECTED_DUST         = 203 - I made this one deprecated as "dust" was a stupid concept in the first place
 	TX_REJECTED_OVERSPEND    = 204
 	TX_REJECTED_LOW_FEE      = 205
 	TX_REJECTED_SCRIPT_FAIL  = 206
@@ -69,7 +69,7 @@ type OneTxToSend struct {
 	Firstseen, Lastsent time.Time
 	Own byte // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
 	Spent []uint64 // Which records in SpentOutputs this TX added
-	Volume, Fee, Minout uint64
+	Volume, Fee uint64
 	*btc.Tx
 	Blocked byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs bool // transaction is spending inputs from other unconfirmed tx(s)
@@ -302,17 +302,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	// Check if total output value does not exceed total input
-	minout := uint64(btc.MAX_MONEY)
 	for i := range tx.TxOut {
-		if tx.TxOut[i].Value < atomic.LoadUint64(&common.CFG.TXPool.MinVoutValue) {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_DUST)
-			TxMutex.Unlock()
-			common.CountSafe("TxRejectedDust")
-			return
-		}
-		if tx.TxOut[i].Value < minout {
-			minout = tx.TxOut[i].Value
-		}
 		totout += tx.TxOut[i].Value
 	}
 
@@ -429,7 +419,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
-		Fee:fee, Firstseen:time.Now(), Tx:tx, Minout:minout, MemInputs:frommem,
+		Fee:fee, Firstseen:time.Now(), Tx:tx, MemInputs:frommem,
 		SigopsCost:sigops, Final:final, VerifyTime:time.Now().Sub(start_time)}
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 	TransactionsToSendSize += uint64(len(rec.Data))
@@ -491,11 +481,6 @@ func isRoutable(rec *OneTxToSend) bool {
 	if rec.Fee < (uint64(len(rec.Data))*atomic.LoadUint64(&common.CFG.TXRoute.FeePerByte)) {
 		common.CountSafe("TxRouteLowFee")
 		rec.Blocked = TX_REJECTED_LOW_FEE
-		return false
-	}
-	if rec.Minout < atomic.LoadUint64(&common.CFG.TXRoute.MinVoutValue) {
-		common.CountSafe("TxRouteDust")
-		rec.Blocked = TX_REJECTED_DUST
 		return false
 	}
 	return true

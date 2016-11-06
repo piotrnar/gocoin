@@ -58,7 +58,6 @@ var (
 			AllowMemInputs bool
 			FeePerByte uint64
 			MaxTxSize uint32
-			MinVoutValue uint64
 			// If something is 1KB big, it expires after this many minutes.
 			// Otherwise expiration time will be proportionally different.
 			TxExpireMinPerKB uint
@@ -68,7 +67,6 @@ var (
 			Enabled bool // Global on/off swicth
 			FeePerByte uint64
 			MaxTxSize uint32
-			MinVoutValue uint64
 		}
 		Memory struct {
 			GCPercTrshold int
@@ -128,14 +126,12 @@ func InitConfig() {
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 20
 	CFG.TXPool.MaxTxSize = 100e3
-	CFG.TXPool.MinVoutValue = 0
 	CFG.TXPool.TxExpireMinPerKB = 180
 	CFG.TXPool.TxExpireMaxHours = 12
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
-	CFG.TXRoute.MinVoutValue = 0
 
 	CFG.Memory.GCPercTrshold = 100 // 100%
 	CFG.Memory.MaxCachedBlocks = 500
