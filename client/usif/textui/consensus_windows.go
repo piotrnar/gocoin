@@ -20,7 +20,6 @@ import (
 
 const (
 	DllName  = "libbitcoinconsensus-0.dll"
-	ProcName = "bitcoinconsensus_verify_script_with_amount"
 )
 
 /*
@@ -32,10 +31,13 @@ EXPORT_SYMBOL int bitcoinconsensus_verify_script_with_amount(const unsigned char
                                     const unsigned char *txTo        , unsigned int txToLen,
                                     unsigned int nIn, unsigned int flags, bitcoinconsensus_error* err);
 
+EXPORT_SYMBOL unsigned int bitcoinconsensus_version();
+}
 */
 
 var (
 	bitcoinconsensus_verify_script_with_amount *syscall.Proc
+	bitcoinconsensus_version *syscall.Proc
 
 	ConsensusChecks uint64
 	ConsensusExpErr uint64
@@ -101,14 +103,18 @@ func init() {
 		println("WARNING: Consensus verification disabled")
 		return
 	}
-	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc(ProcName)
+	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc("bitcoinconsensus_verify_script_with_amount")
+	if er == nil {
+		bitcoinconsensus_version, er = dll.FindProc("bitcoinconsensus_version")
+	}
 	if er != nil {
 		println(er.Error())
 		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n")
 		println("WARNING: Consensus verification disabled")
 		return
 	}
-	fmt.Println("Using", DllName, "to ensure consensus rules")
+	r1, _, _ := syscall.Syscall(bitcoinconsensus_version.Addr(), 0, 0, 0, 0)
+	fmt.Println("Using", DllName, "version", r1, "to ensure consensus rules")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
 }
