@@ -14,8 +14,7 @@ type scrStack struct {
 func (s *scrStack) copy_from(x *scrStack) {
 	s.data = make([][]byte, len(x.data))
 	for i := range x.data {
-		s.data[i] = make([]byte, len(x.data[i]))
-		copy(s.data[i], x.data[i])
+		s.data[i] = x.data[i]
 	}
 }
 
