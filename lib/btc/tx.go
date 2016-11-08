@@ -706,16 +706,15 @@ func (tx *Tx) SetHash(raw []byte) {
 		raw = tx.Raw
 	}
 	h := NewSha2Hash(raw)
+	tx.Size = uint32(len(raw))
 	if tx.SegWit != nil {
 		tx.wTxID = h
-		s := sha256.New()
-		tx.WriteSerialized(s)
-		tmp := s.Sum(nil)
-		s.Reset()
-		s.Write(tmp)
-		tx.Hash = NewUint256(s.Sum(nil))
+		nowit_raw := tx.Serialize()
+		tx.Hash = NewSha2Hash(nowit_raw)
+		tx.NoWitSize = uint32(len(nowit_raw))
 	} else {
 		tx.Hash = h
+		tx.NoWitSize = tx.Size
 	}
 }
 
@@ -725,4 +724,11 @@ func (t *Tx) WTxID() *Uint256 {
 	} else {
 		return t.wTxID
 	}
+}
+
+func (tx *Tx) VSize() int {
+	if tx.NoWitSize==tx.Size {
+		return int(tx.Size)
+	}
+	return ( 3 * int(tx.NoWitSize+1) + int(tx.Size) ) >> 2
 }
