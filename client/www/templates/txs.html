@@ -558,7 +558,7 @@ function handlehover(event, pos, item) {
 			str += ' -  Tx #'+(rec.Txs_so_far+1)
 			str += ' ('+rec.Current_tx_length+' bytes'
 			str += ' @ ' + rec.Offset_in_block+')'
-			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.firstseen)/60).toFixed(1) +' min old'
+			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
 			showTooltip(item.pageX, item.pageY, str)
 		}
 	} else {
