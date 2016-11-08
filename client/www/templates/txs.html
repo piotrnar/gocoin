@@ -85,7 +85,8 @@ mempool transactions,
 sorted by
 	<select id="mp_show_sort">
 		<option value="age">age</option>
-		<option value="len">size</option>
+		<option value="siz">length</option>
+		<option value="vsi">virtual size</option>
 		<option value="inp">inputs count</option>
 		<option value="out">outputs count</option>
 		<option value="btc">BTC volume</option>
@@ -109,7 +110,8 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th width="20" align="right">totlen
 		<th>Transaction ID
 		<th onclick="sortclick('age')" style="cursor:pointer" width="60" align="right">Maturity
-		<th onclick="sortclick('len')" style="cursor:pointer" width="80" align="right">Size
+		<th onclick="sortclick('siz')" style="cursor:pointer" width="80" align="right">Len
+		<th onclick="sortclick('vsi')" style="cursor:pointer" width="80" align="right">VSiz
 		<th onclick="sortclick('inp')" style="cursor:pointer" width="30" align="right">Inps
 		<th onclick="sortclick('out')" style="cursor:pointer" width="30" align="right">Outs
 		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
@@ -248,7 +250,7 @@ function decode_tx_id(txid) {
 
 			var tin=0, tout=0, s = ''
 
-			var len = xval(aj.responseXML,  "len")
+			var len = xval(aj.responseXML,  "size")
 
 			var is = aj.responseXML.getElementsByTagName('input')
 			for (var i=0; i<is.length; i++) {
@@ -273,6 +275,8 @@ function decode_tx_id(txid) {
 				if (!isNaN(sops)) {
 					s += "  + " + sops + ' sigops'
 				}
+				//s += "\n    " + xval(is[i], "script_sig")
+				s += "   (sigscr_len:" + (xval(is[i], "script_sig").length/2)+")"
 				s += "\n"
 			}
 			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"
@@ -290,10 +294,14 @@ function decode_tx_id(txid) {
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
 			s += "\n"
 			var fee = tin-tout
-			s += 'Len: ' + len + ' bytes  /  Sigops: ' + xval(aj.responseXML,  "tx_sigops") + '\n'
-			var len = xval(aj.responseXML,  "len")
+			s += 'TxSize: ' + len
+			s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize")
+			s += '  /  VSize: ' + xval(aj.responseXML,  "vsize")
+			s += ' bytes  /  Sigops: ' + xval(aj.responseXML,  "sigops") + '\n'
+
+			var vsize = parseFloat(xval(aj.responseXML,  "vsize"))
 			s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
-			s += '  ==> ' + parseFloat(fee/len).toFixed(1) + ' Satoshis per byte\n'
+			s += '  ==> ' + parseFloat(fee/vsize).toFixed(1) + ' Satoshis per byte\n'
 			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
 
 			rawdiv.innerHTML = s
@@ -335,7 +343,7 @@ function show_txs2s(extrapar) {
 					row.className='hov'
 				}
 
-				var len = parseInt(xval(txs[i], 'len'))
+				var len = parseInt(xval(txs[i], 'size'))
 				lensofar += len
 
 				c=row.insertCell(-1);c.align='right'
@@ -356,6 +364,12 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = len
+				var nws = 'No witness size:' + xval(txs[i], 'nwsize')
+				c.title = nws
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML += xval(txs[i], 'vsize')
+				c.title = nws
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'inputs')
@@ -373,7 +387,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML = (fee/1e8).toFixed(8)
 
 					c=row.insertCell(-1);c.align='right'
-					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'len'))).toFixed(1)
+					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'size'))).toFixed(1)
 				} else {
 					c=row.insertCell(-1);c.align='right'
 					c.innerHTML = '<i>unknown</i>'
@@ -455,7 +469,7 @@ function show_txsre() {
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'len')
+				c.innerHTML = xval(txs[i], 'size')
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = val2reason(xval(txs[i], 'reason'))
@@ -544,7 +558,7 @@ function handlehover(event, pos, item) {
 			str += ' -  Tx #'+(rec.Txs_so_far+1)
 			str += ' ('+rec.Current_tx_length+' bytes'
 			str += ' @ ' + rec.Offset_in_block+')'
-			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
+			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.firstseen)/60).toFixed(1) +' min old'
 			showTooltip(item.pageX, item.pageY, str)
 		}
 	} else {
@@ -572,6 +586,7 @@ function show_mempool_fees() {
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			mp = JSON.parse(aj.responseText)
+			if (mp==null) return
 
 			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
 			var plot_options = {

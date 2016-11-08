@@ -78,6 +78,9 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 	w.Write([]byte("<inputs>"))
 	for i := range tx.TxIn {
 		w.Write([]byte("<input>"))
+		w.Write([]byte("<script_sig>"))
+		w.Write([]byte(hex.EncodeToString(tx.TxIn[i].ScriptSig)))
+		w.Write([]byte("</script_sig>"))
 		var po *btc.TxOut
 		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
@@ -88,7 +91,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 		}
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, po.Value, i, tx, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			ok := script.VerifyTxScript(po.Pk_script, po.Value, i, tx, script.STANDARD_VERIFY_FLAGS)
 			if !ok {
 				w.Write([]byte("<status>Script FAILED</status>"))
 			} else {
@@ -130,6 +133,36 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 }
 
 
+func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
+	w.Write([]byte("<tx><status>OK</status>"))
+	fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
+	fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
+	if int(v.Size)!=len(v.Data) {
+		panic("TX size does not match data length")
+	}
+	fmt.Fprint(w, "<size>", v.Size, "</size>")
+	fmt.Fprint(w, "<nwsize>", v.NoWitSize, "</nwsize>")
+	fmt.Fprint(w, "<vsize>", v.VSize(), "</vsize>")
+	fmt.Fprint(w, "<inputs>", len(v.TxIn), "</inputs>")
+	fmt.Fprint(w, "<outputs>", len(v.TxOut), "</outputs>")
+	if verbose {
+		output_tx_xml(w, v.Tx)
+	}
+	fmt.Fprint(w, "<own>", v.Own, "</own>")
+	fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
+	fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
+	fmt.Fprint(w, "<sigops>", v.SigopsCost, "</sigops>")
+	fmt.Fprint(w, "<sentcnt>", v.SentCnt, "</sentcnt>")
+	fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
+	fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
+	fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
+	fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
+	fmt.Fprint(w, "<final>", v.Final, "</final>")
+	fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
+	w.Write([]byte("</tx>"))
+}
+
+
 func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 	txid := btc.NewUint256FromString(minedid)
 	if txid==nil {
@@ -151,7 +184,7 @@ func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 	fmt.Fprint(w, "<id>", minedid, "</id>")
 	if dat, er := common.BlockChain.GetRawTx(uint32(block_number), txid); er == nil {
 		w.Write([]byte("<status>OK</status>"))
-		w.Write([]byte(fmt.Sprint("<len>", len(dat), "</len>")))
+		w.Write([]byte(fmt.Sprint("<size>", len(dat), "</size>")))
 		tx, _ := btc.NewTx(dat)
 		output_tx_xml(w, tx)
 	} else {
@@ -161,30 +194,6 @@ func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 
 	lck.Out.Done()
 
-}
-
-
-func output_mempool_tx_xml(w http.ResponseWriter, id string) {
-	txid := btc.NewUint256FromString(id)
-	if txid==nil {
-		return
-	}
-	w.Write([]byte("<tx>"))
-	fmt.Fprint(w, "<id>", id, "</id>")
-	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		w.Write([]byte("<status>OK</status>"))
-		w.Write([]byte(fmt.Sprint("<len>", len(t2s.Data), "</len>")))
-		fmt.Fprint(w, "<inputs>", len(t2s.TxIn), "</inputs>")
-		fmt.Fprint(w, "<outputs>", len(t2s.TxOut), "</outputs>")
-		w.Write([]byte(fmt.Sprint("<time_received>", t2s.Firstseen.Unix(), "</time_received>")))
-		output_tx_xml(w, t2s.Tx)
-		fmt.Fprint(w, "<tx_sigops>", t2s.SigopsCost, "</tx_sigops>")
-		fmt.Fprint(w, "<final>", t2s.Final, "</final>")
-		fmt.Fprint(w, "<verify_us>", uint(t2s.VerifyTime/time.Microsecond), "</verify_us>")
-	} else {
-		w.Write([]byte("<status>Not found</status>"))
-	}
-	w.Write([]byte("</tx>"))
 }
 
 
@@ -198,8 +207,12 @@ func (tl sortedTxList) Less(i, j int) bool {
 	switch txs2s_sort {
 		case "age":
 			res = tl[j].Firstseen.UnixNano() > tl[i].Firstseen.UnixNano()
-		case "len":
-			res = len(tl[j].Data) < len(tl[i].Data)
+		case "siz":
+			res = tl[j].Size < tl[i].Size
+		case "nws":
+			res = tl[j].NoWitSize < tl[i].NoWitSize
+		case "vsi":
+			res = tl[j].VSize() < tl[i].VSize()
 		case "inp":
 			res = len(tl[j].TxIn) < len(tl[i].TxIn)
 		case "out":
@@ -244,7 +257,20 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["id"])>0 {
-		output_mempool_tx_xml(w, r.Form["id"][0])
+		txid := btc.NewUint256FromString(r.Form["id"][0])
+		if txid==nil {
+			return
+		}
+		network.TxMutex.Lock()
+		defer network.TxMutex.Unlock()
+		if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+			tx_xml(w, t2s, true)
+		} else {
+			w.Write([]byte("<tx>"))
+			fmt.Fprint(w, "<id>", txid.String(), "</id>")
+			w.Write([]byte("<status>Not found</status>"))
+			w.Write([]byte("</tx>"))
+		}
 		return
 	}
 
@@ -324,24 +350,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("<txpool>"))
 	for cnt=0; cnt<len(sorted) && cnt<txs2s_count; cnt++ {
 		v := sorted[cnt]
-		w.Write([]byte("<tx>"))
-		fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
-		fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
-		fmt.Fprint(w, "<len>", len(v.Data), "</len>")
-		fmt.Fprint(w, "<inputs>", len(v.TxIn), "</inputs>")
-		fmt.Fprint(w, "<outputs>", len(v.TxOut), "</outputs>")
-		fmt.Fprint(w, "<own>", v.Own, "</own>")
-		fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
-		fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
-		fmt.Fprint(w, "<sigops>", v.SigopsCost, "</sigops>")
-		fmt.Fprint(w, "<sentcnt>", v.SentCnt, "</sentcnt>")
-		fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
-		fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
-		fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
-		fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
-		fmt.Fprint(w, "<final>", v.Final, "</final>")
-		fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
-		w.Write([]byte("</tx>"))
+		tx_xml(w, v, false)
 	}
 	w.Write([]byte("</txpool>"))
 }
@@ -359,7 +368,7 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<tx>"))
 		fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
-		fmt.Fprint(w, "<len>", v.Size, "</len>")
+		fmt.Fprint(w, "<size>", v.Size, "</size>")
 		fmt.Fprint(w, "<reason>", v.Reason, "</reason>")
 		w.Write([]byte("</tx>"))
 	}
