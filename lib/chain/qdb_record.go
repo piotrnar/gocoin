@@ -227,3 +227,11 @@ func (r *QdbTxOut) IsP2SH() bool {
 func (r *QdbTxOut) IsStealthIdx() bool {
 	return len(r.PKScr)==40 && r.PKScr[0]==0x6a && r.PKScr[1]==0x26 && r.PKScr[2]==0x06
 }
+
+func (r *QdbTxOut) IsP2WPKH() bool {
+	return len(r.PKScr)==22 && r.PKScr[0]==0 && r.PKScr[1]==20
+}
+
+func (r *QdbTxOut) IsP2WSH() bool {
+	return len(r.PKScr)==34 && r.PKScr[0]==0 && r.PKScr[1]==32
+}
