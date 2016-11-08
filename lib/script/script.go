@@ -23,6 +23,8 @@ var (
 )
 
 const (
+	MAX_SCRIPT_SIZE = 10000
+
 	VER_P2SH = 1<<0
 	VER_STRICTENC = 1<<1
 	VER_DERSIG = 1<<2
@@ -297,7 +299,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 	}
 
 
-	if len(p) > 10000 {
+	if len(p) > MAX_SCRIPT_SIZE {
 		if DBG_ERR {
 			fmt.Println("script too long", len(p))
 		}
