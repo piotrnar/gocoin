@@ -75,7 +75,7 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 
 
 func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
-	w.Write([]byte("<inputs>"))
+	w.Write([]byte("<input_list>"))
 	for i := range tx.TxIn {
 		w.Write([]byte("<input>"))
 		w.Write([]byte("<script_sig>"))
@@ -113,11 +113,21 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			w.Write([]byte("<status>UNKNOWN INPUT</status>"))
 		}
 		fmt.Fprint(w, "<sequence>", tx.TxIn[i].Sequence, "</sequence>")
+
+		if tx.SegWit!=nil {
+			w.Write([]byte("<segwit>"))
+			for _, wit := range tx.SegWit[i] {
+				w.Write([]byte("<witness>"))
+				w.Write([]byte(hex.EncodeToString(wit)))
+				w.Write([]byte("</witness>"))
+			}
+			w.Write([]byte("</segwit>"))
+		}
 		w.Write([]byte("</input>"))
 	}
-	w.Write([]byte("</inputs>"))
+	w.Write([]byte("</input_list>"))
 
-	w.Write([]byte("<outputs>"))
+	w.Write([]byte("<output_list>"))
 	for i := range tx.TxOut {
 		w.Write([]byte("<output>"))
 		fmt.Fprint(w, "<value>", tx.TxOut[i].Value, "</value>")
@@ -129,7 +139,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 		}
 		w.Write([]byte("</output>"))
 	}
-	w.Write([]byte("</outputs>"))
+	w.Write([]byte("</output_list>"))
 }
 
 
