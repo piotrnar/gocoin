@@ -100,10 +100,6 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
 &nbsp;&nbsp;&nbsp;
 <input type="button" value="Decode mempool TX" onclick="show_txid()">
-&nbsp;
-<span title="See input scripts inside decoded transactions">
-Script:<input type="checkbox" id="cb_show_scripts">
-</span>
 </table>
 
 
@@ -279,14 +275,10 @@ function decode_tx_id(txid) {
 				if (!isNaN(sops)) {
 					s += "  + " + sops + ' sigops'
 				}
-				if (cb_show_scripts.checked) {
-					var inspcr = xval(is[i], "script_sig")
-					s += "\n  SigScript length " +inspcr.length/2
-					for (var k=0; k<inspcr.length; k+=100) {
-						s += "\n    " + inspcr.substr(k, 100)
-					}
-				} else {
-					s += "   (sigscr_len:" + (xval(is[i], "script_sig").length/2)+")"
+				var inspcr = xval(is[i], "script_sig")
+				s += "\n  SigScript length " +inspcr.length/2
+				for (var k=0; k<inspcr.length; k+=100) {
+					s += "\n    " + inspcr.substr(k, 100)
 				}
 
 				var segwit = is[i].getElementsByTagName("witness")
