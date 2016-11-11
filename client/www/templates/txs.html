@@ -100,6 +100,10 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
 &nbsp;&nbsp;&nbsp;
 <input type="button" value="Decode mempool TX" onclick="show_txid()">
+&nbsp;
+<span title="See input scripts inside decoded transactions">
+Script:<input type="checkbox" id="cb_show_scripts">
+</span>
 </table>
 
 
@@ -275,8 +279,24 @@ function decode_tx_id(txid) {
 				if (!isNaN(sops)) {
 					s += "  + " + sops + ' sigops'
 				}
-				//s += "\n    " + xval(is[i], "script_sig")
-				s += "   (sigscr_len:" + (xval(is[i], "script_sig").length/2)+")"
+				if (cb_show_scripts.checked) {
+					var inspcr = xval(is[i], "script_sig")
+					s += "\n  SigScript length " +inspcr.length/2
+					for (var k=0; k<inspcr.length; k+=100) {
+						s += "\n    " + inspcr.substr(k, 100)
+					}
+				} else {
+					s += "   (sigscr_len:" + (xval(is[i], "script_sig").length/2)+")"
+				}
+
+				var segwit = is[i].getElementsByTagName("witness")
+				if (segwit.length>0) {
+					s += "\n  SegWit stack:"
+					for (var k=0; k<segwit.length; k++) {
+						s += "\n    " + segwit[k].childNodes[0].nodeValue
+					}
+				}
+
 				s += "\n"
 			}
 			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"
@@ -377,6 +397,7 @@ function show_txs2s(extrapar) {
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'outputs')
 
+
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = (parseFloat(xval(txs[i], 'volume'))/1e8).toFixed(8)
 
@@ -429,6 +450,9 @@ function show_txs2s(extrapar) {
 					}
 				}
 
+				if (xval(txs[i], 'witness_cnt') > 0) {
+					row.classList.add('segwit')
+				}
 			}
 			txs2s.style.display = 'table'
 		}

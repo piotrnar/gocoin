@@ -81,6 +81,10 @@ tr.bip152 {
 	background-color:#fffff8;
 }
 
+tr.segwit {
+	background-color:#f8fff0;
+}
+
 tr.CFN {
 	background-color:#f0ffff;
 }

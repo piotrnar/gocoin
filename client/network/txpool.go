@@ -418,6 +418,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
+	if tx.Size != tx.NoWitSize {
+		fmt.Print("\007segwit tx ", tx.Hash.String(), "\n> ")
+	}
+
 	rec := &OneTxToSend{Data:ntx.raw, Spent:spent, Volume:totinp,
 		Fee:fee, Firstseen:time.Now(), Tx:tx, MemInputs:frommem,
 		SigopsCost:sigops, Final:final, VerifyTime:time.Now().Sub(start_time)}
