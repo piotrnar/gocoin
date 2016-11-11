@@ -277,8 +277,8 @@ function decode_tx_id(txid) {
 				}
 				var inspcr = xval(is[i], "script_sig")
 				s += "\n  SigScript length " +inspcr.length/2
-				for (var k=0; k<inspcr.length; k+=100) {
-					s += "\n    " + inspcr.substr(k, 100)
+				for (var k=0; k<inspcr.length; k+=200) {
+					s += "\n    " + inspcr.substr(k, 200)
 				}
 
 				var segwit = is[i].getElementsByTagName("witness")
