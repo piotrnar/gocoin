@@ -276,7 +276,7 @@ function decode_tx_id(txid) {
 					s += "  + " + sops + ' sigops'
 				}
 				var inspcr = xval(is[i], "script_sig")
-				s += "\n  SigScript length " +inspcr.length/2
+				s += " - SigScript length " +inspcr.length/2
 				for (var k=0; k<inspcr.length; k+=200) {
 					s += "\n    " + inspcr.substr(k, 200)
 				}
