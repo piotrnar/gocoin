@@ -145,6 +145,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	fmt.Fprint(w, "<vsize>", v.VSize(), "</vsize>")
 	fmt.Fprint(w, "<inputs>", len(v.TxIn), "</inputs>")
 	fmt.Fprint(w, "<outputs>", len(v.TxOut), "</outputs>")
+	fmt.Fprint(w, "<witness_cnt>", len(v.SegWit), "</witness_cnt>")
 	if verbose {
 		output_tx_xml(w, v.Tx)
 	}
