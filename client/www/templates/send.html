@@ -134,7 +134,8 @@ function fetch_wallet_balance(name) {
 					for (ii in rec.Outs) {
 						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
 							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
-							'addr':wallet[i].addr, 'label':wallet[i].label, 'msg':rec.Outs[ii].Message})
+							'addr':wallet[i].addr, 'label':wallet[i].label,
+							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message})
 					}
 				}
 				totbtc += rec.Value
@@ -196,6 +197,7 @@ function fetch_wallet_balance(name) {
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
 				td.innerText = outs[i].addr
+				td.title = outs[i].addr2
 
 				td = row.insertCell(-1)
 				td.className = 'hand'
