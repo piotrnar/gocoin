@@ -60,6 +60,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Height uint32
 		Coinbase bool
 		Message string
+		Addr string
 	}
 
 	type OneOuts struct {
@@ -67,8 +68,6 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		OutCnt int
 		Outs []OneOut
 	}
-
-	println("fetch bal of", len(addrs), "addrs")
 
 	out := make(map[string] *OneOuts)
 
@@ -94,13 +93,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec.Outs = append(newrec.Outs, OneOut{
 						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-						Message: html.EscapeString(string(u.Message))})
+						Message: html.EscapeString(string(u.Message)), Addr:a})
 				}
 			}
 		}
 		out[aa.String()] = newrec
 
-		/* Segwit P2WPKH:
+		/* Segwit P2WPKH: */
 		if aa.Version==btc.AddrVerPubkey(common.Testnet) {
 			// SegWit if applicable
 			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, aa.Hash160[:]...))
@@ -108,18 +107,18 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			unsp = wallet.GetAllUnspent(aa)
 			if len(unsp) > 0 {
 				newrec.OutCnt += len(unsp)
+				as := aa.String()
 				for _, u := range unsp {
 					newrec.Value += u.Value
 					if !summary {
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-							Message: html.EscapeString(string(u.Message)), Address:aa.String()})
+							Message: html.EscapeString(string(u.Message)), Addr:as})
 					}
 				}
 			}
 		}
-		*/
 	}
 
 	lck.Out.Done()
