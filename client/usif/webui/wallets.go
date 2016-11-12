@@ -68,6 +68,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Outs []OneOut
 	}
 
+	println("fetch bal of", len(addrs), "addrs")
+
 	out := make(map[string] *OneOuts)
 
 	lck := new(usif.OneLock)
@@ -78,23 +80,46 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	for _, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
-		if e==nil {
-			unsp := wallet.GetAllUnspent(aa)
-			newrec := new(OneOuts)
+		if e!=nil {
+			continue
+		}
+
+		unsp := wallet.GetAllUnspent(aa)
+		newrec := new(OneOuts)
+		if len(unsp) > 0 {
+			newrec.OutCnt = len(unsp)
+			for _, u := range unsp {
+				newrec.Value += u.Value
+				if !summary {
+					newrec.Outs = append(newrec.Outs, OneOut{
+						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
+						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
+						Message: html.EscapeString(string(u.Message))})
+				}
+			}
+		}
+		out[aa.String()] = newrec
+
+		/* Segwit P2WPKH:
+		if aa.Version==btc.AddrVerPubkey(common.Testnet) {
+			// SegWit if applicable
+			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, aa.Hash160[:]...))
+			aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+			unsp = wallet.GetAllUnspent(aa)
 			if len(unsp) > 0 {
-				newrec.OutCnt = len(unsp)
+				newrec.OutCnt += len(unsp)
 				for _, u := range unsp {
 					newrec.Value += u.Value
 					if !summary {
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-							Message: html.EscapeString(string(u.Message))})
+							Message: html.EscapeString(string(u.Message)), Address:aa.String()})
 					}
 				}
 			}
-			out[aa.String()] = newrec
 		}
+		*/
 	}
 
 	lck.Out.Done()
