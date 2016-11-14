@@ -305,6 +305,7 @@ function decode_tx_id(txid) {
 			}
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
 			s += "\n"
+			s += "Lock time: " + xval(aj.responseXML,  "lock_time") + "\n\n"
 			var fee = tin-tout
 			s += 'TxSize: ' + len
 			s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize")
