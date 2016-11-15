@@ -99,8 +99,6 @@ function fetch_wallet_balance(name) {
 				if (rec.OutCnt>0) {
 					td.innerText = rec.OutCnt
 					totouts += rec.OutCnt
-				} else {
-					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
 
 				// empty column,  for space
@@ -117,6 +115,8 @@ function fetch_wallet_balance(name) {
 				td.className = 'segwitcnt'
 				if (rec.SegWitCnt>0) {
 					td.innerText = rec.SegWitCnt
+				} else if (rec.OutCnt>0) {
+					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
 
 				totbtc += rec.Value
@@ -427,7 +427,7 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <th width="40">Outs
 </table>
 
-<hr>
+<br>
 <span style="color:red"><b>Warnings!</b> <br>
 <br>
 Do not deposit any coins into P2SH-WPKH Addresses until Segregated Witness feature is activated on the blockchain.<br>
