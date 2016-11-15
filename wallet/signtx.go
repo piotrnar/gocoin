@@ -50,13 +50,20 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 				all_signed = false
 				continue
 			}
-			k := hash_to_key(adr.Hash160)
-			if k == nil {
+			k_idx := hash_to_key_idx(adr.Hash160[:])
+			if k_idx < 0 {
 				fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
 				all_signed = false
 				continue
 			}
-			er := tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+			var er error
+			k := keys[k_idx]
+			if adr.String()==segwit[k_idx].String() {
+				tx.TxIn[in].ScriptSig = append([]byte{22,0,20}, k.BtcAddr.Hash160[:]...)
+				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+			} else {
+				er = tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+			}
 			if er != nil {
 				fmt.Println("ERROR: Sign failed for input number", in, er.Error())
 				all_signed = false
@@ -77,7 +84,12 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 }
 
 func write_tx_file(tx *btc.Tx) {
-	signedrawtx := tx.Serialize()
+	var signedrawtx []byte
+	if tx.SegWit!=nil {
+		signedrawtx = tx.SerializeNew()
+	} else {
+		signedrawtx = tx.Serialize()
+	}
 	tx.SetHash(signedrawtx)
 
 	hs := tx.Hash.String()
@@ -96,7 +108,7 @@ func write_tx_file(tx *btc.Tx) {
 func make_signed_tx() {
 	// Make an empty transaction
 	tx := new(btc.Tx)
-	tx.Version = 1
+	tx.Version = 2
 	tx.Lock_time = 0
 
 	// Select as many inputs as we need to pay the full amount (with the fee)
