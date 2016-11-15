@@ -17,6 +17,7 @@ var (
 	first_determ_idx int
 	// set in make_wallet():
 	keys []*btc.PrivateAddr
+	segwit []*btc.BtcAddr
 	curFee uint64
 )
 
@@ -165,6 +166,16 @@ func make_wallet() {
 	if *verbose {
 		fmt.Println("Private keys re-generated")
 	}
+
+	// Calculate SegWit addresses
+	segwit = make([]*btc.BtcAddr, len(keys))
+	for i, pk := range keys {
+		if len(pk.Pubkey)!=33 {
+			continue
+		}
+		h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, pk.Hash160[:]...))
+		segwit[i] = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(testnet))
+	}
 }
 
 
@@ -184,9 +195,19 @@ func dump_addrs() {
 				cleanExit(1)
 			}
 		}
-		fmt.Println(keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
+		var pubaddr string
+		if *segwit_mode {
+			if segwit[i]==nil {
+				pubaddr = "-=CompressedKey=-"
+			} else {
+				pubaddr = segwit[i].String()
+			}
+		} else {
+			pubaddr = keys[i].BtcAddr.String()
+		}
+		fmt.Println(pubaddr, keys[i].BtcAddr.Extra.Label)
 		if f != nil {
-			fmt.Fprintln(f, keys[i].BtcAddr.String(), keys[i].BtcAddr.Extra.Label)
+			fmt.Fprintln(f, pubaddr, keys[i].BtcAddr.Extra.Label)
 		}
 	}
 	if f != nil {
@@ -206,11 +227,22 @@ func public_to_key(pubkey []byte) *btc.PrivateAddr {
 }
 
 
-func hash_to_key(h160 [20]byte) *btc.PrivateAddr {
+func hash_to_key_idx(h160 []byte) (res int) {
 	for i := range keys {
-		if keys[i].BtcAddr.Hash160==h160 {
-			return keys[i]
+		if bytes.Equal(keys[i].BtcAddr.Hash160[:], h160) {
+			return i
 		}
+		if bytes.Equal(segwit[i].Hash160[:], h160) {
+			return i
+		}
+	}
+	return -1
+}
+
+
+func hash_to_key(h160 []byte) *btc.PrivateAddr {
+	if i:=hash_to_key_idx(h160); i>=0 {
+		return keys[i]
 	}
 	return nil
 }
@@ -223,16 +255,18 @@ func address_to_key(addr string) *btc.PrivateAddr {
 		println(e.Error())
 		cleanExit(1)
 	}
-	return hash_to_key(a.Hash160)
+	return hash_to_key(a.Hash160[:])
 }
 
 
 // suuports only P2KH scripts
 func pkscr_to_key(scr []byte) *btc.PrivateAddr {
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
-		var h [20]byte
-		copy(h[:], scr[3:23])
-		return hash_to_key(h)
+		return hash_to_key(scr[3:23])
+	}
+	// P2SH(WPKH)
+	if len(scr)==23 && scr[0]==0xa9 && scr[22]==0x87 {
+		return hash_to_key(scr[2:22])
 	}
 	return nil
 }
