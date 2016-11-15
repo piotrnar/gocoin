@@ -58,6 +58,8 @@ var (
 	allowextramsigns *bool = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 
 	sequence *int = flag.Int("seq", 0, "Use given RBF sequence number (-1 or -2 for final)")
+
+	segwit_mode *bool = flag.Bool("segwit", false, "List SegWit P2SH-WPKH deposit addresses (instead of P2KH)")
 )
 
 
