@@ -142,10 +142,14 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 				} else if v.X.MinFeeSPKB>0 && uint64(v.X.MinFeeSPKB)>fee_spkb {
 					send_inv = false
 					common.CountSafe("SendInvFeeTooLow")
-				} else if fromConn==nil && v.X.InvsRecieved==0 {
+				}
+
+				/* This is to prevent sending own txs to "spying" peers:
+				else if fromConn==nil && v.X.InvsRecieved==0 {
 					send_inv = false
 					common.CountSafe("SendInvOwnBlocked")
 				}
+				*/
 			}
 			if send_inv {
 				if len(v.PendingInvs) < 500 {
