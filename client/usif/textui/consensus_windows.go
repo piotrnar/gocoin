@@ -11,7 +11,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -76,15 +75,12 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 			atomic.AddUint64(&ConsensusErrors, 1)
 			common.CountSafe("TxConsensusERR")
 			mut.Lock()
-			println("Compare to consensus failed!", res, result)
-			println("Gocoin", result)
-			println("ConsLIB", res)
+			println("Compare to consensus failed!")
+			println("Gocoin:", result, "   ConsLIB:", res)
 			println("pkScr", hex.EncodeToString(pkScr))
 			println("txTo", hex.EncodeToString(txTo))
-			println("amount", amount)
-			println("i", i)
-			println("ver_flags", ver_flags)
-			println(string(debug.Stack()))
+			println("amount:", amount, "  input_idx:", i, "  ver_flags:", ver_flags)
+			println()
 			mut.Unlock()
 		}
 	}(tmp, tx_raw, i, ver_flags, result)
