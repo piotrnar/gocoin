@@ -249,8 +249,9 @@ function decode_tx_id(txid) {
 			disp_txid.innerHTML = xval(aj.responseXML,  "id")
 
 			var tin=0, tout=0, s = ''
-
 			var len = xval(aj.responseXML,  "size")
+
+			s += "Version: " + xval(aj.responseXML,  "version") + "\n\n"
 
 			var is = aj.responseXML.getElementsByTagName('input')
 			for (var i=0; i<is.length; i++) {
