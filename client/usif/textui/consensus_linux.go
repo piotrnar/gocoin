@@ -56,7 +56,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
-	"runtime/debug"
 	"sync/atomic"
 	"unsafe"
 	"encoding/hex"
