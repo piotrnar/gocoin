@@ -66,6 +66,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	type OneOuts struct {
 		Value uint64
 		OutCnt int
+		SegWitCnt int
+		SegWitAddr string
 		Outs []OneOut
 	}
 
@@ -104,9 +106,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			// SegWit if applicable
 			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, aa.Hash160[:]...))
 			aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+			newrec.SegWitAddr = aa.String()
 			unsp = wallet.GetAllUnspent(aa)
 			if len(unsp) > 0 {
 				newrec.OutCnt += len(unsp)
+				newrec.SegWitCnt = len(unsp)
 				as := aa.String()
 				for _, u := range unsp {
 					newrec.Value += u.Value

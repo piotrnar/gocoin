@@ -180,15 +180,6 @@ td.blspb {
 table.netcons {
 }
 
-.addr_long {
-	font-size:10px;
-	font-weight:bold;
-}
-
-.addr_norm {
-	font-weight:bold;
-}
-
 div.footer {
 	margin-top:10px;
 	font-style:italic;

@@ -1,12 +1,30 @@
 <style>
+td.addr_long {
+	font-size:10px;
+	font-weight:bold;
+}
+td.addr_norm {
+	font-weight:bold;
+}
 td.balbtc {
 	text-align: right;
 	font-family: monospace;
 	font-size: 110%;
+	width: 150px;
+}
+td.segwitaddr {
+	text-align: left;
+	font-style:italic;
+	font-size: 80%;
+	color:brown;
+}
+td.segwitcnt {
+	text-align: right;
+	font-style:italic;
+	color:brown;
 }
 td.outcnt {
 	text-align: right;
-	width: 30px;
 }
 </style>
 <script>
@@ -80,6 +98,22 @@ function fetch_wallet_balance(name) {
 					totouts += rec.OutCnt
 				} else {
 					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
+				}
+
+				// empty column,  for space
+				row.insertCell(-1)
+
+
+				td = row.insertCell(-1)
+				td.className = 'segwitaddr'
+				if (rec.SegWitAddr!='') {
+					td.innerText = rec.SegWitAddr
+				}
+
+				td = row.insertCell(-1)
+				td.className = 'segwitcnt'
+				if (rec.SegWitCnt>0) {
+					td.innerText = rec.SegWitCnt
 				}
 
 				totbtc += rec.Value
@@ -381,10 +415,23 @@ Import settings: <input type="file" id="import_file" accept=".json">
 </h2>
 <table class="wal bord" id="walltab">
 <tr>
-<th>Address
+<th width="360">Address
 <th align="left">Label
-<th colspan="2">Balance&nbsp;BTC
+<th width="160" align="right">Balance&nbsp;BTC
+<th width="40">Outs
+<th width="50">
+<th width="330">P2SH-WPKH  Deposit Address
+<th width="40">Outs
 </table>
+
+<hr>
+<span style="color:red"><b>Warnings!</b> <br>
+<br>
+Do not deposit any coins into P2SH-WPKH Addresses until Segregated Witness feature is activated on the blockchain.<br>
+<br>
+The given P2SH-WPKH Address is only spendable if the corresponding Address comes from compressed key.<br>
+If Address comes from uncompressed key, you will not be able to spend anything deposited onto its WPKH .<br>
+
 </div>
 
 <div id="formwal" style="display:none">
@@ -402,7 +449,7 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <tr><td colspan="2">
 	<textarea name="walletdata" id="walletdata" style="width:100%" rows="25">{WALLET_DATA}</textarea><br>
 	<i>
-	Only list your wallet's <b>public adddresses</b> here!
+	Only list your wallet's <b>public addresses</b> here!
 	Empty lines and lines starting with <b>#</b> are ignored.<br>
 	</i>
 </form>
