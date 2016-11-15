@@ -196,8 +196,12 @@ function fetch_wallet_balance(name) {
 				td.className = 'bold hand'
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
-				td.innerText = outs[i].addr
-				td.title = outs[i].addr2
+				if (outs[i].addr2!=outs[i].addr) {
+					td.innerText = 'Witness: ' + outs[i].addr
+					td.title = outs[i].addr2
+				} else {
+					td.innerText = outs[i].addr
+				}
 
 				td = row.insertCell(-1)
 				td.className = 'hand'
