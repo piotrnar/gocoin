@@ -109,13 +109,15 @@ function fetch_wallet_balance(name) {
 				td.className = 'segwitaddr'
 				if (rec.SegWitAddr!='') {
 					td.innerText = rec.SegWitAddr
+					td.onclick = function() {warnings.style.display='block'}
+					warnings
 				}
 
 				td = row.insertCell(-1)
 				td.className = 'segwitcnt'
 				if (rec.SegWitCnt>0) {
 					td.innerText = rec.SegWitCnt
-				} else if (rec.OutCnt>0) {
+				} else if (rec.OutCnt==0) {
 					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
 
@@ -428,13 +430,13 @@ Import settings: <input type="file" id="import_file" accept=".json">
 </table>
 
 <br>
-<span style="color:red"><b>Warnings!</b> <br>
+<div id="warnings" style="color:red;display:none"><b>Warnings!</b> <br>
 <br>
 Do not deposit any coins into P2SH-WPKH Addresses until Segregated Witness feature is activated on the blockchain.<br>
 <br>
 The given P2SH-WPKH Address is only spendable if the corresponding Address comes from compressed key.<br>
 If Address comes from uncompressed key, you will not be able to spend anything deposited onto its WPKH .<br>
-
+</div>
 </div>
 
 <div id="formwal" style="display:none">
