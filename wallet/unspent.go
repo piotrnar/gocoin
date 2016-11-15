@@ -104,23 +104,25 @@ func show_balance() {
 	var totBtc, msBtc, knownInputs, unknownInputs, multisigInputs uint64
 	for i := range unspentOuts {
 		uo := getUO(&unspentOuts[i].TxPrevOut)
+
+		if unspentOuts[i].key!=nil {
+			totBtc += uo.Value
+			knownInputs++
+			continue
+		}
+
 		if btc.IsP2SH(uo.Pk_script) {
 			msBtc += uo.Value
 			multisigInputs++
-		} else {
-			// Sum up all the balance and check if we have private key for this input
-			if unspentOuts[i].key!=nil {
-				totBtc += uo.Value
-				knownInputs++
-			} else {
-				unknownInputs++
-				if *verbose {
-					fmt.Println("WARNING: Don't know how to sign", unspentOuts[i].TxPrevOut.String())
-				}
-			}
+			continue
+		}
+
+		unknownInputs++
+		if *verbose {
+			fmt.Println("WARNING: Don't know how to sign", unspentOuts[i].TxPrevOut.String())
 		}
 	}
-	fmt.Printf("You have %.8f BTC in %d P2KH outputs\n", float64(totBtc)/1e8, knownInputs)
+	fmt.Printf("You have %.8f BTC in %d keyhash outputs\n", float64(totBtc)/1e8, knownInputs)
 	if multisigInputs>0 {
 		fmt.Printf("There is %.8f BTC in %d multisig outputs\n", float64(msBtc)/1e8, multisigInputs)
 	}
