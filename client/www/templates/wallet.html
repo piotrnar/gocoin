@@ -6,6 +6,9 @@ td.addr_long {
 td.addr_norm {
 	font-weight:bold;
 }
+td.addr_label {
+	white-space: nowrap;
+}
 td.balbtc {
 	text-align: right;
 	font-family: monospace;
@@ -76,7 +79,7 @@ function fetch_wallet_balance(name) {
 				td.innerText = wallet_addr[i]
 
 				td = row.insertCell(-1)
-				td.className = "hand"
+				td.className = "hand addr_label"
 				td.innerText = wallet[i].label
 				if (wallet[i].virgin && rec.OutCnt>0) {
 					td.classList.add("i")
