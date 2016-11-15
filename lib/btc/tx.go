@@ -738,6 +738,8 @@ func (tx *Tx) CountWitnessSigOps(inp int, scriptPubKey []byte) uint {
 func (tx *Tx) SetHash(raw []byte) {
 	if raw==nil {
 		raw = tx.Raw
+	} else {
+		tx.Raw = raw
 	}
 	h := NewSha2Hash(raw)
 	tx.Size = uint32(len(raw))
