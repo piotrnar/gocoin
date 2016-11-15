@@ -264,7 +264,6 @@ func (tx *Tx) SignWitness(in int, pk_script []byte, amount uint64, hash_type byt
 
 	//Calculate proper transaction hash
 	h := tx.WitnessSigHash(pk_script, amount, in, int32(hash_type))
-	println("hasz:", NewUint256(h).String())
 
 	// Sign
 	r, s, er := EcdsaSign(priv_key, h)
