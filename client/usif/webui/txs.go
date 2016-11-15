@@ -146,6 +146,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	w.Write([]byte("<tx><status>OK</status>"))
 	fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
+	fmt.Fprint(w, "<version>", v.Tx.Version, "</version>")
 	fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
 	if int(v.Size)!=len(v.Data) {
 		panic("TX size does not match data length")
