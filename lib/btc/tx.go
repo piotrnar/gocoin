@@ -121,8 +121,6 @@ func (t *Tx) Serialize() ([]byte) {
 
 // Return the transaction's hash, that is about to get signed/verified
 func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) {
-	var buf [9]byte
-
 	// Remove any OP_CODESEPARATOR
 	var idx int
 	var nd []byte
@@ -142,29 +140,25 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) 
 
 	sha := sha256.New()
 
-	binary.LittleEndian.PutUint32(buf[:4], t.Version)
-	sha.Write(buf[:4])
+	binary.Write(sha, binary.LittleEndian, uint32(t.Version))
 
 	if (hashType&SIGHASH_ANYONECANPAY)!=0 {
 		sha.Write([]byte{1}) // only 1 input
 		// The one input:
 		sha.Write(t.TxIn[nIn].Input.Hash[:])
-		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Input.Vout)
-		sha.Write(buf[:4])
-		sha.Write(buf[:PutVlen(buf[:], len(scriptCode))])
-		sha.Write(scriptCode[:])
-		binary.LittleEndian.PutUint32(buf[:4], t.TxIn[nIn].Sequence)
-		sha.Write(buf[:4])
+		binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[nIn].Input.Vout))
+		WriteVlen(sha, uint64(len(scriptCode)))
+		sha.Write(scriptCode)
+		binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[nIn].Sequence))
 	} else {
-		sha.Write(buf[:PutVlen(buf[:], len(t.TxIn))])
+		WriteVlen(sha, uint64(len(t.TxIn)))
 		for i := range t.TxIn {
 			sha.Write(t.TxIn[i].Input.Hash[:])
-			binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Input.Vout)
-			sha.Write(buf[:4])
+			binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[i].Input.Vout))
 
 			if i==nIn {
-				sha.Write(buf[:PutVlen(buf[:], len(scriptCode))])
-				sha.Write(scriptCode[:])
+				WriteVlen(sha, uint64(len(scriptCode)))
+				sha.Write(scriptCode)
 			} else {
 				sha.Write([]byte{0})
 			}
@@ -172,8 +166,7 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) 
 			if (ht==SIGHASH_NONE || ht==SIGHASH_SINGLE) && i!=nIn {
 				sha.Write([]byte{0,0,0,0})
 			} else {
-				binary.LittleEndian.PutUint32(buf[:4], t.TxIn[i].Sequence)
-				sha.Write(buf[:4])
+				binary.Write(sha, binary.LittleEndian, uint32(t.TxIn[i].Sequence))
 			}
 		}
 	}
@@ -186,24 +179,19 @@ func (t *Tx) SignatureHash(scriptCode []byte, nIn int, hashType int32) ([]byte) 
 			// Return 1 as the satoshi client (utils.IsOn't ask me why 1, and not something else)
 			return []byte{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 		}
-
-		sha.Write(buf[:PutVlen(buf[:], nOut+1)])
+		WriteVlen(sha, uint64(nOut+1))
 		for i:=0; i < nOut; i++ {
 			sha.Write([]byte{0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0})
 		}
-		binary.LittleEndian.PutUint64(buf[:8], t.TxOut[nOut].Value)
-		sha.Write(buf[:8])
-		sha.Write(buf[:PutVlen(buf[:], len(t.TxOut[nOut].Pk_script))])
-		sha.Write(t.TxOut[nOut].Pk_script[:])
+		binary.Write(sha, binary.LittleEndian, uint64(t.TxOut[nOut].Value))
+		WriteVlen(sha, uint64(len(t.TxOut[nOut].Pk_script)))
+		sha.Write(t.TxOut[nOut].Pk_script)
 	} else {
-		sha.Write(buf[:PutVlen(buf[:], len(t.TxOut))])
+		WriteVlen(sha, uint64(len(t.TxOut)))
 		for i := range t.TxOut {
-			binary.LittleEndian.PutUint64(buf[:8], t.TxOut[i].Value)
-			sha.Write(buf[:8])
-
-			sha.Write(buf[:PutVlen(buf[:], len(t.TxOut[i].Pk_script))])
-
-			sha.Write(t.TxOut[i].Pk_script[:])
+			binary.Write(sha, binary.LittleEndian, uint64(t.TxOut[i].Value))
+			WriteVlen(sha, uint64(len(t.TxOut[i].Pk_script)))
+			sha.Write(t.TxOut[i].Pk_script)
 		}
 	}
 
