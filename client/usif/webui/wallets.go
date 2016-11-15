@@ -187,6 +187,17 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 			if len(newrecs) > 0 {
 				thisbal = append(thisbal, newrecs...)
 			}
+
+			/* Segwit P2WPKH: */
+			if aa.Version==btc.AddrVerPubkey(common.Testnet) {
+				// SegWit if applicable
+				h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, aa.Hash160[:]...))
+				aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+				newrecs = wallet.GetAllUnspent(aa)
+				if len(newrecs) > 0 {
+					thisbal = append(thisbal, newrecs...)
+				}
+			}
 		}
 	}
 	lck.Out.Done()
