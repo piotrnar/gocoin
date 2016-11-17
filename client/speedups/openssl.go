@@ -15,6 +15,11 @@ import (
 )
 
 func EC_Verify(k, s, h []byte) bool {
+	if len(s)>=9 && int(s[1])==len(s)-3 {
+		// remove hashType from the signature as new openssl libs do not like it
+		// see: https://github.com/piotrnar/gocoin/issues/19
+		s = s[:len(s)-1]
+	}
 	return openssl.EC_Verify(k, s, h)==1
 }
 
