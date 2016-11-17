@@ -2,8 +2,8 @@ package openssl
 
 /*
 #cgo !windows LDFLAGS: -lcrypto
-#cgo windows LDFLAGS: /DEV/openssl-1.0.1e/libcrypto.a -lgdi32
-#cgo windows CFLAGS: -I /DEV/openssl-1.0.1e/include
+#cgo windows LDFLAGS: /DEV/openssl-1.0.2a/libcrypto.a -lgdi32
+#cgo windows CFLAGS: -I /DEV/openssl-1.0.2a/include
 
 #include <stdio.h>
 #include <openssl/ec.h>
