@@ -18,6 +18,9 @@ Use mingw(64) and msys.
 
 You will need libcrypto.a build for your architecture and the header files.
 
-Having the libcrypto.a, you will need to "fix" it by executing bash script “win_fix_libcrypto.sh”.
-
 Before doing "go build" edit openssl.go and fix the paths to "libcrypto.a" and openssl include dir.
+
+If you want to build the lib yourself, leek here:
+ * http://stackoverflow.com/questions/9379363/how-to-build-openssl-with-mingw-in-windows#9379476
+
+ > perl Configure mingw64 no-shared no-asm --prefix=/C/OpenSSL-x64
