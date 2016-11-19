@@ -108,7 +108,7 @@ func write_tx_file(tx *btc.Tx) {
 func make_signed_tx() {
 	// Make an empty transaction
 	tx := new(btc.Tx)
-	tx.Version = 2
+	tx.Version = 1
 	tx.Lock_time = 0
 
 	// Select as many inputs as we need to pay the full amount (with the fee)
