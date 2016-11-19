@@ -35,7 +35,7 @@ func dump_raw_sigscript(d []byte) bool {
 	if p2sh {
 		ms, er := btc.NewMultiSigFromScript(d)
 		if er==nil {
-			fmt.Println("       Multisig script", ms.SigsNeeded, "of", len(ms.PublicKeys))
+			fmt.Println("      Multisig script", ms.SigsNeeded, "of", len(ms.PublicKeys))
 			for i := range ms.PublicKeys {
 				fmt.Printf("       pkey%d = %s\n", i+1, hex.EncodeToString(ms.PublicKeys[i]))
 			}
@@ -50,7 +50,7 @@ func dump_raw_sigscript(d []byte) bool {
 		}
 	}
 
-	fmt.Println("       SigScript:", p2sh)
+	fmt.Println("      SigScript:", p2sh)
 	for i := range ss {
 		if p2sh && i==len(ss)-1 {
 			// Print p2sh script
@@ -76,9 +76,8 @@ func dump_raw_sigscript(d []byte) bool {
 
 
 func dump_sigscript(d []byte) bool {
-	if len(d) < 10 + 34 { // at least 10 bytes for sig and 34 bytes key
-		fmt.Println("       WARNING: Short sigScript")
-		fmt.Print(hex_dump(d))
+	if len(d) == 0 {
+		fmt.Println("       WARNING: Empty sigScript")
 		return false
 	}
 	rd := bytes.NewReader(d)
