@@ -98,11 +98,10 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 				w.Write([]byte("<status>OK</status>"))
 			}
 			fmt.Fprint(w, "<value>", po.Value, "</value>")
-			ads := "???"
+			fmt.Fprint(w, "<pkscript>", hex.EncodeToString(po.Pk_script), "</pkscript>")
 			if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
-				ads = ad.String()
+				fmt.Fprint(w, "<addr>", ad.String(), "</addr>")
 			}
-			fmt.Fprint(w, "<addr>", ads, "</addr>")
 			fmt.Fprint(w, "<block>", po.BlockHeight, "</block>")
 
 			if btc.IsP2SH(po.Pk_script) {
