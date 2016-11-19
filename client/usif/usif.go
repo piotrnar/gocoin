@@ -241,8 +241,8 @@ type SortedTxToSend []*network.OneTxToSend
 func (tl SortedTxToSend) Len() int {return len(tl)}
 func (tl SortedTxToSend) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
 func (tl SortedTxToSend) Less(i, j int) bool {
-	spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
-	spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
+	spb_i := float64(tl[i].Fee)/float64(tl[i].VSize())
+	spb_j := float64(tl[j].Fee)/float64(tl[j].VSize())
 	return spb_j < spb_i
 }
 
