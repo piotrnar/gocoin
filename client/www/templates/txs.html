@@ -263,7 +263,7 @@ function decode_tx_id(txid) {
 					s += (parseFloat(val)/1e8).toFixed(8)
 					s += " BTC <= "
 					var ad = xval(is[i], "addr")
-					if (ad==null) {
+					if (typeof(ad)!="string") {
 						s += xval(is[i], "pkscript")
 					} else {
 						s += ad
