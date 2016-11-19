@@ -404,7 +404,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML = (fee/1e8).toFixed(8)
 
 					c=row.insertCell(-1);c.align='right'
-					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'size'))).toFixed(1)
+					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'vsize'))).toFixed(1)
 				} else {
 					c=row.insertCell(-1);c.align='right'
 					c.innerHTML = '<i>unknown</i>'
