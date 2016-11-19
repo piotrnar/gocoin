@@ -469,6 +469,8 @@ func (c *OneConnection) Run() {
 
 			case "verack":
 				c.X.VerackReceived = true
+				c.PeerAddr.Services = c.Node.Services
+				c.PeerAddr.Save()
 				if common.IsListenTCP() {
 					c.SendOwnAddr()
 				}
