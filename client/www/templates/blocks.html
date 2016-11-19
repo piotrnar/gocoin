@@ -27,12 +27,14 @@
 	<th width="10" title="Extra times received">X
 </tr>
 </table>
+<br>
+Block Version Legend:<br>
+&bull; <b>w</b> - Supports SegWit<br>
+&bull; <b>+</b> - Supports 2MB blocks (BIP-109))<br>
+&bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
+&bull; <b>?</b> - Unrecognized block version<br>
 <script>
 const MINER_ID_COLUMN = 10
-
-var vermap = new Array()
-var current_version_index = 0
-var version_strings = [".", "*", "|", "="]
 
 var show_timestamp = false
 
@@ -144,11 +146,22 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
-				var vx = vermap[cs[i].Version]
-				if (isNaN(vx)) {
-					vx = vermap[cs[i].Version] = current_version_index++
+				var vx = ''
+				if (cs[i].Version<=4) {
+					vx = cs[i].Version
+				} else {
+					if (cs[i].Version&0x20000000) {
+						if (cs[i].Version&0x2) {
+							vx += 'w'
+						}
+						if (cs[i].Version&0x10000000) {
+							vx += '+'
+						}
+					} else {
+						vx = '?'
+					}
 				}
-				td.innerText = version_strings[vx]
+				td.innerText = vx
 				td.title = '0x' + cs[i].Version.toString(16)
 
 				var miner = cs[i].Miner.substr(0,11)
