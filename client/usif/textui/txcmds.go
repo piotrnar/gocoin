@@ -6,6 +6,7 @@ import (
 	"time"
 	"sort"
 	"strconv"
+	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/network"
@@ -112,6 +113,23 @@ func dec_tx(par string) {
 }
 
 
+func save_tx(par string) {
+	txid := btc.NewUint256FromString(par)
+	if txid==nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		list_txs("")
+		return
+	}
+	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		fn := tx.Hash.String() + ".tx"
+		ioutil.WriteFile(fn, tx.Data, 0600)
+		fmt.Println("Saved to", fn)
+	} else {
+		fmt.Println("No such transaction ID in the memory pool.")
+	}
+}
+
+
 func mempool_stats(par string) {
 	fmt.Print(usif.MemoryPoolFees())
 }
@@ -198,4 +216,5 @@ func init () {
 	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space <max_size>")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
+	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
 }
