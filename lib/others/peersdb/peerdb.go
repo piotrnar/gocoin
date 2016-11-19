@@ -156,7 +156,7 @@ func (p *PeerAddr) Ip() (string) {
 
 
 func (p *PeerAddr) String() (s string) {
-	s = fmt.Sprintf("%21s", p.Ip())
+	s = fmt.Sprintf("%21s  srv:%16x", p.Ip(), p.Services)
 
 	now := uint32(time.Now().Unix())
 	if p.Banned != 0 {
