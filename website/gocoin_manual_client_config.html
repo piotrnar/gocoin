@@ -144,6 +144,11 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> When a new block appears, (up to) how many peers to ask for its data at the same time.</td>
 </tr>
 <tr>
+<td class="cfg_name"> Net.MinSegwitCons</td>
+<td class="cfg_type"> uint32</td>
+<td> 0</td>
+<td class="cfg_info"> Maintain at least so many connections to nodes indicating support for Segregated Witness (via bit 0x8 in Services).</td>
+<tr>
 <td class="cfg_name"> TXPool.Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>

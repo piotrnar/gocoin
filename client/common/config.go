@@ -52,6 +52,7 @@ var (
 			MaxUpKBps uint
 			MaxDownKBps uint
 			MaxBlockAtOnce uint32
+			MinSegwitCons uint32
 		}
 		TXPool struct {
 			Enabled bool // Global on/off swicth

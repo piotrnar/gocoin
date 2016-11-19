@@ -369,7 +369,23 @@ func NetworkTick() {
 	}
 
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
-		adrs := peersdb.GetBestPeers(128, ConnectionActive)
+		var segwit_conns uint32
+		if common.CFG.Net.MinSegwitCons > 0 {
+			Mutex_net.Lock()
+			for _, cc := range OpenCons {
+				if (cc.Node.Services & SERVICE_SEGWIT) != 0 {
+					segwit_conns++
+				}
+			}
+			Mutex_net.Unlock()
+		}
+
+		adrs := peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) (bool) {
+			if segwit_conns<common.CFG.Net.MinSegwitCons && (ad.Services & SERVICE_SEGWIT)==0 {
+				return true
+			}
+			return ConnectionActive(ad)
+		})
 		if len(adrs)==0 {
 			common.LockCfg()
 			if common.CFG.ConnectOnly=="" && common.DebugLevel>0 {
