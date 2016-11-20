@@ -101,7 +101,7 @@ func (c *OneConnection) Tick() {
 	// Check no-data timeout
 	if c.X.LastDataGot.Add(NO_DATA_TIMEOUT).Before(now) {
 		c.Disconnect()
-		common.CountSafe("NetNodataTout")
+		common.CountSafe("NetNodataToutA")
 		if common.DebugLevel>0 {
 			println(c.PeerAddr.Ip(), "no data for", NO_DATA_TIMEOUT/time.Second, "seconds - disconnect")
 		}
@@ -115,8 +115,8 @@ func (c *OneConnection) Tick() {
 
 	if c.X.GetHeadersInProgress && now.After(c.X.GetHeadersTimeout) {
 		//println(c.ConnID, "- GetHdrs Timeout")
-		c.DoS("GetHdrsTimeout")
-		common.CountSafe("NetNodataTout")
+		c.Disconnect()
+		common.CountSafe("NetNodataToutB")
 		return
 	}
 
