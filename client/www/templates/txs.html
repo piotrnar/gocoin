@@ -1,5 +1,11 @@
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<style>
+td.maturity {
+	text-align: right;
+	white-space: nowrap;
+}
+</style>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
@@ -182,8 +188,11 @@ function sorttab(tid,col) {
 }
 
 function get_maturity(t) {
-	var mins = parseInt(((new Date()).getTime()/1000) - parseInt(t)) / 60
-	//if (mins<0) mins=0
+	var secs = parseInt(((new Date()).getTime()/1000) - parseInt(t))
+	if (secs<0) secs=0
+	if (secs<180)  return secs + ' s'
+	var mins = secs / 60
+	if (mins>300) return  (mins/60).toFixed(2) + ' h'
 	return mins.toFixed(1) + ' min'
 }
 
@@ -375,7 +384,7 @@ function show_txs2s(extrapar) {
 				c.addEventListener('click', decode_tx, false)
 				c.style.cursor='pointer'
 
-				c=row.insertCell(-1);c.align='right'
+				c=row.insertCell(-1);c.className='maturity'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
 
 				c=row.insertCell(-1);c.align='right'
@@ -491,7 +500,7 @@ function show_txsre() {
 				t = xval(txs[i], 'id')
 				c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
-				c=row.insertCell(-1);c.align='right'
+				c=row.insertCell(-1);className='maturity'
 				c.innerHTML = get_maturity(xval(txs[i], 'time'))
 
 				c=row.insertCell(-1);c.align='right'
@@ -541,7 +550,7 @@ function show_txw4i() {
 					t = xval(pendtxs[j], 'id')
 					c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
-					c=row.insertCell(-1);c.align='right'
+					c=row.insertCell(-1);className='maturity'
 					c.innerHTML = get_maturity(xval(pendtxs[j], 'time'))
 				}
 			}
