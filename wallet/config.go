@@ -140,4 +140,7 @@ func parse_config() {
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
+	if uncompressed {
+		fmt.Println("WARNING: Using uncompressed keys")
+	}
 }
