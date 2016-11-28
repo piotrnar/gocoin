@@ -29,7 +29,7 @@
 </table>
 <br>
 Block Version Legend:<br>
-&bull; <b>w</b> - Supports SegWit<br>
+&bull; <b>w</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109))<br>
 &bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
 &bull; <b>?</b> - Unrecognized block version<br>
@@ -79,6 +79,7 @@ function refreshblocks() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
+			var segwit_c = 0
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
 
@@ -153,6 +154,7 @@ function refreshblocks() {
 					if (cs[i].Version&0x20000000) {
 						if (cs[i].Version&0x2) {
 							vx += 'w'
+							segwit_c++
 						}
 						if (cs[i].Version&0x10000000) {
 							vx += '+'
@@ -218,6 +220,8 @@ function refreshblocks() {
 
 				onc(row, i)
 			}
+
+			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'
 
 			if (mid!=null) {
 				for (var i=2; i<blkstab.rows.length; i++) {
