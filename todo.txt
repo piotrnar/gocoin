@@ -6,6 +6,7 @@ Downloader:
 * If only e.g. 2 blocks are left, it is fetching them from a single peer
 
 Client:
+* Monitor: the main look got stuck in network.Tick() function after ~50 days of uptime
 * Implement SegWit addresses handling and fetching balances from segwit addresses
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
