@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 	"encoding/hex"
+	"crypto/rand"
 )
 
 func TestSigRecover(t *testing.T) {
@@ -134,6 +135,17 @@ func BenchmarkVerify(b *testing.B) {
 		if !sig.Verify(&key, &msg) {
 			b.Fatal("sig_verify failed")
 		}
+	}
+}
+
+
+func BenchmarkPrv2Pub(b *testing.B) {
+	var prv [32]byte
+	var pub [33]byte
+	rand.Read(prv[:])
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		BaseMultiply(prv[:], pub[:])
 	}
 }
 
