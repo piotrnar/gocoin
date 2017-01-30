@@ -150,6 +150,18 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
 		//ioutil.WriteFile(hash.String() + ".bin", b, 0700)
 		conn.DoS("BadBlock")
+
+		// we don't need to remove from conn.GetBlockInProgress as we're disconnecting
+
+		if b2g.Block.MerkleRootMatch() {
+			println("It was a wrongly mined one - clean it up")
+			DelB2G(idx) //remove it from BlocksToGet
+			if b2g.BlockTreeNode==LastCommitedHeader {
+				LastCommitedHeader = LastCommitedHeader.Parent
+			}
+			common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+		}
+
 		MutexRcv.Unlock()
 		return
 	}
@@ -369,5 +381,3 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	return
 }
-
-
