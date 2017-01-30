@@ -138,3 +138,12 @@ func (bl *Block) BuildTxList() (e error) {
 func GetBlockReward(height uint32) (uint64) {
 	return 50e8 >> (height/210000)
 }
+
+
+func (bl *Block) MerkleRootMatch() bool {
+	if bl.TxCount==0 {
+		return false
+	}
+	merkle, _ := GetMerkle(bl.Txs)
+	return bytes.Equal(merkle, bl.MerkleRoot())
+}
