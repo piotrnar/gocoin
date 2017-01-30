@@ -571,7 +571,10 @@ func (c *OneConnection) Run() {
 						c.Mutex.Unlock()
 					}
 				} else {
-					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+					common.CountSafe("SendCmpctErr")
+					if len(cmd.pl)!=5 {
+						println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
+					}
 				}
 
 			case "cmpctblock":
