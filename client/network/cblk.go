@@ -355,22 +355,32 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		//sta := time.Now()
 		b2g.Block.UpdateContent(col.Assemble())
 		//sto := time.Now()
+		bidx := b2g.Block.Hash.BIdx()
 		er := common.BlockChain.PostCheckBlock(b2g.Block)
 		if er!=nil {
 			println(c.ConnID, "Corrupt CmpctBlkA")
 			ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+
+			if b2g.Block.MerkleRootMatch() {
+				println("It was a wrongly mined one - clean it up")
+				DelB2G(bidx) //remove it from BlocksToGet
+				if b2g.BlockTreeNode==LastCommitedHeader {
+					LastCommitedHeader = LastCommitedHeader.Parent
+				}
+				common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+			}
+
 			//c.DoS("BadCmpctBlockA")
 			return
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
-		idx := b2g.Block.Hash.BIdx()
 		c.Mutex.Lock()
 		c.counters["NewCBlock"]++
 		c.blocksreceived = append(c.blocksreceived, time.Now())
 		c.Mutex.Unlock()
 		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
-		ReceivedBlocks[idx] = orb
-		DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
+		ReceivedBlocks[bidx] = orb
+		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
 		b2g.TmPreproc = time.Now()
@@ -470,6 +480,16 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Corrupt CmpctBlkB")
 		//c.DoS("BadCmpctBlockB")
 		ioutil.WriteFile(b2g.Hash.String()+".bin", b2g.Block.Raw, 0700)
+
+		if b2g.Block.MerkleRootMatch() {
+			println("It was a wrongly mined one - clean it up")
+			DelB2G(idx) //remove it from BlocksToGet
+			if b2g.BlockTreeNode==LastCommitedHeader {
+				LastCommitedHeader = LastCommitedHeader.Parent
+			}
+			common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+		}
+
 		return
 	}
 	DelB2G(idx)
