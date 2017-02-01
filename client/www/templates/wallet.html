@@ -107,7 +107,7 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = 'segwitaddr'
-				if (rec.SegWitAddr!='') {
+				if (testnet && rec.SegWitAddr!='') {
 					td.innerText = rec.SegWitAddr
 					td.onclick = function() {warnings.style.display='block'}
 					warnings
