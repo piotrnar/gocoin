@@ -376,6 +376,6 @@ func main() {
 		fmt.Println("The data has been stored in 'balance' folder.")
 		fmt.Println("Use it with the wallet app to spend any of it.")
 	} else {
-		fmt.Println("The fateched balance is empty.")
+		fmt.Println("No coins found on the given address(es).")
 	}
 }
