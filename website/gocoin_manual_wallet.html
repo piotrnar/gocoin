@@ -36,12 +36,21 @@ Since you do not see such characters on screen, you may have problems re-creatin
 The seed password is the key to your entire wallet and the function used to calculate it is double SHA256, which is pretty easy to compute.<br>
 That is why it is very important for you to make sure that the password you're choosing will be resistant to brute force and dictionary attacks.<br>
 <br>
+If you choose to use a memorable seed-password (aka <i>brain wallet</i>),
+make it <u>at least</u> 20 characters long, preferably more than 30.
+Use both cases of letters, digits and sepcial characters.
+Try to avoid using words that can be found in a dictionary and never use sentences that can be found in Google.<br>
+<br>
+If you decide to write down the password, because you are affraid of forgetting it,
+try to describe it as a puzzle that ony you can understad. Avoid writing down the password as is.<br>
+<br>
 
 <b>Are brain wallets less secure from those based on a random number generator?</b><br>
 It is debatable.<br>
 There are people claiming that brain wallets aren't secure because brains cannot possibly be a good source of entropy.<br>
 If you have such a brain, make sure to consider this risk (e.g. use a random generator to create the content of the <code>.secret</code> file).<br>
-Otherwise coming out with a memorable though <u>uncrackable</u> seed, gives you a more secured solution, because you get rid of backups which are a week point of any wallet's security.<br>
+Otherwise coming out with a memorable though <u>uncrackable</u> seed, gives you a more secure and very convenient solution,
+because you get rid of backups that are a week point of the wallet's security and you never have to carry the wallet file with you.<br>
 <br>
 
 <h2>Importing other private keys</h2>
