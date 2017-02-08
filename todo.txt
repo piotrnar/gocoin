@@ -14,6 +14,7 @@ Client:
 * Implement booostraping of the node with only the block headers and UTXO snapshot
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime
 * Implement SegWit addresses handling and fetching balances from segwit addresses
+* Add "server mode" - where WebUI users cannot change config and shutdown the node
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
