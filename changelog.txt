@@ -1,4 +1,4 @@
-1.8.0
+1.8.0 - 2017-02-26
 * Segregated Witness related functionality and many other changes here and there
 * Client: drop_worst_peer - do not drop peers that send new transactions
 * Client: Requires new consensus lib (from bitcon-core 0.13.1)
