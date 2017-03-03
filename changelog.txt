@@ -1,5 +1,6 @@
 1.8.1
 * Client: enable it to work with purged blockchain.new/blockchain.dat
+* bdb: -purgeall to purge all the blocks from blockchain.new (delete blockchain.dat manually)
 
 1.8.0 - 2017-02-06
 * Segregated Witness related functionality and many other changes here and there
