@@ -315,6 +315,8 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	rec, trusted, e = db.BlockGetExt(hash)
 	if rec!=nil {
 		bl = rec.Data
+	} else {
+		e = errors.New("Block not found")
 	}
 	return
 }
