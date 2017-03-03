@@ -38,9 +38,8 @@ func host_init() {
 	os.MkdirAll(common.GocoinHomeDir, 0770)
 	sys.LockDatabaseDir(common.GocoinHomeDir)
 
-	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.dat")
+	fi, e := os.Stat(common.GocoinHomeDir+"blockchain.new")
 	if e!=nil {
-		os.RemoveAll(common.GocoinHomeDir)
 		fmt.Println("You seem to be running Gocoin for the fist time on this PC")
 		fi, e = os.Stat(BtcRootDir+"blocks/blk00000.dat")
 		if e==nil && fi.Size()>1024*1024 {
