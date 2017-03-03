@@ -26,6 +26,10 @@ type Block struct {
 
 
 func NewBlock(data []byte) (bl *Block, er error) {
+	if data==nil {
+		er = errors.New("nil pointer")
+		return
+	}
 	bl = new(Block)
 	bl.Hash = NewSha2Hash(data[:80])
 	er = bl.UpdateContent(data)
