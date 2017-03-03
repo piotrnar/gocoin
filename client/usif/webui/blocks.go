@@ -57,11 +57,11 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	for cnt:=uint32(0); end!=nil && cnt<atomic.LoadUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
-			return
+			break
 		}
 		block, e := btc.NewBlock(bl)
 		if e!=nil {
-			return
+			break
 		}
 
 		b := new(one_block)
