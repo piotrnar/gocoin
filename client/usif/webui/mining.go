@@ -71,10 +71,14 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		lastts = int64(end.Timestamp())
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
-			return
+			break
 		}
 
 		block, e := btc.NewBlock(bl)
+		if e != nil {
+			break
+		}
+
 		cbasetx, _ := btc.NewTx(bl[block.TxOffset:])
 
 		diff += btc.GetDifficulty(end.Bits())
