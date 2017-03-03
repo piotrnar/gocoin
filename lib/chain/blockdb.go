@@ -261,6 +261,12 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 		return
 	}
 
+	if rec.blen==0 {
+		db.mutex.Unlock()
+		e = errors.New("btc.Block purged from disk")
+		return
+	}
+
 	trusted = rec.trusted
 	if db.cache!=nil {
 		if crec, hit := db.cache[hash.BIdx()]; hit {
