@@ -43,6 +43,7 @@ var (
 	fl_trunc             bool
 	fl_commit, fl_verify bool
 	fl_savebl            string
+	fl_purgeall          bool
 )
 
 /********************************************************/
@@ -171,6 +172,7 @@ func main() {
 	flag.BoolVar(&fl_verify, "verify", false, "Verify each block inside the database")
 	flag.StringVar(&fl_savebl, "savebl", "", "Save block with the given hash to disk")
 	flag.BoolVar(&fl_resetflags, "resetflags", false, "Reset all Invalid and Trusted flags when defragmenting")
+	flag.BoolVar(&fl_purgeall, "purgeall", false, "Purge all blocks from the database")
 
 	flag.Parse()
 
@@ -250,6 +252,17 @@ func main() {
 	}
 
 	fmt.Println(len(dat)/136, "records")
+
+	if fl_purgeall {
+		for off := 0; off < len(dat); off += 136 {
+			sl := dat[off : off+136]
+			binary.LittleEndian.PutUint64(sl[40:48], 0)
+			binary.LittleEndian.PutUint32(sl[48:52], 0)
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		fmt.Println("blockchain.new upated. Now delete blockchain.dat yourself...")
+	}
 
 	if fl_scan {
 		var scan_errs uint
