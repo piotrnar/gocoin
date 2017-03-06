@@ -2,6 +2,7 @@ package textui
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
@@ -285,15 +286,19 @@ func dump_block(s string) {
 	}
 
 	ioutil.WriteFile(h.String() + ".bin", crec.Data, 0700)
+	fmt.Println("Block saved")
+
 	if crec.Block==nil {
 		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
 	if crec.Block.OldData==nil {
 		crec.Block.BuildTxList()
 	}
-	ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+	if !bytes.Equal(crec.Data, crec.Block.OldData) {
+		ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+		fmt.Println("Old block saved")
+	}
 
-	fmt.Println("Block saved")
 }
 
 func ui_quit(par string) {
