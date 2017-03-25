@@ -31,6 +31,7 @@
 Block Version Legend:<br>
 &bull; <b>w</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109)<br>
+&bull; <b>U</b> - Signals BU's <span class="mono">/EBx/ADy/</span> thingy  <span id="ebad_cnt"></span><br>
 &bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
 &bull; <b>?</b> - Unrecognized block version<br>
 <script>
@@ -80,6 +81,7 @@ function refreshblocks() {
 		try {
 			var cs = JSON.parse(aj.responseText)
 			var segwit_c = 0
+			var ebad_c = 0
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
 
@@ -163,8 +165,12 @@ function refreshblocks() {
 						vx = '?'
 					}
 				}
+				if (typeof(cs[i].EBAD)=="string" && cs[i].EBAD!="") {
+					ebad_c++
+					vx += 'U'
+				}
 				td.innerText = vx
-				td.title = '0x' + cs[i].Version.toString(16)
+				td.title = '0x' + cs[i].Version.toString(16) + cs[i].EBAD
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
@@ -222,6 +228,7 @@ function refreshblocks() {
 			}
 
 			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'
+			ebad_cnt.innerText = '(' + ebad_c + '/' + cs.length + ')'
 
 			if (mid!=null) {
 				for (var i=2; i<blkstab.rows.length; i++) {

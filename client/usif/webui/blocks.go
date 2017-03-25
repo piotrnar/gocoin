@@ -2,6 +2,7 @@ package webui
 
 import (
 	"time"
+	"regexp"
 	"net/http"
 	"sync/atomic"
 	"encoding/json"
@@ -46,6 +47,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		MinFeeKSPB uint64
 		NonWitnessSize int
+		EBAD string
 	}
 
 	var blks []*one_block
@@ -53,6 +55,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	common.Last.Mutex.Lock()
 	end := common.Last.Block
 	common.Last.Mutex.Unlock()
+
+	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
 	for cnt:=uint32(0); end!=nil && cnt<atomic.LoadUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
@@ -123,6 +127,10 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		b.MinFeeKSPB = rb.MinFeeKSPB
 		b.NonWitnessSize = rb.NonWitnessSize
+
+		if res:=eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res!=nil {
+			b.EBAD = string(res)
+		}
 
 		blks = append(blks, b)
 		end = end.Parent

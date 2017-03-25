@@ -5,6 +5,7 @@ import (
 	"time"
 	"sort"
 	"strings"
+	"regexp"
 	"net/http"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -16,6 +17,7 @@ type omv struct {
 	bts uint64
 	mid int
 	fees uint64
+	ebad_cnt int
 }
 
 type onemiernstat []struct {
@@ -64,6 +66,8 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 
 	next_diff_change := 2016-end.Height%2016
 
+	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
+
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
 			break
@@ -97,6 +101,10 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			rew += cbasetx.TxOut[o].Value
 		}
 		om.fees += rew - btc.GetBlockReward(end.Height)
+
+		if eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig) != nil {
+			om.ebad_cnt++
+		}
 
 		m[miner] = om
 		if mid!=-1 && current_mid==-1 && minerid==string(common.MinerIds[mid].Tag) {
@@ -148,6 +156,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{MINER_ID}", fmt.Sprint(srt[i].mid), -1)
 		s = strings.Replace(s, "<!--TOTAL_FEES-->", btc.UintToBtc(srt[i].fees), -1)
 		s = strings.Replace(s, "<!--FEE_PER_BYTE-->", fmt.Sprint(srt[i].fees/srt[i].bts), -1)
+		s = strings.Replace(s, "<!--EBAD_CNT-->", fmt.Sprint(srt[i].ebad_cnt), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 		totfees += srt[i].fees
 	}

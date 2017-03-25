@@ -1,6 +1,11 @@
 <tr class="hov" id="midrow{MINER_ID}">
 	<td>{MINER_NAME}
-	<td align="right">{BLOCK_COUNT}
+	<td align="right"><script>
+{
+	var a="<!--EBAD_CNT-->"
+	if (a!="" && a!="0") document.write('<i title="BU signaling">('+a+')</i> ')
+}
+	</script>{BLOCK_COUNT}
 	<td align="right">{TOTAL_PERCENT}%
 	<td align="right" nowrap="mowrap">{MINER_HASHRATE}
 	<td align="right">{AVG_BLOCK_SIZE}
