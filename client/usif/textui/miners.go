@@ -32,6 +32,9 @@ func do_mining(s string) {
 	bip100_voting := make(map[string]uint)
 	bip100x := regexp.MustCompile("/BV{0,1}[0-9]+[M]{0,1}/")
 
+	eb_ad_voting := make(map[string]uint)
+	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
+
 	for end.Timestamp() >= lim {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
@@ -71,6 +74,11 @@ func do_mining(s string) {
 			fmt.Println("      block", end.Height, "by", nimer, "voting", string(res), " total:", bip100_voting[string(res)])
 		}
 
+		res = eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig)
+		if res!=nil {
+			eb_ad_voting[string(res)]++
+		}
+
 		end = end.Parent
 	}
 	if tot_blocks == 0 {
@@ -92,8 +100,14 @@ func do_mining(s string) {
 	bph := float64(tot_blocks)/float64(hrs)
 	fmt.Printf("Total network hashrate : %s @ average diff %.0f  (%.2f bph)\n",
 		common.HashrateToString(bph/6 * diff * 7158278.826667), diff, bph)
-	fmt.Printf("Average block size was %.1f KB,  next difficulty change in %d blocks\n",
-		float64(tot_blocks_len/tot_blocks)/1e3, 2016-bte.Height%2016)
+	fmt.Printf("%d blocks in %d hours. Average size %.1f KB,  next diff in %d blocks\n",
+		tot_blocks, hrs, float64(tot_blocks_len/tot_blocks)/1e3, 2016-bte.Height%2016)
+
+	fmt.Println()
+	fmt.Println("BU Voting")
+	for k, v := range eb_ad_voting {
+		fmt.Printf(" %s \t %d \t %.2f%%\n", k, v, float64(v)*100/float64(tot_blocks))
+	}
 }
 
 
