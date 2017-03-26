@@ -18,6 +18,7 @@ type omv struct {
 	mid int
 	fees uint64
 	ebad_cnt int
+	segwit_cnt int
 }
 
 type onemiernstat []struct {
@@ -106,6 +107,10 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 			om.ebad_cnt++
 		}
 
+		if end.BlockVersion()==0x20000002 {
+			om.segwit_cnt++
+		}
+
 		m[miner] = om
 		if mid!=-1 && current_mid==-1 && minerid==string(common.MinerIds[mid].Tag) {
 			current_mid = mid
@@ -157,6 +162,7 @@ func p_miners(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "<!--TOTAL_FEES-->", btc.UintToBtc(srt[i].fees), -1)
 		s = strings.Replace(s, "<!--FEE_PER_BYTE-->", fmt.Sprint(srt[i].fees/srt[i].bts), -1)
 		s = strings.Replace(s, "<!--EBAD_CNT-->", fmt.Sprint(srt[i].ebad_cnt), -1)
+		s = strings.Replace(s, "<!--SEGWIT_CNT-->", fmt.Sprint(srt[i].segwit_cnt), -1)
 		mnrs = templ_add(mnrs, "<!--MINER_ROW-->", s)
 		totfees += srt[i].fees
 	}
