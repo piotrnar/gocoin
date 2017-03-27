@@ -7,6 +7,7 @@ Downloader:
 * If only e.g. 2 blocks are left, it is fetching them from a single peer
 
 Client:
+* Fix "GetRawTx: block not in the database", when balance is fetched with blocks purged
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
 	Undo block 450529 000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5 976 KB
