@@ -107,25 +107,25 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		println("GetTxFromExplorer - OK")
+		//println("GetTxFromExplorer - OK")
 		return
 	}
 
 	raw = GetTxFromWebBTC(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		println("GetTxFromWebBTC - OK")
+		//println("GetTxFromWebBTC - OK")
 		return
 	}
 
 	raw = GetTxFromBlockrIo(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		println("GetTxFromBlockrIo - OK")
+		//println("GetTxFromBlockrIo - OK")
 		return
 	}
 
 	raw = GetTxFromBlockchainInfo(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		println("GetTxFromBlockchainInfo - OK")
+		//println("GetTxFromBlockchainInfo - OK")
 		return
 	}
 

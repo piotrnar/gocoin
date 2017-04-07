@@ -190,7 +190,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			was_tx[thisbal[i].TxPrevOut.Hash] = true
 			txid := btc.NewUint256(thisbal[i].TxPrevOut.Hash[:])
 			fz, _ := zi.Create("balance/" + txid.String() + ".tx")
-			if dat, er := common.BlockChain.GetRawTx(thisbal[i].MinedAt, txid); er == nil {
+			if dat, er := common.GetRawTx(thisbal[i].MinedAt, txid); er == nil {
 				fz.Write(dat)
 			} else {
 				println(er.Error())

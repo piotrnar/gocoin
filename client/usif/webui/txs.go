@@ -194,7 +194,7 @@ func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 
 	w.Write([]byte("<tx>"))
 	fmt.Fprint(w, "<id>", minedid, "</id>")
-	if dat, er := common.BlockChain.GetRawTx(uint32(block_number), txid); er == nil {
+	if dat, er := common.GetRawTx(uint32(block_number), txid); er == nil {
 		w.Write([]byte("<status>OK</status>"))
 		w.Write([]byte(fmt.Sprint("<size>", len(dat), "</size>")))
 		tx, _ := btc.NewTx(dat)

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"errors"
 	"sync/atomic"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 const (
@@ -156,4 +158,17 @@ func RecalcAverageBlockSize(fix_sizes bool) {
 	} else {
 		atomic.StoreUint32(&AverageBlockSize, uint32(204))
 	}
+}
+
+func GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, er error) {
+	data, er = BlockChain.GetRawTx(BlockHeight, txid)
+	if er!=nil {
+		data = utils.GetTxFromWeb(txid)
+		if data!=nil {
+			er = nil
+		} else {
+			er = errors.New("GetRawTx and GetTxFromWeb failed for " + txid.String())
+		}
+	}
+	return
 }
