@@ -1,4 +1,5 @@
 1.8.1
+* WebUI/Wallet: Fixed error "Form submission canceled because the form is not connected"
 * Client: enable it to work with purged blockchain.new/blockchain.dat
 * bdb: -purgeall to purge all the blocks from blockchain.new (delete blockchain.dat manually)
 * Client: added some BU-singnalling related stats
