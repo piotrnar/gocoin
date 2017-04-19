@@ -1,4 +1,5 @@
 1.8.1
+* WebUI/Miners: Redone
 * WebUI: When a block with a wallet's unspent tx is purged from blockchain.dat, the raw tx gets fetched from the web
 * WebUI/Wallet: Fixed error "Form submission canceled because the form is not connected"
 * Client: enable it to work with purged blockchain.new/blockchain.dat

@@ -120,15 +120,18 @@ function bignum(n) {
 		return (n/1e9).toFixed(1) + " G"
 	}
 	if (n<10e15) {
-		return (n/1e12).toFixed(1) + " P"
+		return (n/1e12).toFixed(1) + " T"
 	}
 	if (n<10e18) {
-		return (n/1e15).toFixed(1) + " E"
+		return (n/1e15).toFixed(1) + " P"
 	}
 	if (n<10e21) {
-		return (n/1e18).toFixed(1) + " Z"
+		return (n/1e18).toFixed(1) + " E"
 	}
-	return (n/1e21).toFixed(2) + " Y"
+	if (n<10e24) {
+		return (n/1e21).toFixed(1) + " Z"
+	}
+	return (n/1e24).toFixed(2) + " Y"
 }
 
 function int2ip(i) {

@@ -93,16 +93,4 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-
-	if len(r.Form["mid"])>0 {
-		v, e := strconv.ParseUint(r.Form["mid"][0], 10, 32)
-		if e == nil && v < uint64(len(common.MinerIds)) {
-			common.CFG.Beeps.MinerID = string(common.MinerIds[v].Tag)
-		} else {
-			common.CFG.Beeps.MinerID = ""
-		}
-		http.Redirect(w, r, "miners", http.StatusFound)
-		return
-	}
-
 }
