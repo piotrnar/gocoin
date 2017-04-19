@@ -3,9 +3,9 @@ var curmid='{MINER_MON_IDX}'
 function inerton(id) {
 	if (id>=0) {
 		if (id!=curmid) {
-			document.write('<a href="cfg?mid='+id+'&sid='+sid+'">Turn ON</a>')
+			document.write('<a href="cfg?mid='+id+'&sid='+sid+'">ON</a>')
 		} else {
-			document.write('<a href="cfg?mid=off&sid='+sid+'">Turn OFF</a>')
+			document.write('<a href="cfg?mid=off&sid='+sid+'">OFF</a>')
 		}
 	}
 }
@@ -41,7 +41,7 @@ with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
 		<th width="100" align="right" title="Average Block Length">ABL
 		<th width="100" align="right">Fees BTC
 		<th width="60" align="right" title="Satoshis per byte">SPB
-		<th width="80" align="right">Monitor
+		<th width="80" align="right">Mon
 	</tr>
     <!--MINER_ROW-->
 </table>
