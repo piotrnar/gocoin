@@ -49,7 +49,7 @@ function refresh_mining_info() {
 			el_avg_diff.innerText = bignum(cs.AvgDifficulty)
 			el_diff_change_in.innerText = (parseInt(last_block_height/2016)+1)*2016 - last_block_height
 
-			while (minerstab.rows.length>2) blkstab.deleteRow(2)
+			while (minerstab.rows.length>2) minerstab.deleteRow(2)
 
 			var totfees=0,  totbts=0,  bu_cnt=0,  sw_cnt=0
 			for (var i=0; i<cs.Miners.length; i++) {
@@ -194,6 +194,8 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 		else if (a.cnt==b.cnt) return 0;
 		else return 1;
 	})
+
+	while (blockver_tab.rows.length>2) blockver_tab.deleteRow(2)
 
 	for (var i=0; i<sorted.length; i++) {
 		var row = blockver_tab.insertRow(-1)
