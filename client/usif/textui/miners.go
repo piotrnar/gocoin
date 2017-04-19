@@ -13,7 +13,7 @@ import (
 
 
 func do_mining(s string) {
-	var totbtc, hrs uint64
+	var totbtc, hrs, segwit_cnt uint64
 	if s != "" {
 		hrs, _ = strconv.ParseUint(s, 10, 64)
 	}
@@ -67,6 +67,10 @@ func do_mining(s string) {
 		}
 		common.UnlockCfg()
 
+		if (block.Version()&0x20000002) == 0x20000002 {
+			segwit_cnt++
+		}
+
 		res := bip100x.Find(cbasetx.TxIn[0].ScriptSig)
 		if res!=nil {
 			bip100_voting[string(res)]++
@@ -103,10 +107,11 @@ func do_mining(s string) {
 	fmt.Printf("%d blocks in %d hours. Average size %.1f KB,  next diff in %d blocks\n",
 		tot_blocks, hrs, float64(tot_blocks_len/tot_blocks)/1e3, 2016-bte.Height%2016)
 
+	fmt.Printf("\nSegWit Voting: %d (%.1f%%)\n", segwit_cnt, float64(segwit_cnt)*100/float64(tot_blocks))
 	fmt.Println()
 	fmt.Println("BU Voting")
 	for k, v := range eb_ad_voting {
-		fmt.Printf(" %s \t %d \t %.2f%%\n", k, v, float64(v)*100/float64(tot_blocks))
+		fmt.Printf(" %s \t %d \t %.1f%%\n", k, v, float64(v)*100/float64(tot_blocks))
 	}
 }
 
