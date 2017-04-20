@@ -13,6 +13,11 @@ td.mi_unkn {
 	font-style:italic;
 	font-size:80%;
 }
+td.mi_tot {
+	text-align:right;
+	color:purple;
+	font-style:italic;
+}
 td.mi_sw {
 	text-align:right;
 	color:#00b000;
@@ -62,6 +67,11 @@ function refresh_mining_info() {
 
 				td = row.insertCell(-1)
 				td.className = 'r'
+				var frac = parseFloat(m.Blocks/cs.BlockCount)
+				td.innerText = parseFloat(100.0*frac).toFixed(1) + '%'
+
+				td = row.insertCell(-1)
+				td.className = 'mi_tot'
 				td.innerText = m.Blocks
 
 				td = row.insertCell(-1)
@@ -77,11 +87,6 @@ function refresh_mining_info() {
 					td.innerText = m.BUcnt
 					bu_cnt += m.BUcnt
 				}
-
-				td = row.insertCell(-1)
-				td.className = 'r'
-				var frac = parseFloat(m.Blocks/cs.BlockCount)
-				td.innerText = parseFloat(100.0*frac).toFixed(1) + '%'
 
 				td = row.insertCell(-1)
 				td.className = 'r'
@@ -137,11 +142,11 @@ with the average of <b id="el_avg_fpb"></b> Satoshis per byte.<br>
 
 <table id="minerstab" class="bord" width="100%">
 	<tr>
-		<th width="120">Miner
-		<th width="40" align="right">Blks
+		<th width="120" align="left">Miner
+		<th width="80" align="right">Share
+		<th width="40" align="right">Tot
 		<th width="20" align="right" id="th_sw_sign">SW
 		<th width="20" align="right" id="th_bu_sign">BU
-		<th width="80" align="right">Net Share
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right" title="Average Block Length">kByte
 		<th width="100" align="right">Fees BTC
