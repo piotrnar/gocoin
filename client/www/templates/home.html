@@ -28,7 +28,7 @@
 	<col width="120">
 	<tr><td align="right">Block Hash:<td colspan="5"><b id="last_block_hash"></b>
 		<td align="right">Beep New Block:
-			<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
+            <td><a id="el_beep_block_switch" title="Click to switch on/off" href="javascript:alert('Not possible in Server Mode')"><!--NEW_BLOCK_BEEP--></a>
 
 	<tr><td align="right">Timestamp:
 			<td><b id="last_block_timestamp"></b>
@@ -84,7 +84,7 @@
 		<b title="Go heap size" id="si_heap_size"></b> +
 		<b title="Extra mem taken by QDB" id="si_qdb_extramem"></b>
 		(<b title="Sys mem taken by Go" id="si_heap_sysmem"></b>)
-		&nbsp;[<a href="javascript:config('freemem')">FREE</a>]
+		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
 		&nbsp;&bull;&nbsp;
@@ -100,7 +100,7 @@
 	</table>
 </table>
 
-<div id="showcfg">
+<div id="showcfg" style="display:none">
 <form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
 <table width="100%"><tr>
 <td align="left"><input type="button" value="Edit configuration" onclick="shwcfg()">
@@ -131,6 +131,13 @@
 </table>
 </div>
 <script>
+if (!server_mode) {
+	showcfg.style.display='block'
+	el_free_mem.style.display='inline'
+	el_beep_block_switch.href="javascript:config('beepblock')"
+}
+
+
 var previousPoint = null;
 var cs
 

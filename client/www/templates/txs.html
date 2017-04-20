@@ -54,11 +54,11 @@ td.maturity {
 		<tr>
 			<td>Memory pool:
 			<td><b><!--MEM_POOL_ENABLED--></b>
-			<td>[<a href="javascript:config('txponoff')">Switch ON/OFF</a>]
+			<td><span id="el_txp_switch" style="display:none">[<a href="javascript:config('txponoff')">Switch ON/OFF</a>]</span>
 		<tr>
 			<td>Relay transactions:
 			<td><b><!--TX_ROUTE_ENABLED--></b>
-			<td>[<a href="javascript:config('txronoff')">Switch ON/OFF</a>]
+			<td><span id="el_txr_switch" style="display:none">[<a href="javascript:config('txronoff')">Switch ON/OFF</a>]</span>
 		<tr>
 			<td colspan="3">
 				<hr>
@@ -146,6 +146,10 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
 <script>
+if (!server_mode) {
+	el_txp_switch.style.display='inline'
+	el_txr_switch.style.display='inline'
+}
 
 function sortclick(type) {
 	var os = mp_show_sort.options
