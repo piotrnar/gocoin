@@ -75,7 +75,7 @@ func do_mining(s string) {
 		if res!=nil {
 			bip100_voting[string(res)]++
 			nimer, _ := common.TxMiner(cbasetx)
-			fmt.Println("      block", end.Height, "by", nimer, "voting", string(res), " total:", bip100_voting[string(res)])
+			fmt.Println("      block", end.Height, "by", nimer, "BIP100 voting", string(res), " total:", bip100_voting[string(res)])
 		}
 
 		res = eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig)
