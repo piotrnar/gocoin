@@ -13,20 +13,40 @@ td.mi_unkn {
 	font-style:italic;
 	font-size:80%;
 }
+td.mi_netshare {
+	font-family: monospace;
+	text-align:right;
+	font-weight:bold;
+}
+td.mi_hashrate {
+	font-family: monospace;
+	text-align:right;
+	font-style:italic;
+	font-size:90%;
+}
+td.mi_bsize {
+	font-family: monospace;
+	text-align:right;
+	font-size:90%;
+	font-weight:bold;
+}
 td.mi_tot {
 	text-align:right;
 	color:purple;
 	font-style:italic;
+	font-weight:bold;
 }
 td.mi_sw {
 	text-align:right;
 	color:#00b000;
 	font-style:italic;
+	font-size:90%;
 }
 td.mi_bu {
 	text-align:right;
 	color:blue;
 	font-style:italic;
+	font-size:90%;
 }
 </style>
 
@@ -66,7 +86,7 @@ function refresh_mining_info() {
 				td.innerText = m.Name
 
 				td = row.insertCell(-1)
-				td.className = 'r'
+				td.className = 'mi_netshare'
 				var frac = parseFloat(m.Blocks/cs.BlockCount)
 				td.innerText = parseFloat(100.0*frac).toFixed(1) + '%'
 
@@ -89,13 +109,13 @@ function refresh_mining_info() {
 				}
 
 				td = row.insertCell(-1)
-				td.className = 'r'
+				td.className = 'mi_hashrate'
 				var frac = parseFloat(m.Blocks/cs.BlockCount)
 				td.innerText = bignum(frac*cs.AvgHashrate)+'H/s'
 
 				td = row.insertCell(-1)
-				td.className = 'r bold'
-				td.innerText = parseFloat(m.TotalBytes/m.Blocks/1000).toFixed(1)
+				td.className = 'mi_bsize'
+				td.innerText = parseFloat(m.TotalBytes/m.Blocks).toFixed(0)
 
 				td = row.insertCell(-1)
 				td.className = 'blreward'
@@ -148,7 +168,7 @@ with the average of <b id="el_avg_fpb"></b> Satoshis per byte.<br>
 		<th width="20" align="right" id="th_sw_sign">SW
 		<th width="20" align="right" id="th_bu_sign">BU
 		<th width="100" align="right">Hashrate
-		<th width="100" align="right" title="Average Block Length">kByte
+		<th width="100" align="right" title="Average Block Length">Average
 		<th width="100" align="right">Fees BTC
 		<th width="60" align="right" title="Satoshis per byte">SPB
 	</tr>
