@@ -2,33 +2,27 @@ Lib:
 * Implement BIP9
 * Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
+* CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")
+* Try to make own (faster) implementation of sha256 and rimp160
+* The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Client:
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
 	Undo block 450529 000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5 976 KB
-* Each call to common.BlockChain.DeleteBranch() shall also do DelB2G() recursively
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime
-* Implement SegWit addresses handling and fetching balances from segwit addresses
 * Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * StealthAddr: seems that a single metadata index can have more than one ephemkey (find out how to handle it)
 
 Wallet:
-* Implement sending coins to/from segwit addresses
+* Implement "server mode", e.g. through TCP or serial connection
+* Write some automated tests
 
- Probably not to do:
+Probably not to do:
 * Do not list unmatured coinbase outputs in the balance
 * Implement "mempool" network command
 
 Tools:
 * txaddsig - make it to work with multisig
-
-Wallet:
-* Write some automated tests
-
-Core lib:
-* CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")
-* Try to make own (faster) implementation of sha256 and rimp160
-* The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
