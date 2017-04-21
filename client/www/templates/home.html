@@ -27,17 +27,17 @@
 	<col width="170">
 	<col width="120">
 	<tr><td align="right">Block Hash:<td colspan="5"><b id="last_block_hash"></b>
-		<td align="right">Beep New Block:
-            <td><a id="el_beep_block_switch" title="Click to switch on/off" href="javascript:alert('Not possible in Server Mode')"><!--NEW_BLOCK_BEEP--></a>
+		<td align="right">Version:
+			<td><b id="last_block_version"></b>
 
 	<tr><td align="right">Timestamp:
 			<td><b id="last_block_timestamp"></b>
 		<td align="right">Median:
 			<td><b id="last_block_median"></b>
-		<td align="right">Received:
-			<td><b id="last_block_received"></b>
 		<td align="right">Difficulty:
 			<td><b id="last_block_difficulty"></b>
+		<td align="right">Received:
+			<td><b id="last_block_received"></b>
 	</table>
 </td>
 </tr>
@@ -134,7 +134,6 @@
 if (!server_mode) {
 	showcfg.style.display='block'
 	el_free_mem.style.display='inline'
-	el_beep_block_switch.href="javascript:config('beepblock')"
 }
 
 
@@ -296,6 +295,7 @@ blno.addEventListener("lastblock", function(e) {
 		last_block_height = stat.Height
 		last_block_difficulty.innerText = bignum(stat.Diff)
 		last_block_median.innerText = tim2str(stat.Median)
+		last_block_version.innerText = '0x' + leftpad(stat.Version.toString(16),  '0',  8)
 		draw_chart()
 	}
 	var ago = stat.Time_now - stat.Received
@@ -393,9 +393,8 @@ function refreshbwinfo() {
 	aj.send(null)
 }
 refreshbwinfo()
-</script>
 
-<script>
+
 function refreshtxstat() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -418,4 +417,5 @@ function refreshtxstat() {
 	aj.send(null)
 }
 refreshtxstat()
+
 </script>

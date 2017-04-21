@@ -1,7 +1,6 @@
 package webui
 
 import (
-	"fmt"
 	"time"
 	"strings"
 	"net/http"
@@ -29,7 +28,6 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	s := load_template("home.html")
 
 	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
-	s = strings.Replace(s, "<!--NEW_BLOCK_BEEP-->", fmt.Sprint(common.CFG.Beeps.NewBlock), 1)
 
 	common.LockCfg()
 	dat, _ := json.Marshal(&common.CFG)
@@ -55,6 +53,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		Time_now int64
 		Diff float64
 		Median uint32
+		Version uint32
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -64,6 +63,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Time_now =  time.Now().Unix()
 	out.Diff =  btc.GetDifficulty(common.Last.Block.Bits())
 	out.Median =  common.Last.Block.GetMedianTimePast()
+	out.Version = common.Last.Block.BlockVersion()
 	common.Last.Mutex.Unlock()
 
 	bx, er := json.Marshal(out)
