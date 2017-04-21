@@ -53,7 +53,7 @@
 	</colgroup>
 	<tr><td>Average:
 	<td align="right" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><--NETWORK_HASHRATE--></a>
-    <td align="right" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
+	<td align="right" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
 	<td align="right" title="Block size"><a href="https://blockchain.info/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
 	<tr><td nowrap="nowrap">Connections:
 		<td align="right"><b id="bw_open_conns_total"></b>
@@ -325,7 +325,7 @@ function refreshsysinfo() {
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
 			si_avg_block_size.innerText = (si.Average_block_size/1000).toFixed(1) + ' kB'
-			si_avg_fee_spb.innerText = si.Average_fee.toFixed(2)
+			si_avg_fee_spb.innerText = si.Average_fee.toFixed(0)
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 			si_node_uptime.innerText = period2str(si.Node_uptime)
