@@ -16,6 +16,10 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if common.CFG.WebUI.ServerMode {
+		return
+	}
+
 	common.LockCfg()
 	defer common.UnlockCfg()
 
