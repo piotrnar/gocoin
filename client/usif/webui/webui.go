@@ -194,9 +194,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/blocks", p_blocks)
 	http.HandleFunc("/miners", p_miners)
 	http.HandleFunc("/counts", p_counts)
-	if !common.CFG.WebUI.ServerMode {
-		http.HandleFunc("/cfg", p_cfg)
-	}
+	http.HandleFunc("/cfg", p_cfg)
 	http.HandleFunc("/help", p_help)
 
 	http.HandleFunc("/txs2s.xml", xml_txs2s)
