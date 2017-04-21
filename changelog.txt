@@ -1,4 +1,5 @@
 1.8.1
+* Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively
 * WebUI: Added (switchable) sound notifications when a new block is mined
 * Client: Support for new config value "WebUI.ServerMode" - many users to share the same node
 * WebUI/Miners: Redone

@@ -159,7 +159,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 			if b2g.BlockTreeNode==LastCommitedHeader {
 				LastCommitedHeader = LastCommitedHeader.Parent
 			}
-			common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 		}
 
 		MutexRcv.Unlock()

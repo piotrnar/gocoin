@@ -162,6 +162,10 @@ func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
 	c.SendRawMsg("blocktxn", msg.Bytes())
 }
 
+func delB2G_callback(hash *btc.Uint256) {
+	DelB2G(hash.BIdx())
+}
+
 func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	if len(pl)<90 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error A", hex.EncodeToString(pl))
@@ -367,7 +371,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 				if b2g.BlockTreeNode==LastCommitedHeader {
 					LastCommitedHeader = LastCommitedHeader.Parent
 				}
-				common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+				common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 			}
 
 			//c.DoS("BadCmpctBlockA")
@@ -392,6 +396,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
 	}
 }
+
 
 func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if len(pl)<33 {
@@ -487,7 +492,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 			if b2g.BlockTreeNode==LastCommitedHeader {
 				LastCommitedHeader = LastCommitedHeader.Parent
 			}
-			common.BlockChain.DeleteBranch(b2g.BlockTreeNode)
+			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
 		}
 
 		return

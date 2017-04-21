@@ -52,13 +52,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		bl, er := btc.NewBlock(b)
 		if er != nil {
-			ch.DeleteBranch(nxt)
+			ch.DeleteBranch(nxt, nil)
 			break
 		}
 
 		er = bl.BuildTxList()
 		if er != nil {
-			ch.DeleteBranch(nxt)
+			ch.DeleteBranch(nxt, nil)
 			break
 		}
 
@@ -67,7 +67,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
 			println("ProcessBlockTransactionsB", nxt.BlockHash.String(), nxt.Height, er.Error())
-			ch.DeleteBranch(nxt)
+			ch.DeleteBranch(nxt, nil)
 			break
 		}
 		nxt.SigopsCost = bl.SigopsCost
@@ -266,9 +266,12 @@ func (cur *BlockTreeNode)FirstCommonParent(dst *BlockTreeNode) *BlockTreeNode {
 
 
 // make sure ch.BlockIndexAccess is locked before calling it
-func (cur *BlockTreeNode) delAllChildren(ch *Chain) {
+func (cur *BlockTreeNode) delAllChildren(ch *Chain, deleteCallback func(*btc.Uint256)) {
 	for i := range cur.Childs {
-		cur.Childs[i].delAllChildren(ch)
+		if deleteCallback!=nil {
+			deleteCallback(cur.Childs[i].BlockHash)
+		}
+		cur.Childs[i].delAllChildren(ch, deleteCallback)
 		delete(ch.BlockIndex, cur.Childs[i].BlockHash.BIdx())
 		ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	}
@@ -276,13 +279,13 @@ func (cur *BlockTreeNode) delAllChildren(ch *Chain) {
 }
 
 
-func (ch *Chain) DeleteBranch(cur *BlockTreeNode) {
+func (ch *Chain) DeleteBranch(cur *BlockTreeNode, deleteCallback func(*btc.Uint256)) {
 	// first disconnect it from the Parent
 	ch.Blocks.BlockInvalid(cur.BlockHash.Hash[:])
 	ch.BlockIndexAccess.Lock()
 	delete(ch.BlockIndex, cur.BlockHash.BIdx())
 	cur.Parent.delChild(cur)
-	cur.delAllChildren(ch)
+	cur.delAllChildren(ch, deleteCallback)
 	ch.BlockIndexAccess.Unlock()
 	if !ch.DoNotSync {
 		ch.Blocks.Sync()
