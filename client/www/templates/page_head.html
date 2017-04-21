@@ -12,7 +12,7 @@ var new_block_audio_file = new Audio('webui/new_block.mp3')
 var back_online_audio_file = new Audio('webui/back_online.mp3')
 
 function remember_beep() {
-	localStorage.setItem("new_block_beep", beep_new_block.checked)
+	localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
 }
 </script>
 </head>
@@ -103,7 +103,9 @@ function build_wallet_list() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-	beep_new_block.checked = !!localStorage.getItem("new_block_beep")
+	if (localStorage.getItem("new_block_beep")==="true") {
+		beep_new_block.checked = true
+	}
 	refreshblock()
 	if (typeof(localStorage.gocoinWallets)=="string") {
 		build_wallet_list()
