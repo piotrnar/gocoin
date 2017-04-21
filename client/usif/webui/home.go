@@ -2,6 +2,7 @@ package webui
 
 import (
 	"time"
+	"sync"
 	"strings"
 	"net/http"
 	"encoding/json"
@@ -12,6 +13,12 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
+)
+
+var (
+	mutexHrate sync.Mutex
+	lastHrate float64
+	nextHrate time.Time
 )
 
 
@@ -27,12 +34,12 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("home.html")
 
-	s = strings.Replace(s, "<--NETWORK_HASHRATE-->", usif.GetNetworkHashRate(), 1)
-
-	common.LockCfg()
-	dat, _ := json.Marshal(&common.CFG)
-	common.UnlockCfg()
-	s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
+	if !common.CFG.WebUI.ServerMode {
+		common.LockCfg()
+		dat, _ := json.Marshal(&common.CFG)
+		common.UnlockCfg()
+		s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
+	}
 
 	write_html_head(w, r)
 	w.Write([]byte(s))
@@ -95,6 +102,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Average_block_size uint
 		Average_fee float64
 		LastHeaderHeight uint32
+		NetworkHashRate float64
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
@@ -111,6 +119,14 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
+
+	mutexHrate.Lock()
+	if nextHrate.IsZero() || time.Now().After(nextHrate) {
+		lastHrate = usif.GetNetworkHashRateNum()
+		nextHrate = time.Now().Add(time.Minute)
+	}
+	out.NetworkHashRate = lastHrate
+	mutexHrate.Unlock()
 
 	bx, er := json.Marshal(out)
 	if er == nil {
