@@ -3,14 +3,12 @@ package chain
 import (
 	"os"
 	"fmt"
+	"bufio"
 	"bytes"
 	"errors"
-	"strconv"
-	"strings"
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
 
@@ -31,17 +29,14 @@ type BlockChanges struct {
 
 
 type UnspentDB struct {
-	LastBlockHash []byte
+	HashMap map[UtxoKeyType][]byte
+	LastBlockHash[]byte
 	LastBlockHeight uint32
-	FullDefragOnClose bool
 	dir string
-	tdb [NumberOfUnspentSubDBs] *qdb.DB
-	defragIndex int
-	defragCount uint64
-	nosyncinprogress bool
 	ch *Chain
 	volatimemode bool
 	UnwindBufLen uint32
+	DirtyDB bool
 }
 
 type NewUnspentOpts struct {
@@ -53,8 +48,7 @@ type NewUnspentOpts struct {
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
-//dir string, init bool, ch *Chain
-	var maxbl_fn string
+	//var maxbl_fn string
 	db = new(UnspentDB)
 	db.dir = opts.Dir+"unspent4"+string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
@@ -63,45 +57,128 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	if opts.Rescan {
 		os.RemoveAll(db.dir)
 	} else {
-		fis, _ := ioutil.ReadDir(db.dir)
-		var maxbl, undobl int
-		for _, fi := range fis {
-			if !fi.IsDir() && fi.Size()>=32 {
-				ss := strings.SplitN(fi.Name(), ".", 2)
-				cb, er := strconv.ParseUint(ss[0], 10, 32)
-				if er == nil && int(cb) > maxbl {
-					maxbl = int(cb)
-					maxbl_fn = db.dir + fi.Name()
-					if len(ss)==2 && ss[1]=="tmp" {
-						undobl = maxbl
-					}
-				}
-			}
-		}
-		if maxbl!=0 {
-			db.LastBlockHeight = uint32(maxbl)
-			db.LastBlockHash = make([]byte, 32)
-			f, _ := os.Open(maxbl_fn)
-			f.Read(db.LastBlockHash)
-			f.Close()
-			if undobl==maxbl {
-				undo_last_block = true
-			}
-		}
+		os.Remove(db.dir+"tmp")
 	}
-
 	db.ch = opts.Chain
 
-	for i := range db.tdb {
-		fmt.Print("\rLoading new unspent DB - ", 100*i/len(db.tdb), "% complete ... ")
-		db.DbN(i) // Load each of the sub-DBs into memory
-		if AbortNow {
-			return
+
+	// Load data form disk
+	var k UtxoKeyType
+	var cnt_dwn, cnt_dwn_from int
+	var le uint64
+	var u64, tot_recs uint64
+
+	of, er := os.Open(db.dir + "UTXO3.db")
+	if er!=nil {
+		db.HashMap = make(map[UtxoKeyType][]byte)
+		return
+	}
+	defer of.Close()
+
+	rd := bufio.NewReader(of)
+
+	er = binary.Read(rd, binary.LittleEndian, &u64)
+	if er != nil {
+		goto fatal_error
+	}
+	db.LastBlockHeight = uint32(u64)
+	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records:", u64)
+
+	db.LastBlockHash = make([]byte, 32)
+	_, er = rd.Read(db.LastBlockHash)
+	if er != nil {
+		goto fatal_error
+	}
+	er = binary.Read(rd, binary.LittleEndian, &u64)
+	if er != nil {
+		goto fatal_error
+	}
+
+	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
+
+	cnt_dwn_from = int(u64/100)
+
+	for !AbortNow && tot_recs<u64 {
+		le, er = btc.ReadVLen(rd)
+		//er = binary.Read(rd, binary.LittleEndian, &le)
+		if er!=nil {
+			goto fatal_error
+		}
+
+		er = binary.Read(rd, binary.LittleEndian, &k)
+		if er!=nil {
+			goto fatal_error
+		}
+
+
+		b := make([]byte, int(le)-8)
+		er = btc.ReadAll(rd, b)
+		if er!=nil {
+			goto fatal_error
+		}
+
+		db.HashMap[k] = b
+		if db.ch.CB.LoadWalk!=nil {
+			db.ch.CB.LoadWalk(NewQdbRecStatic(k, b))
+		}
+
+		tot_recs++
+		if cnt_dwn==0 {
+			fmt.Print("\rLoading UTXO.db - ", tot_recs*100/u64, "% complete ... ")
+			cnt_dwn = cnt_dwn_from
+		} else {
+			cnt_dwn--
 		}
 	}
-	fmt.Print("\r                                                              \r")
 
+	fmt.Print("\r                                                              \r")
 	return
+
+fatal_error:
+	println("Fatal error when opening UTXO.db:", er.Error(), tot_recs, u64)
+	AbortNow = true
+	return
+}
+
+
+// Flush the data and close all the files
+func (db *UnspentDB) Close() {
+	var cnt_dwn, cnt_dwn_from, perc int
+
+	if true || db.DirtyDB {
+		of, er := os.Create(db.dir + "UTXO3.db")
+		if er!=nil {
+			println("Create file:", er.Error())
+			return
+		}
+
+		cnt_dwn_from = len(db.HashMap)/100
+		wr := bufio.NewWriter(of)
+		binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
+		wr.Write(db.LastBlockHash)
+		binary.Write(wr, binary.LittleEndian, uint64(len(db.HashMap)))
+		for k, v := range db.HashMap {
+			btc.WriteVlen(wr, uint64(8+len(v)))
+			//binary.Write(wr, binary.LittleEndian, uint32(8+len(v)))
+			binary.Write(wr, binary.LittleEndian, k)
+			_, er = wr.Write(v)
+			if er != nil {
+				println("\n\007Fatal error:", er.Error())
+				break
+			}
+			if cnt_dwn==0 {
+				fmt.Print("\rSaving UTXO.db - ", perc, "% complete ... ")
+				cnt_dwn = cnt_dwn_from
+				perc++
+			} else {
+				cnt_dwn--
+			}
+		}
+		wr.Flush()
+		of.Close()
+
+		fmt.Print("\r                                                              \r")
+	}
 }
 
 
@@ -120,17 +197,10 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 			}
 		}
 		ioutil.WriteFile(db.dir+"tmp", bu.Bytes(), 0666)
-		os.Rename(db.dir+"tmp", undo_fn+".tmp")
+		os.Rename(db.dir+"tmp", undo_fn)
 	}
 
-	db.nosync()
 	db.commit(changes)
-	if changes.LastKnownHeight<=changes.Height {
-		db.Sync()
-	}
-
-	os.Rename(undo_fn+".tmp", undo_fn)
-
 
 	if db.LastBlockHash==nil {
 		db.LastBlockHash = make([]byte, 32)
@@ -141,6 +211,8 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	if changes.Height>db.UnwindBufLen {
 		os.Remove(fmt.Sprint(db.dir, changes.Height-db.UnwindBufLen))
 	}
+
+	db.DirtyDB = true
 	return
 }
 
@@ -180,9 +252,8 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			db.ch.CB.NotifyTxAdd(tx)
 		}
 
-		ind := qdb.KeyType(binary.LittleEndian.Uint64(tx.TxID[:8]))
-		_db := db.DbN(int(tx.TxID[31])%NumberOfUnspentSubDBs)
-		v := _db.Get(ind)
+		ind := UtxoKeyType(binary.LittleEndian.Uint64(tx.TxID[:8]))
+		v := db.HashMap[ind]
 		if v != nil {
 			oldrec := NewQdbRec(ind, v)
 			for a := range tx.Outs {
@@ -191,94 +262,36 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 				}
 			}
 		}
-		_db.PutExt(ind, tx.Bytes(), 0)
+		db.HashMap[ind] = tx.Bytes()
 	}
 
 	os.Remove(fn)
 	db.LastBlockHeight--
 	copy(db.LastBlockHash, newhash)
+	db.DirtyDB = true
 }
 
 
 // Flush all the data to files
 func (db *UnspentDB) Sync() {
-	db.nosyncinprogress = false
-	for i := range db.tdb {
-		if db.tdb[i]!=nil {
-			db.tdb[i].Sync()
-		}
-	}
-	db.syncUnpent()
-}
-
-
-func (db *UnspentDB) syncUnpent() {
-	if db.LastBlockHash!=nil {
-		fn := fmt.Sprint(db.dir, db.LastBlockHeight)
-		fi, er := os.Stat(fn)
-		if er!=nil || fi.Size()<32 {
-			ioutil.WriteFile(fn, db.LastBlockHash, 0666)
-		}
-	}
-}
-
-// Hold on writing data to disk untill next sync is called
-func (db *UnspentDB) nosync() {
-	db.nosyncinprogress = true
-	for i := range db.tdb {
-		if db.tdb[i]!=nil {
-			db.tdb[i].NoSync()
-		}
-	}
-}
-
-
-// Flush the data and close all the files
-func (db *UnspentDB) Close() {
-	for i := range db.tdb {
-		if db.tdb[i]!=nil {
-			if db.FullDefragOnClose {
-				db.tdb[i].Defrag(true)
-			}
-			db.tdb[i].Close()
-			db.tdb[i] = nil
-		}
-	}
-	db.syncUnpent()
 }
 
 
 // Call it when the main thread is idle - this will do DB defrag
 func (db *UnspentDB) Idle() bool {
-	for _ = range db.tdb {
-		db.defragIndex++
-		if db.defragIndex >= len(db.tdb) {
-			db.defragIndex = 0
-		}
-		if db.tdb[db.defragIndex]!=nil && db.tdb[db.defragIndex].Defrag(false) {
-			db.defragCount++
-			return true
-		}
-	}
 	return false
 }
 
 
 // Flush all the data to disk
 func (db *UnspentDB) Save() {
-	for i := range db.tdb {
-		if db.tdb[i]!=nil {
-			db.tdb[i].Flush()
-		}
-	}
-	db.syncUnpent()
 }
 
 
 // Get ne unspent output
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
-	ind := qdb.KeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
-	v := db.DbN(int(po.Hash[31])%NumberOfUnspentSubDBs).Get(ind)
+	ind := UtxoKeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
+	v := db.HashMap[ind]
 	if v==nil {
 		e = errors.New("Unspent TX not found")
 		return
@@ -299,51 +312,9 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 }
 
 
-// Browse through all unspent outputs
-func (db *UnspentDB) BrowseUTXO(quick bool, walk FunctionWalkUnspent) {
-	var i int
-	brfn := func(k qdb.KeyType, v []byte) (fl uint32) {
-		walk(NewQdbRecStatic(k, v))
-		return
-	}
-
-	if quick {
-		for i = range db.tdb {
-			db.DbN(i).Browse(brfn)
-		}
-	} else {
-		for i = range db.tdb {
-			db.DbN(i).BrowseAll(brfn)
-		}
-	}
-}
-
-func (db *UnspentDB) DbN(i int) (*qdb.DB) {
-	if db.tdb[i]==nil {
-		qdb.NewDBExt(&db.tdb[i], &qdb.NewDBOpts {
-			Dir : db.dir+fmt.Sprintf("%06d", i),
-			WalkFunction : func(k qdb.KeyType, v []byte) uint32 {
-				if db.ch.CB.LoadWalk!=nil {
-					db.ch.CB.LoadWalk(NewQdbRecStatic(k, v))
-				}
-				return 0
-			},
-			Records : 650e3/*size of pre-allocated map*/,
-			LoadData : true,
-			Volatile : db.volatimemode})
-
-		if db.nosyncinprogress {
-			db.tdb[i].NoSync()
-		}
-	}
-	return db.tdb[i]
-}
-
-
 func (db *UnspentDB) del(hash []byte, outs []bool) {
-	ind := qdb.KeyType(binary.LittleEndian.Uint64(hash[:8]))
-	_db := db.DbN(int(hash[31])%NumberOfUnspentSubDBs)
-	v := _db.Get(ind)
+	ind := UtxoKeyType(binary.LittleEndian.Uint64(hash[:8]))
+	v := db.HashMap[ind]
 	if v==nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
@@ -360,9 +331,9 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 		}
 	}
 	if anyout {
-		_db.Put(ind, rec.Bytes())
+		db.HashMap[ind] = rec.Bytes()
 	} else {
-		_db.Del(ind)
+		delete(db.HashMap, ind)
 	}
 }
 
@@ -370,11 +341,11 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
-		ind := qdb.KeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
+		ind := UtxoKeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
 		if db.ch.CB.NotifyTxAdd!=nil {
 			db.ch.CB.NotifyTxAdd(rec)
 		}
-		db.DbN(int(rec.TxID[31])%NumberOfUnspentSubDBs).PutExt(ind, rec.Bytes(), 0)
+		db.HashMap[ind] = rec.Bytes()
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)
@@ -382,93 +353,36 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 }
 
 
-func (db *UnspentDB) PrintCoinAge() {
-	const chunk = 10000
-	var maxbl uint32
-	type onerec struct {
-		cnt, bts, val, valcb uint64
-	}
-	age := make(map[uint32] *onerec)
-	for i := range db.tdb {
-		db.DbN(i).BrowseAll(func(k qdb.KeyType, v []byte) uint32 {
-			rec := NewQdbRecStatic(k, v)
-			a := rec.InBlock
-			if a>maxbl {
-				maxbl = a
-			}
-			a /= chunk
-			tmp := age[a]
-			if tmp==nil {
-				tmp = new(onerec)
-			}
-			for _, ou := range rec.Outs {
-				if ou!=nil {
-					tmp.val += ou.Value
-					if rec.Coinbase {
-						tmp.valcb += ou.Value
-					}
-					tmp.cnt++
-				}
-			}
-			tmp.bts += uint64(len(v))
-			age[a] = tmp
-			return 0
-		})
-	}
-	for i:=uint32(0); i<=(maxbl/chunk); i++ {
-		tb := (i+1)*chunk-1
-		if tb>maxbl {
-			tb = maxbl
-		}
-		cnt := uint64(tb-i*chunk)+1
-		fmt.Printf(" Blocks  %6d ... %6d: %9d records, %5d MB, %18s/%16s BTC.  Per block:%7.1f records,%8d,%15s BTC\n",
-			i*chunk, tb, age[i].cnt, age[i].bts>>20, btc.UintToBtc(age[i].val), btc.UintToBtc(age[i].valcb),
-			float64(age[i].cnt)/float64(cnt), (age[i].bts/cnt), btc.UintToBtc(age[i].val/cnt))
-	}
-}
-
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
-	var tot, outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
-	var mincnt, maxcnt, totdatasize, unspendable uint64
-	for i := range db.tdb {
-		dbcnt := uint64(db.DbN(i).Count())
-		if i==0 {
-			mincnt, maxcnt = dbcnt, dbcnt
-		} else if dbcnt < mincnt {
-			mincnt = dbcnt
-		} else if dbcnt > maxcnt {
-			maxcnt = dbcnt
-		}
-		tot += dbcnt
-		db.DbN(i).Browse(func(k qdb.KeyType, v []byte) uint32 {
-			totdatasize += uint64(len(v)+8)
-			rec := NewQdbRecStatic(k, v)
-			for idx, r := range rec.Outs {
-				if r!=nil {
-					outcnt++
-					sum += r.Value
-					if rec.Coinbase {
-						sumcb += r.Value
+	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
+	var totdatasize, unspendable uint64
+	for k, v := range db.HashMap {
+		totdatasize += uint64(len(v)+8)
+		rec := NewQdbRecStatic(k, v)
+		for idx, r := range rec.Outs {
+			if r!=nil {
+				outcnt++
+				sum += r.Value
+				if rec.Coinbase {
+					sumcb += r.Value
+				}
+				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
+					unspendable++
+				}
+				if r.IsStealthIdx() && idx+1<len(rec.Outs) {
+					if rec.Outs[idx+1]!=nil {
+						stealth_uns++
 					}
-					if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
-						unspendable++
-					}
-					if r.IsStealthIdx() && idx+1<len(rec.Outs) {
-						if rec.Outs[idx+1]!=nil {
-							stealth_uns++
-						}
-						stealth_tot++
-					}
+					stealth_tot++
 				}
 			}
-			return 0
-		})
+		}
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
-		float64(sum)/1e8, outcnt, tot, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" Defrags:%d  Recs/db : %d..%d   TotalData:%.1fMB  MaxTxOutCnt:%d \n",
-		db.defragCount, mincnt, maxcnt, float64(totdatasize)/1e6, len(rec_outs))
+		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
+	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t\n",
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Number of stealth indexes: %d / %d spent\n",

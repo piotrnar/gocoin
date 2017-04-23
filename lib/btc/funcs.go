@@ -161,19 +161,23 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 }
 
 
+func ReadAll(rd io.Reader, b []byte) (er error) {
+	var n int
+	for i:=0; i<len(b); i+=n {
+		n, er = rd.Read(b[i:])
+		if er!=nil {
+			return
+		}
+	}
+	return
+}
+
 // Reads var_len from the given reader
 func ReadVLen(b io.Reader) (res uint64, e error) {
 	var buf [8]byte;
-	var n int
 
-	n, e = b.Read(buf[:1])
-	if e != nil {
+	if e = ReadAll(b, buf[:1]); e != nil {
 		//println("ReadVLen1 error:", e.Error())
-		return
-	}
-
-	if n != 1 {
-		e = errors.New("Buffer empty")
 		return
 	}
 
@@ -184,13 +188,9 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 
 	c := 2 << (2-(0xff-buf[0]));
 
-	n, e = b.Read(buf[:c])
-	if e != nil {
+
+	if e = ReadAll(b, buf[:c]); e != nil {
 		println("ReadVLen1 error:", e.Error())
-		return
-	}
-	if n != c {
-		e = errors.New("Buffer too short")
 		return
 	}
 	for i:=0; i<c; i++ {

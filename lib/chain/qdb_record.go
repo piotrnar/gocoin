@@ -3,7 +3,6 @@ package chain
 import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 )
 
 
@@ -22,6 +21,8 @@ Eech value is variable length:
 */
 
 
+type UtxoKeyType uint64
+
 type QdbRec struct {
 	TxID [32]byte
 	Coinbase bool
@@ -36,7 +37,7 @@ type QdbTxOut struct {
 
 
 func FullQdbRec(dat []byte) *QdbRec {
-	return NewQdbRec(qdb.KeyType(binary.LittleEndian.Uint64(dat[:8])), dat[8:])
+	return NewQdbRec(UtxoKeyType(binary.LittleEndian.Uint64(dat[:8])), dat[8:])
 }
 
 
@@ -47,7 +48,7 @@ var (
 )
 
 
-func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
+func NewQdbRecStatic(key UtxoKeyType, dat []byte) *QdbRec {
 	var off, n, i int
 	var u64, idx uint64
 
@@ -94,7 +95,7 @@ func NewQdbRecStatic(key qdb.KeyType, dat []byte) *QdbRec {
 }
 
 
-func NewQdbRec(key qdb.KeyType, dat []byte) *QdbRec {
+func NewQdbRec(key UtxoKeyType, dat []byte) *QdbRec {
 	var off, n, i int
 	var u64, idx uint64
 	var rec QdbRec

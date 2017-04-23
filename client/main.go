@@ -247,7 +247,7 @@ func main() {
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
 			network.NetCloseAll()
-			common.CloseBlockChain(false)
+			common.CloseBlockChain()
 			peersdb.ClosePeerDB()
 			sys.UnlockDatabaseDir()
 			os.Exit(1)
@@ -420,7 +420,7 @@ func main() {
 		fmt.Println("Closing blockchain")
 	}
 	sta := time.Now()
-	common.CloseBlockChain(usif.DefragUTXO)
+	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
 	sys.UnlockDatabaseDir()

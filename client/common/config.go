@@ -293,9 +293,8 @@ func UnlockCfg() {
 	mutex_cfg.Unlock()
 }
 
-func CloseBlockChain(defrag bool) {
+func CloseBlockChain() {
 	if BlockChain!=nil {
-		BlockChain.Unspent.FullDefragOnClose = defrag
 		BlockChain.Close()
 		BlockChain = nil
 	}

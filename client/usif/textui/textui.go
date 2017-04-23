@@ -418,10 +418,6 @@ func show_addresses(par string) {
 	}
 }
 
-func coins_age(s string) {
-	common.BlockChain.Unspent.PrintCoinAge()
-}
-
 func show_cached(par string) {
 	var hi, lo uint32
 	for _, v := range network.CachedBlocks {
@@ -505,7 +501,6 @@ func switch_trust(par string) {
 }
 
 func init() {
-	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
