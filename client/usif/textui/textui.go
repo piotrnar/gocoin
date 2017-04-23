@@ -500,6 +500,11 @@ func switch_trust(par string) {
 	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
 }
 
+func save_utxo(par string) {
+	common.BlockChain.Unspent.DirtyDB = true
+}
+
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
@@ -521,4 +526,5 @@ func init() {
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
+	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 }

@@ -166,7 +166,6 @@ func (ch *Chain) RebuildGenesisHeader() {
 func (ch *Chain) Sync() {
 	ch.DoNotSync = false
 	ch.Blocks.Sync()
-	ch.Unspent.Sync()
 }
 
 
@@ -174,13 +173,6 @@ func (ch *Chain) Sync() {
 // when your client is idle, to defragment databases.
 func (ch *Chain) Idle() bool {
 	return ch.Unspent.Idle()
-}
-
-
-// Save all the databases. Defragment when needed.
-func (ch *Chain) Save() {
-	ch.Blocks.Sync()
-	ch.Unspent.Save()
 }
 
 

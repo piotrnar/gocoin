@@ -3,6 +3,8 @@ package chain
 import (
 	"os"
 	"fmt"
+	"sync"
+	"time"
 	"bufio"
 	"bytes"
 	"errors"
@@ -37,6 +39,11 @@ type UnspentDB struct {
 	volatimemode bool
 	UnwindBufLen uint32
 	DirtyDB bool
+	sync.Mutex
+	WritingInProgress bool
+	AbortWriting bool
+	CurrentHeightOnDisk uint32
+	HurryUp bool
 }
 
 type NewUnspentOpts struct {
@@ -58,6 +65,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 		os.RemoveAll(db.dir)
 	} else {
 		os.Remove(db.dir+"tmp")
+		os.Remove(db.dir+"UTXO3.db.tmp")
 	}
 	db.ch = opts.Chain
 
@@ -82,7 +90,6 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 		goto fatal_error
 	}
 	db.LastBlockHeight = uint32(u64)
-	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records:", u64)
 
 	db.LastBlockHash = make([]byte, 32)
 	_, er = rd.Read(db.LastBlockHash)
@@ -93,6 +100,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	if er != nil {
 		goto fatal_error
 	}
+
+	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 
 	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
 
@@ -132,6 +141,9 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	}
 
 	fmt.Print("\r                                                              \r")
+
+	db.CurrentHeightOnDisk = db.LastBlockHeight
+
 	return
 
 fatal_error:
@@ -141,50 +153,82 @@ fatal_error:
 }
 
 
-// Flush the data and close all the files
-func (db *UnspentDB) Close() {
-	var cnt_dwn, cnt_dwn_from, perc int
+func (db *UnspentDB) save() {
+	//var cnt_dwn, cnt_dwn_from, perc int
+	var abort bool
 
-	if true || db.DirtyDB {
-		of, er := os.Create(db.dir + "UTXO3.db")
-		if er!=nil {
-			println("Create file:", er.Error())
-			return
+	time_target := time.Minute
+
+	of, er := os.Create(db.dir + "UTXO3.db.tmp")
+	if er!=nil {
+		println("Create file:", er.Error())
+		return
+	}
+
+	start_time := time.Now()
+	total_records := len(db.HashMap)
+	var current_records, timewaits int
+
+	println("writing utxo", db.LastBlockHeight)
+	wr := bufio.NewWriter(of)
+	binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
+	wr.Write(db.LastBlockHash)
+	binary.Write(wr, binary.LittleEndian, uint64(total_records))
+	for k, v := range db.HashMap {
+		if !db.HurryUp {
+			current_records++
+			if (current_records&0xff)==0 {
+				data_progress := int64((current_records<<8)/total_records)
+				time_progress := int64((time.Now().Sub(start_time)<<8) / time_target)
+				if data_progress > time_progress {
+					time.Sleep(1e6)
+					timewaits++
+				}
+			}
 		}
 
-		cnt_dwn_from = len(db.HashMap)/100
-		wr := bufio.NewWriter(of)
-		binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
-		wr.Write(db.LastBlockHash)
-		binary.Write(wr, binary.LittleEndian, uint64(len(db.HashMap)))
-		for k, v := range db.HashMap {
-			btc.WriteVlen(wr, uint64(8+len(v)))
-			//binary.Write(wr, binary.LittleEndian, uint32(8+len(v)))
-			binary.Write(wr, binary.LittleEndian, k)
-			_, er = wr.Write(v)
-			if er != nil {
-				println("\n\007Fatal error:", er.Error())
-				break
-			}
-			if cnt_dwn==0 {
-				fmt.Print("\rSaving UTXO.db - ", perc, "% complete ... ")
-				cnt_dwn = cnt_dwn_from
-				perc++
-			} else {
-				cnt_dwn--
-			}
+		if db.AbortWriting {
+			println("abort")
+			abort = true
+			break
 		}
+		btc.WriteVlen(wr, uint64(8+len(v)))
+		binary.Write(wr, binary.LittleEndian, k)
+		_, er = wr.Write(v)
+		if er != nil {
+			println("\n\007Fatal error saving UTXO:", er.Error())
+			abort = true
+			break
+		}
+	}
+
+
+	if abort {
+		of.Close()
+		os.Remove(db.dir + "UTXO3.db.tmp")
+	} else {
+		db.DirtyDB = false
 		wr.Flush()
 		of.Close()
-
-		fmt.Print("\r                                                              \r")
+		os.Rename(db.dir + "UTXO3.db", db.dir + "UTXO3.old")
+		ioutil.WriteFile(db.dir + "UTXO3_old.txt", []byte(fmt.Sprint(db.CurrentHeightOnDisk)), 0x600)
+		os.Rename(db.dir + "UTXO3.db.tmp", db.dir + "UTXO3.db")
+		println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
+		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
+
+	db.WritingInProgress = false
+	//fmt.Print("\r                                                              \r")
 }
 
 
 // Commit the given add/del transactions to UTXO and Wnwind DBs
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	undo_fn := fmt.Sprint(db.dir, changes.Height)
+
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	db.abortifwriting("commit")
 
 	if changes.UndoData!=nil || (changes.Height%db.UnwindBufLen)==0 {
 		bu := new(bytes.Buffer)
@@ -218,6 +262,10 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+	db.abortifwriting("undo")
+
 	for _, tx := range bl.Txs {
 		lst := make([]bool, len(tx.TxOut))
 		for i := range lst {
@@ -272,19 +320,28 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 }
 
 
-// Flush all the data to files
-func (db *UnspentDB) Sync() {
-}
-
-
 // Call it when the main thread is idle - this will do DB defrag
 func (db *UnspentDB) Idle() bool {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
+
+	if db.DirtyDB && !db.WritingInProgress {
+		db.WritingInProgress = true
+		//println("save", db.LastBlockHeight, "now")
+		go db.save()
+	}
+
 	return false
 }
 
 
-// Flush all the data to disk
-func (db *UnspentDB) Save() {
+// Flush the data and close all the files
+func (db *UnspentDB) Close() {
+	db.HurryUp = true
+	db.Idle()
+	for db.WritingInProgress {
+		time.Sleep(1e7)
+	}
 }
 
 
@@ -353,6 +410,17 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 }
 
 
+func (db *UnspentDB) abortifwriting(why string) {
+	if db.WritingInProgress {
+		db.AbortWriting = true
+		for db.WritingInProgress {
+			time.Sleep(1e6)
+		}
+		db.AbortWriting = false
+	}
+}
+
+
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
@@ -381,8 +449,8 @@ func (db *UnspentDB) GetStats() (s string) {
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
-	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB)
+	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Number of stealth indexes: %d / %d spent\n",
