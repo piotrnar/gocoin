@@ -103,6 +103,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Average_fee float64
 		LastHeaderHeight uint32
 		NetworkHashRate float64
+		SavingUTXO bool
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
@@ -127,6 +128,8 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	}
 	out.NetworkHashRate = lastHrate
 	mutexHrate.Unlock()
+
+	out.SavingUTXO = common.BlockChain.Unspent.WritingInProgress
 
 	bx, er := json.Marshal(out)
 	if er == nil {

@@ -97,6 +97,7 @@
 		&nbsp;<b id="si_blocks_to_get"></b> to get
 	<tr><td>Last Header:<td>
 		<b title="Last received header" id="si_last_hdr_height"></b>
+		<span id="si_extra_data" style="float:right"></span>
 	</table>
 </table>
 
@@ -331,6 +332,7 @@ function refreshsysinfo() {
 			si_node_uptime.innerText = period2str(si.Node_uptime)
 			si_last_hdr_height.innerText = si.LastHeaderHeight
 			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
+			si_extra_data.innerText = si.SavingUTXO ? "SavingUTXO" : ""
 		} catch(e) {
 			console.log(e)
 		}

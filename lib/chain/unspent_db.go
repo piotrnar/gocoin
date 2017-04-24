@@ -16,7 +16,7 @@ import (
 
 const (
 	UTXO_RECORDS_PREALLOC = 25e6
-	UTXO_WRITING_TIME = 5*time.Minute
+	UTXO_WRITING_TIME_TARGET = 5*time.Minute  // Take it easy with flushing UTXO.db onto disk
 )
 
 type FunctionWalkUnspent func(*QdbRec)
@@ -35,7 +35,7 @@ type UnspentDB struct {
 	HashMap map[UtxoKeyType][]byte
 	LastBlockHash[]byte
 	LastBlockHeight uint32
-	dir string
+	dir_utxo, dir_undo string
 	ch *Chain
 	volatimemode bool
 	UnwindBufLen uint32
@@ -55,21 +55,25 @@ type NewUnspentOpts struct {
 	UnwindBufferLen uint32
 }
 
-func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
+func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	//var maxbl_fn string
 	db = new(UnspentDB)
-	db.dir = opts.Dir+"unspent4"+string(os.PathSeparator)
+	db.dir_utxo = opts.Dir
+	db.dir_undo = db.dir_utxo + "undo"+string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
 	db.UnwindBufLen = 256
 
-	if opts.Rescan {
-		os.RemoveAll(db.dir)
-	} else {
-		os.Remove(db.dir+"tmp")
-		os.Remove(db.dir+"UTXO3.db.tmp")
-	}
+	os.MkdirAll(db.dir_undo, 0770)
+
+	os.Remove(db.dir_undo+"tmp")
+	os.Remove(db.dir_utxo+"UTXO.db.tmp")
 	db.ch = opts.Chain
 
+	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
+
+	if opts.Rescan {
+		return
+	}
 
 	// Load data form disk
 	var k UtxoKeyType
@@ -77,11 +81,14 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	var le uint64
 	var u64, tot_recs uint64
 
-	of, er := os.Open(db.dir + "UTXO3.db")
+	of, er := os.Open(db.dir_utxo + "UTXO.db")
 	if er!=nil {
-		db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
-		return
+		of, er = os.Open(db.dir_utxo + "UTXO.old")
+		if er!=nil {
+			return
+		}
 	}
+
 	defer of.Close()
 
 	rd := bufio.NewReader(of)
@@ -103,8 +110,6 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 	}
 
 	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
-
-	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
 
 	cnt_dwn_from = int(u64/100)
 
@@ -158,9 +163,9 @@ func (db *UnspentDB) save() {
 	//var cnt_dwn, cnt_dwn_from, perc int
 	var abort bool
 
-	time_target := UTXO_WRITING_TIME
+	os.Rename(db.dir_utxo + "UTXO.db", db.dir_utxo + "UTXO.old")
 
-	of, er := os.Create(db.dir + "UTXO3.db.tmp")
+	of, er := os.Create(db.dir_utxo + "UTXO.db.tmp")
 	if er!=nil {
 		println("Create file:", er.Error())
 		return
@@ -180,7 +185,7 @@ func (db *UnspentDB) save() {
 			current_records++
 			if (current_records&0xf)==0 {
 				data_progress := int64((current_records<<8)/total_records)
-				time_progress := int64((time.Now().Sub(start_time)<<8) / time_target)
+				time_progress := int64((time.Now().Sub(start_time)<<8) / UTXO_WRITING_TIME_TARGET)
 				if data_progress > time_progress {
 					time.Sleep(1e6)
 					timewaits++
@@ -206,14 +211,12 @@ func (db *UnspentDB) save() {
 
 	if abort {
 		of.Close()
-		os.Remove(db.dir + "UTXO3.db.tmp")
+		os.Remove(db.dir_utxo + "UTXO.db.tmp")
 	} else {
 		db.DirtyDB = false
 		wr.Flush()
 		of.Close()
-		os.Rename(db.dir + "UTXO3.db", db.dir + "UTXO3.old")
-		ioutil.WriteFile(db.dir + "UTXO3_old.txt", []byte(fmt.Sprint(db.CurrentHeightOnDisk)), 0600)
-		os.Rename(db.dir + "UTXO3.db.tmp", db.dir + "UTXO3.db")
+		os.Rename(db.dir_utxo + "UTXO.db.tmp", db.dir_utxo + "UTXO.db")
 		println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
@@ -225,7 +228,7 @@ func (db *UnspentDB) save() {
 
 // Commit the given add/del transactions to UTXO and Wnwind DBs
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
-	undo_fn := fmt.Sprint(db.dir, changes.Height)
+	undo_fn := fmt.Sprint(db.dir_undo, changes.Height)
 
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
@@ -241,8 +244,8 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 				bu.Write(bin)
 			}
 		}
-		ioutil.WriteFile(db.dir+"tmp", bu.Bytes(), 0666)
-		os.Rename(db.dir+"tmp", undo_fn)
+		ioutil.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
+		os.Rename(db.dir_undo+"tmp", undo_fn)
 	}
 
 	db.commit(changes)
@@ -254,7 +257,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.LastBlockHeight = changes.Height
 
 	if changes.Height>db.UnwindBufLen {
-		os.Remove(fmt.Sprint(db.dir, changes.Height-db.UnwindBufLen))
+		os.Remove(fmt.Sprint(db.dir_undo, changes.Height-db.UnwindBufLen))
 	}
 
 	db.DirtyDB = true
@@ -275,7 +278,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		db.del(tx.Hash.Hash[:], lst)
 	}
 
-	fn := fmt.Sprint(db.dir, db.LastBlockHeight)
+	fn := fmt.Sprint(db.dir_undo, db.LastBlockHeight)
 	var addback []*QdbRec
 
 	if _, er := os.Stat(fn); er != nil {
@@ -323,6 +326,10 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 
 // Call it when the main thread is idle - this will do DB defrag
 func (db *UnspentDB) Idle() bool {
+	if db.volatimemode {
+		return false
+	}
+
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
@@ -330,6 +337,7 @@ func (db *UnspentDB) Idle() bool {
 		db.WritingInProgress = true
 		//println("save", db.LastBlockHeight, "now")
 		go db.save()
+		return true
 	}
 
 	return false

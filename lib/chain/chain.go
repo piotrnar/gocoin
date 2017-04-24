@@ -68,7 +68,6 @@ func NewChain(dbrootdir string, genesis *btc.Uint256, rescan bool) (ch *Chain) {
 
 // This is the very first function one should call in order to use this package
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
-	var undo_last_block bool
 	ch = new(Chain)
 	ch.Genesis = genesis
 	if opts != nil {
@@ -99,7 +98,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	} else {
 		ch.Blocks = NewBlockDB(dbrootdir)
 	}
-	ch.Unspent, undo_last_block = NewUnspentDb(&NewUnspentOpts{
+	ch.Unspent = NewUnspentDb(&NewUnspentOpts{
 		Dir:dbrootdir, Chain:ch, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode})
 
 	if AbortNow {
@@ -122,12 +121,6 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	if AbortNow {
 		return
-	}
-
-	if undo_last_block {
-		fmt.Println("Undo last block after the previous commit was interrupted..")
-		ch.UndoLastBlock()
-		fmt.Println("DONE")
 	}
 
 	if opts.UndoBlocks > 0 {

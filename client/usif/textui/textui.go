@@ -158,7 +158,7 @@ func show_info(par string) {
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
+	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%dx\n",
 		len(network.TransactionsToSend), len(network.TransactionsRejected),
 		len(network.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("WaitingForInputs:%d,  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
@@ -183,7 +183,7 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", gocoin.Version,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
-		"  cach:", cached, "  dis:", discarded)
+		"  cach:", cached, "  dis:", discarded, "  Writing:", common.BlockChain.Unspent.WritingInProgress)
 }
 
 func show_counters(par string) {
