@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -45,6 +46,8 @@ type UnspentDB struct {
 	AbortWriting bool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
+
+	WritingProgress int64
 }
 
 type NewUnspentOpts struct {
@@ -172,20 +175,22 @@ func (db *UnspentDB) save() {
 	}
 
 	start_time := time.Now()
-	total_records := len(db.HashMap)
-	var current_records, timewaits int
+	total_records := int64(len(db.HashMap))
+	var timewaits int
+	var current_record, data_progress, time_progress int64
 
-	//println("writing utxo", db.LastBlockHeight)
+	db.WritingProgress = 0
+
 	wr := bufio.NewWriter(of)
 	binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
 	wr.Write(db.LastBlockHash)
 	binary.Write(wr, binary.LittleEndian, uint64(total_records))
 	for k, v := range db.HashMap {
 		if !db.HurryUp {
-			current_records++
-			if (current_records&0xf)==0 {
-				data_progress := int64((current_records<<8)/total_records)
-				time_progress := int64((time.Now().Sub(start_time)<<8) / UTXO_WRITING_TIME_TARGET)
+			current_record = atomic.AddInt64(&db.WritingProgress, 1)
+			if (current_record&0xf)==0 {
+				data_progress = int64((current_record<<20)/total_records)
+				time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
 				if data_progress > time_progress {
 					time.Sleep(1e6)
 					timewaits++
@@ -222,7 +227,6 @@ func (db *UnspentDB) save() {
 	}
 
 	db.WritingInProgress = false
-	//fmt.Print("\r                                                              \r")
 }
 
 
