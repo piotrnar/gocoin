@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
-	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
