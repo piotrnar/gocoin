@@ -183,7 +183,12 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", gocoin.Version,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
-		"  cach:", cached, "  dis:", discarded, "  Writing:", common.BlockChain.Unspent.WritingInProgress)
+		"  cach:", cached, "  dis:", discarded)
+	if common.BlockChain.Unspent.WritingInProgress {
+		prog := atomic.LoadInt64(&common.BlockChain.Unspent.WritingProgress)
+		fmt.Println("Writing UTXO database in progress at",
+			100.0*float64(prog)/float64(len(common.BlockChain.Unspent.HashMap)), "percent")
+	}
 }
 
 func show_counters(par string) {
