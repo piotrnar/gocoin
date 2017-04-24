@@ -52,26 +52,26 @@ int init_bitcoinconsensus_so() {
 import "C"
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
+	"sync"
 	"sync/atomic"
 	"unsafe"
-	"encoding/hex"
-	"sync"
 )
 
 var (
 	ConsensusChecks uint64
 	ConsensusExpErr uint64
 	ConsensusErrors uint64
-	mut sync.Mutex
+	mut             sync.Mutex
 )
 
 func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool) {
 	var tmp []byte
-	if len(pkScr)!=0 {
+	if len(pkScr) != 0 {
 		tmp = make([]byte, len(pkScr))
 		copy(tmp, pkScr)
 	}
@@ -81,7 +81,7 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 	}
 	go func(pkScr []byte, txTo []byte, amount uint64, i int, ver_flags uint32, result bool) {
 		var pkscr_ptr *C.uchar // default to null
-		var pkscr_len C.uint // default to 0
+		var pkscr_len C.uint   // default to 0
 		if pkScr != nil {
 			pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
 			pkscr_len = C.uint(len(pkScr))
@@ -108,6 +108,24 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 	}(tmp, tx_raw, amount, i, ver_flags, result)
 }
 
+func verify_script_with_amount(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+	txTo := tx.Raw
+	if txTo == nil {
+		txTo = tx.Serialize()
+	}
+	var pkscr_ptr *C.uchar // default to null
+	var pkscr_len C.uint   // default to 0
+	if pkScr != nil {
+		pkscr_ptr = (*C.uchar)(unsafe.Pointer(&pkScr[0]))
+		pkscr_len = C.uint(len(pkScr))
+	}
+	r1 := int(C.bitcoinconsensus_verify_script_with_amount(pkscr_ptr, pkscr_len, C.int64_t(amount),
+		(*C.uchar)(unsafe.Pointer(&txTo[0])), C.uint(len(txTo)), C.uint(i), C.uint(ver_flags)))
+
+	result = (r1 == 1)
+	return
+}
+
 func consensus_stats(s string) {
 	fmt.Println("Consensus Checks:", atomic.LoadUint64(&ConsensusChecks))
 	fmt.Println("Consensus ExpErr:", atomic.LoadUint64(&ConsensusExpErr))
@@ -115,7 +133,7 @@ func consensus_stats(s string) {
 }
 
 func init() {
-	if C.init_bitcoinconsensus_so()==0 {
+	if C.init_bitcoinconsensus_so() == 0 {
 		fmt.Println("WARNING: Not using libbitcoinconsensus.so to ensure consensus rules")
 		return
 	}
