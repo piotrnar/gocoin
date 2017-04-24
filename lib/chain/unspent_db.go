@@ -114,8 +114,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 		goto fatal_error
 	}
 
-	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
-
+	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 	cnt_dwn_from = int(u64/100)
 
 	for !AbortNow && tot_recs<u64 {
