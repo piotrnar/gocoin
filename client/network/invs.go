@@ -260,7 +260,6 @@ func (c *OneConnection) SendInvs() (res bool) {
 					common.BlockChain.BlockIndexAccess.Unlock()
 					inv_sent_otherwise = true
 				}
-				println("inv-b to", c.ConnID, inv_sent_otherwise, c.Node.SendCmpctVer, c.Node.HighBandwidth, c.Node.SendHeaders)
 			}
 
 			if !inv_sent_otherwise {
