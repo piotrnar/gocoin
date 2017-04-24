@@ -16,6 +16,9 @@ import (
 
 const (
 	UTXO_RECORDS_PREALLOC = 25e6
+)
+
+var (
 	UTXO_WRITING_TIME_TARGET = 5*time.Minute  // Take it easy with flushing UTXO.db onto disk
 )
 
@@ -357,6 +360,8 @@ func (db *UnspentDB) Close() {
 
 // Get ne unspent output
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
 	ind := UtxoKeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
 	v := db.HashMap[ind]
 	if v==nil {
