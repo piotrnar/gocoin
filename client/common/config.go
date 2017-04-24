@@ -22,6 +22,7 @@ var (
 		UndoBlocks uint
 		TrustAll bool
 		UnbanAllPeers bool
+		Exit bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -181,6 +182,7 @@ func InitConfig() {
 	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
+	flag.BoolVar(&FLAG.Exit, "exit", FLAG.Exit, "Load the Block Chain and then exit (useful for rebuilding UTXO.db)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
