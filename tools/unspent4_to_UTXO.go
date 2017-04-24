@@ -72,7 +72,7 @@ func load_last_block() {
 	block_height = uint64(maxbl)
 	block_hash = make([]byte, 32)
 
-	f, _ := os.Open(maxbl_fn)
+	f, _ := os.Open("unspent4/"+maxbl_fn)
 	f.Read(block_hash)
 	f.Close()
 
@@ -129,7 +129,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("Loading input database. Block", block_height)
+	fmt.Println("Loading input database. Block", block_height, btc.NewUint256(block_hash).String())
 	sta = time.Now()
 	ndb := load_map4()
 	fmt.Println(len(ndb), "records loaded in", time.Now().Sub(sta).String())
