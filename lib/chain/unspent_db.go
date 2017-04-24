@@ -222,7 +222,7 @@ func (db *UnspentDB) save() {
 		wr.Flush()
 		of.Close()
 		os.Rename(db.dir_utxo + "UTXO.db.tmp", db.dir_utxo + "UTXO.db")
-		println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
+		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
