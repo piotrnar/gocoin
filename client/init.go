@@ -50,9 +50,6 @@ func host_init() {
 		}
 	}
 
-	fmt.Println("Loading UTXO-db and P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
-
-
 	__exit := make(chan bool)
 	__done := make(chan bool)
 	go func() {
@@ -68,11 +65,17 @@ func host_init() {
 		}
 	}()
 
-	ext := &chain.NewChanOpts{NotifyTxAdd: wallet.TxNotifyAdd,
-		NotifyTxDel: wallet.TxNotifyDel, LoadWalk: wallet.NewUTXO,
+	ext := &chain.NewChanOpts{
 		UTXOVolatileMode : common.FLAG.VolatileUTXO,
 		UndoBlocks : common.FLAG.UndoBlocks,
 		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlocks)}
+
+	if !common.FLAG.Exit {
+		ext.NotifyTxAdd = wallet.TxNotifyAdd
+		ext.NotifyTxDel = wallet.TxNotifyDel
+		ext.LoadWalk = wallet.NewUTXO
+		fmt.Println("Loading UTXO-db and P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
+	}
 
 	sta := time.Now().UnixNano()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
