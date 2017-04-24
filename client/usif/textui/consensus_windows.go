@@ -86,6 +86,26 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 	}(tmp, tx_raw, i, ver_flags, result)
 }
 
+func verify_script_with_amount(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+	var pkscr_ptr, pkscr_len uintptr // default to 0/null
+	txTo := tx.Raw
+	if txTo == nil {
+		txTo = tx.Serialize()
+	}
+	if pkScr != nil {
+		pkscr_ptr = uintptr(unsafe.Pointer(&pkScr[0]))
+		pkscr_len = uintptr(len(pkScr))
+	}
+	r1, _, _ := syscall.Syscall9(bitcoinconsensus_verify_script_with_amount.Addr(), 8,
+		pkscr_ptr, pkscr_len, uintptr(amount),
+		uintptr(unsafe.Pointer(&txTo[0])), uintptr(len(txTo)),
+		uintptr(i), uintptr(ver_flags), 0, 0)
+
+	result = (r1==1)
+	return
+}
+
+
 func consensus_stats(s string) {
 	fmt.Println("Consensus Checks:", atomic.LoadUint64(&ConsensusChecks))
 	fmt.Println("Consensus ExpErr:", atomic.LoadUint64(&ConsensusExpErr))
