@@ -11,7 +11,7 @@ td.agent {
 <table width="100%">
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
- &nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]<br>
+<span id="el_tcp_listen_switch" style="display:none">&nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
 
 <div id="chart" style="height:180px;margin:2px"></div>
@@ -60,6 +60,10 @@ Node Version Legend:<br>
 </table>
 
 <script>
+if (!server_mode) {
+	el_tcp_listen_switch.style.display='inline'
+}
+
 var raw_timer = null
 var curr_monitor_id = -1
 
@@ -179,6 +183,10 @@ function row_clicked(id) {
 }
 
 function net_drop(id) {
+	if (server_mode) {
+		alert('Droping connections is not available in Server Mode')
+		return
+	}
 	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
 		document.location = 'cfg?drop='+id+'&sid='+sid
 	}

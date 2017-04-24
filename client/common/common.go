@@ -103,6 +103,15 @@ func BytesToString(val uint64) string {
 
 
 func NumberToString(num float64) string {
+	if num>1e24 {
+		return fmt.Sprintf("%.2f Y", num/1e24)
+	}
+	if num>1e21 {
+		return fmt.Sprintf("%.2f Z", num/1e21)
+	}
+	if num>1e18 {
+		return fmt.Sprintf("%.2f E", num/1e18)
+	}
 	if num>1e15 {
 		return fmt.Sprintf("%.2f P", num/1e15)
 	}

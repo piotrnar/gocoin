@@ -285,7 +285,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	}
 
 	rec := NewQdbRec(ind, v)
-	if len(rec.Outs)<int(po.Vout) || rec.Outs[po.Vout]==nil {
+	if len(rec.Outs)<=int(po.Vout) || rec.Outs[po.Vout]==nil {
 		e = errors.New("Unspent VOut not found")
 		return
 	}

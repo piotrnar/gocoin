@@ -30,9 +30,11 @@ func TxMiner(cbtx *btc.Tx) (string, int) {
 		}
 	}
 
-	adr := btc.NewAddrFromPkScript(cbtx.TxOut[0].Pk_script, Testnet)
-	if adr!=nil {
-		return adr.String(), -1
+	for _, txo := range cbtx.TxOut {
+		adr := btc.NewAddrFromPkScript(txo.Pk_script, Testnet)
+		if adr!=nil {
+			return adr.String(), -1
+		}
 	}
 
 	return "", -1

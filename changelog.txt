@@ -1,4 +1,8 @@
 1.8.1
+* Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively
+* WebUI: Added (switchable) sound notifications when a new block is mined
+* Client: Support for new config value "WebUI.ServerMode" - many users to share the same node
+* WebUI/Miners: Redone
 * WebUI: When a block with a wallet's unspent tx is purged from blockchain.dat, the raw tx gets fetched from the web
 * WebUI/Wallet: Fixed error "Form submission canceled because the form is not connected"
 * Client: enable it to work with purged blockchain.new/blockchain.dat

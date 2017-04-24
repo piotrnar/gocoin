@@ -37,6 +37,7 @@ var (
 			AddrListLen uint32 // size of address list in MakeTx tab popups
 			Title string
 			PayCommandName string
+			ServerMode bool
 		}
 		RPC struct {
 			Enabled bool

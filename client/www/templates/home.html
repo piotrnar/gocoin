@@ -27,17 +27,17 @@
 	<col width="170">
 	<col width="120">
 	<tr><td align="right">Block Hash:<td colspan="5"><b id="last_block_hash"></b>
-		<td align="right">Beep New Block:
-			<td><a title="Click to switch on/off" href="javascript:config('beepblock')"><!--NEW_BLOCK_BEEP--></a>
+		<td align="right">Version:
+			<td><b id="last_block_version"></b>
 
 	<tr><td align="right">Timestamp:
 			<td><b id="last_block_timestamp"></b>
 		<td align="right">Median:
 			<td><b id="last_block_median"></b>
-		<td align="right">Received:
-			<td><b id="last_block_received"></b>
 		<td align="right">Difficulty:
 			<td><b id="last_block_difficulty"></b>
+		<td align="right">Received:
+			<td><b id="last_block_received"></b>
 	</table>
 </td>
 </tr>
@@ -52,8 +52,8 @@
 		<col width="30%">
 	</colgroup>
 	<tr><td>Average:
-	<td align="right" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><--NETWORK_HASHRATE--></a>
-    <td align="right" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
+    <td align="right" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><span id="si_network_hashrate"></span></a>
+	<td align="right" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
 	<td align="right" title="Block size"><a href="https://blockchain.info/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
 	<tr><td nowrap="nowrap">Connections:
 		<td align="right"><b id="bw_open_conns_total"></b>
@@ -84,7 +84,7 @@
 		<b title="Go heap size" id="si_heap_size"></b> +
 		<b title="Extra mem taken by QDB" id="si_qdb_extramem"></b>
 		(<b title="Sys mem taken by Go" id="si_heap_sysmem"></b>)
-		&nbsp;[<a href="javascript:config('freemem')">FREE</a>]
+		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
 		&nbsp;&bull;&nbsp;
@@ -100,7 +100,7 @@
 	</table>
 </table>
 
-<div id="showcfg">
+<div id="showcfg" style="display:none">
 <form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
 <table width="100%"><tr>
 <td align="left"><input type="button" value="Edit configuration" onclick="shwcfg()">
@@ -131,6 +131,12 @@
 </table>
 </div>
 <script>
+if (!server_mode) {
+	showcfg.style.display='block'
+	el_free_mem.style.display='inline'
+}
+
+
 var previousPoint = null;
 var cs
 
@@ -289,6 +295,7 @@ blno.addEventListener("lastblock", function(e) {
 		last_block_height = stat.Height
 		last_block_difficulty.innerText = bignum(stat.Diff)
 		last_block_median.innerText = tim2str(stat.Median)
+		last_block_version.innerText = '0x' + leftpad(stat.Version.toString(16),  '0',  8)
 		draw_chart()
 	}
 	var ago = stat.Time_now - stat.Received
@@ -318,11 +325,12 @@ function refreshsysinfo() {
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
 			si_avg_block_size.innerText = (si.Average_block_size/1000).toFixed(1) + ' kB'
-			si_avg_fee_spb.innerText = si.Average_fee.toFixed(2)
+			si_avg_fee_spb.innerText = si.Average_fee.toFixed(0)
 			si_blocks_cached.innerText = si.Blocks_cached
 			si_blocks_to_get.innerText = si.BlocksToGet
 			si_node_uptime.innerText = period2str(si.Node_uptime)
 			si_last_hdr_height.innerText = si.LastHeaderHeight
+			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
 		} catch(e) {
 			console.log(e)
 		}
@@ -386,9 +394,8 @@ function refreshbwinfo() {
 	aj.send(null)
 }
 refreshbwinfo()
-</script>
 
-<script>
+
 function refreshtxstat() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -411,4 +418,5 @@ function refreshtxstat() {
 	aj.send(null)
 }
 refreshtxstat()
+
 </script>

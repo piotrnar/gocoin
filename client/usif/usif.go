@@ -193,7 +193,8 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	return
 }
 
-func GetNetworkHashRate() string {
+
+func GetNetworkHashRateNum() float64 {
 	hours := common.CFG.HashrateHours
 	common.Last.Mutex.Lock()
 	end := common.Last.Block
@@ -209,11 +210,11 @@ func GetNetworkHashRate() string {
 		end = end.Parent
 	}
 	if cnt==0 {
-		return "0"
+		return 0
 	}
 	diff /= float64(cnt)
 	bph := float64(cnt)/float64(hours)
-	return common.HashrateToString(bph/6 * diff * 7158278.826667)
+	return bph/6 * diff * 7158278.826667
 }
 
 

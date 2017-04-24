@@ -1,54 +1,3 @@
-<script>
-var curmid='{MINER_MON_IDX}'
-function inerton(id) {
-	if (id>=0) {
-		if (id!=curmid) {
-			document.write('<a href="cfg?mid='+id+'&sid='+sid+'">Turn ON</a>')
-		} else {
-			document.write('<a href="cfg?mid=off&sid='+sid+'">Turn OFF</a>')
-		}
-	}
-}
-document.addEventListener('DOMContentLoaded', function() {
-	if (curmid>=0) {
-		document.getElementById('midrow'+curmid).className = "own"
-	}
-})
-</script>
-<table><tr>
-<td valign="top">
-
-Data from last <b>{MINING_HOURS}</b> hours.
- The oldest block starting at <b>{FIRST_BLOCK_TIME}</b><br>
-Total number of blocks was <b>{BLOCKS_COUNT}</b>,
- making average of <b>{AVG_BLOCKS_PER_HOUR}</b> per hour,
- with the size of <b>{AVG_BLOCKSIZE}</b><br>
-Network's rate of <b>{AVG_HASHDATE}</b>,
-at average difficulty <b>{AVG_DIFFICULTY}</b>,
-which changes in <b>{DIFF_CHANGE_IN}</b> blocks<br>
-
-Total mining fees amount to <b><!--TOTAL_MINING_FEES--></b> BTC
-with the average of <b><!--AVERAGE_FEE_PER_BYTE--></b> Satoshis per byte.<br>
-
-<table class="bord" width="100%">
-	<tr>
-		<th width="120">Miner
-		<th width="40" align="right">Blks
-		<th width="20" align="right">SW
-		<th width="20" align="right">BU
-		<th width="80" align="right">Net Share
-		<th width="100" align="right">Hashrate
-		<th width="100" align="right" title="Average Block Length">ABL
-		<th width="100" align="right">Fees BTC
-		<th width="60" align="right" title="Satoshis per byte">SPB
-		<th width="80" align="right">Monitor
-	</tr>
-    <!--MINER_ROW-->
-</table>
-
-</td>
-<td valign="top">
-
 <style>
 td.bl_ver {
 	font-family: monospace;
@@ -60,7 +9,173 @@ td.bl_cnt {
 td.bl_perc {
 	text-align:right;
 }
+td.mi_unkn {
+	font-style:italic;
+	font-size:80%;
+}
+td.mi_netshare {
+	font-family: monospace;
+	text-align:right;
+	font-weight:bold;
+}
+td.mi_hashrate {
+	font-family: monospace;
+	text-align:right;
+	font-style:italic;
+	font-size:90%;
+}
+td.mi_bsize {
+	font-family: monospace;
+	text-align:right;
+	font-size:90%;
+	font-weight:bold;
+}
+td.mi_tot {
+	text-align:right;
+	color:purple;
+	font-style:italic;
+	font-weight:bold;
+}
+td.mi_sw {
+	text-align:right;
+	color:#00b000;
+	font-style:italic;
+	font-size:90%;
+}
+td.mi_bu {
+	text-align:right;
+	color:blue;
+	font-style:italic;
+	font-size:90%;
+}
 </style>
+
+<script>
+
+var last_block_height = 0
+
+function refresh_mining_info() {
+	function onc(c,id) {
+		c.onclick = function() {hlminer(id)}
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshblocks, 1000)
+	}
+	aj.onload=function() {
+		try {
+			var cs = JSON.parse(aj.responseText)
+			el_min_hrs.innerText = cs.MiningStatHours
+			el_first_block_time.innerText = tim2str(cs.FirstBlockTime, false)
+			el_block_cnt.innerText = cs.BlockCount
+			el_blocks_per_hour.innerText = parseFloat(cs.AvgBlocksPerHour).toFixed(2)
+			el_avg_hashrate.innerText = bignum(cs.AvgHashrate)+'H/s'
+			el_avg_diff.innerText = bignum(cs.AvgDifficulty)
+			el_diff_change_in.innerText = (parseInt(last_block_height/2016)+1)*2016 - last_block_height
+
+			while (minerstab.rows.length>1) minerstab.deleteRow(1)
+
+			var totfees=0,  totbts=0,  bu_cnt=0,  sw_cnt=0
+			for (var i=0; i<cs.Miners.length; i++) {
+				var m = cs.Miners[i]
+				var td, row = minerstab.insertRow(-1)
+
+				td = row.insertCell(-1)
+				if (m.Unknown)  td.className = 'mi_unkn'
+				td.innerText = m.Name
+
+				td = row.insertCell(-1)
+				td.className = 'mi_netshare'
+				var frac = parseFloat(m.Blocks/cs.BlockCount)
+				td.innerText = parseFloat(100.0*frac).toFixed(1) + '%'
+
+				td = row.insertCell(-1)
+				td.className = 'mi_tot'
+				td.innerText = m.Blocks
+
+				td = row.insertCell(-1)
+				if (m.SWcnt>0) {
+					td.className ='mi_sw'
+					td.innerText = m.SWcnt
+					sw_cnt += m.SWcnt
+				}
+
+				td = row.insertCell(-1)
+				if (m.BUcnt>0) {
+					td.className ='mi_bu'
+					td.innerText = m.BUcnt
+					bu_cnt += m.BUcnt
+				}
+
+				td = row.insertCell(-1)
+				td.className = 'mi_hashrate'
+				var frac = parseFloat(m.Blocks/cs.BlockCount)
+				td.innerText = bignum(frac*cs.AvgHashrate)+'H/s'
+
+				td = row.insertCell(-1)
+				td.className = 'mi_bsize'
+				td.innerText = parseFloat(m.TotalBytes/m.Blocks).toFixed(0)
+
+				td = row.insertCell(-1)
+				td.className = 'blreward'
+				td.innerText = val2str_pad(m.TotalFees, true)
+
+				td = row.insertCell(-1)
+				td.className = 'blspb'
+				td.innerText = parseFloat(m.TotalFees/m.TotalBytes).toFixed(0)
+
+				totfees += m.TotalFees
+				totbts += m.TotalBytes
+			}
+
+			el_avg_block_size.innerText = parseFloat(totbts/cs.BlockCount).toFixed(0)
+			el_total_fees.innerText = val2str(totfees)
+			el_avg_fpb.innerText = parseFloat(totfees/totbts).toFixed(0)
+
+			th_sw_sign.title = parseFloat(100*sw_cnt/cs.BlockCount).toFixed(0) + '%'
+			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
+		} catch(e) {
+			console.log(e)
+		}
+	}
+	aj.open("GET","miners.json",true)
+	aj.send(null)
+}
+
+
+</script>
+<table><tr>
+<td valign="top">
+
+Data from last <b id="el_min_hrs"></b> hours.
+ The oldest block starting at <b id="el_first_block_time"></b><br>
+Total number of blocks was <b id="el_block_cnt"></b>,
+ making average of <b id="el_blocks_per_hour"></b> per hour,
+ with the size of <b id="el_avg_block_size"></b><br>
+Network's rate of <b id="el_avg_hashrate"></b>,
+at average difficulty <b id="el_avg_diff"></b>,
+which changes in <b id="el_diff_change_in"></b> blocks<br>
+
+Total mining fees amount to <b id="el_total_fees"></b> BTC
+with the average of <b id="el_avg_fpb"></b> Satoshis per byte.<br>
+
+<table id="minerstab" class="bord" width="100%">
+	<tr>
+		<th width="120" align="left">Miner
+		<th width="80" align="right">Share
+		<th width="40" align="right">Tot
+		<th width="20" align="right" id="th_sw_sign">SW
+		<th width="20" align="right" id="th_bu_sign">BU
+		<th width="100" align="right">Hashrate
+		<th width="100" align="right" title="Average Block Length">Average
+		<th width="100" align="right">Fees BTC
+		<th width="60" align="right" title="Satoshis per byte">SPB
+	</tr>
+</table>
+</td>
+<td valign="top">
+
 <center>Last 1000 blocks:</center>
 <table class="bord" id="blockver_tab_a" align="right">
 <tr><th>Version<th>Count<th>Share
@@ -75,7 +190,6 @@ td.bl_perc {
 <table class="bord" id="blockver_tab_c" align="right">
 <tr><th>Version<th>Count<th>Share
 </table>
-
 </td>
 </tr>
 </table>
@@ -105,6 +219,8 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 		else if (a.cnt==b.cnt) return 0;
 		else return 1;
 	})
+
+	while (blockver_tab.rows.length>1) blockver_tab.deleteRow(1)
 
 	for (var i=0; i<sorted.length; i++) {
 		var row = blockver_tab.insertRow(-1)
@@ -149,17 +265,12 @@ function blocks_version_stats() {
 	aj.send(null)
 }
 
-blocks_version_stats()
-
-//Block versions: <!--BLOCK_VERSIONS--><br>
-
 // reaload page on new block
-var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
-	if (_lblo==0) {
-		_lblo = e.block.Height
-	} else if (e.block.Height!=_lblo) {
-		location.reload()
+	if (e.block.Height!=last_block_height) {
+		last_block_height = e.block.Height
+		refresh_mining_info()
+		blocks_version_stats()
 	}
 })
 </script>

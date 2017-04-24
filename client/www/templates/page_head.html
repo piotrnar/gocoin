@@ -4,8 +4,16 @@
 <script>
 /*_SESSION_ID_*/
 /*_AVERAGE_FEE_SPB_*/
+/*_SERVER_MODE_*/
 var doc_title = document.title
 var testnet = (doc_title.indexOf(" Testnet") != -1)
+
+var new_block_audio_file = new Audio('webui/new_block.mp3')
+var back_online_audio_file = new Audio('webui/back_online.mp3')
+
+function remember_beep() {
+	localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
+}
 </script>
 </head>
 <body>
@@ -18,7 +26,8 @@ var testnet = (doc_title.indexOf(" Testnet") != -1)
 		</td>
 		<td align="center"><a href="javascript:pushtx()">LoadTx</a></td>
 		<td align="right">
-		<b id="blno"></b> |
+		<b id="blno"></b>
+		<input type="checkbox" id="beep_new_block" title="Beep new block" onchange="remember_beep()"> |
 		{MENU_RIGHT} |
 		<a href="{HELPURL}">Help</a></td>
 	</tr></table>
@@ -44,6 +53,13 @@ function refreshblock() {
 			blno.title = "Received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
 
 			if (blno.innerText != stat.Height) {
+				if (beep_new_block.checked)  {
+					if (blno.innerText=="XXX") {
+						back_online_audio_file.play()
+					} else if (blno.innerText!="") {
+						new_block_audio_file.play()
+					}
+				}
 				new_block = true
 				blno.innerText = stat.Height
 				document.title = doc_title + ' @ ' + stat.Height
@@ -87,6 +103,9 @@ function build_wallet_list() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+	if (localStorage.getItem("new_block_beep")==="true") {
+		beep_new_block.checked = true
+	}
 	refreshblock()
 	if (typeof(localStorage.gocoinWallets)=="string") {
 		build_wallet_list()

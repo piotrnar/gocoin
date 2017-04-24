@@ -122,6 +122,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
 	s = strings.Replace(s, "/*_SESSION_ID_*/", "var sid = '"+sessid+"'", 1)
 	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", common.GetAverageFee()), 1)
+	s = strings.Replace(s, "/*_SERVER_MODE_*/", fmt.Sprint("var server_mode = ", common.CFG.WebUI.ServerMode), 1)
 
 	if r.URL.Path!="/" {
 		s = strings.Replace(s, "{HELPURL}", "help#" + r.URL.Path[1:], 1)
@@ -217,6 +218,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)
 	http.HandleFunc("/blkver.json", json_blkver)
 	http.HandleFunc("/balance.json", json_balance)
+	http.HandleFunc("/miners.json", json_miners)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
