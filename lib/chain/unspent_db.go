@@ -178,7 +178,7 @@ func (db *UnspentDB) save() {
 	for k, v := range db.HashMap {
 		if !db.HurryUp {
 			current_records++
-			if (current_records&0xff)==0 {
+			if (current_records&0xf)==0 {
 				data_progress := int64((current_records<<8)/total_records)
 				time_progress := int64((time.Now().Sub(start_time)<<8) / time_target)
 				if data_progress > time_progress {
