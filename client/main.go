@@ -40,6 +40,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.DoNotSync = true
 		syncNow <- true
 	}
+	if newbl.DoInvs {
+		common.Busy("NetRouteInv")
+		network.NetRouteInv(2, bl.Hash, newbl.Conn)
+	}
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
 		// new block accepted
@@ -157,9 +161,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 // Freshly mined block - do the inv and beeps... TODO: combine it with the other code
 func new_block_mined(bl *btc.Block, conn *network.OneConnection) {
-	common.Busy("NetRouteInv")
-	network.NetRouteInv(2, bl.Hash, conn)
-
 	if common.CFG.Beeps.NewBlock {
 		fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
 		textui.ShowPrompt()

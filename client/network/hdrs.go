@@ -111,6 +111,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				}
 			} else {
 				if sta==PH_STATUS_NEW {
+					if cnt==1 {
+						b2g.SendInvs = true
+					}
 					new_headers_got++
 				}
 				if b2g.Block.Height > highest_block_found {

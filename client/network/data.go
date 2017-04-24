@@ -137,6 +137,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 			MutexRcv.Unlock()
 			return;
 		}
+		if sta==PH_STATUS_NEW {
+			b2g.SendInvs = true
+		}
 		//println(c.ConnID, " - taking this new block")
 		common.CountSafe("UnxpectedBlockNEW")
 	}
@@ -167,7 +170,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	}
 
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-		TmDownload:conn.LastMsgTime, FromConID:conn.ConnID}
+		TmDownload:conn.LastMsgTime, FromConID:conn.ConnID, DoInvs:b2g.SendInvs}
 
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]

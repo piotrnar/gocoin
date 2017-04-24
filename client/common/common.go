@@ -15,7 +15,7 @@ import (
 const (
 	ConfigFile = "gocoin.conf"
 
-	Version = uint32(70014)
+	Version = uint32(70015)
 	DefaultUserAgent = "/Gocoin:"+gocoin.Version+"/"
 	Services = uint64(0x00000009)
 )

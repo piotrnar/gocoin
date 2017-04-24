@@ -194,6 +194,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		return
 	}
+	if sta==PH_STATUS_NEW {
+		b2g.SendInvs = true
+	}
 
 	/*fmt.Println()
 	fmt.Println(c.ConnID, "Received CmpctBlock  enf:", common.BlockChain.Consensus.Enforce_SEGWIT,
@@ -382,7 +385,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		c.counters["NewCBlock"]++
 		c.blocksreceived = append(c.blocksreceived, time.Now())
 		c.Mutex.Unlock()
-		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID}
+		orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:time.Now(), FromConID:c.ConnID, DoInvs:b2g.SendInvs}
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
@@ -504,7 +507,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	c.blocksreceived = append(c.blocksreceived, time.Now())
 	c.Mutex.Unlock()
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-		TmDownload:c.LastMsgTime, TxMissing:col.Missing, FromConID:c.ConnID}
+		TmDownload:c.LastMsgTime, TxMissing:col.Missing, FromConID:c.ConnID, DoInvs:b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
 	NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }

@@ -18,6 +18,7 @@ type OneReceivedBlock struct {
 	FromConID uint32
 	MinFeeKSPB uint64
 	NonWitnessSize int
+	DoInvs bool
 }
 
 type BlockRcvd struct {
@@ -39,6 +40,7 @@ type OneBlockToGet struct {
 	*chain.BlockTreeNode
 	InProgress uint
 	TmPreproc time.Time // how long it took to start downloading this block
+	SendInvs bool
 }
 
 var (

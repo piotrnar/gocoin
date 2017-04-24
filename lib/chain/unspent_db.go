@@ -15,7 +15,8 @@ import (
 
 
 const (
-	NumberOfUnspentSubDBs = 0x10
+	UTXO_RECORDS_PREALLOC = 25e6
+	UTXO_WRITING_TIME = 5*time.Minute
 )
 
 type FunctionWalkUnspent func(*QdbRec)
@@ -78,7 +79,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 
 	of, er := os.Open(db.dir + "UTXO3.db")
 	if er!=nil {
-		db.HashMap = make(map[UtxoKeyType][]byte)
+		db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
 		return
 	}
 	defer of.Close()
@@ -103,7 +104,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB, undo_last_block bool) {
 
 	fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 
-	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
+	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
 
 	cnt_dwn_from = int(u64/100)
 
@@ -157,7 +158,7 @@ func (db *UnspentDB) save() {
 	//var cnt_dwn, cnt_dwn_from, perc int
 	var abort bool
 
-	time_target := time.Minute
+	time_target := UTXO_WRITING_TIME
 
 	of, er := os.Create(db.dir + "UTXO3.db.tmp")
 	if er!=nil {
@@ -213,7 +214,7 @@ func (db *UnspentDB) save() {
 		os.Rename(db.dir + "UTXO3.db", db.dir + "UTXO3.old")
 		ioutil.WriteFile(db.dir + "UTXO3_old.txt", []byte(fmt.Sprint(db.CurrentHeightOnDisk)), 0600)
 		os.Rename(db.dir + "UTXO3.db.tmp", db.dir + "UTXO3.db")
-		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
+		println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
