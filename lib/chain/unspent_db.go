@@ -176,10 +176,8 @@ func (db *UnspentDB) save() {
 
 	start_time := time.Now()
 	total_records := int64(len(db.HashMap))
-	var timewaits int
+	//var timewaits int
 	var current_record, data_progress, time_progress int64
-
-	db.WritingProgress = 0
 
 	wr := bufio.NewWriter(of)
 	binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
@@ -187,13 +185,13 @@ func (db *UnspentDB) save() {
 	binary.Write(wr, binary.LittleEndian, uint64(total_records))
 	for k, v := range db.HashMap {
 		if !db.HurryUp {
-			current_record = atomic.AddInt64(&db.WritingProgress, 1)
+			current_record++
 			if (current_record&0xf)==0 {
 				data_progress = int64((current_record<<20)/total_records)
 				time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
 				if data_progress > time_progress {
 					time.Sleep(1e6)
-					timewaits++
+					//timewaits++
 				}
 			}
 		}
@@ -236,7 +234,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
-	db.abortifwriting("commit")
+	db.abortifwriting()
 
 	if changes.UndoData!=nil || (changes.Height%db.UnwindBufLen)==0 {
 		bu := new(bytes.Buffer)
@@ -272,7 +270,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
-	db.abortifwriting("undo")
+	db.abortifwriting()
 
 	for _, tx := range bl.Txs {
 		lst := make([]bool, len(tx.TxOut))
@@ -423,7 +421,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 }
 
 
-func (db *UnspentDB) abortifwriting(why string) {
+func (db *UnspentDB) abortifwriting() {
 	if db.WritingInProgress {
 		db.AbortWriting = true
 		for db.WritingInProgress {
@@ -437,7 +435,7 @@ func (db *UnspentDB) abortifwriting(why string) {
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
-	var totdatasize, unspendable uint64
+	var totdatasize, unspendable, unspendable_bytes uint64
 	for k, v := range db.HashMap {
 		totdatasize += uint64(len(v)+8)
 		rec := NewQdbRecStatic(k, v)
@@ -450,6 +448,7 @@ func (db *UnspentDB) GetStats() (s string) {
 				}
 				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
 					unspendable++
+					unspendable_bytes += uint64(8+len(r.PKScr))
 				}
 				if r.IsStealthIdx() && idx+1<len(rec.Outs) {
 					if rec.Outs[idx+1]!=nil {
@@ -466,7 +465,7 @@ func (db *UnspentDB) GetStats() (s string) {
 		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Number of unspendable outputs: %d.  Number of stealth indexes: %d / %d spent\n",
-		unspendable, stealth_uns, stealth_tot)
+	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB).  Number of stealth indexes: %d / %d spent\n",
+		unspendable, unspendable_bytes>>10, stealth_uns, stealth_tot)
 	return
 }
