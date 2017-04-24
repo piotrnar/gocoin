@@ -1,6 +1,7 @@
 1.9.0
 * Got rid of "qdb" for UTXO.
 * Announce a new block to peers before its fully verified (like Core 0.14.0 / net protocol 70015)
+* bdb: -purgeto <block_height> to purge all blocks up to given height
 
 1.8.1
 * Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively

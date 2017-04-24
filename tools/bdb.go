@@ -44,6 +44,7 @@ var (
 	fl_commit, fl_verify bool
 	fl_savebl            string
 	fl_purgeall          bool
+	fl_purgeto           uint
 )
 
 /********************************************************/
@@ -74,6 +75,10 @@ func (r one_idx_rec) SetDPos(dp uint64) {
 
 func (r one_idx_rec) DLen() uint32 {
 	return binary.LittleEndian.Uint32(r.sl[48:52])
+}
+
+func (r one_idx_rec) SetDLen(l uint32) {
+	binary.LittleEndian.PutUint32(r.sl[48:52], l)
 }
 
 func (r one_idx_rec) Hash() []byte {
@@ -173,6 +178,7 @@ func main() {
 	flag.StringVar(&fl_savebl, "savebl", "", "Save block with the given hash to disk")
 	flag.BoolVar(&fl_resetflags, "resetflags", false, "Reset all Invalid and Trusted flags when defragmenting")
 	flag.BoolVar(&fl_purgeall, "purgeall", false, "Purge all blocks from the database")
+	flag.UintVar(&fl_purgeto, "purgeto", 0, "Purge all blocks till (but excluding) the given height")
 
 	flag.Parse()
 
@@ -262,6 +268,50 @@ func main() {
 		ioutil.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println("blockchain.new upated. Now delete blockchain.dat yourself...")
+	}
+
+	if fl_purgeto!=0 {
+		var buf [1024 * 1024]byte
+		var cur_dat_pos uint64
+
+		f, er := os.Open("blockchain.dat")
+		if er!=nil {
+			println(er.Error())
+			return
+		}
+		defer f.Close()
+
+		newdir := fmt.Sprint("purged_to_", fl_purgeto, string(os.PathSeparator))
+		os.Mkdir(newdir, os.ModePerm)
+
+		o, er := os.Create(newdir+"blockchain.dat")
+		if er!=nil {
+			println(er.Error())
+			return
+		}
+		defer o.Close()
+
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+
+			if uint(sl.Height()) < fl_purgeto {
+				sl.SetDLen(0)
+				sl.SetDPos(0)
+			} else {
+				blen := int(sl.DLen())
+				f.Seek(int64(sl.DPos()), os.SEEK_SET)
+				er = btc.ReadAll(f, buf[:blen])
+				if er != nil {
+					println(er.Error())
+					return
+				}
+				sl.SetDPos(cur_dat_pos)
+				cur_dat_pos += uint64(blen)
+				o.Write(buf[:blen])
+			}
+		}
+		ioutil.WriteFile(newdir+"blockchain.new", dat, 0600)
+		return
 	}
 
 	if fl_scan {
