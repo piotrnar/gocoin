@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
+	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -92,6 +93,7 @@ var (
 			BlckExpireHours uint // zero for never
 			PingPeriodSec uint // zero to not ping
 		}
+		UTXOWriteTargetSeconds uint
 	}
 
 	mutex_cfg sync.Mutex
@@ -247,6 +249,11 @@ func Reset() {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
 	SetListenTCP(CFG.Net.ListenTCP, false)
+
+	if CFG.UTXOWriteTargetSeconds != 0 {
+		chain.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOWriteTargetSeconds)
+	}
+
 	ReloadMiners()
 }
 
