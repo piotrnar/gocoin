@@ -169,7 +169,7 @@ func (db *UnspentDB) save() {
 	total_records := len(db.HashMap)
 	var current_records, timewaits int
 
-	println("writing utxo", db.LastBlockHeight)
+	//println("writing utxo", db.LastBlockHeight)
 	wr := bufio.NewWriter(of)
 	binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
 	wr.Write(db.LastBlockHash)
@@ -188,7 +188,7 @@ func (db *UnspentDB) save() {
 		}
 
 		if db.AbortWriting {
-			println("abort")
+			//println("abort")
 			abort = true
 			break
 		}
@@ -211,9 +211,9 @@ func (db *UnspentDB) save() {
 		wr.Flush()
 		of.Close()
 		os.Rename(db.dir + "UTXO3.db", db.dir + "UTXO3.old")
-		ioutil.WriteFile(db.dir + "UTXO3_old.txt", []byte(fmt.Sprint(db.CurrentHeightOnDisk)), 0x600)
+		ioutil.WriteFile(db.dir + "UTXO3_old.txt", []byte(fmt.Sprint(db.CurrentHeightOnDisk)), 0600)
 		os.Rename(db.dir + "UTXO3.db.tmp", db.dir + "UTXO3.db")
-		println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
+		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
