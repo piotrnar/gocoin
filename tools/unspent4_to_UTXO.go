@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
-	"io"
 	"io/ioutil"
 	"os"
 	"time"
