@@ -40,14 +40,16 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.BlockChain.DoNotSync = true
 		syncNow <- true
 	}
-	if newbl.DoInvs {
-		common.Busy("NetRouteInv")
-		network.NetRouteInv(2, bl.Hash, newbl.Conn)
-	}
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if e == nil {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
+
+		if newbl.DoInvs {
+			common.Busy("NetRouteInv")
+			network.NetRouteInv(2, bl.Hash, newbl.Conn)
+		}
+
 		newbl.NonWitnessSize = len(bl.OldData)
 
 		common.RecalcAverageBlockSize(false)
