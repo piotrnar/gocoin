@@ -369,7 +369,6 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 	db.mutex.Unlock()
 
 	if rec.ipos==-1 {
-		db.mutex.Unlock()
 		e = errors.New("Block not written yet and not in the cache")
 		return
 	}
