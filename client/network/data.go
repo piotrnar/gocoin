@@ -37,8 +37,9 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 
 		common.CountSafe(fmt.Sprintf("GetdataType-%x",typ))
 		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
-			crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h[4:]))
-			//bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
+			hash := btc.NewUint256(h[4:])
+			crec, _, er := common.BlockChain.Blocks.BlockGetExt(hash)
+
 			if er == nil {
 				bl := crec.Data
 				if typ == MSG_BLOCK {
@@ -54,7 +55,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 				c.SendRawMsg("block", bl)
 			} else {
-				fmt.Println("BlockGetExt-2 failed for", btc.NewUint256(h[4:]).String(), er.Error())
+				fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {

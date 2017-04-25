@@ -80,9 +80,6 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
-			if !ch.DoNotSync {
-				ch.Blocks.Sync()
-			}
 			ch.BlockTreeEnd = cur // Advance the head
 		}
 	} else {

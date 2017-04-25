@@ -287,9 +287,6 @@ func (ch *Chain) DeleteBranch(cur *BlockTreeNode, deleteCallback func(*btc.Uint2
 	cur.Parent.delChild(cur)
 	cur.delAllChildren(ch, deleteCallback)
 	ch.BlockIndexAccess.Unlock()
-	if !ch.DoNotSync {
-		ch.Blocks.Sync()
-	}
 }
 
 

@@ -44,8 +44,6 @@ func import_blockchain(dir string) {
 	var dat []byte
 	var totbytes, perbytes uint64
 
-	chain.DoNotSync = true
-
 	fmt.Println("Be patient while importing Satoshi's database... ")
 	start := time.Now().UnixNano()
 	prv := start

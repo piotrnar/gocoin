@@ -23,8 +23,6 @@ type Chain struct {
 	BlockIndexAccess sync.Mutex
 	BlockIndex map[[btc.Uint256IdxLen]byte] *BlockTreeNode
 
-	DoNotSync bool // do not flush all the files after each block
-
 	CB NewChanOpts // callbacks used by Unspent database
 
 	Consensus struct {
@@ -155,16 +153,10 @@ func (ch *Chain) RebuildGenesisHeader() {
 }
 
 
-// Forces all database changes to be flushed to disk.
-func (ch *Chain) Sync() {
-	ch.DoNotSync = false
-	ch.Blocks.Sync()
-}
-
-
 // Call this function periodically (i.e. each second)
 // when your client is idle, to defragment databases.
 func (ch *Chain) Idle() bool {
+	ch.Blocks.Idle()
 	return ch.Unspent.Idle()
 }
 
@@ -182,8 +174,8 @@ func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
 // Return blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
 	ch.BlockIndexAccess.Lock()
-	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d  MedianTime:%d\n",
-		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
+	s = fmt.Sprintf("CHAIN: blocks:%d  Height:%d  MedianTime:%d\n",
+		len(ch.BlockIndex), ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()

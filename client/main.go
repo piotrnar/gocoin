@@ -27,7 +27,6 @@ import (
 var (
 	killchan          chan os.Signal = make(chan os.Signal)
 	retryCachedBlocks bool
-	syncNow           chan bool = make(chan bool, 1)
 )
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
@@ -36,16 +35,15 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	if common.FLAG.TrustAll {
 		bl.Trusted = true
 	}
-	if !common.BlockChain.DoNotSync {
-		common.BlockChain.DoNotSync = true
-		syncNow <- true
-	}
+	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 
 	if newbl.DoInvs {
 		common.Busy("NetRouteInv")
 		network.NetRouteInv(2, bl.Hash, newbl.Conn)
 	}
+
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
+
 	if e == nil {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
@@ -367,11 +365,6 @@ func main() {
 				common.CountSafe("MainNetBlock")
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
-
-			case <-syncNow:
-				common.CountSafe("MainChainSync")
-				common.Busy("BlockChain.Sync()")
-				common.BlockChain.Sync()
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("MainNetTx")

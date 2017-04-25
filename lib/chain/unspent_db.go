@@ -439,6 +439,7 @@ func (db *UnspentDB) abortifwriting() {
 func (db *UnspentDB) GetStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
 	var totdatasize, unspendable, unspendable_bytes uint64
+	/*
 	for k, v := range db.HashMap {
 		totdatasize += uint64(len(v)+8)
 		rec := NewQdbRecStatic(k, v)
@@ -462,6 +463,7 @@ func (db *UnspentDB) GetStats() (s string) {
 			}
 		}
 	}
+	*/
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
