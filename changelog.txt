@@ -4,6 +4,7 @@
 * bdb: -purgeto <block_height> to purge all blocks up to given height
 * client: does not offer to import core's blocks-db anymore
 * Optimized the way new blocks are written to disk (verification should be faster now)
+* Client: New TextUI command "purge", to purge unspendable records from UTXO-db
 
 1.8.1
 * Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively

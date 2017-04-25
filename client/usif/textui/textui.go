@@ -505,6 +505,9 @@ func save_utxo(par string) {
 	common.BlockChain.Unspent.DirtyDB = true
 }
 
+func purge_utxo(par string) {
+	common.BlockChain.Unspent.PurgeUnspendable(par=="all")
+}
 
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
@@ -522,6 +525,7 @@ func init() {
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
+	newUi("purge", true, purge_utxo, "Purge unspendable outputs from UTXO database (add 'all' to purge everything)")
 	newUi("quit q", false, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")

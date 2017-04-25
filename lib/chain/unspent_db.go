@@ -436,10 +436,11 @@ func (db *UnspentDB) abortifwriting() {
 
 func (db *UnspentDB) UTXOStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
-	var totdatasize, unspendable, unspendable_bytes uint64
+	var totdatasize, unspendable, unspendable_recs, unspendable_bytes uint64
 	for k, v := range db.HashMap {
 		totdatasize += uint64(len(v)+8)
 		rec := NewQdbRecStatic(k, v)
+		var spendable_found bool
 		for idx, r := range rec.Outs {
 			if r!=nil {
 				outcnt++
@@ -450,6 +451,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
 					unspendable++
 					unspendable_bytes += uint64(8+len(r.PKScr))
+				} else {
+					spendable_found = true
 				}
 				if r.IsStealthIdx() && idx+1<len(rec.Outs) {
 					if rec.Outs[idx+1]!=nil {
@@ -459,6 +462,9 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				}
 			}
 		}
+		if !spendable_found {
+			unspendable_recs++
+		}
 	}
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
@@ -466,8 +472,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB).  Number of stealth indexes: %d / %d spent\n",
-		unspendable, unspendable_bytes>>10, stealth_uns, stealth_tot)
+	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
+		unspendable, unspendable_bytes>>10, unspendable_recs, stealth_uns, stealth_tot)
 	return
 }
 
@@ -479,4 +485,39 @@ func (db *UnspentDB) GetStats() (s string) {
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return
+}
+
+func (db *UnspentDB) PurgeUnspendable(all bool) {
+	var unspendable_txs, unspendable_recs uint64
+	db.Mutex.Lock()
+	db.abortifwriting()
+
+	for k, v := range db.HashMap {
+		rec := NewQdbRecStatic(k, v)
+		var spendable_found bool
+		var record_removed uint64
+		for idx, r := range rec.Outs {
+			if r!=nil {
+				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
+					unspendable_recs++
+					if all {
+						rec.Outs[idx] = nil
+						record_removed++
+					}
+				} else {
+					spendable_found = true
+				}
+			}
+		}
+		if !spendable_found {
+			delete(db.HashMap, k)
+			unspendable_txs++
+		} else if record_removed>0 {
+			db.HashMap[k] = rec.Serialize(false)
+			unspendable_recs += record_removed
+		}
+	}
+	db.Mutex.Unlock()
+
+	fmt.Println("Purged", unspendable_txs, "transactions and", unspendable_recs, "extra records")
 }
