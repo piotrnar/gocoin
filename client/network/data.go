@@ -55,7 +55,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 				c.SendRawMsg("block", bl)
 			} else {
-				fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
+				//fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
