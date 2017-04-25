@@ -351,12 +351,6 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 		return
 	}
 
-	if rec.blen==0 {
-		db.mutex.Unlock()
-		e = errors.New("Block purged from disk")
-		return
-	}
-
 	trusted = rec.trusted
 	if db.cache!=nil {
 		if crec, hit := db.cache[hash.BIdx()]; hit {
@@ -370,6 +364,11 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 
 	if rec.ipos==-1 {
 		e = errors.New("Block not written yet and not in the cache")
+		return
+	}
+
+	if rec.blen==0 {
+		e = errors.New("Block purged from disk")
 		return
 	}
 
