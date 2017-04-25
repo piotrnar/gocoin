@@ -174,9 +174,9 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		db.addToCache(bl.Hash, bl.Raw, bl)
 		db.blocksToWrite <- oneB2W{idx:idx, h:bl.Hash.Hash, data:bl.Raw, height:height, txcount:uint32(bl.TxCount)}
 	} else {
-		println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
+		//println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
 		if !rec.trusted && bl.Trusted {
-			println(" ... but now it's getting trusted")
+			//println(" ... but now it's getting trusted")
 			if rec.ipos==-1 {
 				// It's not saved yet - just change the flag
 				rec.trusted = true
@@ -188,12 +188,12 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	db.mutex.Unlock()
 
 	if trust_it {
-		println(" ... in the slow mode")
+		//println(" ... in the slow mode")
 		db.BlockTrusted(bl.Hash.Hash[:])
 	}
 
 	if len(db.blocksToWrite)>=MAX_BLOCKS_TO_WRITE {
-		println("Too many blocksToWrite - flush the data...")
+		//println("Too many blocksToWrite - flush the data...")
 		if !db.writeAll() {
 			panic("many to write but nothing stored")
 		}
@@ -235,7 +235,6 @@ func (db *BlockDB) writeOne() (written bool) {
 	}
 
 	db.disk_access.Lock()
-	println("saving block", b2w.height)
 
 	sta := time.Now()
 	rec.fpos = uint64(db.maxdatfilepos)
