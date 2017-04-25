@@ -54,6 +54,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 				c.SendRawMsg("block", bl)
 			} else {
+				fmt.Println("BlockGetExt-2 failed for", btc.NewUint256(h[4:]).String(), er.Error())
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
