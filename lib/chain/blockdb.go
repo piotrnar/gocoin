@@ -203,12 +203,14 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 }
 
 func (db *BlockDB) writeAll() (sync bool) {
+	//sta := time.Now()
 	for db.writeOne() {
 		sync = true
 	}
 	if sync {
 		db.blockdata.Sync()
 		db.blockindx.Sync()
+		//println("Block(s) saved in", time.Now().Sub(sta).String())
 	}
 	return
 }
@@ -236,7 +238,6 @@ func (db *BlockDB) writeOne() (written bool) {
 
 	db.disk_access.Lock()
 
-	sta := time.Now()
 	rec.fpos = uint64(db.maxdatfilepos)
 	fl[0] |= BLOCK_COMPRSD|BLOCK_SNAPPED // gzip compression is deprecated
 	if rec.trusted {
@@ -265,7 +266,6 @@ func (db *BlockDB) writeOne() (written bool) {
 
 	db.maxidxfilepos += 136
 	db.maxdatfilepos += int64(rec.blen)
-	println("Block", b2w.height, "saved in", time.Now().Sub(sta).String())
 
 	db.disk_access.Unlock()
 
@@ -327,14 +327,14 @@ func (db *BlockDB) setBlockFlag(cur *oneBl, fl byte) {
 
 func (db *BlockDB) Idle() {
 	if db.writeAll() {
-		println(" * block(s) stored from idle")
+		//println(" * block(s) stored from idle")
 	}
 }
 
 
 func (db *BlockDB) Close() {
 	if db.writeAll() {
-		println(" * block(s) stored from close")
+		//println(" * block(s) stored from close")
 	}
 	db.blockdata.Close()
 	db.blockindx.Close()
