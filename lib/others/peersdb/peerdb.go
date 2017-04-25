@@ -125,6 +125,7 @@ func ExpirePeers() {
 
 func (p *PeerAddr) Save() {
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
+	PeerDB.Sync()
 }
 
 
