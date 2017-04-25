@@ -434,12 +434,9 @@ func (db *UnspentDB) abortifwriting() {
 	}
 }
 
-
-// Return DB statistics
-func (db *UnspentDB) GetStats() (s string) {
+func (db *UnspentDB) UTXOStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
 	var totdatasize, unspendable, unspendable_bytes uint64
-	/*
 	for k, v := range db.HashMap {
 		totdatasize += uint64(len(v)+8)
 		rec := NewQdbRecStatic(k, v)
@@ -463,7 +460,6 @@ func (db *UnspentDB) GetStats() (s string) {
 			}
 		}
 	}
-	*/
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
@@ -472,5 +468,15 @@ func (db *UnspentDB) GetStats() (s string) {
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB).  Number of stealth indexes: %d / %d spent\n",
 		unspendable, unspendable_bytes>>10, stealth_uns, stealth_tot)
+	return
+}
+
+
+// Return DB statistics
+func (db *UnspentDB) GetStats() (s string) {
+	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
+		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
+	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
+		db.LastBlockHeight)
 	return
 }

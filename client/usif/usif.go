@@ -37,7 +37,6 @@ var (
 	LocksChan chan *OneLock = make(chan *OneLock, 1)
 
 	Exit_now bool
-	DefragUTXO bool
 )
 
 

@@ -392,16 +392,10 @@ func main() {
 				network.ExpireTxs()
 
 			case <-time.After(time.Second / 2):
-				common.CountSafe("MainThreadTouts")
-				if !retryCachedBlocks {
-					if usif.DefragUTXO {
-						usif.Exit_now = true
-						break
-					}
-					common.Busy("BlockChain.Idle()")
-					if common.BlockChain.Idle() {
-						common.CountSafe("ChainIdleUsed")
-					}
+				common.CountSafe("MainThreadIdle")
+				common.Busy("BlockChain.Idle()")
+				if common.BlockChain.Idle() {
+					common.CountSafe("ChainIdleUsed")
 				}
 				continue
 			}
@@ -411,11 +405,6 @@ func main() {
 		network.NetCloseAll()
 	}
 
-	if usif.DefragUTXO {
-		fmt.Println("Closing blockchain while defragmenting UTXO")
-	} else {
-		fmt.Println("Closing blockchain")
-	}
 	sta := time.Now()
 	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())

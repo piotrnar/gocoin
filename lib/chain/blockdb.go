@@ -21,7 +21,8 @@ const (
 	BLOCK_COMPRSD = 0x04
 	BLOCK_SNAPPED = 0x08
 
-	MAX_BLOCKS_TO_WRITE = 100 // flush tyhe data to disk when exceeding
+	MAX_BLOCKS_TO_WRITE = 1024 // flush the data to disk when exceeding
+	MAX_DATA_WRITE = 16*1024*1024
 )
 
 /*
@@ -84,6 +85,7 @@ type BlockDB struct {
 	maxidxfilepos, maxdatfilepos int64
 
 	blocksToWrite chan oneB2W
+	datToWrite uint64
 }
 
 
@@ -152,8 +154,8 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 
 func (db *BlockDB) GetStats() (s string) {
 	db.mutex.Lock()
-	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache.  ToWriteCnt:%d\n",
-		len(db.blockIndex), len(db.cache), db.max_cached_blocks, len(db.blocksToWrite))
+	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache.  ToWriteCnt:%d (%dKB)\n",
+		len(db.blockIndex), len(db.cache), db.max_cached_blocks, len(db.blocksToWrite), db.datToWrite>>10)
 	db.mutex.Unlock()
 	return
 }
@@ -167,12 +169,15 @@ func hash2idx (h []byte) (idx [btc.Uint256IdxLen]byte) {
 
 func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	var trust_it bool
+	var flush_now bool
 	db.mutex.Lock()
 	idx := bl.Hash.BIdx()
 	if rec, ok := db.blockIndex[idx]; !ok {
 		db.blockIndex[idx] = &oneBl{ipos:-1, trusted:bl.Trusted}
 		db.addToCache(bl.Hash, bl.Raw, bl)
+		db.datToWrite += uint64(len(bl.Raw))
 		db.blocksToWrite <- oneB2W{idx:idx, h:bl.Hash.Hash, data:bl.Raw, height:height, txcount:uint32(bl.TxCount)}
+		flush_now = len(db.blocksToWrite)>=MAX_BLOCKS_TO_WRITE || db.datToWrite>=MAX_DATA_WRITE
 	} else {
 		//println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
 		if !rec.trusted && bl.Trusted {
@@ -192,7 +197,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		db.BlockTrusted(bl.Hash.Hash[:])
 	}
 
-	if len(db.blocksToWrite)>=MAX_BLOCKS_TO_WRITE {
+	if flush_now {
 		//println("Too many blocksToWrite - flush the data...")
 		if !db.writeAll() {
 			panic("many to write but nothing stored")
@@ -229,6 +234,7 @@ func (db *BlockDB) writeOne() (written bool) {
 	}
 
 	db.mutex.Lock()
+	db.datToWrite -= uint64(len(b2w.data))
 	rec = db.blockIndex[b2w.idx]
 	db.mutex.Unlock()
 

@@ -311,8 +311,8 @@ func blchain_stats(par string) {
 	fmt.Println(common.BlockChain.Stats())
 }
 
-func defrag_utxo(par string) {
-	usif.DefragUTXO = true
+func blchain_utxodb(par string) {
+	fmt.Println(common.BlockChain.Unspent.UTXOStats())
 }
 
 func set_ulmax(par string) {
@@ -508,13 +508,13 @@ func save_utxo(par string) {
 
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("defrag", true, defrag_utxo, "Defragment UTXO database (use tool bdb -defrag for blocks DB)")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
@@ -524,8 +524,8 @@ func init() {
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("quit q", false, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
-	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
+	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
+	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }
