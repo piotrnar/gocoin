@@ -42,6 +42,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		network.NetRouteInv(2, bl.Hash, newbl.Conn)
 	}
 
+	network.MutexRcv.Lock()
+	bl.LastKnownHeight = network.LastCommitedHeader.Height
+	network.MutexRcv.Unlock()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 
 	if e == nil {
