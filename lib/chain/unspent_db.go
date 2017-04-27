@@ -239,7 +239,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	defer db.Mutex.Unlock()
 	db.abortifwriting()
 
-	if changes.UndoData!=nil && (changes.Height%db.UnwindBufLen)==0 {
+	if changes.UndoData!=nil {
 		bu := new(bytes.Buffer)
 		bu.Write(blhash)
 		if changes.UndoData != nil {
