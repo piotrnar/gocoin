@@ -20,7 +20,7 @@ func (c *OneConnection) HandlePong() {
 		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
 	}
 	if ms==0 {
-		println(c.ConnID, "Ping returned after 0ms")
+		//println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
 	}
 	c.Mutex.Lock()
