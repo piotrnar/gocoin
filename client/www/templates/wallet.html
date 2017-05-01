@@ -33,6 +33,7 @@ td.outcnt {
 <script>
 var edit_in_progress = false
 var wallet;
+var fetching_balance_in_progress = null
 function switchwallet_button_click_browser() {
 	if (edit_in_progress) {
 		close_editor()
@@ -41,6 +42,11 @@ function switchwallet_button_click_browser() {
 }
 
 function fetch_wallet_balance(name) {
+	if (fetching_balance_in_progress!=null) {
+		fetching_balance_in_progress.abort()
+		fetching_balance_in_progress = null
+	}
+
 	wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
 
@@ -54,10 +60,12 @@ function fetch_wallet_balance(name) {
 
 	var aj = ajax()
 	aj.onerror=function() {
+		fetching_balance_in_progress = null
 		console.log("onerror")
 	}
 
 	aj.onload=function() {
+		fetching_balance_in_progress = null
 		try {
 			var totbtc = 0
 			var totouts = 0
@@ -131,6 +139,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
+	fetching_balance_in_progress = aj
 	aj.open("POST", "balance.json?summary", true)
 	aj.send(JSON.stringify(wallet_addr))
 }
