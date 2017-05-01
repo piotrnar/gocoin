@@ -22,7 +22,7 @@ var (
 		UndoBlocks uint
 		TrustAll bool
 		UnbanAllPeers bool
-		Exit bool
+		NoWallet bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -182,7 +182,7 @@ func InitConfig() {
 	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
-	flag.BoolVar(&FLAG.Exit, "exit", FLAG.Exit, "Load the Block Chain and then exit (useful for rebuilding UTXO.db)")
+	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not monitor balance of addresses (speeds up chain sync)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
@@ -256,6 +256,8 @@ func Reset() {
 		chain.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOWriteTargetSeconds)
 	}
 
+	connect_only = CFG.ConnectOnly!=""
+
 	ReloadMiners()
 }
 
@@ -311,9 +313,10 @@ func CloseBlockChain() {
 
 
 var listen_tcp uint32
+var connect_only bool // set in Reset()
 
 func IsListenTCP() bool {
-	return atomic.LoadUint32(&listen_tcp)!=0
+	return !connect_only && atomic.LoadUint32(&listen_tcp)!=0
 }
 
 func SetListenTCP(yes bool, global bool) {
