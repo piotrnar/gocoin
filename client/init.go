@@ -51,7 +51,6 @@ func host_init() {
 	}()
 
 	if check_if_convert_needed(common.GocoinHomeDir) {
-		fmt.Println("UTXO database converted to a new format")
 		fmt.Println("You will no longer need the folder", common.GocoinHomeDir+"unspent4", "(delete it to recover space)")
 		fmt.Println("Start the client again to continue.")
 		sys.UnlockDatabaseDir()
