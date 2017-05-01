@@ -71,6 +71,11 @@ func host_init() {
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
+	if common.CFG.Memory.FreeAtStart {
+		fmt.Print("Freeing memory... ")
+		sys.FreeMem()
+		fmt.Print("\r                  \r")
+	}
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %.3f seconds.  %d + %d MB of RAM used (%d)\n",
 		float64(sto-sta)/1e9, al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)

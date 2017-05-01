@@ -75,6 +75,7 @@ var (
 		Memory struct {
 			GCPercTrshold int
 			MaxCachedBlocks uint
+			FreeAtStart bool // Free all possible memory after initial loading of block chain
 		}
 		Beeps struct {
 			NewBlock bool  // beep when a new block has been mined
