@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"fmt"
 	"sync"
 	"bytes"
 	"encoding/binary"
@@ -31,6 +32,23 @@ func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
 		rec = chain.NewQdbRec(ind, v)
 	}
 	return
+}
+
+func FetchInitialBalance() {
+	var cur_rec, cnt_dwn, perc int
+	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap)/100
+	for k, v := range common.BlockChain.Unspent.HashMap {
+		NewUTXO(chain.NewQdbRecStatic(k, v))
+		cur_rec++
+		if cnt_dwn==0 {
+			fmt.Print("\r", perc, "% complete ... ")
+			cnt_dwn = cnt_dwn_from
+			perc++
+		} else {
+			cnt_dwn--
+		}
+	}
+	fmt.Print("\r                                                              \r")
 }
 
 func NewUTXO(tx *chain.QdbRec) {

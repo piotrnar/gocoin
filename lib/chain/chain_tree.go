@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 	"sort"
-	"runtime"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -27,16 +26,15 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var b []byte
 	var er error
 	var trusted bool
+	var tot_bytes uint64
 
-	prv := time.Now().UnixNano()
+	sta := time.Now()
+	prv := sta
 	for !AbortNow && ch.BlockTreeEnd != end {
-		cur := time.Now().UnixNano()
-		if cur-prv >= 10e9 {
-			fmt.Print("\rParseTillBlock ... ", ch.BlockTreeEnd.Height, " / ", end.Height, " ")
-			if ch.CB.NotifyTxAdd!=nil {
-				fmt.Print("(use -nowallet switch to speed it up) ")
-			}
-			runtime.GC()
+		cur := time.Now()
+		if cur.Sub(prv) >= 10 * time.Second {
+			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
+			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s\n", ch.BlockTreeEnd.Height, end.Height, mbps)
 			prv = cur
 		}
 
@@ -54,6 +52,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if er != nil {
 			panic("Db.BlockGet(): "+er.Error())
 		}
+		tot_bytes += uint64(len(b))
 
 		bl, er := btc.NewBlock(b)
 		if er != nil {

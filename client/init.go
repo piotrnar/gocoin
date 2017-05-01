@@ -66,18 +66,10 @@ func host_init() {
 		UndoBlocks : common.FLAG.UndoBlocks,
 		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlocks)}
 
-	if !common.FLAG.NoWallet {
-		ext.NotifyTxAdd = wallet.TxNotifyAdd
-		ext.NotifyTxDel = wallet.TxNotifyDel
-		ext.LoadWalk = wallet.NewUTXO
-		fmt.Println("Loading UTXO-db and P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
-	}
-
-	sta := time.Now().UnixNano()
+	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
-	sto := time.Now().UnixNano()
 	if chain.AbortNow {
-		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", float64(sto-sta)/1e9)
+		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
@@ -87,9 +79,31 @@ func host_init() {
 		sys.FreeMem()
 		fmt.Print("\r                  \r")
 	}
+	sto := time.Now()
+
 	al, sy := sys.MemUsed()
-	fmt.Printf("Blockchain open in %.3f seconds.  %d + %d MB of RAM used (%d)\n",
-		float64(sto-sta)/1e9, al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
+	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
+		sto.Sub(sta).String(), al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
+
+
+	// Init Wallet
+	common.BlockChain.CB.NotifyTxAdd = wallet.TxNotifyAdd
+	common.BlockChain.CB.NotifyTxDel = wallet.TxNotifyDel
+	// LoadWalk = wallet.NewUTXO
+	fmt.Println("Loading balance of P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
+	sta = time.Now()
+	wallet.FetchInitialBalance()
+	if common.CFG.Memory.FreeAtStart {
+		fmt.Print("Freeing memory... ")
+		sys.FreeMem()
+		fmt.Print("\r                  \r")
+	}
+	sto = time.Now()
+	al, sy = sys.MemUsed()
+	fmt.Printf("Balances loaded in %s seconds.  %d + %d MB of RAM used (%d)\n",
+		sto.Sub(sta).String(), al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
+
+
 	common.StartTime = time.Now()
 	__exit <- true
 	_ = <- __done
