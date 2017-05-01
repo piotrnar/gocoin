@@ -55,7 +55,7 @@ func host_init() {
 		UndoBlocks : common.FLAG.UndoBlocks,
 		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlocks)}
 
-	if !common.FLAG.Exit {
+	if !common.FLAG.NoWallet {
 		ext.NotifyTxAdd = wallet.TxNotifyAdd
 		ext.NotifyTxDel = wallet.TxNotifyDel
 		ext.LoadWalk = wallet.NewUTXO
