@@ -37,18 +37,22 @@ func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
 func FetchInitialBalance() {
 	var cur_rec, cnt_dwn, perc int
 	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap)/100
+	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal) + " BTC or more"
 	for k, v := range common.BlockChain.Unspent.HashMap {
+		if chain.AbortNow {
+			break
+		}
 		NewUTXO(chain.NewQdbRecStatic(k, v))
 		cur_rec++
 		if cnt_dwn==0 {
-			fmt.Print("\r", perc, "% complete ... ")
+			fmt.Print("\r", info, " - ", perc, "% complete ... ")
 			cnt_dwn = cnt_dwn_from
 			perc++
 		} else {
 			cnt_dwn--
 		}
 	}
-	fmt.Print("\r                                                              \r")
+	fmt.Print("\r                                                                                  \r")
 }
 
 func NewUTXO(tx *chain.QdbRec) {
