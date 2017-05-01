@@ -158,7 +158,7 @@ func show_info(par string) {
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%dx\n",
+	fmt.Printf("TransactionsToSend:%d,  TransactionsRejected:%d,  TransactionsPending:%d/%d\n",
 		len(network.TransactionsToSend), len(network.TransactionsRejected),
 		len(network.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("WaitingForInputs:%d,  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
