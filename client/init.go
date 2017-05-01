@@ -69,7 +69,7 @@ func host_init() {
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	if chain.AbortNow {
-		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", time.Now().Sub(sta).String())
+		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
@@ -90,9 +90,14 @@ func host_init() {
 	common.BlockChain.CB.NotifyTxAdd = wallet.TxNotifyAdd
 	common.BlockChain.CB.NotifyTxDel = wallet.TxNotifyDel
 	// LoadWalk = wallet.NewUTXO
-	fmt.Println("Loading balance of P2SH/P2KH outputs of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
 	sta = time.Now()
 	wallet.FetchInitialBalance()
+	if chain.AbortNow {
+		fmt.Printf("Loading balances aborted after %s seconds\n", time.Now().Sub(sta).String())
+		common.BlockChain.Close()
+		sys.UnlockDatabaseDir()
+		os.Exit(1)
+	}
 	if common.CFG.Memory.FreeAtStart {
 		fmt.Print("Freeing memory... ")
 		sys.FreeMem()
