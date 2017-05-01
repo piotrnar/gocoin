@@ -69,7 +69,7 @@ func host_init() {
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	if chain.AbortNow {
-		fmt.Printf("Blockchain opening aborted after %.3f seconds\n", time.Now().Sub(sta).String())
+		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
