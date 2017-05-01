@@ -32,7 +32,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	for !AbortNow && ch.BlockTreeEnd != end {
 		cur := time.Now().UnixNano()
 		if cur-prv >= 10e9 {
-			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height, "(start client with -exit to speed this up)")
+			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height, "(start client with -nowallet to speed this up)")
 			runtime.GC()
 			prv = cur
 		}
