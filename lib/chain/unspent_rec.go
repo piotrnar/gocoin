@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"encoding/binary"
+	//"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -21,7 +21,11 @@ Eech value is variable length:
 */
 
 
-type UtxoKeyType uint64
+const (
+	UtxoIdxLen = 16
+)
+
+type UtxoKeyType [UtxoIdxLen]byte
 
 type QdbRec struct {
 	TxID [32]byte
@@ -37,7 +41,9 @@ type QdbTxOut struct {
 
 
 func FullQdbRec(dat []byte) *QdbRec {
-	return NewQdbRec(UtxoKeyType(binary.LittleEndian.Uint64(dat[:8])), dat[8:])
+	var key UtxoKeyType
+	copy(key[:], dat[:UtxoIdxLen])
+	return NewQdbRec(key, dat[UtxoIdxLen:])
 }
 
 
@@ -52,9 +58,9 @@ func NewQdbRecStatic(key UtxoKeyType, dat []byte) *QdbRec {
 	var off, n, i int
 	var u64, idx uint64
 
-	binary.LittleEndian.PutUint64(sta_rec.TxID[:8], uint64(key))
-	copy(sta_rec.TxID[8:], dat[:24])
-	off = 24
+	off = 32-UtxoIdxLen
+	copy(sta_rec.TxID[:UtxoIdxLen], key[:])
+	copy(sta_rec.TxID[UtxoIdxLen:], dat[:off])
 
 	u64, n = btc.VULe(dat[off:])
 	off += n
@@ -100,9 +106,9 @@ func NewQdbRec(key UtxoKeyType, dat []byte) *QdbRec {
 	var u64, idx uint64
 	var rec QdbRec
 
-	binary.LittleEndian.PutUint64(rec.TxID[:8], uint64(key))
-	copy(rec.TxID[8:], dat[:24])
-	off = 24
+	off = 32-UtxoIdxLen
+	copy(rec.TxID[:UtxoIdxLen], key[:])
+	copy(rec.TxID[UtxoIdxLen:], dat[:off])
 
 	u64, n = btc.VULe(dat[off:])
 	off += n
@@ -156,7 +162,7 @@ func (rec *QdbRec) Serialize(full bool) (buf []byte) {
 	if full {
 		le = 32
 	} else {
-		le = 24
+		le = 32-UtxoIdxLen
 	}
 
 	le += vlen2size(uint64(rec.InBlock))  // block length
@@ -180,8 +186,8 @@ func (rec *QdbRec) Serialize(full bool) (buf []byte) {
 		copy(buf[:32], rec.TxID[:])
 		of = 32
 	} else {
-		copy(buf[:24], rec.TxID[8:])
-		of = 24
+		of = 32-UtxoIdxLen
+		copy(buf[:of], rec.TxID[UtxoIdxLen:])
 	}
 
 	of += btc.PutULe(buf[of:], uint64(rec.InBlock))

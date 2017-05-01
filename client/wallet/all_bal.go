@@ -15,7 +15,7 @@ var (
 	BalanceMutex sync.Mutex
 )
 
-type OneAllAddrInp [8+4]byte
+type OneAllAddrInp [chain.UtxoIdxLen+4]byte
 
 type OneAllAddrBal struct {
 	Value uint64  // Highest bit of it means P2SH
@@ -23,10 +23,11 @@ type OneAllAddrBal struct {
 }
 
 func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
-	ind := chain.UtxoKeyType(binary.LittleEndian.Uint64(ur[:8]))
+	var ind chain.UtxoKeyType
+	copy(ind[:], ur[:])
 	v := common.BlockChain.Unspent.HashMap[ind]
 	if v != nil {
-		vout = binary.LittleEndian.Uint32(ur[8:12])
+		vout = binary.LittleEndian.Uint32(ur[chain.UtxoIdxLen:])
 		rec = chain.NewQdbRec(ind, v)
 	}
 	return
@@ -37,7 +38,7 @@ func NewUTXO(tx *chain.QdbRec) {
 	var rec *OneAllAddrBal
 	var nr OneAllAddrInp
 
-	copy(nr[0:8], tx.TxID[:8]) //RecIdx
+	copy(nr[:chain.UtxoIdxLen], tx.TxID[:]) //RecIdx
 
 	for vout:=uint32(0); vout<uint32(len(tx.Outs)); vout++ {
 		out := tx.Outs[vout]
@@ -65,7 +66,7 @@ func NewUTXO(tx *chain.QdbRec) {
 			continue
 		}
 
-		binary.LittleEndian.PutUint32(nr[8:12], vout)
+		binary.LittleEndian.PutUint32(nr[chain.UtxoIdxLen:], vout)
 		rec.Unsp = append(rec.Unsp, nr)
 		rec.Value += out.Value
 	}
@@ -77,7 +78,7 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 	var i int
 	var nr OneAllAddrInp
 	var p2kh bool
-	copy(nr[0:8], tx.TxID[:8]) //RecIdx
+	copy(nr[:chain.UtxoIdxLen], tx.TxID[:]) //RecIdx
 	for vout:=uint32(0); vout<uint32(len(tx.Outs)); vout++ {
 		if !outs[vout] {
 			continue
@@ -105,7 +106,8 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 		}
 
 		for i=0; i<len(rec.Unsp); i++ {
-			if bytes.Equal(rec.Unsp[i][:8], nr[:8]) && binary.LittleEndian.Uint32(rec.Unsp[i][8:12])==vout {
+			if bytes.Equal(rec.Unsp[i][:chain.UtxoIdxLen], nr[:chain.UtxoIdxLen]) &&
+				binary.LittleEndian.Uint32(rec.Unsp[i][chain.UtxoIdxLen:])==vout {
 				break
 			}
 		}

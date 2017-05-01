@@ -121,18 +121,17 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 	for !AbortNow && tot_recs<u64 {
 		le, er = btc.ReadVLen(rd)
-		//er = binary.Read(rd, binary.LittleEndian, &le)
 		if er!=nil {
 			goto fatal_error
 		}
 
-		er = binary.Read(rd, binary.LittleEndian, &k)
+		er = btc.ReadAll(rd, k[:])
 		if er!=nil {
 			goto fatal_error
 		}
 
 
-		b := make([]byte, int(le)-8)
+		b := make([]byte, int(le)-UtxoIdxLen)
 		er = btc.ReadAll(rd, b)
 		if er!=nil {
 			goto fatal_error
@@ -204,8 +203,8 @@ func (db *UnspentDB) save() {
 			abort = true
 			break
 		}
-		btc.WriteVlen(wr, uint64(8+len(v)))
-		binary.Write(wr, binary.LittleEndian, k)
+		btc.WriteVlen(wr, uint64(UtxoIdxLen+len(v)))
+		wr.Write(k[:])
 		_, er = wr.Write(v)
 		if er != nil {
 			println("\n\007Fatal error saving UTXO:", er.Error())
@@ -309,7 +308,8 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			db.ch.CB.NotifyTxAdd(tx)
 		}
 
-		ind := UtxoKeyType(binary.LittleEndian.Uint64(tx.TxID[:8]))
+		var ind UtxoKeyType
+		copy(ind[:], tx.TxID[:])
 		v := db.HashMap[ind]
 		if v != nil {
 			oldrec := NewQdbRec(ind, v)
@@ -363,7 +363,8 @@ func (db *UnspentDB) Close() {
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
-	ind := UtxoKeyType(binary.LittleEndian.Uint64(po.Hash[:8]))
+	var ind UtxoKeyType
+	copy(ind[:], po.Hash[:])
 	v := db.HashMap[ind]
 	if v==nil {
 		e = errors.New("Unspent TX not found")
@@ -386,7 +387,8 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 
 
 func (db *UnspentDB) del(hash []byte, outs []bool) {
-	ind := UtxoKeyType(binary.LittleEndian.Uint64(hash[:8]))
+	var ind UtxoKeyType
+	copy(ind[:], hash)
 	v := db.HashMap[ind]
 	if v==nil {
 		return // no such txid in UTXO (just ignorde delete request)
@@ -414,7 +416,8 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
-		ind := UtxoKeyType(binary.LittleEndian.Uint64(rec.TxID[:8]))
+		var ind UtxoKeyType
+		copy(ind[:], rec.TxID[:])
 		if db.ch.CB.NotifyTxAdd!=nil {
 			db.ch.CB.NotifyTxAdd(rec)
 		}
