@@ -270,7 +270,7 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
-	if common.FLAG.UndoBlocks > 0 || common.FLAG.Exit {
+	if common.FLAG.UndoBlocks > 0 {
 		usif.Exit_now = true
 	}
 
