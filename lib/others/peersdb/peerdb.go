@@ -256,10 +256,10 @@ func InitPeers(dir string) {
 		}
 		proxyPeer = NewEmptyPeer()
 		proxyPeer.Services = Services
-		copy(proxyPeer.Ip4[:], oa.IP[0:4])
+		copy(proxyPeer.Ip4[:], oa.IP[12:16])
 		proxyPeer.Port = uint16(oa.Port)
 		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
-			oa.IP[0], oa.IP[1], oa.IP[2], oa.IP[3], oa.Port)
+			proxyPeer.Ip4[0], proxyPeer.Ip4[1], proxyPeer.Ip4[2], proxyPeer.Ip4[3], proxyPeer.Port)
 	} else {
 		go func() {
 			if !Testnet {
