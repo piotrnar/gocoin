@@ -28,8 +28,11 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var trusted bool
 	var tot_bytes uint64
 
+	ch.Blocks.DoNotCache = true
+
 	sta := time.Now()
 	prv := sta
+
 	for !AbortNow && ch.BlockTreeEnd != end {
 		cur := time.Now()
 		if cur.Sub(prv) >= 10 * time.Second {
@@ -83,6 +86,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		ch.BlockTreeEnd = nxt
 	}
+
+	ch.Blocks.DoNotCache = false
 
 	if !AbortNow && ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
