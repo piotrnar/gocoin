@@ -74,6 +74,8 @@ type oneB2W struct {
 }
 
 type BlockDB struct {
+	DoNotCache bool // use it while rescanning
+
 	dirname string
 	blockIndex map[[btc.Uint256IdxLen]byte] *oneBl
 	blockdata *os.File
@@ -403,9 +405,13 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 		}
 	}
 
-	db.mutex.Lock()
-	cacherec = db.addToCache(hash, bl, nil)
-	db.mutex.Unlock()
+	if !db.DoNotCache {
+		db.mutex.Lock()
+		cacherec = db.addToCache(hash, bl, nil)
+		db.mutex.Unlock()
+	} else {
+		cacherec = &BlckCachRec{Data:bl}
+	}
 
 	return
 }
