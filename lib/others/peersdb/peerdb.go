@@ -247,11 +247,11 @@ func InitPeers(dir string) {
 	if ConnectOnly != "" {
 		x := strings.Index(ConnectOnly, ":")
 		if x == -1 {
-			ConnectOnly = fmt.Sprint(ConnectOnly, ":", DefaultTcpPort)
+			ConnectOnly = fmt.Sprint(ConnectOnly, ":", DefaultTcpPort())
 		}
 		oa, e := net.ResolveTCPAddr("tcp4", ConnectOnly)
 		if e != nil {
-			println(e.Error())
+			println(e.Error(), ConnectOnly)
 			os.Exit(1)
 		}
 		proxyPeer = NewEmptyPeer()
