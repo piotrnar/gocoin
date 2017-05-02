@@ -8,14 +8,6 @@ package utxo
 
 /*
 #include <stdlib.h>
-#include <string.h>
-
-static void *alloc_ptr(void *c, unsigned long l) {
-	void *ptr = malloc(l);
-	memcpy(ptr, c, l);
-	return ptr;
-}
-
 */
 import "C"
 
@@ -28,7 +20,7 @@ import (
 func gcc_malloc(le uint32) unsafe.Pointer {
 	atomic.AddInt64(&ExtraMemoryConsumed, int64(le)+4)
 	atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
-	ptr := unsafe.Pointer(C.my_alloc(C.ulong(le+4)))
+	ptr := unsafe.Pointer(C.malloc(C.ulong(le+4)))
 	*((*uint32)(unsafe.Pointer(ptr))) = le
 	return ptr
 }
