@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"bufio"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -434,9 +435,9 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	var bh, txs uint32
 	db.blockindx.Seek(0, os.SEEK_SET)
 	db.maxidxfilepos = 0
+	rd := bufio.NewReader(db.blockindx)
 	for !AbortNow {
-		_, e := db.blockindx.Read(b[:])
-		if e != nil {
+		if e := btc.ReadAll(rd, b[:]); e != nil {
 			break
 		}
 
