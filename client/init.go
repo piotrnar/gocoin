@@ -86,7 +86,7 @@ func host_init() {
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
 		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
 
-	if common.FLAG.UndoBlocks==0 {
+	if common.FLAG.UndoBlocks==0 && !common.FLAG.NoWallet {
 		// Init Wallet
 		common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
 		common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
