@@ -420,12 +420,12 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 			anyout = true
 		}
 	}
-	free(v)
 	if anyout {
 		db.HashMap[ind] = malloc_and_copy(rec.Bytes())
 	} else {
 		delete(db.HashMap, ind)
 	}
+	free(v)
 }
 
 
