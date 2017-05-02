@@ -25,6 +25,7 @@ import "C"
 
 import (
 	"unsafe"
+	"reflect"
 )
 
 
@@ -51,9 +52,6 @@ func gcc_slice(ptr unsafe.Pointer) []byte {
 }
 
 func init() {
-	if membind_use_wrapper {
-		panic("Another wrapper already initialized")
-	}
 	println("Using malloc() for UTXO memory bindings")
 	malloc = gcc_malloc
 	free = gcc_free
