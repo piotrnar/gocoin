@@ -16,10 +16,6 @@ static void *alloc_ptr(void *c, unsigned long l) {
 	return ptr;
 }
 
-static void *my_alloc(unsigned long l) {
-	return malloc(l);
-}
-
 */
 import "C"
 
@@ -30,16 +26,24 @@ import (
 
 
 func gcc_malloc(le uint32) unsafe.Pointer {
-	return unsafe.Pointer(C.my_alloc(C.ulong(le)))
+	atomic.AddInt64(&ExtraMemoryConsumed, int64(le)+4)
+	atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
+	ptr := unsafe.Pointer(C.my_alloc(C.ulong(le+4)))
+	*((*uint32)(unsafe.Pointer(ptr))) = le
+	return ptr
 }
 
 func gcc_free(ptr unsafe.Pointer) {
+	atomic.AddInt64(&ExtraMemoryConsumed, -int64(gcc_len(ptr)+4))
+	atomic.AddInt64(&ExtraMemoryAllocCnt, -1)
 	C.free(unsafe.Pointer(ptr))
 }
 
 func gcc_malloc_and_copy(v []byte) unsafe.Pointer {
-	ptr := unsafe.Pointer(&v[0]) // see https://github.com/golang/go/issues/15172
-	return unsafe.Pointer(C.alloc_ptr(ptr, C.ulong(len(v))))
+	ptr := gcc_malloc(uint32(len(v)))
+	sl := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(ptr)+4, Len:int(len(v)), Cap:int(len(v))}))
+	copy(sl, v)
+	return ptr
 }
 
 func gcc_len(ptr unsafe.Pointer) int {
