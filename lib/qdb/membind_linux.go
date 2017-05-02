@@ -10,13 +10,13 @@ package qdb
 #include <stdlib.h>
 #include <string.h>
 
-void *alloc_ptr(void *c, unsigned long l) {
+static void *alloc_ptr(void *c, unsigned long l) {
 	void *ptr = malloc(l);
 	memcpy(ptr, c, l);
 	return ptr;
 }
 
-void *my_alloc(unsigned long l) {
+static void *my_alloc(unsigned long l) {
 	return malloc(l);
 }
 
