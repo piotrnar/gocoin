@@ -86,29 +86,29 @@ func host_init() {
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
 		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
 
-
-	// Init Wallet
-	common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
-	common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
-	// LoadWalk = wallet.NewUTXO
-	sta = time.Now()
-	wallet.FetchInitialBalance()
-	if chain.AbortNow {
-		fmt.Printf("Loading balances aborted after %s seconds\n", time.Now().Sub(sta).String())
-		common.BlockChain.Close()
-		sys.UnlockDatabaseDir()
-		os.Exit(1)
+	if common.FLAG.UndoBlocks==0 {
+		// Init Wallet
+		common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
+		common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
+		// LoadWalk = wallet.NewUTXO
+		sta = time.Now()
+		wallet.FetchInitialBalance()
+		if chain.AbortNow {
+			fmt.Printf("Loading balances aborted after %s seconds\n", time.Now().Sub(sta).String())
+			common.BlockChain.Close()
+			sys.UnlockDatabaseDir()
+			os.Exit(1)
+		}
+		if common.CFG.Memory.FreeAtStart {
+			fmt.Print("Freeing memory... ")
+			sys.FreeMem()
+			fmt.Print("\r                  \r")
+		}
+		sto = time.Now()
+		al, sy = sys.MemUsed()
+		fmt.Printf("Balances loaded in %s seconds.  %d + %d MB of RAM used (%d)\n",
+			sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
 	}
-	if common.CFG.Memory.FreeAtStart {
-		fmt.Print("Freeing memory... ")
-		sys.FreeMem()
-		fmt.Print("\r                  \r")
-	}
-	sto = time.Now()
-	al, sy = sys.MemUsed()
-	fmt.Printf("Balances loaded in %s seconds.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
-
 
 	common.StartTime = time.Now()
 	__exit <- true
