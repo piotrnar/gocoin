@@ -56,6 +56,6 @@ func init() {
 	malloc = gcc_malloc
 	free = gcc_free
 	malloc_and_copy = gcc_malloc_and_copy
-	gcc_len = gcc_len
+	_len = gcc_len
 	_slice = gcc_slice
 }
