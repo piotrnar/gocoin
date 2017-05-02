@@ -75,22 +75,12 @@ func host_init() {
 		os.Exit(1)
 	}
 
-	sto := time.Now()
-	if time.Now().Sub(sta) > 15*time.Minute {
-		fmt.Printf("Opening of Blockchain took more than 15 minutes (%s). Closing now to flush UTXO-db ...\n",
-			time.Now().Sub(sta).String())
-		common.BlockChain.Close()
-		fmt.Println("Start the client again to continue.")
-		sys.UnlockDatabaseDir()
-		os.Exit(0)
-	}
-
 	if common.CFG.Memory.FreeAtStart {
 		fmt.Print("Freeing memory... ")
 		sys.FreeMem()
 		fmt.Print("\r                  \r")
 	}
-	sto = time.Now()
+	sto := time.Now()
 
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
