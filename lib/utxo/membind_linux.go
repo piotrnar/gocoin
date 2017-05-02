@@ -14,13 +14,14 @@ import "C"
 import (
 	"unsafe"
 	"reflect"
+	"sync/atomic"
 )
 
 
 func gcc_malloc(le uint32) unsafe.Pointer {
 	atomic.AddInt64(&ExtraMemoryConsumed, int64(le)+4)
 	atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
-	ptr := unsafe.Pointer(C.malloc(C.ulong(le+4)))
+	ptr := unsafe.Pointer(C.malloc(C.size_t(le+4)))
 	*((*uint32)(unsafe.Pointer(ptr))) = le
 	return ptr
 }
