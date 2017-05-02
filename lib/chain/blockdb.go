@@ -445,7 +445,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 
 		if (b[0]&BLOCK_INVALID) != 0 {
 			// just ignore it
-			fmt.Println("BlockDB: Block", binary.LittleEndian.Uint32(b[36:40]), btc.BlockHash.String(), "is invalid")
+			fmt.Println("BlockDB: Block", binary.LittleEndian.Uint32(b[36:40]), BlockHash.String(), "is invalid")
 			continue
 		}
 
