@@ -47,7 +47,7 @@ func gcc_len(ptr unsafe.Pointer) int {
 }
 
 func gcc_slice(ptr unsafe.Pointer) []byte {
-	le := _len(ptr)
+	le := gcc_len(ptr)
 	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(ptr)+4, Len:le, Cap:le}))
 }
 
@@ -56,6 +56,6 @@ func init() {
 	malloc = gcc_malloc
 	free = gcc_free
 	malloc_and_copy = gcc_malloc_and_copy
-	_len = gcc_len
+	gcc_len = gcc_len
 	_slice = gcc_slice
 }
