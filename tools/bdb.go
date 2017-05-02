@@ -45,6 +45,7 @@ var (
 	fl_savebl            string
 	fl_purgeall          bool
 	fl_purgeto           uint
+	fl_resetinvalid      bool
 )
 
 /********************************************************/
@@ -114,10 +115,11 @@ type one_tree_node struct {
 
 func print_record(sl []byte) {
 	bh := btc.NewSha2Hash(sl[56:136])
-	fmt.Print("Block ", bh.String(), " Height ", binary.LittleEndian.Uint32(sl[36:40]))
-	fmt.Println()
-	fmt.Println("  ...", binary.LittleEndian.Uint32(sl[48:52]), " Bytes @ ",
-		binary.LittleEndian.Uint64(sl[40:48]), " in dat file")
+	fmt.Println("Block", bh.String())
+	fmt.Println("  ... Height", binary.LittleEndian.Uint32(sl[36:40]),
+		"  Flags", fmt.Sprintf("0x%02x", sl[0]),
+		" - ", binary.LittleEndian.Uint32(sl[48:52]), "bytes @",
+		binary.LittleEndian.Uint64(sl[40:48]), "in DAT")
 	hdr := sl[56:136]
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
@@ -179,6 +181,7 @@ func main() {
 	flag.BoolVar(&fl_resetflags, "resetflags", false, "Reset all Invalid and Trusted flags when defragmenting")
 	flag.BoolVar(&fl_purgeall, "purgeall", false, "Purge all blocks from the database")
 	flag.UintVar(&fl_purgeto, "purgeto", 0, "Purge all blocks till (but excluding) the given height")
+	flag.BoolVar(&fl_resetinvalid, "resetinvalid", false, "Reset all Invalid flags")
 
 	flag.Parse()
 
@@ -258,6 +261,15 @@ func main() {
 	}
 
 	fmt.Println(len(dat)/136, "records")
+
+	if fl_resetinvalid {
+		for off := 0; off < len(dat); off += 136 {
+			dat[off] &= 0xFD // reset invalid flag
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		fmt.Println("All invalid falgs removed in blockchain.new")
+	}
 
 	if fl_purgeall {
 		for off := 0; off < len(dat); off += 136 {
