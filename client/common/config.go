@@ -138,7 +138,7 @@ func InitConfig() {
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
 
-	CFG.Memory.GCPercTrshold = 100 // 100%
+	CFG.Memory.GCPercTrshold = 50 // 50% (optimized to 8GB system)
 	CFG.Memory.MaxCachedBlocks = 500
 
 	CFG.HashrateHours = 12
