@@ -217,8 +217,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 			if !tx_trusted {
 				wg.Wait()
 				if ver_err_cnt > 0 {
-					println("VerifyScript failed", ver_err_cnt, "time(s)")
-					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time(s)"))
+					println("VerifyScript failed", ver_err_cnt, "time (s)")
+					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
 				}
 			}
 		} else {
