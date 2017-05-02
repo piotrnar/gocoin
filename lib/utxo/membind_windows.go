@@ -24,24 +24,24 @@ func win_malloc(le uint32) unsafe.Pointer {
 }
 
 func win_free(ptr unsafe.Pointer) {
-	atomic.AddInt64(&ExtraMemoryConsumed, -int64(_len(ptr)+4))
+	atomic.AddInt64(&ExtraMemoryConsumed, -int64(win_len(ptr)+4))
 	atomic.AddInt64(&ExtraMemoryAllocCnt, -1)
 	funcGlobalFree.Call(uintptr(ptr))
 }
 
 func win_malloc_and_copy(v []byte) unsafe.Pointer {
-	ptr := malloc(uint32(len(v)))
+	ptr := win_malloc(uint32(len(v)))
 	sl := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(ptr)+4, Len:int(len(v)), Cap:int(len(v))}))
 	copy(sl, v)
 	return ptr
 }
 
-func win_len(ptr unsafe.Pointer) int {
+func winwin_len(ptr unsafe.Pointer) int {
 	return int(*((*uint32)(ptr)))
 }
 
 func win_slice(ptr unsafe.Pointer) []byte {
-	le := _len(ptr)
+	le := win_len(ptr)
 	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(ptr)+4, Len:le, Cap:le}))
 }
 
@@ -56,6 +56,6 @@ func init() {
 	malloc = win_malloc
 	free = win_free
 	malloc_and_copy = win_malloc_and_copy
-	_len = win_len
+	win_len = winwin_len
 	_slice = win_slice
 }
