@@ -440,8 +440,12 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 			break
 		}
 
+		bh = binary.LittleEndian.Uint32(b[36:40])
+		BlockHash := btc.NewUint256(b[4:36])
+
 		if (b[0]&BLOCK_INVALID) != 0 {
 			// just ignore it
+			fmt.Println("BlockDB: Block", binary.LittleEndian.Uint32(b[36:40]), btc.BlockHash.String(), "is invalid")
 			continue
 		}
 
@@ -449,14 +453,12 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		ob.trusted = (b[0]&BLOCK_TRUSTED) != 0
 		ob.compressed = (b[0]&BLOCK_COMPRSD) != 0
 		ob.snappied = (b[0]&BLOCK_SNAPPED) != 0
-		bh = binary.LittleEndian.Uint32(b[36:40])
 		ob.fpos = binary.LittleEndian.Uint64(b[40:48])
 		ob.blen = binary.LittleEndian.Uint32(b[48:52])
 		txs = binary.LittleEndian.Uint32(b[52:56])
 		ob.ipos = db.maxidxfilepos
 
-		BlockHash := b[4:36]
-		db.blockIndex[btc.NewUint256(BlockHash).BIdx()] = ob
+		db.blockIndex[BlockHash.BIdx()] = ob
 
 		if int64(ob.fpos)+int64(ob.blen) > db.maxdatfilepos {
 			db.maxdatfilepos = int64(ob.fpos)+int64(ob.blen)
