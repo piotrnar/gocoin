@@ -36,7 +36,7 @@ func win_malloc_and_copy(v []byte) unsafe.Pointer {
 	return ptr
 }
 
-func winwin_len(ptr unsafe.Pointer) int {
+func win_len(ptr unsafe.Pointer) int {
 	return int(*((*uint32)(ptr)))
 }
 
@@ -56,6 +56,6 @@ func init() {
 	malloc = win_malloc
 	free = win_free
 	malloc_and_copy = win_malloc_and_copy
-	win_len = winwin_len
+	_len = win_len
 	_slice = win_slice
 }
