@@ -9,7 +9,7 @@ import (
 	"archive/zip"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -38,7 +38,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 	var err string
 
 	if len(r.Form["outcnt"])==1 {
-		var thisbal chain.AllUnspentTx
+		var thisbal utxo.AllUnspentTx
 		var pay_cmd string
 		var totalinput, spentsofar uint64
 		var change_addr *btc.BtcAddr
@@ -73,7 +73,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 						if res, er := common.BlockChain.Unspent.UnspentGet(&po); er==nil {
 							addr := btc.NewAddrFromPkScript(res.Pk_script, common.Testnet)
 
-							unsp := &chain.OneUnspentTx{TxPrevOut:po, Value:res.Value,
+							unsp := &utxo.OneUnspentTx{TxPrevOut:po, Value:res.Value,
 								MinedAt:res.BlockHeight, Coinbase:res.WasCoinbase, BtcAddr:addr}
 
 							thisbal = append(thisbal, unsp)

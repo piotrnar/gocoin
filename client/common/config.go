@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -138,8 +138,8 @@ func InitConfig() {
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
 
-	CFG.Memory.GCPercTrshold = 50 // 50% (optimized to 8GB system)
-	CFG.Memory.MaxCachedBlocks = 500
+	CFG.Memory.GCPercTrshold = 100 // 100% (Go's default)
+	CFG.Memory.MaxCachedBlocks = 200
 
 	CFG.HashrateHours = 12
 	CFG.MiningStatHours = 48
@@ -252,7 +252,7 @@ func Reset() {
 	SetListenTCP(CFG.Net.ListenTCP, false)
 
 	if CFG.UTXOWriteTargetSeconds != 0 {
-		chain.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOWriteTargetSeconds)
+		utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOWriteTargetSeconds)
 	}
 
 	connect_only = CFG.ConnectOnly!=""

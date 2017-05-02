@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -171,8 +172,8 @@ func show_info(par string) {
 	// Memory used
 	al, sy := sys.MemUsed()
 	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
-		atomic.LoadInt64(&qdb.ExtraMemoryConsumed)>>20, "MB in",
-		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "recs")
+		atomic.LoadInt64(&utxo.ExtraMemoryConsumed)>>20, "MB in",
+		atomic.LoadInt64(&utxo.ExtraMemoryAllocCnt), "recs")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
@@ -287,17 +288,17 @@ func dump_block(s string) {
 		return
 	}
 
-	ioutil.WriteFile(h.String() + ".bin", crec.Data, 0700)
+	ioutil.WriteFile(h.String()+".bin", crec.Data, 0700)
 	fmt.Println("Block saved")
 
-	if crec.Block==nil {
+	if crec.Block == nil {
 		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
-	if crec.Block.OldData==nil {
+	if crec.Block.OldData == nil {
 		crec.Block.BuildTxList()
 	}
 	if !bytes.Equal(crec.Data, crec.Block.OldData) {
-		ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+		ioutil.WriteFile(h.String()+".old", crec.Block.OldData, 0700)
 		fmt.Println("Old block saved")
 	}
 
@@ -378,15 +379,15 @@ func save_config(s string) {
 
 func show_addresses(par string) {
 	fmt.Println(peersdb.PeerDB.Count(), "peers in the database")
-	if par=="list" {
-		cnt :=  0
+	if par == "list" {
+		cnt := 0
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			cnt++
 			fmt.Printf("%4d) %s\n", cnt, peersdb.NewPeer(v).String())
 			return 0
 		})
-	} else if par=="ban" {
-		cnt :=  0
+	} else if par == "ban" {
+		cnt := 0
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := peersdb.NewPeer(v)
 			if pr.Banned != 0 {
@@ -395,7 +396,7 @@ func show_addresses(par string) {
 			}
 			return 0
 		})
-		if cnt==0 {
+		if cnt == 0 {
 			fmt.Println("No banned peers in the DB")
 		}
 	} else if par != "" {
@@ -456,35 +457,35 @@ func send_inv(par string) {
 }
 
 func analyze_bip9(par string) {
-	all := par=="all"
+	all := par == "all"
 	n := common.BlockChain.BlockTreeRoot
-	for n!=nil {
+	for n != nil {
 		var i uint
 		start_block := uint(n.Height)
 		start_time := n.Timestamp()
 		bits := make(map[byte]uint32)
-		for i=0; i<2016 && n!=nil; i++ {
+		for i = 0; i < 2016 && n != nil; i++ {
 			ver := n.BlockVersion()
-			if (ver&0x20000000) != 0 {
-				for bit:=byte(0); bit<=28; bit++ {
-					if (ver & (1<<bit)) != 0 {
+			if (ver & 0x20000000) != 0 {
+				for bit := byte(0); bit <= 28; bit++ {
+					if (ver & (1 << bit)) != 0 {
 						bits[bit]++
 					}
 				}
 			}
 			n = n.FindPathTo(common.BlockChain.BlockTreeEnd)
 		}
-		if len(bits)>0 {
+		if len(bits) > 0 {
 			var s string
 			for k, v := range bits {
 				if all || v >= common.BlockChain.Consensus.BIP9_Treshold {
-					if s!="" {
+					if s != "" {
 						s += " | "
 					}
 					s += fmt.Sprint(v, " x bit(", k, ")")
 				}
 			}
-			if s!="" {
+			if s != "" {
 				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
 					" block #", start_block, "-", start_block+i-1, ":", s, " - active from", start_block+2*2016)
 			}
@@ -493,9 +494,9 @@ func analyze_bip9(par string) {
 }
 
 func switch_trust(par string) {
-	if par=="0" {
+	if par == "0" {
 		common.FLAG.TrustAll = false
-	} else if par=="1" {
+	} else if par == "1" {
 		common.FLAG.TrustAll = true
 	}
 	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
@@ -506,7 +507,7 @@ func save_utxo(par string) {
 }
 
 func purge_utxo(par string) {
-	common.BlockChain.Unspent.PurgeUnspendable(par=="all")
+	common.BlockChain.Unspent.PurgeUnspendable(par == "all")
 }
 
 func init() {

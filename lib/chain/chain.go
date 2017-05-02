@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 
@@ -14,7 +15,7 @@ var AbortNow bool  // set it to true to abort any activity
 
 type Chain struct {
 	Blocks *BlockDB      // blockchain.dat and blockchain.idx
-	Unspent *UnspentDB    // unspent folder
+	Unspent *utxo.UnspentDB    // unspent folder
 
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
@@ -40,20 +41,11 @@ type Chain struct {
 }
 
 type NewChanOpts struct {
-	// If NotifyTx is set, it will be called each time a new unspent
-	// output is being added or removed. When being removed, btc.TxOut is nil.
-	NotifyTxAdd func (*QdbRec)
-	NotifyTxDel func (*QdbRec, []bool)
-
-	// These two are used only during loading
-	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
-
 	UTXOVolatileMode bool
-
 	UndoBlocks uint // undo this many blocks when opening the chain
-
 	SetBlocksDBCacheSize bool
 	BlocksDBCacheSize int // this value is only taken if SetBlocksDBCacheSize is true
+	UTXOCallbacks utxo.CallbackFunctions
 }
 
 
@@ -94,8 +86,9 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	} else {
 		ch.Blocks = NewBlockDB(dbrootdir)
 	}
-	ch.Unspent = NewUnspentDb(&NewUnspentOpts{
-		Dir:dbrootdir, Chain:ch, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode})
+	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
+		Dir:dbrootdir, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode,
+		CB:opts.UTXOCallbacks, AbortNow:&AbortNow})
 
 	if AbortNow {
 		return

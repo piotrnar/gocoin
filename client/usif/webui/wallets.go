@@ -11,7 +11,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
@@ -175,7 +175,7 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		Coinbase bool
 	}
 
-	var thisbal chain.AllUnspentTx
+	var thisbal utxo.AllUnspentTx
 
 	lck := new(usif.OneLock)
 	lck.In.Add(1)

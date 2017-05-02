@@ -1,4 +1,4 @@
-package chain
+package utxo
 
 import (
 	"os"
@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"unsafe"
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -22,24 +23,33 @@ var (
 	UTXO_WRITING_TIME_TARGET = 5*time.Minute  // Take it easy with flushing UTXO.db onto disk
 )
 
-type FunctionWalkUnspent func(*QdbRec)
+type FunctionWalkUnspent func(*UtxoRec)
+
+type CallbackFunctions struct {
+	// If NotifyTx is set, it will be called each time a new unspent
+	// output is being added or removed. When being removed, btc.TxOut is nil.
+	NotifyTxAdd func (*UtxoRec)
+	NotifyTxDel func (*UtxoRec, []bool)
+
+	// These two are used only during loading
+	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
+}
 
 // Used to pass block's changes to UnspentDB
 type BlockChanges struct {
 	Height uint32
 	LastKnownHeight uint32  // put here zero to disable this feature
-	AddList []*QdbRec
+	AddList []*UtxoRec
 	DeledTxs map[[32]byte] []bool
-	UndoData map[[32]byte] *QdbRec
+	UndoData map[[32]byte] *UtxoRec
 }
 
 
 type UnspentDB struct {
-	HashMap map[UtxoKeyType][]byte
+	HashMap map[UtxoKeyType] unsafe.Pointer
 	LastBlockHash[]byte
 	LastBlockHeight uint32
 	dir_utxo, dir_undo string
-	ch *Chain
 	volatimemode bool
 	UnwindBufLen uint32
 	DirtyDB bool
@@ -48,18 +58,18 @@ type UnspentDB struct {
 	AbortWriting bool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
-
 	WritingProgress int64
-
 	DoNotWriteUndoFiles bool
+	CB CallbackFunctions
 }
 
 type NewUnspentOpts struct {
 	Dir string
-	Chain *Chain
 	Rescan bool
 	VolatimeMode bool
 	UnwindBufferLen uint32
+	CB CallbackFunctions
+	AbortNow *bool
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
@@ -69,14 +79,14 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.dir_undo = db.dir_utxo + "undo"+string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
 	db.UnwindBufLen = 256
+	db.CB = opts.CB
 
 	os.MkdirAll(db.dir_undo, 0770)
 
 	os.Remove(db.dir_undo+"tmp")
 	os.Remove(db.dir_utxo+"UTXO.db.tmp")
-	db.ch = opts.Chain
 
-	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
+	db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
 
 	if opts.Rescan {
 		return
@@ -87,6 +97,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var cnt_dwn, cnt_dwn_from int
 	var le uint64
 	var u64, tot_recs uint64
+	var buf [1024*1024]byte
 
 	of, er := os.Open(db.dir_utxo + "UTXO.db")
 	if er!=nil {
@@ -119,7 +130,10 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 	cnt_dwn_from = int(u64/100)
 
-	for !AbortNow && tot_recs<u64 {
+	for tot_recs<u64 {
+		if opts.AbortNow!=nil && *opts.AbortNow {
+			break
+		}
 		le, er = btc.ReadVLen(rd)
 		if er!=nil {
 			goto fatal_error
@@ -130,16 +144,15 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 			goto fatal_error
 		}
 
-
-		b := make([]byte, int(le)-UtxoIdxLen)
+		b := buf[:int(le)-UtxoIdxLen]
 		er = btc.ReadAll(rd, b)
 		if er!=nil {
 			goto fatal_error
 		}
 
-		db.HashMap[k] = b
-		if db.ch.CB.LoadWalk!=nil {
-			db.ch.CB.LoadWalk(NewQdbRecStatic(k, b))
+		db.HashMap[k] = malloc_and_copy(b)
+		if db.CB.LoadWalk!=nil {
+			db.CB.LoadWalk(NewUtxoRecStatic(k, b))
 		}
 
 		tot_recs++
@@ -159,7 +172,9 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 fatal_error:
 	println("Fatal error when opening UTXO.db:", er.Error(), tot_recs, u64)
-	AbortNow = true
+	if opts.AbortNow!=nil {
+		*opts.AbortNow = true
+	}
 	return
 }
 
@@ -203,9 +218,9 @@ func (db *UnspentDB) save() {
 			abort = true
 			break
 		}
-		btc.WriteVlen(wr, uint64(UtxoIdxLen+len(v)))
+		btc.WriteVlen(wr, uint64(UtxoIdxLen+_len(v)))
 		wr.Write(k[:])
-		_, er = wr.Write(v)
+		_, er = wr.Write(_slice(v))
 		if er != nil {
 			println("\n\007Fatal error saving UTXO:", er.Error())
 			abort = true
@@ -283,7 +298,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	}
 
 	fn := fmt.Sprint(db.dir_undo, db.LastBlockHeight)
-	var addback []*QdbRec
+	var addback []*UtxoRec
 
 	if _, er := os.Stat(fn); er != nil {
 		fn += ".tmp"
@@ -298,28 +313,28 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	for off < len(dat) {
 		le, n := btc.VLen(dat[off:])
 		off += n
-		qr := FullQdbRec(dat[off:off+le])
+		qr := FullUtxoRec(dat[off:off+le])
 		off += le
 		addback = append(addback, qr)
 	}
 
 	for _, tx := range addback {
-		if db.ch.CB.NotifyTxAdd!=nil {
-			db.ch.CB.NotifyTxAdd(tx)
+		if db.CB.NotifyTxAdd!=nil {
+			db.CB.NotifyTxAdd(tx)
 		}
 
 		var ind UtxoKeyType
 		copy(ind[:], tx.TxID[:])
 		v := db.HashMap[ind]
 		if v != nil {
-			oldrec := NewQdbRec(ind, v)
+			oldrec := NewUtxoRec(ind, _slice(v))
 			for a := range tx.Outs {
 				if tx.Outs[a]==nil {
 					tx.Outs[a] = oldrec.Outs[a]
 				}
 			}
 		}
-		db.HashMap[ind] = tx.Bytes()
+		db.HashMap[ind] = malloc_and_copy(tx.Bytes())
 	}
 
 	os.Remove(fn)
@@ -371,7 +386,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 		return
 	}
 
-	rec := NewQdbRec(ind, v)
+	rec := NewUtxoRec(ind, _slice(v))
 	if len(rec.Outs)<=int(po.Vout) || rec.Outs[po.Vout]==nil {
 		e = errors.New("Unspent VOut not found")
 		return
@@ -393,9 +408,9 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	if v==nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
-	rec := NewQdbRec(ind, v)
-	if db.ch.CB.NotifyTxDel!=nil {
-		db.ch.CB.NotifyTxDel(rec, outs)
+	rec := NewUtxoRec(ind, _slice(v))
+	if db.CB.NotifyTxDel!=nil {
+		db.CB.NotifyTxDel(rec, outs)
 	}
 	var anyout bool
 	for i, rm := range outs {
@@ -405,8 +420,9 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 			anyout = true
 		}
 	}
+	free(v)
 	if anyout {
-		db.HashMap[ind] = rec.Bytes()
+		db.HashMap[ind] = malloc_and_copy(rec.Bytes())
 	} else {
 		delete(db.HashMap, ind)
 	}
@@ -418,10 +434,10 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 	for _, rec := range changes.AddList {
 		var ind UtxoKeyType
 		copy(ind[:], rec.TxID[:])
-		if db.ch.CB.NotifyTxAdd!=nil {
-			db.ch.CB.NotifyTxAdd(rec)
+		if db.CB.NotifyTxAdd!=nil {
+			db.CB.NotifyTxAdd(rec)
 		}
-		db.HashMap[ind] = rec.Bytes()
+		db.HashMap[ind] = malloc_and_copy(rec.Bytes())
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)
@@ -443,8 +459,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
 	var totdatasize, unspendable, unspendable_recs, unspendable_bytes uint64
 	for k, v := range db.HashMap {
-		totdatasize += uint64(len(v)+8)
-		rec := NewQdbRecStatic(k, v)
+		totdatasize += uint64(_len(v)+8)
+		rec := NewUtxoRecStatic(k, _slice(v))
 		var spendable_found bool
 		for idx, r := range rec.Outs {
 			if r!=nil {
@@ -498,7 +514,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	db.abortifwriting()
 
 	for k, v := range db.HashMap {
-		rec := NewQdbRecStatic(k, v)
+		rec := NewUtxoRecStatic(k, _slice(v))
 		var spendable_found bool
 		var record_removed uint64
 		for idx, r := range rec.Outs {
@@ -515,10 +531,12 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			}
 		}
 		if !spendable_found {
+			free(v)
 			delete(db.HashMap, k)
 			unspendable_txs++
 		} else if record_removed>0 {
-			db.HashMap[k] = rec.Serialize(false)
+			free(v)
+			db.HashMap[k] = malloc_and_copy(rec.Serialize(false))
 			unspendable_recs += record_removed
 		}
 	}

@@ -65,7 +65,7 @@ func main() {
 			return
 		}
 
-		rec := chain.NewQdbRecStatic(chain.UtxoKeyType(binary.LittleEndian.Uint64(buf[:8])), buf[8:le])
+		rec := chain.NewUtxoRecStatic(chain.UtxoKeyType(binary.LittleEndian.Uint64(buf[:8])), buf[8:le])
 		var spendable_found, output_removed bool
 		for idx, r := range rec.Outs {
 			if r!=nil {

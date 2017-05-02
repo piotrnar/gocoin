@@ -1,4 +1,4 @@
-package chain
+package utxo
 
 import (
 	//"encoding/binary"
@@ -27,34 +27,34 @@ const (
 
 type UtxoKeyType [UtxoIdxLen]byte
 
-type QdbRec struct {
+type UtxoRec struct {
 	TxID [32]byte
 	Coinbase bool
 	InBlock uint32
-	Outs []*QdbTxOut
+	Outs []*UtxoTxOut
 }
 
-type QdbTxOut struct {
+type UtxoTxOut struct {
 	Value uint64
 	PKScr []byte
 }
 
 
-func FullQdbRec(dat []byte) *QdbRec {
+func FullUtxoRec(dat []byte) *UtxoRec {
 	var key UtxoKeyType
 	copy(key[:], dat[:UtxoIdxLen])
-	return NewQdbRec(key, dat[UtxoIdxLen:])
+	return NewUtxoRec(key, dat[UtxoIdxLen:])
 }
 
 
 var (
-	sta_rec QdbRec
-	rec_outs = make([]*QdbTxOut, 30001)
-	rec_pool = make([]QdbTxOut, 30001)
+	sta_rec UtxoRec
+	rec_outs = make([]*UtxoTxOut, 30001)
+	rec_pool = make([]UtxoTxOut, 30001)
 )
 
 
-func NewQdbRecStatic(key UtxoKeyType, dat []byte) *QdbRec {
+func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
 	var off, n, i int
 	var u64, idx uint64
 
@@ -72,8 +72,8 @@ func NewQdbRecStatic(key UtxoKeyType, dat []byte) *QdbRec {
 	sta_rec.Coinbase = (u64&1) != 0
 	u64 >>= 1
 	if len(rec_outs) < int(u64) {
-		rec_outs = make([]*QdbTxOut, u64)
-		rec_pool = make([]QdbTxOut, u64)
+		rec_outs = make([]*UtxoTxOut, u64)
+		rec_pool = make([]UtxoTxOut, u64)
 	}
 	sta_rec.Outs = rec_outs[:u64]
 	for i := range sta_rec.Outs {
@@ -101,10 +101,10 @@ func NewQdbRecStatic(key UtxoKeyType, dat []byte) *QdbRec {
 }
 
 
-func NewQdbRec(key UtxoKeyType, dat []byte) *QdbRec {
+func NewUtxoRec(key UtxoKeyType, dat []byte) *UtxoRec {
 	var off, n, i int
 	var u64, idx uint64
-	var rec QdbRec
+	var rec UtxoRec
 
 	off = 32-UtxoIdxLen
 	copy(rec.TxID[:UtxoIdxLen], key[:])
@@ -118,12 +118,12 @@ func NewQdbRec(key UtxoKeyType, dat []byte) *QdbRec {
 	off += n
 
 	rec.Coinbase = (u64&1) != 0
-	rec.Outs = make([]*QdbTxOut, u64>>1)
+	rec.Outs = make([]*UtxoTxOut, u64>>1)
 
 	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
-		rec.Outs[idx] = new(QdbTxOut)
+		rec.Outs[idx] = new(UtxoTxOut)
 
 		u64, n = btc.VULe(dat[off:])
 		off += n
@@ -150,7 +150,7 @@ func vlen2size(uvl uint64) int {
 }
 
 
-func (rec *QdbRec) Serialize(full bool) (buf []byte) {
+func (rec *UtxoRec) Serialize(full bool) (buf []byte) {
 	var le, of int
 	var any_out bool
 
@@ -205,12 +205,12 @@ func (rec *QdbRec) Serialize(full bool) (buf []byte) {
 }
 
 
-func (rec *QdbRec) Bytes() []byte {
+func (rec *UtxoRec) Bytes() []byte {
 	return rec.Serialize(false)
 }
 
 
-func (r *QdbRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
+func (r *UtxoRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
 	nr.TxPrevOut.Hash = r.TxID
 	nr.TxPrevOut.Vout = idx
@@ -222,23 +222,23 @@ func (r *QdbRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	return
 }
 
-func (out *QdbTxOut) IsP2KH() bool {
+func (out *UtxoTxOut) IsP2KH() bool {
 	return len(out.PKScr)==25 && out.PKScr[0]==0x76 && out.PKScr[1]==0xa9 &&
 		out.PKScr[2]==0x14 && out.PKScr[23]==0x88 && out.PKScr[24]==0xac
 }
 
-func (r *QdbTxOut) IsP2SH() bool {
+func (r *UtxoTxOut) IsP2SH() bool {
 	return len(r.PKScr)==23 && r.PKScr[0]==0xa9 && r.PKScr[1]==0x14 && r.PKScr[22]==0x87
 }
 
-func (r *QdbTxOut) IsStealthIdx() bool {
+func (r *UtxoTxOut) IsStealthIdx() bool {
 	return len(r.PKScr)==40 && r.PKScr[0]==0x6a && r.PKScr[1]==0x26 && r.PKScr[2]==0x06
 }
 
-func (r *QdbTxOut) IsP2WPKH() bool {
+func (r *UtxoTxOut) IsP2WPKH() bool {
 	return len(r.PKScr)==22 && r.PKScr[0]==0 && r.PKScr[1]==20
 }
 
-func (r *QdbTxOut) IsP2WSH() bool {
+func (r *UtxoTxOut) IsP2WSH() bool {
 	return len(r.PKScr)==34 && r.PKScr[0]==0 && r.PKScr[1]==32
 }

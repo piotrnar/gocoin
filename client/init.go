@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -94,12 +94,12 @@ func host_init() {
 
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
+		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
 
 
 	// Init Wallet
-	common.BlockChain.CB.NotifyTxAdd = wallet.TxNotifyAdd
-	common.BlockChain.CB.NotifyTxDel = wallet.TxNotifyDel
+	common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
+	common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
 	// LoadWalk = wallet.NewUTXO
 	sta = time.Now()
 	wallet.FetchInitialBalance()
@@ -117,7 +117,7 @@ func host_init() {
 	sto = time.Now()
 	al, sy = sys.MemUsed()
 	fmt.Printf("Balances loaded in %s seconds.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, qdb.ExtraMemoryConsumed>>20, sy>>20)
+		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
 
 
 	common.StartTime = time.Now()

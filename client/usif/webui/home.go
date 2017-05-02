@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
@@ -116,7 +116,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Net_block_qsize = len(network.NetBlocks)
 	out.Net_tx_qsize = len(network.NetTxs)
 	out.Heap_size, out.Heap_sysmem = sys.MemUsed()
-	out.Qdb_extramem = qdb.ExtraMemoryConsumed
+	out.Qdb_extramem = utxo.ExtraMemoryConsumed
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt
 	out.Average_block_size = common.GetAverageBlockSize()
 	out.Average_fee = common.GetAverageFee()
