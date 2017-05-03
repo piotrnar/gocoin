@@ -139,5 +139,5 @@ func init() {
 	}
 	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to cross-check consensus")
 	script.VerifyConsensus = check_consensus
-	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
+	newUi("cons", false, consensus_stats, "See statistics of the consensus cross-checks")
 }
