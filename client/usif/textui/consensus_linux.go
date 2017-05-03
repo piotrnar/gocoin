@@ -134,7 +134,7 @@ func consensus_stats(s string) {
 
 func init() {
 	if C.init_bitcoinconsensus_so() == 0 {
-		fmt.Println("WARNING: Not using libbitcoinconsensus.so to ensure consensus rules")
+		fmt.Println("WARNING: Not using libbitcoinconsensus.so to cross-check consensus rules")
 		return
 	}
 	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to ensure consensus rules")
