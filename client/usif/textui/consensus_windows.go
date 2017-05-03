@@ -126,11 +126,11 @@ func init() {
 	if er != nil {
 		println(er.Error())
 		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n")
-		println("WARNING: Consensus verification disabled")
+		println("WARNING: Consensus cross-checking disabled")
 		return
 	}
 	r1, _, _ := syscall.Syscall(bitcoinconsensus_version.Addr(), 0, 0, 0, 0)
-	fmt.Println("Using", DllName, "version", r1, "to ensure consensus rules")
+	fmt.Println("Using", DllName, "version", r1, "to cross-check consensus rules")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
 }
