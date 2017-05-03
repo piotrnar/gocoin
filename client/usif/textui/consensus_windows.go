@@ -132,5 +132,5 @@ func init() {
 	r1, _, _ := syscall.Syscall(bitcoinconsensus_version.Addr(), 0, 0, 0, 0)
 	fmt.Println("Using", DllName, "version", r1, "to cross-check consensus rules")
 	script.VerifyConsensus = check_consensus
-	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
+	newUi("cons", false, consensus_stats, "See statistics of the consensus cross-checks")
 }
