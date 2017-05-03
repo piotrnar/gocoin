@@ -137,7 +137,7 @@ func init() {
 		fmt.Println("WARNING: Not using libbitcoinconsensus.so to cross-check consensus rules")
 		return
 	}
-	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to ensure consensus rules")
+	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to cross-check consensus")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
 }
