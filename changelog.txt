@@ -1,4 +1,4 @@
-1.9.0
+1.9.0 - 2017-05-05
 * Got rid of "qdb" for UTXO.
 * New package "lib/utxo" extracted from "lib/chain"
 * Announce a new block to peers before its fully verified (like Core 0.14.0 / net protocol 70015)
