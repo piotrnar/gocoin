@@ -13,7 +13,7 @@
 * WebUI: Show MinValue for accounted outputs on "Wallet" and "MakeTx" tabs
 * Client: New config value FreeAtStart, to free all possible memory after initial loading of block chain
 * WebUI/Wallet: Fixed problem with switching to different wallet while balance for previous none is still being fetched
-* Client: the balnace of all the addresses is fetched after the blockchain finishes loading. It saves memory and speeds up potential rescans
+* Client: the balance of all the addresses is fetched after the blockchain finishes loading. It saves memory and speeds up potential rescans
 
 1.8.1
 * Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively
