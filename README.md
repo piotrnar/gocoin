@@ -20,10 +20,6 @@ The **client** (p2p node) is an application independent from the **wallet**.
 The **wallet** is deterministic and password seeded.
 As long as you remember the password, you do not need any backups of your wallet.
 
-There is additional tool called **downloader** that
-can quickly sync (download) the blockchain state from the p2p network.
-Use it for the initial blockchain download or to sync your **client** after having it offline for a longer time.
-
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
 Each source file in that folder is a separate tool.
@@ -38,7 +34,7 @@ where you can find extended documentation, including **User Manual**.
 
 ## Hardware
 
-**client** / **downloader**:
+**client**:
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB
@@ -85,10 +81,9 @@ Note that source files get installed within your GOPATH folder.
 Go to the `client/` folder and execute `go build` there.
 
 
-## Wallet and downloader
+## Wallet
 Go to the `wallet/` folder and execute `go build` there.
 
-Go to the `downloader/` folder and execute `go build` there.
 
 ## Tools
 Go to the `tools/` folder and execute:

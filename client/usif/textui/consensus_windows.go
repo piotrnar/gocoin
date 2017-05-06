@@ -86,6 +86,26 @@ func check_consensus(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags u
 	}(tmp, tx_raw, i, ver_flags, result)
 }
 
+func verify_script_with_amount(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
+	var pkscr_ptr, pkscr_len uintptr // default to 0/null
+	txTo := tx.Raw
+	if txTo == nil {
+		txTo = tx.Serialize()
+	}
+	if pkScr != nil {
+		pkscr_ptr = uintptr(unsafe.Pointer(&pkScr[0]))
+		pkscr_len = uintptr(len(pkScr))
+	}
+	r1, _, _ := syscall.Syscall9(bitcoinconsensus_verify_script_with_amount.Addr(), 8,
+		pkscr_ptr, pkscr_len, uintptr(amount),
+		uintptr(unsafe.Pointer(&txTo[0])), uintptr(len(txTo)),
+		uintptr(i), uintptr(ver_flags), 0, 0)
+
+	result = (r1==1)
+	return
+}
+
+
 func consensus_stats(s string) {
 	fmt.Println("Consensus Checks:", atomic.LoadUint64(&ConsensusChecks))
 	fmt.Println("Consensus ExpErr:", atomic.LoadUint64(&ConsensusExpErr))
@@ -96,7 +116,7 @@ func init() {
 	dll, er := syscall.LoadDLL(DllName)
 	if er != nil {
 		println(er.Error())
-		println("WARNING: Consensus verification disabled")
+		println("WARNING: Not using", DllName, "to cross-check consensus rules")
 		return
 	}
 	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc("bitcoinconsensus_verify_script_with_amount")
@@ -106,11 +126,11 @@ func init() {
 	if er != nil {
 		println(er.Error())
 		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n")
-		println("WARNING: Consensus verification disabled")
+		println("WARNING: Consensus cross-checking disabled")
 		return
 	}
 	r1, _, _ := syscall.Syscall(bitcoinconsensus_version.Addr(), 0, 0, 0, 0)
-	fmt.Println("Using", DllName, "version", r1, "to ensure consensus rules")
+	fmt.Println("Using", DllName, "version", r1, "to cross-check consensus rules")
 	script.VerifyConsensus = check_consensus
-	newUi("cons", false, consensus_stats, "See statistics of the consensus checks")
+	newUi("cons", false, consensus_stats, "See statistics of the consensus cross-checks")
 }

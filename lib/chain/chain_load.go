@@ -62,7 +62,7 @@ func (ch *Chain)loadBlockIndex() {
 		var ok bool
 		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {
-			panic("Last btc.Block Hash not found")
+			panic("Last Block Hash not found")
 		}
 	}
 }

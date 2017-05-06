@@ -1,3 +1,20 @@
+1.9.0 - 2017-05-05
+* Got rid of "qdb" for UTXO.
+* New package "lib/utxo" extracted from "lib/chain"
+* Announce a new block to peers before its fully verified (like Core 0.14.0 / net protocol 70015)
+* bdb: -purgeto <block_height> to purge all blocks up to given height
+* client: does not offer to import core's blocks-db anymore
+* Optimized the way new blocks are written to disk (verification should be faster now)
+* Client: New TextUI command "purge", to purge unspendable records from UTXO-db
+* New tool "fetchblock" and new functions in "lib/others/utils" for fetching raw blocks from the web
+* UTXO index has now configurable length (via "lib/chain/UtxoIdxLen"), to address possible collision attacks (now set to 16 bytes)
+* Block index increased to 16 bytes, to address possible collision attacks
+* Client: Fixed "ConnectOnly" mode
+* WebUI: Show MinValue for accounted outputs on "Wallet" and "MakeTx" tabs
+* Client: New config value FreeAtStart, to free all possible memory after initial loading of block chain
+* WebUI/Wallet: Fixed problem with switching to different wallet while balance for previous none is still being fetched
+* Client: the balance of all the addresses is fetched after the blockchain finishes loading. It saves memory and speeds up potential rescans
+
 1.8.1
 * Client: each call to common.BlockChain.DeleteBranch() also does DelB2G() recursively
 * WebUI: Added (switchable) sound notifications when a new block is mined

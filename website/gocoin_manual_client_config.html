@@ -229,7 +229,7 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <tr>
 <td class="cfg_name"> Memory.MaxCachedBlocks</td>
 <td class="cfg_type"> uint</td>
-<td> 500</td>
+<td> 200</td>
 <td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
 </tr>
 <tr>
@@ -313,6 +313,13 @@ Beep when a balance of the currently selected wallet has changed.
 <td class="cfg_type"> uint</td>
 <td> 15</td>
 <td class="cfg_info"> How many seconds between sending ping comand to a peer. 0 - do not ping.</td>
+</tr>
+
+<tr>
+<td class="cfg_name"> UTXOWriteTargetSeconds</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Delay writing of UTXO.db files to least at least so many seconds. 0 means dafault value, which is 5 minutes.</td>
 </tr>
 
 </tbody>

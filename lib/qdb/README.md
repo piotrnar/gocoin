@@ -1,2 +1,2 @@
-If you cannot compile this package because you do not have "gcc",
-just replace file "membind.go" with the one in "no_gcc/" folder.
+From Gocoin version 1.9.0 it is no longer used for UTXO db.
+Now it is only used for maintaining peers database.

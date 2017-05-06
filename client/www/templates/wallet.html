@@ -33,6 +33,7 @@ td.outcnt {
 <script>
 var edit_in_progress = false
 var wallet;
+var fetching_balance_in_progress = null
 function switchwallet_button_click_browser() {
 	if (edit_in_progress) {
 		close_editor()
@@ -41,6 +42,11 @@ function switchwallet_button_click_browser() {
 }
 
 function fetch_wallet_balance(name) {
+	if (fetching_balance_in_progress!=null) {
+		fetching_balance_in_progress.abort()
+		fetching_balance_in_progress = null
+	}
+
 	wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
 
@@ -54,10 +60,12 @@ function fetch_wallet_balance(name) {
 
 	var aj = ajax()
 	aj.onerror=function() {
+		fetching_balance_in_progress = null
 		console.log("onerror")
 	}
 
 	aj.onload=function() {
+		fetching_balance_in_progress = null
 		try {
 			var totbtc = 0
 			var totouts = 0
@@ -131,6 +139,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
+	fetching_balance_in_progress = aj
 	aj.open("POST", "balance.json?summary", true)
 	aj.send(JSON.stringify(wallet_addr))
 }
@@ -404,7 +413,11 @@ function import_file_selected(e) {
 <input type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </span>
 </h2>
-Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)<br>
+Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
+
+<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
+Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
+<br>
 <br>
 <div id="browser_wallets">Available wallets: </div>
 <br>
@@ -469,6 +482,10 @@ var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
 	if (_lblo==0) {
 		_lblo = e.block.Height
+		if (e.block.MinValue>0) {
+			min_val_btc.innerText = val2str(e.block.MinValue)
+			wallet_min_warning.style.display = 'block'
+		}
 	} else if (!edit_in_progress && e.block.Height!=_lblo) {
 		location.reload()
 	}

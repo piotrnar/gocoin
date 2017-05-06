@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"runtime/debug"
 	"encoding/json"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -21,6 +22,7 @@ var (
 		UndoBlocks uint
 		TrustAll bool
 		UnbanAllPeers bool
+		NoWallet bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -73,6 +75,7 @@ var (
 		Memory struct {
 			GCPercTrshold int
 			MaxCachedBlocks uint
+			FreeAtStart bool // Free all possible memory after initial loading of block chain
 		}
 		Beeps struct {
 			NewBlock bool  // beep when a new block has been mined
@@ -92,6 +95,7 @@ var (
 			BlckExpireHours uint // zero for never
 			PingPeriodSec uint // zero to not ping
 		}
+		UTXOWriteTargetSeconds uint
 	}
 
 	mutex_cfg sync.Mutex
@@ -135,8 +139,8 @@ func InitConfig() {
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
 
-	CFG.Memory.GCPercTrshold = 100 // 100%
-	CFG.Memory.MaxCachedBlocks = 500
+	CFG.Memory.GCPercTrshold = 100 // 100% (Go's default)
+	CFG.Memory.MaxCachedBlocks = 200
 
 	CFG.HashrateHours = 12
 	CFG.MiningStatHours = 48
@@ -179,6 +183,7 @@ func InitConfig() {
 	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
+	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not monitor balances (saves time and memory)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
@@ -247,6 +252,13 @@ func Reset() {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
 	SetListenTCP(CFG.Net.ListenTCP, false)
+
+	if CFG.UTXOWriteTargetSeconds != 0 {
+		utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOWriteTargetSeconds)
+	}
+
+	connect_only = CFG.ConnectOnly!=""
+
 	ReloadMiners()
 }
 
@@ -293,9 +305,8 @@ func UnlockCfg() {
 	mutex_cfg.Unlock()
 }
 
-func CloseBlockChain(defrag bool) {
+func CloseBlockChain() {
 	if BlockChain!=nil {
-		BlockChain.Unspent.FullDefragOnClose = defrag
 		BlockChain.Close()
 		BlockChain = nil
 	}
@@ -303,9 +314,10 @@ func CloseBlockChain(defrag bool) {
 
 
 var listen_tcp uint32
+var connect_only bool // set in Reset()
 
 func IsListenTCP() bool {
-	return atomic.LoadUint32(&listen_tcp)!=0
+	return !connect_only && atomic.LoadUint32(&listen_tcp)!=0
 }
 
 func SetListenTCP(yes bool, global bool) {

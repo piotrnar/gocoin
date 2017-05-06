@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -171,8 +172,8 @@ func show_info(par string) {
 	// Memory used
 	al, sy := sys.MemUsed()
 	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
-		atomic.LoadInt64(&qdb.ExtraMemoryConsumed)>>20, "MB in",
-		atomic.LoadInt64(&qdb.ExtraMemoryAllocCnt), "recs")
+		atomic.LoadInt64(&utxo.ExtraMemoryConsumed)>>20, "MB in",
+		atomic.LoadInt64(&utxo.ExtraMemoryAllocCnt), "recs")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
@@ -183,7 +184,8 @@ func show_info(par string) {
 	fmt.Println("Gocoin:", gocoin.Version,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
-		"  cach:", cached, "  dis:", discarded)
+		"  cach:", cached, "  dis:", discarded, "  Saving:",
+		common.BlockChain.Unspent.WritingInProgress)
 }
 
 func show_counters(par string) {
@@ -286,17 +288,17 @@ func dump_block(s string) {
 		return
 	}
 
-	ioutil.WriteFile(h.String() + ".bin", crec.Data, 0700)
+	ioutil.WriteFile(h.String()+".bin", crec.Data, 0700)
 	fmt.Println("Block saved")
 
-	if crec.Block==nil {
+	if crec.Block == nil {
 		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
-	if crec.Block.OldData==nil {
+	if crec.Block.OldData == nil {
 		crec.Block.BuildTxList()
 	}
 	if !bytes.Equal(crec.Data, crec.Block.OldData) {
-		ioutil.WriteFile(h.String() + ".old", crec.Block.OldData, 0700)
+		ioutil.WriteFile(h.String()+".old", crec.Block.OldData, 0700)
 		fmt.Println("Old block saved")
 	}
 
@@ -310,8 +312,8 @@ func blchain_stats(par string) {
 	fmt.Println(common.BlockChain.Stats())
 }
 
-func defrag_utxo(par string) {
-	usif.DefragUTXO = true
+func blchain_utxodb(par string) {
+	fmt.Println(common.BlockChain.Unspent.UTXOStats())
 }
 
 func set_ulmax(par string) {
@@ -377,15 +379,15 @@ func save_config(s string) {
 
 func show_addresses(par string) {
 	fmt.Println(peersdb.PeerDB.Count(), "peers in the database")
-	if par=="list" {
-		cnt :=  0
+	if par == "list" {
+		cnt := 0
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			cnt++
 			fmt.Printf("%4d) %s\n", cnt, peersdb.NewPeer(v).String())
 			return 0
 		})
-	} else if par=="ban" {
-		cnt :=  0
+	} else if par == "ban" {
+		cnt := 0
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := peersdb.NewPeer(v)
 			if pr.Banned != 0 {
@@ -394,7 +396,7 @@ func show_addresses(par string) {
 			}
 			return 0
 		})
-		if cnt==0 {
+		if cnt == 0 {
 			fmt.Println("No banned peers in the DB")
 		}
 	} else if par != "" {
@@ -416,10 +418,6 @@ func show_addresses(par string) {
 		fmt.Println("Use 'peers ban' to list the benned ones")
 		fmt.Println("Use 'peers <number>' to show the most recent ones")
 	}
-}
-
-func coins_age(s string) {
-	common.BlockChain.Unspent.PrintCoinAge()
 }
 
 func show_cached(par string) {
@@ -459,35 +457,35 @@ func send_inv(par string) {
 }
 
 func analyze_bip9(par string) {
-	all := par=="all"
+	all := par == "all"
 	n := common.BlockChain.BlockTreeRoot
-	for n!=nil {
+	for n != nil {
 		var i uint
 		start_block := uint(n.Height)
 		start_time := n.Timestamp()
 		bits := make(map[byte]uint32)
-		for i=0; i<2016 && n!=nil; i++ {
+		for i = 0; i < 2016 && n != nil; i++ {
 			ver := n.BlockVersion()
-			if (ver&0x20000000) != 0 {
-				for bit:=byte(0); bit<=28; bit++ {
-					if (ver & (1<<bit)) != 0 {
+			if (ver & 0x20000000) != 0 {
+				for bit := byte(0); bit <= 28; bit++ {
+					if (ver & (1 << bit)) != 0 {
 						bits[bit]++
 					}
 				}
 			}
 			n = n.FindPathTo(common.BlockChain.BlockTreeEnd)
 		}
-		if len(bits)>0 {
+		if len(bits) > 0 {
 			var s string
 			for k, v := range bits {
 				if all || v >= common.BlockChain.Consensus.BIP9_Treshold {
-					if s!="" {
+					if s != "" {
 						s += " | "
 					}
 					s += fmt.Sprint(v, " x bit(", k, ")")
 				}
 			}
-			if s!="" {
+			if s != "" {
 				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
 					" block #", start_block, "-", start_block+i-1, ":", s, " - active from", start_block+2*2016)
 			}
@@ -496,24 +494,31 @@ func analyze_bip9(par string) {
 }
 
 func switch_trust(par string) {
-	if par=="0" {
+	if par == "0" {
 		common.FLAG.TrustAll = false
-	} else if par=="1" {
+	} else if par == "1" {
 		common.FLAG.TrustAll = true
 	}
 	fmt.Println("Assume blocks trusted:", common.FLAG.TrustAll)
 }
 
+func save_utxo(par string) {
+	common.BlockChain.Unspent.DirtyDB = true
+}
+
+func purge_utxo(par string) {
+	common.BlockChain.Unspent.PurgeUnspendable(par == "all")
+}
+
 func init() {
-	newUi("age", true, coins_age, "Show age of records in UTXO database")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
+	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("cache", false, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
 	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
-	newUi("defrag", true, defrag_utxo, "Defragment UTXO database (use tool bdb -defrag for blocks DB)")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
@@ -521,9 +526,11 @@ func init() {
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
+	newUi("purge", true, purge_utxo, "Purge unspendable outputs from UTXO database (add 'all' to purge everything)")
 	newUi("quit q", false, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
-	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
+	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
+	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }

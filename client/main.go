@@ -27,7 +27,6 @@ import (
 var (
 	killchan          chan os.Signal = make(chan os.Signal)
 	retryCachedBlocks bool
-	syncNow           chan bool = make(chan bool, 1)
 )
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
@@ -36,14 +35,22 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	if common.FLAG.TrustAll {
 		bl.Trusted = true
 	}
-	if !common.BlockChain.DoNotSync {
-		common.BlockChain.DoNotSync = true
-		syncNow <- true
+	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
+
+	if newbl.DoInvs {
+		common.Busy("NetRouteInv")
+		network.NetRouteInv(2, bl.Hash, newbl.Conn)
 	}
+
+	network.MutexRcv.Lock()
+	bl.LastKnownHeight = network.LastCommitedHeader.Height
+	network.MutexRcv.Unlock()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
+
 	if e == nil {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
+
 		newbl.NonWitnessSize = len(bl.OldData)
 
 		common.RecalcAverageBlockSize(false)
@@ -157,9 +164,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 // Freshly mined block - do the inv and beeps... TODO: combine it with the other code
 func new_block_mined(bl *btc.Block, conn *network.OneConnection) {
-	common.Busy("NetRouteInv")
-	network.NetRouteInv(2, bl.Hash, conn)
-
 	if common.CFG.Beeps.NewBlock {
 		fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
 		textui.ShowPrompt()
@@ -247,7 +251,7 @@ func main() {
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
 			network.NetCloseAll()
-			common.CloseBlockChain(false)
+			common.CloseBlockChain()
 			peersdb.ClosePeerDB()
 			sys.UnlockDatabaseDir()
 			os.Exit(1)
@@ -322,7 +326,7 @@ func main() {
 		}
 
 		if common.CFG.WebUI.Interface != "" {
-			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface, "...")
+			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 			go webui.ServerThread(common.CFG.WebUI.Interface)
 		}
 
@@ -365,11 +369,6 @@ func main() {
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
 
-			case <-syncNow:
-				common.CountSafe("MainChainSync")
-				common.Busy("BlockChain.Sync()")
-				common.BlockChain.Sync()
-
 			case newtx := <-network.NetTxs:
 				common.CountSafe("MainNetTx")
 				common.Busy("network.HandleNetTx()")
@@ -396,31 +395,21 @@ func main() {
 				network.ExpireTxs()
 
 			case <-time.After(time.Second / 2):
-				common.CountSafe("MainThreadTouts")
-				if !retryCachedBlocks {
-					if usif.DefragUTXO {
-						usif.Exit_now = true
-						break
-					}
-					common.Busy("BlockChain.Idle()")
-					if common.BlockChain.Idle() {
-						common.CountSafe("ChainIdleUsed")
-					}
+				common.CountSafe("MainThreadIdle")
+				common.Busy("BlockChain.Idle()")
+				if common.BlockChain.Idle() {
+					common.CountSafe("ChainIdleUsed")
 				}
 				continue
 			}
 		}
 
+		common.BlockChain.Unspent.HurryUp = true
 		network.NetCloseAll()
 	}
 
-	if usif.DefragUTXO {
-		fmt.Println("Closing blockchain while defragmenting UTXO")
-	} else {
-		fmt.Println("Closing blockchain")
-	}
 	sta := time.Now()
-	common.CloseBlockChain(usif.DefragUTXO)
+	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
 	sys.UnlockDatabaseDir()

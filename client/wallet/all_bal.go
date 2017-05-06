@@ -1,11 +1,12 @@
 package wallet
 
 import (
+	"fmt"
 	"sync"
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -16,30 +17,51 @@ var (
 	BalanceMutex sync.Mutex
 )
 
-type OneAllAddrInp [1+8+4]byte
+type OneAllAddrInp [utxo.UtxoIdxLen+4]byte
 
 type OneAllAddrBal struct {
 	Value uint64  // Highest bit of it means P2SH
 	Unsp []OneAllAddrInp
 }
 
-func (ur *OneAllAddrInp) GetRec() (rec *chain.QdbRec, vout uint32) {
-	ind := qdb.KeyType(binary.LittleEndian.Uint64(ur[1:9]))
-	v := common.BlockChain.Unspent.DbN(int(ur[0])).Get(ind)
+func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
+	var ind utxo.UtxoKeyType
+	copy(ind[:], ur[:])
+	v := common.BlockChain.Unspent.HashMap[ind]
 	if v != nil {
-		vout = binary.LittleEndian.Uint32(ur[9:13])
-		rec = chain.NewQdbRec(ind, v)
+		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
+		rec = utxo.NewUtxoRec(ind, utxo.Slice(v))
 	}
 	return
 }
 
-func NewUTXO(tx *chain.QdbRec) {
+func FetchInitialBalance() {
+	var cur_rec, cnt_dwn, perc int
+	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap)/100
+	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal) + " BTC or more"
+	for k, v := range common.BlockChain.Unspent.HashMap {
+		if chain.AbortNow {
+			break
+		}
+		NewUTXO(utxo.NewUtxoRecStatic(k, utxo.Slice(v)))
+		cur_rec++
+		if cnt_dwn==0 {
+			fmt.Print("\r", info, " - ", perc, "% complete ... ")
+			cnt_dwn = cnt_dwn_from
+			perc++
+		} else {
+			cnt_dwn--
+		}
+	}
+	fmt.Print("\r                                                                                  \r")
+}
+
+func NewUTXO(tx *utxo.UtxoRec) {
 	var uidx [20]byte
 	var rec *OneAllAddrBal
 	var nr OneAllAddrInp
 
-	nr[0] = byte(tx.TxID[31]) % chain.NumberOfUnspentSubDBs //DbIdx
-	copy(nr[1:9], tx.TxID[:8]) //RecIdx
+	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
 
 	for vout:=uint32(0); vout<uint32(len(tx.Outs)); vout++ {
 		out := tx.Outs[vout]
@@ -67,20 +89,19 @@ func NewUTXO(tx *chain.QdbRec) {
 			continue
 		}
 
-		binary.LittleEndian.PutUint32(nr[9:13], vout)
+		binary.LittleEndian.PutUint32(nr[utxo.UtxoIdxLen:], vout)
 		rec.Unsp = append(rec.Unsp, nr)
 		rec.Value += out.Value
 	}
 }
 
-func all_del_utxos(tx *chain.QdbRec, outs []bool) {
+func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	var uidx [20]byte
 	var rec *OneAllAddrBal
 	var i int
 	var nr OneAllAddrInp
 	var p2kh bool
-	nr[0] = byte(tx.TxID[31]) % chain.NumberOfUnspentSubDBs //DbIdx
-	copy(nr[1:9], tx.TxID[:8]) //RecIdx
+	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
 	for vout:=uint32(0); vout<uint32(len(tx.Outs)); vout++ {
 		if !outs[vout] {
 			continue
@@ -108,7 +129,8 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 		}
 
 		for i=0; i<len(rec.Unsp); i++ {
-			if bytes.Equal(rec.Unsp[i][:9], nr[:9]) && binary.LittleEndian.Uint32(rec.Unsp[i][9:13])==vout {
+			if bytes.Equal(rec.Unsp[i][:utxo.UtxoIdxLen], nr[:utxo.UtxoIdxLen]) &&
+				binary.LittleEndian.Uint32(rec.Unsp[i][utxo.UtxoIdxLen:])==vout {
 				break
 			}
 		}
@@ -130,20 +152,20 @@ func all_del_utxos(tx *chain.QdbRec, outs []bool) {
 }
 
 // This is called while accepting the block (from the chain's thread)
-func TxNotifyAdd(tx *chain.QdbRec) {
+func TxNotifyAdd(tx *utxo.UtxoRec) {
 	BalanceMutex.Lock()
 	NewUTXO(tx)
 	BalanceMutex.Unlock()
 }
 
 // This is called while accepting the block (from the chain's thread)
-func TxNotifyDel(tx *chain.QdbRec, outs []bool) {
+func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
 	BalanceMutex.Lock()
 	all_del_utxos(tx, outs)
 	BalanceMutex.Unlock()
 }
 
-func GetAllUnspent(aa *btc.BtcAddr) (thisbal chain.AllUnspentTx) {
+func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
 	if aa.Version==btc.AddrVerPubkey(common.Testnet) {
 		rec = AllBalancesP2KH[aa.Hash160]
@@ -156,7 +178,7 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal chain.AllUnspentTx) {
 		for _, v := range rec.Unsp {
 			if qr, vout := v.GetRec(); qr!=nil {
 				if oo := qr.Outs[vout]; oo!=nil {
-					unsp := &chain.OneUnspentTx{TxPrevOut:btc.TxPrevOut{Hash:qr.TxID, Vout:vout},
+					unsp := &utxo.OneUnspentTx{TxPrevOut:btc.TxPrevOut{Hash:qr.TxID, Vout:vout},
 						Value:oo.Value, MinedAt:qr.InBlock, Coinbase:qr.Coinbase, BtcAddr:aa}
 
 					if int(vout+1) < len(qr.Outs) {

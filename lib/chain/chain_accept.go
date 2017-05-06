@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
@@ -14,8 +15,8 @@ import (
 var TrustedTxChecker func(*btc.Uint256) bool
 
 
-func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *BlockChanges, e error) {
-	changes = new(BlockChanges)
+func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *utxo.BlockChanges, e error) {
+	changes = new(utxo.BlockChanges)
 	changes.Height = height
 	changes.LastKnownHeight = lknown
 	changes.DeledTxs = make(map[[32]byte][]bool)
@@ -64,7 +65,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	cur.TxCount = uint32(bl.TxCount)
 	if ch.BlockTreeEnd==cur.Parent {
 		// The head of out chain - apply the transactions
-		var changes *BlockChanges
+		var changes *utxo.BlockChanges
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
 		if e != nil {
 			// ProcessBlockTransactions failed, so trash the block.
@@ -80,9 +81,6 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
-			if !ch.DoNotSync {
-				ch.Blocks.Sync()
-			}
 			ch.BlockTreeEnd = cur // Advance the head
 		}
 	} else {
@@ -106,12 +104,12 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 
 
 // This isusually the most time consuming process when applying a new block
-func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
+func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
 	if changes.Height+ch.Unspent.UnwindBufLen >= changes.LastKnownHeight {
-		changes.UndoData = make(map[[32]byte] *QdbRec)
+		changes.UndoData = make(map[[32]byte] *utxo.UtxoRec)
 	}
 
 	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
@@ -179,17 +177,17 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 					spendrec[inp.Vout] = true
 
 					if changes.UndoData != nil {
-						var urec *QdbRec
+						var urec *utxo.UtxoRec
 						urec = changes.UndoData[inp.Hash]
 						if urec == nil {
-							urec = new(QdbRec)
+							urec = new(utxo.UtxoRec)
 							urec.TxID = inp.Hash
 							urec.Coinbase = tout.WasCoinbase
 							urec.InBlock = tout.BlockHeight
-							urec.Outs = make([]*QdbTxOut, tout.VoutCount)
+							urec.Outs = make([]*utxo.UtxoTxOut, tout.VoutCount)
 							changes.UndoData[inp.Hash] = urec
 						}
-						tmp := new(QdbTxOut)
+						tmp := new(utxo.UtxoTxOut)
 						tmp.Value = tout.Value
 						tmp.PKScr = make([]byte, len(tout.Pk_script))
 						copy(tmp.PKScr, tout.Pk_script)
@@ -219,8 +217,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 			if !tx_trusted {
 				wg.Wait()
 				if ver_err_cnt > 0 {
-					println("VerifyScript failed", ver_err_cnt, "time(s)")
-					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time(s)"))
+					println("VerifyScript failed", ver_err_cnt, "time (s)")
+					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
 				}
 			}
 		} else {
@@ -262,18 +260,18 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *BlockChanges) (e error) {
 		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 	}
 
-	var rec *QdbRec
+	var rec *utxo.UtxoRec
 	for k, v := range blUnsp {
 		for i := range v {
 			if v[i]!=nil {
 				if rec==nil {
-					rec = new(QdbRec)
+					rec = new(utxo.UtxoRec)
 					rec.TxID = k
 					rec.Coinbase = v[i].WasCoinbase
 					rec.InBlock = changes.Height
-					rec.Outs = make([]*QdbTxOut, len(v))
+					rec.Outs = make([]*utxo.UtxoTxOut, len(v))
 				}
-				rec.Outs[i] = &QdbTxOut{Value:v[i].Value, PKScr:v[i].Pk_script}
+				rec.Outs[i] = &utxo.UtxoTxOut{Value:v[i].Value, PKScr:v[i].Pk_script}
 			}
 		}
 		if rec!=nil {

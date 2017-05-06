@@ -37,8 +37,9 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 
 		common.CountSafe(fmt.Sprintf("GetdataType-%x",typ))
 		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
-			crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h[4:]))
-			//bl, _, er := common.BlockChain.Blocks.BlockGet(btc.NewUint256(h[4:]))
+			hash := btc.NewUint256(h[4:])
+			crec, _, er := common.BlockChain.Blocks.BlockGetExt(hash)
+
 			if er == nil {
 				bl := crec.Data
 				if typ == MSG_BLOCK {
@@ -54,6 +55,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 				c.SendRawMsg("block", bl)
 			} else {
+				//fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
@@ -137,6 +139,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 			MutexRcv.Unlock()
 			return;
 		}
+		if sta==PH_STATUS_NEW {
+			b2g.SendInvs = true
+		}
 		//println(c.ConnID, " - taking this new block")
 		common.CountSafe("UnxpectedBlockNEW")
 	}
@@ -167,7 +172,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	}
 
 	orb := &OneReceivedBlock{TmStart:b2g.Started, TmPreproc:b2g.TmPreproc,
-		TmDownload:conn.LastMsgTime, FromConID:conn.ConnID}
+		TmDownload:conn.LastMsgTime, FromConID:conn.ConnID, DoInvs:b2g.SendInvs}
 
 	conn.Mutex.Lock()
 	bip := conn.GetBlockInProgress[idx]

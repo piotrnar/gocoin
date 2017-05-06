@@ -2,7 +2,12 @@
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
 
-<table width="100%">
+<table width="100%" border="0">
+<colgroup>
+	<col width="50%">
+	<col width="50%">
+</colgroup>
+
 <tr><td colspan="2">
 <input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span onclick="chart_type_siz.click()" style="cursor:pointer"> Blocksize KB</span>
 &nbsp;&bull;&nbsp;
@@ -73,7 +78,7 @@
 	</table>
 <td valign="top">
 	<h2>Others</h2>
-	<table>
+	<table width="100%">
 	<tr><td>Node's Uptime:<td>
 		<b id="si_node_uptime"></b>
 		&nbsp;&bull;&nbsp;
@@ -97,6 +102,7 @@
 		&nbsp;<b id="si_blocks_to_get"></b> to get
 	<tr><td>Last Header:<td>
 		<b title="Last received header" id="si_last_hdr_height"></b>
+		<img id="si_saving" src="webui/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
 	</table>
 </table>
 
@@ -331,6 +337,7 @@ function refreshsysinfo() {
 			si_node_uptime.innerText = period2str(si.Node_uptime)
 			si_last_hdr_height.innerText = si.LastHeaderHeight
 			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
+			si_saving.style.display = si.SavingUTXO ? "block" : "none"
 		} catch(e) {
 			console.log(e)
 		}

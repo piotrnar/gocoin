@@ -5,9 +5,10 @@ import (
 	"sync"
 	"strings"
 	"net/http"
+	"sync/atomic"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
@@ -61,6 +62,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		Diff float64
 		Median uint32
 		Version uint32
+		MinValue uint64
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -71,6 +73,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Diff =  btc.GetDifficulty(common.Last.Block.Bits())
 	out.Median =  common.Last.Block.GetMedianTimePast()
 	out.Version = common.Last.Block.BlockVersion()
+	out.MinValue = atomic.LoadUint64(&common.CFG.AllBalances.MinValue)
 	common.Last.Mutex.Unlock()
 
 	bx, er := json.Marshal(out)
@@ -103,6 +106,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Average_fee float64
 		LastHeaderHeight uint32
 		NetworkHashRate float64
+		SavingUTXO bool
 	}
 
 	out.Blocks_cached = len(network.CachedBlocks)
@@ -112,7 +116,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Net_block_qsize = len(network.NetBlocks)
 	out.Net_tx_qsize = len(network.NetTxs)
 	out.Heap_size, out.Heap_sysmem = sys.MemUsed()
-	out.Qdb_extramem = qdb.ExtraMemoryConsumed
+	out.Qdb_extramem = utxo.ExtraMemoryConsumed
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt
 	out.Average_block_size = common.GetAverageBlockSize()
 	out.Average_fee = common.GetAverageFee()
@@ -127,6 +131,8 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	}
 	out.NetworkHashRate = lastHrate
 	mutexHrate.Unlock()
+
+	out.SavingUTXO = common.BlockChain.Unspent.WritingInProgress
 
 	bx, er := json.Marshal(out)
 	if er == nil {

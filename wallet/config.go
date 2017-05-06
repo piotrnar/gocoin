@@ -15,7 +15,7 @@ var (
 	waltype uint = 3
 	type2sec string
 	uncompressed bool = false
-	fee string = "0.0001"
+	fee string = "0.001"
 	apply2bal bool = true
 	secret_seed []byte
 	litecoin bool = false

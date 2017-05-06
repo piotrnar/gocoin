@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 
@@ -14,7 +15,7 @@ var AbortNow bool  // set it to true to abort any activity
 
 type Chain struct {
 	Blocks *BlockDB      // blockchain.dat and blockchain.idx
-	Unspent *UnspentDB    // unspent folder
+	Unspent *utxo.UnspentDB    // unspent folder
 
 	BlockTreeRoot *BlockTreeNode
 	BlockTreeEnd *BlockTreeNode
@@ -22,8 +23,6 @@ type Chain struct {
 
 	BlockIndexAccess sync.Mutex
 	BlockIndex map[[btc.Uint256IdxLen]byte] *BlockTreeNode
-
-	DoNotSync bool // do not flush all the files after each block
 
 	CB NewChanOpts // callbacks used by Unspent database
 
@@ -42,22 +41,11 @@ type Chain struct {
 }
 
 type NewChanOpts struct {
-	// If NotifyTx is set, it will be called each time a new unspent
-	// output is being added or removed. When being removed, btc.TxOut is nil.
-	NotifyTxAdd func (*QdbRec)
-	NotifyTxDel func (*QdbRec, []bool)
-
-	// These two are used only during loading
-	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
-
-	DoNotParseTillEnd bool // Do not rebuild UTXO database up to the highest known block (used by the downloader)<F2>
-
 	UTXOVolatileMode bool
-
 	UndoBlocks uint // undo this many blocks when opening the chain
-
 	SetBlocksDBCacheSize bool
 	BlocksDBCacheSize int // this value is only taken if SetBlocksDBCacheSize is true
+	UTXOCallbacks utxo.CallbackFunctions
 }
 
 
@@ -68,7 +56,6 @@ func NewChain(dbrootdir string, genesis *btc.Uint256, rescan bool) (ch *Chain) {
 
 // This is the very first function one should call in order to use this package
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
-	var undo_last_block bool
 	ch = new(Chain)
 	ch.Genesis = genesis
 	if opts != nil {
@@ -99,8 +86,9 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	} else {
 		ch.Blocks = NewBlockDB(dbrootdir)
 	}
-	ch.Unspent, undo_last_block = NewUnspentDb(&NewUnspentOpts{
-		Dir:dbrootdir, Chain:ch, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode})
+	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
+		Dir:dbrootdir, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode,
+		CB:opts.UTXOCallbacks, AbortNow:&AbortNow})
 
 	if AbortNow {
 		return
@@ -115,19 +103,8 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.BlockTreeEnd = ch.BlockTreeRoot
 	}
 
-	if opts!=nil && opts.DoNotParseTillEnd {
-		ch.BlockTreeEnd, _ = ch.BlockTreeRoot.FindFarthestNode()
-		return
-	}
-
 	if AbortNow {
 		return
-	}
-
-	if undo_last_block {
-		fmt.Println("Undo last block after the previous commit was interrupted..")
-		ch.UndoLastBlock()
-		fmt.Println("DONE")
 	}
 
 	if opts.UndoBlocks > 0 {
@@ -162,25 +139,11 @@ func (ch *Chain) RebuildGenesisHeader() {
 }
 
 
-// Forces all database changes to be flushed to disk.
-func (ch *Chain) Sync() {
-	ch.DoNotSync = false
-	ch.Blocks.Sync()
-	ch.Unspent.Sync()
-}
-
-
 // Call this function periodically (i.e. each second)
 // when your client is idle, to defragment databases.
 func (ch *Chain) Idle() bool {
+	ch.Blocks.Idle()
 	return ch.Unspent.Idle()
-}
-
-
-// Save all the databases. Defragment when needed.
-func (ch *Chain) Save() {
-	ch.Blocks.Sync()
-	ch.Unspent.Save()
 }
 
 
@@ -197,8 +160,8 @@ func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
 // Return blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
 	ch.BlockIndexAccess.Lock()
-	s = fmt.Sprintf("CHAIN: blocks:%d  nosync:%t  Height:%d  MedianTime:%d\n",
-		len(ch.BlockIndex), ch.DoNotSync, ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
+	s = fmt.Sprintf("CHAIN: blocks:%d  Height:%d  MedianTime:%d\n",
+		len(ch.BlockIndex), ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()

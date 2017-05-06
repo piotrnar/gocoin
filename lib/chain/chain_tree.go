@@ -26,12 +26,18 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var b []byte
 	var er error
 	var trusted bool
+	var tot_bytes uint64
 
-	prv := time.Now().UnixNano()
+	ch.Blocks.DoNotCache = true
+
+	sta := time.Now()
+	prv := sta
+
 	for !AbortNow && ch.BlockTreeEnd != end {
-		cur := time.Now().UnixNano()
-		if cur-prv >= 10e9 {
-			fmt.Println("ParseTillBlock ...", ch.BlockTreeEnd.Height, "/", end.Height)
+		cur := time.Now()
+		if cur.Sub(prv) >= 10 * time.Second {
+			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
+			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s\n", ch.BlockTreeEnd.Height, end.Height, mbps)
 			prv = cur
 		}
 
@@ -49,6 +55,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		if er != nil {
 			panic("Db.BlockGet(): "+er.Error())
 		}
+		tot_bytes += uint64(len(b))
 
 		bl, er := btc.NewBlock(b)
 		if er != nil {
@@ -80,13 +87,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 	}
 
+	ch.Blocks.DoNotCache = false
+
 	if !AbortNow && ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
 	}
-	ch.Unspent.Sync()
-	ch.Save()
 }
 
 func (n *BlockTreeNode) BlockVersion() (uint32) {
@@ -287,9 +294,6 @@ func (ch *Chain) DeleteBranch(cur *BlockTreeNode, deleteCallback func(*btc.Uint2
 	cur.Parent.delChild(cur)
 	cur.delAllChildren(ch, deleteCallback)
 	ch.BlockIndexAccess.Unlock()
-	if !ch.DoNotSync {
-		ch.Blocks.Sync()
-	}
 }
 
 

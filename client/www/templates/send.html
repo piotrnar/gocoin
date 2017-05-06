@@ -636,7 +636,10 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 
 <h2>Select Inputs</h2>
 Total balance: <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
-<table vspace="10" id="unspent" width="100%">
+<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
+Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
+<br><br>
+<table id="unspent" width="100%">
 <tr>
 	<th width="20">#
 	<th width="40">Block
@@ -651,6 +654,16 @@ Total balance: <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
 
 </form>
 <script>
+var warning_set = false
+blno.addEventListener("lastblock", function(e) {
+	if (!warning_set) {
+		warning_set = true
+		if (e.block.MinValue>0) {
+			min_val_btc.innerText = val2str(e.block.MinValue)
+			wallet_min_warning.style.display = 'block'
+		}
+	}
+})
 qswal.addEventListener("loadwallet", function(e) {
 	fetch_wallet_balance(e.name)
 	build_change_list()
