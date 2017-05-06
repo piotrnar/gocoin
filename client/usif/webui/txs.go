@@ -504,7 +504,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	if division<100 {
 		division = 100
 	} else if division>1e6 {
-		division = 1e6
+		division = 1e5 // 10 points per block
 	}
 
 	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
