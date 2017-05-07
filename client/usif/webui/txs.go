@@ -483,7 +483,8 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	var cnt int
-	var division uint64
+	var division, maxbytes uint64
+	var e error
 
 	if !ipchecker(r) {
 		return
@@ -492,19 +493,26 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	division = network.TransactionsToSendSize/100
+	if len(r.Form["max"])>0 {
+		maxbytes, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
+		if e!=nil {
+			maxbytes = network.TransactionsToSendSize
+		}
+	} else {
+		maxbytes = network.TransactionsToSendSize
+	}
 
 	if len(r.Form["div"])>0 {
-		d, e := strconv.ParseUint(r.Form["div"][0], 10, 64)
-		if e==nil {
-			division = d
+		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
+		if e!=nil {
+			division = maxbytes/100
 		}
+	} else {
+		division = maxbytes/100
 	}
 
 	if division<100 {
 		division = 100
-	} else if division>1e6 {
-		division = 1e5 // 10 points per block
 	}
 
 	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
@@ -539,6 +547,9 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Time_received : uint(v.Firstseen.Unix())})
 		}
 		totlen = newlen
+		if totlen >= maxbytes {
+			break
+		}
 	}
 
 	bx, er := json.Marshal(mempool_stats)
