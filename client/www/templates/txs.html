@@ -675,7 +675,7 @@ function show_mempool_fees() {
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	aj.open("GET","mempool_stats.json", true);
+	aj.open("GET","mempool_stats.json?max=10000000", true);
 	aj.send(null);
 }
 
