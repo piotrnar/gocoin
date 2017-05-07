@@ -1,3 +1,6 @@
+1.9.1
+* WebUI/Txs: Limit memory pool fees graph to first 12 MB
+
 1.9.0 - 2017-05-05
 * Got rid of "qdb" for UTXO.
 * New package "lib/utxo" extracted from "lib/chain"
