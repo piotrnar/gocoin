@@ -41,12 +41,15 @@ func (x AllUnspentTx) Swap(i, j int) {
 }
 
 func (ou *OneUnspentTx) String() (s string) {
-	s = fmt.Sprintf("%15.8f  ", float64(ou.Value)/1e8) + ou.TxPrevOut.String()
+	s = fmt.Sprintf("%15s BTC %s", btc.UintToBtc(ou.Value), ou.TxPrevOut.String())
 	if ou.BtcAddr!=nil {
 		s += " " + ou.DestAddr() + ou.BtcAddr.Label()
 	}
 	if ou.MinedAt != 0 {
-		s += fmt.Sprint("  ", ou.MinedAt)
+		s += fmt.Sprint(" ", ou.MinedAt)
+	}
+	if ou.Coinbase {
+		s += fmt.Sprint(" Coinbase")
 	}
 	if ou.Message != nil {
 		s += "  "
