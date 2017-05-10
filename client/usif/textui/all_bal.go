@@ -131,6 +131,7 @@ func list_unspent(addr string) {
 		var tot uint64
 		sort.Sort(unsp)
 		for i := range unsp {
+			unsp[i].BtcAddr = nil // no need to print the address here
 			tot += unsp[i].Value
 		}
 		fmt.Println(ad.String(), "has", btc.UintToBtc(tot), "BTC in", len(unsp), "records:")
