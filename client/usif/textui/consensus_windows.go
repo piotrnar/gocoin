@@ -115,7 +115,7 @@ func consensus_stats(s string) {
 func init() {
 	dll, er := syscall.LoadDLL(DllName)
 	if er != nil {
-		println(er.Error())
+		//println(er.Error())
 		println("WARNING: Not using", DllName, "to cross-check consensus rules")
 		return
 	}
