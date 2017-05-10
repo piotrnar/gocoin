@@ -86,7 +86,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	} else {
 		// The block's parent is not the current head of the chain...
 
-		// Save the block, though do not makt it as "trusted" just yet
+		// Save the block, though do not mark it as "trusted" just yet
 		ch.Blocks.BlockAdd(cur.Height, bl)
 
 		// If it has a bigger height than the current head,
@@ -96,6 +96,8 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			if ch.BlockTreeEnd!=cur {
 				e = errors.New("CommitBlock: MoveToBlock failed")
 			}
+		} else {
+			println("Orphaned block", bl.Hash.String(), cur.Height, cur.BlockHash.String())
 		}
 	}
 
