@@ -288,10 +288,7 @@ function refreshconnections() {
 					s += cs[i].SendCmpctVer
 					if (cs[i].HighBandwidth)  s += '+'
 				}
-				if (cs[i].Services&8) {
-					s += 'W'
-					row.classList.add('segwit')
-				}
+				if (cs[i].Services&8)  s += 'W'
 				td.innerText = s
 
 				// user agent
