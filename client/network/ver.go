@@ -11,7 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-var IgnoreExternalIpFrom = []string{"/Snoopy:0.1/", "/libbitcoin:2.0.0/", "/Snoopy:0.2.1/"}
+var IgnoreExternalIpFrom = []string{"/Snoopy:0.1/", "/libbitcoin:2.0.0/", "/Snoopy:0.2.1/", "/xbadprobe:1.0/"}
 
 func (c *OneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
