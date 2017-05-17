@@ -38,6 +38,7 @@ function switchwallet_button_click_browser() {
 	if (edit_in_progress) {
 		close_editor()
 	}
+	cur_wallet_name.innerText = this.value
 	switch_to_webwallet(this.value)
 }
 
@@ -406,6 +407,8 @@ function import_file_selected(e) {
 
 
 </script>
+<select id="qswal" style="display:none"></select>
+
 <h2>Current wallet: <span id="cur_wallet_name"></span>
 <span style="float:right" >
 <input id="move_left" type="button" value="Move left" onclick="move_wallet_left()">
@@ -477,6 +480,12 @@ If Address comes from uncompressed key, you will not be able to spend anything d
 
 
 <script>
+if (typeof(localStorage.gocoinWallets)=="string") {
+	build_wallet_list()
+} else {
+	localStorage.gocoinWallets = ""
+}
+
 // reaload page on new block
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
