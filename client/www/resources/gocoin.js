@@ -200,6 +200,33 @@ function parse_wallet(s) {
 	return wallet
 }
 
+function build_wallet_list() {
+	var gvi = localStorage.getItem("gocoinWalletId")
+	var i
+
+	var names = localStorage.getItem("gocoinWallets").split('|')
+	var s = ''
+	for (i=0; i<names.length; i++) {
+		if (names[i]!="") {
+			var content = localStorage.getItem("gocoinWal_"+names[i])
+			if (typeof(content)=="string" && content.length > 0) {
+				var o = document.createElement("option")
+				o.value = o.text = names[i]
+				qswal.add(o)
+				if (localStorage.getItem("gocoinWalletSelected")==names[i]) {
+					qswal.selectedIndex = qswal.length-1
+				}
+				if (s!='') s+='|'
+				s += names[i]
+			} else {
+				console.log("removing webwallet", names[i])
+				localStorage.removeItem("gocoinWal_"+names[i])
+			}
+		}
+	}
+	localStorage.setItem("gocoinWallets", s)
+}
+
 function quick_switch_wallet() {
 	try {
 		if (qswal.options.length==0 || qswal.selectedIndex<0 || qswal.options.length<=qswal.selectedIndex) return
