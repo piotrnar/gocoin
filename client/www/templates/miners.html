@@ -177,22 +177,24 @@ with the average of <b id="el_avg_fpb"></b> Satoshis per byte.<br>
 </table>
 </div>
 </td>
-<td valign="top">
+<td valign="top" id="block_history_td" style="display:none">
 
-<center>Last 1000 blocks:</center>
 <table class="bord" id="blockver_tab_a" align="right">
+<caption>Last 1000 blocks</caption>
 <tr><th>Version<th>Count<th>Share
 </table>
-
-<center>Past period:</center>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
 <table class="bord" id="blockver_tab_b" align="right">
+<caption>Past period</caption>
 <tr><th>Version<th>Count<th>Share
 </table>
 
-<center>Current period:</center>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
 <table class="bord" id="blockver_tab_c" align="right">
+<caption>Current period</caption>
 <tr><th>Version<th>Count<th>Share
 </table>
+
 </td>
 </tr>
 </table>
@@ -259,6 +261,8 @@ function blocks_version_stats() {
 			do_table(blockver_tab_a, block_versions, top_block_height, top_block_height-999)
 			do_table(blockver_tab_b, block_versions, last_epoch_change-1, last_epoch_change-2016)
 			do_table(blockver_tab_c, block_versions, top_block_height, last_epoch_change)
+
+			block_history_td.style.display = 'table-cell'
 
 		} catch (e) {
 			blockver_tab.style.display='none'
