@@ -136,6 +136,7 @@ function refresh_mining_info() {
 			th_sw_sign.title = parseFloat(100*sw_cnt/cs.BlockCount).toFixed(0) + '%'
 			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
 
+			loading_icon.style.display = 'none'
 			mining_info_div.style.display = 'block'
 		} catch(e) {
 			console.log(e)
@@ -148,7 +149,7 @@ function refresh_mining_info() {
 
 </script>
 <table><tr>
-<td valign="top" width="800"><div id="mining_info_div" style="display:none">
+<td valign="top" width="800"><img id="loading_icon" src="webui/loading.gif" style="display:inline"><div id="mining_info_div" style="display:none">
 Data from last <b id="el_min_hrs"></b> hours.
  The oldest block starting at <b id="el_first_block_time"></b><br>
 Total number of blocks was <b id="el_block_cnt"></b>,
