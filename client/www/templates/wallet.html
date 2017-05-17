@@ -61,11 +61,13 @@ function fetch_wallet_balance(name) {
 
 	var aj = ajax()
 	aj.onerror=function() {
+		loading_icon.style.display = 'none'
 		fetching_balance_in_progress = null
 		console.log("onerror")
 	}
 
 	aj.onload=function() {
+		loading_icon.style.display = 'none'
 		fetching_balance_in_progress = null
 		try {
 			var totbtc = 0
@@ -140,6 +142,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
+	loading_icon.style.display = 'block'
 	fetching_balance_in_progress = aj
 	aj.open("POST", "balance.json?summary", true)
 	aj.send(JSON.stringify(wallet_addr))
@@ -409,7 +412,7 @@ function import_file_selected(e) {
 </script>
 <select id="qswal" style="display:none"></select>
 
-<h2>Current wallet: <span id="cur_wallet_name"></span>
+<h2>Current wallet: <span id="cur_wallet_name"></span> <img id="loading_icon" src="webui/loading.gif" style="display:none">
 <span style="float:right" >
 <input id="move_left" type="button" value="Move left" onclick="move_wallet_left()">
 <input id="move_right" type="button" value="Move right"  onclick="move_wallet_right()">
