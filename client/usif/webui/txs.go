@@ -502,6 +502,10 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		maxbytes = network.TransactionsToSendSize
 	}
 
+	if maxbytes > network.TransactionsToSendSize {
+		maxbytes = network.TransactionsToSendSize
+	}
+
 	if len(r.Form["div"])>0 {
 		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
 		if e!=nil {
