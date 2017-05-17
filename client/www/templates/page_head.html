@@ -54,7 +54,7 @@ function refreshblock() {
 				if (beep_new_block.checked)  {
 					if (blno.innerText=="XXX") {
 						back_online_audio_file.play()
-					} else if (blno.innerText!="") {
+					} else if (blno.innerText!="...") {
 						new_block_audio_file.play()
 					}
 				}
@@ -73,13 +73,9 @@ function refreshblock() {
 	aj.send(null)
 }
 
-function init_fields() {
-	if (localStorage.getItem("new_block_beep")==="true") {
-		beep_new_block.checked = true
-	}
+if (localStorage.getItem("new_block_beep")==="true") {
+	beep_new_block.checked = true
 }
-
-init_fields()
 
 document.addEventListener('DOMContentLoaded', function() {
 	refreshblock()
