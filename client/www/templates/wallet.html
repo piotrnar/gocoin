@@ -142,7 +142,7 @@ function fetch_wallet_balance(name) {
 		}
 	}
 
-	loading_icon.style.display = 'block'
+	loading_icon.style.display = 'inline'
 	fetching_balance_in_progress = aj
 	aj.open("POST", "balance.json?summary", true)
 	aj.send(JSON.stringify(wallet_addr))
