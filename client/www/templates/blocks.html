@@ -1,11 +1,20 @@
+<style>
+.stat0 {
+}
+.stat1 {
+}
+</style>
+<div style="text-align:right;margin-bottom:8px;">
+<input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span onclick="stats_type_min.click()" style="cursor:pointer"> Mining Information</span>
+&nbsp;&bull;&nbsp;
+<input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()"><span onclick="stats_type_pro.click()" style="cursor:pointer"> Block Processing</span>
+</div>
 <table class="blocks bord" id="blkstab">
 <tr>
 	<th colspan="3">Block info
 	<th colspan="3">Block size
-	<th colspan="4">Mining info
-	<th>
-	<th>
-	<th colspan="6">Block fetch statistics
+	<th class="stat0" colspan="5" width="270">Mining Information
+	<th class="stat1" colspan="7" width="270">Block Processing
 <tr>
 	<th width="52">Height
 	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
@@ -13,18 +22,18 @@
 	<th width="30" align="right">TXs
 	<th width="20" align="right">SiOps
 	<th width="35" align="right">kByte
-	<th width="30">BTC
-	<th width="30">SPB
-	<th width="20">&ge;
-	<th width="20">Ver
-	<th align="left">Miner
-	<th width="10" title="Received from ConnID">Id
-	<th width="10" title="Missing TXs in cmpctblk">Ms
-	<th width="20" title="Preprocessing time ms" align="right">Pre
-	<th width="20" title="Full download time ms" align="right">D/L
-	<th width="20" title="Queueing time ms" align="right">Que
-	<th width="20" title="Block committed after ms" align="right">Ver
-	<th width="10" title="Extra times received">X
+	<th class="stat0" width="30">BTC
+	<th class="stat0" width="30">SPB
+	<th class="stat0" width="20">&ge;
+	<th class="stat0" width="20">Ver
+	<th class="stat0" align="left">Miner
+	<th class="stat1" width="10" title="Received from ConnID">Id
+	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Ms
+	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
+	<th class="stat1" width="20" title="Full download time ms" align="right">D/L
+	<th class="stat1" width="20" title="Queueing time ms" align="right">Que
+	<th class="stat1" width="20" title="Block committed after ms" align="right">Ver
+	<th class="stat1" width="10" title="Extra times received">X
 </tr>
 </table>
 <br>
@@ -35,6 +44,35 @@ Block Version Legend:<br>
 &bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
 &bull; <b>?</b> - Unrecognized block version<br>
 <script>
+function css(selector, property, value) {
+	for (var i=0; i<document.styleSheets.length;i++) {//Loop through all styles
+		//Try add rule
+		try {
+			document.styleSheets[i].insertRule(selector+ ' {'+property+':'+value+'}', document.styleSheets[i].cssRules.length);
+		} catch(err) {try { document.styleSheets[i].addRule(selector, property+':'+value);} catch(err) {}}//IE
+	}
+}
+
+
+function switch_stats_type() {
+	if (stats_type_pro.checked) {
+		css('.stat1', 'display', 'table-cell')
+		css('.stat0', 'display', 'none')
+		localStorage.setItem("blocks_info", "pro")
+	} else {
+		css('.stat0', 'display', 'table-cell')
+		css('.stat1', 'display', 'none')
+		localStorage.setItem("blocks_info", "min")
+	}
+}
+function remember_info_setting() {
+	var mod = localStorage.getItem("blocks_info")
+	if ((mod+'').length!=3) mod = "min"
+	document.getElementById('stats_type_'+mod).checked = true
+}
+remember_info_setting()
+switch_stats_type()
+
 const MINER_ID_COLUMN = 10
 
 var show_timestamp = false
@@ -132,16 +170,16 @@ function refreshblocks() {
 
 
 				td = row.insertCell(-1)
-				td.className = 'blreward'
+				td.className = 'blreward stat0'
 				td.innerText = (cs[i].Reward/1e8).toFixed(2)
 
 				td = row.insertCell(-1)
-				td.className = 'blspb'
+				td.className = 'blspb stat0'
 				td.innerText = cs[i].FeeSPB.toFixed(1)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
+				td.className = 'i stat0'
 				if (cs[i].TimeVer>=0 && cs[i].TxCnt>1) {
 					td.innerText = (cs[i].MinFeeKSPB/1000).toFixed(1)
 					td.title = cs[i].MinFeeKSPB
@@ -149,6 +187,7 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
+				td.className = 'stat0'
 				var vx = ''
 				if (cs[i].Version<=4) {
 					vx = cs[i].Version
@@ -174,44 +213,44 @@ function refreshblocks() {
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
-				td.className = "i"
+				td.className = "i stat0"
 				td.innerText = miner
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].TimeVer>0)  td.innerText = cs[i].FromConID
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].MissedCnt>0)  td.innerText = cs[i].MissedCnt
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].TimePre>0)  td.innerText = cs[i].TimePre
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].TimeDl>0)  td.innerText = cs[i].TimeDl
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].TimeQue>0)  td.innerText = cs[i].TimeQue
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].TimeVer>0) {
 					td.innerText = cs[i].TimeVer - cs[i].TimeQue
 				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat'
+				td.className = 'blstat stat1'
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				if (cs[i].TimeVer>=0) { // block received during this uptime
