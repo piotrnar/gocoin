@@ -12,16 +12,17 @@
 <table class="blocks bord" id="blkstab">
 <tr>
 	<th colspan="7">Block info
-	<th class="stat0" colspan="4" width="300">Mining Information
-	<th class="stat1" colspan="7" width="300">Block Processing <i>(ms)</i>
+	<th class="stat0" colspan="5">Mining Information
+	<th class="stat1" colspan="7">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
-	<th width="10" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
+	<th width="70" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
 	<th width="450">Hash
-	<th width="30" align="right">TXs
-	<th width="20" align="right">SiOps
-	<th width="35" align="right">kByte
-	<th width="30">BTC
+	<th width="35" align="right">TXs
+	<th width="40" align="right">SiOps
+	<th width="45" align="right">kByte
+	<th>
+	<th class="stat0" width="30">BTC
 	<th class="stat0" width="30" align="right">SPB
 	<th class="stat0" width="20" align="right">&ge;
 	<th class="stat0" width="20">Ver
@@ -165,10 +166,11 @@ function refreshblocks() {
 					td.title = cs[i].Size + ' -> ' + cs[i].NonWitnessSize
 					//(cs[i].NonWitnessSize/1000.0).toFixed(1)
 				}
-
+				td = row.insertCell(-1)
+				td.innerText = ''
 
 				td = row.insertCell(-1)
-				td.className = 'blreward'
+				td.className = 'blreward stat0'
 				td.innerText = (cs[i].Reward/1e8).toFixed(2)
 
 				td = row.insertCell(-1)
@@ -177,7 +179,7 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i stat0'
+				td.className = 'blminspb stat0'
 				if (cs[i].TimeVer>=0 && cs[i].TxCnt>1) {
 					td.innerText = (cs[i].MinFeeKSPB/1000).toFixed(1)
 					td.title = cs[i].MinFeeKSPB
