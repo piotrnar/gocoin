@@ -382,10 +382,10 @@ function open_address_book(idx) {
 		sel.add(op)
 	}
 
+	// add only virgin addresses from the current wallet
 	for (var i=0; i<wallet.length; i++) {
 		if (wallet[i].virgin) {
 			var op = document.createElement("option")
-			op.text += wallet[i].wallet + ": "
 			op.text += wallet[i].label
 			op.text += " - " + wallet[i].addr
 			op.value = wallet[i].addr
@@ -396,10 +396,9 @@ function open_address_book(idx) {
 	}
 
 	if (sel.options.length==0) {
-		// add all the addresses from the current wallet
+		// if the list is empty ATM,  add all addresses from current wallet
 		for (var i=0; i<wallet.length; i++) {
 			var op = document.createElement("option")
-			op.text += wallet[i].wallet + ": "
 			op.text += wallet[i].label
 			op.text += " - " + wallet[i].addr
 			op.value = wallet[i].addr
