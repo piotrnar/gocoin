@@ -187,7 +187,15 @@ td.blreward {
 }
 
 td.blspb {
+	font-size:10px;
 	color:#0000c0;
+	font-family: monospace;
+	text-align: right;
+}
+
+td.blminspb {
+	font-size:10px;
+	color:purple;
 	font-family: monospace;
 	text-align: right;
 }
