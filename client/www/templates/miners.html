@@ -130,8 +130,9 @@ function refresh_mining_info() {
 			}
 
 			el_avg_block_size.innerText = parseFloat(totbts/cs.BlockCount).toFixed(0)
-			el_total_fees.innerText = val2str(totfees)
-			el_avg_fpb.innerText = parseFloat(totfees/totbts).toFixed(0)
+			el_total_fees.innerText = (totfees/1e8).toFixed(2)
+			el_avg_fpbyte.innerText = parseFloat(totfees/totbts).toFixed(0)
+			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
 
 			th_sw_sign.title = parseFloat(100*sw_cnt/cs.BlockCount).toFixed(0) + '%'
 			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
@@ -160,7 +161,7 @@ at average difficulty <b id="el_avg_diff"></b>,
 which changes in <b id="el_diff_change_in"></b> blocks<br>
 
 Total mining fees amount to <b id="el_total_fees"></b> BTC
-with the average of <b id="el_avg_fpb"></b> Satoshis per byte.<br>
+with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b> BTC/block<br>
 
 <table id="minerstab" class="bord" width="100%">
 	<tr>
