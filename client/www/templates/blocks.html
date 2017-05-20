@@ -14,7 +14,7 @@
 	<th colspan="3">Block info
 	<th colspan="3">Block size
 	<th class="stat0" colspan="5" width="270">Mining Information
-	<th class="stat1" colspan="7" width="270">Block Processing
+	<th class="stat1" colspan="7" width="270">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
 	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
@@ -27,9 +27,9 @@
 	<th class="stat0" width="20">&ge;
 	<th class="stat0" width="20">Ver
 	<th class="stat0" align="left">Miner
-	<th class="stat1" width="10" title="Received from ConnID">Id
-	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Ms
-	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
+	<th class="stat1" width="10" title="Received from ConnID">NID
+	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Miss
+	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Prep
 	<th class="stat1" width="20" title="Full download time ms" align="right">D/L
 	<th class="stat1" width="20" title="Queueing time ms" align="right">Que
 	<th class="stat1" width="20" title="Block committed after ms" align="right">Ver
@@ -218,12 +218,12 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat stat1'
+				td.className = 'nodeid stat1'
 				if (cs[i].TimeVer>0)  td.innerText = cs[i].FromConID
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat stat1'
+				td.className = 'blstatmissedtxs stat1'
 				if (cs[i].MissedCnt>0)  td.innerText = cs[i].MissedCnt
 
 				td = row.insertCell(-1)
@@ -234,12 +234,12 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
-				if (cs[i].TimeDl>0)  td.innerText = cs[i].TimeDl
+				if (cs[i].TimeDl>0)  td.innerText = cs[i].TimeDl-cs[i].TimePre
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
-				if (cs[i].TimeQue>0)  td.innerText = cs[i].TimeQue
+				if (cs[i].TimeQue>0)  td.innerText = cs[i].TimeQue-cs[i].TimeDl
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
@@ -250,7 +250,7 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'blstat stat1'
+				td.className = 'blstatwaste stat1'
 				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
 
 				if (cs[i].TimeVer>=0) { // block received during this uptime
