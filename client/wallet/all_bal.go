@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"fmt"
-	"sync"
 	"bytes"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -14,13 +13,16 @@ import (
 var (
 	AllBalancesP2SH map[[20]byte]*OneAllAddrBal = make(map[[20]byte]*OneAllAddrBal)
 	AllBalancesP2KH map[[20]byte]*OneAllAddrBal = make(map[[20]byte]*OneAllAddrBal)
-	BalanceMutex sync.Mutex
+
+	dirty_list_p2sh [][20]byte
+	dirty_list_p2kh [][20]byte
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen+4]byte
 
 type OneAllAddrBal struct {
 	Value uint64  // Highest bit of it means P2SH
+	Dirty int
 	Unsp []OneAllAddrInp
 }
 
@@ -146,23 +148,60 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			}
 		} else {
 			rec.Value -= out.Value
-			rec.Unsp = append(rec.Unsp[:i], rec.Unsp[i+1:]...)
+
+			binary.LittleEndian.PutUint32(rec.Unsp[i][utxo.UtxoIdxLen:], 0xffffffff)
+			rec.Dirty++
+
+			if p2kh {
+				dirty_list_p2kh = append(dirty_list_p2kh, uidx)
+			} else {
+				dirty_list_p2sh = append(dirty_list_p2sh, uidx)
+			}
 		}
 	}
 }
 
+
+func block_finished(l [][20]byte, m map[[20]byte]*OneAllAddrBal) {
+		var i int
+	for _, k := range l {
+		rec := m[k]
+		if rec==nil || rec.Dirty==0 {
+			continue // already processed
+		}
+		if rec.Dirty==len(rec.Unsp) {
+			delete(m, k)
+		} else {
+			newunsp := make([]OneAllAddrInp, len(rec.Unsp)-rec.Dirty)
+			i = 0
+			for _, v := range rec.Unsp {
+				if binary.LittleEndian.Uint32(v[utxo.UtxoIdxLen:])!=0xffffffff {
+					newunsp[i] = v
+					i++
+				}
+			}
+			rec.Unsp = newunsp
+			rec.Dirty = 0
+		}
+	}
+}
+
+// This is called after a new block was accepted, to defrag all the "dirty" outputs
+func BlockFinished(h uint32) {
+	block_finished(dirty_list_p2sh, AllBalancesP2SH)
+	dirty_list_p2sh = nil
+	block_finished(dirty_list_p2kh, AllBalancesP2KH)
+	dirty_list_p2kh = nil
+}
+
 // This is called while accepting the block (from the chain's thread)
 func TxNotifyAdd(tx *utxo.UtxoRec) {
-	BalanceMutex.Lock()
 	NewUTXO(tx)
-	BalanceMutex.Unlock()
 }
 
 // This is called while accepting the block (from the chain's thread)
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
-	BalanceMutex.Lock()
 	all_del_utxos(tx, outs)
-	BalanceMutex.Unlock()
 }
 
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
