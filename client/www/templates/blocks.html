@@ -106,6 +106,21 @@ function do_rcvd_time(td) {
 }
 
 
+function ms2str(v) {
+	if (v>=10e3) {
+		if (v>=180e3) {
+			if (v>=3600e3) {
+				v = (v/3600e3).toFixed(1) + 'hrs'
+			} else {
+				v = (v/60e3).toFixed(1) + 'min'
+			}
+		} else {
+			v = (v/1000).toFixed(1) + 's'
+		}
+	}
+	return v
+}
+
 function refreshblocks() {
 	function onc(c,id) {
 		c.onclick = function() {hlminer(id)}
@@ -236,19 +251,7 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
 				if (cs[i].TimeDl>0) {
-					var v = cs[i].TimeDl - time_base
-					if (v>=10e3) {
-						if (v>=180e3) {
-							if (v>=3600e3) {
-								v = (v/3600e3).toFixed(1) + 'hrs'
-							} else {
-								v = (v/60e3).toFixed(1) + 'min'
-							}
-						} else {
-							v = (v/1000).toFixed(1) + 's'
-						}
-					}
-					td.innerText = v
+					td.innerText = ms2str(cs[i].TimeDl - time_base)
 					time_base = cs[i].TimeDl
 				}
 
@@ -256,7 +259,7 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
 				if (cs[i].TimeQue>0) {
-					td.innerText = cs[i].TimeQue - time_base
+					td.innerText = ms2str(cs[i].TimeQue - time_base)
 					time_base = cs[i].TimeQue
 				}
 
@@ -264,7 +267,7 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
 				if (cs[i].TimeVer>0) {
-					td.innerText = cs[i].TimeVer - time_base
+					td.innerText = ms2str(cs[i].TimeVer - time_base)
 				}
 
 				td = row.insertCell(-1)
