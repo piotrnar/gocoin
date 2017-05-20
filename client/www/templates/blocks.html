@@ -257,7 +257,7 @@ function refreshblocks() {
 				td.className = 'blstat stat1'
 				if (cs[i].TimeQue>0) {
 					td.innerText = cs[i].TimeQue - time_base
-					time_base = cs[i].TimeDl
+					time_base = cs[i].TimeQue
 				}
 
 				td = row.insertCell(-1)
