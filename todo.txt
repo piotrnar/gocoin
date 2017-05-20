@@ -7,6 +7,7 @@ Lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Client:
+* Update client/wallet database after (not during) the block is commited to UTXO
 * Orphaned blocks cause printing:
 	BlockGetExt failed for 0000000000000000013503d24a8c9b8001f663a4d5ea9f06f9f38d58805723ae Block not in the index
 	12577 cmpctblock not sent for 0000000000000000013503d24a8c9b8001f663a4d5ea9f06f9f38d58805723ae
