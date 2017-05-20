@@ -155,6 +155,21 @@ td.block_hash {
 	font-size:12px;
 }
 
+td.nodeid {
+	font-size:10px;
+	color:purple;
+	font-weight:bold;
+}
+
+td.blstatmissedtxs {
+	color:purple;
+	font-size:10px;
+}
+
+td.blstatwaste {
+	font-size:8px;
+}
+
 td.blstat {
 	font-size:10px;
 	font-style:italic;
