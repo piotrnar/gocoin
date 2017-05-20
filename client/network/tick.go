@@ -305,7 +305,7 @@ func tcp_server() {
 
 
 
-var TickStage int
+var TickStage int // TODO: This is to investigate very rare hanging inside NetworkTick()
 
 func NetworkTick() {
 	TickStage = 1
