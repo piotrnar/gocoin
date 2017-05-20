@@ -59,9 +59,6 @@ func all_addrs(par string) {
 		}
 	}
 
-	wallet.BalanceMutex.Lock()
-	defer wallet.BalanceMutex.Unlock()
-
 	for k, rec := range wallet.AllBalancesP2SH {
 		ptsh_vals += rec.Value
 		ptsh_outs += uint64(len(rec.Unsp))
