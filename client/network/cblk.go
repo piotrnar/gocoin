@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"runtime"
 	"io/ioutil"
 	"encoding/hex"
 	"crypto/sha256"
@@ -76,7 +77,8 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 	crec := GetchBlockForBIP152(hash)
 	if crec==nil {
-		fmt.Println(c.ConnID, "cmpctblock not sent for", hash.String())
+		_, fn, li, _ := runtime.Caller(1)
+		fmt.Println(c.ConnID, "cmpctblock not sent:", fn, li, c.Node.Agent, hash.String())
 		return
 	}
 
