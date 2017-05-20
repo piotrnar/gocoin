@@ -12,7 +12,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
 )
 
 
@@ -101,8 +100,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			// There werte no inputs
 			return
 		}
-		//wallet.BalanceMutex.Lock()
-		//wallet.BalanceMutex.Unlock()
 
 		for i:=1; ; i++ {
 			adridx := fmt.Sprint("adr", i)
@@ -234,9 +231,6 @@ func p_snd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := load_template("send.html")
-
-	wallet.BalanceMutex.Lock()
-	wallet.BalanceMutex.Unlock()
 
 	write_html_head(w, r)
 	w.Write([]byte(s))
