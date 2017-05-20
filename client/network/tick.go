@@ -325,7 +325,7 @@ func NetworkTick() {
 	var _v *OneConnection
 	for _, v := range OpenCons {
 		TickStage = 31
-		v.Mutex.Lock()
+		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
 		TickStage = 32
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
