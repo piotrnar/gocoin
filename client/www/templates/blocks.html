@@ -11,20 +11,19 @@
 </div>
 <table class="blocks bord" id="blkstab">
 <tr>
-	<th colspan="3">Block info
-	<th colspan="3">Block size
-	<th class="stat0" colspan="5" width="270">Mining Information
-	<th class="stat1" colspan="7" width="270">Block Processing <i>(ms)</i>
+	<th colspan="7">Block info
+	<th class="stat0" colspan="4" width="300">Mining Information
+	<th class="stat1" colspan="7" width="300">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
-	<th width="62" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
-	<th>Hash
+	<th width="10" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
+	<th width="450">Hash
 	<th width="30" align="right">TXs
 	<th width="20" align="right">SiOps
 	<th width="35" align="right">kByte
-	<th class="stat0" width="30">BTC
-	<th class="stat0" width="30">SPB
-	<th class="stat0" width="20">&ge;
+	<th width="30">BTC
+	<th class="stat0" width="30" align="right">SPB
+	<th class="stat0" width="20" align="right">&ge;
 	<th class="stat0" width="20">Ver
 	<th class="stat0" align="left">Miner
 	<th class="stat1" width="10" title="Received from ConnID">NID
@@ -145,7 +144,6 @@ function refreshblocks() {
 				}
 
 				td = row.insertCell(-1)
-				td.style.textAlign = 'center'
 				td.className = 'mono block_hash'
 				td.innerText = cs[i].Hash
 
@@ -170,7 +168,7 @@ function refreshblocks() {
 
 
 				td = row.insertCell(-1)
-				td.className = 'blreward stat0'
+				td.className = 'blreward'
 				td.innerText = (cs[i].Reward/1e8).toFixed(2)
 
 				td = row.insertCell(-1)
@@ -236,7 +234,19 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
 				if (cs[i].TimeDl>0) {
-					td.innerText = cs[i].TimeDl - time_base
+					var v = cs[i].TimeDl - time_base
+					if (v>=10e3) {
+						if (v>=180e3) {
+							if (v>=3600e3) {
+								v = (v/3600e3).toFixed(1) + 'hrs'
+							} else {
+								v = (v/60e3).toFixed(1) + 'min'
+							}
+						} else {
+							v = (v/1000).toFixed(1) + 's'
+						}
+					}
+					td.innerText = v
 					time_base = cs[i].TimeDl
 				}
 
