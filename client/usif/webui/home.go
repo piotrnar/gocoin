@@ -31,6 +31,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 	// The handler also gets called for /favicon.ico
 	if r.URL.Path!="/" {
 		http.NotFound(w, r)
+		return
 	}
 
 	s := load_template("home.html")
