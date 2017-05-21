@@ -187,8 +187,17 @@ broken_topic:
 
 func ServerThread(iface string) {
 	http.HandleFunc("/webui/", p_webui)
-	http.HandleFunc("/wal", p_wal)
-	http.HandleFunc("/snd", p_snd)
+
+	if common.FLAG.NoWallet {
+		webuimenu = append(webuimenu[:1], webuimenu[3:]...) // remove Wallet and MakeTx
+	} else {
+		http.HandleFunc("/wal", p_wal)
+		http.HandleFunc("/snd", p_snd)
+		http.HandleFunc("/balance.json", json_balance)
+		http.HandleFunc("/payment.zip", dl_payment)
+		http.HandleFunc("/balance.zip", dl_balance)
+	}
+
 	http.HandleFunc("/net", p_net)
 	http.HandleFunc("/txs", p_txs)
 	http.HandleFunc("/blocks", p_blocks)
@@ -202,9 +211,6 @@ func ServerThread(iface string) {
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
 
-	http.HandleFunc("/payment.zip", dl_payment)
-	http.HandleFunc("/balance.zip", dl_balance)
-
 	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
 	http.HandleFunc("/counts.json", json_counts)
@@ -217,7 +223,6 @@ func ServerThread(iface string) {
 	http.HandleFunc("/bwchar.json", json_bwchar)
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)
 	http.HandleFunc("/blkver.json", json_blkver)
-	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/miners.json", json_miners)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
