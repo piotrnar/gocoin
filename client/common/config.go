@@ -89,6 +89,7 @@ var (
 		UserAgent string
 		AllBalances struct {
 			MinValue uint64  // Do not keep balance records for values lower than this
+			UseMapCnt int
 		}
 		DropPeers struct {
 			DropEachMinutes uint // zero for never
@@ -149,6 +150,7 @@ func InitConfig() {
 	CFG.UserAgent = DefaultUserAgent
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
+	CFG.AllBalances.UseMapCnt = 100
 
 	CFG.DropPeers.DropEachMinutes = 5 // minutes
 	CFG.DropPeers.BlckExpireHours = 48 // hours
