@@ -26,7 +26,7 @@ func (sk SortedWalletAddrs) Len() int {
 
 func (sk SortedWalletAddrs) Less(a, b int) bool {
 	if sort_by_cnt {
-		return len(sk[a].rec.Unsp) > len(sk[b].rec.Unsp)
+		return sk[a].rec.Count() > sk[b].rec.Count()
 	}
 	return sk[a].rec.Value > sk[b].rec.Value
 }
@@ -61,16 +61,16 @@ func all_addrs(par string) {
 
 	for k, rec := range wallet.AllBalancesP2SH {
 		ptsh_vals += rec.Value
-		ptsh_outs += uint64(len(rec.Unsp))
-		if sort_by_cnt && len(rec.Unsp)>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
+		ptsh_outs += uint64(rec.Count())
+		if sort_by_cnt && rec.Count()>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
 			best = append(best, OneWalletAddrs{P2SH:true, Key:k, rec:rec})
 		}
 	}
 
 	for k, rec := range wallet.AllBalancesP2KH {
 		ptkh_vals += rec.Value
-		ptkh_outs += uint64(len(rec.Unsp))
-		if sort_by_cnt && len(rec.Unsp)>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
+		ptkh_outs += uint64(rec.Count())
+		if sort_by_cnt && rec.Count()>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
 			best = append(best, OneWalletAddrs{Key:k, rec:rec})
 		}
 	}
@@ -108,7 +108,7 @@ func all_addrs(par string) {
 			copy(pkscr_p2kh[3:23], best[i].Key[:])
 			ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
 		}
-		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", len(best[i].rec.Unsp), "inputs")
+		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
 	}
 }
 
