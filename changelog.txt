@@ -3,6 +3,7 @@
 * WebUI: Do not display wallet name(s) in each tab's header (privacy)
 * WebUI/Blocks: Dispaly either mining info or block processing info
 * client/wallet: Use hashmap (instead of list) for addresses with "CFG.AllBalances.UseMapCnt"+ unspent outputs
+* WebUI: Do not show Wallet and MakeTx tabs in NoWallet mode
 
 1.9.0 - 2017-05-05
 * Got rid of "qdb" for UTXO.
