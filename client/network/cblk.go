@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 	"bytes"
-	"runtime"
 	"io/ioutil"
 	"encoding/hex"
 	"crypto/sha256"
@@ -50,14 +49,14 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	if crec.Block==nil {
 		crec.Block, _ = btc.NewBlock(crec.Data)
 		if crec.Block==nil {
-			fmt.Println("SendCmpctBlk: btc.NewBlock() failed for", hash.String())
+			fmt.Println("GetchBlockForBIP152: btc.NewBlock() failed for", hash.String())
 			return
 		}
 	}
 
 	if len(crec.Block.Txs)==0 {
 		if crec.Block.BuildTxList()!=nil {
-			fmt.Println("SendCmpctBlk: bl.BuildTxList() failed for", hash.String())
+			fmt.Println("GetchBlockForBIP152: bl.BuildTxList() failed for", hash.String())
 			return
 		}
 	}
@@ -74,12 +73,11 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	return
 }
 
-func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
+func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) bool {
 	crec := GetchBlockForBIP152(hash)
 	if crec==nil {
-		_, fn, li, _ := runtime.Caller(1)
-		fmt.Println(c.ConnID, "cmpctblock not sent:", fn, li, c.Node.Agent, hash.String())
-		return
+		//fmt.Println(c.ConnID, "cmpctblock not sent:", c.Node.Agent, hash.String())
+		return false
 	}
 
 	k0 := binary.LittleEndian.Uint64(crec.BIP152[8:16])
@@ -108,6 +106,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) {
 		crec.Block.Txs[0].WriteSerialized(msg) // coinbase - index 0
 	}
 	c.SendRawMsg("cmpctblock", msg.Bytes())
+	return true
 }
 
 func (c *OneConnection) ProcessGetBlockTxn(pl []byte) {
