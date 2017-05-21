@@ -354,6 +354,8 @@ function open_address_book(idx) {
 	}
 
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
+
+	// append the curtrent wallet's virgin adds
 	try { // in case if we had no wallets in the browser
 		var tmp = parse_wallet(localStorage.getItem("gocoinWal_"+qswal.options[qswal.selectedIndex].text))
 		for (var i in tmp) {
@@ -366,7 +368,6 @@ function open_address_book(idx) {
 	var div = document.createElement("div")
 	c.style.position="realitive"
 	div.style.position="absolute"
-
 
 	var sel = document.createElement("select")
 	sel.style.width = '100%'
@@ -382,31 +383,6 @@ function open_address_book(idx) {
 		sel.add(op)
 	}
 
-	// add only virgin addresses from the current wallet
-	for (var i=0; i<wallet.length; i++) {
-		if (wallet[i].virgin) {
-			var op = document.createElement("option")
-			op.text += wallet[i].label
-			op.text += " - " + wallet[i].addr
-			op.value = wallet[i].addr
-			op.selected = inadr.value==op.value
-			op["addr_label"] = wallet[i].label
-			sel.add(op)
-		}
-	}
-
-	if (sel.options.length==0) {
-		// if the list is empty ATM,  add all addresses from current wallet
-		for (var i=0; i<wallet.length; i++) {
-			var op = document.createElement("option")
-			op.text += wallet[i].label
-			op.text += " - " + wallet[i].addr
-			op.value = wallet[i].addr
-			op.selected = inadr.value==op.value
-			op["addr_label"] = wallet[i].label
-			sel.add(op)
-		}
-	}
 	div.appendChild(sel)
 	c.appendChild(div)
 
