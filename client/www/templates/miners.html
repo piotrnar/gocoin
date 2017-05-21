@@ -151,6 +151,7 @@ function refresh_mining_info() {
 </script>
 <table><tr>
 <td valign="top" width="800"><img id="loading_icon" src="webui/loading.gif" style="display:inline"><div id="mining_info_div" style="display:none">
+<div style="margin-bottom:8px">
 Data from last <b id="el_min_hrs"></b> hours.
  The oldest block starting at <b id="el_first_block_time"></b><br>
 Total number of blocks was <b id="el_block_cnt"></b>,
@@ -161,8 +162,8 @@ at average difficulty <b id="el_avg_diff"></b>,
 which changes in <b id="el_diff_change_in"></b> blocks<br>
 
 Total mining fees amount to <b id="el_total_fees"></b> BTC
-with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b> BTC/block<br>
-
+with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b> BTC/block
+</div>
 <table id="minerstab" class="bord" width="100%">
 	<tr>
 		<th width="120" align="left">Miner
