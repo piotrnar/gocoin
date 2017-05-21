@@ -75,7 +75,12 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
-			c.SendCmpctBlk(btc.NewUint256(h[4:]))
+			if !c.SendCmpctBlk(btc.NewUint256(h[4:])) {
+				println(c.ConnID, "asked for CmpctBlk we don't have")
+				if c.Misbehave("GetCmpctBlk", 100) {
+					break
+				}
+			}
 		} else {
 			if common.DebugLevel>0 {
 				println("getdata for type", typ, "not supported yet")
