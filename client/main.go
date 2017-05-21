@@ -10,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
-	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -68,8 +67,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			// Freshly mined block - do the inv and beeps...
 			new_block_mined(bl, newbl.Conn)
 		}
-
-		wallet.BlockFinished(common.BlockChain.BlockTreeEnd.Height)
 
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
@@ -225,9 +222,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
 
 	new_block_mined(msg.Block, nil)
-
-	wallet.BlockFinished(common.BlockChain.BlockTreeEnd.Height)
-
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
