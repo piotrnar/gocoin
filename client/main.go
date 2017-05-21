@@ -222,9 +222,12 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	}
 
 	common.CountSafe("RPCBlockOK")
-	println("New mined block", msg.Block.Height, "accepted OK")
+	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
 
 	new_block_mined(msg.Block, nil)
+
+	wallet.BlockFinished(common.BlockChain.BlockTreeEnd.Height)
+
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
