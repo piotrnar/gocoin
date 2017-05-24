@@ -4,6 +4,7 @@
 * WebUI/Blocks: Dispaly either mining info or block processing info
 * client/wallet: Use hashmap (instead of list) for addresses with "CFG.AllBalances.UseMapCnt"+ unspent outputs
 * WebUI: Do not show Wallet and MakeTx tabs in NoWallet mode
+* WebUI/Wallet: Show QR code when clicking on the address
 
 1.9.0 - 2017-05-05
 * Got rid of "qdb" for UTXO.
