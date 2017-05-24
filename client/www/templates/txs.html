@@ -243,7 +243,7 @@ function deltx_click(id) {
 	txrawdata.innerText = ''
 }
 
-var prvpos
+var prvpos = null
 
 function decode_tx() {
 	decode_tx_id(this.id)
@@ -340,13 +340,16 @@ function decode_tx_id(txid) {
 			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
 
 			rawdiv.innerHTML = s
+
+			if (prvpos==null) {
+				fade.addEventListener('click', closepopup)
+				fade.style.cursor = 'pointer'
+				fade.title = 'Click here to close the popup'
+			}
+
+
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
-
-			// TODO: make it to happen only once
-			fade.addEventListener('click', closepopup)
-			fade.style.cursor = 'pointer'
-			fade.title = 'Click here to close the popup'
 
 			light.style.display='block'
 			fade.style.display='block'

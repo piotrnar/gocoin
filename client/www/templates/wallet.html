@@ -1,3 +1,41 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/qrcode.min.js"></script>
+<div id="light" class="white_content" style="height:auto;left:20%;width:60%">
+<table width="100%">
+<tr><td align="right"><a href="javascript:closepopup()">X</a>
+<tr><td align="center"><span class="qr_addr_label" id="qr_label"></span>
+<tr><td align="center"><span class="qr_addr_addr" id="qr_address"></span>
+<tr><td align="center">
+<div id="qrcode"></div>
+<tr><td align="right">&nbsp;
+</table>
+</div><div id="fade" class="black_overlay"></div>
+
+<script>
+var prvpos = null
+
+var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:300})
+
+function showqrcode(label, addr) {
+	qr_label.innerText = label
+	qr_address.innerText = addr
+	qrcode.makeCode(addr)
+
+	if (prvpos==null) {
+		fade.addEventListener('click', closepopup)
+		fade.style.cursor = 'pointer'
+		fade.title = 'Click here to close the popup'
+	}
+
+	prvpos = document.body.scrollTop
+	window.scrollTo(0,0)
+
+	light.style.display='block'
+	fade.style.display='block'
+	document.addEventListener("scroll", noscroll)
+}
+</script>
+
 <style>
 td.addr_long {
 	font-size:10px;
@@ -43,6 +81,10 @@ function switchwallet_button_click_browser() {
 }
 
 function fetch_wallet_balance(name) {
+	function onc(c,ad,lab) {
+		c.onclick = function() {showqrcode(lab,ad)}
+	}
+
 	if (fetching_balance_in_progress!=null) {
 		fetching_balance_in_progress.abort()
 		fetching_balance_in_progress = null
@@ -82,12 +124,13 @@ function fetch_wallet_balance(name) {
 				}
 
 				var td, row = walltab.insertRow(-1)
-				row.className = "how"
+				row.className = "hov"
 				row.id = 'walrow'+idxx
 
 				td = row.insertCell(-1)
-				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
+				td.className = (wallet_addr[i].length>80) ? "hand addr_long" : "hand addr_norm"
 				td.innerText = wallet_addr[i]
+				onc(td, wallet_addr[i], wallet[i].label)
 
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
@@ -480,6 +523,8 @@ If Address comes from uncompressed key, you will not be able to spend anything d
 </form>
 </table>
 </div>
+
+<input type="button" value="test" onclick="showqrcode('label_35', '1P8he7gb8saaFsiTnfayaALdG246rNcQ72')">
 
 
 <script>

@@ -243,3 +243,13 @@ div.footer {
 	z-index:1002;
 	overflow: auto;
 }
+
+.qr_addr_label {
+	font-size:24px;
+	font-weight:bold;
+}
+
+.qr_addr_addr {
+	font-size:17px;
+	font-weight:bold;
+}
