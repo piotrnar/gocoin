@@ -392,7 +392,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
 		NetBlocks <- &BlockRcvd{Conn:c, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 	} else {
-		b2g.TmPreproc = time.Now()
+		if b2g.TmPreproc.IsZero() { // do not overwrite TmPreproc if already set
+			b2g.TmPreproc = time.Now()
+		}
 		b2g.InProgress++
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
