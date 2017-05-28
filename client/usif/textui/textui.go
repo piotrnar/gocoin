@@ -159,7 +159,7 @@ func show_info(par string) {
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	fmt.Printf("Transactions InMemPool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
+	fmt.Printf("Transactions  In Memory Pool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
 		len(network.TransactionsToSend), network.TransactionsToSendSize >> 20,
 		len(network.TransactionsRejected), network.TransactionsRejectedSize >> 20,
 		len(network.TransactionsPending), len(network.NetTxs))
