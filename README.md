@@ -68,7 +68,7 @@ from your OS's command prompt without a need to specify full path to the executa
 
 ### Linux
 
-When building for Linux, install `gcc` or delete file `lib/utxo/membind_linux.go`
+When building for Linux make sure to have `gcc` installed or delete file `lib/utxo/membind_linux.go`
 
 
 # Getting sources
