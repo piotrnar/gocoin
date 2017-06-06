@@ -6,46 +6,35 @@ if ($page=='') {
 	$page = 'index';
 }
 
-function get_html($fn) {
+function get_between_tags($content, $tag) {
+	$beg = strpos($content, "<$tag>");
+	if ($beg!==FALSE) {
+		$beg += strlen($tag)+2;
+	}
+	$end = strpos($content, "</$tag>");
+	if ($end===FALSE) {
+		$end = strlen($content);
+	}
+	return substr($content, $beg, $end-$beg);
+}
+
+
+function get_body($fn) {
 	$content = file_get_contents($fn);
-
-	$beg = strpos($content, "<body>");
-	if ($beg!==FALSE) {
-		$beg += 6;
-	}
-	$end = strpos($content, "</body>");
-	if ($end===FALSE) {
-		$end = strlen($content);
-	}
-
-	return substr($content, $beg, $end-$beg);
+	return get_between_tags($content, "body");
 }
 
-function get_title($content) {
-	$beg = strpos($content, "<h1>");
-	if ($beg!==FALSE) {
-		$beg += 4;
-	}
-	$end = strpos($content, "</h1>");
-	if ($end===FALSE) {
-		$end = strlen($content);
-	}
-
-	return substr($content, $beg, $end-$beg);
-}
-
-$menu = get_html("menu.html");
+$menu = get_body("menu.html");
 $fielname = "gocoin_$page.html";
 
+// add class="selected" to the main menu
 $apos = strpos($menu, 'href="' . $fielname);
 if ($apos!==FALSE) {
 	$menu = substr($menu, 0, $apos) . 'class="selected" ' . substr($menu, $apos);
 }
 
-$content = get_html($fielname);
-$title = get_title($content);
-
-// add class="selected" to the main menu
+$content = get_body($fielname);
+$title = get_between_tags($content, "h1");
 
 
 echo '<html>
