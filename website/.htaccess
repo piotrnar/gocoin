@@ -1,0 +1,7 @@
+RewriteEngine on
+Options +FollowSymLinks
+
+RewriteRule ^gocoin_([a-z0-9_\-]+).html$ page.php\?id=$1 [L]
+
+RewriteRule ^.*$ page.php [L]
+
