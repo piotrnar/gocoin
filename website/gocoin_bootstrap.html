@@ -6,7 +6,7 @@
 <h1>Bootstraping</h1>
 Since Gocoin's client is a so-called <i>full node</i>,&nbsp;the initial block chain synchronization is quite a time consuming operation.<br>
 <br>
-With a good internet connection you may speed up the process quite much by starting the client with <code>-v -trust</code> switches.<br>
+With a good internet connection you may speed up the process quite much by starting the client with <code>-v -trust -nowallet</code> switches.<br>
 <br>
 Switch <code>-v</code> causes the node to only maintain UTXO database in memory.
 It writes the content of the database to disk when you are shutting down the client properly.
@@ -14,18 +14,9 @@ It writes the content of the database to disk when you are shutting down the cli
 <br>
 Switch <code>-trust</code> makes the node to treat each new downloaded block as trusted, thus not verifying the scripts inside its transactions.
 After syncing your chain with this switch on, it is important to check the hash of the last received block (e.g. comparing it with a value from a trusted block explorer).
-
-<h2>Import from Satoshi</h2>
-When you run the client node for the first time, it will look for the satoshi's client (otherwise known as: <i>bitcoin-qt</i>, <i>bitcoind</i> or <i>bitcoin core</i>) database in its default location (e.g. <code>~/.bitcoin/blocks</code> or <code>%appdata%\Bitcoin\blocks</code>).<br>
 <br>
-If found, it will ask you whether you want to import these blocks - you should say 'yes'.<br>
-Choosing to verify the scripts is not recommended, since then it will take much more time while the satoshi's database should only contain verified blocks anyway.<br>
 <br>
-There is also a separate tool called <b>importblocks</b> that you can use to do the same thing<br>
-Start the tool without parameters and it will tell you how to use it.<br>
-While importing the blockchain using this tool, make sure that your node is not running.<br>
-<br>
-In both cases, the operation might take a long time, but it is one time only.<br>
+Switch <code>-nowallet</code> disables wallet functionality which speeds up block processing. It also limit the memory used the node.
 
 </body>
 </html>

@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 )
 
-const Uint256IdxLen = 16  // The bigger it is, the more memory is needed, but lower chance of a collision
+const Uint256IdxLen = 8  // The bigger it is, the more memory is needed, but lower chance of a collision
 
 type Uint256 struct {
 	Hash [32]byte

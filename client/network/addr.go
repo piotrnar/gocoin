@@ -2,6 +2,7 @@ package network
 
 import (
 	"time"
+	"sort"
 	"sync"
 	"bytes"
 	"encoding/binary"
@@ -29,35 +30,42 @@ func ExternalAddrLen() (res int) {
 
 
 func BestExternalAddr() []byte {
-	var best_ip, worst_ip uint32
-	var worst_tim, best_tim uint
+	var best_ip uint32
 
 	ExternalIpMutex.Lock()
-
 	if len(ExternalIp4) > 0 {
-		for ip, rec := range ExternalIp4 {
-			if worst_tim == 0 {
-				worst_tim = rec[1]
-				worst_ip = ip
-			}
-			if best_ip==0 || (rec[1]>best_tim && rec[0]>3) {
-				/*If newer timestamp and more than 3 counts */
-				best_ip = ip
-				best_tim = rec[1]
-			} else if rec[1] < worst_tim {
-				worst_tim = rec[1]
-				worst_ip = ip
-			}
+		type oneip struct {
+			ip uint32
+			cnt uint
+			tim uint
 		}
+		arr := make([]oneip, len(ExternalIp4))
+		var idx int
+		for ip, rec := range ExternalIp4 {
+			arr[idx].ip = ip
+			arr[idx].cnt = rec[0]
+			arr[idx].tim = rec[1]
+		}
+		sort.Slice(arr, func (i, j int) bool {
+			if (arr[i].cnt>3 && arr[j].cnt>3 || arr[i].cnt==arr[j].cnt) {
+				return arr[j].tim > arr[i].tim
+			}
+			return arr[j].cnt > arr[i].cnt
+		})
+		best_ip = arr[0].ip
 
 		// Expire any extra IP if it has been stale for more than an hour
-		if len(ExternalIp4) > 1 && uint(time.Now().Unix())-worst_tim > 3600 {
-			common.CountSafe("ExternalIPExpire")
-			delete(ExternalIp4, worst_ip)
+		if len(arr) > 1 {
+			worst := &arr[len(arr)-1]
+
+			if uint(time.Now().Unix())-worst.tim > 3600 {
+				common.CountSafe("ExternalIPExpire")
+				delete(ExternalIp4, worst.ip)
+			}
 		}
 	}
-
 	ExternalIpMutex.Unlock()
+
 	res := make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], common.Services)
 	// leave ip6 filled with zeros, except for the last 2 bytes:

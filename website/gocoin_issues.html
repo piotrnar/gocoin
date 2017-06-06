@@ -4,82 +4,11 @@
 </head>
 <body>
 <h1>Known issues</h1>
-<!--
-<h2>Memory usage</h2>
-The amount of required system memory for the online node is not something to be neglected.<br>
-At the other hand, having enough of it you should see this software performing better than any other full bitcoin node out there.<br>
-<br>
-
-If you would like to decrease memory consumption, you can try any (or all) of the following tips.<br>
-Shut down your node, open your&nbsp;<b>goconf.cfg</b>&nbsp;file in a text editor and set:<br>
-<br>
-<ul><li><b>NoCacheBefore</b> to <b>-1</b></li>
-<li><b>GCPercTrshold</b>&nbsp;to <b>25</b> or less</li>
-<li><b>MaxCachedBlocks</b>&nbsp;to <b>25</b> or less</li></ul>
-<br>
-Save the new config and start the client.&nbsp;<br>
-<br>
-
-<h2>No gcc compiler</h2>
-The database engine&nbsp;uses some C code to&nbsp;optimize&nbsp;system memory usage.&nbsp;If you do not have a proper gcc compiler installed in your system, you will not be able to build it.&nbsp;To work around this issue copy file <code>gocoin/lib/qdb/no_gcc/membind.go</code> one folder up (overwriting the original&nbsp;<code>gocoin/</code>lib/<code>qdb/membind.go</code>).<br>
-<br>
-Still, if you can make it, it is recommended to install gcc in your system, because it will decrease the node's memory usage.<br>
-<br>
-<i><b>Note:</b> for Windows you will need mingw64. After installing it (before running "go build"),&nbsp;make sure that the path to gcc.exe is in the system's PATH.</i><br>
-<br>
-
-<h2>Database locking problems</h2>
-You must not run two instances of the client node at the same time, unless they would operate on a different database folders (running real-net and test-net nodes simultaneously is fine).<br>
-<br>
-There is a built-in protection against running two clients which operate on the same database, but it has not been well tested.<br>
-That is why you should be careful and make sure by yourself to not execute a client more then once at the same time, because if there is something wrong with this protection mechanism, it will likely corrupt your database, meaning that you may need to re-download the entire block chain.<br>
-<br>
-
-Moreover there is a known issue with the database locking on Linux, though rather a minor one.<br>
-If you do not shut down your node gracefully, next time you try to launch it, it will complain that the database folder is locked and refuse to start.<br>
-In order to fix it, you will need to remove the file it mentions.<br>
-<br>
-
-<h2>Duplicate stealth addresses</h2>
-If you add the same stealth address (same scan-key and same spend-key), but with different prefixes, to one or more of your wallets (including the ADDRESS file), the node will merge them into one stealth address with null prefix. This will likely cause a&nbsp;performance&nbsp;drop.
-<br>
--->
 
 <h2>Coinbase maturity</h2>
 According to the block chain protocol, generated coins can be spent only after 100 confirmations.<br>
 Users should be aware that fetching a wallet's balance from the client returns&nbsp;also&nbsp;immature coinbase transactions.<br>
 If you provide such coins to the gocoin wallet, the network will not mine your signed transaction until the coinbase
 inputs that you included in it get 100 confirmations.<br>
-<br>
-
-
-<h2>Possible unspent database corruption</h2>
-
-It happens sometimes that the unspent outputs database gets corrupt when you are closing your node.
-There may be different reasons for that.<br>
-Having a corrput database, when you start your node the next time, it will malfunction (i.e. panic or do not process any new blocks).<br>
-<br>
-
-The simplest way to fix this issue is to rebuild the entire unspent database.
-In order to do this, start the client with "-r" switch (<code>client -r</code>).<br>
-<br>
-Unfortunatelly the rebuilding operaiton takes a couple of hours.<br>
-<br>
-To save time, before rebuilding the database, you may want to try undoing the last few blocks of your corrupt database.<br>
-In order to do this start the client with <code>-undo n</code> switch where n is number of blocks to undo.
-For example, try running:<br>
-<code>    client -undo 5</code><br>
-After it finishes, start the client again, but this time without <code>-undo</code> switch.<br>
-<br>
-In case the undo does not help, it is good to have a backup of some recent version of the unspent database.<br>
-Then you won't need to rebuild it entirely, but only the part that came after your last backup.<br>
-What you need to backup is the entire folder named <code>unspent4/</code>, from gocoin's data folder.<br>
-<i><b>Note:</b> After you had recovered a backup, do not use "-r" switch.</i><br>
-<br>
-For your own convinience <b>backup your <code>unspent4/</code> folder every week or so.</b><br>
-Before making the backup, to save disk space, use TextUI command <code>defrag</code>
-which will defragment the database before shutting down the node.<br>
-<b>Only backup the folder when the client is not running.</b>
-
 </body>
 </html>

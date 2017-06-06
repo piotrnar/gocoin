@@ -1,4 +1,6 @@
 1.9.1
+* "btc.Uint256IdxLen" and "utxo.UtxoIdxLen" set back to 8 bytes, to decrease memory usage
+* Client: fixed the way best external IP is selected
 * WebUI/Txs: Limit memory pool fees graph to first 10 MB
 * WebUI: Do not display wallet name(s) in each tab's header (privacy)
 * WebUI/Blocks: Dispaly either mining info or block processing info

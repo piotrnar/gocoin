@@ -22,7 +22,7 @@ Eech value is variable length:
 
 
 const (
-	UtxoIdxLen = 16
+	UtxoIdxLen = 8
 )
 
 type UtxoKeyType [UtxoIdxLen]byte
