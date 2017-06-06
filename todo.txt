@@ -7,6 +7,7 @@ Lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Client:
+* After downloading blockchain with "-v" it does not save UTXO.db
 * Abort saving of UTXO.db before processing a new block
 * Update client/wallet database after (not during) the block is commited to UTXO as it struggles on testnet after block 601024...)
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)
