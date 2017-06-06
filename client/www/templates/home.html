@@ -374,12 +374,6 @@ function refreshbwinfo() {
 				external_ip0.title = ''
 				external_others.innerHTML = ''
 			} else {
-				bw.ExternalIP.sort(function(a,b){
-					if (a.Count>3 && b.Count>3 || a.Count==b.Count) {
-						return b.Timestamp - a.Timestamp
-					}
-					return b.Count - a.Count
-				})
 				var ht=''
 				if (bw.ExternalIP.length>1) {
 					for (var i=1; i<bw.ExternalIP.length; i++) {
