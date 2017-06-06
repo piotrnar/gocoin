@@ -366,6 +366,7 @@ func (db *UnspentDB) Idle() bool {
 
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
+	db.volatimemode = false
 	db.HurryUp = true
 	db.Idle()
 	for db.WritingInProgress {
