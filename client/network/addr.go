@@ -29,48 +29,61 @@ func ExternalAddrLen() (res int) {
 }
 
 
-func BestExternalAddr() []byte {
-	var best_ip uint32
+type ExternalIpRec struct {
+	IP uint32
+	Cnt uint
+	Tim uint
+}
 
+
+// Returns the list sorted by "freshness"
+func GetExternalIPs() (arr []ExternalIpRec) {
 	ExternalIpMutex.Lock()
+	defer ExternalIpMutex.Unlock()
 	if len(ExternalIp4) > 0 {
-		type oneip struct {
-			ip uint32
-			cnt uint
-			tim uint
-		}
-		arr := make([]oneip, len(ExternalIp4))
+		arr = make([]ExternalIpRec, len(ExternalIp4))
 		var idx int
 		for ip, rec := range ExternalIp4 {
-			arr[idx].ip = ip
-			arr[idx].cnt = rec[0]
-			arr[idx].tim = rec[1]
+			arr[idx].IP = ip
+			arr[idx].Cnt = rec[0]
+			arr[idx].Tim = rec[1]
+			idx++
 		}
 		sort.Slice(arr, func (i, j int) bool {
-			if (arr[i].cnt>3 && arr[j].cnt>3 || arr[i].cnt==arr[j].cnt) {
-				return arr[j].tim > arr[i].tim
+			if (arr[i].Cnt > 3 && arr[j].Cnt > 3 || arr[i].Cnt==arr[j].Cnt) {
+				return arr[i].Tim > arr[j].Tim
 			}
-			return arr[j].cnt > arr[i].cnt
+			return arr[i].Cnt > arr[j].Cnt
 		})
-		best_ip = arr[0].ip
+	}
+	return
+}
 
-		// Expire any extra IP if it has been stale for more than an hour
-		if len(arr) > 1 {
-			worst := &arr[len(arr)-1]
 
-			if uint(time.Now().Unix())-worst.tim > 3600 {
-				common.CountSafe("ExternalIPExpire")
-				delete(ExternalIp4, worst.ip)
+func BestExternalAddr() []byte {
+	arr := GetExternalIPs()
+
+	// Expire any extra IP if it has been stale for more than an hour
+	if len(arr) > 1 {
+		worst := &arr[len(arr)-1]
+
+		if uint(time.Now().Unix())-worst.Tim > 3600 {
+			common.CountSafe("ExternalIPExpire")
+			ExternalIpMutex.Lock()
+			if ExternalIp4[worst.IP][0]==worst.Cnt {
+				delete(ExternalIp4, worst.IP)
 			}
+			ExternalIpMutex.Unlock()
 		}
 	}
-	ExternalIpMutex.Unlock()
 
 	res := make([]byte, 26)
 	binary.LittleEndian.PutUint64(res[0:8], common.Services)
 	// leave ip6 filled with zeros, except for the last 2 bytes:
 	res[18], res[19] = 0xff, 0xff
-	binary.BigEndian.PutUint32(res[20:24], best_ip)
+	if len(arr)>0 {
+		binary.BigEndian.PutUint32(res[20:24], arr[0].IP)
+	}
 	binary.BigEndian.PutUint16(res[24:26], common.DefaultTcpPort)
 	return res
 }
