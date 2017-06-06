@@ -164,13 +164,12 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	out.Open_conns_in = network.InConsActive
 	network.Mutex_net.Unlock()
 
-	network.ExternalIpMutex.Lock()
-	for ip, rec := range network.ExternalIp4 {
+	arr := network.GetExternalIPs()
+	for _, rec := range arr {
 		out.ExternalIP = append(out.ExternalIP, one_ext_ip{
-			Ip : fmt.Sprintf("%d.%d.%d.%d", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip)),
-			Count:rec[0], Timestamp:rec[1]})
+			Ip : fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),
+			Count:rec.Cnt, Timestamp:rec.Tim})
 	}
-	network.ExternalIpMutex.Unlock()
 
 	bx, er := json.Marshal(out)
 	if er == nil {
