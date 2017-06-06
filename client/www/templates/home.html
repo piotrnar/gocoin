@@ -375,7 +375,7 @@ function refreshbwinfo() {
 				external_others.innerHTML = ''
 			} else {
 				bw.ExternalIP.sort(function(a,b){
-					if (b.Count > 3) {
+					if (a.Count>3 && b.Count>3 || a.Count==b.Count) {
 						return b.Timestamp - a.Timestamp
 					}
 					return b.Count - a.Count
