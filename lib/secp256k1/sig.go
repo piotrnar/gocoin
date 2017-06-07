@@ -16,7 +16,7 @@ func (s *Signature) Print(lab string) {
 }
 
 func (r *Signature) ParseBytes(sig []byte) int {
-	if sig[0] != 0x30 || len(sig) < 5 {
+	if len(sig) < 5 || sig[0] != 0x30 {
 		return -1
 	}
 
