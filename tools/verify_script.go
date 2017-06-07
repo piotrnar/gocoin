@@ -66,7 +66,7 @@ func main() {
 	tx.Hash = btc.NewSha2Hash(d)
 	println("txid", tx.Hash.String())
 	i := 0
-	flags := uint32(65503)
+	flags := uint32(script.STANDARD_VERIFY_FLAGS)
 	amount := uint64(1000000)
 	//script.DBG_SCR = true
 	//script.DBG_ERR = true
