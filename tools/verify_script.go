@@ -66,7 +66,7 @@ func main() {
 	tx.Hash = btc.NewSha2Hash(d)
 	println("txid", tx.Hash.String())
 	i := 0
-	flags := uint32(script.STANDARD_VERIFY_FLAGS)
+	flags := uint32(script.STANDARD_VERIFY_FLAGS) //& ^uint32(script.VER_MINDATA)
 	amount := uint64(1000000)
 	//script.DBG_SCR = true
 	//script.DBG_ERR = true
@@ -74,5 +74,7 @@ func main() {
 	if bitcoinconsensus_verify_script_with_amount!=nil {
 		resc := call_consensus_lib(pkscript, amount, i, tx, flags)
 		println(res, resc)
+	} else {
+		println(res)
 	}
 }
