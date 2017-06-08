@@ -36,6 +36,9 @@ func (c *OneConnection) HandlePong() {
 // Returns (median) average ping
 // Make sure to called it within c.Mutex.Lock()
 func (c *OneConnection) GetAveragePing() int {
+	if !v.X.VerackReceived {
+		return 0
+	}
 	if c.Node.Version>60000 {
 		var pgs[PingHistoryLength] int
 		var act_len int
@@ -88,38 +91,33 @@ func (l SortedConnections) Swap(a, b int) {
 }
 
 // Make suure to call it with locked Mutex_net
-func GetSortedConnections(all bool) (list SortedConnections, any_ping bool) {
+func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
 	var now time.Time
-	var time_online time.Duration
 	now = time.Now()
 	list = make(SortedConnections, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
-		// do not drop peers that connected just recently
-		if v.X.ConnectedAt.IsZero() {
-			time_online = 0
+		list[cnt].Conn = v
+		list[cnt].Ping = v.GetAveragePing()
+		list[cnt].BlockCount = len(v.blocksreceived)
+		list[cnt].TxsCount = v.X.TxsReceived
+		if v.X.VerackReceived==false || v.X.ConnectedAt.IsZero() {
+			list[cnt].MinutesOnline = 0
 		} else {
-			time_online = now.Sub(v.X.ConnectedAt)
-		}
-		if all || time_online >= common.DropSlowestEvery {
-			list[cnt].Conn = v
-			list[cnt].Ping = v.GetAveragePing()
-			list[cnt].BlockCount = len(v.blocksreceived)
-			list[cnt].TxsCount = v.X.TxsReceived
-			list[cnt].MinutesOnline = int(time_online/time.Minute)
-			if list[cnt].Ping>0 {
-				any_ping = true
-			}
-			cnt++
+			list[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt)/time.Minute)
 		}
 		v.Mutex.Unlock()
+
+		if list[cnt].Ping > 0 {
+			any_ping = true
+		}
+		cnt++
 	}
-	if cnt > 0 {
-		list = list[:cnt]
-		sort.Sort(list)
-	} else {
+	if cnt == 0 {
 		list = nil
+	} else {
+		sort.Sort(list)
 	}
 	return
 }
@@ -132,7 +130,7 @@ func drop_worst_peer() bool {
 	Mutex_net.Lock()
 	defer Mutex_net.Unlock()
 
-	list, any_ping = GetSortedConnections(false)
+	list, any_ping = GetSortedConnections()
 	if !any_ping { // if "list" is empty "any_ping" will also be false
 		return false
 	}
