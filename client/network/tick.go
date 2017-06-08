@@ -503,6 +503,13 @@ func (c *OneConnection) Run() {
 					c.Disconnect()
 					break
 				}
+				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+				if f!=nil {
+					fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
+						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
+						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
+					f.Close()
+				}
 				if c.Node.DoNotRelayTxs {
 					c.DoS("SPV")
 					break
@@ -536,13 +543,6 @@ func (c *OneConnection) Run() {
 				c.PeerAddr.Save()
 				if common.IsListenTCP() {
 					c.SendOwnAddr()
-				}
-				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f!=nil {
-					fmt.Fprintf(f, "%s: Verack from ConnID=%d / In:%t @ ip:%s  ver:%d  se:0x%x  ua:%s\n",
-						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
-						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
-					f.Close()
 				}
 
 			case "inv":
