@@ -72,24 +72,16 @@ func (l SortedConnections) Len() int {
 }
 
 func (l SortedConnections) Less(a, b int) bool {
-	// If any of the two is connected for less than one hour, just compare the ping
-	if l[a].MinutesOnline<60 || l[b].MinutesOnline<60 {
-		goto check_the_ping
-	}
-
 	if l[a].BlockCount == l[b].BlockCount {
 		if l[a].TxsCount == l[b].TxsCount {
-			goto check_the_ping
+			if l[a].Ping==l[b].Ping {
+				return l[a].Conn.ConnID > l[a].Conn.ConnID
+			}
+			return l[a].Ping > l[b].Ping
 		}
 		return l[a].TxsCount < l[b].TxsCount
 	}
 	return l[a].BlockCount < l[b].BlockCount
-
-check_the_ping:
-	if l[a].Ping==l[b].Ping {
-		return l[a].Conn.ConnID > l[a].Conn.ConnID
-	}
-	return l[a].Ping > l[b].Ping
 }
 
 func (l SortedConnections) Swap(a, b int) {
@@ -142,6 +134,9 @@ func drop_worst_peer() bool {
 	}
 
 	for _, v := range list {
+		if v.MinutesOnline < OnlineImmunityMinutes {
+			continue
+		}
 		if v.Conn.X.Incomming {
 			if InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")

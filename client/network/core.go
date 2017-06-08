@@ -47,6 +47,10 @@ const (
 	MAX_INV_HISTORY = 500
 
 	SERVICE_SEGWIT = 0x8
+
+	TxsCounterPeriod = 6*time.Second // how long for one tick
+	TxsCounterBufLen = 60 // how many ticks
+	OnlineImmunityMinutes = int(TxsCounterBufLen*TxsCounterPeriod/time.Minute)
 )
 
 
@@ -179,9 +183,10 @@ type OneConnection struct {
 	nextMaintanence time.Time
 	nextGetData time.Time
 
-	// we need these two below to count txs received only during last hour
-	txsRH [60]int
-	txsRI int
+	// we need these three below to count txs received only during last hour
+	txsCur int
+	txsCha chan int
+	txsNxt time.Time
 }
 
 type BIDX [btc.Uint256IdxLen]byte

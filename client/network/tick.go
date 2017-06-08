@@ -120,6 +120,18 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
+	if now.After(c.txsNxt) {
+		c.Mutex.Lock()
+		if len(c.txsCha)==cap(c.txsCha) {
+			tmp := <- c.txsCha
+			c.X.TxsReceived -= tmp
+		}
+		c.txsCha <- c.txsCur
+		c.txsCur = 0
+		c.txsNxt = c.txsNxt.Add(TxsCounterPeriod)
+		c.Mutex.Unlock()
+	}
+
 	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
@@ -441,6 +453,10 @@ func (c *OneConnection) Run() {
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
 	c.LastPingSent = now.Add(5*time.Second-common.PingPeerEvery) // do first ping ~5 seconds from now
+
+	c.txsNxt = now.Add(TxsCounterPeriod)
+	c.txsCha = make(chan int, TxsCounterBufLen)
+
 	c.Mutex.Unlock()
 
 
