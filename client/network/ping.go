@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os"
 	"fmt"
 	"time"
 	"sort"
@@ -55,84 +56,108 @@ func (c *OneConnection) GetAveragePing() int {
 }
 
 
-type conn_list_to_drop []struct {
-	c *OneConnection
-	ping int
-	blks int
-	txs int
-	mins int
+type SortedConnections []struct {
+	Conn *OneConnection
+	Ping int
+	BlockCount int
+	TxsCount int
+	MinutesOnline int
 }
 
-func (l conn_list_to_drop) Len() int {
+func (l SortedConnections) Len() int {
 	return len(l)
 }
 
-func (l conn_list_to_drop) Less(a, b int) bool {
+func (l SortedConnections) Less(a, b int) bool {
 	// If any of the two is connected for less than one hour, just compare the ping
-	if l[a].mins<60 || l[b].mins<60 {
-		return l[a].ping > l[b].ping
+	if l[a].MinutesOnline<60 || l[b].MinutesOnline<60 {
+		return l[a].Ping > l[b].Ping
 	}
 
-	if l[a].blks == l[b].blks {
-		if l[a].txs == l[b].txs {
-			return l[a].ping > l[b].ping
+	if l[a].BlockCount == l[b].BlockCount {
+		if l[a].TxsCount == l[b].TxsCount {
+			return l[a].Ping > l[b].Ping
 		}
-		return l[a].txs < l[b].txs
+		return l[a].TxsCount < l[b].TxsCount
 	}
-	return l[a].blks < l[b].blks
+	return l[a].BlockCount < l[b].BlockCount
 }
 
-func (l conn_list_to_drop) Swap(a, b int) {
+func (l SortedConnections) Swap(a, b int) {
 	l[a], l[b] = l[b], l[a]
 }
 
-
-// This function should be called only when OutConsActive >= MaxOutCons
-func drop_worst_peer() bool {
-	var list conn_list_to_drop
+// Make suure to call it with locked Mutex_net
+func GetSortedConnections(all bool) (list SortedConnections, any_ping bool) {
 	var cnt int
-	var any_ping bool
-
-	Mutex_net.Lock()
-	defer Mutex_net.Unlock()
-
-	now := time.Now()
-	list = make(conn_list_to_drop, len(OpenCons))
+	var now time.Time
+	var time_online time.Duration
+	now = time.Now()
+	list = make(SortedConnections, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		// do not drop peers that connected just recently
-		if time_online := now.Sub(v.X.ConnectedAt); time_online >= common.DropSlowestEvery {
-			list[cnt].c = v
-			list[cnt].ping = v.GetAveragePing()
-			list[cnt].blks = len(v.blocksreceived)
-			list[cnt].txs = v.X.TxsReceived
-			list[cnt].mins = int(time_online/time.Minute)
-			if list[cnt].ping>0 {
+		time_online = now.Sub(v.X.ConnectedAt)
+		if all || time_online >= common.DropSlowestEvery {
+			list[cnt].Conn = v
+			list[cnt].Ping = v.GetAveragePing()
+			list[cnt].BlockCount = len(v.blocksreceived)
+			list[cnt].TxsCount = v.X.TxsReceived
+			list[cnt].MinutesOnline = int(time_online/time.Minute)
+			if list[cnt].Ping>0 {
 				any_ping = true
 			}
 			cnt++
 		}
 		v.Mutex.Unlock()
 	}
-	if !any_ping || cnt==0 {
+	if cnt > 0 {
+		list = list[:cnt]
+		sort.Sort(list)
+	} else {
+		list = nil
+	}
+	return
+}
+
+// This function should be called only when OutConsActive >= MaxOutCons
+func drop_worst_peer() bool {
+	var list SortedConnections
+	var any_ping bool
+
+	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+
+	list, any_ping = GetSortedConnections(false)
+	if !any_ping { // if "list" is empty "any_ping" will also be false
 		return false
 	}
-	sort.Sort(list)
+
 	for _, v := range list {
-		if v.c.X.Incomming {
+		if v.Conn.X.Incomming {
 			if InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
-				fmt.Printf("Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n> ",
-					v.c.ConnID, v.blks, v.txs, v.ping, v.mins)
-				v.c.Disconnect()
+				f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+				if f!=nil {
+					fmt.Fprintf(f, "%s: Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
+						time.Now().Format("2006-01-02 15:04:05"),
+						v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
+					f.Close()
+				}
+				v.Conn.Disconnect()
 				return true
 			}
 		} else {
 			if OutConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
-				fmt.Printf("Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n> ",
-					v.c.ConnID, v.blks, v.txs, v.ping, v.mins)
-				v.c.Disconnect()
+				f, _ := os.OpenFile("drop.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+				if f!=nil {
+					fmt.Fprintf(f, "%s: Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
+						time.Now().Format("2006-01-02 15:04:05"),
+						v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
+					f.Close()
+				}
+				v.Conn.Disconnect()
 				return true
 			}
 		}

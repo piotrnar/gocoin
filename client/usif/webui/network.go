@@ -2,7 +2,6 @@ package webui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"strconv"
 	"net/http"
@@ -12,21 +11,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 )
-
-type sorted_net_cons []network.ConnInfo
-
-func (sk sorted_net_cons) Len() int {
-	return len(sk)
-}
-
-func (sk sorted_net_cons) Less(a, b int) bool {
-	return sk[a].ID<sk[b].ID
-}
-
-func (sk sorted_net_cons) Swap(a, b int) {
-	sk[a], sk[b] = sk[b], sk[a]
-}
-
 
 
 func p_net(w http.ResponseWriter, r *http.Request) {
@@ -67,13 +51,13 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 	network.Mutex_net.Lock()
 	defer network.Mutex_net.Unlock()
 
-	net_cons := make(sorted_net_cons, len(network.OpenCons))
-	var i int
-	for _, v := range network.OpenCons {
-		v.GetStats(&net_cons[i])
-		i++
+	net_cons := make([]network.ConnInfo, len(network.OpenCons))
+	tmp, _ := network.GetSortedConnections(true)
+	i := len(net_cons)
+	for _, v := range tmp {
+		i--
+		v.Conn.GetStats(&net_cons[i])
 	}
-	sort.Sort(net_cons)
 
 	bx, er := json.Marshal(net_cons)
 	if er == nil {
