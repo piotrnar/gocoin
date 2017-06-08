@@ -97,7 +97,11 @@ func GetSortedConnections(all bool) (list SortedConnections, any_ping bool) {
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		// do not drop peers that connected just recently
-		time_online = now.Sub(v.X.ConnectedAt)
+		if v.X.ConnectedAt.IsZero() {
+			time_online = 0
+		} else {
+			time_online = now.Sub(v.X.ConnectedAt)
+		}
 		if all || time_online >= common.DropSlowestEvery {
 			list[cnt].Conn = v
 			list[cnt].Ping = v.GetAveragePing()
