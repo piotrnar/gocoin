@@ -74,11 +74,7 @@ func (l SortedConnections) Len() int {
 func (l SortedConnections) Less(a, b int) bool {
 	// If any of the two is connected for less than one hour, just compare the ping
 	if l[a].MinutesOnline<60 || l[b].MinutesOnline<60 {
-	check_the_ping:
-		if l[a].Ping==l[b].Ping {
-			return l[a].Conn.ConnID > l[a].Conn.ConnID
-		}
-		return l[a].Ping > l[b].Ping
+		goto check_the_ping
 	}
 
 	if l[a].BlockCount == l[b].BlockCount {
@@ -88,6 +84,12 @@ func (l SortedConnections) Less(a, b int) bool {
 		return l[a].TxsCount < l[b].TxsCount
 	}
 	return l[a].BlockCount < l[b].BlockCount
+
+check_the_ping:
+	if l[a].Ping==l[b].Ping {
+		return l[a].Conn.ConnID > l[a].Conn.ConnID
+	}
+	return l[a].Ping > l[b].Ping
 }
 
 func (l SortedConnections) Swap(a, b int) {
