@@ -16,7 +16,11 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 
 <div id="chart" style="height:180px;margin:2px"></div>
 
-<br>
+<div style="text-align:right;margin-bottom:8px;">
+<input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span onclick="net_list_order_sp.click()" style="cursor:pointer"> Sort by speed</span>
+&nbsp;&bull;&nbsp;
+<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by ID</span>
+</div>
 <table class="netcons bord" width="100%" id="netcons">
 <col width="30"> <!--#-->
 <col width="130"> <!--IP-->
@@ -205,6 +209,13 @@ function refreshconnections() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
+
+			if (net_list_order_id.checked) {
+				cs.sort(function(a,b){
+					return (a.ID>b.ID) ? 1 : -1;
+				})
+			}
+
 			while (netcons.rows.length>1) netcons.deleteRow(1)
 
 			var ins=0, outs=0
@@ -367,7 +378,6 @@ function refreshconnections() {
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
 }
-refreshconnections()
 
 
 function draw_chart() {
@@ -408,5 +418,23 @@ function draw_chart() {
 
 
 draw_chart()
+
+function switch_order_type() {
+	if (net_list_order_sp.checked) {
+		localStorage.setItem("net_order", "sp")
+	} else {
+		localStorage.setItem("net_order", "id")
+	}
+	refreshconnections()
+}
+function remember_info_setting() {
+	var mod = localStorage.getItem("net_order")
+	if ((mod+'').length!=2) mod = "sp"
+	document.getElementById('net_list_order_'+mod).checked = true
+}
+remember_info_setting()
+switch_order_type()
+
+
 
 </script>
