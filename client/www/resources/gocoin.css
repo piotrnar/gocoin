@@ -85,6 +85,10 @@ tr.segwit {
 	background-color:#f8fff0;
 }
 
+tr.immune {
+	background-color:#f4fff4;
+}
+
 tr.CFN {
 	background-color:#f0ffff;
 }

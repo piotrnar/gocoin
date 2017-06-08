@@ -361,6 +361,10 @@ function refreshconnections() {
 				onc(row, id)
 				row.title = "Connection Details"
 				row.style.cursor = 'pointer'
+
+				if (cs[i].HasImmunity) {
+					row.classList.add("immune")
+				}
 			}
 
 			if (curr_monitor_id!=-1 && !id_found) {

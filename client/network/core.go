@@ -127,6 +127,7 @@ type ConnInfo struct {
 	AveragePing int
 	InvsDone int
 	BlocksReceived int
+	HasImmunity bool
 }
 
 type OneConnection struct {

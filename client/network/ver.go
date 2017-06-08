@@ -12,7 +12,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-var IgnoreExternalIpFrom = []string{"/Snoopy:0.1/", "/libbitcoin:2.0.0/", "/Snoopy:0.2.1/", "/xbadprobe:1.0/"}
+var IgnoreExternalIpFrom = []string{}
 
 func (c *OneConnection) SendVersion() {
 	b := bytes.NewBuffer([]byte{})
@@ -108,8 +108,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 
 		if use_this_ip {
 			ExternalIpMutex.Lock()
-			_, use_this_ip = ExternalIp4[c.Node.ReportedIp4]
-			if !use_this_ip { // New IP
+			if _, known := ExternalIp4[c.Node.ReportedIp4]; !known { // New IP
 				use_this_ip = true
 				for x, v := range IgnoreExternalIpFrom {
 					if c.Node.Agent==v {
@@ -119,8 +118,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					}
 				}
 				if use_this_ip {
-					fmt.Printf("New external IP %d.%d.%d.%d from %s @ %s (%d)\n> ",
-						pl[40], pl[41], pl[42], pl[43], c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
+					fmt.Printf("New external IP %d.%d.%d.%d from ConnID=%d\n> ",
+						pl[40], pl[41], pl[42], pl[43], c.ConnID)
 				}
 			}
 			if use_this_ip {
