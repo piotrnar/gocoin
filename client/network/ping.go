@@ -36,7 +36,7 @@ func (c *OneConnection) HandlePong() {
 // Returns (median) average ping
 // Make sure to called it within c.Mutex.Lock()
 func (c *OneConnection) GetAveragePing() int {
-	if !v.X.VerackReceived {
+	if !c.X.VerackReceived {
 		return 0
 	}
 	if c.Node.Version>60000 {
