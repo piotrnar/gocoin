@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"time"
 	"sort"
 	"sync/atomic"
@@ -59,6 +60,7 @@ type conn_list_to_drop []struct {
 	ping int
 	blks int
 	txs int
+	mins int
 }
 
 func (l conn_list_to_drop) Len() int {
@@ -66,6 +68,11 @@ func (l conn_list_to_drop) Len() int {
 }
 
 func (l conn_list_to_drop) Less(a, b int) bool {
+	// If any of the two is connected for less than one hour, just compare the ping
+	if l[a].mins<60 || l[b].mins<60 {
+		return l[a].ping > l[b].ping
+	}
+
 	if l[a].blks == l[b].blks {
 		if l[a].txs == l[b].txs {
 			return l[a].ping > l[b].ping
@@ -81,44 +88,56 @@ func (l conn_list_to_drop) Swap(a, b int) {
 
 
 // This function should be called only when OutConsActive >= MaxOutCons
-func drop_worst_peer() {
+func drop_worst_peer() bool {
 	var list conn_list_to_drop
 	var cnt int
 	var any_ping bool
+
 	Mutex_net.Lock()
 	defer Mutex_net.Unlock()
+
+	now := time.Now()
 	list = make(conn_list_to_drop, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
-		list[cnt].c = v
-		list[cnt].ping = v.GetAveragePing()
-		list[cnt].blks = len(v.blocksreceived)
-		list[cnt].txs = v.X.TxsReceived
-		if list[cnt].ping>0 {
-			any_ping = true
+		// do not drop peers that connected just recently
+		if time_online := now.Sub(v.X.ConnectedAt); time_online >= common.DropSlowestEvery {
+			list[cnt].c = v
+			list[cnt].ping = v.GetAveragePing()
+			list[cnt].blks = len(v.blocksreceived)
+			list[cnt].txs = v.X.TxsReceived
+			list[cnt].mins = int(time_online/time.Minute)
+			if list[cnt].ping>0 {
+				any_ping = true
+			}
+			cnt++
 		}
 		v.Mutex.Unlock()
-		cnt++
 	}
-	if !any_ping {
-		return
+	if !any_ping || cnt==0 {
+		return false
 	}
 	sort.Sort(list)
 	for _, v := range list {
 		if v.c.X.Incomming {
 			if InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
+				fmt.Printf("Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n> ",
+					v.c.ConnID, v.blks, v.txs, v.ping, v.mins)
 				v.c.Disconnect()
-				return
+				return true
 			}
 		} else {
 			if OutConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
+				fmt.Printf("Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n> ",
+					v.c.ConnID, v.blks, v.txs, v.ping, v.mins)
 				v.c.Disconnect()
-				return
+				return true
 			}
 		}
 	}
+	return false
 }
 
 

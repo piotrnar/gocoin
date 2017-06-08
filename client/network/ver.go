@@ -57,6 +57,9 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
+
+		use_this_ip := sys.ValidIp4(pl[40:44])
+
 		if len(pl) >= 86 {
 			le, of := btc.VLen(pl[80:])
 			of += 80
@@ -73,9 +76,23 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		}
 		c.Mutex.Unlock()
 
-		if sys.ValidIp4(pl[40:44]) {
+		if use_this_ip {
+			if bytes.Equal(pl[40:44], c.PeerAddr.Ip4[:]) {
+				fmt.Printf("* OWN IP from %s @ %s - %d\n> ", c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
+				common.CountSafe("IgnoreExtIP-O")
+				use_this_ip = false
+			} else if len(pl) >= 86 && binary.BigEndian.Uint32(pl[66:70]) != 0 &&
+				!bytes.Equal(pl[66:70], c.PeerAddr.Ip4[:]) {
+				fmt.Printf("* BAD IP=%d.%d.%d.%d from %s @ %s - %d\n> ",
+					pl[66], pl[67], pl[68], pl[69], c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
+				common.CountSafe("IgnoreExtIP-B")
+				use_this_ip = false
+			}
+		}
+
+		if use_this_ip {
 			ExternalIpMutex.Lock()
-			_, use_this_ip := ExternalIp4[c.Node.ReportedIp4]
+			_, use_this_ip = ExternalIp4[c.Node.ReportedIp4]
 			if !use_this_ip { // New IP
 				use_this_ip = true
 				for x, v := range IgnoreExternalIpFrom {
@@ -86,8 +103,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					}
 				}
 				if use_this_ip {
-					fmt.Printf("New external IP %d.%d.%d.%d from %s\n> ",
-						pl[40], pl[41], pl[42], pl[43], c.Node.Agent)
+					fmt.Printf("NEW EXT IP=%d.%d.%d.%d from %s @ %s - %d\n> ",
+						pl[40], pl[41], pl[42], pl[43], c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
 				}
 			}
 			if use_this_ip {
@@ -96,6 +113,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			}
 			ExternalIpMutex.Unlock()
 		}
+
 	} else {
 		return errors.New("version message too short")
 	}

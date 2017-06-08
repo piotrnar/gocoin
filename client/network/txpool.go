@@ -446,6 +446,17 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	if ntx.conn!=nil {
 		ntx.conn.Mutex.Lock()
+		// we only count txs from the last 60 minutes
+		idx := int(rec.Firstseen.Unix() / 60) % 60
+		for idx != ntx.conn.txsRI {
+			if ntx.conn.txsRI==59 {
+				ntx.conn.txsRI = 0
+			} else {
+				ntx.conn.txsRI++
+			}
+			ntx.conn.X.TxsReceived -= ntx.conn.txsRH[ntx.conn.txsRI]
+		}
+		ntx.conn.txsRH[idx]++
 		ntx.conn.X.TxsReceived++
 		ntx.conn.Mutex.Unlock()
 	}

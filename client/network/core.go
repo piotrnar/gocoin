@@ -106,7 +106,8 @@ type ConnectionStatus struct {
 
 	GetAddrDone bool
 	MinFeeSPKB int64  // BIP 133
-	TxsReceived int
+
+	TxsReceived int // During last hour
 }
 
 type ConnInfo struct {
@@ -177,6 +178,10 @@ type OneConnection struct {
 	blocksreceived []time.Time
 	nextMaintanence time.Time
 	nextGetData time.Time
+
+	// we need these two below to count txs received only during last hour
+	txsRH [60]int
+	txsRI int
 }
 
 type BIDX [btc.Uint256IdxLen]byte

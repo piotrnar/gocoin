@@ -1,4 +1,7 @@
 1.9.1
+* Added some protection against nodes sending own IP instead of ours (bitcointalk.org/index.php?topic=1954151.0)
+* Node's TxsReceived stat only counts the last hour
+* Changed rules of choosing the "slowest" peer to drop
 * "btc.Uint256IdxLen" and "utxo.UtxoIdxLen" set back to 8 bytes, to decrease memory usage
 * Client: fixed the way best external IP is selected
 * WebUI/Txs: Limit memory pool fees graph to first 10 MB

@@ -364,8 +364,12 @@ func NetworkTick() {
 		if next_drop_peer.IsZero() {
 			next_drop_peer = time.Now().Add(common.DropSlowestEvery)
 		} else if time.Now().After(next_drop_peer) {
-			drop_worst_peer()
-			next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+			if drop_worst_peer() {
+				next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+			} else {
+				// If no peer dropped this time, try again sooner
+				next_drop_peer = time.Now().Add(common.DropSlowestEvery >> 2)
+			}
 		}
 	}
 
