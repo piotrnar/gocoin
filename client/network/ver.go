@@ -79,28 +79,32 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 
 		if use_this_ip {
 			if bytes.Equal(pl[40:44], c.PeerAddr.Ip4[:]) {
-				ExternalIpMutex.Lock()
-				f, _ := os.OpenFile("badip_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f != nil {
-					fmt.Fprintf(f, "%s: OWN IP from %s @ %s - %d\n",
-						time.Now().Format("2006-01-02 15:04:05"),
-						c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
-					f.Close()
+				if common.FLAG.Log {
+					ExternalIpMutex.Lock()
+					f, _ := os.OpenFile("badip_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+					if f != nil {
+						fmt.Fprintf(f, "%s: OWN IP from %s @ %s - %d\n",
+							time.Now().Format("2006-01-02 15:04:05"),
+							c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
+						f.Close()
+					}
+					ExternalIpMutex.Unlock()
 				}
-				ExternalIpMutex.Unlock()
 				common.CountSafe("IgnoreExtIP-O")
 				use_this_ip = false
 			} else if len(pl) >= 86 && binary.BigEndian.Uint32(pl[66:70]) != 0 &&
 				!bytes.Equal(pl[66:70], c.PeerAddr.Ip4[:]) {
-				ExternalIpMutex.Lock()
-				f, _ := os.OpenFile("badip_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f != nil {
-					fmt.Fprintf(f, "%s: BAD IP=%d.%d.%d.%d from %s @ %s - %d\n",
-						time.Now().Format("2006-01-02 15:04:05"),
-						pl[66], pl[67], pl[68], pl[69], c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
-					f.Close()
+				if common.FLAG.Log {
+					ExternalIpMutex.Lock()
+					f, _ := os.OpenFile("badip_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+					if f != nil {
+						fmt.Fprintf(f, "%s: BAD IP=%d.%d.%d.%d from %s @ %s - %d\n",
+							time.Now().Format("2006-01-02 15:04:05"),
+							pl[66], pl[67], pl[68], pl[69], c.Node.Agent, c.PeerAddr.Ip(), c.ConnID)
+						f.Close()
+					}
+					ExternalIpMutex.Unlock()
 				}
-				ExternalIpMutex.Unlock()
 				common.CountSafe("IgnoreExtIP-B")
 				use_this_ip = false
 			}

@@ -23,6 +23,7 @@ var (
 		TrustAll bool
 		UnbanAllPeers bool
 		NoWallet bool
+		Log bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -186,6 +187,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not monitor balances (saves time and memory, use to sync chain)")
+	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"

@@ -140,12 +140,14 @@ func drop_worst_peer() bool {
 		if v.Conn.X.Incomming {
 			if InConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
-				f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f!=nil {
-					fmt.Fprintf(f, "%s: Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
-						time.Now().Format("2006-01-02 15:04:05"),
-						v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
-					f.Close()
+				if common.FLAG.Log {
+					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+					if f!=nil {
+						fmt.Fprintf(f, "%s: Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
+							time.Now().Format("2006-01-02 15:04:05"),
+							v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
+						f.Close()
+					}
 				}
 				v.Conn.Disconnect()
 				return true
@@ -153,12 +155,14 @@ func drop_worst_peer() bool {
 		} else {
 			if OutConsActive+2 > atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
-				f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f!=nil {
-					fmt.Fprintf(f, "%s: Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
-						time.Now().Format("2006-01-02 15:04:05"),
-						v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
-					f.Close()
+				if common.FLAG.Log {
+					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+					if f!=nil {
+						fmt.Fprintf(f, "%s: Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
+							time.Now().Format("2006-01-02 15:04:05"),
+							v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
+						f.Close()
+					}
 				}
 				v.Conn.Disconnect()
 				return true
