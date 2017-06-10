@@ -307,7 +307,7 @@ func main() {
 		}
 		ioutil.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
-		fmt.Println(cnt, "Falgs updated in blockchain.new")
+		fmt.Println(cnt, "flags updated in blockchain.new")
 	}
 
 	if fl_purgeall {
