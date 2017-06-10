@@ -154,7 +154,7 @@ func InitConfig() {
 	CFG.AllBalances.UseMapCnt = 100
 
 	CFG.DropPeers.DropEachMinutes = 5 // minutes
-	CFG.DropPeers.BlckExpireHours = 48 // hours
+	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15 // seconds
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
