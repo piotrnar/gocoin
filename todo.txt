@@ -9,11 +9,7 @@ Lib:
 Client:
 * Test: After downloading blockchain with "-v" it does not save UTXO.db
 * Abort saving of UTXO.db before processing a new block
-* Update client/wallet database after (not during) the block is commited to UTXO as it struggles on testnet after block 601024...)
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)
-* Orphaned blocks cause printing:
-	BlockGetExt failed for 0000000000000000013503d24a8c9b8001f663a4d5ea9f06f9f38d58805723ae Block not in the index
-	12577 cmpctblock not sent for 0000000000000000013503d24a8c9b8001f663a4d5ea9f06f9f38d58805723ae
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
 	Undo block 450529 000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5 976 KB
