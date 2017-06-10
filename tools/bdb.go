@@ -31,12 +31,16 @@ import (
 		[56:136] - 80 bytes blocks header
 */
 
+const (
+	TRUSTED = 0x01
+	INVALID = 0x02
+)
+
 var (
 	fl_help              bool
 	fl_block, fl_stop    uint
 	fl_dir               string
 	fl_scan, fl_defrag   bool
-	fl_resetflags        bool
 	fl_split             string
 	fl_skip              uint
 	fl_append            string
@@ -45,7 +49,10 @@ var (
 	fl_savebl            string
 	fl_purgeall          bool
 	fl_purgeto           uint
-	fl_resetinvalid      bool
+	fl_flasg             bool
+	fl_from, fl_to       uint
+	fl_trusted           int
+	fl_invalid           int
 )
 
 /********************************************************/
@@ -178,10 +185,13 @@ func main() {
 	flag.BoolVar(&fl_commit, "commit", false, "Optimize the size of the data file")
 	flag.BoolVar(&fl_verify, "verify", false, "Verify each block inside the database")
 	flag.StringVar(&fl_savebl, "savebl", "", "Save block with the given hash to disk")
-	flag.BoolVar(&fl_resetflags, "resetflags", false, "Reset all Invalid and Trusted flags when defragmenting")
 	flag.BoolVar(&fl_purgeall, "purgeall", false, "Purge all blocks from the database")
 	flag.UintVar(&fl_purgeto, "purgeto", 0, "Purge all blocks till (but excluding) the given height")
-	flag.BoolVar(&fl_resetinvalid, "resetinvalid", false, "Reset all Invalid flags")
+
+	flag.UintVar(&fl_from, "from", 0, "Set/clear flag from this block")
+	flag.UintVar(&fl_to, "to", 0xffffffff, "Set/clear flag to this block")
+	flag.IntVar(&fl_invalid, "invalid", -1, "Set (1) or clear (0) INVALID flag")
+	flag.IntVar(&fl_trusted, "trusted", -1, "Set (1) or clear (0) TRUSTED flag")
 
 	flag.Parse()
 
@@ -262,13 +272,42 @@ func main() {
 
 	fmt.Println(len(dat)/136, "records")
 
-	if fl_resetinvalid {
+	if fl_invalid==0 || fl_invalid==1 || fl_trusted==0 || fl_trusted==1 {
+		var cnt uint64
 		for off := 0; off < len(dat); off += 136 {
-			dat[off] &= 0xFD // reset invalid flag
+			sl := dat[off : off+136]
+			if uint(binary.LittleEndian.Uint32(sl[36:40])) < fl_from {
+				continue
+			}
+			if uint(binary.LittleEndian.Uint32(sl[36:40])) > fl_to {
+				continue
+			}
+			if fl_invalid==0 {
+				if (sl[0]&INVALID)!=0 {
+					sl[0] &= ^byte(INVALID)
+					cnt++
+				}
+			} else if fl_invalid==1 {
+				if (sl[0]&INVALID)==0 {
+					sl[0] |= INVALID
+					cnt++
+				}
+			}
+			if fl_trusted==0 {
+				if (sl[0]&TRUSTED)!=0 {
+					sl[0] &= ^byte(TRUSTED)
+					cnt++
+				}
+			} else if fl_trusted==1 {
+				if (sl[0]&TRUSTED)==0 {
+					sl[0] |= TRUSTED
+					cnt++
+				}
+			}
 		}
 		ioutil.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
-		fmt.Println("All invalid falgs removed in blockchain.new")
+		fmt.Println(cnt, "Falgs updated in blockchain.new")
 	}
 
 	if fl_purgeall {
@@ -398,7 +437,7 @@ func main() {
 			}
 			total_data_size += uint64(n.DLen())
 		}
-		if len(used) < len(blks) || fl_resetflags {
+		if len(used) < len(blks) {
 			fmt.Println("Purge", len(blks)-len(used), "blocks from the index file...")
 			f, e := os.Create(fl_dir + "blockchain.tmp")
 			if e != nil {
