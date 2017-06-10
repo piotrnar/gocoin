@@ -145,7 +145,7 @@ func InitConfig() {
 	CFG.Memory.MaxCachedBlocks = 200
 
 	CFG.HashrateHours = 12
-	CFG.MiningStatHours = 48
+	CFG.MiningStatHours = 24
 	CFG.AverageFeeBlocks = 4*6 /*last 4 hours*/
 	CFG.AverageBlockSizeBlocks = 12*6 /*half a day*/
 	CFG.UserAgent = DefaultUserAgent
