@@ -8,7 +8,6 @@ Lib:
 
 Client:
 * Test: After downloading blockchain with "-v" it does not save UTXO.db
-* Abort saving of UTXO.db before processing a new block
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
