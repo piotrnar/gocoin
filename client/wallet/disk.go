@@ -3,6 +3,7 @@ package wallet
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -10,7 +11,7 @@ import (
 )
 
 const (
-	FILE_NAME  = "balances.db"
+	FILE_NAME = "balances.db"
 )
 
 var (
@@ -51,7 +52,7 @@ func Load() bool {
 		return false
 	}
 	if !bytes.Equal(ha[:], common.BlockChain.BlockTreeEnd.BlockHash.Hash[:]) {
-		println("balanses are for different last block hash")
+		println(FILE_NAME, "is for different last block hash")
 		return false
 	}
 
@@ -61,7 +62,7 @@ func Load() bool {
 		return false
 	}
 	if ui != common.AllBalMinVal {
-		println("balanses are for different AllBalMinVal")
+		println(FILE_NAME, "is for different AllBalMinVal")
 		return false
 	}
 
@@ -71,7 +72,7 @@ func Load() bool {
 		return false
 	}
 	if ha[0] != byte(utxo.UtxoIdxLen) {
-		println("balanses are for different UtxoIdxLen")
+		println(FILE_NAME, "is for different UtxoIdxLen")
 		return false
 	}
 
@@ -93,11 +94,11 @@ func Load() bool {
 		return false
 	}
 	if !bytes.Equal(ha[:len(END_MARKER)], END_MARKER) {
-		println("end marker missing")
+		println(FILE_NAME, "has marker missing")
 		return false
 	}
 
-	println("All balances loaded from", FILE_NAME)
+	fmt.Println("All balances loaded from", FILE_NAME)
 
 	return true
 }
@@ -186,6 +187,7 @@ func Save() {
 		return
 	}
 
+	fmt.Println("Saving", FILE_NAME)
 	wr := bufio.NewWriter(f)
 
 	wr.Write(common.BlockChain.BlockTreeEnd.BlockHash.Hash[:])

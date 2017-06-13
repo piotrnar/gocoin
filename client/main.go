@@ -413,9 +413,7 @@ func main() {
 	}
 
 	sta := time.Now()
-	fmt.Println("Saving balance")
 	wallet.Save()
-	fmt.Println("Closing BlockChain")
 	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
