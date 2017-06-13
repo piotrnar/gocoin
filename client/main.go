@@ -30,12 +30,14 @@ var (
 )
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
-	newbl.TmQueue = time.Now()
 	bl := newbl.Block
 	if common.FLAG.TrustAll {
 		bl.Trusted = true
 	}
+
+	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
+	newbl.TmQueue = time.Now()
 
 	if newbl.DoInvs {
 		common.Busy("NetRouteInv")
@@ -198,6 +200,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		panic("Block " + msg.Block.Hash.String() + " not in ReceivedBlocks map")
 	}
 
+	common.BlockChain.Unspent.AbortWriting()
 	rb.TmQueue = time.Now()
 
 	e, _, _ := common.BlockChain.CheckBlock(msg.Block)
