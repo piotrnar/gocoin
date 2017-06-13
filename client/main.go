@@ -413,10 +413,10 @@ func main() {
 	}
 
 	sta := time.Now()
-	common.CloseBlockChain()
 	if !common.FLAG.NoWallet {
 		wallet.Save()
 	}
+	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
 	sys.UnlockDatabaseDir()
