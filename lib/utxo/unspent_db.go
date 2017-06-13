@@ -55,7 +55,7 @@ type UnspentDB struct {
 	DirtyDB bool
 	sync.Mutex
 	WritingInProgress bool
-	AbortWriting bool
+	abortwritingnow bool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
 	WritingProgress int64
@@ -213,7 +213,7 @@ func (db *UnspentDB) save() {
 			}
 		}
 
-		if db.AbortWriting {
+		if db.abortwritingnow {
 			//println("abort")
 			abort = true
 			break
@@ -251,7 +251,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
-	db.abortifwriting()
+	db.abortWriting()
 
 	if changes.UndoData!=nil {
 		bu := new(bytes.Buffer)
@@ -287,7 +287,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
-	db.abortifwriting()
+	db.abortWriting()
 
 	for _, tx := range bl.Txs {
 		lst := make([]bool, len(tx.TxOut))
@@ -446,13 +446,19 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 }
 
 
-func (db *UnspentDB) abortifwriting() {
+func (db *UnspentDB) AbortWriting() {
+	db.Mutex.Lock()
+	db.abortWriting()
+	db.Mutex.Unlock()
+}
+
+func (db *UnspentDB) abortWriting() {
 	if db.WritingInProgress {
-		db.AbortWriting = true
+		db.abortwritingnow = true
 		for db.WritingInProgress {
 			time.Sleep(1e6)
 		}
-		db.AbortWriting = false
+		db.abortwritingnow = false
 	}
 }
 
@@ -491,7 +497,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.abortwritingnow)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
@@ -503,7 +509,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress, db.AbortWriting)
+		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress, db.abortwritingnow)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return
@@ -512,7 +518,7 @@ func (db *UnspentDB) GetStats() (s string) {
 func (db *UnspentDB) PurgeUnspendable(all bool) {
 	var unspendable_txs, unspendable_recs uint64
 	db.Mutex.Lock()
-	db.abortifwriting()
+	db.abortWriting()
 
 	for k, v := range db.HashMap {
 		rec := NewUtxoRecStatic(k, _slice(v))
