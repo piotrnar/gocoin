@@ -75,6 +75,12 @@ func host_init() {
 		os.Exit(1)
 	}
 
+	common.Last.Block = common.BlockChain.BlockTreeEnd
+	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
+	if common.Last.Time.After(time.Now()) {
+		common.Last.Time = time.Now()
+	}
+
 	if common.CFG.Memory.FreeAtStart {
 		fmt.Print("Freeing memory... ")
 		sys.FreeMem()

@@ -16,6 +16,7 @@ const (
 
 var (
 	END_MARKER = []byte("END_OF_FILE")
+	file_for_block [32]byte
 )
 
 /*
@@ -45,7 +46,7 @@ func Load() bool {
 	}
 	defer f.Close()
 
-	fmt.Println("Loading all balances from", FILE_NAME, "of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
+	fmt.Println("Loading balances from", FILE_NAME, "of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
 
 	rd := bufio.NewReader(f)
 	er = btc.ReadAll(rd, ha[:])
@@ -53,7 +54,7 @@ func Load() bool {
 		println(er.Error())
 		return false
 	}
-	if !bytes.Equal(ha[:], common.BlockChain.BlockTreeEnd.BlockHash.Hash[:]) {
+	if !bytes.Equal(ha[:], common.Last.Block.BlockHash.Hash[:]) {
 		println(FILE_NAME, "is for different last block hash")
 		return false
 	}
@@ -100,6 +101,7 @@ func Load() bool {
 		return false
 	}
 
+	copy(file_for_block[:], common.Last.Block.BlockHash.Hash[:])
 	return true
 }
 
@@ -181,6 +183,11 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal) {
 }
 
 func Save() {
+	if bytes.Equal(file_for_block[:], common.Last.Block.BlockHash.Hash[:]) {
+		fmt.Println("No need to update", FILE_NAME)
+		return
+	}
+
 	f, er := os.Create(common.GocoinHomeDir + FILE_NAME)
 	if er != nil {
 		println(er.Error())
@@ -190,7 +197,7 @@ func Save() {
 	fmt.Println("Saving", FILE_NAME)
 	wr := bufio.NewWriter(f)
 
-	wr.Write(common.BlockChain.BlockTreeEnd.BlockHash.Hash[:])
+	wr.Write(common.Last.Block.BlockHash.Hash[:])
 	btc.WriteVlen(wr, common.AllBalMinVal)
 	wr.Write([]byte{byte(utxo.UtxoIdxLen)})
 
