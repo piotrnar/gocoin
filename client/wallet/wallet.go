@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	AllBalancesP2SH map[[20]byte]*OneAllAddrBal = make(map[[20]byte]*OneAllAddrBal)
-	AllBalancesP2KH map[[20]byte]*OneAllAddrBal = make(map[[20]byte]*OneAllAddrBal)
+	AllBalancesP2KH, AllBalancesP2SH map[[20]byte]*OneAllAddrBal
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -35,6 +34,13 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 }
 
 func FetchInitialBalance() {
+	if Load() {
+		return
+	}
+
+	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal)
+	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal)
+
 	var cur_rec, cnt_dwn, perc int
 	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap) / 100
 	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal) + " BTC or more"

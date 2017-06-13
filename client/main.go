@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
+	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -412,6 +413,9 @@ func main() {
 	}
 
 	sta := time.Now()
+	fmt.Println("Saving balance")
+	wallet.Save()
+	fmt.Println("Closing BlockChain")
 	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
