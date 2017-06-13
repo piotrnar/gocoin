@@ -199,6 +199,8 @@ func InitConfig() {
 	}
 	flag.Parse()
 
+	AllBalMinVal = CFG.AllBalances.MinValue
+
 	Reset()
 }
 
@@ -228,7 +230,9 @@ func Reset() {
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.TxExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.TxExpireMinPerKB) * time.Minute
-	AllBalMinVal = CFG.AllBalances.MinValue
+	if AllBalMinVal != CFG.AllBalances.MinValue {
+		fmt.Println("In order to apply the new value of AllBalMinVal, node's restart is requirted")
+	}
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes)*time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours)*time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec)*time.Second
