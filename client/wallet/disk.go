@@ -45,6 +45,8 @@ func Load() bool {
 	}
 	defer f.Close()
 
+	fmt.Println("Loading", FILE_NAME)
+
 	rd := bufio.NewReader(f)
 	er = btc.ReadAll(rd, ha[:])
 	if er != nil {
@@ -97,8 +99,6 @@ func Load() bool {
 		println(FILE_NAME, "has marker missing")
 		return false
 	}
-
-	fmt.Println("All balances loaded from", FILE_NAME)
 
 	return true
 }
