@@ -332,6 +332,8 @@ func main() {
 			go rpcapi.StartServer(common.RPCPort())
 		}
 
+		network.MempoolLoad()
+
 		for !usif.Exit_now {
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
@@ -408,6 +410,7 @@ func main() {
 
 	sta := time.Now()
 	common.CloseBlockChain()
+	network.MempoolSave()
 	if !common.FLAG.NoWallet {
 		wallet.Save()
 	}

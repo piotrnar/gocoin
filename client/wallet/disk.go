@@ -46,7 +46,7 @@ func Load() bool {
 	}
 	defer f.Close()
 
-	fmt.Println("Loading balances from", FILE_NAME, "of", btc.UintToBtc(common.AllBalMinVal), "BTC or more")
+	fmt.Println("Loading balances", "of", btc.UintToBtc(common.AllBalMinVal), "BTC or more from", FILE_NAME)
 
 	rd := bufio.NewReader(f)
 	er = btc.ReadAll(rd, ha[:])
