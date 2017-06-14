@@ -685,7 +685,6 @@ func MempoolLoad() bool {
 		println(er.Error())
 		return false
 	}
-	println("Loading", totcnt, "txs")
 
 	for ; totcnt > 0; totcnt-- {
 		txlen, er = btc.ReadVLen(rd)
