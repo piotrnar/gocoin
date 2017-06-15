@@ -60,7 +60,7 @@ var (
 	// Transactions that are waiting for inputs:
 	WaitingForInputs map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
 
-	END_MARKER             = []byte("END_OF_FILE")
+	END_MARKER = []byte("END_OF_FILE")
 )
 
 type OneTxToSend struct {
@@ -363,35 +363,37 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	// Verify scripts
 	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
-	var wg sync.WaitGroup
-	var ver_err_cnt uint32
 
-	prev_dbg_err := script.DBG_ERR
-	script.DBG_ERR = false // keep quiet for incorrect txs
-	for i := range tx.TxIn {
-		wg.Add(1)
-		go func(prv []byte, amount uint64, i int, tx *btc.Tx) {
-			if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
-				atomic.AddUint32(&ver_err_cnt, 1)
-			}
-			wg.Done()
-		}(pos[i].Pk_script, pos[i].Value, i, tx)
-	}
+	if !ntx.trusted { // Verify scripts
+		var wg sync.WaitGroup
+		var ver_err_cnt uint32
 
-	wg.Wait()
-	script.DBG_ERR = prev_dbg_err
-
-	if ver_err_cnt > 0 {
-		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
-		TxMutex.Unlock()
-		ntx.conn.DoS("TxScriptFail")
-		if len(rbf_tx_list) > 0 {
-			fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
-			fmt.Print("> ")
+		prev_dbg_err := script.DBG_ERR
+		script.DBG_ERR = false // keep quiet for incorrect txs
+		for i := range tx.TxIn {
+			wg.Add(1)
+			go func(prv []byte, amount uint64, i int, tx *btc.Tx) {
+				if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
+					atomic.AddUint32(&ver_err_cnt, 1)
+				}
+				wg.Done()
+			}(pos[i].Pk_script, pos[i].Value, i, tx)
 		}
-		return
+
+		wg.Wait()
+		script.DBG_ERR = prev_dbg_err
+
+		if ver_err_cnt > 0 {
+			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
+			TxMutex.Unlock()
+			ntx.conn.DoS("TxScriptFail")
+			if len(rbf_tx_list) > 0 {
+				fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
+				fmt.Print("> ")
+			}
+			return
+		}
 	}
 
 	for i := range tx.TxIn {
@@ -402,7 +404,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if len(rbf_tx_list) > 0 {
-
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
 			DeleteToSend(ctx)
@@ -704,7 +705,7 @@ func MempoolLoad() bool {
 			return false
 		}
 		tx.SetHash(rawtx)
-		HandleNetTx(&TxRcvd{tx:tx, raw:rawtx}, true)
+		HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
 	}
 
 	er = btc.ReadAll(rd, ha[:len(END_MARKER)])
