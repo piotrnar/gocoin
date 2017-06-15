@@ -197,6 +197,12 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
 </tr>
 <tr>
+<td class="cfg_name"> TXPool.SaveOnDisk</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Save content of memory pool to disk on closing and load it on startup.</td>
+</tr>
+<tr>
 <td class="cfg_name"> TXRoute.Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
@@ -295,12 +301,17 @@ Beep when a balance of the currently selected wallet has changed.
 <td> 10000</td>
 <td class="cfg_info"> The addresses balance database does not include inputs carrying value lover than this many Satoshis.</td>
 </tr>
-
 <tr>
 <td class="cfg_name"> AllBalances.UseMapCnt</td>
 <td class="cfg_type"> int</td>
 <td> 100</td>
 <td class="cfg_info"> Use hashmap instead of list for addresses that have this many (or more) unspent outputs.</td>
+</tr>
+<tr>
+<td class="cfg_name"> AllBalances.SaveOnDisk</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Save content of the balances database to disk on closing and load it on startup.</td>
 </tr>
 
 <tr>
