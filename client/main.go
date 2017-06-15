@@ -332,7 +332,9 @@ func main() {
 			go rpcapi.StartServer(common.RPCPort())
 		}
 
-		network.MempoolLoad()
+		if common.CFG.TXPool.SaveOnDisk {
+			network.MempoolLoad()
+		}
 
 		for !usif.Exit_now {
 			common.CountSafe("MainThreadLoops")
@@ -410,8 +412,10 @@ func main() {
 
 	sta := time.Now()
 	common.CloseBlockChain()
-	network.MempoolSave()
-	if !common.FLAG.NoWallet {
+	if common.CFG.TXPool.SaveOnDisk {
+		network.MempoolSave()
+	}
+	if !common.FLAG.NoWallet && common.CFG.AllBalances.SaveOnDisk {
 		wallet.Save()
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())

@@ -34,7 +34,7 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 }
 
 func FetchInitialBalance() {
-	if Load() {
+	if common.CFG.AllBalances.SaveOnDisk && Load() {
 		return
 	}
 

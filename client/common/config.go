@@ -67,6 +67,7 @@ var (
 			// Otherwise expiration time will be proportionally different.
 			TxExpireMinPerKB uint
 			TxExpireMaxHours uint
+			SaveOnDisk bool
 		}
 		TXRoute struct {
 			Enabled bool // Global on/off swicth
@@ -91,6 +92,7 @@ var (
 		AllBalances struct {
 			MinValue uint64  // Do not keep balance records for values lower than this
 			UseMapCnt int
+			SaveOnDisk bool
 		}
 		DropPeers struct {
 			DropEachMinutes uint // zero for never
