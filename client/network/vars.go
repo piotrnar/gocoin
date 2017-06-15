@@ -32,6 +32,7 @@ type TxRcvd struct {
 	conn *OneConnection
 	tx *btc.Tx
 	raw []byte
+	trusted bool  // used only when loading mempool orm disk
 }
 
 type OneBlockToGet struct {
