@@ -1,4 +1,5 @@
 1.9.1
+* Client: "SaveOnDisk" config option for "TXPool" and "AllBalances" (defaults to false)
 * Client: save mempool on exit and load in on startup
 * Client: on close save all balances to "balances.db" (for quicker start next time)
 * Client: adding of a new block to block's db is accounted inside the queue time statistics
