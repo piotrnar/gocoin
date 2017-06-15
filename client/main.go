@@ -319,6 +319,10 @@ func main() {
 		}
 		network.LastCommitedHeader = common.Last.Block
 
+		if common.CFG.TXPool.SaveOnDisk {
+			network.MempoolLoad()
+		}
+
 		if common.CFG.TextUI.Enabled {
 			go textui.MainThread()
 		}
@@ -330,10 +334,6 @@ func main() {
 
 		if common.CFG.RPC.Enabled {
 			go rpcapi.StartServer(common.RPCPort())
-		}
-
-		if common.CFG.TXPool.SaveOnDisk {
-			network.MempoolLoad()
 		}
 
 		for !usif.Exit_now {
