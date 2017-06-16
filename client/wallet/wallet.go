@@ -258,3 +258,20 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	}
 	return
 }
+
+func PrintStat() {
+	var p2sh_maps, p2kh_maps uint64
+	for _, r := range AllBalancesP2KH {
+		if r.unspMap != nil {
+			p2kh_maps++
+		}
+	}
+	for _, r := range AllBalancesP2SH {
+		if r.unspMap != nil {
+			p2sh_maps++
+		}
+	}
+	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
+	fmt.Println("AllBalancesP2KH has", len(AllBalancesP2KH), "records and", p2kh_maps, "use map")
+	fmt.Println("AllBalancesP2SH has", len(AllBalancesP2SH), "records and", p2sh_maps, "use map")
+}
