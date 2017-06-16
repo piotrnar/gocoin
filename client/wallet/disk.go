@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"time"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"os"
+	"reflect"
+	"unsafe"
 )
 
 const (
@@ -106,8 +109,10 @@ func Load() bool {
 }
 
 func load_one_map(rd *bufio.Reader) (res map[[20]byte]*OneAllAddrBal, er error) {
-	var recs, outs, idx uint64
+	var recs, outs uint64
 	var key [20]byte
+	var bts int
+	var slice []byte
 	var v *OneAllAddrBal
 
 	recs, er = btc.ReadVLen(rd)
@@ -146,11 +151,11 @@ func load_one_map(rd *bufio.Reader) (res map[[20]byte]*OneAllAddrBal, er error) 
 		} else {
 			// using list
 			v.unsp = make([]OneAllAddrInp, int(outs))
-			for idx = 0; idx < outs; idx++ {
-				er = btc.ReadAll(rd, v.unsp[idx][:])
-				if er != nil {
-					return
-				}
+			bts = len(v.unsp) * len(v.unsp[0])
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			er = btc.ReadAll(rd, slice)
+			if er != nil {
+				return
 			}
 		}
 
@@ -163,6 +168,8 @@ func load_one_map(rd *bufio.Reader) (res map[[20]byte]*OneAllAddrBal, er error) 
 }
 
 func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal) {
+	var bts int
+	var slice []byte
 	btc.WriteVlen(wr, uint64(len(allbal)))
 	for k, v := range allbal {
 		wr.Write(k[:])
@@ -174,9 +181,9 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal) {
 			}
 		} else {
 			btc.WriteVlen(wr, uint64(len(v.unsp)))
-			for _, ii := range v.unsp {
-				wr.Write(ii[:])
-			}
+			bts = len(v.unsp) * len(v.unsp[0])
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			wr.Write(slice)
 		}
 	}
 
@@ -194,8 +201,9 @@ func Save() {
 		return
 	}
 
-	fmt.Println("Saving", FILE_NAME)
+	fmt.Print("Saving ", FILE_NAME)
 	wr := bufio.NewWriter(f)
+	sta := time.Now()
 
 	wr.Write(common.Last.Block.BlockHash.Hash[:])
 	btc.WriteVlen(wr, common.AllBalMinVal)
@@ -207,4 +215,6 @@ func Save() {
 	wr.Write(END_MARKER[:])
 	wr.Flush()
 	f.Close()
+	fmt.Print("\r", FILE_NAME, " saved in ", time.Now().Sub(sta).String())
+	fmt.Println()
 }
