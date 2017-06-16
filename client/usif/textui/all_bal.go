@@ -138,8 +138,13 @@ func list_unspent(addr string) {
 	}
 }
 
+func all_val_stats(s string) {
+	wallet.PrintStat()
+}
+
 func init() {
 	newUi("richest r", true, best_val, "Show addresses with most coins")
 	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs")
 	newUi("balance a", true, list_unspent, "List balance of given bitcoin address")
+	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
 }
