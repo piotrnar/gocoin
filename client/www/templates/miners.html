@@ -85,7 +85,7 @@ function refresh_mining_info() {
 
 			while (minerstab.rows.length>1) minerstab.deleteRow(1)
 
-			var totfees=0,  totbts=0,  bu_cnt=0,  sw_cnt=0
+			var totfees=0,  totbts=0,  bu_cnt=0,  sw_cnt=0, ny_cnt=0
 			for (var i=0; i<cs.Miners.length; i++) {
 				var m = cs.Miners[i]
 				var td, row = minerstab.insertRow(-1)
@@ -121,7 +121,7 @@ function refresh_mining_info() {
 				if (m.NYAcnt>0) {
 					td.className ='mi_nya'
 					td.innerText = m.NYAcnt
-					bu_cnt += m.BUcnt
+					ny_cnt += m.BUcnt
 				}
 
 				td = row.insertCell(-1)
@@ -152,6 +152,7 @@ function refresh_mining_info() {
 
 			th_sw_sign.title = parseFloat(100*sw_cnt/cs.BlockCount).toFixed(0) + '%'
 			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
+			th_ny_sign.title = parseFloat(100*ny_cnt/cs.BlockCount).toFixed(0) + '%'
 
 			loading_icon.style.display = 'none'
 			mining_info_div.style.display = 'block'
@@ -187,7 +188,7 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b
 		<th width="40" align="right">Tot
 		<th width="20" align="right" id="th_sw_sign">SW
 		<th width="20" align="right" id="th_bu_sign">BU
-		<th width="20" align="right" id="th_bu_sign">NY
+		<th width="20" align="right" id="th_ny_sign">NY
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right" title="Average Block Length">Average
 		<th width="100" align="right">Fees BTC
