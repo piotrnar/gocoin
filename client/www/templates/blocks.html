@@ -38,7 +38,7 @@
 </table>
 <br>
 Block Version Legend:<br>
-&bull; <b>w</b> - Supports SegWit <span id="segwit_cnt"></span><br>
+&bull; <b>W</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109)<br>
 &bull; <b>U</b> - Signals BU's <span class="mono">/EBx/ADy/</span> thingy  <span id="ebad_cnt"></span><br>
 &bull; <b>N</b> - Signals support for New York Agreement <span id="nya_cnt"></span><br>
@@ -211,7 +211,7 @@ function refreshblocks() {
 				} else {
 					if (cs[i].Version&0x20000000) {
 						if (cs[i].Version&0x2) {
-							vx += 'w'
+							vx += 'W'
 							segwit_c++
 						}
 						if (cs[i].Version&0x10000000) {
