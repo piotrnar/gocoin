@@ -2,6 +2,7 @@ package webui
 
 import (
 	"time"
+	"bytes"
 	"regexp"
 	"net/http"
 	"sync/atomic"
@@ -48,6 +49,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		MinFeeKSPB uint64
 		NonWitnessSize int
 		EBAD string
+		NYA bool
 	}
 
 	var blks []*one_block
@@ -131,6 +133,8 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		if res:=eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res!=nil {
 			b.EBAD = string(res)
 		}
+
+		b.NYA = bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1
 
 		blks = append(blks, b)
 		end = end.Parent

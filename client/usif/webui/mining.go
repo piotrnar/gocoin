@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"sort"
+	"bytes"
 	"regexp"
 	"net/http"
 	"encoding/json"
@@ -19,6 +20,7 @@ type omv struct {
 	fees uint64
 	ebad_cnt int
 	segwit_cnt int
+	nya_cnt int
 }
 
 type onemiernstat []struct {
@@ -90,7 +92,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		Name string
 		Blocks int
 		TotalFees, TotalBytes uint64
-		BUcnt, SWcnt int
+		BUcnt, SWcnt, NYAcnt int
 	}
 
 	type the_mining_stats struct {
@@ -159,6 +161,10 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 			om.segwit_cnt++
 		}
 
+		if bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1 {
+			om.nya_cnt++
+		}
+
 		m[miner] = om
 
 		end = end.Parent
@@ -202,6 +208,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		stats.Miners[i].TotalBytes = srt[i].bts
 		stats.Miners[i].BUcnt = srt[i].ebad_cnt
 		stats.Miners[i].SWcnt = srt[i].segwit_cnt
+		stats.Miners[i].NYAcnt = srt[i].nya_cnt
 	}
 
 	bx, er := json.Marshal(stats)

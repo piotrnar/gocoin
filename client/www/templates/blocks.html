@@ -41,6 +41,7 @@ Block Version Legend:<br>
 &bull; <b>w</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109)<br>
 &bull; <b>U</b> - Signals BU's <span class="mono">/EBx/ADy/</span> thingy  <span id="ebad_cnt"></span><br>
+&bull; <b>N</b> - Signals support for New York Agreement <span id="nya_cnt"></span><br>
 &bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
 &bull; <b>?</b> - Unrecognized block version<br>
 <script>
@@ -135,6 +136,7 @@ function refreshblocks() {
 			var cs = JSON.parse(aj.responseText)
 			var segwit_c = 0
 			var ebad_c = 0
+			var nya_c = 0
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
 
@@ -223,6 +225,10 @@ function refreshblocks() {
 					ebad_c++
 					vx += 'U'
 				}
+				if (cs[i].NYA) {
+					nya_c++
+					vx += 'N'
+				}
 				td.innerText = vx
 				td.title = '0x' + cs[i].Version.toString(16) + cs[i].EBAD
 
@@ -290,6 +296,7 @@ function refreshblocks() {
 
 			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'
 			ebad_cnt.innerText = '(' + ebad_c + '/' + cs.length + ')'
+			nya_cnt.innerText = '(' + nya_c + '/' + cs.length + ')'
 
 			if (mid!=null) {
 				for (var i=2; i<blkstab.rows.length; i++) {

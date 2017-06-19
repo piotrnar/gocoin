@@ -48,6 +48,12 @@ td.mi_bu {
 	font-style:italic;
 	font-size:90%;
 }
+td.mi_nya {
+	text-align:right;
+	color:red;
+	font-style:italic;
+	font-size:90%;
+}
 caption {
 	margin-bottom:6px;
 }
@@ -108,6 +114,13 @@ function refresh_mining_info() {
 				if (m.BUcnt>0) {
 					td.className ='mi_bu'
 					td.innerText = m.BUcnt
+					bu_cnt += m.BUcnt
+				}
+
+				td = row.insertCell(-1)
+				if (m.NYAcnt>0) {
+					td.className ='mi_nya'
+					td.innerText = m.NYAcnt
 					bu_cnt += m.BUcnt
 				}
 
@@ -174,6 +187,7 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b
 		<th width="40" align="right">Tot
 		<th width="20" align="right" id="th_sw_sign">SW
 		<th width="20" align="right" id="th_bu_sign">BU
+		<th width="20" align="right" id="th_bu_sign">NY
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right" title="Average Block Length">Average
 		<th width="100" align="right">Fees BTC
