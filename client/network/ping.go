@@ -67,55 +67,69 @@ type SortedConnections []struct {
 	MinutesOnline int
 }
 
-func (l SortedConnections) Len() int {
-	return len(l)
-}
 
-func (l SortedConnections) Less(a, b int) bool {
-	if l[a].BlockCount == l[b].BlockCount {
-		if l[a].TxsCount == l[b].TxsCount {
-			if l[a].Ping==l[b].Ping {
-				return l[a].Conn.ConnID > l[a].Conn.ConnID
-			}
-			return l[a].Ping > l[b].Ping
-		}
-		return l[a].TxsCount < l[b].TxsCount
-	}
-	return l[a].BlockCount < l[b].BlockCount
-}
-
-func (l SortedConnections) Swap(a, b int) {
-	l[a], l[b] = l[b], l[a]
-}
-
+// Returns the slowest peers first
 // Make suure to call it with locked Mutex_net
 func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
 	var now time.Time
+	var tlist SortedConnections
 	now = time.Now()
-	list = make(SortedConnections, len(OpenCons))
+	tlist = make(SortedConnections, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
-		list[cnt].Conn = v
-		list[cnt].Ping = v.GetAveragePing()
-		list[cnt].BlockCount = len(v.blocksreceived)
-		list[cnt].TxsCount = v.X.TxsReceived
+		tlist[cnt].Conn = v
+		tlist[cnt].Ping = v.GetAveragePing()
+		tlist[cnt].BlockCount = len(v.blocksreceived)
+		tlist[cnt].TxsCount = v.X.TxsReceived
 		if v.X.VerackReceived==false || v.X.ConnectedAt.IsZero() {
-			list[cnt].MinutesOnline = 0
+			tlist[cnt].MinutesOnline = 0
 		} else {
-			list[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt)/time.Minute)
+			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt)/time.Minute)
 		}
 		v.Mutex.Unlock()
 
-		if list[cnt].Ping > 0 {
+		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
 		cnt++
 	}
-	if cnt == 0 {
-		list = nil
-	} else {
-		sort.Sort(list)
+	if cnt > 0 {
+		list = make(SortedConnections, len(tlist))
+		var ignore_bcnt bool // otherwise count blocks
+		var idx, best_idx, bcnt, best_bcnt, best_tcnt, best_ping int
+
+		for idx = len(list) - 1; idx >= 0; idx-- {
+			best_idx = -1
+			for i, v := range tlist {
+				if v.Conn == nil {
+					continue
+				}
+				if best_idx < 0 {
+					best_idx = i
+					best_tcnt = v.TxsCount
+					best_bcnt = v.BlockCount
+					best_ping = v.Ping
+				} else {
+					if ignore_bcnt {
+						bcnt = best_bcnt
+					} else {
+						bcnt = v.BlockCount
+					}
+					if best_bcnt < bcnt ||
+						best_bcnt == bcnt && best_tcnt < v.TxsCount ||
+						best_bcnt == bcnt && best_tcnt == v.TxsCount && best_ping > v.Ping {
+						best_bcnt = v.BlockCount
+						best_tcnt = v.TxsCount
+						best_ping = v.Ping
+						best_idx = i
+					}
+				}
+			}
+			list[idx] = tlist[best_idx]
+			tlist[best_idx].Conn = nil
+			ignore_bcnt = !ignore_bcnt
+		}
 	}
 	return
 }
