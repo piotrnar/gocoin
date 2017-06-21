@@ -260,18 +260,30 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 }
 
 func PrintStat() {
-	var p2sh_maps, p2kh_maps uint64
+	var p2sh_maps, p2kh_maps, p2sh_outs, p2kh_outs, p2sh_vals, p2kh_vals uint64
 	for _, r := range AllBalancesP2KH {
+		p2kh_vals += r.Value
 		if r.unspMap != nil {
 			p2kh_maps++
+			p2kh_outs += uint64(len(r.unspMap))
+		} else {
+			p2kh_outs += uint64(len(r.unsp))
 		}
 	}
 	for _, r := range AllBalancesP2SH {
+		p2sh_vals += r.Value
 		if r.unspMap != nil {
 			p2sh_maps++
+			p2sh_outs += uint64(len(r.unspMap))
+		} else {
+			p2sh_outs += uint64(len(r.unsp))
 		}
 	}
 	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
-	fmt.Println("AllBalancesP2KH has", len(AllBalancesP2KH), "records and", p2kh_maps, "use map")
-	fmt.Println("AllBalancesP2SH has", len(AllBalancesP2SH), "records and", p2sh_maps, "use map")
+
+	fmt.Println("AllBalancesP2KH: ", len(AllBalancesP2KH), "records,",
+		p2kh_outs, "outputs," , btc.UintToBtc(p2kh_vals), "BTC,", p2kh_maps, "maps")
+
+	fmt.Println("AllBalancesP2SH: ", len(AllBalancesP2SH), "records,",
+		p2sh_outs, "outputs," , btc.UintToBtc(p2sh_vals), "BTC,", p2sh_maps, "maps")
 }
