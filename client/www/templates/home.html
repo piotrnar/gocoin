@@ -86,9 +86,9 @@
 		&nbsp;&bull;&nbsp;
 		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
 	<tr><td>Mem Used MB:<td>
-		<b title="Go heap size" id="si_heap_size"></b> +
-		<b title="Extra mem taken by QDB" id="si_qdb_extramem"></b>
-		(<b title="Sys mem taken by Go" id="si_heap_sysmem"></b>)
+		<b title="Total memory used" id="si_total_mem"></b>
+		(<b title="Native Go heap" id="si_heap_size"></b> +
+		<b title="QDB UTXO records" id="si_qdb_extramem"></b>)
 		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
@@ -324,8 +324,9 @@ function refreshsysinfo() {
 		try {
 			var si = JSON.parse(aj.responseText)
 			si_known_peers.innerText = si.Known_peers
+			si_total_mem.innerText = ((si.Heap_size+si.Qdb_extramem)/0x100000).toFixed(0)
+			el_free_mem.title = (si.Heap_sysmem/0x100000).toFixed(0)
 			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
-			si_heap_sysmem.innerText = (si.Heap_sysmem/0x100000).toFixed(0)
 			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
 			si_net_block_qsize.innerText = si.Net_block_qsize
 			si_net_tx_qsize.innerText = si.Net_tx_qsize
