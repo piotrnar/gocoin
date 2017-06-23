@@ -6,7 +6,6 @@ import (
 	"time"
 	"errors"
 	"sync/atomic"
-	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/utils"
@@ -14,9 +13,7 @@ import (
 
 const (
 	ConfigFile = "gocoin.conf"
-
 	Version = uint32(70015)
-	DefaultUserAgent = "/Gocoin:"+gocoin.Version+"/"
 	Services = uint64(0x00000009)
 )
 
@@ -54,6 +51,8 @@ var (
 	DropSlowestEvery time.Duration
 	BlockExpireEvery time.Duration
 	PingPeerEvery time.Duration
+
+	UserAgent string
 )
 
 
@@ -147,7 +146,7 @@ func GetAverageBlockSize() (res uint) {
 func RecalcAverageBlockSize(fix_sizes bool) {
 	n := BlockChain.BlockTreeEnd
 	var sum, cnt, orgsum uint
-	for maxcnt := CFG.AverageBlockSizeBlocks; maxcnt>0 && n!=nil; maxcnt-- {
+	for maxcnt := CFG.Stat.BSizeBlks; maxcnt>0 && n!=nil; maxcnt-- {
 		if fix_sizes {
 			bl, _, _ := BlockChain.Blocks.BlockGet(n.BlockHash)
 			orgsum += uint(n.BlockSize)

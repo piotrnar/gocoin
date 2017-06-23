@@ -86,7 +86,7 @@ func GetAverageFee() (float64) {
 	Last.Mutex.Unlock()
 
 	LockCfg()
-	blocks := CFG.AverageFeeBlocks
+	blocks := CFG.Stat.FeesBlks
 	UnlockCfg()
 	if blocks<=0 {
 		blocks = 1 // at leats one block

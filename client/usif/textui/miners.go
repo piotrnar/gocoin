@@ -18,7 +18,7 @@ func do_mining(s string) {
 		hrs, _ = strconv.ParseUint(s, 10, 64)
 	}
 	if hrs == 0 {
-		hrs = uint64(common.CFG.MiningStatHours)
+		hrs = uint64(common.CFG.Stat.MiningHrs)
 	}
 	fmt.Println("Looking back", hrs, "hours...")
 	lim := uint32(time.Now().Add(-time.Hour*time.Duration(hrs)).Unix())

@@ -200,7 +200,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if pay_cmd!="" {
-			fz, _ = zi.Create(common.CFG.WebUI.PayCommandName)
+			fz, _ = zi.Create(common.CFG.WebUI.PayCmdName)
 			fz.Write([]byte(pay_cmd))
 		}
 

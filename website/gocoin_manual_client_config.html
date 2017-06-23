@@ -6,7 +6,7 @@
 <h1>Config</h1>
 The online node configuration file is named <b>gocoin.conf</b><br>
 Client application looks for this file in the folder where it is being launched from.<br>
-The config file is in JSON encoded format, so in general the order of the fields does not matter, but their types do.<br>
+The config file is in JSON encoded format, so the order of the fields does not matter, but their types do.<br>
 <br>
 
 
@@ -33,312 +33,297 @@ The config file is in JSON encoded format, so in general the order of the fields
 <tr>
 <td class="cfg_name"> Datadir</td>
 <td class="cfg_type"> string</td>
-<td>Windows main net:<br>
- "%APPDATA%\Bitcoin\gocoin\btcnet"<br>
-Windows test net:<br>
- "%APPDATA%\Bitcoin\gocoin\tstnet"<br>
-Non-Windows main net:<br>
- "~/.bitcoin/gocoin/btcnet"<br>
-Non-Windows main net:<br>
- "~/.bitcoin/gocoin/tstnet"</td>
+<td>"%APPDATA%\Bitcoin\gocoin"<br>
+or "~/.bitcoin/gocoin"</td>
 <td class="cfg_info"> The data folder for the gocoin client node.<br>
-<br>
-The data dir contains:<br>
- * Block database: blockchain.dat, blockchain.idx files.<br>
- * UTXO database: unspent3/ folder.<br>
- * Known peers database: peers3/ folder.<br>
- * Wallet files: wallet/ folder.</td>
 </tr>
 <tr>
-<td class="cfg_name"> Walletdir</td>
+<td class="cfg_name"> UserAgent</td>
 <td class="cfg_type"> string</td>
-<td> &lt;Datadir&gt;/wallet</td>
-<td class="cfg_info"> In versions up to 1.6.4 it would specify where the wallet files (containing public addresses) are stored. <br>
-For higher versions, it is only looking into "multisig/" sub-folder for the json files.<br>
- By default it is a sub-folder in the data directory, but it can be changed to increase privacy.</td>
+<td> ""</td>
+<td class="cfg_info"> Overwrite the string reported by the node as User-Agent in the version messages.<br>
+When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 </tr>
-<tr><td class="cfg_name"> TextUI.Enabled</td>
+
+<tr>
+<td class="cfg_name"> UTXOSaveSec</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Delay writing of UTXO.db files to least at least so many seconds. 0 means dafault value, which is 5 minutes.</td>
+</tr>
+
+<tr><td class="cfg_name"> TextUI_Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
 </tr>
-<tr>
+
+<tr class="even">
 <td class="cfg_name"> WebUI.Interface</td>
 <td class="cfg_type"> string</td>
 <td> "127.0.0.1:8833"</td>
 <td class="cfg_info"> Bind WebUI server to this interface. Change it to ":8833" in order to allow external connections.<br>
 </td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> WebUI.AllowedIP </td>
 <td class="cfg_type"> string</td>
 <td> "127.0.0.1"</td>
 <td class="cfg_info"> List of IP addresses that are allowed to access WebUI. Use "0.0.0.0/0" to let everyone in.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> WebUI.ShowBlocks</td>
 <td class="cfg_type"> uint32</td>
 <td> 144</td>
 <td class="cfg_info"> How many recent blocks to show at the Blocks page.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> WebUI.AddrListLen</td>
 <td class="cfg_type"> uint32</td>
 <td> 15</td>
 <td class="cfg_info"> How many addresses to show (at the same time) in the address book that pops up at MakeTx page.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> WebUI.Title </td>
 <td class="cfg_type"> string</td>
 <td> "Gocoin"</td>
 <td class="cfg_info"> Title of the WebUI window as seen in the browser.</td>
 </tr>
-<tr>
-<td class="cfg_name"> WebUI.PayCommandName</td>
+<tr class="even">
+<td class="cfg_name"> WebUI.PayCmdName</td>
 <td class="cfg_type"> string</td>
 <td> "pay_cmd.txt"</td>
 <td class="cfg_info"> The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
  Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> WebUI.ServerMode </td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Enable mode in which a client cannot do certain things (e.g. change configuration).</td>
 </tr>
-<tr>
+
+<tr class="odd">
 <td class="cfg_name"> Net.ListenTCP</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Accept incoming TCP connections.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.TCPPort</td>
 <td class="cfg_type"> uint16</td>
 <td> 0 </td>
 <td class="cfg_info"> Zero value means to use the default port, which is 8333 for main net and 18333 for test net.<br>
 Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MaxOutCons</td>
 <td class="cfg_type"> uint32</td>
 <td> 9</td>
 <td class="cfg_info"> Maximum number of outgoing TCP connections.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MaxInCons</td>
 <td class="cfg_type"> uint32</td>
 <td> 10</td>
 <td class="cfg_info"> Maximum number of incoming TCP connections.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MaxUpKBps</td>
 <td class="cfg_type"> uint</td>
 <td> 0</td>
 <td class="cfg_info"> Maximum upload speed in kilobytes per second. 0 means unlimited.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MaxDownKBps</td>
 <td class="cfg_type"> uint</td>
 <td> 0</td>
 <td class="cfg_info"> Maximum download speed in kilobytes per second. 0 means unlimited. </td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MaxBlockAtOnce</td>
 <td class="cfg_type"> uint32</td>
 <td> 3</td>
 <td class="cfg_info"> When a new block appears, (up to) how many peers to ask for its data at the same time.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Net.MinSegwitCons</td>
 <td class="cfg_type"> uint32</td>
 <td> 0</td>
 <td class="cfg_info"> Maintain at least so many connections to nodes indicating support for Segregated Witness (via bit 0x8 in Services).</td>
-<tr>
+
+<tr class="even">
 <td class="cfg_name"> TXPool.Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Enable memory pool (for transactions).</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.AllowMemInputs</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Accept transactions with unconfirmed inputs to the memory pool.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.FeePerByte</td>
 <td class="cfg_type"> uint64</td>
 <td> 20</td>
 <td class="cfg_info"> Required minimum fee per byte to accept a transaction to the memory pool.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.MaxTxSize</td>
 <td class="cfg_type"> uint32</td>
 <td> 100000</td>
 <td class="cfg_info"> Maximum size of a transaction that would be accepted to the memory pool.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.MinVoutValue</td>
 <td class="cfg_type"> uint64</td>
 <td> 0</td>
 <td class="cfg_info"> Required minimum value (checked separately for each output) to accept a transaction to the memory pool. 0 - no restriction.</td>
 </tr>
-<tr>
-<td class="cfg_name"> TXPool.TxExpireMinPerKB</td>
+<tr class="even">
+<td class="cfg_name"> TXPool.ExpireMinPerKB</td>
 <td class="cfg_type"> uint</td>
-<td> 180</td>
+<td> 1800</td>
 <td class="cfg_info"> If something is 1KB big, it expires after this many minutes. Otherwise expiration time will be proportionally different.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.TxExpireMaxHours</td>
 <td class="cfg_type"> uint</td>
 <td> 12</td>
 <td class="cfg_info"> Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.SaveOnDisk</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Save content of memory pool to disk on closing and load it on startup.</td>
 </tr>
-<tr>
+
+<tr class="odd">
 <td class="cfg_name"> TXRoute.Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Enable routing of transactions (memory pool must be enabled as well).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> TXRoute.FeePerByte</td>
 <td class="cfg_type"> uint64</td>
 <td> 25</td>
 <td class="cfg_info"> Required minimum fee per byte to route a transaction.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> TXRoute.MaxTxSize</td>
 <td class="cfg_type"> uint32</td>
 <td> 100000</td>
 <td class="cfg_info"> Maximum size of a transaction that will be routed to other peers.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> TXRoute.MinVoutValue</td>
 <td class="cfg_type"> uint64</td>
 <td> 0</td>
 <td class="cfg_info"> Required minimum value (checked separately for each output) to route a transaction. 0 for no restriction.</td>
 </tr>
-<tr>
+
+<tr class="even">
 <td class="cfg_name"> Memory.GCPercTrshold</td>
 <td class="cfg_type"> int </td>
 <td> 100</td>
 <td class="cfg_info"> A threshold (in percent) to trigger Go's garbage collector engine.</td>
 </tr>
-<tr>
-<td class="cfg_name"> Memory.MaxCachedBlocks</td>
+<tr class="even">
+<td class="cfg_name"> Memory.MaxCachedBlks</td>
 <td class="cfg_type"> uint</td>
 <td> 200</td>
 <td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Beeps.NewBlock</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Beep when a  new block is added to the top of the chain (someone has mined a new one).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Beeps.ActiveFork</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Triple beep when there is a fork in the block chain.</td>
 </tr>
-<tr>
-<td class="cfg_name"> Beeps.NewBalance</td>
-<td class="cfg_type"> bool</td>
-<td> false</td>
-<td class="cfg_info">
-Beep when a balance of the currently selected wallet has changed.
-<b>Deprecated since version 1.7.0</b>.</td>
-</tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> Beeps.MinerID</td>
 <td class="cfg_type"> string</td>
 <td> ""</td>
 <td class="cfg_info"> Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.</td>
 </tr>
-<tr>
-<td class="cfg_name"> HashrateHours</td>
-<td class="cfg_type"> uint</td>
-<td> 12</td>
-<td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
-</tr>
-<tr>
-<td class="cfg_name"> MiningStatHours</td>
-<td class="cfg_type"> uint</td>
-<td> 24</td>
-<td class="cfg_info"> How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
-</tr>
-<tr>
-<td class="cfg_name"> AverageFeeBlocks</td>
-<td class="cfg_type"> uint</td>
-<td> 24</td>
-<td class="cfg_info"> How many block down the chain to look for calculating the current average transaction fee.</td>
-</tr>
-<tr>
-<td class="cfg_name"> AverageBlockSizeBlocks</td>
-<td class="cfg_type"> uint</td>
-<td> 72</td>
-<td class="cfg_info"> How many block down the chain to look for calculating the current average block size.</td>
-</tr>
-<tr>
-<td class="cfg_name"> UserAgent</td>
-<td class="cfg_type"> string</td>
-<td> "/Gocoin:<i>?.?.?</i>/"</td>
-<td class="cfg_info"> Which string shall be reported by the node as User-Agent (in the version messages).</td>
-</tr>
 
-<tr>
+<tr class="even">
 <td class="cfg_name"> AllBalances.MinValue</td>
 <td class="cfg_type"> uint</td>
 <td> 10000</td>
 <td class="cfg_info"> The addresses balance database does not include inputs carrying value lover than this many Satoshis.</td>
 </tr>
-<tr>
+
+<tr class="even">
 <td class="cfg_name"> AllBalances.UseMapCnt</td>
 <td class="cfg_type"> int</td>
 <td> 100</td>
 <td class="cfg_info"> Use hashmap instead of list for addresses that have this many (or more) unspent outputs.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> AllBalances.SaveOnDisk</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Save content of the balances database to disk on closing and load it on startup.</td>
 </tr>
 
-<tr>
+<tr class="odd">
 <td class="cfg_name"> DropPeers.DropEachMinutes</td>
 <td class="cfg_type"> uint</td>
 <td> 5</td>
 <td class="cfg_info"> How many minutes between disconnecting the slowest peers. 0 - never drop peers.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> DropPeers.BlckExpireHours</td>
 <td class="cfg_type"> uint</td>
 <td> 24</td>
 <td class="cfg_info"> How many hours before blocks received from a peer "expire",  in slowest peer calculation.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td class="cfg_name"> DropPeers.PingPeriodSec</td>
 <td class="cfg_type"> uint</td>
 <td> 15</td>
 <td class="cfg_info"> How many seconds between sending ping comand to a peer. 0 - do not ping.</td>
 </tr>
 
-<tr>
-<td class="cfg_name"> UTXOWriteTargetSeconds</td>
+<tr class="even">
+<td class="cfg_name"> Stat.HashrateHrs </td>
 <td class="cfg_type"> uint</td>
-<td> 0</td>
-<td class="cfg_info"> Delay writing of UTXO.db files to least at least so many seconds. 0 means dafault value, which is 5 minutes.</td>
+<td> 12</td>
+<td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
 </tr>
+<tr class="even">
+<td class="cfg_name"> Stat.MiningHrs</td>
+<td class="cfg_type"> uint</td>
+<td> 24</td>
+<td class="cfg_info"> How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> Stat.FeesBlks</td>
+<td class="cfg_type"> uint</td>
+<td> 24</td>
+<td class="cfg_info"> How many block down the chain to look for calculating the current average transaction fee.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> Stat.BSizeBlks</td>
+<td class="cfg_type"> uint</td>
+<td> 72</td>
+<td class="cfg_info"> How many block down the chain to look for calculating the current average block size.</td>
+</tr>
+<tr>
+
+
+
 
 </tbody>
 </table>

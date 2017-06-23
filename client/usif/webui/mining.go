@@ -123,7 +123,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
 	for ; end!=nil; cnt++ {
-		if now-int64(end.Timestamp()) > int64(common.CFG.MiningStatHours)*3600 {
+		if now-int64(end.Timestamp()) > int64(common.CFG.Stat.MiningHrs)*3600 {
 			break
 		}
 		lastts = int64(end.Timestamp())
@@ -188,10 +188,10 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 	var stats the_mining_stats
 
 	diff /= float64(cnt)
-	bph := float64(cnt)/float64(common.CFG.MiningStatHours)
+	bph := float64(cnt)/float64(common.CFG.Stat.MiningHrs)
 	hrate := bph/6 * diff * 7158278.826667
 
-	stats.MiningStatHours = common.CFG.MiningStatHours
+	stats.MiningStatHours = common.CFG.Stat.MiningHrs
 	stats.BlockCount = cnt
 	stats.FirstBlockTime = lastts
 	stats.AvgBlocksPerHour = bph

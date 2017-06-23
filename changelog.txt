@@ -1,4 +1,5 @@
 1.9.1
+* Client: changed configuration related data
 * Client: Changed rules of choosing the "slowest" peer to drop
 * Client/WebIO: shows New York Agreement support related info in "Block" and "Miners" tabs
 * Client: "SaveOnDisk" config option for "TXPool" and "AllBalances" (defaults to false)

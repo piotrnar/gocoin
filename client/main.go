@@ -225,7 +225,8 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.CountSafe("RPCBlockOK")
 	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
 
-	new_block_mined(msg.Block, nil)
+
+	new_block_mined(msg.Block, nil) // this must be done before we update "common.Last"
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
@@ -323,7 +324,7 @@ func main() {
 			network.MempoolLoad()
 		}
 
-		if common.CFG.TextUI.Enabled {
+		if common.CFG.TextUI_Enabled {
 			go textui.MainThread()
 		}
 

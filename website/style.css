@@ -51,3 +51,10 @@ pre {
 .bigger {
 	font-size:120%;
 }
+
+tr.even {
+	background-color:#fcfff8;
+}
+tr.odd {
+	background-color:#f8f8ff;
+}
