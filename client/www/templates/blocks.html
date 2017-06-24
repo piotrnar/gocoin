@@ -84,7 +84,7 @@ function remember_info_setting() {
 remember_info_setting()
 switch_stats_type()
 
-const MINER_ID_COLUMN = 10
+const MINER_ID_COLUMN = 11
 
 var show_timestamp = false
 
@@ -146,11 +146,13 @@ function stat_clicked(hash, height) {
 				stat_error.style.display = 'none'
 
 				// sort fees by SPB
+				/*
 				stats.sort(function (a, b) {
 					var spb_a = a[1] / a[0]
 					var spb_b = b[1] / b[0]
 					return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
 				})
+				*/
 				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
 
 				var plot_options = {
