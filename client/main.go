@@ -17,6 +17,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -58,12 +59,27 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		common.RecalcAverageBlockSize(false)
 
+		var wr *bytes.Buffer
+		if common.CFG.Stat.BlockFees && len(bl.Txs) > 1 {
+			wr = new(bytes.Buffer)
+			wr.Write([]byte("["))
+		}
 		for i := 1; i < len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
 			kspb := 1000 * bl.Txs[i].Fee / uint64(bl.Txs[i].Size)
 			if i == 1 || newbl.MinFeeKSPB > kspb {
 				newbl.MinFeeKSPB = kspb
 			}
+			if wr != nil {
+				if i>1 {
+					wr.WriteByte(byte(','))
+				}
+				fmt.Fprint(wr, "[", bl.Txs[i].Size, ",", bl.Txs[i].Fee, "]")
+			}
+		}
+		if wr != nil {
+			wr.Write([]byte("]"))
+			ioutil.WriteFile(common.BlockFeesFile(bl.Hash), wr.Bytes(), 0600)
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {

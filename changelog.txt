@@ -1,4 +1,5 @@
 1.9.1
+* Client: WebUI/Blocks can show new blocks extended fee stats when "CFG.Stat.BlockFees" is true
 * Client: changed configuration related data
 * Client: Changed rules of choosing the "slowest" peer to drop
 * Client/WebIO: shows New York Agreement support related info in "Block" and "Miners" tabs

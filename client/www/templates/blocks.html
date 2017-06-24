@@ -1,9 +1,19 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <style>
 .stat0 {
 }
 .stat1 {
 }
 </style>
+
+<div id="block_fee_stats" width="100%" style="display:none;text-align:center">
+Fee statistics for block <b id="stat_height"></b> - <b class="mono" id="stat_hash"></b>
+(average <b id="stat_avg_fee"></b> SPB) - <a href="javascript:closestats()">close the chart</a>
+<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
+<div id="block_fees" style="height:200px;margin:5px"></div>
+</div>
+
 <div style="text-align:right;margin-bottom:8px;">
 <input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span onclick="stats_type_min.click()" style="cursor:pointer"> Mining Information</span>
 &nbsp;&bull;&nbsp;
@@ -122,9 +132,75 @@ function ms2str(v) {
 	return v
 }
 
+
+function stat_clicked(hash, height) {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			block_fee_stats.style.display = 'block'
+
+			try {
+				var stats = JSON.parse(aj.responseText)
+
+				// hide error message
+				stat_error.style.display = 'none'
+
+				// sort fees by SPB
+				stats.sort(function (a, b) {
+					var spb_a = a[1] / a[0]
+					var spb_b = b[1] / b[0]
+					return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
+				})
+				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
+
+				var plot_options = {
+					xaxis: { max : 1e6,  position : "top", tickSize:100e3, alignTicksWithAxis: 200,
+						tickFormatter : function(a) {return (a/10e3) + "%"} },
+					yaxis : { max : 1000,  position : "right",
+						tickFormatter : function(a) {return a + " SPB"},
+						labelWidth : 50 }
+				}
+
+				var totbytes = 0
+				var totfees = 0
+				for (var i=0; i<stats.length; i++) {
+					totbytes += stats[i][0]
+					totfees += stats[i][1]
+					plot_data[0].data.push([totbytes, stats[i][1] / stats[i][0]])
+				}
+
+				var avg_fee = totfees / totbytes
+				stat_avg_fee.innerText = avg_fee.toFixed(1)
+				plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
+
+				$.plot($("#block_fees"), plot_data, plot_options)
+
+			} catch (e) {
+				console.log(e)
+				error_info.innertText = aj.responseText
+				stat_error.style.display = 'block'
+			}
+
+			stat_height.innerText = height
+			stat_hash.innerText = hash
+
+		}
+	}
+	aj.open("GET","http://127.0.0.1:8833/blfees.json?hash="+hash, true);
+	aj.send(null);
+}
+
+function closestats() {
+	block_fee_stats.style.display = 'none'
+}
+
 function refreshblocks() {
-	function onc(c,id) {
+	function onc_mid(c,id) {
 		c.onclick = function() {hlminer(id)}
+	}
+
+	function onc_stat(c,hash,height) {
+		c.onclick = function() {stat_clicked(hash, height); return false}
 	}
 
 	var aj = ajax()
@@ -143,7 +219,7 @@ function refreshblocks() {
 			for (var i=0; i<cs.length; i++) {
 				var td, row = blkstab.insertRow(-1)
 
-				row.className = 'hov hand'
+				row.className = 'hov'
 				row.title = "Rcvd at " + tim2str(cs[i].Received) + " with TS " + tim2str(cs[i].Timestamp)
 
 				td = row.insertCell(-1)
@@ -164,6 +240,16 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.className = 'mono block_hash'
 				td.innerText = cs[i].Hash
+				//var h = cs[i].Hash
+				if (cs[i].HaveFeeStats) {
+					var img = document.createElement('img')
+					img.src = 'webui/stats.png'
+					img.style.cssFloat = 'right'
+					img.className = 'hand'
+					td.appendChild(img)
+					onc_stat(img, cs[i].Hash, cs[i].Height)
+					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
+				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
@@ -234,8 +320,9 @@ function refreshblocks() {
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
-				td.className = "i stat0"
+				td.className = "i stat0 hand"
 				td.innerText = miner
+				onc_mid(td, i)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
@@ -290,8 +377,6 @@ function refreshblocks() {
 						}
 					}
 				}
-
-				onc(row, i)
 			}
 
 			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'

@@ -1,15 +1,17 @@
 package webui
 
 import (
-	"time"
 	"bytes"
-	"regexp"
-	"net/http"
-	"sync/atomic"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"regexp"
+	"sync/atomic"
+	"time"
 )
 
 func p_blocks(w http.ResponseWriter, r *http.Request) {
@@ -22,34 +24,35 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
-
 func json_blocks(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
 	type one_block struct {
-		Height uint32
+		Height    uint32
 		Timestamp uint32
-		Hash string
-		TxCnt int
-		Size int
-		Version uint32
-		Reward uint64
-		Miner string
-		FeeSPB float64
+		Hash      string
+		TxCnt     int
+		Size      int
+		Version   uint32
+		Reward    uint64
+		Miner     string
+		FeeSPB    float64
 
-		Received uint32
+		Received                          uint32
 		TimePre, TimeDl, TimeVer, TimeQue int
-		WasteCnt uint
-		MissedCnt int
-		FromConID uint32
-		Sigops int
+		WasteCnt                          uint
+		MissedCnt                         int
+		FromConID                         uint32
+		Sigops                            int
 
-		MinFeeKSPB uint64
+		MinFeeKSPB     uint64
 		NonWitnessSize int
-		EBAD string
-		NYA bool
+		EBAD           string
+		NYA            bool
+
+		HaveFeeStats bool
 	}
 
 	var blks []*one_block
@@ -60,13 +63,13 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
-	for cnt:=uint32(0); end!=nil && cnt<atomic.LoadUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
+	for cnt := uint32(0); end != nil && cnt < atomic.LoadUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			break
 		}
 		block, e := btc.NewBlock(bl)
-		if e!=nil {
+		if e != nil {
 			break
 		}
 
@@ -102,25 +105,25 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		if rb.TmPreproc.IsZero() {
 			b.TimePre = -1
 		} else {
-			b.TimePre = int(rb.TmPreproc.Sub(rb.TmStart)/time.Millisecond)
+			b.TimePre = int(rb.TmPreproc.Sub(rb.TmStart) / time.Millisecond)
 		}
 
 		if rb.TmDownload.IsZero() {
 			b.TimeDl = -1
 		} else {
-			b.TimeDl = int(rb.TmDownload.Sub(rb.TmStart)/time.Millisecond)
+			b.TimeDl = int(rb.TmDownload.Sub(rb.TmStart) / time.Millisecond)
 		}
 
 		if rb.TmQueue.IsZero() {
 			b.TimeQue = -1
 		} else {
-			b.TimeQue = int(rb.TmQueue.Sub(rb.TmStart)/time.Millisecond)
+			b.TimeQue = int(rb.TmQueue.Sub(rb.TmStart) / time.Millisecond)
 		}
 
 		if rb.TmAccepted.IsZero() {
 			b.TimeVer = -1
 		} else {
-			b.TimeVer = int(rb.TmAccepted.Sub(rb.TmStart)/time.Millisecond)
+			b.TimeVer = int(rb.TmAccepted.Sub(rb.TmStart) / time.Millisecond)
 		}
 
 		b.WasteCnt = rb.Cnt
@@ -130,11 +133,15 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.MinFeeKSPB = rb.MinFeeKSPB
 		b.NonWitnessSize = rb.NonWitnessSize
 
-		if res:=eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res!=nil {
+		if res := eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res != nil {
 			b.EBAD = string(res)
 		}
 
 		b.NYA = bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1
+
+		if fi, _ := os.Stat(common.BlockFeesFile(end.BlockHash)); fi != nil && fi.Size() > 2 {
+			b.HaveFeeStats = true
+		}
 
 		blks = append(blks, b)
 		end = end.Parent
@@ -146,6 +153,32 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		w.Write(bx)
 	} else {
 		println(er.Error())
+	}
+
+}
+
+func json_blfees(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	if len(r.Form["hash"]) == 0 {
+		w.Write([]byte("No hash given"))
+		return
+	}
+
+	hash := btc.NewUint256FromString(r.Form["hash"][0])
+	if hash == nil {
+		w.Write([]byte("Incorect hash given"))
+		return
+	}
+
+	dat, _ := ioutil.ReadFile(common.BlockFeesFile(hash))
+	if dat != nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(dat)
+	} else {
+		w.Write([]byte("File nmot found"))
 	}
 
 }

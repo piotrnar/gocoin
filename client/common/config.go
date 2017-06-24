@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"encoding/json"
 	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -95,6 +96,7 @@ var (
 			MiningHrs uint
 			FeesBlks uint
 			BSizeBlks uint
+			BlockFees bool
 		}
 		DropPeers struct {
 			DropEachMinutes uint // zero for never
@@ -275,6 +277,10 @@ func Reset() {
 		UserAgent = "/Gocoin:"+gocoin.Version+"/"
 	}
 
+	if CFG.Stat.BlockFees {
+		os.MkdirAll("blkfees", 0700)
+	}
+
 	ReloadMiners()
 }
 
@@ -347,4 +353,8 @@ func SetListenTCP(yes bool, global bool) {
 		// Make sure mutex_cfg is locked while calling this one
 		CFG.Net.ListenTCP = yes
 	}
+}
+
+func BlockFeesFile(hash *btc.Uint256) string {
+	return "blkfees" + string(os.PathSeparator) + hash.String() + ".json"
 }
