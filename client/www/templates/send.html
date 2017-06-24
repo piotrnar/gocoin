@@ -55,6 +55,9 @@ function build_change_list() {
 	}
 }
 
+var prvpos = null
+
+
 function show_input_tx() {
 	var aj = ajax()
 	var vout = parseInt(this["vout"])
@@ -90,13 +93,14 @@ function show_input_tx() {
 			console.log(s)
 
 			rawdiv.innerHTML = s
+
+			if (prvpos==null) {
+				fade.addEventListener('click', closepopup)
+				fade.style.cursor = 'pointer'
+				fade.title = 'Click here to close the popup'
+			}
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
-
-			// TODO: make it to happen only once
-			fade.addEventListener('click', closepopup)
-			fade.style.cursor = 'pointer'
-			fade.title = 'Click here to close the popup'
 
 			light.style.display='block'
 			fade.style.display='block'
@@ -184,7 +188,7 @@ function fetch_wallet_balance(name) {
 				td.innerText = outs[i].block
 
 				td = row.insertCell(-1)
-				td.className = 'inpid'
+				td.className = 'inpid hand'
 				td.innerText = outs[i].txid + ' - ' + outs[i].vout
 				td["txid"] = outs[i].txid
 				td["vout"] = outs[i].vout
