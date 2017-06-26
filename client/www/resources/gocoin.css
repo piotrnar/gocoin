@@ -257,3 +257,8 @@ div.footer {
 	font-size:17px;
 	font-weight:bold;
 }
+
+.nw {
+	white-space: nowrap;
+}
+
