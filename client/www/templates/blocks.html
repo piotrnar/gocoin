@@ -27,7 +27,7 @@ Fee statistics for block <b id="stat_height"></b> - <b class="mono" id="stat_has
 <tr>
 	<th width="52">Height
 	<th width="70" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
-	<th width="450">Hash
+	<th width="480">Hash
 	<th width="35" align="right">TXs
 	<th width="40" align="right">SiOps
 	<th width="45" align="right">kByte
@@ -84,7 +84,7 @@ function remember_info_setting() {
 remember_info_setting()
 switch_stats_type()
 
-const MINER_ID_COLUMN = 11
+const MINER_ID_COLUMN = 10
 
 var show_timestamp = false
 
@@ -146,13 +146,11 @@ function stat_clicked(hash, height) {
 				stat_error.style.display = 'none'
 
 				// sort fees by SPB
-				/*
 				stats.sort(function (a, b) {
 					var spb_a = a[1] / a[0]
 					var spb_b = b[1] / b[0]
 					return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
 				})
-				*/
 				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
 
 				var plot_options = {
@@ -160,7 +158,7 @@ function stat_clicked(hash, height) {
 						tickFormatter : function(a) {return (a/10e3) + "%"} },
 					yaxis : { max : 1000,  position : "right",
 						tickFormatter : function(a) {return a + " SPB"},
-						labelWidth : 50 }
+						labelWidth : 80 }
 				}
 
 				var totbytes = 0
@@ -240,14 +238,14 @@ function refreshblocks() {
 				}
 
 				td = row.insertCell(-1)
-				td.className = 'mono block_hash'
+				td.className = 'mono block_hash nw'
 				td.innerText = cs[i].Hash
 				//var h = cs[i].Hash
 				if (cs[i].HaveFeeStats) {
 					var img = document.createElement('img')
 					img.src = 'webui/stats.png'
-					img.style.cssFloat = 'right'
 					img.className = 'hand'
+					img.style.margin = '0px 0px 0px 10px'
 					td.appendChild(img)
 					onc_stat(img, cs[i].Hash, cs[i].Height)
 					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
