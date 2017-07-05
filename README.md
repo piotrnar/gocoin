@@ -58,7 +58,7 @@ Currently that can be at least one of the following:
 * Free BSD
 
 ## Build environment
-Since no binaries are provided, in order to build Gocoin yourself, you will need the following tools installed in your system:
+In order to build Gocoin yourself, you will need the following tools installed in your system:
 
 * **Go** (version 1.8 or higher) - http://golang.org/doc/install
 * **Git** - http://git-scm.com/downloads

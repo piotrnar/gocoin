@@ -8,8 +8,14 @@
 </style>
 
 <div id="block_fee_stats" width="100%" style="display:none;text-align:center">
-Fee statistics for block <b id="stat_height"></b> - <b class="mono" id="stat_hash"></b>
-(average <b id="stat_avg_fee"></b> SPB) - <a href="javascript:closestats()">close the chart</a>
+<table width="100%"><tr><td>
+Fee statistics for block number <b id="stat_height"></b></b>
+(average <b id="stat_avg_fee"></b> SPB)
+<td align="center">Sort by SPB:
+<input id="block_fees_sort" type="checkbox" onchange="stat_clicked(last_hash, last_height)">
+<td align="right">
+<a href="javascript:closestats()">close the chart</a>
+</table>
 <div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
 <div id="block_fees" style="height:200px;margin:5px"></div>
 </div>
@@ -84,7 +90,7 @@ function remember_info_setting() {
 remember_info_setting()
 switch_stats_type()
 
-const MINER_ID_COLUMN = 10
+const MINER_ID_COLUMN = 11
 
 var show_timestamp = false
 
@@ -133,8 +139,12 @@ function ms2str(v) {
 }
 
 
+var last_hash, last_height
+
 function stat_clicked(hash, height) {
 	var aj = ajax()
+	last_hash = hash
+	last_height = height
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			block_fee_stats.style.display = 'block'
@@ -146,11 +156,13 @@ function stat_clicked(hash, height) {
 				stat_error.style.display = 'none'
 
 				// sort fees by SPB
-				stats.sort(function (a, b) {
-					var spb_a = a[1] / a[0]
-					var spb_b = b[1] / b[0]
-					return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
-				})
+				if (block_fees_sort.checked) {
+					stats.sort(function (a, b) {
+						var spb_a = a[1] / a[0]
+						var spb_b = b[1] / b[0]
+						return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
+					})
+				}
 				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
 
 				var plot_options = {
@@ -182,7 +194,7 @@ function stat_clicked(hash, height) {
 			}
 
 			stat_height.innerText = height
-			stat_hash.innerText = hash
+			//stat_hash.innerText = hash
 
 		}
 	}
