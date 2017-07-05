@@ -126,8 +126,8 @@ func retry_cached_blocks() bool {
 			common.Busy("Cache.LocalAcceptBlock " + newbl.Block.Hash.String())
 			e := LocalAcceptBlock(newbl)
 			if e != nil {
-				fmt.Println("AcceptBlock:", e.Error())
-				newbl.Conn.DoS("LocalAcceptBl")
+				fmt.Println("AcceptBlock", newbl.Block.Hash.String(), "-", e.Error())
+				newbl.Conn.Misbehave("LocalAcceptBl", 250)
 			}
 			if usif.Exit_now {
 				return false
