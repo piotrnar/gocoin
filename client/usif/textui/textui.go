@@ -227,9 +227,11 @@ func ui_dbg(par string) {
 }
 
 func show_pending(par string) {
+	network.MutexRcv.Lock()
 	for _, v := range network.BlocksToGet {
 		fmt.Printf(" * %d / %s / %d in progress\n", v.Block.Height, v.Block.Hash.String(), v.InProgress)
 	}
+	network.MutexRcv.Unlock()
 }
 
 func show_help(par string) {
