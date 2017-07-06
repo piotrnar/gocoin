@@ -58,9 +58,12 @@ func NewChain(dbrootdir string, genesis *btc.Uint256, rescan bool) (ch *Chain) {
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
-	if opts != nil {
-		ch.CB = *opts
+
+	if opts == nil {
+		opts = &NewChanOpts{}
 	}
+
+	ch.CB = *opts
 
 	ch.Consensus.GensisTimestamp = 1231006505
 	ch.Consensus.MaxPOWBits = 0x1d00ffff
