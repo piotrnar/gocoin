@@ -11,7 +11,7 @@ Client:
 * Make -nowallet mode switchable without restarting the node.
 * When UTXO set has changed, start independent timer for saving it (instead of using the idle tick).
 * Implement way of compressing UTXO and balance DBs in memory, by using PkScr->Index mappings
-* Test: After downloading blockchain with "-v" it does not save UTXO.db
+* Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
