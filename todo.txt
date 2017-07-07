@@ -7,6 +7,8 @@ Lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Client:
+* WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
+* Make -nowallet mode switchable without restarting the node.
 * When UTXO set has changed, start independent timer for saving it (instead of using the idle tick).
 * Implement way of compressing UTXO and balance DBs in memory, by using PkScr->Index mappings
 * Test: After downloading blockchain with "-v" it does not save UTXO.db
