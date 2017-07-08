@@ -1,7 +1,7 @@
 package main
 
 /*
-  This is a EC_Verify speedup that works inly with Windows
+  This is a EC_Verify speedup that works only with Windows
 
   Use secp256k1.dll from gocoin/tools/sipa_dll
   or build one yourself.
@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	advapi32 = syscall.NewLazyDLL("secp256k1.dll")
-	DLL_EC_Verify = advapi32.NewProc("EC_Verify")
+	dll = syscall.NewLazyDLL("secp256k1.dll")
+	DLL_EC_Verify = dll.NewProc("EC_Verify")
 )
 
 
