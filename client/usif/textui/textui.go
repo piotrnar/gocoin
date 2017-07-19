@@ -227,9 +227,11 @@ func ui_dbg(par string) {
 }
 
 func show_pending(par string) {
+	network.MutexRcv.Lock()
 	for _, v := range network.BlocksToGet {
 		fmt.Printf(" * %d / %s / %d in progress\n", v.Block.Height, v.Block.Hash.String(), v.InProgress)
 	}
+	network.MutexRcv.Unlock()
 }
 
 func show_help(par string) {
@@ -528,7 +530,7 @@ func init() {
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge unspendable outputs from UTXO database (add 'all' to purge everything)")
-	newUi("quit q", false, ui_quit, "Exit nicely, saving all files. Otherwise use Ctrl+C")
+	newUi("quit q", false, ui_quit, "Quit the node")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")

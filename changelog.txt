@@ -1,4 +1,5 @@
 1.9.1
+* LIb: fixed panic in chain.NewChainExt() when called with nil options (used by importblocks tool)
 * Client: When calculating initial average block size, assume MAX_BLOCK_SIZE for the purged ones
 * Client: WebUI/Blocks can show new blocks extended fee stats when "CFG.Stat.BlockFees" is true
 * Client: changed configuration related data

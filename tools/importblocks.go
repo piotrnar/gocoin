@@ -37,7 +37,7 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 
 func import_blockchain(dir string) {
 	BlockDatabase := blockdb.NewBlockDB(dir, Magic)
-	chain := chain.NewChain(GocoinHomeDir, GenesisBlock, false)
+	chain := chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, nil)
 
 	var bl *btc.Block
 	var er error
@@ -95,7 +95,6 @@ func import_blockchain(dir string) {
 	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
 
 	fmt.Println("Now saving the new database...")
-	chain.Save()
 	chain.Close()
 	fmt.Println("Database saved. No more imports should be needed.")
 }
