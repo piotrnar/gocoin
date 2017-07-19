@@ -54,6 +54,7 @@ Fee statistics for block number <b id="stat_height"></b></b>
 </table>
 <br>
 Block Version Legend:<br>
+&bull; <b>9</b> - Supports BIP91 <span id="bip91_cnt"></span><br>
 &bull; <b>W</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109)<br>
 &bull; <b>U</b> - Signals BU's <span class="mono">/EBx/ADy/</span> thingy  <span id="ebad_cnt"></span><br>
@@ -225,6 +226,7 @@ function refreshblocks() {
 			var segwit_c = 0
 			var ebad_c = 0
 			var nya_c = 0
+			var bip91_c = 0
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
 
@@ -308,6 +310,10 @@ function refreshblocks() {
 					vx = cs[i].Version
 				} else {
 					if (cs[i].Version&0x20000000) {
+						if (cs[i].Version&0x10) {
+							vx += '9'
+							bip91_c++
+						}
 						if (cs[i].Version&0x2) {
 							vx += 'W'
 							segwit_c++
@@ -394,6 +400,7 @@ function refreshblocks() {
 			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'
 			ebad_cnt.innerText = '(' + ebad_c + '/' + cs.length + ')'
 			nya_cnt.innerText = '(' + nya_c + '/' + cs.length + ')'
+			bip91_cnt.innerText = '(' + bip91_c + '/' + cs.length + ')'
 
 			if (mid!=null) {
 				for (var i=2; i<blkstab.rows.length; i++) {
