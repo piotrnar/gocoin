@@ -157,7 +157,8 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 			om.ebad_cnt++
 		}
 
-		if end.BlockVersion()==0x20000002 {
+		ver := end.BlockVersion()
+		if (ver&0xE0000000)==0x20000000 && (ver&2)!=0 {
 			om.segwit_cnt++
 		}
 
