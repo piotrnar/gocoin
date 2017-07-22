@@ -18,7 +18,8 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
-	if bl.Version()==0 {
+	ver := bl.Version()
+	if ver == 0 {
 		er = errors.New("CheckBlock() : Block version 0 not allowed - RPC_Result:bad-version")
 		dos = true
 		return
@@ -82,15 +83,24 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
-	if bl.Version() < 2 && bl.Height >= ch.Consensus.BIP34Height ||
-		bl.Version() < 3 && bl.Height >= ch.Consensus.BIP66Height ||
-		bl.Version() < 4 && bl.Height >= ch.Consensus.BIP65Height {
+	if ver < 2 && bl.Height >= ch.Consensus.BIP34Height ||
+		ver < 3 && bl.Height >= ch.Consensus.BIP66Height ||
+		ver < 4 && bl.Height >= ch.Consensus.BIP65Height {
 		// bad block version
-		erstr := fmt.Sprintf("0x%08x", bl.Version())
-		er = errors.New("CheckBlock() : Rejected Version="+erstr+" blolck - RPC_Result:bad-version("+erstr+")")
+		erstr := fmt.Sprintf("0x%08x", ver)
+		er = errors.New("CheckBlock() : Rejected Version="+erstr+" block - RPC_Result:bad-version("+erstr+")")
 		dos = true
 		return
 	}
+
+	if ch.Consensus.BIP91Height != 0 && ch.Consensus.Enforce_SEGWIT != 0 {
+		if bl.Height >= ch.Consensus.BIP91Height && bl.Height < ch.Consensus.Enforce_SEGWIT-2016 {
+			if (ver&0xE0000000) != 0x20000000 || (ver&2) == 0 {
+				er = errors.New("CheckBlock() : relayed block must signal for segwit - RPC_Result:bad-no-segwit")
+			}
+		}
+	}
+
 	return
 }
 
