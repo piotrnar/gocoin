@@ -126,8 +126,8 @@ func retry_cached_blocks() bool {
 			common.Busy("Cache.LocalAcceptBlock " + newbl.Block.Hash.String())
 			e := LocalAcceptBlock(newbl)
 			if e != nil {
-				fmt.Println("AcceptBlock", newbl.Block.Hash.String(), "-", e.Error())
-				newbl.Conn.Misbehave("LocalAcceptBl", 250)
+				fmt.Println("AcceptBlock2", newbl.Block.Hash.String(), "-", e.Error())
+				newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 			}
 			if usif.Exit_now {
 				return false
@@ -173,8 +173,8 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	e := LocalAcceptBlock(newbl)
 	if e != nil {
 		common.CountSafe("DiscardFreshBlockB")
-		fmt.Println("AcceptBlock:", e.Error())
-		newbl.Conn.DoS("LocalAcceptBl")
+		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
+		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
 	} else {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
