@@ -242,7 +242,10 @@ func (ch *Chain) UndoLastBlock() {
 	fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
 		ch.BlockTreeEnd.BlockSize>>10, "KB")
 
-	raw, _, _ := ch.Blocks.BlockGet(ch.BlockTreeEnd.BlockHash)
+	raw, _, er := ch.Blocks.BlockGet(ch.BlockTreeEnd.BlockHash)
+	if er != nil {
+		panic(er.Error())
+	}
 
 	bl, _ := btc.NewBlock(raw)
 	bl.BuildTxList()
