@@ -1,15 +1,14 @@
 package webui
 
 import (
-	"bytes"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"regexp"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -50,7 +49,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		MinFeeKSPB     uint64
 		NonWitnessSize int
 		EBAD           string
-		NYA            bool
 
 		HaveFeeStats bool
 	}
@@ -137,11 +135,9 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 			b.EBAD = string(res)
 		}
 
-		b.NYA = bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1
-
-		if fi, _ := os.Stat(common.BlockFeesFile(end.BlockHash)); fi != nil && fi.Size() > 2 {
-			b.HaveFeeStats = true
-		}
+		usif.BlockFeesMutex.Lock()
+		_, b.HaveFeeStats = usif.BlockFees[end.Height]
+		usif.BlockFeesMutex.Unlock()
 
 		blks = append(blks, b)
 		end = end.Parent
@@ -162,23 +158,31 @@ func json_blfees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(r.Form["hash"]) == 0 {
+	if len(r.Form["height"]) == 0 {
 		w.Write([]byte("No hash given"))
 		return
 	}
 
-	hash := btc.NewUint256FromString(r.Form["hash"][0])
-	if hash == nil {
-		w.Write([]byte("Incorect hash given"))
+	height, e := strconv.ParseUint(r.Form["height"][0], 10, 32)
+	if e != nil {
+		w.Write([]byte(e.Error()))
 		return
 	}
 
-	dat, _ := ioutil.ReadFile(common.BlockFeesFile(hash))
-	if dat != nil {
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.Write(dat)
-	} else {
-		w.Write([]byte("File nmot found"))
+	usif.BlockFeesMutex.Lock()
+	fees, ok := usif.BlockFees[uint32(height)]
+	usif.BlockFeesMutex.Unlock()
+
+	if !ok {
+		w.Write([]byte("File not found"))
+		return
 	}
 
+	bx, er := json.Marshal(fees)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
 }

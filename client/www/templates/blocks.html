@@ -54,11 +54,8 @@ Fee statistics for block number <b id="stat_height"></b></b>
 </table>
 <br>
 Block Version Legend:<br>
-&bull; <b>9</b> - Supports BIP91 <span id="bip91_cnt"></span><br>
-&bull; <b>W</b> - Supports SegWit <span id="segwit_cnt"></span><br>
 &bull; <b>+</b> - Supports 2MB blocks (BIP-109)<br>
 &bull; <b>U</b> - Signals BU's <span class="mono">/EBx/ADy/</span> thingy  <span id="ebad_cnt"></span><br>
-&bull; <b>N</b> - Signals support for New York Agreement <span id="nya_cnt"></span><br>
 &bull; <b>1,2,3,4</b> - Old fasion blocks (before BIP9)<br>
 &bull; <b>?</b> - Unrecognized block version<br>
 <script>
@@ -149,7 +146,6 @@ function stat_clicked(hash, height) {
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			block_fee_stats.style.display = 'block'
-
 			try {
 				var stats = JSON.parse(aj.responseText)
 
@@ -199,7 +195,7 @@ function stat_clicked(hash, height) {
 
 		}
 	}
-	aj.open("GET","blfees.json?hash="+hash, true);
+	aj.open("GET","blfees.json?height="+height, true);
 	aj.send(null);
 }
 
@@ -223,10 +219,7 @@ function refreshblocks() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
-			var segwit_c = 0
 			var ebad_c = 0
-			var nya_c = 0
-			var bip91_c = 0
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
 
@@ -310,14 +303,6 @@ function refreshblocks() {
 					vx = cs[i].Version
 				} else {
 					if (cs[i].Version&0x20000000) {
-						if (cs[i].Version&0x10) {
-							vx += '9'
-							bip91_c++
-						}
-						if (cs[i].Version&0x2) {
-							vx += 'W'
-							segwit_c++
-						}
 						if (cs[i].Version&0x10000000) {
 							vx += '+'
 						}
@@ -328,10 +313,6 @@ function refreshblocks() {
 				if (typeof(cs[i].EBAD)=="string" && cs[i].EBAD!="") {
 					ebad_c++
 					vx += 'U'
-				}
-				if (cs[i].NYA) {
-					nya_c++
-					vx += 'N'
 				}
 				td.innerText = vx
 				td.title = '0x' + cs[i].Version.toString(16) + cs[i].EBAD
@@ -397,10 +378,7 @@ function refreshblocks() {
 				}
 			}
 
-			segwit_cnt.innerText = '(' + segwit_c + '/' + cs.length + ')'
 			ebad_cnt.innerText = '(' + ebad_c + '/' + cs.length + ')'
-			nya_cnt.innerText = '(' + nya_c + '/' + cs.length + ')'
-			bip91_cnt.innerText = '(' + bip91_c + '/' + cs.length + ')'
 
 			if (mid!=null) {
 				for (var i=2; i<blkstab.rows.length; i++) {

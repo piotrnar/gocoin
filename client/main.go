@@ -12,12 +12,11 @@ import (
 	"github.com/piotrnar/gocoin/client/usif/webui"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
-	"io/ioutil"
+	"github.com/piotrnar/gocoin/lib/qdb"
 	"os"
 	"os/signal"
 	"runtime"
@@ -59,27 +58,30 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		common.RecalcAverageBlockSize(false)
 
-		var wr *bytes.Buffer
-		if common.CFG.Stat.BlockFees && len(bl.Txs) > 1 {
-			wr = new(bytes.Buffer)
-			wr.Write([]byte("["))
+		var fees [][2]uint64
+
+		usif.BlockFeesMutex.Lock()
+		delete(usif.BlockFees, newbl.BlockTreeNode.Height-144)
+		usif.BlockFeesMutex.Unlock()
+		if len(bl.Txs) > 1 {
+			fees = make([][2]uint64, len(bl.Txs)-1)
 		}
+
 		for i := 1; i < len(bl.Txs); i++ {
 			network.TxMined(bl.Txs[i])
 			kspb := 1000 * bl.Txs[i].Fee / uint64(bl.Txs[i].Size)
 			if i == 1 || newbl.MinFeeKSPB > kspb {
 				newbl.MinFeeKSPB = kspb
 			}
-			if wr != nil {
-				if i>1 {
-					wr.WriteByte(byte(','))
-				}
-				fmt.Fprint(wr, "[", bl.Txs[i].Size, ",", bl.Txs[i].Fee, "]")
+			if fees != nil {
+				fees[i-1][0] = uint64(bl.Txs[i].Size)
+				fees[i-1][1] = uint64(bl.Txs[i].Fee)
 			}
 		}
-		if wr != nil {
-			wr.Write([]byte("]"))
-			ioutil.WriteFile(common.BlockFeesFile(bl.Hash), wr.Bytes(), 0600)
+		if fees != nil {
+			usif.BlockFeesMutex.Lock()
+			usif.BlockFees[newbl.BlockTreeNode.Height] = fees
+			usif.BlockFeesMutex.Unlock()
 		}
 
 		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
@@ -241,7 +243,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.CountSafe("RPCBlockOK")
 	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
 
-
 	new_block_mined(msg.Block, nil) // this must be done before we update "common.Last"
 
 	common.Last.Mutex.Lock()
@@ -316,7 +317,7 @@ func main() {
 			var vals [][]byte
 			peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 				peer := utils.NewPeer(v)
-				if peer.Banned!=0 {
+				if peer.Banned != 0 {
 					fmt.Println("Unban", peer.NetAddr.String())
 					peer.Banned = 0
 					keys = append(keys, k)

@@ -1,44 +1,44 @@
 package usif
 
 import (
-	"fmt"
-	"time"
-	"sync"
-	"sort"
-	"errors"
-	"math/rand"
-	"encoding/hex"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/script"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
+	"math/rand"
+	"sort"
+	"sync"
+	"time"
 )
 
-
 type OneUiReq struct {
-	Param string
+	Param   string
 	Handler func(pars string)
-	Done sync.WaitGroup
+	Done    sync.WaitGroup
 }
-
 
 // A thread that wants to lock the main thread calls:
 // In.Add(1); Out.Add(1); [put msg into LocksChan]; In.Wait(); [do synchronized code]; Out.Done()
 // The main thread, upon receiving the message, does:
 // In.Done(); Out.Wait();
 type OneLock struct {
-	In sync.WaitGroup  // main thread calls Done() on this one and then Stop.Wait()
-	Out sync.WaitGroup   // the synchronized thread calls Done
+	In  sync.WaitGroup // main thread calls Done() on this one and then Stop.Wait()
+	Out sync.WaitGroup // the synchronized thread calls Done
 }
 
 var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
-	LocksChan chan *OneLock = make(chan *OneLock, 1)
+	LocksChan chan *OneLock  = make(chan *OneLock, 1)
 
 	Exit_now bool
-)
 
+	BlockFeesMutex sync.Mutex
+	BlockFees      map[uint32][][2]uint64 = make(map[uint32][][2]uint64)
+)
 
 func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {
 	s += fmt.Sprintln("Transaction details (for your information):")
@@ -72,7 +72,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 			totinp += po.Value
 
 			ads := "???"
-			if ad:=btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad!=nil {
+			if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
 				ads = ad.String()
 			}
 			s += fmt.Sprintf(" %15.8f BTC @ %s", float64(po.Value)/1e8, ads)
@@ -99,7 +99,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 	for i := range tx.TxOut {
 		totout += tx.TxOut[i].Value
 		adr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet)
-		if adr!=nil {
+		if adr != nil {
 			s += fmt.Sprintf(" %15.8f BTC to adr %s\n", float64(tx.TxOut[i].Value)/1e8, adr.String())
 		} else {
 			s += fmt.Sprintf(" %15.8f BTC to scr %s\n", float64(tx.TxOut[i].Value)/1e8, hex.EncodeToString(tx.TxOut[i].Pk_script))
@@ -123,7 +123,6 @@ func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e e
 	return
 }
 
-
 func LoadRawTx(buf []byte) (s string) {
 	txd, er := hex.DecodeString(string(buf))
 	if er != nil {
@@ -132,7 +131,7 @@ func LoadRawTx(buf []byte) (s string) {
 
 	// At this place we should have raw transaction in txd
 	tx, le := btc.NewTx(txd)
-	if tx==nil || le != len(txd) {
+	if tx == nil || le != len(txd) {
 		s += fmt.Sprintln("Could not decode transaction file or it has some extra data")
 		return
 	}
@@ -154,18 +153,17 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 
 	if missinginp {
-		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:2, Firstseen:time.Now(),
-			Volume:totout, SigopsCost:sigops}
+		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx: tx, Data: txd, Own: 2, Firstseen: time.Now(),
+			Volume: totout, SigopsCost: sigops}
 	} else {
-		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx:tx, Data:txd, Own:1, Firstseen:time.Now(),
-			Volume:totinp, Fee:totinp-totout, SigopsCost:sigops}
+		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx: tx, Data: txd, Own: 1, Firstseen: time.Now(),
+			Volume: totinp, Fee: totinp - totout, SigopsCost: sigops}
 	}
 	network.TransactionsToSendSize += uint64(len(txd))
 	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
 	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
 	return
 }
-
 
 func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	common.CountSafe(fmt.Sprint("NetSendOneInv", typ))
@@ -180,7 +178,7 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	idx := rand.Intn(len(network.OpenCons))
 	var cnt int
 	for _, v := range network.OpenCons {
-		if idx==cnt {
+		if idx == cnt {
 			v.Mutex.Lock()
 			v.PendingInvs = append(v.PendingInvs, inv)
 			v.Mutex.Unlock()
@@ -192,7 +190,6 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 	return
 }
 
-
 func GetNetworkHashRateNum() float64 {
 	hours := common.CFG.Stat.HashrateHrs
 	common.Last.Mutex.Lock()
@@ -201,25 +198,24 @@ func GetNetworkHashRateNum() float64 {
 	now := time.Now().Unix()
 	cnt := 0
 	var diff float64
-	for ; end!=nil; cnt++ {
+	for ; end != nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(hours)*3600 {
 			break
 		}
 		diff += btc.GetDifficulty(end.Bits())
 		end = end.Parent
 	}
-	if cnt==0 {
+	if cnt == 0 {
 		return 0
 	}
 	diff /= float64(cnt)
-	bph := float64(cnt)/float64(hours)
-	return bph/6 * diff * 7158278.826667
+	bph := float64(cnt) / float64(hours)
+	return bph / 6 * diff * 7158278.826667
 }
-
 
 func ExecUiReq(req *OneUiReq) {
 	common.Busy_mutex.Lock()
-	if common.BusyWith!="" {
+	if common.BusyWith != "" {
 		fmt.Print("now common.BusyWith with ", common.BusyWith)
 	}
 	common.Busy_mutex.Unlock()
@@ -235,17 +231,15 @@ func ExecUiReq(req *OneUiReq) {
 	}()
 }
 
-
 type SortedTxToSend []*network.OneTxToSend
 
-func (tl SortedTxToSend) Len() int {return len(tl)}
-func (tl SortedTxToSend) Swap(i, j int)      { tl[i], tl[j] = tl[j], tl[i] }
+func (tl SortedTxToSend) Len() int      { return len(tl) }
+func (tl SortedTxToSend) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
 func (tl SortedTxToSend) Less(i, j int) bool {
-	spb_i := float64(tl[i].Fee)/float64(tl[i].VSize())
-	spb_j := float64(tl[j].Fee)/float64(tl[j].VSize())
+	spb_i := float64(tl[i].Fee) / float64(tl[i].VSize())
+	spb_j := float64(tl[j].Fee) / float64(tl[j].VSize())
 	return spb_j < spb_i
 }
-
 
 func MemoryPoolFees() (res string) {
 	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
@@ -261,19 +255,19 @@ func MemoryPoolFees() (res string) {
 	sort.Sort(sorted)
 
 	var totlen uint64
-	for cnt=0; cnt<len(sorted); cnt++ {
+	for cnt = 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
-		newlen := totlen+uint64(len(v.Data))
+		newlen := totlen + uint64(len(v.Data))
 
-		if cnt==0 || cnt+1==len(sorted) || (newlen/100e3)!=(totlen/100e3) {
-			spb := float64(v.Fee)/float64(len(v.Data))
+		if cnt == 0 || cnt+1 == len(sorted) || (newlen/100e3) != (totlen/100e3) {
+			spb := float64(v.Fee) / float64(len(v.Data))
 			toprint := newlen
-			if cnt!=0 && cnt+1!=len(sorted) {
-				toprint = newlen/100e3*100e3
+			if cnt != 0 && cnt+1 != len(sorted) {
+				toprint = newlen / 100e3 * 100e3
 			}
 			res += fmt.Sprintf(" %9d bytes, %6d txs @ fee %8.1f Satoshis / byte\n", toprint, cnt+1, spb)
 		}
-		if (newlen/1e6)!=(totlen/1e6) {
+		if (newlen / 1e6) != (totlen / 1e6) {
 			res += "===========================================================\n"
 		}
 
@@ -281,7 +275,6 @@ func MemoryPoolFees() (res string) {
 	}
 	return
 }
-
 
 func init() {
 	rand.Seed(int64(time.Now().Nanosecond()))
