@@ -242,7 +242,9 @@ func (db *BlockDB) writeOne() (written bool) {
 	db.mutex.Unlock()
 
 	if rec==nil || rec.ipos!=-1 {
-		panic("block2write unexpected")
+		println("Block not in the index anymore - discard")
+		written = true
+		return
 	}
 
 	db.disk_access.Lock()
@@ -423,8 +425,6 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	rec, trusted, e = db.BlockGetExt(hash)
 	if rec!=nil {
 		bl = rec.Data
-	} else {
-		e = errors.New("Block not found")
 	}
 	return
 }
