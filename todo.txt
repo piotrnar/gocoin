@@ -9,7 +9,6 @@ Lib:
 Client:
 * WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
 * Make -nowallet mode switchable without restarting the node.
-* When UTXO set has changed, start independent timer for saving it (instead of using the idle tick).
 * Implement way of compressing UTXO and balance DBs in memory, by using PkScr->Index mappings
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)

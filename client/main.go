@@ -28,7 +28,20 @@ import (
 var (
 	killchan          chan os.Signal = make(chan os.Signal)
 	retryCachedBlocks bool
+	SaveBlockChain    *time.Timer = time.NewTimer(24*time.Hour)
 )
+
+const (
+	SaveBlockChainAfter = 5*time.Second
+)
+
+func reset_save_timer() {
+	SaveBlockChain.Stop()
+	for len(SaveBlockChain.C) > 0 {
+		<- SaveBlockChain.C
+	}
+	SaveBlockChain.Reset(SaveBlockChainAfter)
+}
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
@@ -97,6 +110,8 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			usif.Exit_now = true
 		}
 		common.Last.Mutex.Unlock()
+
+		reset_save_timer()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		common.Last.Mutex.Lock()
@@ -389,6 +404,14 @@ func main() {
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
 
+			case <- SaveBlockChain.C:
+				common.CountSafe("SaveBlockChain")
+				common.Busy("BlockChain.Idle()")
+				println("saving BC...", common.Last.Block.Height)
+				if common.BlockChain.Idle() {
+					common.CountSafe("ChainIdleUsed")
+				}
+
 			case newtx := <-network.NetTxs:
 				common.CountSafe("MainNetTx")
 				common.Busy("network.HandleNetTx()")
@@ -414,12 +437,8 @@ func main() {
 				common.Busy("network.ExpireTxs()")
 				network.ExpireTxs()
 
-			case <-time.After(time.Second / 2):
+			case <-time.After(time.Second):
 				common.CountSafe("MainThreadIdle")
-				common.Busy("BlockChain.Idle()")
-				if common.BlockChain.Idle() {
-					common.CountSafe("ChainIdleUsed")
-				}
 				continue
 			}
 		}
