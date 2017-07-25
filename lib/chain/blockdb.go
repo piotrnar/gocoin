@@ -148,7 +148,8 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 			}
 		}
 		if rec := db.blockIndex[oldest_k]; rec!=nil && rec.ipos==-1 {
-			println("BlockDB: Oldest cache record not yet written - keep it")
+			// Oldest cache record not yet written - keep it
+			//println("BlockDB: Oldest cache record not yet written - keep it")
 		} else {
 			delete(db.cache, oldest_k)
 		}
