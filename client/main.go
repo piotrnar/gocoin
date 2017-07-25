@@ -32,7 +32,7 @@ var (
 )
 
 const (
-	SaveBlockChainAfter = 5*time.Second
+	SaveBlockChainAfter = 2*time.Second
 )
 
 func reset_save_timer() {
