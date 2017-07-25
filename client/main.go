@@ -407,7 +407,6 @@ func main() {
 			case <- SaveBlockChain.C:
 				common.CountSafe("SaveBlockChain")
 				common.Busy("BlockChain.Idle()")
-				println("saving BC...", common.Last.Block.Height)
 				if common.BlockChain.Idle() {
 					common.CountSafe("ChainIdleUsed")
 				}
