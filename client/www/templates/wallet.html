@@ -126,8 +126,8 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
-				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet_addr[i] +
-					'\', \'' + wallet[i].label + '\')" class="hand"> ' + wallet_addr[i]
+				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
+					'\', \'' + wallet_addr[i] + '\')" class="hand"> ' + wallet_addr[i]
 
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
@@ -160,8 +160,8 @@ function fetch_wallet_balance(name) {
 				td.className = 'segwitaddr'
 				if (segwit_active && rec.SegWitAddr!='') {
 					//td.innerText = rec.SegWitAddr
-					td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + rec.SegWitAddr +
-						'\', \'Segwit deposit address for ' + wallet[i].label + '\')" class="hand"> ' + rec.SegWitAddr
+                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
+						'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr
 				}
 
 				td = row.insertCell(-1)
