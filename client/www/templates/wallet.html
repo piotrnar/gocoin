@@ -12,6 +12,7 @@
 </div><div id="fade" class="black_overlay"></div>
 
 <script>
+/*WALLET_JS_VARS*/
 var prvpos = null
 
 var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:300})
@@ -55,8 +56,8 @@ td.balbtc {
 }
 td.segwitaddr {
 	text-align: left;
-	font-style:italic;
-	font-size: 80%;
+	//font-style:italic;
+	//font-size: 80%;
 	color:brown;
 }
 td.segwitcnt {
@@ -81,10 +82,6 @@ function switchwallet_button_click_browser() {
 }
 
 function fetch_wallet_balance(name) {
-	function onc(c,ad,lab) {
-		c.onclick = function() {showqrcode(lab,ad)}
-	}
-
 	if (fetching_balance_in_progress!=null) {
 		fetching_balance_in_progress.abort()
 		fetching_balance_in_progress = null
@@ -128,9 +125,9 @@ function fetch_wallet_balance(name) {
 				row.id = 'walrow'+idxx
 
 				td = row.insertCell(-1)
-				td.className = (wallet_addr[i].length>80) ? "hand addr_long" : "hand addr_norm"
-				td.innerText = wallet_addr[i]
-				onc(td, wallet_addr[i], wallet[i].label)
+				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
+				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet_addr[i] +
+					'\', \'' + wallet[i].label + '\')" class="hand"> ' + wallet_addr[i]
 
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
@@ -161,10 +158,10 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = 'segwitaddr'
-				if (testnet && rec.SegWitAddr!='') {
-					td.innerText = rec.SegWitAddr
-					td.onclick = function() {warnings.style.display='block'}
-					warnings
+				if (segwit_active && rec.SegWitAddr!='') {
+					//td.innerText = rec.SegWitAddr
+					td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + rec.SegWitAddr +
+						'\', \'Segwit deposit address for ' + wallet[i].label + '\')" class="hand"> ' + rec.SegWitAddr
 				}
 
 				td = row.insertCell(-1)
@@ -493,12 +490,11 @@ Import settings: <input type="file" id="import_file" accept=".json">
 </table>
 
 <br>
-<div id="warnings" style="color:red;display:none"><b>Warnings!</b> <br>
-<br>
-Do not deposit any coins into P2SH-WPKH Addresses until Segregated Witness feature is activated on the blockchain.<br>
-<br>
-The given P2SH-WPKH Address is only spendable if the corresponding Address comes from compressed key.<br>
-If Address comes from uncompressed key, you will not be able to spend anything deposited onto its WPKH .<br>
+<div id="warnings" style="color:red;display:none"><br><center style="font-size:200%"><b>Warnings</b></center>
+<ul>
+<li style="margin-bottom:10px;"><b>The listed P2SH-WPKH addresses are spendable <u>only</u> if their originating address refers to a <u>compressed key</u></b><br></li>
+<li>Do not deposit any coins into P2SH-WPKH addresses until Segregated Witness feature is activated on the blockchain</li>
+</ul>
 </div>
 </div>
 
@@ -553,5 +549,6 @@ qswal.addEventListener("loadwallet", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
 	import_file.addEventListener('change', import_file_selected, false);
+	if (segwit_active)  warnings.style.display = 'block'
 })
 </script>

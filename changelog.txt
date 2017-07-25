@@ -1,4 +1,5 @@
 1.9.1
+* Client/WebUI/Wallet: Show Segwit deposit addresses if segwit is active
 * Client: WebUI/Blocks shows new blocks' extended fee stats
 * Added support fro BIP91 in chain.PreCheckBlock() as well as on WebUI (mining info)
 * LIb: fixed panic in chain.NewChainExt() when called with nil options (used by importblocks tool)
