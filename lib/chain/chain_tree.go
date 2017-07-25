@@ -23,12 +23,10 @@ type BlockTreeNode struct {
 }
 
 func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
-	var b []byte
+	var crec *BlckCachRec
 	var er error
 	var trusted bool
 	var tot_bytes uint64
-
-	ch.Blocks.DoNotCache = true
 
 	sta := time.Now()
 	prv := sta
@@ -51,13 +49,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			break
 		}
 
-		b, trusted, er = ch.Blocks.BlockGet(nxt.BlockHash)
+		crec, trusted, er = ch.Blocks.BlockGetInternal(nxt.BlockHash, true)
 		if er != nil {
 			panic("Db.BlockGet(): "+er.Error())
 		}
-		tot_bytes += uint64(len(b))
+		tot_bytes += uint64(len(crec.Data))
 
-		bl, er := btc.NewBlock(b)
+		bl, er := btc.NewBlock(crec.Data)
 		if er != nil {
 			ch.DeleteBranch(nxt, nil)
 			break
@@ -86,8 +84,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		ch.BlockTreeEnd = nxt
 	}
-
-	ch.Blocks.DoNotCache = false
 
 	if !AbortNow && ch.BlockTreeEnd != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
@@ -242,12 +238,12 @@ func (ch *Chain) UndoLastBlock() {
 	fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
 		ch.BlockTreeEnd.BlockSize>>10, "KB")
 
-	raw, _, er := ch.Blocks.BlockGet(ch.BlockTreeEnd.BlockHash)
+	crec, _, er := ch.Blocks.BlockGetInternal(ch.BlockTreeEnd.BlockHash, true)
 	if er != nil {
 		panic(er.Error())
 	}
 
-	bl, _ := btc.NewBlock(raw)
+	bl, _ := btc.NewBlock(crec.Data)
 	bl.BuildTxList()
 
 	ch.Unspent.UndoBlockTxs(bl, ch.BlockTreeEnd.Parent.BlockHash.Hash[:])
