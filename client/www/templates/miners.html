@@ -36,12 +36,6 @@ td.mi_tot {
 	font-style:italic;
 	font-weight:bold;
 }
-td.mi_sw {
-	text-align:right;
-	color:#00b000;
-	font-style:italic;
-	font-size:90%;
-}
 td.mi_bu {
 	text-align:right;
 	color:blue;
@@ -104,13 +98,6 @@ function refresh_mining_info() {
 				td.innerText = m.Blocks
 
 				td = row.insertCell(-1)
-				if (m.SWcnt>0) {
-					td.className ='mi_sw'
-					td.innerText = m.SWcnt
-					sw_cnt += m.SWcnt
-				}
-
-				td = row.insertCell(-1)
 				if (m.BUcnt>0) {
 					td.className ='mi_bu'
 					td.innerText = m.BUcnt
@@ -150,7 +137,6 @@ function refresh_mining_info() {
 			el_avg_fpbyte.innerText = parseFloat(totfees/totbts).toFixed(0)
 			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
 
-			th_sw_sign.title = parseFloat(100*sw_cnt/cs.BlockCount).toFixed(0) + '%'
 			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
 			th_ny_sign.title = parseFloat(100*ny_cnt/cs.BlockCount).toFixed(0) + '%'
 
@@ -186,7 +172,6 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock"></b
 		<th width="120" align="left">Miner
 		<th width="80" align="right">Share
 		<th width="40" align="right">Tot
-		<th width="20" align="right" id="th_sw_sign">SW
 		<th width="20" align="right" id="th_bu_sign">BU
 		<th width="20" align="right" id="th_ny_sign">NY
 		<th width="100" align="right">Hashrate

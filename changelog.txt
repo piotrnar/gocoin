@@ -1,4 +1,6 @@
 1.9.1
+* Client/WebUI: Pressing ESC closes popups
+* Client/WebUI: Removed Segwit related statistics
 * Client/WebUI/Wallet: Show Segwit deposit addresses if segwit is active
 * Client: WebUI/Blocks shows new blocks' extended fee stats
 * Added support fro BIP91 in chain.PreCheckBlock() as well as on WebUI (mining info)

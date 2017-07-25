@@ -716,6 +716,9 @@ function refreshtxstat() {
 
 document.addEventListener('DOMContentLoaded', function() {
 	refreshtxstat()
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
 })
 
 blno.addEventListener("lastblock", function(e) {

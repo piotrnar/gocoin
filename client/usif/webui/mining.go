@@ -19,7 +19,6 @@ type omv struct {
 	bts uint64
 	fees uint64
 	ebad_cnt int
-	segwit_cnt int
 	nya_cnt int
 }
 
@@ -92,7 +91,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		Name string
 		Blocks int
 		TotalFees, TotalBytes uint64
-		BUcnt, SWcnt, NYAcnt int
+		BUcnt, NYAcnt int
 	}
 
 	type the_mining_stats struct {
@@ -157,11 +156,6 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 			om.ebad_cnt++
 		}
 
-		ver := end.BlockVersion()
-		if (ver&0xE0000000)==0x20000000 && (ver&2)!=0 {
-			om.segwit_cnt++
-		}
-
 		if bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1 {
 			om.nya_cnt++
 		}
@@ -208,7 +202,6 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		stats.Miners[i].TotalFees = srt[i].fees
 		stats.Miners[i].TotalBytes = srt[i].bts
 		stats.Miners[i].BUcnt = srt[i].ebad_cnt
-		stats.Miners[i].SWcnt = srt[i].segwit_cnt
 		stats.Miners[i].NYAcnt = srt[i].nya_cnt
 	}
 

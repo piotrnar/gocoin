@@ -246,8 +246,10 @@ function noscroll() {
 }
 
 function closepopup() {
-	light.style.display='none'
-	fade.style.display='none'
-	window.scrollTo(0,prvpos)
-	document.removeEventListener("scroll", noscroll)
+	if (light.style.display!='none') {
+		light.style.display='none'
+		fade.style.display='none'
+		window.scrollTo(0,prvpos)
+		document.removeEventListener("scroll", noscroll)
+	}
 }

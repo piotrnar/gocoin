@@ -178,9 +178,12 @@ func show_info(par string) {
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
+	usif.BlockFeesMutex.Lock()
 	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Now().Sub(gs.LastGC).String(),
-		"   NumGC:", gs.NumGC,
-		"   PauseTotal:", gs.PauseTotal.String())
+		"  NumGC:", gs.NumGC,
+		"  PauseTotal:", gs.PauseTotal.String(),
+		"  BlkFeesCnt:", len(usif.BlockFees))
+	usif.BlockFeesMutex.Unlock()
 
 	fmt.Println("Gocoin:", gocoin.Version,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),

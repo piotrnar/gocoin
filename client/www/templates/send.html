@@ -63,7 +63,6 @@ function show_input_tx() {
 	var vout = parseInt(this["vout"])
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
-			console.log(aj.responseXML)
 			var sta = xval(aj.responseXML,  "status")
 			if (sta!="OK") {
 				alert(sta)
@@ -74,7 +73,7 @@ function show_input_tx() {
 			var s = ''
 			var tout = 0
 
-			s += 'Len: ' + xval(aj.responseXML,  "len") + '\n'
+			s += 'Len: ' + xval(aj.responseXML,  "size") + '\n'
 			s += "Total inputs: " + aj.responseXML.getElementsByTagName('input').length + "\n"
 			s += "\n"
 
@@ -89,8 +88,6 @@ function show_input_tx() {
 				s += "\n"
 			}
 			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
-
-			console.log(s)
 
 			rawdiv.innerHTML = s
 
@@ -660,5 +657,8 @@ qswal.addEventListener("loadwallet", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
 })
 </script>

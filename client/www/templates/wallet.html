@@ -550,5 +550,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
 	import_file.addEventListener('change', import_file_selected, false);
 	if (segwit_active)  warnings.style.display = 'block'
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
 })
 </script>
