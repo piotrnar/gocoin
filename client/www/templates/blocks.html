@@ -7,18 +7,27 @@
 }
 </style>
 
-<div id="block_fee_stats" width="100%" style="display:none;text-align:center">
-<table width="100%"><tr><td>
-Fee statistics for block number <b id="stat_height"></b></b>
-(average <b id="stat_avg_fee"></b> SPB)
-<td align="center">Sort by SPB:
-<input id="block_fees_sort" type="checkbox" onchange="stat_clicked(last_hash, last_height)">
-<td align="right">
-<a href="javascript:closestats()">close the chart</a>
-</table>
-<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
-<div id="block_fees" style="height:200px;margin:5px"></div>
+<div id="light" class="white_content" style="height:550px">
+<div id="block_fee_stats" width="100%" style="text-align:center">
+
+<div>
+<br>
+<span style="font-size:20px">
+Fee statistics for block number <b id="stat_height"></b> (average <b id="stat_avg_fee"></b> SPB)</span>
+<span style="float:right"><a href="javascript:closepopup()">X</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+<br><br>
 </div>
+
+<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
+<div id="block_fees" style="height:400px;margin:5px"></div>
+<br>
+<table width="100%"><tr>
+<td><i>Note: If there was a reorg, this chart may be incorrect</i>
+<td align="right">Sort by SPB: <input id="block_fees_sort" type="checkbox" onchange="stat_clicked(last_hash, last_height)">
+</table>
+
+</div>
+</div><div id="fade" class="black_overlay"></div>
 
 <div style="text-align:right;margin-bottom:8px;">
 <input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span onclick="stats_type_min.click()" style="cursor:pointer"> Mining Information</span>
@@ -138,6 +147,7 @@ function ms2str(v) {
 
 
 var last_hash, last_height
+var prvpos = null
 
 function stat_clicked(hash, height) {
 	var aj = ajax()
@@ -145,7 +155,20 @@ function stat_clicked(hash, height) {
 	last_height = height
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
-			block_fee_stats.style.display = 'block'
+			if (prvpos==null) {
+				fade.addEventListener('click', closepopup)
+				fade.style.cursor = 'pointer'
+				fade.title = 'Click here to close the popup'
+			}
+
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+
+
 			try {
 				var stats = JSON.parse(aj.responseText)
 
@@ -184,6 +207,7 @@ function stat_clicked(hash, height) {
 
 				$.plot($("#block_fees"), plot_data, plot_options)
 
+
 			} catch (e) {
 				console.log(e)
 				error_info.innertText = aj.responseText
@@ -197,10 +221,6 @@ function stat_clicked(hash, height) {
 	}
 	aj.open("GET","blfees.json?height="+height, true);
 	aj.send(null);
-}
-
-function closestats() {
-	block_fee_stats.style.display = 'none'
 }
 
 function refreshblocks() {
@@ -407,6 +427,12 @@ blno.addEventListener("lastblock", function(e) {
 		for (var i=2; i<blkstab.rows.length; i++) {
 			do_rcvd_time(blkstab.rows[i].cells[1])
 		}
+	}
+})
+
+document.addEventListener('DOMContentLoaded', function() {
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
 	}
 })
 
