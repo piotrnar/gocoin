@@ -75,8 +75,6 @@ type oneB2W struct {
 }
 
 type BlockDB struct {
-	DoNotCache bool // use it while rescanning
-
 	dirname string
 	blockIndex map[[btc.Uint256IdxLen]byte] *oneBl
 	blockdata *os.File
@@ -374,7 +372,7 @@ func (db *BlockDB) Close() {
 }
 
 
-func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, trusted bool, e error) {
+func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cacherec *BlckCachRec, trusted bool, e error) {
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
@@ -430,7 +428,7 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 		}
 	}
 
-	if !db.DoNotCache {
+	if !do_not_cache {
 		db.mutex.Lock()
 		cacherec = db.addToCache(hash, bl, nil)
 		db.mutex.Unlock()
@@ -442,10 +440,13 @@ func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, truste
 	return
 }
 
+func (db *BlockDB) BlockGetExt(hash *btc.Uint256) (cacherec *BlckCachRec, trusted bool, e error) {
+	return db.BlockGetInternal(hash, false)
+}
 
 func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error) {
 	var rec *BlckCachRec
-	rec, trusted, e = db.BlockGetExt(hash)
+	rec, trusted, e = db.BlockGetInternal(hash, false)
 	if rec!=nil {
 		bl = rec.Data
 	}
