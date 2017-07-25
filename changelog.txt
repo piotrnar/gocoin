@@ -1,5 +1,5 @@
 1.9.1
-* Client: Write new blocks and UTXO set to disk 5 seconds after the last successfull AcceptBlock()
+* Client: Write new blocks and UTXO set to disk 2 seconds after the last successfull AcceptBlock()
 * Client/WebUI/Blocks: The block's fee chart appears as a popup now
 * Client/WebUI: Pressing ESC closes popups
 * Client/WebUI: Removed Segwit related statistics
