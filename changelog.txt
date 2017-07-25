@@ -1,4 +1,5 @@
 1.9.1
+* Client/WebUI/Blocks: The block's fee chart appears as a popup now
 * Client/WebUI: Pressing ESC closes popups
 * Client/WebUI: Removed Segwit related statistics
 * Client/WebUI/Wallet: Show Segwit deposit addresses if segwit is active
