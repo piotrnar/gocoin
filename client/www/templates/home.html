@@ -74,7 +74,7 @@
 		<td align="right" class="nw"><b id="bw_ul_total"></b> tot
 	<tr><td>Extrenal IP:
 		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
-		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic">
+		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic;overlay-x:">
 	</table>
 <td valign="top">
 	<h2>Others</h2>
@@ -381,6 +381,10 @@ function refreshbwinfo() {
 						if (i>1) ht += ', '
 						ht += '<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
 						'">' + bw.ExternalIP[i].Ip + '</span>'
+						if (i==2 && bw.ExternalIP.length>=3) {
+							ht+= ', <span title="' + (bw.ExternalIP.length-3) + ' more">...</span>'
+							break
+						}
 					}
 				}
 				external_ip0.innerText = bw.ExternalIP[0].Ip
