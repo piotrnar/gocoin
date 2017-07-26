@@ -4,4 +4,3 @@ client
 gocoin*.conf
 .stealth
 *.bat
-blkfees/
