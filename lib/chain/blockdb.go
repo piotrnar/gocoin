@@ -87,7 +87,6 @@ type BlockDB struct {
 
 	blocksToWrite chan oneB2W
 	datToWrite uint64
-	flushNow bool
 }
 
 
@@ -142,14 +141,13 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 		var oldest_k [btc.Uint256IdxLen]byte
 		for k, v := range db.cache {
 			if oldest_t.IsZero() || v.LastUsed.Before(oldest_t) {
-				oldest_t = v.LastUsed
-				oldest_k = k
+				if rec := db.blockIndex[oldest_k]; rec == nil || rec.ipos != -1 {
+					oldest_t = v.LastUsed
+					oldest_k = k
+				}
 			}
 		}
-		if rec := db.blockIndex[oldest_k]; rec!=nil && rec.ipos==-1 {
-			// Oldest cache record not yet written - keep it
-			//println("BlockDB: Oldest cache record not yet written - keep it")
-			db.flushNow = true
+		if oldest_t.IsZero() {
 			break
 		} else {
 			delete(db.cache, oldest_k)
@@ -176,24 +174,10 @@ func hash2idx (h []byte) (idx [btc.Uint256IdxLen]byte) {
 }
 
 
-// Make sure to call with the mutex unlocked
-func (db *BlockDB) checkFlush() {
-	db.mutex.Lock()
-	fn := db.flushNow
-	db.flushNow = false
-	db.mutex.Unlock()
-	if fn {
-		//println("Too many blocksToWrite - flush the data...")
-		if !db.writeAll() {
-			panic("many to write but nothing stored")
-		}
-		//println("flush done")
-	}
-}
-
-
 func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	var trust_it bool
+	var flush bool
+
 	db.mutex.Lock()
 	idx := bl.Hash.BIdx()
 	if rec, ok := db.blockIndex[idx]; !ok {
@@ -201,11 +185,7 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		db.addToCache(bl.Hash, bl.Raw, bl)
 		db.datToWrite += uint64(len(bl.Raw))
 		db.blocksToWrite <- oneB2W{idx:idx, h:bl.Hash.Hash, data:bl.Raw, height:height, txcount:uint32(bl.TxCount)}
-		if !db.flushNow {
-			if len(db.blocksToWrite)>=MAX_BLOCKS_TO_WRITE || db.datToWrite>=MAX_DATA_WRITE {
-				db.flushNow = true
-			}
-		}
+		flush = len(db.blocksToWrite)>=MAX_BLOCKS_TO_WRITE || db.datToWrite>=MAX_DATA_WRITE
 	} else {
 		//println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
 		if !rec.trusted && bl.Trusted {
@@ -225,7 +205,13 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 		db.BlockTrusted(bl.Hash.Hash[:])
 	}
 
-	db.checkFlush()
+	if flush {
+		//println("Too many blocksToWrite - flush the data...")
+		if !db.writeAll() {
+			panic("many to write but nothing stored")
+		}
+		//println("flush done")
+	}
 
 	return
 }
@@ -432,7 +418,6 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 		db.mutex.Lock()
 		cacherec = db.addToCache(hash, bl, nil)
 		db.mutex.Unlock()
-		db.checkFlush()
 	} else {
 		cacherec = &BlckCachRec{Data:bl}
 	}
