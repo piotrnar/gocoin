@@ -141,7 +141,7 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 		var oldest_k [btc.Uint256IdxLen]byte
 		for k, v := range db.cache {
 			if oldest_t.IsZero() || v.LastUsed.Before(oldest_t) {
-				if rec := db.blockIndex[oldest_k]; rec == nil || rec.ipos != -1 {
+				if rec := db.blockIndex[k]; rec == nil || rec.ipos != -1 {
 					oldest_t = v.LastUsed
 					oldest_k = k
 				}
