@@ -97,7 +97,6 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var cnt_dwn, cnt_dwn_from int
 	var le uint64
 	var u64, tot_recs uint64
-	var buf [1024*1024]byte
 
 	of, er := os.Open(db.dir_utxo + "UTXO.db")
 	if er!=nil {
@@ -144,15 +143,15 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 			goto fatal_error
 		}
 
-		b := buf[:int(le)-UtxoIdxLen]
-		er = btc.ReadAll(rd, b)
+		b := malloc(uint32(int(le)-UtxoIdxLen))
+		er = btc.ReadAll(rd, Slice(b))
 		if er!=nil {
 			goto fatal_error
 		}
 
-		db.HashMap[k] = malloc_and_copy(b)
+		db.HashMap[k] = b
 		if db.CB.LoadWalk!=nil {
-			db.CB.LoadWalk(NewUtxoRecStatic(k, b))
+			db.CB.LoadWalk(NewUtxoRecStatic(k, Slice(b)))
 		}
 
 		tot_recs++
