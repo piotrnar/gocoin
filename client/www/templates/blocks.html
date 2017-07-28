@@ -7,21 +7,19 @@
 }
 </style>
 
-<div id="light" class="white_content" style="height:500px">
+<div id="light" class="white_content" style="height:auto">
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
-<div>
-<br>
-<span style="font-size:20px">
-Fee statistics for block number <b id="stat_height"></b> (average <b id="stat_avg_fee"></b> SPB)</span>
+<div style="margin-top:10px">
+Fee statistics for block number <b id="stat_height"></b> (average <b id="stat_avg_fee"></b> SPB)
 <span style="float:right"><a href="javascript:closepopup()">X</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>
 <br><br>
 </div>
 
 <div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
-<div id="block_fees" style="height:350px;margin:5px"></div>
+<div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
-<table width="100%"><tr>
+<table width="100%" style="margin-bottom:10px"><tr>
 <td><i>Note: If there was a reorg, this chart may be incorrect</i>
 <td align="right">Sort by SPB: <input id="block_fees_sort" type="checkbox" onchange="stat_clicked(last_hash, last_height)">
 </table>
