@@ -142,6 +142,7 @@ func (db *BlockDB) addToCache(h *btc.Uint256, bl []byte, str *btc.Block) (crec *
 		for k, v := range db.cache {
 			if oldest_t.IsZero() || v.LastUsed.Before(oldest_t) {
 				if rec := db.blockIndex[k]; rec.ipos != -1 {
+					// don't expire records that have not been writen to disk yet
 					oldest_t = v.LastUsed
 					oldest_k = k
 				}
@@ -307,9 +308,14 @@ func (db *BlockDB) BlockInvalid(hash []byte) {
 		panic("Trusted block cannot be invalid")
 	}
 	//println("mark", btc.NewUint256(hash).String(), "as invalid")
-	db.setBlockFlag(cur, BLOCK_INVALID)
-	delete(db.blockIndex, idx)
-	delete(db.cache, idx)
+	if cur.ipos==-1 {
+		// if not written yet, then never write it
+		delete(db.cache, idx)
+		delete(db.blockIndex, idx)
+	} else {
+		// write the new flag to disk
+		db.setBlockFlag(cur, BLOCK_INVALID)
+	}
 	db.mutex.Unlock()
 }
 
