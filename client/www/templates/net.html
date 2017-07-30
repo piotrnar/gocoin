@@ -23,6 +23,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 </div>
 <table class="netcons bord" width="100%" id="netcons">
 <col width="30"> <!--#-->
+<col width="60"> <!--time-->
 <col width="130"> <!--IP-->
 <col width="20"> <!--in/out icon-->
 <col width="60"> <!--ping-->
@@ -37,8 +38,9 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
+	<th>Time
 	<th colspan="2">Peer Address
-	<th >Ping
+	<th>Ping
 	<th>Rcvd
 	<th>Sent
 	<th >Tot In
@@ -238,6 +240,19 @@ function refreshconnections() {
 				td.style.textAlign = 'right'
 				td.className = 'nodeid'
 				td.innerHTML = '&nbsp;<b>'+id+'</b>&nbsp;'
+
+				// time
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				if (typeof(time_now)=="number") {
+					var secs = time_now - parseInt(Date.parse(cs[i].ConnectedAt)/1000)
+					if (secs<0)  secs = 0
+					if (secs<120) {
+						td.innerHTML = (secs/60).toFixed(1) + ' min'
+					} else {
+						td.innerHTML = period2str( secs )
+					}
+				}
 
 				// addr
 				td = row.insertCell(-1)
