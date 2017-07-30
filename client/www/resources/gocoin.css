@@ -1,3 +1,7 @@
+body {
+	font-family:Arial;
+	//font-size:10px;
+}
 a {
 	color:blue;
 	text-decoration:none;
@@ -261,4 +265,3 @@ div.footer {
 .nw {
 	white-space: nowrap;
 }
-

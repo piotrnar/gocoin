@@ -23,12 +23,10 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 </div>
 <table class="netcons bord" width="100%" id="netcons">
 <col width="30"> <!--#-->
-<col width="60"> <!--age-->
+<col width="80"> <!--age-->
 <col width="130"> <!--IP-->
 <col width="20"> <!--in/out icon-->
 <col width="60"> <!--ping-->
-<col width="60"> <!--Last rcvd-->
-<col width="60"> <!--Last sent-->
 <col width="80"> <!--total rcvd-->
 <col width="80"> <!--total sent-->
 <col> <!--node version & agent-->
@@ -41,8 +39,6 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th>Age
 	<th colspan="2">Peer Address
 	<th>Ping
-	<th>Rcvd
-	<th>Sent
 	<th >Tot In
 	<th >Tot Out
 	<th colspan="3">Node Version
@@ -243,6 +239,7 @@ function refreshconnections() {
 
 				// age
 				td = row.insertCell(-1)
+				td.noWrap = true
 				td.style.textAlign = 'right'
 				if (typeof(time_now)=="number") {
 					var secs = time_now - parseInt(Date.parse(cs[i].ConnectedAt)/1000)
@@ -273,7 +270,7 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
-
+/*
 				// last_cmd_rcvd
 				td = row.insertCell(-1)
 				td.className = 'mono'
@@ -285,7 +282,7 @@ function refreshconnections() {
 				td.className = 'mono'
 				td.title = cs[i].LastBtsSent
 				td.innerHTML = cs[i].LastCmdSent
-
+*/
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
