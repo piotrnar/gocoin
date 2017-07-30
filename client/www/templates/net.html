@@ -19,11 +19,11 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <div style="text-align:right;margin-bottom:8px;">
 <input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span onclick="net_list_order_sp.click()" style="cursor:pointer"> Sort by speed</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by ID</span>
+<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by age</span>
 </div>
 <table class="netcons bord" width="100%" id="netcons">
 <col width="30"> <!--#-->
-<col width="60"> <!--time-->
+<col width="60"> <!--age-->
 <col width="130"> <!--IP-->
 <col width="20"> <!--in/out icon-->
 <col width="60"> <!--ping-->
@@ -38,7 +38,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <col width="20"> <!--agent-->
 <tr>
 	<th>ID
-	<th>Time
+	<th>Age
 	<th colspan="2">Peer Address
 	<th>Ping
 	<th>Rcvd
@@ -241,7 +241,7 @@ function refreshconnections() {
 				td.className = 'nodeid'
 				td.innerHTML = '&nbsp;<b>'+id+'</b>&nbsp;'
 
-				// time
+				// age
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				if (typeof(time_now)=="number") {
