@@ -244,6 +244,7 @@ function deltx_click(id) {
 }
 
 var prvpos = null
+var tx_decoding_in_progress = false
 
 function decode_tx() {
 	decode_tx_id(this.id)
@@ -251,6 +252,7 @@ function decode_tx() {
 
 function decode_tx_id(txid) {
 	var aj = ajax()
+	tx_decoding_in_progress = true
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			var sta = xval(aj.responseXML,  "status")
@@ -354,6 +356,7 @@ function decode_tx_id(txid) {
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)
+			tx_decoding_in_progress = false
 		}
 	}
 	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
@@ -611,8 +614,10 @@ function handlehover(event, pos, item) {
 
 
 function handleclick(event, pos, item) {
-	var rec = mp[item.dataIndex]
-	decode_tx_id(rec.Current_tx_id)
+	if (!tx_decoding_in_progress) {
+		var rec = mp[item.dataIndex]
+		decode_tx_id(rec.Current_tx_id)
+	}
 }
 
 function show_txid() {
