@@ -247,7 +247,9 @@ var prvpos = null
 var tx_decoding_in_progress = false
 
 function decode_tx() {
-	decode_tx_id(this.id)
+	if (!tx_decoding_in_progress) {
+		decode_tx_id(this.id)
+	}
 }
 
 function decode_tx_id(txid) {
@@ -621,9 +623,11 @@ function handleclick(event, pos, item) {
 }
 
 function show_txid() {
-	var tid = prompt("Enter ID of the TX");
-	if (tid!=null) {
-		decode_tx_id(tid)
+	if (!tx_decoding_in_progress) {
+		var tid = prompt("Enter ID of the TX");
+		if (tid!=null) {
+			decode_tx_id(tid)
+		}
 	}
 }
 
