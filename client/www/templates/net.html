@@ -241,7 +241,7 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.noWrap = true
 				td.style.textAlign = 'right'
-				if (typeof(time_now)=="number") {
+				if (cs[i].ConnectedAt!=0 && typeof(time_now)=="number") {
 					var secs = time_now - parseInt(Date.parse(cs[i].ConnectedAt)/1000)
 					if (secs<0)  secs = 0
 					if (secs<120) {
