@@ -37,9 +37,6 @@ func (c *OneConnection) SendPendingData() bool {
 				c.SendBufCons = n
 			}
 			c.Mutex.Unlock()
-		} else if time.Now().After(c.X.LastSent.Add(AnySendTimeout)) {
-			common.CountSafe("PeerSendTimeout")
-			c.Disconnect()
 		} else if e != nil {
 			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")

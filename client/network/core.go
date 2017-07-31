@@ -28,7 +28,6 @@ const (
 	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
 
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
-	AnySendTimeout = 30*time.Second // If it does not send a byte within this time, assume it dead
 
 	MIN_PROTO_VERSION = 209
 
