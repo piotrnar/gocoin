@@ -1,4 +1,4 @@
-1.9.1
+1.9.1 - 2017-08-01
 * Client: Removed AnySendTimeout as it was causing problems with limited UL bandwidth
 * Client/WebUI: The font is set to Arial
 * Client/WebUI/Network: Show how long each connection has been active and removes lest sent/rcvd command
