@@ -166,7 +166,7 @@ func load_one_map(rd *bufio.Reader, what string) (res map[[20]byte]*OneAllAddrBa
 		allbal[key] = v
 
 		if cnt_dwn==0 {
-			fmt.Print("\rLoading of ", what, " - ", perc, "% complete ... ")
+			fmt.Print("\rLoading ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
 		} else {
@@ -205,7 +205,7 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal, what str
 		}
 
 		if cnt_dwn==0 {
-			fmt.Print("\rSaving of ", what, " - ", perc, "% complete ... ")
+			fmt.Print("\rSaving ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
 		} else {
@@ -227,7 +227,6 @@ func Save() {
 		return
 	}
 
-	fmt.Print("Saving ", FILE_NAME)
 	wr := bufio.NewWriter(f)
 	sta := time.Now()
 
