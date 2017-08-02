@@ -94,9 +94,10 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 	// Load data form disk
 	var k UtxoKeyType
-	var cnt_dwn, cnt_dwn_from int
+	var cnt_dwn, cnt_dwn_from, perc int
 	var le uint64
 	var u64, tot_recs uint64
+	var info string
 
 	of, er := os.Open(db.dir_utxo + "UTXO.db")
 	if er!=nil {
@@ -129,6 +130,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 	cnt_dwn_from = int(u64/100)
 
+	info = fmt.Sprint("\rLoading ", u64, " transactions from UTXO.db - ")
+
 	for tot_recs<u64 {
 		if opts.AbortNow!=nil && *opts.AbortNow {
 			break
@@ -156,7 +159,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 		tot_recs++
 		if cnt_dwn==0 {
-			fmt.Print("\rLoading UTXO.db - ", tot_recs*100/u64, "% complete ... ")
+			fmt.Print(info, perc, "% complete ... ")
+			perc++
 			cnt_dwn = cnt_dwn_from
 		} else {
 			cnt_dwn--

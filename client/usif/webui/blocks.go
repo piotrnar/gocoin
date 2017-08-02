@@ -46,7 +46,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		FromConID                         uint32
 		Sigops                            int
 
-		MinFeeKSPB     uint64
 		NonWitnessSize int
 		EBAD           string
 
@@ -128,7 +127,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.MissedCnt = rb.TxMissing
 		b.FromConID = rb.FromConID
 
-		b.MinFeeKSPB = rb.MinFeeKSPB
 		b.NonWitnessSize = rb.NonWitnessSize
 
 		if res := eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res != nil {

@@ -11,7 +11,12 @@
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
 <div style="margin-top:10px">
-Fee statistics for block number <b id="stat_height"></b> (average <b id="stat_avg_fee"></b> SPB)
+Fee statistics for block number <b id="stat_height"></b> -
+Maximum <b id="stat_max_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Average <b id="stat_avg_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Minimum <b id="stat_min_fee"></b> SPB
 <span style="float:right"><a href="javascript:closepopup()">X</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>
 <br><br>
 </div>
@@ -59,7 +64,6 @@ Sort by SPB</span>
 	<th>
 	<th class="stat0" width="30">BTC
 	<th class="stat0" width="30" align="right">SPB
-	<th class="stat0" width="20" align="right">&ge;
 	<th class="stat0" width="20">Ver
 	<th class="stat0" align="left">Miner
 	<th class="stat1" width="10" title="Received from ConnID">Fro
@@ -107,7 +111,7 @@ function remember_info_setting() {
 remember_info_setting()
 switch_stats_type()
 
-const MINER_ID_COLUMN = 11
+const MINER_ID_COLUMN = 10
 
 var show_timestamp = false
 
@@ -215,21 +219,33 @@ function stat_clicked(hash, height) {
 				var plot_options = {
 					xaxis: { max : 1e6,  position : "top", tickSize:100e3, alignTicksWithAxis: 200,
 						tickFormatter : function(a) {return (a/10e3) + "%"} },
-					yaxis : { max : 1000,  position : "right",
+					yaxis : { position : "right",
 						tickFormatter : function(a) {return a + " SPB"},
 						labelWidth : 80 }
 				}
 
+				var max_spb, min_spb, spb
 				var totbytes = 0
 				var totfees = 0
 				for (var i=0; i<stats.length; i++) {
+					spb = stats[i][1] / stats[i][0]
+					if (i==0) {
+						max_spb = min_spb = spb
+					} else {
+						if (spb>max_spb) max_spb=spb
+						else if (spb<min_spb) min_spb=spb
+					}
+
 					totbytes += stats[i][0]
 					totfees += stats[i][1]
-					plot_data[0].data.push([totbytes, stats[i][1] / stats[i][0]])
+					plot_data[0].data.push([totbytes, spb])
 				}
 
 				var avg_fee = totfees / totbytes
+				stat_max_fee.innerText = max_spb.toFixed(0)
 				stat_avg_fee.innerText = avg_fee.toFixed(1)
+				stat_min_fee.innerText = min_spb.toFixed(2)
+
 				if (block_fees_range.checked) {
 					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
 				}
@@ -335,14 +351,6 @@ function refreshblocks() {
 				td = row.insertCell(-1)
 				td.className = 'blspb stat0'
 				td.innerText = cs[i].FeeSPB.toFixed(1)
-
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.className = 'blminspb stat0'
-				if (cs[i].TimeVer>=0 && cs[i].TxCnt>1) {
-					td.innerText = (cs[i].MinFeeKSPB/1000).toFixed(1)
-					td.title = cs[i].MinFeeKSPB
-				}
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'

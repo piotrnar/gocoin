@@ -1,4 +1,6 @@
 1.9.2
+* Client: Show number of records (txs) while loading UTXO.db
+* Client/WebUI/Blocks: Removed minimum fee from the block table. Moved to the fee stats chart, also added maximum
 * Client: show progess of loading/saving balance of P2KH/P2SH addresses
 * Client: removed "config.Beeps" and all the related beeping functionality
 * Client/WebUI/Blocks: transactions in the fee stats can be grouped now to smooth the graph

@@ -39,7 +39,7 @@ var (
 */
 
 // return false if failed
-func Load() bool {
+func Load(abort *bool) bool {
 	var ha [32]byte
 	var ui uint64
 	f, er := os.Open(common.GocoinHomeDir + FILE_NAME)
@@ -82,15 +82,21 @@ func Load() bool {
 		return false
 	}
 
-	AllBalancesP2KH, er = load_one_map(rd, "P2KH")
+	AllBalancesP2KH, er = load_one_map(rd, "P2KH", abort)
 	if er != nil {
 		println(er.Error())
 		return false
 	}
+	if *abort {
+		return false
+	}
 
-	AllBalancesP2SH, er = load_one_map(rd, "P2SH")
+	AllBalancesP2SH, er = load_one_map(rd, "P2SH", abort)
 	if er != nil {
 		println(er.Error())
+		return false
+	}
+	if *abort {
 		return false
 	}
 
@@ -108,7 +114,7 @@ func Load() bool {
 	return true
 }
 
-func load_one_map(rd *bufio.Reader, what string) (res map[[20]byte]*OneAllAddrBal, er error) {
+func load_one_map(rd *bufio.Reader, what string, abort *bool) (res map[[20]byte]*OneAllAddrBal, er error) {
 	var recs, outs, cnt_dwn_from, cnt_dwn uint64
 	var key [20]byte
 	var bts, perc int
@@ -161,6 +167,10 @@ func load_one_map(rd *bufio.Reader, what string) (res map[[20]byte]*OneAllAddrBa
 			if er != nil {
 				return
 			}
+		}
+
+		if *abort {
+			return
 		}
 
 		allbal[key] = v

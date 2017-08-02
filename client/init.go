@@ -98,7 +98,7 @@ func host_init() {
 		common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
 		// LoadWalk = wallet.NewUTXO
 		sta = time.Now()
-		wallet.FetchInitialBalance()
+		wallet.FetchInitialBalance(&chain.AbortNow)
 		if chain.AbortNow {
 			fmt.Printf("Loading balances aborted after %s seconds\n", time.Now().Sub(sta).String())
 			common.BlockChain.Close()

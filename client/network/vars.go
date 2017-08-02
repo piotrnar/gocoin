@@ -16,7 +16,6 @@ type OneReceivedBlock struct {
 	Cnt uint
 	TxMissing int
 	FromConID uint32
-	MinFeeKSPB uint64
 	NonWitnessSize int
 	DoInvs bool
 }

@@ -33,8 +33,8 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	return
 }
 
-func FetchInitialBalance() {
-	if common.CFG.AllBalances.SaveOnDisk && Load() {
+func FetchInitialBalance(abort *bool) {
+	if common.CFG.AllBalances.SaveOnDisk && Load(abort) || *abort {
 		return
 	}
 
@@ -56,6 +56,9 @@ func FetchInitialBalance() {
 			perc++
 		} else {
 			cnt_dwn--
+		}
+		if *abort {
+			break
 		}
 	}
 	fmt.Print("\r                                                                                  \r")
