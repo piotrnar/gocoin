@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
@@ -11,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
 	"github.com/piotrnar/gocoin/client/wallet"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -67,48 +65,20 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
 
+		network.BlockMined(bl)
+
 		newbl.NonWitnessSize = len(bl.OldData)
 
 		common.RecalcAverageBlockSize(false)
 
-		var fees [][2]uint64
-
-		usif.BlockFeesMutex.Lock()
-		delete(usif.BlockFees, newbl.BlockTreeNode.Height-144)
-		usif.BlockFeesMutex.Unlock()
-		if len(bl.Txs) > 1 {
-			fees = make([][2]uint64, len(bl.Txs)-1)
-		}
-
-		for i := 1; i < len(bl.Txs); i++ {
-			network.TxMined(bl.Txs[i])
-			kspb := 1000 * bl.Txs[i].Fee / uint64(bl.Txs[i].Size)
-			if i == 1 || newbl.MinFeeKSPB > kspb {
-				newbl.MinFeeKSPB = kspb
-			}
-			if fees != nil {
-				fees[i-1][0] = uint64(bl.Txs[i].Size)
-				fees[i-1][1] = uint64(bl.Txs[i].Fee)
-			}
-		}
-		if fees != nil {
-			usif.BlockFeesMutex.Lock()
-			usif.BlockFees[newbl.BlockTreeNode.Height] = fees
-			usif.BlockFeesMutex.Unlock()
-		}
-
-		if int64(bl.BlockTime()) > time.Now().Add(-10*time.Minute).Unix() {
-			// Freshly mined block - do the inv and beeps...
-			new_block_mined(bl, newbl.Conn)
+		//if common.BlockChain.BlockTreeEnd.BlockHash.Equal(network.LastCommitedHeader.BlockHash) {
+		if int(network.LastCommitedHeader.Height) - int(common.BlockChain.BlockTreeEnd.Height) < 144 {
+			usif.ProcessBlockFees(newbl) // do not run it when syncing chain
 		}
 
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.BlockTreeEnd
-		if false && common.Last.Block.Height == 725676 {
-			fmt.Println("Reached block number", common.Last.Block.Height, "- exiting...")
-			usif.Exit_now = true
-		}
 		common.Last.Mutex.Unlock()
 
 		reset_save_timer()
@@ -198,34 +168,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	}
 }
 
-// Freshly mined block - do the inv and beeps... TODO: combine it with the other code
-func new_block_mined(bl *btc.Block, conn *network.OneConnection) {
-	if common.CFG.Beeps.NewBlock {
-		fmt.Println("\007Received block", common.BlockChain.BlockTreeEnd.Height)
-		textui.ShowPrompt()
-	}
-
-	if common.CFG.Beeps.MinerID != "" {
-		//_, rawtxlen := btc.NewTx(bl[bl.TxOffset:])
-		if bytes.Contains(bl.Txs[0].Serialize(), []byte(common.CFG.Beeps.MinerID)) {
-			fmt.Println("\007Mined by '"+common.CFG.Beeps.MinerID+"':", bl.Hash)
-			textui.ShowPrompt()
-		}
-	}
-
-	if common.CFG.Beeps.ActiveFork && common.Last.Block == common.BlockChain.BlockTreeEnd {
-		// Last block has not changed, so it must have been an orphaned block
-		bln := common.BlockChain.BlockIndex[bl.Hash.BIdx()]
-		commonNode := common.Last.Block.FirstCommonParent(bln)
-		forkDepth := bln.Height - commonNode.Height
-		fmt.Println("Orphaned block:", bln.Height, bl.Hash.String(), bln.BlockSize>>10, "KB")
-		if forkDepth > 1 {
-			fmt.Println("\007\007\007WARNING: the fork is", forkDepth, "blocks deep")
-		}
-		textui.ShowPrompt()
-	}
-}
-
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	network.MutexRcv.Lock()
 	rb := network.ReceivedBlocks[msg.Block.Hash.BIdx()]
@@ -249,16 +191,12 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		return
 	}
 
-	common.RecalcAverageBlockSize(false)
+	network.BlockMined(msg.Block)
 
-	for i := 1; i < len(msg.Block.Txs); i++ {
-		network.TxMined(msg.Block.Txs[i])
-	}
+	common.RecalcAverageBlockSize(false)
 
 	common.CountSafe("RPCBlockOK")
 	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
-
-	new_block_mined(msg.Block, nil) // this must be done before we update "common.Last"
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
@@ -369,6 +307,8 @@ func main() {
 			go rpcapi.StartServer(common.RPCPort())
 		}
 
+		usif.LoadBlockFees()
+
 		for !usif.Exit_now {
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
@@ -431,6 +371,7 @@ func main() {
 			case <-peersTick:
 				common.Busy("peersdb.ExpirePeers()")
 				peersdb.ExpirePeers()
+				usif.ExpireBlockFees()
 
 			case <-txPoolTick:
 				common.Busy("network.ExpireTxs()")
@@ -458,5 +399,6 @@ func main() {
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
+	usif.SaveBlockFees()
 	sys.UnlockDatabaseDir()
 }

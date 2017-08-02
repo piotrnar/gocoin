@@ -505,53 +505,6 @@ func DeleteToSend(rec *OneTxToSend) {
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
-// This function is called for each tx mined in a new block
-func TxMined(tx *btc.Tx) {
-	h := tx.Hash
-	TxMutex.Lock()
-	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
-		common.CountSafe("TxMinedToSend")
-		DeleteToSend(rec)
-	}
-	if _, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafe("TxMinedRejected")
-		deleteRejected(h.BIdx())
-	}
-	if _, ok := TransactionsPending[h.BIdx()]; ok {
-		common.CountSafe("TxMinedPending")
-		delete(TransactionsPending, h.BIdx())
-	}
-
-	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
-	for i := range tx.TxIn {
-		idx := tx.TxIn[i].Input.UIdx()
-		if val, ok := SpentOutputs[idx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
-				if rec.Own != 0 {
-					common.CountSafe("TxMinedMalleabled")
-					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
-				} else {
-					common.CountSafe("TxMinedOtherSpend")
-				}
-				DeleteToSend(rec)
-			} else {
-				common.CountSafe("TxMinedSpentERROR")
-				fmt.Println("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
-			}
-			delete(SpentOutputs, idx)
-		}
-	}
-
-	wtg := WaitingForInputs[h.BIdx()]
-	TxMutex.Unlock()
-
-	// Try to redo waiting txs
-	if wtg != nil {
-		common.CountSafe("TxMinedGotInput")
-		RetryWaitingForInput(wtg)
-	}
-}
-
 func txChecker(h *btc.Uint256) bool {
 	TxMutex.Lock()
 	rec, ok := TransactionsToSend[h.BIdx()]
@@ -721,4 +674,71 @@ func MempoolLoad() bool {
 	fmt.Println(len(TransactionsToSend), "transactions loaded from", MEMPOOL_FILE_NAME)
 
 	return true
+}
+
+
+
+// This function is called for each tx mined in a new block
+func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
+	h := tx.Hash
+	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
+		common.CountSafe("TxMinedToSend")
+		DeleteToSend(rec)
+	}
+	if _, ok := TransactionsRejected[h.BIdx()]; ok {
+		common.CountSafe("TxMinedRejected")
+		deleteRejected(h.BIdx())
+	}
+	if _, ok := TransactionsPending[h.BIdx()]; ok {
+		common.CountSafe("TxMinedPending")
+		delete(TransactionsPending, h.BIdx())
+	}
+
+	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
+	for i := range tx.TxIn {
+		idx := tx.TxIn[i].Input.UIdx()
+		if val, ok := SpentOutputs[idx]; ok {
+			if rec, _ := TransactionsToSend[val]; rec != nil {
+				if rec.Own != 0 {
+					common.CountSafe("TxMinedMalleabled")
+					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
+				} else {
+					common.CountSafe("TxMinedOtherSpend")
+				}
+				DeleteToSend(rec)
+			} else {
+				common.CountSafe("TxMinedSpentERROR")
+				fmt.Println("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
+			}
+			delete(SpentOutputs, idx)
+		}
+	}
+
+	wtg = WaitingForInputs[h.BIdx()]
+	return
+}
+
+
+
+// Removes all the block's tx from the mempool
+func BlockMined(bl *btc.Block) {
+	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
+	var wtg_cnt int
+	TxMutex.Lock()
+	for i := 1; i < len(bl.Txs); i++ {
+		wtg := tx_mined(bl.Txs[i])
+		if wtg != nil {
+			wtgs[wtg_cnt] = wtg
+			wtg_cnt++
+		}
+	}
+	TxMutex.Unlock()
+
+	// Try to redo waiting txs
+	if wtg_cnt > 0 {
+		common.CountSafeAdd("TxMinedGotInput", uint64(wtg_cnt))
+		for _, wtg := range wtgs[:wtg_cnt] {
+			RetryWaitingForInput(wtg)
+		}
+	}
 }

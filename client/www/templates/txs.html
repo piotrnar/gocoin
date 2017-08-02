@@ -13,7 +13,16 @@ td.maturity {
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
 </div><div id="fade" class="black_overlay"></div>
-<h2>Memory Pool:</h2>
+<table width="100%">
+<tr>
+<td><b>Memory Pool:</b></td>
+<td align="right">
+<input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()" checked>
+<span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit range</span>
+</td>
+</tr>
+</table>
+
 <table width="100%">
 <tr>
 <td colspan="2">
@@ -678,7 +687,7 @@ function show_mempool_fees() {
 			}
 
 			// calculate 3 times the medium fee in the first block to be mined
-			if (max_spb > max_spb_corrected) {
+			if (mempool_spb_range.checked && max_spb > max_spb_corrected) {
 				plot_options.yaxis.max = max_spb_corrected
 			}
 

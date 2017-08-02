@@ -35,9 +35,6 @@ var (
 	LocksChan chan *OneLock  = make(chan *OneLock, 1)
 
 	Exit_now bool
-
-	BlockFeesMutex sync.Mutex
-	BlockFees      map[uint32][][2]uint64 = make(map[uint32][][2]uint64)
 )
 
 func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {

@@ -21,7 +21,19 @@ Fee statistics for block number <b id="stat_height"></b> (average <b id="stat_av
 <br>
 <table width="100%" style="margin-bottom:10px"><tr>
 <td><i>Note: If there was a reorg, this chart may be incorrect</i>
-<td align="right">Sort by SPB: <input id="block_fees_sort" type="checkbox" onchange="stat_clicked(last_hash, last_height)">
+<td align="right">
+<input type="checkbox" id="block_fees_range" onchange="stat_clicked(last_hash, last_height)" checked>
+<span onclick="block_fees_range.click()" style="cursor:pointer">Limit range</span>
+&nbsp;&bull;&nbsp;
+
+<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="stat_clicked(last_hash, last_height)" checked>
+<span onclick="block_fees_raw.click()" style="cursor:pointer">Show as is</span>
+&nbsp;&bull;&nbsp;
+<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="stat_clicked(last_hash, last_height)">
+<span onclick="block_fees_gru.click()" style="cursor:pointer">Try to group</span>
+&nbsp;&bull;&nbsp;
+<span onclick="block_fees_spb.click()" style="cursor:pointer"><input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="stat_clicked(last_hash, last_height)">
+Sort by SPB</span>
 </table>
 
 </div>
@@ -173,14 +185,31 @@ function stat_clicked(hash, height) {
 				// hide error message
 				stat_error.style.display = 'none'
 
-				// sort fees by SPB
-				if (block_fees_sort.checked) {
+				if (block_fees_gru.checked) {
+					var stat2 = new Array()
+					var curr_elem = [0,0,0]
+					for (var i=0; i<stats.length; i++) {
+						if (stats[i][2]!=curr_elem[2]) {
+							if (curr_elem[0] > 0) {
+								stat2.push(curr_elem)
+							}
+							curr_elem = [0,0,stats[i][2]]
+						}
+						curr_elem[0] += stats[i][0]
+						curr_elem[1] += stats[i][1]
+					}
+					if (curr_elem[0] > 0) {
+						stat2.push(curr_elem)
+					}
+					stats = stat2
+				} else if (block_fees_spb.checked) {
 					stats.sort(function (a, b) {
 						var spb_a = a[1] / a[0]
 						var spb_b = b[1] / b[0]
 						return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
 					})
 				}
+
 				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
 
 				var plot_options = {
@@ -201,7 +230,9 @@ function stat_clicked(hash, height) {
 
 				var avg_fee = totfees / totbytes
 				stat_avg_fee.innerText = avg_fee.toFixed(1)
-				plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
+				if (block_fees_range.checked) {
+					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
+				}
 
 				$.plot($("#block_fees"), plot_data, plot_options)
 

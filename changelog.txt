@@ -1,3 +1,9 @@
+1.9.2
+* Client: removed "config.Beeps" and all the related beeping functionality
+* Client/WebUI/Blocks: transactions in the fee stats can be grouped now to smooth the graph
+* Client: fee stats fpor WebUI/Blocks are being saved now
+* Client/WebUI: "Limit range" checkbox added to SPB graphs
+
 1.9.1 - 2017-08-01
 * Client: Removed AnySendTimeout as it was causing problems with limited UL bandwidth
 * Client/WebUI: The font is set to Arial

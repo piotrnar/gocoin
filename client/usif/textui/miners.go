@@ -3,10 +3,8 @@ package textui
 import (
 	"fmt"
 	"time"
-	"bytes"
 	"regexp"
 	"strconv"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 )
@@ -48,24 +46,11 @@ func do_mining(s string) {
 		}
 
 		bt, _ := btc.NewBlock(bl)
-		cbasetx, cbtxlen := btc.NewTx(bl[bt.TxOffset:])
+		cbasetx, _ := btc.NewTx(bl[bt.TxOffset:])
 
 		tot_blocks++
 		tot_blocks_len += len(bl)
 		diff += btc.GetDifficulty(block.Bits())
-		common.LockCfg()
-		if common.CFG.Beeps.MinerID!="" &&
-			bytes.Contains(bl[bt.TxOffset:bt.TxOffset+cbtxlen], []byte(common.CFG.Beeps.MinerID)) {
-			block.BuildTxList()
-			totbtc += block.Txs[0].TxOut[0].Value
-			cnt++
-			fmt.Printf("%4d) %6d %s %s  %5.2f => %5.2f BTC total, %d txs, %.1f KB\n",
-				cnt, end.Height, end.BlockHash.String(),
-				time.Unix(int64(end.Timestamp()), 0).Format("2006-01-02 15:04:05"),
-				float64(block.Txs[0].TxOut[0].Value)/1e8, float64(totbtc)/1e8,
-				len(block.Txs), float64(len(bl))/1e3)
-		}
-		common.UnlockCfg()
 
 		if (block.Version()&0x20000002) == 0x20000002 {
 			segwit_cnt++
@@ -90,12 +75,6 @@ func do_mining(s string) {
 		return
 	}
 	diff /= float64(tot_blocks)
-	common.LockCfg()
-	if common.CFG.Beeps.MinerID!="" {
-		fmt.Printf("%.8f BTC mined by %s, in %d blocks for the last %d hours\n",
-			float64(totbtc)/1e8, common.CFG.Beeps.MinerID, cnt, hrs)
-	}
-	common.UnlockCfg()
 	if cnt > 0 {
 		fmt.Printf("Projected weekly income : %.0f BTC,  estimated hashrate : %s\n",
 			7*24*float64(totbtc)/float64(hrs)/1e8,
@@ -116,39 +95,6 @@ func do_mining(s string) {
 }
 
 
-func set_miner(p string) {
-	if p=="" {
-		common.ReloadMiners()
-		fmt.Println("Specify MinerID string or one of the numberic values:")
-		for i := range common.MinerIds {
-			fmt.Printf("%3d - %s %s\n", i, common.MinerIds[i].Name, hex.EncodeToString(common.MinerIds[i].Tag))
-		}
-		return
-	}
-
-	if p=="off" {
-		common.LockCfg()
-		common.CFG.Beeps.MinerID = ""
-		common.UnlockCfg()
-		fmt.Printf("Mining monitor disabled\n")
-		return
-	}
-
-	v, e := strconv.ParseUint(p, 10, 32)
-	common.LockCfg()
-	if e!=nil {
-		common.CFG.Beeps.MinerID = p
-	} else if int(v)<len(common.MinerIds) {
-		common.CFG.Beeps.MinerID = string(common.MinerIds[v].Tag)
-	} else {
-		fmt.Println("The number is too big. Max is", len(common.MinerIds)-1)
-	}
-	fmt.Printf("Current miner ID: '%s'\n", common.CFG.Beeps.MinerID)
-	common.UnlockCfg()
-}
-
-
 func init() {
-	newUi("minerset mid", false, set_miner, "Setup the mining monitor with the given ID, or off to disable the monitor")
 	newUi("minerstat m", false, do_mining, "Look for the miner ID in recent blocks (optionally specify number of hours)")
 }
