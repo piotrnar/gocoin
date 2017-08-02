@@ -85,6 +85,7 @@ func SaveBlockFees() {
 		return
 	}
 
+	ExpireBlockFees()
 	buf := bufio.NewWriter(f)
 	er = gob.NewEncoder(buf).Encode(BlockFees)
 
