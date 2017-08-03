@@ -4,7 +4,7 @@
 	display:none;
 }
 td.agent {
-	max-width: 100px;
+	//max-width: auto;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap
@@ -399,8 +399,10 @@ function refreshconnections() {
 function switch_debug_mode() {
 	if (show_debug_mode.checked) {
 		css('.dbg', 'display', 'table-cell')
+		css('td.agent', 'max-width', '100px')
 	} else {
 		css('.dbg', 'display', 'none')
+		css('td.agent', 'max-width', '350px')
 	}
 }
 
@@ -458,7 +460,7 @@ function remember_info_setting() {
 }
 remember_info_setting()
 switch_order_type()
-
+switch_debug_mode()
 
 
 </script>
