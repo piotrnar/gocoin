@@ -1,4 +1,8 @@
 <style>
+.dbg {
+	//display:table-cell;
+	display:none;
+}
 td.agent {
 	max-width: 100px;
 	overflow: hidden;
@@ -8,7 +12,6 @@ td.agent {
 </style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
-<table width="100%">
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 <span id="el_tcp_listen_switch" style="display:none">&nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
@@ -22,44 +25,40 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 <input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by age</span>
 </div>
 <table class="netcons bord" width="100%" id="netcons">
-<col width="30"> <!--#-->
-<col width="80"> <!--age-->
-<col width="130"> <!--IP-->
-<col width="20"> <!--in/out icon-->
-<col width="60"> <!--ping-->
-<col width="80"> <!--total rcvd-->
-<col width="80"> <!--total sent-->
-<col> <!--node version & agent-->
-<col width="30"> <!--blocks received-->
-<col width="30"> <!--blocks in progress-->
-<col width="30"> <!--txs received-->
-<col width="20"> <!--agent-->
 <tr>
-	<th>ID
-	<th>Age
-	<th colspan="2">Peer Address
-	<th>Ping
-	<th >Tot In
-	<th >Tot Out
+	<th width="30">ID
+	<th width="80">Age
+	<th width="130" colspan="2">Peer Address
+	<th width="20">Ping
+	<th class="dbg">Rcvd
+	<th class="dbg">Sent
+	<th width="60" >Tot In
+	<th width="60" >Tot Out
 	<th colspan="3">Node Version
-	<th colspan="2" title="Received / In Progress">Blks
+	<th width="60" colspan="2" title="Received / In Progress">Blks
 	<th >Txs
-	<th title="Bytes waiting to be sent">ToSend
-	<th title="Max bytes waiting to be sent">MaxSend
+	<th class="dbg" title="Bytes waiting to be sent">ToSend
+	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
 	<th>&nbsp;
 </tr>
 <!--PEER_ROW-->
 </table>
-<br>
+
+
+<table width="100%"><tr>
+<td>
 Node Version Legend:<br>
 &bull; <b>H</b> - Supports BIP130<br>
 &bull; <b>B</b> - Supports Bloom Filtering<br>
 &bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
 &bull; <b>W</b> - Supports Segregate Witness<br>
 <a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
-
-
+</td>
+<td align="right" valign="top">
+More info <input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()">
+</td></tr>
 </table>
+
 
 <script>
 if (!server_mode) {
@@ -270,19 +269,19 @@ function refreshconnections() {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
-/*
+
 				// last_cmd_rcvd
 				td = row.insertCell(-1)
-				td.className = 'mono'
+				td.className = 'dbg mono'
 				td.title = cs[i].LastBtsRcvd
 				td.innerHTML = cs[i].LastCmdRcvd
 
 				// last_cmd_sent
 				td = row.insertCell(-1)
-				td.className = 'mono'
+				td.className = 'dbg mono'
 				td.title = cs[i].LastBtsSent
 				td.innerHTML = cs[i].LastCmdSent
-*/
+
 				// total_rcvd
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
@@ -355,11 +354,13 @@ function refreshconnections() {
 				if (cs[i].TxsReceived!=0) td.innerHTML = cs[i].TxsReceived
 
 				td = row.insertCell(-1)
+				td.className = "dbg"
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				if (cs[i].BytesToSend>0) td.innerHTML = cs[i].BytesToSend
 
 				td = row.insertCell(-1)
+				td.className = "dbg"
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				td.innerHTML = cs[i].MaxSentBufSize
@@ -395,6 +396,13 @@ function refreshconnections() {
 	aj.send(null)
 }
 
+function switch_debug_mode() {
+	if (show_debug_mode.checked) {
+		css('.dbg', 'display', 'table-cell')
+	} else {
+		css('.dbg', 'display', 'none')
+	}
+}
 
 function draw_chart() {
 	var aj = ajax()
