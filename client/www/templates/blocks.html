@@ -5,6 +5,9 @@
 }
 .stat1 {
 }
+td.bordr {
+	border-right: 1px solid;
+}
 </style>
 
 <div id="light" class="white_content" style="height:auto">
@@ -52,7 +55,7 @@ Sort by SPB</span>
 <table class="blocks bord" id="blkstab">
 <tr>
 	<th colspan="7">Block info
-	<th class="stat0" colspan="5">Mining Information
+	<th class="stat0" colspan="4">Mining Information
 	<th class="stat1" colspan="7">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
@@ -65,7 +68,7 @@ Sort by SPB</span>
 	<th class="stat0" width="30">BTC
 	<th class="stat0" width="30" align="right">SPB
 	<th class="stat0" width="20">Ver
-	<th class="stat0" align="left">Miner
+	<th class="stat0 bordr" align="left">Miner
 	<th class="stat1" width="10" title="Received from ConnID">Fro
 	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Mis
 	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
@@ -366,7 +369,7 @@ function refreshblocks() {
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
-				td.className = "i stat0 hand"
+				td.className = "i stat0 hand bordr"
 				td.innerText = miner
 				onc_mid(td, i)
 
