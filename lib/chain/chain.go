@@ -47,6 +47,7 @@ type NewChanOpts struct {
 	SetBlocksDBCacheSize bool
 	BlocksDBCacheSize int // this value is only taken if SetBlocksDBCacheSize is true
 	UTXOCallbacks utxo.CallbackFunctions
+	BlockMinedCB func(*btc.Block) // used to remove mined txs from memory pool
 }
 
 

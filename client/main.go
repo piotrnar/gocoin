@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
 	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -41,6 +42,18 @@ func reset_save_timer() {
 	SaveBlockChain.Reset(SaveBlockChainAfter)
 }
 
+func blockMined(bl *btc.Block) {
+	network.BlockMined(bl)
+
+	network.MutexRcv.Lock()
+	height := common.BlockChain.BlockTreeEnd.Height
+	yes := int(network.LastCommitedHeader.Height) - int(height) < 144
+	network.MutexRcv.Unlock()
+	if yes { // do not run it when syncing chain
+		usif.ProcessBlockFees(height, bl)
+	}
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll {
@@ -65,16 +78,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		// new block accepted
 		newbl.TmAccepted = time.Now()
 
-		network.BlockMined(bl)
-
 		newbl.NonWitnessSize = len(bl.OldData)
 
 		common.RecalcAverageBlockSize(false)
-
-		//if common.BlockChain.BlockTreeEnd.BlockHash.Equal(network.LastCommitedHeader.BlockHash) {
-		if int(network.LastCommitedHeader.Height) - int(common.BlockChain.BlockTreeEnd.Height) < 144 {
-			usif.ProcessBlockFees(newbl) // do not run it when syncing chain
-		}
 
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
@@ -190,8 +196,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		msg.Done.Done()
 		return
 	}
-
-	network.BlockMined(msg.Block)
 
 	common.RecalcAverageBlockSize(false)
 

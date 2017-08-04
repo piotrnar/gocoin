@@ -64,7 +64,8 @@ func host_init() {
 	ext := &chain.NewChanOpts{
 		UTXOVolatileMode : common.FLAG.VolatileUTXO,
 		UndoBlocks : common.FLAG.UndoBlocks,
-		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlks)}
+		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlks),
+		BlockMinedCB : blockMined}
 
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)

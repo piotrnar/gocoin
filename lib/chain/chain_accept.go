@@ -82,6 +82,9 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 			ch.BlockTreeEnd = cur // Advance the head
+			if ch.CB.BlockMinedCB != nil {
+				ch.CB.BlockMinedCB(bl)
+			}
 		}
 	} else {
 		// The block's parent is not the current head of the chain...

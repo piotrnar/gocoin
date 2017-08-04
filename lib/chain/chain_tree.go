@@ -83,6 +83,10 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 
 		ch.BlockTreeEnd = nxt
+
+		if ch.CB.BlockMinedCB != nil {
+			ch.CB.BlockMinedCB(bl)
+		}
 	}
 
 	if !AbortNow && ch.BlockTreeEnd != end {

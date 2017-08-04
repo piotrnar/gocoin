@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"os"
 	"sync"
 )
@@ -15,13 +15,11 @@ const (
 
 var (
 	BlockFeesMutex sync.Mutex
-	BlockFees map[uint32][][3]uint64 = make(map[uint32][][3]uint64) // [0]=Size  [1]-Fee  [2]-Group
-	BlockFeesDirty bool // it true, clean up old data
+	BlockFees      map[uint32][][3]uint64 = make(map[uint32][][3]uint64) // [0]=Size  [1]-Fee  [2]-Group
+	BlockFeesDirty bool                                                  // it true, clean up old data
 )
 
-func ProcessBlockFees(newbl *network.BlockRcvd) {
-	bl := newbl.Block
-
+func ProcessBlockFees(height uint32, bl *btc.Block) {
 	if len(bl.Txs) < 2 {
 		return
 	}
@@ -49,7 +47,7 @@ func ProcessBlockFees(newbl *network.BlockRcvd) {
 	}
 
 	BlockFeesMutex.Lock()
-	BlockFees[newbl.BlockTreeNode.Height] = fees
+	BlockFees[height] = fees
 	BlockFeesDirty = true
 	BlockFeesMutex.Unlock()
 }
@@ -76,7 +74,6 @@ func ExpireBlockFees() {
 	}
 	BlockFeesMutex.Unlock()
 }
-
 
 func SaveBlockFees() {
 	f, er := os.Create(common.GocoinHomeDir + BLKFES_FILE_NAME)

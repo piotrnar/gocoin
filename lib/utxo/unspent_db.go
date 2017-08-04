@@ -248,7 +248,7 @@ func (db *UnspentDB) save() {
 }
 
 
-// Commit the given add/del transactions to UTXO and Wnwind DBs
+// Commit the given add/del transactions to UTXO and Unwind DBs
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	undo_fn := fmt.Sprint(db.dir_undo, changes.Height)
 
