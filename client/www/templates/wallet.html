@@ -266,7 +266,7 @@ function edit_wallet() {
 }
 function setunused(idx) {
 	var tr = document.getElementById('walrow'+idx)
-	var adr = tr.cells[0].innerText
+	var adr = tr["btc_addr"] //tr.cells[0].innerText
 
 	var name = qswal.options[qswal.selectedIndex].text
 	if (confirm("Remove " + adr + " from the current browser wallet?")) {
