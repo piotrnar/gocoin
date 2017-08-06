@@ -124,6 +124,8 @@ function fetch_wallet_balance(name) {
 				row.className = "hov"
 				row.id = 'walrow'+idxx
 
+				row["btc_addr"] = wallet_addr[i]
+
 				td = row.insertCell(-1)
 				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
 				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
@@ -210,7 +212,6 @@ function enable_move_buttons() {
 }
 
 function move_wallet_left() {
-	console.log("move_wallet_left")
 	if (qswal.options.length<2) {
 		return
 	}
@@ -282,10 +283,9 @@ function setunused(idx) {
 	}
 }
 function edit_label() {
-	console.log(this)
 	var idx = this.row_idx
 	var tr = document.getElementById('walrow'+idx)
-	var adr = tr.cells[0].innerText
+	var adr = tr["btc_addr"] //tr.cells[0].innerText
 	var lab = tr.cells[1].innerText
 
 	var newlab = prompt("Edit label in the current browser wallet for:\n" + adr, lab)
@@ -295,6 +295,7 @@ function edit_label() {
 		var s = ''
 		for (var i=0; ; ) {
 			var found = lines[i].indexOf(adr)
+
 			if (found==-1) {
 				s += lines[i]
 			} else {
