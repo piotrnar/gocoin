@@ -1,5 +1,6 @@
 1.9.2
-* Client: chanegd the way freshly mined txs are removed from mempool so it also works for reorgs
+* Client/WebUI/MakeTx: pay_cmd inside will not apply changes to the balance folder
+* Client: changed the way freshly mined txs are removed from mempool so it also works for reorgs
 * Client/WebUI/Network: Make some extra information about the nodes switchable on/off
 * Client: Show number of records (txs) while loading UTXO.db
 * Client/WebUI/Blocks: Removed minimum fee from the block table. Moved to the fee stats chart, also added maximum
