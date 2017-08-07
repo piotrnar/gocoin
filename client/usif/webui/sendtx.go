@@ -115,7 +115,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 					am, er := btc.StringToSatoshis(r.Form[btcidx][0])
 					if er==nil && am>0 {
 						if pay_cmd=="" {
-							pay_cmd = "./wallet -a=false -useallinputs -send "
+							pay_cmd = "wallet -a=false -useallinputs -send "
 						} else {
 							pay_cmd += ","
 						}
