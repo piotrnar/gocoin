@@ -7,6 +7,7 @@ Lib:
 * The best chain should be decided on the amount of hashing work, not the length - SetBestChain()
 
 Client:
+* WebUI: Optimize mempool access for fetching "/balance.json?summary&mempool" with a long list of addressess
 * WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
 * Make -nowallet mode switchable without restarting the node.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download

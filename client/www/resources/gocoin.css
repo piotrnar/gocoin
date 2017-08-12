@@ -268,11 +268,7 @@ div.footer {
 
 .unspent_minus {
 	color:red;
-	font-style:italic;
-	font-size:80%;
 }
 .unspent_plus {
 	color:green;
-	font-style:italic;
-	font-size:80%;
 }

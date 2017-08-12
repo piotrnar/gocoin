@@ -99,6 +99,9 @@ function fetch_wallet_balance(name) {
 	}
 
 	var aj = ajax()
+
+	var mempool = show_mempol.checked
+
 	aj.onerror=function() {
 		loading_icon.style.display = 'none'
 		fetching_balance_in_progress = null
@@ -116,7 +119,7 @@ function fetch_wallet_balance(name) {
 			for (var i in wallet_addr) {
 				var rec = bal[wallet_addr[i]]
 
-				if (rec.OutCnt==0 && wallet[i].virgin) {
+				if ((rec.OutCnt+rec.PendingCnt)==0 && wallet[i].virgin) {
 					continue
 				}
 
@@ -134,7 +137,7 @@ function fetch_wallet_balance(name) {
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
 				td.innerText = wallet[i].label
-				if (wallet[i].virgin && rec.OutCnt>0) {
+				if (wallet[i].virgin) {
 					td.classList.add("i")
 				}
 				//? ' ***' : '' )
@@ -146,11 +149,13 @@ function fetch_wallet_balance(name) {
 				if (rec.OutCnt>0) {
 					td.innerText = val2str_pad(rec.Value,true)
 				}
-				if (rec.PendingValue>0) {
-					td.innerHTML += ' <span class="unspent_plus">+' + val2str_pad(rec.PendingValue,true) + '</span>'
-				}
-				if (rec.SpendingValue>0) {
-					td.innerHTML += ' <span class="unspent_minus">-' + val2str_pad(rec.SpendingValue,true) + '</span>'
+				if (mempool) {
+					if (rec.PendingValue>0) {
+						td.innerHTML += '<br><span class="unspent_plus">+' + val2str_pad(rec.PendingValue,true) + '</span>'
+					}
+					if (rec.SpendingValue>0) {
+						td.innerHTML += '<br><span class="unspent_minus">-' + val2str_pad(rec.SpendingValue,true) + '</span>'
+					}
 				}
 
 				td = row.insertCell(-1)
@@ -159,11 +164,13 @@ function fetch_wallet_balance(name) {
 					td.innerText = rec.OutCnt
 					totouts += rec.OutCnt
 				}
-				if (rec.PendingCnt>0) {
-					td.innerHTML += ' <span class="unspent_plus">+' + rec.PendingCnt + '</span>'
-				}
-				if (rec.SpendingCnt>0) {
-					td.innerHTML += ' <span class="unspent_minus">-' + rec.SpendingCnt + '</span>'
+				if (mempool) {
+					if (rec.PendingCnt>0) {
+						td.innerHTML += '<br><span class="unspent_plus">+' + rec.PendingCnt + '</span>'
+					}
+					if (rec.SpendingCnt>0) {
+						td.innerHTML += '<br><span class="unspent_minus">-' + rec.SpendingCnt + '</span>'
+					}
 				}
 
 				// empty column,  for space
@@ -197,18 +204,18 @@ function fetch_wallet_balance(name) {
 			total_btc.innerText = val2str(totbtc)
 			unspent_outs.innerText = totouts
 
-			if (totcntin>0) {
+			if (mempool && totcntin>0) {
 				arriving_btc.innerText = val2str(totvalin)
 				arriving_cnt.innerText = totcntin
-				arriving_info_id.style.display = 'block'
+				arriving_info_id.style.display = 'table-cell'
 			} else {
 				arriving_info_id.style.display = 'none'
 			}
 
-			if (totcntout>0) {
+			if (mempool && totcntout>0) {
 				spending_btc.innerText = val2str(totvalout)
 				spending_cnt.innerText = totcntout
-				spending_info_id.style.display = 'block'
+				spending_info_id.style.display = 'table-cell'
 			} else {
 				spending_info_id.style.display = 'none'
 			}
@@ -219,7 +226,7 @@ function fetch_wallet_balance(name) {
 
 	loading_icon.style.display = 'inline'
 	fetching_balance_in_progress = aj
-	aj.open("POST", "balance.json?summary&mempool", true)
+	aj.open("POST", "balance.json?summary" + (mempool ? "&mempool" : ""), true)
 	aj.send(JSON.stringify(wallet_addr))
 }
 
@@ -493,10 +500,11 @@ function import_file_selected(e) {
 <input type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </span>
 </h2>
+<div>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
-<br>
-<div id="arriving_info_id" style="display:none" class="unspent_plus"><br>Unconfirmed arriving: <b id="arriving_btc"></b> BTC in <b id="arriving_cnt"></b> outputs</div>
-<div id="spending_info_id" style="display:none" class="unspent_minus"><br>Unconfirmed spending: <b id="spending_btc"></b> BTC in <b id="spending_cnt"></b> outputs</div>
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><span class="hand" onclick="show_mempol.click()"> Show unconfirmed</span>
+</div>
 <i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 <br>
@@ -513,6 +521,7 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <input type="button" value="Edit Wallet" onclick="edit_wallet()">
 </span>
 </h2>
+
 <table class="wal bord" id="walltab">
 <tr>
 <th width="360">Address
@@ -523,6 +532,11 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <th width="330">P2SH-WPKH  Deposit Address
 <th width="40">Outs
 </table>
+
+<table width="100%"><tr>
+<td width="50%" id="arriving_info_id" style="display:none" class="unspent_plus">Unconfirmed arriving: <b id="arriving_btc"></b> BTC in <b id="arriving_cnt"></b> outputs</td>
+<td width="50%" id="spending_info_id" style="display:none" class="unspent_minus">Unconfirmed spending: <b id="spending_btc"></b> BTC from <b id="spending_cnt"></b> outputs</td>
+</tr></table>
 
 <br>
 <div id="warnings" style="color:red;display:none"><br><center style="font-size:200%"><b>Warnings</b></center>
@@ -562,6 +576,11 @@ if (typeof(localStorage.gocoinWallets)=="string") {
 	localStorage.gocoinWallets = ""
 }
 
+function show_mempool_clicked() {
+	localStorage.setItem("wallet_show_mempool", show_mempol.checked)
+	quick_switch_wallet()
+}
+
 // reaload page on new block
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
@@ -582,6 +601,7 @@ qswal.addEventListener("loadwallet", function(e) {
 	fetch_wallet_balance(e.name)
 })
 document.addEventListener('DOMContentLoaded', function() {
+	show_mempol.checked = localStorage.getItem("wallet_show_mempool") == 'true'
 	quick_switch_wallet() // this is to force loading wallet after loading
 	import_file.addEventListener('change', import_file_selected, false);
 	if (segwit_active)  warnings.style.display = 'block'
