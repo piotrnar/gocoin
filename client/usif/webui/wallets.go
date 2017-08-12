@@ -15,6 +15,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/wallet"
 )
 
@@ -50,6 +51,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary := len(r.Form["summary"])>0
+	mempool := len(r.Form["mempool"])>0
 
 	inp, er := ioutil.ReadAll(r.Body)
 	if er != nil {
@@ -72,6 +74,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Coinbase bool
 		Message string
 		Addr string
+		Spending bool // if true the spending tx is in the mempool
 	}
 
 	type OneOuts struct {
@@ -80,6 +83,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		SegWitCnt int
 		SegWitAddr string
 		Outs []OneOut
+
+		PendingCnt int
+		PendingValue uint64
+		PendingOuts []OneOut
+
+		SpendingValue uint64
+		SpendingCnt uint64
 	}
 
 	out := make(map[string] *OneOuts)
@@ -102,14 +112,43 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			newrec.OutCnt = len(unsp)
 			for _, u := range unsp {
 				newrec.Value += u.Value
+				network.TxMutex.Lock()
+				_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
+				network.TxMutex.Unlock()
+				if spending {
+					newrec.SpendingValue += u.Value
+					newrec.SpendingCnt++
+				}
 				if !summary {
 					newrec.Outs = append(newrec.Outs, OneOut{
 						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-						Message: html.EscapeString(string(u.Message)), Addr:a})
+						Message: html.EscapeString(string(u.Message)), Addr:a, Spending:spending})
 				}
 			}
 		}
+
+		// check memory pool
+		if mempool {
+			network.TxMutex.Lock()
+			for _, t2s := range network.TransactionsToSend {
+				for vo, to := range t2s.TxOut {
+					if aa.Owns(to.Pk_script) {
+						newrec.PendingValue += to.Value
+						newrec.PendingCnt++
+						if !summary {
+							po := &btc.TxPrevOut{Hash:t2s.Hash.Hash, Vout:uint32(vo)}
+							_, spending := network.SpentOutputs[po.UIdx()]
+							newrec.PendingOuts = append(newrec.PendingOuts, OneOut{
+								TxId : t2s.Hash.String(), Vout : uint32(vo),
+								Value : to.Value, Spending : spending})
+						}
+					}
+				}
+			}
+			network.TxMutex.Unlock()
+		}
+
 		out[aa.String()] = newrec
 
 		/* Segwit P2WPKH: */

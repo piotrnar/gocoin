@@ -14,7 +14,6 @@ Client:
 * Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
 	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
 	Undo block 450529 000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5 976 KB
-* Show unconfirmed transactions (inside the mempool) if they have something to do with the current wallet
 * Implement "Child Pays for Parent Merged" (mining feature)
 * At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 

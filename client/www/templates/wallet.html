@@ -46,7 +46,7 @@ td.addr_norm {
 	font-weight:bold;
 }
 td.addr_label {
-	white-space: nowrap;
+	//white-space: nowrap;
 }
 td.balbtc {
 	text-align: right;
@@ -109,8 +109,8 @@ function fetch_wallet_balance(name) {
 		loading_icon.style.display = 'none'
 		fetching_balance_in_progress = null
 		try {
-			var totbtc = 0
-			var totouts = 0
+			var totbtc = 0,  totvalin = 0,  totvalout = 0
+			var totouts = 0,  totcntin = 0,  totcntout = 0
 			bal = JSON.parse(aj.responseText)
 			var idxx = 0
 			for (var i in wallet_addr) {
@@ -146,12 +146,24 @@ function fetch_wallet_balance(name) {
 				if (rec.OutCnt>0) {
 					td.innerText = val2str_pad(rec.Value,true)
 				}
+				if (rec.PendingValue>0) {
+					td.innerHTML += ' <span class="unspent_plus">+' + val2str_pad(rec.PendingValue,true) + '</span>'
+				}
+				if (rec.SpendingValue>0) {
+					td.innerHTML += ' <span class="unspent_minus">-' + val2str_pad(rec.SpendingValue,true) + '</span>'
+				}
 
 				td = row.insertCell(-1)
 				td.className = "outcnt"
 				if (rec.OutCnt>0) {
 					td.innerText = rec.OutCnt
 					totouts += rec.OutCnt
+				}
+				if (rec.PendingCnt>0) {
+					td.innerHTML += ' <span class="unspent_plus">+' + rec.PendingCnt + '</span>'
+				}
+				if (rec.SpendingCnt>0) {
+					td.innerHTML += ' <span class="unspent_minus">-' + rec.SpendingCnt + '</span>'
 				}
 
 				// empty column,  for space
@@ -174,11 +186,32 @@ function fetch_wallet_balance(name) {
 					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
 
+				totvalin += rec.PendingValue
+				totvalout += rec.SpendingValue
+				totcntin += rec.PendingCnt
+				totcntout += rec.SpendingCnt
+
 				totbtc += rec.Value
 				idxx++
 			}
 			total_btc.innerText = val2str(totbtc)
 			unspent_outs.innerText = totouts
+
+			if (totcntin>0) {
+				arriving_btc.innerText = val2str(totvalin)
+				arriving_cnt.innerText = totcntin
+				arriving_info_id.style.display = 'block'
+			} else {
+				arriving_info_id.style.display = 'none'
+			}
+
+			if (totcntout>0) {
+				spending_btc.innerText = val2str(totvalout)
+				spending_cnt.innerText = totcntout
+				spending_info_id.style.display = 'block'
+			} else {
+				spending_info_id.style.display = 'none'
+			}
 		} catch (e) {
 			console.log(e)
 		}
@@ -186,7 +219,7 @@ function fetch_wallet_balance(name) {
 
 	loading_icon.style.display = 'inline'
 	fetching_balance_in_progress = aj
-	aj.open("POST", "balance.json?summary", true)
+	aj.open("POST", "balance.json?summary&mempool", true)
 	aj.send(JSON.stringify(wallet_addr))
 }
 
@@ -461,10 +494,11 @@ function import_file_selected(e) {
 </span>
 </h2>
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
-
+<br>
+<div id="arriving_info_id" style="display:none" class="unspent_plus"><br>Unconfirmed arriving: <b id="arriving_btc"></b> BTC in <b id="arriving_cnt"></b> outputs</div>
+<div id="spending_info_id" style="display:none" class="unspent_minus"><br>Unconfirmed spending: <b id="spending_btc"></b> BTC in <b id="spending_cnt"></b> outputs</div>
 <i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
-<br>
 <br>
 <div id="browser_wallets">Available wallets: </div>
 <br>
