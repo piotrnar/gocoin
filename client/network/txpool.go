@@ -445,7 +445,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		// Gocoin does not route txs that need unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
-	} else if isRoutable(rec) {
+	} else if !ntx.trusted && isRoutable(rec) {
+		// do not automatically route loacally loaded txs
 		rec.Invsentcnt += NetRouteInvExt(1, tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.raw)))
 		common.CountSafe("TxRouteOK")
 	}
@@ -474,10 +475,6 @@ func findPendingTxs(tx *btc.Tx) (res []BIDX) {
 }
 
 func isRoutable(rec *OneTxToSend) bool {
-	if rec.trusted {
-		// do not automatically route loacally loaded txs
-		return false
-	}
 	if !common.CFG.TXRoute.Enabled {
 		common.CountSafe("TxRouteDisabled")
 		rec.Blocked = TX_REJECTED_DISABLED
