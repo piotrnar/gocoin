@@ -81,6 +81,12 @@ function switchwallet_button_click_browser() {
 	switch_to_webwallet(this.value)
 }
 
+function remove_comment_from_label(lab) {
+	var i = lab.indexOf('#')
+	if (i==-1)  return lab
+	return lab.substr(0, i)
+}
+
 function fetch_wallet_balance(name) {
 	if (fetching_balance_in_progress!=null) {
 		fetching_balance_in_progress.abort()
@@ -128,6 +134,7 @@ function fetch_wallet_balance(name) {
 				row.id = 'walrow'+idxx
 
 				row["btc_addr"] = wallet_addr[i]
+				row["addr_label"] = wallet[i].label
 
 				td = row.insertCell(-1)
 				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
@@ -136,7 +143,7 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
-				td.innerText = wallet[i].label
+				td.innerText = remove_comment_from_label(wallet[i].label)
 				if (wallet[i].virgin) {
 					td.classList.add("i")
 				}
@@ -326,7 +333,7 @@ function edit_label() {
 	var idx = this.row_idx
 	var tr = document.getElementById('walrow'+idx)
 	var adr = tr["btc_addr"] //tr.cells[0].innerText
-	var lab = tr.cells[1].innerText
+	var lab = tr["addr_label"]
 
 	var newlab = prompt("Edit label in the current browser wallet for:\n" + adr, lab)
 	if (newlab) {
