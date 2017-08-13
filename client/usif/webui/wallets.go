@@ -100,6 +100,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	usif.LocksChan <- lck
 	lck.In.Wait()
 
+	var addr_map map[string]string
+
+	if mempool {
+		// make addrs -> idx
+		addr_map = make(map[string]string, 2*len(addrs))
+	}
+
 	for _, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
 		if e!=nil {
@@ -128,28 +135,11 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// check memory pool
-		if mempool {
-			network.TxMutex.Lock()
-			for _, t2s := range network.TransactionsToSend {
-				for vo, to := range t2s.TxOut {
-					if aa.Owns(to.Pk_script) {
-						newrec.PendingValue += to.Value
-						newrec.PendingCnt++
-						if !summary {
-							po := &btc.TxPrevOut{Hash:t2s.Hash.Hash, Vout:uint32(vo)}
-							_, spending := network.SpentOutputs[po.UIdx()]
-							newrec.PendingOuts = append(newrec.PendingOuts, OneOut{
-								TxId : t2s.Hash.String(), Vout : uint32(vo),
-								Value : to.Value, Spending : spending})
-						}
-					}
-				}
-			}
-			network.TxMutex.Unlock()
-		}
+		out[a] = newrec
 
-		out[aa.String()] = newrec
+		if mempool {
+			addr_map[string(aa.OutScript())] = a
+		}
 
 		/* Segwit P2WPKH: */
 		if aa.Version==btc.AddrVerPubkey(common.Testnet) {
@@ -172,7 +162,32 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			if mempool {
+				addr_map[string(aa.OutScript())] = a
+			}
 		}
+	}
+
+	// check memory pool
+	if mempool {
+		network.TxMutex.Lock()
+		for _, t2s := range network.TransactionsToSend {
+			for vo, to := range t2s.TxOut {
+				if a, ok := addr_map[string(to.Pk_script)]; ok {
+					newrec := out[a]
+					newrec.PendingValue += to.Value
+					newrec.PendingCnt++
+					if !summary {
+						po := &btc.TxPrevOut{Hash:t2s.Hash.Hash, Vout:uint32(vo)}
+						_, spending := network.SpentOutputs[po.UIdx()]
+						newrec.PendingOuts = append(newrec.PendingOuts, OneOut{
+							TxId : t2s.Hash.String(), Vout : uint32(vo),
+							Value : to.Value, Spending : spending})
+					}
+				}
+			}
+		}
+		network.TxMutex.Unlock()
 	}
 
 	lck.Out.Done()
