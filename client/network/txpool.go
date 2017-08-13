@@ -96,20 +96,25 @@ type OneWaitingList struct {
 	Ids  map[BIDX]time.Time // List of pending tx ids
 }
 
-// Return false if we do not want to receive a data for this tx
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
+	return NeedThisTxExt(id, cb)==0
+}
+
+// Return false if we do not want to receive a data for this tx
+func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	TxMutex.Lock()
 	if _, present := TransactionsToSend[id.BIdx()]; present {
-		//res = false
+		why_not = 1
 	} else if _, present := TransactionsRejected[id.BIdx()]; present {
-		//res = false
+		why_not = 2
 	} else if _, present := TransactionsPending[id.BIdx()]; present {
-		//res = false
+		why_not = 3
 	} else if txo, _ := common.BlockChain.Unspent.UnspentGet(&btc.TxPrevOut{Hash: id.Hash}); txo != nil {
+		why_not = 4
 		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
 		common.CountSafe("TxMinedRejected")
 	} else {
-		res = true
+		// why_not = 0
 		if cb != nil {
 			cb()
 		}
@@ -232,13 +237,21 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 		inptx := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 
-		if txinmem, ok := TransactionsToSend[inptx.BIdx()]; common.CFG.TXPool.AllowMemInputs && ok {
+		if txinmem, ok := TransactionsToSend[inptx.BIdx()]; ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedBadInput")
 				return
 			}
+
+			if !ntx.trusted && !common.CFG.TXPool.AllowMemInputs {
+				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
+				TxMutex.Unlock()
+				common.CountSafe("TxRejectedMemInput1")
+				return
+			}
+
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			common.CountSafe("TxInputInMemory")
 			frommem = true
@@ -250,7 +263,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				if !common.CFG.TXPool.AllowMemInputs {
 					RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
 					TxMutex.Unlock()
-					common.CountSafe("TxRejectedMemInput")
+					common.CountSafe("TxRejectedMemInput2")
 					return
 				}
 				// In this case, let's "save" it for later...
@@ -308,7 +321,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(tx.VSize()) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte)) {
+	if !ntx.trusted && fee < (uint64(tx.VSize()) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte)) {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
 		common.CountSafe("TxRejectedLowFee")
@@ -343,7 +356,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		for k, _ := range rbf_tx_list {
 			ctx := TransactionsToSend[k]
 
-			if ctx.Final {
+			if !ntx.trusted && ctx.Final {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedRBFFinal")
@@ -355,7 +368,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		new_min_fee = totfees + (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte))
 
-		if fee < new_min_fee {
+		if !ntx.trusted && fee < new_min_fee {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
@@ -609,6 +622,10 @@ func MempoolSave() {
 	f.Close()
 }
 
+func SubmitTrustedTx(tx *btc.Tx, rawtx []byte) bool {
+	return HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
+}
+
 func MempoolLoad() bool {
 	var ha [32]byte
 	var totcnt, txlen uint64
@@ -640,6 +657,14 @@ func MempoolLoad() bool {
 		return false
 	}
 
+
+
+	// skip this tx when loading mempool
+	/*
+	skip_tx := btc.NewUint256FromString("1e6536ab149a26bbff1c1c08612355dfee6fc8141e85aa1fb30932e8cc2fbc06")
+	println("skipped tx", skip_tx.String())
+	*/
+
 	for ; totcnt > 0; totcnt-- {
 		txlen, er = btc.ReadVLen(rd)
 		if er != nil {
@@ -658,7 +683,13 @@ func MempoolLoad() bool {
 			return false
 		}
 		tx.SetHash(rawtx)
-		HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
+		/*
+		if tx.Hash.Equal(skip_tx) {
+			println("skipped")
+			continue
+		}
+		*/
+		SubmitTrustedTx(tx, rawtx)
 	}
 
 	er = btc.ReadAll(rd, ha[:len(END_MARKER)])
