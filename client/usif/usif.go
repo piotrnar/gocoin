@@ -64,7 +64,6 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
 				e = errors.New("Invalid signature")
-				return
 			}
 			totinp += po.Value
 
@@ -134,31 +133,35 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 	tx.SetHash(txd)
 
+	s, _, _, _, _ = DecodeTx(tx)
+
+	if why := network.NeedThisTxExt(tx.Hash, nil); why != 0 {
+		s += fmt.Sprintln("Transaction not needed or not wanted", why)
+		return
+	}
+
+	if !network.SubmitTrustedTx(tx, txd) {
+		network.TxMutex.Lock()
+		rr := network.TransactionsRejected[tx.Hash.BIdx()]
+		network.TxMutex.Unlock()
+		if rr != nil {
+			s += fmt.Sprintln("Transaction rejected", rr.Reason)
+		} else {
+			s += fmt.Sprintln("Transaction rejected in a weird way")
+		}
+		return
+	}
+
 	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
-	if _, ok := network.TransactionsToSend[tx.Hash.BIdx()]; ok {
-		s += fmt.Sprintln("TxID", tx.Hash.String(), "was already in the pool")
-		return
-	}
-
-	var missinginp bool
-	var totinp, totout uint64
-	var sigops uint
-	s, missinginp, totinp, totout, sigops, er = DecodeTxSops(tx)
-	if er != nil {
-		return
-	}
-
-	if missinginp {
-		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx: tx, Data: txd, Own: 2, Firstseen: time.Now(),
-			Volume: totout, SigopsCost: sigops}
+	t2s := network.TransactionsToSend[tx.Hash.BIdx()]
+	network.TxMutex.Unlock()
+	if t2s != nil {
+		t2s.Own = 1
+		s += fmt.Sprintln("Transaction added to the memory pool. You can broadcast it now.")
 	} else {
-		network.TransactionsToSend[tx.Hash.BIdx()] = &network.OneTxToSend{Tx: tx, Data: txd, Own: 1, Firstseen: time.Now(),
-			Volume: totinp, Fee: totinp - totout, SigopsCost: sigops}
+		s += fmt.Sprintln("Transaction not rejected in a weird way.")
 	}
-	network.TransactionsToSendSize += uint64(len(txd))
-	s += fmt.Sprintln("Transaction added to the memory pool. Please double check its details above.")
-	s += fmt.Sprintln("If it does what you intended, you can send it the network.\nUse TxID:", tx.Hash.String())
+
 	return
 }
 
