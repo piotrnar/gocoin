@@ -474,6 +474,10 @@ func findPendingTxs(tx *btc.Tx) (res []BIDX) {
 }
 
 func isRoutable(rec *OneTxToSend) bool {
+	if rec.trusted {
+		// do not automatically route loacally loaded txs
+		return false
+	}
 	if !common.CFG.TXRoute.Enabled {
 		common.CountSafe("TxRouteDisabled")
 		rec.Blocked = TX_REJECTED_DISABLED
