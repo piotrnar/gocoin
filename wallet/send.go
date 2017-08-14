@@ -42,7 +42,7 @@ func parse_spend() {
 			println("Incorrect amount: ", tmp[1], er.Error())
 			cleanExit(1)
 		}
-		if *subfee {
+		if *subfee && i==0 {
 			am -= curFee
 		}
 
