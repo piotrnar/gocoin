@@ -46,8 +46,13 @@ func blockMined(bl *btc.Block) {
 	network.BlockMined(bl)
 
 	network.MutexRcv.Lock()
+	var yes bool
 	height := common.BlockChain.BlockTreeEnd.Height
-	yes := int(network.LastCommitedHeader.Height) - int(height) < 144
+	if common.BlockChain==nil || network.LastCommitedHeader==nil {
+		yes = true
+	} else {
+		yes = int(network.LastCommitedHeader.Height) - int(height) < 144
+	}
 	network.MutexRcv.Unlock()
 	if yes { // do not run it when syncing chain
 		usif.ProcessBlockFees(height, bl)

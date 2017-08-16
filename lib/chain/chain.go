@@ -52,8 +52,9 @@ type NewChanOpts struct {
 
 
 // This is the very first function one should call in order to use this package
-func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
-	ch = new(Chain)
+func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts, ch_ret **Chain) {
+	*ch_ret = new(Chain)
+	ch := *ch_ret
 	ch.Genesis = genesis
 
 	if opts == nil {
