@@ -44,18 +44,8 @@ func reset_save_timer() {
 
 func blockMined(bl *btc.Block) {
 	network.BlockMined(bl)
-
-	network.MutexRcv.Lock()
-	var yes bool
-	height := common.BlockChain.BlockTreeEnd.Height
-	if common.BlockChain==nil || network.LastCommitedHeader==nil {
-		yes = true
-	} else {
-		yes = int(network.LastCommitedHeader.Height) - int(height) < 144
-	}
-	network.MutexRcv.Unlock()
-	if yes { // do not run it when syncing chain
-		usif.ProcessBlockFees(height, bl)
+	if int(bl.LastKnownHeight) - int(bl.Height) < 144 { // do not run it when syncing chain
+		usif.ProcessBlockFees(bl.Height, bl)
 	}
 }
 

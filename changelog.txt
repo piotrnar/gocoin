@@ -1,5 +1,4 @@
 1.9.2
-* chain.NewChainExt now stores the pointer to the new chain before returning from the function (fixes crash inside callbacks)
 * Wallet: Fix: "-f" was substracting the fee from every output's value, not only the first one
 * Client: Changed/fixed the way how own txs are inserted into mempool (e.g. it wasn't updating SpentOutputs)
 * Client/WebUI/Wallet: Show unconfirmed transactions

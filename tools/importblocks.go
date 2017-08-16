@@ -36,9 +36,8 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 
 
 func import_blockchain(dir string) {
-	var ch *chain.Chain
 	BlockDatabase := blockdb.NewBlockDB(dir, Magic)
-	chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, nil, &ch)
+	chain := chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, nil)
 
 	var bl *btc.Block
 	var er error
@@ -51,7 +50,7 @@ func import_blockchain(dir string) {
 	for {
 		now := time.Now().UnixNano()
 		if now-prv >= 10e9 {
-			stat(now-start, now-prv, totbytes, perbytes, ch.BlockTreeEnd.Height)
+			stat(now-start, now-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
 			prv = now  // show progress each 10 seconds
 			perbytes = 0
 		}
@@ -70,7 +69,7 @@ func import_blockchain(dir string) {
 
 		bl.Trusted = Trust
 
-		er, _, _ = ch.CheckBlock(bl)
+		er, _, _ = chain.CheckBlock(bl)
 
 		if er != nil {
 			if er.Error()!="Genesis" {
@@ -80,7 +79,7 @@ func import_blockchain(dir string) {
 			continue
 		}
 
-		er = ch.AcceptBlock(bl)
+		er = chain.AcceptBlock(bl)
 		if er != nil {
 			println("AcceptBlock failed:", er.Error())
 			os.Exit(1) // Such a thing should not happen, so let's better abort here.
@@ -91,12 +90,12 @@ func import_blockchain(dir string) {
 	}
 
 	stop := time.Now().UnixNano()
-	stat(stop-start, stop-prv, totbytes, perbytes, ch.BlockTreeEnd.Height)
+	stat(stop-start, stop-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
 
 	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
 
 	fmt.Println("Now saving the new database...")
-	ch.Close()
+	chain.Close()
 	fmt.Println("Database saved. No more imports should be needed.")
 }
 

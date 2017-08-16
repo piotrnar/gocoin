@@ -85,6 +85,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.BlockTreeEnd = nxt
 
 		if ch.CB.BlockMinedCB != nil {
+			bl.Height = nxt.Height
+			bl.LastKnownHeight = end.Height
 			ch.CB.BlockMinedCB(bl)
 		}
 	}

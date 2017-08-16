@@ -68,7 +68,7 @@ func host_init() {
 		BlockMinedCB : blockMined}
 
 	sta := time.Now()
-	chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext, &common.BlockChain)
+	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
