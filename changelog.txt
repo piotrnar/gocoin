@@ -1,4 +1,5 @@
 1.9.2
+* Client: start it with "-b" switch to check the balances while loading UTXO.db
 * Client/WebUI: POST to "balance.json?rawtx" returns the raw (originating) transaction for each output
 * Wallet: Fix: "-f" was substracting the fee from every output's value, not only the first one
 * Client: Changed/fixed the way how own txs are inserted into mempool (e.g. it wasn't updating SpentOutputs)

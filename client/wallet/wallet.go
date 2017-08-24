@@ -38,9 +38,6 @@ func FetchInitialBalance(abort *bool) {
 		return
 	}
 
-	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal)
-	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal)
-
 	var cur_rec, cnt_dwn, perc int
 	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap) / 100
 	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal) + " BTC or more"

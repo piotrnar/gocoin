@@ -25,6 +25,7 @@ var (
 		UnbanAllPeers bool
 		NoWallet      bool
 		Log           bool
+		BalanceOnLoad bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -182,6 +183,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not monitor balances (saves time and memory, use to sync chain)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
+	flag.BoolVar(&FLAG.BalanceOnLoad, "b", FLAG.BalanceOnLoad, "Check balances while loading UTXO.db (do not use when rescan is needeed)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
@@ -194,6 +196,10 @@ func InitConfig() {
 	flag.Parse()
 
 	AllBalMinVal = CFG.AllBalances.MinValue
+
+	if FLAG.UndoBlocks != 0 {
+		FLAG.NoWallet = true // this will prevent loading of balances, thus speeding up the process
+	}
 
 	Reset()
 }
