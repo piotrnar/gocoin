@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"archive/zip"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -52,6 +53,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	summary := len(r.Form["summary"])>0
 	mempool := len(r.Form["mempool"])>0
+	getrawtx := len(r.Form["rawtx"])>0
 
 	inp, er := ioutil.ReadAll(r.Body)
 	if er != nil {
@@ -75,6 +77,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Message string
 		Addr string
 		Spending bool // if true the spending tx is in the mempool
+		RawTx string
 	}
 
 	type OneOuts struct {
@@ -127,10 +130,19 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec.SpendingCnt++
 				}
 				if !summary {
+					txid := btc.NewUint256(u.TxPrevOut.Hash[:])
+					var rawtx string
+					if getrawtx {
+						dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
+						if er == nil {
+							rawtx = hex.EncodeToString(dat)
+						}
+					}
 					newrec.Outs = append(newrec.Outs, OneOut{
 						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-						Message: html.EscapeString(string(u.Message)), Addr:a, Spending:spending})
+						Message: html.EscapeString(string(u.Message)), Addr:a, Spending:spending,
+						RawTx:rawtx})
 				}
 			}
 		}
@@ -155,10 +167,18 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 				for _, u := range unsp {
 					newrec.Value += u.Value
 					if !summary {
+						txid := btc.NewUint256(u.TxPrevOut.Hash[:])
+						var rawtx string
+						if getrawtx {
+							dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
+							if er == nil {
+								rawtx = hex.EncodeToString(dat)
+							}
+						}
 						newrec.Outs = append(newrec.Outs, OneOut{
-							TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
+							TxId : txid.String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-							Message: html.EscapeString(string(u.Message)), Addr:as})
+							Message: html.EscapeString(string(u.Message)), Addr:as, RawTx:rawtx})
 					}
 				}
 			}
