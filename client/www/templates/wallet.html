@@ -551,6 +551,7 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <li style="margin-bottom:10px;"><b>The listed P2SH-WPKH addresses are spendable <u>only</u> if their originating address refers to a <u>compressed key</u></b><br></li>
 <li>Do not deposit any coins into P2SH-WPKH addresses until Segregated Witness feature is activated on the blockchain</li>
 </ul>
+<center><a href="javascript:turn_off_warning()">Click here to hide the warnings and never show them again</a></center>
 </div>
 </div>
 
@@ -611,9 +612,13 @@ document.addEventListener('DOMContentLoaded', function() {
 	show_mempol.checked = localStorage.getItem("wallet_show_mempool") == 'true'
 	quick_switch_wallet() // this is to force loading wallet after loading
 	import_file.addEventListener('change', import_file_selected, false);
-	if (segwit_active)  warnings.style.display = 'block'
+	if (segwit_active && localStorage.getItem("disable_wegwit_warning")!="yes")  warnings.style.display = 'block'
 	window.onkeyup = function (event) {
 		if(event.keyCode == 27)  closepopup()
 	}
 })
+function turn_off_warning() {
+	warnings.style.display = 'none'
+	localStorage.setItem("disable_wegwit_warning", "yes")
+}
 </script>
