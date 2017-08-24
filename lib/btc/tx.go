@@ -85,6 +85,7 @@ func (to *TxOut) String(testnet bool) (s string) {
 }
 
 
+// Non-SegWit format
 func (t *Tx) WriteSerialized(wr io.Writer) {
 	// Version
 	binary.Write(wr, binary.LittleEndian, t.Version)
@@ -112,6 +113,7 @@ func (t *Tx) WriteSerialized(wr io.Writer) {
 }
 
 
+// Non-SegWit format
 func (t *Tx) Serialize() ([]byte) {
 	wr := new(bytes.Buffer)
 	t.WriteSerialized(wr)
@@ -770,6 +772,7 @@ func (tx *Tx) VSize() int {
 }
 
 
+// SegWit format
 func (t *Tx) WriteSerializedNew(wr io.Writer) {
 	if t.SegWit == nil {
 		t.WriteSerialized(wr)
@@ -814,6 +817,7 @@ func (t *Tx) WriteSerializedNew(wr io.Writer) {
 }
 
 
+// SegWit format
 func (t *Tx) SerializeNew() ([]byte) {
 	wr := new(bytes.Buffer)
 	t.WriteSerializedNew(wr)
