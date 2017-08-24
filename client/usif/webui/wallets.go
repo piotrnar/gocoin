@@ -77,7 +77,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Message string
 		Addr string
 		Spending bool // if true the spending tx is in the mempool
-		RawTx string
+		RawTx string `json:",omitempty"`
 	}
 
 	type OneOuts struct {
