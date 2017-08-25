@@ -1,5 +1,6 @@
 1.9.2
-* Clirent/textUI: "balance" command lists mempool transaction related to the given address
+* Client/WebUI/Wallet: Export settings stores entire local storage
+* Client/WextUI: "balance" command lists mempool transaction related to the given address
 * Client: start it with "-b" switch to check the balances while loading UTXO.db
 * Client/WebUI: POST to "balance.json?rawtx" returns the raw (originating) transaction for each output
 * Wallet: Fix: "-f" was substracting the fee from every output's value, not only the first one

@@ -455,20 +455,7 @@ function get_balance_zip() {
 }
 
 function export_settings() {
-	var names = localStorage.getItem("gocoinWallets").split('|')
-	var settings = {}
-	settings["home_chart"] = localStorage.getItem("home_chart")
-	settings["gocoinAddressBook"] = localStorage.getItem("gocoinAddressBook")
-	settings["gocoinWallets"] = localStorage.getItem("gocoinWallets")
-	for (var i=0; i<names.length; i++) {
-		if (names[i]!="") {
-			var content = localStorage.getItem("gocoinWal_"+names[i])
-			if (typeof(content)=="string" && content.length > 0) {
-				settings["gocoinWal_"+names[i]] = content
-			}
-		}
-	}
-	var jsonstring = JSON.stringify(settings)
+	var jsonstring = JSON.stringify(localStorage)
 	var a = document.createElement("a")
 	var file = new Blob([jsonstring], {type: 'application/json'})
 	a.href = URL.createObjectURL(file)
