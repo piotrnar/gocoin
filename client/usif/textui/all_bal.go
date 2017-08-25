@@ -1,19 +1,20 @@
 package textui
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"sort"
 	"strconv"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/wallet"
 )
-
 
 type OneWalletAddrs struct {
 	P2SH bool
-	Key [20]byte
-	rec *wallet.OneAllAddrBal
+	Key  [20]byte
+	rec  *wallet.OneAllAddrBal
 }
 
 type SortedWalletAddrs []OneWalletAddrs
@@ -35,7 +36,6 @@ func (sk SortedWalletAddrs) Swap(a, b int) {
 	sk[a], sk[b] = sk[b], sk[a]
 }
 
-
 func max_outs(par string) {
 	sort_by_cnt = true
 	all_addrs(par)
@@ -46,15 +46,13 @@ func best_val(par string) {
 	all_addrs(par)
 }
 
-
-
 func all_addrs(par string) {
 	var ptkh_outs, ptkh_vals, ptsh_outs, ptsh_vals uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
 
-	if par!="" {
-		if c, e := strconv.ParseUint(par, 10, 32); e==nil {
+	if par != "" {
+		if c, e := strconv.ParseUint(par, 10, 32); e == nil {
 			cnt = int(c)
 		}
 	}
@@ -62,16 +60,16 @@ func all_addrs(par string) {
 	for k, rec := range wallet.AllBalancesP2SH {
 		ptsh_vals += rec.Value
 		ptsh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count()>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
-			best = append(best, OneWalletAddrs{P2SH:true, Key:k, rec:rec})
+		if sort_by_cnt && rec.Count() >= 1000 || !sort_by_cnt && rec.Value >= 1000e8 {
+			best = append(best, OneWalletAddrs{P2SH: true, Key: k, rec: rec})
 		}
 	}
 
 	for k, rec := range wallet.AllBalancesP2KH {
 		ptkh_vals += rec.Value
 		ptkh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count()>=1000 || !sort_by_cnt && rec.Value>=1000e8 {
-			best = append(best, OneWalletAddrs{Key:k, rec:rec})
+		if sort_by_cnt && rec.Count() >= 1000 || !sort_by_cnt && rec.Value >= 1000e8 {
+			best = append(best, OneWalletAddrs{Key: k, rec: rec})
 		}
 	}
 
@@ -100,7 +98,7 @@ func all_addrs(par string) {
 	pkscr_p2kh[23] = 0x88
 	pkscr_p2kh[24] = 0xac
 
-	for i:=0; i<len(best) && i<cnt; i++ {
+	for i := 0; i < len(best) && i < cnt; i++ {
 		if best[i].P2SH {
 			copy(pkscr_p2sk[2:22], best[i].Key[:])
 			ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
@@ -121,8 +119,10 @@ func list_unspent(addr string) {
 		return
 	}
 
+	outscr := ad.OutScript()
+
 	unsp := wallet.GetAllUnspent(ad)
-	if len(unsp)==0 {
+	if len(unsp) == 0 {
 		fmt.Println(ad.String(), "has no coins")
 	} else {
 		var tot uint64
@@ -134,8 +134,29 @@ func list_unspent(addr string) {
 		fmt.Println(ad.String(), "has", btc.UintToBtc(tot), "BTC in", len(unsp), "records:")
 		for i := range unsp {
 			fmt.Println(unsp[i].String())
+			network.TxMutex.Lock()
+			bidx, spending := network.SpentOutputs[unsp[i].TxPrevOut.UIdx()]
+			var t2s *network.OneTxToSend
+			if spending {
+				t2s, spending = network.TransactionsToSend[bidx]
+			}
+			network.TxMutex.Unlock()
+			if spending {
+				fmt.Println("\t- being spent by TxID", t2s.Hash.String())
+			}
 		}
 	}
+
+	network.TxMutex.Lock()
+	for _, t2s := range network.TransactionsToSend {
+		for vo, to := range t2s.TxOut {
+			if bytes.Equal(to.Pk_script, outscr) {
+				fmt.Println(fmt.Sprintf("Mempool Tx: %15s BTC comming with %s-%03d",
+					btc.UintToBtc(to.Value), t2s.Hash.String(), vo))
+			}
+		}
+	}
+	network.TxMutex.Unlock()
 }
 
 func all_val_stats(s string) {
