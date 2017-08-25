@@ -487,7 +487,6 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []byte, height, blen, txs uint32)) (e error) {
 	var b [136]byte
 	var bh, txs uint32
-	var olen_warning_done bool
 	db.blockindx.Seek(0, os.SEEK_SET)
 	db.maxidxfilepos = 0
 	rd := bufio.NewReader(db.blockindx)
@@ -515,9 +514,6 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		if (b[0]&BLOCK_LENGTH) != 0 {
 			blen = binary.LittleEndian.Uint32(b[32:36])
 			ob.olen = blen
-		} else if !olen_warning_done {
-			fmt.Println("Your BlocksDB index file is old. Consider optimizing it with 'bdb -fixlen'")
-			olen_warning_done = true
 		}
 		txs = binary.LittleEndian.Uint32(b[52:56])
 		ob.ipos = db.maxidxfilepos
