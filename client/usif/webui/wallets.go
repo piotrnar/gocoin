@@ -166,6 +166,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 				as := aa.String()
 				for _, u := range unsp {
 					newrec.Value += u.Value
+					network.TxMutex.Lock()
+					_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
+					network.TxMutex.Unlock()
+					if spending {
+						newrec.SpendingValue += u.Value
+						newrec.SpendingCnt++
+					}
 					if !summary {
 						txid := btc.NewUint256(u.TxPrevOut.Hash[:])
 						var rawtx string
@@ -178,7 +185,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 						newrec.Outs = append(newrec.Outs, OneOut{
 							TxId : txid.String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
-							Message: html.EscapeString(string(u.Message)), Addr:as, RawTx:rawtx})
+							Message: html.EscapeString(string(u.Message)), Addr:as,
+							Spending:spending, RawTx:rawtx})
 					}
 				}
 			}
