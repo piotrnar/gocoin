@@ -152,6 +152,7 @@ function fetch_wallet_balance(name) {
 
 			outcnt_val.value = outs.length
 			for (i in outs) {
+				var segwit_mode = outs[i].addr2!=outs[i].addr
 				var row_number = parseInt(i)+1
 				var inp,  td, row = unspent.insertRow(-1)
 				row.className = "how"
@@ -173,7 +174,7 @@ function fetch_wallet_balance(name) {
 				inp = document.createElement('input')
 				inp.type = 'hidden'
 				inp.id = "txsigsiz"+row_number
-				inp.value = 107
+				inp.value = segwit_mode ? 50 : 107
 				row.appendChild(inp)
 
 				td = row.insertCell(-1)
@@ -201,7 +202,7 @@ function fetch_wallet_balance(name) {
 				td.className = 'bold hand'
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
-				if (outs[i].addr2!=outs[i].addr) {
+				if (segwit_mode) {
 					td.classList.add('WPKH')
 					td.innerText = outs[i].addr2
 					td.title = outs[i].addr
