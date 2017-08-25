@@ -75,7 +75,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		newbl.NonWitnessSize = len(bl.OldData)
 
-		common.RecalcAverageBlockSize(false)
+		common.RecalcAverageBlockSize()
 
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
@@ -192,7 +192,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		return
 	}
 
-	common.RecalcAverageBlockSize(false)
+	common.RecalcAverageBlockSize()
 
 	common.CountSafe("RPCBlockOK")
 	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
@@ -254,7 +254,7 @@ func main() {
 
 	} else if !usif.Exit_now {
 
-		common.RecalcAverageBlockSize(true)
+		common.RecalcAverageBlockSize()
 
 		peersTick := time.Tick(5 * time.Minute)
 		txPoolTick := time.Tick(time.Minute)

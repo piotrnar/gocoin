@@ -21,6 +21,7 @@ const (
 	BLOCK_INVALID = 0x02
 	BLOCK_COMPRSD = 0x04
 	BLOCK_SNAPPED = 0x08
+	BLOCK_LENGTH  = 0x10
 
 	MAX_BLOCKS_TO_WRITE = 1024 // flush the data to disk when exceeding
 	MAX_DATA_WRITE = 16*1024*1024
@@ -34,7 +35,8 @@ const (
 			bit(1) - "invalid" flag - this block's scripts have failed
 			bit(2) - "compressed" flag - this block's data is compressed
 			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-		[4:36]  - 256-bit block hash
+			bit(4) - if this bit is set, the highest 32 bits of the "block hash" carry length of uncompressed block
+		[4:36]  - 256-bit block hash - DEPRECATED! (hash the header tpo get the value)
 		[36:40] - 32-bit block height (genesis is 0)
 		[40:48] - 64-bit block pos in blockchain.dat file
 		[48:52] - 32-bit block lenght in bytes
@@ -47,6 +49,7 @@ type oneBl struct {
 	fpos uint64 // where at the block is stored in blockchain.dat
 	ipos int64  // where at the record is stored in blockchain.idx (used to set flags) / -1 if not stored in the file (yet)
 	blen uint32 // how long the block is in blockchain.dat
+	olen uint32 // original length fo the block (before compression)
 	trusted bool
 	compressed bool
 	snappied bool
@@ -263,11 +266,14 @@ func (db *BlockDB) writeOne() (written bool) {
 	}
 
 	rec.compressed, rec.snappied = true, true
-	cbts := snappy.Encode(nil, b2w.data)
+ 	cbts := snappy.Encode(nil, b2w.data)
 	rec.blen = uint32(len(cbts))
 	rec.ipos = db.maxidxfilepos
 
-	copy(fl[4:36], b2w.h[:])
+	copy(fl[4:32], b2w.h[:28])
+	fl[0] |= BLOCK_LENGTH
+	binary.LittleEndian.PutUint32(fl[32:36], uint32(len(b2w.data)))
+
 	binary.LittleEndian.PutUint32(fl[36:40], uint32(b2w.height))
 	binary.LittleEndian.PutUint64(fl[40:48], uint64(rec.fpos))
 	binary.LittleEndian.PutUint32(fl[48:52], uint32(rec.blen))
@@ -421,6 +427,10 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 		}
 	}
 
+	if rec.olen == 0 {
+		rec.olen = uint32(len(bl))
+	}
+
 	if !do_not_cache {
 		db.mutex.Lock()
 		cacherec = db.addToCache(hash, bl, nil)
@@ -445,10 +455,39 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	return
 }
 
+func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
+	db.mutex.Lock()
+	rec, ok := db.blockIndex[hash.BIdx()]
+	if !ok {
+		db.mutex.Unlock()
+		e = errors.New("Block not in the index")
+		return
+	}
+	db.mutex.Unlock()
+
+	if rec.olen != 0 {
+		length = rec.olen
+		return
+	}
+
+	if !rec.compressed {
+		length = rec.blen
+		return
+	}
+
+	_, _, e = db.BlockGet(hash)
+	if e == nil {
+		length = rec.olen
+	}
+
+	return
+}
+
 
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []byte, height, blen, txs uint32)) (e error) {
 	var b [136]byte
 	var bh, txs uint32
+	var olen_warning_done bool
 	db.blockindx.Seek(0, os.SEEK_SET)
 	db.maxidxfilepos = 0
 	rd := bufio.NewReader(db.blockindx)
@@ -458,7 +497,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		}
 
 		bh = binary.LittleEndian.Uint32(b[36:40])
-		BlockHash := btc.NewUint256(b[4:36])
+		BlockHash := btc.NewSha2Hash(b[56:136])
 
 		if (b[0]&BLOCK_INVALID) != 0 {
 			// just ignore it
@@ -471,7 +510,15 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		ob.compressed = (b[0]&BLOCK_COMPRSD) != 0
 		ob.snappied = (b[0]&BLOCK_SNAPPED) != 0
 		ob.fpos = binary.LittleEndian.Uint64(b[40:48])
-		ob.blen = binary.LittleEndian.Uint32(b[48:52])
+		blen := binary.LittleEndian.Uint32(b[48:52])
+		ob.blen = blen
+		if (b[0]&BLOCK_LENGTH) != 0 {
+			blen = binary.LittleEndian.Uint32(b[32:36])
+			ob.olen = blen
+		} else if !olen_warning_done {
+			fmt.Println("Your BlocksDB index file is old. Consider optimizing it with 'bdb -fixlen'")
+			olen_warning_done = true
+		}
 		txs = binary.LittleEndian.Uint32(b[52:56])
 		ob.ipos = db.maxidxfilepos
 
@@ -481,7 +528,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 			db.maxdatfilepos = int64(ob.fpos)+int64(ob.blen)
 		}
 
-		walk(ch, b[4:36], b[56:136], bh, ob.blen, txs)
+		walk(ch, BlockHash.Hash[:], b[56:136], bh, blen, txs)
 		db.maxidxfilepos += 136
 	}
 	// In case if there was some trash at the end of data or index file, this should truncate it:

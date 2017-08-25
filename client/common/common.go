@@ -143,25 +143,13 @@ func GetAverageBlockSize() (res uint) {
 
 // Calculates average blocks size over the last "CFG.Stat.BSizeBlks" blocks
 // Only call from blockchain thread.
-func RecalcAverageBlockSize(fix_sizes bool) {
+func RecalcAverageBlockSize() {
 	n := BlockChain.BlockTreeEnd
-	var sum, cnt, orgsum uint
+	var sum, cnt uint
 	for maxcnt := CFG.Stat.BSizeBlks; maxcnt>0 && n!=nil; maxcnt-- {
-		if fix_sizes {
-			bl, _, _ := BlockChain.Blocks.BlockGet(n.BlockHash)
-			orgsum += uint(n.BlockSize)
-			n.BlockSize = uint32(len(bl))
-			if n.BlockSize==0 {
-				n.BlockSize = btc.MAX_BLOCK_SIZE  // for purged blocks assume MAX_BLOCK_SIZE
-			}
-		}
 		sum += uint(n.BlockSize)
 		cnt++
 		n = n.Parent
-	}
-	if fix_sizes && sum>0 {
-		fmt.Printf("The last %d blocks are compressed to occupy %.1f%% of their original size\n",
-			cnt, 100.0*float64(orgsum)/float64(sum))
 	}
 	if sum>0 && cnt>0 {
 		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)

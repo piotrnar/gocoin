@@ -23,7 +23,7 @@ import (
 			bit(1) - "invalid" flag - this block's scripts have failed
 			bit(2) - "compressed" flag - this block's data is compressed
 			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-		[4:36]  - 256-bit block hash
+		[4:36]  - 256-bit block hash (DEPRECATED!)
 		[36:40] - 32-bit block height (genesis is 0)
 		[40:48] - 64-bit block pos in blockchain.dat file
 		[48:52] - 32-bit block lenght in bytes
@@ -53,15 +53,18 @@ var (
 	fl_from, fl_to       uint
 	fl_trusted           int
 	fl_invalid           int
+	fl_fixlen            bool
 )
 
 /********************************************************/
 type one_idx_rec struct {
 	sl []byte
+	hash [32]byte
 }
 
 func new_sl(sl []byte) (r one_idx_rec) {
 	r.sl = sl
+	btc.ShaHash(sl[56:136], r.hash[:])
 	return
 }
 
@@ -90,13 +93,12 @@ func (r one_idx_rec) SetDLen(l uint32) {
 }
 
 func (r one_idx_rec) Hash() []byte {
-	return r.sl[4:36]
+	return r.hash[:]
 }
 
-func (r one_idx_rec) HIdx() [32]byte {
-	var h [32]byte
-	copy(h[:], r.sl[4:36])
-	return h
+func (r one_idx_rec) HIdx() (h [32]byte) {
+	copy(h[:], r.hash[:])
+	return
 }
 
 func (r one_idx_rec) Parent() []byte {
@@ -123,10 +125,14 @@ type one_tree_node struct {
 func print_record(sl []byte) {
 	bh := btc.NewSha2Hash(sl[56:136])
 	fmt.Println("Block", bh.String())
-	fmt.Println("  ... Height", binary.LittleEndian.Uint32(sl[36:40]),
-		"  Flags", fmt.Sprintf("0x%02x", sl[0]),
+	fmt.Println(" ... Height", binary.LittleEndian.Uint32(sl[36:40]),
+		" Flags", fmt.Sprintf("0x%02x", sl[0]),
 		" - ", binary.LittleEndian.Uint32(sl[48:52]), "bytes @",
 		binary.LittleEndian.Uint64(sl[40:48]), "in DAT")
+	if (sl[0]&0x10) != 0 {
+		fmt.Println("     Uncompressed length:",
+			binary.LittleEndian.Uint32(sl[32:36]), "bytes")
+	}
 	hdr := sl[56:136]
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
@@ -193,6 +199,8 @@ func main() {
 	flag.IntVar(&fl_invalid, "invalid", -1, "Set (1) or clear (0) INVALID flag")
 	flag.IntVar(&fl_trusted, "trusted", -1, "Set (1) or clear (0) TRUSTED flag")
 
+	flag.BoolVar(&fl_fixlen, "fixlen", false, "Calculate (fix) orignial length of each block")
+
 	flag.Parse()
 
 	if fl_help {
@@ -203,6 +211,8 @@ func main() {
 	if fl_dir != "" && fl_dir[len(fl_dir)-1] != os.PathSeparator {
 		fl_dir += string(os.PathSeparator)
 	}
+
+	var buf [5*1024*1024]byte // 5MB should be anough
 
 	if fl_append != "" {
 		if fl_append[len(fl_append)-1] != os.PathSeparator {
@@ -231,7 +241,6 @@ func main() {
 
 		fmt.Println("Appending blocks data to blockchain.dat")
 		for {
-			var buf [1024 * 1024]byte
 			n, _ := f.Read(buf[:])
 			if n > 0 {
 				fo.Write(buf[:n])
@@ -322,7 +331,6 @@ func main() {
 	}
 
 	if fl_purgeto!=0 {
-		var buf [1024 * 1024]byte
 		var cur_dat_pos uint64
 
 		f, er := os.Open("blockchain.dat")
@@ -494,7 +502,6 @@ func main() {
 
 		var doff uint64
 		var prv_perc uint64 = 101
-		buf := make([]byte, 0x100000)
 		for n := first_block; n != nil; n = n.next {
 			perc := 1000 * doff / total_data_size
 			dp := n.DPos()
@@ -505,10 +512,6 @@ func main() {
 				prv_perc = perc
 			}
 			if dp > doff {
-				if len(buf) < int(dl) {
-					println("WARNIGN: grow block buffer to ")
-					buf = make([]byte, dl)
-				}
 				fdat.Seek(int64(dp), os.SEEK_SET)
 				fdat.Read(buf[:int(dl)])
 
@@ -552,7 +555,6 @@ func main() {
 
 		dat_file_size, _ := fdat.Seek(0, os.SEEK_END)
 
-		buf := make([]byte, 0x100000)
 		var prv_perc int64 = -1
 		var totlen uint64
 		var done sync.WaitGroup
@@ -588,6 +590,7 @@ func main() {
 			totlen += uint64(len(blk))
 		}
 		done.Wait()  // wait for all the goroutines to complete
+		fdat.Close()
 		return
 	}
 
@@ -652,7 +655,6 @@ func main() {
 					}
 
 					for {
-						var buf [1024 * 1024]byte
 						n, _ := f.Read(buf[:])
 						if n > 0 {
 							df.Write(buf[:n])
@@ -702,17 +704,57 @@ func main() {
 					println(er.Error())
 					return
 				}
-				buf := make([]byte, int(sl.DLen()))
+				bu := buf[:int(sl.DLen())]
 				f.Seek(int64(sl.DPos()), os.SEEK_SET)
-				f.Read(buf)
+				f.Read(bu)
 				f.Close()
-				ioutil.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), buf), 0600)
+				ioutil.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), bu), 0600)
 				fmt.Println(bh.String()+".bin written to disk. It has height", sl.Height())
 				return
 			}
 		}
 		fmt.Println("Block", bh.String(), "not found in the database")
 		return
+	}
+
+	if fl_fixlen {
+		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
+		if er != nil {
+			println(er.Error())
+			return
+		}
+
+		dat_file_size, _ := fdat.Seek(0, os.SEEK_END)
+
+		var prv_perc int64 = -1
+		var totlen uint64
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+			olen := binary.LittleEndian.Uint32(sl.sl[32:36])
+			if olen == 0 {
+				sl := new_sl(dat[off : off+136])
+				dp := int64(sl.DPos())
+				le := int(sl.DLen())
+
+				perc := 1000 * dp / dat_file_size
+				if perc != prv_perc {
+					fmt.Printf("\rUpdating blocks length - %.1f%% / %dMB processed...",
+						float64(perc)/10.0, totlen>>20)
+					prv_perc = perc
+				}
+
+				fdat.Seek(dp, os.SEEK_SET)
+				fdat.Read(buf[:le])
+				blk := decomp_block(sl.Flags(), buf[:le])
+				binary.LittleEndian.PutUint32(sl.sl[32:36], uint32(len(blk)))
+				sl.sl[0] |= 0x10
+
+				totlen += uint64(len(blk))
+			}
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		fmt.Println("blockchain.new updated")
 	}
 
 	var minbh, maxbh uint32
