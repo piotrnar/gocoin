@@ -54,6 +54,7 @@ var (
 	fl_trusted           int
 	fl_invalid           int
 	fl_fixlen            bool
+	fl_fixlenall         bool
 )
 
 /********************************************************/
@@ -199,7 +200,8 @@ func main() {
 	flag.IntVar(&fl_invalid, "invalid", -1, "Set (1) or clear (0) INVALID flag")
 	flag.IntVar(&fl_trusted, "trusted", -1, "Set (1) or clear (0) TRUSTED flag")
 
-	flag.BoolVar(&fl_fixlen, "fixlen", false, "Calculate (fix) orignial length of each block")
+	flag.BoolVar(&fl_fixlen, "fixlen", false, "Calculate (fix) orignial length of last 144 blocks")
+	flag.BoolVar(&fl_fixlenall, "fixlenall", false, "Calculate (fix) orignial length of each block")
 
 	flag.Parse()
 
@@ -717,7 +719,7 @@ func main() {
 		return
 	}
 
-	if fl_fixlen {
+	if fl_fixlen || fl_fixlenall {
 		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
 		if er != nil {
 			println(er.Error())
@@ -728,7 +730,11 @@ func main() {
 
 		var prv_perc int64 = -1
 		var totlen uint64
-		for off := 0; off < len(dat); off += 136 {
+		var off int
+		if !fl_fixlenall {
+			off = len(dat) - 144*136
+		}
+		for ; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
 			olen := binary.LittleEndian.Uint32(sl.sl[32:36])
 			if olen == 0 {
