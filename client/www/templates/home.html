@@ -182,9 +182,6 @@ function handlehover(event, pos, item) {
 			str += tim2str(rec.Received)+' ... '+tim2str(rec.Timestamp, true)+'<br>'
 			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
 			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
-			if (rec.TimeVer>=0 && rec.TxCnt>1) {
-				str += 'Lowest tx fee included: ' + (rec.MinFeeKSPB/1000).toFixed(1)+' SPB<br>'
-			}
 			str += 'Mined by ' + rec.Miner
 			showTooltip(item.pageX, item.pageY, str)
 		}
@@ -219,9 +216,6 @@ function draw_chart() {
 			} else if (chart_type_spb.checked) {
 				plot_data[0].color = 2
 				localStorage.setItem("home_chart", "spb")
-				if (!chart_type_avg.checked) {
-					plot_data.push({ data:[], lines: {show:true, fill:true}, color:3})
-				}
 			} else {
 				plot_data[0].color = 4
 				localStorage.setItem("home_chart", "txs")
@@ -259,15 +253,7 @@ function draw_chart() {
 					if (chart_type_siz.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
 					} else if (chart_type_spb.checked) {
-						if (testnet || _cs[i].Size>250e3) { // ignore small blocks
-							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
-							if (_cs[i].TimeVer>=0 && _cs[i].TxCnt>1) {
-								plot_data[2].data.push([_cs[i].Timestamp*1000, _cs[i].MinFeeKSPB/1000])
-							}
-						} else {
-							var tt = _cs[i].Timestamp*1000
-							plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: "#d0f0f0" })
-						}
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
 					} else {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
 					}
