@@ -519,12 +519,20 @@ func DeleteToSend(rec *OneTxToSend) {
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
-func txChecker(h *btc.Uint256) bool {
+func txChecker(tx *btc.Tx) bool {
 	TxMutex.Lock()
-	rec, ok := TransactionsToSend[h.BIdx()]
+	rec, ok := TransactionsToSend[tx.Hash.BIdx()]
 	TxMutex.Unlock()
 	if ok && rec.Own != 0 {
+		common.CountSafe("TxScrOwn")
 		return false // Assume own txs as non-trusted
+	}
+	if ok {
+		ok = tx.WTxID().Equal(rec.WTxID())
+		if !ok {
+			println("wTXID mismatch at", tx.Hash.String(), tx.WTxID().String(), rec.WTxID().String())
+			common.CountSafe("TxScrSWErr")
+		}
 	}
 	if ok {
 		common.CountSafe("TxScrBoosted")

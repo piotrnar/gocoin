@@ -12,7 +12,7 @@ import (
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
 // been verified already by the client while being taken to its memory pool
-var TrustedTxChecker func(*btc.Uint256) bool
+var TrustedTxChecker func(*btc.Tx) bool
 
 
 func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *utxo.BlockChanges, e error) {
@@ -130,7 +130,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
 			tx_trusted := bl.Trusted
-			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i].Hash) {
+			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i]) {
 				tx_trusted = true
 			}
 
