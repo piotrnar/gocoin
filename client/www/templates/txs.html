@@ -104,6 +104,7 @@ sorted by
 		<option value="age">age</option>
 		<option value="siz">length</option>
 		<option value="vsi">virtual size</option>
+		<option value="swc">SegWit compression</option>
 		<option value="inp">inputs count</option>
 		<option value="out">outputs count</option>
 		<option value="btc">BTC volume</option>
@@ -129,6 +130,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sortclick('age')" style="cursor:pointer" width="60" align="right">Maturity
 		<th onclick="sortclick('siz')" style="cursor:pointer" width="80" align="right">Len
 		<th onclick="sortclick('vsi')" style="cursor:pointer" width="80" align="right">VSiz
+		<th onclick="sortclick('swc')" style="cursor:pointer" width="80" align="right">SWC
 		<th onclick="sortclick('inp')" style="cursor:pointer" width="30" align="right">Inps
 		<th onclick="sortclick('out')" style="cursor:pointer" width="30" align="right">Outs
 		<th onclick="sortclick('btc')" style="cursor:pointer" width="90" align="right">Total BTC
@@ -268,9 +270,11 @@ function decode_tx_id(txid) {
 	tx_decoding_in_progress = true
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
+			tx_decoding_in_progress = false
+
 			var sta = xval(aj.responseXML,  "status")
 			if (sta!="OK") {
-				alert(sta)
+				alert("Error: " + sta)
 				return
 			}
 
@@ -322,7 +326,11 @@ function decode_tx_id(txid) {
 				if (segwit.length>0) {
 					s += "\n  SegWit stack:"
 					for (var k=0; k<segwit.length; k++) {
-						s += "\n    " + segwit[k].childNodes[0].nodeValue
+						if (segwit[k].childNodes.length>0) {
+							s += "\n    " + segwit[k].childNodes[0].nodeValue
+						} else {
+							s += "\n    OP_0"
+						}
 					}
 				}
 
@@ -344,8 +352,12 @@ function decode_tx_id(txid) {
 			s += "\n"
 			s += "Lock time: " + xval(aj.responseXML,  "lock_time") + "\n\n"
 			var fee = tin-tout
+
+			var sw_compr =  + '%'
+
 			s += 'TxSize: ' + len
-			s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize")
+            s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize") + ' ('
+            s += (xval(aj.responseXML, "sw_compress") / 10.0).toFixed(1) + '%)'
 			s += '  /  VSize: ' + xval(aj.responseXML,  "vsize")
 			s += ' bytes  /  Sigops: ' + xval(aj.responseXML,  "sigops") + '\n'
 
@@ -369,7 +381,6 @@ function decode_tx_id(txid) {
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)
-			tx_decoding_in_progress = false
 		}
 	}
 	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
@@ -417,6 +428,10 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML += xval(txs[i], 'vsize')
+				c.title = nws
+
+				c=row.insertCell(-1);c.align='right'
+				c.innerHTML += (xval(txs[i], 'sw_compress') / 10.0).toFixed(0) + '%'
 				c.title = nws
 
 				c=row.insertCell(-1);c.align='right'
