@@ -244,7 +244,7 @@ func (tl sortedTxList) Less(i, j int) bool {
 		case "swc":
 			sw_compr_i := float64(int(tl[i].Size) - int(tl[i].NoWitSize)) / float64(tl[i].Size)
 			sw_compr_j := float64(int(tl[j].Size) - int(tl[j].NoWitSize)) / float64(tl[j].Size)
-			res = sw_compr_i < sw_compr_j
+			res = sw_compr_i > sw_compr_j
 		default: /*spb*/
 			spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
 			spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
