@@ -3,7 +3,6 @@ package network
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
