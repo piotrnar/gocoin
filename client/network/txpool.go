@@ -566,6 +566,12 @@ func deleteRejected(bidx BIDX) {
 	}
 }
 
+func RemoveFromRejected(hash *btc.Uint256) {
+	TxMutex.Lock()
+	deleteRejected(hash.BIdx())
+	TxMutex.Unlock()
+}
+
 func ExpireTxs() {
 	var cnt1a, cnt1b, cnt2 uint64
 
