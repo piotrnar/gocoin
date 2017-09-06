@@ -87,7 +87,7 @@ func (db *BlockDB)readOneBlock() (res []byte, e error) {
 
 func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 	if db.f == nil {
-		println("DB file not open - this shoudl never happen")
+		println("DB file not open - this should never happen")
 		os.Exit(1)
 	}
 	bl, e = db.readOneBlock()
@@ -109,4 +109,3 @@ func lsb2uint(lt []byte) (res uint64) {
 	}
 	return
 }
-
