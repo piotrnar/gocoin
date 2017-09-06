@@ -1,4 +1,5 @@
 1.9.2
+* Client: When loading a local transaciton, remove it from Rejected first
 * Client: Never send "inv" messages with MSG_WITNESS_TX type
 * Client/WebUI/Txs: Allow sorting Txs by SegWit compression factor
 * Client: the handler to chain.TrustedTxChecker also checks match on tx's WTxID now.
