@@ -137,6 +137,11 @@ func LoadRawTx(buf []byte) (s string) {
 
 	if why := network.NeedThisTxExt(tx.Hash, nil); why != 0 {
 		s += fmt.Sprintln("Transaction not needed or not wanted", why)
+		network.TxMutex.Lock()
+		if t2s := network.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
+			t2s.Own = 1 // make as own (if not needed)
+		}
+		network.TxMutex.Unlock()
 		return
 	}
 
