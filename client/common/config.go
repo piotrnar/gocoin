@@ -114,6 +114,7 @@ func InitConfig() {
 	CFG.Net.MaxOutCons = 9
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
+	CFG.Net.MinSegwitCons = 4
 
 	CFG.TextUI_Enabled = true
 

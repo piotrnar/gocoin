@@ -1,4 +1,6 @@
 1.9.2
+* Client: Default value of "CFG.Net.MinSegwitCons" changed to 4
+* Client: Do not drop segwit peers when connected ot less then CFG.Net.MinSegwitCons
 * Client: When loading a local transaciton, remove it from Rejected first
 * Client: Never send "inv" messages with MSG_WITNESS_TX type
 * Client/WebUI/Txs: Allow sorting Txs by SegWit compression factor

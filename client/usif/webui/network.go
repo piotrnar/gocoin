@@ -52,7 +52,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 	defer network.Mutex_net.Unlock()
 
 	net_cons := make([]network.ConnInfo, len(network.OpenCons))
-	tmp, _ := network.GetSortedConnections()
+	tmp, _, _ := network.GetSortedConnections()
 	i := len(net_cons)
 	for _, v := range tmp {
 		i--
