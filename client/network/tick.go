@@ -421,6 +421,12 @@ func NetworkTick() {
 			}
 			return ConnectionActive(ad)
 		})
+		if len(adrs)==0 && segwit_conns < common.CFG.Net.MinSegwitCons {
+			// we have only non-segwit peers in the database - take them
+			adrs = peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) (bool) {
+				return ConnectionActive(ad)
+			})
+		}
 		if len(adrs)==0 {
 		TickStage = 121
 			common.LockCfg()
