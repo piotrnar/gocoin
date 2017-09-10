@@ -246,8 +246,8 @@ func (tl sortedTxList) Less(i, j int) bool {
 			sw_compr_j := float64(int(tl[j].Size) - int(tl[j].NoWitSize)) / float64(tl[j].Size)
 			res = sw_compr_i > sw_compr_j
 		default: /*spb*/
-			spb_i := float64(tl[i].Fee)/float64(len(tl[i].Data))
-			spb_j := float64(tl[j].Fee)/float64(len(tl[j].Data))
+			spb_i := float64(tl[i].Fee)/float64(tl[i].VSize())
+			spb_j := float64(tl[j].Fee)/float64(tl[j].VSize())
 			res = spb_j < spb_i
 	}
 	if txs2s_sort_desc {
