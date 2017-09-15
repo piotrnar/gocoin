@@ -14,12 +14,14 @@ td.bordr {
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
 <div style="margin-top:10px">
-Fee statistics for block number <b id="stat_height"></b> -
-Maximum <b id="stat_max_fee"></b> SPB
+Block number <b id="stat_height"></b> /
+<b id="stat_block_size"></b> bytes
+-
+Max <b id="stat_max_fee"></b> SPB
 &nbsp;&bull;&nbsp;
-Average <b id="stat_avg_fee"></b> SPB
+Avg <b id="stat_avg_fee"></b> SPB
 &nbsp;&bull;&nbsp;
-Minimum <b id="stat_min_fee"></b> SPB
+Min <b id="stat_min_fee"></b> SPB
 <span style="float:right"><a href="javascript:closepopup()">X</a>&nbsp;&nbsp;&nbsp;&nbsp;</span>
 <br><br>
 </div>
@@ -28,14 +30,14 @@ Minimum <b id="stat_min_fee"></b> SPB
 <div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
 <div width="100%" style="margin-bottom:10px;text-align:right">
-<input type="checkbox" id="block_fees_range" onchange="stat_clicked(last_hash, last_height)" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
+<input type="checkbox" id="block_fees_range" onchange="stat_clicked()" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
 &nbsp;&bull;&nbsp;
 
-<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="stat_clicked(last_hash, last_height)" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
+<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="stat_clicked()" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="stat_clicked(last_hash, last_height)"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
+<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="stat_clicked()"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="stat_clicked(last_hash, last_height)"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
+<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="stat_clicked()"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
 </div>
 
 </div>
@@ -152,8 +154,6 @@ var prvpos = null
 
 function stat_clicked(hash, height) {
 	var aj = ajax()
-	last_hash = hash
-	last_height = height
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			if (prvpos==null) {
@@ -204,11 +204,8 @@ function stat_clicked(hash, height) {
 				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
 
 				var plot_options = {
-					xaxis: { max : 1e6,  position : "top", tickSize:100e3, alignTicksWithAxis: 200,
-						tickFormatter : function(a) {return (a/10e3) + "%"} },
-					yaxis : { position : "right",
-						tickFormatter : function(a) {return a + " SPB"},
-						labelWidth : 80 }
+					xaxis: { position : "top", alignTicksWithAxis: 200 },
+					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 }
 				}
 
 				var max_spb, min_spb, spb
@@ -245,13 +242,9 @@ function stat_clicked(hash, height) {
 				error_info.innertText = aj.responseText
 				stat_error.style.display = 'block'
 			}
-
-			stat_height.innerText = height
-			//stat_hash.innerText = hash
-
 		}
 	}
-	aj.open("GET","blfees.json?height="+height, true);
+	aj.open("GET","blfees.json?height="+last_height, true);
 	aj.send(null);
 }
 
@@ -260,8 +253,14 @@ function refreshblocks() {
 		c.onclick = function() {hlminer(id)}
 	}
 
-	function onc_stat(c,hash,height) {
-		c.onclick = function() {stat_clicked(hash, height); return false}
+	function onc_stat(c,height,size) {
+		c.onclick = function() {
+			last_height = height
+			stat_height.innerText = height
+			stat_block_size.innerText = size
+			stat_clicked()
+			return false
+		}
 	}
 
 	var aj = ajax()
@@ -306,7 +305,7 @@ function refreshblocks() {
 					img.className = 'hand'
 					img.style.margin = '0px 0px 0px 10px'
 					td.appendChild(img)
-					onc_stat(img, cs[i].Hash, cs[i].Height)
+					onc_stat(img, cs[i].Height, cs[i].Size)
 					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
 				}
 
