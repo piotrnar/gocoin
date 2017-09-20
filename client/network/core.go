@@ -92,7 +92,7 @@ type ConnectionStatus struct {
 	AllHeadersReceived bool // keep sending getheaders until this is not set
 	LastHeadersEmpty bool
 	TotalNewHeadersCount int
-	GetHeadersInProgress bool
+	GetHeadersInProgress sys.SyncBool
 	GetHeadersTimeout time.Time
 	LastHeadersHeightAsk uint32
 	GetBlocksDataNow sys.SyncBool

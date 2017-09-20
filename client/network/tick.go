@@ -111,7 +111,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if c.X.GetHeadersInProgress && now.After(c.X.GetHeadersTimeout) {
+	if c.X.GetHeadersInProgress.Get() && now.After(c.X.GetHeadersTimeout) {
 		//println(c.ConnID, "- GetHdrs Timeout")
 		c.Disconnect()
 		common.CountSafe("NetNodataToutB")
@@ -146,7 +146,7 @@ func (c *OneConnection) Tick() {
 	ahr := c.X.AllHeadersReceived
 	c.Mutex.Unlock()
 
-	if !c.X.GetHeadersInProgress && !ahr && c.BlksInProgress()==0 {
+	if !c.X.GetHeadersInProgress.Get() && !ahr && c.BlksInProgress()==0 {
 		c.sendGetHeaders()
 	}
 
@@ -163,7 +163,7 @@ func (c *OneConnection) Tick() {
 	// Need to send some invs...?
 	c.SendInvs()
 
-	if !c.X.GetHeadersInProgress && c.BlksInProgress()==0 {
+	if !c.X.GetHeadersInProgress.Get() && c.BlksInProgress()==0 {
 		// Ping if we dont do anything
 		c.TryPing()
 	}
@@ -337,7 +337,7 @@ func NetworkTick() {
 		TickStage = 31
 		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
 		TickStage = 32
-		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
+		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress.Get() {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
 			if _v==nil || v.X.TotalNewHeadersCount > max_headers_got_cnt {

@@ -68,7 +68,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 	var highest_block_found uint32
 
-	c.X.GetHeadersInProgress = false
+	c.X.GetHeadersInProgress.Clr()
 
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
@@ -285,6 +285,6 @@ func (c *OneConnection) sendGetHeaders() {
 
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
 	c.X.LastHeadersHeightAsk = lb.Height
-	c.X.GetHeadersInProgress = true
+	c.X.GetHeadersInProgress.Set()
 	c.X.GetHeadersTimeout = time.Now().Add(NO_DATA_TIMEOUT)
 }
