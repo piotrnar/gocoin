@@ -117,7 +117,7 @@ func retry_cached_blocks() bool {
 				fmt.Println("AcceptBlock2", newbl.Block.Hash.String(), "-", e.Error())
 				newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 			}
-			if usif.Exit_now {
+			if usif.Exit_now.Get() {
 				return false
 			}
 			// remove it from cache
@@ -245,14 +245,14 @@ func main() {
 	host_init() // This will create the DB lock file and keep it open
 
 	if common.FLAG.UndoBlocks > 0 {
-		usif.Exit_now = true
+		usif.Exit_now.Set()
 	}
 
 	if common.FLAG.Rescan && common.FLAG.VolatileUTXO {
 
 		fmt.Println("UTXO database rebuilt complete in the volatile mode, so flush DB to disk and exit...")
 
-	} else if !usif.Exit_now {
+	} else if !usif.Exit_now.Get() {
 
 		common.RecalcAverageBlockSize()
 
@@ -308,7 +308,7 @@ func main() {
 
 		usif.LoadBlockFees()
 
-		for !usif.Exit_now {
+		for !usif.Exit_now.Get() {
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
 				retryCachedBlocks = retry_cached_blocks()
@@ -323,7 +323,7 @@ func main() {
 			select {
 			case s := <-killchan:
 				fmt.Println("Got signal:", s)
-				usif.Exit_now = true
+				usif.Exit_now.Set()
 				continue
 
 			case rpcbl := <-rpcapi.RpcBlocks:

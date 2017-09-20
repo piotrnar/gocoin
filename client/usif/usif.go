@@ -8,6 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/script"
 	"math/rand"
 	"sort"
@@ -34,7 +35,7 @@ var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
 	LocksChan chan *OneLock  = make(chan *OneLock, 1)
 
-	Exit_now bool
+	Exit_now sys.SyncBool
 )
 
 func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {

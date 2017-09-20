@@ -91,7 +91,7 @@ func ShowPrompt() {
 
 func MainThread() {
 	time.Sleep(1e9) // hold on for 1 sencond before showing the show_prompt
-	for !usif.Exit_now {
+	for !usif.Exit_now.Get() {
 		if show_prompt {
 			ShowPrompt()
 		}
@@ -309,7 +309,7 @@ func dump_block(s string) {
 }
 
 func ui_quit(par string) {
-	usif.Exit_now = true
+	usif.Exit_now.Set()
 }
 
 func blchain_stats(par string) {
