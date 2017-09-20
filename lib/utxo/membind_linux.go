@@ -19,16 +19,16 @@ import (
 
 
 func gcc_malloc(le uint32) unsafe.Pointer {
-	atomic.AddInt64(&ExtraMemoryConsumed, int64(le)+24)
-	atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
+	atomic.AddInt64(&extraMemoryConsumed, int64(le)+24)
+	atomic.AddInt64(&extraMemoryAllocCnt, 1)
 	ptr := uintptr(C.malloc(C.size_t(le+24)))
 	*(*reflect.SliceHeader)(unsafe.Pointer(ptr)) = reflect.SliceHeader{Data:ptr+24, Len:int(le), Cap:int(le)}
 	return unsafe.Pointer(ptr)
 }
 
 func gcc_free(ptr unsafe.Pointer) {
-	atomic.AddInt64(&ExtraMemoryConsumed, -int64(gcc_len(ptr)+24))
-	atomic.AddInt64(&ExtraMemoryAllocCnt, -1)
+	atomic.AddInt64(&extraMemoryConsumed, -int64(gcc_len(ptr)+24))
+	atomic.AddInt64(&extraMemoryAllocCnt, -1)
 	C.free(unsafe.Pointer(ptr))
 }
 

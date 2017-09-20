@@ -16,16 +16,16 @@ var (
 )
 
 func win_malloc(le uint32) unsafe.Pointer {
-	atomic.AddInt64(&ExtraMemoryConsumed, int64(le)+24)
-	atomic.AddInt64(&ExtraMemoryAllocCnt, 1)
+	atomic.AddInt64(&extraMemoryConsumed, int64(le)+24)
+	atomic.AddInt64(&extraMemoryAllocCnt, 1)
 	ptr, _, _ := funcGlobalAlloc.Call(0, uintptr(le+24))
 	*(*reflect.SliceHeader)(unsafe.Pointer(ptr)) = reflect.SliceHeader{Data:ptr+24, Len:int(le), Cap:int(le)}
 	return unsafe.Pointer(ptr)
 }
 
 func win_free(ptr unsafe.Pointer) {
-	atomic.AddInt64(&ExtraMemoryConsumed, -int64(win_len(ptr)+24))
-	atomic.AddInt64(&ExtraMemoryAllocCnt, -1)
+	atomic.AddInt64(&extraMemoryConsumed, -int64(win_len(ptr)+24))
+	atomic.AddInt64(&extraMemoryAllocCnt, -1)
 	funcGlobalFree.Call(uintptr(ptr))
 }
 

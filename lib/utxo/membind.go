@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"unsafe"
+	"sync/atomic"
 )
 
 var (
@@ -13,9 +14,17 @@ var (
 )
 
 var (
-	ExtraMemoryConsumed int64  // if we are using the glibc memory manager
-	ExtraMemoryAllocCnt int64  // if we are using the glibc memory manager
+	extraMemoryConsumed int64  // if we are using the glibc memory manager
+	extraMemoryAllocCnt int64  // if we are using the glibc memory manager
 )
+
+func ExtraMemoryConsumed() int64 {
+	return atomic.LoadInt64(&extraMemoryConsumed)
+}
+
+func ExtraMemoryAllocCnt() int64 {
+	return atomic.LoadInt64(&extraMemoryAllocCnt)
+}
 
 func native_malloc(le uint32) unsafe.Pointer {
 	ptr := make([]byte, int(le))

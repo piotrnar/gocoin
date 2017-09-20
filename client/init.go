@@ -100,7 +100,7 @@ func host_init() {
 
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
+		sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed()>>20, sy>>20)
 
 	if !common.FLAG.NoWallet {
 		// Init Wallet
@@ -124,7 +124,7 @@ func host_init() {
 			sto = time.Now()
 			al, sy = sys.MemUsed()
 			fmt.Printf("Balances loaded in %s seconds.  %d + %d MB of RAM used (%d)\n",
-				sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed>>20, sy>>20)
+				sto.Sub(sta).String(), al>>20, utxo.ExtraMemoryConsumed()>>20, sy>>20)
 		} else {
 			fmt.Println("Balances of", btc.UintToBtc(common.AllBalMinVal),
 				"BTC or less already done when loading UTXO.db")
@@ -136,5 +136,3 @@ func host_init() {
 	_ = <- __done
 
 }
-
-
