@@ -55,7 +55,7 @@ type UnspentDB struct {
 	UnwindBufLen uint32
 	DirtyDB bool
 	sync.Mutex
-	abortwritingnow bool
+	abortwritingnow sys.SyncBool
 	WritingInProgress sys.SyncBool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
@@ -216,7 +216,7 @@ func (db *UnspentDB) save() {
 			}
 		}
 
-		if db.abortwritingnow {
+		if db.abortwritingnow.Get() {
 			//println("abort")
 			abort = true
 			break
@@ -244,7 +244,7 @@ func (db *UnspentDB) save() {
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
-	db.WritingInProgress.Set(false)
+	db.WritingInProgress.Clr()
 }
 
 
@@ -357,7 +357,7 @@ func (db *UnspentDB) Idle() bool {
 	defer db.Mutex.Unlock()
 
 	if db.DirtyDB && !db.WritingInProgress.Get() {
-		db.WritingInProgress.Set(true)
+		db.WritingInProgress.Set()
 		//println("save", db.LastBlockHeight, "now")
 		go db.save()
 		return true
@@ -457,11 +457,11 @@ func (db *UnspentDB) AbortWriting() {
 
 func (db *UnspentDB) abortWriting() {
 	if db.WritingInProgress.Get() {
-		db.abortwritingnow = true
+		db.abortwritingnow.Set()
 		for db.WritingInProgress.Get() {
 			time.Sleep(1e6)
 		}
-		db.abortwritingnow = false
+		db.abortwritingnow.Clr()
 	}
 }
 
@@ -500,7 +500,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow)
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow.Get())
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
@@ -512,7 +512,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow)
+		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow.Get())
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return

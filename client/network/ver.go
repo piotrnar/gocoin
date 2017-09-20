@@ -70,7 +70,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			of += le
 			if len(pl) >= of+4 {
 				c.Node.Height = binary.LittleEndian.Uint32(pl[of:of+4])
-				c.X.GetBlocksDataNow.Set(true)
+				c.X.GetBlocksDataNow.Set()
 				of += 4
 				if len(pl) > of && pl[of]==0 {
 					c.Node.DoNotRelayTxs = true
