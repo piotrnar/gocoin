@@ -407,9 +407,11 @@ func NetworkTick() {
 			TickStage = 11
 			Mutex_net.Lock()
 			for _, cc := range OpenCons {
+				cc.Mutex.Lock()
 				if (cc.Node.Services & SERVICE_SEGWIT) != 0 {
 					segwit_conns++
 				}
+				cc.Mutex.Unlock()
 			}
 			Mutex_net.Unlock()
 		}
@@ -498,58 +500,80 @@ func (c *OneConnection) Run() {
 		common.CountSafe("rcvd_"+cmd.cmd)
 		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 
-		switch cmd.cmd {
-			case "version":
-				er := c.HandleVersion(cmd.pl)
-				if er != nil {
-					println("version msg error:", er.Error())
-					c.Disconnect()
-					break
+		if cmd.cmd == "version" {
+			if c.Node.Version != 0 {
+				println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
+				c.DoS("VersionAgain")
+				break
+			}
+
+			er := c.HandleVersion(cmd.pl)
+			if er != nil {
+				println("version msg error:", er.Error())
+				c.Disconnect()
+				break
+			}
+			if common.FLAG.Log {
+				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
+				if f!=nil {
+					fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
+						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
+						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
+					f.Close()
 				}
-				if common.FLAG.Log {
-					f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-					if f!=nil {
-						fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
-							time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
-							c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
-						f.Close()
+			}
+			if c.Node.DoNotRelayTxs {
+				c.DoS("SPV")
+				break
+			}
+			if c.Node.Version >= 70012 {
+				c.SendRawMsg("sendheaders", nil)
+				if c.Node.Version >= 70013 {
+					if common.CFG.TXPool.FeePerByte!=0 {
+						var pl [8]byte
+						binary.LittleEndian.PutUint64(pl[:], 1000*common.CFG.TXPool.FeePerByte)
+						c.SendRawMsg("feefilter", pl[:])
 					}
-				}
-				if c.Node.DoNotRelayTxs {
-					c.DoS("SPV")
-					break
-				}
-				if c.Node.Version >= 70012 {
-					c.SendRawMsg("sendheaders", nil)
-					if c.Node.Version >= 70013 {
-						if common.CFG.TXPool.FeePerByte!=0 {
-							var pl [8]byte
-							binary.LittleEndian.PutUint64(pl[:], 1000*common.CFG.TXPool.FeePerByte)
-							c.SendRawMsg("feefilter", pl[:])
-						}
-						if c.Node.Version >= 70014 {
-							if (c.Node.Services&SERVICE_SEGWIT)==0 {
-								// if the node does not support segwit, request compact blocks
-								// only if we have not achieved he segwit enforcement moment
-								if common.BlockChain.Consensus.Enforce_SEGWIT==0 ||
-									common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
-									c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
-								}
-							} else {
-								c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+					if c.Node.Version >= 70014 {
+						if (c.Node.Services&SERVICE_SEGWIT)==0 {
+							// if the node does not support segwit, request compact blocks
+							// only if we have not achieved he segwit enforcement moment
+							if common.BlockChain.Consensus.Enforce_SEGWIT==0 ||
+								common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
+								c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
 							}
+						} else {
+							c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
 						}
 					}
 				}
+			}
+			continue
+		}
 
-			case "verack":
-				c.X.VerackReceived = true
-				c.PeerAddr.Services = c.Node.Services
-				c.PeerAddr.Save()
-				if common.IsListenTCP() {
-					c.SendOwnAddr()
-				}
+		if cmd.cmd == "verack" {
+			if c.Node.Version == 0 {
+				println("NoVersion from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
+				c.DoS("NoVersion")
+				break
+			}
+			c.X.VerackReceived = true
+			c.PeerAddr.Services = c.Node.Services
+			c.PeerAddr.Save()
+			if common.IsListenTCP() {
+				c.SendOwnAddr()
+			}
+			continue
+		}
 
+		if !c.X.VerackReceived {
+			println("NoVerAck from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
+			c.DoS("NoVerAck")
+			break
+		}
+
+
+		switch cmd.cmd {
 			case "inv":
 				c.ProcessInv(cmd.pl)
 
@@ -653,7 +677,6 @@ func (c *OneConnection) Run() {
 				}
 		}
 	}
-
 
 	c.Mutex.Lock()
 	MutexRcv.Lock()

@@ -1,4 +1,6 @@
 1.9.2
+* Lib: protect cahced hash fields with a mutex, within tx.WitnessSigHash()
+* Client: Do not talk to peers that send any commands before "verack" or send you "version" twice
 * Client: Default value of "CFG.Net.MinSegwitCons" changed to 4
 * Client: Do not drop segwit peers when connected ot less then CFG.Net.MinSegwitCons
 * Client: When loading a local transaciton, remove it from Rejected first
