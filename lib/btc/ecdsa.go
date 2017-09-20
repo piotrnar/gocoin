@@ -57,19 +57,3 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	return &sig.R.Int, &sig.S.Int, nil
 }
 
-
-type SyncBool struct {
-	val int32
-}
-
-func (b *SyncBool) Get() bool {
-	return atomic.LoadInt32(&b.val) != 0
-}
-
-func (b *SyncBool) Set(val bool) {
-	if val {
-		atomic.StoreInt32(&b.val, 1)
-	} else {
-		atomic.StoreInt32(&b.val, 0)
-	}
-}

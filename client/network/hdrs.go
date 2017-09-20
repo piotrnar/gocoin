@@ -120,7 +120,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				if c.Node.Height < b2g.Block.Height {
 					c.Node.Height = b2g.Block.Height
 				}
-				c.X.GetBlocksDataNow = true
+				c.X.GetBlocksDataNow.Set(true)
 				if b2g.TmPreproc.IsZero() { // do not overwrite TmPreproc (in case of PH_STATUS_FRESH)
 					b2g.TmPreproc = time.Now()
 				}

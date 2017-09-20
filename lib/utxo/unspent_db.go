@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 
@@ -55,7 +56,7 @@ type UnspentDB struct {
 	DirtyDB bool
 	sync.Mutex
 	abortwritingnow bool
-	WritingInProgress btc.SyncBool
+	WritingInProgress sys.SyncBool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
 	DoNotWriteUndoFiles bool

@@ -84,7 +84,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 						}
 						common.CountSafe("InvBlockFresh")
 						//println(c.PeerAddr.Ip(), c.Node.Version, "also knows the block", b2g.Block.Height, bhash.String())
-						c.X.GetBlocksDataNow = true
+						c.X.GetBlocksDataNow.Set(true)
 					} else {
 						common.CountSafe("InvBlockNew")
 						c.ReceiveHeadersNow()

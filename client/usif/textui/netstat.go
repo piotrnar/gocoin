@@ -86,7 +86,7 @@ func node_info(par string) {
 		fmt.Print("Invs  Recieved:", r.InvsRecieved, "  Pending:", r.InvsToSend, "\n")
 		fmt.Print("Bytes to send:", r.BytesToSend, " (", r.MaxSentBufSize, " max)\n")
 		fmt.Print("BlockInProgress:", r.BlocksInProgress, "  GetHeadersInProgress:", r.GetHeadersInProgress, "\n")
-		fmt.Println("GetBlocksDataNow:", r.GetBlocksDataNow)
+		fmt.Println("GetBlocksDataNow:", r.GetBlocksDataNow.Get())
 		fmt.Println("AllHeadersReceived:", r.AllHeadersReceived)
 		fmt.Println("Total Received:", r.BytesReceived, " /  Sent:", r.BytesSent)
 		for k, v := range r.Counters {

@@ -12,8 +12,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
-	//"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
@@ -95,7 +95,7 @@ type ConnectionStatus struct {
 	GetHeadersInProgress bool
 	GetHeadersTimeout time.Time
 	LastHeadersHeightAsk uint32
-	GetBlocksDataNow bool
+	GetBlocksDataNow sys.SyncBool
 
 	LastSent time.Time
 	MaxSentBufSize int

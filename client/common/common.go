@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
@@ -42,7 +43,7 @@ var (
 	BusyWith string
 	Busy_mutex sync.Mutex
 
-	NetworkClosed btc.SyncBool
+	NetworkClosed sys.SyncBool
 
 	AverageBlockSize uint32
 

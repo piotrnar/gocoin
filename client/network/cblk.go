@@ -212,7 +212,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			println("Ignore compact block", b2g.Block.Height, "from non-segwit node", c.ConnID)
 			if (c.Node.Services&SERVICE_SEGWIT)!=0 {
 				// it only makes sense to ask this node for block's data, if it supports segwit
-				c.X.GetBlocksDataNow = true
+				c.X.GetBlocksDataNow.Set(true)
 			}
 			return
 		}

@@ -151,11 +151,11 @@ func (c *OneConnection) Tick() {
 	}
 
 	if ahr {
-		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
-			c.X.GetBlocksDataNow = true
+		if !c.X.GetBlocksDataNow.Get() && now.After(c.nextGetData) {
+			c.X.GetBlocksDataNow.Set(true)
 		}
-		if c.X.GetBlocksDataNow {
-			c.X.GetBlocksDataNow = false
+		if c.X.GetBlocksDataNow.Get() {
+			c.X.GetBlocksDataNow.Set(false)
 			c.GetBlockData()
 		}
 	}
