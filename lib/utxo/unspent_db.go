@@ -53,7 +53,7 @@ type UnspentDB struct {
 	dir_utxo, dir_undo string
 	volatimemode bool
 	UnwindBufLen uint32
-	DirtyDB bool
+	DirtyDB sys.SyncBool
 	sync.Mutex
 	abortwritingnow sys.SyncBool
 	WritingInProgress sys.SyncBool
@@ -236,7 +236,7 @@ func (db *UnspentDB) save() {
 		of.Close()
 		os.Remove(db.dir_utxo + "UTXO.db.tmp")
 	} else {
-		db.DirtyDB = false
+		db.DirtyDB.Clr()
 		wr.Flush()
 		of.Close()
 		os.Rename(db.dir_utxo + "UTXO.db.tmp", db.dir_utxo + "UTXO.db")
@@ -282,7 +282,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 		os.Remove(fmt.Sprint(db.dir_undo, changes.Height-db.UnwindBufLen))
 	}
 
-	db.DirtyDB = true
+	db.DirtyDB.Set()
 	return
 }
 
@@ -343,7 +343,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	os.Remove(fn)
 	db.LastBlockHeight--
 	copy(db.LastBlockHash, newhash)
-	db.DirtyDB = true
+	db.DirtyDB.Set()
 }
 
 
@@ -356,7 +356,7 @@ func (db *UnspentDB) Idle() bool {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
-	if db.DirtyDB && !db.WritingInProgress.Get() {
+	if db.DirtyDB.Get() && !db.WritingInProgress.Get() {
 		db.WritingInProgress.Set()
 		//println("save", db.LastBlockHeight, "now")
 		go db.save()
@@ -500,7 +500,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow.Get())
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), db.abortwritingnow.Get())
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
@@ -512,7 +512,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress.Get(), db.abortwritingnow.Get())
+		len(db.HashMap), len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), db.abortwritingnow.Get())
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return
