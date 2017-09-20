@@ -3,6 +3,7 @@ package btc
 import (
 	"io"
 	"fmt"
+	"sync"
 	"bytes"
 	"errors"
 	"encoding/hex"
@@ -55,6 +56,7 @@ type Tx struct {
 
 	wTxID *Uint256
 
+	hash_lock sync.Mutex
 	hashPrevouts []byte
 	hashSequence []byte
 	hashOutputs []byte
@@ -624,6 +626,9 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	var hashPrevouts []byte
 	var hashSequence []byte
 	var hashOutputs []byte
+
+	tx.hash_lock.Lock()
+	defer tx.hash_lock.Unlock()
 
 	sha := sha256.New()
 
