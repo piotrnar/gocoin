@@ -12,7 +12,6 @@
 * Client: BlocksDB index file contains now also the uncompressed size of each block
 * Client/WebUI/Wallet: Export settings stores entire local storage
 * Client/WextUI: "balance" command lists mempool transaction related to the given address
-* Client: start it with "-b" switch to check the balances while loading UTXO.db
 * Client/WebUI: POST to "balance.json?rawtx" returns the raw (originating) transaction for each output
 * Wallet: Fix: "-f" was substracting the fee from every output's value, not only the first one
 * Client: Changed/fixed the way how own txs are inserted into mempool (e.g. it wasn't updating SpentOutputs)

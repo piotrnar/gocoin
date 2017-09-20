@@ -187,7 +187,7 @@ func show_info(par string) {
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
 		"  ECDSA cnt:", btc.EcdsaVerifyCnt(),
 		"  cach:", cached, "  dis:", discarded, "  Saving:",
-		common.BlockChain.Unspent.WritingInProgress())
+		common.BlockChain.Unspent.WritingInProgress.Get())
 }
 
 func show_counters(par string) {

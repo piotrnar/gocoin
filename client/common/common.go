@@ -42,7 +42,7 @@ var (
 	BusyWith string
 	Busy_mutex sync.Mutex
 
-	networkClosed int32
+	NetworkClosed btc.SyncBool
 
 	AverageBlockSize uint32
 
@@ -55,14 +55,6 @@ var (
 	UserAgent string
 )
 
-
-func NetworkClosed() bool {
-	return atomic.LoadInt32(&networkClosed) != 0
-}
-
-func SetNetworkClosed() {
-	atomic.StoreInt32(&networkClosed, 1)
-}
 
 type TheLastBlock struct {
 	sync.Mutex // use it for writing and reading from non-chain thread
