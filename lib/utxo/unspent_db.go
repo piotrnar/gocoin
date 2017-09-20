@@ -372,7 +372,7 @@ func (db *UnspentDB) Close() {
 	db.volatimemode = false
 	db.HurryUp = true
 	db.Idle()
-	for !db.WritingInProgress.Get() {
+	for db.WritingInProgress.Get() {
 		time.Sleep(1e7)
 	}
 }
