@@ -10,6 +10,7 @@ import (
 	"errors"
 	"unsafe"
 	"io/ioutil"
+	"sync/atomic"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -54,13 +55,24 @@ type UnspentDB struct {
 	UnwindBufLen uint32
 	DirtyDB bool
 	sync.Mutex
-	WritingInProgress bool
 	abortwritingnow bool
 	CurrentHeightOnDisk uint32
 	HurryUp bool
-	WritingProgress int64
 	DoNotWriteUndoFiles bool
 	CB CallbackFunctions
+	writingInProgress int32 // access it only via SetWritingInProgress(val) / WritingInProgress()
+}
+
+func (x *UnspentDB) WritingInProgress() bool {
+	return atomic.LoadInt32(&x.writingInProgress) != 0
+}
+
+func (x *UnspentDB) SetWritingInProgress(val bool) {
+	if val {
+		atomic.StoreInt32(&x.writingInProgress, 1)
+	} else {
+		atomic.StoreInt32(&x.writingInProgress, 0)
+	}
 }
 
 type NewUnspentOpts struct {
@@ -244,7 +256,7 @@ func (db *UnspentDB) save() {
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
-	db.WritingInProgress = false
+	db.SetWritingInProgress(false)
 }
 
 
@@ -356,8 +368,8 @@ func (db *UnspentDB) Idle() bool {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
-	if db.DirtyDB && !db.WritingInProgress {
-		db.WritingInProgress = true
+	if db.DirtyDB && !db.WritingInProgress() {
+		db.SetWritingInProgress(true)
 		//println("save", db.LastBlockHeight, "now")
 		go db.save()
 		return true
@@ -372,7 +384,7 @@ func (db *UnspentDB) Close() {
 	db.volatimemode = false
 	db.HurryUp = true
 	db.Idle()
-	for db.WritingInProgress {
+	for !db.WritingInProgress() {
 		time.Sleep(1e7)
 	}
 }
@@ -456,9 +468,9 @@ func (db *UnspentDB) AbortWriting() {
 }
 
 func (db *UnspentDB) abortWriting() {
-	if db.WritingInProgress {
+	if db.WritingInProgress() {
 		db.abortwritingnow = true
-		for db.WritingInProgress {
+		for !db.WritingInProgress() {
 			time.Sleep(1e6)
 		}
 		db.abortwritingnow = false
@@ -500,7 +512,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, len(db.HashMap), float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress, db.abortwritingnow)
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB, db.WritingInProgress(), db.abortwritingnow)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
@@ -512,7 +524,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress, db.abortwritingnow)
+		len(db.HashMap), len(rec_outs), db.DirtyDB, db.WritingInProgress(), db.abortwritingnow)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return

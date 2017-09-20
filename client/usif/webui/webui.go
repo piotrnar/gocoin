@@ -29,7 +29,7 @@ var start_time time.Time
 
 
 func ipchecker(r *http.Request) bool {
-	if common.NetworkClosed || usif.Exit_now {
+	if common.NetworkClosed() || usif.Exit_now {
 		return false
 	}
 	var a,b,c,d uint32
