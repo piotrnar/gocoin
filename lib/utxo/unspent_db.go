@@ -58,7 +58,7 @@ type UnspentDB struct {
 	abortwritingnow sys.SyncBool
 	WritingInProgress sys.SyncBool
 	CurrentHeightOnDisk uint32
-	HurryUp bool
+	HurryUp sys.SyncBool
 	DoNotWriteUndoFiles bool
 	CB CallbackFunctions
 }
@@ -204,7 +204,7 @@ func (db *UnspentDB) save() {
 	wr.Write(db.LastBlockHash)
 	binary.Write(wr, binary.LittleEndian, uint64(total_records))
 	for k, v := range db.HashMap {
-		if !db.HurryUp {
+		if !db.HurryUp.Get() {
 			current_record++
 			if (current_record&0xf)==0 {
 				data_progress = int64((current_record<<20)/total_records)
@@ -370,7 +370,7 @@ func (db *UnspentDB) Idle() bool {
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
 	db.volatimemode = false
-	db.HurryUp = true
+	db.HurryUp.Set()
 	db.Idle()
 	for db.WritingInProgress.Get() {
 		time.Sleep(1e7)

@@ -382,7 +382,7 @@ func main() {
 			}
 		}
 
-		common.BlockChain.Unspent.HurryUp = true
+		common.BlockChain.Unspent.HurryUp.Set()
 		network.NetCloseAll()
 	}
 
