@@ -138,14 +138,3 @@ func host_init() {
 }
 
 
-func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
-	totmbs := float64(totbytes) / (1024*1024)
-	perkbs := float64(perbytes) / (1024)
-	var x string
-	if btc.EcdsaVerifyCnt > 0 {
-		x = fmt.Sprintf("|  %d -> %d us/ecdsa", btc.EcdsaVerifyCnt, uint64(pernsec)/btc.EcdsaVerifyCnt/1e3)
-		btc.EcdsaVerifyCnt = 0
-	}
-	fmt.Printf("%.1fMB of data processed. We are at height %d. Processing speed %.3fMB/sec, recent: %.1fKB/s %s\n",
-		totmbs, height, totmbs/(float64(totnsec)/1e9), perkbs/(float64(pernsec)/1e9), x)
-}

@@ -187,7 +187,7 @@ func show_info(par string) {
 
 	fmt.Println("Gocoin:", gocoin.Version,
 		"  Uptime:", time.Now().Sub(common.StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt,
+		"  ECDSA cnt:", btc.EcdsaVerifyCnt(),
 		"  cach:", cached, "  dis:", discarded, "  Saving:",
 		common.BlockChain.Unspent.WritingInProgress)
 }

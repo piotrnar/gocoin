@@ -10,12 +10,17 @@ import (
 )
 
 var (
-	EcdsaVerifyCnt uint64
+	ecdsaVerifyCnt uint64
 	EC_Verify func(k, s, h []byte) bool
 )
 
+
+func EcdsaVerifyCnt() uint64 {
+	return atomic.LoadUint64(&ecdsaVerifyCnt)
+}
+
 func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
-	atomic.AddUint64(&EcdsaVerifyCnt, 1)
+	atomic.AddUint64(&ecdsaVerifyCnt, 1)
 	if len(kd)==0 || len(sd)==0 {
 		return false
 	}

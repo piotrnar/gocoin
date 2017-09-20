@@ -146,7 +146,8 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		}
 
 		if rec == nil {
-			println("balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String())
+			println("balance rec not found for", btc.NewAddrFromPkScript(out.PKScr, common.CFG.Testnet).String(),
+				btc.NewUint256(tx.TxID[:]).String(), vout, btc.UintToBtc(out.Value))
 			continue
 		}
 
