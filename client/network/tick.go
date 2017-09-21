@@ -503,7 +503,7 @@ func (c *OneConnection) Run() {
 		if cmd.cmd == "version" {
 			if c.X.VersionReceived {
 				println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
-				c.Misbehave("VersionAgain")
+				c.Misbehave("VersionAgain", 1000/10)
 				break
 			}
 			c.X.VersionReceived = true
