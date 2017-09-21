@@ -5,6 +5,7 @@ import (
 	"time"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 type OneReceivedBlock struct {
@@ -55,6 +56,7 @@ var (
 	NetTxs chan *TxRcvd = make(chan *TxRcvd, 2000)
 
 	CachedBlocks []*BlockRcvd
+	CachedBlocksLen sys.SyncInt
 	DiscardedBlocks map[BIDX] bool = make(map[BIDX] bool)
 )
 

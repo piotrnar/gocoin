@@ -108,6 +108,7 @@ func retry_cached_blocks() bool {
 		if CheckParentDiscarded(newbl.BlockTreeNode) {
 			common.CountSafe("DiscardCachedBlock")
 			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
+			network.CachedBlocksLen.Store(len(network.CachedBlocks))
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
@@ -122,6 +123,7 @@ func retry_cached_blocks() bool {
 			}
 			// remove it from cache
 			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
+			network.CachedBlocksLen.Store(len(network.CachedBlocks))
 			return len(network.CachedBlocks) > 0
 		} else {
 			idx++
@@ -152,9 +154,8 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
-		network.MutexRcv.Lock()
 		network.CachedBlocks = append(network.CachedBlocks, newbl)
-		network.MutexRcv.Unlock()
+		network.CachedBlocksLen.Store(len(network.CachedBlocks))
 		common.CountSafe("BlockPostone")
 		return
 	}

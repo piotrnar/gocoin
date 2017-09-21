@@ -112,7 +112,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		SavingUTXO bool
 	}
 
-	out.Blocks_cached = len(network.CachedBlocks)
+	out.Blocks_cached = network.CachedBlocksLen.Get()
 	network.MutexRcv.Lock()
 	out.BlocksToGet = len(network.BlocksToGet)
 	network.MutexRcv.Unlock()

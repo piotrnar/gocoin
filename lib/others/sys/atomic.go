@@ -25,3 +25,16 @@ func (b *SyncBool) Store(val bool) {
 		b.Clr()
 	}
 }
+
+
+type SyncInt struct {
+	val int64
+}
+
+func (b *SyncInt) Get() int {
+	return int(atomic.LoadInt64(&b.val))
+}
+
+func (b *SyncInt) Store(val int) {
+	atomic.StoreInt64(&b.val, int64(val))
+}

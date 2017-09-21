@@ -137,7 +137,7 @@ func show_info(par string) {
 	network.MutexRcv.Lock()
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
 	discarded := len(network.DiscardedBlocks)
-	cached := len(network.CachedBlocks)
+	cached := network.CachedBlocksLen.Get()
 	b2g_len := len(network.BlocksToGet)
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	lb2g := network.LowestIndexToBlocksToGet
@@ -517,7 +517,7 @@ func purge_utxo(par string) {
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
-	newUi("cache", false, show_cached, "Show blocks cached in memory")
+	newUi("cache", true, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
