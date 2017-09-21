@@ -1,7 +1,8 @@
 1.9.2
+* Client: do nothing on "verack" messages
 * Fixes of some DATA RACE warnings (not really dangerous ones, but just to shut up the race detector)
-* Lib: protect cahced hash fields with a mutex, within tx.WitnessSigHash()
-* Client: Do not talk to peers that send any commands before "verack" or send you "version" twice
+* Lib: protect cached hash fields with a mutex, within tx.WitnessSigHash()
+* Client: Do not talk to peers that send any commands before "version"
 * Client: Default value of "CFG.Net.MinSegwitCons" changed to 4
 * Client: Do not drop segwit peers when connected ot less then CFG.Net.MinSegwitCons
 * Client: When loading a local transaciton, remove it from Rejected first

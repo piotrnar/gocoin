@@ -36,7 +36,7 @@ func (c *OneConnection) HandlePong() {
 // Returns (median) average ping
 // Make sure to called it within c.Mutex.Lock()
 func (c *OneConnection) GetAveragePing() int {
-	if !c.X.VerackReceived {
+	if !c.X.VersionReceived {
 		return 0
 	}
 	if c.Node.Version>60000 {
@@ -82,7 +82,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
-		if v.X.VerackReceived==false || v.X.ConnectedAt.IsZero() {
+		if v.X.VersionReceived==false || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {
 			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt)/time.Minute)

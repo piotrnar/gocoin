@@ -83,7 +83,7 @@ type NetworkNodeStruct struct {
 type ConnectionStatus struct {
 	Incomming bool
 	ConnectedAt time.Time
-	VerackReceived bool
+	VersionReceived bool
 	LastBtsRcvd, LastBtsSent uint32
 	LastCmdRcvd, LastCmdSent string
 	LastDataGot time.Time // if we have no data for some time, we abort this conenction

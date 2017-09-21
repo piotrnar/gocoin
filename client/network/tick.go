@@ -106,7 +106,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
-	if !c.X.VerackReceived {
+	if !c.X.VersionReceived {
 		// If we have no ack, do nothing more.
 		return
 	}
@@ -482,7 +482,7 @@ func (c *OneConnection) Run() {
 			continue
 		}
 
-		if c.X.VerackReceived {
+		if c.X.VersionReceived {
 			c.PeerAddr.Alive()
 		}
 		c.Mutex.Lock()
@@ -501,11 +501,12 @@ func (c *OneConnection) Run() {
 		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 
 		if cmd.cmd == "version" {
-			if c.Node.Version != 0 {
-				println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
-				c.DoS("VersionAgain")
+			if c.X.VersionReceived {
+				println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
+				c.Misbehave("VersionAgain")
 				break
 			}
+			c.X.VersionReceived = true
 
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
@@ -548,16 +549,6 @@ func (c *OneConnection) Run() {
 					}
 				}
 			}
-			continue
-		}
-
-		if cmd.cmd == "verack" {
-			if c.Node.Version == 0 {
-				println("NoVersion from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
-				c.DoS("NoVersion")
-				break
-			}
-			c.X.VerackReceived = true
 			c.PeerAddr.Services = c.Node.Services
 			c.PeerAddr.Save()
 			if common.IsListenTCP() {
@@ -565,13 +556,6 @@ func (c *OneConnection) Run() {
 			}
 			continue
 		}
-
-		if !c.X.VerackReceived {
-			println("NoVerAck from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, " - ban it")
-			c.DoS("NoVerAck")
-			break
-		}
-
 
 		switch cmd.cmd {
 			case "inv":
