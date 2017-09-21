@@ -276,7 +276,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		return
 	}
 
-	avg_block_size := int(common.GetAverageBlockSize())
+	avg_block_size := common.AverageBlockSize.Get()
 	block_data_in_progress := cbip * avg_block_size
 
 	if block_data_in_progress+avg_block_size > MAX_GETDATA_FORWARD {

@@ -105,7 +105,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 		Heap_sysmem uint64
 		Qdb_extramem int64
 		Ecdsa_verify_cnt uint64
-		Average_block_size uint
+		Average_block_size int
 		Average_fee float64
 		LastHeaderHeight uint32
 		NetworkHashRate float64
@@ -123,7 +123,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Heap_size, out.Heap_sysmem = sys.MemUsed()
 	out.Qdb_extramem = utxo.ExtraMemoryConsumed()
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt()
-	out.Average_block_size = common.GetAverageBlockSize()
+	out.Average_block_size = common.AverageBlockSize.Get()
 	out.Average_fee = common.GetAverageFee()
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height

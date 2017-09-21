@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 	"errors"
-	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -45,7 +44,7 @@ var (
 
 	NetworkClosed sys.SyncBool
 
-	AverageBlockSize uint32
+	AverageBlockSize sys.SyncInt
 
 	AllBalMinVal uint64
 
@@ -135,13 +134,6 @@ func HashrateToString(hr float64) string {
 	return NumberToString(hr)+"H/s"
 }
 
-
-// This is supposed to return average block size at the current blockchain height
-func GetAverageBlockSize() (res uint) {
-	res = uint(atomic.LoadUint32(&AverageBlockSize))
-	return
-}
-
 // Calculates average blocks size over the last "CFG.Stat.BSizeBlks" blocks
 // Only call from blockchain thread.
 func RecalcAverageBlockSize() {
@@ -154,9 +146,9 @@ func RecalcAverageBlockSize() {
 	}
 	if sum>0 && cnt>0 {
 		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)
-		atomic.StoreUint32(&AverageBlockSize, uint32(sum/cnt))
+		AverageBlockSize.Store(int(sum/cnt))
 	} else {
-		atomic.StoreUint32(&AverageBlockSize, uint32(204))
+		AverageBlockSize.Store(204)
 	}
 }
 
