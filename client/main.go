@@ -152,7 +152,9 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
+		network.MutexRcv.Lock()
 		network.CachedBlocks = append(network.CachedBlocks, newbl)
+		network.MutexRcv.Unlock()
 		common.CountSafe("BlockPostone")
 		return
 	}
