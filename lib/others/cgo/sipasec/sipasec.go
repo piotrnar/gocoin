@@ -1,7 +1,7 @@
 package sipasec
 
 /*
-#cgo windows LDFLAGS: -lsecp256k1 -lgmp
+#cgo LDFLAGS: -lsecp256k1 -lgmp
 
 #include <stdio.h>
 #include <string.h>
