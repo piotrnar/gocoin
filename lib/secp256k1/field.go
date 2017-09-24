@@ -32,15 +32,16 @@ func (a *Field) GetBig() (r *big.Int) {
 }
 
 func (r *Field) SetB32(a []byte) {
-	r.n[0] = 0; r.n[1] = 0; r.n[2] = 0; r.n[3] = 0; r.n[4] = 0;
-	r.n[5] = 0; r.n[6] = 0; r.n[7] = 0; r.n[8] = 0; r.n[9] = 0;
-	for i:=uint(0); i<32; i++ {
-		for j:=uint(0); j<4; j++ {
-			limb := (8*i+2*j)/26
-			shift := (8*i+2*j)%26
-			r.n[limb] |= (uint32)((a[31-i] >> (2*j)) & 0x3) << shift
-		}
-	}
+	r.n[0] = uint32(a[31]) | (uint32(a[30]) << 8) | (uint32(a[29]) << 16) | (uint32(a[28] & 0x3) << 24)
+	r.n[1] = uint32((a[28] >> 2) & 0x3f) | (uint32(a[27]) << 6) | (uint32(a[26]) << 14) | (uint32(a[25] & 0xf) << 22)
+	r.n[2] = uint32((a[25] >> 4) & 0xf) | (uint32(a[24]) << 4) | (uint32(a[23]) << 12) | (uint32(a[22] & 0x3f) << 20)
+	r.n[3] = uint32((a[22] >> 6) & 0x3) | (uint32(a[21]) << 2) | (uint32(a[20]) << 10) | (uint32(a[19]) << 18)
+	r.n[4] = uint32(a[18]) | (uint32(a[17]) << 8) | (uint32(a[16]) << 16) | (uint32(a[15] & 0x3) << 24)
+	r.n[5] = uint32((a[15] >> 2) & 0x3f) | (uint32(a[14]) << 6) | (uint32(a[13]) << 14) | (uint32(a[12] & 0xf) << 22)
+	r.n[6] = uint32((a[12] >> 4) & 0xf) | (uint32(a[11]) << 4) | (uint32(a[10]) << 12) | (uint32(a[9] & 0x3f) << 20)
+	r.n[7] = uint32((a[9] >> 6) & 0x3) | (uint32(a[8]) << 2) | (uint32(a[7]) << 10) | (uint32(a[6]) << 18)
+	r.n[8] = uint32(a[5]) | (uint32(a[4]) << 8) | (uint32(a[3]) << 16) | (uint32(a[2] & 0x3) << 24)
+	r.n[9] = uint32((a[2] >> 2) & 0x3f) | (uint32(a[1]) << 6) | (uint32(a[0]) << 14)
 }
 
 func (r *Field) SetBytes(a []byte) {
@@ -154,16 +155,38 @@ func (r *Field) Normalize() {
 }
 
 func (a *Field) GetB32(r []byte) {
-	var i, j, c, limb, shift uint32
-	for i=0; i<32; i++ {
-		c = 0
-		for j=0; j<4; j++ {
-			limb = (8*i+2*j)/26
-			shift =(8*i+2*j)%26
-			c |= ((a.n[limb] >> shift) & 0x3) << (2 * j)
-		}
-		r[31-i] = byte(c)
-	}
+	r[0] = byte(a.n[9] >> 14)
+	r[1] = byte(a.n[9] >> 6)
+	r[2] = byte((a.n[9] & 0x3F) << 2) | byte((a.n[8] >> 24) & 0x3)
+	r[3] = byte(a.n[8] >> 16)
+	r[4] = byte(a.n[8] >> 8)
+	r[5] = byte(a.n[8])
+	r[6] = byte(a.n[7] >> 18)
+	r[7] = byte(a.n[7] >> 10)
+	r[8] = byte(a.n[7] >> 2)
+	r[9] = byte((a.n[7] & 0x3) << 6) | byte((a.n[6] >> 20) & 0x3f)
+	r[10] = byte(a.n[6] >> 12)
+	r[11] = byte(a.n[6] >> 4)
+	r[12] = byte((a.n[6] & 0xf) << 4) | byte((a.n[5] >> 22) & 0xf)
+	r[13] = byte(a.n[5] >> 14)
+	r[14] = byte(a.n[5] >> 6)
+	r[15] = byte((a.n[5] & 0x3f) << 2) | byte((a.n[4] >> 24) & 0x3)
+	r[16] = byte(a.n[4] >> 16)
+	r[17] = byte(a.n[4] >> 8)
+	r[18] = byte(a.n[4])
+	r[19] = byte(a.n[3] >> 18)
+	r[20] = byte(a.n[3] >> 10)
+	r[21] = byte(a.n[3] >> 2)
+	r[22] = byte((a.n[3] & 0x3) << 6) | byte((a.n[2] >> 20) & 0x3f)
+	r[23] = byte(a.n[2] >> 12)
+	r[24] = byte(a.n[2] >> 4)
+	r[25] = byte((a.n[2] & 0xf) << 4) | byte((a.n[1] >> 22) & 0xf)
+	r[26] = byte(a.n[1] >> 14)
+	r[27] = byte(a.n[1] >> 6)
+	r[28] = byte((a.n[1] & 0x3f) << 2) | byte((a.n[0] >> 24) & 0x3)
+	r[29] = byte(a.n[0] >> 16)
+	r[30] = byte(a.n[0] >> 8)
+	r[31] = byte(a.n[0])
 }
 
 func (a *Field) Equals(b *Field) bool {
