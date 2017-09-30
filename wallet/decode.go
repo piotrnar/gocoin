@@ -147,6 +147,7 @@ func dump_raw_tx() {
 	var unsigned, totin, totout, noins uint64
 
 	fmt.Println("ID:", tx.Hash.String())
+	fmt.Println("WTxID:", tx.WTxID().String())
 	fmt.Println("Tx Version:", tx.Version)
 	if tx.SegWit!=nil {
 		fmt.Println("Segregated Witness transaction", len(tx.SegWit))

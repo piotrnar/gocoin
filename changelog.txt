@@ -1,3 +1,7 @@
+1.9.3:
+* Client: NetRouteInv() was only routing txs to peers which don't use "feefilter"
+* Wallet: decode transaction also shows WTxID now
+
 1.9.2 - 2017-09-30
 * Minor performance improvements in "lib/secp256k1"
 * Client: do nothing on "verack" messages
