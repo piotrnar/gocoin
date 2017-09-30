@@ -117,13 +117,15 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 
 func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint {
 	var fee_spkb uint64
-	TxMutex.Lock()
-	if tx, ok := TransactionsToSend[h.BIdx()]; ok {
-		fee_spkb = ( 1000 * tx.Fee ) / uint64(tx.VSize())
-	} else {
-		println("NetRouteInv: txid", h.String(), "not in mempool")
+	if typ == MSG_TX {
+		TxMutex.Lock()
+		if tx, ok := TransactionsToSend[h.BIdx()]; ok {
+			fee_spkb = ( 1000 * tx.Fee ) / uint64(tx.VSize())
+		} else {
+			println("NetRouteInv: txid", h.String(), "not in mempool")
+		}
+		TxMutex.Unlock()
 	}
-	TxMutex.Unlock()
 	return NetRouteInvExt(typ, h, fromConn, fee_spkb)
 }
 
