@@ -1,4 +1,4 @@
-1.9.2
+1.9.2 - 2017-09-30
 * Minor performance improvements in "lib/secp256k1"
 * Client: do nothing on "verack" messages
 * Fixes of some DATA RACE warnings (not really dangerous ones, but just to shut up the race detector)
