@@ -34,6 +34,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Hash      string
 		TxCnt     int
 		Size      int
+		Weight    uint
 		Version   uint32
 		Reward    uint64
 		Miner     string
@@ -76,6 +77,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Hash = end.BlockHash.String()
 		b.TxCnt = block.TxCount
 		b.Size = len(bl)
+		b.Weight = block.BlockWeight
 		b.Version = block.Version()
 
 		cbasetx, cbaselen := btc.NewTx(bl[block.TxOffset:])

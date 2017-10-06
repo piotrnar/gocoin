@@ -22,6 +22,7 @@ type Block struct {
 	MedianPastTime uint32
 
 	OldData []byte // all the block's transactions stripped from witnesses
+	BlockWeight uint
 }
 
 
@@ -93,6 +94,8 @@ func (bl *Block) BuildTxList() (e error) {
 	old_format_block.Write(bl.Raw[:80])
 	WriteVlen(old_format_block, uint64(bl.TxCount))
 
+	bl.BlockWeight = uint(old_format_block.Len())
+
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
@@ -116,9 +119,10 @@ func (bl *Block) BuildTxList() (e error) {
 			}
 		} else {
 			data2hash = bl.Txs[i].Raw
-			bl.Txs[i].NoWitSize = bl.Txs[i].NoWitSize
+			bl.Txs[i].NoWitSize = bl.Txs[i].Size
 			witness2hash = nil
 		}
+		bl.BlockWeight += uint(3 * bl.Txs[i].NoWitSize + bl.Txs[i].Size)
 		old_format_block.Write(data2hash)
 		wg.Add(1)
 		go func(tx *Tx, b, w []byte) {
