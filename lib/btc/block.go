@@ -94,7 +94,7 @@ func (bl *Block) BuildTxList() (e error) {
 	old_format_block.Write(bl.Raw[:80])
 	WriteVlen(old_format_block, uint64(bl.TxCount))
 
-	bl.BlockWeight = uint(old_format_block.Len())
+	bl.BlockWeight = 4 * uint(old_format_block.Len())
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
