@@ -15,7 +15,7 @@ const (
 
 var (
 	BlockFeesMutex sync.Mutex
-	BlockFees      map[uint32][][3]uint64 = make(map[uint32][][3]uint64) // [0]=Size  [1]-Fee  [2]-Group
+	BlockFees      map[uint32][][3]uint64 = make(map[uint32][][3]uint64) // [0]=Weight  [1]-Fee  [2]-Group
 	BlockFeesDirty bool                                                  // it true, clean up old data
 )
 
