@@ -212,7 +212,7 @@ function stat_clicked(hash, height) {
 				var totbytes = 0
 				var totfees = 0
 				for (var i=0; i<stats.length; i++) {
-					spb = stats[i][1] / stats[i][0]
+					spb = stats[i][1] / (stats[i][0] / 4)
 					if (i==0) {
 						max_spb = min_spb = spb
 					} else {
@@ -220,7 +220,7 @@ function stat_clicked(hash, height) {
 						else if (spb<min_spb) min_spb=spb
 					}
 
-					totbytes += stats[i][0]
+					totbytes += (stats[i][0] / 4)
 					totfees += stats[i][1]
 					plot_data[0].data.push([totbytes, spb])
 				}
