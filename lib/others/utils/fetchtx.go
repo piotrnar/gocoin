@@ -35,36 +35,6 @@ func GetTxFromExplorer(txid *btc.Uint256) (rawtx []byte) {
 }
 
 
-// Download raw transaction from blockr.io
-func GetTxFromBlockrIo(txid *btc.Uint256) (raw []byte) {
-	url := "http://btc.blockr.io/api/v1/tx/raw/" + txid.String()
-	r, er := http.Get(url)
-	if er == nil {
-		if r.StatusCode == 200 {
-			defer r.Body.Close()
-			c, _ := ioutil.ReadAll(r.Body)
-			var txx struct {
-				Status string
-				Data   struct {
-					Tx struct {
-						Hex string
-					}
-				}
-			}
-			er = json.Unmarshal(c[:], &txx)
-			if er == nil {
-				raw, _ = hex.DecodeString(txx.Data.Tx.Hex)
-			}
-		} else {
-			fmt.Println("btc.blockr.io StatusCode=", r.StatusCode)
-		}
-	}
-	if er != nil {
-		fmt.Println("btc.blockr.io:", er.Error())
-	}
-	return
-}
-
 // Download raw transaction from webbtc.com
 func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
 	url := "https://webbtc.com/tx/" + txid.String() + ".bin"
@@ -114,12 +84,6 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromWebBTC(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
 		//println("GetTxFromWebBTC - OK")
-		return
-	}
-
-	raw = GetTxFromBlockrIo(txid)
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		//println("GetTxFromBlockrIo - OK")
 		return
 	}
 

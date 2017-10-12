@@ -3,12 +3,11 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/utils"
 	"io"
 	"io/ioutil"
 	"net"
@@ -25,30 +24,6 @@ var (
 	ltc   bool
 	tbtc  bool
 )
-
-type prvout struct {
-	Address string
-	Unspent []struct {
-		Tx            string
-		N             uint32
-		Amount        string
-		Confirmations uint
-	}
-}
-
-type singleadd struct {
-	Status  string
-	Data    prvout
-	Code    int
-	Message string
-}
-
-type mulitiadd struct {
-	Status  string
-	Data    []prvout
-	Code    int
-	Message string
-}
 
 func print_help() {
 	fmt.Println()
@@ -129,86 +104,6 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 	return
 }
 
-// Download raw transaction from blockr.io
-func get_raw_tx(txid string) (raw []byte) {
-	url := base_url() + "tx/raw/" + txid
-	r, er := http.Get(url)
-	if er == nil && r.StatusCode == 200 {
-		defer r.Body.Close()
-		c, _ := ioutil.ReadAll(r.Body)
-		var txx struct {
-			Status string
-			Data   struct {
-				Tx struct {
-					Hex string
-				}
-			}
-		}
-		er = json.Unmarshal(c[:], &txx)
-		if er == nil {
-			raw, _ = hex.DecodeString(txx.Data.Tx.Hex)
-		} else {
-			println("er", er.Error())
-		}
-	}
-	return
-}
-
-func get_unspent(addrs []*btc.BtcAddr) []prvout {
-	if len(addrs) == 0 {
-		panic("no addresses to fetch")
-	}
-
-	if len(addrs) > MAX_UNSPENT_AT_ONCE {
-		panic("too many addresses")
-	}
-
-	url := base_url() + "address/unspent/" + addrs[0].String()
-	for i := 1; i < len(addrs); i++ {
-		url += "," + addrs[i].String()
-	}
-
-	r, er := http.Get(url)
-	if er == nil {
-		if r.StatusCode != 200 {
-			println("get_unspent: StatusCode", r.StatusCode)
-			return nil
-		}
-
-		c, _ := ioutil.ReadAll(r.Body)
-		r.Body.Close()
-
-		if len(addrs) == 1 {
-			var s singleadd
-			er = json.Unmarshal(c, &s)
-			if er == nil {
-				return []prvout{s.Data}
-			}
-		} else {
-			var r mulitiadd
-			er = json.Unmarshal(c, &r)
-			if er == nil {
-				return r.Data
-			}
-		}
-	}
-
-	if er != nil {
-		println("get_unspent:", er.Error())
-	}
-	return nil
-}
-
-func base_url() string {
-	if tbtc {
-		return "http://tbtc.blockr.io/api/v1/"
-	}
-	if ltc {
-		return "http://ltc.blockr.io/api/v1/"
-	}
-	return "http://btc.blockr.io/api/v1/"
-}
-
 func curr_unit() string {
 	if ltc {
 		return "LTC"
@@ -274,6 +169,8 @@ func main() {
 	var argz []string
 	for i := 1; i < len(os.Args); i++ {
 		if os.Args[i] == "-ltc" {
+			println("Litecoin not supported ion thie version")
+			os.Exit(1)
 			ltc = true
 		} else if os.Args[i] == "-t" {
 			tbtc = true
@@ -318,17 +215,14 @@ func main() {
 		}
 	}
 
-	if tbtc && ltc {
-		println("Litecoin's testnet is not suppported")
-		return
+	if ltc {
+		println("No LTC support in this version")
+		os.Exit(1)
 	}
 
-	url := base_url() + "address/unspent/"
-	for i := range addrs {
-		if i > 0 {
-			url += ","
-		}
-		url += addrs[i].String()
+	if tbtc {
+		println("No testnet support in this version")
+		os.Exit(1)
 	}
 
 	if len(addrs) == 0 {
@@ -341,33 +235,22 @@ func main() {
 	os.RemoveAll("balance/")
 	os.Mkdir("balance/", 0700)
 	unsp, _ := os.Create("balance/unspent.txt")
-	for off := 0; off < len(addrs); off += MAX_UNSPENT_AT_ONCE {
-		var r []prvout
-		if off+MAX_UNSPENT_AT_ONCE < len(addrs) {
-			r = get_unspent(addrs[off : off+MAX_UNSPENT_AT_ONCE])
-		} else {
-			r = get_unspent(addrs[off:])
-		}
-		if r == nil {
-			return
-		}
-		for i := range r {
-			for j := range r[i].Unspent {
-				txraw := get_raw_tx(r[i].Unspent[j].Tx)
-				if len(txraw) > 0 {
-					ioutil.WriteFile("balance/"+r[i].Unspent[j].Tx+".tx", txraw, 0666)
-				} else {
-					println("ERROR: cannot fetch raw tx data for", r[i].Unspent[j].Tx)
-					os.Exit(1)
-				}
-
-				val, _ := btc.StringToSatoshis(r[i].Unspent[j].Amount)
-				sum += val
-				outcnt++
-				fmt.Fprintf(unsp, "%s-%03d # %s @ %s, %d confs", r[i].Unspent[j].Tx,
-					r[i].Unspent[j].N, r[i].Unspent[j].Amount, r[i].Address, r[i].Unspent[j].Confirmations)
-				fmt.Fprintln(unsp)
+	for off := 0; off < len(addrs); off++ {
+		res := utils.GetUnspent(addrs[off])
+		for _, r := range res {
+			id := btc.NewUint256(r.TxPrevOut.Hash[:])
+			txraw := utils.GetTxFromWeb(id)
+			if len(txraw) > 0 {
+				ioutil.WriteFile("balance/"+id.String()+".tx", txraw, 0666)
+			} else {
+				println("ERROR: cannot fetch raw tx data for", id.String())
+				os.Exit(1)
 			}
+
+			sum += r.Value
+			outcnt++
+
+			fmt.Fprintln(unsp, r.UnspentTextLine())
 		}
 	}
 	unsp.Close()
