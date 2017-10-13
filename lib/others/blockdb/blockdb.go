@@ -60,7 +60,7 @@ func readBlockFromFile(f *os.File, mag []byte) (res []byte, e error) {
 		return
 	}
 	le := uint32(lsb2uint(buf[:]))
-	if le<81 || le>btc.MAX_BLOCK_SIZE {
+	if le<81 {
 		e = errors.New(fmt.Sprintf("Incorrect block size %d", le))
 		return
 	}

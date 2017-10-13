@@ -1,4 +1,5 @@
 1.9.3:
+* Got rid of btc.MAX_BLOCK_SIZE (replaced it with btc.MAX_BLOCK_WEIGHT)
 * Lib: New "utils.GetUnspent()" function to fetch a balance from "blockexplorer.com" or "blockchain.info"
 * Tools/BalIO: Remade to use blockexplorer.com since blockr.io isn't working any more
 * Client/WebUI/Blocks: Show fee statistics in relation to transactions' weight, not the size

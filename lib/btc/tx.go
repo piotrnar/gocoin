@@ -341,7 +341,7 @@ func (tx *Tx) CheckTransaction() error {
 	}
 
 	// Size limits
-	if tx.NoWitSize > MAX_BLOCK_SIZE {
+	if tx.NoWitSize * 4 > MAX_BLOCK_WEIGHT {
 		return errors.New("CheckTransaction() : size limits failed")
 	}
 

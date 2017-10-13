@@ -72,7 +72,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	r.Mutable = []string{"time","transactions","prevblock"}
 	r.Noncerange = "00000000ffffffff"
 	r.Sigoplimit = btc.MAX_BLOCK_SIGOPS_COST / btc.WITNESS_SCALE_FACTOR
-	r.Sizelimit = btc.MAX_BLOCK_SIZE
+	r.Sizelimit = 1e6
 	r.Bits = fmt.Sprintf("%08x", bits)
 	r.Height = uint(height)
 
@@ -115,7 +115,7 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 			continue
 		}
 
-		if totlen+len(v.Data) > btc.MAX_BLOCK_SIZE {
+		if totlen+len(v.Data) > 1e6 {
 			//println("Too many txs - limit to 999000 bytes")
 			return
 		}
