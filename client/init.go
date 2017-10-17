@@ -14,7 +14,6 @@ import (
 
 
 func host_init() {
-	BtcRootDir := sys.BitcoinHome()
 	common.GocoinHomeDir = common.CFG.Datadir+string(os.PathSeparator)
 
 	common.Testnet = common.CFG.Testnet // So chaging this value would will only affect the behaviour after restart
@@ -22,7 +21,6 @@ func host_init() {
 		common.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
 		common.Magic = [4]byte{0x0B,0x11,0x09,0x07}
 		common.GocoinHomeDir += common.DataSubdir() + string(os.PathSeparator)
-		BtcRootDir += "testnet3"+string(os.PathSeparator)
 		common.MaxPeersNeeded = 2000
 	} else {
 		common.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
