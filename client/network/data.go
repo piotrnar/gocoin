@@ -279,7 +279,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	avg_block_size := common.AverageBlockSize.Get()
 	block_data_in_progress := cbip * avg_block_size
 
-	if block_data_in_progress+avg_block_size > MAX_GETDATA_FORWARD {
+	if block_data_in_progress > 0 && (block_data_in_progress + avg_block_size) > MAX_GETDATA_FORWARD {
 		c.IncCnt("FetchMaxBytesInProgress", 1)
 		// wake up in a few seconds, maybe some blocks will complete by then
 		c.nextGetData = time.Now().Add(5*time.Second) // wait for some blocks to complete
