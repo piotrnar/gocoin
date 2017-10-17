@@ -38,7 +38,7 @@ const (
 	MAX_PEERS_BLOCKS_IN_PROGRESS = 500
 	MAX_BLOCKS_FORWARD_CNT = 5000 // Never ask for a block higher than current top + this value
 	MAX_BLOCKS_FORWARD_SIZ = 50e6
-	MAX_GETDATA_FORWARD = 8e6 // 2 times maximum block size
+	MAX_GETDATA_FORWARD = 2e6 // Download up to 2MB forward (or one block)
 
 	MAINTANENCE_PERIOD = time.Minute
 	NO_INV_TIMEOUT = 15*time.Minute
