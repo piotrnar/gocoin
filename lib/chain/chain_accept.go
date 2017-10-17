@@ -261,7 +261,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
 	}
 
-	if bl.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
+	if bl.SigopsCost > ch.MaxBlockSigopsCost(bl.Height) {
 		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 	}
 

@@ -334,26 +334,26 @@ func (tx *Tx) IsCoinBase() bool {
 func (tx *Tx) CheckTransaction() error {
 	// Basic checks that utils.IsOn't depend on any context
 	if len(tx.TxIn)==0 {
-		return errors.New("CheckTransaction() : vin empty")
+		return errors.New("CheckTransaction() : vin empty - RPC_Result:bad-txns-vin-empty")
 	}
 	if len(tx.TxOut)==0 {
-		return errors.New("CheckTransaction() : vout empty")
+		return errors.New("CheckTransaction() : vout empty - RPC_Result:bad-txns-vout-empty")
 	}
 
 	// Size limits
 	if tx.NoWitSize * 4 > MAX_BLOCK_WEIGHT {
-		return errors.New("CheckTransaction() : size limits failed")
+		return errors.New("CheckTransaction() : size limits failed - RPC_Result:bad-txns-oversize")
 	}
 
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
-			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d",
+			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d - RPC_Result:",
 				len(tx.TxIn[0].ScriptSig)))
 		}
 	} else {
 		for i := range tx.TxIn {
 			if tx.TxIn[i].Input.IsNull() {
-				return errors.New("CheckTransaction() : prevout is null")
+				return errors.New("CheckTransaction() : prevout is null - RPC_Result:bad-txns-prevout-null")
 			}
 		}
 	}

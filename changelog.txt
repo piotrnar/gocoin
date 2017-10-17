@@ -1,4 +1,5 @@
 1.9.3:
+* From block #494784 onward, allow twice bigger blocks on mainnet (segwit2x)
 * Got rid of btc.MAX_BLOCK_SIZE (replaced it with btc.MAX_BLOCK_WEIGHT)
 * Lib: New "utils.GetUnspent()" function to fetch a balance from "blockexplorer.com" or "blockchain.info"
 * Tools/BalIO: Remade to use blockexplorer.com since blockr.io isn't working any more

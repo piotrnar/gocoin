@@ -38,6 +38,7 @@ type Chain struct {
 		BIP65Height uint32
 		BIP66Height uint32
 		BIP91Height uint32
+		S2XHeight uint32
 	}
 }
 
@@ -80,6 +81,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Enforce_SEGWIT = 481824 // https://www.reddit.com/r/Bitcoin/comments/6okd1n/bip91_lock_in_is_guaranteed_as_of_block_476768/
 		ch.Consensus.BIP91Height = 477120
 		ch.Consensus.BIP9_Treshold = 1916
+		ch.Consensus.S2XHeight = 494784
 	}
 
 	if opts.SetBlocksDBCacheSize {
@@ -180,4 +182,24 @@ func (ch *Chain) Close() {
 // Returns true if we are on Testnet3 chain
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
+}
+
+
+// For SegWit2X
+func (ch *Chain) MaxBlockWeight(height uint32) uint {
+	if ch.Consensus.S2XHeight != 0 && height >= ch.Consensus.S2XHeight {
+		return 2 * btc.MAX_BLOCK_WEIGHT
+	} else {
+		return btc.MAX_BLOCK_WEIGHT
+	}
+}
+
+
+// For SegWit2X
+func (ch *Chain) MaxBlockSigopsCost(height uint32) uint32 {
+	if ch.Consensus.S2XHeight != 0 && height >= ch.Consensus.S2XHeight {
+		return 2 * btc.MAX_BLOCK_SIGOPS_COST
+	} else {
+		return btc.MAX_BLOCK_SIGOPS_COST
+	}
 }

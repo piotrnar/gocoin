@@ -1,5 +1,4 @@
 Lib:
-* Implement segwit2x consensus changes, starting from block #494784 https://segwit2x.github.io/segwit2x-announce.html
 * Seen "FindPathTo: Unknown path to block" from NewChainExt/ParseTillBlock on init, after soft exit. Undo helped.
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
 * CheckTransactions to return descriptive errors (e.g. "bad-txns-vin-empty")

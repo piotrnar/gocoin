@@ -117,7 +117,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		if er != nil {
 			return
 		}
-		if bl.BlockWeight > btc.MAX_BLOCK_WEIGHT {
+		if bl.BlockWeight > ch.MaxBlockWeight(bl.Height) {
 			er = errors.New("CheckBlock() : weight limits failed - RPC_Result:bad-blk-weight")
 			return
 		}
