@@ -222,6 +222,9 @@ function refreshconnections() {
 				var td, row = netcons.insertRow(-1)
 				var id = cs[i].ID
 
+				cs[i].GetHeadersInProgress = cs[i].GetHeadersInProgress=='true'
+				cs[i].GetBlocksDataNow = cs[i].GetBlocksDataNow=='true'
+
 				if (curr_monitor_id==id) {
 					update_connection_info(cs[i])
 					id_found = true
