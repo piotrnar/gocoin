@@ -1,5 +1,5 @@
 1.9.3:
-* Client: MAX_GETDATA_FORWARD changed from 2 to 8 MB, as it was getting stuck on testnet5
+* Client: Ignore the value of MAX_GETDATA_FORWARD when there are no blocks in progress
 * MarshalText() method madded to "sys.SyncBool" and "sys.SyncInt" (fixes WebUI issue)
 * From block #494784 onward, allow twice bigger blocks on mainnet (segwit2x)
 * Got rid of btc.MAX_BLOCK_SIZE (replaced it with btc.MAX_BLOCK_WEIGHT)
