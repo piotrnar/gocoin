@@ -1,6 +1,9 @@
 package sys
 
-import "sync/atomic"
+import (
+	"fmt"
+	"sync/atomic"
+)
 
 type SyncBool struct {
 	val int32
@@ -16,6 +19,10 @@ func (b *SyncBool) Set() {
 
 func (b *SyncBool) Clr() {
 	atomic.StoreInt32(&b.val, 0)
+}
+
+func (b *SyncBool) MarshalText() (text []byte, err error) {
+	return []byte(fmt.Sprint(b.Get())), nil
 }
 
 func (b *SyncBool) Store(val bool) {
@@ -37,4 +44,8 @@ func (b *SyncInt) Get() int {
 
 func (b *SyncInt) Store(val int) {
 	atomic.StoreInt64(&b.val, int64(val))
+}
+
+func (b *SyncInt) MarshalText() (text []byte, err error) {
+	return []byte(fmt.Sprint(b.Get())), nil
 }
