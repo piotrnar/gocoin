@@ -19,7 +19,8 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 
 <div id="chart" style="height:180px;margin:2px"></div>
 
-<div style="text-align:right;margin-bottom:8px;">
+<div style="width:100%">
+<div style="text-align:right;margin-bottom:8px;float:right">
 <input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span onclick="net_list_order_sp.click()" style="cursor:pointer"> Sort by speed</span>
 &nbsp;&bull;&nbsp;
 <input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by age</span>
@@ -39,7 +40,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th >Txs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
-	<th>&nbsp;
+	<th><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
 </tr>
 <!--PEER_ROW-->
 </table>
@@ -52,12 +53,21 @@ Node Version Legend:<br>
 &bull; <b>B</b> - Supports Bloom Filtering<br>
 &bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
 &bull; <b>W</b> - Supports Segregate Witness<br>
-<a name="rawdiv"></a><pre id="rawdiv" class="mono"></pre>
 </td>
 <td align="right" valign="top">
+<span class="hand" onclick="stat_freeze.click()">Freeze stats </span><input type="checkbox" id="stat_freeze" onchange="freeze_stats()">
+&nbsp;&bull;&nbsp;&nbsp;
 <span class="hand" onclick="show_debug_mode.click()">More info </span><input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()">
 </td></tr>
-</table>
+<tr>
+<td colspan="2">
+<a name="rawdiv"></a>
+<div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
+<img title="Refresh peer info" src="webui/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
+<img title="Hide peer info" src="webui/del.png" style="position:absolute;right:5px;top:5px;z-index:2000;cursor:hand" onclick="hide_peer_info()">
+<pre id="rawdiv" class="mono" style="left:0px;top: 0px;z-index:1000;width:100%;"></pre>
+</div>
+</td></tr></table>
 
 
 <script>
@@ -68,15 +78,38 @@ if (!server_mode) {
 var raw_timer = null
 var curr_monitor_id = -1
 
+function freeze_stats() {
+	if (!stat_freeze.checked) {
+		refreshconnections(false)
+		if (curr_monitor_id!=-1) {
+			raw_load(curr_monitor_id,false)
+		}
+	}
+}
+
 function hide_peer_info() {
 	if (raw_timer!=null) {
 		clearTimeout(raw_timer)
 		raw_timer = null
 	}
 	document.getElementById('rawdiv').innerHTML = ''
+	document.getElementById('rawdivon').style.display = 'none'
 	curr_monitor_id = -1
 }
 
+function refresh_raw() {
+	if (!stat_freeze.checked) {
+		stat_freeze.click()
+	}
+	raw_load(curr_monitor_id,true)
+}
+
+function refresh_conns() {
+	if (!stat_freeze.checked) {
+		stat_freeze.click()
+	}
+	refreshconnections(true)
+}
 
 function update_connection_info(ci) {
 	var s = 'Connection ID ' + ci.ID + ':\n'
@@ -151,13 +184,17 @@ function update_connection_info(ci) {
 	s += '----------------------------------------------------------------\n'
 
 	document.getElementById('rawdiv').innerHTML = s
+	document.getElementById('rawdivon').style.display = 'block'
 }
 
-function raw_load(id) {
+function raw_load(id,force) {
 	//console.log(this)
 	if (raw_timer!=null) {
 		clearTimeout(raw_timer)
 		raw_timer = null
+	}
+	if (!force && stat_freeze.checked) {
+		return
 	}
 	curr_monitor_id = id
 	var aj = ajax()
@@ -169,7 +206,7 @@ function raw_load(id) {
 			console.log("Closing peer info because", e)
 			hide_peer_info()
 		}
-		raw_timer = setTimeout('raw_load('+id+')', 900)
+		raw_timer = setTimeout('raw_load('+id+',false)', 900)
 	}
 	aj.open("GET","peerst.json?id="+id, true);
 	aj.send(null);
@@ -179,7 +216,7 @@ function row_clicked(id) {
 	if (id==curr_monitor_id) { // hide when clicked again
 		hide_peer_info()
 	} else {
-		raw_load(id)
+		raw_load(id,true)
 	}
 }
 
@@ -194,14 +231,18 @@ function net_drop(id) {
 	return false
 }
 
-function refreshconnections() {
+function refreshconnections(force) {
+	if (!force && stat_freeze.checked) {
+		return
+	}
+
 	function onc(c,id) {
 		c.onclick = function() {row_clicked(id)}
 	}
 
 	var aj = ajax()
 	aj.onerror=function() {
-		setTimeout(refreshconnections, 5000)
+		setTimeout('refreshconnections(false)', 5000)
 	}
 	aj.onload=function() {
 		try {
@@ -393,7 +434,7 @@ function refreshconnections() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(refreshconnections, 1000)
+		setTimeout('refreshconnections(false)', 1000)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
@@ -454,7 +495,7 @@ function switch_order_type() {
 	} else {
 		localStorage.setItem("net_order", "id")
 	}
-	refreshconnections()
+	refreshconnections(true)
 }
 function remember_info_setting() {
 	var mod = localStorage.getItem("net_order")
