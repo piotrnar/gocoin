@@ -92,6 +92,11 @@ func main() {
 
 	flag.Parse()
 
+	if uncompressed {
+		println("For SegWit address safety, uncompressed keys are disabled in this version")
+		os.Exit(1)
+	}
+
 	// convert string fee to uint64
 	if val, e := btc.StringToSatoshis(fee); e != nil {
 		println("Incorrect fee value", fee)
