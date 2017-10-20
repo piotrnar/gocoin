@@ -346,7 +346,7 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
-	if true || common.DebugLevel!=0 {
+	if common.DebugLevel!=0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.Mutex.Unlock()
