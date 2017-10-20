@@ -79,6 +79,15 @@ func host_init() {
 		os.Exit(1)
 	}
 
+	if common.BlockChain.Consensus.S2XHeight != 0 {
+		delta := int(common.BlockChain.BlockTreeEnd.Height) - int(common.BlockChain.Consensus.S2XHeight)
+		if delta < 0 {
+			fmt.Println("WARNING: (segwit)2x bigger blocks will be allowed in", -delta, "blocks")
+		} else {
+			fmt.Println("WARNING: (segwit)2x bigger blocks has been alowed for", delta, "blocks")
+		}
+	}
+
 	common.Last.Block = common.BlockChain.BlockTreeEnd
 	common.Last.Time = time.Unix(int64(common.Last.Block.Timestamp()), 0)
 	if common.Last.Time.After(time.Now()) {

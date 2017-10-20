@@ -81,6 +81,11 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Enforce_SEGWIT = 481824 // https://www.reddit.com/r/Bitcoin/comments/6okd1n/bip91_lock_in_is_guaranteed_as_of_block_476768/
 		ch.Consensus.BIP91Height = 477120
 		ch.Consensus.BIP9_Treshold = 1916
+
+		/*
+			Remove the line below, if you don't want to allow 2X bigger blocks for segwit2x deployment
+			See more here: https://segwit2x.github.io/segwit2x-announce.html
+		*/
 		ch.Consensus.S2XHeight = 494784
 	}
 
