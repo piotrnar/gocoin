@@ -346,7 +346,7 @@ func (c *OneConnection) DoS(why string) {
 	c.Mutex.Lock()
 	c.banit = true
 	c.broken = true
-	if common.DebugLevel!=0 {
+	if true || common.DebugLevel!=0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.Mutex.Unlock()
@@ -490,7 +490,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "inv": return 3+50000*36 // the spec says "max 50000 entries"
 		case "tx": return 500e3 // max segwit tx size 500KB
 		case "addr": return 3+1000*30 // max 1000 addrs
-		case "block": return 5e6+4 // max segwit block size 5MB
+		case "block": return 8e6 // max seg2x block size 8MB
 		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
 		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
 		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
