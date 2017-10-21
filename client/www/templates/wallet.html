@@ -71,6 +71,7 @@ td.outcnt {
 </style>
 <script>
 var edit_in_progress = false
+var do_not_refresh = false
 var wallet;
 var fetching_balance_in_progress = null
 function switchwallet_button_click_browser() {
@@ -483,6 +484,9 @@ function import_file_selected(e) {
 	reader.readAsText(f)
 }
 
+function import_file_clicked(e) {
+	do_not_refresh = true
+}
 
 </script>
 <select id="qswal" style="display:none"></select>
@@ -585,7 +589,7 @@ blno.addEventListener("lastblock", function(e) {
 			min_val_btc.innerText = val2str(e.block.MinValue)
 			wallet_min_warning.style.display = 'block'
 		}
-	} else if (!edit_in_progress && e.block.Height!=_lblo) {
+	} else if (!edit_in_progress && !do_not_refresh && e.block.Height!=_lblo) {
 		location.reload()
 	}
 })
@@ -599,6 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	show_mempol.checked = localStorage.getItem("wallet_show_mempool") == 'true'
 	quick_switch_wallet() // this is to force loading wallet after loading
 	import_file.addEventListener('change', import_file_selected, false);
+	import_file.addEventListener('click', import_file_clicked, false);
 	if (segwit_active && localStorage.getItem("disable_wegwit_warning")!="yes")  warnings.style.display = 'block'
 	window.onkeyup = function (event) {
 		if(event.keyCode == 27)  closepopup()
