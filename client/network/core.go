@@ -15,6 +15,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"runtime"
 )
 
 
@@ -267,11 +268,11 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	c.Mutex.Lock()
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
-		if bytes_left:=SendBufSize-c.BytesToSent(); bytes_left<=len(pl)+24 {
+		if bytes_left := SendBufSize - c.BytesToSent(); bytes_left <= len(pl) + 24 {
 			c.Mutex.Unlock()
 			/*println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
 				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())*/
-			c.Disconnect()
+			c.DisconnectExt("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
@@ -327,6 +328,15 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 
 func (c *OneConnection) Disconnect() {
+	_, file, line, _ := runtime.Caller(1)
+	c.DisconnectExt(fmt.Sprint(file, ":", line))
+}
+
+
+func (c *OneConnection) DisconnectExt(why string) {
+	if true || strings.HasPrefix(c.Node.Agent, "/Gocoin") {
+		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+	}
 	c.Mutex.Lock()
 	c.broken = true
 	c.Mutex.Unlock()
@@ -387,7 +397,7 @@ func (c *OneConnection) HandleError(e error) (error) {
 	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
-	c.Disconnect()
+	c.DisconnectExt("Error:"+e.Error())
 	return e
 }
 
@@ -411,7 +421,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 				println("FetchMessage: Proto out of sync")
 			}
 			common.CountSafe("NetBadMagic")
-			c.Disconnect()
+			c.DisconnectExt("BadMagic")
 			return nil
 		}
 		if c.broken {
