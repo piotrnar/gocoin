@@ -12,6 +12,8 @@ td.agent {
 </style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<input type="button" style="float:right" value="Connect Peer" onclick="connect_peer()">
+
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 <span id="el_tcp_listen_switch" style="display:none">&nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
@@ -77,6 +79,20 @@ if (!server_mode) {
 
 var raw_timer = null
 var curr_monitor_id = -1
+
+
+function connect_peer() {
+	var ip = prompt("Enter IP of the peer to connect to");
+	if (ip!=null) {
+		var aj = ajax()
+		aj.onload=function() {
+			console.log(aj.responseText)
+		}
+		aj.open("GET",'cfg?conn='+encodeURI(ip)+'&sid='+sid, true);
+		aj.send(null);
+	}
+}
+
 
 function freeze_stats() {
 	if (!stat_freeze.checked) {

@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"fmt"
 	"strconv"
 	"net/http"
 	"io/ioutil"
@@ -9,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 func p_cfg(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +76,17 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 			network.DropPeer(uint32(conid))
 		}
 		http.Redirect(w, r, "net", http.StatusFound)
+		return
+	}
+
+	if len(r.Form["conn"]) > 0 {
+		ad, er := peersdb.NewPeerFromString(r.Form["conn"][0], false)
+		if er != nil {
+			w.Write([]byte(er.Error()))
+			return
+		}
+		w.Write([]byte(fmt.Sprint("Connecting to ", ad.Ip())))
+		network.DoNetwork(ad)
 		return
 	}
 
