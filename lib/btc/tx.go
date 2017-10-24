@@ -347,7 +347,7 @@ func (tx *Tx) CheckTransaction() error {
 
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
-			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d - RPC_Result:",
+			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
 				len(tx.TxIn[0].ScriptSig)))
 		}
 	} else {
