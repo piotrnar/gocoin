@@ -1,4 +1,5 @@
 1.9.3:
+* Lib: CheckTransactions now returns descriptive errors (e.g. "bad-txns-vin-empty")
 * Client: Added 2x bigger block consensus change warning (segwit2x)
 * Client/WebUI/Net: New "Freeze stats" option and manual refresh buttons
 * Wallet: disallow uncompressed keys, for WPKH segwit address safety

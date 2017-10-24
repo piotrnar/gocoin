@@ -289,19 +289,46 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 }
 
 
-// Check transactions for consistency and finality. Return true if OK
-func CheckTransactions(txs []*btc.Tx, height, btime uint32) bool {
+// Check transactions for consistency and finality. Return nil if OK, otherwise a descripive error
+func CheckTransactions(txs []*btc.Tx, height, btime uint32) (res error) {
 	var wg sync.WaitGroup
-	var ver_err_cnt uint32
-	for i := range txs {
+
+	res_chan := make(chan error, 1)
+
+	for i := 0; len(res_chan) == 0 && i < len(txs); i++ {
 		wg.Add(1)
+
 		go func(tx *btc.Tx) {
-			if tx.CheckTransaction()!=nil || !tx.IsFinal(height, btime) {
-				atomic.AddUint32(&ver_err_cnt, 1)
+			defer wg.Done() // call wg.Done() before returning from this goroutine
+
+			if len(res_chan) > 0 {
+				return // abort checking if a parallel error has already been reported
 			}
-			wg.Done()
+
+			er := tx.CheckTransaction()
+
+			if len(res_chan) > 0 {
+				return // abort checking if a parallel error has already been reported
+			}
+
+			if er == nil && !tx.IsFinal(height, btime) {
+				er = errors.New("CheckTransactions() : not-final transaction - RPC_Result:bad-txns-nonfinal")
+			}
+
+			if er != nil {
+				select { // this is a non-blocking write to channel
+					case res_chan <- er:
+					default:
+				}
+			}
 		}(txs[i])
 	}
-	wg.Wait()
-	return ver_err_cnt==0
+
+	wg.Wait() // wait for all the goroutines to complete
+
+	if len(res_chan) > 0 {
+		res = <- res_chan
+	}
+
+	return
 }

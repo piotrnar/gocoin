@@ -243,10 +243,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 
 		// Check transactions - this is the most time consuming task
-		if !CheckTransactions(bl.Txs, bl.Height, blockTime) {
-			er = errors.New("CheckBlock() : CheckTransactions() failed - RPC_Result:bad-tx")
-			return
-		}
+		er = CheckTransactions(bl.Txs, bl.Height, blockTime)
 	}
 	return
 }
