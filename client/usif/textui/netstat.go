@@ -104,7 +104,7 @@ func net_conn(par string) {
 		fmt.Println(par, er.Error())
 		return
 	}
-	fmt.Println("Conencting to", ad.Ip())
+	fmt.Println("Connecting to", ad.Ip())
 	network.DoNetwork(ad)
 }
 
