@@ -41,7 +41,7 @@ func (c *OneConnection) SendPendingData() bool {
 			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
-			c.Disconnect()
+			c.DisconnectExt("SendErr:"+e.Error())
 		}
 	}
 	return c.SendBufProd!=c.SendBufCons
