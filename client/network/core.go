@@ -342,6 +342,9 @@ func (c *OneConnection) IsBroken() (res bool) {
 
 
 func (c *OneConnection) DoS(why string) {
+	if strings.HasPrefix(c.Node.Agent, "/Gocoin") {
+		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+	}
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
 	c.banit = true
@@ -354,6 +357,9 @@ func (c *OneConnection) DoS(why string) {
 
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
+	if strings.HasPrefix(c.Node.Agent, "/Gocoin") {
+		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+	}
 	c.Mutex.Lock()
 	if !c.banit {
 		common.CountSafe("Bad"+why)
