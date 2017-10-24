@@ -41,7 +41,7 @@ func (c *OneConnection) SendPendingData() bool {
 			if common.DebugLevel > 0 {
 				println(c.PeerAddr.Ip(), "Connection Broken during send")
 			}
-			c.DisconnectExt("SendErr:"+e.Error())
+			c.Disconnect("SendErr:"+e.Error())
 		}
 	}
 	return c.SendBufProd!=c.SendBufCons
@@ -98,7 +98,7 @@ func (c *OneConnection) Tick() {
 
 	// Check no-data timeout
 	if c.X.LastDataGot.Add(NO_DATA_TIMEOUT).Before(now) {
-		c.Disconnect()
+		c.Disconnect("NetNodataToutA")
 		common.CountSafe("NetNodataToutA")
 		if common.DebugLevel>0 {
 			println(c.PeerAddr.Ip(), "no data for", NO_DATA_TIMEOUT/time.Second, "seconds - disconnect")
@@ -113,7 +113,7 @@ func (c *OneConnection) Tick() {
 
 	if c.X.GetHeadersInProgress.Get() && now.After(c.X.GetHeadersTimeout) {
 		//println(c.ConnID, "- GetHdrs Timeout")
-		c.Disconnect()
+		c.Disconnect("NetNodataToutB")
 		common.CountSafe("NetNodataToutB")
 		return
 	}
@@ -305,7 +305,7 @@ func tcp_server() {
 	Mutex_net.Lock()
 	for _, c := range OpenCons {
 		if c.X.Incomming {
-			c.Disconnect()
+			c.Disconnect("CloseAllIn")
 		}
 	}
 	TCPServerStarted = false
@@ -511,7 +511,7 @@ func (c *OneConnection) Run() {
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
 				println("version msg error:", er.Error())
-				c.Disconnect()
+				c.Disconnect("Version:" + er.Error())
 				break
 			}
 			if common.FLAG.Log {

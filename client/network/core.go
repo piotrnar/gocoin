@@ -15,7 +15,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"runtime"
 )
 
 
@@ -272,7 +271,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			c.Mutex.Unlock()
 			/*println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
 				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())*/
-			c.DisconnectExt("SendBufferOverflow")
+			c.Disconnect("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
@@ -327,17 +326,16 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 }
 
 
-func (c *OneConnection) Disconnect() {
-	_, file, line, _ := runtime.Caller(1)
-	c.DisconnectExt(fmt.Sprint(file, ":", line))
+func (c *OneConnection) IsGocoin() bool {
+	return strings.HasPrefix(c.Node.Agent, "/Gocoin")
 }
 
 
-func (c *OneConnection) DisconnectExt(why string) {
-	if true || strings.HasPrefix(c.Node.Agent, "/Gocoin") {
+func (c *OneConnection) Disconnect(why string) {
+	c.Mutex.Lock()
+	if c.IsGocoin() || common.DebugLevel != 0 {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
-	c.Mutex.Lock()
 	c.broken = true
 	c.Mutex.Unlock()
 }
@@ -352,25 +350,22 @@ func (c *OneConnection) IsBroken() (res bool) {
 
 
 func (c *OneConnection) DoS(why string) {
-	if strings.HasPrefix(c.Node.Agent, "/Gocoin") {
-		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
-	}
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	c.banit = true
-	c.broken = true
-	if common.DebugLevel!=0 {
+	if c.IsGocoin() || common.DebugLevel != 0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
+	c.banit = true
+	c.broken = true
 	c.Mutex.Unlock()
 }
 
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
-	if strings.HasPrefix(c.Node.Agent, "/Gocoin") {
+	c.Mutex.Lock()
+	if c.IsGocoin() || common.DebugLevel != 0 {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
-	c.Mutex.Lock()
 	if !c.banit {
 		common.CountSafe("Bad"+why)
 		c.misbehave += how_much
@@ -397,7 +392,7 @@ func (c *OneConnection) HandleError(e error) (error) {
 	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
-	c.DisconnectExt("Error:"+e.Error())
+	c.Disconnect("Error:"+e.Error())
 	return e
 }
 
@@ -421,7 +416,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 				println("FetchMessage: Proto out of sync")
 			}
 			common.CountSafe("NetBadMagic")
-			c.DisconnectExt("BadMagic")
+			c.Disconnect("BadMagic")
 			return nil
 		}
 		if c.broken {
@@ -529,7 +524,7 @@ func NetCloseAll() {
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {
-			v.Disconnect()
+			v.Disconnect("CloseAll")
 		}
 	}
 	Mutex_net.Unlock()

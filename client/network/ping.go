@@ -172,7 +172,7 @@ func drop_worst_peer() bool {
 						f.Close()
 					}
 				}
-				v.Conn.Disconnect()
+				v.Conn.Disconnect("PeerInDropped")
 				return true
 			}
 		} else {
@@ -187,7 +187,7 @@ func drop_worst_peer() bool {
 						f.Close()
 					}
 				}
-				v.Conn.Disconnect()
+				v.Conn.Disconnect("PeerOutDropped")
 				return true
 			}
 		}
