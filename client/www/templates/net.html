@@ -12,7 +12,7 @@ td.agent {
 </style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
-<input type="button" style="float:right" value="Connect Peer" onclick="connect_peer()">
+<input type="button" style="float:right;display:none" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
 
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
@@ -504,6 +504,9 @@ function draw_chart() {
 	aj.send(null)
 }
 
+if (!server_mode) {
+	conn_peer_but.style.display = 'block'
+}
 
 draw_chart()
 
