@@ -93,6 +93,10 @@ tr.immune {
 	background-color:#f4fff4;
 }
 
+tr.special {
+	background-color:#f8f4e4;
+}
+
 tr.CFN {
 	background-color:#f0ffff;
 }

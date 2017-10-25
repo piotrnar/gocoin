@@ -6,6 +6,7 @@ import (
 	"time"
 	"bytes"
 	"errors"
+	"strings"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -76,6 +77,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					c.Node.DoNotRelayTxs = true
 				}
 			}
+			c.X.IsSpecial = strings.HasPrefix(c.Node.Agent, "/Gocoin:")
 		}
 		c.Mutex.Unlock()
 

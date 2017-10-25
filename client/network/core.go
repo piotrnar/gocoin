@@ -111,6 +111,8 @@ type ConnectionStatus struct {
 	MinFeeSPKB int64  // BIP 133
 
 	TxsReceived int // During last hour
+
+	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
 }
 
 type ConnInfo struct {
@@ -326,14 +328,9 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 }
 
 
-func (c *OneConnection) IsGocoin() bool {
-	return strings.HasPrefix(c.Node.Agent, "/Gocoin")
-}
-
-
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.IsGocoin() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.broken = true
@@ -352,7 +349,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.IsGocoin() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -363,7 +360,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.IsGocoin() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {

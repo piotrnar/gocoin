@@ -65,6 +65,7 @@ type SortedConnections []struct {
 	BlockCount int
 	TxsCount int
 	MinutesOnline int
+	Special bool
 }
 
 
@@ -82,6 +83,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
+		tlist[cnt].Special = v.X.IsSpecial
 		if v.X.VersionReceived==false || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {
@@ -154,6 +156,9 @@ func drop_worst_peer() bool {
 
 	for _, v := range list {
 		if v.MinutesOnline < OnlineImmunityMinutes {
+			continue
+		}
+		if v.Special {
 			continue
 		}
 		if common.CFG.Net.MinSegwitCons > 0 && segwit_cnt <= int(common.CFG.Net.MinSegwitCons) &&

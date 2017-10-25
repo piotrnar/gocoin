@@ -435,7 +435,9 @@ function refreshconnections(force) {
 				row.title = "Connection Details"
 				row.style.cursor = 'pointer'
 
-				if (cs[i].HasImmunity) {
+				if (cs[i].IsSpecial) {
+					row.classList.add("special")
+				} else if (cs[i].HasImmunity) {
 					row.classList.add("immune")
 				}
 			}
