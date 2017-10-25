@@ -92,11 +92,10 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		// Save the block, though do not mark it as "trusted" just yet
 		ch.Blocks.BlockAdd(cur.Height, bl)
 
-		// If it has a bigger height than the current head,
-		// ... move the coin state into a new branch.
-		if cur.Height > ch.BlockTreeEnd.Height {
+		// If it has more POW than the current head, move the head to it
+		if cur.MorePOW(ch.BlockTreeEnd) {
 			ch.MoveToBlock(cur)
-			if ch.BlockTreeEnd!=cur {
+			if ch.BlockTreeEnd != cur {
 				e = errors.New("CommitBlock: MoveToBlock failed")
 			}
 		} else {

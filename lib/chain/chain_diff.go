@@ -63,3 +63,23 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 
 	return
 }
+
+// Returns true if b1 has more POW than b2
+func (b1 *BlockTreeNode) MorePOW(b2 *BlockTreeNode) bool {
+	var b1sum, b2sum float64
+	for b1.Height > b2.Height {
+		b1sum += btc.GetDifficulty(b1.Bits())
+		b1 = b1.Parent
+	}
+	for b2.Height > b1.Height {
+		b2sum += btc.GetDifficulty(b2.Bits())
+		b2 = b2.Parent
+	}
+	for b1 != b2 {
+		b1sum += btc.GetDifficulty(b1.Bits())
+		b2sum += btc.GetDifficulty(b2.Bits())
+		b1 = b1.Parent
+		b2 = b2.Parent
+	}
+	return b1sum > b2sum
+}

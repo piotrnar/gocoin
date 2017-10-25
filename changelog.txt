@@ -1,4 +1,5 @@
 1.9.3:
+* Lib: The best chain is now decided on the amount of POW, not the height anymore
 * WebUI/Network: New option "Connect Peer", to connect to a peer with the given IP[:port]
 * Lib: CheckTransactions now returns descriptive errors (e.g. "bad-txns-vin-empty")
 * Client: Added 2x bigger block consensus change warning (segwit2x)

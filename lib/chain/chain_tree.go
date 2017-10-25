@@ -204,6 +204,7 @@ func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 }
 
 
+// Performs channel reorg
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	for cur.Height > ch.BlockTreeEnd.Height {
@@ -257,26 +258,6 @@ func (ch *Chain) UndoLastBlock() {
 }
 
 
-// Returns a common parent with the highest height
-func (cur *BlockTreeNode)FirstCommonParent(dst *BlockTreeNode) *BlockTreeNode {
-	if cur.Height > dst.Height {
-		for cur.Height > dst.Height {
-			cur = cur.Parent
-		}
-	} else {
-		for cur.Height < dst.Height {
-			dst = dst.Parent
-		}
-	}
-	// From this point on, both cur and dst should be at the same height
-	for cur != dst {
-		cur = cur.Parent
-		dst = dst.Parent
-	}
-	return cur
-}
-
-
 // make sure ch.BlockIndexAccess is locked before calling it
 func (cur *BlockTreeNode) delAllChildren(ch *Chain, deleteCallback func(*btc.Uint256)) {
 	for i := range cur.Childs {
@@ -321,3 +302,4 @@ func (n *BlockTreeNode)delChild(c *BlockTreeNode) {
 	}
 	n.Childs = newChds
 }
+
