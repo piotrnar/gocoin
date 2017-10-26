@@ -131,6 +131,8 @@ type ConnInfo struct {
 	InvsDone int
 	BlocksReceived int
 	HasImmunity bool
+
+	LocalAddr, RemoteAddr string
 }
 
 type OneConnection struct {
@@ -248,6 +250,10 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 	v.Mutex.Lock()
 	res.ID = v.ConnID
 	res.PeerIp = v.PeerAddr.Ip()
+	if v.Conn != nil {
+		res.LocalAddr = v.Conn.LocalAddr().String()
+		res.RemoteAddr = v.Conn.RemoteAddr().String()
+	}
 	res.NetworkNodeStruct = v.Node
 	res.ConnectionStatus = v.X
 	res.BytesToSend = v.BytesToSent()

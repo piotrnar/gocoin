@@ -56,7 +56,7 @@ func NewPeer(v []byte) (p *PeerAddr) {
 }
 
 
-func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
+func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	port := DefaultTcpPort()
 	x := strings.Index(ipstr, ":")
 	if x!=-1 {
@@ -76,24 +76,35 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 	ip := net.ParseIP(ipstr)
 	if ip != nil && len(ip)==16 {
-		if sys.IsIPBlocked(ip[12:16]) {
-			e = errors.New(ipstr+" is blocked")
-			return
-		}
 		p = NewEmptyPeer()
 		copy(p.Ip4[:], ip[12:16])
 		p.Services = Services
 		copy(p.Ip6[:], ip[:12])
 		p.Port = port
-		if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
-			e = errors.New(p.Ip() + " is banned")
-			p = nil
-		} else {
-			p.Time = uint32(time.Now().Unix())
-			p.Save()
-		}
 	} else {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
+	}
+	return
+}
+
+
+func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
+	p, e = NewAddrFromString(ipstr, force_default_port)
+	if e != nil {
+		return
+	}
+
+	if sys.IsIPBlocked(p.Ip4[:]) {
+		e = errors.New(ipstr+" is blocked")
+		return
+	}
+
+	if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
+		e = errors.New(p.Ip() + " is banned")
+		p = nil
+	} else {
+		p.Time = uint32(time.Now().Unix())
+		p.Save()
 	}
 	return
 }

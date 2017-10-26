@@ -434,7 +434,7 @@ func unban_peer(par string) {
 
 	if par != "all" {
 		var er error
-		ad, er = peersdb.NewPeerFromString(par, false)
+		ad, er = peersdb.NewAddrFromString(par, false)
 		if er != nil {
 			fmt.Println(par, er.Error())
 			return
@@ -450,7 +450,7 @@ func unban_peer(par string) {
 		peer := peersdb.NewPeer(v)
 		if peer.Banned != 0 {
 			if ad == nil || peer.Ip() == ad.Ip() {
-				fmt.Println("Unban", peer.NetAddr.String())
+				fmt.Println(" -", peer.NetAddr.String())
 				peer.Banned = 0
 				keys = append(keys, k)
 				vals = append(vals, peer.Bytes())
@@ -462,7 +462,7 @@ func unban_peer(par string) {
 		peersdb.PeerDB.Put(keys[i], vals[i])
 	}
 
-	fmt.Println(len(keys), "peers un-baned")
+	fmt.Println(len(keys), "peer(s) un-baned")
 }
 
 func show_cached(par string) {
