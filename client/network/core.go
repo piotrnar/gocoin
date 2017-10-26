@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -21,19 +22,17 @@ import (
 const (
 	AskAddrsEvery = (5*time.Minute)
 	MaxAddrsPerMessage = 500
+	SendBufSize = 16*1024*1024 // If you'd have this much in the send buffer, disconnect the peer
 
-	NO_DATA_TIMEOUT = 2*time.Minute
-	SendBufSize = 4*1024*1024 // If you'd this much in the send buffer, disconnect the peer
-
-	GetBlockTimeout = 15*time.Second  // Timeout to receive the entire block (we like it fast)
-
+	GetHeadersTimeout = 2*time.Minute  // Timeout to receive headers
+	VersionMsgTimeout = 20*time.Second  // Timeout to receive teh version message after connecting
 	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
 
 	MIN_PROTO_VERSION = 209
 
 	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
 
-	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache fro that long, drop it*/
+	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache for that long, drop it*/
 
 	MAX_PEERS_BLOCKS_IN_PROGRESS = 500
 	MAX_BLOCKS_FORWARD_CNT = 5000 // Never ask for a block higher than current top + this value
@@ -41,7 +40,7 @@ const (
 	MAX_GETDATA_FORWARD = 2e6 // Download up to 2MB forward (or one block)
 
 	MAINTANENCE_PERIOD = time.Minute
-	NO_INV_TIMEOUT = 15*time.Minute
+	NO_INV_TIMEOUT = 15*time.Minute  // If peer sent us no "inv" for that much time, consider it useless
 
 	MAX_INV_HISTORY = 500
 
@@ -384,9 +383,6 @@ func (c *OneConnection) HandleError(e error) (error) {
 		//fmt.Println("Just a timeout - ignore")
 		return nil
 	}
-	if common.DebugLevel>0 {
-		println("HandleError:", e.Error())
-	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
 	c.Disconnect("Error:"+e.Error())
@@ -401,17 +397,22 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
 		c.Mutex.Lock()
-		c.recv.hdr_len += n
+		if n > 0 {
+			c.X.LastDataGot = time.Now()
+			c.recv.hdr_len += n
+		}
 		if e != nil {
 			c.Mutex.Unlock()
 			c.HandleError(e)
-			return nil
+			return nil // Make sure to exit here, in case of timeout
 		}
-		if c.recv.hdr_len>=4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
+		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
 			c.Mutex.Unlock()
 			if common.DebugLevel >0 {
 				println("FetchMessage: Proto out of sync")
 			}
+			fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
+				hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n)
 			common.CountSafe("NetBadMagic")
 			c.Disconnect("BadMagic")
 			return nil

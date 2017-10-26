@@ -96,25 +96,24 @@ func (c *OneConnection) Maintanence(now time.Time) {
 func (c *OneConnection) Tick() {
 	now := time.Now()
 
-	// Check no-data timeout
-	if c.X.LastDataGot.Add(NO_DATA_TIMEOUT).Before(now) {
-		c.Disconnect("NetNodataToutA")
-		common.CountSafe("NetNodataToutA")
-		if common.DebugLevel>0 {
-			println(c.PeerAddr.Ip(), "no data for", NO_DATA_TIMEOUT/time.Second, "seconds - disconnect")
-		}
-		return
-	}
-
 	if !c.X.VersionReceived {
+		// Wait only certain amount of time for the version message
+		if c.X.ConnectedAt.Add(VersionMsgTimeout).Before(now) {
+			c.Disconnect("VersionTimeout")
+			common.CountSafe("NetVersionTout")
+			if common.DebugLevel > 0 {
+				println(c.PeerAddr.Ip(), "version message timeout")
+			}
+			return
+		}
 		// If we have no ack, do nothing more.
 		return
 	}
 
 	if c.X.GetHeadersInProgress.Get() && now.After(c.X.GetHeadersTimeout) {
 		//println(c.ConnID, "- GetHdrs Timeout")
-		c.Disconnect("NetNodataToutB")
-		common.CountSafe("NetNodataToutB")
+		c.Disconnect("HeadersTimeout")
+		common.CountSafe("NetHeadersTout")
 		return
 	}
 

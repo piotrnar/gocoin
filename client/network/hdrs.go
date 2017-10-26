@@ -286,5 +286,5 @@ func (c *OneConnection) sendGetHeaders() {
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
 	c.X.LastHeadersHeightAsk = lb.Height
 	c.X.GetHeadersInProgress.Set()
-	c.X.GetHeadersTimeout = time.Now().Add(NO_DATA_TIMEOUT)
+	c.X.GetHeadersTimeout = time.Now().Add(GetHeadersTimeout)
 }

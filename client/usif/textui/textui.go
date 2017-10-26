@@ -159,8 +159,8 @@ func show_info(par string) {
 
 	network.TxMutex.Lock()
 	fmt.Printf("Transactions  In Memory Pool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
-		len(network.TransactionsToSend), network.TransactionsToSendSize >> 20,
-		len(network.TransactionsRejected), network.TransactionsRejectedSize >> 20,
+		len(network.TransactionsToSend), network.TransactionsToSendSize>>20,
+		len(network.TransactionsRejected), network.TransactionsRejectedSize>>20,
 		len(network.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("WaitingForInputs:%d,  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
 		len(network.WaitingForInputs), len(network.SpentOutputs),
@@ -424,6 +424,47 @@ func show_addresses(par string) {
 	}
 }
 
+func unban_peer(par string) {
+	if par == "" {
+		fmt.Println("Specify IP of the peer to unban or use 'unban all'")
+		return
+	}
+
+	var ad *peersdb.PeerAddr
+
+	if par != "all" {
+		var er error
+		ad, er = peersdb.NewPeerFromString(par, false)
+		if er != nil {
+			fmt.Println(par, er.Error())
+			return
+		}
+		fmt.Println("Unban", ad.Ip(), "...")
+	} else {
+		fmt.Println("Unban all peers ...")
+	}
+
+	var keys []qdb.KeyType
+	var vals [][]byte
+	peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+		peer := peersdb.NewPeer(v)
+		if peer.Banned != 0 {
+			if ad == nil || peer.Ip() == ad.Ip() {
+				fmt.Println("Unban", peer.NetAddr.String())
+				peer.Banned = 0
+				keys = append(keys, k)
+				vals = append(vals, peer.Bytes())
+			}
+		}
+		return 0
+	})
+	for i := range keys {
+		peersdb.PeerDB.Put(keys[i], vals[i])
+	}
+
+	fmt.Println(len(keys), "peers un-baned")
+}
+
 func show_cached(par string) {
 	var hi, lo uint32
 	for _, v := range network.CachedBlocks {
@@ -536,5 +577,6 @@ func init() {
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }

@@ -1,4 +1,7 @@
 1.9.3:
+* Client: Increased size of each peer's send buffer to 16MB (so it can handle 8MB blocks)
+* Client/TextUI: New command "unban"
+* Client: Removed NO_DATA timeout and added NoVersionMessage timeout
 * Client: Introduced a concept of "special" peers that get more debugging and never get dropped
 * Lib: The best chain is now decided on the amount of POW, not the height anymore
 * WebUI/Network: New option "Connect Peer", to connect to a peer with the given IP[:port]

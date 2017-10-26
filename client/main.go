@@ -14,7 +14,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/others/utils"
 	"github.com/piotrnar/gocoin/lib/qdb"
 	"os"
 	"os/signal"
@@ -271,7 +270,7 @@ func main() {
 			var keys []qdb.KeyType
 			var vals [][]byte
 			peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-				peer := utils.NewPeer(v)
+				peer := peersdb.NewPeer(v)
 				if peer.Banned != 0 {
 					fmt.Println("Unban", peer.NetAddr.String())
 					peer.Banned = 0
@@ -284,7 +283,7 @@ func main() {
 				peersdb.PeerDB.Put(keys[i], vals[i])
 			}
 
-			fmt.Println(len(keys), "peerts un-baned")
+			fmt.Println(len(keys), "peers un-baned")
 		}
 
 		for k, v := range common.BlockChain.BlockIndex {
