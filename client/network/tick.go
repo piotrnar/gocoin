@@ -93,9 +93,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 }
 
 
-func (c *OneConnection) Tick() {
-	now := time.Now()
-
+func (c *OneConnection) Tick(now time.Time) {
 	if !c.X.VersionReceived {
 		// Wait only certain amount of time for the version message
 		if c.X.ConnectedAt.Add(VersionMsgTimeout).Before(now) {
@@ -117,6 +115,7 @@ func (c *OneConnection) Tick() {
 		return
 	}
 
+	// Tick the recent transactions counter
 	if now.After(c.txsNxt) {
 		c.Mutex.Lock()
 		if len(c.txsCha)==cap(c.txsCha) {
@@ -158,9 +157,6 @@ func (c *OneConnection) Tick() {
 			c.GetBlockData()
 		}
 	}
-
-	// Need to send some invs...?
-	c.SendInvs()
 
 	if !c.X.GetHeadersInProgress.Get() && c.BlksInProgress()==0 {
 		// Ping if we dont do anything
@@ -464,6 +460,8 @@ func (c *OneConnection) Run() {
 
 	c.Mutex.Unlock()
 
+	next_tick := now
+	next_invs := now
 
 	for !c.IsBroken() {
 		if c.IsBroken() {
@@ -474,20 +472,30 @@ func (c *OneConnection) Run() {
 			continue // Do now read the socket if we have pending data to send
 		}
 
-		cmd := c.FetchMessage()
+		now = time.Now()
 
-		if cmd==nil {
-			c.Tick()
+		if c.X.VersionReceived && now.After(next_invs) {
+			c.SendInvs()
+			next_invs = now.Add(InvsFlushPeriod)
+		}
+
+		if now.After(next_tick) {
+			c.Tick(now)
+			next_tick = now.Add(PeerTickPeriod)
+		}
+
+		cmd := c.FetchMessage()
+		if cmd == nil {
 			continue
 		}
 
 		if c.X.VersionReceived {
 			c.PeerAddr.Alive()
 		}
+
 		c.Mutex.Lock()
 		c.counters["rcvd_"+cmd.cmd]++
 		c.counters["rbts_"+cmd.cmd] += uint64(len(cmd.pl))
-		c.X.LastDataGot = time.Now()
 		c.X.LastCmdRcvd = cmd.cmd
 		c.X.LastBtsRcvd = uint32(len(cmd.pl))
 		c.Mutex.Unlock()

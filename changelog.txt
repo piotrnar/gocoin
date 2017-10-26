@@ -1,4 +1,6 @@
 1.9.3:
+* Client: Run Tick() method for each peer not more often than each 100 ms
+* Client: Run SendInvs() method for each peer not more often each 10 ms
 * Client: Increased size of each peer's send buffer to 16MB (so it can handle 8MB blocks)
 * Client/TextUI: New command "unban"
 * Client: Removed NO_DATA timeout and added NoVersionMessage timeout

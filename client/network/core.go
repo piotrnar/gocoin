@@ -49,6 +49,9 @@ const (
 	TxsCounterPeriod = 6*time.Second // how long for one tick
 	TxsCounterBufLen = 60 // how many ticks
 	OnlineImmunityMinutes = int(TxsCounterBufLen*TxsCounterPeriod/time.Minute)
+
+	PeerTickPeriod = 100*time.Millisecond // run the peer's tick not more often than this
+	InvsFlushPeriod = 10*time.Millisecond // send all the pending invs to the peer not more often than this
 )
 
 
