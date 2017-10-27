@@ -202,10 +202,12 @@ function fetch_wallet_balance(name) {
 				td.className = 'bold hand'
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
+				var wpkh = false
 				if (segwit_mode) {
 					td.classList.add('WPKH')
 					td.innerText = outs[i].addr2
 					td.title = outs[i].addr
+					wpkh = true
 				} else {
 					td.innerText = outs[i].addr
 				}
@@ -227,8 +229,20 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.align = 'center'
-				td.innerHTML = '<input id="txout'+row_number+'" name="txout'+row_number+'" type="checkbox" onchange="recalc_inputs()">'
+				var inp = document.createElement("input")
+				inp.id = "txout"+row_number
+				inp.type = "checkbox"
+				inp.name = "txout"+row_number
+				inp.onchange = recalc_inputs
+				td.appendChild(inp)
 
+				if (wpkh) {
+					inp = document.createElement("input")
+					inp.type = "hidden"
+					inp.name = "wpkh"+row_number
+					inp.value = "true"
+					td.appendChild(inp)
+				}
 			}
 
 			total_btc.innerText = val2str(totbtc)
