@@ -50,7 +50,7 @@ func dump_raw_sigscript(d []byte) bool {
 		}
 	}
 
-	fmt.Println("      SigScript:", p2sh)
+	fmt.Println("      SigScript:")
 	for i := range ss {
 		if p2sh && i==len(ss)-1 {
 			// Print p2sh script
@@ -201,7 +201,11 @@ func dump_raw_tx() {
 			if tx.SegWit!=nil {
 				fmt.Println("      Witness data:")
 				for _, ww := range tx.SegWit[i] {
-					fmt.Println("       ", hex.EncodeToString(ww))
+					if len(ww)==0 {
+						fmt.Println("       ", "OP_0")
+					} else {
+						fmt.Println("       ", hex.EncodeToString(ww))
+					}
 				}
 			}
 		}
