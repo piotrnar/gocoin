@@ -1,3 +1,4 @@
+<script type="text/javascript" src="webui/crypto.js"></script>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
@@ -31,6 +32,7 @@ var cur_but = null
 
 var wallet = new Array()
 var addrbook = new Array()
+var basic_addrbook_len = 0 // without the wallets virgin addrs
 
 const ADDR_LIST_SIZE = 15
 
@@ -370,6 +372,7 @@ function open_address_book(idx) {
 	}
 
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
+	basic_addrbook_len = addrbook.length
 
 	// append the curtrent wallet's virgin adds
 	try { // in case if we had no wallets in the browser
@@ -391,11 +394,27 @@ function open_address_book(idx) {
 
 	for (var i=0; i<addrbook.length; i++) {
 		var op = document.createElement("option")
-		op.text += addrbook[i].label
-		op.text += " - " + addrbook[i].addr
-		op.value = addrbook[i].addr
-		op.selected = inadr.value==op.value
-		op["addr_label"] = addrbook[i].label
+		var wpkh = ''
+
+		if (i >= basic_addrbook_len) {
+			wpkh = p2kh_to_wpkh(addrbook[i].addr)
+		}
+
+		if (wpkh != '') {
+			var label = 'SW:' + addrbook[i].label
+			op = document.createElement("option")
+			op.text += label
+			op.text += " - " + wpkh
+			op.value = wpkh
+			op.selected = inadr.value==op.value
+			op["addr_label"] = label
+		} else {
+			op.text += addrbook[i].label
+			op.text += " - " + addrbook[i].addr
+			op.value = addrbook[i].addr
+			op.selected = inadr.value==op.value
+			op["addr_label"] = addrbook[i].label
+		}
 		sel.add(op)
 	}
 

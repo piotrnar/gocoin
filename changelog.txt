@@ -1,4 +1,5 @@
 1.9.3:
+* Client/WebUI/MakeTx: Address Book shows auto calculated P2SH-WPKH Addresses from currently selected wallet
 * Client: Show real endpoint's TCP port for incomming connections
 * Client: Run Tick() method for each peer not more often than each 100 ms
 * Client: Run SendInvs() method for each peer not more often each 10 ms
