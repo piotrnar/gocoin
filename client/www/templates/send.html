@@ -373,10 +373,13 @@ function open_address_book(idx) {
 
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
 	basic_addrbook_len = addrbook.length
+	var auto_transalte_to_segwit = false
 
-	// append the curtrent wallet's virgin adds
+	// append the curtrent wallet's virgin addresses
 	try { // in case if we had no wallets in the browser
-		var tmp = parse_wallet(localStorage.getItem("gocoinWal_"+qswal.options[qswal.selectedIndex].text))
+		var curr_wallet_raw = localStorage.getItem("gocoinWal_"+qswal.options[qswal.selectedIndex].text)
+		auto_transalte_to_segwit = curr_wallet_raw.indexOf("Auto-translate to SegWit") != -1
+		var tmp = parse_wallet(curr_wallet_raw)
 		for (var i in tmp) {
 			if (tmp[i].virgin) addrbook.push(tmp[i])
 		}
@@ -396,7 +399,7 @@ function open_address_book(idx) {
 		var op = document.createElement("option")
 		var wpkh = ''
 
-		if (i >= basic_addrbook_len) {
+		if (auto_transalte_to_segwit && i >= basic_addrbook_len) {
 			wpkh = p2kh_to_wpkh(addrbook[i].addr)
 		}
 
