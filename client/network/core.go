@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -419,8 +420,10 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			if common.DebugLevel >0 {
 				println("FetchMessage: Proto out of sync")
 			}
-			/*fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
-				hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n)*/
+			if c.X.IsSpecial {
+				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
+					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n)
+			}
 			common.CountSafe("NetBadMagic")
 			c.Disconnect("BadMagic")
 			return nil
