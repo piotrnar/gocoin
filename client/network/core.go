@@ -114,7 +114,7 @@ type ConnectionStatus struct {
 
 	TxsReceived int // During last hour
 
-	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
+	IsSpecial sys.SyncBool // Special connections get more debgs and are not being automatically dropped
 }
 
 type ConnInfo struct {
@@ -338,7 +338,7 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.broken = true
@@ -357,7 +357,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -368,7 +368,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
@@ -420,7 +420,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			if common.DebugLevel >0 {
 				println("FetchMessage: Proto out of sync")
 			}
-			if c.X.IsSpecial {
+			if c.X.IsSpecial.Get() {
 				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
 					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n)
 			}

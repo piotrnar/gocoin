@@ -179,7 +179,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		return
 	}
 	if ad.Friend || ad.Manual {
-		conn.X.IsSpecial = true
+		conn.X.IsSpecial.Set()
 	}
 	OpenCons[ad.UniqID()] = conn
 	OutConsActive++
@@ -333,12 +333,15 @@ func ConnectFriends() {
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
 				Mutex_net.Lock()
-				_, connected := OpenCons[ad.UniqID()]
+				curr, _ := OpenCons[ad.UniqID()]
 				Mutex_net.Unlock()
-				if !connected {
+				if curr == nil {
 					//print("Connecting friend ", ad.Ip(), " ...\n> ")
 					ad.Friend = true
 					DoNetwork(ad)
+				} else {
+					curr.PeerAddr.Friend = true
+					curr.X.IsSpecial.Set()
 				}
 			}
 		}
@@ -729,7 +732,7 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
-	} else if c.X.Incomming && !c.X.IsSpecial {
+	} else if c.X.Incomming && !c.X.IsSpecial.Get() {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()
