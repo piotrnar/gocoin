@@ -33,6 +33,10 @@ var (
 
 type PeerAddr struct {
 	*utils.OnePeer
+
+	// The fields below don't get saved, but are used internaly
+	Manual bool  // Manually connected (from UI)
+	Friend bool  // Connected from friends.txt
 }
 
 func DefaultTcpPort() uint16 {
