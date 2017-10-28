@@ -729,7 +729,7 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
-	} else if c.X.Incomming {
+	} else if c.X.Incomming && !c.X.IsSpecial {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()
