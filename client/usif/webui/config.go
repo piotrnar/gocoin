@@ -80,12 +80,13 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["conn"]) > 0 {
-		ad, er := peersdb.NewPeerFromString(r.Form["conn"][0], false)
+		ad, er := peersdb.NewAddrFromString(r.Form["conn"][0], false)
 		if er != nil {
 			w.Write([]byte(er.Error()))
 			return
 		}
 		w.Write([]byte(fmt.Sprint("Connecting to ", ad.Ip())))
+		ad.Manual = true
 		network.DoNetwork(ad)
 		return
 	}

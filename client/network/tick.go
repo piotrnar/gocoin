@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 	"bytes"
+	"bufio"
+	"strings"
 	"math/rand"
 	"sync/atomic"
 	"encoding/hex"
@@ -176,6 +178,9 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		Mutex_net.Unlock()
 		return
 	}
+	if ad.Friend || ad.Manual {
+		conn.X.IsSpecial = true
+	}
 	OpenCons[ad.UniqID()] = conn
 	OutConsActive++
 	Mutex_net.Unlock()
@@ -309,6 +314,38 @@ func tcp_server() {
 }
 
 
+var nextConnectFriends time.Time = time.Now()
+
+func ConnectFriends() {
+	f, _ := os.Open("friends.txt")
+	if f == nil {
+		return
+	}
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	if rd != nil {
+		for {
+			ln, _, er := rd.ReadLine()
+			if er != nil {
+				break
+			}
+			ls := strings.SplitN(string(ln), " ", 2)
+			ad, _ := peersdb.NewAddrFromString(ls[0], false)
+			if ad != nil {
+				Mutex_net.Lock()
+				_, connected := OpenCons[ad.UniqID()]
+				Mutex_net.Unlock()
+				if !connected {
+					print("Connecting friend ", ad.Ip(), " ...\n> ")
+					ad.Friend = true
+					DoNetwork(ad)
+				}
+			}
+		}
+	}
+}
+
+
 
 var TickStage int // TODO: This is to investigate very rare hanging inside NetworkTick()
 
@@ -393,6 +430,13 @@ func NetworkTick() {
 		}
 		HammeringMutex.Unlock()
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
+	}
+
+	// Connect friends
+	if time.Now().After(nextConnectFriends) {
+		TickStage = 95
+		ConnectFriends()
+		nextConnectFriends = time.Now().Add(5*time.Minute)
 	}
 
 	TickStage = 10

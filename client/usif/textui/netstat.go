@@ -99,12 +99,13 @@ func node_info(par string) {
 
 
 func net_conn(par string) {
-	ad, er := peersdb.NewPeerFromString(par, false)
+	ad, er := peersdb.NewAddrFromString(par, false)
 	if er != nil {
 		fmt.Println(par, er.Error())
 		return
 	}
 	fmt.Println("Connecting to", ad.Ip())
+	ad.Manual = true
 	network.DoNetwork(ad)
 }
 
