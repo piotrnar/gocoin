@@ -336,7 +336,7 @@ func ConnectFriends() {
 				_, connected := OpenCons[ad.UniqID()]
 				Mutex_net.Unlock()
 				if !connected {
-					print("Connecting friend ", ad.Ip(), " ...\n> ")
+					//print("Connecting friend ", ad.Ip(), " ...\n> ")
 					ad.Friend = true
 					DoNetwork(ad)
 				}
