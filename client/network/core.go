@@ -515,9 +515,9 @@ func maxmsgsize(cmd string) uint32 {
 		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
 		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
 		case "getheaders": return 4+3+500*32+32 // we allow up to 500 locator hashes
-		case "cmpctblock": return 0x10000 // 64KB shall be enough
-		case "getblocktxn": return 0x10000 // 64KB shall be enough
-		case "blocktxn": return 32+2+1e6-80-5 // all txs that can fit withing 1MB block
+		case "cmpctblock": return 1e6 // 1MB shall be enough
+		case "getblocktxn": return 1e6 // 1MB shall be enough
+		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }
