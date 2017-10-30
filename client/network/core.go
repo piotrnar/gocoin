@@ -515,7 +515,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 func (c *OneConnection) writing_thread() {
 	for !c.IsBroken() {
-		c.Mutex.Lock()
+		c.Mutex.Lock() // protect access to c.SendBufProd
 
 		if c.SendBufProd == c.SendBufCons {
 			c.Mutex.Unlock()
@@ -528,14 +528,14 @@ func (c *OneConnection) writing_thread() {
 		}
 
 		bytes_to_send := c.SendBufProd - c.SendBufCons
+		c.Mutex.Unlock() // unprotect access to c.SendBufProd
+
 		if bytes_to_send < 0 {
 			bytes_to_send += SendBufSize
 		}
 		if c.SendBufCons + bytes_to_send > SendBufSize {
-			bytes_to_send = SendBufSize-c.SendBufCons
+			bytes_to_send = SendBufSize - c.SendBufCons
 		}
-
-		c.Mutex.Unlock()
 
 		n, e := common.SockWrite(c.Conn, c.sendBuf[c.SendBufCons:c.SendBufCons+bytes_to_send])
 		if n > 0 {
