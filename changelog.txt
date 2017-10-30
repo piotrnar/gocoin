@@ -1,4 +1,5 @@
 1.9.3:
+* Client: Data is being written to peer TCP connections from a desigated threads
 * Client: And peer that you connect to manually, automatically gets marked as Special (no auto-dropping)
 * Client: Automatically connect to IPs from file "friends.txt" (inside the client/ folder)
 * Client/WebUI/MakeTx: Show P2SH-WPKH instead of P2KH, only if currently selected wallet contains "# Auto-translate to SegWit"

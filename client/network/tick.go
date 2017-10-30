@@ -266,7 +266,7 @@ func tcp_server() {
 				}
 			}
 		} else {
-			time.Sleep(1e9)
+			time.Sleep(1e8)
 		}
 	}
 	Mutex_net.Lock()
@@ -461,6 +461,8 @@ func NetworkTick() {
 
 // Process that handles communication with a single peer
 func (c *OneConnection) Run() {
+	c.writing_thread_push = make(chan bool, 1)
+
 	c.SendVersion()
 
 	c.Mutex.Lock()
@@ -485,7 +487,7 @@ func (c *OneConnection) Run() {
 			break
 		}
 
-		cmd, waited := c.FetchMessage()
+		cmd, read_tried := c.FetchMessage()
 
 		now = time.Now()
 		if c.X.VersionReceived && now.After(next_invs) {
@@ -499,7 +501,8 @@ func (c *OneConnection) Run() {
 		}
 
 		if cmd == nil {
-			if !waited {
+			if !read_tried {
+				// it will end up here if we did not even try to read anything because of BW limit
 				time.Sleep(10 * time.Millisecond)
 			}
 			continue

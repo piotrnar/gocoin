@@ -195,6 +195,7 @@ type OneConnection struct {
 	txsNxt time.Time
 
 	writing_thread_done sync.WaitGroup
+	writing_thread_push chan bool
 }
 
 type BIDX [btc.Uint256IdxLen]byte
@@ -314,6 +315,10 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 		}
 	}
 	c.Mutex.Unlock()
+	select {
+		case c.writing_thread_push <- true:
+		default:
+	}
 	return
 }
 
@@ -514,15 +519,19 @@ func (c *OneConnection) writing_thread() {
 
 		if c.SendBufProd == c.SendBufCons {
 			c.Mutex.Unlock()
-			time.Sleep(10*time.Millisecond)
+			// wait for a new write, but time out just in case
+			select {
+				case <- c.writing_thread_push:
+				case <- time.After(10*time.Millisecond):
+			}
 			continue
 		}
 
 		bytes_to_send := c.SendBufProd - c.SendBufCons
-		if bytes_to_send<0 {
+		if bytes_to_send < 0 {
 			bytes_to_send += SendBufSize
 		}
-		if c.SendBufCons+bytes_to_send > SendBufSize {
+		if c.SendBufCons + bytes_to_send > SendBufSize {
 			bytes_to_send = SendBufSize-c.SendBufCons
 		}
 
@@ -543,6 +552,7 @@ func (c *OneConnection) writing_thread() {
 		} else if e != nil {
 			c.Disconnect("SendErr:"+e.Error())
 		} else  if n < 0 {
+			// It comes here if we could not send a single byte because of BW limit
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
