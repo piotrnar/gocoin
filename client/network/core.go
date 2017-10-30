@@ -193,6 +193,8 @@ type OneConnection struct {
 	txsCur int
 	txsCha chan int
 	txsNxt time.Time
+
+	writing_thread_done sync.WaitGroup
 }
 
 type BIDX [btc.Uint256IdxLen]byte
@@ -399,12 +401,17 @@ func (c *OneConnection) HandleError(e error) (error) {
 }
 
 
-func (c *OneConnection) FetchMessage() (*BCmsg) {
+func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	var e error
 	var n int
 
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
+		if n < 0 {
+			n = 0
+		} else {
+			timeout_or_data = true
+		}
 		c.Mutex.Lock()
 		if n > 0 {
 			c.X.LastDataGot = time.Now()
@@ -413,7 +420,7 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 		if e != nil {
 			c.Mutex.Unlock()
 			c.HandleError(e)
-			return nil // Make sure to exit here, in case of timeout
+			return // Make sure to exit here, in case of timeout
 		}
 		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
 			c.Mutex.Unlock()
@@ -426,11 +433,11 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			}
 			common.CountSafe("NetBadMagic")
 			c.Disconnect("BadMagic")
-			return nil
+			return
 		}
 		if c.broken {
 			c.Mutex.Unlock()
-			return nil
+			return
 		}
 		if c.recv.hdr_len >= 24 {
 			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
@@ -444,15 +451,20 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 			msi := maxmsgsize(c.recv.cmd)
 			if c.recv.pl_len > msi {
 				c.DoS("Big-"+c.recv.cmd)
-				return nil
+				return
 			}
 			c.Mutex.Lock()
 			c.recv.dat = make([]byte, c.recv.pl_len)
 			c.recv.datlen = 0
 			c.Mutex.Unlock()
 		}
-		for c.recv.datlen < c.recv.pl_len {
+		if c.recv.datlen < c.recv.pl_len {
 			n, e = common.SockRead(c.Conn, c.recv.dat[c.recv.datlen:])
+			if n < 0 {
+				n = 0
+			} else {
+				timeout_or_data = true
+			}
 			if n > 0 {
 				c.Mutex.Lock()
 				c.recv.datlen += uint32(n)
@@ -460,15 +472,15 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 				if c.recv.datlen > c.recv.pl_len {
 					println(c.PeerAddr.Ip(), "is sending more of", c.recv.cmd, "then it should have", c.recv.datlen, c.recv.pl_len)
 					c.DoS("MsgSizeMismatch")
-					return nil
+					return
 				}
 			}
 			if e != nil {
 				c.HandleError(e)
-				return nil
+				return
 			}
-			if c.broken {
-				return nil
+			if c.broken || c.recv.datlen < c.recv.pl_len {
+				return
 			}
 		}
 	}
@@ -477,10 +489,10 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 	if !bytes.Equal(c.recv.hdr[20:24], sh[:4]) {
 		//println(c.PeerAddr.Ip(), "Msg checksum error")
 		c.DoS("MsgBadChksum")
-		return nil
+		return
 	}
 
-	ret := new(BCmsg)
+	ret = new(BCmsg)
 	ret.cmd = c.recv.cmd
 	ret.pl = c.recv.dat
 
@@ -492,7 +504,49 @@ func (c *OneConnection) FetchMessage() (*BCmsg) {
 
 	c.LastMsgTime = time.Now()
 
-	return ret
+	return
+}
+
+
+func (c *OneConnection) writing_thread() {
+	for !c.IsBroken() {
+		c.Mutex.Lock()
+
+		if c.SendBufProd == c.SendBufCons {
+			c.Mutex.Unlock()
+			time.Sleep(10*time.Millisecond)
+			continue
+		}
+
+		bytes_to_send := c.SendBufProd - c.SendBufCons
+		if bytes_to_send<0 {
+			bytes_to_send += SendBufSize
+		}
+		if c.SendBufCons+bytes_to_send > SendBufSize {
+			bytes_to_send = SendBufSize-c.SendBufCons
+		}
+
+		c.Mutex.Unlock()
+
+		n, e := common.SockWrite(c.Conn, c.sendBuf[c.SendBufCons:c.SendBufCons+bytes_to_send])
+		if n > 0 {
+			c.Mutex.Lock()
+			c.X.LastSent = time.Now()
+			c.X.BytesSent += uint64(n)
+			n += c.SendBufCons
+			if n >= SendBufSize {
+				c.SendBufCons = 0
+			} else {
+				c.SendBufCons = n
+			}
+			c.Mutex.Unlock()
+		} else if e != nil {
+			c.Disconnect("SendErr:"+e.Error())
+		} else  if n < 0 {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	c.writing_thread_done.Done()
 }
 
 

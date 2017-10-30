@@ -65,6 +65,8 @@ func TickSent() {
 }
 
 
+// Reads the given number of bytes, but respecting the download limit
+// Returns -1 and no error if we can't read any data now, because of bw limit
 func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
@@ -82,23 +84,23 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	dl_bytes_so_far += toread
 	bw_mutex.Unlock()
 
-	if toread>0 {
+	if toread > 0 {
 		// Wait 1 millisecond for a data, timeout if nothing there
-		con.SetReadDeadline(time.Now().Add(5*time.Millisecond))
+		con.SetReadDeadline(time.Now().Add(10*time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		DlBytesTotal += uint64(n)
 		dl_bytes_priod += uint64(n)
 		bw_mutex.Unlock()
 	} else {
-		// supsend a task for awhile, to prevent stucking in a busy loop
-		time.Sleep(5*time.Millisecond)
+		n = -1
 	}
 	return
 }
 
 
 // Send all the bytes, but respect the upload limit (force delays)
+// Returns -1 and no error if we can't send any data now, because of bw limit
 func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
@@ -117,7 +119,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// Set timeout to prevent thread from getting stuck if the other end does not read
-		con.SetWriteDeadline(time.Now().Add(5*time.Millisecond))
+		con.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		UlBytesTotal += uint64(n)
@@ -129,7 +131,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 			}
 		}
 	} else {
-		time.Sleep(5*time.Millisecond)
+		n = -1
 	}
 	return
 }

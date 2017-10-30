@@ -17,39 +17,6 @@ import (
 )
 
 
-func (c *OneConnection) SendPendingData() bool {
-	if c.SendBufProd!=c.SendBufCons {
-		bytes_to_send := c.SendBufProd-c.SendBufCons
-		if bytes_to_send<0 {
-			bytes_to_send += SendBufSize
-		}
-		if c.SendBufCons+bytes_to_send > SendBufSize {
-			bytes_to_send = SendBufSize-c.SendBufCons
-		}
-
-		n, e := common.SockWrite(c.Conn, c.sendBuf[c.SendBufCons:c.SendBufCons+bytes_to_send])
-		if n > 0 {
-			c.Mutex.Lock()
-			c.X.LastSent = time.Now()
-			c.X.BytesSent += uint64(n)
-			n += c.SendBufCons
-			if n >= SendBufSize {
-				c.SendBufCons = 0
-			} else {
-				c.SendBufCons = n
-			}
-			c.Mutex.Unlock()
-		} else if e != nil {
-			if common.DebugLevel > 0 {
-				println(c.PeerAddr.Ip(), "Connection Broken during send")
-			}
-			c.Disconnect("SendErr:"+e.Error())
-		}
-	}
-	return c.SendBufProd!=c.SendBufCons
-}
-
-
 // Call this once a minute
 func (c *OneConnection) Maintanence(now time.Time) {
 	// Disconnect and ban useless peers (such that don't send invs)
@@ -510,27 +477,30 @@ func (c *OneConnection) Run() {
 	next_tick := now
 	next_invs := now
 
+	c.writing_thread_done.Add(1)
+	go c.writing_thread()
+
 	for !c.IsBroken() {
 		if c.IsBroken() {
 			break
 		}
 
-		if c.SendPendingData() {
-			continue // Do now read the socket if we have pending data to send
+		cmd, waited := c.FetchMessage()
+
+		now = time.Now()
+		if c.X.VersionReceived && now.After(next_invs) {
+			c.SendInvs()
+			next_invs = now.Add(InvsFlushPeriod)
 		}
 
-		cmd := c.FetchMessage()
+		if now.After(next_tick) {
+			c.Tick(now)
+			next_tick = now.Add(PeerTickPeriod)
+		}
 
 		if cmd == nil {
-			now = time.Now()
-			if c.X.VersionReceived && now.After(next_invs) {
-				c.SendInvs()
-				next_invs = now.Add(InvsFlushPeriod)
-			}
-
-			if now.After(next_tick) {
-				c.Tick(now)
-				next_tick = now.Add(PeerTickPeriod)
+			if !waited {
+				time.Sleep(10 * time.Millisecond)
 			}
 			continue
 		}
@@ -714,6 +684,8 @@ func (c *OneConnection) Run() {
 				}
 		}
 	}
+
+	c.writing_thread_done.Wait()
 
 	c.Mutex.Lock()
 	MutexRcv.Lock()
