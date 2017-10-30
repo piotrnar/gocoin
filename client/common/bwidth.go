@@ -84,7 +84,7 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 
 	if toread>0 {
 		// Wait 1 millisecond for a data, timeout if nothing there
-		con.SetReadDeadline(time.Now().Add(100*time.Millisecond))
+		con.SetReadDeadline(time.Now().Add(5*time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		DlBytesTotal += uint64(n)
@@ -92,7 +92,7 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 		bw_mutex.Unlock()
 	} else {
 		// supsend a task for awhile, to prevent stucking in a busy loop
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(5*time.Millisecond)
 	}
 	return
 }
@@ -117,7 +117,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// Set timeout to prevent thread from getting stuck if the other end does not read
-		con.SetWriteDeadline(time.Now().Add(250*time.Millisecond))
+		con.SetWriteDeadline(time.Now().Add(5*time.Millisecond))
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		UlBytesTotal += uint64(n)
@@ -129,7 +129,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 			}
 		}
 	} else {
-		time.Sleep(250*time.Millisecond)
+		time.Sleep(5*time.Millisecond)
 	}
 	return
 }

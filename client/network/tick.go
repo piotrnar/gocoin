@@ -238,9 +238,9 @@ func tcp_server() {
 		ica := InConsActive
 		Mutex_net.Unlock()
 		if ica < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
-			lis.SetDeadline(time.Now().Add(time.Second))
+			lis.SetDeadline(time.Now().Add(100*time.Millisecond))
 			tc, e := lis.AcceptTCP()
-			if e == nil {
+			if e == nil && common.IsListenTCP() {
 				var terminate bool
 
 				if common.DebugLevel>0 {
@@ -519,20 +519,19 @@ func (c *OneConnection) Run() {
 			continue // Do now read the socket if we have pending data to send
 		}
 
-		now = time.Now()
-
-		if c.X.VersionReceived && now.After(next_invs) {
-			c.SendInvs()
-			next_invs = now.Add(InvsFlushPeriod)
-		}
-
-		if now.After(next_tick) {
-			c.Tick(now)
-			next_tick = now.Add(PeerTickPeriod)
-		}
-
 		cmd := c.FetchMessage()
+
 		if cmd == nil {
+			now = time.Now()
+			if c.X.VersionReceived && now.After(next_invs) {
+				c.SendInvs()
+				next_invs = now.Add(InvsFlushPeriod)
+			}
+
+			if now.After(next_tick) {
+				c.Tick(now)
+				next_tick = now.Add(PeerTickPeriod)
+			}
 			continue
 		}
 
