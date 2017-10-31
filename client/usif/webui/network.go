@@ -2,9 +2,11 @@ package webui
 
 import (
 	"fmt"
+	"html"
 	"strings"
 	"strconv"
 	"net/http"
+	"io/ioutil"
 	"encoding/json"
 	"runtime/debug"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -25,6 +27,9 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(network.BestExternalAddr()).String(), 1)
 
 	network.Mutex_net.Unlock()
+
+	d, _ := ioutil.ReadFile("friends.txt")
+	net_page = strings.Replace(net_page, "{FRIENDS_TXT}", html.EscapeString(string(d)), 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(net_page))

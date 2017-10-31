@@ -281,7 +281,7 @@ func tcp_server() {
 }
 
 
-var nextConnectFriends time.Time = time.Now()
+var NextConnectFriends time.Time = time.Now()
 
 func ConnectFriends() {
 	f, _ := os.Open("friends.txt")
@@ -403,11 +403,16 @@ func NetworkTick() {
 	}
 
 	// Connect friends
-	if time.Now().After(nextConnectFriends) {
+	TickStage = 94
+	Mutex_net.Lock()
+	if time.Now().After(NextConnectFriends) {
+		Mutex_net.Unlock()
 		TickStage = 95
 		ConnectFriends()
-		nextConnectFriends = time.Now().Add(5*time.Minute)
+		Mutex_net.Lock()
+		NextConnectFriends = time.Now().Add(5*time.Minute)
 	}
+	Mutex_net.Unlock()
 
 	TickStage = 10
 	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {

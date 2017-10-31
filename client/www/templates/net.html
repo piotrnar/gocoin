@@ -12,12 +12,30 @@ td.agent {
 </style>
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
-<input type="button" style="float:right;display:none" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
+<span style="float:right;display:none" id="connect_buttons">
+<input type="button" id="edit_friends" value="Edit Friends" onclick="edit_friends()">
+<input type="button" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
+</span>
 
 <b id="out_connections"></b> outgoing and <b id="in_connections"></b> incoming connections<br>
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 <span id="el_tcp_listen_switch" style="display:none">&nbsp;&nbsp;[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
 External address: <b>{EXTERNAL_ADDR}</b><br>
+
+<div style="display:none" id="friends_form">
+<table width="100%" cellspacing="0" cellpadding="0"><tr><td align="right">
+<form method="post" action="cfg" >
+<table cellspacing="0" cellpadding="0">
+<tr><td colspan="2" align="right">
+	<textarea name="friends_file" style="width:600px" rows="5">{FRIENDS_TXT}</textarea>
+<tr><td align="center"><i>Each line shall start with the IP address</i>
+	<td align="right">
+	<input type="button" value="Cancel" onclick="location.reload()">
+	<input type="submit" name="apply" value="Save & Connect">
+</table>
+</form>
+</table>
+</div>
 
 <div id="chart" style="height:180px;margin:2px"></div>
 
@@ -94,6 +112,9 @@ function connect_peer() {
 	}
 }
 
+function edit_friends() {
+	friends_form.style.display = 'block'
+}
 
 function freeze_stats() {
 	if (!stat_freeze.checked) {
@@ -508,7 +529,7 @@ function draw_chart() {
 }
 
 if (!server_mode) {
-	conn_peer_but.style.display = 'block'
+	connect_buttons.style.display = 'inline'
 }
 
 draw_chart()
