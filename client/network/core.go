@@ -433,8 +433,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				println("FetchMessage: Proto out of sync")
 			}
 			if c.X.IsSpecial.Get() {
-				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
-					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n)
+				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
+					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
+					c.X.LastCmdRcvd, c.X.LastBtsRcvd, c.X.LastCmdSent, c.X.LastBtsSent)
 			}
 			common.CountSafe("NetBadMagic")
 			c.Disconnect("BadMagic")
