@@ -133,7 +133,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				break
 			}*/
 			//print(c.PeerAddr.Ip(), " ", c.Node.Agent, " ", c.Node.Version, " addr local ", a.String(), "\n> ")
-		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Minute)) {
+		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Hour)) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
 				v := peersdb.PeerDB.Get(k)
