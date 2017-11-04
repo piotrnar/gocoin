@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"time"
+	"sync"
 	"bytes"
 	"io/ioutil"
 	"encoding/hex"
@@ -13,6 +14,11 @@ import (
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 )
+
+var (
+	CompactBlocksMutex sync.Mutex
+)
+
 
 type CmpctBlockCollector struct {
 	Header []byte
@@ -39,6 +45,9 @@ func (col *CmpctBlockCollector) Assemble() []byte {
 
 func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 	var er error
+
+	CompactBlocksMutex.Lock()
+	defer CompactBlocksMutex.Unlock()
 
 	crec, _, er = common.BlockChain.Blocks.BlockGetExt(hash)
 	if crec==nil{
@@ -427,17 +436,18 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	bip := c.GetBlockInProgress[idx]
 	if bip==nil {
 		c.Mutex.Unlock()
-		println(c.ConnID, "Unexpected BlkTxn1 received from", c.PeerAddr.Ip())
-		common.CountSafe("BlkTxnUnexp1")
-		c.DoS("BlkTxnErrBip")
+		println(c.ConnID, "blocktxn received from", c.PeerAddr.Ip(), "while block not in progress")
+		c.counters["BlkTxnNoBIP"]++
+		c.Misbehave("BlkTxnErrBip", 100)
 		return
 	}
 	col := bip.col
 	if col==nil {
 		c.Mutex.Unlock()
-		println("Unexpected BlockTxn2 not expected from this peer", c.PeerAddr.Ip())
+		println("blocktxn received from", c.PeerAddr.Ip(), "while we have no col object for it")
 		common.CountSafe("UnxpectedBlockTxn")
-		c.DoS("BlkTxnErrCol")
+		c.counters["BlkTxnNoCOL"]++
+		c.Misbehave("BlkTxnNoCOL", 100)
 		return
 	}
 	delete(c.GetBlockInProgress, idx)

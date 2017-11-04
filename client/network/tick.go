@@ -35,6 +35,9 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
+			if c.X.IsSpecial.Get() {
+				println(c.ConnID, "Block Timeout", v.hash.String(), " col:", v.col,  " - ", c.PeerAddr.Ip(), " / ", c.Node.Agent)
+			}
 			//println(c.ConnID, "GetBlockInProgress timeout")
 			if bip, ok := BlocksToGet[k]; ok {
 				bip.InProgress--
