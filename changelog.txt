@@ -1,4 +1,5 @@
 1.9.3:
+* Client: Added network.CompactBlocksMutex to prevent data race
 * Client/WebUI/MakeTx: For privacy, randomly modify the default SPB by up to +/- 10%
 * Client/WebUI/Network: Allows to edit "friends.txt" file
 * Client: Data is being written to peer TCP connections from a desigated threads
