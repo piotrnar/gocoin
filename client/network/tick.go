@@ -137,7 +137,6 @@ func (c *OneConnection) Tick(now time.Time) {
 }
 
 func DoNetwork(ad *peersdb.PeerAddr) {
-	var e error
 	conn := NewConnection(ad)
 	Mutex_net.Lock()
 	if _, ok := OpenCons[ad.UniqID()]; ok {
