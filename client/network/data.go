@@ -268,7 +268,9 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		return
 	}
 
-	cbip := c.BlksInProgress()
+	c.Mutex.Lock()
+	cbip := len(c.GetBlockInProgress)
+	c.Mutex.Unlock()
 	if cbip>=MAX_PEERS_BLOCKS_IN_PROGRESS {
 		c.IncCnt("FetchMaxCountInProgress", 1)
 		// wake up in a few seconds, maybe some blocks will complete by then

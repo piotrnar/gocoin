@@ -83,7 +83,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 		tlist[cnt].Ping = v.GetAveragePing()
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
-		tlist[cnt].Special = v.X.IsSpecial.Get()
+		tlist[cnt].Special = v.X.IsSpecial
 		if v.X.VersionReceived==false || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {

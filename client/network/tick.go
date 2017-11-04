@@ -35,7 +35,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
-			if c.X.IsSpecial.Get() {
+			if c.X.IsSpecial {
 				println(c.ConnID, "Block Timeout", v.hash.String(), " col:", v.col,  " - ", c.PeerAddr.Ip(), " / ", c.Node.Agent)
 			}
 			//println(c.ConnID, "GetBlockInProgress timeout")
@@ -80,7 +80,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		return
 	}
 
-	if c.X.GetHeadersInProgress.Get() && now.After(c.X.GetHeadersTimeout) {
+	if c.MutexGetBool(&c.X.GetHeadersInProgress) && now.After(c.X.GetHeadersTimeout) {
 		//println(c.ConnID, "- GetHdrs Timeout")
 		c.Disconnect("HeadersTimeout")
 		common.CountSafe("NetHeadersTout")
@@ -113,26 +113,30 @@ func (c *OneConnection) Tick(now time.Time) {
 	}
 
 	c.Mutex.Lock()
-	ahr := c.X.AllHeadersReceived
-	c.Mutex.Unlock()
-
-	if !c.X.GetHeadersInProgress.Get() && !ahr && c.BlksInProgress()==0 {
+	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress)==0 {
+		c.Mutex.Unlock()
 		c.sendGetHeaders()
+		c.Mutex.Lock()
+	} else {
+		if c.X.AllHeadersReceived {
+			if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
+				c.X.GetBlocksDataNow = true
+			}
+			if c.X.GetBlocksDataNow {
+				c.X.GetBlocksDataNow = false
+				c.Mutex.Unlock()
+				c.GetBlockData()
+				c.Mutex.Lock()
+			}
+		}
 	}
 
-	if ahr {
-		if !c.X.GetBlocksDataNow.Get() && now.After(c.nextGetData) {
-			c.X.GetBlocksDataNow.Set()
-		}
-		if c.X.GetBlocksDataNow.Get() {
-			c.X.GetBlocksDataNow.Clr()
-			c.GetBlockData()
-		}
-	}
-
-	if !c.X.GetHeadersInProgress.Get() && c.BlksInProgress()==0 {
+	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+		c.Mutex.Unlock()
 		// Ping if we dont do anything
 		c.TryPing()
+	} else {
+		c.Mutex.Unlock()
 	}
 }
 
@@ -148,7 +152,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		return
 	}
 	if ad.Friend || ad.Manual {
-		conn.X.IsSpecial.Set()
+		conn.MutexSetBool(&conn.X.IsSpecial, true)
 	}
 	OpenCons[ad.UniqID()] = conn
 	OutConsActive++
@@ -315,8 +319,10 @@ func ConnectFriends() {
 					ad.Friend = true
 					DoNetwork(ad)
 				} else {
+					curr.Mutex.Lock()
 					curr.PeerAddr.Friend = true
-					curr.X.IsSpecial.Set()
+					curr.X.IsSpecial = true
+					curr.Mutex.Unlock()
 				}
 				friend_ids[ad.UniqID()] = true
 			}
@@ -330,7 +336,7 @@ func ConnectFriends() {
 		if v.PeerAddr.Friend && !friend_ids[v.PeerAddr.UniqID()] {
 			v.PeerAddr.Friend = false
 			if !v.PeerAddr.Manual {
-				v.X.IsSpecial.Clr()
+				v.X.IsSpecial = false
 			}
 		}
 		v.Unlock()
@@ -362,7 +368,7 @@ func NetworkTick() {
 		TickStage = 31
 		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
 		TickStage = 32
-		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress.Get() {
+		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
 			if _v==nil || v.X.TotalNewHeadersCount > max_headers_got_cnt {
@@ -734,7 +740,7 @@ func (c *OneConnection) Run() {
 	if ban {
 		c.PeerAddr.Ban()
 		common.CountSafe("PeersBanned")
-	} else if c.X.Incomming && !c.X.IsSpecial.Get() {
+	} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()

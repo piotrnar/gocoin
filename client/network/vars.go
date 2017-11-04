@@ -72,7 +72,7 @@ func AddB2G(b2g *OneBlockToGet) {
 	// Trigger each connection to as the peer for block data
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		v.X.GetBlocksDataNow.Set()
+		v.MutexSetBool(&v.X.GetBlocksDataNow, true)
 	}
 	Mutex_net.Unlock()
 }

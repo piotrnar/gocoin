@@ -14,7 +14,6 @@ import (
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
@@ -94,10 +93,10 @@ type ConnectionStatus struct {
 	AllHeadersReceived bool // keep sending getheaders until this is not set
 	LastHeadersEmpty bool
 	TotalNewHeadersCount int
-	GetHeadersInProgress sys.SyncBool
+	GetHeadersInProgress bool
 	GetHeadersTimeout time.Time
 	LastHeadersHeightAsk uint32
-	GetBlocksDataNow sys.SyncBool
+	GetBlocksDataNow bool
 
 	LastSent time.Time
 	MaxSentBufSize int
@@ -114,7 +113,7 @@ type ConnectionStatus struct {
 
 	TxsReceived int // During last hour
 
-	IsSpecial sys.SyncBool // Special connections get more debgs and are not being automatically dropped
+	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
 }
 
 type ConnInfo struct {
@@ -231,12 +230,24 @@ func (v *OneConnection) IncCnt(name string, val uint64) {
 }
 
 
-func (v *OneConnection) BlksInProgress() (res int) {
+// mutex protected
+func (v *OneConnection) MutexSetBool(addr *bool, val bool) {
 	v.Mutex.Lock()
-	res = len(v.GetBlockInProgress)
+	*addr = val
+	v.Mutex.Unlock()
+}
+
+
+// mutex protected
+func (v *OneConnection) MutexGetBool(addr *bool) (val bool) {
+	v.Mutex.Lock()
+	val = *addr
 	v.Mutex.Unlock()
 	return
 }
+
+
+
 
 
 // call it with locked mutex!
@@ -345,7 +356,7 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.broken = true
@@ -364,7 +375,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -375,7 +386,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial.Get() || common.DebugLevel != 0 {
+	if c.X.IsSpecial || common.DebugLevel != 0 {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
@@ -428,15 +439,15 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return // Make sure to exit here, in case of timeout
 		}
 		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
-			c.Mutex.Unlock()
 			if common.DebugLevel >0 {
 				println("FetchMessage: Proto out of sync")
 			}
-			if c.X.IsSpecial.Get() {
+			if c.X.IsSpecial {
 				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
 					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
 					c.X.LastCmdRcvd, c.X.LastBtsRcvd, c.X.LastCmdSent, c.X.LastBtsSent)
 			}
+			c.Mutex.Unlock()
 			common.CountSafe("NetBadMagic")
 			c.Disconnect("BadMagic")
 			return

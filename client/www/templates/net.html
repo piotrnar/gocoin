@@ -307,10 +307,6 @@ function refreshconnections(force) {
 				var td, row = netcons.insertRow(-1)
 				var id = cs[i].ID
 
-				cs[i].GetHeadersInProgress = JSON.parse(cs[i].GetHeadersInProgress)
-				cs[i].GetBlocksDataNow = JSON.parse(cs[i].GetBlocksDataNow)
-				cs[i].IsSpecial = JSON.parse(cs[i].IsSpecial)
-
 				if (curr_monitor_id==id) {
 					update_connection_info(cs[i])
 					id_found = true
