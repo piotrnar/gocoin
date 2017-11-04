@@ -292,6 +292,9 @@ func ConnectFriends() {
 		return
 	}
 	defer f.Close()
+
+	friend_ids := make(map[uint64] bool)
+
 	rd := bufio.NewReader(f)
 	if rd != nil {
 		for {
@@ -313,9 +316,24 @@ func ConnectFriends() {
 					curr.PeerAddr.Friend = true
 					curr.X.IsSpecial.Set()
 				}
+				friend_ids[ad.UniqID()] = true
 			}
 		}
 	}
+
+	// Unmark those that are not longer friends
+	Mutex_net.Lock()
+	for _, v := range OpenCons {
+		v.Lock()
+		if v.PeerAddr.Friend && !friend_ids[v.PeerAddr.UniqID()] {
+			v.PeerAddr.Friend = false
+			if !v.PeerAddr.Manual {
+				v.X.IsSpecial.Clr()
+			}
+		}
+		v.Unlock()
+	}
+	Mutex_net.Unlock()
 }
 
 
