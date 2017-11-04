@@ -431,7 +431,7 @@ func NetworkTick() {
 		TickStage = 95
 		ConnectFriends()
 		Mutex_net.Lock()
-		NextConnectFriends = time.Now().Add(5*time.Minute)
+		NextConnectFriends = time.Now().Add(15*time.Minute)
 	}
 	Mutex_net.Unlock()
 
