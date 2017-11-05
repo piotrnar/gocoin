@@ -214,13 +214,11 @@ type BCmsg struct {
 
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
-	c.Mutex.Lock()
 	c.PeerAddr = ad
 	c.GetBlockInProgress = make(map[BIDX] *oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
-	c.Mutex.Unlock()
 	return
 }
 
