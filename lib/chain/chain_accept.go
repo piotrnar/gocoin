@@ -63,7 +63,7 @@ func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	cur.BlockSize = uint32(len(bl.Raw))
 	cur.TxCount = uint32(bl.TxCount)
-	if ch.BlockTreeEnd==cur.Parent {
+	if ch.LastBlock() == cur.Parent {
 		// The head of out chain - apply the transactions
 		var changes *utxo.BlockChanges
 		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
@@ -81,7 +81,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
-			ch.BlockTreeEnd = cur // Advance the head
+			ch.SetLast(cur) // Advance the head
 			if ch.CB.BlockMinedCB != nil {
 				ch.CB.BlockMinedCB(bl)
 			}
@@ -93,9 +93,9 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		ch.Blocks.BlockAdd(cur.Height, bl)
 
 		// If it has more POW than the current head, move the head to it
-		if cur.MorePOW(ch.BlockTreeEnd) {
+		if cur.MorePOW(ch.LastBlock()) {
 			ch.MoveToBlock(cur)
-			if ch.BlockTreeEnd != cur {
+			if ch.LastBlock() != cur {
 				e = errors.New("CommitBlock: MoveToBlock failed")
 			}
 		} else {

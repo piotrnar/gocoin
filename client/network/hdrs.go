@@ -190,9 +190,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		best_block = common.BlockChain.BlockTreeRoot
 	}
 
-	//best_bl_ch := len(best_block.Childs)
-	//last_block = common.BlockChain.BlockTreeEnd
-
 	var resp []byte
 	var cnt uint32
 
@@ -200,22 +197,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		// If we get a hash of an old orphaned blocks, FindPathTo() will panic, so...
 		if r := recover(); r != nil {
 			common.CountSafe("GetHeadersOrphBlk")
-			/*
-			err, ok := r.(error)
-			if !ok {
-				err = fmt.Errorf("pkg: %v", r)
-			}
-			// This happens the you receive request for headers from an orphaned block
-			fmt.Println("GetHeaders panic recovered:", err.Error())
-			fmt.Println("Cnt:", cnt, "  len(h2get):", len(h2get))
-			if best_block!=nil {
-				fmt.Println("BestBlock:", best_block.Height, best_block.BlockHash.String(),
-					len(best_block.Childs), best_bl_ch)
-			}
-			if last_block!=nil {
-				fmt.Println("LastBlock:", last_block.Height, last_block.BlockHash.String(), len(last_block.Childs))
-			}
-			*/
 		}
 
 		common.BlockChain.BlockIndexAccess.Unlock()
@@ -233,8 +214,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		}
 		best_block = best_block.FindPathTo(last_block)
 		if best_block==nil {
-			//println("FindPathTo failed", last_block.BlockHash.String(), cnt)
-			//println("resp:", hex.EncodeToString(resp))
 			break
 		}
 		resp = append(resp, append(best_block.BlockHeader[:], 0)...) // 81st byte is always zero

@@ -137,7 +137,7 @@ func HashrateToString(hr float64) string {
 // Calculates average blocks size over the last "CFG.Stat.BSizeBlks" blocks
 // Only call from blockchain thread.
 func RecalcAverageBlockSize() {
-	n := BlockChain.BlockTreeEnd
+	n := BlockChain.LastBlock()
 	var sum, cnt uint
 	for maxcnt := CFG.Stat.BSizeBlks; maxcnt>0 && n!=nil; maxcnt-- {
 		sum += uint(n.BlockSize)
@@ -145,7 +145,6 @@ func RecalcAverageBlockSize() {
 		n = n.Parent
 	}
 	if sum>0 && cnt>0 {
-		//println("The average block size is", sum/cnt, "at block height", BlockChain.BlockTreeEnd.Height)
 		AverageBlockSize.Store(int(sum/cnt))
 	} else {
 		AverageBlockSize.Store(204)

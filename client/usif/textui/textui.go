@@ -518,7 +518,7 @@ func analyze_bip9(par string) {
 					}
 				}
 			}
-			n = n.FindPathTo(common.BlockChain.BlockTreeEnd)
+			n = n.FindPathTo(common.BlockChain.LastBlock())
 		}
 		if len(bits) > 0 {
 			var s string

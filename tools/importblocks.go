@@ -52,7 +52,7 @@ func import_blockchain(dir string) {
 	for {
 		now := time.Now().UnixNano()
 		if now-prv >= 10e9 {
-			stat(now-start, now-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
+			stat(now-start, now-prv, totbytes, perbytes, chain.LastBlock().Height)
 			prv = now  // show progress each 10 seconds
 			perbytes = 0
 		}
@@ -92,7 +92,7 @@ func import_blockchain(dir string) {
 	}
 
 	stop := time.Now().UnixNano()
-	stat(stop-start, stop-prv, totbytes, perbytes, chain.BlockTreeEnd.Height)
+	stat(stop-start, stop-prv, totbytes, perbytes, chain.LastBlock().Height)
 
 	fmt.Println("Satoshi's database import finished in", (stop-start)/1e9, "seconds")
 

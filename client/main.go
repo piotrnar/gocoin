@@ -78,19 +78,20 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
-		common.Last.Block = common.BlockChain.BlockTreeEnd
+		common.Last.Block = common.BlockChain.LastBlock()
 		common.Last.Mutex.Unlock()
 
 		reset_save_timer()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
+		new_end := common.BlockChain.LastBlock()
 		common.Last.Mutex.Lock()
-		common.Last.Block = common.BlockChain.BlockTreeEnd
+		common.Last.Block = new_end
 		common.Last.Mutex.Unlock()
 		// update network.LastCommitedHeader
 		network.MutexRcv.Lock()
-		if network.LastCommitedHeader != common.BlockChain.BlockTreeEnd {
-			network.LastCommitedHeader = common.BlockChain.BlockTreeEnd
+		if network.LastCommitedHeader != new_end {
+			network.LastCommitedHeader = new_end
 			//println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
 		}
 		network.DiscardedBlocks[newbl.Hash.BIdx()] = true
@@ -201,7 +202,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
-	common.Last.Block = common.BlockChain.BlockTreeEnd
+	common.Last.Block = common.BlockChain.LastBlock()
 	common.Last.Mutex.Unlock()
 
 	msg.Done.Done()

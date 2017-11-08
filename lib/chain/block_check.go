@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
+// Make sure to call this function with ch.BlockIndexAccess locked
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
 	if len(bl.Raw)<81 {
@@ -60,9 +61,10 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 	bl.Height = prevblk.Height+1
 
 	// Reject the block if it reaches into the chain deeper than our unwind buffer
-	if prevblk!=ch.BlockTreeEnd && int(ch.BlockTreeEnd.Height)-int(bl.Height)>=MovingCheckopintDepth {
+	lst_now := ch.LastBlock()
+	if prevblk != lst_now && int(lst_now.Height)-int(bl.Height) >= MovingCheckopintDepth {
 		er = errors.New(fmt.Sprint("CheckBlock: btc.Block ", bl.Hash.String(),
-			" hooks too deep into the chain: ", bl.Height, "/", ch.BlockTreeEnd.Height, " ",
+			" hooks too deep into the chain: ", bl.Height, "/", lst_now.Height, " ",
 			btc.NewUint256(bl.ParentHash()).String(), " - RPC_Result:bad-prevblk"))
 		return
 	}

@@ -55,22 +55,22 @@ func (ch *Chain)loadBlockIndex() {
 	}
 	if tlb == nil {
 		//println("No last block - full rescan will be needed")
-		ch.BlockTreeEnd = ch.BlockTreeRoot
+		ch.SetLast(ch.BlockTreeRoot)
 		return
 	} else {
 		//println("Last Block Hash:", btc.NewUint256(tlb).String())
-		var ok bool
-		ch.BlockTreeEnd, ok = ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
+		last, ok := ch.BlockIndex[btc.NewUint256(tlb).BIdx()]
 		if !ok {
 			panic("Last Block Hash not found")
 		}
+		ch.SetLast(last)
 	}
 }
 
 func (ch *Chain) GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, er error) {
 	// Find the block with the indicated Height in the main tree
 	ch.BlockIndexAccess.Lock()
-	n := ch.BlockTreeEnd
+	n := ch.LastBlock()
 	if n.Height < BlockHeight {
 		println(n.Height, BlockHeight)
 		ch.BlockIndexAccess.Unlock()

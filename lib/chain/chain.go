@@ -18,7 +18,8 @@ type Chain struct {
 	Unspent *utxo.UnspentDB    // unspent folder
 
 	BlockTreeRoot *BlockTreeNode
-	BlockTreeEnd *BlockTreeNode
+	blockTreeEnd *BlockTreeNode
+	blockTreeAccess sync.Mutex
 	Genesis *btc.Uint256
 
 	BlockIndexAccess sync.Mutex
@@ -108,7 +109,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	}
 
 	if rescan {
-		ch.BlockTreeEnd = ch.BlockTreeRoot
+		ch.SetLast(ch.BlockTreeRoot)
 	}
 
 	if AbortNow {
@@ -126,7 +127,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
-	if end.Height > ch.BlockTreeEnd.Height {
+	if end.Height > ch.LastBlock().Height {
 		ch.ParseTillBlock(end)
 	} else {
 		ch.Unspent.LastBlockHeight = end.Height
@@ -167,9 +168,10 @@ func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
 
 // Return blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
+	last := ch.LastBlock()
 	ch.BlockIndexAccess.Lock()
 	s = fmt.Sprintf("CHAIN: blocks:%d  Height:%d  MedianTime:%d\n",
-		len(ch.BlockIndex), ch.BlockTreeEnd.Height, ch.BlockTreeEnd.GetMedianTimePast())
+		len(ch.BlockIndex), last.Height, last.GetMedianTimePast())
 	ch.BlockIndexAccess.Unlock()
 	s += ch.Blocks.GetStats()
 	s += ch.Unspent.GetStats()
@@ -207,4 +209,18 @@ func (ch *Chain) MaxBlockSigopsCost(height uint32) uint32 {
 	} else {
 		return btc.MAX_BLOCK_SIGOPS_COST
 	}
+}
+
+func (ch *Chain) LastBlock() (res *BlockTreeNode) {
+	ch.blockTreeAccess.Lock()
+	res = ch.blockTreeEnd
+	ch.blockTreeAccess.Unlock()
+	return
+}
+
+func (ch *Chain) SetLast(val *BlockTreeNode) {
+	ch.blockTreeAccess.Lock()
+	ch.blockTreeEnd = val
+	ch.blockTreeAccess.Unlock()
+	return
 }

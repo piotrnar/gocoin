@@ -31,15 +31,16 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	sta := time.Now()
 	prv := sta
 
-	for !AbortNow && ch.BlockTreeEnd != end {
+	last := ch.LastBlock()
+	for !AbortNow && last != end {
 		cur := time.Now()
 		if cur.Sub(prv) >= 10 * time.Second {
 			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
-			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s\n", ch.BlockTreeEnd.Height, end.Height, mbps)
+			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s\n", last.Height, end.Height, mbps)
 			prv = cur
 		}
 
-		nxt := ch.BlockTreeEnd.FindPathTo(end)
+		nxt := last.FindPathTo(end)
 		if nxt == nil {
 			break
 		}
@@ -82,7 +83,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
 
-		ch.BlockTreeEnd = nxt
+		ch.SetLast(nxt)
+		last = nxt
 
 		if ch.CB.BlockMinedCB != nil {
 			bl.Height = nxt.Height
@@ -91,7 +93,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		}
 	}
 
-	if !AbortNow && ch.BlockTreeEnd != end {
+	if !AbortNow && last != end {
 		end, _ = ch.BlockTreeRoot.FindFarthestNode()
 		fmt.Println("ParseTillBlock failed - now go to", end.Height)
 		ch.MoveToBlock(end)
@@ -191,7 +193,7 @@ func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 
 // returns true if the given node is on the active branch
 func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
-	top := ch.BlockTreeEnd
+	top := ch.LastBlock()
 	for {
 		if dst==top {
 			return true
@@ -207,7 +209,7 @@ func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 // Performs channel reorg
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
-	for cur.Height > ch.BlockTreeEnd.Height {
+	for cur.Height > ch.LastBlock().Height {
 		cur = cur.Parent
 
 		// if cur.TxCount is zero, it means we dont yet have this block's data
@@ -219,8 +221,8 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 		}
 	}
 
-	// At this point both "ch.BlockTreeEnd" and "cur" should be at the same height
-	for tmp := ch.BlockTreeEnd; tmp != cur; tmp = tmp.Parent {
+	// At this point both "ch.blockTreeEnd" and "cur" should be at the same height
+	for tmp := ch.LastBlock(); tmp != cur; tmp = tmp.Parent {
 		if cur.Parent.TxCount==0 {
 			fmt.Println("MoveToBlock cannot continue B")
 			fmt.Println("Trying to go:", dst.BlockHash.String())
@@ -231,7 +233,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	}
 
 	// At this point "cur" is at the highest common block
-	for ch.BlockTreeEnd != cur {
+	for ch.LastBlock() != cur {
 		if AbortNow {
 			return
 		}
@@ -242,10 +244,10 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 
 func (ch *Chain) UndoLastBlock() {
-	fmt.Println("Undo block", ch.BlockTreeEnd.Height, ch.BlockTreeEnd.BlockHash.String(),
-		ch.BlockTreeEnd.BlockSize>>10, "KB")
+	last := ch.LastBlock()
+	fmt.Println("Undo block", last.Height, last.BlockHash.String(), last.BlockSize>>10, "KB")
 
-	crec, _, er := ch.Blocks.BlockGetInternal(ch.BlockTreeEnd.BlockHash, true)
+	crec, _, er := ch.Blocks.BlockGetInternal(last.BlockHash, true)
 	if er != nil {
 		panic(er.Error())
 	}
@@ -253,8 +255,8 @@ func (ch *Chain) UndoLastBlock() {
 	bl, _ := btc.NewBlock(crec.Data)
 	bl.BuildTxList()
 
-	ch.Unspent.UndoBlockTxs(bl, ch.BlockTreeEnd.Parent.BlockHash.Hash[:])
-	ch.BlockTreeEnd = ch.BlockTreeEnd.Parent
+	ch.Unspent.UndoBlockTxs(bl, last.Parent.BlockHash.Hash[:])
+	ch.SetLast(last.Parent)
 }
 
 
@@ -302,4 +304,3 @@ func (n *BlockTreeNode)delChild(c *BlockTreeNode) {
 	}
 	n.Childs = newChds
 }
-
