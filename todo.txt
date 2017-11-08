@@ -7,6 +7,7 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
+* Implement access protection for common.config values when updating config (e.g. from WebUI)
 * WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
 * Make -nowallet mode switchable without restarting the node.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
