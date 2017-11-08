@@ -9,7 +9,6 @@ import (
 	"os"
 	"bytes"
 	"errors"
-	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 
