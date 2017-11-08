@@ -57,7 +57,9 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.DoS("InvEmpty")
 		return
 	}
+	c.Mutex.Lock()
 	c.X.InvsRecieved++
+	c.Mutex.Unlock()
 
 	cnt, of := btc.VLen(pl)
 	if len(pl) != of + 36*cnt {
