@@ -157,10 +157,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 		return
 	}
 
-	if common.DebugLevel > 1 {
-		println("GetHeaders", len(h2get), hashstop.String())
-	}
-
 	var best_block, last_block *chain.BlockTreeNode
 
 	//common.Last.Mutex.Lock()

@@ -18,9 +18,6 @@ const (
 
 func (c *OneConnection) HandlePong() {
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
-	if common.DebugLevel>1 {
-		println(c.PeerAddr.Ip(), "pong after", ms, "ms", time.Now().Sub(c.LastPingSent).String())
-	}
 	if ms==0 {
 		//println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
@@ -202,7 +199,7 @@ func drop_worst_peer() bool {
 
 
 func (c *OneConnection) TryPing() bool {
-	if common.PingPeerEvery==0 {
+	if common.GetDuration(&common.PingPeerEvery)==0 {
 		return false // pinging disabled in global config
 	}
 
@@ -210,14 +207,11 @@ func (c *OneConnection) TryPing() bool {
 		return false // insufficient protocol version
 	}
 
-	if time.Now().Before(c.LastPingSent.Add(common.PingPeerEvery)) {
+	if time.Now().Before(c.LastPingSent.Add(common.GetDuration(&common.PingPeerEvery))) {
 		return false // not yet...
 	}
 
 	if c.PingInProgress!=nil {
-		if common.DebugLevel > 0 {
-			println(c.PeerAddr.Ip(), "ping timeout")
-		}
 		common.CountSafe("PingTimeout")
 		c.HandlePong()  // this will set PingInProgress to nil
 	}

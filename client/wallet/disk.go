@@ -49,7 +49,7 @@ func Load(abort *bool) bool {
 	}
 	defer f.Close()
 
-	fmt.Println("Loading balances of", btc.UintToBtc(common.AllBalMinVal), "BTC or more from", FILE_NAME)
+	fmt.Println("Loading balances of", btc.UintToBtc(common.AllBalMinVal()), "BTC or more from", FILE_NAME)
 
 	rd := bufio.NewReader(f)
 	er = btc.ReadAll(rd, ha[:])
@@ -67,7 +67,7 @@ func Load(abort *bool) bool {
 		println(er.Error())
 		return false
 	}
-	if ui != common.AllBalMinVal {
+	if ui != common.AllBalMinVal() {
 		println(FILE_NAME, "is for different AllBalMinVal")
 		return false
 	}
@@ -241,7 +241,7 @@ func Save() {
 	sta := time.Now()
 
 	wr.Write(common.Last.Block.BlockHash.Hash[:])
-	btc.WriteVlen(wr, common.AllBalMinVal)
+	btc.WriteVlen(wr, common.AllBalMinVal())
 	wr.Write([]byte{byte(utxo.UtxoIdxLen)})
 
 	save_one_map(wr, AllBalancesP2KH, "P2KH")

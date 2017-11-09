@@ -82,9 +82,6 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 			}
 		} else {
-			if common.DebugLevel>0 {
-				println("getdata for type", typ, "not supported yet")
-			}
 			if typ>0 && typ<=3 /*3 is a filtered block(we dont support it)*/ {
 				notfound = append(notfound, h[:]...)
 			}

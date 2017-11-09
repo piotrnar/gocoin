@@ -219,14 +219,6 @@ func show_counters(par string) {
 	common.CounterMutex.Unlock()
 }
 
-func ui_dbg(par string) {
-	v, e := strconv.ParseInt(par, 10, 32)
-	if e == nil {
-		common.DebugLevel = v
-	}
-	fmt.Println("common.DebugLevel:", common.DebugLevel)
-}
-
 func show_pending(par string) {
 	network.MutexRcv.Lock()
 	for _, v := range network.BlocksToGet {
@@ -323,10 +315,10 @@ func blchain_utxodb(par string) {
 func set_ulmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		common.UploadLimit = uint(v << 10)
+		common.SetUint64(&common.UploadLimit, uint64(v << 10))
 	}
-	if common.UploadLimit != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.UploadLimit>>10)
+	if common.GetUint64(&common.UploadLimit) != 0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", common.GetUint64(&common.UploadLimit) >> 10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -335,10 +327,10 @@ func set_ulmax(par string) {
 func set_dlmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		common.DownloadLimit = uint(v << 10)
+		common.SetUint64(&common.DownloadLimit, v << 10)
 	}
-	if common.DownloadLimit != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.DownloadLimit>>10)
+	if common.GetUint64(&common.DownloadLimit) != 0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", common.GetUint64(&common.DownloadLimit) >> 10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -563,7 +555,6 @@ func init() {
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
 	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
 	newUi("counters c", false, show_counters, "Show all kind of debug counters")
-	newUi("dbg d", false, ui_dbg, "Control debugs (use numeric parameter)")
 	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")

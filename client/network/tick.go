@@ -52,7 +52,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	if len(c.blocksreceived)>0 {
 		var i int
 		for i=0; i<len(c.blocksreceived); i++ {
-			if c.blocksreceived[i].Add(common.BlockExpireEvery).After(now) {
+			if c.blocksreceived[i].Add(common.GetDuration(&common.BlockExpireEvery)).After(now) {
 				break
 			}
 			common.CountSafe("BlksRcvdExpired")
@@ -71,9 +71,6 @@ func (c *OneConnection) Tick(now time.Time) {
 		if c.X.ConnectedAt.Add(VersionMsgTimeout).Before(now) {
 			c.Disconnect("VersionTimeout")
 			common.CountSafe("NetVersionTout")
-			if common.DebugLevel > 0 {
-				println(c.PeerAddr.Ip(), "version message timeout")
-			}
 			return
 		}
 		// If we have no ack, do nothing more.
@@ -144,9 +141,6 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	conn := NewConnection(ad)
 	Mutex_net.Lock()
 	if _, ok := OpenCons[ad.UniqID()]; ok {
-		if common.DebugLevel>0 {
-			fmt.Println(ad.Ip(), "already connected")
-		}
 		common.CountSafe("ConnectingAgain")
 		Mutex_net.Unlock()
 		return
@@ -165,14 +159,8 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 			conn.Conn = con
 			conn.X.ConnectedAt = time.Now()
 			Mutex_net.Unlock()
-			if common.DebugLevel!=0 {
-				println("Connected to", ad.Ip())
-			}
 			conn.Run()
 		} else {
-			if common.DebugLevel!=0 {
-				println("Could not connect to", ad.Ip())
-			}
 			//println(e.Error())
 		}
 		Mutex_net.Lock()
@@ -219,9 +207,6 @@ func tcp_server() {
 			if e == nil && common.IsListenTCP() {
 				var terminate bool
 
-				if common.DebugLevel>0 {
-					fmt.Println("Incoming connection from", tc.RemoteAddr().String())
-				}
 				// set port to default, for incomming connections
 				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
 				if e == nil {
@@ -262,9 +247,6 @@ func tcp_server() {
 						}
 					}
 				} else {
-					if common.DebugLevel>0 {
-						println("NewPeerFromString:", e.Error())
-					}
 					common.CountSafe("InConnRefused")
 					terminate = true
 				}
@@ -403,13 +385,13 @@ func NetworkTick() {
 	if common.CFG.DropPeers.DropEachMinutes!=0 {
 	TickStage = 7
 		if next_drop_peer.IsZero() {
-			next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+			next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery))
 		} else if time.Now().After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = time.Now().Add(common.DropSlowestEvery)
+				next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery))
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = time.Now().Add(common.DropSlowestEvery >> 2)
+				next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery) >> 2)
 			}
 		}
 	}
@@ -476,9 +458,6 @@ func NetworkTick() {
 		TickStage = 121
 			common.LockCfg()
 		TickStage = 122
-			if common.CFG.ConnectOnly=="" && common.DebugLevel>0 {
-				println("no new peers", len(OpenCons), conn_cnt)
-			}
 			common.UnlockCfg()
 			break
 		}
@@ -503,7 +482,7 @@ func (c *OneConnection) Run() {
 	now := time.Now()
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
-	c.LastPingSent = now.Add(5*time.Second-common.PingPeerEvery) // do first ping ~5 seconds from now
+	c.LastPingSent = now.Add(5*time.Second-common.GetDuration(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterPeriod)
 	c.txsCha = make(chan int, TxsCounterBufLen)
@@ -552,10 +531,6 @@ func (c *OneConnection) Run() {
 		c.X.LastCmdRcvd = cmd.cmd
 		c.X.LastBtsRcvd = uint32(len(cmd.pl))
 		c.Mutex.Unlock()
-
-		if common.DebugLevel<0 {
-			fmt.Println(c.PeerAddr.Ip(), "->", cmd.cmd, len(cmd.pl))
-		}
 
 		common.CountSafe("rcvd_"+cmd.cmd)
 		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
@@ -716,9 +691,6 @@ func (c *OneConnection) Run() {
 				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			default:
-				if common.DebugLevel>0 {
-					println(cmd.cmd, "from", c.PeerAddr.Ip())
-				}
 		}
 	}
 
@@ -744,9 +716,6 @@ func (c *OneConnection) Run() {
 		HammeringMutex.Lock()
 		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
 		HammeringMutex.Unlock()
-	}
-	if common.DebugLevel!=0 {
-		println("Disconnected from", c.PeerAddr.Ip())
 	}
 	c.Conn.Close()
 }

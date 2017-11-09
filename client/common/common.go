@@ -34,8 +34,6 @@ var (
 	MaxExpireTime time.Duration
 	ExpirePerKB time.Duration
 
-	DebugLevel int64
-
 	CounterMutex sync.Mutex
 	Counter map[string] uint64 = make(map[string]uint64)
 
@@ -46,13 +44,15 @@ var (
 
 	AverageBlockSize sys.SyncInt
 
-	AllBalMinVal uint64
+	allBalMinVal uint64
 
 	DropSlowestEvery time.Duration
 	BlockExpireEvery time.Duration
 	PingPeerEvery time.Duration
 
 	UserAgent string
+
+	ListenTCP bool
 )
 
 

@@ -356,7 +356,7 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.broken = true
@@ -375,7 +375,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -386,7 +386,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial || common.DebugLevel != 0 {
+	if c.X.IsSpecial {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
@@ -439,9 +439,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return // Make sure to exit here, in case of timeout
 		}
 		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
-			if common.DebugLevel >0 {
-				println("FetchMessage: Proto out of sync")
-			}
 			if c.X.IsSpecial {
 				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
 					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
@@ -604,7 +601,7 @@ func NetCloseAll() {
 	common.NetworkClosed.Set()
 	time.Sleep(1e9) // give one second for WebUI requests to complete
 	common.LockCfg()
-	common.SetListenTCP(false, false)
+	common.ListenTCP = false
 	common.UnlockCfg()
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {

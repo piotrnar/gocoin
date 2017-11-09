@@ -194,7 +194,7 @@ func InitConfig() {
 	}
 	flag.Parse()
 
-	AllBalMinVal = CFG.AllBalances.MinValue
+	atomic.StoreUint64(&allBalMinVal, CFG.AllBalances.MinValue)
 
 	if FLAG.UndoBlocks != 0 {
 		FLAG.NoWallet = true // this will prevent loading of balances, thus speeding up the process
@@ -221,13 +221,14 @@ func SaveConfig() bool {
 
 }
 
+// make sure to call it with locked mutex_cfg
 func Reset() {
-	UploadLimit = CFG.Net.MaxUpKBps << 10
-	DownloadLimit = CFG.Net.MaxDownKBps << 10
+	UploadLimit = uint64(CFG.Net.MaxUpKBps) << 10
+	DownloadLimit = uint64(CFG.Net.MaxDownKBps) << 10
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.ExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.ExpireMinPerKB) * time.Minute
-	if AllBalMinVal != CFG.AllBalances.MinValue {
+	if AllBalMinVal() != CFG.AllBalances.MinValue {
 		fmt.Println("In order to apply the new value of AllBalMinVal, node's restart is requirted")
 	}
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
@@ -256,13 +257,11 @@ func Reset() {
 	if len(WebUIAllowed) == 0 {
 		println("WARNING: No IP is currently allowed at WebUI")
 	}
-	SetListenTCP(CFG.Net.ListenTCP, false)
+	ListenTCP = CFG.Net.ListenTCP
 
 	if CFG.UTXOSaveSec != 0 {
 		utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOSaveSec)
 	}
-
-	connect_only = CFG.ConnectOnly != ""
 
 	if CFG.UserAgent != "" {
 		UserAgent = CFG.UserAgent
@@ -273,15 +272,20 @@ func Reset() {
 	ReloadMiners()
 }
 
-func RPCPort() uint32 {
+func RPCPort() (res uint32) {
+	mutex_cfg.Lock()
+	defer mutex_cfg.Unlock()
+
 	if CFG.RPC.TCPPort != 0 {
-		return CFG.RPC.TCPPort
+		res = CFG.RPC.TCPPort
+		return
 	}
 	if CFG.Testnet {
-		return 18332
+		res = 18332
 	} else {
-		return 8332
+		res = 8332
 	}
+	return
 }
 
 // Converts an IP range to addr/mask
@@ -322,21 +326,34 @@ func CloseBlockChain() {
 	}
 }
 
-var listen_tcp uint32
-var connect_only bool // set in Reset()
-
-func IsListenTCP() bool {
-	return !connect_only && atomic.LoadUint32(&listen_tcp) != 0
+func GetDuration(addr *time.Duration) (res time.Duration) {
+	mutex_cfg.Lock()
+	res = *addr
+	mutex_cfg.Unlock()
+	return
 }
 
-func SetListenTCP(yes bool, global bool) {
-	if yes {
-		atomic.StoreUint32(&listen_tcp, 1)
-	} else {
-		atomic.StoreUint32(&listen_tcp, 0)
-	}
-	if global {
-		// Make sure mutex_cfg is locked while calling this one
-		CFG.Net.ListenTCP = yes
-	}
+func GetUint64(addr *uint64) (res uint64) {
+	mutex_cfg.Lock()
+	res = *addr
+	mutex_cfg.Unlock()
+	return
+}
+
+func SetUint64(addr *uint64, val uint64) {
+	mutex_cfg.Lock()
+	*addr = val
+	mutex_cfg.Unlock()
+	return
+}
+
+func AllBalMinVal() uint64 {
+	return atomic.LoadUint64(&allBalMinVal)
+}
+
+func IsListenTCP() (res bool) {
+	mutex_cfg.Lock()
+	res = CFG.ConnectOnly == "" && ListenTCP
+	mutex_cfg.Unlock()
+	return
 }

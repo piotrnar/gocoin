@@ -218,11 +218,6 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 			for ; end!=nil && end.Height>=bl.Height; end = end.Parent {
 				if end==bl {
 					addInvBlockBranch(invs, bl, hashstop)  // Yes - this is the main chain
-					if common.DebugLevel>0 {
-						fmt.Println(c.PeerAddr.Ip(), "getblocks from", bl.Height,
-							"stop at",  hashstop.String(), "->", len(invs), "invs")
-					}
-
 					if len(invs)>0 {
 						common.BlockChain.BlockIndexAccess.Unlock()
 

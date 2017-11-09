@@ -40,7 +40,7 @@ func FetchInitialBalance(abort *bool) {
 
 	var cur_rec, cnt_dwn, perc int
 	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap) / 100
-	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal) + " BTC or more"
+	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal()) + " BTC or more"
 	for k, v := range common.BlockChain.Unspent.HashMap {
 		if chain.AbortNow {
 			break
@@ -73,7 +73,7 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		if out == nil {
 			continue
 		}
-		if out.Value < common.AllBalMinVal {
+		if out.Value < common.AllBalMinVal() {
 			continue
 		}
 		if out.IsP2KH() {
@@ -132,7 +132,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if out == nil {
 			continue
 		}
-		if out.Value < common.AllBalMinVal {
+		if out.Value < common.AllBalMinVal() {
 			continue
 		}
 		if p2kh = out.IsP2KH(); p2kh {
@@ -280,7 +280,7 @@ func PrintStat() {
 			p2sh_outs += uint64(len(r.unsp))
 		}
 	}
-	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
+	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
 
 	fmt.Println("AllBalancesP2KH: ", len(AllBalancesP2KH), "records,",
 		p2kh_outs, "outputs," , btc.UintToBtc(p2kh_vals), "BTC,", p2kh_maps, "maps")

@@ -19,8 +19,8 @@ var (
 	dl_bytes_priod uint64
 	DlBytesTotal uint64
 
-	UploadLimit uint
-	DownloadLimit uint
+	UploadLimit uint64
+	DownloadLimit uint64
 
 	ul_last_sec int64
 	ul_bytes_so_far int

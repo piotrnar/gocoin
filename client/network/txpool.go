@@ -494,18 +494,12 @@ func isRoutable(rec *OneTxToSend) bool {
 }
 
 func RetryWaitingForInput(wtg *OneWaitingList) {
-	for k, t := range wtg.Ids {
+	for k, _ := range wtg.Ids {
 		pendtxrcv := TransactionsRejected[k].Wait4Input.TxRcvd
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
-			if common.DebugLevel > 0 {
-				fmt.Println(pendtxrcv.tx.Hash.String(), "accepted after", time.Now().Sub(t).String())
-			}
 		} else {
 			common.CountSafe("TxRetryRejected")
-			if common.DebugLevel > 0 {
-				fmt.Println(pendtxrcv.tx.Hash.String(), "still rejected", TransactionsRejected[k].Reason)
-			}
 		}
 	}
 }
@@ -547,13 +541,16 @@ func init() {
 }
 
 func expireTime(size int) (t time.Time) {
+	common.LockCfg()
 	if !common.CFG.TXPool.Enabled {
+		common.UnlockCfg()
 		return // return zero time which should expire immediatelly
 	}
 	exp := (time.Duration(size) * common.ExpirePerKB) >> 10
 	if exp > common.MaxExpireTime {
 		exp = common.MaxExpireTime
 	}
+	common.UnlockCfg()
 	return time.Now().Add(-exp)
 }
 
