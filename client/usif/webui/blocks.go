@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"sync/atomic"
 	"time"
 )
 
@@ -61,7 +60,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
-	for cnt := uint32(0); end != nil && cnt < atomic.LoadUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
+	for cnt := uint32(0); end != nil && cnt < common.GetUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			break

@@ -340,9 +340,9 @@ func GetUint64(addr *uint64) (res uint64) {
 	return
 }
 
-func SetUint64(addr *uint64, val uint64) {
+func GetUint32(addr *uint32) (res uint32) {
 	mutex_cfg.Lock()
-	*addr = val
+	res = *addr
 	mutex_cfg.Unlock()
 	return
 }

@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"strings"
 	"math/rand"
-	"sync/atomic"
 	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/client/common"
@@ -201,7 +200,7 @@ func tcp_server() {
 		Mutex_net.Lock()
 		ica := InConsActive
 		Mutex_net.Unlock()
-		if ica < atomic.LoadUint32(&common.CFG.Net.MaxInCons) {
+		if ica < common.GetUint32(&common.CFG.Net.MaxInCons) {
 			lis.SetDeadline(time.Now().Add(100*time.Millisecond))
 			tc, e := lis.AcceptTCP()
 			if e == nil && common.IsListenTCP() {
@@ -426,7 +425,7 @@ func NetworkTick() {
 	Mutex_net.Unlock()
 
 	TickStage = 10
-	for conn_cnt < atomic.LoadUint32(&common.CFG.Net.MaxOutCons) {
+	for conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
 		var segwit_conns uint32
 		if common.CFG.Net.MinSegwitCons > 0 {
 			TickStage = 11

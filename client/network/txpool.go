@@ -155,7 +155,7 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 
 // Handle incoming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
-	if uint32(len(pl)) > atomic.LoadUint32(&common.CFG.TXPool.MaxTxSize) {
+	if uint32(len(pl)) > common.GetUint32(&common.CFG.TXPool.MaxTxSize) {
 		common.CountSafe("TxRejectedBig")
 		return
 	}
@@ -480,7 +480,7 @@ func isRoutable(rec *OneTxToSend) bool {
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if uint32(len(rec.Data)) > atomic.LoadUint32(&common.CFG.TXRoute.MaxTxSize) {
+	if uint32(len(rec.Data)) > common.GetUint32(&common.CFG.TXRoute.MaxTxSize) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false
