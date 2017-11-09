@@ -288,9 +288,9 @@ func DefaultTcpPort() (res uint16) {
 		return
 	}
 	if CFG.Testnet {
-		res = 18332
+		res = 18333
 	} else {
-		res = 8332
+		res = 8333
 	}
 	return
 }
