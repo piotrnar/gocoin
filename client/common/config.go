@@ -234,15 +234,6 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
-	if CFG.Net.TCPPort != 0 {
-		DefaultTcpPort = uint16(CFG.Net.TCPPort)
-	} else {
-		if CFG.Testnet {
-			DefaultTcpPort = 18333
-		} else {
-			DefaultTcpPort = 8333
-		}
-	}
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
 	WebUIAllowed = nil
@@ -278,6 +269,22 @@ func RPCPort() (res uint32) {
 
 	if CFG.RPC.TCPPort != 0 {
 		res = CFG.RPC.TCPPort
+		return
+	}
+	if CFG.Testnet {
+		res = 18332
+	} else {
+		res = 8332
+	}
+	return
+}
+
+func DefaultTcpPort() (res uint16) {
+	mutex_cfg.Lock()
+	defer mutex_cfg.Unlock()
+
+	if CFG.RPC.TCPPort != 0 {
+		res = CFG.Net.TCPPort
 		return
 	}
 	if CFG.Testnet {

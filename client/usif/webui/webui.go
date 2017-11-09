@@ -38,12 +38,15 @@ func ipchecker(r *http.Request) bool {
 		return false
 	}
 	addr := (a<<24) | (b<<16) | (c<<8) | d
+	common.LockCfg()
 	for i := range common.WebUIAllowed {
 		if (addr&common.WebUIAllowed[i].Mask)==common.WebUIAllowed[i].Addr {
+			common.UnlockCfg()
 			r.ParseForm()
 			return true
 		}
 	}
+	common.UnlockCfg()
 	println("ipchecker:", r.RemoteAddr, "is blocked")
 	return false
 }

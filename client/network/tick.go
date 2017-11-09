@@ -180,7 +180,7 @@ var (
 
 // TCP server
 func tcp_server() {
-	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", common.DefaultTcpPort))
+	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", common.DefaultTcpPort()))
 	if e != nil {
 		println("ResolveTCPAddr", e.Error())
 		return

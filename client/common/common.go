@@ -29,8 +29,6 @@ var (
 	StartTime time.Time
 	MaxPeersNeeded int
 
-	DefaultTcpPort uint16
-
 	MaxExpireTime time.Duration
 	ExpirePerKB time.Duration
 
