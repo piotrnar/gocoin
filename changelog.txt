@@ -1,5 +1,6 @@
 1.9.3:
-* Client: Access protection for common.config values when updating config (e.g. from WebUI)
+* Client: Check nonce inside each version messages and disconnect the peer if already had it
+* Client: Redone protection os accessing values in "common" package, to prevent data race
 * Lib: "chain.BlockTreeEnd" is now only accessible through multi-thread protected methods LastBlock() and SetLast()
 * Client: Added network.CompactBlocksMutex to prevent data race
 * Client/WebUI/MakeTx: For privacy, randomly modify the default SPB by up to +/- 10%

@@ -75,6 +75,7 @@ type NetworkNodeStruct struct {
 	DoNotRelayTxs bool
 	ReportedIp4 uint32
 	SendHeaders bool
+	Nonce [8]byte
 
 	// BIP152:
 	SendCmpctVer uint64

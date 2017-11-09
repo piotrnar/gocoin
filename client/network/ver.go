@@ -48,16 +48,35 @@ func (c *OneConnection) SendVersion() {
 
 func (c *OneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
-		c.Mutex.Lock()
-		c.Node.Version = binary.LittleEndian.Uint32(pl[0:4])
 		if bytes.Equal(pl[72:80], nonce[:]) {
-			c.Mutex.Unlock()
+			common.CountSafe("VerNonceUs")
 			return errors.New("Connecting to ourselves")
 		}
+
+		// check if we don't have this nonce yet
+		Mutex_net.Lock()
+		for _, v := range OpenCons {
+			if v != c {
+				v.Mutex.Lock()
+				yes := bytes.Equal(v.Node.Nonce[:], pl[72:80])
+				v.Mutex.Unlock()
+				if yes {
+					Mutex_net.Unlock()
+					common.CountSafe("VerNonceSame")
+					return errors.New("Peer already connected")
+				}
+			}
+		}
+		Mutex_net.Unlock()
+
+		c.Mutex.Lock()
+		c.Node.Version = binary.LittleEndian.Uint32(pl[0:4])
 		if c.Node.Version < MIN_PROTO_VERSION {
 			c.Mutex.Unlock()
 			return errors.New("Client version too low")
 		}
+
+		copy(c.Node.Nonce[:], pl[72:80])
 		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
