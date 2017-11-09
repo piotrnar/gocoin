@@ -337,6 +337,8 @@ func set_dlmax(par string) {
 }
 
 func set_config(s string) {
+	common.LockCfg()
+	defer common.UnlockCfg()
 	if s != "" {
 		new := common.CFG
 		e := json.Unmarshal([]byte("{"+s+"}"), &new)
@@ -358,6 +360,8 @@ func load_config(s string) {
 		println(e.Error())
 		return
 	}
+	common.LockCfg()
+	defer common.UnlockCfg()
 	e = json.Unmarshal(d, &common.CFG)
 	if e != nil {
 		println(e.Error())
@@ -368,9 +372,11 @@ func load_config(s string) {
 }
 
 func save_config(s string) {
+	common.LockCfg()
 	if common.SaveConfig() {
 		fmt.Println("Current settings saved to", common.ConfigFile)
 	}
+	common.UnlockCfg()
 }
 
 func show_addresses(par string) {
