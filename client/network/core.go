@@ -220,6 +220,7 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
+	rand.Read(c.Node.Nonce[:])
 	return
 }
 
