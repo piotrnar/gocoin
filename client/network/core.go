@@ -496,7 +496,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				c.HandleError(e)
 				return
 			}
-			if c.broken || c.recv.datlen < c.recv.pl_len {
+			if c.MutexGetBool(&c.broken) || c.recv.datlen < c.recv.pl_len {
 				return
 			}
 		}
