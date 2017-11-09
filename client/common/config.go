@@ -283,7 +283,7 @@ func DefaultTcpPort() (res uint16) {
 	mutex_cfg.Lock()
 	defer mutex_cfg.Unlock()
 
-	if CFG.RPC.TCPPort != 0 {
+	if CFG.Net.TCPPort != 0 {
 		res = CFG.Net.TCPPort
 		return
 	}
