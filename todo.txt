@@ -7,15 +7,12 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
-* WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
-* Make -nowallet mode switchable without restarting the node.
-* Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in tick.go)
-* Make sure it does not need to "Undo block ##" after fist rejecting it with "Corrupt block received from"
-	Corrupt block received from 91.106.149.46:8333 CheckBlock() : size limits failed high - RPC_Result:bad-blk-length
-	Undo block 450529 000000000000000000cf208f521de0424677f7a87f2f278a1042f38d159565f5 976 KB
-* Implement "Child Pays for Parent Merged" (mining feature)
-* At slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
+* Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
+* Optionally use utils.GetBlockFromWeb() for initial blockchain download
+* Make "-nowallet" mode switchable without restarting the node.
+* WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
+* Uodate mining API and implement "Child Pays for Parent Merged"
 
 Wallet:
 * Implement "server mode", e.g. through TCP or serial connection
