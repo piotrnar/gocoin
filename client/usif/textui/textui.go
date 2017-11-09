@@ -315,10 +315,10 @@ func blchain_utxodb(par string) {
 func set_ulmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		common.SetUint64(&common.UploadLimit, uint64(v << 10))
+		common.SetUploadLimit(v << 10)
 	}
-	if common.GetUint64(&common.UploadLimit) != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.GetUint64(&common.UploadLimit) >> 10)
+	if common.UploadLimit() != 0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", common.UploadLimit() >> 10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -327,10 +327,10 @@ func set_ulmax(par string) {
 func set_dlmax(par string) {
 	v, e := strconv.ParseUint(par, 10, 64)
 	if e == nil {
-		common.SetUint64(&common.DownloadLimit, v << 10)
+		common.SetDownloadLimit(v << 10)
 	}
-	if common.GetUint64(&common.DownloadLimit) != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.GetUint64(&common.DownloadLimit) >> 10)
+	if common.DownloadLimit() != 0 {
+		fmt.Printf("Current upload limit is %d KB/s\n", common.DownloadLimit() >> 10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}

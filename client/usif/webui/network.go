@@ -141,10 +141,10 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	common.TickRecv()
 	common.TickSent()
 	out.Dl_speed_now = common.GetAvgBW(common.DlBytesPrevSec[:], common.DlBytesPrevSecIdx, 5)
-	out.Dl_speed_max = common.GetUint64(&common.DownloadLimit)
+	out.Dl_speed_max = common.DownloadLimit()
 	out.Dl_total = common.DlBytesTotal
 	out.Ul_speed_now = common.GetAvgBW(common.UlBytesPrevSec[:], common.UlBytesPrevSecIdx, 5)
-	out.Ul_speed_max = common.GetUint64(&common.UploadLimit)
+	out.Ul_speed_max = common.UploadLimit()
 	out.Ul_total = common.UlBytesTotal
 	common.UnlockBw()
 

@@ -2,6 +2,7 @@ package common
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 	"fmt"
 	"net"
@@ -19,8 +20,8 @@ var (
 	dl_bytes_priod uint64
 	DlBytesTotal uint64
 
-	UploadLimit uint64
-	DownloadLimit uint64
+	upload_limit uint64
+	download_limit uint64
 
 	ul_last_sec int64
 	ul_bytes_so_far int
@@ -71,10 +72,10 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
 	TickRecv()
-	if DownloadLimit==0 {
+	if DownloadLimit()==0 {
 		toread = len(buf)
 	} else {
-		toread = int(DownloadLimit) - dl_bytes_so_far
+		toread = int(DownloadLimit()) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
 		} else if toread < 0 {
@@ -105,10 +106,10 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
 	TickSent()
-	if UploadLimit==0 {
+	if UploadLimit()==0 {
 		tosend = len(buf)
 	} else {
-		tosend = int(UploadLimit) - ul_bytes_so_far
+		tosend = int(UploadLimit()) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
 		} else if tosend<0 {
@@ -166,9 +167,25 @@ func PrintStats() {
 	TickRecv()
 	TickSent()
 	fmt.Printf("Downloading at %d/%d KB/s, %s total",
-		GetAvgBW(DlBytesPrevSec[:], DlBytesPrevSecIdx, 5)>>10, DownloadLimit>>10, BytesToString(DlBytesTotal))
+		GetAvgBW(DlBytesPrevSec[:], DlBytesPrevSecIdx, 5)>>10, DownloadLimit()>>10, BytesToString(DlBytesTotal))
 	fmt.Printf("  |  Uploading at %d/%d KB/s, %s total\n",
-		GetAvgBW(UlBytesPrevSec[:], UlBytesPrevSecIdx, 5)>>10, UploadLimit>>10, BytesToString(UlBytesTotal))
+		GetAvgBW(UlBytesPrevSec[:], UlBytesPrevSecIdx, 5)>>10, UploadLimit()>>10, BytesToString(UlBytesTotal))
 	bw_mutex.Unlock()
 	return
+}
+
+func SetDownloadLimit(val uint64) {
+	atomic.StoreUint64(&download_limit, val)
+}
+
+func DownloadLimit() uint64 {
+	return atomic.LoadUint64(&download_limit)
+}
+
+func SetUploadLimit(val uint64) {
+	atomic.StoreUint64(&upload_limit, val)
+}
+
+func UploadLimit() (res uint64) {
+	return atomic.LoadUint64(&upload_limit)
 }

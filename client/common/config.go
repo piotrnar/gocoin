@@ -223,8 +223,8 @@ func SaveConfig() bool {
 
 // make sure to call it with locked mutex_cfg
 func Reset() {
-	UploadLimit = uint64(CFG.Net.MaxUpKBps) << 10
-	DownloadLimit = uint64(CFG.Net.MaxDownKBps) << 10
+	SetUploadLimit(uint64(CFG.Net.MaxUpKBps) << 10)
+	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.ExpireMaxHours) * time.Hour
 	ExpirePerKB = time.Duration(CFG.TXPool.ExpireMinPerKB) * time.Minute
