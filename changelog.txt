@@ -24,7 +24,6 @@
 * Wallet: disallow uncompressed keys, for WPKH segwit address safety
 * Client: Ignore the value of MAX_GETDATA_FORWARD when there are no blocks in progress
 * MarshalText() method madded to "sys.SyncBool" and "sys.SyncInt" (fixes WebUI issue)
-* From block #494784 onward, allow twice bigger blocks on mainnet (segwit2x)
 * Got rid of btc.MAX_BLOCK_SIZE (replaced it with btc.MAX_BLOCK_WEIGHT)
 * Lib: New "utils.GetUnspent()" function to fetch a balance from "blockexplorer.com" or "blockchain.info"
 * Tools/BalIO: Remade to use blockexplorer.com since blockr.io isn't working any more
