@@ -540,8 +540,6 @@ func (c *OneConnection) Run() {
 				c.Misbehave("VersionAgain", 1000/10)
 				break
 			}
-			c.X.VersionReceived = true
-
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
 				println("version msg error:", er.Error())

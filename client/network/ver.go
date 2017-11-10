@@ -59,7 +59,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		for _, v := range OpenCons {
 			if v != c {
 				v.Mutex.Lock()
-				yes := bytes.Equal(v.Node.Nonce[:], pl[72:80])
+				yes := v.X.VersionReceived && bytes.Equal(v.Node.Nonce[:], pl[72:80])
 				v.Mutex.Unlock()
 				if yes {
 					Mutex_net.Unlock()
@@ -105,6 +105,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				c.X.IsSpecial = true
 			}
 		}
+		c.X.VersionReceived = true
 		c.Mutex.Unlock()
 
 		if use_this_ip {
