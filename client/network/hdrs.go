@@ -118,7 +118,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 					highest_block_found = b2g.Block.Height
 				}
 				if c.Node.Height < b2g.Block.Height {
+					c.Mutex.Lock()
 					c.Node.Height = b2g.Block.Height
+					c.Mutex.Unlock()
 				}
 				c.MutexSetBool(&c.X.GetBlocksDataNow, true)
 				if b2g.TmPreproc.IsZero() { // do not overwrite TmPreproc (in case of PH_STATUS_FRESH)

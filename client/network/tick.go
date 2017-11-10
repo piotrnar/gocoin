@@ -649,7 +649,9 @@ func (c *OneConnection) Run() {
 				}
 
 			case "sendheaders":
+				c.Mutex.Lock()
 				c.Node.SendHeaders = true
+				c.Mutex.Unlock()
 
 			case "feefilter":
 				if len(cmd.pl) >= 8 {
@@ -660,15 +662,15 @@ func (c *OneConnection) Run() {
 			case "sendcmpct":
 				if len(cmd.pl)>=9 {
 					version := binary.LittleEndian.Uint64(cmd.pl[1:9])
+					c.Mutex.Lock()
 					if version > c.Node.SendCmpctVer {
 						//println(c.ConnID, "sendcmpct", cmd.pl[0])
 						c.Node.SendCmpctVer = version
 						c.Node.HighBandwidth = cmd.pl[0]==1
 					} else {
-						c.Mutex.Lock()
 						c.counters[fmt.Sprint("SendCmpctV", version)]++
-						c.Mutex.Unlock()
 					}
+					c.Mutex.Unlock()
 				} else {
 					common.CountSafe("SendCmpctErr")
 					if len(cmd.pl)!=5 {

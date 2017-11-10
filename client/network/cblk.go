@@ -235,7 +235,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
+		c.Mutex.Lock()
 		c.Node.Height = b2g.Block.Height
+		c.Mutex.Unlock()
 	}
 
 	if b2g.InProgress >= uint(common.CFG.Net.MaxBlockAtOnce) {
