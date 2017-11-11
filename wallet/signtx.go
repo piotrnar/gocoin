@@ -107,7 +107,7 @@ func write_tx_file(tx *btc.Tx) {
 	if f != nil {
 		f.Write([]byte(hex.EncodeToString(signedrawtx)))
 		f.Close()
-		fmt.Println("Transaction data stored in", hs[:8]+".txt")
+		fmt.Println("Transaction data stored in", fn)
 	}
 }
 
