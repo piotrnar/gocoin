@@ -19,6 +19,7 @@ var (
 	apply2bal bool = true
 	secret_seed []byte
 	litecoin bool = false
+	txfilename string
 )
 
 func parse_config() {
@@ -140,6 +141,7 @@ func parse_config() {
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
+	flag.StringVar(&txfilename, "txfn", "", "The this filename for output transaction (otherwise random name)")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
 	}

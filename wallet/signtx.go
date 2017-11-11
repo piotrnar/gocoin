@@ -95,7 +95,15 @@ func write_tx_file(tx *btc.Tx) {
 	hs := tx.Hash.String()
 	fmt.Println("TxID", hs)
 
-	f, _ := os.Create(hs[:8]+".txt")
+	var fn string
+
+	if txfilename == "" {
+		fn = hs[:8]+".txt"
+	} else {
+		fn = txfilename
+	}
+
+	f, _ := os.Create(fn)
 	if f != nil {
 		f.Write([]byte(hex.EncodeToString(signedrawtx)))
 		f.Close()
