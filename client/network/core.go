@@ -39,7 +39,6 @@ const (
 	MAX_GETDATA_FORWARD = 2e6 // Download up to 2MB forward (or one block)
 
 	MAINTANENCE_PERIOD = time.Minute
-	NO_INV_TIMEOUT = 15*time.Minute  // If peer sent us no "inv" for that much time, consider it useless
 
 	MAX_INV_HISTORY = 500
 

@@ -38,7 +38,7 @@ func (c *OneConnection) SendVersion() {
 	common.UnlockCfg()
 
 	binary.Write(b, binary.LittleEndian, uint32(common.Last.BlockHeight()))
-	if !common.CFG.TXPool.Enabled {
+	if !common.GetBool(&common.CFG.TXPool.Enabled) {
 		b.WriteByte(0)  // don't notify me about txs
 	}
 

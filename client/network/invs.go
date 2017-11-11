@@ -98,7 +98,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 				}
 			}
 		} else if typ==MSG_TX {
-			if common.CFG.TXPool.Enabled {
+			if common.GetBool(&common.CFG.TXPool.Enabled) {
 				MutexRcv.Lock()
 				pending_blocks := len(BlocksToGet) + CachedBlocksLen.Get() + len(NetBlocks)
 				MutexRcv.Unlock()

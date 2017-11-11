@@ -354,6 +354,13 @@ func GetUint32(addr *uint32) (res uint32) {
 	return
 }
 
+func GetBool(addr *bool) (res bool) {
+	mutex_cfg.Lock()
+	res = *addr
+	mutex_cfg.Unlock()
+	return
+}
+
 func AllBalMinVal() uint64 {
 	return atomic.LoadUint64(&allBalMinVal)
 }

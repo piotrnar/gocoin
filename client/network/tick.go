@@ -18,12 +18,6 @@ import (
 
 // Call this once a minute
 func (c *OneConnection) Maintanence(now time.Time) {
-	// Disconnect and ban useless peers (such that don't send invs)
-	if c.X.InvsRecieved==0 && c.X.ConnectedAt.Add(NO_INV_TIMEOUT).Before(now) {
-		c.DoS("PeerUseless")
-		return
-	}
-
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
@@ -594,7 +588,7 @@ func (c *OneConnection) Run() {
 				c.ProcessInv(cmd.pl)
 
 			case "tx":
-				if common.CFG.TXPool.Enabled {
+				if common.GetBool(&common.CFG.TXPool.Enabled) {
 					c.ParseTxNet(cmd.pl)
 				}
 
