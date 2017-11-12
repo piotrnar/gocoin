@@ -1,4 +1,5 @@
 1.9.3:
+* Wallet: New command line switch "-stdin" to get the seed password from stdin
 * Wallet: New command line switch "-txfn <filename>" to control the name of the output transaction file
 * Client: Check nonce inside each version messages and disconnect the peer if already had it
 * Client: Redone protection os accessing values in "common" package, to prevent data race
