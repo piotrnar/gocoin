@@ -43,6 +43,25 @@ func getpass() []byte {
 	var e error
 	var f *os.File
 
+	if stdin {
+		if *ask4pass {
+			fmt.Println("ERROR: Both -p and -stdin switches are not allowed at the same time")
+			return nil
+		}
+		d, er := ioutil.ReadAll(os.Stdin)
+		if er != nil {
+			fmt.Println("Reading from stdin:", e.Error())
+			return nil
+		}
+		n = len(d)
+		if n <= 0 {
+			return nil
+		}
+		copy(pass[:n], d)
+		sys.ClearBuffer(d)
+		goto check_pass
+	}
+
 	if !*ask4pass {
 		f, e = os.Open(PassSeedFilename)
 		if e == nil {
