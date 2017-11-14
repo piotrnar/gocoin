@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"strings"
-	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -64,8 +63,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				if yes {
 					Mutex_net.Unlock()
 					v.Mutex.Lock()
-					println("Peer with nonce", hex.EncodeToString(pl[72:80]), "from", c.PeerAddr.Ip(),
-						"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)
+					/*println("Peer with nonce", hex.EncodeToString(pl[72:80]), "from", c.PeerAddr.Ip(),
+						"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)*/
 					v.Mutex.Unlock()
 					common.CountSafe("VerNonceSame")
 					return errors.New("Peer already connected")

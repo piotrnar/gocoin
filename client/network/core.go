@@ -356,9 +356,9 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial {
+	/*if c.X.IsSpecial {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
-	}
+	}*/
 	c.broken = true
 	c.Mutex.Unlock()
 }

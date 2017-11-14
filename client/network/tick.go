@@ -536,7 +536,7 @@ func (c *OneConnection) Run() {
 			}
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
-				println("version msg error:", er.Error())
+				//println("version msg error:", er.Error())
 				c.Disconnect("Version:" + er.Error())
 				break
 			}
