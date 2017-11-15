@@ -51,7 +51,7 @@ func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
 
 	crec, _, er = common.BlockChain.Blocks.BlockGetExt(hash)
 	if crec==nil{
-		fmt.Println("BlockGetExt failed for", hash.String(), er.Error())
+		//fmt.Println("BlockGetExt failed for", hash.String(), er.Error())
 		return
 	}
 
