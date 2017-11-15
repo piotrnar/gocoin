@@ -76,7 +76,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
 			if !c.SendCmpctBlk(btc.NewUint256(h[4:])) {
-				println(c.ConnID, "asked for CmpctBlk we don't have")
+				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "asked for CmpctBlk we don't have", btc.NewUint256(h[4:]).String())
 				if c.Misbehave("GetCmpctBlk", 100) {
 					break
 				}
