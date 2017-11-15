@@ -44,12 +44,10 @@ func (col *CmpctBlockCollector) Assemble() []byte {
 }
 
 func GetchBlockForBIP152(hash *btc.Uint256) (crec *chain.BlckCachRec) {
-	var er error
-
 	CompactBlocksMutex.Lock()
 	defer CompactBlocksMutex.Unlock()
 
-	crec, _, er = common.BlockChain.Blocks.BlockGetExt(hash)
+	crec, _, _ = common.BlockChain.Blocks.BlockGetExt(hash)
 	if crec==nil{
 		//fmt.Println("BlockGetExt failed for", hash.String(), er.Error())
 		return
