@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"runtime"
 	"sync/atomic"
 	"crypto/rand"
 	"encoding/hex"
@@ -53,8 +54,33 @@ const (
 )
 
 
+type MySyncMutex struct {   // TODO: remove this after ficing the rare hanging issue
+	sync.Mutex
+}
+
 var (
-	Mutex_net sync.Mutex
+	MutFile string
+	MutLine int
+	MutLock bool
+)
+
+
+func (m *MySyncMutex) Lock() {
+	m.Mutex.Lock()
+	MutLock = true
+	_, MutFile, MutLine, _ = runtime.Caller(1)
+}
+
+
+func (m *MySyncMutex) Unlock() {
+	_, MutFile, MutLine, _ = runtime.Caller(1)
+	MutLock = false
+	m.Mutex.Unlock()
+}
+
+
+var (
+	Mutex_net MySyncMutex
 	OpenCons map[uint64]*OneConnection = make(map[uint64]*OneConnection)
 	InConsActive, OutConsActive uint32
 	LastConnId uint32

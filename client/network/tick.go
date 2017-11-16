@@ -321,10 +321,7 @@ func ConnectFriends() {
 
 
 
-var TickStage int // TODO: This is to investigate very rare hanging inside NetworkTick()
-
 func NetworkTick() {
-	TickStage = 1
 	if common.IsListenTCP() {
 		if !TCPServerStarted {
 			TCPServerStarted = true
@@ -333,16 +330,12 @@ func NetworkTick() {
 	}
 
 	// Push GetHeaders if not in progress
-	TickStage = 2
 	Mutex_net.Lock()
-	TickStage = 3
 	var cnt_headers_in_progress int
 	var max_headers_got_cnt int
 	var _v *OneConnection
 	for _, v := range OpenCons {
-		TickStage = 31
 		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
-		TickStage = 32
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -353,30 +346,23 @@ func NetworkTick() {
 		}
 		v.Mutex.Unlock()
 	}
-	TickStage = 4
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
 
 	if cnt_headers_in_progress==0 {
-	TickStage = 5
 		if _v!=nil {
 			common.CountSafe("GetHeadersPush")
 			/*println("No headers_in_progress, so take it from", _v.ConnID,
 				_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
-	TickStage = 51
 			_v.Mutex.Lock()
-	TickStage = 52
 			_v.X.AllHeadersReceived = false
 			_v.Mutex.Unlock()
 		} else {
-	TickStage = 55
 			common.CountSafe("GetHeadersNone")
 		}
 	}
 
-	TickStage = 6
 	if common.CFG.DropPeers.DropEachMinutes!=0 {
-	TickStage = 7
 		if next_drop_peer.IsZero() {
 			next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery))
 		} else if time.Now().After(next_drop_peer) {
@@ -389,14 +375,11 @@ func NetworkTick() {
 		}
 	}
 
-	TickStage = 8
 	// hammering protection - expire recently disconnected
 	if next_clean_hammers.IsZero() {
 		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
 	} else if time.Now().After(next_clean_hammers) {
-	TickStage = 9
 		HammeringMutex.Lock()
-	TickStage = 91
 		for k, t := range RecentlyDisconencted {
 			if time.Now().Sub(t) >= HammeringMinReconnect {
 				delete(RecentlyDisconencted, k)
@@ -407,22 +390,18 @@ func NetworkTick() {
 	}
 
 	// Connect friends
-	TickStage = 94
 	Mutex_net.Lock()
 	if time.Now().After(NextConnectFriends) {
 		Mutex_net.Unlock()
-		TickStage = 95
 		ConnectFriends()
 		Mutex_net.Lock()
 		NextConnectFriends = time.Now().Add(15*time.Minute)
 	}
 	Mutex_net.Unlock()
 
-	TickStage = 10
 	for conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
 		var segwit_conns uint32
 		if common.CFG.Net.MinSegwitCons > 0 {
-			TickStage = 11
 			Mutex_net.Lock()
 			for _, cc := range OpenCons {
 				cc.Mutex.Lock()
@@ -433,7 +412,6 @@ func NetworkTick() {
 			}
 			Mutex_net.Unlock()
 		}
-		TickStage = 12
 
 		adrs := peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) (bool) {
 			if segwit_conns<common.CFG.Net.MinSegwitCons && (ad.Services & SERVICE_SEGWIT)==0 {
@@ -448,20 +426,15 @@ func NetworkTick() {
 			})
 		}
 		if len(adrs)==0 {
-		TickStage = 121
 			common.LockCfg()
-		TickStage = 122
 			common.UnlockCfg()
 			break
 		}
 		DoNetwork(adrs[rand.Int31n(int32(len(adrs)))])
-		TickStage = 13
 		Mutex_net.Lock()
-		TickStage = 14
 		conn_cnt = OutConsActive
 		Mutex_net.Unlock()
 	}
-	TickStage = 0
 }
 
 
