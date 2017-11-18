@@ -210,7 +210,7 @@ func dump_addrs() {
 			fmt.Fprintln(f, pubaddr, keys[i].BtcAddr.Extra.Label)
 		}
 	}
-	if f != nil {
+ 	if f != nil {
 		f.Close()
 		fmt.Println("You can find all the addresses in wallet.txt file")
 	}
@@ -232,7 +232,7 @@ func hash_to_key_idx(h160 []byte) (res int) {
 		if bytes.Equal(keys[i].BtcAddr.Hash160[:], h160) {
 			return i
 		}
-		if bytes.Equal(segwit[i].Hash160[:], h160) {
+		if segwit[i]!=nil && bytes.Equal(segwit[i].Hash160[:], h160) {
 			return i
 		}
 	}
