@@ -436,7 +436,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	bip := c.GetBlockInProgress[idx]
 	if bip==nil {
 		c.Mutex.Unlock()
-		println(c.ConnID, "blocktxn received from", c.PeerAddr.Ip(), "while block not in progress")
+		println(c.ConnID, "BlkTxnNoBIP: ", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		c.counters["BlkTxnNoBIP"]++
 		c.Misbehave("BlkTxnErrBip", 100)
 		return
