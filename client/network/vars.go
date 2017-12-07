@@ -69,12 +69,14 @@ func AddB2G(b2g *OneBlockToGet) {
 		LowestIndexToBlocksToGet = bh
 	}
 
+	/* TODO: this was causing deadlock. Removing it for now as maybe it is not even needed.
 	// Trigger each connection to as the peer for block data
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
 		v.MutexSetBool(&v.X.GetBlocksDataNow, true)
 	}
 	Mutex_net.Unlock()
+	*/
 }
 
 func DelB2G(idx BIDX) {

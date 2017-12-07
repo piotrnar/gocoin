@@ -8,7 +8,7 @@ Lib:
 
 Client:
 * Investigate and fix issue #27
-* Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in core.go)
+* Monitor: the main loop got stuck in network.Tick() function after ~50 days of uptime (see TODO in core.go and in AddB2G function)
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Figure out a way to purge blocks that we got good headers for, but never managed to download the txs
