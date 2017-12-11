@@ -139,6 +139,9 @@ func ExpirePeers() {
 
 
 func (p *PeerAddr) Save() {
+	if p.Time > 0x80000000 {
+		println("saving dupa", int32(p.Time), p.Ip())
+	}
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
 	PeerDB.Sync()
 }
