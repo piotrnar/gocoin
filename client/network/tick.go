@@ -200,6 +200,7 @@ func tcp_server() {
 				// set port to default, for incomming connections
 				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
 				if e == nil {
+					ad.Time = uint32(time.Now().Unix())
 					// Hammering protection
 					HammeringMutex.Lock()
 					ti, ok := RecentlyDisconencted[ad.NetAddr.Ip4]
