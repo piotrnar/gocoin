@@ -439,7 +439,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if bip==nil {
 		// TODO: Investigating issue #27, thus the extended debugs...
 		println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
-		println("AAA:", c.LastAAA.Hash, "sec ago:", time.Now().Unix()-c.LastAAA.Time, " br:", c.X.BytesReceived, " bs:", c.X.BytesSent)
+		println("AAA:", c.LastAAA.Hash.String(), "sec ago:", time.Now().Unix()-c.LastAAA.Time, " br:", c.X.BytesReceived, " bs:", c.X.BytesSent)
 		println("Last command received:", c.X.LastCmdRcvd, " ", c.X.LastBtsRcvd, "bytes")
 		println("Last command sent:", c.X.LastCmdSent, " ", c.X.LastBtsSent, "bytes")
 		c.Mutex.Unlock()
