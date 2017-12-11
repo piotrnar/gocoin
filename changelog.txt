@@ -1,4 +1,7 @@
 1.9.3:
+* Lib/PeersDB: Do not add IPs (from the seed-DNS) with timestamps in a future
+* Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
+* Client: Fixed problem with returning the same command again by OneConnection.FetchMessage()
 * Wallet: New command line switch "-stdin" to get the seed password from stdin
 * Wallet: New command line switch "-txfn <filename>" to control the name of the output transaction file
 * Client: Check nonce inside each version messages and disconnect the peer if already had it
