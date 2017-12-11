@@ -50,6 +50,7 @@ func DefaultTcpPort() uint16 {
 func NewEmptyPeer() (p *PeerAddr) {
 	p = new(PeerAddr)
 	p.OnePeer = new(utils.OnePeer)
+	p.Time = uint32(time.Now().Unix())
 	return
 }
 
@@ -85,7 +86,6 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		p.Services = Services
 		copy(p.Ip6[:], ip[:12])
 		p.Port = port
-		p.Time = uint32(time.Now().Unix())
 	} else {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
 	}
@@ -240,15 +240,10 @@ func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
-			now := uint32(time.Now().Unix())
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip)==16 {
 					p := NewEmptyPeer()
-					p.Time = uint32(time.Now().Add(-3600*time.Second).Unix())
-					if p.Time > now {
-						p.Time = now
-					}
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
