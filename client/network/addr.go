@@ -91,10 +91,15 @@ func BestExternalAddr() []byte {
 
 func (c *OneConnection) SendAddr() {
 	pers := peersdb.GetBestPeers(MaxAddrsPerMessage, nil)
+	maxtime := uint32(time.Now().Unix()+3600)
 	if len(pers)>0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, uint64(len(pers)))
 		for i := range pers {
+			if pers[i].Time > maxtime {
+				println("addr", i, "time in future", pers[i].Time, maxtime, "should not happen")
+				pers[i].Time = maxtime-7200
+			}
 			binary.Write(buf, binary.LittleEndian, pers[i].Time)
 			buf.Write(pers[i].NetAddr.Bytes())
 		}
