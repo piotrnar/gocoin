@@ -124,6 +124,8 @@ func ExpirePeers() {
 		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
 			todel[delcnt] = k // we cannot call Del() from here
 			delcnt++
+		} else if ptim > uint32(now.Unix()+3600) {
+			println("expper dupa", ptim, now.Unix())
 		}
 		return 0
 	})
@@ -293,6 +295,7 @@ func InitPeers(dir string) {
 			}
 		}()
 	}
+	ExpirePeers()
 }
 
 
