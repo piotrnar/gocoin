@@ -121,11 +121,9 @@ func ExpirePeers() {
 	todel := make([]qdb.KeyType, PeerDB.Count())
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ptim := binary.LittleEndian.Uint32(v[0:4])
-		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) {
+		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) || ptim > uint32(now.Unix()+3600) {
 			todel[delcnt] = k // we cannot call Del() from here
 			delcnt++
-		} else if ptim > uint32(now.Unix()+3600) {
-			println("expper dupa", ptim, now.Unix())
 		}
 		return 0
 	})
@@ -238,11 +236,15 @@ func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
+			now := uint32(time.Now().Unix())
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip)==16 {
 					p := NewEmptyPeer()
 					p.Time = uint32(time.Now().Add(-3600*time.Second).Unix())
+					if p.Time > now {
+						p.Time = now
+					}
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
