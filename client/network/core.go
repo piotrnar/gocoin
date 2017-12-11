@@ -484,11 +484,17 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			c.Mutex.Unlock()
 			return
 		}
-		if c.recv.hdr_len >= 24 {
+		if c.recv.hdr_len == 24 {
 			c.recv.pl_len = binary.LittleEndian.Uint32(c.recv.hdr[16:20])
 			c.recv.cmd = strings.TrimRight(string(c.recv.hdr[4:16]), "\000")
+			c.Mutex.Unlock()
+		} else {
+			if c.recv.hdr_len > 24 {
+				panic("c.recv.hdr_len > 24")
+			}
+			c.Mutex.Unlock()
+			return
 		}
-		c.Mutex.Unlock()
 	}
 
 	if c.recv.pl_len > 0 {
@@ -542,10 +548,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	ret.pl = c.recv.dat
 
 	c.Mutex.Lock()
-	c.recv.cmd = "*error*"
-	c.recv.dat = nil
 	c.recv.hdr_len = 0
-	c.recv.pl_len = 0
+	c.recv.cmd = ""
+	c.recv.dat = nil
 	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
 
