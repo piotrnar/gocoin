@@ -146,6 +146,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 					a.Banned = peersdb.NewPeer(v[:]).Banned
 				}
 				a.Time = uint32(time.Now().Add(-5*time.Minute).Unix()) // add new peers as not just alive
+				if a.Time > uint32(time.Now().Unix()) {
+					println("wtf", a.Time, time.Now().Unix())
+				}
 				peersdb.PeerDB.Put(k, a.Bytes())
 			} else {
 				common.CountSafe("AddrStale")
