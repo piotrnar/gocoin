@@ -297,7 +297,6 @@ func InitPeers(dir string) {
 			}
 		}()
 	}
-	ExpirePeers()
 }
 
 
