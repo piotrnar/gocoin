@@ -1,7 +1,7 @@
 package sipasec
 
 /*
-#cgo LDFLAGS: -lsecp256k1 -lgmp
+#cgo LDFLAGS: /usr/local/lib/libsecp256k1.a
 
 #include <stdio.h>
 #include <string.h>
