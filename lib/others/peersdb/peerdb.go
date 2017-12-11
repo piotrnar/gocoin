@@ -85,6 +85,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		p.Services = Services
 		copy(p.Ip6[:], ip[:12])
 		p.Port = port
+		p.Time = uint32(time.Now().Unix())
 	} else {
 		e = errors.New("Error parsing IP '"+ipstr+"'")
 	}
