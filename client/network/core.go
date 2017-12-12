@@ -221,11 +221,6 @@ type OneConnection struct {
 
 	writing_thread_done sync.WaitGroup
 	writing_thread_push chan bool
-
-	LastAAA struct {  // TODO: Remove after fixing issue #27
-		Hash *btc.Uint256
-		Time int64
-	}
 }
 
 type BIDX [btc.Uint256IdxLen]byte

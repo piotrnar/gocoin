@@ -407,8 +407,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		b2g.InProgress++
 		c.Mutex.Lock()
 		c.GetBlockInProgress[b2g.Block.Hash.BIdx()] = &oneBlockDl{hash:b2g.Block.Hash, start:time.Now(), col:col}
-		c.LastAAA.Hash = b2g.Block.Hash
-		c.LastAAA.Time = time.Now().Unix()
 		c.Mutex.Unlock()
 		c.SendRawMsg("getblocktxn", msg.Bytes())
 		//fmt.Println(c.ConnID, "Send getblocktxn for", col.Missing, "/", shortidscnt, "missing txs.  ", msg.Len(), "bytes")
@@ -438,10 +436,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	bip := c.GetBlockInProgress[idx]
 	if bip==nil {
 		// TODO: Investigating issue #27, thus the extended debugs...
-		println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
-		println("AAA:", c.LastAAA.Hash.String(), "sec ago:", time.Now().Unix()-c.LastAAA.Time, " br:", c.X.BytesReceived, " bs:", c.X.BytesSent)
-		println("Last command received:", c.X.LastCmdRcvd, " ", c.X.LastBtsRcvd, "bytes")
-		println("Last command sent:", c.X.LastCmdSent, " ", c.X.LastBtsSent, "bytes")
+		println(c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		c.Mutex.Unlock()
 		c.counters["BlkTxnNoBIP"]++
 		c.Misbehave("BlkTxnErrBip", 100)
