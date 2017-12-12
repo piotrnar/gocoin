@@ -302,7 +302,7 @@ func str2oaa(ip string) (res *oneAllowedAddr) {
 	if n < 4 {
 		return
 	}
-	if (a|b|c|d) > 255 || n == 5 && (x < 1 || x > 32) {
+	if (a|b|c|d) > 255 || n == 5 && (x < 0 || x > 32) {
 		return
 	}
 	res = new(oneAllowedAddr)
