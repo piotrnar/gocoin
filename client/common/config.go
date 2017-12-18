@@ -138,7 +138,7 @@ func InitConfig() {
 	CFG.TXRoute.FeePerByte = 25
 	CFG.TXRoute.MaxTxSize = 100e3
 
-	CFG.Memory.GCPercTrshold = 100 // 100% (Go's default)
+	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 
 	CFG.Stat.HashrateHrs = 12
