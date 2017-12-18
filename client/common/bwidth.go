@@ -78,6 +78,9 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 		toread = int(DownloadLimit()) - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
+			if toread > 4096 {
+				toread = 4096
+			}
 		} else if toread < 0 {
 			toread = 0
 		}
@@ -112,7 +115,10 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 		tosend = int(UploadLimit()) - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
-		} else if tosend<0 {
+			if tosend > 4096 {
+				tosend = 4096
+			}
+		} else if tosend < 0 {
 			tosend = 0
 		}
 	}
