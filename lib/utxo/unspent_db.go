@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	UTXO_WRITING_TIME_TARGET = 5*time.Minute  // Take it easy with flushing UTXO.db onto disk
+	UTXO_WRITING_TIME_TARGET = 20*time.Minute  // Take it easy with flushing UTXO.db onto disk
 )
 
 type FunctionWalkUnspent func(*UtxoRec)
