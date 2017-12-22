@@ -221,12 +221,6 @@ type OneConnection struct {
 
 	writing_thread_done sync.WaitGroup
 	writing_thread_push chan bool
-
-	aaa, aaa_p int
-	LastAAA struct {  // TODO: Remove after fixing issue #27
-		Hash *btc.Uint256
-		Time int64
-	}
 }
 
 type BIDX [btc.Uint256IdxLen]byte
@@ -462,7 +456,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 		}
 		c.Mutex.Lock()
 		if n > 0 {
-			c.aaa += n
+			c.X.BytesReceived += uint64(n)
 			c.X.LastDataGot = time.Now()
 			c.recv.hdr_len += n
 		}
@@ -519,8 +513,8 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				timeout_or_data = true
 			}
 			if n > 0 {
-				c.aaa += n
 				c.Mutex.Lock()
+				c.X.BytesReceived += uint64(n)
 				c.recv.datlen += uint32(n)
 				c.Mutex.Unlock()
 				if c.recv.datlen > c.recv.pl_len {
@@ -556,10 +550,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.recv.dat = nil
 	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
-	if c.aaa_p + 24+len(ret.pl) != c.aaa {
-		println("dupa", c.aaa_p, c.aaa, ret.cmd, 24+len(ret.pl))
-	}
-	c.aaa_p = c.aaa
 
 	c.LastMsgTime = time.Now()
 
