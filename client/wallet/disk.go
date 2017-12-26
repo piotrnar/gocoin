@@ -100,6 +100,15 @@ func Load(abort *bool) bool {
 		return false
 	}
 
+	AllBalancesP2WKH, er = load_one_map(rd, "P2WKH", abort)
+	if er != nil {
+		println(er.Error())
+		return false
+	}
+	if *abort {
+		return false
+	}
+
 	er = btc.ReadAll(rd, ha[:len(END_MARKER)])
 	if er != nil {
 		println(er.Error())
@@ -246,6 +255,7 @@ func Save() {
 
 	save_one_map(wr, AllBalancesP2KH, "P2KH")
 	save_one_map(wr, AllBalancesP2SH, "P2SH")
+	save_one_map(wr, AllBalancesP2WKH, "P2WKH")
 
 	wr.Write(END_MARKER[:])
 	wr.Flush()
