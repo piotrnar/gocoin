@@ -119,7 +119,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 						} else {
 							pay_cmd += ","
 						}
-						pay_cmd += addr.Enc58str + "=" + btc.UintToBtc(am)
+						pay_cmd += addr.String() + "=" + btc.UintToBtc(am)
 
 						outs, er := btc.NewSpendOutputs(addr, am, common.CFG.Testnet)
 						if er != nil {

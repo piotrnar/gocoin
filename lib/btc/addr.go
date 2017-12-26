@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"bytes"
 	"errors"
+	"strings"
 	"math/big"
 	"encoding/hex"
 	"encoding/binary"
@@ -38,6 +39,15 @@ type SegwitProg struct {
 
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
+	if strings.HasPrefix(hs, "bc1") || strings.HasPrefix(hs, "tb1") {
+		var sw = &SegwitProg{HRP:hs[:2]}
+		sw.Version, sw.Program, e = bech32.MyDecode(sw.HRP, hs)
+		if e == nil {
+			a = &BtcAddr{SegwitProg:sw}
+		}
+		return
+	}
+
 	dec := Decodeb58(hs)
 	if dec == nil {
 		e = errors.New("Cannot decode b58 string '"+hs+"'")
@@ -235,7 +245,15 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 
 
 func (a *BtcAddr) OutScript() (res []byte) {
-	if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) || a.Version==48 /*Litecoin*/ {
+	if a.SegwitProg != nil {
+		if a.SegwitProg.Version != 0 || ( len(a.SegwitProg.Program) != 20 && len(a.SegwitProg.Program) != 32  ) {
+			panic("Only Segwit programs version 0 and length 20 or 32 supported")
+		}
+		res = make([]byte, 2 + len(a.SegwitProg.Program))
+		res[0] = 0x00 // OP_0
+		res[1] = byte(len(a.SegwitProg.Program))
+		copy(res[2:], a.SegwitProg.Program)
+	} else if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) || a.Version==48 /*Litecoin*/ {
 		res = make([]byte, 25)
 		res[0] = 0x76
 		res[1] = 0xa9
