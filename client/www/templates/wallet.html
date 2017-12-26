@@ -56,9 +56,10 @@ td.balbtc {
 }
 td.segwitaddr {
 	text-align: left;
-	//font-style:italic;
-	//font-size: 80%;
+	font-style:italic;
+	font-size: 90%;
 	color:brown;
+	white-space: nowrap;
 }
 td.segwitcnt {
 	text-align: right;
@@ -546,8 +547,8 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <th align="right">Balance&nbsp;BTC
 <th width="40">Outs
 <th width="50">
-<th width="330">Segwit Deposit Address /
-<span class="hand" onclick="p2sh_sw.click()">P2SH:</span><input id="p2sh_sw" type="checkbox" checked onchange="fetch_wallet_balance()">
+<th width="330"><span class="hand" onclick="p2sh_sw.click()">Segwit Deposit Address</span>
+<input style="float:right" id="p2sh_sw" title="P2SH-P2WPKH" type="checkbox" checked onchange="fetch_wallet_balance()">
 <th width="40">Outs
 </table>
 
