@@ -1,4 +1,4 @@
-1.9.3:
+1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
 * Client: Fixed problem with returning the same command again by OneConnection.FetchMessage()
 * Wallet: New command line switch "-stdin" to get the seed password from stdin
