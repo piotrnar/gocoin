@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	AllBalancesP2KH, AllBalancesP2SH map[[20]byte]*OneAllAddrBal
+	AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH map[[20]byte]*OneAllAddrBal
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -90,6 +90,13 @@ func NewUTXO(tx *utxo.UtxoRec) {
 				rec = &OneAllAddrBal{}
 				AllBalancesP2SH[uidx] = rec
 			}
+		} else if out.IsP2WPKH() {
+			copy(uidx[:], out.PKScr[2:22])
+			rec = AllBalancesP2WKH[uidx]
+			if rec == nil {
+				rec = &OneAllAddrBal{}
+				AllBalancesP2WKH[uidx] = rec
+			}
 		} else {
 			continue
 		}
@@ -122,7 +129,7 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	var rec *OneAllAddrBal
 	var i int
 	var nr OneAllAddrInp
-	var p2kh bool
+	var typ int // 0 - P2KH, 1 - P2SH, 2 - P2WKH
 	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
 	for vout := uint32(0); vout < uint32(len(tx.Outs)); vout++ {
 		if !outs[vout] {
@@ -135,12 +142,18 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if p2kh = out.IsP2KH(); p2kh {
+		if out.IsP2KH() {
+			typ = 0
 			copy(uidx[:], out.PKScr[3:23])
 			rec = AllBalancesP2KH[uidx]
 		} else if out.IsP2SH() {
+			typ = 1
 			copy(uidx[:], out.PKScr[2:22])
 			rec = AllBalancesP2SH[uidx]
+		} else if out.IsP2WPKH() {
+			typ = 2
+			copy(uidx[:], out.PKScr[2:22])
+			rec = AllBalancesP2WKH[uidx]
 		} else {
 			continue
 		}
@@ -160,10 +173,10 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			}
 			delete(rec.unspMap, nr)
 			if len(rec.unspMap) == 0 {
-				if p2kh {
-					delete(AllBalancesP2KH, uidx)
-				} else {
-					delete(AllBalancesP2SH, uidx)
+				switch typ {
+					case 0: delete(AllBalancesP2KH, uidx)
+					case 1: delete(AllBalancesP2SH, uidx)
+					case 2: delete(AllBalancesP2WKH, uidx)
 				}
 			} else {
 				rec.Value -= out.Value
@@ -181,10 +194,10 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			continue
 		}
 		if len(rec.unsp) == 1 {
-			if p2kh {
-				delete(AllBalancesP2KH, uidx)
-			} else {
-				delete(AllBalancesP2SH, uidx)
+			switch typ {
+				case 0: delete(AllBalancesP2KH, uidx)
+				case 1: delete(AllBalancesP2SH, uidx)
+				case 2: delete(AllBalancesP2WKH, uidx)
 			}
 		} else {
 			rec.Value -= out.Value
@@ -226,7 +239,9 @@ func (r *OneAllAddrBal) Count() int {
 
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
-	if aa.Version == btc.AddrVerPubkey(common.Testnet) {
+	if aa.SegwitProg != nil && aa.SegwitProg.Version == 0 {
+		rec = AllBalancesP2WKH[aa.Hash160]
+	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
 		rec = AllBalancesP2KH[aa.Hash160]
 	} else if aa.Version == btc.AddrVerScript(common.Testnet) {
 		rec = AllBalancesP2SH[aa.Hash160]
@@ -261,7 +276,7 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 }
 
 func PrintStat() {
-	var p2sh_maps, p2kh_maps, p2sh_outs, p2kh_outs, p2sh_vals, p2kh_vals uint64
+	var p2kh_maps, p2kh_outs, p2kh_vals uint64
 	for _, r := range AllBalancesP2KH {
 		p2kh_vals += r.Value
 		if r.unspMap != nil {
@@ -271,6 +286,8 @@ func PrintStat() {
 			p2kh_outs += uint64(len(r.unsp))
 		}
 	}
+
+	var p2sh_maps, p2sh_outs, p2sh_vals uint64
 	for _, r := range AllBalancesP2SH {
 		p2sh_vals += r.Value
 		if r.unspMap != nil {
@@ -280,6 +297,34 @@ func PrintStat() {
 			p2sh_outs += uint64(len(r.unsp))
 		}
 	}
+
+	var p2wkh_maps, p2wkh_outs, p2wkh_vals, mm uint64
+	for _, r := range AllBalancesP2WKH {
+		p2wkh_vals += r.Value
+		if r.Value > mm {
+			mm = r.Value
+		}
+		/*
+		if r.Value > 100e8 {
+			addr, _ = bech32.SegwitAddrEncode(, 0, program []int) (string, error)
+			println(btc.UintToBtc(r.Value), "BTC - recs:", len(r.unsp), " - ", )
+			r.Browse(func(v *OneAllAddrInp) {
+				if qr, vout := v.GetRec(); qr != nil {
+					if oo := qr.Outs[vout]; oo != nil {
+						println(btc.UintToBtc(oo.Value), btc.NewUint256(qr.TxID[:]).String(), vout)
+					}
+				}
+			})
+		}
+		*/
+		if r.unspMap != nil {
+			p2wkh_maps++
+			p2wkh_outs += uint64(len(r.unspMap))
+		} else {
+			p2wkh_outs += uint64(len(r.unsp))
+		}
+	}
+
 	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
 
 	fmt.Println("AllBalancesP2KH: ", len(AllBalancesP2KH), "records,",
@@ -287,4 +332,8 @@ func PrintStat() {
 
 	fmt.Println("AllBalancesP2SH: ", len(AllBalancesP2SH), "records,",
 		p2sh_outs, "outputs," , btc.UintToBtc(p2sh_vals), "BTC,", p2sh_maps, "maps")
+
+	fmt.Println("AllBalancesP2WKH: ", len(AllBalancesP2WKH), "records,",
+		p2wkh_outs, "outputs," , btc.UintToBtc(p2wkh_vals), "BTC,", p2wkh_maps, "maps")
+
 }
