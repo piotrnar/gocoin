@@ -8,6 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/utxo"
+	"github.com/piotrnar/gocoin/lib/others/bech32"
 )
 
 var (
@@ -299,24 +300,26 @@ func PrintStat() {
 	}
 
 	var p2wkh_maps, p2wkh_outs, p2wkh_vals, mm uint64
-	for _, r := range AllBalancesP2WKH {
+	for k, r := range AllBalancesP2WKH {
 		p2wkh_vals += r.Value
 		if r.Value > mm {
 			mm = r.Value
 		}
-		/*
 		if r.Value > 100e8 {
-			addr, _ = bech32.SegwitAddrEncode(, 0, program []int) (string, error)
-			println(btc.UintToBtc(r.Value), "BTC - recs:", len(r.unsp), " - ", )
+			var ints [20]int
+			for idx := range ints {
+				ints[idx] = int(k[idx])
+			}
+			addr, _ := bech32.SegwitAddrEncode(bech32.GetSegwitHRP(common.Testnet), 0, ints[:])
+			println(btc.UintToBtc(r.Value), "BTC @ addr", addr)
 			r.Browse(func(v *OneAllAddrInp) {
 				if qr, vout := v.GetRec(); qr != nil {
 					if oo := qr.Outs[vout]; oo != nil {
-						println(btc.UintToBtc(oo.Value), btc.NewUint256(qr.TxID[:]).String(), vout)
+						println("   from txid", btc.NewUint256(qr.TxID[:]).String(), vout)
 					}
 				}
 			})
 		}
-		*/
 		if r.unspMap != nil {
 			p2wkh_maps++
 			p2wkh_outs += uint64(len(r.unspMap))
