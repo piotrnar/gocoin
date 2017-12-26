@@ -17,6 +17,8 @@ type BtcAddr struct {
 	Pubkey []byte    // Unused for a stealth address
 	Enc58str string
 
+	*SegwitProg // if this is not nil, means that this is a native segwit address
+
 	*StealthAddr // if this is not nil, means that this is a stealth address
 
 	// This is used only by the client
@@ -25,6 +27,11 @@ type BtcAddr struct {
 		Wallet string
 		Virgin bool
 	}
+}
+
+type SegwitProg struct {
+	Version byte
+	Program []byte  // for version 0 (P2WPKH), the hash is stored in parent's Hash160
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
