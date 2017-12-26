@@ -1,4 +1,5 @@
 1.9.4:
+* Support for native (P2WKH) segwit addresses, in bech32 format (work in progress)
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
