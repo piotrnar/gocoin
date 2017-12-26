@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"encoding/hex"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/lib/others/bech32"
 )
 
 
@@ -30,9 +31,11 @@ type BtcAddr struct {
 }
 
 type SegwitProg struct {
+	HRP string
 	Version byte
-	Program []byte  // for version 0 (P2WPKH), the hash is stored in parent's Hash160
+	Program []byte
 }
+
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	dec := Decodeb58(hs)
@@ -109,6 +112,28 @@ func AddrVerScript(testnet bool) byte {
 
 
 func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
+	// check segwit bech32:
+	if len(scr)==0 {
+		return nil
+	}
+
+	if len(scr)>=2 && int(scr[1]) + 2 == len(scr) { // segwit program
+		sw := &SegwitProg{HRP:bech32.GetSegwitHRP(testnet), Version:scr[0]}
+		sw.Program = make([]byte, int(scr[1]))
+		copy(sw.Program, scr[2:])
+
+		str, er := bech32.MyEncode(sw.HRP, 0, sw.Program)
+		if er != nil {
+			return nil
+		}
+
+		ad := new(BtcAddr)
+		ad.Enc58str = str
+		ad.SegwitProg = sw
+
+		return ad
+	}
+
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 		return NewAddrFromHash160(scr[3:23], AddrVerPubkey(testnet))
 	} else if len(scr)==67 && scr[0]==0x41 && scr[66]==0xac {
@@ -125,7 +150,9 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 // Base58 encoded address
 func (a *BtcAddr) String() string {
 	if a.Enc58str=="" {
-		if a.StealthAddr!=nil {
+		if a.SegwitProg != nil {
+			a.Enc58str = a.SegwitProg.String()
+		} else if a.StealthAddr!=nil {
 			a.Enc58str = a.StealthAddr.String()
 		} else {
 			var ad [25]byte
@@ -294,5 +321,10 @@ func Decodeb58(s string) (res []byte) {
 		res = make([]byte, i)
 	}
 	res = append(res, bn.Bytes()...)
+	return
+}
+
+func (sw *SegwitProg) String() (res string) {
+	res, _ = bech32.MyEncode(sw.HRP, sw.Version, sw.Program)
 	return
 }
