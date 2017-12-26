@@ -173,8 +173,12 @@ func make_wallet() {
 		if len(pk.Pubkey)!=33 {
 			continue
 		}
-		h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, pk.Hash160[:]...))
-		segwit[i] = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(testnet))
+		if *bech32 {
+			segwit[i] = btc.NewAddrFromPkScript(append([]byte{0,20}, pk.Hash160[:]...), testnet)
+		} else {
+			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, pk.Hash160[:]...))
+			segwit[i] = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(testnet))
+		}
 	}
 }
 
