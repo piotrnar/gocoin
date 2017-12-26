@@ -68,6 +68,7 @@ func host_init() {
 	if !common.FLAG.NoWallet {
 		wallet.AllBalancesP2KH = make(map[[20]byte]*wallet.OneAllAddrBal)
 		wallet.AllBalancesP2SH = make(map[[20]byte]*wallet.OneAllAddrBal)
+		wallet.AllBalancesP2WKH = make(map[[20]byte]*wallet.OneAllAddrBal)
 	}
 
 	sta := time.Now()
