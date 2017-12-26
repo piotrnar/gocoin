@@ -93,6 +93,9 @@ function fetch_wallet_balance(name) {
 		fetching_balance_in_progress.abort()
 		fetching_balance_in_progress = null
 	}
+	if (name==null) {
+		name = localStorage.getItem("gocoinWalletSelected")
+	}
 
 	wallet = parse_wallet(localStorage.getItem("gocoinWal_"+name))
 	var wallet_addr = new Array()
@@ -187,17 +190,33 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = 'segwitaddr'
-				if (segwit_active && rec.SegWitAddr!='') {
-					//td.innerText = rec.SegWitAddr
-                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
-						'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr
-				}
 
-				td = row.insertCell(-1)
-				td.className = 'segwitcnt'
-				if (rec.SegWitCnt>0) {
-					td.innerText = rec.SegWitCnt
-				} else if (rec.OutCnt==0) {
+				if (p2sh_sw.checked) {
+					if (segwit_active && rec.SegWitAddr!='') {
+						//td.innerText = rec.SegWitAddr
+	                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
+							'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr
+					}
+
+					td = row.insertCell(-1)
+					td.className = 'segwitcnt'
+					if (rec.SegWitCnt>0) {
+						td.innerText = rec.SegWitCnt
+					}
+				} else {
+					if (segwit_active && rec.SegWitNativeAddr!='') {
+						//td.innerText = rec.SegWitAddr
+	                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
+							'\', \'' + rec.SegWitNativeAddr + '\')" class="hand"> ' + rec.SegWitNativeAddr
+					}
+
+					td = row.insertCell(-1)
+					td.className = 'segwitcnt'
+					if (rec.SegWitNativeCnt>0) {
+						td.innerText = rec.SegWitNativeCnt
+					}
+				}
+				if (rec.OutCnt==0) {
 					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
 				}
 
@@ -527,7 +546,8 @@ Import settings: <input type="file" id="import_file" accept=".json">
 <th align="right">Balance&nbsp;BTC
 <th width="40">Outs
 <th width="50">
-<th width="330">P2SH-WPKH  Deposit Address
+<th width="330">Segwit Deposit Address /
+<span class="hand" onclick="p2sh_sw.click()">P2SH:</span><input id="p2sh_sw" type="checkbox" checked onchange="fetch_wallet_balance()">
 <th width="40">Outs
 </table>
 
