@@ -239,7 +239,8 @@ func (r *OneAllAddrBal) Count() int {
 
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
-	if aa.SegwitProg != nil && aa.SegwitProg.Version == 0 {
+	if aa.SegwitProg != nil && aa.SegwitProg.Version == 0 && len(aa.SegwitProg.Program)==20 {
+		copy(aa.Hash160[:], aa.SegwitProg.Program)
 		rec = AllBalancesP2WKH[aa.Hash160]
 	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
 		rec = AllBalancesP2KH[aa.Hash160]

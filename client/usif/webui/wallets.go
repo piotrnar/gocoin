@@ -85,6 +85,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		OutCnt int
 		SegWitCnt int
 		SegWitAddr string
+		SegWitNativeCnt int
+		SegWitNativeAddr string
 		Outs []OneOut
 
 		PendingCnt int
@@ -153,10 +155,12 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			addr_map[string(aa.OutScript())] = a
 		}
 
-		/* Segwit P2WPKH: */
-		if aa.Version==btc.AddrVerPubkey(common.Testnet) {
-			// SegWit if applicable
-			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, aa.Hash160[:]...))
+		/* For P2KH addr, we wlso check its segwit's P2SH-P2WPKH and Native P2WPKH */
+		if aa.SegwitProg == nil && aa.Version == btc.AddrVerPubkey(common.Testnet) {
+			p2kh := aa.Hash160
+
+			// P2SH SegWit if applicable
+			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, p2kh[:]...))
 			aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
 			newrec.SegWitAddr = aa.String()
 			unsp = wallet.GetAllUnspent(aa)
@@ -193,6 +197,45 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			if mempool {
 				addr_map[string(aa.OutScript())] = a
 			}
+
+			// Native SegWit if applicable
+			aa = btc.NewAddrFromPkScript(append([]byte{0,20}, p2kh[:]...), common.Testnet)
+			newrec.SegWitNativeAddr = aa.String()
+			unsp = wallet.GetAllUnspent(aa)
+			if len(unsp) > 0 {
+				newrec.OutCnt += len(unsp)
+				newrec.SegWitNativeCnt = len(unsp)
+				as := aa.String()
+				for _, u := range unsp {
+					newrec.Value += u.Value
+					network.TxMutex.Lock()
+					_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
+					network.TxMutex.Unlock()
+					if spending {
+						newrec.SpendingValue += u.Value
+						newrec.SpendingCnt++
+					}
+					if !summary {
+						txid := btc.NewUint256(u.TxPrevOut.Hash[:])
+						var rawtx string
+						if getrawtx {
+							dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
+							if er == nil {
+								rawtx = hex.EncodeToString(dat)
+							}
+						}
+						newrec.Outs = append(newrec.Outs, OneOut{
+							TxId : txid.String(), Vout : u.Vout,
+							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
+							Message: html.EscapeString(string(u.Message)), Addr:as,
+							Spending:spending, RawTx:rawtx})
+					}
+				}
+			}
+			if mempool {
+				addr_map[string(aa.OutScript())] = a
+			}
+
 		}
 	}
 
