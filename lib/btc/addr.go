@@ -32,7 +32,7 @@ type BtcAddr struct {
 
 type SegwitProg struct {
 	HRP string
-	Version byte
+	Version int
 	Program []byte
 }
 
@@ -117,12 +117,10 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 		return nil
 	}
 
-	if len(scr)>=2 && int(scr[1]) + 2 == len(scr) { // segwit program
-		sw := &SegwitProg{HRP:bech32.GetSegwitHRP(testnet), Version:scr[0]}
-		sw.Program = make([]byte, int(scr[1]))
-		copy(sw.Program, scr[2:])
+	if version, program := IsWitnessProgram(scr); program != nil {
+		sw := &SegwitProg{HRP:bech32.GetSegwitHRP(testnet), Version:version, Program:program}
 
-		str, er := bech32.MyEncode(sw.HRP, 0, sw.Program)
+		str, er := bech32.MyEncode(sw.HRP, version, program)
 		if er != nil {
 			return nil
 		}
