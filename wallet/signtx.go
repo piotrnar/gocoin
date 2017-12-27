@@ -50,6 +50,12 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 				all_signed = false
 				continue
 			}
+
+			ver, segwit_prog := btc.IsWitnessProgram(uo.Pk_script)
+			if len(segwit_prog)==20 && ver==0 {
+				copy(adr.Hash160[:], segwit_prog) // native segwith P2WPKH output
+			}
+
 			k_idx := hash_to_key_idx(adr.Hash160[:])
 			if k_idx < 0 {
 				fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
@@ -58,7 +64,9 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			}
 			var er error
 			k := keys[k_idx]
-			if adr.String()==segwit[k_idx].String() {
+			if segwit_prog != nil {
+				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+			} else if adr.String()==segwit[k_idx].String() {
 				tx.TxIn[in].ScriptSig = append([]byte{22,0,20}, k.BtcAddr.Hash160[:]...)
 				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
 			} else {

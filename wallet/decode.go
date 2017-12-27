@@ -195,7 +195,9 @@ func dump_raw_tx() {
 					unsigned++
 				}
 			} else {
-				unsigned++
+				if tx.SegWit==nil || len(tx.SegWit[i]) < 2 {
+					unsigned++
+				}
 			}
 
 			if tx.SegWit!=nil {

@@ -272,6 +272,10 @@ func pkscr_to_key(scr []byte) *btc.PrivateAddr {
 	if len(scr)==23 && scr[0]==0xa9 && scr[22]==0x87 {
 		return hash_to_key(scr[2:22])
 	}
+	// P2WPKH
+	if len(scr)==22 && scr[0]==0x00 && scr[1]==0x14 {
+		return hash_to_key(scr[2:])
+	}
 	return nil
 }
 
