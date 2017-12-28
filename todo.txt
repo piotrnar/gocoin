@@ -7,6 +7,7 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
+* WebUI/MakeTx: fix calculating tx size for P2WPKH inputs and outputs
 * Add "P2PKH -> P2WPKH" address translation to WebUI/MakeTX
 * Auto refresh "Own TXs" after bloadcasting a tx
 * Use different "friends.txt" for testnet
