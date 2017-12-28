@@ -295,11 +295,28 @@ function recalc_inputs() {
 	recalc_to_pay()
 }
 
+function addr2outsize(ad) {
+	if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
+		return 8+22
+	}
+	switch (ad[0]) {
+		case '1':
+		case 'm':
+		case 'n':
+			return 8+25
+		case '2':
+		case '3':
+			return 8+23
+	}
+	return AvgOutputSize
+}
+
 
 function recalc_to_pay() {
 	var el, v, fee, totsend=0
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
+	var first_input_addr = ''
 
 	fee = val2int(txfee.value)
 
@@ -310,19 +327,29 @@ function recalc_to_pay() {
 			el.classList.add('err')
 			butdisabled = true
 			document.getElementById('mbtc_out'+idx).value = ''
+			ets_bytes += AvgOutputSize
 		} else {
 			el.classList.remove('err')
 			totsend += v
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
-			if (document.getElementById('inadr'+idx).value.length > 50) {
-				ets_bytes += StealthIndexLen // long string = stealth address
+			var ad = document.getElementById('inadr'+idx).value
+			if (ad.length > 50) {
+				ets_bytes += StealthIndexLen + 8+25 // long string = stealth address (+P2KH)
+			} else {
+				ets_bytes += addr2outsize(ad)
+				if (first_input_addr=='')  first_input_addr=ad
 			}
 		}
-		ets_bytes += AvgOutputSize // TODO: do not use AvgOutputSize but check the type (P2KH / P2SH / P2WKH)
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {
-		ets_bytes += AvgOutputSize
+		var ad = changeaddrsel.selectedIndex
+		if (ad!=0) {
+			ad = changeaddrsel.options[ad].value
+			ets_bytes += addr2outsize(ad)
+		} else {
+			ets_bytes += addr2outsize(first_input_addr)
+		}
 	}
 
 	if (auto_adjust_fee.checked) {
@@ -657,7 +684,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 
 <tr title="Transaction change">
 	<td>Change
-	<td><select name="change" style="width:100%" id="changeaddrsel">
+	<td><select name="change" style="width:100%" id="changeaddrsel" onchange="recalc_to_pay()">
 			<option value="">The first input's address</option>
 		</select>
 	<td class="r">
