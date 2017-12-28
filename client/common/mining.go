@@ -105,7 +105,7 @@ func GetAverageFee() (float64) {
 	AverageFeeBytes = 0
 	AverageFeeTotal = 0
 
-	for blocks>0 {
+	for blocks > 0 {
 		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			return 0
@@ -116,10 +116,15 @@ func GetAverageFee() (float64) {
 		}
 
 		cbasetx, cbasetxlen := btc.NewTx(bl[block.TxOffset:])
+		var fees_from_this_block int64
 		for o := range cbasetx.TxOut {
-			AverageFeeTotal += cbasetx.TxOut[o].Value
+			fees_from_this_block += int64(cbasetx.TxOut[o].Value)
 		}
-		AverageFeeTotal -= btc.GetBlockReward(end.Height)
+		fees_from_this_block -= int64(btc.GetBlockReward(end.Height))
+
+		if fees_from_this_block > 0 {
+			AverageFeeTotal += uint64(fees_from_this_block)
+		}
 
 		AverageFeeBytes += uint64(len(bl)-block.TxOffset-cbasetxlen) /*do not count block header and conibase tx */
 
