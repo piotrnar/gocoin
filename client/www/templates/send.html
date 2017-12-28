@@ -159,7 +159,8 @@ function fetch_wallet_balance(name) {
 						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
 							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
 							'addr':wallet[i].addr, 'label':wallet[i].label,
-							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message})
+							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message,
+							'type':rec.Outs[ii].AddrType})
 					}
 				}
 				totbtc += rec.Value
@@ -171,12 +172,12 @@ function fetch_wallet_balance(name) {
 
 			outcnt_val.value = outs.length
 			for (i in outs) {
-				var segwit_mode = outs[i].addr2!=outs[i].addr
 				var row_number = parseInt(i)+1
 				var inp,  td, row = unspent.insertRow(-1)
 				row.className = "how"
-				row["addr"] = outs[i].addr
+				row["addr"] = outs[i].addr2
 				row["value"] = outs[i].value
+				row["label"] = outs[i].label
 
 				inp = document.createElement('input')
 				inp.type = 'hidden'
@@ -193,7 +194,15 @@ function fetch_wallet_balance(name) {
 				inp = document.createElement('input')
 				inp.type = 'hidden'
 				inp.id = "txsigsiz"+row_number
-				inp.value = segwit_mode ? 50 : 107
+				if (outs[i].type=="P2PKH") {
+					inp.value = 107
+				} else if (outs[i].type=="P2SH-P2WPKH") {
+					inp.value = 51
+				} else if (outs[i].type=="P2WPKH") {
+					inp.value = 28
+				} else {
+					inp.value = 200
+				}
 				row.appendChild(inp)
 
 				td = row.insertCell(-1)
@@ -221,20 +230,14 @@ function fetch_wallet_balance(name) {
 				td.className = 'bold hand'
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
-				var wpkh = false
-				if (segwit_mode) {
-					td.classList.add('WPKH')
-					td.innerText = outs[i].addr2
-					td.title = outs[i].addr
-					wpkh = true
-				} else {
-					td.innerText = outs[i].addr
-				}
+				td.classList.add(outs[i].type)
+				td.innerText = outs[i].addr2
+				td.title = outs[i].addr
 
 				td = row.insertCell(-1)
 				td.className = 'hand'
 				td["row_number"] = row_number
-				td.addEventListener('click', selectadr)
+				td.addEventListener('click', selectlabel)
 				td.innerText = outs[i].label
 
 				td = row.insertCell(-1)
@@ -254,14 +257,6 @@ function fetch_wallet_balance(name) {
 				inp.name = "txout"+row_number
 				inp.onchange = recalc_inputs
 				td.appendChild(inp)
-
-				if (wpkh) {
-					inp = document.createElement("input")
-					inp.type = "hidden"
-					inp.name = "wpkh"+row_number
-					inp.value = "true"
-					td.appendChild(inp)
-				}
 			}
 
 			total_btc.innerText = val2str(totbtc)
@@ -318,7 +313,7 @@ function recalc_to_pay() {
 				ets_bytes += StealthIndexLen // long string = stealth address
 			}
 		}
-		ets_bytes += AvgOutputSize
+		ets_bytes += AvgOutputSize // TODO: do not use AvgOutputSize but check the type (P2KH / P2SH / P2WKH)
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {
@@ -551,6 +546,18 @@ function selectadr() {
 	var chkd = document.getElementById('txout'+idx).checked
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (unspent.rows[i].addr==addr) {
+			document.getElementById('txout'+i).checked = !chkd
+		}
+	}
+	recalc_inputs()
+}
+
+function selectlabel() {
+	var idx = this.row_number
+	var label = unspent.rows[idx].label
+	var chkd = document.getElementById('txout'+idx).checked
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (unspent.rows[i].label==label) {
 			document.getElementById('txout'+i).checked = !chkd
 		}
 	}

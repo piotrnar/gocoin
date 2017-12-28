@@ -257,6 +257,7 @@ func dump_raw_tx() {
 	} else {
 		fmt.Println("WARNING: Unable to figure out what the fee is")
 	}
+	fmt.Println("Transaction Size:", tx.Size, "   NoWitSize:", tx.NoWitSize, "   VSize:", tx.VSize())
 
 	if !tx.IsCoinBase() {
 		if unsigned>0 {

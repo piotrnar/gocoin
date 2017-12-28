@@ -41,6 +41,18 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+func getaddrtype(aa *btc.BtcAddr) string {
+	if aa.SegwitProg != nil && aa.SegwitProg.Version == 0 && len(aa.SegwitProg.Program)==20 {
+		return "P2WPKH"
+	}
+	if aa.Version == btc.AddrVerPubkey(common.Testnet) {
+		return "P2PKH"
+	}
+	if aa.Version == btc.AddrVerScript(common.Testnet) {
+		return "P2SH"
+	}
+	return "unknown"
+}
 
 func json_balance(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
@@ -76,6 +88,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		Coinbase bool
 		Message string
 		Addr string
+		AddrType string
 		Spending bool // if true the spending tx is in the mempool
 		RawTx string `json:",omitempty"`
 	}
@@ -144,7 +157,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 						TxId : btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout : u.Vout,
 						Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
 						Message: html.EscapeString(string(u.Message)), Addr:a, Spending:spending,
-						RawTx:rawtx})
+						RawTx:rawtx, AddrType:getaddrtype(aa)})
 				}
 			}
 		}
@@ -190,7 +203,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 							TxId : txid.String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr:as,
-							Spending:spending, RawTx:rawtx})
+							Spending:spending, RawTx:rawtx, AddrType:"P2SH-P2WPKH"})
 					}
 				}
 			}
@@ -228,7 +241,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 							TxId : txid.String(), Vout : u.Vout,
 							Value : u.Value, Height : u.MinedAt, Coinbase : u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr:as,
-							Spending:spending, RawTx:rawtx})
+							Spending:spending, RawTx:rawtx, AddrType:"P2WPKH"})
 					}
 				}
 			}
