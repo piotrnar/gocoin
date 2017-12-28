@@ -152,7 +152,11 @@ func RecalcAverageBlockSize() {
 func GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, er error) {
 	data, er = BlockChain.GetRawTx(BlockHeight, txid)
 	if er!=nil {
-		data = utils.GetTxFromWeb(txid)
+		if Testnet {
+			data = utils.GetTestnetTxFromWeb(txid)
+		} else {
+			data = utils.GetTxFromWeb(txid)
+		}
 		if data!=nil {
 			er = nil
 		} else {

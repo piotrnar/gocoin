@@ -2,6 +2,8 @@
 * Added support for native segwit addresses (P2WPKH)
 * Client: Removed extra code added to investigate "the main loop got stuck in network.Tick()" problem (seems to be fixed now)
 * Client: Fixed problem with calculating insanely high average fee (seen on testnet @ block 1256442)
+* Client: When fetching balance, download missging txs from www also for testnet
+* "lib/ltc" package moved to "lib/others/ltc"
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()

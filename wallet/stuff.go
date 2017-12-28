@@ -8,7 +8,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/ltc"
+	"github.com/piotrnar/gocoin/lib/others/ltc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/bech32"
 )

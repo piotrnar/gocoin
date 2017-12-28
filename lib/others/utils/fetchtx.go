@@ -10,8 +10,13 @@ import (
 )
 
 // Download (and re-assemble) raw transaction from blockexplorer.com
-func GetTxFromExplorer(txid *btc.Uint256) (rawtx []byte) {
-	url := "http://blockexplorer.com/api/rawtx/" + txid.String()
+func GetTxFromExplorer(txid *btc.Uint256, testnet bool) (rawtx []byte) {
+	var url string
+	if testnet {
+		url = "http://testnet.blockexplorer.com/api/rawtx/" + txid.String()
+	} else {
+		url = "http://blockexplorer.com/api/rawtx/" + txid.String()
+	}
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
@@ -75,7 +80,7 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 
 // Download raw transaction from a web server (try one after another)
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	raw = GetTxFromExplorer(txid)
+	raw = GetTxFromExplorer(txid, false)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
 		//println("GetTxFromExplorer - OK")
 		return
@@ -90,6 +95,18 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockchainInfo(txid)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
 		//println("GetTxFromBlockchainInfo - OK")
+		return
+	}
+
+	return
+}
+
+
+// Download testnet's raw transaction from a web server
+func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
+	raw = GetTxFromExplorer(txid, true)
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromExplorer - OK")
 		return
 	}
 

@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/ltc"
+	"github.com/piotrnar/gocoin/lib/others/ltc"
 )
 
 
