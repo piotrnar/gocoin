@@ -1,4 +1,5 @@
 <script type="text/javascript" src="webui/crypto.js"></script>
+<script type="text/javascript" src="webui/bech32.js"></script>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
@@ -34,6 +35,7 @@ var wallet = new Array()
 var addrbook = new Array()
 var basic_addrbook_len = 0 // without the wallets virgin addrs
 var auto_transalte_to_segwit = false
+var auto_transalte_to_segwit_p2sh = false
 
 const ADDR_LIST_SIZE = 15
 
@@ -49,7 +51,7 @@ function build_change_list() {
 		}
 
 		if (auto_transalte_to_segwit) {
-			wpkh = p2kh_to_wpkh(wallet[i].addr)
+			wpkh = p2kh_to_witness(wallet[i].addr)
 		}
 
 		if (wpkh != '') {
@@ -127,6 +129,9 @@ function show_input_tx() {
 function fetch_wallet_balance(name) {
 	var curr_wallet_raw = localStorage.getItem("gocoinWal_"+name)
 	auto_transalte_to_segwit = curr_wallet_raw.indexOf("Auto-translate to SegWit") != -1
+	if (auto_transalte_to_segwit) {
+		auto_transalte_to_segwit_p2sh = curr_wallet_raw.indexOf("Auto-translate to SegWit P2SH") != -1
+	}
 
 	wallet = parse_wallet(curr_wallet_raw)
 	var wallet_addr = new Array()
@@ -377,6 +382,13 @@ function auto_adjust_fee_clicked() {
 	}
 }
 
+function p2kh_to_witness(t) {
+	if (auto_transalte_to_segwit_p2sh)  return p2kh_to_witness_p2sh(t)
+	var r = Base58.decode(t)
+	if (25!=r.length || 0!=r[0] && 111!=r[0]) return ""
+	return sw_encode(testnet?"tb":"bc", 0, r.slice(1,21))
+}
+
 
 function open_address_book(idx) {
 	if (cur_but!=null) {
@@ -409,7 +421,7 @@ function open_address_book(idx) {
 		var wpkh = ''
 
 		if (auto_transalte_to_segwit && i >= basic_addrbook_len) {
-			wpkh = p2kh_to_wpkh(addrbook[i].addr)
+			wpkh = p2kh_to_witness(addrbook[i].addr)
 		}
 
 		if (wpkh != '') {
