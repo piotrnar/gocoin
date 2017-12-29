@@ -78,6 +78,33 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 }
 
 
+// Download (and re-assemble) raw transaction from blockcypher.com
+func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
+	var url string
+	url = "https://api.blockcypher.com/v1/" + currency + "/main/txs/" + txid.String() + "?limit=1000&instart=1000&outstart=1000&includeHex=true"
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode == 200 {
+			defer r.Body.Close()
+			c, _ := ioutil.ReadAll(r.Body)
+			var txx struct {
+				Raw string `json:"hex"`
+			}
+			er = json.Unmarshal(c[:], &txx)
+			if er == nil {
+				rawtx, er = hex.DecodeString(txx.Raw)
+			}
+		} else {
+			fmt.Println("blockcypher.com StatusCode=", r.StatusCode)
+		}
+	}
+	if er != nil {
+		fmt.Println("blockcypher.com:", er.Error())
+	}
+	return
+}
+
+
 // Download raw transaction from a web server (try one after another)
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid, false)
@@ -98,6 +125,12 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 		return
 	}
 
+	raw = GetTxFromBlockcypher(txid, "btc")
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromBlockcypher - OK")
+		return
+	}
+
 	return
 }
 
@@ -107,6 +140,12 @@ func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid, true)
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
 		//println("GetTxFromExplorer - OK")
+		return
+	}
+
+	raw = GetTxFromBlockcypher(txid, "btc-testnet")
+	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+		//println("GetTxFromBlockcypher - OK")
 		return
 	}
 

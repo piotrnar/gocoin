@@ -26,7 +26,3 @@ Probably not to do:
 
 Tools:
 * txaddsig - make it to work with multisig and segwit
-* balio: make it work with LTC again  - see https://www.blockcypher.com/dev/bitcoin/#transactions
-	"https://api.blockcypher.com/v1/ltc/main/addrs/$ADDR?unspentOnly=true"
-	"https://api.blockcypher.com/v1/ltc/main/txs/$TXID?limit=1000&instart=1000&outstart=1000&includeHex=true"
-* balio: make it work with Testnet again - see testnet.blockexplorer.com

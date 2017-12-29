@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/ltc"
 	"github.com/piotrnar/gocoin/lib/others/utils"
+	"github.com/piotrnar/gocoin/lib/utxo"
 	"io"
 	"io/ioutil"
 	"net"
@@ -20,9 +22,9 @@ import (
 const MAX_UNSPENT_AT_ONCE = 20
 
 var (
-	proxy string
-	ltc   bool
-	tbtc  bool
+	proxy    string
+	ltc_mode bool
+	tbtc     bool
 )
 
 func print_help() {
@@ -31,7 +33,7 @@ func print_help() {
 	fmt.Println("  Name of one text file containing litecoin addresses,")
 	fmt.Println("... or space separteted litecoin addresses themselves.")
 	fmt.Println()
-	fmt.Println("Add -ltc at the command line, to fetch Litecoin balance.")
+	fmt.Println("Add -ltc_mode at the command line, to fetch Litecoin balance.")
 	fmt.Println()
 	fmt.Println("To use Tor, setup environment variable TOR=host:port")
 	fmt.Println("The host:port should point to your Tor's SOCKS proxy.")
@@ -105,7 +107,7 @@ func splitHostPort(addr string) (host string, port uint16, err error) {
 }
 
 func curr_unit() string {
-	if ltc {
+	if ltc_mode {
 		return "LTC"
 	} else {
 		return "BTC"
@@ -168,10 +170,8 @@ func main() {
 
 	var argz []string
 	for i := 1; i < len(os.Args); i++ {
-		if os.Args[i] == "-ltc" {
-			println("Litecoin not supported ion thie version")
-			os.Exit(1)
-			ltc = true
+		if os.Args[i] == "-ltc_mode" {
+			ltc_mode = true
 		} else if os.Args[i] == "-t" {
 			tbtc = true
 		} else {
@@ -209,20 +209,15 @@ func main() {
 	for i := range addrs {
 		switch addrs[i].Version {
 		case 48:
-			ltc = true
+			ltc_mode = true
 		case 111:
 			tbtc = true
 		}
 	}
 
-	if ltc {
-		println("No LTC support in this version")
-		os.Exit(1)
-	}
-
-	if tbtc {
-		println("No testnet support in this version")
-		os.Exit(1)
+	if tbtc && ltc_mode {
+		println("Litecoin's testnet is not suppported")
+		return
 	}
 
 	if len(addrs) == 0 {
@@ -236,15 +231,29 @@ func main() {
 	os.Mkdir("balance/", 0700)
 	unsp, _ := os.Create("balance/unspent.txt")
 	for off := 0; off < len(addrs); off++ {
-		res := utils.GetUnspent(addrs[off])
+		var res utxo.AllUnspentTx
+		if ltc_mode {
+			res = ltc.GetUnspent(addrs[off])
+		} else if tbtc {
+			res = utils.GetUnspentTestnet(addrs[off])
+		} else {
+			res = utils.GetUnspent(addrs[off])
+		}
 		for _, r := range res {
+			var txraw []byte
 			id := btc.NewUint256(r.TxPrevOut.Hash[:])
-			txraw := utils.GetTxFromWeb(id)
+			if ltc_mode {
+				txraw = ltc.GetTxFromWeb(id)
+			} else if tbtc {
+				txraw = utils.GetTestnetTxFromWeb(id)
+			} else {
+				txraw = utils.GetTxFromWeb(id)
+			}
 			if len(txraw) > 0 {
 				ioutil.WriteFile("balance/"+id.String()+".tx", txraw, 0666)
 			} else {
 				println("ERROR: cannot fetch raw tx data for", id.String())
-				os.Exit(1)
+				//os.Exit(1)
 			}
 
 			sum += r.Value
