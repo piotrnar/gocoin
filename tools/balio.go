@@ -33,7 +33,7 @@ func print_help() {
 	fmt.Println("  Name of one text file containing litecoin addresses,")
 	fmt.Println("... or space separteted litecoin addresses themselves.")
 	fmt.Println()
-	fmt.Println("Add -ltc_mode at the command line, to fetch Litecoin balance.")
+	fmt.Println("Add -ltc at the command line, to fetch Litecoin balance.")
 	fmt.Println()
 	fmt.Println("To use Tor, setup environment variable TOR=host:port")
 	fmt.Println("The host:port should point to your Tor's SOCKS proxy.")
@@ -170,7 +170,7 @@ func main() {
 
 	var argz []string
 	for i := 1; i < len(os.Args); i++ {
-		if os.Args[i] == "-ltc_mode" {
+		if os.Args[i] == "-ltc" {
 			ltc_mode = true
 		} else if os.Args[i] == "-t" {
 			tbtc = true
