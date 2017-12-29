@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func GetUnspentFromExplorer(addr *btc.BtcAddr) (res utxo.AllUnspentTx, er error) {
+func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspentTx, er error) {
 	type one_unsp struct {
 		Address string `json:"address"`
 		TxID    string `json:"txid"`
@@ -19,7 +19,11 @@ func GetUnspentFromExplorer(addr *btc.BtcAddr) (res utxo.AllUnspentTx, er error)
 	}
 
 	var r *http.Response
-	r, er = http.Get("https://blockexplorer.com/api/addr/" + addr.String() + "/utxo")
+	if testnet {
+		r, er = http.Get("https://testnet.blockexplorer.com/api/addr/" + addr.String() + "/utxo")
+	} else {
+		r, er = http.Get("https://blockexplorer.com/api/addr/" + addr.String() + "/utxo")
+	}
 	if er != nil {
 		return
 	}
@@ -118,7 +122,7 @@ func GetUnspentFromBlockchainInfo(addr *btc.BtcAddr) (res utxo.AllUnspentTx, er 
 func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	var er error
 
-	res, er = GetUnspentFromExplorer(addr)
+	res, er = GetUnspentFromExplorer(addr, false)
 	if er == nil {
 		return
 	}
@@ -130,5 +134,11 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	}
 	println("BlockchainInfo:", er.Error())
 
+	return
+}
+
+
+func GetUnspentTestnet(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
+	res, _ = GetUnspentFromExplorer(addr, true)
 	return
 }
