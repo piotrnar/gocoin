@@ -132,9 +132,9 @@ function show_input_tx() {
 
 function fetch_wallet_balance(name) {
 	var curr_wallet_raw = localStorage.getItem("gocoinWal_"+name)
-	auto_transalte_to_segwit = curr_wallet_raw.indexOf("Auto-translate to SegWit") != -1
+	auto_transalte_to_segwit = curr_wallet_raw.indexOf("SegWit") != -1
 	if (auto_transalte_to_segwit) {
-		auto_transalte_to_segwit_p2sh = curr_wallet_raw.indexOf("Auto-translate to SegWit P2SH") != -1
+		auto_transalte_to_segwit_p2sh = curr_wallet_raw.indexOf("SegWit P2SH") != -1
 	}
 
 	wallet = parse_wallet(curr_wallet_raw)
