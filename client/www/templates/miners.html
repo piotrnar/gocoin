@@ -112,9 +112,6 @@ function refresh_mining_info() {
 			el_avg_fpbyte.innerText = parseFloat(totfees/totbts).toFixed(0)
 			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
 
-			th_bu_sign.title = parseFloat(100*bu_cnt/cs.BlockCount).toFixed(0) + '%'
-			th_ny_sign.title = parseFloat(100*ny_cnt/cs.BlockCount).toFixed(0) + '%'
-
 			loading_icon.style.display = 'none'
 			mining_info_div.style.display = 'block'
 		} catch(e) {
