@@ -240,12 +240,14 @@ function val2reason(r) {
 function send1tx_click(id) {
 	if (confirm("Send TX "+id+" to one random peer")) {
 		show_txs2s('&sendone='+id+'&ownonly=1')
+		setTimeout("show_txs2s('&ownonly=1')", 1000)
 	}
 }
 
 function sendtx_click(id) {
 	if (confirm("Broadcast TX "+id)) {
 		show_txs2s('&send='+id+'&ownonly=1')
+		setTimeout("show_txs2s('&ownonly=1')", 1000)
 	}
 }
 

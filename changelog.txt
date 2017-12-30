@@ -5,6 +5,8 @@
 * Client: When fetching balance, download missging txs from www also for testnet
 * "lib/ltc" package moved to "lib/others/ltc"
 * Tools/Balio: Suports LTC and Testnet again
+* WebUI: Changed the string to look for inside the wallet from "Auto-translate to SegWit" to "SegWit" or "SegWit P2SH"
+* WebUI/Transactions: auto refresh "Own TXs" after bloadcasting a tx
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()

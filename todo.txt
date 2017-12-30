@@ -7,7 +7,6 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
-* Auto refresh "Own TXs" after bloadcasting a tx
 * Use different "friends.txt" for testnet
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
