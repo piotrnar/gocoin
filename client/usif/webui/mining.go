@@ -150,7 +150,10 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		for o := range cbasetx.TxOut {
 			rew += cbasetx.TxOut[o].Value
 		}
-		om.fees += rew - btc.GetBlockReward(end.Height)
+		fees := rew - btc.GetBlockReward(end.Height)
+		if int64(fees) > 0 { // solution for a possibility of a miner not claiming the reward (see block #501726)
+			om.fees += fees
+		}
 
 		if eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig) != nil {
 			om.ebad_cnt++
