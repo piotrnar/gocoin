@@ -336,6 +336,10 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		if len(r.Form["quiet"])>0 {
+			return
+		}
+
 		if len(r.Form["cnt"])>0 {
 			u, e := strconv.ParseUint(r.Form["cnt"][0], 10, 32)
 			if e==nil && u>0 && u<10e3 {
@@ -534,6 +538,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 
 	type one_stat_row struct {
 		Txs_so_far uint
+		Real_len_so_far uint
 		Offset_in_block uint
 		Current_tx_length uint
 		Current_tx_spb float64
@@ -542,14 +547,16 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	}
 	var mempool_stats []one_stat_row
 
-	var totlen uint64
+	var totlen, reallen uint64
 	for cnt=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
-		newlen := totlen+uint64(len(v.Data))
+		newlen := totlen + uint64(v.VSize())
+		reallen += uint64(len(v.Data))
 
 		if cnt==0 || cnt+1==len(sorted) || (newlen/division)!=(totlen/division) {
 			mempool_stats = append(mempool_stats, one_stat_row{
 				Txs_so_far : uint(cnt),
+				Real_len_so_far : uint(reallen),
 				Offset_in_block : uint(totlen),
 				Current_tx_length : uint(len(v.Data)),
 				Current_tx_spb : float64(v.Fee)/float64(v.VSize()),
