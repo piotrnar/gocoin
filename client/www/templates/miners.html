@@ -37,18 +37,6 @@ td.mi_tot {
 	font-style:italic;
 	font-weight:bold;
 }
-td.mi_bu {
-	text-align:right;
-	color:blue;
-	font-style:italic;
-	font-size:90%;
-}
-td.mi_nya {
-	text-align:right;
-	color:red;
-	font-style:italic;
-	font-size:90%;
-}
 caption {
 	margin-bottom:6px;
 }
@@ -97,20 +85,6 @@ function refresh_mining_info() {
 				td = row.insertCell(-1)
 				td.className = 'mi_tot'
 				td.innerText = m.Blocks
-
-				td = row.insertCell(-1)
-				if (m.BUcnt>0) {
-					td.className ='mi_bu'
-					td.innerText = m.BUcnt
-					bu_cnt += m.BUcnt
-				}
-
-				td = row.insertCell(-1)
-				if (m.NYAcnt>0) {
-					td.className ='mi_nya'
-					td.innerText = m.NYAcnt
-					ny_cnt += m.NYAcnt
-				}
 
 				td = row.insertCell(-1)
 				td.className = 'mi_hashrate'
@@ -173,8 +147,6 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 		<th width="120" align="left">Miner
 		<th width="80" align="right">Share
 		<th width="40" align="right">Tot
-		<th width="20" align="right" id="th_bu_sign">BU
-		<th width="20" align="right" id="th_ny_sign">NY
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right" title="Average Block Length">Average
 		<th width="100" align="right">Fees BTC
