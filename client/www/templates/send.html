@@ -331,18 +331,17 @@ function recalc_to_pay() {
 			el.classList.add('err')
 			butdisabled = true
 			document.getElementById('mbtc_out'+idx).value = ''
-			ets_bytes += AvgOutputSize
 		} else {
 			el.classList.remove('err')
 			totsend += v
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
-			var ad = document.getElementById('inadr'+idx).value
-			if (ad.length > 50) {
-				ets_bytes += StealthIndexLen + 8+25 // long string = stealth address (+P2KH)
-			} else {
-				ets_bytes += addr2outsize(ad)
-				if (first_input_addr=='')  first_input_addr=ad
-			}
+		}
+		var ad = document.getElementById('inadr'+idx).value
+		if (ad.length > 50) {
+			ets_bytes += StealthIndexLen + 8+25 // long string = stealth address (+P2KH)
+		} else {
+			ets_bytes += addr2outsize(ad)
+			if (first_input_addr=='')  first_input_addr=ad
 		}
 	}
 
