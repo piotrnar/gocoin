@@ -72,7 +72,7 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 		}
 	}
 	if er != nil {
-		fmt.Println("blockexplorer.com:", er.Error())
+		fmt.Println("blockchain.info:", er.Error())
 	}
 	return
 }
@@ -105,28 +105,37 @@ func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 }
 
 
+func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
+	tx, _ := btc.NewTx(rawtx)
+	if tx == nil {
+		return false
+	}
+	tx.SetHash(nil)
+	return txid.Equal(tx.Hash)
+}
+
 // Download raw transaction from a web server (try one after another)
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid, false)
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromExplorer - OK")
 		return
 	}
 
 	raw = GetTxFromWebBTC(txid)
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromWebBTC - OK")
 		return
 	}
 
 	raw = GetTxFromBlockchainInfo(txid)
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromBlockchainInfo - OK")
 		return
 	}
 
 	raw = GetTxFromBlockcypher(txid, "btc")
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromBlockcypher - OK")
 		return
 	}
@@ -138,13 +147,13 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 // Download testnet's raw transaction from a web server
 func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid, true)
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromExplorer - OK")
 		return
 	}
 
 	raw = GetTxFromBlockcypher(txid, "btc-testnet")
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
+	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromBlockcypher - OK")
 		return
 	}
