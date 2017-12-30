@@ -46,7 +46,7 @@ td.maturity {
 			<td align="right">
 		<tr><td>UTXOs spent in memory:
 			<td><b id="outspent"></b>
-			<td align="right">avg. <b id="avgoutspertx"></b> / tx
+			<td align="right" nowrap="nowrap" style="font-size:70%">avg. <b id="avgoutspertx"></b> / tx
 		<tr><td>Rejected transactions:
 			<td><input type="button" id="butre" value="" onclick="show_txsre()">
 			<td align="right"><b id="ts_tre_size"></b>
@@ -73,9 +73,8 @@ td.maturity {
 			<td colspan="3" bgcolor="#f0fff0" style="border:1px solid black">
 				<b>Upload Transaction File:</b><br>
 				<br>
-				<form id="the-form" method="post" enctype="multipart/form-data">
+				<form id="theform" method="post" enctype="multipart/form-data" onchange="theform.submit()">
 					<input name="txfile" type="file">
-					<input type="submit" value="Upload" />
 				</form>
 				... or use
 				<a href="https://blockchain.info/pushtx" target="_blank">blockchain.info</a>
@@ -239,14 +238,14 @@ function val2reason(r) {
 
 function send1tx_click(id) {
 	if (confirm("Send TX "+id+" to one random peer")) {
-		show_txs2s('&sendone='+id+'&ownonly=1')
+		quiet_txs2s('&sendone='+id)
 		setTimeout("show_txs2s('&ownonly=1')", 1000)
 	}
 }
 
 function sendtx_click(id) {
 	if (confirm("Broadcast TX "+id)) {
-		show_txs2s('&send='+id+'&ownonly=1')
+		quiet_txs2s('&send='+id)
 		setTimeout("show_txs2s('&ownonly=1')", 1000)
 	}
 }
@@ -386,6 +385,12 @@ function decode_tx_id(txid) {
 		}
 	}
 	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
+	aj.send(null);
+}
+
+function quiet_txs2s(extrapar) {
+	var aj = ajax()
+	aj.open("GET","txs2s.xml?quiet=1&sid="+sid+extrapar, true);
 	aj.send(null);
 }
 
@@ -632,7 +637,7 @@ function handlehover(event, pos, item) {
 
 			str += ' -  Tx #'+(rec.Txs_so_far+1)
 			str += ' ('+rec.Current_tx_length+' bytes'
-			str += ' @ ' + rec.Offset_in_block+')'
+			str += ' @ ' + rec.Offset_in_block + ' / ' + rec.Real_len_so_far + ')'
 			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
 			showTooltip(item.pageX, item.pageY, str)
 		}
