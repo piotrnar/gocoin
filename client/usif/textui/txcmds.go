@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"io/ioutil"
+	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/network"
@@ -105,6 +106,9 @@ func dec_tx(par string) {
 		return
 	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		if tx.Raw != nil {
+			fmt.Println("Raw:", hex.EncodeToString(tx.Raw))
+		}
 		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
 		fmt.Println(s)
 	} else {
@@ -212,7 +216,7 @@ func init () {
 	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer (identified by a given <txid>)")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
-	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
+	newUi("txdecode td", true, dec_tx, "Dump & decode a transaction from memory pool (identified by a given <txid>)")
 	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space <max_size>")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
