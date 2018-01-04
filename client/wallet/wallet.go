@@ -310,8 +310,6 @@ func PrintStat() {
 			for idx := range ints {
 				ints[idx] = int(k[idx])
 			}
-			//addr, _ := bech32.SegwitAddrEncode(bech32.GetSegwitHRP(common.Testnet), 0, ints[:])
-			//println(btc.UintToBtc(r.Value), "BTC @ addr", addr)
 			r.Browse(func(v *OneAllAddrInp) {
 				if qr, vout := v.GetRec(); qr != nil {
 					if oo := qr.Outs[vout]; oo != nil {

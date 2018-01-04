@@ -10,7 +10,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/ltc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/others/bech32"
 )
 
 // Cache for txs from already loaded from balance/ folder
@@ -248,7 +247,7 @@ func addr_from_pkscr(scr []byte) *btc.BtcAddr {
 // make sure the version byte in the given address is what we expect
 func assert_address_version(a *btc.BtcAddr) {
 	if a.SegwitProg != nil {
-		if a.SegwitProg.HRP != bech32.GetSegwitHRP(testnet) {
+		if a.SegwitProg.HRP != btc.GetSegwitHRP(testnet) {
 			println("Sending address", a.String(), "has an incorrect HRP string", a.SegwitProg.HRP)
 			cleanExit(1)
 		}

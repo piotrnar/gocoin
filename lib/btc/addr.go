@@ -41,8 +41,8 @@ type SegwitProg struct {
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	if strings.HasPrefix(hs, "bc1") || strings.HasPrefix(hs, "tb1") {
 		var sw = &SegwitProg{HRP:hs[:2]}
-		sw.Version, sw.Program, e = bech32.MyDecode(sw.HRP, hs)
-		if e == nil {
+		sw.Version, sw.Program = bech32.SegwitDecode(sw.HRP, hs)
+		if sw.Program != nil {
 			a = &BtcAddr{SegwitProg:sw}
 		}
 		return
@@ -128,10 +128,10 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 	}
 
 	if version, program := IsWitnessProgram(scr); program != nil {
-		sw := &SegwitProg{HRP:bech32.GetSegwitHRP(testnet), Version:version, Program:program}
+		sw := &SegwitProg{HRP:GetSegwitHRP(testnet), Version:version, Program:program}
 
-		str, er := bech32.MyEncode(sw.HRP, version, program)
-		if er != nil {
+		str := bech32.SegwitEncode(sw.HRP, version, program)
+		if str == "" {
 			return nil
 		}
 
@@ -341,6 +341,14 @@ func Decodeb58(s string) (res []byte) {
 }
 
 func (sw *SegwitProg) String() (res string) {
-	res, _ = bech32.MyEncode(sw.HRP, sw.Version, sw.Program)
+	res = bech32.SegwitEncode(sw.HRP, sw.Version, sw.Program)
 	return
+}
+
+func GetSegwitHRP(testnet bool) string {
+	if testnet {
+		return "tb"
+	} else {
+		return "bc"
+	}
 }
