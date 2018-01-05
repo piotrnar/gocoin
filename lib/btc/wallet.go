@@ -57,11 +57,14 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 
 // B_private_key = ( A_private_key + secret ) % N
 // Used for implementing Type-2 determinitic keys
-func DeriveNextPrivate(p, s []byte) []byte {
+func DeriveNextPrivate(p, s []byte) (toreturn []byte) {
 	var prv, secret big.Int
 	prv.SetBytes(p)
 	secret.SetBytes(s)
-	return new(big.Int).Mod(new(big.Int).Add(&prv, &secret), &secp256k1.TheCurve.Order.Int).Bytes()
+	res := new(big.Int).Mod(new(big.Int).Add(&prv, &secret), &secp256k1.TheCurve.Order.Int).Bytes()
+	toreturn = make([]byte, 32)
+	copy(toreturn[32-len(res):], res)
+	return
 }
 
 
