@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// dump public key or secret scan key?
-	if *pubkey!="" || *scankey!="" {
+	if *pubkey!="" {
 		make_wallet()
 		cleanExit(0)
 	}

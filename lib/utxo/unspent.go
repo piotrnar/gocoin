@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"fmt"
-	"encoding/hex"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -15,7 +14,6 @@ type OneUnspentTx struct {
 	Value uint64
 	MinedAt uint32
 	*btc.BtcAddr
-	StealthC []byte
 	destString string
 	Coinbase bool
 	Message []byte
@@ -71,18 +69,12 @@ func (ou *OneUnspentTx) FixDestString() {
 func (ou *OneUnspentTx) UnspentTextLine() (s string) {
 	s = fmt.Sprintf("%s # %.8f BTC @ %s%s, block %d", ou.TxPrevOut.String(),
 		float64(ou.Value)/1e8, ou.DestAddr(), ou.BtcAddr.Label(), ou.MinedAt)
-	if ou.StealthC!=nil {
-		s += ", _StealthC:" + hex.EncodeToString(ou.StealthC)
-	}
 	return
 }
 
 func (ou *OneUnspentTx) DestAddr() (string) {
 	if ou.destString=="" {
 		return ou.BtcAddr.String()
-	}
-	if ou.StealthC!=nil {
-		return "@" + ou.destString
 	}
 	return ou.destString
 }

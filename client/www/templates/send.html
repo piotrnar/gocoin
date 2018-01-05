@@ -27,7 +27,6 @@ td.P2WPKH {
 const addrbook_lab = "Address Book"
 
 const AvgOutputSize = 34
-const StealthIndexLen = 49
 
 var selected_value = 0
 var ets_inputs = 0
@@ -337,12 +336,8 @@ function recalc_to_pay() {
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
 		}
 		var ad = document.getElementById('inadr'+idx).value
-		if (ad.length > 50) {
-			ets_bytes += StealthIndexLen + 8+25 // long string = stealth address (+P2KH)
-		} else {
-			ets_bytes += addr2outsize(ad)
-			if (first_input_addr=='')  first_input_addr=ad
-		}
+		ets_bytes += addr2outsize(ad)
+		if (first_input_addr=='')  first_input_addr=ad
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"io/ioutil"
-	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -16,7 +15,6 @@ type unspRec struct {
 	btc.TxPrevOut
 	label string
 	key *btc.PrivateAddr
-	stealth bool
 	spent bool
 }
 
@@ -50,24 +48,6 @@ func NewUnspRec(l []byte) (uns *unspRec) {
 	uns.TxPrevOut.Vout = uint32(vout)
 	if len(rst)>1 {
 		uns.label = rst[1]
-	}
-
-	if first_determ_idx < len(keys) {
-		str := string(l)
-		if sti:=strings.Index(str, "_StealthC:"); sti!=-1 {
-			c, e := hex.DecodeString(str[sti+10:sti+10+64])
-			if e != nil {
-				fmt.Println("ERROR at stealth", txid.String(), vout, e.Error())
-			} else {
-				// add a new key to the wallet
-				sec := btc.DeriveNextPrivate(keys[first_determ_idx].Key, c)
-				rec := btc.NewPrivateAddr(sec, ver_secret(), true) // stealth keys are always compressed
-				rec.BtcAddr.Extra.Label = uns.label
-				keys = append(keys, rec)
-				uns.stealth = true
-				uns.key = rec
-			}
-		}
 	}
 
 	return
@@ -147,7 +127,6 @@ func apply_to_balance(tx *btc.Tx) {
 				uns.TxPrevOut.Hash = tx.Hash.Hash
 				uns.TxPrevOut.Vout = uint32(out)
 				uns.label = fmt.Sprint("# ", btc.UintToBtc(tx.TxOut[out].Value), " BTC @ ", k.BtcAddr.String())
-				//stealth bool TODO: maybe we can fix it...
 				unspentOuts = append(unspentOuts, uns)
 			}
 		}

@@ -338,7 +338,6 @@ func IsP2SH(d []byte) bool {
 }
 
 // Returns true if the given PK_script is anyhow usefull to gocoin's node
-// Stealth payment descriptors are handled outside this
 func IsUsefullOutScript(v []byte) bool {
 	if len(v)==25 && v[0]==0x76 && v[1]==0xa9 && v[2]==0x14 && v[23]==0x88 && v[24]==0xac {
 		return true // P2KH

@@ -466,13 +466,13 @@ func (db *UnspentDB) abortWriting() {
 }
 
 func (db *UnspentDB) UTXOStats() (s string) {
-	var outcnt, sum, sumcb, stealth_uns, stealth_tot uint64
+	var outcnt, sum, sumcb uint64
 	var totdatasize, unspendable, unspendable_recs, unspendable_bytes uint64
 	for k, v := range db.HashMap {
 		totdatasize += uint64(_len(v)+8)
 		rec := NewUtxoRecStatic(k, _slice(v))
 		var spendable_found bool
-		for idx, r := range rec.Outs {
+		for _, r := range rec.Outs {
 			if r!=nil {
 				outcnt++
 				sum += r.Value
@@ -484,12 +484,6 @@ func (db *UnspentDB) UTXOStats() (s string) {
 					unspendable_bytes += uint64(8+len(r.PKScr))
 				} else {
 					spendable_found = true
-				}
-				if r.IsStealthIdx() && idx+1<len(rec.Outs) {
-					if rec.Outs[idx+1]!=nil {
-						stealth_uns++
-					}
-					stealth_tot++
 				}
 			}
 		}
@@ -503,8 +497,8 @@ func (db *UnspentDB) UTXOStats() (s string) {
 		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), db.abortwritingnow.Get())
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d.  Number of stealth indexes: %d / %d spent\n",
-		unspendable, unspendable_bytes>>10, unspendable_recs, stealth_uns, stealth_tot)
+	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d\n",
+		unspendable, unspendable_bytes>>10, unspendable_recs)
 	return
 }
 

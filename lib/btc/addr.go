@@ -14,14 +14,12 @@ import (
 
 type BtcAddr struct {
 	Version byte
-	Hash160 [20]byte // For a stealth address: it's HASH160
-	Checksum []byte  // Unused for a stealth address
-	Pubkey []byte    // Unused for a stealth address
+	Hash160 [20]byte
+	Checksum []byte
+	Pubkey []byte
 	Enc58str string
 
 	*SegwitProg // if this is not nil, means that this is a native segwit address
-
-	*StealthAddr // if this is not nil, means that this is a stealth address
 
 	// This is used only by the client
 	Extra struct {
@@ -70,17 +68,7 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 			a.Enc58str = hs
 		}
 	} else {
-		var sa *StealthAddr
-		sa, e = NewStealthAddr(dec)
-		if e!=nil {
-			e = errors.New("Unrecognized address payload " + hex.EncodeToString(dec))
-			return
-		}
-		a = new(BtcAddr)
-		a.Version = sa.Version
-		copy(a.Hash160[:], sa.Hash160())
-		a.Enc58str = hs
-		a.StealthAddr = sa
+		e = errors.New("Unrecognized address payload " + hex.EncodeToString(dec))
 	}
 	return
 }
@@ -160,8 +148,6 @@ func (a *BtcAddr) String() string {
 	if a.Enc58str=="" {
 		if a.SegwitProg != nil {
 			a.Enc58str = a.SegwitProg.String()
-		} else if a.StealthAddr!=nil {
-			a.Enc58str = a.StealthAddr.String()
 		} else {
 			var ad [25]byte
 			ad[0] = a.Version

@@ -82,7 +82,7 @@ func getpass() []byte {
 		return nil
 	}
 
-	if *list || *scankey!="" {
+	if *list {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
@@ -139,9 +139,6 @@ func get_change_addr() (chng *btc.BtcAddr) {
 
 	// If change address not specified, send it back to the first input
 	for idx := range unspentOuts {
-		if unspentOuts[idx].stealth {
-			continue // cannot send change to a stelath address since we don't know the scankey
-		}
 		uo := getUO(&unspentOuts[idx].TxPrevOut)
 		if k := pkscr_to_key(uo.Pk_script); k!=nil {
 			chng = k.BtcAddr
@@ -225,11 +222,6 @@ func ver_script() byte {
 	return btc.AddrVerScript(testnet)
 }
 
-// version byte for stealth addresses
-func ver_stealth() byte {
-	return btc.StealthAddressVersion(testnet)
-}
-
 // version byte for private key addresses
 func ver_secret() byte {
 	return ver_pubkey() + 0x80
@@ -251,7 +243,7 @@ func assert_address_version(a *btc.BtcAddr) {
 			println("Sending address", a.String(), "has an incorrect HRP string", a.SegwitProg.HRP)
 			cleanExit(1)
 		}
-	} else if a.Version!=ver_pubkey() && a.Version!=ver_script() && a.Version!=ver_stealth() {
+	} else if a.Version!=ver_pubkey() && a.Version!=ver_script() {
 		println("Sending address", a.String(), "has an incorrect version", a.Version)
 		cleanExit(1)
 	}

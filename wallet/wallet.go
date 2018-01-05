@@ -146,10 +146,6 @@ func make_wallet() {
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
 		}
-		if *scankey!="" {
-			new_stealth_address(prv_key)
-			return
-		}
 
 		rec := btc.NewPrivateAddr(prv_key, ver_secret(), !uncompressed)
 

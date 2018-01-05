@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"bytes"
 	"encoding/hex"
-	"crypto/sha256"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -223,14 +222,6 @@ func dump_raw_tx() {
 			} else {
 				fmt.Println("to address", addr.String())
 			}
-		} else if len(tx.TxOut[i].Pk_script)==40 && tx.TxOut[i].Pk_script[0]==0x6a &&
-					tx.TxOut[i].Pk_script[1]==0x26 && tx.TxOut[i].Pk_script[2]==0x06 {
-
-			sha := sha256.New()
-			sha.Write(tx.TxOut[i].Pk_script[3:40])
-
-			fmt.Println("Stealth", hex.EncodeToString(sha.Sum(nil)[:4]),
-				hex.EncodeToString(tx.TxOut[i].Pk_script[7:]))
 		} else {
 			if tx.TxOut[i].Value > 0 {
 				fmt.Println("WARNING!!! These coins go to non-standard Pk_script:")

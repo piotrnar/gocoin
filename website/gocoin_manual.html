@@ -24,7 +24,6 @@ There are also some additional tools:
 <li><b>importblocks</b> - import block database from the satoshi client</li>
 <li><b>mkmulti</b> - create a multisig address</li>
 <li><b>peers</b> - display a content of gocoin's peers database</li>
-<li><b>stealth</b> - decode a stealth address</li>
 <li><b>txaddsig</b> - add a signature (generated somewhere else) to a raw transaction</li>
 <li><b>type2determ</b>, </b><b>type2next</b> - generate public addresses for type-2 deterministic wallets</li></ul>
 
@@ -37,9 +36,6 @@ For this purpose there is a tool called <b>balio</b>.
 It can fetch the balance of your wallet from popular block explorers and save it in the format recognized by gocoin's wallet.
 You can find it in the <code>tools/</code> folder.
 Execute "<code>go build balio.go</code>" to compile it, or run it without compiling with: <code>go run </code><code>balio.go &lt;your_bitcoin_addresses&gt;</code>
-<br>
-<br>
-<i>Note: This tool does not support fetching balances of stealth addresses. You need the client node to fetch a balance of a stealth addresses.</i>
 <br>
 
 <h2>User interface</h2>

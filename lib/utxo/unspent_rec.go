@@ -231,10 +231,6 @@ func (r *UtxoTxOut) IsP2SH() bool {
 	return len(r.PKScr)==23 && r.PKScr[0]==0xa9 && r.PKScr[1]==0x14 && r.PKScr[22]==0x87
 }
 
-func (r *UtxoTxOut) IsStealthIdx() bool {
-	return len(r.PKScr)==40 && r.PKScr[0]==0x6a && r.PKScr[1]==0x26 && r.PKScr[2]==0x06
-}
-
 func (r *UtxoTxOut) IsP2WPKH() bool {
 	return len(r.PKScr)==22 && r.PKScr[0]==0 && r.PKScr[1]==20
 }

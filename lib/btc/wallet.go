@@ -77,16 +77,12 @@ func DeriveNextPublic(public, secret []byte) (out []byte) {
 }
 
 
-// returns one or two (for stealth) TxOut records
+// returns one TxOut record
 func NewSpendOutputs(addr *BtcAddr, amount uint64, testnet bool) ([]*TxOut, error) {
-	if addr.StealthAddr != nil {
-		return MakeStealthTxOuts(addr.StealthAddr, amount, testnet)
-	} else {
-		out := new(TxOut)
-		out.Value = amount
-		out.Pk_script = addr.OutScript()
-		return []*TxOut{out}, nil
-	}
+	out := new(TxOut)
+	out.Value = amount
+	out.Pk_script = addr.OutScript()
+	return []*TxOut{out}, nil
 }
 
 
