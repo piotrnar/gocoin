@@ -1,4 +1,6 @@
 1.9.4:
+NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 already generated, but have problems spending from it now.
+
 * Added support for native segwit addresses (P2WPKH)
 * Client: Removed extra code added to investigate "the main loop got stuck in network.Tick()" problem (seems to be fixed now)
 * Client: Fixed problem with calculating insanely high average fee (seen on testnet @ block 1256442)
@@ -8,6 +10,7 @@
 * WebUI: Changed the string to look for inside the wallet from "Auto-translate to SegWit" to "SegWit" or "SegWit P2SH"
 * WebUI/Transactions: auto refresh "Own TXs" after bloadcasting a tx
 * WebUI/Transactions: Show accumulated VSize() on X-axis (insted of accumulated raw size of the txs)
+* Fixed issue #32 (Broken private key padding).
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
