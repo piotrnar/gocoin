@@ -355,6 +355,11 @@ func save_one_map32(wr *bufio.Writer, allbal map[[32]byte]*OneAllAddrBal, what s
 }
 
 func Save() {
+	if common.FLAG.NoWallet || !common.CFG.AllBalances.SaveOnDisk {
+		os.Remove(common.GocoinHomeDir + FILE_NAME)
+		return
+	}
+
 	if bytes.Equal(file_for_block[:], common.Last.Block.BlockHash.Hash[:]) {
 		fmt.Println("No need to update", FILE_NAME)
 		return
