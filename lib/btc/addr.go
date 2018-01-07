@@ -260,11 +260,6 @@ func (a *BtcAddr) OutScript() (res []byte) {
 }
 
 
-func (a *BtcAddr) AIdx() (uint64) {
-	return binary.LittleEndian.Uint64(a.Hash160[:8])
-}
-
-
 var b58set []byte = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 
 func b58chr2int(chr byte) int {
