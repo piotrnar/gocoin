@@ -612,6 +612,11 @@ func ExpireTxs() {
 }
 
 func MempoolSave() {
+	if !common.CFG.TXPool.SaveOnDisk {
+		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
+		return
+	}
+
 	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		println(er.Error())
