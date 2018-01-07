@@ -18,9 +18,16 @@ td.P2SH-P2WPKH {
 	color:brown;
 	font-style:italic;
 }
+td.P2WSH {
+	color:purple;
+	font-style:italic;
+}
 td.P2WPKH {
 	color:darkgreen;
 	font-style:italic;
+}
+td.long_addr {
+	font-size:9px;
 }
 </style>
 <script>
@@ -30,6 +37,7 @@ const AvgOutputSize = 34
 
 var selected_value = 0
 var ets_inputs = 0
+var first_input_addr = ''
 var selected_cnt = 0
 var total_to_pay = 0
 var cur_but = null
@@ -164,11 +172,17 @@ function fetch_wallet_balance(name) {
 				if (rec.Outs!=null) {
 					totouts += rec.Outs.length
 					for (ii in rec.Outs) {
+						var ty = rec.Outs[ii].AddrType
+						if (ty=='P2PKH') {
+							var ad = rec.Outs[ii].Addr
+							if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
+								ty = ad.length > 45 ? "P2WSH" : "P2WPKH"
+							}
+						}
 						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
 							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
 							'addr':wallet[i].addr, 'label':wallet[i].label,
-							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message,
-							'type':rec.Outs[ii].AddrType})
+							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message, 'type':ty})
 					}
 				}
 				totbtc += rec.Value
@@ -209,6 +223,7 @@ function fetch_wallet_balance(name) {
 				} else if (outs[i].type=="P2WPKH") {
 					inp.value = 28
 				} else {
+					// default for P2SH and P2WSH
 					inp.value = 200
 				}
 				row.appendChild(inp)
@@ -240,6 +255,9 @@ function fetch_wallet_balance(name) {
 				td.addEventListener('click', selectadr)
 				td.classList.add(outs[i].type)
 				td.innerText = outs[i].addr2
+				if (outs[i].addr2.length>45) {
+					td.classList.add("long_addr")
+				}
 				td.title = outs[i].addr
 
 				td = row.insertCell(-1)
@@ -282,8 +300,10 @@ function recalc_inputs() {
 	selected_value = 0
 	selected_cnt = 0
 	ets_inputs = 0
+	first_input_addr = ''
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (document.getElementById('txout'+i).checked) {
+			if (first_input_addr=='')  first_input_addr=unspent.rows[i].addr
 			selected_value += unspent.rows[i].value
 			selected_cnt++
 			ets_inputs += 36+1+parseInt(document.getElementById('txsigsiz'+i).value)+4
@@ -300,7 +320,7 @@ function recalc_inputs() {
 
 function addr2outsize(ad) {
 	if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
-		return 8+22
+		return 8 + ((ad.length>45) ? 34 : 22)
 	}
 	switch (ad[0]) {
 		case '1':
@@ -319,7 +339,6 @@ function recalc_to_pay() {
 	var el, v, fee, totsend=0
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
-	var first_input_addr = ''
 
 	fee = val2int(txfee.value)
 
@@ -337,7 +356,6 @@ function recalc_to_pay() {
 		}
 		var ad = document.getElementById('inadr'+idx).value
 		ets_bytes += addr2outsize(ad)
-		if (first_input_addr=='')  first_input_addr=ad
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {
@@ -409,9 +427,13 @@ function auto_adjust_fee_clicked() {
 
 function p2kh_to_witness(t) {
 	if (auto_transalte_to_segwit_p2sh)  return p2kh_to_witness_p2sh(t)
-	var r = Base58.decode(t)
-	if (25!=r.length || 0!=r[0] && 111!=r[0]) return ""
-	return sw_encode(testnet?"tb":"bc", 0, r.slice(1,21))
+	try {
+		var r = Base58.decode(t)
+		if (25!=r.length || 0!=r[0] && 111!=r[0]) return ""
+		return sw_encode(testnet?"tb":"bc", 0, r.slice(1,21))
+	} catch (e) {
+		return ""
+	}
 }
 
 
