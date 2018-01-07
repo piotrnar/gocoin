@@ -50,7 +50,7 @@ func FetchInitialBalance(abort *bool) {
 
 	var cur_rec, cnt_dwn, perc int
 	cnt_dwn_from := len(common.BlockChain.Unspent.HashMap) / 100
-	info := "Loading balance of P2SH/P2KH outputs of " + btc.UintToBtc(common.AllBalMinVal()) + " BTC or more"
+	info := "Loading balance of P2SH/P2KH/P2WKH/P2WSH outputs with " + btc.UintToBtc(common.AllBalMinVal()) + " BTC or more"
 	for k, v := range common.BlockChain.Unspent.HashMap {
 		if chain.AbortNow {
 			break
