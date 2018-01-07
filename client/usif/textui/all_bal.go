@@ -12,8 +12,8 @@ import (
 )
 
 type OneWalletAddrs struct {
-	P2SH bool
-	Key  [20]byte
+	Typ  int // 0-p2kh, 1-p2sh, 2-segwit_prog
+	Key  []byte
 	rec  *wallet.OneAllAddrBal
 }
 
@@ -46,8 +46,15 @@ func best_val(par string) {
 	all_addrs(par)
 }
 
+func new_slice(in []byte) (kk []byte) {
+	kk = make([]byte, len(in))
+	copy(kk, in)
+	return
+}
+
 func all_addrs(par string) {
 	var ptkh_outs, ptkh_vals, ptsh_outs, ptsh_vals uint64
+	var ptwkh_outs, ptwkh_vals, ptwsh_outs, ptwsh_vals uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
 
@@ -57,31 +64,50 @@ func all_addrs(par string) {
 		}
 	}
 
+	const MIN_BTC = 100e8
+	const MIN_OUTS = 1000
+
 	for k, rec := range wallet.AllBalancesP2SH {
 		ptsh_vals += rec.Value
 		ptsh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= 1000 || !sort_by_cnt && rec.Value >= 1000e8 {
-			best = append(best, OneWalletAddrs{P2SH: true, Key: k, rec: rec})
+		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+			best = append(best, OneWalletAddrs{Typ:1, Key: new_slice(k[:]), rec: rec})
 		}
 	}
 
 	for k, rec := range wallet.AllBalancesP2KH {
 		ptkh_vals += rec.Value
 		ptkh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= 1000 || !sort_by_cnt && rec.Value >= 1000e8 {
-			best = append(best, OneWalletAddrs{Key: k, rec: rec})
+		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+			best = append(best, OneWalletAddrs{Typ:0, Key: new_slice(k[:]), rec: rec})
 		}
 	}
 
-	// TODO: Also do native segiwt addresses
+	for k, rec := range wallet.AllBalancesP2WKH {
+		ptwkh_vals += rec.Value
+		ptwkh_outs += uint64(rec.Count())
+		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+			best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+		}
+	}
+
+	for k, rec := range wallet.AllBalancesP2WSH {
+		ptwsh_vals += rec.Value
+		ptwsh_outs += uint64(rec.Count())
+		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+			best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+		}
+	}
 
 	fmt.Println(btc.UintToBtc(ptkh_vals), "BTC in", ptkh_outs, "unspent recs from", len(wallet.AllBalancesP2KH), "P2KH addresses")
 	fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "unspent recs from", len(wallet.AllBalancesP2SH), "P2SH addresses")
+	fmt.Println(btc.UintToBtc(ptwkh_vals), "BTC in", ptwkh_outs, "unspent recs from", len(wallet.AllBalancesP2WKH), "P2WKH addresses")
+	fmt.Println(btc.UintToBtc(ptwsh_vals), "BTC in", ptwsh_outs, "unspent recs from", len(wallet.AllBalancesP2WSH), "P2WSH addresses")
 
 	if sort_by_cnt {
-		fmt.Println("Addrs with at least 1000 inps:", len(best))
+		fmt.Println("Number of addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
 	} else {
-		fmt.Println("Addrs with at least 1000 BTC:", len(best))
+		fmt.Println("Number of addresses with at least", btc.UintToBtc(MIN_BTC), "BTC:", len(best))
 	}
 
 	sort.Sort(best)
@@ -101,12 +127,18 @@ func all_addrs(par string) {
 	pkscr_p2kh[24] = 0xac
 
 	for i := 0; i < len(best) && i < cnt; i++ {
-		if best[i].P2SH {
-			copy(pkscr_p2sk[2:22], best[i].Key[:])
-			ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
-		} else {
-			copy(pkscr_p2kh[3:23], best[i].Key[:])
-			ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
+		switch best[i].Typ {
+			case 0:
+				copy(pkscr_p2kh[3:23], best[i].Key)
+				ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
+			case 1:
+				copy(pkscr_p2sk[2:22], best[i].Key)
+				ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
+			case 2:
+				ad = new(btc.BtcAddr)
+				ad.SegwitProg = new(btc.SegwitProg)
+				ad.SegwitProg.HRP = btc.GetSegwitHRP(common.CFG.Testnet)
+				ad.SegwitProg.Program = best[i].Key
 		}
 		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
 	}
