@@ -65,12 +65,6 @@ func host_init() {
 		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlks),
 		BlockMinedCB : blockMined}
 
-	if !common.FLAG.NoWallet {
-		wallet.AllBalancesP2KH = make(map[[20]byte]*wallet.OneAllAddrBal)
-		wallet.AllBalancesP2SH = make(map[[20]byte]*wallet.OneAllAddrBal)
-		wallet.AllBalancesP2WKH = make(map[[20]byte]*wallet.OneAllAddrBal)
-	}
-
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
 	if chain.AbortNow {
