@@ -7,7 +7,6 @@ import (
 	"strings"
 	"math/big"
 	"encoding/hex"
-	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/others/bech32"
 )
 
