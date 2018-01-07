@@ -39,11 +39,13 @@ function showqrcode(label, addr) {
 
 <style>
 td.addr_long {
-	font-size:10px;
+	font-size:9px;
 	font-weight:bold;
+	white-space: nowrap;
 }
 td.addr_norm {
 	font-weight:bold;
+	white-space: nowrap;
 }
 td.addr_label {
 	//white-space: nowrap;
@@ -145,7 +147,7 @@ function fetch_wallet_balance(name) {
 				row["addr_label"] = wallet[i].label
 
 				td = row.insertCell(-1)
-				td.className = (wallet_addr[i].length>80) ? "addr_long" : "addr_norm"
+				td.className = (wallet_addr[i].length>45) ? "addr_long" : "addr_norm"
 				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
 					'\', \'' + wallet_addr[i] + '\')" class="hand"> ' + wallet_addr[i]
 
