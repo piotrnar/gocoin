@@ -392,12 +392,8 @@ func main() {
 	sta := time.Now()
 	common.CloseBlockChain()
 	if common.FLAG.UndoBlocks == 0 {
-		if common.CFG.TXPool.SaveOnDisk {
-			network.MempoolSave()
-		}
-		if !common.FLAG.NoWallet && common.CFG.AllBalances.SaveOnDisk {
-			wallet.Save()
-		}
+		network.MempoolSave()
+		wallet.Save()
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()
