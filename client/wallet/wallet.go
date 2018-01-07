@@ -35,10 +35,10 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 }
 
 func InitMaps() {
-	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal)
-	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal)
-	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal)
-	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal)
+	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, 10e6)
+	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, 3e6)
+	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, 10e3)
+	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, 10e3)
 }
 
 func FetchInitialBalance(abort *bool) {
