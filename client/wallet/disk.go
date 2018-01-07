@@ -84,7 +84,7 @@ func Load(abort *bool) bool {
 
 	AllBalancesP2KH, er = load_one_map(rd, "P2KH", abort)
 	if er != nil {
-		println(er.Error())
+		println("AllBalancesP2KH:", er.Error())
 		return false
 	}
 	if *abort {
@@ -93,7 +93,7 @@ func Load(abort *bool) bool {
 
 	AllBalancesP2SH, er = load_one_map(rd, "P2SH", abort)
 	if er != nil {
-		println(er.Error())
+		println("AllBalancesP2SH:", er.Error())
 		return false
 	}
 	if *abort {
@@ -102,7 +102,16 @@ func Load(abort *bool) bool {
 
 	AllBalancesP2WKH, er = load_one_map(rd, "P2WKH", abort)
 	if er != nil {
-		println(er.Error())
+		println("AllBalancesP2WKH:", er.Error())
+		return false
+	}
+	if *abort {
+		return false
+	}
+
+	AllBalancesP2WSH, er = load_one_map32(rd, "P2WSH", abort)
+	if er != nil {
+		println("AllBalancesP2WSH:", er.Error())
 		return false
 	}
 	if *abort {
@@ -111,7 +120,7 @@ func Load(abort *bool) bool {
 
 	er = btc.ReadAll(rd, ha[:len(END_MARKER)])
 	if er != nil {
-		println(er.Error())
+		println("END_MARKER read:", er.Error())
 		return false
 	}
 	if !bytes.Equal(ha[:len(END_MARKER)], END_MARKER) {
@@ -139,6 +148,83 @@ func load_one_map(rd *bufio.Reader, what string, abort *bool) (res map[[20]byte]
 	cnt_dwn_from = recs/100
 
 	allbal := make(map[[20]byte]*OneAllAddrBal, int(recs))
+
+	for ; recs > 0; recs-- {
+		er = btc.ReadAll(rd, key[:])
+		if er != nil {
+			return
+		}
+		v = new(OneAllAddrBal)
+		v.Value, er = btc.ReadVLen(rd)
+		if er != nil {
+			return
+		}
+
+		outs, er = btc.ReadVLen(rd)
+		if er != nil {
+			return
+		}
+
+		if int(outs) >= common.CFG.AllBalances.UseMapCnt-1 {
+			// using map
+			var tmp OneAllAddrInp
+			v.unspMap = make(map[OneAllAddrInp]bool, int(outs))
+			for ; outs > 0; outs-- {
+				er = btc.ReadAll(rd, tmp[:])
+				if er != nil {
+					return
+				}
+				v.unspMap[tmp] = true
+			}
+		} else {
+			// using list
+			v.unsp = make([]OneAllAddrInp, int(outs))
+			bts = len(v.unsp) * len(v.unsp[0])
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			er = btc.ReadAll(rd, slice)
+			if er != nil {
+				return
+			}
+		}
+
+		if *abort {
+			return
+		}
+
+		allbal[key] = v
+
+		if cnt_dwn==0 {
+			fmt.Print("\rLoading ", what, " - ", perc, "% complete ... ")
+			perc++
+			cnt_dwn = cnt_dwn_from
+		} else {
+			cnt_dwn--
+		}
+	}
+
+	fmt.Print("\r                                                              \r")
+
+	// all good
+	res = allbal
+	return
+}
+
+func load_one_map32(rd *bufio.Reader, what string, abort *bool) (res map[[32]byte]*OneAllAddrBal, er error) {
+	var recs, outs, cnt_dwn_from, cnt_dwn uint64
+	var key [32]byte
+	var bts, perc int
+	var slice []byte
+	var v *OneAllAddrBal
+
+	recs, er = btc.ReadVLen(rd)
+	if er != nil {
+		return
+	}
+
+	what = fmt.Sprint(recs, " ", what, " addresses")
+	cnt_dwn_from = recs/100
+
+	allbal := make(map[[32]byte]*OneAllAddrBal, int(recs))
 
 	for ; recs > 0; recs-- {
 		er = btc.ReadAll(rd, key[:])
@@ -234,6 +320,40 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal, what str
 	fmt.Print("\r                                                              \r")
 }
 
+func save_one_map32(wr *bufio.Writer, allbal map[[32]byte]*OneAllAddrBal, what string) {
+	var bts, cnt_dwn_from, cnt_dwn, perc int
+	var slice []byte
+
+	what = fmt.Sprint(len(allbal), " ", what, " addresses")
+	cnt_dwn_from = len(allbal)/100
+
+	btc.WriteVlen(wr, uint64(len(allbal)))
+	for k, v := range allbal {
+		wr.Write(k[:])
+		btc.WriteVlen(wr, v.Value)
+		if v.unspMap != nil {
+			btc.WriteVlen(wr, uint64(len(v.unspMap)))
+			for ii, _ := range v.unspMap {
+				wr.Write(ii[:])
+			}
+		} else {
+			btc.WriteVlen(wr, uint64(len(v.unsp)))
+			bts = len(v.unsp) * len(v.unsp[0])
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			wr.Write(slice)
+		}
+
+		if cnt_dwn==0 {
+			fmt.Print("\rSaving ", what, " - ", perc, "% complete ... ")
+			perc++
+			cnt_dwn = cnt_dwn_from
+		} else {
+			cnt_dwn--
+		}
+	}
+	fmt.Print("\r                                                              \r")
+}
+
 func Save() {
 	if bytes.Equal(file_for_block[:], common.Last.Block.BlockHash.Hash[:]) {
 		fmt.Println("No need to update", FILE_NAME)
@@ -256,6 +376,7 @@ func Save() {
 	save_one_map(wr, AllBalancesP2KH, "P2KH")
 	save_one_map(wr, AllBalancesP2SH, "P2SH")
 	save_one_map(wr, AllBalancesP2WKH, "P2WKH")
+	save_one_map32(wr, AllBalancesP2WSH, "P2WSH")
 
 	wr.Write(END_MARKER[:])
 	wr.Flush()
