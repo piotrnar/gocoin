@@ -1,15 +1,17 @@
 package wallet
 
 import (
-	"time"
 	"bufio"
 	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
+	"io/ioutil"
 	"os"
 	"reflect"
+	"time"
 	"unsafe"
 )
 
@@ -18,7 +20,7 @@ const (
 )
 
 var (
-	END_MARKER = []byte("END_OF_FILE")
+	END_MARKER     = []byte("END_OF_FILE")
 	file_for_block [32]byte
 )
 
@@ -145,7 +147,7 @@ func load_one_map(rd *bufio.Reader, what string, abort *bool) (res map[[20]byte]
 	}
 
 	what = fmt.Sprint(recs, " ", what, " addresses")
-	cnt_dwn_from = recs/100
+	cnt_dwn_from = recs / 100
 
 	allbal := make(map[[20]byte]*OneAllAddrBal, int(recs))
 
@@ -180,7 +182,7 @@ func load_one_map(rd *bufio.Reader, what string, abort *bool) (res map[[20]byte]
 			// using list
 			v.unsp = make([]OneAllAddrInp, int(outs))
 			bts = len(v.unsp) * len(v.unsp[0])
-			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(unsafe.Pointer(&v.unsp[0][0])), Len: bts, Cap: bts}))
 			er = btc.ReadAll(rd, slice)
 			if er != nil {
 				return
@@ -193,7 +195,7 @@ func load_one_map(rd *bufio.Reader, what string, abort *bool) (res map[[20]byte]
 
 		allbal[key] = v
 
-		if cnt_dwn==0 {
+		if cnt_dwn == 0 {
 			fmt.Print("\rLoading ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
@@ -222,7 +224,7 @@ func load_one_map32(rd *bufio.Reader, what string, abort *bool) (res map[[32]byt
 	}
 
 	what = fmt.Sprint(recs, " ", what, " addresses")
-	cnt_dwn_from = recs/100
+	cnt_dwn_from = recs / 100
 
 	allbal := make(map[[32]byte]*OneAllAddrBal, int(recs))
 
@@ -257,7 +259,7 @@ func load_one_map32(rd *bufio.Reader, what string, abort *bool) (res map[[32]byt
 			// using list
 			v.unsp = make([]OneAllAddrInp, int(outs))
 			bts = len(v.unsp) * len(v.unsp[0])
-			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(unsafe.Pointer(&v.unsp[0][0])), Len: bts, Cap: bts}))
 			er = btc.ReadAll(rd, slice)
 			if er != nil {
 				return
@@ -270,7 +272,7 @@ func load_one_map32(rd *bufio.Reader, what string, abort *bool) (res map[[32]byt
 
 		allbal[key] = v
 
-		if cnt_dwn==0 {
+		if cnt_dwn == 0 {
 			fmt.Print("\rLoading ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
@@ -291,7 +293,7 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal, what str
 	var slice []byte
 
 	what = fmt.Sprint(len(allbal), " ", what, " addresses")
-	cnt_dwn_from = len(allbal)/100
+	cnt_dwn_from = len(allbal) / 100
 
 	btc.WriteVlen(wr, uint64(len(allbal)))
 	for k, v := range allbal {
@@ -305,11 +307,11 @@ func save_one_map(wr *bufio.Writer, allbal map[[20]byte]*OneAllAddrBal, what str
 		} else {
 			btc.WriteVlen(wr, uint64(len(v.unsp)))
 			bts = len(v.unsp) * len(v.unsp[0])
-			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(unsafe.Pointer(&v.unsp[0][0])), Len: bts, Cap: bts}))
 			wr.Write(slice)
 		}
 
-		if cnt_dwn==0 {
+		if cnt_dwn == 0 {
 			fmt.Print("\rSaving ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
@@ -325,7 +327,7 @@ func save_one_map32(wr *bufio.Writer, allbal map[[32]byte]*OneAllAddrBal, what s
 	var slice []byte
 
 	what = fmt.Sprint(len(allbal), " ", what, " addresses")
-	cnt_dwn_from = len(allbal)/100
+	cnt_dwn_from = len(allbal) / 100
 
 	btc.WriteVlen(wr, uint64(len(allbal)))
 	for k, v := range allbal {
@@ -339,11 +341,11 @@ func save_one_map32(wr *bufio.Writer, allbal map[[32]byte]*OneAllAddrBal, what s
 		} else {
 			btc.WriteVlen(wr, uint64(len(v.unsp)))
 			bts = len(v.unsp) * len(v.unsp[0])
-			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data:uintptr(unsafe.Pointer(&v.unsp[0][0])), Len:bts, Cap:bts}))
+			slice = *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(unsafe.Pointer(&v.unsp[0][0])), Len: bts, Cap: bts}))
 			wr.Write(slice)
 		}
 
-		if cnt_dwn==0 {
+		if cnt_dwn == 0 {
 			fmt.Print("\rSaving ", what, " - ", perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
@@ -395,4 +397,36 @@ func Save() {
 	f.Close()
 	fmt.Print("\r", FILE_NAME, " saved in ", time.Now().Sub(sta).String())
 	fmt.Println()
+}
+
+const (
+	MAPSIZ_FILE_NAME = "mapsize.gob"
+)
+
+var (
+	WalletAddrsCount map[uint64][4]int = make(map[uint64][4]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH
+)
+
+func UpdateMapSizes() {
+	WalletAddrsCount[common.AllBalMinVal()] = [4]int{len(AllBalancesP2KH),
+		len(AllBalancesP2SH), len(AllBalancesP2WKH), len(AllBalancesP2WSH)}
+
+	buf := new(bytes.Buffer)
+	gob.NewEncoder(buf).Encode(WalletAddrsCount)
+	ioutil.WriteFile(common.GocoinHomeDir+MAPSIZ_FILE_NAME, buf.Bytes(), 0600)
+}
+
+func LoadMapSizes() {
+	d, er := ioutil.ReadFile(common.GocoinHomeDir + MAPSIZ_FILE_NAME)
+	if er != nil {
+		println("LoadMapSizes:", er.Error())
+		return
+	}
+
+	buf := bytes.NewBuffer(d)
+
+	er = gob.NewDecoder(buf).Decode(&WalletAddrsCount)
+	if er != nil {
+		println("LoadMapSizes:", er.Error())
+	}
 }
