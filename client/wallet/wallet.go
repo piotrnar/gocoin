@@ -35,15 +35,19 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 }
 
 func InitMaps() {
-	if common.AllBalMinVal() < 100000 {
-		AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, 25e6)
-		AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, 5e6)
+	LoadMapSizes()
+	szs, ok := WalletAddrsCount[common.AllBalMinVal()]
+	if ok {
+		fmt.Println("Have map sizes for MinBal", common.AllBalMinVal(), ":", szs[0], szs[1], szs[2], szs[3])
 	} else {
-		AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, 10e6)
-		AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, 3e6)
+		fmt.Println("No map sizes for MinBal", common.AllBalMinVal())
+		szs = [4]int{10e6, 3e6, 10e3, 1e3} // defaults
 	}
-	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, 10e3)
-	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, 10e3)
+
+	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, szs[0])
+	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, szs[1])
+	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, szs[2])
+	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, szs[3])
 }
 
 func FetchInitialBalance(abort *bool) {
