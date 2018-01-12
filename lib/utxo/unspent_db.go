@@ -86,9 +86,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	os.Remove(db.dir_undo+"tmp")
 	os.Remove(db.dir_utxo+"UTXO.db.tmp")
 
-	db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
-
 	if opts.Rescan {
+		db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
 		return
 	}
 
@@ -103,6 +102,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	if er!=nil {
 		of, er = os.Open(db.dir_utxo + "UTXO.old")
 		if er!=nil {
+			db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
 			return
 		}
 	}
@@ -130,6 +130,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 	cnt_dwn_from = int(u64/100)
 
+	db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, int(u64))
 	info = fmt.Sprint("\rLoading ", u64, " transactions from UTXO.db - ")
 
 	for tot_recs<u64 {
