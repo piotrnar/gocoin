@@ -567,6 +567,7 @@ func (c *OneConnection) Run() {
 
 			case "block": //block received
 				netBlockReceived(c, cmd.pl)
+				c.X.GetBlocksDataNow = true // try to ask for more blocks
 
 			case "getblocks":
 				c.GetBlocks(cmd.pl)
