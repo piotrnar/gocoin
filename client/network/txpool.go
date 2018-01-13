@@ -614,6 +614,7 @@ func ExpireTxs() {
 	common.CounterMutex.Unlock()
 }
 
+/* Old method
 func MempoolSave1() {
 	if !common.CFG.TXPool.SaveOnDisk {
 		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
@@ -641,6 +642,7 @@ func MempoolSave1() {
 	wr.Flush()
 	f.Close()
 }
+*/
 
 func bool2byte(v bool) byte {
 	if v {
@@ -705,6 +707,7 @@ func SubmitTrustedTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
 }
 
+/* Old slow method
 func MempoolLoad1() bool {
 	var ha [32]byte
 	var totcnt, txlen uint64
@@ -773,7 +776,7 @@ func MempoolLoad1() bool {
 
 	return true
 }
-
+*/
 
 func MempoolLoad2() bool {
 	var t2s *OneTxToSend

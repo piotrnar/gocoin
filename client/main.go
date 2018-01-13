@@ -394,7 +394,8 @@ func main() {
 	sta := time.Now()
 	common.CloseBlockChain()
 	if common.FLAG.UndoBlocks == 0 {
-		network.MempoolSave1()
+		//network.MempoolSave1()
+		os.Remove(common.GocoinHomeDir + network.MEMPOOL_FILE_NAME)
 		network.MempoolSave2()
 		wallet.Save()
 	}
