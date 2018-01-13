@@ -294,7 +294,7 @@ func main() {
 
 		if common.CFG.TXPool.SaveOnDisk {
 			sta := time.Now()
-			network.MempoolLoad1()
+			network.MempoolLoad2()
 			fmt.Println("Mempool loaded in", time.Now().Sub(sta).String())
 		}
 
