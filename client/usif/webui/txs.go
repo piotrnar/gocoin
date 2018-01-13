@@ -558,7 +558,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Txs_so_far : uint(cnt),
 				Real_len_so_far : uint(reallen),
 				Offset_in_block : uint(totlen),
-				Current_tx_length : uint(len(v.Data)),
+				Current_tx_length : uint(v.VSize()),
 				Current_tx_spb : float64(v.Fee)/float64(v.VSize()),
 				Current_tx_id : v.Hash.String(),
 				Time_received : uint(v.Firstseen.Unix())})
