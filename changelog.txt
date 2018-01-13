@@ -12,6 +12,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * WebUI/Transactions: Show accumulated VSize() on X-axis (insted of accumulated raw size of the txs)
 * Lib: fixed issue #32 (Broken private key padding)
 * Completely removed support for stealth addresses
+* Client: store length of wallet's balance maps (in "mapsize.gob") for time and memory optimization on next boot
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
