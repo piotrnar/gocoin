@@ -117,7 +117,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 }
 
 
-func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint {
+func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 	var fee_spkb uint64
 	if typ == MSG_TX {
 		TxMutex.Lock()
@@ -133,7 +133,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint {
 
 
 // This function is called from the main thread (or from an UI)
-func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint) {
+func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint32) {
 	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
 
 	// Prepare the inv

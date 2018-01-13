@@ -293,7 +293,9 @@ func main() {
 		network.LastCommitedHeader = common.Last.Block
 
 		if common.CFG.TXPool.SaveOnDisk {
-			network.MempoolLoad()
+			sta := time.Now()
+			network.MempoolLoad1()
+			fmt.Println("Mempool loaded in", time.Now().Sub(sta).String())
 		}
 
 		if common.CFG.TextUI_Enabled {
@@ -392,7 +394,8 @@ func main() {
 	sta := time.Now()
 	common.CloseBlockChain()
 	if common.FLAG.UndoBlocks == 0 {
-		network.MempoolSave()
+		network.MempoolSave1()
+		network.MempoolSave2()
 		wallet.Save()
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())

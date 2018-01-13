@@ -17,7 +17,7 @@ type OneTransaction struct {
 	Hash string `json:"hash"`
 	Depends []uint `json:"depends"`
 	Fee uint64 `json:"fee"`
-	Sigops uint `json:"sigops"`
+	Sigops uint64 `json:"sigops"`
 }
 
 type GetBlockTemplateResp struct {
@@ -99,7 +99,7 @@ func (tl sortedTxList) Less(i, j int) bool { return tl[j].Fee < tl[i].Fee }
 
 var txs_so_far map[[32]byte] uint
 var totlen int
-var sigops uint
+var sigops uint64
 
 func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 	var unsp *btc.TxOut
