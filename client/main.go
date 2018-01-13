@@ -293,9 +293,7 @@ func main() {
 		network.LastCommitedHeader = common.Last.Block
 
 		if common.CFG.TXPool.SaveOnDisk {
-			sta := time.Now()
 			network.MempoolLoad2()
-			fmt.Println("Mempool loaded in", time.Now().Sub(sta).String())
 		}
 
 		if common.CFG.TextUI_Enabled {
