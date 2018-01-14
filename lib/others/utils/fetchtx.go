@@ -110,7 +110,7 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 	if tx == nil {
 		return false
 	}
-	tx.SetHash(nil)
+	tx.SetHash(rawtx)
 	return txid.Equal(tx.Hash)
 }
 
