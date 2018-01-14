@@ -57,52 +57,66 @@ func all_addrs(par string) {
 	var ptwkh_outs, ptwkh_vals, ptwsh_outs, ptwsh_vals uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
+	var mode int
 
 	if par != "" {
 		if c, e := strconv.ParseUint(par, 10, 32); e == nil {
-			cnt = int(c)
+			if c > 3 {
+				cnt = int(c)
+			} else {
+				mode = int(c+1)
+				fmt.Println("Counting only addr type", ([]string{"P2KH", "P2SH", "P2WKH", "P2WSH"})[int(c)])
+			}
 		}
 	}
 
-	const MIN_BTC = 100e8
-	const MIN_OUTS = 1000
+	const MIN_BTC = 0
+	const MIN_OUTS = 0
 
-	for k, rec := range wallet.AllBalancesP2SH {
-		ptsh_vals += rec.Value
-		ptsh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-			best = append(best, OneWalletAddrs{Typ:1, Key: new_slice(k[:]), rec: rec})
+	if mode==0 || mode==1 {
+		for k, rec := range wallet.AllBalancesP2KH {
+			ptkh_vals += rec.Value
+			ptkh_outs += uint64(rec.Count())
+			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+				best = append(best, OneWalletAddrs{Typ:0, Key: new_slice(k[:]), rec: rec})
+			}
 		}
+		fmt.Println(btc.UintToBtc(ptkh_vals), "BTC in", ptkh_outs, "unspent recs from", len(wallet.AllBalancesP2KH), "P2KH addresses")
 	}
 
-	for k, rec := range wallet.AllBalancesP2KH {
-		ptkh_vals += rec.Value
-		ptkh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-			best = append(best, OneWalletAddrs{Typ:0, Key: new_slice(k[:]), rec: rec})
+	if mode==0 || mode==2 {
+		for k, rec := range wallet.AllBalancesP2SH {
+			ptsh_vals += rec.Value
+			ptsh_outs += uint64(rec.Count())
+			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+				best = append(best, OneWalletAddrs{Typ:1, Key: new_slice(k[:]), rec: rec})
+			}
 		}
+		fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "unspent recs from", len(wallet.AllBalancesP2SH), "P2SH addresses")
 	}
 
-	for k, rec := range wallet.AllBalancesP2WKH {
-		ptwkh_vals += rec.Value
-		ptwkh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-			best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+	if mode==0 || mode==3 {
+		for k, rec := range wallet.AllBalancesP2WKH {
+			ptwkh_vals += rec.Value
+			ptwkh_outs += uint64(rec.Count())
+			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+				best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+			}
 		}
+		fmt.Println(btc.UintToBtc(ptwkh_vals), "BTC in", ptwkh_outs, "unspent recs from", len(wallet.AllBalancesP2WKH), "P2WKH addresses")
 	}
 
-	for k, rec := range wallet.AllBalancesP2WSH {
-		ptwsh_vals += rec.Value
-		ptwsh_outs += uint64(rec.Count())
-		if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-			best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+	if mode==0 || mode==4 {
+		for k, rec := range wallet.AllBalancesP2WSH {
+			ptwsh_vals += rec.Value
+			ptwsh_outs += uint64(rec.Count())
+			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+				best = append(best, OneWalletAddrs{Typ:2, Key: new_slice(k[:]), rec: rec})
+			}
 		}
+		fmt.Println(btc.UintToBtc(ptwsh_vals), "BTC in", ptwsh_outs, "unspent recs from", len(wallet.AllBalancesP2WSH), "P2WSH addresses")
 	}
 
-	fmt.Println(btc.UintToBtc(ptkh_vals), "BTC in", ptkh_outs, "unspent recs from", len(wallet.AllBalancesP2KH), "P2KH addresses")
-	fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "unspent recs from", len(wallet.AllBalancesP2SH), "P2SH addresses")
-	fmt.Println(btc.UintToBtc(ptwkh_vals), "BTC in", ptwkh_outs, "unspent recs from", len(wallet.AllBalancesP2WKH), "P2WKH addresses")
-	fmt.Println(btc.UintToBtc(ptwsh_vals), "BTC in", ptwsh_outs, "unspent recs from", len(wallet.AllBalancesP2WSH), "P2WSH addresses")
 
 	if sort_by_cnt {
 		fmt.Println("Number of addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
@@ -198,8 +212,8 @@ func all_val_stats(s string) {
 }
 
 func init() {
-	newUi("richest r", true, best_val, "Show addresses with most coins")
-	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs")
+	newUi("richest r", true, best_val, "Show addresses with most coins [0,1,2,3 or count]")
+	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
 	newUi("balance a", true, list_unspent, "List balance of given bitcoin address")
 	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
 }
