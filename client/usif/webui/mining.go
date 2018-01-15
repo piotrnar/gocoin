@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 	"sort"
-	"bytes"
-	"regexp"
+//	"bytes"
+//	"regexp"
 	"net/http"
 	"encoding/json"
 	"encoding/binary"
@@ -18,8 +18,8 @@ type omv struct {
 	cnt int
 	bts uint64
 	fees uint64
-	ebad_cnt int
-	nya_cnt int
+	//ebad_cnt int
+	//nya_cnt int
 }
 
 type onemiernstat []struct {
@@ -91,7 +91,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		Name string
 		Blocks int
 		TotalFees, TotalBytes uint64
-		BUcnt, NYAcnt int
+		//BUcnt, NYAcnt int
 	}
 
 	type the_mining_stats struct {
@@ -119,7 +119,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 
 	next_diff_change := 2016-end.Height%2016
 
-	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
+	//eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
 	for ; end!=nil; cnt++ {
 		if now-int64(end.Timestamp()) > int64(common.CFG.Stat.MiningHrs)*3600 {
@@ -155,13 +155,13 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 			om.fees += fees
 		}
 
-		if eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig) != nil {
+		/*if eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig) != nil {
 			om.ebad_cnt++
 		}
 
 		if bytes.Index(cbasetx.TxIn[0].ScriptSig, []byte("/NYA/")) != -1 {
 			om.nya_cnt++
-		}
+		}*/
 
 		m[miner] = om
 
@@ -204,8 +204,8 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		stats.Miners[i].Blocks = srt[i].cnt
 		stats.Miners[i].TotalFees = srt[i].fees
 		stats.Miners[i].TotalBytes = srt[i].bts
-		stats.Miners[i].BUcnt = srt[i].ebad_cnt
-		stats.Miners[i].NYAcnt = srt[i].nya_cnt
+		//stats.Miners[i].BUcnt = srt[i].ebad_cnt
+		//stats.Miners[i].NYAcnt = srt[i].nya_cnt
 	}
 
 	bx, er := json.Marshal(stats)
