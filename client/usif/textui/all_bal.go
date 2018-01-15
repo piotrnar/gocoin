@@ -70,8 +70,13 @@ func all_addrs(par string) {
 		}
 	}
 
-	const MIN_BTC = 0
-	const MIN_OUTS = 0
+	var MIN_BTC uint64 = 100e8
+	var MIN_OUTS int = 1000
+
+	if mode != 0 {
+		MIN_BTC = 0
+		MIN_OUTS = 0
+	}
 
 	if mode==0 || mode==1 {
 		for k, rec := range wallet.AllBalancesP2KH {
