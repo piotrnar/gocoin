@@ -7,7 +7,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"net/http"
-	"regexp"
+//	"regexp"
 	"strconv"
 	"time"
 )
@@ -47,7 +47,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Sigops                            int
 
 		NonWitnessSize int
-		EBAD           string
+		//EBAD           string
 
 		HaveFeeStats bool
 	}
@@ -58,7 +58,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	end := common.Last.Block
 	common.Last.Mutex.Unlock()
 
-	eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
+	//eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
 	for cnt := uint32(0); end != nil && cnt < common.GetUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
@@ -130,9 +130,9 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		b.NonWitnessSize = rb.NonWitnessSize
 
-		if res := eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res != nil {
+		/*if res := eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res != nil {
 			b.EBAD = string(res)
-		}
+		}*/
 
 		usif.BlockFeesMutex.Lock()
 		_, b.HaveFeeStats = usif.BlockFees[end.Height]
