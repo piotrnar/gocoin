@@ -28,7 +28,7 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 
 	network.Mutex_net.Unlock()
 
-	d, _ := ioutil.ReadFile("friends.txt")
+	d, _ := ioutil.ReadFile(common.GocoinHomeDir + "friends.txt")
 	net_page = strings.Replace(net_page, "{FRIENDS_TXT}", html.EscapeString(string(d)), 1)
 
 	write_html_head(w, r)

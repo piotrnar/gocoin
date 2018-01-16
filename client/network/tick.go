@@ -278,7 +278,7 @@ func tcp_server() {
 var NextConnectFriends time.Time = time.Now()
 
 func ConnectFriends() {
-	f, _ := os.Open("friends.txt")
+	f, _ := os.Open(common.GocoinHomeDir + "friends.txt")
 	if f == nil {
 		return
 	}

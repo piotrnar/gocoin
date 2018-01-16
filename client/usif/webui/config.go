@@ -40,7 +40,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(r.Form["friends_file"]) > 0 {
-			ioutil.WriteFile("friends.txt", []byte(r.Form["friends_file"][0]), 0600)
+			ioutil.WriteFile(common.GocoinHomeDir + "friends.txt", []byte(r.Form["friends_file"][0]), 0600)
 			network.Mutex_net.Lock()
 			network.NextConnectFriends = time.Now()
 			network.Mutex_net.Unlock()

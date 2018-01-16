@@ -7,11 +7,9 @@ Lib:
 
 Client:
 * Review and update WebUI's Help page
-* Use different "friends.txt" for testnet
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Figure out a way to purge blocks that we got good headers for, but never managed to download the txs
-* Make "-nowallet" mode switchable without restarting the node.
 * WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
 * Update mining API and implement "Child Pays for Parent Merged"
 
