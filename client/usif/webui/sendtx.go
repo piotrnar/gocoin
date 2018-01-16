@@ -30,7 +30,7 @@ type MultisigAddr struct {
 }
 
 func dl_payment(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
+	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
 		return
 	}
 
@@ -226,7 +226,7 @@ error:
 
 
 func p_snd(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
+	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
 		return
 	}
 

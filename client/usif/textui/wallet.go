@@ -216,9 +216,67 @@ func all_val_stats(s string) {
 	wallet.PrintStat()
 }
 
+func wallet_on_off(s string) {
+	switch s {
+		case "on":
+			if !common.FLAG.NoWallet {
+				fmt.Println("The wallet is already enabled")
+				return
+			}
+			var abort bool
+			__exit := make(chan bool)
+			__done := make(chan bool)
+			go func() {
+				for {
+					select {
+						case s := <-common.KillChan:
+							fmt.Println(s)
+							abort = true
+						case <-__exit:
+							__done <- true
+							return
+					}
+				}
+			}()
+			fmt.Println("Press Ctrl+C to abort...")
+			common.ApplyBalMinVal()
+			wallet.FetchInitialBalance(false, &abort)
+			__exit <- true
+			_ = <- __done
+			if abort {
+				fmt.Println("Aborted")
+				wallet.InitMaps(true)
+			} else {
+				common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
+				common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
+				common.SetBool(&common.FLAG.NoWallet, false)
+			}
+
+		case "off":
+			if common.FLAG.NoWallet {
+				fmt.Println("The wallet is already disabled")
+				return
+			}
+			common.BlockChain.Unspent.CB.NotifyTxAdd = nil
+			common.BlockChain.Unspent.CB.NotifyTxDel = nil
+			common.SetBool(&common.FLAG.NoWallet, true)
+			wallet.InitMaps(true)
+
+		default:
+			if !common.FLAG.NoWallet {
+				fmt.Println("The wallet functionality is currently enabled.")
+				fmt.Println("Execute 'wallet off' to disable it.")
+			} else {
+				fmt.Println("The wallet functionality is currently disabled.")
+				fmt.Println("Execute 'wallet on' to enable it.")
+			}
+	}
+}
+
 func init() {
 	newUi("richest r", true, best_val, "Show addresses with most coins [0,1,2,3 or count]")
 	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
 	newUi("balance a", true, list_unspent, "List balance of given bitcoin address")
 	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
+	newUi("wallet w", true, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
 }

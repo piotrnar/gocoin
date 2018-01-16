@@ -141,6 +141,10 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{TESTNET}", "", 1)
 	}
 	for i := range webuimenu {
+		if common.GetBool(&common.FLAG.NoWallet) && (i==1 || i==2) {
+			continue
+		}
+
 		var x string
 		if i>0 && i<len(webuimenu)-1 {
 			x = " | "
@@ -193,15 +197,11 @@ broken_topic:
 func ServerThread(iface string) {
 	http.HandleFunc("/webui/", p_webui)
 
-	if common.FLAG.NoWallet {
-		webuimenu = append(webuimenu[:1], webuimenu[3:]...) // remove Wallet and MakeTx
-	} else {
-		http.HandleFunc("/wal", p_wal)
-		http.HandleFunc("/snd", p_snd)
-		http.HandleFunc("/balance.json", json_balance)
-		http.HandleFunc("/payment.zip", dl_payment)
-		http.HandleFunc("/balance.zip", dl_balance)
-	}
+	http.HandleFunc("/wal", p_wal)
+	http.HandleFunc("/snd", p_snd)
+	http.HandleFunc("/balance.json", json_balance)
+	http.HandleFunc("/payment.zip", dl_payment)
+	http.HandleFunc("/balance.zip", dl_balance)
 
 	http.HandleFunc("/net", p_net)
 	http.HandleFunc("/txs", p_txs)

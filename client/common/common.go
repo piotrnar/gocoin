@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"fmt"
 	"sync"
 	"time"
@@ -54,6 +55,8 @@ var (
 
 	minFeePerKB, routeMinFeePerKB, minminFeePerKB uint64
 	maxMempoolSizeBytes uint64
+
+	KillChan chan os.Signal = make(chan os.Signal)
 )
 
 

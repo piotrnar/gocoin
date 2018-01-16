@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	killchan          chan os.Signal = make(chan os.Signal)
 	retryCachedBlocks bool
 	SaveBlockChain    *time.Timer = time.NewTimer(24*time.Hour)
 )
@@ -208,6 +207,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	msg.Done.Done()
 }
 
+
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -218,7 +218,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
 	// Disable Ctrl+C
-	signal.Notify(killchan, os.Interrupt, os.Kill)
+	signal.Notify(common.KillChan, os.Interrupt, os.Kill)
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -310,6 +310,25 @@ func main() {
 
 		usif.LoadBlockFees()
 
+		wallet.FetchingBalanceTick = func() {
+			select {
+				case rec := <-usif.LocksChan:
+					common.CountSafe("DoMainLocks")
+					rec.In.Done()
+					rec.Out.Wait()
+
+				case newtx := <-network.NetTxs:
+					common.CountSafe("DoMainNetTx")
+					network.HandleNetTx(newtx, false)
+
+				case <-netTick:
+					common.CountSafe("DoMainNetTick")
+					network.NetworkTick()
+
+				default:
+			}
+		}
+
 		for !usif.Exit_now.Get() {
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
@@ -323,7 +342,7 @@ func main() {
 			common.Busy("")
 
 			select {
-			case s := <-killchan:
+			case s := <-common.KillChan:
 				fmt.Println("Got signal:", s)
 				usif.Exit_now.Set()
 				continue

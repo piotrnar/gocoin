@@ -1018,7 +1018,7 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 
-	fmt.Println(len(TransactionsToSend), "transactions loaded from", MEMPOOL_FILE_NAME2)
+	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME2)
 
 	return true
 

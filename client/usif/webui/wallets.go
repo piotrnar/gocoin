@@ -22,7 +22,7 @@ import (
 
 
 func p_wal(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
+	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet) {
 		return
 	}
 	var str string
@@ -55,7 +55,7 @@ func getaddrtype(aa *btc.BtcAddr) string {
 }
 
 func json_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
+	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
 		return
 	}
 
@@ -287,7 +287,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
+	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
 		return
 	}
 

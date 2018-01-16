@@ -13,6 +13,8 @@ import (
 var (
 	AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH map[[20]byte]*OneAllAddrBal
 	AllBalancesP2WSH map[[32]byte]*OneAllAddrBal
+
+	FetchingBalanceTick func()
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -34,9 +36,16 @@ func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	return
 }
 
-func InitMaps() {
+func InitMaps(empty bool) {
+	var szs [4]int
+	var ok bool
+
+	if empty {
+		goto init
+	}
+
 	LoadMapSizes()
-	szs, ok := WalletAddrsCount[common.AllBalMinVal()]
+	szs, ok = WalletAddrsCount[common.AllBalMinVal()]
 	if ok {
 		fmt.Println("Have map sizes for MinBal", common.AllBalMinVal(), ":", szs[0], szs[1], szs[2], szs[3])
 	} else {
@@ -44,18 +53,19 @@ func InitMaps() {
 		szs = [4]int{10e6, 3e6, 10e3, 1e3} // defaults
 	}
 
+init:
 	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, szs[0])
 	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, szs[1])
 	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, szs[2])
 	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, szs[3])
 }
 
-func FetchInitialBalance(abort *bool) {
-	if common.CFG.AllBalances.SaveOnDisk && Load(abort) || *abort {
+func FetchInitialBalance(trytoload bool, abort *bool) {
+	if trytoload && Load(abort) || *abort {
 		return
 	}
 
-	InitMaps()
+	InitMaps(false)
 
 	fmt.Println("Calculating balances of", btc.UintToBtc(common.AllBalMinVal()), "BTC or more from UTXO set")
 
@@ -77,6 +87,9 @@ func FetchInitialBalance(abort *bool) {
 		}
 		if *abort {
 			break
+		}
+		if FetchingBalanceTick != nil {
+			FetchingBalanceTick()
 		}
 	}
 	fmt.Print("\r                                                                                  \r")

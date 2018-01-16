@@ -195,7 +195,7 @@ func InitConfig() {
 	}
 	flag.Parse()
 
-	atomic.StoreUint64(&allBalMinVal, CFG.AllBalances.MinValue)
+	ApplyBalMinVal()
 
 	if FLAG.UndoBlocks != 0 {
 		FLAG.NoWallet = true // this will prevent loading of balances, thus speeding up the process
@@ -230,7 +230,7 @@ func Reset() {
 	MaxExpireTime = time.Duration(CFG.TXPool.ExpireMaxHours) * time.Hour
 	ExpirePerByte = float64(CFG.TXPool.ExpireMinPerKB) * float64(time.Minute) / 1024
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
-		fmt.Println("In order to apply the new value of AllBalMinVal, node's restart is requirted")
+		fmt.Println("In order to apply the new value of AllBalMinVal, restart the node or do 'wallet off' and 'wallet on'")
 	}
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
@@ -367,8 +367,18 @@ func GetBool(addr *bool) (res bool) {
 	return
 }
 
+func SetBool(addr *bool, val bool) {
+	mutex_cfg.Lock()
+	*addr = val
+	mutex_cfg.Unlock()
+}
+
 func AllBalMinVal() uint64 {
 	return atomic.LoadUint64(&allBalMinVal)
+}
+
+func ApplyBalMinVal() {
+	atomic.StoreUint64(&allBalMinVal, CFG.AllBalances.MinValue)
 }
 
 func MinFeePerKB() uint64 {

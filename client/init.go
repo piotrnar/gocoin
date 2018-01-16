@@ -38,7 +38,7 @@ func host_init() {
 	go func() {
 		for {
 			select {
-				case s := <-killchan:
+				case s := <-common.KillChan:
 					fmt.Println(s)
 					chain.AbortNow = true
 				case <-__exit:
@@ -106,7 +106,7 @@ func host_init() {
 		common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
 		// LoadWalk = wallet.NewUTXO
 		sta = time.Now()
-		wallet.FetchInitialBalance(&chain.AbortNow)
+		wallet.FetchInitialBalance(common.CFG.AllBalances.SaveOnDisk, &chain.AbortNow)
 		if chain.AbortNow {
 			fmt.Printf("Loading balances aborted after %s seconds\n", time.Now().Sub(sta).String())
 			common.BlockChain.Close()
