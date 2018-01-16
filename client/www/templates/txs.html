@@ -49,8 +49,9 @@ td.maturity {
 			<td align="right" nowrap="nowrap" style="font-size:70%">avg. <b id="avgoutspertx"></b> / tx
 		<tr><td>Rejected transactions:
 			<td><input type="button" id="butre" value="" onclick="show_txsre()">
-			<td align="right"><b id="ts_tre_size"></b>
-		<tr><td>Waiting for inputs:<td colspan="2"><input type="button" id="butw4i" value="" onclick="show_txw4i()">
+			<td align="right" nowrap="nowrap"><b id="ts_tre_size"></b>
+		<tr><td>Waiting for inputs:<td><input type="button" id="butw4i" value="" onclick="show_txw4i()">
+			<td align="right" nowrap="nowrap" title="FeeFiler value"><b id="min_spb"></b> spb
 		<tr><td>Being processed:
 			<td><b id="ts_ptr1_cnt"></b> / <b id="ts_ptr2_cnt"></b>
 			<td><input type="button" onclick="show_txs2s('&ownonly=1')" value="Own TXs">
@@ -747,6 +748,7 @@ function refreshtxstat() {
 			butw4i.value = ts.awaiting_inputs
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
+			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)
 		} catch(e) {
 			console.log(e)
 		}
