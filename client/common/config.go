@@ -227,7 +227,7 @@ func Reset() {
 	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
 	MaxExpireTime = time.Duration(CFG.TXPool.ExpireMaxHours) * time.Hour
-	ExpirePerKB = time.Duration(CFG.TXPool.ExpireMinPerKB) * time.Minute
+	ExpirePerByte = float64(CFG.TXPool.ExpireMinPerKB) * float64(time.Minute) / 1024
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
 		fmt.Println("In order to apply the new value of AllBalMinVal, node's restart is requirted")
 	}

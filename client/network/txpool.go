@@ -543,20 +543,6 @@ func init() {
 	chain.TrustedTxChecker = txChecker
 }
 
-func expireTime(size int) (t time.Time) {
-	common.LockCfg()
-	if !common.CFG.TXPool.Enabled {
-		common.UnlockCfg()
-		return // return zero time which should expire immediatelly
-	}
-	exp := (time.Duration(size) * common.ExpirePerKB) >> 10
-	if exp > common.MaxExpireTime {
-		exp = common.MaxExpireTime
-	}
-	common.UnlockCfg()
-	return time.Now().Add(-exp)
-}
-
 // Make sure to call it with locked TxMutex
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
@@ -578,12 +564,34 @@ func RemoveFromRejected(hash *btc.Uint256) {
 	TxMutex.Unlock()
 }
 
+var (
+	poolenabled bool
+	expireperbyte float64
+	maxexpiretime time.Duration
+	timenow time.Time
+)
+
+func expireTime(size int) (t time.Time) {
+	exp := time.Duration(float64(size) * expireperbyte)
+	if exp > maxexpiretime {
+		exp = maxexpiretime
+	}
+	return timenow.Add(-exp)
+}
+
 func ExpireTxs() {
 	var cnt1a, cnt1b, cnt2 uint64
 
+	common.LockCfg()
+	poolenabled = common.CFG.TXPool.Enabled
+	expireperbyte = common.ExpirePerByte
+	maxexpiretime = common.MaxExpireTime
+	common.UnlockCfg()
+	timenow = time.Now()
+
 	TxMutex.Lock()
 	for _, v := range TransactionsToSend {
-		if v.Own == 0 && v.Firstseen.Before(expireTime(len(v.Data))) { // Do not expire own txs
+		if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
 			DeleteToSend(v)
 			if v.Blocked == 0 {
 				cnt1a++
@@ -593,7 +601,7 @@ func ExpireTxs() {
 		}
 	}
 	for k, v := range TransactionsRejected {
-		if v.Time.Before(expireTime(int(v.Size))) {
+		if !poolenabled || v.Time.Before(expireTime(int(v.Size))) {
 			deleteRejected(k)
 			cnt2++
 		}

@@ -30,7 +30,7 @@ var (
 	MaxPeersNeeded int
 
 	MaxExpireTime time.Duration
-	ExpirePerKB time.Duration
+	ExpirePerByte float64
 
 	CounterMutex sync.Mutex
 	Counter map[string] uint64 = make(map[string]uint64)

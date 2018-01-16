@@ -84,6 +84,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client/WebUI/Blocks: transactions in the fee stats can be grouped now to smooth the graph
 * Client: fee stats fpor WebUI/Blocks are being saved now
 * Client/WebUI: "Limit range" checkbox added to SPB graphs
+* Client: Fixed problem with expiring mempool txs too soon because of overflowing ints
 
 1.9.1 - 2017-08-01
 * Client: Removed AnySendTimeout as it was causing problems with limited UL bandwidth
