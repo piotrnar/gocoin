@@ -588,21 +588,20 @@ func limitPoolSize(maxlen uint64) {
 
 	if TransactionsToSendSize < maxlen {
 		if TransactionsToSendSize < maxlen-2*ticklen {
-			common.SetMinFeePerKB(0)
-
-			var cnt uint64
-			for k, v := range TransactionsRejected {
-				if v.Reason == TX_REJECTED_LOW_FEE {
-					deleteRejected(k)
-					cnt++
+			if common.SetMinFeePerKB(0) {
+				var cnt uint64
+				for k, v := range TransactionsRejected {
+					if v.Reason == TX_REJECTED_LOW_FEE {
+						deleteRejected(k)
+						cnt++
+					}
 				}
+				common.CounterMutex.Lock()
+				common.Counter["TxPoolSizeLow"]++
+				common.Counter["TxRejectedFeeUndone"] += cnt
+				common.CounterMutex.Unlock()
+				fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
 			}
-
-			common.CounterMutex.Lock()
-			common.Counter["TxPoolSizeLow"]++
-			common.Counter["TxRejectedFeeUndone"] += cnt
-			common.CounterMutex.Unlock()
-			fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
 		} else {
 			common.CountSafe("TxPoolSizeOK")
 			//fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
