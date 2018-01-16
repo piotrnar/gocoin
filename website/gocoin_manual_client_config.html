@@ -166,8 +166,8 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.FeePerByte</td>
-<td class="cfg_type"> uint64</td>
-<td> 20</td>
+<td class="cfg_type"> float64</td>
+<td> 20.0</td>
 <td class="cfg_info"> Required minimum fee per byte to accept a transaction to the memory pool.</td>
 </tr>
 <tr class="even">
@@ -195,6 +195,12 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
 </tr>
 <tr class="even">
+<td class="cfg_name"> TXPool.MaxSizeMB</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> If not zero, the node will keep the mempool size around this value (ignoring TXPool.ExpireMinPerKB).</td>
+</tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.SaveOnDisk</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
@@ -209,8 +215,8 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 </tr>
 <tr class="odd">
 <td class="cfg_name"> TXRoute.FeePerByte</td>
-<td class="cfg_type"> uint64</td>
-<td> 25</td>
+<td class="cfg_type"> float64</td>
+<td> 25.0</td>
 <td class="cfg_info"> Required minimum fee per byte to route a transaction.</td>
 </tr>
 <tr class="odd">

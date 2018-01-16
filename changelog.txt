@@ -87,6 +87,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client: Fixed problem with expiring mempool txs too soon because of overflowing ints
 * Client: Minimum fee per byte (for mempool and routing) is a floating point value now
 * Client: Send "feefilter" massage to all the peers whenever minimum fee per byte changes
+* Client: New config file parameter "TXPool.MaxSizeMB", to keep memory pool at a certain level
 
 1.9.1 - 2017-08-01
 * Client: Removed AnySendTimeout as it was causing problems with limited UL bandwidth

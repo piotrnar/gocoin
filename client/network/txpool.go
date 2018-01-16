@@ -13,6 +13,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 	"io"
 	"os"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,7 +40,7 @@ const (
 	TX_REJECTED_RBF_FINAL   = 211
 	TX_REJECTED_RBF_100     = 212
 
-	MEMPOOL_FILE_NAME = "mempool.bin"
+	MEMPOOL_FILE_NAME  = "mempool.bin"
 	MEMPOOL_FILE_NAME2 = "mempool.dmp"
 )
 
@@ -99,8 +100,18 @@ type OneWaitingList struct {
 	Ids  map[BIDX]time.Time // List of pending tx ids
 }
 
+type SortedTxToSend []*OneTxToSend
+
+func (tl SortedTxToSend) Len() int      { return len(tl) }
+func (tl SortedTxToSend) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
+func (tl SortedTxToSend) Less(i, j int) bool {
+	spb_i := float64(tl[i].Fee) / float64(tl[i].VSize())
+	spb_j := float64(tl[j].Fee) / float64(tl[j].VSize())
+	return spb_j < spb_i
+}
+
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
-	return NeedThisTxExt(id, cb)==0
+	return NeedThisTxExt(id, cb) == 0
 }
 
 // Return false if we do not want to receive a data for this tx
@@ -324,7 +335,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if !ntx.trusted && fee < (uint64(tx.VSize()) * common.MinFeePerKB() / 1000) {
+	if !ntx.trusted && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
 		common.CountSafe("TxRejectedLowFee")
@@ -565,11 +576,76 @@ func RemoveFromRejected(hash *btc.Uint256) {
 }
 
 var (
-	poolenabled bool
+	poolenabled   bool
 	expireperbyte float64
 	maxexpiretime time.Duration
-	timenow time.Time
+	timenow       time.Time
 )
+
+// This must be called with TxMutex locked
+func limitPoolSize(maxlen uint64) {
+	ticklen := maxlen >> 4 // 1/16th of the max size = X
+
+	if TransactionsToSendSize < maxlen {
+		if TransactionsToSendSize < maxlen-2*ticklen {
+			common.SetMinFeePerKB(0)
+
+			var cnt uint64
+			for k, v := range TransactionsRejected {
+				if v.Reason == TX_REJECTED_LOW_FEE {
+					deleteRejected(k)
+					cnt++
+				}
+			}
+
+			common.CounterMutex.Lock()
+			common.Counter["TxPoolSizeLow"]++
+			common.Counter["TxRejectedFeeUndone"] += cnt
+			common.CounterMutex.Unlock()
+			fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
+		} else {
+			common.CountSafe("TxPoolSizeOK")
+			fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
+		}
+		return
+	}
+
+	sta := time.Now()
+	var idx int
+	sorted := make(SortedTxToSend, len(TransactionsToSend))
+	for _, v := range TransactionsToSend {
+		sorted[idx] = v
+		idx++
+	}
+	sort.Sort(sorted)
+
+	maxlen -= ticklen
+	for idx = range sorted {
+		siz := uint64(len(sorted[idx].Data))
+		if siz > maxlen {
+			break
+		}
+		maxlen -= siz
+	}
+	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
+	cnt := len(sorted) - idx
+	old_size := TransactionsToSendSize
+	for idx < len(sorted) {
+		DeleteToSend(sorted[idx])
+		idx++
+	}
+
+	common.SetMinFeePerKB(newspkb)
+
+	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
+		old_size - TransactionsToSendSize, "of", TransactionsToSendSize, "bytes and", cnt, "of", len(sorted), "txs removed. New max SPKB:", newspkb)
+
+	common.CounterMutex.Lock()
+	common.Counter["TxPoolSizeHigh"]++
+	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
+	common.Counter["TxPurgedSizBts"] += old_size - TransactionsToSendSize
+	common.CounterMutex.Unlock()
+}
 
 func expireTime(size int) (t time.Time) {
 	exp := time.Duration(float64(size) * expireperbyte)
@@ -590,16 +666,22 @@ func ExpireTxs() {
 	timenow = time.Now()
 
 	TxMutex.Lock()
-	for _, v := range TransactionsToSend {
-		if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
-			DeleteToSend(v)
-			if v.Blocked == 0 {
-				cnt1a++
-			} else {
-				cnt1b++
+
+	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
+		limitPoolSize(maxpoolsize)
+	} else {
+		for _, v := range TransactionsToSend {
+			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
+				DeleteToSend(v)
+				if v.Blocked == 0 {
+					cnt1a++
+				} else {
+					cnt1b++
+				}
 			}
 		}
 	}
+
 	for k, v := range TransactionsRejected {
 		if !poolenabled || v.Time.Before(expireTime(int(v.Size))) {
 			deleteRejected(k)
@@ -660,7 +742,7 @@ func bool2byte(v bool) byte {
 	}
 }
 
-func (t2s *OneTxToSend)WriteBytes(wr io.Writer) {
+func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	btc.WriteVlen(wr, uint64(len(t2s.Data)))
 	wr.Write(t2s.Data)
 
@@ -932,9 +1014,6 @@ fatal_error:
 	return false
 }
 
-
-
-
 // This function is called for each tx mined in a new block
 func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	h := tx.Hash
@@ -974,8 +1053,6 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	wtg = WaitingForInputs[h.BIdx()]
 	return
 }
-
-
 
 // Removes all the block's tx from the mempool
 func BlockMined(bl *btc.Block) {

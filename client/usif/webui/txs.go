@@ -529,7 +529,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	sorted := make(usif.SortedTxToSend, len(network.TransactionsToSend))
+	sorted := make(network.SortedTxToSend, len(network.TransactionsToSend))
 	for _, v := range network.TransactionsToSend {
 		sorted[cnt] = v
 		cnt++

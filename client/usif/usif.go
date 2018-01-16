@@ -239,23 +239,13 @@ func ExecUiReq(req *OneUiReq) {
 	}()
 }
 
-type SortedTxToSend []*network.OneTxToSend
-
-func (tl SortedTxToSend) Len() int      { return len(tl) }
-func (tl SortedTxToSend) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
-func (tl SortedTxToSend) Less(i, j int) bool {
-	spb_i := float64(tl[i].Fee) / float64(tl[i].VSize())
-	spb_j := float64(tl[j].Fee) / float64(tl[j].VSize())
-	return spb_j < spb_i
-}
-
 func MemoryPoolFees() (res string) {
 	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
 	cnt := 0
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	sorted := make(SortedTxToSend, len(network.TransactionsToSend))
+	sorted := make(network.SortedTxToSend, len(network.TransactionsToSend))
 	for _, v := range network.TransactionsToSend {
 		sorted[cnt] = v
 		cnt++

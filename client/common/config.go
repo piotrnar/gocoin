@@ -235,7 +235,11 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
-	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
+
+	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB) * 1e6)
+	if CFG.TXPool.MaxSizeMB==0 {
+		atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
+	}
 	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte * 1000))
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
@@ -372,6 +376,10 @@ func MinFeePerKB() uint64 {
 	return atomic.LoadUint64(&minFeePerKB)
 }
 
+func SetMinFeePerKB(val uint64) {
+	atomic.StoreUint64(&minFeePerKB, val)
+}
+
 func RouteMinFeePerKB() uint64 {
 	return atomic.LoadUint64(&routeMinFeePerKB)
 }
@@ -381,4 +389,8 @@ func IsListenTCP() (res bool) {
 	res = CFG.ConnectOnly == "" && ListenTCP
 	mutex_cfg.Unlock()
 	return
+}
+
+func MaxMempoolSize() uint64 {
+	return atomic.LoadUint64(&maxMempoolSizeBytes)
 }
