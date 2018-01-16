@@ -14,7 +14,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Completely removed support for stealth addresses
 * Client: store length of wallet's balance maps (in "mapsize.gob") for time and memory optimization on next boot
 * Client: improved time of loading mempool from disk
-* Client: "friends.txt" filemoved to the data directory
+* Client: "friends.txt" file moved to the data directory
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
