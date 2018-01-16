@@ -375,12 +375,16 @@ func MinFeePerKB() uint64 {
 	return atomic.LoadUint64(&minFeePerKB)
 }
 
-func SetMinFeePerKB(val uint64) {
+func SetMinFeePerKB(val uint64) bool {
 	minmin := atomic.LoadUint64(&minminFeePerKB)
 	if val < minmin {
 		val = minmin
 	}
+	if val == MinFeePerKB() {
+		return false
+	}
 	atomic.StoreUint64(&minFeePerKB, val)
+	return true
 }
 
 func RouteMinFeePerKB() uint64 {
