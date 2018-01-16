@@ -62,17 +62,18 @@ var (
 		TXPool struct {
 			Enabled        bool // Global on/off swicth
 			AllowMemInputs bool
-			FeePerByte     uint64
+			FeePerByte     float64
 			MaxTxSize      uint32
 			// If something is 1KB big, it expires after this many minutes.
 			// Otherwise expiration time will be proportionally different.
 			ExpireMinPerKB uint
 			ExpireMaxHours uint
+			MaxSizeMB      uint
 			SaveOnDisk     bool
 		}
 		TXRoute struct {
 			Enabled    bool // Global on/off swicth
-			FeePerByte uint64
+			FeePerByte float64
 			MaxTxSize  uint32
 		}
 		Memory struct {
@@ -129,13 +130,13 @@ func InitConfig() {
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
-	CFG.TXPool.FeePerByte = 20
+	CFG.TXPool.FeePerByte = 20.0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.ExpireMinPerKB = 1800
 	CFG.TXPool.ExpireMaxHours = 120
 
 	CFG.TXRoute.Enabled = true
-	CFG.TXRoute.FeePerByte = 25
+	CFG.TXRoute.FeePerByte = 25.0
 	CFG.TXRoute.MaxTxSize = 100e3
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
@@ -234,6 +235,8 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
+	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
+	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte * 1000))
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
 	WebUIAllowed = nil
@@ -363,6 +366,14 @@ func GetBool(addr *bool) (res bool) {
 
 func AllBalMinVal() uint64 {
 	return atomic.LoadUint64(&allBalMinVal)
+}
+
+func MinFeePerKB() uint64 {
+	return atomic.LoadUint64(&minFeePerKB)
+}
+
+func RouteMinFeePerKB() uint64 {
+	return atomic.LoadUint64(&routeMinFeePerKB)
 }
 
 func IsListenTCP() (res bool) {

@@ -85,6 +85,8 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client: fee stats fpor WebUI/Blocks are being saved now
 * Client/WebUI: "Limit range" checkbox added to SPB graphs
 * Client: Fixed problem with expiring mempool txs too soon because of overflowing ints
+* Client: Minimum fee per byte (for mempool and routing) is a floating point value now
+* Client: Send "feefilter" massage to all the peers whenever minimum fee per byte changes
 
 1.9.1 - 2017-08-01
 * Client: Removed AnySendTimeout as it was causing problems with limited UL bandwidth

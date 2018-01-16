@@ -114,6 +114,8 @@ type ConnectionStatus struct {
 	TxsReceived int // During last hour
 
 	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
+
+	LastMinFeePerKByte uint64
 }
 
 type ConnInfo struct {

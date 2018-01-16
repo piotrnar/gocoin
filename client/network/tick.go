@@ -87,6 +87,14 @@ func (c *OneConnection) Tick(now time.Time) {
 		c.Mutex.Unlock()
 	}
 
+	if mfpb := common.MinFeePerKB(); mfpb != c.X.LastMinFeePerKByte {
+		c.X.LastMinFeePerKByte = mfpb
+		if c.Node.Version >= 70013 {
+			c.SendFeeFilter()
+		}
+	}
+
+
 	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
@@ -434,6 +442,11 @@ func NetworkTick() {
 	}
 }
 
+func (c *OneConnection) SendFeeFilter() {
+	var pl [8]byte
+	binary.LittleEndian.PutUint64(pl[:], c.X.LastMinFeePerKByte)
+	c.SendRawMsg("feefilter", pl[:])
+}
 
 // Process that handles communication with a single peer
 func (c *OneConnection) Run() {
@@ -523,13 +536,12 @@ func (c *OneConnection) Run() {
 				c.DoS("SPV")
 				break
 			}
+			c.X.LastMinFeePerKByte = common.MinFeePerKB()
 			if c.Node.Version >= 70012 {
 				c.SendRawMsg("sendheaders", nil)
 				if c.Node.Version >= 70013 {
-					if common.CFG.TXPool.FeePerByte!=0 {
-						var pl [8]byte
-						binary.LittleEndian.PutUint64(pl[:], 1000*common.CFG.TXPool.FeePerByte)
-						c.SendRawMsg("feefilter", pl[:])
+					if c.X.LastMinFeePerKByte != 0 {
+						c.SendFeeFilter()
 					}
 					if c.Node.Version >= 70014 {
 						if (c.Node.Services&SERVICE_SEGWIT)==0 {

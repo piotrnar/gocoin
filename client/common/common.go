@@ -51,6 +51,8 @@ var (
 	UserAgent string
 
 	ListenTCP bool
+
+	minFeePerKB, routeMinFeePerKB uint64
 )
 
 

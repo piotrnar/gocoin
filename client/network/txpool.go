@@ -324,7 +324,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if !ntx.trusted && fee < (uint64(tx.VSize()) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte)) {
+	if !ntx.trusted && fee < (uint64(tx.VSize()) * common.MinFeePerKB() / 1000) {
 		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
 		common.CountSafe("TxRejectedLowFee")
@@ -369,7 +369,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totlen += len(ctx.Data)
 			totfees += ctx.Fee
 		}
-		new_min_fee = totfees + (uint64(len(ntx.raw)) * atomic.LoadUint64(&common.CFG.TXPool.FeePerByte))
+		new_min_fee = totfees + (uint64(len(ntx.raw)) * common.MinFeePerKB() / 1000)
 
 		if !ntx.trusted && fee < new_min_fee {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
@@ -488,7 +488,7 @@ func isRoutable(rec *OneTxToSend) bool {
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false
 	}
-	if rec.Fee < (uint64(rec.VSize()) * atomic.LoadUint64(&common.CFG.TXRoute.FeePerByte)) {
+	if rec.Fee < (uint64(rec.VSize()) * common.RouteMinFeePerKB() / 1000) {
 		common.CountSafe("TxRouteLowFee")
 		rec.Blocked = TX_REJECTED_LOW_FEE
 		return false

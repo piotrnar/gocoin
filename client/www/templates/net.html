@@ -171,8 +171,8 @@ function update_connection_info(ci) {
 	s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
 	s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
 	s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
-	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent +'\n'
-	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB +'\n'
+	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '\n'
+	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
 	s += 'Ping history:'
 
 	var idx = ci.PingHistoryIdx
