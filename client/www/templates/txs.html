@@ -18,7 +18,10 @@ td.maturity {
 <td><b>Memory Pool:</b></td>
 <td align="right">
 <input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()" checked>
-<span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit range</span>
+<span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit Y</span>
+&nbsp;&nbsp;
+<input type="checkbox" id="mempool_siz_range" onchange="show_mempool_fees()" checked>
+<span onclick="mempool_siz_range.click()" style="cursor:pointer">Limit X</span>
 </td>
 </tr>
 </table>
@@ -721,8 +724,12 @@ function show_mempool_fees() {
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 		}
 	}
-	aj.open("GET","mempool_stats.json?max=10000000", true);
-	aj.send(null);
+	if (mempool_siz_range.checked) {
+		aj.open("GET","mempool_stats.json?max=10000000", true)
+	} else {
+		aj.open("GET","mempool_stats.json", true)
+	}
+	aj.send(null)
 }
 
 
