@@ -257,6 +257,7 @@ func wallet_on_off(s string) {
 				fmt.Println("The wallet is already disabled")
 				return
 			}
+			wallet.UpdateMapSizes()
 			common.BlockChain.Unspent.CB.NotifyTxAdd = nil
 			common.BlockChain.Unspent.CB.NotifyTxDel = nil
 			common.SetBool(&common.FLAG.NoWallet, true)

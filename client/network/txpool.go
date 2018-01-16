@@ -652,7 +652,7 @@ func limitPoolSize(maxlen uint64) {
 	common.SetMinFeePerKB(newspkb)
 
 	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size - TransactionsToSendSize, "of", old_size, "bytes and", cnt, "of", len(sorted), "txs removed. New max SPKB:", newspkb)
+		old_size - TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)
 
 	common.CounterMutex.Lock()
 	common.Counter["TxPoolSizeHigh"]++
@@ -720,36 +720,6 @@ func ExpireTxs() {
 	common.CounterMutex.Unlock()
 }
 
-/* Old method
-func MempoolSave1() {
-	if !common.CFG.TXPool.SaveOnDisk {
-		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
-		return
-	}
-
-	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
-	if er != nil {
-		println(er.Error())
-		return
-	}
-
-	fmt.Println("Saving", MEMPOOL_FILE_NAME)
-	wr := bufio.NewWriter(f)
-
-	wr.Write(common.Last.Block.BlockHash.Hash[:])
-	btc.WriteVlen(wr, uint64(len(TransactionsToSend)))
-
-	for _, t2s := range TransactionsToSend {
-		btc.WriteVlen(wr, uint64(len(t2s.Raw)))
-		wr.Write(t2s.Raw)
-	}
-
-	wr.Write(END_MARKER[:])
-	wr.Flush()
-	f.Close()
-}
-*/
-
 func bool2byte(v bool) byte {
 	if v {
 		return 1
@@ -812,75 +782,6 @@ func MempoolSave2() {
 func SubmitTrustedTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
 }
-
-/* Old slow method
-func MempoolLoad1() bool {
-	var ha [32]byte
-	var totcnt, txlen uint64
-	var rawtx []byte
-	var tx *btc.Tx
-	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
-	if er != nil {
-		println(er.Error())
-		return false
-	}
-	defer f.Close()
-
-	rd := bufio.NewReader(f)
-	er = btc.ReadAll(rd, ha[:])
-	if er != nil {
-		println(er.Error())
-		return false
-	}
-	if !bytes.Equal(ha[:], common.Last.Block.BlockHash.Hash[:]) {
-		println(MEMPOOL_FILE_NAME, "is for different last block hash")
-		return false
-	}
-
-	totcnt, er = btc.ReadVLen(rd)
-	if er != nil {
-		println(er.Error())
-		return false
-	}
-
-
-
-	for ; totcnt > 0; totcnt-- {
-		txlen, er = btc.ReadVLen(rd)
-		if er != nil {
-			println(er.Error())
-			return false
-		}
-		rawtx = make([]byte, int(txlen))
-		er = btc.ReadAll(rd, rawtx)
-		if er != nil {
-			println(er.Error())
-			return false
-		}
-		tx, _ = btc.NewTx(rawtx)
-		if tx == nil {
-			println("Error parsing tx from", MEMPOOL_FILE_NAME)
-			return false
-		}
-		tx.SetHash(rawtx)
-		SubmitTrustedTx(tx, rawtx)
-	}
-
-	er = btc.ReadAll(rd, ha[:len(END_MARKER)])
-	if er != nil {
-		println(er.Error())
-		return false
-	}
-	if !bytes.Equal(ha[:len(END_MARKER)], END_MARKER) {
-		println(MEMPOOL_FILE_NAME, "has marker missing")
-		return false
-	}
-
-	fmt.Println(len(TransactionsToSend), "transactions loaded from", MEMPOOL_FILE_NAME)
-
-	return true
-}
-*/
 
 func MempoolLoad2() bool {
 	var t2s *OneTxToSend
