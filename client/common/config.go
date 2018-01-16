@@ -130,13 +130,14 @@ func InitConfig() {
 
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
-	CFG.TXPool.FeePerByte = 20.0
+	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.ExpireMinPerKB = 1800
 	CFG.TXPool.ExpireMaxHours = 120
+	CFG.TXPool.MaxSizeMB = 100
 
 	CFG.TXRoute.Enabled = true
-	CFG.TXRoute.FeePerByte = 25.0
+	CFG.TXRoute.FeePerByte = 0.0
 	CFG.TXRoute.MaxTxSize = 100e3
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
