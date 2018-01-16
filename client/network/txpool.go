@@ -826,8 +826,6 @@ func MempoolLoad1() bool {
 	}
 	defer f.Close()
 
-	fmt.Println("Loading mempool from", MEMPOOL_FILE_NAME)
-
 	rd := bufio.NewReader(f)
 	er = btc.ReadAll(rd, ha[:])
 	if er != nil {
@@ -898,8 +896,6 @@ func MempoolLoad2() bool {
 		return false
 	}
 	defer f.Close()
-
-	fmt.Println("Loading mempool from", MEMPOOL_FILE_NAME2)
 
 	rd := bufio.NewReader(f)
 	if er = btc.ReadAll(rd, tmp[:32]); er != nil {
