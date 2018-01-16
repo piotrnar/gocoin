@@ -474,7 +474,8 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(network.TransactionsPending), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
 	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(network.SpentOutputs), ",")))
-	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(network.WaitingForInputs), "")))
+	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(network.WaitingForInputs), ",")))
+	w.Write([]byte(fmt.Sprint("\"min_fee_per_kb\":", common.MinFeePerKB(), "")))
 
 	network.TxMutex.Unlock()
 

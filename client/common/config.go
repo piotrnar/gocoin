@@ -237,9 +237,8 @@ func Reset() {
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
 
 	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB) * 1e6)
-	if CFG.TXPool.MaxSizeMB==0 {
-		atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
-	}
+	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
+	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte * 1000))
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
@@ -377,6 +376,10 @@ func MinFeePerKB() uint64 {
 }
 
 func SetMinFeePerKB(val uint64) {
+	minmin := atomic.LoadUint64(&minminFeePerKB)
+	if val < minmin {
+		val = minmin
+	}
 	atomic.StoreUint64(&minFeePerKB, val)
 }
 

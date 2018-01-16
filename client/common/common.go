@@ -52,7 +52,7 @@ var (
 
 	ListenTCP bool
 
-	minFeePerKB, routeMinFeePerKB uint64
+	minFeePerKB, routeMinFeePerKB, minminFeePerKB uint64
 	maxMempoolSizeBytes uint64
 )
 

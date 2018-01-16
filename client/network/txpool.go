@@ -584,7 +584,7 @@ var (
 
 // This must be called with TxMutex locked
 func limitPoolSize(maxlen uint64) {
-	ticklen := maxlen >> 4 // 1/16th of the max size = X
+	ticklen := maxlen >> 5 // 1/32th of the max size = X
 
 	if TransactionsToSendSize < maxlen {
 		if TransactionsToSendSize < maxlen-2*ticklen {
@@ -605,7 +605,7 @@ func limitPoolSize(maxlen uint64) {
 			fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
 		} else {
 			common.CountSafe("TxPoolSizeOK")
-			fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
+			//fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
 		}
 		return
 	}

@@ -96,6 +96,8 @@
 		<b title="Rejected" id="ts_tre_size" style="font-weight:bold"></b>
 		&nbsp;&bull;&nbsp;
 		<b title="UTXOs spent in memory" id="outspent" style="font-weight:bold"></b>
+		&nbsp;&bull;&nbsp;
+		<b title="Minimum SPB" id="min_spb" style="font-weight:bold"></b> spb
 	<tr><td>Pending Data:<td><b id="si_net_tx_qsize"></b> txs,
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> cached,
@@ -401,6 +403,7 @@ function refreshtxstat() {
 			outspent.innerText = ts.spent_outs_cnt
 			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
 			ts_tre_size.title = ts.tre_cnt + ' transactions rejected'
+			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(1)
 		} catch(e) {
 			console.log(e)
 		}
