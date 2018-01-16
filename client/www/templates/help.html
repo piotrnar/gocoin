@@ -41,41 +41,6 @@ Press the <span class="but">Shutdown Node</span> button and confirm to shut down
 
 At this page you can check a balance of each address of you currently selected wallet, as well as quickly switch between all your available wallets.
 
-<h3>Special wallets</h3>
-There are three wallets with a fixed name that have a special meaning:
-<ul>
-<li><b>ADDRESS</b> - this is your address book (the addresses you will be able to select at <a href="snd">MakeTx</a> page)</li>
-<li><b>DEFAULT</b> - this is the wallet that is always loaded when the node starts</li>
-<li><b>UNUSED</b> - this is wallet where you can move the addresses that you are no longer planing to use (to remove them from your wallets, though still being able to monitor a balance on them, just in case)</li>
-</ul>
-
-<h3>Address book</h3>
-The address book is a special kind of wallet. You can select it only at this page - when you leave the page, it will switch back to the default wallet.<br>
-On the Wallet page you can edit the address book just like any other wallet.
-
-<h3>Editing wallet</h3>
-Select a wallet that you wish to edit, end press <span class="but">Edit</span>.<br>
-After you are done press <span class="but">Save wallet & Recalc balance</span> button.<br>
-
-<h3>Adding wallets</h3>
-To add a new wallet press the <span class="but">Edit</span> button, enter the new wallet's name in
-<span class="but">File Name</span> filed, place the desired content of the wallet in the text area
-and press the <span class="but">Save wallet & Recalc balance</span> button.
-
-<h3>Deleting wallets</h3>
-You cannot delete wallet files from the web interface.
-In order to delete a wallet you need to remove the wallet file from the
-<span class="cod">wallet/</span> folder (that is a sub-folder in your gocoin's data dir),
-
-<h3>Hidden wallets</h3>
-You can have a wallet that won't be visible on the list. Just give it a file name that starts with a dot (.)
-
-<h3>Including wallets</h3>
-You can include a content (addressees) of one wallet in another. In order to do this, inside the parent wallet put a line like this:<br>
-&nbsp;<span class="cod">@filename</span><br>
-<i>(make sure that the @ character is the first one in the line)</i><br>
-The wallets you include can be of a hidden type. In fact, including hidden wallets inside parent wallets is their only meaning of their existence.
-
 <hr>
 <a name="snd" href="/snd"><h2>MakeTx</h2></a>
 
