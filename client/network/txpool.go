@@ -631,7 +631,9 @@ func limitPoolSize(maxlen uint64) {
 	cnt := len(sorted) - idx
 	old_size := TransactionsToSendSize
 	for idx < len(sorted) {
-		DeleteToSend(sorted[idx])
+		v := sorted[idx]
+		RejectTx(v.Hash, len(v.Data), TX_REJECTED_LOW_FEE)
+		DeleteToSend(v)
 		idx++
 	}
 
