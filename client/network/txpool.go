@@ -65,6 +65,8 @@ var (
 	WaitingForInputs map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
 
 	END_MARKER = []byte("END_OF_FILE")
+
+	ExpireNow chan bool = make(chan bool, 1)
 )
 
 type OneTxToSend struct {
@@ -441,8 +443,22 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec := &OneTxToSend{Data: ntx.raw, Spent: spent, Volume: totinp,
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
+
 	TransactionsToSend[tx.Hash.BIdx()] = rec
-	TransactionsToSendSize += uint64(len(rec.Data))
+
+	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
+		newsize := TransactionsToSendSize + uint64(len(rec.Data))
+		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
+			select {
+				case ExpireNow <- true:
+				default:
+			}
+		}
+		TransactionsToSendSize = newsize
+	} else {
+		TransactionsToSendSize += uint64(len(rec.Data))
+	}
+
 	for i := range spent {
 		SpentOutputs[spent[i]] = tx.Hash.BIdx()
 	}

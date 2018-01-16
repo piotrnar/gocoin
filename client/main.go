@@ -375,6 +375,10 @@ func main() {
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
 
+			case <-network.ExpireNow:
+				common.Busy("network.ExpireTxsNow()")
+				network.ExpireTxs()
+
 			case <-txPoolTick:
 				common.Busy("network.ExpireTxs()")
 				network.ExpireTxs()
