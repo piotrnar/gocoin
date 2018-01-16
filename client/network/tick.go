@@ -94,6 +94,11 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 
+	if expireTxsNow {
+		ExpireTxs()
+	} else if now.After(lastTxsExpire.Add(time.Minute)) {
+		expireTxsNow = true
+	}
 
 	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)

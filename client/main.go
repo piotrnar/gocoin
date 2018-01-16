@@ -260,7 +260,6 @@ func main() {
 		common.RecalcAverageBlockSize()
 
 		peersTick := time.Tick(5 * time.Minute)
-		txPoolTick := time.Tick(time.Minute)
 		netTick := time.Tick(time.Second)
 
 		peersdb.Testnet = common.Testnet
@@ -374,14 +373,6 @@ func main() {
 				common.Busy("peersdb.ExpirePeers()")
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
-
-			case <-network.ExpireNow:
-				common.Busy("network.ExpireTxsNow()")
-				network.ExpireTxs()
-
-			case <-txPoolTick:
-				common.Busy("network.ExpireTxs()")
-				network.ExpireTxs()
 
 			case <-time.After(time.Second):
 				common.CountSafe("MainThreadIdle")

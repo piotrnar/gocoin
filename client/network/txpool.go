@@ -66,7 +66,7 @@ var (
 
 	END_MARKER = []byte("END_OF_FILE")
 
-	ExpireNow chan bool = make(chan bool, 1)
+	expireTxsNow bool = true
 )
 
 type OneTxToSend struct {
@@ -449,10 +449,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		newsize := TransactionsToSendSize + uint64(len(rec.Data))
 		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
-			select {
-				case ExpireNow <- true:
-				default:
-			}
+			expireTxsNow = true
 		}
 		TransactionsToSendSize = newsize
 	} else {
@@ -595,7 +592,7 @@ var (
 	poolenabled   bool
 	expireperbyte float64
 	maxexpiretime time.Duration
-	timenow       time.Time
+	lastTxsExpire time.Time
 )
 
 // This must be called with TxMutex locked
@@ -655,7 +652,7 @@ func limitPoolSize(maxlen uint64) {
 	common.SetMinFeePerKB(newspkb)
 
 	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size - TransactionsToSendSize, "of", TransactionsToSendSize, "bytes and", cnt, "of", len(sorted), "txs removed. New max SPKB:", newspkb)
+		old_size - TransactionsToSendSize, "of", old_size, "bytes and", cnt, "of", len(sorted), "txs removed. New max SPKB:", newspkb)
 
 	common.CounterMutex.Lock()
 	common.Counter["TxPoolSizeHigh"]++
@@ -669,7 +666,7 @@ func expireTime(size int) (t time.Time) {
 	if exp > maxexpiretime {
 		exp = maxexpiretime
 	}
-	return timenow.Add(-exp)
+	return lastTxsExpire.Add(-exp)
 }
 
 func ExpireTxs() {
@@ -680,7 +677,9 @@ func ExpireTxs() {
 	expireperbyte = common.ExpirePerByte
 	maxexpiretime = common.MaxExpireTime
 	common.UnlockCfg()
-	timenow = time.Now()
+
+	lastTxsExpire = time.Now()
+	expireTxsNow = false
 
 	TxMutex.Lock()
 
@@ -1092,4 +1091,6 @@ func BlockMined(bl *btc.Block) {
 			RetryWaitingForInput(wtg)
 		}
 	}
+
+	expireTxsNow = true
 }
