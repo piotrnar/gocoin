@@ -215,6 +215,7 @@ func clean_txs(par string) {
 	for {
 		any_done = false
 		for _, tx := range network.TransactionsToSend {
+			var remove_it bool
 			for i := range tx.TxIn {
 				var po *btc.TxOut
 				inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
@@ -226,15 +227,15 @@ func clean_txs(par string) {
 					po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 				}
 				if po==nil {
-					any_done = true
+					remove_it = true
 					break
 				}
 			}
 
-			if any_done {
+			if remove_it {
 				network.DeleteToSend(tx)
+				any_done = true
 				total_done++
-				break
 			}
 		}
 		if !any_done {
