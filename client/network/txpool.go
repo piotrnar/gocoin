@@ -622,7 +622,7 @@ func limitPoolSize(maxlen uint64) {
 		return
 	}
 
-	sta := time.Now()
+	//sta := time.Now()
 	var idx int
 	sorted := make(SortedTxToSend, len(TransactionsToSend))
 	for _, v := range TransactionsToSend {
