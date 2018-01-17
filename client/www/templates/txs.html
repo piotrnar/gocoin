@@ -320,7 +320,7 @@ function decode_tx_id(txid) {
 					s += "  + " + sops + ' sigops'
 				}
 				var inspcr = xval(is[i], "script_sig")
-				if (!isNaN(inspcr)) {
+				if (typeof(inspcr)=="string") {
 					s += " - SigScript length " +inspcr.length/2
 					for (var k=0; k<inspcr.length; k+=140) {
 						s += "\n    " + inspcr.substr(k, 140)
