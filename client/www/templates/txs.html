@@ -287,6 +287,7 @@ function decode_tx_id(txid) {
 
 			var tin=0, tout=0, s = ''
 			var len = xval(aj.responseXML,  "size")
+			var all_input_values = true
 
 			s += "Version: " + xval(aj.responseXML,  "version") + "\n\n"
 
@@ -317,7 +318,8 @@ function decode_tx_id(txid) {
 					} else {
 						s += ad
 					}
-				}
+				} else all_input_values = false
+
 				var sops = parseInt(xval(is[i], "input_sigops"))
 				if (!isNaN(sops)) {
 					s += "  + " + sops + ' sigops'
@@ -363,15 +365,18 @@ function decode_tx_id(txid) {
 
 			var sw_compr =  + '%'
 
+			var vsize = parseFloat(xval(aj.responseXML,  "vsize"))
 			s += 'TxSize: ' + len
             s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize") + ' ('
             s += (xval(aj.responseXML, "sw_compress") / 10.0).toFixed(1) + '%)'
-			s += '  /  VSize: ' + xval(aj.responseXML,  "vsize")
+			s += '  /  VSize: ' + vsize
 			s += ' bytes  /  Sigops: ' + xval(aj.responseXML,  "sigops") + '\n'
 
-			var vsize = parseFloat(xval(aj.responseXML,  "vsize"))
-			s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
-			s += '  ==> ' + parseFloat(fee/vsize).toFixed(1) + ' Satoshis per byte\n'
+			if (all_input_values) {
+				s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
+				s += '  ==> ' + parseFloat(fee/vsize).toFixed(1) + ' Satoshis per byte\n'
+			}
+
 			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
 
 			rawdiv.innerHTML = s
