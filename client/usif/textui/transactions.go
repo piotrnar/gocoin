@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 )
 
@@ -206,6 +207,44 @@ func send_all_tx(par string) {
 	network.TxMutex.Unlock()
 }
 
+func clean_txs(par string) {
+	var any_done bool
+	var total_done int
+	sta := time.Now()
+	network.TxMutex.Lock()
+	for {
+		any_done = false
+		for _, tx := range network.TransactionsToSend {
+			for i := range tx.TxIn {
+				var po *btc.TxOut
+				inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
+				if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
+					if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
+						po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
+					}
+				} else {
+					po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+				}
+				if po==nil {
+					any_done = true
+					break
+				}
+			}
+
+			if any_done {
+				network.DeleteToSend(tx)
+				total_done++
+				break
+			}
+		}
+		if !any_done {
+			break
+		}
+	}
+	network.TxMutex.Unlock()
+	fmt.Println("Removed", total_done, "txs with unknown inputs in", time.Now().Sub(sta).String())
+}
+
 func init () {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
@@ -217,4 +256,5 @@ func init () {
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
 	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
+	newUi("txclean", true, clean_txs, "Remove txs with unknown inputs from the mempool")
 }

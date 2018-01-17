@@ -595,6 +595,30 @@ var (
 	lastTxsExpire time.Time
 )
 
+// delete specified tx and all of its children from mempool
+func DeleteAllToSend(t2s *OneTxToSend) {
+	if _, ok := TransactionsToSend[t2s.Hash.BIdx()]; !ok {
+		// Transaction already removed
+		return
+	}
+
+	// remove all the children that ate spending from t2s
+	var po btc.TxPrevOut
+	po.Hash = t2s.Hash.Hash
+	for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
+		if so, ok := SpentOutputs[po.UIdx()]; ok {
+			if child, ok := TransactionsToSend[so]; ok {
+				DeleteAllToSend(child)
+			}
+		}
+	}
+
+	// Remove the t2s itself
+	RejectTx(t2s.Hash, len(t2s.Data), TX_REJECTED_LOW_FEE)
+	DeleteToSend(t2s)
+}
+
+
 // This must be called with TxMutex locked
 func limitPoolSize(maxlen uint64) {
 	ticklen := maxlen >> 5 // 1/32th of the max size = X
@@ -613,7 +637,7 @@ func limitPoolSize(maxlen uint64) {
 				common.Counter["TxPoolSizeLow"]++
 				common.Counter["TxRejectedFeeUndone"] += cnt
 				common.CounterMutex.Unlock()
-				//fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
+				fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
 			}
 		} else {
 			common.CountSafe("TxPoolSizeOK")
@@ -622,7 +646,7 @@ func limitPoolSize(maxlen uint64) {
 		return
 	}
 
-	//sta := time.Now()
+	sta := time.Now()
 	var idx int
 	sorted := make(SortedTxToSend, len(TransactionsToSend))
 	for _, v := range TransactionsToSend {
@@ -631,30 +655,22 @@ func limitPoolSize(maxlen uint64) {
 	}
 	sort.Sort(sorted)
 
-	maxlen -= ticklen
-	for idx = range sorted {
-		siz := uint64(len(sorted[idx].Data))
-		if siz > maxlen {
-			break
-		}
-		maxlen -= siz
-	}
-	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
-	cnt := len(sorted) - idx
 	old_size := TransactionsToSendSize
-	for idx < len(sorted) {
-		v := sorted[idx]
-		RejectTx(v.Hash, len(v.Data), TX_REJECTED_LOW_FEE)
-		DeleteToSend(v)
-		idx++
+
+	maxlen -= ticklen
+
+	for idx > 0 && TransactionsToSendSize > maxlen {
+		idx--
+		DeleteAllToSend(sorted[idx])
 	}
 
+	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
 	common.SetMinFeePerKB(newspkb)
 
-	/*
+	cnt := len(sorted) - idx
+
 	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
 		old_size - TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)
-	*/
 	common.CounterMutex.Lock()
 	common.Counter["TxPoolSizeHigh"]++
 	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
