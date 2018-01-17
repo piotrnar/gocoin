@@ -81,6 +81,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 		w.Write([]byte("<script_sig>"))
 		w.Write([]byte(hex.EncodeToString(tx.TxIn[i].ScriptSig)))
 		w.Write([]byte("</script_sig>"))
+		fmt.Fprint(w, "<txid-vout>", tx.TxIn[i].Input.String(), "</txid-vout>")
 		var po *btc.TxOut
 		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
@@ -109,7 +110,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 			}
 			fmt.Fprint(w, "<witness_sigops>", tx.CountWitnessSigOps(i, po.Pk_script), "</witness_sigops>")
 		} else {
-			w.Write([]byte("<status>UNKNOWN INPUT</status>"))
+			w.Write([]byte("<status>Unknown input</status>"))
 		}
 		fmt.Fprint(w, "<sequence>", tx.TxIn[i].Sequence, "</sequence>")
 

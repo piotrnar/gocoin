@@ -292,36 +292,39 @@ function decode_tx_id(txid) {
 
 			var is = aj.responseXML.getElementsByTagName('input')
 			for (var i=0; i<is.length; i++) {
-				s += (i+1) + ") "
+				s += (i+1) + ") " + xval(is[i], "txid-vout") + " "
+
+				var bl = xval(is[i], "block")
+				if (isNaN(bl) || bl==0) {
+					s += "(unconfirmed)"
+				} else {
+					s += "(#"+xval(is[i], "block")+")"
+				}
+				s += " seq=" + parseInt(xval(is[i], "sequence")).toString(16)
+				s += " "
+
 				var st = xval(is[i], "status")
-				if (st=="OK") {
-					var val = parseInt(xval(is[i], "value"))
+				s += "\n  Status : " + st
+				var val = parseInt(xval(is[i], "value"))
+				if (!isNaN(val)) {
 					tin += val
+					s += " &bull; "
 					s += (parseFloat(val)/1e8).toFixed(8)
-					s += " BTC <= "
+					s += " BTC @ "
 					var ad = xval(is[i], "addr")
 					if (typeof(ad)!="string") {
 						s += xval(is[i], "pkscript")
 					} else {
 						s += ad
 					}
-				} else {
-					s += st
 				}
-				var bl = xval(is[i], "block")
-				if (bl==0) {
-					s += " (unconfirmed yet)"
-				} else {
-					s += " (confirmed in #"+xval(is[i], "block")+")"
-				}
-				s += " seq=" + parseInt(xval(is[i], "sequence")).toString(16)
 				var sops = parseInt(xval(is[i], "input_sigops"))
 				if (!isNaN(sops)) {
 					s += "  + " + sops + ' sigops'
 				}
 				var inspcr = xval(is[i], "script_sig")
 				if (typeof(inspcr)=="string") {
-					s += " - SigScript length " +inspcr.length/2
+					s += "\n  SigScript length " +inspcr.length/2 + ":"
 					for (var k=0; k<inspcr.length; k+=140) {
 						s += "\n    " + inspcr.substr(k, 140)
 					}
@@ -339,7 +342,7 @@ function decode_tx_id(txid) {
 					}
 				}
 
-				s += "\n"
+				s += "\n\n"
 			}
 			s += "Total input: " + (parseFloat(tin)/1e8).toFixed(8) + " BTC\n"
 			s += "\n"
