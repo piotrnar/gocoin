@@ -769,6 +769,10 @@ func (t *Tx) WTxID() *Uint256 {
 	}
 }
 
+func (tx *Tx) Weight() int {
+	return 3 * int(tx.NoWitSize) + int(tx.Size)
+}
+
 func (tx *Tx) VSize() int {
 	if tx.NoWitSize==tx.Size {
 		return int(tx.Size)
