@@ -62,8 +62,13 @@ func (u *Uint256) Equal(o *Uint256) bool {
 }
 
 
+func BIdx(hash []byte) (o [Uint256IdxLen]byte) {
+	copy(o[:], hash[:Uint256IdxLen])
+	return
+}
+
 func (u *Uint256) BIdx() (o [Uint256IdxLen]byte) {
-	copy(o[:], u.Hash[:Uint256IdxLen])
+	o = BIdx(u.Hash[:])
 	return
 }
 
