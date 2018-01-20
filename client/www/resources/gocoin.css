@@ -42,10 +42,6 @@ table.bord {
 	border-collapse:collapse;
 }
 
-table.txs {
-	font-size:75%
-}
-
 table.wal {
 	font-size:80%;
 	width:100%;
