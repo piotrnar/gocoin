@@ -1,9 +1,16 @@
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <style>
+table.txs {
+	font-size:75%
+}
 td.maturity {
 	text-align: right;
 	white-space: nowrap;
+}
+td.txid {
+	font-family: monospace;
+	font-size:7px;
 }
 </style>
 <div id="light" class="white_content">
@@ -431,7 +438,7 @@ function show_txs2s(extrapar) {
 				c.innerHTML = lensofar
 
 				c = row.insertCell(-1)
-				c.className ='mono'
+				c.className ='txid'
 				c.innerHTML = txid
 				c.id = txid
 				c.addEventListener('click', decode_tx, false)
