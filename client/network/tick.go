@@ -94,12 +94,6 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 
-	if expireTxsNow {
-		ExpireTxs()
-	} else if now.After(lastTxsExpire.Add(time.Minute)) {
-		expireTxsNow = true
-	}
-
 	if now.After(c.nextMaintanence) {
 		c.Maintanence(now)
 		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
@@ -339,6 +333,8 @@ func NetworkTick() {
 		}
 	}
 
+	now := time.Now()
+
 	// Push GetHeaders if not in progress
 	Mutex_net.Lock()
 	var cnt_headers_in_progress int
@@ -374,38 +370,38 @@ func NetworkTick() {
 
 	if common.CFG.DropPeers.DropEachMinutes!=0 {
 		if next_drop_peer.IsZero() {
-			next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery))
-		} else if time.Now().After(next_drop_peer) {
+			next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
+		} else if now.After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery))
+				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = time.Now().Add(common.GetDuration(&common.DropSlowestEvery) >> 2)
+				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery) >> 2)
 			}
 		}
 	}
 
 	// hammering protection - expire recently disconnected
 	if next_clean_hammers.IsZero() {
-		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
-	} else if time.Now().After(next_clean_hammers) {
+		next_clean_hammers = now.Add(HammeringMinReconnect)
+	} else if now.After(next_clean_hammers) {
 		HammeringMutex.Lock()
 		for k, t := range RecentlyDisconencted {
-			if time.Now().Sub(t) >= HammeringMinReconnect {
+			if now.Sub(t) >= HammeringMinReconnect {
 				delete(RecentlyDisconencted, k)
 			}
 		}
 		HammeringMutex.Unlock()
-		next_clean_hammers = time.Now().Add(HammeringMinReconnect)
+		next_clean_hammers = now.Add(HammeringMinReconnect)
 	}
 
 	// Connect friends
 	Mutex_net.Lock()
-	if time.Now().After(NextConnectFriends) {
+	if now.After(NextConnectFriends) {
 		Mutex_net.Unlock()
 		ConnectFriends()
 		Mutex_net.Lock()
-		NextConnectFriends = time.Now().Add(15*time.Minute)
+		NextConnectFriends = now.Add(15*time.Minute)
 	}
 	Mutex_net.Unlock()
 
@@ -444,6 +440,12 @@ func NetworkTick() {
 		Mutex_net.Lock()
 		conn_cnt = OutConsActive
 		Mutex_net.Unlock()
+	}
+
+	if expireTxsNow {
+		ExpireTxs()
+	} else if now.After(lastTxsExpire.Add(time.Minute)) {
+		expireTxsNow = true
 	}
 }
 
