@@ -154,7 +154,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 
 	fmt.Fprint(w, "<size>", v.Size, "</size>")
 	fmt.Fprint(w, "<nwsize>", v.NoWitSize, "</nwsize>")
-	fmt.Fprint(w, "<vsize>", v.VSize(), "</vsize>")
+	fmt.Fprint(w, "<weight>", v.Weight(), "</weight>")
 	fmt.Fprint(w, "<sw_compress>", 1000 * (int(v.Size) - int(v.NoWitSize)) / int(v.Size), "</sw_compress>")
 	fmt.Fprint(w, "<inputs>", len(v.TxIn), "</inputs>")
 	fmt.Fprint(w, "<outputs>", len(v.TxOut), "</outputs>")
@@ -226,8 +226,8 @@ func (tl sortedTxList) Less(i, j int) bool {
 			res = tl[j].Size < tl[i].Size
 		case "nws":
 			res = tl[j].NoWitSize < tl[i].NoWitSize
-		case "vsi":
-			res = tl[j].VSize() < tl[i].VSize()
+		case "wgh":
+			res = tl[j].Weight() < tl[i].Weight()
 		case "inp":
 			res = len(tl[j].TxIn) < len(tl[i].TxIn)
 		case "out":
@@ -247,8 +247,8 @@ func (tl sortedTxList) Less(i, j int) bool {
 			sw_compr_j := float64(int(tl[j].Size) - int(tl[j].NoWitSize)) / float64(tl[j].Size)
 			res = sw_compr_i > sw_compr_j
 		default: /*spb*/
-			spb_i := float64(tl[i].Fee)/float64(tl[i].VSize())
-			spb_j := float64(tl[j].Fee)/float64(tl[j].VSize())
+			spb_i := float64(tl[i].Fee)/float64(tl[i].Weight())
+			spb_j := float64(tl[j].Fee)/float64(tl[j].Weight())
 			res = spb_j < spb_i
 	}
 	if txs2s_sort_desc {
@@ -495,7 +495,7 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	var cnt int
-	var division, maxbytes uint64
+	var division, maxweight uint64
 	var e error
 
 	if !ipchecker(r) {
@@ -506,28 +506,28 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	defer network.TxMutex.Unlock()
 
 	if len(r.Form["max"])>0 {
-		maxbytes, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
+		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
 		if e!=nil {
-			maxbytes = network.TransactionsToSendSize
+			maxweight = network.TransactionsToSendWeight
 		}
 	} else {
-		maxbytes = network.TransactionsToSendSize
+		maxweight = network.TransactionsToSendWeight
 	}
 
-	if maxbytes > network.TransactionsToSendSize {
-		maxbytes = network.TransactionsToSendSize
+	if maxweight > network.TransactionsToSendWeight {
+		maxweight = network.TransactionsToSendWeight
 	}
 
 	if len(r.Form["div"])>0 {
 		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
 		if e!=nil {
-			division = maxbytes/100
+			division = maxweight / 100
 		}
 	} else {
-		division = maxbytes/100
+		division = maxweight / 100
 	}
 
-	if division<100 {
+	if division < 100 {
 		division = 100
 	}
 
@@ -541,32 +541,32 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	type one_stat_row struct {
 		Txs_so_far uint
 		Real_len_so_far uint
-		Offset_in_block uint
-		Current_tx_length uint
+		Weight_so_far uint
+		Current_tx_weight uint
 		Current_tx_spb float64
 		Current_tx_id string
 		Time_received uint
 	}
 	var mempool_stats []one_stat_row
 
-	var totlen, reallen uint64
+	var totweight, reallen uint64
 	for cnt=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
-		newlen := totlen + uint64(v.VSize())
+		newtotweight := totweight + uint64(v.Weight())
 		reallen += uint64(len(v.Data))
 
-		if cnt==0 || cnt+1==len(sorted) || (newlen/division)!=(totlen/division) {
+		if cnt==0 || cnt+1==len(sorted) || (newtotweight/division)!=(totweight/division) {
 			mempool_stats = append(mempool_stats, one_stat_row{
 				Txs_so_far : uint(cnt),
 				Real_len_so_far : uint(reallen),
-				Offset_in_block : uint(totlen),
-				Current_tx_length : uint(v.VSize()),
-				Current_tx_spb : float64(v.Fee)/float64(v.VSize()),
+				Weight_so_far : uint(totweight),
+				Current_tx_weight : uint(v.Weight()),
+				Current_tx_spb : float64(v.Fee)/(float64(v.Weight()/4.0)),
 				Current_tx_id : v.Hash.String(),
 				Time_received : uint(v.Firstseen.Unix())})
 		}
-		totlen = newlen
-		if totlen >= maxbytes {
+		totweight = newtotweight
+		if totweight >= maxweight {
 			break
 		}
 	}

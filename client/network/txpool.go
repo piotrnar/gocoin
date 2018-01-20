@@ -50,6 +50,7 @@ var (
 	// The actual memory pool:
 	TransactionsToSend     map[BIDX]*OneTxToSend = make(map[BIDX]*OneTxToSend)
 	TransactionsToSendSize uint64
+	TransactionsToSendWeight uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
 	SpentOutputs map[uint64]BIDX = make(map[uint64]BIDX)
@@ -78,7 +79,7 @@ type OneTxToSend struct {
 	Volume, Fee         uint64
 	*btc.Tx
 	Blocked    byte // if non-zero, it gives you the reason why this tx nas not been routed
-	MemInputs  bool // transaction is spending inputs from other unconfirmed tx(s)
+	MemInputs  []bool // transaction is spending inputs from other unconfirmed tx(s)
 	SigopsCost uint64
 	Final      bool // if true RFB will not work on it
 	VerifyTime time.Duration
@@ -216,7 +217,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var final bool // set to true if any of the inpits has a final sequence
 
 	var totinp, totout uint64
-	var frommem bool
+	var frommem []bool
 
 	TxMutex.Lock()
 
@@ -251,9 +252,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			rbf_tx_list[so] = true
 		}
 
-		inptx := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-
-		if txinmem, ok := TransactionsToSend[inptx.BIdx()]; ok {
+		if txinmem, ok := TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
@@ -270,7 +269,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			common.CountSafe("TxInputInMemory")
-			frommem = true
+			if frommem == nil {
+				frommem = make([]bool, len(tx.TxIn))
+			}
+			frommem[i] = true
 		} else {
 			pos[i], _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
@@ -455,6 +457,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	} else {
 		TransactionsToSendSize += uint64(len(rec.Data))
 	}
+	TransactionsToSendWeight += uint64(rec.Tx.Weight())
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = tx.Hash.BIdx()
@@ -468,7 +471,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Unlock()
 	common.CountSafe("TxAccepted")
 
-	if frommem {
+	if frommem!=nil {
 		// Gocoin does not route txs that need unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
@@ -537,6 +540,7 @@ func DeleteToSend(rec *OneTxToSend) {
 		delete(SpentOutputs, rec.Spent[i])
 	}
 	TransactionsToSendSize -= uint64(len(rec.Data))
+	TransactionsToSendWeight -= uint64(rec.Weight())
 	delete(TransactionsToSend, rec.Tx.Hash.BIdx())
 }
 
@@ -689,6 +693,10 @@ func expireTime(size int) (t time.Time) {
 func ExpireTxs() {
 	var cnt1a, cnt1b, cnt2 uint64
 
+	if MempoolCheck() {
+		fmt.Println("ERROR AT ExpireTxs 1")
+	}
+
 	common.LockCfg()
 	poolenabled = common.CFG.TXPool.Enabled
 	expireperbyte = common.ExpirePerByte
@@ -735,6 +743,10 @@ func ExpireTxs() {
 		common.Counter["TxPurgedRejected"] += cnt2
 	}
 	common.CounterMutex.Unlock()
+
+	if MempoolCheck() {
+		fmt.Println("ERROR AT ExpireTxs 2")
+	}
 }
 
 func bool2byte(v bool) byte {
@@ -760,7 +772,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	binary.Write(wr, binary.LittleEndian, t2s.Fee)
 	binary.Write(wr, binary.LittleEndian, t2s.SigopsCost)
 	binary.Write(wr, binary.LittleEndian, t2s.VerifyTime)
-	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs), bool2byte(t2s.Final)})
+	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs!=nil), bool2byte(t2s.Final)})
 }
 
 func MempoolSave2() {
@@ -807,6 +819,7 @@ func MempoolLoad2() bool {
 	var bi BIDX
 	var tina uint32
 	var i int
+	var cnt1, cnt2 uint
 
 	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
 	if er != nil {
@@ -898,13 +911,16 @@ func MempoolLoad2() bool {
 		}
 		t2s.Own = tmp[0]
 		t2s.Blocked = tmp[1]
-		t2s.MemInputs = tmp[2] != 0
+		if tmp[2] != 0 {
+			t2s.MemInputs = make([]bool, len(t2s.TxIn))
+		}
 		t2s.Final = tmp[3] != 0
 
 		t2s.Tx.Fee = t2s.Fee
 
 		TransactionsToSend[t2s.Hash.BIdx()] = t2s
 		TransactionsToSendSize += uint64(len(t2s.Data))
+		TransactionsToSendWeight += uint64(t2s.Weight())
 	}
 
 	if totcnt, er = btc.ReadVLen(rd); er != nil {
@@ -932,7 +948,26 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 
+	// recover MemInputs
+	for _, t2s := range TransactionsToSend {
+		if t2s.MemInputs!=nil {
+			var any bool
+			cnt1++
+			for i := range t2s.TxIn {
+				if _, inmem := TransactionsToSend[btc.BIdx(t2s.TxIn[i].Input.Hash[:])]; inmem {
+					t2s.MemInputs[i] = true
+					any = true
+					cnt2++
+				}
+			}
+			if !any {
+				t2s.MemInputs = nil
+			}
+		}
+	}
+
 	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME2)
+	fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
 
 	return true
 
@@ -940,9 +975,82 @@ fatal_error:
 	fmt.Println("Error loading", MEMPOOL_FILE_NAME2, ":", er.Error())
 	TransactionsToSend = make(map[BIDX]*OneTxToSend)
 	TransactionsToSendSize = 0
+	TransactionsToSendWeight = 0
 	SpentOutputs = make(map[uint64]BIDX)
 	return false
 }
+
+
+func (rec *OneTxToSend) recover_input_idx(key uint64) int {
+	for i, o := range rec.TxIn {
+		if o.Input.UIdx()==key {
+			return i
+		}
+	}
+	return -1
+}
+
+
+func MempoolCheck() (dupa bool) {
+	var spent_cnt int
+
+	TxMutex.Lock()
+
+	// First check if t2s.MemInputs fields are properly set
+	for _, t2s := range TransactionsToSend {
+		var all_nomem bool = true
+		for i, inp := range t2s.TxIn {
+			spent_cnt++
+
+			outk, ok := SpentOutputs[inp.Input.UIdx()]
+			if ok {
+				if outk != t2s.Hash.BIdx() {
+					fmt.Println("Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
+					dupa = true
+				}
+			} else {
+				fmt.Println("Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
+				dupa = true
+			}
+
+			_, ok = TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
+
+			if t2s.MemInputs==nil {
+				if ok {
+					fmt.Println("Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
+					dupa = true
+				}
+			} else {
+				if t2s.MemInputs[i] {
+					if !ok {
+						fmt.Println("Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
+						dupa = true
+					}
+					all_nomem = false
+				} else {
+					if ok {
+						fmt.Println("Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
+						dupa = true
+					}
+				}
+			}
+		}
+		if t2s.MemInputs!=nil && all_nomem {
+			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
+			dupa = true
+		}
+	}
+
+	if spent_cnt != len(SpentOutputs) {
+		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
+		dupa = true
+	}
+
+	TxMutex.Unlock()
+
+	return
+}
+
 
 // This function is called for each tx mined in a new block
 func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
@@ -980,12 +1088,54 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 		}
 	}
 
+	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
+	var po btc.TxPrevOut
+	po.Hash = tx.Hash.Hash
+	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec, _ := TransactionsToSend[val]; rec != nil {
+				if rec.MemInputs==nil {
+					common.CountSafe("TxMinedMeminER1")
+					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
+					continue
+				}
+				idx := rec.recover_input_idx(uidx)
+				if idx < 0 {
+					common.CountSafe("TxMinedMeminER2")
+					fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
+					continue
+				}
+				rec.MemInputs[idx] = false
+				var ii int
+				for ii = 0; ii < len(rec.MemInputs); ii++ {
+					if rec.MemInputs[ii] {
+						break
+					}
+				}
+				common.CountSafe("TxMinedMeminOut")
+				if ii == len(rec.MemInputs) {
+					common.CountSafe("TxMinedMeminTx")
+					rec.MemInputs = nil
+				}
+			} else {
+				common.CountSafe("TxMinedMeminERR")
+				fmt.Println("WTF?", po.String(), " in SpentOutputs, but not in mempool")
+			}
+		}
+	}
+
+
 	wtg = WaitingForInputs[h.BIdx()]
 	return
 }
 
 // Removes all the block's tx from the mempool
 func BlockMined(bl *btc.Block) {
+	if MempoolCheck() {
+		fmt.Println("ERROR AT BlockMined 1")
+	}
+
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int
 	TxMutex.Lock()
@@ -998,6 +1148,9 @@ func BlockMined(bl *btc.Block) {
 	}
 	TxMutex.Unlock()
 
+	if MempoolCheck() {
+		fmt.Println("ERROR AT BlockMined 2")
+	}
 	// Try to redo waiting txs
 	if wtg_cnt > 0 {
 		common.CountSafeAdd("TxMinedGotInput", uint64(wtg_cnt))
@@ -1006,5 +1159,8 @@ func BlockMined(bl *btc.Block) {
 		}
 	}
 
+	if MempoolCheck() {
+		fmt.Println("ERROR AT BlockMined 3")
+	}
 	expireTxsNow = true
 }

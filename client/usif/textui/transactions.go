@@ -209,17 +209,21 @@ func send_all_tx(par string) {
 
 func clean_txs(par string) {
 	var any_done bool
-	var total_done int
+	var total_done, cnt1, cnt2 int
 	sta := time.Now()
 	network.TxMutex.Lock()
 	for {
 		any_done = false
 		for _, tx := range network.TransactionsToSend {
 			var remove_it bool
+			var meminputs []bool
 			for i := range tx.TxIn {
 				var po *btc.TxOut
 				inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
+					if meminputs==nil {
+						meminputs = make([]bool, len(tx.TxIn))
+					}
 					if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
 						po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 					}
@@ -236,6 +240,13 @@ func clean_txs(par string) {
 				network.DeleteToSend(tx)
 				any_done = true
 				total_done++
+			} else {
+				if meminputs==nil && tx.MemInputs!=nil {
+					cnt1++
+				} else if meminputs!=nil && tx.MemInputs==nil {
+					cnt2++
+				}
+				tx.MemInputs = meminputs
 			}
 		}
 		if !any_done {
@@ -244,6 +255,11 @@ func clean_txs(par string) {
 	}
 	network.TxMutex.Unlock()
 	fmt.Println("Removed", total_done, "txs with unknown inputs in", time.Now().Sub(sta).String())
+	fmt.Println(cnt1, cnt2, "MemInputs fixed")
+}
+
+func check_txs(par string) {
+	network.MempoolCheck()
 }
 
 func init () {
@@ -258,4 +274,5 @@ func init () {
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
 	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
 	newUi("txclean", true, clean_txs, "Remove txs with unknown inputs from the mempool")
+	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 }

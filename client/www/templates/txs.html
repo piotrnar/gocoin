@@ -106,7 +106,7 @@ sorted by
 	<select id="mp_show_sort">
 		<option value="age">age</option>
 		<option value="siz">length</option>
-		<option value="vsi">virtual size</option>
+		<option value="wgh">weight</option>
 		<option value="swc">SegWit compression</option>
 		<option value="inp">inputs count</option>
 		<option value="out">outputs count</option>
@@ -132,7 +132,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th>Transaction ID
 		<th onclick="sortclick('age')" style="cursor:pointer" width="60" align="right">Maturity
 		<th onclick="sortclick('siz')" style="cursor:pointer" width="80" align="right">Len
-		<th onclick="sortclick('vsi')" style="cursor:pointer" width="80" align="right">VSiz
+		<th onclick="sortclick('wgh')" style="cursor:pointer" width="80" align="right">Wght
 		<th onclick="sortclick('swc')" style="cursor:pointer" width="80" align="right">SWC
 		<th onclick="sortclick('inp')" style="cursor:pointer" width="30" align="right">Inps
 		<th onclick="sortclick('out')" style="cursor:pointer" width="30" align="right">Outs
@@ -365,16 +365,16 @@ function decode_tx_id(txid) {
 
 			var sw_compr =  + '%'
 
-			var vsize = parseFloat(xval(aj.responseXML,  "vsize"))
+			var weight = parseFloat(xval(aj.responseXML,  "weight"))
 			s += 'TxSize: ' + len
             s += '  /  NoWit:' + xval(aj.responseXML,  "nwsize") + ' ('
             s += (xval(aj.responseXML, "sw_compress") / 10.0).toFixed(1) + '%)'
-			s += '  /  VSize: ' + vsize
+			s += '  /  Weight: ' + weight
 			s += ' bytes  /  Sigops: ' + xval(aj.responseXML,  "sigops") + '\n'
 
 			if (all_input_values) {
 				s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
-				s += '  ==> ' + parseFloat(fee/vsize).toFixed(1) + ' Satoshis per byte\n'
+				s += '  ==> ' + parseFloat(fee/(weight/4.0)).toFixed(1) + ' Satoshis per byte\n'
 			}
 
 			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
@@ -446,8 +446,9 @@ function show_txs2s(extrapar) {
 				c.title = nws
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML += xval(txs[i], 'vsize')
-				c.title = nws
+				var weight = xval(txs[i], 'weight')
+				c.innerHTML += weight
+				c.title = 'Virtual size:' + (weight/4).toFixed(0)
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML += (xval(txs[i], 'sw_compress') / 10.0).toFixed(0) + '%'
@@ -470,7 +471,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML = (fee/1e8).toFixed(8)
 
 					c=row.insertCell(-1);c.align='right'
-					c.innerHTML = (parseFloat(fee)/parseFloat(xval(txs[i], 'vsize'))).toFixed(1)
+					c.innerHTML = (parseFloat(fee)/(parseFloat(xval(txs[i], 'weight'))/4)).toFixed(1)
 				} else {
 					c=row.insertCell(-1);c.align='right'
 					c.innerHTML = '<i>unknown</i>'
@@ -648,8 +649,8 @@ function handlehover(event, pos, item) {
 			str += rec.Current_tx_spb.toFixed(2) + ' SPB'
 
 			str += ' -  Tx #'+(rec.Txs_so_far+1)
-			str += ' ('+rec.Current_tx_length+' bytes'
-			str += ' @ ' + rec.Offset_in_block + ' / ' + rec.Real_len_so_far + ')'
+			str += ' ('+rec.Current_tx_weight+' WB'
+			str += ' @ ' + rec.Weight_so_far + ' / ' + rec.Real_len_so_far + ')'
 			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
 			showTooltip(item.pageX, item.pageY, str)
 		}
@@ -687,17 +688,17 @@ function show_mempool_fees() {
 			var plot_data = [ { data : [], color : 4, points: { show:true }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
-					markings: [ { xaxis: { from: 0, to: 1e6 }, color: "#e0ffe0" },
-						{ xaxis: { from: 1e6, to: 2e6 }, color: "#f0f0e0" },
-						{ xaxis: { from: 2e6 }, color: "#ffe0e0" },
+					markings: [ { xaxis: { from: 0, to: 4e6 }, color: "#e0ffe0" },
+						{ xaxis: { from: 4e6, to: 8e6 }, color: "#f0f0e0" },
+						{ xaxis: { from: 8e6 }, color: "#ffe0e0" },
 					 ],
 					hoverable: true,
 					clickable: true
 				},
 				xaxis: {
 					//tickLength : 1e6,
-					minTickSize : 1e5,
-					tickFormatter : function(a,b) {return (a/1e6).toFixed(1)}
+					minTickSize : 4e6,
+					tickFormatter : function(a,b) {return (a/4e6).toFixed(1)}
 				},
 				yaxis : {
 					//position : "left"
@@ -706,20 +707,20 @@ function show_mempool_fees() {
 
 			var max_spb = 0
 			var max_spb_corrected = 0
-			var half = 500e3
+			var half = 2e6
 
-			if (mp.length>1 && mp[mp.length-1].Offset_in_block<1e6) {
-				half = Math.round(mp[mp.length-1].Offset_in_block / 2)
+			if (mp.length>1 && mp[mp.length-1].Weight_so_far<4e6) {
+				half = Math.round(mp[mp.length-1].Weight_so_far / 2)
 			}
 
 			for (var i=0; i<mp.length; i++) {
 				if (mp[i].Current_tx_spb>max_spb) {
 					max_spb = mp[i].Current_tx_spb
 				}
-				if (mp[i].Offset_in_block<half) {
+				if (mp[i].Weight_so_far < half) {
 					max_spb_corrected = 3*mp[i].Current_tx_spb
 				}
-				plot_data[0].data.push([mp[i].Offset_in_block+mp[i].Current_tx_length, mp[i].Current_tx_spb])
+				plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, mp[i].Current_tx_spb])
 			}
 
 			// calculate 3 times the medium fee in the first block to be mined
@@ -733,7 +734,7 @@ function show_mempool_fees() {
 		}
 	}
 	if (mempool_siz_range.checked) {
-		aj.open("GET","mempool_stats.json?max=6000000", true)
+		aj.open("GET","mempool_stats.json?max=24000000", true)
 	} else {
 		aj.open("GET","mempool_stats.json", true)
 	}
