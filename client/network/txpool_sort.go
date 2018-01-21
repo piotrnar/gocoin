@@ -301,19 +301,7 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
-			t2s := TransactionsToSend[val]
-
-			if t2s == nil {
-				// TODO: remove the check
-				println("FATAL: SpentOutput not in mempool")
-				return
-			}
-
-			if res[t2s] {
-				println(t2s.Hash.String(), "- already in", len(res))
-				continue
-			}
-			res[t2s] = true
+			res[TransactionsToSend[val]] = true
 		}
 	}
 
@@ -324,4 +312,36 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 		idx++
 	}
 	return
+}
+
+func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
+	already_included := make(map[*OneTxToSend]bool)
+	var stage = []*OneTxToSend{tx}
+	for len(stage) > 0 {
+		it := stage[len(stage)-1]
+		already_included[it] = true
+		stage = stage[:len(stage)-1]
+
+		chlds := it.GetChildren()
+		for _, tx := range chlds {
+			if _, ok := already_included[tx]; !ok {
+				stage = append(stage, tx)
+			}
+		}
+	}
+	result = make([]*OneTxToSend, len(already_included))
+	var idx int
+	for tx, _ := range already_included {
+		result[idx] = tx
+		idx++
+	}
+	return
+}
+
+func (tx *OneTxToSend) SPW() float64 {
+	return float64(tx.Fee) / float64(tx.Weight())
+}
+
+func (tx *OneTxToSend) SPB() float64 {
+	return tx.SPW() * 4.0
 }
