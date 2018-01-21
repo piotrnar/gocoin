@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 )
 
@@ -207,55 +206,8 @@ func send_all_tx(par string) {
 	network.TxMutex.Unlock()
 }
 
-func clean_txs(par string) {
-	var any_done bool
-	var total_done, cnt1, cnt2 int
-	sta := time.Now()
-	network.TxMutex.Lock()
-	for {
-		any_done = false
-		for _, tx := range network.TransactionsToSend {
-			var remove_it bool
-			var meminputs []bool
-			for i := range tx.TxIn {
-				var po *btc.TxOut
-				inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-				if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
-					if meminputs==nil {
-						meminputs = make([]bool, len(tx.TxIn))
-					}
-					if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
-						po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
-					}
-				} else {
-					po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-				}
-				if po==nil {
-					remove_it = true
-					break
-				}
-			}
-
-			if remove_it {
-				network.DeleteToSend(tx)
-				any_done = true
-				total_done++
-			} else {
-				if meminputs==nil && tx.MemInputs!=nil {
-					cnt1++
-				} else if meminputs!=nil && tx.MemInputs==nil {
-					cnt2++
-				}
-				tx.MemInputs = meminputs
-			}
-		}
-		if !any_done {
-			break
-		}
-	}
-	network.TxMutex.Unlock()
-	fmt.Println("Removed", total_done, "txs with unknown inputs in", time.Now().Sub(sta).String())
-	fmt.Println(cnt1, cnt2, "MemInputs fixed")
+func save_mempool(par string) {
+	network.MempoolSave2()
 }
 
 func check_txs(par string) {
@@ -273,6 +225,6 @@ func init () {
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
 	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
-	newUi("txclean", true, clean_txs, "Remove txs with unknown inputs from the mempool")
+	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 }
