@@ -13,7 +13,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 	"io"
 	"os"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -80,6 +79,7 @@ type OneTxToSend struct {
 	*btc.Tx
 	Blocked    byte // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs  []bool // transaction is spending inputs from other unconfirmed tx(s)
+	MemInputCnt int
 	SigopsCost uint64
 	Final      bool // if true RFB will not work on it
 	VerifyTime time.Duration
@@ -218,6 +218,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	var totinp, totout uint64
 	var frommem []bool
+	var frommemcnt int
 
 	TxMutex.Lock()
 
@@ -273,6 +274,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				frommem = make([]bool, len(tx.TxIn))
 			}
 			frommem[i] = true
+			frommemcnt++
 		} else {
 			pos[i], _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
@@ -443,7 +445,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	rec := &OneTxToSend{Data: ntx.raw, Spent: spent, Volume: totinp,
-		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem,
+		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
 	TransactionsToSend[tx.Hash.BIdx()] = rec
@@ -590,96 +592,6 @@ func RemoveFromRejected(hash *btc.Uint256) {
 	TxMutex.Lock()
 	deleteRejected(hash.BIdx())
 	TxMutex.Unlock()
-}
-
-var (
-	poolenabled   bool
-	expireperbyte float64
-	maxexpiretime time.Duration
-	lastTxsExpire time.Time
-)
-
-// delete specified tx and all of its children from mempool
-func DeleteAllToSend(t2s *OneTxToSend) {
-	if _, ok := TransactionsToSend[t2s.Hash.BIdx()]; !ok {
-		// Transaction already removed
-		return
-	}
-
-	// remove all the children that ate spending from t2s
-	var po btc.TxPrevOut
-	po.Hash = t2s.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
-		if so, ok := SpentOutputs[po.UIdx()]; ok {
-			if child, ok := TransactionsToSend[so]; ok {
-				DeleteAllToSend(child)
-			}
-		}
-	}
-
-	// Remove the t2s itself
-	RejectTx(t2s.Hash, len(t2s.Data), TX_REJECTED_LOW_FEE)
-	DeleteToSend(t2s)
-}
-
-
-// This must be called with TxMutex locked
-func limitPoolSize(maxlen uint64) {
-	ticklen := maxlen >> 5 // 1/32th of the max size = X
-
-	if TransactionsToSendSize < maxlen {
-		if TransactionsToSendSize < maxlen-2*ticklen {
-			if common.SetMinFeePerKB(0) {
-				var cnt uint64
-				for k, v := range TransactionsRejected {
-					if v.Reason == TX_REJECTED_LOW_FEE {
-						deleteRejected(k)
-						cnt++
-					}
-				}
-				common.CounterMutex.Lock()
-				common.Counter["TxPoolSizeLow"]++
-				common.Counter["TxRejectedFeeUndone"] += cnt
-				common.CounterMutex.Unlock()
-				fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
-			}
-		} else {
-			common.CountSafe("TxPoolSizeOK")
-			//fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
-		}
-		return
-	}
-
-	sta := time.Now()
-	var idx int
-	sorted := make(SortedTxToSend, len(TransactionsToSend))
-	for _, v := range TransactionsToSend {
-		sorted[idx] = v
-		idx++
-	}
-	sort.Sort(sorted)
-
-	old_size := TransactionsToSendSize
-
-	maxlen -= ticklen
-
-	for idx > 0 && TransactionsToSendSize > maxlen {
-		idx--
-		DeleteAllToSend(sorted[idx])
-	}
-
-	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
-	common.SetMinFeePerKB(newspkb)
-
-	cnt := len(sorted) - idx
-
-	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size - TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)
-	common.CounterMutex.Lock()
-	common.Counter["TxPoolSizeHigh"]++
-	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
-	common.Counter["TxPurgedSizBts"] += old_size - TransactionsToSendSize
-	common.CounterMutex.Unlock()
 }
 
 func expireTime(size int) (t time.Time) {
@@ -951,16 +863,16 @@ func MempoolLoad2() bool {
 	// recover MemInputs
 	for _, t2s := range TransactionsToSend {
 		if t2s.MemInputs!=nil {
-			var any bool
 			cnt1++
 			for i := range t2s.TxIn {
 				if _, inmem := TransactionsToSend[btc.BIdx(t2s.TxIn[i].Input.Hash[:])]; inmem {
 					t2s.MemInputs[i] = true
-					any = true
+					t2s.MemInputCnt++
 					cnt2++
 				}
 			}
-			if !any {
+			if t2s.MemInputCnt==0 {
+				println("ERROR: MemInputs not nil but nothing found")
 				t2s.MemInputs = nil
 			}
 		}
@@ -981,7 +893,7 @@ fatal_error:
 }
 
 
-func (rec *OneTxToSend) recover_input_idx(key uint64) int {
+func (rec *OneTxToSend) IIdx(key uint64) int {
 	for i, o := range rec.TxIn {
 		if o.Input.UIdx()==key {
 			return i
@@ -998,7 +910,8 @@ func MempoolCheck() (dupa bool) {
 
 	// First check if t2s.MemInputs fields are properly set
 	for _, t2s := range TransactionsToSend {
-		var all_nomem bool = true
+		var micnt int
+
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
 
@@ -1022,11 +935,11 @@ func MempoolCheck() (dupa bool) {
 				}
 			} else {
 				if t2s.MemInputs[i] {
+					micnt++
 					if !ok {
 						fmt.Println("Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
 						dupa = true
 					}
-					all_nomem = false
 				} else {
 					if ok {
 						fmt.Println("Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
@@ -1035,8 +948,12 @@ func MempoolCheck() (dupa bool) {
 				}
 			}
 		}
-		if t2s.MemInputs!=nil && all_nomem {
+		if t2s.MemInputs!=nil && micnt==0 {
 			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
+			dupa = true
+		}
+		if t2s.MemInputCnt != micnt {
+			fmt.Println("Tx", t2s.Hash.String(), "has incorrect MemInputCnt", t2s.MemInputCnt, micnt)
 			dupa = true
 		}
 	}
@@ -1100,21 +1017,16 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
-				idx := rec.recover_input_idx(uidx)
+				idx := rec.IIdx(uidx)
 				if idx < 0 {
 					common.CountSafe("TxMinedMeminER2")
 					fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
 					continue
 				}
 				rec.MemInputs[idx] = false
-				var ii int
-				for ii = 0; ii < len(rec.MemInputs); ii++ {
-					if rec.MemInputs[ii] {
-						break
-					}
-				}
+				rec.MemInputCnt--
 				common.CountSafe("TxMinedMeminOut")
-				if ii == len(rec.MemInputs) {
+				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
 					rec.MemInputs = nil
 				}
