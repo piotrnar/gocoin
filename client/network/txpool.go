@@ -605,9 +605,7 @@ func expireTime(size int) (t time.Time) {
 func ExpireTxs() {
 	var cnt1a, cnt1b, cnt2 uint64
 
-	if MempoolCheck() {
-		fmt.Println("ERROR AT ExpireTxs 1")
-	}
+	MPC()
 
 	common.LockCfg()
 	poolenabled = common.CFG.TXPool.Enabled
@@ -656,9 +654,7 @@ func ExpireTxs() {
 	}
 	common.CounterMutex.Unlock()
 
-	if MempoolCheck() {
-		fmt.Println("ERROR AT ExpireTxs 2")
-	}
+	MPC()
 }
 
 func bool2byte(v bool) byte {
@@ -903,72 +899,6 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 }
 
 
-func MempoolCheck() (dupa bool) {
-	var spent_cnt int
-
-	TxMutex.Lock()
-
-	// First check if t2s.MemInputs fields are properly set
-	for _, t2s := range TransactionsToSend {
-		var micnt int
-
-		for i, inp := range t2s.TxIn {
-			spent_cnt++
-
-			outk, ok := SpentOutputs[inp.Input.UIdx()]
-			if ok {
-				if outk != t2s.Hash.BIdx() {
-					fmt.Println("Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
-					dupa = true
-				}
-			} else {
-				fmt.Println("Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
-				dupa = true
-			}
-
-			_, ok = TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
-
-			if t2s.MemInputs==nil {
-				if ok {
-					fmt.Println("Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
-					dupa = true
-				}
-			} else {
-				if t2s.MemInputs[i] {
-					micnt++
-					if !ok {
-						fmt.Println("Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
-						dupa = true
-					}
-				} else {
-					if ok {
-						fmt.Println("Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
-						dupa = true
-					}
-				}
-			}
-		}
-		if t2s.MemInputs!=nil && micnt==0 {
-			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
-			dupa = true
-		}
-		if t2s.MemInputCnt != micnt {
-			fmt.Println("Tx", t2s.Hash.String(), "has incorrect MemInputCnt", t2s.MemInputCnt, micnt)
-			dupa = true
-		}
-	}
-
-	if spent_cnt != len(SpentOutputs) {
-		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
-		dupa = true
-	}
-
-	TxMutex.Unlock()
-
-	return
-}
-
-
 // This function is called for each tx mined in a new block
 func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	h := tx.Hash
@@ -1044,9 +974,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 
 // Removes all the block's tx from the mempool
 func BlockMined(bl *btc.Block) {
-	if MempoolCheck() {
-		fmt.Println("ERROR AT BlockMined 1")
-	}
+	MPC()
 
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int
@@ -1060,9 +988,8 @@ func BlockMined(bl *btc.Block) {
 	}
 	TxMutex.Unlock()
 
-	if MempoolCheck() {
-		fmt.Println("ERROR AT BlockMined 2")
-	}
+	MPC()
+
 	// Try to redo waiting txs
 	if wtg_cnt > 0 {
 		common.CountSafeAdd("TxMinedGotInput", uint64(wtg_cnt))
@@ -1071,8 +998,7 @@ func BlockMined(bl *btc.Block) {
 		}
 	}
 
-	if MempoolCheck() {
-		fmt.Println("ERROR AT BlockMined 3")
-	}
+	MPC()
+
 	expireTxsNow = true
 }

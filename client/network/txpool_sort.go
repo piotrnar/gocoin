@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"runtime"
 	"sort"
 	"time"
 )
@@ -223,4 +224,79 @@ func limitPoolSize(maxlen uint64) {
 	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
 	common.Counter["TxPurgedSizBts"] += old_size - TransactionsToSendSize
 	common.CounterMutex.Unlock()
+}
+
+var stop_mempool_checks bool
+
+func MPC() {
+	if er := MempoolCheck(); er {
+		_, file, line, _ := runtime.Caller(1)
+		println("MempoolCheck() first failed in", file, line)
+		stop_mempool_checks = true
+	}
+}
+
+func MempoolCheck() (dupa bool) {
+	var spent_cnt int
+
+	TxMutex.Lock()
+
+	// First check if t2s.MemInputs fields are properly set
+	for _, t2s := range TransactionsToSend {
+		var micnt int
+
+		for i, inp := range t2s.TxIn {
+			spent_cnt++
+
+			outk, ok := SpentOutputs[inp.Input.UIdx()]
+			if ok {
+				if outk != t2s.Hash.BIdx() {
+					fmt.Println("Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
+					dupa = true
+				}
+			} else {
+				fmt.Println("Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
+				dupa = true
+			}
+
+			_, ok = TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
+
+			if t2s.MemInputs == nil {
+				if ok {
+					fmt.Println("Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
+					dupa = true
+				}
+			} else {
+				if t2s.MemInputs[i] {
+					micnt++
+					if !ok {
+						fmt.Println("Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
+						dupa = true
+					}
+				} else {
+					if ok {
+						fmt.Println("Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
+						dupa = true
+					}
+				}
+			}
+		}
+		if t2s.MemInputs != nil && micnt == 0 {
+			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
+			dupa = true
+		}
+		if t2s.MemInputCnt != micnt {
+			fmt.Println("Tx", t2s.Hash.String(), "has incorrect MemInputCnt", t2s.MemInputCnt, micnt)
+			dupa = true
+		}
+	}
+
+	if spent_cnt != len(SpentOutputs) {
+		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
+		dupa = true
+	}
+
+	TxMutex.Unlock()
+
+	return
 }
