@@ -103,16 +103,6 @@ type OneWaitingList struct {
 	Ids  map[BIDX]time.Time // List of pending tx ids
 }
 
-type SortedTxToSend []*OneTxToSend
-
-func (tl SortedTxToSend) Len() int      { return len(tl) }
-func (tl SortedTxToSend) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
-func (tl SortedTxToSend) Less(i, j int) bool {
-	spb_i := float64(tl[i].Fee) / float64(tl[i].VSize())
-	spb_j := float64(tl[j].Fee) / float64(tl[j].VSize())
-	return spb_j < spb_i
-}
-
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	return NeedThisTxExt(id, cb) == 0
 }

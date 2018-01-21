@@ -530,7 +530,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	sorted := network.GetSortedMempoolPtrs()
+	sorted := network.GetSortedMempool()
 
 	type one_stat_row struct {
 		Txs_so_far uint

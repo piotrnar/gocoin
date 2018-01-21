@@ -4,7 +4,6 @@ import (
 	"os"
 	"fmt"
 	"time"
-	"sort"
 	"strconv"
 	"io/ioutil"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -141,12 +140,7 @@ func list_txs(par string) {
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	sorted := make(network.SortedTxToSend, len(network.TransactionsToSend))
-	for _, v := range network.TransactionsToSend {
-		sorted[cnt] = v
-		cnt++
-	}
-	sort.Sort(sorted)
+	sorted := network.GetSortedMempool()
 
 	var totlen uint64
 	for cnt=0; cnt<len(sorted); cnt++ {

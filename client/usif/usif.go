@@ -11,7 +11,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/script"
 	"math/rand"
-	"sort"
 	"sync"
 	"time"
 )
@@ -241,19 +240,13 @@ func ExecUiReq(req *OneUiReq) {
 
 func MemoryPoolFees() (res string) {
 	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
-	cnt := 0
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	sorted := make(network.SortedTxToSend, len(network.TransactionsToSend))
-	for _, v := range network.TransactionsToSend {
-		sorted[cnt] = v
-		cnt++
-	}
-	sort.Sort(sorted)
+	sorted := network.GetSortedMempool()
 
 	var totlen, rawlen uint64
-	for cnt = 0; cnt < len(sorted); cnt++ {
+	for cnt := 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
 		newlen := totlen + uint64(v.VSize())
 		rawlen += uint64(len(v.Data))

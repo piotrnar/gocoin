@@ -33,17 +33,17 @@ func missing_parents(txkey BIDX, already_in map[BIDX]bool) (res []BIDX) {
 	return
 }
 
-func GetSortedMempool() (result []BIDX) {
-	inBlock := make([]BIDX, len(TransactionsToSend))
+func GetSortedMempool() (result []*OneTxToSend) {
+	all_txs := make([]BIDX, len(TransactionsToSend))
 	var idx int
 	const MIN_PKB = 200
 	for k, _ := range TransactionsToSend {
-		inBlock[idx] = k
+		all_txs[idx] = k
 		idx++
 	}
-	sort.Slice(inBlock, func(i, j int) bool {
-		rec_i := TransactionsToSend[inBlock[i]]
-		rec_j := TransactionsToSend[inBlock[j]]
+	sort.Slice(all_txs, func(i, j int) bool {
+		rec_i := TransactionsToSend[all_txs[i]]
+		rec_j := TransactionsToSend[all_txs[j]]
 		rate_i := rec_i.Fee * uint64(rec_j.Weight())
 		rate_j := rec_j.Fee * uint64(rec_i.Weight())
 		if rate_i != rate_j {
@@ -61,8 +61,8 @@ func GetSortedMempool() (result []BIDX) {
 	})
 
 	// now put the childrer after the parents
-	result = make([]BIDX, len(inBlock))
-	already_in := make(map[BIDX]bool, len(inBlock))
+	result = make([]*OneTxToSend, len(all_txs))
+	already_in := make(map[BIDX]bool, len(all_txs))
 	parent_of := make(map[BIDX][]BIDX)
 
 	idx = 0
@@ -96,7 +96,7 @@ func GetSortedMempool() (result []BIDX) {
 
 	var append_txs func(txkey BIDX)
 	append_txs = func(txkey BIDX) {
-		result[idx] = txkey
+		result[idx] = TransactionsToSend[txkey]
 		idx++
 		already_in[txkey] = true
 
@@ -113,7 +113,7 @@ func GetSortedMempool() (result []BIDX) {
 		}
 	}
 
-	for _, txkey := range inBlock {
+	for _, txkey := range all_txs {
 		if missing, yes := missing_parents(txkey, false); yes {
 			for _, kv := range missing {
 				parent_of[kv] = append(parent_of[kv], txkey)
@@ -129,15 +129,6 @@ func GetSortedMempool() (result []BIDX) {
 		result = result[:idx]
 	}
 
-	return
-}
-
-func GetSortedMempoolPtrs() (sorted SortedTxToSend) {
-	srt := GetSortedMempool()
-	sorted = make(SortedTxToSend, len(srt))
-	for idx, k := range srt {
-		sorted[idx] = TransactionsToSend[k]
-	}
 	return
 }
 
@@ -200,7 +191,7 @@ func limitPoolSize(maxlen uint64) {
 
 	sta := time.Now()
 
-	sorted := GetSortedMempoolPtrs()
+	sorted := GetSortedMempool()
 	idx := len(sorted)
 
 	old_size := TransactionsToSendSize
@@ -298,5 +289,39 @@ func MempoolCheck() (dupa bool) {
 
 	TxMutex.Unlock()
 
+	return
+}
+
+func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
+	var po btc.TxPrevOut
+	po.Hash = tx.Hash.Hash
+
+	res := make(map[*OneTxToSend]bool)
+
+	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			t2s := TransactionsToSend[val]
+
+			if t2s == nil {
+				// TODO: remove the check
+				println("FATAL: SpentOutput not in mempool")
+				return
+			}
+
+			if res[t2s] {
+				println(t2s.Hash.String(), "- already in", len(res))
+				continue
+			}
+			res[t2s] = true
+		}
+	}
+
+	result = make([]*OneTxToSend, len(res))
+	var idx int
+	for tx, _ := range res {
+		result[idx] = tx
+		idx++
+	}
 	return
 }
