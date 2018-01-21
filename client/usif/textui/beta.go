@@ -57,7 +57,7 @@ func new_block(par string) {
 	var most_children *network.OneTxToSend
 	var most_children_cnt int
 	for _, tx := range txs {
-		tmp := tx.GetChildren()
+		tmp := tx.GetAllChildren()
 		if len(tmp) > most_children_cnt {
 			most_children_cnt = len(tmp)
 			most_children = tx
@@ -80,11 +80,16 @@ func gettxchildren(par string) {
 	if t2s==nil {
 		println(txid.String(), "not im mempool")
 	}
-	chlds := t2s.GetChildren()
+	chlds := t2s.GetAllChildren()
 	println("has", len(chlds), "children")
+	var tot_wg, tot_fee uint64
 	for _, tx := range chlds {
-		println(" -", tx.Hash.String(), len(tx.GetChildren()))
+		println(" -", tx.Hash.String(), len(tx.GetChildren()), tx.SPB(), "@", tx.Weight())
+		tot_wg += uint64(tx.Weight())
+		tot_fee += tx.Fee
+		//gettxchildren(tx.Hash.String())
 	}
+	println("Groups SPB:", float64(tot_fee) / float64(tot_wg) * 4.0)
 }
 
 func init () {
