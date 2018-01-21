@@ -494,7 +494,6 @@ func txt_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 
 func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
-	var cnt int
 	var division, maxweight uint64
 	var e error
 
@@ -531,12 +530,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	sorted := make(network.SortedTxToSend, len(network.TransactionsToSend))
-	for _, v := range network.TransactionsToSend {
-		sorted[cnt] = v
-		cnt++
-	}
-	sort.Sort(sorted)
+	sorted := network.GetSortedMempoolPtrs()
 
 	type one_stat_row struct {
 		Txs_so_far uint
@@ -550,7 +544,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	var mempool_stats []one_stat_row
 
 	var totweight, reallen uint64
-	for cnt=0; cnt<len(sorted); cnt++ {
+	for cnt:=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
 		newtotweight := totweight + uint64(v.Weight())
 		reallen += uint64(len(v.Data))
