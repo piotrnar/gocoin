@@ -323,6 +323,27 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	return
 }
 
+func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
+	already_in := make(map[*OneTxToSend]bool)
+	already_in[tx] = true
+	var do_one func(*OneTxToSend)
+	do_one = func(tx *OneTxToSend) {
+		if tx.MemInputCnt > 0 {
+			for idx := range tx.TxIn {
+				if tx.MemInputs[idx] {
+					do_one(TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])])
+				}
+			}
+		}
+		if _, ok := already_in[tx]; !ok {
+			result = append(result, tx)
+			already_in[tx] = true
+		}
+	}
+	do_one(tx)
+	return
+}
+
 func (tx *OneTxToSend) SPW() float64 {
 	return float64(tx.Fee) / float64(tx.Weight())
 }
