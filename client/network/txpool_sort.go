@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"runtime"
+	"runtime/debug"
 	"sort"
 	"time"
 )
@@ -139,31 +139,8 @@ var (
 	lastTxsExpire time.Time
 )
 
-// delete specified tx and all of its children from mempool
-func DeleteAllToSend(t2s *OneTxToSend) {
-	if _, ok := TransactionsToSend[t2s.Hash.BIdx()]; !ok {
-		// Transaction already removed
-		return
-	}
-
-	// remove all the children that are spending from t2s
-	var po btc.TxPrevOut
-	po.Hash = t2s.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
-		if so, ok := SpentOutputs[po.UIdx()]; ok {
-			if child, ok := TransactionsToSend[so]; ok {
-				DeleteAllToSend(child)
-			}
-		}
-	}
-
-	// Remove the t2s itself
-	RejectTx(t2s.Hash, len(t2s.Data), TX_REJECTED_LOW_FEE)
-	DeleteToSend(t2s)
-}
-
 // This must be called with TxMutex locked
-func limitPoolSize(maxlen uint64) {
+func LimitPoolSize(maxlen uint64) {
 	ticklen := maxlen >> 5 // 1/32th of the max size = X
 
 	if TransactionsToSendSize < maxlen {
@@ -200,7 +177,12 @@ func limitPoolSize(maxlen uint64) {
 
 	for idx > 0 && TransactionsToSendSize > maxlen {
 		idx--
-		DeleteAllToSend(sorted[idx])
+		tx := sorted[idx]
+		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+			// this has already been rmoved
+			continue
+		}
+		tx.Delete(true, TX_REJECTED_LOW_FEE)
 	}
 
 	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
@@ -224,9 +206,8 @@ func MPC() {
 		return
 	}
 	if er := MempoolCheck(); er {
-		_, file, line, _ := runtime.Caller(1)
-		println("MempoolCheck() first failed in", file, line)
-		stop_mempool_checks = true
+		println("MempoolCheck() first failed")
+		println(string(debug.Stack()))
 	}
 }
 
@@ -347,4 +328,33 @@ func (tx *OneTxToSend) SPW() float64 {
 
 func (tx *OneTxToSend) SPB() float64 {
 	return tx.SPW() * 4.0
+}
+
+
+func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
+	var po btc.TxPrevOut
+	po.Hash = tx.Hash.Hash
+	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec, ok := TransactionsToSend[val]; ok {
+				if rec.MemInputs != nil {
+					idx := rec.IIdx(uidx)
+					if idx < 0 {
+						fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
+						return
+					}
+					if rec.MemInputs[idx] {
+						fmt.Println("ERR:", po.String(), " is marked as meminput in", tx.Hash.String())
+						return
+					}
+				}
+			} else {
+				fmt.Println("WTF?", po.String(), " in SpentOutputs, but not in mempool")
+				return
+			}
+		}
+	}
+	res = true
+	return
 }
