@@ -1,7 +1,7 @@
 package textui
 
 import (
-	//"fmt"
+	"fmt"
 	"sort"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/network"
@@ -10,15 +10,31 @@ import (
 
 
 type OneTxsPackage struct {
-	Parents []*network.OneTxToSend
-	Child *network.OneTxToSend
+	Txs []*network.OneTxToSend
 	Weight int
 	Fee uint64
 }
 
+func (pk *OneTxsPackage) SPW() float64 {
+	return float64(pk.Fee) / float64(pk.Weight)
+}
+
+func (pk *OneTxsPackage) SPB() float64 {
+	return pk.SPW() * 4.0
+}
+
+func (pk *OneTxsPackage) AnyIn(list map[*network.OneTxToSend]bool) (ok bool) {
+	for _, par := range pk.Txs {
+		if _, ok = list[par]; ok {
+			return
+		}
+	}
+	return
+}
+
 func (pkg *OneTxsPackage) Ver() bool {
-	mned := make(map[network.BIDX]bool, len(pkg.Parents))
-	for _, tx := range append(pkg.Parents, pkg.Child) {
+	mned := make(map[network.BIDX]bool, len(pkg.Txs))
+	for idx, tx := range append(pkg.Txs) {
 		if tx.MemInputCnt > 0 {
 			var cnt int
 			for i := range tx.MemInputs {
@@ -33,7 +49,7 @@ func (pkg *OneTxsPackage) Ver() bool {
 				}
 			}
 		}
-		if tx == pkg.Child {
+		if idx == len(pkg.Txs)-1 {
 			break
 		}
 		mned[tx.Hash.BIdx()] = true
@@ -45,12 +61,10 @@ func (pkg *OneTxsPackage) Ver() bool {
 func LookForPackages(txs []*network.OneTxToSend) (result []*OneTxsPackage) {
 	for _, tx := range txs {
 		var pkg OneTxsPackage
-		pkg.Parents = tx.GetAllParents()
-		if len(pkg.Parents) > 0 {
-			pkg.Child = tx
-			pkg.Weight = tx.Weight()
-			pkg.Fee = tx.Fee
-			for _, t := range pkg.Parents {
+		parents := tx.GetAllParents()
+		if len(parents) > 0 {
+			pkg.Txs = append(parents, tx)
+			for _, t := range pkg.Txs {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
 			}
@@ -73,7 +87,7 @@ func new_block(par string) {
 	println(len(pkgs), "packages found in", time.Now().Sub(sta).String())
 	for _, pkg := range pkgs {
 		//println("=============================")
-		//println(i, ")", pkg.Child.Hash.String(), len(pkg.Parents), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
+		//println(i, ")", pkg.Child.Hash.String(), len(pkg.Txs), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
 		/*for _, ch := range pkg.Parents {
 			println("   ", ch.Hash.String())
 		}*/
@@ -81,6 +95,64 @@ func new_block(par string) {
 			break
 		}
 	}
+
+	//return
+	result := make([]*network.OneTxToSend, len(txs))
+	var txs_idx, pks_idx, res_idx int
+	already_in := make(map[*network.OneTxToSend]bool, len(txs))
+	for txs_idx < len(txs) {
+		tx := txs[txs_idx]
+
+		if pks_idx < len(pkgs) {
+			pk := pkgs[pks_idx]
+			if pk.SPW() > tx.SPW() {
+				pks_idx++
+				if pk.AnyIn(already_in) {
+					continue
+				}
+				// all package's txs new: incude them all
+				copy(result[res_idx:], pk.Txs)
+				res_idx += len(pk.Txs)
+				for _, _t := range pk.Txs {
+					already_in[_t] = true
+				}
+				continue
+			}
+		}
+
+		txs_idx++
+		if _, ok := already_in[tx]; ok {
+			continue
+		}
+		result[res_idx] = tx
+		already_in[tx] = true
+		res_idx++
+	}
+	println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
+
+	var totwgh int
+	var totfees, totfees2 uint64
+	for _, tx := range txs {
+		totfees += tx.Fee
+		totwgh += tx.Weight()
+		if totwgh > 4e6 {
+			totwgh -= tx.Weight()
+			break
+		}
+	}
+	println("Fees from OLD sorting:", btc.UintToBtc(totfees), totwgh)
+
+	totwgh = 0
+	for _, tx := range result {
+		totfees2 += tx.Fee
+		totwgh += tx.Weight()
+		if totwgh > 4e6 {
+			totwgh -= tx.Weight()
+			break
+		}
+	}
+	fmt.Printf("Fees from NEW sorting: %s %d ... profit: %.2f%%\n", btc.UintToBtc(totfees2), totwgh,
+		100.0*float64(totfees2-totfees)/float64(totfees))
 }
 
 func gettxchildren(par string) {
