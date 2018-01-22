@@ -43,7 +43,7 @@ func new_block(par string) {
 	if totfees2 > totfees {
 		fmt.Printf("New method profit: %.3f%%\n", 100.0*float64(totfees2-totfees)/float64(totfees))
 	} else {
-		fmt.Printf("New method lose: %.3f%%\n", 100.0*float64(totfees-totfees2)/float64(totfees))
+		fmt.Printf("New method -LOSE-: %.3f%%\n", 100.0*float64(totfees-totfees2)/float64(totfees))
 	}
 }
 
