@@ -291,8 +291,8 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 
 	result = make([]*OneTxToSend, len(res))
 	var idx int
-	for tx, _ := range res {
-		result[idx] = tx
+	for ttx, _ := range res {
+		result[idx] = ttx
 		idx++
 	}
 	return
@@ -300,23 +300,24 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 
 func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	already_included := make(map[*OneTxToSend]bool)
-	var stage = []*OneTxToSend{tx}
-	for len(stage) > 0 {
-		it := stage[len(stage)-1]
-		already_included[it] = true
-		stage = stage[:len(stage)-1]
-
-		chlds := it.GetChildren()
-		for _, tx := range chlds {
-			if _, ok := already_included[tx]; !ok {
-				stage = append(stage, tx)
+	var idx int
+	par := tx
+	for {
+		chlds := par.GetChildren()
+		for _, ch := range chlds {
+			// TODO: remove this check already_included
+			if _, ok := already_included[ch]; !ok {
+				result = append(result, ch)
+			} else {
+				println("Do not remove this TODO already_included")
 			}
 		}
-	}
-	result = make([]*OneTxToSend, len(already_included))
-	var idx int
-	for tx, _ := range already_included {
-		result[idx] = tx
+		if idx == len(result) {
+			break
+		}
+
+		par = result[idx]
+		already_included[par] = true
 		idx++
 	}
 	return
