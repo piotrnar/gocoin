@@ -2,33 +2,73 @@ package textui
 
 import (
 	//"fmt"
-	//"sort"
+	"sort"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/network"
 )
 
 
-/*
-func CalculateDescendants(entryit network.BIDX, setDescendants map[network.BIDX]bool) {
-	//println("CalculateDescendants of", network.TransactionsToSend[entryit].Hash.String(), "...", len(setDescendants))
-	var stage []network.BIDX
-	if _, ok := setDescendants[entryit]; !ok {
-		stage = []network.BIDX{entryit}
-	}
-	for len(stage) > 0 {
-		it := stage[len(stage)-1]
-		setDescendants[it] = true
-		stage = stage[:len(stage)-1]
+type OneTxsPackage struct {
+	Parent *network.OneTxToSend
+	Children []*network.OneTxToSend
+	Weight int
+	Fee uint64
+}
 
-		setChildren := GetMemPoolChildren(it)
-		for childiter, _ := range setChildren {
-			if _, ok := setDescendants[childiter]; !ok {
-				stage = append(stage, childiter)
+func (pkg *OneTxsPackage) Ver() bool {
+	mned := make(map[network.BIDX]bool, 1 + len(pkg.Children))
+	mned[pkg.Parent.Hash.BIdx()] = true
+
+	//println("testing", pkg.Parent.Hash.String())
+	for _, tx := range pkg.Children {
+		//println("Child", ii, tx.Hash.String(), "meminps:", tx.MemInputCnt, "...")
+		if tx.MemInputs == nil || tx.MemInputCnt==0 {
+			return false
+		}
+
+		var cnt int
+		for i := range tx.MemInputs {
+			bidx := btc.BIdx(tx.TxIn[i].Input.Hash[:])
+			if tx.MemInputs[i] {
+				//println("... input", i, tx.TxIn[i].Input.String(), "-is mem:", mned[bidx], "cnt")
+				if ok, _ := mned[bidx]; !ok {
+					//println("error")
+					return false
+				}
+				cnt++
+				if cnt==tx.MemInputCnt {
+					return true
+				}
+			}
+			mned[bidx] = true
+		}
+	}
+	return true
+}
+
+
+func LookForPackages(txs []*network.OneTxToSend) (result []*OneTxsPackage) {
+	for _, tx := range txs {
+		var pkg OneTxsPackage
+		pkg.Children = tx.GetAllChildren()
+		if len(pkg.Children) > 0 {
+			pkg.Parent = tx
+			pkg.Weight = tx.Weight()
+			pkg.Fee = tx.Fee
+			for _, t := range pkg.Children {
+				pkg.Weight += t.Weight()
+				pkg.Fee += t.Fee
+				result = append(result, &pkg)
 			}
 		}
 	}
-	//println("... ->", len(setDescendants))
+	sort.Slice(txs, func(i, j int) bool {
+		return txs[i].Fee * uint64(txs[j].Weight()) > txs[j].Fee * uint64(txs[i].Weight())
+	})
+	return
 }
+
+/*
 
 func UpdatePackagesForAdded(alreadyAdded map[network.BIDX]bool, mapModifiedTx map[network.BIDX]bool) (childs_updated int) {
 	for it, _ := range alreadyAdded {
@@ -54,6 +94,7 @@ func UpdatePackagesForAdded(alreadyAdded map[network.BIDX]bool, mapModifiedTx ma
 
 func new_block(par string) {
 	txs := network.GetSortedMempool()
+	/*
 	var most_children *network.OneTxToSend
 	var most_children_cnt int
 	for _, tx := range txs {
@@ -67,6 +108,20 @@ func new_block(par string) {
 		println("txid", most_children.Hash.String(), "has", most_children_cnt, "children")
 		gettxchildren(most_children.Hash.String())
 	}
+	*/
+
+	pkgs := LookForPackages(txs)
+	println(len(pkgs), "packages found")
+	for i, pkg := range pkgs {
+		if !pkg.Ver() {
+			println(i, ") FAAILED", pkg.Parent.Hash.String(), "with", len(pkg.Children), "children")
+			for _, ch := range pkg.Children {
+				println("   ", ch.Hash.String())
+			}
+			break
+		}
+		println(i, ")", len(pkg.Children), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
+	}
 }
 
 func gettxchildren(par string) {
@@ -79,9 +134,10 @@ func gettxchildren(par string) {
 	t2s := network.TransactionsToSend[bidx]
 	if t2s==nil {
 		println(txid.String(), "not im mempool")
+		return
 	}
 	chlds := t2s.GetAllChildren()
-	println("has", len(chlds), "children")
+	println("has", len(chlds), "all children")
 	var tot_wg, tot_fee uint64
 	for _, tx := range chlds {
 		println(" -", tx.Hash.String(), len(tx.GetChildren()), tx.SPB(), "@", tx.Weight())
