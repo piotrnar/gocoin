@@ -299,7 +299,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 			if tid!=nil {
 				network.TxMutex.Lock()
 				if tts, ok := network.TransactionsToSend[tid.BIdx()]; ok {
-					network.DeleteToSend(tts)
+					tts.Delete(true, 0)
 				}
 				network.TxMutex.Unlock()
 			}
