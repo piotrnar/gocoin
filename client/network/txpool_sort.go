@@ -217,9 +217,12 @@ func limitPoolSize(maxlen uint64) {
 	common.CounterMutex.Unlock()
 }
 
-var stop_mempool_checks bool
+var stop_mempool_checks bool = true
 
 func MPC() {
+	if stop_mempool_checks {
+		return
+	}
 	if er := MempoolCheck(); er {
 		_, file, line, _ := runtime.Caller(1)
 		println("MempoolCheck() first failed in", file, line)
