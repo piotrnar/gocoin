@@ -13,7 +13,7 @@ func new_block(par string) {
 	println(len(txs), "txs got in", time.Now().Sub(sta).String())
 
 	sta = time.Now()
-	rbf := network.GetSortedMempoolRBF()
+	rbf := network.GetSortedMempoolNew()
 	println(len(rbf), "rbf got in", time.Now().Sub(sta).String())
 
 	println("All sorted.  txs:", len(txs), "  rbf:", len(rbf))
