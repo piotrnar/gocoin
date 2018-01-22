@@ -133,7 +133,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 }
 
 
-func GetSortedMempoolRBF() (result []*OneTxToSend) {
+func GetSortedMempoolNew() (result []*OneTxToSend) {
 	txs := GetSortedMempool()
 	pkgs := LookForPackages(txs)
 
