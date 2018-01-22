@@ -132,6 +132,47 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
+
+func GetSortedMempoolRBF() (result []*OneTxToSend) {
+	txs := GetSortedMempool()
+	pkgs := LookForPackages(txs)
+
+	result = make([]*OneTxToSend, len(txs))
+	var txs_idx, pks_idx, res_idx int
+	already_in := make(map[*OneTxToSend]bool, len(txs))
+	for txs_idx < len(txs) {
+		tx := txs[txs_idx]
+
+		if pks_idx < len(pkgs) {
+			pk := pkgs[pks_idx]
+			if pk.SPW() > tx.SPW() {
+				pks_idx++
+				if pk.AnyIn(already_in) {
+					continue
+				}
+				// all package's txs new: incude them all
+				copy(result[res_idx:], pk.Txs)
+				res_idx += len(pk.Txs)
+				for _, _t := range pk.Txs {
+					already_in[_t] = true
+				}
+				continue
+			}
+		}
+
+		txs_idx++
+		if _, ok := already_in[tx]; ok {
+			continue
+		}
+		result[res_idx] = tx
+		already_in[tx] = true
+		res_idx++
+	}
+	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
+	return
+}
+
+
 var (
 	poolenabled   bool
 	expireperbyte float64
@@ -352,7 +393,6 @@ func (tx *OneTxToSend) SPB() float64 {
 	return tx.SPW() * 4.0
 }
 
-
 func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
@@ -378,5 +418,74 @@ func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
 		}
 	}
 	res = true
+	return
+}
+
+type OneTxsPackage struct {
+	Txs []*OneTxToSend
+	Weight int
+	Fee uint64
+}
+
+func (pk *OneTxsPackage) SPW() float64 {
+	return float64(pk.Fee) / float64(pk.Weight)
+}
+
+func (pk *OneTxsPackage) SPB() float64 {
+	return pk.SPW() * 4.0
+}
+
+func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
+	for _, par := range pk.Txs {
+		if _, ok = list[par]; ok {
+			return
+		}
+	}
+	return
+}
+
+/*
+func (pkg *OneTxsPackage) Ver() bool {
+	mned := make(map[BIDX]bool, len(pkg.Txs))
+	for idx, tx := range append(pkg.Txs) {
+		if tx.MemInputCnt > 0 {
+			var cnt int
+			for i := range tx.MemInputs {
+				if tx.MemInputs[i] {
+					if ok, _ := mned[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; !ok {
+						return false
+					}
+					cnt++
+					if cnt==tx.MemInputCnt {
+						break
+					}
+				}
+			}
+		}
+		if idx == len(pkg.Txs)-1 {
+			break
+		}
+		mned[tx.Hash.BIdx()] = true
+	}
+	return true
+}
+*/
+
+func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
+	for _, tx := range txs {
+		var pkg OneTxsPackage
+		parents := tx.GetAllParents()
+		if len(parents) > 0 {
+			pkg.Txs = append(parents, tx)
+			for _, t := range pkg.Txs {
+				pkg.Weight += t.Weight()
+				pkg.Fee += t.Fee
+			}
+			result = append(result, &pkg)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Fee * uint64(result[j].Weight) > result[j].Fee * uint64(result[i].Weight)
+	})
 	return
 }
