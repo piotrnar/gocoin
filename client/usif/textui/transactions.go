@@ -91,8 +91,8 @@ func del_tx(par string) {
 		list_txs("")
 		return
 	}
-	network.DeleteToSend(tx)
-	fmt.Println("Transaction", txid.String(), "removed from the memory pool")
+	tx.Delete(true, 0)
+	fmt.Println("Transaction", txid.String(), "and all its children removed from the memory pool")
 }
 
 
