@@ -242,6 +242,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		spent[i] = tx.TxIn[i].Input.UIdx()
 
 		if so, ok := SpentOutputs[spent[i]]; ok {
+			println("RBF disabled for now - fix it later")
+			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
+			TxMutex.Unlock()
+			common.CountSafe("TxRejectedRBF-OFF")
+			return
+
 			rbf_tx_list[so] = true
 		}
 
