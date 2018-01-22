@@ -9,39 +9,33 @@ import (
 
 
 type OneTxsPackage struct {
-	Parent *network.OneTxToSend
-	Children []*network.OneTxToSend
+	Parents []*network.OneTxToSend
+	Child *network.OneTxToSend
 	Weight int
 	Fee uint64
 }
 
 func (pkg *OneTxsPackage) Ver() bool {
-	mned := make(map[network.BIDX]bool, 1 + len(pkg.Children))
-	mned[pkg.Parent.Hash.BIdx()] = true
-
-	//println("testing", pkg.Parent.Hash.String())
-	for _, tx := range pkg.Children {
-		//println("Child", ii, tx.Hash.String(), "meminps:", tx.MemInputCnt, "...")
-		if tx.MemInputs == nil || tx.MemInputCnt==0 {
-			return false
-		}
-
-		var cnt int
-		for i := range tx.MemInputs {
-			bidx := btc.BIdx(tx.TxIn[i].Input.Hash[:])
-			if tx.MemInputs[i] {
-				//println("... input", i, tx.TxIn[i].Input.String(), "-is mem:", mned[bidx], "cnt")
-				if ok, _ := mned[bidx]; !ok {
-					//println("error")
-					return false
-				}
-				cnt++
-				if cnt==tx.MemInputCnt {
-					return true
+	mned := make(map[network.BIDX]bool, len(pkg.Parents))
+	for _, tx := range append(pkg.Parents, pkg.Child) {
+		if tx.MemInputCnt > 0 {
+			var cnt int
+			for i := range tx.MemInputs {
+				if tx.MemInputs[i] {
+					if ok, _ := mned[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; !ok {
+						return false
+					}
+					cnt++
+					if cnt==tx.MemInputCnt {
+						break
+					}
 				}
 			}
-			mned[bidx] = true
 		}
+		if tx == pkg.Child {
+			break
+		}
+		mned[tx.Hash.BIdx()] = true
 	}
 	return true
 }
@@ -50,20 +44,21 @@ func (pkg *OneTxsPackage) Ver() bool {
 func LookForPackages(txs []*network.OneTxToSend) (result []*OneTxsPackage) {
 	for _, tx := range txs {
 		var pkg OneTxsPackage
-		pkg.Children = tx.GetAllChildren()
-		if len(pkg.Children) > 0 {
-			pkg.Parent = tx
+		pkg.Parents = tx.GetAllParents()
+		if len(pkg.Parents) > 0 {
+			pkg.Child = tx
 			pkg.Weight = tx.Weight()
 			pkg.Fee = tx.Fee
-			for _, t := range pkg.Children {
+			for _, t := range pkg.Parents {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
-				result = append(result, &pkg)
 			}
+			result = append(result, &pkg)
 		}
 	}
-	sort.Slice(txs, func(i, j int) bool {
-		return txs[i].Fee * uint64(txs[j].Weight()) > txs[j].Fee * uint64(txs[i].Weight())
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Fee * uint64(result[j].Weight) > result[j].Fee * uint64(result[i].Weight)
+		//return len(txs[i].Perents) < len(txs[j].Perents)
 	})
 	return
 }
@@ -113,14 +108,14 @@ func new_block(par string) {
 	pkgs := LookForPackages(txs)
 	println(len(pkgs), "packages found")
 	for i, pkg := range pkgs {
+		//println("=============================")
+		println(i, ")", pkg.Child.Hash.String(), len(pkg.Parents), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
+		/*for _, ch := range pkg.Parents {
+			println("   ", ch.Hash.String())
+		}*/
 		if !pkg.Ver() {
-			println(i, ") FAAILED", pkg.Parent.Hash.String(), "with", len(pkg.Children), "children")
-			for _, ch := range pkg.Children {
-				println("   ", ch.Hash.String())
-			}
 			break
 		}
-		println(i, ")", len(pkg.Children), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
 	}
 }
 
