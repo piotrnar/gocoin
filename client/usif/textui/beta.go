@@ -5,6 +5,7 @@ import (
 	"sort"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/network"
+	"time"
 )
 
 
@@ -58,58 +59,21 @@ func LookForPackages(txs []*network.OneTxToSend) (result []*OneTxsPackage) {
 	}
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Fee * uint64(result[j].Weight) > result[j].Fee * uint64(result[i].Weight)
-		//return len(txs[i].Perents) < len(txs[j].Perents)
 	})
 	return
 }
 
-/*
-
-func UpdatePackagesForAdded(alreadyAdded map[network.BIDX]bool, mapModifiedTx map[network.BIDX]bool) (childs_updated int) {
-	for it, _ := range alreadyAdded {
-		descendants := make(map[network.BIDX]bool)
-		CalculateDescendants(it, descendants)
-		// Insert all descendants (not yet in block) into the modified set
-		for desc, _ := range descendants {
-			if _, ok := alreadyAdded[desc]; ok {
-				continue
-			}
-			childs_updated++
-			if _, ok := mapModifiedTx[desc]; !ok {
-				println("modEntry-insert")
-                mapModifiedTx[desc] = true
-			} else {
-				println("modEntry-modify")
-			}
-		}
-	}
-    return
-}
-*/
-
 func new_block(par string) {
+	sta := time.Now()
 	txs := network.GetSortedMempool()
-	/*
-	var most_children *network.OneTxToSend
-	var most_children_cnt int
-	for _, tx := range txs {
-		tmp := tx.GetAllChildren()
-		if len(tmp) > most_children_cnt {
-			most_children_cnt = len(tmp)
-			most_children = tx
-		}
-	}
-	if most_children != nil {
-		println("txid", most_children.Hash.String(), "has", most_children_cnt, "children")
-		gettxchildren(most_children.Hash.String())
-	}
-	*/
+	println(len(txs), "txs got in", time.Now().Sub(sta).String())
 
+	sta = time.Now()
 	pkgs := LookForPackages(txs)
-	println(len(pkgs), "packages found")
-	for i, pkg := range pkgs {
+	println(len(pkgs), "packages found in", time.Now().Sub(sta).String())
+	for _, pkg := range pkgs {
 		//println("=============================")
-		println(i, ")", pkg.Child.Hash.String(), len(pkg.Parents), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
+		//println(i, ")", pkg.Child.Hash.String(), len(pkg.Parents), "spkb:", 1000 * uint64(pkg.Fee) / uint64(pkg.Weight))
 		/*for _, ch := range pkg.Parents {
 			println("   ", ch.Hash.String())
 		}*/
