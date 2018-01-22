@@ -151,8 +151,12 @@ func new_block(par string) {
 			break
 		}
 	}
-	fmt.Printf("Fees from NEW sorting: %s %d ... profit: %.2f%%\n", btc.UintToBtc(totfees2), totwgh,
-		100.0*float64(totfees2-totfees)/float64(totfees))
+	fmt.Printf("Fees from NEW sorting: %s %d\n", btc.UintToBtc(totfees2), totwgh)
+	if totfees2 > totfees {
+		fmt.Printf("New method profit: %.3f%%\n", 100.0*float64(totfees2-totfees)/float64(totfees))
+	} else {
+		fmt.Printf("New method lose: %.3f%%\n", 100.0*float64(totfees-totfees2)/float64(totfees))
+	}
 }
 
 func gettxchildren(par string) {
