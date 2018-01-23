@@ -336,14 +336,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	if len(rbf_tx_list) > 0 {
 		already_done := make(map[*OneTxToSend]bool)
-		for _, ttt := range rbf_tx_list {
-			chlds := ttt.GetChildren()
-			for _, ch := range chlds {
-				if _, ok := already_done[ch]; !ok {
-					rbf_tx_list = append(rbf_tx_list, ch)
-				}
-			}
-		}
 		if len(rbf_tx_list) > 100 {
 			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
 			TxMutex.Unlock()
@@ -351,6 +343,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			return
 		}
 
+		for _, ttt := range rbf_tx_list {
+			chlds := ttt.GetAllChildren()
+			for _, ch := range chlds {
+				if _, ok := already_done[ch]; !ok {
+					rbf_tx_list = append(rbf_tx_list, ch)
+					if len(rbf_tx_list) > 100 {
+						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
+						TxMutex.Unlock()
+						common.CountSafe("TxRejectedRBF100+")
+						return
+					}
+				}
+			}
+		}
 		for _, ctx := range rbf_tx_list {
 			if !ntx.trusted && ctx.Final {
 				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
