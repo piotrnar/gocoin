@@ -209,7 +209,7 @@ func LimitPoolSize(maxlen uint64) {
 
 	sta := time.Now()
 
-	sorted := GetSortedMempool()
+	sorted := GetSortedMempoolNew()
 	idx := len(sorted)
 
 	old_size := TransactionsToSendSize

@@ -530,7 +530,12 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	sorted := network.GetSortedMempool()
+	var sorted []*network.OneTxToSend
+	if len(r.Form["new"])>0 {
+		sorted = network.GetSortedMempoolNew()
+	} else {
+		sorted = network.GetSortedMempool()
+	}
 
 	type one_stat_row struct {
 		Txs_so_far uint
@@ -540,22 +545,19 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		Current_tx_spb float64
 		Current_tx_id string
 		Time_received uint
+		Fees_so_far uint64
 	}
 	var mempool_stats []one_stat_row
 
-	var totweight, reallen uint64
-	var prev_spb float64 = 21e14
+	var totweight, reallen, totfee uint64
 	for cnt:=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
 		newtotweight := totweight + uint64(v.Weight())
 		reallen += uint64(len(v.Data))
+		totfee += v.Fee
 
 		if cnt==0 || cnt+1==len(sorted) || (newtotweight/division)!=(totweight/division) {
 			cur_spb := float64(v.Fee)/(float64(v.Weight()/4.0))
-			if cur_spb > prev_spb {
-				continue // do not include hanging txs (with high SPB)
-			}
-			prev_spb = cur_spb
 			mempool_stats = append(mempool_stats, one_stat_row{
 				Txs_so_far : uint(cnt),
 				Real_len_so_far : uint(reallen),
@@ -563,6 +565,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Current_tx_weight : uint(v.Weight()),
 				Current_tx_spb : cur_spb,
 				Current_tx_id : v.Hash.String(),
+				Fees_so_far : totfee,
 				Time_received : uint(v.Firstseen.Unix())})
 		}
 		totweight = newtotweight

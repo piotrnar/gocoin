@@ -24,6 +24,9 @@ td.txid {
 <tr>
 <td><b>Memory Pool:</b></td>
 <td align="right">
+<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" checked>
+<span onclick="mempool_new_sort.click()" style="cursor:pointer">New Sort</span>
+&nbsp;&nbsp;
 <input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()" checked>
 <span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit Y</span>
 &nbsp;&nbsp;
@@ -65,6 +68,8 @@ td.txid {
 		<tr><td>Being processed:
 			<td><b id="ts_ptr1_cnt"></b> / <b id="ts_ptr2_cnt"></b>
 			<td><input type="button" onclick="show_txs2s('&ownonly=1')" value="Own TXs">
+		<tr><td>Estmated Fees:
+			<td colspan="2"><b id="fees_from_first_block"></b> BTC from 1st block
 	</table>
 <td valign="top">
 	<table>
@@ -716,6 +721,7 @@ function show_mempool_fees() {
 			var max_spb = 0
 			var max_spb_corrected = 0
 			var half = 2e6
+			var feesfrom1stblock = 0
 
 			if (mp.length>1 && mp[mp.length-1].Weight_so_far<4e6) {
 				half = Math.round(mp[mp.length-1].Weight_so_far / 2)
@@ -725,8 +731,11 @@ function show_mempool_fees() {
 				if (mp[i].Current_tx_spb>max_spb) {
 					max_spb = mp[i].Current_tx_spb
 				}
-				if (mp[i].Weight_so_far < half) {
-					max_spb_corrected = 3*mp[i].Current_tx_spb
+				if (mp[i].Weight_so_far < 2*half) {
+					feesfrom1stblock = mp[i].Fees_so_far
+					if (mp[i].Weight_so_far < half) {
+						max_spb_corrected = 3*mp[i].Current_tx_spb
+					}
 				}
 				plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, mp[i].Current_tx_spb])
 			}
@@ -739,12 +748,16 @@ function show_mempool_fees() {
 			$("#mempool_fees").bind("plothover", handlehover)
 			$("#mempool_fees").bind("plotclick", handleclick)
 			$.plot($("#mempool_fees"), plot_data, plot_options)
+
+			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(3)
 		}
 	}
 	if (mempool_siz_range.checked) {
-		aj.open("GET","mempool_stats.json?max=24000000", true)
+		var ext = mempool_new_sort.checked ? "&new" : ""
+		aj.open("GET","mempool_stats.json?max=24000000"+ext, true)
 	} else {
-		aj.open("GET","mempool_stats.json", true)
+		var ext = mempool_new_sort.checked ? "?new" : ""
+		aj.open("GET","mempool_stats.json"+ext, true)
 	}
 	aj.send(null)
 }

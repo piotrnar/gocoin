@@ -243,7 +243,7 @@ func MemoryPoolFees() (res string) {
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
-	sorted := network.GetSortedMempool()
+	sorted := network.GetSortedMempoolNew()
 
 	var totlen, rawlen uint64
 	for cnt := 0; cnt < len(sorted); cnt++ {
