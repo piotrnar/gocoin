@@ -6,13 +6,12 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
-* Mempool: update MemInputs values when new block gets mined
 * Review and update WebUI's Help page
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Figure out a way to purge blocks that we got good headers for, but never managed to download the txs
 * WebUI to offer switching to "-trust -nowallet" mode while downloading many blocks.
-* Update mining API and implement "Child Pays for Parent Merged"
+* Update mining API
 
 Wallet:
 * Implement "server mode", e.g. through TCP or serial connection

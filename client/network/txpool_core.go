@@ -1,18 +1,12 @@
 package network
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/script"
-	"io"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,9 +33,6 @@ const (
 	TX_REJECTED_RBF_FINAL   = 211
 	TX_REJECTED_RBF_100     = 212
 	TX_REJECTED_REPLACED    = 213
-
-	MEMPOOL_FILE_NAME  = "mempool.bin"
-	MEMPOOL_FILE_NAME2 = "mempool.dmp"
 )
 
 var (
@@ -64,10 +55,6 @@ var (
 
 	// Transactions that are waiting for inputs:
 	WaitingForInputs map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
-
-	END_MARKER = []byte("END_OF_FILE")
-
-	expireTxsNow bool = true
 )
 
 type OneTxToSend struct {
@@ -102,6 +89,14 @@ type OneTxRejected struct {
 type OneWaitingList struct {
 	TxID *btc.Uint256
 	Ids  map[BIDX]time.Time // List of pending tx ids
+}
+
+func (pk *OneTxsPackage) SPW() float64 {
+	return float64(pk.Fee) / float64(pk.Weight)
+}
+
+func (pk *OneTxsPackage) SPB() float64 {
+	return pk.SPW() * 4.0
 }
 
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
@@ -193,10 +188,6 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 			//println("NetTxsFULL")
 		}
 	})
-}
-
-func bidx2str(idx BIDX) string {
-	return hex.EncodeToString(idx[:])
 }
 
 // Must be called from the chain's thread
@@ -462,7 +453,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		// Gocoin does not route txs that need unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
-	} else if !ntx.trusted && isRoutable(rec) {
+	} else if !ntx.trusted && rec.isRoutable() {
 		// do not automatically route loacally loaded txs
 		rec.Invsentcnt += NetRouteInvExt(1, tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.raw)))
 		common.CountSafe("TxRouteOK")
@@ -479,19 +470,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	return
 }
 
-// Return txs in mempool that are spending any outputs form the given tx
-func findPendingTxs(tx *btc.Tx) (res []BIDX) {
-	var in btc.TxPrevOut
-	copy(in.Hash[:], tx.Hash.Hash[:])
-	for in.Vout = 0; in.Vout < uint32(len(tx.TxOut)); in.Vout++ {
-		if r, ok := SpentOutputs[in.UIdx()]; ok {
-			res = append(res, r)
-		}
-	}
-	return res
-}
-
-func isRoutable(rec *OneTxToSend) bool {
+func (rec *OneTxToSend) isRoutable() bool {
 	if !common.CFG.TXRoute.Enabled {
 		common.CountSafe("TxRouteDisabled")
 		rec.Blocked = TX_REJECTED_DISABLED
@@ -578,10 +557,6 @@ func txChecker(tx *btc.Tx) bool {
 	return ok
 }
 
-func init() {
-	chain.TrustedTxChecker = txChecker
-}
-
 // Make sure to call it with locked TxMutex
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
@@ -603,412 +578,10 @@ func RemoveFromRejected(hash *btc.Uint256) {
 	TxMutex.Unlock()
 }
 
-func expireTime(size int) (t time.Time) {
-	exp := time.Duration(float64(size) * expireperbyte)
-	if exp > maxexpiretime {
-		exp = maxexpiretime
-	}
-	return lastTxsExpire.Add(-exp)
-}
-
-func ExpireTxs() {
-	var cnt1a, cnt1b, cnt2 uint64
-
-	MPC()
-
-	common.LockCfg()
-	poolenabled = common.CFG.TXPool.Enabled
-	expireperbyte = common.ExpirePerByte
-	maxexpiretime = common.MaxExpireTime
-	common.UnlockCfg()
-
-	lastTxsExpire = time.Now()
-	expireTxsNow = false
-
-	TxMutex.Lock()
-
-	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		LimitPoolSize(maxpoolsize)
-	} else {
-		for _, v := range TransactionsToSend {
-			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
-				v.Delete(true, 0)
-				if v.Blocked == 0 {
-					cnt1a++
-				} else {
-					cnt1b++
-				}
-			}
-		}
-	}
-
-	for k, v := range TransactionsRejected {
-		if !poolenabled || v.Time.Before(expireTime(int(v.Size))) {
-			deleteRejected(k)
-			cnt2++
-		}
-	}
-	TxMutex.Unlock()
-
-	common.CounterMutex.Lock()
-	common.Counter["TxPurgedTicks"]++
-	if cnt1a > 0 {
-		common.Counter["TxPurgedOK"] += cnt1a
-	}
-	if cnt1b > 0 {
-		common.Counter["TxPurgedBlocked"] += cnt1b
-	}
-	if cnt2 > 0 {
-		common.Counter["TxPurgedRejected"] += cnt2
-	}
-	common.CounterMutex.Unlock()
-
-	MPC()
-}
-
-func bool2byte(v bool) byte {
-	if v {
-		return 1
-	} else {
-		return 0
-	}
-}
-
-func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
-	btc.WriteVlen(wr, uint64(len(t2s.Data)))
-	wr.Write(t2s.Data)
-
-	btc.WriteVlen(wr, uint64(len(t2s.Spent)))
-	binary.Write(wr, binary.LittleEndian, t2s.Spent[:])
-
-	binary.Write(wr, binary.LittleEndian, t2s.Invsentcnt)
-	binary.Write(wr, binary.LittleEndian, t2s.SentCnt)
-	binary.Write(wr, binary.LittleEndian, uint32(t2s.Firstseen.Unix()))
-	binary.Write(wr, binary.LittleEndian, uint32(t2s.Lastsent.Unix()))
-	binary.Write(wr, binary.LittleEndian, t2s.Volume)
-	binary.Write(wr, binary.LittleEndian, t2s.Fee)
-	binary.Write(wr, binary.LittleEndian, t2s.SigopsCost)
-	binary.Write(wr, binary.LittleEndian, t2s.VerifyTime)
-	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs != nil), bool2byte(t2s.Final)})
-}
-
-func MempoolSave2() {
-	if !common.CFG.TXPool.SaveOnDisk {
-		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
-		return
-	}
-
-	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
-	if er != nil {
-		println(er.Error())
-		return
-	}
-
-	fmt.Println("Saving", MEMPOOL_FILE_NAME2)
-	wr := bufio.NewWriter(f)
-
-	wr.Write(common.Last.Block.BlockHash.Hash[:])
-
-	btc.WriteVlen(wr, uint64(len(TransactionsToSend)))
-	for _, t2s := range TransactionsToSend {
-		t2s.WriteBytes(wr)
-	}
-
-	btc.WriteVlen(wr, uint64(len(SpentOutputs)))
-	for k, v := range SpentOutputs {
-		binary.Write(wr, binary.LittleEndian, k)
-		binary.Write(wr, binary.LittleEndian, v)
-	}
-
-	wr.Write(END_MARKER[:])
-	wr.Flush()
-	f.Close()
-}
-
 func SubmitTrustedTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{tx: tx, raw: rawtx, trusted: true}, true)
 }
 
-func MempoolLoad2() bool {
-	var t2s *OneTxToSend
-	var totcnt, le uint64
-	var tmp [32]byte
-	var bi BIDX
-	var tina uint32
-	var i int
-	var cnt1, cnt2 uint
-
-	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
-	if er != nil {
-		fmt.Println("MempoolLoad:", er.Error())
-		return false
-	}
-	defer f.Close()
-
-	rd := bufio.NewReader(f)
-	if er = btc.ReadAll(rd, tmp[:32]); er != nil {
-		goto fatal_error
-	}
-	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
-		er = errors.New(MEMPOOL_FILE_NAME2 + " is for different last block hash")
-		goto fatal_error
-	}
-
-	if totcnt, er = btc.ReadVLen(rd); er != nil {
-		goto fatal_error
-	}
-
-	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
-	for ; totcnt > 0; totcnt-- {
-		le, er = btc.ReadVLen(rd)
-		if er != nil {
-			goto fatal_error
-		}
-
-		t2s = new(OneTxToSend)
-		t2s.Data = make([]byte, int(le))
-
-		er = btc.ReadAll(rd, t2s.Data)
-		if er != nil {
-			goto fatal_error
-		}
-
-		t2s.Tx, i = btc.NewTx(t2s.Data)
-		if t2s.Tx == nil || i != len(t2s.Data) {
-			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME2, " at idx", len(TransactionsToSend)))
-			goto fatal_error
-		}
-		t2s.Tx.SetHash(t2s.Data)
-
-		le, er = btc.ReadVLen(rd)
-		if er != nil {
-			goto fatal_error
-		}
-		t2s.Spent = make([]uint64, int(le))
-		if er = binary.Read(rd, binary.LittleEndian, t2s.Spent[:]); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.Invsentcnt); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.SentCnt); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
-			goto fatal_error
-		}
-		t2s.Firstseen = time.Unix(int64(tina), 0)
-
-		if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
-			goto fatal_error
-		}
-		t2s.Lastsent = time.Unix(int64(tina), 0)
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.Volume); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.Fee); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.SigopsCost); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &t2s.VerifyTime); er != nil {
-			goto fatal_error
-		}
-
-		if er = btc.ReadAll(rd, tmp[:4]); er != nil {
-			goto fatal_error
-		}
-		t2s.Own = tmp[0]
-		t2s.Blocked = tmp[1]
-		if tmp[2] != 0 {
-			t2s.MemInputs = make([]bool, len(t2s.TxIn))
-		}
-		t2s.Final = tmp[3] != 0
-
-		t2s.Tx.Fee = t2s.Fee
-
-		TransactionsToSend[t2s.Hash.BIdx()] = t2s
-		TransactionsToSendSize += uint64(len(t2s.Data))
-		TransactionsToSendWeight += uint64(t2s.Weight())
-	}
-
-	if totcnt, er = btc.ReadVLen(rd); er != nil {
-		goto fatal_error
-	}
-
-	SpentOutputs = make(map[uint64]BIDX, int(totcnt))
-	for ; totcnt > 0; totcnt-- {
-		if er = binary.Read(rd, binary.LittleEndian, &le); er != nil {
-			goto fatal_error
-		}
-
-		if er = binary.Read(rd, binary.LittleEndian, &bi); er != nil {
-			goto fatal_error
-		}
-
-		SpentOutputs[le] = bi
-	}
-
-	if er = btc.ReadAll(rd, tmp[:len(END_MARKER)]); er != nil {
-		goto fatal_error
-	}
-	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
-		er = errors.New(MEMPOOL_FILE_NAME2 + " has marker missing")
-		goto fatal_error
-	}
-
-	// recover MemInputs
-	for _, t2s := range TransactionsToSend {
-		if t2s.MemInputs != nil {
-			cnt1++
-			for i := range t2s.TxIn {
-				if _, inmem := TransactionsToSend[btc.BIdx(t2s.TxIn[i].Input.Hash[:])]; inmem {
-					t2s.MemInputs[i] = true
-					t2s.MemInputCnt++
-					cnt2++
-				}
-			}
-			if t2s.MemInputCnt == 0 {
-				println("ERROR: MemInputs not nil but nothing found")
-				t2s.MemInputs = nil
-			}
-		}
-	}
-
-	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME2)
-	fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
-
-	return true
-
-fatal_error:
-	fmt.Println("Error loading", MEMPOOL_FILE_NAME2, ":", er.Error())
-	TransactionsToSend = make(map[BIDX]*OneTxToSend)
-	TransactionsToSendSize = 0
-	TransactionsToSendWeight = 0
-	SpentOutputs = make(map[uint64]BIDX)
-	return false
-}
-
-func (rec *OneTxToSend) IIdx(key uint64) int {
-	for i, o := range rec.TxIn {
-		if o.Input.UIdx() == key {
-			return i
-		}
-	}
-	return -1
-}
-
-func (tx *OneTxToSend) UnMarkChildrenForMem() {
-	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
-		if val, ok := SpentOutputs[uidx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
-				if rec.MemInputs == nil {
-					common.CountSafe("TxMinedMeminER1")
-					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
-					continue
-				}
-				idx := rec.IIdx(uidx)
-				if idx < 0 {
-					common.CountSafe("TxMinedMeminER2")
-					fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
-					continue
-				}
-				rec.MemInputs[idx] = false
-				rec.MemInputCnt--
-				common.CountSafe("TxMinedMeminOut")
-				if rec.MemInputCnt == 0 {
-					common.CountSafe("TxMinedMeminTx")
-					rec.MemInputs = nil
-				}
-			} else {
-				common.CountSafe("TxMinedMeminERR")
-				fmt.Println("WTF?", po.String(), " in SpentOutputs, but not in mempool")
-			}
-		}
-	}
-}
-
-// This function is called for each tx mined in a new block
-func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
-	h := tx.Hash
-	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
-		common.CountSafe("TxMinedToSend")
-		rec.UnMarkChildrenForMem()
-		rec.Delete(false, 0)
-	}
-	if _, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafe("TxMinedRejected")
-		deleteRejected(h.BIdx())
-	}
-	if _, ok := TransactionsPending[h.BIdx()]; ok {
-		common.CountSafe("TxMinedPending")
-		delete(TransactionsPending, h.BIdx())
-	}
-
-	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
-	for i := range tx.TxIn {
-		idx := tx.TxIn[i].Input.UIdx()
-		if val, ok := SpentOutputs[idx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
-				// if we got here, the txs has been Malleabled
-				if rec.Own != 0 {
-					common.CountSafe("TxMinedMalleabled")
-					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
-				} else {
-					common.CountSafe("TxMinedOtherSpend")
-				}
-				rec.Delete(true, 0)
-			} else {
-				common.CountSafe("TxMinedSpentERROR")
-				fmt.Println("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
-			}
-			delete(SpentOutputs, idx)
-		}
-	}
-
-	wtg = WaitingForInputs[h.BIdx()]
-	return
-}
-
-// Removes all the block's tx from the mempool
-func BlockMined(bl *btc.Block) {
-	MPC()
-
-	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
-	var wtg_cnt int
-	TxMutex.Lock()
-	for i := 1; i < len(bl.Txs); i++ {
-		wtg := tx_mined(bl.Txs[i])
-		if wtg != nil {
-			wtgs[wtg_cnt] = wtg
-			wtg_cnt++
-		}
-	}
-	TxMutex.Unlock()
-
-	MPC()
-
-	// Try to redo waiting txs
-	if wtg_cnt > 0 {
-		common.CountSafeAdd("TxMinedGotInput", uint64(wtg_cnt))
-		for _, wtg := range wtgs[:wtg_cnt] {
-			RetryWaitingForInput(wtg)
-		}
-	}
-
-	MPC()
-
-	expireTxsNow = true
+func init() {
+	chain.TrustedTxChecker = txChecker
 }

@@ -4,35 +4,15 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"runtime/debug"
 	"sort"
 	"time"
 )
 
-// returns true if the given tx has not memory inputs or if all of the memory inputs are in already_in
-func missing_parents(txkey BIDX, already_in map[BIDX]bool) (res []BIDX) {
-	tx := TransactionsToSend[txkey]
-	if tx.MemInputs == nil {
-		return
-	}
-	var cnt_ok int
-	for idx, inp := range tx.TxIn {
-		if tx.MemInputs[idx] {
-			txk := btc.BIdx(inp.Input.Hash[:])
-			if _, ok := already_in[txk]; ok {
-			} else {
-				res = append(res, txk)
-			}
+var (
+	expireTxsNow bool = true
+)
 
-			cnt_ok++
-			if cnt_ok == tx.MemInputCnt {
-				return
-			}
-		}
-	}
-	return
-}
-
+// Return txs sorted by SPB, but with parents first
 func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))
 	var idx int
@@ -132,45 +112,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
-func GetSortedMempoolNew() (result []*OneTxToSend) {
-	txs := GetSortedMempool()
-	pkgs := LookForPackages(txs)
-
-	result = make([]*OneTxToSend, len(txs))
-	var txs_idx, pks_idx, res_idx int
-	already_in := make(map[*OneTxToSend]bool, len(txs))
-	for txs_idx < len(txs) {
-		tx := txs[txs_idx]
-
-		if pks_idx < len(pkgs) {
-			pk := pkgs[pks_idx]
-			if pk.SPW() > tx.SPW() {
-				pks_idx++
-				if pk.AnyIn(already_in) {
-					continue
-				}
-				// all package's txs new: incude them all
-				copy(result[res_idx:], pk.Txs)
-				res_idx += len(pk.Txs)
-				for _, _t := range pk.Txs {
-					already_in[_t] = true
-				}
-				continue
-			}
-		}
-
-		txs_idx++
-		if _, ok := already_in[tx]; ok {
-			continue
-		}
-		result[res_idx] = tx
-		already_in[tx] = true
-		res_idx++
-	}
-	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
-	return
-}
-
+// Used by LimitPoolSize
 var (
 	poolenabled   bool
 	expireperbyte float64
@@ -238,18 +180,7 @@ func LimitPoolSize(maxlen uint64) {
 	common.CounterMutex.Unlock()
 }
 
-var stop_mempool_checks bool = true
-
-func MPC() {
-	if stop_mempool_checks {
-		return
-	}
-	if er := MempoolCheck(); er {
-		println("MempoolCheck() first failed")
-		println(string(debug.Stack()))
-	}
-}
-
+// Verifies Mempool for consistency
 func MempoolCheck() (dupa bool) {
 	var spent_cnt int
 
@@ -315,6 +246,7 @@ func MempoolCheck() (dupa bool) {
 	return
 }
 
+// Get all first level children of the tx
 func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
@@ -337,6 +269,8 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	return
 }
 
+// Get all the children (and all of their children...) of the tx
+// The result is sorted by the oldest parent
 func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	already_included := make(map[*OneTxToSend]bool)
 	var idx int
@@ -362,6 +296,8 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	return
 }
 
+// Get all the parents of the given tx
+// The result is sorted by the oldest parent
 func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
 	already_in := make(map[*OneTxToSend]bool)
 	already_in[tx] = true
@@ -391,48 +327,10 @@ func (tx *OneTxToSend) SPB() float64 {
 	return tx.SPW() * 4.0
 }
 
-/*
-func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
-	var po btc.TxPrevOut
-	po.Hash = tx.Hash.Hash
-	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
-		uidx := po.UIdx()
-		if val, ok := SpentOutputs[uidx]; ok {
-			if rec, ok := TransactionsToSend[val]; ok {
-				if rec.MemInputs != nil {
-					idx := rec.IIdx(uidx)
-					if idx < 0 {
-						fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
-						return
-					}
-					if rec.MemInputs[idx] {
-						fmt.Println("ERR:", po.String(), " is marked as meminput in", tx.Hash.String())
-						return
-					}
-				}
-			} else {
-				fmt.Println("WTF?", po.String(), " in SpentOutputs, but not in mempool")
-				return
-			}
-		}
-	}
-	res = true
-	return
-}
-*/
-
 type OneTxsPackage struct {
 	Txs    []*OneTxToSend
 	Weight int
 	Fee    uint64
-}
-
-func (pk *OneTxsPackage) SPW() float64 {
-	return float64(pk.Fee) / float64(pk.Weight)
-}
-
-func (pk *OneTxsPackage) SPB() float64 {
-	return pk.SPW() * 4.0
 }
 
 func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
@@ -443,33 +341,6 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	}
 	return
 }
-
-/*
-func (pkg *OneTxsPackage) Ver() bool {
-	mned := make(map[BIDX]bool, len(pkg.Txs))
-	for idx, tx := range append(pkg.Txs) {
-		if tx.MemInputCnt > 0 {
-			var cnt int
-			for i := range tx.MemInputs {
-				if tx.MemInputs[i] {
-					if ok, _ := mned[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; !ok {
-						return false
-					}
-					cnt++
-					if cnt==tx.MemInputCnt {
-						break
-					}
-				}
-			}
-		}
-		if idx == len(pkg.Txs)-1 {
-			break
-		}
-		mned[tx.Hash.BIdx()] = true
-	}
-	return true
-}
-*/
 
 func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	for _, tx := range txs {
@@ -488,4 +359,103 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 		return result[i].Fee*uint64(result[j].Weight) > result[j].Fee*uint64(result[i].Weight)
 	})
 	return
+}
+
+// It is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo
+func GetSortedMempoolNew() (result []*OneTxToSend) {
+	txs := GetSortedMempool()
+	pkgs := LookForPackages(txs)
+
+	result = make([]*OneTxToSend, len(txs))
+	var txs_idx, pks_idx, res_idx int
+	already_in := make(map[*OneTxToSend]bool, len(txs))
+	for txs_idx < len(txs) {
+		tx := txs[txs_idx]
+
+		if pks_idx < len(pkgs) {
+			pk := pkgs[pks_idx]
+			if pk.SPW() > tx.SPW() {
+				pks_idx++
+				if pk.AnyIn(already_in) {
+					continue
+				}
+				// all package's txs new: incude them all
+				copy(result[res_idx:], pk.Txs)
+				res_idx += len(pk.Txs)
+				for _, _t := range pk.Txs {
+					already_in[_t] = true
+				}
+				continue
+			}
+		}
+
+		txs_idx++
+		if _, ok := already_in[tx]; ok {
+			continue
+		}
+		result[res_idx] = tx
+		already_in[tx] = true
+		res_idx++
+	}
+	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
+	return
+}
+
+func expireTime(size int) (t time.Time) {
+	exp := time.Duration(float64(size) * expireperbyte)
+	if exp > maxexpiretime {
+		exp = maxexpiretime
+	}
+	return lastTxsExpire.Add(-exp)
+}
+
+func ExpireTxs() {
+	var cnt1a, cnt1b, cnt2 uint64
+
+	common.LockCfg()
+	poolenabled = common.CFG.TXPool.Enabled
+	expireperbyte = common.ExpirePerByte
+	maxexpiretime = common.MaxExpireTime
+	common.UnlockCfg()
+
+	lastTxsExpire = time.Now()
+	expireTxsNow = false
+
+	TxMutex.Lock()
+
+	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
+		LimitPoolSize(maxpoolsize)
+	} else {
+		for _, v := range TransactionsToSend {
+			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
+				v.Delete(true, 0)
+				if v.Blocked == 0 {
+					cnt1a++
+				} else {
+					cnt1b++
+				}
+			}
+		}
+	}
+
+	for k, v := range TransactionsRejected {
+		if !poolenabled || v.Time.Before(expireTime(int(v.Size))) {
+			deleteRejected(k)
+			cnt2++
+		}
+	}
+	TxMutex.Unlock()
+
+	common.CounterMutex.Lock()
+	common.Counter["TxPurgedTicks"]++
+	if cnt1a > 0 {
+		common.Counter["TxPurgedOK"] += cnt1a
+	}
+	if cnt1b > 0 {
+		common.Counter["TxPurgedBlocked"] += cnt1b
+	}
+	if cnt2 > 0 {
+		common.Counter["TxPurgedRejected"] += cnt2
+	}
+	common.CounterMutex.Unlock()
 }
