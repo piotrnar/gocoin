@@ -720,7 +720,7 @@ function show_mempool_fees() {
 
 			var max_spb = 0
 			var max_spb_corrected = 0
-			var half = 2e6
+			var half = 8e6
 			var feesfrom1stblock = 0
 
 			if (mp.length>1 && mp[mp.length-1].Weight_so_far<4e6) {
@@ -734,7 +734,7 @@ function show_mempool_fees() {
 				if (mp[i].Weight_so_far < 2*half) {
 					feesfrom1stblock = mp[i].Fees_so_far
 					if (mp[i].Weight_so_far < half) {
-						max_spb_corrected = 10*(feesfrom1stblock/half)
+						max_spb_corrected = 10*(feesfrom1stblock/mp[i].Weight_so_far)
 					}
 				}
 				plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, mp[i].Current_tx_spb])
