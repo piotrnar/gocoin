@@ -720,27 +720,22 @@ function show_mempool_fees() {
 
 			var max_spb = 0
 			var max_spb_corrected = 0
-			var half = 8e6
 			var feesfrom1stblock = 0
-
-			if (mp.length>1 && mp[mp.length-1].Weight_so_far<4e6) {
-				half = Math.round(mp[mp.length-1].Weight_so_far / 2)
-			}
+			var lenforfee = 0
 
 			for (var i=0; i<mp.length; i++) {
 				if (mp[i].Current_tx_spb>max_spb) {
 					max_spb = mp[i].Current_tx_spb
 				}
-				if (mp[i].Weight_so_far < 2*half) {
+				if (mp[i].Weight_so_far < 4e6) {
 					feesfrom1stblock = mp[i].Fees_so_far
-					if (mp[i].Weight_so_far < half) {
-						max_spb_corrected = 10*(feesfrom1stblock/mp[i].Weight_so_far)
-					}
+					lenforfee = mp[i].Weight_so_far
 				}
 				plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, mp[i].Current_tx_spb])
 			}
 
-			// calculate 3 times the medium fee in the first block to be mined
+			max_spb_corrected = 10*(feesfrom1stblock/lenforfee)
+			// calculate the medium fee in the first block to be mined
 			if (mempool_spb_range.checked && max_spb > max_spb_corrected) {
 				plot_options.yaxis.max = max_spb_corrected
 			}
