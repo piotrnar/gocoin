@@ -16,7 +16,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"runtime"
 )
 
 const (
@@ -49,8 +48,8 @@ var (
 	TxMutex sync.Mutex
 
 	// The actual memory pool:
-	TransactionsToSend     map[BIDX]*OneTxToSend = make(map[BIDX]*OneTxToSend)
-	TransactionsToSendSize uint64
+	TransactionsToSend       map[BIDX]*OneTxToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSendSize   uint64
 	TransactionsToSendWeight uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
@@ -79,12 +78,12 @@ type OneTxToSend struct {
 	Spent               []uint64 // Which records in SpentOutputs this TX added
 	Volume, Fee         uint64
 	*btc.Tx
-	Blocked    byte // if non-zero, it gives you the reason why this tx nas not been routed
-	MemInputs  []bool // transaction is spending inputs from other unconfirmed tx(s)
+	Blocked     byte   // if non-zero, it gives you the reason why this tx nas not been routed
+	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
 	MemInputCnt int
-	SigopsCost uint64
-	Final      bool // if true RFB will not work on it
-	VerifyTime time.Duration
+	SigopsCost  uint64
+	Final       bool // if true RFB will not work on it
+	VerifyTime  time.Duration
 }
 
 type Wait4Input struct {
@@ -459,7 +458,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Unlock()
 	common.CountSafe("TxAccepted")
 
-	if frommem!=nil {
+	if frommem != nil {
 		// Gocoin does not route txs that need unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
@@ -538,13 +537,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 				}
 			}
 		}
-	} else {
-		// TODO: remove this when everythign is OK
+	} /*else {
 		if !tx.AssetMarkChildrenForMem() {
 			_, f, l, _ := runtime.Caller(1)
 			println("AssetMarkChildrenForMem() failed for", tx.Hash.String(), f, l)
 		}
-	}
+	}*/
 
 	for i := range tx.Spent {
 		delete(SpentOutputs, tx.Spent[i])
@@ -691,7 +689,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	binary.Write(wr, binary.LittleEndian, t2s.Fee)
 	binary.Write(wr, binary.LittleEndian, t2s.SigopsCost)
 	binary.Write(wr, binary.LittleEndian, t2s.VerifyTime)
-	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs!=nil), bool2byte(t2s.Final)})
+	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs != nil), bool2byte(t2s.Final)})
 }
 
 func MempoolSave2() {
@@ -869,7 +867,7 @@ func MempoolLoad2() bool {
 
 	// recover MemInputs
 	for _, t2s := range TransactionsToSend {
-		if t2s.MemInputs!=nil {
+		if t2s.MemInputs != nil {
 			cnt1++
 			for i := range t2s.TxIn {
 				if _, inmem := TransactionsToSend[btc.BIdx(t2s.TxIn[i].Input.Hash[:])]; inmem {
@@ -878,7 +876,7 @@ func MempoolLoad2() bool {
 					cnt2++
 				}
 			}
-			if t2s.MemInputCnt==0 {
+			if t2s.MemInputCnt == 0 {
 				println("ERROR: MemInputs not nil but nothing found")
 				t2s.MemInputs = nil
 			}
@@ -899,16 +897,14 @@ fatal_error:
 	return false
 }
 
-
 func (rec *OneTxToSend) IIdx(key uint64) int {
 	for i, o := range rec.TxIn {
-		if o.Input.UIdx()==key {
+		if o.Input.UIdx() == key {
 			return i
 		}
 	}
 	return -1
 }
-
 
 func (tx *OneTxToSend) UnMarkChildrenForMem() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
@@ -918,7 +914,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
-				if rec.MemInputs==nil {
+				if rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
 					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
