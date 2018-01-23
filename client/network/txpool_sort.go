@@ -132,7 +132,6 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
-
 func GetSortedMempoolNew() (result []*OneTxToSend) {
 	txs := GetSortedMempool()
 	pkgs := LookForPackages(txs)
@@ -171,7 +170,6 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
 	return
 }
-
 
 var (
 	poolenabled   bool
@@ -393,6 +391,7 @@ func (tx *OneTxToSend) SPB() float64 {
 	return tx.SPW() * 4.0
 }
 
+/*
 func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
@@ -420,11 +419,12 @@ func (tx *OneTxToSend) AssetMarkChildrenForMem() (res bool) {
 	res = true
 	return
 }
+*/
 
 type OneTxsPackage struct {
-	Txs []*OneTxToSend
+	Txs    []*OneTxToSend
 	Weight int
-	Fee uint64
+	Fee    uint64
 }
 
 func (pk *OneTxsPackage) SPW() float64 {
@@ -485,7 +485,7 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].Fee * uint64(result[j].Weight) > result[j].Fee * uint64(result[i].Weight)
+		return result[i].Fee*uint64(result[j].Weight) > result[j].Fee*uint64(result[i].Weight)
 	})
 	return
 }
