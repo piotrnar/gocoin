@@ -138,7 +138,7 @@ func LimitPoolSize(maxlen uint64) {
 				common.Counter["TxPoolSizeLow"]++
 				common.Counter["TxRejectedFeeUndone"] += cnt
 				common.CounterMutex.Unlock()
-				fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
+				//fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
 			}
 		} else {
 			common.CountSafe("TxPoolSizeOK")
@@ -171,8 +171,8 @@ func LimitPoolSize(maxlen uint64) {
 
 	cnt := len(sorted) - idx
 
-	fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)
+	/*fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
+		old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
 	common.CounterMutex.Lock()
 	common.Counter["TxPoolSizeHigh"]++
 	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
