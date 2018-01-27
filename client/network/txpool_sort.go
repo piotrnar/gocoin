@@ -147,7 +147,7 @@ func LimitPoolSize(maxlen uint64) {
 		return
 	}
 
-	sta := time.Now()
+	//sta := time.Now()
 
 	sorted := GetSortedMempoolNew()
 	idx := len(sorted)
