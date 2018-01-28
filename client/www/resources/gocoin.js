@@ -1,6 +1,11 @@
 const min_btc_addr_len = 27 // 1111111111111111111114oLvT2
 const b58set = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
+var prvpos = null
+
+var last_hash, last_height // used for showing block fees
+
+
 function ajax() {
 	try { xmlHttp=new XMLHttpRequest(); }
 	catch (e) {
@@ -263,3 +268,98 @@ function css(selector, property, value) {
 	}
 }
 
+
+function show_fees_clicked(hash, height) {
+	var aj = ajax()
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			if (prvpos==null) {
+				fade.addEventListener('click', closepopup)
+				fade.style.cursor = 'pointer'
+				fade.title = 'Click here to close the popup'
+			}
+
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+
+
+			try {
+				var showblfees_stats = JSON.parse(aj.responseText)
+
+				// hide error message
+				stat_error.style.display = 'none'
+
+				if (block_fees_gru.checked) {
+					var stat2 = new Array()
+					var curr_elem = [0,0,0]
+					for (var i=0; i<showblfees_stats.length; i++) {
+						if (showblfees_stats[i][2]!=curr_elem[2]) {
+							if (curr_elem[0] > 0) {
+								stat2.push(curr_elem)
+							}
+							curr_elem = [0,0,showblfees_stats[i][2]]
+						}
+						curr_elem[0] += showblfees_stats[i][0]
+						curr_elem[1] += showblfees_stats[i][1]
+					}
+					if (curr_elem[0] > 0) {
+						stat2.push(curr_elem)
+					}
+					showblfees_stats = stat2
+				} else if (block_fees_spb.checked) {
+					showblfees_stats.sort(function (a, b) {
+						var spb_a = a[1] / a[0]
+						var spb_b = b[1] / b[0]
+						return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
+					})
+				}
+
+				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
+
+				var plot_options = {
+					xaxis: { position : "top", alignTicksWithAxis: 200 },
+					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 }
+				}
+
+				var max_spb, min_spb, spb
+				var totbytes = 0
+				var totfees = 0
+				for (var i=0; i<showblfees_stats.length; i++) {
+					spb = showblfees_stats[i][1] / (showblfees_stats[i][0] / 4)
+					if (i==0) {
+						max_spb = min_spb = spb
+					} else {
+						if (spb>max_spb) max_spb=spb
+						else if (spb<min_spb) min_spb=spb
+					}
+
+					totbytes += (showblfees_stats[i][0] / 4)
+					totfees += showblfees_stats[i][1]
+					plot_data[0].data.push([totbytes, spb])
+				}
+
+				var avg_fee = totfees / totbytes
+				stat_max_fee.innerText = max_spb.toFixed(0)
+				stat_avg_fee.innerText = avg_fee.toFixed(1)
+				stat_min_fee.innerText = min_spb.toFixed(2)
+
+				if (block_fees_range.checked) {
+					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
+				}
+
+				$.plot($("#block_fees"), plot_data, plot_options)
+
+			} catch (e) {
+				console.log(e)
+				error_info.innertText = aj.responseText
+				stat_error.style.display = 'block'
+			}
+		}
+	}
+	aj.open("GET","blfees.json?height="+last_height, true);
+	aj.send(null);
+}

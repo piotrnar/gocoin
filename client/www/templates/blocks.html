@@ -30,14 +30,14 @@ Min <b id="stat_min_fee"></b> SPB
 <div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
 <div width="100%" style="margin-bottom:10px;text-align:right">
-<input type="checkbox" id="block_fees_range" onchange="stat_clicked()" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
+<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
 &nbsp;&bull;&nbsp;
 
-<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="stat_clicked()" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
+<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="stat_clicked()"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
+<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="stat_clicked()"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
+<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
 </div>
 
 </div>
@@ -143,105 +143,6 @@ function ms2str(v) {
 }
 
 
-var last_hash, last_height
-var prvpos = null
-
-function stat_clicked(hash, height) {
-	var aj = ajax()
-	aj.onreadystatechange=function() {
-		if(aj.readyState==4) {
-			if (prvpos==null) {
-				fade.addEventListener('click', closepopup)
-				fade.style.cursor = 'pointer'
-				fade.title = 'Click here to close the popup'
-			}
-
-			prvpos = document.body.scrollTop
-			window.scrollTo(0,0)
-
-			light.style.display='block'
-			fade.style.display='block'
-			document.addEventListener("scroll", noscroll)
-
-
-			try {
-				var stats = JSON.parse(aj.responseText)
-
-				// hide error message
-				stat_error.style.display = 'none'
-
-				if (block_fees_gru.checked) {
-					var stat2 = new Array()
-					var curr_elem = [0,0,0]
-					for (var i=0; i<stats.length; i++) {
-						if (stats[i][2]!=curr_elem[2]) {
-							if (curr_elem[0] > 0) {
-								stat2.push(curr_elem)
-							}
-							curr_elem = [0,0,stats[i][2]]
-						}
-						curr_elem[0] += stats[i][0]
-						curr_elem[1] += stats[i][1]
-					}
-					if (curr_elem[0] > 0) {
-						stat2.push(curr_elem)
-					}
-					stats = stat2
-				} else if (block_fees_spb.checked) {
-					stats.sort(function (a, b) {
-						var spb_a = a[1] / a[0]
-						var spb_b = b[1] / b[0]
-						return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
-					})
-				}
-
-				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
-
-				var plot_options = {
-					xaxis: { position : "top", alignTicksWithAxis: 200 },
-					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 }
-				}
-
-				var max_spb, min_spb, spb
-				var totbytes = 0
-				var totfees = 0
-				for (var i=0; i<stats.length; i++) {
-					spb = stats[i][1] / (stats[i][0] / 4)
-					if (i==0) {
-						max_spb = min_spb = spb
-					} else {
-						if (spb>max_spb) max_spb=spb
-						else if (spb<min_spb) min_spb=spb
-					}
-
-					totbytes += (stats[i][0] / 4)
-					totfees += stats[i][1]
-					plot_data[0].data.push([totbytes, spb])
-				}
-
-				var avg_fee = totfees / totbytes
-				stat_max_fee.innerText = max_spb.toFixed(0)
-				stat_avg_fee.innerText = avg_fee.toFixed(1)
-				stat_min_fee.innerText = min_spb.toFixed(2)
-
-				if (block_fees_range.checked) {
-					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
-				}
-
-				$.plot($("#block_fees"), plot_data, plot_options)
-
-
-			} catch (e) {
-				console.log(e)
-				error_info.innertText = aj.responseText
-				stat_error.style.display = 'block'
-			}
-		}
-	}
-	aj.open("GET","blfees.json?height="+last_height, true);
-	aj.send(null);
-}
-
 function refreshblocks() {
 	function onc_mid(c,id) {
 		c.onclick = function() {hlminer(id)}
@@ -252,7 +153,7 @@ function refreshblocks() {
 			last_height = height
 			stat_height.innerText = height
 			stat_block_size.innerText = size
-			stat_clicked()
+			show_fees_clicked()
 			return false
 		}
 	}

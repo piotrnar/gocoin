@@ -2,6 +2,41 @@
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
 
+<div id="light" class="white_content" style="height:auto">
+<div id="block_fee_stats" width="100%" style="text-align:center">
+
+<div style="margin-top:10px">
+Block number <b id="stat_height"></b> /
+<b id="stat_block_size"></b> bytes
+-
+Max <b id="stat_max_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Avg <b id="stat_avg_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Min <b id="stat_min_fee"></b> SPB
+<span style="float:right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">&nbsp;</span>
+<br><br>
+</div>
+
+<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
+<div id="block_fees" style="height:370px;margin:5px"></div>
+<br>
+<div width="100%" style="margin-bottom:10px;text-align:right">
+<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
+&nbsp;&bull;&nbsp;
+
+<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
+&nbsp;&bull;&nbsp;
+<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
+&nbsp;&bull;&nbsp;
+<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
+</div>
+
+</div>
+</div><div id="fade" class="black_overlay"></div>
+
+
+
 <table width="100%" border="0">
 <colgroup>
 	<col width="50%">
@@ -193,6 +228,17 @@ function handlehover(event, pos, item) {
 	}
 }
 
+
+function handleclick(event, pos, item) {
+	if (item) {
+		var rec = cs[item.dataIndex]
+		last_height = rec.Height
+		stat_height.innerText = rec.Height
+		stat_block_size.innerText = rec.Size
+		show_fees_clicked()
+	}
+}
+
 function draw_chart() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -263,6 +309,7 @@ function draw_chart() {
 			}
 
 			$("#chart").bind("plothover", handlehover)
+			$("#chart").bind("plotclick", handleclick)
 			$.plot($("#chart"), plot_data, plot_options)
 
 		} catch(e) {
@@ -413,5 +460,11 @@ function refreshtxstat() {
 	aj.send(null)
 }
 refreshtxstat()
+
+document.addEventListener('DOMContentLoaded', function() {
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
+})
 
 </script>

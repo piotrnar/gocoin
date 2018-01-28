@@ -18,6 +18,8 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client/WebUI/Transactions: Use transaction weights, instead of VSize
 * Client: mempool code spread across several files
 * Client: mempool improved algorithm for sorting mempool (e.g. added child-pays-for-parent)
+* Client/WebUI/Transactions: Use Quick (less bandwidth consuming) mode for "Memory Pool" charts
+* WebUI/Home: Show the fee chart when clicked on a block's dot
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
