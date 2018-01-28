@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"time"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 )

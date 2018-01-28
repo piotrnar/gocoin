@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/qdb"
+	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"io/ioutil"
 	"os"
 	"time"
