@@ -227,6 +227,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/peerst.json", json_peerst)
 	http.HandleFunc("/bwchar.json", json_bwchar)
 	http.HandleFunc("/mempool_stats.json", json_mempool_stats)
+	http.HandleFunc("/mempool_fees.json", json_mempool_fees)
 	http.HandleFunc("/blkver.json", json_blkver)
 	http.HandleFunc("/miners.json", json_miners)
 	http.HandleFunc("/blfees.json", json_blfees)

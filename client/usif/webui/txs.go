@@ -582,3 +582,73 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		println(er.Error())
 	}
 }
+
+func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
+	var division, maxweight uint64
+	var e error
+
+	if !ipchecker(r) {
+		return
+	}
+
+	network.TxMutex.Lock()
+	defer network.TxMutex.Unlock()
+
+	if len(r.Form["max"])>0 {
+		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
+		if e!=nil {
+			maxweight = network.TransactionsToSendWeight
+		}
+	} else {
+		maxweight = network.TransactionsToSendWeight
+	}
+
+	if maxweight > network.TransactionsToSendWeight {
+		maxweight = network.TransactionsToSendWeight
+	}
+
+	if len(r.Form["div"])>0 {
+		division, e = strconv.ParseUint(r.Form["div"][0], 10, 64)
+		if e!=nil {
+			division = maxweight / 100
+		}
+	} else {
+		division = maxweight / 100
+	}
+
+	if division < 1 {
+		division = 1
+	}
+
+	sorted := network.GetMempoolFees(maxweight)
+
+	var mempool_stats [][3]uint64
+	var totweight uint64
+	var prv_feerate uint64 = 21e14
+	var totfeessofar uint64
+	for cnt := range sorted {
+		wgh := sorted[cnt][0]
+		fee := sorted[cnt][1]
+		totfeessofar += fee
+		newtotweight := totweight + wgh
+
+		if cnt==0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
+			cur_feerate := 4000 * fee / wgh
+			if cur_feerate > prv_feerate {
+				cur_feerate = prv_feerate
+			} else {
+				prv_feerate = cur_feerate
+			}
+			mempool_stats = append(mempool_stats, [3]uint64{newtotweight, cur_feerate, totfeessofar})
+		}
+		totweight = newtotweight
+	}
+
+	bx, er := json.Marshal(mempool_stats)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
+}
