@@ -24,7 +24,7 @@ td.txid {
 <tr>
 <td><b>Memory Pool:</b></td>
 <td align="right">
-<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()"><span onclick="mempool_new_sort.click()" style="cursor:pointer" title="Sort as Child-Pays-For-Parent">CPFP</span>
+<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()"><span onclick="mempool_new_sort.click()" style="cursor:pointer" title="Uses less bandwidth">Quick</span>
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()"><span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit Y</span>
 &nbsp;&bull;&nbsp;
@@ -635,6 +635,8 @@ function show_txw4i() {
 
 var previousPoint = null
 var mp = []
+var first_run = true
+var loading_in_progress = false
 
 function showTooltip(x, y, contents) {
 	$('<div id="tooltip">' + contents + '</div>').css( {
@@ -656,15 +658,22 @@ function handlehover(event, pos, item) {
 			previousPoint = item.dataIndex;
 			$("#tooltip").remove();
 
+			if (loading_in_progress) return
+
 			var rec = mp[item.dataIndex]
+
 			var str = ''
+			if (typeof(rec.Current_tx_spb)!="number") {
+				str += (rec[1]/1000).toFixed(2) + ' SPB'
+				str += ' @ ' + (rec[0]/4e6).toFixed(2) + 'BL'
+			} else {
+				str += rec.Current_tx_spb.toFixed(2) + ' SPB'
 
-			str += rec.Current_tx_spb.toFixed(2) + ' SPB'
-
-			str += ' -  Tx #'+(rec.Txs_so_far+1)
-			str += ' ('+parseInt(rec.Current_tx_weight/4)+' B'
-			str += ' @ ' + (rec.Real_len_so_far/1e6).toFixed(2) + 'M)'
-			str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
+				str += ' -  Tx #'+(rec.Txs_so_far+1)
+				str += ' ('+parseInt(rec.Current_tx_weight/4)+' B'
+				str += ' @ ' + (rec.Real_len_so_far/1e6).toFixed(2) + 'M)'
+				str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
+			}
 			showTooltip(item.pageX, item.pageY, str)
 		}
 	} else {
@@ -673,9 +682,8 @@ function handlehover(event, pos, item) {
 	}
 }
 
-
 function handleclick(event, pos, item) {
-	if (!tx_decoding_in_progress) {
+	if (!loading_in_progress && !mempool_new_sort.checked && !tx_decoding_in_progress) {
 		var rec = mp[item.dataIndex]
 		decode_tx_id(rec.Current_tx_id)
 	}
@@ -693,12 +701,16 @@ function show_txid() {
 
 function show_mempool_fees() {
 	var aj = ajax()
+	var one_block = mempool_siz_range_1.checked
+
+	loading_in_progress = true
+
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			mp = JSON.parse(aj.responseText)
 			if (mp==null) return
 
-			var plot_data = [ { data : [], color : 4, points: { show:!mempool_siz_range_1.checked }, lines: {show:true, fill:true}} ];
+			var plot_data = [ { data : [], color : 4, points: { show:!one_block }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
 					markings: [ { xaxis: { from: 0, to: 4e6 }, color: "#e0ffe0" },
@@ -710,7 +722,7 @@ function show_mempool_fees() {
 				},
 				xaxis: {
 					//tickLength : 1e6,
-					minTickSize : 4e6,
+					minTickSize : one_block ? 4e5 : 4e6,
 					tickFormatter : function(a,b) {return (a/4e6).toFixed(1)}
 				},
 				yaxis : {
@@ -722,46 +734,79 @@ function show_mempool_fees() {
 			var max_spb_corrected = 0
 			var feesfrom1stblock = 0
 			var lenforfee = 0
+			var cr_spb, prv_spb = 21e14
 
-			for (var i=0; i<mp.length; i++) {
-				if (mp[i].Current_tx_spb>max_spb) {
-					max_spb = mp[i].Current_tx_spb
+			if (mempool_new_sort.checked) {
+				for (var i=0; i < mp.length; i++) {
+					if (mp[i][1] > max_spb) {
+						max_spb = mp[i][1]
+					}
+					if (mp[i][0] < 4e6) {
+						feesfrom1stblock = mp[i][2]
+						lenforfee = mp[i][0]
+					}
+
+					cur_spb = (mp[i][1])/1000
+					if (cur_spb > prv_spb) {
+						cur_spb = prv_spb
+					} else {
+						prv_spb = cur_spb
+					}
+					plot_data[0].data.push([mp[i][0], cur_spb])
 				}
-				if (mp[i].Weight_so_far < 4e6) {
-					feesfrom1stblock = mp[i].Fees_so_far
-					lenforfee = mp[i].Weight_so_far
+			} else {
+				for (var i=0; i<mp.length; i++) {
+					if (mp[i].Current_tx_spb>max_spb) {
+						max_spb = mp[i].Current_tx_spb
+					}
+					if (mp[i].Weight_so_far < 4e6) {
+						feesfrom1stblock = mp[i].Fees_so_far
+						lenforfee = mp[i].Weight_so_far
+					}
+
+					cur_spb = mp[i].Current_tx_spb
+					if (cur_spb > prv_spb) {
+						cur_spb = prv_spb
+					} else {
+						prv_spb = cur_spb
+					}
+					plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, cur_spb])
 				}
-				plot_data[0].data.push([mp[i].Weight_so_far+mp[i].Current_tx_weight, mp[i].Current_tx_spb])
+
 			}
 
-			max_spb_corrected = 10*(feesfrom1stblock/lenforfee)
-			// calculate the medium fee in the first block to be mined
+			max_spb_corrected = 20*(feesfrom1stblock/lenforfee)
 			if (mempool_spb_range.checked && max_spb > max_spb_corrected) {
 				plot_options.yaxis.max = max_spb_corrected
 			}
 
-			$("#mempool_fees").bind("plothover", handlehover)
-			$("#mempool_fees").bind("plotclick", handleclick)
+			if (first_run) {
+				$("#mempool_fees").bind("plothover", handlehover)
+				$("#mempool_fees").bind("plotclick", handleclick)
+				first_run = false
+			}
 			$.plot($("#mempool_fees"), plot_data, plot_options)
 
 			fees_from_first_block.innerText = (feesfrom1stblock/1e8).toFixed(3)
+			loading_in_progress = false
 		}
 	}
+
+	var url = mempool_new_sort.checked ? "mempool_fees.json" : "mempool_stats.json"
+
 	localStorage.setItem("txs_chart_y_limit", mempool_spb_range.checked)
 	localStorage.setItem("txs_chart_new_sort", mempool_new_sort.checked)
+
 	if (mempool_siz_range_1.checked) {
 		localStorage.setItem("txs_chart_x", "1")
-		var ext = mempool_new_sort.checked ? "&new" : ""
-		aj.open("GET","mempool_stats.json?max=4000000&div=1"+ext, true)
+		url += "?max=4000000&div=1"
 	} else if (mempool_siz_range_6.checked) {
 		localStorage.setItem("txs_chart_x", "6")
-		var ext = mempool_new_sort.checked ? "&new" : ""
-		aj.open("GET","mempool_stats.json?max=24000000"+ext, true)
+		url += "?max=24000000"
 	} else {
 		localStorage.setItem("txs_chart_x", "a")
-		var ext = mempool_new_sort.checked ? "?new" : ""
-		aj.open("GET","mempool_stats.json"+ext, true)
 	}
+	aj.open("GET", url, true)
 	aj.send(null)
 }
 

@@ -624,7 +624,6 @@ func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
 
 	var mempool_stats [][3]uint64
 	var totweight uint64
-	var prv_feerate uint64 = 21e14
 	var totfeessofar uint64
 	for cnt := range sorted {
 		wgh := sorted[cnt][0]
@@ -633,13 +632,7 @@ func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
 		newtotweight := totweight + wgh
 
 		if cnt==0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
-			cur_feerate := 4000 * fee / wgh
-			if cur_feerate > prv_feerate {
-				cur_feerate = prv_feerate
-			} else {
-				prv_feerate = cur_feerate
-			}
-			mempool_stats = append(mempool_stats, [3]uint64{newtotweight, cur_feerate, totfeessofar})
+			mempool_stats = append(mempool_stats, [3]uint64{newtotweight, 4000 * fee / wgh, totfeessofar})
 		}
 		totweight = newtotweight
 	}
