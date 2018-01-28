@@ -10,6 +10,7 @@ td.bordr {
 }
 </style>
 
+<!-- **************************** BLOCK_FEES_BEGIN **************************** -->
 <div id="light" class="white_content" style="height:auto">
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
@@ -22,6 +23,8 @@ Max <b id="stat_max_fee"></b> SPB
 Avg <b id="stat_avg_fee"></b> SPB
 &nbsp;&bull;&nbsp;
 Min <b id="stat_min_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Mined by <b id="stat_mined_by"></b>
 <span style="float:right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">&nbsp;</span>
 <br><br>
 </div>
@@ -42,6 +45,7 @@ Min <b id="stat_min_fee"></b> SPB
 
 </div>
 </div><div id="fade" class="black_overlay"></div>
+<!-- **************************** BLOCK_FEES_END **************************** -->
 
 <div style="text-align:right;margin-bottom:8px;">
 <input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span onclick="stats_type_min.click()" style="cursor:pointer"> Mining Information</span>
@@ -148,12 +152,9 @@ function refreshblocks() {
 		c.onclick = function() {hlminer(id)}
 	}
 
-	function onc_stat(c,height,size) {
+	function onc_stat(c,height,size,minedby) {
 		c.onclick = function() {
-			last_height = height
-			stat_height.innerText = height
-			stat_block_size.innerText = size
-			show_fees_clicked()
+			show_block_fees(height,size,minedby)
 			return false
 		}
 	}
@@ -199,7 +200,7 @@ function refreshblocks() {
 					img.className = 'hand'
 					img.style.margin = '0px 0px 0px 10px'
 					td.appendChild(img)
-					onc_stat(img, cs[i].Height, cs[i].Size)
+					onc_stat(img, cs[i].Height, cs[i].Size, cs[i].Miner.substr(0,12))
 					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
 				}
 

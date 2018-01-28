@@ -3,8 +3,6 @@ const b58set = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 var prvpos = null
 
-var last_hash, last_height // used for showing block fees
-
 
 function ajax() {
 	try { xmlHttp=new XMLHttpRequest(); }
@@ -269,7 +267,9 @@ function css(selector, property, value) {
 }
 
 
-function show_fees_clicked(hash, height) {
+var last_height // used for showing block fees
+
+function show_fees_clicked(height) {
 	var aj = ajax()
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
@@ -362,4 +362,12 @@ function show_fees_clicked(hash, height) {
 	}
 	aj.open("GET","blfees.json?height="+last_height, true);
 	aj.send(null);
+}
+
+function show_block_fees(height,size,minedby) {
+	last_height = height // for refreshing the chart
+	stat_height.innerText = height
+	stat_block_size.innerText = size
+	stat_mined_by.innerText = minedby
+	show_fees_clicked()
 }

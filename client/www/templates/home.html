@@ -2,6 +2,7 @@
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
 
+<!-- **************************** BLOCK_FEES_BEGIN **************************** -->
 <div id="light" class="white_content" style="height:auto">
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
@@ -14,6 +15,8 @@ Max <b id="stat_max_fee"></b> SPB
 Avg <b id="stat_avg_fee"></b> SPB
 &nbsp;&bull;&nbsp;
 Min <b id="stat_min_fee"></b> SPB
+&nbsp;&bull;&nbsp;
+Mined by <b id="stat_mined_by"></b>
 <span style="float:right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">&nbsp;</span>
 <br><br>
 </div>
@@ -34,7 +37,7 @@ Min <b id="stat_min_fee"></b> SPB
 
 </div>
 </div><div id="fade" class="black_overlay"></div>
-
+<!-- **************************** BLOCK_FEES_END **************************** -->
 
 
 <table width="100%" border="0">
@@ -232,10 +235,7 @@ function handlehover(event, pos, item) {
 function handleclick(event, pos, item) {
 	if (item) {
 		var rec = cs[item.dataIndex]
-		last_height = rec.Height
-		stat_height.innerText = rec.Height
-		stat_block_size.innerText = rec.Size
-		show_fees_clicked()
+		show_block_fees(rec.Height,rec.Size,rec.Miner.substr(0,12))
 	}
 }
 
