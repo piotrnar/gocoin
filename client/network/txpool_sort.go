@@ -374,7 +374,7 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
-			if pk.SPW() > tx.SPW() {
+			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
 					continue
@@ -398,6 +398,51 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 		res_idx++
 	}
 	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
+	return
+}
+
+// Only take tx/package weight and the fee
+func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
+	txs := GetSortedMempool()
+	pkgs := LookForPackages(txs)
+
+	var txs_idx, pks_idx, res_idx int
+	var weightsofar uint64
+	result = make([][2]uint64, len(txs))
+	already_in := make(map[*OneTxToSend]bool, len(txs))
+	for txs_idx < len(txs) && weightsofar < maxweight {
+		tx := txs[txs_idx]
+
+		if pks_idx < len(pkgs) {
+			pk := pkgs[pks_idx]
+			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
+				pks_idx++
+				if pk.AnyIn(already_in) {
+					continue
+				}
+
+				result[res_idx] = [2]uint64{uint64(pk.Weight), pk.Fee}
+				res_idx++
+				weightsofar += uint64(pk.Weight)
+
+				for _, _t := range pk.Txs {
+					already_in[_t] = true
+				}
+				continue
+			}
+		}
+
+		txs_idx++
+		if _, ok := already_in[tx]; ok {
+			continue
+		}
+		result[res_idx] = [2]uint64{uint64(tx.Weight()), tx.Fee}
+		res_idx++
+		weightsofar += uint64(tx.Weight())
+
+		already_in[tx] = true
+	}
+	result = result[:res_idx]
 	return
 }
 
