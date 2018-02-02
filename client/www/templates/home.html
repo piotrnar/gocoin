@@ -192,7 +192,7 @@ function remember_chart_setting() {
 	var mod = localStorage.getItem("home_chart")
 	if ((mod+'').length!=3) mod = "siz"
 	document.getElementById('chart_type_'+mod).checked = true
-	chart_type_avg.checked = localStorage.getItem("home_chart_avg") == 'true'
+	chart_type_avg.checked = localStorage.getItem("home_chart_avg") === 'true'
 	avg_size.innerText = blks_average
 }
 remember_chart_setting()
