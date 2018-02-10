@@ -1,5 +1,9 @@
 package sipasec
 
+// Note: to compile this file with go 1.9.4, set CGO_LDFLAGS_ALLOW='.*\.a$'
+// https://github.com/golang/go/issues/23749#issuecomment-364690096
+
+
 /*
 #cgo LDFLAGS: /usr/local/lib/libsecp256k1.a
 
