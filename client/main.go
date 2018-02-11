@@ -406,7 +406,7 @@ func main() {
 	sta := time.Now()
 	common.CloseBlockChain()
 	if common.FLAG.UndoBlocks == 0 {
-		network.MempoolSave2()
+		network.MempoolSave(false)
 		wallet.Save()
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())

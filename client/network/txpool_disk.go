@@ -47,7 +47,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs != nil), bool2byte(t2s.Final)})
 }
 
-func MempoolSave2() {
+func MempoolSave(force bool) {
 	if !common.CFG.TXPool.SaveOnDisk {
 		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
 		return
@@ -245,5 +245,96 @@ fatal_error:
 	TransactionsToSendSize = 0
 	TransactionsToSendWeight = 0
 	SpentOutputs = make(map[uint64]BIDX)
+	return false
+}
+
+
+func MempoolLoadNew(fname string) bool {
+	var ntx *TxRcvd
+	var totcnt, le, tmp64 uint64
+	var tmp [32]byte
+	var tina uint32
+	var i int
+	var cnt1, cnt2 uint
+	var t2s OneTxToSend
+
+	f, er := os.Open(fname)
+	if er != nil {
+		fmt.Println("MempoolLoad:", er.Error())
+		return false
+	}
+	defer f.Close()
+
+	rd := bufio.NewReader(f)
+	if er = btc.ReadAll(rd, tmp[:32]); er != nil {
+		goto fatal_error
+	}
+
+	if totcnt, er = btc.ReadVLen(rd); er != nil {
+		goto fatal_error
+	}
+	fmt.Println("Loading", totcnt, "transactions from", fname, "...")
+
+	for ; totcnt > 0; totcnt-- {
+		le, er = btc.ReadVLen(rd)
+		if er != nil {
+			goto fatal_error
+		}
+
+		ntx = new(TxRcvd)
+		ntx.raw = make([]byte, int(le))
+
+		er = btc.ReadAll(rd, ntx.raw)
+		if er != nil {
+			goto fatal_error
+		}
+
+		ntx.tx, i = btc.NewTx(ntx.raw)
+		if ntx.tx == nil || i != len(ntx.raw) {
+			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME2, " at idx", len(TransactionsToSend)))
+			goto fatal_error
+		}
+		ntx.tx.SetHash(ntx.raw)
+
+		le, er = btc.ReadVLen(rd)
+		if er != nil {
+			goto fatal_error
+		}
+
+		for le > 0 {
+			if er = binary.Read(rd, binary.LittleEndian, &tmp64); er != nil {
+				goto fatal_error
+			}
+			le--
+		}
+
+		// discard all the rest...
+		binary.Read(rd, binary.LittleEndian, &t2s.Invsentcnt)
+		binary.Read(rd, binary.LittleEndian, &t2s.SentCnt)
+		binary.Read(rd, binary.LittleEndian, &tina)
+		binary.Read(rd, binary.LittleEndian, &tina)
+		binary.Read(rd, binary.LittleEndian, &t2s.Volume)
+		binary.Read(rd, binary.LittleEndian, &t2s.Fee)
+		binary.Read(rd, binary.LittleEndian, &t2s.SigopsCost)
+		binary.Read(rd, binary.LittleEndian, &t2s.VerifyTime)
+		if er = btc.ReadAll(rd, tmp[:4]); er != nil {
+			goto fatal_error
+		}
+
+		// submit tx if we dont have it yet...
+		if _, present := TransactionsToSend[ntx.tx.Hash.BIdx()]; !present {
+			cnt2++
+			if HandleNetTx(ntx, true) {
+				cnt1++
+			}
+		}
+	}
+
+	fmt.Println(cnt1, "out of", cnt2, "new transactions accepted into memory pool")
+
+	return true
+
+fatal_error:
+	fmt.Println("Error loading", fname, ":", er.Error())
 	return false
 }

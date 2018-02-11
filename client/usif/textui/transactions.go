@@ -201,11 +201,18 @@ func send_all_tx(par string) {
 }
 
 func save_mempool(par string) {
-	network.MempoolSave2()
+	network.MempoolSave(true)
 }
 
 func check_txs(par string) {
 	network.MempoolCheck()
+}
+
+func load_mempool(par string) {
+	if par=="" {
+		par = "mempool.dmp"
+	}
+	network.MempoolLoadNew(par)
 }
 
 func init () {
@@ -221,4 +228,5 @@ func init () {
 	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
 	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
+	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
 }
