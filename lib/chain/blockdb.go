@@ -22,6 +22,7 @@ const (
 	BLOCK_COMPRSD = 0x04
 	BLOCK_SNAPPED = 0x08
 	BLOCK_LENGTH  = 0x10
+	BLOCK_INDEX   = 0x20
 
 	MAX_BLOCKS_TO_WRITE = 1024 // flush the data to disk when exceeding
 	MAX_DATA_WRITE = 16*1024*1024
@@ -35,8 +36,16 @@ const (
 			bit(1) - "invalid" flag - this block's scripts have failed
 			bit(2) - "compressed" flag - this block's data is compressed
 			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-			bit(4) - if this bit is set, the highest 32 bits of the "block hash" carry length of uncompressed block
-		[4:36]  - 256-bit block hash - DEPRECATED! (hash the header tpo get the value)
+			bit(4) - if this bit is set, bytes [32:36] carry length of uncompressed block
+			bit(5) - if this bit is set, bytes [28:32] carry data file index
+
+		Used to be:
+		[4:36]  - 256-bit block hash - DEPRECATED! (hash the header to get the value)
+
+		[4:28] - reserved
+		[28:32] - specifies which blockchain.dat file is used (if not zero, the filename is: blockchain-%08x.dat)
+		[32:36] - length of uncompressed block
+
 		[36:40] - 32-bit block height (genesis is 0)
 		[40:48] - 64-bit block pos in blockchain.dat file
 		[48:52] - 32-bit block lenght in bytes
@@ -50,6 +59,9 @@ type oneBl struct {
 	ipos int64  // where at the record is stored in blockchain.idx (used to set flags) / -1 if not stored in the file (yet)
 	blen uint32 // how long the block is in blockchain.dat
 	olen uint32 // original length fo the block (before compression)
+
+	datfileidx uint32 // use different blockchain.dat (if not zero, the filename is: blockchain-%08x.dat)
+
 	trusted bool
 	compressed bool
 	snappied bool
@@ -67,6 +79,7 @@ type BlckCachRec struct {
 
 type BlockDBOpts struct {
 	MaxCachedBlocks int
+	MaxDataFileSize uint64
 }
 
 type oneB2W struct {
@@ -87,10 +100,14 @@ type BlockDB struct {
 	cache map[[btc.Uint256IdxLen]byte] *BlckCachRec
 
 	maxidxfilepos, maxdatfilepos int64
+	maxdatfileidx uint32
 
 	blocksToWrite chan oneB2W
 	datToWrite uint64
+
+	max_data_file_size uint64
 }
+
 
 
 func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
@@ -101,19 +118,16 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 	}
 	db.blockIndex = make(map[[btc.Uint256IdxLen]byte] *oneBl)
 	os.MkdirAll(db.dirname, 0770)
-	db.blockdata, _ = os.OpenFile(db.dirname+"blockchain.dat", os.O_RDWR|os.O_CREATE, 0660)
-	if db.blockdata == nil {
-		panic("Cannot open blockchain.dat")
-	}
 
 	db.blockindx, _ = os.OpenFile(db.dirname+"blockchain.new", os.O_RDWR|os.O_CREATE, 0660)
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.new")
 	}
-	if opts.MaxCachedBlocks>0 {
+	if opts.MaxCachedBlocks > 0 {
 		db.max_cached_blocks = opts.MaxCachedBlocks
 		db.cache = make(map[[btc.Uint256IdxLen]byte]*BlckCachRec, db.max_cached_blocks)
 	}
+	db.max_data_file_size = opts.MaxDataFileSize
 
 	db.blocksToWrite = make(chan oneB2W, MAX_BLOCKS_TO_WRITE)
 	return
@@ -259,20 +273,32 @@ func (db *BlockDB) writeOne() (written bool) {
 
 	db.disk_access.Lock()
 
+	rec.compressed, rec.snappied = true, true
+	cbts := snappy.Encode(nil, b2w.data)
+	rec.blen = uint32(len(cbts))
+	rec.ipos = db.maxidxfilepos
+
+	if db.max_data_file_size != 0 && uint64(db.maxdatfilepos) + uint64(len(cbts)) > db.max_data_file_size {
+		if tmpf, _ := os.Create(db.dat_fname(db.maxdatfileidx + 1)); tmpf != nil {
+			db.blockdata.Close()
+			db.blockdata = tmpf
+			db.maxdatfilepos = 0
+			db.maxdatfileidx++
+		} else {
+			println("Cannot create", db.dat_fname(db.maxdatfileidx))
+		}
+	}
+
 	rec.fpos = uint64(db.maxdatfilepos)
 	fl[0] |= BLOCK_COMPRSD|BLOCK_SNAPPED // gzip compression is deprecated
 	if rec.trusted {
 		fl[0] |= BLOCK_TRUSTED
 	}
 
-	rec.compressed, rec.snappied = true, true
- 	cbts := snappy.Encode(nil, b2w.data)
-	rec.blen = uint32(len(cbts))
-	rec.ipos = db.maxidxfilepos
-
-	copy(fl[4:32], b2w.h[:28])
-	fl[0] |= BLOCK_LENGTH
+	//copy(fl[4:32], b2w.h[:28])
+	fl[0] |= BLOCK_LENGTH | BLOCK_INDEX
 	binary.LittleEndian.PutUint32(fl[32:36], uint32(len(b2w.data)))
+	binary.LittleEndian.PutUint32(fl[28:32], rec.datfileidx)
 
 	binary.LittleEndian.PutUint32(fl[36:40], uint32(b2w.height))
 	binary.LittleEndian.PutUint64(fl[40:48], uint64(rec.fpos))
@@ -405,7 +431,7 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 
 	db.disk_access.Lock()
 	// we will re-open the data file, to not spoil the writting pointer
-	f, e := os.Open(db.dirname+"blockchain.dat")
+	f, e := os.Open(db.dat_fname(rec.datfileidx))
 	if e != nil {
 		return
 	}
@@ -484,6 +510,13 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
 }
 
 
+func (db *BlockDB) dat_fname(idx uint32) string {
+	if idx == 0 {
+		return db.dirname + "blockchain.dat"
+	}
+	return db.dirname + fmt.Sprintf("blockchain-%08x.dat", idx)
+}
+
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []byte, height, blen, txs uint32)) (e error) {
 	var b [136]byte
 	var bh, txs uint32
@@ -515,6 +548,13 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 			blen = binary.LittleEndian.Uint32(b[32:36])
 			ob.olen = blen
 		}
+		if (b[0]&BLOCK_INDEX) != 0 {
+			ob.datfileidx = binary.LittleEndian.Uint32(b[28:32])
+		}
+		if ob.datfileidx > db.maxdatfileidx {
+			db.maxdatfileidx = ob.datfileidx
+			db.maxdatfilepos = 0
+		}
 		txs = binary.LittleEndian.Uint32(b[52:56])
 		ob.ipos = db.maxidxfilepos
 
@@ -529,6 +569,12 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	}
 	// In case if there was some trash at the end of data or index file, this should truncate it:
 	db.blockindx.Seek(db.maxidxfilepos, os.SEEK_SET)
+
+	db.blockdata, _ = os.OpenFile(db.dat_fname(db.maxdatfileidx), os.O_RDWR|os.O_CREATE, 0660)
+	if db.blockdata == nil {
+		panic("Cannot open blockchain.dat")
+	}
+
 	db.blockdata.Seek(db.maxdatfilepos, os.SEEK_SET)
 	return
 }

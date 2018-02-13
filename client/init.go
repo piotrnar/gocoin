@@ -62,25 +62,18 @@ func host_init() {
 	ext := &chain.NewChanOpts{
 		UTXOVolatileMode : common.FLAG.VolatileUTXO,
 		UndoBlocks : common.FLAG.UndoBlocks,
-		SetBlocksDBCacheSize:true, BlocksDBCacheSize:int(common.CFG.Memory.MaxCachedBlks),
 		BlockMinedCB : blockMined}
 
 	sta := time.Now()
-	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext)
+	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
+		&chain.BlockDBOpts{
+			MaxCachedBlocks : int(common.CFG.Memory.MaxCachedBlks),
+			MaxDataFileSize : common.CFG.BlockDB.MaxDataFileMB << 20})
 	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
-	}
-
-	if common.BlockChain.Consensus.S2XHeight != 0 {
-		delta := int(common.BlockChain.LastBlock().Height) - int(common.BlockChain.Consensus.S2XHeight)
-		if delta < 0 {
-			fmt.Println("WARNING: (segwit)2x bigger blocks will be allowed in", -delta, "blocks")
-		} else {
-			fmt.Println("WARNING: (segwit)2x bigger blocks has been alowed for", delta, "blocks")
-		}
 	}
 
 	common.Last.Block = common.BlockChain.LastBlock()

@@ -46,15 +46,13 @@ type Chain struct {
 type NewChanOpts struct {
 	UTXOVolatileMode bool
 	UndoBlocks uint // undo this many blocks when opening the chain
-	SetBlocksDBCacheSize bool
-	BlocksDBCacheSize int // this value is only taken if SetBlocksDBCacheSize is true
 	UTXOCallbacks utxo.CallbackFunctions
 	BlockMinedCB func(*btc.Block) // used to remove mined txs from memory pool
 }
 
 
 // This is the very first function one should call in order to use this package
-func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts) (ch *Chain) {
+func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts, bdbopts *BlockDBOpts) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
 
@@ -84,11 +82,8 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.BIP9_Treshold = 1916
 	}
 
-	if opts.SetBlocksDBCacheSize {
-		ch.Blocks = NewBlockDBExt(dbrootdir, &BlockDBOpts{MaxCachedBlocks:opts.BlocksDBCacheSize})
-	} else {
-		ch.Blocks = NewBlockDB(dbrootdir)
-	}
+	ch.Blocks = NewBlockDBExt(dbrootdir, bdbopts)
+
 	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
 		Dir:dbrootdir, Rescan:rescan, VolatimeMode:opts.UTXOVolatileMode,
 		CB:opts.UTXOCallbacks, AbortNow:&AbortNow})

@@ -81,6 +81,9 @@ var (
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 		}
+		BlockDB struct {
+			MaxDataFileMB uint64 // 0 for unlimited size
+		}
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
 			UseMapCnt  int
