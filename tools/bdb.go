@@ -23,7 +23,16 @@ import (
 			bit(1) - "invalid" flag - this block's scripts have failed
 			bit(2) - "compressed" flag - this block's data is compressed
 			bit(3) - "snappy" flag - this block is compressed with snappy (not gzip'ed)
-		[4:36]  - 256-bit block hash (DEPRECATED!)
+			bit(4) - if this bit is set, bytes [32:36] carry length of uncompressed block
+			bit(5) - if this bit is set, bytes [28:32] carry data file index
+
+		Used to be:
+		[4:36]  - 256-bit block hash - DEPRECATED! (hash the header to get the value)
+
+		[4:28] - reserved
+		[28:32] - specifies which blockchain.dat file is used (if not zero, the filename is: blockchain-%08x.dat)
+		[32:36] - length of uncompressed block
+
 		[36:40] - 32-bit block height (genesis is 0)
 		[40:48] - 64-bit block pos in blockchain.dat file
 		[48:52] - 32-bit block lenght in bytes
@@ -55,6 +64,7 @@ var (
 	fl_invalid           int
 	fl_fixlen            bool
 	fl_fixlenall         bool
+	fl_fixdatidx         bool
 )
 
 /********************************************************/
@@ -134,6 +144,10 @@ func print_record(sl []byte) {
 		fmt.Println("     Uncompressed length:",
 			binary.LittleEndian.Uint32(sl[32:36]), "bytes")
 	}
+	if (sl[0]&0x20) != 0 {
+		fmt.Println("     Data file index:",
+			binary.LittleEndian.Uint32(sl[28:32]))
+	}
 	hdr := sl[56:136]
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
@@ -202,6 +216,9 @@ func main() {
 
 	flag.BoolVar(&fl_fixlen, "fixlen", false, "Calculate (fix) orignial length of last 144 blocks")
 	flag.BoolVar(&fl_fixlenall, "fixlenall", false, "Calculate (fix) orignial length of each block")
+
+	flag.BoolVar(&fl_fixdatidx, "fixdatidx", false, "Fix data file index fields")
+
 
 	flag.Parse()
 
@@ -407,6 +424,45 @@ func main() {
 			last_bl_height = height
 
 			exp_offset += uint64(binary.LittleEndian.Uint32(sl[48:52]))
+		}
+		return
+	}
+
+	if fl_fixdatidx {
+		var maxidx uint32
+		var lastfpos uint64
+		var totcnt int
+		fmt.Println("Scanning database for inconsistent data indexes...")
+		for off := 136; off < len(dat); off += 136 {
+			var datidx uint32
+			sl := dat[off : off+136]
+
+			height := binary.LittleEndian.Uint32(sl[36:40])
+			fpos := binary.LittleEndian.Uint64(sl[40:48])
+
+			if (sl[0]&0x20) != 0 {
+				datidx = binary.LittleEndian.Uint32(sl[28:32])
+			}
+
+			if datidx==0 && fpos < lastfpos {
+				maxidx++
+				println("Advance data index to", maxidx, "at block", height)
+			}
+
+			lastfpos = fpos
+
+			if maxidx != 0 && datidx != maxidx {
+				println("Fix data index to", maxidx, "at block", height)
+				binary.LittleEndian.PutUint32(sl[28:32], maxidx)
+				totcnt++
+			}
+		}
+		if totcnt > 0 {
+			ioutil.WriteFile("blockchain.tmp", dat, 0600)
+			os.Rename("blockchain.tmp", "blockchain.new")
+			fmt.Println("blockchain.new upated.", totcnt, "records fixed.")
+		} else {
+			println("All was good.")
 		}
 		return
 	}
