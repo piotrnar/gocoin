@@ -289,6 +289,7 @@ func (db *BlockDB) writeOne() (written bool) {
 		}
 	}
 
+	rec.datfileidx = db.maxdatfileidx
 	rec.fpos = uint64(db.maxdatfilepos)
 	fl[0] |= BLOCK_COMPRSD|BLOCK_SNAPPED // gzip compression is deprecated
 	if rec.trusted {
@@ -433,19 +434,31 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 	// we will re-open the data file, to not spoil the writting pointer
 	f, e := os.Open(db.dat_fname(rec.datfileidx))
 	if e != nil {
+		db.disk_access.Unlock()
 		return
 	}
 
 	_, e = f.Seek(int64(rec.fpos), os.SEEK_SET)
-	if e == nil {
-		_, e = f.Read(bl[:])
+	if e != nil {
+		f.Close()
+		db.disk_access.Unlock()
+		return
 	}
+
+	e = btc.ReadAll(f, bl)
 	f.Close()
 	db.disk_access.Unlock()
+
+	if e != nil {
+		return
+	}
 
 	if rec.compressed {
 		if rec.snappied {
 			bl, _ = snappy.Decode(nil, bl)
+			if bl==nil {
+				e = errors.New("snappy.Decode() failed")
+			}
 		} else {
 			gz, _ := gzip.NewReader(bytes.NewReader(bl))
 			bl, _ = ioutil.ReadAll(gz)
