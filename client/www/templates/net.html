@@ -73,7 +73,6 @@ Node Version Legend:<br>
 &bull; <b>B</b> - Supports Bloom Filtering<br>
 &bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
 &bull; <b>W</b> - Supports Segregate Witness<br>
-&bull; <b>X</b> - Supports Segwit2X<br>
 </td>
 <td align="right" valign="top">
 <span class="hand" onclick="stat_freeze.click()">Freeze stats </span><input type="checkbox" id="stat_freeze" onchange="freeze_stats()">
@@ -397,7 +396,6 @@ function refreshconnections(force) {
 					if (cs[i].HighBandwidth)  s += '+'
 				}
 				if (cs[i].Services&8)  s += 'W'
-				if (cs[i].Services&0x80)  s += 'X'
 				td.innerText = s
 
 				// user agent
