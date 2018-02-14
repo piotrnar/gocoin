@@ -249,7 +249,7 @@ fatal_error:
 }
 
 
-func MempoolLoadNew(fname string) bool {
+func MempoolLoadNew(fname string, abort *bool) bool {
 	var ntx *TxRcvd
 	var totcnt, le, tmp64 uint64
 	var tmp [32]byte
@@ -276,6 +276,9 @@ func MempoolLoadNew(fname string) bool {
 	fmt.Println("Loading", totcnt, "transactions from", fname, "...")
 
 	for ; totcnt > 0; totcnt-- {
+		if abort != nil && *abort {
+			break
+		}
 		le, er = btc.ReadVLen(rd)
 		if er != nil {
 			goto fatal_error
