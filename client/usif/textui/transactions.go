@@ -1,19 +1,19 @@
 package textui
 
 import (
-	"os"
 	"fmt"
-	"time"
-	"strconv"
-	"io/ioutil"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"time"
 )
 
-
 func load_tx(par string) {
-	if par=="" {
+	if par == "" {
 		fmt.Println("Specify a name of a transaction file")
 		return
 	}
@@ -30,10 +30,9 @@ func load_tx(par string) {
 	fmt.Println(usif.LoadRawTx(buf))
 }
 
-
 func send_tx(par string) {
 	txid := btc.NewUint256FromString(par)
-	if txid==nil {
+	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		list_txs("")
 		return
@@ -52,10 +51,9 @@ func send_tx(par string) {
 	}
 }
 
-
 func send1_tx(par string) {
 	txid := btc.NewUint256FromString(par)
-	if txid==nil {
+	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		list_txs("")
 		return
@@ -74,10 +72,9 @@ func send1_tx(par string) {
 	}
 }
 
-
 func del_tx(par string) {
 	txid := btc.NewUint256FromString(par)
-	if txid==nil {
+	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		list_txs("")
 		return
@@ -95,10 +92,9 @@ func del_tx(par string) {
 	fmt.Println("Transaction", txid.String(), "and all its children removed from the memory pool")
 }
 
-
 func dec_tx(par string) {
 	txid := btc.NewUint256FromString(par)
-	if txid==nil {
+	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		list_txs("")
 		return
@@ -111,10 +107,9 @@ func dec_tx(par string) {
 	}
 }
 
-
 func save_tx(par string) {
 	txid := btc.NewUint256FromString(par)
-	if txid==nil {
+	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		list_txs("")
 		return
@@ -127,7 +122,6 @@ func save_tx(par string) {
 		fmt.Println("No such transaction ID in the memory pool.")
 	}
 }
-
 
 func mempool_stats(par string) {
 	fmt.Print(usif.MemoryPoolFees())
@@ -143,16 +137,16 @@ func list_txs(par string) {
 	sorted := network.GetSortedMempool()
 
 	var totlen uint64
-	for cnt=0; cnt<len(sorted); cnt++ {
+	for cnt = 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
 		totlen += uint64(len(v.Data))
 
-		if limitbytes!=0 && totlen>limitbytes {
+		if limitbytes != 0 && totlen > limitbytes {
 			break
 		}
 
 		var oe, snt string
-		if v.Own!=0 {
+		if v.Own != 0 {
 			oe = " *OWN*"
 		} else {
 			oe = ""
@@ -160,20 +154,19 @@ func list_txs(par string) {
 
 		snt = fmt.Sprintf("INV sent %d times,   ", v.Invsentcnt)
 
-		if v.SentCnt==0 {
+		if v.SentCnt == 0 {
 			snt = "never sent"
 		} else {
 			snt = fmt.Sprintf("sent %d times, last %s ago", v.SentCnt,
 				time.Now().Sub(v.Lastsent).String())
 		}
 
-		spb := float64(v.Fee)/float64(len(v.Data))
+		spb := float64(v.Fee) / float64(len(v.Data))
 
 		fmt.Println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe))
 
 	}
 }
-
 
 func baned_txs(par string) {
 	fmt.Println("Rejected transactions:")
@@ -187,11 +180,10 @@ func baned_txs(par string) {
 	network.TxMutex.Unlock()
 }
 
-
 func send_all_tx(par string) {
 	network.TxMutex.Lock()
 	for k, v := range network.TransactionsToSend {
-		if v.Own!=0 {
+		if v.Own != 0 {
 			cnt := network.NetRouteInv(1, btc.NewUint256(k[:]), nil)
 			v.Invsentcnt += cnt
 			fmt.Println("INV for TxID", v.Hash.String(), "sent to", cnt, "node(s)")
@@ -209,13 +201,34 @@ func check_txs(par string) {
 }
 
 func load_mempool(par string) {
-	if par=="" {
+	if par == "" {
 		par = "mempool.dmp"
 	}
-	network.MempoolLoadNew(par)
+	var abort bool
+	__exit := make(chan bool)
+	__done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case s := <-common.KillChan:
+				fmt.Println(s)
+				abort = true
+			case <-__exit:
+				__done <- true
+				return
+			}
+		}
+	}()
+	fmt.Println("Press Ctrl+C to abort...")
+	network.MempoolLoadNew(par, &abort)
+	__exit <- true
+	_ = <-__done
+	if abort {
+		fmt.Println("Aborted")
+	}
 }
 
-func init () {
+func init() {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
 	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer (identified by a given <txid>)")
