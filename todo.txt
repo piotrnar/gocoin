@@ -6,7 +6,7 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
-* Mempool: Limit the size of WaitingForInput txs
+* Mempool: Limit the size of WaitingForInput txs - see LimitOrphanTxSize()
 * Force to create UTXO.db file once for awhile (when bootstraping)
 * While syncing up the chain, consider storing pending blocks on disk (insted or RAM)
 * Review and update WebUI's Help page
