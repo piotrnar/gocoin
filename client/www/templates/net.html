@@ -503,8 +503,8 @@ function draw_chart() {
 			cs = JSON.parse(aj.responseText)
 
 			var plot_data = [
-				{ data : [], label:"Downloading in kB/s", color:3, lines: {show:true, fill:true} },
-				{ data : [], label:"Uploading in kB/s",   color:2, lines: {show:true, fill:true} }
+				{ data : [], color:3, lines: {show:true, fill:true} },
+				{ data : [], color:2, lines: {show:true, fill:true} }
 				];
 			var plot_options = {
 				xaxis: { tickSize:60,  tickFormatter : function(a,b) {return a ? (parseInt(-a/60) + 'min') : ''} },
@@ -512,10 +512,17 @@ function draw_chart() {
 				legend: { position: 'nw' }
 			}
 
+			var tot_dl = 0
+			var tot_ul = 0
 			for (var i=0; i<256; i++) {
 				plot_data[0].data.push([-i, cs.DL[i]/1e3])
 				plot_data[1].data.push([-i, cs.UL[i]/1e3])
+				tot_dl += cs.DL[i]
+				tot_ul += cs.UL[i]
 			}
+
+			plot_data[0].label = 'Downloading in kB/s - avg ' + (tot_dl / 256e3).toFixed(1)
+			plot_data[1].label = 'Uploading in kB/s - avg ' + (tot_ul / 256e4).toFixed(1)
 
 			$.plot($("#chart"), plot_data, plot_options)
 
