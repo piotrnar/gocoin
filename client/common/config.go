@@ -146,7 +146,7 @@ func InitConfig() {
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
-	//CFG.Memory.CacheOnDisk = true
+	CFG.Memory.CacheOnDisk = true
 
 	CFG.Stat.HashrateHrs = 12
 	CFG.Stat.MiningHrs = 24
@@ -272,7 +272,7 @@ func Reset() {
 		UserAgent = "/Gocoin:" + gocoin.Version + "/"
 	}
 
-	if GocoinHomeDir != "" { // this will nor be set before Host_init
+	if common.BlockChain != nil { // no point calling it host_init as we dont know root dir yet
 		MkTempBlocksDir()
 	}
 
@@ -280,7 +280,8 @@ func Reset() {
 }
 
 func MkTempBlocksDir() {
-	if CFG.Memory.CacheOnDisk {
+	// no point doing it before GocoinHomeDir is set in host_init()
+	if CFG.Memory.CacheOnDisk && GocoinHomeDir != "" {
 		os.Mkdir(TempBlocksDir(), 0700)
 	}
 }
