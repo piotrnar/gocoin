@@ -115,7 +115,7 @@ func retry_cached_blocks() bool {
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-			common.Busy("Cache.LocalAcceptBlock " + newbl.Block.Hash.String())
+			common.Busy("Cache.LocalAcceptBlock " + newbl.BlockTreeNode.BlockHash.String())
 
 			if newbl.Block == nil {
 				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
@@ -134,7 +134,7 @@ func retry_cached_blocks() bool {
 
 			e := LocalAcceptBlock(newbl)
 			if e != nil {
-				fmt.Println("AcceptBlock2", newbl.Block.Hash.String(), "-", e.Error())
+				fmt.Println("AcceptBlock2", newbl.BlockTreeNode.BlockHash.String(), "-", e.Error())
 				newbl.Conn.Misbehave("LocalAcceptBl2", 250)
 			}
 			if usif.Exit_now.Get() {
