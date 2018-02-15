@@ -199,7 +199,11 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	MutexRcv.Unlock()
 
 	if store_on_disk {
-		ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600)
+		if e := ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600); e != nil {
+			panic(e.Error())
+		} else {
+			println("saved", common.TempBlocksDir() + hash.String(), len(b2g.Block.Raw))
+		}
 		b2g.Block = nil
 	}
 
