@@ -195,14 +195,12 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
-	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 65536
+	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
 	MutexRcv.Unlock()
 
 	if store_on_disk {
 		if e := ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600); e != nil {
 			panic(e.Error())
-		} else {
-			println("saved", common.TempBlocksDir() + hash.String(), len(b2g.Block.Raw))
 		}
 		b2g.Block = nil
 	}
