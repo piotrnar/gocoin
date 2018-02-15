@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"bytes"
+	"io/ioutil"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -194,7 +195,13 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
+	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 65536
 	MutexRcv.Unlock()
+
+	if store_on_disk {
+		ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600)
+		b2g.Block = nil
+	}
 
 	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
 }

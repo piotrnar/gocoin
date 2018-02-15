@@ -80,6 +80,7 @@ var (
 			GCPercTrshold int
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
+			CacheOnDisk   bool
 		}
 		BlockDB struct {
 			MaxDataFileMB uint64 // 0 for unlimited size
@@ -145,6 +146,7 @@ func InitConfig() {
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
+	CFG.Memory.CacheOnDisk = true
 
 	CFG.Stat.HashrateHrs = 12
 	CFG.Stat.MiningHrs = 24
@@ -268,6 +270,10 @@ func Reset() {
 		UserAgent = CFG.UserAgent
 	} else {
 		UserAgent = "/Gocoin:" + gocoin.Version + "/"
+	}
+
+	if CFG.Memory.CacheOnDisk {
+		os.Mkdir(TempBlocksDir(), 0700)
 	}
 
 	ReloadMiners()
@@ -414,4 +420,8 @@ func IsListenTCP() (res bool) {
 
 func MaxMempoolSize() uint64 {
 	return atomic.LoadUint64(&maxMempoolSizeBytes)
+}
+
+func TempBlocksDir() string {
+	return GocoinHomeDir + "tmpblk" + string(os.PathSeparator)
 }

@@ -13,8 +13,9 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -25,24 +26,24 @@ import (
 
 var (
 	retryCachedBlocks bool
-	SaveBlockChain    *time.Timer = time.NewTimer(24*time.Hour)
+	SaveBlockChain    *time.Timer = time.NewTimer(24 * time.Hour)
 )
 
 const (
-	SaveBlockChainAfter = 2*time.Second
+	SaveBlockChainAfter = 2 * time.Second
 )
 
 func reset_save_timer() {
 	SaveBlockChain.Stop()
 	for len(SaveBlockChain.C) > 0 {
-		<- SaveBlockChain.C
+		<-SaveBlockChain.C
 	}
 	SaveBlockChain.Reset(SaveBlockChainAfter)
 }
 
 func blockMined(bl *btc.Block) {
 	network.BlockMined(bl)
-	if int(bl.LastKnownHeight) - int(bl.Height) < 144 { // do not run it when syncing chain
+	if int(bl.LastKnownHeight)-int(bl.Height) < 144 { // do not run it when syncing chain
 		usif.ProcessBlockFees(bl.Height, bl)
 	}
 }
@@ -145,6 +146,13 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
+	var tmpfn string
+
+	if newbl.Block.Raw == nil {
+		tmpfn = common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
+		defer os.Remove(tmpfn)
+	}
+
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
 		retryCachedBlocks = len(network.CachedBlocks) > 0
@@ -159,9 +167,21 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		return
 	}
 
+	if newbl.Block == nil {
+		dat, e := ioutil.ReadFile(tmpfn)
+		if e != nil {
+			panic(e.Error())
+		}
+		if newbl.Block, e = btc.NewBlock(dat); e != nil {
+			panic(e.Error())
+		}
+		if e = newbl.Block.BuildTxList(); e != nil {
+			panic(e.Error())
+		}
+	}
+
 	common.Busy("LocalAcceptBlock " + newbl.Hash.String())
-	e := LocalAcceptBlock(newbl)
-	if e != nil {
+	if e := LocalAcceptBlock(newbl); e != nil {
 		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
 		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
@@ -207,7 +227,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	msg.Done.Done()
 }
 
-
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -246,6 +265,8 @@ func main() {
 	}
 
 	host_init() // This will create the DB lock file and keep it open
+
+	os.RemoveAll(common.TempBlocksDir())
 
 	if common.FLAG.UndoBlocks > 0 {
 		usif.Exit_now.Set()
@@ -312,20 +333,20 @@ func main() {
 
 		wallet.FetchingBalanceTick = func() {
 			select {
-				case rec := <-usif.LocksChan:
-					common.CountSafe("DoMainLocks")
-					rec.In.Done()
-					rec.Out.Wait()
+			case rec := <-usif.LocksChan:
+				common.CountSafe("DoMainLocks")
+				rec.In.Done()
+				rec.Out.Wait()
 
-				case newtx := <-network.NetTxs:
-					common.CountSafe("DoMainNetTx")
-					network.HandleNetTx(newtx, false)
+			case newtx := <-network.NetTxs:
+				common.CountSafe("DoMainNetTx")
+				network.HandleNetTx(newtx, false)
 
-				case <-netTick:
-					common.CountSafe("DoMainNetTick")
-					network.NetworkTick()
+			case <-netTick:
+				common.CountSafe("DoMainNetTick")
+				network.NetworkTick()
 
-				default:
+			default:
 			}
 		}
 
@@ -364,7 +385,7 @@ func main() {
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
 
-			case <- SaveBlockChain.C:
+			case <-SaveBlockChain.C:
 				common.CountSafe("SaveBlockChain")
 				common.Busy("BlockChain.Idle()")
 				if common.BlockChain.Idle() {
@@ -413,4 +434,5 @@ func main() {
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
 	sys.UnlockDatabaseDir()
+	os.RemoveAll(common.TempBlocksDir())
 }
