@@ -165,16 +165,11 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	var tmpfn string
-
-	if newbl.Block == nil {
-		tmpfn = common.TempBlocksDir() + newbl.
-		BlockTreeNode.BlockHash.String()
-		defer os.Remove(tmpfn)
-	}
-
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
+		if newbl.Block == nil {
+			os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+		}
 		retryCachedBlocks = len(network.CachedBlocks) > 0
 		return
 	}
@@ -188,7 +183,9 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	}
 
 	if newbl.Block == nil {
+		tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
 		dat, e := ioutil.ReadFile(tmpfn)
+		os.Remove(tmpfn)
 		if e != nil {
 			panic(e.Error())
 		}
