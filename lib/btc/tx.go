@@ -49,12 +49,12 @@ type Tx struct {
 	// These three fields should be set in block.go:
 	Raw []byte
 	Size, NoWitSize uint32
-	Hash *Uint256
+	Hash Uint256
 
 	// This field is only set in chain's ProcessBlockTransactions:
 	Fee uint64
 
-	wTxID *Uint256
+	wTxID Uint256
 
 	hash_lock sync.Mutex
 	hashPrevouts []byte
@@ -748,24 +748,25 @@ func (tx *Tx) SetHash(raw []byte) {
 	} else {
 		tx.Raw = raw
 	}
-	h := NewSha2Hash(raw)
+	var h [32]byte
+	ShaHash(raw, h[:])
 	tx.Size = uint32(len(raw))
 	if tx.SegWit != nil {
-		tx.wTxID = h
+		tx.wTxID.Hash = h
 		nowit_raw := tx.Serialize()
-		tx.Hash = NewSha2Hash(nowit_raw)
+		tx.Hash.Calc(nowit_raw)
 		tx.NoWitSize = uint32(len(nowit_raw))
 	} else {
-		tx.Hash = h
+		tx.Hash.Hash = h
 		tx.NoWitSize = tx.Size
 	}
 }
 
 func (t *Tx) WTxID() *Uint256 {
-	if t.wTxID==nil {
-		return t.Hash
+	if t.SegWit == nil {
+		return &t.Hash
 	} else {
-		return t.wTxID
+		return &t.wTxID
 	}
 }
 

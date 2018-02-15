@@ -100,7 +100,7 @@ func (c *OneConnection) SendCmpctBlk(hash *btc.Uint256) bool {
 		if c.Node.SendCmpctVer==2 {
 			hasz = crec.Block.Txs[i].WTxID()
 		} else {
-			hasz = crec.Block.Txs[i].Hash
+			hasz = &crec.Block.Txs[i].Hash
 		}
 		binary.LittleEndian.PutUint64(lsb[:], siphash.Hash(k0, k1, hasz.Hash[:]))
 		msg.Write(lsb[:6])
@@ -318,7 +318,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		if c.Node.SendCmpctVer==2 {
 			hash2take = v.Tx.WTxID()
 		} else {
-			hash2take = v.Tx.Hash
+			hash2take = &v.Tx.Hash
 		}
 		sid := siphash.Hash(col.K0, col.K1, hash2take.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {

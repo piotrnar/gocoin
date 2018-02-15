@@ -104,7 +104,6 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
 		if i==0 {
-			bl.Txs[i].wTxID = new(Uint256) // all zeros
 			for _, ou := range bl.Txs[0].TxOut {
 				ou.WasCoinbase = true
 			}
@@ -124,9 +123,9 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.NoWitnessSize += len(data2hash)
 		wg.Add(1)
 		go func(tx *Tx, b, w []byte) {
-			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
+			tx.Hash.Calc(b) // Calculate tx hash in a background
 			if w!=nil {
-				tx.wTxID = NewSha2Hash(w)
+				tx.wTxID.Calc(w)
 			}
 			wg.Done()
 		}(bl.Txs[i], data2hash, witness2hash)

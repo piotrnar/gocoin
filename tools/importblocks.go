@@ -39,7 +39,7 @@ func stat(totnsec, pernsec int64, totbytes, perbytes uint64, height uint32) {
 
 func import_blockchain(dir string) {
 	BlockDatabase := blockdb.NewBlockDB(dir, Magic)
-	chain := chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, nil)
+	chain := chain.NewChainExt(GocoinHomeDir, GenesisBlock, false, nil, nil)
 
 	var bl *btc.Block
 	var er error

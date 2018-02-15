@@ -111,7 +111,7 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 		return false
 	}
 	tx.SetHash(rawtx)
-	return txid.Equal(tx.Hash)
+	return txid.Equal(&tx.Hash)
 }
 
 // Download raw transaction from a web server (try one after another)

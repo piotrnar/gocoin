@@ -61,6 +61,10 @@ func (u *Uint256) Equal(o *Uint256) bool {
 	return bytes.Equal(u.Hash[:], o.Hash[:])
 }
 
+func (u *Uint256) Calc(data []byte) {
+	ShaHash(data, u.Hash[:])
+}
+
 
 func BIdx(hash []byte) (o [Uint256IdxLen]byte) {
 	copy(o[:], hash[:Uint256IdxLen])

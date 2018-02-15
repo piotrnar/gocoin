@@ -177,7 +177,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 	}
 
 	tx.SetHash(pl)
-	NeedThisTx(tx.Hash, func() {
+	NeedThisTx(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl
 		select {
@@ -237,14 +237,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 		if txinmem, ok := TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
+				RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedBadInput")
 				return
 			}
 
 			if !ntx.trusted && !common.CFG.TXPool.AllowMemInputs {
-				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
+				RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedMemInput1")
 				return
@@ -263,14 +263,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				var newone bool
 
 				if !common.CFG.TXPool.AllowMemInputs {
-					RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
+					RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NOT_MINED)
 					TxMutex.Unlock()
 					common.CountSafe("TxRejectedMemInput2")
 					return
 				}
 				// In this case, let's "save" it for later...
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-				nrtx := RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
+				nrtx := RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
 
 				if nrtx != nil {
 					nrtx.Wait4Input = &Wait4Input{missingTx: missingid, TxRcvd: ntx}
@@ -297,7 +297,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			} else {
 				if pos[i].WasCoinbase {
 					if common.Last.BlockHeight()+1-pos[i].BlockHeight < chain.COINBASE_MATURITY {
-						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_CB_INMATURE)
+						RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_CB_INMATURE)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedCBInmature")
 						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
@@ -315,7 +315,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if totout > totinp {
-		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_OVERSPEND)
+		RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_OVERSPEND)
 		TxMutex.Unlock()
 		ntx.conn.DoS("TxOverspend")
 		return
@@ -324,7 +324,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	// Check for a proper fee
 	fee := totinp - totout
 	if !ntx.trusted && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) {
-		RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
+		RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
 		common.CountSafe("TxRejectedLowFee")
 		return
@@ -337,7 +337,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if len(rbf_tx_list) > 0 {
 		already_done := make(map[*OneTxToSend]bool)
 		if len(rbf_tx_list) > 100 {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
+			RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBF100+")
 			return
@@ -349,7 +349,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				if _, ok := already_done[ch]; !ok {
 					rbf_tx_list = append(rbf_tx_list, ch)
 					if len(rbf_tx_list) > 100 {
-						RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
+						RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_100)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedRBF100+")
 						return
@@ -359,7 +359,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		for _, ctx := range rbf_tx_list {
 			if !ntx.trusted && ctx.Final {
-				RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
+				RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_FINAL)
 				TxMutex.Unlock()
 				common.CountSafe("TxRejectedRBFFinal")
 				return
@@ -371,7 +371,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		new_min_fee = totfees + (uint64(tx.Weight()) * common.MinFeePerKB() / 4000)
 
 		if !ntx.trusted && fee < new_min_fee {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
+			RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
 			return
@@ -400,7 +400,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		script.DBG_ERR = prev_dbg_err
 
 		if ver_err_cnt > 0 {
-			RejectTx(ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
+			RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_SCRIPT_FAIL)
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
 			if len(rbf_tx_list) > 0 {
@@ -461,7 +461,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRouteNotMined")
 	} else if !ntx.trusted && rec.isRoutable() {
 		// do not automatically route loacally loaded txs
-		rec.Invsentcnt += NetRouteInvExt(1, tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.raw)))
+		rec.Invsentcnt += NetRouteInvExt(1, &tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.raw)))
 		common.CountSafe("TxRouteOK")
 	}
 
@@ -536,7 +536,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Tx.Hash.BIdx())
 	if reason != 0 {
-		RejectTx(tx.Hash, len(tx.Data), reason)
+		RejectTx(&tx.Hash, len(tx.Data), reason)
 	}
 }
 
