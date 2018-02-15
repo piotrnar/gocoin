@@ -47,11 +47,11 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 					if crec.Block==nil {
 						crec.Block, _ = btc.NewBlock(bl)
 					}
-					if crec.Block.OldData==nil {
-						crec.Block.BuildTxList()
+					if crec.Block.NoWitnessData==nil {
+						crec.Block.BuildNoWitnessData()
 					}
 					//println("block size", len(crec.Data), "->", len(bl))
-					bl = crec.Block.OldData
+					bl = crec.Block.NoWitnessData
 				}
 				c.SendRawMsg("block", bl)
 			} else {
