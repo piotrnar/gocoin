@@ -150,8 +150,12 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if newbl.Block == nil {
 		tmpfn = common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
-		defer os.Remove(tmpfn)
 	}
+	defer func() {
+		if tmpfn != "" {
+			os.Remove(tmpfn)
+		}
+	}()
 
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
