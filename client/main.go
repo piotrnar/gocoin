@@ -107,12 +107,31 @@ func retry_cached_blocks() bool {
 		newbl := network.CachedBlocks[idx]
 		if CheckParentDiscarded(newbl.BlockTreeNode) {
 			common.CountSafe("DiscardCachedBlock")
+			if newbl.Block == nil {
+				os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
+			}
 			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
 			network.CachedBlocksLen.Store(len(network.CachedBlocks))
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 			common.Busy("Cache.LocalAcceptBlock " + newbl.Block.Hash.String())
+
+			if newbl.Block == nil {
+				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
+				dat, e := ioutil.ReadFile(tmpfn)
+				os.Remove(tmpfn)
+				if e != nil {
+					panic(e.Error())
+				}
+				if newbl.Block, e = btc.NewBlock(dat); e != nil {
+					panic(e.Error())
+				}
+				if e = newbl.Block.BuildTxList(); e != nil {
+					panic(e.Error())
+				}
+			}
+
 			e := LocalAcceptBlock(newbl)
 			if e != nil {
 				fmt.Println("AcceptBlock2", newbl.Block.Hash.String(), "-", e.Error())
@@ -149,13 +168,10 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	var tmpfn string
 
 	if newbl.Block == nil {
-		tmpfn = common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
+		tmpfn = common.TempBlocksDir() + newbl.
+		BlockTreeNode.BlockHash.String()
+		defer os.Remove(tmpfn)
 	}
-	defer func() {
-		if tmpfn != "" {
-			os.Remove(tmpfn)
-		}
-	}()
 
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
