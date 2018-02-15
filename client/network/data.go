@@ -199,10 +199,11 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	MutexRcv.Unlock()
 
 	if store_on_disk {
-		if e := ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600); e != nil {
-			panic(e.Error())
+		if e := ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600); e == nil {
+			b2g.Block = nil
+		} else {
+			println("write tmp block:", e.Error())
 		}
-		b2g.Block = nil
 	}
 
 	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
