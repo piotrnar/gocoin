@@ -270,6 +270,9 @@ func main() {
 
 	host_init() // This will create the DB lock file and keep it open
 
+	os.RemoveAll(common.TempBlocksDir())
+	common.MkTempBlocksDir()
+
 	if common.FLAG.UndoBlocks > 0 {
 		usif.Exit_now.Set()
 	}

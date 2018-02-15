@@ -272,11 +272,17 @@ func Reset() {
 		UserAgent = "/Gocoin:" + gocoin.Version + "/"
 	}
 
-	if CFG.Memory.CacheOnDisk {
-		os.Mkdir(TempBlocksDir(), 0700)
+	if GocoinHomeDir != "" { // this will nor be set before Host_init
+		MkTempBlocksDir()
 	}
 
 	ReloadMiners()
+}
+
+func MkTempBlocksDir() {
+	if CFG.Memory.CacheOnDisk {
+		os.Mkdir(TempBlocksDir(), 0700)
+	}
 }
 
 func RPCPort() (res uint32) {
