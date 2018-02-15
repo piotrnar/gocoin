@@ -81,9 +81,7 @@ var (
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk   bool
-		}
-		BlockDB struct {
-			MaxDataFileMB uint64 // 0 for unlimited size
+			MaxDataFileMB uint // 0 for unlimited size
 		}
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
@@ -272,9 +270,7 @@ func Reset() {
 		UserAgent = "/Gocoin:" + gocoin.Version + "/"
 	}
 
-	if common.BlockChain != nil { // no point calling it host_init as we dont know root dir yet
-		MkTempBlocksDir()
-	}
+	MkTempBlocksDir()
 
 	ReloadMiners()
 }

@@ -232,6 +232,18 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td> 200</td>
 <td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
 </tr>
+<tr class="even">
+<td class="cfg_name"> Memory.CacheOnDisk</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> During chain sync, store bigger blocks on disk (in datadir's "tmpblk/") instead of holding them in RAM.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> Memory.MaxDataFileMB</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Maximum size of single data file in blocks database (0 for unlimited). Used for easy purging of old blocks.</td>
+</tr>
 <tr class="odd">
 <td class="cfg_name"> Beeps.NewBlock</td>
 <td class="cfg_type"> bool</td>
