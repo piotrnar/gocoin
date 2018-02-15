@@ -170,7 +170,7 @@ func verify_block(blk []byte, sl one_idx_rec, off int) {
 		return
 	}
 
-	merk, _ := btc.GetMerkle(bl.Txs)
+	merk, _ := bl.GetMerkle()
 	if !bytes.Equal(bl.MerkleRoot(), merk) {
 		println("verify_block at off", off, "Payload invalid")
 		return

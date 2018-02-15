@@ -113,7 +113,7 @@ func VULe(b []byte) (le uint64, var_int_siz int) {
 }
 
 
-func CalcMerkle(mtr [][]byte) (res []byte, mutated bool) {
+func CalcMerkle(mtr [][32]byte) (res []byte, mutated bool) {
 	var j, i2 int
 	for siz:=len(mtr); siz>1; siz=(siz+1)/2 {
 		for i := 0; i < siz; i += 2 {
@@ -122,39 +122,32 @@ func CalcMerkle(mtr [][]byte) (res []byte, mutated bool) {
 			} else {
 				i2 = siz-1
 			}
-			if i!=i2 && bytes.Equal(mtr[j+i], mtr[j+i2]) {
+			if i!=i2 && bytes.Equal(mtr[j+i][:], mtr[j+i2][:]) {
 				mutated = true
 			}
 			s := sha256.New()
-			s.Write(mtr[j+i])
-			s.Write(mtr[j+i2])
+			s.Write(mtr[j+i][:])
+			s.Write(mtr[j+i2][:])
 			tmp := s.Sum(nil)
 			s.Reset()
 			s.Write(tmp)
-			mtr = append(mtr, s.Sum(nil))
+
+			var sum [32]byte
+			copy(sum[:], s.Sum(nil))
+			mtr = append(mtr, sum)
 		}
 		j += siz
 	}
-	res = mtr[len(mtr)-1]
-	return
-}
-
-
-func GetMerkle(txs []*Tx) (res []byte, mutated bool) {
-	mtr := make([][]byte, len(txs))
-	for i := range txs {
-		mtr[i] = txs[i].Hash.Hash[:]
-	}
-	res, mutated = CalcMerkle(mtr)
+	res = mtr[len(mtr)-1][:]
 	return
 }
 
 
 func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
-	mtr := make([][]byte, len(txs))
-	mtr[0] = make([]byte, 32) // null
+	mtr := make([][32]byte, len(txs))
+	//mtr[0] = make([]byte, 32) // null
 	for i:=1; i<len(txs); i++ {
-		mtr[i] = txs[i].WTxID().Hash[:]
+		mtr[i] = txs[i].WTxID().Hash
 	}
 	res, mutated = CalcMerkle(mtr)
 	return

@@ -170,6 +170,15 @@ func (bl *Block) MerkleRootMatch() bool {
 	if bl.TxCount==0 {
 		return false
 	}
-	merkle, _ := GetMerkle(bl.Txs)
+	merkle, _ := bl.GetMerkle()
 	return bytes.Equal(merkle, bl.MerkleRoot())
+}
+
+func (bl *Block) GetMerkle() (res []byte, mutated bool) {
+	mtr := make([][32]byte, len(bl.Txs))
+	for i, tx := range bl.Txs {
+		mtr[i] = tx.Hash.Hash
+	}
+	res, mutated = CalcMerkle(mtr)
+	return
 }
