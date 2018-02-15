@@ -148,7 +148,7 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 func HandleNetBlock(newbl *network.BlockRcvd) {
 	var tmpfn string
 
-	if newbl.Block.Raw == nil {
+	if newbl.Block == nil {
 		tmpfn = common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
 		defer os.Remove(tmpfn)
 	}
