@@ -23,6 +23,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * "lib/qdb" package moved to "lib/others/qdb"
 * Client/TextUI: New command "txmpload" to load new transactions from "mempool.dmp" file (created by "txmpsave")
 * Support for keeping blocks database in smaller files (for easy purging) - see "CFG.BlockDB.MaxDataFileMB"
+* Do not build block's OldData / NoWitnessData when not needed
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()

@@ -21,7 +21,8 @@ type Block struct {
 	SigopsCost uint32
 	MedianPastTime uint32
 
-	OldData []byte // all the block's transactions stripped from witnesses
+	NoWitnessSize int
+	NoWitnessData []byte // all the block's transactions stripped from witnesses
 	BlockWeight uint
 }
 
@@ -90,11 +91,8 @@ func (bl *Block) BuildTxList() (e error) {
 	var wg sync.WaitGroup
 	var data2hash, witness2hash []byte
 
-	old_format_block := new(bytes.Buffer)
-	old_format_block.Write(bl.Raw[:80])
-	WriteVlen(old_format_block, uint64(bl.TxCount))
-
-	bl.BlockWeight = 4 * uint(old_format_block.Len())
+	bl.NoWitnessSize = 80 + VLenSize(uint64(bl.TxCount))
+	bl.BlockWeight = 4 * uint(bl.NoWitnessSize)
 
 	for i:=0; i<bl.TxCount; i++ {
 		var n int
@@ -123,7 +121,7 @@ func (bl *Block) BuildTxList() (e error) {
 			witness2hash = nil
 		}
 		bl.BlockWeight += uint(3 * bl.Txs[i].NoWitSize + bl.Txs[i].Size)
-		old_format_block.Write(data2hash)
+		bl.NoWitnessSize += len(data2hash)
 		wg.Add(1)
 		go func(tx *Tx, b, w []byte) {
 			tx.Hash = NewSha2Hash(b) // Calculate tx hash in a background
@@ -137,8 +135,28 @@ func (bl *Block) BuildTxList() (e error) {
 
 	wg.Wait()
 
-	bl.OldData = old_format_block.Bytes()
+	return
+}
 
+
+// The block data in non-segwit format
+func (bl *Block) BuildNoWitnessData() (e error) {
+	if bl.TxCount==0 {
+		e = bl.BuildTxList()
+		if e != nil {
+			return
+		}
+	}
+	old_format_block := new(bytes.Buffer)
+	old_format_block.Write(bl.Raw[:80])
+	WriteVlen(old_format_block, uint64(bl.TxCount))
+	for _, tx := range bl.Txs {
+		tx.WriteSerialized(old_format_block)
+	}
+	bl.NoWitnessData = old_format_block.Bytes()
+	if bl.NoWitnessSize != len(bl.NoWitnessData) {
+		panic("NoWitnessSize corrupt")
+	}
 	return
 }
 
