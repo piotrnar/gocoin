@@ -82,6 +82,7 @@ var (
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk   bool
 			MaxDataFileMB uint // 0 for unlimited size
+			DataFilesKeep uint32 // 0 for all
 		}
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
@@ -268,6 +269,10 @@ func Reset() {
 		UserAgent = CFG.UserAgent
 	} else {
 		UserAgent = "/Gocoin:" + gocoin.Version + "/"
+	}
+
+	if CFG.Memory.MaxDataFileMB != 0 && CFG.Memory.MaxDataFileMB < 8 {
+		CFG.Memory.MaxDataFileMB = 8
 	}
 
 	MkTempBlocksDir()

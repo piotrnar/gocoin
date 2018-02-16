@@ -80,6 +80,7 @@ type BlckCachRec struct {
 type BlockDBOpts struct {
 	MaxCachedBlocks int
 	MaxDataFileSize uint64
+	DataFilesKeep uint32
 }
 
 type oneB2W struct {
@@ -106,6 +107,7 @@ type BlockDB struct {
 	datToWrite uint64
 
 	max_data_file_size uint64
+	data_files_keep uint32
 }
 
 
@@ -128,6 +130,7 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 		db.cache = make(map[[btc.Uint256IdxLen]byte]*BlckCachRec, db.max_cached_blocks)
 	}
 	db.max_data_file_size = opts.MaxDataFileSize
+	db.data_files_keep = opts.DataFilesKeep
 
 	db.blocksToWrite = make(chan oneB2W, MAX_BLOCKS_TO_WRITE)
 	return
@@ -283,6 +286,9 @@ func (db *BlockDB) writeOne() (written bool) {
 			db.blockdata.Close()
 			db.blockdata = tmpf
 			db.maxdatfilepos = 0
+			if db.data_files_keep != 0 && db.maxdatfileidx >= db.data_files_keep {
+				os.Remove(db.dat_fname(db.maxdatfileidx - db.data_files_keep))
+			}
 			db.maxdatfileidx++
 		} else {
 			println("Cannot create", db.dat_fname(db.maxdatfileidx))

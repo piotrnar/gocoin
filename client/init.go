@@ -68,7 +68,8 @@ func host_init() {
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
 		&chain.BlockDBOpts{
 			MaxCachedBlocks : int(common.CFG.Memory.MaxCachedBlks),
-			MaxDataFileSize : uint64(common.CFG.Memory.MaxDataFileMB) << 20})
+			MaxDataFileSize : uint64(common.CFG.Memory.MaxDataFileMB) << 20,
+			DataFilesKeep : common.CFG.Memory.DataFilesKeep})
 	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
