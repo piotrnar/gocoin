@@ -6,6 +6,7 @@ Lib:
 * Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
+* Add auto fetching of native segwit to webui's dl_balance()
 * Mempool: Implement proper handling and expiring of orphan txs
 * Force to create UTXO.db file once for awhile (when bootstraping)
 * Review and update WebUI's Help page
