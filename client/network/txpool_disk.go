@@ -249,9 +249,10 @@ fatal_error:
 }
 
 
+// this one is only called from TextUI
 func MempoolLoadNew(fname string, abort *bool) bool {
 	var ntx *TxRcvd
-	var totcnt, le, tmp64 uint64
+	var idx, totcnt, le, tmp64, oneperc, cntdwn, perc uint64
 	var tmp [32]byte
 	var tina uint32
 	var i int
@@ -273,9 +274,17 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 	if totcnt, er = btc.ReadVLen(rd); er != nil {
 		goto fatal_error
 	}
-	fmt.Println("Loading", totcnt, "transactions from", fname, "...")
+	fmt.Println("Loading", totcnt, "transactions from", fname)
 
-	for ; totcnt > 0; totcnt-- {
+	oneperc = totcnt/100
+
+	for idx = 0; idx < totcnt; idx++ {
+		if cntdwn==0 {
+			fmt.Print("\r", perc, "% complete...")
+			perc++
+			cntdwn = oneperc
+		}
+		cntdwn--
 		if abort != nil && *abort {
 			break
 		}
@@ -294,7 +303,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 
 		ntx.tx, i = btc.NewTx(ntx.raw)
 		if ntx.tx == nil || i != len(ntx.raw) {
-			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME2, " at idx", len(TransactionsToSend)))
+			er = errors.New(fmt.Sprint("Error parsing tx from ", fname, " at idx", idx))
 			goto fatal_error
 		}
 		ntx.tx.SetHash(ntx.raw)
@@ -333,6 +342,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		}
 	}
 
+	fmt.Print("\r                                    \r")
 	fmt.Println(cnt1, "out of", cnt2, "new transactions accepted into memory pool")
 
 	return true
