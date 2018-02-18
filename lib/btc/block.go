@@ -159,7 +159,9 @@ func (bl *Block) BuildNoWitnessData() (e error) {
 		tx.WriteSerialized(old_format_block)
 	}
 	bl.NoWitnessData = old_format_block.Bytes()
-	if bl.NoWitnessSize != len(bl.NoWitnessData) {
+	if bl.NoWitnessSize == 0 {
+		bl.NoWitnessSize = len(bl.NoWitnessData)
+	} else if bl.NoWitnessSize != len(bl.NoWitnessData) {
 		panic("NoWitnessSize corrupt")
 	}
 	return
