@@ -602,6 +602,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "cmpctblock": return 1e6 // 1MB shall be enough
 		case "getblocktxn": return 1e6 // 1MB shall be enough
 		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
+		case "notfound": return 3+50000*36 // maximum size of getdata
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }
