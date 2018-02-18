@@ -257,7 +257,6 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 
 	rec_from := new_sl(dat[min_valid_off:min_valid_off+136])
 	pos_from := rec_from.DPos()
-	//println(".. child split", fname, "at offs", min_valid_off/136, "fpos:", pos_from, " maxlen:", maxlen)
 
 	for off := min_valid_off; off <= max_valid_off; off += 136 {
 		rec := new_sl(dat[off:off+136])
@@ -274,7 +273,7 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 			if er != nil {
 				println(er.Error())
 			}
-			max_valid_off = off
+			max_valid_off = off-136
 			break // go to the next stage
 		}
 	}
@@ -297,6 +296,7 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 		}
 	}
 
+	//println(".. child split", fname, "at offs", min_valid_off/136, "...", max_valid_off/136, "fpos:", pos_from, " maxlen:", maxlen)
 	for off := min_valid_off; off <= max_valid_off; off += 136 {
 		sl := new_sl(dat[off:off+136])
 		sl.SetDatIdx(idx)
@@ -580,9 +580,9 @@ func main() {
 	if fl_purgedatidx {
 		cache := make(map[uint32]bool)
 		var cnt int
-		for off := 0; off <= len(dat); off += 136 {
+		for off := 0; off < len(dat); off += 136 {
 			rec := new_sl(dat[off:])
-			if rec.DLen()==0 || rec.DatIdx()==0xffffffff {
+			if rec.DLen()==0 && rec.DatIdx()==0xffffffff {
 				continue
 			}
 			idx := rec.DatIdx()
@@ -598,9 +598,14 @@ func main() {
 				cnt++
 			}
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
-		os.Rename("blockchain.tmp", "blockchain.new")
-		fmt.Println(cnt, "records removed from blockchain.new")
+		if cnt > 0 {
+			ioutil.WriteFile("blockchain.tmp", dat, 0600)
+			os.Rename("blockchain.tmp", "blockchain.new")
+			fmt.Println(cnt, "records removed from blockchain.new")
+		} else {
+			fmt.Println("Data files seem consisent - no need to remove anything")
+		}
+		return
 	}
 
 
@@ -875,7 +880,7 @@ func main() {
 		var done sync.WaitGroup
 		var dat_file_open uint32 = 0xffffffff
 		var fdat *os.File
-		var cnt int
+		var cnt, cnt_nd, cnt_err int
 
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
@@ -920,13 +925,15 @@ func main() {
 			fdat.Seek(dp, os.SEEK_SET)
 			n, _ := fdat.Read(buf[:le])
 			if n != le {
-				fmt.Println("Block", hei, "not in dat file", idx, dp)
+				//fmt.Println("Block", hei, "not in dat file", idx, dp)
+				cnt_nd++
 				continue
 			}
 
 			blk := decomp_block(sl.Flags(), buf[:le])
 			if blk == nil {
 				fmt.Println("Block", hei, "decompression failed")
+				cnt_err++
 				continue
 			}
 
@@ -945,6 +952,7 @@ func main() {
 			fdat.Close()
 		}
 		fmt.Println("\nAll blocks done -", totlen>>20, "MB and", cnt, "blocks verified OK")
+		fmt.Println("No data errors:", cnt_nd, "  Decompression errors:", cnt_err)
 		return
 	}
 
