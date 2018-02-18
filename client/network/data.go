@@ -198,15 +198,19 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
 	MutexRcv.Unlock()
 
+	var bei *btc.BlockExtraInfo
+
 	if store_on_disk {
 		if e := ioutil.WriteFile(common.TempBlocksDir() + hash.String(), b2g.Block.Raw, 0600); e == nil {
+			bei = new(btc.BlockExtraInfo)
+			*bei = b2g.Block.BlockExtraInfo
 			b2g.Block = nil
 		} else {
 			println("write tmp block:", e.Error())
 		}
 	}
 
-	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb}
+	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb, BlockExtraInfo:bei}
 }
 
 

@@ -130,6 +130,7 @@ func retry_cached_blocks() bool {
 				if e = newbl.Block.BuildTxList(); e != nil {
 					panic(e.Error())
 				}
+				newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 			}
 
 			e := LocalAcceptBlock(newbl)
@@ -195,6 +196,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		if e = newbl.Block.BuildTxList(); e != nil {
 			panic(e.Error())
 		}
+		newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 	}
 
 	common.Busy("LocalAcceptBlock " + newbl.Hash.String())

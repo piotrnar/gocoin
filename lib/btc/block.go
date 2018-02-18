@@ -15,15 +15,21 @@ type Block struct {
 	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
 
-	// These flags are set during chain.(Pre/Post)CheckBlock and used later (e.g. by script.VerifyTxScript):
+	BlockExtraInfo
+
+	// These flags are set in BuildTxList() used later (e.g. by script.VerifyTxScript):
+	NoWitnessSize int
+	BlockWeight uint
+
+	NoWitnessData []byte // This is set by BuildNoWitnessData()
+}
+
+
+type BlockExtraInfo struct {
 	VerifyFlags uint32
 	Height uint32
 	SigopsCost uint32
 	MedianPastTime uint32
-
-	NoWitnessSize int
-	NoWitnessData []byte // all the block's transactions stripped from witnesses
-	BlockWeight uint
 }
 
 
