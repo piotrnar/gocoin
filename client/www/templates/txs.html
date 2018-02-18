@@ -594,7 +594,7 @@ function show_txw4i() {
 			while (txw4i.rows.length>1)  txw4i.deleteRow(1)
 			wait4s = aj.responseXML.getElementsByTagName('wait4')
 			var idx=0
-			butw4i.value = ' ' + wait4s.length + ' '
+			//butw4i.value = ' ' + wait4s.length + ' '
 			for (var i=0; i<wait4s.length; i++) {
 				pendtxs = wait4s[i].getElementsByTagName('tx')
 				idx++
@@ -829,7 +829,7 @@ function refreshtxstat() {
 			}
 			butre.value = ts.tre_cnt
 			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
-			butw4i.value = ts.awaiting_inputs
+			butw4i.value = ts.awaiting_inputs + " / " + bignum(ts.awaiting_inputs_size)
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)

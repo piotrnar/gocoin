@@ -161,8 +161,8 @@ func show_info(par string) {
 		len(network.TransactionsToSend), network.TransactionsToSendSize>>20,
 		len(network.TransactionsRejected), network.TransactionsRejectedSize>>20,
 		len(network.TransactionsPending), len(network.NetTxs))
-	fmt.Printf("WaitingForInputs:%d,  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
-		len(network.WaitingForInputs), len(network.SpentOutputs),
+	fmt.Printf("WaitingForInputs:%d (%d KB),  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
+		len(network.WaitingForInputs), network.WaitingForInputsSize, len(network.SpentOutputs),
 		common.HashrateToString(usif.GetNetworkHashRateNum()), common.GetAverageFee())
 	network.TxMutex.Unlock()
 
