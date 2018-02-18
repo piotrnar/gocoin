@@ -55,6 +55,7 @@ var (
 
 	// Transactions that are waiting for inputs:
 	WaitingForInputs map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
+	WaitingForInputsSize uint64
 )
 
 type OneTxToSend struct {
@@ -88,6 +89,7 @@ type OneTxRejected struct {
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
+	TxLen uint32
 	Ids  map[BIDX]time.Time // List of pending tx ids
 }
 
@@ -268,6 +270,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					common.CountSafe("TxRejectedMemInput2")
 					return
 				}
+
+				if _, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
+					RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
+					TxMutex.Unlock()
+					common.CountSafe("TxRejectedParentRej")
+					return
+				}
+
 				// In this case, let's "save" it for later...
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
@@ -280,8 +290,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()]; rec == nil {
 						rec = new(OneWaitingList)
 						rec.TxID = nrtx.Wait4Input.missingTx
+						rec.TxLen = uint32(len(ntx.raw))
 						rec.Ids = make(map[BIDX]time.Time)
 						newone = true
+						WaitingForInputsSize += uint64(rec.TxLen)
 					}
 					rec.Ids[tx.Hash.BIdx()] = time.Now()
 					WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()] = rec
@@ -570,6 +582,7 @@ func deleteRejected(bidx BIDX) {
 			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx.BIdx()]
 			delete(w4i.Ids, bidx)
 			if len(w4i.Ids) == 0 {
+				WaitingForInputsSize -= uint64(w4i.TxLen)
 				delete(WaitingForInputs, tr.Wait4Input.missingTx.BIdx())
 			}
 		}
