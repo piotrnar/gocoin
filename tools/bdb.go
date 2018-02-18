@@ -336,7 +336,7 @@ func main() {
 	flag.UintVar(&fl_movedat, "movedat", 0, "Rename this data file index into the data file specified by -to <idx>")
 
 	flag.IntVar(&fl_splitdat, "splitdat", -1, "Split this data file into smaller parts (-mb <mb>)")
-	flag.UintVar(&fl_mb, "mb", 1024, "Split big data file into smaller parts of this size in MB (at least 8 MB)")
+	flag.UintVar(&fl_mb, "mb", 1000, "Split big data file into smaller parts of this size in MB (at least 8 MB)")
 
 	flag.IntVar(&fl_datidx, "datidx", -1, "Show records with the specific data file index")
 
@@ -430,12 +430,14 @@ func main() {
 			fmt.Println("Invalid from index")
 			return
 		}
+		/*
 		min_valid_to, max_valid_to := look_for_range(dat, uint32(fl_to))
 		if min_valid_from==-1 {
 			fmt.Println("Invalid to index")
 			return
 		}
 		fmt.Println("Append records", min_valid_from/136, max_valid_from/136, "after", min_valid_to/136, max_valid_to/136)
+		*/
 
 		from_fn := dat_fname(uint32(fl_mergedat))
 		to_fn := dat_fname(uint32(fl_to))
@@ -528,6 +530,10 @@ func main() {
 	}
 
 	if fl_splitdat >= 0 {
+		if fl_mb < 8 {
+			fmt.Println("Minimal value of -mb parameter is 8")
+			return
+		}
 		fname := dat_fname(uint32(fl_splitdat))
 		fmt.Println("Spliting file", fname, "into chunks - up to", fl_mb, "MB...")
 		min_valid_off, max_valid_off := look_for_range(dat, uint32(fl_splitdat))
