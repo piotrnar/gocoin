@@ -220,13 +220,9 @@ func decomp_block(fl uint32, buf []byte) (blk []byte) {
 func look_for_range(dat []byte, _idx uint32) (min_valid_off, max_valid_off int) {
 	min_valid_off = -1
 	for off := 0; off < len(dat); off += 136 {
-		sl := dat[off : off+136]
-		var idx uint32
-		if (sl[0]&0x20) != 0 {
-			idx = binary.LittleEndian.Uint32(sl[28:32])
-		}
-		blen := binary.LittleEndian.Uint32(sl[32:36])
-		if blen > 0 {
+		sl := new_sl(dat[off:])
+		idx := sl.DatIdx()
+		if sl.DLen() > 0 {
 			if idx == _idx {
 				if min_valid_off == -1 {
 					min_valid_off = off
