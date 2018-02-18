@@ -64,7 +64,13 @@ var (
 	fl_invalid           int
 	fl_fixlen            bool
 	fl_fixlenall         bool
-	fl_fixdatidx         bool
+
+	fl_mergedat          uint
+	fl_movedat           uint
+
+	fl_splitdat          bool
+	fl_idx               uint
+	fl_mb                uint
 )
 
 /********************************************************/
@@ -121,6 +127,14 @@ func (r one_idx_rec) PIdx() [32]byte {
 	copy(h[:], r.sl[60:92])
 	return h
 }
+
+func (r one_idx_rec) DatIdx() uint32 {
+	if (r.sl[0]&0x20) != 0 {
+		return binary.LittleEndian.Uint32(r.sl[28:32])
+	}
+	return 0
+}
+
 
 /********************************************************/
 
@@ -192,6 +206,37 @@ func decomp_block(fl uint32, buf []byte) (blk []byte) {
 	return
 }
 
+// Look for the first and last records with the given index
+func look_for_range(dat []byte, _idx uint32) (min_valid_off, max_valid_off int) {
+	min_valid_off = -1
+	for off := 0; off < len(dat); off += 136 {
+		sl := dat[off : off+136]
+		var idx uint32
+		if (sl[0]&0x20) != 0 {
+			idx = binary.LittleEndian.Uint32(sl[28:32])
+		}
+		blen := binary.LittleEndian.Uint32(sl[32:36])
+		if blen > 0 {
+			if idx == _idx {
+				if min_valid_off == -1 {
+					min_valid_off = off
+				}
+				max_valid_off = off
+			} else if idx > _idx {
+				break
+			}
+		}
+	}
+	return
+}
+
+func dat_fname(idx uint32) string {
+	if idx == 0 {
+		return "blockchain.dat"
+	}
+	return fmt.Sprintf("blockchain-%08x.dat", idx)
+}
+
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
@@ -210,15 +255,19 @@ func main() {
 	flag.UintVar(&fl_purgeto, "purgeto", 0, "Purge all blocks till (but excluding) the given height")
 
 	flag.UintVar(&fl_from, "from", 0, "Set/clear flag from this block")
-	flag.UintVar(&fl_to, "to", 0xffffffff, "Set/clear flag to this block")
+	flag.UintVar(&fl_to, "to", 0xffffffff, "Set/clear flag to this block or merge/rename into this data file index")
 	flag.IntVar(&fl_invalid, "invalid", -1, "Set (1) or clear (0) INVALID flag")
 	flag.IntVar(&fl_trusted, "trusted", -1, "Set (1) or clear (0) TRUSTED flag")
 
 	flag.BoolVar(&fl_fixlen, "fixlen", false, "Calculate (fix) orignial length of last 144 blocks")
 	flag.BoolVar(&fl_fixlenall, "fixlenall", false, "Calculate (fix) orignial length of each block")
 
-	flag.BoolVar(&fl_fixdatidx, "fixdatidx", false, "Fix data file index fields")
+	flag.UintVar(&fl_mergedat, "mergedat", 0, "Merge this data file index into the data file specified by -to <idx>")
+	flag.UintVar(&fl_movedat, "movedat", 0, "Rename this data file index into the data file specified by -to <idx>")
 
+	flag.BoolVar(&fl_splitdat, "splitdat", false, "Split big data file into smaller parts (use with -idx <idx> -mb <mb>")
+	flag.UintVar(&fl_mb, "mb", 1024, "Split big data file into smaller parts of this size in MB (at least 8)")
+	flag.UintVar(&fl_idx, "idx", 0, "Split big data file of this index")
 
 	flag.Parse()
 
@@ -299,6 +348,111 @@ func main() {
 	}
 
 	fmt.Println(len(dat)/136, "records")
+
+	if fl_mergedat != 0 {
+		if fl_to >= fl_mergedat {
+			fmt.Println("To index must be lower than from index")
+			return
+		}
+		min_valid_from, max_valid_from := look_for_range(dat, uint32(fl_mergedat))
+		if min_valid_from==-1 {
+			fmt.Println("Invalid from index")
+			return
+		}
+		min_valid_to, max_valid_to := look_for_range(dat, uint32(fl_to))
+		if min_valid_from==-1 {
+			fmt.Println("Invalid to index")
+			return
+		}
+		fmt.Println("Append records", min_valid_from/136, max_valid_from/136, "after", min_valid_to/136, max_valid_to/136)
+
+		from_fn := dat_fname(uint32(fl_mergedat))
+		to_fn := dat_fname(uint32(fl_to))
+
+		f, er := os.Open(from_fn)
+		if er != nil {
+			fmt.Println(er.Error())
+			return
+		}
+
+		fo, er := os.OpenFile(to_fn, os.O_WRONLY, 0600)
+		if er != nil {
+			f.Close()
+			fmt.Println(er.Error())
+			return
+		}
+		offset_to_add, _ := fo.Seek(0, os.SEEK_END)
+
+		fmt.Println("Appending", from_fn, "to", to_fn, "at offset", offset_to_add)
+		for {
+			n, _ := f.Read(buf[:])
+			if n > 0 {
+				fo.Write(buf[:n])
+			}
+			if n != len(buf) {
+				break
+			}
+		}
+		fo.Close()
+		f.Close()
+
+		var cnt int
+		for off := min_valid_from; off <= max_valid_from; off += 136 {
+			sl := dat[off : off+136]
+			fpos := binary.LittleEndian.Uint64(sl[40:48])
+			fpos += uint64(offset_to_add)
+			binary.LittleEndian.PutUint64(sl[40:48], fpos)
+			sl[0] |= 0x20
+			binary.LittleEndian.PutUint32(sl[28:32], uint32(fl_to))
+			cnt++
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		os.Remove(from_fn)
+		fmt.Println(from_fn, "removed and", cnt, "records updated in blockchain.new")
+		return
+	}
+
+	if fl_movedat != 0 {
+		if fl_to == fl_movedat {
+			fmt.Println("To index must be different than from index")
+			return
+		}
+		min_valid, max_valid := look_for_range(dat, uint32(fl_movedat))
+		if min_valid==-1 {
+			fmt.Println("Invalid from index")
+			return
+		}
+		to_fn := dat_fname(uint32(fl_to))
+		f, er := os.Open(to_fn)
+		f.Close()
+		if er == nil {
+			fmt.Println(fl_to, "exist - get rid of it first")
+			return
+		}
+
+		from_fn := dat_fname(uint32(fl_movedat))
+
+		var cnt int
+		for off := min_valid; off <= max_valid; off += 136 {
+			sl := dat[off : off+136]
+			sl[0] |= 0x20
+			binary.LittleEndian.PutUint32(sl[28:32], uint32(fl_to))
+			cnt++
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename(from_fn, to_fn)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		fmt.Println(from_fn, "renamed to ", to_fn, "and", cnt, "records updated in blockchain.new")
+		return
+	}
+
+	if fl_splitdat {
+		min_valid_off, max_valid_off := look_for_range(dat, uint32(fl_idx))
+		fmt.Println(dat_fname(uint32(fl_idx)), "is from record", min_valid_off/136,
+			"to", max_valid_off/136, "/ height", binary.LittleEndian.Uint32(dat[max_valid_off+36:]), "in blockchain.new")
+		return
+	}
 
 	if fl_invalid==0 || fl_invalid==1 || fl_trusted==0 || fl_trusted==1 {
 		var cnt uint64
@@ -424,45 +578,6 @@ func main() {
 			last_bl_height = height
 
 			exp_offset += uint64(binary.LittleEndian.Uint32(sl[48:52]))
-		}
-		return
-	}
-
-	if fl_fixdatidx {
-		var maxidx uint32
-		var lastfpos uint64
-		var totcnt int
-		fmt.Println("Scanning database for inconsistent data indexes...")
-		for off := 136; off < len(dat); off += 136 {
-			var datidx uint32
-			sl := dat[off : off+136]
-
-			height := binary.LittleEndian.Uint32(sl[36:40])
-			fpos := binary.LittleEndian.Uint64(sl[40:48])
-
-			if (sl[0]&0x20) != 0 {
-				datidx = binary.LittleEndian.Uint32(sl[28:32])
-			}
-
-			if datidx==0 && fpos < lastfpos {
-				maxidx++
-				println("Advance data index to", maxidx, "at block", height)
-			}
-
-			lastfpos = fpos
-
-			if maxidx != 0 && datidx != maxidx {
-				println("Fix data index to", maxidx, "at block", height)
-				binary.LittleEndian.PutUint32(sl[28:32], maxidx)
-				totcnt++
-			}
-		}
-		if totcnt > 0 {
-			ioutil.WriteFile("blockchain.tmp", dat, 0600)
-			os.Rename("blockchain.tmp", "blockchain.new")
-			fmt.Println("blockchain.new upated.", totcnt, "records fixed.")
-		} else {
-			println("All was good.")
 		}
 		return
 	}
@@ -757,7 +872,7 @@ func main() {
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
 			if bytes.Equal(sl.Hash(), bh.Hash[:]) {
-				f, er := os.Open(fl_dir+"blockchain.dat")
+				f, er := os.Open(fl_dir+dat_fname(sl.DatIdx()))
 				if er != nil {
 					println(er.Error())
 					return
