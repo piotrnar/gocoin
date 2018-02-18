@@ -73,6 +73,8 @@ var (
 
 	fl_datidx            int
 
+	fl_purgedatidx       bool
+
 	buf [5*1024*1024]byte // 5MB should be anough
 )
 
@@ -255,7 +257,7 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 
 	rec_from := new_sl(dat[min_valid_off:min_valid_off+136])
 	pos_from := rec_from.DPos()
-	println(".. child split", fname, "at offs", min_valid_off/136, "fpos:", pos_from, " maxlen:", maxlen)
+	//println(".. child split", fname, "at offs", min_valid_off/136, "fpos:", pos_from, " maxlen:", maxlen)
 
 	for off := min_valid_off; off <= max_valid_off; off += 136 {
 		rec := new_sl(dat[off:off+136])
@@ -267,7 +269,7 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 			if !split_the_data_file(parent_f, idx+1, maxlen, dat, off, max_valid_off) {
 				return false // abort spliting
 			}
-			println("truncate parent at", dpos)
+			//println("truncate parent at", dpos)
 			er := parent_f.Truncate(int64(dpos))
 			if er != nil {
 				println(er.Error())
@@ -296,9 +298,9 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 	}
 
 	for off := min_valid_off; off <= max_valid_off; off += 136 {
-		sl := dat[off:off+136]
-		sl[0] |= 0x20
-		binary.LittleEndian.PutUint32(sl[28:32], idx)
+		sl := new_sl(dat[off:off+136])
+		sl.SetDatIdx(idx)
+		sl.SetDPos(sl.DPos() - pos_from)
 	}
 	// flush blockchain.new to disk wicth each noe split for safety
 	ioutil.WriteFile("blockchain.tmp", dat, 0600)
@@ -341,6 +343,8 @@ func main() {
 	flag.UintVar(&fl_mb, "mb", 1024, "Split big data file into smaller parts of this size in MB (at least 8 MB)")
 
 	flag.IntVar(&fl_datidx, "datidx", -1, "Show records with the specific data file index")
+
+	flag.BoolVar(&fl_purgedatidx, "purgedatidx", false, "Remove reerence to dat files which are not on disk")
 
 	flag.Parse()
 
@@ -537,7 +541,7 @@ func main() {
 			return
 		}
 		defer f.Close()
-		fmt.Println("Range:", min_valid_off/136, "...", max_valid_off/136)
+		//fmt.Println("Range:", min_valid_off/136, "...", max_valid_off/136)
 
 		maxlen := uint64(fl_mb) << 20
 		for off := min_valid_off; off <= max_valid_off; off += 136 {
@@ -547,7 +551,7 @@ func main() {
 			}
 			dpos := rec.DPos()
 			if dpos + uint64(rec.DLen()) > maxlen {
-				println("root split from", dpos)
+				//println("root split from", dpos)
 				if !split_the_data_file(f, uint32(fl_splitdat)+1, maxlen, dat, off, max_valid_off) {
 					fmt.Println("Splitting failed")
 					return
@@ -571,6 +575,32 @@ func main() {
 		fmt.Println(fname, "is used by", (max_valid_off-min_valid_off)/136+1, "records. From", min_valid_off/136, "to", max_valid_off/136)
 		fmt.Println("Block height from", new_sl(dat[min_valid_off:]).Height(), "to", new_sl(dat[max_valid_off:]).Height())
 		return
+	}
+
+	if fl_purgedatidx {
+		cache := make(map[uint32]bool)
+		var cnt int
+		for off := 0; off <= len(dat); off += 136 {
+			rec := new_sl(dat[off:])
+			if rec.DLen()==0 || rec.DatIdx()==0xffffffff {
+				continue
+			}
+			idx := rec.DatIdx()
+			have_file, ok := cache[idx]
+			if !ok {
+				fi, _ := os.Stat(dat_fname(idx))
+				have_file = fi!=nil
+				cache[idx] = have_file
+			}
+			if !have_file {
+				rec.SetDatIdx(0xffffffff)
+				rec.SetDLen(0)
+				cnt++
+			}
+		}
+		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.Rename("blockchain.tmp", "blockchain.new")
+		fmt.Println(cnt, "records removed from blockchain.new")
 	}
 
 
@@ -840,25 +870,43 @@ func main() {
 	}
 
 	if fl_verify {
-		fdat, er := os.OpenFile(fl_dir+"blockchain.dat", os.O_RDWR, 0600)
-		if er != nil {
-			println(er.Error())
-			return
-		}
-
-		dat_file_size, _ := fdat.Seek(0, os.SEEK_END)
-
-		var prv_perc int64 = -1
+		var prv_perc int = -1
 		var totlen uint64
 		var done sync.WaitGroup
+		var dat_file_open uint32 = 0xffffffff
+		var fdat *os.File
+		var cnt int
+
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
 
-			dp := int64(sl.DPos())
 			le := int(sl.DLen())
+			if le == 0 {
+				continue
+			}
+
+			dp := int64(sl.DPos())
 			hei := uint(sl.Height())
 
-			perc := 1000 * dp / dat_file_size
+			idx := sl.DatIdx()
+			if idx == 0xffffffff {
+				continue
+			}
+
+			if idx != dat_file_open {
+				var er error
+				dat_file_open = idx
+				if fdat != nil {
+					fdat.Close()
+				}
+				fdat, er = os.OpenFile(fl_dir + dat_fname(idx), os.O_RDWR, 0600)
+				if er != nil {
+					//println(er.Error())
+					continue
+				}
+			}
+
+			perc := 1000 * off / len(dat)
 			if perc != prv_perc {
 				fmt.Printf("\rVerifying blocks data - %.1f%% @ %d / %dMB processed...",
 					float64(perc)/10.0, hei, totlen>>20)
@@ -870,20 +918,33 @@ func main() {
 			}
 
 			fdat.Seek(dp, os.SEEK_SET)
-			fdat.Read(buf[:le])
+			n, _ := fdat.Read(buf[:le])
+			if n != le {
+				fmt.Println("Block", hei, "not in dat file", idx, dp)
+				continue
+			}
 
 			blk := decomp_block(sl.Flags(), buf[:le])
+			if blk == nil {
+				fmt.Println("Block", hei, "decompression failed")
+				continue
+			}
 
 			done.Add(1)
 			go func(blk []byte, sl one_idx_rec, off int) {
 				verify_block(blk, sl, off)
 				done.Done()
+				cnt++
 			}(blk, sl, off)
 
 			totlen += uint64(len(blk))
 		}
 		done.Wait()  // wait for all the goroutines to complete
 		fdat.Close()
+		if fdat != nil {
+			fdat.Close()
+		}
+		fmt.Println("\nAll blocks done -", totlen>>20, "MB and", cnt, "blocks verified OK")
 		return
 	}
 
@@ -1054,7 +1115,7 @@ func main() {
 		fmt.Println("blockchain.new updated")
 	}
 
-	var minbh, maxbh uint32
+	var minbh, maxbh, valididx, validlen uint32
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
 	for off := 136; off < len(dat); off += 136 {
@@ -1065,6 +1126,14 @@ func main() {
 		} else if bh < minbh {
 			minbh = bh
 		}
+		if sl.DatIdx() != 0xffffffff {
+			valididx++
+		}
+		if sl.DLen() != 0 {
+			validlen++
+		}
 	}
 	fmt.Println("Block heights from", minbh, "to", maxbh)
+	fmt.Println("Number of records with valid length:", validlen)
+	fmt.Println("Number of records with valid data file:", valididx)
 }
