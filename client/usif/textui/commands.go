@@ -2,7 +2,6 @@ package textui
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/piotrnar/gocoin"
