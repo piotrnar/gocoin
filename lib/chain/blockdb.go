@@ -570,7 +570,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 		if (b[0]&BLOCK_INDEX) != 0 {
 			ob.datfileidx = binary.LittleEndian.Uint32(b[28:32])
 		}
-		if ob.datfileidx > db.maxdatfileidx {
+		if blen > 0 && ob.datfileidx != 0xffffffff && ob.datfileidx > db.maxdatfileidx {
 			db.maxdatfileidx = ob.datfileidx
 			db.maxdatfilepos = 0
 		}
