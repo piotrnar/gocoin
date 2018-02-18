@@ -68,9 +68,12 @@ var (
 	fl_mergedat          uint
 	fl_movedat           uint
 
-	fl_splitdat          bool
-	fl_idx               uint
+	fl_splitdat          int
 	fl_mb                uint
+
+	fl_datidx            int
+
+	buf [5*1024*1024]byte // 5MB should be anough
 )
 
 /********************************************************/
@@ -80,7 +83,7 @@ type one_idx_rec struct {
 }
 
 func new_sl(sl []byte) (r one_idx_rec) {
-	r.sl = sl
+	r.sl = sl[:136]
 	btc.ShaHash(sl[56:136], r.hash[:])
 	return
 }
@@ -107,6 +110,11 @@ func (r one_idx_rec) DLen() uint32 {
 
 func (r one_idx_rec) SetDLen(l uint32) {
 	binary.LittleEndian.PutUint32(r.sl[48:52], l)
+}
+
+func (r one_idx_rec) SetDatIdx(l uint32) {
+	r.sl[0] |= 0x20
+	binary.LittleEndian.PutUint32(r.sl[28:32], l)
 }
 
 func (r one_idx_rec) Hash() []byte {
@@ -222,7 +230,7 @@ func look_for_range(dat []byte, _idx uint32) (min_valid_off, max_valid_off int) 
 					min_valid_off = off
 				}
 				max_valid_off = off
-			} else if idx > _idx {
+			} else if min_valid_off != -1 {
 				break
 			}
 		}
@@ -236,6 +244,70 @@ func dat_fname(idx uint32) string {
 	}
 	return fmt.Sprintf("blockchain-%08x.dat", idx)
 }
+
+func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byte, min_valid_off, max_valid_off int) bool {
+	fname := dat_fname(idx)
+
+	if fi, _ := os.Stat(fname); fi != nil {
+		fmt.Println(fi.Name(), "exist - get rid of it first")
+		return false
+	}
+
+	rec_from := new_sl(dat[min_valid_off:min_valid_off+136])
+	pos_from := rec_from.DPos()
+	println(".. child split", fname, "at offs", min_valid_off/136, "fpos:", pos_from, " maxlen:", maxlen)
+
+	for off := min_valid_off; off <= max_valid_off; off += 136 {
+		rec := new_sl(dat[off:off+136])
+		if rec.DLen()==0 {
+			continue
+		}
+		dpos := rec.DPos()
+		if dpos - pos_from + uint64(rec.DLen()) > maxlen {
+			if !split_the_data_file(parent_f, idx+1, maxlen, dat, off, max_valid_off) {
+				return false // abort spliting
+			}
+			println("truncate parent at", dpos)
+			er := parent_f.Truncate(int64(dpos))
+			if er != nil {
+				println(er.Error())
+			}
+			max_valid_off = off
+			break // go to the next stage
+		}
+	}
+
+	// at this point parent_f should be truncated
+	f, er := os.Create(fname)
+	if er != nil {
+		fmt.Println(er.Error())
+		return false
+	}
+
+	parent_f.Seek(int64(pos_from), os.SEEK_SET)
+	for {
+		n, _ := parent_f.Read(buf[:])
+		if n > 0 {
+			f.Write(buf[:n])
+		}
+		if n != len(buf) {
+			break
+		}
+	}
+
+	for off := min_valid_off; off <= max_valid_off; off += 136 {
+		sl := dat[off:off+136]
+		sl[0] |= 0x20
+		binary.LittleEndian.PutUint32(sl[28:32], idx)
+	}
+	// flush blockchain.new to disk wicth each noe split for safety
+	ioutil.WriteFile("blockchain.tmp", dat, 0600)
+	os.Rename("blockchain.tmp", "blockchain.new")
+
+	return true
+}
+
+
 
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
@@ -265,9 +337,10 @@ func main() {
 	flag.UintVar(&fl_mergedat, "mergedat", 0, "Merge this data file index into the data file specified by -to <idx>")
 	flag.UintVar(&fl_movedat, "movedat", 0, "Rename this data file index into the data file specified by -to <idx>")
 
-	flag.BoolVar(&fl_splitdat, "splitdat", false, "Split big data file into smaller parts (use with -idx <idx> -mb <mb>")
-	flag.UintVar(&fl_mb, "mb", 1024, "Split big data file into smaller parts of this size in MB (at least 8)")
-	flag.UintVar(&fl_idx, "idx", 0, "Split big data file of this index")
+	flag.IntVar(&fl_splitdat, "splitdat", -1, "Split this data file into smaller parts (-mb <mb>)")
+	flag.UintVar(&fl_mb, "mb", 1024, "Split big data file into smaller parts of this size in MB (at least 8 MB)")
+
+	flag.IntVar(&fl_datidx, "datidx", -1, "Show records with the specific data file index")
 
 	flag.Parse()
 
@@ -279,8 +352,6 @@ func main() {
 	if fl_dir != "" && fl_dir[len(fl_dir)-1] != os.PathSeparator {
 		fl_dir += string(os.PathSeparator)
 	}
-
-	var buf [5*1024*1024]byte // 5MB should be anough
 
 	if fl_append != "" {
 		if fl_append[len(fl_append)-1] != os.PathSeparator {
@@ -424,15 +495,24 @@ func main() {
 			return
 		}
 		to_fn := dat_fname(uint32(fl_to))
-		f, er := os.Open(to_fn)
-		f.Close()
-		if er == nil {
-			fmt.Println(fl_to, "exist - get rid of it first")
+
+		if fi, _ := os.Stat(to_fn); fi != nil {
+			fmt.Println(fi.Name(), "exist - get rid of it first")
 			return
 		}
 
 		from_fn := dat_fname(uint32(fl_movedat))
 
+		// first discard all the records with the target index
+		for off := 0; off < len(dat); off += 136 {
+			rec := new_sl(dat[off : off+136])
+			if rec.DatIdx()==uint32(fl_to) {
+				rec.SetDLen(0)
+				rec.SetDatIdx(0xffffffff)
+			}
+		}
+
+		// now set the new index
 		var cnt int
 		for off := min_valid; off <= max_valid; off += 136 {
 			sl := dat[off : off+136]
@@ -447,12 +527,52 @@ func main() {
 		return
 	}
 
-	if fl_splitdat {
-		min_valid_off, max_valid_off := look_for_range(dat, uint32(fl_idx))
-		fmt.Println(dat_fname(uint32(fl_idx)), "is from record", min_valid_off/136,
-			"to", max_valid_off/136, "/ height", binary.LittleEndian.Uint32(dat[max_valid_off+36:]), "in blockchain.new")
+	if fl_splitdat >= 0 {
+		fname := dat_fname(uint32(fl_splitdat))
+		fmt.Println("Spliting file", fname, "into chunks - up to", fl_mb, "MB...")
+		min_valid_off, max_valid_off := look_for_range(dat, uint32(fl_splitdat))
+		f, er := os.OpenFile(fname, os.O_RDWR, 0600)
+		if er != nil {
+			fmt.Println(er.Error())
+			return
+		}
+		defer f.Close()
+		fmt.Println("Range:", min_valid_off/136, "...", max_valid_off/136)
+
+		maxlen := uint64(fl_mb) << 20
+		for off := min_valid_off; off <= max_valid_off; off += 136 {
+			rec := new_sl(dat[off:off+136])
+			if rec.DLen()==0 {
+				continue
+			}
+			dpos := rec.DPos()
+			if dpos + uint64(rec.DLen()) > maxlen {
+				println("root split from", dpos)
+				if !split_the_data_file(f, uint32(fl_splitdat)+1, maxlen, dat, off, max_valid_off) {
+					fmt.Println("Splitting failed")
+					return
+				}
+				f.Truncate(int64(dpos))
+				fmt.Println("Splitting succeeded")
+				return
+			}
+		}
+		fmt.Println("There was nothing to split")
 		return
 	}
+
+	if fl_datidx >= 0 {
+		fname := dat_fname(uint32(fl_datidx))
+		min_valid_off, max_valid_off := look_for_range(dat, uint32(fl_datidx))
+		if min_valid_off==-1 {
+			fmt.Println(fname, "is not used by any record")
+			return
+		}
+		fmt.Println(fname, "is used by", (max_valid_off-min_valid_off)/136+1, "records. From", min_valid_off/136, "to", max_valid_off/136)
+		fmt.Println("Block height from", new_sl(dat[min_valid_off:]).Height(), "to", new_sl(dat[max_valid_off:]).Height())
+		return
+	}
+
 
 	if fl_invalid==0 || fl_invalid==1 || fl_trusted==0 || fl_trusted==1 {
 		var cnt uint64
