@@ -138,6 +138,7 @@ func InitConfig() {
 	CFG.TXPool.ExpireMinPerKB = 1800
 	CFG.TXPool.ExpireMaxHours = 120
 	CFG.TXPool.MaxSizeMB = 100
+	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 0.0
