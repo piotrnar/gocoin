@@ -160,10 +160,6 @@ func RejectTx(id *btc.Uint256, size int, why byte) *OneTxRejected {
 
 // Handle incoming "tx" msg
 func (c *OneConnection) ParseTxNet(pl []byte) {
-	if uint32(len(pl)) > common.GetUint32(&common.CFG.TXPool.MaxTxSize) {
-		common.CountSafe("TxRejectedBig")
-		return
-	}
 	tx, le := btc.NewTx(pl)
 	if tx == nil {
 		c.DoS("TxRejectedBroken")
@@ -179,6 +175,15 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 	}
 
 	tx.SetHash(pl)
+
+	if tx.Weight() > 4 * int(common.GetUint32(&common.CFG.TXPool.MaxTxSize)) {
+		TxMutex.Lock()
+		RejectTx(btc.NewSha2Hash(pl), len(pl), TX_REJECTED_TOO_BIG)
+		TxMutex.Unlock()
+		common.CountSafe("TxRejectedBig")
+		return
+	}
+
 	NeedThisTx(&tx.Hash, func() {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl
@@ -494,7 +499,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if uint32(len(rec.Data)) > common.GetUint32(&common.CFG.TXRoute.MaxTxSize) {
+	if rec.Weight() > 4 * int(common.GetUint32(&common.CFG.TXRoute.MaxTxSize)) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false
