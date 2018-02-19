@@ -278,11 +278,8 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	for {
 		chlds := par.GetChildren()
 		for _, ch := range chlds {
-			// TODO: remove this check already_included
 			if _, ok := already_included[ch]; !ok {
 				result = append(result, ch)
-			} else {
-				println("Do not remove this TODO already_included")
 			}
 		}
 		if idx == len(result) {
