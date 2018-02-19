@@ -430,14 +430,6 @@ func main() {
 			fmt.Println("Invalid from index")
 			return
 		}
-		/*
-		min_valid_to, max_valid_to := look_for_range(dat, uint32(fl_to))
-		if min_valid_from==-1 {
-			fmt.Println("Invalid to index")
-			return
-		}
-		fmt.Println("Append records", min_valid_from/136, max_valid_from/136, "after", min_valid_to/136, max_valid_to/136)
-		*/
 
 		from_fn := dat_fname(uint32(fl_mergedat))
 		to_fn := dat_fname(uint32(fl_to))
