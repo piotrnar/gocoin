@@ -12,7 +12,7 @@ import (
 
 
 func (c *OneConnection) ProcessGetData(pl []byte) {
-	var notfound []byte
+	//var notfound []byte
 
 	//println(c.PeerAddr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
@@ -57,7 +57,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				c.SendRawMsg("block", bl)
 			} else {
 				//fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
-				notfound = append(notfound, h[:]...)
+				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
 			// transaction
@@ -73,7 +73,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 			} else {
 				TxMutex.Unlock()
-				notfound = append(notfound, h[:]...)
+				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
 			if !c.SendCmpctBlk(btc.NewUint256(h[4:])) {
@@ -84,17 +84,19 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			}
 		} else {
 			if typ>0 && typ<=3 /*3 is a filtered block(we dont support it)*/ {
-				notfound = append(notfound, h[:]...)
+				//notfound = append(notfound, h[:]...)
 			}
 		}
 	}
 
+	/*
 	if len(notfound)>0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, uint64(len(notfound)/36))
 		buf.Write(notfound)
 		c.SendRawMsg("notfound", buf.Bytes())
 	}
+	*/
 }
 
 
