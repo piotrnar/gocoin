@@ -48,7 +48,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 }
 
 func MempoolSave(force bool) {
-	if !common.CFG.TXPool.SaveOnDisk {
+	if !force && !common.CFG.TXPool.SaveOnDisk {
 		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
 		return
 	}
