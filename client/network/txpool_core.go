@@ -117,7 +117,7 @@ func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	} else if txo, _ := common.BlockChain.Unspent.UnspentGet(&btc.TxPrevOut{Hash: id.Hash}); txo != nil {
 		why_not = 4
 		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
-		common.CountSafe("TxMinedRejected")
+		common.CountSafe("TxAlreadyMined")
 	} else {
 		// why_not = 0
 		if cb != nil {
