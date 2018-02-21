@@ -387,7 +387,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		new_min_fee = totfees + (uint64(tx.Weight()) * common.MinFeePerKB() / 4000)
 
-		if !ntx.trusted && fee < new_min_fee {
+		if !ntx.trusted && fee <= new_min_fee {
 			RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
