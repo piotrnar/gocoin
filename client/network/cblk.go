@@ -258,7 +258,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 	offs += n
 	shortidx_idx = offs
-	shortids := make(map[uint64] *OneTxToSend, shortidscnt)
+	shortids := make(map[uint64] []byte, shortidscnt)
 	for i:=0; i<int(shortidscnt); i++ {
 		if len(pl[offs:offs+6])<6 {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error B2", hex.EncodeToString(pl))
@@ -327,8 +327,31 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Same short ID - abort")
 				return
 			}
-			shortids[sid] = v
+			shortids[sid] = v.Data
 			cnt_found++
+		}
+	}
+
+	for _, v := range TransactionsRejected {
+		if v.Wait4Input == nil {
+			continue
+		}
+		var hash2take *btc.Uint256
+		if c.Node.SendCmpctVer==2 {
+			hash2take = v.Wait4Input.tx.WTxID()
+		} else {
+			hash2take = &v.Wait4Input.tx.Hash
+		}
+		sid := siphash.Hash(col.K0, col.K1, hash2take.Hash[:]) & 0xffffffffffff
+		if ptr, ok := shortids[sid]; ok {
+			if ptr!=nil {
+				common.CountSafe("ShortIDSame")
+				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Same short ID - abort")
+				return
+			}
+			shortids[sid] = v.Wait4Input.tx.Raw
+			cnt_found++
+			common.CountSafe("CmpctBlkUseRejected")
 		}
 	}
 
@@ -350,9 +373,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 			default:
 				sid := ShortIDToU64(pl[shortidx_idx:shortidx_idx+6])
-				if t2s, ok := shortids[sid]; ok {
-					if t2s!=nil {
-						col.Txs[n] = t2s.Data
+				if ptr, ok := shortids[sid]; ok {
+					if ptr != nil {
+						col.Txs[n] = ptr
 					} else {
 						col.Txs[n] = sid
 						col.Sid2idx[sid] = n
