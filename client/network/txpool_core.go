@@ -276,11 +276,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					return
 				}
 
-				if _, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
-					TxMutex.Unlock()
-					common.CountSafe("TxRejectedParentRej")
-					return
+				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
+					if (rej.Reason!=TX_REJECTED_NO_TXOU || rej.Wait4Input==nil) {
+						RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_NO_TXOU)
+						TxMutex.Unlock()
+						common.CountSafe("TxRejectedParentRej")
+						return
+					}
+					common.CountSafe("TxWait4ParentsParent")
 				}
 
 				// In this case, let's "save" it for later...
