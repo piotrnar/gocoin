@@ -349,7 +349,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	//var new_spb, old_spb float64
 	var totweight int
-	var totfees, new_min_fee uint64
+	var totfees uint64
 
 	if len(rbf_tx_list) > 0 {
 		already_done := make(map[*OneTxToSend]bool)
@@ -385,9 +385,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totweight += ctx.Weight()
 			totfees += ctx.Fee
 		}
-		new_min_fee = totfees + (uint64(tx.Weight()) * common.MinFeePerKB() / 4000)
 
-		if !ntx.trusted && fee < new_min_fee {
+		if !ntx.trusted && totfees * uint64(tx.Weight()) >= fee * uint64(totweight) {
 			RejectTx(&ntx.tx.Hash, len(ntx.raw), TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
