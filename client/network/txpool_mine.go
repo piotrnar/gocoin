@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"time"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -58,7 +59,11 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 		rec.UnMarkChildrenForMem()
 		rec.Delete(false, 0)
 	}
-	if _, ok := TransactionsRejected[h.BIdx()]; ok {
+	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
+		if common.GetBool(&common.CFG.TXPool.Debug) {
+			println("Mined rejected", h.String(), " len:", mr.Size, " reason:", mr.Reason, " w4i:", mr.Wait4Input,
+				" seen", time.Now().Sub(mr.Time).String(), "ago")
+		}
 		common.CountSafe("TxMinedRejected")
 		deleteRejected(h.BIdx())
 	}
@@ -94,6 +99,9 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 
 // Removes all the block's tx from the mempool
 func BlockMined(bl *btc.Block) {
+	if common.GetBool(&common.CFG.TXPool.Debug) {
+		println("Mined block", bl.Height)
+	}
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int
 	TxMutex.Lock()
@@ -112,6 +120,9 @@ func BlockMined(bl *btc.Block) {
 		for _, wtg := range wtgs[:wtg_cnt] {
 			RetryWaitingForInput(wtg)
 		}
+	}
+	if common.GetBool(&common.CFG.TXPool.Debug) {
+		print("> ")
 	}
 
 	expireTxsNow = true
