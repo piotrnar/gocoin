@@ -70,6 +70,7 @@ var (
 			ExpireMaxHours uint
 			MaxSizeMB      uint
 			SaveOnDisk     bool
+			Debug          bool
 		}
 		TXRoute struct {
 			Enabled    bool // Global on/off swicth
