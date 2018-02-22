@@ -64,7 +64,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 			println("Mined rejected", h.String(), " len:", mr.Size, " reason:", mr.Reason, " w4i:", mr.Wait4Input,
 				" seen", time.Now().Sub(mr.Time).String(), "ago")
 		}
-		common.CountSafe("TxMinedRejected")
+		common.CountSafe(fmt.Sprint("TxMinedRej-", mr.Reason))
 		deleteRejected(h.BIdx())
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
