@@ -15,7 +15,7 @@ Client:
 	static const int64_t ORPHAN_TX_EXPIRE_INTERVAL = 5 * 60;
 
 ... better idea:
-	Combine it with the cache for (some of the) rejected transations (e.g. low fee, RBF replaced, RBF final, no utxo)
+	Combine it with the cache for (some of the) rejected transations (e.g. low fee, RBF replaced, RBF final, RBF 100+, no utxo)
 	All the txs that you see mined after, but which are in the rejected list
 
 * Force to create UTXO.db file once for awhile (when bootstraping)
