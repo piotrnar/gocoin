@@ -166,18 +166,18 @@ func LimitPoolSize(maxlen uint64) {
 		tx.Delete(true, TX_REJECTED_LOW_FEE)
 	}
 
-	newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
-	common.SetMinFeePerKB(newspkb)
+	if cnt := len(sorted) - idx; cnt > 0 {
+		newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
+		common.SetMinFeePerKB(newspkb)
 
-	cnt := len(sorted) - idx
-
-	/*fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
-	common.CounterMutex.Lock()
-	common.Counter["TxPoolSizeHigh"]++
-	common.Counter["TxPurgedSizCnt"] += uint64(cnt)
-	common.Counter["TxPurgedSizBts"] += old_size - TransactionsToSendSize
-	common.CounterMutex.Unlock()
+		/*fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
+			old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
+		common.CounterMutex.Lock()
+		common.Counter["TxPoolSizeHigh"]++
+		common.Counter["TxPurgedSizCnt"] += uint64(cnt)
+		common.Counter["TxPurgedSizBts"] += old_size - TransactionsToSendSize
+		common.CounterMutex.Unlock()
+	}
 }
 
 // Verifies Mempool for consistency
