@@ -67,7 +67,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				tx.Lastsent = time.Now()
 				TxMutex.Unlock()
 				if tx.SegWit==nil || typ==MSG_WITNESS_TX {
-					c.SendRawMsg("tx", tx.Data)
+					c.SendRawMsg("tx", tx.Raw)
 				} else {
 					c.SendRawMsg("tx", tx.Serialize())
 				}

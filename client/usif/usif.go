@@ -249,7 +249,7 @@ func MemoryPoolFees() (res string) {
 	for cnt := 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
 		newlen := totlen + uint64(v.VSize())
-		rawlen += uint64(len(v.Data))
+		rawlen += uint64(len(v.Raw))
 
 		if cnt == 0 || cnt+1 == len(sorted) || (newlen/100e3) != (totlen/100e3) {
 			spb := float64(v.Fee) / float64(v.VSize())

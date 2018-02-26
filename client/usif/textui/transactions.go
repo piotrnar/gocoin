@@ -116,7 +116,7 @@ func save_tx(par string) {
 	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
 		fn := tx.Hash.String() + ".tx"
-		ioutil.WriteFile(fn, tx.Data, 0600)
+		ioutil.WriteFile(fn, tx.Raw, 0600)
 		fmt.Println("Saved to", fn)
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
@@ -139,7 +139,7 @@ func list_txs(par string) {
 	var totlen uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
-		totlen += uint64(len(v.Data))
+		totlen += uint64(len(v.Raw))
 
 		if limitbytes != 0 && totlen > limitbytes {
 			break
@@ -161,9 +161,9 @@ func list_txs(par string) {
 				time.Now().Sub(v.Lastsent).String())
 		}
 
-		spb := float64(v.Fee) / float64(len(v.Data))
+		spb := float64(v.Fee) / float64(len(v.Raw))
 
-		fmt.Println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Data), spb, snt, oe))
+		fmt.Println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Raw), spb, snt, oe))
 
 	}
 }

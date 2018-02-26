@@ -115,11 +115,11 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 			continue
 		}
 
-		if totlen+len(v.Data) > 1e6 {
+		if totlen+len(v.Raw) > 1e6 {
 			//println("Too many txs - limit to 999000 bytes")
 			return
 		}
-		totlen += len(v.Data)
+		totlen += len(v.Raw)
 
 		if sigops + v.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
 			//println("Too many sigops - limit to 999000 bytes")
@@ -184,7 +184,7 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 	res = make([]OneTransaction, len(sorted))
 	for cnt=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
-		res[cnt].Data = hex.EncodeToString(v.Data)
+		res[cnt].Data = hex.EncodeToString(v.Raw)
 		res[cnt].Hash = v.Tx.Hash.String()
 		res[cnt].Fee = v.Fee
 		res[cnt].Sigops = v.SigopsCost

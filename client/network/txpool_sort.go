@@ -469,7 +469,7 @@ func ExpireTxs() {
 		LimitPoolSize(maxpoolsize)
 	} else {
 		for _, v := range TransactionsToSend {
-			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Data)))) { // Do not expire own txs
+			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Raw)))) { // Do not expire own txs
 				v.Delete(true, 0)
 				if v.Blocked == 0 {
 					cnt1a++

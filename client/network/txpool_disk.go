@@ -30,8 +30,8 @@ func bool2byte(v bool) byte {
 }
 
 func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
-	btc.WriteVlen(wr, uint64(len(t2s.Data)))
-	wr.Write(t2s.Data)
+	btc.WriteVlen(wr, uint64(len(t2s.Raw)))
+	wr.Write(t2s.Raw)
 
 	btc.WriteVlen(wr, uint64(len(t2s.Spent)))
 	binary.Write(wr, binary.LittleEndian, t2s.Spent[:])
@@ -117,19 +117,19 @@ func MempoolLoad2() bool {
 		}
 
 		t2s = new(OneTxToSend)
-		t2s.Data = make([]byte, int(le))
+		raw := make([]byte, int(le))
 
-		er = btc.ReadAll(rd, t2s.Data)
+		er = btc.ReadAll(rd, raw)
 		if er != nil {
 			goto fatal_error
 		}
 
-		t2s.Tx, i = btc.NewTx(t2s.Data)
-		if t2s.Tx == nil || i != len(t2s.Data) {
+		t2s.Tx, i = btc.NewTx(raw)
+		if t2s.Tx == nil || i != len(raw) {
 			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME2, " at idx", len(TransactionsToSend)))
 			goto fatal_error
 		}
-		t2s.Tx.SetHash(t2s.Data)
+		t2s.Tx.SetHash(raw)
 
 		le, er = btc.ReadVLen(rd)
 		if er != nil {
@@ -187,7 +187,7 @@ func MempoolLoad2() bool {
 		t2s.Tx.Fee = t2s.Fee
 
 		TransactionsToSend[t2s.Hash.BIdx()] = t2s
-		TransactionsToSendSize += uint64(len(t2s.Data))
+		TransactionsToSendSize += uint64(len(t2s.Raw))
 		TransactionsToSendWeight += uint64(t2s.Weight())
 	}
 
@@ -294,19 +294,19 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		}
 
 		ntx = new(TxRcvd)
-		ntx.raw = make([]byte, int(le))
+		raw := make([]byte, int(le))
 
-		er = btc.ReadAll(rd, ntx.raw)
+		er = btc.ReadAll(rd, raw)
 		if er != nil {
 			goto fatal_error
 		}
 
-		ntx.tx, i = btc.NewTx(ntx.raw)
-		if ntx.tx == nil || i != len(ntx.raw) {
+		ntx.Tx, i = btc.NewTx(raw)
+		if ntx.Tx == nil || i != len(raw) {
 			er = errors.New(fmt.Sprint("Error parsing tx from ", fname, " at idx", idx))
 			goto fatal_error
 		}
-		ntx.tx.SetHash(ntx.raw)
+		ntx.SetHash(raw)
 
 		le, er = btc.ReadVLen(rd)
 		if er != nil {
@@ -334,7 +334,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		}
 
 		// submit tx if we dont have it yet...
-		if _, present := TransactionsToSend[ntx.tx.Hash.BIdx()]; !present {
+		if _, present := TransactionsToSend[ntx.Hash.BIdx()]; !present {
 			cnt2++
 			if HandleNetTx(ntx, true) {
 				cnt1++

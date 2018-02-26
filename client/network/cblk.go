@@ -327,7 +327,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Same short ID - abort")
 				return
 			}
-			shortids[sid] = v.Data
+			shortids[sid] = v.Raw
 			cnt_found++
 		}
 	}
@@ -338,9 +338,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		var hash2take *btc.Uint256
 		if c.Node.SendCmpctVer==2 {
-			hash2take = v.Wait4Input.tx.WTxID()
+			hash2take = v.Wait4Input.WTxID()
 		} else {
-			hash2take = &v.Wait4Input.tx.Hash
+			hash2take = &v.Wait4Input.Hash
 		}
 		sid := siphash.Hash(col.K0, col.K1, hash2take.Hash[:]) & 0xffffffffffff
 		if ptr, ok := shortids[sid]; ok {
@@ -349,7 +349,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "Same short ID - abort")
 				return
 			}
-			shortids[sid] = v.Wait4Input.tx.Raw
+			shortids[sid] = v.Wait4Input.Raw
 			cnt_found++
 			common.CountSafe("CmpctBlkUseRejected")
 		}

@@ -148,7 +148,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
 	fmt.Fprint(w, "<version>", v.Tx.Version, "</version>")
 	fmt.Fprint(w, "<time>", v.Firstseen.Unix(), "</time>")
-	if int(v.Size)!=len(v.Data) {
+	if int(v.Size)!=len(v.Raw) {
 		panic("TX size does not match data length")
 	}
 
@@ -554,7 +554,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 	for cnt:=0; cnt<len(sorted); cnt++ {
 		v := sorted[cnt]
 		newtotweight := totweight + uint64(v.Weight())
-		reallen += uint64(len(v.Data))
+		reallen += uint64(len(v.Raw))
 		totfee += v.Fee
 
 		if cnt==0 || cnt+1==len(sorted) || (newtotweight/division)!=(totweight/division) {
