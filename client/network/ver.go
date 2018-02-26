@@ -44,7 +44,9 @@ func (c *OneConnection) SendVersion() {
 	c.SendRawMsg("version", b.Bytes())
 }
 
-
+func (c *OneConnection) IsGocoin() bool {
+	return strings.HasPrefix(c.Node.Agent, "/Gocoin:")
+}
 
 func (c *OneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
@@ -100,7 +102,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					c.Node.DoNotRelayTxs = true
 				}
 			}
-			if strings.HasPrefix(c.Node.Agent, "/Gocoin:") {
+			if c.IsGocoin() {
 				c.X.IsSpecial = true
 			}
 		}

@@ -485,6 +485,7 @@ func (c *OneConnection) SendAuth() {
 }
 
 func (c *OneConnection) AuthRvcd(pl []byte) {
+	fmt.Println("Got auth message from", c.ConnID)
 	rnd := make([]byte, 32)
 	copy(rnd, nonce[:])
 	for _, pub := range AuthPubkeys {
@@ -607,7 +608,7 @@ func (c *OneConnection) Run() {
 			c.PeerAddr.Services = c.Node.Services
 			c.PeerAddr.Save()
 
-			if c.PeerAddr.Friend {
+			if c.IsGocoin() {
 				c.SendAuth()
 			}
 
@@ -720,6 +721,9 @@ func (c *OneConnection) Run() {
 
 			case "getmp":
 				c.ProcessGetMP(cmd.pl)
+
+			case "auth":
+				c.AuthRvcd(cmd.pl)
 				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			default:
