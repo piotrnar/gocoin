@@ -178,6 +178,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		if !has_this_one[k] {
 			c.SendRawMsg("tx", v.Raw)
 			data_sent_so_far += 24 + len(v.Raw)
+			cnt2++
 		}
 	}
 	TxMutex.Unlock()
