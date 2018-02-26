@@ -334,7 +334,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		}
 
 		// submit tx if we dont have it yet...
-		if _, present := TransactionsToSend[ntx.Hash.BIdx()]; !present {
+		if NeedThisTx(&ntx.Hash, nil) {
 			cnt2++
 			if HandleNetTx(ntx, true) {
 				cnt1++
