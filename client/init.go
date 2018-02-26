@@ -4,6 +4,8 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"io/ioutil"
+	"crypto/rand"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -32,6 +34,15 @@ func host_init() {
 	// Lock the folder
 	os.MkdirAll(common.GocoinHomeDir, 0770)
 	sys.LockDatabaseDir(common.GocoinHomeDir)
+
+	common.SecretKey, _ = ioutil.ReadFile(common.GocoinHomeDir + "authkey")
+	if len(common.SecretKey) != 32 {
+		common.SecretKey = make([]byte, 32)
+		rand.Read(common.SecretKey)
+		ioutil.WriteFile(common.GocoinHomeDir + "authkey", common.SecretKey, 0600)
+	}
+	common.PublicKey = btc.PublicFromPrivate(common.SecretKey, true)
+	fmt.Println("Public auth key:", btc.Encodeb58(common.PublicKey))
 
 	__exit := make(chan bool)
 	__done := make(chan bool)

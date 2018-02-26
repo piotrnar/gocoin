@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"encoding/hex"
 	"encoding/binary"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
@@ -276,6 +277,8 @@ func tcp_server() {
 
 var NextConnectFriends time.Time = time.Now()
 
+var AuthPubkeys [][]byte
+
 func ConnectFriends() {
 	f, _ := os.Open(common.GocoinHomeDir + "friends.txt")
 	if f == nil {
@@ -283,6 +286,7 @@ func ConnectFriends() {
 	}
 	defer f.Close()
 
+	AuthPubkeys = nil
 	friend_ids := make(map[uint64] bool)
 
 	rd := bufio.NewReader(f)
@@ -309,6 +313,12 @@ func ConnectFriends() {
 					curr.Mutex.Unlock()
 				}
 				friend_ids[ad.UniqID()] = true
+				continue
+			}
+			pk := btc.Decodeb58(strings.Trim(string(ln), " \r\n\t"))
+			if len(pk)==33 {
+				AuthPubkeys = append(AuthPubkeys, pk)
+				println("Using pubkey:", hex.EncodeToString(pk))
 			}
 		}
 	}
@@ -460,6 +470,31 @@ func (c *OneConnection) SendFeeFilter() {
 	c.SendRawMsg("feefilter", pl[:])
 }
 
+func (c *OneConnection) SendAuth() {
+	rnd := make([]byte, 32)
+	copy(rnd, c.Node.Nonce[:])
+	r, s, er := btc.EcdsaSign(common.SecretKey, rnd)
+	if er != nil {
+		println(er.Error())
+		return
+	}
+	var sig btc.Signature
+	sig.R.Set(r)
+	sig.S.Set(s)
+	c.SendRawMsg("auth", sig.Bytes())
+}
+
+func (c *OneConnection) AuthRvcd(pl []byte) {
+	rnd := make([]byte, 32)
+	copy(rnd, nonce[:])
+	for _, pub := range AuthPubkeys {
+		if btc.EcdsaVerify(pub, pl, rnd) {
+			c.X.Authorized = true
+			return
+		}
+	}
+}
+
 // Process that handles communication with a single peer
 func (c *OneConnection) Run() {
 	c.writing_thread_push = make(chan bool, 1)
@@ -571,6 +606,11 @@ func (c *OneConnection) Run() {
 			}
 			c.PeerAddr.Services = c.Node.Services
 			c.PeerAddr.Save()
+
+			if c.PeerAddr.Friend {
+				c.SendAuth()
+			}
+
 			if common.IsListenTCP() {
 				c.SendOwnAddr()
 			}
