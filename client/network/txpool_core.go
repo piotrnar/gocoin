@@ -421,7 +421,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if ver_err_cnt > 0 {
 			RejectTx(ntx.Tx, TX_REJECTED_SCRIPT_FAIL)
 			if common.GetBool(&common.CFG.TXPool.Debug) {
-				fmt.Println("Tx Script fail for id", ntx.Hash.String())
+				fmt.Println(ntx.conn.PeerAddr.Ip(), ntx.conn.Node.Agent, "- Tx Script fail for id", ntx.Hash.String())
 				fmt.Println(hex.EncodeToString(tx.Raw))
 				fmt.Print("> ")
 			}
