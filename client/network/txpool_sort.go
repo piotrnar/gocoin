@@ -10,6 +10,7 @@ import (
 
 var (
 	expireTxsNow bool = true
+	lastTxsExpire time.Time
 )
 
 // Return txs sorted by SPB, but with parents first
@@ -112,14 +113,6 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
-// Used by LimitPoolSize
-var (
-	poolenabled   bool
-	expireperbyte float64
-	maxexpiretime time.Duration
-	lastTxsExpire time.Time
-)
-
 // This must be called with TxMutex locked
 func LimitPoolSize(maxlen uint64) {
 	ticklen := maxlen >> 5 // 1/32th of the max size = X
@@ -179,6 +172,77 @@ func LimitPoolSize(maxlen uint64) {
 		common.CounterMutex.Unlock()
 	}
 }
+
+
+func GetSortedRejected() (sorted []*OneTxRejected) {
+	var idx int
+	sorted = make([]*OneTxRejected, len(TransactionsRejected))
+	for _, t := range TransactionsRejected {
+		sorted[idx] = t
+		idx++
+	}
+	var now = time.Now()
+	sort.Slice(sorted, func(i, j int) bool {
+		return int64(sorted[i].Size) * int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size) * int64(now.Sub(sorted[j].Time))
+	})
+	println("rejected sorted:", sorted[0].Size, now.Sub(sorted[0].Time), "...", sorted[idx-1].Size, now.Sub(sorted[idx-1].Time))
+	return
+}
+
+
+// This must be called with TxMutex locked
+func LimitRejectedSize() {
+	//ticklen := maxlen >> 5 // 1/32th of the max size = X
+	var idx int
+	var sorted []*OneTxRejected
+
+	old_cnt := len(TransactionsRejected)
+	old_size := TransactionsRejectedSize
+
+	maxlen, maxcnt := common.RejectedTxsLimits()
+
+	if maxcnt > 0 && len(TransactionsRejected) > maxcnt {
+		common.CountSafe("TxRejectedCntHigh")
+		sorted = GetSortedRejected()
+		maxcnt -= maxcnt >> 5
+		for idx = maxcnt; idx < len(sorted); idx++ {
+			deleteRejected(sorted[idx].Hash.BIdx())
+		}
+		sorted = sorted[:maxcnt]
+	}
+
+	if maxlen > 0 && TransactionsRejectedSize > maxlen {
+		common.CountSafe("TxRejectedBtsHigh")
+		if sorted == nil {
+			sorted = GetSortedRejected()
+		}
+		maxlen -= maxlen >> 5
+		for idx = len(sorted)-1; idx >= 0; idx-- {
+			deleteRejected(sorted[idx].Hash.BIdx())
+			if TransactionsRejectedSize <= maxlen {
+				break
+			}
+		}
+	}
+
+	if old_cnt > len(TransactionsRejected) {
+		common.CounterMutex.Lock()
+		common.Counter["TxRejectedSizCnt"] += uint64(old_cnt - len(TransactionsRejected))
+		common.Counter["TxRejectedSizBts"] += old_size - TransactionsRejectedSize
+		println("Removed", uint64(old_cnt - len(TransactionsRejected)), "txs and", old_size - TransactionsRejectedSize,
+			"bytes from the rejected poool")
+		common.CounterMutex.Unlock()
+	}
+/*
+	TransactionsRejected
+	if maxlen > 0 && TransactionsRejectedSize > maxlen {
+		// build the list of all rejected txs with data and sort them by time*size
+		sorted := make(, len())
+		for _, v TransactionsRejected
+	}
+*/
+}
+
 
 // Verifies Mempool for consistency
 func MempoolCheck() (dupa bool) {
@@ -443,23 +507,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	return
 }
 
-func expireTime(size int) (t time.Time) {
-	exp := time.Duration(float64(size) * expireperbyte)
-	if exp > maxexpiretime {
-		exp = maxexpiretime
-	}
-	return lastTxsExpire.Add(-exp)
-}
-
 func ExpireTxs() {
-	var cnt1a, cnt1b, cnt2 uint64
-
-	common.LockCfg()
-	poolenabled = common.CFG.TXPool.Enabled
-	expireperbyte = common.ExpirePerByte
-	maxexpiretime = common.MaxExpireTime
-	common.UnlockCfg()
-
 	lastTxsExpire = time.Now()
 	expireTxsNow = false
 
@@ -467,37 +515,11 @@ func ExpireTxs() {
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		LimitPoolSize(maxpoolsize)
-	} else {
-		for _, v := range TransactionsToSend {
-			if v.Own == 0 && (!poolenabled || v.Firstseen.Before(expireTime(len(v.Raw)))) { // Do not expire own txs
-				v.Delete(true, 0)
-				if v.Blocked == 0 {
-					cnt1a++
-				} else {
-					cnt1b++
-				}
-			}
-		}
 	}
 
-	for k, v := range TransactionsRejected {
-		if !poolenabled || v.Time.Before(expireTime(int(v.Size))) {
-			deleteRejected(k)
-			cnt2++
-		}
-	}
+	LimitRejectedSize()
+
 	TxMutex.Unlock()
 
-	common.CounterMutex.Lock()
-	common.Counter["TxPurgedTicks"]++
-	if cnt1a > 0 {
-		common.Counter["TxPurgedOK"] += cnt1a
-	}
-	if cnt1b > 0 {
-		common.Counter["TxPurgedBlocked"] += cnt1b
-	}
-	if cnt2 > 0 {
-		common.Counter["TxPurgedRejected"] += cnt2
-	}
-	common.CounterMutex.Unlock()
+	common.CountSafe("TxPurgedTicks")
 }

@@ -177,22 +177,22 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> Maximum size of a transaction that would be accepted to the memory pool.</td>
 </tr>
 <tr class="even">
-<td class="cfg_name"> TXPool.ExpireMinPerKB</td>
-<td class="cfg_type"> uint</td>
-<td> 1800</td>
-<td class="cfg_info"> If something is 1KB big, it expires after this many minutes. Otherwise expiration time will be proportionally different.</td>
-</tr>
-<tr class="even">
-<td class="cfg_name"> TXPool.ExpireMaxHours</td>
-<td class="cfg_type"> uint</td>
-<td> 120</td>
-<td class="cfg_info"> Expire from memory pool any transaction that stays unconfirmed for so may hours.</td>
-</tr>
-<tr class="even">
 <td class="cfg_name"> TXPool.MaxSizeMB</td>
 <td class="cfg_type"> uint</td>
 <td> 100</td>
-<td class="cfg_info"> If not zero, the node will keep the mempool size below this value (don't expire).</td>
+<td class="cfg_info"> If not zero, the node will keep the mempool size below this value.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> TXPool.MaxRejectMB</td>
+<td class="cfg_type"> uint</td>
+<td> 25</td>
+<td class="cfg_info"> If not zero, the node will keep the cache of rejected transaction below this value.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> TXPool.MaxRejectCnt</td>
+<td class="cfg_type"> uint</td>
+<td> 5000</td>
+<td class="cfg_info"> If not zero, the node will not keep more than this many records of rejected transaction.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.SaveOnDisk</td>

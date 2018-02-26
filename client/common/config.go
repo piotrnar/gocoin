@@ -64,11 +64,9 @@ var (
 			AllowMemInputs bool
 			FeePerByte     float64
 			MaxTxSize      uint32
-			// If something is 1KB big, it expires after this many minutes.
-			// Otherwise expiration time will be proportionally different.
-			ExpireMinPerKB uint
-			ExpireMaxHours uint
 			MaxSizeMB      uint
+			MaxRejectMB    uint
+			MaxRejectCnt   uint
 			SaveOnDisk     bool
 			Debug          bool
 		}
@@ -136,9 +134,9 @@ func InitConfig() {
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
-	CFG.TXPool.ExpireMinPerKB = 1800
-	CFG.TXPool.ExpireMaxHours = 120
 	CFG.TXPool.MaxSizeMB = 100
+	CFG.TXPool.MaxRejectMB = 25
+	CFG.TXPool.MaxRejectCnt = 5000
 	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true
@@ -234,8 +232,6 @@ func Reset() {
 	SetUploadLimit(uint64(CFG.Net.MaxUpKBps) << 10)
 	SetDownloadLimit(uint64(CFG.Net.MaxDownKBps) << 10)
 	debug.SetGCPercent(CFG.Memory.GCPercTrshold)
-	MaxExpireTime = time.Duration(CFG.TXPool.ExpireMaxHours) * time.Hour
-	ExpirePerByte = float64(CFG.TXPool.ExpireMinPerKB) * float64(time.Minute) / 1024
 	if AllBalMinVal() != CFG.AllBalances.MinValue {
 		fmt.Println("In order to apply the new value of AllBalMinVal, restart the node or do 'wallet off' and 'wallet on'")
 	}
@@ -244,6 +240,7 @@ func Reset() {
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
 
 	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB) * 1e6)
+	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB) * 1e6)
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte * 1000))
@@ -430,6 +427,14 @@ func IsListenTCP() (res bool) {
 
 func MaxMempoolSize() uint64 {
 	return atomic.LoadUint64(&maxMempoolSizeBytes)
+}
+
+func RejectedTxsLimits() (size uint64, cnt int) {
+	mutex_cfg.Lock()
+	size = maxRejectedSizeBytes
+	cnt = int(CFG.TXPool.MaxRejectCnt)
+	mutex_cfg.Unlock()
+	return
 }
 
 func TempBlocksDir() string {

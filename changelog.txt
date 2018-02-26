@@ -27,7 +27,8 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Support for automatic purging of old blocks from the disk - config via "Memory.MaxDataFileMB"  and "Memory.DataFilesKeep"
 * Tools/bdb - the tool can now work with the new blocks database format (e.g. can split "blockchain.dat" into smaller chunks)
 * Client: Do not sent "notfound" mesages, as core does not
-* Client: "cmpctblock" handler also takes data from TransactionsRejected (Wait4Input field)
+* Client: "cmpctblock" handler also takes data from TransactionsRejected
+* Client: Changes in mempool around how rejected transactions are expired and when their raw data is kept
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()

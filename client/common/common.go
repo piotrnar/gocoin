@@ -30,9 +30,6 @@ var (
 	StartTime time.Time
 	MaxPeersNeeded int
 
-	MaxExpireTime time.Duration
-	ExpirePerByte float64
-
 	CounterMutex sync.Mutex
 	Counter map[string] uint64 = make(map[string]uint64)
 
@@ -54,7 +51,7 @@ var (
 	ListenTCP bool
 
 	minFeePerKB, routeMinFeePerKB, minminFeePerKB uint64
-	maxMempoolSizeBytes uint64
+	maxMempoolSizeBytes, maxRejectedSizeBytes uint64
 
 	KillChan chan os.Signal = make(chan os.Signal)
 )

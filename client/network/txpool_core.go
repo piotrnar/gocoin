@@ -47,7 +47,7 @@ var (
 
 	// Transactions that we downloaded, but rejected:
 	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
-	TransactionsRejectedSize uint64
+	TransactionsRejectedSize uint64 // only include those that have *Tx pointer set
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
 	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
@@ -109,14 +109,6 @@ func ReasonToString(reason byte) string {
 	return fmt.Sprint("UNKNOWN_", reason)
 }
 
-func (pk *OneTxsPackage) SPW() float64 {
-	return float64(pk.Fee) / float64(pk.Weight)
-}
-
-func (pk *OneTxsPackage) SPB() float64 {
-	return pk.SPW() * 4.0
-}
-
 func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	return NeedThisTxExt(id, cb) == 0
 }
@@ -173,14 +165,19 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	if why >= 200 {
 		rec.Tx = tx
 		rec.Id = &tx.Hash
+		TransactionsRejectedSize += uint64(rec.Size)
 	} else {
 		rec.Id = new(btc.Uint256)
 		rec.Id.Hash = tx.Hash.Hash
 	}
 
-	TransactionsRejected[tx.Hash.BIdx()] = rec
-	TransactionsRejectedSize += uint64(rec.Size)
-	return rec
+	bidx := tx.Hash.BIdx()
+	TransactionsRejected[bidx] = rec
+
+	LimitRejectedSize()
+
+	// tru to re-fetch the record from the map, in case it has been removed by LimitRejectedSize()
+	return TransactionsRejected[bidx]
 }
 
 // Handle incoming "tx" msg
@@ -619,7 +616,9 @@ func deleteRejected(bidx BIDX) {
 				delete(WaitingForInputs, tr.Waiting4.BIdx())
 			}
 		}
-		TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
+		if tr.Tx != nil {
+			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
+		}
 		delete(TransactionsRejected, bidx)
 	}
 }
