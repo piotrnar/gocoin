@@ -274,6 +274,15 @@ function net_drop(id) {
 	return false
 }
 
+function net_getmp(id) {
+	if (!confirm("Request all missing transactions from Connection ID "+id)) {
+		return
+	}
+	var aj = ajax()
+	aj.open("GET", 'cfg?getmp='+id+'&sid='+sid, true)
+	aj.send(null)
+}
+
 function refreshconnections(force) {
 	if (!force && stat_freeze.checked) {
 		return
@@ -451,9 +460,11 @@ function refreshconnections(force) {
 
 				// drop conn
 				td = row.insertCell(-1)
-				td.style.width = '20px'
-				td.style.textAlign = 'right'
+				td.className = "r nw"
 				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')">'
+				if (cs[i].IsSpecial) {
+					td.innerHTML += ' <img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')">'
+				}
 
 				onc(row, id)
 				row.title = "Connection Details"

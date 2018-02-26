@@ -235,29 +235,8 @@ func get_mempool(par string) {
 		return
 	}
 
-	var c *network.OneConnection
-
-	network.Mutex_net.Lock()
-
-	for _, v := range network.OpenCons {
-		if uint32(conid)==v.ConnID {
-			c = v
-			break
-		}
-	}
-	network.Mutex_net.Unlock()
-
-	if c == nil {
-		return
-	}
-
-	fmt.Println("Getting mempool from connection ID", c.ConnID, "...")
-	select {
-		case c.GetMP <- true:
-
-		default:
-			fmt.Println("Channel full")
-	}
+	fmt.Println("Getting mempool from connection ID", conid, "...")
+	network.GetMP(uint32(conid))
 }
 
 

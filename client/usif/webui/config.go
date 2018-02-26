@@ -90,6 +90,13 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(r.Form["getmp"])>0 {
+		if conid, e := strconv.ParseUint(r.Form["getmp"][0], 10, 32); e==nil {
+			network.GetMP(uint32(conid))
+		}
+		return
+	}
+
 	if len(r.Form["conn"]) > 0 {
 		ad, er := peersdb.NewAddrFromString(r.Form["conn"][0], false)
 		if er != nil {

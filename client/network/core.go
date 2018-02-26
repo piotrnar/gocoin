@@ -655,6 +655,23 @@ func DropPeer(conid uint32) {
 }
 
 
+func GetMP(conid uint32) {
+	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+	for _, v := range OpenCons {
+		if uint32(conid)==v.ConnID {
+			select {
+				case v.GetMP <- true:
+				default:
+					fmt.Println(conid, "GetMP channel full")
+			}
+			return
+		}
+	}
+	fmt.Println("GetMP: There is no such an active connection", conid)
+}
+
+
 func init() {
 	rand.Read(nonce[:])
 }
