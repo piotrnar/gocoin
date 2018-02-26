@@ -60,11 +60,14 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 		rec.Delete(false, 0)
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		if common.GetBool(&common.CFG.TXPool.Debug) {
-			println("Mined rejected", h.String(), " len:", mr.Size, " reason:", mr.Reason, " w4i:", mr.Wait4Input,
-				" seen", time.Now().Sub(mr.Time).String(), "ago")
+		if mr.Tx != nil {
+			common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Reason))
+			if common.GetBool(&common.CFG.TXPool.Debug) {
+				println("Unstored mined rejected", h.String(), " len:", mr.Size, " reason:", mr.Reason, " seen", time.Now().Sub(mr.Time).String(), "ago")
+			}
+		} else {
+			common.CountSafe(fmt.Sprint("TxMinedRNO-", mr.Reason))
 		}
-		common.CountSafe(fmt.Sprint("TxMinedRej-", mr.Reason))
 		deleteRejected(h.BIdx())
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
