@@ -171,7 +171,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
 	fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
 	fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
-	fmt.Fprint(w, "<blocked>", v.Blocked, "</blocked>")
+	fmt.Fprint(w, "<blocked>", network.ReasonToString(v.Blocked), "</blocked>")
 	fmt.Fprint(w, "<final>", v.Final, "</final>")
 	fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
 	w.Write([]byte("</tx>"))
@@ -392,7 +392,7 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 		fmt.Fprint(w, "<size>", v.Size, "</size>")
-		fmt.Fprint(w, "<reason>", v.Reason, "</reason>")
+		fmt.Fprint(w, "<reason>", network.ReasonToString(v.Reason), "</reason>")
 		w.Write([]byte("</tx>"))
 	}
 	network.TxMutex.Unlock()
