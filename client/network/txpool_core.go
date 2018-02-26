@@ -2,7 +2,6 @@ package network
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -21,13 +20,12 @@ const (
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
 
-	TX_REJECTED_DOUBLE_SPEND = 201
-	TX_REJECTED_NO_TXOU      = 202
-	//TX_REJECTED_DUST         = 203 - I made this one deprecated as "dust" was a stupid concept in the first place
-	TX_REJECTED_OVERSPEND   = 204
+	TX_REJECTED_OVERSPEND    = 154
+	TX_REJECTED_BAD_INPUT    = 157
+
+	// Anything from the list below might eventually get mined
+	TX_REJECTED_NO_TXOU     = 202
 	TX_REJECTED_LOW_FEE     = 205
-	TX_REJECTED_SCRIPT_FAIL = 206
-	TX_REJECTED_BAD_INPUT   = 207
 	TX_REJECTED_NOT_MINED   = 208
 	TX_REJECTED_CB_INMATURE = 209
 	TX_REJECTED_RBF_LOWFEE  = 210
@@ -74,23 +72,41 @@ type OneTxToSend struct {
 	VerifyTime  time.Duration
 }
 
-type Wait4Input struct {
-	missingTx *btc.Uint256
-	*TxRcvd
-}
 
 type OneTxRejected struct {
 	Id *btc.Uint256
 	time.Time
 	Size   uint32
 	Reason byte
-	*Wait4Input
+	Waiting4 *btc.Uint256
+	*btc.Tx
 }
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
 	TxLen uint32
 	Ids  map[BIDX]time.Time // List of pending tx ids
+}
+
+func ReasonToString(reason byte) string {
+	switch reason {
+		case 1: return "RELAY_OFF"
+		case 101: return "TOO_BIG"
+		case 102: return "FORMAT"
+		case 103: return "LEN_MISMATCH"
+		case 104: return "EMPTY_INPUT"
+		case 154: return "OVERSPEND"
+		case 157: return "BAD_INPUT"
+		case 202: return "NO_TXOU"
+		case 205: return "LOW_FEE"
+		case 208: return "NOT_MINED"
+		case 209: return "CB_INMATURE"
+		case 210: return "RBF_LOWFEE"
+		case 211: return "RBF_FINAL"
+		case 212: return "RBF_100"
+		case 213: return "REPLACED"
+	}
+	return fmt.Sprint("UNKNOWN_", reason)
 }
 
 func (pk *OneTxsPackage) SPW() float64 {
@@ -149,10 +165,19 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 // Returns the OneTxRejected or nil if it has not been added.
 func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	rec := new(OneTxRejected)
-	rec.Id = &tx.Hash
 	rec.Time = time.Now()
 	rec.Size = uint32(len(tx.Raw))
 	rec.Reason = why
+
+	// TODO: only store tx for selected reasons
+	if why >= 200 {
+		rec.Tx = tx
+		rec.Id = &tx.Hash
+	} else {
+		rec.Id = new(btc.Uint256)
+		rec.Id.Hash = tx.Hash.Hash
+	}
+
 	TransactionsRejected[tx.Hash.BIdx()] = rec
 	TransactionsRejectedSize += uint64(rec.Size)
 	return rec
@@ -277,7 +302,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				}
 
 				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					if (rej.Reason!=TX_REJECTED_NO_TXOU || rej.Wait4Input==nil) {
+					if (rej.Reason!=TX_REJECTED_NO_TXOU || rej.Waiting4==nil) {
 						RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedParentRej")
@@ -290,21 +315,22 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 				nrtx := RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU)
 
-				if nrtx != nil {
-					nrtx.Wait4Input = &Wait4Input{missingTx: missingid, TxRcvd: ntx}
+				if nrtx != nil && nrtx.Tx != nil {
+					nrtx.Waiting4 = missingid
+					//nrtx.Tx = ntx.Tx
 
 					// Add to waiting list:
 					var rec *OneWaitingList
-					if rec, _ = WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()]; rec == nil {
+					if rec, _ = WaitingForInputs[missingid.BIdx()]; rec == nil {
 						rec = new(OneWaitingList)
-						rec.TxID = nrtx.Wait4Input.missingTx
+						rec.TxID = missingid
 						rec.TxLen = uint32(len(ntx.Raw))
 						rec.Ids = make(map[BIDX]time.Time)
 						newone = true
 						WaitingForInputsSize += uint64(rec.TxLen)
 					}
 					rec.Ids[tx.Hash.BIdx()] = time.Now()
-					WaitingForInputs[nrtx.Wait4Input.missingTx.BIdx()] = rec
+					WaitingForInputs[missingid.BIdx()] = rec
 				}
 
 				TxMutex.Unlock()
@@ -419,12 +445,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		script.DBG_ERR = prev_dbg_err
 
 		if ver_err_cnt > 0 {
-			RejectTx(ntx.Tx, TX_REJECTED_SCRIPT_FAIL)
-			if common.GetBool(&common.CFG.TXPool.Debug) {
-				fmt.Println(ntx.conn.PeerAddr.Ip(), ntx.conn.Node.Agent, "- Tx Script fail for id", ntx.Hash.String())
-				fmt.Println(hex.EncodeToString(tx.Raw))
-				fmt.Print("> ")
-			}
+			// not moving it to rejected, but baning the peer
 			TxMutex.Unlock()
 			ntx.conn.DoS("TxScriptFail")
 			if len(rbf_tx_list) > 0 {
@@ -521,7 +542,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 
 func RetryWaitingForInput(wtg *OneWaitingList) {
 	for k, _ := range wtg.Ids {
-		pendtxrcv := TransactionsRejected[k].Wait4Input.TxRcvd
+		pendtxrcv := &TxRcvd{Tx: TransactionsRejected[k].Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
 		} else {
@@ -590,12 +611,12 @@ func txChecker(tx *btc.Tx) bool {
 // Make sure to call it with locked TxMutex
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
-		if tr.Wait4Input != nil {
-			w4i, _ := WaitingForInputs[tr.Wait4Input.missingTx.BIdx()]
+		if tr.Waiting4 != nil {
+			w4i, _ := WaitingForInputs[tr.Waiting4.BIdx()]
 			delete(w4i.Ids, bidx)
 			if len(w4i.Ids) == 0 {
 				WaitingForInputsSize -= uint64(w4i.TxLen)
-				delete(WaitingForInputs, tr.Wait4Input.missingTx.BIdx())
+				delete(WaitingForInputs, tr.Waiting4.BIdx())
 			}
 		}
 		TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
