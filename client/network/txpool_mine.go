@@ -152,9 +152,6 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		c.DoS("InvEmpty")
 		return
 	}
-	c.Mutex.Lock()
-	c.X.InvsRecieved++
-	c.Mutex.Unlock()
 
 	cnt, of := btc.VLen(pl)
 	if len(pl) != of+cnt*btc.Uint256IdxLen {
@@ -175,6 +172,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
 		if c.BytesToSent() > SendBufSize/2 {
+			fmt.Println("Not everything sent - try again in awhile")
 			break
 		}
 		if !has_this_one[k] {
@@ -182,7 +180,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 			data_sent_so_far += 24 + len(v.Raw)
 		}
 	}
-	TxMutex.Lock()
+	TxMutex.Unlock()
 
 	println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
 
