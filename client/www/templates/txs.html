@@ -228,31 +228,6 @@ function get_maturity(t) {
 	return mins.toFixed(1) + ' min'
 }
 
-function val2reason(r) {
-	switch (parseInt(r)) {
-		case 1: return "RELAY_OFF"
-		case 101: return "TOO_BIG"
-		case 102: return "FORMAT"
-		case 103: return "LEN_MISMATCH"
-		case 104: return "EMPTY_INPUT"
-		case 201: return "DOUBLE_SPEND"
-		case 202: return "NO_TXOUT"
-		case 203: return "DUST"
-		case 204: return "OVERSPEND"
-		case 205: return "LOW_FEE"
-		case 206: return "SCRIPT_FAIL"
-		case 207: return "BAD_INPUT"
-		case 208: return "NOT_MINED"
-		case 209: return "CB_INMATURE"
-		case 210: return "RBF_LOWFEE"
-		case 211: return "RBF_FINAL"
-		case 212: return "RBF_100"
-		case 213: return "REPLACED"
-	}
-	return r
-}
-
-
 function send1tx_click(id) {
 	if (confirm("Send TX "+id+" to one random peer")) {
 		quiet_txs2s('&sendone='+id)
@@ -517,12 +492,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML += '&nbsp;'
 					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/del.png">'
 				} else {
-					var blkd = parseInt(xval(txs[i], 'blocked'))
-					if (blkd!=0) {
-						c.innerHTML = val2reason(blkd)
-					} else {
-						c.innerHTML = '&nbsp;'
-					}
+					c.innerHTML = parseInt(xval(txs[i], 'blocked'))
 				}
 
 				if (own!=0) {
@@ -577,7 +547,7 @@ function show_txsre() {
 				c.innerHTML = xval(txs[i], 'size')
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = val2reason(xval(txs[i], 'reason'))
+				c.innerHTML = xval(txs[i], 'reason')
 			}
 			txsre.style.display = 'table'
 		}
