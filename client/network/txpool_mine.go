@@ -133,9 +133,15 @@ func BlockMined(bl *btc.Block) {
 }
 
 func (c *OneConnection) SendGetMP() {
-	b := new(bytes.Buffer)
 	TxMutex.Lock()
-	btc.WriteVlen(b, uint64(len(TransactionsToSend)+len(TransactionsRejected)))
+	tcnt := len(TransactionsToSend)+len(TransactionsRejected)
+	if tcnt > 100e3 {
+		fmt.Println("Too many transactions in the current pool")
+		TxMutex.Unlock()
+		return
+	}
+	b := new(bytes.Buffer)
+	btc.WriteVlen(b, uint64(tcnt))
 	for k, _ := range TransactionsToSend {
 		b.Write(k[:])
 	}
