@@ -233,14 +233,6 @@ func LimitRejectedSize() {
 			"bytes from the rejected poool")
 		common.CounterMutex.Unlock()
 	}
-/*
-	TransactionsRejected
-	if maxlen > 0 && TransactionsRejectedSize > maxlen {
-		// build the list of all rejected txs with data and sort them by time*size
-		sorted := make(, len())
-		for _, v TransactionsRejected
-	}
-*/
 }
 
 
