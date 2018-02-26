@@ -74,6 +74,11 @@ func (c *OneConnection) Tick(now time.Time) {
 		return
 	}
 
+	if len(c.GetMP) > 0 {
+		_ = <- c.GetMP
+		c.SendGetMP()
+	}
+
 	// Tick the recent transactions counter
 	if now.After(c.txsNxt) {
 		c.Mutex.Lock()
@@ -671,6 +676,10 @@ func (c *OneConnection) Run() {
 
 			case "blocktxn":
 				c.ProcessBlockTxn(cmd.pl)
+				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
+
+			case "getmp":
+				c.ProcessGetMP(cmd.pl)
 				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			default:

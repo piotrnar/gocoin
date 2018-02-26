@@ -1,10 +1,11 @@
 package network
 
 import (
+	"bytes"
 	"fmt"
-	"time"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"time"
 )
 
 func (rec *OneTxToSend) IIdx(key uint64) int {
@@ -129,4 +130,60 @@ func BlockMined(bl *btc.Block) {
 	}
 
 	expireTxsNow = true
+}
+
+func (c *OneConnection) SendGetMP() {
+	b := new(bytes.Buffer)
+	TxMutex.Lock()
+	btc.WriteVlen(b, uint64(len(TransactionsToSend)+len(TransactionsRejected)))
+	for k, _ := range TransactionsToSend {
+		b.Write(k[:])
+	}
+	for k, _ := range TransactionsRejected {
+		b.Write(k[:])
+	}
+	TxMutex.Unlock()
+	c.SendRawMsg("getmp", b.Bytes())
+}
+
+func (c *OneConnection) ProcessGetMP(pl []byte) {
+	if len(pl) < 37 {
+		//println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
+		c.DoS("InvEmpty")
+		return
+	}
+	c.Mutex.Lock()
+	c.X.InvsRecieved++
+	c.Mutex.Unlock()
+
+	cnt, of := btc.VLen(pl)
+	if len(pl) != of+cnt*btc.Uint256IdxLen {
+		println("getmp payload length mismatch", len(pl), of, cnt)
+	}
+
+	has_this_one := make(map[BIDX]bool, cnt)
+	for i := 0; i < cnt; i++ {
+		var idx BIDX
+		copy(idx[:], pl[of:])
+		has_this_one[idx] = true
+		of += btc.Uint256IdxLen
+	}
+
+	println(c.ConnID, "- got getmp message with", cnt, "txs...")
+	var cnt2, data_sent_so_far int
+
+	TxMutex.Lock()
+	for k, v := range TransactionsToSend {
+		if c.BytesToSent() > SendBufSize/2 {
+			break
+		}
+		if !has_this_one[k] {
+			c.SendRawMsg("tx", v.Raw)
+			data_sent_so_far += 24 + len(v.Raw)
+		}
+	}
+	TxMutex.Lock()
+
+	println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
+
 }

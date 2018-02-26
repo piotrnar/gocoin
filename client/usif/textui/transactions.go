@@ -228,6 +228,38 @@ func load_mempool(par string) {
 	}
 }
 
+func get_mempool(par string) {
+	conid, e := strconv.ParseUint(par, 10, 32)
+	if e != nil {
+		return
+	}
+
+	var c *network.OneConnection
+
+	network.Mutex_net.Lock()
+
+	for _, v := range network.OpenCons {
+		if uint32(conid)==v.ConnID {
+			c = v
+			break
+		}
+	}
+	network.Mutex_net.Unlock()
+
+	if c == nil {
+		return
+	}
+
+	fmt.Println("Getting mempool from connection ID", c.ConnID, "...")
+	select {
+		case c.GetMP <- true:
+
+		default:
+			fmt.Println("Channel full")
+	}
+}
+
+
 func init() {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")

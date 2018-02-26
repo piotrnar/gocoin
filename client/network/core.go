@@ -197,6 +197,8 @@ type OneConnection struct {
 
 	writing_thread_done sync.WaitGroup
 	writing_thread_push chan bool
+
+	GetMP chan bool
 }
 
 type BIDX [btc.Uint256IdxLen]byte
@@ -221,6 +223,7 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
+	c.GetMP = make(chan bool, 1)
 	return
 }
 
@@ -603,6 +606,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "getblocktxn": return 1e6 // 1MB shall be enough
 		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
 		case "notfound": return 3+50000*36 // maximum size of getdata
+		case "getmp": return 5+8*100000 // max 100k txs
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }
