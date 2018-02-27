@@ -746,17 +746,18 @@ func (c *OneConnection) Run() {
 
 	ban := c.banit
 	c.Mutex.Unlock()
-	if ban {
-		if c.PeerAddr.Friend {
-			common.CountSafe("FriendNotBanned")
-		} else {
+
+	if c.PeerAddr.Friend || c.X.Authorized {
+		common.CountSafe(fmt.Sprint("FDisconnect-", ban))
+	} else {
+		if ban {
 			c.PeerAddr.Ban()
 			common.CountSafe("PeersBanned")
+		} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
+			HammeringMutex.Lock()
+			RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
+			HammeringMutex.Unlock()
 		}
-	} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
-		HammeringMutex.Lock()
-		RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = time.Now()
-		HammeringMutex.Unlock()
 	}
 	c.Conn.Close()
 }
