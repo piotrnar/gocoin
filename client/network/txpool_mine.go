@@ -172,13 +172,13 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		of += btc.Uint256IdxLen
 	}
 
-	println(c.ConnID, "- got getmp message with", cnt, "txs...")
+	fmt.Print(c.ConnID, " - getmp message with ", cnt, " txs... ")
 	var cnt2, data_sent_so_far int
 
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
 		if c.BytesToSent() > SendBufSize/2 {
-			fmt.Println("Not everything sent - try again in awhile")
+			fmt.Println("Not all done - try again in awhile")
 			break
 		}
 		if !has_this_one[k] {
@@ -189,6 +189,6 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	}
 	TxMutex.Unlock()
 
-	println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
+	fmt.Println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
 
 }
