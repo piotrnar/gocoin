@@ -153,6 +153,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
 	b2g.Block.Raw = b
+	b2g.Block.Trusted = conn.X.Authorized
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {
@@ -212,9 +213,6 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		}
 	}
 
-	if b2g.Block != nil {
-		b2g.Block.Trusted = conn.X.Authorized
-	}
 	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb, BlockExtraInfo:bei}
 }
 
