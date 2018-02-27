@@ -172,13 +172,17 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		of += btc.Uint256IdxLen
 	}
 
-	fmt.Print(c.ConnID, " - getmp message with ", cnt, " txs... ")
+	if common.GetBool(&common.CFG.TXPool.Debug) {
+		fmt.Print(c.ConnID, " - getmp message with ", cnt, " txs... ")
+	}
 	var cnt2, data_sent_so_far int
 
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
 		if c.BytesToSent() > SendBufSize/2 {
-			fmt.Println("Not all done - try again in awhile")
+			if common.GetBool(&common.CFG.TXPool.Debug) {
+				fmt.Println("Not all done - try again in awhile")
+			}
 			break
 		}
 		if !has_this_one[k] {
@@ -189,6 +193,8 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	}
 	TxMutex.Unlock()
 
-	fmt.Println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
-
+	if common.GetBool(&common.CFG.TXPool.Debug) {
+		fmt.Println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
+		fmt.Println("> ")
+	}
 }
