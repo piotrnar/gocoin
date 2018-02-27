@@ -485,6 +485,15 @@ func (c *OneConnection) SendAuth() {
 }
 
 func (c *OneConnection) AuthRvcd(pl []byte) {
+	if len(pl) != 32 {
+		c.DoS("AuthMsgErr")
+		return
+	}
+	if c.X.AuthMsgGot > 0 {
+		c.DoS("AuthMsgCnt")  // Only allow one auth message per connection (DoS prevention)
+		return
+	}
+	c.X.AuthMsgGot++
 	rnd := make([]byte, 32)
 	copy(rnd, nonce[:])
 	for _, pub := range AuthPubkeys {
@@ -493,6 +502,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 			return
 		}
 	}
+	c.X.Authorized = false
 }
 
 // Process that handles communication with a single peer
@@ -584,6 +594,11 @@ func (c *OneConnection) Run() {
 				break
 			}
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
+
+			if c.X.IsGocoin {
+				c.SendAuth()
+			}
+
 			if c.Node.Version >= 70012 {
 				c.SendRawMsg("sendheaders", nil)
 				if c.Node.Version >= 70013 {
@@ -593,7 +608,7 @@ func (c *OneConnection) Run() {
 					if c.Node.Version >= 70014 {
 						if (c.Node.Services&SERVICE_SEGWIT)==0 {
 							// if the node does not support segwit, request compact blocks
-							// only if we have not achieved he segwit enforcement moment
+							// only if we have not achieved the segwit enforcement moment
 							if common.BlockChain.Consensus.Enforce_SEGWIT==0 ||
 								common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
 								c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
@@ -606,10 +621,6 @@ func (c *OneConnection) Run() {
 			}
 			c.PeerAddr.Services = c.Node.Services
 			c.PeerAddr.Save()
-
-			if c.X.IsGocoin {
-				c.SendAuth()
-			}
 
 			if common.IsListenTCP() {
 				c.SendOwnAddr()
