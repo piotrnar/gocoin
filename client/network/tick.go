@@ -607,7 +607,7 @@ func (c *OneConnection) Run() {
 			c.PeerAddr.Services = c.Node.Services
 			c.PeerAddr.Save()
 
-			if c.IsGocoin() {
+			if c.X.IsGocoin {
 				c.SendAuth()
 			}
 

@@ -462,7 +462,7 @@ function refreshconnections(force) {
 				// drop conn
 				td = row.insertCell(-1)
 				td.className = "r nw"
-				td.innerHTML = ( cs[i].IsSpecial ? '<img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')"> ' : '' ) +
+				td.innerHTML = ( cs[i].IsGocoin ? '<img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')"> ' : '' ) +
 					'<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')">'
 
 				onc(row, id)

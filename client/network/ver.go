@@ -102,9 +102,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					c.Node.DoNotRelayTxs = true
 				}
 			}
-			if c.IsGocoin() {
-				c.X.IsSpecial = true
-			}
+			c.X.IsGocoin = strings.HasPrefix(c.Node.Agent, "/Gocoin:")
 		}
 		c.X.VersionReceived = true
 		c.Mutex.Unlock()
