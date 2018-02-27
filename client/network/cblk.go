@@ -503,7 +503,11 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 			return
 		}
 		raw_tx := pl[offs:offs+n]
-		tx_hash := btc.NewSha2Hash(raw_tx)
+		var tx_hash btc.Uint256
+		tx_hash.Calc(raw_tx)
+		if common.GetBool(&common.CFG.TXPool.Debug) {
+			fmt.Println("BlkTxn:", tx_hash.String(), "was missing in the mempool")
+		}
 		offs += n
 
 		sid := siphash.Hash(col.K0, col.K1, tx_hash.Hash[:]) & 0xffffffffffff
