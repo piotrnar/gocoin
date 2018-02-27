@@ -30,6 +30,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client: "cmpctblock" handler also takes data from TransactionsRejected
 * Client: Changes in mempool around how rejected transactions are expired and when their raw data is kept
 * Client: New commands: "getmp" and "auth" - used for fetching/serviing entire mempool from/to a trusted gocoin node
+* Client: Assume blocks and txs received from authoried peers as trusted
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
