@@ -210,7 +210,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 		// This body is called with a locked TxMutex
 		tx.Raw = pl
 		select {
-		case NetTxs <- &TxRcvd{conn: c, Tx: tx}:
+		case NetTxs <- &TxRcvd{conn: c, Tx: tx, trusted: c.X.Athorized}:
 			TransactionsPending[tx.Hash.BIdx()] = true
 		default:
 			common.CountSafe("TxRejectedFullQ")
