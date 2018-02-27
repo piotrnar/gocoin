@@ -192,8 +192,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	// but don't try to change it to ProcessNewHeader(append(pl[:80], 0)) as it'd overwrite pl[80]
 
 	if b2g==nil {
-		/*fmt.Println(c.ConnID, "Don't process CompactBlk", btc.NewSha2Hash(pl[:80]),
-			hex.EncodeToString(pl[80:88]), "->", sta)*/
 		common.CountSafe("CmpctBlockHdrNo")
 		if sta==PH_STATUS_ERROR {
 			c.ReceiveHeadersNow() // block doesn't connect so ask for the headers
@@ -207,12 +205,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		b2g.SendInvs = true
 	}
 
-	/*fmt.Println()
-	fmt.Println(c.ConnID, "Received CmpctBlock  enf:", common.BlockChain.Consensus.Enforce_SEGWIT,
-		"   serwice:", (c.Node.Services&SERVICE_SEGWIT)!=0,
-		"   height:", b2g.Block.Height,
-		"   ver:", c.Node.SendCmpctVer)
-	*/
 	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && c.Node.SendCmpctVer < 2 {
 		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
 			common.CountSafe("CmpctBlockIgnore")
@@ -224,12 +216,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 	}
-
-	/*
-	var sta_s = []string{"???", "NEW", "FRESH", "OLD", "ERROR", "FATAL"}
-	fmt.Println(c.ConnID, "Compact Block len", len(pl), "for", btc.NewSha2Hash(pl[:80]).String()[48:],
-		"#", b2g.Block.Height, sta_s[sta], " inp:", b2g.InProgress)
-	*/
 
 	// if we got here, we shall download this block
 	if c.Node.Height < b2g.Block.Height {
@@ -296,8 +282,6 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			return
 		}
 		col.Txs[idx] = pl[offs:offs+n]
-		//fmt.Println("  prefilledtxn", i, idx, ":", hex.EncodeToString(pl[offs:offs+n]))
-		//btc.NewSha2Hash(pl[offs:offs+n]).String())
 		offs += n
 		exp = int(idx)+1
 	}
@@ -506,7 +490,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		var tx_hash btc.Uint256
 		tx_hash.Calc(raw_tx)
 		if common.GetBool(&common.CFG.TXPool.Debug) {
-			fmt.Println("BlkTxn:", tx_hash.String(), "was missing in the mempool")
+			_tx, _ := btc.NewTx(raw_tx)
+			_tx.SetHash(nil)
+			fmt.Println("BlkTxn:", _tx.Hash.String(), "was missing in the mempool")
 		}
 		offs += n
 
