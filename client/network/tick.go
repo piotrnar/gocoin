@@ -296,7 +296,7 @@ func ConnectFriends() {
 			if er != nil {
 				break
 			}
-			ls := strings.SplitN(string(ln), " ", 2)
+			ls := strings.SplitN(strings.Trim(string(ln), "\r\n\t"), " ", 2)
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
 				Mutex_net.Lock()
@@ -315,7 +315,7 @@ func ConnectFriends() {
 				friend_ids[ad.UniqID()] = true
 				continue
 			}
-			pk := btc.Decodeb58(strings.Trim(string(ln), " \r\n\t"))
+			pk := btc.Decodeb58(ls[0])
 			if len(pk)==33 {
 				AuthPubkeys = append(AuthPubkeys, pk)
 				//println("Using pubkey:", hex.EncodeToString(pk))
