@@ -212,7 +212,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		}
 	}
 
-	b2g.Block.Trusted = conn.X.Authorized
+	if b2g.Block != nil {
+		b2g.Block.Trusted = conn.X.Authorized
+	}
 	NetBlocks <- &BlockRcvd{Conn:conn, Block:b2g.Block, BlockTreeNode:b2g.BlockTreeNode, OneReceivedBlock:orb, BlockExtraInfo:bei}
 }
 
