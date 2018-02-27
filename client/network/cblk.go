@@ -493,6 +493,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 			_tx, _ := btc.NewTx(raw_tx)
 			_tx.SetHash(nil)
 			fmt.Println("BlkTxn:", _tx.Hash.String(), "was missing in the mempool")
+			fmt.Println(hex.EncodeToString(raw_tx))
 		}
 		offs += n
 
