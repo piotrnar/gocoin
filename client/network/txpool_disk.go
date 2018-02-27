@@ -101,7 +101,7 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
-		er = errors.New(MEMPOOL_FILE_NAME2 + " is for different last block hash")
+		er = errors.New(MEMPOOL_FILE_NAME2 + " is for different last block hash (try to load it with 'mpl' command)")
 		goto fatal_error
 	}
 
