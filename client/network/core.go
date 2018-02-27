@@ -115,7 +115,9 @@ type ConnectionStatus struct {
 
 	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
 	IsGocoin bool
+
 	Authorized bool
+	AuthMsgGot uint
 
 	LastMinFeePerKByte uint64
 }
