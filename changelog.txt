@@ -4,7 +4,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Added support for native segwit addresses (P2WPKH and P2WSH)
 * Client: Removed extra code added to investigate "the main loop got stuck in network.Tick()" problem (seems to be fixed now)
 * Client: Fixed problem with calculating insanely high average fee (seen on testnet @ block 1256442)
-* Client: When fetching balance, download missging txs from www also for testnet
+* Client: When fetching balance, download missing txs from www also for testnet
 * "lib/ltc" package moved to "lib/others/ltc"
 * Tools/Balio: Suports LTC and Testnet again
 * WebUI: Changed the string to look for inside the wallet from "Auto-translate to SegWit" to "SegWit" or "SegWit P2SH"
