@@ -93,6 +93,10 @@ tr.special {
 	background-color:#f8f4e4;
 }
 
+tr.secure {
+	background-color:#ffe8f0;
+}
+
 tr.CFN {
 	background-color:#f0ffff;
 }

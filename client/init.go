@@ -41,8 +41,8 @@ func host_init() {
 		rand.Read(common.SecretKey)
 		ioutil.WriteFile(common.GocoinHomeDir + "authkey", common.SecretKey, 0600)
 	}
-	common.PublicKey = btc.PublicFromPrivate(common.SecretKey, true)
-	fmt.Println("Public auth key:", btc.Encodeb58(common.PublicKey))
+	common.PublicKey = btc.Encodeb58(btc.PublicFromPrivate(common.SecretKey, true))
+	fmt.Println("Public auth key:", common.PublicKey)
 
 	__exit := make(chan bool)
 	__done := make(chan bool)

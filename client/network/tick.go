@@ -318,7 +318,7 @@ func ConnectFriends() {
 			pk := btc.Decodeb58(strings.Trim(string(ln), " \r\n\t"))
 			if len(pk)==33 {
 				AuthPubkeys = append(AuthPubkeys, pk)
-				println("Using pubkey:", hex.EncodeToString(pk))
+				//println("Using pubkey:", hex.EncodeToString(pk))
 			}
 		}
 	}
@@ -485,7 +485,6 @@ func (c *OneConnection) SendAuth() {
 }
 
 func (c *OneConnection) AuthRvcd(pl []byte) {
-	fmt.Println("Got auth message from", c.ConnID)
 	rnd := make([]byte, 32)
 	copy(rnd, nonce[:])
 	for _, pub := range AuthPubkeys {
@@ -720,7 +719,9 @@ func (c *OneConnection) Run() {
 				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
 
 			case "getmp":
-				c.ProcessGetMP(cmd.pl)
+				if c.X.Authorized {
+					c.ProcessGetMP(cmd.pl)
+				}
 
 			case "auth":
 				c.AuthRvcd(cmd.pl)

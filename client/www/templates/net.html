@@ -60,7 +60,7 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 	<th >Txs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
-	<th><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
+	<th class="r"><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
 </tr>
 <!--PEER_ROW-->
 </table>
@@ -329,6 +329,7 @@ function refreshconnections(force) {
 				td.className = 'nodeid'
 				td.innerHTML = '&nbsp;<b>'+id+'</b>&nbsp;'
 
+
 				// age
 				td = row.insertCell(-1)
 				td.noWrap = true
@@ -470,7 +471,9 @@ function refreshconnections(force) {
 				row.title = "Connection Details"
 				row.style.cursor = 'pointer'
 
-				if (cs[i].IsSpecial) {
+				if (cs[i].Authorized) {
+					row.classList.add("secure")
+				} else if (cs[i].IsSpecial) {
 					row.classList.add("special")
 				} else if (cs[i].HasImmunity) {
 					row.classList.add("immune")

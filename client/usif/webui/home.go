@@ -43,6 +43,8 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
 	}
 
+	s = strings.Replace(s, "<!--PUB_AUTH_KEY-->", common.PublicKey, 1)
+
 	write_html_head(w, r)
 	w.Write([]byte(s))
 	write_html_tail(w)

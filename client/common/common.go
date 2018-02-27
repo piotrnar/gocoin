@@ -56,7 +56,7 @@ var (
 	KillChan chan os.Signal = make(chan os.Signal)
 
 	SecretKey []byte // 32 bytes of secret key
-	PublicKey []byte // 33 bytes of public key
+	PublicKey string
 )
 
 
