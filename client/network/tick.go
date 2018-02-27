@@ -485,10 +485,6 @@ func (c *OneConnection) SendAuth() {
 }
 
 func (c *OneConnection) AuthRvcd(pl []byte) {
-	if len(pl) != 32 {
-		c.DoS("AuthMsgErr")
-		return
-	}
 	if c.X.AuthMsgGot > 0 {
 		c.DoS("AuthMsgCnt")  // Only allow one auth message per connection (DoS prevention)
 		return

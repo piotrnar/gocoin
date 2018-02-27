@@ -611,7 +611,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
 		case "notfound": return 3+50000*36 // maximum size of getdata
 		case "getmp": return 5+8*100000 // max 100k txs
-		case "auth": return 0x10000 // 64KB shaold be more than enough
+		case "auth": return 100 // only needs to fit one signature
 		default: return 1024 // Any other type of block: 1KB payload limit
 	}
 }
