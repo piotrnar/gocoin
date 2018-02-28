@@ -491,9 +491,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		tx_hash.Calc(raw_tx)
 		if common.GetBool(&common.CFG.TXPool.Debug) {
 			_tx, _ := btc.NewTx(raw_tx)
-			_tx.SetHash(nil)
-			fmt.Println("BlkTxn:", _tx.Hash.String(), "was missing in the mempool")
-			fmt.Println(hex.EncodeToString(raw_tx))
+			_tx.SetHash(raw_tx)
+			fmt.Println("BlkTxn:", _tx.Hash.String(), "was missing")
 		}
 		offs += n
 
