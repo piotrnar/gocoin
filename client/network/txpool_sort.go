@@ -239,12 +239,15 @@ func LimitRejectedSize() {
 // Verifies Mempool for consistency
 func MempoolCheck() (dupa bool) {
 	var spent_cnt int
+	var totsize uint64
 
 	TxMutex.Lock()
 
 	// First check if t2s.MemInputs fields are properly set
 	for _, t2s := range TransactionsToSend {
 		var micnt int
+
+		totsize += uint64(t2s.Size)
 
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
@@ -281,6 +284,13 @@ func MempoolCheck() (dupa bool) {
 					}
 				}
 			}
+
+			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
+				if unsp, _ := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
+					fmt.Println("Mempool tx", t2s.Hash.String(), "has no input", i)
+					dupa = true
+				}
+			}
 		}
 		if t2s.MemInputs != nil && micnt == 0 {
 			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
@@ -294,6 +304,11 @@ func MempoolCheck() (dupa bool) {
 
 	if spent_cnt != len(SpentOutputs) {
 		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
+		dupa = true
+	}
+
+	if totsize != TransactionsToSendSize {
+		fmt.Println("TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
 		dupa = true
 	}
 
