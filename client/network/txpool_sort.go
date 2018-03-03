@@ -317,10 +317,12 @@ func MempoolCheck() (dupa bool) {
 		}
 	}
 
+	/* - we only do TransactionsToSendSize verification ATM
 	if spent_cnt != len(SpentOutputs) {
 		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
 		dupa = true
 	}
+	*/
 
 	if totsize != TransactionsToSendSize {
 		fmt.Println("TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
