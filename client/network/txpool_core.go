@@ -497,7 +497,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	TxMutex.Unlock()
-	MPC()
+	if MPC() {
+		println("__________ error after adding", rec.Hash.String(), " len", len(rec.Raw), " wtg", wtg)
+	}
 	common.CountSafe("TxAccepted")
 
 	if frommem != nil {
