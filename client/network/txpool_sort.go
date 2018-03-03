@@ -240,7 +240,7 @@ func LimitRejectedSize() {
 var first_ = true
 
 func MPC() {
-	if first_ && MempoolCheck() {
+	if first_ && common.GetBool(&common.CFG.TXPool.Debug) && MempoolCheck() {
 		first_ = false
 		_, file, line, _ := runtime.Caller(1)
 		println("Mempool first iime seen broken from", file, line)
