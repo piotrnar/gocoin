@@ -176,7 +176,7 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 
 	LimitRejectedSize()
 
-	// tru to re-fetch the record from the map, in case it has been removed by LimitRejectedSize()
+	// try to re-fetch the record from the map, in case it has been removed by LimitRejectedSize()
 	return TransactionsRejected[bidx]
 }
 
@@ -230,6 +230,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var totinp, totout uint64
 	var frommem []bool
 	var frommemcnt int
+
+	MPC()
 
 	TxMutex.Lock()
 
@@ -495,6 +497,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	TxMutex.Unlock()
+	MPC()
 	common.CountSafe("TxAccepted")
 
 	if frommem != nil {

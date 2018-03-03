@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"runtime"
 	"sort"
 	"time"
 )
@@ -236,6 +237,17 @@ func LimitRejectedSize() {
 }
 
 
+var first_ = true
+
+func MPC() {
+	if first_ && MempoolCheck() {
+		first_ = false
+		_, file, line, _ := runtime.Caller(1)
+		println("Mempool first iime seen broken from", file, line)
+	}
+}
+
+
 // Verifies Mempool for consistency
 func MempoolCheck() (dupa bool) {
 	var spent_cnt int
@@ -247,7 +259,8 @@ func MempoolCheck() (dupa bool) {
 	for _, t2s := range TransactionsToSend {
 		var micnt int
 
-		totsize += uint64(t2s.Size)
+		totsize += uint64(len(t2s.Raw))
+		continue // we only do TransactionsToSendSize verification ATM
 
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
@@ -285,12 +298,14 @@ func MempoolCheck() (dupa bool) {
 				}
 			}
 
+			/*
 			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
 				if unsp, _ := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
 					fmt.Println("Mempool tx", t2s.Hash.String(), "has no input", i)
 					dupa = true
 				}
 			}
+			*/
 		}
 		if t2s.MemInputs != nil && micnt == 0 {
 			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
@@ -518,6 +533,7 @@ func ExpireTxs() {
 	lastTxsExpire = time.Now()
 	expireTxsNow = false
 
+	MPC()
 	TxMutex.Lock()
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
@@ -527,6 +543,7 @@ func ExpireTxs() {
 	LimitRejectedSize()
 
 	TxMutex.Unlock()
+	MPC()
 
 	common.CountSafe("TxPurgedTicks")
 }
