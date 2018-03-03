@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"runtime/debug"
 )
 
 const (
@@ -21,8 +20,8 @@ const (
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
 
-	TX_REJECTED_OVERSPEND    = 154
-	TX_REJECTED_BAD_INPUT    = 157
+	TX_REJECTED_OVERSPEND = 154
+	TX_REJECTED_BAD_INPUT = 157
 
 	// Anything from the list below might eventually get mined
 	TX_REJECTED_NO_TXOU     = 202
@@ -48,13 +47,13 @@ var (
 
 	// Transactions that we downloaded, but rejected:
 	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
-	TransactionsRejectedSize uint64 // only include those that have *Tx pointer set
+	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
 	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
 
 	// Transactions that are waiting for inputs:
-	WaitingForInputs map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
+	WaitingForInputs     map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
 	WaitingForInputsSize uint64
 )
 
@@ -73,39 +72,53 @@ type OneTxToSend struct {
 	VerifyTime  time.Duration
 }
 
-
 type OneTxRejected struct {
 	Id *btc.Uint256
 	time.Time
-	Size   uint32
-	Reason byte
+	Size     uint32
+	Reason   byte
 	Waiting4 *btc.Uint256
 	*btc.Tx
 }
 
 type OneWaitingList struct {
-	TxID *btc.Uint256
+	TxID  *btc.Uint256
 	TxLen uint32
-	Ids  map[BIDX]time.Time // List of pending tx ids
+	Ids   map[BIDX]time.Time // List of pending tx ids
 }
 
 func ReasonToString(reason byte) string {
 	switch reason {
-		case 1: return "RELAY_OFF"
-		case 101: return "TOO_BIG"
-		case 102: return "FORMAT"
-		case 103: return "LEN_MISMATCH"
-		case 104: return "EMPTY_INPUT"
-		case 154: return "OVERSPEND"
-		case 157: return "BAD_INPUT"
-		case 202: return "NO_TXOU"
-		case 205: return "LOW_FEE"
-		case 208: return "NOT_MINED"
-		case 209: return "CB_INMATURE"
-		case 210: return "RBF_LOWFEE"
-		case 211: return "RBF_FINAL"
-		case 212: return "RBF_100"
-		case 213: return "REPLACED"
+	case 1:
+		return "RELAY_OFF"
+	case 101:
+		return "TOO_BIG"
+	case 102:
+		return "FORMAT"
+	case 103:
+		return "LEN_MISMATCH"
+	case 104:
+		return "EMPTY_INPUT"
+	case 154:
+		return "OVERSPEND"
+	case 157:
+		return "BAD_INPUT"
+	case 202:
+		return "NO_TXOU"
+	case 205:
+		return "LOW_FEE"
+	case 208:
+		return "NOT_MINED"
+	case 209:
+		return "CB_INMATURE"
+	case 210:
+		return "RBF_LOWFEE"
+	case 211:
+		return "RBF_FINAL"
+	case 212:
+		return "RBF_100"
+	case 213:
+		return "REPLACED"
 	}
 	return fmt.Sprint("UNKNOWN_", reason)
 }
@@ -199,7 +212,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	if tx.Weight() > 4 * int(common.GetUint32(&common.CFG.TXPool.MaxTxSize)) {
+	if tx.Weight() > 4*int(common.GetUint32(&common.CFG.TXPool.MaxTxSize)) {
 		TxMutex.Lock()
 		RejectTx(tx, TX_REJECTED_TOO_BIG)
 		TxMutex.Unlock()
@@ -340,7 +353,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				}
 
 				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					if (rej.Reason!=TX_REJECTED_NO_TXOU || rej.Waiting4==nil) {
+					if rej.Reason != TX_REJECTED_NO_TXOU || rej.Waiting4 == nil {
 						RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedParentRej")
@@ -423,7 +436,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totfees += ctx.Fee
 		}
 
-		if !ntx.trusted && totfees * uint64(tx.Weight()) >= fee * uint64(totweight) {
+		if !ntx.trusted && totfees*uint64(tx.Weight()) >= fee*uint64(totweight) {
 			RejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
@@ -496,7 +509,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 	TransactionsToSendWeight += uint64(rec.Tx.Weight())
 
-
 	for i := range spent {
 		SpentOutputs[spent[i]] = tx.Hash.BIdx()
 	}
@@ -536,7 +548,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if rec.Weight() > 4 * int(common.GetUint32(&common.CFG.TXRoute.MaxTxSize)) {
+	if rec.Weight() > 4*int(common.GetUint32(&common.CFG.TXRoute.MaxTxSize)) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false
@@ -565,11 +577,12 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 // Delete all the children as well if with_children is true
 // If reason is not zero, add the deleted txs to the rejected list
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	// TODO: remove tjis check...
-	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-		println("ERROR:", tx.Hash.String(), "not in", TransactionsToSend)
-		debug.PrintStack()
-	}
+	/*
+		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+			println("ERROR:", tx.Hash.String(), "not in", TransactionsToSend)
+			debug.PrintStack()
+		}
+	*/
 
 	if with_children {
 		// remove all the children that are spending from tx
