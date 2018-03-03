@@ -41,12 +41,22 @@ External address: <b>{EXTERNAL_ADDR}</b><br>
 
 <div id="chart" style="height:180px;margin:2px"></div>
 
-<div style="width:100%">
-<div style="text-align:right;margin-bottom:8px;float:right">
+<table style="width:100%">
+<tr>
+<td align="left" valign="top">
+<input type="checkbox" id="stat_freeze" onchange="freeze_stats()"><span class="hand" onclick="stat_freeze.click()">Freeze stats</span>
+<!--
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
+-->
+</td>
+<td align="right">
 <input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span onclick="net_list_order_sp.click()" style="cursor:pointer"> Sort by speed</span>
 &nbsp;&bull;&nbsp;
 <input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by age</span>
-</div>
+</td>
+</tr>
+</table>
 <table class="netcons bord" width="100%" id="netcons">
 <tr>
 	<th width="30">ID
@@ -76,13 +86,9 @@ Node Version Legend:<br>
 &bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
 &bull; <b>W</b> - Supports Segregate Witness<br>
 </td>
-<td align="right" valign="top">
-<span class="hand" onclick="stat_freeze.click()">Freeze stats </span><input type="checkbox" id="stat_freeze" onchange="freeze_stats()">
-&nbsp;&bull;&nbsp;&nbsp;
-<span class="hand" onclick="show_debug_mode.click()">More info </span><input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()">
-</td></tr>
+</tr>
 <tr>
-<td colspan="2">
+<td>
 <a name="rawdiv"></a>
 <div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
 <img title="Refresh peer info" src="webui/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
