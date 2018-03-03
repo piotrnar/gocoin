@@ -251,7 +251,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
-	var rbf_tx_list []*OneTxToSend
+	var rbf_tx_list map[*OneTxToSend]bool
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
@@ -262,7 +262,47 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		spent[i] = tx.TxIn[i].Input.UIdx()
 
 		if so, ok := SpentOutputs[spent[i]]; ok {
-			rbf_tx_list = append(rbf_tx_list, TransactionsToSend[so])
+			// Can only be accepted as RBF...
+
+			if rbf_tx_list == nil {
+				rbf_tx_list = make(map[*OneTxToSend]bool)
+			}
+
+			ctx := TransactionsToSend[so]
+
+			if !ntx.trusted && ctx.Final {
+				RejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL)
+				TxMutex.Unlock()
+				common.CountSafe("TxRejectedRBFFinal")
+				return
+			}
+
+			rbf_tx_list[ctx] = true
+			if !ntx.trusted && len(rbf_tx_list) > 100 {
+				RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
+				TxMutex.Unlock()
+				common.CountSafe("TxRejectedRBF100+")
+				return
+			}
+
+			chlds := ctx.GetAllChildren()
+			for _, ctx = range chlds {
+				if !ntx.trusted && ctx.Final {
+					RejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL)
+					TxMutex.Unlock()
+					common.CountSafe("TxRejectedRBF_Final")
+					return
+				}
+
+				rbf_tx_list[ctx] = true
+
+				if !ntx.trusted && len(rbf_tx_list) > 100 {
+					RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
+					TxMutex.Unlock()
+					common.CountSafe("TxRejectedRBF100+")
+					return
+				}
+			}
 		}
 
 		if txinmem, ok := TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
@@ -374,42 +414,11 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
-	//var new_spb, old_spb float64
-	var totweight int
-	var totfees uint64
+	if rbf_tx_list != nil {
+		var totweight int
+		var totfees uint64
 
-	if len(rbf_tx_list) > 0 {
-		already_done := make(map[*OneTxToSend]bool)
-		if len(rbf_tx_list) > 100 {
-			RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
-			TxMutex.Unlock()
-			common.CountSafe("TxRejectedRBF100+")
-			return
-		}
-
-		for _, ttt := range rbf_tx_list {
-			chlds := ttt.GetAllChildren()
-			for _, ch := range chlds {
-				if _, ok := already_done[ch]; !ok {
-					if len(rbf_tx_list) + 1 > 100 {
-						RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
-						TxMutex.Unlock()
-						common.CountSafe("TxRejectedRBF100+")
-						return
-					}
-					rbf_tx_list = append(rbf_tx_list, ch)
-					already_done[ch] = true
-				}
-			}
-		}
-		for _, ctx := range rbf_tx_list {
-			if !ntx.trusted && ctx.Final {
-				RejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL)
-				TxMutex.Unlock()
-				common.CountSafe("TxRejectedRBFFinal")
-				return
-			}
-
+		for ctx, _ := range rbf_tx_list {
 			totweight += ctx.Weight()
 			totfees += ctx.Fee
 		}
@@ -462,8 +471,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	if len(rbf_tx_list) > 0 {
-		for _, ctx := range rbf_tx_list {
+	if rbf_tx_list != nil {
+		for ctx, _ := range rbf_tx_list {
 			// we dont remove with children because we have all of them on the list
 			ctx.Delete(false, TX_REJECTED_REPLACED)
 			common.CountSafe("TxRemovedByRBF")
