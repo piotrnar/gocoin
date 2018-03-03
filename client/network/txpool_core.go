@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"runtime/debug"
 )
 
 const (
@@ -569,6 +570,12 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 // If reason is not zero, add the deleted txs to the rejected list
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	MPC_locked()
+
+	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+		println("ERROR1:", tx.Hash.String(), "not in", TransactionsToSend)
+		debug.PrintStack()
+	}
+
 	if with_children {
 		// remove all the children that are spending from tx
 		var po btc.TxPrevOut
@@ -590,11 +597,17 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	for i := range tx.Spent {
 		delete(SpentOutputs, tx.Spent[i])
 	}
+
 	MPC_locked()
-	TransactionsToSendSize -= uint64(len(tx.Raw))
-	TransactionsToSendWeight -= uint64(tx.Weight())
-	delete(TransactionsToSend, tx.Tx.Hash.BIdx())
-	MPC_locked()
+	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+		println("ERROR2:", tx.Hash.String(), "not in", TransactionsToSend)
+		debug.PrintStack()
+	} else {
+		TransactionsToSendSize -= uint64(len(tx.Raw))
+		TransactionsToSendWeight -= uint64(tx.Weight())
+		delete(TransactionsToSend, tx.Hash.BIdx())
+		MPC_locked()
+	}
 	if reason != 0 {
 		RejectTx(tx.Tx, reason)
 		MPC_locked()
