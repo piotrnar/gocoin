@@ -249,6 +249,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		deleteRejected(tx.Hash.BIdx())
 	}
 
+	MPC_locked()
+
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
 
@@ -375,6 +377,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
+	MPC_locked()
+
 	//var new_spb, old_spb float64
 	var totweight int
 	var totfees uint64
@@ -455,6 +459,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
+	MPC_locked()
+
 	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
@@ -474,6 +480,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
+	MPC_locked()
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
@@ -482,10 +489,13 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			expireTxsNow = true
 		}
 		TransactionsToSendSize = newsize
+		MPC_locked()
 	} else {
 		TransactionsToSendSize += uint64(len(rec.Raw))
+		MPC_locked()
 	}
 	TransactionsToSendWeight += uint64(rec.Tx.Weight())
+
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = tx.Hash.BIdx()
@@ -558,6 +568,7 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 // Delete all the children as well if with_children is true
 // If reason is not zero, add the deleted txs to the rejected list
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
+	MPC_locked()
 	if with_children {
 		// remove all the children that are spending from tx
 		var po btc.TxPrevOut
@@ -579,11 +590,14 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	for i := range tx.Spent {
 		delete(SpentOutputs, tx.Spent[i])
 	}
+	MPC_locked()
 	TransactionsToSendSize -= uint64(len(tx.Raw))
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Tx.Hash.BIdx())
+	MPC_locked()
 	if reason != 0 {
 		RejectTx(tx.Tx, reason)
+		MPC_locked()
 	}
 }
 

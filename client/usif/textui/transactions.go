@@ -197,7 +197,9 @@ func save_mempool(par string) {
 }
 
 func check_txs(par string) {
+	network.TxMutex.Lock()
 	network.MempoolCheck()
+	network.TxMutex.Unlock()
 }
 
 func load_mempool(par string) {

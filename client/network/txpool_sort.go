@@ -239,23 +239,31 @@ func LimitRejectedSize() {
 
 var first_ = true
 
-func MPC() bool {
+// call this one when TxMutex is locked
+func MPC_locked() bool {
 	if first_ && common.GetBool(&common.CFG.TXPool.Debug) && MempoolCheck() {
 		first_ = false
 		_, file, line, _ := runtime.Caller(1)
+		println("=====================================================")
 		println("Mempool first iime seen broken from", file, line)
 		return true
 	}
 	return false
 }
 
+func MPC() (res bool) {
+	TxMutex.Lock()
+	res = MPC_locked()
+	TxMutex.Unlock()
+	return
+}
+
 
 // Verifies Mempool for consistency
+// Make sure to call it with TxMutex Locked
 func MempoolCheck() (dupa bool) {
 	var spent_cnt int
 	var totsize uint64
-
-	TxMutex.Lock()
 
 	// First check if t2s.MemInputs fields are properly set
 	for _, t2s := range TransactionsToSend {
@@ -330,8 +338,6 @@ func MempoolCheck() (dupa bool) {
 		fmt.Println("TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
 		dupa = true
 	}
-
-	TxMutex.Unlock()
 
 	return
 }
