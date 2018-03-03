@@ -397,13 +397,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			chlds := ttt.GetAllChildren()
 			for _, ch := range chlds {
 				if _, ok := already_done[ch]; !ok {
-					rbf_tx_list = append(rbf_tx_list, ch)
-					if len(rbf_tx_list) > 100 {
+					if len(rbf_tx_list) + 1 > 100 {
 						RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedRBF100+")
 						return
 					}
+					rbf_tx_list = append(rbf_tx_list, ch)
+					already_done[ch] = true
 				}
 			}
 		}
