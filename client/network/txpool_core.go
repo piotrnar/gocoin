@@ -232,8 +232,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var frommem []bool
 	var frommemcnt int
 
-	MPC()
-
 	TxMutex.Lock()
 
 	if !retry {
@@ -249,8 +247,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		// ... so remove it now to free any tied WaitingForInputs
 		deleteRejected(tx.Hash.BIdx())
 	}
-
-	MPC_locked()
 
 	pos := make([]*btc.TxOut, len(tx.TxIn))
 	spent := make([]uint64, len(tx.TxIn))
@@ -378,8 +374,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
-	MPC_locked()
-
 	//var new_spb, old_spb float64
 	var totweight int
 	var totfees uint64
@@ -461,8 +455,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	MPC_locked()
-
 	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
@@ -482,7 +474,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
-	MPC_locked()
 	TransactionsToSend[tx.Hash.BIdx()] = rec
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
@@ -491,10 +482,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			expireTxsNow = true
 		}
 		TransactionsToSendSize = newsize
-		MPC_locked()
 	} else {
 		TransactionsToSendSize += uint64(len(rec.Raw))
-		MPC_locked()
 	}
 	TransactionsToSendWeight += uint64(rec.Tx.Weight())
 
@@ -509,9 +498,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	TxMutex.Unlock()
-	if MPC() {
-		println("__________ error after adding", rec.Hash.String(), " len", len(rec.Raw), " wtg", wtg)
-	}
 	common.CountSafe("TxAccepted")
 
 	if frommem != nil {
@@ -570,10 +556,9 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 // Delete all the children as well if with_children is true
 // If reason is not zero, add the deleted txs to the rejected list
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	MPC_locked()
-
+	// TODO: remove tjis check...
 	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-		println("ERROR1:", tx.Hash.String(), "not in", TransactionsToSend)
+		println("ERROR:", tx.Hash.String(), "not in", TransactionsToSend)
 		debug.PrintStack()
 	}
 
@@ -599,19 +584,11 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		delete(SpentOutputs, tx.Spent[i])
 	}
 
-	MPC_locked()
-	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-		println("ERROR2:", tx.Hash.String(), "not in", TransactionsToSend)
-		debug.PrintStack()
-	} else {
-		TransactionsToSendSize -= uint64(len(tx.Raw))
-		TransactionsToSendWeight -= uint64(tx.Weight())
-		delete(TransactionsToSend, tx.Hash.BIdx())
-		MPC_locked()
-	}
+	TransactionsToSendSize -= uint64(len(tx.Raw))
+	TransactionsToSendWeight -= uint64(tx.Weight())
+	delete(TransactionsToSend, tx.Hash.BIdx())
 	if reason != 0 {
 		RejectTx(tx.Tx, reason)
-		MPC_locked()
 	}
 }
 

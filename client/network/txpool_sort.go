@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"runtime"
 	"sort"
 	"time"
 )
@@ -236,7 +235,7 @@ func LimitRejectedSize() {
 	}
 }
 
-
+/*
 var first_ = true
 
 // call this one when TxMutex is locked
@@ -257,6 +256,7 @@ func MPC() (res bool) {
 	TxMutex.Unlock()
 	return
 }
+*/
 
 
 // Verifies Mempool for consistency
@@ -270,7 +270,6 @@ func MempoolCheck() (dupa bool) {
 		var micnt int
 
 		totsize += uint64(len(t2s.Raw))
-		continue // we only do TransactionsToSendSize verification ATM
 
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
@@ -308,14 +307,12 @@ func MempoolCheck() (dupa bool) {
 				}
 			}
 
-			/*
 			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
 				if unsp, _ := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
 					fmt.Println("Mempool tx", t2s.Hash.String(), "has no input", i)
 					dupa = true
 				}
 			}
-			*/
 		}
 		if t2s.MemInputs != nil && micnt == 0 {
 			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
@@ -327,15 +324,22 @@ func MempoolCheck() (dupa bool) {
 		}
 	}
 
-	/* - we only do TransactionsToSendSize verification ATM
 	if spent_cnt != len(SpentOutputs) {
 		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
 		dupa = true
 	}
-	*/
 
 	if totsize != TransactionsToSendSize {
 		fmt.Println("TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
+		dupa = true
+	}
+
+	totsize = 0
+	for _, tr := range TransactionsRejected {
+		totsize += uint64(tr.Size)
+	}
+	if totsize != TransactionsRejectedSize {
+		fmt.Println("TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
 		dupa = true
 	}
 
@@ -543,7 +547,6 @@ func ExpireTxs() {
 	lastTxsExpire = time.Now()
 	expireTxsNow = false
 
-	MPC()
 	TxMutex.Lock()
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
@@ -553,7 +556,6 @@ func ExpireTxs() {
 	LimitRejectedSize()
 
 	TxMutex.Unlock()
-	MPC()
 
 	common.CountSafe("TxPurgedTicks")
 }

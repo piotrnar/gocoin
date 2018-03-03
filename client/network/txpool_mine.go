@@ -108,7 +108,6 @@ func BlockMined(bl *btc.Block) {
 	}
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int
-	MPC()
 	TxMutex.Lock()
 	for i := 1; i < len(bl.Txs); i++ {
 		wtg := tx_mined(bl.Txs[i])
@@ -118,7 +117,6 @@ func BlockMined(bl *btc.Block) {
 		}
 	}
 	TxMutex.Unlock()
-	MPC()
 
 	// Try to redo waiting txs
 	if wtg_cnt > 0 {
@@ -132,7 +130,6 @@ func BlockMined(bl *btc.Block) {
 	}
 
 	expireTxsNow = true
-	MPC()
 }
 
 func (c *OneConnection) SendGetMP() {
