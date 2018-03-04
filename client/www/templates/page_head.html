@@ -11,6 +11,17 @@ var testnet = (doc_title.indexOf(" Testnet") != -1)
 var new_block_audio_file = new Audio('webui/new_block.mp3')
 var back_online_audio_file = new Audio('webui/back_online.mp3')
 
+var webuimenu = [
+	["/", "Home"],
+	["/wal", "Wallet"],
+	["/snd", "MakeTx"],
+	["/net", "Network"],
+	["/txs", "Transactions"],
+	["/blocks", "Blocks"],
+	["/miners", "Miners"],
+	["/counts", "Counters"]
+]
+
 function beep_clicked() {
 	beep_new_block.checked = !beep_new_block.checked
 	localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
@@ -21,29 +32,52 @@ function beep_clicked() {
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%" border="0" cellspacing="0"><tr>
 		<colgroup>
-			<col>
-			<col width="90">
-			<col width="90">
-			<col width="90">
-			<col width="100">
-			<col>
+			<col>  <!-- top menu -->
+			<col width="90"> <!-- block height -->
+			<col width="80"> <!-- beep -->
+			<col width="50"> <!-- minout warning -->
+			<col width="80"> <!-- PushTX -->
+			<col> <!-- right menu -->
 		</colgroup>
 
-		<td id="topmenu">{MENU_LEFT}</td>
+		<td id="topmenu"></td>
 		<td align="center" class="nw"><b id="blno">...</b></td>
 		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
 			<input type="checkbox" id="beep_new_block" class="hand"><img src="webui/music.png">
 		</td>
 		<td align="center" align="center"><img id="warning_icon" src="webui/warning.png" style="display:none"></td>
 		<td align="center">
-			<input type="button" value="Load Raw TX" onclick="pushtx()" style="padding:2px;font-size:10px" title="Load raw transaction">
-		<td align="right">
-			{MENU_RIGHT} |
-			<a href="{HELPURL}">Help</a>
+			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
+		<td align="right" id="rightmenu">
+			<a id="helpmenulink" href="{HELPURL}" class="topmenu">Help</a>
 		</td>
 	</tr></table>
 <hr>
 <script>
+
+for (var i=0; i < webuimenu.length; i++) {
+	var a = document.createElement('a')
+	a.href = webuimenu[i][0]
+	a.text = webuimenu[i][1]
+	a.className = 'topmenu'
+	console.log(document.location.pathname)
+	if (document.location.pathname==webuimenu[i][0]) {
+		a.classList.add('menuat')
+	}
+	if (i < webuimenu.length-1) {
+		topmenu.appendChild(a)
+	} else {
+		rightmenu.insertBefore(a, helpmenulink)
+	}
+
+	if (i < webuimenu.length-2) {
+		var sp = document.createElement('span')
+		sp.innerHTML = ' '
+		topmenu.appendChild(sp)
+	}
+}
+
+
 var time_now /*_TIME_NOW_*/
 function refreshblock() {
 	var aj = ajax()
@@ -60,6 +94,11 @@ function refreshblock() {
 			e.block = stat
 			time_now = stat.Time_now
 			blno.dispatchEvent(e)
+
+			if (!stat.WalletON) {
+				topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
+				topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
+			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
 

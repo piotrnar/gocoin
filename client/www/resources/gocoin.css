@@ -16,8 +16,30 @@ a:hover {
 	background-color:yellow;
 }
 
+a.topmenu {
+	color:#2020e0;
+	padding-top:2px;
+	padding-bottom:2px;
+	padding-left:6px;
+	padding-right:6px;
+	border: 1px solid white;
+	border-collapse: collapse;
+}
+
+a.topmenu:hover {
+	//background-color:pink;
+	border-radius: 8px;
+	border: 1px solid blue;
+}
+
 a.menuat {
-	text-decoration:underline;
+	//text-decoration:underline;
+	border-radius: 8px;
+	border: 1px solid black;
+}
+
+a.dimenu {
+	color:#a0a0ff;
 }
 
 .mono {
