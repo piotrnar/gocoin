@@ -239,6 +239,11 @@ func wallet_on_off(s string) {
 			fmt.Println("Wallet functionality is currently DISABLED. Execute 'wallet on' to enable it.")
 		}
 	}
+
+
+	if pend := common.WalletPending(); pend > 0 {
+		fmt.Println("Wallet functionality will auto enable in", pend, "seconds")
+	}
 }
 
 func init() {
