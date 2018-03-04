@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
@@ -99,6 +100,8 @@ var (
 			BlckExpireHours uint // zero for never
 			PingPeriodSec   uint // zero to not ping
 		}
+
+		LastTrustedBlock string
 	}
 
 	mutex_cfg sync.Mutex
@@ -159,6 +162,8 @@ func InitConfig() {
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
+
+	CFG.LastTrustedBlock = "00000000000000000045ef0848dec46dbf26184034955746d5f0a56ccf58427a" // block #512021
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
@@ -287,6 +292,8 @@ func Reset() {
 	MkTempBlocksDir()
 
 	ReloadMiners()
+
+	lastTrustedBlock = btc.NewUint256FromString(CFG.LastTrustedBlock)
 }
 
 func MkTempBlocksDir() {

@@ -20,6 +20,8 @@ type BlockTreeNode struct {
 	SigopsCost uint32
 
 	BlockHeader [80]byte
+
+	Trusted bool
 }
 
 func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {

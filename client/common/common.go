@@ -61,6 +61,8 @@ var (
 	WalletON bool
 	WalletProgress uint32 // 0 for not / 1000 for max
 	WalletOnIn uint32
+
+	lastTrustedBlock *btc.Uint256
 )
 
 
@@ -182,6 +184,13 @@ func WalletPendingTick() (res bool) {
 		WalletOnIn--
 		res = WalletOnIn==0
 	}
+	mutex_cfg.Unlock()
+	return
+}
+
+func LastTrustedBlockMatch(h *btc.Uint256) (res bool) {
+	mutex_cfg.Lock()
+	res = lastTrustedBlock != nil && lastTrustedBlock.Equal(h)
 	mutex_cfg.Unlock()
 	return
 }

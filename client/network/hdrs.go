@@ -61,6 +61,13 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	AddB2G(b2g)
 	LastCommitedHeader = node
 
+	if common.LastTrustedBlockMatch(node.BlockHash) {
+		for node != nil {
+			node.Trusted = true
+			node = node.Parent
+		}
+	}
+
 	return PH_STATUS_NEW, b2g
 }
 
