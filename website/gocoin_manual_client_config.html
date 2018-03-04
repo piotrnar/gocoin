@@ -58,6 +58,13 @@ When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 <td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
 </tr>
 
+<tr>
+<td class="cfg_name"> LastTrustedBlock</td>
+<td class="cfg_type"> string</td>
+<td> <i>updated regularly</i></td>
+<td class="cfg_info"> Hash of the highest trused block (used to speed up initial chain sync).</td>
+</tr>
+
 <tr class="even">
 <td class="cfg_name"> WebUI.Interface</td>
 <td class="cfg_type"> string</td>
@@ -333,14 +340,6 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> How many block down the chain to look for calculating the current average block size.</td>
 </tr>
 <tr>
-
-<tr>
-<td class="cfg_name"> LastTrustedBlock</td>
-<td class="cfg_type"> string</td>
-<td> <i>updated regularly</i></td>
-<td class="cfg_info"> Hash of the highest trused block (used to speed up initial chain sync).</td>
-</tr>
-
 
 </tbody>
 </table>

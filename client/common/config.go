@@ -35,6 +35,8 @@ var (
 		TextUI_Enabled bool
 		UserAgent      string
 		UTXOSaveSec    uint
+		LastTrustedBlock string
+
 		WebUI          struct {
 			Interface   string
 			AllowedIP   string // comma separated
@@ -100,8 +102,6 @@ var (
 			BlckExpireHours uint // zero for never
 			PingPeriodSec   uint // zero to not ping
 		}
-
-		LastTrustedBlock string
 	}
 
 	mutex_cfg sync.Mutex
