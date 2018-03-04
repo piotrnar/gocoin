@@ -11,25 +11,36 @@ var testnet = (doc_title.indexOf(" Testnet") != -1)
 var new_block_audio_file = new Audio('webui/new_block.mp3')
 var back_online_audio_file = new Audio('webui/back_online.mp3')
 
-function remember_beep() {
+function beep_clicked() {
+	beep_new_block.checked = !beep_new_block.checked
 	localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
 }
 </script>
 </head>
 <body>
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
-	<table width="100%" border="0"><tr>
+	<table width="100%" border="0" cellspacing="0"><tr>
+		<colgroup>
+			<col>
+			<col width="90">
+			<col width="90">
+			<col width="90">
+			<col width="100">
+			<col>
+		</colgroup>
+
 		<td id="topmenu">{MENU_LEFT}</td>
-		<td align="left" width="120" class="nw">Height: <b id="blno">...</b>
-		<td align="left" width="80">Beep:
-		<input type="checkbox" id="beep_new_block" onchange="remember_beep()" title="Beep on each new block">
+		<td align="center" class="nw"><b id="blno">...</b></td>
+		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
+			<input type="checkbox" id="beep_new_block" class="hand"><img src="webui/music.png">
 		</td>
-		<td align="center" width="50" align="center"><img id="warning_icon" src="webui/warning.png" style="display:none"></td>
-		<td align="left">
-		<input type="button" value="Load Raw TX" onclick="pushtx()" style="padding:2px;font-size:10px" title="Load raw transaction">
+		<td align="center" align="center"><img id="warning_icon" src="webui/warning.png" style="display:none"></td>
+		<td align="center">
+			<input type="button" value="Load Raw TX" onclick="pushtx()" style="padding:2px;font-size:10px" title="Load raw transaction">
 		<td align="right">
-		{MENU_RIGHT} |
-		<a href="{HELPURL}">Help</a></td>
+			{MENU_RIGHT} |
+			<a href="{HELPURL}">Help</a>
+		</td>
 	</tr></table>
 <hr>
 <script>
@@ -50,7 +61,7 @@ function refreshblock() {
 			time_now = stat.Time_now
 			blno.dispatchEvent(e)
 
-			blno.title = "Received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
+			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
 
 			if (blno.innerText != stat.Height) {
 				if (beep_new_block.checked)  {
@@ -66,7 +77,7 @@ function refreshblock() {
 			}
 
 			if (e.block.MinValue != 0) {
-				warning_icon.title = "Minimum wallet's output value " + val2str(e.block.MinValue) + " BTC"
+				warning_icon.title = "Wallet ignores outputs with values below " + val2str(e.block.MinValue) + " BTC"
 				warning_icon.style.display = 'inline'
 			} else {
 				warning_icon.style.display = 'none'
@@ -87,6 +98,9 @@ if (localStorage.getItem("new_block_beep")==="true") {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+	beep_new_block.onclick = function(event) {
+		event.stopPropagation()
+	}
 	refreshblock()
 })
 
