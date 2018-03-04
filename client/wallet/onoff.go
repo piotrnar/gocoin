@@ -3,7 +3,6 @@ package wallet
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
@@ -11,7 +10,7 @@ import (
 
 var (
 	FetchingBalanceTick func() bool
-	OnOff chan bool = make(chan bool, 1)
+	OnOff               chan bool = make(chan bool, 1)
 )
 
 func InitMaps(empty bool) {
