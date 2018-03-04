@@ -78,7 +78,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Median =  common.Last.Block.GetMedianTimePast()
 	out.Version = common.Last.Block.BlockVersion()
 	out.MinValue = atomic.LoadUint64(&common.CFG.AllBalances.MinValue)
-	out.NoWallet = common.GetBool(&common.FLAG.NoWallet)
+	out.NoWallet = !common.GetBool(&common.WalletON)
 	common.Last.Mutex.Unlock()
 
 	bx, er := json.Marshal(out)

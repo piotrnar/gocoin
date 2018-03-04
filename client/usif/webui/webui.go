@@ -141,10 +141,6 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{TESTNET}", "", 1)
 	}
 	for i := range webuimenu {
-		if common.GetBool(&common.FLAG.NoWallet) && (i==1 || i==2) {
-			continue
-		}
-
 		var x string
 		if i>0 && i<len(webuimenu)-1 {
 			x = " | "
@@ -190,6 +186,14 @@ broken_topic:
 	page := load_template(fname)
 	write_html_head(w, r)
 	w.Write([]byte(page))
+	write_html_tail(w)
+}
+
+
+func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
+	s := load_template("wallet_off.html")
+	write_html_head(w, r)
+	w.Write([]byte(s))
 	write_html_tail(w)
 }
 

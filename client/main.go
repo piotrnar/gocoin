@@ -246,6 +246,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	msg.Done.Done()
 }
 
+
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -351,7 +352,7 @@ func main() {
 
 		usif.LoadBlockFees()
 
-		wallet.FetchingBalanceTick = func() {
+		wallet.FetchingBalanceTick = func() bool {
 			select {
 			case rec := <-usif.LocksChan:
 				common.CountSafe("DoMainLocks")
@@ -366,8 +367,14 @@ func main() {
 				common.CountSafe("DoMainNetTick")
 				network.NetworkTick()
 
+			case on := <-wallet.OnOff:
+				if !on {
+					return true
+				}
+
 			default:
 			}
+			return usif.Exit_now.Get()
 		}
 
 		for !usif.Exit_now.Get() {
@@ -401,6 +408,7 @@ func main() {
 				continue
 
 			case newbl := <-network.NetBlocks:
+				common.WalletOnIn = 5 // 5 seconds atter last block received
 				common.CountSafe("MainNetBlock")
 				common.Busy("HandleNetBlock()")
 				HandleNetBlock(newbl)
@@ -421,6 +429,12 @@ func main() {
 				common.CountSafe("MainNetTick")
 				common.Busy("network.NetworkTick()")
 				network.NetworkTick()
+				if common.WalletOnIn > 0 && network.BlocksToGetCnt() == 0 {
+					common.WalletOnIn--
+					if common.WalletOnIn == 0 {
+						wallet.OnOff <- true
+					}
+				}
 
 			case cmd := <-usif.UiChannel:
 				common.CountSafe("MainUICmd")
@@ -437,6 +451,14 @@ func main() {
 			case <-time.After(time.Second):
 				common.CountSafe("MainThreadIdle")
 				continue
+
+			case on := <-wallet.OnOff:
+				if on {
+					wallet.LoadBalance()
+				} else {
+					wallet.Disable()
+					common.WalletOnIn = 0 // do not auto enable
+				}
 			}
 		}
 
@@ -448,7 +470,6 @@ func main() {
 	common.CloseBlockChain()
 	if common.FLAG.UndoBlocks == 0 {
 		network.MempoolSave(false)
-		wallet.Save()
 	}
 	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
 	peersdb.ClosePeerDB()

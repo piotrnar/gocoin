@@ -22,9 +22,15 @@ import (
 
 
 func p_wal(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet) {
+	if !ipchecker(r) {
 		return
 	}
+
+	if !common.GetBool(&common.WalletON) {
+		p_wallet_is_off(w, r)
+		return
+	}
+
 	var str string
 	common.Last.Mutex.Lock()
 	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 &&
@@ -55,7 +61,7 @@ func getaddrtype(aa *btc.BtcAddr) string {
 }
 
 func json_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
+	if !ipchecker(r) || !common.GetBool(&common.WalletON)  {
 		return
 	}
 
@@ -287,7 +293,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || common.GetBool(&common.FLAG.NoWallet)  {
+	if !ipchecker(r) || !common.GetBool(&common.WalletON)  {
 		return
 	}
 

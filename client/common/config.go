@@ -86,7 +86,7 @@ var (
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
 			UseMapCnt  int
-			SaveOnDisk bool
+			AutoLoad   bool
 		}
 		Stat struct {
 			HashrateHrs uint
@@ -154,6 +154,7 @@ func InitConfig() {
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 100
+	CFG.AllBalances.AutoLoad = true
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
@@ -187,7 +188,7 @@ func InitConfig() {
 	flag.UintVar(&FLAG.UndoBlocks, "undo", 0, "Undo UTXO with this many blocks and exit")
 	flag.BoolVar(&FLAG.TrustAll, "trust", FLAG.TrustAll, "Trust all scripts inside new blocks (for fast syncig)")
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
-	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not monitor balances (saves time and memory, use to sync chain)")
+	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 
 	if CFG.Datadir == "" {
@@ -202,9 +203,18 @@ func InitConfig() {
 
 	ApplyBalMinVal()
 
-	if FLAG.UndoBlocks != 0 {
-		FLAG.NoWallet = true // this will prevent loading of balances, thus speeding up the process
+	if !FLAG.NoWallet {
+		if FLAG.UndoBlocks != 0 {
+			FLAG.NoWallet = true // this will prevent loading of balances, thus speeding up the process
+		} else {
+			FLAG.NoWallet = !CFG.AllBalances.AutoLoad
+		}
+
+		if !FLAG.NoWallet {
+			WalletOnIn = 20 // give it 20 network ticks to receive missing headers
+		}
 	}
+
 
 	Reset()
 }
@@ -373,6 +383,13 @@ func GetUint64(addr *uint64) (res uint64) {
 func GetUint32(addr *uint32) (res uint32) {
 	mutex_cfg.Lock()
 	res = *addr
+	mutex_cfg.Unlock()
+	return
+}
+
+func SetUint32(addr *uint32, val uint32) {
+	mutex_cfg.Lock()
+	*addr = val
 	mutex_cfg.Unlock()
 	return
 }

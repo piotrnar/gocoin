@@ -677,6 +677,13 @@ func GetMP(conid uint32) {
 }
 
 
+func BlocksToGetCnt() (res int) {
+	MutexRcv.Lock()
+	res = len(BlocksToGet)
+	MutexRcv.Unlock()
+	return
+}
+
 func init() {
 	rand.Read(nonce[:])
 }

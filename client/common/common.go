@@ -57,6 +57,10 @@ var (
 
 	SecretKey []byte // 32 bytes of secret key
 	PublicKey string
+
+	WalletON bool
+	WalletProgress uint32 // 0 for not / 1000 for max
+	WalletOnIn uint32
 )
 
 

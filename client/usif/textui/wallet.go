@@ -217,60 +217,27 @@ func all_val_stats(s string) {
 }
 
 func wallet_on_off(s string) {
-	switch s {
-		case "on":
-			if !common.FLAG.NoWallet {
-				fmt.Println("The wallet is already enabled")
-				return
-			}
-			var abort bool
-			__exit := make(chan bool)
-			__done := make(chan bool)
-			go func() {
-				for {
-					select {
-						case s := <-common.KillChan:
-							fmt.Println(s)
-							abort = true
-						case <-__exit:
-							__done <- true
-							return
-					}
-				}
-			}()
-			fmt.Println("Press Ctrl+C to abort...")
-			common.ApplyBalMinVal()
-			wallet.FetchInitialBalance(false, &abort)
-			__exit <- true
-			_ = <- __done
-			if abort {
-				fmt.Println("Aborted")
-				wallet.InitMaps(true)
-			} else {
-				common.BlockChain.Unspent.CB.NotifyTxAdd = wallet.TxNotifyAdd
-				common.BlockChain.Unspent.CB.NotifyTxDel = wallet.TxNotifyDel
-				common.SetBool(&common.FLAG.NoWallet, false)
-			}
+	if s == "on" {
+		select {
+			case wallet.OnOff <- true:
+			default:
+		}
+	} else if s == "off" {
+		select {
+			case wallet.OnOff <- false:
+			default:
+		}
+	}
 
-		case "off":
-			if common.FLAG.NoWallet {
-				fmt.Println("The wallet is already disabled")
-				return
-			}
-			wallet.UpdateMapSizes()
-			common.BlockChain.Unspent.CB.NotifyTxAdd = nil
-			common.BlockChain.Unspent.CB.NotifyTxDel = nil
-			common.SetBool(&common.FLAG.NoWallet, true)
-			wallet.InitMaps(true)
-
-		default:
-			if !common.FLAG.NoWallet {
-				fmt.Println("The wallet functionality is currently enabled.")
-				fmt.Println("Execute 'wallet off' to disable it.")
-			} else {
-				fmt.Println("The wallet functionality is currently disabled.")
-				fmt.Println("Execute 'wallet on' to enable it.")
-			}
+	if common.GetBool(&common.WalletON) {
+		fmt.Println("Wallet functionality is currently ENABLED. Execute 'wallet off' to disable it.")
+		fmt.Println("")
+	} else {
+		if perc := common.GetUint32(&common.WalletProgress); perc != 0 {
+			fmt.Println("Enabling wallet functionality -", (perc-1)/10, "percent complete. Execute 'wallet off' to abort it.")
+		} else {
+			fmt.Println("Wallet functionality is currently DISABLED. Execute 'wallet on' to enable it.")
+		}
 	}
 }
 
@@ -279,5 +246,5 @@ func init() {
 	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
 	newUi("balance a", true, list_unspent, "List balance of given bitcoin address")
 	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
-	newUi("wallet w", true, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
+	newUi("wallet w", false, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
 }
