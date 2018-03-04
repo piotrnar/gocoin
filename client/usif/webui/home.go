@@ -5,7 +5,6 @@ import (
 	"sync"
 	"strings"
 	"net/http"
-	"sync/atomic"
 	"encoding/json"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -66,7 +65,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		Median uint32
 		Version uint32
 		MinValue uint64
-		NoWallet bool
+		WalletON bool
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -77,9 +76,9 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Diff =  btc.GetDifficulty(common.Last.Block.Bits())
 	out.Median =  common.Last.Block.GetMedianTimePast()
 	out.Version = common.Last.Block.BlockVersion()
-	out.MinValue = atomic.LoadUint64(&common.CFG.AllBalances.MinValue)
-	out.NoWallet = !common.GetBool(&common.WalletON)
 	common.Last.Mutex.Unlock()
+	out.MinValue = common.AllBalMinVal()
+	out.WalletON = common.GetBool(&common.WalletON)
 
 	bx, er := json.Marshal(out)
 	if er == nil {

@@ -60,7 +60,7 @@ var (
 
 	WalletON bool
 	WalletProgress uint32 // 0 for not / 1000 for max
-	walletOnIn int32
+	WalletOnIn uint32
 )
 
 
@@ -173,5 +173,15 @@ func GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, er error) {
 			er = errors.New("GetRawTx and GetTxFromWeb failed for " + txid.String())
 		}
 	}
+	return
+}
+
+func WalletPendingTick() (res bool) {
+	mutex_cfg.Lock()
+	if WalletOnIn > 0 {
+		WalletOnIn--
+		res = WalletOnIn==0
+	}
+	mutex_cfg.Unlock()
 	return
 }

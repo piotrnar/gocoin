@@ -40,7 +40,7 @@ init:
 
 func LoadBalance() {
 	if common.GetBool(&common.WalletON) {
-		fmt.Println("wallet.LoadBalance() ignore: ", common.GetBool(&common.WalletON))
+		//fmt.Println("wallet.LoadBalance() ignore: ", common.GetBool(&common.WalletON))
 		return
 	}
 
@@ -81,7 +81,7 @@ func LoadBalance() {
 
 func Disable() {
 	if !common.GetBool(&common.WalletON) {
-		fmt.Println("wallet.Disable() ignore: ", common.GetBool(&common.WalletON))
+		//fmt.Println("wallet.Disable() ignore: ", common.GetBool(&common.WalletON))
 		return
 	}
 	UpdateMapSizes()

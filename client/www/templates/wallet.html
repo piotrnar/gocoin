@@ -606,6 +606,10 @@ function show_mempool_clicked() {
 // reaload page on new block
 var _lblo = 0
 blno.addEventListener("lastblock", function(e) {
+	if (!e.block.WalletON) {
+		location.reload()
+		return
+	}
 	if (_lblo==0) {
 		_lblo = e.block.Height
 		if (e.block.MinValue>0) {

@@ -222,11 +222,13 @@ func wallet_on_off(s string) {
 			case wallet.OnOff <- true:
 			default:
 		}
+		return
 	} else if s == "off" {
 		select {
 			case wallet.OnOff <- false:
 			default:
 		}
+		return
 	}
 
 	if common.GetBool(&common.WalletON) {
@@ -241,7 +243,7 @@ func wallet_on_off(s string) {
 	}
 
 
-	if pend := common.WalletPending(); pend > 0 {
+	if pend := common.GetUint32(&common.WalletOnIn); pend > 0 {
 		fmt.Println("Wallet functionality will auto enable in", pend, "seconds")
 	}
 }

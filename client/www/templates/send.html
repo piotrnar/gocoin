@@ -758,6 +758,10 @@ if (typeof(localStorage.gocoinWallets)=="string") {
 
 var warning_set = false
 blno.addEventListener("lastblock", function(e) {
+	if (!e.block.WalletON) {
+		location.reload()
+		return
+	}
 	if (!warning_set) {
 		warning_set = true
 		if (e.block.MinValue>0) {

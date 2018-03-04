@@ -211,7 +211,7 @@ func InitConfig() {
 		}
 
 		if !FLAG.NoWallet {
-			walletOnIn = 15 // give it 15 network ticks to receive missing headers before
+			WalletOnIn = 15 // give it 15 network ticks to receive missing headers before
 		}
 	}
 
@@ -456,16 +456,4 @@ func RejectedTxsLimits() (size uint64, cnt int) {
 
 func TempBlocksDir() string {
 	return GocoinHomeDir + "tmpblk" + string(os.PathSeparator)
-}
-
-func WalletPending() int {
-	return int(atomic.LoadInt32(&walletOnIn))
-}
-
-func WalletPendingSet(val int32) {
-	atomic.StoreInt32(&walletOnIn, val)
-}
-
-func WalletPendingTick() bool {
-	return atomic.AddInt32(&walletOnIn, -1) <= 0
 }

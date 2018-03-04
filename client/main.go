@@ -408,8 +408,8 @@ func main() {
 				continue
 
 			case newbl := <-network.NetBlocks:
-				if common.WalletPending() > 0 {
-					common.WalletPendingSet(5)  // snooze the timer to 5 seconds from now
+				if common.GetUint32(&common.WalletOnIn) > 0 {
+					common.SetUint32(&common.WalletOnIn, 5)  // snooze the timer to 5 seconds from now
 				}
 				common.CountSafe("MainNetBlock")
 				common.Busy("HandleNetBlock()")
@@ -431,7 +431,7 @@ func main() {
 				common.CountSafe("MainNetTick")
 				common.Busy("network.NetworkTick()")
 				network.NetworkTick()
-				if common.WalletPending() > 0 && network.BlocksToGetCnt() == 0 {
+				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 {
 					if common.WalletPendingTick() {
 						wallet.OnOff <- true
 					}
@@ -458,7 +458,7 @@ func main() {
 					wallet.LoadBalance()
 				} else {
 					wallet.Disable()
-					common.WalletPendingSet(0)
+					common.SetUint32(&common.WalletOnIn, 0)
 				}
 			}
 		}

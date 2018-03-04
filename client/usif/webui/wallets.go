@@ -399,3 +399,29 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 
 }
+
+
+func json_wallet_status(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
+	var out struct {
+		WalletON bool
+		WalletProgress uint32
+		WalletOnIn uint32
+	}
+	common.LockCfg()
+	out.WalletON = common.WalletON
+	out.WalletProgress = common.WalletProgress
+	out.WalletOnIn = common.WalletOnIn
+	common.UnlockCfg()
+
+	bx, er := json.Marshal(out)
+	if er == nil {
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.Write(bx)
+	} else {
+		println(er.Error())
+	}
+}
