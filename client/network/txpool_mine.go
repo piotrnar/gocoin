@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"time"
 )
 
 func (rec *OneTxToSend) IIdx(key uint64) int {
@@ -65,9 +64,6 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 			common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Reason))
 		} else {
 			common.CountSafe(fmt.Sprint("TxMinedRNO-", mr.Reason))
-			if common.GetBool(&common.CFG.TXPool.Debug) {
-				println("Mined empty rejected", h.String(), " len:", mr.Size, " reason:", mr.Reason, " seen", time.Now().Sub(mr.Time).String(), "ago")
-			}
 		}
 		deleteRejected(h.BIdx())
 	}
@@ -103,9 +99,6 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 
 // Removes all the block's tx from the mempool
 func BlockMined(bl *btc.Block) {
-	if common.GetBool(&common.CFG.TXPool.Debug) {
-		println("Mined block", bl.Height)
-	}
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int
 	TxMutex.Lock()
@@ -125,16 +118,13 @@ func BlockMined(bl *btc.Block) {
 			RetryWaitingForInput(wtg)
 		}
 	}
-	if common.GetBool(&common.CFG.TXPool.Debug) {
-		print("> ")
-	}
 
 	expireTxsNow = true
 }
 
 func (c *OneConnection) SendGetMP() {
 	TxMutex.Lock()
-	tcnt := len(TransactionsToSend)+len(TransactionsRejected)
+	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
 	if tcnt > 100e3 {
 		fmt.Println("Too many transactions in the current pool")
 		TxMutex.Unlock()
@@ -172,29 +162,17 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		of += btc.Uint256IdxLen
 	}
 
-	if common.GetBool(&common.CFG.TXPool.Debug) {
-		fmt.Print(c.ConnID, " - getmp message with ", cnt, " txs... ")
-	}
-	var cnt2, data_sent_so_far int
+	var data_sent_so_far int
 
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
 		if c.BytesToSent() > SendBufSize/2 {
-			if common.GetBool(&common.CFG.TXPool.Debug) {
-				fmt.Println("Not all done - try again in awhile")
-			}
 			break
 		}
 		if !has_this_one[k] {
 			c.SendRawMsg("tx", v.Raw)
 			data_sent_so_far += 24 + len(v.Raw)
-			cnt2++
 		}
 	}
 	TxMutex.Unlock()
-
-	if common.GetBool(&common.CFG.TXPool.Debug) {
-		fmt.Println("sent", cnt2, "txs and", data_sent_so_far, "bytes in response")
-		fmt.Println("> ")
-	}
 }
