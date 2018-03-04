@@ -211,7 +211,7 @@ func InitConfig() {
 		}
 
 		if !FLAG.NoWallet {
-			WalletOnIn = 20 // give it 20 network ticks to receive missing headers
+			WalletOnIn = 15 // give it 15 network ticks to receive missing headers before
 		}
 	}
 
