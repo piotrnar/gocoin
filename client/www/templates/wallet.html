@@ -591,6 +591,14 @@ Import settings: <input type="file" id="import_file" accept=".json">
 </table>
 </div>
 
+
+<form id="form_b" method="post" action="cfg" style="margin:0px;text-align:center" onsubmit="return confirm('Disable wallet functionality')">
+<input type="hidden" name="wallet" value="off">
+<input type="hidden" name="page" value="/wal">
+<input type="submit" value="Disable wallet functionality for lower memory usage and faster block processing">
+</form>
+
+
 <script>
 if (typeof(localStorage.gocoinWallets)=="string") {
 	build_wallet_list()
@@ -643,5 +651,9 @@ function turn_off_warning() {
 
 if (localStorage.getItem("wallet_segwit_p2sh")==="true") {
 	p2sh_sw.checked = true
+}
+
+if (!server_mode) {
+	form_b.style.display = 'block'
 }
 </script>
