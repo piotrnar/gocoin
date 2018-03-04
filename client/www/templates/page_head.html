@@ -60,7 +60,6 @@ for (var i=0; i < webuimenu.length; i++) {
 	a.href = webuimenu[i][0]
 	a.text = webuimenu[i][1]
 	a.className = 'topmenu'
-	console.log(document.location.pathname)
 	if (document.location.pathname==webuimenu[i][0]) {
 		a.classList.add('menuat')
 	}
@@ -76,7 +75,7 @@ for (var i=0; i < webuimenu.length; i++) {
 		topmenu.appendChild(sp)
 	}
 }
-
+if (document.location.pathname=='/help') helpmenulink.classList.add('menuat')
 
 var time_now /*_TIME_NOW_*/
 function refreshblock() {
