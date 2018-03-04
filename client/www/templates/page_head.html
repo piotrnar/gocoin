@@ -21,10 +21,12 @@ function remember_beep() {
 	<table width="100%" border="0"><tr>
 		<td id="topmenu">{MENU_LEFT}</td>
 		<td align="left" width="120" class="nw">Height: <b id="blno">...</b>
-		<td align="left" width="150">Beep:
-        <input type="checkbox" id="beep_new_block" onchange="remember_beep()" title="Beep on each new block">
+		<td align="left" width="80">Beep:
+		<input type="checkbox" id="beep_new_block" onchange="remember_beep()" title="Beep on each new block">
+		</td>
+		<td align="center" width="50" align="center"><img id="warning_icon" src="webui/warning.png" style="display:none"></td>
 		<td align="left">
-        <input type="button" value="Load Raw TX" onclick="pushtx()" style="padding:2px;font-size:10px" title="Load raw transaction">
+		<input type="button" value="Load Raw TX" onclick="pushtx()" style="padding:2px;font-size:10px" title="Load raw transaction">
 		<td align="right">
 		{MENU_RIGHT} |
 		<a href="{HELPURL}">Help</a></td>
@@ -63,7 +65,12 @@ function refreshblock() {
 				document.title = doc_title + ' @ ' + stat.Height
 			}
 
-			topmenu.getElementsByTagName('a')[1].title = "Minimum output value " + val2str(e.block.MinValue) + " BTC"
+			if (e.block.MinValue != 0) {
+				warning_icon.title = "Minimum wallet's output value " + val2str(e.block.MinValue) + " BTC"
+				warning_icon.style.display = 'inline'
+			} else {
+				warning_icon.style.display = 'none'
+			}
 		} catch(e) {
 			blno.title = e
 			blno.innerText = "???"
