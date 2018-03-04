@@ -97,6 +97,9 @@ function refreshblock() {
 			if (!stat.WalletON) {
 				topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
 				topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
+			} else {
+				topmenu.getElementsByTagName('a')[1].classList.remove('dimenu')
+				topmenu.getElementsByTagName('a')[2].classList.remove('dimenu')
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
