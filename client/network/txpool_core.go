@@ -577,13 +577,6 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 // Delete all the children as well if with_children is true
 // If reason is not zero, add the deleted txs to the rejected list
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	/*
-		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-			println("ERROR:", tx.Hash.String(), "not in", TransactionsToSend)
-			debug.PrintStack()
-		}
-	*/
-
 	if with_children {
 		// remove all the children that are spending from tx
 		var po btc.TxPrevOut
@@ -595,12 +588,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 				}
 			}
 		}
-	} /*else {
-		if !tx.AssetMarkChildrenForMem() {
-			_, f, l, _ := runtime.Caller(1)
-			println("AssetMarkChildrenForMem() failed for", tx.Hash.String(), f, l)
-		}
-	}*/
+	}
 
 	for i := range tx.Spent {
 		delete(SpentOutputs, tx.Spent[i])
