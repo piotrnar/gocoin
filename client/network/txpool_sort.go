@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	expireTxsNow bool = true
+	expireTxsNow  bool = true
 	lastTxsExpire time.Time
 )
 
@@ -164,7 +164,7 @@ func LimitPoolSize(maxlen uint64) {
 		common.SetMinFeePerKB(newspkb)
 
 		/*fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-			old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
+		old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
 		common.CounterMutex.Lock()
 		common.Counter["TxPoolSizeHigh"]++
 		common.Counter["TxPurgedSizCnt"] += uint64(cnt)
@@ -172,7 +172,6 @@ func LimitPoolSize(maxlen uint64) {
 		common.CounterMutex.Unlock()
 	}
 }
-
 
 func GetSortedRejected() (sorted []*OneTxRejected) {
 	var idx int
@@ -183,12 +182,11 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 	}
 	var now = time.Now()
 	sort.Slice(sorted, func(i, j int) bool {
-		return int64(sorted[i].Size) * int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size) * int64(now.Sub(sorted[j].Time))
+		return int64(sorted[i].Size)*int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size)*int64(now.Sub(sorted[j].Time))
 	})
 	println("rejected sorted:", sorted[0].Size, now.Sub(sorted[0].Time), "...", sorted[idx-1].Size, now.Sub(sorted[idx-1].Time))
 	return
 }
-
 
 // This must be called with TxMutex locked
 func LimitRejectedSize() {
@@ -217,7 +215,7 @@ func LimitRejectedSize() {
 			sorted = GetSortedRejected()
 		}
 		maxlen -= maxlen >> 5
-		for idx = len(sorted)-1; idx >= 0; idx-- {
+		for idx = len(sorted) - 1; idx >= 0; idx-- {
 			deleteRejected(sorted[idx].Hash.BIdx())
 			if TransactionsRejectedSize <= maxlen {
 				break
@@ -229,18 +227,19 @@ func LimitRejectedSize() {
 		common.CounterMutex.Lock()
 		common.Counter["TxRejectedSizCnt"] += uint64(old_cnt - len(TransactionsRejected))
 		common.Counter["TxRejectedSizBts"] += old_size - TransactionsRejectedSize
-		println("Removed", uint64(old_cnt - len(TransactionsRejected)), "txs and", old_size - TransactionsRejectedSize,
+		println("Removed", uint64(old_cnt-len(TransactionsRejected)), "txs and", old_size-TransactionsRejectedSize,
 			"bytes from the rejected poool")
 		common.CounterMutex.Unlock()
 	}
 }
 
-/*
+/* --== Let's keep it here for now as it sometimes comes handy for debuging
+
 var first_ = true
 
 // call this one when TxMutex is locked
 func MPC_locked() bool {
-	if first_ && common.GetBool(&common.CFG.TXPool.Debug) && MempoolCheck() {
+	if first_ && MempoolCheck() {
 		first_ = false
 		_, file, line, _ := runtime.Caller(1)
 		println("=====================================================")
@@ -257,7 +256,6 @@ func MPC() (res bool) {
 	return
 }
 */
-
 
 // Verifies Mempool for consistency
 // Make sure to call it with TxMutex Locked
@@ -471,7 +469,7 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
-			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
+			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
 					continue
@@ -512,7 +510,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
-			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
+			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
 					continue
