@@ -19,7 +19,7 @@ function remember_beep() {
 <body>
 <table align="center" width="1020" cellpadding="0" cellspacing="0"><tr><td>
 	<table width="100%" border="0"><tr>
-		<td>{MENU_LEFT}</td>
+		<td id="topmenu">{MENU_LEFT}</td>
 		<td align="left" width="120" class="nw">Height: <b id="blno">...</b>
 		<td align="left" width="150">Beep:
         <input type="checkbox" id="beep_new_block" onchange="remember_beep()" title="Beep on each new block">
@@ -62,6 +62,8 @@ function refreshblock() {
 				blno.innerText = stat.Height
 				document.title = doc_title + ' @ ' + stat.Height
 			}
+
+			topmenu.getElementsByTagName('a')[1].title = "Minimum output value " + val2str(e.block.MinValue) + " BTC"
 		} catch(e) {
 			blno.title = e
 			blno.innerText = "???"
