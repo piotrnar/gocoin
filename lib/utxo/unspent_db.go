@@ -381,17 +381,16 @@ func (db *UnspentDB) Close() {
 
 // Get ne unspent output
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
-	db.Mutex.Lock()
-	defer db.Mutex.Unlock()
 	var ind UtxoKeyType
+	var v unsafe.Pointer
 	copy(ind[:], po.Hash[:])
-	v := db.HashMap[ind]
+
+	db.Mutex.Lock()
+	v = db.HashMap[ind]
+	db.Mutex.Unlock()
 	if v==nil {
 		e = errors.New("UnspentGet: Unspent TX not found")
-		return
-	}
-
-	if res = OneUtxoRec(ind, _slice(v), po.Vout); res == nil {
+	} else if res = OneUtxoRec(ind, _slice(v), po.Vout); res == nil {
 		e = errors.New("UnspentGet: Unspent Vout not found")
 	}
 	return
