@@ -141,7 +141,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 					e = errors.New("Input spent more then once in same block")
 					return
 				}
-				tout := ch.PickUnspent(inp)
+				tout := ch.Unspent.UnspentGet(inp)
 				if tout==nil {
 					t, ok := blUnsp[inp.Hash]
 					if !ok {

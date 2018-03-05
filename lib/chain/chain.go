@@ -145,16 +145,6 @@ func (ch *Chain) Idle() bool {
 }
 
 
-// Returns detauils of an unspent output, it there is such.
-func (ch *Chain) PickUnspent(txin *btc.TxPrevOut) (*btc.TxOut) {
-	o, e := ch.Unspent.UnspentGet(txin)
-	if e == nil {
-		return o
-	}
-	return nil
-}
-
-
 // Return blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
 	last := ch.LastBlock()

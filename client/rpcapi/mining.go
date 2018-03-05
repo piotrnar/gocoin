@@ -130,7 +130,7 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 		all_inputs_found = true
 		var depends []uint
 		for i := range tx.TxIn {
-			unsp, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			unsp = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if unsp==nil {
 				// not found in the confirmed blocks
 				// check if txid is in txs_so_far

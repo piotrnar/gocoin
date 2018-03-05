@@ -50,6 +50,9 @@ func LoadBalance() {
 
 	InitMaps(false)
 
+	common.BlockChain.Unspent.RWMutex.RLock()
+	defer common.BlockChain.Unspent.RWMutex.RUnlock()
+
 	cnt_dwn_from := (len(common.BlockChain.Unspent.HashMap) + 999) / 1000
 	cnt_dwn := cnt_dwn_from
 	perc := uint32(1)

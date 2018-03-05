@@ -54,7 +54,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			}
 		} else {
-			po, _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			po = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if po != nil {
 				s += fmt.Sprintf("%8d", po.BlockHeight)
 			}

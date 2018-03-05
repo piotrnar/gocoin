@@ -306,7 +306,7 @@ func MempoolCheck() (dupa bool) {
 			}
 
 			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
-				if unsp, _ := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
+				if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
 					fmt.Println("Mempool tx", t2s.Hash.String(), "has no input", i)
 					dupa = true
 				}

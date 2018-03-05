@@ -136,7 +136,7 @@ func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 		why_not = 2
 	} else if _, present := TransactionsPending[id.BIdx()]; present {
 		why_not = 3
-	} else if txo, _ := common.BlockChain.Unspent.UnspentGet(&btc.TxPrevOut{Hash: id.Hash}); txo != nil {
+	} else if common.BlockChain.Unspent.TxPresent(id) {
 		why_not = 4
 		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
 		common.CountSafe("TxAlreadyMined")
@@ -341,7 +341,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			frommem[i] = true
 			frommemcnt++
 		} else {
-			pos[i], _ = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
 				var newone bool
 

@@ -69,7 +69,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 					vout, er := strconv.ParseUint(r.Form["txvout"+is][0], 10, 32)
 					if er==nil {
 						var po = btc.TxPrevOut{Hash:hash.Hash, Vout:uint32(vout)}
-						if res, er := common.BlockChain.Unspent.UnspentGet(&po); er==nil {
+						if res := common.BlockChain.Unspent.UnspentGet(&po); res != nil {
 							addr := btc.NewAddrFromPkScript(res.Pk_script, common.Testnet)
 
 							unsp := &utxo.OneUnspentTx{TxPrevOut:po, Value:res.Value,
