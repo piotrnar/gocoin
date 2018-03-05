@@ -351,7 +351,7 @@ func set_config(s string) {
 			fmt.Println("Config changed. Execute configsave, if you want to save it.")
 		}
 	}
-	dat, _ := json.Marshal(&common.CFG)
+	dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
 	fmt.Println(string(dat))
 }
 

@@ -325,11 +325,6 @@ function draw_chart() {
 var last_block_height = -1
 
 function shwcfg() {
-	try {
-		configjson.value = JSON.stringify(JSON.parse(configjson.value), null, 4)
-	} catch (e) {
-		console.log(e)
-	}
 	showcfg.style.display='none'
 	formcfg.style.display='block'
 	window.scrollTo(0,document.body.scrollHeight)

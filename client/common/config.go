@@ -232,7 +232,7 @@ func DataSubdir() string {
 }
 
 func SaveConfig() bool {
-	dat, _ := json.Marshal(&CFG)
+	dat, _ := json.MarshalIndent(&CFG, "", "    ")
 	if dat == nil {
 		return false
 	}

@@ -126,7 +126,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(r.Form["savecfg"]) > 0 {
-		dat, _ := json.Marshal(&common.CFG)
+		dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
 		if dat != nil {
 			ioutil.WriteFile(common.ConfigFile, dat, 0660)
 		}

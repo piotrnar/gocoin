@@ -37,7 +37,7 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	if !common.CFG.WebUI.ServerMode {
 		common.LockCfg()
-		dat, _ := json.Marshal(&common.CFG)
+		dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
 		common.UnlockCfg()
 		s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
 	}
