@@ -93,7 +93,9 @@ func host_init() {
 		common.Last.Time = time.Now()
 	}
 
-	common.ApplyLastTrustedBlock(true)
+	common.LockCfg()
+	common.ApplyLastTrustedBlock()
+	common.UnlockCfg()
 
 	if common.CFG.Memory.FreeAtStart {
 		fmt.Print("Freeing memory... ")

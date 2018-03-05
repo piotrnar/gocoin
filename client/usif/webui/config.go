@@ -143,7 +143,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["trusthash"]) > 0 {
 		if btc.NewUint256FromString(r.Form["trusthash"][0]) != nil {
 			common.CFG.LastTrustedBlock = r.Form["trusthash"][0]
-			common.ApplyLastTrustedBlock(false)
+			common.ApplyLastTrustedBlock()
 		}
 		w.Write([]byte(common.CFG.LastTrustedBlock))
 		return

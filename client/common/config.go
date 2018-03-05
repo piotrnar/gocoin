@@ -292,7 +292,7 @@ func Reset() {
 
 	ReloadMiners()
 
-	ApplyLastTrustedBlock(true)
+	ApplyLastTrustedBlock()
 }
 
 func MkTempBlocksDir() {
