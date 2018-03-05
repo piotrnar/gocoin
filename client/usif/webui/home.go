@@ -66,6 +66,8 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		Version uint32
 		MinValue uint64
 		WalletON bool
+		LastTrustedBlockHeight uint32
+		LastHeaderHeight uint32
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -79,6 +81,10 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	common.Last.Mutex.Unlock()
 	out.MinValue = common.AllBalMinVal()
 	out.WalletON = common.GetBool(&common.WalletON)
+	out.LastTrustedBlockHeight = common.GetUint32(&common.LastTrustedBlockHeight)
+	network.MutexRcv.Lock()
+	out.LastHeaderHeight = network.LastCommitedHeader.Height
+	network.MutexRcv.Unlock()
 
 	bx, er := json.Marshal(out)
 	if er == nil {

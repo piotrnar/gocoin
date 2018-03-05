@@ -63,6 +63,7 @@ var (
 	WalletOnIn uint32
 
 	lastTrustedBlock *btc.Uint256
+	LastTrustedBlockHeight uint32
 )
 
 
