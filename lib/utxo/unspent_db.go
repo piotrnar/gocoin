@@ -387,21 +387,13 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut, e error) {
 	copy(ind[:], po.Hash[:])
 	v := db.HashMap[ind]
 	if v==nil {
-		e = errors.New("Unspent TX not found")
+		e = errors.New("UnspentGet: Unspent TX not found")
 		return
 	}
 
-	rec := NewUtxoRec(ind, _slice(v))
-	if len(rec.Outs)<=int(po.Vout) || rec.Outs[po.Vout]==nil {
-		e = errors.New("Unspent VOut not found")
-		return
+	if res = OneUtxoRec(ind, _slice(v), po.Vout); res == nil {
+		e = errors.New("UnspentGet: Unspent Vout not found")
 	}
-	res = new(btc.TxOut)
-	res.VoutCount = uint32(len(rec.Outs))
-	res.WasCoinbase = rec.Coinbase
-	res.BlockHeight = rec.InBlock
-	res.Value = rec.Outs[po.Vout].Value
-	res.Pk_script = rec.Outs[po.Vout].PKScr
 	return
 }
 

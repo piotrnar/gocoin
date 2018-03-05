@@ -55,7 +55,7 @@ var (
 
 
 func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
-	var off, n, i int
+	var off, n, i, _idx int
 	var u64, idx uint64
 
 	off = 32-UtxoIdxLen
@@ -76,13 +76,15 @@ func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
 		rec_pool = make([]UtxoTxOut, u64)
 	}
 	sta_rec.Outs = rec_outs[:u64]
-	for i := range sta_rec.Outs {
-		sta_rec.Outs[i] = nil
-	}
 
 	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
+
+		for _idx < int(idx) {
+			sta_rec.Outs[_idx] = nil
+			_idx++
+		}
 
 		sta_rec.Outs[idx] = &rec_pool[idx]
 
@@ -95,6 +97,11 @@ func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
 
 		sta_rec.Outs[idx].PKScr = dat[off:off+i]
 		off += i
+	}
+
+	for _idx < len(sta_rec.Outs) {
+		sta_rec.Outs[_idx] = nil
+		_idx++
 	}
 
 	return &sta_rec
@@ -136,6 +143,50 @@ func NewUtxoRec(key UtxoKeyType, dat []byte) *UtxoRec {
 		off += i
 	}
 	return &rec
+}
+
+
+func OneUtxoRec(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
+	var off, n, i int
+	var u64, idx uint64
+	var res btc.TxOut
+
+	off = 32-UtxoIdxLen
+
+	u64, n = btc.VULe(dat[off:])
+	off += n
+	res.BlockHeight = uint32(u64)
+
+	u64, n = btc.VULe(dat[off:])
+	off += n
+
+	res.VoutCount = uint32(u64>>1)
+	if res.VoutCount <= vout {
+		return nil
+	}
+	res.WasCoinbase = (u64&1) != 0
+
+	for off < len(dat) {
+		idx, n = btc.VULe(dat[off:])
+		if uint32(idx) > vout {
+			return nil
+		}
+		off += n
+
+		u64, n = btc.VULe(dat[off:])
+		off += n
+
+		i, n = btc.VLen(dat[off:])
+		off += n
+
+		if uint32(idx)==vout {
+			res.Value = uint64(u64)
+			res.Pk_script = dat[off:off+i]
+			return &res
+		}
+		off += i
+	}
+	return nil
 }
 
 func vlen2size(uvl uint64) int {
