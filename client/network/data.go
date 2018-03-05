@@ -153,7 +153,9 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
 	b2g.Block.Raw = b
-	b2g.Block.Trusted = conn.X.Authorized
+	if conn.X.Authorized {
+		b2g.Block.Trusted = true
+	}
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er!=nil {

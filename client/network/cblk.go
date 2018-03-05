@@ -405,7 +405,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: time.Now(), FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
-		b2g.Block.Trusted = c.X.Authorized
+		if c.X.Authorized {
+			b2g.Block.Trusted = true
+		}
 		NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 	} else {
 		if b2g.TmPreproc.IsZero() { // do not overwrite TmPreproc if already set
@@ -539,6 +541,8 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,
 		TmDownload: c.LastMsgTime, TxMissing: col.Missing, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
-	b2g.Block.Trusted = c.X.Authorized
+	if c.X.Authorized {
+		b2g.Block.Trusted = true
+	}
 	NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 }
