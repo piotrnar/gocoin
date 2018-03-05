@@ -160,7 +160,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 			}
 		}
 
-		// Check Merkle Root - that's importnant
+		// Check Merkle Root - that's important
 		merkle, mutated := bl.GetMerkle()
 		if mutated {
 			er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
