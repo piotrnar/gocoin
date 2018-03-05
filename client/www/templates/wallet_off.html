@@ -1,4 +1,6 @@
 <br>
+<i id="wallet_min_warning" style="color:purple;float:right" title="Modify MinValue in gocoin.conf to change it">
+Minimum output value to be included in wallet's balance: <b id="min_val_btc"></b> BTC</i>
 <div id="wal_off" style="display:none">
 Wallet functionality is not available at this moment.
 
@@ -77,5 +79,13 @@ if (!server_mode) {
 	form_b.style.display = 'block'
 }
 refresh_walletstatus()
+
+var _lblo = 0
+blno.addEventListener("lastblock", function(e) {
+	if (_lblo==0) {
+		_lblo = e.block.Height
+		min_val_btc.innerText = val2str(e.block.MinValue)
+	}
+})
 
 </script>

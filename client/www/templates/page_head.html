@@ -47,7 +47,6 @@ function beep_clicked() {
 		</td>
 		<td align="center" align="center">
 			<img id="chainsync_icon" src="webui/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
-			<img id="warning_icon" src="webui/warning.png" style="display:none">
 		</td>
 		<td align="center">
 			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
@@ -120,13 +119,6 @@ function refreshblock() {
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
-
-			if (stat.MinValue != 0) {
-				warning_icon.title = "Wallet ignores outputs with values below " + val2str(stat.MinValue) + " BTC"
-				warning_icon.style.display = 'inline'
-			} else {
-				warning_icon.style.display = 'none'
-			}
 
 			// dispatch event..
 			var e = document.createEvent("Event")
