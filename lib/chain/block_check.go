@@ -159,18 +159,18 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 				return
 			}
 		}
+	}
 
-		// Check Merkle Root - that's important
-		merkle, mutated := bl.GetMerkle()
-		if mutated {
-			er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
-			return
-		}
+	// Check Merkle Root, even for trusted blocks - that's important, as they may come from untrasted peers
+	merkle, mutated := bl.GetMerkle()
+	if mutated {
+		er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
+		return
+	}
 
-		if !bytes.Equal(merkle, bl.MerkleRoot()) {
-			er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
-			return
-		}
+	if !bytes.Equal(merkle, bl.MerkleRoot()) {
+		er = errors.New("CheckBlock() : Merkle Root mismatch - RPC_Result:bad-txnmrklroot")
+		return
 	}
 
 	if bl.BlockTime()>=BIP16SwitchTime {

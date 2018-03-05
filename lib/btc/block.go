@@ -177,8 +177,8 @@ func (bl *Block) MerkleRootMatch() bool {
 	if bl.TxCount==0 {
 		return false
 	}
-	merkle, _ := bl.GetMerkle()
-	return bytes.Equal(merkle, bl.MerkleRoot())
+	merkle, mutated := bl.GetMerkle()
+	return !mutated && bytes.Equal(merkle, bl.MerkleRoot())
 }
 
 func (bl *Block) GetMerkle() (res []byte, mutated bool) {

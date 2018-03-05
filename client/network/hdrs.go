@@ -57,6 +57,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	node := common.BlockChain.AcceptHeader(bl)
+	bl.Trusted = node.Trusted
 	b2g = &OneBlockToGet{Started:c.LastMsgTime, Block:bl, BlockTreeNode:node, InProgress:0}
 	AddB2G(b2g)
 	LastCommitedHeader = node

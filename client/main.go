@@ -50,7 +50,7 @@ func blockMined(bl *btc.Block) {
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
-	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted {
+	if common.FLAG.TrustAll {
 		bl.Trusted = true
 	}
 
