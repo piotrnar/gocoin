@@ -106,7 +106,7 @@ function refreshblock() {
 
 			if (stat.LastHeaderHeight - stat.Height > 1) {
 				chainsync_icon.style.display =  'inline'
-				chainsync_icon.title = (stat.LastHeaderHeight - stat.Height) + " blocks pending"
+				chainsync_icon.title = (stat.LastHeaderHeight - stat.Height) + " blocks left"
 			} else {
 				chainsync_icon.style.display =  'none'
 			}
