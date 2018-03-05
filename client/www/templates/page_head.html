@@ -5,11 +5,14 @@
 /*_SESSION_ID_*/
 /*_AVERAGE_FEE_SPB_*/
 /*_SERVER_MODE_*/
+/*_WALLET_ON_*/
 var doc_title = document.title
 var testnet = (doc_title.indexOf(" Testnet") != -1)
 
 var new_block_audio_file = new Audio('webui/new_block.mp3')
 var back_online_audio_file = new Audio('webui/back_online.mp3')
+
+var last_blocks_left = 0
 
 var webuimenu = [
 	["/", "Home"],
@@ -69,6 +72,16 @@ function set_tblock_hash() {
 	}
 }
 
+function apply_wallet_on() {
+	if (wallet_on) {
+		topmenu.getElementsByTagName('a')[1].classList.remove('dimenu')
+		topmenu.getElementsByTagName('a')[2].classList.remove('dimenu')
+	} else {
+		topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
+		topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
+	}
+}
+
 for (var i=0; i < webuimenu.length; i++) {
 	var a = document.createElement('a')
 	a.href = webuimenu[i][0]
@@ -89,6 +102,7 @@ for (var i=0; i < webuimenu.length; i++) {
 		topmenu.appendChild(sp)
 	}
 }
+apply_wallet_on()
 if (document.location.pathname=='/help') helpmenulink.classList.add('menuat')
 
 var time_now /*_TIME_NOW_*/
@@ -103,19 +117,20 @@ function refreshblock() {
 		try {
 			var stat = JSON.parse(aj.responseText)
 
-			if (stat.LastHeaderHeight - stat.Height > 1) {
-				chainsync_icon.style.display =  'inline'
-				chainsync_icon.title = (stat.LastHeaderHeight - stat.Height) + " blocks left"
-			} else {
-				chainsync_icon.style.display =  'none'
+			var blocks_left = stat.LastHeaderHeight - stat.Height
+			if (blocks_left != last_blocks_left) {
+				last_blocks_left = blocks_left
+				if (blocks_left > 1) {
+					chainsync_icon.title = blocks_left + " blocks left"
+					chainsync_icon.style.display =  'inline'
+				} else {
+					chainsync_icon.style.display =  'none'
+				}
 			}
 
-			if (!stat.WalletON) {
-				topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
-				topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
-			} else {
-				topmenu.getElementsByTagName('a')[1].classList.remove('dimenu')
-				topmenu.getElementsByTagName('a')[2].classList.remove('dimenu')
+			if (stat.WalletON != wallet_on) {
+				wallet_on = stat.WalletON
+				apply_wallet_on()
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
