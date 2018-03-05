@@ -34,8 +34,8 @@ function beep_clicked() {
 		<colgroup>
 			<col>  <!-- top menu -->
 			<col width="90"> <!-- block height -->
-			<col width="80"> <!-- beep -->
-			<col width="50"> <!-- minout warning -->
+			<col width="60"> <!-- beep -->
+			<col width="70"> <!-- status icons -->
 			<col width="80"> <!-- PushTX -->
 			<col> <!-- right menu -->
 		</colgroup>
@@ -45,7 +45,10 @@ function beep_clicked() {
 		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
 			<input type="checkbox" id="beep_new_block" class="hand"><img src="webui/music.png">
 		</td>
-		<td align="center" align="center"><img id="warning_icon" src="webui/warning.png" style="display:none"></td>
+		<td align="center" align="center">
+			<img id="chainsync_icon" src="webui/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
+			<img id="warning_icon" src="webui/warning.png" style="display:none">
+		</td>
 		<td align="center">
 			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
 		<td align="right" id="rightmenu">
@@ -54,6 +57,18 @@ function beep_clicked() {
 	</tr></table>
 <hr style="margin:2px">
 <script>
+
+function set_tblock_hash() {
+	var hash = prompt("To speed up chain sync, enter hash of the highest block you trust")
+	if (hash!=null) {
+		var aj = ajax()
+		aj.onload = function() {
+			location.reload()
+		}
+		aj.open("GET","cfg?sid="+sid+"&trusthash="+hash, true)
+		aj.send(null)
+	}
+}
 
 for (var i=0; i < webuimenu.length; i++) {
 	var a = document.createElement('a')
@@ -88,11 +103,13 @@ function refreshblock() {
 		var new_block = false
 		try {
 			var stat = JSON.parse(aj.responseText)
-			var e = document.createEvent("Event")
-			e.initEvent("lastblock", false, false)
-			e.block = stat
-			time_now = stat.Time_now
-			blno.dispatchEvent(e)
+
+			if (stat.LastHeaderHeight - stat.Height > 1) {
+				chainsync_icon.style.display =  'inline'
+				chainsync_icon.title = (stat.LastHeaderHeight - stat.Height) + " blocks pending"
+			} else {
+				chainsync_icon.style.display =  'none'
+			}
 
 			if (!stat.WalletON) {
 				topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
@@ -103,6 +120,20 @@ function refreshblock() {
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
+
+			if (stat.MinValue != 0) {
+				warning_icon.title = "Wallet ignores outputs with values below " + val2str(stat.MinValue) + " BTC"
+				warning_icon.style.display = 'inline'
+			} else {
+				warning_icon.style.display = 'none'
+			}
+
+			// dispatch event..
+			var e = document.createEvent("Event")
+			e.initEvent("lastblock", false, false)
+			e.block = stat
+			time_now = stat.Time_now
+			blno.dispatchEvent(e)
 
 			if (blno.innerText != stat.Height) {
 				if (beep_new_block.checked)  {
@@ -115,13 +146,6 @@ function refreshblock() {
 				new_block = true
 				blno.innerText = stat.Height
 				document.title = doc_title + ' @ ' + stat.Height
-			}
-
-			if (e.block.MinValue != 0) {
-				warning_icon.title = "Wallet ignores outputs with values below " + val2str(e.block.MinValue) + " BTC"
-				warning_icon.style.display = 'inline'
-			} else {
-				warning_icon.style.display = 'none'
 			}
 		} catch(e) {
 			blno.title = e

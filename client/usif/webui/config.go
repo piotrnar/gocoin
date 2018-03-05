@@ -7,6 +7,7 @@ import (
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
@@ -136,6 +137,15 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["freemem"]) > 0 {
 		sys.FreeMem()
 		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	if len(r.Form["trusthash"]) > 0 {
+		if btc.NewUint256FromString(r.Form["trusthash"][0]) != nil {
+			common.CFG.LastTrustedBlock = r.Form["trusthash"][0]
+			common.ApplyLastTrustedBlock(false)
+		}
+		w.Write([]byte(common.CFG.LastTrustedBlock))
 		return
 	}
 }

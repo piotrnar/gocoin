@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
@@ -293,7 +292,7 @@ func Reset() {
 
 	ReloadMiners()
 
-	lastTrustedBlock = btc.NewUint256FromString(CFG.LastTrustedBlock)
+	ApplyLastTrustedBlock(true)
 }
 
 func MkTempBlocksDir() {

@@ -189,6 +189,35 @@ func WalletPendingTick() (res bool) {
 	return
 }
 
+func ApplyLastTrustedBlock(lock bool) {
+	if lock {
+		mutex_cfg.Lock()
+	}
+	hash := btc.NewUint256FromString(CFG.LastTrustedBlock)
+	lastTrustedBlock = hash
+	LastTrustedBlockHeight = 0
+	if lock {
+		mutex_cfg.Unlock()
+	}
+
+	if BlockChain != nil {
+		BlockChain.BlockIndexAccess.Lock()
+		node := BlockChain.BlockIndex[hash.BIdx()]
+		BlockChain.BlockIndexAccess.Unlock()
+		if node != nil {
+			if lock {
+				SetUint32(&LastTrustedBlockHeight, node.Height)
+			} else {
+				LastTrustedBlockHeight = node.Height
+			}
+			for node != nil {
+				node.Trusted = true
+				node = node.Parent
+			}
+		}
+	}
+}
+
 func LastTrustedBlockMatch(h *btc.Uint256) (res bool) {
 	mutex_cfg.Lock()
 	res = lastTrustedBlock != nil && lastTrustedBlock.Equal(h)
