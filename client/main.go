@@ -431,7 +431,8 @@ func main() {
 				common.CountSafe("MainNetTick")
 				common.Busy("network.NetworkTick()")
 				network.NetworkTick()
-				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 {
+				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
+					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
 					if common.WalletPendingTick() {
 						wallet.OnOff <- true
 					}
