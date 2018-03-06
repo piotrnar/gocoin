@@ -22,6 +22,7 @@ type Block struct {
 	// These flags are set in BuildTxList() used later (e.g. by script.VerifyTxScript):
 	NoWitnessSize int
 	BlockWeight uint
+	TotalInputs int
 
 	NoWitnessData []byte // This is set by BuildNoWitnessData()
 }
@@ -100,7 +101,7 @@ func (bl *Block) BuildTxList() (e error) {
 	bl.NoWitnessSize = 80 + VLenSize(uint64(bl.TxCount))
 	bl.BlockWeight = 4 * uint(bl.NoWitnessSize)
 
-	for i:=0; i<bl.TxCount; i++ {
+	for i := 0; i < bl.TxCount; i++ {
 		var n int
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		if bl.Txs[i] == nil || n==0 {
@@ -109,12 +110,15 @@ func (bl *Block) BuildTxList() (e error) {
 		}
 		bl.Txs[i].Raw = bl.Raw[offs:offs+n]
 		bl.Txs[i].Size = uint32(n)
-		if i==0 {
+		if i == 0 {
 			for _, ou := range bl.Txs[0].TxOut {
 				ou.WasCoinbase = true
 			}
+		} else {
+			// Coinbase tx does not have an input
+			bl.TotalInputs += len(bl.Txs[i].TxIn)
 		}
-		if bl.Txs[i].SegWit!=nil {
+		if bl.Txs[i].SegWit != nil {
 			data2hash = bl.Txs[i].Serialize()
 			bl.Txs[i].NoWitSize = uint32(len(data2hash))
 			if i>0 {
@@ -130,7 +134,7 @@ func (bl *Block) BuildTxList() (e error) {
 		wg.Add(1)
 		go func(tx *Tx, b, w []byte) {
 			tx.Hash.Calc(b) // Calculate tx hash in a background
-			if w!=nil {
+			if w != nil {
 				tx.wTxID.Calc(w)
 			}
 			wg.Done()
