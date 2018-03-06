@@ -69,7 +69,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.ApplyBlockFlags(bl)
 
 		// Do not recover MedianPastTime as it is only checked in PostCheckBlock()
-		// ... that had to be done before the block wa stored on disk.
+		// ... that had to be done before the block was stored on disk.
 
 		er = bl.BuildTxList()
 		if er != nil {
