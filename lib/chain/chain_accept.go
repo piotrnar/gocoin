@@ -15,12 +15,12 @@ import (
 var TrustedTxChecker func(*btc.Tx) bool
 
 
-func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *utxo.BlockChanges, e error) {
+func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *utxo.BlockChanges, sigopscost uint32, e error) {
 	changes = new(utxo.BlockChanges)
 	changes.Height = height
 	changes.LastKnownHeight = lknown
 	changes.DeledTxs = make(map[[32]byte][]bool)
-	e = ch.commitTxs(bl, changes)
+	sigopscost, e = ch.commitTxs(bl, changes)
 	return
 }
 
@@ -66,7 +66,8 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	if ch.LastBlock() == cur.Parent {
 		// The head of out chain - apply the transactions
 		var changes *utxo.BlockChanges
-		changes, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
+		var sigopscost uint32
+		changes, sigopscost, e = ch.ProcessBlockTransactions(bl, cur.Height, bl.LastKnownHeight)
 		if e != nil {
 			// ProcessBlockTransactions failed, so trash the block.
 			//println("ProcessBlockTransactionsA", cur.BlockHash.String(), cur.Height, e.Error())
@@ -75,7 +76,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			delete(ch.BlockIndex, cur.BlockHash.BIdx())
 			ch.BlockIndexAccess.Unlock()
 		} else {
-			cur.SigopsCost = bl.SigopsCost
+			cur.SigopsCost = sigopscost
 			// ProcessBlockTransactions succeeded, so save the block as "trusted".
 			bl.Trusted = true
 			ch.Blocks.BlockAdd(cur.Height, bl)
@@ -108,7 +109,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 
 
 // This isusually the most time consuming process when applying a new block
-func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
+func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost uint32, e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
@@ -124,7 +125,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
 
-		bl.SigopsCost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
+		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
 
 		// Check each tx for a valid input, except from the first one
 		if i>0 {
@@ -210,10 +211,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 				}
 
 				if btc.IsP2SH(tout.Pk_script) {
-					bl.SigopsCost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
+					sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
 				}
 
-				bl.SigopsCost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
+				sigopscost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
 
 				txinsum += tout.Value
 			}
@@ -222,14 +223,16 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 				wg.Wait()
 				if ver_err_cnt > 0 {
 					println("VerifyScript failed", ver_err_cnt, "time (s)")
-					return errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
+					e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
+					return
 				}
 			}
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
 			if len(bl.Txs[0].TxIn[0].ScriptSig)<2 || len(bl.Txs[0].TxIn[0].ScriptSig)>100 {
-				return errors.New(fmt.Sprint("Coinbase script has a wrong length ", len(bl.Txs[0].TxIn[0].ScriptSig)))
+				e = errors.New(fmt.Sprint("Coinbase script has a wrong length ", len(bl.Txs[0].TxIn[0].ScriptSig)))
+				return
 			}
 		}
 		sumblockin += txinsum
@@ -245,8 +248,9 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 		if i>0 {
 			bl.Txs[i].Fee = txinsum - txoutsum
 			if txoutsum > txinsum {
-				return errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
+				e = errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
 					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
+				return
 			}
 		}
 
@@ -257,11 +261,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 	}
 
 	if sumblockin < sumblockout {
-		return errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
+		e = errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
+		return
 	}
 
-	if bl.SigopsCost > ch.MaxBlockSigopsCost(bl.Height) {
-		return errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
+	if sigopscost > ch.MaxBlockSigopsCost(bl.Height) {
+		e = errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
+		return
 	}
 
 	var rec *utxo.UtxoRec
@@ -284,7 +290,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (e error) {
 		}
 	}
 
-	return nil
+	return
 }
 
 

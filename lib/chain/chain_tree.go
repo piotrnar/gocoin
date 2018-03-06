@@ -63,6 +63,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			ch.DeleteBranch(nxt, nil)
 			break
 		}
+		bl.Height = nxt.Height
+
+		// Recover the flags to be used when verifying scripts for non-trusted blocks (stored orphaned blocks)
+		ch.ApplyBlockFlags(bl)
+
+		// Do not recover MedianPastTime as it is only checked in PostCheckBlock()
+		// ... that had to be done before the block wa stored on disk.
 
 		er = bl.BuildTxList()
 		if er != nil {
@@ -72,13 +79,13 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		bl.Trusted = trusted
 
-		changes, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
+		changes, sigopscost, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
 			println("ProcessBlockTransactionsB", nxt.BlockHash.String(), nxt.Height, er.Error())
 			ch.DeleteBranch(nxt, nil)
 			break
 		}
-		nxt.SigopsCost = bl.SigopsCost
+		nxt.SigopsCost = sigopscost
 		if !trusted {
 			ch.Blocks.BlockTrusted(bl.Hash.Hash[:])
 		}

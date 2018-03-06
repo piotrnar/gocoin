@@ -15,7 +15,9 @@ type Block struct {
 	Trusted bool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight uint32
 
-	BlockExtraInfo
+	BlockExtraInfo // If we cache block on disk (between downloading and comitting), this data has to be preserved
+
+	MedianPastTime uint32 // Set in PreCheckBlock() .. last used in PostCheckBlock()
 
 	// These flags are set in BuildTxList() used later (e.g. by script.VerifyTxScript):
 	NoWitnessSize int
@@ -28,8 +30,6 @@ type Block struct {
 type BlockExtraInfo struct {
 	VerifyFlags uint32
 	Height uint32
-	SigopsCost uint32
-	MedianPastTime uint32
 }
 
 

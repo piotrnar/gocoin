@@ -107,6 +107,32 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 }
 
 
+func (ch *Chain) ApplyBlockFlags(bl *btc.Block) {
+	if bl.BlockTime() >= BIP16SwitchTime {
+		bl.VerifyFlags = script.VER_P2SH
+	} else {
+		bl.VerifyFlags = 0
+	}
+
+	if bl.Height >= ch.Consensus.BIP66Height {
+		bl.VerifyFlags |= script.VER_DERSIG
+	}
+
+	if bl.Height >= ch.Consensus.BIP65Height {
+		bl.VerifyFlags |= script.VER_CLTV
+	}
+
+	if ch.Consensus.Enforce_CSV != 0 && bl.Height >= ch.Consensus.Enforce_CSV {
+		bl.VerifyFlags |= script.VER_CSV
+	}
+
+	if ch.Consensus.Enforce_SEGWIT != 0 && bl.Height >= ch.Consensus.Enforce_SEGWIT {
+		bl.VerifyFlags |= script.VER_WITNESS | script.VER_NULLDUMMY
+	}
+
+}
+
+
 func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 	// Size limits
 	if len(bl.Raw)<81 {
@@ -173,27 +199,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		return
 	}
 
-	if bl.BlockTime()>=BIP16SwitchTime {
-		bl.VerifyFlags = script.VER_P2SH
-	} else {
-		bl.VerifyFlags = 0
-	}
-
-	if bl.Height >= ch.Consensus.BIP66Height {
-		bl.VerifyFlags |= script.VER_DERSIG
-	}
-
-	if bl.Height >= ch.Consensus.BIP65Height {
-		bl.VerifyFlags |= script.VER_CLTV
-	}
-
-	if ch.Consensus.Enforce_CSV!=0 && bl.Height>=ch.Consensus.Enforce_CSV {
-		bl.VerifyFlags |= script.VER_CSV
-	}
-
-	if ch.Consensus.Enforce_SEGWIT!=0 && bl.Height>=ch.Consensus.Enforce_SEGWIT {
-		bl.VerifyFlags |= script.VER_WITNESS | script.VER_NULLDUMMY
-	}
+	ch.ApplyBlockFlags(bl)
 
 	if !bl.Trusted {
 		var blockTime uint32
