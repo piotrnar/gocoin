@@ -19,7 +19,7 @@ func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) 
 	changes = new(utxo.BlockChanges)
 	changes.Height = height
 	changes.LastKnownHeight = lknown
-	changes.DeledTxs = make(map[[32]byte][]bool)
+	changes.DeledTxs = make(map[[32]byte] []bool, bl.TotalInputs)
 	sigopscost, e = ch.commitTxs(bl, changes)
 	return
 }
@@ -117,7 +117,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		changes.UndoData = make(map[[32]byte] *utxo.UtxoRec)
 	}
 
-	blUnsp := make(map[[32]byte] []*btc.TxOut, 4*len(bl.Txs))
+	blUnsp := make(map[[32]byte] []*btc.TxOut, len(bl.Txs))
 
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
@@ -128,19 +128,27 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
 
 		// Check each tx for a valid input, except from the first one
-		if i>0 {
+		if i > 0 {
 			tx_trusted := bl.Trusted
 			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i]) {
 				tx_trusted = true
 			}
 
-			for j:=0; j<len(bl.Txs[i].TxIn); j++ {
+			for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
-				spendrec, waspent := changes.DeledTxs[inp.Hash]
-				if waspent && spendrec[inp.Vout] {
-					println("txin", inp.String(), "already spent in this block")
-					e = errors.New("Input spent more then once in same block")
-					return
+				spent_map, was_spent := changes.DeledTxs[inp.Hash]
+				if was_spent {
+					if int(inp.Vout) >= len(spent_map) {
+						println("txin", inp.String(), "did not have vout", inp.Vout)
+						e = errors.New("Tx VOut too big")
+						return
+					}
+
+					if spent_map[inp.Vout] {
+						println("txin", inp.String(), "already spent in this block")
+						e = errors.New("Double spend inside the block")
+						return
+					}
 				}
 				tout := ch.Unspent.UnspentGet(inp)
 				if tout==nil {
@@ -150,7 +158,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 						return
 					}
 
-					if inp.Vout>=uint32(len(t)) {
+					if inp.Vout >= uint32(len(t)) {
 						println("Vout too big", len(t), inp.String())
 						e = errors.New("Vout too big")
 						return
@@ -175,11 +183,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 						return
 					}
 					// it is confirmed already so delete it later
-					if !waspent {
-						spendrec = make([]bool, tout.VoutCount)
-						changes.DeledTxs[inp.Hash] = spendrec
+					if !was_spent {
+						spent_map = make([]bool, tout.VoutCount)
+						changes.DeledTxs[inp.Hash] = spent_map
 					}
-					spendrec[inp.Vout] = true
+					spent_map[inp.Vout] = true
 
 					if changes.UndoData != nil {
 						var urec *utxo.UtxoRec
@@ -230,7 +238,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
-			if len(bl.Txs[0].TxIn[0].ScriptSig)<2 || len(bl.Txs[0].TxIn[0].ScriptSig)>100 {
+			if len(bl.Txs[0].TxIn[0].ScriptSig) < 2 || len(bl.Txs[0].TxIn[0].ScriptSig) > 100 {
 				e = errors.New(fmt.Sprint("Coinbase script has a wrong length ", len(bl.Txs[0].TxIn[0].ScriptSig)))
 				return
 			}
@@ -245,7 +253,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		if e != nil {
 			return // If any input fails, do not continue
 		}
-		if i>0 {
+		if i > 0 {
 			bl.Txs[i].Fee = txinsum - txoutsum
 			if txoutsum > txinsum {
 				e = errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
@@ -271,10 +279,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 	}
 
 	var rec *utxo.UtxoRec
+	changes.AddList = make([]*utxo.UtxoRec, 0, len(blUnsp))
 	for k, v := range blUnsp {
 		for i := range v {
-			if v[i]!=nil {
-				if rec==nil {
+			if v[i] != nil {
+				if rec == nil {
 					rec = new(utxo.UtxoRec)
 					rec.TxID = k
 					rec.Coinbase = v[i].WasCoinbase
@@ -284,7 +293,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				rec.Outs[i] = &utxo.UtxoTxOut{Value:v[i].Value, PKScr:v[i].Pk_script}
 			}
 		}
-		if rec!=nil {
+		if rec != nil {
 			changes.AddList = append(changes.AddList, rec)
 			rec = nil
 		}
