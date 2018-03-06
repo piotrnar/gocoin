@@ -148,6 +148,7 @@ func InitConfig() {
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
+	CFG.Memory.MaxDataFileMB = 1000 // max 1GB per single data file
 
 	CFG.Stat.HashrateHrs = 12
 	CFG.Stat.MiningHrs = 24
