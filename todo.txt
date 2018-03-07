@@ -2,7 +2,6 @@ Global:
 * Add suport for multisig segwit
 
 Lib:
-* Make sure that block flags etc. are set while reindexing non-trusted blocks
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
 * Try to make own (faster) implementation of sha256 and rimp160
 
