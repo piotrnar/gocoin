@@ -1,3 +1,8 @@
+# Documentation
+The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
+where you can find extended documentation, including **User Manual**.
+
+
 # Binaries
 
 Windows or Linux (amd64) binaries can be downloaded from
@@ -23,11 +28,6 @@ As long as you remember the password, you do not need any backups of your wallet
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
 Each source file in that folder is a separate tool.
-
-
-# Documentation
-The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
-where you can find extended documentation, including **User Manual**.
 
 
 # Requirements
