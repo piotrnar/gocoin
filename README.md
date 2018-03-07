@@ -14,9 +14,6 @@ The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
 
-[See the video presentation from Arnhem 2017](https://www.youtube.com/watch?v=ohiMSsemLHM)
-
-
 # Requirements
 
 ## Hardware
