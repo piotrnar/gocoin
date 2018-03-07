@@ -15,12 +15,6 @@ It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
 
 
-
-# Documentation
-The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
-where you can find extended documentation, including **User Manual**.
-
-
 # Requirements
 
 ## Hardware
@@ -103,6 +97,10 @@ licensing. If you are missing some functionality, just describe me your needs an
 for you. But if you want your specific code in, please fork and develop your own repo.
 
 # Support
-Please do not log issues when you have questions concerning this software.
+The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
+where you can find extended documentation, including **User Manual**.
+
+Please do not log github issues when you only have questions concerning this software.
 Instead see [Contact](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
 for possible ways of contacting me.
+
