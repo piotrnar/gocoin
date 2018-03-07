@@ -5,8 +5,8 @@
 The software's architecture is focused on maximum performance and cold storage security.
 
 The **client** (p2p node) is an application independent from the **wallet**.
-Unlike other full bitcoin node solutions, this one keeps the entire UTXO database
-in system memory to provide the best block processing performance on the market.
+Unlike other full bitcoin node solutions, gocoin node keeps the entire UTXO set
+in RAM, providing the best block processing performance on the market.
 
 The **wallet** is designed to be used offline.
 It is deterministic and password seeded - as long as you remember the password,
