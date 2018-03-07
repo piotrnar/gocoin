@@ -1,5 +1,10 @@
 body {
 	//font-family: Arial, Verdana, sans-serif;
+	line-height:1.5;
+}
+
+td {
+	line-height:1.5;
 }
 
 a {

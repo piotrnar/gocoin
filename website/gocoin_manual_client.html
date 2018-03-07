@@ -12,6 +12,8 @@ Run <code>client -h</code> to see all available command line switches. Some exam
 -dl=NN - set maximum download speed to NN kilobytes per second<br>
 </code>
 <br>
+To run the client on a remote Linux server (via ssh connection), you probably want to get adventage of <b>screen</b> command.
+<br>
 <h2>TextUI</h2>
 When the client is already running you have an interactive, text command based interface, on the console.<br>
 Type <code>help</code> to see the possible commands.
@@ -21,21 +23,23 @@ Type <code>help</code> to see the possible commands.
 There is also a web interface that you can operate with a web browser.<br>
 <br>
 
-Make sure that wherever you launch the client executable from, there is the <code>www/</code> folder, along with its content. The folder contains web templates which are an important part of the WebUI application. You can modify these files to satisfy your look&amp;feel preferences,
-even to add a new functionality to the web app.<br>
+Make sure to have the <code>www/</code> folder in the location where you execute the client from.<br>
+The folder contains files that are an essencial part of the WebUI application.<br>
+<br>
+WebUI application is tested with Google Chrome, but should be compatible with any modern web browser.<br>
 <br>
 By default (for security reasons) WebUI is available only from a local host, via <a target="_blank" href="http://127.0.0.1:8833/">http://127.0.0.1:8833/</a><br>
 <br>
-If you want to have access to it from different computers:<br>
+<h3>Remote server</h3>
+In order to use WebUI securely on a remote server, set up <b>ssh tunneling</b> to port 8833.<br>
+<br>
+<h3>Local network</h3>
+If you run the node on a local network and want to have access to its WebUI from different computers:<br>
 <ul><li>Open <code>gocoin.conf</code> file in a text editor (or edit it at the <b>Home</b> page of the WebUI).</li>
 <li>Change <code>Interface</code> value in the config file to <code>:8833</code> (<i>Note: this binds the web service to all network interfaces).</i></li>
 <li>Change <code>AllowedIP</code> value to allow access from all the addresses you need - e.g. <code>127.0.0.1,192.168.0.0/16</code> (<i>Note: <code>0.0.0.0/0</code> allows to connect from anywhere).</i></li>
 <li>Remember to save the new config and then restart your node.</li></ul>
 <br>
-Read more about the config file at the <a href="gocoin_manual_client_config.html">Config</a> page.
-<br>
-<br>
-
-Being able to access the  page of this manual for further help.
+Read more about the config file at the <a href="gocoin_manual_config.html">config file</a> page.
 </body>
 </html>

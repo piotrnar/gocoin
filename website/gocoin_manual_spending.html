@@ -4,20 +4,23 @@
 </head>
 <body>
 <h1>Spending BTC</h1>
-Spending money is a secured process that requires several steps and moving files between your online client PC and your offline wallet machine. USB flash disk is probably the most convenient medium to use for this purpose.
+Spending your Bitcoins is a secured process that requires several steps.<br>
+It involves moving files between your <u>online PC</u> and your offline <u>wallet machine</u>.<br>
+USB flash disk is probably the most convenient medium to use for this purpose.
 <br>
-
-Never move any files others than the ones that you actually need to move, which are:
-
-<ul><li>The <code>balance/</code> folder containing your unspent outputs - you move it from client to wallet</li>
-<li>Text files with signed transactions - these you move from wallet to client</li></ul>
-
+<br>
+Never move any files others than the ones that you actually need to move, which are:<br>
+<ul><li><code>balance/</code> folder created by <b>balio</b>
+or <code>balance.zip</code> / <code>payment.zip</code> file
+generted by <b>WebUI</b> - you move it from <u>online PC</u> to <u>wallet machine</u>.</li>
+<li>Text files with signed transactions - these you move from <u>wallet machine</u> to <u>online PC</u>.</li></ul>
+<br>
 Assuming that you would not sign a wrong transaction, nothing in the files you move between the two points is security sensitive, so you do not need to worry about protecting the medium (USB disk).
 <br>
 
 
 <h2><b>1. Export your balance</b></h2>
-In order to spend your coins you will need to copy the <code>balance</code> folder (containing <code>unspent.txt</code> and one or more <code>&lt;txid&gt;.tx</code> files) to the PC that runs your wallet.
+In order to spend your coins you will need to provide a current balance data to the computer that runs your <u>wallet</u>.
 
 <br><br>
 
@@ -29,12 +32,16 @@ In order to spend your coins you will need to copy the <code>balance</code> fold
 
 <tr>
 <td valign="top">
-There is a tool <b>balio</b> that can fetch a balance of your wallet from a public block explorer<br>
+There is a tool <b>balio</b> that can fetch a balance of your wallet from a public block explorers.<br>
 <br>
-Run the tool from a command line with a path to your wallet file or the list of (space separated) public addresses for which you want to fetch the balance.<br>
-It should create the <code>balance/</code> folder in the current directory, ready to be provided to your wallet.<br>
+Run the tool from a command line with the file name of your wallet as the command line parameter (e.g. <code>balio wallet.txt</code>).<br>
+Eventually enter the list of space separated BTC addresses that you want to fetch the balance for
+(<code>balio 1Hz96kJKF2HLPGY15JWLB5m9qGNxvt8tHJ 3NEDeMiXubepj68RGCTXJyJc83cYXMpusw</code>).
 <br>
-<i><b>Note:</b>fetching the balance this way exposes your privacy.</i><br>
+<br>
+This should create the <code>balance/</code> folder in the current directory, ready to be moved your <u>wallet machine</u>.<br>
+<br>
+<i><b>Note:</b> fetching the balance this way exposes your privacy.</i><br>
 <i>To </i><i>use <b>balio</b> through <b>Tor</b>, set TOR environment variable in your system, pointing it to your tor's socks proxy (e.g. <code>TOR=localhost:9050</code>).</i><br>
 <i>Additionally, despite of using Tor, to further protect your privacy try to fetch balance of single addresses instead of entire wallets.</i>
 
@@ -78,7 +85,8 @@ Extract the zip file to get the <code>balance</code> folder.<br>
 <h2><b>2. Sign your transaction</b></h2>
 
 
-As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from the client node to the PC with your wallet. Now, on the wallet PC, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balnace/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.<br>
+As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from <u>online PC</u> to <u>wallet machine</u>.<br>
+Now, on the <u>wallet mchine</u>, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balnace/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.<br>
 <br>
 
 To spend your coins, order the wallet to make and sign a new transaction, using a command like:<br>
@@ -88,9 +96,13 @@ Please note no spaces between the address, the equal sign and the value. The val
 
 There are also other switches which you may find useful at this stage.
 One of them (<code>-fee</code>) allows you to control the transaction's' fee.
-To see all the wallet's options, just run <code>wallet -h</code>
+To see all the wallet's options, just run <code>wallet -h</code><br>
 <br>
-<br>
+
+<b>Note:</b>
+If you used <b>MakeTx</b> tab to export your balance at point 1, all you have to do now is to extract <b>payment.zip</b>
+file at the <u>wallet</u> computer and execute there the exact command from the <b>pay_cmd</b> file.</b>
+
 
 <h2><b>3. Verify signed transaction</b></h2>
 
@@ -100,7 +112,7 @@ The file is named like <code>01234567.txt</code> - this is the file you need to 
 to your online node in order to notify the network about your payment.
 Before you broadcast your signed transaction to the network,
 verify carefully that it does exactly what you intended.
-You can do it in a several ways. In any case, first move the signed transaction file to your online PC.
+You can do it in a several ways, some of them will first require moving the signed transaction file to your <u>online PC</u>.
 <br>
 <br>
 
@@ -123,7 +135,7 @@ Use the node's TextUI to execute <code>tx 01234567.txt</code> (where <code>01234
 
 <td valign="top">
 Use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.<br>
-Alternatively, you can click the <b>Load TX</b> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.<br>
+Alternatively, you can click the <b>PushTx</b> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.<br>
 </table>
 
 <br>
