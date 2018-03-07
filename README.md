@@ -1,17 +1,3 @@
-# Documentation
-The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
-where you can find extended documentation, including **User Manual**.
-
-
-# Binaries
-
-Windows or Linux (amd64) binaries can be downloaded from
-
- * https://sourceforge.net/projects/gocoin/files/?source=directory
-
-Please note that the binaries are usually not up to date.
-I strongly encourage everyone to build the binaries himself.
-
 # About Gocoin
 
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
@@ -28,6 +14,11 @@ As long as you remember the password, you do not need any backups of your wallet
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
 Each source file in that folder is a separate tool.
+
+
+# Documentation
+The official web page of the project is served at <a href="http://gocoin.pl">gocoin.pl</a>
+where you can find extended documentation, including **User Manual**.
 
 
 # Requirements
@@ -95,6 +86,15 @@ Go to the `tools/` folder and execute:
 	go build btcversig.go
 
 Repeat the `go build` for each source file of the tool you want to build.
+
+# Binaries
+
+Windows or Linux (amd64) binaries can be downloaded from
+
+ * https://sourceforge.net/projects/gocoin/files/?source=directory
+
+Please note that the binaries are usually not up to date.
+I strongly encourage everyone to build the binaries himself.
 
 # Development
 Although it is an open source project, I am sorry to inform you that I will not merge in any pull requests.
