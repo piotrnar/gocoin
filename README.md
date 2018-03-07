@@ -101,3 +101,8 @@ Although it is an open source project, I am sorry to inform you that I will not 
 The reason is that I want to stay an explicit author of this software, to keep a full control over its
 licensing. If you are missing some functionality, just describe me your needs and I will see what I can do
 for you. But if you want your specific code in, please fork and develop your own repo.
+
+# Support
+Please do not log issues when you have questions concerning this software.
+Instead see the [Contacts](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
+for possible ways of contacting me.
