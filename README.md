@@ -9,8 +9,8 @@ Unlike other full bitcoin node solutions, gocoin node keeps the entire UTXO set
 in RAM, providing the best block processing performance on the market.
 
 The **wallet** is designed to be used offline.
-It is deterministic and password seeded - as long as you remember the password,
-you do not need any backups of your wallet's keys.
+It is deterministic and password seeded.
+As long as you remember the password, you do not need any backups.
 
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
