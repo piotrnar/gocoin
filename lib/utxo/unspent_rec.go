@@ -55,7 +55,7 @@ var (
 
 
 func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
-	var off, n, i int
+	var off, n, i, rec_idx int
 	var u64, idx uint64
 
 	off = 32-UtxoIdxLen
@@ -84,7 +84,8 @@ func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
 		idx, n = btc.VULe(dat[off:])
 		off += n
 
-		sta_rec.Outs[idx] = &rec_pool[idx]
+		sta_rec.Outs[idx] = &rec_pool[rec_idx]
+		rec_idx++
 
 		u64, n = btc.VULe(dat[off:])
 		off += n
