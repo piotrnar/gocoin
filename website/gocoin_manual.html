@@ -4,42 +4,20 @@
 </head>
 <body>
 <h1>User Manual</h1>
-<h2>Node and wallet</h2>
+<h2>Client and wallet</h2>
 The two basic components of the software are:
-<ul><li><b>client</b> - a bitcoin node that must be connected to Internet</li>
-<li><b>wallet</b> - a wallet app, that is designed to be used (for security) on a network-free PC</li>
+<ul><li><b>client</b> - online component: original implementation of a full bitcoin node</li>
+<li><b>wallet</b> - application designed to be used offline as a cold storage wallet</li>
 </ul>
-<br>
 
-<h2>Tools</h2>
-
-There are also some additional tools:
-
-<ul><li><b>base58</b> - encode / decode base58 data</li>
-<li><b>bootdat_qt</b> - convert gocoin's block database to <code>bootstrap.dat</code> file (for bitcoin-qt)</li>
-<li><b>btcversig</b> - verify a messages signed with bitcoin address.</li>
-<li><b>fetchbal</b> - fetch your balance (in a format recognized by the wallet) from block explorers</li>
-<li><b>fetchtx</b> - downloads a raw transaction from blockexplorer.com, storing it in a binary file</li>
-<li><b>goc</b> - command line client to remote control the client node via its web interface (with no browser required)</li>
-<li><b>importblocks</b> - import block database from the satoshi client</li>
-<li><b>mkmulti</b> - create a multisig address</li>
-<li><b>peers</b> - display a content of gocoin's peers database</li>
-<li><b>txaddsig</b> - add a signature (generated somewhere else) to a raw transaction</li>
-<li><b>type2determ</b>, </b><b>type2next</b> - generate public addresses for type-2 deterministic wallets</li></ul>
-
-
-<br>
-
-<h2>Using wallet without a node</h2>
+<h2>Wallet without client</h2>
 It is also possible to use the wallet without the client.
-For this purpose there is a tool called <b>balio</b>.
-It can fetch the balance of your wallet from popular block explorers and save it in the format recognized by gocoin's wallet.
-You can find it in the <code>tools/</code> folder.
-Execute "<code>go build balio.go</code>" to compile it, or run it without compiling with: <code>go run </code><code>balio.go &lt;your_bitcoin_addresses&gt;</code>
-<br>
+For such purpose there is a tool called <b>balio</b>.<br>
+The tool can download the balance data from popular block explorers and save it on disk in a format recognized by the wallet.<br>
 
 <h2>User interface</h2>
-All the applications are console only (no GUI window), though the client node has a fairly functional and quite convenient web interface (to be controlled via a web browser).
+The applications are console only (no GUI window), although the client node has a fairly functional and quite convenient web interface 
+(to be used with a web browser).
 
 
 <br>

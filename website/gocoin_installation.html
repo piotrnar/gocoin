@@ -6,16 +6,20 @@
 <h1>Installation</h1>
 <h2>System requirements</h2>
 
-<h3>client</h3>
-If you want to run the full node (<b>client</b>), your system ought to have <u>at least 15GB of RAM</u>.<br>
-<br>
-To run the <b>client</b> you also need 64-bit OS and a file system that support files larger than 4GB (e.g NTFS or ext2/ext3/ext4).<br>
+If you only want to use the <b>wallet</b> with the corresponding <b>balio</b> tool, 
+you can run it on anything that your <b>go</b> compiler can build for.<br>
+For instance, it will work on even the oldest Raspberry Pi model A with 256MB of RAM.
+<br><br>
+
+However, in order to run the full node (<b>client</b>), you need a 64-bit OS with at least 15 GB of RAM.<br>
+You also need a file system that supports large files (bigger than 4GB) and a decent size of a free space on it.<br>
 <br>
 Note that you can purge blocks from disk, allowing you to run the node with a limited storage (e.g. 20GB).<br>
 See <a href="gocoin_manual_config.html">config file</a> values:
 <span class="cfg_name">Memory.MaxDataFileMB</span> and <span class="cfg_name">Memory.DataFilesKeep</span> (set this one to non-zero, e.g. 10)<br>
 <br>
-It runs very well on Linux based virtual servers - some of them you can rent per-hour:<br>
+The node runs very well on Linux based virtual servers, as long as they have enough RAM.<br>
+Find below a list of example providers. Some of them you can rent per-hour.<br>
 <a href="https://www.waveride.at/">Waveride</a>
 &bull;
 <a href="https://www.ssdnodes.com/">SSD Nodes</a>
@@ -29,19 +33,20 @@ It runs very well on Linux based virtual servers - some of them you can rent per
 <a href="https://cloud.google.com/">Gogle Cloud</a>
 <br>
 
-<h3>wallet</h3>
-If you only want to use the <b>wallet</b> with the corresponding <b>balio</b> tool, you don't have to worry about
-the system memory or a file system.<br>
-It will run even on RaspberryPi.
-<br><br>
 <h2>Build from source</h2>
 
 You will need <b>git</b> and <b>go</b> commands installed in your system and in most cases
 (not for Windows) also <b>gcc</b> (e.g. <code>sudo apt-get install gcc</code>)<br>
 <br>
-Once you are ready with that, simply execute:<br>
-<code>&nbsp;&nbsp;&nbsp;&nbsp;go get github.com/piotrnar/gocoin</code><br>
+Once you are ready with that, simply execute <code>go get github.com/piotrnar/gocoin</code> to download all the sources and dependencies.<br>
+<i>&nbsp;Note: Sources will be placed within your GOPATH folder, in <code>scr/github.com/piotrnar/gocoin</code>.<br>
+&nbsp;Note: Execute <code>go env GOPATH</code> to see where your GOPATH folder is.</i><br>
 <br>
+Then go to <code>gocoin/client/</code> and execute <code>go build</code> there.
+Do the same in <code>gocoin/wallet/</code>, to build the wallet. <br>
+In order to build <code>balio</code> or some other tool, go to <code>gocoin/tools/</code> and do <code>go build balio.go</code><br>
+<br>
+
 The process is also described in the main <b>README.md</b> file of the github repo
 <a target="_blank" href="https://github.com/piotrnar/gocoin">piotrnar/gocoin</a><br>
 <br>
