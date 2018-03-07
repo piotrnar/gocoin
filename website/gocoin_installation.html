@@ -7,21 +7,47 @@
 <h2>System requirements</h2>
 
 <h3>client</h3>
-If you want to run the full node (<b>client</b>), your system ought to have <u>at least 16GB of RAM</u>.<br>
-It is possible to run it will less memory (e.g. 8GB), but it will likely affect performance and might even
-make the software to crash sometimes.<br>
+If you want to run the full node (<b>client</b>), your system ought to have <u>at least 15GB of RAM</u>.<br>
 <br>
 To run the <b>client</b> you also need 64-bit OS and a file system that support files larger than 4GB (e.g NTFS or ext2/ext3/ext4).<br>
+<br>
+Note that you can purge blocks from disk, allowing you to run the node with a limited storage (e.g. 20GB).<br>
+See <a href="gocoin_manual_client_config.html">config file</a> values:
+<span class="cfg_name">Memory.MaxDataFileMB</span> and <span class="cfg_name">Memory.DataFilesKeep</span> (set this one to non-zero, e.g. 10)<br>
+<br>
+It runs very well on Linux based virtual servers - some of them you can rent per-hour:<br>
+<a href="https://www.waveride.at/">Waveride</a>
+&bull;
+<a href="https://www.ssdnodes.com/">SSD Nodes</a>
+&bull;
+<a href="https://www.scaleway.com/">Scaleway</a>
+&bull;
+<a href="https://www.digitalocean.com/">DigitalOcean</a>
+&bull;
+<a href="https://aws.amazon.com/">Amazon AWS</a>
+&bull;
+<a href="https://cloud.google.com/">Gogle Cloud</a>
+<br>
+
 <h3>wallet</h3>
 If you only want to use the <b>wallet</b> with the corresponding <b>balio</b> tool, you don't have to worry about
-the system memory or a file system.
-<br><br>
-<h2>Download binaries</h2>
-The binaries (not always the latest version) for Windows and Linux OS can be downloaded from
-<a target="_blank" href="https://sourceforge.net/projects/gocoin/files/?source=directory">sourceforge.net</a>
+the system memory or a file system.<br>
+It will run even on RaspberryPi.
 <br><br>
 <h2>Build from source</h2>
-The process is described in the main <b>README.md</b> file of the github repo
-<a target="_blank" href="https://github.com/piotrnar/gocoin">piotrnar/gocoin</a>
+
+You will need <b>git</b> and <b>go</b> commands installed in your system and in most cases
+(not for Windows) also <b>gcc</b> (e.g. <code>sudo apt-get install gcc</code>)<br>
+<br>
+Once you are ready with that, simply execute:<br>
+<code>&nbsp;&nbsp;&nbsp;&nbsp;go get github.com/piotrnar/gocoin</code><br>
+<br>
+The process is also described in the main <b>README.md</b> file of the github repo
+<a target="_blank" href="https://github.com/piotrnar/gocoin">piotrnar/gocoin</a><br>
+<br>
+
+<h2>Binaries</h2>
+The binaries (usually not the latest version) for Windows and Linux can be downloaded from
+<a target="_blank" href="https://sourceforge.net/projects/gocoin/files/?source=directory">sourceforge.net</a>
 </body>
 </html>
