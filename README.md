@@ -2,15 +2,16 @@
 
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
 The wallet combined with `balio` tool also provides a working solution for **Litecoin**.
+
 The software's architecture is focused on maximum performance and security.
 
 The **client** (p2p node) is an application independent from the **wallet**.
-Unlike other full Bitcoin node solutions, this one keeps the entire UTXO database
-in system memory and provides the best block processing performance on the market.
+Unlike other full bitcoin node solutions, this one keeps the entire UTXO database
+in system memory to provide the best block processing performance on the market.
 
-
-The **wallet** is deterministic and password seeded.
-As long as you remember the password, you do not need any backups of your wallet.
+The **wallet** is designed to be used offline (cold storage).
+It is deterministic and password seeded - as long as you remember the password, 
+you do not need any backups of your wallet's keys.
 
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
