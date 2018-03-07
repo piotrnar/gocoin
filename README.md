@@ -2,7 +2,8 @@
 
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
 
-The software's architecture is focused on maximum node performance and cold wallet security.
+The software architecture is focused on maximum performance of the node 
+and cold storage security of the wallet.
 
 The **client** (p2p node) is an application independent from the **wallet**.
 Unlike other full bitcoin node solutions, gocoin keeps the entire UTXO set
