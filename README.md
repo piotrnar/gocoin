@@ -7,6 +7,9 @@ The wallet combined with `balio` tool also provides a working solution for **Lit
 The software's architecture is focused on maximum security and good performance.
 
 The **client** (p2p node) is an application independent from the **wallet**.
+Unlike other full Bitcoin node solutions, this one keeps the entire UTXO database
+in system memory and provides the best block processing performance on the market.
+
 
 The **wallet** is deterministic and password seeded.
 As long as you remember the password, you do not need any backups of your wallet.
