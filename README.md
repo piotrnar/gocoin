@@ -104,6 +104,5 @@ for you. But if you want your specific code in, please fork and develop your own
 
 # Support
 Please do not log issues when you have questions concerning this software.
-
-Instead see [Contacts](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
+Instead see [Contact](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
 for possible ways of contacting me.
