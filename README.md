@@ -8,11 +8,11 @@ The **client** (p2p node) is an application independent from the **wallet**.
 Unlike other full bitcoin node solutions, gocoin keeps the entire UTXO set
 in RAM, providing the best block processing performance on the market.
 With a decent machine and a fast connection (e.g. 4 vCPUs from Google Cloud or Amazon AWS),
-the node should sync the entire bitcoin block chain (~512000 blocks) in less than for 4 hours.
+the node should sync the entire bitcoin block chain in less than for 4 hours (as of chain length ~512000).
 
 The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
-As long as you remember the password, you do not need any backups.
+As long as you remember the password, you do not need any backups ever.
 
 In addition there is also a set of more and less useful tools.
 They are all inside the `tools/` folder.
