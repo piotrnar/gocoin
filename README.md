@@ -2,12 +2,11 @@
 
 **Gocoin** is a full **Bitcoin** solution written in Go language (golang).
 
-The software architecture is focused on maximum performance of the node 
+The software architecture is focused on maximum performance of the node
 and cold storage security of the wallet.
 
 The **client** (p2p node) is an application independent from the **wallet**.
-Unlike other full bitcoin node solutions, gocoin keeps the entire UTXO set
-in RAM, providing the best block processing performance on the market.
+It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
 With a decent machine and a fast connection (e.g. 4 vCPUs from Google Cloud or Amazon AWS),
 the node should sync the entire bitcoin block chain in less than 4 hours (chain length ~512000).
 
