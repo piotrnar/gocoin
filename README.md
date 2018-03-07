@@ -14,10 +14,6 @@ The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
 
-In addition there is also a set of more and less useful tools.
-They are all inside the `tools/` folder.
-Each source file in that folder is a separate tool.
-
 
 
 # Documentation
