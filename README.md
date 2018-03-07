@@ -14,6 +14,8 @@ The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
 
+[See the video presentation from Arnhem 2017](https://www.youtube.com/watch?v=ohiMSsemLHM)
+
 
 # Requirements
 
@@ -103,4 +105,3 @@ where you can find extended documentation, including **User Manual**.
 Please do not log github issues when you only have questions concerning this software.
 Instead see [Contact](http://gocoin.pl/gocoin_links.html) page at [gocoin.pl](http://gocoin.pl) website
 for possible ways of contacting me.
-
