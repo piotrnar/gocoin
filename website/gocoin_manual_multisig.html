@@ -76,8 +76,7 @@ Like with the regular addresses you can also append a label to multisig address,
 Make sure that the currently selected wallet has the multisig address in it and the address itself has some unspent coins.<br>
 Now go to <b>MakeTx</b> tab of the WebUI.<br>
 <br>
-At this point you have two different ways to proceed - both are described below.<br>
-Whichever way you chose, you will need to pass your transaction through all the parties/wallets that are supposed to sign it. The output transaction from one party/wallet becomes an input transaction for the next one. The output from the last wallet should already be a sufficiently signed transaction that only needs to be sent to the network. Send it out using the same way as for regular (non multisig) transactions.<br>
+You will need to pass your transaction through all the parties/wallets that are supposed to sign it. The output transaction from one party/wallet becomes an input transaction for the next one. The output from the last wallet should already be a sufficiently signed transaction that only needs to be sent to the network. Send it out using the same way as for regular (non multisig) transactions.<br>
 <br>
 At any moment when signing your transaction it may be useful to look inside it by executing:<br>
 <code>&nbsp;&nbsp;&nbsp;&nbsp;wallet -d 012345678.txt</code><br>
