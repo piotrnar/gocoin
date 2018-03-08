@@ -11,29 +11,26 @@ When you start client node for the first time, it will go trough the process of 
 block chain and building the UTXO database.
 To speed up this process the database is not being flushed to disk as the block processing goes on.<br>
 <br>
-The node only writes it to disk when either all the blocks are downloaded or when the node's shutdown has 
+The node only writes it to disk when either all the blocks are downloaded or when the node's shutdown has
 been requested from a user interface (e.g. text command 'quit' was given).
 If you kill the process or reboot the machine, you will loose all your hard worked UTXO changes!
 Therefore, to save the the work as the new blocks are being processed, you should once for awhile quit the node and start it again.
 This BTW may also have a positive impact on memory consumption, allowing you to set up the node with less RAM (e.g. 13GB).<br>
 <br>
-When the node is synchronized, it flushes UTXO database to disk once for awhile. 
+When the node is synchronized, it flushes UTXO database to disk once for awhile.
 Killing it then won't have such a bad consequences, as it will start with the most recently written version of the database
 and only apply the data from the blocks that came later.<br>
-<br>
-<i><b>Note:</b> with a decent (e.g. 4 vCPUs) machine and a fast connection (e.g. Google Cloud or Amazon AWS),
-the node should download the entire block chain in less than for 4 hours (as of block hight #512000)</i><br>
 <br>
 <h2>Coinbase maturity</h2>
 According to the block chain protocol, generated coins can be spent only after 100 confirmations.<br>
 Users should be aware that fetching a wallet's balance from the client returns&nbsp;also&nbsp;immature coinbase transactions.<br>
 Because wallet has no way of knowing if a coinbase output is mature enough, it always considers it mature.<br>
-But be aware that the network will not accept your signed transaction until all of the mined coins that it is trying to spend 
+But be aware that the network will not accept your signed transaction until all of the mined coins that it is trying to spend
 get at least 100 confirmations.<br>
 <br>
 <h2>Mining API</h2>
 The mining RPC API is experimental and had been implemented in March 2016 - long before the segwit support was added.<br>
-It was tested on Testnet3 and worked well, but only for one mining setup. 
+It was tested on Testnet3 and worked well, but only for one mining setup.
 It has not been used ever since then and at this moment shall be considered unusable.<br>
 If you are interested in using Gocoin node for mining, please contact me, so I can help you with any issues that may need resolving,
 before you start throwing any hash power onto it.<br>
