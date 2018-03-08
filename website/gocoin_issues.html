@@ -14,7 +14,7 @@ To speed up this process the database is not being flushed to disk as the block 
 The node only writes it to disk when either all the blocks are downloaded or when the node's shutdown has
 been requested from a user interface (e.g. text command 'quit' was given).
 If you kill the process or reboot the machine, you will loose all your hard worked UTXO changes!
-Therefore, to save the the work as the new blocks are being processed, you should once for awhile quit the node and start it again.
+Therefore, to save the work as the new blocks are being processed, you should once for awhile quit the node and start it again.
 This BTW may also have a positive impact on memory consumption, allowing you to set up the node with less RAM (e.g. 13GB).<br>
 <br>
 When the node is synchronized, it flushes UTXO database to disk once for awhile.
