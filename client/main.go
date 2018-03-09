@@ -55,7 +55,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
-	newbl.TmQue0 = time.Now()
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
@@ -167,8 +166,6 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	//ti := time.Now()
-
 	defer func() {
 		common.CountSafe("MainNetBlock")
 		if common.GetUint32(&common.WalletOnIn) > 0 {
@@ -218,13 +215,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
 	}
-
-	/*if !newbl.Time.IsZero() {
-		fmt.Println("When block", newbl.BlockTreeNode.Height, "was passed in", ti.Sub(newbl.Time).String(),
-			"queued for", newbl.TmQue0.Sub(newbl.Time).String(),
-			"and saved in ", newbl.TmQueue.Sub(newbl.TmQue0).String(),
-			"main.go was last seen in line", newbl.Busy)
-	}*/
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
