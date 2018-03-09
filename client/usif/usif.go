@@ -221,11 +221,7 @@ func GetNetworkHashRateNum() float64 {
 }
 
 func ExecUiReq(req *OneUiReq) {
-	common.Busy_mutex.Lock()
-	if common.BusyWith != "" {
-		fmt.Print("now common.BusyWith with ", common.BusyWith)
-	}
-	common.Busy_mutex.Unlock()
+	fmt.Print("main.go in line ", common.BusyIn())
 	fmt.Println("...")
 	sta := time.Now().UnixNano()
 	req.Done.Add(1)
