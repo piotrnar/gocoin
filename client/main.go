@@ -395,12 +395,12 @@ func main() {
 				continue
 
 			case newbl := <-network.NetBlocks:
+				common.Busy("HandleNetBlock()")
+				HandleNetBlock(newbl)
+				common.CountSafe("MainNetBlock")
 				if common.GetUint32(&common.WalletOnIn) > 0 {
 					common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
 				}
-				common.CountSafe("MainNetBlock")
-				common.Busy("HandleNetBlock()")
-				HandleNetBlock(newbl)
 
 			case rpcbl := <-rpcapi.RpcBlocks:
 				common.CountSafe("RPCNewBlock")
