@@ -56,8 +56,11 @@ type UnspentDB struct {
 	UnwindBufLen uint32
 	DirtyDB sys.SyncBool
 	sync.Mutex
+
 	abortwritingnow sys.SyncBool
 	WritingInProgress sys.SyncBool
+	writingDone sync.WaitGroup
+
 	CurrentHeightOnDisk uint32
 	HurryUp sys.SyncBool
 	DoNotWriteUndoFiles bool
@@ -250,7 +253,7 @@ func (db *UnspentDB) save() {
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
-	db.WritingInProgress.Clr()
+	db.writingDone.Done()
 }
 
 
@@ -368,8 +371,9 @@ func (db *UnspentDB) Idle() bool {
 
 	if db.DirtyDB.Get() && !db.WritingInProgress.Get() {
 		db.WritingInProgress.Set()
+		db.writingDone.Add(1)
 		//println("save", db.LastBlockHeight, "now")
-		go db.save()
+		go db.save() // this one will call db.writingDone.Done()
 		return true
 	}
 
@@ -382,8 +386,9 @@ func (db *UnspentDB) Close() {
 	db.volatimemode = false
 	db.HurryUp.Set()
 	db.Idle()
-	for db.WritingInProgress.Get() {
-		time.Sleep(1e7)
+	if db.WritingInProgress.Get() {
+		db.writingDone.Wait()
+		db.WritingInProgress.Clr()
 	}
 }
 
@@ -475,10 +480,9 @@ func (db *UnspentDB) AbortWriting() {
 func (db *UnspentDB) abortWriting() {
 	if db.WritingInProgress.Get() {
 		db.abortwritingnow.Set()
-		for db.WritingInProgress.Get() {
-			time.Sleep(1e3)
-		}
+		db.writingDone.Wait()
 		db.abortwritingnow.Clr()
+		db.WritingInProgress.Clr() // empty the channel
 	}
 }
 
