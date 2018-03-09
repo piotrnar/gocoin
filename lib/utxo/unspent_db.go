@@ -59,7 +59,7 @@ type UnspentDB struct {
 
 	abortwritingnow chan bool
 	WritingInProgress sys.SyncBool
-	writingDone sync.Cond
+	writingDone sync.WaitGroup
 
 	CurrentHeightOnDisk uint32
 	hurryup chan bool
@@ -256,7 +256,7 @@ func (db *UnspentDB) save() {
 		db.CurrentHeightOnDisk = db.LastBlockHeight
 	}
 
-	db.writingDone.Signal()
+	db.writingDone.Done()
 }
 
 
@@ -373,9 +373,10 @@ func (db *UnspentDB) Idle() bool {
 	defer db.Mutex.Unlock()
 
 	if db.DirtyDB.Get() && !db.WritingInProgress.Get() {
+		db.writingDone.Add(1)
 		db.WritingInProgress.Set()
 		//println("save", db.LastBlockHeight, "now")
-		go db.save() // this one will call db.writingDone.Signal()
+		go db.save() // this one will call db.writingDone.Done()
 		return true
 	}
 
