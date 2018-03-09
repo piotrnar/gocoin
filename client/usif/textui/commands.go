@@ -125,13 +125,7 @@ func MainThread() {
 }
 
 func show_info(par string) {
-	common.Busy_mutex.Lock()
-	if common.BusyWith != "" {
-		fmt.Println("Chain thread busy with:", common.BusyWith)
-	} else {
-		fmt.Println("Chain thread is idle")
-	}
-	common.Busy_mutex.Unlock()
+	fmt.Println("main.go last seen in line:", common.BusyIn())
 
 	network.MutexRcv.Lock()
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
