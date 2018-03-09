@@ -476,7 +476,7 @@ func (db *UnspentDB) abortWriting() {
 	if db.WritingInProgress.Get() {
 		db.abortwritingnow.Set()
 		for db.WritingInProgress.Get() {
-			time.Sleep(1e6)
+			time.Sleep(1e3)
 		}
 		db.abortwritingnow.Clr()
 	}
