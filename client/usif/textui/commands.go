@@ -542,6 +542,7 @@ func switch_trust(par string) {
 
 func save_utxo(par string) {
 	common.BlockChain.Unspent.DirtyDB.Set()
+	common.BlockChain.Idle()
 }
 
 func purge_utxo(par string) {
