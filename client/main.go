@@ -55,6 +55,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	}
 
 	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
+	newbl.TmQue0 = time.Now()
 	common.BlockChain.Blocks.BlockAdd(newbl.BlockTreeNode.Height, bl)
 	newbl.TmQueue = time.Now()
 
@@ -166,6 +167,8 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
+	//ti := time.Now()
+
 	defer func() {
 		common.CountSafe("MainNetBlock")
 		if common.GetUint32(&common.WalletOnIn) > 0 {
@@ -215,9 +218,18 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
 	}
+
+	/*if !newbl.Time.IsZero() {
+		fmt.Println("When block", newbl.BlockTreeNode.Height, "was passed in", ti.Sub(newbl.Time).String(),
+			"queued for", newbl.TmQue0.Sub(newbl.Time).String(),
+			"and saved in ", newbl.TmQueue.Sub(newbl.TmQue0).String(),
+			"main.go was last seen in line", newbl.Busy)
+	}*/
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
+	common.CountSafe("RPCNewBlock")
+
 	network.MutexRcv.Lock()
 	rb := network.ReceivedBlocks[msg.Block.Hash.BIdx()]
 	network.MutexRcv.Unlock()
@@ -395,18 +407,10 @@ func main() {
 				}
 			}
 
-			// new blocks have priority
-			if len(network.NetBlocks) > 0 {
+			// first check for priority messages; kill signal or a new block
+			select {
+			case <-common.KillChan:
 				common.Busy()
-				HandleNetBlock(<-network.NetBlocks)
-			}
-
-			common.Busy()
-
-			select { // first high priority channels
-			case s := <-common.KillChan:
-				common.Busy()
-				fmt.Println("Got signal:", s)
 				usif.Exit_now.Set()
 				continue
 
@@ -416,7 +420,25 @@ func main() {
 
 			case rpcbl := <-rpcapi.RpcBlocks:
 				common.Busy()
-				common.CountSafe("RPCNewBlock")
+				HandleRpcBlock(rpcbl)
+
+			default: // timeout immediatelly if no priority message
+			}
+
+			common.Busy()
+
+			select {
+			case <-common.KillChan:
+				common.Busy()
+				usif.Exit_now.Set()
+				continue
+
+			case newbl := <-network.NetBlocks:
+				common.Busy()
+				HandleNetBlock(newbl)
+
+			case rpcbl := <-rpcapi.RpcBlocks:
+				common.Busy()
 				HandleRpcBlock(rpcbl)
 
 			case rec := <-usif.LocksChan:
@@ -424,7 +446,7 @@ func main() {
 				common.CountSafe("MainLocks")
 				rec.In.Done()
 				rec.Out.Wait()
-				continue
+
 			case <-SaveBlockChain.C:
 				common.Busy()
 				common.CountSafe("SaveBlockChain")
@@ -453,17 +475,11 @@ func main() {
 				common.CountSafe("MainUICmd")
 				cmd.Handler(cmd.Param)
 				cmd.Done.Done()
-				continue
 
 			case <-peersTick:
 				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
-
-			case <-time.After(time.Second):
-				common.Busy()
-				common.CountSafe("MainThreadIdle")
-				continue
 
 			case on := <-wallet.OnOff:
 				common.Busy()
