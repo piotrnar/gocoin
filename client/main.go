@@ -166,8 +166,6 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	ti := time.Now()
-
 	defer func() {
 		common.CountSafe("MainNetBlock")
 		if common.GetUint32(&common.WalletOnIn) > 0 {
@@ -216,12 +214,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	} else {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
-	}
-
-	if !newbl.Time.IsZero() {
-		fmt.Println("When block", newbl.BlockTreeNode.Height, "was received",
-			newbl.Time.Sub(newbl.TmPreproc).String(),
-			ti.Sub(newbl.Time).String(), "main.go was last seen in line", newbl.Busy)
 	}
 }
 
