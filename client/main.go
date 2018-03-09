@@ -59,7 +59,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	newbl.TmQueue = time.Now()
 
 	if newbl.DoInvs {
-		common.Busy("NetRouteInv")
+		common.Busy()
 		network.NetRouteInv(2, bl.Hash, newbl.Conn)
 	}
 
@@ -115,7 +115,7 @@ func retry_cached_blocks() bool {
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-			common.Busy("Cache.LocalAcceptBlock " + newbl.BlockTreeNode.BlockHash.String())
+			common.Busy()
 
 			if newbl.Block == nil {
 				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
@@ -166,6 +166,15 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
+	ti := time.Now()
+
+	defer func() {
+		common.CountSafe("MainNetBlock")
+		if common.GetUint32(&common.WalletOnIn) > 0 {
+			common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
+		}
+	}()
+
 	if CheckParentDiscarded(newbl.BlockTreeNode) {
 		common.CountSafe("DiscardFreshBlockA")
 		if newbl.Block == nil {
@@ -199,7 +208,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 	}
 
-	common.Busy("LocalAcceptBlock " + newbl.Hash.String())
+	common.Busy()
 	if e := LocalAcceptBlock(newbl); e != nil {
 		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
@@ -207,6 +216,12 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	} else {
 		//println("block", newbl.Block.Height, "accepted")
 		retryCachedBlocks = retry_cached_blocks()
+	}
+
+	if !newbl.Time.IsZero() {
+		fmt.Println("When block", newbl.BlockTreeNode.Height, "was received",
+			newbl.Time.Sub(newbl.TmPreproc).String(),
+			ti.Sub(newbl.Time).String(), "main.go was last seen in line", newbl.Busy)
 	}
 }
 
@@ -377,6 +392,8 @@ func main() {
 		}
 
 		for !usif.Exit_now.Get() {
+			common.Busy()
+
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
 				retryCachedBlocks = retry_cached_blocks()
@@ -386,82 +403,83 @@ func main() {
 				}
 			}
 
-			common.Busy("")
+			// new blocks have priority
+			if len(network.NetBlocks) > 0 {
+				common.Busy()
+				HandleNetBlock(<-network.NetBlocks)
+			}
+
+			common.Busy()
 
 			select { // first high priority channels
 			case s := <-common.KillChan:
+				common.Busy()
 				fmt.Println("Got signal:", s)
 				usif.Exit_now.Set()
 				continue
 
 			case newbl := <-network.NetBlocks:
-				common.Busy("HandleNetBlock()")
+				common.Busy()
 				HandleNetBlock(newbl)
-				common.CountSafe("MainNetBlock")
-				if common.GetUint32(&common.WalletOnIn) > 0 {
-					common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
-				}
 
 			case rpcbl := <-rpcapi.RpcBlocks:
+				common.Busy()
 				common.CountSafe("RPCNewBlock")
-				common.Busy("HandleRpcBlock()")
 				HandleRpcBlock(rpcbl)
 
 			case rec := <-usif.LocksChan:
+				common.Busy()
 				common.CountSafe("MainLocks")
-				common.Busy("LockedByRequest")
 				rec.In.Done()
 				rec.Out.Wait()
 				continue
+			case <-SaveBlockChain.C:
+				common.Busy()
+				common.CountSafe("SaveBlockChain")
+				if common.BlockChain.Idle() {
+					common.CountSafe("ChainIdleUsed")
+				}
 
-			default: // now low prioirity channels...
-				select {
-				case <-SaveBlockChain.C:
-					common.CountSafe("SaveBlockChain")
-					common.Busy("BlockChain.Idle()")
-					if common.BlockChain.Idle() {
-						common.CountSafe("ChainIdleUsed")
+			case newtx := <-network.NetTxs:
+				common.Busy()
+				common.CountSafe("MainNetTx")
+				network.HandleNetTx(newtx, false)
+
+			case <-netTick:
+				common.Busy()
+				common.CountSafe("MainNetTick")
+				network.NetworkTick()
+				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
+					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
+					if common.WalletPendingTick() {
+						wallet.OnOff <- true
 					}
+				}
 
-				case newtx := <-network.NetTxs:
-					common.CountSafe("MainNetTx")
-					common.Busy("network.HandleNetTx()")
-					network.HandleNetTx(newtx, false)
+			case cmd := <-usif.UiChannel:
+				common.Busy()
+				common.CountSafe("MainUICmd")
+				cmd.Handler(cmd.Param)
+				cmd.Done.Done()
+				continue
 
-				case <-netTick:
-					common.CountSafe("MainNetTick")
-					common.Busy("network.NetworkTick()")
-					network.NetworkTick()
-					if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
-						len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
-						if common.WalletPendingTick() {
-							wallet.OnOff <- true
-						}
-					}
+			case <-peersTick:
+				common.Busy()
+				peersdb.ExpirePeers()
+				usif.ExpireBlockFees()
 
-				case cmd := <-usif.UiChannel:
-					common.CountSafe("MainUICmd")
-					common.Busy("UI command")
-					cmd.Handler(cmd.Param)
-					cmd.Done.Done()
-					continue
+			case <-time.After(time.Second):
+				common.Busy()
+				common.CountSafe("MainThreadIdle")
+				continue
 
-				case <-peersTick:
-					common.Busy("peersdb.ExpirePeers()")
-					peersdb.ExpirePeers()
-					usif.ExpireBlockFees()
-
-				case <-time.After(time.Second):
-					common.CountSafe("MainThreadIdle")
-					continue
-
-				case on := <-wallet.OnOff:
-					if on {
-						wallet.LoadBalance()
-					} else {
-						wallet.Disable()
-						common.SetUint32(&common.WalletOnIn, 0)
-					}
+			case on := <-wallet.OnOff:
+				common.Busy()
+				if on {
+					wallet.LoadBalance()
+				} else {
+					wallet.Disable()
+					common.SetUint32(&common.WalletOnIn, 0)
 				}
 			}
 		}
