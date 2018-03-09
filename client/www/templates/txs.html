@@ -206,7 +206,7 @@ function sorttab(tid,col) {
 		var row = tbl.rows[i];
 		var sortnr = row.cells[col]["numeric_value"]
 		if (isNaN(sortnr)) {
-			parseFloat(row.cells[col].textContent || row.cells[col].innerText);
+			sortnr = parseFloat(row.cells[col].textContent || row.cells[col].innerText);
 		}
 		if (!isNaN(sortnr)) store.push([sortnr, row]);
 	}
