@@ -89,35 +89,37 @@ type OneWaitingList struct {
 
 func ReasonToString(reason byte) string {
 	switch reason {
-	case 1:
+	case 0:
+		return ""
+	case TX_REJECTED_DISABLED:
 		return "RELAY_OFF"
-	case 101:
+	case TX_REJECTED_TOO_BIG:
 		return "TOO_BIG"
-	case 102:
+	case TX_REJECTED_FORMAT:
 		return "FORMAT"
-	case 103:
+	case TX_REJECTED_LEN_MISMATCH:
 		return "LEN_MISMATCH"
-	case 104:
+	case TX_REJECTED_EMPTY_INPUT:
 		return "EMPTY_INPUT"
-	case 154:
+	case TX_REJECTED_OVERSPEND:
 		return "OVERSPEND"
-	case 157:
+	case TX_REJECTED_BAD_INPUT:
 		return "BAD_INPUT"
-	case 202:
+	case TX_REJECTED_NO_TXOU:
 		return "NO_TXOU"
-	case 205:
+	case TX_REJECTED_LOW_FEE:
 		return "LOW_FEE"
-	case 208:
+	case TX_REJECTED_NOT_MINED:
 		return "NOT_MINED"
-	case 209:
+	case TX_REJECTED_CB_INMATURE:
 		return "CB_INMATURE"
-	case 210:
+	case TX_REJECTED_RBF_LOWFEE:
 		return "RBF_LOWFEE"
-	case 211:
+	case TX_REJECTED_RBF_FINAL:
 		return "RBF_FINAL"
-	case 212:
+	case TX_REJECTED_RBF_100:
 		return "RBF_100"
-	case 213:
+	case TX_REJECTED_REPLACED:
 		return "REPLACED"
 	}
 	return fmt.Sprint("UNKNOWN_", reason)
