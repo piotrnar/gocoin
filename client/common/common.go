@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 	"errors"
+	"runtime"
+	"sync/atomic"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -33,8 +35,7 @@ var (
 	CounterMutex sync.Mutex
 	Counter map[string] uint64 = make(map[string]uint64)
 
-	BusyWith string
-	Busy_mutex sync.Mutex
+	busyLine int32
 
 	NetworkClosed sys.SyncBool
 
@@ -95,10 +96,15 @@ func CountSafeAdd(k string, val uint64) {
 }
 
 
-func Busy(b string) {
-	Busy_mutex.Lock()
-	BusyWith = b
-	Busy_mutex.Unlock()
+func Busy() {
+	var line int
+	_, _, line, _ = runtime.Caller(1)
+	atomic.StoreInt32(&busyLine, int32(line))
+}
+
+
+func BusyIn() int {
+	return int(atomic.LoadInt32(&busyLine))
 }
 
 
