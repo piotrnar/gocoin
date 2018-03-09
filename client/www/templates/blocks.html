@@ -5,6 +5,10 @@
 }
 .stat1 {
 }
+.time0 {
+}
+.time1 {
+}
 td.bordr {
 	border-right: 1px solid;
 }
@@ -59,7 +63,8 @@ Mined by <b id="stat_mined_by"></b>
 	<th class="stat1" colspan="7">Block Processing <i>(ms)</i>
 <tr>
 	<th width="52">Height
-	<th width="70" id="ts_rcvd_lab" onclick="swap_time_mode()" style="cursor:pointer">Received
+	<th class="time0" width="70" onclick="swap_time_mode()" style="cursor:pointer">Received
+	<th class="time1" width="70" onclick="swap_time_mode()" style="cursor:pointer;font-size:85%">Timestamp
 	<th width="480">Hash
 	<th width="35" align="right">TXs
 	<th width="40" align="right">SiOps
@@ -104,8 +109,14 @@ var show_timestamp = false
 
 function swap_time_mode() {
 	show_timestamp = !show_timestamp
-	ts_rcvd_lab.innerText = show_timestamp ? 'T.stamp' : 'Received'
-	refreshblocks()
+	if (show_timestamp) {
+		css('.time1', 'display', 'table-cell')
+		css('.time0', 'display', 'none')
+	} else {
+		css('.time0', 'display', 'table-cell')
+		css('.time1', 'display', 'none')
+	}
+	localStorage.setItem("blocks_show_timestmp", show_timestamp)
 }
 
 var mid = null
@@ -182,13 +193,15 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
-				td.className = 'i'
+				td.className = 'i time0'
 				td.name = cs[i].Received
-				if (show_timestamp) {
-					td.innerText = tim2str(cs[i].Timestamp, true)
-				} else {
-					do_rcvd_time(td)
-				}
+				do_rcvd_time(td)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i time1'
+				td.name = cs[i].Received
+				td.innerText = tim2str(cs[i].Timestamp, true)
 
 				td = row.insertCell(-1)
 				td.className = 'mono block_hash nw'
@@ -320,7 +333,7 @@ blno.addEventListener("lastblock", function(e) {
 	if (e.block.Height!=_lblo) {
 		_lblo = e.block.Height
 		refreshblocks() // refersh the table for each new block notifiaction
-	} else if (!show_timestamp) {
+	} else {
 		for (var i=2; i<blkstab.rows.length; i++) {
 			do_rcvd_time(blkstab.rows[i].cells[1])
 		}
@@ -332,5 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(event.keyCode == 27)  closepopup()
 	}
 })
+
+show_timestamp = localStorage.getItem("blocks_show_timestmp")!=="true"
+swap_time_mode()
 
 </script>
