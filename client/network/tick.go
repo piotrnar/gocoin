@@ -521,7 +521,6 @@ func (c *OneConnection) Run() {
 	next_tick := now
 	next_invs := now
 
-	c.writing_thread_done.Add(1)
 	go c.writing_thread()
 
 	for !c.IsBroken() {
