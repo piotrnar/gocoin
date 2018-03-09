@@ -598,7 +598,9 @@ function show_txw4i() {
 					c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
 					c=row.insertCell(-1);className='maturity'
-					c.innerHTML = get_maturity(xval(pendtxs[j], 'time'))
+					var tim = xval(pendtxs[j], 'time')
+					c["numeric_value"]  = tim
+					c.innerHTML = get_maturity(tim)
 				}
 			}
 			txw4i.style.display = 'table'
