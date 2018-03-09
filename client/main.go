@@ -246,7 +246,6 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	msg.Done.Done()
 }
 
-
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -389,11 +388,19 @@ func main() {
 
 			common.Busy("")
 
-			select {
+			select { // first high priority channels
 			case s := <-common.KillChan:
 				fmt.Println("Got signal:", s)
 				usif.Exit_now.Set()
 				continue
+
+			case newbl := <-network.NetBlocks:
+				if common.GetUint32(&common.WalletOnIn) > 0 {
+					common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
+				}
+				common.CountSafe("MainNetBlock")
+				common.Busy("HandleNetBlock()")
+				HandleNetBlock(newbl)
 
 			case rpcbl := <-rpcapi.RpcBlocks:
 				common.CountSafe("RPCNewBlock")
@@ -407,59 +414,54 @@ func main() {
 				rec.Out.Wait()
 				continue
 
-			case newbl := <-network.NetBlocks:
-				if common.GetUint32(&common.WalletOnIn) > 0 {
-					common.SetUint32(&common.WalletOnIn, 5)  // snooze the timer to 5 seconds from now
-				}
-				common.CountSafe("MainNetBlock")
-				common.Busy("HandleNetBlock()")
-				HandleNetBlock(newbl)
-
-			case <-SaveBlockChain.C:
-				common.CountSafe("SaveBlockChain")
-				common.Busy("BlockChain.Idle()")
-				if common.BlockChain.Idle() {
-					common.CountSafe("ChainIdleUsed")
-				}
-
-			case newtx := <-network.NetTxs:
-				common.CountSafe("MainNetTx")
-				common.Busy("network.HandleNetTx()")
-				network.HandleNetTx(newtx, false)
-
-			case <-netTick:
-				common.CountSafe("MainNetTick")
-				common.Busy("network.NetworkTick()")
-				network.NetworkTick()
-				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
-					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
-					if common.WalletPendingTick() {
-						wallet.OnOff <- true
+			default: // now low prioirity channels...
+				select {
+				case <-SaveBlockChain.C:
+					common.CountSafe("SaveBlockChain")
+					common.Busy("BlockChain.Idle()")
+					if common.BlockChain.Idle() {
+						common.CountSafe("ChainIdleUsed")
 					}
-				}
 
-			case cmd := <-usif.UiChannel:
-				common.CountSafe("MainUICmd")
-				common.Busy("UI command")
-				cmd.Handler(cmd.Param)
-				cmd.Done.Done()
-				continue
+				case newtx := <-network.NetTxs:
+					common.CountSafe("MainNetTx")
+					common.Busy("network.HandleNetTx()")
+					network.HandleNetTx(newtx, false)
 
-			case <-peersTick:
-				common.Busy("peersdb.ExpirePeers()")
-				peersdb.ExpirePeers()
-				usif.ExpireBlockFees()
+				case <-netTick:
+					common.CountSafe("MainNetTick")
+					common.Busy("network.NetworkTick()")
+					network.NetworkTick()
+					if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
+						len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
+						if common.WalletPendingTick() {
+							wallet.OnOff <- true
+						}
+					}
 
-			case <-time.After(time.Second):
-				common.CountSafe("MainThreadIdle")
-				continue
+				case cmd := <-usif.UiChannel:
+					common.CountSafe("MainUICmd")
+					common.Busy("UI command")
+					cmd.Handler(cmd.Param)
+					cmd.Done.Done()
+					continue
 
-			case on := <-wallet.OnOff:
-				if on {
-					wallet.LoadBalance()
-				} else {
-					wallet.Disable()
-					common.SetUint32(&common.WalletOnIn, 0)
+				case <-peersTick:
+					common.Busy("peersdb.ExpirePeers()")
+					peersdb.ExpirePeers()
+					usif.ExpireBlockFees()
+
+				case <-time.After(time.Second):
+					common.CountSafe("MainThreadIdle")
+					continue
+
+				case on := <-wallet.OnOff:
+					if on {
+						wallet.LoadBalance()
+					} else {
+						wallet.Disable()
+						common.SetUint32(&common.WalletOnIn, 0)
+					}
 				}
 			}
 		}

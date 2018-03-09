@@ -184,7 +184,6 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 	sort.Slice(sorted, func(i, j int) bool {
 		return int64(sorted[i].Size)*int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size)*int64(now.Sub(sorted[j].Time))
 	})
-	println("rejected sorted:", sorted[0].Size, now.Sub(sorted[0].Time), "...", sorted[idx-1].Size, now.Sub(sorted[idx-1].Time))
 	return
 }
 
@@ -227,8 +226,10 @@ func LimitRejectedSize() {
 		common.CounterMutex.Lock()
 		common.Counter["TxRejectedSizCnt"] += uint64(old_cnt - len(TransactionsRejected))
 		common.Counter["TxRejectedSizBts"] += old_size - TransactionsRejectedSize
-		println("Removed", uint64(old_cnt-len(TransactionsRejected)), "txs and", old_size-TransactionsRejectedSize,
-			"bytes from the rejected poool")
+		if common.GetBool(&common.CFG.TXPool.Debug) {
+			println("Removed", uint64(old_cnt-len(TransactionsRejected)), "txs and", old_size-TransactionsRejectedSize,
+				"bytes from the rejected poool")
+		}
 		common.CounterMutex.Unlock()
 	}
 }
