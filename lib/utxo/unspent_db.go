@@ -57,12 +57,12 @@ type UnspentDB struct {
 	DirtyDB sys.SyncBool
 	sync.Mutex
 
-	abortwritingnow sys.SyncBool
+	abortwritingnow chan bool
 	WritingInProgress sys.SyncBool
 	writingDone sync.WaitGroup
 
 	CurrentHeightOnDisk uint32
-	HurryUp sys.SyncBool
+	hurryup chan bool
 	DoNotWriteUndoFiles bool
 	CB CallbackFunctions
 }
@@ -84,6 +84,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.volatimemode = opts.VolatimeMode
 	db.UnwindBufLen = 256
 	db.CB = opts.CB
+	db.abortwritingnow = make(chan bool, 1)
+	db.hurryup = make(chan bool, 1)
 
 	os.MkdirAll(db.dir_undo, 0770)
 
@@ -192,7 +194,7 @@ fatal_error:
 
 func (db *UnspentDB) save() {
 	//var cnt_dwn, cnt_dwn_from, perc int
-	var abort bool
+	var abort, hurryup bool
 
 	os.Rename(db.dir_utxo + "UTXO.db", db.dir_utxo + "UTXO.old")
 
@@ -205,7 +207,6 @@ func (db *UnspentDB) save() {
 	start_time := time.Now()
 	db.RWMutex.RLock()
 	total_records := int64(len(db.HashMap))
-	//var timewaits int
 	var current_record, data_progress, time_progress int64
 
 	wr := bufio.NewWriter(of)
@@ -213,21 +214,23 @@ func (db *UnspentDB) save() {
 	wr.Write(db.LastBlockHash)
 	binary.Write(wr, binary.LittleEndian, uint64(total_records))
 	for k, v := range db.HashMap {
-		if !db.HurryUp.Get() {
+		if !hurryup {
 			current_record++
 			if (current_record&0xf)==0 {
 				data_progress = int64((current_record<<20)/total_records)
 				time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
 				if data_progress > time_progress {
-					time.Sleep(1e6)
-					//timewaits++
+					select {
+					case <- db.abortwritingnow:
+						abort = true
+					case <- db.hurryup:
+						hurryup = true
+					case <- time.After(1e6):
+					}
 				}
 			}
 		}
-
-		if db.abortwritingnow.Get() {
-			//println("abort")
-			abort = true
+		if abort {
 			break
 		}
 		btc.WriteVlen(wr, uint64(UtxoIdxLen+_len(v)))
@@ -360,7 +363,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 }
 
 
-// Call it when the main thread is idle - this will do DB defrag
+// Call it when the main thread is idle
 func (db *UnspentDB) Idle() bool {
 	if db.volatimemode {
 		return false
@@ -381,10 +384,16 @@ func (db *UnspentDB) Idle() bool {
 }
 
 
+func (db *UnspentDB) HurryUp() {
+	select {
+		case db.hurryup <- true:
+		default:
+	}
+}
+
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
 	db.volatimemode = false
-	db.HurryUp.Set()
 	db.Idle()
 	if db.WritingInProgress.Get() {
 		db.writingDone.Wait()
@@ -479,9 +488,12 @@ func (db *UnspentDB) AbortWriting() {
 
 func (db *UnspentDB) abortWriting() {
 	if db.WritingInProgress.Get() {
-		db.abortwritingnow.Set()
+		db.abortwritingnow <- true
 		db.writingDone.Wait()
-		db.abortwritingnow.Clr()
+		select {
+		case <- db.abortwritingnow:
+		default:
+		}
 		db.WritingInProgress.Clr() // empty the channel
 	}
 }
@@ -523,7 +535,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
 	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), db.abortwritingnow.Get())
+		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d\n",
@@ -540,7 +552,7 @@ func (db *UnspentDB) GetStats() (s string) {
 	db.RWMutex.RUnlock()
 
 	s = fmt.Sprintf("UNSPENT: %d records. MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		hml, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), db.abortwritingnow.Get())
+		hml, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
 	return
