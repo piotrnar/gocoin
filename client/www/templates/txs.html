@@ -497,7 +497,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML += '&nbsp;'
 					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/del.png">'
 				} else {
-					c.innerHTML = parseInt(xval(txs[i], 'blocked'))
+					c.innerHTML = xval(txs[i], 'blocked')
 				}
 
 				if (own!=0) {
