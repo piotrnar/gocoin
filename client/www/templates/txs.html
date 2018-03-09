@@ -204,7 +204,10 @@ function sorttab(tid,col) {
 	var store = []
 	for(var i=0, len=tbl.rows.length; i<len; i++) {
 		var row = tbl.rows[i];
-		var sortnr = parseFloat(row.cells[col].textContent || row.cells[col].innerText);
+		var sortnr = row.cells[col]["numeric_value"]
+		if (isNaN(sortnr)) {
+			parseFloat(row.cells[col].textContent || row.cells[col].innerText);
+		}
 		if (!isNaN(sortnr)) store.push([sortnr, row]);
 	}
 	store.sort(function(x,y) {
@@ -425,7 +428,9 @@ function show_txs2s(extrapar) {
 				c.style.cursor='pointer'
 
 				c=row.insertCell(-1);c.className='maturity'
-				c.innerHTML = get_maturity(xval(txs[i], 'time'))
+				var tim = xval(txs[i], 'time')
+				c["numeric_value"]  = tim
+				c.innerHTML = get_maturity(tim)
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = len
@@ -541,7 +546,9 @@ function show_txsre() {
 				c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
 
 				c=row.insertCell(-1);className='maturity'
-				c.innerHTML = get_maturity(xval(txs[i], 'time'))
+				var tim = xval(txs[i], 'time')
+				c["numeric_value"]  = tim
+				c.innerHTML = get_maturity(tim)
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'size')
