@@ -199,7 +199,7 @@ type OneConnection struct {
 	txsCha chan int
 	txsNxt time.Time
 
-	writing_thread_done sync.WaitGroup
+	writing_thread_done sync.Cond
 	writing_thread_push chan bool
 
 	GetMP chan bool
@@ -583,7 +583,7 @@ func (c *OneConnection) writing_thread() {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	c.writing_thread_done.Done()
+	c.writing_thread_done.Signal()
 }
 
 
