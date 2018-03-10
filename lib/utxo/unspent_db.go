@@ -1,26 +1,25 @@
 package utxo
 
 import (
-	"os"
-	"fmt"
-	"sync"
-	"time"
 	"bufio"
 	"bytes"
-	"unsafe"
-	"io/ioutil"
 	"encoding/binary"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"io/ioutil"
+	"os"
+	"sync"
+	"time"
+	"unsafe"
 )
-
 
 const (
 	UTXO_RECORDS_PREALLOC = 35e6
 )
 
 var (
-	UTXO_WRITING_TIME_TARGET = 5*time.Minute  // Take it easy with flushing UTXO.db onto disk
+	UTXO_WRITING_TIME_TARGET = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 )
 
 type FunctionWalkUnspent func(*UtxoRec)
@@ -28,8 +27,8 @@ type FunctionWalkUnspent func(*UtxoRec)
 type CallbackFunctions struct {
 	// If NotifyTx is set, it will be called each time a new unspent
 	// output is being added or removed. When being removed, btc.TxOut is nil.
-	NotifyTxAdd func (*UtxoRec)
-	NotifyTxDel func (*UtxoRec, []bool)
+	NotifyTxAdd func(*UtxoRec)
+	NotifyTxDel func(*UtxoRec, []bool)
 
 	// These two are used only during loading
 	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
@@ -37,51 +36,50 @@ type CallbackFunctions struct {
 
 // Used to pass block's changes to UnspentDB
 type BlockChanges struct {
-	Height uint32
-	LastKnownHeight uint32  // put here zero to disable this feature
-	AddList []*UtxoRec
-	DeledTxs map[[32]byte] []bool
-	UndoData map[[32]byte] *UtxoRec
+	Height          uint32
+	LastKnownHeight uint32 // put here zero to disable this feature
+	AddList         []*UtxoRec
+	DeledTxs        map[[32]byte][]bool
+	UndoData        map[[32]byte]*UtxoRec
 }
 
-
 type UnspentDB struct {
-	HashMap map[UtxoKeyType] unsafe.Pointer
+	HashMap      map[UtxoKeyType]unsafe.Pointer
 	sync.RWMutex // used to access HashMap
 
-	LastBlockHash[]byte
-	LastBlockHeight uint32
+	LastBlockHash      []byte
+	LastBlockHeight    uint32
 	dir_utxo, dir_undo string
-	volatimemode bool
-	UnwindBufLen uint32
-	DirtyDB sys.SyncBool
+	volatimemode       bool
+	UnwindBufLen       uint32
+	DirtyDB            sys.SyncBool
 	sync.Mutex
 
-	abortwritingnow chan bool
+	abortwritingnow   chan bool
 	WritingInProgress sys.SyncBool
-	writingDone sync.WaitGroup
-	lastFileClosed sync.WaitGroup
+	writingDone       sync.WaitGroup
+	lastFileClosed    sync.WaitGroup
 
 	CurrentHeightOnDisk uint32
-	hurryup chan bool
+	hurryup             chan bool
 	DoNotWriteUndoFiles bool
-	CB CallbackFunctions
+	CB                  CallbackFunctions
 }
 
 type NewUnspentOpts struct {
-	Dir string
-	Rescan bool
-	VolatimeMode bool
+	Dir             string
+	Rescan          bool
+	VolatimeMode    bool
 	UnwindBufferLen uint32
-	CB CallbackFunctions
-	AbortNow *bool
+	CB              CallbackFunctions
+	AbortNow        *bool
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	//var maxbl_fn string
 	db = new(UnspentDB)
 	db.dir_utxo = opts.Dir
-	db.dir_undo = db.dir_utxo + "undo"+string(os.PathSeparator)
+	db.dir_undo = db.dir_utxo + "undo" + string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
 	db.UnwindBufLen = 256
 	db.CB = opts.CB
@@ -90,8 +88,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 	os.MkdirAll(db.dir_undo, 0770)
 
-	os.Remove(db.dir_undo+"tmp")
-	os.Remove(db.dir_utxo+"UTXO.db.tmp")
+	os.Remove(db.dir_undo + "tmp")
+	os.Remove(db.dir_utxo + "UTXO.db.tmp")
 
 	if opts.Rescan {
 		db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
@@ -106,9 +104,9 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var info string
 
 	of, er := os.Open(db.dir_utxo + "UTXO.db")
-	if er!=nil {
+	if er != nil {
 		of, er = os.Open(db.dir_utxo + "UTXO.old")
-		if er!=nil {
+		if er != nil {
 			db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, UTXO_RECORDS_PREALLOC)
 			return
 		}
@@ -135,28 +133,28 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	}
 
 	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
-	cnt_dwn_from = int(u64/100)
+	cnt_dwn_from = int(u64 / 100)
 
 	db.HashMap = make(map[UtxoKeyType]unsafe.Pointer, int(u64))
 	info = fmt.Sprint("\rLoading ", u64, " transactions from UTXO.db - ")
 
-	for tot_recs<u64 {
-		if opts.AbortNow!=nil && *opts.AbortNow {
+	for tot_recs < u64 {
+		if opts.AbortNow != nil && *opts.AbortNow {
 			break
 		}
 		le, er = btc.ReadVLen(rd)
-		if er!=nil {
+		if er != nil {
 			goto fatal_error
 		}
 
 		er = btc.ReadAll(rd, k[:])
-		if er!=nil {
+		if er != nil {
 			goto fatal_error
 		}
 
-		b := malloc(uint32(int(le)-UtxoIdxLen))
+		b := malloc(uint32(int(le) - UtxoIdxLen))
 		er = btc.ReadAll(rd, Slice(b))
-		if er!=nil {
+		if er != nil {
 			goto fatal_error
 		}
 
@@ -164,12 +162,12 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 		db.HashMap[k] = b
 		db.RWMutex.Unlock()
 
-		if db.CB.LoadWalk!=nil {
+		if db.CB.LoadWalk != nil {
 			db.CB.LoadWalk(NewUtxoRecStatic(k, Slice(b)))
 		}
 
 		tot_recs++
-		if cnt_dwn==0 {
+		if cnt_dwn == 0 {
 			fmt.Print(info, perc, "% complete ... ")
 			perc++
 			cnt_dwn = cnt_dwn_from
@@ -186,20 +184,20 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 fatal_error:
 	println("Fatal error when opening UTXO.db:", er.Error(), tot_recs, u64)
-	if opts.AbortNow!=nil {
+	if opts.AbortNow != nil {
 		*opts.AbortNow = true
 	}
 	return
 }
-
 
 func (db *UnspentDB) save() {
 	//var cnt_dwn, cnt_dwn_from, perc int
 	var abort, hurryup, check_time bool
 	var total_records, current_record, data_progress, time_progress int64
 
-	os.Rename(db.dir_utxo + "UTXO.db", db.dir_utxo + "UTXO.old")
-	control_channel := make(chan []byte, 1000)
+	os.Rename(db.dir_utxo+"UTXO.db", db.dir_utxo+"UTXO.old")
+	data_channel := make(chan []byte, 2500)
+	exit_channel := make(chan bool, 1)
 
 	start_time := time.Now()
 
@@ -220,63 +218,79 @@ func (db *UnspentDB) save() {
 		binary.Write(wr, binary.LittleEndian, recs)
 
 		var dat []byte
+		var abort, exit bool
 
-		for {
-			dat = <- control_channel
-			if len(dat) == 1 {
-				if dat[0] != 0 {
-					of.Close()  // abort
-					os.Remove(fname)
-				} else {
-					wr.Flush() // complete
-					of.Close()
-					os.Rename(fname, db.dir_utxo + "UTXO.db")
+		for !exit || len(data_channel) > 0 {
+			select {
+
+			case dat = <-data_channel:
+				if len(exit_channel) > 0 {
+					if abort = <-exit_channel; abort {
+						goto exit
+					} else {
+						exit = true
+					}
 				}
-				db.lastFileClosed.Done()
-				return
+				wr.Write(dat)
+
+			case abort = <-exit_channel:
+				if abort {
+					goto exit
+				} else {
+					exit = true
+				}
 			}
-			wr.Write(dat)
 		}
+	exit:
+		if abort {
+			of.Close() // abort
+			os.Remove(fname)
+		} else {
+			wr.Flush() // complete
+			of.Close()
+			os.Rename(fname, db.dir_utxo+"UTXO.db")
+		}
+		db.lastFileClosed.Done()
 	}(uint64(db.LastBlockHeight), db.LastBlockHash, uint64(total_records))
 
 	for k, v := range db.HashMap {
 		if check_time {
 			check_time = false
-			data_progress = int64((current_record<<20)/total_records)
-			time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
+			data_progress = int64((current_record << 20) / total_records)
+			time_progress = int64((time.Now().Sub(start_time) << 20) / UTXO_WRITING_TIME_TARGET)
 			if data_progress > time_progress {
 				select {
-				case <- db.abortwritingnow:
+				case <-db.abortwritingnow:
 					abort = true
 					goto finito
-				case <- db.hurryup:
+				case <-db.hurryup:
 					hurryup = true
-				case <- time.After(time.Millisecond):
+				case <-time.After(time.Millisecond):
 				}
 			}
 		}
 
-		for len(control_channel) >= cap(control_channel) - 1 /*we keep one spare slot for exit message */ {
+		for len(data_channel) >= cap(data_channel) {
 			select {
-			case <- db.abortwritingnow:
+			case <-db.abortwritingnow:
 				abort = true
 				goto finito
-			case <- db.hurryup:
+			case <-db.hurryup:
 				hurryup = true
-			case <- time.After(time.Millisecond):
+			case <-time.After(time.Millisecond):
 			}
 		}
 
 		rec_len := UtxoIdxLen + _len(v)
-		buf := make([]byte, 5 + rec_len)
+		buf := make([]byte, 5+rec_len)
 		of := int(btc.PutVlen(buf, rec_len))
 		copy(buf[of:], k[:])
 		copy(buf[of+UtxoIdxLen:], _slice(v))
-		control_channel <- buf[:of+rec_len]
+		data_channel <- buf[:of+rec_len]
 
 		if !hurryup {
 			current_record++
-			if (current_record&0xf) == 0 {
+			if (current_record & 0xf) == 0 {
 				check_time = true
 			}
 		}
@@ -284,11 +298,7 @@ func (db *UnspentDB) save() {
 finito:
 	db.RWMutex.RUnlock()
 
-	if abort {
-		control_channel <- []byte{1} // abort the sub-routine
-	} else {
-		control_channel <- []byte{0} // complete the sub-routine
-	}
+	exit_channel <- abort
 
 	if !abort {
 		db.DirtyDB.Clr()
@@ -299,7 +309,6 @@ finito:
 	db.writingDone.Done()
 }
 
-
 // Commit the given add/del transactions to UTXO and Unwind DBs
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	undo_fn := fmt.Sprint(db.dir_undo, changes.Height)
@@ -308,7 +317,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	defer db.Mutex.Unlock()
 	db.abortWriting()
 
-	if changes.UndoData!=nil {
+	if changes.UndoData != nil {
 		bu := new(bytes.Buffer)
 		bu.Write(blhash)
 		if changes.UndoData != nil {
@@ -324,20 +333,19 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 
 	db.commit(changes)
 
-	if db.LastBlockHash==nil {
+	if db.LastBlockHash == nil {
 		db.LastBlockHash = make([]byte, 32)
 	}
 	copy(db.LastBlockHash, blhash)
 	db.LastBlockHeight = changes.Height
 
-	if changes.Height>db.UnwindBufLen {
+	if changes.Height > db.UnwindBufLen {
 		os.Remove(fmt.Sprint(db.dir_undo, changes.Height-db.UnwindBufLen))
 	}
 
 	db.DirtyDB.Set()
 	return
 }
-
 
 func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	db.Mutex.Lock()
@@ -360,21 +368,21 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	}
 
 	dat, er := ioutil.ReadFile(fn)
-	if er!=nil {
+	if er != nil {
 		panic(er.Error())
 	}
 
-	off := 32  // ship the block hash
+	off := 32 // ship the block hash
 	for off < len(dat) {
 		le, n := btc.VLen(dat[off:])
 		off += n
-		qr := FullUtxoRec(dat[off:off+le])
+		qr := FullUtxoRec(dat[off : off+le])
 		off += le
 		addback = append(addback, qr)
 	}
 
 	for _, tx := range addback {
-		if db.CB.NotifyTxAdd!=nil {
+		if db.CB.NotifyTxAdd != nil {
 			db.CB.NotifyTxAdd(tx)
 		}
 
@@ -386,7 +394,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		if v != nil {
 			oldrec := NewUtxoRec(ind, _slice(v))
 			for a := range tx.Outs {
-				if tx.Outs[a]==nil {
+				if tx.Outs[a] == nil {
 					tx.Outs[a] = oldrec.Outs[a]
 				}
 			}
@@ -401,7 +409,6 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	copy(db.LastBlockHash, newhash)
 	db.DirtyDB.Set()
 }
-
 
 // Call it when the main thread is idle
 func (db *UnspentDB) Idle() bool {
@@ -422,11 +429,10 @@ func (db *UnspentDB) Idle() bool {
 	return false
 }
 
-
 func (db *UnspentDB) HurryUp() {
 	select {
-		case db.hurryup <- true:
-		default:
+	case db.hurryup <- true:
+	default:
 	}
 }
 
@@ -437,7 +443,6 @@ func (db *UnspentDB) Close() {
 	db.writingDone.Wait()
 	db.lastFileClosed.Wait()
 }
-
 
 // Get given unspent output
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
@@ -455,7 +460,6 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	return
 }
 
-
 // Returns true if gived TXID is in UTXO
 func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	var ind UtxoKeyType
@@ -466,18 +470,17 @@ func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	return
 }
 
-
 func (db *UnspentDB) del(hash []byte, outs []bool) {
 	var ind UtxoKeyType
 	copy(ind[:], hash)
 	db.RWMutex.RLock()
 	v := db.HashMap[ind]
 	db.RWMutex.RUnlock()
-	if v==nil {
+	if v == nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
 	rec := NewUtxoRec(ind, _slice(v))
-	if db.CB.NotifyTxDel!=nil {
+	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
 	}
 	var anyout bool
@@ -498,13 +501,12 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	free(v)
 }
 
-
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
 		var ind UtxoKeyType
 		copy(ind[:], rec.TxID[:])
-		if db.CB.NotifyTxAdd!=nil {
+		if db.CB.NotifyTxAdd != nil {
 			db.CB.NotifyTxAdd(rec)
 		}
 		db.RWMutex.Lock()
@@ -515,7 +517,6 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		db.del(k[:], v)
 	}
 }
-
 
 func (db *UnspentDB) AbortWriting() {
 	db.Mutex.Lock()
@@ -528,7 +529,7 @@ func (db *UnspentDB) abortWriting() {
 		db.abortwritingnow <- true
 		db.writingDone.Wait()
 		select {
-		case <- db.abortwritingnow:
+		case <-db.abortwritingnow:
 		default:
 		}
 	}
@@ -543,19 +544,19 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	lele := len(db.HashMap)
 
 	for k, v := range db.HashMap {
-		totdatasize += uint64(_len(v)+8)
+		totdatasize += uint64(_len(v) + 8)
 		rec := NewUtxoRecStatic(k, _slice(v))
 		var spendable_found bool
 		for _, r := range rec.Outs {
-			if r!=nil {
+			if r != nil {
 				outcnt++
 				sum += r.Value
 				if rec.Coinbase {
 					sumcb += r.Value
 				}
-				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
+				if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
 					unspendable++
-					unspendable_bytes += uint64(8+len(r.PKScr))
+					unspendable_bytes += uint64(8 + len(r.PKScr))
 				} else {
 					spendable_found = true
 				}
@@ -579,7 +580,6 @@ func (db *UnspentDB) UTXOStats() (s string) {
 
 	return
 }
-
 
 // Return DB statistics
 func (db *UnspentDB) GetStats() (s string) {
@@ -606,8 +606,8 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 		var spendable_found bool
 		var record_removed uint64
 		for idx, r := range rec.Outs {
-			if r!=nil {
-				if len(r.PKScr)>0 && r.PKScr[0]==0x6a {
+			if r != nil {
+				if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
 					unspendable_recs++
 					if all {
 						rec.Outs[idx] = nil
@@ -622,7 +622,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			free(v)
 			delete(db.HashMap, k)
 			unspendable_txs++
-		} else if record_removed>0 {
+		} else if record_removed > 0 {
 			free(v)
 			db.HashMap[k] = malloc_and_copy(rec.Serialize(false))
 			unspendable_recs += record_removed
