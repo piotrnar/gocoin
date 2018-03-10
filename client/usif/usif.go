@@ -221,8 +221,7 @@ func GetNetworkHashRateNum() float64 {
 }
 
 func ExecUiReq(req *OneUiReq) {
-	fmt.Print("main.go in line ", common.BusyIn())
-	fmt.Println("...")
+	fmt.Println("main.go last seen in line", common.BusyIn())
 	sta := time.Now().UnixNano()
 	req.Done.Add(1)
 	UiChannel <- req
