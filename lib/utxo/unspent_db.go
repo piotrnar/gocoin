@@ -60,6 +60,7 @@ type UnspentDB struct {
 	abortwritingnow chan bool
 	WritingInProgress sys.SyncBool
 	writingDone sync.WaitGroup
+	lastFileClosed sync.WaitGroup
 
 	CurrentHeightOnDisk uint32
 	hurryup chan bool
@@ -194,66 +195,106 @@ fatal_error:
 
 func (db *UnspentDB) save() {
 	//var cnt_dwn, cnt_dwn_from, perc int
-	var abort, hurryup bool
+	var abort, hurryup, check_time bool
+	var total_records, current_record, data_progress, time_progress int64
 
 	os.Rename(db.dir_utxo + "UTXO.db", db.dir_utxo + "UTXO.old")
-
-	of, er := os.Create(db.dir_utxo + "UTXO.db.tmp")
-	if er!=nil {
-		println("Create file:", er.Error())
-		return
-	}
+	control_channel := make(chan []byte, 1000)
 
 	start_time := time.Now()
-	db.RWMutex.RLock()
-	total_records := int64(len(db.HashMap))
-	var current_record, data_progress, time_progress int64
 
-	wr := bufio.NewWriter(of)
-	binary.Write(wr, binary.LittleEndian, uint64(db.LastBlockHeight))
-	wr.Write(db.LastBlockHash)
-	binary.Write(wr, binary.LittleEndian, uint64(total_records))
+	db.RWMutex.RLock()
+	total_records = int64(len(db.HashMap))
+	db.lastFileClosed.Add(1)
+	go func(height uint64, hash []byte, recs uint64) {
+		fname := db.dir_utxo + btc.NewUint256(hash).String() + ".db.tmp"
+		of, er := os.Create(fname)
+		if er != nil {
+			println("Create file:", er.Error())
+			return
+		}
+
+		wr := bufio.NewWriter(of)
+		binary.Write(wr, binary.LittleEndian, height)
+		wr.Write(hash)
+		binary.Write(wr, binary.LittleEndian, recs)
+
+		var dat []byte
+
+		for {
+			dat = <- control_channel
+			if len(dat) == 1 {
+				if dat[0] != 0 {
+					of.Close()  // abort
+					os.Remove(fname)
+				} else {
+					wr.Flush() // complete
+					of.Close()
+					os.Rename(fname, db.dir_utxo + "UTXO.db")
+				}
+				db.lastFileClosed.Done()
+				return
+			}
+			wr.Write(dat)
+		}
+	}(uint64(db.LastBlockHeight), db.LastBlockHash, uint64(total_records))
+
 	for k, v := range db.HashMap {
-		if !hurryup {
-			current_record++
-			if (current_record&0xf)==0 {
-				data_progress = int64((current_record<<20)/total_records)
-				time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
-				if data_progress > time_progress {
-					select {
-					case <- db.abortwritingnow:
-						abort = true
-					case <- db.hurryup:
-						hurryup = true
-					case <- time.After(1e6):
-					}
+		if check_time {
+			check_time = false
+			data_progress = int64((current_record<<20)/total_records)
+			time_progress = int64((time.Now().Sub(start_time)<<20) / UTXO_WRITING_TIME_TARGET)
+			if data_progress > time_progress {
+				select {
+				case <- db.abortwritingnow:
+					abort = true
+					goto finito
+				case <- db.hurryup:
+					hurryup = true
+				case <- time.After(time.Millisecond):
 				}
 			}
 		}
-		if abort {
-			break
+
+		for len(control_channel) >= cap(control_channel) - 1 /*we keep one spare slot for exit message */ {
+			select {
+			case <- db.abortwritingnow:
+				abort = true
+				goto finito
+			case <- db.hurryup:
+				hurryup = true
+			case <- time.After(time.Millisecond):
+			}
 		}
-		btc.WriteVlen(wr, uint64(UtxoIdxLen+_len(v)))
-		wr.Write(k[:])
-		_, er = wr.Write(_slice(v))
-		if er != nil {
-			println("\n\007Fatal error saving UTXO:", er.Error())
-			abort = true
-			break
+
+		rec_len := UtxoIdxLen + _len(v)
+		buf := make([]byte, 5 + rec_len)
+		of := int(btc.PutVlen(buf, rec_len))
+		copy(buf[of:], k[:])
+		copy(buf[of+UtxoIdxLen:], _slice(v))
+		control_channel <- buf[:of+rec_len]
+
+		if !hurryup {
+			current_record++
+			if (current_record&0xf) == 0 {
+				check_time = true
+			}
 		}
 	}
+finito:
 	db.RWMutex.RUnlock()
 
 	if abort {
-		of.Close()
-		os.Remove(db.dir_utxo + "UTXO.db.tmp")
+		control_channel <- []byte{1} // abort the sub-routine
 	} else {
+		control_channel <- []byte{0} // complete the sub-routine
+	}
+
+	if !abort {
 		db.DirtyDB.Clr()
-		wr.Flush()
-		of.Close()
-		os.Rename(db.dir_utxo + "UTXO.db.tmp", db.dir_utxo + "UTXO.db")
 		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
+	} else {
 	}
 
 	db.writingDone.Done()
@@ -399,6 +440,7 @@ func (db *UnspentDB) Close() {
 		db.writingDone.Wait()
 		db.WritingInProgress.Clr()
 	}
+	db.lastFileClosed.Wait()
 }
 
 
