@@ -312,7 +312,7 @@ func main() {
 		peersTick := time.Tick(5 * time.Minute)
 		netTick := time.Tick(time.Second)
 
-		reset_save_timer()
+		reset_save_timer() // we wil do one save try after loading, in case if ther was a rescan
 
 		peersdb.Testnet = common.Testnet
 		peersdb.ConnectOnly = common.CFG.ConnectOnly
