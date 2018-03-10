@@ -196,26 +196,27 @@ func (db *UnspentDB) save() {
 	var total_records, current_record, data_progress, time_progress int64
 
 	os.Rename(db.dir_utxo+"UTXO.db", db.dir_utxo+"UTXO.old")
-	data_channel := make(chan []byte, 2500)
+	data_channel := make(chan []byte, 100)
 	exit_channel := make(chan bool, 1)
 
 	start_time := time.Now()
 
 	db.RWMutex.RLock()
+
 	total_records = int64(len(db.HashMap))
+
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint64(db.LastBlockHeight))
+	buf.Write(db.LastBlockHash)
+	binary.Write(buf, binary.LittleEndian, uint64(total_records))
+
 	db.lastFileClosed.Add(1)
-	go func(height uint64, hash []byte, recs uint64) {
-		fname := db.dir_utxo + btc.NewUint256(hash).String() + ".db.tmp"
+	go func(fname string) {
 		of, er := os.Create(fname)
 		if er != nil {
 			println("Create file:", er.Error())
 			return
 		}
-
-		wr := bufio.NewWriter(of)
-		binary.Write(wr, binary.LittleEndian, height)
-		wr.Write(hash)
-		binary.Write(wr, binary.LittleEndian, recs)
 
 		var dat []byte
 		var abort, exit bool
@@ -231,7 +232,7 @@ func (db *UnspentDB) save() {
 						exit = true
 					}
 				}
-				wr.Write(dat)
+				of.Write(dat)
 
 			case abort = <-exit_channel:
 				if abort {
@@ -246,12 +247,11 @@ func (db *UnspentDB) save() {
 			of.Close() // abort
 			os.Remove(fname)
 		} else {
-			wr.Flush() // complete
 			of.Close()
 			os.Rename(fname, db.dir_utxo+"UTXO.db")
 		}
 		db.lastFileClosed.Done()
-	}(uint64(db.LastBlockHeight), db.LastBlockHash, uint64(total_records))
+	}(db.dir_utxo + btc.NewUint256(db.LastBlockHash).String() + ".db.tmp")
 
 	for k, v := range db.HashMap {
 		if check_time {
@@ -281,16 +281,17 @@ func (db *UnspentDB) save() {
 			}
 		}
 
-		rec_len := UtxoIdxLen + _len(v)
-		buf := make([]byte, 5+rec_len)
-		of := int(btc.PutVlen(buf, rec_len))
-		copy(buf[of:], k[:])
-		copy(buf[of+UtxoIdxLen:], _slice(v))
-		data_channel <- buf[:of+rec_len]
+		btc.WriteVlen(buf, uint64(UtxoIdxLen + _len(v)))
+		buf.Write(k[:])
+		buf.Write(_slice(v))
+		if buf.Len() > 0x10000 {
+			data_channel <- buf.Bytes()
+			buf = new(bytes.Buffer)
+		}
 
 		if !hurryup {
 			current_record++
-			if (current_record & 0xf) == 0 {
+			if (current_record & 0x3f) == 0 {
 				check_time = true
 			}
 		}
@@ -298,6 +299,9 @@ func (db *UnspentDB) save() {
 finito:
 	db.RWMutex.RUnlock()
 
+	if !abort && buf.Len() > 0 {
+		data_channel <- buf.Bytes()
+	}
 	exit_channel <- abort
 
 	if !abort {
