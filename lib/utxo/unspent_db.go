@@ -294,9 +294,8 @@ finito:
 		db.DirtyDB.Clr()
 		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
 		db.CurrentHeightOnDisk = db.LastBlockHeight
-	} else {
 	}
-
+	db.WritingInProgress.Clr()
 	db.writingDone.Done()
 }
 
@@ -414,9 +413,8 @@ func (db *UnspentDB) Idle() bool {
 	defer db.Mutex.Unlock()
 
 	if db.DirtyDB.Get() && !db.WritingInProgress.Get() {
-		db.writingDone.Add(1)
 		db.WritingInProgress.Set()
-		//println("save", db.LastBlockHeight, "now")
+		db.writingDone.Add(1)
 		go db.save() // this one will call db.writingDone.Done()
 		return true
 	}
@@ -436,10 +434,7 @@ func (db *UnspentDB) HurryUp() {
 func (db *UnspentDB) Close() {
 	db.volatimemode = false
 	db.Idle()
-	if db.WritingInProgress.Get() {
-		db.writingDone.Wait()
-		db.WritingInProgress.Clr()
-	}
+	db.writingDone.Wait()
 	db.lastFileClosed.Wait()
 }
 
@@ -536,7 +531,6 @@ func (db *UnspentDB) abortWriting() {
 		case <- db.abortwritingnow:
 		default:
 		}
-		db.WritingInProgress.Clr() // empty the channel
 	}
 }
 
