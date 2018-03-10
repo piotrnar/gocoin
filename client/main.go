@@ -312,6 +312,8 @@ func main() {
 		peersTick := time.Tick(5 * time.Minute)
 		netTick := time.Tick(time.Second)
 
+		reset_save_timer()
+
 		peersdb.Testnet = common.Testnet
 		peersdb.ConnectOnly = common.CFG.ConnectOnly
 		peersdb.Services = common.Services
