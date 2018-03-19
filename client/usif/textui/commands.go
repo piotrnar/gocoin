@@ -273,7 +273,7 @@ func dump_block(s string) {
 	}
 	crec, _, er := common.BlockChain.Blocks.BlockGetExt(btc.NewUint256(h.Hash[:]))
 	if er != nil {
-		println(er.Error())
+		println("BlockGetExt:", er.Error())
 		return
 	}
 
