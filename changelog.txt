@@ -35,6 +35,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client: New config value "LastTrustedBlock" used to speed up initial chain sync.
 * Lib/utxo: Largely improved speed of Unspent.UnspentGet()
 * Client: Improved the timing of aborting UTXO saving, resulting in faster processing of new blocks
+* Client: If BlockDB does not find a .dat file, it will try to look again for it in "oldat/" folder (make it a link to keep old blocks on different drive)
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()
