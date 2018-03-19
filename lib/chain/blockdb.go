@@ -282,16 +282,16 @@ func (db *BlockDB) writeOne() (written bool) {
 	rec.ipos = db.maxidxfilepos
 
 	if db.max_data_file_size != 0 && uint64(db.maxdatfilepos) + uint64(len(cbts)) > db.max_data_file_size {
-		if tmpf, _ := os.Create(db.dat_fname(db.maxdatfileidx + 1)); tmpf != nil {
+		if tmpf, _ := os.Create(db.dat_fname(db.maxdatfileidx + 1, false)); tmpf != nil {
 			db.blockdata.Close()
 			db.blockdata = tmpf
 			db.maxdatfilepos = 0
 			if db.data_files_keep != 0 && db.maxdatfileidx >= db.data_files_keep {
-				os.Remove(db.dat_fname(db.maxdatfileidx - db.data_files_keep))
+				os.Remove(db.dat_fname(db.maxdatfileidx - db.data_files_keep, false))
 			}
 			db.maxdatfileidx++
 		} else {
-			println("Cannot create", db.dat_fname(db.maxdatfileidx))
+			println("Cannot create", db.dat_fname(db.maxdatfileidx, false))
 		}
 	}
 
@@ -437,11 +437,16 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 	bl := make([]byte, rec.blen)
 
 	db.disk_access.Lock()
+
+	var f *os.File
 	// we will re-open the data file, to not spoil the writting pointer
-	f, e := os.Open(db.dat_fname(rec.datfileidx))
-	if e != nil {
-		db.disk_access.Unlock()
-		return
+	f, e = os.Open(db.dat_fname(rec.datfileidx, false))
+	if f == nil || e != nil {
+		f, e = os.Open(db.dat_fname(rec.datfileidx, true))
+		if f == nil || e != nil {
+			db.disk_access.Unlock()
+			return
+		}
 	}
 
 	_, e = f.Seek(int64(rec.fpos), os.SEEK_SET)
@@ -529,11 +534,15 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
 }
 
 
-func (db *BlockDB) dat_fname(idx uint32) string {
-	if idx == 0 {
-		return db.dirname + "blockchain.dat"
+func (db *BlockDB) dat_fname(idx uint32, archive bool) string {
+	dir := db.dirname
+	if archive {
+		dir += "oldat" + string(os.PathSeparator)
 	}
-	return db.dirname + fmt.Sprintf("blockchain-%08x.dat", idx)
+	if idx == 0 {
+		return dir + "blockchain.dat"
+	}
+	return dir + fmt.Sprintf("blockchain-%08x.dat", idx)
 }
 
 func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []byte, height, blen, txs uint32)) (e error) {
@@ -589,7 +598,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	// In case if there was some trash at the end of data or index file, this should truncate it:
 	db.blockindx.Seek(db.maxidxfilepos, os.SEEK_SET)
 
-	db.blockdata, _ = os.OpenFile(db.dat_fname(db.maxdatfileidx), os.O_RDWR|os.O_CREATE, 0660)
+	db.blockdata, _ = os.OpenFile(db.dat_fname(db.maxdatfileidx, false), os.O_RDWR|os.O_CREATE, 0660)
 	if db.blockdata == nil {
 		panic("Cannot open blockchain.dat")
 	}
