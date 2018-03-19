@@ -210,6 +210,8 @@ func (db *UnspentDB) save() {
 	buf.Write(db.LastBlockHash)
 	binary.Write(buf, binary.LittleEndian, uint64(total_records))
 
+	// The data is written in a separate process
+	// so we can abort without waiting for disk.
 	db.lastFileClosed.Add(1)
 	go func(fname string) {
 		of, er := os.Create(fname)
