@@ -124,9 +124,9 @@ func all_addrs(par string) {
 
 
 	if sort_by_cnt {
-		fmt.Println("Number of addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
+		fmt.Println("Top addresses with at least", MIN_OUTS, "unspent outputs:", len(best))
 	} else {
-		fmt.Println("Number of addresses with at least", btc.UintToBtc(MIN_BTC), "BTC:", len(best))
+		fmt.Println("Top addresses with at least", btc.UintToBtc(MIN_BTC), "BTC:", len(best))
 	}
 
 	sort.Sort(best)
