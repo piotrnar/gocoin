@@ -60,7 +60,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 	if newbl.DoInvs {
 		common.Busy()
-		network.NetRouteInv(2, bl.Hash, newbl.Conn)
+		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 	}
 
 	network.MutexRcv.Lock()
@@ -242,6 +242,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 		return
 	}
 
+	network.NetRouteInv(network.MSG_BLOCK, msg.Block.Hash, nil)
 	common.RecalcAverageBlockSize()
 
 	common.CountSafe("RPCBlockOK")
