@@ -47,15 +47,30 @@ Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 </table>
 </div>
 
-<div style="text-align:right">Resolution:
+<table style="margin-top:5px" width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td align="left"><span id="bw_dl_speed_now_span">
+Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
+&nbsp;&bull;&nbsp;
+<span id="bw_ul_speed_now_span">Uploading at
+<b id="bw_ul_speed_now"></b> KB/s</span>
+</td>
+<td align="right">
+Resolution:
 <select id="bw_chart_seconds" onchange="draw_chart()">
 	<option value="1">1 second</option>
 	<option value="5">5 seconds</option>
 	<option value="30">30 seconds</option>
 	<option value="300">5 minutes</option>
 </select>
-</div>
-<div id="chart" style="height:180px;margin:2px"></div>
+</td>
+</tr>
+<tr>
+<td colspan="2">
+<div id="chart" style="height:180px;margin:0px"></div>
+</td>
+</tr>
+</table>
 
 <table style="width:100%">
 <tr>
@@ -581,11 +596,40 @@ function draw_chart() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(draw_chart, 1000)
+		setTimeout(draw_chart, 990*seconds)
 	}
 	aj.open("GET","bwchar.json?seconds="+seconds, true)
 	aj.send(null)
 }
+
+function refreshbwinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshbwinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var bw = JSON.parse(aj.responseText)
+
+			in_connections.innerText = bw.Open_conns_in
+			out_connections.innerText = bw.Open_conns_out
+
+			bw_dl_speed_now.innerText = bw.Dl_speed_now >> 10
+			var sl = bw.Dl_speed_max==0 ? "not limited" : "limited to " + (bw.Dl_speed_max >> 10) + "KB/s"
+			bw_dl_speed_now_span.title = "Total " + bignum(bw.Dl_total) + 'B / Download speed ' + sl
+
+			bw_ul_speed_now.innerText = bw.Ul_speed_now >> 10
+			sl = bw.Ul_speed_max==0 ? "not limited" : "limited to " + (bw.Ul_speed_max >> 10) + "KB/s"
+			bw_ul_speed_now_span.title = "Total " + bignum(bw.Ul_total) + 'B / Upload speed ' + sl
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshbwinfo, 1000)
+	}
+	aj.open("GET","bwidth.json",true)
+	aj.send(null)
+}
+
 
 if (!server_mode) {
 	connect_buttons.style.display = 'inline'
@@ -617,5 +661,6 @@ remember_info_setting()
 switch_order_type()
 switch_debug_mode()
 draw_chart()
+refreshbwinfo()
 
 </script>
