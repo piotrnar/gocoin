@@ -68,7 +68,6 @@ interactive way.<br>
 <br>
 After you fill in all the transaction details, it will give you <code>payment.zip</code> with the exact command that you shall execute at the wallet machine.<br>
 <br>
-<i><b>Note:</b> MakeTx tab is currently the only way to spend coins from multisig addresses.</i><br>
 
 <td valign="top">
 Use <b>Wallet</b> page of WebUI to download <code>balance.zip</code> file.<br>
@@ -86,22 +85,23 @@ Extract the zip file to get the <code>balance</code> folder.<br>
 
 
 As mentioned before, to spend your money you need to move the most recent <code>balance/</code> folder, from <u>online PC</u> to <u>wallet machine</u>.<br>
-Now, on the <u>wallet machine</u>, when you execute <code>wallet</code> without any parameters (in the same folder where the <code>balance/</code> is placed), it should show you how much BTC you are able to spend, from the current balance.<br>
-<br>
+For security reasons, you should execute <code>wallet</code> command only on offline machine - one that never was nor will be connected to Internet.<br>
 
+<h3>Manual mode</h3>
 To spend your coins, order the wallet to make and sign a new transaction, using a command like:<br>
 <code>&nbsp;&nbsp;&nbsp;&nbsp;wallet -send 1JbdKe4eBwtexisGTbCKY5v5CfphtdZXJs=0.01</code><br>
-Please note no spaces between the address, the equal sign and the value. The value represents the amount in BTC, which you request to send to the given address.<br>
+Please note no spaces between the address, the equal sign and the value.<br>
+The value represents the amount in BTC, which you request to send to the given address.<br>
 <br>
 
-There are also other switches which you may find useful at this stage.
-One of them (<code>-fee</code>) allows you to control the transaction's' fee.
-To see all the wallet's options, just run <code>wallet -h</code><br>
-<br>
+There are also other switches which you may find useful at this stage.<br>
+One of them (<code>-fee</code>) allows you to control the transaction's' fee.<br>
+To see all the wallet's options, just run <code>wallet -h</code>
 
-<b>Note:</b>
-If you used <b>MakeTx</b> tab to export your balance at point 1, all you have to do now is to extract <b>payment.zip</b>
-file at the <u>wallet</u> computer and execute there the exact command from the <b>pay_cmd</b> file.</b>
+<h3>Smart mode</h3>
+If you used <b>MakeTx</b> tab to make the transaction, all you have to do now is to extract <b>payment.zip</b>
+file at the <u>wallet</u> computer and execute there the exact command from the <b>pay_cmd</b> file.
+For further convenience, you can rename it to <i>pay_cmd.sh</i> or <i>pay_cmd.bat</i> by editing the <a href="gocoin_manual_config.html">config file</a>.
 
 
 <h2><b>3. Verify signed transaction</b></h2>
@@ -112,39 +112,33 @@ The file is named like <code>01234567.txt</code> - this is the file you need to 
 to your online node in order to notify the network about your payment.
 Before you broadcast your signed transaction to the network,
 verify carefully that it does exactly what you intended.
-You can do it in a several ways, some of them will first require moving the signed transaction file to your <u>online PC</u>.
 <br>
 <br>
 
 <table border="1" cellpadding="3" cellspacing="0">
 <tr>
 <td align="center" width="30%"><b>Wallet</b>
-<td align="center" width="30%"><b>TextUI</b> (requires client)
 <td align="center" width="40%"><b>WebUI</b> (requires client)
 
 
 <tr>
 <td valign="top">
-To see a decoded content of a transaction, execute:
+To see a decoded content of a transaction, execute:<br>
 <code>  wallet -d rawtxdata.txt</code>
 
 
 <td valign="top">
-Use the node's TextUI to execute <code>tx 01234567.txt</code> (where <code>01234567.txt</code> is the path to your transaction file). The node will decode the transaction and display it's details (inputs, outputs, fee, TXID).
-
-
-<td valign="top">
-Use WebUI and it's "Upload Transaction File" form. After you load the transaction, its details will be shown in your browser, for your verification.<br>
-Alternatively, you can click the <b>PushTx</b> link at the top of the page and paste a hex-dump of the signed transaction into the dialog that will pop up.<br>
+Use <b>PushTx</b> button or <i>Upload Transaction File</i> form.<br>
+After you upload the transaction, you should see it decoded.<br>
+Then have a look if it makes sense. And if it does, send it away...<br>
 </table>
 
 <br>
 <i><b>Note: always verify transaction before broadcasting it!</b><br>
 Verify that the decoded content of a transaction matches exactly what you intended to spend.</i>
-<i>If what you see would not be what you wanted, do not broadcast the transaction, but destroy the transaction file immediately.<br>
+<i>If what you see would not be what you wanted, do not broadcast the transaction, but destroy the transaction file instead.<br>
 </i>
 <i>If you follow this simple rule, your money will be safe, even in case if there was a critical bug in the wallet application that would otherwise destroy your coins (which we hope there isn't).</i>
-<i>Additionally this step allows you to double check that you did not make any mistake making the transaction, giving you the last chance to fix it.</i>
 <br>
 <br>
 <h2><b>4. Broadcast the transaction</b></h2>

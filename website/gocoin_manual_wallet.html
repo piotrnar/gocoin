@@ -29,10 +29,6 @@ In order to do this, just run <code>wallet -l</code> and your wallet's public ad
 Make sure that the disk with <code>.secret</code> file is encrypted.<br>
 <br>
 
-Keep in mind that <code>.secret</code> should not contain any non-printable characters, nor new line characters, because they count while calculating the seed.<br>
-Since you do not see such characters on screen, you may have problems re-creating the same file after you would loose it.<br>
-<br>
-
 The seed password is the key to your entire wallet and the function used to calculate it is double SHA256, which is pretty easy to compute.<br>
 That is why it is very important for you to make sure that the password you're choosing will be resistant to brute force and dictionary attacks.<br>
 <br>
@@ -71,12 +67,5 @@ The imported keys will extend the key pool of the deterministic ones (that come 
 <h2>Optional: setup your node with the wallet file</h2>
 Having <b>wallet.txt</b> file generated at the wallet machine, use <b>Wallet</b> page of WebUI and store the content of
 this file as a wallet in your browser. You can choose any name you want and you can change labels for the addresses.
-<br>
-<br>
-
-<h3>Multiple wallets</h3>
-In the node's wallet folder you can have multiple text files that contain public addresses from different wallets.<br>
-You can quickly switch between the wallets, using WebUI's <b>Wallets</b> tab.<br>
-The tab allows you to also edit your wallets, as well as to create new ones.<br>
 </body>
 </html>
