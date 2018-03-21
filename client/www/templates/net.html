@@ -575,7 +575,7 @@ function draw_chart() {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout(draw_chart, 1000)
+		setTimeout(draw_chart, 1000*seconds)
 	}
 	aj.open("GET","bwchar.json?seconds="+seconds, true)
 	aj.send(null)
