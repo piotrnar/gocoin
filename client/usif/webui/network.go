@@ -189,6 +189,7 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 	var out struct {
 		DL [200]uint64  // max 200 records (from 200 seconds to ~16.7 hours)
 		UL [200]uint64
+		MaxDL, MaxUL uint64
 	}
 
 	common.LockBw()
@@ -201,6 +202,9 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 		for c := 0; c < int(cnt); c++ {
 			idx--
 			sum += common.DlBytesPrevSec[idx]
+			if common.DlBytesPrevSec[idx] > out.MaxDL {
+				out.MaxDL = common.DlBytesPrevSec[idx]
+			}
 		}
 		out.DL[i] = sum/cnt
 	}
@@ -211,6 +215,9 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 		for c := 0; c < int(cnt); c++ {
 			idx--
 			sum += common.UlBytesPrevSec[idx]
+			if common.UlBytesPrevSec[idx] > out.MaxUL {
+				out.MaxUL = common.UlBytesPrevSec[idx]
+			}
 		}
 		out.UL[i] = sum/cnt
 	}

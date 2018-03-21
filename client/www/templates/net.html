@@ -558,6 +558,12 @@ function draw_chart() {
 				legend: { position: 'nw' }
 			}
 
+			if (cs.MaxUL && cs.MaxUL > cs.MaxDL) {
+				plot_options.yaxis.max = cs.MaxUL/900
+			} else {
+				plot_options.yaxis.max = cs.MaxDL/900
+			}
+
 			var tot_dl = 0
 			var tot_ul = 0
 			for (var i=0; i<200; i++) {
@@ -600,7 +606,6 @@ function remember_info_setting() {
 
 	// bw chart resolution:
 	var seconds = localStorage.getItem("net_bw_seconds")
-	console.log("aaa", seconds)
 	for (var i=0; i<bw_chart_seconds.options.length; i++) {
 		if (bw_chart_seconds.options[i].value==seconds) {
 			bw_chart_seconds.selectedIndex = i
