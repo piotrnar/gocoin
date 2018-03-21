@@ -325,9 +325,9 @@ func set_dlmax(par string) {
 		common.SetDownloadLimit(v << 10)
 	}
 	if common.DownloadLimit() != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.DownloadLimit() >> 10)
+		fmt.Printf("Current download limit is %d KB/s\n", common.DownloadLimit() >> 10)
 	} else {
-		fmt.Println("The upload speed is not limited")
+		fmt.Println("The download speed is not limited")
 	}
 }
 
