@@ -1,3 +1,5 @@
+// +build linux
+
 package sipasec
 
 // Note: to compile this file with go 1.9.4, set CGO_LDFLAGS_ALLOW='.*\.a$'
