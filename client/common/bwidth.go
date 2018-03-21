@@ -1,81 +1,83 @@
 package common
 
 import (
+	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
-	"net"
 )
 
 var (
 	bw_mutex sync.Mutex
 
-	dl_last_sec int64
+	dl_last_sec     int64
 	dl_bytes_so_far int
 
-	DlBytesPrevSec [0x100]uint64
+	DlBytesPrevSec    [0x100]uint64
 	DlBytesPrevSecIdx int
 
 	dl_bytes_priod uint64
-	DlBytesTotal uint64
+	DlBytesTotal   uint64
 
-	upload_limit uint64
+	upload_limit   uint64
 	download_limit uint64
 
-	ul_last_sec int64
+	ul_last_sec     int64
 	ul_bytes_so_far int
 
-	UlBytesPrevSec [0x100]uint64
+	UlBytesPrevSec    [0x100]uint64
 	UlBytesPrevSecIdx int
-	ul_bytes_priod uint64
-	UlBytesTotal uint64
+	ul_bytes_priod    uint64
+	UlBytesTotal      uint64
 )
 
-
-
-func TickRecv() {
-	now := time.Now().Unix()
+func TickRecv() (ms int) {
+	tn := time.Now()
+	ms = tn.Nanosecond() / 1e6
+	now := tn.Unix()
 	if now != dl_last_sec {
-		if now - dl_last_sec == 1 {
+		if now-dl_last_sec == 1 {
 			DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
 		} else {
 			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
 		}
-		DlBytesPrevSecIdx = (DlBytesPrevSecIdx+1)&0xff
+		DlBytesPrevSecIdx = (DlBytesPrevSecIdx + 1) & 0xff
 		dl_bytes_priod = 0
 		dl_bytes_so_far = 0
 		dl_last_sec = now
 	}
+	return
 }
 
-
-func TickSent() {
-	now := time.Now().Unix()
+func TickSent() (ms int) {
+	tn := time.Now()
+	ms = tn.Nanosecond() / 1e6
+	now := tn.Unix()
 	if now != ul_last_sec {
-		if now - ul_last_sec == 1 {
+		if now-ul_last_sec == 1 {
 			UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
 		} else {
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
 		}
-		UlBytesPrevSecIdx = (UlBytesPrevSecIdx+1)&0xff
+		UlBytesPrevSecIdx = (UlBytesPrevSecIdx + 1) & 0xff
 		ul_bytes_priod = 0
 		ul_bytes_so_far = 0
 		ul_last_sec = now
 	}
+	return
 }
-
 
 // Reads the given number of bytes, but respecting the download limit
 // Returns -1 and no error if we can't read any data now, because of bw limit
 func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
-	TickRecv()
-	if DownloadLimit()==0 {
+	ms := TickRecv()
+	if DownloadLimit() == 0 {
 		toread = len(buf)
 	} else {
-		toread = int(DownloadLimit()) - dl_bytes_so_far
+		toread = ms*int(DownloadLimit())/1000 - dl_bytes_so_far
 		if toread > len(buf) {
 			toread = len(buf)
 			if toread > 4096 {
@@ -90,7 +92,7 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 
 	if toread > 0 {
 		// Wait 10 millisecond for a data, timeout if nothing there
-		con.SetReadDeadline(time.Now().Add(10*time.Millisecond))
+		con.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		n, e = con.Read(buf[:toread])
 		bw_mutex.Lock()
 		dl_bytes_so_far -= toread
@@ -106,17 +108,16 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	return
 }
 
-
 // Send all the bytes, but respect the upload limit (force delays)
 // Returns -1 and no error if we can't send any data now, because of bw limit
 func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()
-	TickSent()
-	if UploadLimit()==0 {
+	ms := TickSent()
+	if UploadLimit() == 0 {
 		tosend = len(buf)
 	} else {
-		tosend = int(UploadLimit()) - ul_bytes_so_far
+		tosend = ms*int(UploadLimit())/1000 - ul_bytes_so_far
 		if tosend > len(buf) {
 			tosend = len(buf)
 			if tosend > 4096 {
@@ -130,7 +131,7 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	bw_mutex.Unlock()
 	if tosend > 0 {
 		// Set timeout to prevent thread from getting stuck if the other end does not read
-		con.SetWriteDeadline(time.Now().Add(10*time.Millisecond))
+		con.SetWriteDeadline(time.Now().Add(10 * time.Millisecond))
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		ul_bytes_so_far -= tosend
@@ -151,7 +152,6 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	return
 }
 
-
 func LockBw() {
 	bw_mutex.Lock()
 }
@@ -162,18 +162,18 @@ func UnlockBw() {
 
 func GetAvgBW(arr []uint64, idx int, cnt int) uint64 {
 	var sum uint64
-	if cnt<=0 {
+	if cnt <= 0 {
 		return 0
 	}
-	for i:=0; i<cnt; i++ {
-		if idx==0 {
-			idx = len(arr)-1
+	for i := 0; i < cnt; i++ {
+		if idx == 0 {
+			idx = len(arr) - 1
 		} else {
 			idx--
 		}
 		sum += arr[idx]
 	}
-	return sum/uint64(cnt)
+	return sum / uint64(cnt)
 }
 
 func PrintStats() {
