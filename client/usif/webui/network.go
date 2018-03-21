@@ -174,33 +174,45 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
+
+	var cnt uint64
+
+	if len(r.Form["seconds"]) > 0 {
+		cnt, _ = strconv.ParseUint(r.Form["seconds"][0], 10, 32)
+	}
+	if cnt < 1 {
+		cnt = 1
+	} else if cnt > 300 {
+		cnt = 300
+	}
+
 	var out struct {
-		DL [0x100]uint64
-		UL [0x100]uint64
+		DL [200]uint64  // max 200 records (from 200 seconds to ~16.7 hours)
+		UL [200]uint64
 	}
 
 	common.LockBw()
 	common.TickRecv()
 	common.TickSent()
 
-	idx := common.DlBytesPrevSecIdx
-	for i:=0; i<0x100; i++ {
-		if idx==0 {
-			idx = 0xff
-		} else {
+	idx := uint16(common.DlBytesPrevSecIdx)
+	for i := range out.DL {
+		var sum uint64
+		for c := 0; c < int(cnt); c++ {
 			idx--
+			sum += common.DlBytesPrevSec[idx]
 		}
-		out.DL[i] = common.DlBytesPrevSec[idx]
+		out.DL[i] = sum/cnt
 	}
 
-	idx = common.UlBytesPrevSecIdx
-	for i:=0; i<0x100; i++ {
-		if idx==0 {
-			idx = 0xff
-		} else {
+	idx = uint16(common.UlBytesPrevSecIdx)
+	for i := range out.UL {
+		var sum uint64
+		for c := 0; c < int(cnt); c++ {
 			idx--
+			sum += common.UlBytesPrevSec[idx]
 		}
-		out.UL[i] = common.UlBytesPrevSec[idx]
+		out.UL[i] = sum/cnt
 	}
 
 	common.UnlockBw()

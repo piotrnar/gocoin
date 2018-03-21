@@ -47,6 +47,14 @@ Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 </table>
 </div>
 
+<div style="text-align:right">Resolution:
+<select id="bw_chart_seconds" onchange="draw_chart()">
+	<option value="1">1 second</option>
+	<option value="5">5 seconds</option>
+	<option value="30">30 seconds</option>
+	<option value="300">5 minutes</option>
+</select>
+</div>
 <div id="chart" style="height:180px;margin:2px"></div>
 
 <table style="width:100%">
@@ -511,7 +519,7 @@ function refreshconnections(force) {
 }
 
 function switch_debug_mode() {
-	if (show_debug_mode.checked) {
+	if (false/*show_debug_mode.checked*/) {
 		css('.dbg', 'display', 'table-cell')
 		css('td.agent', 'max-width', '100px')
 	} else {
@@ -521,6 +529,10 @@ function switch_debug_mode() {
 }
 
 function draw_chart() {
+	var seconds = parseInt(bw_chart_seconds.value)
+
+	localStorage.setItem("net_bw_seconds", seconds)
+
 	var aj = ajax()
 	aj.onerror=function() {
 		setTimeout(draw_chart, 1000)
@@ -535,14 +547,20 @@ function draw_chart() {
 				{ data : [], color:2, lines: {show:true, fill:true} }
 				];
 			var plot_options = {
-				xaxis: { tickSize:60,  tickFormatter : function(a,b) {return a ? (parseInt(-a/60) + 'min') : ''} },
+				xaxis: { tickSize:60,  tickFormatter : function(a,b) {
+					if (a==0) return ''
+					if (seconds>60) {
+						return (parseInt(-a*seconds/3600) + 'h')
+					}
+					return (parseInt(-a*seconds/60) + 'min')
+				} },
 				yaxis : {labelWidth : 40, min : 0, position : "right",  label:"kB/s" },
 				legend: { position: 'nw' }
 			}
 
 			var tot_dl = 0
 			var tot_ul = 0
-			for (var i=0; i<256; i++) {
+			for (var i=0; i<200; i++) {
 				plot_data[0].data.push([-i, cs.DL[i]/1e3])
 				plot_data[1].data.push([-i, cs.UL[i]/1e3])
 				tot_dl += cs.DL[i]
@@ -559,15 +577,13 @@ function draw_chart() {
 		}
 		setTimeout(draw_chart, 1000)
 	}
-	aj.open("GET","bwchar.json",true)
+	aj.open("GET","bwchar.json?seconds="+seconds, true)
 	aj.send(null)
 }
 
 if (!server_mode) {
 	connect_buttons.style.display = 'inline'
 }
-
-draw_chart()
 
 function switch_order_type() {
 	if (net_list_order_sp.checked) {
@@ -581,10 +597,20 @@ function remember_info_setting() {
 	var mod = localStorage.getItem("net_order")
 	if ((mod+'').length!=2) mod = "sp"
 	document.getElementById('net_list_order_'+mod).checked = true
+
+	// bw chart resolution:
+	var seconds = localStorage.getItem("net_bw_seconds")
+	console.log("aaa", seconds)
+	for (var i=0; i<bw_chart_seconds.options.length; i++) {
+		if (bw_chart_seconds.options[i].value==seconds) {
+			bw_chart_seconds.selectedIndex = i
+			break
+		}
+	}
 }
 remember_info_setting()
 switch_order_type()
 switch_debug_mode()
-
+draw_chart()
 
 </script>

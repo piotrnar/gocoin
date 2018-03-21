@@ -11,11 +11,11 @@ import (
 var (
 	bw_mutex sync.Mutex
 
-	dl_last_sec     int64
+	dl_last_sec     int64 = time.Now().Unix()
 	dl_bytes_so_far int
 
-	DlBytesPrevSec    [0x100]uint64
-	DlBytesPrevSecIdx int
+	DlBytesPrevSec    [0x10000]uint64 // this buffer takes 524288 bytes (hope it's not a problem)
+	DlBytesPrevSecIdx uint16
 
 	dl_bytes_priod uint64
 	DlBytesTotal   uint64
@@ -23,11 +23,11 @@ var (
 	upload_limit   uint64
 	download_limit uint64
 
-	ul_last_sec     int64
+	ul_last_sec     int64 = time.Now().Unix()
 	ul_bytes_so_far int
 
-	UlBytesPrevSec    [0x100]uint64
-	UlBytesPrevSecIdx int
+	UlBytesPrevSec    [0x10000]uint64 // this buffer takes 524288 bytes (hope it's not a problem)
+	UlBytesPrevSecIdx uint16
 	ul_bytes_priod    uint64
 	UlBytesTotal      uint64
 )
@@ -37,12 +37,13 @@ func TickRecv() (ms int) {
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
 	if now != dl_last_sec {
-		if now-dl_last_sec == 1 {
-			DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
-		} else {
+		for now-dl_last_sec != 1 {
 			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
+			DlBytesPrevSecIdx++
+			dl_last_sec++
 		}
-		DlBytesPrevSecIdx = (DlBytesPrevSecIdx + 1) & 0xff
+		DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
+		DlBytesPrevSecIdx++
 		dl_bytes_priod = 0
 		dl_bytes_so_far = 0
 		dl_last_sec = now
@@ -55,12 +56,13 @@ func TickSent() (ms int) {
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
 	if now != ul_last_sec {
-		if now-ul_last_sec == 1 {
-			UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
-		} else {
+		for now-ul_last_sec != 1 {
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
+			UlBytesPrevSecIdx++
+			ul_last_sec++
 		}
-		UlBytesPrevSecIdx = (UlBytesPrevSecIdx + 1) & 0xff
+		UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
+		UlBytesPrevSecIdx++
 		ul_bytes_priod = 0
 		ul_bytes_so_far = 0
 		ul_last_sec = now
@@ -160,17 +162,13 @@ func UnlockBw() {
 	bw_mutex.Unlock()
 }
 
-func GetAvgBW(arr []uint64, idx int, cnt int) uint64 {
+func GetAvgBW(arr []uint64, idx uint16, cnt int) uint64 {
 	var sum uint64
 	if cnt <= 0 {
 		return 0
 	}
 	for i := 0; i < cnt; i++ {
-		if idx == 0 {
-			idx = len(arr) - 1
-		} else {
-			idx--
-		}
+		idx--
 		sum += arr[idx]
 	}
 	return sum / uint64(cnt)
