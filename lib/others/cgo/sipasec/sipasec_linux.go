@@ -3,7 +3,8 @@
 package sipasec
 
 /*
-To build the library, on Debian based Linux system, execute the following steps:
+To build and install secp256k1 lib on Debian Linux system, execute the following steps:
+
  * sudo apt-get install gcc autoconf libtool make
  * git clone https://github.com/bitcoin/bitcoin.git
  * cd bitcoin/src/secp256k1/
@@ -12,8 +13,5 @@ To build the library, on Debian based Linux system, execute the following steps:
  * make
  * sudo make install
 
-When the library is properly installed, executing "go test" in this folder says PASS.
+When the lib is properly installed, executing "go test" in this folder will say "PASS".
 */
-
-// #cgo LDFLAGS: /usr/local/lib/libsecp256k1.a
-import "C"

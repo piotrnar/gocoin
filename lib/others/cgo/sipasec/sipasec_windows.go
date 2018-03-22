@@ -25,5 +25,5 @@ be able to execute "go test" in this folder without any problems.
 
 */
 
-// #cgo LDFLAGS: -lsecp256k1 -lgmp
+// #cgo LDFLAGS: -lgmp
 import "C"
