@@ -16,3 +16,6 @@ To build and install secp256k1 lib on Debian Linux system, execute the following
 When the lib is properly installed, executing "go test" in this folder will say "PASS".
 Then copy "gocoin/client/speedups/sipasec.go" to "gocoin/client/" to boost your client.
 */
+
+// #cgo LDFLAGS: /usr/local/lib/libsecp256k1.a
+import "C"
