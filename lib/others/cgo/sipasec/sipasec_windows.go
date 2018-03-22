@@ -42,5 +42,5 @@ If everything went well, you should see "PASS" executing "go test" in this folde
 Then copy "gocoin/client/speedups/sipasec.go" to "gocoin/client/" to boost your client.
 */
 
-// #cgo LDFLAGS: -lgmp
+// #cgo LDFLAGS: -lsecp256k1 -lgmp
 import "C"
