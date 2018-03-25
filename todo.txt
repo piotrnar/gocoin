@@ -3,7 +3,6 @@ Global:
 
 Lib:
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
-* Try to make own (faster) implementation of sha256 and rimp160
 
 Client:
 * Figure out a better way of deciding on "BlockTimeout"
@@ -21,6 +20,7 @@ Wallet:
 Probably not to do:
 * Do not list unmatured coinbase outputs in the balance
 * Implement "mempool" network command
+* Try to make own (faster) implementation of sha256 and rimp160
 
 Tools:
 * txaddsig - make it to work with multisig and segwit
