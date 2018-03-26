@@ -144,7 +144,7 @@ func CalcMerkle(mtr [][32]byte) (res []byte, mutated bool) {
 
 
 func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
-	mtr := make([][32]byte, len(txs))
+	mtr := make([][32]byte, len(txs), 3*len(txs)) // make the buffer 3 times longer as we use append() inside CalcMerkle
 	//mtr[0] = make([]byte, 32) // null
 	for i:=1; i<len(txs); i++ {
 		mtr[i] = txs[i].WTxID().Hash
