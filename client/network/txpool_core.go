@@ -416,7 +416,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if totout > totinp {
 		RejectTx(ntx.Tx, TX_REJECTED_OVERSPEND)
 		TxMutex.Unlock()
-		ntx.conn.DoS("TxOverspend")
+		if ntx.conn != nil {
+			ntx.conn.DoS("TxOverspend")
+		}
 		return
 	}
 
@@ -470,7 +472,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if ver_err_cnt > 0 {
 			// not moving it to rejected, but baning the peer
 			TxMutex.Unlock()
-			ntx.conn.DoS("TxScriptFail")
+			if ntx.conn != nil {
+				ntx.conn.DoS("TxScriptFail")
+			}
 			if len(rbf_tx_list) > 0 {
 				fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
 				fmt.Print("> ")
