@@ -20,6 +20,9 @@ func win_malloc(le uint32) unsafe.Pointer {
 	atomic.AddInt64(&extraMemoryConsumed, int64(le)+24)
 	atomic.AddInt64(&extraMemoryAllocCnt, 1)
 	ptr, _, _ := syscall.Syscall(funcHeapAllocAddr, 3, hHeap, 0, uintptr(le+24))
+	if ptr == 0 {
+		panic("Out of memory / HeapAlloc() failed")
+	}
 	*(*reflect.SliceHeader)(unsafe.Pointer(ptr)) = reflect.SliceHeader{Data:ptr+24, Len:int(le), Cap:int(le)}
 	return unsafe.Pointer(ptr)
 }
