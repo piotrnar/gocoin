@@ -11,14 +11,15 @@ import (
 )
 
 var (
-	funcGlobalAlloc *syscall.Proc
-	funcGlobalFree  *syscall.Proc
+	hHeap uintptr
+	funcHeapAllocAddr uintptr
+	funcHeapFreeAddr  uintptr
 )
 
 func win_malloc(le uint32) unsafe.Pointer {
 	atomic.AddInt64(&extraMemoryConsumed, int64(le)+24)
 	atomic.AddInt64(&extraMemoryAllocCnt, 1)
-	ptr, _, _ := funcGlobalAlloc.Call(0, uintptr(le+24))
+	ptr, _, _ := syscall.Syscall(funcHeapAllocAddr, 3, hHeap, 0, uintptr(le+24))
 	*(*reflect.SliceHeader)(unsafe.Pointer(ptr)) = reflect.SliceHeader{Data:ptr+24, Len:int(le), Cap:int(le)}
 	return unsafe.Pointer(ptr)
 }
@@ -26,7 +27,7 @@ func win_malloc(le uint32) unsafe.Pointer {
 func win_free(ptr unsafe.Pointer) {
 	atomic.AddInt64(&extraMemoryConsumed, -int64(win_len(ptr)+24))
 	atomic.AddInt64(&extraMemoryAllocCnt, -1)
-	funcGlobalFree.Call(uintptr(ptr))
+	syscall.Syscall(funcHeapFreeAddr, 3, hHeap, 0, uintptr(ptr))
 }
 
 func win_malloc_and_copy(v []byte) unsafe.Pointer {
@@ -48,8 +49,15 @@ func init() {
 	if er!=nil {
 		return
 	}
-	funcGlobalAlloc, _ = dll.FindProc("GlobalAlloc")
-	funcGlobalFree, _ = dll.FindProc("GlobalFree")
+	fun, _ := dll.FindProc("GetProcessHeap")
+	hHeap, _, _ = fun.Call()
+
+	fun, _ = dll.FindProc("HeapAlloc")
+	funcHeapAllocAddr = fun.Addr()
+
+	fun, _ = dll.FindProc("HeapFree")
+	funcHeapFreeAddr = fun.Addr()
+
 	fmt.Println("Using kernel32.dll for UTXO memory bindings")
 	malloc = win_malloc
 	free = win_free
