@@ -527,8 +527,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Unlock()
 	common.CountSafe("TxAccepted")
 
-	if frommem != nil {
-		// Gocoin does not route txs that need unconfirmed inputs
+	if frommem != nil && !common.GetBool(&common.CFG.TXRoute.MemInputs) {
+		// By default Gocoin does not route txs that spend unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
 	} else if !ntx.trusted && rec.isRoutable() {

@@ -76,6 +76,7 @@ var (
 			Enabled    bool // Global on/off swicth
 			FeePerByte float64
 			MaxTxSize  uint32
+			MemInputs bool
 		}
 		Memory struct {
 			GCPercTrshold int
