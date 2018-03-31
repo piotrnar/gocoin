@@ -29,9 +29,6 @@ type CallbackFunctions struct {
 	// output is being added or removed. When being removed, btc.TxOut is nil.
 	NotifyTxAdd func(*UtxoRec)
 	NotifyTxDel func(*UtxoRec, []bool)
-
-	// These two are used only during loading
-	LoadWalk FunctionWalkUnspent // this one is called for each UTXO record that has just been loaded
 }
 
 // Used to pass block's changes to UnspentDB
@@ -114,7 +111,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 	defer of.Close()
 
-	rd := bufio.NewReader(of)
+	rd := bufio.NewReaderSize(of, 0x100000)
 
 	er = binary.Read(rd, binary.LittleEndian, &u64)
 	if er != nil {
@@ -158,13 +155,8 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 			goto fatal_error
 		}
 
-		db.RWMutex.Lock()
+		// we don't lock RWMutex here as this code is only used during init phase, when no other routines are running
 		db.HashMap[k] = b
-		db.RWMutex.Unlock()
-
-		if db.CB.LoadWalk != nil {
-			db.CB.LoadWalk(NewUtxoRecStatic(k, Slice(b)))
-		}
 
 		tot_recs++
 		if cnt_dwn == 0 {
