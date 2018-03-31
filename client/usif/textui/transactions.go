@@ -146,7 +146,7 @@ func list_txs(par string) {
 		}
 
 		var oe, snt string
-		if v.Own != 0 {
+		if v.Local {
 			oe = " *OWN*"
 		} else {
 			oe = ""
@@ -183,7 +183,7 @@ func baned_txs(par string) {
 func send_all_tx(par string) {
 	network.TxMutex.Lock()
 	for k, v := range network.TransactionsToSend {
-		if v.Own != 0 {
+		if v.Local {
 			cnt := network.NetRouteInv(1, btc.NewUint256(k[:]), nil)
 			v.Invsentcnt += cnt
 			fmt.Println("INV for TxID", v.Hash.String(), "sent to", cnt, "node(s)")

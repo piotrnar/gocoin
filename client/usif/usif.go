@@ -141,13 +141,13 @@ func LoadRawTx(buf []byte) (s string) {
 		s += fmt.Sprintln("Transaction not needed or not wanted", why)
 		network.TxMutex.Lock()
 		if t2s := network.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
-			t2s.Own = 1 // make as own (if not needed)
+			t2s.Local = true // make as own (if not needed)
 		}
 		network.TxMutex.Unlock()
 		return
 	}
 
-	if !network.SubmitTrustedTx(tx, txd) {
+	if !network.SubmitLocalTx(tx, txd) {
 		network.TxMutex.Lock()
 		rr := network.TransactionsRejected[tx.Hash.BIdx()]
 		network.TxMutex.Unlock()
@@ -160,13 +160,12 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 
 	network.TxMutex.Lock()
-	t2s := network.TransactionsToSend[tx.Hash.BIdx()]
+	_, ok := network.TransactionsToSend[tx.Hash.BIdx()]
 	network.TxMutex.Unlock()
-	if t2s != nil {
-		t2s.Own = 1
+	if ok {
 		s += fmt.Sprintln("Transaction added to the memory pool. You can broadcast it now.")
 	} else {
-		s += fmt.Sprintln("Transaction not rejected in a weird way.")
+		s += fmt.Sprintln("Transaction not rejected, but also not accepted - very strange!")
 	}
 
 	return

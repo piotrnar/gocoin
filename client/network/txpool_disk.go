@@ -44,7 +44,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	binary.Write(wr, binary.LittleEndian, t2s.Fee)
 	binary.Write(wr, binary.LittleEndian, t2s.SigopsCost)
 	binary.Write(wr, binary.LittleEndian, t2s.VerifyTime)
-	wr.Write([]byte{t2s.Own, t2s.Blocked, bool2byte(t2s.MemInputs != nil), bool2byte(t2s.Final)})
+	wr.Write([]byte{bool2byte(t2s.Local), t2s.Blocked, bool2byte(t2s.MemInputs != nil), bool2byte(t2s.Final)})
 }
 
 func MempoolSave(force bool) {
@@ -177,7 +177,7 @@ func MempoolLoad2() bool {
 		if er = btc.ReadAll(rd, tmp[:4]); er != nil {
 			goto fatal_error
 		}
-		t2s.Own = tmp[0]
+		t2s.Local = tmp[0] != 0
 		t2s.Blocked = tmp[1]
 		if tmp[2] != 0 {
 			t2s.MemInputs = make([]bool, len(t2s.TxIn))

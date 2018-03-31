@@ -163,7 +163,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	if verbose {
 		output_tx_xml(w, v.Tx)
 	}
-	fmt.Fprint(w, "<own>", v.Own, "</own>")
+	fmt.Fprint(w, "<own>", v.Local, "</own>")
 	fmt.Fprint(w, "<firstseen>", v.Firstseen.Unix(), "</firstseen>")
 	fmt.Fprint(w, "<invsentcnt>", v.Invsentcnt, "</invsentcnt>")
 	fmt.Fprint(w, "<sigops>", v.SigopsCost, "</sigops>")
@@ -361,7 +361,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 	sorted := make(sortedTxList, len(network.TransactionsToSend))
 	var cnt int
 	for _, v := range network.TransactionsToSend {
-		if len(r.Form["ownonly"])>0 && v.Own==0 {
+		if len(r.Form["ownonly"])>0 && !v.Local {
 			continue
 		}
 		sorted[cnt] = v

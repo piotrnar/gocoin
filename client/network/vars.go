@@ -32,7 +32,7 @@ type BlockRcvd struct {
 type TxRcvd struct {
 	conn *OneConnection
 	*btc.Tx
-	trusted bool  // used only when loading mempool from disk
+	trusted, local bool
 }
 
 type OneBlockToGet struct {

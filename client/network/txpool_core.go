@@ -60,7 +60,7 @@ var (
 type OneTxToSend struct {
 	Invsentcnt, SentCnt uint32
 	Firstseen, Lastsent time.Time
-	Own                 byte     // 0-not own, 1-own and OK, 2-own but with UNKNOWN input
+	Local               bool
 	Spent               []uint64 // Which records in SpentOutputs this TX added
 	Volume, Fee         uint64
 	*btc.Tx
@@ -424,7 +424,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	// Check for a proper fee
 	fee := totinp - totout
-	if fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) {
+	if !ntx.local && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000)  { // do not check minimum fee for locally loaded txs
 		RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE)
 		TxMutex.Unlock()
 		common.CountSafe("TxRejectedLowFee")
@@ -440,7 +440,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			totfees += ctx.Fee
 		}
 
-		if !ntx.trusted && totfees*uint64(tx.Weight()) >= fee*uint64(totweight) {
+		if !ntx.local && totfees*uint64(tx.Weight()) >= fee*uint64(totweight) {
 			RejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")
@@ -498,7 +498,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	rec := &OneTxToSend{Spent: spent, Volume: totinp,
+	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local : ntx.local,
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
@@ -612,7 +612,7 @@ func txChecker(tx *btc.Tx) bool {
 	TxMutex.Lock()
 	rec, ok := TransactionsToSend[tx.Hash.BIdx()]
 	TxMutex.Unlock()
-	if ok && rec.Own != 0 {
+	if ok && rec.Local {
 		common.CountSafe("TxScrOwn")
 		return false // Assume own txs as non-trusted
 	}
@@ -655,8 +655,8 @@ func RemoveFromRejected(hash *btc.Uint256) {
 	TxMutex.Unlock()
 }
 
-func SubmitTrustedTx(tx *btc.Tx, rawtx []byte) bool {
-	return HandleNetTx(&TxRcvd{Tx: tx, trusted: true}, true)
+func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
+	return HandleNetTx(&TxRcvd{Tx: tx, trusted: true, local: true}, true)
 }
 
 func init() {

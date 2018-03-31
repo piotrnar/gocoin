@@ -78,7 +78,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 		if val, ok := SpentOutputs[idx]; ok {
 			if rec, _ := TransactionsToSend[val]; rec != nil {
 				// if we got here, the txs has been Malleabled
-				if rec.Own != 0 {
+				if rec.Local {
 					common.CountSafe("TxMinedMalleabled")
 					fmt.Println("Input from own ", rec.Tx.Hash.String(), " mined in ", tx.Hash.String())
 				} else {
