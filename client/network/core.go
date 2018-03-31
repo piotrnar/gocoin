@@ -118,6 +118,7 @@ type ConnectionStatus struct {
 
 	Authorized bool
 	AuthMsgGot uint
+	AuthAckGot bool
 
 	LastMinFeePerKByte uint64
 }
@@ -540,6 +541,16 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 }
 
 
+func (c *OneConnection) GetMPNow() {
+	if c.X.Authorized && common.GetBool(&common.CFG.TXPool.Enabled) {
+		select {
+			case c.GetMP <- true:
+			default:
+				fmt.Println(c.ConnID, "GetMP channel full")
+		}
+	}
+}
+
 func (c *OneConnection) writing_thread() {
 	for !c.IsBroken() {
 		c.Mutex.Lock() // protect access to c.SendBufProd
@@ -611,8 +622,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
 		case "notfound": return 3+50000*36 // maximum size of getdata
 		case "getmp": return 5+8*100000 // max 100k txs
-		case "auth": return 100 // only needs to fit one signature
-		default: return 1024 // Any other type of block: 1KB payload limit
+		default: return 1024 // Any other type of block: maximum 1KB payload limit
 	}
 }
 
@@ -662,17 +672,14 @@ func DropPeer(conid uint32) {
 
 func GetMP(conid uint32) {
 	Mutex_net.Lock()
-	defer Mutex_net.Unlock()
 	for _, v := range OpenCons {
 		if uint32(conid)==v.ConnID {
-			select {
-				case v.GetMP <- true:
-				default:
-					fmt.Println(conid, "GetMP channel full")
-			}
+			Mutex_net.Unlock()
+			v.GetMPNow()
 			return
 		}
 	}
+	Mutex_net.Unlock()
 	fmt.Println("GetMP: There is no such an active connection", conid)
 }
 

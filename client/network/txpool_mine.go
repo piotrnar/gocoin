@@ -167,6 +167,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
 		if c.BytesToSent() > SendBufSize/2 {
+			c.SendRawMsg("authack", nil) // this should trigger the peer to send another "getmp"
 			break
 		}
 		if !has_this_one[k] {

@@ -495,6 +495,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	for _, pub := range AuthPubkeys {
 		if btc.EcdsaVerify(pub, pl, rnd) {
 			c.X.Authorized = true
+			c.SendRawMsg("authack", nil)
 			return
 		}
 	}
@@ -732,7 +733,13 @@ func (c *OneConnection) Run() {
 
 			case "auth":
 				c.AuthRvcd(cmd.pl)
-				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
+				if c.X.AuthAckGot {
+					c.GetMPNow()
+				}
+
+			case "authack":
+				c.X.AuthAckGot = true
+				c.GetMPNow()
 
 			default:
 		}
