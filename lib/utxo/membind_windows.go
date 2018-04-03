@@ -35,7 +35,7 @@ func win_free(ptr unsafe.Pointer) {
 
 func win_malloc_and_copy(v []byte) unsafe.Pointer {
 	ptr := win_malloc(uint32(len(v)))
-	copy(win_slice(ptr), v)
+	copy(Slice(ptr), v)
 	return ptr
 }
 
