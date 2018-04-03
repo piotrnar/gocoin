@@ -30,16 +30,6 @@ func main() {
 	tim := time.Now().Sub(sta)
 	println("\rGoing through the map done in", tim.String())
 
-	print("Going through the map with using the pointer...")
-	sta = time.Now()
-	for _, v := range db.HashMap {
-		if *(*byte)(v) == 0 {
-			//*(*byte)(v) = 0
-			tmp++
-		}
-	}
-	println("\rGoing through the map with using the pointer done in", time.Now().Sub(sta).String())
-
 	print("Going through the map with using the slice...")
 	sta = time.Now()
 	for _, v := range db.HashMap {
@@ -52,21 +42,21 @@ func main() {
 	}
 	println("\rGoing through the map with using the slice done in", time.Now().Sub(sta).String())
 
-	print("Making static records ...")
+	print("Making all static records ...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRecStatic(k, utxo.Slice(v))
 		//utxo.NewUtxoRecStatic2(k, v)
 	}
-	println("\rMaking static records done in", time.Now().Sub(sta).String())
+	println("\rMaking all static records done in", time.Now().Sub(sta).String())
 
-	print("Making dynamic records...")
+	print("Making all dynamic records...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRec(k, utxo.Slice(v))
 		//utxo.NewUtxoRec2(k, v)
 	}
-	println("\rMaking dynamic records done in", time.Now().Sub(sta).String())
+	println("\rMaking all dynamic records done in", time.Now().Sub(sta).String())
 
 	println("Ctrl+c ... (you can check your memory now)")
 	for {
