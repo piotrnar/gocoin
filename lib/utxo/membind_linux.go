@@ -34,7 +34,7 @@ func gcc_free(ptr unsafe.Pointer) {
 
 func gcc_malloc_and_copy(v []byte) unsafe.Pointer {
 	sl := gcc_malloc(uint32(len(v)))
-	copy(_slice(sl), v)
+	copy(*(*[]byte)(sl), v)
 	return sl
 }
 
