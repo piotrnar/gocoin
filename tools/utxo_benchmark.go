@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"github.com/piotrnar/gocoin/lib/utxo"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var a1 int
@@ -10,6 +11,7 @@ var a1 int
 func main() {
 	var tmp int
 
+	println("UtxoIdxLen:", utxo.UtxoIdxLen)
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{})
 	if db == nil {
@@ -19,47 +21,42 @@ func main() {
 
 	println(len(db.HashMap), "UTXO records/txs loaded in", time.Now().Sub(sta).String())
 
-	print("Checking how quickly we hav go through the map...")
+	print("Going through the map...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
-		if false {
-			v = v
-			k = k
+		if (*byte)(v) == nil || k[0]==0 {
+			tmp++
 		}
 	}
 	tim := time.Now().Sub(sta)
 	println("\rGoing through the map done in", tim.String())
 
-	print("Going through the map with using the slice...")
+	print("Going through the map for the slice...")
 	sta = time.Now()
 	for _, v := range db.HashMap {
-		ss := utxo.Slice(v)
-		//ss := *(*[]byte)(v)
-		if ss[0]==0 {
+		if utxo.Slice(v)[0]==0 {
 			//ss[0] = 0
 			tmp++
 		}
 	}
-	println("\rGoing through the map with using the slice done in", time.Now().Sub(sta).String())
+	println("\rGoing through the map for the slice done in", time.Now().Sub(sta).String())
 
-	print("Making all static records ...")
+	print("Fetching all records in static mode ...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRecStatic(k, utxo.Slice(v))
 		//utxo.NewUtxoRecStatic2(k, v)
 	}
-	println("\rMaking all static records done in", time.Now().Sub(sta).String())
+	println("\rFetching all records in static mode done in", time.Now().Sub(sta).String())
 
-	print("Making all dynamic records...")
+	print("Fetching all records in dynamic mode ...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRec(k, utxo.Slice(v))
 		//utxo.NewUtxoRec2(k, v)
 	}
-	println("\rMaking all dynamic records done in", time.Now().Sub(sta).String())
+	println("\rFetching all records in dynamic mode done in", time.Now().Sub(sta).String())
 
-	println("Ctrl+c ... (you can check your memory now)")
-	for {
-		time.Sleep(1e9)
-	}
+	al, sy := sys.MemUsed()
+	println("Mem Used:", al>>20, "/", sy>>20)
 }
