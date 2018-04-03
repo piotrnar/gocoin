@@ -42,15 +42,10 @@ func gcc_len(ptr unsafe.Pointer) int {
 	return len(*(*[]byte)(ptr))
 }
 
-func gcc_slice(ptr unsafe.Pointer) []byte {
-	return *(*[]byte)(ptr)
-}
-
 func init() {
 	println("Using malloc() for UTXO memory bindings")
 	malloc = gcc_malloc
 	free = gcc_free
 	malloc_and_copy = gcc_malloc_and_copy
 	_len = gcc_len
-	_slice = gcc_slice
 }
