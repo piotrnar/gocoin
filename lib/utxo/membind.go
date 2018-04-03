@@ -10,7 +10,6 @@ var (
 	free func(ptr unsafe.Pointer) = native_free
 	malloc_and_copy func (v []byte) unsafe.Pointer = native_malloc_and_copy
 	_len func(ptr unsafe.Pointer) int = native_len
-	_slice func (ptr unsafe.Pointer) []byte = native_slice
 )
 
 var (
@@ -49,5 +48,5 @@ func native_slice(ptr unsafe.Pointer) []byte {
 }
 
 func Slice(ptr unsafe.Pointer) []byte {
-	return _slice(ptr)
+	return *(*[]byte)(ptr)
 }
