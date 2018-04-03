@@ -41,21 +41,21 @@ func main() {
 	}
 	println("\rGoing through the map for the slice done in", time.Now().Sub(sta).String())
 
-	print("Fetching all records in static mode ...")
+	print("Decoding all records in static mode ...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRecStatic(k, utxo.Slice(v))
 		//utxo.NewUtxoRecStatic2(k, v)
 	}
-	println("\rFetching all records in static mode done in", time.Now().Sub(sta).String())
+	println("\rDecoding all records in static mode done in", time.Now().Sub(sta).String())
 
-	print("Fetching all records in dynamic mode ...")
+	print("Decoding all records in dynamic mode ...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
 		utxo.NewUtxoRec(k, utxo.Slice(v))
 		//utxo.NewUtxoRec2(k, v)
 	}
-	println("\rFetching all records in dynamic mode done in", time.Now().Sub(sta).String())
+	println("\rDecoding all records in dynamic mode done in", time.Now().Sub(sta).String())
 
 	al, sy := sys.MemUsed()
 	println("Mem Used:", al>>20, "/", sy>>20)
