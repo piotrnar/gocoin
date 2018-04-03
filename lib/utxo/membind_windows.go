@@ -43,10 +43,6 @@ func win_len(ptr unsafe.Pointer) int {
 	return len(*(*[]byte)(ptr))
 }
 
-func win_slice(ptr unsafe.Pointer) []byte {
-	return *(*[]byte)(ptr)
-}
-
 func init() {
 	dll, er := syscall.LoadDLL("kernel32.dll")
 	if er!=nil {
@@ -66,5 +62,4 @@ func init() {
 	free = win_free
 	malloc_and_copy = win_malloc_and_copy
 	_len = win_len
-	_slice = win_slice
 }
