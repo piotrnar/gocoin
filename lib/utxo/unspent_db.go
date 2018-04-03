@@ -277,7 +277,7 @@ func (db *UnspentDB) save() {
 
 		btc.WriteVlen(buf, uint64(UtxoIdxLen + _len(v)))
 		buf.Write(k[:])
-		buf.Write(_slice(v))
+		buf.Write(*(*[]byte)(v))
 		if buf.Len() > 0x10000 {
 			data_channel <- buf.Bytes()
 			buf = new(bytes.Buffer)
@@ -390,7 +390,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		v := db.HashMap[ind]
 		db.RWMutex.RUnlock()
 		if v != nil {
-			oldrec := NewUtxoRec(ind, _slice(v))
+			oldrec := NewUtxoRec(ind, *(*[]byte)(v))
 			for a := range tx.Outs {
 				if tx.Outs[a] == nil {
 					tx.Outs[a] = oldrec.Outs[a]
@@ -452,7 +452,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	v = db.HashMap[ind]
 	db.RWMutex.RUnlock()
 	if v != nil {
-		res = OneUtxoRec(ind, _slice(v), po.Vout)
+		res = OneUtxoRec(ind, *(*[]byte)(v), po.Vout)
 	}
 
 	return
@@ -477,7 +477,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	if v == nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
-	rec := NewUtxoRec(ind, _slice(v))
+	rec := NewUtxoRec(ind, *(*[]byte)(v))
 	if db.CB.NotifyTxDel != nil {
 		db.CB.NotifyTxDel(rec, outs)
 	}
@@ -543,7 +543,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 
 	for k, v := range db.HashMap {
 		totdatasize += uint64(_len(v) + 8)
-		rec := NewUtxoRecStatic(k, _slice(v))
+		rec := NewUtxoRecStatic(k, *(*[]byte)(v))
 		var spendable_found bool
 		for _, r := range rec.Outs {
 			if r != nil {
@@ -600,7 +600,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	db.RWMutex.Lock()
 
 	for k, v := range db.HashMap {
-		rec := NewUtxoRecStatic(k, _slice(v))
+		rec := NewUtxoRecStatic(k, *(*[]byte)(v))
 		var spendable_found bool
 		var record_removed uint64
 		for idx, r := range rec.Outs {
