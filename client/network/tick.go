@@ -240,7 +240,7 @@ func tcp_server() {
 						conn.X.Incomming = true
 						conn.Conn = tc
 						Mutex_net.Lock()
-						if oc, ok := OpenCons[ad.UniqID()]; ok {
+						if _, ok := OpenCons[ad.UniqID()]; ok {
 							//fmt.Println(ad.Ip(), "already connected")
 							common.CountSafe("SameIpReconnect")
 							Mutex_net.Unlock()
