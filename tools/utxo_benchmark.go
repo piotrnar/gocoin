@@ -1,30 +1,25 @@
 package main
 
 import (
+	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"os"
-	"runtime/pprof"
 	"time"
 )
 
-var a1 int
-
 func main() {
-	var tmp int
+	var tmp uint32
 
 	println("UtxoIdxLen:", utxo.UtxoIdxLen)
-
-	f, _ := os.Create("NewUnspentDb.prof")
-	if f != nil {
-		pprof.StartCPUProfile(f)
+	if len(os.Args) < 2 {
+		utxo.MembindInit()
+	} else {
+		println("Using native Go heap for UTXO records")
 	}
+
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{})
-	if f != nil {
-		pprof.StopCPUProfile()
-		f.Close()
-	}
 	if db == nil {
 		println("place UTXO.db or UTXO.old in the current folder")
 		return
@@ -35,38 +30,36 @@ func main() {
 	print("Going through the map...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
-		if (*byte)(v) == nil || k[0] == 0 {
-			tmp++
+		if v != nil {
+			tmp += binary.LittleEndian.Uint32(k[:])
 		}
 	}
 	tim := time.Now().Sub(sta)
-	println("\rGoing through the map done in", tim.String())
+	println("\rGoing through the map done in", tim.String(), tmp)
 
 	print("Going through the map for the slice...")
+	tmp = 0
 	sta = time.Now()
 	for _, v := range db.HashMap {
-		if utxo.Slice(v)[0] == 0 {
-			//ss[0] = 0
-			tmp++
-		}
+		tmp += binary.LittleEndian.Uint32(v)
 	}
-	println("\rGoing through the map for the slice done in", time.Now().Sub(sta).String())
+	println("\rGoing through the map for the slice done in", time.Now().Sub(sta).String(), tmp)
 
 	print("Decoding all records in static mode ...")
+	tmp = 0
 	sta = time.Now()
 	for k, v := range db.HashMap {
-		utxo.NewUtxoRecStatic(k, utxo.Slice(v))
-		//utxo.NewUtxoRecStatic2(k, v)
+		tmp += utxo.NewUtxoRecStatic(k, v).InBlock
 	}
-	println("\rDecoding all records in static mode done in", time.Now().Sub(sta).String())
+	println("\rDecoding all records in static mode done in", time.Now().Sub(sta).String(), tmp)
 
 	print("Decoding all records in dynamic mode ...")
+	tmp = 0
 	sta = time.Now()
 	for k, v := range db.HashMap {
-		utxo.NewUtxoRec(k, utxo.Slice(v))
-		//utxo.NewUtxoRec2(k, v)
+		tmp += utxo.NewUtxoRec(k, v).InBlock
 	}
-	println("\rDecoding all records in dynamic mode done in", time.Now().Sub(sta).String())
+	println("\rDecoding all records in dynamic mode done in", time.Now().Sub(sta).String(), tmp)
 
 	al, sy := sys.MemUsed()
 	println("Mem Used:", al>>20, "/", sy>>20)
