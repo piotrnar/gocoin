@@ -39,6 +39,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client/WebUI/Network: Improved bandwidth usage chart
 * Client: New config value "TXRoute.MemInputs", enables routing of transactions which spend unconfirmed inputs
 * Client: When memory pool is enabled the node automatically sends "getmp" messages to authorized peers
+* Client: New config value "Memory.UseGoHeap", forces node to use native go heap for UTXO records
 
 1.9.3 - 2017-12-26
 * Client: Removed a rare deadlock that could happen in network.AddB2G() on Mutex_net.Lock()

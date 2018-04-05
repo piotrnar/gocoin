@@ -10,6 +10,7 @@ var (
 	free func(ptr unsafe.Pointer) = native_free
 	malloc_and_copy func (v []byte) unsafe.Pointer = native_malloc_and_copy
 	_len func(ptr unsafe.Pointer) int = native_len
+	MembindInit func() = func() {}
 )
 
 var (

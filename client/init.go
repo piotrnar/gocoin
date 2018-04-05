@@ -69,6 +69,12 @@ func host_init() {
 		os.Exit(1)
 	}
 
+	if common.CFG.Memory.UseGoHeap {
+		fmt.Println("Using native Go heap for UTXO records")
+	} else {
+		utxo.MembindInit()
+	}
+
 	ext := &chain.NewChanOpts{
 		UTXOVolatileMode : common.FLAG.VolatileUTXO,
 		UndoBlocks : common.FLAG.UndoBlocks,

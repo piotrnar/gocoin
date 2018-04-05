@@ -80,6 +80,7 @@ var (
 		}
 		Memory struct {
 			GCPercTrshold int
+			UseGoHeap     bool // Do not use OS memory functions for UTXO records
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk   bool
@@ -164,7 +165,7 @@ func InitConfig() {
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
 
-	CFG.LastTrustedBlock = "0000000000000000001e21e2a2db0813824880b32567fdcacf9e3e40ab42d549" // block #514925
+	CFG.LastTrustedBlock = "0000000000000000001d9c3e3c49f6aafa21f2f77c5f865dd275ec63e8a345dd" // block #516725
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {

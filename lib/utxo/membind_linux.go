@@ -12,6 +12,7 @@ package utxo
 import "C"
 
 import (
+	"fmt"
 	"unsafe"
 	"reflect"
 	"sync/atomic"
@@ -43,9 +44,11 @@ func gcc_len(ptr unsafe.Pointer) int {
 }
 
 func init() {
-	println("Using malloc() for UTXO memory bindings")
-	malloc = gcc_malloc
-	free = gcc_free
-	malloc_and_copy = gcc_malloc_and_copy
-	_len = gcc_len
+	MembindInit = func() {
+		fmt.Println("Using malloc() and free() for UTXO records")
+		malloc = gcc_malloc
+		free = gcc_free
+		malloc_and_copy = gcc_malloc_and_copy
+		_len = gcc_len
+	}
 }

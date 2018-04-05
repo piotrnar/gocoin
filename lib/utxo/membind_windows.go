@@ -44,22 +44,24 @@ func win_len(ptr unsafe.Pointer) int {
 }
 
 func init() {
-	dll, er := syscall.LoadDLL("kernel32.dll")
-	if er!=nil {
-		return
+	MembindInit = func() {
+		dll, er := syscall.LoadDLL("kernel32.dll")
+		if er!=nil {
+			return
+		}
+		fun, _ := dll.FindProc("GetProcessHeap")
+		hHeap, _, _ = fun.Call()
+
+		fun, _ = dll.FindProc("HeapAlloc")
+		funcHeapAllocAddr = fun.Addr()
+
+		fun, _ = dll.FindProc("HeapFree")
+		funcHeapFreeAddr = fun.Addr()
+
+		fmt.Println("Using kernel32.dll for UTXO records")
+		malloc = win_malloc
+		free = win_free
+		malloc_and_copy = win_malloc_and_copy
+		_len = win_len
 	}
-	fun, _ := dll.FindProc("GetProcessHeap")
-	hHeap, _, _ = fun.Call()
-
-	fun, _ = dll.FindProc("HeapAlloc")
-	funcHeapAllocAddr = fun.Addr()
-
-	fun, _ = dll.FindProc("HeapFree")
-	funcHeapFreeAddr = fun.Addr()
-
-	fmt.Println("Using kernel32.dll for UTXO memory bindings")
-	malloc = win_malloc
-	free = win_free
-	malloc_and_copy = win_malloc_and_copy
-	_len = win_len
 }

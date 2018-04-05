@@ -1,9 +1,11 @@
 package main
 
 import (
-	"time"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/utxo"
+	"os"
+	"runtime/pprof"
+	"time"
 )
 
 var a1 int
@@ -12,8 +14,17 @@ func main() {
 	var tmp int
 
 	println("UtxoIdxLen:", utxo.UtxoIdxLen)
+
+	f, _ := os.Create("NewUnspentDb.prof")
+	if f != nil {
+		pprof.StartCPUProfile(f)
+	}
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{})
+	if f != nil {
+		pprof.StopCPUProfile()
+		f.Close()
+	}
 	if db == nil {
 		println("place UTXO.db or UTXO.old in the current folder")
 		return
@@ -24,7 +35,7 @@ func main() {
 	print("Going through the map...")
 	sta = time.Now()
 	for k, v := range db.HashMap {
-		if (*byte)(v) == nil || k[0]==0 {
+		if (*byte)(v) == nil || k[0] == 0 {
 			tmp++
 		}
 	}
@@ -34,7 +45,7 @@ func main() {
 	print("Going through the map for the slice...")
 	sta = time.Now()
 	for _, v := range db.HashMap {
-		if utxo.Slice(v)[0]==0 {
+		if utxo.Slice(v)[0] == 0 {
 			//ss[0] = 0
 			tmp++
 		}
