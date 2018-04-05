@@ -139,9 +139,12 @@ type ConnInfo struct {
 	AveragePing int
 	InvsDone int
 	BlocksReceived int
-	HasImmunity bool
+	GetMPInProgress bool
 
 	LocalAddr, RemoteAddr string
+
+	// This one is only set inside webui's hnadler (for sorted connections)
+	HasImmunity bool
 }
 
 type OneConnection struct {
@@ -295,6 +298,7 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 
 	res.InvsDone = len(v.InvDone.History)
 	res.BlocksReceived = len(v.blocksreceived)
+	res.GetMPInProgress = len(v.GetMP) != 0
 
 	v.Mutex.Unlock()
 }
