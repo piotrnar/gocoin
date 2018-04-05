@@ -98,16 +98,10 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 				}
 			}
 		} else if typ==MSG_TX {
-			if common.GetBool(&common.CFG.TXPool.Enabled) {
-				MutexRcv.Lock()
-				pending_blocks := len(BlocksToGet) + CachedBlocksLen.Get() + len(NetBlocks)
-				MutexRcv.Unlock()
-
-				if pending_blocks > 10 {
-					common.CountSafe("InvTxIgnored") // do not process TXs if the chain is not synchronized
-				} else {
-					c.TxInvNotify(pl[of+4:of+36])
-				}
+			if common.AcceptTx() {
+				c.TxInvNotify(pl[of+4:of+36])
+			} else {
+				common.CountSafe("InvTxIgnored")
 			}
 		}
 		of+= 36
