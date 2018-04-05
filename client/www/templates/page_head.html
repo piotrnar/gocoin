@@ -13,7 +13,7 @@ var testnet = (doc_title.indexOf(" Testnet") != -1)
 var new_block_audio_file = new Audio('webui/new_block.mp3')
 var back_online_audio_file = new Audio('webui/back_online.mp3')
 
-var last_blocks_left = 0
+var last_blocks_left = -1
 
 var webuimenu = [
 	["/", "Home"],
@@ -45,7 +45,7 @@ function beep_clicked() {
 		</colgroup>
 
 		<td id="topmenu"></td>
-		<td align="center" class="nw" id="blno">...</td>
+		<td align="center" class="nw bold" id="blno">...</td>
 		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
 			<input type="checkbox" id="beep_new_block" class="hand"><img src="webui/music.png">
 		</td>
@@ -120,13 +120,11 @@ function refreshblock() {
 
 			var blocks_left = stat.LastHeaderHeight - stat.Height
 			if (blocks_left != last_blocks_left) {
-				last_blocks_left = blocks_left
-				if (blocks_left > 1) {
-					chainsync_icon.title = blocks_left + " blocks left"
-					chainsync_icon.style.display =  'inline'
-				} else {
-					chainsync_icon.style.display =  'none'
-				}
+				chainsync_icon.title = blocks_left + " blocks left"
+			}
+			if (chain_in_sync != stat.BlockChainSynchronized) {
+				chain_in_sync = stat.BlockChainSynchronized
+				set_chain_in_sync()
 			}
 
 			if (stat.WalletON != wallet_on) {
@@ -135,10 +133,6 @@ function refreshblock() {
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
-			if (chain_in_sync != stat.BlockChainSynchronized) {
-				chain_in_sync = stat.BlockChainSynchronized
-				set_chain_in_sync()
-			}
 			// dispatch event..
 			var e = document.createEvent("Event")
 			e.initEvent("lastblock", false, false)
@@ -170,11 +164,8 @@ function refreshblock() {
 }
 
 function set_chain_in_sync() {
-	if (chain_in_sync) {
-		blno.classList.add('bold')
-	} else {
-		blno.classList.remove('bold')
-	}
+	console.log(chain_in_sync)
+	chainsync_icon.style.display = chain_in_sync ? 'none' : 'inline'
 }
 set_chain_in_sync()
 
