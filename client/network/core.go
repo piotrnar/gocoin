@@ -654,11 +654,11 @@ func NetCloseAll() {
 		}
 		if time.Now().Sub(sta) > 3 * time.Second {
 			Mutex_net.Lock()
-			fmt.Println("\nStill have open connections:", InConsActive, OutConsActive)
+			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons))
 			for _, v := range OpenCons {
 				var r ConnInfo
 				v.GetStats(&r)
-				fmt.Println("===============", v.ConnID, "===============")
+				fmt.Println("========================================")
 				dat, _ := json.MarshalIndent(&r, "", "  ")
 				fmt.Println(string(dat))
 			}
