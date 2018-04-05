@@ -115,7 +115,7 @@ func init() {
 	dll, er := syscall.LoadDLL(DllName)
 	if er != nil {
 		//common.Log.Println(er.Error())
-		common.Log.Println("WARNING: Not using", DllName, "to cross-check consensus rules")
+		common.Log.Println("Not using", DllName, "to cross-check consensus rules")
 		return
 	}
 	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc("bitcoinconsensus_verify_script_with_amount")
