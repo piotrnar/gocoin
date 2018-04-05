@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -630,6 +631,7 @@ func maxmsgsize(cmd string) uint32 {
 
 
 func NetCloseAll() {
+	sta := time.Now()
 	println("Closing network")
 	common.NetworkClosed.Set()
 	time.Sleep(1e9) // give one second for WebUI requests to complete
@@ -649,6 +651,18 @@ func NetCloseAll() {
 		Mutex_net.Unlock()
 		if all_done {
 			return
+		}
+		if time.Now().Sub(sta) > 3 * time.Second {
+			Mutex_net.Lock()
+			fmt.Println("\nStill have open connections:", InConsActive, OutConsActive)
+			for _, v := range OpenCons {
+				var r ConnInfo
+				v.GetStats(&r)
+				fmt.Println("===============", v.ConnID, "===============")
+				dat, _ := json.MarshalIndent(&r, "", "  ")
+				fmt.Println(string(dat))
+			}
+			Mutex_net.Unlock()
 		}
 		time.Sleep(1e7)
 	}
