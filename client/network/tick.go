@@ -84,17 +84,18 @@ func (c *OneConnection) Tick(now time.Time) {
 		return
 	}
 
-	// See if to send "getmp" command
-	select {
-	case GetMPInProgressTicket <- true:
-		// wisket received - check for the request...
-		if len(c.GetMP) == 0 || c.SendGetMP() != nil {
-			// no request for "getmp" here or sending failed - clear the global flag/channel
-			_ = <-GetMPInProgressTicket
-		} else {
+	if common.GetBool(&common.BlockChainSynchronized) {
+		// See if to send "getmp" command
+		select {
+		case GetMPInProgressTicket <- true:
+			// ticket received - check for the request...
+			if len(c.GetMP) == 0 || c.SendGetMP() != nil {
+				// no request for "getmp" here or sending failed - clear the global flag/channel
+				_ = <-GetMPInProgressTicket
+			}
+		default:
+			// failed to get the ticket - just do nothing
 		}
-	default:
-		// failed to get the ticket - just do nothing
 	}
 
 	// Tick the recent transactions counter
@@ -644,7 +645,7 @@ func (c *OneConnection) Run() {
 			c.ProcessInv(cmd.pl)
 
 		case "tx":
-			if common.GetBool(&common.CFG.TXPool.Enabled) {
+			if common.AcceptTx() {
 				c.ParseTxNet(cmd.pl)
 			}
 
