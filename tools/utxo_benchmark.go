@@ -10,16 +10,21 @@ import (
 
 func main() {
 	var tmp uint32
+	var dir = ""
 
 	println("UtxoIdxLen:", utxo.UtxoIdxLen)
-	if len(os.Args) < 2 {
+	if len(os.Args) > 1 {
+		dir = os.Args[1]
+	}
+
+	if len(os.Args) < 3 {
 		utxo.MembindInit()
 	} else {
 		println("Using native Go heap for UTXO records")
 	}
 
 	sta := time.Now()
-	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{})
+	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{Dir:dir})
 	if db == nil {
 		println("place UTXO.db or UTXO.old in the current folder")
 		return
