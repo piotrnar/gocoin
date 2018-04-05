@@ -22,6 +22,7 @@ const (
 	AskAddrsEvery = (5*time.Minute)
 	MaxAddrsPerMessage = 500
 	SendBufSize = 16*1024*1024 // If you'd have this much in the send buffer, disconnect the peer
+	SendBufMask = SendBufSize-1
 
 	GetHeadersTimeout = 2*time.Minute  // Timeout to receive headers
 	VersionMsgTimeout = 20*time.Second  // Timeout to receive teh version message after connecting
@@ -357,16 +358,11 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 	if room_left>=len(d) {
 		copy(c.sendBuf[c.SendBufProd:], d)
 		room_left = c.SendBufProd+len(d)
-		if room_left>=SendBufSize {
-			c.SendBufProd = 0
-		} else {
-			c.SendBufProd = room_left
-		}
 	} else {
 		copy(c.sendBuf[c.SendBufProd:], d[:room_left])
 		copy(c.sendBuf[:], d[room_left:])
-		c.SendBufProd = c.SendBufProd+len(d)-SendBufSize
 	}
+	c.SendBufProd = (c.SendBufProd + len(d)) & SendBufMask
 }
 
 
@@ -586,12 +582,7 @@ func (c *OneConnection) writing_thread() {
 			c.Mutex.Lock()
 			c.X.LastSent = time.Now()
 			c.X.BytesSent += uint64(n)
-			n += c.SendBufCons
-			if n >= SendBufSize {
-				c.SendBufCons = 0
-			} else {
-				c.SendBufCons = n
-			}
+			c.SendBufCons = (c.SendBufCons + n) & SendBufMask
 			c.Mutex.Unlock()
 		} else if e != nil {
 			c.Disconnect("SendErr:"+e.Error())
