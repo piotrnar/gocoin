@@ -30,7 +30,7 @@ func init() {
 		fun, _ = dll.FindProc("HeapFree")
 		funcHeapFreeAddr = fun.Addr()
 
-		fmt.Println("Using kernel32.dll for UTXO records")
+		fmt.Println("Using kernel32.dll heap functions for UTXO records")
 		malloc = func(le uint32) []byte {
 			atomic.AddInt64(&extraMemoryConsumed, int64(le)+24)
 			atomic.AddInt64(&extraMemoryAllocCnt, 1)
