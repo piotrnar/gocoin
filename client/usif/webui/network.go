@@ -135,6 +135,7 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 		Ul_speed_max uint64
 		Ul_total uint64
 		ExternalIP []one_ext_ip
+		GetMPInProgress bool
 	}
 
 	common.LockBw()
@@ -160,6 +161,8 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 			Ip : fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),
 			Count:rec.Cnt, Timestamp:rec.Tim})
 	}
+
+	out.GetMPInProgress = len(network.GetMPInProgressTicket) != 0
 
 	bx, er := json.Marshal(out)
 	if er == nil {
