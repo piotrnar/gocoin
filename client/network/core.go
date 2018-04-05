@@ -25,7 +25,7 @@ const (
 
 	GetHeadersTimeout = 2*time.Minute  // Timeout to receive headers
 	VersionMsgTimeout = 20*time.Second  // Timeout to receive teh version message after connecting
-	TCPDialTimeout = 10*time.Second // If it does not connect within this time, assume it dead
+	TCPDialTimeout = 20*time.Second // If it does not connect within this time, assume it dead
 
 	MIN_PROTO_VERSION = 209
 
@@ -637,10 +637,7 @@ func NetCloseAll() {
 	sta := time.Now()
 	println("Closing network")
 	common.NetworkClosed.Set()
-	time.Sleep(1e9) // give one second for WebUI requests to complete
-	common.LockCfg()
-	common.ListenTCP = false
-	common.UnlockCfg()
+	common.SetBool(&common.ListenTCP, false)
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {
@@ -648,27 +645,20 @@ func NetCloseAll() {
 		}
 	}
 	Mutex_net.Unlock()
+	time.Sleep(1e9) // give one second for WebUI requests to complete
+	// now wait for all the connections to close
 	for {
 		Mutex_net.Lock()
-		all_done := InConsActive == 0 && OutConsActive == 0
+		all_done := len(OpenCons)==0
 		Mutex_net.Unlock()
 		if all_done {
 			return
 		}
-		if time.Now().Sub(sta) > 3 * time.Second {
+		if time.Now().Sub(sta) > 2 * time.Second {
 			Mutex_net.Lock()
-			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons))
-			/*
-			for _, v := range OpenCons {
-				var r ConnInfo
-				v.GetStats(&r)
-				fmt.Println("========================================")
-				dat, _ := json.MarshalIndent(&r, "", "  ")
-				fmt.Println(string(dat))
-			}
-			*/
+			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons), "- please report")
 			Mutex_net.Unlock()
-			time.Sleep(2e9)
+			break
 		}
 		time.Sleep(1e7)
 	}

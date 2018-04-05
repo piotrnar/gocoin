@@ -173,17 +173,34 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	OutConsActive++
 	Mutex_net.Unlock()
 	go func() {
-		con, e := net.DialTimeout("tcp4", fmt.Sprintf("%d.%d.%d.%d:%d",
-			ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port), TCPDialTimeout)
-		if e == nil {
-			Mutex_net.Lock()
-			conn.Conn = con
-			conn.X.ConnectedAt = time.Now()
-			Mutex_net.Unlock()
-			conn.Run()
-		} else {
-			//println(e.Error())
+		var con net.Conn
+		var e error
+		con_done := make(chan bool, 1)
+
+		go func(addr string) {
+			// we do net.Dial() in paralell routine, so we can abort quickly upon request
+			con, e = net.DialTimeout("tcp4", addr, TCPDialTimeout)
+			con_done <- true
+		}(fmt.Sprintf("%d.%d.%d.%d:%d", ad.Ip4[0], ad.Ip4[1], ad.Ip4[2], ad.Ip4[3], ad.Port))
+
+		for {
+			select {
+			case <- con_done:
+				if e == nil {
+					Mutex_net.Lock()
+					conn.Conn = con
+					conn.X.ConnectedAt = time.Now()
+					Mutex_net.Unlock()
+					conn.Run()
+				}
+			case <-time.After(10*time.Millisecond):
+				if !conn.IsBroken() {
+					continue
+				}
+			}
+			break
 		}
+
 		Mutex_net.Lock()
 		delete(OpenCons, ad.UniqID())
 		OutConsActive--
@@ -512,7 +529,9 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) > 0 {
 		if len(pl) != 1 || pl[0] == 0 || c.SendGetMP() != nil {
 			_ = <-c.GetMP
-			_ = <-GetMPInProgressTicket
+			if len(GetMPInProgressTicket) > 0 {
+				_ = <-GetMPInProgressTicket
+			}
 		}
 	}
 }
