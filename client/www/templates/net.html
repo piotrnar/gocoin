@@ -488,7 +488,7 @@ function refreshconnections(force) {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.noWrap = true
-				if (cs[i].TxsReceived!=0) td.innerHTML = cs[i].TxsReceived
+				if (cs[i].TxsReceived!=0) td.innerText = cs[i].TxsReceived + ( cs[i].GetMPInProgress ? '..' : '' )
 
 				td = row.insertCell(-1)
 				td.className = "dbg"
