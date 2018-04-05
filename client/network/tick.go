@@ -1,21 +1,31 @@
 package network
 
 import (
-	"os"
-	"fmt"
-	"net"
-	"time"
-	"bytes"
 	"bufio"
-	"strings"
-	"math/rand"
-	"encoding/hex"
+	"bytes"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/btc"
+	"encoding/hex"
+	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"math/rand"
+	"net"
+	"os"
+	"strings"
+	"time"
 )
 
+var (
+	TCPServerStarted   bool
+	next_drop_peer     time.Time
+	next_clean_hammers time.Time
+
+	NextConnectFriends time.Time = time.Now()
+	AuthPubkeys        [][]byte
+
+	GetMPInProgressTicket = make(chan bool, 1)
+)
 
 // Call this once a minute
 func (c *OneConnection) Maintanence(now time.Time) {
@@ -25,7 +35,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	MutexRcv.Lock()
 	for k, v := range c.GetBlockInProgress {
-		if now.After(v.start.Add(5*time.Minute)) {
+		if now.After(v.start.Add(5 * time.Minute)) {
 			delete(c.GetBlockInProgress, k)
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
@@ -40,21 +50,20 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	MutexRcv.Unlock()
 
 	// Expire BlocksReceived after two days
-	if len(c.blocksreceived)>0 {
+	if len(c.blocksreceived) > 0 {
 		var i int
-		for i=0; i<len(c.blocksreceived); i++ {
+		for i = 0; i < len(c.blocksreceived); i++ {
 			if c.blocksreceived[i].Add(common.GetDuration(&common.BlockExpireEvery)).After(now) {
 				break
 			}
 			common.CountSafe("BlksRcvdExpired")
 		}
-		if i>0 {
+		if i > 0 {
 			//println(c.ConnID, "expire", i, "block(s)")
 			c.blocksreceived = c.blocksreceived[i:]
 		}
 	}
 }
-
 
 func (c *OneConnection) Tick(now time.Time) {
 	if !c.X.VersionReceived {
@@ -75,16 +84,26 @@ func (c *OneConnection) Tick(now time.Time) {
 		return
 	}
 
-	if len(c.GetMP) > 0 {
-		_ = <- c.GetMP
-		c.SendGetMP()
+	// See if to send "getmp" command
+	select {
+	case GetMPInProgressTicket <- true:
+		// wisket received - check for the request...
+		if len(c.GetMP) > 0 && c.SendGetMP() == nil {
+			c.GetMPNow()
+			// leave the message inside both the channels to indicate getmp work in progress
+		} else {
+			// no request for "getmp" here, so clear the global flag/channel
+			_ = <-GetMPInProgressTicket
+		}
+	default:
+		// failed to get the ticket - just do nothing
 	}
 
 	// Tick the recent transactions counter
 	if now.After(c.txsNxt) {
 		c.Mutex.Lock()
-		if len(c.txsCha)==cap(c.txsCha) {
-			tmp := <- c.txsCha
+		if len(c.txsCha) == cap(c.txsCha) {
+			tmp := <-c.txsCha
 			c.X.TxsReceived -= tmp
 		}
 		c.txsCha <- c.txsCur
@@ -113,7 +132,7 @@ func (c *OneConnection) Tick(now time.Time) {
 	}
 
 	c.Mutex.Lock()
-	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress)==0 {
+	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress) == 0 {
 		c.Mutex.Unlock()
 		c.sendGetHeaders()
 		c.Mutex.Lock()
@@ -131,7 +150,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 
-	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress)==0 {
+	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress) == 0 {
 		c.Mutex.Unlock()
 		// Ping if we dont do anything
 		c.TryPing()
@@ -174,14 +193,6 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 	}()
 }
 
-
-var (
-	TCPServerStarted bool
-	next_drop_peer time.Time
-	next_clean_hammers time.Time
-)
-
-
 // TCP server
 func tcp_server() {
 	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", common.DefaultTcpPort()))
@@ -205,7 +216,7 @@ func tcp_server() {
 		ica := InConsActive
 		Mutex_net.Unlock()
 		if ica < common.GetUint32(&common.CFG.Net.MaxInCons) {
-			lis.SetDeadline(time.Now().Add(100*time.Millisecond))
+			lis.SetDeadline(time.Now().Add(100 * time.Millisecond))
 			tc, e := lis.AcceptTCP()
 			if e == nil && common.IsListenTCP() {
 				var terminate bool
@@ -240,7 +251,7 @@ func tcp_server() {
 							OpenCons[ad.UniqID()] = conn
 							InConsActive++
 							Mutex_net.Unlock()
-							go func () {
+							go func() {
 								conn.Run()
 								Mutex_net.Lock()
 								delete(OpenCons, ad.UniqID())
@@ -274,11 +285,6 @@ func tcp_server() {
 	//fmt.Println("TCP server stopped")
 }
 
-
-var NextConnectFriends time.Time = time.Now()
-
-var AuthPubkeys [][]byte
-
 func ConnectFriends() {
 	f, _ := os.Open(common.GocoinHomeDir + "friends.txt")
 	if f == nil {
@@ -287,7 +293,7 @@ func ConnectFriends() {
 	defer f.Close()
 
 	AuthPubkeys = nil
-	friend_ids := make(map[uint64] bool)
+	friend_ids := make(map[uint64]bool)
 
 	rd := bufio.NewReader(f)
 	if rd != nil {
@@ -316,7 +322,7 @@ func ConnectFriends() {
 				continue
 			}
 			pk := btc.Decodeb58(ls[0])
-			if len(pk)==33 {
+			if len(pk) == 33 {
 				AuthPubkeys = append(AuthPubkeys, pk)
 				//println("Using pubkey:", hex.EncodeToString(pk))
 			}
@@ -338,8 +344,6 @@ func ConnectFriends() {
 	Mutex_net.Unlock()
 }
 
-
-
 func NetworkTick() {
 	if common.IsListenTCP() {
 		if !TCPServerStarted {
@@ -360,7 +364,7 @@ func NetworkTick() {
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
-			if _v==nil || v.X.TotalNewHeadersCount > max_headers_got_cnt {
+			if _v == nil || v.X.TotalNewHeadersCount > max_headers_got_cnt {
 				max_headers_got_cnt = v.X.TotalNewHeadersCount
 				_v = v
 			}
@@ -370,11 +374,11 @@ func NetworkTick() {
 	conn_cnt := OutConsActive
 	Mutex_net.Unlock()
 
-	if cnt_headers_in_progress==0 {
-		if _v!=nil {
+	if cnt_headers_in_progress == 0 {
+		if _v != nil {
 			common.CountSafe("GetHeadersPush")
 			/*println("No headers_in_progress, so take it from", _v.ConnID,
-				_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
+			_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
 			_v.Mutex.Lock()
 			_v.X.AllHeadersReceived = false
 			_v.Mutex.Unlock()
@@ -383,7 +387,7 @@ func NetworkTick() {
 		}
 	}
 
-	if common.CFG.DropPeers.DropEachMinutes!=0 {
+	if common.CFG.DropPeers.DropEachMinutes != 0 {
 		if next_drop_peer.IsZero() {
 			next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
 		} else if now.After(next_drop_peer) {
@@ -416,7 +420,7 @@ func NetworkTick() {
 		Mutex_net.Unlock()
 		ConnectFriends()
 		Mutex_net.Lock()
-		NextConnectFriends = now.Add(15*time.Minute)
+		NextConnectFriends = now.Add(15 * time.Minute)
 	}
 	Mutex_net.Unlock()
 
@@ -434,19 +438,19 @@ func NetworkTick() {
 			Mutex_net.Unlock()
 		}
 
-		adrs := peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) (bool) {
-			if segwit_conns<common.CFG.Net.MinSegwitCons && (ad.Services & SERVICE_SEGWIT)==0 {
+		adrs := peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) bool {
+			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&SERVICE_SEGWIT) == 0 {
 				return true
 			}
 			return ConnectionActive(ad)
 		})
-		if len(adrs)==0 && segwit_conns < common.CFG.Net.MinSegwitCons {
+		if len(adrs) == 0 && segwit_conns < common.CFG.Net.MinSegwitCons {
 			// we have only non-segwit peers in the database - take them
-			adrs = peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) (bool) {
+			adrs = peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) bool {
 				return ConnectionActive(ad)
 			})
 		}
-		if len(adrs)==0 {
+		if len(adrs) == 0 {
 			common.LockCfg()
 			common.UnlockCfg()
 			break
@@ -486,7 +490,7 @@ func (c *OneConnection) SendAuth() {
 
 func (c *OneConnection) AuthRvcd(pl []byte) {
 	if c.X.AuthMsgGot > 0 {
-		c.DoS("AuthMsgCnt")  // Only allow one auth message per connection (DoS prevention)
+		c.DoS("AuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
 		return
 	}
 	c.X.AuthMsgGot++
@@ -502,6 +506,18 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	c.X.Authorized = false
 }
 
+// call it upon receiving "getmpdone" message or when the peer disconnects
+func (c *OneConnection) GetMPDone(pl []byte) {
+	if len(c.GetMP) > 0 {
+		if len(pl) == 1 && pl[0] != 0 {
+			c.GetMPNow() // redo
+		} else {
+			_ = <-c.GetMP
+			_ = <-GetMPInProgressTicket
+		}
+	}
+}
+
 // Process that handles communication with a single peer
 func (c *OneConnection) Run() {
 	c.writing_thread_push = make(chan bool, 1)
@@ -512,7 +528,7 @@ func (c *OneConnection) Run() {
 	now := time.Now()
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
-	c.LastPingSent = now.Add(5*time.Second-common.GetDuration(&common.PingPeerEvery)) // do first ping ~5 seconds from now
+	c.LastPingSent = now.Add(5*time.Second - common.GetDuration(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterPeriod)
 	c.txsCha = make(chan int, TxsCounterBufLen)
@@ -562,7 +578,7 @@ func (c *OneConnection) Run() {
 		c.X.LastBtsRcvd = uint32(len(cmd.pl))
 		c.Mutex.Unlock()
 
-		common.CountSafe("rcvd_"+cmd.cmd)
+		common.CountSafe("rcvd_" + cmd.cmd)
 		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 
 		if cmd.cmd == "version" {
@@ -578,8 +594,8 @@ func (c *OneConnection) Run() {
 				break
 			}
 			if common.FLAG.Log {
-				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-				if f!=nil {
+				f, _ := os.OpenFile("conn_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+				if f != nil {
 					fmt.Fprintf(f, "%s: New connection. ID:%d  Incomming:%t  Addr:%s  Version:%d  Services:0x%x  Agent:%s\n",
 						time.Now().Format("2006-01-02 15:04:05"), c.ConnID, c.X.Incomming,
 						c.PeerAddr.Ip(), c.Node.Version, c.Node.Services, c.Node.Agent)
@@ -603,15 +619,15 @@ func (c *OneConnection) Run() {
 						c.SendFeeFilter()
 					}
 					if c.Node.Version >= 70014 {
-						if (c.Node.Services&SERVICE_SEGWIT)==0 {
+						if (c.Node.Services & SERVICE_SEGWIT) == 0 {
 							// if the node does not support segwit, request compact blocks
 							// only if we have not achieved the segwit enforcement moment
-							if common.BlockChain.Consensus.Enforce_SEGWIT==0 ||
+							if common.BlockChain.Consensus.Enforce_SEGWIT == 0 ||
 								common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
-								c.SendRawMsg("sendcmpct", []byte{0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+								c.SendRawMsg("sendcmpct", []byte{0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 							}
 						} else {
-							c.SendRawMsg("sendcmpct", []byte{0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00})
+							c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 						}
 					}
 				}
@@ -626,131 +642,136 @@ func (c *OneConnection) Run() {
 		}
 
 		switch cmd.cmd {
-			case "inv":
-				c.ProcessInv(cmd.pl)
+		case "inv":
+			c.ProcessInv(cmd.pl)
 
-			case "tx":
-				if common.GetBool(&common.CFG.TXPool.Enabled) {
-					c.ParseTxNet(cmd.pl)
-				}
+		case "tx":
+			if common.GetBool(&common.CFG.TXPool.Enabled) {
+				c.ParseTxNet(cmd.pl)
+			}
 
-			case "addr":
-				c.ParseAddr(cmd.pl)
+		case "addr":
+			c.ParseAddr(cmd.pl)
 
-			case "block": //block received
-				netBlockReceived(c, cmd.pl)
-				c.X.GetBlocksDataNow = true // try to ask for more blocks
+		case "block": //block received
+			netBlockReceived(c, cmd.pl)
+			c.X.GetBlocksDataNow = true // try to ask for more blocks
 
-			case "getblocks":
-				c.GetBlocks(cmd.pl)
+		case "getblocks":
+			c.GetBlocks(cmd.pl)
 
-			case "getdata":
-				c.ProcessGetData(cmd.pl)
+		case "getdata":
+			c.ProcessGetData(cmd.pl)
 
-			case "getaddr":
-				if !c.X.GetAddrDone {
-					c.SendAddr()
-					c.X.GetAddrDone = true
-				} else {
-					c.Mutex.Lock()
-					c.counters["SecondGetAddr"]++
-					c.Mutex.Unlock()
-					if c.Misbehave("SecondGetAddr", 1000/20) {
-						break
-					}
-				}
-
-			case "ping":
-				re := make([]byte, len(cmd.pl))
-				copy(re, cmd.pl)
-				c.SendRawMsg("pong", re)
-
-			case "pong":
-				if c.PingInProgress==nil {
-					common.CountSafe("PongUnexpected")
-				} else if bytes.Equal(cmd.pl, c.PingInProgress) {
-					c.HandlePong()
-				} else {
-					common.CountSafe("PongMismatch")
-				}
-
-			case "getheaders":
-				c.GetHeaders(cmd.pl)
-
-			case "notfound":
-				common.CountSafe("NotFound")
-
-			case "headers":
-				if c.HandleHeaders(cmd.pl) > 0 {
-					c.sendGetHeaders()
-				}
-
-			case "sendheaders":
+		case "getaddr":
+			if !c.X.GetAddrDone {
+				c.SendAddr()
+				c.X.GetAddrDone = true
+			} else {
 				c.Mutex.Lock()
-				c.Node.SendHeaders = true
+				c.counters["SecondGetAddr"]++
 				c.Mutex.Unlock()
-
-			case "feefilter":
-				if len(cmd.pl) >= 8 {
-					c.X.MinFeeSPKB = int64(binary.LittleEndian.Uint64(cmd.pl[:8]))
-					//println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
+				if c.Misbehave("SecondGetAddr", 1000/20) {
+					break
 				}
+			}
 
-			case "sendcmpct":
-				if len(cmd.pl)>=9 {
-					version := binary.LittleEndian.Uint64(cmd.pl[1:9])
-					c.Mutex.Lock()
-					if version > c.Node.SendCmpctVer {
-						//println(c.ConnID, "sendcmpct", cmd.pl[0])
-						c.Node.SendCmpctVer = version
-						c.Node.HighBandwidth = cmd.pl[0]==1
-					} else {
-						c.counters[fmt.Sprint("SendCmpctV", version)]++
-					}
-					c.Mutex.Unlock()
+		case "ping":
+			re := make([]byte, len(cmd.pl))
+			copy(re, cmd.pl)
+			c.SendRawMsg("pong", re)
+
+		case "pong":
+			if c.PingInProgress == nil {
+				common.CountSafe("PongUnexpected")
+			} else if bytes.Equal(cmd.pl, c.PingInProgress) {
+				c.HandlePong()
+			} else {
+				common.CountSafe("PongMismatch")
+			}
+
+		case "getheaders":
+			c.GetHeaders(cmd.pl)
+
+		case "notfound":
+			common.CountSafe("NotFound")
+
+		case "headers":
+			if c.HandleHeaders(cmd.pl) > 0 {
+				c.sendGetHeaders()
+			}
+
+		case "sendheaders":
+			c.Mutex.Lock()
+			c.Node.SendHeaders = true
+			c.Mutex.Unlock()
+
+		case "feefilter":
+			if len(cmd.pl) >= 8 {
+				c.X.MinFeeSPKB = int64(binary.LittleEndian.Uint64(cmd.pl[:8]))
+				//println(c.PeerAddr.Ip(), c.Node.Agent, "feefilter", c.X.MinFeeSPKB)
+			}
+
+		case "sendcmpct":
+			if len(cmd.pl) >= 9 {
+				version := binary.LittleEndian.Uint64(cmd.pl[1:9])
+				c.Mutex.Lock()
+				if version > c.Node.SendCmpctVer {
+					//println(c.ConnID, "sendcmpct", cmd.pl[0])
+					c.Node.SendCmpctVer = version
+					c.Node.HighBandwidth = cmd.pl[0] == 1
 				} else {
-					common.CountSafe("SendCmpctErr")
-					if len(cmd.pl)!=5 {
-						println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
-					}
+					c.counters[fmt.Sprint("SendCmpctV", version)]++
 				}
-
-			case "cmpctblock":
-				c.ProcessCmpctBlock(cmd.pl)
-
-			case "getblocktxn":
-				c.ProcessGetBlockTxn(cmd.pl)
-				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
-
-			case "blocktxn":
-				c.ProcessBlockTxn(cmd.pl)
-				//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
-
-			case "getmp":
-				if c.X.Authorized {
-					c.ProcessGetMP(cmd.pl)
+				c.Mutex.Unlock()
+			} else {
+				common.CountSafe("SendCmpctErr")
+				if len(cmd.pl) != 5 {
+					println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "sendcmpct", hex.EncodeToString(cmd.pl))
 				}
+			}
 
-			case "auth":
-				c.AuthRvcd(cmd.pl)
-				if c.X.AuthAckGot {
-					c.GetMPNow()
-				}
+		case "cmpctblock":
+			c.ProcessCmpctBlock(cmd.pl)
 
-			case "authack":
-				c.X.AuthAckGot = true
+		case "getblocktxn":
+			c.ProcessGetBlockTxn(cmd.pl)
+			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "getblocktxn", hex.EncodeToString(cmd.pl))
+
+		case "blocktxn":
+			c.ProcessBlockTxn(cmd.pl)
+			//println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn", hex.EncodeToString(cmd.pl))
+
+		case "getmp":
+			if c.X.Authorized {
+				c.ProcessGetMP(cmd.pl)
+			}
+
+		case "auth":
+			c.AuthRvcd(cmd.pl)
+			if c.X.AuthAckGot {
 				c.GetMPNow()
+			}
 
-			default:
+		case "authack":
+			c.X.AuthAckGot = true
+			c.GetMPNow()
+
+		case "getmpdone":
+			c.GetMPDone(cmd.pl)
+
+		default:
 		}
 	}
+
+	c.GetMPDone(nil)
 
 	c.writing_thread_done.Wait()
 
 	c.Mutex.Lock()
 	MutexRcv.Lock()
 	for k, _ := range c.GetBlockInProgress {
-		if rec, ok := BlocksToGet[k] ; ok {
+		if rec, ok := BlocksToGet[k]; ok {
 			rec.InProgress--
 		} else {
 			//println("ERROR! Block", bip.hash.String(), "in progress, but not in BlocksToGet")
