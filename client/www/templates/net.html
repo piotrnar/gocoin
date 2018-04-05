@@ -54,6 +54,9 @@ Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 &nbsp;&bull;&nbsp;
 <span id="bw_ul_speed_now_span">Uploading at
 <b id="bw_ul_speed_now"></b> KB/s</span>
+
+<span id="get_mp_in_progress">&nbsp;&bull;&nbsp;<b>GetMPInProgress</b></span>
+
 </td>
 <td align="right">
 Resolution:
@@ -502,7 +505,7 @@ function refreshconnections(force) {
 				// drop conn
 				td = row.insertCell(-1)
 				td.className = "r nw"
-				td.innerHTML = ( cs[i].IsGocoin ? '<img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')"> ' : '' ) +
+				td.innerHTML = ( ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) ? '<img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')"> ' : '' ) +
 					'<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')">'
 
 				onc(row, id)
@@ -622,6 +625,8 @@ function refreshbwinfo() {
 			bw_ul_speed_now.innerText = bw.Ul_speed_now >> 10
 			sl = bw.Ul_speed_max==0 ? "not limited" : "limited to " + (bw.Ul_speed_max >> 10) + "KB/s"
 			bw_ul_speed_now_span.title = "Total " + bignum(bw.Ul_total) + 'B / Upload speed ' + sl
+
+			get_mp_in_progress.style.display = bw.GetMPInProgress ? "inline" : "none"
 		} catch(e) {
 			console.log(e)
 		}
