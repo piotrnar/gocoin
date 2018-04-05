@@ -88,12 +88,10 @@ func (c *OneConnection) Tick(now time.Time) {
 	select {
 	case GetMPInProgressTicket <- true:
 		// wisket received - check for the request...
-		if len(c.GetMP) > 0 && c.SendGetMP() == nil {
-			c.GetMPNow()
-			// leave the message inside both the channels to indicate getmp work in progress
-		} else {
-			// no request for "getmp" here, so clear the global flag/channel
+		if len(c.GetMP) == 0 || c.SendGetMP() != nil {
+			// no request for "getmp" here or sending failed - clear the global flag/channel
 			_ = <-GetMPInProgressTicket
+		} else {
 		}
 	default:
 		// failed to get the ticket - just do nothing
@@ -509,9 +507,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 // call it upon receiving "getmpdone" message or when the peer disconnects
 func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) > 0 {
-		if len(pl) == 1 && pl[0] != 0 {
-			c.GetMPNow() // redo
-		} else {
+		if len(pl) != 1 || pl[0] == 0 || c.SendGetMP() != nil {
 			_ = <-c.GetMP
 			_ = <-GetMPInProgressTicket
 		}
