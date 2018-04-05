@@ -70,7 +70,7 @@ func host_init() {
 	}
 
 	if common.CFG.Memory.UseGoHeap {
-		fmt.Println("Using native Go heap for UTXO records")
+		fmt.Println("Using native Go heap with the garbage collector for UTXO records")
 	} else {
 		utxo.MembindInit()
 	}
