@@ -134,10 +134,10 @@ func consensus_stats(s string) {
 
 func init() {
 	if C.init_bitcoinconsensus_so() == 0 {
-		fmt.Println("WARNING: Not using libbitcoinconsensus.so to cross-check consensus rules")
+		common.Log.Println("WARNING: Not using libbitcoinconsensus.so to cross-check consensus rules")
 		return
 	}
-	fmt.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to cross-check consensus")
+	common.Log.Println("Using libbitcoinconsensus.so version", C.bitcoinconsensus_version(), "to cross-check consensus")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus cross-checks")
 }

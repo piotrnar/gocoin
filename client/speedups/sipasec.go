@@ -11,16 +11,16 @@ package main
 */
 
 import (
-	"fmt"
-	"github.com/piotrnar/gocoin/lib/others/cgo/sipasec"
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/cgo/sipasec"
 )
 
 func EC_Verify(k, s, h []byte) bool {
-	return sipasec.EC_Verify(k, s, h)==1
+	return sipasec.EC_Verify(k, s, h) == 1
 }
 
 func init() {
-	fmt.Println("Using libsecp256k1.a by sipa for EC_Verify")
+	common.Log.Println("Using libsecp256k1.a by sipa for EC_Verify")
 	btc.EC_Verify = EC_Verify
 }

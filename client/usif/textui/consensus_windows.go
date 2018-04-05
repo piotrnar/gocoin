@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DllName  = "libbitcoinconsensus-0.dll"
+	DllName = "libbitcoinconsensus-0.dll"
 )
 
 /*
@@ -36,7 +36,7 @@ EXPORT_SYMBOL unsigned int bitcoinconsensus_version();
 
 var (
 	bitcoinconsensus_verify_script_with_amount *syscall.Proc
-	bitcoinconsensus_version *syscall.Proc
+	bitcoinconsensus_version                   *syscall.Proc
 
 	ConsensusChecks uint64
 	ConsensusExpErr uint64
@@ -101,10 +101,9 @@ func verify_script_with_amount(pkScr []byte, amount uint64, i int, tx *btc.Tx, v
 		uintptr(unsafe.Pointer(&txTo[0])), uintptr(len(txTo)),
 		uintptr(i), uintptr(ver_flags), 0, 0)
 
-	result = (r1==1)
+	result = (r1 == 1)
 	return
 }
-
 
 func consensus_stats(s string) {
 	fmt.Println("Consensus Checks:", atomic.LoadUint64(&ConsensusChecks))
@@ -115,8 +114,8 @@ func consensus_stats(s string) {
 func init() {
 	dll, er := syscall.LoadDLL(DllName)
 	if er != nil {
-		//println(er.Error())
-		println("WARNING: Not using", DllName, "to cross-check consensus rules")
+		//common.Log.Println(er.Error())
+		common.Log.Println("WARNING: Not using", DllName, "to cross-check consensus rules")
 		return
 	}
 	bitcoinconsensus_verify_script_with_amount, er = dll.FindProc("bitcoinconsensus_verify_script_with_amount")
@@ -124,13 +123,13 @@ func init() {
 		bitcoinconsensus_version, er = dll.FindProc("bitcoinconsensus_version")
 	}
 	if er != nil {
-		println(er.Error())
-		println("DllName is probably too old. Use one of bitcoin-core 0.13.1\n")
-		println("WARNING: Consensus cross-checking disabled")
+		common.Log.Println(er.Error())
+		common.Log.Println(DllName, "is probably too old. Use one of bitcoin-core 0.13.1 or later")
+		common.Log.Println("WARNING: Consensus cross-checking disabled")
 		return
 	}
 	r1, _, _ := syscall.Syscall(bitcoinconsensus_version.Addr(), 0, 0, 0, 0)
-	fmt.Println("Using", DllName, "version", r1, "to cross-check consensus rules")
+	common.Log.Println("Using", DllName, "version", r1, "to cross-check consensus rules")
 	script.VerifyConsensus = check_consensus
 	newUi("cons", false, consensus_stats, "See statistics of the consensus cross-checks")
 }
