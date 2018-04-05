@@ -68,6 +68,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 		WalletON bool
 		LastTrustedBlockHeight uint32
 		LastHeaderHeight uint32
+		BlockChainSynchronized bool
 	}
 	common.Last.Mutex.Lock()
 	out.Height = common.Last.Block.Height
@@ -85,6 +86,7 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
+	out.BlockChainSynchronized = common.GetBool(&common.BlockChainSynchronized)
 
 	bx, er := json.Marshal(out)
 	if er == nil {
