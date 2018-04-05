@@ -284,6 +284,8 @@ func tcp_server() {
 }
 
 func ConnectFriends() {
+	common.CountSafe("ConnectFriends")
+
 	f, _ := os.Open(common.GocoinHomeDir + "friends.txt")
 	if f == nil {
 		return
