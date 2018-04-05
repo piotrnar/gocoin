@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/client/common"
@@ -659,6 +658,7 @@ func NetCloseAll() {
 		if time.Now().Sub(sta) > 3 * time.Second {
 			Mutex_net.Lock()
 			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons))
+			/*
 			for _, v := range OpenCons {
 				var r ConnInfo
 				v.GetStats(&r)
@@ -666,7 +666,9 @@ func NetCloseAll() {
 				dat, _ := json.MarshalIndent(&r, "", "  ")
 				fmt.Println(string(dat))
 			}
+			*/
 			Mutex_net.Unlock()
+			time.Sleep(2e9)
 		}
 		time.Sleep(1e7)
 	}

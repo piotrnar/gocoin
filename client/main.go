@@ -388,10 +388,10 @@ func main() {
 			return usif.Exit_now.Get()
 		}
 
-		startup_ticks := 10 // give 10 seconds for inintial network connections
+		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		if !common.FLAG.NoWallet {
-			// snooze the timer to 5 seconds after startup_ticks goes down
-			common.SetUint32(&common.WalletOnIn, 5)
+			// snooze the timer to 10 seconds after startup_ticks goes down
+			common.SetUint32(&common.WalletOnIn, 10)
 		}
 
 		for !usif.Exit_now.Get() {

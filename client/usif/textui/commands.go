@@ -142,16 +142,17 @@ func show_info(par string) {
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String(),
 		lb2g)
-	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("2006/01/02 15:04:05"), ",   ")
+	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("06/01/02 15:04:05"), ", ")
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("NetQueueSize:%d, NetConns:%d, Peers:%d, B2G:%d/%d\n", len(network.NetBlocks),
-		len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len)
+	fmt.Printf("BlkNetQue:%d, Conns:%d, Peers:%d, B2G:%d/%d, SyncDone:%t\n", len(network.NetBlocks),
+		len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len,
+		common.GetBool(&common.BlockChainSynchronized))
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	fmt.Printf("Transactions  In Memory Pool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
+	fmt.Printf("Transactions  In MemPool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
 		len(network.TransactionsToSend), network.TransactionsToSendSize>>20,
 		len(network.TransactionsRejected), network.TransactionsRejectedSize>>20,
 		len(network.TransactionsPending), len(network.NetTxs))

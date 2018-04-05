@@ -58,7 +58,7 @@ func LoadBalance() {
 	perc := uint32(1)
 
 	for k, v := range common.BlockChain.Unspent.HashMap {
-		NewUTXO(utxo.NewUtxoRecStatic(k, utxo.Slice(v)))
+		NewUTXO(utxo.NewUtxoRecStatic(k, v))
 		if cnt_dwn == 0 {
 			perc++
 			common.SetUint32(&common.WalletProgress, perc)
