@@ -48,3 +48,13 @@ func BenchmarkNewUtxoRecStatic(b *testing.B) {
 		}
 	}
 }
+
+
+func TestMembinds(t *testing.T) {
+	MembindInit()
+	ptr := malloc(0x100000)
+	for i := range ptr {
+		ptr[i] = byte(i)
+	}
+	free(ptr)
+}
