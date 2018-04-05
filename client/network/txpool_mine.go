@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -122,13 +123,13 @@ func BlockMined(bl *btc.Block) {
 	expireTxsNow = true
 }
 
-func (c *OneConnection) SendGetMP() {
+func (c *OneConnection) SendGetMP() error {
 	TxMutex.Lock()
 	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
-	if tcnt > 100e3 {
+	if tcnt > MAX_GETMP_TXS {
 		fmt.Println("Too many transactions in the current pool")
 		TxMutex.Unlock()
-		return
+		return errors.New("Too many transactions in the current pool")
 	}
 	b := new(bytes.Buffer)
 	btc.WriteVlen(b, uint64(tcnt))
@@ -139,7 +140,7 @@ func (c *OneConnection) SendGetMP() {
 		b.Write(k[:])
 	}
 	TxMutex.Unlock()
-	c.SendRawMsg("getmp", b.Bytes())
+	return c.SendRawMsg("getmp", b.Bytes())
 }
 
 func (c *OneConnection) ProcessGetMP(pl []byte) {
@@ -163,11 +164,12 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	}
 
 	var data_sent_so_far int
+	var redo [1]byte
 
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
-		if c.BytesToSent() > SendBufSize/2 {
-			c.SendRawMsg("authack", nil) // this should trigger the peer to send another "getmp"
+		if c.BytesToSent() > SendBufSize/4 {
+			redo[0] = 1
 			break
 		}
 		if !has_this_one[k] {
@@ -176,4 +178,6 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 		}
 	}
 	TxMutex.Unlock()
+
+	c.SendRawMsg("getmpdone", redo[:])
 }
