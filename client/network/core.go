@@ -50,6 +50,8 @@ const (
 
 	PeerTickPeriod = 100*time.Millisecond // run the peer's tick not more often than this
 	InvsFlushPeriod = 10*time.Millisecond // send all the pending invs to the peer not more often than this
+
+	MAX_GETMP_TXS = 100e3
 )
 
 
@@ -621,7 +623,7 @@ func maxmsgsize(cmd string) uint32 {
 		case "getblocktxn": return 1e6 // 1MB shall be enough
 		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
 		case "notfound": return 3+50000*36 // maximum size of getdata
-		case "getmp": return 5+8*100000 // max 100k txs
+		case "getmp": return 5+8*MAX_GETMP_TXS
 		default: return 1024 // Any other type of block: maximum 1KB payload limit
 	}
 }
