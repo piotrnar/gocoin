@@ -6,6 +6,7 @@
 /*_AVERAGE_FEE_SPB_*/
 /*_SERVER_MODE_*/
 /*_WALLET_ON_*/
+/*_CHAIN_IN_SYNC_*/
 var doc_title = document.title
 var testnet = (doc_title.indexOf(" Testnet") != -1)
 
@@ -44,7 +45,7 @@ function beep_clicked() {
 		</colgroup>
 
 		<td id="topmenu"></td>
-		<td align="center" class="nw"><b id="blno">...</b></td>
+		<td align="center" class="nw" id="blno">...</td>
 		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
 			<input type="checkbox" id="beep_new_block" class="hand"><img src="webui/music.png">
 		</td>
@@ -78,7 +79,7 @@ function apply_wallet_on() {
 		topmenu.getElementsByTagName('a')[2].classList.remove('dimenu')
 	} else {
 		topmenu.getElementsByTagName('a')[1].classList.add('dimenu')
-		topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
+	topmenu.getElementsByTagName('a')[2].classList.add('dimenu')
 	}
 }
 
@@ -134,7 +135,10 @@ function refreshblock() {
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
-
+			if (chain_in_sync != stat.BlockChainSynchronized) {
+				chain_in_sync = stat.BlockChainSynchronized
+				set_chain_in_sync()
+			}
 			// dispatch event..
 			var e = document.createEvent("Event")
 			e.initEvent("lastblock", false, false)
@@ -164,6 +168,15 @@ function refreshblock() {
 	aj.open("GET","status.json",true)
 	aj.send(null)
 }
+
+function set_chain_in_sync() {
+	if (chain_in_sync) {
+		blno.classList.add('bold')
+	} else {
+		blno.classList.remove('bold')
+	}
+}
+set_chain_in_sync()
 
 if (localStorage.getItem("new_block_beep")==="true") {
 	beep_new_block.checked = true
