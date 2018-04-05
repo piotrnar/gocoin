@@ -388,6 +388,12 @@ func main() {
 			return usif.Exit_now.Get()
 		}
 
+		startup_ticks := 10 // give 10 seconds for inintial network connections
+		if !common.FLAG.NoWallet {
+			// snooze the timer to 5 seconds after startup_ticks goes down
+			common.SetUint32(&common.WalletOnIn, 5)
+		}
+
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
@@ -456,11 +462,17 @@ func main() {
 				common.Busy()
 				common.CountSafe("MainNetTick")
 				network.NetworkTick()
-				if common.GetUint32(&common.WalletOnIn) > 0 && network.BlocksToGetCnt() == 0 &&
+				if startup_ticks > 0 {
+					startup_ticks--
+					break
+				}
+				if !common.BlockChainSynchronized && network.BlocksToGetCnt() == 0 &&
 					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
-					if common.WalletPendingTick() {
-						wallet.OnOff <- true
-					}
+					// only when we have no pending blocks startup_ticks go down..
+					common.SetBool(&common.BlockChainSynchronized, true)
+				}
+				if common.WalletPendingTick() {
+					wallet.OnOff <- true
 				}
 
 			case cmd := <-usif.UiChannel:
