@@ -173,6 +173,8 @@ func net_stats(par string) {
 	network.HammeringMutex.Unlock()
 	fmt.Println()
 
+	fmt.Println("GetMPInProgress:", len(network.GetMPInProgressTicket) != 0)
+
 	common.PrintStats()
 }
 
