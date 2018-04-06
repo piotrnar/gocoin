@@ -534,7 +534,6 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.recv.hdr_len = 0
 	c.recv.cmd = ""
 	c.recv.dat = nil
-	c.X.BytesReceived += uint64(24+len(ret.pl))
 	c.Mutex.Unlock()
 
 	c.LastMsgTime = time.Now()
