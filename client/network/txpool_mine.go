@@ -144,23 +144,24 @@ func (c *OneConnection) SendGetMP() error {
 }
 
 func (c *OneConnection) ProcessGetMP(pl []byte) {
-	if len(pl) < 37 {
-		//println(c.PeerAddr.Ip(), "inv payload too short", len(pl))
-		c.DoS("InvEmpty")
+	br := bytes.NewBuffer(pl)
+
+	cnt, er := btc.ReadVLen(br)
+	if er != nil {
+		println("getmp message does not have the length field")
+		c.DoS("GetMPError1")
 		return
 	}
 
-	cnt, of := btc.VLen(pl)
-	if len(pl) != of+cnt*btc.Uint256IdxLen {
-		println("getmp payload length mismatch", len(pl), of, cnt)
-	}
-
 	has_this_one := make(map[BIDX]bool, cnt)
-	for i := 0; i < cnt; i++ {
+	for i := 0; i < int(cnt); i++ {
 		var idx BIDX
-		copy(idx[:], pl[of:])
+		if n, _ := br.Read(idx[:]); n != len(idx) {
+			println("getmp message too short")
+			c.DoS("GetMPError2")
+			return
+		}
 		has_this_one[idx] = true
-		of += btc.Uint256IdxLen
 	}
 
 	var data_sent_so_far int
