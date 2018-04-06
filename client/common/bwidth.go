@@ -132,8 +132,8 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	ul_bytes_so_far += tosend
 	bw_mutex.Unlock()
 	if tosend > 0 {
-		// Set timeout to prevent thread from getting stuck if the other end does not read
-		con.SetWriteDeadline(time.Now().Add(10 * time.Millisecond))
+		// We used to have SetWriteDeadline() here, but it was causing problems because
+		// in case of a timeout returned "n" was always 0, even if some data got sent.
 		n, e = con.Write(buf[:tosend])
 		bw_mutex.Lock()
 		ul_bytes_so_far -= tosend
@@ -143,11 +143,6 @@ func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 			ul_bytes_priod += uint64(n)
 		}
 		bw_mutex.Unlock()
-		if e != nil {
-			if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
-				e = nil
-			}
-		}
 	} else {
 		n = -1
 	}
