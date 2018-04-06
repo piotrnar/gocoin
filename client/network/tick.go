@@ -784,6 +784,7 @@ func (c *OneConnection) Run() {
 
 	c.GetMPDone(nil)
 
+	c.Conn.SetWriteDeadline(time.Now()) // this should cause c.Conn.Write() to terminate
 	c.writing_thread_done.Wait()
 
 	c.Mutex.Lock()
