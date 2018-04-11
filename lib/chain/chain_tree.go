@@ -32,6 +32,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 	last := ch.LastBlock()
 	var total_size_to_process uint64
+	fmt.Println("Calculating size of blockchain overhead")
 	for n := end; n != nil && n != last; n = n.Parent {
 		l, _ := ch.Blocks.BlockLength(n.BlockHash)
 		total_size_to_process += uint64(l)
