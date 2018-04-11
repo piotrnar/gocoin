@@ -158,19 +158,22 @@ type one_tree_node struct {
 /********************************************************/
 
 func print_record(sl []byte) {
+	var dat_idx uint32
+	if (sl[0]&0x20) != 0 {
+		dat_idx = binary.LittleEndian.Uint32(sl[28:32])
+	}
 	bh := btc.NewSha2Hash(sl[56:136])
 	fmt.Println("Block", bh.String())
 	fmt.Println(" ... Height", binary.LittleEndian.Uint32(sl[36:40]),
 		" Flags", fmt.Sprintf("0x%02x", sl[0]),
 		" - ", binary.LittleEndian.Uint32(sl[48:52]), "bytes @",
-		binary.LittleEndian.Uint64(sl[40:48]), "in DAT")
+		binary.LittleEndian.Uint64(sl[40:48]), "in", dat_fname(dat_idx))
 	if (sl[0]&0x10) != 0 {
 		fmt.Println("     Uncompressed length:",
 			binary.LittleEndian.Uint32(sl[32:36]), "bytes")
 	}
 	if (sl[0]&0x20) != 0 {
-		fmt.Println("     Data file index:",
-			binary.LittleEndian.Uint32(sl[28:32]))
+		fmt.Println("     Data file index:", dat_idx)
 	}
 	hdr := sl[56:136]
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
@@ -305,7 +308,13 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 	return true
 }
 
-
+func calc_total_size(dat []byte) (res uint64) {
+	for off := 0; off < len(dat); off += 136 {
+		sl := new_sl(dat[off : off+136])
+		res += uint64(sl.DLen())
+	}
+	return
+}
 
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
@@ -869,12 +878,15 @@ func main() {
 	}
 
 	if fl_verify {
-		var prv_perc int = -1
+		var prv_perc uint64 = 0xffffffffff
 		var totlen uint64
 		var done sync.WaitGroup
 		var dat_file_open uint32 = 0xffffffff
 		var fdat *os.File
 		var cnt, cnt_nd, cnt_err int
+		var cur_progress uint64
+
+		total_data_size := calc_total_size(dat)
 
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
@@ -883,9 +895,13 @@ func main() {
 			if le == 0 {
 				continue
 			}
+			cur_progress += uint64(sl.DLen())
 
-			dp := int64(sl.DPos())
 			hei := uint(sl.Height())
+
+			if hei < fl_from {
+				continue
+			}
 
 			idx := sl.DatIdx()
 			if idx == 0xffffffff {
@@ -905,7 +921,7 @@ func main() {
 				}
 			}
 
-			perc := 1000 * off / len(dat)
+			perc := 1000 * cur_progress / total_data_size
 			if perc != prv_perc {
 				fmt.Printf("\rVerifying blocks data - %.1f%% @ %d / %dMB processed...",
 					float64(perc)/10.0, hei, totlen>>20)
@@ -916,6 +932,7 @@ func main() {
 				continue
 			}
 
+			dp := int64(sl.DPos())
 			fdat.Seek(dp, os.SEEK_SET)
 			n, _ := fdat.Read(buf[:le])
 			if n != le {
