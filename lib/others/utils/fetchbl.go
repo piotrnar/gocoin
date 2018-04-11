@@ -98,9 +98,9 @@ func IsBlockOK(raw []byte, hash *btc.Uint256) (bl *btc.Block) {
 func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 	var raw []byte
 
-	raw = GetBlockFromExplorer(hash)
+	raw = GetBlockFromBlockchainInfo(hash)
 	if bl = IsBlockOK(raw, hash); bl != nil {
-		//println("GetTxFromExplorer - OK")
+		//println("GetTxFromBlockchainInfo - OK")
 		return
 	}
 
@@ -110,9 +110,9 @@ func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 		return
 	}
 
-	raw = GetBlockFromBlockchainInfo(hash)
+	raw = GetBlockFromExplorer(hash)
 	if bl = IsBlockOK(raw, hash); bl != nil {
-		//println("GetTxFromBlockchainInfo - OK")
+		//println("GetTxFromExplorer - OK")
 		return
 	}
 
