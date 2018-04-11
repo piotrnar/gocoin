@@ -183,23 +183,23 @@ func print_record(sl []byte) {
 func verify_block(blk []byte, sl one_idx_rec, off int) {
 	bl, er := btc.NewBlock(blk)
 	if er != nil {
-		println("verify_block at off", off, er.Error())
+		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), er.Error())
 		return
 	}
 	if !bytes.Equal(bl.Hash.Hash[:], sl.Hash()) {
-		println("verify_block at off", off, "Header invalid")
+		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), "Header invalid")
 		return
 	}
 
 	er = bl.BuildTxList()
 	if er != nil {
-		println("verify_block at off", off, er.Error())
+		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), er.Error())
 		return
 	}
 
 	merk, _ := bl.GetMerkle()
 	if !bytes.Equal(bl.MerkleRoot(), merk) {
-		println("verify_block at off", off, "Payload invalid")
+		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), "Payload invalid / Merkle mismatch")
 		return
 	}
 }
