@@ -30,8 +30,6 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var trusted bool
 	var tot_bytes uint64
 
-	prv := sta
-
 	last := ch.LastBlock()
 	var total_size_to_process uint64
 	for n := end; n != nil && n != last; n = n.Parent {
@@ -40,6 +38,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	}
 	fmt.Println("Applying", total_size_to_process>>20, "MB of transactions data from", end.Height-last.Height, "blocks to UTXO.db")
 	sta := time.Now()
+	prv := sta
 	for !AbortNow && last != end {
 		cur := time.Now()
 		if cur.Sub(prv) >= 10 * time.Second {
