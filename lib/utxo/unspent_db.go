@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	UTXO_RECORDS_PREALLOC = 35e6
+	UTXO_RECORDS_PREALLOC = 25e6
 )
 
 var (
