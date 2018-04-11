@@ -34,11 +34,19 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	prv := sta
 
 	last := ch.LastBlock()
+	var total_size_to_process uint64
+	for n := end; n != nil && n != last; n = n.Parent {
+		l, _ := ch.Blocks.BlockLength(n.BlockHash)
+		total_size_to_process += uint64(l)
+	}
+	fmt.Println("Applying", total_size_to_process>>20, "MB of transactions data from", end.Height-last.Height, "blocks to UTXO.db")
 	for !AbortNow && last != end {
 		cur := time.Now()
 		if cur.Sub(prv) >= 10 * time.Second {
 			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
-			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s\n", last.Height, end.Height, mbps)
+			sec_left := int64(float64(total_size_to_process)/1e6 / mbps)
+			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s - %d:%02d:%02d left\n", last.Height,
+				end.Height, mbps, sec_left/3600, (sec_left/60)%60, sec_left%60)
 			prv = cur
 		}
 
@@ -57,6 +65,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			panic("Db.BlockGet(): "+er.Error())
 		}
 		tot_bytes += uint64(len(crec.Data))
+		total_size_to_process -= uint64(len(crec.Data))
 
 		bl, er := btc.NewBlock(crec.Data)
 		if er != nil {
