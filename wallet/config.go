@@ -28,14 +28,12 @@ func parse_config() {
 	if cfgfn=="" {
 		cfgfn = "wallet.cfg"
 		fmt.Println("GOCOIN_WALLET_CONFIG not set")
-	} else {
-		fmt.Println("GOCOIN_WALLET_CONFIG=" + cfgfn)
 	}
-	fmt.Println("Using config file", cfgfn)
 	d, e := ioutil.ReadFile(cfgfn)
 	if e != nil {
 		fmt.Println(cfgfn, "not found")
 	} else {
+		fmt.Println("Using config file", cfgfn)
 		lines := strings.Split(string(d), "\n")
 		for i := range lines {
 			line := strings.Trim(lines[i], " \n\r\t")
