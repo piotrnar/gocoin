@@ -58,12 +58,6 @@ func host_init() {
 		}
 	}()
 
-	if check_if_convert_needed(common.GocoinHomeDir) {
-		fmt.Println("You will no longer need the folder", common.GocoinHomeDir+"unspent4", "(delete it to recover space)")
-		fmt.Println("Start the client again to continue.")
-		sys.UnlockDatabaseDir()
-		os.Exit(0)
-	}
 	if chain.AbortNow {
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
