@@ -27,6 +27,9 @@ func parse_config() {
 	cfgfn := os.Getenv("GOCOIN_WALLET_CONFIG")
 	if cfgfn=="" {
 		cfgfn = "wallet.cfg"
+		fmt.Println("GOCOIN_WALLET_CONFIG not set")
+	} else {
+		fmt.Println("GOCOIN_WALLET_CONFIG=" + cfgfn)
 	}
 	fmt.Println("Using config file", cfgfn)
 	d, e := ioutil.ReadFile(cfgfn)
