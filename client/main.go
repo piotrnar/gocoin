@@ -498,6 +498,7 @@ func main() {
 		}
 
 		common.BlockChain.Unspent.HurryUp()
+		wallet.UpdateMapSizes()
 		network.NetCloseAll()
 	}
 
