@@ -2,7 +2,6 @@ package network
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -27,27 +26,34 @@ var (
 	GetMPInProgressTicket = make(chan bool, 1)
 )
 
+func (c *OneConnection) ExpireBlocksToGet(now *time.Time, curr_ping_cnt uint64) {
+	MutexRcv.Lock()
+	for k, v := range c.GetBlockInProgress {
+		if curr_ping_cnt > v.SentAtPingCnt {
+			common.CountSafe("BlockInprogNotfound")
+			c.counters["BlockTotFound"]++
+		} else if now != nil && now.After(v.start.Add(5 * time.Minute)) {
+			common.CountSafe("BlockInprogTimeout")
+			c.counters["BlockTimeout"]++
+		} else {
+			continue
+		}
+		c.X.BlocksExpired++
+		delete(c.GetBlockInProgress, k)
+		if bip, ok := BlocksToGet[k]; ok {
+			bip.InProgress--
+		}
+	}
+	MutexRcv.Unlock()
+}
+
 // Call this once a minute
 func (c *OneConnection) Maintanence(now time.Time) {
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
-	MutexRcv.Lock()
-	for k, v := range c.GetBlockInProgress {
-		if now.After(v.start.Add(5 * time.Minute)) {
-			delete(c.GetBlockInProgress, k)
-			common.CountSafe("BlockInprogTimeout")
-			c.counters["BlockTimeout"]++
-			//println(c.ConnID, "GetBlockInProgress timeout")
-			if bip, ok := BlocksToGet[k]; ok {
-				bip.InProgress--
-				continue
-			}
-			break
-		}
-	}
-	MutexRcv.Unlock()
+	c.ExpireBlocksToGet(&now, 0)
 
 	// Expire BlocksReceived after two days
 	if len(c.blocksreceived) > 0 {
@@ -700,13 +706,7 @@ func (c *OneConnection) Run() {
 			c.SendRawMsg("pong", re)
 
 		case "pong":
-			if c.PingInProgress == nil {
-				common.CountSafe("PongUnexpected")
-			} else if bytes.Equal(cmd.pl, c.PingInProgress) {
-				c.HandlePong()
-			} else {
-				common.CountSafe("PongMismatch")
-			}
+			c.HandlePong(cmd.pl)
 
 		case "getheaders":
 			c.GetHeaders(cmd.pl)

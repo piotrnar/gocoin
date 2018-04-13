@@ -285,9 +285,15 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	}
 
 	c.Mutex.Lock()
+	if c.X.BlocksExpired > 0 { // Do not fetch blocks from nodes that had not given us some in the past
+		c.Mutex.Unlock()
+		c.IncCnt("FetchHasBlocksExpired", 1)
+		return
+	}
 	cbip := len(c.GetBlockInProgress)
 	c.Mutex.Unlock()
-	if cbip>=MAX_PEERS_BLOCKS_IN_PROGRESS {
+
+	if cbip >= MAX_PEERS_BLOCKS_IN_PROGRESS {
 		c.IncCnt("FetchMaxCountInProgress", 1)
 		// wake up in a few seconds, maybe some blocks will complete by then
 		c.nextGetData = time.Now().Add(1*time.Second)
@@ -379,7 +385,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 		c.Mutex.Lock()
 		c.GetBlockInProgress[lowest_found.BlockHash.BIdx()] =
-			&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now()}
+			&oneBlockDl{hash:lowest_found.BlockHash, start:time.Now(), SentAtPingCnt:c.X.PingSentCnt}
 		cbip = len(c.GetBlockInProgress)
 		c.Mutex.Unlock()
 

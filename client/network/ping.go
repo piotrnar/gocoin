@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"os"
 	"fmt"
 	"time"
@@ -15,7 +16,17 @@ const (
 )
 
 
-func (c *OneConnection) HandlePong() {
+func (c *OneConnection) HandlePong(pl []byte) {
+	if pl != nil {
+		if !bytes.Equal(pl, c.PingInProgress) {
+			common.CountSafe("PongMismatch")
+			return
+		}
+		common.CountSafe("PongOK")
+		c.ExpireBlocksToGet(nil, c.X.PingSentCnt)
+	} else {
+		common.CountSafe("PongTimeout")
+	}
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
 	if ms==0 {
 		//println(c.ConnID, "Ping returned after 0ms")
@@ -210,11 +221,11 @@ func (c *OneConnection) TryPing() bool {
 		return false // not yet...
 	}
 
-	if c.PingInProgress!=nil {
-		common.CountSafe("PingTimeout")
-		c.HandlePong()  // this will set PingInProgress to nil
+	if c.PingInProgress != nil {
+		c.HandlePong(nil)  // this will set PingInProgress to nil
 	}
 
+	c.X.PingSentCnt++
 	c.PingInProgress = make([]byte, 8)
 	rand.Read(c.PingInProgress[:])
 	c.SendRawMsg("ping", c.PingInProgress)

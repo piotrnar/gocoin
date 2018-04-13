@@ -124,6 +124,9 @@ type ConnectionStatus struct {
 	AuthAckGot bool
 
 	LastMinFeePerKByte uint64
+
+	PingSentCnt uint64
+	BlocksExpired uint64
 }
 
 type ConnInfo struct {
@@ -218,6 +221,7 @@ type oneBlockDl struct {
 	hash *btc.Uint256
 	start time.Time
 	col *CmpctBlockCollector
+	SentAtPingCnt uint64
 }
 
 
