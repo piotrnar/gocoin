@@ -112,7 +112,7 @@ func net_conn(par string) {
 
 func net_stats(par string) {
 	if par=="bw" {
-		common.PrintStats()
+		common.PrintBWStats()
 		return
 	} else if par!="" {
 		node_info(par)
@@ -175,7 +175,7 @@ func net_stats(par string) {
 
 	fmt.Println("GetMPInProgress:", len(network.GetMPInProgressTicket) != 0)
 
-	common.PrintStats()
+	common.PrintBWStats()
 }
 
 

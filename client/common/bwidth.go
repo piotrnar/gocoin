@@ -169,7 +169,7 @@ func GetAvgBW(arr []uint64, idx uint16, cnt int) uint64 {
 	return sum / uint64(cnt)
 }
 
-func PrintStats() {
+func PrintBWStats() {
 	bw_mutex.Lock()
 	TickRecv()
 	TickSent()

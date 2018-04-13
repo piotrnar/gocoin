@@ -128,60 +128,61 @@ func show_info(par string) {
 	fmt.Println("main.go last seen in line:", common.BusyIn())
 
 	network.MutexRcv.Lock()
-	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
 	discarded := len(network.DiscardedBlocks)
 	cached := network.CachedBlocksLen.Get()
 	b2g_len := len(network.BlocksToGet)
 	b2g_idx_len := len(network.IndexToBlocksToGet)
-	lb2g := network.LowestIndexToBlocksToGet
+	network.MutexRcv.Unlock()
+
+	fmt.Printf("Gocoin: %s,  Synced: %t,  Uptime %s,  Peers: %d,  ECDSAs: %d\n",
+		gocoin.Version, common.GetBool(&common.BlockChainSynchronized),
+		time.Now().Sub(common.StartTime).String(), btc.EcdsaVerifyCnt(), peersdb.PeerDB.Count())
+
+	// Memory used
+	al, sy := sys.MemUsed()
+	fmt.Printf("Heap_used: %d MB,  System_used: %d MB,  UTXO-X-mem: %d MB in %d recs,  Saving: %t\n", al>>20, sy>>20,
+		utxo.ExtraMemoryConsumed()>>20, utxo.ExtraMemoryAllocCnt(), common.BlockChain.Unspent.WritingInProgress.Get())
+
+	network.MutexRcv.Lock()
+	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
 	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
-	fmt.Printf("Timestamp: %s,  Diff: %.0f,  Got: %s ago,  ToGetFrom: %d\n",
+	fmt.Printf(" Time: %s (~%s),  Diff: %.0f,  Rcvd: %s ago\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String(),
-		lb2g)
-	fmt.Print("Median Time: ", time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("06/01/02 15:04:05"), ", ")
+		time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("15:04:05"),
+		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("BlkNetQue:%d, Conns:%d, Peers:%d, B2G:%d/%d, SyncDone:%t\n", len(network.NetBlocks),
-		len(network.OpenCons), peersdb.PeerDB.Count(), b2g_len, b2g_idx_len,
-		common.GetBool(&common.BlockChainSynchronized))
+	fmt.Printf("Blocks Queued: %d,  Cached: %d,  Discarded: %d,  To Get: %d/%d\n", len(network.NetBlocks),
+		cached, discarded, b2g_len, b2g_idx_len)
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	fmt.Printf("Transactions  In MemPool:%d (%dMB),  Rejected:%d (%dMB),  Pending:%d/%d\n",
-		len(network.TransactionsToSend), network.TransactionsToSendSize>>20,
+	var sw_cnt, sw_bts uint64
+	for _, v := range network.TransactionsToSend {
+		if v.SegWit != nil {
+			sw_cnt++
+			sw_bts += uint64(v.Size)
+		}
+	}
+	fmt.Printf("Txs in mem pool: %d (%dMB),  SegWit: %d (%dMB),  Rejected: %d (%dMB),  Pending:%d/%d\n",
+		len(network.TransactionsToSend), network.TransactionsToSendSize>>20, sw_cnt, sw_bts>>20,
 		len(network.TransactionsRejected), network.TransactionsRejectedSize>>20,
 		len(network.TransactionsPending), len(network.NetTxs))
-	fmt.Printf("WaitingForInputs:%d (%d KB),  SpentOutputs:%d,  Hashrate:%s,  AverageFee:%.1f SpB\n",
-		len(network.WaitingForInputs), network.WaitingForInputsSize, len(network.SpentOutputs),
-		common.HashrateToString(usif.GetNetworkHashRateNum()), common.GetAverageFee())
+	fmt.Printf(" WaitingForInputs: %d (%d KB),  SpentOutputs: %d,  AverageFee: %.1f SpB\n",
+		len(network.WaitingForInputs), network.WaitingForInputsSize, len(network.SpentOutputs), common.GetAverageFee())
 	network.TxMutex.Unlock()
-
-	common.PrintStats()
-
-	// Memory used
-	al, sy := sys.MemUsed()
-	fmt.Println("Heap size:", al>>20, "MB    Sys mem used:", sy>>20, "MB    QDB extra mem:",
-		utxo.ExtraMemoryConsumed()>>20, "MB in", utxo.ExtraMemoryAllocCnt(), "recs")
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
 	usif.BlockFeesMutex.Lock()
 	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Now().Sub(gs.LastGC).String(),
 		"  NumGC:", gs.NumGC,
-		"  PauseTotal:", gs.PauseTotal.String(),
-		"  BlkFeesCnt:", len(usif.BlockFees))
+		"  PauseTotal:", gs.PauseTotal.String())
 	usif.BlockFeesMutex.Unlock()
-
-	fmt.Println("Gocoin:", gocoin.Version,
-		"  Uptime:", time.Now().Sub(common.StartTime).String(),
-		"  ECDSA cnt:", btc.EcdsaVerifyCnt(),
-		"  cach:", cached, "  dis:", discarded, "  Saving:",
-		common.BlockChain.Unspent.WritingInProgress.Get())
 }
 
 func show_counters(par string) {
