@@ -98,22 +98,19 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var le uint64
 	var u64, tot_recs uint64
 	var info string
-	var try_old bool
+	var rd *bufio.Reader
+	var of *os.File
 
-	of, er := os.Open(db.dir_utxo + "UTXO.db")
-	if er != nil {
-		of, er = os.Open(db.dir_utxo + "UTXO.old")
-		if er != nil {
-			db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
-			return
-		}
-	} else {
-		try_old = true
-	}
-
-	rd := bufio.NewReaderSize(of, 0x100000)
+	fname := "UTXO.db"
 
 redo:
+	of, er := os.Open(db.dir_utxo + fname)
+	if er != nil {
+		goto fatal_error
+	}
+
+	rd = bufio.NewReaderSize(of, 0x100000)
+
 	er = binary.Read(rd, binary.LittleEndian, &u64)
 	if er != nil {
 		goto fatal_error
@@ -135,7 +132,7 @@ redo:
 	perc = 0
 
 	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
-	info = fmt.Sprint("\rLoading ", u64, " transactions from UTXO.db - ")
+	info = fmt.Sprint("\rLoading ", u64, " transactions from ", fname, " - ")
 
 	for tot_recs = 0; tot_recs < u64; tot_recs++ {
 		if opts.AbortNow != nil && *opts.AbortNow {
@@ -177,22 +174,19 @@ redo:
 	return
 
 fatal_error:
+	if of != nil {
+		of.Close()
+	}
 
-	of.Close()
-	println("Fatal error when loading UTXO.db:", er.Error(), tot_recs, u64)
-	if try_old {
-		of, er = os.Open(db.dir_utxo + "UTXO.old")
-		if er == nil {
-			println("Trying UTXO.old instead...")
-			try_old = false
-			tot_recs = 0
-			rd = bufio.NewReaderSize(of, 0x100000)
-			goto redo
-		}
+	println(er.Error())
+	if fname != "UTXO.old" {
+		fname = "UTXO.old"
+		goto redo
 	}
-	if opts.AbortNow != nil {
-		*opts.AbortNow = true
-	}
+	db.LastBlockHeight = 0
+	db.LastBlockHash = nil
+	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
+
 	return
 }
 
