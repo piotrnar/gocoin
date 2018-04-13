@@ -1,5 +1,6 @@
 1.9.5:
-* Removed automatic conversion of old format unspent4 to the new UTXO.db
+* Client: Removed automatic conversion of old format unspent4 to the new UTXO.db
+* Client: If pong comes out but a block is still pending, timeout it and dont ask this peer for blocks again.
 
 1.9.4 - 2018-04-11
 NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 already generated, but have problems spending from it now.
