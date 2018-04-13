@@ -5,7 +5,6 @@ Lib:
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
 
 Client:
-* Figure out a better way of deciding on "BlockTimeout"
 * Force to create UTXO.db file once for awhile (when bootstraping)
 * Review and update WebUI's Help page
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
