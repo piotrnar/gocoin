@@ -98,6 +98,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	var le uint64
 	var u64, tot_recs uint64
 	var info string
+	var try_old bool
 
 	of, er := os.Open(db.dir_utxo + "UTXO.db")
 	if er != nil {
@@ -106,12 +107,13 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 			db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
 			return
 		}
+	} else {
+		try_old = true
 	}
-
-	defer of.Close()
 
 	rd := bufio.NewReaderSize(of, 0x100000)
 
+redo:
 	er = binary.Read(rd, binary.LittleEndian, &u64)
 	if er != nil {
 		goto fatal_error
@@ -130,11 +132,12 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 
 	//fmt.Println("Last block height", db.LastBlockHeight, "   Number of records", u64)
 	cnt_dwn_from = int(u64 / 100)
+	perc = 0
 
 	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
 	info = fmt.Sprint("\rLoading ", u64, " transactions from UTXO.db - ")
 
-	for tot_recs < u64 {
+	for tot_recs = 0; tot_recs < u64; tot_recs++ {
 		if opts.AbortNow != nil && *opts.AbortNow {
 			break
 		}
@@ -157,7 +160,6 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 		// we don't lock RWMutex here as this code is only used during init phase, when no other routines are running
 		db.HashMap[k] = b
 
-		tot_recs++
 		if cnt_dwn == 0 {
 			fmt.Print(info, perc, "% complete ... ")
 			perc++
@@ -166,6 +168,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 			cnt_dwn--
 		}
 	}
+	of.Close()
 
 	fmt.Print("\r                                                              \r")
 
@@ -174,7 +177,19 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	return
 
 fatal_error:
-	println("Fatal error when opening UTXO.db:", er.Error(), tot_recs, u64)
+
+	of.Close()
+	println("Fatal error when loading UTXO.db:", er.Error(), tot_recs, u64)
+	if try_old {
+		of, er = os.Open(db.dir_utxo + "UTXO.old")
+		if er == nil {
+			println("Trying UTXO.old instead...")
+			try_old = false
+			tot_recs = 0
+			rd = bufio.NewReaderSize(of, 0x100000)
+			goto redo
+		}
+	}
 	if opts.AbortNow != nil {
 		*opts.AbortNow = true
 	}
