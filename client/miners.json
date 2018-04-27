@@ -1,6 +1,6 @@
 [
 ["AntPool", "AntPool", ""],
-["BTC.TOP", "/BTC.TOP/", ""],
+["BTC.TOP", "BTC.TOP/", ""],
 ["BTC.COM", "/BTC.COM/", ""],
 ["BTC.COM", "", "3EhLZarJUNSfV6TWMZY1Nh5mi3FMsdHa5U"],
 ["ViaBTC", "/ViaBTC/", ""],
@@ -22,5 +22,8 @@
 ["ConnectBTC", "/ConnectBTC - Home for Miners/", ""],
 ["BATPOOL", "/BATPOOL/", ""],
 ["58coin", "/58coin.com/", ""],
+["DPOOL", "/DPOOL.TOP/", ""],
+["canoepool", "/canoepool/", ""],
+["Helix", "/Helix/", ""],
 ["P2Pool", "_p2pool_", ""]
 ]
