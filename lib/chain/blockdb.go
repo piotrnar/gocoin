@@ -505,7 +505,7 @@ func (db *BlockDB) BlockGet(hash *btc.Uint256) (bl []byte, trusted bool, e error
 	return
 }
 
-func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
+func (db *BlockDB) BlockLength(hash *btc.Uint256, decode_if_needed bool) (length uint32, e error) {
 	db.mutex.Lock()
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
@@ -520,7 +520,7 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256) (length uint32, e error) {
 		return
 	}
 
-	if !rec.compressed {
+	if !rec.compressed || !decode_if_needed {
 		length = rec.blen
 		return
 	}
