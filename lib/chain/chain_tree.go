@@ -34,7 +34,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	var total_size_to_process uint64
 	fmt.Print("Calculating size of blockchain overhead...")
 	for n := end; n != nil && n != last; n = n.Parent {
-		l, _ := ch.Blocks.BlockLength(n.BlockHash)
+		l, _ := ch.Blocks.BlockLength(n.BlockHash, false)
 		total_size_to_process += uint64(l)
 	}
 	fmt.Println("\rApplying", total_size_to_process>>20, "MB of transactions data from", end.Height-last.Height, "blocks to UTXO.db")
@@ -65,7 +65,8 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			panic("Db.BlockGet(): "+er.Error())
 		}
 		tot_bytes += uint64(len(crec.Data))
-		total_size_to_process -= uint64(len(crec.Data))
+		l, _ := ch.Blocks.BlockLength(nxt.BlockHash, false)
+		total_size_to_process -= uint64(l)
 
 		bl, er := btc.NewBlock(crec.Data)
 		if er != nil {
