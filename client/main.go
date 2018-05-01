@@ -285,6 +285,10 @@ func main() {
 
 	common.InitConfig()
 
+	if common.FLAG.SaveConfig {
+		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the client properly (do not kill it!)")
+	}
+
 	if common.FLAG.VolatileUTXO {
 		fmt.Println("WARNING! Using UTXO database in a volatile mode. Make sure to close the client properly (do not kill it!)")
 	}
