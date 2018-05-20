@@ -85,6 +85,18 @@ func (db *BlockDB)readOneBlock() (res []byte, e error) {
 	return
 }
 
+func (db *BlockDB) GetBlockByFileNumber(fileNumber uint32) ([]byte, error) {
+	db.f.Close()
+	f, e := os.Open(idx2fname(db.dir, fileNumber))
+	if e != nil {
+		return nil, e
+	}
+	db.f = f
+	db.currfileidx = fileNumber
+	block, err := db.readOneBlock()
+	return block, err
+}
+
 func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 	if db.f == nil {
 		println("DB file not open - this should never happen")
