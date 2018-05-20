@@ -9,6 +9,7 @@ import (
 	"os"
 	"bytes"
 	"errors"
+	"io"
 )
 
 
@@ -78,7 +79,7 @@ func (db *BlockDB)readOneBlock() (res []byte, e error) {
 	fpos, _ := db.f.Seek(0, 1)
 	res, e = readBlockFromFile(db.f, db.magic[:])
 	if e != nil {
-		db.f.Seek(int64(fpos), os.SEEK_SET) // restore the original position
+		db.f.Seek(int64(fpos), io.SeekStart) // restore the original position
 		return
 	}
 	return
