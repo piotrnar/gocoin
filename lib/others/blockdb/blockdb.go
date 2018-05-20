@@ -9,6 +9,7 @@ import (
 	"os"
 	"bytes"
 	"errors"
+	"io"
 )
 
 
@@ -78,10 +79,22 @@ func (db *BlockDB)readOneBlock() (res []byte, e error) {
 	fpos, _ := db.f.Seek(0, 1)
 	res, e = readBlockFromFile(db.f, db.magic[:])
 	if e != nil {
-		db.f.Seek(int64(fpos), os.SEEK_SET) // restore the original position
+		db.f.Seek(int64(fpos), io.SeekStart) // restore the original position
 		return
 	}
 	return
+}
+
+func (db *BlockDB) GetBlockByFileNumber(fileNumber uint32) ([]byte, error) {
+	db.f.Close()
+	f, e := os.Open(idx2fname(db.dir, fileNumber))
+	if e != nil {
+		return nil, e
+	}
+	db.f = f
+	db.currfileidx = fileNumber
+	block, err := db.readOneBlock()
+	return block, err
 }
 
 func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
@@ -104,7 +117,7 @@ func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 
 func lsb2uint(lt []byte) (res uint64) {
 	for i:=0; i<len(lt); i++ {
-		res |= (uint64(lt[i]) << uint(i*8))
+		res |= uint64(lt[i]) << uint(i*8)
 	}
 	return
 }
