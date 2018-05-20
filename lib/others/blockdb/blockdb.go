@@ -104,7 +104,7 @@ func (db *BlockDB) FetchNextBlock() (bl []byte, e error) {
 
 func lsb2uint(lt []byte) (res uint64) {
 	for i:=0; i<len(lt); i++ {
-		res |= (uint64(lt[i]) << uint(i*8))
+		res |= uint64(lt[i]) << uint(i*8)
 	}
 	return
 }
