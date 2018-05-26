@@ -2,6 +2,8 @@ package webui
 
 import (
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin"
@@ -9,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,6 +23,11 @@ func ipchecker(r *http.Request) bool {
 	if common.NetworkClosed.Get() || usif.Exit_now.Get() {
 		return false
 	}
+
+	if r.TLS != nil {
+		return true
+	}
+
 	var a, b, c, d uint32
 	n, _ := fmt.Sscanf(r.RemoteAddr, "%d.%d.%d.%d", &a, &b, &c, &d)
 	if n != 4 {
@@ -204,5 +212,56 @@ func ServerThread(iface string) {
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
+	go start_ssl_server()
 	http.ListenAndServe(iface, nil)
 }
+
+func start_ssl_server() {
+	fi, _ := os.Stat("ca.key")
+	if fi == nil || fi.Size() < 100 {
+		println("ca.key not found")
+		return
+	}
+
+	// try to start SSL server...
+	dat, err := ioutil.ReadFile("ca.crt")
+	if err != nil {
+		println("ca.crt not found")
+		// no "ca.crt" file - do not start SSL server
+		return
+	}
+
+	server := &http.Server{
+		Addr: ":4433",
+		TLSConfig: &tls.Config{
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		},
+	}
+	server.TLSConfig.ClientCAs = x509.NewCertPool()
+	ok := server.TLSConfig.ClientCAs.AppendCertsFromPEM(dat)
+	if !ok {
+		println("AppendCertsFromPEM error")
+		return
+	}
+
+	println("Starting SSL server at port 4433...")
+	err = server.ListenAndServeTLS("ca.crt", "ca.key")
+	if err != nil {
+		println(err.Error())
+	}
+}
+
+/*
+#1# Generate ca.key
+> openssl genrsa -out ca.key 4096
+
+#2# Generate ca.crt
+> openssl req -new -x509 -days 365 -key ca.key -out ca.crt
+
+#3# Generate client.p12 (to be inported into the client browser)
+> openssl genrsa -out client.key 4096
+> openssl req -new -key client.key -out client.csr
+> openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt
+> openssl pkcs12 -export -clcerts -in client.crt -inkey client.key -out client.p12
+
+*/
