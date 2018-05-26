@@ -26,6 +26,7 @@ func ipchecker(r *http.Request) bool {
 	}
 
 	if r.TLS != nil {
+		r.ParseForm()
 		return true
 	}
 
