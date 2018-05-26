@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"log"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
@@ -216,6 +217,13 @@ func ServerThread(iface string) {
 	http.ListenAndServe(iface, nil)
 }
 
+type null_logger struct {
+}
+
+func (nl null_logger) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
 func start_ssl_server() {
 	fi, _ := os.Stat("ca.key")
 	if fi == nil || fi.Size() < 100 {
@@ -236,6 +244,7 @@ func start_ssl_server() {
 		TLSConfig: &tls.Config{
 			ClientAuth: tls.RequireAndVerifyClientCert,
 		},
+		ErrorLog: log.New(new(null_logger), "", 0),
 	}
 	server.TLSConfig.ClientCAs = x509.NewCertPool()
 	ok := server.TLSConfig.ClientCAs.AppendCertsFromPEM(dat)
