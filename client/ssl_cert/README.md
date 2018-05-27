@@ -3,18 +3,11 @@ In order to have a TLS secured access to your node's WebUI, place here the follo
 * server.key
 * server.crt
 
-### Generate ca.key
+### Generate ca.key and ca.crt
 > openssl genrsa -out ca.key 4096
-
-### Generate ca.crt
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
 
 Import `ca.crt` into your broweser's Trusted Root CA list and place its copy in the current folder.
-
-### Generate server.key
-> openssl genrsa -out server.key 2048
-
-Place `server.key` in current folder.
 
 ### Create v3.ext file
 
@@ -26,15 +19,16 @@ Place `server.key` in current folder.
 	[alt_names]
 	DNS.1 = domain.com
 
-Replace domain.com with your node's hostname or IP.
+Replace *domain.com* with your node's hostname or IP.
 
-### Generate server.crt
+### Generate server.key and server.crt
+> openssl genrsa -out server.key 2048
 > openssl req -new -key server.key -out server.csr
-> openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key -set_serial 02 -out server.crt -sha256 -extfile v3.ext
 
-When asked for *Common Name* give your node's hostname or IP.
+When asked for **Common Name** give your node's hostname or IP (same value as **DNS.1** in `v3.ext` file)
+> openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out server.crt -sha256 -extfile v3.ext
 
-When finished, place `server.crt` in the current folder.
+When finished, place `server.key` and `server.crt` in the current folder.
 
 ### Generate client.p12
 > openssl genrsa -out client.key 2048
