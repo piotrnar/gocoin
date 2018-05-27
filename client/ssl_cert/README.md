@@ -56,7 +56,7 @@ When finished, place `server.key` and `server.crt` in the current folder.
 Import `client.p12` into your browser's Personal certificates.
 
 
-### Security pracautions
+# Security pracautions
 
 In order to assure the security of the WebUI, make sure to keep the `ca.key` and all the `client.*` files secret.
 Whoever gets access to any of these files, will be able to access your node's WebUI.
