@@ -23,6 +23,7 @@ Replace *domain.com* with your node's hostname or IP.
 
 ### Generate server.key and server.crt
 > openssl genrsa -out server.key 2048
+
 > openssl req -new -key server.key -out server.csr
 
 When asked for **Common Name** give your node's hostname or IP (same value as **DNS.1** in `v3.ext` file)
@@ -32,8 +33,11 @@ When finished, place `server.key` and `server.crt` in the current folder.
 
 ### Generate client.p12
 > openssl genrsa -out client.key 2048
+
 > openssl req -new -key client.key -out client.csr
+
 > openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt
+
 > openssl pkcs12 -export -clcerts -in client.crt -inkey client.key -out client.p12
 
 Import `client.p12` into your browser's Personal certificates.
