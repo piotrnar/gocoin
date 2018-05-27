@@ -14,6 +14,10 @@ In order to access it you will need `client.p12` certificate imported into your 
 Then use URL like **https://your.hostname.or.ip:4433/**
 
 
+# How to generate needed files
+
+Use `openssl` command to generate all the required files.
+
 ### Generate ca.key and ca.crt
 > openssl genrsa -out ca.key 4096
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
