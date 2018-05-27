@@ -1,4 +1,4 @@
-Place here the following files:
+In order to have a TLS secured access to your node's WebUI, place here the following files:
 * ca.crt
 * server.key
 * server.crt
@@ -43,3 +43,9 @@ When finished, place `server.crt` in the current folder.
 > openssl pkcs12 -export -clcerts -in client.crt -inkey client.key -out client.p12
 
 Import `client.p12` into your browser's Personal certificates.
+
+
+### Security
+
+In order to assure the security of the WebUI, make sure to keep the `ca.key` and all the `client.*` files secret.
+Whoever gets access to any of these files, will be able to access your node's WebUI.
