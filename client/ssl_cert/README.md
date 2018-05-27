@@ -3,6 +3,12 @@ In order to have a TLS secured access to your node's WebUI, place here the follo
 * server.key
 * server.crt
 
+If all the three files are in place, SSL server will be started at port 4433, in parallell to the regular HTTP server.
+The SSL server will accept connections from any IP address, regardless of the WebUI setting in `gocoin.conf` file.
+In order to access it you will need `client.p12` certificate imported into your browser's Personal certificates.
+Then use URL like **https://your.hostname.or.ip:4433/**
+
+
 ### Generate ca.key and ca.crt
 > openssl genrsa -out ca.key 4096
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
