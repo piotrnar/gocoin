@@ -7,7 +7,7 @@ In order to have a TLS secured access to your node's WebUI, place here the follo
 > openssl genrsa -out ca.key 4096
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
 
-Import `ca.crt` into your broweser's Trusted Root CA list and place its copy in the current folder.
+Import `ca.crt` into your browser's Trusted Root CA list and place its copy in the current folder.
 
 ### Create v3.ext file
 Create file named `v3.ext` with the following content:
