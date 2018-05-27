@@ -9,12 +9,12 @@ Place here the following files:
 ### Generate ca.crt
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
 
-Import `ca.crt` into your broweser's Trusted Root CA list and place its copy in this (`ssl_cert/`) folder.
+Import `ca.crt` into your broweser's Trusted Root CA list and place its copy in the current folder.
 
 ### Generate server.key
 > openssl genrsa -out server.key 2048
 
-Place `server.key` in this (`ssl_cert/`) folder.
+Place `server.key` in current folder.
 
 ### Create v3.ext file
 
@@ -34,7 +34,7 @@ Replace domain.com with your node's hostname or IP.
 
 When asked for *Common Name* give your node's hostname or IP.
 
-When finished, place `server.crt` in this (`ssl_cert/`) folder.
+When finished, place `server.crt` in the current folder.
 
 ### Generate client.p12
 > openssl genrsa -out client.key 2048
