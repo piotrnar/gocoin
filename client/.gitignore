@@ -4,3 +4,5 @@ client
 gocoin*.conf
 .stealth
 *.bat
+ssl_cert/*.crt
+ssl_cert/*.key
