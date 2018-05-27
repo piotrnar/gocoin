@@ -11,6 +11,7 @@ Import `ca.crt` into your browser's Trusted Root CA list and place its copy in t
 
 ### Create v3.ext file
 Create file named `v3.ext` with the following content:
+
 	authorityKeyIdentifier=keyid,issuer
 	basicConstraints=CA:FALSE
 	keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
