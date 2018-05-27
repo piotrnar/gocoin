@@ -1,4 +1,6 @@
-In order to have a TLS secured access to your node's WebUI, place here the following files:
+### How to use SSL secured WebUI
+
+In order to have a SSL secured access to your node's WebUI, place here the following files:
 * ca.crt
 * server.key
 * server.crt
