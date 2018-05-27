@@ -10,7 +10,7 @@ In order to have a TLS secured access to your node's WebUI, place here the follo
 Import `ca.crt` into your broweser's Trusted Root CA list and place its copy in the current folder.
 
 ### Create v3.ext file
-
+Create file named `v3.ext` with the following content:
 	authorityKeyIdentifier=keyid,issuer
 	basicConstraints=CA:FALSE
 	keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
