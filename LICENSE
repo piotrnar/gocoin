@@ -1,4 +1,4 @@
-Copyright (c) 2013-2016 Piotr Narewski
+Copyright (c) 2013-2018 Piotr Narewski
 -----------------------
 
 
@@ -15,13 +15,14 @@ free, without a need for an explicit permission.
 
 COMMERCIAL USE
 -----------------------
-If you want to use this software in a commercial application you
-need to acquire an explicit license. The price depends on a type
-of your business and a kind of the license you need.
+Commercial companies (businesses) are allowed to use, develop
+and distribute this software for research purposes, without an
+explicit permission.
 
-If you just want to try this software, ask for a free temporary
-license.
-
+However, selling any software that originates from this code
+base or products based on the infrastructure that such a
+software would be a part of, is forbidden before acquiring an
+explicit written license.
 
 -----------------------
 piotr@gocoin.pl
