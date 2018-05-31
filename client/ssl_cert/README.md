@@ -18,11 +18,20 @@ Then use URL like **https://your.hostname.or.ip:4433/**
 
 Use `openssl` command to generate all the required files.
 
-### Generate ca.key and ca.crt
+## Generate ca.key and ca.crt
 > openssl genrsa -out ca.key 4096
 > openssl req -new -x509 -days 365 -key ca.key -out ca.crt
 
-Import `ca.crt` into your browser's Trusted Root CA list and place its copy in the current folder.
+Place `ca.crt` in the current folder.
+
+If you plan to use self-signed SSL certificate, additionally import `ca.crt` into your browser's Trusted Root CA list.
+
+## Generate server.key and server.crt
+
+You can use one of the CA vendors to acquire SSL certificate for your WebUI hostname.
+
+Otherwise, the method below guides you through creating a self-signed SSL certificate.
+Using self-signed certificate, make sure to have `ca.crt` imported into your browser's Trusted Root CA list, to avoid security alerts.
 
 ### Create v3.ext file
 Create file named `v3.ext` with the following content:
@@ -45,9 +54,11 @@ When asked for **Common Name** give your node's hostname or IP (same value as **
 
 	openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out server.crt -sha256 -extfile v3.ext
 
-When finished, place `server.key` and `server.crt` in the current folder.
+## Installing server.key and server.crt
 
-### Generate client.p12
+Place `server.key` and `server.crt` in the current folder.
+
+## Generate client.p12
 	openssl genrsa -out client.key 2048
 	openssl req -new -key client.key -out client.csr
 	openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt
