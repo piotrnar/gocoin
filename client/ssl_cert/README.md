@@ -29,6 +29,8 @@ If you plan to use self-signed SSL certificate, additionally import `ca.crt` int
 ## Generate server.key and server.crt
 
 You can use one of the CA vendors to acquire SSL certificate for your WebUI hostname.
+Both the files are expected to be in the PEM format.
+`server.crt` may contain a chain of certificates.
 
 Otherwise, the method below guides you through creating a self-signed SSL certificate.
 Using self-signed certificate, make sure to have `ca.crt` imported into your browser's Trusted Root CA list, to avoid security alerts.
