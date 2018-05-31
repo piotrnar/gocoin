@@ -19,8 +19,8 @@ Then use URL like **https://your.hostname.or.ip:4433/**
 Use `openssl` command to generate all the required files.
 
 ## Generate ca.key and ca.crt
-> openssl genrsa -out ca.key 4096
-> openssl req -new -x509 -days 365 -key ca.key -out ca.crt
+	openssl genrsa -out ca.key 4096
+	openssl req -new -x509 -days 365 -key ca.key -out ca.crt
 
 Place `ca.crt` in the current folder.
 
