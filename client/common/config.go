@@ -166,7 +166,7 @@ func InitConfig() {
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
 
-	CFG.LastTrustedBlock = "0000000000000000001f6897d85c5c580308ba393da6b184d8e7de36fcb58a6e" // block #517986
+	CFG.LastTrustedBlock = "00000000000000000005beee8a689aef9d2cf2f2441aa7019b95fc31c976a3bb" // block #526461
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
