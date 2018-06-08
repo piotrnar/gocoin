@@ -316,6 +316,15 @@ func calc_total_size(dat []byte) (res uint64) {
 	return
 }
 
+func open_dat_file(idx uint32) (f *os.File, er error) {
+	f, er = os.Open(fl_dir+dat_fname(idx))
+	if er != nil {
+		f, er = os.Open(fl_dir+"oldat"+string(os.PathSeparator)+dat_fname(idx))
+	}
+	return
+}
+
+
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
@@ -1072,7 +1081,7 @@ func main() {
 		for off := 0; off < len(dat); off += 136 {
 			sl := new_sl(dat[off : off+136])
 			if bytes.Equal(sl.Hash(), bh.Hash[:]) {
-				f, er := os.Open(fl_dir+dat_fname(sl.DatIdx()))
+				f, er := open_dat_file(sl.DatIdx())
 				if er != nil {
 					println(er.Error())
 					return
