@@ -175,6 +175,7 @@ if (localStorage.getItem("new_block_beep")==="true") {
 
 document.addEventListener('DOMContentLoaded', function() {
 	beep_new_block.onclick = function(event) {
+		localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
 		event.stopPropagation()
 	}
 	refreshblock()
