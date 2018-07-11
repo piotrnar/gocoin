@@ -429,14 +429,21 @@ func (db *UnspentDB) Idle() bool {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
-	if db.DirtyDB.Get() && !db.WritingInProgress.Get() && db.LastBlockHeight-atomic.LoadUint32(&db.CurrentHeightOnDisk) > UTXO_SKIP_SAVE_BLOCKS {
-		db.WritingInProgress.Set()
-		db.writingDone.Add(1)
-		go db.save() // this one will call db.writingDone.Done()
-		return true
+	if db.DirtyDB.Get() && db.LastBlockHeight-atomic.LoadUint32(&db.CurrentHeightOnDisk) > UTXO_SKIP_SAVE_BLOCKS {
+		return db.Save()
 	}
 
 	return false
+}
+
+func (db *UnspentDB) Save() bool {
+	if db.WritingInProgress.Get() {
+		return false
+	}
+	db.WritingInProgress.Set()
+	db.writingDone.Add(1)
+	go db.save() // this one will call db.writingDone.Done()
+	return true
 }
 
 func (db *UnspentDB) HurryUp() {
@@ -448,9 +455,11 @@ func (db *UnspentDB) HurryUp() {
 
 // Flush the data and close all the files
 func (db *UnspentDB) Close() {
-	db.HurryUp()
 	db.volatimemode = false
-	db.Idle()
+	if db.DirtyDB.Get() {
+		db.HurryUp()
+		db.Save()
+	}
 	db.writingDone.Wait()
 	db.lastFileClosed.Wait()
 }
