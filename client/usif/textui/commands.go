@@ -10,8 +10,8 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -156,8 +157,9 @@ func show_info(par string) {
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
-	fmt.Printf("Blocks Queued: %d,  Cached: %d,  Discarded: %d,  To Get: %d/%d\n", len(network.NetBlocks),
-		cached, discarded, b2g_len, b2g_idx_len)
+	fmt.Printf("Blocks Queued: %d,  Cached: %d,  Discarded: %d,  To Get: %d/%d,  UTXO.db on disk: %d\n",
+		len(network.NetBlocks), cached, discarded, b2g_len, b2g_idx_len,
+		atomic.LoadUint32(&common.BlockChain.Unspent.CurrentHeightOnDisk))
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
@@ -286,13 +288,13 @@ func dump_block(s string) {
 		crec.Block, _ = btc.NewBlock(crec.Data)
 	}
 	/*
-	if crec.Block.NoWitnessData == nil {
-		crec.Block.BuildNoWitnessData()
-	}
-	if !bytes.Equal(crec.Data, crec.Block.NoWitnessData) {
-		ioutil.WriteFile(h.String()+".old", crec.Block.NoWitnessData, 0700)
-		fmt.Println("Old block saved")
-	}
+		if crec.Block.NoWitnessData == nil {
+			crec.Block.BuildNoWitnessData()
+		}
+		if !bytes.Equal(crec.Data, crec.Block.NoWitnessData) {
+			ioutil.WriteFile(h.String()+".old", crec.Block.NoWitnessData, 0700)
+			fmt.Println("Old block saved")
+		}
 	*/
 
 }
@@ -315,7 +317,7 @@ func set_ulmax(par string) {
 		common.SetUploadLimit(v << 10)
 	}
 	if common.UploadLimit() != 0 {
-		fmt.Printf("Current upload limit is %d KB/s\n", common.UploadLimit() >> 10)
+		fmt.Printf("Current upload limit is %d KB/s\n", common.UploadLimit()>>10)
 	} else {
 		fmt.Println("The upload speed is not limited")
 	}
@@ -327,7 +329,7 @@ func set_dlmax(par string) {
 		common.SetDownloadLimit(v << 10)
 	}
 	if common.DownloadLimit() != 0 {
-		fmt.Printf("Current download limit is %d KB/s\n", common.DownloadLimit() >> 10)
+		fmt.Printf("Current download limit is %d KB/s\n", common.DownloadLimit()>>10)
 	} else {
 		fmt.Println("The download speed is not limited")
 	}
