@@ -34,7 +34,6 @@ var (
 		Datadir        string
 		TextUI_Enabled bool
 		UserAgent      string
-		UTXOSaveSec    uint
 		LastTrustedBlock string
 
 		WebUI          struct {
@@ -104,6 +103,10 @@ var (
 			BlckExpireHours uint // zero for never
 			PingPeriodSec   uint // zero to not ping
 		}
+		UTXOSave struct {
+			SecondsToTake uint  // zero for as fast as possible, 600 for do it in 10 minutes
+			BlocksToHold  uint32 // zero for immediatelly, one for every other block...
+		}
 	}
 
 	mutex_cfg sync.Mutex
@@ -166,7 +169,10 @@ func InitConfig() {
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
 
-	CFG.LastTrustedBlock = "0000000000000000002427f67f85a3116048c061a16203072353343af7894ca5" // block #531167
+	CFG.UTXOSave.SecondsToTake = 300
+	CFG.UTXOSave.BlocksToHold = 6
+
+	CFG.LastTrustedBlock = "0000000000000000003092e0372f341f5e027e026612b79d24558211eb486909" // block #531489
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
@@ -275,9 +281,8 @@ func Reset() {
 	}
 	ListenTCP = CFG.Net.ListenTCP
 
-	if CFG.UTXOSaveSec != 0 {
-		utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOSaveSec)
-	}
+	utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOSave.SecondsToTake)
+	utxo.UTXO_SKIP_SAVE_BLOCKS = CFG.UTXOSave.BlocksToHold
 
 	if CFG.UserAgent != "" {
 		UserAgent = CFG.UserAgent

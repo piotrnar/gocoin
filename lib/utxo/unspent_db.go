@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,7 +19,8 @@ const (
 )
 
 var (
-	UTXO_WRITING_TIME_TARGET = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
+	UTXO_WRITING_TIME_TARGET  = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
+	UTXO_SKIP_SAVE_BLOCKS     uint32 = 0
 )
 
 type FunctionWalkUnspent func(*UtxoRec)
@@ -169,7 +171,7 @@ redo:
 
 	fmt.Print("\r                                                              \r")
 
-	db.CurrentHeightOnDisk = db.LastBlockHeight
+	atomic.StoreUint32(&db.CurrentHeightOnDisk, db.LastBlockHeight)
 
 	return
 
@@ -206,6 +208,7 @@ func (db *UnspentDB) save() {
 	total_records = int64(len(db.HashMap))
 
 	buf := new(bytes.Buffer)
+	buf.Grow(0x20000)
 	binary.Write(buf, binary.LittleEndian, uint64(db.LastBlockHeight))
 	buf.Write(db.LastBlockHash)
 	binary.Write(buf, binary.LittleEndian, uint64(total_records))
@@ -283,12 +286,13 @@ func (db *UnspentDB) save() {
 			}
 		}
 
-		btc.WriteVlen(buf, uint64(UtxoIdxLen + len(v)))
+		btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
 		buf.Write(k[:])
 		buf.Write(v)
 		if buf.Len() > 0x10000 {
 			data_channel <- buf.Bytes()
 			buf = new(bytes.Buffer)
+			buf.Grow(0x20000)
 		}
 
 		if !hurryup {
@@ -309,7 +313,7 @@ finito:
 	if !abort {
 		db.DirtyDB.Clr()
 		//println("utxo written OK in", time.Now().Sub(start_time).String(), timewaits)
-		db.CurrentHeightOnDisk = db.LastBlockHeight
+		atomic.StoreUint32(&db.CurrentHeightOnDisk, db.LastBlockHeight)
 	}
 	db.WritingInProgress.Clr()
 	db.writingDone.Done()
@@ -425,7 +429,7 @@ func (db *UnspentDB) Idle() bool {
 	db.Mutex.Lock()
 	defer db.Mutex.Unlock()
 
-	if db.DirtyDB.Get() && !db.WritingInProgress.Get() {
+	if db.DirtyDB.Get() && !db.WritingInProgress.Get() && db.LastBlockHeight-atomic.LoadUint32(&db.CurrentHeightOnDisk) > UTXO_SKIP_SAVE_BLOCKS {
 		db.WritingInProgress.Set()
 		db.writingDone.Add(1)
 		go db.save() // this one will call db.writingDone.Done()

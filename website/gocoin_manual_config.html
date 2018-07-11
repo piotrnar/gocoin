@@ -46,13 +46,6 @@ It contains the bock chain, UTXO and peers database, plus some other files used 
 When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 </tr>
 
-<tr>
-<td class="cfg_name"> UTXOSaveSec</td>
-<td class="cfg_type"> uint</td>
-<td> 0</td>
-<td class="cfg_info"> Delay writing of UTXO.db files to least at least so many seconds. 0 means dafault value, which is 5 minutes.</td>
-</tr>
-
 <tr><td class="cfg_name"> TextUI_Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
@@ -353,6 +346,22 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_info"> How many block down the chain to look for calculating the current average block size.</td>
 </tr>
 <tr>
+
+<tr>
+<td class="cfg_name"> UTXOSave.SecondsToTake</td>
+<td class="cfg_type"> uint</td>
+<td> 300</td>
+<td class="cfg_info"> While saving UTXO.db to disk, delay the process into at least so many seconds.
+New block arriving within this period will abort and restart the saving process.
+0 saves UTXO.db as fast as possible.</td>
+</tr>
+<tr>
+<td class="cfg_name"> UTXOSave.BlocksToHold</td>
+<td class="cfg_type"> uint</td>
+<td> 0</td>
+<td class="cfg_info"> Skip so many new blocks before auto saving a new UTXO.db to disk.</td>
+</tr>
+
 
 </tbody>
 </table>
