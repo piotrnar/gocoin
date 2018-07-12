@@ -197,8 +197,11 @@ func (db *UnspentDB) save() {
 	var abort, hurryup, check_time bool
 	var total_records, current_record, data_progress, time_progress int64
 
+	const save_buffer_min = 0x10000
+	const save_buffer_cnt = 100
+
 	os.Rename(db.dir_utxo+"UTXO.db", db.dir_utxo+"UTXO.old")
-	data_channel := make(chan []byte, 100)
+	data_channel := make(chan []byte, save_buffer_cnt)
 	exit_channel := make(chan bool, 1)
 
 	start_time := time.Now()
@@ -207,8 +210,7 @@ func (db *UnspentDB) save() {
 
 	total_records = int64(len(db.HashMap))
 
-	buf := new(bytes.Buffer)
-	buf.Grow(0x20000)
+	buf := bytes.NewBuffer(make([]byte, 0, 2*save_buffer_min))
 	binary.Write(buf, binary.LittleEndian, uint64(db.LastBlockHeight))
 	buf.Write(db.LastBlockHash)
 	binary.Write(buf, binary.LittleEndian, uint64(total_records))
@@ -289,10 +291,9 @@ func (db *UnspentDB) save() {
 		btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
 		buf.Write(k[:])
 		buf.Write(v)
-		if buf.Len() > 0x10000 {
+		if buf.Len() >= save_buffer_min {
 			data_channel <- buf.Bytes()
-			buf = new(bytes.Buffer)
-			buf.Grow(0x20000)
+			buf = bytes.NewBuffer(make([]byte, 0, 2*save_buffer_min))
 		}
 
 		if !hurryup {
