@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	UTXO_WRITING_TIME_TARGET  = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
-	UTXO_SKIP_SAVE_BLOCKS     uint32 = 0
+	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
+	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
 )
 
 type FunctionWalkUnspent func(*UtxoRec)
@@ -210,7 +210,7 @@ func (db *UnspentDB) save() {
 
 	total_records = int64(len(db.HashMap))
 
-	buf := bytes.NewBuffer(make([]byte, 0, 2*save_buffer_min))
+	buf := bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record (it will still be able to grow over it)
 	binary.Write(buf, binary.LittleEndian, uint64(db.LastBlockHeight))
 	buf.Write(db.LastBlockHash)
 	binary.Write(buf, binary.LittleEndian, uint64(total_records))
@@ -293,7 +293,7 @@ func (db *UnspentDB) save() {
 		buf.Write(v)
 		if buf.Len() >= save_buffer_min {
 			data_channel <- buf.Bytes()
-			buf = bytes.NewBuffer(make([]byte, 0, 2*save_buffer_min))
+			buf = bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record
 		}
 
 		if !hurryup {
