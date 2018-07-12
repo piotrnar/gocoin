@@ -800,6 +800,7 @@ function refreshtxstat() {
 			var ts = JSON.parse(aj.responseText)
 
 			ts_t2s_size.value = bignum(ts.t2s_size)+'B in ' + ts.t2s_cnt + ' txs'
+			ts_t2s_size.title = "Average TX size: " + (ts.t2s_size/ts.t2s_cnt).toFixed(0) + " Bytes"
 			outspent.innerText = ts.spent_outs_cnt
 			if (ts.t2s_cnt>0) {
 				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
