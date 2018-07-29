@@ -135,15 +135,15 @@ func parse_config() {
 		}
 	}
 
-	flag.UintVar(&keycnt, "n", keycnt, "Set the number of keys to be used")
+	flag.UintVar(&keycnt, "n", keycnt, "Set the number of determinstic keys to be calculated by the wallet")
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
-	flag.UintVar(&waltype, "type", waltype, "Type of deterministic wallet (1 to 4)")
+	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
 	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
-	flag.StringVar(&txfilename, "txfn", "", "The this filename for output transaction (otherwise random name)")
+	flag.StringVar(&txfilename, "txfn", "", "Use this filename for output transaction (otherwise use a random name)")
 	flag.BoolVar(&stdin, "stdin", stdin, "Read password from stdin")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
