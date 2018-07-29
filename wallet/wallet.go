@@ -173,7 +173,7 @@ func make_wallet() {
 			segwit[i] = btc.NewAddrFromPkScript(append([]byte{0,20}, pk.Hash160[:]...), testnet)
 		} else {
 			h160 := btc.Rimp160AfterSha256(append([]byte{0,20}, pk.Hash160[:]...))
-			segwit[i] = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(testnet))
+			segwit[i] = btc.NewAddrFromHash160(h160[:], ver_script())
 		}
 	}
 }

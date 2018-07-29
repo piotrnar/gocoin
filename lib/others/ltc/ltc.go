@@ -8,6 +8,7 @@ import (
 )
 
 const LTC_ADDR_VERSION = 48
+const LTC_ADDR_VERSION_SCRIPT = 50
 
 // LTC signing uses different seed string
 func HashFromMessage(msg []byte, out []byte) {
@@ -25,6 +26,14 @@ func AddrVerPubkey(testnet bool) byte {
 		return LTC_ADDR_VERSION
 	}
 	return btc.AddrVerPubkey(testnet)
+}
+
+// At some point Litecoin started using addresses with M in front (version 50) - see github issue #41
+func AddrVerScript(testnet bool) byte {
+	if !testnet {
+		return LTC_ADDR_VERSION_SCRIPT
+	}
+	return btc.AddrVerScript(testnet)
 }
 
 func NewAddrFromPkScript(scr []byte, testnet bool) (ad *btc.BtcAddr) {

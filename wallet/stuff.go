@@ -218,8 +218,11 @@ func ver_pubkey() byte {
 
 // version byte for P2SH addresses
 func ver_script() byte {
-	// for litecoin the version is identical
-	return btc.AddrVerScript(testnet)
+	if litecoin {
+		return ltc.AddrVerScript(testnet)
+	} else {
+		return btc.AddrVerScript(testnet)
+	}
 }
 
 // version byte for private key addresses
