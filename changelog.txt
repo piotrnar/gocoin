@@ -1,4 +1,5 @@
 1.9.5:
+* Wallet: "-l -ltc -segwit" will now give addresses starting from M, not from 3 (see issue #41)
 * Client/WebUI: Suport for TLS connections with forced client-side authentication (https://hostname:4433/)
 * Client: Removed automatic conversion of old format unspent4 to the new UTXO.db
 * Client: If pong comes out but a block is still pending, timeout it and dont ask this peer for blocks again.
