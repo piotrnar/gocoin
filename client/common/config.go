@@ -172,7 +172,7 @@ func InitConfig() {
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
 
-	CFG.LastTrustedBlock = "0000000000000000003092e0372f341f5e027e026612b79d24558211eb486909" // block #531489
+	CFG.LastTrustedBlock = "00000000000000000015e96e98a806907ca1848ee5eed88a81719aba58a681be" // block #537186
 
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
