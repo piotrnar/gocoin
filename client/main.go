@@ -394,7 +394,7 @@ func main() {
 			return usif.Exit_now.Get()
 		}
 
-		startup_ticks := 5 // give 5 seconds for finding out missing blocks
+		startup_ticks := 15 // give 15 seconds for finding out missing blocks
 		if !common.FLAG.NoWallet {
 			// snooze the timer to 10 seconds after startup_ticks goes down
 			common.SetUint32(&common.WalletOnIn, 10)
