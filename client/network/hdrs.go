@@ -86,7 +86,7 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 		return
 	}
 
-	if cnt>0 {
+	if cnt > 0 {
 		MutexRcv.Lock()
 		defer MutexRcv.Unlock()
 
@@ -137,6 +137,8 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 				}
 			}
 		}
+	} else {
+		common.CountSafe("EmptyHeadersRcvd")
 	}
 
 	c.Mutex.Lock()
