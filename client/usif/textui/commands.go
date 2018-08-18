@@ -135,8 +135,8 @@ func show_info(par string) {
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()
 
-	fmt.Printf("Gocoin: %s,  Synced: %t,  Uptime %s,  Peers: %d,  ECDSAs: %d\n",
-		gocoin.Version, common.GetBool(&common.BlockChainSynchronized),
+	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d\n",
+		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
 		time.Now().Sub(common.StartTime).String(), btc.EcdsaVerifyCnt(), peersdb.PeerDB.Count())
 
 	// Memory used

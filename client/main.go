@@ -31,6 +31,7 @@ var (
 
 const (
 	SaveBlockChainAfter = 2 * time.Second
+	SaveBlockChainAfterNoSync = 10 * time.Minute
 )
 
 func reset_save_timer() {
@@ -38,7 +39,11 @@ func reset_save_timer() {
 	for len(SaveBlockChain.C) > 0 {
 		<-SaveBlockChain.C
 	}
-	SaveBlockChain.Reset(SaveBlockChainAfter)
+	if common.BlockChainSynchronized {
+		SaveBlockChain.Reset(SaveBlockChainAfter)
+	} else {
+		SaveBlockChain.Reset(SaveBlockChainAfterNoSync)
+	}
 }
 
 func blockMined(bl *btc.Block) {
@@ -394,7 +399,7 @@ func main() {
 			return usif.Exit_now.Get()
 		}
 
-		startup_ticks := 15 // give 15 seconds for finding out missing blocks
+		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		if !common.FLAG.NoWallet {
 			// snooze the timer to 10 seconds after startup_ticks goes down
 			common.SetUint32(&common.WalletOnIn, 10)
@@ -468,17 +473,25 @@ func main() {
 				common.Busy()
 				common.CountSafe("MainNetTick")
 				network.NetworkTick()
-				if startup_ticks > 0 {
-					startup_ticks--
-					break
+
+				if common.BlockChainSynchronized {
+					if common.WalletPendingTick() {
+						wallet.OnOff <- true
+					}
+					break // BlockChainSynchronized so never mind checking it
 				}
-				if !common.BlockChainSynchronized && network.BlocksToGetCnt() == 0 &&
+
+				if network.HeadersReceived.Get() >= 15 && network.BlocksToGetCnt() == 0 &&
 					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
-					// only when we have no pending blocks startup_ticks go down..
+					// only when we have no pending blocks and rteceived header messages, startup_ticks can go down..
+					if startup_ticks > 0 {
+						startup_ticks--
+						break
+					}
 					common.SetBool(&common.BlockChainSynchronized, true)
-				}
-				if common.WalletPendingTick() {
-					wallet.OnOff <- true
+					reset_save_timer()
+				} else {
+					startup_ticks = 5 // snooze by 5 seconds each time we're in here
 				}
 
 			case cmd := <-usif.UiChannel:

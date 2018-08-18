@@ -58,6 +58,8 @@ var (
 	CachedBlocks []*BlockRcvd
 	CachedBlocksLen sys.SyncInt
 	DiscardedBlocks map[BIDX] bool = make(map[BIDX] bool)
+
+	HeadersReceived sys.SyncInt
 )
 
 func AddB2G(b2g *OneBlockToGet) {

@@ -46,6 +46,10 @@ func (b *SyncInt) Store(val int) {
 	atomic.StoreInt64(&b.val, int64(val))
 }
 
+func (b *SyncInt) Add(val int) {
+	atomic.AddInt64(&b.val, int64(val))
+}
+
 func (b *SyncInt) MarshalText() (text []byte, err error) {
 	return []byte(fmt.Sprint(b.Get())), nil
 }
