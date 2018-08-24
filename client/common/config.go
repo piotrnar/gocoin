@@ -60,6 +60,7 @@ var (
 			MaxDownKBps    uint
 			MaxBlockAtOnce uint32
 			MinSegwitCons  uint32
+			ExternalIP     string
 		}
 		TXPool struct {
 			Enabled        bool // Global on/off swicth
@@ -468,4 +469,11 @@ func RejectedTxsLimits() (size uint64, cnt int) {
 
 func TempBlocksDir() string {
 	return GocoinHomeDir + "tmpblk" + string(os.PathSeparator)
+}
+
+func GetExternalIp() (res string) {
+	mutex_cfg.Lock()
+	res = CFG.Net.ExternalIP
+	mutex_cfg.Unlock()
+	return
 }

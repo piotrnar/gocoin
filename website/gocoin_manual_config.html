@@ -152,6 +152,11 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_type"> uint32</td>
 <td> 4</td>
 <td class="cfg_info"> Maintain at least so many connections to nodes indicating support for Segregated Witness (via bit 0x8 in Services).</td>
+<tr class="odd">
+<td class="cfg_name"> Net.ExternalIP</td>
+<td class="cfg_type"> string</td>
+<td> ""</td>
+<td class="cfg_info"> If the string is a valid IP v4 address, it will be used as <code>addr_from</code> inside <code>version</code> messages.</td>
 
 <tr class="even">
 <td class="cfg_name"> TXPool.Enabled</td>

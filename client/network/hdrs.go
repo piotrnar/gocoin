@@ -246,7 +246,7 @@ func (c *OneConnection) sendGetHeaders() {
 	var cnt uint64
 	var step int
 	step = 1
-	for cnt < 50 /*it shoudl never get that far, but just in case...*/ {
+	for cnt < 50 /*it should never get that far, but just in case...*/ {
 		blks.Write(lb.BlockHash.Hash[:])
 		cnt++
 		//println(" geth", cnt, "height", lb.Height, lb.BlockHash.String())

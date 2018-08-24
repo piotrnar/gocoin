@@ -151,7 +151,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 						break
 					}
 				}
-				if use_this_ip && common.IsListenTCP() {
+				if use_this_ip && common.IsListenTCP() && common.GetExternalIp()=="" {
 					fmt.Printf("New external IP %d.%d.%d.%d from ConnID=%d\n> ",
 						pl[40], pl[41], pl[42], pl[43], c.ConnID)
 				}
