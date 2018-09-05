@@ -84,6 +84,12 @@ func VLenSize(uvl uint64) int {
 // Returns var_int and number of bytes that the var_int took
 // If there is not enough bytes in the buffer, it will panic
 func VLen(b []byte) (le int, var_int_siz int) {
+	defer func() { // In case if the buffer was too short, to recover from a panic
+		if r := recover(); r != nil {
+			println("VLen() failed")
+			le, var_int_siz = 0, 0
+		}
+	}()
 	switch b[0] {
 		case 0xfd:
 			return int(binary.LittleEndian.Uint16(b[1:3])), 3
@@ -100,6 +106,12 @@ func VLen(b []byte) (le int, var_int_siz int) {
 // Returns var_uint and number of bytes that the var_uint took
 // If there is not enough bytes in the buffer, it will panic
 func VULe(b []byte) (le uint64, var_int_siz int) {
+	defer func() { // In case if the buffer was too short, to recover from a panic
+		if r := recover(); r != nil {
+			println("VULe() failed")
+			le, var_int_siz = 0, 0
+		}
+	}()
 	switch b[0] {
 		case 0xfd:
 			return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
