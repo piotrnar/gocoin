@@ -92,6 +92,11 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		if len(pl) >= 86 {
 			le, of := btc.VLen(pl[80:])
 			of += 80
+			if len(pl) < of+le {
+				c.Mutex.Unlock()
+				c.DoS("VerErr")
+				return errors.New("version message corrupt")
+			}
 			c.Node.Agent = string(pl[of:of+le])
 			of += le
 			if len(pl) >= of+4 {

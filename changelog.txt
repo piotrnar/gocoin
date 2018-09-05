@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Fixed a possible DoS attack vector through a corrupt "version" message
 * Client: New config value "CFG.Net.ExternalIP" - force external IP (only v4) to be reported in "version" messages
 * Client: Do not try to save UTXO.db when chain is not synchronized, unless network has been idle for 10 minutes
 * Client: Improved the algorithm of setting "common.BlockChainSynchronized"
