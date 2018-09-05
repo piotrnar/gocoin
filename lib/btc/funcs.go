@@ -82,46 +82,52 @@ func VLenSize(uvl uint64) int {
 
 
 // Returns var_int and number of bytes that the var_int took
-// If there is not enough bytes in the buffer, it will panic
+// If there is not enough bytes in the buffer, it return 0, 0
 func VLen(b []byte) (le int, var_int_siz int) {
-	defer func() { // In case if the buffer was too short, to recover from a panic
-		if r := recover(); r != nil {
-			println("VLen() failed")
-			le, var_int_siz = 0, 0
+	if len(b) > 0 {
+		switch b[0] {
+			case 0xfd:
+				if len(b) >= 3 {
+					return int(binary.LittleEndian.Uint16(b[1:3])), 3
+				}
+			case 0xfe:
+				if len(b) >= 5 {
+					return int(binary.LittleEndian.Uint32(b[1:5])), 5
+				}
+			case 0xff:
+				if len(b) >= 9 {
+					return int(binary.LittleEndian.Uint64(b[1:9])), 9
+				}
+			default:
+				return int(b[0]), 1
 		}
-	}()
-	switch b[0] {
-		case 0xfd:
-			return int(binary.LittleEndian.Uint16(b[1:3])), 3
-		case 0xfe:
-			return int(binary.LittleEndian.Uint32(b[1:5])), 5
-		case 0xff:
-			return int(binary.LittleEndian.Uint64(b[1:9])), 9
-		default:
-			return int(b[0]), 1
 	}
+	return
 }
 
 
 // Returns var_uint and number of bytes that the var_uint took
-// If there is not enough bytes in the buffer, it will panic
+// If there is not enough bytes in the buffer, it return 0, 0
 func VULe(b []byte) (le uint64, var_int_siz int) {
-	defer func() { // In case if the buffer was too short, to recover from a panic
-		if r := recover(); r != nil {
-			println("VULe() failed")
-			le, var_int_siz = 0, 0
+	if len(b) > 0 {
+		switch b[0] {
+			case 0xfd:
+				if len(b) >= 3 {
+					return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
+				}
+			case 0xfe:
+				if len(b) >= 5 {
+					return uint64(binary.LittleEndian.Uint32(b[1:5])), 5
+				}
+			case 0xff:
+				if len(b) >= 9 {
+					return uint64(binary.LittleEndian.Uint64(b[1:9])), 9
+				}
+			default:
+				return uint64(b[0]), 1
 		}
-	}()
-	switch b[0] {
-		case 0xfd:
-			return uint64(binary.LittleEndian.Uint16(b[1:3])), 3
-		case 0xfe:
-			return uint64(binary.LittleEndian.Uint32(b[1:5])), 5
-		case 0xff:
-			return binary.LittleEndian.Uint64(b[1:9]), 9
-		default:
-			return uint64(b[0]), 1
 	}
+	return
 }
 
 
