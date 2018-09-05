@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -32,7 +33,7 @@ func (c *OneConnection) ExpireBlocksToGet(now *time.Time, curr_ping_cnt uint64) 
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
 			c.counters["BlockTotFound"]++
-		} else if now != nil && now.After(v.start.Add(5 * time.Minute)) {
+		} else if now != nil && now.After(v.start.Add(5*time.Minute)) {
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
 		} else {
@@ -191,7 +192,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 
 		for {
 			select {
-			case <- con_done:
+			case <-con_done:
 				if e == nil {
 					Mutex_net.Lock()
 					conn.Conn = con
@@ -199,7 +200,7 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 					Mutex_net.Unlock()
 					conn.Run()
 				}
-			case <-time.After(10*time.Millisecond):
+			case <-time.After(10 * time.Millisecond):
 				if !conn.IsBroken() {
 					continue
 				}
@@ -544,6 +545,28 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 
 // Process that handles communication with a single peer
 func (c *OneConnection) Run() {
+	defer func() {
+		if r := recover(); r != nil {
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("pkg: %v", r)
+			}
+			fmt.Println()
+			fmt.Println()
+			fmt.Println("********************** THIS SHOULD NOT HAPPEN **********************")
+			fmt.Println("Please report by sending email to piotr@gocoin.pl")
+			fmt.Println("or by logging new issue at https://github.com/piotrnar/gocoin/issues")
+			fmt.Println()
+			fmt.Println("Make sure to include the data below:")
+			fmt.Println()
+			fmt.Println(err.Error())
+			fmt.Println(string(debug.Stack()))
+			fmt.Println()
+			fmt.Println("The node will likely malfunction now - it is advised to restart it.")
+			fmt.Println("************************ END OF REPORT ****************************")
+		}
+	}()
+
 	c.writing_thread_push = make(chan bool, 1)
 
 	c.SendVersion()
