@@ -236,7 +236,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	offs := 88
 	shortidscnt, n = btc.VLen(pl[offs:])
-	if shortidscnt < 0 || n > 3 {
+	if n == 0 || shortidscnt < 0 || n > 3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error B", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrB")
 		return
@@ -255,7 +255,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	}
 
 	prefilledcnt, n = btc.VLen(pl[offs:])
-	if prefilledcnt < 0 || n > 3 {
+	if n == 0 || prefilledcnt < 0 || n > 3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error C", hex.EncodeToString(pl))
 		c.DoS("CmpctBlkErrC")
 		return
@@ -267,7 +267,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	exp := 0
 	for i := 0; i < int(prefilledcnt); i++ {
 		idx, n = btc.VLen(pl[offs:])
-		if idx < 0 || n > 3 {
+		if n == 0 || idx < 0 || n > 3 {
 			println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "cmpctblock error D", hex.EncodeToString(pl))
 			c.DoS("CmpctBlkErrD")
 			return
@@ -430,7 +430,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	}
 	hash := btc.NewUint256(pl[:32])
 	le, n := btc.VLen(pl[32:])
-	if le < 0 || n > 3 {
+	if n == 0 || le < 0 || n > 3 {
 		println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "blocktxn error B", hex.EncodeToString(pl))
 		c.DoS("BlkTxnErrCnt")
 		return

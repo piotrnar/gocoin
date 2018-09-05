@@ -89,14 +89,14 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 
 		use_this_ip := sys.ValidIp4(pl[40:44])
 
-		if len(pl) >= 86 {
+		if len(pl) >= 82 {
 			le, of := btc.VLen(pl[80:])
-			of += 80
-			if len(pl) < of+le {
+			if of == 0 || len(pl) < 80+le {
 				c.Mutex.Unlock()
 				c.DoS("VerErr")
 				return errors.New("version message corrupt")
 			}
+			of += 80
 			c.Node.Agent = string(pl[of:of+le])
 			of += le
 			if len(pl) >= of+4 {
