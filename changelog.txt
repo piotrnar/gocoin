@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Do not send "sendcmpct" messages if memory pool is disabled
 * Client: Fixed a DoS attack vector through a corrupt "version" message (possibly also "cmpctblock" and "inv")
 * Client: New config value "CFG.Net.ExternalIP" - force external IP (only v4) to be reported in "version" messages
 * Client: Do not try to save UTXO.db when chain is not synchronized, unless network has been idle for 10 minutes
