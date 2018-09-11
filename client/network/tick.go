@@ -665,7 +665,7 @@ func (c *OneConnection) Run() {
 					if c.X.LastMinFeePerKByte != 0 {
 						c.SendFeeFilter()
 					}
-					if c.Node.Version >= 70014 {
+					if c.Node.Version >= 70014 && common.GetBool(&common.CFG.TXPool.Enabled) {
 						if (c.Node.Services & SERVICE_SEGWIT) == 0 {
 							// if the node does not support segwit, request compact blocks
 							// only if we have not achieved the segwit enforcement moment
