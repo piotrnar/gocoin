@@ -649,10 +649,6 @@ func (c *OneConnection) Run() {
 					f.Close()
 				}
 			}
-			if c.Node.DoNotRelayTxs {
-				c.DoS("SPV")
-				break
-			}
 			c.X.LastMinFeePerKByte = common.MinFeePerKB()
 
 			if c.X.IsGocoin {
@@ -800,6 +796,9 @@ func (c *OneConnection) Run() {
 
 		case "getmpdone":
 			c.GetMPDone(cmd.pl)
+
+		case "filterload", "filteradd", "filterclear", "merkleblock":
+			c.DoS("SPV")
 
 		default:
 		}

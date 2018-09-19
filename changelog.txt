@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Do not ban blocks only nodes, but only those that try to use bloom filtering
 * Client: Do not send "sendcmpct" messages if memory pool is disabled
 * Client: Fixed a DoS attack vector through a corrupt "version" message (possibly also "cmpctblock" and "inv")
 * Client: New config value "CFG.Net.ExternalIP" - force external IP (only v4) to be reported in "version" messages
