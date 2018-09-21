@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"crypto/sha256"
-	"encoding/binary"
 	"golang.org/x/crypto/ripemd160"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"runtime/debug"
@@ -1314,26 +1313,19 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 
 
 func delSig(where, sig []byte) (res []byte, cnt int) {
-	// recover the standard length
-	bb := new(bytes.Buffer)
-	if len(sig) < btc.OP_PUSHDATA1 {
-		bb.Write([]byte{byte(len(sig))})
-	} else if len(sig) <= 0xff {
-		bb.Write([]byte{btc.OP_PUSHDATA1})
-		bb.Write([]byte{byte(len(sig))})
-	} else if len(sig) <= 0xffff {
-		bb.Write([]byte{btc.OP_PUSHDATA2})
-		binary.Write(bb, binary.LittleEndian, uint16(len(sig)))
-	} else {
-		bb.Write([]byte{btc.OP_PUSHDATA4})
-		binary.Write(bb, binary.LittleEndian, uint32(len(sig)))
-	}
-	bb.Write(sig)
-	sig = bb.Bytes()
+	// place the push opcode in front of the signature
+	push_sig_scr := make([]byte, len(sig)+5)
+	n := int(btc.PutVlen(push_sig_scr, len(sig)))
+	copy(push_sig_scr[n:], sig)
+	sig = push_sig_scr[:n+len(sig)]
+
+	// set the cap to the maximum possible size, to speed up further append-s
+	res = make([]byte, 0, len(where))
+
 	var idx int
 	for idx < len(where) {
 		_, _, n, e := btc.GetOpcode(where[idx:])
-		if e!=nil {
+		if e != nil {
 			fmt.Println(e.Error())
 			fmt.Println("B", idx, hex.EncodeToString(where))
 			return
