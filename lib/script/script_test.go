@@ -204,6 +204,8 @@ func decode_flags(s string) (fl uint32, e error) {
 				fl |= VER_NULLFAIL
 			case "WITNESS_PUBKEYTYPE":
 				fl |= VER_WITNESS_PUBKEY
+			case "CONST_SCRIPTCODE":
+				fl |= VER_CONST_SCRIPTCODE
 			default:
 				e = errors.New("Unsupported flag "+ss[i])
 				return

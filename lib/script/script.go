@@ -41,6 +41,7 @@ const (
 	VER_MINIMALIF = 1<<13
 	VER_NULLFAIL = 1<<14
 	VER_WITNESS_PUBKEY = 1 << 15 // WITNESS_PUBKEYTYPE
+	VER_CONST_SCRIPTCODE = 1 << 16
 
 	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
 		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV |
@@ -375,6 +376,13 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 			opcode == 0x99/*OP_RSHIFT*/ {
 			if DBG_ERR {
 				fmt.Println("Unsupported opcode", opcode)
+			}
+			return false
+		}
+
+		if opcode == 0xab/*OP_CODESEPARATOR*/ && sigversion == SIGVERSION_BASE && (ver_flags&VER_CONST_SCRIPTCODE) != 0 {
+			if DBG_ERR {
+				fmt.Println("evalScript: SCRIPT_ERR_OP_CODESEPARATOR")
 			}
 			return false
 		}
@@ -929,6 +937,20 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					vchSig := stack.top(-2)
 					vchPubKey := stack.top(-1)
 
+					scriptCode := p[sta:]
+
+					// Drop the signature in pre-segwit scripts but not segwit scripts
+					if sigversion == SIGVERSION_BASE {
+						var found int
+						scriptCode, found = delSig(scriptCode, vchSig)
+						if found > 0 && (ver_flags&VER_CONST_SCRIPTCODE) != 0 {
+							if DBG_ERR {
+								fmt.Println("SCRIPT_ERR_SIG_FINDANDDELETE SIN")
+							}
+							return false
+						}
+					}
+
 					// BIP-0066
 					if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
 						if DBG_ERR {
@@ -937,15 +959,15 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 						return false
 					}
 
-					if len(vchSig)>0 {
+					if len(vchSig) > 0 {
 						var sh []byte
-						if sigversion==SIGVERSION_WITNESS_V0 {
+						if sigversion == SIGVERSION_WITNESS_V0 {
 							if DBG_SCR {
 								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(vchSig[len(vchSig)-1]))
 							}
-							sh = tx.WitnessSigHash(p[sta:], amount, inp, int32(vchSig[len(vchSig)-1]))
+							sh = tx.WitnessSigHash(scriptCode, amount, inp, int32(vchSig[len(vchSig)-1]))
 						} else {
-							sh = tx.SignatureHash(delSig(p[sta:], vchSig), inp, int32(vchSig[len(vchSig)-1]))
+							sh = tx.SignatureHash(scriptCode, inp, int32(vchSig[len(vchSig)-1]))
 						}
 						if DBG_SCR {
 							fmt.Println("EcdsaVerify", hex.EncodeToString(sh))
@@ -1036,9 +1058,17 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					}
 
 					xxx := p[sta:]
-					if sigversion!=SIGVERSION_WITNESS_V0 {
-						for k:=0; k<int(sigscnt); k++ {
-							xxx = delSig(xxx, stack.top(-isig-k))
+					// Drop the signature in pre-segwit scripts but not segwit scripts
+					if sigversion == SIGVERSION_BASE {
+						for k := 0; k < int(sigscnt); k++ {
+							var found int
+							xxx, found = delSig(xxx, stack.top(-isig-k))
+							if found > 0 && (ver_flags&VER_CONST_SCRIPTCODE) != 0 {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_SIG_FINDANDDELETE MUL")
+								}
+								return false
+							}
 						}
 					}
 
@@ -1282,7 +1312,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 }
 
 
-func delSig(where, sig []byte) (res []byte) {
+func delSig(where, sig []byte) (res []byte, cnt int) {
 	// recover the standard length
 	bb := new(bytes.Buffer)
 	if len(sig) < btc.OP_PUSHDATA1 {
@@ -1309,6 +1339,8 @@ func delSig(where, sig []byte) (res []byte) {
 		}
 		if !bytes.Equal(where[idx:idx+n], sig) {
 			res = append(res, where[idx:idx+n]...)
+		} else {
+			cnt++
 		}
 		idx+= n
 	}
@@ -1518,6 +1550,38 @@ func checkMinimalPush(d []byte, opcode int) bool {
 	}
 	fmt.Println("All checks passed")
 	return true
+}
+
+func FindAndDelete(script, b []byte) (nFound int, result []byte) {
+	if len(b) == 0 {
+		return
+	}
+	result = make([]byte, 0, len(script))
+	var pc, pc2, end, n int
+	var e error
+	end = len(script)
+
+	for {
+		if pc > pc2 {
+			result = append(result, script[pc2:pc]...)
+		}
+		for end-pc >= len(b) && bytes.Equal(b, script[pc:end]) {
+			pc = pc + len(b)
+			nFound++
+		}
+		pc2 = pc
+		_, _, n, e = btc.GetOpcode(script[pc:])
+		if e != nil {
+			break
+		}
+		pc += n
+	}
+
+	if nFound > 0 {
+		result = append(result, script[pc2:]...)
+	}
+
+	return
 }
 
 
