@@ -1553,39 +1553,6 @@ func checkMinimalPush(d []byte, opcode int) bool {
 	return true
 }
 
-func FindAndDelete(script, b []byte) (nFound int, result []byte) {
-	if len(b) == 0 {
-		return
-	}
-	result = make([]byte, 0, len(script))
-	var pc, pc2, end, n int
-	var e error
-	end = len(script)
-
-	for {
-		if pc > pc2 {
-			result = append(result, script[pc2:pc]...)
-		}
-		for end-pc >= len(b) && bytes.Equal(b, script[pc:end]) {
-			pc = pc + len(b)
-			nFound++
-		}
-		pc2 = pc
-		_, _, n, e = btc.GetOpcode(script[pc:])
-		if e != nil {
-			break
-		}
-		pc += n
-	}
-
-	if nFound > 0 {
-		result = append(result, script[pc2:]...)
-	}
-
-	return
-}
-
-
 func CheckSequence(tx *btc.Tx, inp int, seq int64) bool {
 	if tx.Version < 2 {
 		return false
