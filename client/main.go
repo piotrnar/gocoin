@@ -85,8 +85,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.LastBlock()
 		common.Last.Mutex.Unlock()
-
-		reset_save_timer()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()
@@ -95,13 +93,19 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Mutex.Unlock()
 		// update network.LastCommitedHeader
 		network.MutexRcv.Lock()
-		if network.LastCommitedHeader != new_end {
-			network.LastCommitedHeader = new_end
-			//println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
+		prev_last_header := network.LastCommitedHeader
+		network.DiscardBlock(newbl.BlockTreeNode) // this function can also modify network.LastCommitedHeader
+		if common.Last.Block.Height > network.LastCommitedHeader.Height {
+			network.LastCommitedHeader, _ = common.Last.Block.FindFarthestNode()
 		}
-		network.DiscardedBlocks[newbl.Hash.BIdx()] = true
+		need_more_headers := prev_last_header != network.LastCommitedHeader
 		network.MutexRcv.Unlock()
+		if need_more_headers {
+			//println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
+			network.GetMoreHeaders()
+		}
 	}
+	reset_save_timer()
 	return
 }
 
@@ -157,7 +161,7 @@ func retry_cached_blocks() bool {
 	return false
 }
 
-// Return true iof the block's parent is on the DiscardedBlocks list
+// Return true if the block's parent is on the DiscardedBlocks list
 // Add it to DiscardedBlocks, if returning true
 func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 	network.MutexRcv.Lock()
@@ -216,10 +220,8 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
 		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
-	} else {
-		//println("block", newbl.Block.Height, "accepted")
-		retryCachedBlocks = retry_cached_blocks()
 	}
+	retryCachedBlocks = retry_cached_blocks()
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
