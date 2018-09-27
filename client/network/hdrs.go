@@ -27,6 +27,12 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	c.InvStore(MSG_BLOCK, bl.Hash.Hash[:])
 	c.Mutex.Unlock()
 
+	if _, ok = DiscardedBlocks[bl.Hash.BIdx()]; ok {
+		common.CountSafe("HdrRejected")
+		//fmt.Println("", bl.Hash.String(), "-header for already rejected block")
+		return PH_STATUS_FATAL, nil
+	}
+
 	if _, ok = ReceivedBlocks[bl.Hash.BIdx()]; ok {
 		common.CountSafe("HeaderOld")
 		//fmt.Println("", i, bl.Hash.String(), "-already received")
@@ -58,7 +64,12 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	node := common.BlockChain.AcceptHeader(bl)
 	b2g = &OneBlockToGet{Started: c.LastMsgTime, Block: bl, BlockTreeNode: node, InProgress: 0}
 	AddB2G(b2g)
-	LastCommitedHeader = node
+	if node.Height > LastCommitedHeader.Height {
+		LastCommitedHeader = node
+		//println("LastCommitedHeader:", LastCommitedHeader.Height, "-change to", LastCommitedHeader.BlockHash.String())
+	} else {
+		//println("LastCommitedHeader:", LastCommitedHeader.Height, "new:", node.Height, "-keep!")
+	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
 		common.SetUint32(&common.LastTrustedBlockHeight, node.Height)
