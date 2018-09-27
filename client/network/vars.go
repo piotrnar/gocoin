@@ -62,6 +62,19 @@ var (
 	HeadersReceived sys.SyncInt
 )
 
+// make sure to call it with MutexRcv locked
+func DiscardBlock(n *chain.BlockTreeNode) {
+	if LastCommitedHeader == n {
+		LastCommitedHeader = n.Parent
+		println("Revert LastCommitedHeader to", LastCommitedHeader.Height)
+	}
+	for _, c := range n.Childs {
+		DiscardBlock(c)
+	}
+	DiscardedBlocks[n.BlockHash.BIdx()] = true
+	return
+}
+
 func AddB2G(b2g *OneBlockToGet) {
 	bidx := b2g.Block.Hash.BIdx()
 	BlocksToGet[bidx] = b2g
