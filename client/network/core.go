@@ -690,6 +690,18 @@ func GetMP(conid uint32) {
 }
 
 
+func GetMoreHeaders() {
+	Mutex_net.Lock()
+	for _, v := range OpenCons {
+		v.Lock()
+		println(v.ConnID, "AllHeadersReceived = false")
+		v.X.AllHeadersReceived = false
+		v.Unlock()
+	}
+	Mutex_net.Unlock()
+}
+
+
 func BlocksToGetCnt() (res int) {
 	MutexRcv.Lock()
 	res = len(BlocksToGet)
