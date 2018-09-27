@@ -1000,18 +1000,23 @@ func main() {
 			if bh.Hash == th.Hash {
 				trunc_idx_offs := int64(off)
 				trunc_dat_offs := int64(binary.LittleEndian.Uint64(sl[40:48]))
+				trunc_dat_idx := binary.LittleEndian.Uint32(sl[28:32])
+				cur_dat_fname := dat_fname(trunc_dat_idx)
 				fmt.Println("Truncate blockchain.new at offset", trunc_idx_offs)
-				fmt.Println("Truncate blockchain.dat at offset", trunc_dat_offs)
+				fmt.Println("Truncate", dat_fname, "at offset", trunc_dat_offs)
 				if !fl_trunc {
 					new_dir := fl_dir + fmt.Sprint(height) + string(os.PathSeparator)
 					os.Mkdir(new_dir, os.ModePerm)
 
-					f, e := os.Open(fl_dir + "blockchain.dat")
+					new_dat_idx := trunc_dat_idx+1
+					new_dat_fname := dat_fname(new_dat_idx)
+
+					f, e := os.Open(fl_dir + cur_dat_fname)
 					if e != nil {
 						fmt.Println(e.Error())
 						return
 					}
-					df, e := os.Create(new_dir + "blockchain.dat")
+					df, e := os.Create(new_dir + new_dat_fname)
 					if e != nil {
 						f.Close()
 						fmt.Println(e.Error())
@@ -1020,7 +1025,7 @@ func main() {
 
 					f.Seek(trunc_dat_offs, os.SEEK_SET)
 
-					fmt.Println("But fist save the rest in", new_dir, "...")
+					fmt.Println("But fist save the rest as", new_dir + new_dat_fname, "...")
 					if fl_skip != 0 {
 						fmt.Println("Skip", fl_skip, "blocks in the output file")
 						for fl_skip > 0 {
@@ -1059,13 +1064,14 @@ func main() {
 						sl := dat[off2 : off2+136]
 						newoffs := binary.LittleEndian.Uint64(sl[40:48]) - uint64(trunc_dat_offs)
 						binary.LittleEndian.PutUint64(sl[40:48], newoffs)
+						binary.LittleEndian.PutUint32(sl[28:32], new_dat_idx)
 						df.Write(sl)
 					}
 					df.Close()
 				}
 
 				os.Truncate(fl_dir+"blockchain.new", trunc_idx_offs)
-				os.Truncate(fl_dir+"blockchain.dat", trunc_dat_offs)
+				os.Truncate(fl_dir+cur_dat_fname, trunc_dat_offs)
 				return
 			}
 		}
