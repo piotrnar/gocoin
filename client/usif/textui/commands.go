@@ -218,10 +218,17 @@ func show_counters(par string) {
 
 func show_pending(par string) {
 	network.MutexRcv.Lock()
+	out := make([]string, len(network.BlocksToGet))
+	var idx int
 	for _, v := range network.BlocksToGet {
-		fmt.Printf(" * %d / %s / %d in progress\n", v.Block.Height, v.Block.Hash.String(), v.InProgress)
+		out[idx] = fmt.Sprintf(" * %d / %s / %d in progress", v.Block.Height, v.Block.Hash.String(), v.InProgress)
+		idx++
 	}
 	network.MutexRcv.Unlock()
+	sort.Strings(out)
+	for _, s := range out {
+		fmt.Println(s)
+	}
 }
 
 func show_help(par string) {
