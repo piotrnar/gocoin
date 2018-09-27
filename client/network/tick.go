@@ -44,6 +44,7 @@ func (c *OneConnection) ExpireBlocksToGet(now *time.Time, curr_ping_cnt uint64) 
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 		}
+		c.Disconnect("BlockDlTimeout")
 	}
 	MutexRcv.Unlock()
 }
@@ -156,7 +157,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 	}
 
-	if !c.X.GetHeadersInProgress && len(c.GetBlockInProgress) == 0 {
+	if !c.X.GetHeadersInProgress {
 		c.Mutex.Unlock()
 		// Ping if we dont do anything
 		c.TryPing()
