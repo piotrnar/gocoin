@@ -372,9 +372,11 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	/*if c.X.IsSpecial {
+	if /*c.X.IsSpecial*/c.PeerAddr.Ip()[:4]=="127." {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
-	}*/
+		println("last_cmd_rcvd:", c.X.LastCmdRcvd)
+		println("last_cmd_sent:", c.X.LastCmdSent)
+	}
 	c.broken = true
 	c.Mutex.Unlock()
 }
@@ -693,10 +695,7 @@ func GetMP(conid uint32) {
 func GetMoreHeaders() {
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
-		v.Lock()
-		println(v.ConnID, "AllHeadersReceived = false")
-		v.X.AllHeadersReceived = false
-		v.Unlock()
+		v.ReceiveHeadersNow()
 	}
 	Mutex_net.Unlock()
 }
