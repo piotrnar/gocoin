@@ -98,6 +98,7 @@ type ConnectionStatus struct {
 	TotalNewHeadersCount int
 	GetHeadersInProgress bool
 	GetHeadersTimeout time.Time
+	GetHeadersSentAtPingCnt uint64
 	LastHeadersHeightAsk uint32
 	GetBlocksDataNow bool
 
@@ -118,6 +119,7 @@ type ConnectionStatus struct {
 
 	IsSpecial bool // Special connections get more debgs and are not being automatically dropped
 	IsGocoin bool
+	Debug bool
 
 	Authorized bool
 	AuthMsgGot uint
@@ -178,6 +180,7 @@ type OneConnection struct {
 		datlen uint32
 	}
 	LastMsgTime time.Time
+	unfinished_getdata []byte
 
 	InvDone struct {
 		Map map[uint64]uint32
@@ -267,9 +270,6 @@ func (v *OneConnection) MutexGetBool(addr *bool) (val bool) {
 }
 
 
-
-
-
 // call it with locked mutex!
 func (v *OneConnection) BytesToSent() int {
 	if v.SendBufProd >= v.SendBufCons {
@@ -279,6 +279,13 @@ func (v *OneConnection) BytesToSent() int {
 	}
 }
 
+// call it with unlocked mutex!
+func (c *OneConnection) SendingPaused() (res bool) {
+	c.Mutex.Lock()
+	res = c.BytesToSent() > SendBufSize/2
+	c.Mutex.Unlock()
+	return
+}
 
 func (v *OneConnection) GetStats(res *ConnInfo) {
 	v.Mutex.Lock()
@@ -310,12 +317,17 @@ func (v *OneConnection) GetStats(res *ConnInfo) {
 
 func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 	c.Mutex.Lock()
+
+	/*if c.X.Debug {
+		fmt.Println(c.ConnID, "sent", cmd, len(pl))
+	}*/
+
 	if !c.broken {
 		// we never allow the buffer to be totally full because then producer would be equal consumer
 		if bytes_left := SendBufSize - c.BytesToSent(); bytes_left <= len(pl) + 24 {
 			c.Mutex.Unlock()
-			/*println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
-				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())*/
+			println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
+				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())
 			c.Disconnect("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
@@ -372,10 +384,8 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if /*c.X.IsSpecial*/c.PeerAddr.Ip()[:4]=="127." {
+	if c.X.Debug {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
-		println("last_cmd_rcvd:", c.X.LastCmdRcvd)
-		println("last_cmd_sent:", c.X.LastCmdSent)
 	}
 	c.broken = true
 	c.Mutex.Unlock()
@@ -393,7 +403,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.X.IsSpecial {
+	if c.X.Debug {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -404,7 +414,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.IsSpecial {
+	if c.X.Debug {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
@@ -458,7 +468,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			return // Make sure to exit here, in case of timeout
 		}
 		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
-			if c.X.IsSpecial {
+			if c.X.Debug {
 				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
 					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
 					c.X.LastCmdRcvd, c.X.LastBtsRcvd, c.X.LastCmdSent, c.X.LastBtsSent)
@@ -540,9 +550,21 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.recv.hdr_len = 0
 	c.recv.cmd = ""
 	c.recv.dat = nil
+
+	c.counters["rcvd_"+ret.cmd]++
+	c.counters["rbts_"+ret.cmd] += uint64(len(ret.pl))
+	c.X.LastCmdRcvd = ret.cmd
+	c.X.LastBtsRcvd = uint32(len(ret.pl))
+
 	c.Mutex.Unlock()
 
 	c.LastMsgTime = time.Now()
+	common.CountSafe("rcvd_" + ret.cmd)
+	common.CountSafeAdd("rbts_"+ret.cmd, uint64(len(ret.pl)))
+
+	/*if c.X.Debug {
+		fmt.Println(c.ConnID, "rcvd", cmd.cmd, len(cmd.pl))
+	}*/
 
 	return
 }
