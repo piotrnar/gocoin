@@ -1,4 +1,5 @@
 1.9.5:
+* lib/others/peersdb: updated list of DNS seeds
 * Client: Split incomming "getdata" into chunks, to prevent send buffer from overflowing
 * Client: Improved way of discovering "getheaders" and "getdata" timeouts
 * Client: Improved way of handling chain splits with only one branch valid
