@@ -166,6 +166,9 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 
 func (c *OneConnection) ReceiveHeadersNow() {
 	c.Mutex.Lock()
+	if c.X.Debug {
+		println(c.ConnID, "- ReceiveHeadersNow()")
+	}
 	c.X.AllHeadersReceived = false
 	c.Mutex.Unlock()
 }
@@ -284,5 +287,10 @@ func (c *OneConnection) sendGetHeaders() {
 	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
 	c.X.LastHeadersHeightAsk = lb.Height
 	c.MutexSetBool(&c.X.GetHeadersInProgress, true)
-	c.X.GetHeadersTimeout = time.Now().Add(GetHeadersTimeout)
+	c.X.GetHeadersTimeOutAt = time.Now().Add(GetHeadersTimeout)
+	c.X.GetHeadersSentAtPingCnt = c.X.PingSentCnt
+
+	/*if c.X.Debug {
+		println(c.ConnID, "- GetHeadersSentAtPingCnt", c.X.GetHeadersSentAtPingCnt)
+	}*/
 }
