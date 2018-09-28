@@ -97,7 +97,7 @@ type ConnectionStatus struct {
 	LastHeadersEmpty bool
 	TotalNewHeadersCount int
 	GetHeadersInProgress bool
-	GetHeadersTimeout time.Time
+	GetHeadersTimeOutAt time.Time
 	GetHeadersSentAtPingCnt uint64
 	LastHeadersHeightAsk uint32
 	GetBlocksDataNow bool
@@ -386,6 +386,8 @@ func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
 	if c.X.Debug {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+		println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent)
+		println("LastCmdSent:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
 	}
 	c.broken = true
 	c.Mutex.Unlock()
