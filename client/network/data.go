@@ -21,12 +21,26 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
-	for i:=0; i<int(cnt); i++ {
+	for i:=0; i < int(cnt); i++ {
 		var typ uint32
 		var h [36]byte
 
-		n, _ := b.Read(h[:])
-		if n!=36 {
+		if c.SendingPaused() {
+			out := new(bytes.Buffer)
+			btc.WriteVlen(out, cnt-uint64(i))
+			for ; i < int(cnt); i++ {
+				if n, _ := b.Read(h[:]); n != 36 {
+					println("ProcessGetData - 2: pl too short", c.PeerAddr.Ip())
+					return
+				}
+				out.Write(h[:])
+			}
+			c.unfinished_getdata = out.Bytes()
+			common.CountSafe("GetDataPaused")
+			break
+		}
+
+		if n, _ := b.Read(h[:]); n != 36 {
 			println("ProcessGetData: pl too short", c.PeerAddr.Ip())
 			return
 		}
