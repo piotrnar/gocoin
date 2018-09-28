@@ -21,35 +21,54 @@ Whenever you have made any changes to a running node and you want to apply them 
 Use this button and confirm to shut down the node.<br>
 <span class="note">Note that after the node is off, you will not be able to launch it from the web interface (it will shut down as well).</span>
 
+<h3>Public Authorization Key</h3>
+Place this valule in <code>friends.txt</code> file of another gocoin node, to make it a trusted node.
+Trusted nodes will respond to <b>getmp</b> command of this node.
+They will also assume all transactions and blocks sent by this node as valid (won't be verifying them).
+
+
 <hr>
 <a name="wal" href="/wal"><h2>Wallet</h2></a>
 
-At this page you can check a balance of each address of you currently selected wallet, as well as quickly switch between all your available wallets.
-You can also download <code>balance.zip</code> file for your wallet.
+At this page you can check a balance of each address of you currently selected wallet.<br>
+You can also edit your wallets, as well as quickly switch between them.<br>
+<br>
+
+For a curently selected wallet, you can download <code>balance.zip</code> file.<br>
+Such file is to be used with gocoin's <b>wallet</b> tool, for making signed transactions.<br>
+<br>
+At this page you can also <span class="but">Import</span> or <span class="but">Export settings</span> of your node's WebUI.<br>
+This is useful for backup purposes or to move settings between different web browsers, or web interfaces.<br>
+<br>
+You can <span class="but">Disable wallet functionality</span> to save memory and speed up block processing.<br>
+Switching wallet functionality on and off does not require restart, but might take awhile.
 
 <hr>
 <a name="snd" href="/snd"><h2>MakeTx</h2></a>
 
-Create a transaction to be further signed by gocoin's wallet.<br>
-It will also crate a raw transaction, which you can sign by any other wallet (e.g. bitcoin-qt).
-
-<h3>Payment details</h3>
-Fill in the outputs of the transaction, the fee and the change address.<br>
-If you need more outputs, press the <a>+ add output</a> link.<br>
-Note that <i>mBTC</i> values and the value of <b>Change</b> are read-only.<br>
-
-<h3>Estimated tx size</h3>
-Note that the estimated transaction size may not be accurate.<br>
-It always assumes compressed public keys and 2 of 3 required signatures in case of unknown P2SH input scripts (without corresponding JSON files in wallet/multisig/).
+Create a transaction to be further signed by gocoin's <b>wallet</b>.
 
 <h3>Select Inputs</h3>
-Select the unspent outputs that you want to have in the transaction.<br>
-Obviously they must carry enough bitcoins to satisfy your output volume along with the fee - only then <span class="but">Download payment.zip</span> button will be enabled.<br>
+First go to the bottom of the form and select unspent coins from your current wallet that you want to spend.<br>
+Together they must carry enough BTC to satisfy your total output volume and the fee.<br>
+
+<h3>Payment details</h3>
+Fill in the outputs (address - BTC value) of the transaction, set <b>Transaction fee</b> and <b>Change</b> address.<br>
+If change addres you want to use is not on the list, you have to add it to curtrently selected wallet on <a href="/wal">Wallet</a> tab.<br>
+If you need more outputs, press the <a>+ add output</a> link.<br>
+<span class="note">Note that <i>mBTC</i> values and the value of change amount are read-only.</span><br>
+
+<h3>Estimated tx size</h3>
+<span class="note">Note that the estimated transaction size may not be accurate.</span><br>
+Assumes compressed public keys and 2-of-3 multisig for P2SH addresses.
 
 <h3>Download payment.zip</h3>
 If the button is not enabled, something in the forms is filled in incorrectly.<br>
-Otherwise press it to download <b>payment.zip</b>, which you will need to extract at your wallet machine.
-Then execute the payment command (by default it will be in file <span class="cod">pay_cmd.txt</span>) and the wallet shall create and sign the transaction, just as you have defined it here.<br>
+Otherwise press it to download <b>payment.zip</b>, which you will need to extract at your wallet machine.<br>
+
+<h3>At the wallet machine</h3>
+Execute the payment command (by default it will be in file <span class="cod">pay_cmd.txt</span>).<br>
+The wallet tool shall then create and sign transaction, just as you have defined it here.<br>
 
 <hr>
 <a name="net" href="/net"><h2>Network</h2></a>
