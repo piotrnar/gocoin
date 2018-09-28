@@ -1,4 +1,6 @@
 1.9.5:
+* Client: Split incomming "getdata" into chunks, to prevent send buffer from overflowing
+* Client: Improved way of discovering "getheaders" and "getdata" timeouts
 * Client: Improved way of handling chain splits with only one branch valid
 * Lib: new script verification flag "VER_CONST_SCRIPTCODE", for compatibility with recent changes in bitcoin core
 * Client: Do not ban blocks only nodes, but only those that try to use bloom filtering
