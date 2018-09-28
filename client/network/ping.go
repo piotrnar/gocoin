@@ -23,7 +23,7 @@ func (c *OneConnection) HandlePong(pl []byte) {
 			return
 		}
 		common.CountSafe("PongOK")
-		c.ExpireBlocksToGet(nil, c.X.PingSentCnt)
+		c.ExpireHeadersAndGetData(nil, c.X.PingSentCnt)
 	} else {
 		common.CountSafe("PongTimeout")
 	}
