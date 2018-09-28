@@ -119,7 +119,9 @@ Node Version Legend:<br>
 &bull; <b>B</b> - Supports Bloom Filtering<br>
 &bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
 &bull; <b>W</b> - Supports Segregate Witness<br>
-&bull; <b>O</b> - Blocks only mode (node does not want transactions)<br>
+&bull; <b>X</b> - XThin blocks support<br>
+&bull; <b>L</b> - Limited network (only saves last 288 blocks)<br>
+&bull; <b>O</b> - Blocks only mode (node does not want transactions<br>
 </td>
 </tr>
 <tr>
@@ -451,6 +453,8 @@ function refreshconnections(force) {
 					if (cs[i].HighBandwidth)  s += '+'
 				}
 				if (cs[i].Services&8)  s += 'W'
+				if (cs[i].Services&0x10)  s += 'X'
+				if (cs[i].Services&0x400)  s += 'L'
 				if (cs[i].DoNotRelayTxs)  s += 'O'
 				td.innerText = s
 
