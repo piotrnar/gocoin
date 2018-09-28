@@ -27,8 +27,36 @@ var (
 	GetMPInProgressTicket = make(chan bool, 1)
 )
 
-func (c *OneConnection) ExpireBlocksToGet(now *time.Time, curr_ping_cnt uint64) {
+// call with unlocked c.Mutex
+func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt uint64) {
+	var disconnect string
+
+	c.Mutex.Lock()
+	/*if c.X.Debug {
+		println(c.ConnID, "- ExpireHeadersAndGetData", curr_ping_cnt, c.X.GetHeadersSentAtPingCnt, c.X.GetHeadersInProgress, len(c.GetBlockInProgress))
+	}*/
+
+	if c.X.GetHeadersInProgress {
+		var err string
+		if curr_ping_cnt > c.X.GetHeadersSentAtPingCnt {
+			err = "GetHeadersPong"
+		} else if now != nil && now.After(c.X.GetHeadersTimeOutAt) {
+			err = "GetHeadersTimeout"
+		}
+		if err != "" {
+			// GetHeaders timeout accured
+			c.X.GetHeadersInProgress = false
+			c.X.LastHeadersEmpty = true
+			c.X.AllHeadersReceived = true
+			common.CountSafe(err)
+			disconnect = err
+		}
+	}
+	c.Mutex.Unlock()
+
+	// never lock network.MutexRcv within (*OneConnection).Mutex as it can cause a deadlock
 	MutexRcv.Lock()
+	c.Mutex.Lock()
 	for k, v := range c.GetBlockInProgress {
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
@@ -44,20 +72,27 @@ func (c *OneConnection) ExpireBlocksToGet(now *time.Time, curr_ping_cnt uint64) 
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 		}
-		c.Disconnect("BlockDlTimeout")
+		disconnect = "BlockDlTimeout"
 	}
+	c.Mutex.Unlock()
 	MutexRcv.Unlock()
+
+	if disconnect != "" {
+		if c.MutexGetBool(&c.X.IsSpecial) {
+			println(c.ConnID, "is special - ignore diconnect request:", disconnect)
+		} else {
+			c.Disconnect(disconnect)
+		}
+	}
 }
 
 // Call this once a minute
 func (c *OneConnection) Maintanence(now time.Time) {
-	c.Mutex.Lock()
-	defer c.Mutex.Unlock()
-
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
-	c.ExpireBlocksToGet(&now, 0)
+	c.ExpireHeadersAndGetData(&now, 0)
 
 	// Expire BlocksReceived after two days
+	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
 		var i int
 		for i = 0; i < len(c.blocksreceived); i++ {
@@ -71,6 +106,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 			c.blocksreceived = c.blocksreceived[i:]
 		}
 	}
+	c.Mutex.Unlock()
 }
 
 func (c *OneConnection) Tick(now time.Time) {
@@ -82,13 +118,6 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 		// If we have no ack, do nothing more.
-		return
-	}
-
-	if c.MutexGetBool(&c.X.GetHeadersInProgress) && now.After(c.X.GetHeadersTimeout) {
-		//println(c.ConnID, "- GetHdrs Timeout")
-		c.Disconnect("HeadersTimeout")
-		common.CountSafe("NetHeadersTout")
 		return
 	}
 
@@ -139,31 +168,29 @@ func (c *OneConnection) Tick(now time.Time) {
 	}
 
 	c.Mutex.Lock()
+
 	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress) == 0 {
 		c.Mutex.Unlock()
 		c.sendGetHeaders()
-		c.Mutex.Lock()
-	} else {
-		if c.X.AllHeadersReceived {
-			if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
-				c.X.GetBlocksDataNow = true
-			}
-			if c.X.GetBlocksDataNow {
-				c.X.GetBlocksDataNow = false
-				c.Mutex.Unlock()
-				c.GetBlockData()
-				c.Mutex.Lock()
-			}
+		return // new headers requested
+	}
+
+	if c.X.AllHeadersReceived {
+		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
+			c.X.GetBlocksDataNow = true
+		}
+		if c.X.GetBlocksDataNow {
+			c.X.GetBlocksDataNow = false
+			c.Mutex.Unlock()
+			c.GetBlockData()
+			return // block data requested
 		}
 	}
 
-	if !c.X.GetHeadersInProgress {
-		c.Mutex.Unlock()
-		// Ping if we dont do anything
-		c.TryPing()
-	} else {
-		c.Mutex.Unlock()
-	}
+	c.Mutex.Unlock()
+
+	// nothing requested - free to ping..
+	c.TryPing()
 }
 
 func DoNetwork(ad *peersdb.PeerAddr) {
@@ -406,6 +433,9 @@ func NetworkTick() {
 			/*println("No headers_in_progress, so take it from", _v.ConnID,
 			_v.X.TotalNewHeadersCount, _v.X.LastHeadersEmpty)*/
 			_v.Mutex.Lock()
+			if _v.X.Debug {
+				println(_v.ConnID, "- GetHeadersPush")
+			}
 			_v.X.AllHeadersReceived = false
 			_v.Mutex.Unlock()
 		} else {
@@ -608,6 +638,12 @@ func (c *OneConnection) Run() {
 		}
 
 		if cmd == nil {
+			if c.unfinished_getdata != nil && !c.SendingPaused() {
+				cmd = &BCmsg{cmd:"getdata", pl:c.unfinished_getdata}
+				common.CountSafe("GetDataRestored")
+				goto recovered_getdata
+			}
+
 			if !read_tried {
 				// it will end up here if we did not even try to read anything because of BW limit
 				time.Sleep(10 * time.Millisecond)
@@ -618,16 +654,6 @@ func (c *OneConnection) Run() {
 		if c.X.VersionReceived {
 			c.PeerAddr.Alive()
 		}
-
-		c.Mutex.Lock()
-		c.counters["rcvd_"+cmd.cmd]++
-		c.counters["rbts_"+cmd.cmd] += uint64(len(cmd.pl))
-		c.X.LastCmdRcvd = cmd.cmd
-		c.X.LastBtsRcvd = uint32(len(cmd.pl))
-		c.Mutex.Unlock()
-
-		common.CountSafe("rcvd_" + cmd.cmd)
-		common.CountSafeAdd("rbts_"+cmd.cmd, uint64(len(cmd.pl)))
 
 		if cmd.cmd == "version" {
 			if c.X.VersionReceived {
@@ -685,6 +711,7 @@ func (c *OneConnection) Run() {
 			continue
 		}
 
+	recovered_getdata:
 		switch cmd.cmd {
 		case "inv":
 			c.ProcessInv(cmd.pl)
@@ -705,6 +732,7 @@ func (c *OneConnection) Run() {
 			c.GetBlocks(cmd.pl)
 
 		case "getdata":
+			c.unfinished_getdata = nil
 			c.ProcessGetData(cmd.pl)
 
 		case "getaddr":
