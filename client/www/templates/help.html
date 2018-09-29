@@ -17,12 +17,12 @@ To cancel editing, press the <span class="but">Cancel</span> button reload the p
 <h3>Save configuration</h3>
 Whenever you have made any changes to a running node and you want to apply them permanently, use this button.
 
-<h3>Shutdown Node node</h3>
+<h3>Shutdown Node</h3>
 Use this button and confirm to shut down the node.<br>
-<span class="note">Note that after the node is off, you will not be able to launch it from the web interface (it will shut down as well).</span>
+<span class="note">Note that you will not be able to re-launch it from the web interface as it will shut down as well.</span>
 
 <h3>Public Authorization Key</h3>
-Place this valule in <code>friends.txt</code> file of another gocoin node, to make it a trusted node.
+Place this value in <code>friends.txt</code> file of another gocoin node, to make it a trusted node.
 Trusted nodes will respond to <b>getmp</b> command of this node.
 They will also assume all transactions and blocks sent by this node as valid (won't be verifying them).
 
@@ -30,45 +30,41 @@ They will also assume all transactions and blocks sent by this node as valid (wo
 <hr>
 <a name="wal" href="/wal"><h2>Wallet</h2></a>
 
-At this page you can check a balance of each address of you currently selected wallet.<br>
-You can also edit your wallets, as well as quickly switch between them.<br>
+Edit your wallets and quickly switch between them.<br>
 <br>
-
-For a curently selected wallet, you can download <code>balance.zip</code> file.<br>
-Such file is to be used with gocoin's <b>wallet</b> tool, for making signed transactions.<br>
+Check balance of each address of you currently selected wallet.<br>
+Download <a>balance.zip</a> file of a curently selected wallet, to be used by gocoin's <b>wallet</b> tool.<br>
 <br>
-At this page you can also <span class="but">Import</span> or <span class="but">Export settings</span> of your node's WebUI.<br>
-This is useful for backup purposes or to move settings between different web browsers, or web interfaces.<br>
+<span class="but">Import</span> or <span class="but">Export settings</span> of your node's WebUI settings.<br>
+Useful for backup or to transfer settings across browsers/nodes.<br>
 <br>
-You can <span class="but">Disable wallet functionality</span> to save memory and speed up block processing.<br>
+<span class="but">Disable wallet functionality</span> to save memory and speed up block chain processing.<br>
 Switching wallet functionality on and off does not require restart, but might take awhile.
 
 <hr>
 <a name="snd" href="/snd"><h2>MakeTx</h2></a>
 
-Create a transaction to be further signed by gocoin's <b>wallet</b>.
+Create a transaction to be signed by gocoin's <b>wallet</b>.
 
 <h3>Select Inputs</h3>
 First go to the bottom of the form and select unspent coins from your current wallet that you want to spend.<br>
 Together they must carry enough BTC to satisfy your total output volume and the fee.<br>
 
 <h3>Payment details</h3>
-Fill in the outputs (address - BTC value) of the transaction, set <b>Transaction fee</b> and <b>Change</b> address.<br>
-If change addres you want to use is not on the list, you have to add it to curtrently selected wallet on <a href="/wal">Wallet</a> tab.<br>
+Fill in the outputs (address - BTC value) of the transaction, choose <b>Transaction fee</b> and <b>Change</b> address.<br>
+If change addres you want to use is not on the list, you have to add it to the currently selected wallet on <a href="/wal">Wallet</a> page.<br>
 If you need more outputs, press the <a>+ add output</a> link.<br>
-<span class="note">Note that <i>mBTC</i> values and the value of change amount are read-only.</span><br>
-
-<h3>Estimated tx size</h3>
-<span class="note">Note that the estimated transaction size may not be accurate.</span><br>
-Assumes compressed public keys and 2-of-3 multisig for P2SH addresses.
+<br>
+<span class="note">Note that the estimated transaction size may not be accurate.
+It assumes compressed public keys and 2-of-3 multisig for P2SH addresses.</span>
 
 <h3>Download payment.zip</h3>
-If the button is not enabled, something in the forms is filled in incorrectly.<br>
-Otherwise press it to download <b>payment.zip</b>, which you will need to extract at your wallet machine.<br>
+Press this button to download <b>payment.zip</b><br>
+Move this file to PC with the <b>wallet</b> tool and extract it there.
 
 <h3>At the wallet machine</h3>
-Execute the payment command (by default it will be in file <span class="cod">pay_cmd.txt</span>).<br>
-The wallet tool shall then create and sign transaction, just as you have defined it here.<br>
+Execute the payment command (by default it will be in file <span class="cod">pay_cmd.txt</span>)<br>
+The <b>wallet</b> tool shall then create and sign transaction, just as you have defined it here.<br>
 
 <hr>
 <a name="net" href="/net"><h2>Network</h2></a>
@@ -76,19 +72,14 @@ The wallet tool shall then create and sign transaction, just as you have defined
 The current network connections to other bitcoin peers.
 
 <h3>Incoming connections</h3>
-Click in the link [<a>Switch ON/OFF</a>] (right from the label
-<span class="but">Listening for incoming TCP connections</span>)
-to switch between allowing or blocking remote connections coming to your node from internet.<br>
+Click <b>Listening for incoming TCP connections</b> [<a>Switch ON/OFF</a>]
+to switch between allowing (or blocking) TCP connections from other bitcoin nodes.<br>
 <br>
-<span class="note">Note that switching on this does not automatically mean that peers will be able to connect to your node.
-In most cases you will also need to configure your network gateway to allow incoming connections at the desired TCP port and route them to the host running the node.
-Also mind that the recent versions of Satoshi client will not connect to your node on any port other then the default one (that is 8333, or 18333 for testnet).</span><br>
+<span class="note small">Note that having this switched on does not automatically mean that external peers will be able to connect to your node.<br>
+Configure your network to allow incoming connections at the desired TCP port and route them to the host running the node.<br>
+Be aware that Bitcoin Core based nodes will not connect to your node on any port other then the default one (8333).</span><br>
 <br>
-<span class="note">Note that you need to save configuration at the <a href="/">Home</a> page to make the change permanent.</span><br>
-
-<h3>Peer statistics</h3>
-Click on any row in the network connections table to see detailed info about each peer.<br>
-The info appears as a text box, below the table.
+<span class="note">To make changes permanent, <b>Save configuration</b> at <a href="/">Home</a> page.</span><br>
 
 <h3>Drop a connection</h3>
 Click on <img src="webui/del.png"> icon at the right column of a row describing  a peer connection to disconnect from it.
@@ -97,8 +88,10 @@ Click on <img src="webui/del.png"> icon at the right column of a row describing 
 <hr>
 <a name="txs" href="/txs"><h2>Transactions</h2></a>
 
-Transactions memory pool, broadcasting and routing control.
-
+Transactions memory pool control and monitoring.<br>
+<br>
+Broadcasting of own transactions.
+<!--
 <h3>Memory pool</h3>
 If the memory pool is disabled the node only operates on the full blocks and never downloads any transactions.<br>
 <br>
@@ -144,29 +137,29 @@ which is controlled by configuration parameter <span class="mono">TXPool.AllowMe
 Number of transaction in the network queue.
 These are transactions that are already received from the network (via <b>tx</b> command), but have not been yet processed by the memory pool handler.
 In most cases both the number should be equal.
-
+-->
 <hr>
 <a name="blocks" href="/blocks"><h2>Blocks</h2></a>
 
-This page shows an information about the recent blocks added to the block chain.<br>
+Information about the recent blocks added to the block chain.<br>
 <br>
 
 <hr>
 <a name="miners" href="/miners"><h2>Miners</h2></a>
 
-This page shows an information about the block chain mining statistic.<br>
+Information about the recent block chain mining statistic.<br>
 <br>
 
 <hr>
-<h2>PushTx</h2>
+<a name="pushtc" href="javascript:pushtx()"><h2>PushTx</h2></a>
 
-Allows to quickly import own transaction to the memory pool.<br>
-The transaction must be in a raw (hex-encoded) format with no spaces, nor any other characters except hex digits.<br>
-If the operation succeeds you will end up in <a href="txs">Transactions</a> page that will display the decoded transaction data.<br>
+Import own transaction into the node's memory pool.<br>
+The transaction must be in a hex-encoded raw format, with no spaces nor any other characters except hex digits.<br>
 <br>
-<span class="note">In order to send you transaction out, make sure to broadcast it after loading.</span>
+If the operation succeeds you will up in <a href="txs">Transactions</a> page that will decode and display the details fo your transaction.<br>
+Here you should broadcast the transaciton, in order for the bitcoin network to see it.</span>
 
 <hr>
-<a name="counters" href="/counters"><h2>Counters</h2></a>
+<a name="counters" href="/counts"><h2>Counters</h2></a>
 
 The node's internal real time counters and statistics.
