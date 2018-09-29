@@ -35,15 +35,26 @@ and the address book from <a href="/snd">MakeTx</a> page.<br>
 
 <hr>
 <a name="wal" href="/wal"><h2>Wallet</h2></a>
-
+<h3>Your wallets</h3>
 Edit your wallets and quickly switch between them.<br>
-<br>
-Check balance of each address of you currently selected wallet.<br>
-Download <a>balance.zip</a> file of a curently selected wallet, to be used by gocoin's <b>wallet</b> tool.<br>
-<br>
-<span class="but">Disable wallet functionality</span> to save memory and speed up block chain processing.<br>
-Switching wallet functionality on and off does not require restart, but might take awhile.
+<span class="note">Note that the wallets' data is only stored inside your browser.</span>
 
+<h3>Current wallet</h3>
+Check balance of each deposit address of you currently selected wallet.<br>
+Click on <img src="webui/qrcode.png"> icon to see the QR code for the corresponding deposit address.<br>
+Download <a>balance.zip</a> file of a curently selected wallet (to use it with gocoin's <b>wallet</b> tool)<br>
+
+<h3>Segwit Deposit Address</h3>
+These addresses are automatically generated from the corresponding deposit addresses of the original wallet.<br>
+You can have them in a backward compatible P2SH format or a new bech32 format. Click on the checkbox to change the format.<br>
+Deposit bitcoins to either of these addresses and still be able to spend it with gocoin's <b>wallet</b> while having to pay a lower transaction fees<br>
+
+<h3>Show unconfirmed</h3>
+Select this checkbox to also see the current wallet's transactions that are in memory pool (not yet confirmed).
+
+<h3>Turn wallet functionality on/off</h3>
+Disable wallet functionality to save memory and speed up block chain processing.<br>
+Switching wallet functionality on and off does not require restart, but might take awhile.
 <hr>
 <a name="snd" href="/snd"><h2>MakeTx</h2></a>
 
