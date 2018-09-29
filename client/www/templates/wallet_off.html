@@ -24,10 +24,6 @@ Wallet functionality is being enabled - <b id="perc_compl"></b> complete
 </div>
 </div>
 
-<hr>
-Import settings: <input type="file" id="import_file" accept=".json">
-<input style="float:right" type="button" value="Export settings" onclick="export_settings()">
-
 <script>
 
 function hande_stat(stat) {
@@ -90,40 +86,6 @@ blno.addEventListener("lastblock", function(e) {
 		_lblo = e.block.Height
 		min_val_btc.innerText = val2str(e.block.MinValue)
 	}
-})
-
-function export_settings() {
-	var jsonstring = JSON.stringify(localStorage)
-	var a = document.createElement("a")
-	var file = new Blob([jsonstring], {type: 'application/json'})
-	a.href = URL.createObjectURL(file)
-	a.download = "wallets.json"
-	a.click()
-}
-
-function import_file_selected(e) {
-	var f = import_file.files[0]
-	var reader = new FileReader()
-	reader.onload = function(e) {
-		//console.log('aac', e, e.target.result)
-		try {
-			var sets = JSON.parse(e.target.result)
-			var wlts = ''
-			localStorage.clear()
-			for (var nam in sets) {
-				localStorage.setItem(nam, sets[nam])
-			}
-			location.reload()
-		} catch (ex) {
-			console.log(ex)
-		}
-	};
-	reader.readAsText(f)
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-	import_file.addEventListener('change', import_file_selected, false);
-	import_file.addEventListener('click', import_file_clicked, false);
 })
 
 </script>

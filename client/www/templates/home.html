@@ -54,12 +54,16 @@ Mined by <b id="stat_mined_by"></b>
 <input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"><span onclick="chart_type_spb.click()" style="cursor:pointer"> Fee SPB</span>
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span onclick="chart_type_avg.click()" style="cursor:pointer"> <span id="avg_size">.</span> blocks average</span>
+
+
 <div id="chart" style="height:200px;margin:5px"></div>
 
 
-<tr><td colspan="2">
+<tr><td colspan="1">
 	<h2>Last Block</h2>
+<td>
 
+<tr><td colspan="2">
 <table border="0">
 	<col width="100">
 	<col width="200">
@@ -146,6 +150,9 @@ Mined by <b id="stat_mined_by"></b>
 	</table>
 </table>
 
+<div class="r small">
+Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
+</div>
 <div id="showcfg" style="display:none">
 <form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
 <table width="100%"><tr>
@@ -157,6 +164,7 @@ Mined by <b id="stat_mined_by"></b>
 </form>
 </table>
 </div>
+
 <div id="formcfg" style="display:none">
 <h2>Configuration</h2>
 <table width="100%">
@@ -174,9 +182,13 @@ Mined by <b id="stat_mined_by"></b>
 </table>
 </div>
 
-<div class="r small">
-Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
+<hr>
+<div style="margin-left:7px;margin-right:7px">
+<b>Import WebUI Settings</b> <input type="file" id="import_file" accept=".json">
+<input style="float:right" type="button" value="Export WebUI Settings" onclick="export_settings()">
 </div>
+
+
 <script>
 if (!server_mode) {
 	showcfg.style.display='block'
@@ -463,10 +475,40 @@ function refreshtxstat() {
 }
 refreshtxstat()
 
+function export_settings() {
+	var jsonstring = JSON.stringify(localStorage)
+	var a = document.createElement("a")
+	var file = new Blob([jsonstring], {type: 'application/json'})
+	a.href = URL.createObjectURL(file)
+	a.download = "wallets.json"
+	a.click()
+}
+
+function import_file_selected(e) {
+	var f = import_file.files[0]
+	var reader = new FileReader()
+	reader.onload = function(e) {
+		//console.log('aac', e, e.target.result)
+		try {
+			var sets = JSON.parse(e.target.result)
+			var wlts = ''
+			localStorage.clear()
+			for (var nam in sets) {
+				localStorage.setItem(nam, sets[nam])
+			}
+			location.reload()
+		} catch (ex) {
+			console.log(ex)
+		}
+	};
+	reader.readAsText(f)
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 	window.onkeyup = function (event) {
 		if(event.keyCode == 27)  closepopup()
 	}
+	import_file.addEventListener('change', import_file_selected, false);
 })
 
 </script>

@@ -75,7 +75,6 @@ td.outcnt {
 </style>
 <script>
 var edit_in_progress = false
-var do_not_refresh = false
 var wallet;
 var fetching_balance_in_progress = null
 function switchwallet_button_click_browser() {
@@ -473,76 +472,39 @@ function get_balance_zip() {
 	form.submit()
 }
 
-function export_settings() {
-	var jsonstring = JSON.stringify(localStorage)
-	var a = document.createElement("a")
-	var file = new Blob([jsonstring], {type: 'application/json'})
-	a.href = URL.createObjectURL(file)
-	a.download = "wallets.json"
-	a.click()
-}
-
-function import_file_selected(e) {
-	var f = import_file.files[0]
-	var reader = new FileReader()
-	reader.onload = function(e) {
-		//console.log('aac', e, e.target.result)
-		try {
-			var sets = JSON.parse(e.target.result)
-			var wlts = ''
-			localStorage.clear()
-			for (var nam in sets) {
-				localStorage.setItem(nam, sets[nam])
-			}
-			location.reload()
-		} catch (ex) {
-			console.log(ex)
-		}
-	};
-	reader.readAsText(f)
-}
-
 function switch_segwit_p2sh() {
 	localStorage.setItem("wallet_segwit_p2sh", p2sh_sw.checked)
 	fetch_wallet_balance()
 }
 
-function import_file_clicked(e) {
-	do_not_refresh = true
-}
-
 </script>
 <select id="qswal" style="display:none"></select>
 
-<h2>Current wallet: <span id="cur_wallet_name"></span> <img title="Loading balance" id="loading_icon" src="webui/loading.gif" style="display:none">
+<h2>Your wallets
 <span style="float:right" >
 <input id="move_left" type="button" value="Move left" onclick="move_wallet_left()">
 <input id="move_right" type="button" value="Move right"  onclick="move_wallet_right()">
 <input type="button" id="delwal_button" value="Delete This Wallet" onclick="delete_wallet()">
 </span>
 </h2>
-<div>
-Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
-&nbsp;&bull;&nbsp;
-<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><span class="hand" onclick="show_mempol.click()"> Show unconfirmed</span>
-</div>
-<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
-<img src="webui/warning.png" style="vertical-align:middle">
-Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
-<br>
 <div id="browser_wallets">Available wallets: </div>
-<br>
-Import settings: <input type="file" id="import_file" accept=".json">
-<input style="float:right" type="button" value="Export settings" onclick="export_settings()">
 <hr>
 
 <div id="showwal">
-<h2>Current wallet
+<h2>Current wallet: <span id="cur_wallet_name"></span> <img title="Loading balance" id="loading_icon" src="webui/loading.gif" style="display:none">
 
 <span style="float:right">
 <input type="button" value="Edit Wallet" onclick="edit_wallet()">
 </span>
 </h2>
+
+Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><span class="hand" onclick="show_mempol.click()"> Show unconfirmed</span>
+<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
+<img src="webui/warning.png" style="vertical-align:middle">
+Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
+<br><br>
 
 <table class="wal bord" id="walltab">
 <tr>
@@ -618,7 +580,7 @@ blno.addEventListener("lastblock", function(e) {
 			min_val_btc.innerText = val2str(e.block.MinValue)
 			wallet_min_warning.style.display = 'block'
 		}
-	} else if (!edit_in_progress && !do_not_refresh && e.block.Height!=_lblo) {
+	} else if (!edit_in_progress && e.block.Height!=_lblo) {
 		location.reload()
 	}
 })
@@ -631,8 +593,6 @@ qswal.addEventListener("loadwallet", function(e) {
 document.addEventListener('DOMContentLoaded', function() {
 	show_mempol.checked = localStorage.getItem("wallet_show_mempool") == 'true'
 	quick_switch_wallet() // this is to force loading wallet after loading
-	import_file.addEventListener('change', import_file_selected, false);
-	import_file.addEventListener('click', import_file_clicked, false);
 	window.onkeyup = function (event) {
 		if(event.keyCode == 27)  closepopup()
 	}
