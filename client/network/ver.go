@@ -108,6 +108,13 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				}
 			}
 			c.X.IsGocoin = strings.HasPrefix(c.Node.Agent, "/Gocoin:")
+			/*c.X.Debug = strings.HasPrefix(c.Node.Agent, "/btcwire:")// || strings.HasPrefix(c.PeerAddr.Ip(), "127.0.0.")
+			if c.X.Debug {
+				c.X.IsSpecial = true
+				c.X.LastHeadersEmpty = true
+				c.X.AllHeadersReceived = true
+				println(c.ConnID, "connected", c.PeerAddr.Ip(), c.Node.Agent, "- will not be requesting headers")
+			}*/
 		}
 		c.X.VersionReceived = true
 		c.Mutex.Unlock()
