@@ -113,15 +113,16 @@ Resolution:
 
 
 <table width="100%"><tr>
-<td>
+<td class="small">
 Node Version Legend:<br>
-&bull; <b>H</b> - Supports BIP130<br>
-&bull; <b>B</b> - Supports Bloom Filtering<br>
-&bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth)<br>
-&bull; <b>W</b> - Supports Segregate Witness<br>
-&bull; <b>X</b> - XThin blocks support<br>
-&bull; <b>L</b> - Limited network (only saves last 288 blocks)<br>
-&bull; <b>O</b> - Blocks only mode (node does not want transactions<br>
+&bull; <b>N</b> - Capable of serving the complete block chain<br>
+&bull; <b>n</b> - Limited network (can only serve last 288 blocks)<br>
+&bull; <b>H</b> - Supports BIP130 (sendheaders functionality)<br>
+&bull; <b>B</b> - Supports Bloom Filtering (for serving SPV clients)<br>
+&bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth mode)<br>
+&bull; <b>W</b> - Supports Segregate Witness functionality<br>
+&bull; <b>X</b> - Supports Xtreme Thinblocks functionality<br>
+&bull; <b>O</b> - Blocks only mode (node does not request transactions)<br>
 </td>
 </tr>
 <tr>
@@ -211,14 +212,15 @@ function update_connection_info(ci) {
 	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpctVer: ' + ci.SendCmpctVer + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
 	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
 	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
-	s += 'Invs  Done:' + ci.InvsDone + '   Recieved:' + ci.InvsRecieved + '  Pending:' + ci.InvsToSend +  '\n'
-	s += 'Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
-	s += 'BlockInProgress:' + ci.BlocksInProgress + '  GetHeadersInProgress:' + ci.GetHeadersInProgress + '\n'
-	s += 'GetBlocksDataNow:' + ci.GetBlocksDataNow + '  AllHeadersReceived:' + ci.AllHeadersReceived + '\n'
-	s += 'Authorized:' + ci.Authorized + '  AuthMsgGot:' + ci.AuthMsgGot + '  AuthAckGot:' + ci.AuthAckGot + '\n'
-	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '\n'
+
+	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '   Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+
+	s += 'Invs:  Done=' + ci.InvsDone + '   Recieved=' + ci.InvsRecieved + '  Pending=' + ci.InvsToSend +  '\n'
+	s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
+	s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
+
+	s += 'Authorized:' + ci.Authorized + '  AuthMsgGot:' + ci.AuthMsgGot + '  AuthAckGot:' + ci.AuthAckGot + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
 	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
-	s += 'GetMPInProgress:' + ci.GetMPInProgress + '\n'
 	s += 'Ping history:'
 
 	var idx = ci.PingHistoryIdx
@@ -446,6 +448,8 @@ function refreshconnections(force) {
 				td.className = 'bold'
 				td.style.textAlign = 'center'
 				var s = ''
+				if (cs[i].Services&1)  s += 'N'
+				else  if (cs[i].Services&0x400)  s += 'n'
 				if (cs[i].SendHeaders) s += 'H'
 				if (cs[i].Services&4) s += 'B'
 				if (cs[i].SendCmpctVer) {
@@ -454,7 +458,6 @@ function refreshconnections(force) {
 				}
 				if (cs[i].Services&8)  s += 'W'
 				if (cs[i].Services&0x10)  s += 'X'
-				if (cs[i].Services&0x400)  s += 'L'
 				if (cs[i].DoNotRelayTxs)  s += 'O'
 				td.innerText = s
 
