@@ -449,7 +449,7 @@ function refreshconnections(force) {
 				td.style.textAlign = 'center'
 				var s = ''
 				if (cs[i].Services&1)  s += 'N'
-				else  if (cs[i].Services&0x400)  s += 'n'
+				else  if ((cs[i].Services&0x400)==0)  s += 'n'
 				if (cs[i].SendHeaders) s += 'H'
 				if (cs[i].Services&4) s += 'B'
 				if (cs[i].SendCmpctVer) {
