@@ -125,12 +125,19 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 	if db.blockindx == nil {
 		panic("Cannot open blockchain.new")
 	}
-	if opts.MaxCachedBlocks > 0 {
-		db.max_cached_blocks = opts.MaxCachedBlocks
-		db.cache = make(map[[btc.Uint256IdxLen]byte]*BlckCachRec, db.max_cached_blocks)
+
+	if opts != nil {
+		if opts.MaxCachedBlocks > 0 {
+			db.max_cached_blocks = opts.MaxCachedBlocks
+		}
+		db.max_data_file_size = opts.MaxDataFileSize
+		db.data_files_keep = opts.DataFilesKeep
 	}
-	db.max_data_file_size = opts.MaxDataFileSize
-	db.data_files_keep = opts.DataFilesKeep
+
+	if db.max_cached_blocks == 0 {
+		db.max_cached_blocks = 100 // default
+	}
+	db.cache = make(map[[btc.Uint256IdxLen]byte]*BlckCachRec, db.max_cached_blocks)
 
 	db.blocksToWrite = make(chan oneB2W, MAX_BLOCKS_TO_WRITE)
 	return
