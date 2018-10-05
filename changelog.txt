@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Fixed performance issue with mempool's transaction.GetAllParents() method
 * Client/WebUI: Import/Export WebUI settings moved from Wallet to Home page
 * lib/others/peersdb: updated list of DNS seeds
 * Client: Split incomming "getdata" into chunks, to prevent send buffer from overflowing

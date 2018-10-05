@@ -402,7 +402,10 @@ func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
 		if tx.MemInputCnt > 0 {
 			for idx := range tx.TxIn {
 				if tx.MemInputs[idx] {
-					do_one(TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])])
+					par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]
+					if _, ok := already_in[par_tx]; !ok {
+						do_one(par_tx)
+					}
 				}
 			}
 		}
