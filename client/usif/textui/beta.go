@@ -10,13 +10,13 @@ import (
 func new_block(par string) {
 	sta := time.Now()
 	txs := network.GetSortedMempool()
-	println(len(txs), "txs got in", time.Now().Sub(sta).String())
+	println(len(txs), "_txs got in", time.Now().Sub(sta).String())
 
 	sta = time.Now()
-	rbf := network.GetSortedMempoolNew()
-	println(len(rbf), "rbf got in", time.Now().Sub(sta).String())
+	cpfp := network.GetSortedMempoolNew()
+	println(len(cpfp), "cpfp got in", time.Now().Sub(sta).String())
 
-	println("All sorted.  txs:", len(txs), "  rbf:", len(rbf))
+	println("All sorted.  txs:", len(txs), "  cpfp:", len(cpfp))
 
 	var totwgh int
 	var totfees, totfees2 uint64
@@ -31,7 +31,7 @@ func new_block(par string) {
 	println("Fees from OLD sorting:", btc.UintToBtc(totfees), totwgh)
 
 	totwgh = 0
-	for _, tx := range rbf {
+	for _, tx := range cpfp {
 		totfees2 += tx.Fee
 		totwgh += tx.Weight()
 		if totwgh > 4e6 {
