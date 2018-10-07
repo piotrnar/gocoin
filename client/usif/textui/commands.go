@@ -170,12 +170,14 @@ func show_info(par string) {
 			sw_bts += uint64(v.Size)
 		}
 	}
-	fmt.Printf("Txs in mem pool: %d (%dMB),  SegWit: %d (%dMB),  Rejected: %d (%dMB),  Pending:%d/%d\n",
-		len(network.TransactionsToSend), network.TransactionsToSendSize>>20, sw_cnt, sw_bts>>20,
-		len(network.TransactionsRejected), network.TransactionsRejectedSize>>20,
+	fmt.Printf("Txs in mempool: %d (%sB),  Using SegWit: %d (%sB),  Rejected: %d (%sB)\n",
+		len(network.TransactionsToSend), common.UintToString(network.TransactionsToSendSize),
+		sw_cnt, common.UintToString(sw_bts),
+		len(network.TransactionsRejected), common.UintToString(network.TransactionsRejectedSize))
+	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d\n",
+		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
+		len(network.SpentOutputs), common.GetAverageFee(),
 		len(network.TransactionsPending), len(network.NetTxs))
-	fmt.Printf(" WaitingForInputs: %d (%d KB),  SpentOutputs: %d,  AverageFee: %.1f SpB\n",
-		len(network.WaitingForInputs), network.WaitingForInputsSize, len(network.SpentOutputs), common.GetAverageFee())
 	network.TxMutex.Unlock()
 
 	var gs debug.GCStats
