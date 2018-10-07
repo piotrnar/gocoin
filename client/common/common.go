@@ -118,7 +118,42 @@ func BytesToString(val uint64) string {
 	return fmt.Sprintf("%.2f GB", float64(val)/1e9)
 }
 
-func NumberToString(num float64) string {
+//max 6 characters
+func UintToString(num uint64) string {
+	if num < 1e5 {
+		return fmt.Sprint(num) + " "
+	}
+	if num < 10e6 {
+		return fmt.Sprintf("%.0f K", float64(num)/1e3)
+	}
+	if num < 10e7 {
+		return fmt.Sprintf("%.1f M", float64(num)/1e6)
+	}
+	if num < 10e9 {
+		return fmt.Sprintf("%.0f M", float64(num)/1e6)
+	}
+	if num < 10e10 {
+		return fmt.Sprintf("%.1f G", float64(num)/1e9)
+	}
+	if num < 10e12 {
+		return fmt.Sprintf("%.0f G", float64(num)/1e9)
+	}
+	if num < 10e13 {
+		return fmt.Sprintf("%.1f T", float64(num)/1e12)
+	}
+	if num < 10e15 {
+		return fmt.Sprintf("%.0f T", float64(num)/1e12)
+	}
+	if num < 10e16 {
+		return fmt.Sprintf("%.1f P", float64(num)/1e15)
+	}
+	if num < 10e18 {
+		return fmt.Sprintf("%.0f P", float64(num)/1e15)
+	}
+	return fmt.Sprintf("%.1f E", float64(num)/1e18)
+}
+
+func FloatToString(num float64) string {
 	if num > 1e24 {
 		return fmt.Sprintf("%.2f Y", num/1e24)
 	}
@@ -147,7 +182,7 @@ func NumberToString(num float64) string {
 }
 
 func HashrateToString(hr float64) string {
-	return NumberToString(hr) + "H/s"
+	return FloatToString(hr) + "H/s"
 }
 
 // Calculates average blocks size over the last "CFG.Stat.BSizeBlks" blocks
