@@ -20,7 +20,7 @@ function xval(xml,tag) {
 	try {
 		return xml.getElementsByTagName(tag)[0].childNodes[0].nodeValue;
 	} catch (e) {
-		return NaN
+		return null
 	}
 }
 

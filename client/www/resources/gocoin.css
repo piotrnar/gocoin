@@ -163,6 +163,7 @@ tr.hov:hover {
 
 .cod {
 	font-family: monospace;
+	font-size:12px;
 	background-color:#eeeeee;
 	color:#006000;
 }
@@ -233,6 +234,7 @@ td.blreward {
 	color:#008000;
 	font-family: monospace;
 	text-align: right;
+	font-size:12px;
 }
 
 td.blspb {
