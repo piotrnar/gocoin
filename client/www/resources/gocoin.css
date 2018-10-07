@@ -64,6 +64,14 @@ table {
 	font-size:14px;
 }
 
+h2 {
+	margin-bottom:5px;
+}
+
+h3 {
+	margin-bottom:3px;
+}
+
 table.bord {
 	border: 1px #000000 solid;
 	border-spacing:0;
