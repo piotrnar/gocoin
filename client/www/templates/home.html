@@ -47,8 +47,16 @@ Mined by <b id="stat_mined_by"></b>
 </colgroup>
 
 <tr><td colspan="2" style="padding:0px">
-<table width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
-<td style="font-size:12px;padding-left:8px;padding-top:7px;padding-bottom:0px">
+<div align="right" style="float:right;font-size:12px;padding-top:0px">
+WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
+<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="webui/backup.png"> Export</a>
+&nbsp;
+<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="webui/restore.png"> Import</a>
+</div>
+<h2 style="margin-top:10px;margin-bottom:5px">Recent Blocks</h2>
+
+<table width="100%"><tr style="border:0">
+<td style="padding:0">
 <input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span onclick="chart_type_siz.click()" style="cursor:pointer"> Blocksize KB</span>
 &nbsp;&bull;&nbsp;
 <input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span onclick="chart_type_txs.click()" style="cursor:pointer"> Transactions</span>
@@ -57,41 +65,37 @@ Mined by <b id="stat_mined_by"></b>
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span onclick="chart_type_avg.click()" style="cursor:pointer"> <span id="avg_size">.</span> blocks average</span>
 </td>
+<td align="right" style="padding:0px">
+	<table>
+	<tr style="border:0"><td style="padding-top:0px;padding-bottom:0px;" >Average:
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><span id="si_network_hashrate"></span></a>
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Block size"><a href="https://blockchain.info/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
+	</table>
 
-<td align="right" style="font-size:12px;padding-top:0px;padding-bottom:7px">
-WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
-<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="webui/backup.png"> Export</a>
-&nbsp;
-<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="webui/restore.png"> Import</a>
 </td>
 </tr></table>
-
-<div id="chart" style="height:200px;margin-left:0px;margin-right:20px;margin-top:0px;margin-bottom:5px"></div>
+<div id="chart" style="height:200px;margin-left:0px;margin-right:5px;margin-top:0px;margin-bottom:5px"></div>
 
 
 <tr><td colspan="2">
 	<h2>Last Block</h2>
-<table border="0">
-	<col width="100">
-	<col width="200">
-	<col width="100">
-	<col width="200">
-	<col width="100">
-	<col width="150">
-	<col width="170">
-	<col width="120">
-	<tr><td align="right" class="nw">Block Hash:<td colspan="5"><b id="last_block_hash"></b>
-		<td align="right">Version:
-			<td><b id="last_block_version"></b>
+<table border="0" width="100%">
+	<tr><td align="right" class="nw">Block Hash:<td colspan="7"><b id="last_block_hash"></b>
+		<td align="right" class="nw">Last Header:
+			<td><b title="Last known header" id="si_last_hdr_height"></b>
 
-	<tr><td align="right">Timestamp:
+	<tr>
+		<td align="right" colspan="1">Version:
+			<td colspan="1"><b id="last_block_version"></b>
+		<td align="right">Received:
+			<td><b id="last_block_received"></b>
+		<td align="right">Timestamp:
 			<td class="nw"><b id="last_block_timestamp"></b>
 		<td align="right">Median:
 			<td class="nw"><b id="last_block_median"></b>
 		<td align="right">Difficulty:
 			<td><b id="last_block_difficulty"></b>
-		<td align="right">Received:
-			<td><b id="last_block_received"></b>
 	</table>
 </td>
 </tr>
@@ -105,10 +109,6 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<col width="25%">
 		<col width="30%">
 	</colgroup>
-	<tr><td>Average:
-    <td align="right" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><span id="si_network_hashrate"></span></a>
-	<td align="right" title="Transaction fee"><a href="http://bitcoinfees.21.co/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
-	<td align="right" title="Block size"><a href="https://blockchain.info/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
 	<tr><td nowrap="nowrap">Connections:
 		<td align="right"><b id="bw_open_conns_total"></b>
 		<td align="right" class="nw">outgoing <b id="bw_open_conns_out"></b>
@@ -124,11 +124,13 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 	<tr><td>External IP:
 		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
 		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic;overlay-x:">
+	<tr title="Public Authorization Key"><td>Auth Key:
+		<td colspan="3" align="left" class="small"><b><!--PUB_AUTH_KEY--></b>
 	</table>
 <td valign="top">
-	<h2>Others</h2>
+	<h2>Node</h2>
 	<table width="100%">
-	<tr><td>Node's Uptime:<td>
+	<tr><td>Uptime:<td>
 		<b id="si_node_uptime"></b>
 		&nbsp;&bull;&nbsp;
 		<b title="Known peers" id="si_known_peers"></b> peers
@@ -139,6 +141,7 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		(<b title="Native Go heap" id="si_heap_size"></b> +
 		<b title="QDB UTXO records" id="si_qdb_extramem"></b>)
 		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
+
 	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
 		<b title="Accepted" id="ts_t2s_size"></b>
 		&nbsp;&bull;&nbsp;
@@ -151,23 +154,22 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> cached,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
-	<tr><td>Last Header:<td>
-		<b title="Last received header" id="si_last_hdr_height"></b>
 		<img id="si_saving" src="webui/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
-	</table>
-</table>
+	</tr>
+	<tr id="showcfg" style="display:none">
 
-<div id="showcfg" style="display:none">
 <form method="post" style="margin:0" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
-<table width="100%"><tr>
-<td align="left"><input type="button" value="Edit configuration" onclick="shwcfg()">
-<td align="right">
+<td align="left" style="padding:0px"><input type="button" value="Edit configuration" onclick="shwcfg()">
+<td align="right" style="padding:0px">
 <input type="button" value="Save configuration" onclick="savecfg()">
 <input type="hidden" name="shutdown" value="1">
 <input type="submit" value="Shutdown Node">
 </form>
+</td>
+
+</tr>
+	</table>
 </table>
-</div>
 
 <div id="formcfg" style="display:none">
 <h2>Configuration</h2>
@@ -186,13 +188,9 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 </table>
 </div>
 
-<div class="r small" style="margin:10px">
-Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
-</div>
-
 <script>
 if (!server_mode) {
-	showcfg.style.display='block'
+	showcfg.style.display='table-row'
 	el_free_mem.style.display='inline'
 }
 
