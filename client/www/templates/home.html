@@ -46,7 +46,9 @@ Mined by <b id="stat_mined_by"></b>
 	<col width="50%">
 </colgroup>
 
-<tr><td colspan="2">
+<tr><td colspan="2" style="padding:0px">
+<table width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+<td style="font-size:12px;padding-left:20px;padding-top:7px;padding-bottom:0px">
 <input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span onclick="chart_type_siz.click()" style="cursor:pointer"> Blocksize KB</span>
 &nbsp;&bull;&nbsp;
 <input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span onclick="chart_type_txs.click()" style="cursor:pointer"> Transactions</span>
@@ -54,9 +56,17 @@ Mined by <b id="stat_mined_by"></b>
 <input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"><span onclick="chart_type_spb.click()" style="cursor:pointer"> Fee SPB</span>
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span onclick="chart_type_avg.click()" style="cursor:pointer"> <span id="avg_size">.</span> blocks average</span>
+</td>
 
+<td align="right" style="font-size:12px;padding-top:0px;padding-bottom:7px">
+WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
+<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="webui/backup.png"> Export</a>
+&nbsp;
+<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="webui/restore.png"> Import</a>
+</td>
+</tr></table>
 
-<div id="chart" style="height:200px;margin:5px"></div>
+<div id="chart" style="height:200px;margin-left:5px;margin-right:10px;margin-top:0px;margin-bottom:5px"></div>
 
 
 <tr><td colspan="2">
@@ -147,11 +157,8 @@ Mined by <b id="stat_mined_by"></b>
 	</table>
 </table>
 
-<div class="r small">
-Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
-</div>
 <div id="showcfg" style="display:none">
-<form method="post" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
+<form method="post" style="margin:0" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
 <table width="100%"><tr>
 <td align="left"><input type="button" value="Edit configuration" onclick="shwcfg()">
 <td align="right">
@@ -179,12 +186,9 @@ Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
 </table>
 </div>
 
-<hr>
-<div style="margin-left:7px;margin-right:7px">
-<b>Import WebUI Settings</b> <input type="file" id="import_file" accept=".json">
-<input style="float:right" type="button" value="Export WebUI Settings" onclick="export_settings()">
+<div class="r small" style="margin:10px">
+Public Authorization Key: <b><!--PUB_AUTH_KEY--></b>
 </div>
-
 
 <script>
 if (!server_mode) {
@@ -479,6 +483,10 @@ function export_settings() {
 	a.href = URL.createObjectURL(file)
 	a.download = "wallets.json"
 	a.click()
+}
+
+function import_file_click() {
+	import_file.click()
 }
 
 function import_file_selected(e) {

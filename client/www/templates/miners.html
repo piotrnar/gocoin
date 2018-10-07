@@ -66,6 +66,10 @@ function refresh_mining_info() {
 			el_avg_diff.innerText = bignum(cs.AvgDifficulty)
 			el_diff_change_in.innerText = (parseInt(last_block_height/2016)+1)*2016 - last_block_height
 
+			var per = (parseInt(last_block_height/210e3)+1) * 210e3
+			next_halving_days.innerText = parseInt((per - last_block_height) / 144)
+			next_halving_weeks.innerText = parseInt((per - last_block_height) / 144/7)
+
 			while (minerstab.rows.length>1) minerstab.deleteRow(1)
 
 			var totfees=0,  totbts=0,  bu_cnt=0,  sw_cnt=0, ny_cnt=0
@@ -150,6 +154,8 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 		<th width="60" align="right" title="Satoshis per byte">SPB
 	</tr>
 </table>
+<br>
+The next halving is estimated to happen in <b id="next_halving_days">...</b> days or <b id="next_halving_weeks">...</b> weeks.
 </div>
 </td>
 <td valign="top" id="block_history_td" style="display:none">
