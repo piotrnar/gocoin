@@ -1,6 +1,6 @@
 body {
 	font-family:Arial;
-	//font-size:10px;
+	font-size:14px;
 }
 a {
 	color:blue;
@@ -24,6 +24,7 @@ a.topmenu {
 	padding-right:6px;
 	border: 1px solid white;
 	border-collapse: collapse;
+	font-size:16px;
 }
 
 a.topmenu:hover {
@@ -44,6 +45,7 @@ a.dimenu {
 
 .mono {
 	font-family: monospace;
+	font-size:12px;
 }
 
 .bold {
@@ -56,6 +58,10 @@ a.dimenu {
 
 .i {
 	font-style:italic;
+}
+
+table {
+	font-size:14px;
 }
 
 table.bord {
@@ -173,6 +179,7 @@ input[type=button], input[type=submit] {
 	padding-right: 10px;
 	padding-top: 3px;
 	padding-bottom: 3px;
+	font-size:12px;
 }
 
 input[type=button]:hover, input[type=submit]:hover {
@@ -181,12 +188,12 @@ input[type=button]:hover, input[type=submit]:hover {
 }
 
 table.blocks {
-	font-size:13px;
+	font-size:12px;
 	width:100%;
 }
 
 td.block_hash {
-	font-size:12px;
+	font-size:11px;
 }
 
 td.nodeid {
