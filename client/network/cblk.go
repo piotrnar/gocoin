@@ -471,7 +471,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 
 	b2g := BlocksToGet[idx]
 	if b2g == nil {
-		panic("BlockTxn: Block missing from BlocksToGet")
+		// This may happen if we received this block already and it was invalid
+		println("BlockTxn: Block isn't in BlocksToGet anymore", hash.String())
+		common.CountSafe("BlkTxnNoB2G")
 		return
 	}
 	//b2g.InProgress--
