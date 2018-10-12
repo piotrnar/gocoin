@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Do not panic upon receiving "blocktxn" for a block that had been removed from BlocksToGet
 * Client/WebUI: Cosmetic chanages in the layout
 * Client: Fixed performance issue with mempool's transaction.GetAllParents() method
 * Client/WebUI: Import/Export WebUI settings moved from Wallet to Home page
