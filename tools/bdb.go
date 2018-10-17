@@ -967,7 +967,6 @@ func main() {
 			totlen += uint64(len(blk))
 		}
 		done.Wait()  // wait for all the goroutines to complete
-		fdat.Close()
 		if fdat != nil {
 			fdat.Close()
 		}
