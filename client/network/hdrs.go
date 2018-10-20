@@ -178,7 +178,7 @@ func (c *OneConnection) ReceiveHeadersNow() {
 func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 	if e != nil || hashstop == nil {
-		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip())
+		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent)
 		c.DoS("BadGetHdrs")
 		return
 	}
