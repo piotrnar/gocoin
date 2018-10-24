@@ -106,13 +106,13 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 
 			n, _ := b.Read(hdr[:])
 			if n != 81 {
-				println("HandleHeaders: pl too short", c.PeerAddr.Ip())
+				println("HandleHeaders: pl too short", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr1")
 				return
 			}
 
 			if hdr[80] != 0 {
-				fmt.Println("Unexpected value of txn_count from", c.PeerAddr.Ip())
+				fmt.Println("Unexpected value of txn_count from", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr2")
 				return
 			}
