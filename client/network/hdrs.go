@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -95,6 +94,12 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 		return
 	}
 
+	if cnt > 2000 {
+		println("HandleHeaders: too many headers", cnt, c.PeerAddr.Ip(), c.Node.Agent)
+		c.DoS("HdrErrX")
+		return
+	}
+
 	HeadersReceived.Add(1)
 
 	if cnt > 0 {
@@ -102,22 +107,21 @@ func (c *OneConnection) HandleHeaders(pl []byte) (new_headers_got int) {
 		defer MutexRcv.Unlock()
 
 		for i := 0; i < int(cnt); i++ {
-			var hdr [81]byte
+			hdr := make([]byte, 80)
 
-			n, _ := b.Read(hdr[:])
-			if n != 81 {
-				println("HandleHeaders: pl too short", c.PeerAddr.Ip(), c.Node.Agent)
+			if n, _ := b.Read(hdr); n != 80 {
+				println("HandleHeaders: pl too short 1", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr1")
 				return
 			}
 
-			if hdr[80] != 0 {
-				fmt.Println("Unexpected value of txn_count from", c.PeerAddr.Ip(), c.Node.Agent)
+			if _, e = btc.ReadVLen(b); e != nil {
+				println("HandleHeaders: pl too short 2", c.PeerAddr.Ip(), c.Node.Agent)
 				c.DoS("HdrErr2")
 				return
 			}
 
-			sta, b2g := c.ProcessNewHeader(hdr[:])
+			sta, b2g := c.ProcessNewHeader(hdr)
 			if b2g == nil {
 				if sta == PH_STATUS_FATAL {
 					//println("c.DoS(BadHeader)")

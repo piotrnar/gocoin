@@ -143,10 +143,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if b2g==nil {
 		//println("Block", hash.String(), " from", conn.PeerAddr.Ip(), conn.Node.Agent, " was not expected")
 
-		var hdr [81]byte
 		var sta int
-		copy(hdr[:80], b[:80])
-		sta, b2g = conn.ProcessNewHeader(hdr[:])
+		sta, b2g = conn.ProcessNewHeader(b[:80])
 		if b2g==nil {
 			if sta==PH_STATUS_FATAL {
 				println("Unrequested Block: FAIL - Ban", conn.PeerAddr.Ip(), conn.Node.Agent)

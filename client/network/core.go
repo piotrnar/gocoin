@@ -637,21 +637,22 @@ func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 
 
 // Returns maximum accepted payload size of a given type of message
+// For wider compatibility, we assume that any var_len may be up to 9 bytes
 func maxmsgsize(cmd string) uint32 {
 	switch cmd {
-		case "inv": return 3+50000*36 // the spec says "max 50000 entries"
+		case "inv": return 9+50000*36 // the spec says "max 50000 entries"
 		case "tx": return 500e3 // max segwit tx size 500KB
-		case "addr": return 3+1000*30 // max 1000 addrs
-		case "block": return 8e6 // max seg2x block size 8MB
-		case "getblocks": return 4+3+500*32+32 // we allow up to 500 locator hashes
-		case "getdata": return 3+50000*36 // the spec says "max 50000 entries"
-		case "headers": return 3+50000*36 // the spec says "max 50000 entries"
-		case "getheaders": return 4+3+500*32+32 // we allow up to 500 locator hashes
+		case "addr": return 9+1000*30 // max 1000 addrs
+		case "block": return 4e6 // max segwit block size 4MB
+		case "getblocks": return 4+9+500*32+32 // we allow up to 500 locator hashes
+		case "getdata": return 9+50000*36 // core: MAX_INV_SZ = 50000
+		case "headers": return 9+2000*89 // core: MAX_HEADERS_RESULTS = 2000
+		case "getheaders": return 4+9+500*32+32 // we allow up to 500 locator hashes
 		case "cmpctblock": return 1e6 // 1MB shall be enough
 		case "getblocktxn": return 1e6 // 1MB shall be enough
-		case "blocktxn": return 8e6 // all txs that can fit withing 1MB block
-		case "notfound": return 3+50000*36 // maximum size of getdata
-		case "getmp": return 5+8*MAX_GETMP_TXS
+		case "blocktxn": return 4e6 // all txs that can fit withing max size block
+		case "notfound": return 9+50000*36 // same as maximum size of getdata
+		case "getmp": return 9+8*MAX_GETMP_TXS
 		default: return 1024 // Any other type of block: maximum 1KB payload limit
 	}
 }

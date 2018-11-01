@@ -185,10 +185,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
-	var tmp_hdr [81]byte
-	copy(tmp_hdr[:80], pl[:80])
-	sta, b2g := c.ProcessNewHeader(tmp_hdr[:]) // ProcessNewHeader() needs byte(0) after the header,
-	// but don't try to change it to ProcessNewHeader(append(pl[:80], 0)) as it'd overwrite pl[80]
+	sta, b2g := c.ProcessNewHeader(pl[:80])
 
 	if b2g == nil {
 		common.CountSafe("CmpctBlockHdrNo")

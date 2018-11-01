@@ -34,6 +34,7 @@ type BlockExtraInfo struct {
 }
 
 
+// tha data may contain only the header (80 bytes)
 func NewBlock(data []byte) (bl *Block, er error) {
 	if data==nil {
 		er = errors.New("nil pointer")
@@ -46,16 +47,19 @@ func NewBlock(data []byte) (bl *Block, er error) {
 }
 
 
+// tha data may contain only the header (80 bytes)
 func (bl *Block) UpdateContent(data []byte) error {
-	if len(data)<81 {
+	if len(data) < 80 {
 		return errors.New("Block too short")
 	}
 	bl.Raw = data
-	bl.TxCount, bl.TxOffset = VLen(data[80:])
-	if bl.TxOffset == 0 {
-		return errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
+	if len(data) > 80 {
+		bl.TxCount, bl.TxOffset = VLen(data[80:])
+		if bl.TxOffset == 0 {
+			return errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
+		}
+		bl.TxOffset += 80
 	}
-	bl.TxOffset += 80
 	return nil
 }
 

@@ -13,7 +13,7 @@ import (
 // Make sure to call this function with ch.BlockIndexAccess locked
 func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
 	// Size limits
-	if len(bl.Raw)<81 {
+	if len(bl.Raw) < 80 {
 		er = errors.New("CheckBlock() : size limits failed - RPC_Result:bad-blk-length")
 		dos = true
 		return
