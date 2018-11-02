@@ -5,16 +5,15 @@
 The software architecture is focused on maximum performance of the node
 and cold storage security of the wallet.
 
-The **client** (p2p node) is an application independent from the **wallet**.
-It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
-With a decent machine and a fast connection (e.g. 4 vCPUs from Google Cloud or Amazon AWS),
-the node should sync the entire bitcoin block chain in less than 4 hours (as of chain height ~512000).
-
-![SyncChart](website/btc_chain_sync_perf.png)
-
 The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
+It can be used without the **client**.
+
+The **client** (p2p node) is an application independent from the **wallet**.
+It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
+
+![SyncChart](website/btc_chain_sync_perf.png)
 
 # Requirements
 
