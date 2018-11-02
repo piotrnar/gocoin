@@ -13,7 +13,11 @@ It can be used without the **client**.
 The **client** (p2p node) is an application independent from the **wallet**.
 It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
 
+**System memory and time needed to sync BTC block chain up to the given block number:**
+
 ![SyncChart](website/btc_chain_sync_perf.png)
+*The data above is from Gocoin 1.9.5 running on a standard 4 vCPUs / 15 GB memory VPS from [Google Cloud Platform](https://cloud.google.com/).*
+*Note that Gocoin uses configurable LastTrustedBlock parameter, to avoid verifying scripts from all blocks known as valid.*
 
 # Requirements
 
