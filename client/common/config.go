@@ -219,6 +219,17 @@ func InitConfig() {
 	}
 	flag.Parse()
 
+	// swap LastTrustedBlock if it's now from the other chain
+	if CFG.Testnet {
+		if CFG.LastTrustedBlock == LastTrustedBTCBlock {
+			CFG.LastTrustedBlock = LastTrustedTN3Block
+		}
+	} else {
+		if CFG.LastTrustedBlock == LastTrustedTN3Block {
+			CFG.LastTrustedBlock = LastTrustedBTCBlock
+		}
+	}
+
 	ApplyBalMinVal()
 
 	if !FLAG.NoWallet {
@@ -231,13 +242,6 @@ func InitConfig() {
 
 	if new_config_file {
 		// Create default config file
-
-		if CFG.Testnet {
-			CFG.LastTrustedBlock = LastTrustedTN3Block
-		} else {
-			CFG.LastTrustedBlock = LastTrustedBTCBlock
-		}
-
 		SaveConfig()
 		println("Stored default configuration in", ConfigFile)
 	}

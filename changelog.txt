@@ -1,4 +1,5 @@
 1.9.5:
+* Client: Added default Last Trusted Block hash also for testnet3
 * Client: Allow non-zero tx counts inside "headers" message, for compatibility with the core client
 * Client: Do not panic upon receiving "blocktxn" for a block that had been removed from BlocksToGet
 * Client/WebUI: Cosmetic chanages in the layout
