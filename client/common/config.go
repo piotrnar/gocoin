@@ -221,11 +221,11 @@ func InitConfig() {
 
 	// swap LastTrustedBlock if it's now from the other chain
 	if CFG.Testnet {
-		if CFG.LastTrustedBlock == LastTrustedBTCBlock {
+		if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock {
 			CFG.LastTrustedBlock = LastTrustedTN3Block
 		}
 	} else {
-		if CFG.LastTrustedBlock == LastTrustedTN3Block {
+		if new_config_file || CFG.LastTrustedBlock == LastTrustedTN3Block {
 			CFG.LastTrustedBlock = LastTrustedBTCBlock
 		}
 	}

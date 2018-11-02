@@ -235,7 +235,7 @@ func ApplyLastTrustedBlock() {
 	lastTrustedBlock = hash
 	LastTrustedBlockHeight = 0
 
-	if BlockChain != nil {
+	if hash != nil && BlockChain != nil {
 		BlockChain.BlockIndexAccess.Lock()
 		node := BlockChain.BlockIndex[hash.BIdx()]
 		BlockChain.BlockIndexAccess.Unlock()
