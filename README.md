@@ -18,8 +18,6 @@ System memory and time needed to sync BTC block chain up to the given block numb
 ![SyncChart](website/btc_chain_sync_perf.png)
 *The data above is from Gocoin 1.9.5 running on a standard 4 vCPUs / 15 GB memory VPS from [Google Cloud Platform](https://cloud.google.com/).*
 
-Note that Gocoin uses configurable `LastTrustedBlock` parameter, to avoid verifying scripts from blocks known as valid.
-
 # Requirements
 
 ## Hardware
