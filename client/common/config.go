@@ -16,6 +16,9 @@ import (
 	"time"
 )
 
+const LastTrustedBTCBlock = "00000000000000000005ccb10615d138f3f3f973ff9cce8cd99f6695ea41e5df" // #548429
+const LastTrustedTN3Block = "000000000000004af2797ec6c819d68e45a67b0add227d786aa6011be2489511" // #1441638
+
 var (
 	FLAG struct { // Command line only options
 		Rescan        bool
@@ -120,6 +123,8 @@ type oneAllowedAddr struct {
 var WebUIAllowed []oneAllowedAddr
 
 func InitConfig() {
+	var new_config_file bool
+
 	// Fill in default values
 	CFG.Net.ListenTCP = true
 	CFG.Net.MaxOutCons = 9
@@ -174,8 +179,6 @@ func InitConfig() {
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
 
-	CFG.LastTrustedBlock = "00000000000000000015e96e98a806907ca1848ee5eed88a81719aba58a681be" // block #537186
-
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
@@ -184,9 +187,7 @@ func InitConfig() {
 			os.Exit(1)
 		}
 	} else {
-		// Create default config file
-		SaveConfig()
-		println("Stored default configuration in", ConfigFile)
+		new_config_file = true
 	}
 
 	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild UTXO database (fixes 'Unknown input TxID' errors)")
@@ -228,6 +229,18 @@ func InitConfig() {
 		}
 	}
 
+	if new_config_file {
+		// Create default config file
+
+		if CFG.Testnet {
+			CFG.LastTrustedBlock = LastTrustedTN3Block
+		} else {
+			CFG.LastTrustedBlock = LastTrustedBTCBlock
+		}
+
+		SaveConfig()
+		println("Stored default configuration in", ConfigFile)
+	}
 
 	Reset()
 }
