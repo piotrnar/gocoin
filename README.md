@@ -8,7 +8,7 @@ and cold storage security of the wallet.
 The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
 As long as you remember the password, you do not need any backups ever.
-It can be used without the **client**.
+Wallet can be used without the client, but with the provided **balio** tool instead.
 
 The **client** (p2p node) is an application independent from the **wallet**.
 It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
