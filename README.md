@@ -10,7 +10,7 @@ It keeps the entire UTXO set in RAM, providing the best block processing perform
 With a decent machine and a fast connection (e.g. 4 vCPUs from Google Cloud or Amazon AWS),
 the node should sync the entire bitcoin block chain in less than 4 hours (as of chain height ~512000).
 
-![Chart][website/btc_chain_sync_perf.png]
+![SyncChart](website/btc_chain_sync_perf.png)
 
 The **wallet** is designed to be used offline.
 It is deterministic and password seeded.
