@@ -231,11 +231,11 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 }
 
 
-// Read VLen followed by the number of locators
-// parse the payload of getblocks and getheaders messages
+// Parse the payload of "getblocks" or ""getheaders messages
+// Read Version and VLen followed by the number of locators
+// Return zero-ed stop_hash is not present in the payload
 func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint256, er error) {
 	var cnt uint64
-	var h [32]byte
 	var ver uint32
 
 	b := bytes.NewReader(pl)
@@ -246,27 +246,24 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 	}
 
 	// hash count
-	cnt, er = btc.ReadVLen(b)
-	if er != nil {
+	if cnt, er = btc.ReadVLen(b); er != nil {
 		return
 	}
 
 	// block locator hashes
-	if cnt>0 {
+	if cnt > 0 {
 		h2get = make([]*btc.Uint256, cnt)
-		for i:=0; i<int(cnt); i++ {
-			if _, er = b.Read(h[:]); er!=nil {
+		for i := 0; i < int(cnt); i++ {
+			h2get[i] = new(btc.Uint256)
+			if _, er = b.Read(h2get[i].Hash[:]); er != nil {
 				return
 			}
-			h2get[i] = btc.NewUint256(h[:])
 		}
 	}
 
 	// hash_stop
-	if _, er = b.Read(h[:]); er!=nil {
-		return
-	}
-	hashstop = btc.NewUint256(h[:])
+	hashstop = new(btc.Uint256)
+	b.Read(hashstop.Hash[:]) // if not there, don't make a big deal about it
 
 	return
 }

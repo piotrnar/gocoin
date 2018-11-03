@@ -181,9 +181,16 @@ func (c *OneConnection) ReceiveHeadersNow() {
 // https://en.bitcoin.it/wiki/Protocol_specification#getheaders
 func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
-	if e != nil || hashstop == nil {
-		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent)
-		c.DoS("BadGetHdrs")
+
+	if e != nil {
+		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		c.DoS("BadGetHdrsA")
+		return
+	}
+
+	if len(h2get) > 101 || hashstop == nil {
+		println("GetHeaders: too many locators", len(h2get), "or missing hashstop", hashstop, "from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		c.DoS("BadGetHdrsB")
 		return
 	}
 
@@ -260,12 +267,12 @@ func (c *OneConnection) sendGetHeaders() {
 		min_height = 0
 	}
 
-	blks := new(bytes.Buffer)
 	var cnt uint64
 	var step int
 	step = 1
+	hashes := make([]byte, 0, 50*32)
 	for cnt < 50 /*it should never get that far, but just in case...*/ {
-		blks.Write(lb.BlockHash.Hash[:])
+		hashes = append(hashes, lb.BlockHash.Hash[:]...)
 		cnt++
 		//println(" geth", cnt, "height", lb.Height, lb.BlockHash.String())
 		if int(lb.Height) <= min_height {
@@ -281,14 +288,14 @@ func (c *OneConnection) sendGetHeaders() {
 			step = step * 2
 		}
 	}
-	var null_stop [32]byte
-	blks.Write(null_stop[:])
 
-	bhdr := new(bytes.Buffer)
-	binary.Write(bhdr, binary.LittleEndian, common.Version)
-	btc.WriteVlen(bhdr, cnt)
+	bmsg := bytes.NewBuffer(make([]byte, 0, 4+9+len(hashes)+32))
+	binary.Write(bmsg, binary.LittleEndian, common.Version)
+	btc.WriteVlen(bmsg, cnt)
+	bmsg.Write(hashes)
+	bmsg.Write(make([]byte, 32)) // null_stop
 
-	c.SendRawMsg("getheaders", append(bhdr.Bytes(), blks.Bytes()...))
+	c.SendRawMsg("getheaders", bmsg.Bytes())
 	c.X.LastHeadersHeightAsk = lb.Height
 	c.MutexSetBool(&c.X.GetHeadersInProgress, true)
 	c.X.GetHeadersTimeOutAt = time.Now().Add(GetHeadersTimeout)

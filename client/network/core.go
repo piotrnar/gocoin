@@ -644,10 +644,10 @@ func maxmsgsize(cmd string) uint32 {
 		case "tx": return 500e3 // max segwit tx size 500KB
 		case "addr": return 9+1000*30 // max 1000 addrs
 		case "block": return 4e6 // max segwit block size 4MB
-		case "getblocks": return 4+9+500*32+32 // we allow up to 500 locator hashes
+		case "getblocks": return 4+9+101*32+32 // MAX_LOCATOR_SZ = 101
 		case "getdata": return 9+50000*36 // core: MAX_INV_SZ = 50000
 		case "headers": return 9+2000*89 // core: MAX_HEADERS_RESULTS = 2000
-		case "getheaders": return 4+9+500*32+32 // we allow up to 500 locator hashes
+		case "getheaders": return 4+9+101*32+32 // MAX_LOCATOR_SZ = 101
 		case "cmpctblock": return 1e6 // 1MB shall be enough
 		case "getblocktxn": return 1e6 // 1MB shall be enough
 		case "blocktxn": return 4e6 // all txs that can fit withing max size block
