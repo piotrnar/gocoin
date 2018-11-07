@@ -142,9 +142,9 @@ function refreshblock() {
 
 			if (blno.innerText != stat.Height) {
 				if (beep_new_block.checked)  {
-					if (blno.innerText=="XXX") {
+					if (blno.innerText.indexOf("XXX")!=-1) {
 						back_online_audio_file.play()
-					} else if (blno.innerText!="...") {
+					} else if (blno.innerText.indexOf("...")!=-1) {
 						new_block_audio_file.play()
 					}
 				}
