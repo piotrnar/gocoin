@@ -26,6 +26,8 @@ var webuimenu = [
 	["/counts", "Counters"]
 ]
 
+const BN_OFFLINE = "XXX"
+
 function beep_clicked() {
 	beep_new_block.checked = !beep_new_block.checked
 	localStorage.setItem("new_block_beep", beep_new_block.checked?"true":"false")
@@ -110,7 +112,7 @@ var time_now /*_TIME_NOW_*/
 function refreshblock() {
 	var aj = ajax()
 	aj.onerror=function() {
-		blno.innerText = "XXX"
+		blno.innerText = BN_OFFLINE
 		setTimeout(refreshblock, 10000)
 	}
 	aj.onload=function() {
@@ -133,18 +135,11 @@ function refreshblock() {
 			}
 
 			blno.title = "Last block received " + ((stat.Time_now-stat.Received)/60).toFixed(1) + " min ago"
-			// dispatch event..
-			var e = document.createEvent("Event")
-			e.initEvent("lastblock", false, false)
-			e.block = stat
-			time_now = stat.Time_now
-			blno.dispatchEvent(e)
-
 			if (blno.innerText != stat.Height) {
 				if (beep_new_block.checked)  {
-					if (blno.innerText.indexOf("XXX")!=-1) {
+					if (blno.innerText==BN_OFFLINE) {
 						back_online_audio_file.play()
-					} else if (blno.innerText.indexOf("...")!=-1) {
+					} else if (blno.innerText.indexOf("...")==-1) {
 						new_block_audio_file.play()
 					}
 				}
@@ -152,6 +147,13 @@ function refreshblock() {
 				blno.innerText = stat.Height
 				document.title = doc_title + ' @ ' + stat.Height
 			}
+
+			// dispatch event..
+			var e = document.createEvent("Event")
+			e.initEvent("lastblock", false, false)
+			e.block = stat
+			time_now = stat.Time_now
+			blno.dispatchEvent(e)
 		} catch(e) {
 			blno.title = e
 			blno.innerText = "???"
