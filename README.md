@@ -56,7 +56,7 @@ from your OS's command prompt without a need to specify full path to the executa
 
 ### Linux
 
-When building for Linux make sure to have `gcc` installed or delete file `lib/utxo/membind_linux.go`
+When building for Linux make sure to have `gcc` installed or delete files `lib/utxo/membind_linux.go` and `client/usif/textui/consensus_linux.go`
 
 
 # Getting sources
