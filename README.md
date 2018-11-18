@@ -62,10 +62,13 @@ When building for Linux make sure to have `gcc` installed or delete files `lib/u
 # Getting sources
 
 Use `go get` to fetch and install the source code files.
-Note that source files get installed within your GOPATH folder.
 
 	go get github.com/piotrnar/gocoin
 
+Note that the source files are installed inside your GOPATH folder.
+To find out where your GOPATH folder is, execute:
+
+	go env GOPATH
 
 # Building
 
