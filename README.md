@@ -65,8 +65,8 @@ Use `go get` to fetch and install the source code files.
 
 	go get github.com/piotrnar/gocoin
 
-Note that the source files are installed inside your GOPATH folder.
-To find out where your GOPATH folder is, execute:
+Note that the source files are stored inside your GOPATH folder.
+To find out where the GOPATH folder is, execute:
 
 	go env GOPATH
 
