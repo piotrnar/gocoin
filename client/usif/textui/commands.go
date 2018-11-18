@@ -137,7 +137,7 @@ func show_info(par string) {
 
 	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d\n",
 		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
-		time.Now().Sub(common.StartTime).String(), btc.EcdsaVerifyCnt(), peersdb.PeerDB.Count())
+		time.Now().Sub(common.StartTime).String(), peersdb.PeerDB.Count(), btc.EcdsaVerifyCnt())
 
 	// Memory used
 	al, sy := sys.MemUsed()
