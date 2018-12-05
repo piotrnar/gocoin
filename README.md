@@ -96,7 +96,7 @@ Windows or Linux (amd64) binaries can be downloaded from
 Please note that the binaries are usually not up to date.
 I strongly encourage everyone to build the binaries himself.
 
-# Development
+# Development (pull requests)
 Although it is an open source project, I am sorry to inform you that I will not merge in any pull requests.
 The reason is that I want to stay an explicit author of this software, to keep a full control over its
 licensing. If you are missing some functionality, just describe me your needs and I will see what I can do
