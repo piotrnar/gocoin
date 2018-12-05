@@ -78,11 +78,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	MutexRcv.Unlock()
 
 	if disconnect != "" {
-		if c.MutexGetBool(&c.X.IsSpecial) {
-			println(c.ConnID, "is special - ignore diconnect request:", disconnect)
-		} else {
-			c.Disconnect(disconnect)
-		}
+		c.Disconnect(disconnect)
 	}
 }
 
