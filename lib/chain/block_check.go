@@ -187,7 +187,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		}
 	}
 
-	// Check Merkle Root, even for trusted blocks - that's important, as they may come from untrasted peers
+	// Check Merkle Root, even for trusted blocks - that's important, as they may come from untrusted peers
 	merkle, mutated := bl.GetMerkle()
 	if mutated {
 		er = errors.New("CheckBlock(): duplicate transaction - RPC_Result:bad-txns-duplicate")
