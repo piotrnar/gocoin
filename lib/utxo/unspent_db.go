@@ -299,7 +299,7 @@ func (db *UnspentDB) save() {
 		if !hurryup {
 			current_record++
 			if (current_record & 0x3f) == 0 {
-				check_time = true
+				check_time = UTXO_WRITING_TIME_TARGET > 0
 			}
 		}
 	}
