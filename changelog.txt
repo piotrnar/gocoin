@@ -1,4 +1,5 @@
 1.9.5:
+* Tools/bdb - shows which blocks are actually stored on disk (for purged blocks db)
 * Client: Reject "getheaders" and "getblocks" with more than 101 locators. Allow those without hash_stop
 * Client: Added default Last Trusted Block hash also for testnet3
 * Client: Allow non-zero tx counts inside "headers" message, for compatibility with the core client
