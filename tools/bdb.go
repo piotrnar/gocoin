@@ -1148,25 +1148,40 @@ func main() {
 		fmt.Println("blockchain.new updated")
 	}
 
-	var minbh, maxbh, valididx, validlen uint32
+	var minbh, maxbh, valididx, validlen, blockondisk, minbhondisk uint32
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
+	minbhondisk = 0xffffffff
 	for off := 136; off < len(dat); off += 136 {
 		sl := new_sl(dat[off : off+136])
+
+		dlen := sl.DLen()
+		didx := sl.DatIdx()
+
 		bh := sl.Height()
 		if bh > maxbh {
 			maxbh = bh
 		} else if bh < minbh {
 			minbh = bh
 		}
-		if sl.DatIdx() != 0xffffffff {
+		if didx != 0xffffffff {
 			valididx++
 		}
-		if sl.DLen() != 0 {
+		if dlen != 0 {
 			validlen++
 		}
+		if didx != 0xffffffff && dlen != 0 {
+			if fi, er := os.Stat(dat_fname(didx)); er== nil && fi.Size() >= int64(sl.DPos()) + int64(dlen) {
+				blockondisk++
+				if bh < minbhondisk {
+					minbhondisk = bh
+				}
+			}
+		}
+
 	}
 	fmt.Println("Block heights from", minbh, "to", maxbh)
+	fmt.Println(blockondisk, "blocks stored on disk, from height", minbhondisk)
 	fmt.Println("Number of records with valid length:", validlen)
 	fmt.Println("Number of records with valid data file:", valididx)
 }
