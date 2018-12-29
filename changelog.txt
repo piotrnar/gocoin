@@ -1,4 +1,5 @@
 1.9.5:
+* Client: By default native go heap is used for UTXO records and Memory.UseGoHeap config param is ignored.
 * Client: By default support for cross-checking consensus rules against core's consensus lib is disabled.
 * Tools/bdb - shows which blocks are actually stored on disk (for purged blocks db)
 * Client: Reject "getheaders" and "getblocks" with more than 101 locators. Allow those without hash_stop
