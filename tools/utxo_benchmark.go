@@ -17,11 +17,7 @@ func main() {
 		dir = os.Args[1]
 	}
 
-	if len(os.Args) < 3 {
-		utxo.MembindInit()
-	} else {
-		println("Using native Go heap for UTXO records")
-	}
+	utxo.MembindInit()
 
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{Dir:dir})
