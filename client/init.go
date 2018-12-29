@@ -63,11 +63,7 @@ func host_init() {
 		os.Exit(1)
 	}
 
-	if common.CFG.Memory.UseGoHeap {
-		fmt.Println("Using native Go heap with the garbage collector for UTXO records")
-	} else {
-		utxo.MembindInit()
-	}
+	utxo.MembindInit()
 
 	fmt.Print(string(common.LogBuffer.Bytes()))
 	common.LogBuffer = nil

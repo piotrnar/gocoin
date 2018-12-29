@@ -84,7 +84,6 @@ var (
 		}
 		Memory struct {
 			GCPercTrshold int
-			UseGoHeap     bool // Do not use OS memory functions for UTXO records
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk   bool
