@@ -2,7 +2,7 @@ Files in this folder allow to disable garbage collector over UTXO records,
 thus freeing the memory used by such records as soon as possible.
 
 This may sometimes result in a lower memory usage, although it isn't always
-the case. However it always seem to be decreasesing the performance.
+the case and it may decrease the performance.
 
 To acheive a similar goal, perhaps you prefer to decrease the value of
 `Memory.GCPercTrshold` in `gocoin.conf` file instead.
