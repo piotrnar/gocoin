@@ -16,7 +16,7 @@ It keeps the entire UTXO set in RAM, providing the best block processing perform
 System memory and time needed to sync BTC block chain up to the given block number:
 
 ![SyncChart](website/btc_chain_sync_perf.png)
-*The data above is from Gocoin 1.9.5 running on a standard 4 vCPUs / 15 GB memory VPS from [Google Cloud Platform](https://cloud.google.com/).*
+*The data above is from Gocoin 1.9.5 running on 8 vCPUs / 16 GB memory, 200 GB SSD disk VPS from [Google Cloud Platform](https://cloud.google.com/).*
 
 # Requirements
 
