@@ -54,11 +54,6 @@ In order to build Gocoin yourself, you will need the following tools installed i
 If the tools mentioned above are all properly installed, you should be able to execute `go` and `git`
 from your OS's command prompt without a need to specify full path to the executables.
 
-### Linux
-
-When building for Linux make sure to have `gcc` installed or delete files `lib/utxo/membind_linux.go`
-
-
 # Getting sources
 
 Use `go get` to fetch and install the source code files.
