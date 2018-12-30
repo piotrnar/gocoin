@@ -18,7 +18,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"runtime"
 	"runtime/debug"
 	"time"
 	"unsafe"
@@ -270,7 +269,6 @@ func main() {
 	}
 
 	fmt.Println("Gocoin client version", gocoin.Version)
-	runtime.GOMAXPROCS(runtime.NumCPU()) // It seems that Go does not do it by default
 
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, os.Kill)
