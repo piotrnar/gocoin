@@ -1,0 +1,42 @@
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body>
+<h1>Performance</h1>
+
+Gocoin node keeps the entire UTXO set in RAM, providing the best block and transaction
+processing performance on the market.<br>
+<br>
+Charts below present system memory and time needed to sync BTC block chain up to the given block number,
+depeding on the configuration of a virtual server from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a>.
+
+Each test was performed with Gocoin client version <b>1.9.5</b>, built with Go version <b>1.12 beta 1</b>,
+using default configuration and running on <b>Debian GNU/Linux 9 (stretch)</b>.<br>
+<br>
+<i>Note that Gocoin uses configurable <code>LastTrustedBlock</code> parameter, to avoid verifying scripts from all blocks known as valid.</i><br>
+
+<h3>32 vCPUs, 32 GB memory, SSD persistent disk</h3>
+
+<img src="btc_chain_sync_perf_32.png" width="70%"><br>
+Time needed to re-build UTXO database from blocks stored on disk: <b>2.42 hours</b><sup>*</sup><br>
+
+<h3>8 vCPUs, 16 GB memory, Standard persistent disk</h3>
+
+<img src="btc_chain_sync_perf_8.png" width="70%"><br>
+Time needed to re-build UTXO database from blocks stored on disk: <b>3.11 hours</b><sup>*</sup><br>
+
+<h3>4 vCPUs, 16 GB memory, SSD persistent disk</h3>
+
+<img src="btc_chain_sync_perf_4a.png" width="70%"><br>
+Time needed to re-build UTXO database from blocks stored on disk: <b>??? hours</b><sup>*</sup><br>
+
+<h3>4 vCPUs, 15 GB memory, Standard persistent disk</h3>
+
+<img src="btc_chain_sync_perf_4.png" width="70%"><br>
+Time needed to re-build UTXO database from blocks stored on disk: <b>??? hours</b><sup>*</sup><br>
+
+<hr>
+<i>*) Up to BTC block #550000</i>
+</body>
+</html>
