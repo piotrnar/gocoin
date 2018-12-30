@@ -46,7 +46,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
 			sec_left := int64(float64(total_size_to_process)/1e6 / mbps)
 			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s - %d:%02d:%02d left (%d)\n", last.Height,
-				end.Height, mbps, sec_left/3600, (sec_left/60)%60, sec_left%60, cur-sta)
+				end.Height, mbps, sec_left/3600, (sec_left/60)%60, sec_left%60, cur.Unix()-sta.Unix())
 			prv = cur
 		}
 
