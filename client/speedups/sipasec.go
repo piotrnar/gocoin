@@ -21,6 +21,6 @@ func EC_Verify(k, s, h []byte) bool {
 }
 
 func init() {
-	common.Log.Println("Using libsecp256k1.a by sipa for EC_Verify")
+	common.Log.Println("Using libsecp256k1.a of Bitcoin Core for EC_Verify")
 	btc.EC_Verify = EC_Verify
 }

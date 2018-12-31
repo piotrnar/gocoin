@@ -39,7 +39,7 @@ func verify() bool {
 
 func init() {
 	if verify() {
-		common.Log.Println("Using secp256k1.dll by sipa for EC_Verify")
+		common.Log.Println("Using secp256k1.dll of Bitcoin Core for EC_Verify")
 		btc.EC_Verify = EC_Verify
 	} else {
 		common.Log.Println("ERROR: Could not initiate secp256k1.dll")
