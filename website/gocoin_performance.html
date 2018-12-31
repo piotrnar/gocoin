@@ -6,7 +6,7 @@
 <h1>Performance</h1>
 
 Gocoin node keeps the entire UTXO set in RAM, providing the best block and transaction
-processing performance on the market.<br>
+processing performance on the market.<sup>1</sup><br>
 <br>
 Charts below present system memory and time needed to sync BTC block chain up to the given block number,
 depeding on the configuration of a virtual server from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a>.
@@ -19,25 +19,27 @@ using default configuration and running on <b>Debian GNU/Linux 9 (stretch)</b>.<
 <h3>32 vCPUs, 32 GB memory, SSD persistent disk</h3>
 
 <img src="btc_chain_sync_perf_32.png" width="70%"><br>
-Time needed to re-build UTXO database from blocks stored on the disk<sup>*</sup>: <b>2.42 hours</b><br>
+Time needed to re-build UTXO database from blocks stored on the disk<sup>2</sup>: <b>2.42 hours</b><br>
 
 <h3>8 vCPUs, 16 GB memory, Standard persistent disk</h3>
 
 <img src="btc_chain_sync_perf_8.png" width="70%"><br>
-Time needed to re-build UTXO database from blocks stored on the disk<sup>*</sup>: <b>3.11 hours</b><br>
+Time needed to re-build UTXO database from blocks stored on the disk<sup>2</sup>: <b>3.11 hours</b><br>
 
-<!--
 <h3>4 vCPUs, 16 GB memory, SSD persistent disk</h3>
 
 <img src="btc_chain_sync_perf_4a.png" width="70%"><br>
-Time needed to re-build UTXO database from blocks stored on the disk<sup>*</sup>: <b>3.40 hours</b><br>
--->
+Time needed to re-build UTXO database from blocks stored on the disk<sup>2</sup>: <b>3.40 hours</b><br>
+
 <h3>4 vCPUs, 15 GB memory, Standard persistent disk</h3>
 
 <img src="btc_chain_sync_perf_4.png" width="70%"><br>
-Time needed to re-build UTXO database from blocks stored on disk: <b>3.72 hours</b><sup>*</sup><br>
+Time needed to re-build UTXO database from blocks stored on disk<sup>2</sup>: <b>3.72 hours</b><br>
 
 <hr>
-<i>*) Up to BTC block #550000</i>
+<i>
+1) Using <a href="gocoin_tweaks.html#libsecp256k1">external libsec256k1</a> for ECDSA verifications<br>
+2) Up to block number 550000
+</i>
 </body>
 </html>
