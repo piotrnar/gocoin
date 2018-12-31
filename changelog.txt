@@ -1,3 +1,5 @@
+1.9.6:
+
 1.9.5 - 2018-12-31
 * Client: By default native go heap is used for UTXO records. Memory.UseGoHeap config param removed.
 * Client: By default support for cross-checking consensus rules against core's consensus lib is disabled.

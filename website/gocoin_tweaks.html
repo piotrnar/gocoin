@@ -11,22 +11,40 @@ of a running <b>client</b>.<br>
 <h2>External secp256k1</h2>
 Use <a target="_blank" href="https://github.com/bitcoin/bitcoin/tree/master/src/secp256k1">libsecp256k1</a>
 maintained by <a target="_blank" href="https://github.com/bitcoin/bitcoin/">Bitcoin Core</a> project,
-that is written in C and assembler and up to 4 times faster when it comes to EC_Verify operations.<br>
+that is written in C and assembler to provide optimal performance for EC_Verify operations.<br>
 <br>
 To make Gocoin client to use the external library, copy either the file
 <code>sipadll.go</code> (Windows only) or <code>sipasec.go</code> (any OS),
-from the folder <code>gocoin/client/speedups/</code> to its parent folder (<code>gocoin/client/</code>).
+from <code>gocoin/client/speedups/</code> to its parent folder (<code>gocoin/client/</code>).
 Then rebuild and restart the client.<br>
+<br>
+<i>Note: You can have either <code>sipadll.go</code> or <code>sipasec.go</code> in your
+<code>gocoin/client/</code> folder, but never both of them as the client will not build then.</i><br>
+<br>
+Depending which speedup file you chose, follow either of the instrutions in the table below.<br>
+<br>
 
-<h3>sipadll.go (Windows only)</h3>
-To use <code>sipadll.go</code> speedup, you have to place <code>secp256k1.dll</code>
-in a folder where Windows looks for executables (e.g. <code>C:\WINDOWS</code>).<br>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr>
+<td align="center" width="50%"><b>sipadll.go</b> (Windows only)</td>
+<td align="center" width="50%"><b>sipasec.go</b></td>
+</tr>
+<tr>
 
-<i>Note: You can find <b>secp256k1.dll</b> in <code>gocoin/tools/sipa_dll/</code>
-or you can download it from <a href="https://sourceforge.net/projects/gocoin/files/?source=directory">sourceforge.net</a>
-(it's inside <b>secp256k1.dll-amd64.zip</b>).</i><br>
+<td valign="top">
+To use <code>sipadll.go</code> speedup, you have to place <b>secp256k1.dll</b>
+in <code>gocoin/client/</code> or in any folder where Windows looks for executables
+(e.g. <code>C:\WINDOWS</code>).<br>
+<br>
+You can find <b>secp256k1.dll</b> in <code>gocoin/tools/sipa_dll/</code>
+or you can download it from <a target="_blank" href="https://sourceforge.net/projects/gocoin/files/?source=directory">sourceforge.net</a>
+(it's inside <a target="_blank" href="https://sourceforge.net/projects/gocoin/files/secp256k1.dll-amd64.zip/download">secp256k1.dll-amd64.zip</a>).<br>
+<br>
+To build <b>secp256k1.dll</b> youself, look into
+<a target="_blank" href="https://sourceforge.net/projects/gocoin/files/secp256k1_win.zip/download">secp256k1_win.zip</a>.
+</td>
 
-<h3>sipasec.go</h3>
+<td valign="top">
 In order to use <code>sipasec.go</code> speedup, build and install <b>secp256k1</b> library in your system.<br>
 <br>
 On Debian based Linux system, simply execute the following commands:<br>
@@ -39,13 +57,17 @@ On Debian based Linux system, simply execute the following commands:<br>
 <code>&nbsp;&nbsp;make</code> <br>
 <code>&nbsp;&nbsp;sudo make install</code> <br>
 <br>
-<i>Note: When the library is properly installed, executing <code>go test</code> from
+<i>Note: When the library is properly installed, executing <code>go test</code> inside
 <code>gocoin/lib/others/cgo/sipasec/</code> says <b>PASS</b></i>
+</td>
+
+</tr>
+</table>
 
 <br>
 <h2>Disable wallet functionality</h2>
 
-You can disable node's wallet functionality, to save system memory used by running client
+You can disable node's wallet functionality, to save system memory used by a running client
 and improve block processing times.<br>
 In order to do so, use TextUI command <code>wallet off</code> or click the disable wallet button on the bottom of the <b>Wallet</b> page in the WebUI.<br>
 <br>
