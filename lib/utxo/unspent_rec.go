@@ -187,7 +187,10 @@ func vlen2size(uvl uint64) int {
 	return 9
 }
 
-func (rec *UtxoRec) SerializeExt(full bool, utxoheap bool) (buf []byte) {
+// returns UTXO-heap pointer to the freshly allocated serialized record
+// full - to have entire 256 bits of TxID at the beginning of the record
+// use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory.Malloc()
+func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 	var le, of int
 	var any_out bool
 
@@ -218,10 +221,10 @@ func (rec *UtxoRec) SerializeExt(full bool, utxoheap bool) (buf []byte) {
 		return
 	}
 
-	if utxoheap {
+	if use_buf == nil {
 		buf, _ = Memory.Malloc(le)
 	} else {
-		buf = make([]byte, le)
+		buf = use_buf[:le]
 	}
 	if full {
 		copy(buf[:32], rec.TxID[:])
@@ -245,15 +248,6 @@ func (rec *UtxoRec) SerializeExt(full bool, utxoheap bool) (buf []byte) {
 	return
 }
 
-// return serialized record from Go's heap (GC)
-func (rec *UtxoRec) Bytes() []byte {
-	return rec.SerializeExt(false, false)
-}
-
-// return serialized record UTXO heap
-func (rec *UtxoRec) MallocBytes() []byte {
-	return rec.SerializeExt(false, true)
-}
 
 func (r *UtxoRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)
