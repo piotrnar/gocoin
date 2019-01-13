@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"compress/gzip"
 	"encoding/binary"
-	"github.com/golang/snappy"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/snappy"
 )
 
 
