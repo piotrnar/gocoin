@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/memory"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
 	"os"
@@ -21,6 +22,8 @@ const (
 var (
 	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
+
+	Memory memory.Allocator
 )
 
 type FunctionWalkUnspent func(*UtxoRec)
@@ -150,7 +153,7 @@ redo:
 			goto fatal_error
 		}
 
-		b := malloc(uint32(int(le) - UtxoIdxLen))
+		b, _ := Memory.Malloc(int(le) - UtxoIdxLen)
 		er = btc.ReadAll(rd, b)
 		if er != nil {
 			goto fatal_error
@@ -333,9 +336,10 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 		bu.Write(blhash)
 		if changes.UndoData != nil {
 			for _, xx := range changes.UndoData {
-				bin := xx.Serialize(true)
+				bin := xx.SerializeExt(true, true)
 				btc.WriteVlen(bu, uint64(len(bin)))
 				bu.Write(bin)
+				Memory.Free(bin)
 			}
 		}
 		ioutil.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
@@ -392,26 +396,26 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		addback = append(addback, qr)
 	}
 
-	for _, tx := range addback {
+	for _, rec := range addback {
 		if db.CB.NotifyTxAdd != nil {
-			db.CB.NotifyTxAdd(tx)
+			db.CB.NotifyTxAdd(rec)
 		}
 
 		var ind UtxoKeyType
-		copy(ind[:], tx.TxID[:])
+		copy(ind[:], rec.TxID[:])
 		db.RWMutex.RLock()
 		v := db.HashMap[ind]
 		db.RWMutex.RUnlock()
 		if v != nil {
 			oldrec := NewUtxoRec(ind, v)
-			for a := range tx.Outs {
-				if tx.Outs[a] == nil {
-					tx.Outs[a] = oldrec.Outs[a]
+			for a := range rec.Outs {
+				if rec.Outs[a] == nil {
+					rec.Outs[a] = oldrec.Outs[a]
 				}
 			}
 		}
 		db.RWMutex.Lock()
-		db.HashMap[ind] = malloc_and_copy(tx.Bytes())
+		db.HashMap[ind] = rec.MallocBytes()
 		db.RWMutex.Unlock()
 	}
 
@@ -514,12 +518,12 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	db.RWMutex.Lock()
 	if anyout {
-		db.HashMap[ind] = malloc_and_copy(rec.Bytes())
+		db.HashMap[ind] = rec.MallocBytes()
 	} else {
 		delete(db.HashMap, ind)
 	}
 	db.RWMutex.Unlock()
-	free(v)
+	Memory.Free(v)
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
@@ -531,7 +535,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 			db.CB.NotifyTxAdd(rec)
 		}
 		db.RWMutex.Lock()
-		db.HashMap[ind] = malloc_and_copy(rec.Bytes())
+		db.HashMap[ind] = rec.MallocBytes()
 		db.RWMutex.Unlock()
 	}
 	for k, v := range changes.DeledTxs {
@@ -640,12 +644,12 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			}
 		}
 		if !spendable_found {
-			free(v)
+			Memory.Free(v)
 			delete(db.HashMap, k)
 			unspendable_txs++
 		} else if record_removed > 0 {
-			free(v)
-			db.HashMap[k] = malloc_and_copy(rec.Serialize(false))
+			Memory.Free(v)
+			db.HashMap[k] = rec.SerializeExt(false, true)
 			unspendable_recs += record_removed
 		}
 	}
