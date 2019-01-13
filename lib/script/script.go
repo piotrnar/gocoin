@@ -6,8 +6,8 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"crypto/sha256"
-	"golang.org/x/crypto/ripemd160"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 	"runtime/debug"
 )
 

@@ -2,6 +2,7 @@
 * Source code from "modernc.org/memory" placed in "lib/others/memory" and used for UTXO records (with minor changes)
 * Source code from "github.com/dchest/siphash" placed in "lib/others/siphash"
 * Source code from "github.com/golang/snappy" placed in "lib/others/snappy"
+* Source code from "golang.org/x/crypto/ripemd160" placed in "lib/others/ripemd160"
 
 1.9.5 - 2018-12-31
 * Client: By default native go heap is used for UTXO records. Memory.UseGoHeap config param removed.
