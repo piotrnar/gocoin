@@ -1,4 +1,5 @@
 1.9.6:
+* peersdb.NewAddrFromString() resolves host names now, which has system-wise applications
 * Source code from "modernc.org/memory" placed in "lib/others/memory" and used for UTXO records (with minor changes)
 * Source code from "github.com/dchest/siphash" placed in "lib/others/siphash"
 * Source code from "github.com/golang/snappy" placed in "lib/others/snappy"
