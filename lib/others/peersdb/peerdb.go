@@ -79,15 +79,23 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		}
 		ipstr = ipstr[:x] // remove port number
 	}
-	ip := net.ParseIP(ipstr)
-	if ip != nil && len(ip)==16 {
-		p = NewEmptyPeer()
-		copy(p.Ip4[:], ip[12:16])
-		p.Services = Services
-		copy(p.Ip6[:], ip[:12])
-		p.Port = port
+	ipa, er := net.ResolveIPAddr("ip", ipstr)
+	if er == nil {
+		if ipa !=nil {
+			p = NewEmptyPeer()
+			p.Services = Services
+			p.Port = port
+			if len(ipa.IP)==4 {
+				copy(p.Ip4[:], ipa.IP[:])
+			} else if len(ipa.IP)==16 {
+				copy(p.Ip4[:], ipa.IP[12:16])
+				copy(p.Ip6[:], ipa.IP[:12])
+			}
+		} else {
+			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - unspecified error")
+		}
 	} else {
-		e = errors.New("Error parsing IP '"+ipstr+"'")
+		e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - " + er.Error())
 	}
 	return
 }
