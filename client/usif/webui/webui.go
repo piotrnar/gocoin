@@ -252,5 +252,5 @@ func start_ssl_server() {
 	if err != nil {
 		println(err.Error())
 	}
+	// sudo iptables -t nat -D PREROUTING -p tcp --dport 4433 -j REDIRECT --to-port 443
 }
-
