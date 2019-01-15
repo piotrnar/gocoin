@@ -1,5 +1,6 @@
 Global:
 * Add suport for multisig segwit
+* Move rescan functionality from the lib to the client
 
 Lib:
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
