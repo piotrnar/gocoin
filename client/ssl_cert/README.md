@@ -13,8 +13,9 @@ In order to access it you will need `client.p12` certificate imported into your 
 
 Then use URL like **https://your.hostname.or.ip:4433/**
 
-To access WebUI on default SSL port setup the port rediraction - e.g.:
-	sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4433
+To access WebUI at default SSL port, set up port redirect on your nat:
+
+	iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 4433
 
 
 # How to generate needed files
