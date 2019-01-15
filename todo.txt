@@ -12,6 +12,7 @@ Client:
 * Optionally use utils.GetBlockFromWeb() for initial blockchain download
 * Figure out a way to purge blocks that we got good headers for, but never managed to download the txs
 * Update mining API
+* Console + TextUI over WebUI functionality
 
 Wallet:
 * Implement "server mode", e.g. through TCP or serial connection
