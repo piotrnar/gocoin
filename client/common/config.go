@@ -247,9 +247,9 @@ func InitConfig() {
 	}
 
 	if CFG.Memory.UseGoHeap {
-		fmt.Println("Using native Go heap and Garbage Collector for UTXO records")
+		fmt.Println("Using native Go heap with Garbage Collector for UTXO records")
 	} else {
-		fmt.Println("Using modernc.org/memory package to disable GC for UTXO records ")
+		fmt.Println("Using modernc.org/memory package to skip GC for UTXO records ")
 		utxo.Memory_Malloc = func(le int) (res []byte) {
 			res, _ = Memory.Malloc(le)
 			return
