@@ -8,10 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 )
-
-// https://api.blockchair.com/bitcoin/outputs?q=is_spent(false),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
 
 func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
@@ -160,6 +157,7 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
 
+	// https://api.blockchair.com/bitcoin/outputs?q=is_spent(false),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
 	r, er = http.Get("https://api.blockchair.com/" + currency + "/outputs?q=is_spent(false),recipient(" + addr.String() + ")")
 
 	if er != nil {
@@ -177,7 +175,7 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 		Outs []struct {
 			TxID   string `json:"transaction_hash"`
 			Vout   uint32 `json:"index"`
-			Value  string `json:"value"`
+			Value  uint64 `json:"value"`
 			Height uint32 `json:"block_id"`
 		} `json:"data"`
 	}
@@ -196,10 +194,7 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 		}
 		copy(ur.TxPrevOut.Hash[:], id.Hash[:])
 		ur.TxPrevOut.Vout = r.Vout
-		if ur.Value, er = strconv.ParseUint(r.Value, 10, 64); er != nil {
-			er = errors.New(fmt.Sprint("Bad Value:", r.Value))
-			return
-		}
+		ur.Value = r.Value
 		ur.MinedAt = r.Height
 		ur.BtcAddr = addr
 		res = append(res, ur)
