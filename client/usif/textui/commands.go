@@ -12,7 +12,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -142,7 +141,7 @@ func show_info(par string) {
 	// Memory used
 	al, sy := sys.MemUsed()
 	fmt.Printf("Heap_used: %d MB,  System_used: %d MB,  UTXO-X-mem: %d MB in %d recs,  Saving: %t\n", al>>20, sy>>20,
-		utxo.Memory.Bytes>>20, utxo.Memory.Allocs, common.BlockChain.Unspent.WritingInProgress.Get())
+		common.Memory.Bytes>>20, common.Memory.Allocs, common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)

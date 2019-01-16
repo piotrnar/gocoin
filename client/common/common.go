@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/memory"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 	"log"
@@ -23,8 +24,8 @@ const (
 )
 
 var (
-	LogBuffer = new(bytes.Buffer)
-	Log *log.Logger = log.New(LogBuffer, "", 0)
+	LogBuffer             = new(bytes.Buffer)
+	Log       *log.Logger = log.New(LogBuffer, "", 0)
 
 	BlockChain   *chain.Chain
 	GenesisBlock *btc.Uint256
@@ -72,6 +73,8 @@ var (
 
 	lastTrustedBlock       *btc.Uint256
 	LastTrustedBlockHeight uint32
+
+	Memory memory.Allocator
 )
 
 type TheLastBlock struct {

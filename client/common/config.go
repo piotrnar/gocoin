@@ -84,6 +84,7 @@ var (
 		}
 		Memory struct {
 			GCPercTrshold int
+			UseGoHeap     bool // Use Go Heap and Garbage Collector for UTXO records
 			MaxCachedBlks uint
 			FreeAtStart   bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk   bool
@@ -243,6 +244,19 @@ func InitConfig() {
 		// Create default config file
 		SaveConfig()
 		println("Stored default configuration in", ConfigFile)
+	}
+
+	if CFG.Memory.UseGoHeap {
+		fmt.Println("Using native Go heap and Garbage Collector for UTXO records")
+	} else {
+		fmt.Println("Using modernc.org/memory package to disable GC for UTXO records ")
+		utxo.Memory_Malloc = func(le int) (res []byte) {
+			res, _ = Memory.Malloc(le)
+			return
+		}
+		utxo.Memory_Free = func(ptr []byte) {
+			Memory.Free(ptr)
+		}
 	}
 
 	Reset()

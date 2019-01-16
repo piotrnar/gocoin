@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"crypto/rand"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -107,7 +106,7 @@ func host_init() {
 
 	al, sy := sys.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, utxo.Memory.Bytes>>20, sy>>20)
+		sto.Sub(sta).String(), al>>20, common.Memory.Bytes>>20, sy>>20)
 
 	common.StartTime = time.Now()
 	__exit <- true

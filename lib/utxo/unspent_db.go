@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/memory"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
 	"os"
@@ -22,9 +21,14 @@ const (
 var (
 	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
-
-	Memory memory.Allocator
 )
+
+var Memory_Malloc = func(le int) []byte {
+	return make([]byte, le)
+}
+
+var Memory_Free = func([]byte) {
+}
 
 type FunctionWalkUnspent func(*UtxoRec)
 
@@ -74,6 +78,7 @@ type NewUnspentOpts struct {
 	UnwindBufferLen uint32
 	CB              CallbackFunctions
 	AbortNow        *bool
+	UseGoHeap       bool
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
@@ -153,7 +158,7 @@ redo:
 			goto fatal_error
 		}
 
-		b, _ := Memory.Malloc(int(le) - UtxoIdxLen)
+		b := Memory_Malloc(int(le) - UtxoIdxLen)
 		er = btc.ReadAll(rd, b)
 		if er != nil {
 			goto fatal_error
@@ -523,7 +528,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 		delete(db.HashMap, ind)
 	}
 	db.RWMutex.Unlock()
-	Memory.Free(v)
+	Memory_Free(v)
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
@@ -644,11 +649,11 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			}
 		}
 		if !spendable_found {
-			Memory.Free(v)
+			Memory_Free(v)
 			delete(db.HashMap, k)
 			unspendable_txs++
 		} else if record_removed > 0 {
-			Memory.Free(v)
+			Memory_Free(v)
 			db.HashMap[k] = rec.Serialize(false, nil)
 			unspendable_recs += record_removed
 		}
