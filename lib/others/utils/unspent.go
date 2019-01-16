@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-// https://api.blockchair.com/bitcoin/outputs?q=is_spent(0),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
+// https://api.blockchair.com/bitcoin/outputs?q=is_spent(false),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
 
 func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
@@ -160,7 +160,7 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
 
-	r, er = http.Get("https://api.blockchair.com/" + currency + "/outputs?q=is_spent(0),recipient(" + addr.String() + ")")
+	r, er = http.Get("https://api.blockchair.com/" + currency + "/outputs?q=is_spent(false),recipient(" + addr.String() + ")")
 
 	if er != nil {
 		return
