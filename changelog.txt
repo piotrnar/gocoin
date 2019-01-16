@@ -1,4 +1,5 @@
 1.9.6:
+* Tools/balio: Fixed compatibility with recent API of blockchair.com
 * "Memory.UseGoHeap" config value brought back
 * peersdb.NewAddrFromString() resolves host names now, which has system-wise applications
 * Source code from "modernc.org/memory" placed in "lib/others/memory" and used for UTXO records (with minor changes)
