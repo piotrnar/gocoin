@@ -668,7 +668,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	// remove (or backup) the old .dat files before continuing
 	if db.data_files_keep != 0 && db.maxdatfileidx > db.data_files_keep  {
 		idx := db.maxdatfileidx - db.data_files_keep
-		for limit := 0; limit < 32; limit++ {
+		for limit := 0; limit < 10; limit++ {
 			idx--
 			fn := db.dat_fname(idx, false)
 			if fi, er := os.Stat(fn); er == nil && fi.Mode().IsRegular() {
