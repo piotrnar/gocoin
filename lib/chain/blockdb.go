@@ -2,6 +2,7 @@ package chain
 
 import (
 	"os"
+	"io"
 	"fmt"
 	"sync"
 	"time"
@@ -81,6 +82,7 @@ type BlockDBOpts struct {
 	MaxCachedBlocks int
 	MaxDataFileSize uint64
 	DataFilesKeep uint32
+	DataFilesBackup bool
 }
 
 type oneB2W struct {
@@ -108,6 +110,8 @@ type BlockDB struct {
 
 	max_data_file_size uint64
 	data_files_keep uint32
+	data_files_backup bool
+	data_files_done sync.WaitGroup
 }
 
 
@@ -132,6 +136,7 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 		}
 		db.max_data_file_size = opts.MaxDataFileSize
 		db.data_files_keep = opts.DataFilesKeep
+		db.data_files_backup = opts.DataFilesBackup
 	}
 
 	if db.max_cached_blocks == 0 {
@@ -257,6 +262,52 @@ func (db *BlockDB) writeAll() (sync bool) {
 	return
 }
 
+func (db *BlockDB) removeDatFile(idx uint32) {
+	var remove bool
+	dat_file := db.dat_fname(idx, false)
+	if db.data_files_backup {
+		os.Mkdir(db.dirname + "oldat", 0770)
+		bak_file := db.dat_fname(idx, true)
+		if er := os.Rename(dat_file, bak_file); er != nil {
+			// if we try to move the file across different file systems, it will end up here
+			if df, er := os.Open(dat_file); er == nil {
+				if bf, er := os.Create(bak_file); er == nil {
+					if _, er := io.Copy(bf, df); er==nil {
+						remove = true
+					} else {
+						println("blockdb.RDF-A:", er.Error())
+					}
+					bf.Close()
+				} else {
+					println("blockdb.RDF-B:", er.Error())
+				}
+				df.Close()
+			} else {
+				println("blockdb.RDF-C:", er.Error())
+			}
+		}
+	} else {
+		remove = true
+	}
+
+	if remove {
+		if er := os.Remove(dat_file); er != nil {
+			if er := os.Rename(dat_file, dat_file + ".tmp"); er == nil {
+				// It was probably open by GetBlock()
+				// Rename it, wait one second and try again...
+				time.Sleep(1e9)
+				if er := os.Remove(dat_file + ".tmp"); er != nil {
+					println("failed to remove", dat_file + ".tmp", "because", er.Error())
+				}
+			} else {
+				println("failed to remove", dat_file, "because", er.Error())
+			}
+		}
+	}
+
+	db.data_files_done.Done()
+}
+
 func (db *BlockDB) writeOne() (written bool) {
 	var fl [136]byte
 	var rec *oneBl
@@ -294,7 +345,8 @@ func (db *BlockDB) writeOne() (written bool) {
 			db.blockdata = tmpf
 			db.maxdatfilepos = 0
 			if db.data_files_keep != 0 && db.maxdatfileidx >= db.data_files_keep {
-				os.Remove(db.dat_fname(db.maxdatfileidx - db.data_files_keep, false))
+				db.data_files_done.Add(1)
+				go db.removeDatFile(db.maxdatfileidx - db.data_files_keep)
 			}
 			db.maxdatfileidx++
 		} else {
@@ -406,6 +458,7 @@ func (db *BlockDB) Close() {
 	if db.writeAll() {
 		//println(" * block(s) stored from close")
 	}
+	db.data_files_done.Wait()
 	db.blockdata.Close()
 	db.blockindx.Close()
 }
@@ -611,5 +664,25 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	}
 
 	db.blockdata.Seek(db.maxdatfilepos, os.SEEK_SET)
+
+	// remove (or backup) the old .dat files before continuing
+	if db.data_files_keep != 0 && db.maxdatfileidx > db.data_files_keep  {
+		idx := db.maxdatfileidx - db.data_files_keep
+		for limit := 0; limit < 32; limit++ {
+			idx--
+			fn := db.dat_fname(idx, false)
+			if fi, er := os.Stat(fn); er == nil && fi.Mode().IsRegular() {
+				db.data_files_done.Add(1)
+				//println("getting rid of", fn, "...")
+				db.removeDatFile(idx) // we're not using backgroud process here
+			} else {
+				os.Remove(fn + ".tmp")
+			}
+			if idx == 0 {
+				break
+			}
+		}
+	}
+
 	return
 }

@@ -90,6 +90,7 @@ var (
 			CacheOnDisk   bool
 			MaxDataFileMB uint // 0 for unlimited size
 			DataFilesKeep uint32 // 0 for all
+			OldDataBackup bool // move old dat files to "oldat/" folder (instead of removing them)
 		}
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
