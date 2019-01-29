@@ -231,7 +231,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 }
 
 
-// Parse the payload of "getblocks" or ""getheaders messages
+// Parse the payload of "getblocks" or "getheaders" messages
 // Read Version and VLen followed by the number of locators
 // Return zero-ed stop_hash is not present in the payload
 func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint256, er error) {
