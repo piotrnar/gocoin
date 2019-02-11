@@ -653,8 +653,8 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			delete(db.HashMap, k)
 			unspendable_txs++
 		} else if record_removed > 0 {
-			Memory_Free(v)
 			db.HashMap[k] = rec.Serialize(false, nil)
+			Memory_Free(v)
 			unspendable_recs += record_removed
 		}
 	}
