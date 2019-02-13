@@ -14,29 +14,45 @@ To speed up this process the database is not being flushed to disk as the block 
 The node only writes it to disk when either all the blocks are downloaded and processed or when the node's shutdown has
 been requested from a user interface (e.g. text command 'quit' was given).
 If you kill the process or reboot the machine, you will loose all your hard worked UTXO changes!
-Therefore, to save the work as the new blocks are being processed, you should once for awhile quit the node and start it again.
+Therefore, <u>to save the work as the new blocks are being processed, you should once for awhile quit the node and start it again</u>.
 This BTW may also have a positive impact on memory consumption, allowing you to set up the node with less RAM (e.g. 13GB).<br>
 <br>
 When the node is synchronized, it flushes UTXO database to disk once for awhile.
 Killing it then won't have such a bad consequences, as it will start with the most recently written version of the database
 and only apply the data from the blocks that came later.<br>
 <br>
+
 <h2>Coinbase maturity</h2>
 According to the block chain protocol, generated coins can be spent only after 100 confirmations.<br>
 Users should be aware that fetching a wallet's balance from the client returns&nbsp;also&nbsp;immature coinbase transactions.<br>
 Because wallet has no way of knowing if a coinbase output is mature enough, it always considers it mature.<br>
-But be aware that the network will not accept your signed transaction until all of the mined coins that it is trying to spend
-get at least 100 confirmations.<br>
+But <u>be aware that the network will not accept your signed transaction until all of the mined coins that it is trying to spend
+get at least 100 confirmations</u>.<br>
+<br>
+
+<h2>Node becoming non-responsive</h2>
+It has been observed on systems with AMD Ryzen CPU hosted on Windows OS, that the client node would
+become unresponsive after a random time of being ran for a normal operation.
+While being non-responsive, the client.exe process seemed to be fully consuming one of the CPU threads (cores).<br>
+<br>
+It does not affect the OS stability and the client node can be easily killed and restarted, upon an occurrence of such a malfunction.<br>
+On that specific platform, this would averagely happen about every three days, although sometimes it was hours, other times a week.<br>
+<br>
+The nature of this problem is not completely clear, although it seems to have something to do
+with the computer's clock being updated.<br>
+Therefore, <u>the solution for this problem is to turn off internet time sync</u> in the Windows OS, for the time of running the node.<br>
 <br>
 <h2>Mining API</h2>
 The mining RPC API is experimental and had been implemented in March 2016 - long before the segwit support was added.<br>
 It was tested on Testnet3 and worked well, but only for one mining setup.
-It has not been used ever since then and at this moment shall be considered unusable.<br>
+It has not been used ever since then and <u>at this moment shall be considered unusable</u>.<br>
 If you are interested in using Gocoin node for mining, please contact me, so I can help you with any issues that may need resolving,
 before you start throwing any hash power onto it.<br>
 <br>
+
 <h2>Litecoin support in wallet</h2>
-The wallet only supports Litecoin's P2PKH address types (such that start from <code>L...</code>).<br>
+The wallet <u>only supports Litecoin's P2PKH address types</u> (such that start from <code>L...</code>).<br>
 No <b>segwit</b> or <b>multisig</b> suport for Litecoin. It might work, but has not been tested.<br>
+<br>
 </body>
 </html>
