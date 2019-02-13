@@ -64,7 +64,7 @@ func node_info(par string) {
 
 	fmt.Printf("Connection ID %d:\n", r.ID)
 	if r.Incomming {
-		fmt.Println("Comming from", r.PeerIp)
+		fmt.Println("Coming from", r.PeerIp)
 	} else {
 		fmt.Println("Going to", r.PeerIp)
 	}
