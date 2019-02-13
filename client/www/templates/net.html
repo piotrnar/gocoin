@@ -79,6 +79,8 @@ Resolution:
 <tr>
 <td align="left" valign="top">
 <input type="checkbox" id="stat_freeze" onchange="freeze_stats()"><span class="hand" onclick="stat_freeze.click()">Freeze table</span>
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="hide_incomming_cb" onchange="switch_hidden()"><span class="hand" onclick="hide_incomming_cb.click()">Hide incomming</span>
 <!--
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
@@ -174,6 +176,10 @@ function freeze_stats() {
 			raw_load(curr_monitor_id,false)
 		}
 	}
+}
+
+function switch_hidden() {
+	refreshconnections(false)
 }
 
 function hide_peer_info() {
@@ -361,6 +367,8 @@ function refreshconnections(force) {
 			var id_found = false
 
 			for (var i=0; i<cs.length; i++) {
+				if (hide_incomming_cb.checked && cs[i].Incomming) continue
+
 				var td, row = netcons.insertRow(-1)
 				var id = cs[i].ID
 
