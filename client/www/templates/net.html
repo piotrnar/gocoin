@@ -23,7 +23,7 @@ td.agent {
 
 <b>{EXTERNAL_ADDR}</b>
 <==>
-<b id="out_connections"></b> outgoing + <b id="in_connections"></b> incoming (connections)<br>
+<b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png"> (connections)<br>
 
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 <span id="el_tcp_listen_switch" style="display:none">[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
@@ -80,7 +80,9 @@ Resolution:
 <td align="left" valign="top">
 <input type="checkbox" id="stat_freeze" onchange="freeze_stats()"><span class="hand" onclick="stat_freeze.click()">Freeze table</span>
 &nbsp;&bull;&nbsp;
-<input type="checkbox" id="hide_incomming_cb" onchange="switch_hidden()"><span class="hand" onclick="hide_incomming_cb.click()">Hide incomming</span>
+<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)"><span class="hand" onclick="hide_incoming_cb.click()">Hide <img src="webui/incoming.png"></span>
+&nbsp;
+<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)"><span class="hand" onclick="hide_outgoing_cb.click()">Hide <img src="webui/outgoing.png"></span>
 <!--
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
@@ -178,9 +180,17 @@ function freeze_stats() {
 	}
 }
 
-function switch_hidden() {
+function switch_hidden(cb) {
+	if (hide_incoming_cb.checked && hide_outgoing_cb.checked) {
+		if (cb.id=="hide_incoming_cb") {
+			hide_outgoing_cb.checked = !hide_outgoing_cb.checked
+		} else {
+			hide_incoming_cb.checked = !hide_incoming_cb.checked
+		}
+	}
 	hide_peer_info()
 	refreshconnections(false)
+	return false
 }
 
 function hide_peer_info() {
@@ -368,7 +378,13 @@ function refreshconnections(force) {
 			var id_found = false
 
 			for (var i=0; i<cs.length; i++) {
-				if (hide_incomming_cb.checked && cs[i].Incomming) continue
+				if (cs[i].Incomming) {
+					ins++
+					if (hide_incoming_cb.checked) continue
+				} else {
+					outs++
+					if (hide_outgoing_cb.checked) continue
+				}
 
 				var td, row = netcons.insertRow(-1)
 				var id = cs[i].ID
@@ -411,10 +427,8 @@ function refreshconnections(force) {
 				td = row.insertCell(-1)
 				if (cs[i].Incomming) {
 					td.innerHTML = "<img src=\"webui/incoming.png\">"
-					ins++
 				} else {
 					td.innerHTML = "<img src=\"webui/outgoing.png\">"
-					outs++
 				}
 
 				// ping
