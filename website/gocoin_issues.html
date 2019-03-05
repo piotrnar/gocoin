@@ -31,16 +31,16 @@ get at least 100 confirmations</u>.<br>
 <br>
 
 <h2>Node becoming non-responsive</h2>
-It has been observed on systems with AMD Ryzen CPU hosted on Windows OS, that the client node would
-become unresponsive after a random time of being ran for a normal operation.
-While being non-responsive, the client.exe process seemed to be fully consuming one of the CPU threads (cores).<br>
-<br>
-It does not affect the OS stability and the client node can be easily killed and restarted, upon an occurrence of such a malfunction.<br>
+It has been observed on one system (AMD Ryzen 1800X CPU, Windows OS) that the client node would
+become unresponsive after a random time of being online.
+While being non-responsive, the client process seemed to be fully consuming one of the CPU threads (cores).
 On that specific platform, this would averagely happen about every three days, although sometimes it was hours, other times a week.<br>
+<br>
+It does not affect the OS stability and the client node can be easily killed and restarted upon an occurrence of such a malfunction.<br>
 <br>
 The nature of this problem is not completely clear, although it seems to have something to do
 with the computer's clock being updated.<br>
-Therefore, <u>the solution for this problem is to turn off internet time sync</u> in the Windows OS, for the time of running the node.<br>
+Therefore, <u>the solution for this problem is to turn off internet time sync</u> in the OS, for the time of running the node.<br>
 <br>
 <h2>Mining API</h2>
 The mining RPC API is experimental and had been implemented in March 2016 - long before the segwit support was added.<br>
