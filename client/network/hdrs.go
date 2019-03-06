@@ -183,7 +183,7 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 
 	if e != nil {
-		println("GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
 		c.DoS("BadGetHdrsA")
 		return
 	}
