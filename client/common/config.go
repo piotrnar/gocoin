@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const LastTrustedBTCBlock = "0000000000000000001388f0aeb098f469d0b74e5dd97f8f7ee31bf982b4c37a" // #558245
+const LastTrustedBTCBlock = "00000000000000000029059440d08baa9f2dbce19295599f8b51f9bcd08b686a" // #566048
 const LastTrustedTN3Block = "000000000000004af2797ec6c819d68e45a67b0add227d786aa6011be2489511" // #1441638
 
 var (
