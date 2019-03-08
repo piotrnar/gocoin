@@ -553,7 +553,7 @@ func switch_trust(par string) {
 }
 
 func save_utxo(par string) {
-	common.BlockChain.Unspent.HurryUp()
+	//common.BlockChain.Unspent.HurryUp()
 	common.BlockChain.Unspent.Save()
 }
 
