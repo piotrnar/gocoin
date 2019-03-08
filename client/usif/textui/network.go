@@ -176,15 +176,19 @@ func net_rd(par string) {
 	srt := make([]string, len(network.RecentlyDisconencted))
 	var idx int
 	for ip, rd := range network.RecentlyDisconencted {
-		srt[idx] = fmt.Sprintf("%31d %16s %3d %20s - %s", rd.Time.UnixNano(), fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]), rd.Count, time.Now().Sub(rd.Time).String(), rd.Why)
+		srt[idx] = fmt.Sprintf("%31d %16s %3d %16s - %s", rd.Time.UnixNano(),
+			fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]), rd.Count,
+			time.Now().Sub(rd.Time).String(), rd.Why)
 		idx++
 	}
 	sort.Strings(srt)
 	network.HammeringMutex.Unlock()
-	fmt.Println("RecentlyDisconencted:")
+	fmt.Println("Recently disconencted incomming connections:")
 	for _, s := range srt {
 		fmt.Println(s[32:])
 	}
+	fmt.Println("Baned if", network.HammeringMaxAllowedCount+1, "conections (within", network.HammeringMinReconnect,
+		"...", network.HammeringMinReconnect+network.HammeringExpirePeriod, "in between)")
 }
 
 

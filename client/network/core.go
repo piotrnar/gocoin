@@ -30,7 +30,7 @@ const (
 
 	MIN_PROTO_VERSION = 209
 
-	HammeringMinReconnect = 60*time.Minute // If any incoming peer reconnects in below this time, ban it
+	HammeringMinReconnect = 20*time.Minute // If any incoming peer reconnects in below this time, ban it
 	HammeringMaxAllowedCount = 3 // If reconnecting more than this many times within the time above, ban the IP
 	HammeringExpirePeriod = time.Minute // Expite Hammering history interval
 
