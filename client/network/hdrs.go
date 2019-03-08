@@ -183,13 +183,13 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)
 
 	if e != nil {
-		println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		//println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "GetHeaders: error parsing payload from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
 		c.DoS("BadGetHdrsA")
 		return
 	}
 
 	if len(h2get) > 101 || hashstop == nil {
-		println("GetHeaders: too many locators", len(h2get), "or missing hashstop", hashstop, "from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
+		//println("GetHeaders: too many locators", len(h2get), "or missing hashstop", hashstop, "from", c.PeerAddr.Ip(), c.Node.Agent, e.Error())
 		c.DoS("BadGetHdrsB")
 		return
 	}
