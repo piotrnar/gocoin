@@ -30,7 +30,8 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			btc.WriteVlen(out, cnt-uint64(i))
 			for ; i < int(cnt); i++ {
 				if n, _ := b.Read(h[:]); n != 36 {
-					println("ProcessGetData - 2: pl too short", c.PeerAddr.Ip())
+					//println("ProcessGetData - 2: pl too short", c.PeerAddr.Ip())
+					c.DoS("GetDataA")
 					return
 				}
 				out.Write(h[:])
@@ -41,7 +42,8 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		}
 
 		if n, _ := b.Read(h[:]); n != 36 {
-			println("ProcessGetData: pl too short", c.PeerAddr.Ip())
+			//println("ProcessGetData: pl too short", c.PeerAddr.Ip())
+			c.DoS("GetDataB")
 			return
 		}
 
