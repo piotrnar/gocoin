@@ -218,7 +218,7 @@ func (db *UnspentDB) save() {
 
 	total_records = int64(len(db.HashMap))
 
-	buf := bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record (it will still be able to grow over it)
+	buf := bytes.NewBuffer(make([]byte, 0, save_buffer_min + 0x1000)) // add 4K extra for the last record (it will still be able to grow over it)
 	binary.Write(buf, binary.LittleEndian, uint64(db.LastBlockHeight))
 	buf.Write(db.LastBlockHash)
 	binary.Write(buf, binary.LittleEndian, uint64(total_records))
@@ -268,11 +268,14 @@ func (db *UnspentDB) save() {
 		db.lastFileClosed.Done()
 	}(db.dir_utxo + btc.NewUint256(db.LastBlockHash).String() + ".db.tmp")
 
+	if UTXO_WRITING_TIME_TARGET == 0 {
+		hurryup = true
+	}
 	for k, v := range db.HashMap {
 		if check_time {
 			check_time = false
-			data_progress = int64((current_record << 20) / total_records)
-			time_progress = int64((time.Now().Sub(start_time) << 20) / UTXO_WRITING_TIME_TARGET)
+			data_progress = int64(current_record << 20) / int64(total_records)
+			time_progress = int64(time.Now().Sub(start_time) << 20) / int64(UTXO_WRITING_TIME_TARGET)
 			if data_progress > time_progress {
 				select {
 				case <-db.abortwritingnow:
@@ -280,7 +283,7 @@ func (db *UnspentDB) save() {
 					goto finito
 				case <-db.hurryup:
 					hurryup = true
-				case <-time.After(time.Millisecond):
+				case <-time.After((time.Duration(data_progress-time_progress) * UTXO_WRITING_TIME_TARGET) >> 20):
 				}
 			}
 		}
@@ -301,15 +304,13 @@ func (db *UnspentDB) save() {
 		buf.Write(v)
 		if buf.Len() >= save_buffer_min {
 			data_channel <- buf.Bytes()
-			buf = bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record
+			if !hurryup {
+				check_time = true
+			}
+			buf = bytes.NewBuffer(make([]byte, 0, save_buffer_min + 0x1000)) // add 4K extra for the last record
 		}
 
-		if !hurryup {
-			current_record++
-			if (current_record & 0x3f) == 0 {
-				check_time = UTXO_WRITING_TIME_TARGET > 0
-			}
-		}
+		current_record++
 	}
 finito:
 	db.RWMutex.RUnlock()
