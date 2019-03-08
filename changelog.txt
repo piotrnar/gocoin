@@ -1,5 +1,5 @@
 1.9.6:
-* New config value "Memory.OldDataBackup" - move .dat files to "oldat/" instead of deleting
+* Client: New config value "Memory.OldDataBackup" - move .dat files to "oldat/" instead of deleting
 * Tools/balio: Fixed compatibility with recent API of blockchair.com
 * "Memory.UseGoHeap" config value brought back
 * peersdb.NewAddrFromString() resolves host names now, which has system-wise applications
