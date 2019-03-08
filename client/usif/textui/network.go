@@ -165,17 +165,26 @@ func net_stats(par string) {
 
 	network.Mutex_net.Unlock()
 
-	fmt.Print("RecentlyDisconencted:")
-	network.HammeringMutex.Lock()
-	for ip, ti := range network.RecentlyDisconencted {
-		fmt.Printf(" %d.%d.%d.%d-%s", ip[0], ip[1], ip[2], ip[3], time.Now().Sub(ti).String())
-	}
-	network.HammeringMutex.Unlock()
-	fmt.Println()
-
 	fmt.Println("GetMPInProgress:", len(network.GetMPInProgressTicket) != 0)
 
 	common.PrintBWStats()
+}
+
+
+func net_rd(par string) {
+	network.HammeringMutex.Lock()
+	srt := make([]string, len(network.RecentlyDisconencted))
+	var idx int
+	for ip, rd := range network.RecentlyDisconencted {
+		srt[idx] = fmt.Sprintf("%31d %16s %3d %20s - %s", rd.Time.UnixNano(), fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]), rd.Count, time.Now().Sub(rd.Time).String(), rd.Why)
+		idx++
+	}
+	sort.Strings(srt)
+	network.HammeringMutex.Unlock()
+	fmt.Println("RecentlyDisconencted:")
+	for _, s := range srt {
+		fmt.Println(s[32:])
+	}
 }
 
 
@@ -183,4 +192,5 @@ func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
+	newUi("rd", false, net_rd, "Show recently disconnected connections")
 }

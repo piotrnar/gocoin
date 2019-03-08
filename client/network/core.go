@@ -30,7 +30,9 @@ const (
 
 	MIN_PROTO_VERSION = 209
 
-	HammeringMinReconnect = 60*time.Second // If any incoming peer reconnects in below this time, ban it
+	HammeringMinReconnect = 60*time.Minute // If any incoming peer reconnects in below this time, ban it
+	HammeringMaxAllowedCount = 3 // If reconnecting more than this many times within the time above, ban the IP
+	HammeringExpirePeriod = time.Minute // Expite Hammering history interval
 
 	ExpireCachedAfter = 20*time.Minute /*If a block stays in the cache for that long, drop it*/
 
@@ -65,8 +67,14 @@ var (
 
 	// Hammering protection (peers that keep re-connecting) map IPv4 => UnixTime
 	HammeringMutex sync.Mutex
-	RecentlyDisconencted map[[4]byte] time.Time = make(map[[4]byte] time.Time)
+	RecentlyDisconencted map[[4]byte] *RecentlyDisconenctedType = make(map[[4]byte] *RecentlyDisconenctedType)
 )
+
+type RecentlyDisconenctedType struct {
+	time.Time
+	Count uint
+	Why string
+}
 
 type NetworkNodeStruct struct {
 	Version uint32
@@ -160,6 +168,7 @@ type OneConnection struct {
 	sync.Mutex // protects concurent access to any fields inside this structure
 
 	broken bool // flag that the conenction has been broken / shall be disconnected
+	why_disconnected string
 	banit bool // Ban this client after disconnecting
 	misbehave int // When it reaches 1000, ban it
 
@@ -389,6 +398,7 @@ func (c *OneConnection) Disconnect(why string) {
 		println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
 	}
 	c.broken = true
+	c.why_disconnected = why
 	c.Mutex.Unlock()
 }
 
