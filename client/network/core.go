@@ -486,7 +486,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			}
 			c.Mutex.Unlock()
 			common.CountSafe("NetBadMagic")
-			c.Disconnect("BadMagic")
+			c.Ban()
 			return
 		}
 		if c.broken {
