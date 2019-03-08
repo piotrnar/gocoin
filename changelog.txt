@@ -1,4 +1,6 @@
 1.9.6:
+* Client/TextUI: "saveutxo" command triggers slow saving now (not a rapid one)
+* Client: Imporved resource usage when saving UTXO.db to disk
 * Client: New config value "Memory.OldDataBackup" - move .dat files to "oldat/" instead of deleting
 * Tools/balio: Fixed compatibility with recent API of blockchair.com
 * "Memory.UseGoHeap" config value brought back
