@@ -178,7 +178,7 @@ func drop_worst_peer() bool {
 				if common.FLAG.Log {
 					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
 					if f!=nil {
-						fmt.Fprintf(f, "%s: Drop incomming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
+						fmt.Fprintf(f, "%s: Drop incoming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
 							time.Now().Format("2006-01-02 15:04:05"),
 							v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
 						f.Close()

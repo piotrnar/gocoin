@@ -183,7 +183,7 @@ func net_rd(par string) {
 	}
 	sort.Strings(srt)
 	network.HammeringMutex.Unlock()
-	fmt.Println("Recently disconencted incomming connections:")
+	fmt.Println("Recently disconencted incoming connections:")
 	for _, s := range srt {
 		fmt.Println(s[32:])
 	}
@@ -196,5 +196,5 @@ func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
-	newUi("rd", false, net_rd, "Show recently disconnected connections")
+	newUi("rd", false, net_rd, "Show recently disconnected incoming connections")
 }

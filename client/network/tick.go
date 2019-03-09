@@ -268,7 +268,7 @@ func tcp_server() {
 			if e == nil && common.IsListenTCP() {
 				var terminate bool
 
-				// set port to default, for incomming connections
+				// set port to default, for incmming connections
 				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
 				if e == nil {
 					// Hammering protection

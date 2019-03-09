@@ -24,7 +24,7 @@
 * Client: Fixed performance issue with mempool's transaction.GetAllParents() method
 * Client/WebUI: Import/Export WebUI settings moved from Wallet to Home page
 * lib/others/peersdb: updated list of DNS seeds
-* Client: Split incomming "getdata" into chunks, to prevent send buffer from overflowing
+* Client: Split incoming "getdata" into chunks, to prevent send buffer from overflowing
 * Client: Improved way of discovering "getheaders" and "getdata" timeouts
 * Client: Improved way of handling chain splits with only one branch valid
 * Lib: new script verification flag "VER_CONST_SCRIPTCODE", for compatibility with recent changes in bitcoin core
@@ -100,7 +100,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 * Client: Automatically connect to IPs from file "friends.txt" (inside the client/ folder)
 * Client/WebUI/MakeTx: Show P2SH-WPKH instead of P2KH, only if currently selected wallet contains "# Auto-translate to SegWit"
 * Client/WebUI/MakeTx: Address Book shows auto calculated P2SH-WPKH Addresses from currently selected wallet
-* Client: Show real endpoint's TCP port for incomming connections
+* Client: Show real endpoint's TCP port for incoming connections
 * Client: Run Tick() method for each peer not more often than each 100 ms
 * Client: Run SendInvs() method for each peer not more often each 10 ms
 * Client: Increased size of each peer's send buffer to 16MB (so it can handle 8MB blocks)
@@ -375,7 +375,7 @@ NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 alread
 1.0.2 - 2015-01-02
 * Fix: GetHeaders for unknown block does not cause panic anymore
 * Fix: Index out of range in "client/usif/webui/wallets.go" seen when quickly switching wallets
-* Baning of incomming peers ignores the remote port number (only checks IP)
+* Baning of incoming peers ignores the remote port number (only checks IP)
 * WebUI: show last block number in the top level menu
 
 1.0.1 - 2014-10-19
