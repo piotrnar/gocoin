@@ -7,23 +7,41 @@
 On this page you can find ways to improve performance and lower resource consumptions
 of a running <b>client</b>.<br>
 
-<a name="libsecp256k1"></a>
-<h2>External secp256k1</h2>
-Use <a target="_blank" href="https://github.com/bitcoin/bitcoin/tree/master/src/secp256k1">libsecp256k1</a>
-maintained by <a target="_blank" href="https://github.com/bitcoin/bitcoin/">Bitcoin Core</a> project,
-that is written in C and assembler to provide optimal performance for EC_Verify operations.<br>
+<h2>Disable wallet functionality</h2>
+
+You can disable node's wallet functionality, to save system memory used by a running client
+and improve block processing times.<br>
+In order to do so, use TextUI command <code>wallet off</code> or click the disable wallet button on the bottom of the <b>Wallet</b> page in the WebUI.<br>
 <br>
+If you don't want the wallet functionality to automatically enable after the node is started,
+set the value of <code>AllBalances.AutoLoad</code> to <code>false</code> in the
+<a href="gocoin_manual_config.html">config file</a>.<br>
+<br>
+<i>Note: You can manually enable wallet functionality at any time while the node is running,
+either from WebUI or by executing TextUI command <code>wallet on</code></i><br>
+<br>
+<a name="libsecp256k1"></a>
+<h2>External secp256k1 speedups</h2>
+
+It is possible to use <a target="_blank" href="https://github.com/bitcoin/bitcoin/tree/master/src/secp256k1">libsecp256k1</a>
+(maintained by <a target="_blank" href="https://github.com/bitcoin/bitcoin/">Bitcoin Core</a> project)
+that is written in C and assembler.<br>
+<br>
+
+<i><b>Note:</b>
+Thanks to the recent improvements in Go compiler, an external library does not always perform better than the Gocoin's native one.<br>
+To check if it does, use test programs from <code>gocoin/lib/others/cgo/ec_bench/</code> - for instance: <code>go run gonative.go</code> vs <code>go run sipasec.go</code></i><br>
+<br>
+
 To make Gocoin client to use the external library, copy either the file
 <code>sipadll.go</code> (Windows only) or <code>sipasec.go</code> (any OS),
 from <code>gocoin/client/speedups/</code> to its parent folder (<code>gocoin/client/</code>).
 Then rebuild and restart the client.<br>
-<br>
 <i>Note: You can have either <code>sipadll.go</code> or <code>sipasec.go</code> in your
 <code>gocoin/client/</code> folder, but never both of them as the client will not build then.</i><br>
 <br>
-Depending which speedup file you chose, follow either of the instrutions in the table below.<br>
+Depending which speedup file you chose, follow either of the instructions in the table below.<br>
 <br>
-
 <table border="1" cellpadding="5" cellspacing="0">
 <tr>
 <td align="center" width="50%"><b>sipadll.go</b> (Windows only)</td>
@@ -63,20 +81,5 @@ On Debian based Linux system, simply execute the following commands:<br>
 
 </tr>
 </table>
-
-<br>
-<h2>Disable wallet functionality</h2>
-
-You can disable node's wallet functionality, to save system memory used by a running client
-and improve block processing times.<br>
-In order to do so, use TextUI command <code>wallet off</code> or click the disable wallet button on the bottom of the <b>Wallet</b> page in the WebUI.<br>
-<br>
-If you don't want the wallet functionality to automatically enable after the node is started,
-set the value of <code>AllBalances.AutoLoad</code> to <code>false</code> in the
-<a href="gocoin_manual_config.html">config file</a>.<br>
-<br>
-<i>Note: You can manually enable wallet functionality at any time while the node is running,
-either from WebUI or by executing TextUI command <code>wallet on</code></i><br>
-
 </body>
 </html>
