@@ -119,7 +119,7 @@ redo:
 		goto fatal_error
 	}
 
-	rd = bufio.NewReaderSize(of, 0x100000)
+	rd = bufio.NewReaderSize(of, 0x40000) // read ahed buffer size
 
 	er = binary.Read(rd, binary.LittleEndian, &u64)
 	if er != nil {
@@ -205,7 +205,7 @@ func (db *UnspentDB) save() {
 	var abort, hurryup, check_time bool
 	var total_records, current_record, data_progress, time_progress int64
 
-	const save_buffer_min = 0x10000
+	const save_buffer_min = 0x10000 // write in chunks of ~64KB
 	const save_buffer_cnt = 100
 
 	os.Rename(db.dir_utxo+"UTXO.db", db.dir_utxo+"UTXO.old")
@@ -227,11 +227,13 @@ func (db *UnspentDB) save() {
 	// so we can abort without waiting for disk.
 	db.lastFileClosed.Add(1)
 	go func(fname string) {
-		of, er := os.Create(fname)
+		of_, er := os.Create(fname)
 		if er != nil {
 			println("Create file:", er.Error())
 			return
 		}
+
+		of := bufio.NewWriter(of_)
 
 		var dat []byte
 		var abort, exit bool
@@ -259,10 +261,11 @@ func (db *UnspentDB) save() {
 		}
 	exit:
 		if abort {
-			of.Close() // abort
+			of_.Close() // abort
 			os.Remove(fname)
 		} else {
-			of.Close()
+			of.Flush()
+			of_.Close()
 			os.Rename(fname, db.dir_utxo+"UTXO.db")
 		}
 		db.lastFileClosed.Done()

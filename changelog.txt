@@ -1,4 +1,5 @@
 1.9.6:
+* lib/utxo: use bufio.Writer for saving UTXO.db to disk
 * Client/TextUI: New command "rd" to show recently disconnected peers
 * Client: Hammering protection only kicks in after repeated re-connecting
 * Client/TextUI: "saveutxo" command triggers slow saving now (not a rapid one)
