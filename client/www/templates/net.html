@@ -24,7 +24,7 @@ td.agent {
 <b>{EXTERNAL_ADDR}</b>
 <==>
 <b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png"> connections<br>
-
+<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
 <span id="el_tcp_listen_switch" style="display:none">[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
 </div>
@@ -217,6 +217,11 @@ function refresh_conns() {
 	refreshconnections(true)
 }
 
+function show_info(id) {
+	raw_load(id,true)
+	rawdiv.scrollIntoView()
+}
+
 function update_connection_info(ci) {
 	var s = 'Connection ID ' + ci.ID + ':\n'
 
@@ -321,14 +326,6 @@ function raw_load(id,force) {
 	aj.send(null);
 }
 
-function row_clicked(id) {
-	if (id==curr_monitor_id) { // hide when clicked again
-		hide_peer_info()
-	} else {
-		raw_load(id,true)
-	}
-}
-
 function net_drop(id) {
 	if (server_mode) {
 		alert('Droping connections is not available in Server Mode')
@@ -352,10 +349,6 @@ function net_getmp(id) {
 function refreshconnections(force) {
 	if (!force && stat_freeze.checked) {
 		return
-	}
-
-	function onc(c,id) {
-		c.onclick = function() {row_clicked(id)}
 	}
 
 	var aj = ajax()
@@ -422,6 +415,16 @@ function refreshconnections(force) {
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'
 				td.innerHTML = cs[i].PeerIp
+				td.title = "Click to Copy"
+				td.className = 'hand'
+				td["peerip"] = cs[i].PeerIp
+				td.addEventListener("click", function(e) {
+					autocopy.style.display = 'inline'
+					autocopy.value = e.srcElement["peerip"]
+					autocopy.select()
+					document.execCommand('copy')
+					autocopy.style.display = 'none'
+				})
 
 				// direction
 				td = row.insertCell(-1)
@@ -535,15 +538,24 @@ function refreshconnections(force) {
 				td.noWrap = true
 				td.innerHTML = cs[i].MaxSentBufSize
 
-				// drop conn
+				// action icons
+				var peer_ip = cs[i].PeerIp.split(':')[0]
 				td = row.insertCell(-1)
 				td.className = "r nw"
-				td.innerHTML = ( ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) ? '<img title="Request missing transactions" class="hand" src="webui/request.png" onclick="net_getmp('+id+')"> ' : '' ) +
-					'<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')">'
-
-				onc(row, id)
-				row.title = "Connection Details"
-				row.style.cursor = 'pointer'
+				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')"> ' +
+					'<img title="Connection Details" class="hand" src="webui/info.png" onclick="show_info('+id+')"> '
+				if ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) {
+					var img = document.createElement('img');
+					img.src = "webui/request.png"
+					img.title = "Request missing transactions"
+					img.classList.add('hand')
+					img["connid"] = id
+					img.addEventListener("click", function(e) {
+						net_getmp(e.srcElement["connid"])
+						e.stopPropagation()
+					})
+					td.insertBefore(img, td.firstChild)
+				}
 
 				if (cs[i].Authorized) {
 					row.classList.add("secure")

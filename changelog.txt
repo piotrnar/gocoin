@@ -1,4 +1,5 @@
 1.9.6:
+* WebUI/Transactions: Clicking on peer's IP copies it into clipboard
 * lib/utxo: use bufio.Writer for saving UTXO.db to disk
 * Client/TextUI: New command "rd" to show recently disconnected peers
 * Client: Hammering protection only kicks in after repeated re-connecting
