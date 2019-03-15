@@ -222,6 +222,7 @@ function refresh_conns() {
 }
 
 function show_info(id) {
+	hide_peer_info()
 	raw_load(id,true)
 }
 
@@ -303,7 +304,7 @@ function update_connection_info(ci) {
 	rawdiv.innerHTML = s
 	if (rawdivon_hidden) {
 		rawdivon.style.display = 'block'
-		rawdivon.scrollIntoView()
+		window.scrollTo(0,document.body.scrollHeight)
 		rawdivon_hidden = false
 	}
 }
