@@ -148,7 +148,7 @@ if (!server_mode) {
 var raw_timer = null
 var curr_monitor_id = -1
 var friends_file_bak = ''
-var rawdivon_hidden = true
+var loading_new_rawdivon = false
 
 function connect_peer() {
 	var ip = prompt("Enter IP of the peer to connect to");
@@ -201,10 +201,7 @@ function hide_peer_info() {
 	}
 	rawdiv.innerHTML = ''
 	curr_monitor_id = -1
-	if (!rawdivon_hidden) {
-		rawdivon_hidden = true
-		rawdivon.style.display = 'none'
-	}
+	rawdivon.style.display = 'none'
 }
 
 function refresh_raw() {
@@ -222,7 +219,7 @@ function refresh_conns() {
 }
 
 function show_info(id) {
-	hide_peer_info()
+	loading_new_rawdivon = true
 	raw_load(id,true)
 }
 
@@ -302,10 +299,10 @@ function update_connection_info(ci) {
 	s += '----------------------------------------------------------------\n'
 
 	rawdiv.innerHTML = s
-	if (rawdivon_hidden) {
-		rawdivon.style.display = 'block'
+	rawdivon.style.display = 'block'
+	if (loading_new_rawdivon) {
 		window.scrollTo(0,document.body.scrollHeight)
-		rawdivon_hidden = false
+		loading_new_rawdivon = false
 	}
 }
 
@@ -356,6 +353,11 @@ function net_getmp(id) {
 
 function refreshconnections(force) {
 	if (!force && stat_freeze.checked) {
+		return
+	}
+
+	if (loading_new_rawdivon) {
+		setTimeout('refreshconnections(false)', 2500)
 		return
 	}
 
@@ -584,7 +586,7 @@ function refreshconnections(force) {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout('refreshconnections(false)', 3000)
+		setTimeout('refreshconnections(false)', 2500)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
