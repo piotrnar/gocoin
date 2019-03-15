@@ -148,6 +148,7 @@ if (!server_mode) {
 var raw_timer = null
 var curr_monitor_id = -1
 var friends_file_bak = ''
+var rawdivon_hidden = true
 
 function connect_peer() {
 	var ip = prompt("Enter IP of the peer to connect to");
@@ -198,9 +199,12 @@ function hide_peer_info() {
 		clearTimeout(raw_timer)
 		raw_timer = null
 	}
-	document.getElementById('rawdiv').innerHTML = ''
-	document.getElementById('rawdivon').style.display = 'none'
+	rawdiv.innerHTML = ''
 	curr_monitor_id = -1
+	if (!rawdivon_hidden) {
+		rawdivon_hidden = true
+		rawdivon.style.display = 'none'
+	}
 }
 
 function refresh_raw() {
@@ -219,7 +223,6 @@ function refresh_conns() {
 
 function show_info(id) {
 	raw_load(id,true)
-	rawdiv.scrollIntoView()
 }
 
 function update_connection_info(ci) {
@@ -297,8 +300,12 @@ function update_connection_info(ci) {
 	}
 	s += '----------------------------------------------------------------\n'
 
-	document.getElementById('rawdiv').innerHTML = s
-	document.getElementById('rawdivon').style.display = 'block'
+	rawdiv.innerHTML = s
+	if (rawdivon_hidden) {
+		rawdivon.style.display = 'block'
+		rawdivon.scrollIntoView()
+		rawdivon_hidden = false
+	}
 }
 
 function raw_load(id,force) {
