@@ -584,7 +584,7 @@ function refreshconnections(force) {
 		} catch(e) {
 			console.log(e)
 		}
-		setTimeout('refreshconnections(false)', 1000)
+		setTimeout('refreshconnections(false)', 3000)
 	}
 	aj.open("GET","netcon.json",true)
 	aj.send(null)
