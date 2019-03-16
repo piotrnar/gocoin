@@ -619,7 +619,7 @@ func txChecker(tx *btc.Tx) bool {
 	if ok {
 		ok = tx.WTxID().Equal(rec.WTxID())
 		if !ok {
-			println("wTXID mismatch at", tx.Hash.String(), tx.WTxID().String(), rec.WTxID().String())
+			//println("wTXID mismatch at", tx.Hash.String(), tx.WTxID().String(), rec.WTxID().String())
 			common.CountSafe("TxScrSWErr")
 		}
 	}
