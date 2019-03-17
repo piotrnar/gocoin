@@ -7,6 +7,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 // Download (and re-assemble) raw transaction from blockexplorer.com
@@ -80,9 +81,29 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 
 // Download (and re-assemble) raw transaction from blockcypher.com
 func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
-	var url string
-	url = "https://api.blockcypher.com/v1/" + currency + "/main/txs/" + txid.String() + "?limit=1000&instart=1000&outstart=1000&includeHex=true"
-	r, er := http.Get(url)
+	var r *http.Response
+	var er error
+	var try_cnt int
+
+	url := "https://api.blockcypher.com/v1/" + currency + "/main/txs/" + txid.String() + "?limit=1000&instart=1000&outstart=1000&includeHex=true"
+
+	for {
+		r, er = http.Get(url)
+		if er != nil {
+			fmt.Println("blockcypher.com:", er.Error())
+			return
+		}
+
+		if r.StatusCode == 429 && try_cnt < 5 {
+			try_cnt++
+			println("Retry blockcypher.com in", try_cnt, "seconds...")
+			time.Sleep( time.Duration(try_cnt) * time.Second)
+			continue
+		}
+
+		break
+	}
+
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
@@ -99,7 +120,6 @@ func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 		}
 	}
 	if er != nil {
-		fmt.Println("blockcypher.com:", er.Error())
 	}
 	return
 }

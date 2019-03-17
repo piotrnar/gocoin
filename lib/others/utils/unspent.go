@@ -8,6 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspentTx, er error) {
@@ -106,15 +107,27 @@ func GetUnspentFromBlockchainInfo(addr *btc.BtcAddr) (res utxo.AllUnspentTx, er 
 
 func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
+	var try_cnt int
 
-	r, er = http.Get("https://api.blockcypher.com/v1/" + currency + "/main/addrs/" + addr.String() + "?unspentOnly=true")
+	for {
+		r, er = http.Get("https://api.blockcypher.com/v1/" + currency + "/main/addrs/" + addr.String() + "?unspentOnly=true")
 
-	if er != nil {
-		return
-	}
-	if r.StatusCode != 200 {
-		er = errors.New(fmt.Sprint("HTTP StatusCode ", r.StatusCode))
-		return
+		if er != nil {
+			return
+		}
+		if r.StatusCode == 429 && try_cnt < 5 {
+			try_cnt++
+			println("Retry blockcypher.com in", try_cnt, "seconds...")
+			time.Sleep( time.Duration(try_cnt) * time.Second)
+			continue
+		}
+
+		if r.StatusCode != 200 {
+			er = errors.New(fmt.Sprint("HTTP StatusCode ", r.StatusCode))
+			return
+		}
+
+		break
 	}
 
 	c, _ := ioutil.ReadAll(r.Body)
