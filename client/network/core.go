@@ -499,7 +499,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			c.Mutex.Unlock()
 		} else {
 			if c.recv.hdr_len > 24 {
-				// hard to belive but I saw this happening once on Windows
+				// hard to belive but I saw this happening twice on Windows
 				println("ERROR: hdr_len > 24 after receiving", n, "bytes")
 				c.Mutex.Unlock()
 				common.CountSafe("SockReadOverflow")
