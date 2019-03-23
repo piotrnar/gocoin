@@ -49,7 +49,10 @@ func ipchecker(r *http.Request) bool {
 }
 
 func load_template(fn string) string {
-	dat, _ := ioutil.ReadFile("www/templates/" + fn)
+	dat, er := ioutil.ReadFile("www/templates/" + fn)
+	if er != nil {
+		return er.Error() + "\n"
+	}
 	return string(dat)
 }
 
