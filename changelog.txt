@@ -1,5 +1,6 @@
 1.9.6:
-* WebUI will show some erros  now, if the page template files cannot be loaded (instead of a blank page)
+* WebUI/Wallet: added "Copy to clipboard" action icons next addresses
+* WebUI will show some erros now, if the page template files cannot be loaded (instead of a blank page)
 * Tools/balio: Retry HTTP request if blockcypher.com server returns status code 429
 * WebUI/Transactions: Clicking on peer's IP copies it into clipboard
 * lib/utxo: use bufio.Writer for saving UTXO.db to disk
