@@ -4,7 +4,8 @@
 <table width="100%">
 <tr><td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
 <tr><td align="center"><span class="qr_addr_label" id="qr_label"></span>
-<tr><td align="center"><span class="qr_addr_addr" id="qr_address"></span>
+<tr><td align="center"><input type="text" class="qr_addr_addr" id="qr_address" onclick="this.select()" readonly="readonly">
+<img src="webui/copy.png" title="Copy to clipboard" class="hand" onclick="qr_address.select();document.execCommand('copy')">
 <tr><td align="center">
 <div id="qrcode"></div>
 <tr><td align="right">&nbsp;
@@ -17,7 +18,8 @@ var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:30
 
 function showqrcode(label, addr) {
 	qr_label.innerText = label
-	qr_address.innerText = addr
+	qr_address.value = addr
+	qr_address.style.width = (addr.length+1) + 'ch'
 	qrcode.makeCode(addr)
 
 	if (prvpos==null) {
@@ -91,6 +93,23 @@ function remove_comment_from_label(lab) {
 	return lab.substr(0, i)
 }
 
+function add_copy_icon(td, txt) {
+	var img = document.createElement("img")
+	img["text2copy"] = txt
+	img.style.verticalAlign = "bottom"
+	img.src = 'webui/copy.png'
+	img.className = "hand"
+	img.title = "Copy to clipboard"
+	img.addEventListener("click", function(e) {
+		autocopy.style.display = 'inline'
+		autocopy.value = e.srcElement["text2copy"]
+		autocopy.select()
+		document.execCommand('copy')
+		autocopy.style.display = 'none'
+	})
+	td.appendChild(img)
+}
+
 function fetch_wallet_balance(name) {
 	if (fetching_balance_in_progress!=null) {
 		fetching_balance_in_progress.abort()
@@ -145,8 +164,9 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = (wallet_addr[i].length>45) ? "addr_long" : "addr_norm"
-				td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
-					'\', \'' + wallet_addr[i] + '\')" class="hand"> ' + wallet_addr[i]
+				td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
+					'\', \'' + wallet_addr[i] + '\')" class="hand"> ' + wallet_addr[i] + '&nbsp;'
+				add_copy_icon(td, wallet_addr[i])
 
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
@@ -191,18 +211,21 @@ function fetch_wallet_balance(name) {
 					td.classList.add('p2sh')
 					if (segwit_active && rec.SegWitAddr!='') {
 						//td.innerText = rec.SegWitAddr
-	                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
-							'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr
+	                    td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
+							'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr + '&nbsp;'
+						add_copy_icon(td, rec.SegWitAddr)
 					}
 				} else {
 					td.classList.add('native')
 					if (segwit_active && rec.SegWitNativeAddr!='') {
 						//td.innerText = rec.SegWitAddr
-	                    td.innerHTML = '<img src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
-							'\', \'' + rec.SegWitNativeAddr + '\')" class="hand"> ' + rec.SegWitNativeAddr
+	                    td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
+							'\', \'' + rec.SegWitNativeAddr + '\')" class="hand"> ' + rec.SegWitNativeAddr + '&nbsp;'
+						add_copy_icon(td, rec.SegWitNativeAddr)
 					}
 
 				}
+
 				td = row.insertCell(-1)
 				td.className = 'outcnt'
 				if (rec.OutCnt>0) {
@@ -498,6 +521,7 @@ function switch_segwit_p2sh() {
 </span>
 </h2>
 
+<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><span class="hand" onclick="show_mempol.click()"> Show unconfirmed</span>

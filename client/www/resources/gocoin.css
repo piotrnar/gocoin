@@ -45,7 +45,7 @@ a.dimenu {
 
 .mono {
 	font-family: monospace;
-	font-size:12px;
+font-size:12px;
 }
 
 .bold {
@@ -301,8 +301,13 @@ div.footer {
 }
 
 .qr_addr_addr {
+	font-family: monospace;
 	font-size:17px;
 	font-weight:bold;
+	text-align:center;
+	width:400px;
+	border: 0px solid;
+	outline: none;
 }
 
 .nw {
