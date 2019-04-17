@@ -59,6 +59,11 @@ func all_addrs(par string) {
 	var cnt int = 15
 	var mode int
 
+	if !common.GetBool(&common.WalletON) {
+		fmt.Println("Wallet functionality is currently disabled.")
+		return
+	}
+
 	if par != "" {
 		if c, e := strconv.ParseUint(par, 10, 32); e == nil {
 			if c > 3 {
@@ -164,6 +169,11 @@ func all_addrs(par string) {
 }
 
 func list_unspent(addr string) {
+	if !common.GetBool(&common.WalletON) {
+		fmt.Println("Wallet functionality is currently disabled.")
+		return
+	}
+
 	fmt.Println("Checking unspent coins for addr", addr)
 
 	ad, e := btc.NewAddrFromString(addr)
@@ -213,6 +223,11 @@ func list_unspent(addr string) {
 }
 
 func all_val_stats(s string) {
+	if !common.GetBool(&common.WalletON) {
+		fmt.Println("Wallet functionality is currently disabled.")
+		return
+	}
+
 	wallet.PrintStat()
 }
 
