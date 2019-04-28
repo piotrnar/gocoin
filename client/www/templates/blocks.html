@@ -37,14 +37,21 @@ Mined by <b id="stat_mined_by"></b>
 <div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
 <div width="100%" style="margin-bottom:10px;text-align:right">
-<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" checked><span onclick="block_fees_range.click()"> Limit range</span>
+<span class="hand" onclick="block_fees_range.click()">
+	<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Limit range
+</span>
 &nbsp;&bull;&nbsp;
-
-<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span onclick="block_fees_raw.click()"> Show as is</span>
+<span class="hand" onclick="block_fees_raw.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Show as is
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span onclick="block_fees_gru.click()"> Try to group</span>
+<span class="hand" onclick="block_fees_gru.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Try to group
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span onclick="block_fees_spb.click()"> Sort by SPB</span>
+<span class="hand" onclick="block_fees_spb.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Sort by SPB
+</span>
 </div>
 
 </div>
