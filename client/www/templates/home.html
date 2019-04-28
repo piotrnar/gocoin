@@ -25,14 +25,21 @@ Mined by <b id="stat_mined_by"></b>
 <div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
 <div width="100%" style="margin-bottom:10px;text-align:right">
-<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" checked><span onclick="block_fees_range.click()" style="cursor:pointer"> Limit range</span>
+<span class="hand" onclick="block_fees_range.click()">
+	<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Limit range
+</span>
 &nbsp;&bull;&nbsp;
-
-<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" checked><span onclick="block_fees_raw.click()" style="cursor:pointer"> Show as is</span>
+<span class="hand" onclick="block_fees_raw.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Show as is
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()"><span onclick="block_fees_gru.click()" style="cursor:pointer"> Try to group</span>
+<span class="hand" onclick="block_fees_gru.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Try to group
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()"><span onclick="block_fees_spb.click()" style="cursor:pointer"> Sort by SPB</span>
+<span class="hand" onclick="block_fees_spb.click()">
+	<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Sort by SPB
+</span>
 </div>
 
 </div>
@@ -57,13 +64,22 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 
 <table width="100%"><tr style="border:0">
 <td style="padding:0">
-<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()"><span onclick="chart_type_siz.click()" style="cursor:pointer"> Blocksize KB</span>
+<span onclick="chart_type_siz.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" onclick="event.stopPropagation()"> Blocksize KB
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()"><span onclick="chart_type_txs.click()" style="cursor:pointer"> Transactions</span>
+<span onclick="chart_type_txs.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()" onclick="event.stopPropagation()"> Transactions
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()"><span onclick="chart_type_spb.click()" style="cursor:pointer"> Fee SPB</span>
+<span onclick="chart_type_spb.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Fee SPB
+</span>
 &nbsp;&bull;&nbsp;
-<input type="checkbox" id="chart_type_avg" onchange="draw_chart()"><span onclick="chart_type_avg.click()" style="cursor:pointer"> <span id="avg_size">.</span> blocks average</span>
+<span onclick="chart_type_avg.click()" class="hand">
+	<input type="checkbox" id="chart_type_avg" onchange="draw_chart()" onclick="event.stopPropagation()">
+	<span id="avg_size">.</span> blocks average
+</span>
 </td>
 <td align="right" style="padding:0px">
 	<table>

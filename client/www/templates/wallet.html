@@ -524,7 +524,9 @@ function switch_segwit_p2sh() {
 <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
 &nbsp;&bull;&nbsp;
-<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()"><span class="hand" onclick="show_mempol.click()"> Show unconfirmed</span>
+<span class="hand" onclick="show_mempol.click()">
+	<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()" onclick="event.stopPropagation()"> Show unconfirmed
+</span>
 <i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
 <img src="webui/warning.png" style="vertical-align:middle">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
@@ -537,7 +539,7 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 <th align="right">Balance&nbsp;BTC
 <th width="50">
 <th width="330"><span class="hand" onclick="p2sh_sw.click()">Segwit Deposit Address</span>
-<input style="float:right;cursor:pointer" id="p2sh_sw" title="P2SH-P2WPKH" type="checkbox" onchange="switch_segwit_p2sh()">
+<input style="float:right" id="p2sh_sw" title="P2SH-P2WPKH" type="checkbox" onchange="switch_segwit_p2sh()">
 <th width="40">Outs
 </table>
 

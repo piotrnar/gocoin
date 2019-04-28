@@ -78,20 +78,30 @@ Resolution:
 <table style="width:100%">
 <tr>
 <td align="left" valign="top">
-<input type="checkbox" id="stat_freeze" onchange="freeze_stats()"><span class="hand" onclick="stat_freeze.click()">Freeze table</span>
+<span class="hand" onclick="stat_freeze.click()">
+	<input type="checkbox" id="stat_freeze" onchange="freeze_stats()" onclick="event.stopPropagation()">Freeze table
+</span>
 &nbsp;&bull;&nbsp;
-<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)"><span class="hand" onclick="hide_incoming_cb.click()">Hide <img src="webui/incoming.png"></span>
+<span class="hand" onclick="hide_incoming_cb.click()">
+	<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/incoming.png">
+</span>
 &nbsp;
-<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)"><span class="hand" onclick="hide_outgoing_cb.click()">Hide <img src="webui/outgoing.png"></span>
+<span class="hand" onclick="hide_outgoing_cb.click()">
+	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/outgoing.png">
+</span>
 <!--
 &nbsp;&bull;&nbsp;
 <input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
 -->
 </td>
 <td align="right">
-<input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()"><span onclick="net_list_order_sp.click()" style="cursor:pointer"> Sort by speed</span>
+<span onclick="net_list_order_sp.click()" class="hand">
+	<input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by speed
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()"><span onclick="net_list_order_id.click()" style="cursor:pointer"> Sort by age</span>
+<span onclick="net_list_order_id.click()" class="hand">
+	<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by age
+</span>
 </td>
 </tr>
 </table>
