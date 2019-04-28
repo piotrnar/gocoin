@@ -323,3 +323,11 @@ div.footer {
 .size120 {
 	font-size:130%;
 }
+
+input[type='checkbox'] {
+	cursor:pointer;
+}
+
+input[type='radio'] {
+	cursor:pointer;
+}

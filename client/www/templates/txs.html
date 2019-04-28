@@ -24,14 +24,24 @@ td.txid {
 <tr>
 <td><b>Memory Pool:</b></td>
 <td align="right">
-<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()"><span onclick="mempool_new_sort.click()" style="cursor:pointer" title="Uses less bandwidth">Quick</span>
+<span onclick="mempool_new_sort.click()" class="hand" title="Uses less bandwidth">
+	<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
+</span>
 &nbsp;&bull;&nbsp;
-<input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()"><span onclick="mempool_spb_range.click()" style="cursor:pointer">Limit Y</span>
+<span onclick="mempool_spb_range.click()" class="hand">
+	<input type="checkbox" id="mempool_spb_range" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Limit Y
+</span>
 &nbsp;&bull;&nbsp;
 X for
-<input type="radio" name="mempool_siz_range" id="mempool_siz_range_1" onchange="show_mempool_fees()"><span onclick="mempool_siz_range_1.click()" style="cursor:pointer">Block</span>
-<input type="radio" name="mempool_siz_range" id="mempool_siz_range_6" onchange="show_mempool_fees()" checked><span onclick="mempool_siz_range_6.click()" style="cursor:pointer">Hour</span>
-<input type="radio" name="mempool_siz_range" id="mempool_siz_range_a" onchange="show_mempool_fees()"><span onclick="mempool_siz_range_a.click()" style="cursor:pointer">All</span>
+<span onclick="mempool_siz_range_1.click()" class="hand">
+	<input type="radio" name="mempool_siz_range" id="mempool_siz_range_1" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Block
+</span>
+<span onclick="mempool_siz_range_6.click()" class="hand">
+	<input type="radio" name="mempool_siz_range" id="mempool_siz_range_6" onchange="show_mempool_fees()" onclick="event.stopPropagation()" checked>Hour
+</span>
+<span onclick="mempool_siz_range_a.click()" class="hand">
+	<input type="radio" name="mempool_siz_range" id="mempool_siz_range_a" onchange="show_mempool_fees()" onclick="event.stopPropagation()">All
+</span>
 </td>
 </tr>
 </table>
