@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"time"
 	"bytes"
 	"io/ioutil"
@@ -52,8 +51,12 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		c.InvStore(typ, h[4:36])
 		c.Mutex.Unlock()
 
-		common.CountSafe(fmt.Sprintf("GetdataType-%x",typ))
 		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
+			if typ == MSG_BLOCK {
+				common.CountSafe("GetdataBlock")
+			} else {
+				common.CountSafe("GetdataBlockSw")
+			}
 			hash := btc.NewUint256(h[4:])
 			crec, _, er := common.BlockChain.Blocks.BlockGetExt(hash)
 
@@ -76,7 +79,12 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
-			// transaction
+			if typ == MSG_TX {
+				common.CountSafe("GetdataTx")
+			} else {
+				common.CountSafe("GetdataTxSw")
+			}
+			// ransaction
 			TxMutex.Lock()
 			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked==0 {
 				tx.SentCnt++
@@ -92,6 +100,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
+			common.CountSafe("GetdataCmpctBlk")
 			if !c.SendCmpctBlk(btc.NewUint256(h[4:])) {
 				println(c.ConnID, c.PeerAddr.Ip(), c.Node.Agent, "asked for CmpctBlk we don't have", btc.NewUint256(h[4:]).String())
 				if c.Misbehave("GetCmpctBlk", 100) {
@@ -99,6 +108,7 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 				}
 			}
 		} else {
+			common.CountSafe("GetdataTypeInvalid")
 			if typ>0 && typ<=3 /*3 is a filtered block(we dont support it)*/ {
 				//notfound = append(notfound, h[:]...)
 			}
