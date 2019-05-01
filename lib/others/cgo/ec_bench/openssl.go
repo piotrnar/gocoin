@@ -26,5 +26,5 @@ func main() {
 	}
 	wg.Wait()
 	sto := time.Now()
-	println((sto.UnixNano()-sta.UnixNano())/int64(CNT*1000), "us per ECDSA_Verify")
+	println((sto.UnixNano()-sta.UnixNano())/int64(CNT), "ns per ECDSA_Verify")
 }
