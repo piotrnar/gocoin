@@ -440,8 +440,9 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	c.Mutex.Lock()
 	bip := c.GetBlockInProgress[idx]
 	if bip == nil {
-		println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
+		//println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		c.Mutex.Unlock()
+		common.CountSafe("UnxpBlockTxnA")
 		c.counters["BlkTxnNoBIP"]++
 		c.Misbehave("BlkTxnErrBip", 100)
 		return
@@ -450,7 +451,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	if col == nil {
 		c.Mutex.Unlock()
 		println("BlkTxnNoCOL:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
-		common.CountSafe("UnxpectedBlockTxn")
+		common.CountSafe("UnxpBlockTxnB")
 		c.counters["BlkTxnNoCOL"]++
 		c.Misbehave("BlkTxnNoCOL", 100)
 		return
