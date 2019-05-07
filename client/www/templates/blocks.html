@@ -59,9 +59,13 @@ Mined by <b id="stat_mined_by"></b>
 <!-- **************************** BLOCK_FEES_END **************************** -->
 
 <div style="text-align:right;margin-bottom:8px;">
-<input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()"><span onclick="stats_type_min.click()"> Mining Information</span>
+<span class="hand" onclick="stats_type_min.click()">
+	<input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Mining Information
+</span>
 &nbsp;&bull;&nbsp;
-<input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()"><span onclick="stats_type_pro.click()"> Block Processing</span>
+<span class="hand" onclick="stats_type_pro.click()">
+	<input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Block Processing
+</span>
 </div>
 <table class="blocks bord" id="blkstab">
 <tr>
