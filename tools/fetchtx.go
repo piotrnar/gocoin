@@ -19,6 +19,11 @@ func main() {
 	}
 
 	txid := btc.NewUint256FromString(os.Args[1])
+	if txid == nil {
+		println("Incorrect transaction ID")
+		return
+	}
+
 	rawtx := utils.GetTxFromWeb(txid)
 	if rawtx==nil {
 		fmt.Println("Error fetching the transaction")
