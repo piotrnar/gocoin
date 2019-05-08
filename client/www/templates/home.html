@@ -495,7 +495,7 @@ function export_settings() {
 	var a = document.createElement("a")
 	var file = new Blob([jsonstring], {type: 'application/json'})
 	a.href = URL.createObjectURL(file)
-	a.download = "wallets.json"
+	a.download = "gocoin-config.json"
 	a.click()
 }
 
