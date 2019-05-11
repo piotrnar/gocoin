@@ -393,7 +393,7 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
-	if c.X.Debug {
+	if c.X.Debug || c.X.Authorized {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 		println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
 	}
@@ -414,7 +414,7 @@ func (c *OneConnection) IsBroken() (res bool) {
 func (c *OneConnection) DoS(why string) {
 	common.CountSafe("Ban"+why)
 	c.Mutex.Lock()
-	if c.X.Debug {
+	if c.X.Debug || c.X.Authorized {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
@@ -425,7 +425,7 @@ func (c *OneConnection) DoS(why string) {
 
 func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 	c.Mutex.Lock()
-	if c.X.Debug {
+	if c.X.Debug || c.X.Authorized {
 		print("Misbehave " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	if !c.banit {
