@@ -72,13 +72,22 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 		if bip, ok := BlocksToGet[k]; ok {
 			bip.InProgress--
 		}
-		disconnect = "BlockDlTimeout"
+		if now == nil {
+			disconnect = "BlockDlPongExp"
+		} else {
+			disconnect = "BlockDlTimeout"
+		}
 	}
 	c.Mutex.Unlock()
 	MutexRcv.Unlock()
 
 	if disconnect != "" {
-		c.Disconnect(disconnect)
+		if c.X.IsSpecial {
+			common.CountSafe("SpecialNo"+disconnect)
+			c.counters[disconnect]++
+		} else {
+			c.Disconnect(disconnect)
+		}
 	}
 }
 
