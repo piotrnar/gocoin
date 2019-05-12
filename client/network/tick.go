@@ -60,7 +60,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	for k, v := range c.GetBlockInProgress {
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
-			c.counters["BlockTotFound"]++
+			c.counters["BlockNotFound"]++
 		} else if now != nil && now.After(v.start.Add(5*time.Minute)) {
 			common.CountSafe("BlockInprogTimeout")
 			c.counters["BlockTimeout"]++
