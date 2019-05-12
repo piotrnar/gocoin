@@ -83,7 +83,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 
 	if disconnect != "" {
 		if c.X.IsSpecial {
-			common.CountSafe("SpecialNo"+disconnect)
+			common.CountSafe("Spec"+disconnect)
 			c.counters[disconnect]++
 		} else {
 			c.Disconnect(disconnect)
