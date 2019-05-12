@@ -34,6 +34,36 @@ Find below a list of example providers. Most of them you can rent per-hour (esti
 &bull;
 <a target="_blank" href="https://cloud.google.com/">Gogle Cloud</a> ($100)
 <br>
+<br>
+To quickly asses a performance of a chosen platform, you can use the benchmark below (lower time = better performance).<br>
+<pre>
+
+	package main
+
+	import (
+		"fmt"
+		"math/rand"
+		"time"
+	)
+
+	const (
+		MAPSIZE = 8
+		RECNT   = int(20e6)
+	)
+
+	func main() {
+		tm := make(map[[MAPSIZE]byte]bool, RECNT)
+		var k [MAPSIZE]byte
+		fmt.Println("Plase wait...")
+		sta := time.Now()
+		for i := 0; i < RECNT; i++ {
+			rand.Read(k[:])
+			tm[k] = true
+		}
+		fmt.Printf("All %d records loaded in %s\n", RECNT, time.Now().Sub(sta).String())
+	}
+
+</pre>
 
 <h2>Build from source</h2>
 
