@@ -184,7 +184,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 			c.X.GetBlocksDataNow = true
 		}
-		if c.X.GetBlocksDataNow {
+		if c.X.GetBlocksDataNow && len(c.GetBlockInProgress) == 0 {
 			c.X.GetBlocksDataNow = false
 			c.Mutex.Unlock()
 			c.GetBlockData()

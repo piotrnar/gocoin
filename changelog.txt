@@ -1,4 +1,5 @@
 1.9.6:
+* Client: Do not executy connection's GetBlockData() if the previous one has not finished (or timed out) yet
 * Tools/FetchTx: Suports fetching SegWit txs via blockchair.com
 * WebUI/Wallet: added "Copy to clipboard" action icons next addresses
 * WebUI will show some erros now, if the page template files cannot be loaded (instead of a blank page)
