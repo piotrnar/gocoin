@@ -1,4 +1,5 @@
 1.9.6:
+* Client: Do not disconnect from friend peers when they fail to return block data
 * Client: Do not executy connection's GetBlockData() if the previous one has not finished (or timed out) yet
 * Tools/FetchTx: Suports fetching SegWit txs via blockchair.com
 * WebUI/Wallet: added "Copy to clipboard" action icons next addresses
