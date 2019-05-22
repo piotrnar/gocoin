@@ -485,7 +485,7 @@ func NetworkTick() {
 	}
 	Mutex_net.Unlock()
 
-	for conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
+	if conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
 		var segwit_conns uint32
 		if common.CFG.Net.MinSegwitCons > 0 {
 			Mutex_net.Lock()
