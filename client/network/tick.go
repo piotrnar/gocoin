@@ -511,15 +511,12 @@ func NetworkTick() {
 				return ConnectionActive(ad)
 			})
 		}
-		if len(adrs) == 0 {
-			common.LockCfg()
-			common.UnlockCfg()
-			break
+		if len(adrs) != 0 {
+			DoNetwork(adrs[rand.Int31n(int32(len(adrs)))])
+			Mutex_net.Lock()
+			conn_cnt = OutConsActive
+			Mutex_net.Unlock()
 		}
-		DoNetwork(adrs[rand.Int31n(int32(len(adrs)))])
-		Mutex_net.Lock()
-		conn_cnt = OutConsActive
-		Mutex_net.Unlock()
 	}
 
 	if expireTxsNow {
