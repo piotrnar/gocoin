@@ -190,15 +190,20 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 			Vout   uint32 `json:"index"`
 			Value  uint64 `json:"value"`
 			Height uint32 `json:"block_id"`
+			Spent  bool   `json:"is_spent"`
 		} `json:"data"`
 	}
 
+	println(string(c))
 	er = json.Unmarshal(c, &result)
 	if er != nil {
 		return
 	}
 
 	for _, r := range result.Outs {
+		if r.Spent {
+			continue
+		}
 		ur := new(utxo.OneUnspentTx)
 		id := btc.NewUint256FromString(r.TxID)
 		if id == nil {
@@ -221,6 +226,7 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 
 	res, er = GetUnspentFromBlockchair(addr, "bitcoin")
 	if er == nil {
+		println("bc ok")
 		return
 	}
 	println("GetUnspentFromBlockchair:", er.Error())
