@@ -225,7 +225,6 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 
 	res, er = GetUnspentFromBlockchair(addr, "bitcoin")
 	if er == nil {
-		println("bc ok")
 		return
 	}
 	println("GetUnspentFromBlockchair:", er.Error())
