@@ -194,7 +194,6 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 		} `json:"data"`
 	}
 
-	println(string(c))
 	er = json.Unmarshal(c, &result)
 	if er != nil {
 		return
