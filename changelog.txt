@@ -1,4 +1,5 @@
 1.9.6:
+* Tools/balio: fix for including spent otputs in the results from api.blockchair.com
 * Client: fixed problem with a high CPU usage in case of no network connection
 * Client/WebUI: do not reload Wallet page on new blocks as it was breaking the beeps
 * Client: Do not disconnect from friend peers when they fail to return block data
