@@ -394,8 +394,12 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 func (c *OneConnection) Disconnect(why string) {
 	c.Mutex.Lock()
 	if c.X.Debug || c.X.Authorized {
-		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
-		println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
+		if c.X.Authorized && ( strings.HasPrefix(why, "CloseAll") || why == "Error:EOF" || strings.HasSuffix(why, "connection reset by peer") ) {
+			// Do not print disconnect message undeer these conditions
+		} else {
+			print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
+			println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
+		}
 	}
 	c.broken = true
 	c.why_disconnected = why
