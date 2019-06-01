@@ -354,9 +354,9 @@ function show_fees_clicked(height) {
 				$.plot($("#block_fees"), plot_data, plot_options)
 
 			} catch (e) {
-				console.log(e)
-				error_info.innertText = aj.responseText
+				error_info.innerText = aj.responseText
 				stat_error.style.display = 'block'
+				$("#block_fees").empty()
 			}
 		}
 	}

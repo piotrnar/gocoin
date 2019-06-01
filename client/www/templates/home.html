@@ -263,7 +263,11 @@ function handlehover(event, pos, item) {
 function handleclick(event, pos, item) {
 	if (item) {
 		var rec = cs[item.dataIndex]
-		show_block_fees(rec.Height,rec.Size,rec.Miner.substr(0,12))
+		if (rec.HaveFeeStats) {
+			show_block_fees(rec.Height,rec.Size,rec.Miner.substr(0,12))
+		} else {
+			//alert("No fee stats for this block")
+		}
 	}
 }
 
