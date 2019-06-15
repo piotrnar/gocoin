@@ -185,7 +185,7 @@ func (c *OneConnection) SendAuth() {
 		println(er.Error())
 		return
 	}
-	var sig btc.Signature
+	var sig secp256k1.Signature
 	sig.R.Set(r)
 	sig.S.Set(s)
 
