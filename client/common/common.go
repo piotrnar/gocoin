@@ -233,10 +233,9 @@ func WalletPendingTick() (res bool) {
 }
 
 // Make sure to call it with mutex_cfg locked
-func ApplyLastTrustedBlock() {
-	hash := btc.NewUint256FromString(CFG.LastTrustedBlock)
+func ApplyLTB(hash *btc.Uint256, height uint32) {
 	lastTrustedBlock = hash
-	LastTrustedBlockHeight = 0
+	LastTrustedBlockHeight = height
 
 	if hash != nil && BlockChain != nil {
 		BlockChain.BlockIndexAccess.Lock()
@@ -250,6 +249,11 @@ func ApplyLastTrustedBlock() {
 			}
 		}
 	}
+}
+
+// Make sure to call it with mutex_cfg locked
+func ApplyLastTrustedBlock() {
+	ApplyLTB(btc.NewUint256FromString(CFG.LastTrustedBlock), 0)
 }
 
 func LastTrustedBlockMatch(h *btc.Uint256) (res bool) {

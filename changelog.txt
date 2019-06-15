@@ -1,4 +1,5 @@
 1.9.6:
+* Client: "auth" messages carry last valid block data and the receiving peer can act upon it accordingly
 * Client/WebUI: some fixes around trying to show blocks fee stats while no such stats are stored
 * Tools/balio: fix for including spent otputs in the results from api.blockchair.com
 * Client: fixed problem with a high CPU usage in case of no network connection

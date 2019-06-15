@@ -360,7 +360,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if common.BlockChain.Consensus.Enforce_SEGWIT!=0 && (c.Node.Services&SERVICE_SEGWIT)==0 { // no segwit node
 		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
 			max_height = common.BlockChain.Consensus.Enforce_SEGWIT-1
-			if max_height <= common.Last.Block.Height {
+			if max_height <= common.Last.BlockHeight() {
 				c.IncCnt("FetchNoWitness", 1)
 				c.nextGetData = time.Now().Add(3600*time.Second) // never do getdata
 				return
@@ -420,7 +420,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	}
 
 	if cnt == 0 {
-		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.Block.Height, cnt_in_progress)
+		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
 		c.IncCnt("FetchNothing", 1)
 		// wake up in a few seconds, maybe it will be different next time
 		c.nextGetData = time.Now().Add(5*time.Second)

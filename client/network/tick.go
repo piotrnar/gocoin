@@ -532,38 +532,6 @@ func (c *OneConnection) SendFeeFilter() {
 	c.SendRawMsg("feefilter", pl[:])
 }
 
-func (c *OneConnection) SendAuth() {
-	rnd := make([]byte, 32)
-	copy(rnd, c.Node.Nonce[:])
-	r, s, er := btc.EcdsaSign(common.SecretKey, rnd)
-	if er != nil {
-		println(er.Error())
-		return
-	}
-	var sig btc.Signature
-	sig.R.Set(r)
-	sig.S.Set(s)
-	c.SendRawMsg("auth", sig.Bytes())
-}
-
-func (c *OneConnection) AuthRvcd(pl []byte) {
-	if c.X.AuthMsgGot > 0 {
-		c.DoS("AuthMsgCnt") // Only allow one auth message per connection (DoS prevention)
-		return
-	}
-	c.X.AuthMsgGot++
-	rnd := make([]byte, 32)
-	copy(rnd, nonce[:])
-	for _, pub := range AuthPubkeys {
-		if btc.EcdsaVerify(pub, pl, rnd) {
-			c.X.Authorized = true
-			c.SendRawMsg("authack", nil)
-			return
-		}
-	}
-	c.X.Authorized = false
-}
-
 // call it upon receiving "getmpdone" message or when the peer disconnects
 func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) > 0 {
