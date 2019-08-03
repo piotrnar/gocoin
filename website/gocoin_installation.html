@@ -11,7 +11,10 @@ you can run it on anything that your <b>go</b> compiler can build for.<br>
 For instance, it will work on even the oldest Raspberry Pi model A with 256MB of RAM.
 <br><br>
 
-However, in order to run the full node (<b>client</b>), you need a 64-bit OS with at least 15 GB of RAM.<br>
+However, in order to run the full node (<b>client</b>), you need a 64-bit OS with at least 16 GB of RAM,
+although because the UTXO database has been groving rapidly, a running node may actually requite even more RAM these days.<br>
+For that reason and to keep it future-proof, 32 GB or RAM is a safe recommended amount.<br>
+<br>
 You also need a file system that supports large files (bigger than 4GB) and a decent size of a free space on it.<br>
 <br>
 Note that you can purge blocks from disk, allowing you to run the node with a limited storage (e.g. 20GB).<br>
@@ -19,20 +22,20 @@ See <a href="gocoin_manual_config.html">config file</a> values:
 <span class="cfg_name">Memory.MaxDataFileMB</span> and <span class="cfg_name">Memory.DataFilesKeep</span> (set this one to non-zero, e.g. 10)<br>
 <br>
 The node runs very well on Linux based virtual servers, as long as they have enough RAM.<br>
-Find below a list of example providers. Most of them you can rent per-hour (estimated monthly cost in brackets).<br>
-<a target="_blank" href="https://www.waveride.at/">Waveride</a> (&euro;20)
+Find below a list of example providers. Most of them you can rent per-hour.<br>
+<a target="_blank" href="https://www.waveride.at/">Waveride</a>
 &bull;
-<a target="_blank" href="https://www.scaleway.com/">Scaleway</a> (&euro;25)
+<a target="_blank" href="https://www.scaleway.com/">Scaleway</a>
 &bull;
-<a target="_blank" href="https://www.vultr.com/">Vultr</a> ($80)
+<a target="_blank" href="https://www.vultr.com/">Vultr</a>
 &bull;
-<a target="_blank" href="https://www.digitalocean.com/">DigitalOcean</a> ($80)
+<a target="_blank" href="https://www.digitalocean.com/">DigitalOcean</a>
 &bull;
-<a target="_blank" href="https://linode.com/">linode</a> ($80)
+<a target="_blank" href="https://linode.com/">linode</a>
 &bull;
-<a target="_blank" href="https://aws.amazon.com/">Amazon AWS</a> ($100)
+<a target="_blank" href="https://aws.amazon.com/">Amazon AWS</a>
 &bull;
-<a target="_blank" href="https://cloud.google.com/">Gogle Cloud</a> ($100)
+<a target="_blank" href="https://cloud.google.com/">Gogle Cloud</a>
 <br>
 <br>
 To quickly assess a performance of a chosen platform, you can use the benchmark below (lower time = better performance).<br>
