@@ -558,7 +558,11 @@ func save_utxo(par string) {
 }
 
 func purge_utxo(par string) {
-	common.BlockChain.Unspent.PurgeUnspendable(par == "all")
+	common.BlockChain.Unspent.PurgeUnspendable(true)
+	if !common.CFG.Memory.PurgeUnspendableUTXO {
+		fmt.Println("Save your config file (cs) to have all the futher records purged automatically.")
+		common.CFG.Memory.PurgeUnspendableUTXO = true
+	}
 }
 
 func init() {
@@ -576,7 +580,7 @@ func init() {
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
-	newUi("purge", true, purge_utxo, "Purge unspendable outputs from UTXO database (add 'all' to purge everything)")
+	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")

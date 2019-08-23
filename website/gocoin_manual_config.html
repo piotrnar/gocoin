@@ -278,8 +278,8 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Memory.PurgeUnspendableUTXO</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
-<td class="cfg_info"> Automatically purge unspendable records from UTXO database.<br>
-Note: execute TextUI command <code>purge all</code> to purge older unspendale records.</td>
+<td class="cfg_info"> Automatically remove unspendable outputs from UTXO database, while handling transactions that contain them.<br>
+Note: execute TextUI command <code>purge</code> to purge all unspendable records from past transactions.</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> Beeps.NewBlock</td>

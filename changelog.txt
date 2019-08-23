@@ -1,6 +1,6 @@
 1.9.6:
 * Client: New config value "Memory.PurgeUnspendableUTXO" - automatically purge unspendable records from UTXO.db
-  Note: execute TextUI commad "purge all" to purge older unspendale records.
+  Note: execute TextUI commad "purge" to purge older unspendale records.
 * Client: "auth" messages carry last valid block data and the receiving peer can act upon it accordingly
 * Client/WebUI: some fixes around trying to show blocks fee stats while no such stats are stored
 * Tools/balio: fix for including spent otputs in the results from api.blockchair.com
