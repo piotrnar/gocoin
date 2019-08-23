@@ -91,6 +91,7 @@ var (
 			MaxDataFileMB uint // 0 for unlimited size
 			DataFilesKeep uint32 // 0 for all
 			OldDataBackup bool // move old dat files to "oldat/" folder (instead of removing them)
+			PurgeUnspendableUTXO bool
 		}
 		AllBalances struct {
 			MinValue   uint64 // Do not keep balance records for values lower than this
@@ -316,6 +317,7 @@ func Reset() {
 
 	utxo.UTXO_WRITING_TIME_TARGET = time.Second * time.Duration(CFG.UTXOSave.SecondsToTake)
 	utxo.UTXO_SKIP_SAVE_BLOCKS = CFG.UTXOSave.BlocksToHold
+	utxo.UTXO_PURGE_UNSPENDABLE = CFG.Memory.PurgeUnspendableUTXO
 
 	if CFG.UserAgent != "" {
 		UserAgent = CFG.UserAgent

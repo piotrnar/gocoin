@@ -21,6 +21,7 @@ const (
 var (
 	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
+	UTXO_PURGE_UNSPENDABLE   bool = false
 )
 
 var Memory_Malloc = func(le int) []byte {
@@ -519,7 +520,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	var anyout bool
 	for i, rm := range outs {
-		if rm {
+		if rm || UTXO_PURGE_UNSPENDABLE && len(rec.Outs[i].PKScr) > 0 && rec.Outs[i].PKScr[0] == 0x6a {
 			rec.Outs[i] = nil
 		} else if rec.Outs[i] != nil {
 			anyout = true
@@ -543,9 +544,25 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		if db.CB.NotifyTxAdd != nil {
 			db.CB.NotifyTxAdd(rec)
 		}
-		db.RWMutex.Lock()
-		db.HashMap[ind] = rec.Serialize(false, nil)
-		db.RWMutex.Unlock()
+		var add_this_tx bool
+		if UTXO_PURGE_UNSPENDABLE {
+			for idx, r := range rec.Outs {
+				if r != nil {
+					if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
+						rec.Outs[idx] = nil
+					} else {
+						add_this_tx = true
+					}
+				}
+			}
+		} else {
+			add_this_tx = true
+		}
+		if add_this_tx {
+			db.RWMutex.Lock()
+			db.HashMap[ind] = rec.Serialize(false, nil)
+			db.RWMutex.Unlock()
+		}
 	}
 	for k, v := range changes.DeledTxs {
 		db.del(k[:], v)

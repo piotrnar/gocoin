@@ -274,6 +274,13 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td> false</td>
 <td class="cfg_info"> Save data files to "oldat/" folder before deleting them from the blocks database.</td>
 </tr>
+<tr class="even">
+<td class="cfg_name"> Memory.PurgeUnspendableUTXO</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> Automatically purge unspendable records from UTXO database.<br>
+Note: execute TextUI command <code>purge all</code> to purge older unspendale records.</td>
+</tr>
 <tr class="odd">
 <td class="cfg_name"> Beeps.NewBlock</td>
 <td class="cfg_type"> bool</td>
