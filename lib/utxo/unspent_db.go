@@ -520,7 +520,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	var anyout bool
 	for i, rm := range outs {
-		if rm || UTXO_PURGE_UNSPENDABLE && len(rec.Outs[i].PKScr) > 0 && rec.Outs[i].PKScr[0] == 0x6a {
+		if rm || UTXO_PURGE_UNSPENDABLE && rec.Outs[i]!=nil && len(rec.Outs[i].PKScr) > 0 && rec.Outs[i].PKScr[0] == 0x6a {
 			rec.Outs[i] = nil
 		} else if rec.Outs[i] != nil {
 			anyout = true
