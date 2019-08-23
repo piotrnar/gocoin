@@ -6,6 +6,7 @@ Lib:
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
 
 Client:
+* Implement automated purging of unspendable UTXO recs, as it has grown much recently and eats up a lot of RAM
 * Force to create UTXO.db file once for awhile (when bootstraping)
 * Review and update WebUI's Help page
 * Monitor: at slow connections it gets stuck (new blocks stop being downloaded). Go to standby and come back.
