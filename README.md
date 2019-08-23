@@ -27,7 +27,7 @@ For results from other platforms see [gocoin.pl](https://gocoin.pl/gocoin_perfor
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
-* At least 20GB of system RAM, with 32GB being a recommended future-proof amount.
+* At least 15GB of system RAM, with 32GB being a recommended future-proof amount.
 
 
 **wallet**:

@@ -244,6 +244,8 @@ func InitConfig() {
 
 	if new_config_file {
 		// Create default config file
+		// Set to purge unspndable UTXO records, for lower system memory usage
+		CFG.Memory.PurgeUnspendableUTXO = true
 		SaveConfig()
 		println("Stored default configuration in", ConfigFile)
 	}
