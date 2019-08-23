@@ -659,7 +659,6 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 		for idx, r := range rec.Outs {
 			if r != nil {
 				if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
-					unspendable_recs++
 					if all {
 						rec.Outs[idx] = nil
 						record_removed++
