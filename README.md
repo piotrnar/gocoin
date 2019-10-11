@@ -15,9 +15,9 @@ It keeps the entire UTXO set in RAM, providing the best block processing perform
 
 System memory and time needed to sync BTC block chain up to the given block number:
 
-![SyncChart](website/btc_chain_sync_perf_32.png)
-*The data above is from Gocoin 1.9.5 running on [Google Cloud Platform](https://cloud.google.com/) VPS with 32 vCPUs and SSD persistent storage.<br/>
-For results from other platforms see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
+![SyncChart](website/btc_chain_sync_perf_32_598900.png)
+*The data above is from Gocoin 1.9.6 running on [Google Cloud Platform](https://cloud.google.com/) VPS with 32 vCPUs and SSD persistent storage.<br/>
+For results from other platforms running Gocoin 1.9.5 see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
 
@@ -27,7 +27,7 @@ For results from other platforms see [gocoin.pl](https://gocoin.pl/gocoin_perfor
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
-* At least 15GB of system RAM, with 32GB being a recommended future-proof amount.
+* At least 15GB of system RAM.
 
 
 **wallet**:

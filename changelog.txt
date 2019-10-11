@@ -1,4 +1,4 @@
-1.9.6:
+1.9.6 - 2019-10-11:
 * Client: New config value "Memory.PurgeUnspendableUTXO" - automatically purge unspendable records from UTXO.db
   Note: execute TextUI commad "purge" to purge older unspendale records.
 * Client: "auth" messages carry last valid block data and the receiving peer can act upon it accordingly
