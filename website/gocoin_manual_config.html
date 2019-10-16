@@ -278,8 +278,10 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Memory.PurgeUnspendableUTXO</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
-<td class="cfg_info"> Automatically remove unspendable outputs from UTXO database, while handling transactions that contain them.<br>
-Note: execute TextUI command <code>purge</code> to purge all unspendable records from past transactions.</td>
+<td class="cfg_info"> When enabled, the node does not store unspendable outputs in its UTXO database.<br>
+Having just enabling this option, execute TextUI command <code>purge</code> to purge all unspendable records kept from past transactions.<br>
+Disabling this will make your node to require more RAM, but may be necessary for certain applications that one may develop on top of Gocoin's UTXO database.<br>
+</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> Beeps.NewBlock</td>
