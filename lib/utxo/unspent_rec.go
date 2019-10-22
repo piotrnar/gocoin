@@ -277,3 +277,7 @@ func (r *UtxoTxOut) IsP2WPKH() bool {
 func (r *UtxoTxOut) IsP2WSH() bool {
 	return len(r.PKScr) == 34 && r.PKScr[0] == 0 && r.PKScr[1] == 32
 }
+
+func (out *UtxoTxOut) IsUnspendable() bool {
+	return len(out.PKScr) > 0 && out.PKScr[0] == 0x6a
+}

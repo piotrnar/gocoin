@@ -520,9 +520,9 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	var anyout bool
 	for i, rm := range outs {
-		if rm || UTXO_PURGE_UNSPENDABLE && rec.Outs[i]!=nil && len(rec.Outs[i].PKScr) > 0 && rec.Outs[i].PKScr[0] == 0x6a {
+		if rm || UTXO_PURGE_UNSPENDABLE && rec.Outs[i] != nil && rec.Outs[i].IsUnspendable() {
 			rec.Outs[i] = nil
-		} else if rec.Outs[i] != nil {
+		} else if !anyout && rec.Outs[i] != nil {
 			anyout = true
 		}
 	}
@@ -548,7 +548,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		if UTXO_PURGE_UNSPENDABLE {
 			for idx, r := range rec.Outs {
 				if r != nil {
-					if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
+					if r.IsUnspendable() {
 						rec.Outs[idx] = nil
 					} else {
 						add_this_tx = true
@@ -605,7 +605,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				if rec.Coinbase {
 					sumcb += r.Value
 				}
-				if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
+				if r.IsUnspendable() {
 					unspendable++
 					unspendable_bytes += uint64(8 + len(r.PKScr))
 				} else {
@@ -658,7 +658,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 		var record_removed uint64
 		for idx, r := range rec.Outs {
 			if r != nil {
-				if len(r.PKScr) > 0 && r.PKScr[0] == 0x6a {
+				if r.IsUnspendable() {
 					if all {
 						rec.Outs[idx] = nil
 						record_removed++

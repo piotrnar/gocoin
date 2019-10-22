@@ -1,3 +1,6 @@
+1.9.7
+
+
 1.9.6 - 2019-10-11:
 * Client: New config value "Memory.PurgeUnspendableUTXO" - automatically purge unspendable records from UTXO.db
   Note: execute TextUI commad "purge" to purge older unspendale records.
