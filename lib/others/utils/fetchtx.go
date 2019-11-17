@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Download (and re-assemble) raw transaction from blockexplorer.com
+// GetTxFromExplorer downloads (and re-assembles) raw transaction from blockexplorer.com.
 func GetTxFromExplorer(txid *btc.Uint256, testnet bool) (rawtx []byte) {
 	var url string
 	if testnet {
@@ -40,7 +40,7 @@ func GetTxFromExplorer(txid *btc.Uint256, testnet bool) (rawtx []byte) {
 	return
 }
 
-// Download raw transaction from webbtc.com
+// GetTxFromWebBTC downloads a raw transaction from webbtc.com.
 func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
 	url := "https://webbtc.com/tx/" + txid.String() + ".bin"
 	r, er := http.Get(url)
@@ -58,7 +58,7 @@ func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
 	return
 }
 
-// Download (and re-assemble) raw transaction from blockexplorer.com
+// GetTxFromBlockchainInfo downloads (and re-assembles) raw transaction from blockchain.info.
 func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 	url := "https://blockchain.info/tx/" + txid.String() + "?format=hex"
 	r, er := http.Get(url)
@@ -77,7 +77,7 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 	return
 }
 
-// Download (and re-assemble) raw transaction from blockcypher.com
+// GetTxFromBlockcypher downloads (and re-assembles) raw transaction from blockcypher.com.
 func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 	var r *http.Response
 	var er error
@@ -163,7 +163,7 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 	return txid.Equal(&tx.Hash)
 }
 
-// Download raw transaction from a web server (try one after another)
+// GetTxFromWeb downloads a raw transaction from a web server (try one after another).
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockchair(txid, "bitcoin")
 	if raw != nil && verify_txid(txid, raw) {
@@ -198,7 +198,7 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	return
 }
 
-// Download testnet's raw transaction from a web server
+// GetTestnetTxFromWeb downloads a testnet's raw transaction from a web server.
 func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromExplorer(txid, true)
 	if raw != nil && verify_txid(txid, raw) {

@@ -13,7 +13,7 @@ import (
 // https://webbtc.com/block/0000000000000000000cdc0d2a9b33c2d4b34b4d4fa8920f074338d0dc1164dc.bin
 // https://blockexplorer.com/api/rawblock/0000000000000000000cdc0d2a9b33c2d4b34b4d4fa8920f074338d0dc1164dc
 
-// Download (and re-assemble) raw block from blockexplorer.com
+// GetBlockFromExplorer downloads (and re-assembles) a raw block from blockexplorer.com.
 func GetBlockFromExplorer(hash *btc.Uint256) (rawtx []byte) {
 	url := "http://blockexplorer.com/api/rawblock/" + hash.String()
 	r, er := http.Get(url)
@@ -38,7 +38,7 @@ func GetBlockFromExplorer(hash *btc.Uint256) (rawtx []byte) {
 	return
 }
 
-// Download raw block from webbtc.com
+// GetBlockFromWebBTC downloads a raw block from webbtc.com.
 func GetBlockFromWebBTC(hash *btc.Uint256) (raw []byte) {
 	url := "https://webbtc.com/block/" + hash.String() + ".bin"
 	r, er := http.Get(url)
@@ -56,7 +56,7 @@ func GetBlockFromWebBTC(hash *btc.Uint256) (raw []byte) {
 	return
 }
 
-// Download raw block from blockexplorer.com
+// GetBlockFromBlockchainInfo downloads a raw block from blockchain.info.
 func GetBlockFromBlockchainInfo(hash *btc.Uint256) (rawtx []byte) {
 	url := "https://blockchain.info/block/" + hash.String() + "?format=hex"
 	r, er := http.Get(url)
@@ -94,7 +94,7 @@ func IsBlockOK(raw []byte, hash *btc.Uint256) (bl *btc.Block) {
 	return
 }
 
-// Download raw block from a web server (try one after another)
+// GetBlockFromWeb downloads a raw block from a web server (try one after another).
 func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 	var raw []byte
 

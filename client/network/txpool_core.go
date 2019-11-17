@@ -129,7 +129,7 @@ func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	return NeedThisTxExt(id, cb) == 0
 }
 
-// Return false if we do not want to receive a data for this tx
+// NeedThisTxExt returns false if we do not want to receive a data for this tx.
 func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	TxMutex.Lock()
 	if _, present := TransactionsToSend[id.BIdx()]; present {
@@ -152,7 +152,7 @@ func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	return
 }
 
-// Handle tx-inv notifications
+// TxInvNotify handles tx-inv notifications.
 func (c *OneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1 + 4 + 32]byte
@@ -168,7 +168,7 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	}
 }
 
-// Adds a transaction to the rejected list or not, it it has been mined already
+// RejectTx adds a transaction to the rejected list or not, if it has been mined already.
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.
 func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
@@ -196,7 +196,7 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	return TransactionsRejected[bidx]
 }
 
-// Handle incoming "tx" msg
+// ParseTxNet handles incoming "tx" messages.
 func (c *OneConnection) ParseTxNet(pl []byte) {
 	tx, le := btc.NewTx(pl)
 	if tx == nil {
@@ -235,7 +235,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 	})
 }
 
-// Must be called from the chain's thread
+// HandleNetTx must be called from the chain's thread.
 func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	common.CountSafe("HandleNetTx")
 
@@ -259,7 +259,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		delete(TransactionsPending, ntx.Hash.BIdx())
 	} else {
 		// In case case of retry, it is on the rejected list,
-		// ... so remove it now to free any tied WaitingForInputs
+		// so remove it now to free any tied WaitingForInputs
 		deleteRejected(tx.Hash.BIdx())
 	}
 
@@ -578,10 +578,10 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 	}
 }
 
-// Make sure to call it with locked TxMutex
-// Detele the tx fomr mempool.
-// Delete all the children as well if with_children is true
-// If reason is not zero, add the deleted txs to the rejected list
+// Delete deletes the tx from the mempool.
+// Deletes all the children as well if with_children is true.
+// If reason is not zero, add the deleted txs to the rejected list.
+// Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if with_children {
 		// remove all the children that are spending from tx

@@ -8,7 +8,7 @@ import (
 
 type AllUnspentTx []*OneUnspentTx
 
-// Returned by GetUnspentFromPkScr
+// OneUnspentTx is returned by GetUnspentFromPkScr.
 type OneUnspentTx struct {
 	btc.TxPrevOut
 	Value uint64

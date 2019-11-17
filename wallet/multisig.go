@@ -10,7 +10,7 @@ import (
 const MultiToSignOut = "multi2sign.txt"
 
 
-// add P2SH pre-signing data into a raw tx
+// make_p2sh adds P2SH pre-signing data into a raw tx.
 func make_p2sh() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {
@@ -45,9 +45,9 @@ func make_p2sh() {
 }
 
 
-// reorder signatures to meet order of the keys
-// remove signatuers made by the same keys
-// remove exessive signatures (keeps transaction size down)
+// multisig_reorder reorders signatures to meet order of the keys.
+// Removes signatures made by the same keys.
+// Removes exessive signatures (keeps transaction size down).
 func multisig_reorder(tx *btc.Tx) (all_signed bool) {
 	all_signed = true
 	for i := range tx.TxIn {
@@ -96,7 +96,7 @@ func multisig_reorder(tx *btc.Tx) (all_signed bool) {
 	return
 }
 
-// sign a multisig transaction with a specific key
+// multisig_sign signs a multisig transaction with a specific key.
 func multisig_sign() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {

@@ -40,7 +40,7 @@ type CallbackFunctions struct {
 	NotifyTxDel func(*UtxoRec, []bool)
 }
 
-// Used to pass block's changes to UnspentDB
+// BlockChanges is used to pass block's changes to UnspentDB.
 type BlockChanges struct {
 	Height          uint32
 	LastKnownHeight uint32 // put here zero to disable this feature
@@ -333,7 +333,7 @@ finito:
 	db.writingDone.Done()
 }
 
-// Commit the given add/del transactions to UTXO and Unwind DBs
+// CommitBlockTxs commits the given add/del transactions to UTXO and Unwind DBs.
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
 	undo_fn := fmt.Sprint(db.dir_undo, changes.Height)
 
@@ -435,7 +435,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 	db.DirtyDB.Set()
 }
 
-// Call it when the main thread is idle
+// Idle should be called when the main thread is idle.
 func (db *UnspentDB) Idle() bool {
 	if db.volatimemode {
 		return false
@@ -468,7 +468,7 @@ func (db *UnspentDB) HurryUp() {
 	}
 }
 
-// Flush the data and close all the files
+// Close flushes the data and closes all the files.
 func (db *UnspentDB) Close() {
 	db.volatimemode = false
 	if db.DirtyDB.Get() {
@@ -479,7 +479,7 @@ func (db *UnspentDB) Close() {
 	db.lastFileClosed.Wait()
 }
 
-// Get given unspent output
+// UnspentGet gets the given unspent output.
 func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	var ind UtxoKeyType
 	var v []byte
@@ -495,7 +495,7 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	return
 }
 
-// Returns true if gived TXID is in UTXO
+// TxPresent returns true if gived TXID is in UTXO.
 func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	var ind UtxoKeyType
 	copy(ind[:], id.Hash[:])
@@ -632,7 +632,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	return
 }
 
-// Return DB statistics
+// GetStats returns DB statistics.
 func (db *UnspentDB) GetStats() (s string) {
 	db.RWMutex.RLock()
 	hml := len(db.HashMap)

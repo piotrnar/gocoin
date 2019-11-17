@@ -11,7 +11,7 @@ import (
 )
 
 
-// this function signs either a message or a raw hash
+// sign_message signs either a message or a raw hash.
 func sign_message() {
 	var hash []byte
 	var signkey *btc.PrivateAddr

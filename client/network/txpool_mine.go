@@ -17,7 +17,7 @@ func (rec *OneTxToSend) IIdx(key uint64) int {
 	return -1
 }
 
-// Clear MemInput flag of all the children (used when a tx is mined)
+// UnMarkChildrenForMem clears the MemInput flag of all the children (used when a tx is mined).
 func (tx *OneTxToSend) UnMarkChildrenForMem() {
 	// Go through all the tx's outputs and unmark MemInputs in txs that have been spending it
 	var po btc.TxPrevOut
@@ -52,7 +52,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 	}
 }
 
-// This function is called for each tx mined in a new block
+// tx_mined is called for each tx mined in a new block.
 func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	h := tx.Hash
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
@@ -98,7 +98,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	return
 }
 
-// Removes all the block's tx from the mempool
+// BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
 	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
 	var wtg_cnt int

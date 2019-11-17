@@ -67,7 +67,7 @@ func parserec(vv []interface{}) (ret *testvector) {
 
 
 // Some tests from the satoshi's json files are not applicable
-// ... for our architectre so lets just fake them.
+// for our architectre so lets just fake them.
 func skip_broken_tests(tx *btc.Tx) bool {
 	// No inputs
 	if len(tx.TxIn)==0 {

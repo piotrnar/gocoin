@@ -40,8 +40,8 @@ func (c *OneConnection) HandlePong(pl []byte) {
 }
 
 
-// Returns (median) average ping
-// Make sure to called it within c.Mutex.Lock()
+// GetAveragePing returns the (median) average ping.
+// Make sure to call it within c.Mutex.Lock().
 func (c *OneConnection) GetAveragePing() int {
 	if !c.X.VersionReceived {
 		return 0
@@ -76,8 +76,8 @@ type SortedConnections []struct {
 }
 
 
-// Returns the slowest peers first
-// Make suure to call it with locked Mutex_net
+// GetSortedConnections returns the slowest peers first.
+// Make sure to call it with locked Mutex_net.
 func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt int) {
 	var cnt int
 	var now time.Time
@@ -147,7 +147,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 	return
 }
 
-// This function should be called only when OutConsActive >= MaxOutCons
+// drop_worst_peer should be called only when OutConsActive >= MaxOutCons.
 func drop_worst_peer() bool {
 	var list SortedConnections
 	var any_ping bool

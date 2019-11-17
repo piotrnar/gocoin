@@ -76,8 +76,8 @@ func getline(buf []byte) (n int) {
 	return n
 }
 
-// Reads a password from console
-// Returns -1 on error
+// ReadPassword reads a password from console.
+// Returns -1 on error.
 func ReadPassword(buf []byte) (n int) {
 	if secrespass != nil {
 		return secrespass(buf)
@@ -85,14 +85,14 @@ func ReadPassword(buf []byte) (n int) {
 	return getline(buf)
 }
 
-// Returns Alloc and Sys (how much memory is used)
+// MemUsed returns Alloc and Sys (how much memory is used).
 func MemUsed() (uint64, uint64) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	return ms.Alloc, ms.Sys
 }
 
-// Run GC and free as much mem as possible
+// FreeMem runs the GC and frees as much memory as possible.
 func FreeMem() {
 	runtime.GC()
 	debug.FreeOSMemory()

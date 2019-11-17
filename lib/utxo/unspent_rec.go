@@ -187,9 +187,9 @@ func vlen2size(uvl uint64) int {
 	return 9
 }
 
-// returns UTXO-heap pointer to the freshly allocated serialized record
-// full - to have entire 256 bits of TxID at the beginning of the record
-// use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc()
+// Serialize returns UTXO-heap pointer to the freshly allocated serialized record.
+// full - to have entire 256 bits of TxID at the beginning of the record.
+// use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc().
 func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 	var le, of int
 	var any_out bool

@@ -262,7 +262,7 @@ func (v *OneConnection) IncCnt(name string, val uint64) {
 }
 
 
-// mutex protected
+// MutexSetBool does a mutex protected assignment of val to addr.
 func (v *OneConnection) MutexSetBool(addr *bool, val bool) {
 	v.Mutex.Lock()
 	*addr = val
@@ -270,7 +270,7 @@ func (v *OneConnection) MutexSetBool(addr *bool, val bool) {
 }
 
 
-// mutex protected
+// MutexGetBool does a mutex protected read of the value of addr and returns it.
 func (v *OneConnection) MutexGetBool(addr *bool) (val bool) {
 	v.Mutex.Lock()
 	val = *addr
@@ -377,7 +377,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 
 
 
-// this function assumes that there is enough room inside sendBuf
+// append_to_send_buffer assumes that there is enough room inside sendBuf.
 func (c *OneConnection) append_to_send_buffer(d []byte) {
 	room_left := SendBufSize - c.SendBufProd
 	if room_left>=len(d) {
@@ -650,8 +650,8 @@ func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 }
 
 
-// Returns maximum accepted payload size of a given type of message
-// For wider compatibility, we assume that any var_len may be up to 9 bytes
+// maxmsgsize returns maximum accepted payload size of a given type of message.
+// For wider compatibility, we assume that any var_len may be up to 9 bytes.
 func maxmsgsize(cmd string) uint32 {
 	switch cmd {
 		case "inv": return 9+50000*36 // the spec says "max 50000 entries"

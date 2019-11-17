@@ -56,7 +56,7 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	return
 }
 
-// Download testnet's raw transaction from a web server
+// GetTxFromWeb downloads testnet's raw transaction from a web server.
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = utils.GetTxFromBlockcypher(txid, "ltc")
 	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {

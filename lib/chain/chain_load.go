@@ -22,7 +22,7 @@ func nextBlock(ch *Chain, hash, header []byte, height, blen, txs uint32) {
 }
 
 
-// Loads block index from the disk
+// loadBlockIndex loads the block index from the disk.
 func (ch *Chain)loadBlockIndex() {
 	ch.BlockIndex = make(map[[btc.Uint256IdxLen]byte]*BlockTreeNode, BlockMapInitLen)
 	ch.BlockTreeRoot = new(BlockTreeNode)

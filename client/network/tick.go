@@ -532,7 +532,7 @@ func (c *OneConnection) SendFeeFilter() {
 	c.SendRawMsg("feefilter", pl[:])
 }
 
-// call it upon receiving "getmpdone" message or when the peer disconnects
+// GetMPDone should be called upon receiving "getmpdone" message or when the peer disconnects.
 func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) > 0 {
 		if len(pl) != 1 || pl[0] == 0 || c.SendGetMP() != nil {
@@ -544,7 +544,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	}
 }
 
-// Process that handles communication with a single peer
+// Run starts a process that handles communication with a single peer.
 func (c *OneConnection) Run() {
 	defer func() {
 		if r := recover(); r != nil {

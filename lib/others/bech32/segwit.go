@@ -4,7 +4,7 @@ import (
 	"bytes"
 )
 
-// Return nil on error
+// convert_bits returns nil on error.
 func convert_bits(outbits uint, in []byte, inbits uint, pad bool) []byte {
 	var val uint32
 	var bits uint
@@ -28,7 +28,7 @@ func convert_bits(outbits uint, in []byte, inbits uint, pad bool) []byte {
 	return out.Bytes()
 }
 
-// Returns empty string on error
+// SegwitEncode returns an empty string on error.
 func SegwitEncode(hrp string, witver int, witprog []byte) string {
 	if witver > 16 {
 		return ""
@@ -42,10 +42,10 @@ func SegwitEncode(hrp string, witver int, witprog []byte) string {
 	return Encode(hrp, append([]byte{byte(witver)}, convert_bits(5, witprog, 8, true)...))
 }
 
-// returns (0, nil) on error
+// SegwitDecode returns (0, nil) on error.
 func SegwitDecode(hrp, addr string) (witver int, witdata []byte) {
 	hrp_actual, data := Decode(addr)
-	if hrp_actual == "" || len(data)==0 || len(data) > 65 {
+	if hrp_actual == "" || len(data) == 0 || len(data) > 65 {
 		return
 	}
 	if hrp != hrp_actual {

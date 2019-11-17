@@ -12,11 +12,11 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
-// Cache for txs from already loaded from balance/ folder
+// loadedTxs is a cache for txs from already loaded from balance/ folder.
 var loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
 
 
-// Read a line from stdin
+// getline reads a line from stdin.
 func getline() string {
 	li, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 	return string(li)
@@ -124,7 +124,7 @@ check_pass:
 }
 
 
-// return the change addrress or nil if there will be no change
+// get_change_addr returns the change addrress or nil if there will be no change.
 func get_change_addr() (chng *btc.BtcAddr) {
 	if *change!="" {
 		var e error
@@ -168,7 +168,7 @@ func raw_tx_from_file(fn string) *btc.Tx {
 	return tx
 }
 
-// Get tx with given id from the balance folder, of from cache
+// tx_from_balance gets the tx for the given ID from the balance folder, or from cache.
 func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 	if tx=loadedTxs[txid.Hash]; tx!=nil {
 		return // we have it in cache already
@@ -199,7 +199,7 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 	return
 }
 
-// Look for specific TxPrevOut in the balance folder
+// getUO looks for specific TxPrevOut in the balance folder.
 func getUO(pto *btc.TxPrevOut) *btc.TxOut {
 	if _, ok := loadedTxs[pto.Hash]; !ok {
 		loadedTxs[pto.Hash] = tx_from_balance(btc.NewUint256(pto.Hash[:]), true)
@@ -207,7 +207,7 @@ func getUO(pto *btc.TxPrevOut) *btc.TxOut {
 	return loadedTxs[pto.Hash].TxOut[pto.Vout]
 }
 
-// version byte for P2KH addresses
+// ver_pubkey returns the version byte for P2KH addresses.
 func ver_pubkey() byte {
 	if litecoin {
 		return ltc.AddrVerPubkey(testnet)
@@ -216,7 +216,7 @@ func ver_pubkey() byte {
 	}
 }
 
-// version byte for P2SH addresses
+// ver_script returns the version byte for P2SH addresses.
 func ver_script() byte {
 	if litecoin {
 		return ltc.AddrVerScript(testnet)
@@ -225,12 +225,12 @@ func ver_script() byte {
 	}
 }
 
-// version byte for private key addresses
+// ver_secret returns the version byte for private key addresses.
 func ver_secret() byte {
 	return ver_pubkey() + 0x80
 }
 
-// get BtcAddr from pk_script
+// addr_from_pkscr gets the BtcAddr from pk_script.
 func addr_from_pkscr(scr []byte) *btc.BtcAddr {
 	if litecoin {
 		return ltc.NewAddrFromPkScript(scr, testnet)
@@ -239,7 +239,7 @@ func addr_from_pkscr(scr []byte) *btc.BtcAddr {
 	}
 }
 
-// make sure the version byte in the given address is what we expect
+// assert_address_version makes sure the version byte in the given address is what we expect.
 func assert_address_version(a *btc.BtcAddr) {
 	if a.SegwitProg != nil {
 		if a.SegwitProg.HRP != btc.GetSegwitHRP(testnet) {

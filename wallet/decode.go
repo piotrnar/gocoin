@@ -7,7 +7,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-// hex dump with max 32 bytes per line
+// hex_dump returns the hex dump with max 32 bytes per line.
 func hex_dump(d []byte) (s string) {
 	for {
 		le := 32
@@ -135,7 +135,7 @@ func dump_sigscript(d []byte) bool {
 }
 
 
-// dump raw transaction
+// dump_raw_tx dumps a raw transaction.
 func dump_raw_tx() {
 	tx := raw_tx_from_file(*dumptxfn)
 	if tx == nil {

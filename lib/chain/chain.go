@@ -51,7 +51,7 @@ type NewChanOpts struct {
 }
 
 
-// This is the very first function one should call in order to use this package
+// NewChainExt is the very first function one should call in order to use this package.
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts, bdbopts *BlockDBOpts) (ch *Chain) {
 	ch = new(Chain)
 	ch.Genesis = genesis
@@ -126,7 +126,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 }
 
 
-// Calculate an imaginary header of the genesis block (for Timestamp() and Bits() functions from chain_tree.go)
+// RebuildGenesisHeader calculates an imaginary header of the genesis block (for Timestamp() and Bits() functions from chain_tree.go).
 func (ch *Chain) RebuildGenesisHeader() {
 	binary.LittleEndian.PutUint32(ch.BlockTreeRoot.BlockHeader[0:4], 1) // Version
 	// [4:36] - prev_block
@@ -137,7 +137,7 @@ func (ch *Chain) RebuildGenesisHeader() {
 }
 
 
-// Call this function periodically (i.e. each second)
+// Idle should be called periodically (i.e. each second)
 // when your client is idle, to defragment databases.
 func (ch *Chain) Idle() bool {
 	ch.Blocks.Idle()
@@ -145,7 +145,7 @@ func (ch *Chain) Idle() bool {
 }
 
 
-// Return blockchain stats in one string.
+// Stats returns blockchain stats in one string.
 func (ch *Chain) Stats() (s string) {
 	last := ch.LastBlock()
 	ch.BlockIndexAccess.Lock()
@@ -158,14 +158,14 @@ func (ch *Chain) Stats() (s string) {
 }
 
 
-// Close the databases.
+// Close closes the databases.
 func (ch *Chain) Close() {
 	ch.Blocks.Close()
 	ch.Unspent.Close()
 }
 
 
-// Returns true if we are on Testnet3 chain
+// testnet returns true if we are on Testnet3 chain.
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
 }

@@ -188,7 +188,7 @@ func HashrateToString(hr float64) string {
 	return FloatToString(hr) + "H/s"
 }
 
-// Calculates average blocks size over the last "CFG.Stat.BSizeBlks" blocks
+// RecalcAverageBlockSize calculates the average blocks size over the last "CFG.Stat.BSizeBlks" blocks.
 // Only call from blockchain thread.
 func RecalcAverageBlockSize() {
 	n := BlockChain.LastBlock()

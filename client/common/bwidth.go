@@ -70,8 +70,8 @@ func TickSent() (ms int) {
 	return
 }
 
-// Reads the given number of bytes, but respecting the download limit
-// Returns -1 and no error if we can't read any data now, because of bw limit
+// SockRead reads the given number of bytes, but respecting the download limit.
+// Returns -1 and no error if we can't read any data now, because of bw limit.
 func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	var toread int
 	bw_mutex.Lock()
@@ -110,8 +110,8 @@ func SockRead(con net.Conn, buf []byte) (n int, e error) {
 	return
 }
 
-// Send all the bytes, but respect the upload limit (force delays)
-// Returns -1 and no error if we can't send any data now, because of bw limit
+// SockWrite sends all the bytes, but respect the upload limit (force delays).
+// Returns -1 and no error if we can't send any data now, because of bw limit.
 func SockWrite(con net.Conn, buf []byte) (n int, e error) {
 	var tosend int
 	bw_mutex.Lock()

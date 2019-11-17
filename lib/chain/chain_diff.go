@@ -64,7 +64,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 	return
 }
 
-// Returns true if b1 has more POW than b2
+// MorePOW returns true if b1 has more POW than b2.
 func (b1 *BlockTreeNode) MorePOW(b2 *BlockTreeNode) bool {
 	var b1sum, b2sum float64
 	for b1.Height > b2.Height {

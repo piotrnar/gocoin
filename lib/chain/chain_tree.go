@@ -79,7 +79,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 		ch.ApplyBlockFlags(bl)
 
 		// Do not recover MedianPastTime as it is only checked in PostCheckBlock()
-		// ... that had to be done before the block was stored on disk.
+		// that had to be done before the block was stored on disk.
 
 		er = bl.BuildTxList()
 		if er != nil {
@@ -131,7 +131,7 @@ func (n *BlockTreeNode) Bits() (uint32) {
 	return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
 }
 
-// Returns median time of the last 11 blocks
+// GetMedianTimePast returns the median time of the last 11 blocks.
 func (pindex *BlockTreeNode) GetMedianTimePast() (uint32) {
 	var pmedian [MedianTimeSpan]int
 	pbegin := MedianTimeSpan
@@ -146,7 +146,7 @@ func (pindex *BlockTreeNode) GetMedianTimePast() (uint32) {
 }
 
 
-// Looks for the fartherst node
+// FindFarthestNode looks for the farthest node.
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
 	//fmt.Println("FFN:", n.Height, "kids:", len(n.Childs))
 	if len(n.Childs)==0 {
@@ -166,7 +166,7 @@ func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
 }
 
 
-// Returns the next node that leads to the given destiantion
+// FindPathTo returns the next node that leads to the given destination.
 func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 	if n==end {
 		return nil
@@ -196,7 +196,7 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 }
 
 
-// Check whether the given node has all its parent blocks already comitted
+// HasAllParents checks whether the given node has all its parent blocks already comitted.
 func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 	for {
 		dst = dst.Parent
@@ -210,7 +210,7 @@ func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 }
 
 
-// returns true if the given node is on the active branch
+// OnActiveBranch returns true if the given node is on the active branch.
 func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 	top := ch.LastBlock()
 	for {
@@ -225,7 +225,7 @@ func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 }
 
 
-// Performs channel reorg
+// MoveToBlock performs a channel reorg.
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
 	for cur.Height > ch.LastBlock().Height {

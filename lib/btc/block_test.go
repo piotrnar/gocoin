@@ -19,7 +19,7 @@ func block_filename() string {
 	return _block_filename
 }
 
-// Download block from blockchain.info and store it in the TEMP folder
+// fetch_block downloads a block from blockchain.info and stores it in the TEMP folder.
 func fetch_block(b *testing.B) {
 	url := "https://blockchain.info/block/" + block_hash + "?format=hex"
 	r, er := http.Get(url)

@@ -160,8 +160,8 @@ func retry_cached_blocks() bool {
 	return false
 }
 
-// Return true if the block's parent is on the DiscardedBlocks list
-// Add it to DiscardedBlocks, if returning true
+// CheckParentDiscarded returns true if the block's parent is on the DiscardedBlocks list.
+// Add it to DiscardedBlocks, if returning true.
 func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 	network.MutexRcv.Lock()
 	defer network.MutexRcv.Unlock()
@@ -172,7 +172,7 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 	return false
 }
 
-// Called from the blockchain thread
+// HandleNetBlock is called from the blockchain thread.
 func HandleNetBlock(newbl *network.BlockRcvd) {
 	defer func() {
 		common.CountSafe("MainNetBlock")

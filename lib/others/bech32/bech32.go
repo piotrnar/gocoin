@@ -30,7 +30,7 @@ var (
 		1, 0, 3, 16, 11, 28, 12, 14, 6, 4, 2, 99, 99, 99, 99, 99}
 )
 
-// returns empty string on error
+// Encode returns an empty string on error.
 func Encode(hrp string, data []byte) string {
 	var chk uint32 = 1
 	var i int
@@ -75,7 +75,7 @@ func Encode(hrp string, data []byte) string {
 	return string(output.Bytes())
 }
 
-// returns ("", nil) on error
+// Decode returns ("", nil) on error.
 func Decode(input string) (res_hrp string, res_data []byte) {
 	var chk uint32 = 1
 	var i, data_len, hrp_len int
