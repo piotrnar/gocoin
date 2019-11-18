@@ -11,7 +11,7 @@ As long as you remember the password, you do not need any backups ever.
 Wallet can be used without the client, but with the provided **balio** tool instead.
 
 The **client** (p2p node) is an application independent from the **wallet**.
-It keeps the entire UTXO set in RAM, providing the best block processing performance on the market.
+It keeps the entire UTXO set in RAM, providing an instant access to all its records.
 
 System memory and time needed to sync BTC block chain up to the given block number:
 
