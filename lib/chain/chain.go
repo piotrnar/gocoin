@@ -48,6 +48,7 @@ type NewChanOpts struct {
 	UndoBlocks uint // undo this many blocks when opening the chain
 	UTXOCallbacks utxo.CallbackFunctions
 	BlockMinedCB func(*btc.Block) // used to remove mined txs from memory pool
+	DoNotRescan bool // when set UTXO will not be automatically updated with new block found on disk
 }
 
 
@@ -117,7 +118,9 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	// And now re-apply the blocks which you have just reverted :)
 	end, _ := ch.BlockTreeRoot.FindFarthestNode()
 	if end.Height > ch.LastBlock().Height {
-		ch.ParseTillBlock(end)
+		if !opts.DoNotRescan {
+			ch.ParseTillBlock(end)
+		}
 	} else {
 		ch.Unspent.LastBlockHeight = end.Height
 	}
