@@ -283,7 +283,7 @@ function refreshblocks() {
 				td.style.textAlign = 'right'
 				td.className = 'blstat stat1'
 				var time_base = cs[i].TimePre
-				if (cs[i].TimePre>0)  td.innerText = cs[i].TimePre
+				if (cs[i].TimePre>0)  td.innerText = ms2str(cs[i].TimePre)
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'right'

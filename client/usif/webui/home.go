@@ -104,6 +104,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 
 	var out struct {
 		Blocks_cached int
+		Blocks_on_disk uint32
 		BlocksToGet int
 		Known_peers int
 		Node_uptime uint64
@@ -121,6 +122,11 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out.Blocks_cached = network.CachedBlocksLen.Get()
+	common.Last.Mutex.Lock()
+	if common.Last.ParseTill != nil {
+		out.Blocks_on_disk = common.Last.ParseTill.Height - common.Last.Block.Height
+	}
+	common.Last.Mutex.Unlock()
 	network.MutexRcv.Lock()
 	out.BlocksToGet = len(network.BlocksToGet)
 	network.MutexRcv.Unlock()

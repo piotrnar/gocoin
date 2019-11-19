@@ -9,7 +9,7 @@ Wallet functionality is not available at this moment.
 <form id="form_a" method="post" action="cfg" style="margin-top:20px;display:none">
 <input type="hidden" name="wallet" value="on">
 <input type="hidden" name="page" id="page_a">
-<input type="submit" value="Enable wallet functionality now">
+<input type="submit" id="enable_wallet_button" value="Enable wallet functionality now">
 </form>
 </div>
 
@@ -87,5 +87,10 @@ blno.addEventListener("lastblock", function(e) {
 		min_val_btc.innerText = val2str(e.block.MinValue)
 	}
 })
+
+if (!chain_in_sync) {
+	enable_wallet_button.disabled = true
+	enable_wallet_button.title = 'Cannot enable when block chain sync in progress'
+}
 
 </script>

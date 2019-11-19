@@ -168,7 +168,7 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<b title="Minimum SPB" id="min_spb" style="font-weight:bold"></b> spb
 	<tr><td>Pending Data:<td><b id="si_net_tx_qsize"></b> txs,
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
-		&nbsp;<b id="si_blocks_cached"></b> cached,
+		&nbsp;<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
 		<img id="si_saving" src="webui/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
 	</tr>
@@ -401,7 +401,13 @@ function refreshsysinfo() {
 			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
 			si_avg_block_size.innerText = (si.Average_block_size/1000).toFixed(1) + ' kB'
 			si_avg_fee_spb.innerText = si.Average_fee.toFixed(0)
-			si_blocks_cached.innerText = si.Blocks_cached
+			if (si.Blocks_on_disk>0) {
+				si_blocks_cached.innerText = si.Blocks_on_disk
+				si_blocks_cached_label.innerText = "on disk"
+			} else {
+				si_blocks_cached.innerText = si.Blocks_cached
+				si_blocks_cached_label.innerText = "cached"
+			}
 			si_blocks_to_get.innerText = si.BlocksToGet
 			si_node_uptime.innerText = period2str(si.Node_uptime)
 			si_last_hdr_height.innerText = si.LastHeaderHeight

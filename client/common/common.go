@@ -81,6 +81,7 @@ type TheLastBlock struct {
 	sync.Mutex // use it for writing and reading from non-chain thread
 	Block      *chain.BlockTreeNode
 	time.Time
+	ParseTill *chain.BlockTreeNode
 }
 
 func (b *TheLastBlock) BlockHeight() (res uint32) {

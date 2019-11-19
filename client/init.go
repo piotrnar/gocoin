@@ -72,7 +72,7 @@ func host_init() {
 	ext := &chain.NewChanOpts{
 		UTXOVolatileMode : common.FLAG.VolatileUTXO,
 		UndoBlocks : common.FLAG.UndoBlocks,
-		BlockMinedCB : blockMined}
+		BlockMinedCB : blockMined, DoNotRescan : true}
 
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
@@ -86,6 +86,10 @@ func host_init() {
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
+	}
+
+	if lb, _ := common.BlockChain.BlockTreeRoot.FindFarthestNode(); lb.Height > common.BlockChain.LastBlock().Height {
+		common.Last.ParseTill = lb
 	}
 
 	common.Last.Block = common.BlockChain.LastBlock()

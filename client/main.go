@@ -26,6 +26,8 @@ import (
 var (
 	retryCachedBlocks bool
 	SaveBlockChain    *time.Timer = time.NewTimer(24 * time.Hour)
+
+	NetBlocksSize sys.SyncInt
 )
 
 const (
@@ -83,6 +85,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.LastBlock()
+
+		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
+			println("Initial parsing finished in", time.Now().Sub(newbl.TmStart).String())
+			common.Last.ParseTill = nil
+		}
 		common.Last.Mutex.Unlock()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
@@ -174,6 +181,8 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
+	NetBlocksSize.Add(-len(newbl.Block.Raw))
+
 	defer func() {
 		common.CountSafe("MainNetBlock")
 		if common.GetUint32(&common.WalletOnIn) > 0 {
@@ -260,6 +269,63 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.Last.Mutex.Unlock()
 
 	msg.Done.Done()
+}
+
+func do_the_blocks(end *chain.BlockTreeNode) {
+	sta := time.Now()
+	last := common.BlockChain.LastBlock()
+	for last != end {
+		nxt := last.FindPathTo(end)
+		if nxt == nil {
+			break
+		}
+
+		if nxt.BlockSize==0 {
+			println("BlockSize is zero - corrupt database")
+			break
+		}
+
+		pre := time.Now()
+		crec, trusted, _ := common.BlockChain.Blocks.BlockGetInternal(nxt.BlockHash, true)
+		trusted = false
+
+		bl, er := btc.NewBlock(crec.Data)
+		if er != nil {
+			println("btc.NewBlock() error - corrupt database")
+			break
+		}
+		bl.Height = nxt.Height
+
+		// Recover the flags to be used when verifying scripts for non-trusted blocks (stored orphaned blocks)
+		common.BlockChain.ApplyBlockFlags(bl)
+
+		er = bl.BuildTxList()
+		if er != nil {
+			println("bl.BuildTxList() error - corrupt database")
+			break
+		}
+
+		bl.Trusted = trusted
+
+		tdl := time.Now()
+
+		rb := &network.OneReceivedBlock{TmStart:sta, TmPreproc:pre, TmDownload:tdl}
+		network.MutexRcv.Lock()
+		network.ReceivedBlocks[bl.Hash.BIdx()] = rb
+		network.MutexRcv.Unlock()
+
+		network.NetBlocks <- &network.BlockRcvd{Conn:nil, Block:bl, BlockTreeNode:nxt,
+			OneReceivedBlock:rb, BlockExtraInfo:nil}
+
+		NetBlocksSize.Add(len(bl.Raw))
+		for NetBlocksSize.Get() > 64*1024*1024 {
+			time.Sleep(100*time.Millisecond)
+		}
+
+		last = nxt
+
+	}
+	//println("all blocks queued", len(network.NetBlocks))
 }
 
 func main() {
@@ -353,7 +419,15 @@ func main() {
 		for k, v := range common.BlockChain.BlockIndex {
 			network.ReceivedBlocks[k] = &network.OneReceivedBlock{TmStart: time.Unix(int64(v.Timestamp()), 0)}
 		}
-		network.LastCommitedHeader = common.Last.Block
+
+		if common.Last.ParseTill != nil {
+			network.LastCommitedHeader = common.Last.ParseTill
+			println("Hold on network for now as we have",
+				common.Last.ParseTill.Height - common.Last.Block.Height, "new blocks on disk.")
+			go do_the_blocks(common.Last.ParseTill)
+		} else {
+			network.LastCommitedHeader = common.Last.Block
+		}
 
 		if common.CFG.TXPool.SaveOnDisk {
 			network.MempoolLoad2()
@@ -387,6 +461,9 @@ func main() {
 
 			case <-netTick:
 				common.CountSafe("DoMainNetTick")
+				if common.Last.ParseTill != nil {
+					break
+				}
 				network.NetworkTick()
 
 			case on := <-wallet.OnOff:
@@ -472,6 +549,9 @@ func main() {
 			case <-netTick:
 				common.Busy()
 				common.CountSafe("MainNetTick")
+				if common.Last.ParseTill != nil {
+					break
+				}
 				network.NetworkTick()
 
 				if common.BlockChainSynchronized {
@@ -508,7 +588,11 @@ func main() {
 			case on := <-wallet.OnOff:
 				common.Busy()
 				if on {
-					wallet.LoadBalance()
+					if common.BlockChainSynchronized {
+						wallet.LoadBalance()
+					} else {
+						fmt.Println("Cannot enable wallet functionality with blockchain sync in progress")
+					}
 				} else {
 					wallet.Disable()
 					common.SetUint32(&common.WalletOnIn, 0)
