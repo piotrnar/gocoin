@@ -181,7 +181,9 @@ func CheckParentDiscarded(n *chain.BlockTreeNode) bool {
 
 // Called from the blockchain thread
 func HandleNetBlock(newbl *network.BlockRcvd) {
-	NetBlocksSize.Add(-len(newbl.Block.Raw))
+	if common.Last.ParseTill != nil {
+		NetBlocksSize.Add(-len(newbl.Block.Raw))
+	}
 
 	defer func() {
 		common.CountSafe("MainNetBlock")
