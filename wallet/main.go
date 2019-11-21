@@ -64,7 +64,7 @@ var (
 )
 
 
-// exit after cleaning up private data from memory
+// cleanExit exits after cleaning up private data from memory.
 func cleanExit(code int) {
 	if *verbose {
 		fmt.Println("Cleaning up private keys")

@@ -219,7 +219,7 @@ func decomp_block(fl uint32, buf []byte) (blk []byte) {
 	return
 }
 
-// Look for the first and last records with the given index
+// look_for_range looks for the first and last records with the given index.
 func look_for_range(dat []byte, _idx uint32) (min_valid_off, max_valid_off int) {
 	min_valid_off = -1
 	for off := 0; off < len(dat); off += 136 {

@@ -7,7 +7,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-// Resolved while parsing "-send" parameter
+// oneSendTo is resolved while parsing "-send" parameter.
 type oneSendTo struct {
 	addr *btc.BtcAddr
 	amount uint64
@@ -19,7 +19,7 @@ var (
 	sendTo []oneSendTo
 )
 
-// parse the "-send ..." parameter
+// parse_spend parses the "-send ..." parameter.
 func parse_spend() {
 	outs := strings.Split(*send, ",")
 
@@ -51,7 +51,7 @@ func parse_spend() {
 	}
 }
 
-// parse the "-batch ..." parameter
+// parse_batch parses the "-batch ..." parameter.
 func parse_batch() {
 	f, e := os.Open(*batch)
 	if e == nil {
@@ -95,7 +95,7 @@ func parse_batch() {
 	}
 }
 
-// returns true if spend operation has been requested
+// send_request returns true if spend operation has been requested.
 func send_request() bool {
 	feeBtc = curFee
 	if *send!="" {

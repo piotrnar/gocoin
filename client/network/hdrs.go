@@ -177,7 +177,7 @@ func (c *OneConnection) ReceiveHeadersNow() {
 	c.Mutex.Unlock()
 }
 
-// Handle getheaders protocol command
+// GetHeaders handles getheaders protocol command.
 // https://en.bitcoin.it/wiki/Protocol_specification#getheaders
 func (c *OneConnection) GetHeaders(pl []byte) {
 	h2get, hashstop, e := parseLocatorsPayload(pl)

@@ -203,12 +203,12 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	}
 }
 
-// This is called while accepting the block (from the chain's thread)
+// TxNotifyAdd is called while accepting the block (from the chain's thread).
 func TxNotifyAdd(tx *utxo.UtxoRec) {
 	NewUTXO(tx)
 }
 
-// This is called while accepting the block (from the chain's thread)
+// TxNotifyDel is called while accepting the block (from the chain's thread).
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
 	all_del_utxos(tx, outs)
 }

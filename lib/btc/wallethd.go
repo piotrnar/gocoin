@@ -138,7 +138,7 @@ func StringChild(data string, i uint32) (string) {
 	}
 }
 
-//StringToAddress returns the Bitcoin address of a base58-encoded extended key.
+// StringToAddress returns the Bitcoin address of a base58-encoded extended key.
 func StringAddress(data string) (string, error) {
 	w, err := StringWallet(data)
 	if err != nil {
@@ -148,7 +148,7 @@ func StringAddress(data string) (string, error) {
 	return NewAddrFromPubkey(w.Key, AddrVerPubkey(w.Prefix==TestPublic || w.Prefix==TestPrivate)).String(), nil
 }
 
-// PublicAddress returns base58 encoded public address of the given HD key
+// PublicAddress returns the Base58 encoded public address of the given HD key.
 func (w *HDWallet) PubAddr() *BtcAddr {
 	var pub []byte
 	if w.Prefix==Private || w.Prefix==TestPrivate {
@@ -174,12 +174,12 @@ func MasterKey(seed []byte, testnet bool) *HDWallet {
 	return res
 }
 
-// StringCheck is a validation check of a base58-encoded extended key.
+// StringCheck is a validation check of a Base58-encoded extended key.
 func StringCheck(key string) error {
 	return ByteCheck(Decodeb58(key))
 }
 
-// Verifies consistency of a serialized HD address
+// ByteCheck verifies the consistency of a serialized HD address.
 func ByteCheck(dbin []byte) error {
 	// check proper length
 	if len(dbin) != 82 {
@@ -204,7 +204,7 @@ func ByteCheck(dbin []byte) error {
 }
 
 
-// Returns first 32 bits, as expected for sepcific HD address
+// HDKeyPrefix returns the first 32 bits, as expected for sepcific HD address.
 func HDKeyPrefix(private, testnet bool) uint32 {
 	if private {
 		if testnet {

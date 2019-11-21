@@ -35,7 +35,7 @@ var (
 	show_prompt bool = true
 )
 
-// add a new UI commend handler
+// newUi adds a new UI commend handler.
 func newUi(cmds string, sync bool, hn func(string), help string) {
 	cs := strings.Split(cmds, " ")
 	if len(cs[0]) > 0 {

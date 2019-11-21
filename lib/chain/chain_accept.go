@@ -25,7 +25,7 @@ func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) 
 }
 
 
-// This function either appends a new block at the end of the existing chain
+// AcceptBlock either appends a new block at the end of the existing chain
 // in which case it also applies all the transactions to the unspent database.
 // If the block does is not the heighest, it is added to the chain, but maked
 // as an orphan - its transaction will be verified only if the chain would swap
@@ -108,7 +108,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 }
 
 
-// This isusually the most time consuming process when applying a new block
+// commitTxs is ususually the most time consuming process when applying a new block.
 func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost uint32, e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
@@ -303,7 +303,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 }
 
 
-// Check transactions for consistency and finality. Return nil if OK, otherwise a descripive error
+// CheckTransactions checks transactions for consistency and finality.
+// Return nil if OK, otherwise a descripive error.
 func CheckTransactions(txs []*btc.Tx, height, btime uint32) (res error) {
 	var wg sync.WaitGroup
 

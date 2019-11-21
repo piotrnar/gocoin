@@ -249,7 +249,7 @@ fatal_error:
 }
 
 
-// this one is only called from TextUI
+// MempoolLoadNew is only called from TextUI.
 func MempoolLoadNew(fname string, abort *bool) bool {
 	var ntx *TxRcvd
 	var idx, totcnt, le, tmp64, oneperc, cntdwn, perc uint64

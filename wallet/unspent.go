@@ -54,7 +54,7 @@ func NewUnspRec(l []byte) (uns *unspRec) {
 }
 
 
-// load the content of the "balance/" folder
+// load_balance loads the content of the "balance/" folder.
 func load_balance() error {
 	f, e := os.Open("balance/unspent.txt")
 	if e!=nil {
@@ -112,7 +112,7 @@ func show_balance() {
 }
 
 
-// apply the chnages to the balance folder
+// apply_to_balance applies the changes to the balance folder.
 func apply_to_balance(tx *btc.Tx) {
 	f, _ := os.Create("balance/unspent.txt")
 	if f != nil {

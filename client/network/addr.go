@@ -33,7 +33,7 @@ type ExternalIpRec struct {
 	Tim uint
 }
 
-// Returns the list sorted by "freshness"
+// GetExternalIPs returns the list sorted by "freshness".
 func GetExternalIPs() (arr []ExternalIpRec) {
 	ExternalIpMutex.Lock()
 	defer ExternalIpMutex.Unlock()
@@ -129,7 +129,7 @@ func (c *OneConnection) SendOwnAddr() {
 	}
 }
 
-// Parese network's "addr" message
+// ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)

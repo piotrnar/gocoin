@@ -211,7 +211,7 @@ func (mp manyPeers) Swap(i, j int) {
 }
 
 
-// Fetch a given number of best (most recenty seen) peers.
+// GetBestPeers fetches a given number of best (most recenty seen) peers.
 func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
 	if proxyPeer!=nil {
 		if isConnected==nil || !isConnected(proxyPeer) {
@@ -266,7 +266,7 @@ func initSeeds(seeds []string, port uint16) {
 }
 
 
-// shall be called from the main thread
+// InitPeers should be called from the main thread.
 func InitPeers(dir string) {
 	PeerDB, _ = qdb.NewDB(dir+"peers3", true)
 

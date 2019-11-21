@@ -37,7 +37,7 @@ func NewSignature(buf []byte) (*Signature, error) {
 	return sig, nil
 }
 
-// Recoved public key form a signature
+// RecoverPublicKey recovers the public key from a signature.
 func (sig *Signature) RecoverPublicKey(msg []byte, recid int) (key *PublicKey) {
 	key = new(PublicKey)
 	if !secp256k1.RecoverPublicKey(sig.R.Bytes(), sig.S.Bytes(), msg, recid, &key.XY) {
@@ -52,7 +52,7 @@ func (sig *Signature) IsLowS() bool {
 }
 
 
-// Returns serialized canoncal signature followed by a hash type
+// Bytes returns a serialized canoncal signature followed by a hash type.
 func (sig *Signature) Bytes() []byte {
 	return append(sig.Signature.Bytes(), sig.HashType)
 }

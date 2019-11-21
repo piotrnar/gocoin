@@ -142,7 +142,7 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 }
 
 
-// Base58 encoded address
+// String returns the Base58 encoded address.
 func (a *BtcAddr) String() string {
 	if a.Enc58str=="" {
 		if a.SegwitProg != nil {
@@ -187,7 +187,7 @@ func (a *BtcAddr) Label() (s string) {
 	return
 }
 
-// Check if a pk_script send coins to this address
+// Owns checks if a pk_script send coins to this address.
 func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	// The most common spend script
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {

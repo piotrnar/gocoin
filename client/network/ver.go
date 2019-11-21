@@ -176,7 +176,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 	return nil
 }
 
-// Send auth message (only used by other gocoin nodes)
+// SendAuth sends auth messages (only used by other gocoin nodes).
 func (c *OneConnection) SendAuth() {
 	rnd := make([]byte, 32)
 	copy(rnd, c.Node.Nonce[:])
@@ -198,7 +198,7 @@ func (c *OneConnection) SendAuth() {
 	c.SendRawMsg("auth", msg.Bytes())
 }
 
-// Process auth message (from other gocoin nodes)
+// AuthRvcd processes auth messages (from other gocoin nodes).
 func (c *OneConnection) AuthRvcd(pl []byte) {
 	if c.X.AuthMsgGot > 0 {
 		c.DoS("AuthMsgCnt") // Only allow one auth message per connection (DoS prevention)

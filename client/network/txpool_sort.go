@@ -13,7 +13,7 @@ var (
 	lastTxsExpire time.Time
 )
 
-// Return txs sorted by SPB, but with parents first
+// GetSortedMempool returns txs sorted by SPB, but with parents first.
 func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))
 	var idx int
@@ -113,7 +113,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
-// This must be called with TxMutex locked
+// LimitPoolSize must be called with TxMutex locked.
 func LimitPoolSize(maxlen uint64) {
 	ticklen := maxlen >> 5 // 1/32th of the max size = X
 
@@ -187,7 +187,7 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 	return
 }
 
-// This must be called with TxMutex locked
+// LimitRejectedSize must be called with TxMutex locked.
 func LimitRejectedSize() {
 	//ticklen := maxlen >> 5 // 1/32th of the max size = X
 	var idx int
@@ -264,8 +264,8 @@ func MPC() (res bool) {
 }
 */
 
-// Verifies Mempool for consistency
-// Make sure to call it with TxMutex Locked
+// MempoolCheck verifies the Mempool for consistency.
+// Make sure to call it with TxMutex Locked.
 func MempoolCheck() (dupa bool) {
 	var spent_cnt int
 	var totsize uint64
@@ -351,7 +351,7 @@ func MempoolCheck() (dupa bool) {
 	return
 }
 
-// Get all first level children of the tx
+// GetChildren gets all first level children of the tx.
 func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	var po btc.TxPrevOut
 	po.Hash = tx.Hash.Hash
@@ -374,8 +374,8 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	return
 }
 
-// Get all the children (and all of their children...) of the tx
-// The result is sorted by the oldest parent
+// GetAllChildren gets all the children (and all of their children...) of the tx.
+// The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	already_included := make(map[*OneTxToSend]bool)
 	var idx int
@@ -398,8 +398,8 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	return
 }
 
-// Get all the parents of the given tx
-// The result is sorted by the oldest parent
+// GetAllParents gets all the parents of the given tx.
+// The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
 	already_in := make(map[*OneTxToSend]bool)
 	already_in[tx] = true
@@ -466,7 +466,7 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	return
 }
 
-// It is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo
+// GetSortedMempoolNew is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolNew() (result []*OneTxToSend) {
 	txs := GetSortedMempool()
 	pkgs := LookForPackages(txs)
@@ -506,7 +506,7 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 	return
 }
 
-// Only take tx/package weight and the fee
+// GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	txs := GetSortedMempool()
 	pkgs := LookForPackages(txs)

@@ -22,7 +22,7 @@ var (
 )
 
 
-// load private keys fo .others file
+// load_others loads private keys of .others file.
 func load_others() {
 	f, e := os.Open(RawKeysFilename)
 	if e == nil {
@@ -71,7 +71,7 @@ func load_others() {
 }
 
 
-// Get the secret seed and generate "keycnt" key pairs (both private and public)
+// make_wallet gets the secret seed and generates "keycnt" key pairs (both private and public).
 func make_wallet() {
 	var lab string
 
@@ -179,7 +179,7 @@ func make_wallet() {
 }
 
 
-// Print all the public addresses
+// dump_addrs prints all the public addresses.
 func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
 
@@ -259,7 +259,7 @@ func address_to_key(addr string) *btc.PrivateAddr {
 }
 
 
-// suuports only P2KH scripts
+// pkscr_to_key supports only P2KH scripts.
 func pkscr_to_key(scr []byte) *btc.PrivateAddr {
 	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
 		return hash_to_key(scr[3:23])

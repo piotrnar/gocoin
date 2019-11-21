@@ -9,7 +9,7 @@ import (
 )
 
 
-// prepare a signed transaction
+// sign_tx prepares a signed transaction.
 func sign_tx(tx *btc.Tx) (all_signed bool) {
 	var multisig_done bool
 	all_signed = true
@@ -120,7 +120,7 @@ func write_tx_file(tx *btc.Tx) {
 }
 
 
-// prepare a signed transaction
+// make_signed_tx prepares a signed transaction.
 func make_signed_tx() {
 	// Make an empty transaction
 	tx := new(btc.Tx)
@@ -198,7 +198,7 @@ func make_signed_tx() {
 }
 
 
-// sign raw transaction with all the keys we have
+// process_raw_tx signs a raw transaction with all the keys we have.
 func process_raw_tx() {
 	tx := raw_tx_from_file(*rawtx)
 	if tx == nil {

@@ -128,7 +128,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 }
 
 
-// This function is called from the main thread (or from an UI)
+// NetRouteInvExt is called from the main thread (or from a UI).
 func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint32) {
 	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
 
