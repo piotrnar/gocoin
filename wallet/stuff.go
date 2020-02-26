@@ -175,17 +175,15 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 	}
 	fn := "balance/" + txid.String() + ".tx"
 	buf, er := ioutil.ReadFile(fn)
-	if er==nil && buf!=nil {
-		var th [32]byte
-		btc.ShaHash(buf, th[:])
-		if txid.Hash==th {
-			tx, _ = btc.NewTx(buf)
-			if error_is_fatal && tx == nil {
-				println("Transaction is corrupt:", txid.String())
-				cleanExit(1)
-			}
-		} else if error_is_fatal {
-			println("Transaction file is corrupt:", txid.String())
+	if er == nil && buf != nil {
+		tx, _ = btc.NewTx(buf)
+		if error_is_fatal && tx == nil {
+			println("Transaction is corrupt:", txid.String())
+			cleanExit(1)
+		}
+		tx.SetHash(nil)
+		if txid.Hash != tx.Hash.Hash {
+			println("Transaction ID mismitch:", txid.String(), tx.Hash.String())
 			cleanExit(1)
 		}
 	} else if error_is_fatal {
