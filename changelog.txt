@@ -1,6 +1,7 @@
 1.9.7
 * Client: does not allow to enable wallet functionality while blockchain sync in progress
 * Client: applying blocks stored on disk to UTXO-db is a non-blocking process now (UI works)
+* Wallet: fixed problem with "Transaction is corrupt" error for segwit txs
 
 1.9.6 - 2019-10-11:
 * Client: New config value "Memory.PurgeUnspendableUTXO" - automatically purge unspendable records from UTXO.db
