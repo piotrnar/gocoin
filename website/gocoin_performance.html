@@ -5,37 +5,48 @@
 <body>
 <h1>Performance</h1>
 
-Charts below present system memory and time needed to sync BTC block chain up to the given block number,
-depeding on the configuration of a virtual server from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a>.
-
-Each test was performed with Gocoin client version <b>1.9.5</b>, built with Go version <b>1.12 beta 1</b>,
-using default configuration and running on <b>Debian GNU/Linux 9 (stretch)</b>.<br>
+Charts below present system memory and time needed to sync BTC block chain up to the given block number.<br>
 <br>
 <i>Note: Gocoin uses configurable <code>LastTrustedBlock</code> parameter, to avoid verifying scripts from all blocks known as valid.</i><br>
 
-<h3>32 vCPUs, 32 GB memory, SSD persistent disk</h3>
+<h2>Gocoin 1.9.7</b>, built with Go 1.14.1</h2>
 
-<img src="btc_chain_sync_perf_32.png" width="70%"><br>
+<h3>6 CPUs, 16 GB memory, 320 GB storage from <a href="https://upcloud.com/" target="_blank">UpCloud</a></h3>
+
+<img src="btc_chain_sync_perf_6_upcloud_2020.png" width="50%"><br>
+Time needed to re-build UTXO database from blocks stored on the disk<sup>2</sup>: <b>2.2 hours</b><br>
+
+<h3>4 vCPUs, 15 GB memory, SSD persistent disk from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a></h3>
+
+<img src="btc_chain_sync_perf_4_ssd_2020.png" width="50%"><br>
+
+
+<h2>Gocoin 1.9.5</b>, built with Go 1.12</h2>
+
+<h3>32 vCPUs, 32 GB memory, SSD persistent disk from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a></h3>
+
+<img src="btc_chain_sync_perf_32.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk<sup>1</sup>: <b>2.4 hours</b><br>
 
-<h3>8 vCPUs, 16 GB memory, Standard persistent disk</h3>
+<h3>8 vCPUs, 16 GB memory, Standard persistent disk from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a></h3>
 
-<img src="btc_chain_sync_perf_8.png" width="70%"><br>
+<img src="btc_chain_sync_perf_8.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk<sup>1</sup>: <b>3.1 hours</b><br>
 
-<h3>4 vCPUs, 15 GB memory, SSD persistent disk</h3>
+<h3>4 vCPUs, 15 GB memory, SSD persistent disk from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a></h3>
 
-<img src="btc_chain_sync_perf_4_ssd.png" width="70%"><br>
+<img src="btc_chain_sync_perf_4_ssd.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk<sup>1</sup>: <b>3.2 hours</b><br>
 
-<h3>4 vCPUs, 15 GB memory, Standard persistent disk</h3>
+<h3>4 vCPUs, 15 GB memory, Standard persistent disk from <a href="https://cloud.google.com/" target="_blank">Google Cloud Platform</a></h3>
 
-<img src="btc_chain_sync_perf_4.png" width="70%"><br>
+<img src="btc_chain_sync_perf_4.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on disk<sup>1</sup>: <b>3.7 hours</b><br>
 
 <hr>
 <i>
-1) Up to block number 550000
+1) Up to block number 550000<br>
+2) Up to block number 620000
 </i>
 </body>
 </html>
