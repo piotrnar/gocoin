@@ -1,3 +1,6 @@
+1.9.8
+* Fixed performance problem of slow mempool sorting with CPFP algo (packages are now built from parents, not children)
+
 1.9.7 - 2020-03-23
 * Client: does not allow to enable wallet functionality while blockchain sync in progress
 * Client: applying blocks stored on disk to UTXO-db is a non-blocking process now (UI works)

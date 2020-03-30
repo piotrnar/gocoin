@@ -384,6 +384,7 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 		chlds := par.GetChildren()
 		for _, ch := range chlds {
 			if _, ok := already_included[ch]; !ok {
+				already_included[ch] = true
 				result = append(result, ch)
 			}
 		}
@@ -449,10 +450,13 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 
 func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	for _, tx := range txs {
+		if tx.MemInputCnt > 0 {
+			continue
+		}
 		var pkg OneTxsPackage
-		parents := tx.GetAllParents()
-		if len(parents) > 0 {
-			pkg.Txs = append(parents, tx)
+		childs := tx.GetAllChildren()
+		if len(childs) > 0 {
+			pkg.Txs = append(childs, tx)
 			for _, t := range pkg.Txs {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee

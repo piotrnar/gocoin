@@ -7,6 +7,19 @@ import (
 	"time"
 )
 
+
+func get_total_block_fees(txs []*network.OneTxToSend) (totfees uint64, totwgh int) {
+	for _, tx := range txs {
+		wght := tx.Weight()
+		if totwgh + wght > 4e6 {
+			break
+		}
+		totfees += tx.Fee
+		totwgh += wght
+	}
+	return
+}
+
 func new_block(par string) {
 	sta := time.Now()
 	txs := network.GetSortedMempool()
@@ -20,25 +33,10 @@ func new_block(par string) {
 
 	var totwgh int
 	var totfees, totfees2 uint64
-	for _, tx := range txs {
-		totfees += tx.Fee
-		totwgh += tx.Weight()
-		if totwgh > 4e6 {
-			totwgh -= tx.Weight()
-			break
-		}
-	}
+	totfees, totwgh = get_total_block_fees(txs)
 	println("Fees from OLD sorting:", btc.UintToBtc(totfees), totwgh)
 
-	totwgh = 0
-	for _, tx := range cpfp {
-		totfees2 += tx.Fee
-		totwgh += tx.Weight()
-		if totwgh > 4e6 {
-			totwgh -= tx.Weight()
-			break
-		}
-	}
+	totfees2, totwgh = get_total_block_fees(cpfp)
 	fmt.Printf("Fees from NEW sorting: %s %d\n", btc.UintToBtc(totfees2), totwgh)
 	if totfees2 > totfees {
 		fmt.Printf("New method profit: %.3f%%\n", 100.0*float64(totfees2-totfees)/float64(totfees))
