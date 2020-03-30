@@ -374,6 +374,45 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 	return
 }
 
+
+// GetItWithAllChildren gets all the children (and all of their children...) of the tx.
+// If any of the children has other unconfirmed parents, they are also included in the result.
+// The result is sorted with the input parent first and always with parents before their children.
+func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
+	already_included := make(map[*OneTxToSend]bool)
+
+	result = []*OneTxToSend{tx} // out starting (parent) tx shall be the first element of the result
+	already_included[tx] = true
+
+	for idx := 0; idx < len(result); idx++ {
+		par := result[idx]
+		for _, ch := range par.GetChildren() {
+			// do it for each returned child,
+
+			// but only if it has not been included yet ...
+			if _, ok := already_included[ch]; !ok {
+
+				// first make sure we have all of its parents...
+				for _, prnt := range ch.GetAllParentsExcept(par) {
+					if _, ok := already_included[prnt]; !ok {
+						// if we dont have a parent, just insert it here into the result
+						result = append(result, prnt)
+						// ... and mark it as included, for later
+						already_included[prnt] = true
+					}
+				}
+
+				// now we can safely insert the child, as all its parent shall be already included
+				result = append(result, ch)
+				// ... and mark it as included, for later
+				already_included[ch] = true
+			}
+		}
+	}
+	return
+}
+
+
 // GetAllChildren gets all the children (and all of their children...) of the tx.
 // The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
@@ -399,7 +438,7 @@ func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
 	return
 }
 
-// GetAllParents gets all the parents of the given tx.
+// GetAllParents gets all the unconfirmed parents of the given tx.
 // The result is sorted by the oldest parent.
 func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
 	already_in := make(map[*OneTxToSend]bool)
@@ -412,6 +451,33 @@ func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
 					par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]
 					if _, ok := already_in[par_tx]; !ok {
 						do_one(par_tx)
+					}
+				}
+			}
+		}
+		if _, ok := already_in[tx]; !ok {
+			result = append(result, tx)
+			already_in[tx] = true
+		}
+	}
+	do_one(tx)
+	return
+}
+
+// GetAllParents gets all the unconfirmed parents of the given tx, except for the input tx (and its parents).
+// The result is sorted by the oldest parent.
+func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTxToSend) {
+	already_in := make(map[*OneTxToSend]bool)
+	already_in[tx] = true
+	var do_one func(*OneTxToSend)
+	do_one = func(tx *OneTxToSend) {
+		if tx.MemInputCnt > 0 {
+			for idx := range tx.TxIn {
+				if tx.MemInputs[idx] {
+					if par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]; par_tx != except {
+						if _, ok := already_in[par_tx]; !ok {
+							do_one(par_tx)
+						}
 					}
 				}
 			}
@@ -454,7 +520,30 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 			continue
 		}
 		var pkg OneTxsPackage
-		childs := tx.GetAllChildren()
+		pandch := tx.GetItWithAllChildren()
+		if len(pandch) > 1 {
+			pkg.Txs = pandch
+			for _, t := range pkg.Txs {
+				pkg.Weight += t.Weight()
+				pkg.Fee += t.Fee
+			}
+			result = append(result, &pkg)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Fee*uint64(result[j].Weight) > result[j].Fee*uint64(result[i].Weight)
+	})
+	return
+}
+
+/* This one uses the old method, which turned out to be very slow sometimes
+func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
+	for _, tx := range txs {
+		if tx.MemInputCnt == 0 {
+			continue
+		}
+		var pkg OneTxsPackage
+		childs := tx.GetAllParents()
 		if len(childs) > 0 {
 			pkg.Txs = append(childs, tx)
 			for _, t := range pkg.Txs {
@@ -469,11 +558,13 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	})
 	return
 }
+*/
 
 // GetSortedMempoolNew is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolNew() (result []*OneTxToSend) {
 	txs := GetSortedMempool()
 	pkgs := LookForPackages(txs)
+	//println(len(pkgs), "pkgs from", len(txs), "txs")
 
 	result = make([]*OneTxToSend, len(txs))
 	var txs_idx, pks_idx, res_idx int
@@ -483,7 +574,7 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
-			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
+			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
 					continue
