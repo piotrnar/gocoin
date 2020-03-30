@@ -51,7 +51,7 @@ func new_block(par string) {
 
 	sta = time.Now()
 	cpfp := network.GetSortedMempoolNew()
-	println(len(cpfp), "NEW tx_ort got in", time.Now().Sub(sta).String())
+	println(len(cpfp), "NEW tx_sort got in", time.Now().Sub(sta).String())
 
 	var totwgh, tcnt int
 	var totfees, totfees2 uint64
