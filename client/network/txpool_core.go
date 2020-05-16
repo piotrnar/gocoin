@@ -190,10 +190,7 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	bidx := tx.Hash.BIdx()
 	TransactionsRejected[bidx] = rec
 
-	LimitRejectedSize()
-
-	// try to re-fetch the record from the map, in case it has been removed by LimitRejectedSize()
-	return TransactionsRejected[bidx]
+	return rec
 }
 
 // ParseTxNet handles incoming "tx" messages.
