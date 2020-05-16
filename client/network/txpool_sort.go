@@ -203,13 +203,7 @@ func LimitRejectedSize() {
 		sorted = GetSortedRejected()
 		maxcnt -= maxcnt >> 5
 		for idx = maxcnt; idx < len(sorted); idx++ {
-			// TODO: investigating issue #47
-			tx := sorted[idx]
-			if tx == nil {
-				println("nil at idx", idx, maxcnt, len(sorted), len(TransactionsRejected))
-				panic("this should not happen. please report")
-			}
-			deleteRejected(tx.Hash.BIdx())
+			deleteRejected(sorted[idx].Id.BIdx())
 		}
 		sorted = sorted[:maxcnt]
 	}
