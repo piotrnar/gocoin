@@ -110,6 +110,10 @@ func (r one_idx_rec) DLen() uint32 {
 	return binary.LittleEndian.Uint32(r.sl[48:52])
 }
 
+func (r one_idx_rec) Size() uint32 {
+	return binary.LittleEndian.Uint32(r.sl[32:36])
+}
+
 func (r one_idx_rec) SetDLen(l uint32) {
 	binary.LittleEndian.PutUint32(r.sl[48:52], l)
 }
@@ -1149,14 +1153,24 @@ func main() {
 	}
 
 	var minbh, maxbh, valididx, validlen, blockondisk, minbhondisk uint32
+	var tot_len, tot_size, tot_size_bad uint64
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
 	minbhondisk = 0xffffffff
-	for off := 136; off < len(dat); off += 136 {
+	for off := 0; off < len(dat); off += 136 {
 		sl := new_sl(dat[off : off+136])
 
 		dlen := sl.DLen()
 		didx := sl.DatIdx()
+
+		tot_len += uint64(dlen)
+
+		s := sl.Size()
+		if s == 0 {
+			tot_size_bad++
+		} else {
+			tot_size += uint64(s)
+		}
 
 		bh := sl.Height()
 		if bh > maxbh {
@@ -1184,4 +1198,9 @@ func main() {
 	fmt.Println(blockondisk, "blocks stored on disk, from height", minbhondisk)
 	fmt.Println("Number of records with valid length:", validlen)
 	fmt.Println("Number of records with valid data file:", valididx)
+	fmt.Println("Total size of all  compressed  blocks:", tot_len)
+	fmt.Println("Total size of all uncompressed blocks:", tot_size)
+	if tot_size_bad > 0 {
+		fmt.Println("WARNING: Total size did not account for", tot_size_bad, "blocks")
+	}
 }
