@@ -118,6 +118,7 @@ func (r *XY) SetXO(X *Field, odd bool) {
 	c.SetInt(7)
 	c.SetAdd(&x3)
 	c.Sqrt(&r.Y)
+	r.Y.Normalize()
 	if r.Y.IsOdd() != odd {
 		r.Y.Negate(&r.Y, 1)
 	}
