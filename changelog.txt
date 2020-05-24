@@ -1,4 +1,5 @@
 1.9.8
+* lib/secp256k1: Improved perfomance (for 64-bits platforms) with the new 5x52 mode
 * Client: fixed issue #47 - panic in network.LimitRejectedSize()
 * Client: do not call network.LimitRejectedSize() at every rejected tx, as it can cause performance problems
 * Fixed performance problem of slow mempool sorting with CPFP algo (packages are now built from parents, not children)

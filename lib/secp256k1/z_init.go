@@ -1,6 +1,7 @@
+// +build ignore
+
 package secp256k1
 
-/*
 import (
 	"os"
 	"fmt"
@@ -14,9 +15,9 @@ var (
 	fin XY
 )
 
+const SAVE = false
 
 func ecmult_start() {
-	return
 	sta := time.Now()
 
 	g := TheCurve.G
@@ -54,7 +55,7 @@ func ecmult_start() {
 	fin.SetXYZ(&fn)
 	fin.Neg(&fin)
 
-	if false {
+	if SAVE {
 		f, _ := os.Create("z_prec.go")
 		fmt.Fprintln(f, "package secp256k1\n\nvar prec = [64][16]XY {")
 		for j:=0; j<64; j++ {
@@ -68,7 +69,7 @@ func ecmult_start() {
 		f.Close()
 	}
 
-	if false {
+	if SAVE {
 		f, _ := os.Create("z_pre_g.go")
 		fmt.Fprintln(f, "package secp256k1\n\nvar pre_g = []XY {")
 		for i := range pre_g {
@@ -78,7 +79,7 @@ func ecmult_start() {
 		f.Close()
 	}
 
-	if false {
+	if SAVE {
 		f, _ := os.Create("z_pre_g_128.go")
 		fmt.Fprintln(f, "package secp256k1\n\nvar pre_g_128 = []XY {")
 		for i := range pre_g_128 {
@@ -88,9 +89,9 @@ func ecmult_start() {
 		f.Close()
 	}
 
-	if false {
+	if SAVE {
 		f, _ := os.Create("z_fin.go")
-		fmt.Fprintln(f, "package secp256k1\n\nvar fim = XY {")
+		fmt.Fprintln(f, "package secp256k1\n\nvar fin = XY {")
 		fmt.Fprintln(f, "X:" + fe2str(&fin.X) + ", Y:" + fe2str(&fin.Y) + ",")
 		fmt.Fprintln(f, "}")
 		f.Close()
@@ -100,7 +101,7 @@ func ecmult_start() {
 }
 
 
-func fe2str(f *Field) (s string) {
+func fe2str_26(f *Field) (s string) {
 	s = fmt.Sprintf("Field{[10]uint32{0x%08x", f.n[0])
 	for i:=1; i<len(f.n); i++ {
 		s += fmt.Sprintf(", 0x%08x", f.n[i])
@@ -109,5 +110,15 @@ func fe2str(f *Field) (s string) {
 	return
 }
 
+func fe2str(f *Field) (s string) {
+	s = fmt.Sprintf("Field{[5]uint64{0x%08x", f.n[0])
+	for i:=1; i<len(f.n); i++ {
+		s += fmt.Sprintf(", 0x%08x", f.n[i])
+	}
+	s += "}}"
+	return
+}
 
-*/
+func init() {
+	ecmult_start()
+}
