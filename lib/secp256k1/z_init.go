@@ -5,7 +5,7 @@ This file is normally not used, as the data it would pre-compute is embedded
 into the source code, for fast library initialization.
 
 If you prefer to use this file (e.g. to have a smaller executabe), remove the
-"build ignore" directive below and delete the two source files:
+"build ignore" directive above and delete the two source files:
   1) z_consts_5x52.go
   2) z_consts_10x26.go
 */
