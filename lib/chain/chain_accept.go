@@ -226,15 +226,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 				txinsum += tout.Value
 			}
-
-			if !tx_trusted {
-				wg.Wait()
-				if ver_err_cnt > 0 {
-					println("VerifyScript failed", ver_err_cnt, "time (s)")
-					e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
-					return
-				}
-			}
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
@@ -266,6 +257,15 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		outs := make([]*btc.TxOut, len(bl.Txs[i].TxOut))
 		copy(outs, bl.Txs[i].TxOut)
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
+	}
+
+	if !bl.Trusted {
+		wg.Wait()
+		if ver_err_cnt > 0 {
+			println("VerifyScript failed", ver_err_cnt, "time (s)")
+			e = errors.New(fmt.Sprint("VerifyScripts failed ", ver_err_cnt, "time (s)"))
+			return
+		}
 	}
 
 	if sumblockin < sumblockout {
