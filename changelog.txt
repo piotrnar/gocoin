@@ -1,4 +1,5 @@
 1.9.8
+* Client / lib: Fixed a bug that was stopping multi-CPU platforms from paralell processing of the blocks
 * lib/secp256k1: Improved perfomance (for 64-bits platforms) with the new 5x52 mode
 * Client: fixed issue #47 - panic in network.LimitRejectedSize()
 * Client: do not call network.LimitRejectedSize() at every rejected tx, as it can cause performance problems
