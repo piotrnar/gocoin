@@ -70,6 +70,11 @@ func Stop() {
 	ProfilerDisabled = true
 	stop := time.Now().UnixNano() - start
 
+	if stop == 0 {
+		fmt.Println(len(chpTotal), "checkpoints but in zero time")
+		return
+	}
+
 	var mk sortif
 	mk.val = make([]oneval, len(chpTotal))
 	i := 0
