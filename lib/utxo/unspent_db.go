@@ -335,6 +335,8 @@ finito:
 
 // CommitBlockTxs commits the given add/del transactions to UTXO and Unwind DBs.
 func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e error) {
+	var wg sync.WaitGroup
+
 	undo_fn := fmt.Sprint(db.dir_undo, changes.Height)
 
 	db.Mutex.Lock()
@@ -342,18 +344,22 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	db.abortWriting()
 
 	if changes.UndoData != nil {
-		var tmp [0x100000]byte // static record for Serialize to serialize to
-		bu := new(bytes.Buffer)
-		bu.Write(blhash)
-		if changes.UndoData != nil {
-			for _, xx := range changes.UndoData {
-				bin := xx.Serialize(true, tmp[:])
-				btc.WriteVlen(bu, uint64(len(bin)))
-				bu.Write(bin)
+		wg.Add(1)
+		go func() {
+			var tmp [0x100000]byte // static record for Serialize to serialize to
+			bu := new(bytes.Buffer)
+			bu.Write(blhash)
+			if changes.UndoData != nil {
+				for _, xx := range changes.UndoData {
+					bin := xx.Serialize(true, tmp[:])
+					btc.WriteVlen(bu, uint64(len(bin)))
+					bu.Write(bin)
+				}
 			}
-		}
-		ioutil.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
-		os.Rename(db.dir_undo+"tmp", undo_fn)
+			ioutil.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
+			os.Rename(db.dir_undo+"tmp", undo_fn)
+			wg.Done()
+		}()
 	}
 
 	db.commit(changes)
@@ -369,6 +375,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 	}
 
 	db.DirtyDB.Set()
+	wg.Wait()
 	return
 }
 
