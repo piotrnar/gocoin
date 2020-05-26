@@ -185,6 +185,11 @@ func (bl *Block) MerkleRootMatch() bool {
 func (bl *Block) GetMerkle() (res []byte, mutated bool) {
 	mtr := make([][32]byte, len(bl.Txs), 3*len(bl.Txs)) // make the buffer 3 times longer as we use append() inside CalcMerkle
 	for i, tx := range bl.Txs {
+		if tx == nil {
+			println("GetMerkle(): tx missing", i)
+			mutated = true
+			return
+		}
 		mtr[i] = tx.Hash.Hash
 	}
 	res, mutated = CalcMerkle(mtr)
