@@ -693,7 +693,7 @@ func NetCloseAll() {
 		if all_done {
 			return
 		}
-		if time.Now().Sub(sta) > 2 * time.Second {
+		if time.Now().Sub(sta) > 5 * time.Second {
 			Mutex_net.Lock()
 			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons), "- please report")
 			Mutex_net.Unlock()
