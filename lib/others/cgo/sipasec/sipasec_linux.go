@@ -17,5 +17,5 @@ When the lib is properly installed, executing "go test" in this folder will say 
 Then copy "gocoin/client/speedups/sipasec.go" to "gocoin/client/" to boost your client.
 */
 
-// #cgo LDFLAGS: /usr/local/lib/libsecp256k1.a
+// #cgo LDFLAGS: /usr/local/lib/libsecp256k1.a -lgmp
 import "C"
