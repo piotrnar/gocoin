@@ -7,6 +7,10 @@ import (
 	"crypto/rand"
 )
 
+func TestPrintArch(t *testing.T) {
+	println("Using field", FieldArch)
+}
+
 func TestSigRecover(t *testing.T) {
 	var vs = [][6]string {
 		{

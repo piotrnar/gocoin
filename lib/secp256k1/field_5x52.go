@@ -6,6 +6,8 @@ import (
 	"math/bits"
 )
 
+const FieldArch = "5x52"
+
 type Field struct {
 	n [5]uint64
 }

@@ -5,6 +5,8 @@ package secp256k1
 import (
 )
 
+const FieldArch = "10x26"
+
 type Field struct {
 	n [10]uint32
 }
