@@ -49,7 +49,8 @@ When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 <tr><td class="cfg_name"> TextUI_Enabled</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
-<td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).</td>
+<td class="cfg_info"> Enable TextUI. You will want to disable text interface if you want to start the node as a daemon (with no stdin).<br>
+Note that on Linux based systems it is advised to run the node within the "screen" command, in which case you want to keep TextUI enabled.</td>
 </tr>
 
 <tr>
@@ -88,20 +89,20 @@ When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 <td class="cfg_name"> WebUI.Title </td>
 <td class="cfg_type"> string</td>
 <td> "Gocoin"</td>
-<td class="cfg_info"> Title of the WebUI window as seen in the browser.</td>
+<td class="cfg_info"> Title of the WebUI window as seen in the web browser.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> WebUI.PayCmdName</td>
 <td class="cfg_type"> string</td>
 <td> "pay_cmd.txt"</td>
 <td class="cfg_info"> The file name of the pay script command inside the payment.zip (created at MakeTx page).<br>
- Depending on your platform, change .txt extension to .bat or .sh, if prefer convenience over security.</td>
+Prefering convenience over security, change .txt extension to .bat or .sh (depending on your platform).</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> WebUI.ServerMode </td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Enable mode in which a client cannot do certain things (e.g. change configuration).</td>
+<td class="cfg_info"> Enable mode in which the WebUI operator cannot do certain things (e.g. change configuration).</td>
 </tr>
 
 <tr class="odd">
@@ -115,7 +116,7 @@ When this value is empty, the defualt of <b>/Gocoin:x.y.z/</b> is used.</td>
 <td class="cfg_type"> uint16</td>
 <td> 0 </td>
 <td class="cfg_info"> Zero value means to use the default port, which is 8333 for main net and 18333 for test net.<br>
-Note that the current satoshi client has a "feature" that causes it to refuse connecting to any TCP port other than default.</td>
+Note that Bitcoin Core nodes will not connect to any TCP port other than the default.</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> Net.MaxOutCons</td>
@@ -217,7 +218,9 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> TXRoute.FeePerByte</td>
 <td class="cfg_type"> float64</td>
 <td> 0.0</td>
-<td class="cfg_info"> Required minimum fee per byte to route a transaction.</td>
+<td class="cfg_info"> Required minimum fee per byte to route accepted transactions.<br>
+Note that transactions which do not meet "TXPool.FeePerByte" (see above) are not being accepted,
+therefore setting it to 0.0 will route all the accepted transactions.</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> TXRoute.MaxTxSize</td>
@@ -242,7 +245,8 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Memory.UseGoHeap</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Use native Go heap with Garbage Collector for UTXO records.</td>
+<td class="cfg_info"> Use native Go heap with Garbage Collector for UTXO records.<br>
+Using native heap makes the node a bit faster at a cost of using more RAM, although it is not always the case.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.MaxCachedBlks</td>
@@ -254,7 +258,8 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Memory.CacheOnDisk</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
-<td class="cfg_info"> During chain sync, store bigger blocks on disk (in datadir's "tmpblk/") instead of holding them in RAM.</td>
+<td class="cfg_info"> During chain sync, store bigger blocks on disk (in datadir's "tmpblk/") instead of holding them in RAM.<br>
+Makes block chain sync process a bit slower, but saves RAM instead.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.MaxDataFileMB</td>
@@ -272,7 +277,9 @@ Note that the current satoshi client has a "feature" that causes it to refuse co
 <td class="cfg_name"> Memory.OldDataBackup</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Save data files to "oldat/" folder before deleting them from the blocks database.</td>
+<td class="cfg_info"> Save data files to "oldat/" folder before deleting them from the blocks database.<br>
+It is useful for automatic archiving old blocks on a different drive ("oldat/" shall be a link to a different drive, then).<br>
+The blocks from "oldat/" folder will still be served by the node to its peers.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.PurgeUnspendableUTXO</td>
@@ -368,18 +375,22 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <tr>
 
 <tr>
-<td class="cfg_name"> UTXOSave.SecondsToTake</td>
-<td class="cfg_type"> uint</td>
-<td> 300</td>
-<td class="cfg_info"> While saving UTXO.db to disk, delay the process into at least so many seconds.
-New block arriving within this period will abort and restart the saving process.
-0 saves UTXO.db as fast as possible.</td>
-</tr>
-<tr>
 <td class="cfg_name"> UTXOSave.BlocksToHold</td>
 <td class="cfg_type"> uint</td>
 <td> 6</td>
-<td class="cfg_info"> Skip so many new blocks before auto saving a new UTXO.db to disk.</td>
+<td class="cfg_info"> Skip so many new blocks before auto saving a new UTXO.db to disk.<br>
+Note that UTXO.db has a size of a few GB - saving it more often may cause a solid state drive (SSD) to deplete faster.</td>
+</tr>
+<tr>
+<td class="cfg_name"> UTXOSave.SecondsToTake</td>
+<td class="cfg_type"> uint</td>
+<td> 300</td>
+<td class="cfg_info"> While saving UTXO.db to disk, spread (delay) the process into at least so many seconds.
+New block arriving within this period will abort and restart the saving process.
+0 saves UTXO.db as fast as possible.<br>
+Note that setting this value too low may make your system sluggish while the database is being written.
+At the other hand, setting it too high may make the saving process unable to complete for long periods of time,
+causing wasteful depletion of your SSD.</td>
 </tr>
 
 
