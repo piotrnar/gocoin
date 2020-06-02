@@ -57,6 +57,7 @@ var (
 		Net struct {
 			ListenTCP      bool
 			TCPPort        uint16
+			BindToIF       string
 			MaxOutCons     uint32
 			MaxInCons      uint32
 			MaxUpKBps      uint
@@ -133,6 +134,7 @@ func InitConfig() {
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
 	CFG.Net.MinSegwitCons = 4
+	CFG.Net.BindToIF = "0.0.0.0"
 
 	CFG.TextUI_Enabled = true
 
@@ -329,6 +331,10 @@ func Reset() {
 
 	if CFG.Memory.MaxDataFileMB != 0 && CFG.Memory.MaxDataFileMB < 8 {
 		CFG.Memory.MaxDataFileMB = 8
+	}
+
+	if CFG.Net.BindToIF == "" {
+		CFG.Net.BindToIF = "0.0.0.0"
 	}
 
 	MkTempBlocksDir()

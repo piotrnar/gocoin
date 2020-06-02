@@ -251,13 +251,15 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 
 // TCP server
 func tcp_server() {
-	ad, e := net.ResolveTCPAddr("tcp4", fmt.Sprint("0.0.0.0:", common.DefaultTcpPort()))
-	if e != nil {
-		println("ResolveTCPAddr", e.Error())
-		return
+	var ad net.TCPAddr
+	ad.IP = net.ParseIP(common.CFG.Net.BindToIF)
+	if ad.IP == nil {
+		println("Check config value of Net.BindToIF - binding to any...")
+		ad.IP = net.IPv4(0, 0, 0, 0)
 	}
+	ad.Port = int(common.DefaultTcpPort())
 
-	lis, e := net.ListenTCP("tcp4", ad)
+	lis, e := net.ListenTCP("tcp4", &ad)
 	if e != nil {
 		println("ListenTCP", e.Error())
 		return
