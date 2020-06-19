@@ -6,7 +6,7 @@ import (
 )
 
 /*
-Each unspent key is 8 bytes long - thats firt 8 bytes of TXID
+Each unspent key is 8 bytes long - these are the first 8 bytes of TXID
 Eech value is variable length:
   [0:24] - remainig 24 bytes of TxID
   var_int: BlochHeight
