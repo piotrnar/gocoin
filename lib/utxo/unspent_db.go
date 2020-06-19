@@ -8,6 +8,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/script"
+	"io"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -155,13 +156,13 @@ redo:
 			goto fatal_error
 		}
 
-		er = btc.ReadAll(rd, k[:])
+		_, er = io.ReadFull(rd, k[:])
 		if er != nil {
 			goto fatal_error
 		}
 
 		b := Memory_Malloc(int(le) - UtxoIdxLen)
-		er = btc.ReadAll(rd, b)
+		_, er = io.ReadFull(rd, b)
 		if er != nil {
 			goto fatal_error
 		}
