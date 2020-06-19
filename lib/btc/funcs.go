@@ -164,22 +164,11 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 	return
 }
 
-func ReadAll(rd io.Reader, b []byte) (er error) {
-	var n int
-	for i := 0; i < len(b); i += n {
-		n, er = rd.Read(b[i:])
-		if er != nil {
-			return
-		}
-	}
-	return
-}
-
 // ReadVLen reads var_len from the given reader.
 func ReadVLen(b io.Reader) (res uint64, e error) {
 	var buf [8]byte
 
-	if e = ReadAll(b, buf[:1]); e != nil {
+	if _, e = io.ReadFull(b, buf[:1]); e != nil {
 		//println("ReadVLen1 error:", e.Error())
 		return
 	}
@@ -191,7 +180,7 @@ func ReadVLen(b io.Reader) (res uint64, e error) {
 
 	c := 2 << (2 - (0xff - buf[0]))
 
-	if e = ReadAll(b, buf[:c]); e != nil {
+	if _, e = io.ReadFull(b, buf[:c]); e != nil {
 		println("ReadVLen1 error:", e.Error())
 		return
 	}
