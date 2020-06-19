@@ -261,23 +261,3 @@ func (r *UtxoRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	return
 }
 
-func (out *UtxoTxOut) IsP2KH() bool {
-	return len(out.PKScr) == 25 && out.PKScr[0] == 0x76 && out.PKScr[1] == 0xa9 &&
-		out.PKScr[2] == 0x14 && out.PKScr[23] == 0x88 && out.PKScr[24] == 0xac
-}
-
-func (r *UtxoTxOut) IsP2SH() bool {
-	return len(r.PKScr) == 23 && r.PKScr[0] == 0xa9 && r.PKScr[1] == 0x14 && r.PKScr[22] == 0x87
-}
-
-func (r *UtxoTxOut) IsP2WPKH() bool {
-	return len(r.PKScr) == 22 && r.PKScr[0] == 0 && r.PKScr[1] == 20
-}
-
-func (r *UtxoTxOut) IsP2WSH() bool {
-	return len(r.PKScr) == 34 && r.PKScr[0] == 0 && r.PKScr[1] == 32
-}
-
-func (out *UtxoTxOut) IsUnspendable() bool {
-	return len(out.PKScr) > 0 && out.PKScr[0] == 0x6a
-}

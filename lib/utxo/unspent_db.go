@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/script"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -527,7 +528,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	var anyout bool
 	for i, rm := range outs {
-		if rm || UTXO_PURGE_UNSPENDABLE && rec.Outs[i] != nil && rec.Outs[i].IsUnspendable() {
+		if rm || UTXO_PURGE_UNSPENDABLE && rec.Outs[i] != nil && script.IsUnspendable(rec.Outs[i].PKScr) {
 			rec.Outs[i] = nil
 		} else if !anyout && rec.Outs[i] != nil {
 			anyout = true
@@ -555,7 +556,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		if UTXO_PURGE_UNSPENDABLE {
 			for idx, r := range rec.Outs {
 				if r != nil {
-					if r.IsUnspendable() {
+					if script.IsUnspendable(r.PKScr) {
 						rec.Outs[idx] = nil
 					} else {
 						add_this_tx = true
@@ -612,7 +613,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 				if rec.Coinbase {
 					sumcb += r.Value
 				}
-				if r.IsUnspendable() {
+				if script.IsUnspendable(r.PKScr) {
 					unspendable++
 					unspendable_bytes += uint64(8 + len(r.PKScr))
 				} else {
@@ -665,7 +666,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 		var record_removed uint64
 		for idx, r := range rec.Outs {
 			if r != nil {
-				if r.IsUnspendable() {
+				if script.IsUnspendable(r.PKScr) {
 					if all {
 						rec.Outs[idx] = nil
 						record_removed++
