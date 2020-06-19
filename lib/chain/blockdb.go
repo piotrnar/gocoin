@@ -516,7 +516,7 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 		return
 	}
 
-	e = btc.ReadAll(f, bl)
+	_, e = io.ReadFull(f, bl)
 	f.Close()
 	db.disk_access.Unlock()
 
@@ -612,7 +612,7 @@ func (db *BlockDB) LoadBlockIndex(ch *Chain, walk func(ch *Chain, hash, hdr []by
 	db.maxidxfilepos = 0
 	rd := bufio.NewReader(db.blockindx)
 	for !AbortNow {
-		if e := btc.ReadAll(rd, b[:]); e != nil {
+		if _, e := io.ReadFull(rd, b[:]); e != nil {
 			break
 		}
 
