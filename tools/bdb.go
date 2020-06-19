@@ -10,6 +10,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/snappy"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -703,7 +704,7 @@ func main() {
 			} else {
 				blen := int(sl.DLen())
 				f.Seek(int64(sl.DPos()), os.SEEK_SET)
-				er = btc.ReadAll(f, buf[:blen])
+				_, er = io.ReadFull(f, buf[:blen])
 				if er != nil {
 					println(er.Error())
 					return
