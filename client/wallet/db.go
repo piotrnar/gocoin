@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
@@ -50,28 +51,28 @@ func NewUTXO(tx *utxo.UtxoRec) {
 		if out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if out.IsP2KH() {
+		if script.IsP2KH(out.PKScr) {
 			copy(uidx[:], out.PKScr[3:23])
 			rec = AllBalancesP2KH[uidx]
 			if rec == nil {
 				rec = &OneAllAddrBal{}
 				AllBalancesP2KH[uidx] = rec
 			}
-		} else if out.IsP2SH() {
+		} else if script.IsP2SH(out.PKScr) {
 			copy(uidx[:], out.PKScr[2:22])
 			rec = AllBalancesP2SH[uidx]
 			if rec == nil {
 				rec = &OneAllAddrBal{}
 				AllBalancesP2SH[uidx] = rec
 			}
-		} else if out.IsP2WPKH() {
+		} else if script.IsP2WPKH(out.PKScr) {
 			copy(uidx[:], out.PKScr[2:22])
 			rec = AllBalancesP2WKH[uidx]
 			if rec == nil {
 				rec = &OneAllAddrBal{}
 				AllBalancesP2WKH[uidx] = rec
 			}
-		} else if out.IsP2WSH() {
+		} else if script.IsP2WSH(out.PKScr) {
 			var uidx [32]byte
 			copy(uidx[:], out.PKScr[2:34])
 			rec = AllBalancesP2WSH[uidx]
@@ -125,19 +126,19 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 		if out.Value < common.AllBalMinVal() {
 			continue
 		}
-		if out.IsP2KH() {
+		if script.IsP2KH(out.PKScr) {
 			typ = 0
 			copy(uidx[:], out.PKScr[3:23])
 			rec = AllBalancesP2KH[uidx]
-		} else if out.IsP2SH() {
+		} else if script.IsP2SH(out.PKScr) {
 			typ = 1
 			copy(uidx[:], out.PKScr[2:22])
 			rec = AllBalancesP2SH[uidx]
-		} else if out.IsP2WPKH() {
+		} else if script.IsP2WPKH(out.PKScr) {
 			typ = 2
 			copy(uidx[:], out.PKScr[2:22])
 			rec = AllBalancesP2WKH[uidx]
-		} else if out.IsP2WSH() {
+		} else if script.IsP2WSH(out.PKScr) {
 			typ = 3
 			copy(uidx32[:], out.PKScr[2:34])
 			rec = AllBalancesP2WSH[uidx32]
