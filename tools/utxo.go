@@ -1,15 +1,16 @@
 package main
 
 import (
-	"os"
-	"fmt"
 	"encoding/binary"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"io"
+	"os"
 )
 
 func main() {
 	var buf [48]byte
-	if len(os.Args)!=2 {
+	if len(os.Args) != 2 {
 		fmt.Println("Specify the filename containing UTXO database")
 		return
 	}
@@ -18,7 +19,7 @@ func main() {
 		fmt.Println(er.Error())
 		return
 	}
-	er = btc.ReadAll(f, buf[:])
+	_, er = io.ReadFull(f, buf[:])
 	f.Close()
 	if er != nil {
 		fmt.Println(er.Error())
