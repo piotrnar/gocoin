@@ -208,12 +208,12 @@ func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 	le += vlen2size(uint64(rec.InBlock)) // block length
 	le += vlen2size(outcnt)              // out count
 
-	for i := range rec.Outs {
-		if rec.Outs[i] != nil {
+	for i, r := range rec.Outs {
+		if r != nil {
 			le += vlen2size(uint64(i))
-			le += vlen2size(rec.Outs[i].Value)
-			le += vlen2size(uint64(len(rec.Outs[i].PKScr)))
-			le += len(rec.Outs[i].PKScr)
+			le += vlen2size(r.Value)
+			le += vlen2size(uint64(len(r.PKScr)))
+			le += len(r.PKScr)
 			any_out = true
 		}
 	}
@@ -236,13 +236,13 @@ func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 
 	of += btc.PutULe(buf[of:], uint64(rec.InBlock))
 	of += btc.PutULe(buf[of:], outcnt)
-	for i := range rec.Outs {
-		if rec.Outs[i] != nil {
+	for i, r := range rec.Outs {
+		if r != nil {
 			of += btc.PutULe(buf[of:], uint64(i))
-			of += btc.PutULe(buf[of:], rec.Outs[i].Value)
-			of += btc.PutULe(buf[of:], uint64(len(rec.Outs[i].PKScr)))
-			copy(buf[of:], rec.Outs[i].PKScr)
-			of += len(rec.Outs[i].PKScr)
+			of += btc.PutULe(buf[of:], r.Value)
+			of += btc.PutULe(buf[of:], uint64(len(r.PKScr)))
+			copy(buf[of:], r.PKScr)
+			of += len(r.PKScr)
 		}
 	}
 	return
@@ -260,4 +260,3 @@ func (r *UtxoRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr.destString = ad.String()
 	return
 }
-
