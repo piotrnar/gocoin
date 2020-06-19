@@ -97,7 +97,7 @@ func MempoolLoad2() bool {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	if er = btc.ReadAll(rd, tmp[:32]); er != nil {
+	if _, er = io.ReadFull(rd, tmp[:32]); er != nil {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
@@ -119,7 +119,7 @@ func MempoolLoad2() bool {
 		t2s = new(OneTxToSend)
 		raw := make([]byte, int(le))
 
-		er = btc.ReadAll(rd, raw)
+		_, er = io.ReadFull(rd, raw)
 		if er != nil {
 			goto fatal_error
 		}
@@ -174,7 +174,7 @@ func MempoolLoad2() bool {
 			goto fatal_error
 		}
 
-		if er = btc.ReadAll(rd, tmp[:4]); er != nil {
+		if _, er = io.ReadFull(rd, tmp[:4]); er != nil {
 			goto fatal_error
 		}
 		t2s.Local = tmp[0] != 0
@@ -208,7 +208,7 @@ func MempoolLoad2() bool {
 		SpentOutputs[le] = bi
 	}
 
-	if er = btc.ReadAll(rd, tmp[:len(END_MARKER)]); er != nil {
+	if _, er = io.ReadFull(rd, tmp[:len(END_MARKER)]); er != nil {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
@@ -267,7 +267,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	if er = btc.ReadAll(rd, tmp[:32]); er != nil {
+	if _, er = io.ReadFull(rd, tmp[:32]); er != nil {
 		goto fatal_error
 	}
 
@@ -296,7 +296,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		ntx = new(TxRcvd)
 		raw := make([]byte, int(le))
 
-		er = btc.ReadAll(rd, raw)
+		_, er = io.ReadFull(rd, raw)
 		if er != nil {
 			goto fatal_error
 		}
@@ -329,7 +329,7 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 		binary.Read(rd, binary.LittleEndian, &t2s.Fee)
 		binary.Read(rd, binary.LittleEndian, &t2s.SigopsCost)
 		binary.Read(rd, binary.LittleEndian, &t2s.VerifyTime)
-		if er = btc.ReadAll(rd, tmp[:4]); er != nil {
+		if _, er = io.ReadFull(rd, tmp[:4]); er != nil {
 			goto fatal_error
 		}
 
