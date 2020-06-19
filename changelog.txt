@@ -1,4 +1,6 @@
 1.9.8
+* lib/btc: added CompressAmount() and DecompressAmount() as used by Core's new "dumptxoutset" API
+* lib/script: added CompressScript() and DecompressScript() as used by Core's new "dumptxoutset" API
 * Client: new config value "Net.BindToIF"
 * Client / lib: Fixed a bug that was stopping multi-CPU platforms from paralell processing of the blocks
 * lib/secp256k1: Improved perfomance (for 64-bits platforms) with the new 5x52 mode
