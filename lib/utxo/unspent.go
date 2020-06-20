@@ -6,6 +6,13 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+const (
+	UtxoIdxLen = 8  // Increase this value (maximum 32) for better security at a cost of memory usage
+	UTXO_RECORDS_PREALLOC = 40e6
+)
+
+type UtxoKeyType [UtxoIdxLen]byte
+
 type AllUnspentTx []*OneUnspentTx
 
 // OneUnspentTx is returned by GetUnspentFromPkScr.

@@ -1,4 +1,5 @@
 1.9.8
+* lib/utxo: added functions for dealing with compressed UTXO records, in new file unspent_recc.go
 * lib: removed btc.ReadAll() and using io.ReadFull() instead
 * lib/btc: added CompressAmount() and DecompressAmount() as used by Core's new "dumptxoutset" API
 * lib/script: added CompressScript() and DecompressScript() as used by Core's new "dumptxoutset" API
