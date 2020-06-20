@@ -43,10 +43,56 @@ func BenchmarkNewUtxoRecStatic(b *testing.B) {
 	dat := raw[UtxoIdxLen:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if NewUtxoRec(key, dat) == nil {
+		if NewUtxoRecStatic(key, dat) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
 }
 
+
+func BenchmarkSerialize(b *testing.B) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	var key UtxoKeyType
+	var buf [0x100000]byte
+	copy(key[:], raw[:])
+	dat := raw[UtxoIdxLen:]
+	rec := NewUtxoRecStatic(key, dat)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if rec.Serialize(0, buf[:]) == nil {
+			b.Fatal("Nil pointer returned")
+		}
+	}
+}
+
+
+func BenchmarkSerializeFull(b *testing.B) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	var key UtxoKeyType
+	var buf [0x100000]byte
+	copy(key[:], raw[:])
+	dat := raw[UtxoIdxLen:]
+	rec := NewUtxoRecStatic(key, dat)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if rec.Serialize(SERIALIZE_FULL, buf[:]) == nil {
+			b.Fatal("Nil pointer returned")
+		}
+	}
+}
+
+
+func BenchmarkSerializeWithAlloc(b *testing.B) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	var key UtxoKeyType
+	copy(key[:], raw[:])
+	dat := raw[UtxoIdxLen:]
+	rec := NewUtxoRecStatic(key, dat)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if rec.Serialize(0, nil) == nil {
+			b.Fatal("Nil pointer returned")
+		}
+	}
+}
 

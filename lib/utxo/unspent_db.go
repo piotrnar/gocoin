@@ -353,7 +353,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 			bu.Write(blhash)
 			if changes.UndoData != nil {
 				for _, xx := range changes.UndoData {
-					bin := xx.Serialize(true, tmp[:])
+					bin := xx.Serialize(SERIALIZE_FULL, tmp[:])
 					btc.WriteVlen(bu, uint64(len(bin)))
 					bu.Write(bin)
 				}
@@ -434,7 +434,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 			}
 		}
 		db.RWMutex.Lock()
-		db.HashMap[ind] = rec.Serialize(false, nil)
+		db.HashMap[ind] = rec.Serialize(0, nil)
 		db.RWMutex.Unlock()
 	}
 
@@ -537,7 +537,7 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 	}
 	db.RWMutex.Lock()
 	if anyout {
-		db.HashMap[ind] = rec.Serialize(false, nil)
+		db.HashMap[ind] = rec.Serialize(0, nil)
 	} else {
 		delete(db.HashMap, ind)
 	}
@@ -569,7 +569,7 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		}
 		if add_this_tx {
 			db.RWMutex.Lock()
-			db.HashMap[ind] = rec.Serialize(false, nil)
+			db.HashMap[ind] = rec.Serialize(0, nil)
 			db.RWMutex.Unlock()
 		}
 	}
@@ -682,7 +682,7 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			delete(db.HashMap, k)
 			unspendable_txs++
 		} else if record_removed > 0 {
-			db.HashMap[k] = rec.Serialize(false, nil)
+			db.HashMap[k] = rec.Serialize(0, nil)
 			Memory_Free(v)
 			unspendable_recs += record_removed
 		}

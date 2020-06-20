@@ -10,7 +10,7 @@ Each unspent key is 8 bytes long - these are the first 8 bytes of TXID
 Eech value is variable length:
   [0:24] - remainig 24 bytes of TxID
   var_int: BlochHeight
-  var_int: 2*out_cnt + is_coibase
+  var_int: 2*out_cnt + is_coinbase
   And now set of records:
    var_int: Output index
    var_int: Value
@@ -21,6 +21,8 @@ Eech value is variable length:
 
 const (
 	UtxoIdxLen = 8
+
+	SERIALIZE_FULL = 1 << 0
 )
 
 type UtxoKeyType [UtxoIdxLen]byte
@@ -176,21 +178,11 @@ func OneUtxoRec(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
 	return nil
 }
 
-func vlen2size(uvl uint64) int {
-	if uvl < 0xfd {
-		return 1
-	} else if uvl < 0x10000 {
-		return 3
-	} else if uvl < 0x100000000 {
-		return 5
-	}
-	return 9
-}
-
-// Serialize returns UTXO-heap pointer to the freshly allocated serialized record.
-// full - to have entire 256 bits of TxID at the beginning of the record.
+// Serialize() returns UTXO-heap pointer to the freshly allocated serialized record.
+// Flags:
+//  SERIALIZE_FULL - to have entire 256 bits of TxID at the beginning of the record.
 // use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc().
-func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
+func (rec *UtxoRec) Serialize(flags uint32, use_buf []byte) (buf []byte) {
 	var le, of int
 	var any_out bool
 
@@ -199,20 +191,20 @@ func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 		outcnt |= 1
 	}
 
-	if full {
+	if (flags & SERIALIZE_FULL) != 0 {
 		le = 32
 	} else {
 		le = 32 - UtxoIdxLen
 	}
 
-	le += vlen2size(uint64(rec.InBlock)) // block length
-	le += vlen2size(outcnt)              // out count
+	le += btc.VLenSize(uint64(rec.InBlock)) // block length
+	le += btc.VLenSize(outcnt)              // out count
 
 	for i, r := range rec.Outs {
-		if r != nil {
-			le += vlen2size(uint64(i))
-			le += vlen2size(r.Value)
-			le += vlen2size(uint64(len(r.PKScr)))
+		if rec.Outs[i] != nil {
+			le += btc.VLenSize(uint64(i))
+			le += btc.VLenSize(r.Value)
+			le += btc.VLenSize(uint64(len(r.PKScr)))
 			le += len(r.PKScr)
 			any_out = true
 		}
@@ -226,7 +218,7 @@ func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 	} else {
 		buf = use_buf[:le]
 	}
-	if full {
+	if (flags & SERIALIZE_FULL) != 0 {
 		copy(buf[:32], rec.TxID[:])
 		of = 32
 	} else {
@@ -237,7 +229,7 @@ func (rec *UtxoRec) Serialize(full bool, use_buf []byte) (buf []byte) {
 	of += btc.PutULe(buf[of:], uint64(rec.InBlock))
 	of += btc.PutULe(buf[of:], outcnt)
 	for i, r := range rec.Outs {
-		if r != nil {
+		if rec.Outs[i] != nil {
 			of += btc.PutULe(buf[of:], uint64(i))
 			of += btc.PutULe(buf[of:], r.Value)
 			of += btc.PutULe(buf[of:], uint64(len(r.PKScr)))
