@@ -1,8 +1,8 @@
 package utxo
 
 import (
-	//"encoding/binary"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
 )
 
 /*
@@ -23,6 +23,7 @@ const (
 	UtxoIdxLen = 8
 
 	SERIALIZE_FULL = 1 << 0
+	SERIALIZE_COMPRESS = 1 << 1
 )
 
 type UtxoKeyType [UtxoIdxLen]byte
@@ -49,6 +50,11 @@ var (
 	sta_rec  UtxoRec
 	rec_outs = make([]*UtxoTxOut, 30001)
 	rec_pool = make([]UtxoTxOut, 30001)
+
+	// Used by Serialize(SERIALIZE_COMPRESS, ..)
+	//comp_pool_mutex sync.Mutex <- consider using this mutex for multi-thread serializations
+	comp_val []uint64
+	comp_scr [][]byte
 )
 
 func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
@@ -181,6 +187,7 @@ func OneUtxoRec(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
 // Serialize() returns UTXO-heap pointer to the freshly allocated serialized record.
 // Flags:
 //  SERIALIZE_FULL - to have entire 256 bits of TxID at the beginning of the record.
+//  SERIALIZE_COMPRESS - produce compressed amount and script
 // use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc().
 func (rec *UtxoRec) Serialize(flags uint32, use_buf []byte) (buf []byte) {
 	var le, of int
@@ -189,6 +196,24 @@ func (rec *UtxoRec) Serialize(flags uint32, use_buf []byte) (buf []byte) {
 	outcnt := uint64(len(rec.Outs) << 1)
 	if rec.Coinbase {
 		outcnt |= 1
+	}
+
+	if (flags & SERIALIZE_COMPRESS) != 0 {
+		/* <- consider anabling this for multi-thread serializations
+		comp_pool_mutex.Lock()
+		defer comp_pool_mutex.Unlock()
+		*/
+
+		// Only allocate when used for a first time, so no mem is wasted when not using compression
+		if int(outcnt) > len(comp_val)  {
+			if outcnt > 30001 {
+				comp_val = make([]uint64, outcnt)
+				comp_scr = make([][]byte, outcnt)
+			} else {
+				comp_val = make([]uint64, 30001)
+				comp_scr = make([][]byte, 30001)
+			}
+		}
 	}
 
 	if (flags & SERIALIZE_FULL) != 0 {
@@ -203,9 +228,21 @@ func (rec *UtxoRec) Serialize(flags uint32, use_buf []byte) (buf []byte) {
 	for i, r := range rec.Outs {
 		if rec.Outs[i] != nil {
 			le += btc.VLenSize(uint64(i))
-			le += btc.VLenSize(r.Value)
-			le += btc.VLenSize(uint64(len(r.PKScr)))
-			le += len(r.PKScr)
+			if (flags & SERIALIZE_COMPRESS) != 0 {
+				comp_val[i] = btc.CompressAmount(r.Value)
+				comp_scr[i] = script.CompressScript(r.PKScr)
+				le += btc.VLenSize(comp_val[i])
+				if comp_scr[i] != nil {
+					le += len(comp_scr[i])
+				} else {
+					le += btc.VLenSize(uint64(6 + len(r.PKScr)))
+					le += len(r.PKScr)
+				}
+			} else {
+				le += btc.VLenSize(r.Value)
+				le += btc.VLenSize(uint64(len(r.PKScr)))
+				le += len(r.PKScr)
+			}
 			any_out = true
 		}
 	}
@@ -231,10 +268,22 @@ func (rec *UtxoRec) Serialize(flags uint32, use_buf []byte) (buf []byte) {
 	for i, r := range rec.Outs {
 		if rec.Outs[i] != nil {
 			of += btc.PutULe(buf[of:], uint64(i))
-			of += btc.PutULe(buf[of:], r.Value)
-			of += btc.PutULe(buf[of:], uint64(len(r.PKScr)))
-			copy(buf[of:], r.PKScr)
-			of += len(r.PKScr)
+			if (flags & SERIALIZE_COMPRESS) != 0 {
+				of += btc.PutULe(buf[of:], comp_val[i])
+				if comp_scr[i] != nil {
+					copy(buf[of:], comp_scr[i])
+					of += len(comp_scr[i])
+				} else {
+					of += btc.PutULe(buf[of:], uint64(6 + len(r.PKScr)))
+					copy(buf[of:], r.PKScr)
+					of += len(r.PKScr)
+				}
+			} else {
+				of += btc.PutULe(buf[of:], r.Value)
+				of += btc.PutULe(buf[of:], uint64(len(r.PKScr)))
+				copy(buf[of:], r.PKScr)
+				of += len(r.PKScr)
+			}
 		}
 	}
 	return

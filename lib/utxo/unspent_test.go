@@ -1,7 +1,9 @@
 package utxo
 
 import (
+	"bytes"
 	"testing"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"encoding/hex"
 )
 
@@ -10,6 +12,48 @@ const (
 	//UtxoRecord = "875207AE844E25A60BB57C7E68FDEA8C3BD04FBF678866EF3E7E9FDD408B9E98FEF07A06000401FD60EA17A914379238E99325F2BD2D1F773B8D95CFB9EA92C31887"
 )
 
+func TestFullUtxoRec(t *testing.T) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	rec := FullUtxoRec(raw)
+	if rec == nil {
+		t.Error("nil returned")
+	}
+	refid := btc.NewUint256FromString("68e34a6dd92377762938d7344ca1ba96943c39a897494c635f6ed1f97a876bb2")
+	txid := btc.NewUint256(rec.TxID[:])
+	if !refid.Equal(txid) {
+		t.Error("TxID mismatch")
+	}
+	if rec.Coinbase {
+		t.Error("Coibase mismatch")
+	}
+	if rec.InBlock != 502809 {
+		t.Error("InBlock mismatch")
+	}
+	if len(rec.Outs) != 3 {
+		t.Error("Outs count mismatch")
+	}
+	if rec.Outs[0] != nil {
+		t.Error("Outs[0] not nil")
+	}
+	if rec.Outs[1] == nil {
+		t.Error("Outs[1] is nil")
+	}
+	if rec.Outs[1].Value != 0 {
+		t.Error("Outs[1] bad value")
+	}
+	if len(rec.Outs[1].PKScr) != 22 {
+		t.Error("Outs[1] bad script")
+	}
+	if rec.Outs[2].Value != 546 {
+		t.Error("Outs[2] bad value")
+	}
+	if len(rec.Outs[2].PKScr) != 25 {
+		t.Error("Outs[2] bad script")
+	}
+	if !bytes.Equal(raw, rec.Serialize(SERIALIZE_FULL, nil)) {
+		t.Error("Serialize error")
+	}
+}
 
 func BenchmarkFullUtxoRec(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
@@ -96,3 +140,35 @@ func BenchmarkSerializeWithAlloc(b *testing.B) {
 	}
 }
 
+
+func BenchmarkSerializeCompress(b *testing.B) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	var key UtxoKeyType
+	var buf [0x100000]byte
+	copy(key[:], raw[:])
+	dat := raw[UtxoIdxLen:]
+	rec := NewUtxoRecStatic(key, dat)
+	rec.Serialize(SERIALIZE_COMPRESS, buf[:]) // serialize once to allocate the pools
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if rec.Serialize(SERIALIZE_COMPRESS, buf[:]) == nil {
+			b.Fatal("Nil pointer returned")
+		}
+	}
+}
+
+
+func BenchmarkSerializeCompressWithAlloc(b *testing.B) {
+	raw, _ := hex.DecodeString(UtxoRecord)
+	var key UtxoKeyType
+	copy(key[:], raw[:])
+	dat := raw[UtxoIdxLen:]
+	rec := NewUtxoRecStatic(key, dat)
+	rec.Serialize(SERIALIZE_COMPRESS, nil) // serialize once to allocate the pools
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if rec.Serialize(SERIALIZE_COMPRESS, nil) == nil {
+			b.Fatal("Nil pointer returned")
+		}
+	}
+}

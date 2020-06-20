@@ -597,14 +597,21 @@ func (db *UnspentDB) abortWriting() {
 
 func (db *UnspentDB) UTXOStats() (s string) {
 	var outcnt, sum, sumcb uint64
-	var totdatasize, unspendable, unspendable_recs, unspendable_bytes uint64
+	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
+	var compressedsize uint64
+	var buf [0x100000]byte
+
+	filesize = 8 + 32 + 8  // UTXO.db: block_no + block_hash + rec_cnt
+	compressedsize = filesize
 
 	db.RWMutex.RLock()
 
 	lele := len(db.HashMap)
 
 	for k, v := range db.HashMap {
-		totdatasize += uint64(len(v) + 8)
+		reclen := uint64(len(v) + UtxoIdxLen)
+		filesize += uint64(btc.VLenSize(reclen))
+		filesize += reclen
 		rec := NewUtxoRecStatic(k, v)
 		var spendable_found bool
 		for _, r := range rec.Outs {
@@ -625,18 +632,23 @@ func (db *UnspentDB) UTXOStats() (s string) {
 		if !spendable_found {
 			unspendable_recs++
 		}
+
+		compr := rec.Serialize(SERIALIZE_COMPRESS, buf[:])
+		reclen = uint64(len(compr) + UtxoIdxLen)
+		compressedsize += uint64(btc.VLenSize(reclen))
+		compressedsize += reclen
 	}
 
 	db.RWMutex.RUnlock()
 
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
-	s += fmt.Sprintf(" TotalData:%.1fMB  MaxTxOutCnt:%d  DirtyDB:%t  Writing:%t  Abort:%t\n",
-		float64(totdatasize)/1e6, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0)
+	s += fmt.Sprintf(" FileSize: %d  MaxTxOutCnt: %d  DirtyDB: %t  Writing: %t  Abort: %t\n",
+		filesize, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(), len(db.abortwritingnow) > 0)
 	s += fmt.Sprintf(" Last Block : %s @ %d\n", btc.NewUint256(db.LastBlockHash).String(),
 		db.LastBlockHeight)
-	s += fmt.Sprintf(" Unspendable outputs: %d (%dKB)  txs:%d\n",
-		unspendable, unspendable_bytes>>10, unspendable_recs)
+	s += fmt.Sprintf(" Unspendable Outputs: %d (%dKB)  txs:%d   Compressed Size: %d\n",
+		unspendable, unspendable_bytes>>10, unspendable_recs, compressedsize)
 
 	return
 }
