@@ -1,4 +1,6 @@
 1.9.8
+* New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
+* Client: works with either compressed or uncompressed UTXO records, depending on the format of UTXO.db file
 * lib/utxo: added functions for dealing with compressed UTXO records, in new file unspent_recc.go
 * lib: removed btc.ReadAll() and using io.ReadFull() instead
 * lib/btc: added CompressAmount() and DecompressAmount() as used by Core's new "dumptxoutset" API

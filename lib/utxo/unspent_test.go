@@ -50,7 +50,7 @@ func TestFullUtxoRec(t *testing.T) {
 	if len(rec.Outs[2].PKScr) != 25 {
 		t.Error("Outs[2] bad script")
 	}
-	if !bytes.Equal(raw, rec.Serialize(true, nil)) {
+	if !bytes.Equal(raw, Serialize(rec, true, nil)) {
 		t.Error("Serialize error")
 	}
 }
@@ -103,7 +103,7 @@ func BenchmarkSerialize(b *testing.B) {
 	rec := NewUtxoRecStatic(key, dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if rec.Serialize(false, buf[:]) == nil {
+		if Serialize(rec, false, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -119,7 +119,7 @@ func BenchmarkSerializeFull(b *testing.B) {
 	rec := NewUtxoRecStatic(key, dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if rec.Serialize(false, buf[:]) == nil {
+		if Serialize(rec, false, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -134,7 +134,7 @@ func BenchmarkSerializeWithAlloc(b *testing.B) {
 	rec := NewUtxoRecStatic(key, dat)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if rec.Serialize(false, nil) == nil {
+		if Serialize(rec, false, nil) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -148,10 +148,10 @@ func BenchmarkSerializeCompress(b *testing.B) {
 	copy(key[:], raw[:])
 	dat := raw[UtxoIdxLen:]
 	rec := NewUtxoRecStatic(key, dat)
-	rec.SerializeC(false, buf[:]) // serialize once to allocate the pools
+	SerializeC(rec, false, buf[:]) // serialize once to allocate the pools
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if rec.SerializeC(false, buf[:]) == nil {
+		if SerializeC(rec, false, buf[:]) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}
@@ -164,10 +164,10 @@ func BenchmarkSerializeCompressWithAlloc(b *testing.B) {
 	copy(key[:], raw[:])
 	dat := raw[UtxoIdxLen:]
 	rec := NewUtxoRecStatic(key, dat)
-	rec.SerializeC(false, nil) // serialize once to allocate the pools
+	SerializeC(rec, false, nil) // serialize once to allocate the pools
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if rec.SerializeC(false, nil) == nil {
+		if SerializeC(rec, false, nil) == nil {
 			b.Fatal("Nil pointer returned")
 		}
 	}

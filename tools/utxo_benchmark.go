@@ -36,10 +36,6 @@ func main() {
 	tim := time.Now().Sub(sta)
 	println("\rGoing through the map done in", tim.String(), tmp)
 
-	for {
-		time.Sleep(1e9)
-	}
-
 	print("Going through the map for the slice...")
 	tmp = 0
 	sta = time.Now()
