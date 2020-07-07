@@ -81,5 +81,16 @@ On Debian based Linux system, simply execute the following commands:<br>
 
 </tr>
 </table>
+<br>
+
+<h2>Compress UTXO records</h2>
+To save some system memory as well as a disk space, although at the cost of a performance, you can compress UTXO database.<br>
+<br>
+In order to do this, execute the tool <code>utxo_compress</code>.<br>
+The tool needs to be executed from inside the data folder - where the <code>UTXO.db</code> file is.<br>
+The node must not be running while executing the tool.<br>
+<br>
+You can reverse the operation of compressing the database, be running <code>utxo_decompress</code>.
+
 </body>
 </html>
