@@ -1,3 +1,6 @@
+1.9.9:
+ * Do not drop Authorized peers
+
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
 * Client: works with either compressed or uncompressed UTXO records, depending on the format of UTXO.db file
