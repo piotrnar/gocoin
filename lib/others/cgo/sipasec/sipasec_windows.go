@@ -14,16 +14,16 @@ Please note that you will need the 64-bit compiler.
 After having MSYS2 and Mingw64 installed, you have to install dependency packages.
 Just execute the following command from within the "MSYS2 MSYS" shell:
 
- > pacman -S make autoconf automake libtoolm lzip
+ > pacman -S make autoconf automake libtool lzip
 
 
 3. gmplib + secp256k1
 Now use "MSYS2 MinGW 64-bit" shell and execute:
 
  > cd ~
- > wget https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
- > tar vxf gmp-6.1.2.tar.lz
- > cd gmp-6.1.2
+ > wget https://gmplib.org/download/gmp/gmp-6.2.0.tar.lz
+ > tar vxf gmp-6.2.0.tar.lz
+ > cd gmp-6.2.0
  > ./configure
  > make
  > make install
