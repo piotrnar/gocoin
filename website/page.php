@@ -1,6 +1,6 @@
 <?php
 
-$page = preg_replace("/[^a-zA-Z_]/", "", $_GET['id']);
+$page = isset($_GET['id']) ? preg_replace("/[^a-zA-Z_]/", "", $_GET['id']) : '';
 //echo $page;
 if ($page=='') {
 	$page = 'index';
