@@ -152,7 +152,7 @@ func InitConfig() {
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
-	CFG.TXPool.MaxSizeMB = 100
+	CFG.TXPool.MaxSizeMB = 300
 	CFG.TXPool.MaxRejectMB = 25
 	CFG.TXPool.MaxRejectCnt = 5000
 	CFG.TXPool.SaveOnDisk = true

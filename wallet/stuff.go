@@ -181,9 +181,9 @@ func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
 			println("Transaction is corrupt:", txid.String())
 			cleanExit(1)
 		}
-		tx.SetHash(nil)
+		tx.SetHash(buf)
 		if txid.Hash != tx.Hash.Hash {
-			println("Transaction ID mismitch:", txid.String(), tx.Hash.String())
+			println("Transaction ID mismatch:", txid.String(), tx.Hash.String())
 			cleanExit(1)
 		}
 	} else if error_is_fatal {

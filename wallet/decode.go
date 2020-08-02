@@ -244,7 +244,8 @@ func dump_raw_tx() {
 	fmt.Println("Output volume:", btc.UintToBtc(totout), "BTC")
 	if noins==0 {
 		fmt.Println("Input volume :", btc.UintToBtc(totin), "BTC")
-		fmt.Println("Transact. fee:", btc.UintToBtc(totin-totout), "BTC")
+		fmt.Println("Transact. fee:", btc.UintToBtc(totin-totout), "BTC ->",
+			fmt.Sprintf("%.3f", float64(totin-totout)/float64(tx.VSize())), "SPB")
 	} else {
 		fmt.Println("WARNING: Unable to figure out what the fee is")
 	}

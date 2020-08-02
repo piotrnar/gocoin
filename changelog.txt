@@ -1,5 +1,9 @@
 1.9.9:
- * Do not drop Authorized peers
+ * Client: Do not drop Authorized peers
+ * Client: Default value for config's "TXPool.MaxSizeMB" changed from 100 to 300
+ * Lib: Chain.GetRawTx() does not return segwit-stripped data anymore
+ * Wallet: fixed problem with "Transaction ID mismatch" error for segwit-stripped txs (now should work with either)
+ * Wallet: decoding a transaction also displays its fee's SPB (when possible)
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file

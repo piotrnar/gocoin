@@ -103,7 +103,7 @@ func (ch *Chain) GetRawTx(BlockHeight uint32, txid *btc.Uint256) (data []byte, e
 	// Find the transaction we need and store it in the file
 	for i := range bl.Txs {
 		if bl.Txs[i].Hash.Equal(txid) {
-			data = bl.Txs[i].Serialize()
+			data = bl.Txs[i].Raw
 			return
 		}
 	}
