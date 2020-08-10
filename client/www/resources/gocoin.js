@@ -268,6 +268,40 @@ function css(selector, property, value) {
 
 
 var last_height // used for showing block fees
+var fees_plot_data = [ { data : [] } ];
+var previousPoint = null
+
+function show_fees_tooltip(x, y, contents) {
+	$('<div id="fees_tooltip">' + contents + '</div>').css( {
+		'position': 'absolute',
+		'display': 'none',
+		'top': y - 30,
+		'left': x + 5,
+		'text-align' : 'center',
+		'z-index': 9999,
+		'border': '2px solid green',
+		'padding': '5px',
+		'font-size' : '14px',
+		'background-color': '#c0c0c0',
+		'opacity': 1
+	}).appendTo("body").fadeIn(200);
+}
+
+function show_fees_handlehover(event, pos, item) {
+	if (item) {
+		if (previousPoint != item.dataIndex) {
+			var rec = fees_plot_data[0].data[item.dataIndex]
+			previousPoint = item.dataIndex
+			$("#fees_tooltip").remove()
+			var str = '<b>' + parseFloat(rec[1]).toFixed(2) + '</b> SPB at ' +
+				'<b>' + (100.0*rec[0]/1e6).toFixed(0) + '%</b><br>(of max block size)'
+			show_fees_tooltip(item.pageX, item.pageY, str)
+		}
+	} else {
+		$("#fees_tooltip").remove()
+		previousPoint = null
+	}
+}
 
 function show_fees_clicked(height) {
 	var aj = ajax()
@@ -318,11 +352,14 @@ function show_fees_clicked(height) {
 					})
 				}
 
-				var plot_data = [ { data : [], points: { show:false }, lines: {show:true, fill:true}} ];
+				fees_plot_data = [ { data : [] } ];
 
 				var plot_options = {
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
-					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 }
+					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 },
+					grid: { hoverable: true, clickable: false },
+					points: { show:false },
+					lines: {show:true, fill:true}
 				}
 
 				var max_spb, min_spb, spb
@@ -339,7 +376,7 @@ function show_fees_clicked(height) {
 
 					totbytes += (showblfees_stats[i][0] / 4)
 					totfees += showblfees_stats[i][1]
-					plot_data[0].data.push([totbytes, spb])
+					fees_plot_data[0].data.push([totbytes, spb])
 				}
 
 				var avg_fee = totfees / totbytes
@@ -351,9 +388,10 @@ function show_fees_clicked(height) {
 					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
 				}
 
-				$.plot($("#block_fees"), plot_data, plot_options)
-
+				$.plot($("#block_fees"), fees_plot_data, plot_options)
+				$("#block_fees").bind("plothover", show_fees_handlehover)
 			} catch (e) {
+				console.log('error', e)
 				error_info.innerText = aj.responseText
 				stat_error.style.display = 'block'
 				$("#block_fees").empty()

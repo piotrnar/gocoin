@@ -4,6 +4,7 @@
  * Lib: Chain.GetRawTx() does not return segwit-stripped data anymore
  * Wallet: fixed problem with "Transaction ID mismatch" error for segwit-stripped txs (now should work with either)
  * Wallet: decoding a transaction also displays its fee's SPB (when possible)
+ * Client/WebUI: The fees chart for an already mined block shows a tooltip when hovered
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
