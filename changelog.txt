@@ -8,6 +8,7 @@
  * Client: Unbanning an IP also removes it from "network.RecentlyDisconencted"
  * Client: Unbanning all peers empties "network.RecentlyDisconencted"
  * Client/WebUI/Network: New UI button "Unban" to unban one or all the peers
+ * Client/TextUI: New command "peeradd" for manually adding peers to the database
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file

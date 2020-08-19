@@ -433,6 +433,16 @@ func unban_peer(par string) {
 	fmt.Print(usif.UnbanPeer(par))
 }
 
+func add_peer(par string) {
+	ad, er := peersdb.NewAddrFromString(par, false)
+	if er != nil {
+		fmt.Println(par, er.Error())
+		return
+	}
+	ad.Time = uint32(time.Now().Unix())
+	ad.Save()
+}
+
 func show_cached(par string) {
 	var hi, lo uint32
 	for _, v := range network.CachedBlocks {
@@ -542,6 +552,7 @@ func init() {
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
+	newUi("peeradd", false, add_peer, "Add a peer to the database, mark it as alive")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node")
