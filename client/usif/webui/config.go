@@ -111,6 +111,11 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(r.Form["unban"]) > 0 {
+		w.Write([]byte(usif.UnbanPeer(r.Form["unban"][0])))
+		return
+	}
+
 	// All the functions below change modify the config file
 	common.LockCfg()
 	defer common.UnlockCfg()

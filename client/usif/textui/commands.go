@@ -430,44 +430,7 @@ func show_addresses(par string) {
 }
 
 func unban_peer(par string) {
-	if par == "" {
-		fmt.Println("Specify IP of the peer to unban or use 'unban all'")
-		return
-	}
-
-	var ad *peersdb.PeerAddr
-
-	if par != "all" {
-		var er error
-		ad, er = peersdb.NewAddrFromString(par, false)
-		if er != nil {
-			fmt.Println(par, er.Error())
-			return
-		}
-		fmt.Println("Unban", ad.Ip(), "...")
-	} else {
-		fmt.Println("Unban all peers ...")
-	}
-
-	var keys []qdb.KeyType
-	var vals [][]byte
-	peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-		peer := peersdb.NewPeer(v)
-		if peer.Banned != 0 {
-			if ad == nil || peer.Ip() == ad.Ip() {
-				fmt.Println(" -", peer.NetAddr.String())
-				peer.Banned = 0
-				keys = append(keys, k)
-				vals = append(vals, peer.Bytes())
-			}
-		}
-		return 0
-	})
-	for i := range keys {
-		peersdb.PeerDB.Put(keys[i], vals[i])
-	}
-
-	fmt.Println(len(keys), "peer(s) un-baned")
+	fmt.Print(usif.UnbanPeer(par))
 }
 
 func show_cached(par string) {

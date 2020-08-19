@@ -8,6 +8,8 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/script"
 	"math/rand"
@@ -259,6 +261,50 @@ func MemoryPoolFees() (res string) {
 
 		totlen = newlen
 	}
+	return
+}
+
+// UnbanPeer unbans peer of a given IP or "all" banned peers
+func UnbanPeer(par string) (s string) {
+	var ad *peersdb.PeerAddr
+
+	if par != "all" {
+		var er error
+		ad, er = peersdb.NewAddrFromString(par, false)
+		if er != nil {
+			s = fmt.Sprintln(par, er.Error())
+			return
+		}
+		s += fmt.Sprintln("Unban", ad.Ip(), "...")
+		network.HammeringMutex.Lock()
+		delete(network.RecentlyDisconencted, ad.Ip4)
+		network.HammeringMutex.Unlock()
+	} else {
+		s += fmt.Sprintln("Unban all peers ...")
+		network.HammeringMutex.Lock()
+		network.RecentlyDisconencted = make(map[[4]byte]*network.RecentlyDisconenctedType)
+		network.HammeringMutex.Unlock()
+	}
+
+	var keys []qdb.KeyType
+	var vals [][]byte
+	peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+		peer := peersdb.NewPeer(v)
+		if peer.Banned != 0 {
+			if ad == nil || peer.Ip() == ad.Ip() {
+				s += fmt.Sprintln(" -", peer.NetAddr.String())
+				peer.Banned = 0
+				keys = append(keys, k)
+				vals = append(vals, peer.Bytes())
+			}
+		}
+		return 0
+	})
+	for i := range keys {
+		peersdb.PeerDB.Put(keys[i], vals[i])
+	}
+
+	s += fmt.Sprintln(len(keys), "peer(s) un-baned")
 	return
 }
 

@@ -17,6 +17,7 @@ td.agent {
 
 <span style="float:right;display:none" id="connect_buttons">
 <input type="button" id="edit_friends" value="Edit Friends" onclick="edit_friends()">
+<input type="button" id="unban_peer_but" value="Unban" onclick="unban_peer()">
 <input type="button" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
 </span>
 
@@ -168,6 +169,18 @@ function connect_peer() {
 			console.log(aj.responseText)
 		}
 		aj.open("GET",'cfg?conn='+encodeURI(ip)+'&sid='+sid, true);
+		aj.send(null);
+	}
+}
+
+function unban_peer() {
+	var ip = prompt("Enter IP of the peer to unban or 'all'");
+	if (ip!=null) {
+		var aj = ajax()
+		aj.onload=function() {
+			console.log(aj.responseText)
+		}
+		aj.open("GET",'cfg?unban='+encodeURI(ip)+'&sid='+sid, true);
 		aj.send(null);
 	}
 }

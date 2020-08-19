@@ -5,6 +5,9 @@
  * Wallet: fixed problem with "Transaction ID mismatch" error for segwit-stripped txs (now should work with either)
  * Wallet: decoding a transaction also displays its fee's SPB (when possible)
  * Client/WebUI: The fees chart for an already mined block shows a tooltip when hovered
+ * Client: Unbanning an IP also removes it from "network.RecentlyDisconencted"
+ * Client: Unbanning all peers empties "network.RecentlyDisconencted"
+ * Client/WebUI/Network: New UI button "Unban" to unban one or all the peers
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
