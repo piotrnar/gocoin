@@ -2,6 +2,7 @@
 ["AntPool", "AntPool", ""],
 ["BTC.TOP", "BTC.TOP/", ""],
 ["BTC.COM", "/BTC.COM/", ""],
+["BTC.COM", "/BTC.com/", ""],
 ["BTC.COM", "", "3EhLZarJUNSfV6TWMZY1Nh5mi3FMsdHa5U"],
 ["ViaBTC", "/ViaBTC/", ""],
 ["BTCC", "/BTCC/", ""],
@@ -42,5 +43,6 @@
 ["Binance", "binance.com", ""],
 ["Binance", "/Binance/", ""],
 ["SpiderPool", "SpiderPool", ""],
+["OKKONG", "/hash.okkong.com/", ""],
 ["P2Pool", "_p2pool_", ""]
 ]
