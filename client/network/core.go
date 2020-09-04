@@ -712,8 +712,11 @@ func DropPeer(conid uint32) {
 	defer Mutex_net.Unlock()
 	for _, v := range OpenCons {
 		if uint32(conid)==v.ConnID {
-			v.DoS("FromUI")
-			//fmt.Println("The connection with", v.PeerAddr.Ip(), "is being dropped and the peer is banned")
+			if v.X.IsSpecial {
+				v.Disconnect("FromUI")
+			} else {
+				v.DoS("FromUI")
+			}
 			return
 		}
 	}

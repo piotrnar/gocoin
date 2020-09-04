@@ -11,6 +11,7 @@
  * Client/TextUI: New command "peeradd" for manually adding peers to the database
  * Client/TextUI: "net" does not show last recv/sent command (the lines were too long)
  * Client/WebUI/Miners: Versions tables only show a summary of single occurences of uniqe values
+ * Client: network.DropPeer() does not automatically ban the peer if its IsSpecial is set
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
