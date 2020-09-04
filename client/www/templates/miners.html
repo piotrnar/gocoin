@@ -37,6 +37,10 @@ td.mi_tot {
 	font-style:italic;
 	font-weight:bold;
 }
+tr.ver_others {
+	font-weight:bold;
+	font-style:italic;
+}
 caption {
 	margin-bottom:6px;
 }
@@ -211,6 +215,20 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 	for (var i=0; i<sorted.length; i++) {
 		var row = blockver_tab.insertRow(-1)
 		var c = row.insertCell(-1)
+
+		if (sorted[i].cnt==1) {
+			row.className = 'ver_others'
+			c.innerText = 'Others'
+			c = row.insertCell(-1)
+			c.className = 'bl_cnt'
+			var cc = sorted.length-i
+			c.innerText = cc
+			c = row.insertCell(-1)
+			c.className = 'bl_perc'
+			c.innerText = Math.round(cc*100/counted) + '%'
+			break
+		}
+
 		c.className = 'bl_ver'
 		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
 
