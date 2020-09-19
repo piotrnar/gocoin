@@ -73,13 +73,15 @@ function show_versions(row, id) {
 		s += "  " + vrs[i][0].toString(16) + ("    " + vrs[i][1]).slice(-5) + "\n"
 	}
 
-	s += "\n\n  Height   Version   Length\n"
-	s += " ===========================\n"
+	s += "\n\n  Height   Version   Length    Fees BTC    SPB\n"
+	s += " ==============================================\n"
 	var mbs = row["mbs"]
 	for (var i=0; i<mbs.length; i++) {
 		s += ("    "+mbs[i].Height).slice(-8) +
 			"  " + mbs[i].Version.toString(16) +
-			("           "+mbs[i].Length).slice(-9) + "\n"
+			("           "+mbs[i].Length).slice(-9) +
+			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
+			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + "\n"
 	}
 
 	verinfo.innerText = s
@@ -163,7 +165,7 @@ function refresh_mining_info() {
 
 				td = row.insertCell(-1)
 				td.className = 'blspb'
-				td.innerText = parseFloat(m.TotalFees/m.TotalBytes).toFixed(0)
+				td.innerText = parseFloat(m.TotalFees/m.TotalBytes).toFixed(2)
 
 				totfees += m.TotalFees
 				totbts += m.TotalBytes

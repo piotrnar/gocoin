@@ -17,6 +17,7 @@ type OneMinedBlock struct {
 	Height uint32
 	Version uint32
 	Length int
+	Fees uint64
 }
 
 type omv struct {
@@ -148,7 +149,6 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.TxMiner(cbasetx)
 		om = m[miner]
-		om.blocks = append(om.blocks, OneMinedBlock{Height:end.Height, Version:block.Version(), Length:len(bl)})
 		om.bts+= uint64(len(bl))
 		om.unknown_miner = (mid==-1)
 
@@ -161,6 +161,8 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		if int64(fees) > 0 { // solution for a possibility of a miner not claiming the reward (see block #501726)
 			om.fees += fees
 		}
+		om.blocks = append(om.blocks, OneMinedBlock{Height:end.Height,
+			Version:block.Version(), Length:len(bl), Fees:fees})
 
 		/*if eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig) != nil {
 			om.ebad_cnt++
