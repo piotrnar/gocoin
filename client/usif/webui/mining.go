@@ -13,11 +13,17 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
+type OneMinedBlock struct {
+	Height uint32
+	Version uint32
+	Length int
+}
+
 type omv struct {
 	unknown_miner bool
-	cnt int
 	bts uint64
 	fees uint64
+	blocks []OneMinedBlock
 	//ebad_cnt int
 	//nya_cnt int
 }
@@ -32,10 +38,10 @@ func (x onemiernstat) Len() int {
 }
 
 func (x onemiernstat) Less(i, j int) bool {
-	if x[i].cnt == x[j].cnt {
+	if len(x[i].blocks) == len(x[j].blocks) {
 		return x[i].name < x[j].name // Same numbers: sort by name
 	}
-	return x[i].cnt > x[j].cnt
+	return len(x[i].blocks) > len(x[j].blocks)
 }
 
 func (x onemiernstat) Swap(i, j int) {
@@ -91,6 +97,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		Name string
 		Blocks int
 		TotalFees, TotalBytes uint64
+		MinedBlocks []OneMinedBlock
 		//BUcnt, NYAcnt int
 	}
 
@@ -141,7 +148,7 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 		diff += btc.GetDifficulty(end.Bits())
 		miner, mid := common.TxMiner(cbasetx)
 		om = m[miner]
-		om.cnt++
+		om.blocks = append(om.blocks, OneMinedBlock{Height:end.Height, Version:block.Version(), Length:len(bl)})
 		om.bts+= uint64(len(bl))
 		om.unknown_miner = (mid==-1)
 
@@ -201,9 +208,10 @@ func json_miners(w http.ResponseWriter, r *http.Request) {
 	for i := range srt {
 		stats.Miners[i].Unknown = srt[i].unknown_miner
 		stats.Miners[i].Name = srt[i].name
-		stats.Miners[i].Blocks = srt[i].cnt
+		stats.Miners[i].Blocks = len(srt[i].blocks)
 		stats.Miners[i].TotalFees = srt[i].fees
 		stats.Miners[i].TotalBytes = srt[i].bts
+		stats.Miners[i].MinedBlocks = srt[i].blocks
 		//stats.Miners[i].BUcnt = srt[i].ebad_cnt
 		//stats.Miners[i].NYAcnt = srt[i].nya_cnt
 	}

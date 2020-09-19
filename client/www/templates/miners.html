@@ -37,6 +37,12 @@ td.mi_tot {
 	font-style:italic;
 	font-weight:bold;
 }
+td.mi_vers {
+	text-align:right;
+	color:brown;
+	font-style:italic;
+	font-weight:bold;
+}
 tr.ver_others {
 	font-weight:bold;
 	font-style:italic;
@@ -50,9 +56,38 @@ caption {
 
 var last_block_height = 0
 
+
+function show_versions(row, id) {
+	var s = "*** Blocks mined by " + id + ' ***'
+
+	var vrs = new Array()
+	row["vers"].forEach(function(cnt, ver, m) {
+		vrs.push([ver, cnt])
+	})
+	vrs.sort(function(a,b){
+		return (a[1]>b[1]) ? -1 : ((a[1]==b[1]) ? 0 : 1);
+	})
+	s += "\n\n  Version   Cnt\n"
+	s += " ================\n"
+	for (var i=0; i<vrs.length; i++) {
+		s += "  " + vrs[i][0].toString(16) + ("    " + vrs[i][1]).slice(-5) + "\n"
+	}
+
+	s += "\n\n  Height   Version   Length\n"
+	s += " ===========================\n"
+	var mbs = row["mbs"]
+	for (var i=0; i<mbs.length; i++) {
+		s += ("    "+mbs[i].Height).slice(-8) +
+			"  " + mbs[i].Version.toString(16) +
+			("           "+mbs[i].Length).slice(-9) + "\n"
+	}
+
+	verinfo.innerText = s
+}
+
 function refresh_mining_info() {
-	function onc(c,id) {
-		c.onclick = function() {hlminer(id)}
+	function onc(c, id) {
+		c.onclick = function() {show_versions(c, id)}
 	}
 
 	var aj = ajax()
@@ -81,6 +116,10 @@ function refresh_mining_info() {
 				var m = cs.Miners[i]
 				var td, row = minerstab.insertRow(-1)
 
+				row.className = 'hand'
+				row["mbs"] = m.MinedBlocks
+				onc(row, m.Name)
+
 				td = row.insertCell(-1)
 				if (m.Unknown)  td.className = 'mi_unkn'
 				td.innerText = m.Name
@@ -92,7 +131,22 @@ function refresh_mining_info() {
 
 				td = row.insertCell(-1)
 				td.className = 'mi_tot'
-				td.innerText = m.Blocks
+				td.innerText = m.MinedBlocks.length
+
+				// parse MinedBlocks array
+				var vers = new Map()
+				for (var j=0; j<m.MinedBlocks.length; j++) {
+					var b = m.MinedBlocks[j]
+					var cnt = 0
+					if (vers.has(b.Version)) {
+						cnt = vers.get(b.Version)
+					}
+					vers.set(b.Version, cnt+1)
+				}
+				row["vers"] = vers
+				td = row.insertCell(-1)
+				td.className = 'mi_vers'
+				td.innerText = vers.size
 
 				td = row.insertCell(-1)
 				td.className = 'mi_hashrate'
@@ -151,7 +205,8 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 	<tr>
 		<th width="120" align="left">Miner
 		<th width="80" align="right">Share
-		<th width="40" align="right">Tot
+		<th width="60" align="right" title="Total blocks mined">Blks
+		<th width="60" align="right" title="Unique version values">Vers
 		<th width="100" align="right">Hashrate
 		<th width="100" align="right" title="Average Block Length">Average
 		<th width="100" align="right">Fees BTC
@@ -161,6 +216,9 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 <br>
 The next halving is estimated to happen in <b id="next_halving_days">...</b> days or <b id="next_halving_weeks">...</b> weeks.
 </div>
+
+<pre id="verinfo" class="mono" style="left:0px;top:0px;z-index:1000;width:100%;background-color:#e0e0e0"></pre>
+
 </td>
 <td valign="top" id="block_history_td" style="display:none">
 
@@ -243,10 +301,6 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 }
 
 function blocks_version_stats() {
-	function onc(c,id) {
-		c.onclick = function() {hlminer(id)}
-	}
-
 	var aj = ajax()
 	aj.onerror=function() {
 		setTimeout(refreshblocks, 1000)
