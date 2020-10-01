@@ -14,6 +14,7 @@
  * Client: network.DropPeer() does not automatically ban the peer if its IsSpecial is set
  * Client/WebUI/Miners: Shows how many unique version values were mined by each miner
  * Client/WebUI/Miners: Clicking on a miner's row shows which blocks were mined by it
+ * Client: Added protection for a possible lock-up inside network's TickRecv() and TickSent()
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file

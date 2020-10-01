@@ -36,6 +36,10 @@ func TickRecv() (ms int) {
 	tn := time.Now()
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
+	if now < dl_last_sec {
+		dl_last_sec = now // This is to prevent a lock-up when OS clock is updated back
+		ms = 1e6-1
+	}
 	if now != dl_last_sec {
 		for now-dl_last_sec != 1 {
 			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
@@ -55,6 +59,10 @@ func TickSent() (ms int) {
 	tn := time.Now()
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
+	if now < dl_last_sec {
+		dl_last_sec = now // This is to prevent a lock-up when OS clock is updated back
+		ms = 1e6-1
+	}
 	if now != ul_last_sec {
 		for now-ul_last_sec != 1 {
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
