@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -127,17 +126,24 @@ func (c *OneConnection) SendGetMP() error {
 	TxMutex.Lock()
 	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
 	if tcnt > MAX_GETMP_TXS {
-		fmt.Println("Too many transactions in the current pool")
-		TxMutex.Unlock()
-		return errors.New("Too many transactions in the current pool")
+		fmt.Println("Too many transactions in the current pool", tcnt, "/", MAX_GETMP_TXS)
 	}
+	var cnt int
 	b := new(bytes.Buffer)
 	btc.WriteVlen(b, uint64(tcnt))
 	for k, _ := range TransactionsToSend {
 		b.Write(k[:])
+		cnt++
+		if cnt == MAX_GETMP_TXS {
+			break
+		}
 	}
 	for k, _ := range TransactionsRejected {
 		b.Write(k[:])
+		cnt++
+		if cnt == MAX_GETMP_TXS {
+			break
+		}
 	}
 	TxMutex.Unlock()
 	return c.SendRawMsg("getmp", b.Bytes())
