@@ -54,7 +54,7 @@ const (
 	PeerTickPeriod = 100*time.Millisecond // run the peer's tick not more often than this
 	InvsFlushPeriod = 10*time.Millisecond // send all the pending invs to the peer not more often than this
 
-	MAX_GETMP_TXS = 100e3
+	MAX_GETMP_TXS = 1e6
 )
 
 
