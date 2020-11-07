@@ -343,6 +343,9 @@ func tcp_server() {
 	//fmt.Println("TCP server stopped")
 }
 
+
+var friends_pubkey_cache map[string][]byte
+
 func ConnectFriends() {
 	common.CountSafe("ConnectFriends")
 
@@ -355,6 +358,7 @@ func ConnectFriends() {
 	AuthPubkeys = nil
 	friend_ids := make(map[uint64]bool)
 
+	new_pubkey_cache := make(map[string][]byte)
 	rd := bufio.NewReader(f)
 	if rd != nil {
 		for {
@@ -362,14 +366,37 @@ func ConnectFriends() {
 			if er != nil {
 				break
 			}
-			ls := strings.SplitN(strings.Trim(string(ln), "\r\n\t"), " ", 2)
+			lns := strings.Trim(string(ln), " \r\n\t")
+			if len(lns) == 0 || lns[0] == '#' {
+				continue
+			}
+			ls := strings.SplitN(lns, " ", 2)
+			if len(ls[0]) > 1 && ls[0][0]=='@' {
+				var pk []byte
+				pks := ls[0][1:]
+				if friends_pubkey_cache != nil {
+					pk = friends_pubkey_cache[pks]
+					//println(" - from cache:", len(pk))
+				}
+				if pk == nil {
+					pk = btc.Decodeb58(pks)
+				}
+				if len(pk) == 33 {
+					new_pubkey_cache[pks] = pk
+					AuthPubkeys = append(AuthPubkeys, pk)
+					//println("Using Auth Key:", hex.EncodeToString(pk))
+				} else {
+					println(pks, "is not a valid Auth Key. Check your friends.txt file")
+				}
+				continue
+			}
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
+				//println(" Trying to connect", ad.Ip())
 				Mutex_net.Lock()
 				curr, _ := OpenCons[ad.UniqID()]
 				Mutex_net.Unlock()
 				if curr == nil {
-					//print("Connecting friend ", ad.Ip(), " ...\n> ")
 					ad.Friend = true
 					DoNetwork(ad)
 				} else {
@@ -381,12 +408,12 @@ func ConnectFriends() {
 				friend_ids[ad.UniqID()] = true
 				continue
 			}
-			pk := btc.Decodeb58(ls[0])
-			if len(pk) == 33 {
-				AuthPubkeys = append(AuthPubkeys, pk)
-				//println("Using pubkey:", hex.EncodeToString(pk))
-			}
 		}
+	}
+	if len(new_pubkey_cache) > 0 {
+		friends_pubkey_cache = new_pubkey_cache
+	} else {
+		friends_pubkey_cache = nil
 	}
 
 	// Unmark those that are not longer friends
