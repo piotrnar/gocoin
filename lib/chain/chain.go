@@ -38,7 +38,6 @@ type Chain struct {
 		BIP34Height uint32
 		BIP65Height uint32
 		BIP66Height uint32
-		BIP91Height uint32
 		S2XHeight uint32
 	}
 }
@@ -78,8 +77,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.BIP65Height = 388381
 		ch.Consensus.BIP66Height = 363725
 		ch.Consensus.Enforce_CSV = 419328
-		ch.Consensus.Enforce_SEGWIT = 481824 // https://www.reddit.com/r/Bitcoin/comments/6okd1n/bip91_lock_in_is_guaranteed_as_of_block_476768/
-		ch.Consensus.BIP91Height = 477120
+		ch.Consensus.Enforce_SEGWIT = 481824
 		ch.Consensus.BIP9_Treshold = 1916
 	}
 

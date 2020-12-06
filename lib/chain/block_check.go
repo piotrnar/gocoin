@@ -95,14 +95,6 @@ func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bo
 		return
 	}
 
-	if ch.Consensus.BIP91Height != 0 && ch.Consensus.Enforce_SEGWIT != 0 {
-		if bl.Height >= ch.Consensus.BIP91Height && bl.Height < ch.Consensus.Enforce_SEGWIT-2016 {
-			if (ver&0xE0000000) != 0x20000000 || (ver&2) == 0 {
-				er = errors.New("CheckBlock() : relayed block must signal for segwit - RPC_Result:bad-no-segwit")
-			}
-		}
-	}
-
 	return
 }
 
