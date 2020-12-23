@@ -606,8 +606,11 @@ blno.addEventListener("lastblock", function(e) {
 			min_val_btc.innerText = val2str(e.block.MinValue)
 			wallet_min_warning.style.display = 'block'
 		}
-	} else if (!edit_in_progress && e.block.Height!=_lblo) {
-		fetch_wallet_balance(null)
+	} else if (e.block.Height!=_lblo) {
+		_lblo = e.block.Height
+		if (!edit_in_progres) {
+			fetch_wallet_balance(null)
+		}
 	}
 })
 qswal.addEventListener("loadwallet", function(e) {
