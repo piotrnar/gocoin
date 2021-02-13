@@ -1,22 +1,22 @@
 package main
 
 import (
-	"os"
 	"bufio"
-	"strings"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"os"
+	"strings"
 )
 
 // oneSendTo is resolved while parsing "-send" parameter.
 type oneSendTo struct {
-	addr *btc.BtcAddr
+	addr   *btc.BtcAddr
 	amount uint64
 }
 
 var (
 	// set in parse_spend():
 	spendBtc, feeBtc, changeBtc uint64
-	sendTo []oneSendTo
+	sendTo                      []oneSendTo
 )
 
 // parse_spend parses the "-send ..." parameter.
@@ -25,7 +25,7 @@ func parse_spend() {
 
 	for i := range outs {
 		tmp := strings.Split(strings.Trim(outs[i], " "), "=")
-		if len(tmp)!=2 {
+		if len(tmp) != 2 {
 			println("The outputs must be in a format address1=amount1[,addressN=amountN]")
 			cleanExit(1)
 		}
@@ -42,11 +42,11 @@ func parse_spend() {
 			println("Incorrect amount: ", tmp[1], er.Error())
 			cleanExit(1)
 		}
-		if *subfee && i==0 {
+		if *subfee && i == 0 {
 			am -= curFee
 		}
 
-		sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
+		sendTo = append(sendTo, oneSendTo{addr: a, amount: am})
 		spendBtc += am
 	}
 }
@@ -65,11 +65,11 @@ func parse_batch() {
 			}
 			lcnt++
 			tmp := strings.SplitN(strings.Trim(string(li), " "), "=", 2)
-			if len(tmp)<2 {
+			if len(tmp) < 2 {
 				println("Error in the batch file line", lcnt)
 				cleanExit(1)
 			}
-			if tmp[0][0]=='#' {
+			if tmp[0][0] == '#' {
 				continue // Just a comment-line
 			}
 
@@ -86,7 +86,7 @@ func parse_batch() {
 				cleanExit(1)
 			}
 
-			sendTo = append(sendTo, oneSendTo{addr:a, amount:am})
+			sendTo = append(sendTo, oneSendTo{addr: a, amount: am})
 			spendBtc += am
 		}
 	} else {
@@ -98,11 +98,11 @@ func parse_batch() {
 // send_request returns true if spend operation has been requested.
 func send_request() bool {
 	feeBtc = curFee
-	if *send!="" {
+	if *send != "" {
 		parse_spend()
 	}
-	if *batch!="" {
+	if *batch != "" {
 		parse_batch()
 	}
-	return len(sendTo)>0
+	return len(sendTo) > 0
 }

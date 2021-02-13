@@ -1,20 +1,19 @@
 package main
 
 import (
-	"os"
-	"fmt"
 	"bufio"
 	"bytes"
-	"strings"
-	"io/ioutil"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/ltc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 // loadedTxs is a cache for txs from already loaded from balance/ folder.
-var loadedTxs map[[32]byte] *btc.Tx = make(map[[32]byte] *btc.Tx)
-
+var loadedTxs map[[32]byte]*btc.Tx = make(map[[32]byte]*btc.Tx)
 
 // getline reads a line from stdin.
 func getline() string {
@@ -22,20 +21,18 @@ func getline() string {
 	return string(li)
 }
 
-
 func ask_yes_no(msg string) bool {
 	for {
 		fmt.Print(msg, " (y/n) : ")
 		l := strings.ToLower(getline())
-		if l=="y" {
+		if l == "y" {
 			return true
-		} else if l=="n" {
+		} else if l == "n" {
 			return false
 		}
 	}
 	return false
 }
-
 
 func getpass() []byte {
 	var pass [1024]byte
@@ -78,7 +75,7 @@ func getpass() []byte {
 
 	fmt.Print("Enter your wallet's seed password: ")
 	n = sys.ReadPassword(pass[:])
-	if n<=0 {
+	if n <= 0 {
 		return nil
 	}
 
@@ -87,7 +84,7 @@ func getpass() []byte {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
 			p2len := sys.ReadPassword(pass2[:])
-			if p2len!=n || !bytes.Equal(pass[:n], pass2[:p2len]) {
+			if p2len != n || !bytes.Equal(pass[:n], pass2[:p2len]) {
 				sys.ClearBuffer(pass[:n])
 				sys.ClearBuffer(pass2[:p2len])
 				println("The two passwords you entered do not match")
@@ -108,14 +105,14 @@ func getpass() []byte {
 		}
 	}
 check_pass:
-	for i:=0; i<n; i++ {
-		if pass[i]<' ' || pass[i]>126 {
+	for i := 0; i < n; i++ {
+		if pass[i] < ' ' || pass[i] > 126 {
 			fmt.Println("WARNING: Your secret contains non-printable characters")
 			break
 		}
 	}
 	outpass := make([]byte, n+len(secret_seed))
-	if len(secret_seed)>0 {
+	if len(secret_seed) > 0 {
 		copy(outpass, secret_seed)
 	}
 	copy(outpass[len(secret_seed):], pass[:n])
@@ -123,10 +120,9 @@ check_pass:
 	return outpass
 }
 
-
 // get_change_addr returns the change addrress or nil if there will be no change.
 func get_change_addr() (chng *btc.BtcAddr) {
-	if *change!="" {
+	if *change != "" {
 		var e error
 		chng, e = btc.NewAddrFromString(*change)
 		if e != nil {
@@ -140,7 +136,7 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	// If change address not specified, send it back to the first input
 	for idx := range unspentOuts {
 		uo := getUO(&unspentOuts[idx].TxPrevOut)
-		if k := pkscr_to_key(uo.Pk_script); k!=nil {
+		if k := pkscr_to_key(uo.Pk_script); k != nil {
 			chng = k.BtcAddr
 			return
 		}
@@ -151,10 +147,9 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	return
 }
 
-
 func raw_tx_from_file(fn string) *btc.Tx {
 	dat := sys.GetRawData(fn)
-	if dat==nil {
+	if dat == nil {
 		fmt.Println("Cannot fetch raw transaction data")
 		return nil
 	}
@@ -170,7 +165,7 @@ func raw_tx_from_file(fn string) *btc.Tx {
 
 // tx_from_balance gets the tx for the given ID from the balance folder, or from cache.
 func tx_from_balance(txid *btc.Uint256, error_is_fatal bool) (tx *btc.Tx) {
-	if tx=loadedTxs[txid.Hash]; tx!=nil {
+	if tx = loadedTxs[txid.Hash]; tx != nil {
 		return // we have it in cache already
 	}
 	fn := "balance/" + txid.String() + ".tx"
@@ -244,7 +239,7 @@ func assert_address_version(a *btc.BtcAddr) {
 			println("Sending address", a.String(), "has an incorrect HRP string", a.SegwitProg.HRP)
 			cleanExit(1)
 		}
-	} else if a.Version!=ver_pubkey() && a.Version!=ver_script() {
+	} else if a.Version != ver_pubkey() && a.Version != ver_script() {
 		println("Sending address", a.String(), "has an incorrect version", a.Version)
 		cleanExit(1)
 	}

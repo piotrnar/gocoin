@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -16,12 +16,11 @@ func hex_dump(d []byte) (s string) {
 		}
 		s += "       " + hex.EncodeToString(d[:le]) + "\n"
 		d = d[le:]
-		if len(d)==0 {
+		if len(d) == 0 {
 			return
 		}
 	}
 }
-
 
 func dump_raw_sigscript(d []byte) bool {
 	ss, er := btc.ScriptToText(d)
@@ -30,10 +29,10 @@ func dump_raw_sigscript(d []byte) bool {
 		return false
 	}
 
-	p2sh := len(ss)>=2 && d[0]==0
+	p2sh := len(ss) >= 2 && d[0] == 0
 	if p2sh {
 		ms, er := btc.NewMultiSigFromScript(d)
-		if er==nil {
+		if er == nil {
 			fmt.Println("      Multisig script", ms.SigsNeeded, "of", len(ms.PublicKeys))
 			for i := range ms.PublicKeys {
 				fmt.Printf("       pkey%d = %s\n", i+1, hex.EncodeToString(ms.PublicKeys[i]))
@@ -43,7 +42,7 @@ func dump_raw_sigscript(d []byte) bool {
 				fmt.Printf("       S%d = %64s\n", i+1, hex.EncodeToString(ms.Signatures[i].S.Bytes()))
 				fmt.Printf("       HashType%d = %02x\n", i+1, ms.Signatures[i].HashType)
 			}
-			return len(ms.Signatures)>=int(ms.SigsNeeded)
+			return len(ms.Signatures) >= int(ms.SigsNeeded)
 		} else {
 			println(er.Error())
 		}
@@ -51,7 +50,7 @@ func dump_raw_sigscript(d []byte) bool {
 
 	fmt.Println("      SigScript:")
 	for i := range ss {
-		if p2sh && i==len(ss)-1 {
+		if p2sh && i == len(ss)-1 {
 			// Print p2sh script
 			d, _ = hex.DecodeString(ss[i])
 			s2, er := btc.ScriptToText(d)
@@ -73,7 +72,6 @@ func dump_raw_sigscript(d []byte) bool {
 	return true
 }
 
-
 func dump_sigscript(d []byte) bool {
 	if len(d) == 0 {
 		fmt.Println("       WARNING: Empty sigScript")
@@ -83,7 +81,7 @@ func dump_sigscript(d []byte) bool {
 
 	// ECDSA Signature
 	le, _ := rd.ReadByte()
-	if le<0x40 {
+	if le < 0x40 {
 		return dump_raw_sigscript(d)
 	}
 	sd := make([]byte, le)
@@ -123,7 +121,7 @@ func dump_sigscript(d []byte) bool {
 		return false
 	}
 	fmt.Printf("       X = %64s\n", key.X.String())
-	if le>=65 {
+	if le >= 65 {
 		fmt.Printf("       Y = %64s\n", key.Y.String())
 	}
 
@@ -133,7 +131,6 @@ func dump_sigscript(d []byte) bool {
 	}
 	return true
 }
-
 
 // dump_raw_tx dumps a raw transaction.
 func dump_raw_tx() {
@@ -148,22 +145,22 @@ func dump_raw_tx() {
 	fmt.Println("ID:", tx.Hash.String())
 	fmt.Println("WTxID:", tx.WTxID().String())
 	fmt.Println("Tx Version:", tx.Version)
-	if tx.SegWit!=nil {
+	if tx.SegWit != nil {
 		fmt.Println("Segregated Witness transaction", len(tx.SegWit))
 	} else {
 		fmt.Println("Regular (non-SegWit) transaction", len(tx.SegWit))
 	}
 	if tx.IsCoinBase() {
-		if len(tx.TxIn[0].ScriptSig) >= 4 && tx.TxIn[0].ScriptSig[0]==3 {
-			fmt.Println("Coinbase TX from block height", uint(tx.TxIn[0].ScriptSig[1]) |
-				uint(tx.TxIn[0].ScriptSig[2])<<8 | uint(tx.TxIn[0].ScriptSig[3])<<16)
+		if len(tx.TxIn[0].ScriptSig) >= 4 && tx.TxIn[0].ScriptSig[0] == 3 {
+			fmt.Println("Coinbase TX from block height", uint(tx.TxIn[0].ScriptSig[1])|
+				uint(tx.TxIn[0].ScriptSig[2])<<8|uint(tx.TxIn[0].ScriptSig[3])<<16)
 		} else {
 			fmt.Println("Coinbase TX from an unknown block")
 		}
 		s := hex.EncodeToString(tx.TxIn[0].ScriptSig)
-		for len(s)>0 {
+		for len(s) > 0 {
 			i := len(s)
-			if i>64 {
+			if i > 64 {
 				i = 64
 			}
 			fmt.Println("  ", s[:i])
@@ -194,15 +191,15 @@ func dump_raw_tx() {
 					unsigned++
 				}
 			} else {
-				if tx.SegWit==nil || len(tx.SegWit[i]) < 2 {
+				if tx.SegWit == nil || len(tx.SegWit[i]) < 2 {
 					unsigned++
 				}
 			}
 
-			if tx.SegWit!=nil {
+			if tx.SegWit != nil {
 				fmt.Println("      Witness data:")
 				for _, ww := range tx.SegWit[i] {
-					if len(ww)==0 {
+					if len(ww) == 0 {
 						fmt.Println("       ", "OP_0")
 					} else {
 						fmt.Println("       ", hex.EncodeToString(ww))
@@ -217,7 +214,7 @@ func dump_raw_tx() {
 		fmt.Printf("%4d) %20s BTC ", i, btc.UintToBtc(tx.TxOut[i].Value))
 		addr := addr_from_pkscr(tx.TxOut[i].Pk_script)
 		if addr != nil {
-			if addr.Version==ver_script() {
+			if addr.Version == ver_script() {
 				fmt.Println("to scriptH", addr.String())
 			} else {
 				fmt.Println("to address", addr.String())
@@ -242,7 +239,7 @@ func dump_raw_tx() {
 	fmt.Println("Lock Time:", tx.Lock_time)
 
 	fmt.Println("Output volume:", btc.UintToBtc(totout), "BTC")
-	if noins==0 {
+	if noins == 0 {
 		fmt.Println("Input volume :", btc.UintToBtc(totin), "BTC")
 		fmt.Println("Transact. fee:", btc.UintToBtc(totin-totout), "BTC ->",
 			fmt.Sprintf("%.3f", float64(totin-totout)/float64(tx.VSize())), "SPB")
@@ -252,7 +249,7 @@ func dump_raw_tx() {
 	fmt.Println("Transaction Size:", tx.Size, "   NoWitSize:", tx.NoWitSize, "   VSize:", tx.VSize())
 
 	if !tx.IsCoinBase() {
-		if unsigned>0 {
+		if unsigned > 0 {
 			fmt.Println("WARNING:", unsigned, "out of", len(tx.TxIn), "inputs are not signed or signed only patially")
 		} else {
 			fmt.Println("All", len(tx.TxIn), "transaction inputs seem to be signed")

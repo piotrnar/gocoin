@@ -1,20 +1,19 @@
 package main
 
 import (
-	"os"
 	"fmt"
-	"testing"
 	"io/ioutil"
+	"os"
+	"testing"
 )
 
 const (
-	SECRET = "test_secret"
-	SEED_PASS = "qwerty12345"
+	SECRET      = "test_secret"
+	SEED_PASS   = "qwerty12345"
 	CONFIG_FILE = "test_wallet.cfg"
 
 	OTHERS = "test_others"
 )
-
 
 func start() error {
 	PassSeedFilename = SECRET
@@ -32,7 +31,6 @@ func stop() {
 	os.Remove(OTHERS)
 }
 
-
 func mkwal_check(t *testing.T, exp string) {
 	reset_wallet()
 	make_wallet()
@@ -44,14 +42,13 @@ func mkwal_check(t *testing.T, exp string) {
 	}
 }
 
-
 func TestMakeWallet(t *testing.T) {
 	defer stop()
 	if start() != nil {
 		t.Error("start failed")
 	}
 
-    keycnt = 300
+	keycnt = 300
 
 	// Type-3
 	waltype = 3
@@ -68,50 +65,49 @@ func TestMakeWallet(t *testing.T) {
 	testnet = false
 	mkwal_check(t, "19LYstQNGATfFoa8KsPK4N37Z6tojngQaX")
 
-    // Type-4 / 0
+	// Type-4 / 0
 	uncompressed = false
 	testnet = false
-    waltype = 4
-    hdwaltype = 0
+	waltype = 4
+	hdwaltype = 0
 	keycnt = 20
 	mkwal_check(t, "1FvWLNinb9RfQ4pFanWVMZJKq3DiB817X9")
-    
-    // Type-4 / 1
-    hdwaltype = 1
-	mkwal_check(t, "13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy")
-    
-    bip39bits = 128
-	mkwal_check(t, "1PP9HRai5dfWW8JByuP8jBEeu42b7AFRfR")
-    
-    bip39bits = 160
-	mkwal_check(t, "1DvsyQDNhnX1wSWBnaFfhaBCTMAiGAG6ig")
-    
-    bip39bits = 192
-	mkwal_check(t, "1BAkYsi4CzAjvgMBUe78QEVYhPJnmkNAyQ")
-    
-    bip39bits = 224
-	mkwal_check(t, "192TT86GEBkhRJUT6qD2YPgAVzKRU3f6V6")
-    
-    bip39bits = 256
-	mkwal_check(t, "1JRQ1zkTSuWkmVFDtz9A9ErD9x4BNNAYmY")
-    
-    // Type-4 / 2
-    hdwaltype = 2
-    bip39bits = 128
-	mkwal_check(t, "14iD1SLEFL9SHWoo8WrT9Wa6Mde3b2R79j")
-    
-    // Type-4 / 3
-    hdwaltype = 3
-    bip39bits = 0
-	mkwal_check(t, "1HDTrCbonnRdN6dBmhEDmLstkDxTT6BEQM")
-    
-    // Type-4 / 4
-    hdwaltype = 4
-    bip39bits = 0
-	mkwal_check(t, "1ABhTNjkFGquAo9Wq8yj2UirN65oUSiKWR")
-    
-}
 
+	// Type-4 / 1
+	hdwaltype = 1
+	mkwal_check(t, "13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy")
+
+	bip39bits = 128
+	mkwal_check(t, "1PP9HRai5dfWW8JByuP8jBEeu42b7AFRfR")
+
+	bip39bits = 160
+	mkwal_check(t, "1DvsyQDNhnX1wSWBnaFfhaBCTMAiGAG6ig")
+
+	bip39bits = 192
+	mkwal_check(t, "1BAkYsi4CzAjvgMBUe78QEVYhPJnmkNAyQ")
+
+	bip39bits = 224
+	mkwal_check(t, "192TT86GEBkhRJUT6qD2YPgAVzKRU3f6V6")
+
+	bip39bits = 256
+	mkwal_check(t, "1JRQ1zkTSuWkmVFDtz9A9ErD9x4BNNAYmY")
+
+	// Type-4 / 2
+	hdwaltype = 2
+	bip39bits = 128
+	mkwal_check(t, "14iD1SLEFL9SHWoo8WrT9Wa6Mde3b2R79j")
+
+	// Type-4 / 3
+	hdwaltype = 3
+	bip39bits = 0
+	mkwal_check(t, "1HDTrCbonnRdN6dBmhEDmLstkDxTT6BEQM")
+
+	// Type-4 / 4
+	hdwaltype = 4
+	bip39bits = 0
+	mkwal_check(t, "1ABhTNjkFGquAo9Wq8yj2UirN65oUSiKWR")
+
+}
 
 func import_check(t *testing.T, pk, exp string) {
 	ioutil.WriteFile(OTHERS, []byte(fmt.Sprintln(pk, exp+"lab")), 0600)
@@ -128,7 +124,6 @@ func import_check(t *testing.T, pk, exp string) {
 		t.Error("Expected address mismatch", keys[0].BtcAddr.String(), exp)
 	}
 }
-
 
 func TestImportPriv(t *testing.T) {
 	defer stop()

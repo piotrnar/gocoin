@@ -1,13 +1,12 @@
 package main
 
 import (
-	"os"
-	"fmt"
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"os"
 )
-
 
 // sign_tx prepares a signed transaction.
 func sign_tx(tx *btc.Tx) (all_signed bool) {
@@ -26,7 +25,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 						println("ERROR in sign_tx:", e.Error())
 						all_signed = false
 					} else {
-						btcsig := &btc.Signature{HashType:0x01}
+						btcsig := &btc.Signature{HashType: 0x01}
 						btcsig.R.Set(r)
 						btcsig.S.Set(s)
 
@@ -38,7 +37,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			}
 		} else {
 			uo := getUO(&tx.TxIn[in].Input)
-			if uo==nil {
+			if uo == nil {
 				println("ERROR: Unkown input:", tx.TxIn[in].Input.String(), "- missing balance folder?")
 				all_signed = false
 				continue
@@ -52,7 +51,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			}
 
 			ver, segwit_prog := btc.IsWitnessProgram(uo.Pk_script)
-			if len(segwit_prog)==20 && ver==0 {
+			if len(segwit_prog) == 20 && ver == 0 {
 				copy(adr.Hash160[:], segwit_prog) // native segwith P2WPKH output
 			}
 
@@ -66,8 +65,8 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			k := keys[k_idx]
 			if segwit_prog != nil {
 				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
-			} else if adr.String()==segwit[k_idx].String() {
-				tx.TxIn[in].ScriptSig = append([]byte{22,0,20}, k.BtcAddr.Hash160[:]...)
+			} else if adr.String() == segwit[k_idx].String() {
+				tx.TxIn[in].ScriptSig = append([]byte{22, 0, 20}, k.BtcAddr.Hash160[:]...)
 				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
 			} else {
 				er = tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
@@ -93,7 +92,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 
 func write_tx_file(tx *btc.Tx) {
 	var signedrawtx []byte
-	if tx.SegWit!=nil {
+	if tx.SegWit != nil {
 		signedrawtx = tx.SerializeNew()
 	} else {
 		signedrawtx = tx.Serialize()
@@ -106,7 +105,7 @@ func write_tx_file(tx *btc.Tx) {
 	var fn string
 
 	if txfilename == "" {
-		fn = hs[:8]+".txt"
+		fn = hs[:8] + ".txt"
 	} else {
 		fn = txfilename
 	}
@@ -118,7 +117,6 @@ func write_tx_file(tx *btc.Tx) {
 		fmt.Println("Transaction data stored in", fn)
 	}
 }
-
 
 // make_signed_tx prepares a signed transaction.
 func make_signed_tx() {
@@ -142,13 +140,13 @@ func make_signed_tx() {
 
 		btcsofar += uo.Value
 		unspentOuts[i].spent = true
-		if !*useallinputs && ( btcsofar >= spendBtc + feeBtc ) {
+		if !*useallinputs && (btcsofar >= spendBtc+feeBtc) {
 			break
 		}
 	}
 	if btcsofar < (spendBtc + feeBtc) {
 		fmt.Println("ERROR: You have", btc.UintToBtc(btcsofar), "BTC, but you need",
-			btc.UintToBtc(spendBtc + feeBtc), "BTC for the transaction")
+			btc.UintToBtc(spendBtc+feeBtc), "BTC for the transaction")
 		cleanExit(1)
 	}
 	changeBtc = btcsofar - (spendBtc + feeBtc)
@@ -180,7 +178,7 @@ func make_signed_tx() {
 		tx.TxOut = append(tx.TxOut, outs...)
 	}
 
-	if *message!="" {
+	if *message != "" {
 		// Add NULL output with an arbitrary message
 		scr := new(bytes.Buffer)
 		scr.WriteByte(0x6a) // OP_RETURN
@@ -196,7 +194,6 @@ func make_signed_tx() {
 		apply_to_balance(tx)
 	}
 }
-
 
 // process_raw_tx signs a raw transaction with all the keys we have.
 func process_raw_tx() {
