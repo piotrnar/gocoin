@@ -21,6 +21,7 @@ var (
 	litecoin bool = false
 	txfilename string
 	stdin bool
+    hdwaltype uint = 0 // 0 - hadrened private derivation, 1 - normal private derevation (e.g. electrum compatible)
 )
 
 func parse_config() {
@@ -64,6 +65,20 @@ func parse_config() {
 							waltype = uint(v)
 						} else {
 							println(i, "wallet.cfg: incorrect wallet type", v)
+							os.Exit(1)
+						}
+					} else {
+						println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+						os.Exit(1)
+					}
+
+				case "hdtype":
+					v, e := strconv.ParseUint(ll[1], 10, 32)
+					if e == nil {
+						if v>=0 && v<=1 {
+							hdwaltype = uint(v)
+						} else {
+							println(i, "wallet.cfg: incorrect HD wallet type", v)
 							os.Exit(1)
 						}
 					} else {
@@ -138,6 +153,7 @@ func parse_config() {
 	flag.UintVar(&keycnt, "n", keycnt, "Set the number of determinstic keys to be calculated by the wallet")
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
 	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
+	flag.UintVar(&hdwaltype, "hdtype", waltype, "Type of a deterministic wallet to be used (1 to 4)")
 	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")

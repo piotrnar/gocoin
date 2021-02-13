@@ -61,6 +61,8 @@ var (
 
 	segwit_mode *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
 	bech32_mode *bool = flag.Bool("bech32", false, "use with -segwit to see P2WPKH deposit addresses (instead of P2SH-WPKH)")
+	
+    dumpxprv *bool  = flag.Bool("xprv", false, "Print HD wallet's private seed and exit")
 )
 
 

@@ -117,6 +117,16 @@ func make_wallet() {
 		lab = "TypHD"
 		hdwal = btc.MasterKey(pass, testnet)
 		sys.ClearBuffer(pass)
+        if *dumpxprv {
+            fmt.Println(hdwal.String())
+            if hdwaltype != 1 {
+                fmt.Println("WARNING: This HD wallet uses hardened keys (not Electrum compatible)")
+            }
+            cleanExit(0)
+        }
+        if hdwaltype == 1 {
+            hdwal = hdwal.Child(0)
+        }
 	} else {
 		sys.ClearBuffer(pass)
 		println("ERROR: Unsupported wallet type", waltype)
@@ -141,7 +151,13 @@ func make_wallet() {
 			copy(seed_key, prv_key)
 		} else /*if waltype==4*/ {
 			// HD wallet
-			_hd := hdwal.Child(uint32(0x80000000|i))
+            var idx uint32
+            if hdwaltype == 0 {
+                idx = uint32(0x00000000|i)
+            } else {
+                idx = uint32(i)
+            }
+			_hd := hdwal.Child(idx)
 			copy(prv_key, _hd.Key[1:])
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
