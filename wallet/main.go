@@ -94,23 +94,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if waltype == 4 {
-		if hdwaltype > 5 {
-			println("ERROR: Incorrect value of HD Wallet type", hdwaltype)
-			os.Exit(1)
-		}
-	}
-
-	if bip39bits != 0 {
-		if bip39bits < 128 || bip39bits > 256 || (bip39bits%32) != 0 {
-			println("ERROR: Incorrect value for BIP39 entropy bits", bip39bits)
-			os.Exit(1)
-		}
-		if waltype != 4 {
-			fmt.Println("WARNING: Not HD-Wallet type. BIP39 mode ignored.")
-		}
-	}
-
 	// convert string fee to uint64
 	if val, e := btc.StringToSatoshis(fee); e != nil {
 		println("Incorrect fee value", fee)

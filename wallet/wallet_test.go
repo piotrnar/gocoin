@@ -52,21 +52,13 @@ func TestMakeWallet(t *testing.T) {
 
 	// Type-3
 	waltype = 3
-	uncompressed = false
 	testnet = false
 	mkwal_check(t, "1M8UbAaJ132nzgWQEhBxhydswWgHpASA2R")
 
 	testnet = true
 	mkwal_check(t, "n1eRtDfGp4U3mnz1xGALXtrCoWGzhjrDDr")
 
-	uncompressed = true
-	mkwal_check(t, "morWAwVM5Btv2v3k3SMgtHFSR6VWgkwukW")
-
-	testnet = false
-	mkwal_check(t, "19LYstQNGATfFoa8KsPK4N37Z6tojngQaX")
-
 	// Type-4 / 0
-	uncompressed = false
 	testnet = false
 	waltype = 4
 	hdwaltype = 0
@@ -77,34 +69,34 @@ func TestMakeWallet(t *testing.T) {
 	hdwaltype = 1
 	mkwal_check(t, "13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy")
 
-	bip39bits = 128
+	bip39wrds = 12
 	mkwal_check(t, "1PP9HRai5dfWW8JByuP8jBEeu42b7AFRfR")
 
-	bip39bits = 160
+	bip39wrds = 15
 	mkwal_check(t, "1DvsyQDNhnX1wSWBnaFfhaBCTMAiGAG6ig")
 
-	bip39bits = 192
+	bip39wrds = 18
 	mkwal_check(t, "1BAkYsi4CzAjvgMBUe78QEVYhPJnmkNAyQ")
 
-	bip39bits = 224
+	bip39wrds = 21
 	mkwal_check(t, "192TT86GEBkhRJUT6qD2YPgAVzKRU3f6V6")
 
-	bip39bits = 256
+	bip39wrds = 24
 	mkwal_check(t, "1JRQ1zkTSuWkmVFDtz9A9ErD9x4BNNAYmY")
 
 	// Type-4 / 2
 	hdwaltype = 2
-	bip39bits = 128
+	bip39wrds = 12
 	mkwal_check(t, "14iD1SLEFL9SHWoo8WrT9Wa6Mde3b2R79j")
 
 	// Type-4 / 3
 	hdwaltype = 3
-	bip39bits = 0
+	bip39wrds = 0
 	mkwal_check(t, "1HDTrCbonnRdN6dBmhEDmLstkDxTT6BEQM")
 
 	// Type-4 / 4
 	hdwaltype = 4
-	bip39bits = 0
+	bip39wrds = 0
 	mkwal_check(t, "1ABhTNjkFGquAo9Wq8yj2UirN65oUSiKWR")
 
 }

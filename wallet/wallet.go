@@ -106,9 +106,9 @@ func make_wallet() {
 		}
 	}
 
-	if bip39bits != 0 {
-		if bip39bits < 128 || bip39bits > 256 || (bip39bits%32) != 0 {
-			println("ERROR: Incorrect value for BIP39 entropy bits", bip39bits)
+	if bip39wrds != 0 {
+		if bip39wrds < 12 || bip39wrds > 24 || (bip39wrds%3) != 0 {
+			println("ERROR: Incorrect value for BIP39 words count", bip39wrds)
 			os.Exit(1)
 		}
 		if waltype != 4 {
@@ -128,16 +128,16 @@ func make_wallet() {
 		lab = "TypC"
 	} else /*if waltype==4*/ {
 		lab = fmt.Sprint("TypHD", hdwaltype)
-		if bip39bits != 0 {
-			lab = fmt.Sprint(lab, "-b", bip39bits)
+		if bip39wrds != 0 {
+			lab = fmt.Sprint(lab, "-w", bip39wrds)
 			s := sha256.New()
 			s.Write(pass)
 			s.Write([]byte("|gocoin|"))
 			s.Write(pass)
-			s.Write([]byte{byte(bip39bits)})
+			s.Write([]byte{byte(bip39wrds/3*32)})
 			seed_key = s.Sum(nil)
 			sys.ClearBuffer(pass)
-			mnemonic, er := bip39.NewMnemonic(seed_key[:bip39bits/8])
+			mnemonic, er := bip39.NewMnemonic(seed_key[:(bip39wrds/3)*4])
 			sys.ClearBuffer(seed_key)
 			if er != nil {
 				println(er.Error())

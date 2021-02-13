@@ -13,7 +13,6 @@ var (
 	keycnt       uint = 250
 	testnet      bool = false
 	waltype      uint = 3
-	type2sec     string
 	uncompressed bool   = false
 	fee          string = "0.001"
 	apply2bal    bool   = true
@@ -22,7 +21,7 @@ var (
 	txfilename   string
 	stdin        bool
 	hdwaltype    uint = 0
-	bip39bits    uint = 0
+	bip39wrds    uint = 0
 )
 
 func parse_config() {
@@ -90,8 +89,8 @@ func parse_config() {
 			case "bip39":
 				v, e := strconv.ParseUint(ll[1], 10, 32)
 				if e == nil {
-					if v >= 128 && v <= 256 && (v%32) == 0 {
-						bip39bits = uint(v)
+					if v >= 12 && v <= 24 && (v%3) == 0 {
+						bip39wrds = uint(v)
 					} else {
 						println(i, "wallet.cfg: incorrect bip39 value", v)
 						os.Exit(1)
@@ -100,9 +99,6 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 					os.Exit(1)
 				}
-
-			case "type2sec":
-				type2sec = ll[1]
 
 			case "keycnt":
 				v, e := strconv.ParseUint(ll[1], 10, 32)
@@ -169,8 +165,7 @@ func parse_config() {
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
 	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
 	flag.UintVar(&hdwaltype, "hdtype", hdwaltype, "Type of a deterministic wallet to be used (1 to 4)")
-	flag.UintVar(&bip39bits, "bip39", bip39bits, "Create HD Wallet in BIP39 mode (with 128, 160, 192, 224 or 256 entropy bits)")
-	flag.StringVar(&type2sec, "t2sec", type2sec, "Enforce using this secret for Type-2 wallet (hex encoded)")
+	flag.UintVar(&bip39wrds, "bip39", bip39wrds, "Create HD Wallet in BIP39 mode using 12, 15, 18, 21 or 24 words")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")
