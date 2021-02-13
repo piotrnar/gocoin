@@ -7,18 +7,21 @@ import (
 	"bytes"
 	"strings"
 	"encoding/hex"
+    "crypto/sha256"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
+    "github.com/piotrnar/gocoin/lib/others/bip39"
 )
 
 
 var (
-	type2_secret []byte // used to type-2 wallets
 	first_determ_idx int
 	// set in make_wallet():
 	keys []*btc.PrivateAddr
 	segwit []*btc.BtcAddr
 	curFee uint64
+    hd_wallet_path string
+    hd_wallet_xpub string
 )
 
 
@@ -74,6 +77,7 @@ func load_others() {
 // make_wallet gets the secret seed and generates "keycnt" key pairs (both private and public).
 func make_wallet() {
 	var lab string
+    var hd_hard uint32
 
 	load_others()
 
@@ -88,49 +92,99 @@ func make_wallet() {
 		}
 	}()
 
-	pass := getpass()
+    if waltype < 1 || waltype > 4 {
+		println("ERROR: Unsupported wallet type", waltype)
+		os.Exit(1)
+    }
+    
+    if waltype < 3 {
+		println("Wallets Type", waltype, " are no longer supported. Use Gocoin wallet 1.9.8 or earlier.")
+		os.Exit(1)
+    }
+    
+    if waltype == 4 {
+        if hdwaltype > 4 {
+            println("ERROR: Incorrect value of HD Wallet type", hdwaltype)
+            os.Exit(1)
+        }
+    }
+    
+    if bip39bits != 0 {
+        if bip39bits < 128 || bip39bits > 256 || (bip39bits % 32) != 0 {
+            println("ERROR: Incorrect value for BIP39 entropy bits", bip39bits)
+            os.Exit(1)
+        }
+        if waltype != 4 {
+            fmt.Println("WARNING: Not HD-Wallet type. BIP39 mode ignored.")
+        }
+    }
+
+    pass := getpass()
 	if pass==nil {
 		cleanExit(0)
 	}
 
-	if waltype>=1 && waltype<=3 {
+	if waltype == 3 {
 		seed_key = make([]byte, 32)
 		btc.ShaHash(pass, seed_key)
 		sys.ClearBuffer(pass)
-		lab = fmt.Sprintf("Typ%c", 'A'+waltype-1)
-		if waltype==1 {
-			println("WARNING: Wallet Type 1 is obsolete")
-		} else if waltype==2 {
-			if type2sec!="" {
-				d, e := hex.DecodeString(type2sec)
-				if e!=nil {
-					println("t2sec error:", e.Error())
-					cleanExit(1)
-				}
-				type2_secret = d
-			} else {
-				type2_secret = make([]byte, 20)
-				btc.RimpHash(seed_key, type2_secret)
-			}
-		}
-	} else if waltype==4 {
-		lab = "TypHD"
-		hdwal = btc.MasterKey(pass, testnet)
-		sys.ClearBuffer(pass)
+		lab = "TypC"
+	} else /*if waltype==4*/ {
+        lab = fmt.Sprint("TypHD", hdwaltype)
+        if bip39bits != 0 {
+            lab = fmt.Sprint(lab, "-b", bip39bits)
+            s := sha256.New()
+            s.Write(pass)
+            s.Write([]byte("|gocoin|"))
+            s.Write(pass)
+            s.Write([]byte{byte(bip39bits)})
+            seed_key = s.Sum(nil)
+            sys.ClearBuffer(pass)
+            mnemonic, er := bip39.NewMnemonic(seed_key[:bip39bits/8])
+            sys.ClearBuffer(seed_key)
+            if er != nil {
+                println(er.Error())
+                cleanExit(1)
+            }
+            if *dumpwords {
+                fmt.Println("BIP39:", mnemonic)
+            }
+            seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, "")
+            hdwal = btc.MasterKey(seed_key, testnet)
+            sys.ClearBuffer(seed_key)    
+        } else {
+            hdwal = btc.MasterKey(pass, testnet)
+            sys.ClearBuffer(pass)
+        }
         if *dumpxprv {
             fmt.Println(hdwal.String())
-            if hdwaltype != 1 {
-                fmt.Println("WARNING: This HD wallet uses hardened keys (not Electrum compatible)")
-            }
-            cleanExit(0)
         }
-        if hdwaltype == 1 {
+        if hdwaltype == 0 {
+            hd_hard = 0x80000000
+            hd_wallet_path = "m/k'"
+        } else if hdwaltype == 1 {
+            hd_wallet_path = "m/0/k"
             hdwal = hdwal.Child(0)
+        } else if hdwaltype == 2 {
+            hd_wallet_path = "m/0'/0'/k'"
+            hdwal = hdwal.Child(0x80000000).Child(0x80000000)
+            hd_hard = 0x80000000
+        } else if hdwaltype == 3 {
+            hd_wallet_path = "m/0'/0/k"
+            hdwal = hdwal.Child(0x80000000).Child(0)
+        } else if hdwaltype == 4 {
+            hd_wallet_path = "m/44'/0'/0'/k"
+            hdwal = hdwal.Child(0x80000000+44).Child(0x80000000).Child(0x80000000)
+        } /*else if hdwaltype == 5 {   // for importing word-list into electrum
+            hd_wallet_path = "m/44'/0'/0'/0/k"
+            hdwal = hdwal.Child(0x80000000+44).Child(0x80000000).Child(0x80000000).Child(0)
+        }*/
+        if *dumpxprv {
+            fmt.Println(hdwal.String())
         }
-	} else {
-		sys.ClearBuffer(pass)
-		println("ERROR: Unsupported wallet type", waltype)
-		cleanExit(1)
+        if hd_hard == 0 {
+            hd_wallet_xpub = hdwal.Pub().String()
+        }
 	}
 
 	if *verbose {
@@ -139,25 +193,13 @@ func make_wallet() {
 
 	first_determ_idx = len(keys)
 	for i:=uint(0); i < keycnt; {
-		prv_key := make([]byte, 32)
+        prv_key := make([]byte, 32)
 		if waltype==3 {
 			btc.ShaHash(seed_key, prv_key)
 			seed_key = append(seed_key, byte(i))
-		} else if waltype==2 {
-			seed_key = btc.DeriveNextPrivate(seed_key, type2_secret)
-			copy(prv_key, seed_key)
-		} else if waltype==1 {
-			btc.ShaHash(seed_key, prv_key)
-			copy(seed_key, prv_key)
 		} else /*if waltype==4*/ {
 			// HD wallet
-            var idx uint32
-            if hdwaltype == 0 {
-                idx = uint32(0x00000000|i)
-            } else {
-                idx = uint32(i)
-            }
-			_hd := hdwal.Child(idx)
+            _hd := hdwal.Child(uint32(i)|hd_hard)
 			copy(prv_key, _hd.Key[1:])
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
@@ -166,7 +208,8 @@ func make_wallet() {
 		rec := btc.NewPrivateAddr(prv_key, ver_secret(), !uncompressed)
 
 		if *pubkey!="" && *pubkey==rec.BtcAddr.String() {
-			fmt.Println("Public address:", rec.BtcAddr.String())
+            sys.ClearBuffer(seed_key)
+            fmt.Println("Public address:", rec.BtcAddr.String())
 			fmt.Println("Public hexdump:", hex.EncodeToString(rec.BtcAddr.Pubkey))
 			return
 		}
@@ -200,10 +243,12 @@ func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
 
 	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
-	if type2_secret!=nil {
-		fmt.Fprintln(f, "#", hex.EncodeToString(keys[first_determ_idx].BtcAddr.Pubkey))
-		fmt.Fprintln(f, "#", hex.EncodeToString(type2_secret))
-	}
+    if hd_wallet_path != "" {
+        fmt.Fprintln(f, "# BIP32 Derivation Path:", hd_wallet_path)
+    }
+    if hd_wallet_xpub != "" {
+        fmt.Fprintln(f, "# Extended Pubkey:", hd_wallet_xpub)
+    }
 	for i := range keys {
 		if !*noverify {
 			if er := btc.VerifyKeyPair(keys[i].Key, keys[i].BtcAddr.Pubkey); er!=nil {

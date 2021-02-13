@@ -62,7 +62,8 @@ var (
 	segwit_mode *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
 	bech32_mode *bool = flag.Bool("bech32", false, "use with -segwit to see P2WPKH deposit addresses (instead of P2SH-WPKH)")
 	
-    dumpxprv *bool  = flag.Bool("xprv", false, "Print HD wallet's private seed and exit")
+    dumpxprv *bool  = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
+    dumpwords *bool  = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
 )
 
 
@@ -73,9 +74,6 @@ func cleanExit(code int) {
 	}
 	for k := range keys {
 		sys.ClearBuffer(keys[k].Key)
-	}
-	if type2_secret != nil {
-		sys.ClearBuffer(type2_secret)
 	}
 	os.Exit(code)
 }
@@ -97,6 +95,23 @@ func main() {
 		println("For SegWit address safety, uncompressed keys are disabled in this version")
 		os.Exit(1)
 	}
+    
+    if waltype == 4 {
+        if hdwaltype > 5 {
+            println("ERROR: Incorrect value of HD Wallet type", hdwaltype)
+            os.Exit(1)
+        }
+    }
+    
+    if bip39bits != 0 {
+        if bip39bits < 128 || bip39bits > 256 || (bip39bits % 32) != 0 {
+            println("ERROR: Incorrect value for BIP39 entropy bits", bip39bits)
+            os.Exit(1)
+        }
+        if waltype != 4 {
+            fmt.Println("WARNING: Not HD-Wallet type. BIP39 mode ignored.")
+        }
+    }
 
 	// convert string fee to uint64
 	if val, e := btc.StringToSatoshis(fee); e != nil {

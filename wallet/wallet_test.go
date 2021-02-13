@@ -25,7 +25,6 @@ func start() error {
 
 func reset_wallet() {
 	keys = nil
-	type2_secret = nil
 }
 
 func stop() {
@@ -41,7 +40,7 @@ func mkwal_check(t *testing.T, exp string) {
 		t.Error("keys - wrong number")
 	}
 	if keys[keycnt-1].BtcAddr.String() != exp {
-		t.Error("Expected address mismatch", keys[keycnt-1].BtcAddr.String(), exp)
+		t.Error("Expected address mismatch", keys[keycnt-1].BtcAddr.String(), exp, keycnt)
 	}
 }
 
@@ -52,37 +51,7 @@ func TestMakeWallet(t *testing.T) {
 		t.Error("start failed")
 	}
 
-	keycnt = 300
-
-	// Type-1
-	waltype = 1
-	uncompressed = false
-	testnet = false
-	mkwal_check(t, "1DkMmYRVUXvjR1QkrWQTQCgMvaApewxU43")
-
-	testnet = true
-	mkwal_check(t, "mtGK4bWUHZMzC7tNa5NqE7tgnZmXaYtpdy")
-
-	uncompressed = true
-	mkwal_check(t, "mifm3evqJAgknC5WnK8Cq6xs1riR5oEcpT")
-
-	testnet = false
-	mkwal_check(t, "149okbqrV9FW15bu4k9q1BkY9s7iE2ny2Y")
-
-	// Type-2
-	waltype = 2
-	uncompressed = false
-	testnet = false
-	mkwal_check(t, "12jYVgCNDB63t3J8HhtBwQzs5Qjcu5G6j4")
-
-	testnet = true
-	mkwal_check(t, "mhFVnjHM2CXJf9mk1GrZmLDBwQLKn65QNw")
-
-	uncompressed = true
-	mkwal_check(t, "mmPAAMPpuSqvkBs6oYFbN5E9fQPwRFYggW")
-
-	testnet = false
-	mkwal_check(t, "16sCsJJr6RQfy5PV5yHDYA1poQoEbRwA7F")
+    keycnt = 300
 
 	// Type-3
 	waltype = 3
@@ -98,6 +67,49 @@ func TestMakeWallet(t *testing.T) {
 
 	testnet = false
 	mkwal_check(t, "19LYstQNGATfFoa8KsPK4N37Z6tojngQaX")
+
+    // Type-4 / 0
+	uncompressed = false
+	testnet = false
+    waltype = 4
+    hdwaltype = 0
+	keycnt = 20
+	mkwal_check(t, "1FvWLNinb9RfQ4pFanWVMZJKq3DiB817X9")
+    
+    // Type-4 / 1
+    hdwaltype = 1
+	mkwal_check(t, "13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy")
+    
+    bip39bits = 128
+	mkwal_check(t, "1PP9HRai5dfWW8JByuP8jBEeu42b7AFRfR")
+    
+    bip39bits = 160
+	mkwal_check(t, "1DvsyQDNhnX1wSWBnaFfhaBCTMAiGAG6ig")
+    
+    bip39bits = 192
+	mkwal_check(t, "1BAkYsi4CzAjvgMBUe78QEVYhPJnmkNAyQ")
+    
+    bip39bits = 224
+	mkwal_check(t, "192TT86GEBkhRJUT6qD2YPgAVzKRU3f6V6")
+    
+    bip39bits = 256
+	mkwal_check(t, "1JRQ1zkTSuWkmVFDtz9A9ErD9x4BNNAYmY")
+    
+    // Type-4 / 2
+    hdwaltype = 2
+    bip39bits = 128
+	mkwal_check(t, "14iD1SLEFL9SHWoo8WrT9Wa6Mde3b2R79j")
+    
+    // Type-4 / 3
+    hdwaltype = 3
+    bip39bits = 0
+	mkwal_check(t, "1HDTrCbonnRdN6dBmhEDmLstkDxTT6BEQM")
+    
+    // Type-4 / 4
+    hdwaltype = 4
+    bip39bits = 0
+	mkwal_check(t, "1ABhTNjkFGquAo9Wq8yj2UirN65oUSiKWR")
+    
 }
 
 
