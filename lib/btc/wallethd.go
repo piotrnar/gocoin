@@ -19,6 +19,10 @@ const (
 	Private     = uint32(0x0488ADE4)
 	TestPublic  = uint32(0x043587CF)
 	TestPrivate = uint32(0x04358394)
+	PublicY     = uint32(0x049d7cb2)
+	PrivateY    = uint32(0x049d7878)
+	PublicZ     = uint32(0x04b24746)
+	PrivateZ    = uint32(0x04b2430c)
 )
 
 // HDWallet defines the components of a hierarchical deterministic wallet
@@ -31,6 +35,32 @@ type HDWallet struct {
 	Key       []byte //33 bytes
 }
 
+
+func IsPublicHDPrefix(p uint32) bool {
+	return p == Public || p == TestPublic || p == PublicY || p == PublicZ
+}
+
+
+func IsPrivateHDPrefix(p uint32) bool {
+	return p == Private || p == TestPrivate || p == PrivateY || p == PrivateZ
+}
+
+func PublishHDPrefix(p uint32) uint32 {
+	if p == Private {
+		return Public
+	}
+	if p == TestPrivate {
+		return TestPublic
+	}
+	if p == PrivateY {
+		return PublicY
+	}
+	if p == PrivateZ {
+		return PublicZ
+	}
+	return p
+}
+
 // Child returns the ith child of wallet w. Values of i >= 2^31
 // signify private key derivation. Attempting private key derivation
 // with a public key will throw an error.
@@ -38,7 +68,7 @@ func (w *HDWallet) Child(i uint32) (res *HDWallet) {
 	var ha, newkey []byte
 	var chksum [20]byte
 
-	if w.Prefix==Private || w.Prefix==TestPrivate {
+	if IsPrivateHDPrefix(w.Prefix) {
 		pub := PublicFromPrivate(w.Key[1:], true)
 		mac := hmac.New(sha512.New, w.ChCode)
 		if i >= uint32(0x80000000) {
@@ -50,7 +80,7 @@ func (w *HDWallet) Child(i uint32) (res *HDWallet) {
 		ha = mac.Sum(nil)
 		newkey = append([]byte{0}, DeriveNextPrivate(ha[:32], w.Key[1:])...)
 		RimpHash(pub, chksum[:])
-	} else if w.Prefix==Public || w.Prefix==TestPublic {
+	} else if IsPublicHDPrefix(w.Prefix) {
 		mac := hmac.New(sha512.New, w.ChCode)
 		if i >= uint32(0x80000000) {
 			panic("HDWallet.Child(): Private derivation on Public key")
@@ -117,12 +147,12 @@ func StringWallet(data string) (*HDWallet, error) {
 // Pub returns a new wallet which is the public key version of w.
 // If w is a public key, Pub returns a copy of w
 func (w *HDWallet) Pub() *HDWallet {
-	if w.Prefix==Public || w.Prefix==TestPublic {
+	if IsPublicHDPrefix(w.Prefix) {
 		r := new(HDWallet)
 		*r = *w
 		return r
 	} else {
-		return &HDWallet{Prefix:Public, Depth:w.Depth, Checksum:w.Checksum,
+		return &HDWallet{Prefix:PublishHDPrefix(w.Prefix), Depth:w.Depth, Checksum:w.Checksum,
 			I:w.I, ChCode:w.ChCode, Key:PublicFromPrivate(w.Key[1:], true)}
 	}
 }
@@ -151,7 +181,7 @@ func StringAddress(data string) (string, error) {
 // PublicAddress returns the Base58 encoded public address of the given HD key.
 func (w *HDWallet) PubAddr() *BtcAddr {
 	var pub []byte
-	if w.Prefix==Private || w.Prefix==TestPrivate {
+	if IsPrivateHDPrefix(w.Prefix) {
 		pub = PublicFromPrivate(w.Key[1:], true)
 	} else {
 		pub = w.Key
@@ -188,12 +218,12 @@ func ByteCheck(dbin []byte) error {
 
 	// check for correct Public or Private Prefix
 	vb := binary.BigEndian.Uint32(dbin[:4])
-	if vb!=Public && vb!=Private && vb!=TestPublic && vb!=TestPrivate {
+	if !IsPrivateHDPrefix(vb) && !IsPublicHDPrefix(vb) {
 		return errors.New("ByteCheck: Unexpected Prefix")
 	}
 
 	// if Public, check x coord is on curve
-	if vb==Public || vb==TestPublic {
+	if IsPublicHDPrefix(vb) {
 		var xy secp256k1.XY
 		xy.ParsePubkey(dbin[45:78])
 		if !xy.IsValid() {

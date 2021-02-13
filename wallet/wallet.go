@@ -153,6 +153,13 @@ func make_wallet() {
 			hdwal = btc.MasterKey(pass, testnet)
 			sys.ClearBuffer(pass)
 		}
+		if !testnet && *segwit_mode {
+			if *bech32_mode {
+				hdwal.Prefix = btc.PrivateZ
+			} else {
+				hdwal.Prefix = btc.PrivateY
+			}
+		}
 		if *dumpxprv {
 			fmt.Println(hdwal.String())
 		}

@@ -23,6 +23,7 @@
  * Wallet: Added new command line switch -xprv, to print wallet's seed for Electrum -(use with "type=4" and "hdtype=1")
  * Wallet: Added support for BIP39 seeded wallets, for importing Gocoin wallet into other wallets
  * Wallet: Removed support for wallets type 1 and 2 (1 was already deprecated and 2 is not as good as 4)
+ * Lib,Wallet: added support for ypub/yprv/zpub/zprv types of HD Wallets
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
