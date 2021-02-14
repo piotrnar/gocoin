@@ -256,5 +256,5 @@ func init() {
 	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
-	newUi("getmp mpg", true, get_mempool, "Get getmp message to the peer with teh given ID")
+	newUi("getmp mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
 }
