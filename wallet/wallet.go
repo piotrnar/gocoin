@@ -11,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"os"
 	"strings"
+	"strconv"
 )
 
 var (
@@ -19,8 +20,7 @@ var (
 	keys           []*btc.PrivateAddr
 	segwit         []*btc.BtcAddr
 	curFee         uint64
-	hd_wallet_path string
-	hd_wallet_xpub string
+	hd_wallet_xtra []string
 )
 
 // load_others loads private keys of .others file.
@@ -73,14 +73,13 @@ func load_others() {
 
 // make_wallet gets the secret seed and generates "keycnt" key pairs (both private and public).
 func make_wallet() {
-	var lab string
-	var hd_hard uint32
-
-	load_others()
-
 	var seed_key []byte
 	var hdwal *btc.HDWallet
+	var hdpath_x []uint32
+	var hdpath_last uint32
+	var hd_label_prefix string
 
+	load_others()
 	defer func() {
 		sys.ClearBuffer(seed_key)
 		if hdwal != nil {
@@ -100,10 +99,34 @@ func make_wallet() {
 	}
 
 	if waltype == 4 {
-		if hdwaltype > 4 {
-			println("ERROR: Incorrect value of HD Wallet type", hdwaltype)
+		// parse hdpath
+		ts := strings.Split(hdpath, "/")
+		if len(ts) < 2 || ts[0] != "m" {
+			println("hdpath - top level syntax error")
 			os.Exit(1)
 		}
+		hd_label_prefix = "m"
+		for i := 1; i < len(ts); i++ {
+			var xval uint32
+			ti := ts[i]
+			if strings.HasSuffix(ti, "'") {
+				xval = 0x80000000 // hardened
+			}
+			if v, e := strconv.ParseInt(strings.TrimSuffix(ti, "'"), 10, 32); e != nil || v < 0 {
+				println("hdpath - syntax error. non-negative integer expected:", ti)
+				os.Exit(1)
+			} else {
+				xval |= uint32(v)
+			}
+			hdpath_x = append(hdpath_x, xval)
+			if i < len(ts)-1 {
+				hd_label_prefix += fmt.Sprint("/", xval&0x3fffffff)
+				if (xval&0x80000000) != 0 {
+					hd_label_prefix += "'"
+				}
+			}
+		}
+		hdpath_last = hdpath_x[len(hdpath_x)-1]
 	}
 
 	if bip39wrds != 0 {
@@ -125,11 +148,9 @@ func make_wallet() {
 		seed_key = make([]byte, 32)
 		btc.ShaHash(pass, seed_key)
 		sys.ClearBuffer(pass)
-		lab = "TypC"
 	} else /*if waltype==4*/ {
-		lab = fmt.Sprint("TypHD", hdwaltype)
 		if bip39wrds != 0 {
-			lab = fmt.Sprint(lab, "-w", bip39wrds)
+			hd_wallet_xtra = append(hd_wallet_xtra, fmt.Sprint("Based on ", bip39wrds, " BIP39 words"))
 			s := sha256.New()
 			s.Write(pass)
 			s.Write([]byte("|gocoin|"))
@@ -163,31 +184,14 @@ func make_wallet() {
 		if *dumpxprv {
 			fmt.Println(hdwal.String())
 		}
-		if hdwaltype == 0 {
-			hd_hard = 0x80000000
-			hd_wallet_path = "m/k'"
-		} else if hdwaltype == 1 {
-			hd_wallet_path = "m/0/k"
-			hdwal = hdwal.Child(0)
-		} else if hdwaltype == 2 {
-			hd_wallet_path = "m/0'/0'/k'"
-			hdwal = hdwal.Child(0x80000000).Child(0x80000000)
-			hd_hard = 0x80000000
-		} else if hdwaltype == 3 {
-			hd_wallet_path = "m/0'/0/k"
-			hdwal = hdwal.Child(0x80000000).Child(0)
-		} else if hdwaltype == 4 {
-			hd_wallet_path = "m/44'/0'/0'/k"
-			hdwal = hdwal.Child(0x80000000 + 44).Child(0x80000000).Child(0x80000000)
-		} /*else if hdwaltype == 5 {   // for importing word-list into electrum
-		    hd_wallet_path = "m/44'/0'/0'/0/k"
-		    hdwal = hdwal.Child(0x80000000+44).Child(0x80000000).Child(0x80000000).Child(0)
-		}*/
+		for _, x := range hdpath_x[:len(hdpath_x)-1] {
+		    hdwal = hdwal.Child(x)
+		}
 		if *dumpxprv {
 			fmt.Println(hdwal.String())
 		}
-		if hd_hard == 0 {
-			hd_wallet_xpub = hdwal.Pub().String()
+		if (hdpath_last & 0x80000000) == 0 {
+			hd_wallet_xtra = append(hd_wallet_xtra, hdwal.Pub().String())
 		}
 	}
 
@@ -196,14 +200,14 @@ func make_wallet() {
 	}
 
 	first_determ_idx = len(keys)
-	for i := uint(0); i < keycnt; {
+	for i := uint32(0); i < uint32(keycnt); {
 		prv_key := make([]byte, 32)
 		if waltype == 3 {
 			btc.ShaHash(seed_key, prv_key)
 			seed_key = append(seed_key, byte(i))
 		} else /*if waltype==4*/ {
 			// HD wallet
-			_hd := hdwal.Child(uint32(i) | hd_hard)
+			_hd := hdwal.Child(uint32(i) | hdpath_last)
 			copy(prv_key, _hd.Key[1:])
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
@@ -218,7 +222,15 @@ func make_wallet() {
 			return
 		}
 
-		rec.BtcAddr.Extra.Label = fmt.Sprint(lab, " ", i+1)
+		if waltype == 3 {
+			rec.BtcAddr.Extra.Label = fmt.Sprint("TypC ", i+1)
+		} else {
+			if (hdpath_last & 0x80000000) != 0 {
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i + (hdpath_last & 0x3fffffff), "'")
+			} else {
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i + (hdpath_last & 0x3fffffff))
+			}
+		}
 		keys = append(keys, rec)
 		i++
 	}
@@ -246,11 +258,9 @@ func dump_addrs() {
 	f, _ := os.Create("wallet.txt")
 
 	fmt.Fprintln(f, "# Deterministic Walet Type", waltype)
-	if hd_wallet_path != "" {
-		fmt.Fprintln(f, "# BIP32 Derivation Path:", hd_wallet_path)
-	}
-	if hd_wallet_xpub != "" {
-		fmt.Fprintln(f, "# Extended Pubkey:", hd_wallet_xpub)
+	for _, x := range hd_wallet_xtra {
+		fmt.Println("#", x)
+		fmt.Fprintln(f, "#", x)
 	}
 	for i := range keys {
 		if !*noverify {

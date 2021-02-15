@@ -19,11 +19,11 @@
  * New tool "bip39wal" - Mnemonic Code Converter with BIP32 Derivation Path (https://iancoleman.io/bip39/)
  * Client: Improved way of parsing friends.txt file. Base58 encoded AuthKey must now start with extra @ character
  * Removed BIP91 blocks version field enforcement, as it seems to be obsolete at this moment
- * Wallet: Added new wallet's config value "hdtype=1", for generating Electrum comatible HD wallets (use with "type=4")
- * Wallet: Added new command line switch -xprv, to print wallet's seed for Electrum -(use with "type=4" and "hdtype=1")
- * Wallet: Added support for BIP39 seeded wallets, for importing Gocoin wallet into other wallets
+ * Wallet: Added support for BIP39 seeded wallets, for importing Gocoin wallet into other wallets (-bip39 and -words switch)
  * Wallet: Removed support for wallets type 1 and 2 (1 was already deprecated and 2 is not as good as 4)
  * Lib,Wallet: added support for ypub/yprv/zpub/zprv types of HD Wallets
+ * Wallet: Added new command line switch -xprv, to print wallet's master key
+ * Wallet: Added new wallet's config value "hdpath", for flexible compatibility with external wallets (use with "type=4")
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file

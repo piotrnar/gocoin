@@ -60,7 +60,7 @@ var (
 	sequence *int = flag.Int("seq", 0, "Use given Replace-By-Fee sequence number (-1 or -2 for final)")
 
 	segwit_mode *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
-	bech32_mode *bool = flag.Bool("bech32", false, "use with -segwit to see P2WPKH deposit addresses (instead of P2SH-WPKH)")
+	bech32_mode *bool = flag.Bool("bech32", false, "Use with -segwit to see P2WPKH deposit addresses (instead of P2SH-WPKH)")
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")

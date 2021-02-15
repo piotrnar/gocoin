@@ -20,7 +20,7 @@ var (
 	litecoin     bool = false
 	txfilename   string
 	stdin        bool
-	hdwaltype    uint = 0
+	hdpath       string = "m/0'"
 	bip39wrds    uint = 0
 )
 
@@ -72,19 +72,8 @@ func parse_config() {
 					os.Exit(1)
 				}
 
-			case "hdtype":
-				v, e := strconv.ParseUint(ll[1], 10, 32)
-				if e == nil {
-					if v >= 0 && v <= 4 {
-						hdwaltype = uint(v)
-					} else {
-						println(i, "wallet.cfg: incorrect HD wallet type", v)
-						os.Exit(1)
-					}
-				} else {
-					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
-					os.Exit(1)
-				}
+			case "hdpath":
+				PassSeedFilename = ll[1]
 
 			case "bip39":
 				v, e := strconv.ParseUint(ll[1], 10, 32)
@@ -164,7 +153,7 @@ func parse_config() {
 	flag.UintVar(&keycnt, "n", keycnt, "Set the number of determinstic keys to be calculated by the wallet")
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
 	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
-	flag.UintVar(&hdwaltype, "hdtype", hdwaltype, "Type of a deterministic wallet to be used (1 to 4)")
+	flag.StringVar(&hdpath, "hdpath", hdpath, "Derivation Path to the first key in HD wallet (type=4)")
 	flag.UintVar(&bip39wrds, "bip39", bip39wrds, "Create HD Wallet in BIP39 mode using 12, 15, 18, 21 or 24 words")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")

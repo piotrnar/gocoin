@@ -61,12 +61,12 @@ func TestMakeWallet(t *testing.T) {
 	// Type-4 / 0
 	testnet = false
 	waltype = 4
-	hdwaltype = 0
+	hdpath = "m/0'"
 	keycnt = 20
 	mkwal_check(t, "1FvWLNinb9RfQ4pFanWVMZJKq3DiB817X9")
 
-	// Type-4 / 1
-	hdwaltype = 1
+	// Type-4 / Electrum
+	hdpath = "m/0/0"
 	mkwal_check(t, "13M4ypZeacDM2rZ62rqG8jZNg1LVRHhSGy")
 
 	bip39wrds = 12
@@ -84,21 +84,35 @@ func TestMakeWallet(t *testing.T) {
 	bip39wrds = 24
 	mkwal_check(t, "1JRQ1zkTSuWkmVFDtz9A9ErD9x4BNNAYmY")
 
-	// Type-4 / 2
-	hdwaltype = 2
+	// Type-4 / Bitcon Core
+	hdpath = "m/0'/0'/0'"
 	bip39wrds = 12
 	mkwal_check(t, "14iD1SLEFL9SHWoo8WrT9Wa6Mde3b2R79j")
 
-	// Type-4 / 3
-	hdwaltype = 3
+	// Type-4 / Multibit HD, BRD Wallet
+	hdpath = "m/0'/0/0"
 	bip39wrds = 0
 	mkwal_check(t, "1HDTrCbonnRdN6dBmhEDmLstkDxTT6BEQM")
 
 	// Type-4 / 4
-	hdwaltype = 4
+	hdpath = "m/44'/0'/0'/0"
 	bip39wrds = 0
 	mkwal_check(t, "1ABhTNjkFGquAo9Wq8yj2UirN65oUSiKWR")
 
+	// Type-4: BIP84
+	hdpath = "m/84'/0'/0'/0/0"
+	bip39wrds = 12
+	keycnt = 10
+	*segwit_mode = true
+	*bech32_mode = true
+	mkwal_check(t, "1DCw8Gjgy3pfAh2NWQvgJEXHBjZvB4PAoD")
+	if segwit[9].String() != "bc1qsh35g0djgwj7yw6evkhlkajke3twaua30ke3em" {
+		t.Error("Expected address mismatch", segwit[9].String())
+	}
+	
+	*segwit_mode = false
+	*bech32_mode = false
+	bip39wrds = 0
 }
 
 func import_check(t *testing.T, pk, exp string) {
