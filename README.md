@@ -57,14 +57,10 @@ from your OS's command prompt without a need to specify full path to the executa
 
 # Getting sources
 
-Use `go get` to fetch and install the source code files.
+Download the source code from github to a local folder of your choice, e.g. by executing:
 
-	go get github.com/piotrnar/gocoin
+	git clone https://github.com/piotrnar/gocoin.git
 
-Note that the source files are stored inside your GOPATH folder.
-To find out where the GOPATH folder is, execute:
-
-	go env GOPATH
 
 # Building
 
