@@ -146,7 +146,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 
 	if !bl.Trusted {
 		// We need to be satoshi compatible
-		if len(bl.Txs)==0 || !bl.Txs[0].IsCoinBase() {
+		if len(bl.Txs)==0 || bl.Txs[0]==nil || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: "+bl.Hash.String()+" - RPC_Result:bad-cb-missing")
 			return
 		}

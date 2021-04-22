@@ -106,6 +106,7 @@ func (bl *Block) BuildTxList() (e error) {
 		bl.Txs[i], n = NewTx(bl.Raw[offs:])
 		if bl.Txs[i] == nil || n == 0 {
 			e = errors.New("NewTx failed")
+			bl.Txs = bl.Txs[:i] // make sure we don't leave any nil pointers in bl.Txs
 			break
 		}
 		bl.Txs[i].Raw = bl.Raw[offs : offs+n]

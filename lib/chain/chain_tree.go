@@ -271,8 +271,15 @@ func (ch *Chain) UndoLastBlock() {
 		panic(er.Error())
 	}
 
-	bl, _ := btc.NewBlock(crec.Data)
-	bl.BuildTxList()
+	bl, er := btc.NewBlock(crec.Data)
+	if er != nil {
+		panic("UndoLastBlock: NewBlock() should not fail with block from disk")
+	}
+	
+	er = bl.BuildTxList()
+	if er != nil {
+		panic("UndoLastBlock: BuildTxList() should not fail with block from disk")
+	}
 
 	ch.Unspent.UndoBlockTxs(bl, last.Parent.BlockHash.Hash[:])
 	ch.SetLast(last.Parent)
