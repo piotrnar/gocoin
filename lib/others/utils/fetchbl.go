@@ -128,15 +128,15 @@ func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 		return
 	}
 
-	raw = GetBlockFromWebBTC(hash)
-	if bl = IsBlockOK(raw, hash); bl != nil {
-		//println("GetTxFromWebBTC - OK")
-		return
-	}
-
 	raw = GetBlockFromExplorer(hash)
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		//println("GetTxFromExplorer - OK")
+		return
+	}
+
+	raw = GetBlockFromWebBTC(hash)
+	if bl = IsBlockOK(raw, hash); bl != nil {
+		//println("GetTxFromWebBTC - OK")
 		return
 	}
 
