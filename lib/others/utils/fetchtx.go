@@ -154,6 +154,24 @@ func GetTxFromBlockchair(txid *btc.Uint256, currency string) (rawtx []byte) {
 	return
 }
 
+// GetTxFromBlockstream downloads a raw transaction from webbtc.com.
+func GetTxFromBlockstream(txid *btc.Uint256, api_url string) (raw []byte) {
+	url := api_url + txid.String() + "/raw"
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode == 200 {
+			raw, _ = ioutil.ReadAll(r.Body)
+			r.Body.Close()
+		} else {
+			fmt.Println("blockstream.info get_tx StatusCode=", r.StatusCode)
+		}
+	}
+	if er != nil {
+		fmt.Println("blockstream.info get_tx:", er.Error())
+	}
+	return
+}
+
 func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 	tx, _ := btc.NewTx(rawtx)
 	if tx == nil {
@@ -165,15 +183,17 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 
 // GetTxFromWeb downloads a raw transaction from a web server (try one after another).
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	raw = GetTxFromBlockchair(txid, "bitcoin")
+	// 
+	
+	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
-		//println("GetTxFromBlockchair - OK")
+		//println("GetTxFromBlockstream - OK")
 		return
 	}
 
-	raw = GetTxFromWebBTC(txid)
+	raw = GetTxFromBlockchair(txid, "bitcoin")
 	if raw != nil && verify_txid(txid, raw) {
-		//println("GetTxFromWebBTC - OK")
+		//println("GetTxFromBlockchair - OK")
 		return
 	}
 
@@ -195,11 +215,23 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 		return
 	}
 
+	raw = GetTxFromWebBTC(txid)
+	if raw != nil && verify_txid(txid, raw) {
+		//println("GetTxFromWebBTC - OK")
+		return
+	}
+
 	return
 }
 
 // GetTestnetTxFromWeb downloads a testnet's raw transaction from a web server.
 func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
+	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet/api/tx/")
+	if raw != nil && verify_txid(txid, raw) {
+		//println("GetTxFromBlockstream - OK")
+		return
+	}
+
 	raw = GetTxFromExplorer(txid, true)
 	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromExplorer - OK")
@@ -208,7 +240,7 @@ func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 
 	raw = GetTxFromBlockcypher(txid, "btc-testnet")
 	if raw != nil && verify_txid(txid, raw) {
-		println("GetTxFromBlockcypher - OK")
+		//println("GetTxFromBlockcypher - OK")
 		return
 	}
 

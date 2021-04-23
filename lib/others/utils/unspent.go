@@ -220,8 +220,66 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 	return
 }
 
+func GetUnspentFromBlockstream(addr *btc.BtcAddr, api_url string) (res utxo.AllUnspentTx, er error) {
+	var r *http.Response
+	
+	r, er = http.Get(api_url + addr.String() + "/utxo")
+
+	if er != nil {
+		return
+	}
+	if r.StatusCode != 200 {
+		er = errors.New(fmt.Sprint("HTTP StatusCode ", r.StatusCode))
+		return
+	}
+
+	c, _ := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+
+	var result []struct {
+		TxID   string `json:"txid"`
+		Vout   uint32 `json:"vout"`
+		Status struct {
+			Confirmed  bool   `json:"confirmed"`
+			Height uint32 `json:"block_height"`
+		} `json:"status"`
+		Value  uint64 `json:"value"`
+	}
+
+	er = json.Unmarshal(c, &result)
+	if er != nil {
+		return
+	}
+	
+	for _, r := range result {
+		if !r.Status.Confirmed {
+			continue
+		}
+		ur := new(utxo.OneUnspentTx)
+		id := btc.NewUint256FromString(r.TxID)
+		if id == nil {
+			er = errors.New(fmt.Sprint("Bad TXID:", r.TxID))
+			return
+		}
+		copy(ur.TxPrevOut.Hash[:], id.Hash[:])
+		ur.TxPrevOut.Vout = r.Vout
+		ur.Value = r.Value
+		ur.MinedAt = r.Status.Height
+		ur.BtcAddr = addr
+		res = append(res, ur)
+	}
+
+	return
+}
+
 func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	var er error
+
+	res, er = GetUnspentFromBlockstream(addr, "https://blockstream.info/api/address/")
+	if er == nil {
+		return
+	}
+	println("GetUnspentFromBlockstream:", er.Error())
 
 	res, er = GetUnspentFromBlockchair(addr, "bitcoin")
 	if er == nil {
@@ -246,6 +304,12 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 
 func GetUnspentTestnet(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	var er error
+
+	res, er = GetUnspentFromBlockstream(addr, "https://blockstream.info/testnet/api/address/")
+	if er == nil {
+		return
+	}
+	println("GetUnspentFromBlockstream:", er.Error())
 
 	res, er = GetUnspentFromExplorer(addr, true)
 	if er == nil {

@@ -24,6 +24,7 @@
  * Lib,Wallet: added support for ypub/yprv/zpub/zprv types of HD Wallets
  * Wallet: Added new command line switch -xprv, to print wallet's master key
  * Wallet: Added new wallet's config value "hdpath", for flexible compatibility with external wallets (use with "type=4")
+ * Lib/Others/Utils: Added support for blockstream.info/api and made it the default
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file

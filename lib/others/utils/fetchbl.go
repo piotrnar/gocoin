@@ -70,7 +70,25 @@ func GetBlockFromBlockchainInfo(hash *btc.Uint256) (rawtx []byte) {
 		}
 	}
 	if er != nil {
-		fmt.Println("blockexplorer.com:", er.Error())
+		fmt.Println("blockchain.info:", er.Error())
+	}
+	return
+}
+
+// GetBlockFromBlockstream downloads a raw block from blockstream
+func GetBlockFromBlockstream(hash *btc.Uint256, api_url string) (raw []byte) {
+	url := api_url + hash.String() + "/raw"
+	r, er := http.Get(url)
+	if er == nil {
+		if r.StatusCode == 200 {
+			raw, _ = ioutil.ReadAll(r.Body)
+			r.Body.Close()
+		} else {
+			fmt.Println("blockstream block StatusCode=", r.StatusCode)
+		}
+	}
+	if er != nil {
+		fmt.Println("blockstream block:", er.Error())
 	}
 	return
 }
@@ -97,7 +115,13 @@ func IsBlockOK(raw []byte, hash *btc.Uint256) (bl *btc.Block) {
 // GetBlockFromWeb downloads a raw block from a web server (try one after another).
 func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 	var raw []byte
-
+	
+	raw = GetBlockFromBlockstream(hash, "https://blockstream.info/api/block/")
+	if bl = IsBlockOK(raw, hash); bl != nil {
+		//println("GetTxFromBlockstream - OK")
+		return
+	}
+	
 	raw = GetBlockFromBlockchainInfo(hash)
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		//println("GetTxFromBlockchainInfo - OK")
