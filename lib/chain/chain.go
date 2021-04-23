@@ -47,6 +47,7 @@ type NewChanOpts struct {
 	UndoBlocks uint // undo this many blocks when opening the chain
 	UTXOCallbacks utxo.CallbackFunctions
 	BlockMinedCB func(*btc.Block) // used to remove mined txs from memory pool
+	BlockUndoneCB func(*btc.Block) // used to put undone txs back into memory pool
 	DoNotRescan bool // when set UTXO will not be automatically updated with new block found on disk
 }
 

@@ -54,6 +54,10 @@ func blockMined(bl *btc.Block) {
 	}
 }
 
+func blockUndone(bl *btc.Block) {
+	network.BlockUndone(bl)
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted {

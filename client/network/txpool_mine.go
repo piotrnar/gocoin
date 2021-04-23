@@ -122,6 +122,53 @@ func BlockMined(bl *btc.Block) {
 	expireTxsNow = true
 }
 
+// MarkChildrenForMem sets the MemInput flag of all the children (used when a tx is mined).
+func MarkChildrenForMem(tx *btc.Tx) {
+	// Go through all the tx's outputs and mark MemInputs in txs that have been spending it
+	var po btc.TxPrevOut
+	po.Hash = tx.Hash.Hash
+	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec, _ := TransactionsToSend[val]; rec != nil {
+				if rec.MemInputs == nil {
+					rec.MemInputs = make([]bool, len(rec.TxIn))
+				}
+				idx := rec.IIdx(uidx)
+				rec.MemInputs[idx] = true
+				rec.MemInputCnt++
+				common.CountSafe("TxPutBackMemIn")
+			} else {
+				common.CountSafe("TxPutBackMeminERR")
+				fmt.Println("MarkChildrenForMem WTF?", po.String(), " in SpentOutputs, but not in mempool")
+			}
+		}
+	}
+}
+
+func BlockUndone(bl *btc.Block) {
+	var cnt int
+	for _, tx := range bl.Txs[1:] {
+		// put it back into the mempool
+		ntx := &TxRcvd{Tx:tx, trusted:true}
+
+		if NeedThisTx(&ntx.Hash, nil) {
+			if HandleNetTx(ntx, true) {
+				common.CountSafe("TxPutBackOK")
+				cnt++
+			} else {
+				common.CountSafe("TxPutBackFail")
+			}
+		} else {
+			common.CountSafe("TxPutBackNoNeed")
+		}
+		
+		// TODO: make sure to set MemInputs of ones using it back to true (issue #58)
+		MarkChildrenForMem(tx)
+	}
+	println("network.BlockUndone(" + bl.Hash.String() + ") - ", cnt, "of", len(bl.Txs)-1, "txs put backś")
+}
+
 func (c *OneConnection) SendGetMP() error {
 	b := new(bytes.Buffer)
 	TxMutex.Lock()
