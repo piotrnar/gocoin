@@ -34,6 +34,12 @@ func (elem *XY) ParsePubkey(pub []byte) bool {
 	return true
 }
 
+func (elem *XY) ParseXOnlyPubkey(pub []byte) bool {
+	elem.X.SetB32(pub)
+	elem.SetXO(&elem.X, false)
+	return true
+}
+
 // Bytes returns the serialized key in uncompressed format "<04> <X> <Y>"
 // or in compressed format: "<02> <X>", eventually "<03> <X>".
 func (pub *XY) Bytes(compressed bool) (raw []byte) {
