@@ -538,6 +538,13 @@ func purge_utxo(par string) {
 	}
 }
 
+func undo_block(par string) {
+	common.BlockChain.UndoLastBlock()
+	common.Last.Mutex.Lock()
+	common.Last.Block = common.BlockChain.LastBlock()
+	common.Last.Mutex.Unlock()
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
@@ -562,4 +569,5 @@ func init() {
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
+	newUi("undo", true, undo_block, "Undo last block")
 }

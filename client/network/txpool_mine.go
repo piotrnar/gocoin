@@ -166,7 +166,7 @@ func BlockUndone(bl *btc.Block) {
 		// TODO: make sure to set MemInputs of ones using it back to true (issue #58)
 		MarkChildrenForMem(tx)
 	}
-	println("network.BlockUndone(" + bl.Hash.String() + ") - ", cnt, "of", len(bl.Txs)-1, "txs put backś")
+	println("network.BlockUndone(" + bl.Hash.String() + ") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
 }
 
 func (c *OneConnection) SendGetMP() error {
