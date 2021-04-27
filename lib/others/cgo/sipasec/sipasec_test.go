@@ -2,7 +2,9 @@ package sipasec
 
 import (
 	"testing"
+	"encoding/csv"
 	"encoding/hex"
+	"os"
 )
 
 var ta = [][3]string{
@@ -53,7 +55,7 @@ var ta = [][3]string{
 	},
 }
 
-func TestVerify1(t *testing.T) {
+func TestVerify(t *testing.T) {
 	for i := range ta {
 		pkey, _ := hex.DecodeString(ta[i][0])
 		sign, _ := hex.DecodeString(ta[i][1])
@@ -84,6 +86,49 @@ func TestVerify1(t *testing.T) {
 
 }
 
+func TestSchnorrVerify(t *testing.T) {
+	f, er := os.Open("../../../test/bip340_test_vectors.csv")
+	if er != nil {
+		t.Error(er.Error())
+		return
+	}
+	cf := csv.NewReader(f)
+	tas, er := cf.ReadAll()
+	f.Close()
+	if er != nil {
+		t.Error(er.Error())
+		return
+	}
+	for i := range tas {
+		if i == 0 {
+			continue // skip column names
+		}
+		pkey, _ := hex.DecodeString(tas[i][2])
+		hasz, _ := hex.DecodeString(tas[i][4])
+		sign, _ := hex.DecodeString(tas[i][5])
+		//println(i, len(pkey), len(hasz), len(sign), tas[i][6], tas[i][2])
+
+		if tas[i][6] == "FALSE" {
+			res := Schnorr_Verify(pkey, sign, hasz)
+			if res!=0 {
+				t.Error("Schnorr_Verify not failed")
+			}
+			continue
+		}
+
+		res := Schnorr_Verify(pkey, sign, hasz)
+		if res!=1 {
+			t.Error("Schnorr_Verify failed")
+		}
+		continue
+		hasz[0]++
+		res = Schnorr_Verify(pkey, sign, hasz)
+		if res!=0 {
+			t.Error("SchnorrVerify not failed while it should")
+		}
+	}
+}
+
 func BenchmarkVerifyUncompressed(b *testing.B) {
 	key, _ := hex.DecodeString("040eaebcd1df2df853d66ce0e1b0fda07f67d1cabefde98514aad795b86a6ea66dbeb26b67d7a00e2447baeccc8a4cef7cd3cad67376ac1c5785aeebb4f6441c16")
 	sig, _ := hex.DecodeString("3045022100fe00e013c244062847045ae7eb73b03fca583e9aa5dbd030a8fd1c6dfcf11b1002207d0d04fed8fa1e93007468d5a9e134b0a7023b6d31db4e50942d43a250f4d07c01")
@@ -103,3 +148,14 @@ func BenchmarkVerifyCompressed(b *testing.B) {
 		EC_Verify(key_compr, sig, msg)
 	}
 }
+
+func BenchmarkSchnorrVerify(b *testing.B) {
+	key, _ := hex.DecodeString("DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659")
+	sig, _ := hex.DecodeString("6896BD60EEAE296DB48A229FF71DFE071BDE413E6D43F917DC8DCF8C78DE33418906D11AC976ABCCB20B091292BFF4EA897EFCB639EA871CFA95F6DE339E4B0A")
+	msg, _ := hex.DecodeString("243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Schnorr_Verify(key, sig, msg)
+	}
+}
+

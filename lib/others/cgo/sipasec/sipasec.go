@@ -4,6 +4,7 @@ package sipasec
 #include <stdio.h>
 #include <string.h>
 #include "secp256k1.h"
+#include "secp256k1_schnorrsig.h"
 
 static secp256k1_context *ctx;
 
@@ -158,6 +159,13 @@ static int secp256k1_verify(unsigned char *msg, unsigned char *sig, int siglen, 
 	return result;
 }
 
+static int gocoin_schnorr_verify(unsigned char *msg, unsigned char *sig, unsigned char *pk) {
+	secp256k1_xonly_pubkey pubkey;
+	if (!secp256k1_xonly_pubkey_parse(ctx, &pubkey, pk)) return 0;
+	//printf("pubkey: %02x%02x.. ==> %02x%02x... %02x%02x...\n", pk[0], pk[1], pubkey.data[0], pubkey.data[1], pubkey.data[32], pubkey.data[33]);
+	return secp256k1_schnorrsig_verify(ctx, sig, msg, &pubkey);
+}
+
 */
 import "C"
 import "unsafe"
@@ -167,6 +175,11 @@ func EC_Verify(pkey, sign, hash []byte) int {
 	return int(C.secp256k1_verify((*C.uchar)(unsafe.Pointer(&hash[0])),
 		(*C.uchar)(unsafe.Pointer(&sign[0])), C.int(len(sign)),
 		(*C.uchar)(unsafe.Pointer(&pkey[0])), C.int(len(pkey))))
+}
+
+func Schnorr_Verify(pkey, sign, msg []byte) int {
+	return int(C.gocoin_schnorr_verify((*C.uchar)(unsafe.Pointer(&msg[0])),
+		(*C.uchar)(unsafe.Pointer(&sign[0])), (*C.uchar)(unsafe.Pointer(&pkey[0]))))
 }
 
 func init() {

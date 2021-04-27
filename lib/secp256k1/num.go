@@ -102,3 +102,8 @@ func (num *Number) get_bin(le int) ([]byte) {
 	}
 	return append(make([]byte, le-len(bts)), bts...)
 }
+
+func (num *Number) sub(a, b *Number) {
+	num.Sub(&a.Int, &b.Int)
+}
+
