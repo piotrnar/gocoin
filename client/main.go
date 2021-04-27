@@ -594,7 +594,9 @@ func main() {
 				common.Busy()
 				if on {
 					if common.BlockChainSynchronized {
+						usif.FetchingBalances.Set()
 						wallet.LoadBalance()
+						usif.FetchingBalances.Clr()
 					} else {
 						fmt.Println("Cannot enable wallet functionality with blockchain sync in progress")
 					}
