@@ -248,11 +248,16 @@ The next halving is estimated to happen in <b id="next_halving_days">...</b> day
 function do_table(blockver_tab, block_versions, max_block_number, min_block_number) {
 	var key, st = new Array()
 	var counted = 0;
+	var taproot = 0;
 	for (var i=0; i<block_versions.length; i++) {
 		if (block_versions[i][0] > max_block_number) continue;
 		if (block_versions[i][0] < min_block_number) continue;
 		counted++;
-		key = block_versions[i][1]+""
+		var ver = block_versions[i][1]
+		if ((ver & 0x20000004) == 0x20000004) {
+			taproot++
+		}
+		key = ver+""
 		if (isNaN(st[key])) {
 			st[key] = 1
 		} else {
@@ -286,9 +291,22 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 			c = row.insertCell(-1)
 			c.className = 'bl_perc'
 			c.innerText = Math.round(cc*100/counted) + '%'
+			
+			if (taproot) {
+				row = blockver_tab.insertRow(-1)
+				c = row.insertCell(-1)
+				row.className = 'ver_others'
+				c.innerText = 'Taproot'
+				c = row.insertCell(-1)
+				c.className = 'bl_cnt'
+				c.innerText = taproot
+				c = row.insertCell(-1)
+				c.className = 'bl_perc'
+				c.innerText = Math.round(taproot*100/counted) + '%'
+			}
 			break
 		}
-
+		
 		c.className = 'bl_ver'
 		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
 
