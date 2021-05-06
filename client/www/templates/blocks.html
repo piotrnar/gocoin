@@ -116,7 +116,8 @@ function remember_info_setting() {
 remember_info_setting()
 switch_stats_type()
 
-const MINER_ID_COLUMN = 10
+const MINER_ID_COLUMN = 11
+const VERSION_COLUMN = 10
 
 var show_timestamp = false
 
@@ -134,14 +135,14 @@ function swap_time_mode() {
 
 var mid = null
 
-function hlminer(i) {
+function hl_rows(column, i) {
 	var row = blkstab.rows[2+i]
-	mid = row.cells[MINER_ID_COLUMN].innerHTML
+	mid = row.cells[column].innerHTML
 	if (row.className.indexOf("own")!=-1) {
 		mid = null
 	}
 	for (var i=2; i<blkstab.rows.length; i++) {
-		if (blkstab.rows[i].cells[MINER_ID_COLUMN].innerHTML==mid) {
+		if (blkstab.rows[i].cells[column].innerHTML==mid) {
 			blkstab.rows[i].classList.add("own")
 		} else {
 			blkstab.rows[i].classList.remove("own")
@@ -173,7 +174,11 @@ function ms2str(v) {
 
 function refreshblocks() {
 	function onc_mid(c,id) {
-		c.onclick = function() {hlminer(id)}
+		c.onclick = function() {hl_rows(MINER_ID_COLUMN, id)}
+	}
+
+	function onc_ver(c,id) {
+		c.onclick = function() {hl_rows(VERSION_COLUMN, id)}
 	}
 
 	function onc_stat(c,height,size,minedby) {
@@ -262,12 +267,13 @@ function refreshblocks() {
 
 				td = row.insertCell(-1)
 				td.style.textAlign = 'center'
-				td.className = 'stat0'
+				td.className = 'stat0 hand'
 				td.innerText = (cs[i].Version&15).toString(16)
 				td.title = '0x' + cs[i].Version.toString(16)
 				if ((cs[i].Version & 0x20000004) == 0x20000004) {
 					taproot_yes++
 				}
+				onc_ver(td, i)
 
 				var miner = cs[i].Miner.substr(0,11)
 				td = row.insertCell(-1)
