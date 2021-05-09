@@ -38,7 +38,6 @@ type Chain struct {
 		BIP34Height uint32
 		BIP65Height uint32
 		BIP66Height uint32
-		S2XHeight uint32
 	}
 }
 
@@ -172,25 +171,6 @@ func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0]==0x43 // it's simple, but works
 }
 
-
-// For SegWit2X
-func (ch *Chain) MaxBlockWeight(height uint32) uint {
-	if ch.Consensus.S2XHeight != 0 && height >= ch.Consensus.S2XHeight {
-		return 2 * btc.MAX_BLOCK_WEIGHT
-	} else {
-		return btc.MAX_BLOCK_WEIGHT
-	}
-}
-
-
-// For SegWit2X
-func (ch *Chain) MaxBlockSigopsCost(height uint32) uint32 {
-	if ch.Consensus.S2XHeight != 0 && height >= ch.Consensus.S2XHeight {
-		return 2 * btc.MAX_BLOCK_SIGOPS_COST
-	} else {
-		return btc.MAX_BLOCK_SIGOPS_COST
-	}
-}
 
 func (ch *Chain) LastBlock() (res *BlockTreeNode) {
 	ch.blockTreeAccess.Lock()

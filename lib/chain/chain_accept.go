@@ -218,11 +218,15 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 					}(tout.Pk_script, tout.Value, j, bl.Txs[i])
 				}
 
-				if btc.IsP2SH(tout.Pk_script) {
-					sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
+				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
+					if btc.IsP2SH(tout.Pk_script) {
+						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
+					}
 				}
 
-				sigopscost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
+				if (bl.VerifyFlags & script.VER_WITNESS) != 0 {
+					sigopscost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
+				}
 
 				txinsum += tout.Value
 			}
@@ -273,7 +277,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		return
 	}
 
-	if sigopscost > ch.MaxBlockSigopsCost(bl.Height) {
+	if sigopscost > btc.MAX_BLOCK_SIGOPS_COST {
 		e = errors.New("commitTxs(): too many sigops - RPC_Result:bad-blk-sigops")
 		return
 	}
