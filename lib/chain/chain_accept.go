@@ -218,13 +218,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 					}(tout.Pk_script, tout.Value, j, bl.Txs[i])
 				}
 
-				if (bl.VerifyFalgs & script.VER_P2SH) != 0 {
+				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
 					if btc.IsP2SH(tout.Pk_script) {
 						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
 					}
 				}
 
-				if (bl.VerifyFalgs & script.VER_WITNESS) != 0 {
+				if (bl.VerifyFlags & script.VER_WITNESS) != 0 {
 					sigopscost += uint32(bl.Txs[i].CountWitnessSigOps(j, tout.Pk_script))
 				}
 
