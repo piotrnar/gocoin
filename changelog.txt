@@ -27,6 +27,7 @@
  * Lib/Others/Utils: Added support for blockstream.info/api and made it the default
  * Lib/secp256k1: Added support BIP340 - new function SchnorrVerify()
  * Lib/Others/cgo/sipasec: Added Schnorr_Verify() - note: build lib with "./configure --enable-module-schnorrsig --enable-experimental"
+ * Lib: btc.GetSigOpCount() now aborts counting on OP_RETURN (was wrongly rejecting testnet block #1971687)
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
