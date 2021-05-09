@@ -388,7 +388,7 @@ func GetSigOpCount(scr []byte, fAccurate bool) (n uint) {
 	var lastOpcode byte = 0xff
 	for pc < len(scr) {
 		opcode, _, le, e := GetOpcode(scr[pc:])
-		if e != nil {
+		if e != nil || opcode == 0x6a /*Fix for testnet block #1971687 -> Txs[30] (too many sigops) */ {
 			break
 		}
 		pc += le
