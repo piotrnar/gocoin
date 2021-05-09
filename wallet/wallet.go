@@ -102,7 +102,7 @@ func make_wallet() {
 		// parse hdpath
 		ts := strings.Split(hdpath, "/")
 		if len(ts) < 2 || ts[0] != "m" {
-			println("hdpath - top level syntax error")
+			println("hdpath - top level syntax error:", hdpath, len(ts))
 			os.Exit(1)
 		}
 		hd_label_prefix = "m"

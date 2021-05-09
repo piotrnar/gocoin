@@ -73,7 +73,7 @@ func parse_config() {
 				}
 
 			case "hdpath":
-				PassSeedFilename = ll[1]
+				hdpath = strings.Trim(ll[1], "\"")
 
 			case "bip39":
 				v, e := strconv.ParseUint(ll[1], 10, 32)
