@@ -16,6 +16,7 @@ var (
 
 var (
 	// Command line switches
+	cfg_fn    *string = flag.String("cfg", "wallet.cfg", "Specify name of the config file (overwrites env's GOCOIN_WALLET_CONFIG)")
 
 	// Wallet options
 	list      *bool = flag.Bool("l", false, "List public (deposit) addressses and save them to wallet.txt file")
@@ -87,11 +88,15 @@ func main() {
 
 	parse_config()
 
-	flag.Parse() // this one will print defaults and exit in case of any unknown switches (like -h)
+	flag.Parse() // this one prints defaults and exits in case of unknown switches or when help requested
 
 	if uncompressed {
 		println("For SegWit address safety, uncompressed keys are disabled in this version")
 		os.Exit(1)
+	}
+
+	if *bech32_mode {
+		*segwit_mode = true
 	}
 
 	// convert string fee to uint64
