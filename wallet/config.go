@@ -25,14 +25,33 @@ var (
 )
 
 func parse_config() {
-	cfgfn := os.Getenv("GOCOIN_WALLET_CONFIG")
+	cfgfn := ""
+
+	// pre-parse command line: look for -cfg <fname> or -h
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i]=="-cfg" || os.Args[i]=="--cfg" {
+			if i+1 >= len(os.Args) {
+				println("Missing the file name for", os.Args[i], "argument")
+				os.Exit(1)
+			}
+			cfgfn = os.Args[i+1]
+			break
+		}
+		if strings.HasPrefix(os.Args[i], "-cfg=") || strings.HasPrefix(os.Args[i], "--cfg=") {
+			ss := strings.SplitN(os.Args[i], "=", 2)
+			cfgfn = ss[1]
+		}
+	}
+
 	if cfgfn == "" {
-		cfgfn = "wallet.cfg"
-		fmt.Println("GOCOIN_WALLET_CONFIG not set")
+		cfgfn = os.Getenv("GOCOIN_WALLET_CONFIG")
+		if cfgfn == "" {
+			cfgfn = *cfg_fn
+		}
 	}
 	d, e := ioutil.ReadFile(cfgfn)
 	if e != nil {
-		fmt.Println(cfgfn, "not found")
+		fmt.Println(cfgfn, "not found - proceeding with the default config values.")
 	} else {
 		fmt.Println("Using config file", cfgfn)
 		lines := strings.Split(string(d), "\n")

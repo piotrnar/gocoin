@@ -207,7 +207,7 @@ func make_wallet() {
 			seed_key = append(seed_key, byte(i))
 		} else /*if waltype==4*/ {
 			// HD wallet
-			_hd := hdwal.Child(uint32(i) | hdpath_last)
+			_hd := hdwal.Child(uint32(i) + hdpath_last)
 			copy(prv_key, _hd.Key[1:])
 			sys.ClearBuffer(_hd.Key)
 			sys.ClearBuffer(_hd.ChCode)
