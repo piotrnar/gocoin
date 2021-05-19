@@ -237,6 +237,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	common.CountSafe("HandleNetTx")
 
 	tx := ntx.Tx
+	bidx := tx.Hash.BIdx()
 	start_time := time.Now()
 	var final bool // set to true if any of the inpits has a final sequence
 
@@ -247,17 +248,17 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Lock()
 
 	if !retry {
-		if _, present := TransactionsPending[tx.Hash.BIdx()]; !present {
+		if _, present := TransactionsPending[bidx]; !present {
 			// It had to be mined in the meantime, so just drop it now
 			TxMutex.Unlock()
 			common.CountSafe("TxNotPending")
 			return
 		}
-		delete(TransactionsPending, ntx.Hash.BIdx())
+		delete(TransactionsPending, bidx)
 	} else {
 		// In case case of retry, it is on the rejected list,
 		// so remove it now to free any tied WaitingForInputs
-		deleteRejected(tx.Hash.BIdx())
+		deleteRejected(bidx)
 	}
 
 	pos := make([]*btc.TxOut, len(tx.TxIn))
@@ -379,7 +380,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 						newone = true
 						WaitingForInputsSize += uint64(rec.TxLen)
 					}
-					rec.Ids[tx.Hash.BIdx()] = time.Now()
+					rec.Ids[bidx] = time.Now()
 					WaitingForInputs[missingid.BIdx()] = rec
 				}
 
@@ -499,7 +500,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
-	TransactionsToSend[tx.Hash.BIdx()] = rec
+	TransactionsToSend[bidx] = rec
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		newsize := TransactionsToSendSize + uint64(len(rec.Raw))
@@ -513,10 +514,10 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TransactionsToSendWeight += uint64(rec.Tx.Weight())
 
 	for i := range spent {
-		SpentOutputs[spent[i]] = tx.Hash.BIdx()
+		SpentOutputs[spent[i]] = bidx
 	}
 
-	wtg := WaitingForInputs[tx.Hash.BIdx()]
+	wtg := WaitingForInputs[bidx]
 	if wtg != nil {
 		defer RetryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 	}

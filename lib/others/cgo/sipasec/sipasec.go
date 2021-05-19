@@ -4,7 +4,7 @@ package sipasec
 #include <stdio.h>
 #include <string.h>
 #include "secp256k1.h"
-#include "secp256k1_schnorrsig.h"
+#include "secp256k1_schnorrsig.h" // make sure to build libsecp256k1 with: ./configure --enable-module-schnorrsig --enable-experimental
 
 static secp256k1_context *ctx;
 

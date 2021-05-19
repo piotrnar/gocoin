@@ -16,6 +16,10 @@ const (
 	SIGHASH_NONE         = 2
 	SIGHASH_SINGLE       = 3
 	SIGHASH_ANYONECANPAY = 0x80
+
+    SIGHASH_DEFAULT = 0 //!< Taproot only; implied when sighash byte is missing, and equivalent to SIGHASH_ALL
+    SIGHASH_OUTPUT_MASK = 3
+    SIGHASH_INPUT_MASK = 0x80
 )
 
 type TxPrevOut struct {
@@ -59,6 +63,12 @@ type Tx struct {
 	hashPrevouts []byte
 	hashSequence []byte
 	hashOutputs  []byte
+
+    m_prevouts_single_hash []byte
+    m_sequences_single_hash []byte
+    m_outputs_single_hash []byte
+    m_spent_amounts_single_hash []byte
+    m_spent_scripts_single_hash []byte
 }
 
 type AddrValue struct {
@@ -809,3 +819,4 @@ func (t *Tx) SerializeNew() []byte {
 	t.WriteSerializedNew(wr)
 	return wr.Bytes()
 }
+

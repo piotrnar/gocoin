@@ -36,6 +36,7 @@ var (
 	UiChannel chan *OneUiReq = make(chan *OneUiReq, 1)
 	LocksChan chan *OneLock  = make(chan *OneLock, 1)
 
+	FetchingBalances sys.SyncBool
 	Exit_now sys.SyncBool
 )
 
@@ -222,6 +223,10 @@ func GetNetworkHashRateNum() float64 {
 }
 
 func ExecUiReq(req *OneUiReq) {
+	if FetchingBalances.Get() {
+		fmt.Println("Client is currently busy fetching wallet balance.\nYour command has been queued and will execute soon.")
+	}
+
 	//fmt.Println("main.go last seen in line", common.BusyIn())
 	sta := time.Now().UnixNano()
 	req.Done.Add(1)
