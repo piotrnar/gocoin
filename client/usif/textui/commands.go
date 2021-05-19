@@ -538,6 +538,68 @@ func purge_utxo(par string) {
 	}
 }
 
+func undo_block(par string) {
+	common.BlockChain.UndoLastBlock()
+	common.Last.Mutex.Lock()
+	common.Last.Block = common.BlockChain.LastBlock()
+	common.Last.Mutex.Unlock()
+}
+
+
+func redo_block(par string) {
+	network.MutexRcv.Lock()
+	end := network.LastCommitedHeader
+	network.MutexRcv.Unlock()
+	last := common.BlockChain.LastBlock()
+	if last == end {
+		println("You already are at the last known block - nothing to redo")
+		return
+	}
+		
+	sta := time.Now()
+	nxt := last.FindPathTo(end)
+	if nxt == nil {
+		println("ERROR: FindPathTo failed")
+		return
+	}
+
+	if nxt.BlockSize==0 {
+		println("ERROR: BlockSize is zero - corrupt database")
+		return
+	}
+
+	pre := time.Now()
+	crec, _, _ := common.BlockChain.Blocks.BlockGetInternal(nxt.BlockHash, true)
+
+	bl, er := btc.NewBlock(crec.Data)
+	if er != nil {
+		println("btc.NewBlock() error - corrupt database")
+		return
+	}
+	bl.Height = nxt.Height
+
+	// Recover the flags to be used when verifying scripts for non-trusted blocks (stored orphaned blocks)
+	common.BlockChain.ApplyBlockFlags(bl)
+
+	er = bl.BuildTxList()
+	if er != nil {
+		println("bl.BuildTxList() error - corrupt database")
+		return
+	}
+
+	bl.Trusted = false // assume not trusted
+
+	tdl := time.Now()
+	rb := &network.OneReceivedBlock{TmStart:sta, TmPreproc:pre, TmDownload:tdl}
+	network.MutexRcv.Lock()
+	network.ReceivedBlocks[bl.Hash.BIdx()] = rb
+	network.MutexRcv.Unlock()
+
+	fmt.Println("Putting block", bl.Height, "into net queue...")
+	network.NetBlocks <- &network.BlockRcvd{Conn:nil, Block:bl, BlockTreeNode:nxt,
+		OneReceivedBlock:rb, BlockExtraInfo:nil}
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
@@ -562,4 +624,6 @@ func init() {
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
+	newUi("undo", true, undo_block, "Undo last block")
+	newUi("redo", true, redo_block, "Redo last block")
 }

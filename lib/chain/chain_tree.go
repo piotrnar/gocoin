@@ -282,6 +282,9 @@ func (ch *Chain) UndoLastBlock() {
 	}
 
 	ch.Unspent.UndoBlockTxs(bl, last.Parent.BlockHash.Hash[:])
+	if ch.CB.BlockUndoneCB != nil {
+		ch.CB.BlockUndoneCB(bl)
+	}
 	ch.SetLast(last.Parent)
 }
 

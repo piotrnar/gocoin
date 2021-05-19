@@ -198,8 +198,11 @@ func save_mempool(par string) {
 
 func check_txs(par string) {
 	network.TxMutex.Lock()
-	network.MempoolCheck()
+	err := network.MempoolCheck()
 	network.TxMutex.Unlock()
+	if !err {
+		fmt.Println("Memory Pool seems to be consistent")
+	}
 }
 
 func load_mempool(par string) {
