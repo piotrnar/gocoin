@@ -153,7 +153,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 				}
 				return
 			}
-			if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+			if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ false) {
 				if DBG_ERR {
 					fmt.Println("VerifyWitnessProgram failed A")
 				}
@@ -239,7 +239,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 					}
 					return
 				}
-				if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags) {
+				if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ true) {
 					if DBG_ERR {
 						fmt.Println("VerifyWitnessProgram failed B")
 					}

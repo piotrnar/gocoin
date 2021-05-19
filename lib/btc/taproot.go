@@ -33,7 +33,7 @@ type ScriptExecutionData struct {
 
 // TaprootSigHash implements taproot's sighash algorithm
 // script - if true uses TAPSCRIPT mode (not TAPROOT)
-func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, spent_outputs []TxOut, in_pos int, hash_type byte, script bool) []byte {
+func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_type byte, script bool) []byte {
 	var ext_flag, key_version byte
 	
 	if script {
@@ -65,54 +65,57 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, spent_outputs []TxOu
 	binary.Write(sha, binary.LittleEndian, tx.Version)
 	binary.Write(sha, binary.LittleEndian, tx.Lock_time)
     
-	if tx.m_prevouts_single_hash == nil {
-		sh := sha256.New()
-		for _, ti := range tx.TxIn {
-			sh.Write(ti.Input.Hash[:])
-			binary.Write(sh, binary.LittleEndian, ti.Input.Vout)
-		}
-		tx.m_prevouts_single_hash = sh.Sum(nil)
-		//println("prevouts:", NewUint256(tx.m_prevouts_single_hash).String())
-		
-		sh.Reset()
-		for i := range tx.TxIn {
-			binary.Write(sh, binary.LittleEndian, spent_outputs[i].Value)
-		}
-		tx.m_spent_amounts_single_hash = sh.Sum(nil)
-		//println("amounts:", NewUint256(tx.m_spent_amounts_single_hash).String())
-		
-		sh.Reset()
-		for i := range tx.TxIn {
-			WriteVlen(sh, uint64(len(spent_outputs[i].Pk_script)))
-			sh.Write(spent_outputs[i].Pk_script)
-		}
-		tx.m_spent_scripts_single_hash = sh.Sum(nil)
-		//println("m_spent_scripts_single_hash:", NewUint256(tx.m_spent_scripts_single_hash).String())
-		
-		sh.Reset()
-		for _, vin := range tx.TxIn {
-			binary.Write(sh, binary.LittleEndian, vin.Sequence)
-		}
-		tx.m_sequences_single_hash = sh.Sum(nil)
-		//println("m_sequences_single_hash:", NewUint256(tx.m_sequences_single_hash).String())
-	
-		sh.Reset()
-		for _, vout := range tx.TxOut {
-			binary.Write(sh, binary.LittleEndian, vout.Value)
-			WriteVlen(sh, uint64(len(vout.Pk_script)))
-			sh.Write(vout.Pk_script)
-		}
-		tx.m_outputs_single_hash = sh.Sum(nil)
-		//println("m_outputs_single_hash:", NewUint256(tx.m_outputs_single_hash).String())
-	}
-	
 	if input_type != SIGHASH_ANYONECANPAY {
+		if tx.m_prevouts_single_hash == nil {
+			sh := sha256.New()
+			for _, ti := range tx.TxIn {
+				sh.Write(ti.Input.Hash[:])
+				binary.Write(sh, binary.LittleEndian, ti.Input.Vout)
+			}
+			tx.m_prevouts_single_hash = sh.Sum(nil)
+			//println("prevouts:", NewUint256(tx.m_prevouts_single_hash).String())
+
+			sh.Reset()
+			for i := range tx.TxIn {
+				binary.Write(sh, binary.LittleEndian, tx.Spent_outputs[i].Value)
+			}
+			tx.m_spent_amounts_single_hash = sh.Sum(nil)
+			//println("amounts:", NewUint256(tx.m_spent_amounts_single_hash).String())
+
+			sh.Reset()
+			for i := range tx.TxIn {
+				WriteVlen(sh, uint64(len(tx.Spent_outputs[i].Pk_script)))
+				sh.Write(tx.Spent_outputs[i].Pk_script)
+			}
+			tx.m_spent_scripts_single_hash = sh.Sum(nil)
+			//println("m_spent_scripts_single_hash:", NewUint256(tx.m_spent_scripts_single_hash).String())
+
+			sh.Reset()
+			for _, vin := range tx.TxIn {
+				binary.Write(sh, binary.LittleEndian, vin.Sequence)
+			}
+			tx.m_sequences_single_hash = sh.Sum(nil)
+			//println("m_sequences_single_hash:", NewUint256(tx.m_sequences_single_hash).String())
+		}
+
+		
 		sha.Write(tx.m_prevouts_single_hash)
 		sha.Write(tx.m_spent_amounts_single_hash)
 		sha.Write(tx.m_spent_scripts_single_hash)
 		sha.Write(tx.m_sequences_single_hash)
     }
     if output_type == SIGHASH_ALL {
+		if tx.m_outputs_single_hash == nil {
+			sh := sha256.New()
+			for _, vout := range tx.TxOut {
+				binary.Write(sh, binary.LittleEndian, vout.Value)
+				WriteVlen(sh, uint64(len(vout.Pk_script)))
+				sh.Write(vout.Pk_script)
+			}
+			tx.m_outputs_single_hash = sh.Sum(nil)
+			//println("m_outputs_single_hash:", NewUint256(tx.m_outputs_single_hash).String())
+		}
+
 		sha.Write(tx.m_outputs_single_hash)
     }
 	
@@ -127,8 +130,8 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, spent_outputs []TxOu
     if input_type == SIGHASH_ANYONECANPAY {
 		sha.Write(tx.TxIn[in_pos].Input.Hash[:])
 		binary.Write(sha, binary.LittleEndian, tx.TxIn[in_pos].Input.Vout)
-		binary.Write(sha, binary.LittleEndian, spent_outputs[in_pos].Value)
-		sha.Write(spent_outputs[in_pos].Pk_script)
+		binary.Write(sha, binary.LittleEndian, tx.Spent_outputs[in_pos].Value)
+		sha.Write(tx.Spent_outputs[in_pos].Pk_script)
 		binary.Write(sha, binary.LittleEndian, tx.TxIn[in_pos].Sequence)
     } else {
 		binary.Write(sha, binary.LittleEndian, uint32(in_pos))

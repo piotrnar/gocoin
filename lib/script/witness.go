@@ -16,7 +16,7 @@ func (w *witness_ctx) IsNull() bool {
 	return w.stack.size()==0
 }
 
-func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp int, witversion int, program []byte, flags uint32) bool {
+func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp int, witversion int, program []byte, flags uint32, is_p2sh bool) bool {
 	var stack scrStack
 	var scriptPubKey []byte
 
@@ -71,6 +71,15 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			}
 			return false
 		}
+	} else if witversion == 1 && len(program) == 32 && !is_p2sh {
+		if (flags & VER_TAPROOT) == 0 {
+			if DBG_ERR {
+				fmt.Println("VER_TAPROOT not set")
+			}
+			return false
+		}
+		println("==== TAP TAP =====")
+		return false
 	} else if (flags&VER_WITNESS_PROG) != 0 {
 		if DBG_ERR {
 			fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_WITNESS_PROGRAM")

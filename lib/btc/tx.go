@@ -64,7 +64,8 @@ type Tx struct {
 	hashSequence []byte
 	hashOutputs  []byte
 
-    m_prevouts_single_hash []byte
+	Spent_outputs []*TxOut // this is used by TaprootSigHash()
+	m_prevouts_single_hash []byte
     m_sequences_single_hash []byte
     m_outputs_single_hash []byte
     m_spent_amounts_single_hash []byte

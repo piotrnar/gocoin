@@ -99,8 +99,8 @@ func TestTaprootScritps(t *testing.T) {
 			t.Fatal(i, "Tx not fully decoded", off, len(d), tv.Tx)
 		}
 
-		prvouts := make([]btc.TxOut, len(tv.Prevouts))
-		
+		tx.Spent_outputs = make([]*btc.TxOut, len(tv.Prevouts))
+	
 		_b := new(bytes.Buffer)
 		btc.WriteVlen(_b, uint64(len(tv.Prevouts)))
 		outs := _b.Bytes()
@@ -110,8 +110,9 @@ func TestTaprootScritps(t *testing.T) {
 			if e != nil {
 				t.Fatal(i, e.Error())
 			}
+			tx.Spent_outputs[i] = new(btc.TxOut)
 			rd := bytes.NewReader(d)
-			e = binary.Read(rd, binary.LittleEndian, &prvouts[i].Value)
+			e = binary.Read(rd, binary.LittleEndian, &tx.Spent_outputs[i].Value)
 			if e != nil {
 				t.Fatal(i, e.Error())
 			}
@@ -119,12 +120,12 @@ func TestTaprootScritps(t *testing.T) {
 			if e != nil {
 				t.Fatal(i, e.Error())
 			}
-			prvouts[i].Pk_script = make([]byte, int(le))
-			_, e = rd.Read(prvouts[i].Pk_script)
+			tx.Spent_outputs[i].Pk_script = make([]byte, int(le))
+			_, e = rd.Read(tx.Spent_outputs[i].Pk_script)
 			if e != nil {
 				t.Fatal(i, e.Error())
 			}
-			outs = append(outs, txout_serialize(&prvouts[i])...)
+			outs = append(outs, txout_serialize(tx.Spent_outputs[i])...)
 		}
 		
 		idx := tv.Index
@@ -150,17 +151,20 @@ func TestTaprootScritps(t *testing.T) {
 			t.Fatal(i, er.Error())
 		}		
 		//println("\n\njade z", i, "...")
-		res := verify_script_with_spent_outputs(prvouts[idx].Pk_script, prvouts[idx].Value, outs, idx, tx, flags)
+		//res := verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
 		
-		/*
-		hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{
-			//M_tapleaf_hash : btc.NewUint256FromString("b45b31b6d43e11c6e3c38b09942a7e6d8178eaa97965f387b0872b5857c6768d").Hash[:],
-			//M_tapleaf_hash : btc.NewUint256FromString("c6cbacab88ff5c89948bcdd19fcc6c4d85db9278876c514a622aeea48a3c010c").Hash[:],
-			M_codeseparator_pos : 0xffffffff}, prvouts, idx, 2, false)
+		res := VerifyTxScript(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, idx, tx, flags)
+		//break
 		
-		println("hasz:", btc.NewUint256(hasz).String())
-		break
-		*/
+		if false {
+			hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{
+				M_tapleaf_hash : btc.NewUint256FromString("b45b31b6d43e11c6e3c38b09942a7e6d8178eaa97965f387b0872b5857c6768d").Hash[:],
+				M_codeseparator_pos : 0xffffffff}, idx, 2, false)
+
+			println("hasz:", btc.NewUint256(hasz).String())
+			break
+		}
+		
 		if !res {
 			dump_test(&tv)
 			t.Fatal(i, "Verify Failed for", tv.Comment)
@@ -187,7 +191,7 @@ func TestTaprootScritps(t *testing.T) {
 					}
 				}
 			}
-			res = verify_script_with_spent_outputs(prvouts[idx].Pk_script, prvouts[idx].Value, outs, idx, tx, flags)
+			res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
 			if res {
 				dump_test(&tv)
 				t.Fatal(i, "Verify not Failed but should")
