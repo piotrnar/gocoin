@@ -121,6 +121,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
+	var touts []*btc.TxOut
 
 	for i := range bl.Txs {
 		txoutsum, txinsum = 0, 0
@@ -129,11 +130,17 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 		// Check each tx for a valid input, except from the first one
 		if i > 0 {
+			
 			tx_trusted := bl.Trusted
-			if !tx_trusted && TrustedTxChecker!=nil && TrustedTxChecker(bl.Txs[i]) {
-				tx_trusted = true
+			if !tx_trusted {
+				if TrustedTxChecker != nil && TrustedTxChecker(bl.Txs[i]) {
+					tx_trusted = true
+				} else {
+					touts = make([]*btc.TxOut, len(bl.Txs[i].TxIn))
+				}
 			}
 
+			// first collect all the inputs, their amounts and spend scripts
 			for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 				inp := &bl.Txs[i].TxIn[j].Input
 				spent_map, was_spent := changes.DeledTxs[inp.Hash]
@@ -208,16 +215,10 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 					}
 				}
 
-				if !tx_trusted { // run VerifyTxScript() in a parallel task
-					wg.Add(1)
-					go func (prv []byte, amount uint64, i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(prv, amount, i, tx, bl.VerifyFlags) {
-							atomic.AddUint32(&ver_err_cnt, 1)
-						}
-						wg.Done()
-					}(tout.Pk_script, tout.Value, j, bl.Txs[i])
+				if !tx_trusted {
+					touts[j] = tout
 				}
-
+				
 				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
 					if btc.IsP2SH(tout.Pk_script) {
 						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
@@ -230,6 +231,20 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 				txinsum += tout.Value
 			}
+			
+			// second, verify the scrips:
+			if !tx_trusted { // run VerifyTxScript() in a parallel task
+				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
+					wg.Add(1)
+					go func (_touts []*btc.TxOut, i int, tx *btc.Tx) {
+						if !script.VerifyTxScript(_touts[i].Pk_script, _touts[i].Value, i, tx, bl.VerifyFlags) {
+							atomic.AddUint32(&ver_err_cnt, 1)
+						}
+						wg.Done()
+					}(touts, j, bl.Txs[i])
+				}
+			}
+
 		} else {
 			// For coinbase tx we need to check (like satoshi) whether the script size is between 2 and 100 bytes
 			// (Previously we made sure in CheckBlock() that this was a coinbase type tx)
@@ -238,6 +253,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				return
 			}
 		}
+		
+		if e != nil { // this should not happen as every error has a return
+			return // If any input fails, do not continue
+		}
+		
 		sumblockin += txinsum
 
 		for j := range bl.Txs[i].TxOut {
@@ -245,9 +265,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		}
 		sumblockout += txoutsum
 
-		if e != nil {
-			return // If any input fails, do not continue
-		}
 		if i > 0 {
 			bl.Txs[i].Fee = txinsum - txoutsum
 			if txoutsum > txinsum {
