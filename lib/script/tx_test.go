@@ -156,7 +156,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 			continue
 		}
 
-		if VerifyTxScript(pk, tv.inps[j].value, i, tx, tv.ver_flags) {
+		if VerifyTxScript(pk, &SigChecker{Amount:tv.inps[j].value, Idx:i, Tx:tx}, tv.ver_flags) {
 			oks++
 		}
 	}

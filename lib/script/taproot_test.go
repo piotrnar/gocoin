@@ -153,8 +153,8 @@ func TestTaprootScritps(t *testing.T) {
 		//println("\n\njade z", i, "...")
 		//res := verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
 		
-		res := VerifyTxScript(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, idx, tx, flags)
-		//break
+		res := VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
+		break
 		
 		if false {
 			hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{

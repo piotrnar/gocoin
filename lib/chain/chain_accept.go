@@ -237,7 +237,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 					wg.Add(1)
 					go func (_touts []*btc.TxOut, i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(_touts[i].Pk_script, _touts[i].Value, i, tx, bl.VerifyFlags) {
+						if !script.VerifyTxScript(_touts[i].Pk_script, &script.SigChecker{Amount:_touts[i].Value, Idx:i, Tx:tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()

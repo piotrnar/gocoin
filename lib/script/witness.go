@@ -16,12 +16,13 @@ func (w *witness_ctx) IsNull() bool {
 	return w.stack.size()==0
 }
 
-func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp int, witversion int, program []byte, flags uint32, is_p2sh bool) bool {
+func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion int, program []byte, flags uint32, is_p2sh bool) bool {
 	var stack scrStack
 	var scriptPubKey []byte
+    var execdata btc.ScriptExecutionData
 
 	if DBG_SCR {
-		fmt.Println("*****************VerifyWitnessProgram", len(tx.SegWit), witversion, flags, witness.stack.size(), len(program))
+		fmt.Println("*****************VerifyWitnessProgram", len(checker.Tx.SegWit), witversion, flags, witness.stack.size(), len(program))
 	}
 
 	if witversion == 0 {
@@ -52,7 +53,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 			// Special case for pay-to-pubkeyhash; signature + pubkey in witness
 			if (witness.stack.size() != 2) {
 				if DBG_ERR {
-					fmt.Println("20-SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH", tx.Hash.String())
+					fmt.Println("20-SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH", checker.Tx.Hash.String())
 				}
 				return false
 			}
@@ -103,7 +104,7 @@ func VerifyWitnessProgram(witness *witness_ctx, amount uint64, tx *btc.Tx, inp i
 		}
 	}
 
-	if !evalScript(scriptPubKey, amount, &stack, tx, inp, flags, SIGVERSION_WITNESS_V0) {
+	if !evalScript(scriptPubKey, &stack, checker, flags, SIGVERSION_WITNESS_V0, &execdata) {
 		return false
 	}
 

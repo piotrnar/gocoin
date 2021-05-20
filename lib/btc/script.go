@@ -187,6 +187,7 @@ func DecodeScript(pk string) (out []byte, e error) {
 					case "NOP8": out = append(out, 0xb7)
 					case "NOP9": out = append(out, 0xb8)
 					case "NOP10": out = append(out, 0xb9)
+					case "CHECKSIGADD": out = append(out, 0xba)
 					case "": out = append(out, []byte{}...)
 					default:
 						dat, _ := hex.DecodeString(xx[i])

@@ -457,7 +457,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		for i := range tx.TxIn {
 			wg.Add(1)
 			go func(prv []byte, amount uint64, i int, tx *btc.Tx) {
-				if !script.VerifyTxScript(prv, amount, i, tx, script.STANDARD_VERIFY_FLAGS) {
+				if !script.VerifyTxScript(prv, &script.SigChecker{Amount:amount, Idx:i, Tx:tx}, script.STANDARD_VERIFY_FLAGS) {
 					atomic.AddUint32(&ver_err_cnt, 1)
 				}
 				wg.Done()

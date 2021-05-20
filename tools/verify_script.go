@@ -70,7 +70,7 @@ func main() {
 	amount := uint64(1000000)
 	//script.DBG_SCR = true
 	//script.DBG_ERR = true
-	res := script.VerifyTxScript(pkscript, amount, i, tx, flags)
+	res := script.VerifyTxScript(pkscript, &script.SigChecker{Amount:amount, Idx:i, Tx:tx}, flags)
 	if bitcoinconsensus_verify_script_with_amount!=nil {
 		resc := call_consensus_lib(pkscript, amount, i, tx, flags)
 		println(res, resc)

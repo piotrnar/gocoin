@@ -69,7 +69,7 @@ func main() {
 	value := uint64(1000000)
 	flags := uint32(script.STANDARD_VERIFY_FLAGS)
 	println(flags)
-	res := script.VerifyTxScript(pkscript, value, i, tx, flags)
+	res := script.VerifyTxScript(pkscript, &script.SigChecker{Amount:value, Idx:i, Tx:tx}, flags)
 	println("Gocoin:", res)
 	if use_consensus_lib {
 		res = consensus_verify_script(pkscript, i, tx, flags)

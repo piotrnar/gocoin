@@ -147,7 +147,7 @@ func TestScritps(t *testing.T) {
 			println("spend:", hex.EncodeToString(spend_tx.Serialize()))
 			println("------------------------------ testing vector", tot, len(v.witness), v.value)
 		}
-		res := VerifyTxScript(v.pkscr, v.value, 0, spend_tx, flags)
+		res := VerifyTxScript(v.pkscr, &SigChecker{Amount:v.value, Idx:0, Tx:spend_tx}, flags)
 
 		if res!=v.exp_res {
 			t.Error(tot, "TestScritps failed. Got:", res, "   exp:", v.exp_res, v.desc)

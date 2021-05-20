@@ -12,13 +12,9 @@ import (
 )
 
 
-type VerifyConsensusFunction func(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32, result bool)
-
 var (
 	DBG_SCR = false
 	DBG_ERR = true
-
-	VerifyConsensus VerifyConsensusFunction
 )
 
 const (
@@ -56,17 +52,16 @@ const (
 
 	SIGVERSION_BASE = 0
 	SIGVERSION_WITNESS_V0 = 1
+	SIGVERSION_TAPROOT = 2
+	SIGVERSION_TAPSCRIPT = 3
 )
 
 
-func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags uint32) (result bool) {
-	if VerifyConsensus!=nil {
-		defer func() {
-			// We call CompareToConsensus inside another function to wait for final "result"
-			VerifyConsensus(pkScr, amount, i, tx, ver_flags, result)
-		}()
-	}
-
+func VerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (result bool) {
+    var execdata btc.ScriptExecutionData
+	
+	tx := checker.Tx
+	i := checker.Idx
 	sigScr := tx.TxIn[i].ScriptSig
 
 	if (ver_flags & VER_SIGPUSHONLY) != 0 && !btc.IsPushOnly(sigScr) {
@@ -84,7 +79,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 	}
 
 	var stack, stackCopy scrStack
-	if !evalScript(sigScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
+	if !evalScript(sigScr, &stack, checker, ver_flags, SIGVERSION_BASE, &execdata) {
 		if DBG_ERR {
 			if tx != nil {
 				fmt.Println("VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -105,7 +100,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 		stackCopy.copy_from(&stack)
 	}
 
-	if !evalScript(pkScr, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
+	if !evalScript(pkScr, &stack, checker, ver_flags, SIGVERSION_BASE, &execdata) {
 		if DBG_SCR {
 			fmt.Println("* pkScript failed :", hex.EncodeToString(pkScr[:]))
 			fmt.Println("* VerifyTxScript", tx.Hash.String(), i+1, "/", len(tx.TxIn))
@@ -153,7 +148,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 				}
 				return
 			}
-			if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ false) {
+			if !VerifyWitnessProgram(&witness, checker, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ false) {
 				if DBG_ERR {
 					fmt.Println("VerifyWitnessProgram failed A")
 				}
@@ -200,7 +195,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 			fmt.Println("pubKey2:", hex.EncodeToString(pubKey2))
 		}
 
-		if !evalScript(pubKey2, amount, &stack, tx, i, ver_flags, SIGVERSION_BASE) {
+		if !evalScript(pubKey2, &stack, checker, ver_flags, SIGVERSION_BASE, &execdata) {
 			if DBG_ERR {
 				fmt.Println("P2SH extra verification failed")
 			}
@@ -239,7 +234,7 @@ func VerifyTxScript(pkScr []byte, amount uint64, i int, tx *btc.Tx, ver_flags ui
 					}
 					return
 				}
-				if !VerifyWitnessProgram(&witness, amount, tx, i, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ true) {
+				if !VerifyWitnessProgram(&witness, checker, witnessversion, witnessprogram, ver_flags, /* is_p2sh */ true) {
 					if DBG_ERR {
 						fmt.Println("VerifyWitnessProgram failed B")
 					}
@@ -294,14 +289,19 @@ func b2i(b bool) int64 {
 	}
 }
 
-func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, ver_flags uint32, sigversion int) bool {
+func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32, sigversion int, execdata *btc.ScriptExecutionData) bool {
+	
+	tx := checker.Tx
+	inp := checker.Idx
+	amount := checker.Amount
+	
 	if DBG_SCR {
 		fmt.Println("evalScript len", len(p), "amount", amount, "inp", inp, "flagz", ver_flags, "sigver", sigversion)
 		stack.print()
 	}
 
 
-	if len(p) > MAX_SCRIPT_SIZE {
+	if (sigversion == SIGVERSION_BASE || sigversion == SIGVERSION_WITNESS_V0) && len(p) > MAX_SCRIPT_SIZE {
 		if DBG_ERR {
 			fmt.Println("script too long", len(p))
 		}
@@ -323,9 +323,13 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 
 	var exestack scrStack
 	var altstack scrStack
-	sta, idx, opcnt := 0, 0, 0
+	pbegincodehash, idx, opcnt := 0, 0, 0
 	checkMinVals := (ver_flags&VER_MINDATA)!=0
-	for idx < len(p) {
+	var opcode_pos uint32
+    execdata.M_codeseparator_pos = 0xFFFFFFFF
+    execdata.M_codeseparator_pos_init = true
+	
+	for ; idx < len(p); opcode_pos++ {
 		inexec := exestack.nofalse()
 
 		// Read instruction
@@ -350,13 +354,16 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 			return false
 		}
 
-		if opcode > 0x60 {
-			opcnt++
-			if opcnt > 201 {
-				if DBG_ERR {
-					fmt.Println("evalScript: too many opcodes A")
+		if (sigversion == SIGVERSION_BASE || sigversion == SIGVERSION_WITNESS_V0) {
+			// Note how OP_RESERVED does not count towards the opcode limit.
+			if opcode > 0x60 {
+				opcnt++
+				if opcnt > 201 {
+					if DBG_ERR {
+						fmt.Println("evalScript: too many opcodes A")
+					}
+					return false
 				}
-				return false
 			}
 		}
 
@@ -425,6 +432,18 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 							return false
 						}
 						vch := stack.pop()
+                        // Tapscript requires minimal IF/NOTIF inputs as a consensus rule.
+                        if sigversion == SIGVERSION_TAPSCRIPT {
+                            // The input argument to the OP_IF and OP_NOTIF opcodes must be either
+                            // exactly 0 (the empty vector) or exactly 1 (the one-byte vector with value 1).
+                            if len(vch) > 1 || (len(vch) == 1 && vch[0] != 1) {
+								if DBG_ERR {
+									fmt.Println("SCRIPT_ERR_TAPSCRIPT_MINIMALIF")
+								}
+								return false
+                            }
+                        }
+                        // Under witness v0 rules it is only a policy rule, enabled through SCRIPT_VERIFY_MINIMALIF.
 						if sigversion==SIGVERSION_WITNESS_V0 && (ver_flags&VER_MINIMALIF)!=0 {
 							if len(vch)>1 {
 								if DBG_ERR {
@@ -924,7 +943,8 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					stack.push(h[:])
 
 				case opcode==0xab: // OP_CODESEPARATOR
-					sta = idx
+					pbegincodehash = idx
+					execdata.M_codeseparator_pos = opcode_pos
 
 				case opcode==0xac || opcode==0xad: // OP_CHECKSIG || OP_CHECKSIGVERIFY
 
@@ -934,61 +954,12 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 						}
 						return false
 					}
-					var fSuccess bool
 					vchSig := stack.top(-2)
 					vchPubKey := stack.top(-1)
-
-					scriptCode := p[sta:]
-
-					// Drop the signature in pre-segwit scripts but not segwit scripts
-					if sigversion == SIGVERSION_BASE {
-						var found int
-						scriptCode, found = delSig(scriptCode, vchSig)
-						if found > 0 && (ver_flags&VER_CONST_SCRIPTCODE) != 0 {
-							if DBG_ERR {
-								fmt.Println("SCRIPT_ERR_SIG_FINDANDDELETE SIN")
-							}
-							return false
-						}
-					}
-
-					// BIP-0066
-					if !CheckSignatureEncoding(vchSig, ver_flags) || !CheckPubKeyEncoding(vchPubKey, ver_flags, sigversion) {
-						if DBG_ERR {
-							fmt.Println("Invalid Signature Encoding A")
-						}
-						return false
-					}
-
-					if len(vchSig) > 0 {
-						var sh []byte
-						if sigversion == SIGVERSION_WITNESS_V0 {
-							if DBG_SCR {
-								fmt.Println("getting WitnessSigHash for inp", inp, "and htype", int32(vchSig[len(vchSig)-1]))
-							}
-							sh = tx.WitnessSigHash(scriptCode, amount, inp, int32(vchSig[len(vchSig)-1]))
-						} else {
-							sh = tx.SignatureHash(scriptCode, inp, int32(vchSig[len(vchSig)-1]))
-						}
-						if DBG_SCR {
-							fmt.Println("EcdsaVerify", hex.EncodeToString(sh))
-							fmt.Println(" key:", hex.EncodeToString(vchPubKey))
-							fmt.Println(" sig:", hex.EncodeToString(vchSig))
-						}
-						fSuccess = btc.EcdsaVerify(vchPubKey, vchSig, sh)
-						if DBG_SCR {
-							fmt.Println(" ->", fSuccess)
-						}
-					}
-					if !fSuccess && DBG_SCR {
-						fmt.Println("EcdsaVerify fail 1", tx.Hash.String())
-					}
-
-					if !fSuccess && (ver_flags&VER_NULLFAIL)!=0 && len(vchSig)>0 {
-						if DBG_ERR {
-							fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-1")
-						}
-						return false
+				
+					ok, fSuccess := checker.evalChecksig(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
+					if !ok {
+					   return false
 					}
 
 					stack.pop()
@@ -1004,6 +975,40 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 					} else { // OP_CHECKSIG
 						stack.pushBool(fSuccess)
 					}
+
+				case opcode == 0xba: /*OP_CHECKSIGADD*/
+                    // OP_CHECKSIGADD is only available in Tapscript
+					if sigversion == SIGVERSION_BASE || sigversion == SIGVERSION_WITNESS_V0 {
+						if DBG_ERR {
+							fmt.Println("SCRIPT_ERR_BAD_OPCODE / OP_CHECKSIGADD")
+						}
+						return false
+					}
+                    
+					// (sig num pubkey -- num)
+					if stack.size() < 3 {
+						if DBG_ERR {
+							fmt.Println("OP_CHECKSIGADD: SCRIPT_ERR_INVALID_STACK_OPERATION")
+						}
+						return false
+					}
+                
+					sig := stack.top(-3)
+					num := stack.topInt(-1, checkMinVals)	
+					pubkey := stack.top(-1)
+
+					ok, success := checker.evalChecksig(sig, pubkey, p, pbegincodehash, execdata, ver_flags, sigversion)
+					if !ok {
+					   return false
+					}
+				
+					stack.pop()
+					stack.pop()
+					stack.pop()
+					if success {
+						num++
+					}
+					stack.pushInt(num)
 
 				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
 					//fmt.Println("OP_CHECKMULTISIG ...")
@@ -1058,7 +1063,7 @@ func evalScript(p []byte, amount uint64, stack *scrStack, tx *btc.Tx, inp int, v
 						return false
 					}
 
-					xxx := p[sta:]
+					xxx := p[pbegincodehash:]
 					// Drop the signature in pre-segwit scripts but not segwit scripts
 					if sigversion == SIGVERSION_BASE {
 						for k := 0; k < int(sigscnt); k++ {
