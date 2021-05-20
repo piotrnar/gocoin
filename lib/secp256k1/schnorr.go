@@ -1,9 +1,12 @@
 package secp256k1
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding"
 	"hash"
+	"encoding/hex"
+	//"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func SchnorrsigChallenge(e *Number, r32, msg32, pubkey32 []byte) {
@@ -44,6 +47,62 @@ func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
 	r.X.Normalize()
 	return rx.Equals(&r.X)
 }
+
+func _rev(d []byte) string {
+	x := make([]byte, len(d))
+	for i := range d {
+		x[len(x)-i-1] = d[i]
+	}
+	return hex.EncodeToString(x)
+}
+
+
+func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {
+	var base_point XY
+	/*
+	println("CheckPayToContract", parity)
+	println("key", _rev(m_keydata))
+	println("has", _rev(hash))
+	println("bas", _rev(base))
+	*/
+	base_point.ParseXOnlyPubkey(base)
+	return base_point.XOnlyPubkeyTweakAddCheck(m_keydata, parity, hash)
+}
+
+func (pk *XY) XOnlyPubkeyTweakAddCheck(tweaked_pubkey32 []byte, tweaked_pk_parity bool, hash []byte) bool {
+    var pk_expected32 [32]byte
+	var tweak Number
+
+	tweak.SetBytes(hash)
+	if (!pk.ECPublicTweakAdd(&tweak)) {
+        return false
+    }
+	pk.X.Normalize()
+	pk.Y.Normalize()
+	pk.X.GetB32(pk_expected32[:])
+	
+	if bytes.Equal(pk_expected32[:], tweaked_pubkey32) {
+		if pk.Y.IsOdd() == tweaked_pk_parity {
+			return true
+		}
+	}
+	
+	return false
+}
+
+func (key *XY) ECPublicTweakAdd(tweak *Number) bool {
+	var pt, pt2 XYZ
+	var one Number
+	pt.SetXY(key)
+	one.SetInt64(1)
+	pt.ECmult(&pt2, &one, tweak)
+	if pt2.IsInfinity() {
+		return false
+	}
+	key.SetXYZ(&pt2)
+	return true
+}
+
 
 var _sha_midstate []byte
 

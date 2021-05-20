@@ -217,3 +217,11 @@ func (s *scrStack) print() {
 func (s *scrStack) resize(siz int) {
 	s.data = s.data[:siz]
 }
+
+
+func (s *scrStack) GetSerializeSize(ver uint32) (res int) {
+	for _, d := range s.data {
+		res += len(d)
+	}
+	return
+}

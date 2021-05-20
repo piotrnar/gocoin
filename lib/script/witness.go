@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"crypto/sha256"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 
@@ -53,7 +54,8 @@ func (c *SigChecker) ExecuteWitnessScript(stack *scrStack, scriptPubKey []byte, 
 	}
 
     // Run the script interpreter.
-	if !evalScript(scriptPubKey, stack, c, flags, SIGVERSION_WITNESS_V0, execdata) {
+	if !evalScript(scriptPubKey, stack, c, flags, sigversion, execdata) {
+		println("eval script failed")
 		return false
 	}
 
@@ -164,37 +166,41 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
         if stack.size() == 1 {
             // Key path spending (stack size is 1 after removing optional annex)
             if (!checker.CheckSchnorrSignature(stack.top(-1), program, SIGVERSION_TAPROOT, &execdata)) {
-				println("schnorr sig Bad")
+				//println("schnorr sig Bad")
                 return false; // serror is set
             }
-			println("schnorr sig OK")
+			//println("schnorr sig OK")
 			return true
         } else {
             // Script path spending (stack size is >1 after removing optional annex)
-			println("==== TAP TAP not implemented =====")
-			/*
-            const valtype& control = SpanPopBack(stack);
-            const valtype& script_bytes = SpanPopBack(stack);
-            exec_script = CScript(script_bytes.begin(), script_bytes.end());
-            if (control.size() < TAPROOT_CONTROL_BASE_SIZE || control.size() > TAPROOT_CONTROL_MAX_SIZE || ((control.size() - TAPROOT_CONTROL_BASE_SIZE) % TAPROOT_CONTROL_NODE_SIZE) != 0) {
-                return set_error(serror, SCRIPT_ERR_TAPROOT_WRONG_CONTROL_SIZE);
+			control := stack.pop()
+			script_bytes := stack.pop()
+			//exec_script = script_bytes
+			if len(control) < TAPROOT_CONTROL_BASE_SIZE || len(control) > TAPROOT_CONTROL_MAX_SIZE || ((len(control) - TAPROOT_CONTROL_BASE_SIZE) % TAPROOT_CONTROL_NODE_SIZE) != 0 {
+                fmt.Println("SCRIPT_ERR_TAPROOT_WRONG_CONTROL_SIZE")
+				return false
             }
-            if (!VerifyTaprootCommitment(control, program, exec_script, execdata.m_tapleaf_hash)) {
-                return set_error(serror, SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH);
+			
+			//println("control:", hex.EncodeToString(control))
+			//println("program:", hex.EncodeToString(program))
+			//println("script :", hex.EncodeToString(script_bytes))
+			if !VerifyTaprootCommitment(control, program, script_bytes, &execdata.M_tapleaf_hash) {
+				fmt.Println("VerifyTaprootCommitment: SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH");
+				return false
             }
-            execdata.m_tapleaf_hash_init = true;
-            if ((control[0] & TAPROOT_LEAF_MASK) == TAPROOT_LEAF_TAPSCRIPT) {
+			
+            execdata.M_tapleaf_hash_init = true
+            if (control[0] & TAPROOT_LEAF_MASK) == TAPROOT_LEAF_TAPSCRIPT {
                 // Tapscript (leaf version 0xc0)
-                execdata.m_validation_weight_left = ::GetSerializeSize(witness.stack, PROTOCOL_VERSION) + VALIDATION_WEIGHT_OFFSET;
-                execdata.m_validation_weight_left_init = true;
-                return ExecuteWitnessScript(stack, exec_script, flags, SigVersion::TAPSCRIPT, checker, execdata, serror);
+                execdata.M_validation_weight_left = int64(witness.stack.GetSerializeSize(PROTOCOL_VERSION) + VALIDATION_WEIGHT_OFFSET)
+                execdata.M_validation_weight_left_init = true;
+				return checker.ExecuteWitnessScript(&stack, script_bytes, flags, SIGVERSION_TAPSCRIPT, &execdata)
             }
-            if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_TAPROOT_VERSION) {
-                return set_error(serror, SCRIPT_ERR_DISCOURAGE_UPGRADABLE_TAPROOT_VERSION);
+            if (flags & VER_DIS_TAPVER) != 0 {
+                fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_TAPROOT_VERSION")
+				return false
             }
-            return set_success(serror);
-			*/
-			return false
+			return true
 		}
 	} else if (flags&VER_WITNESS_PROG) != 0 {
 		if DBG_ERR {
@@ -207,3 +213,68 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 	}
     // There is intentionally no return statement here, to be able to use "control reaches end of non-void function" warnings to detect gaps in the logic above.
 }
+
+
+func lexicographical_compare(d1, d2 []byte) bool {
+	first1, first2 := 0, 0
+	last1, last2 := len(d1), len(d2)
+	for first1 != last1 {
+		if (first2==last2 || d2[first2] < d1[first1]) {
+			return false
+		}
+		if (d1[first1] < d2[first2]) {
+			return true
+		}
+		first1++
+		first2++
+  }
+  return first2 != last2;
+}
+
+
+// (control, program, script_bytes, execdata.M_tapleaf_hash)
+func VerifyTaprootCommitment(control, program, script []byte, tapleaf_hash *[]byte) bool {
+	path_len := (len(control) - TAPROOT_CONTROL_BASE_SIZE) / TAPROOT_CONTROL_NODE_SIZE
+    //! The internal pubkey (x-only, so no Y coordinate parity).
+	p := control[1:TAPROOT_CONTROL_BASE_SIZE]
+    //! The output pubkey (taken from the scriptPubKey).
+	q := program  //const XOnlyPubKey q{uint256(program)};
+    // Compute the tapleaf hash.
+    
+	sha := btc.TaggedHash("TapLeaf")
+	sha.Write([]byte{control[0] & TAPROOT_LEAF_MASK})
+	btc.WriteVlen(sha, uint64(len(script)))
+	sha.Write(script)
+	*tapleaf_hash = sha.Sum(nil)
+	
+	//println("leaf:", btc.NewUint256(*tapleaf_hash).String())
+	
+	// Compute the Merkle root from the leaf and the provided path.
+	k := *tapleaf_hash;
+	for i := 0; i < path_len; i++ {
+		ss_branch := btc.TaggedHash("TapBranch")
+		tmp := TAPROOT_CONTROL_BASE_SIZE + TAPROOT_CONTROL_NODE_SIZE * i
+		node := control[tmp:tmp + TAPROOT_CONTROL_NODE_SIZE]
+        
+		if lexicographical_compare(k, node) {
+			ss_branch.Write(k)
+			ss_branch.Write(node)
+        } else {
+			ss_branch.Write(node)
+			ss_branch.Write(k)
+        }
+        k = ss_branch.Sum(nil);
+    }
+	
+	//println("p:", btc.NewUint256(p).String())
+	//println("q:", btc.NewUint256(q).String())
+    // Compute the tweak from the Merkle root and the internal pubkey.
+	sha = btc.TaggedHash("TapTweak")
+	sha.Write(p)
+	sha.Write(k)
+	k = sha.Sum(nil)
+	//println("kkkk:", btc.NewUint256(k).String())
+    // Verify that the output pubkey matches the tweaked internal pubkey, after correcting for parity.
+	return secp256k1.CheckPayToContract(q, p, k, (control[0] & 1) != 0)
+}
+

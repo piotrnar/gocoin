@@ -72,6 +72,7 @@ func txout_serialize(to *btc.TxOut) []byte {
 
 func TestTaprootScritps(t *testing.T) {
 	var tests []one_scr_tst
+	var res bool
 
 	DBG_ERR = false
 	dat, er := ioutil.ReadFile("bip341_script_tests.json")
@@ -85,6 +86,7 @@ func TestTaprootScritps(t *testing.T) {
 		return
 	}
 	for i := 0; i < len(tests); i++  {
+		println("+++++++++++++", i, "+++++++++++++++")
 		tv := tests[i]
 		
 		d, e := hex.DecodeString(tv.Tx)
@@ -151,9 +153,12 @@ func TestTaprootScritps(t *testing.T) {
 			t.Fatal(i, er.Error())
 		}		
 		//println("\n\njade z", i, "...")
-		//res := verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
+		res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
+		println("res core:", res)
 		
-		res := VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
+		res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
+		println("res nati:", res)
+		//break
 		
 		if false {
 			hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{
@@ -191,6 +196,9 @@ func TestTaprootScritps(t *testing.T) {
 				}
 			}
 			res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
+			println("core_neg:", res)
+			res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
+			println("nati_neg:", res)
 			if res {
 				dump_test(&tv)
 				t.Fatal(i, "Verify not Failed but should")

@@ -15,6 +15,58 @@ type SigChecker struct {
 }
 
 func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
+	if sigversion==SIGVERSION_BASE || sigversion==SIGVERSION_WITNESS_V0 {
+		return c.evalChecksigPreTapscript(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
+	}
+	if sigversion==SIGVERSION_TAPSCRIPT {
+		return c.evalChecksigTapscript(vchSig, vchPubKey, execdata, ver_flags, sigversion)
+	}
+	panic("should not get here")
+	return
+}
+
+func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.ScriptExecutionData, flags uint32, sigversion int) (ok, success bool) {
+    /*
+     *  The following validation sequence is consensus critical. Please note how --
+     *    upgradable public key versions precede other rules;
+     *    the script execution fails when using empty signature with invalid public key;
+     *    the script execution fails when using non-empty invalid signature.
+     */
+	success = len(sig) > 0;
+    if success {
+        // Implement the sigops/witnesssize ratio test.
+        // Passing with an upgradable public key version is also counted.
+        execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED;
+        if execdata.M_validation_weight_left < 0 {
+            fmt.Println("SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT")
+			return
+        }
+    }
+    if len(pubkey) == 0 {
+        fmt.Println("SCRIPT_ERR_PUBKEYTYPE")
+		return 
+    } else if len(pubkey) == 32 {
+		if (success && !c.CheckSchnorrSignature(sig, pubkey, sigversion, execdata)) {
+            return
+        }
+    } else {
+        /*
+         *  New public key version softforks should be defined before this `else` block.
+         *  Generally, the new code should not do anything but failing the script execution. To avoid
+         *  consensus bugs, it should not modify any existing values (including `success`).
+         */
+        if (flags & VER_DIS_PUBKEYTYPE) != 0 {
+            fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_PUBKEYTYPE")
+			return
+        }
+    }
+
+    ok = true
+	return
+}
+
+
+func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
 	scriptCode := p[pbegincodehash:]
 
 	// Drop the signature in pre-segwit scripts but not segwit scripts
@@ -91,14 +143,18 @@ func (c *SigChecker) verifyECDSA(data, sig, pubkey []byte, sigversion int) bool 
 
 func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, execdata *btc.ScriptExecutionData) bool {
 	if len(sig) != 64 && len(sig) != 65 {
-		fmt.Println("SCRIPT_ERR_SCHNORR_SIG_SIZE")
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_SCHNORR_SIG_SIZE")
+		}
 		return false
 	}
 	hashtype := byte(btc.SIGHASH_DEFAULT)
 	if len(sig) == 65 {
 		hashtype = sig[64]
 		if hashtype == btc.SIGHASH_DEFAULT {
-			fmt.Println("SCRIPT_ERR_SCHNORR_SIG_HASHTYPE")
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_SCHNORR_SIG_HASHTYPE")
+			}
 			return false
 		}
 		sig = sig[:64]

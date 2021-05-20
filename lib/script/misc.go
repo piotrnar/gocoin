@@ -164,10 +164,13 @@ func CheckSignatureEncoding(sig []byte, flags uint32) bool {
 		return true
 	}
 	if (flags&(VER_DERSIG|VER_STRICTENC)) != 0 && !IsValidSignatureEncoding(sig) {
+		println("aaa")
 		return false
 	} else if (flags&VER_LOW_S) != 0 && !IsLowS(sig) {
+		println("bbb")
 		return false
 	} else if (flags&VER_STRICTENC) != 0 && !IsDefinedHashtypeSignature(sig) {
+		println("ccc")
 		return false
 	}
 	return true
