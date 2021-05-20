@@ -1,24 +1,23 @@
 package script
 
 import (
-	"fmt"
 	"encoding/hex"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
-
 type SigChecker struct {
-	Tx *btc.Tx
-	Idx int
+	Tx     *btc.Tx
+	Idx    int
 	Amount uint64
 }
 
 func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
-	if sigversion==SIGVERSION_BASE || sigversion==SIGVERSION_WITNESS_V0 {
+	if sigversion == SIGVERSION_BASE || sigversion == SIGVERSION_WITNESS_V0 {
 		return c.evalChecksigPreTapscript(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
 	}
-	if sigversion==SIGVERSION_TAPSCRIPT {
+	if sigversion == SIGVERSION_TAPSCRIPT {
 		return c.evalChecksigTapscript(vchSig, vchPubKey, execdata, ver_flags, sigversion)
 	}
 	panic("should not get here")
@@ -26,52 +25,51 @@ func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash in
 }
 
 func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.ScriptExecutionData, flags uint32, sigversion int) (ok, success bool) {
-    /*
-     *  The following validation sequence is consensus critical. Please note how --
-     *    upgradable public key versions precede other rules;
-     *    the script execution fails when using empty signature with invalid public key;
-     *    the script execution fails when using non-empty invalid signature.
-     */
-	success = len(sig) > 0;
-    if success {
-        // Implement the sigops/witnesssize ratio test.
-        // Passing with an upgradable public key version is also counted.
-		execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED;
-        if execdata.M_validation_weight_left < 0 {
-		if DBG_ERR {
+	/*
+	 *  The following validation sequence is consensus critical. Please note how --
+	 *    upgradable public key versions precede other rules;
+	 *    the script execution fails when using empty signature with invalid public key;
+	 *    the script execution fails when using non-empty invalid signature.
+	 */
+	success = len(sig) > 0
+	if success {
+		// Implement the sigops/witnesssize ratio test.
+		// Passing with an upgradable public key version is also counted.
+		execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED
+		if execdata.M_validation_weight_left < 0 {
+			if DBG_ERR {
 				fmt.Println("SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT")
 			}
 			return
-        }
-    }
-    if len(pubkey) == 0 {
+		}
+	}
+	if len(pubkey) == 0 {
 		if DBG_ERR {
 			fmt.Println("SCRIPT_ERR_PUBKEYTYPE")
 		}
-		return 
-    } else if len(pubkey) == 32 {
-		if (success && !c.CheckSchnorrSignature(sig, pubkey, sigversion, execdata)) {
+		return
+	} else if len(pubkey) == 32 {
+		if success && !c.CheckSchnorrSignature(sig, pubkey, sigversion, execdata) {
 			if DBG_ERR {
 				fmt.Println("evalChecksigTapscript: CheckSchnorrSignature failed")
 			}
 			return
-        }
-    } else {
-        /*
-         *  New public key version softforks should be defined before this `else` block.
-         *  Generally, the new code should not do anything but failing the script execution. To avoid
-         *  consensus bugs, it should not modify any existing values (including `success`).
-         */
-        if (flags & VER_DIS_PUBKEYTYPE) != 0 {
-            fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_PUBKEYTYPE")
+		}
+	} else {
+		/*
+		 *  New public key version softforks should be defined before this `else` block.
+		 *  Generally, the new code should not do anything but failing the script execution. To avoid
+		 *  consensus bugs, it should not modify any existing values (including `success`).
+		 */
+		if (flags & VER_DIS_PUBKEYTYPE) != 0 {
+			fmt.Println("SCRIPT_ERR_DISCOURAGE_UPGRADABLE_PUBKEYTYPE")
 			return
-        }
-    }
+		}
+	}
 
-    ok = true
+	ok = true
 	return
 }
-
 
 func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
 	scriptCode := p[pbegincodehash:]
@@ -120,7 +118,7 @@ func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegi
 		fmt.Println("EcdsaVerify fail 1", c.Tx.Hash.String())
 	}
 
-	if !fSuccess && (ver_flags&VER_NULLFAIL)!=0 && len(vchSig)>0 {
+	if !fSuccess && (ver_flags&VER_NULLFAIL) != 0 && len(vchSig) > 0 {
 		if DBG_ERR {
 			fmt.Println("SCRIPT_ERR_SIG_NULLFAIL-1")
 		}
@@ -130,17 +128,16 @@ func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegi
 	return
 }
 
-
 func (c *SigChecker) verifyECDSA(data, sig, pubkey []byte, sigversion int) bool {
 	if len(sig) == 0 {
 		return false
 	}
-	
+
 	nHashType := int32(sig[len(sig)-1])
-	
+
 	var sh []byte
 
-	if sigversion==SIGVERSION_WITNESS_V0 {
+	if sigversion == SIGVERSION_WITNESS_V0 {
 		sh = c.Tx.WitnessSigHash(data, c.Amount, c.Idx, nHashType)
 	} else {
 		sh = c.Tx.SignatureHash(data, c.Idx, nHashType)

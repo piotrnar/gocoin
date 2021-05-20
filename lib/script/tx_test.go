@@ -1,28 +1,27 @@
 package script
 
 import (
-	"fmt"
 	"bytes"
-	"testing"
-	"io/ioutil"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"io/ioutil"
+	"testing"
 )
 
-
 type oneinp struct {
-	txid *btc.Uint256
-	vout int
+	txid  *btc.Uint256
+	vout  int
 	pkscr string
 	value uint64
 }
 
 type testvector struct {
-	inps []oneinp
-	tx string
+	inps      []oneinp
+	tx        string
 	ver_flags uint32
-	skip string
+	skip      string
 }
 
 var last_descr string
@@ -37,26 +36,25 @@ func (tv *testvector) String() (s string) {
 	return
 }
 
-
 func parserec(vv []interface{}) (ret *testvector) {
 	ret = new(testvector)
 	for i, u := range vv[0].([]interface{}) {
 		switch uu := u.(type) {
-			case []interface{}:
-				txid := btc.NewUint256FromString(uu[0].(string))
-				newrec := oneinp{txid:txid, vout:int(uu[1].(float64)), pkscr:uu[2].(string)}
-				if len(uu)>3 {
-					newrec.value = uint64(uu[3].(float64))
-				}
-				ret.inps = append(ret.inps, newrec)
-			default:
-				fmt.Printf(" - %d is of a type %T\n", i, uu)
+		case []interface{}:
+			txid := btc.NewUint256FromString(uu[0].(string))
+			newrec := oneinp{txid: txid, vout: int(uu[1].(float64)), pkscr: uu[2].(string)}
+			if len(uu) > 3 {
+				newrec.value = uint64(uu[3].(float64))
+			}
+			ret.inps = append(ret.inps, newrec)
+		default:
+			fmt.Printf(" - %d is of a type %T\n", i, uu)
 		}
 	}
 	ret.tx = vv[1].(string)
 	params := vv[2].(string)
 	var e error
-	ret.ver_flags, e = decode_flags(params)  // deifned in script_test.go
+	ret.ver_flags, e = decode_flags(params) // deifned in script_test.go
 	if e != nil {
 		println("skip", params)
 		ret.skip = e.Error()
@@ -64,13 +62,11 @@ func parserec(vv []interface{}) (ret *testvector) {
 	return
 }
 
-
-
 // Some tests from the satoshi's json files are not applicable
 // for our architectre so lets just fake them.
 func skip_broken_tests(tx *btc.Tx) bool {
 	// No inputs
-	if len(tx.TxIn)==0 {
+	if len(tx.TxIn) == 0 {
 		return true
 	}
 
@@ -83,8 +79,8 @@ func skip_broken_tests(tx *btc.Tx) bool {
 
 	// Duplicate inputs
 	if len(tx.TxIn) > 1 {
-		for i:=0; i<len(tx.TxIn)-1; i++ {
-			for j:=i+1; j<len(tx.TxIn); j++ {
+		for i := 0; i < len(tx.TxIn)-1; i++ {
+			for j := i + 1; j < len(tx.TxIn); j++ {
 				if tx.TxIn[i].Input == tx.TxIn[j].Input {
 					return true
 				}
@@ -94,10 +90,10 @@ func skip_broken_tests(tx *btc.Tx) bool {
 
 	// Coinbase of w wrong size
 	if tx.IsCoinBase() {
-		if len(tx.TxIn[0].ScriptSig)<2 {
+		if len(tx.TxIn[0].ScriptSig) < 2 {
 			return true
 		}
-		if len(tx.TxIn[0].ScriptSig)>100 {
+		if len(tx.TxIn[0].ScriptSig) > 100 {
 			return true
 		}
 	}
@@ -105,9 +101,8 @@ func skip_broken_tests(tx *btc.Tx) bool {
 	return false
 }
 
-
 func execute_test_tx(t *testing.T, tv *testvector) bool {
-	if len(tv.inps)==0 {
+	if len(tv.inps) == 0 {
 		t.Error("Vector has no inputs")
 		return false
 	}
@@ -117,7 +112,7 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 		return false
 	}
 	tx, _ := btc.NewTx(rd)
-	if tx==nil {
+	if tx == nil {
 		t.Error("Canot decode tx")
 		return false
 	}
@@ -145,24 +140,23 @@ func execute_test_tx(t *testing.T, tv *testvector) bool {
 				break
 			}
 		}
-		if j>=len(tv.inps) {
+		if j >= len(tv.inps) {
 			t.Error("Matching input not found")
 			continue
 		}
 
 		pk, er := btc.DecodeScript(tv.inps[j].pkscr)
-		if er!=nil {
+		if er != nil {
 			t.Error(er.Error())
 			continue
 		}
 
-		if VerifyTxScript(pk, &SigChecker{Amount:tv.inps[j].value, Idx:i, Tx:tx}, tv.ver_flags) {
+		if VerifyTxScript(pk, &SigChecker{Amount: tv.inps[j].value, Idx: i, Tx: tx}, tv.ver_flags) {
 			oks++
 		}
 	}
-	return oks==len(tx.TxIn)
+	return oks == len(tx.TxIn)
 }
-
 
 func TestValidTransactions(t *testing.T) {
 	var str interface{}
@@ -181,22 +175,21 @@ func TestValidTransactions(t *testing.T) {
 	cnt := 0
 	for _, v := range m {
 		switch vv := v.(type) {
-			case []interface{}:
-				if len(vv)==3 {
-					cnt++
-					tv := parserec(vv)
-					if tv.skip!="" {
-						//println(tv.skip)
-					} else if !execute_test_tx(t, tv) {
-						t.Error(cnt, "Failed transaction:", last_descr)
-					}
-				} else if len(vv)==1 {
-					last_descr = vv[0].(string)
+		case []interface{}:
+			if len(vv) == 3 {
+				cnt++
+				tv := parserec(vv)
+				if tv.skip != "" {
+					//println(tv.skip)
+				} else if !execute_test_tx(t, tv) {
+					t.Error(cnt, "Failed transaction:", last_descr)
 				}
+			} else if len(vv) == 1 {
+				last_descr = vv[0].(string)
+			}
 		}
 	}
 }
-
 
 func TestInvalidTransactions(t *testing.T) {
 	var str interface{}
@@ -215,34 +208,33 @@ func TestInvalidTransactions(t *testing.T) {
 	cnt := 0
 	for _, v := range m {
 		switch vv := v.(type) {
-			case []interface{}:
-				if len(vv)==3 {
-					cnt++
-					if cnt==64000 {
-						DBG_SCR = true
-					}
-					tv := parserec(vv)
-					if tv.skip!="" {
-						//println(tv.skip)
-					} else if execute_test_tx(t, tv) {
-						t.Error(cnt, "NOT failed transaction:", last_descr)
-						return
-					}
-					last_descr = ""
-					if cnt==64000 {
-						return
-					}
-				} else if len(vv)==1 {
-					if last_descr=="" {
-						last_descr = vv[0].(string)
-					} else {
-						last_descr += "\n" + vv[0].(string)
-					}
+		case []interface{}:
+			if len(vv) == 3 {
+				cnt++
+				if cnt == 64000 {
+					DBG_SCR = true
 				}
+				tv := parserec(vv)
+				if tv.skip != "" {
+					//println(tv.skip)
+				} else if execute_test_tx(t, tv) {
+					t.Error(cnt, "NOT failed transaction:", last_descr)
+					return
+				}
+				last_descr = ""
+				if cnt == 64000 {
+					return
+				}
+			} else if len(vv) == 1 {
+				if last_descr == "" {
+					last_descr = vv[0].(string)
+				} else {
+					last_descr += "\n" + vv[0].(string)
+				}
+			}
 		}
 	}
 }
-
 
 func TestSighash(t *testing.T) {
 	var arr [][]interface{}
@@ -263,7 +255,7 @@ func TestSighash(t *testing.T) {
 		return
 	}
 	for i := range arr {
-		if len(arr[i])==5 {
+		if len(arr[i]) == 5 {
 			tmp, _ := hex.DecodeString(arr[i][0].(string))
 			tx, _ := btc.NewTx(tmp)
 			if tx == nil {
