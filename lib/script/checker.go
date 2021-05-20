@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 type SigChecker struct {
@@ -164,5 +163,5 @@ func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, e
 		sig = sig[:64]
 	}
 	sh := c.Tx.TaprootSigHash(execdata, c.Idx, hashtype, sigversion == SIGVERSION_TAPSCRIPT)
-	return secp256k1.SchnorrVerify(pubkey, sig, sh)
+	return btc.SchnorrVerify(pubkey, sig, sh)
 }

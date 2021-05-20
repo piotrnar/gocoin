@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 type witness_ctx struct {
@@ -278,5 +277,5 @@ func VerifyTaprootCommitment(control, program, script []byte, tapleaf_hash *[]by
 	sha.Write(k)
 	k = sha.Sum(nil)
 	// Verify that the output pubkey matches the tweaked internal pubkey, after correcting for parity.
-	return secp256k1.CheckPayToContract(q, p, k, (control[0]&1) != 0)
+	return btc.CheckPayToContract(q, p, k, (control[0]&1) != 0)
 }

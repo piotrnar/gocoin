@@ -57,3 +57,13 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	return &sig.R.Int, &sig.S.Int, nil
 }
 
+
+func SchnorrVerify(pkey, sig, msg []byte) bool {
+	return secp256k1.SchnorrVerify(pkey, sig, msg)
+}
+
+
+func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {
+	return secp256k1.CheckPayToContract(m_keydata, base, hash, parity)
+}
+

@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding"
 	"hash"
-	"encoding/hex"
-	//"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func SchnorrsigChallenge(e *Number, r32, msg32, pubkey32 []byte) {
@@ -48,23 +46,8 @@ func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
 	return rx.Equals(&r.X)
 }
 
-func _rev(d []byte) string {
-	x := make([]byte, len(d))
-	for i := range d {
-		x[len(x)-i-1] = d[i]
-	}
-	return hex.EncodeToString(x)
-}
-
-
 func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {
 	var base_point XY
-	/*
-	println("CheckPayToContract", parity)
-	println("key", _rev(m_keydata))
-	println("has", _rev(hash))
-	println("bas", _rev(base))
-	*/
 	base_point.ParseXOnlyPubkey(base)
 	return base_point.XOnlyPubkeyTweakAddCheck(m_keydata, parity, hash)
 }
