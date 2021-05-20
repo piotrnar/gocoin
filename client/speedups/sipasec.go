@@ -16,11 +16,21 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/cgo/sipasec"
 )
 
-func EC_Verify(k, s, h []byte) bool {
+func sipa_ec_verify(k, s, h []byte) bool {
 	return sipasec.EC_Verify(k, s, h) == 1
 }
 
+func schnorr_ec_verify(pkey, sign, msg []byte) bool {
+	return sipasec.Schnorr_Verify(pkey, sign, msg) == 1
+}
+
+func check_pay_to_contract(m_keydata, base, hash []byte, parity bool) bool {
+	return sipasec.CheckPayToContract(m_keydata, base, hash, parity) == 1
+}
+
 func init() {
-	common.Log.Println("Using libsecp256k1.a of Bitcoin Core for EC_Verify")
-	btc.EC_Verify = EC_Verify
+	common.Log.Println("Using libsecp256k1.a for ECVerify, SchnorrVerify & CheckPayToContact")
+	btc.EC_Verify = sipa_ec_verify
+	btc.Schnorr_Verify = schnorr_ec_verify
+	btc.Check_PayToContract = check_pay_to_contract
 }

@@ -166,6 +166,12 @@ static int gocoin_schnorr_verify(unsigned char *msg, unsigned char *sig, unsigne
 	return secp256k1_schnorrsig_verify(ctx, sig, msg, &pubkey);
 }
 
+static int check_pay_to_contract(unsigned char *m_keydata, unsigned char *base, unsigned char *hash, int parity) {
+    secp256k1_xonly_pubkey base_point;
+    if (!secp256k1_xonly_pubkey_parse(ctx, &base_point, base)) return 0;
+    return secp256k1_xonly_pubkey_tweak_add_check(ctx, m_keydata, parity, &base_point, hash);
+}
+
 */
 import "C"
 import "unsafe"
@@ -180,6 +186,15 @@ func EC_Verify(pkey, sign, hash []byte) int {
 func Schnorr_Verify(pkey, sign, msg []byte) int {
 	return int(C.gocoin_schnorr_verify((*C.uchar)(unsafe.Pointer(&msg[0])),
 		(*C.uchar)(unsafe.Pointer(&sign[0])), (*C.uchar)(unsafe.Pointer(&pkey[0]))))
+}
+
+func CheckPayToContract(m_keydata, base, hash []byte, parity bool) int {
+	var par C.int
+	if parity {
+		par = 1
+	}
+	return int(C.check_pay_to_contract((*C.uchar)(unsafe.Pointer(&m_keydata[0])),
+		(*C.uchar)(unsafe.Pointer(&base[0])), (*C.uchar)(unsafe.Pointer(&hash[0])), par))
 }
 
 func init() {

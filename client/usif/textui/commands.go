@@ -134,9 +134,10 @@ func show_info(par string) {
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()
 
-	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d\n",
+	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d %d %d\n",
 		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
-		time.Now().Sub(common.StartTime).String(), peersdb.PeerDB.Count(), btc.EcdsaVerifyCnt())
+		time.Now().Sub(common.StartTime).String(), peersdb.PeerDB.Count(),
+		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt())
 
 	// Memory used
 	al, sy := sys.MemUsed()
@@ -545,7 +546,6 @@ func undo_block(par string) {
 	common.Last.Mutex.Unlock()
 }
 
-
 func redo_block(par string) {
 	network.MutexRcv.Lock()
 	end := network.LastCommitedHeader
@@ -555,7 +555,7 @@ func redo_block(par string) {
 		println("You already are at the last known block - nothing to redo")
 		return
 	}
-		
+
 	sta := time.Now()
 	nxt := last.FindPathTo(end)
 	if nxt == nil {
@@ -563,7 +563,7 @@ func redo_block(par string) {
 		return
 	}
 
-	if nxt.BlockSize==0 {
+	if nxt.BlockSize == 0 {
 		println("ERROR: BlockSize is zero - corrupt database")
 		return
 	}
@@ -590,14 +590,14 @@ func redo_block(par string) {
 	bl.Trusted = false // assume not trusted
 
 	tdl := time.Now()
-	rb := &network.OneReceivedBlock{TmStart:sta, TmPreproc:pre, TmDownload:tdl}
+	rb := &network.OneReceivedBlock{TmStart: sta, TmPreproc: pre, TmDownload: tdl}
 	network.MutexRcv.Lock()
 	network.ReceivedBlocks[bl.Hash.BIdx()] = rb
 	network.MutexRcv.Unlock()
 
 	fmt.Println("Putting block", bl.Height, "into net queue...")
-	network.NetBlocks <- &network.BlockRcvd{Conn:nil, Block:bl, BlockTreeNode:nxt,
-		OneReceivedBlock:rb, BlockExtraInfo:nil}
+	network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: bl, BlockTreeNode: nxt,
+		OneReceivedBlock: rb, BlockExtraInfo: nil}
 }
 
 func init() {

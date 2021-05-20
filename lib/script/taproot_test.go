@@ -48,7 +48,7 @@ func TestTaprootScritps(t *testing.T) {
 	var res bool
 
 	DBG_ERR = false
-	dat, er := ioutil.ReadFile("bip341_script_tests.json")
+	dat, er := ioutil.ReadFile("../test/bip341_script_tests.json")
 	if er != nil {
 		t.Error(er.Error())
 		return
@@ -126,12 +126,8 @@ func TestTaprootScritps(t *testing.T) {
 			t.Fatal(i, er.Error())
 		}
 
-		//res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
-		//println("res core:", res)
-
 		//DBG_ERR = true
 		res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx: tx, Idx: idx, Amount: tx.Spent_outputs[idx].Value}, flags)
-		//println("res nati:", res)
 
 		if false {
 			hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{
@@ -146,10 +142,6 @@ func TestTaprootScritps(t *testing.T) {
 			//dump_test(&tv)
 			t.Fatal(i, "Verify Failed for", tv.Comment)
 		}
-
-		//
-		//println(i, "ok")
-		//dump_test(&tv)
 
 		if tv.Failure.ScriptSig != "" || len(tv.Failure.Witness) > 0 {
 			if tv.Failure.ScriptSig != "" {
@@ -168,11 +160,8 @@ func TestTaprootScritps(t *testing.T) {
 					}
 				}
 			}
-			//res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
-			//println("core_neg:", res)
 
 			res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx: tx, Idx: idx, Amount: tx.Spent_outputs[idx].Value}, flags)
-			//println("nati_neg:", res)
 
 			if res {
 				dump_test(&tv)
@@ -182,4 +171,5 @@ func TestTaprootScritps(t *testing.T) {
 
 		//break
 	}
+	//println("counters:", btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt())
 }
