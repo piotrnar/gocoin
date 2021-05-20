@@ -33,7 +33,8 @@ type Chain struct {
 		MaxPOWValue *big.Int
 		GensisTimestamp uint32
 		Enforce_CSV uint32 // if non zero CVS verifications will be enforced from this block onwards
-		Enforce_SEGWIT uint32 // if non zero CVS verifications will be enforced from this block onwards
+		Enforce_SEGWIT uint32 // if non zero SegWit verifications will be enforced from this block onwards
+		Enforce_Taproot uint32 // if non zero Taproot verifications will be enforced from this block onwards
 		BIP9_Treshold uint32 // It is not really used at this moment, but maybe one day...
 		BIP34Height uint32
 		BIP65Height uint32

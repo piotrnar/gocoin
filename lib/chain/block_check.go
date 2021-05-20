@@ -122,6 +122,9 @@ func (ch *Chain) ApplyBlockFlags(bl *btc.Block) {
 		bl.VerifyFlags |= script.VER_WITNESS | script.VER_NULLDUMMY
 	}
 
+	if ch.Consensus.Enforce_Taproot != 0 && bl.Height >= ch.Consensus.Enforce_Taproot {
+		bl.VerifyFlags |= script.VER_TAPROOT
+	}
 }
 
 

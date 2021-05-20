@@ -453,15 +453,17 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		var ver_err_cnt uint32
 
 		prev_dbg_err := script.DBG_ERR
+		tx.Spent_outputs = pos
 		script.DBG_ERR = false // keep quiet for incorrect txs
 		for i := range tx.TxIn {
 			wg.Add(1)
-			go func(prv []byte, amount uint64, i int, tx *btc.Tx) {
-				if !script.VerifyTxScript(prv, &script.SigChecker{Amount:amount, Idx:i, Tx:tx}, script.STANDARD_VERIFY_FLAGS) {
+			go func(i int, tx *btc.Tx) {
+				if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script,
+					&script.SigChecker{Amount:tx.Spent_outputs[i].Value, Idx:i, Tx:tx}, script.STANDARD_VERIFY_FLAGS) {
 					atomic.AddUint32(&ver_err_cnt, 1)
 				}
 				wg.Done()
-			}(pos[i].Pk_script, pos[i].Value, i, tx)
+			}(i, tx)
 		}
 
 		wg.Wait()

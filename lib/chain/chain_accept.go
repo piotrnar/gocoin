@@ -121,9 +121,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
-	var touts []*btc.TxOut
 
-	for i := range bl.Txs {
+	for i, tx := range bl.Txs {
 		txoutsum, txinsum = 0, 0
 
 		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
@@ -136,7 +135,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				if TrustedTxChecker != nil && TrustedTxChecker(bl.Txs[i]) {
 					tx_trusted = true
 				} else {
-					touts = make([]*btc.TxOut, len(bl.Txs[i].TxIn))
+					tx.Spent_outputs = make([]*btc.TxOut, len(bl.Txs[i].TxIn))
 				}
 			}
 
@@ -216,7 +215,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				}
 
 				if !tx_trusted {
-					touts[j] = tout
+					tx.Spent_outputs[j] = tout
 				}
 				
 				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
@@ -236,12 +235,12 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 			if !tx_trusted { // run VerifyTxScript() in a parallel task
 				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 					wg.Add(1)
-					go func (_touts []*btc.TxOut, i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(_touts[i].Pk_script, &script.SigChecker{Amount:_touts[i].Value, Idx:i, Tx:tx}, bl.VerifyFlags) {
+					go func (i int, tx *btc.Tx) {
+						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount:tx.Spent_outputs[i].Value, Idx:i, Tx:tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()
-					}(touts, j, bl.Txs[i])
+					}(j, bl.Txs[i])
 				}
 			}
 
