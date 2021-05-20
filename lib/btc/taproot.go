@@ -60,11 +60,16 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 		return make([]byte, 32)
 	}
 	sha.Write([]byte{hash_type})
+	
+	//println("l1:", NewUint256(sha.Sum(nil)).String(), tx.Version, tx.Lock_time)
 
     // Transaction level data
 	binary.Write(sha, binary.LittleEndian, tx.Version)
+	//println("lX:", NewUint256(sha.Sum(nil)).String(), tx.Version, tx.Lock_time)
 	binary.Write(sha, binary.LittleEndian, tx.Lock_time)
     
+	//println("l2:", NewUint256(sha.Sum(nil)).String())
+
 	if input_type != SIGHASH_ANYONECANPAY {
 		if tx.m_prevouts_single_hash == nil {
 			sh := sha256.New()
@@ -104,6 +109,8 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 		sha.Write(tx.m_spent_scripts_single_hash)
 		sha.Write(tx.m_sequences_single_hash)
     }
+	//println("l3:", NewUint256(sha.Sum(nil)).String(), output_type, SIGHASH_ALL)
+
     if output_type == SIGHASH_ALL {
 		if tx.m_outputs_single_hash == nil {
 			sh := sha256.New()
@@ -119,6 +126,8 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 		sha.Write(tx.m_outputs_single_hash)
     }
 	
+	//println("l4:", NewUint256(sha.Sum(nil)).String())
+
 	// Data about the input/prevout being spent
 	have_annex := execdata.M_annex_present;
 	spend_type := (ext_flag << 1)
@@ -126,6 +135,7 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 		spend_type++
 	}
 	sha.Write([]byte{spend_type})
+	//println("l5:", NewUint256(sha.Sum(nil)).String())
 
     if input_type == SIGHASH_ANYONECANPAY {
 		sha.Write(tx.TxIn[in_pos].Input.Hash[:])
@@ -136,6 +146,7 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
     } else {
 		binary.Write(sha, binary.LittleEndian, uint32(in_pos))
     }
+	//println("l6:", NewUint256(sha.Sum(nil)).String())
     if have_annex {
 		sha.Write(execdata.M_annex_hash)
     }

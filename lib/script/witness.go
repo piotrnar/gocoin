@@ -54,8 +54,11 @@ func (c *SigChecker) ExecuteWitnessScript(stack *scrStack, scriptPubKey []byte, 
 	}
 
     // Run the script interpreter.
+	//DBG_SCR = true
 	if !evalScript(scriptPubKey, stack, c, flags, sigversion, execdata) {
-		println("eval script failed")
+		if DBG_ERR {
+			fmt.Println("eval script failed")
+		}
 		return false
 	}
 
@@ -85,6 +88,7 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 		fmt.Println("*****************VerifyWitnessProgram", len(checker.Tx.SegWit), witversion, flags, witness.stack.size(), len(program))
 	}
 
+	//println("witver", witversion)
 	if witversion == 0 {
 		if len(program) == 32 {
 			// Version 0 segregated witness program: SHA256(CScript) inside the program, CScript + inputs in witness
@@ -137,9 +141,9 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 		// TAPROOT
 		if (flags & VER_TAPROOT) == 0 {
 			if DBG_ERR {
-				fmt.Println("VER_TAPROOT not set")
+				fmt.Println("VER_TAPROOT not set - verify script OK")
 			}
-			return false
+			return true
 		}
 		stack.copy_from(&witness.stack)
 		
@@ -155,6 +159,7 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
             	// Drop annex (this is non-standard; see IsWitnessStandard)
 				annex := stack.pop()
 				sha := sha256.New()
+				btc.WriteVlen(sha, uint64(len(annex)))
 				sha.Write(annex)
 				execdata.M_annex_hash = sha.Sum(nil)
 				execdata.M_annex_present = true
@@ -193,7 +198,8 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
             if (control[0] & TAPROOT_LEAF_MASK) == TAPROOT_LEAF_TAPSCRIPT {
                 // Tapscript (leaf version 0xc0)
                 execdata.M_validation_weight_left = int64(witness.stack.GetSerializeSize(PROTOCOL_VERSION) + VALIDATION_WEIGHT_OFFSET)
-                execdata.M_validation_weight_left_init = true;
+				//println("M_validation_weight_left", execdata.M_validation_weight_left)
+				execdata.M_validation_weight_left_init = true;
 				return checker.ExecuteWitnessScript(&stack, script_bytes, flags, SIGVERSION_TAPSCRIPT, &execdata)
             }
             if (flags & VER_DIS_TAPVER) != 0 {

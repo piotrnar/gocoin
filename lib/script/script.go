@@ -974,9 +974,16 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					vchSig := stack.top(-2)
 					vchPubKey := stack.top(-1)
 				
+					//println("checksig...", pbegincodehash, ver_flags, sigversion)
+				//println("sig", hex.EncodeToString(vchSig))
+				//println("pke", hex.EncodeToString(vchPubKey))
+				//println("ppp", hex.EncodeToString(p))
 					ok, fSuccess := checker.evalChecksig(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
 					if !ok {
-					   return false
+						if DBG_ERR {
+							fmt.Println("SOP_CHECKSIG: checker.evalChecksig failed")
+						}
+						return false
 					}
 
 					stack.pop()
@@ -1011,7 +1018,7 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					}
                 
 					sig := stack.top(-3)
-					num := stack.topInt(-1, checkMinVals)	
+					num := stack.topInt(-2, checkMinVals)	
 					pubkey := stack.top(-1)
 
 					ok, success := checker.evalChecksig(sig, pubkey, p, pbegincodehash, execdata, ver_flags, sigversion)

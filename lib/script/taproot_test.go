@@ -156,6 +156,7 @@ func TestTaprootScritps(t *testing.T) {
 		res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
 		println("res core:", res)
 		
+	DBG_ERR = true
 		res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
 		println("res nati:", res)
 		//break
@@ -170,7 +171,7 @@ func TestTaprootScritps(t *testing.T) {
 		}
 		
 		if !res {
-			dump_test(&tv)
+			//dump_test(&tv)
 			t.Fatal(i, "Verify Failed for", tv.Comment)
 		}
 		

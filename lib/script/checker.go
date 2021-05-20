@@ -36,7 +36,7 @@ func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.Scr
     if success {
         // Implement the sigops/witnesssize ratio test.
         // Passing with an upgradable public key version is also counted.
-        execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED;
+		execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED;
         if execdata.M_validation_weight_left < 0 {
             fmt.Println("SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT")
 			return
@@ -159,6 +159,8 @@ func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, e
 		}
 		sig = sig[:64]
 	}
+	//println("hashing", c.Idx, hashtype, sigversion)
 	sh := c.Tx.TaprootSigHash(execdata, c.Idx, hashtype, sigversion == SIGVERSION_TAPSCRIPT)
+	//println("ha", btc.NewUint256(sh).String())
 	return secp256k1.SchnorrVerify(pubkey, sig, sh)
 }
