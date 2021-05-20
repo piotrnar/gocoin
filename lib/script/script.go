@@ -71,6 +71,8 @@ const (
 	VALIDATION_WEIGHT_PER_SIGOP_PASSED = 50
 	
 	PROTOCOL_VERSION = 70016
+	
+	MAX_STACK_SIZE = 1000
 )
 
 
@@ -974,10 +976,6 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					vchSig := stack.top(-2)
 					vchPubKey := stack.top(-1)
 				
-					//println("checksig...", pbegincodehash, ver_flags, sigversion)
-				//println("sig", hex.EncodeToString(vchSig))
-				//println("pke", hex.EncodeToString(vchPubKey))
-				//println("ppp", hex.EncodeToString(p))
 					ok, fSuccess := checker.evalChecksig(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
 					if !ok {
 						if DBG_ERR {
@@ -1300,6 +1298,12 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					}
 					// just do nothing
 
+				case opcode==0x6a: /*OP_RETURN*/
+					if DBG_ERR {
+						fmt.Println("SCRIPT_ERR_OP_RETURN")
+					}
+					return false
+				
 				default:
 					if DBG_ERR {
 						fmt.Printf("Unhandled opcode 0x%02x - a handler must be implemented\n", opcode)
@@ -1367,3 +1371,9 @@ func delSig(where, sig []byte) (res []byte, cnt int) {
 }
 
 
+func IsOpSuccess(opcode int) bool {
+    return opcode == 80 || opcode == 98 || (opcode >= 126 && opcode <= 129) ||
+           (opcode >= 131 && opcode <= 134) || (opcode >= 137 && opcode <= 138) ||
+           (opcode >= 141 && opcode <= 142) || (opcode >= 149 && opcode <= 153) ||
+           (opcode >= 187 && opcode <= 254);
+}

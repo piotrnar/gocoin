@@ -86,7 +86,7 @@ func TestTaprootScritps(t *testing.T) {
 		return
 	}
 	for i := 0; i < len(tests); i++  {
-		println("+++++++++++++", i, "+++++++++++++++")
+		//println("+++++++++++++", i, "+++++++++++++++")
 		tv := tests[i]
 		
 		d, e := hex.DecodeString(tv.Tx)
@@ -152,14 +152,13 @@ func TestTaprootScritps(t *testing.T) {
 		if er != nil {
 			t.Fatal(i, er.Error())
 		}		
-		//println("\n\njade z", i, "...")
-		res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
-		println("res core:", res)
 		
-	DBG_ERR = true
+		//res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
+		//println("res core:", res)
+		
+		//DBG_ERR = true
 		res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
-		println("res nati:", res)
-		//break
+		//println("res nati:", res)
 		
 		if false {
 			hasz := tx.TaprootSigHash(&btc.ScriptExecutionData{
@@ -196,10 +195,12 @@ func TestTaprootScritps(t *testing.T) {
 					}
 				}
 			}
-			res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
-			println("core_neg:", res)
+			//res = verify_script_with_spent_outputs(tx.Spent_outputs[idx].Pk_script, tx.Spent_outputs[idx].Value, outs, idx, tx, flags)
+			//println("core_neg:", res)
+			
 			res = VerifyTxScript(tx.Spent_outputs[idx].Pk_script, &SigChecker{Tx:tx, Idx:idx, Amount:tx.Spent_outputs[idx].Value}, flags)
-			println("nati_neg:", res)
+			//println("nati_neg:", res)
+			
 			if res {
 				dump_test(&tv)
 				t.Fatal(i, "Verify not Failed but should")

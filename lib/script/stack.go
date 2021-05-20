@@ -63,7 +63,6 @@ func (s *scrStack) pushInt(val int64) {
 
 func bts2int(d []byte) (res int64) {
 	if len(d) > nMaxNumSize {
-		println("max num size exceeded:", len(d), nMaxNumSize)
 		panic("Int on the stack is too long")
 		// Make sure this panic is captured in evalScript (cause the script to fail, not crash)
 	}
@@ -227,6 +226,5 @@ func (s *scrStack) GetSerializeSize(ver uint32) (res int) {
 		res += btc.VLenSize(uint64(len(d)))
 		res += len(d)
 	}
-	//println("GetSerializeSize:", res, len(s.data))
 	return
 }

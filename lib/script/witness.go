@@ -19,30 +19,41 @@ func (w *witness_ctx) IsNull() bool {
 }
 
 func (c *SigChecker) ExecuteWitnessScript(stack *scrStack, scriptPubKey []byte, flags uint32, sigversion int, execdata *btc.ScriptExecutionData) bool {
-    /*
-	if (sigversion == SigVersion::TAPSCRIPT) {
-        // OP_SUCCESSx processing overrides everything, including stack element size limits
-        CScript::const_iterator pc = scriptPubKey.begin();
-        while (pc < scriptPubKey.end()) {
-            opcodetype opcode;
-            if (!scriptPubKey.GetOp(pc, opcode)) {
+	if sigversion == SIGVERSION_TAPSCRIPT {
+		var pc int
+		for pc < len(scriptPubKey) {
+			opcode, _, le, e := btc.GetOpcode(scriptPubKey[pc:])
+			if e != nil {
                 // Note how this condition would not be reached if an unknown OP_SUCCESSx was found
-                return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
-            }
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_BAD_OPCODE")
+				}
+				return false
+			}
             // New opcodes will be listed here. May use a different sigversion to modify existing opcodes.
-            if (IsOpSuccess(opcode)) {
-                if (flags & SCRIPT_VERIFY_DISCOURAGE_OP_SUCCESS) {
-                    return set_error(serror, SCRIPT_ERR_DISCOURAGE_OP_SUCCESS);
+			if IsOpSuccess(opcode) {
+                if (flags & VER_DIS_SUCCESS) != 0 {
+					if DBG_ERR {
+						fmt.Println("SCRIPT_ERR_DISCOURAGE_OP_SUCCESS")
+					}
+					return false
                 }
-                return set_success(serror);
-            }
-        }
-
+				if DBG_ERR {
+					fmt.Println("IsOpSuccess - yes")
+				}
+				return true
+			}
+			pc += le
+		}
         // Tapscript enforces initial stack size limits (altstack is empty here)
-        if (stack.size() > MAX_STACK_SIZE) return set_error(serror, SCRIPT_ERR_STACK_SIZE);
-    }
-	*/
-
+		if (stack.size() > MAX_STACK_SIZE) {
+			if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_STACK_SIZE")
+			}
+			return false
+		}
+	}
+	
 	// Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
 	for i:=0; i<stack.size(); i++ {
 		if len(stack.at(i)) > btc.MAX_SCRIPT_ELEMENT_SIZE {
@@ -88,7 +99,6 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 		fmt.Println("*****************VerifyWitnessProgram", len(checker.Tx.SegWit), witversion, flags, witness.stack.size(), len(program))
 	}
 
-	//println("witver", witversion)
 	if witversion == 0 {
 		if len(program) == 32 {
 			// Version 0 segregated witness program: SHA256(CScript) inside the program, CScript + inputs in witness
@@ -152,7 +162,7 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 			return false
 		}
 
-        execdata.M_annex_present = false
+        execdata.M_annex_hash = nil
 		if stack.size() >= 2 {
 			dat := stack.top(-1)
 			if len(dat) > 0 && dat[0] == ANNEX_TAG {
@@ -162,19 +172,15 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 				btc.WriteVlen(sha, uint64(len(annex)))
 				sha.Write(annex)
 				execdata.M_annex_hash = sha.Sum(nil)
-				execdata.M_annex_present = true
 			}
         }
-		
-		execdata.M_annex_init = true
+		// execdata.M_annex_init - it doesn't seem like we need this
 
         if stack.size() == 1 {
             // Key path spending (stack size is 1 after removing optional annex)
             if (!checker.CheckSchnorrSignature(stack.top(-1), program, SIGVERSION_TAPROOT, &execdata)) {
-				//println("schnorr sig Bad")
                 return false; // serror is set
             }
-			//println("schnorr sig OK")
 			return true
         } else {
             // Script path spending (stack size is >1 after removing optional annex)
@@ -182,23 +188,22 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 			script_bytes := stack.pop()
 			//exec_script = script_bytes
 			if len(control) < TAPROOT_CONTROL_BASE_SIZE || len(control) > TAPROOT_CONTROL_MAX_SIZE || ((len(control) - TAPROOT_CONTROL_BASE_SIZE) % TAPROOT_CONTROL_NODE_SIZE) != 0 {
-                fmt.Println("SCRIPT_ERR_TAPROOT_WRONG_CONTROL_SIZE")
+				if DBG_ERR {
+					fmt.Println("SCRIPT_ERR_TAPROOT_WRONG_CONTROL_SIZE")
+				}
 				return false
             }
 			
-			//println("control:", hex.EncodeToString(control))
-			//println("program:", hex.EncodeToString(program))
-			//println("script :", hex.EncodeToString(script_bytes))
 			if !VerifyTaprootCommitment(control, program, script_bytes, &execdata.M_tapleaf_hash) {
-				fmt.Println("VerifyTaprootCommitment: SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH");
+				if DBG_ERR {
+					fmt.Println("VerifyTaprootCommitment: SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH")
+				}
 				return false
             }
 			
-            execdata.M_tapleaf_hash_init = true
             if (control[0] & TAPROOT_LEAF_MASK) == TAPROOT_LEAF_TAPSCRIPT {
                 // Tapscript (leaf version 0xc0)
                 execdata.M_validation_weight_left = int64(witness.stack.GetSerializeSize(PROTOCOL_VERSION) + VALIDATION_WEIGHT_OFFSET)
-				//println("M_validation_weight_left", execdata.M_validation_weight_left)
 				execdata.M_validation_weight_left_init = true;
 				return checker.ExecuteWitnessScript(&stack, script_bytes, flags, SIGVERSION_TAPSCRIPT, &execdata)
             }
@@ -253,8 +258,6 @@ func VerifyTaprootCommitment(control, program, script []byte, tapleaf_hash *[]by
 	sha.Write(script)
 	*tapleaf_hash = sha.Sum(nil)
 	
-	//println("leaf:", btc.NewUint256(*tapleaf_hash).String())
-	
 	// Compute the Merkle root from the leaf and the provided path.
 	k := *tapleaf_hash;
 	for i := 0; i < path_len; i++ {
@@ -272,14 +275,11 @@ func VerifyTaprootCommitment(control, program, script []byte, tapleaf_hash *[]by
         k = ss_branch.Sum(nil);
     }
 	
-	//println("p:", btc.NewUint256(p).String())
-	//println("q:", btc.NewUint256(q).String())
     // Compute the tweak from the Merkle root and the internal pubkey.
 	sha = btc.TaggedHash("TapTweak")
 	sha.Write(p)
 	sha.Write(k)
 	k = sha.Sum(nil)
-	//println("kkkk:", btc.NewUint256(k).String())
     // Verify that the output pubkey matches the tweaked internal pubkey, after correcting for parity.
 	return secp256k1.CheckPayToContract(q, p, k, (control[0] & 1) != 0)
 }

@@ -38,16 +38,23 @@ func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.Scr
         // Passing with an upgradable public key version is also counted.
 		execdata.M_validation_weight_left -= VALIDATION_WEIGHT_PER_SIGOP_PASSED;
         if execdata.M_validation_weight_left < 0 {
-            fmt.Println("SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT")
+		if DBG_ERR {
+				fmt.Println("SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT")
+			}
 			return
         }
     }
     if len(pubkey) == 0 {
-        fmt.Println("SCRIPT_ERR_PUBKEYTYPE")
+		if DBG_ERR {
+			fmt.Println("SCRIPT_ERR_PUBKEYTYPE")
+		}
 		return 
     } else if len(pubkey) == 32 {
 		if (success && !c.CheckSchnorrSignature(sig, pubkey, sigversion, execdata)) {
-            return
+			if DBG_ERR {
+				fmt.Println("evalChecksigTapscript: CheckSchnorrSignature failed")
+			}
+			return
         }
     } else {
         /*
@@ -159,8 +166,6 @@ func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, e
 		}
 		sig = sig[:64]
 	}
-	//println("hashing", c.Idx, hashtype, sigversion)
 	sh := c.Tx.TaprootSigHash(execdata, c.Idx, hashtype, sigversion == SIGVERSION_TAPSCRIPT)
-	//println("ha", btc.NewUint256(sh).String())
 	return secp256k1.SchnorrVerify(pubkey, sig, sh)
 }
