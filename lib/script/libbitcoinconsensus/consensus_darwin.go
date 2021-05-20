@@ -28,6 +28,7 @@ int init_bitcoinconsensus_dylib() {
 			printf("libbitcoinconsensus.dylib not found\n");
 			return 0;
 		}
+		printf("bitcoinconsensus_version %d\n", _bitcoinconsensus_version());
 		if (!_bitcoinconsensus_verify_script_with_amount) {
 			printf("libbitcoinconsensus.dylib is too old. Use one of bitcoin-core 0.13.1\n");
 			return 0;
@@ -148,7 +149,7 @@ func myVerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (resu
 
 func init() {
 	if C.init_bitcoinconsensus_dylib() != 0 {
-		fmt.Println("using libbitcoinconsensus version:", C.bitcoinconsensus_version())
+		fmt.Println("Using bitcoinconsensus lib to verify transactions")
 		HookVerifyTxScript = myVerifyTxScript
 	} else {
 		panic("libbitcoinconsensus.dylib not found")
