@@ -1011,8 +1011,13 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 					stack.pushInt(num)
 
 				case opcode==0xae || opcode==0xaf: //OP_CHECKMULTISIG || OP_CHECKMULTISIGVERIFY
-					//fmt.Println("OP_CHECKMULTISIG ...")
-					//stack.print()
+					if sigversion == SIGVERSION_TAPSCRIPT {
+						if DBG_ERR {
+							fmt.Println("SCRIPT_ERR_TAPSCRIPT_CHECKMULTISIG")
+						}
+						return false
+					}
+				
 					if stack.size()<1 {
 						if DBG_ERR {
 							fmt.Println("OP_CHECKMULTISIG: Stack too short A")
@@ -1091,18 +1096,9 @@ func evalScript(p []byte, stack *scrStack, checker *SigChecker, ver_flags uint32
 							return false
 						}
 
-						if len(vchSig) > 0 {
-							var sh []byte
-
-							if sigversion==SIGVERSION_WITNESS_V0 {
-								sh = tx.WitnessSigHash(xxx, amount, inp, int32(vchSig[len(vchSig)-1]))
-							} else {
-								sh = tx.SignatureHash(xxx, inp, int32(vchSig[len(vchSig)-1]))
-							}
-							if btc.EcdsaVerify(vchPubKey, vchSig, sh) {
-								isig++
-								sigscnt--
-							}
+						if checker.verifyECDSA(xxx, vchSig, vchPubKey, sigversion) {
+							isig++
+							sigscnt--
 						}
 
 						ikey++

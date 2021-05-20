@@ -69,3 +69,21 @@ func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash in
 	ok = true
 	return
 }
+
+
+func (c *SigChecker) verifyECDSA(data, sig, pubkey []byte, sigversion int) bool {
+	if len(sig) == 0 {
+		return false
+	}
+	
+	nHashType := int32(sig[len(sig)-1])
+	
+	var sh []byte
+
+	if sigversion==SIGVERSION_WITNESS_V0 {
+		sh = c.Tx.WitnessSigHash(data, c.Amount, c.Idx, nHashType)
+	} else {
+		sh = c.Tx.SignatureHash(data, c.Idx, nHashType)
+	}
+	return btc.EcdsaVerify(pubkey, sig, sh)
+}
