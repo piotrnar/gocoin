@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"encoding/hex"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 
@@ -86,4 +87,22 @@ func (c *SigChecker) verifyECDSA(data, sig, pubkey []byte, sigversion int) bool 
 		sh = c.Tx.SignatureHash(data, c.Idx, nHashType)
 	}
 	return btc.EcdsaVerify(pubkey, sig, sh)
+}
+
+func (c *SigChecker) CheckSchnorrSignature(sig, pubkey []byte, sigversion int, execdata *btc.ScriptExecutionData) bool {
+	if len(sig) != 64 && len(sig) != 65 {
+		fmt.Println("SCRIPT_ERR_SCHNORR_SIG_SIZE")
+		return false
+	}
+	hashtype := byte(btc.SIGHASH_DEFAULT)
+	if len(sig) == 65 {
+		hashtype = sig[64]
+		if hashtype == btc.SIGHASH_DEFAULT {
+			fmt.Println("SCRIPT_ERR_SCHNORR_SIG_HASHTYPE")
+			return false
+		}
+		sig = sig[:64]
+	}
+	sh := c.Tx.TaprootSigHash(execdata, c.Idx, hashtype, sigversion == SIGVERSION_TAPSCRIPT)
+	return secp256k1.SchnorrVerify(pubkey, sig, sh)
 }
