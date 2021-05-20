@@ -14,6 +14,8 @@ import (
 var (
 	DBG_SCR = false
 	DBG_ERR = true
+
+	HookVerifyTxScript func(pkScr []byte, checker *SigChecker, ver_flags uint32) (result bool)
 )
 
 const (
@@ -75,6 +77,10 @@ const (
 )
 
 func VerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (result bool) {
+	if HookVerifyTxScript != nil {
+		return HookVerifyTxScript(pkScr, checker, ver_flags)
+	}
+
 	var execdata btc.ScriptExecutionData
 
 	tx := checker.Tx

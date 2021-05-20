@@ -137,6 +137,7 @@ func TestScritps(t *testing.T) {
 
 		credit_tx := mk_credit_tx(v.pkscr, v.value)
 		spend_tx := mk_spend_tx(credit_tx, v.sigscr, v.witness)
+		spend_tx.Raw = spend_tx.SerializeNew()
 
 		if DBG_SCR {
 			println("desc:", v, tot, v.desc)

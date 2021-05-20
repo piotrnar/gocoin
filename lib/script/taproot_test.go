@@ -35,14 +35,6 @@ func dump_test(tst *one_scr_tst) {
 	}
 }
 
-func txout_serialize(to *btc.TxOut) []byte {
-	b := new(bytes.Buffer)
-	binary.Write(b, binary.LittleEndian, to.Value)
-	btc.WriteVlen(b, uint64(len(to.Pk_script)))
-	b.Write(to.Pk_script)
-	return b.Bytes()
-}
-
 func TestTaprootScritps(t *testing.T) {
 	var tests []one_scr_tst
 	var res bool
@@ -76,9 +68,11 @@ func TestTaprootScritps(t *testing.T) {
 
 		tx.Spent_outputs = make([]*btc.TxOut, len(tv.Prevouts))
 
+		/*
 		_b := new(bytes.Buffer)
 		btc.WriteVlen(_b, uint64(len(tv.Prevouts)))
 		outs := _b.Bytes()
+		*/
 
 		for i, pks := range tv.Prevouts {
 			d, e = hex.DecodeString(pks)
@@ -100,7 +94,7 @@ func TestTaprootScritps(t *testing.T) {
 			if e != nil {
 				t.Fatal(i, e.Error())
 			}
-			outs = append(outs, txout_serialize(tx.Spent_outputs[i])...)
+			//outs = append(outs, txout_serialize(tx.Spent_outputs[i])...)
 		}
 
 		idx := tv.Index
