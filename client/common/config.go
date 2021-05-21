@@ -231,7 +231,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
-	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save", ConfigFile, "file and exit (use to create default config file)")
+	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
