@@ -31,6 +31,7 @@
  * Lib: btc.GetSigOpCount() now aborts counting on OP_RETURN (was wrongly rejecting testnet block #1971687)
  * Wallet: New command line switch "-cfg <fname>" to overwrite env's GOCOIN_WALLET_CONFIG variable
  * Wallet: No longer neccessary to add "-segwit" command line switch for "-bech32" to work
+ * Client: New command line switch "-cfg <fname>" to specify config's file name other than "gocoin.conf"
 
 1.9.8 - 2020-07-09
 * New tools "utxo_compress" and "utxo_decompress" to compress/decompress UTXO.db file
