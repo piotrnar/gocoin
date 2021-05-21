@@ -215,7 +215,7 @@ func (s *scrStack) resize(siz int) {
 	s.data = s.data[:siz]
 }
 
-func (s *scrStack) GetSerializeSize(ver uint32) (res int) {
+func (s *scrStack) GetSerializeSize() (res int) {
 	res += btc.VLenSize(uint64(len(s.data)))
 	for _, d := range s.data {
 		res += btc.VLenSize(uint64(len(d)))

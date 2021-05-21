@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	ConfigFile = "gocoin.conf"
-	Version    = uint32(70015)
-	Services   = uint64(0x00000009)
+	Version  = uint32(70015)
+	Services = uint64(0x00000009)
 )
 
 var (

@@ -201,7 +201,7 @@ func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion 
 
 			if (control[0] & TAPROOT_LEAF_MASK) == TAPROOT_LEAF_TAPSCRIPT {
 				// Tapscript (leaf version 0xc0)
-				execdata.M_validation_weight_left = int64(witness.stack.GetSerializeSize(PROTOCOL_VERSION) + VALIDATION_WEIGHT_OFFSET)
+				execdata.M_validation_weight_left = int64(witness.stack.GetSerializeSize() + VALIDATION_WEIGHT_OFFSET)
 				execdata.M_validation_weight_left_init = true
 				return checker.ExecuteWitnessScript(&stack, script_bytes, flags, SIGVERSION_TAPSCRIPT, &execdata)
 			}

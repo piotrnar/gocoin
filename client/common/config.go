@@ -20,6 +20,8 @@ const LastTrustedBTCBlock = "00000000000000000005e30238fd37a49536a7c70fa18c9bbe8
 const LastTrustedTN3Block = "000000000000004af2797ec6c819d68e45a67b0add227d786aa6011be2489511" // #1441638
 
 var (
+	ConfigFile string = "gocoin.conf"
+	
 	FLAG struct { // Command line only options
 		Rescan        bool
 		VolatileUTXO  bool
@@ -183,6 +185,22 @@ func InitConfig() {
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
 
+	// pre-parse command line: look for -cfg <fname> or -h
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i]=="-cfg" || os.Args[i]=="--cfg" {
+			if i+1 >= len(os.Args) {
+				println("Missing the file name for", os.Args[i], "argument")
+				os.Exit(1)
+			}
+			ConfigFile = os.Args[i+1]
+			break
+		}
+		if strings.HasPrefix(os.Args[i], "-cfg=") || strings.HasPrefix(os.Args[i], "--cfg=") {
+			ss := strings.SplitN(os.Args[i], "=", 2)
+			ConfigFile = ss[1]
+		}
+	}
+	
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
@@ -194,6 +212,8 @@ func InitConfig() {
 		new_config_file = true
 	}
 
+	var _cfg_fn string
+	flag.StringVar(&_cfg_fn, "cfg", ConfigFile, "Specify name of the config file")
 	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild UTXO database (fixes 'Unknown input TxID' errors)")
 	flag.BoolVar(&FLAG.VolatileUTXO, "v", false, "Use UTXO database in volatile mode (speeds up rebuilding)")
 	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
