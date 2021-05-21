@@ -62,4 +62,15 @@ func BenchmarkSchnorrVerify(b *testing.B) {
 	}
 }
 
-
+func BenchmarkCheckPayToContract(b *testing.B) {
+	pkey, _ := hex.DecodeString("afaf8a67be00186668f74740e34ffce748139c2b73c9fbd2c1f33e48a612a75d")
+	base, _ := hex.DecodeString("f1cbd3f2430910916144d5d2bf63d48a6281e5b8e6ade31413adccff3d8839d4")
+	hash, _ := hex.DecodeString("93a760e87123883022cbd462ac40571176cf09d9d2c6168759fee6c2b079fdd8")
+	parity := true
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !CheckPayToContract(pkey, base, hash, parity) {
+			b.Fatal("CheckPayToContract failed")
+		}
+	}
+}

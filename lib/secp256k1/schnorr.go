@@ -27,7 +27,7 @@ func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
 
 	SchnorrsigChallenge(&_e, sig[:32], msg, pkey)
 	_e.sub(&TheCurve.Order, &_e)
-	
+
 	_s.SetBytes(sig[32:])
 	pkj.SetXY(&pk)
 	pkj.ECmult(&rj, &_e, &_s)
@@ -36,7 +36,7 @@ func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
 	if r.Infinity {
 		return false
 	}
-	
+
 	r.Y.Normalize()
 	if r.Y.IsOdd() {
 		return false
@@ -53,23 +53,23 @@ func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {
 }
 
 func (pk *XY) XOnlyPubkeyTweakAddCheck(tweaked_pubkey32 []byte, tweaked_pk_parity bool, hash []byte) bool {
-    var pk_expected32 [32]byte
+	var pk_expected32 [32]byte
 	var tweak Number
 
 	tweak.SetBytes(hash)
-	if (!pk.ECPublicTweakAdd(&tweak)) {
-        return false
-    }
+	if !pk.ECPublicTweakAdd(&tweak) {
+		return false
+	}
 	pk.X.Normalize()
 	pk.Y.Normalize()
 	pk.X.GetB32(pk_expected32[:])
-	
+
 	if bytes.Equal(pk_expected32[:], tweaked_pubkey32) {
 		if pk.Y.IsOdd() == tweaked_pk_parity {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -85,7 +85,6 @@ func (key *XY) ECPublicTweakAdd(tweak *Number) bool {
 	key.SetXYZ(&pt2)
 	return true
 }
-
 
 var _sha_midstate []byte
 
