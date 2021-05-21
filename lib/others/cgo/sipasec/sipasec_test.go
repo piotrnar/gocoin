@@ -1,10 +1,10 @@
 package sipasec
 
 import (
-	"testing"
 	"encoding/csv"
 	"encoding/hex"
 	"os"
+	"testing"
 )
 
 var ta = [][3]string{
@@ -62,24 +62,24 @@ func TestVerify(t *testing.T) {
 		hasz, _ := hex.DecodeString(ta[i][2])
 
 		res := EC_Verify(pkey, sign, hasz)
-		if res!=1 {
+		if res != 1 {
 			t.Error("Verify failed")
 		}
 		hasz[0]++
 		res = EC_Verify(pkey, sign, hasz)
-		if res!=0 {
+		if res != 0 {
 			t.Error("Verify not failed while it should")
 		}
 		res = EC_Verify(pkey[:1], sign, hasz)
-		if res>=0 {
+		if res >= 0 {
 			t.Error("Negative result expected", res)
 		}
 		res = EC_Verify(pkey, sign[:1], hasz)
-		if res>=0 {
+		if res >= 0 {
 			t.Error("Yet negative result expected", res)
 		}
 		res = EC_Verify(pkey, sign, hasz[:1])
-		if res!=0 {
+		if res != 0 {
 			t.Error("Zero expected", res)
 		}
 	}
@@ -110,20 +110,20 @@ func TestSchnorrVerify(t *testing.T) {
 
 		if tas[i][6] == "FALSE" {
 			res := Schnorr_Verify(pkey, sign, hasz)
-			if res!=0 {
+			if res != 0 {
 				t.Error("Schnorr_Verify not failed")
 			}
 			continue
 		}
 
 		res := Schnorr_Verify(pkey, sign, hasz)
-		if res!=1 {
+		if res != 1 {
 			t.Error("Schnorr_Verify failed")
 		}
 		continue
 		hasz[0]++
 		res = Schnorr_Verify(pkey, sign, hasz)
-		if res!=0 {
+		if res != 0 {
 			t.Error("SchnorrVerify not failed while it should")
 		}
 	}
@@ -159,3 +159,15 @@ func BenchmarkSchnorrVerify(b *testing.B) {
 	}
 }
 
+func BenchmarkCheckPayToContract(b *testing.B) {
+	pkey, _ := hex.DecodeString("afaf8a67be00186668f74740e34ffce748139c2b73c9fbd2c1f33e48a612a75d")
+	base, _ := hex.DecodeString("f1cbd3f2430910916144d5d2bf63d48a6281e5b8e6ade31413adccff3d8839d4")
+	hash, _ := hex.DecodeString("93a760e87123883022cbd462ac40571176cf09d9d2c6168759fee6c2b079fdd8")
+	parity := true
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if CheckPayToContract(pkey, base, hash, parity) != 1 {
+			b.Fatal("CheckPayToContract failed")
+		}
+	}
+}
