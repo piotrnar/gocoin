@@ -20,6 +20,8 @@ const LastTrustedBTCBlock = "00000000000000000005e30238fd37a49536a7c70fa18c9bbe8
 const LastTrustedTN3Block = "000000000000004af2797ec6c819d68e45a67b0add227d786aa6011be2489511" // #1441638
 
 var (
+	ConfigFile string = "gocoin.conf"
+
 	FLAG struct { // Command line only options
 		Rescan        bool
 		VolatileUTXO  bool
@@ -32,14 +34,14 @@ var (
 	}
 
 	CFG struct { // Options that can come from either command line or common file
-		Testnet        bool
-		ConnectOnly    string
-		Datadir        string
-		TextUI_Enabled bool
-		UserAgent      string
+		Testnet          bool
+		ConnectOnly      string
+		Datadir          string
+		TextUI_Enabled   bool
+		UserAgent        string
 		LastTrustedBlock string
 
-		WebUI          struct {
+		WebUI struct {
 			Interface   string
 			AllowedIP   string // comma separated
 			ShowBlocks  uint32
@@ -81,23 +83,23 @@ var (
 			Enabled    bool // Global on/off swicth
 			FeePerByte float64
 			MaxTxSize  uint32
-			MemInputs bool
+			MemInputs  bool
 		}
 		Memory struct {
-			GCPercTrshold int
-			UseGoHeap     bool // Use Go Heap and Garbage Collector for UTXO records
-			MaxCachedBlks uint
-			FreeAtStart   bool // Free all possible memory after initial loading of block chain
-			CacheOnDisk   bool
-			MaxDataFileMB uint // 0 for unlimited size
-			DataFilesKeep uint32 // 0 for all
-			OldDataBackup bool // move old dat files to "oldat/" folder (instead of removing them)
+			GCPercTrshold        int
+			UseGoHeap            bool // Use Go Heap and Garbage Collector for UTXO records
+			MaxCachedBlks        uint
+			FreeAtStart          bool // Free all possible memory after initial loading of block chain
+			CacheOnDisk          bool
+			MaxDataFileMB        uint   // 0 for unlimited size
+			DataFilesKeep        uint32 // 0 for all
+			OldDataBackup        bool   // move old dat files to "oldat/" folder (instead of removing them)
 			PurgeUnspendableUTXO bool
 		}
 		AllBalances struct {
-			MinValue   uint64 // Do not keep balance records for values lower than this
-			UseMapCnt  int
-			AutoLoad   bool
+			MinValue  uint64 // Do not keep balance records for values lower than this
+			UseMapCnt int
+			AutoLoad  bool
 		}
 		Stat struct {
 			HashrateHrs uint
@@ -111,7 +113,7 @@ var (
 			PingPeriodSec   uint // zero to not ping
 		}
 		UTXOSave struct {
-			SecondsToTake uint  // zero for as fast as possible, 600 for do it in 10 minutes
+			SecondsToTake uint   // zero for as fast as possible, 600 for do it in 10 minutes
 			BlocksToHold  uint32 // zero for immediatelly, one for every other block...
 		}
 	}
@@ -183,6 +185,22 @@ func InitConfig() {
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
 
+	// pre-parse command line: look for -cfg <fname> or -h
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i] == "-cfg" || os.Args[i] == "--cfg" {
+			if i+1 >= len(os.Args) {
+				println("Missing the file name for", os.Args[i], "argument")
+				os.Exit(1)
+			}
+			ConfigFile = os.Args[i+1]
+			break
+		}
+		if strings.HasPrefix(os.Args[i], "-cfg=") || strings.HasPrefix(os.Args[i], "--cfg=") {
+			ss := strings.SplitN(os.Args[i], "=", 2)
+			ConfigFile = ss[1]
+		}
+	}
+
 	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
@@ -194,6 +212,8 @@ func InitConfig() {
 		new_config_file = true
 	}
 
+	var _cfg_fn string
+	flag.StringVar(&_cfg_fn, "cfg", ConfigFile, "Specify name of the config file")
 	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild UTXO database (fixes 'Unknown input TxID' errors)")
 	flag.BoolVar(&FLAG.VolatileUTXO, "v", false, "Use UTXO database in volatile mode (speeds up rebuilding)")
 	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
@@ -211,7 +231,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.UnbanAllPeers, "unban", FLAG.UnbanAllPeers, "Un-ban all peers in databse, before starting")
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
-	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save gocoin.conf file and exit (use to create default config file)")
+	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
@@ -298,11 +318,11 @@ func Reset() {
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
 
-	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB) * 1e6)
-	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB) * 1e6)
-	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte * 1000))
+	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB)*1e6)
+	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB)*1e6)
+	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
-	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte * 1000))
+	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
 	WebUIAllowed = nil
