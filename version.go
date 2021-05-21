@@ -4,4 +4,4 @@ import (
 	// This file use to be only to make "go get" working.
 )
 
-const Version = "1.9.9"
+const Version = "1.10.0pre"
