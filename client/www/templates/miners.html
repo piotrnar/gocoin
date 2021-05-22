@@ -114,8 +114,10 @@ function refresh_mining_info() {
 			el_diff_change_in.innerText = (parseInt(last_block_height/2016)+1)*2016 - last_block_height
 
 			var per = (parseInt(last_block_height/210e3)+1) * 210e3
-			next_halving_days.innerText = parseInt((per - last_block_height) / 144)
-			next_halving_weeks.innerText = parseInt((per - last_block_height) / 144/7)
+			next_halving_days.innerText = Math.round((per - last_block_height) / 144.0)
+			next_halving_weeks.innerText = Math.round((per - last_block_height) / 144.0/7)
+			next_halving_months.innerText = Math.round((per - last_block_height) / 144.0/(365/12))
+			next_halving_years.innerText = ((per - last_block_height) / 144/365.25).toFixed(1)
 
 			while (minerstab.rows.length>1) minerstab.deleteRow(1)
 
@@ -230,7 +232,32 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 	</tr>
 </table>
 <br>
-The next halving is estimated to happen in <b id="next_halving_days">...</b> days or <b id="next_halving_weeks">...</b> weeks.
+	<table width="100%" border="0" cellspacing="0"><tr>
+		<td>
+			Signalling Taproot activation
+				&nbsp;&nbsp;
+			<b id="taperc_1000">90.0</b>% in last 1000 blocks
+			&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+			<b id="taperc_curr">90.0</b>% in current period
+			&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+			<b id="taperc_past">90.0</b>% in last period.
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2">
+			The next halving is estimated to happen in
+				&nbsp;&nbsp;
+				<b id="next_halving_days">...</b> days 
+				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+				<b id="next_halving_weeks">...</b> weeks
+				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+				<b id="next_halving_months">...</b> months
+				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
+				<b id="next_halving_years">...</b> years.
+		</td>
+	</tr>
+	</table>
+
 </div>
 
 <pre id="verinfo" class="mono" style="left:0px;top:0px;z-index:1000;width:100%;background-color:#e0e0e0"></pre>
@@ -238,19 +265,20 @@ The next halving is estimated to happen in <b id="next_halving_days">...</b> day
 </td>
 <td valign="top" id="block_history_td" style="display:none">
 
-<table class="bord" id="blockver_tab_a" align="right">
+<table class="bord" id="blockver_tab_1000" align="right">
 <caption>Last 1000 blocks</caption>
-<tr><th>Version<th>Count<th>Share
-</table>
-&nbsp;&nbsp;&nbsp;&nbsp;<br>
-<table class="bord" id="blockver_tab_b" align="right">
-<caption>Past period</caption>
 <tr><th>Version<th>Count<th>Share
 </table>
 
 &nbsp;&nbsp;&nbsp;&nbsp;<br>
-<table class="bord" id="blockver_tab_c" align="right">
+<table class="bord" id="blockver_tab_curr" align="right">
 <caption>Current period</caption>
+<tr><th>Version<th>Count<th>Share
+</table>
+
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+<table class="bord" id="blockver_tab_past" align="right">
+<caption>Past period</caption>
 <tr><th>Version<th>Count<th>Share
 </table>
 
@@ -259,7 +287,7 @@ The next halving is estimated to happen in <b id="next_halving_days">...</b> day
 </table>
 
 <script>
-function do_table(blockver_tab, block_versions, max_block_number, min_block_number) {
+function do_versions(tabid, block_versions, max_block_number, min_block_number) {
 	var key, st = new Array()
 	var counted = 0;
 	var taproot = 0;
@@ -289,6 +317,7 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 		else return 1;
 	})
 
+	var blockver_tab = document.getElementById("blockver_tab_" + tabid)
 	while (blockver_tab.rows.length>1) blockver_tab.deleteRow(1)
 
 	for (var i=0; i<sorted.length; i++) {
@@ -316,7 +345,9 @@ function do_table(blockver_tab, block_versions, max_block_number, min_block_numb
 				c.innerText = taproot
 				c = row.insertCell(-1)
 				c.className = 'bl_perc'
-				c.innerText = Math.round(taproot*100/counted) + '%'
+				var taperc = taproot*100/counted
+				c.innerText = Math.round(taperc) + '%'
+				document.getElementById("taperc_" + tabid).innerText = taperc.toFixed(1)
 			}
 			break
 		}
@@ -345,9 +376,9 @@ function blocks_version_stats() {
 			var top_block_height = block_versions[0][0]
 			var last_epoch_change = Math.floor(top_block_height/2016) * 2016
 
-			do_table(blockver_tab_a, block_versions, top_block_height, top_block_height-999)
-			do_table(blockver_tab_b, block_versions, last_epoch_change-1, last_epoch_change-2016)
-			do_table(blockver_tab_c, block_versions, top_block_height, last_epoch_change)
+			do_versions("1000", block_versions, top_block_height, top_block_height-999)
+			do_versions("curr", block_versions, top_block_height, last_epoch_change)
+			do_versions("past", block_versions, last_epoch_change-1, last_epoch_change-2016)
 
 			block_history_td.style.display = 'table-cell'
 
