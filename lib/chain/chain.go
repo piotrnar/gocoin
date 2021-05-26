@@ -79,6 +79,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.BIP66Height = 363725
 		ch.Consensus.Enforce_CSV = 419328
 		ch.Consensus.Enforce_SEGWIT = 481824
+		ch.Consensus.Enforce_Taproot = 709632
 		ch.Consensus.BIP9_Treshold = 1916
 	}
 
