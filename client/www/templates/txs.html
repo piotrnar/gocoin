@@ -633,6 +633,16 @@ function showTooltip(x, y, contents) {
 	}).appendTo("body").fadeIn(200);
 }
 
+function time2str(sec) {
+	if (sec < 3600) {
+		return (sec/60).toFixed(1) + ' min'
+	}
+	if (sec < 24*3600) {
+		return (sec/3600).toFixed(1) + ' hour'
+	}
+	return (sec/(24*3600)).toFixed(1) + ' day'
+}
+
 function handlehover(event, pos, item) {
 	if (item) {
 		if (previousPoint != item.dataIndex) {
@@ -648,12 +658,12 @@ function handlehover(event, pos, item) {
 				str += (rec[1]/1000).toFixed(2) + ' SPB'
 				str += ' @ ' + (rec[0]/4e6).toFixed(2) + 'BL'
 			} else {
-				str += rec.Current_tx_spb.toFixed(2) + ' SPB'
-
-				str += ' -  Tx #'+(rec.Txs_so_far+1)
-				str += ' ('+parseInt(rec.Current_tx_weight/4)+' B'
-				str += ' @ ' + (rec.Real_len_so_far/1e6).toFixed(2) + 'M)'
-				str += ' - ' + ((parseInt(new Date().getTime())/1000 - rec.Time_received)/60).toFixed(1) +' min old'
+				str += 'Tx #'+(rec.Txs_so_far+1) + ' - '
+				str += rec.Current_tx_spb.toFixed(2) + ' SPB<br>'
+				str += parseInt(rec.Current_tx_weight/4) + ' bytes'
+				str += ', ' + time2str(parseInt(new Date().getTime())/1000 - rec.Time_received) +' old<br>'
+				str += '' + (rec.Real_len_so_far/1e6).toFixed(2) + ' MB'
+				str += ' &#8594; ' + (rec.Weight_so_far/4e6).toFixed(2) + ' Blocks<br>'
 			}
 			showTooltip(item.pageX, item.pageY, str)
 		}
