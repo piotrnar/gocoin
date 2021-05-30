@@ -1,60 +1,59 @@
 package btc
 
 import (
-	"fmt"
 	"bytes"
-	"errors"
-	"strings"
-	"math/big"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/piotrnar/gocoin/lib/others/bech32"
 )
 
-
 type BtcAddr struct {
-	Version byte
-	Hash160 [20]byte
+	Version  byte
+	Hash160  [20]byte
 	Checksum []byte
-	Pubkey []byte
+	Pubkey   []byte
 	Enc58str string
 
 	*SegwitProg // if this is not nil, means that this is a native segwit address
 
 	// This is used only by the client
 	Extra struct {
-		Label string
+		Label  string
 		Wallet string
 		Virgin bool
 	}
 }
 
 type SegwitProg struct {
-	HRP string
+	HRP     string
 	Version int
 	Program []byte
 }
 
-
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	if strings.HasPrefix(hs, "bc1") || strings.HasPrefix(hs, "tb1") {
-		var sw = &SegwitProg{HRP:hs[:2]}
+		var sw = &SegwitProg{HRP: hs[:2]}
 		sw.Version, sw.Program = bech32.SegwitDecode(sw.HRP, hs)
 		if sw.Program != nil {
-			a = &BtcAddr{SegwitProg:sw}
+			a = &BtcAddr{SegwitProg: sw}
 		}
 		return
 	}
 
 	dec := Decodeb58(hs)
 	if dec == nil {
-		e = errors.New("Cannot decode b58 string '"+hs+"'")
+		e = errors.New("Cannot decode b58 string '" + hs + "'")
 		return
 	}
-	if (len(dec)<25) {
-		e = errors.New("Address too short "+hex.EncodeToString(dec))
+	if len(dec) < 25 {
+		e = errors.New("Address too short " + hex.EncodeToString(dec))
 		return
 	}
-	if (len(dec)==25) {
+	if len(dec) == 25 {
 		sh := Sha2Sum(dec[0:21])
 		if !bytes.Equal(sh[:4], dec[21:25]) {
 			e = errors.New("Address Checksum error")
@@ -79,7 +78,6 @@ func NewAddrFromHash160(in []byte, ver byte) (a *BtcAddr) {
 	return
 }
 
-
 func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	a = new(BtcAddr)
 	a.Pubkey = make([]byte, len(in))
@@ -89,7 +87,6 @@ func NewAddrFromPubkey(in []byte, ver byte) (a *BtcAddr) {
 	return
 }
 
-
 func AddrVerPubkey(testnet bool) byte {
 	if testnet {
 		return 111
@@ -97,7 +94,6 @@ func AddrVerPubkey(testnet bool) byte {
 		return 0
 	}
 }
-
 
 func AddrVerScript(testnet bool) byte {
 	if testnet {
@@ -107,15 +103,14 @@ func AddrVerScript(testnet bool) byte {
 	}
 }
 
-
-func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
+func NewAddrFromPkScript(scr []byte, testnet bool) *BtcAddr {
 	// check segwit bech32:
-	if len(scr)==0 {
+	if len(scr) == 0 {
 		return nil
 	}
 
 	if version, program := IsWitnessProgram(scr); program != nil {
-		sw := &SegwitProg{HRP:GetSegwitHRP(testnet), Version:version, Program:program}
+		sw := &SegwitProg{HRP: GetSegwitHRP(testnet), Version: version, Program: program}
 
 		str := bech32.SegwitEncode(sw.HRP, version, program)
 		if str == "" {
@@ -129,29 +124,28 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (*BtcAddr) {
 		return ad
 	}
 
-	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+	if len(scr) == 25 && scr[0] == 0x76 && scr[1] == 0xa9 && scr[2] == 0x14 && scr[23] == 0x88 && scr[24] == 0xac {
 		return NewAddrFromHash160(scr[3:23], AddrVerPubkey(testnet))
-	} else if len(scr)==67 && scr[0]==0x41 && scr[66]==0xac {
+	} else if len(scr) == 67 && scr[0] == 0x41 && scr[66] == 0xac {
 		return NewAddrFromPubkey(scr[1:66], AddrVerPubkey(testnet))
-	} else if len(scr)==35 && scr[0]==0x21 && scr[34]==0xac {
+	} else if len(scr) == 35 && scr[0] == 0x21 && scr[34] == 0xac {
 		return NewAddrFromPubkey(scr[1:34], AddrVerPubkey(testnet))
-	} else if len(scr)==23 && scr[0]==0xa9 && scr[1]==0x14 && scr[22]==0x87 {
+	} else if len(scr) == 23 && scr[0] == 0xa9 && scr[1] == 0x14 && scr[22] == 0x87 {
 		return NewAddrFromHash160(scr[2:22], AddrVerScript(testnet))
 	}
 	return nil
 }
 
-
 // String returns the Base58 encoded address.
 func (a *BtcAddr) String() string {
-	if a.Enc58str=="" {
+	if a.Enc58str == "" {
 		if a.SegwitProg != nil {
 			a.Enc58str = a.SegwitProg.String()
 		} else {
 			var ad [25]byte
 			ad[0] = a.Version
 			copy(ad[1:21], a.Hash160[:])
-			if a.Checksum==nil {
+			if a.Checksum == nil {
 				sh := Sha2Sum(ad[0:21])
 				a.Checksum = make([]byte, 4)
 				copy(a.Checksum, sh[:4])
@@ -164,10 +158,10 @@ func (a *BtcAddr) String() string {
 }
 
 func (a *BtcAddr) IsCompressed() bool {
-	if len(a.Pubkey)==33 {
+	if len(a.Pubkey) == 33 {
 		return true
 	}
-	if len(a.Pubkey)!=65 {
+	if len(a.Pubkey) != 65 {
 		panic("Cannot determine whether the key was compressed")
 	}
 	return false
@@ -175,10 +169,10 @@ func (a *BtcAddr) IsCompressed() bool {
 
 // String with a label
 func (a *BtcAddr) Label() (s string) {
-	if a.Extra.Wallet!="" {
+	if a.Extra.Wallet != "" {
 		s += " " + a.Extra.Wallet + ":"
 	}
-	if a.Extra.Label!="" {
+	if a.Extra.Label != "" {
 		s += " " + a.Extra.Label
 	}
 	if a.Extra.Virgin {
@@ -190,13 +184,13 @@ func (a *BtcAddr) Label() (s string) {
 // Owns checks if a pk_script send coins to this address.
 func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	// The most common spend script
-	if len(scr)==25 && scr[0]==0x76 && scr[1]==0xa9 && scr[2]==0x14 && scr[23]==0x88 && scr[24]==0xac {
+	if len(scr) == 25 && scr[0] == 0x76 && scr[1] == 0xa9 && scr[2] == 0x14 && scr[23] == 0x88 && scr[24] == 0xac {
 		yes = bytes.Equal(scr[3:23], a.Hash160[:])
 		return
 	}
 
 	// Spend script with an entire public key
-	if len(scr)==67 && scr[0]==0x41 && scr[1]==0x04 && scr[66]==0xac {
+	if len(scr) == 67 && scr[0] == 0x41 && scr[1] == 0x04 && scr[66] == 0xac {
 		if a.Pubkey == nil {
 			h := Rimp160AfterSha256(scr[1:66])
 			if h == a.Hash160 {
@@ -211,7 +205,7 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	}
 
 	// Spend script with a compressed public key
-	if len(scr)==35 && scr[0]==0x21 && (scr[1]==0x02 || scr[1]==0x03) && scr[34]==0xac {
+	if len(scr) == 35 && scr[0] == 0x21 && (scr[1] == 0x02 || scr[1] == 0x03) && scr[34] == 0xac {
 		if a.Pubkey == nil {
 			h := Rimp160AfterSha256(scr[1:34])
 			if h == a.Hash160 {
@@ -228,17 +222,13 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 	return
 }
 
-
 func (a *BtcAddr) OutScript() (res []byte) {
 	if a.SegwitProg != nil {
-		if a.SegwitProg.Version != 0 || ( len(a.SegwitProg.Program) != 20 && len(a.SegwitProg.Program) != 32  ) {
-			panic("Only Segwit programs version 0 and length 20 or 32 supported")
-		}
-		res = make([]byte, 2 + len(a.SegwitProg.Program))
-		res[0] = 0x00 // OP_0
+		res = make([]byte, 2+len(a.SegwitProg.Program))
+		res[0] = byte(a.SegwitProg.Version)
 		res[1] = byte(len(a.SegwitProg.Program))
 		copy(res[2:], a.SegwitProg.Program)
-	} else if a.Version==AddrVerPubkey(false) || a.Version==AddrVerPubkey(true) || a.Version==48 /*Litecoin*/ {
+	} else if a.Version == AddrVerPubkey(false) || a.Version == AddrVerPubkey(true) || a.Version == 48 /*Litecoin*/ {
 		res = make([]byte, 25)
 		res[0] = 0x76
 		res[1] = 0xa9
@@ -246,7 +236,7 @@ func (a *BtcAddr) OutScript() (res []byte) {
 		copy(res[3:23], a.Hash160[:])
 		res[23] = 0x88
 		res[24] = 0xac
-	} else if a.Version==AddrVerScript(false) || a.Version==AddrVerScript(true) {
+	} else if a.Version == AddrVerScript(false) || a.Version == AddrVerScript(true) {
 		res = make([]byte, 23)
 		res[0] = 0xa9
 		res[1] = 20
@@ -258,24 +248,22 @@ func (a *BtcAddr) OutScript() (res []byte) {
 	return
 }
 
-
 var b58set []byte = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 
 func b58chr2int(chr byte) int {
-	for i:=range b58set {
-		if b58set[i]==chr {
+	for i := range b58set {
+		if b58set[i] == chr {
 			return i
 		}
 	}
 	return -1
 }
 
-
 var bn0 *big.Int = big.NewInt(0)
 var bn58 *big.Int = big.NewInt(58)
 
 func Encodeb58(a []byte) (s string) {
-	idx := len(a) * 138 / 100 + 1
+	idx := len(a)*138/100 + 1
 	buf := make([]byte, idx)
 	bn := new(big.Int).SetBytes(a)
 	var mo *big.Int
@@ -285,7 +273,7 @@ func Encodeb58(a []byte) (s string) {
 		buf[idx] = b58set[mo.Int64()]
 	}
 	for i := range a {
-		if a[i]!=0 {
+		if a[i] != 0 {
 			break
 		}
 		idx--
@@ -310,7 +298,7 @@ func Decodeb58(s string) (res []byte) {
 
 	// We want to "restore leading zeros" as satoshi's implementation does:
 	var i int
-	for i<len(s) && s[i]==b58set[0] {
+	for i < len(s) && s[i] == b58set[0] {
 		i++
 	}
 	if i > 0 {
