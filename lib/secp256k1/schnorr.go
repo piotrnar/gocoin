@@ -53,13 +53,16 @@ func get_n_minus(in []byte) []byte {
 	return n.get_bin(32)
 }
 
-func SchnorrSign(m, sk, a []byte) (res []byte) {
+func SchnorrSign(m, sk, a []byte) []byte {
 	var xyz XYZ
 	var n, x Number
 	var P, R XY
-	var d, t, k, e []byte
+	var d, t, k, e, res []byte
 
-	n.SetBytes(sk)
+	n.SetBytes(sk) // d
+	if n.is_zero() || !n.is_below(&TheCurve.Order) {
+		return nil
+	}
 	ECmultGen(&xyz, &n)
 	P.SetXYZ(&xyz)
 	if P.Y.IsOdd() {
@@ -83,6 +86,10 @@ func SchnorrSign(m, sk, a []byte) (res []byte) {
 	k0 := s.Sum(nil)
 
 	n.SetBytes(k0)
+	n.mod(&TheCurve.Order)
+	if n.is_zero() {
+		return nil
+	}
 	ECmultGen(&xyz, &n)
 	R.SetXYZ(&xyz)
 	if R.Y.IsOdd() {
@@ -94,12 +101,18 @@ func SchnorrSign(m, sk, a []byte) (res []byte) {
 	res = make([]byte, 64)
 	R.X.GetB32(res[:32])
 	P.X.GetB32(res[32:])
+	copy(t, res[32:]) // save public key for the verify function
 	s = ShaMidstateChallenge()
 	s.Write(res)
 	s.Write(m)
 	e = s.Sum(nil)
 
 	n.SetBytes(e)
+	if !n.is_below(&TheCurve.Order) {
+		n.sub(&n, &TheCurve.Order) // we need to use "e mod N"
+	}
+
+	// signature: ((e * d + k) mod n)
 	x.SetBytes(d)
 	n.mul(&n, &x)
 
@@ -108,7 +121,10 @@ func SchnorrSign(m, sk, a []byte) (res []byte) {
 	n.mod(&TheCurve.Order)
 
 	copy(res[32:], n.get_bin(32))
-	return
+	if !SchnorrVerify(t, res, m) {
+		return nil
+	}
+	return res
 }
 
 func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {

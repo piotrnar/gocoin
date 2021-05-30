@@ -14,7 +14,7 @@ type Number struct {
 	big.Int
 }
 
-func (a *Number) Print(label string) {
+func (a *Number) print(label string) {
 	fmt.Println(label, hex.EncodeToString(a.Bytes()))
 }
 
@@ -34,7 +34,7 @@ func (r *Number) mod(a *Number) {
 	return
 }
 
-func (a *Number) SetHex(s string) {
+func (a *Number) set_hex(s string) {
 	a.SetString(s, 16)
 }
 
@@ -87,7 +87,7 @@ func (num *Number) rsh_x(bits uint) (res int) {
 	return
 }
 
-func (num *Number) IsOdd() bool {
+func (num *Number) is_odd() bool {
 	return num.Bit(0) != 0
 }
 
@@ -112,4 +112,12 @@ func (num *Number) add(a, b *Number) {
 
 func (num *Number) mul(a, b *Number) {
 	num.Mul(&a.Int, &b.Int)
+}
+
+func (num *Number) is_zero() bool {
+	return num.Sign() == 0
+}
+
+func (num *Number) is_below(a *Number) bool {
+	return num.Cmp(&a.Int) == -1
 }

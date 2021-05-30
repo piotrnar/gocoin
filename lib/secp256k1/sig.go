@@ -1,9 +1,9 @@
 package secp256k1
 
 import (
-	"fmt"
 	"bytes"
 	"encoding/hex"
+	"fmt"
 )
 
 type Signature struct {
@@ -11,8 +11,8 @@ type Signature struct {
 }
 
 func (s *Signature) Print(lab string) {
-	fmt.Println(lab + ".R:", hex.EncodeToString(s.R.Bytes()))
-	fmt.Println(lab + ".S:", hex.EncodeToString(s.S.Bytes()))
+	fmt.Println(lab+".R:", hex.EncodeToString(s.R.Bytes()))
+	fmt.Println(lab+".S:", hex.EncodeToString(s.S.Bytes()))
 }
 
 func (r *Signature) ParseBytes(sig []byte) int {
@@ -32,7 +32,7 @@ func (r *Signature) ParseBytes(sig []byte) int {
 
 	r.R.SetBytes(sig[4 : 4+lenr])
 	r.S.SetBytes(sig[6+lenr : 6+lenr+lens])
-	return 6+lenr+lens
+	return 6 + lenr + lens
 }
 
 func (r *Signature) Verify(pubkey *XY, message *Number) (ret bool) {
@@ -73,7 +73,7 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 	var xj, qj XYZ
 
 	rx.Set(&sig.R.Int)
-	if (recid&2)!=0 {
+	if (recid & 2) != 0 {
 		rx.Add(&rx.Int, &TheCurve.Order.Int)
 		if rx.Cmp(&TheCurve.p.Int) >= 0 {
 			return false
@@ -82,11 +82,10 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 
 	fx.SetB32(rx.get_bin(32))
 
-	X.SetXO(&fx, (recid&1)!=0)
+	X.SetXO(&fx, (recid&1) != 0)
 	if !X.IsValid() {
 		return false
 	}
-
 
 	xj.SetXY(&X)
 	rn.mod_inv(&sig.R, &TheCurve.Order)
@@ -98,7 +97,6 @@ func (sig *Signature) recover(pubkey *XY, m *Number, recid int) (ret bool) {
 
 	return true
 }
-
 
 func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	var r XY
@@ -127,19 +125,19 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	n.mod(&TheCurve.Order)
 	sig.S.mod_inv(nonce, &TheCurve.Order)
 	sig.S.mod_mul(&sig.S, &n, &TheCurve.Order)
-	if sig.S.Sign()==0 {
+	if sig.S.Sign() == 0 {
 		return 0
 	}
-	if sig.S.IsOdd() {
+	if sig.S.is_odd() {
 		sig.S.Sub(&TheCurve.Order.Int, &sig.S.Int)
-		if recid!=nil {
+		if recid != nil {
 			*recid ^= 1
 		}
 	}
 
-	if FORCE_LOW_S && sig.S.Cmp(&TheCurve.HalfOrder.Int)==1 {
+	if FORCE_LOW_S && sig.S.Cmp(&TheCurve.HalfOrder.Int) == 1 {
 		sig.S.Sub(&TheCurve.Order.Int, &sig.S.Int)
-		if recid!=nil {
+		if recid != nil {
 			*recid ^= 1
 		}
 	}
@@ -147,19 +145,18 @@ func (sig *Signature) Sign(seckey, message, nonce *Number, recid *int) int {
 	return 1
 }
 
-
 func (sig *Signature) Bytes() []byte {
 	r := sig.R.Bytes()
-	if r[0]>=0x80 {
+	if r[0] >= 0x80 {
 		r = append([]byte{0}, r...)
 	}
 	s := sig.S.Bytes()
-	if s[0]>=0x80 {
+	if s[0] >= 0x80 {
 		s = append([]byte{0}, s...)
 	}
 	res := new(bytes.Buffer)
 	res.WriteByte(0x30)
-	res.WriteByte(byte(4+len(r)+len(s)))
+	res.WriteByte(byte(4 + len(r) + len(s)))
 	res.WriteByte(0x02)
 	res.WriteByte(byte(len(r)))
 	res.Write(r)
