@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding"
+	"encoding/hex"
 	"hash"
 )
 
@@ -61,10 +62,12 @@ func SchnorrSign(m, sk, a []byte) []byte {
 
 	n.SetBytes(sk) // d
 	if n.is_zero() || !n.is_below(&TheCurve.Order) {
+		println("SchnorrSign: d out of range")
 		return nil
 	}
 	ECmultGen(&xyz, &n)
 	P.SetXYZ(&xyz)
+	P.Y.Normalize()
 	if P.Y.IsOdd() {
 		d = get_n_minus(sk)
 	} else {
@@ -80,6 +83,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 
 	s = ShaMidstateNonce()
 	s.Write(t)
+	P.X.Normalize()
 	P.X.GetB32(t)
 	s.Write(t)
 	s.Write(m)
@@ -88,10 +92,12 @@ func SchnorrSign(m, sk, a []byte) []byte {
 	n.SetBytes(k0)
 	n.mod(&TheCurve.Order)
 	if n.is_zero() {
+		println("SchnorrSign: k' is zero")
 		return nil
 	}
 	ECmultGen(&xyz, &n)
 	R.SetXYZ(&xyz)
+	R.Y.Normalize()
 	if R.Y.IsOdd() {
 		k = get_n_minus(k0)
 	} else {
@@ -99,6 +105,8 @@ func SchnorrSign(m, sk, a []byte) []byte {
 	}
 
 	res = make([]byte, 64)
+	R.X.Normalize()
+	P.X.Normalize()
 	R.X.GetB32(res[:32])
 	P.X.GetB32(res[32:])
 	copy(t, res[32:]) // save public key for the verify function
@@ -112,7 +120,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 		n.sub(&n, &TheCurve.Order) // we need to use "e mod N"
 	}
 
-	// signature: ((e * d + k) mod n)
+	// signature: ((e * d + k) mod N)
 	x.SetBytes(d)
 	n.mul(&n, &x)
 
@@ -122,6 +130,7 @@ func SchnorrSign(m, sk, a []byte) []byte {
 
 	copy(res[32:], n.get_bin(32))
 	if !SchnorrVerify(t, res, m) {
+		println("SchnorrSign: verify error", hex.EncodeToString(res))
 		return nil
 	}
 	return res
