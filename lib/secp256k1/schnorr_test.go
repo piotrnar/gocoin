@@ -1,13 +1,14 @@
 package secp256k1
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/hex"
 	"os"
 	"testing"
 )
 
-func TestSchnorrVerify(t *testing.T) {
+func TestSchnorr(t *testing.T) {
 	f, er := os.Open("../test/bip340_test_vectors.csv")
 	if er != nil {
 		t.Error(er.Error())
@@ -24,10 +25,21 @@ func TestSchnorrVerify(t *testing.T) {
 		if i == 0 {
 			continue // skip column names
 		}
+		priv, _ := hex.DecodeString(tas[i][1])
 		pkey, _ := hex.DecodeString(tas[i][2])
+		rand, _ := hex.DecodeString(tas[i][3])
 		hasz, _ := hex.DecodeString(tas[i][4])
 		sign, _ := hex.DecodeString(tas[i][5])
-		//println(i, len(pkey), len(hasz), len(sign), tas[i][6], tas[i][2])
+
+		if len(priv) == 32 {
+			_sig := SchnorrSign(hasz, priv, rand)
+			if !bytes.Equal(sign, _sig) {
+				println(hex.EncodeToString(_sig))
+				println(hex.EncodeToString(sign))
+				t.Error(i, "Generated signature mismatch")
+				return
+			}
+		}
 
 		if tas[i][6] == "FALSE" {
 			res := SchnorrVerify(pkey, sign, hasz)
@@ -41,7 +53,6 @@ func TestSchnorrVerify(t *testing.T) {
 		if !res {
 			t.Error("SchnorrVerify failed", i, tas[i][0])
 		}
-		continue
 		hasz[0]++
 		res = SchnorrVerify(pkey, sign, hasz)
 		if res {

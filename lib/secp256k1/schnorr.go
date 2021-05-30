@@ -8,7 +8,7 @@ import (
 )
 
 func SchnorrsigChallenge(e *Number, r32, msg32, pubkey32 []byte) {
-	s := ShaMidstate()
+	s := ShaMidstateChallenge()
 
 	s.Write(r32)
 	s.Write(pubkey32)
@@ -44,6 +44,71 @@ func SchnorrVerify(pkey, sig, msg []byte) (ret bool) {
 
 	r.X.Normalize()
 	return rx.Equals(&r.X)
+}
+
+func get_n_minus(in []byte) []byte {
+	var n Number
+	n.SetBytes(in)
+	n.sub(&TheCurve.Order, &n)
+	return n.get_bin(32)
+}
+
+func SchnorrSign(m, sk, a []byte) (res []byte) {
+	var xyz XYZ
+	var n, x Number
+	var P, R XY
+	var d, t, k, e []byte
+
+	n.SetBytes(sk)
+	ECmultGen(&xyz, &n)
+	P.SetXYZ(&xyz)
+	if P.Y.IsOdd() {
+		d = get_n_minus(sk)
+	} else {
+		d = sk
+	}
+
+	s := ShaMidstateAux()
+	s.Write(a)
+	t = s.Sum(nil)
+	for i := range t {
+		t[i] ^= d[i]
+	}
+
+	s = ShaMidstateNonce()
+	s.Write(t)
+	P.X.GetB32(t)
+	s.Write(t)
+	s.Write(m)
+	k0 := s.Sum(nil)
+
+	n.SetBytes(k0)
+	ECmultGen(&xyz, &n)
+	R.SetXYZ(&xyz)
+	if R.Y.IsOdd() {
+		k = get_n_minus(k0)
+	} else {
+		k = k0
+	}
+
+	res = make([]byte, 64)
+	R.X.GetB32(res[:32])
+	P.X.GetB32(res[32:])
+	s = ShaMidstateChallenge()
+	s.Write(res)
+	s.Write(m)
+	e = s.Sum(nil)
+
+	n.SetBytes(e)
+	x.SetBytes(d)
+	n.mul(&n, &x)
+
+	x.SetBytes(k)
+	n.add(&n, &x)
+	n.mod(&TheCurve.Order)
+
+	copy(res[32:], n.get_bin(32))
+	return
 }
 
 func CheckPayToContract(m_keydata, base, hash []byte, parity bool) bool {
@@ -86,17 +151,26 @@ func (key *XY) ECPublicTweakAdd(tweak *Number) bool {
 	return true
 }
 
-var _sha_midstate []byte
+var _sha_midstate_challenge, _sha_midstate_aux, _sha_midstate_nonce []byte
 
-func ShaMidstate() hash.Hash {
+func ShaMidstateChallenge() hash.Hash {
 	s := sha256.New()
-	unmarshaler, ok := s.(encoding.BinaryUnmarshaler)
-	if !ok {
-		panic("second does not implement encoding.BinaryUnmarshaler")
-	}
-	if err := unmarshaler.UnmarshalBinary(_sha_midstate); err != nil {
-		panic("unable to unmarshal hash: " + err.Error())
-	}
+	unmarshaler, _ := s.(encoding.BinaryUnmarshaler)
+	unmarshaler.UnmarshalBinary(_sha_midstate_challenge)
+	return s
+}
+
+func ShaMidstateAux() hash.Hash {
+	s := sha256.New()
+	unmarshaler, _ := s.(encoding.BinaryUnmarshaler)
+	unmarshaler.UnmarshalBinary(_sha_midstate_aux)
+	return s
+}
+
+func ShaMidstateNonce() hash.Hash {
+	s := sha256.New()
+	unmarshaler, _ := s.(encoding.BinaryUnmarshaler)
+	unmarshaler.UnmarshalBinary(_sha_midstate_nonce)
 	return s
 }
 
@@ -107,14 +181,24 @@ func init() {
 	s.Reset()
 	s.Write(c)
 	s.Write(c)
+	marshaler, _ := s.(encoding.BinaryMarshaler)
+	_sha_midstate_challenge, _ = marshaler.MarshalBinary()
 
-	var err error
-	marshaler, ok := s.(encoding.BinaryMarshaler)
-	if !ok {
-		panic("first does not implement encoding.BinaryMarshaler")
-	}
-	_sha_midstate, err = marshaler.MarshalBinary()
-	if err != nil {
-		panic("unable to marshal hash: " + err.Error())
-	}
+	s.Reset()
+	s.Write([]byte("BIP0340/aux"))
+	c = s.Sum(nil)
+	s.Reset()
+	s.Write(c)
+	s.Write(c)
+	marshaler, _ = s.(encoding.BinaryMarshaler)
+	_sha_midstate_aux, _ = marshaler.MarshalBinary()
+
+	s.Reset()
+	s.Write([]byte("BIP0340/nonce"))
+	c = s.Sum(nil)
+	s.Reset()
+	s.Write(c)
+	s.Write(c)
+	marshaler, _ = s.(encoding.BinaryMarshaler)
+	_sha_midstate_nonce, _ = marshaler.MarshalBinary()
 }

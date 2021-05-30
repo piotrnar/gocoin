@@ -1,9 +1,9 @@
 package secp256k1
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
-	"encoding/hex"
 )
 
 var (
@@ -88,11 +88,10 @@ func (num *Number) rsh_x(bits uint) (res int) {
 }
 
 func (num *Number) IsOdd() bool {
-	return num.Bit(0)!=0;
+	return num.Bit(0) != 0
 }
 
-
-func (num *Number) get_bin(le int) ([]byte) {
+func (num *Number) get_bin(le int) []byte {
 	bts := num.Bytes()
 	if len(bts) > le {
 		panic("buffer too small")
@@ -107,3 +106,10 @@ func (num *Number) sub(a, b *Number) {
 	num.Sub(&a.Int, &b.Int)
 }
 
+func (num *Number) add(a, b *Number) {
+	num.Add(&a.Int, &b.Int)
+}
+
+func (num *Number) mul(a, b *Number) {
+	num.Mul(&a.Int, &b.Int)
+}
