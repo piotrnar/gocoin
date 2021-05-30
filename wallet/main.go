@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"os"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 
 var (
 	// Command line switches
-	cfg_fn    *string = flag.String("cfg", "wallet.cfg", "Specify name of the config file (overwrites env's GOCOIN_WALLET_CONFIG)")
+	cfg_fn *string = flag.String("cfg", "wallet.cfg", "Specify name of the config file (overwrites env's GOCOIN_WALLET_CONFIG)")
 
 	// Wallet options
 	list      *bool = flag.Bool("l", false, "List public (deposit) addressses and save them to wallet.txt file")
@@ -60,8 +61,9 @@ var (
 
 	sequence *int = flag.Int("seq", 0, "Use given Replace-By-Fee sequence number (-1 or -2 for final)")
 
-	segwit_mode *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
-	bech32_mode *bool = flag.Bool("bech32", false, "Use with -segwit to see P2WPKH deposit addresses (instead of P2SH-WPKH)")
+	segwit_mode  *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
+	bech32_mode  *bool = flag.Bool("bech32", false, "List SegWit deposit addresses in bech32 format")
+	taproot_mode *bool = flag.Bool("tap", false, "List Taproot deposit addresses in bech32 format")
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
@@ -93,6 +95,11 @@ func main() {
 	if uncompressed {
 		println("For SegWit address safety, uncompressed keys are disabled in this version")
 		os.Exit(1)
+	}
+
+	if *taproot_mode {
+		println("*** WARNING: Taproot may not have been activated yet. Do not send coins to these addresses!!!")
+		*bech32_mode = true
 	}
 
 	if *bech32_mode {

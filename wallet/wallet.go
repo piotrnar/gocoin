@@ -6,12 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/bip39"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"os"
-	"strings"
-	"strconv"
 )
 
 var (
@@ -121,7 +122,7 @@ func make_wallet() {
 			hdpath_x = append(hdpath_x, xval)
 			if i < len(ts)-1 {
 				hd_label_prefix += fmt.Sprint("/", xval&0x3fffffff)
-				if (xval&0x80000000) != 0 {
+				if (xval & 0x80000000) != 0 {
 					hd_label_prefix += "'"
 				}
 			}
@@ -155,7 +156,7 @@ func make_wallet() {
 			s.Write(pass)
 			s.Write([]byte("|gocoin|"))
 			s.Write(pass)
-			s.Write([]byte{byte(bip39wrds/3*32)})
+			s.Write([]byte{byte(bip39wrds / 3 * 32)})
 			seed_key = s.Sum(nil)
 			sys.ClearBuffer(pass)
 			mnemonic, er := bip39.NewMnemonic(seed_key[:(bip39wrds/3)*4])
@@ -185,7 +186,7 @@ func make_wallet() {
 			fmt.Println(hdwal.String())
 		}
 		for _, x := range hdpath_x[:len(hdpath_x)-1] {
-		    hdwal = hdwal.Child(x)
+			hdwal = hdwal.Child(x)
 		}
 		if *dumpxprv {
 			fmt.Println(hdwal.String())
@@ -226,9 +227,9 @@ func make_wallet() {
 			rec.BtcAddr.Extra.Label = fmt.Sprint("TypC ", i+1)
 		} else {
 			if (hdpath_last & 0x80000000) != 0 {
-				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i + (hdpath_last & 0x3fffffff), "'")
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x3fffffff), "'")
 			} else {
-				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i + (hdpath_last & 0x3fffffff))
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x3fffffff))
 			}
 		}
 		keys = append(keys, rec)
@@ -245,7 +246,11 @@ func make_wallet() {
 			continue
 		}
 		if *bech32_mode {
-			segwit[i] = btc.NewAddrFromPkScript(append([]byte{0, 20}, pk.Hash160[:]...), testnet)
+			if *taproot_mode {
+				segwit[i] = btc.NewAddrFromPkScript(append([]byte{btc.OP_1, 32}, pk.Pubkey[1:]...), testnet)
+			} else {
+				segwit[i] = btc.NewAddrFromPkScript(append([]byte{0, 20}, pk.Hash160[:]...), testnet)
+			}
 		} else {
 			h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, pk.Hash160[:]...))
 			segwit[i] = btc.NewAddrFromHash160(h160[:], ver_script())
