@@ -2,10 +2,11 @@ package network
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"sort"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (
@@ -18,7 +19,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))
 	var idx int
 	const MIN_PKB = 200
-	for k, _ := range TransactionsToSend {
+	for k := range TransactionsToSend {
 		all_txs[idx] = k
 		idx++
 	}
@@ -361,13 +362,12 @@ func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
 
 	result = make([]*OneTxToSend, len(res))
 	var idx int
-	for ttx, _ := range res {
+	for ttx := range res {
 		result[idx] = ttx
 		idx++
 	}
 	return
 }
-
 
 // GetItWithAllChildren gets all the children (and all of their children...) of the tx.
 // If any of the children has other unconfirmed parents, they are also included in the result.
@@ -405,7 +405,6 @@ func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
 	}
 	return
 }
-
 
 // GetAllChildren gets all the children (and all of their children...) of the tx.
 // The result is sorted by the oldest parent.
@@ -568,7 +567,7 @@ func GetSortedMempoolNew() (result []*OneTxToSend) {
 
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
-			if pk.Fee * uint64(tx.Weight()) > tx.Fee * uint64(pk.Weight) {
+			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
 					continue
