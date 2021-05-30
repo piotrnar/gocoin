@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -150,7 +151,7 @@ func BlockUndone(bl *btc.Block) {
 	var cnt int
 	for _, tx := range bl.Txs[1:] {
 		// put it back into the mempool
-		ntx := &TxRcvd{Tx:tx, trusted:true}
+		ntx := &TxRcvd{Tx: tx, trusted: true}
 
 		if NeedThisTx(&ntx.Hash, nil) {
 			if HandleNetTx(ntx, true) {
@@ -162,11 +163,13 @@ func BlockUndone(bl *btc.Block) {
 		} else {
 			common.CountSafe("TxPutBackNoNeed")
 		}
-		
+
 		// TODO: make sure to set MemInputs of ones using it back to true (issue #58)
 		MarkChildrenForMem(tx)
 	}
-	println("network.BlockUndone(" + bl.Hash.String() + ") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
+	if cnt != len(bl.Txs)-1 {
+		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
+	}
 }
 
 func (c *OneConnection) SendGetMP() error {
