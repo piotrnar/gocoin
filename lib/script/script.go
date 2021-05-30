@@ -6,9 +6,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"runtime/debug"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/ripemd160"
-	"runtime/debug"
 )
 
 var (
@@ -169,7 +170,7 @@ func VerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (result
 				}
 				return
 			}
-			if !VerifyWitnessProgram(&witness, checker, witnessversion, witnessprogram, ver_flags /* is_p2sh */, false) {
+			if !checker.VerifyWitnessProgram(&witness, witnessversion, witnessprogram, ver_flags /* is_p2sh */, false) {
 				if DBG_ERR {
 					fmt.Println("VerifyWitnessProgram failed A")
 				}
@@ -255,7 +256,7 @@ func VerifyTxScript(pkScr []byte, checker *SigChecker, ver_flags uint32) (result
 					}
 					return
 				}
-				if !VerifyWitnessProgram(&witness, checker, witnessversion, witnessprogram, ver_flags /* is_p2sh */, true) {
+				if !checker.VerifyWitnessProgram(&witness, witnessversion, witnessprogram, ver_flags /* is_p2sh */, true) {
 					if DBG_ERR {
 						fmt.Println("VerifyWitnessProgram failed B")
 					}

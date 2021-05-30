@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 type one_test_vector struct {
@@ -106,8 +107,7 @@ func TestScritps(t *testing.T) {
 					bfield++
 
 				default:
-					panic("Enexpected test vector")
-					skip = true
+					panic("Unexpected test vector")
 				}
 				if skip {
 					break
@@ -219,9 +219,9 @@ func mk_credit_tx(pk_scr []byte, value uint64) (input_tx *btc.Tx) {
 	// We build input_tx only to calculate it's hash for output_tx
 	input_tx = new(btc.Tx)
 	input_tx.Version = 1
-	input_tx.TxIn = []*btc.TxIn{&btc.TxIn{Input: btc.TxPrevOut{Vout: 0xffffffff},
+	input_tx.TxIn = []*btc.TxIn{{Input: btc.TxPrevOut{Vout: 0xffffffff},
 		ScriptSig: []byte{0, 0}, Sequence: 0xffffffff}}
-	input_tx.TxOut = []*btc.TxOut{&btc.TxOut{Pk_script: pk_scr, Value: value}}
+	input_tx.TxOut = []*btc.TxOut{{Pk_script: pk_scr, Value: value}}
 	// Lock_time = 0
 	input_tx.SetHash(input_tx.Serialize())
 	return
@@ -230,9 +230,9 @@ func mk_credit_tx(pk_scr []byte, value uint64) (input_tx *btc.Tx) {
 func mk_spend_tx(input_tx *btc.Tx, sig_scr []byte, witness [][]byte) (output_tx *btc.Tx) {
 	output_tx = new(btc.Tx)
 	output_tx.Version = 1
-	output_tx.TxIn = []*btc.TxIn{&btc.TxIn{Input: btc.TxPrevOut{Hash: btc.Sha2Sum(input_tx.Serialize()), Vout: 0},
+	output_tx.TxIn = []*btc.TxIn{{Input: btc.TxPrevOut{Hash: btc.Sha2Sum(input_tx.Serialize()), Vout: 0},
 		ScriptSig: sig_scr, Sequence: 0xffffffff}}
-	output_tx.TxOut = []*btc.TxOut{&btc.TxOut{Value: input_tx.TxOut[0].Value}}
+	output_tx.TxOut = []*btc.TxOut{{Value: input_tx.TxOut[0].Value}}
 	// Lock_time = 0
 
 	if len(witness) > 0 {

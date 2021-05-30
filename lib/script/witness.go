@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -88,7 +89,7 @@ func (c *SigChecker) ExecuteWitnessScript(stack *scrStack, scriptPubKey []byte, 
 	return true
 }
 
-func VerifyWitnessProgram(witness *witness_ctx, checker *SigChecker, witversion int, program []byte, flags uint32, is_p2sh bool) bool {
+func (checker *SigChecker) VerifyWitnessProgram(witness *witness_ctx, witversion int, program []byte, flags uint32, is_p2sh bool) bool {
 	var stack scrStack
 	var scriptPubKey []byte
 	var execdata btc.ScriptExecutionData

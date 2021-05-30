@@ -3,6 +3,7 @@ package script
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -20,7 +21,6 @@ func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash in
 		return c.evalChecksigTapscript(vchSig, vchPubKey, execdata, ver_flags, sigversion)
 	}
 	panic("should not get here")
-	return
 }
 
 func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.ScriptExecutionData, flags uint32, sigversion int) (ok, success bool) {
