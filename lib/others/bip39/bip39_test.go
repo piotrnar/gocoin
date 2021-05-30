@@ -4,8 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"testing"
-
-	"github.com/tyler-smith/go-bip39/wordlists"
 )
 
 type vector struct {
@@ -15,7 +13,7 @@ type vector struct {
 }
 
 func TestGetWordList(t *testing.T) {
-	assertEqualStringSlices(t, wordlists.English, GetWordList())
+	assertEqualStringSlices(t, wordlistsEnglish, GetWordList())
 }
 
 func TestGetWordIndex(t *testing.T) {
