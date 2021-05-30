@@ -3,9 +3,10 @@ package wallet
 import (
 	"bytes"
 	"encoding/gob"
+	"io/ioutil"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/utxo"
-	"io/ioutil"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 )
 
 func InitMaps(empty bool) {
-	var szs [4]int
+	var szs [5]int
 	var ok bool
 
 	if empty {
@@ -27,7 +28,7 @@ func InitMaps(empty bool) {
 		//fmt.Println("Have map sizes for MinBal", common.AllBalMinVal(), ":", szs[0], szs[1], szs[2], szs[3])
 	} else {
 		//fmt.Println("No map sizes for MinBal", common.AllBalMinVal())
-		szs = [4]int{10e6, 3e6, 10e3, 1e3} // defaults
+		szs = [5]int{25e6, 8e6, 4e6, 300e3, 1e3} // defaults
 	}
 
 init:
@@ -35,6 +36,7 @@ init:
 	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, szs[1])
 	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, szs[2])
 	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, szs[3])
+	AllBalancesP2TAP = make(map[[32]byte]*OneAllAddrBal, szs[4])
 }
 
 func LoadBalance() {
@@ -98,12 +100,13 @@ const (
 )
 
 var (
-	WalletAddrsCount map[uint64][4]int = make(map[uint64][4]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH
+	WalletAddrsCount map[uint64][5]int = make(map[uint64][5]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH, [4]-P2TAP
 )
 
 func UpdateMapSizes() {
-	WalletAddrsCount[common.AllBalMinVal()] = [4]int{len(AllBalancesP2KH),
-		len(AllBalancesP2SH), len(AllBalancesP2WKH), len(AllBalancesP2WSH)}
+	WalletAddrsCount[common.AllBalMinVal()] = [5]int{len(AllBalancesP2KH),
+		len(AllBalancesP2SH), len(AllBalancesP2WKH), len(AllBalancesP2WSH),
+		len(AllBalancesP2TAP)}
 
 	buf := new(bytes.Buffer)
 	gob.NewEncoder(buf).Encode(WalletAddrsCount)

@@ -3,6 +3,7 @@ package script
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
@@ -22,6 +23,10 @@ func IsP2WPKH(scr []byte) bool {
 
 func IsP2WSH(scr []byte) bool {
 	return len(scr) == 34 && scr[0] == 0 && scr[1] == 32
+}
+
+func IsP2TAP(scr []byte) bool {
+	return len(scr) == 34 && scr[0] == 1 && scr[1] == 32
 }
 
 func IsP2PK(scr []byte) (bool, []byte) {

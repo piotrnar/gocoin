@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -12,7 +13,7 @@ import (
 
 var (
 	AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH map[[20]byte]*OneAllAddrBal
-	AllBalancesP2WSH                                   map[[32]byte]*OneAllAddrBal
+	AllBalancesP2WSH, AllBalancesP2TAP                 map[[32]byte]*OneAllAddrBal
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -80,6 +81,14 @@ func NewUTXO(tx *utxo.UtxoRec) {
 				rec = &OneAllAddrBal{}
 				AllBalancesP2WSH[uidx] = rec
 			}
+		} else if script.IsP2TAP(out.PKScr) {
+			var uidx [32]byte
+			copy(uidx[:], out.PKScr[2:34])
+			rec = AllBalancesP2TAP[uidx]
+			if rec == nil {
+				rec = &OneAllAddrBal{}
+				AllBalancesP2TAP[uidx] = rec
+			}
 		} else {
 			continue
 		}
@@ -142,6 +151,10 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 			typ = 3
 			copy(uidx32[:], out.PKScr[2:34])
 			rec = AllBalancesP2WSH[uidx32]
+		} else if script.IsP2TAP(out.PKScr) {
+			typ = 4
+			copy(uidx32[:], out.PKScr[2:34])
+			rec = AllBalancesP2TAP[uidx32]
 		} else {
 			continue
 		}
@@ -170,6 +183,8 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 					delete(AllBalancesP2WKH, uidx)
 				case 3:
 					delete(AllBalancesP2WSH, uidx32)
+				case 4:
+					delete(AllBalancesP2TAP, uidx32)
 				}
 			} else {
 				rec.Value -= out.Value
@@ -196,6 +211,8 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 				delete(AllBalancesP2WKH, uidx)
 			case 3:
 				delete(AllBalancesP2WSH, uidx32)
+			case 4:
+				delete(AllBalancesP2TAP, uidx32)
 			}
 		} else {
 			rec.Value -= out.Value
@@ -239,18 +256,23 @@ func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
 	if aa.SegwitProg != nil {
 		var uidx [32]byte
-		if aa.SegwitProg.Version != 0 {
-			return
-		}
-		switch len(aa.SegwitProg.Program) {
-		case 20:
-			copy(aa.Hash160[:], aa.SegwitProg.Program)
-			rec = AllBalancesP2WKH[aa.Hash160]
-		case 32:
+		if aa.SegwitProg.Version == 1 || len(aa.SegwitProg.Program) == 32 {
 			copy(uidx[:], aa.SegwitProg.Program)
-			rec = AllBalancesP2WSH[uidx]
-		default:
-			return
+			rec = AllBalancesP2TAP[uidx]
+		} else {
+			if aa.SegwitProg.Version != 0 {
+				return
+			}
+			switch len(aa.SegwitProg.Program) {
+			case 20:
+				copy(aa.Hash160[:], aa.SegwitProg.Program)
+				rec = AllBalancesP2WKH[aa.Hash160]
+			case 32:
+				copy(uidx[:], aa.SegwitProg.Program)
+				rec = AllBalancesP2WSH[uidx]
+			default:
+				return
+			}
 		}
 	} else if aa.Version == btc.AddrVerPubkey(common.Testnet) {
 		rec = AllBalancesP2KH[aa.Hash160]
@@ -323,34 +345,22 @@ func PrintStat() {
 	var p2wsh_maps, p2wsh_outs, p2wsh_vals uint64
 	for _, r := range AllBalancesP2WSH {
 		p2wsh_vals += r.Value
-		/*
-			if r.Value > nn {
-				nn = r.Value
-			}
-			if r.Value > 100e8 {
-				var ints [20]int
-				for idx := range ints {
-					ints[idx] = int(k[idx])
-				}
-				r.Browse(func(v *OneAllAddrInp) {
-					if qr, vout := v.GetRec(); qr != nil {
-						if oo := qr.Outs[vout]; oo != nil {
-							if oo.Value > 100e8 {
-								ad := btc.NewAddrFromPkScript(oo.PKScr, common.Testnet)
-								if ad != nil {
-									println(btc.UintToBtc(oo.Value), "@", ad.String(), "from tx", btc.NewUint256(qr.TxID[:]).String(), vout)
-								}
-							}
-						}
-					}
-				})
-			}
-		*/
 		if r.unspMap != nil {
 			p2wsh_maps++
 			p2wsh_outs += uint64(len(r.unspMap))
 		} else {
 			p2wsh_outs += uint64(len(r.unsp))
+		}
+	}
+
+	var p2tap_maps, p2tap_outs, p2tap_vals uint64
+	for _, r := range AllBalancesP2TAP {
+		p2tap_vals += r.Value
+		if r.unspMap != nil {
+			p2tap_maps++
+			p2tap_outs += uint64(len(r.unspMap))
+		} else {
+			p2tap_outs += uint64(len(r.unsp))
 		}
 	}
 
@@ -367,4 +377,7 @@ func PrintStat() {
 
 	fmt.Println("AllBalancesP2WSH: ", len(AllBalancesP2WSH), "records,",
 		p2wsh_outs, "outputs,", btc.UintToBtc(p2wsh_vals), "BTC,", p2wsh_maps, "maps")
+
+	fmt.Println("AllBalancesP2TAP: ", len(AllBalancesP2TAP), "records,",
+		p2tap_outs, "outputs,", btc.UintToBtc(p2tap_vals), "BTC,", p2tap_maps, "maps")
 }
