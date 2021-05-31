@@ -242,6 +242,10 @@ func process_raw_tx() {
 		return
 	}
 
+	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
+	for i := range tx.TxIn {
+		tx.Spent_outputs[i] = getUO(&tx.TxIn[i].Input)
+	}
 	sign_tx(tx)
 	write_tx_file(tx)
 }
