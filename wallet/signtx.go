@@ -2,10 +2,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"os"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 // sign_tx prepares a signed transaction.
@@ -36,7 +40,10 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 				}
 			}
 		} else {
-			uo := getUO(&tx.TxIn[in].Input)
+			var uo *btc.TxOut
+			if in < len(tx.Spent_outputs) {
+				uo = tx.Spent_outputs[in]
+			}
 			if uo == nil {
 				println("ERROR: Unkown input:", tx.TxIn[in].Input.String(), "- missing balance folder?")
 				all_signed = false
@@ -50,21 +57,52 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 				continue
 			}
 
+			k_idx := -1
+
 			ver, segwit_prog := btc.IsWitnessProgram(uo.Pk_script)
-			if len(segwit_prog) == 20 && ver == 0 {
-				copy(adr.Hash160[:], segwit_prog) // native segwith P2WPKH output
+			if segwit_prog != nil {
+				if len(segwit_prog) == 20 && ver == 0 {
+					// native segwith P2WPKH output
+					copy(adr.Hash160[:], segwit_prog)
+				} else if len(segwit_prog) == 32 && ver == 1 {
+					// taproot payment to public key
+					k_idx = public_to_key_idx(segwit_prog)
+				} else {
+					fmt.Println("WARNING: Unsupported SegWit Program: ", adr.String(), "at input", in)
+					all_signed = false
+					continue
+				}
 			}
 
-			k_idx := hash_to_key_idx(adr.Hash160[:])
 			if k_idx < 0 {
-				fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
-				all_signed = false
-				continue
+				k_idx = hash_to_key_idx(adr.Hash160[:])
+				if k_idx < 0 {
+					fmt.Println("WARNING: You do not have key for", adr.String(), "at input", in)
+					all_signed = false
+					continue
+				}
 			}
+
 			var er error
 			k := keys[k_idx]
 			if segwit_prog != nil {
-				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+				if ver == 1 {
+					var randata [32]byte
+					h := tx.TaprootSigHash(&btc.ScriptExecutionData{}, in, btc.SIGHASH_DEFAULT, false)
+					rand.Read(randata[:])
+					sig := secp256k1.SchnorrSign(h, k.Key, randata[:])
+					if len(sig) == 64 {
+						if tx.SegWit == nil {
+							tx.SegWit = make([][][]byte, len(tx.TxIn))
+						}
+						tx.SegWit[in] = [][]byte{sig}
+					} else {
+						er = errors.New("SchnorrSign failed")
+					}
+					fmt.Println("WARNING: Taproot signatures are experimental!!! - input", in)
+				} else {
+					er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+				}
 			} else if adr.String() == segwit[k_idx].String() {
 				tx.TxIn[in].ScriptSig = append([]byte{22, 0, 20}, k.BtcAddr.Hash160[:]...)
 				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
@@ -137,6 +175,7 @@ func make_signed_tx() {
 		tin.Input = unspentOuts[i].TxPrevOut
 		tin.Sequence = uint32(*sequence)
 		tx.TxIn = append(tx.TxIn, tin)
+		tx.Spent_outputs = append(tx.Spent_outputs, uo)
 
 		btcsofar += uo.Value
 		unspentOuts[i].spent = true

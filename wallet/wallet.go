@@ -295,13 +295,21 @@ func dump_addrs() {
 	}
 }
 
-func public_to_key(pubkey []byte) *btc.PrivateAddr {
+func public_to_key_idx(pubkey []byte) int {
 	for i := range keys {
 		if bytes.Equal(pubkey, keys[i].BtcAddr.Pubkey) {
-			return keys[i]
+			return i
 		}
 	}
-	return nil
+	return -1
+}
+
+func public_to_key(pubkey []byte) *btc.PrivateAddr {
+	idx := public_to_key_idx(pubkey)
+	if idx < 0 {
+		return nil
+	}
+	return keys[idx]
 }
 
 func hash_to_key_idx(h160 []byte) (res int) {
