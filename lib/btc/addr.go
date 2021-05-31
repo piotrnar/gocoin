@@ -225,7 +225,13 @@ func (a *BtcAddr) Owns(scr []byte) (yes bool) {
 func (a *BtcAddr) OutScript() (res []byte) {
 	if a.SegwitProg != nil {
 		res = make([]byte, 2+len(a.SegwitProg.Program))
-		res[0] = byte(a.SegwitProg.Version)
+		if a.SegwitProg.Version == 0 {
+			res[0] = OP_0
+		} else if a.SegwitProg.Version <= 16 {
+			res[0] = byte(a.SegwitProg.Version - 1 + OP_1)
+		} else {
+			panic(fmt.Sprint("Cannot create OutScript for SegwitProg version ", a.SegwitProg.Version))
+		}
 		res[1] = byte(len(a.SegwitProg.Program))
 		copy(res[2:], a.SegwitProg.Program)
 	} else if a.Version == AddrVerPubkey(false) || a.Version == AddrVerPubkey(true) || a.Version == 48 /*Litecoin*/ {
