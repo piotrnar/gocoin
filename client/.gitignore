@@ -1,7 +1,7 @@
 *.txt
 balance/
 client
-gocoin*.conf
+*.conf
 .stealth
 *.bat
 ssl_cert/*.crt
