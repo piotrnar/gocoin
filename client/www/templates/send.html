@@ -217,12 +217,12 @@ function fetch_wallet_balance(name) {
 				inp.id = "txsigsiz"+row_number
 				inp["is_segwit"] = false
 				if (outs[i].type=="P2PKH") {
-					inp.value = 1 + 34 + 73  // el_cnt + pub_key + signature
+					inp.value = 72 + 34  // pub_key + signature
 				} else if (outs[i].type=="P2SH-P2WPKH") {
-					inp.value = 22 + (1 + 34 + 73) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
+					inp.value = 24 + (1 + 72 + 34) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
 					inp["is_segwit"] = true
 				} else if (outs[i].type=="P2WPKH") {
-					inp.value = (1 + 34 + 73) / 4 // (witness_cnt + key + signature) / 4
+					inp.value = (1 + 72 + 34) / 4 // (witness_cnt + key + signature) / 4
 					inp["is_segwit"] = true
 				} else if (outs[i].type=="P2TAP") {
 					inp.value = (1 + 1 + 64 + 0) / 4 // (wit_cnt + scr_len + schnorr_signature [+ hash_type]) / 4
@@ -328,16 +328,16 @@ function recalc_inputs() {
 
 function addr2outsize(ad) {
 	if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
-		return 8 + ((ad.length>45) ? 34 : 22)
+		return 8 + ((ad.length>45) ? 35 : 23)
 	}
 	switch (ad[0]) {
 		case '1':
 		case 'm':
 		case 'n':
-			return 8+25
+			return 8+1+25
 		case '2':
 		case '3':
-			return 8+23
+			return 8+1+23
 	}
 	return AvgOutputSize
 }

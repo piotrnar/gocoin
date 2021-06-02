@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -14,8 +15,15 @@ import (
 
 // sign_tx prepares a signed transaction.
 func sign_tx(tx *btc.Tx) (all_signed bool) {
+	var too_big big.Int
 	var multisig_done bool
 	all_signed = true
+
+	if minsig {
+		too_big.SetBytes([]byte{
+			0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	}
 
 	// go through each input
 	for in := range tx.TxIn {
@@ -24,7 +32,12 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			for ki := range ms.PublicKeys {
 				k := public_to_key(ms.PublicKeys[ki])
 				if k != nil {
+				resigna:
 					r, s, e := btc.EcdsaSign(k.Key, hash)
+					if minsig && (r.Cmp(&too_big) >= 0 || s.Cmp(&too_big) >= 0) {
+						//fmt.Println("re-signing A...")
+						goto resigna
+					}
 					if e != nil {
 						println("ERROR in sign_tx:", e.Error())
 						all_signed = false
@@ -101,13 +114,28 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 					}
 					fmt.Println("WARNING: Taproot signatures are experimental!!! - input", in)
 				} else {
+				resignb:
 					er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+					if minsig && len(tx.SegWit[in][0]) > 71 {
+						//fmt.Println("re-signing B...")
+						goto resignb
+					}
 				}
 			} else if adr.String() == segwit[k_idx].String() {
 				tx.TxIn[in].ScriptSig = append([]byte{22, 0, 20}, k.BtcAddr.Hash160[:]...)
+			resignc:
 				er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+				if minsig && len(tx.SegWit[in][0]) > 71 {
+					//fmt.Println("re-signing C...")
+					goto resignc
+				}
 			} else {
+			resignd:
 				er = tx.Sign(in, uo.Pk_script, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
+				if minsig && len(tx.TxIn[in].ScriptSig) > 106 {
+					//fmt.Println("re-signing D...")
+					goto resignd
+				}
 			}
 			if er != nil {
 				fmt.Println("ERROR: Sign failed for input number", in, er.Error())

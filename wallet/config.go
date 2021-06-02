@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	keycnt       uint = 250
-	testnet      bool = false
-	waltype      uint = 3
+	keycnt       uint   = 250
+	testnet      bool   = false
+	waltype      uint   = 3
 	uncompressed bool   = false
 	fee          string = "0.001"
 	apply2bal    bool   = true
@@ -21,7 +21,8 @@ var (
 	txfilename   string
 	stdin        bool
 	hdpath       string = "m/0'"
-	bip39wrds    uint = 0
+	bip39wrds    uint   = 0
+	minsig       bool
 )
 
 func parse_config() {
@@ -29,7 +30,7 @@ func parse_config() {
 
 	// pre-parse command line: look for -cfg <fname> or -h
 	for i := 1; i < len(os.Args); i++ {
-		if os.Args[i]=="-cfg" || os.Args[i]=="--cfg" {
+		if os.Args[i] == "-cfg" || os.Args[i] == "--cfg" {
 			if i+1 >= len(os.Args) {
 				println("Missing the file name for", os.Args[i], "argument")
 				os.Exit(1)
@@ -165,6 +166,14 @@ func parse_config() {
 					os.Exit(1)
 				}
 
+			case "minsig":
+				v, e := strconv.ParseBool(ll[1])
+				if e == nil {
+					minsig = v
+				} else {
+					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+					os.Exit(1)
+				}
 			}
 		}
 	}
@@ -180,6 +189,7 @@ func parse_config() {
 	flag.BoolVar(&litecoin, "ltc", litecoin, "Litecoin mode")
 	flag.StringVar(&txfilename, "txfn", "", "Use this filename for output transaction (otherwise use a random name)")
 	flag.BoolVar(&stdin, "stdin", stdin, "Read password from stdin")
+	flag.BoolVar(&minsig, "minsig", minsig, "Make sure R and S inside ECDSA signatures are only 32 bytes long")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
 	}
