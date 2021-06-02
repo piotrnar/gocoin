@@ -334,21 +334,6 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 			c = row.insertCell(-1)
 			c.className = 'bl_perc'
 			c.innerText = Math.round(cc*100/counted) + '%'
-			
-			if (taproot) {
-				row = blockver_tab.insertRow(-1)
-				c = row.insertCell(-1)
-				row.className = 'ver_others'
-				c.innerText = 'Taproot'
-				c = row.insertCell(-1)
-				c.className = 'bl_cnt'
-				c.innerText = taproot
-				c = row.insertCell(-1)
-				c.className = 'bl_perc'
-				var taperc = taproot*100/counted
-				c.innerText = Math.round(taperc) + '%'
-				document.getElementById("taperc_" + tabid).innerText = taperc.toFixed(1)
-			}
 			break
 		}
 		
@@ -362,6 +347,20 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 		c = row.insertCell(-1)
 		c.className = 'bl_perc'
 		c.innerText = Math.round(sorted[i].cnt*100/counted) + '%'
+	}
+	if (taproot) {
+		row = blockver_tab.insertRow(-1)
+		c = row.insertCell(-1)
+		row.className = 'ver_others'
+		c.innerText = 'Taproot'
+		c = row.insertCell(-1)
+		c.className = 'bl_cnt'
+		c.innerText = taproot
+		c = row.insertCell(-1)
+		c.className = 'bl_perc'
+		var taperc = taproot*100/counted
+		c.innerText = Math.round(taperc) + '%'
+		document.getElementById("taperc_" + tabid).innerText = taperc.toFixed(1)
 	}
 }
 
