@@ -37,6 +37,7 @@ const AvgOutputSize = 34
 
 var selected_value = 0
 var ets_inputs = 0
+var segwit_inputs = false
 var first_input_addr = ''
 var selected_cnt = 0
 var total_to_pay = 0
@@ -214,15 +215,21 @@ function fetch_wallet_balance(name) {
 				inp = document.createElement('input')
 				inp.type = 'hidden'
 				inp.id = "txsigsiz"+row_number
+				inp["is_segwit"] = false
 				if (outs[i].type=="P2PKH") {
-					inp.value = 107
+					inp.value = 1 + 34 + 73  // el_cnt + pub_key + signature
 				} else if (outs[i].type=="P2SH-P2WPKH") {
-					inp.value = 51
+					inp.value = 22 + (1 + 34 + 73) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
+					inp["is_segwit"] = true
 				} else if (outs[i].type=="P2WPKH") {
-					inp.value = 28
+					inp.value = (1 + 34 + 73) / 4 // (witness_cnt + key + signature) / 4
+					inp["is_segwit"] = true
+				} else if (outs[i].type=="P2TAP") {
+					inp.value = (1 + 1 + 64 + 0) / 4 // (wit_cnt + scr_len + schnorr_signature [+ hash_type]) / 4
+					inp["is_segwit"] = true
 				} else {
-					// default for P2SH and P2WSH
-					inp.value = 200
+					// default for P2SH and P2WSH (3 keys and 2 signatures)
+					inp.value = 2 + 3*34 + 2*73
 				}
 				row.appendChild(inp)
 
@@ -298,13 +305,16 @@ function recalc_inputs() {
 	selected_value = 0
 	selected_cnt = 0
 	ets_inputs = 0
+	segwit_inputs = false
 	first_input_addr = ''
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (document.getElementById('txout'+i).checked) {
 			if (first_input_addr=='')  first_input_addr=unspent.rows[i].addr
 			selected_value += unspent.rows[i].value
 			selected_cnt++
-			ets_inputs += 36+1+parseInt(document.getElementById('txsigsiz'+i).value)+4
+			var el = document.getElementById('txsigsiz'+i)
+			ets_inputs += 36 + 1 + parseInt(el.value) + 4
+			if (el["is_segwit"]) segwit_inputs = true
 		}
 	}
 
@@ -337,6 +347,8 @@ function recalc_to_pay() {
 	var el, v, fee, totsend=0
 	var butdisabled = false
 	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
+
+	if (segwit_inputs)  ets_bytes += 2
 
 	fee = val2int(txfee.value)
 
