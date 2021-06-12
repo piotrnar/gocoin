@@ -1,6 +1,7 @@
 1.10.0:
 * Added Taproot support
 * Wallet: New config/command line switch "minsig", to enforce ECDSA creation of signatures without the extra byte
+* Client: Make sure outgoing "inv" message never carries more than 50000 records
 
 1.9.9 - 2021-05-21
  * Client: Do not drop Authorized peers
