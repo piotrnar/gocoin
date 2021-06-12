@@ -216,7 +216,7 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 
 						inv := new(bytes.Buffer)
 						btc.WriteVlen(inv, uint64(len(invs)))
-						for k, _ := range invs {
+						for k := range invs {
 							binary.Write(inv, binary.LittleEndian, uint32(2))
 							inv.Write(k[:])
 						}
@@ -263,7 +263,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 			}
 
 			if !inv_sent_otherwise {
-				if invs_count == 50000 {
+				if invs_count == MAX_INVS_AT_ONCE {
 					common.CountSafe("InvTooManyAtOnce")
 					println("SendInvs: Over 50k invs to send to peer", c.PeerAddr.Ip(), c.Node.Agent)
 					c.PendingInvs = c.PendingInvs[i:]

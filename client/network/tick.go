@@ -5,15 +5,16 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"math/rand"
 	"net"
 	"os"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 var (
@@ -83,7 +84,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 
 	if disconnect != "" {
 		if c.X.IsSpecial {
-			common.CountSafe("Spec"+disconnect)
+			common.CountSafe("Spec" + disconnect)
 			c.counters[disconnect]++
 		} else {
 			c.Disconnect(disconnect)
@@ -343,7 +344,6 @@ func tcp_server() {
 	//fmt.Println("TCP server stopped")
 }
 
-
 var friends_pubkey_cache map[string][]byte
 
 func ConnectFriends() {
@@ -371,7 +371,7 @@ func ConnectFriends() {
 				continue
 			}
 			ls := strings.SplitN(lns, " ", 2)
-			if len(ls[0]) > 1 && ls[0][0]=='@' {
+			if len(ls[0]) > 1 && ls[0][0] == '@' {
 				var pk []byte
 				pks := ls[0][1:]
 				if friends_pubkey_cache != nil {
@@ -638,7 +638,7 @@ func (c *OneConnection) Run() {
 
 		if cmd == nil {
 			if c.unfinished_getdata != nil && !c.SendingPaused() {
-				cmd = &BCmsg{cmd:"getdata", pl:c.unfinished_getdata}
+				cmd = &BCmsg{cmd: "getdata", pl: c.unfinished_getdata}
 				common.CountSafe("GetDataRestored")
 				goto recovered_getdata
 			}
@@ -839,7 +839,7 @@ func (c *OneConnection) Run() {
 
 	c.Mutex.Lock()
 	MutexRcv.Lock()
-	for k, _ := range c.GetBlockInProgress {
+	for k := range c.GetBlockInProgress {
 		if rec, ok := BlocksToGet[k]; ok {
 			rec.InProgress--
 		} else {
@@ -862,7 +862,7 @@ func (c *OneConnection) Run() {
 			HammeringMutex.Lock()
 			rd = RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4]
 			if rd == nil {
-				rd = &RecentlyDisconenctedType{Time:time.Now(), Count:1}
+				rd = &RecentlyDisconenctedType{Time: time.Now(), Count: 1}
 			}
 			rd.Why = c.why_disconnected
 			RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4] = rd

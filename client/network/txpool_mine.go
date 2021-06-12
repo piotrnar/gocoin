@@ -182,14 +182,14 @@ func (c *OneConnection) SendGetMP() error {
 	}
 	btc.WriteVlen(b, uint64(tcnt))
 	var cnt int
-	for k, _ := range TransactionsToSend {
+	for k := range TransactionsToSend {
 		b.Write(k[:])
 		cnt++
 		if cnt == MAX_GETMP_TXS {
 			break
 		}
 	}
-	for k, _ := range TransactionsRejected {
+	for k := range TransactionsRejected {
 		b.Write(k[:])
 		cnt++
 		if cnt == MAX_GETMP_TXS {
