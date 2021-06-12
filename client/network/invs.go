@@ -265,7 +265,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 			if !inv_sent_otherwise {
 				if invs_count == MAX_INVS_AT_ONCE {
 					common.CountSafe("InvTooManyAtOnce")
-					println("SendInvs: Over 50k invs to send to peer", c.PeerAddr.Ip(), c.Node.Agent)
+					println("SendInvs:", MAX_INVS_AT_ONCE, "/", len(c.PendingInvs), "invs to send to peer", c.PeerAddr.Ip(), c.Node.Agent)
 					c.PendingInvs = c.PendingInvs[i:]
 					goto not_all_sent
 				}
