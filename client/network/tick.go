@@ -626,8 +626,9 @@ func (c *OneConnection) Run() {
 		cmd, read_tried := c.FetchMessage()
 
 		now = time.Now()
-		if c.X.VersionReceived && now.After(next_invs) {
+		if c.X.VersionReceived && (c.sendInvsNow.Get() || now.After(next_invs)) {
 			c.SendInvs()
+			c.sendInvsNow.Clr()
 			next_invs = now.Add(InvsFlushPeriod)
 		}
 

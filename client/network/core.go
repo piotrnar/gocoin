@@ -16,6 +16,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 const (
@@ -202,6 +203,7 @@ type OneConnection struct {
 
 	// Statistics:
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
+	sendInvsNow sys.SyncBool
 
 	GetBlockInProgress map[BIDX]*oneBlockDl
 

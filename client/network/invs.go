@@ -165,6 +165,9 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 					} else {
 						v.PendingInvs = append(v.PendingInvs, inv)
 						cnt++
+						if typ == MSG_BLOCK {
+							v.sendInvsNow.Set() // for faster block propagation
+						}
 					}
 				} else {
 					common.CountSafe("SendInvFull")
