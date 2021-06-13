@@ -628,7 +628,6 @@ func (c *OneConnection) Run() {
 		now = time.Now()
 		if c.X.VersionReceived && (c.sendInvsNow.Get() || now.After(next_invs)) {
 			c.SendInvs()
-			c.sendInvsNow.Clr()
 			next_invs = now.Add(InvsFlushPeriod)
 		}
 

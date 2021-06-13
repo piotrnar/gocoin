@@ -270,6 +270,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 					common.CountSafe("InvTooManyAtOnce")
 					println("SendInvs:", MAX_INVS_AT_ONCE, "/", len(c.PendingInvs), "invs to send to peer", c.PeerAddr.Ip(), c.Node.Agent)
 					c.PendingInvs = c.PendingInvs[i:]
+					c.sendInvsNow.Set()
 					goto not_all_sent
 				}
 				invs_count++
@@ -279,6 +280,7 @@ func (c *OneConnection) SendInvs() (res bool) {
 		res = true
 	}
 	c.PendingInvs = nil
+	c.sendInvsNow.Clr()
 not_all_sent:
 	c.Mutex.Unlock()
 
