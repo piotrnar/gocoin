@@ -19,8 +19,6 @@ const (
 	MSG_CMPCT_BLOCK   = 4
 	MSG_WITNESS_TX    = MSG_TX | MSG_WITNESS_FLAG
 	MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG
-
-	MAX_INVS_AT_ONCE = 50000
 )
 
 func blockReceived(bh *btc.Uint256) (ok bool) {
@@ -243,7 +241,6 @@ func (c *OneConnection) SendInvs() (res bool) {
 
 	c.Mutex.Lock()
 	if len(c.PendingInvs) > 0 {
-		var invs_count int
 		for i := range c.PendingInvs {
 			var inv_sent_otherwise bool
 			typ := binary.LittleEndian.Uint32((*c.PendingInvs[i])[:4])
@@ -266,14 +263,6 @@ func (c *OneConnection) SendInvs() (res bool) {
 			}
 
 			if !inv_sent_otherwise {
-				if invs_count == MAX_INVS_AT_ONCE {
-					common.CountSafe("InvTooManyAtOnce")
-					println("SendInvs:", MAX_INVS_AT_ONCE, "/", len(c.PendingInvs), "invs to send to peer", c.PeerAddr.Ip(), c.Node.Agent)
-					c.PendingInvs = c.PendingInvs[i:]
-					c.sendInvsNow.Set()
-					goto not_all_sent
-				}
-				invs_count++
 				b_txs.Write((*c.PendingInvs[i])[:])
 			}
 		}
@@ -281,7 +270,6 @@ func (c *OneConnection) SendInvs() (res bool) {
 	}
 	c.PendingInvs = nil
 	c.sendInvsNow.Clr()
-not_all_sent:
 	c.Mutex.Unlock()
 
 	if len(c_blk) > 0 {

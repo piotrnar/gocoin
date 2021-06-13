@@ -634,7 +634,7 @@ func ConnectionActive(ad *peersdb.PeerAddr) (yes bool) {
 func maxmsgsize(cmd string) uint32 {
 	switch cmd {
 	case "inv":
-		return 9 + MAX_INVS_AT_ONCE*36 // the spec says "max 50000 entries"
+		return 9 + 50000*36 // the spec says "max 50000 entries"
 	case "tx":
 		return 500e3 // max segwit tx size 500KB
 	case "addr":
