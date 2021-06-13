@@ -1,30 +1,30 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"time"
-	"io/ioutil"
 	"crypto/rand"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
-
 func host_init() {
-	common.GocoinHomeDir = common.CFG.Datadir+string(os.PathSeparator)
+	common.GocoinHomeDir = common.CFG.Datadir + string(os.PathSeparator)
 
 	common.Testnet = common.CFG.Testnet // So chaging this value would will only affect the behaviour after restart
-	if common.CFG.Testnet { // testnet3
+	if common.CFG.Testnet {             // testnet3
 		common.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
-		common.Magic = [4]byte{0x0B,0x11,0x09,0x07}
+		common.Magic = [4]byte{0x0B, 0x11, 0x09, 0x07}
 		common.GocoinHomeDir += common.DataSubdir() + string(os.PathSeparator)
 		common.MaxPeersNeeded = 2000
 	} else {
 		common.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
-		common.Magic = [4]byte{0xF9,0xBE,0xB4,0xD9}
+		common.Magic = [4]byte{0xF9, 0xBE, 0xB4, 0xD9}
 		common.GocoinHomeDir += common.DataSubdir() + string(os.PathSeparator)
 		common.MaxPeersNeeded = 5000
 	}
@@ -37,22 +37,22 @@ func host_init() {
 	if len(common.SecretKey) != 32 {
 		common.SecretKey = make([]byte, 32)
 		rand.Read(common.SecretKey)
-		ioutil.WriteFile(common.GocoinHomeDir + "authkey", common.SecretKey, 0600)
+		ioutil.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600)
 	}
 	common.PublicKey = btc.Encodeb58(btc.PublicFromPrivate(common.SecretKey, true))
-	fmt.Println("Public auth key:", common.PublicKey)
+	fmt.Println("Public auth key:", "@"+common.PublicKey)
 
 	__exit := make(chan bool)
 	__done := make(chan bool)
 	go func() {
 		for {
 			select {
-				case s := <-common.KillChan:
-					fmt.Println(s)
-					chain.AbortNow = true
-				case <-__exit:
-					__done <- true
-					return
+			case s := <-common.KillChan:
+				fmt.Println(s)
+				chain.AbortNow = true
+			case <-__exit:
+				__done <- true
+				return
 			}
 		}
 	}()
@@ -70,18 +70,18 @@ func host_init() {
 	}
 
 	ext := &chain.NewChanOpts{
-		UTXOVolatileMode : common.FLAG.VolatileUTXO,
-		UndoBlocks : common.FLAG.UndoBlocks,
-		BlockMinedCB : blockMined, BlockUndoneCB : blockUndone, 
-		DoNotRescan : true}
+		UTXOVolatileMode: common.FLAG.VolatileUTXO,
+		UndoBlocks:       common.FLAG.UndoBlocks,
+		BlockMinedCB:     blockMined, BlockUndoneCB: blockUndone,
+		DoNotRescan: true}
 
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
 		&chain.BlockDBOpts{
-			MaxCachedBlocks : int(common.CFG.Memory.MaxCachedBlks),
-			MaxDataFileSize : uint64(common.CFG.Memory.MaxDataFileMB) << 20,
-			DataFilesKeep : common.CFG.Memory.DataFilesKeep,
-			DataFilesBackup : common.CFG.Memory.OldDataBackup})
+			MaxCachedBlocks: int(common.CFG.Memory.MaxCachedBlks),
+			MaxDataFileSize: uint64(common.CFG.Memory.MaxDataFileMB) << 20,
+			DataFilesKeep:   common.CFG.Memory.DataFilesKeep,
+			DataFilesBackup: common.CFG.Memory.OldDataBackup})
 	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()
@@ -116,6 +116,6 @@ func host_init() {
 
 	common.StartTime = time.Now()
 	__exit <- true
-	_ = <- __done
+	_ = <-__done
 
 }
