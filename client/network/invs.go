@@ -280,16 +280,15 @@ func (c *OneConnection) SendInvs() (res bool) {
 
 	if b_blk.Len() > 0 {
 		common.CountSafe("InvSentAsHeader")
-		b := new(bytes.Buffer)
-		btc.WriteVlen(b, uint64(b_blk.Len()/81))
-		c.SendRawMsg("headers", append(b.Bytes(), b_blk.Bytes()...))
-		//println("sent block's header(s)", b_blk.Len(), uint64(b_blk.Len()/81))
+		var b [5]byte
+		ll := btc.PutVlen(b[:], b_blk.Len()/81)
+		c.SendRawMsg("headers", append(b[:ll], b_blk.Bytes()...))
 	}
 
 	if b_txs.Len() > 0 {
-		b := new(bytes.Buffer)
-		btc.WriteVlen(b, uint64(b_txs.Len()/36))
-		c.SendRawMsg("inv", append(b.Bytes(), b_txs.Bytes()...))
+		var b [5]byte
+		ll := btc.PutVlen(b[:], b_txs.Len()/36)
+		c.SendRawMsg("inv", append(b[:ll], b_txs.Bytes()...))
 	}
 
 	return

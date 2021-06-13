@@ -325,17 +325,6 @@ func IsP2SH(d []byte) bool {
 	return len(d) == 23 && d[0] == 0xa9 && d[1] == 20 && d[22] == 0x87
 }
 
-// IsUsefullOutScript returns true if the given PK_script is somehow useful to gocoin's node.
-func IsUsefullOutScript(v []byte) bool {
-	if len(v) == 25 && v[0] == 0x76 && v[1] == 0xa9 && v[2] == 0x14 && v[23] == 0x88 && v[24] == 0xac {
-		return true // P2KH
-	}
-	if len(v) == 23 && v[0] == 0xa9 && v[1] == 0x14 && v[22] == 0x87 {
-		return true // P2SH
-	}
-	return false
-}
-
 func GetOpcode(b []byte) (opcode int, ret []byte, pc int, e error) {
 	// Read instruction
 	if pc+1 > len(b) {
