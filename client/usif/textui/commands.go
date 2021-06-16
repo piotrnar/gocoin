@@ -4,14 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/piotrnar/gocoin"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"github.com/piotrnar/gocoin/lib/others/qdb"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -21,6 +13,15 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 type oneUiCmd struct {
@@ -434,6 +435,17 @@ func unban_peer(par string) {
 	fmt.Print(usif.UnbanPeer(par))
 }
 
+func ban_peer(par string) {
+	ad, er := peersdb.NewAddrFromString(par, false)
+	if er != nil {
+		fmt.Println(par, er.Error())
+		return
+	}
+	ad.Time = uint32(time.Now().Unix())
+	ad.Banned = ad.Time
+	ad.Save()
+}
+
 func add_peer(par string) {
 	ad, er := peersdb.NewAddrFromString(par, false)
 	if er != nil {
@@ -622,6 +634,7 @@ func init() {
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust t", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
+	newUi("ban", false, ban_peer, "Ban a peer specified by IP")
 	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 	newUi("undo", true, undo_block, "Undo last block")
