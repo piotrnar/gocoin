@@ -814,9 +814,6 @@ func (c *OneConnection) Run() {
 
 		case "auth":
 			c.AuthRvcd(cmd.pl)
-			if c.X.AuthAckGot {
-				c.GetMPNow()
-			}
 
 		case "authack":
 			c.X.AuthAckGot = true
