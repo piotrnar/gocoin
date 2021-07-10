@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -181,7 +182,8 @@ func dump_raw_tx() {
 			if intx := tx_from_balance(btc.NewUint256(tx.TxIn[i].Input.Hash[:]), false); intx != nil {
 				val := intx.TxOut[tx.TxIn[i].Input.Vout].Value
 				totin += val
-				fmt.Printf("%15s BTC\n", btc.UintToBtc(val))
+				fmt.Printf("%15s BTC from address %s\n", btc.UintToBtc(val),
+					btc.NewAddrFromPkScript(intx.TxOut[tx.TxIn[i].Input.Vout].Pk_script, testnet))
 			} else {
 				noins++
 			}
@@ -192,10 +194,19 @@ func dump_raw_tx() {
 				}
 			} else {
 				if tx.SegWit == nil || len(tx.SegWit[i]) < 2 {
-					unsigned++
+					if len(tx.SegWit[i]) == 1 && (len(tx.SegWit[i][0])|1) == 65 {
+						fmt.Println("      Schnorr signature:")
+						fmt.Println("       ", hex.EncodeToString(tx.SegWit[i][0][:32]))
+						fmt.Println("       ", hex.EncodeToString(tx.SegWit[i][0][32:]))
+						if len(tx.SegWit[i][0]) == 65 {
+							fmt.Printf("        Hash Type 0x%02x\n", tx.SegWit[i][0][64])
+						}
+						goto skip_wintesses
+					} else {
+						unsigned++
+					}
 				}
 			}
-
 			if tx.SegWit != nil {
 				fmt.Println("      Witness data:")
 				for _, ww := range tx.SegWit[i] {
@@ -206,6 +217,7 @@ func dump_raw_tx() {
 					}
 				}
 			}
+		skip_wintesses:
 		}
 	}
 	fmt.Println("TX OUT cnt:", len(tx.TxOut))
