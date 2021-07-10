@@ -219,7 +219,7 @@ function fetch_wallet_balance(name) {
 				if (outs[i].type=="P2PKH") {
 					inp.value = 72 + 34  // pub_key + signature
 				} else if (outs[i].type=="P2SH-P2WPKH") {
-					inp.value = 24 + (1 + 72 + 34) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
+					inp.value = 23 + (1 + 72 + 34) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
 					inp["is_segwit"] = true
 				} else if (outs[i].type=="P2WPKH") {
 					inp.value = (1 + 72 + 34) / 4 // (witness_cnt + key + signature) / 4
@@ -378,12 +378,13 @@ function recalc_to_pay() {
 		}
 	}
 
-	ets_bytes = parseInt((ets_bytes*4+3)/4)
+	ets.innerText = ets_bytes
+	//ets_bytes = parseInt((ets_bytes*4+3)/4)
 	
 	if (auto_adjust_fee.checked) {
 		var spb = parseFloat(spb_to_use.value)
 		if (isNaN(spb)) spb = 0
-		fee = parseInt(ets_bytes*spb)
+		fee = Math.round(ets_bytes*spb)
 		txfee.value = val2str(fee)
 	}
 
@@ -420,8 +421,6 @@ function recalc_to_pay() {
 	}
 
 	paybut.disabled = butdisabled
-
-	ets.innerText = ets_bytes
 
 	if (ets_bytes<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
@@ -734,7 +733,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		Auto-calc transaction fee using price of&nbsp;
 		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
 		&nbsp;&nbsp;&nbsp;
-		Estimated transaction size is <span id="ets" style="font-weight:bold"></span> Bytes.
+		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
 	<hr>
 		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
 	</td>
