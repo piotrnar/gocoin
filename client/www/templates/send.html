@@ -378,6 +378,8 @@ function recalc_to_pay() {
 		}
 	}
 
+	ets_bytes = parseInt((ets_bytes*4+3)/4)
+	
 	if (auto_adjust_fee.checked) {
 		var spb = parseFloat(spb_to_use.value)
 		if (isNaN(spb)) spb = 0
@@ -419,7 +421,6 @@ function recalc_to_pay() {
 
 	paybut.disabled = butdisabled
 
-	ets_bytes = parseInt((ets_bytes*4+3)/4)
 	ets.innerText = ets_bytes
 
 	if (ets_bytes<1 || isNaN(fee)) {
