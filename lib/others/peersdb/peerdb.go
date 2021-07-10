@@ -1,42 +1,43 @@
 package peersdb
 
 import (
-	"os"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
-	"time"
-	"sync"
+	"os"
 	"sort"
-	"errors"
-	"strings"
 	"strconv"
-	"encoding/binary"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 const (
-	ExpirePeerAfter = (24*time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
-	MinPeersInDB = 512 // Do not expire peers if we have less than this
+	ExpirePeerAfter = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	MinPeersInDB    = 512              // Do not expire peers if we have less than this
 )
 
 var (
-	PeerDB *qdb.DB
-	proxyPeer *PeerAddr // when this is not nil we should only connect to this single node
+	PeerDB       *qdb.DB
+	proxyPeer    *PeerAddr // when this is not nil we should only connect to this single node
 	peerdb_mutex sync.Mutex
 
-	Testnet bool
+	Testnet     bool
 	ConnectOnly string
-	Services uint64 = 1
+	Services    uint64 = 1
 )
 
 type PeerAddr struct {
 	*utils.OnePeer
 
 	// The fields below don't get saved, but are used internaly
-	Manual bool  // Manually connected (from UI)
-	Friend bool  // Connected from friends.txt
+	Manual bool // Manually connected (from UI)
+	Friend bool // Connected from friends.txt
 }
 
 func DefaultTcpPort() uint16 {
@@ -60,18 +61,17 @@ func NewPeer(v []byte) (p *PeerAddr) {
 	return
 }
 
-
 func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	port := DefaultTcpPort()
 	x := strings.Index(ipstr, ":")
-	if x!=-1 {
+	if x != -1 {
 		if !force_default_port {
 			v, er := strconv.ParseUint(ipstr[x+1:], 10, 32)
 			if er != nil {
 				e = er
 				return
 			}
-			if v>0xffff {
+			if v > 0xffff {
 				e = errors.New("Port number too big")
 				return
 			}
@@ -81,13 +81,13 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 	ipa, er := net.ResolveIPAddr("ip", ipstr)
 	if er == nil {
-		if ipa !=nil {
+		if ipa != nil {
 			p = NewEmptyPeer()
 			p.Services = Services
 			p.Port = port
-			if len(ipa.IP)==4 {
+			if len(ipa.IP) == 4 {
 				copy(p.Ip4[:], ipa.IP[:])
-			} else if len(ipa.IP)==16 {
+			} else if len(ipa.IP) == 16 {
 				copy(p.Ip4[:], ipa.IP[12:16])
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
@@ -100,7 +100,6 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	return
 }
 
-
 func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	p, e = NewAddrFromString(ipstr, force_default_port)
 	if e != nil {
@@ -108,11 +107,11 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 
 	if sys.IsIPBlocked(p.Ip4[:]) {
-		e = errors.New(ipstr+" is blocked")
+		e = errors.New(ipstr + " is blocked")
 		return
 	}
 
-	if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp!=nil && NewPeer(dbp).Banned!=0 {
+	if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil && NewPeer(dbp).Banned != 0 {
 		e = errors.New(p.Ip() + " is banned")
 		p = nil
 	} else {
@@ -121,7 +120,6 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 	return
 }
-
 
 func ExpirePeers() {
 	peerdb_mutex.Lock()
@@ -146,7 +144,6 @@ func ExpirePeers() {
 	peerdb_mutex.Unlock()
 }
 
-
 func (p *PeerAddr) Save() {
 	if p.Time > 0x80000000 {
 		println("saving dupa", int32(p.Time), p.Ip())
@@ -155,12 +152,10 @@ func (p *PeerAddr) Save() {
 	PeerDB.Sync()
 }
 
-
 func (p *PeerAddr) Ban() {
 	p.Banned = uint32(time.Now().Unix())
 	p.Save()
 }
-
 
 func (p *PeerAddr) Alive() {
 	prv := int64(p.Time)
@@ -171,17 +166,14 @@ func (p *PeerAddr) Alive() {
 	}
 }
 
-
 func (p *PeerAddr) Dead() {
 	p.Time -= 600 // make it 10 min older
 	p.Save()
 }
 
-
-func (p *PeerAddr) Ip() (string) {
+func (p *PeerAddr) Ip() string {
 	return fmt.Sprintf("%d.%d.%d.%d:%d", p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port)
 }
-
 
 func (p *PeerAddr) String() (s string) {
 	s = fmt.Sprintf("%21s  srv:%16x", p.Ip(), p.Services)
@@ -194,7 +186,6 @@ func (p *PeerAddr) String() (s string) {
 	}
 	return
 }
-
 
 type manyPeers []*PeerAddr
 
@@ -210,11 +201,10 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
-
 // GetBestPeers fetches a given number of best (most recenty seen) peers.
-func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
-	if proxyPeer!=nil {
-		if isConnected==nil || !isConnected(proxyPeer) {
+func GetBestPeers(limit uint, isConnected func(*PeerAddr) bool) (res manyPeers) {
+	if proxyPeer != nil {
+		if isConnected == nil || !isConnected(proxyPeer) {
 			return manyPeers{proxyPeer}
 		}
 		return manyPeers{}
@@ -223,8 +213,8 @@ func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
 	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.Banned==0 && sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
-			if isConnected==nil || !isConnected(ad) {
+		if ad.Banned == 0 && sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
+			if isConnected == nil || !isConnected(ad) {
 				tmp = append(tmp, ad)
 			}
 		}
@@ -232,9 +222,9 @@ func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
 	})
 	peerdb_mutex.Unlock()
 	// Copy the top rows to the result buffer
-	if len(tmp)>0 {
+	if len(tmp) > 0 {
 		sort.Sort(tmp)
-		if uint(len(tmp))<limit {
+		if uint(len(tmp)) < limit {
 			limit = uint(len(tmp))
 		}
 		res = make(manyPeers, limit)
@@ -243,14 +233,13 @@ func GetBestPeers(limit uint, isConnected func(*PeerAddr)bool) (res manyPeers) {
 	return
 }
 
-
 func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
-				if ip != nil && len(ip)==16 {
+				if ip != nil && len(ip) == 16 {
 					p := NewEmptyPeer()
 					p.Services = 1
 					copy(p.Ip6[:], ip[:12])
@@ -264,7 +253,6 @@ func initSeeds(seeds []string, port uint16) {
 		}
 	}
 }
-
 
 // InitPeers should be called from the main thread.
 func InitPeers(dir string) {
@@ -298,22 +286,23 @@ func InitPeers(dir string) {
 					"seed.btc.petertodd.org",
 					"seed.bitcoin.sprovoost.nl",
 					"seed.bitnodes.io",
-					}, 8333)
+					"dnsseed.emzy.de",
+					"seed.bitcoin.wiz.biz",
+				}, 8333)
 			} else {
 				initSeeds([]string{
 					"testnet-seed.bitcoin.jonasschnelli.ch",
 					"seed.tbtc.petertodd.org",
 					"seed.testnet.bitcoin.sprovoost.nl",
 					"testnet-seed.bluematt.me",
-					}, 18333)
+				}, 18333)
 			}
 		}()
 	}
 }
 
-
 func ClosePeerDB() {
-	if PeerDB!=nil {
+	if PeerDB != nil {
 		fmt.Println("Closing peer DB")
 		PeerDB.Sync()
 		PeerDB.Defrag(true)
