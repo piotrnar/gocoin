@@ -112,7 +112,6 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 					} else {
 						er = errors.New("SchnorrSign failed")
 					}
-					fmt.Println("WARNING: Taproot signatures are experimental!!! - input", in)
 				} else {
 				resignb:
 					er = tx.SignWitness(in, k.BtcAddr.OutScript(), uo.Value, btc.SIGHASH_ALL, k.BtcAddr.Pubkey, k.Key)
