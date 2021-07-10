@@ -26,7 +26,7 @@ func IsP2WSH(scr []byte) bool {
 }
 
 func IsP2TAP(scr []byte) bool {
-	return len(scr) == 34 && scr[0] == 1 && scr[1] == 32
+	return len(scr) == 34 && scr[0] == btc.OP_1 && scr[1] == 32
 }
 
 func IsP2PK(scr []byte) (bool, []byte) {
