@@ -37,7 +37,8 @@ const AvgOutputSize = 34
 
 var selected_value = 0
 var ets_inputs = 0
-var segwit_inputs = false
+var witness_size = 0
+var non_segwit_cnt = 0
 var first_input_addr = ''
 var selected_cnt = 0
 var total_to_pay = 0
@@ -215,18 +216,18 @@ function fetch_wallet_balance(name) {
 				inp = document.createElement('input')
 				inp.type = 'hidden'
 				inp.id = "txsigsiz"+row_number
-				inp["is_segwit"] = false
+				inp["segwit_size"] = 0
 				if (outs[i].type=="P2PKH") {
 					inp.value = 72 + 34  // pub_key + signature
 				} else if (outs[i].type=="P2SH-P2WPKH") {
-					inp.value = 23 + (1 + 72 + 34) / 4  // P2SHscript + (wit_cnt + key + signature) / 4
-					inp["is_segwit"] = true
+					inp.value = 23  // P2SH script
+					inp["segwit_size"] = 1 + 72 + 34 // witness_ver + key + signature
 				} else if (outs[i].type=="P2WPKH") {
-					inp.value = (1 + 72 + 34) / 4 // (witness_cnt + key + signature) / 4
-					inp["is_segwit"] = true
+					inp.value = 0
+					inp["segwit_size"] = 1 + 72 + 34 // witness_ver + key + signature
 				} else if (outs[i].type=="P2TAP") {
-					inp.value = (1 + 1 + 64 + 0) / 4 // (wit_cnt + scr_len + schnorr_signature [+ hash_type]) / 4
-					inp["is_segwit"] = true
+					inp.value = 0
+					inp["segwit_size"] = 1 + 1 + 64 + 0  // wit_ver + scr_len + schnorr_signature [+ hash_type]
 				} else {
 					// default for P2SH and P2WSH (3 keys and 2 signatures)
 					inp.value = 2 + 3*34 + 2*73
@@ -305,7 +306,8 @@ function recalc_inputs() {
 	selected_value = 0
 	selected_cnt = 0
 	ets_inputs = 0
-	segwit_inputs = false
+	witness_size = 0
+	non_segwit_cnt = 0
 	first_input_addr = ''
 	for (var i=1; i<unspent.rows.length; i++) {
 		if (document.getElementById('txout'+i).checked) {
@@ -314,7 +316,9 @@ function recalc_inputs() {
 			selected_cnt++
 			var el = document.getElementById('txsigsiz'+i)
 			ets_inputs += 36 + 1 + parseFloat(el.value) + 4
-			if (el["is_segwit"]) segwit_inputs = true
+			var sws = el["segwit_size"]
+			if (sws==0)  non_segwit_cnt++
+			else  witness_size += sws
 		}
 	}
 
@@ -346,9 +350,7 @@ function addr2outsize(ad) {
 function recalc_to_pay() {
 	var el, v, fee, totsend=0
 	var butdisabled = false
-	var ets_bytes = 10+ets_inputs // version + v_in + n_out + lock_time
-
-	if (segwit_inputs)  ets_bytes += 2
+	var non_segwit_size = 10+ets_inputs // version + v_in + n_out + lock_time
 
 	fee = val2int(txfee.value)
 
@@ -365,26 +367,32 @@ function recalc_to_pay() {
 			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
 		}
 		var ad = document.getElementById('inadr'+idx).value
-		ets_bytes += addr2outsize(ad)
+		non_segwit_size += addr2outsize(ad)
 	}
 
 	if (include_fee_output_in_size_calculation.checked) {
 		var ad = changeaddrsel.selectedIndex
 		if (ad!=0) {
 			ad = changeaddrsel.options[ad].value
-			ets_bytes += addr2outsize(ad)
+			non_segwit_size += addr2outsize(ad)
 		} else {
-			ets_bytes += addr2outsize(first_input_addr)
+			non_segwit_size += addr2outsize(first_input_addr)
 		}
 	}
 
-	ets.innerText = ets_bytes
-	//ets_bytes = parseInt((ets_bytes*4+3)/4)
+	var tx_size = non_segwit_size
+	if (witness_size>0) {
+		// segwit tx is 2 bytes longer, plus each non-segwit input uses one extra byte (0) in its segwit section
+		tx_size += 2+witness_size+non_segwit_cnt
+	}
+	var vsize = Math.floor((3*(non_segwit_size+1) + tx_size)/4)
+	
+	ets.innerText = vsize
 	
 	if (auto_adjust_fee.checked) {
 		var spb = parseFloat(spb_to_use.value)
 		if (isNaN(spb)) spb = 0
-		fee = Math.round(ets_bytes*spb)
+		fee = Math.round(vsize*spb)
 		txfee.value = val2str(fee)
 	}
 
@@ -422,10 +430,10 @@ function recalc_to_pay() {
 
 	paybut.disabled = butdisabled
 
-	if (ets_bytes<1 || isNaN(fee)) {
+	if (vsize<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
 	} else {
-		feeperbyte.innerText = (fee/ets_bytes).toFixed(1)
+		feeperbyte.innerText = (fee/vsize).toFixed(1)
 	}
 }
 
