@@ -2,14 +2,15 @@ package textui
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func load_tx(par string) {
@@ -181,15 +182,19 @@ func baned_txs(par string) {
 }
 
 func send_all_tx(par string) {
+	var tmp []*network.OneTxToSend
 	network.TxMutex.Lock()
-	for k, v := range network.TransactionsToSend {
+	for _, v := range network.TransactionsToSend {
 		if v.Local {
-			cnt := network.NetRouteInv(1, btc.NewUint256(k[:]), nil)
-			v.Invsentcnt += cnt
-			fmt.Println("INV for TxID", v.Hash.String(), "sent to", cnt, "node(s)")
+			tmp = append(tmp, v)
 		}
 	}
 	network.TxMutex.Unlock()
+	for _, v := range tmp {
+		cnt := network.NetRouteInv(1, &v.Tx.Hash, nil)
+		v.Invsentcnt += cnt
+		fmt.Println("INV for TxID", v.Tx.Hash.String(), "sent to", cnt, "node(s)")
+	}
 }
 
 func save_mempool(par string) {
@@ -243,7 +248,6 @@ func get_mempool(par string) {
 	fmt.Println("Getting mempool from connection ID", conid, "...")
 	network.GetMP(uint32(conid))
 }
-
 
 func init() {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
