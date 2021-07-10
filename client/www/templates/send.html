@@ -313,7 +313,7 @@ function recalc_inputs() {
 			selected_value += unspent.rows[i].value
 			selected_cnt++
 			var el = document.getElementById('txsigsiz'+i)
-			ets_inputs += 36 + 1 + parseInt(el.value) + 4
+			ets_inputs += 36 + 1 + parseFloat(el.value) + 4
 			if (el["is_segwit"]) segwit_inputs = true
 		}
 	}
@@ -419,7 +419,8 @@ function recalc_to_pay() {
 
 	paybut.disabled = butdisabled
 
-	ets.innerText = ets_bytes//1000).toFixed(2)
+	ets_bytes = parseInt((ets_bytes*4+3)/4)
+	ets.innerText = ets_bytes
 
 	if (ets_bytes<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
