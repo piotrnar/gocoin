@@ -5,6 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -12,9 +16,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/script"
-	"math/rand"
-	"sync"
-	"time"
 )
 
 type OneUiReq struct {
@@ -37,33 +38,40 @@ var (
 	LocksChan chan *OneLock  = make(chan *OneLock, 1)
 
 	FetchingBalances sys.SyncBool
-	Exit_now sys.SyncBool
+	Exit_now         sys.SyncBool
 )
 
 func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {
 	s += fmt.Sprintln("Transaction details (for your information):")
 	s += fmt.Sprintln(len(tx.TxIn), "Input(s):")
 	sigops = btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
+	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
+	ss := make([]string, len(tx.TxIn))
 	for i := range tx.TxIn {
-		s += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
+		ss[i] += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
 		var po *btc.TxOut
 
 		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
 		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
-			s += fmt.Sprint(" mempool")
+			ss[i] += fmt.Sprint(" mempool")
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				s += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
+				ss[i] += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
 			} else {
 				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			}
 		} else {
 			po = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if po != nil {
-				s += fmt.Sprintf("%8d", po.BlockHeight)
+				ss[i] += fmt.Sprintf("%8d", po.BlockHeight)
 			}
 		}
+		tx.Spent_outputs[i] = po
+	}
+	for i := range tx.TxIn {
+		s += ss[i]
+		po := tx.Spent_outputs[i]
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount:po.Value, Idx:i, Tx:tx}, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
+			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount: po.Value, Idx: i, Tx: tx}, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
 			if !ok {
 				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
 				e = errors.New("Invalid signature")
