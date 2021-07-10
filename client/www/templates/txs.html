@@ -375,7 +375,7 @@ function decode_tx_id(txid) {
 
 			if (all_input_values) {
 				s += "Fee: " + (parseFloat(fee)/1e8).toFixed(8) + " BTC"
-				s += '  ==> ' + parseFloat(fee/(weight/4.0)).toFixed(1) + ' Satoshis per byte\n'
+				s += '  ==> ' + parseFloat(fee/(weight/4.0)).toFixed(5) + ' Satoshis per byte\n'
 			}
 
 			s += 'Verification took: ' + xval(aj.responseXML,  "verify_us") + ' microseconds\n'
