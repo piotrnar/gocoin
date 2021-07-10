@@ -304,8 +304,25 @@ func public_to_key_idx(pubkey []byte) int {
 	return -1
 }
 
+func public_xo_to_key_idx(pubkey []byte) int {
+	for i := range keys {
+		if bytes.Equal(pubkey, keys[i].BtcAddr.Pubkey[1:33]) {
+			return i
+		}
+	}
+	return -1
+}
+
 func public_to_key(pubkey []byte) *btc.PrivateAddr {
 	idx := public_to_key_idx(pubkey)
+	if idx < 0 {
+		return nil
+	}
+	return keys[idx]
+}
+
+func public_xo_to_key(pubkey []byte) *btc.PrivateAddr {
+	idx := public_xo_to_key_idx(pubkey)
 	if idx < 0 {
 		return nil
 	}
@@ -353,6 +370,10 @@ func pkscr_to_key(scr []byte) *btc.PrivateAddr {
 	// P2WPKH
 	if len(scr) == 22 && scr[0] == 0x00 && scr[1] == 0x14 {
 		return hash_to_key(scr[2:])
+	}
+	// TAPROOT
+	if len(scr) == 34 && scr[0] == btc.OP_1 && scr[1] == 32 {
+		return public_xo_to_key(scr[2:])
 	}
 	return nil
 }

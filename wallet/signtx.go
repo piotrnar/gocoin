@@ -79,7 +79,7 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 					copy(adr.Hash160[:], segwit_prog)
 				} else if len(segwit_prog) == 32 && ver == 1 {
 					// taproot payment to public key
-					k_idx = public_to_key_idx(segwit_prog)
+					k_idx = public_xo_to_key_idx(segwit_prog)
 				} else {
 					fmt.Println("WARNING: Unsupported SegWit Program: ", adr.String(), "at input", in)
 					all_signed = false
