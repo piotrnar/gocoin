@@ -609,7 +609,7 @@ blno.addEventListener("lastblock", function(e) {
 		}
 	} else if (e.block.Height!=_lblo) {
 		_lblo = e.block.Height
-		if (!edit_in_progres) {
+		if (!edit_in_progress) {
 			fetch_wallet_balance(null)
 		}
 	}
