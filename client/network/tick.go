@@ -233,6 +233,8 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 					conn.X.ConnectedAt = time.Now()
 					Mutex_net.Unlock()
 					conn.Run()
+				} else {
+					conn.dead = true
 				}
 			case <-time.After(10 * time.Millisecond):
 				if !conn.IsBroken() {
