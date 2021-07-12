@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/secp256k1"
-	"os"
-	"strings"
-	"time"
 )
 
 var IgnoreExternalIpFrom = []string{}
@@ -87,6 +88,11 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
+
+		if c.PeerAddr.Services != c.Node.Services {
+			c.PeerAddr.Services = c.Node.Services
+			c.PeerAddr.Save()
+		}
 
 		use_this_ip := sys.ValidIp4(pl[40:44])
 
@@ -232,7 +238,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	}
 
 	// Check for last block data
-	if len(pl) >= sig_len + 32 + 4 {
+	if len(pl) >= sig_len+32+4 {
 		copy(b32[:], pl[sig_len:sig_len+32])
 		common.LockCfg()
 		common.ApplyLTB(btc.NewUint256(b32[:]), binary.LittleEndian.Uint32(pl[sig_len+32:sig_len+36]))

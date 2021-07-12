@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"sort"
-	"sync"
-	"time"
 )
 
 var (
@@ -54,10 +55,10 @@ func GetExternalIPs() (arr []ExternalIpRec) {
 
 	if len(ExternalIp4) > 0 {
 		for ip, rec := range ExternalIp4 {
-			if arx != nil && arx.IP==ip {
+			if arx != nil && arx.IP == ip {
 				continue
 			}
-			arr = append(arr, ExternalIpRec{IP:ip, Cnt:rec[0], Tim:rec[1]})
+			arr = append(arr, ExternalIpRec{IP: ip, Cnt: rec[0], Tim: rec[1]})
 		}
 
 		if len(arr) > 1 {
@@ -153,12 +154,13 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
 				k := qdb.KeyType(a.UniqID())
 				v := peersdb.PeerDB.Get(k)
+				a.Time = uint32(time.Now().Add(-5 * time.Minute).Unix()) // add new addrs as alive 5 minutes ago
 				if v != nil {
-					a.Banned = peersdb.NewPeer(v[:]).Banned
-				}
-				a.Time = uint32(time.Now().Add(-5 * time.Minute).Unix()) // add new peers as not just alive
-				if a.Time > uint32(time.Now().Unix()) {
-					println("wtf", a.Time, time.Now().Unix())
+					op := peersdb.NewPeer(v[:])
+					a.Banned = op.Banned
+					if op.Time > a.Time {
+						a.Time = op.Time // use last know "alive time" from our DB
+					}
 				}
 				peersdb.PeerDB.Put(k, a.Bytes())
 			} else {

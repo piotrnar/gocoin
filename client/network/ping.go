@@ -2,19 +2,19 @@ package network
 
 import (
 	"bytes"
-	"os"
-	"fmt"
-	"time"
-	"sort"
 	"crypto/rand"
+	"fmt"
+	"os"
+	"sort"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 )
 
 const (
-	PingHistoryLength = 20
+	PingHistoryLength        = 20
 	PingAssumedIfUnsupported = 4999 // ms
 )
-
 
 func (c *OneConnection) HandlePong(pl []byte) {
 	if pl != nil {
@@ -28,17 +28,16 @@ func (c *OneConnection) HandlePong(pl []byte) {
 		common.CountSafe("PongTimeout")
 	}
 	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
-	if ms==0 {
+	if ms == 0 {
 		//println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
 	}
 	c.Mutex.Lock()
 	c.X.PingHistory[c.X.PingHistoryIdx] = int(ms)
-	c.X.PingHistoryIdx = (c.X.PingHistoryIdx+1)%PingHistoryLength
+	c.X.PingHistoryIdx = (c.X.PingHistoryIdx + 1) % PingHistoryLength
 	c.PingInProgress = nil
 	c.Mutex.Unlock()
 }
-
 
 // GetAveragePing returns the (median) average ping.
 // Make sure to call it within c.Mutex.Lock().
@@ -46,16 +45,16 @@ func (c *OneConnection) GetAveragePing() int {
 	if !c.X.VersionReceived {
 		return 0
 	}
-	if c.Node.Version>60000 {
-		var pgs[PingHistoryLength] int
+	if c.Node.Version > 60000 {
+		var pgs [PingHistoryLength]int
 		var act_len int
 		for _, p := range c.X.PingHistory {
-			if p!=0 {
+			if p != 0 {
 				pgs[act_len] = p
 				act_len++
 			}
 		}
-		if act_len==0 {
+		if act_len == 0 {
 			return 0
 		}
 		sort.Ints(pgs[:act_len])
@@ -65,16 +64,14 @@ func (c *OneConnection) GetAveragePing() int {
 	}
 }
 
-
 type SortedConnections []struct {
-	Conn *OneConnection
-	Ping int
-	BlockCount int
-	TxsCount int
+	Conn          *OneConnection
+	Ping          int
+	BlockCount    int
+	TxsCount      int
 	MinutesOnline int
-	Special bool
+	Special       bool
 }
-
 
 // GetSortedConnections returns the slowest peers first.
 // Make sure to call it with locked Mutex_net.
@@ -91,17 +88,17 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
 		tlist[cnt].Special = v.X.IsSpecial || v.X.Authorized
-		if v.X.VersionReceived==false || v.X.ConnectedAt.IsZero() {
+		if v.X.VersionReceived == false || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {
-			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt)/time.Minute)
+			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt) / time.Minute)
 		}
 		v.Mutex.Unlock()
 
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
-		if (v.Node.Services&SERVICE_SEGWIT) != 0 {
+		if (v.Node.Services & SERVICE_SEGWIT) != 0 {
 			segwit_cnt++
 		}
 
@@ -176,30 +173,30 @@ func drop_worst_peer() bool {
 			if InConsActive+2 > common.GetUint32(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
 				if common.FLAG.Log {
-					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-					if f!=nil {
+					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+					if f != nil {
 						fmt.Fprintf(f, "%s: Drop incoming id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
 							time.Now().Format("2006-01-02 15:04:05"),
 							v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
 						f.Close()
 					}
 				}
-				v.Conn.Disconnect("PeerInDropped")
+				v.Conn.Disconnect(true, "PeerInDropped")
 				return true
 			}
 		} else {
 			if OutConsActive+2 > common.GetUint32(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
 				if common.FLAG.Log {
-					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660);
-					if f!=nil {
+					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+					if f != nil {
 						fmt.Fprintf(f, "%s: Drop outgoing id:%d  blks:%d  txs:%d  ping:%d  mins:%d\n",
 							time.Now().Format("2006-01-02 15:04:05"),
 							v.Conn.ConnID, v.BlockCount, v.TxsCount, v.Ping, v.MinutesOnline)
 						f.Close()
 					}
 				}
-				v.Conn.Disconnect("PeerOutDropped")
+				v.Conn.Disconnect(true, "PeerOutDropped")
 				return true
 			}
 		}
@@ -207,13 +204,12 @@ func drop_worst_peer() bool {
 	return false
 }
 
-
 func (c *OneConnection) TryPing() bool {
-	if common.GetDuration(&common.PingPeerEvery)==0 {
+	if common.GetDuration(&common.PingPeerEvery) == 0 {
 		return false // pinging disabled in global config
 	}
 
-	if c.Node.Version<=60000 {
+	if c.Node.Version <= 60000 {
 		return false // insufficient protocol version
 	}
 
@@ -222,7 +218,7 @@ func (c *OneConnection) TryPing() bool {
 	}
 
 	if c.PingInProgress != nil {
-		c.HandlePong(nil)  // this will set PingInProgress to nil
+		c.HandlePong(nil) // this will set PingInProgress to nil
 	}
 
 	c.X.PingSentCnt++

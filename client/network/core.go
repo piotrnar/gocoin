@@ -168,6 +168,7 @@ type OneConnection struct {
 	sync.Mutex // protects concurent access to any fields inside this structure
 
 	broken           bool // flag that the conenction has been broken / shall be disconnected
+	dead             bool // If set the alive time in PeersDB will ne moved back
 	why_disconnected string
 	banit            bool // Ban this client after disconnecting
 	misbehave        int  // When it reaches 1000, ban it
@@ -331,7 +332,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			c.Mutex.Unlock()
 			println(c.PeerAddr.Ip(), c.Node.Version, c.Node.Agent, "Peer Send Buffer Overflow @",
 				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())
-			c.Disconnect("SendBufferOverflow")
+			c.DoS("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
 			return errors.New("Send buffer overflow")
 		}
@@ -382,12 +383,13 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 	c.SendBufProd = (c.SendBufProd + len(d)) & SendBufMask
 }
 
-func (c *OneConnection) Disconnect(why string) {
+func (c *OneConnection) Disconnect(dead bool, why string) {
 	c.Mutex.Lock()
 	if c.X.Debug {
 		print("Disconnect " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because -" + why + "-\n> ")
 		//println("LastCmdSent:", c.X.LastCmdSent, c.X.LastBtsSent, "   LastCmdRcvd:", c.X.LastCmdRcvd, c.X.LastBtsRcvd)
 	}
+	c.dead = dead
 	c.broken = true
 	c.why_disconnected = why
 	c.Mutex.Unlock()
@@ -438,7 +440,7 @@ func (c *OneConnection) HandleError(e error) error {
 	}
 	c.recv.hdr_len = 0
 	c.recv.dat = nil
-	c.Disconnect("Error:" + e.Error())
+	c.Disconnect(true, "Error:"+e.Error())
 	return e
 }
 
@@ -489,7 +491,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 				println("ERROR: hdr_len > 24 after receiving", n, "bytes")
 				c.Mutex.Unlock()
 				common.CountSafe("SockReadOverflow")
-				c.Disconnect("SockReadOverflow")
+				c.Disconnect(true, "SockReadOverflow")
 				return
 			}
 			c.Mutex.Unlock()
@@ -613,7 +615,7 @@ func (c *OneConnection) writing_thread() {
 			c.SendBufCons = (c.SendBufCons + n) & SendBufMask
 			c.Mutex.Unlock()
 		} else if e != nil {
-			c.Disconnect("SendErr:" + e.Error())
+			c.Disconnect(true, "SendErr:"+e.Error())
 		} else if n < 0 {
 			// It comes here if we could not send a single byte because of BW limit
 			time.Sleep(10 * time.Millisecond)
@@ -672,7 +674,7 @@ func NetCloseAll() {
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {
-			v.Disconnect("CloseAll")
+			v.Disconnect(false, "CloseAll")
 		}
 	}
 	Mutex_net.Unlock()
@@ -704,7 +706,7 @@ func DropPeer(conid uint32) {
 	for _, v := range OpenCons {
 		if uint32(conid) == v.ConnID {
 			if v.X.IsSpecial {
-				v.Disconnect("FromUI")
+				v.Disconnect(false, "FromUI")
 			} else {
 				v.DoS("FromUI")
 			}

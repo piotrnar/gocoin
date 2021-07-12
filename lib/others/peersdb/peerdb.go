@@ -38,6 +38,8 @@ type PeerAddr struct {
 	// The fields below don't get saved, but are used internaly
 	Manual bool // Manually connected (from UI)
 	Friend bool // Connected from friends.txt
+
+	lastAliveSaved int64 // update the record only once per minute
 }
 
 func DefaultTcpPort() uint16 {
@@ -51,7 +53,7 @@ func DefaultTcpPort() uint16 {
 func NewEmptyPeer() (p *PeerAddr) {
 	p = new(PeerAddr)
 	p.OnePeer = new(utils.OnePeer)
-	p.Time = uint32(time.Now().Unix())
+	p.Time = uint32(time.Now().Unix() - 600) // Create empty peers with the time 10 minutes in the past
 	return
 }
 
@@ -91,6 +93,14 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 				copy(p.Ip4[:], ipa.IP[12:16])
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
+			p.Time = uint32(time.Now().Unix())
+			// if we already had it, keep the Time and Banned fields
+			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
+				_p := NewPeer(dbp)
+				p.Time = _p.Time
+				p.Banned = _p.Banned
+			}
+			p.Save()
 		} else {
 			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - unspecified error")
 		}
@@ -145,11 +155,8 @@ func ExpirePeers() {
 }
 
 func (p *PeerAddr) Save() {
-	if p.Time > 0x80000000 {
-		println("saving dupa", int32(p.Time), p.Ip())
-	}
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
-	PeerDB.Sync()
+	//PeerDB.Sync()
 }
 
 func (p *PeerAddr) Ban() {
@@ -158,16 +165,16 @@ func (p *PeerAddr) Ban() {
 }
 
 func (p *PeerAddr) Alive() {
-	prv := int64(p.Time)
 	now := time.Now().Unix()
 	p.Time = uint32(now)
-	if now-prv >= 60 {
-		p.Save() // Do not save more often than once per minute
+	if now-p.lastAliveSaved >= 60 {
+		p.lastAliveSaved = now
+		p.Save()
 	}
 }
 
 func (p *PeerAddr) Dead() {
-	p.Time -= 600 // make it 10 min older
+	p.Time = uint32(time.Now().Unix() - 15*60) // make it 15 minutes old
 	p.Save()
 }
 
@@ -237,6 +244,7 @@ func initSeeds(seeds []string, port uint16) {
 	for i := range seeds {
 		ad, er := net.LookupHost(seeds[i])
 		if er == nil {
+			//println(len(ad), "addrs from", seeds[i])
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip) == 16 {
@@ -245,6 +253,12 @@ func initSeeds(seeds []string, port uint16) {
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
 					p.Port = port
+					// if we already had it, keep the Time and Banned fields
+					if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
+						_p := NewPeer(dbp)
+						p.Time = _p.Time
+						p.Banned = _p.Banned
+					}
 					p.Save()
 				}
 			}

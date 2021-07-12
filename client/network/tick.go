@@ -87,7 +87,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			common.CountSafe("Spec" + disconnect)
 			c.counters[disconnect]++
 		} else {
-			c.Disconnect(disconnect)
+			c.Disconnect(true, disconnect)
 		}
 	}
 }
@@ -119,7 +119,7 @@ func (c *OneConnection) Tick(now time.Time) {
 	if !c.X.VersionReceived {
 		// Wait only certain amount of time for the version message
 		if c.X.ConnectedAt.Add(VersionMsgTimeout).Before(now) {
-			c.Disconnect("VersionTimeout")
+			c.Disconnect(true, "VersionTimeout")
 			common.CountSafe("NetVersionTout")
 			return
 		}
@@ -246,7 +246,11 @@ func DoNetwork(ad *peersdb.PeerAddr) {
 		delete(OpenCons, ad.UniqID())
 		OutConsActive--
 		Mutex_net.Unlock()
-		ad.Dead()
+		if conn.dead {
+			ad.Dead()
+		} else {
+			ad.Save()
+		}
 	}()
 }
 
@@ -336,7 +340,7 @@ func tcp_server() {
 	Mutex_net.Lock()
 	for _, c := range OpenCons {
 		if c.X.Incomming {
-			c.Disconnect("CloseAllIn")
+			c.Disconnect(false, "CloseAllIn")
 		}
 	}
 	TCPServerStarted = false
@@ -663,7 +667,7 @@ func (c *OneConnection) Run() {
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
 				//println("version msg error:", er.Error())
-				c.Disconnect("Version:" + er.Error())
+				c.DoS("VerMsg")
 				break
 			}
 			if common.FLAG.Log {
