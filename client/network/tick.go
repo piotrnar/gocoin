@@ -547,7 +547,11 @@ func NetworkTick() {
 			})
 		}
 		// now fetch another 128 never tried peers
-		adrs2 := peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
+		new_cnt := int(32)
+		if len(adrs) > new_cnt {
+			new_cnt = len(adrs)
+		}
+		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), func(ad *peersdb.PeerAddr) bool {
 			return ad.SeenAlive // ignore those that have been seen alive
 		})
 		adrs = append(adrs, adrs2...)
