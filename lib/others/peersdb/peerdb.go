@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -163,6 +164,11 @@ func (p *PeerAddr) Save() {
 
 func (p *PeerAddr) Ban(reason string) {
 	p.Banned = uint32(time.Now().Unix())
+
+	if reason == "" {
+		_, fil, line, _ := runtime.Caller(1)
+		reason = fmt.Sprint(fil, ":", line)
+	}
 	if len(reason) > 255 {
 		p.BanReason = reason[:255]
 	} else {
