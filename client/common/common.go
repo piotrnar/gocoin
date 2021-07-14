@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/memory"
-	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/others/utils"
 	"log"
 	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/memory"
+	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 const (
@@ -33,9 +34,8 @@ var (
 
 	Last TheLastBlock
 
-	GocoinHomeDir  string
-	StartTime      time.Time
-	MaxPeersNeeded int
+	GocoinHomeDir string
+	StartTime     time.Time
 
 	CounterMutex sync.Mutex
 	Counter      map[string]uint64 = make(map[string]uint64)

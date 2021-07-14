@@ -389,45 +389,100 @@ func save_config(s string) {
 }
 
 func show_addresses(par string) {
-	fmt.Println(peersdb.PeerDB.Count(), "peers in the database")
-	if par == "list" {
-		cnt := 0
-		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-			cnt++
-			fmt.Printf("%4d) %s\n", cnt, peersdb.NewPeer(v).String())
-			return 0
-		})
-	} else if par == "ban" {
-		cnt := 0
+	pars := strings.Split(par, " ")
+	if len(pars) < 1 || pars[0] == "" {
+		bcnt, acnt := 0, 0
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := peersdb.NewPeer(v)
 			if pr.Banned != 0 {
-				cnt++
-				fmt.Printf("%4d) %s\n", cnt, pr.String())
+				bcnt++
+			}
+			if pr.SeenAlive {
+				acnt++
 			}
 			return 0
 		})
-		if cnt == 0 {
-			fmt.Println("No banned peers in the DB")
-		}
-	} else if par != "" {
-		limit, er := strconv.ParseUint(par, 10, 32)
-		if er != nil {
-			fmt.Println("Specify number of best peers to display")
-			return
-		}
-		prs := peersdb.GetBestPeers(uint(limit), nil)
-		for i := range prs {
-			fmt.Printf("%4d) %s", i+1, prs[i].String())
-			if network.ConnectionActive(prs[i]) {
-				fmt.Print("  CONNECTED")
+		fmt.Println("Peers in DB:", peersdb.PeerDB.Count())
+		fmt.Println("Peers seen alive:", acnt)
+		fmt.Println("Peers banned:", bcnt)
+		fmt.Println()
+		fmt.Println("Use 'peers all [max_cnt]' or 'peers [max_cnt]' to list all")
+		fmt.Println("Use 'peers ali [max_cnt]' to list only those seen alive")
+		fmt.Println("Use 'peers ban [max_cnt]' to list the banned ones")
+		fmt.Println("Use 'peers purge' to remove all peers never seen alive")
+		fmt.Println("Use 'peers defrag' to defragment DB")
+		fmt.Println("Use 'peers save' to save DB now")
+		return
+	}
+
+	var only_ban, only_alive bool
+	limit := peersdb.PeerDB.Count()
+	check_next := true
+	switch pars[0] {
+	case "ali":
+		only_alive = true
+	case "ban":
+		only_ban = true
+	case "all":
+		// do nothing
+	case "purge":
+		var torem []qdb.KeyType
+		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+			pr := peersdb.NewPeer(v)
+			if !pr.SeenAlive {
+				torem = append(torem, k)
 			}
-			fmt.Print("\n")
+			return 0
+		})
+		fmt.Println("Purginig", len(torem), "records")
+		for _, k := range torem {
+			peersdb.PeerDB.Del(k)
 		}
-	} else {
-		fmt.Println("Use 'peers list' to list them")
-		fmt.Println("Use 'peers ban' to list the benned ones")
-		fmt.Println("Use 'peers <number>' to show the most recent ones")
+		return
+
+	case "defrag":
+		peersdb.PeerDB.Defrag(false)
+		return
+
+	case "save":
+		peersdb.PeerDB.Sync()
+		return
+
+	default:
+		if u, e := strconv.ParseUint(pars[0], 10, 32); e != nil {
+			fmt.Println("Incorrect number A of peers max count:", e.Error())
+			return
+		} else {
+			limit = int(u)
+		}
+		check_next = false
+	}
+	if check_next {
+		if len(pars) >= 2 {
+			if u, e := strconv.ParseUint(pars[1], 10, 32); e != nil {
+				fmt.Println("Incorrect number B of peers max count:", e.Error())
+				return
+			} else {
+				limit = int(u)
+			}
+		}
+	}
+
+	prs := peersdb.GetRecentPeers(uint(limit), func(p *peersdb.PeerAddr) bool {
+		if only_alive && !p.SeenAlive {
+			return true
+		}
+		if only_ban && p.Banned == 0 {
+			return true
+		}
+		return false
+	})
+	for i := range prs {
+		fmt.Printf("%4d) %s", i+1, prs[i].String())
+		if network.ConnectionActive(prs[i]) {
+			fmt.Print("  CONNECTED")
+		}
+		fmt.Print("\n")
 	}
 }
 
@@ -625,7 +680,7 @@ func init() {
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("peers", false, show_addresses, "Dump pers database (specify number)")
+	newUi("peers p", false, show_addresses, "Dump pers database (specify number)")
 	newUi("peeradd", false, add_peer, "Add a peer to the database, mark it as alive")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")

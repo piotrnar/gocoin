@@ -167,8 +167,8 @@ func (c *OneConnection) Tick(now time.Time) {
 	}
 
 	// Ask node for new addresses...?
-	if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < common.MaxPeersNeeded {
-		common.CountSafe("AddrWanted")
+	if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < peersdb.MinPeersInDB {
+		common.CountSafe("AddrsWanted")
 		c.SendRawMsg("getaddr", nil)
 		c.X.OurGetAddrDone = true
 	}
@@ -330,7 +330,7 @@ func tcp_server() {
 					terminate = true
 				}
 
-				// had any error occured - close teh TCP connection
+				// had any error occured - close the TCP connection
 				if terminate {
 					tc.Close()
 				}
@@ -534,20 +534,27 @@ func NetworkTick() {
 			Mutex_net.Unlock()
 		}
 
-		adrs := peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) bool {
+		adrs := peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
 			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&SERVICE_SEGWIT) == 0 {
 				return true
 			}
-			return ConnectionActive(ad)
+			return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
 		})
 		if len(adrs) == 0 && segwit_conns < common.CFG.Net.MinSegwitCons {
 			// we have only non-segwit peers in the database - take them
-			adrs = peersdb.GetBestPeers(128, func(ad *peersdb.PeerAddr) bool {
-				return ConnectionActive(ad)
+			adrs = peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
+				return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
 			})
 		}
+		// now fetch another 128 never tried peers
+		adrs2 := peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
+			return ad.SeenAlive // ignore those that have been seen alive
+		})
+		adrs = append(adrs, adrs2...)
 		if len(adrs) != 0 {
-			DoNetwork(adrs[rand.Int31n(int32(len(adrs)))])
+			ad := adrs[rand.Int31n(int32(len(adrs)))]
+			print("chosen ", ad.String(), "\n> ")
+			DoNetwork(ad)
 			Mutex_net.Lock()
 			conn_cnt = OutConsActive
 			Mutex_net.Unlock()
@@ -742,7 +749,7 @@ func (c *OneConnection) Run() {
 
 		case "getaddr":
 			if !c.X.GetAddrDone {
-				c.SendAddr()
+				c.HandleGetaddr()
 				c.X.GetAddrDone = true
 			} else {
 				c.Mutex.Lock()

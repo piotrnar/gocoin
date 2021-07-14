@@ -102,17 +102,16 @@ func BestExternalAddr() []byte {
 	return res
 }
 
-func (c *OneConnection) SendAddr() {
-	pers := peersdb.GetBestPeers(MaxAddrsPerMessage, nil)
-	maxtime := uint32(time.Now().Unix() + 3600)
+// HandleGetaddr sends the response to "getaddr" message.
+// Sends addr message with the most recent seen-alive peers from our database
+func (c *OneConnection) HandleGetaddr() {
+	pers := peersdb.GetRecentPeers(MaxAddrsPerMessage, func(p *peersdb.PeerAddr) bool {
+		return p.Banned != 0 || !p.SeenAlive // we only return addresses that we've seen alive
+	})
 	if len(pers) > 0 {
 		buf := new(bytes.Buffer)
 		btc.WriteVlen(buf, uint64(len(pers)))
 		for i := range pers {
-			if pers[i].Time > maxtime {
-				println("addr", i, "time in future", pers[i].Time, maxtime, "should not happen")
-				pers[i].Time = maxtime - 7200
-			}
 			binary.Write(buf, binary.LittleEndian, pers[i].Time)
 			buf.Write(pers[i].NetAddr.Bytes())
 		}
@@ -132,6 +131,10 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
+	if peersdb.PeerDB.Count() > MaxPeersInDB {
+		common.CountSafe("AddrMsgIgnore")
+		return
+	}
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -140,35 +143,39 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		if n != len(buf) || e != nil {
 			common.CountSafe("AddrError")
 			c.DoS("AddrError")
-			//println("ParseAddr:", n, e)
 			break
 		}
 		a := peersdb.NewPeer(buf[:])
 		if !sys.ValidIp4(a.Ip4[:]) {
-			common.CountSafe("AddrInvalid")
-			/*if c.Misbehave("AddrLocal", 1) {
-				break
-			}*/
-			//print(c.PeerAddr.Ip(), " ", c.Node.Agent, " ", c.Node.Version, " addr local ", a.String(), "\n> ")
-		} else if time.Unix(int64(a.Time), 0).Before(time.Now().Add(time.Hour)) {
+			common.CountSafe("AddrIPinv")
+		} else {
 			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
+				now := uint32(time.Now().Unix())
+				if a.Time > now {
+					if a.Time-now >= 3600 { // It more than 1 hour in the future, reject it
+						if c.Misbehave("AdrFuture", 50) {
+							break
+						}
+					}
+					a.Time = now
+					common.CountSafe("AddrFuture")
+				}
 				k := qdb.KeyType(a.UniqID())
 				v := peersdb.PeerDB.Get(k)
-				a.Time = uint32(time.Now().Add(-5 * time.Minute).Unix()) // add new addrs as alive 5 minutes ago
 				if v != nil {
 					op := peersdb.NewPeer(v[:])
 					a.Banned = op.Banned
+					a.SeenAlive = op.SeenAlive
 					if op.Time > a.Time {
-						a.Time = op.Time // use last know "alive time" from our DB
+						a.Time = op.Time // oin time in out db is later, keep it
 					}
+					common.CountSafe("AddrOld")
+				} else {
+					common.CountSafe("AddrNew")
 				}
 				peersdb.PeerDB.Put(k, a.Bytes())
 			} else {
 				common.CountSafe("AddrStale")
-			}
-		} else {
-			if c.Misbehave("AddrFuture", 50) {
-				break
 			}
 		}
 	}

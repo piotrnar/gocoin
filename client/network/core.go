@@ -56,6 +56,8 @@ const (
 	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
 
 	MAX_GETMP_TXS = 1e6
+
+	MaxPeersInDB = (1024 + 256) * 64
 )
 
 var (
