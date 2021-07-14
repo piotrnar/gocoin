@@ -161,8 +161,13 @@ func (p *PeerAddr) Save() {
 	//PeerDB.Sync()
 }
 
-func (p *PeerAddr) Ban() {
+func (p *PeerAddr) Ban(reason string) {
 	p.Banned = uint32(time.Now().Unix())
+	if len(reason) > 255 {
+		p.BanReason = reason[:255]
+	} else {
+		p.BanReason = reason
+	}
 	p.Save()
 }
 
@@ -207,6 +212,9 @@ func (p *PeerAddr) String() (s string) {
 
 	if p.Banned != 0 {
 		s += fmt.Sprintf("  BAN %.2f hrs", float64(int(now)-int(p.Banned))/3600.0)
+		if p.BanReason != "" {
+			s += " because " + p.BanReason
+		}
 	}
 
 	return

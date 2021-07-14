@@ -32,7 +32,7 @@ const (
 	MIN_PROTO_VERSION = 209
 
 	HammeringMinReconnect    = 20 * time.Minute // If any incoming peer reconnects in below this time, ban it
-	HammeringMaxAllowedCount = 3                // If reconnecting more than this many times within the time above, ban the IP
+	HammeringMaxAllowedCount = 5                // If reconnecting more than this many times within the time above, ban the IP
 	HammeringExpirePeriod    = time.Minute      // Expite Hammering history interval
 
 	ExpireCachedAfter = 20 * time.Minute /*If a block stays in the cache for that long, drop it*/
@@ -56,8 +56,6 @@ const (
 	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
 
 	MAX_GETMP_TXS = 1e6
-
-	MaxPeersInDB = (1024 + 256) * 64
 )
 
 var (
@@ -173,7 +171,8 @@ type OneConnection struct {
 	dead             bool // If set the alive time in PeersDB will ne moved back
 	why_disconnected string
 	banit            bool // Ban this client after disconnecting
-	misbehave        int  // When it reaches 1000, ban it
+	ban_reason       string
+	misbehave        int // When it reaches 1000, ban it
 
 	net.Conn
 
@@ -411,6 +410,7 @@ func (c *OneConnection) DoS(why string) {
 		print("BAN " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 	}
 	c.banit = true
+	c.ban_reason = why
 	c.broken = true
 	c.Mutex.Unlock()
 }
@@ -476,7 +476,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			}
 			c.Mutex.Unlock()
 			common.CountSafe("NetBadMagic")
-			c.Ban()
+			c.Ban("NetBadMagic")
 			return
 		}
 		if c.broken {

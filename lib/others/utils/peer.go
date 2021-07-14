@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/binary"
 	"hash/crc64"
 
@@ -12,6 +13,7 @@ type OnePeer struct {
 	Time      uint32 // When seen last time
 	Banned    uint32 // time when this address baned or zero if never
 	SeenAlive bool
+	BanReason string
 }
 
 var crctab = crc64.MakeTable(crc64.ISO)
@@ -26,6 +28,9 @@ Serialized peer record (all values are LSB unless specified otherwise):
  [30:34] - OPTIONAL:
  	highest bit: set to 1 of peer has been seen "alive"
 	low 31 bits: if present, unix timestamp of when the peer was banned divided by 2
+ [35] - OPTIONAL flags
+    bit(0) - Indicates BanReadon present (byte_len followed by the string)
+	bits(1-7) - reserved
 */
 
 func NewPeer(v []byte) (p *OnePeer) {
@@ -47,26 +52,39 @@ func NewPeer(v []byte) (p *OnePeer) {
 			// Convert from the old DB - TODO: remove it at some point (now is 14th of July 2021)
 			p.Banned >>= 1
 		}
+		if len(v) >= 35 {
+			extra_fields := v[34]
+			if (extra_fields&0x01) != 0 && len(v) >= 37 {
+				slen := int(v[35])
+				if len(v) >= 36+slen {
+					p.BanReason = string(v[36 : 36+slen])
+				}
+			}
+		}
 	}
 	return
 }
 
 func (p *OnePeer) Bytes() (res []byte) {
+	b := new(bytes.Buffer)
+	binary.Write(b, binary.LittleEndian, p.Time)
+	binary.Write(b, binary.LittleEndian, p.Services)
+	b.Write(p.Ip6[:])
+	b.Write(p.Ip4[:])
+	binary.Write(b, binary.LittleEndian, p.Port)
 	if p.Banned != 0 || p.SeenAlive {
-		res = make([]byte, 34)
 		xd := p.Banned >> 1
 		if p.SeenAlive {
 			xd |= 0x80000000
 		}
-		binary.LittleEndian.PutUint32(res[30:34], xd)
-	} else {
-		res = make([]byte, 30)
+		binary.Write(b, binary.LittleEndian, xd)
+		if p.BanReason != "" {
+			b.Write([]byte{0x01, byte(len(p.BanReason))})
+			b.Write([]byte(p.BanReason))
+		}
+
 	}
-	binary.LittleEndian.PutUint32(res[0:4], p.Time)
-	binary.LittleEndian.PutUint64(res[4:12], p.Services)
-	copy(res[12:24], p.Ip6[:])
-	copy(res[24:28], p.Ip4[:])
-	binary.BigEndian.PutUint16(res[28:30], p.Port)
+	res = b.Bytes()
 	return
 }
 

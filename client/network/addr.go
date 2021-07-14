@@ -131,7 +131,7 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
-	if peersdb.PeerDB.Count() > MaxPeersInDB {
+	if peersdb.PeerDB.Count() > peersdb.MaxPeersInDB {
 		common.CountSafe("AddrMsgIgnore")
 		return
 	}

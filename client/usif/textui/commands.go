@@ -496,9 +496,7 @@ func ban_peer(par string) {
 		fmt.Println(par, er.Error())
 		return
 	}
-	ad.Time = uint32(time.Now().Unix())
-	ad.Banned = ad.Time
-	ad.Save()
+	ad.Ban("FromTUI")
 }
 
 func add_peer(par string) {

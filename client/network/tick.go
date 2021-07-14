@@ -299,7 +299,7 @@ func tcp_server() {
 
 					if terminate {
 						common.CountSafe("BanHammerIn")
-						ad.Ban()
+						ad.Ban("HammerIn")
 					} else {
 						// Incoming IP passed all the initial checks - talk to it
 						conn := NewConnection(ad)
@@ -557,7 +557,7 @@ func NetworkTick() {
 		adrs = append(adrs, adrs2...)
 		if len(adrs) != 0 {
 			ad := adrs[rand.Int31n(int32(len(adrs)))]
-			print("chosen ", ad.String(), "\n> ")
+			//print("chosen ", ad.String(), "\n> ")
 			DoNetwork(ad)
 			Mutex_net.Lock()
 			conn_cnt = OutConsActive
@@ -869,7 +869,7 @@ func (c *OneConnection) Run() {
 		common.CountSafe(fmt.Sprint("FDisconnect-", ban))
 	} else {
 		if ban {
-			c.PeerAddr.Ban()
+			c.PeerAddr.Ban(c.ban_reason)
 			common.CountSafe("PeersBanned")
 		} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
 			var rd *RecentlyDisconenctedType
