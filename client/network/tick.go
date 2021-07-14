@@ -681,7 +681,7 @@ func (c *OneConnection) Run() {
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
 				//println("version msg error:", er.Error())
-				c.DoS("VerMsg")
+				c.DoS("Ver" + er.Error())
 				break
 			}
 			if common.FLAG.Log {
