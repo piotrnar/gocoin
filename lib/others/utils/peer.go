@@ -78,7 +78,7 @@ func (p *OnePeer) Bytes() (res []byte) {
 			xd |= 0x80000000
 		}
 		binary.Write(b, binary.LittleEndian, xd)
-		if p.BanReason != "" {
+		if p.Banned != 0 && p.BanReason != "" {
 			b.Write([]byte{0x01, byte(len(p.BanReason))})
 			b.Write([]byte(p.BanReason))
 		}
