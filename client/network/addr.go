@@ -153,12 +153,12 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				now := uint32(time.Now().Unix())
 				if a.Time > now {
 					if a.Time-now >= 3600 { // It more than 1 hour in the future, reject it
+						common.CountSafe("AddrFuture")
 						if c.Misbehave("AdrFuture", 50) {
 							break
 						}
 					}
 					a.Time = now
-					common.CountSafe("AddrFuture")
 				}
 				k := qdb.KeyType(a.UniqID())
 				v := peersdb.PeerDB.Get(k)
