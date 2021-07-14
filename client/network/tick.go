@@ -552,7 +552,7 @@ func NetworkTick() {
 			new_cnt = len(adrs)
 		}
 		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), func(ad *peersdb.PeerAddr) bool {
-			return ad.SeenAlive // ignore those that have been seen alive
+			return ad.Banned != 0 || ad.SeenAlive // ignore those that have been seen alive
 		})
 		adrs = append(adrs, adrs2...)
 		if len(adrs) != 0 {
