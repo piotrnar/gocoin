@@ -54,7 +54,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 	if len(pl) >= 80 /*Up to, includiong, the nonce */ {
 		if bytes.Equal(pl[72:80], nonce[:]) {
 			common.CountSafe("VerNonceUs")
-			return errors.New("Connecting to ourselves")
+			return errors.New("OurNonce")
 		}
 
 		// check if we don't have this nonce yet
@@ -71,7 +71,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 					"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)*/
 					v.Mutex.Unlock()
 					common.CountSafe("VerNonceSame")
-					return errors.New("Peer already connected")
+					return errors.New("SameNonce")
 				}
 			}
 		}
@@ -81,7 +81,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Node.Version = binary.LittleEndian.Uint32(pl[0:4])
 		if c.Node.Version < MIN_PROTO_VERSION {
 			c.Mutex.Unlock()
-			return errors.New("Client version too low")
+			return errors.New("TooLow")
 		}
 
 		copy(c.Node.Nonce[:], pl[72:80])
@@ -100,8 +100,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			le, of := btc.VLen(pl[80:])
 			if of == 0 || len(pl) < 80+le {
 				c.Mutex.Unlock()
-				c.DoS("VerErr")
-				return errors.New("version message corrupt")
+				return errors.New("MsgCorrupt")
 			}
 			of += 80
 			c.Node.Agent = string(pl[of : of+le])
@@ -176,7 +175,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		}
 
 	} else {
-		return errors.New("version message too short")
+		return errors.New("TooShort")
 	}
 	c.SendRawMsg("verack", []byte{})
 	return nil
