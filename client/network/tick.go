@@ -286,9 +286,10 @@ func tcp_server() {
 			if e == nil && common.IsListenTCP() {
 				var terminate bool
 
-				// set port to default, for incmming connections
+				// set port to default, for incomming connections
 				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
 				if e == nil {
+					//println("incomming connection from", ad.Ip(), tc.RemoteAddr().String())
 					// Hammering protection
 					HammeringMutex.Lock()
 					if rd := RecentlyDisconencted[ad.NetAddr.Ip4]; rd != nil {

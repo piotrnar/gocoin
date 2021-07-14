@@ -14,6 +14,8 @@ type OnePeer struct {
 	Banned    uint32 // time when this address baned or zero if never
 	SeenAlive bool
 	BanReason string
+	key_set   bool
+	key_val   uint64
 }
 
 var crctab = crc64.MakeTable(crc64.ISO)
@@ -89,9 +91,13 @@ func (p *OnePeer) Bytes() (res []byte) {
 }
 
 func (p *OnePeer) UniqID() uint64 {
-	h := crc64.New(crctab)
-	h.Write(p.Ip6[:])
-	h.Write(p.Ip4[:])
-	h.Write([]byte{byte(p.Port >> 8), byte(p.Port)})
-	return h.Sum64()
+	if !p.key_set {
+		h := crc64.New(crctab)
+		h.Write(p.Ip6[:])
+		h.Write(p.Ip4[:])
+		h.Write([]byte{byte(p.Port >> 8), byte(p.Port)})
+		p.key_set = true
+		p.key_val = h.Sum64()
+	}
+	return p.key_val
 }
