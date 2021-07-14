@@ -71,7 +71,7 @@ func (p *OnePeer) Bytes() (res []byte) {
 	binary.Write(b, binary.LittleEndian, p.Services)
 	b.Write(p.Ip6[:])
 	b.Write(p.Ip4[:])
-	binary.Write(b, binary.LittleEndian, p.Port)
+	binary.Write(b, binary.BigEndian, p.Port)
 	if p.Banned != 0 || p.SeenAlive {
 		xd := p.Banned >> 1
 		if p.SeenAlive {
