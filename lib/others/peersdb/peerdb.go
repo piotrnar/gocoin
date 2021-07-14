@@ -19,7 +19,8 @@ import (
 
 const (
 	ExpirePeerAfter = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
-	MinPeersInDB    = 512              // Do not expire peers if we have less than this
+	MinPeersInDB    = 4096             // Do not expire peers if we have less than this
+	MaxPeersInDB    = (1024 + 256) * 64
 )
 
 var (
@@ -99,6 +100,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 				_p := NewPeer(dbp)
 				p.Time = _p.Time
 				p.Banned = _p.Banned
+				p.SeenAlive = _p.SeenAlive
 			}
 			p.Save()
 		} else {
@@ -167,14 +169,19 @@ func (p *PeerAddr) Ban() {
 func (p *PeerAddr) Alive() {
 	now := time.Now().Unix()
 	p.Time = uint32(now)
-	if now-p.lastAliveSaved >= 60 {
+	if !p.SeenAlive || now-p.lastAliveSaved >= 60 {
+		p.SeenAlive = true
 		p.lastAliveSaved = now
 		p.Save()
 	}
 }
 
 func (p *PeerAddr) Dead() {
-	p.Time = uint32(time.Now().Unix() - 15*60) // make it 15 minutes old
+	if !p.SeenAlive && p.Banned == 0 && PeerDB.Count() > MinPeersInDB {
+		PeerDB.Del(qdb.KeyType(p.UniqID()))
+		return
+	}
+	p.Time = uint32(time.Now().Unix() - 5*60) // make it last alive 5 minutes ago
 	p.Save()
 }
 
@@ -183,14 +190,25 @@ func (p *PeerAddr) Ip() string {
 }
 
 func (p *PeerAddr) String() (s string) {
-	s = fmt.Sprintf("%21s  srv:%16x", p.Ip(), p.Services)
+	s = fmt.Sprintf("%21s  ", p.Ip())
+	if p.Services == 0xffffffffffffffff {
+		s += "Srv:ALL"
+	} else {
+		s += fmt.Sprintf("Srv:%3x", p.Services)
+	}
 
 	now := uint32(time.Now().Unix())
-	if p.Banned != 0 {
-		s += fmt.Sprintf("  *BAN %5d sec ago", int(now)-int(p.Time))
+	if p.SeenAlive {
+		s += "  Alive"
 	} else {
-		s += fmt.Sprintf("  Seen %5d sec ago", int(now)-int(p.Time))
+		s += "       "
 	}
+	s += fmt.Sprintf(" %.1f min", float64(int(now)-int(p.Time))/60.0)
+
+	if p.Banned != 0 {
+		s += fmt.Sprintf("  BAN %.2f hrs", float64(int(now)-int(p.Banned))/3600.0)
+	}
+
 	return
 }
 
@@ -208,10 +226,10 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
-// GetBestPeers fetches a given number of best (most recenty seen) peers.
-func GetBestPeers(limit uint, isConnected func(*PeerAddr) bool) (res manyPeers) {
+// GetRecentPeers fetches a given number of best (most recenty seen) peers.
+func GetRecentPeers(limit uint, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
 	if proxyPeer != nil {
-		if isConnected == nil || !isConnected(proxyPeer) {
+		if ignorePeer == nil || !ignorePeer(proxyPeer) {
 			return manyPeers{proxyPeer}
 		}
 		return manyPeers{}
@@ -220,8 +238,8 @@ func GetBestPeers(limit uint, isConnected func(*PeerAddr) bool) (res manyPeers) 
 	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
-		if ad.Banned == 0 && sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
-			if isConnected == nil || !isConnected(ad) {
+		if sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
+			if ignorePeer == nil || !ignorePeer(ad) {
 				tmp = append(tmp, ad)
 			}
 		}
