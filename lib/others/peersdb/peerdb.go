@@ -95,14 +95,10 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 				copy(p.Ip4[:], ipa.IP[12:16])
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
-			p.Time = uint32(time.Now().Unix())
-			// if we already had it, keep the Time and Banned fields
 			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
-				_p := NewPeer(dbp)
-				p.Time = _p.Time
-				p.Banned = _p.Banned
-				p.SeenAlive = _p.SeenAlive
+				p = NewPeer(dbp) // if we already had it, just update the Time field
 			}
+			p.Time = uint32(time.Now().Unix())
 			p.Save()
 		} else {
 			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - unspecified error")
@@ -281,17 +277,17 @@ func initSeeds(seeds []string, port uint16) {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip) == 16 {
 					p := NewEmptyPeer()
-					p.Services = 1
+					p.Services = 0xFFFFFFFFFFFFFFFF
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
 					p.Port = port
-					// if we already had it, keep the Time and Banned fields
 					if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
 						_p := NewPeer(dbp)
-						p.Time = _p.Time
-						p.Banned = _p.Banned
+						_p.Time = p.Time
+						_p.Save() // if we already had it, only update the time field
+					} else {
+						p.Save()
 					}
-					p.Save()
 				}
 			}
 		} else {

@@ -164,11 +164,10 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				v := peersdb.PeerDB.Get(k)
 				if v != nil {
 					op := peersdb.NewPeer(v[:])
-					a.Banned = op.Banned
-					a.SeenAlive = op.SeenAlive
-					if op.Time > a.Time {
-						a.Time = op.Time // oin time in out db is later, keep it
+					if a.Time > op.Time {
+						op.Time = a.Time
 					}
+					a = op
 					common.CountSafe("AddrOld")
 				} else {
 					common.CountSafe("AddrNew")
