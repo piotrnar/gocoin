@@ -236,34 +236,38 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
-// GetRecentPeers fetches a given number of best (most recenty seen) peers.
 func GetRecentPeers(limit uint, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
+	return GetRecentPeersExt(limit, true, ignorePeer)
+}
+
+// GetRecentPeersExt fetches a given number of best (most recenty seen) peers.
+func GetRecentPeersExt(limit uint, sort_result bool, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
 	if proxyPeer != nil {
 		if ignorePeer == nil || !ignorePeer(proxyPeer) {
 			return manyPeers{proxyPeer}
 		}
 		return manyPeers{}
 	}
+	res = make(manyPeers, 0)
 	peerdb_mutex.Lock()
-	tmp := make(manyPeers, 0)
 	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		ad := NewPeer(v)
 		if sys.ValidIp4(ad.Ip4[:]) && !sys.IsIPBlocked(ad.Ip4[:]) {
 			if ignorePeer == nil || !ignorePeer(ad) {
-				tmp = append(tmp, ad)
+				res = append(res, ad)
+				if !sort_result && len(res) >= int(limit) {
+					return qdb.BR_ABORT
+				}
 			}
 		}
 		return 0
 	})
 	peerdb_mutex.Unlock()
-	// Copy the top rows to the result buffer
-	if len(tmp) > 0 {
-		sort.Sort(tmp)
-		if uint(len(tmp)) < limit {
-			limit = uint(len(tmp))
+	if sort_result && len(res) > 0 {
+		sort.Sort(res)
+		if int(limit) < len(res) {
+			res = res[:int(limit)]
 		}
-		res = make(manyPeers, limit)
-		copy(res, tmp[:limit])
 	}
 	return
 }
