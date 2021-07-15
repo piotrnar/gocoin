@@ -1,8 +1,11 @@
 package peersdb
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc64"
 	"net"
 	"os"
 	"runtime"
@@ -12,9 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/others/utils"
 )
 
 const (
@@ -26,6 +29,21 @@ const (
 	ExpirePeersPeriod     = (5 * time.Minute)
 )
 
+/*
+Serialized peer record (all values are LSB unless specified otherwise):
+ [0:4] - Unix timestamp of when last the peer was seen
+ [4:12] - Services
+ [12:24] - IPv6 (network order)
+ [24:28] - IPv4 (network order)
+ [28:30] - TCP port (big endian)
+ [30:34] - OPTIONAL:
+ 	highest bit: set to 1 of peer has been seen "alive"
+	low 31 bits: if present, unix timestamp of when the peer was banned divided by 2
+ [35] - OPTIONAL flags
+    bit(0) - Indicates BanReadon present (byte_len followed by the string)
+	bits(1-7) - reserved
+*/
+
 var (
 	PeerDB       *qdb.DB
 	proxyPeer    *PeerAddr // when this is not nil we should only connect to this single node
@@ -34,10 +52,18 @@ var (
 	Testnet     bool
 	ConnectOnly string
 	Services    uint64 = 1
+
+	crctab = crc64.MakeTable(crc64.ISO)
 )
 
 type PeerAddr struct {
-	*utils.OnePeer
+	btc.NetAddr
+	Time      uint32 // When seen last time
+	Banned    uint32 // time when this address baned or zero if never
+	SeenAlive bool
+	BanReason string
+	key_set   bool
+	key_val   uint64
 
 	// The fields below don't get saved, but are used internaly
 	Manual bool // Manually connected (from UI)
@@ -54,17 +80,71 @@ func DefaultTcpPort() uint16 {
 	}
 }
 
-func NewEmptyPeer() (p *PeerAddr) {
+func NewPeer(v []byte) (p *PeerAddr) {
 	p = new(PeerAddr)
-	p.OnePeer = new(utils.OnePeer)
-	p.Time = uint32(time.Now().Unix() - 600) // Create empty peers with the time 10 minutes in the past
+	if v == nil || len(v) < 30 {
+		p.Time = uint32(time.Now().Unix())
+		return
+	}
+	p.Time = binary.LittleEndian.Uint32(v[0:4])
+	p.Services = binary.LittleEndian.Uint64(v[4:12])
+	copy(p.Ip6[:], v[12:24])
+	copy(p.Ip4[:], v[24:28])
+	p.Port = binary.BigEndian.Uint16(v[28:30])
+	if len(v) >= 34 {
+		xd := binary.LittleEndian.Uint32(v[30:34])
+		p.SeenAlive = (xd & 0x80000000) != 0
+		p.Banned = (xd & 0x7fffffff) << 1
+		if !p.SeenAlive && p.Banned > 1893452400 /*Year 2030*/ {
+			// Convert from the old DB - TODO: remove it at some point (now is 14th of July 2021)
+			p.Banned >>= 1
+		}
+		if len(v) >= 35 {
+			extra_fields := v[34]
+			if (extra_fields&0x01) != 0 && len(v) >= 37 {
+				slen := int(v[35])
+				if len(v) >= 36+slen {
+					p.BanReason = string(v[36 : 36+slen])
+				}
+			}
+		}
+	}
 	return
 }
 
-func NewPeer(v []byte) (p *PeerAddr) {
-	p = new(PeerAddr)
-	p.OnePeer = utils.NewPeer(v)
+func (p *PeerAddr) Bytes() (res []byte) {
+	b := new(bytes.Buffer)
+	binary.Write(b, binary.LittleEndian, p.Time)
+	binary.Write(b, binary.LittleEndian, p.Services)
+	b.Write(p.Ip6[:])
+	b.Write(p.Ip4[:])
+	binary.Write(b, binary.BigEndian, p.Port)
+	if p.Banned != 0 || p.SeenAlive {
+		xd := p.Banned >> 1
+		if p.SeenAlive {
+			xd |= 0x80000000
+		}
+		binary.Write(b, binary.LittleEndian, xd)
+		if p.Banned != 0 && p.BanReason != "" {
+			b.Write([]byte{0x01, byte(len(p.BanReason))})
+			b.Write([]byte(p.BanReason))
+		}
+
+	}
+	res = b.Bytes()
 	return
+}
+
+func (p *PeerAddr) UniqID() uint64 {
+	if !p.key_set {
+		h := crc64.New(crctab)
+		h.Write(p.Ip6[:])
+		h.Write(p.Ip4[:])
+		h.Write([]byte{byte(p.Port >> 8), byte(p.Port)})
+		p.key_set = true
+		p.key_val = h.Sum64()
+	}
+	return p.key_val
 }
 
 func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
@@ -88,7 +168,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	ipa, er := net.ResolveIPAddr("ip", ipstr)
 	if er == nil {
 		if ipa != nil {
-			p = NewEmptyPeer()
+			p = NewPeer(nil)
 			p.Services = Services
 			p.Port = port
 			if len(ipa.IP) == 4 {
@@ -305,7 +385,7 @@ func initSeeds(seeds []string, port uint16) {
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
 				if ip != nil && len(ip) == 16 {
-					p := NewEmptyPeer()
+					p := NewPeer(nil)
 					p.Services = 0xFFFFFFFFFFFFFFFF
 					copy(p.Ip6[:], ip[:12])
 					copy(p.Ip4[:], ip[12:16])
@@ -339,7 +419,7 @@ func InitPeers(dir string) {
 			println(e.Error(), ConnectOnly)
 			os.Exit(1)
 		}
-		proxyPeer = NewEmptyPeer()
+		proxyPeer = NewPeer(nil)
 		proxyPeer.Services = Services
 		copy(proxyPeer.Ip4[:], oa.IP[12:16])
 		proxyPeer.Port = uint16(oa.Port)
