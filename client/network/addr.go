@@ -131,10 +131,6 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
-	if peersdb.PeerDB.Count() > peersdb.MaxPeersInDB {
-		common.CountSafe("AddrMsgIgnore")
-		return
-	}
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -149,33 +145,29 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		if !sys.ValidIp4(a.Ip4[:]) {
 			common.CountSafe("AddrIPinv")
 		} else {
-			if time.Now().Before(time.Unix(int64(a.Time), 0).Add(peersdb.ExpirePeerAfter)) {
-				now := uint32(time.Now().Unix())
-				if a.Time > now {
-					if a.Time-now >= 3600 { // It more than 1 hour in the future, reject it
-						common.CountSafe("AddrFuture")
-						if c.Misbehave("AdrFuture", 50) {
-							break
-						}
+			now := uint32(time.Now().Unix())
+			if a.Time > now {
+				if a.Time-now >= 3600 { // It more than 1 hour in the future, reject it
+					common.CountSafe("AddrFuture")
+					if c.Misbehave("AdrFuture", 50) {
+						break
 					}
-					a.Time = now
 				}
-				k := qdb.KeyType(a.UniqID())
-				v := peersdb.PeerDB.Get(k)
-				if v != nil {
-					op := peersdb.NewPeer(v[:])
-					if a.Time > op.Time {
-						op.Time = a.Time
-					}
-					a = op
-					common.CountSafe("AddrOld")
-				} else {
-					common.CountSafe("AddrNew")
-				}
-				peersdb.PeerDB.Put(k, a.Bytes())
-			} else {
-				common.CountSafe("AddrStale")
+				a.Time = now
 			}
+			k := qdb.KeyType(a.UniqID())
+			v := peersdb.PeerDB.Get(k)
+			if v != nil {
+				op := peersdb.NewPeer(v[:])
+				if a.Time > op.Time {
+					op.Time = a.Time
+				}
+				a = op
+				common.CountSafe("AddrOld")
+			} else {
+				common.CountSafe("AddrNew")
+			}
+			peersdb.PeerDB.Put(k, a.Bytes())
 		}
 	}
 }

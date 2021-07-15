@@ -1,7 +1,6 @@
 package peersdb
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -19,9 +18,10 @@ import (
 )
 
 const (
-	ExpirePeerAfter = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
-	MinPeersInDB    = 4096             // Do not expire peers if we have less than this
-	MaxPeersInDB    = (1024 + 256) * 64
+	ExpireAlivePeerAfter  = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
+	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
+	MaxPeersInDB          = 65536 // 64k records
 )
 
 var (
@@ -132,25 +132,66 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 
 func ExpirePeers() {
 	peerdb_mutex.Lock()
-	var delcnt uint32
-	now := time.Now()
-	todel := make([]qdb.KeyType, PeerDB.Count())
-	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
-		ptim := binary.LittleEndian.Uint32(v[0:4])
-		if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) || ptim > uint32(now.Unix()+3600) {
-			todel[delcnt] = k // we cannot call Del() from here
-			delcnt++
-		}
-		return 0
-	})
-	if delcnt > 0 {
-		for delcnt > 0 && PeerDB.Count() > MinPeersInDB {
-			delcnt--
-			PeerDB.Del(todel[delcnt])
+
+	// if DB is full, remove the oldest records
+	if PeerDB.Count() > MaxPeersInDB {
+		expire_alive_before_time := uint32(time.Now().Add(-ExpireAlivePeerAfter).Unix())
+		expire_banned_before_time := uint32(time.Now().Add(-ExpireBannedPeerAfter).Unix())
+		recs := make(manyPeers, PeerDB.Count())
+		var i, c1, c2, c3 int
+		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+			recs[i] = NewPeer(v)
+			return 0
+		})
+		sort.Sort(recs)
+		for i = len(recs) - 1; i > MinPeersInDB; i-- {
+			var delit bool
+			rec := recs[i]
+			if !rec.SeenAlive {
+				delit = true
+				c1++
+			} else if rec.Time < expire_alive_before_time {
+				if rec.Banned == 0 {
+					delit = true
+					c2++
+				} else if rec.Banned < expire_banned_before_time {
+					delit = true
+					c3++
+				}
+			}
+			if delit {
+				PeerDB.Del(qdb.KeyType(rec.UniqID()))
+				if PeerDB.Count() < MaxPeersInDB {
+					break
+				}
+			}
 		}
 		PeerDB.Defrag(false)
+		peerdb_mutex.Unlock()
+		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ", c3, "banned. Left: ", PeerDB.Count())
+		return
 	}
-	peerdb_mutex.Unlock()
+	/*
+		var delcnt uint32
+		now := time.Now()
+		todel := make([]qdb.KeyType, PeerDB.Count())
+		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+			ptim := binary.LittleEndian.Uint32(v[0:4])
+			if now.After(time.Unix(int64(ptim), 0).Add(ExpirePeerAfter)) || ptim > uint32(now.Unix()+3600) {
+				todel[delcnt] = k // we cannot call Del() from here
+				delcnt++
+			}
+			return 0
+		})
+		if delcnt > 0 {
+			for delcnt > 0 && PeerDB.Count() > MinPeersInDB {
+				delcnt--
+				PeerDB.Del(todel[delcnt])
+			}
+			PeerDB.Defrag(false)
+		}
+		peerdb_mutex.Unlock()
+	*/
 }
 
 func (p *PeerAddr) Save() {
