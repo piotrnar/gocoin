@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -213,6 +214,7 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 }
 
 func ExpirePeers() {
+	common.CountSafe("PeersExpireNeeded")
 	peerdb_mutex.Lock()
 	defer peerdb_mutex.Unlock()
 	if PeerDB.Count() > MaxPeersInDB {
@@ -220,8 +222,7 @@ func ExpirePeers() {
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
 		recs := make(manyPeers, PeerDB.Count())
-		var i, c1, c2, c3 int
-		var last_ts uint32
+		var i, c_dead, c_seen_alive, c_banned int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			recs[i] = NewPeer(v)
 			i++
@@ -231,17 +232,16 @@ func ExpirePeers() {
 		for i = len(recs) - 1; i > MinPeersInDB; i-- {
 			var delit bool
 			rec := recs[i]
-			last_ts = rec.Time
 			if !rec.SeenAlive {
 				delit = true
-				c1++
+				c_dead++
 			} else if rec.Time < expire_alive_before_time {
 				if rec.Banned == 0 {
 					delit = true
-					c2++
+					c_seen_alive++
 				} else if rec.Banned < expire_banned_before_time {
 					delit = true
-					c3++
+					c_banned++
 				}
 			}
 			if delit {
@@ -251,12 +251,14 @@ func ExpirePeers() {
 				}
 			}
 		}
+		common.CounterMutex.Lock()
+		common.Counter["PeersExpiredDead"] += uint64(c_dead)
+		common.Counter["PeersExpiredAlive"] += uint64(c_seen_alive)
+		common.Counter["PeersExpiredBanned"] += uint64(c_banned)
+		common.CounterMutex.Unlock()
 		PeerDB.Defrag(false)
-		fmt.Print("ExpirePeers deleted ", c1, "+", c2, "+", c3, ".")
-		fmt.Printf("  Left:%d / %.2f hrs ago  - took %s\n> ", PeerDB.Count(),
-			float64(now.Unix()-int64(last_ts))/3600.0, time.Now().Sub(now).String())
 	} else {
-		fmt.Print("ExpirePeers - not needed with ", PeerDB.Count(), " peers in DB\n> ")
+		common.CountSafe("PeersExpireNada")
 	}
 }
 
