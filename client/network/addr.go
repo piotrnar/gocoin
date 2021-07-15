@@ -159,8 +159,8 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			v := peersdb.PeerDB.Get(k)
 			if v != nil {
 				op := peersdb.NewPeer(v[:])
-				if a.Time > op.Time {
-					op.Time = a.Time
+				if !op.SeenAlive && a.Time > op.Time {
+					op.Time = a.Time // only update the time is peer not seen alive
 				}
 				a = op
 				common.CountSafe("AddrOld")

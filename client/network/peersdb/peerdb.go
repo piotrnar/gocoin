@@ -244,7 +244,7 @@ func ExpirePeers() {
 			}
 			if delit {
 				PeerDB.Del(qdb.KeyType(rec.UniqID()))
-				if PeerDB.Count() < MaxPeersInDB-MaxPeersDeviation {
+				if PeerDB.Count() <= MaxPeersInDB-MaxPeersDeviation {
 					break
 				}
 			}
