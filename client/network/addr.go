@@ -131,6 +131,7 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
+	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken uint64
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -143,12 +144,12 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		}
 		a := peersdb.NewPeer(buf[:])
 		if !sys.ValidIp4(a.Ip4[:]) {
-			common.CountSafe("AddrIPinv")
+			c_ip_invalid++
 		} else {
 			now := uint32(time.Now().Unix())
 			if a.Time > now {
 				if a.Time-now >= 3600 { // It more than 1 hour in the future, reject it
-					common.CountSafe("AddrFuture")
+					c_future++
 					if c.Misbehave("AdrFuture", 50) {
 						break
 					}
@@ -163,15 +164,32 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 					op.Time = a.Time // only update the time is peer not seen alive
 				}
 				a = op
-				common.CountSafe("AddrOld")
+				c_old++
 			} else {
 				if peersdb.PeerDB.Count() >= peersdb.MaxPeersInDB+peersdb.MaxPeersDeviation {
-					common.CountSafe("AddrNewSkept")
+					c_new_rejected++
 					continue
 				}
-				common.CountSafe("AddrNewTaken")
+				c_new_taken++
 			}
 			peersdb.PeerDB.Put(k, a.Bytes())
 		}
 	}
+	common.CounterMutex.Lock()
+	if c_ip_invalid > 0 {
+		common.Counter["AddrIPinv"] += c_ip_invalid
+	}
+	if c_future > 0 {
+		common.Counter["AddrFuture"] += c_future
+	}
+	if c_old > 0 {
+		common.Counter["AddrOld"] += c_old
+	}
+	if c_new_taken > 0 {
+		common.Counter["AddrNewTaken"] += c_new_taken
+	}
+	if c_new_rejected > 0 {
+		common.Counter["AddrNewSkept"] += c_new_rejected
+	}
+	common.CounterMutex.Unlock()
 }
