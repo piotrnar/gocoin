@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network/peersdb"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
 )
 
 var (

@@ -3,16 +3,16 @@ package textui
 import (
 	"fmt"
 	"sort"
-	"time"
 	"strconv"
-	"github.com/piotrnar/gocoin/client/network"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/peersdb"
 )
 
-
-type SortedKeys [] struct {
-	Key uint64
+type SortedKeys []struct {
+	Key    uint64
 	ConnID uint32
 }
 
@@ -21,13 +21,12 @@ func (sk SortedKeys) Len() int {
 }
 
 func (sk SortedKeys) Less(a, b int) bool {
-	return sk[a].ConnID<sk[b].ConnID
+	return sk[a].ConnID < sk[b].ConnID
 }
 
 func (sk SortedKeys) Swap(a, b int) {
 	sk[a], sk[b] = sk[b], sk[a]
 }
-
 
 func net_drop(par string) {
 	conid, e := strconv.ParseUint(par, 10, 32)
@@ -37,7 +36,6 @@ func net_drop(par string) {
 	}
 	network.DropPeer(uint32(conid))
 }
-
 
 func node_info(par string) {
 	conid, e := strconv.ParseUint(par, 10, 32)
@@ -50,7 +48,7 @@ func node_info(par string) {
 	network.Mutex_net.Lock()
 
 	for _, v := range network.OpenCons {
-		if uint32(conid)==v.ConnID {
+		if uint32(conid) == v.ConnID {
 			r = new(network.ConnInfo)
 			v.GetStats(r)
 			break
@@ -70,7 +68,7 @@ func node_info(par string) {
 	}
 	if !r.ConnectedAt.IsZero() {
 		fmt.Println("Connected at", r.ConnectedAt.Format("2006-01-02 15:04:05"))
-		if r.Version!=0 {
+		if r.Version != 0 {
 			fmt.Println("Node Version:", r.Version, "/ Services:", fmt.Sprintf("0x%x", r.Services))
 			fmt.Println("User Agent:", r.Agent)
 			fmt.Println("Chain Height:", r.Height)
@@ -97,7 +95,6 @@ func node_info(par string) {
 	}
 }
 
-
 func net_conn(par string) {
 	ad, er := peersdb.NewAddrFromString(par, false)
 	if er != nil {
@@ -109,12 +106,11 @@ func net_conn(par string) {
 	network.DoNetwork(ad)
 }
 
-
 func net_stats(par string) {
-	if par=="bw" {
+	if par == "bw" {
 		common.PrintBWStats()
 		return
-	} else if par!="" {
+	} else if par != "" {
 		node_info(par)
 		return
 	}
@@ -144,14 +140,14 @@ func net_stats(par string) {
 		fmt.Printf("%9s %9s", common.BytesToString(v.X.Counters["BytesReceived"]), common.BytesToString(v.X.Counters["BytesSent"]))
 		fmt.Print("  ", v.Node.Agent)
 
-		if b2s:=v.BytesToSent(); b2s>0 {
+		if b2s := v.BytesToSent(); b2s > 0 {
 			fmt.Print("  ", b2s)
 		}
 		v.Mutex.Unlock()
 		fmt.Println()
 	}
 
-	if network.ExternalAddrLen()>0 {
+	if network.ExternalAddrLen() > 0 {
 		fmt.Print("External addresses:")
 		network.ExternalIpMutex.Lock()
 		for ip, cnt := range network.ExternalIp4 {
@@ -169,7 +165,6 @@ func net_stats(par string) {
 
 	common.PrintBWStats()
 }
-
 
 func net_rd(par string) {
 	network.HammeringMutex.Lock()
@@ -190,7 +185,6 @@ func net_rd(par string) {
 	fmt.Println("Baned if", network.HammeringMaxAllowedCount+1, "conections (within", network.HammeringMinReconnect,
 		"...", network.HammeringMinReconnect+network.HammeringExpirePeriod, "in between)")
 }
-
 
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")

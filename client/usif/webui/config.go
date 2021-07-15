@@ -3,17 +3,18 @@ package webui
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin/client/wallet"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/peersdb"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/usif"
+	"github.com/piotrnar/gocoin/client/wallet"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 func p_cfg(w http.ResponseWriter, r *http.Request) {
