@@ -119,7 +119,6 @@ Resolution:
 	<th colspan="3">Node Version
 	<th width="60" colspan="2" title="Received / In Progress">Blks
 	<th >Txs
-	<th >Adrs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
 	<th class="r"><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
@@ -559,11 +558,7 @@ function refreshconnections(force) {
 				td.style.textAlign = 'right'
 				td.noWrap = true
 				if (cs[i].TxsReceived!=0) td.innerText = cs[i].TxsReceived + ( cs[i].GetMPInProgress ? '..' : '' )
-				
-				td = row.insertCell(-1)
-				td.style.textAlign = 'right'
-				td.noWrap = true
-				td.innerText = cs[i].NewAddrsRcvd
+				//td.innerText = cs[i].NewAddrsRcvd
 
 				td = row.insertCell(-1)
 				td.className = "dbg"
