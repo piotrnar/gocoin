@@ -135,12 +135,14 @@ func ExpirePeers() {
 
 	// if DB is full, remove the oldest records
 	if PeerDB.Count() > MaxPeersInDB {
-		expire_alive_before_time := uint32(time.Now().Add(-ExpireAlivePeerAfter).Unix())
-		expire_banned_before_time := uint32(time.Now().Add(-ExpireBannedPeerAfter).Unix())
+		now := time.Now()
+		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
+		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
 		recs := make(manyPeers, PeerDB.Count())
 		var i, c1, c2, c3 int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			recs[i] = NewPeer(v)
+			i++
 			return 0
 		})
 		sort.Sort(recs)
@@ -168,8 +170,8 @@ func ExpirePeers() {
 		}
 		PeerDB.Defrag(false)
 		peerdb_mutex.Unlock()
-		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ",
-			c3, "banned. Left ", PeerDB.Count(), "\n> ")
+		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ", c3,
+			"banned. Left ", PeerDB.Count(), ". Time:", time.Now().Sub(now).String(), "\n> ")
 		return
 	}
 	/*
@@ -191,8 +193,8 @@ func ExpirePeers() {
 			}
 			PeerDB.Defrag(false)
 		}
-		peerdb_mutex.Unlock()
 	*/
+	peerdb_mutex.Unlock()
 }
 
 func (p *PeerAddr) Save() {
