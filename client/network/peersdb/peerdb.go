@@ -23,8 +23,8 @@ import (
 const (
 	ExpireAlivePeerAfter  = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
-	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
-	MaxPeersInDB          = 65536 // 64k records
+	MinPeersInDB          = 5000
+	MaxPeersInDB          = 70000
 	MaxPeersDeviation     = 2500
 	ExpirePeersPeriod     = (5 * time.Minute)
 )
