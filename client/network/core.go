@@ -139,6 +139,7 @@ type ConnectionStatus struct {
 	BlocksExpired uint64
 
 	NewAddrsRcvd uint64
+	AddrMsgsRcvd uint64
 }
 
 type ConnInfo struct {

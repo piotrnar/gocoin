@@ -193,6 +193,11 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	}
 	common.CounterMutex.Unlock()
 	c.Mutex.Lock()
+	c.X.AddrMsgsRcvd++
 	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
 	c.Mutex.Unlock()
+	if c.X.NewAddrsRcvd > 1000 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
+		println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd)
+		c.DoS("AddrFlood")
+	}
 }
