@@ -252,8 +252,8 @@ func ExpirePeers() {
 			}
 		}
 		PeerDB.Defrag(false)
-		fmt.Println("ExpirePeers deleted", c1, "untried, ", c2, "alive and ", c3, "banned")
-		fmt.Printf("  Peers left:%d   Up to:%.2f hrs ago   Took:%s\n> ", PeerDB.Count(),
+		fmt.Print("ExpirePeers deleted ", c1, "+", c2, "+", c3, ".")
+		fmt.Printf("  Left:%d / %.2f hrs ago  - took %s\n> ", PeerDB.Count(),
 			float64(now.Unix()-int64(last_ts))/3600.0, time.Now().Sub(now).String())
 	} else {
 		fmt.Print("ExpirePeers - not needed with ", PeerDB.Count(), " peers in DB\n> ")
