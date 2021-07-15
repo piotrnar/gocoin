@@ -171,7 +171,7 @@ func ExpirePeers() {
 		PeerDB.Defrag(false)
 		peerdb_mutex.Unlock()
 		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ", c3,
-			"banned. Left ", PeerDB.Count(), ". Time:", time.Now().Sub(now).String(), "\n> ")
+			" banned. Left ", PeerDB.Count(), ". Time:", time.Now().Sub(now).String(), "\n> ")
 		return
 	}
 	/*
