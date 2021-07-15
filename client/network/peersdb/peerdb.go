@@ -25,7 +25,7 @@ const (
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
 	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
 	MaxPeersInDB          = 65536 // 64k records
-	MaxPeersDeviation     = 4000
+	MaxPeersDeviation     = 2500
 	ExpirePeersPeriod     = (5 * time.Minute)
 )
 
@@ -221,6 +221,7 @@ func ExpirePeers() {
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
 		recs := make(manyPeers, PeerDB.Count())
 		var i, c1, c2, c3 int
+		var last_ts uint32
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			recs[i] = NewPeer(v)
 			i++
@@ -230,6 +231,7 @@ func ExpirePeers() {
 		for i = len(recs) - 1; i > MinPeersInDB; i-- {
 			var delit bool
 			rec := recs[i]
+			last_ts = rec.Time
 			if !rec.SeenAlive {
 				delit = true
 				c1++
@@ -250,8 +252,9 @@ func ExpirePeers() {
 			}
 		}
 		PeerDB.Defrag(false)
-		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ", c3,
-			" banned. Left ", PeerDB.Count(), ". Time:", time.Now().Sub(now).String(), "\n> ")
+		fmt.Println("ExpirePeers deleted", c1, "untried, ", c2, "alive and ", c3, "banned")
+		fmt.Printf("  Peers left:%d   Up to:%.2f hrs ago   Took:%s\n> ", PeerDB.Count(),
+			float64(now.Unix()-int64(last_ts))/3600.0, time.Now().Sub(now).String())
 	} else {
 		fmt.Print("ExpirePeers - not needed with ", PeerDB.Count(), " peers in DB\n> ")
 	}
