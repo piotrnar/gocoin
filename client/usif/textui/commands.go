@@ -670,6 +670,10 @@ func redo_block(par string) {
 		OneReceivedBlock: rb, BlockExtraInfo: nil}
 }
 
+func kill_node(par string) {
+	os.Exit(1)
+}
+
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
@@ -697,4 +701,5 @@ func init() {
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 	newUi("undo", true, undo_block, "Undo last block")
 	newUi("redo", true, redo_block, "Redo last block")
+	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 }
