@@ -192,4 +192,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 		common.Counter["AddrNewSkept"] += c_new_rejected
 	}
 	common.CounterMutex.Unlock()
+	c.Mutex.Lock()
+	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
+	c.Mutex.Unlock()
 }

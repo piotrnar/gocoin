@@ -137,6 +137,8 @@ type ConnectionStatus struct {
 
 	PingSentCnt   uint64
 	BlocksExpired uint64
+
+	NewAddrsRcvd uint64
 }
 
 type ConnInfo struct {
