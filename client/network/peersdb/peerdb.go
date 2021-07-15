@@ -214,10 +214,10 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 }
 
 func ExpirePeers() {
-	common.CountSafe("PeersExpireNeeded")
 	peerdb_mutex.Lock()
 	defer peerdb_mutex.Unlock()
 	if PeerDB.Count() > MaxPeersInDB {
+		common.CountSafe("PeersExpireNeeded")
 		now := time.Now()
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
@@ -258,7 +258,7 @@ func ExpirePeers() {
 		common.CounterMutex.Unlock()
 		PeerDB.Defrag(false)
 	} else {
-		common.CountSafe("PeersExpireNada")
+		common.CountSafe("PeersExpireNone")
 	}
 }
 
