@@ -1,7 +1,10 @@
 package peersdb
 
 import (
+	"os"
 	"testing"
+
+	"github.com/piotrnar/gocoin/lib/others/qdb"
 )
 
 func test_one_addr(t *testing.T, host string, ip [4]byte, port uint16) {
@@ -62,15 +65,16 @@ func test_one_addr(t *testing.T, host string, ip [4]byte, port uint16) {
 }
 
 func TestNewAddrFromString(t *testing.T) {
+	PeerDB, _ = qdb.NewDB("tmpdir", true)
 
 	// mainnet
 	Testnet = false
-	test_one_addr(t, "ssdn.gocoin.pl", [4]byte{172, 93, 52, 164}, 8333)
+	test_one_addr(t, "slask.gocoin.pl", [4]byte{178, 19, 104, 218}, 8333)
 	test_one_addr(t, "1.2.3.4", [4]byte{1, 2, 3, 4}, 8333)
 
 	// Testnet
 	Testnet = true
-	test_one_addr(t, "ssdn.gocoin.pl", [4]byte{172, 93, 52, 164}, 18333)
+	test_one_addr(t, "kaja.gocoin.pl", [4]byte{195, 136, 152, 164}, 18333)
 	test_one_addr(t, "255.254.253.252", [4]byte{255, 254, 253, 252}, 18333)
 
 	var e error
@@ -83,4 +87,6 @@ func TestNewAddrFromString(t *testing.T) {
 	if e == nil {
 		println("error expected")
 	}
+	PeerDB.Close()
+	os.RemoveAll("tmpdir")
 }
