@@ -25,7 +25,7 @@ const (
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
 	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
 	MaxPeersInDB          = 65536 // 64k records
-	MaxPeersDeviation     = 2500
+	MaxPeersDeviation     = 4000
 	ExpirePeersPeriod     = (5 * time.Minute)
 )
 
@@ -214,7 +214,7 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 
 func ExpirePeers() {
 	peerdb_mutex.Lock()
-	// if DB is full, remove the oldest records
+	defer peerdb_mutex.Unlock()
 	if PeerDB.Count() > MaxPeersInDB {
 		now := time.Now()
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
@@ -250,12 +250,11 @@ func ExpirePeers() {
 			}
 		}
 		PeerDB.Defrag(false)
-		peerdb_mutex.Unlock()
 		fmt.Print("ExpirePeers deleted ", c1, " untried, ", c2, " alive and ", c3,
 			" banned. Left ", PeerDB.Count(), ". Time:", time.Now().Sub(now).String(), "\n> ")
-		return
+	} else {
+		fmt.Print("ExpirePeers - not needed with ", PeerDB.Count(), " peers in DB\n> ")
 	}
-	peerdb_mutex.Unlock()
 }
 
 func (p *PeerAddr) Save() {
@@ -341,12 +340,8 @@ func (mp manyPeers) Swap(i, j int) {
 	mp[i], mp[j] = mp[j], mp[i]
 }
 
-func GetRecentPeers(limit uint, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
-	return GetRecentPeersExt(limit, true, ignorePeer)
-}
-
 // GetRecentPeersExt fetches a given number of best (most recenty seen) peers.
-func GetRecentPeersExt(limit uint, sort_result bool, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
+func GetRecentPeers(limit uint, sort_result bool, ignorePeer func(*PeerAddr) bool) (res manyPeers) {
 	if proxyPeer != nil {
 		if ignorePeer == nil || !ignorePeer(proxyPeer) {
 			return manyPeers{proxyPeer}

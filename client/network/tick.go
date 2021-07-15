@@ -536,7 +536,7 @@ func NetworkTick() {
 		}
 
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
-		adrs := peersdb.GetRecentPeersExt(128, false, func(ad *peersdb.PeerAddr) bool {
+		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
 			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&SERVICE_SEGWIT) == 0 {
 				return true
 			}
@@ -544,7 +544,7 @@ func NetworkTick() {
 		})
 		if len(adrs) == 0 && segwit_conns < common.CFG.Net.MinSegwitCons {
 			// we have only non-segwit peers in the database - take them
-			adrs = peersdb.GetRecentPeersExt(128, false, func(ad *peersdb.PeerAddr) bool {
+			adrs = peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
 				return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
 			})
 		}
@@ -553,7 +553,7 @@ func NetworkTick() {
 		if len(adrs) > new_cnt {
 			new_cnt = len(adrs)
 		}
-		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), func(ad *peersdb.PeerAddr) bool {
+		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), true, func(ad *peersdb.PeerAddr) bool {
 			return ad.Banned != 0 || ad.SeenAlive // ignore those that have been seen alive
 		})
 		adrs = append(adrs, adrs2...)

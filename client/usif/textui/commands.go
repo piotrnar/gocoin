@@ -472,7 +472,7 @@ func show_addresses(par string) {
 		fmt.Println("Use 'peers save' to save DB now")
 		return
 	}
-	prs := peersdb.GetRecentPeers(uint(limit), func(p *peersdb.PeerAddr) bool {
+	prs := peersdb.GetRecentPeers(uint(limit), true, func(p *peersdb.PeerAddr) bool {
 		if only_alive && !p.SeenAlive {
 			return true
 		}
