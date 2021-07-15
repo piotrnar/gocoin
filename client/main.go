@@ -2,6 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"runtime/debug"
+	"time"
+	"unsafe"
+
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -15,12 +22,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/others/peersdb"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"io/ioutil"
-	"os"
-	"os/signal"
-	"runtime/debug"
-	"time"
-	"unsafe"
 )
 
 var (
@@ -31,7 +32,7 @@ var (
 )
 
 const (
-	SaveBlockChainAfter = 2 * time.Second
+	SaveBlockChainAfter       = 2 * time.Second
 	SaveBlockChainAfterNoSync = 10 * time.Minute
 )
 
@@ -286,7 +287,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 			break
 		}
 
-		if nxt.BlockSize==0 {
+		if nxt.BlockSize == 0 {
 			println("BlockSize is zero - corrupt database")
 			break
 		}
@@ -314,17 +315,17 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 		tdl := time.Now()
 
-		rb := &network.OneReceivedBlock{TmStart:sta, TmPreproc:pre, TmDownload:tdl}
+		rb := &network.OneReceivedBlock{TmStart: sta, TmPreproc: pre, TmDownload: tdl}
 		network.MutexRcv.Lock()
 		network.ReceivedBlocks[bl.Hash.BIdx()] = rb
 		network.MutexRcv.Unlock()
 
-		network.NetBlocks <- &network.BlockRcvd{Conn:nil, Block:bl, BlockTreeNode:nxt,
-			OneReceivedBlock:rb, BlockExtraInfo:nil}
+		network.NetBlocks <- &network.BlockRcvd{Conn: nil, Block: bl, BlockTreeNode: nxt,
+			OneReceivedBlock: rb, BlockExtraInfo: nil}
 
 		NetBlocksSize.Add(len(bl.Raw))
 		for NetBlocksSize.Get() > 64*1024*1024 {
-			time.Sleep(100*time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		last = nxt
@@ -392,7 +393,7 @@ func main() {
 
 		common.RecalcAverageBlockSize()
 
-		peersTick := time.Tick(5 * time.Minute)
+		peersTick := time.Tick(peersdb.ExpirePeersPeriod)
 		netTick := time.Tick(time.Second)
 
 		reset_save_timer() // we wil do one save try after loading, in case if ther was a rescan
@@ -428,7 +429,7 @@ func main() {
 		if common.Last.ParseTill != nil {
 			network.LastCommitedHeader = common.Last.ParseTill
 			println("Hold on network for now as we have",
-				common.Last.ParseTill.Height - common.Last.Block.Height, "new blocks on disk.")
+				common.Last.ParseTill.Height-common.Last.Block.Height, "new blocks on disk.")
 			go do_the_blocks(common.Last.ParseTill)
 		} else {
 			network.LastCommitedHeader = common.Last.Block

@@ -22,6 +22,8 @@ const (
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
 	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
 	MaxPeersInDB          = 65536 // 64k records
+	AbsoluteMaxPeersInDB  = MaxPeersInDB + 5000
+	ExpirePeersPeriod     = (5 * time.Minute)
 )
 
 var (
