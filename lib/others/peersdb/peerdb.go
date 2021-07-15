@@ -22,7 +22,7 @@ const (
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
 	MinPeersInDB          = 4096  // Do not expire peers if we have less than this
 	MaxPeersInDB          = 65536 // 64k records
-	AbsoluteMaxPeersInDB  = MaxPeersInDB + 5000
+	MaxPeersDeviation     = 2000
 	ExpirePeersPeriod     = (5 * time.Minute)
 )
 
@@ -165,7 +165,7 @@ func ExpirePeers() {
 			}
 			if delit {
 				PeerDB.Del(qdb.KeyType(rec.UniqID()))
-				if PeerDB.Count() < MaxPeersInDB {
+				if PeerDB.Count() < MaxPeersInDB-MaxPeersDeviation {
 					break
 				}
 			}

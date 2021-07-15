@@ -535,7 +535,8 @@ func NetworkTick() {
 			Mutex_net.Unlock()
 		}
 
-		adrs := peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
+		// First we will choose up to 128 peers that we have seen alive - do not sort them
+		adrs := peersdb.GetRecentPeersExt(128, false, func(ad *peersdb.PeerAddr) bool {
 			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&SERVICE_SEGWIT) == 0 {
 				return true
 			}
@@ -543,11 +544,11 @@ func NetworkTick() {
 		})
 		if len(adrs) == 0 && segwit_conns < common.CFG.Net.MinSegwitCons {
 			// we have only non-segwit peers in the database - take them
-			adrs = peersdb.GetRecentPeers(128, func(ad *peersdb.PeerAddr) bool {
+			adrs = peersdb.GetRecentPeersExt(128, false, func(ad *peersdb.PeerAddr) bool {
 				return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
 			})
 		}
-		// now fetch another 128 never tried peers
+		// now fetch another 128 never tried peers (this time sorted)
 		new_cnt := int(32)
 		if len(adrs) > new_cnt {
 			new_cnt = len(adrs)
@@ -720,7 +721,7 @@ func (c *OneConnection) Run() {
 				}
 			}
 			c.PeerAddr.Services = c.Node.Services
-			c.PeerAddr.Save()
+			c.PeerAddr.Alive()
 
 			if common.IsListenTCP() {
 				c.SendOwnAddr()

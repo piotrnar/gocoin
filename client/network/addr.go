@@ -165,7 +165,11 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				a = op
 				common.CountSafe("AddrOld")
 			} else {
-				common.CountSafe("AddrNew")
+				if peersdb.PeerDB.Count() >= peersdb.MaxPeersInDB+peersdb.MaxPeersDeviation {
+					common.CountSafe("AddrNewSkept")
+					continue
+				}
+				common.CountSafe("AddrNewTaken")
 			}
 			peersdb.PeerDB.Put(k, a.Bytes())
 		}
