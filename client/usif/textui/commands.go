@@ -433,6 +433,7 @@ func show_addresses(par string) {
 		for _, k := range torem {
 			peersdb.PeerDB.Del(k)
 		}
+		show_addresses("")
 		return
 
 	case "defrag":
