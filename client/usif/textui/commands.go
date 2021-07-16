@@ -409,6 +409,7 @@ func show_addresses(par string) {
 	}
 
 	var only_ban, only_alive, show_help bool
+	var ban_reason string
 	limit := peersdb.PeerDB.Count()
 	check_next := true
 	switch pars[0] {
@@ -456,8 +457,17 @@ func show_addresses(par string) {
 	if check_next {
 		if len(pars) >= 2 {
 			if u, e := strconv.ParseUint(pars[1], 10, 32); e != nil {
-				fmt.Println("Incorrect number B of peers max count:", e.Error())
-				show_help = true
+				if only_ban {
+					ban_reason = pars[1]
+					if len(pars) >= 3 {
+						if u, e := strconv.ParseUint(pars[2], 10, 32); e == nil {
+							limit = int(u)
+						}
+					}
+				} else {
+					fmt.Println("Incorrect number B of peers max count:", e.Error())
+					show_help = true
+				}
 			} else {
 				limit = int(u)
 			}
@@ -467,7 +477,7 @@ func show_addresses(par string) {
 	if show_help {
 		fmt.Println("Use 'peers all [max_cnt]' or 'peers [max_cnt]' to list all")
 		fmt.Println("Use 'peers ali [max_cnt]' to list only those seen alive")
-		fmt.Println("Use 'peers ban [max_cnt]' to list the banned ones")
+		fmt.Println("Use 'peers ban [ban_reason] [max_cnt]' to list the banned ones")
 		fmt.Println("Use 'peers purge' to remove all peers never seen alive")
 		fmt.Println("Use 'peers defrag' to defragment DB")
 		fmt.Println("Use 'peers save' to save DB now")
@@ -477,8 +487,10 @@ func show_addresses(par string) {
 		if only_alive && !p.SeenAlive {
 			return true
 		}
-		if only_ban && p.Banned == 0 {
-			return true
+		if only_ban {
+			if p.Banned == 0 || ban_reason != "" && p.BanReason != ban_reason {
+				return true
+			}
 		}
 		return false
 	})
@@ -675,6 +687,7 @@ func kill_node(par string) {
 }
 
 func init() {
+	newUi("ban", false, ban_peer, "Ban a peer specified by IP")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("cache", true, show_cached, "Show blocks cached in memory")
@@ -686,20 +699,19 @@ func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
+	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("peers p", false, show_addresses, "Operation on pers database ('peers help' for help)")
 	newUi("peeradd", false, add_peer, "Add a peer to the database, mark it as alive")
+	newUi("peers p", false, show_addresses, "Operation on pers database ('peers help' for help)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node")
+	newUi("redo", true, redo_block, "Redo last block")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust t", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("ban", false, ban_peer, "Ban a peer specified by IP")
 	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
-	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 	newUi("undo", true, undo_block, "Undo last block")
-	newUi("redo", true, redo_block, "Redo last block")
-	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
+	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }
