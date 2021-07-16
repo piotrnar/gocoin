@@ -721,6 +721,7 @@ func (c *OneConnection) Run() {
 				}
 			}
 			c.PeerAddr.Services = c.Node.Services
+			c.PeerAddr.NodeAgent = c.Node.Agent
 			c.PeerAddr.Alive()
 
 			if common.IsListenTCP() {

@@ -89,11 +89,6 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
 
-		if c.PeerAddr.Services != c.Node.Services {
-			c.PeerAddr.Services = c.Node.Services
-			c.PeerAddr.Save()
-		}
-
 		use_this_ip := sys.ValidIp4(pl[40:44])
 
 		if len(pl) >= 82 {

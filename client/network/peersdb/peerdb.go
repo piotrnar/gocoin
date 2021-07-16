@@ -45,6 +45,7 @@ Serialized peer record (all values are LSB unless specified otherwise):
  [35] - OPTIONAL flags
     bit(0) - Indicates BanReadon present (byte_len followed by the string)
     bit(1) - Indicates CameFromIP present (for IP4: len byte 4 followed by 4 bytes of IP)
+    bit(2) - Agent string from the Version message
 	bits(2-7) - reserved
 
   Extra fields are always present int the order defined by the flags (from bit 0 to 7).
@@ -71,8 +72,10 @@ type PeerAddr struct {
 	SeenAlive  bool
 	BanReason  string
 	CameFromIP []byte
-	key_set    bool
-	key_val    uint64
+	NodeAgent  string
+
+	key_set bool // cached to avid key crc64 re-calculations
+	key_val uint64
 
 	// The fields below don't get saved, but are used internaly
 	Manual bool // Manually connected (from UI)
@@ -88,7 +91,8 @@ func DefaultTcpPort() uint16 {
 		return 8333
 	}
 }
-func get_extra_field(b *bytes.Buffer) []byte {
+
+func read_extra_field(b *bytes.Buffer) []byte {
 	le, er := b.ReadByte()
 	if er != nil {
 		return nil
@@ -99,6 +103,15 @@ func get_extra_field(b *bytes.Buffer) []byte {
 		return nil
 	}
 	return dat
+}
+
+func write_extra_field(b *bytes.Buffer, dat []byte) {
+	le := len(dat)
+	if le > 255 {
+		le = 255
+	}
+	b.WriteByte(byte(le))
+	b.Write(dat[:le])
 }
 
 func NewPeer(v []byte) (p *PeerAddr) {
@@ -126,7 +139,7 @@ func NewPeer(v []byte) (p *PeerAddr) {
 				buf := bytes.NewBuffer(v[35:])
 				for bit := 0; bit < 8; bit++ {
 					if (extra_fields & 0x01) != 0 {
-						dat := get_extra_field(buf)
+						dat := read_extra_field(buf)
 						if dat == nil {
 							break // error
 						}
@@ -135,6 +148,8 @@ func NewPeer(v []byte) (p *PeerAddr) {
 							p.BanReason = string(dat)
 						case 1:
 							p.CameFromIP = dat
+						case 2:
+							p.NodeAgent = string(dat)
 						}
 					}
 					extra_fields >>= 1
@@ -156,6 +171,9 @@ func (p *PeerAddr) Bytes() (res []byte) {
 	if p.CameFromIP != nil {
 		x_flags |= 0x02
 	}
+	if p.NodeAgent != "" {
+		x_flags |= 0x04
+	}
 	b := new(bytes.Buffer)
 	binary.Write(b, binary.LittleEndian, p.Time)
 	binary.Write(b, binary.LittleEndian, p.Services)
@@ -173,12 +191,13 @@ func (p *PeerAddr) Bytes() (res []byte) {
 		b.WriteByte(x_flags)
 	}
 	if (x_flags & 0x01) != 0 {
-		b.WriteByte(byte(len(p.BanReason)))
-		b.Write([]byte(p.BanReason))
+		write_extra_field(b, []byte(p.BanReason))
 	}
 	if (x_flags & 0x02) != 0 {
-		b.WriteByte(byte(len(p.CameFromIP)))
-		b.Write([]byte(p.CameFromIP))
+		write_extra_field(b, p.CameFromIP)
+	}
+	if (x_flags & 0x04) != 0 {
+		write_extra_field(b, []byte(p.NodeAgent))
 	}
 	res = b.Bytes()
 	return
@@ -383,6 +402,10 @@ func (p *PeerAddr) String() (s string) {
 		s += "       "
 	}
 	s += fmt.Sprintf(" %.1f min", float64(int(now)-int(p.Time))/60.0)
+
+	if p.NodeAgent != "" {
+		s += " [" + p.NodeAgent + "]"
+	}
 
 	if p.CameFromIP != nil {
 		if len(p.CameFromIP) == 4 {
