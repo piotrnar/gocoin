@@ -160,11 +160,8 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			v := peersdb.PeerDB.Get(k)
 			if v != nil {
 				op := peersdb.NewPeer(v[:])
-				if op.Banned != 0 {
-					println("update A time for banned peer", op.Ip(), op.SeenAlive, a.Time, op.Time)
-				}
 				if !op.SeenAlive && a.Time > op.Time {
-					op.Time = a.Time // only update the time is peer not seen alive
+					op.Time = a.Time // only update the time if peer not seen alive (yet)
 				}
 				a = op
 				c_old++

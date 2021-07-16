@@ -238,7 +238,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	return
 }
 
-func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
+func NewIncommingConnection(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
 	p, e = NewAddrFromString(ipstr, force_default_port)
 	if e != nil {
 		return
@@ -249,15 +249,12 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		return
 	}
 
-	if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil && NewPeer(dbp).Banned != 0 {
-		e = errors.New(p.Ip() + " is banned")
-		p = nil
-	} else {
-		if p.Banned != 0 {
-			println("update A time for banned peer", p.Ip())
-		}
+	if p.Banned != 0 {
+		// If the peer is banned but still trying to connect, update the time so it won't be expiring
 		p.Time = uint32(time.Now().Unix())
 		p.Save()
+		e = errors.New(p.Ip() + " is banned")
+		p = nil
 	}
 	return
 }

@@ -287,7 +287,7 @@ func tcp_server() {
 				var terminate bool
 
 				// set port to default, for incomming connections
-				ad, e := peersdb.NewPeerFromString(tc.RemoteAddr().String(), true)
+				ad, e := peersdb.NewIncommingConnection(tc.RemoteAddr().String(), true)
 				if e == nil {
 					//println("incomming connection from", ad.Ip(), tc.RemoteAddr().String())
 					// Hammering protection
