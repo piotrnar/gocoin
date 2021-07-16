@@ -73,7 +73,7 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.InvStore(typ, pl[of+4:of+36])
 		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
-		common.CountSafe(fmt.Sprint("InvGot-", typ))
+		//common.CountSafe(fmt.Sprint("InvGot-", typ))
 		if typ == MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4 : of+36])
 			if !ahr {
