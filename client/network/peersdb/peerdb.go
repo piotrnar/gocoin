@@ -227,10 +227,8 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
 			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
-				p = NewPeer(dbp) // if we already had it, just update the Time field
+				p = NewPeer(dbp) // if we already had it, take the previous record
 			}
-			p.Time = uint32(time.Now().Unix())
-			p.Save()
 		} else {
 			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - unspecified error")
 		}
@@ -255,6 +253,9 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		e = errors.New(p.Ip() + " is banned")
 		p = nil
 	} else {
+		if p.Banned != 0 {
+			println("update A time for banned peer", p.Ip())
+		}
 		p.Time = uint32(time.Now().Unix())
 		p.Save()
 	}
