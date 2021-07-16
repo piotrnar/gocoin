@@ -276,7 +276,7 @@ func tcp_server() {
 	//fmt.Println("TCP server started at", ad.String())
 
 	for common.IsListenTCP() {
-		common.CountSafe("NetServerLoops")
+		//common.CountSafe("NetServerLoops")
 		Mutex_net.Lock()
 		ica := InConsActive
 		Mutex_net.Unlock()
