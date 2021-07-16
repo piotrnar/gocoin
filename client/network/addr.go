@@ -170,6 +170,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 					c_new_rejected++
 					continue
 				}
+				a.CameFromIP = c.PeerAddr.Ip4[:]
 				c_new_taken++
 			}
 			peersdb.PeerDB.Put(k, a.Bytes())
@@ -197,7 +198,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
 	c.Mutex.Unlock()
 	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
-		println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String())
+		// delete all the records that came from this ip
+		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
+		println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
 		c.DoS("AddrFlood")
 	}
 }

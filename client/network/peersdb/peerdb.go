@@ -3,9 +3,11 @@ package peersdb
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash/crc64"
+	"io"
 	"net"
 	"os"
 	"runtime"
@@ -42,7 +44,12 @@ Serialized peer record (all values are LSB unless specified otherwise):
 	low 31 bits: if present, unix timestamp of when the peer was banned divided by 2
  [35] - OPTIONAL flags
     bit(0) - Indicates BanReadon present (byte_len followed by the string)
-	bits(1-7) - reserved
+    bit(1) - Indicates CameFromIP present (for IP4: len byte 4 followed by 4 bytes of IP)
+	bits(2-7) - reserved
+
+  Extra fields are always present int the order defined by the flags (from bit 0 to 7).
+  Each extra field is one byte of length followed by the length bytes of data.
+
 */
 
 var (
@@ -59,12 +66,13 @@ var (
 
 type PeerAddr struct {
 	btc.NetAddr
-	Time      uint32 // When seen last time
-	Banned    uint32 // time when this address baned or zero if never
-	SeenAlive bool
-	BanReason string
-	key_set   bool
-	key_val   uint64
+	Time       uint32 // When seen last time
+	Banned     uint32 // time when this address baned or zero if never
+	SeenAlive  bool
+	BanReason  string
+	CameFromIP []byte
+	key_set    bool
+	key_val    uint64
 
 	// The fields below don't get saved, but are used internaly
 	Manual bool // Manually connected (from UI)
@@ -79,6 +87,18 @@ func DefaultTcpPort() uint16 {
 	} else {
 		return 8333
 	}
+}
+func get_extra_field(b *bytes.Buffer) []byte {
+	le, er := b.ReadByte()
+	if er != nil {
+		return nil
+	}
+	dat := make([]byte, int(le))
+	_, er = io.ReadFull(b, dat)
+	if er != nil {
+		return nil
+	}
+	return dat
 }
 
 func NewPeer(v []byte) (p *PeerAddr) {
@@ -102,10 +122,25 @@ func NewPeer(v []byte) (p *PeerAddr) {
 		}
 		if len(v) >= 35 {
 			extra_fields := v[34]
-			if (extra_fields&0x01) != 0 && len(v) >= 37 {
-				slen := int(v[35])
-				if len(v) >= 36+slen {
-					p.BanReason = string(v[36 : 36+slen])
+			if extra_fields != 0 {
+				buf := bytes.NewBuffer(v[35:])
+				for bit := 0; bit < 8; bit++ {
+					if (extra_fields & 0x01) != 0 {
+						dat := get_extra_field(buf)
+						if dat == nil {
+							break // error
+						}
+						switch bit {
+						case 0:
+							p.BanReason = string(dat)
+						case 1:
+							p.CameFromIP = dat
+						}
+					}
+					extra_fields >>= 1
+					if extra_fields == 0 {
+						break
+					}
 				}
 			}
 		}
@@ -114,23 +149,36 @@ func NewPeer(v []byte) (p *PeerAddr) {
 }
 
 func (p *PeerAddr) Bytes() (res []byte) {
+	var x_flags byte
+	if p.Banned != 0 && p.BanReason != "" {
+		x_flags |= 0x01
+	}
+	if p.CameFromIP != nil {
+		x_flags |= 0x02
+	}
 	b := new(bytes.Buffer)
 	binary.Write(b, binary.LittleEndian, p.Time)
 	binary.Write(b, binary.LittleEndian, p.Services)
 	b.Write(p.Ip6[:])
 	b.Write(p.Ip4[:])
 	binary.Write(b, binary.BigEndian, p.Port)
-	if p.Banned != 0 || p.SeenAlive {
+	if p.SeenAlive || x_flags != 0 {
 		xd := p.Banned >> 1
 		if p.SeenAlive {
 			xd |= 0x80000000
 		}
 		binary.Write(b, binary.LittleEndian, xd)
-		if p.Banned != 0 && p.BanReason != "" {
-			b.Write([]byte{0x01, byte(len(p.BanReason))})
-			b.Write([]byte(p.BanReason))
-		}
-
+	}
+	if x_flags != 0 {
+		b.WriteByte(x_flags)
+	}
+	if (x_flags & 0x01) != 0 {
+		b.WriteByte(byte(len(p.BanReason)))
+		b.Write([]byte(p.BanReason))
+	}
+	if (x_flags & 0x02) != 0 {
+		b.WriteByte(byte(len(p.CameFromIP)))
+		b.Write([]byte(p.CameFromIP))
 	}
 	res = b.Bytes()
 	return
@@ -211,6 +259,23 @@ func NewPeerFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 		p.Save()
 	}
 	return
+}
+
+func DeleteFromIP(ip []byte) int {
+	var ks []qdb.KeyType
+	peerdb_mutex.Lock()
+	PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+		p := NewPeer(v)
+		if p.CameFromIP != nil && bytes.Equal(ip, p.CameFromIP) {
+			ks = append(ks, k)
+		}
+		return 0
+	})
+	for _, k := range ks {
+		PeerDB.Del(k)
+	}
+	peerdb_mutex.Unlock()
+	return len(ks)
 }
 
 func ExpirePeers() {
@@ -321,6 +386,13 @@ func (p *PeerAddr) String() (s string) {
 	}
 	s += fmt.Sprintf(" %.1f min", float64(int(now)-int(p.Time))/60.0)
 
+	if p.CameFromIP != nil {
+		if len(p.CameFromIP) == 4 {
+			s += fmt.Sprintf(" from %d.%d.%d.%d", p.CameFromIP[0], p.CameFromIP[1], p.CameFromIP[2], p.CameFromIP[3])
+		} else {
+			s += " from " + hex.EncodeToString(p.CameFromIP)
+		}
+	}
 	if p.Banned != 0 {
 		s += fmt.Sprintf("  BAN %.2f hrs", float64(int(now)-int(p.Banned))/3600.0)
 		if p.BanReason != "" {
