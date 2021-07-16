@@ -405,6 +405,7 @@ func show_addresses(par string) {
 		fmt.Println("Peers in DB:", peersdb.PeerDB.Count())
 		fmt.Println("Peers seen alive:", acnt)
 		fmt.Println("Peers banned:", bcnt)
+		fmt.Println("QDB stats:", peersdb.PeerDB.GetStats())
 		return
 	}
 
@@ -438,7 +439,7 @@ func show_addresses(par string) {
 		return
 
 	case "defrag":
-		peersdb.PeerDB.Defrag(false)
+		peersdb.PeerDB.Defrag(true)
 		return
 
 	case "save":
