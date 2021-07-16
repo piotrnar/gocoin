@@ -327,7 +327,7 @@ func tcp_server() {
 						}
 					}
 				} else {
-					common.CountSafe("InConnRefused")
+					common.CountSafe("InConnDenied")
 					terminate = true
 				}
 
