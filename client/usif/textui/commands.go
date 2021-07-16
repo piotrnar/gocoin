@@ -491,6 +491,7 @@ func show_addresses(par string) {
 			if p.Banned == 0 || ban_reason != "" && p.BanReason != ban_reason {
 				return true
 			}
+			p.Time = p.Banned // to sort them by when they were banned
 		}
 		return false
 	})
