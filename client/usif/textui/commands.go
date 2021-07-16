@@ -491,13 +491,16 @@ func show_addresses(par string) {
 			if p.Banned == 0 || ban_reason != "" && p.BanReason != ban_reason {
 				return true
 			}
-			p.Time = p.Banned // to sort them by when they were banned
+			p.Time, p.Banned = p.Banned, p.Time // to sort them by when they were banned
 		}
 		return false
 	})
-	for i := range prs {
-		fmt.Printf("%4d) %s", i+1, prs[i].String())
-		if network.ConnectionActive(prs[i]) {
+	for i, p := range prs {
+		if only_ban {
+			p.Time, p.Banned = p.Banned, p.Time // Revert the change
+		}
+		fmt.Printf("%4d) %s", i+1, p.String())
+		if network.ConnectionActive(p) {
 			fmt.Print("  CONNECTED")
 		}
 		fmt.Print("\n")
