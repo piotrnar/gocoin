@@ -387,6 +387,19 @@ func (p *PeerAddr) Ip() string {
 	return fmt.Sprintf("%d.%d.%d.%d:%d", p.Ip4[0], p.Ip4[1], p.Ip4[2], p.Ip4[3], p.Port)
 }
 
+func secs_to_str(t int) string {
+	if t < 0 {
+		return fmt.Sprint(t)
+	}
+	if t < 120 {
+		return fmt.Sprintf("%d sec", t)
+	}
+	if 5 < 3600 {
+		return fmt.Sprintf("%.2f min", float64(t)/60.0)
+	}
+	return fmt.Sprintf("%.2f hrs", float64(t)/3600.0)
+}
+
 func (p *PeerAddr) String() (s string) {
 	s = fmt.Sprintf("%21s  ", p.Ip())
 	if p.Services == 0xffffffffffffffff {
@@ -397,28 +410,30 @@ func (p *PeerAddr) String() (s string) {
 
 	now := uint32(time.Now().Unix())
 	if p.SeenAlive {
-		s += "  Alive"
+		s += "  ALI"
 	} else {
-		s += "       "
+		s += "    "
 	}
-	s += fmt.Sprintf(" %.1f min", float64(int(now)-int(p.Time))/60.0)
+	s += " " + secs_to_str(int(now)-int(p.Time))
 
 	if p.NodeAgent != "" {
 		s += " [" + p.NodeAgent + "]"
 	}
 
 	if p.CameFromIP != nil {
+		s += "  from "
 		if len(p.CameFromIP) == 4 {
-			s += fmt.Sprintf(" from %d.%d.%d.%d", p.CameFromIP[0], p.CameFromIP[1], p.CameFromIP[2], p.CameFromIP[3])
+			s += fmt.Sprintf("%d.%d.%d.%d", p.CameFromIP[0], p.CameFromIP[1], p.CameFromIP[2], p.CameFromIP[3])
 		} else {
-			s += " from " + hex.EncodeToString(p.CameFromIP)
+			s += hex.EncodeToString(p.CameFromIP)
 		}
 	}
 	if p.Banned != 0 {
-		s += fmt.Sprintf("  BAN %.2f hrs", float64(int(now)-int(p.Banned))/3600.0)
+		s += "  BAN"
 		if p.BanReason != "" {
-			s += " because " + p.BanReason
+			s += " (" + p.BanReason + ")"
 		}
+		s += " " + secs_to_str(int(now)-int(p.Banned))
 	}
 
 	return
