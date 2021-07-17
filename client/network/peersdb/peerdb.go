@@ -416,10 +416,6 @@ func (p *PeerAddr) String() (s string) {
 	}
 	s += " " + secs_to_str(int(now)-int(p.Time))
 
-	if p.NodeAgent != "" {
-		s += " [" + p.NodeAgent + "]"
-	}
-
 	if p.CameFromIP != nil {
 		s += "  from "
 		if len(p.CameFromIP) == 4 {
@@ -434,6 +430,10 @@ func (p *PeerAddr) String() (s string) {
 			s += " (" + p.BanReason + ")"
 		}
 		s += " " + secs_to_str(int(now)-int(p.Banned))
+	}
+
+	if p.NodeAgent != "" {
+		s += "  [" + p.NodeAgent + "]"
 	}
 
 	return
