@@ -394,7 +394,7 @@ func secs_to_str(t int) string {
 	if t < 120 {
 		return fmt.Sprintf("%d sec", t)
 	}
-	if 5 < 3600 {
+	if t < 5*3600 {
 		return fmt.Sprintf("%.2f min", float64(t)/60.0)
 	}
 	return fmt.Sprintf("%.2f hrs", float64(t)/3600.0)
