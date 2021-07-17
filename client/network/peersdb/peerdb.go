@@ -412,7 +412,7 @@ func (p *PeerAddr) String() (s string) {
 	if p.SeenAlive {
 		s += "  ALI"
 	} else {
-		s += "    "
+		s += "     "
 	}
 	s += " " + secs_to_str(int(now)-int(p.Time))
 
