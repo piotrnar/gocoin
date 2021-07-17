@@ -497,15 +497,19 @@ func show_addresses(par string) {
 		return false
 	})
 	for i, p := range prs {
+		var sc string
 		if only_ban {
 			p.Time, p.Banned = p.Banned, p.Time // Revert the change
 		}
-		fmt.Printf("%4d) %s", i+1, p.String())
 		if network.ConnectionActive(p) {
-			fmt.Print("  CONNECTED")
+			sc = "*"
+		} else {
+			sc = " "
 		}
-		fmt.Print("\n")
+
+		fmt.Printf("%4d%s%s\n", i+1, sc, p.String())
 	}
+	fmt.Println("Note: currently connected peers marked with *")
 }
 
 func unban_peer(par string) {
