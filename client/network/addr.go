@@ -178,19 +178,19 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	}
 	common.CounterMutex.Lock()
 	if c_ip_invalid > 0 {
-		common.Counter["AddrIPinv"] += c_ip_invalid
+		common.Counter["AddrIPinvalid"] += c_ip_invalid
 	}
 	if c_future > 0 {
 		common.Counter["AddrFuture"] += c_future
 	}
 	if c_old > 0 {
-		common.Counter["AddrOld"] += c_old
+		common.Counter["AddrUpdated"] += c_old
 	}
 	if c_new_taken > 0 {
-		common.Counter["AddrNewTaken"] += c_new_taken
+		common.Counter["AddrNewYES"] += c_new_taken
 	}
 	if c_new_rejected > 0 {
-		common.Counter["AddrNewSkept"] += c_new_rejected
+		common.Counter["AddrNewNO"] += c_new_rejected
 	}
 	common.CounterMutex.Unlock()
 	c.Mutex.Lock()
@@ -200,7 +200,8 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
 		// delete all the records that came from this ip
 		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
-		println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
+		common.CountSafeAdd("AddrBanRmvd", delcnt)
+		//println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
 		c.DoS("AddrFlood")
 	}
 }
