@@ -416,14 +416,6 @@ func (p *PeerAddr) String() (s string) {
 	}
 	s += " " + secs_to_str(int(now)-int(p.Time))
 
-	if p.CameFromIP != nil {
-		s += "  from "
-		if len(p.CameFromIP) == 4 {
-			s += fmt.Sprintf("%d.%d.%d.%d", p.CameFromIP[0], p.CameFromIP[1], p.CameFromIP[2], p.CameFromIP[3])
-		} else {
-			s += hex.EncodeToString(p.CameFromIP)
-		}
-	}
 	if p.Banned != 0 {
 		s += "  BAN"
 		if p.BanReason != "" {
@@ -434,6 +426,15 @@ func (p *PeerAddr) String() (s string) {
 
 	if p.NodeAgent != "" {
 		s += "  [" + p.NodeAgent + "]"
+	}
+
+	if p.CameFromIP != nil {
+		s += "  from "
+		if len(p.CameFromIP) == 4 {
+			s += fmt.Sprintf("%d.%d.%d.%d", p.CameFromIP[0], p.CameFromIP[1], p.CameFromIP[2], p.CameFromIP[3])
+		} else {
+			s += hex.EncodeToString(p.CameFromIP)
+		}
 	}
 
 	return
