@@ -80,7 +80,7 @@ type PeerAddr struct {
 	Manual bool // Manually connected (from UI)
 	Friend bool // Connected from friends.txt
 
-	lastAliveSaved int64 // update the record only once per minute
+	lastSaved int64 // update the record only once per minute
 }
 
 func DefaultTcpPort() uint16 {
@@ -344,6 +344,11 @@ func ExpirePeers() {
 }
 
 func (p *PeerAddr) Save() {
+	if p.Banned > p.Time {
+		p.lastSaved = int64(p.Banned)
+	} else {
+		p.lastSaved = int64(p.Time)
+	}
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
 	//PeerDB.Sync()
 }
@@ -351,7 +356,7 @@ func (p *PeerAddr) Save() {
 func (p *PeerAddr) Ban(reason string) {
 	now := time.Now().Unix()
 	p.Banned = uint32(now)
-	if p.Banned == 0 || p.BanReason == "" && reason != "" || now-p.lastAliveSaved >= 60 {
+	if p.Banned == 0 || p.BanReason == "" && reason != "" || now-p.lastSaved >= 60 {
 		p.BanReason = reason
 		p.Save()
 	}
@@ -360,9 +365,8 @@ func (p *PeerAddr) Ban(reason string) {
 func (p *PeerAddr) Alive() {
 	now := time.Now().Unix()
 	p.Time = uint32(now)
-	if !p.SeenAlive || now-p.lastAliveSaved >= 60 {
+	if !p.SeenAlive || now-p.lastSaved >= 60 {
 		p.SeenAlive = true
-		p.lastAliveSaved = now
 		p.Save()
 	}
 }
