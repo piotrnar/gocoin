@@ -103,7 +103,8 @@ func BestExternalAddr() []byte {
 }
 
 // HandleGetaddr sends the response to "getaddr" message.
-// Sends addr message with the most recent seen-alive peers from our database
+// Sends addr message with up to 500 randomly selected peers from our database.
+// Selects only peers that we have been seeing alive and have not been banned.
 func (c *OneConnection) HandleGetaddr() {
 	pers := peersdb.GetRecentPeers(MaxAddrsPerMessage, false, func(p *peersdb.PeerAddr) bool {
 		return p.Banned != 0 || !p.SeenAlive // we only return addresses that we've seen alive
