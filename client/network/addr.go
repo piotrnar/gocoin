@@ -199,9 +199,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
 	c.Mutex.Unlock()
 	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
-		// delete all the records that came from this ip
+		// delete all the new records that came from this ip
 		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
-		common.CountSafeAdd("AddrBanRmvd", uint64(delcnt))
+		common.CountSafeAdd("AddrBanUndone", uint64(delcnt))
 		//println("Address flood from", c.PeerAddr.Ip(), c.Node.Agent, c.X.Incomming, c.X.AddrMsgsRcvd, time.Now().Sub(c.X.ConnectedAt).String(), delcnt)
 		c.DoS("AddrFlood")
 	}
