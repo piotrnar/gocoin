@@ -269,8 +269,7 @@ func NewIncommingConnection(ipstr string, force_default_port bool) (p *PeerAddr,
 
 	if p.Banned != 0 {
 		// If the peer is banned but still trying to connect, update the time so it won't be expiring
-		p.Time = uint32(time.Now().Unix())
-		p.Save()
+		p.Alive() // this will only update once per minute (at most)
 		e = errors.New(p.Ip() + " is banned")
 		p = nil
 	}
