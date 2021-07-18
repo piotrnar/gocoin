@@ -10,7 +10,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -350,18 +349,12 @@ func (p *PeerAddr) Save() {
 }
 
 func (p *PeerAddr) Ban(reason string) {
-	p.Banned = uint32(time.Now().Unix())
-
-	if reason == "" {
-		_, fil, line, _ := runtime.Caller(1)
-		reason = fmt.Sprint(fil, ":", line)
-	}
-	if len(reason) > 255 {
-		p.BanReason = reason[:255]
-	} else {
+	now := time.Now().Unix()
+	p.Banned = uint32(now)
+	if p.Banned == 0 || p.BanReason == "" && reason != "" || now-p.lastAliveSaved >= 60 {
 		p.BanReason = reason
+		p.Save()
 	}
-	p.Save()
 }
 
 func (p *PeerAddr) Alive() {
