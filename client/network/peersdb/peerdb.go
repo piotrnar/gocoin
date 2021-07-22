@@ -310,13 +310,17 @@ func ExpirePeers() {
 		var i, c_dead, c_seen_alive, c_banned int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			if i >= len(recs) {
-				println("ERROR: PeersDB bgrew since we checked its size - fix it!")
+				println("ERROR: PeersDB grew since we checked its size. Please report!")
 				return 0
 			}
 			recs[i] = NewPeer(v)
 			i++
 			return 0
 		})
+		if i < len(recs) {
+			println("ERROR: PeersDB shrunk since we checked its size. Please report!")
+			recs = recs[:i]
+		}
 		sort.Sort(recs)
 		for i = len(recs) - 1; i > MinPeersInDB; i-- {
 			var delit bool
