@@ -174,7 +174,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				a.CameFromIP = c.PeerAddr.Ip4[:]
 				c_new_taken++
 			}
-			peersdb.PeerDB.Put(k, a.Bytes())
+			a.Save()
 		}
 	}
 	common.CounterMutex.Lock()
