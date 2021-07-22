@@ -382,10 +382,13 @@ func (p *PeerAddr) Alive() {
 }
 
 func (p *PeerAddr) Dead() {
+	peerdb_mutex.Lock()
 	if !p.SeenAlive && p.Banned == 0 && PeerDB.Count() > MinPeersInDB {
 		PeerDB.Del(qdb.KeyType(p.UniqID()))
+		peerdb_mutex.Unlock()
 		return
 	}
+	peerdb_mutex.Unlock()
 	p.Time = uint32(time.Now().Unix() - 5*60) // make it last alive 5 minutes ago
 	p.Save()
 }
