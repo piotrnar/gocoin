@@ -91,6 +91,14 @@ func DefaultTcpPort() uint16 {
 	}
 }
 
+func Lock() {
+	peerdb_mutex.Lock()
+}
+
+func Unlock() {
+	peerdb_mutex.Unlock()
+}
+
 func read_extra_field(b *bytes.Buffer) []byte {
 	le, er := b.ReadByte()
 	if er != nil {

@@ -158,6 +158,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				a.Time = now
 			}
 			k := qdb.KeyType(a.UniqID())
+			peersdb.Lock()
 			v := peersdb.PeerDB.Get(k)
 			if v != nil {
 				op := peersdb.NewPeer(v[:])
@@ -169,12 +170,14 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			} else {
 				if peersdb.PeerDB.Count() >= peersdb.MaxPeersInDB+peersdb.MaxPeersDeviation {
 					c_new_rejected++
-					continue
+					goto unlock_db
 				}
 				a.CameFromIP = c.PeerAddr.Ip4[:]
 				c_new_taken++
 			}
-			a.Save()
+			peersdb.PeerDB.Put(k, a.Bytes())
+		unlock_db:
+			peersdb.Unlock()
 		}
 	}
 	common.CounterMutex.Lock()
