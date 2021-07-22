@@ -309,6 +309,10 @@ func ExpirePeers() {
 		recs := make(manyPeers, PeerDB.Count())
 		var i, c_dead, c_seen_alive, c_banned int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
+			if i >= len(recs) {
+				println("ERROR: PeersDB bgrew since we checked its size - fix it!")
+				return 0
+			}
 			recs[i] = NewPeer(v)
 			i++
 			return 0
@@ -353,8 +357,10 @@ func (p *PeerAddr) Save() {
 	} else {
 		p.lastSaved = int64(p.Time)
 	}
+	peerdb_mutex.Lock()
 	PeerDB.Put(qdb.KeyType(p.UniqID()), p.Bytes())
 	//PeerDB.Sync()
+	peerdb_mutex.Unlock()
 }
 
 func (p *PeerAddr) Ban(reason string) {
