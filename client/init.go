@@ -73,6 +73,10 @@ func host_init() {
 		BlockMinedCB:     blockMined, BlockUndoneCB: blockUndone,
 		DoNotRescan: true}
 
+	if ext.UndoBlocks > 0 {
+		ext.BlockUndoneCB = nil // Do not call the callback if undoing blocks as it will panic
+	}
+
 	sta := time.Now()
 	common.BlockChain = chain.NewChainExt(common.GocoinHomeDir, common.GenesisBlock, common.FLAG.Rescan, ext,
 		&chain.BlockDBOpts{

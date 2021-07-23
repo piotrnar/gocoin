@@ -150,7 +150,7 @@ func (checker *SigChecker) VerifyWitnessProgram(witness *witness_ctx, witversion
 		// TAPROOT
 		if (flags & VER_TAPROOT) == 0 {
 			if DBG_ERR {
-				fmt.Println("VER_TAPROOT not set - verify script OK")
+				fmt.Println("VER_TAPROOT not set - verify script OK", checker.Tx.Hash.String())
 			}
 			return true
 		}
