@@ -419,7 +419,10 @@ func secs_to_str(t int) string {
 	if t < 5*3600 {
 		return fmt.Sprintf("%.2f min", float64(t)/60.0)
 	}
-	return fmt.Sprintf("%.2f hrs", float64(t)/3600.0)
+	if t < 2*86400 {
+		return fmt.Sprintf("%.2f hrs", float64(t)/3600.0)
+	}
+	return fmt.Sprintf("%.2f dys", float64(t)/(86400.0))
 }
 
 func (p *PeerAddr) String() (s string) {
