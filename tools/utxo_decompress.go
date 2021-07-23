@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"os"
 	"strings"
+
+	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 func main() {
@@ -43,5 +44,5 @@ func main() {
 	fmt.Println("Saving new UTXO.db")
 	db.Close()
 	fmt.Println("Done")
-
+	fmt.Println("WARNING: the undo folder has not been converted")
 }
