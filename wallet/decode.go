@@ -194,7 +194,7 @@ func dump_raw_tx() {
 				}
 			} else {
 				if tx.SegWit == nil || len(tx.SegWit[i]) < 2 {
-					if len(tx.SegWit[i]) == 1 && (len(tx.SegWit[i][0])|1) == 65 {
+					if i < len(tx.SegWit) && len(tx.SegWit[i]) == 1 && (len(tx.SegWit[i][0])|1) == 65 {
 						fmt.Println("      Schnorr signature:")
 						fmt.Println("       ", hex.EncodeToString(tx.SegWit[i][0][:32]))
 						fmt.Println("       ", hex.EncodeToString(tx.SegWit[i][0][32:]))
