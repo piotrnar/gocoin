@@ -175,16 +175,16 @@ func show_info(par string) {
 		len(network.TransactionsToSend), common.UintToString(network.TransactionsToSendSize),
 		sw_cnt, common.UintToString(sw_bts),
 		len(network.TransactionsRejected), common.UintToString(network.TransactionsRejectedSize))
-	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d\n",
+	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d,  ScrFlgs:0x%x\n",
 		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
 		len(network.SpentOutputs), common.GetAverageFee(),
-		len(network.TransactionsPending), len(network.NetTxs))
+		len(network.TransactionsPending), len(network.NetTxs), common.CurrentScriptFlags())
 	network.TxMutex.Unlock()
 
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
 	usif.BlockFeesMutex.Lock()
-	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Now().Sub(gs.LastGC).String(),
+	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Since(gs.LastGC).String(),
 		"  NumGC:", gs.NumGC,
 		"  PauseTotal:", gs.PauseTotal.String())
 	usif.BlockFeesMutex.Unlock()
@@ -634,6 +634,7 @@ func undo_block(par string) {
 	common.BlockChain.UndoLastBlock()
 	common.Last.Mutex.Lock()
 	common.Last.Block = common.BlockChain.LastBlock()
+	common.UpdateScriptFlags(0)
 	common.Last.Mutex.Unlock()
 }
 

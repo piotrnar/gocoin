@@ -90,6 +90,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Mutex.Lock()
 		common.Last.Time = time.Now()
 		common.Last.Block = common.BlockChain.LastBlock()
+		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
 			println("Initial parsing finished in", time.Now().Sub(newbl.TmStart).String())
@@ -101,6 +102,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		new_end := common.BlockChain.LastBlock()
 		common.Last.Mutex.Lock()
 		common.Last.Block = new_end
+		common.UpdateScriptFlags(bl.VerifyFlags)
 		common.Last.Mutex.Unlock()
 		// update network.LastCommitedHeader
 		network.MutexRcv.Lock()
@@ -273,6 +275,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
 	common.Last.Block = common.BlockChain.LastBlock()
+	common.UpdateScriptFlags(msg.VerifyFlags)
 	common.Last.Mutex.Unlock()
 
 	msg.Done.Done()

@@ -80,7 +80,8 @@ type TheLastBlock struct {
 	sync.Mutex // use it for writing and reading from non-chain thread
 	Block      *chain.BlockTreeNode
 	time.Time
-	ParseTill *chain.BlockTreeNode
+	ParseTill   *chain.BlockTreeNode
+	ScriptFlags uint32
 }
 
 func (b *TheLastBlock) BlockHeight() (res uint32) {
@@ -268,4 +269,16 @@ func AcceptTx() (res bool) {
 	res = CFG.TXPool.Enabled && BlockChainSynchronized
 	mutex_cfg.Unlock()
 	return
+}
+
+func UpdateScriptFlags(flags uint32) {
+	if flags == 0 {
+		// We pass timestamp of 0 to always use P2SH flag
+		flags = BlockChain.GetBlockFlags(Last.Block.Height, 0)
+	}
+	atomic.StoreUint32(&Last.ScriptFlags, flags)
+}
+
+func CurrentScriptFlags() uint32 {
+	return atomic.LoadUint32(&Last.ScriptFlags)
 }

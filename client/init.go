@@ -100,6 +100,7 @@ func host_init() {
 	if common.Last.Time.After(time.Now()) {
 		common.Last.Time = time.Now()
 	}
+	common.UpdateScriptFlags(0)
 
 	common.LockCfg()
 	common.ApplyLastTrustedBlock()

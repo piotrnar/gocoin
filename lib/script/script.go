@@ -44,6 +44,8 @@ const (
 	VER_DIS_SUCCESS      = 1 << 19 // DISCOURAGE_OP_SUCCESS
 	VER_DIS_PUBKEYTYPE   = 1 << 20 // DISCOURAGE_UPGRADABLE_PUBKEYTYPE
 
+	// STANDARD_VERIFY_FLAGS are sort of obsolete - have been replaced with chain's GetBlockFlags()
+	// Gocoin will not enforce the "stadard transacton" rules, only the consensus rules.
 	STANDARD_VERIFY_FLAGS = VER_P2SH | VER_STRICTENC | VER_DERSIG | VER_LOW_S |
 		VER_NULLDUMMY | VER_MINDATA | VER_BLOCK_OPS | VER_CLEANSTACK | VER_CLTV | VER_CSV |
 		VER_WITNESS | VER_WITNESS_PROG | VER_MINIMALIF | VER_NULLFAIL | VER_WITNESS_PUBKEY |

@@ -150,7 +150,7 @@ func (checker *SigChecker) VerifyWitnessProgram(witness *witness_ctx, witversion
 		// TAPROOT
 		if (flags & VER_TAPROOT) == 0 {
 			if DBG_ERR {
-				fmt.Println("VER_TAPROOT not set - verify script OK", checker.Tx.Hash.String())
+				fmt.Println("VER_TAPROOT not set - verify script OK", checker.Tx.Hash.String(), checker.Idx)
 			}
 			return true
 		}
@@ -177,10 +177,7 @@ func (checker *SigChecker) VerifyWitnessProgram(witness *witness_ctx, witversion
 
 		if stack.size() == 1 {
 			// Key path spending (stack size is 1 after removing optional annex)
-			if !checker.CheckSchnorrSignature(stack.top(-1), program, SIGVERSION_TAPROOT, &execdata) {
-				return false // serror is set
-			}
-			return true
+			return checker.CheckSchnorrSignature(stack.top(-1), program, SIGVERSION_TAPROOT, &execdata)
 		} else {
 			// Script path spending (stack size is >1 after removing optional annex)
 			control := stack.pop()

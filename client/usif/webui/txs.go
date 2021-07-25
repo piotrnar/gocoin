@@ -89,6 +89,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 		tx.Spent_outputs[i] = po
 	}
 	w.Write([]byte("<input_list>"))
+	ver_flags := common.CurrentScriptFlags()
 	for i := range tx.TxIn {
 		w.Write([]byte("<input>"))
 		w.Write([]byte("<script_sig>"))
@@ -97,7 +98,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 		fmt.Fprint(w, "<txid-vout>", tx.TxIn[i].Input.String(), "</txid-vout>")
 		po := tx.Spent_outputs[i]
 		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount: po.Value, Idx: i, Tx: tx}, script.STANDARD_VERIFY_FLAGS)
+			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount: po.Value, Idx: i, Tx: tx}, ver_flags)
 			if !ok {
 				w.Write([]byte("<status>Script FAILED</status>"))
 			} else {
