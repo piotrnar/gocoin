@@ -41,8 +41,6 @@ func show_node_stats(par string) {
 }
 
 func show_addresses(par string) {
-	peersdb.Lock()
-	defer peersdb.Unlock()
 	pars := strings.Split(par, " ")
 	if len(pars) < 1 || pars[0] == "" {
 		bcnt, acnt := 0, 0
@@ -80,6 +78,7 @@ func show_addresses(par string) {
 		// do nothing
 	case "purge":
 		var torem []qdb.KeyType
+		peersdb.Lock()
 		peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			pr := peersdb.NewPeer(v)
 			if !pr.SeenAlive {
@@ -91,6 +90,7 @@ func show_addresses(par string) {
 		for _, k := range torem {
 			peersdb.PeerDB.Del(k)
 		}
+		peersdb.Unlock()
 		show_addresses("")
 		return
 
