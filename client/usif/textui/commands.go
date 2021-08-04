@@ -543,23 +543,6 @@ func add_peer(par string) {
 	ad.Save()
 }
 
-func del_peer(par string) {
-	id, er := strconv.ParseUint(par, 16, 64)
-	if er != nil {
-		fmt.Println(er.Error())
-		return
-	}
-	fmt.Printf("Deleting peer ID %016x ... ", id)
-	peersdb.Lock()
-	if peersdb.PeerDB.Get(qdb.KeyType(id)) != nil {
-		peersdb.PeerDB.Del(qdb.KeyType(id))
-		fmt.Println("OK")
-	} else {
-		fmt.Println("not found")
-	}
-	peersdb.Unlock()
-}
-
 func show_cached(par string) {
 	var hi, lo uint32
 	for _, v := range network.CachedBlocks {
@@ -736,8 +719,7 @@ func init() {
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("peeradd pa", false, add_peer, "Add a peer to the database, mark it as alive")
-	newUi("peerdel pd", false, del_peer, "Delete peer with the given ID")
+	newUi("peeradd", false, add_peer, "Add a peer to the database, mark it as alive")
 	newUi("peers p", false, show_addresses, "Operation on pers database ('peers help' for help)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
