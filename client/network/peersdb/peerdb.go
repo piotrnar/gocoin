@@ -338,11 +338,11 @@ func ExpirePeers() {
 			rec := recs[i]
 			if !rec.SeenAlive {
 				if PeerDB.Count() > MaxPeersInDB-MaxPeersDeviation {
-					// if DB is full, we delete all excessive dead peers
+					// if DB is full, we delete all the oldest never-alive records
 					delit = true
 					c_dead1++
 				} else {
-					// otherwise we only delete those older than ExpireDeadPeerAfter
+					// otherwise we only delete those older than 24 hours (ExpireDeadPeerAfter)
 					if rec.Time < expire_dead_before_time {
 						delit = true
 						c_dead2++
@@ -367,10 +367,18 @@ func ExpirePeers() {
 			}
 		}
 		common.CounterMutex.Lock()
-		common.Counter["PeersExpiredDead1"] += uint64(c_dead1)
-		common.Counter["PeersExpiredDead2"] += uint64(c_dead2)
-		common.Counter["PeersExpiredAlive"] += uint64(c_seen_alive)
-		common.Counter["PeersExpiredBanned"] += uint64(c_banned)
+		if c_dead1 > 0 {
+			common.Counter["PeersExpiredDead1"] += uint64(c_dead1)
+		}
+		if c_dead2 > 0 {
+			common.Counter["PeersExpiredDead2"] += uint64(c_dead2)
+		}
+		if c_seen_alive > 0 {
+			common.Counter["PeersExpiredAlive"] += uint64(c_seen_alive)
+		}
+		if c_banned > 0 {
+			common.Counter["PeersExpiredBanned"] += uint64(c_banned)
+		}
 		common.CounterMutex.Unlock()
 		PeerDB.Defrag(false)
 	} else {
