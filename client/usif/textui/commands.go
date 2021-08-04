@@ -410,7 +410,7 @@ func show_addresses(par string) {
 	}
 
 	var only_ban, only_alive, show_help bool
-	var ban_reason string
+	var ban_reason, only_agent string
 	limit := peersdb.PeerDB.Count()
 	check_next := true
 	switch pars[0] {
@@ -420,6 +420,8 @@ func show_addresses(par string) {
 		only_ban = true
 	case "help":
 		show_help = true
+	case "str":
+		only_agent = "/Gocoin"
 	case "all":
 		// do nothing
 	case "purge":
@@ -465,6 +467,8 @@ func show_addresses(par string) {
 							limit = int(u)
 						}
 					}
+				} else if only_agent != "" {
+					only_agent = pars[1]
 				} else {
 					fmt.Println("Incorrect number B of peers max count:", e.Error())
 					show_help = true
@@ -479,12 +483,16 @@ func show_addresses(par string) {
 		fmt.Println("Use 'peers all [max_cnt]' or 'peers [max_cnt]' to list all")
 		fmt.Println("Use 'peers ali [max_cnt]' to list only those seen alive")
 		fmt.Println("Use 'peers ban [ban_reason] [max_cnt]' to list the banned ones")
+		fmt.Println("Use 'peers str [string]' to list only if agent contains string")
 		fmt.Println("Use 'peers purge' to remove all peers never seen alive")
 		fmt.Println("Use 'peers defrag' to defragment DB")
 		fmt.Println("Use 'peers save' to save DB now")
 		return
 	}
 	prs := peersdb.GetRecentPeers(uint(limit), true, func(p *peersdb.PeerAddr) bool {
+		if only_agent != "" && !strings.Contains(p.NodeAgent, only_agent) {
+			return true
+		}
 		if only_alive && !p.SeenAlive {
 			return true
 		}
