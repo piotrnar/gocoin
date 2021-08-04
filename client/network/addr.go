@@ -133,6 +133,7 @@ func (c *OneConnection) SendOwnAddr() {
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
 	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale uint64
+	have_enough := peersdb.PeerDB.Count() > peersdb.MinPeersInDB
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -156,8 +157,8 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 					}
 				}
 				a.Time = now
-			} else if now-a.Time >= 24*3600 {
-				c_stale++ // addr older than 24 hour - ignore it
+			} else if have_enough && now-a.Time >= 24*3600 {
+				c_stale++ // addr older than 24 hour - ignore it, if we have enough in the DB
 				continue
 			}
 			k := qdb.KeyType(a.UniqID())
