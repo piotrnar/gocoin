@@ -14,7 +14,7 @@ import (
 )
 
 func show_node_stats(par string) {
-	ns := make(map[string]uint)
+	ns := make(map[string]int)
 	peersdb.Lock()
 	peersdb.PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 		pr := peersdb.NewPeer(v)
@@ -29,15 +29,17 @@ func show_node_stats(par string) {
 		return
 	}
 	ss := make([]string, len(ns))
-	var i int
+	var i, sum int
 	for k, v := range ns {
 		ss[i] = fmt.Sprintf("%5d %s", v, k)
+		sum += v
 		i++
 	}
 	sort.Strings(ss)
 	for _, s := range ss {
 		fmt.Println(s)
 	}
+	fmt.Println("Total:", sum)
 }
 
 func show_addresses(par string) {
