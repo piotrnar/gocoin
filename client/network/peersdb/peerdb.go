@@ -125,6 +125,7 @@ func write_extra_field(b *bytes.Buffer, dat []byte) {
 func NewPeer(v []byte) (p *PeerAddr) {
 	p = new(PeerAddr)
 	if v == nil || len(v) < 30 {
+		p.Ip6[10], p.Ip6[10] = 0xff, 0xff
 		p.Time = uint32(time.Now().Unix())
 		return
 	}
