@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	ExpireAlivePeerAfter  = (24 * time.Hour) // https://en.bitcoin.it/wiki/Protocol_specification#addr
+	ExpireDeadPeerAfter   = (1 * 24 * time.Hour)
+	ExpireAlivePeerAfter  = (3 * 24 * time.Hour)
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
-	MinPeersInDB          = 5000
+	MinPeersInDB          = 1000
 	MaxPeersInDB          = 70000
 	MaxPeersDeviation     = 2500
 	ExpirePeersPeriod     = (5 * time.Minute)
@@ -309,13 +310,14 @@ func DeleteFromIP(ip []byte) int {
 func ExpirePeers() {
 	peerdb_mutex.Lock()
 	defer peerdb_mutex.Unlock()
-	if PeerDB.Count() > MaxPeersInDB {
+	if PeerDB.Count() > MinPeersInDB {
 		common.CountSafe("PeersExpireNeeded")
 		now := time.Now()
+		expire_dead_before_time := uint32(now.Add(-ExpireDeadPeerAfter).Unix())
 		expire_alive_before_time := uint32(now.Add(-ExpireAlivePeerAfter).Unix())
 		expire_banned_before_time := uint32(now.Add(-ExpireBannedPeerAfter).Unix())
 		recs := make(manyPeers, PeerDB.Count())
-		var i, c_dead, c_seen_alive, c_banned int
+		var i, c_dead1, c_dead2, c_seen_alive, c_banned int
 		PeerDB.Browse(func(k qdb.KeyType, v []byte) uint32 {
 			if i >= len(recs) {
 				println("ERROR: PeersDB grew since we checked its size. Please report!")
@@ -334,8 +336,19 @@ func ExpirePeers() {
 			var delit bool
 			rec := recs[i]
 			if !rec.SeenAlive {
-				delit = true
-				c_dead++
+				if PeerDB.Count() > MaxPeersInDB-MaxPeersDeviation {
+					// if DB is full, we delete all excessive dead peers
+					delit = true
+					c_dead1++
+				} else {
+					// otherwise we only delete those older than ExpireDeadPeerAfter
+					if rec.Time < expire_dead_before_time {
+						delit = true
+						c_dead2++
+					} else {
+						break
+					}
+				}
 			} else if rec.Time < expire_alive_before_time {
 				if rec.Banned == 0 {
 					delit = true
@@ -347,13 +360,14 @@ func ExpirePeers() {
 			}
 			if delit {
 				PeerDB.Del(qdb.KeyType(rec.UniqID()))
-				if PeerDB.Count() <= MaxPeersInDB-MaxPeersDeviation {
+				if PeerDB.Count() <= MinPeersInDB {
 					break
 				}
 			}
 		}
 		common.CounterMutex.Lock()
-		common.Counter["PeersExpiredDead"] += uint64(c_dead)
+		common.Counter["PeersExpiredDead1"] += uint64(c_dead1)
+		common.Counter["PeersExpiredDead2"] += uint64(c_dead2)
 		common.Counter["PeersExpiredAlive"] += uint64(c_seen_alive)
 		common.Counter["PeersExpiredBanned"] += uint64(c_banned)
 		common.CounterMutex.Unlock()

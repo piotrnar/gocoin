@@ -156,6 +156,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 					}
 				}
 				a.Time = now
+			} else if now-a.Time >= 24*3600 {
+				common.CountSafe("AddrTooOld") // addr older than 24 hour - ignore it
+				continue
 			}
 			k := qdb.KeyType(a.UniqID())
 			peersdb.Lock()
