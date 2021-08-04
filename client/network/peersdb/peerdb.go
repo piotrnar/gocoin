@@ -26,7 +26,7 @@ const (
 	ExpireDeadPeerAfter   = (1 * 24 * time.Hour)
 	ExpireAlivePeerAfter  = (3 * 24 * time.Hour)
 	ExpireBannedPeerAfter = (7 * 24 * time.Hour)
-	MinPeersInDB          = 1000
+	MinPeersInDB          = 2500
 	MaxPeersInDB          = 70000
 	MaxPeersDeviation     = 2500
 	ExpirePeersPeriod     = (5 * time.Minute)
@@ -310,7 +310,7 @@ func DeleteFromIP(ip []byte) int {
 func ExpirePeers() {
 	peerdb_mutex.Lock()
 	defer peerdb_mutex.Unlock()
-	if PeerDB.Count() > MinPeersInDB {
+	if PeerDB.Count() > 11*MinPeersInDB/10 {
 		common.CountSafe("PeersExpireNeeded")
 		now := time.Now()
 		expire_dead_before_time := uint32(now.Add(-ExpireDeadPeerAfter).Unix())
