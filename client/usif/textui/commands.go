@@ -515,7 +515,7 @@ func show_addresses(par string) {
 			sc = " "
 		}
 
-		fmt.Printf("%4d %016x%s%s\n", i+1, p.UniqID(), sc, p.String())
+		fmt.Printf("%4d%s%s\n", i+1, sc, p.String())
 	}
 	fmt.Println("Note: currently connected peers marked with *")
 }
@@ -541,6 +541,26 @@ func add_peer(par string) {
 	}
 	ad.Time = uint32(time.Now().Unix())
 	ad.Save()
+}
+
+func del_peer(par string) {
+	peersdb.Lock()
+	defer peersdb.Unlock()
+
+	ad, er := peersdb.NewAddrFromString(par, false)
+	if er != nil {
+		fmt.Println(par, er.Error())
+		return
+	}
+
+	fmt.Print("Deleting ", ad.Ip(), " ... ")
+	id := ad.UniqID()
+	if peersdb.PeerDB.Get(qdb.KeyType(id)) != nil {
+		peersdb.PeerDB.Del(qdb.KeyType(id))
+		fmt.Println("OK")
+	} else {
+		fmt.Println("not found")
+	}
 }
 
 func show_cached(par string) {
@@ -719,7 +739,8 @@ func init() {
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
 	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
-	newUi("peeradd", false, add_peer, "Add a peer to the database, mark it as alive")
+	newUi("peeradd pa", false, add_peer, "Add a peer to the database, mark it as alive")
+	newUi("peerdel pd", false, del_peer, "Delete peer from the DB")
 	newUi("peers p", false, show_addresses, "Operation on pers database ('peers help' for help)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")

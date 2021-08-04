@@ -244,21 +244,21 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 	}
 	ipa, er := net.ResolveIPAddr("ip", ipstr)
 	if er == nil {
-		if ipa != nil {
+		if ipa == nil || len(ipa.IP) != 4 && len(ipa.IP) != 16 {
+			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - address error")
+		} else {
 			p = NewPeer(nil)
 			p.Services = Services
 			p.Port = port
 			if len(ipa.IP) == 4 {
 				copy(p.Ip4[:], ipa.IP[:])
-			} else if len(ipa.IP) == 16 {
+			} else {
 				copy(p.Ip4[:], ipa.IP[12:16])
 				copy(p.Ip6[:], ipa.IP[:12])
 			}
 			if dbp := PeerDB.Get(qdb.KeyType(p.UniqID())); dbp != nil {
 				p = NewPeer(dbp) // if we already had it, take the previous record
 			}
-		} else {
-			e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - unspecified error")
 		}
 	} else {
 		e = errors.New("peerdb.NewAddrFromString(" + ipstr + ") - " + er.Error())
