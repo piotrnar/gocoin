@@ -132,7 +132,7 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
-	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken uint64
+	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale uint64
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
 	for i := 0; i < int(cnt); i++ {
@@ -157,7 +157,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 				}
 				a.Time = now
 			} else if now-a.Time >= 24*3600 {
-				common.CountSafe("AddrTooOld") // addr older than 24 hour - ignore it
+				c_stale++ // addr older than 24 hour - ignore it
 				continue
 			}
 			k := qdb.KeyType(a.UniqID())
@@ -198,6 +198,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	}
 	if c_new_rejected > 0 {
 		common.Counter["AddrNewNO"] += c_new_rejected
+	}
+	if c_stale > 0 {
+		common.Counter["AddrStale"] += c_stale
 	}
 	common.CounterMutex.Unlock()
 	c.Mutex.Lock()
