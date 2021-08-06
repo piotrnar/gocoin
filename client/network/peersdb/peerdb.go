@@ -582,7 +582,7 @@ func InitPeers(dir string) {
 		proxyPeer.Port = uint16(oa.Port)
 		fmt.Printf("Connect to bitcoin network via %d.%d.%d.%d:%d\n",
 			proxyPeer.Ip4[0], proxyPeer.Ip4[1], proxyPeer.Ip4[2], proxyPeer.Ip4[3], proxyPeer.Port)
-	} else {
+	} else if PeerDB.Count() < MinPeersInDB {
 		go func() {
 			if !Testnet {
 				initSeeds([]string{
