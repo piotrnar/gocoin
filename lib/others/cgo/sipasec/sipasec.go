@@ -163,7 +163,7 @@ static int gocoin_schnorr_verify(unsigned char *msg, unsigned char *sig, unsigne
 	secp256k1_xonly_pubkey pubkey;
 	if (!secp256k1_xonly_pubkey_parse(ctx, &pubkey, pk)) return 0;
 	//printf("pubkey: %02x%02x.. ==> %02x%02x... %02x%02x...\n", pk[0], pk[1], pubkey.data[0], pubkey.data[1], pubkey.data[32], pubkey.data[33]);
-	return secp256k1_schnorrsig_verify(ctx, sig, msg, &pubkey);
+	return secp256k1_schnorrsig_verify(ctx, sig, msg, 32, &pubkey);
 }
 
 static int check_pay_to_contract(unsigned char *m_keydata, unsigned char *base, unsigned char *hash, int parity) {
