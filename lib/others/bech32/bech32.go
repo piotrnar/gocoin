@@ -14,6 +14,13 @@ func bech32_polymod_step(pre uint32) uint32 {
 		(-((b >> 4) & 1) & 0x2a1462b3)
 }
 
+func bech32_final_constant(bech32m bool) uint32 {
+	if bech32m {
+		return 0x2bc830a3
+	}
+	return 1
+}
+
 const (
 	charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 )
@@ -31,7 +38,7 @@ var (
 )
 
 // Encode returns an empty string on error.
-func Encode(hrp string, data []byte) string {
+func Encode(hrp string, data []byte, bech32m bool) string {
 	var chk uint32 = 1
 	var i int
 	output := new(bytes.Buffer)
@@ -68,15 +75,15 @@ func Encode(hrp string, data []byte) string {
 	for i = 0; i < 6; i++ {
 		chk = bech32_polymod_step(chk)
 	}
-	chk ^= 1
+	chk ^= bech32_final_constant(bech32m)
 	for i = 0; i < 6; i++ {
 		output.WriteByte(charset[(chk>>uint((5-i)*5))&0x1f])
 	}
-	return string(output.Bytes())
+	return output.String()
 }
 
 // Decode returns ("", nil) on error.
-func Decode(input string) (res_hrp string, res_data []byte) {
+func Decode(input string) (res_hrp string, res_data []byte, bech32m bool) {
 	var chk uint32 = 1
 	var i, data_len, hrp_len int
 	var have_lower, have_upper bool
@@ -135,9 +142,13 @@ func Decode(input string) (res_hrp string, res_data []byte) {
 	if have_lower && have_upper {
 		return
 	}
-	if chk == 1 {
+	if chk == bech32_final_constant(false) {
 		res_hrp = string(hrp)
 		res_data = data
+	} else if chk == bech32_final_constant(true) {
+		res_hrp = string(hrp)
+		res_data = data
+		bech32m = true
 	}
 	return
 }
