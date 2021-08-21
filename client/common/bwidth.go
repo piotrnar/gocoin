@@ -31,7 +31,7 @@ var (
 	ul_bytes_priod    uint64
 	UlBytesTotal      uint64
 
-	BwDeadlockDebug int
+	BwDeadlockDebug int // TODO: It's been seen to lock on macbook - needs investigating
 )
 
 func TickRecv() (ms int) {
