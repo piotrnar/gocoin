@@ -150,8 +150,17 @@ function fetch_wallet_balance(name) {
 			var idxx = 0
 			for (var i in wallet_addr) {
 				var rec = bal[wallet_addr[i]]
+				var rec_error = false
 
-				if ((rec.OutCnt+rec.PendingCnt)==0 && wallet[i].virgin) {
+				try {
+					if (typeof(rec)==undefined || rec==null || (rec.OutCnt+rec.PendingCnt)==0 && wallet[i].virgin) {
+						rec_error = true
+					}
+				} catch(e) {
+					console.log(e)
+					rec_error = true
+				}
+				if (rec_error) {
 					continue
 				}
 
