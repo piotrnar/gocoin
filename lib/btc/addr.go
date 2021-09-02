@@ -43,11 +43,13 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	prefix := strings.ToLower(hs[:3])
 	if prefix == "bc1" || prefix == "tb1" {
 		var sw = &SegwitProg{HRP: prefix[:2]}
-		sw.Version, sw.Program = bech32.SegwitDecode(sw.HRP, hs)
+		sw.Version, sw.Program, e = bech32.SegwitDecode(sw.HRP, hs)
 		if sw.Program != nil {
 			a = &BtcAddr{SegwitProg: sw}
 		} else {
-			e = errors.New("INCORRECT bech32/segwit address")
+			if e == nil {
+				e = errors.New("INCORRECT bech32/segwit address")
+			}
 		}
 		return
 	}
