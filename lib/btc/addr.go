@@ -35,11 +35,19 @@ type SegwitProg struct {
 }
 
 func NewAddrFromString(hs string) (a *BtcAddr, e error) {
-	if strings.HasPrefix(hs, "bc1") || strings.HasPrefix(hs, "tb1") {
-		var sw = &SegwitProg{HRP: hs[:2]}
+	if len(hs) < 4 {
+		e = errors.New("Address '" + hs + "' is too short")
+		return
+	}
+
+	prefix := strings.ToLower(hs[:3])
+	if prefix == "bc1" || prefix == "tb1" {
+		var sw = &SegwitProg{HRP: prefix[:2]}
 		sw.Version, sw.Program = bech32.SegwitDecode(sw.HRP, hs)
 		if sw.Program != nil {
 			a = &BtcAddr{SegwitProg: sw}
+		} else {
+			e = errors.New("INCORRECT bech32/segwit address")
 		}
 		return
 	}
@@ -56,7 +64,7 @@ func NewAddrFromString(hs string) (a *BtcAddr, e error) {
 	if len(dec) == 25 {
 		sh := Sha2Sum(dec[0:21])
 		if !bytes.Equal(sh[:4], dec[21:25]) {
-			e = errors.New("Address Checksum error")
+			e = errors.New("CHECKSUM error in base58")
 		} else {
 			a = new(BtcAddr)
 			a.Version = dec[0]

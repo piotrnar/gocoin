@@ -2,10 +2,11 @@ package btc
 
 import (
 	"bytes"
-	"testing"
-	"io/ioutil"
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
+	"strings"
+	"testing"
 )
 
 func TestAddr(t *testing.T) {
@@ -74,9 +75,9 @@ func TestAddr(t *testing.T) {
 		"17Gt94xaBPy6KrNWnDRsbmtzdnBVnbtBzz",
 		"1FVwrwLeRgZx1XKJTisyT6EQsvUHDoyHt6",
 		"115tTroRo3B9ZDQ6ATJGDCHcNEVbjJoZnF",
-		}
+	}
 
-	for l := 0; l<10; l++ {
+	for l := 0; l < 10; l++ {
 		for i := range ta {
 			//println(ta[i], "...")
 			a, e := NewAddrFromString(ta[i])
@@ -86,7 +87,7 @@ func TestAddr(t *testing.T) {
 			}
 
 			a3 := NewAddrFromHash160(a.Hash160[:], a.Version)
-			if a3.String()!=ta[i] {
+			if a3.String() != ta[i] {
 				t.Error("NewAddrFromHash160 failed")
 				return
 			}
@@ -105,7 +106,7 @@ func TestBase58(t *testing.T) {
 	for i := range vecs {
 		bin, _ := hex.DecodeString(vecs[i][0])
 		str := Encodeb58(bin)
-		if str!=vecs[i][1] {
+		if str != vecs[i][1] {
 			t.Error("Encode mismatch at vector", i, vecs[i][0], vecs[i][1])
 		}
 
@@ -114,4 +115,37 @@ func TestBase58(t *testing.T) {
 			t.Error("Decode mismatch at vector", i, vecs[i][0], vecs[i][1])
 		}
 	}
+}
+
+func test_one_segwit(t *testing.T, s string, valid bool, ver int, plen int) {
+	ad, er := NewAddrFromString(s)
+	if valid {
+		if ad == nil || er != nil {
+			t.Error(s, "- Address not decoded")
+		} else {
+			if ad.Version != 0 {
+				t.Error(s, "- Address Version mismatch", ad.Version, ver)
+			}
+			if len(ad.Program) != plen {
+				t.Error(s, "- Address Program length mismatch", len(ad.Program), plen)
+			}
+		}
+	} else {
+		if ad != nil || er == nil {
+			t.Error(s, "- Address somehow decoded", ad, er)
+		}
+	}
+}
+
+func test_both_segwit(t *testing.T, s string, valid bool, ver int, plen int) {
+	test_one_segwit(t, strings.ToLower(s), valid, ver, plen)
+	test_one_segwit(t, strings.ToUpper(s), valid, ver, plen)
+}
+
+func TestSegwit(t *testing.T) {
+	test_both_segwit(t, "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", true, 0, 20)
+	test_both_segwit(t, "BC1QW508D6QEJXTDG4Y5R3ZARVAYR0C5XW7KV8F3T4", false, 0, 0)
+	test_both_segwit(t, "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", true, 0, 32)
+	test_both_segwit(t, "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0", true, 1, 32)
+	test_both_segwit(t, "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd", false, 0, 0)
 }
