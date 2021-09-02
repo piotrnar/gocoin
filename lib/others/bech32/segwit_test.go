@@ -107,10 +107,10 @@ func segwit_scriptpubkey(witver int, witprog []byte) (scriptpubkey []byte) {
 func TestValidAddress(t *testing.T) {
 	for _, rec := range valid_address {
 		hrp := "bc"
-		witver, witprog := SegwitDecode(hrp, rec.address)
-		if witprog == nil {
+		witver, witprog, er := SegwitDecode(hrp, rec.address)
+		if witprog == nil || er != nil {
 			hrp = "tb"
-			witver, witprog = SegwitDecode(hrp, rec.address)
+			witver, witprog, er = SegwitDecode(hrp, rec.address)
 		}
 		if witprog == nil {
 			t.Error("SegwitDecode fails: ", rec.address)
@@ -134,12 +134,12 @@ func TestValidAddress(t *testing.T) {
 
 func TestInvalidAddress(t *testing.T) {
 	for _, s := range invalid_address {
-		_, witprog := SegwitDecode("bc", s)
-		if witprog != nil {
+		_, witprog, er := SegwitDecode("bc", s)
+		if witprog != nil || er == nil {
 			t.Error("SegwitDecode succeeds on invalid address: ", s)
 		}
-		_, witprog = SegwitDecode("tb", s)
-		if witprog != nil {
+		_, witprog, er = SegwitDecode("tb", s)
+		if witprog != nil || er == nil {
 			t.Error("SegwitDecode succeeds on invalid address: ", s)
 		}
 	}

@@ -2,6 +2,7 @@ package bech32
 
 import (
 	"bytes"
+	"errors"
 )
 
 // convert_bits returns nil on error.
@@ -43,32 +44,40 @@ func SegwitEncode(hrp string, witver int, witprog []byte) string {
 }
 
 // SegwitDecode returns (0, nil) on error.
-func SegwitDecode(hrp, addr string) (witver int, witdata []byte) {
+func SegwitDecode(hrp, addr string) (witver int, witdata []byte, er error) {
 	hrp_actual, data, bech32m := Decode(addr)
 	if hrp_actual == "" || len(data) == 0 || len(data) > 65 {
+		er = errors.New("BECH32 decode error")
 		return
 	}
 	if hrp != hrp_actual {
+		er = errors.New("HRP mismatch")
 		return
 	}
 	if data[0] > 16 {
+		er = errors.New("WITNESS Version too high")
 		return
 	}
 	if data[0] == 0 && bech32m {
+		er = errors.New("WITNESS using M for Version 0")
 		return
 	}
 	if data[0] != 0 && !bech32m {
+		er = errors.New("WITNESS not using M when needed")
 		return
 	}
 	witdata = convert_bits(8, data[1:], 5, false)
 	if witdata == nil {
+		er = errors.New("ERROR from convert_bits")
 		return
 	}
 	if len(witdata) < 2 || len(witdata) > 40 {
+		er = errors.New("WITNESS data length error")
 		witdata = nil
 		return
 	}
 	if data[0] == 0 && len(witdata) != 20 && len(witdata) != 32 {
+		er = errors.New("WITNESS Version 0 data length error")
 		witdata = nil
 		return
 	}
