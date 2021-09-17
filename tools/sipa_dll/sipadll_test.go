@@ -31,3 +31,34 @@ func TestVerify(t *testing.T) {
 		t.Error("Zero expected", res)
 	}
 }
+
+func TestSchnorr(t *testing.T) {
+	key, _ := hex.DecodeString("DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659")
+	sig, _ := hex.DecodeString("6896BD60EEAE296DB48A229FF71DFE071BDE413E6D43F917DC8DCF8C78DE33418906D11AC976ABCCB20B091292BFF4EA897EFCB639EA871CFA95F6DE339E4B0A")
+	msg, _ := hex.DecodeString("243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89")
+	res := Schnorr_Verify(key, sig, msg)
+	if res!=1 {
+		t.Error("Schnorr Verify failed")
+	}
+	msg[0]++
+	res = Schnorr_Verify(key, sig, msg)
+	if res!=0 {
+		t.Error("Schnorr Verify not failed while it should")
+	}
+}
+
+func TestPay2Scr(t *testing.T) {
+	pkey, _ := hex.DecodeString("afaf8a67be00186668f74740e34ffce748139c2b73c9fbd2c1f33e48a612a75d")
+	base, _ := hex.DecodeString("f1cbd3f2430910916144d5d2bf63d48a6281e5b8e6ade31413adccff3d8839d4")
+	hash, _ := hex.DecodeString("93a760e87123883022cbd462ac40571176cf09d9d2c6168759fee6c2b079fdd8")
+	var parity int = 1
+	res := CheckPayToContract(pkey, base, hash, parity)
+	if res!=1 {
+		t.Error("CheckPayToContract failed")
+	}
+	hash[0]++
+	res = CheckPayToContract(pkey, base, hash, parity)
+	if res!=0 {
+		t.Error("CheckPayToContract not failed while it should")
+	}
+}
