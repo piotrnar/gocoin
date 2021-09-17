@@ -20,6 +20,8 @@ import (
 var (
 	dll           = syscall.NewLazyDLL("secp256k1.dll")
 	DLL_EC_Verify = dll.NewProc("EC_Verify")
+	DLL_Schnorr_Verify = dll.NewProc("Schnorr_Verify")
+	DLL_CheckPayToContract = dll.NewProc("CheckPayToContract")
 )
 
 func EC_Verify(pkey, sign, hash []byte) bool {
@@ -27,6 +29,26 @@ func EC_Verify(pkey, sign, hash []byte) bool {
 		uintptr(unsafe.Pointer(&hash[0])), uintptr(32),
 		uintptr(unsafe.Pointer(&sign[0])), uintptr(len(sign)),
 		uintptr(unsafe.Pointer(&pkey[0])), uintptr(len(pkey)))
+	return r1 == 1
+}
+
+func schnorr_ec_verify(pkey, sign, msg []byte) bool {
+	r1, _, _ := syscall.Syscall(DLL_Schnorr_Verify.Addr(), 3,
+		uintptr(unsafe.Pointer(&msg[0])),
+		uintptr(unsafe.Pointer(&sign[0])),
+		uintptr(unsafe.Pointer(&pkey[0])))
+	return r1 == 1
+}
+
+func check_pay_to_contract(kd, base, hash []byte, parity bool) bool {
+	var par uintptr
+	if parity {
+		par = 1
+	}
+	r1, _, _ := syscall.Syscall6(DLL_CheckPayToContract.Addr(), 4,
+		uintptr(unsafe.Pointer(&kd[0])),
+		uintptr(unsafe.Pointer(&base[0])),
+		uintptr(unsafe.Pointer(&hash[0])), par, 0, 0)
 	return r1 == 1
 }
 

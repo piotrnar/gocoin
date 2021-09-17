@@ -5,7 +5,6 @@ Lib:
 * Check implemetation against this: https://bitslog.wordpress.com/2017/01/08/a-bitcoin-transaction-that-takes-5-hours-to-verify/
 
 Client:
-* Add schnorr support to sipadll.go speedup
 * Do not ask peers without services bit 0 for old blocks (perhaps don't event connect to them during initial sync)
 * Force to create UTXO.db file once for awhile (when bootstraping)
 * Review and update WebUI's Help page
