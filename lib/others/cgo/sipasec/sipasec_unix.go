@@ -1,3 +1,4 @@
+//go:build darwin || dragonfly || freebsd || linux || openbsd || solaris || netbsd
 // +build darwin dragonfly freebsd linux openbsd solaris netbsd
 
 package sipasec
@@ -9,7 +10,7 @@ To build and install secp256k1 lib on Debian Linux system, execute the following
  * git clone https://github.com/bitcoin/bitcoin.git
  * cd bitcoin/src/secp256k1/
  * ./autogen.sh
- * ./configure
+ * ./configure --enable-module-schnorrsig --enable-experimental
  * make
  * sudo make install
 

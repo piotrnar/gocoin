@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package sipasec
@@ -32,7 +33,7 @@ Now use "MSYS2 MinGW 64-bit" shell and execute:
  > git clone https://github.com/bitcoin/bitcoin.git
  > cd bitcoin/src/secp256k1/
  > ./autogen.sh
- > ./configure
+ > ./configure --enable-module-schnorrsig --enable-experimental
  > make
  > make install
 
