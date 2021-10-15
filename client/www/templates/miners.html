@@ -62,7 +62,10 @@ caption {
 
 var last_block_height = 0
 
-
+function printable(str) {
+	//return str.replace(/[^\x20-\x7E]/g, '')
+	return str.replace(/[^ -~]+/g, '.');
+}
 function show_versions(row, id) {
 	var s = "*** Blocks mined by " + id + ' ***'
 
@@ -87,7 +90,8 @@ function show_versions(row, id) {
 			"  " + mbs[i].Version.toString(16) +
 			("           "+mbs[i].Length).slice(-9) +
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
-			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + "\n"
+			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + 
+			"      " + mbs[i].Strings.replace(/[^ -~]+/g, ' ') + "\n"
 	}
 
 	verinfo.innerText = s
