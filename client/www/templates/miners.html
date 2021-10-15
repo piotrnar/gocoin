@@ -56,6 +56,14 @@ tr.ver_others {
 caption {
 	margin-bottom:6px;
 }
+#verinfo {
+	left:0px;
+	top:0px;
+	z-index:1000;
+	width:800px;
+	background-color:#e0e0e0;
+	overflow-x:auto;
+}
 </style>
 
 <script>
@@ -82,8 +90,8 @@ function show_versions(row, id) {
 		s += "  " + vrs[i][0].toString(16) + ("    " + vrs[i][1]).slice(-5) + "\n"
 	}
 
-	s += "\n\n  Height   Version   Length    Fees BTC    SPB\n"
-	s += " ==============================================\n"
+	s += "\n\n  Height   Version   Length    Fees BTC    SPB   Coinbase Strings\n"
+	s += " =======================================================================================================\n"
 	var mbs = row["mbs"]
 	for (var i=0; i<mbs.length; i++) {
 		s += ("    "+mbs[i].Height).slice(-8) +
@@ -91,7 +99,7 @@ function show_versions(row, id) {
 			("           "+mbs[i].Length).slice(-9) +
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
 			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + 
-			"      " + mbs[i].Strings.replace(/[^ -~]+/g, ' ') + "\n"
+			"  " + mbs[i].Strings.replace(/[^ -~]+/g, ' ') + "\n"
 	}
 
 	verinfo.innerText = s
@@ -264,7 +272,7 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 
 </div>
 
-<pre id="verinfo" class="mono" style="left:0px;top:0px;z-index:1000;width:100%;background-color:#e0e0e0"></pre>
+<pre id="verinfo" class="mono"></pre>
 
 </td>
 <td valign="top" id="block_history_td" style="display:none">
