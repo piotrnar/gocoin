@@ -94,12 +94,18 @@ function show_versions(row, id) {
 	s += " =======================================================================================================\n"
 	var mbs = row["mbs"]
 	for (var i=0; i<mbs.length; i++) {
+		var str = mbs[i].Strings
+		if (str.length > 6) {
+			// ignore block height for sig_script strings
+			var bh_len = str.charCodeAt(0)
+			if (bh_len >= 3 && bh_len <= 5)  str = str.substr(bh_len+1)
+		}
 		s += ("    "+mbs[i].Height).slice(-8) +
 			"  " + mbs[i].Version.toString(16) +
 			("           "+mbs[i].Length).slice(-9) +
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
 			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + 
-			"  " + mbs[i].Strings.replace(/[^ -~]+/g, ' ') + "\n"
+			"  " + str.replace(/[^ -~]+/g, ' ') + "\n"
 	}
 
 	verinfo.innerText = s
