@@ -514,9 +514,11 @@ func NetworkTick() {
 	// Connect friends
 	Mutex_net.Lock()
 	if now.After(NextConnectFriends) {
-		Mutex_net.Unlock()
-		ConnectFriends()
-		Mutex_net.Lock()
+		if peersdb.ConnectOnly == "" {
+			Mutex_net.Unlock()
+			ConnectFriends()
+			Mutex_net.Lock()
+		}
 		NextConnectFriends = now.Add(15 * time.Minute)
 	}
 	Mutex_net.Unlock()
@@ -817,7 +819,9 @@ func (c *OneConnection) Run() {
 			}
 
 		case "cmpctblock":
-			c.ProcessCmpctBlock(cmd.pl)
+			if common.GetBool(&common.BlockChainSynchronized) {
+				c.ProcessCmpctBlock(cmd.pl)
+			}
 
 		case "getblocktxn":
 			c.ProcessGetBlockTxn(cmd.pl)
