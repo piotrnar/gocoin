@@ -570,8 +570,11 @@ func main() {
 					break // BlockChainSynchronized so never mind checking it
 				}
 
-				if network.HeadersReceived.Get() >= 15 && network.BlocksToGetCnt() == 0 &&
-					len(network.NetBlocks) == 0 && network.CachedBlocksLen.Get() == 0 {
+				// Now check if the chain is synchronized...
+				if (network.HeadersReceived.Get() > int(common.GetUint32(&common.CFG.Net.MaxOutCons)/2) ||
+					peersdb.ConnectOnly != "" && network.HeadersReceived.Get() >= 1) &&
+					network.BlocksToGetCnt() == 0 && len(network.NetBlocks) == 0 &&
+					network.CachedBlocksLen.Get() == 0 {
 					// only when we have no pending blocks and rteceived header messages, startup_ticks can go down..
 					if startup_ticks > 0 {
 						startup_ticks--

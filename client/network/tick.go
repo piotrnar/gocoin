@@ -397,6 +397,10 @@ func ConnectFriends() {
 				}
 				continue
 			}
+			if peersdb.ConnectOnly != "" {
+				// Do not connect to friends in single connection mode
+				continue
+			}
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
 				//println(" Trying to connect", ad.Ip())
@@ -514,11 +518,9 @@ func NetworkTick() {
 	// Connect friends
 	Mutex_net.Lock()
 	if now.After(NextConnectFriends) {
-		if peersdb.ConnectOnly == "" {
-			Mutex_net.Unlock()
-			ConnectFriends()
-			Mutex_net.Lock()
-		}
+		Mutex_net.Unlock()
+		ConnectFriends()
+		Mutex_net.Lock()
 		NextConnectFriends = now.Add(15 * time.Minute)
 	}
 	Mutex_net.Unlock()
