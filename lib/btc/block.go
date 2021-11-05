@@ -176,7 +176,7 @@ func GetBlockReward(height uint32) uint64 {
 }
 
 func (bl *Block) MerkleRootMatch() bool {
-	if bl.TxCount == 0 || len(bl.Txs) == 0 {
+	if bl.TxCount == 0 || len(bl.Txs) != bl.TxCount {
 		return false
 	}
 	merkle, mutated := bl.GetMerkle()
