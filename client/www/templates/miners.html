@@ -43,12 +43,6 @@ td.mi_vers {
 	font-style:italic;
 	font-weight:bold;
 }
-td.mi_taproot {
-	text-align:right;
-	color:blue;
-	font-style:italic;
-	font-weight:bold;
-}
 tr.ver_others {
 	font-weight:bold;
 	font-style:italic;
@@ -163,7 +157,6 @@ function refresh_mining_info() {
 
 				// parse MinedBlocks array
 				var vers = new Map()
-				var taproot_cnt = 0
 				for (var j=0; j<m.MinedBlocks.length; j++) {
 					var b = m.MinedBlocks[j]
 					var cnt = 0
@@ -171,12 +164,7 @@ function refresh_mining_info() {
 						cnt = vers.get(b.Version)
 					}
 					vers.set(b.Version, cnt+1)
-					if ((b.Version&0x20000004) == 0x20000004)  taproot_cnt++
 				}
-
-				td = row.insertCell(-1)
-				td.className = 'mi_taproot'
-				td.innerText = taproot_cnt
 
 				row["vers"] = vers
 				td = row.insertCell(-1)
@@ -241,7 +229,6 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 		<th width="120" align="left">Miner
 		<th width="80" align="right">Share
 		<th width="40" align="right" title="Total blocks mined">Blks
-		<th width="40" align="right" title="Blocks signalling Taproot">Tap
 		<th width="40" align="right" title="Unique version values">Vers
 		<th width="100" align="right">Hashrate
 		<th width="80" align="right" title="Average Block Length">Average
@@ -250,17 +237,7 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 	</tr>
 </table>
 <br>
-	<table width="100%" border="0" cellspacing="0"><tr>
-		<td>
-			Signalling Taproot activation
-				&nbsp;&nbsp;
-			<b id="taperc_1000">90.0</b>% in last 1000 blocks
-			&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-			<b id="taperc_curr">90.0</b>% in current period
-			&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-			<b id="taperc_past">90.0</b>% in last period.
-		</td>
-	</tr>
+	<table width="100%" border="0" cellspacing="0">
 	<tr>
 		<td colspan="2">
 			The next halving is estimated to happen in
@@ -308,15 +285,11 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 function do_versions(tabid, block_versions, max_block_number, min_block_number) {
 	var key, st = new Array()
 	var counted = 0;
-	var taproot = 0;
 	for (var i=0; i<block_versions.length; i++) {
 		if (block_versions[i][0] > max_block_number) continue;
 		if (block_versions[i][0] < min_block_number) continue;
 		counted++;
 		var ver = block_versions[i][1]
-		if ((ver & 0x20000004) == 0x20000004) {
-			taproot++
-		}
 		key = ver+""
 		if (isNaN(st[key])) {
 			st[key] = 1
@@ -365,20 +338,6 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 		c = row.insertCell(-1)
 		c.className = 'bl_perc'
 		c.innerText = Math.round(sorted[i].cnt*100/counted) + '%'
-	}
-	if (taproot) {
-		row = blockver_tab.insertRow(-1)
-		c = row.insertCell(-1)
-		row.className = 'ver_others'
-		c.innerText = 'Taproot'
-		c = row.insertCell(-1)
-		c.className = 'bl_cnt'
-		c.innerText = taproot
-		c = row.insertCell(-1)
-		c.className = 'bl_perc'
-		var taperc = taproot*100/counted
-		c.innerText = Math.round(taperc) + '%'
-		document.getElementById("taperc_" + tabid).innerText = taperc.toFixed(1)
 	}
 }
 
