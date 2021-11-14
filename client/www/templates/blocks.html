@@ -94,8 +94,6 @@ Mined by <b id="stat_mined_by"></b>
 	<th class="stat1" width="10" title="Extra times received">X
 </tr>
 </table>
-	<br>
-	Block signaling Taproot activation: <b id="tap_yes">?</b> / <b id="tap_tot"></b> (<b id="tap_perc"></b>)
 <script>
 function switch_stats_type() {
 	if (stats_type_pro.checked) {
@@ -194,7 +192,6 @@ function refreshblocks() {
 	}
 	aj.onload=function() {
 		try {
-			var taproot_yes = 0;
 			var cs = JSON.parse(aj.responseText)
 
 			while (blkstab.rows.length>2) blkstab.deleteRow(2)
@@ -270,9 +267,6 @@ function refreshblocks() {
 				td.className = 'stat0 hand'
 				td.innerText = (cs[i].Version&15).toString(16)
 				td.title = '0x' + cs[i].Version.toString(16)
-				if ((cs[i].Version & 0x20000004) == 0x20000004) {
-					taproot_yes++
-				}
 				onc_ver(td, i)
 
 				var miner = cs[i].Miner.substr(0,11)
@@ -343,9 +337,6 @@ function refreshblocks() {
 					}
 				}
 			}
-			tap_yes.innerText = taproot_yes
-			tap_tot.innerText = cs.length
-			tap_perc.innerText = (100.0 * taproot_yes / cs.length).toFixed(1) + '%'
 		} catch(e) {
 			console.log(e)
 		}
