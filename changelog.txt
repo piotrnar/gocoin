@@ -8,6 +8,7 @@
 * Client: Ignore "cmpctblock" messages when chain not in sync
 * Client: Do not connect to friends in single connection mode
 * Lib: Fix for a possible crash upon receiving a corrupt block (thx @lopp)
+* Client/TextUI: Added Taproot support to "richest" and "maxouts" commands
 
 1.9.9 - 2021-05-21
  * Client: Do not drop Authorized peers
