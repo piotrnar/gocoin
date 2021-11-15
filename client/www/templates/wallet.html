@@ -35,6 +35,10 @@ function showqrcode(label, addr) {
 	fade.style.display='block'
 	document.addEventListener("scroll", noscroll)
 }
+function showtheqr(img) {
+	console.log('jade', img, "lab:", img["qr_label"], "  ad:", img["qr_addr"])
+	showqrcode(img.qr_label, img.qr_addr)
+}
 </script>
 
 <style>
@@ -93,9 +97,19 @@ function remove_comment_from_label(lab) {
 	return lab.substr(0, i)
 }
 
-function add_copy_icon(td, txt) {
-	var img = document.createElement("img")
-	img["text2copy"] = txt
+function add_address_and_icons(td, adr, lab) {
+	var qrc = document.createElement("img")
+	qrc.src = "webui/qrcode.png"
+	qrc.className = 'hand'
+	qrc["qr_addr"] = adr
+	qrc["qr_label"] = lab
+	qrc.onclick = function(){showtheqr(this)}
+	td.appendChild(qrc)
+	td.appendChild(document.createTextNode('\u00A0' + adr + '\u00A0'))
+
+	// add copy icon
+	img = document.createElement("img")
+	img["text2copy"] = adr
 	img.style.verticalAlign = "bottom"
 	img.src = 'webui/copy.png'
 	img.className = "hand"
@@ -173,10 +187,8 @@ function fetch_wallet_balance(name) {
 
 				td = row.insertCell(-1)
 				td.className = (wallet_addr[i].length>45) ? "addr_long" : "addr_norm"
-				td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\''  + wallet[i].label +
-					'\', \'' + wallet_addr[i] + '\')" class="hand"> ' + wallet_addr[i] + '&nbsp;'
-				add_copy_icon(td, wallet_addr[i])
 
+				add_address_and_icons(td, wallet_addr[i], wallet[i].label)
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
 				td.innerText = remove_comment_from_label(wallet[i].label)
@@ -219,20 +231,13 @@ function fetch_wallet_balance(name) {
 				if (p2sh_sw.checked) {
 					td.classList.add('p2sh')
 					if (segwit_active && rec.SegWitAddr!='') {
-						//td.innerText = rec.SegWitAddr
-	                    td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
-							'\', \'' + rec.SegWitAddr + '\')" class="hand"> ' + rec.SegWitAddr + '&nbsp;'
-						add_copy_icon(td, rec.SegWitAddr)
+						add_address_and_icons(td, rec.SegWitAddr, wallet[i].label)
 					}
 				} else {
 					td.classList.add('native')
 					if (segwit_active && rec.SegWitNativeAddr!='') {
-						//td.innerText = rec.SegWitAddr
-	                    td.innerHTML = '<img valign="bottom" src="webui/qrcode.png" onclick="showqrcode(\'Segwit deposit address for '  + wallet[i].label +
-							'\', \'' + rec.SegWitNativeAddr + '\')" class="hand"> ' + rec.SegWitNativeAddr + '&nbsp;'
-						add_copy_icon(td, rec.SegWitNativeAddr)
+						add_address_and_icons(td, rec.SegWitNativeAddr, wallet[i].label)
 					}
-
 				}
 
 				td = row.insertCell(-1)
