@@ -275,18 +275,25 @@ func dump_addrs() {
 			}
 		}
 		var pubaddr string
+		label := keys[i].BtcAddr.Extra.Label
 		if *segwit_mode {
 			if segwit[i] == nil {
 				pubaddr = "-=CompressedKey=-"
 			} else {
 				pubaddr = segwit[i].String()
 			}
+			p2kh_adr := keys[i].BtcAddr.String()
+			if len(p2kh_adr) > 20 {
+				label += "-" + p2kh_adr[:4] + "..." + p2kh_adr[len(p2kh_adr)-4:]
+			} else {
+				label += "-?????"
+			}
 		} else {
 			pubaddr = keys[i].BtcAddr.String()
 		}
-		fmt.Println(pubaddr, keys[i].BtcAddr.Extra.Label)
+		fmt.Println(pubaddr, label)
 		if f != nil {
-			fmt.Fprintln(f, pubaddr, keys[i].BtcAddr.Extra.Label)
+			fmt.Fprintln(f, pubaddr, label)
 		}
 	}
 	if f != nil {

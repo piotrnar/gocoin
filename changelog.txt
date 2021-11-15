@@ -9,6 +9,7 @@
 * Client: Do not connect to friends in single connection mode
 * Lib: Fix for a possible crash upon receiving a corrupt block (thx @lopp)
 * Client/TextUI: Added Taproot support to "richest" and "maxouts" commands
+* Wallet: For each listed segwit deposit address, extend the label with the reference to its P2KH address
 
 1.9.9 - 2021-05-21
  * Client: Do not drop Authorized peers
