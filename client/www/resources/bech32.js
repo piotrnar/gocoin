@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2021 Pieter Wuille
+// Copyright (c) 2017 Pieter Wuille
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,15 +21,6 @@
 var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 var GENERATOR = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
 
-function getEncodingConst (enc) {
-  if (enc == encodings.BECH32) {
-    return 1;
-  } else if (enc == encodings.BECH32M) {
-    return 0x2bc830a3;
-  } else {
-    return null;
-  }
-}
 
 function polymod (values) {
   var chk = 1;
@@ -58,13 +49,13 @@ function hrpExpand (hrp) {
   return ret;
 }
 
-function verifyChecksum (hrp, data, enc) {
-  return polymod(hrpExpand(hrp).concat(data)) === getEncodingConst(enc);
+function verifyChecksum (hrp, data) {
+  return polymod(hrpExpand(hrp).concat(data)) === 1;
 }
 
-function createChecksum (hrp, data, enc) {
+function createChecksum (hrp, data) {
   var values = hrpExpand(hrp).concat(data).concat([0, 0, 0, 0, 0, 0]);
-  var mod = polymod(values) ^ getEncodingConst(enc);
+  var mod = polymod(values) ^ 1;
   var ret = [];
   for (var p = 0; p < 6; ++p) {
     ret.push((mod >> 5 * (5 - p)) & 31);
@@ -72,8 +63,8 @@ function createChecksum (hrp, data, enc) {
   return ret;
 }
 
-function encode (hrp, data, enc) {
-  var combined = data.concat(createChecksum(hrp, data, enc));
+function bech32_encode (hrp, data) {
+  var combined = data.concat(createChecksum(hrp, data));
   var ret = hrp + '1';
   for (var p = 0; p < combined.length; ++p) {
     ret += CHARSET.charAt(combined[p]);
@@ -81,7 +72,7 @@ function encode (hrp, data, enc) {
   return ret;
 }
 
-function decode (bechString, enc) {
+function bech32_decode (bechString) {
   var p;
   var has_lower = false;
   var has_upper = false;
@@ -113,7 +104,7 @@ function decode (bechString, enc) {
     }
     data.push(d);
   }
-  if (!verifyChecksum(hrp, data, enc)) {
+  if (!verifyChecksum(hrp, data)) {
     return null;
   }
   return {hrp: hrp, data: data.slice(0, data.length - 6)};
@@ -147,12 +138,7 @@ function convertbits (data, frombits, tobits, pad) {
 }
 
 function sw_decode (hrp, addr) {
-  var bech32m = false;
-  var dec = bech32.decode(addr, bech32.encodings.BECH32);
-  if (dec === null) {
-    dec = bech32.decode(addr, bech32.encodings.BECH32M);
-    bech32m = true;
-  }
+  var dec = bech32_decode(addr);
   if (dec === null || dec.hrp !== hrp || dec.data.length < 1 || dec.data[0] > 16) {
     return null;
   }
@@ -163,22 +149,12 @@ function sw_decode (hrp, addr) {
   if (dec.data[0] === 0 && res.length !== 20 && res.length !== 32) {
     return null;
   }
-  if (dec.data[0] === 0 && bech32m) {
-    return null;
-  }
-  if (dec.data[0] !== 0 && !bech32m) {
-    return null;
-  }
   return {version: dec.data[0], program: res};
 }
 
 function sw_encode (hrp, version, program) {
-  var enc = bech32.encodings.BECH32;
-  if (version > 0) {
-    enc = bech32.encodings.BECH32M;
-  }
-  var ret = bech32.encode(hrp, [version].concat(convertbits(program, 8, 5, true)), enc);
-  if (decode(hrp, ret, enc) === null) {
+  var ret = bech32_encode(hrp, [version].concat(convertbits(program, 8, 5, true)));
+  if (sw_decode(hrp, ret) === null) {
     return null;
   }
   return ret;
