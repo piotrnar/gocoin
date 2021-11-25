@@ -297,6 +297,9 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 		pre := time.Now()
 		crec, trusted, _ := common.BlockChain.Blocks.BlockGetInternal(nxt.BlockHash, true)
+		if crec == nil || crec.Data == nil {
+			panic(fmt.Sprint("No data for block #", nxt.Height, " ", nxt.BlockHash.String()))
+		}
 
 		bl, er := btc.NewBlock(crec.Data)
 		if er != nil {
