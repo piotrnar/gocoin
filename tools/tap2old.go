@@ -5,7 +5,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/secp256k1"
 	"os"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -36,24 +35,6 @@ func main() {
 		return
 	}
 	fmt.Println("Possible P2KH addresses:")
-	var pk secp256k1.XY
-	var pkb [33]byte
-	pk.X.SetB32(ad.SegwitProg.Program)
-	pk.SetXO(&pk.X, false)
-	if pk.IsValid() {
-		pk.GetPublicKey(pkb[:])
-		fmt.Println("e:", btc.NewAddrFromPubkey(pkb[:], btc.AddrVerPubkey(false)))
-	} else {
-		fmt.Println("e: Not valid")
-	}
-	pk.X.SetB32(ad.SegwitProg.Program)
-	pk.SetXO(&pk.X, true)
-	if pk.IsValid() {
-		pk.GetPublicKey(pkb[:])
-		fmt.Println("o:", btc.NewAddrFromPubkey(pkb[:], btc.AddrVerPubkey(false)))
-	} else {
-		fmt.Println("o: Not valid")
-	}
-	//fmt.Println("", btc.NewAddrFromPubkey(append([]byte{0x02}, ad.SegwitProg.Program...), btc.AddrVerPubkey(false)))
-	//fmt.Println("", btc.NewAddrFromPubkey(append([]byte{0x03}, ad.SegwitProg.Program...), btc.AddrVerPubkey(false)))
+	fmt.Println("", btc.NewAddrFromPubkey(append([]byte{0x02}, ad.SegwitProg.Program...), btc.AddrVerPubkey(false)))
+	fmt.Println("", btc.NewAddrFromPubkey(append([]byte{0x03}, ad.SegwitProg.Program...), btc.AddrVerPubkey(false)))
 }
