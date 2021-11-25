@@ -467,7 +467,8 @@ func main() {
 				idxs_done[idx] = true
 			}
 		}
-
+		fmt.Println("All dat files have the new names now")
+		return
 	}
 
 	if fl_mergedat != 0 {
