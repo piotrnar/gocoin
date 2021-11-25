@@ -1,20 +1,21 @@
 package webui
 
 import (
-	"log"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/usif"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/usif"
 )
 
 var start_time time.Time
@@ -236,8 +237,14 @@ func start_ssl_server() {
 		return
 	}
 
+	var ssl_serv_addr string
+	if common.Testnet {
+		ssl_serv_addr = ":14433"
+	} else {
+		ssl_serv_addr = ":4433"
+	}
 	server := &http.Server{
-		Addr: ":4433",
+		Addr: ssl_serv_addr,
 		TLSConfig: &tls.Config{
 			ClientAuth: tls.RequireAndVerifyClientCert,
 		},
@@ -250,7 +257,7 @@ func start_ssl_server() {
 		return
 	}
 
-	println("Starting SSL server at port 4433...")
+	println("Starting SSL server at", ssl_serv_addr, "...")
 	err = server.ListenAndServeTLS("ssl_cert/server.crt", "ssl_cert/server.key")
 	if err != nil {
 		println(err.Error())
