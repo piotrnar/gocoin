@@ -149,7 +149,7 @@ func (checker *SigChecker) VerifyWitnessProgram(witness *witness_ctx, witversion
 	} else if witversion == 1 && len(program) == 32 && !is_p2sh {
 		// TAPROOT
 		if (flags & VER_TAPROOT) == 0 {
-			if DBG_ERR {
+			if DBG_SCR {
 				fmt.Println("VER_TAPROOT not set - verify script OK", checker.Tx.Hash.String(), checker.Idx)
 			}
 			return true
