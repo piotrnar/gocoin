@@ -295,84 +295,66 @@ The blocks from "oldat/" folder will still be served by the node to its peers.</
 Having just enabling this option, execute TextUI command <code>purge</code> to purge all unspendable records kept from past transactions.<br>
 Disabling this will make your node to require more RAM, but may be necessary for certain applications that one may develop on top of Gocoin's UTXO database.<br>
 </td>
-</tr>
-<tr class="odd">
-<td class="cfg_name"> Beeps.NewBlock</td>
-<td class="cfg_type"> bool</td>
-<td> false</td>
-<td class="cfg_info"> Beep when a  new block is added to the top of the chain (someone has mined a new one).</td>
-</tr>
-<tr class="odd">
-<td class="cfg_name"> Beeps.ActiveFork</td>
-<td class="cfg_type"> bool</td>
-<td> false</td>
-<td class="cfg_info"> Triple beep when there is a fork in the block chain.</td>
-</tr>
-<tr class="odd">
-<td class="cfg_name"> Beeps.MinerID</td>
-<td class="cfg_type"> string</td>
-<td> ""</td>
-<td class="cfg_info"> Beep when a new block appears with this string in the coinbase transaction. Empty string to disable.</td>
-</tr>
 
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> AllBalances.MinValue</td>
 <td class="cfg_type"> uint</td>
 <td> 10000</td>
 <td class="cfg_info"> The addresses balance database does not include inputs carrying value lover than this many Satoshis.</td>
 </tr>
 
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> AllBalances.UseMapCnt</td>
 <td class="cfg_type"> int</td>
 <td> 100</td>
 <td class="cfg_info"> Use hashmap instead of list for addresses that have this many (or more) unspent outputs.</td>
 </tr>
-<tr class="even">
+
+<tr class="odd">
 <td class="cfg_name"> AllBalances.AutoLoad</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Atomatically enable wallet functionality after the node is launched and synchronized.</td>
 </tr>
 
-<tr class="odd">
+<tr class="even">
 <td class="cfg_name"> DropPeers.DropEachMinutes</td>
 <td class="cfg_type"> uint</td>
 <td> 5</td>
 <td class="cfg_info"> How many minutes between disconnecting the slowest peers. 0 - never drop peers.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td class="cfg_name"> DropPeers.BlckExpireHours</td>
 <td class="cfg_type"> uint</td>
 <td> 24</td>
 <td class="cfg_info"> How many hours before blocks received from a peer "expire",  in slowest peer calculation.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td class="cfg_name"> DropPeers.PingPeriodSec</td>
 <td class="cfg_type"> uint</td>
 <td> 15</td>
 <td class="cfg_info"> How many seconds between sending ping comand to a peer. 0 - do not ping.</td>
 </tr>
 
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> Stat.HashrateHrs </td>
 <td class="cfg_type"> uint</td>
 <td> 12</td>
 <td class="cfg_info"> How many hours to look back for the hashrate calculation (the one shown on the home page of WebUI)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> Stat.MiningHrs</td>
 <td class="cfg_type"> uint</td>
 <td> 24</td>
 <td class="cfg_info"> How many hours the mining statistics (at WebUI's Miners page) should look back.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> Stat.FeesBlks</td>
 <td class="cfg_type"> uint</td>
 <td> 24</td>
 <td class="cfg_info"> How many block down the chain to look for calculating the current average transaction fee.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td class="cfg_name"> Stat.BSizeBlks</td>
 <td class="cfg_type"> uint</td>
 <td> 72</td>
@@ -380,14 +362,14 @@ Disabling this will make your node to require more RAM, but may be necessary for
 </tr>
 <tr>
 
-<tr>
+<tr class="even">
 <td class="cfg_name"> UTXOSave.BlocksToHold</td>
 <td class="cfg_type"> uint</td>
 <td> 6</td>
 <td class="cfg_info"> Skip so many new blocks before auto saving a new UTXO.db to disk.<br>
 Note that UTXO.db has a size of a few GB - saving it more often may cause a solid state drive (SSD) to deplete faster.</td>
 </tr>
-<tr>
+<tr class="even">
 <td class="cfg_name"> UTXOSave.SecondsToTake</td>
 <td class="cfg_type"> uint</td>
 <td> 300</td>
@@ -395,8 +377,7 @@ Note that UTXO.db has a size of a few GB - saving it more often may cause a soli
 New block arriving within this period will abort and restart the saving process.
 0 saves UTXO.db as fast as possible.<br>
 Note that setting this value too low may make your system sluggish while the database is being written.
-At the other hand, setting it too high may make the saving process unable to complete for long periods of time,
-causing wasteful depletion of your SSD.</td>
+At the other hand, setting it too high may make the saving process unable to complete for long periods of time.</td>
 </tr>
 
 
