@@ -182,7 +182,7 @@ redo:
 		}
 
 		// we don't lock RWMutex here as this code is only used during init phase, when no other routines are running
-		db.HashMap[int(k[0])][k] = b
+		db.HashMap[k[0]][k] = b
 
 		if cnt_dwn == 0 {
 			fmt.Print(info, perc, "% complete ... ")
@@ -581,62 +581,6 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
-	/*
-		var add_lists [256][]*UtxoRec
-		type one_delist struct {
-			k [32]byte
-			v []bool
-		}
-		var del_lists [256][]one_delist
-
-		for _, rec := range changes.AddList {
-			if db.CB.NotifyTxAdd != nil {
-				db.CB.NotifyTxAdd(rec)
-			}
-			idx := int(rec.TxID[0])
-			add_lists[idx] = append(add_lists[idx], rec)
-		}
-		for k, v := range changes.DeledTxs {
-			idx := int(k[0])
-			del_lists[idx] = append(del_lists[idx], one_delist{k: k, v: v})
-		}
-
-		for i := 0; i < 256; i++ {
-			if len(add_lists[i]) > 0 || len(del_lists[i]) > 0 {
-				wg.Add(1)
-				go func(idx int) {
-					for _, rec := range add_lists[idx] {
-						var ind UtxoKeyType
-						copy(ind[:], rec.TxID[:])
-						var add_this_tx bool
-						if UTXO_PURGE_UNSPENDABLE {
-							for idx, r := range rec.Outs {
-								if r != nil {
-									if script.IsUnspendable(r.PKScr) {
-										rec.Outs[idx] = nil
-									} else {
-										add_this_tx = true
-									}
-								}
-							}
-						} else {
-							add_this_tx = true
-						}
-						if add_this_tx {
-							db.MapMutex[idx].Lock()
-							db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
-							db.MapMutex[idx].Unlock()
-						}
-					}
-					for _, r := range del_lists[idx] {
-						db.del(r.k[:], r.v)
-					}
-					wg.Done()
-				}(i)
-			}
-		}
-		wg.Wait()
-	*/
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
 		var ind UtxoKeyType
@@ -660,19 +604,19 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		}
 		if add_this_tx {
 			wg.Add(1)
-			go func(k UtxoKeyType, r *UtxoRec) {
-				v := Serialize(r, false, nil)
-				db.MapMutex[int(k[0])].Lock()
-				db.HashMap[int(k[0])][k] = v
-				db.MapMutex[int(k[0])].Unlock()
+			go func(ind UtxoKeyType, rec *UtxoRec) {
+				v := Serialize(rec, false, nil)
+				db.MapMutex[ind[0]].Lock()
+				db.HashMap[ind[0]][ind] = v
+				db.MapMutex[ind[0]].Unlock()
 				wg.Done()
 			}(ind, rec)
 		}
 	}
 	for k, v := range changes.DeledTxs {
 		wg.Add(1)
-		go func(ke [32]byte, vv []bool) {
-			db.del(ke[:], vv)
+		go func(k [32]byte, v []bool) {
+			db.del(k[:], v)
 			wg.Done()
 		}(k, v)
 	}
@@ -790,10 +734,10 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 			}
 			if !spendable_found {
 				Memory_Free(v)
-				delete(db.HashMap[int(k[0])], k)
+				delete(db.HashMap[k[0]], k)
 				unspendable_txs++
 			} else if record_removed > 0 {
-				db.HashMap[int(k[0])][k] = Serialize(rec, false, nil)
+				db.HashMap[k[0]][k] = Serialize(rec, false, nil)
 				Memory_Free(v)
 				unspendable_recs += record_removed
 			}
