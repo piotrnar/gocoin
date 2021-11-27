@@ -456,9 +456,9 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 
 		var ind UtxoKeyType
 		copy(ind[:], rec.TxID[:])
-		db.MapMutex[int(ind[0])].RLock()
-		v := db.HashMap[int(ind[0])][ind]
-		db.MapMutex[int(ind[0])].RUnlock()
+		db.MapMutex[ind[0]].RLock()
+		v := db.HashMap[ind[0]][ind]
+		db.MapMutex[ind[0]].RUnlock()
 		if v != nil {
 			oldrec := NewUtxoRec(ind, v)
 			for a := range rec.Outs {
@@ -467,9 +467,9 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 				}
 			}
 		}
-		db.MapMutex[int(ind[0])].Lock()
-		db.HashMap[int(ind[0])][ind] = Serialize(rec, false, nil)
-		db.MapMutex[int(ind[0])].Unlock()
+		db.MapMutex[ind[0]].Lock()
+		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
+		db.MapMutex[ind[0]].Unlock()
 	}
 
 	os.Remove(fn)
@@ -528,9 +528,9 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	var v []byte
 	copy(ind[:], po.Hash[:])
 
-	db.MapMutex[int(ind[0])].RLock()
-	v = db.HashMap[int(ind[0])][ind]
-	db.MapMutex[int(ind[0])].RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	v = db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	if v != nil {
 		res = OneUtxoRec(ind, v, po.Vout)
 	}
@@ -542,18 +542,18 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	var ind UtxoKeyType
 	copy(ind[:], id.Hash[:])
-	db.MapMutex[int(ind[0])].RLock()
-	_, res = db.HashMap[int(ind[0])][ind]
-	db.MapMutex[int(ind[0])].RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	_, res = db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	return
 }
 
 func (db *UnspentDB) del(hash []byte, outs []bool) {
 	var ind UtxoKeyType
 	copy(ind[:], hash)
-	db.MapMutex[int(ind[0])].RLock()
-	v := db.HashMap[int(ind[0])][ind]
-	db.MapMutex[int(ind[0])].RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	v := db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
@@ -569,18 +569,74 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 			anyout = true
 		}
 	}
-	db.MapMutex[int(ind[0])].Lock()
+	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		db.HashMap[int(ind[0])][ind] = Serialize(rec, false, nil)
+		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
 	} else {
-		delete(db.HashMap[int(ind[0])], ind)
+		delete(db.HashMap[ind[0]], ind)
 	}
-	db.MapMutex[int(ind[0])].Unlock()
+	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
 	var wg sync.WaitGroup
+	/*
+		var add_lists [256][]*UtxoRec
+		type one_delist struct {
+			k [32]byte
+			v []bool
+		}
+		var del_lists [256][]one_delist
+
+		for _, rec := range changes.AddList {
+			if db.CB.NotifyTxAdd != nil {
+				db.CB.NotifyTxAdd(rec)
+			}
+			idx := int(rec.TxID[0])
+			add_lists[idx] = append(add_lists[idx], rec)
+		}
+		for k, v := range changes.DeledTxs {
+			idx := int(k[0])
+			del_lists[idx] = append(del_lists[idx], one_delist{k: k, v: v})
+		}
+
+		for i := 0; i < 256; i++ {
+			if len(add_lists[i]) > 0 || len(del_lists[i]) > 0 {
+				wg.Add(1)
+				go func(idx int) {
+					for _, rec := range add_lists[idx] {
+						var ind UtxoKeyType
+						copy(ind[:], rec.TxID[:])
+						var add_this_tx bool
+						if UTXO_PURGE_UNSPENDABLE {
+							for idx, r := range rec.Outs {
+								if r != nil {
+									if script.IsUnspendable(r.PKScr) {
+										rec.Outs[idx] = nil
+									} else {
+										add_this_tx = true
+									}
+								}
+							}
+						} else {
+							add_this_tx = true
+						}
+						if add_this_tx {
+							db.MapMutex[idx].Lock()
+							db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
+							db.MapMutex[idx].Unlock()
+						}
+					}
+					for _, r := range del_lists[idx] {
+						db.del(r.k[:], r.v)
+					}
+					wg.Done()
+				}(i)
+			}
+		}
+		wg.Wait()
+	*/
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
 		var ind UtxoKeyType
@@ -605,8 +661,9 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 		if add_this_tx {
 			wg.Add(1)
 			go func(k UtxoKeyType, r *UtxoRec) {
+				v := Serialize(r, false, nil)
 				db.MapMutex[int(k[0])].Lock()
-				db.HashMap[int(k[0])][k] = Serialize(r, false, nil)
+				db.HashMap[int(k[0])][k] = v
 				db.MapMutex[int(k[0])].Unlock()
 				wg.Done()
 			}(ind, rec)
