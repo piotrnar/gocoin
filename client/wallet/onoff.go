@@ -52,26 +52,20 @@ func LoadBalance() {
 
 	InitMaps(false)
 
-	common.BlockChain.Unspent.RWMutex.RLock()
-	defer common.BlockChain.Unspent.RWMutex.RUnlock()
-
-	cnt_dwn_from := (len(common.BlockChain.Unspent.HashMap) + 999) / 1000
-	cnt_dwn := cnt_dwn_from
-	perc := uint32(1)
-
-	for k, v := range common.BlockChain.Unspent.HashMap {
-		NewUTXO(utxo.NewUtxoRecStatic(k, v))
-		if cnt_dwn == 0 {
-			perc++
-			common.SetUint32(&common.WalletProgress, perc)
-			cnt_dwn = cnt_dwn_from
-		} else {
-			cnt_dwn--
+	for _i := range common.BlockChain.Unspent.HashMap {
+		common.BlockChain.Unspent.MapMutex[_i].RLock()
+		for k, v := range common.BlockChain.Unspent.HashMap[_i] {
+			NewUTXO(utxo.NewUtxoRecStatic(k, v))
+			if FetchingBalanceTick != nil && FetchingBalanceTick() {
+				aborted = true
+				break
+			}
 		}
-		if FetchingBalanceTick != nil && FetchingBalanceTick() {
-			aborted = true
+		common.BlockChain.Unspent.MapMutex[_i].RUnlock()
+		if aborted {
 			break
 		}
+		common.SetUint32(&common.WalletProgress, 1000*(uint32(_i)+1)/256)
 	}
 	if aborted {
 		InitMaps(true)
