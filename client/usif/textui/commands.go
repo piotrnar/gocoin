@@ -129,6 +129,7 @@ func show_info(par string) {
 	fmt.Println(" ... network.MutexRcv:", network.MutexRcv.String())
 	fmt.Println(" ... network.Mutex_net:", network.Mutex_net.String())
 	fmt.Println(" ... network.TxMutex:", network.TxMutex.String())
+	fmt.Println(" ... under TxMutex in line", network.TxDbg, network.TxDbgS)
 
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
