@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,6 +48,40 @@ type BlockChanges struct {
 	AddList         []*UtxoRec
 	DeledTxs        map[[32]byte][]bool
 	UndoData        map[[32]byte]*UtxoRec
+}
+
+type MyMutex struct {
+	sync.RWMutex
+	locked   bool
+	line     int
+	file     string
+	locked_r bool
+	line_r   int
+	file_r   string
+}
+
+func (m *MyMutex) Lock() {
+	m.RWMutex.Lock()
+	m.locked = true
+	_, m.file, m.line, _ = runtime.Caller(1)
+}
+
+func (m *MyMutex) Unlock() {
+	_, m.file, m.line, _ = runtime.Caller(1)
+	m.locked = false
+	m.RWMutex.Unlock()
+}
+
+func (m *MyMutex) RLock() {
+	m.RWMutex.Lock()
+	m.locked_r = true
+	_, m.file_r, m.line_r, _ = runtime.Caller(1)
+}
+
+func (m *MyMutex) RUnlock() {
+	_, m.file_r, m.line_r, _ = runtime.Caller(1)
+	m.locked_r = false
+	m.RWMutex.Unlock()
 }
 
 type UnspentDB struct {

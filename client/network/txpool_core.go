@@ -130,25 +130,45 @@ func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 	return NeedThisTxExt(id, cb) == 0
 }
 
+var TxDbg int
+var TxDbgS string
+
+func dudu(id *btc.Uint256) (res bool) {
+	TxDbg = 480
+	res = common.BlockChain.Unspent.TxPresent(id)
+	TxDbg = 481
+	return
+}
+
 // NeedThisTxExt returns false if we do not want to receive a data for this tx.
 func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
-	TxMutex.Lock()
+	TxMutex.Lock() // locks here mac - 2 time
+	TxDbg = 100
 	if _, present := TransactionsToSend[id.BIdx()]; present {
+		TxDbg = 200
 		why_not = 1
 	} else if _, present := TransactionsRejected[id.BIdx()]; present {
+		TxDbg = 300
 		why_not = 2
 	} else if _, present := TransactionsPending[id.BIdx()]; present {
+		TxDbg = 400
 		why_not = 3
-	} else if common.BlockChain.Unspent.TxPresent(id) {
+	} else if dudu(id) {
+		TxDbg = 500
 		why_not = 4
 		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
 		common.CountSafe("TxAlreadyMined")
+		TxDbg = 599
 	} else {
+		TxDbg = 600
 		// why_not = 0
 		if cb != nil {
+			TxDbg = 610
 			cb()
 		}
+		TxDbg = 699
 	}
+	TxDbg = 700
 	TxMutex.Unlock()
 	return
 }
