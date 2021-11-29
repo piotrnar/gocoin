@@ -1,9 +1,6 @@
 package network
 
 import (
-	"fmt"
-	"runtime"
-	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -53,7 +50,7 @@ var (
 	IndexToBlocksToGet       map[uint32][]BIDX          = make(map[uint32][]BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
-	MutexRcv                 MyMutex
+	MutexRcv                 sys.Mutex
 
 	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD_CNT+10)
 	NetTxs    chan *TxRcvd    = make(chan *TxRcvd, 2000)
@@ -64,33 +61,6 @@ var (
 
 	HeadersReceived sys.SyncInt
 )
-
-type MyMutex struct {
-	sync.Mutex
-	locked bool
-	line   int
-	file   string
-}
-
-func (m *MyMutex) Lock() {
-	m.Mutex.Lock()
-	m.locked = true
-	_, m.file, m.line, _ = runtime.Caller(1)
-}
-
-func (m *MyMutex) Unlock() {
-	_, m.file, m.line, _ = runtime.Caller(1)
-	m.locked = false
-	m.Mutex.Unlock()
-}
-
-func (m *MyMutex) String() string {
-	if m.locked {
-		return fmt.Sprint("locked in ", m.file, ":", m.line)
-	}
-	//	return "unlocked"
-	return fmt.Sprint("unlocked in ", m.file, ":", m.line)
-}
 
 // make sure to call it with MutexRcv locked
 func DiscardBlock(n *chain.BlockTreeNode) {
