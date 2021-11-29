@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	TxMutex MyMutex
+	TxMutex sync.Mutex
 
 	// The actual memory pool:
 	TransactionsToSend       map[BIDX]*OneTxToSend = make(map[BIDX]*OneTxToSend)

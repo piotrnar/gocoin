@@ -59,7 +59,7 @@ const (
 )
 
 var (
-	Mutex_net                   MyMutex
+	Mutex_net                   sync.Mutex
 	OpenCons                    map[uint64]*OneConnection = make(map[uint64]*OneConnection)
 	InConsActive, OutConsActive uint32
 	LastConnId                  uint32

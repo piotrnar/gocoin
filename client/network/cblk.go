@@ -6,15 +6,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"sync"
-	"time"
-
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/siphash"
+	"io/ioutil"
+	"os"
+	"sync"
+	"time"
 )
 
 var (
@@ -183,7 +182,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		return
 	}
 
-	MutexRcv.Lock() // locks here new testnet - 1 time
+	MutexRcv.Lock()
 	defer MutexRcv.Unlock()
 
 	sta, b2g := c.ProcessNewHeader(pl[:80])
