@@ -272,7 +272,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	defer common.Busy()
 
 	if !retry {
-		common.Busy()
 		if _, present := TransactionsPending[bidx]; !present {
 			// It had to be mined in the meantime, so just drop it now
 			TxMutex.Unlock()
@@ -281,7 +280,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		delete(TransactionsPending, bidx)
 	} else {
-		common.Busy()
 		// In case case of retry, it is on the rejected list,
 		// so remove it now to free any tied WaitingForInputs
 		deleteRejected(bidx)
@@ -293,17 +291,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var rbf_tx_list map[*OneTxToSend]bool
 
 	// Check if all the inputs exist in the chain
-	common.Busy()
 	for i := range tx.TxIn {
 		if !final && tx.TxIn[i].Sequence >= 0xfffffffe {
 			final = true
 		}
 
-		common.Busy()
 		spent[i] = tx.TxIn[i].Input.UIdx()
 
 		if so, ok := SpentOutputs[spent[i]]; ok {
-			common.Busy()
 			// Can only be accepted as RBF...
 
 			if rbf_tx_list == nil {
@@ -327,7 +322,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				return
 			}
 
-			common.Busy()
 			chlds := ctx.GetAllChildren()
 			for _, ctx = range chlds {
 				if !ntx.trusted && ctx.Final {
@@ -348,9 +342,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			}
 		}
 
-		common.Busy()
 		if txinmem, ok := TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-			common.Busy()
 			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
 				RejectTx(ntx.Tx, TX_REJECTED_BAD_INPUT)
 				TxMutex.Unlock()
@@ -373,7 +365,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			frommem[i] = true
 			frommemcnt++
 		} else {
-			common.Busy()
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
 			if pos[i] == nil {
 				var newone bool
@@ -439,7 +430,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		totinp += pos[i].Value
 	}
 
-	common.Busy()
 	// Check if total output value does not exceed total input
 	for i := range tx.TxOut {
 		totout += tx.TxOut[i].Value
@@ -454,7 +444,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
-	common.Busy()
 	// Check for a proper fee
 	fee := totinp - totout
 	if !ntx.local && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) { // do not check minimum fee for locally loaded txs
@@ -464,7 +453,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		return
 	}
 
-	common.Busy()
 	if rbf_tx_list != nil {
 		var totweight int
 		var totfees uint64
@@ -482,7 +470,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	common.Busy()
 	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
 
 	if !ntx.trusted { // Verify scripts
@@ -521,7 +508,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	common.Busy()
 	for i := range tx.TxIn {
 		if btc.IsP2SH(pos[i].Pk_script) {
 			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
@@ -529,7 +515,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	common.Busy()
 	if rbf_tx_list != nil {
 		for ctx := range rbf_tx_list {
 			// we dont remove with children because we have all of them on the list
@@ -538,15 +523,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 	}
 
-	common.Busy()
 	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local,
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
 
-	common.Busy()
 	TransactionsToSend[bidx] = rec
 
-	common.Busy()
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		newsize := TransactionsToSendSize + uint64(len(rec.Raw))
 		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
@@ -562,14 +544,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		SpentOutputs[spent[i]] = bidx
 	}
 
-	common.Busy()
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {
 		defer RetryWaitingForInput(wtg) // Redo waiting txs when leaving this function
 	}
 
 	TxMutex.Unlock()
-	common.Busy()
 	common.CountSafe("TxAccepted")
 
 	if frommem != nil && !common.GetBool(&common.CFG.TXRoute.MemInputs) {
@@ -582,7 +562,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRouteOK")
 	}
 
-	common.Busy()
 	if ntx.conn != nil {
 		ntx.conn.Mutex.Lock()
 		ntx.conn.txsCur++
@@ -591,7 +570,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	accepted = true
-	common.Busy()
 	return
 }
 
