@@ -84,24 +84,9 @@ func (m *MyMutex) RUnlock() {
 	m.RWMutex.Unlock()
 }
 
-func (m *MyMutex) String() (s string) {
-	if m.locked {
-		s = fmt.Sprint("locked in ", m.file, ":", m.line)
-	} else {
-		s = fmt.Sprint("unlocked in ", m.file, ":", m.line)
-	}
-	if m.locked_r {
-		s += fmt.Sprint("   r-locked in ", m.file_r, ":", m.line_r)
-	} else {
-		s += fmt.Sprint("   r-unlocked in ", m.file_r, ":", m.line_r)
-	}
-	//	return "unlocked"
-	return
-}
-
 type UnspentDB struct {
 	HashMap  [256](map[UtxoKeyType][]byte)
-	MapMutex [256]MyMutex // used to access HashMap
+	MapMutex [256]sync.RWMutex // used to access HashMap
 
 	LastBlockHash      []byte
 	LastBlockHeight    uint32
