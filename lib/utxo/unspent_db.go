@@ -650,7 +650,7 @@ func (db *UnspentDB) UTXOStats() (s string) {
 
 	for _i := range db.HashMap {
 		db.MapMutex[_i].RLock()
-		lele += len(db.HashMap)
+		lele += len(db.HashMap[_i])
 		for k, v := range db.HashMap[_i] {
 			reclen := uint64(len(v) + UtxoIdxLen)
 			filesize += uint64(btc.VLenSize(reclen))
