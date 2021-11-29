@@ -374,7 +374,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 			frommemcnt++
 		} else {
 			common.Busy()
+			TxDbgS = common.BlockChain.Unspent.MapMutex[tx.TxIn[i].Input.Hash[0]].String()
 			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
+			common.Busy()
 			if pos[i] == nil {
 				var newone bool
 
