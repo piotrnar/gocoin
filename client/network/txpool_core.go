@@ -267,7 +267,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var frommem []bool
 	var frommemcnt int
 
+	common.Busy()
 	TxMutex.Lock()
+	defer common.Busy()
 
 	if !retry {
 		if _, present := TransactionsPending[bidx]; !present {
