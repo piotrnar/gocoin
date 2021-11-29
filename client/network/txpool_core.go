@@ -135,7 +135,6 @@ var TxDbgS string
 
 func dudu(id *btc.Uint256) (res bool) {
 	TxDbg = 480
-	TxDbgS = common.BlockChain.Unspent.MapMutex[id.Hash[0]].String()
 	res = common.BlockChain.Unspent.TxPresent(id)
 	TxDbg = 481
 	return
