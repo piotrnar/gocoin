@@ -74,11 +74,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 	}
 
-	common.Busy()
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
-	common.Busy()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 
 	if e == nil {
@@ -87,7 +85,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 
 		newbl.NonWitnessSize = bl.NoWitnessSize
 
-		common.Busy()
 		common.RecalcAverageBlockSize()
 
 		common.Last.Mutex.Lock()
@@ -95,7 +92,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Block = common.BlockChain.LastBlock()
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
-		common.Busy()
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
 			println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String())
 		}
@@ -105,17 +101,14 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			common.Last.ParseTill = nil
 		}
 		common.Last.Mutex.Unlock()
-		common.Busy()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
 		new_end := common.BlockChain.LastBlock()
 		common.Last.Mutex.Lock()
 		common.Last.Block = new_end
-		common.Busy()
 		common.UpdateScriptFlags(bl.VerifyFlags)
 		common.Last.Mutex.Unlock()
 		// update network.LastCommitedHeader
-		common.Busy()
 		network.MutexRcv.Lock()
 		prev_last_header := network.LastCommitedHeader
 		network.DiscardBlock(newbl.BlockTreeNode) // this function can also modify network.LastCommitedHeader
@@ -126,13 +119,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		network.MutexRcv.Unlock()
 		if need_more_headers {
 			//println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
-			common.Busy()
 			network.GetMoreHeaders()
 		}
 	}
-	common.Busy()
 	reset_save_timer()
-	common.Busy()
 	return
 }
 
