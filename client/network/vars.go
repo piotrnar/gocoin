@@ -1,6 +1,7 @@
 package network
 
 import (
+	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -50,7 +51,7 @@ var (
 	IndexToBlocksToGet       map[uint32][]BIDX          = make(map[uint32][]BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
-	MutexRcv                 sys.Mutex
+	MutexRcv                 sync.Mutex
 
 	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD_CNT+10)
 	NetTxs    chan *TxRcvd    = make(chan *TxRcvd, 2000)

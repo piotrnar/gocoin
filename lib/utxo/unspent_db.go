@@ -306,6 +306,7 @@ func (db *UnspentDB) save() {
 	}
 	for _i := range db.HashMap {
 		db.MapMutex[_i].RLock()
+		defer db.MapMutex[_i].RUnlock()
 		for k, v := range db.HashMap[_i] {
 			if check_time {
 				check_time = false
@@ -347,7 +348,6 @@ func (db *UnspentDB) save() {
 
 			current_record++
 		}
-		db.MapMutex[_i].RUnlock()
 	}
 finito:
 
