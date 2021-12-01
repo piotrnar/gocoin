@@ -245,14 +245,16 @@ therefore setting it to 0.0 will route all the accepted transactions.</td>
 <td class="cfg_name"> Memory.GCPercTrshold</td>
 <td class="cfg_type"> int </td>
 <td> 30</td>
-<td class="cfg_info"> A threshold (in percent) to trigger Go's garbage collector engine.</td>
+<td class="cfg_info"> A threshold (in percent) to trigger Go's garbage collector engine.<br>
+    The higher you set it, the better performance should be (at a cost of RAM).</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.UseGoHeap</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
 <td class="cfg_info"> Use native Go heap with Garbage Collector for UTXO records.<br>
-Using native heap makes the node a bit faster at a cost of using more RAM, although it is not always the case.</td>
+Using native heap makes the node a bit faster at a cost of using more RAM, although it is not always the case.
+</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.MaxCachedBlks</td>
