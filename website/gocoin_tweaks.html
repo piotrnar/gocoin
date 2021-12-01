@@ -90,7 +90,17 @@ In order to do this, execute the tool <code>utxo_compress</code>.<br>
 The tool needs to be executed from inside the data folder - where the <code>UTXO.db</code> file is.<br>
 The node must not be running while executing the tool.<br>
 <br>
-You can reverse the operation of compressing the database, be running <code>utxo_decompress</code>.
+You can reverse the operation of compressing the database, be running <code>utxo_decompress</code>.<br>
+<br>
 
+<h2>Use Go Heap for UTXO records</h2>
+If you have RAM to spare, try switching UTXO records to Go's heap manager.<br>
+<br>
+Edit the config file setting <code>Memory.UseGoHeap</code> to <b>true</b> and
+<code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).
+Restart the node to apply the changes.<br>
+<br>
+This will increase memory usage, but should improve block processing performance
+(e.g. during initial blockchain download).
 </body>
 </html>
