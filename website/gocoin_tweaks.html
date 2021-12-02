@@ -93,16 +93,17 @@ The node must not be running while executing the tool.<br>
 You can reverse the operation of compressing the database, be running <code>utxo_decompress</code>.<br>
 <br>
 
-<h2>GC Treshold and Go Heap settings</h2>
-If you have RAM to spare, try switching UTXO records to Go's heap manager.<br>
-<br>
-Edit the config file setting <code>Memory.UseGoHeap</code> to <b>true</b> and
-<code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).
-Restart node to apply the changes.<br>
-<br>
-You may also try only increasing <code>Memory.GCPercTrshold</code> (with <code>Memory.UseGoHeap</code> set to <b>false</b>).<br>
-<br>
+<h2>Garbage Collector and UTXO heap</h2>
+If you have RAM to spare, try switching UTXO records to Go's heap manager 
+and increasing Garbage Collector's treshold.<br>
 This will increase memory usage, but should improve block processing performance
-(e.g. during initial blockchain download).
+(e.g. during initial blockchain download).<br>
+<br>
+Edit the <a href="gocoin_manual_config.html"></a>config file</a> to set
+<code>Memory.UseGoHeap</code> to <b>true</b> and
+<code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).<br>
+You may also try only increasing <code>Memory.GCPercTrshold</code>, leaving <code>Memory.UseGoHeap</code> set to <b>false</b>.<br>
+<br>
+<i>Note: The node needs to be restarted to apply a new value of <code>Memory.UseGoHeap</code></i>
 </body>
 </html>
