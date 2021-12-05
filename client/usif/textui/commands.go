@@ -549,7 +549,6 @@ func kill_node(par string) {
 }
 
 func init() {
-	newUi("ban", false, ban_peer, "Ban a peer specified by IP")
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
 	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("cache", true, show_cached, "Show blocks cached in memory")
@@ -571,7 +570,6 @@ func init() {
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
 	newUi("trust t", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 	newUi("undo", true, undo_block, "Undo last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }
