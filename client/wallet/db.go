@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sync"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -14,6 +15,7 @@ import (
 var (
 	AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH map[[20]byte]*OneAllAddrBal
 	AllBalancesP2WSH, AllBalancesP2TAP                 map[[32]byte]*OneAllAddrBal
+	AccessMutex                                        sync.Mutex
 )
 
 type OneAllAddrInp [utxo.UtxoIdxLen + 4]byte
@@ -27,9 +29,9 @@ type OneAllAddrBal struct {
 func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	var ind utxo.UtxoKeyType
 	copy(ind[:], ur[:])
-	common.BlockChain.Unspent.RWMutex.RLock()
-	v := common.BlockChain.Unspent.HashMap[ind]
-	common.BlockChain.Unspent.RWMutex.RUnlock()
+	common.BlockChain.Unspent.MapMutex[int(ind[0])].RLock()
+	v := common.BlockChain.Unspent.HashMap[int(ind[0])][ind]
+	common.BlockChain.Unspent.MapMutex[int(ind[0])].RUnlock()
 	if v != nil {
 		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
 		rec = utxo.NewUtxoRec(ind, v)
@@ -223,12 +225,16 @@ func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 
 // TxNotifyAdd is called while accepting the block (from the chain's thread).
 func TxNotifyAdd(tx *utxo.UtxoRec) {
+	AccessMutex.Lock()
 	NewUTXO(tx)
+	AccessMutex.Unlock()
 }
 
 // TxNotifyDel is called while accepting the block (from the chain's thread).
 func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
+	AccessMutex.Lock()
 	all_del_utxos(tx, outs)
+	AccessMutex.Unlock()
 }
 
 // Call the cb function for each unspent record

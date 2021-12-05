@@ -92,8 +92,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.Last.Block = common.BlockChain.LastBlock()
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
+		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
+			println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String())
+		}
+
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
-			println("Initial parsing finished in", time.Now().Sub(newbl.TmStart).String())
+			println("Initial parsing finished in", time.Since(newbl.TmStart).String())
 			common.Last.ParseTill = nil
 		}
 		common.Last.Mutex.Unlock()

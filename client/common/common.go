@@ -73,7 +73,8 @@ var (
 	lastTrustedBlock       *btc.Uint256
 	LastTrustedBlockHeight uint32
 
-	Memory memory.Allocator
+	Memory   memory.Allocator
+	MemMutex sync.Mutex
 )
 
 type TheLastBlock struct {

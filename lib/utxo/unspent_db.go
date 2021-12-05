@@ -5,9 +5,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/script"
 	"io"
 	"io/ioutil"
 	"os"
@@ -15,12 +12,16 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
+	"github.com/piotrnar/gocoin/lib/script"
 )
 
 var (
 	UTXO_WRITING_TIME_TARGET        = 5 * time.Minute // Take it easy with flushing UTXO.db onto disk
 	UTXO_SKIP_SAVE_BLOCKS    uint32 = 0
-	UTXO_PURGE_UNSPENDABLE   bool = false
+	UTXO_PURGE_UNSPENDABLE   bool   = false
 )
 
 var Memory_Malloc = func(le int) []byte {
@@ -49,8 +50,8 @@ type BlockChanges struct {
 }
 
 type UnspentDB struct {
-	HashMap      map[UtxoKeyType][]byte
-	sync.RWMutex // used to access HashMap
+	HashMap  [256](map[UtxoKeyType][]byte)
+	MapMutex [256]sync.RWMutex // used to access HashMap
 
 	LastBlockHash      []byte
 	LastBlockHeight    uint32
@@ -71,7 +72,7 @@ type UnspentDB struct {
 	DoNotWriteUndoFiles bool
 	CB                  CallbackFunctions
 
-	undo_dir_created    bool
+	undo_dir_created bool
 }
 
 type NewUnspentOpts struct {
@@ -103,7 +104,9 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	}
 
 	if opts.Rescan {
-		db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
+		for i := range db.HashMap {
+			db.HashMap[i] = make(map[UtxoKeyType][]byte, int(UTXO_RECORDS_PREALLOC)/256)
+		}
 		return
 	}
 
@@ -149,7 +152,9 @@ redo:
 	cnt_dwn_from = int(u64 / 100)
 	perc = 0
 
-	db.HashMap = make(map[UtxoKeyType][]byte, int(u64))
+	for i := range db.HashMap {
+		db.HashMap[i] = make(map[UtxoKeyType][]byte, int(u64)/256)
+	}
 	if db.ComprssedUTXO {
 		info = fmt.Sprint("\rLoading ", u64, " compressed txs from ", fname, " - ")
 	} else {
@@ -177,7 +182,7 @@ redo:
 		}
 
 		// we don't lock RWMutex here as this code is only used during init phase, when no other routines are running
-		db.HashMap[k] = b
+		db.HashMap[k[0]][k] = b
 
 		if cnt_dwn == 0 {
 			fmt.Print(info, perc, "% complete ... ")
@@ -214,7 +219,9 @@ fatal_error:
 	}
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
-	db.HashMap = make(map[UtxoKeyType][]byte, UTXO_RECORDS_PREALLOC)
+	for i := range db.HashMap {
+		db.HashMap[i] = make(map[UtxoKeyType][]byte, int(UTXO_RECORDS_PREALLOC)/256)
+	}
 
 	return
 }
@@ -233,11 +240,11 @@ func (db *UnspentDB) save() {
 
 	start_time := time.Now()
 
-	db.RWMutex.RLock()
+	for _i := range db.HashMap {
+		total_records += int64(len(db.HashMap[_i]))
+	}
 
-	total_records = int64(len(db.HashMap))
-
-	buf := bytes.NewBuffer(make([]byte, 0, save_buffer_min + 0x1000)) // add 4K extra for the last record (it will still be able to grow over it)
+	buf := bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record (it will still be able to grow over it)
 	u64 := uint64(db.LastBlockHeight)
 	if db.ComprssedUTXO {
 		u64 |= 0x8000000000000000
@@ -297,49 +304,52 @@ func (db *UnspentDB) save() {
 	if UTXO_WRITING_TIME_TARGET == 0 {
 		hurryup = true
 	}
-	for k, v := range db.HashMap {
-		if check_time {
-			check_time = false
-			data_progress = int64(current_record << 20) / int64(total_records)
-			time_progress = int64(time.Now().Sub(start_time) << 20) / int64(UTXO_WRITING_TIME_TARGET)
-			if data_progress > time_progress {
+	for _i := range db.HashMap {
+		db.MapMutex[_i].RLock()
+		defer db.MapMutex[_i].RUnlock()
+		for k, v := range db.HashMap[_i] {
+			if check_time {
+				check_time = false
+				data_progress = int64(current_record<<20) / int64(total_records)
+				time_progress = int64(time.Now().Sub(start_time)<<20) / int64(UTXO_WRITING_TIME_TARGET)
+				if data_progress > time_progress {
+					select {
+					case <-db.abortwritingnow:
+						abort = true
+						goto finito
+					case <-db.hurryup:
+						hurryup = true
+					case <-time.After((time.Duration(data_progress-time_progress) * UTXO_WRITING_TIME_TARGET) >> 20):
+					}
+				}
+			}
+
+			for len(data_channel) >= cap(data_channel) {
 				select {
 				case <-db.abortwritingnow:
 					abort = true
 					goto finito
 				case <-db.hurryup:
 					hurryup = true
-				case <-time.After((time.Duration(data_progress-time_progress) * UTXO_WRITING_TIME_TARGET) >> 20):
+				case <-time.After(time.Millisecond):
 				}
 			}
-		}
 
-		for len(data_channel) >= cap(data_channel) {
-			select {
-			case <-db.abortwritingnow:
-				abort = true
-				goto finito
-			case <-db.hurryup:
-				hurryup = true
-			case <-time.After(time.Millisecond):
+			btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
+			buf.Write(k[:])
+			buf.Write(v)
+			if buf.Len() >= save_buffer_min {
+				data_channel <- buf.Bytes()
+				if !hurryup {
+					check_time = true
+				}
+				buf = bytes.NewBuffer(make([]byte, 0, save_buffer_min+0x1000)) // add 4K extra for the last record
 			}
-		}
 
-		btc.WriteVlen(buf, uint64(UtxoIdxLen+len(v)))
-		buf.Write(k[:])
-		buf.Write(v)
-		if buf.Len() >= save_buffer_min {
-			data_channel <- buf.Bytes()
-			if !hurryup {
-				check_time = true
-			}
-			buf = bytes.NewBuffer(make([]byte, 0, save_buffer_min + 0x1000)) // add 4K extra for the last record
+			current_record++
 		}
-
-		current_record++
 	}
 finito:
-	db.RWMutex.RUnlock()
 
 	if !abort && buf.Len() > 0 {
 		data_channel <- buf.Bytes()
@@ -446,9 +456,9 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 
 		var ind UtxoKeyType
 		copy(ind[:], rec.TxID[:])
-		db.RWMutex.RLock()
-		v := db.HashMap[ind]
-		db.RWMutex.RUnlock()
+		db.MapMutex[ind[0]].RLock()
+		v := db.HashMap[ind[0]][ind]
+		db.MapMutex[ind[0]].RUnlock()
 		if v != nil {
 			oldrec := NewUtxoRec(ind, v)
 			for a := range rec.Outs {
@@ -457,9 +467,9 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 				}
 			}
 		}
-		db.RWMutex.Lock()
-		db.HashMap[ind] = Serialize(rec, false, nil)
-		db.RWMutex.Unlock()
+		db.MapMutex[ind[0]].Lock()
+		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
+		db.MapMutex[ind[0]].Unlock()
 	}
 
 	os.Remove(fn)
@@ -518,9 +528,9 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 	var v []byte
 	copy(ind[:], po.Hash[:])
 
-	db.RWMutex.RLock()
-	v = db.HashMap[ind]
-	db.RWMutex.RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	v = db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	if v != nil {
 		res = OneUtxoRec(ind, v, po.Vout)
 	}
@@ -532,18 +542,18 @@ func (db *UnspentDB) UnspentGet(po *btc.TxPrevOut) (res *btc.TxOut) {
 func (db *UnspentDB) TxPresent(id *btc.Uint256) (res bool) {
 	var ind UtxoKeyType
 	copy(ind[:], id.Hash[:])
-	db.RWMutex.RLock()
-	_, res = db.HashMap[ind]
-	db.RWMutex.RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	_, res = db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	return
 }
 
 func (db *UnspentDB) del(hash []byte, outs []bool) {
 	var ind UtxoKeyType
 	copy(ind[:], hash)
-	db.RWMutex.RLock()
-	v := db.HashMap[ind]
-	db.RWMutex.RUnlock()
+	db.MapMutex[ind[0]].RLock()
+	v := db.HashMap[ind[0]][ind]
+	db.MapMutex[ind[0]].RUnlock()
 	if v == nil {
 		return // no such txid in UTXO (just ignorde delete request)
 	}
@@ -559,17 +569,18 @@ func (db *UnspentDB) del(hash []byte, outs []bool) {
 			anyout = true
 		}
 	}
-	db.RWMutex.Lock()
+	db.MapMutex[ind[0]].Lock()
 	if anyout {
-		db.HashMap[ind] = Serialize(rec, false, nil)
+		db.HashMap[ind[0]][ind] = Serialize(rec, false, nil)
 	} else {
-		delete(db.HashMap, ind)
+		delete(db.HashMap[ind[0]], ind)
 	}
-	db.RWMutex.Unlock()
+	db.MapMutex[ind[0]].Unlock()
 	Memory_Free(v)
 }
 
 func (db *UnspentDB) commit(changes *BlockChanges) {
+	var wg sync.WaitGroup
 	// Now aplly the unspent changes
 	for _, rec := range changes.AddList {
 		var ind UtxoKeyType
@@ -592,14 +603,24 @@ func (db *UnspentDB) commit(changes *BlockChanges) {
 			add_this_tx = true
 		}
 		if add_this_tx {
-			db.RWMutex.Lock()
-			db.HashMap[ind] = Serialize(rec, false, nil)
-			db.RWMutex.Unlock()
+			wg.Add(1)
+			go func(ind UtxoKeyType, rec *UtxoRec) {
+				v := Serialize(rec, false, nil)
+				db.MapMutex[ind[0]].Lock()
+				db.HashMap[ind[0]][ind] = v
+				db.MapMutex[ind[0]].Unlock()
+				wg.Done()
+			}(ind, rec)
 		}
 	}
 	for k, v := range changes.DeledTxs {
-		db.del(k[:], v)
+		wg.Add(1)
+		go func(k [32]byte, v []bool) {
+			db.del(k[:], v)
+			wg.Done()
+		}(k, v)
 	}
+	wg.Wait()
 }
 
 func (db *UnspentDB) AbortWriting() {
@@ -623,39 +644,40 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	var outcnt, sum, sumcb uint64
 	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
 
-	filesize = 8 + 32 + 8  // UTXO.db: block_no + block_hash + rec_cnt
+	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
 
-	db.RWMutex.RLock()
+	var lele int
 
-	lele := len(db.HashMap)
-
-	for k, v := range db.HashMap {
-		reclen := uint64(len(v) + UtxoIdxLen)
-		filesize += uint64(btc.VLenSize(reclen))
-		filesize += reclen
-		rec := NewUtxoRecStatic(k, v)
-		var spendable_found bool
-		for _, r := range rec.Outs {
-			if r != nil {
-				outcnt++
-				sum += r.Value
-				if rec.Coinbase {
-					sumcb += r.Value
-				}
-				if script.IsUnspendable(r.PKScr) {
-					unspendable++
-					unspendable_bytes += uint64(8 + len(r.PKScr))
-				} else {
-					spendable_found = true
+	for _i := range db.HashMap {
+		db.MapMutex[_i].RLock()
+		lele += len(db.HashMap[_i])
+		for k, v := range db.HashMap[_i] {
+			reclen := uint64(len(v) + UtxoIdxLen)
+			filesize += uint64(btc.VLenSize(reclen))
+			filesize += reclen
+			rec := NewUtxoRecStatic(k, v)
+			var spendable_found bool
+			for _, r := range rec.Outs {
+				if r != nil {
+					outcnt++
+					sum += r.Value
+					if rec.Coinbase {
+						sumcb += r.Value
+					}
+					if script.IsUnspendable(r.PKScr) {
+						unspendable++
+						unspendable_bytes += uint64(8 + len(r.PKScr))
+					} else {
+						spendable_found = true
+					}
 				}
 			}
+			if !spendable_found {
+				unspendable_recs++
+			}
 		}
-		if !spendable_found {
-			unspendable_recs++
-		}
+		db.MapMutex[_i].RUnlock()
 	}
-
-	db.RWMutex.RUnlock()
 
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
@@ -672,9 +694,12 @@ func (db *UnspentDB) UTXOStats() (s string) {
 
 // GetStats returns DB statistics.
 func (db *UnspentDB) GetStats() (s string) {
-	db.RWMutex.RLock()
-	hml := len(db.HashMap)
-	db.RWMutex.RUnlock()
+	var hml int
+	for i := range db.HashMap {
+		db.MapMutex[i].RLock()
+		hml += len(db.HashMap[i])
+		db.MapMutex[i].RUnlock()
+	}
 
 	s = fmt.Sprintf("UNSPENT: %d txs.  MaxCnt:%d  Dirt:%t  Writ:%t  Abort:%t  Compr:%t\n",
 		hml, len(rec_outs), db.DirtyDB.Get(), db.WritingInProgress.Get(),
@@ -689,35 +714,36 @@ func (db *UnspentDB) PurgeUnspendable(all bool) {
 	db.Mutex.Lock()
 	db.abortWriting()
 
-	db.RWMutex.Lock()
-
-	for k, v := range db.HashMap {
-		rec := NewUtxoRecStatic(k, v)
-		var spendable_found bool
-		var record_removed uint64
-		for idx, r := range rec.Outs {
-			if r != nil {
-				if script.IsUnspendable(r.PKScr) {
-					if all {
-						rec.Outs[idx] = nil
-						record_removed++
+	for _i := range db.HashMap {
+		db.MapMutex[_i].Lock()
+		for k, v := range db.HashMap[_i] {
+			rec := NewUtxoRecStatic(k, v)
+			var spendable_found bool
+			var record_removed uint64
+			for idx, r := range rec.Outs {
+				if r != nil {
+					if script.IsUnspendable(r.PKScr) {
+						if all {
+							rec.Outs[idx] = nil
+							record_removed++
+						}
+					} else {
+						spendable_found = true
 					}
-				} else {
-					spendable_found = true
 				}
 			}
+			if !spendable_found {
+				Memory_Free(v)
+				delete(db.HashMap[k[0]], k)
+				unspendable_txs++
+			} else if record_removed > 0 {
+				db.HashMap[k[0]][k] = Serialize(rec, false, nil)
+				Memory_Free(v)
+				unspendable_recs += record_removed
+			}
 		}
-		if !spendable_found {
-			Memory_Free(v)
-			delete(db.HashMap, k)
-			unspendable_txs++
-		} else if record_removed > 0 {
-			db.HashMap[k] = Serialize(rec, false, nil)
-			Memory_Free(v)
-			unspendable_recs += record_removed
-		}
+		db.MapMutex[_i].Unlock()
 	}
-	db.RWMutex.Unlock()
 
 	db.Mutex.Unlock()
 
