@@ -3,11 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 type unspRec struct {
@@ -27,7 +28,7 @@ func (u *unspRec) String() string {
 }
 
 func NewUnspRec(l []byte) (uns *unspRec) {
-	if l[64] != '-' {
+	if len(l) < 65 || l[64] != '-' {
 		return nil
 	}
 

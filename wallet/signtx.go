@@ -233,6 +233,10 @@ func make_signed_tx() {
 	if changeBtc > 0 {
 		// Add one more output (with the change)
 		chad := get_change_addr()
+		if chad == nil {
+			fmt.Println("ERROR: cannot determine change address")
+			cleanExit(1)
+		}
 		if *verbose {
 			fmt.Println("Sending change", changeBtc, "to", chad.String())
 		}

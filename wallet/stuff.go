@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/ltc"
-	"github.com/piotrnar/gocoin/lib/others/sys"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/ltc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 // loadedTxs is a cache for txs from already loaded from balance/ folder.
@@ -31,7 +32,6 @@ func ask_yes_no(msg string) bool {
 			return false
 		}
 	}
-	return false
 }
 
 func getpass() []byte {
@@ -62,7 +62,7 @@ func getpass() []byte {
 	if !*ask4pass {
 		f, e = os.Open(PassSeedFilename)
 		if e == nil {
-			n, e = f.Read(pass[:])
+			n, _ = f.Read(pass[:])
 			f.Close()
 			if n <= 0 {
 				return nil
@@ -137,7 +137,8 @@ func get_change_addr() (chng *btc.BtcAddr) {
 	for idx := range unspentOuts {
 		uo := getUO(&unspentOuts[idx].TxPrevOut)
 		if k := pkscr_to_key(uo.Pk_script); k != nil {
-			chng = k.BtcAddr
+			chng = btc.NewAddrFromPkScript(uo.Pk_script, testnet)
+			//chng = k.BtcAddr
 			return
 		}
 	}

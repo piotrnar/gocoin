@@ -14,6 +14,7 @@
 * Client: BlockDB can work with new "blNNNNNNNN.dat" filenames, as well as the old "blockchain-NNNNNNNN.dat"
 * Tools/bdb - new command "-rendat" to rename old "blockchain-NNNNNNNN.dat" to new "blNNNNNNNN.dat" 
 * Client: Added parallel updating of UTXO database by splitting it into 256 smaller hash-maps
+* Wallet: Default change address (not not specified) does not convert to P2KH anymore
 
 1.9.9 - 2021-05-21
  * Client: Do not drop Authorized peers
