@@ -65,7 +65,6 @@ func VerifyKeyPair(priv []byte, publ []byte) error {
 		return errors.New("SchnorrVerify failed")
 	}
 
-	println("addr ok")
 	return nil
 }
 
