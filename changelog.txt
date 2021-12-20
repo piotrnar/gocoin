@@ -1,3 +1,6 @@
+1.10.1:
+* btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
+
 1.10.0 - 2021-12-16
 * Added Taproot support
 * Wallet: New config/command line switch "minsig", to enforce ECDSA creation of signatures without the extra byte
