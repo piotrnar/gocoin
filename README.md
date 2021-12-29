@@ -43,7 +43,7 @@ Currently that can be at least one of the following:
 
 * Windows
 * Linux
-* OS X
+* macOS
 * Free BSD
 
 ## Build environment
