@@ -100,10 +100,12 @@ func sign_tx(tx *btc.Tx) (all_signed bool) {
 			k := keys[k_idx]
 			if segwit_prog != nil {
 				if ver == 1 {
-					var randata [32]byte
+					var rseed [64]byte
 					h := tx.TaprootSigHash(&btc.ScriptExecutionData{}, in, btc.SIGHASH_DEFAULT, false)
-					rand.Read(randata[:])
-					sig := secp256k1.SchnorrSign(h, k.Key, randata[:])
+					copy(rseed[:32], h)
+					rand.Read(rseed[32:])
+					rand2 := btc.Sha2Sum(rseed[:])
+					sig := secp256k1.SchnorrSign(h, k.Key, rand2[:])
 					if len(sig) == 64 {
 						if tx.SegWit == nil {
 							tx.SegWit = make([][][]byte, len(tx.TxIn))
