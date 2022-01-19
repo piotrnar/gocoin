@@ -79,6 +79,7 @@ func make_wallet() {
 	var hdpath_x []uint32
 	var hdpath_last uint32
 	var hd_label_prefix string
+	var hd_hardend bool
 
 	load_others()
 	defer func() {
@@ -112,6 +113,7 @@ func make_wallet() {
 			ti := ts[i]
 			if strings.HasSuffix(ti, "'") {
 				xval = 0x80000000 // hardened
+				hd_hardend = true
 			}
 			if v, e := strconv.ParseInt(strings.TrimSuffix(ti, "'"), 10, 32); e != nil || v < 0 {
 				println("hdpath - syntax error. non-negative integer expected:", ti)
@@ -183,16 +185,21 @@ func make_wallet() {
 			}
 		}
 		if *dumpxprv {
-			fmt.Println(hdwal.String())
+			fmt.Println("Root:", hdwal.String())
+		}
+		if !hd_hardend {
+			// list root xpub...
+			hd_wallet_xtra = append(hd_wallet_xtra, "Root: "+hdwal.Pub().String())
 		}
 		for _, x := range hdpath_x[:len(hdpath_x)-1] {
 			hdwal = hdwal.Child(x)
 		}
 		if *dumpxprv {
-			fmt.Println(hdwal.String())
+			fmt.Println("Leaf:", hdwal.String())
 		}
 		if (hdpath_last & 0x80000000) == 0 {
-			hd_wallet_xtra = append(hd_wallet_xtra, hdwal.Pub().String())
+			// if non-hadend, list xpub...
+			hd_wallet_xtra = append(hd_wallet_xtra, "Leaf: "+hdwal.Pub().String())
 		}
 	}
 

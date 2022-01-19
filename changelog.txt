@@ -1,6 +1,7 @@
 1.10.1:
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
 * Wallet: Make SchnorrSign nonce dependent not only on RNG but also on the hash being signed
+* Wallet: When listing non-hardend HD wallet (like Elecrum), also output the root Extended Public Key
 
 1.10.0 - 2021-12-16
 * Added Taproot support
