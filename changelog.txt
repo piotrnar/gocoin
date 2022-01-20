@@ -2,6 +2,8 @@
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
 * Wallet: Make SchnorrSign nonce dependent not only on RNG but also on the hash being signed
 * Wallet: When listing non-hardend HD wallet (like Elecrum), also output the root Extended Public Key
+* Lib: Added "github.com/piotrnar/gocoin/lib/others/scrypt" package (for wallet - see below)
+* Wallet: added new config value "scrypt" - use extra scrypt function to convert password into private keys
 
 1.10.0 - 2021-12-16
 * Added Taproot support

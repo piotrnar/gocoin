@@ -97,6 +97,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if usescrypt > 30 {
+		println("ERROR: scrypt value too big")
+		os.Exit(1)
+	}
+
 	if *taproot_mode {
 		println("*** WARNING: Taproot may not have been activated yet. Do not send coins to these addresses!!!")
 		*bech32_mode = true

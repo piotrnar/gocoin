@@ -9,9 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/bip39"
+	"github.com/piotrnar/gocoin/lib/others/scrypt"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -147,6 +149,19 @@ func make_wallet() {
 		cleanExit(0)
 	}
 
+	if usescrypt != 0 {
+		fmt.Print("Running scrypt function with complexity ", 1<<usescrypt, " ... ")
+		sta := time.Now()
+		dk, er := scrypt.Key(pass, []byte("Gocoin scrypt password salt"), 1<<usescrypt, 8, 1, 32)
+		tim := time.Since(sta)
+		sys.ClearBuffer(pass)
+		if len(dk) != 32 || er != nil {
+			println("scrypt.Key failed")
+			cleanExit(0)
+		}
+		pass = dk
+		fmt.Println("took", tim.String())
+	}
 	if waltype == 3 {
 		seed_key = make([]byte, 32)
 		btc.ShaHash(pass, seed_key)
