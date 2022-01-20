@@ -103,7 +103,6 @@ func main() {
 	}
 
 	if *taproot_mode {
-		println("*** WARNING: Taproot may not have been activated yet. Do not send coins to these addresses!!!")
 		*bech32_mode = true
 	}
 
