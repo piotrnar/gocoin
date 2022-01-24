@@ -169,6 +169,7 @@ function fetch_wallet_balance(name) {
 			var i, ii
 			for (i in wallet) {
 				var rec = bal[wallet[i].addr]
+				if (typeof(rec)=='undefined') continue
 				if (rec.Outs!=null) {
 					totouts += rec.Outs.length
 					for (ii in rec.Outs) {
