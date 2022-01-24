@@ -9,9 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/bip39"
+	"github.com/piotrnar/gocoin/lib/others/scrypt"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
@@ -79,6 +81,7 @@ func make_wallet() {
 	var hdpath_x []uint32
 	var hdpath_last uint32
 	var hd_label_prefix string
+	var hd_hardend bool
 
 	load_others()
 	defer func() {
@@ -112,6 +115,7 @@ func make_wallet() {
 			ti := ts[i]
 			if strings.HasSuffix(ti, "'") {
 				xval = 0x80000000 // hardened
+				hd_hardend = true
 			}
 			if v, e := strconv.ParseInt(strings.TrimSuffix(ti, "'"), 10, 32); e != nil || v < 0 {
 				println("hdpath - syntax error. non-negative integer expected:", ti)
@@ -145,6 +149,19 @@ func make_wallet() {
 		cleanExit(0)
 	}
 
+	if usescrypt != 0 {
+		fmt.Print("Running scrypt function with complexity ", 1<<usescrypt, " ... ")
+		sta := time.Now()
+		dk, er := scrypt.Key(pass, []byte("Gocoin scrypt password salt"), 1<<usescrypt, 8, 1, 32)
+		tim := time.Since(sta)
+		sys.ClearBuffer(pass)
+		if len(dk) != 32 || er != nil {
+			println("scrypt.Key failed")
+			cleanExit(0)
+		}
+		pass = dk
+		fmt.Println("took", tim.String())
+	}
 	if waltype == 3 {
 		seed_key = make([]byte, 32)
 		btc.ShaHash(pass, seed_key)
@@ -183,16 +200,21 @@ func make_wallet() {
 			}
 		}
 		if *dumpxprv {
-			fmt.Println(hdwal.String())
+			fmt.Println("Root:", hdwal.String())
+		}
+		if !hd_hardend {
+			// list root xpub...
+			hd_wallet_xtra = append(hd_wallet_xtra, "Root: "+hdwal.Pub().String())
 		}
 		for _, x := range hdpath_x[:len(hdpath_x)-1] {
 			hdwal = hdwal.Child(x)
 		}
 		if *dumpxprv {
-			fmt.Println(hdwal.String())
+			fmt.Println("Leaf:", hdwal.String())
 		}
 		if (hdpath_last & 0x80000000) == 0 {
-			hd_wallet_xtra = append(hd_wallet_xtra, hdwal.Pub().String())
+			// if non-hadend, list xpub...
+			hd_wallet_xtra = append(hd_wallet_xtra, "Leaf: "+hdwal.Pub().String())
 		}
 	}
 

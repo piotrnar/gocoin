@@ -23,6 +23,7 @@ var (
 	hdpath       string = "m/0'"
 	bip39wrds    uint   = 0
 	minsig       bool
+	usescrypt    uint
 )
 
 func parse_config() {
@@ -174,6 +175,20 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 					os.Exit(1)
 				}
+
+			case "scrypt":
+				v, e := strconv.ParseUint(ll[1], 10, 32)
+				if e == nil {
+					if v >= 1 {
+						usescrypt = uint(v)
+					} else {
+						println(i, "wallet.cfg: incorrect scrypt value", v)
+						os.Exit(1)
+					}
+				} else {
+					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+					os.Exit(1)
+				}
 			}
 		}
 	}
@@ -190,6 +205,7 @@ func parse_config() {
 	flag.StringVar(&txfilename, "txfn", "", "Use this filename for output transaction (otherwise use a random name)")
 	flag.BoolVar(&stdin, "stdin", stdin, "Read password from stdin")
 	flag.BoolVar(&minsig, "minsig", minsig, "Make sure R and S inside ECDSA signatures are only 32 bytes long")
+	flag.UintVar(&usescrypt, "scrypt", usescrypt, "Use extra scrypt function to convert password into private keys (default 0 = disabled)")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
 	}
