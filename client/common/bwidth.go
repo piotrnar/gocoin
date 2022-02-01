@@ -46,12 +46,18 @@ func TickRecv() (ms int) {
 	}
 	if now != dl_last_sec {
 		BwDeadlockDebug = 1120
+		var loop_cnt int
 		for now-dl_last_sec != 1 {
 			BwDeadlockDebug = 1121
 			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
 			DlBytesPrevSecIdx++
 			dl_last_sec++
 			BwDeadlockDebug = 1122
+			loop_cnt++
+			if loop_cnt > 10e3 {
+				println("TickRecv: stuck in the loop", now, ul_last_sec)
+				break
+			}
 		}
 		BwDeadlockDebug = 1130
 		DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
@@ -76,12 +82,18 @@ func TickSent() (ms int) {
 	}
 	if now != ul_last_sec {
 		BwDeadlockDebug = 2120
+		var loop_cnt int
 		for now-ul_last_sec != 1 {
 			BwDeadlockDebug = 2121
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
 			UlBytesPrevSecIdx++
 			ul_last_sec++
 			BwDeadlockDebug = 2122
+			loop_cnt++
+			if loop_cnt > 10e3 {
+				println("TickSent: stuck in the loop", now, ul_last_sec)
+				break
+			}
 		}
 		BwDeadlockDebug = 2130
 		UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
