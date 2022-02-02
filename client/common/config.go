@@ -17,7 +17,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
-const LastTrustedBTCBlock = "0000000000000000000148eb4a0a5dfbf1fc42b88b0729df00c97a1f951e9b7b" // #711141
+const LastTrustedBTCBlock = "00000000000000000004cb9741dbfb4024c4c821f0c3c7c5525583ee7c7d0072" // #721513
 const LastTrustedTN3Block = "00000000000000188f42d7699753c039b7b5b2cd82b8b45d09f1588a537d0f13" // #2105100
 
 var (
