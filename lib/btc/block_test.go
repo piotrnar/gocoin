@@ -1,7 +1,6 @@
 package btc
 
 import (
-	"encoding/hex"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -21,17 +20,19 @@ func block_filename() string {
 
 // fetch_block downloads a block from blockchain.info and stores it in the TEMP folder.
 func fetch_block(b *testing.B) {
-	url := "https://blockchain.info/block/" + block_hash + "?format=hex"
+	url := "https://blockstream.info/api/block/" + block_hash + "/raw"
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
-			rawhex, er := ioutil.ReadAll(r.Body)
+			raw, er := ioutil.ReadAll(r.Body)
 			r.Body.Close()
 			if er == nil {
-				raw, er := hex.DecodeString(string(rawhex))
-				if er == nil {
-					er = ioutil.WriteFile(block_filename(), raw, 0600)
+				er = ioutil.WriteFile(block_filename(), raw, 0600)
+				if er != nil {
+					b.Fatal(er.Error())
 				}
+			} else {
+				b.Fatal(er.Error())
 			}
 		} else {
 			b.Fatal("Unexpected HTTP Status code", r.StatusCode, url)
