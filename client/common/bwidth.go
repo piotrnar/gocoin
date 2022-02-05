@@ -55,7 +55,7 @@ func TickRecv() (ms int) {
 			BwDeadlockDebug = 1122
 			loop_cnt++
 			if loop_cnt > 10e3 {
-				println("TickRecv: stuck in the loop", now, ul_last_sec)
+				println("TickRecv: stuck in the loop", now, dl_last_sec)
 				break
 			}
 		}
