@@ -3,10 +3,11 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"time"
 )
 
 const (
@@ -50,7 +51,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	common.BlockChain.BlockIndexAccess.Lock()
 	defer common.BlockChain.BlockIndexAccess.Unlock()
 
-	if er, dos, _ := common.BlockChain.PreCheckBlock(bl); er != nil {
+	if dos, _, er := common.BlockChain.PreCheckBlock(bl); er != nil {
 		common.CountSafe("PreCheckBlockFail")
 		//println("PreCheckBlock err", dos, er.Error())
 		if dos {
@@ -73,11 +74,11 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	if common.LastTrustedBlockMatch(node.BlockHash) {
 		common.SetUint32(&common.LastTrustedBlockHeight, node.Height)
 		for node != nil {
-			node.Trusted = true
+			node.Trusted.Set()
 			node = node.Parent
 		}
 	}
-	b2g.Block.Trusted = b2g.BlockTreeNode.Trusted
+	b2g.Block.Trusted.Store(b2g.BlockTreeNode.Trusted.Get())
 
 	return PH_STATUS_NEW, b2g
 }

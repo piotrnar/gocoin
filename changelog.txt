@@ -4,6 +4,8 @@
 * Wallet: When listing non-hardend HD wallet (like Elecrum), also output the root Extended Public Key
 * Lib: Added "github.com/piotrnar/gocoin/lib/others/scrypt" package (for wallet - see below)
 * Wallet: added new config value "scrypt" - use extra scrypt function to convert password into private keys
+* Client: fixed the bug in the fix for the bandwidth limiter lock problem occuring when system time changing
+* Client: cleaned up some non-leathal race conditions, reformatted some code, got rid of some warnings
 
 1.10.0 - 2021-12-16
 * Added Taproot support

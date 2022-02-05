@@ -30,79 +30,53 @@ var (
 	UlBytesPrevSecIdx uint16
 	ul_bytes_priod    uint64
 	UlBytesTotal      uint64
-
-	BwDeadlockDebug int // TODO: It's been seen to lock on macbook - needs investigating
 )
 
 func TickRecv() (ms int) {
-	BwDeadlockDebug = 1110
 	tn := time.Now()
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
-	BwDeadlockDebug = 1111
 	if now < dl_last_sec {
 		dl_last_sec = now // This is to prevent a lock-up when OS clock is updated back
 		ms = 1e6 - 1
 	}
 	if now != dl_last_sec {
-		BwDeadlockDebug = 1120
-		var loop_cnt int
 		for now-dl_last_sec != 1 {
-			BwDeadlockDebug = 1121
 			DlBytesPrevSec[DlBytesPrevSecIdx] = 0
 			DlBytesPrevSecIdx++
 			dl_last_sec++
-			BwDeadlockDebug = 1122
-			loop_cnt++
-			if loop_cnt > 10e3 {
-				println("TickRecv: stuck in the loop", now, dl_last_sec)
-				break
-			}
 		}
-		BwDeadlockDebug = 1130
 		DlBytesPrevSec[DlBytesPrevSecIdx] = dl_bytes_priod
 		DlBytesPrevSecIdx++
 		dl_bytes_priod = 0
 		dl_bytes_so_far = 0
 		dl_last_sec = now
 	}
-	BwDeadlockDebug = 1000
 	return
 }
 
 func TickSent() (ms int) {
-	BwDeadlockDebug = 2110
 	tn := time.Now()
 	ms = tn.Nanosecond() / 1e6
 	now := tn.Unix()
-	BwDeadlockDebug = 2111
-	if now < dl_last_sec {
-		dl_last_sec = now // This is to prevent a lock-up when OS clock is updated back
+	if now < ul_last_sec {
+		ul_last_sec = now // This is to prevent a lock-up when OS clock is updated back
 		ms = 1e6 - 1
 	}
 	if now != ul_last_sec {
-		BwDeadlockDebug = 2120
 		var loop_cnt int
 		for now-ul_last_sec != 1 {
-			BwDeadlockDebug = 2121
 			UlBytesPrevSec[UlBytesPrevSecIdx] = 0
 			UlBytesPrevSecIdx++
 			ul_last_sec++
-			BwDeadlockDebug = 2122
 			loop_cnt++
-			if loop_cnt > 10e3 {
-				println("TickSent: stuck in the loop", now, ul_last_sec)
-				break
-			}
 		}
-		BwDeadlockDebug = 2130
 		UlBytesPrevSec[UlBytesPrevSecIdx] = ul_bytes_priod
 		UlBytesPrevSecIdx++
 		ul_bytes_priod = 0
 		ul_bytes_so_far = 0
 		ul_last_sec = now
 	}
-	BwDeadlockDebug = 2000
 	return
 }
 

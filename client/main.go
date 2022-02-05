@@ -61,8 +61,8 @@ func blockUndone(bl *btc.Block) {
 
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
-	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted {
-		bl.Trusted = true
+	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
+		bl.Trusted.Set()
 	}
 
 	common.BlockChain.Unspent.AbortWriting() // abort saving of UTXO.db
@@ -258,7 +258,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.BlockChain.Unspent.AbortWriting()
 	rb.TmQueue = time.Now()
 
-	e, _, _ := common.BlockChain.CheckBlock(msg.Block)
+	_, _, e := common.BlockChain.CheckBlock(msg.Block)
 	if e == nil {
 		e = common.BlockChain.AcceptBlock(msg.Block)
 		rb.TmAccepted = time.Now()
@@ -321,7 +321,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 			break
 		}
 
-		bl.Trusted = trusted
+		bl.Trusted.Store(trusted)
 
 		tdl := time.Now()
 

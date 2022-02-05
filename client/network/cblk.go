@@ -6,14 +6,15 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/others/siphash"
 	"io/ioutil"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/chain"
+	"github.com/piotrnar/gocoin/lib/others/siphash"
 )
 
 var (
@@ -403,7 +404,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		ReceivedBlocks[bidx] = orb
 		DelB2G(bidx) //remove it from BlocksToGet if no more pending downloads
 		if c.X.Authorized {
-			b2g.Block.Trusted = true
+			b2g.Block.Trusted.Set()
 		}
 		NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 	} else {
@@ -542,7 +543,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		TmDownload: c.LastMsgTime, TxMissing: col.Missing, FromConID: c.ConnID, DoInvs: b2g.SendInvs}
 	ReceivedBlocks[idx] = orb
 	if c.X.Authorized {
-		b2g.Block.Trusted = true
+		b2g.Block.Trusted.Set()
 	}
 	NetBlocks <- &BlockRcvd{Conn: c, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb}
 }

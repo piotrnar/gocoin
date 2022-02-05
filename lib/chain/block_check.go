@@ -12,7 +12,7 @@ import (
 )
 
 // Make sure to call this function with ch.BlockIndexAccess locked
-func (ch *Chain) PreCheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
+func (ch *Chain) PreCheckBlock(bl *btc.Block) (dos bool, maybelater bool, er error) {
 	// Size limits
 	if len(bl.Raw) < 80 {
 		er = errors.New("CheckBlock() : size limits failed - RPC_Result:bad-blk-length")
@@ -150,7 +150,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 		//fmt.Println("New block", bl.Height, " Weight:", bl.BlockWeight, " Raw:", len(bl.Raw))
 	}
 
-	if !bl.Trusted {
+	if !bl.Trusted.Get() {
 		// We need to be satoshi compatible
 		if len(bl.Txs) == 0 || bl.Txs[0] == nil || !bl.Txs[0].IsCoinBase() {
 			er = errors.New("CheckBlock() : first tx is not coinbase: " + bl.Hash.String() + " - RPC_Result:bad-cb-missing")
@@ -199,7 +199,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 
 	ch.ApplyBlockFlags(bl)
 
-	if !bl.Trusted {
+	if !bl.Trusted.Get() {
 		var blockTime uint32
 		var had_witness bool
 
@@ -254,8 +254,8 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 	return
 }
 
-func (ch *Chain) CheckBlock(bl *btc.Block) (er error, dos bool, maybelater bool) {
-	er, dos, maybelater = ch.PreCheckBlock(bl)
+func (ch *Chain) CheckBlock(bl *btc.Block) (dos bool, maybelater bool, er error) {
+	dos, maybelater, er = ch.PreCheckBlock(bl)
 	if er == nil {
 		er = ch.PostCheckBlock(bl)
 		if er != nil { // all post-check errors are DoS kind

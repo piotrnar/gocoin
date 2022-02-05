@@ -206,14 +206,14 @@ func (db *BlockDB) BlockAdd(height uint32, bl *btc.Block) (e error) {
 	db.mutex.Lock()
 	idx := bl.Hash.BIdx()
 	if rec, ok := db.blockIndex[idx]; !ok {
-		db.blockIndex[idx] = &oneBl{ipos: -1, trusted: bl.Trusted}
+		db.blockIndex[idx] = &oneBl{ipos: -1, trusted: bl.Trusted.Get()}
 		db.addToCache(bl.Hash, bl.Raw, bl)
 		db.datToWrite += uint64(len(bl.Raw))
 		db.blocksToWrite <- oneB2W{idx: idx, h: bl.Hash.Hash, data: bl.Raw, height: height, txcount: uint32(bl.TxCount)}
 		flush = len(db.blocksToWrite) >= MAX_BLOCKS_TO_WRITE || db.datToWrite >= MAX_DATA_WRITE
 	} else {
 		//println("Block", bl.Hash.String(), "already in", rec.trusted, bl.Trusted)
-		if !rec.trusted && bl.Trusted {
+		if !rec.trusted && bl.Trusted.Get() {
 			//println(" ... but now it's getting trusted")
 			if rec.ipos == -1 {
 				// It's not saved yet - just change the flag

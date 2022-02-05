@@ -114,8 +114,9 @@ func host_init() {
 	sto := time.Now()
 
 	al, sy := sys.MemUsed()
+	by, _ := common.MemUsed()
 	fmt.Printf("Blockchain open in %s.  %d + %d MB of RAM used (%d)\n",
-		sto.Sub(sta).String(), al>>20, common.Memory.Bytes>>20, sy>>20)
+		sto.Sub(sta).String(), al>>20, by>>20, sy>>20)
 
 	common.StartTime = time.Now()
 	__exit <- true

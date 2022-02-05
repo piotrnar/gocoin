@@ -5,14 +5,16 @@ import (
 	"encoding/binary"
 	"errors"
 	"sync"
+
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 type Block struct {
 	Raw               []byte
 	Hash              *Uint256
 	Txs               []*Tx
-	TxCount, TxOffset int  // Number of transactions and byte offset to the first one
-	Trusted           bool // if the block is trusted, we do not check signatures and some other things...
+	TxCount, TxOffset int          // Number of transactions and byte offset to the first one
+	Trusted           sys.SyncBool // if the block is trusted, we do not check signatures and some other things...
 	LastKnownHeight   uint32
 
 	BlockExtraInfo // If we cache block on disk (between downloading and comitting), this data has to be preserved
@@ -53,7 +55,7 @@ func (bl *Block) UpdateContent(data []byte) error {
 	if len(data) > 80 {
 		bl.TxCount, bl.TxOffset = VLen(data[80:])
 		if bl.TxOffset == 0 {
-			return errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
+			return errors.New("block's txn_count field corrupt - RPC_Result:bad-blk-length")
 		}
 		bl.TxOffset += 80
 	}
@@ -86,7 +88,7 @@ func (bl *Block) BuildTxList() (e error) {
 	if bl.TxCount == 0 {
 		bl.TxCount, bl.TxOffset = VLen(bl.Raw[80:])
 		if bl.TxCount == 0 || bl.TxOffset == 0 {
-			e = errors.New("Block's txn_count field corrupt - RPC_Result:bad-blk-length")
+			e = errors.New("block's txn_count field corrupt - RPC_Result:bad-blk-length")
 			return
 		}
 		bl.TxOffset += 80

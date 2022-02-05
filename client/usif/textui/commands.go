@@ -81,7 +81,6 @@ func AskYesNo(msg string) bool {
 			return false
 		}
 	}
-	return false
 }
 
 func ShowPrompt() {
@@ -125,7 +124,7 @@ func MainThread() {
 }
 
 func show_info(par string) {
-	fmt.Println("main.go last seen in line:", common.BusyIn(), "  BwDeadlockDebug:", common.BwDeadlockDebug)
+	fmt.Println("main.go last seen in line:", common.BusyIn())
 
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
@@ -136,13 +135,14 @@ func show_info(par string) {
 
 	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d %d %d\n",
 		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
-		time.Now().Sub(common.StartTime).String(), peersdb.PeerDB.Count(),
+		time.Since(common.StartTime).String(), peersdb.PeerDB.Count(),
 		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt())
 
 	// Memory used
 	al, sy := sys.MemUsed()
+	cb, ca := common.MemUsed()
 	fmt.Printf("Heap_used: %d MB,  System_used: %d MB,  UTXO-X-mem: %d MB in %d recs,  Saving: %t\n", al>>20, sy>>20,
-		common.Memory.Bytes>>20, common.Memory.Allocs, common.BlockChain.Unspent.WritingInProgress.Get())
+		cb>>20, ca, common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
 	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
@@ -153,7 +153,7 @@ func show_info(par string) {
 	fmt.Printf(" Time: %s (~%s),  Diff: %.0f,  Rcvd: %s ago\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("15:04:05"),
-		btc.GetDifficulty(common.Last.Block.Bits()), time.Now().Sub(common.Last.Time).String())
+		btc.GetDifficulty(common.Last.Block.Bits()), time.Since(common.Last.Time).String())
 	common.Last.Mutex.Unlock()
 
 	network.Mutex_net.Lock()
@@ -192,7 +192,7 @@ func show_info(par string) {
 func show_counters(par string) {
 	common.CounterMutex.Lock()
 	ck := make([]string, 0)
-	for k, _ := range common.Counter {
+	for k := range common.Counter {
 		if par == "" || strings.HasPrefix(k, par) {
 			ck = append(ck, k)
 		}
@@ -531,7 +531,7 @@ func redo_block(par string) {
 		return
 	}
 
-	bl.Trusted = false // assume not trusted
+	bl.Trusted.Clr() // assume not trusted
 
 	tdl := time.Now()
 	rb := &network.OneReceivedBlock{TmStart: sta, TmPreproc: pre, TmDownload: tdl}

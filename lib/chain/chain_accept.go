@@ -1,29 +1,28 @@
 package chain
 
 import (
+	"errors"
 	"fmt"
 	"sync"
-	"errors"
 	"sync/atomic"
+
 	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"github.com/piotrnar/gocoin/lib/script"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 // TrustedTxChecker is meant to speed up verifying transactions that had
 // been verified already by the client while being taken to its memory pool
 var TrustedTxChecker func(*btc.Tx) bool
 
-
 func (ch *Chain) ProcessBlockTransactions(bl *btc.Block, height, lknown uint32) (changes *utxo.BlockChanges, sigopscost uint32, e error) {
 	changes = new(utxo.BlockChanges)
 	changes.Height = height
 	changes.LastKnownHeight = lknown
-	changes.DeledTxs = make(map[[32]byte] []bool, bl.TotalInputs)
+	changes.DeledTxs = make(map[[32]byte][]bool, bl.TotalInputs)
 	sigopscost, e = ch.commitTxs(bl, changes)
 	return
 }
-
 
 // AcceptBlock either appends a new block at the end of the existing chain
 // in which case it also applies all the transactions to the unspent database.
@@ -37,9 +36,8 @@ func (ch *Chain) AcceptBlock(bl *btc.Block) (e error) {
 	return ch.CommitBlock(bl, cur)
 }
 
-
 // Make sure to call this function with ch.BlockIndexAccess locked
-func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
+func (ch *Chain) AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 	prevblk, ok := ch.BlockIndex[btc.NewUint256(bl.ParentHash()).BIdx()]
 	if !ok {
 		panic("This should not happen")
@@ -59,8 +57,7 @@ func (ch *Chain)AcceptHeader(bl *btc.Block) (cur *BlockTreeNode) {
 	return
 }
 
-
-func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
+func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	cur.BlockSize = uint32(len(bl.Raw))
 	cur.TxCount = uint32(bl.TxCount)
 	if ch.LastBlock() == cur.Parent {
@@ -78,7 +75,7 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 		} else {
 			cur.SigopsCost = sigopscost
 			// ProcessBlockTransactions succeeded, so save the block as "trusted".
-			bl.Trusted = true
+			bl.Trusted.Set()
 			ch.Blocks.BlockAdd(cur.Height, bl)
 			// Apply the block's trabnsactions to the unspent database:
 			ch.Unspent.CommitBlockTxs(changes, bl.Hash.Hash[:])
@@ -107,17 +104,16 @@ func (ch *Chain)CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 	return
 }
 
-
 // commitTxs is ususually the most time consuming process when applying a new block.
-func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost uint32, e error) {
+func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost uint32, e error) {
 	sumblockin := btc.GetBlockReward(changes.Height)
 	var txoutsum, txinsum, sumblockout uint64
 
 	if changes.Height+ch.Unspent.UnwindBufLen >= changes.LastKnownHeight {
-		changes.UndoData = make(map[[32]byte] *utxo.UtxoRec)
+		changes.UndoData = make(map[[32]byte]*utxo.UtxoRec)
 	}
 
-	blUnsp := make(map[[32]byte] []*btc.TxOut, len(bl.Txs))
+	blUnsp := make(map[[32]byte][]*btc.TxOut, len(bl.Txs))
 
 	var wg sync.WaitGroup
 	var ver_err_cnt uint32
@@ -129,8 +125,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 		// Check each tx for a valid input, except from the first one
 		if i > 0 {
-			
-			tx_trusted := bl.Trusted
+
+			tx_trusted := bl.Trusted.Get()
 			if !tx_trusted {
 				if TrustedTxChecker != nil && TrustedTxChecker(bl.Txs[i]) {
 					tx_trusted = true
@@ -146,18 +142,18 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				if was_spent {
 					if int(inp.Vout) >= len(spent_map) {
 						println("txin", inp.String(), "did not have vout", inp.Vout)
-						e = errors.New("Tx VOut too big")
+						e = errors.New("tx VOut too big")
 						return
 					}
 
 					if spent_map[inp.Vout] {
 						println("txin", inp.String(), "already spent in this block")
-						e = errors.New("Double spend inside the block")
+						e = errors.New("double spend inside the block")
 						return
 					}
 				}
 				tout := ch.Unspent.UnspentGet(inp)
-				if tout==nil {
+				if tout == nil {
 					t, ok := blUnsp[inp.Hash]
 					if !ok {
 						e = errors.New("Unknown input TxID: " + btc.NewUint256(inp.Hash[:]).String())
@@ -166,13 +162,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 					if inp.Vout >= uint32(len(t)) {
 						println("Vout too big", len(t), inp.String())
-						e = errors.New("Vout too big")
+						e = errors.New("vout too big")
 						return
 					}
 
 					if t[inp.Vout] == nil {
 						println("Vout already spent", inp.String())
-						e = errors.New("Vout already spent")
+						e = errors.New("vout already spent")
 						return
 					}
 
@@ -184,7 +180,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 					tout = t[inp.Vout]
 					t[inp.Vout] = nil // and now mark it as spent:
 				} else {
-					if tout.WasCoinbase && changes.Height - tout.BlockHeight < COINBASE_MATURITY {
+					if tout.WasCoinbase && changes.Height-tout.BlockHeight < COINBASE_MATURITY {
 						e = errors.New("Trying to spend prematured coinbase: " + btc.NewUint256(inp.Hash[:]).String())
 						return
 					}
@@ -217,7 +213,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				if !tx_trusted {
 					tx.Spent_outputs[j] = tout
 				}
-				
+
 				if (bl.VerifyFlags & script.VER_P2SH) != 0 {
 					if btc.IsP2SH(tout.Pk_script) {
 						sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(bl.Txs[i].TxIn[j].ScriptSig))
@@ -230,13 +226,13 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 				txinsum += tout.Value
 			}
-			
+
 			// second, verify the scrips:
 			if !tx_trusted { // run VerifyTxScript() in a parallel task
 				for j := 0; j < len(bl.Txs[i].TxIn); j++ {
 					wg.Add(1)
-					go func (i int, tx *btc.Tx) {
-						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount:tx.Spent_outputs[i].Value, Idx:i, Tx:tx}, bl.VerifyFlags) {
+					go func(i int, tx *btc.Tx) {
+						if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script, &script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, bl.VerifyFlags) {
 							atomic.AddUint32(&ver_err_cnt, 1)
 						}
 						wg.Done()
@@ -252,11 +248,11 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 				return
 			}
 		}
-		
+
 		if e != nil { // this should not happen as every error has a return
 			return // If any input fails, do not continue
 		}
-		
+
 		sumblockin += txinsum
 
 		for j := range bl.Txs[i].TxOut {
@@ -267,8 +263,8 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		if i > 0 {
 			bl.Txs[i].Fee = txinsum - txoutsum
 			if txoutsum > txinsum {
-				e = errors.New(fmt.Sprintf("More spent (%.8f) than at the input (%.8f) in TX %s",
-					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String()))
+				e = fmt.Errorf("more spent (%.8f) than at the input (%.8f) in TX %s",
+					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String())
 				return
 			}
 		}
@@ -279,7 +275,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 		blUnsp[bl.Txs[i].Hash.Hash] = outs
 	}
 
-	if !bl.Trusted {
+	if !bl.Trusted.Get() {
 		wg.Wait()
 		if ver_err_cnt > 0 {
 			println("VerifyScript failed", ver_err_cnt, "time (s)")
@@ -289,7 +285,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 	}
 
 	if sumblockin < sumblockout {
-		e = errors.New(fmt.Sprintf("Out:%d > In:%d", sumblockout, sumblockin))
+		e = fmt.Errorf("out:%d > in:%d", sumblockout, sumblockin)
 		return
 	}
 
@@ -310,7 +306,7 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 					rec.InBlock = changes.Height
 					rec.Outs = make([]*utxo.UtxoTxOut, len(v))
 				}
-				rec.Outs[i] = &utxo.UtxoTxOut{Value:v[i].Value, PKScr:v[i].Pk_script}
+				rec.Outs[i] = &utxo.UtxoTxOut{Value: v[i].Value, PKScr: v[i].Pk_script}
 			}
 		}
 		if rec != nil {
@@ -321,7 +317,6 @@ func (ch *Chain)commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscost
 
 	return
 }
-
 
 // CheckTransactions checks transactions for consistency and finality.
 // Return nil if OK, otherwise a descripive error.
@@ -352,8 +347,8 @@ func CheckTransactions(txs []*btc.Tx, height, btime uint32) (res error) {
 
 			if er != nil {
 				select { // this is a non-blocking write to channel
-					case res_chan <- er:
-					default:
+				case res_chan <- er:
+				default:
 				}
 			}
 		}(txs[i])
@@ -362,7 +357,7 @@ func CheckTransactions(txs []*btc.Tx, height, btime uint32) (res error) {
 	wg.Wait() // wait for all the goroutines to complete
 
 	if len(res_chan) > 0 {
-		res = <- res_chan
+		res = <-res_chan
 	}
 
 	return

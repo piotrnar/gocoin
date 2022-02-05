@@ -1,27 +1,28 @@
 package chain
 
 import (
-	"fmt"
-	"time"
-	"sort"
 	"encoding/binary"
-	"github.com/piotrnar/gocoin/lib/btc"
-)
+	"fmt"
+	"sort"
+	"time"
 
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
+)
 
 type BlockTreeNode struct {
 	BlockHash *btc.Uint256
-	Height uint32
-	Parent *BlockTreeNode
-	Childs []*BlockTreeNode
+	Height    uint32
+	Parent    *BlockTreeNode
+	Childs    []*BlockTreeNode
 
-	BlockSize uint32 // if this is zero, only header is known so far
-	TxCount uint32
+	BlockSize  uint32 // if this is zero, only header is known so far
+	TxCount    uint32
 	SigopsCost uint32
 
 	BlockHeader [80]byte
 
-	Trusted bool
+	Trusted sys.SyncBool
 }
 
 func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
@@ -42,9 +43,9 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	prv := sta
 	for !AbortNow && last != end {
 		cur := time.Now()
-		if cur.Sub(prv) >= 10 * time.Second {
+		if cur.Sub(prv) >= 10*time.Second {
 			mbps := float64(tot_bytes) / float64(cur.Sub(sta)/1e3)
-			sec_left := int64(float64(total_size_to_process)/1e6 / mbps)
+			sec_left := int64(float64(total_size_to_process) / 1e6 / mbps)
 			fmt.Printf("ParseTillBlock %d / %d ... %.2f MB/s - %d:%02d:%02d left (%d)\n", last.Height,
 				end.Height, mbps, sec_left/3600, (sec_left/60)%60, sec_left%60, cur.Unix()-sta.Unix())
 			prv = cur
@@ -55,14 +56,14 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			break
 		}
 
-		if nxt.BlockSize==0 {
+		if nxt.BlockSize == 0 {
 			println("ParseTillBlock: ", nxt.Height, nxt.BlockHash.String(), "- not yet commited")
 			break
 		}
 
 		crec, trusted, er = ch.Blocks.BlockGetInternal(nxt.BlockHash, true)
 		if er != nil {
-			panic("Db.BlockGet(): "+er.Error())
+			panic("Db.BlockGet(): " + er.Error())
 		}
 		tot_bytes += uint64(len(crec.Data))
 		l, _ := ch.Blocks.BlockLength(nxt.BlockHash, false)
@@ -87,7 +88,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			break
 		}
 
-		bl.Trusted = trusted
+		bl.Trusted.Store(trusted)
 
 		changes, sigopscost, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
@@ -119,42 +120,41 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 	}
 }
 
-func (n *BlockTreeNode) BlockVersion() (uint32) {
+func (n *BlockTreeNode) BlockVersion() uint32 {
 	return binary.LittleEndian.Uint32(n.BlockHeader[0:4])
 }
 
-func (n *BlockTreeNode) Timestamp() (uint32) {
+func (n *BlockTreeNode) Timestamp() uint32 {
 	return binary.LittleEndian.Uint32(n.BlockHeader[68:72])
 }
 
-func (n *BlockTreeNode) Bits() (uint32) {
+func (n *BlockTreeNode) Bits() uint32 {
 	return binary.LittleEndian.Uint32(n.BlockHeader[72:76])
 }
 
 // GetMedianTimePast returns the median time of the last 11 blocks.
-func (pindex *BlockTreeNode) GetMedianTimePast() (uint32) {
+func (pindex *BlockTreeNode) GetMedianTimePast() uint32 {
 	var pmedian [MedianTimeSpan]int
 	pbegin := MedianTimeSpan
 	pend := MedianTimeSpan
-	for i:=0; i<MedianTimeSpan && pindex!=nil; i++ {
+	for i := 0; i < MedianTimeSpan && pindex != nil; i++ {
 		pbegin--
 		pmedian[pbegin] = int(pindex.Timestamp())
 		pindex = pindex.Parent
 	}
 	sort.Ints(pmedian[pbegin:pend])
-	return uint32(pmedian[pbegin+((pend - pbegin)/2)])
+	return uint32(pmedian[pbegin+((pend-pbegin)/2)])
 }
-
 
 // FindFarthestNode looks for the farthest node.
 func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
 	//fmt.Println("FFN:", n.Height, "kids:", len(n.Childs))
-	if len(n.Childs)==0 {
+	if len(n.Childs) == 0 {
 		return n, 0
 	}
 	res, depth := n.Childs[0].FindFarthestNode()
 	if len(n.Childs) > 1 {
-		for i := 1; i<len(n.Childs); i++ {
+		for i := 1; i < len(n.Childs); i++ {
 			_re, _dept := n.Childs[i].FindFarthestNode()
 			if _dept > depth {
 				res = _re
@@ -162,13 +162,12 @@ func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
 			}
 		}
 	}
-	return res, depth+1
+	return res, depth + 1
 }
 
-
 // FindPathTo returns the next node that leads to the given destination.
-func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
-	if n==end {
+func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) *BlockTreeNode {
+	if n == end {
 		return nil
 	}
 
@@ -176,25 +175,22 @@ func (n *BlockTreeNode) FindPathTo(end *BlockTreeNode) (*BlockTreeNode) {
 		panic("FindPathTo: End block is not higher then current")
 	}
 
-	if len(n.Childs)==0 {
+	if len(n.Childs) == 0 {
 		panic("FindPathTo: Unknown path to block " + end.BlockHash.String())
 	}
 
-	if len(n.Childs)==1 {
-		return n.Childs[0]  // if there is only one child, do it fast
+	if len(n.Childs) == 1 {
+		return n.Childs[0] // if there is only one child, do it fast
 	}
 
 	for {
 		// more then one children: go from the end until you reach the current node
-		if end.Parent==n {
+		if end.Parent == n {
 			return end
 		}
 		end = end.Parent
 	}
-
-	return nil
 }
-
 
 // HasAllParents checks whether the given node has all its parent blocks already comitted.
 func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
@@ -203,27 +199,25 @@ func (ch *Chain) HasAllParents(dst *BlockTreeNode) bool {
 		if ch.OnActiveBranch(dst) {
 			return true
 		}
-		if dst==nil || dst.TxCount==0 {
+		if dst == nil || dst.TxCount == 0 {
 			return false
 		}
 	}
 }
-
 
 // OnActiveBranch returns true if the given node is on the active branch.
 func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 	top := ch.LastBlock()
 	for {
-		if dst==top {
+		if dst == top {
 			return true
 		}
-		if dst.Height>=top.Height {
+		if dst.Height >= top.Height {
 			return false
 		}
 		top = top.Parent
 	}
 }
-
 
 // MoveToBlock performs a channel reorg.
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
@@ -232,7 +226,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 		cur = cur.Parent
 
 		// if cur.TxCount is zero, it means we dont yet have this block's data
-		if cur.TxCount==0 {
+		if cur.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue A")
 			fmt.Println("Trying to go:", dst.BlockHash.String())
 			fmt.Println("Cannot go at:", cur.BlockHash.String())
@@ -242,7 +236,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 
 	// At this point both "ch.blockTreeEnd" and "cur" should be at the same height
 	for tmp := ch.LastBlock(); tmp != cur; tmp = tmp.Parent {
-		if cur.Parent.TxCount==0 {
+		if cur.Parent.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue B")
 			fmt.Println("Trying to go:", dst.BlockHash.String())
 			fmt.Println("Cannot go at:", cur.Parent.BlockHash.String())
@@ -261,7 +255,6 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	ch.ParseTillBlock(dst)
 }
 
-
 func (ch *Chain) UndoLastBlock() {
 	last := ch.LastBlock()
 	fmt.Println("Undo block", last.Height, last.BlockHash.String(), last.BlockSize>>10, "KB")
@@ -275,7 +268,7 @@ func (ch *Chain) UndoLastBlock() {
 	if er != nil {
 		panic("UndoLastBlock: NewBlock() should not fail with block from disk")
 	}
-	
+
 	er = bl.BuildTxList()
 	if er != nil {
 		panic("UndoLastBlock: BuildTxList() should not fail with block from disk")
@@ -288,11 +281,10 @@ func (ch *Chain) UndoLastBlock() {
 	ch.SetLast(last.Parent)
 }
 
-
 // make sure ch.BlockIndexAccess is locked before calling it
 func (cur *BlockTreeNode) delAllChildren(ch *Chain, deleteCallback func(*btc.Uint256)) {
 	for i := range cur.Childs {
-		if deleteCallback!=nil {
+		if deleteCallback != nil {
 			deleteCallback(cur.Childs[i].BlockHash)
 		}
 		cur.Childs[i].delAllChildren(ch, deleteCallback)
@@ -301,7 +293,6 @@ func (cur *BlockTreeNode) delAllChildren(ch *Chain, deleteCallback func(*btc.Uin
 	}
 	cur.Childs = nil
 }
-
 
 func (ch *Chain) DeleteBranch(cur *BlockTreeNode, deleteCallback func(*btc.Uint256)) {
 	// first disconnect it from the Parent
@@ -313,22 +304,20 @@ func (ch *Chain) DeleteBranch(cur *BlockTreeNode, deleteCallback func(*btc.Uint2
 	ch.BlockIndexAccess.Unlock()
 }
 
-
-func (n *BlockTreeNode)addChild(c *BlockTreeNode) {
+func (n *BlockTreeNode) addChild(c *BlockTreeNode) {
 	n.Childs = append(n.Childs, c)
 }
 
-
-func (n *BlockTreeNode)delChild(c *BlockTreeNode) {
+func (n *BlockTreeNode) delChild(c *BlockTreeNode) {
 	newChds := make([]*BlockTreeNode, len(n.Childs)-1)
 	xxx := 0
 	for i := range n.Childs {
-		if n.Childs[i]!=c {
+		if n.Childs[i] != c {
 			newChds[xxx] = n.Childs[i]
 			xxx++
 		}
 	}
-	if xxx!=len(n.Childs)-1 {
+	if xxx != len(n.Childs)-1 {
 		panic("Child not found")
 	}
 	n.Childs = newChds

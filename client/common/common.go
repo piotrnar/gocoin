@@ -246,7 +246,7 @@ func ApplyLTB(hash *btc.Uint256, height uint32) {
 		if node != nil {
 			LastTrustedBlockHeight = node.Height
 			for node != nil {
-				node.Trusted = true
+				node.Trusted.Set()
 				node = node.Parent
 			}
 		}
@@ -282,4 +282,11 @@ func UpdateScriptFlags(flags uint32) {
 
 func CurrentScriptFlags() uint32 {
 	return atomic.LoadUint32(&Last.ScriptFlags)
+}
+
+func MemUsed() (bts int, alcs int) {
+	MemMutex.Lock()
+	bts, alcs = Memory.Bytes, Memory.Allocs
+	MemMutex.Unlock()
+	return
 }
