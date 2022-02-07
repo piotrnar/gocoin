@@ -18,6 +18,7 @@
 /*WALLET_JS_VARS*/
 var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:300})
 var address_type // initited from localStorage's wallet_address_type: 0 = pubkey, 1 - P2KH, 2 - P2TAP
+var p2sh_sw_mode // when set to true, use old (base58) address type
 
 function showqrcode(label, addr) {
 	qr_label.innerText = label
@@ -258,7 +259,7 @@ function fetch_wallet_balance(name) {
 				td = row.insertCell(-1)
 
 				td.className = 'segwitaddr'
-				if (p2sh_sw.checked) {
+				if (p2sh_sw_mode) {
 					td.classList.add('p2sh')
 					if (segwit_active && rec.SegWitAddr!='') {
 						add_address_and_icons(td, rec.SegWitAddr, wallet[i].label)
@@ -543,8 +544,14 @@ function get_balance_zip() {
 	form.submit()
 }
 
+function p2sh_sw_mode_changed() {
+	p2sh_sw_mode_str.innerText = p2sh_sw_mode ? "P2SH-P2WPKH" : "P2WPKH"
+}
+
 function switch_segwit_p2sh() {
-	localStorage.setItem("wallet_segwit_p2sh", p2sh_sw.checked)
+	p2sh_sw_mode = !p2sh_sw_mode
+	p2sh_sw_mode_changed()
+	localStorage.setItem("wallet_segwit_p2sh", p2sh_sw_mode)
 	fetch_wallet_balance(null)
 }
 
@@ -601,16 +608,17 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 
 <table class="wal bord" id="walltab">
 <tr>
-<th width="360" align="left" class="hand" onclick="at_click()"><span style="padding-left:20px;">Address</span>
-	(<span id="at_type_str"></span>)
+<th width="360" align="left" class="hand" onclick="at_click()" style="padding-left:25px"
+	title="Click to change address type displayed in this column (needs raw-pubkey wallet)">
+	Base Address (<span id="at_type_str"></span>)
 <th align="left" width="100">Label
 <th align="right">Balance&nbsp;BTC
 <th width="50">
-<th width="330"><span class="hand" onclick="p2sh_sw.click()">Segwit Deposit Address</span>
-<input id="p2sh_sw" title="P2WSH" type="checkbox" onchange="switch_segwit_p2sh()">
+<th align="left" width="330" class="hand" onclick="switch_segwit_p2sh()" style="padding-left:25px"
+	title="Click to change address type displayed in this column (for segwit version 0)">
+	Segwit Address (<span id="p2sh_sw_mode_str"></span>)
 <th width="40">Outs
 </table>
-
 <table width="100%"><tr>
 <td width="50%" id="arriving_info_id" style="display:none" class="unspent_plus">Unconfirmed arriving: <b id="arriving_btc"></b> BTC in <b id="arriving_cnt"></b> outputs</td>
 <td width="50%" id="spending_info_id" style="display:none" class="unspent_minus">Unconfirmed spending: <b id="spending_btc"></b> BTC from <b id="spending_cnt"></b> outputs</td>
@@ -697,9 +705,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 })
 
-if (localStorage.getItem("wallet_segwit_p2sh")==="true") {
-	p2sh_sw.checked = true
-}
+p2sh_sw_mode = (localStorage.getItem("wallet_segwit_p2sh")==="true")
+p2sh_sw_mode_changed()
 
 address_type = parseInt(localStorage.getItem("wallet_address_type")) || 0
 update_address_type()

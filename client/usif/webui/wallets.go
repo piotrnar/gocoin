@@ -22,11 +22,12 @@ import (
 )
 
 const (
-	AT_P2PKH  = "P2PKH"
-	AT_P2SH   = "P2SH"
-	AT_P2WSH  = "P2SH-P2WPKH"
-	AT_P2WPKH = "P2WPKH"
-	AT_P2TAP  = "P2TAP"
+	AT_P2PKH       = "P2PKH"
+	AT_P2SH        = "P2SH"
+	AT_P2WSH       = "P2WSH"
+	AT_P2SH_P2WPKH = "P2SH-P2WPKH"
+	AT_P2WPKH      = "P2WPKH"
+	AT_P2TAP       = "P2TAP"
 )
 
 func p_wal(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +241,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 							TxId: txid.String(), Vout: u.Vout,
 							Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr: as,
-							Spending: spending, RawTx: rawtx, AddrType: AT_P2WSH})
+							Spending: spending, RawTx: rawtx, AddrType: AT_P2SH_P2WPKH})
 					}
 				}
 			}
