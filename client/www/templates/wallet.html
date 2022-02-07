@@ -1,5 +1,7 @@
 <script type="text/javascript" src="webui/jquery.min.js"></script>
 <script type="text/javascript" src="webui/qrcode.min.js"></script>
+<script type="text/javascript" src="webui/crypto.js"></script>
+<script type="text/javascript" src="webui/bech32.js"></script>
 <div id="light" class="white_content" style="height:auto;left:20%;width:60%">
 <table width="100%">
 <tr><td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
@@ -15,6 +17,7 @@
 <script>
 /*WALLET_JS_VARS*/
 var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:300})
+var address_type // initited from localStorage's wallet_address_type: 0 = pubkey, 1 - P2KH, 2 - P2TAP
 
 function showqrcode(label, addr) {
 	qr_label.innerText = label
@@ -47,6 +50,12 @@ td.addr_long {
 	font-weight:bold;
 	white-space: nowrap;
 }
+td.addr_pubkey {
+	font-size:8px;
+	font-weight:bold;
+	white-space:nowrap;
+	font-family: monospace;
+}
 td.addr_norm {
 	font-weight:bold;
 	white-space: nowrap;
@@ -66,9 +75,15 @@ td.balbtc {
 .native {
 	color:darkgreen;
 }
+.p2tap {
+	color:blue;
+}
 .segwitaddr {
 	font-style:italic;
 	font-size: 90%;
+}
+.pubkey {
+	color:darkblue;
 }
 td.segwitaddr {
 	text-align: left;
@@ -186,9 +201,24 @@ function fetch_wallet_balance(name) {
 				row["addr_label"] = wallet[i].label
 
 				td = row.insertCell(-1)
-				td.className = (wallet_addr[i].length>45) ? "addr_long" : "addr_norm"
+				var adr_string = wallet_addr[i] 
+				var pubkey_mode = valid_pubkey(adr_string);
+				if (pubkey_mode && address_type!=0) {
+					var pkb = hex2array(adr_string)
+					if (address_type==1) {
+						adr_string = pubkey_to_p2kh(pkb)
+					} else { // address_type==2
+						adr_string = sw_encode(testnet?"tb":"bc", 1, pkb.slice(1, 33))
+					}
+				}
+				if (pubkey_mode && address_type==0) {
+					td.className = "addr_pubkey pubkey"
+				} else {
+					td.className = (adr_string.length>45) ? "addr_long" : "addr_norm"
+					if (pubkey_mode)  td.classList.add('pubkey')
+				}
 
-				add_address_and_icons(td, wallet_addr[i], wallet[i].label)
+				add_address_and_icons(td, adr_string, wallet[i].label)
 				td = row.insertCell(-1)
 				td.className = "hand addr_label"
 				td.innerText = remove_comment_from_label(wallet[i].label)
@@ -249,6 +279,10 @@ function fetch_wallet_balance(name) {
 
 					if (rec.SegWitNativeCnt>0) {
 						td.innerHTML += ' <span class="segwitaddr native">+' + rec.SegWitNativeCnt + '</span>'
+					}
+					
+					if (rec.SegWitTapCnt>0) {
+						td.innerHTML += ' <span class="segwitaddr p2tap">+' + rec.SegWitTapCnt + '</span>'
 					}
 					totouts += rec.OutCnt
 				} else {
@@ -514,6 +548,25 @@ function switch_segwit_p2sh() {
 	fetch_wallet_balance(null)
 }
 
+function update_address_type() {
+	var tx2set = 'WTF'
+	switch (address_type) {
+		case 0: tx2set='PubKey'; break
+		case 1: tx2set='P2KH'; break
+		case 2: tx2set='P2TAP'; break
+	}
+	at_type_str.innerText = tx2set
+}
+
+function at_click() {
+	if (++address_type==3) {
+		address_type = 0
+	}
+	localStorage.setItem("wallet_address_type", address_type)
+	update_address_type()
+	fetch_wallet_balance(null)
+}
+
 </script>
 <select id="qswal" style="display:none"></select>
 
@@ -548,12 +601,13 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 
 <table class="wal bord" id="walltab">
 <tr>
-<th width="360">Address
+<th width="360" align="left" class="hand" onclick="at_click()"><span style="padding-left:20px;">Address</span>
+	(<span id="at_type_str"></span>)
 <th align="left" width="100">Label
 <th align="right">Balance&nbsp;BTC
 <th width="50">
 <th width="330"><span class="hand" onclick="p2sh_sw.click()">Segwit Deposit Address</span>
-<input style="float:right" id="p2sh_sw" title="P2SH-P2WPKH" type="checkbox" onchange="switch_segwit_p2sh()">
+<input id="p2sh_sw" title="P2WSH" type="checkbox" onchange="switch_segwit_p2sh()">
 <th width="40">Outs
 </table>
 
@@ -582,7 +636,8 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 	<i>
 	Only list your wallet's <b>public addresses</b> here!
 	Empty lines and lines starting with <b>#</b> are ignored.<br>
-	Make a line of <b># SegWit</b> or <b># SegWit P2SH</b> to auto-translate change addresses to SegWit format in <a href="snd">MakeTx</a> tab.
+	Make a line of <b># SegWit</b> or <b># SegWit P2SH</b> or <b># SegWit Tap</b>
+	 to auto-translate change addresses to SegWit format in <a href="snd">MakeTx</a> tab.
 	</i>
 </form>
 </table>
@@ -645,6 +700,9 @@ document.addEventListener('DOMContentLoaded', function() {
 if (localStorage.getItem("wallet_segwit_p2sh")==="true") {
 	p2sh_sw.checked = true
 }
+
+address_type = parseInt(localStorage.getItem("wallet_address_type")) || 0
+update_address_type()
 
 if (!server_mode) {
 	form_b.style.display = 'block'

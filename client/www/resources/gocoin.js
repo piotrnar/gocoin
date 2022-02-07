@@ -145,15 +145,51 @@ function int2ip(i) {
 	return a+'.'+b+'.'+c+'.'+d
 }
 
+function hex2array(t) {
+	if ((t.length & 1)==1) {
+		return null
+	}
+	var pkb = new Uint8Array(t.length/2)
+	for (var i = 0; i < t.length; i += 2) {
+        var v = parseInt(t.substr(i, 2), 16)
+		if (isNaN(v)) return null
+		pkb[i/2] = v
+	}
+	return pkb
+}
+
+function valid_pubkey(s) {
+	if (s.length == 66 && (s.substr(0,2)=="02" || s.substr(0,2)=="03")) {
+		s = s.toLowerCase()
+		for (var i=0; i<s.length; i++) {
+			var c = s[i]
+			if (!(c >= '0' && c <= '9' || c >= 'a' && c <= 'f')) return false
+		}
+		return true
+	}
+	return false
+}
+
+function valid_bech32_addr(s) {
+	return (s.length == 62 || s.length==42) && (s.substr(0,3)=="bc1" || s.substr(0,3)=="tc1")
+}
+
+function valid_base58_addr(s) {
+	for (var i=0; i<s.length; s++) {
+		if (b58set.indexOf(s[i])==-1) {
+			return false
+		}
+	}
+	return true
+}
+
 function valid_btc_addr(s) {
 	try {
 		if (s.length<min_btc_addr_len) return false
-		for (var i=0; i<s.length; s++) {
-			if (b58set.indexOf(s[i])==-1) {
-				return false
-			}
-		}
-		return true
+		if (s[0]=='#') return false
+		if (valid_pubkey(s))  return true
+		if (valid_bech32_addr(s))  return true
+		if (valid_base58_addr(s))  return true
 	} catch (e) {
 		console.log("valid_btc_addr:", e)
 		return false

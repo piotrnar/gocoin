@@ -21,6 +21,14 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
+const (
+	AT_P2PKH  = "P2PKH"
+	AT_P2SH   = "P2SH"
+	AT_P2WSH  = "P2SH-P2WPKH"
+	AT_P2WPKH = "P2WPKH"
+	AT_P2TAP  = "P2TAP"
+)
+
 func p_wal(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -50,14 +58,14 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 func getaddrtype(aa *btc.BtcAddr) string {
 	if aa.SegwitProg != nil {
 		if aa.SegwitProg.Version == 0 && len(aa.SegwitProg.Program) == 20 {
-			return "P2WPKH"
+			return AT_P2WPKH
 		}
 		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
-			return "P2TAP"
+			return AT_P2TAP
 		}
 	}
 	if aa.Version == btc.AddrVerPubkey(common.Testnet) {
-		return "P2PKH"
+		return AT_P2PKH
 	}
 	if aa.Version == btc.AddrVerScript(common.Testnet) {
 		return "P2SH"
@@ -111,6 +119,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		SegWitAddr       string
 		SegWitNativeCnt  int
 		SegWitNativeAddr string
+		SegWitTapCnt     int
+		SegWitTapAddr    string
 		Outs             []OneOut
 
 		PendingCnt   int
@@ -137,15 +147,31 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, a := range addrs {
-		aa, e := btc.NewAddrFromString(a)
-		if e != nil {
-			continue
+		var aa, ab *btc.BtcAddr
+		var e error
+		var pubkey []byte
+		var as string
+
+		if len(a) == 66 && a[0] == '0' && (a[1] == '2' || a[1] == '3') {
+			pubkey, e = hex.DecodeString(a) // raw public key
+			if e != nil || len(pubkey) != 33 {
+				continue
+			}
+			if aa = btc.NewAddrFromPubkey(pubkey, btc.AddrVerPubkey(common.Testnet)); aa == nil {
+				continue
+			}
+		} else {
+			// bitcoin address (of some sort)
+			if aa, e = btc.NewAddrFromString(a); e != nil {
+				continue
+			}
 		}
 
 		unsp := wallet.GetAllUnspent(aa)
 		newrec := new(OneOuts)
 		if len(unsp) > 0 {
 			newrec.OutCnt = len(unsp)
+			as = aa.String()
 			for _, u := range unsp {
 				newrec.Value += u.Value
 				network.TxMutex.Lock()
@@ -167,7 +193,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec.Outs = append(newrec.Outs, OneOut{
 						TxId: btc.NewUint256(u.TxPrevOut.Hash[:]).String(), Vout: u.Vout,
 						Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
-						Message: html.EscapeString(string(u.Message)), Addr: a, Spending: spending,
+						Message: html.EscapeString(string(u.Message)), Addr: as, Spending: spending,
 						RawTx: rawtx, AddrType: getaddrtype(aa)})
 				}
 			}
@@ -185,13 +211,13 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 			// P2SH SegWit if applicable
 			h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, p2kh[:]...))
-			aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
-			newrec.SegWitAddr = aa.String()
-			unsp = wallet.GetAllUnspent(aa)
+			ab = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+			as = ab.String()
+			newrec.SegWitAddr = as
+			unsp = wallet.GetAllUnspent(ab)
 			if len(unsp) > 0 {
 				newrec.OutCnt += len(unsp)
 				newrec.SegWitCnt = len(unsp)
-				as := aa.String()
 				for _, u := range unsp {
 					newrec.Value += u.Value
 					network.TxMutex.Lock()
@@ -214,22 +240,22 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 							TxId: txid.String(), Vout: u.Vout,
 							Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr: as,
-							Spending: spending, RawTx: rawtx, AddrType: "P2SH-P2WPKH"})
+							Spending: spending, RawTx: rawtx, AddrType: AT_P2WSH})
 					}
 				}
 			}
 			if mempool {
-				addr_map[string(aa.OutScript())] = a
+				addr_map[string(ab.OutScript())] = a
 			}
 
 			// Native SegWit if applicable
-			aa = btc.NewAddrFromPkScript(append([]byte{0, 20}, p2kh[:]...), common.Testnet)
-			newrec.SegWitNativeAddr = aa.String()
-			unsp = wallet.GetAllUnspent(aa)
+			ab = btc.NewAddrFromPkScript(append([]byte{0, 20}, p2kh[:]...), common.Testnet)
+			as = ab.String()
+			newrec.SegWitNativeAddr = as
+			unsp = wallet.GetAllUnspent(ab)
 			if len(unsp) > 0 {
 				newrec.OutCnt += len(unsp)
 				newrec.SegWitNativeCnt = len(unsp)
-				as := aa.String()
 				for _, u := range unsp {
 					newrec.Value += u.Value
 					network.TxMutex.Lock()
@@ -252,14 +278,56 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 							TxId: txid.String(), Vout: u.Vout,
 							Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
 							Message: html.EscapeString(string(u.Message)), Addr: as,
-							Spending: spending, RawTx: rawtx, AddrType: "P2WPKH"})
+							Spending: spending, RawTx: rawtx, AddrType: AT_P2WPKH})
 					}
 				}
 			}
 			if mempool {
-				addr_map[string(aa.OutScript())] = a
+				addr_map[string(ab.OutScript())] = a
 			}
 
+			// Also Check PAY2TAP, if pubkey mode...
+			if pubkey != nil {
+				if ab = btc.NewAddrFromPubkey(pubkey, btc.AddrVerPubkey(common.Testnet)); ab == nil {
+					continue
+				}
+				ab.SegwitProg = &btc.SegwitProg{HRP: btc.GetSegwitHRP(common.Testnet), Version: 1, Program: pubkey[1:]}
+				as = ab.String()
+				newrec.SegWitTapAddr = as
+				unsp = wallet.GetAllUnspent(ab)
+				if len(unsp) > 0 {
+					newrec.OutCnt += len(unsp)
+					newrec.SegWitTapCnt = len(unsp)
+					for _, u := range unsp {
+						newrec.Value += u.Value
+						network.TxMutex.Lock()
+						_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
+						network.TxMutex.Unlock()
+						if spending {
+							newrec.SpendingValue += u.Value
+							newrec.SpendingCnt++
+						}
+						if !summary {
+							txid := btc.NewUint256(u.TxPrevOut.Hash[:])
+							var rawtx string
+							if getrawtx {
+								dat, er := common.GetRawTx(uint32(u.MinedAt), txid)
+								if er == nil {
+									rawtx = hex.EncodeToString(dat)
+								}
+							}
+							newrec.Outs = append(newrec.Outs, OneOut{
+								TxId: txid.String(), Vout: u.Vout,
+								Value: u.Value, Height: u.MinedAt, Coinbase: u.Coinbase,
+								Message: html.EscapeString(string(u.Message)), Addr: as,
+								Spending: spending, RawTx: rawtx, AddrType: AT_P2TAP})
+						}
+					}
+				}
+				if mempool {
+					addr_map[string(ab.OutScript())] = a
+				}
+			}
 		}
 	}
 

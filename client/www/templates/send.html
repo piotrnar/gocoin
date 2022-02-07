@@ -26,6 +26,10 @@ td.P2WPKH {
 	color:darkgreen;
 	font-style:italic;
 }
+td.P2TAP {
+	color:blue;
+	font-style:italic;
+}
 td.long_addr {
 	font-size:9px;
 }
@@ -49,6 +53,7 @@ var addrbook = new Array()
 var basic_addrbook_len = 0 // without the wallets virgin addrs
 var auto_transalte_to_segwit = false
 var auto_transalte_to_segwit_p2sh = false
+var auto_transalte_to_segwit_tap = false
 
 const ADDR_LIST_SIZE = 15
 
@@ -63,9 +68,7 @@ function build_change_list() {
 			op.text = "* "
 		}
 
-		if (auto_transalte_to_segwit) {
-			wpkh = p2kh_to_witness(wallet[i].addr)
-		}
+		wpkh = translate_address(wallet[i].addr)
 
 		if (wpkh != '') {
 			op.text += 'SW:' + wallet[i].label
@@ -142,6 +145,9 @@ function fetch_wallet_balance(name) {
 	auto_transalte_to_segwit = curr_wallet_raw.indexOf("SegWit") != -1
 	if (auto_transalte_to_segwit) {
 		auto_transalte_to_segwit_p2sh = curr_wallet_raw.indexOf("SegWit P2SH") != -1
+		if (!auto_transalte_to_segwit_p2sh) {
+			auto_transalte_to_segwit_tap = curr_wallet_raw.indexOf("SegWit Tap") != -1
+		}
 	}
 
 	wallet = parse_wallet(curr_wallet_raw)
@@ -220,7 +226,7 @@ function fetch_wallet_balance(name) {
 				inp["segwit_size"] = 0
 				if (outs[i].type=="P2PKH") {
 					inp.value = 72 + 34  // pub_key + signature
-				} else if (outs[i].type=="P2SH-P2WPKH") {
+				} else if (outs[i].type=="P2WPSH") {
 					inp.value = 23  // P2SH script
 					inp["segwit_size"] = 1 + 72 + 34 // witness_ver + key + signature
 				} else if (outs[i].type=="P2WPKH") {
@@ -445,7 +451,17 @@ function auto_adjust_fee_clicked() {
 	}
 }
 
-function p2kh_to_witness(t) {
+function translate_address(t) {
+	var pkb = hex2array(t)
+	if (pkb!=null && typeof(pkb)=="object" && pkb.length==33 && (pkb[0]==2 || pkb[0]==3)) {
+		// public key
+		if (auto_transalte_to_segwit_tap) {
+			return sw_encode(testnet?"tb":"bc", 1, pkb.slice(1, 33))
+		}
+		t = pubkey_to_p2kh(pkb)
+		// fallback to regulat addr transation
+	}
+	if (!auto_transalte_to_segwit)  return t
 	if (auto_transalte_to_segwit_p2sh)  return p2kh_to_witness_p2sh(t)
 	try {
 		var r = Base58.decode(t)
@@ -487,8 +503,8 @@ function open_address_book(idx) {
 		var op = document.createElement("option")
 		var wpkh = ''
 
-		if (auto_transalte_to_segwit && i >= basic_addrbook_len) {
-			wpkh = p2kh_to_witness(addrbook[i].addr)
+		if (i >= basic_addrbook_len) {
+			wpkh = translate_address(addrbook[i].addr)
 		}
 
 		if (wpkh != '') {
