@@ -64,6 +64,7 @@ var (
 	segwit_mode  *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
 	bech32_mode  *bool = flag.Bool("bech32", false, "List SegWit deposit addresses in bech32 format")
 	taproot_mode *bool = flag.Bool("tap", false, "List Taproot deposit addresses in bech32 format")
+	pubkeys_mode *bool = flag.Bool("pks", false, "List raw public keys instead of BTC deposit addresses")
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
@@ -108,6 +109,11 @@ func main() {
 
 	if *bech32_mode {
 		*segwit_mode = true
+	}
+
+	if *pubkeys_mode && *segwit_mode {
+		println("You cannot use -pks with -tap or -segwit or -bech32")
+		os.Exit(1)
 	}
 
 	// convert string fee to uint64

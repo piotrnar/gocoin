@@ -298,7 +298,9 @@ func dump_addrs() {
 		}
 		var pubaddr string
 		label := keys[i].BtcAddr.Extra.Label
-		if *segwit_mode {
+		if *pubkeys_mode {
+			pubaddr = hex.EncodeToString(keys[i].Pubkey)
+		} else if *segwit_mode {
 			if segwit[i] == nil {
 				pubaddr = "-=CompressedKey=-"
 			} else {
