@@ -558,9 +558,9 @@ function switch_segwit_p2sh() {
 function update_address_type() {
 	var tx2set = 'WTF'
 	switch (address_type) {
-		case 0: tx2set='PubKey'; break
-		case 1: tx2set='P2KH'; break
-		case 2: tx2set='P2TAP'; break
+		case 0: tx2set='Public Key'; break
+		case 1: tx2set='Old / P2KH'; break
+		case 2: tx2set='New / P2TAP'; break
 	}
 	at_type_str.innerText = tx2set
 }
