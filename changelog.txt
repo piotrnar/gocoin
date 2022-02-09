@@ -138,6 +138,7 @@
 * Tools/balio: added support for fetching bech32 encoded addresses (via blockchair.com)
 * Wallet: New command line switch "-pks" to dump wallet's raw public keys (instead of deposit addresses)
 * Client/WebUI: Can work with raw-pubkeys wallets (wallet -list -pks), for smooth compatibility with all the deposit address types
+* Client/TextUI: "balance" command can now also take a raw public key (hex-encoded)
 
 1.9.4 - 2018-04-11
 NOTE: Use older wallet version (e.g. 1.9.3) if you had wallet type 2 or 4 already generated, but have problems spending from it now.

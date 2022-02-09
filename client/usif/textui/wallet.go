@@ -2,6 +2,7 @@ package textui
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -194,26 +195,12 @@ func all_addrs(par string) {
 	}
 }
 
-func list_unspent(addr string) {
-	if !common.GetBool(&common.WalletON) {
-		fmt.Println("Wallet functionality is currently disabled.")
-		return
-	}
-
-	fmt.Println("Checking unspent coins for addr", addr)
-
-	ad, e := btc.NewAddrFromString(addr)
-	if e != nil {
-		println(e.Error())
-		return
-	}
-
+func list_unspent_addr(ad *btc.BtcAddr) {
+	var addr_printed bool
 	outscr := ad.OutScript()
 
 	unsp := wallet.GetAllUnspent(ad)
-	if len(unsp) == 0 {
-		fmt.Println(ad.String(), "has no coins")
-	} else {
+	if len(unsp) != 0 {
 		var tot uint64
 		sort.Sort(unsp)
 		for i := range unsp {
@@ -221,6 +208,7 @@ func list_unspent(addr string) {
 			tot += unsp[i].Value
 		}
 		fmt.Println(ad.String(), "has", btc.UintToBtc(tot), "BTC in", len(unsp), "records:")
+		addr_printed = true
 		for i := range unsp {
 			fmt.Println(unsp[i].String())
 			network.TxMutex.Lock()
@@ -240,12 +228,60 @@ func list_unspent(addr string) {
 	for _, t2s := range network.TransactionsToSend {
 		for vo, to := range t2s.TxOut {
 			if bytes.Equal(to.Pk_script, outscr) {
-				fmt.Println(fmt.Sprintf("Mempool Tx: %15s BTC comming with %s-%03d",
-					btc.UintToBtc(to.Value), t2s.Hash.String(), vo))
+				if !addr_printed {
+					fmt.Println(ad.String(), "has incoming mempool tx(s):")
+					addr_printed = true
+				}
+				fmt.Printf("%15s BTC confirming as %s-%03d\n",
+					btc.UintToBtc(to.Value), t2s.Hash.String(), vo)
 			}
 		}
 	}
 	network.TxMutex.Unlock()
+
+	if !addr_printed {
+		fmt.Println(ad.String(), "has no coins")
+	}
+}
+
+func list_unspent(addr string) {
+	if !common.GetBool(&common.WalletON) {
+		fmt.Println("Wallet functionality is currently disabled.")
+		return
+	}
+
+	// check for raw public key...
+	pk, er := hex.DecodeString(addr)
+	if er != nil || len(pk) != 33 || pk[0] != 2 && pk[0] != 3 {
+		ad, e := btc.NewAddrFromString(addr)
+		if e != nil {
+			println(e.Error())
+			return
+		}
+		list_unspent_addr(ad)
+		return
+	}
+
+	// if here, pk contains a valid public key
+	ad := btc.NewAddrFromPubkey(pk, btc.AddrVerPubkey(common.Testnet))
+	if ad == nil {
+		println("Unexpected error returned by NewAddrFromPubkey()")
+		return
+	}
+	hrp := btc.GetSegwitHRP(common.Testnet)
+	list_unspent_addr(ad)
+
+	ad.Enc58str = ""
+	ad.SegwitProg = &btc.SegwitProg{HRP: hrp, Version: 1, Program: pk[1:]}
+	list_unspent_addr(ad)
+
+	ad.Enc58str = ""
+	ad.SegwitProg = &btc.SegwitProg{HRP: hrp, Version: 0, Program: ad.Hash160[:]}
+	list_unspent_addr(ad)
+
+	h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, ad.Hash160[:]...))
+	ad = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+	list_unspent_addr(ad)
 }
 
 func all_val_stats(s string) {
@@ -291,7 +327,7 @@ func wallet_on_off(s string) {
 func init() {
 	newUi("richest r", true, best_val, "Show addresses with most coins [0,1,2,3 or count]")
 	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
-	newUi("balance a", true, list_unspent, "List balance of given bitcoin address")
+	newUi("balance a", true, list_unspent, "List balance of given bitcoin address (or raw public key)")
 	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
 	newUi("wallet w", false, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
 }
