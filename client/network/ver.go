@@ -66,10 +66,10 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				v.Mutex.Unlock()
 				if yes {
 					Mutex_net.Unlock()
-					v.Mutex.Lock()
-					/*println("Peer with nonce", hex.EncodeToString(pl[72:80]), "from", c.PeerAddr.Ip(),
-					"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)*/
-					v.Mutex.Unlock()
+					/*v.Mutex.Lock()
+					println("Peer with nonce", hex.EncodeToString(pl[72:80]), "from", c.PeerAddr.Ip(),
+					"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)
+					v.Mutex.Unlock()*/
 					common.CountSafe("VerNonceSame")
 					return errors.New("SameNonce")
 				}
@@ -231,12 +231,23 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 		return
 	}
 
-	// Check for last block data
+	// Authorized node - check for last block data fields
 	if len(pl) >= sig_len+32+4 {
-		copy(b32[:], pl[sig_len:sig_len+32])
-		common.LockCfg()
-		common.ApplyLTB(btc.NewUint256(b32[:]), binary.LittleEndian.Uint32(pl[sig_len+32:sig_len+36]))
-		common.UnlockCfg()
+		bl_height := binary.LittleEndian.Uint32(pl[sig_len+32 : sig_len+36])
+		common.Last.Mutex.Lock()
+		c.X.ChainSynchronized = bl_height >= uint32(common.Last.Block.Height)
+		common.Last.Mutex.Unlock()
+
+		if c.X.ChainSynchronized {
+			copy(b32[:], pl[sig_len:sig_len+32])
+			common.LockCfg()
+			common.ApplyLTB(btc.NewUint256(b32[:]), bl_height)
+			common.UnlockCfg()
+		}
 	}
-	c.SendRawMsg("authack", nil)
+	var repl [1]byte // return whether (we think that) we are synchronized
+	if common.GetBool(&common.BlockChainSynchronized) {
+		repl[0] = 1
+	}
+	c.SendRawMsg("authack", repl[:])
 }

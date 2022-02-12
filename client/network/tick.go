@@ -134,7 +134,7 @@ func (c *OneConnection) Tick(now time.Time) {
 			// ticket received - check for the request...
 			if len(c.GetMP) == 0 || c.SendGetMP() != nil {
 				// no request for "getmp" here or sending failed - clear the global flag/channel
-				_ = <-GetMPInProgressTicket
+				<-GetMPInProgressTicket
 			}
 		default:
 			// failed to get the ticket - just do nothing
@@ -588,9 +588,9 @@ func (c *OneConnection) SendFeeFilter() {
 func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) > 0 {
 		if len(pl) != 1 || pl[0] == 0 || c.SendGetMP() != nil {
-			_ = <-c.GetMP
+			<-c.GetMP
 			if len(GetMPInProgressTicket) > 0 {
-				_ = <-GetMPInProgressTicket
+				<-GetMPInProgressTicket
 			}
 		}
 	}
@@ -842,8 +842,16 @@ func (c *OneConnection) Run() {
 			c.AuthRvcd(cmd.pl)
 
 		case "authack":
+			c.Mutex.Lock()
 			c.X.AuthAckGot = true
-			c.GetMPNow()
+			c.Mutex.Unlock()
+			if len(cmd.pl) > 0 {
+				// if there is payload, the first byte says if the node is synchronized
+				c.X.ChainSynchronized = cmd.pl[0] != 0
+			}
+			if c.X.ChainSynchronized {
+				c.GetMPNow() // No point in asking non-synched nodes for their mempool
+			}
 
 		case "getmpdone":
 			c.GetMPDone(cmd.pl)

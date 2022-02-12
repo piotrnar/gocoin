@@ -265,7 +265,7 @@ function update_connection_info(ci) {
 	s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
 	s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
 
-	s += 'Authorized:' + ci.Authorized + '  AuthMsgGot:' + ci.AuthMsgGot + '  AuthAckGot:' + ci.AuthAckGot + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
+	s += 'Authorized:' + ci.Authorized + '  AuthAckGot:' + ci.AuthAckGot + '  ChainSynced:' + ci.ChainSynchronized + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
 	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
 	s += 'Ping history:'
 

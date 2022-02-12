@@ -140,6 +140,8 @@ type ConnectionStatus struct {
 
 	NewAddrsRcvd uint64
 	AddrMsgsRcvd uint64
+
+	ChainSynchronized bool // Initiated by "auth" or "autack" message (gocoin specific commmands)
 }
 
 type ConnInfo struct {
@@ -338,7 +340,7 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 				cmd, bytes_left, len(pl)+24, c.SendBufProd, c.SendBufCons, c.BytesToSent())
 			c.DoS("SendBufferOverflow")
 			common.CountSafe("PeerSendOverflow")
-			return errors.New("Send buffer overflow")
+			return errors.New("send buffer overflow")
 		}
 
 		c.counters["sent_"+cmd]++
@@ -379,7 +381,6 @@ func (c *OneConnection) append_to_send_buffer(d []byte) {
 	room_left := SendBufSize - c.SendBufProd
 	if room_left >= len(d) {
 		copy(c.sendBuf[c.SendBufProd:], d)
-		room_left = c.SendBufProd + len(d)
 	} else {
 		copy(c.sendBuf[c.SendBufProd:], d[:room_left])
 		copy(c.sendBuf[:], d[room_left:])
@@ -579,8 +580,9 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	return
 }
 
+// Check c.X.AuthAckGot before calling this function
 func (c *OneConnection) GetMPNow() {
-	if c.X.Authorized && common.GetBool(&common.CFG.TXPool.Enabled) {
+	if common.GetBool(&common.CFG.TXPool.Enabled) {
 		select {
 		case c.GetMP <- true:
 		default:
@@ -693,7 +695,7 @@ func NetCloseAll() {
 		if all_done {
 			return
 		}
-		if time.Now().Sub(sta) > 5*time.Second {
+		if time.Since(sta) > 5*time.Second {
 			Mutex_net.Lock()
 			fmt.Println("Still have open connections:", InConsActive, OutConsActive, len(OpenCons), "- please report")
 			Mutex_net.Unlock()
@@ -722,12 +724,18 @@ func DropPeer(conid uint32) {
 	fmt.Println("DropPeer: There is no such an active connection", conid)
 }
 
+// GetMP() is called from UI, to force asking the given peer for its mempool
 func GetMP(conid uint32) {
 	Mutex_net.Lock()
 	for _, v := range OpenCons {
 		if uint32(conid) == v.ConnID {
 			Mutex_net.Unlock()
-			v.GetMPNow()
+			v.Mutex.Lock()
+			yes := v.X.AuthAckGot // don't bother if we are not authorized there
+			v.Mutex.Unlock()
+			if yes {
+				v.GetMPNow()
+			}
 			return
 		}
 	}

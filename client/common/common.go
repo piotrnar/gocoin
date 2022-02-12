@@ -236,6 +236,9 @@ func WalletPendingTick() (res bool) {
 
 // Make sure to call it with mutex_cfg locked
 func ApplyLTB(hash *btc.Uint256, height uint32) {
+	if height != 0 && LastTrustedBlockHeight > height {
+		return // Do not apply if older bock than the current one we have
+	}
 	lastTrustedBlock = hash
 	LastTrustedBlockHeight = height
 
