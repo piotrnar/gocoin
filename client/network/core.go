@@ -435,6 +435,8 @@ func (c *OneConnection) Misbehave(why string, how_much int) (res bool) {
 			c.broken = true
 			//print("Ban " + c.PeerAddr.Ip() + " (" + c.Node.Agent + ") because " + why + "\n> ")
 		}
+	} else {
+		common.CountSafe("Misb" + why)
 	}
 	c.Mutex.Unlock()
 	return

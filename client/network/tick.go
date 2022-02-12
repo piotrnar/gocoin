@@ -405,7 +405,7 @@ func ConnectFriends() {
 			if ad != nil {
 				//println(" Trying to connect", ad.Ip())
 				Mutex_net.Lock()
-				curr, _ := OpenCons[ad.UniqID()]
+				curr := OpenCons[ad.UniqID()]
 				Mutex_net.Unlock()
 				if curr == nil {
 					ad.Friend = true
@@ -565,9 +565,6 @@ func NetworkTick() {
 			ad := adrs[rand.Int31n(int32(len(adrs)))]
 			//print("chosen ", ad.String(), "\n> ")
 			DoNetwork(ad)
-			Mutex_net.Lock()
-			conn_cnt = OutConsActive
-			Mutex_net.Unlock()
 		}
 	}
 
@@ -679,7 +676,7 @@ func (c *OneConnection) Run() {
 
 		if cmd.cmd == "version" {
 			if c.X.VersionReceived {
-				println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
+				//println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
 				c.Misbehave("VersionAgain", 1000/10)
 				break
 			}
@@ -873,8 +870,6 @@ func (c *OneConnection) Run() {
 	for k := range c.GetBlockInProgress {
 		if rec, ok := BlocksToGet[k]; ok {
 			rec.InProgress--
-		} else {
-			//println("ERROR! Block", bip.hash.String(), "in progress, but not in BlocksToGet")
 		}
 	}
 	MutexRcv.Unlock()
