@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/utxo"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspentTx, er error) {
@@ -118,7 +119,7 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 		if r.StatusCode == 429 && try_cnt < 5 {
 			try_cnt++
 			println("Retry blockcypher.com in", try_cnt, "seconds...")
-			time.Sleep( time.Duration(try_cnt) * time.Second)
+			time.Sleep(time.Duration(try_cnt) * time.Second)
 			continue
 		}
 
@@ -222,7 +223,7 @@ func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllU
 
 func GetUnspentFromBlockstream(addr *btc.BtcAddr, api_url string) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
-	
+
 	r, er = http.Get(api_url + addr.String() + "/utxo")
 
 	if er != nil {
@@ -240,17 +241,17 @@ func GetUnspentFromBlockstream(addr *btc.BtcAddr, api_url string) (res utxo.AllU
 		TxID   string `json:"txid"`
 		Vout   uint32 `json:"vout"`
 		Status struct {
-			Confirmed  bool   `json:"confirmed"`
-			Height uint32 `json:"block_height"`
+			Confirmed bool   `json:"confirmed"`
+			Height    uint32 `json:"block_height"`
 		} `json:"status"`
-		Value  uint64 `json:"value"`
+		Value uint64 `json:"value"`
 	}
 
 	er = json.Unmarshal(c, &result)
 	if er != nil {
 		return
 	}
-	
+
 	for _, r := range result {
 		if !r.Status.Confirmed {
 			continue
@@ -287,18 +288,23 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	}
 	println("GetUnspentFromBlockchair:", er.Error())
 
-	res, er = GetUnspentFromExplorer(addr, false)
-	if er == nil {
-		return
-	}
-	println("GetUnspentFromExplorer:", er.Error())
-
 	res, er = GetUnspentFromBlockcypher(addr, "btc")
 	if er == nil {
 		return
 	}
 	println("GetUnspentFromBlockcypher:", er.Error())
 
+	res, er = GetUnspentFromBlockchainInfo(addr)
+	if er == nil {
+		return
+	}
+	println("GetUnspentFromBlockchainInfo:", er.Error())
+
+	res, er = GetUnspentFromExplorer(addr, false)
+	if er == nil {
+		return
+	}
+	println("GetUnspentFromExplorer:", er.Error())
 	return
 }
 
