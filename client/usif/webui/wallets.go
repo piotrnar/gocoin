@@ -395,14 +395,6 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	type one_unsp_rec struct {
-		btc.TxPrevOut
-		Value    uint64
-		Addr     string
-		MinedAt  uint32
-		Coinbase bool
-	}
-
 	var thisbal utxo.AllUnspentTx
 
 	lck := new(usif.OneLock)
@@ -412,11 +404,8 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	lck.In.Wait()
 
 	for idx, a := range addrs {
-		aa, e := btc.NewAddrFromString(a)
-		if idx < len(labels) {
+		if aa, e := btc.NewAddrFromString(a); e == nil {
 			aa.Extra.Label = labels[idx]
-		}
-		if e == nil {
 			newrecs := wallet.GetAllUnspent(aa)
 			if len(newrecs) > 0 {
 				thisbal = append(thisbal, newrecs...)
