@@ -413,7 +413,9 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 
 	for idx, a := range addrs {
 		aa, e := btc.NewAddrFromString(a)
-		aa.Extra.Label = labels[idx]
+		if idx < len(labels) {
+			aa.Extra.Label = labels[idx]
+		}
 		if e == nil {
 			newrecs := wallet.GetAllUnspent(aa)
 			if len(newrecs) > 0 {
