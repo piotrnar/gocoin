@@ -74,10 +74,34 @@ func load_others() {
 	}
 }
 
+func hdwal_private_prefix() uint32 {
+	if !testnet {
+		if *segwit_mode {
+			if *bech32_mode {
+				return btc.PrivateZ
+			} else {
+				return btc.PrivateY
+			}
+		} else {
+			return btc.Private
+		}
+	} else {
+		if *segwit_mode {
+			if *bech32_mode {
+				return btc.TestPrivateZ
+			} else {
+				return btc.TestPrivateY
+			}
+		} else {
+			return btc.TestPrivate
+		}
+	}
+}
+
 // make_wallet gets the secret seed and generates "keycnt" key pairs (both private and public).
 func make_wallet() {
 	var seed_key []byte
-	var hdwal *btc.HDWallet
+	var hdwal, prvwal *btc.HDWallet
 	var hdpath_x []uint32
 	var hdpath_last uint32
 	var hd_label_prefix string
@@ -192,13 +216,7 @@ func make_wallet() {
 			hdwal = btc.MasterKey(pass, testnet)
 			sys.ClearBuffer(pass)
 		}
-		if !testnet && *segwit_mode {
-			if *bech32_mode {
-				hdwal.Prefix = btc.PrivateZ
-			} else {
-				hdwal.Prefix = btc.PrivateY
-			}
-		}
+		hdwal.Prefix = hdwal_private_prefix()
 		if *dumpxprv {
 			fmt.Println("Root:", hdwal.String())
 		}
@@ -207,6 +225,11 @@ func make_wallet() {
 			hd_wallet_xtra = append(hd_wallet_xtra, "Root: "+hdwal.Pub().String())
 		}
 		for _, x := range hdpath_x[:len(hdpath_x)-1] {
+			if (x & 0x80000000) == 0 {
+				prvwal = hdwal.Pub()
+			} else {
+				prvwal = nil
+			}
 			hdwal = hdwal.Child(x)
 		}
 		if *dumpxprv {
@@ -214,6 +237,9 @@ func make_wallet() {
 		}
 		if (hdpath_last & 0x80000000) == 0 {
 			// if non-hadend, list xpub...
+			if prvwal != nil {
+				hd_wallet_xtra = append(hd_wallet_xtra, "Prnt: "+prvwal.String())
+			}
 			hd_wallet_xtra = append(hd_wallet_xtra, "Leaf: "+hdwal.Pub().String())
 		}
 	}
