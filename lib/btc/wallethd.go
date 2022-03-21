@@ -17,19 +17,19 @@ import (
 )
 
 const (
-	Public   = uint32(0x0488B21E)
-	Private  = uint32(0x0488ADE4)
-	PublicY  = uint32(0x049d7cb2)
-	PrivateY = uint32(0x049d7878)
-	PublicZ  = uint32(0x04b24746)
-	PrivateZ = uint32(0x04b2430c)
+	Public   = uint32(0x0488B21E) // xpub
+	Private  = uint32(0x0488ADE4) // xprv
+	PublicY  = uint32(0x049d7cb2) // ypub
+	PrivateY = uint32(0x049d7878) // yprv
+	PublicZ  = uint32(0x04b24746) // zpub
+	PrivateZ = uint32(0x04b2430c) // zprv
 
-	TestPublic   = uint32(0x043587cf)
-	TestPrivate  = uint32(0x04358394)
-	TestPublicY  = uint32(0x044a5262)
-	TestPrivateY = uint32(0x044a4e28)
-	TestPublicZ  = uint32(0x045f1cf6)
-	TestPrivateZ = uint32(0x045f18bc)
+	TestPublic   = uint32(0x043587cf) // tpub
+	TestPrivate  = uint32(0x04358394) // tprv
+	TestPublicY  = uint32(0x044a5262) // upub
+	TestPrivateY = uint32(0x044a4e28) // uprv
+	TestPublicZ  = uint32(0x045f1cf6) // vpub
+	TestPrivateZ = uint32(0x045f18bc) // vpub
 )
 
 // HDWallet defines the components of a hierarchical deterministic wallet
