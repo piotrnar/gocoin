@@ -75,8 +75,8 @@ func load_others() {
 
 func hdwal_private_prefix() uint32 {
 	if !testnet {
-		if *segwit_mode {
-			if *bech32_mode {
+		if segwit_mode {
+			if bech32_mode {
 				return btc.PrivateZ
 			} else {
 				return btc.PrivateY
@@ -85,8 +85,8 @@ func hdwal_private_prefix() uint32 {
 			return btc.Private
 		}
 	} else {
-		if *segwit_mode {
-			if *bech32_mode {
+		if segwit_mode {
+			if bech32_mode {
 				return btc.TestPrivateZ
 			} else {
 				return btc.TestPrivateY
@@ -261,13 +261,6 @@ do_it_again:
 
 		rec := btc.NewPrivateAddr(prv_key, ver_secret(), !uncompressed)
 
-		if *pubkey != "" && *pubkey == rec.BtcAddr.String() {
-			sys.ClearBuffer(seed_key)
-			fmt.Println("Public address:", rec.BtcAddr.String())
-			fmt.Println("Public hexdump:", hex.EncodeToString(rec.BtcAddr.Pubkey))
-			return
-		}
-
 		if waltype == 3 {
 			rec.BtcAddr.Extra.Label = fmt.Sprint("TypC ", i+1)
 		} else {
@@ -311,8 +304,8 @@ do_it_again:
 		if len(pk.Pubkey) != 33 {
 			continue
 		}
-		if *bech32_mode {
-			if *taproot_mode {
+		if bech32_mode {
+			if taproot_mode {
 				segwit[i] = btc.NewAddrFromPkScript(append([]byte{btc.OP_1, 32}, pk.Pubkey[1:]...), testnet)
 			} else {
 				segwit[i] = btc.NewAddrFromPkScript(append([]byte{0, 20}, pk.Hash160[:]...), testnet)
@@ -321,6 +314,17 @@ do_it_again:
 			h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, pk.Hash160[:]...))
 			segwit[i] = btc.NewAddrFromHash160(h160[:], ver_script())
 		}
+
+		if *pubkey != "" && (*pubkey == pk.BtcAddr.String() || *pubkey == segwit[i].String()) {
+			if segwit_mode {
+				fmt.Println("Public address:", segwit[i].String())
+			} else {
+				fmt.Println("Public address:", pk.BtcAddr.String())
+			}
+			fmt.Println("Public hexdump:", hex.EncodeToString(pk.BtcAddr.Pubkey))
+			return
+		}
+
 	}
 }
 
@@ -342,9 +346,9 @@ func dump_addrs() {
 		}
 		var pubaddr string
 		label := keys[i].BtcAddr.Extra.Label
-		if *pubkeys_mode {
+		if pubkeys_mode {
 			pubaddr = hex.EncodeToString(keys[i].Pubkey)
-		} else if *segwit_mode {
+		} else if segwit_mode {
 			if segwit[i] == nil {
 				pubaddr = "-=CompressedKey=-"
 			} else {

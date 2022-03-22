@@ -28,7 +28,7 @@ var (
 	nosseed   *bool = flag.Bool("is", false, "Ignore the seed paremeter from the config file")
 	subfee    *bool = flag.Bool("f", false, "Substract fee from the first value")
 
-	dumppriv *string = flag.String("dump", "", "Export a private key of a given address (use * for all)")
+	dumppriv *string = flag.String("dump", "", "Export a private key of a given P2KH address (use * for all)")
 
 	// Spending money options
 	send   *string = flag.String("send", "", "Send money as defined by the list of pairs: address1=amount1[,address2=amount2]")
@@ -51,7 +51,7 @@ var (
 	signhash *string = flag.String("hash", "", "Sign a raw hash value (use together with -sign parameter)")
 
 	// Print a public key of a give bitcoin address
-	pubkey *string = flag.String("pub", "", "Print the public key of the given P2KH address")
+	pubkey *string = flag.String("pub", "", "Print the public key of the given deposit address")
 
 	// Print a public key of a give bitcoin address
 	p2sh             *string = flag.String("p2sh", "", "Insert given P2SH script into the transaction (use with -raw and optionally -input)")
@@ -60,11 +60,6 @@ var (
 	allowextramsigns *bool   = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 
 	sequence *int = flag.Int("seq", 0, "Use given Replace-By-Fee sequence number (-1 or -2 for final)")
-
-	segwit_mode  *bool = flag.Bool("segwit", false, "List SegWit deposit addresses (instead of P2KH)")
-	bech32_mode  *bool = flag.Bool("bech32", false, "List SegWit deposit addresses in bech32 format")
-	taproot_mode *bool = flag.Bool("tap", false, "List Taproot deposit addresses in bech32 format")
-	pubkeys_mode *bool = flag.Bool("pks", false, "List raw public keys instead of BTC deposit addresses")
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
@@ -103,18 +98,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *taproot_mode {
-		*bech32_mode = true
-	}
-
-	if *bech32_mode {
-		*segwit_mode = true
-	}
-
-	if *pubkeys_mode && *segwit_mode {
-		println("You cannot use -pks with -tap or -segwit or -bech32")
-		os.Exit(1)
-	}
+	check_atype()
 
 	// convert string fee to uint64
 	if val, e := btc.StringToSatoshis(fee); e != nil {

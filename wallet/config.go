@@ -24,8 +24,29 @@ var (
 	bip39wrds    uint   = 0
 	minsig       bool
 	usescrypt    uint
-	hdsubs       uint = 1
+	hdsubs       uint   = 1
+	atype        string = "p2kh"
+
+	segwit_mode, bech32_mode, taproot_mode, pubkeys_mode bool
 )
+
+func check_atype() {
+	switch atype {
+	case "p2kh":
+		segwit_mode, bech32_mode, taproot_mode, pubkeys_mode = false, false, false, false
+	case "segwit":
+		segwit_mode, bech32_mode, taproot_mode, pubkeys_mode = true, false, false, false
+	case "bech32":
+		segwit_mode, bech32_mode, taproot_mode, pubkeys_mode = true, true, false, false
+	case "tap":
+		segwit_mode, bech32_mode, taproot_mode, pubkeys_mode = true, true, true, false
+	case "pks":
+		segwit_mode, bech32_mode, taproot_mode, pubkeys_mode = false, false, false, true
+	default:
+		println("ERROR: Invalid value of atype:", atype)
+		os.Exit(1)
+	}
+}
 
 func parse_config() {
 	cfgfn := ""
@@ -139,6 +160,9 @@ func parse_config() {
 					os.Exit(1)
 				}
 
+			case "atype":
+				atype = strings.Trim(ll[1], "\" ")
+
 			case "uncompressed":
 				v, e := strconv.ParseBool(ll[1])
 				if e == nil {
@@ -222,6 +246,7 @@ func parse_config() {
 	flag.BoolVar(&stdin, "stdin", stdin, "Read password from stdin")
 	flag.BoolVar(&minsig, "minsig", minsig, "Make sure R and S inside ECDSA signatures are only 32 bytes long")
 	flag.UintVar(&usescrypt, "scrypt", usescrypt, "Use extra scrypt function to convert password into private keys (default 0 = disabled)")
+	flag.StringVar(&atype, "atype", "p2kh", "When listing, use this type of deposit addresses")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
 	}
