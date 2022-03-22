@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	first_determ_idx int
 	// set in make_wallet():
 	keys           []*btc.PrivateAddr
 	segwit         []*btc.BtcAddr
@@ -103,9 +102,10 @@ func make_wallet() {
 	var seed_key []byte
 	var hdwal, prvwal *btc.HDWallet
 	var hdpath_x []uint32
-	var hdpath_last uint32
+	var hdpath_last, prvidx uint32
 	var hd_label_prefix string
 	var hd_hardend bool
+	var currhdsub uint // default 0
 
 	load_others()
 	defer func() {
@@ -149,7 +149,7 @@ func make_wallet() {
 			}
 			hdpath_x = append(hdpath_x, xval)
 			if i < len(ts)-1 {
-				hd_label_prefix += fmt.Sprint("/", xval&0x3fffffff)
+				hd_label_prefix += fmt.Sprint("/", xval&0x7fffffff)
 				if (xval & 0x80000000) != 0 {
 					hd_label_prefix += "'"
 				}
@@ -225,11 +225,8 @@ func make_wallet() {
 			hd_wallet_xtra = append(hd_wallet_xtra, "Root: "+hdwal.Pub().String())
 		}
 		for _, x := range hdpath_x[:len(hdpath_x)-1] {
-			if (x & 0x80000000) == 0 {
-				prvwal = hdwal.Pub()
-			} else {
-				prvwal = nil
-			}
+			prvwal = hdwal
+			prvidx = x
 			hdwal = hdwal.Child(x)
 		}
 		if *dumpxprv {
@@ -248,7 +245,7 @@ func make_wallet() {
 		fmt.Println("Generating", keycnt, "keys, version", ver_pubkey(), "...")
 	}
 
-	first_determ_idx = len(keys)
+do_it_again:
 	for i := uint32(0); i < uint32(keycnt); {
 		prv_key := make([]byte, 32)
 		if waltype == 3 {
@@ -275,14 +272,35 @@ func make_wallet() {
 			rec.BtcAddr.Extra.Label = fmt.Sprint("TypC ", i+1)
 		} else {
 			if (hdpath_last & 0x80000000) != 0 {
-				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x3fffffff), "'")
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x7fffffff), "'")
 			} else {
-				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x3fffffff))
+				rec.BtcAddr.Extra.Label = fmt.Sprint(hd_label_prefix, "/", i+(hdpath_last&0x7fffffff))
 			}
 		}
 		keys = append(keys, rec)
 		i++
 	}
+	if prvwal != nil {
+		currhdsub++
+		if currhdsub < hdsubs {
+			sys.ClearBuffer(hdwal.ChCode)
+			sys.ClearBuffer(hdwal.Key)
+			hdwal = prvwal.Child(prvidx + uint32(currhdsub))
+			var ii int
+			for ii = len(hd_label_prefix); ii > 0 && hd_label_prefix[ii-1] != '/'; ii-- {
+			}
+			hd_label_prefix = fmt.Sprint(hd_label_prefix[:ii], (prvidx&0x7fffffff)+uint32(currhdsub))
+			if (prvidx & 0x80000000) != 0 {
+				hd_label_prefix = hd_label_prefix + "'"
+			}
+			goto do_it_again
+		}
+		sys.ClearBuffer(prvwal.ChCode)
+		sys.ClearBuffer(prvwal.Key)
+		prvwal = nil
+	}
+	sys.ClearBuffer(hdwal.ChCode)
+	sys.ClearBuffer(hdwal.Key)
 	if *verbose {
 		fmt.Println("Private keys re-generated")
 	}

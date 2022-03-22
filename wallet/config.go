@@ -24,6 +24,7 @@ var (
 	bip39wrds    uint   = 0
 	minsig       bool
 	usescrypt    uint
+	hdsubs       uint = 1
 )
 
 func parse_config() {
@@ -103,6 +104,20 @@ func parse_config() {
 						bip39wrds = uint(v)
 					} else {
 						println(i, "wallet.cfg: incorrect bip39 value", v)
+						os.Exit(1)
+					}
+				} else {
+					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+					os.Exit(1)
+				}
+
+			case "hdsubs":
+				v, e := strconv.ParseUint(ll[1], 10, 32)
+				if e == nil {
+					if v >= 1 {
+						hdsubs = uint(v)
+					} else {
+						println(i, "wallet.cfg: incorrect hdsubs value", v)
 						os.Exit(1)
 					}
 				} else {
@@ -197,6 +212,7 @@ func parse_config() {
 	flag.BoolVar(&testnet, "t", testnet, "Testnet mode")
 	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
 	flag.StringVar(&hdpath, "hdpath", hdpath, "Derivation Path to the first key in HD wallet (type=4)")
+	flag.UintVar(&hdsubs, "hdsubs", hdsubs, "Create HD Wallet with so many sub-accounts (use 2 for common walets)")
 	flag.UintVar(&bip39wrds, "bip39", bip39wrds, "Create HD Wallet in BIP39 mode using 12, 15, 18, 21 or 24 words")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")

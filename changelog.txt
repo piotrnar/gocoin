@@ -10,6 +10,7 @@
 * Client/WebUI: Can work with raw-pubkeys wallets (wallet -list -pks), for smooth compatibility with all the deposit address types
 * Client/TextUI: "balance" command can now also take a raw public key (hex-encoded)
 * Client: Do not send "getmp" message to non-synchronized nodes
+* Wallet: For commmon types of HD Wallets, also change addresses are calculated (use hdsubs=2)
 
 1.10.0 - 2021-12-16
 * Added Taproot support
