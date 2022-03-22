@@ -292,8 +292,11 @@ do_it_again:
 		sys.ClearBuffer(prvwal.Key)
 		prvwal = nil
 	}
-	sys.ClearBuffer(hdwal.ChCode)
-	sys.ClearBuffer(hdwal.Key)
+	if hdwal != nil {
+		sys.ClearBuffer(hdwal.ChCode)
+		sys.ClearBuffer(hdwal.Key)
+		hdwal = nil
+	}
 	if *verbose {
 		fmt.Println("Private keys re-generated")
 	}
@@ -356,7 +359,7 @@ func dump_addrs() {
 			}
 			p2kh_adr := keys[i].BtcAddr.String()
 			if len(p2kh_adr) > 20 {
-				label += "-" + p2kh_adr[:4] + "..." + p2kh_adr[len(p2kh_adr)-4:]
+				label += " (" + p2kh_adr + ")"
 			} else {
 				label += "-?????"
 			}
@@ -432,6 +435,16 @@ func address_to_key(addr string) *btc.PrivateAddr {
 	if e != nil {
 		println("Cannot Decode address", addr)
 		println(e.Error())
+		cleanExit(1)
+	}
+	if a.SegwitProg != nil {
+		if len(a.SegwitProg.Program) == 20 {
+			return hash_to_key(a.SegwitProg.Program)
+		}
+		if len(a.SegwitProg.Program) == 32 {
+			return public_xo_to_key(a.SegwitProg.Program)
+		}
+		println("Cannot show private key for this address type", addr)
 		cleanExit(1)
 	}
 	return hash_to_key(a.Hash160[:])

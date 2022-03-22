@@ -28,7 +28,7 @@ var (
 	nosseed   *bool = flag.Bool("is", false, "Ignore the seed paremeter from the config file")
 	subfee    *bool = flag.Bool("f", false, "Substract fee from the first value")
 
-	dumppriv *string = flag.String("dump", "", "Export a private key of a given P2KH address (use * for all)")
+	dumppriv *string = flag.String("dump", "", "Export a private key of a given deposit address (use * for all)")
 
 	// Spending money options
 	send   *string = flag.String("send", "", "Send money as defined by the list of pairs: address1=amount1[,address2=amount2]")
