@@ -246,7 +246,7 @@ func parse_config() {
 	flag.BoolVar(&stdin, "stdin", stdin, "Read password from stdin")
 	flag.BoolVar(&minsig, "minsig", minsig, "Make sure R and S inside ECDSA signatures are only 32 bytes long")
 	flag.UintVar(&usescrypt, "scrypt", usescrypt, "Use extra scrypt function to convert password into private keys (default 0 = disabled)")
-	flag.StringVar(&atype, "atype", "p2kh", "When listing, use this type of deposit addresses")
+	flag.StringVar(&atype, "atype", atype, "When listing, use this type of deposit addresses")
 	if uncompressed {
 		fmt.Println("WARNING: Using uncompressed keys")
 	}

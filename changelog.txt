@@ -11,6 +11,8 @@
 * Client/TextUI: "balance" command can now also take a raw public key (hex-encoded)
 * Client: Do not send "getmp" message to non-synchronized nodes
 * Wallet: For commmon types of HD Wallets, also change addresses are calculated (use hdsubs=2)
+* Wallet: New switch (or config file param) "-atype" replacing previous: "-segwit", "-bech32", "-tap", "-pks"
+* Wallet: The "-pub <addr>" command should now work with all types of deposit addresses
 
 1.10.0 - 2021-12-16
 * Added Taproot support
