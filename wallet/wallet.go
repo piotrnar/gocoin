@@ -235,7 +235,7 @@ func make_wallet() {
 		if (hdpath_last & 0x80000000) == 0 {
 			// if non-hardend, list xpub...
 			if prvwal != nil {
-				hd_wallet_xtra = append(hd_wallet_xtra, "Prnt: "+prvwal.String())
+				hd_wallet_xtra = append(hd_wallet_xtra, "Prnt: "+prvwal.Pub().String())
 			}
 			hd_wallet_xtra = append(hd_wallet_xtra, "Leaf: "+hdwal.Pub().String())
 		}
