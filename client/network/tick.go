@@ -125,6 +125,13 @@ func (c *OneConnection) Tick(now time.Time) {
 		}
 		// If we have no ack, do nothing more.
 		return
+	} else {
+		// If we have not received any command for some time, disconnect
+		if now.Sub(c.X.LastDataGot) > NoDataTimeout {
+			c.Disconnect(true, "NoDataTimeout")
+			common.CountSafe("NetNoDataTout")
+			return
+		}
 	}
 
 	if common.GetBool(&common.BlockChainSynchronized) {

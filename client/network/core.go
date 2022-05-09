@@ -28,6 +28,7 @@ const (
 	GetHeadersTimeout = 2 * time.Minute  // Timeout to receive headers
 	VersionMsgTimeout = 20 * time.Second // Timeout to receive teh version message after connecting
 	TCPDialTimeout    = 20 * time.Second // If it does not connect within this time, assume it dead
+	NoDataTimeout     = 10 * time.Minute // If no new message received within this time, disconnect
 
 	MIN_PROTO_VERSION = 209
 
