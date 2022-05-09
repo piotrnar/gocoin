@@ -13,7 +13,7 @@
 * Wallet: For commmon types of HD Wallets, also change addresses are calculated (use hdsubs=2)
 * Wallet: New switch (or config file param) "-atype" replacing previous: "-segwit", "-bech32", "-tap", "-pks"
 * Wallet: The "-pub <addr>" command should now work with all types of deposit addresses
-* Client: Disconnect peers that have not sent a message for 10 minutes
+* Client: Disconnect peers that have not sent any data within the last 5 minutes
 
 1.10.0 - 2021-12-16
 * Added Taproot support
