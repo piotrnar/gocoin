@@ -250,12 +250,10 @@ function update_connection_info(ci) {
 	var s = 'Connection ID ' + ci.ID + ':\n'
 
 	s += ci.LocalAddr + (ci.Incomming ? ' <== ' : ' ==> ') + ci.RemoteAddr + '\n'
-	s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + '\n'
-	s += 'Node Version: ' + ci.Version + ' / Services: 0x' + ci.Services.toString(16) + '\n'
-	s += 'User Agent: ' + ci.Agent + '\n'
-	s += 'Chain Height: ' + ci.Height + '\n'
-	s += 'Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
-	s += 'SendHeaders: ' + ci.SendHeaders + ' / SendCmpctVer: ' + ci.SendCmpctVer + ' / HighBandwidth: ' + ci.HighBandwidth + '\n'
+	s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + '\n'
+	s += 'Node Version: ' + ci.Version + ' | Services: 0x' + ci.Services.toString(16) + ' | Chain Height: ' + ci.Height + '\n'
+	s += 'User Agent: ' + ci.Agent + ' | Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+	s += 'SendHeaders: ' + ci.SendHeaders + ' | SendCmpctVer: ' + ci.SendCmpctVer + ' | HighBandwidth: ' + ci.HighBandwidth + '\n'
 	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
 	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
 

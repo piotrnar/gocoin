@@ -14,6 +14,7 @@ import (
 const (
 	PingHistoryLength        = 20
 	PingAssumedIfUnsupported = 4999 // ms
+	PingAssumedIfUnknown     = 9999 // ms
 )
 
 func (c *OneConnection) HandlePong(pl []byte) {
@@ -55,7 +56,7 @@ func (c *OneConnection) GetAveragePing() int {
 			}
 		}
 		if act_len == 0 {
-			return 0
+			return PingAssumedIfUnknown
 		}
 		sort.Ints(pgs[:act_len])
 		return pgs[act_len/2]

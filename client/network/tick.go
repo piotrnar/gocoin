@@ -116,6 +116,8 @@ func (c *OneConnection) Maintanence(now time.Time) {
 }
 
 func (c *OneConnection) Tick(now time.Time) {
+	c.X.Ticks++
+
 	if !c.X.VersionReceived {
 		// Wait only certain amount of time for the version message
 		if c.X.ConnectedAt.Add(VersionMsgTimeout).Before(now) {
@@ -646,10 +648,6 @@ func (c *OneConnection) Run() {
 	go c.writing_thread()
 
 	for !c.IsBroken() {
-		if c.IsBroken() {
-			break
-		}
-
 		cmd, read_tried := c.FetchMessage()
 
 		now = time.Now()
@@ -685,7 +683,7 @@ func (c *OneConnection) Run() {
 			if c.X.VersionReceived {
 				//println("VersionAgain from", c.ConnID, c.PeerAddr.Ip(), c.Node.Agent)
 				c.Misbehave("VersionAgain", 1000/10)
-				break
+				continue
 			}
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
