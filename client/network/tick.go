@@ -61,10 +61,10 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	for k, v := range c.GetBlockInProgress {
 		if curr_ping_cnt > v.SentAtPingCnt {
 			common.CountSafe("BlockInprogNotfound")
-			c.counters["BlockNotFound"]++
+			c.cntInc("BlockNotFound")
 		} else if now != nil && now.After(v.start.Add(5*time.Minute)) {
 			common.CountSafe("BlockInprogTimeout")
-			c.counters["BlockTimeout"]++
+			c.cntInc("BlockTimeout")
 		} else {
 			continue
 		}
@@ -85,7 +85,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 	if disconnect != "" {
 		if c.X.IsSpecial {
 			common.CountSafe("Spec" + disconnect)
-			c.counters[disconnect]++
+			c.cntInc(disconnect)
 		} else {
 			c.Disconnect(true, disconnect)
 		}
@@ -766,7 +766,7 @@ func (c *OneConnection) Run() {
 				c.X.GetAddrDone = true
 			} else {
 				c.Mutex.Lock()
-				c.counters["SecondGetAddr"]++
+				c.cntInc("SecondGetAddr")
 				c.Mutex.Unlock()
 				if c.Misbehave("SecondGetAddr", 1000/20) {
 					break
@@ -812,7 +812,7 @@ func (c *OneConnection) Run() {
 					c.Node.SendCmpctVer = version
 					c.Node.HighBandwidth = cmd.pl[0] == 1
 				} else {
-					c.counters[fmt.Sprint("SendCmpctV", version)]++
+					c.cntInc(fmt.Sprint("SendCmpctV", version))
 				}
 				c.Mutex.Unlock()
 			} else {

@@ -397,7 +397,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 		//fmt.Println(c.ConnID, "Instatnt PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 		c.Mutex.Lock()
-		c.counters["NewCBlock"]++
+		c.cntInc("NewCBlock")
 		c.blocksreceived = append(c.blocksreceived, time.Now())
 		c.Mutex.Unlock()
 		orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: time.Now(), FromConID: c.ConnID, DoInvs: b2g.SendInvs}
@@ -444,7 +444,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		//println(time.Now().Format("2006-01-02 15:04:05"), c.ConnID, "BlkTxnNoBIP:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		c.Mutex.Unlock()
 		common.CountSafe("UnxpBlockTxnA")
-		c.counters["BlkTxnNoBIP"]++
+		c.cntInc("BlkTxnNoBIP")
 		c.Misbehave("BlkTxnErrBip", 100)
 		return
 	}
@@ -453,7 +453,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		c.Mutex.Unlock()
 		println("BlkTxnNoCOL:", c.PeerAddr.Ip(), c.Node.Agent, hash.String())
 		common.CountSafe("UnxpBlockTxnB")
-		c.counters["BlkTxnNoCOL"]++
+		c.cntInc("BlkTxnNoCOL")
 		c.Misbehave("BlkTxnNoCOL", 100)
 		return
 	}
@@ -536,7 +536,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 	DelB2G(idx)
 	//fmt.Println(c.ConnID, "PostCheckBlock OK #", b2g.Block.Height, sto.Sub(sta), time.Now().Sub(sta))
 	c.Mutex.Lock()
-	c.counters["NewTBlock"]++
+	c.cntInc("NewTBlock")
 	c.blocksreceived = append(c.blocksreceived, time.Now())
 	c.Mutex.Unlock()
 	orb := &OneReceivedBlock{TmStart: b2g.Started, TmPreproc: b2g.TmPreproc,

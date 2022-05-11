@@ -262,10 +262,18 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	return
 }
 
-func (v *OneConnection) IncCnt(name string, val uint64) {
+func (v *OneConnection) cntLockInc(name string) {
 	v.Mutex.Lock()
-	v.counters[name] += val
+	v.counters[name]++
 	v.Mutex.Unlock()
+}
+
+func (v *OneConnection) cntInc(name string) {
+	v.counters[name]++
+}
+
+func (v *OneConnection) cntAdd(name string, val uint64) {
+	v.counters[name] += val
 }
 
 // MutexSetBool does a mutex protected assignment of val to addr.
@@ -345,8 +353,8 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			return errors.New("send buffer overflow")
 		}
 
-		c.counters["sent_"+cmd]++
-		c.counters["sbts_"+cmd] += uint64(len(pl))
+		c.cntInc("sent_" + cmd)
+		c.cntAdd("sbts_"+cmd, uint64(len(pl)))
 
 		common.CountSafe("sent_" + cmd)
 		common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
@@ -566,8 +574,8 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.recv.cmd = ""
 	c.recv.dat = nil
 
-	c.counters["rcvd_"+ret.cmd]++
-	c.counters["rbts_"+ret.cmd] += uint64(len(ret.pl))
+	c.cntInc("rcvd_" + ret.cmd)
+	c.cntAdd("rbts_"+ret.cmd, uint64(len(ret.pl)))
 	c.X.LastCmdRcvd = ret.cmd
 	c.X.LastBtsRcvd = uint32(len(ret.pl))
 
