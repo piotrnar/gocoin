@@ -205,16 +205,17 @@ func drop_worst_peer() bool {
 	return false
 }
 
-func (c *OneConnection) TryPing() bool {
-	if common.GetDuration(&common.PingPeerEvery) == 0 {
-		return false // pinging disabled in global config
-	}
-
+func (c *OneConnection) TryPing(now time.Time) bool {
 	if c.Node.Version <= 60000 {
 		return false // insufficient protocol version
 	}
 
-	if time.Now().Before(c.LastPingSent.Add(common.GetDuration(&common.PingPeerEvery))) {
+	pingdur := common.GetDuration(&common.PingPeerEvery)
+	if pingdur == 0 {
+		return false // pinging disabled in global config
+	}
+
+	if now.Sub(c.LastPingSent) < pingdur {
 		return false // not yet...
 	}
 

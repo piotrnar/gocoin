@@ -219,6 +219,7 @@ type OneConnection struct {
 	// Ping stats
 	LastPingSent   time.Time
 	PingInProgress []byte
+	lastSec        int64
 
 	counters map[string]uint64
 

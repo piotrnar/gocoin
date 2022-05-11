@@ -130,65 +130,71 @@ func (c *OneConnection) Tick(now time.Time) {
 			common.CountSafe("NetVersionTout")
 			return
 		}
-		// If we have no ack, do nothing more.
+		// Until we receive version message, do nothing more.
 		return
-	} else {
+	}
+
+	var new_sec bool
+	if tck := now.Unix(); c.lastSec != tck {
+		// these opertions will only be done once a second
+		new_sec = true // keep this for later (to try a ping)
+		c.lastSec = tck
+
 		// If we have not received any data for some time, disconnect
 		if now.Sub(c.X.LastDataGot) > NoDataTimeout {
 			c.Disconnect(true, "NoDataTimeout")
 			common.CountSafe("NetNoDataTout")
 			return
 		}
-	}
 
-	if common.GetBool(&common.BlockChainSynchronized) {
-		// See if to send "getmp" command
-		select {
-		case GetMPInProgressTicket <- true:
-			// ticket received - check for the request...
-			if len(c.GetMP) == 0 || c.SendGetMP() != nil {
-				// no request for "getmp" here or sending failed - clear the global flag/channel
-				<-GetMPInProgressTicket
+		if common.GetBool(&common.BlockChainSynchronized) {
+			// See if to send "getmp" command
+			select {
+			case GetMPInProgressTicket <- true:
+				// ticket received - check for the request...
+				if len(c.GetMP) == 0 || c.SendGetMP() != nil {
+					// no request for "getmp" here or sending failed - clear the global flag/channel
+					<-GetMPInProgressTicket
+				}
+			default:
+				// failed to get the ticket - just do nothing
 			}
-		default:
-			// failed to get the ticket - just do nothing
 		}
-	}
 
-	// Tick the recent transactions counter
-	if now.After(c.txsNxt) {
-		c.Mutex.Lock()
-		if len(c.txsCha) == cap(c.txsCha) {
-			tmp := <-c.txsCha
-			c.X.TxsReceived -= tmp
+		// Tick the recent transactions counter
+		if now.After(c.txsNxt) {
+			c.Mutex.Lock()
+			if len(c.txsCha) == cap(c.txsCha) {
+				tmp := <-c.txsCha
+				c.X.TxsReceived -= tmp
+			}
+			c.txsCha <- c.txsCur
+			c.txsCur = 0
+			c.txsNxt = c.txsNxt.Add(TxsCounterPeriod)
+			c.Mutex.Unlock()
 		}
-		c.txsCha <- c.txsCur
-		c.txsCur = 0
-		c.txsNxt = c.txsNxt.Add(TxsCounterPeriod)
-		c.Mutex.Unlock()
-	}
 
-	if mfpb := common.MinFeePerKB(); mfpb != c.X.LastMinFeePerKByte {
-		c.X.LastMinFeePerKByte = mfpb
-		if c.Node.Version >= 70013 {
-			c.SendFeeFilter()
+		if mfpb := common.MinFeePerKB(); mfpb != c.X.LastMinFeePerKByte {
+			c.X.LastMinFeePerKByte = mfpb
+			if c.Node.Version >= 70013 {
+				c.SendFeeFilter()
+			}
 		}
-	}
 
-	if now.After(c.nextMaintanence) {
-		c.Maintanence(now)
-		c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
-	}
+		if now.After(c.nextMaintanence) {
+			c.Maintanence(now)
+			c.nextMaintanence = now.Add(MAINTANENCE_PERIOD)
+		}
 
-	// Ask node for new addresses...?
-	if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < peersdb.MinPeersInDB {
-		common.CountSafe("AddrsWanted")
-		c.SendRawMsg("getaddr", nil)
-		c.X.OurGetAddrDone = true
+		// Ask node for new addresses...?
+		if !c.X.OurGetAddrDone && peersdb.PeerDB.Count() < peersdb.MinPeersInDB {
+			common.CountSafe("AddrsWanted")
+			c.SendRawMsg("getaddr", nil)
+			c.X.OurGetAddrDone = true
+		}
 	}
 
 	c.Mutex.Lock()
-
 	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress) == 0 {
 		c.Mutex.Unlock()
 		c.sendGetHeaders()
@@ -206,11 +212,11 @@ func (c *OneConnection) Tick(now time.Time) {
 			return // block data requested
 		}
 	}
-
 	c.Mutex.Unlock()
 
-	// nothing requested - free to ping..
-	c.TryPing()
+	if new_sec { // nothing requested - free to ping..
+		c.TryPing(now)
+	}
 }
 
 func DoNetwork(ad *peersdb.PeerAddr) {
