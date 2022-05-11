@@ -359,11 +359,14 @@ func (c *OneConnection) SendRawMsg(cmd string, pl []byte) (e error) {
 			return errors.New("send buffer overflow")
 		}
 
-		c.cntInc("sent_" + cmd)
-		c.cntAdd("sbts_"+cmd, uint64(len(pl)))
-
-		common.CountSafe("sent_" + cmd)
-		common.CountSafeAdd("sbts_"+cmd, uint64(len(pl)))
+		if !common.NoCounters.Get() {
+			ssent := "sent_" + cmd
+			ssbts := "sbts_" + cmd
+			c.cntInc(ssent)
+			c.cntAdd(ssbts, uint64(len(pl)))
+			common.CountSafe(ssent)
+			common.CountSafeAdd(ssbts, uint64(len(pl)))
+		}
 		var sbuf [24]byte
 
 		c.X.LastCmdSent = cmd
@@ -580,16 +583,22 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	c.recv.cmd = ""
 	c.recv.dat = nil
 
-	c.cntInc("rcvd_" + ret.cmd)
-	c.cntAdd("rbts_"+ret.cmd, uint64(len(ret.pl)))
 	c.X.LastCmdRcvd = ret.cmd
 	c.X.LastBtsRcvd = uint32(len(ret.pl))
 
-	c.Mutex.Unlock()
+	if !common.NoCounters.Get() {
+		srcvd := "rcvd_" + ret.cmd
+		srbts := "rbts_" + ret.cmd
+		c.cntInc(srcvd)
+		c.cntAdd(srbts, uint64(len(ret.pl)))
+		c.Mutex.Unlock()
+		common.CountSafe(srcvd)
+		common.CountSafeAdd(srbts, uint64(len(ret.pl)))
+	} else {
+		c.Mutex.Unlock()
+	}
 
 	c.LastMsgTime = time.Now()
-	common.CountSafe("rcvd_" + ret.cmd)
-	common.CountSafeAdd("rbts_"+ret.cmd, uint64(len(ret.pl)))
 
 	/*if c.X.Debug {
 		fmt.Println(c.ConnID, "rcvd", cmd.cmd, len(cmd.pl))
