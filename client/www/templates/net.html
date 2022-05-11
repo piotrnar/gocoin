@@ -288,11 +288,12 @@ function update_connection_info(ci) {
 			cnts += k + '=' + ci.Counters[k]
 		}
 	}
-	if (cnts!='') {
-		s += 'Counters: ' + cnts + '\n'
-	} if (msgs.length==0) {
-			s += 'Counters: disabled in config file (Stats.NoCounters)'
+	if (cnts=='' && msgs.length==0) {
+		s += 'Counters disabled in config file (Stats.NoCounters)'
 	} else {
+		if (cnts!='') {
+			s += 'Counters: ' + cnts + '\n'
+		}
 		s += '----------------------------------------------------------------\n'
 		s += ' Network message     Received from peer          Sent to peer\n'
 		s += '----------------------------------------------------------------\n'
