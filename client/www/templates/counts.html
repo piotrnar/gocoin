@@ -11,7 +11,10 @@ div.tablab {
 	margin-bottom:10px;
 }
 </style>
-<table width="100%">
+<div id="nocounters_message" style="display:none">
+	<br>
+	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
+<table width="100%" id="counters_table" style="display:none">
 <tr>
 <td valign="top" align="center">
 	<div class="tablab">Generic counters A</div>
@@ -73,15 +76,22 @@ function ref_counters() {
 			var i, cts = JSON.parse(aj.responseText)
 			//console.log(cts)
 
+			if (cts.gen==null && cts.txs==null && cts.net==null) {
+				nocounters_message.style.display='block'
+				counters_table.style.display='none'
+				return
+			}
+
 			var gen_a = new Array()
 			var gen_b = new Array()
-
-			for (i=0; i<cts.gen.length; i++) {
+			
+			if (cts.gen!=null) for (i=0; i<cts.gen.length; i++) {
 				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
 					gen_b.push(cts.gen[i])
 				} else {
 					gen_a.push(cts.gen[i])
 				}
+				any_cnts = true
 			}
 
 			for (i=0; i<gen_a.length; i++) {
@@ -121,7 +131,7 @@ function ref_counters() {
 			}
 
 			while (tab_txs.rows.length>1) tab_txs.deleteRow(1)
-			for (i=0; i<cts.txs.length; i++) {
+			if (cts.txs!=null) for (i=0; i<cts.txs.length; i++) {
 				var row
 				if (i < tab_txs.rows.length-1) {
 					row = tab_txs.rows[i+1]
@@ -137,7 +147,7 @@ function ref_counters() {
 			}
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
-			for (i=0; i<cts.net.length; i++) {
+			if (cts.net!=null)  for (i=0; i<cts.net.length; i++) {
 				var row = tab_net.insertRow(-1)
 
 				var col = row.insertCell(-1)
@@ -160,6 +170,8 @@ function ref_counters() {
 				col.className = 'netcnt'
 				col.innerText = cts.net[i].sbts
 			}
+			nocounters_message.style.display='none'
+			counters_table.style.display='table'
 		} catch(e) {
 			console.log("error", e)
 		}

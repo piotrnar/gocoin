@@ -116,7 +116,12 @@ func (c *OneConnection) Maintanence(now time.Time) {
 }
 
 func (c *OneConnection) Tick(now time.Time) {
+	c.Mutex.Lock()
 	c.X.Ticks++
+	if common.NoCounters.Get() && len(c.counters) > 0 {
+		c.counters = make(map[string]uint64) // reset all the counters
+	}
+	c.Mutex.Unlock()
 
 	if !c.X.VersionReceived {
 		// Wait only certain amount of time for the version message

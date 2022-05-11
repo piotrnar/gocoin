@@ -263,17 +263,23 @@ func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 }
 
 func (v *OneConnection) cntLockInc(name string) {
-	v.Mutex.Lock()
-	v.counters[name]++
-	v.Mutex.Unlock()
+	if !common.NoCounters.Get() {
+		v.Mutex.Lock()
+		v.counters[name]++
+		v.Mutex.Unlock()
+	}
 }
 
 func (v *OneConnection) cntInc(name string) {
-	v.counters[name]++
+	if !common.NoCounters.Get() {
+		v.counters[name]++
+	}
 }
 
 func (v *OneConnection) cntAdd(name string, val uint64) {
-	v.counters[name] += val
+	if !common.NoCounters.Get() {
+		v.counters[name] += val
+	}
 }
 
 // MutexSetBool does a mutex protected assignment of val to addr.

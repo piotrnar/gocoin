@@ -290,35 +290,37 @@ function update_connection_info(ci) {
 	}
 	if (cnts!='') {
 		s += 'Counters: ' + cnts + '\n'
+	} if (msgs.length==0) {
+			s += 'Counters: disabled in config file (Stats.NoCounters)'
+	} else {
+		s += '----------------------------------------------------------------\n'
+		s += ' Network message     Received from peer          Sent to peer\n'
+		s += '----------------------------------------------------------------\n'
+		var kks = []
+		for (var k in msgs) {
+			kks.push(k)
+		}
+		kks.sort()
+		for (var i=0; i<kks.length; i++) {
+			var v
+			var k = kks[i]
+			s += ' ' + rightpad(k,  ' ', 16) + ' '
+			v = msgs[k]["rcvd"]
+			s += leftpad(isNaN(v)?' ':v, ' ', 8)
+			v = msgs[k]["rbts"]
+			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+			s += '   '
+
+
+			v = msgs[k]["sent"]
+			s += leftpad(isNaN(v)?' ':v, ' ', 8)
+			v = msgs[k]["sbts"]
+			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+			s += '\n'
+		}
+		s += '----------------------------------------------------------------\n'
 	}
-
-	s += '----------------------------------------------------------------\n'
-	s += ' Network message     Received from peer          Sent to peer\n'
-	s += '----------------------------------------------------------------\n'
-	var kks = []
-	for (var k in msgs) {
-		kks.push(k)
-	}
-	kks.sort()
-	for (var i=0; i<kks.length; i++) {
-		var v
-		var k = kks[i]
-		s += ' ' + rightpad(k,  ' ', 16) + ' '
-		v = msgs[k]["rcvd"]
-		s += leftpad(isNaN(v)?' ':v, ' ', 8)
-		v = msgs[k]["rbts"]
-		s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
-		s += '   '
-
-
-		v = msgs[k]["sent"]
-		s += leftpad(isNaN(v)?' ':v, ' ', 8)
-		v = msgs[k]["sbts"]
-		s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
-		s += '\n'
-	}
-	s += '----------------------------------------------------------------\n'
-
+	
 	rawdiv.innerHTML = s
 	rawdivon.style.display = 'block'
 	if (loading_new_rawdivon) {

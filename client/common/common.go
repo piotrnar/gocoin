@@ -75,6 +75,8 @@ var (
 
 	Memory   memory.Allocator
 	MemMutex sync.Mutex
+
+	NoCounters sys.SyncBool
 )
 
 type TheLastBlock struct {
@@ -93,23 +95,31 @@ func (b *TheLastBlock) BlockHeight() (res uint32) {
 }
 
 func CountSafe(k string) {
-	CounterMutex.Lock()
-	Counter[k]++
-	CounterMutex.Unlock()
+	if !NoCounters.Get() {
+		CounterMutex.Lock()
+		Counter[k]++
+		CounterMutex.Unlock()
+	}
 }
 
 func CountSafeAdd(k string, val uint64) {
-	CounterMutex.Lock()
-	Counter[k] += val
-	CounterMutex.Unlock()
+	if !NoCounters.Get() {
+		CounterMutex.Lock()
+		Counter[k] += val
+		CounterMutex.Unlock()
+	}
 }
 
 func Count(k string) {
-	Counter[k]++
+	if !NoCounters.Get() {
+		Counter[k]++
+	}
 }
 
 func CountAdd(k string, val uint64) {
-	Counter[k] += val
+	if !NoCounters.Get() {
+		Counter[k] += val
+	}
 }
 
 func Busy() {

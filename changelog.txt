@@ -14,6 +14,7 @@
 * Wallet: New switch (or config file param) "-atype" replacing previous: "-segwit", "-bech32", "-tap", "-pks"
 * Wallet: The "-pub <addr>" command should now work with all types of deposit addresses
 * Client: Disconnect peers that have not sent any data within the last 5 minutes
+* Client: New config value "Stat.NoCounters" - to be set for possible performance improvement
 
 1.10.0 - 2021-12-16
 * Added Taproot support

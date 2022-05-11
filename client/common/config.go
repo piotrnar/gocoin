@@ -107,6 +107,7 @@ var (
 			MiningHrs   uint
 			FeesBlks    uint
 			BSizeBlks   uint
+			NoCounters  bool
 		}
 		DropPeers struct {
 			DropEachMinutes uint // zero for never
@@ -328,6 +329,18 @@ func Reset() {
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
+
+	if CFG.Stat.NoCounters {
+		if !NoCounters.Get() {
+			// switching counters off - reset the data
+			NoCounters.Set()
+			CounterMutex.Lock()
+			Counter = make(map[string]uint64)
+			CounterMutex.Unlock()
+		}
+	} else {
+		NoCounters.Clr()
+	}
 
 	ips := strings.Split(CFG.WebUI.AllowedIP, ",")
 	WebUIAllowed = nil
