@@ -1,10 +1,11 @@
 package webui
 
 import (
-	"sort"
 	"encoding/json"
-	"github.com/piotrnar/gocoin/client/common"
 	"net/http"
+	"sort"
+
+	"github.com/piotrnar/gocoin/client/common"
 )
 
 type many_counters []one_counter
@@ -53,8 +54,8 @@ func json_counts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var all_var_cnt struct {
-		Gen []*one_var_cnt  `json:"gen"`
-		Txs []*one_var_cnt  `json:"txs"`
+		Gen []*one_var_cnt `json:"gen"`
+		Txs []*one_var_cnt `json:"txs"`
 		Net []*one_net_rec `json:"net"`
 	}
 
@@ -101,40 +102,4 @@ func json_counts(w http.ResponseWriter, r *http.Request) {
 	} else {
 		println(er.Error())
 	}
-	/*
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.Write([]byte("{\n"))
-
-		w.Write([]byte(" \"gen\":["))
-		for i := range gen {
-			w.Write([]byte(fmt.Sprint("{\"var\":\"", gen[i].key, "\",\"cnt\":", gen[i].cnt, "}")))
-			if i<len(gen)-1 {
-				w.Write([]byte(","))
-			}
-		}
-		w.Write([]byte("],\n \"txs\":["))
-
-		for i := range txs {
-			w.Write([]byte(fmt.Sprint("{\"var\":\"", txs[i].key, "\",\"cnt\":", txs[i].cnt, "}")))
-			if i<len(txs)-1 {
-				w.Write([]byte(","))
-			}
-		}
-		w.Write([]byte("],\n \"net\":["))
-
-		for i := range net {
-			fin := "_"+net[i]
-			w.Write([]byte("{\"var\":\"" + net[i] + "\","))
-			common.CounterMutex.Lock()
-			w.Write([]byte(fmt.Sprint("\"rcvd\":", common.Counter["rcvd"+fin], ",")))
-			w.Write([]byte(fmt.Sprint("\"rbts\":", common.Counter["rbts"+fin], ",")))
-			w.Write([]byte(fmt.Sprint("\"sent\":", common.Counter["sent"+fin], ",")))
-			w.Write([]byte(fmt.Sprint("\"sbts\":", common.Counter["sbts"+fin], "}")))
-			common.CounterMutex.Unlock()
-			if i<len(net)-1 {
-				w.Write([]byte(","))
-			}
-		}
-		w.Write([]byte("]\n}\n"))
-	*/
 }

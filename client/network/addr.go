@@ -186,22 +186,22 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	}
 	common.CounterMutex.Lock()
 	if c_ip_invalid > 0 {
-		common.Counter["AddrIPinvalid"] += c_ip_invalid
+		common.CountAdd("AddrIPinvalid", c_ip_invalid)
 	}
 	if c_future > 0 {
-		common.Counter["AddrFuture"] += c_future
+		common.CountAdd("AddrFuture", c_future)
 	}
 	if c_old > 0 {
-		common.Counter["AddrUpdated"] += c_old
+		common.CountAdd("AddrUpdated", c_old)
 	}
 	if c_new_taken > 0 {
-		common.Counter["AddrNewYES"] += c_new_taken
+		common.CountAdd("AddrNewYES", c_new_taken)
 	}
 	if c_new_rejected > 0 {
-		common.Counter["AddrNewNO"] += c_new_rejected
+		common.CountAdd("AddrNewNO", c_new_rejected)
 	}
 	if c_stale > 0 {
-		common.Counter["AddrStale"] += c_stale
+		common.CountAdd("AddrStale", c_stale)
 	}
 	common.CounterMutex.Unlock()
 	c.Mutex.Lock()

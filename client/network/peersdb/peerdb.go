@@ -368,16 +368,16 @@ func ExpirePeers() {
 		}
 		common.CounterMutex.Lock()
 		if c_dead1 > 0 {
-			common.Counter["PeersExpiredDead1"] += uint64(c_dead1)
+			common.CountAdd("PeersExpiredDead1", uint64(c_dead1))
 		}
 		if c_dead2 > 0 {
-			common.Counter["PeersExpiredDead2"] += uint64(c_dead2)
+			common.CountAdd("PeersExpiredDead2", uint64(c_dead2))
 		}
 		if c_seen_alive > 0 {
-			common.Counter["PeersExpiredAlive"] += uint64(c_seen_alive)
+			common.CountAdd("PeersExpiredAlive", uint64(c_seen_alive))
 		}
 		if c_banned > 0 {
-			common.Counter["PeersExpiredBanned"] += uint64(c_banned)
+			common.CountAdd("PeersExpiredBanned", uint64(c_banned))
 		}
 		common.CounterMutex.Unlock()
 		PeerDB.Defrag(false)

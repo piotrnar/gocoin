@@ -104,6 +104,14 @@ func CountSafeAdd(k string, val uint64) {
 	CounterMutex.Unlock()
 }
 
+func Count(k string) {
+	Counter[k]++
+}
+
+func CountAdd(k string, val uint64) {
+	Counter[k] += val
+}
+
 func Busy() {
 	var line int
 	_, _, line, _ = runtime.Caller(1)
