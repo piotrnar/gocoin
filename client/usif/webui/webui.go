@@ -176,7 +176,9 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
-func ServerThread(iface string) {
+func ServerThread() {
+	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
+
 	http.HandleFunc("/webui/", p_webui)
 
 	http.HandleFunc("/wal", p_wal)
@@ -218,7 +220,7 @@ func ServerThread(iface string) {
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
 	go start_ssl_server()
-	http.ListenAndServe(iface, nil)
+	http.ListenAndServe(common.CFG.WebUI.Interface, nil)
 }
 
 type null_logger struct {
@@ -237,12 +239,16 @@ func start_ssl_server() {
 		return
 	}
 
-	var ssl_serv_addr string
-	if common.Testnet {
-		ssl_serv_addr = ":14433"
-	} else {
-		ssl_serv_addr = ":4433"
+	port := common.CFG.WebUI.SSLPort
+	if port == 0 {
+		if common.Testnet {
+			port = 14433
+		} else {
+			port = 4433
+		}
 	}
+	ssl_serv_addr := fmt.Sprint(":", port)
+
 	server := &http.Server{
 		Addr: ssl_serv_addr,
 		TLSConfig: &tls.Config{

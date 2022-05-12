@@ -104,7 +104,16 @@ Prefering convenience over security, change .txt extension to .bat or .sh (depen
 <td> false</td>
 <td class="cfg_info"> Enable mode in which the WebUI operator cannot do certain things (e.g. change configuration).</td>
 </tr>
-
+<tr class="even">
+    <td class="cfg_name"> WebUI.SSLPort </td>
+    <td class="cfg_type"> uint16</td>
+    <td> 0</td>
+    <td class="cfg_info"> TCP port number to be used for SSL server.<br>
+    Zero value means to use the default port, which is 4433 for main net and 14433 for test net.<br>
+    Note that SSL server needs valid <code>ca.crt</code>, <code>server.crt</code> and
+    <code>server.key</code> in the client's <code>ssl_cert/</code> dir.</td>
+    </tr>
+    
 <tr class="odd">
 <td class="cfg_name"> Net.ListenTCP</td>
 <td class="cfg_type"> bool</td>
@@ -115,8 +124,9 @@ Prefering convenience over security, change .txt extension to .bat or .sh (depen
 <td class="cfg_name"> Net.TCPPort</td>
 <td class="cfg_type"> uint16</td>
 <td> 0 </td>
-<td class="cfg_info"> Zero value means to use the default port, which is 8333 for main net and 18333 for test net.<br>
-Note that Bitcoin Core nodes will not connect to any TCP port other than the default.</td>
+<td class="cfg_info"> Use this TCP port for incomming connections.<br>
+    Zero value means to use the default port, which is 8333 for main net and 18333 for test net.<br>
+Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other than the default.</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> Net.BindToIF</td>

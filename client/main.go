@@ -455,7 +455,7 @@ func main() {
 
 		if common.CFG.WebUI.Interface != "" {
 			fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
-			go webui.ServerThread(common.CFG.WebUI.Interface)
+			go webui.ServerThread()
 		}
 
 		if common.CFG.RPC.Enabled {

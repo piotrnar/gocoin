@@ -50,6 +50,7 @@ var (
 			Title       string
 			PayCmdName  string
 			ServerMode  bool
+			SSLPort     uint16
 		}
 		RPC struct {
 			Enabled  bool
