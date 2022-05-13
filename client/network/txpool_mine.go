@@ -226,7 +226,10 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 
 	TxMutex.Lock()
 	for k, v := range TransactionsToSend {
-		if c.BytesToSent() > SendBufSize/4 {
+		c.Mutex.Lock()
+		bts := c.BytesToSent()
+		c.Mutex.Unlock()
+		if bts > SendBufSize/4 {
 			redo[0] = 1
 			break
 		}
