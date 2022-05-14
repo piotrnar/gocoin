@@ -292,20 +292,6 @@ func dump_block(s string) {
 
 	ioutil.WriteFile(h.String()+".bin", crec.Data, 0700)
 	fmt.Println("Block saved")
-
-	if crec.Block == nil {
-		crec.Block, _ = btc.NewBlock(crec.Data)
-	}
-	/*
-		if crec.Block.NoWitnessData == nil {
-			crec.Block.BuildNoWitnessData()
-		}
-		if !bytes.Equal(crec.Data, crec.Block.NoWitnessData) {
-			ioutil.WriteFile(h.String()+".old", crec.Block.NoWitnessData, 0700)
-			fmt.Println("Old block saved")
-		}
-	*/
-
 }
 
 func ui_quit(par string) {
