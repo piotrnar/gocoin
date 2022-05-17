@@ -137,7 +137,7 @@ func net_stats(par string) {
 		}
 		fmt.Printf(" %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
 		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
-		fmt.Printf("%9s %9s", common.BytesToString(v.X.Counters["BytesReceived"]), common.BytesToString(v.X.Counters["BytesSent"]))
+		fmt.Printf("%9s %9s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
 		fmt.Print("  ", v.Node.Agent)
 
 		if b2s := v.BytesToSent(); b2s > 0 {
