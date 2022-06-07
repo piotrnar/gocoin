@@ -1,4 +1,4 @@
-** This functionality is outdated (incompatible with Taproot) **
+## This functionality is outdated (incompatible with Taproot)
 
 ---
 Files in this folder allow to setup Gocoin node with so called bitcoin
