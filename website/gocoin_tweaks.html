@@ -49,10 +49,27 @@ Depending which speedup file you chose, follow either of the instructions in the
 <br>
 <table border="1" cellpadding="5" cellspacing="0">
 <tr>
-<td align="center" width="35%"><b>sipadll.go</b> (Windows only)</td>
-<td align="center" width="65%"><b>sipasec.go</b></td>
+    <td align="center" width="65%"><b>sipasec.go</b></td>
+    <td align="center" width="35%"><b>sipadll.go</b> (Windows only)</td>
 </tr>
 <tr>
+
+<td valign="top">
+In order to use <code>sipasec.go</code> speedup, build and install <b>secp256k1</b> library in your system.<br>
+<br>
+On Debian based Linux system, simply execute the following commands:<br>
+
+<code>&nbsp;&nbsp;sudo apt-get install gcc automake autoconf libtool make git libgmp-dev</code> <br>
+<code>&nbsp;&nbsp;git clone https://github.com/bitcoin/bitcoin.git</code> <br>
+<code>&nbsp;&nbsp;cd bitcoin/src/secp256k1/</code> <br>
+<code>&nbsp;&nbsp;./autogen.sh</code> <br>
+<code>&nbsp;&nbsp;./configure --enable-module-schnorrsig</code> <br>
+<code>&nbsp;&nbsp;make</code> <br>
+<code>&nbsp;&nbsp;sudo make install</code> <br>
+<br>
+<i>Note: When the library is properly installed, executing <code>go test</code> inside
+<code>gocoin/lib/others/cgo/sipasec/</code> says <b>PASS</b></i>
+</td>
 
 <td valign="top">
 To use <code>sipadll.go</code> speedup, you have to place <b>secp256k1.dll</b>
@@ -65,23 +82,6 @@ or you can download it from <a target="_blank" href="https://sourceforge.net/pro
 <br>
 To build <b>secp256k1.dll</b> youself, look into
 <a target="_blank" href="https://sourceforge.net/projects/gocoin/files/secp256k1_win_v2.zip/download">secp256k1_win_v2.zip</a>.
-</td>
-
-<td valign="top">
-In order to use <code>sipasec.go</code> speedup, build and install <b>secp256k1</b> library in your system.<br>
-<br>
-On Debian based Linux system, simply execute the following commands:<br>
-
-<code>&nbsp;&nbsp;sudo apt-get install gcc autoconf libtool make git libgmp-dev automake</code> <br>
-<code>&nbsp;&nbsp;git clone https://github.com/bitcoin/bitcoin.git</code> <br>
-<code>&nbsp;&nbsp;cd bitcoin/src/secp256k1/</code> <br>
-<code>&nbsp;&nbsp;./autogen.sh</code> <br>
-<code>&nbsp;&nbsp;./configure --enable-module-schnorrsig --enable-experimental</code> <br>
-<code>&nbsp;&nbsp;make</code> <br>
-<code>&nbsp;&nbsp;sudo make install</code> <br>
-<br>
-<i>Note: When the library is properly installed, executing <code>go test</code> inside
-<code>gocoin/lib/others/cgo/sipasec/</code> says <b>PASS</b></i>
 </td>
 
 </tr>
