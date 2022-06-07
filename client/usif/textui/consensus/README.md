@@ -1,3 +1,6 @@
+** This functionality is outdated (incompatible with Taproot) **
+
+---
 Files in this folder allow to setup Gocoin node with so called bitcoin
 consensus lib. It is - depending on the OS - either `libbitcoinconsensus.so` or
 `libbitcoinconsensus-0.dll`, which get released along with Bitcoin Core client.
