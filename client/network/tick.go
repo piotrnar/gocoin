@@ -748,7 +748,7 @@ func (c *OneConnection) Run() {
 				c.SendAuth()
 			}
 
-			if c.Node.Version >= 70012 {
+			if c.Node.Version >= 70012 && c.HasNetworkService() {
 				c.SendRawMsg("sendheaders", nil)
 				if c.Node.Version >= 70013 {
 					if c.X.LastMinFeePerKByte != 0 {
