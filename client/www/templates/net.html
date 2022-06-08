@@ -278,6 +278,7 @@ function update_connection_info(ci) {
 
 	var cnts = ''
 	var msgs = new Array()
+	var has_counters = false
 
 	for (var k in ci.Counters) {
 		if (k[4]=='_') {
@@ -287,8 +288,9 @@ function update_connection_info(ci) {
 			if (cnts!='') cnts+=',  '
 			cnts += k + '=' + ci.Counters[k]
 		}
+		has_counters = true
 	}
-	if (cnts=='' && msgs.length==0) {
+	if (!has_counters) {
 		s += 'No counters yet or counters disabled in config file (Stats.NoCounters)'
 	} else {
 		if (cnts!='') {
