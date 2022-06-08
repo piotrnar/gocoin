@@ -95,7 +95,11 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		return errors.New("NoService")
 	}
 
-	if bytes.Equal(c.Node.Nonce[:], nonce[:]) {
+	if c.Node.Nonce == [8]byte{0, 0, 0, 0, 0, 0, 0, 0} {
+		return errors.New("NullNonce")
+	}
+
+	if c.Node.Nonce == nonce {
 		return errors.New("OurNonce")
 	}
 
@@ -104,7 +108,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 	for _, v := range OpenCons {
 		if v != c {
 			v.Mutex.Lock()
-			yes := v.X.VersionReceived && bytes.Equal(v.Node.Nonce[:], c.Node.Nonce[:])
+			yes := v.X.VersionReceived && v.Node.Nonce == c.Node.Nonce
 			v.Mutex.Unlock()
 			if yes {
 				Mutex_net.Unlock()
