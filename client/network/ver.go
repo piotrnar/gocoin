@@ -183,8 +183,8 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				}
 			}
 			if use_this_ip && common.IsListenTCP() && common.GetExternalIp() == "" {
-				fmt.Printf("New external IP %d.%d.%d.%d from ConnID=%d\n> ",
-					pl[40], pl[41], pl[42], pl[43], c.ConnID)
+				fmt.Printf("New external IP %d.%d.%d.%d from ConnID=%d (%s)\n> ",
+					pl[40], pl[41], pl[42], pl[43], c.ConnID, c.Node.Agent)
 			}
 		}
 		if use_this_ip {

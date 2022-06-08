@@ -390,6 +390,7 @@ func ConnectFriends() {
 	var auth_pubkeys [][]byte
 	var special_agents []string
 	var special_ips [][4]byte
+	var addrs_to_connect []*peersdb.PeerAddr
 	friend_ids := make(map[uint64]bool)
 
 	new_pubkey_cache := make(map[string][]byte)
@@ -446,19 +447,7 @@ func ConnectFriends() {
 			ad, _ := peersdb.NewAddrFromString(ls[0], false)
 			if ad != nil {
 				//println(" Trying to connect", ad.Ip())
-				Mutex_net.Lock()
-				curr := OpenCons[ad.UniqID()]
-				Mutex_net.Unlock()
-				if curr == nil {
-					ad.Friend = true
-					DoNetwork(ad)
-				} else {
-					curr.Mutex.Lock()
-					curr.PeerAddr.Friend = true
-					curr.X.IsSpecial = true
-					curr.Mutex.Unlock()
-				}
-				friend_ids[ad.UniqID()] = true
+				addrs_to_connect = append(addrs_to_connect, ad)
 				continue
 			}
 		}
@@ -473,6 +462,22 @@ func ConnectFriends() {
 	SpecialAgents = special_agents
 	SpecialIPs = special_ips
 	FriendsAccess.Unlock()
+
+	for _, ad := range addrs_to_connect {
+		Mutex_net.Lock()
+		curr := OpenCons[ad.UniqID()]
+		Mutex_net.Unlock()
+		if curr == nil {
+			ad.Friend = true
+			DoNetwork(ad)
+		} else {
+			curr.Mutex.Lock()
+			curr.PeerAddr.Friend = true
+			curr.X.IsSpecial = true
+			curr.Mutex.Unlock()
+		}
+		friend_ids[ad.UniqID()] = true
+	}
 
 	// Unmark those that are not longer friends
 	Mutex_net.Lock()
