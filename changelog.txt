@@ -17,6 +17,8 @@
 * Client: New config value "Stat.NoCounters" - to be set for possible performance improvement
 * Client: New config value "WebUI.SSLPort" (previously it was fixed to the default values)
 * Client: Do not talk to peers that provide no NETWORK servive (at least the limited one)
+* Client: Do not talk to peers that send nonce filled with zeros
+* Client: The friends file allows to define hostnames and user agents that are automatically marked as special
 
 1.10.0 - 2021-12-16
 * Added Taproot support

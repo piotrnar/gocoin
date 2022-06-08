@@ -199,7 +199,8 @@ func (c *OneConnection) Tick(now time.Time) {
 	}
 
 	c.Mutex.Lock()
-	if !c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress) == 0 {
+	if (c.Node.Services&(SERVICE_NETWORK|SERVICE_NETWORK_LIMITED)) != 0 &&
+		!c.X.GetHeadersInProgress && !c.X.AllHeadersReceived && len(c.GetBlockInProgress) == 0 {
 		c.Mutex.Unlock()
 		c.sendGetHeaders()
 		return // new headers requested
