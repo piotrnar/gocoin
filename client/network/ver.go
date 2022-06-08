@@ -110,14 +110,12 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		if c.Node.Version < MIN_PROTO_VERSION {
 			return errors.New("TooLow")
 		}
-		if (c.Node.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) == 0 {
+		if !c.HasNetworkService() {
 			return errors.New("NoService")
 		}
-
 		if c.Node.Nonce == [8]byte{0, 0, 0, 0, 0, 0, 0, 0} {
 			return errors.New("NullNonce")
 		}
-
 		if c.Node.Nonce == nonce {
 			return errors.New("OurNonce")
 		}
@@ -274,4 +272,8 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 		repl[0] = 1
 	}
 	c.SendRawMsg("authack", repl[:])
+}
+
+func (c *OneConnection) HasNetworkService() bool {
+	return (c.Node.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) != 0
 }
