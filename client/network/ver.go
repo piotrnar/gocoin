@@ -66,11 +66,6 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 				v.Mutex.Unlock()
 				if yes {
 					Mutex_net.Unlock()
-					/*v.Mutex.Lock()
-					println("Peer with nonce", hex.EncodeToString(pl[72:80]), "from", c.PeerAddr.Ip(),
-					"already connected as ", v.ConnID, "from ", v.PeerAddr.Ip(), v.Node.Agent)
-					v.Mutex.Unlock()*/
-					common.CountSafe("VerNonceSame")
 					return errors.New("SameNonce")
 				}
 			}
