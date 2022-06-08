@@ -16,6 +16,7 @@
 * Client: Disconnect peers that have not sent any data within the last 5 minutes
 * Client: New config value "Stat.NoCounters" - to be set for possible performance improvement
 * Client: New config value "WebUI.SSLPort" (previously it was fixed to the default values)
+* Client: Do not talk to peers that provide no NETWORK servive (at least the limited one)
 
 1.10.0 - 2021-12-16
 * Added Taproot support

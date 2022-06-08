@@ -84,8 +84,14 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			return errors.New("TooLow")
 		}
 
+		c.PeerAddr.Services = binary.LittleEndian.Uint64(pl[4:12])
+		if (c.PeerAddr.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) == 0 {
+			c.Mutex.Unlock()
+			return errors.New("NoService")
+		}
+		c.Node.Services = c.PeerAddr.Services
+
 		copy(c.Node.Nonce[:], pl[72:80])
-		c.Node.Services = binary.LittleEndian.Uint64(pl[4:12])
 		c.Node.Timestamp = binary.LittleEndian.Uint64(pl[12:20])
 		c.Node.ReportedIp4 = binary.BigEndian.Uint32(pl[40:44])
 

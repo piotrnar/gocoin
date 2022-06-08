@@ -47,7 +47,9 @@ const (
 
 	MAX_INV_HISTORY = 500
 
-	SERVICE_SEGWIT = 0x8
+	SERVICE_NETWORK         = 0x1
+	SERVICE_SEGWIT          = 0x8
+	SERVICE_NETWORK_LIMITED = 1 << 10
 
 	TxsCounterPeriod      = 6 * time.Second // how long for one tick
 	TxsCounterBufLen      = 60              // how many ticks
