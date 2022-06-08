@@ -178,7 +178,10 @@ func show_addresses(par string) {
 }
 
 func unban_peer(par string) {
-	fmt.Print(usif.UnbanPeer(par))
+	ps := strings.Split(par, " ")
+	for _, s := range ps {
+		fmt.Print(usif.UnbanPeer(s))
+	}
 }
 
 func ban_peer(par string) {
