@@ -426,7 +426,7 @@ func ConnectFriends() {
 					}
 
 				case '+':
-					if ad, _ := peersdb.NewAddrFromString(ls[0], false); ad != nil {
+					if ad, _ := peersdb.NewAddrFromString(ls[0][1:], false); ad != nil {
 						special_ips = append(special_ips, ad.Ip4)
 					}
 
