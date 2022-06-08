@@ -88,19 +88,39 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 	c.X.VersionReceived = true
 	c.Mutex.Unlock()
 
-	if c.Node.Version < MIN_PROTO_VERSION {
-		return errors.New("TooLow")
-	}
-	if (c.Node.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) == 0 {
-		return errors.New("NoService")
+	if !c.X.IsSpecial {
+		FriendsAccess.Lock()
+		for _, ua := range SpecialAgents {
+			if strings.HasPrefix(c.Node.Agent, ua) {
+				c.X.IsSpecial = true
+				goto special
+			}
+		}
+		for _, ip := range SpecialIPs {
+			if c.PeerAddr.Ip4 == ip {
+				c.X.IsSpecial = true
+				goto special
+			}
+		}
+	special:
+		FriendsAccess.Unlock()
 	}
 
-	if c.Node.Nonce == [8]byte{0, 0, 0, 0, 0, 0, 0, 0} {
-		return errors.New("NullNonce")
-	}
+	if !c.X.IsSpecial {
+		if c.Node.Version < MIN_PROTO_VERSION {
+			return errors.New("TooLow")
+		}
+		if (c.Node.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) == 0 {
+			return errors.New("NoService")
+		}
 
-	if c.Node.Nonce == nonce {
-		return errors.New("OurNonce")
+		if c.Node.Nonce == [8]byte{0, 0, 0, 0, 0, 0, 0, 0} {
+			return errors.New("NullNonce")
+		}
+
+		if c.Node.Nonce == nonce {
+			return errors.New("OurNonce")
+		}
 	}
 
 	// check if we don't have this nonce yet
@@ -223,12 +243,14 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 	copy(b32[:8], nonce[:]) // the remaining bytes shall be zero'ed
 	m.SetBytes(b32[:])
 
+	FriendsAccess.Lock()
 	for _, pub := range AuthPubkeys {
 		if pkey.ParsePubkey(pub) && sig.Verify(&pkey, &m) {
 			c.X.Authorized = true
 			break
 		}
 	}
+	FriendsAccess.Unlock()
 	if !c.X.Authorized {
 		return
 	}

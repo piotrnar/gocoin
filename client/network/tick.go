@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -24,6 +25,9 @@ var (
 
 	NextConnectFriends time.Time = time.Now()
 	AuthPubkeys        [][]byte
+	SpecialAgents      []string
+	SpecialIPs         [][4]byte
+	FriendsAccess      sync.Mutex
 
 	GetMPInProgressTicket = make(chan bool, 1)
 )
@@ -382,7 +386,9 @@ func ConnectFriends() {
 	}
 	defer f.Close()
 
-	AuthPubkeys = nil
+	var auth_pubkeys [][]byte
+	var special_agents []string
+	var special_ips [][4]byte
 	friend_ids := make(map[uint64]bool)
 
 	new_pubkey_cache := make(map[string][]byte)
@@ -398,24 +404,39 @@ func ConnectFriends() {
 				continue
 			}
 			ls := strings.SplitN(lns, " ", 2)
-			if len(ls[0]) > 1 && ls[0][0] == '@' {
-				var pk []byte
-				pks := ls[0][1:]
-				if friends_pubkey_cache != nil {
-					pk = friends_pubkey_cache[pks]
-					//println(" - from cache:", len(pk))
+			if len(ls[0]) > 1 {
+				var done bool
+				switch ls[0][0] {
+				case '@':
+					var pk []byte
+					pks := ls[0][1:]
+					if friends_pubkey_cache != nil {
+						pk = friends_pubkey_cache[pks]
+						//println(" - from cache:", len(pk))
+					}
+					if pk == nil {
+						pk = btc.Decodeb58(pks)
+					}
+					if len(pk) == 33 {
+						new_pubkey_cache[pks] = pk
+						auth_pubkeys = append(auth_pubkeys, pk)
+						//println("Using Auth Key:", hex.EncodeToString(pk))
+					} else {
+						println(pks, "is not a valid Auth Key. Check your friends.txt file")
+					}
+
+				case '+':
+					if ad, _ := peersdb.NewAddrFromString(ls[0], false); ad != nil {
+						special_ips = append(special_ips, ad.Ip4)
+					}
+
+				case '*':
+					special_agents = append(special_agents, ls[0][1:])
+
 				}
-				if pk == nil {
-					pk = btc.Decodeb58(pks)
+				if done {
+					continue
 				}
-				if len(pk) == 33 {
-					new_pubkey_cache[pks] = pk
-					AuthPubkeys = append(AuthPubkeys, pk)
-					//println("Using Auth Key:", hex.EncodeToString(pk))
-				} else {
-					println(pks, "is not a valid Auth Key. Check your friends.txt file")
-				}
-				continue
 			}
 			if peersdb.ConnectOnly != "" {
 				// Do not connect to friends in single connection mode
@@ -446,6 +467,11 @@ func ConnectFriends() {
 	} else {
 		friends_pubkey_cache = nil
 	}
+	FriendsAccess.Lock()
+	AuthPubkeys = auth_pubkeys
+	SpecialAgents = special_agents
+	SpecialIPs = special_ips
+	FriendsAccess.Unlock()
 
 	// Unmark those that are not longer friends
 	Mutex_net.Lock()

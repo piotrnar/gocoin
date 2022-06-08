@@ -1,6 +1,7 @@
 package textui
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -186,9 +187,24 @@ func net_rd(par string) {
 		"...", network.HammeringMinReconnect+network.HammeringExpirePeriod, "in between)")
 }
 
+func net_friends(par string) {
+	network.FriendsAccess.Lock()
+	for _, pk := range network.AuthPubkeys {
+		fmt.Println("Pubkey", hex.EncodeToString(pk))
+	}
+	for _, ua := range network.SpecialAgents {
+		fmt.Println("Agent Prefix", ua)
+	}
+	for _, p := range network.SpecialIPs {
+		fmt.Println("IP ", fmt.Sprintf("%d.%d.%d.%d", p[0], p[1], p[2], p[3]))
+	}
+	network.FriendsAccess.Unlock()
+}
+
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
 	newUi("rd", false, net_rd, "Show recently disconnected incoming connections")
+	newUi("friends", false, net_friends, "Show current friends settings")
 }
