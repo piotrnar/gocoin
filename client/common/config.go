@@ -189,6 +189,9 @@ func InitConfig() {
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
 
+	if cfgfn := os.Getenv("GOCOIN_CLIENT_CONFIG"); cfgfn != "" {
+		ConfigFile = cfgfn
+	}
 	// pre-parse command line: look for -cfg <fname> or -h
 	for i := 1; i < len(os.Args); i++ {
 		if os.Args[i] == "-cfg" || os.Args[i] == "--cfg" {
@@ -212,8 +215,10 @@ func InitConfig() {
 			println("Error in", ConfigFile, e.Error())
 			os.Exit(1)
 		}
+		fmt.Println("Using config file", ConfigFile)
 	} else {
 		new_config_file = true
+		fmt.Println("New config file", ConfigFile)
 	}
 
 	var _cfg_fn string

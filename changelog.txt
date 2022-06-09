@@ -20,6 +20,7 @@
 * Client: Do not talk to peers that send nonce filled with zeros
 * Client: The friends file allows to define hostnames and user agents that are automatically marked as special
 * Client: Services field report NETWORK_LIMITED (instead of NETWORK) if config's "Memory.DataFilesKeep" is not zero
+* Client: Check env for "GOCOIN_CLIENT_CONFIG" to overwrite default "gocoin.conf" (but command line's "-cfg <fn>" has priority)
 
 1.10.0 - 2021-12-16
 * Added Taproot support
