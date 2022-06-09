@@ -331,7 +331,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	var cnt uint64
 	var block_type uint32
 
-	if (c.Node.Services & SERVICE_SEGWIT) != 0 {
+	if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
 		block_type = MSG_WITNESS_BLOCK
 	} else {
 		block_type = MSG_BLOCK
@@ -353,7 +353,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		max_height = LastCommitedHeader.Height
 	}
 
-	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && (c.Node.Services&SERVICE_SEGWIT) == 0 { // no segwit node
+	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && (c.Node.Services&btc.SERVICE_SEGWIT) == 0 { // no segwit node
 		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
 			max_height = common.BlockChain.Consensus.Enforce_SEGWIT - 1
 			if max_height <= common.Last.BlockHeight() {

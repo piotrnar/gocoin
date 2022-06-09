@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	Version  = uint32(70015)
-	Services = uint64(0x00000009)
+	Version = uint32(70015)
 )
 
 var (
+	Services uint64 = btc.SERVICE_SEGWIT // It updates this value in InitConfig()
+
 	LogBuffer             = new(bytes.Buffer)
 	Log       *log.Logger = log.New(LogBuffer, "", 0)
 

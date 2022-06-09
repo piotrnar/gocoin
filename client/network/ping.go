@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 const (
@@ -99,7 +100,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
-		if (v.Node.Services & SERVICE_SEGWIT) != 0 {
+		if (v.Node.Services & btc.SERVICE_SEGWIT) != 0 {
 			segwit_cnt++
 		}
 
@@ -167,7 +168,7 @@ func drop_worst_peer() bool {
 			continue
 		}
 		if common.CFG.Net.MinSegwitCons > 0 && segwit_cnt <= int(common.CFG.Net.MinSegwitCons) &&
-			(v.Conn.Node.Services&SERVICE_SEGWIT) != 0 {
+			(v.Conn.Node.Services&btc.SERVICE_SEGWIT) != 0 {
 			continue
 		}
 		if v.Conn.X.Incomming {

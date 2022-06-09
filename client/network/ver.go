@@ -275,5 +275,5 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 }
 
 func (c *OneConnection) HasNetworkService() bool {
-	return (c.Node.Services & (SERVICE_NETWORK | SERVICE_NETWORK_LIMITED)) != 0
+	return (c.Node.Services & (btc.SERVICE_NETWORK | btc.SERVICE_NETWORK_LIMITED)) != 0
 }

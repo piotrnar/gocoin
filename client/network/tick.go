@@ -582,7 +582,7 @@ func NetworkTick() {
 			Mutex_net.Lock()
 			for _, cc := range OpenCons {
 				cc.Mutex.Lock()
-				if (cc.Node.Services & SERVICE_SEGWIT) != 0 {
+				if (cc.Node.Services & btc.SERVICE_SEGWIT) != 0 {
 					segwit_conns++
 				}
 				cc.Mutex.Unlock()
@@ -592,7 +592,7 @@ func NetworkTick() {
 
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
-			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&SERVICE_SEGWIT) == 0 {
+			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&btc.SERVICE_SEGWIT) == 0 {
 				return true
 			}
 			return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
@@ -755,7 +755,7 @@ func (c *OneConnection) Run() {
 						c.SendFeeFilter()
 					}
 					if c.Node.Version >= 70014 && common.GetBool(&common.CFG.TXPool.Enabled) {
-						if (c.Node.Services & SERVICE_SEGWIT) == 0 {
+						if (c.Node.Services & btc.SERVICE_SEGWIT) == 0 {
 							// if the node does not support segwit, request compact blocks
 							// only if we have not achieved the segwit enforcement moment
 							if common.BlockChain.Consensus.Enforce_SEGWIT == 0 ||

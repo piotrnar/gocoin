@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin"
+	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
@@ -290,6 +291,12 @@ func InitConfig() {
 			Memory.Free(ptr)
 			MemMutex.Unlock()
 		}
+	}
+
+	if CFG.Memory.DataFilesKeep == 0 {
+		Services |= btc.SERVICE_NETWORK
+	} else {
+		Services |= btc.SERVICE_NETWORK_LIMITED
 	}
 
 	Reset()

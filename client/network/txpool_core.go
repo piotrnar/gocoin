@@ -158,7 +158,7 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	if NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1 + 4 + 32]byte
 		b[0] = 1 // One inv
-		if (c.Node.Services & SERVICE_SEGWIT) != 0 {
+		if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
 			binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
 			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
 		} else {
