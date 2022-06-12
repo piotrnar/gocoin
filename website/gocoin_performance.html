@@ -17,6 +17,19 @@ Charts below present system memory and time needed to sync BTC block chain up to
 Time needed to re-build UTXO database from blocks stored on the disk: <b>1.3 hours</b>
 <i>(up to block #700000)</i><br>
 
+<h3>Dedicated server with 3.4GHz Intel i7-4770 CPU and SSD - tweaked config<sup>*)</sup></h3>
+
+<img src="btc_chain_sync_perf_fin_700000_turbo.png" width="50%"><br>
+*) Tweaked config values:<br>
+<ul>
+ <li><code>Net.MaxOutCons: 20</code><br>
+ <li><code>Memory.GCPercTrshold: 300</code><br>
+ <li><code>Memory.UseGoHeap: true</code><br>
+ <li><code>Memory.CacheOnDisk: false</code><br>
+ <li><code>AllBalances.AutoLoad: false</code><br>
+ <li><code>Stat.NoCounters: true</code><br>
+</ul>
+
 <h2>Gocoin 1.10.0</b>, built with Go 1.17.3</h2>
 
 <h3>Dedicated server with 3.5GHz Xeon E3-1270 v3 CPU and SSD</h3>
