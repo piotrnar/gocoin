@@ -300,8 +300,6 @@ func InitConfig() {
 
 	if CFG.Memory.DataFilesKeep == 0 {
 		Services |= btc.SERVICE_NETWORK
-	} else {
-		Services |= btc.SERVICE_NETWORK_LIMITED
 	}
 
 	Reset()

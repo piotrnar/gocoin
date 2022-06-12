@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	Services uint64 = btc.SERVICE_SEGWIT // It updates this value in InitConfig()
+	Services uint64 = btc.SERVICE_SEGWIT | btc.SERVICE_NETWORK_LIMITED // It updates this value in InitConfig()
 
 	LogBuffer             = new(bytes.Buffer)
 	Log       *log.Logger = log.New(LogBuffer, "", 0)
