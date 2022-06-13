@@ -184,7 +184,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	if er != nil {
 		b2g.InProgress--
 		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
-		//ioutil.WriteFile(hash.String() + ".bin", b, 0700)
+		ioutil.WriteFile(hash.String()+"-"+conn.PeerAddr.Ip()+".bin", b, 0700)
 		conn.DoS("BadBlock")
 
 		// we don't need to remove from conn.GetBlockInProgress as we're disconnecting
