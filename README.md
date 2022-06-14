@@ -17,7 +17,7 @@ System memory and time Gocoin client 1.10.1 needs to sync the blockchain up to
 the given block number, with comparision to Bitcoin Core 23.0:
 
 ![SyncChart](website/btc_chain_sync_comparision_724466_turbo.png)
-*The above data was collected using [Hetzner](hetzner.com) dedicated server
+*The above data was collected using [Hetzner](https://hetzner.com) dedicated server
 with 3.4GHz Intel i7-6700 CPU, 2x2TB HDD and 1Gb internet connection.
 Both the clients were using their default configuration. <br/>
 For more performance results see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
