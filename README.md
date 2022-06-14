@@ -13,10 +13,13 @@ Wallet can be used without the client, but with the provided **balio** tool inst
 The **client** (p2p node) is an application independent from the **wallet**.
 It keeps the entire UTXO set in RAM, providing an instant access to all its records.
 
-System memory and time needed to sync BTC block chain up to the given block number:
+System memory and time Gocoin client 1.10.1 needs to sync the blockchain up to
+the given block number, with comparision to Bitcoin Core 23.0:
 
-![SyncChart](website/btc_chain_sync_perf_fin_700000.png)
-*The data above is from Gocoin 1.10.1 running on 3.4GHz Intel i7-4770 CPU.<br/>
+![SyncChart](website/btc_chain_sync_comparision_724466_turbo.png)
+*The above data was collected using [Hetzner](hetzner.com) dedicated server
+with 3.4GHz Intel i7-6700 CPU, 2x2TB HDD and 1Gb internet connection.
+Both the clients were using their default configuration. <br/>
 For more performance results see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
