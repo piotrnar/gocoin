@@ -11,7 +11,8 @@ As long as you remember the password, you do not need any backups ever.
 Wallet can be used without the client, but with the provided **balio** tool instead.
 
 The **client** (p2p node) is an application independent from the **wallet**.
-It keeps the entire UTXO set in RAM, providing an instant access to all its records.
+It keeps the entire UTXO set in RAM, providing an instant access to all its records
+and - in consequece - an extraordinary blochchain processing performance.
 
 System memory and time Gocoin client 1.10.1 needs to sync the blockchain up to
 the given block number, with comparision to Bitcoin Core 23.0:
