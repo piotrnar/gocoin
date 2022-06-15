@@ -1,4 +1,4 @@
-1.10.1:
+1.10.1 - 2022-06-15
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
 * Wallet: Make SchnorrSign nonce dependent not only on RNG but also on the hash being signed
 * Wallet: When listing non-hardend HD wallet (like Elecrum), also output the root Extended Public Key
