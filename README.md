@@ -22,7 +22,7 @@ the given block number, with comparision to Bitcoin Core 23.0:
 with 3.4GHz Intel i7-6700 CPU, 2x2TB HDD and 1Gb internet connection, 
 running Debian 10 (buster).
 Both the clients were using their default configuration. <br/>
-For more performance results of a Gocoin node, see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
+For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
 
