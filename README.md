@@ -17,11 +17,12 @@ and - in consequece - an extraordinary blochchain processing performance.
 System memory and time Gocoin client 1.10.1 needs to sync the blockchain up to
 the given block number, with comparision to Bitcoin Core 23.0:
 
-![SyncChart](website/btc_chain_sync_comparision_724466_turbo.png)
+![SyncChart](website/quick_sync_gocoin_vs_core.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
-with 3.4GHz Intel i7-6700 CPU, 2x2TB HDD and 1Gb internet connection, 
-running Debian 10 (buster).
-Both the clients were using their default configuration. <br/>
+with 3.6GHz Intel i7-7700 CPU, 2x512MB SSD and 1Gbit internet connection, 
+running Debian 11 (bullseye).
+Clients using their default configuration, except for the second (blue) Bitcoin Core
+that is set to use **dbcache=24000**.<br/>
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
