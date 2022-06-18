@@ -7,7 +7,10 @@
 
 Charts below present system memory and time needed to sync BTC block chain up to the given block number.<br>
 <br>
-<i>Note: Gocoin uses configurable <code>LastTrustedBlock</code> parameter, to avoid verifying scripts from all blocks known as valid.</i><br>
+<i>Note:<br>
+Gocoin uses (configurable) <code>LastTrustedBlock</code> to avoid verifying scripts from all blocks known as valid.<br>
+Referenced Bitcoin Core uses an identical mechanism (configurable with <code>assumevalid</code> parameter).<br>
+Both implementations come with a recent trusted block built into their code (no need to configure them explicitly).<br></i>
 
 <h2>Gocoin 1.10.1</b>, built with Go 1.18.3</h2>
 
