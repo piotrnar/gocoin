@@ -17,7 +17,7 @@ With comparision to Bitcoin Core 23.0:<br>
 <img src="btc_chain_sync_comparision_724466_turbo.png" width="50%"><br>
 <i>Both the clients were using their default configuration.</i><br>
 
-<h3>Dedicated server with 3.6GHz Intel i7-7700 CPU and SSD - tweaked config<sup>*)</sup></h3>
+<h3>Dedicated server with 3.6GHz Intel i7-7700 CPU and SSD - tweaked config<sup><a href="#ex">*)</a></sup></h3>
 
 <img src="d3_turbo.png" width="50%"><br>
 
@@ -27,7 +27,7 @@ With comparision to Bitcoin Core 23.0:<br>
 
 <h3>Dedicated server with 3.4GHz Intel i7-6700 CPU and SSD - default config</h3>
 
-<img src="btc_chain_sync_perf_dd_quick_740000.png" width="50%"><br>
+<img src="dd_quick.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk: <b>1.28 hours</b>
 <i>(up to block #700000)</i><br>
 
@@ -35,18 +35,18 @@ Time needed to re-build UTXO database from blocks stored on the disk: <b>1.28 ho
 
 <h3>Dedicated server with 3.5GHz Xeon E3-1270 v3 CPU and SSD</h3>
 
-<img src="btc_chain_sync_perf_dw32_710000.png" width="50%"><br>
+<img src="dw32_quick.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk: <b>1.6 hours</b>
 <i>(up to block #700000)</i><br>
 
 <h3>Dedicated server with two 1.7GHz Xeon E5-2650L v2 CPUs and HDD</h3>
 
-<img src="btc_chain_sync_perf_rep_710000.png" width="50%"><br>
+<img src="rep_quick.png" width="50%"><br>
 Time needed to re-build UTXO database from blocks stored on the disk: <b>2.6 hours</b>
 <i>(up to block #700000)</i><br>
 
 <hr>
-*) Tweaked config values:<br>
+<a name="ex">*)</a> Tweaked config values:<br>
 <ul>
  <li><code>Net.ListenTCP: false</code><br>
  <li><code>Net.MaxOutCons: 20</code><br>
