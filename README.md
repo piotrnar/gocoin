@@ -22,7 +22,7 @@ the given block number, with comparision to Bitcoin Core 23.0:
 with 3.6GHz Intel i7-7700 CPU, 2x512MB SSD and 1Gbit internet connection, 
 running Debian 11 (bullseye).
 Clients using their default configuration, except for the second (blue) Bitcoin Core
-that is set to use **dbcache=24000**.<br/>
+that is set to use **dbcache=16384**.<br/>
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
