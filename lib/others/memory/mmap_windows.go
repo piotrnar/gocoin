@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package memory
+package memory // import "modernc.org/memory"
 
 import (
+	"os"
 	"syscall"
 )
 
@@ -22,6 +23,8 @@ const pageSizeLog = 16
 
 var (
 	modkernel32      = syscall.NewLazyDLL("kernel32.dll")
+	osPageMask       = osPageSize - 1
+	osPageSize       = os.Getpagesize()
 	procVirtualAlloc = modkernel32.NewProc("VirtualAlloc")
 	procVirtualFree  = modkernel32.NewProc("VirtualFree")
 )
