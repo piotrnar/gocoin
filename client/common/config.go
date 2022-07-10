@@ -175,8 +175,7 @@ func InitConfig() {
 
 	CFG.Stat.HashrateHrs = 12
 	CFG.Stat.MiningHrs = 24
-	CFG.Stat.FeesBlks = 4 * 6   /*last 4 hours*/
-	CFG.Stat.BSizeBlks = 12 * 6 /*half a day*/
+	CFG.Stat.FeesBlks = 4 * 6 /*last 4 hours*/
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 100

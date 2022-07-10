@@ -100,6 +100,14 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			println("Initial parsing finished in", time.Since(newbl.TmStart).String())
 			common.Last.ParseTill = nil
 		}
+		if common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
+			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == network.LastCommitedHeader.Height) {
+			println("Sync to", common.Last.Block.Height, "took", time.Since(common.StartTime).String())
+			if common.Last.Block.Height < 100e3 {
+				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
+				common.CountSafeStore("BlocksUnderflowCount", 0)
+			}
+		}
 		common.Last.Mutex.Unlock()
 	} else {
 		//fmt.Println("Warning: AcceptBlock failed. If the block was valid, you may need to rebuild the unspent DB (-r)")
@@ -243,6 +251,9 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		newbl.Conn.Misbehave("LocalAcceptBl1", 250)
 	}
 	retryCachedBlocks = retry_cached_blocks()
+	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
+		common.CountSafe("BlocksUnderflowCount")
+	}
 }
 
 func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
@@ -503,6 +514,9 @@ func main() {
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
 				retryCachedBlocks = retry_cached_blocks()
+				if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
+					common.CountSafe("BlocksUnderflowCount")
+				}
 				// We have done one per loop - now do something else if pending...
 				if len(network.NetBlocks) > 0 || len(usif.UiChannel) > 0 {
 					break
@@ -580,7 +594,7 @@ func main() {
 				if (network.HeadersReceived.Get() > int(common.GetUint32(&common.CFG.Net.MaxOutCons)/2) ||
 					peersdb.ConnectOnly != "" && network.HeadersReceived.Get() >= 1) &&
 					network.BlocksToGetCnt() == 0 && len(network.NetBlocks) == 0 &&
-					network.CachedBlocksLen.Get() == 0 {
+					len(network.CachedBlocks) == 0 {
 					// only when we have no pending blocks and rteceived header messages, startup_ticks can go down..
 					if startup_ticks > 0 {
 						startup_ticks--

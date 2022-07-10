@@ -1,3 +1,7 @@
+1.10.2
+* Client: fixed a bug that was aborting chain sync when a peer sent a corrupt block
+* Client: Removed config value "CFG.Stat.BSizeBlks" (replaced with a constant)
+
 1.10.1 - 2022-06-15
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
 * Wallet: Make SchnorrSign nonce dependent not only on RNG but also on the hash being signed
