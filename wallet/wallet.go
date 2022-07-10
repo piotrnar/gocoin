@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -106,6 +107,7 @@ func make_wallet() {
 	var hd_label_prefix string
 	var hd_hardend bool
 	var currhdsub uint // default 0
+	var aes_key []byte
 
 	load_others()
 	defer func() {
@@ -159,7 +161,9 @@ func make_wallet() {
 	}
 
 	if bip39wrds != 0 {
-		if bip39wrds < 12 || bip39wrds > 24 || (bip39wrds%3) != 0 {
+		if bip39wrds == -1 {
+			fmt.Println("The seed password is considered to be BIP39 mnemonic")
+		} else if bip39wrds < 12 || bip39wrds > 24 || (bip39wrds%3) != 0 {
 			println("ERROR: Incorrect value for BIP39 words count", bip39wrds)
 			os.Exit(1)
 		}
@@ -174,6 +178,10 @@ func make_wallet() {
 	}
 
 	if usescrypt != 0 {
+		if bip39wrds == -1 {
+			println("ERROR: Cannot use scrypt function in BIP39 mnemonic mode")
+			cleanExit(1)
+		}
 		fmt.Print("Running scrypt function with complexity ", 1<<usescrypt, " ... ")
 		sta := time.Now()
 		dk, er := scrypt.Key(pass, []byte("Gocoin scrypt password salt"), 1<<usescrypt, 8, 1, 32)
@@ -186,35 +194,69 @@ func make_wallet() {
 		pass = dk
 		fmt.Println("took", tim.String())
 	}
+	if *encrypt != "" || *decrypt != "" {
+		aes_key = make([]byte, 32)
+	}
 	if waltype == 3 {
 		seed_key = make([]byte, 32)
 		btc.ShaHash(pass, seed_key)
 		sys.ClearBuffer(pass)
+		if aes_key != nil {
+			btc.ShaHash(seed_key, aes_key)
+		}
 	} else /*if waltype==4*/ {
 		if bip39wrds != 0 {
-			hd_wallet_xtra = append(hd_wallet_xtra, fmt.Sprint("Based on ", bip39wrds, " BIP39 words"))
-			s := sha256.New()
-			s.Write(pass)
-			s.Write([]byte("|gocoin|"))
-			s.Write(pass)
-			s.Write([]byte{byte(bip39wrds / 3 * 32)})
-			seed_key = s.Sum(nil)
-			sys.ClearBuffer(pass)
-			mnemonic, er := bip39.NewMnemonic(seed_key[:(bip39wrds/3)*4])
-			sys.ClearBuffer(seed_key)
-			if er != nil {
-				println(er.Error())
-				cleanExit(1)
+			var er error
+			var mnemonic string
+			if bip39wrds == -1 {
+				mnemonic = strings.ToLower(string(pass))
+				sys.ClearBuffer(pass)
+				re := regexp.MustCompile("[^a-z]")
+				a := re.ReplaceAll([]byte(mnemonic), []byte(" "))
+				lns := strings.Split(string(a), " ")
+				mnemonic = ""
+				for _, l := range lns {
+					if l != "" {
+						if mnemonic != "" {
+							mnemonic = mnemonic + " " + l
+						} else {
+							mnemonic = l
+						}
+					}
+				}
+			} else {
+				hd_wallet_xtra = append(hd_wallet_xtra, fmt.Sprint("Based on ", bip39wrds, " BIP39 words"))
+				s := sha256.New()
+				s.Write(pass)
+				s.Write([]byte("|gocoin|"))
+				s.Write(pass)
+				s.Write([]byte{byte(bip39wrds / 3 * 32)})
+				seed_key = s.Sum(nil)
+				sys.ClearBuffer(pass)
+				mnemonic, er = bip39.NewMnemonic(seed_key[:(bip39wrds/3)*4])
+				sys.ClearBuffer(seed_key)
+				if er != nil {
+					println(er.Error())
+					cleanExit(1)
+				}
 			}
 			if *dumpwords {
 				fmt.Println("BIP39:", mnemonic)
 			}
 			seed_key, er = bip39.NewSeedWithErrorChecking(mnemonic, "")
+			sys.ClearBuffer([]byte(mnemonic))
+			if er != nil {
+				println(er.Error())
+				cleanExit(1)
+			}
 			hdwal = btc.MasterKey(seed_key, testnet)
 			sys.ClearBuffer(seed_key)
 		} else {
 			hdwal = btc.MasterKey(pass, testnet)
 			sys.ClearBuffer(pass)
+		}
+		if aes_key != nil {
+			btc.ShaHash(hdwal.Key, aes_key)
 		}
 		hdwal.Prefix = hdwal_private_prefix()
 		if *dumpxprv {
@@ -239,6 +281,16 @@ func make_wallet() {
 			}
 			hd_wallet_xtra = append(hd_wallet_xtra, "Leaf: "+hdwal.Pub().String())
 		}
+	}
+
+	if *encrypt != "" {
+		fmt.Println("Encryped file saved as", encrypt_file(*encrypt, aes_key))
+		cleanExit(0)
+	}
+
+	if *decrypt != "" {
+		fmt.Println("Decryped file saved as", decrypt_file(*decrypt, aes_key))
+		cleanExit(0)
 	}
 
 	if *verbose {

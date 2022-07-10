@@ -172,14 +172,20 @@ func print_record(sl []byte) {
 	bh := btc.NewSha2Hash(sl[56:136])
 	fmt.Println("Block", bh.String())
 	fmt.Println(" ... Height", binary.LittleEndian.Uint32(sl[36:40]),
-		" Flags", fmt.Sprintf("0x%02x", sl[0]),
 		" - ", binary.LittleEndian.Uint32(sl[48:52]), "bytes @",
 		binary.LittleEndian.Uint64(sl[40:48]), "in", dat_fname(dat_idx))
-	if (sl[0] & 0x10) != 0 {
+	fmt.Print("     Flags: ", fmt.Sprintf("0x%02x", sl[0]), "   ")
+	for i, s := range []string{"TRUST", "INVAL", "COMPR", "SNAPY", "LNGTH", "INDEX"} {
+		if (sl[0] & (1 << i)) != 0 {
+			fmt.Print("  ", s)
+		}
+	}
+	fmt.Println()
+	if (sl[0] & chain.BLOCK_LENGTH) != 0 {
 		fmt.Println("     Uncompressed length:",
 			binary.LittleEndian.Uint32(sl[32:36]), "bytes")
 	}
-	if (sl[0] & 0x20) != 0 {
+	if (sl[0] & chain.BLOCK_INDEX) != 0 {
 		fmt.Println("     Data file index:", dat_idx)
 	}
 	hdr := sl[56:136]

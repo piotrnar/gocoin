@@ -63,6 +63,9 @@ var (
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
+
+	encrypt *string = flag.String("encrypt", "", "Encrypt this file using the wallet's seed password")
+	decrypt *string = flag.String("decrypt", "", "Decrypt this file using the wallet's seed password")
 )
 
 // cleanExit exits after cleaning up private data from memory.

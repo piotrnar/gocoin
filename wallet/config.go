@@ -21,7 +21,7 @@ var (
 	txfilename   string
 	stdin        bool
 	hdpath       string = "m/0'"
-	bip39wrds    uint   = 0
+	bip39wrds    int    = 0
 	minsig       bool
 	usescrypt    uint
 	hdsubs       uint   = 1
@@ -119,10 +119,10 @@ func parse_config() {
 				hdpath = strings.Trim(ll[1], "\"")
 
 			case "bip39":
-				v, e := strconv.ParseUint(ll[1], 10, 32)
+				v, e := strconv.ParseInt(ll[1], 10, 32)
 				if e == nil {
-					if v >= 12 && v <= 24 && (v%3) == 0 {
-						bip39wrds = uint(v)
+					if v == -1 || v >= 12 && v <= 24 && (v%3) == 0 {
+						bip39wrds = int(v)
 					} else {
 						println(i, "wallet.cfg: incorrect bip39 value", v)
 						os.Exit(1)
@@ -237,7 +237,7 @@ func parse_config() {
 	flag.UintVar(&waltype, "type", waltype, "Type of a deterministic wallet to be used (1 to 4)")
 	flag.StringVar(&hdpath, "hdpath", hdpath, "Derivation Path to the first key in HD wallet (type=4)")
 	flag.UintVar(&hdsubs, "hdsubs", hdsubs, "Create HD Wallet with so many sub-accounts (use 2 for common walets)")
-	flag.UintVar(&bip39wrds, "bip39", bip39wrds, "Create HD Wallet in BIP39 mode using 12, 15, 18, 21 or 24 words")
+	flag.IntVar(&bip39wrds, "bip39", bip39wrds, "Create HD Wallet in BIP39 mode using 12, 15, 18, 21 or 24 words")
 	flag.BoolVar(&uncompressed, "u", uncompressed, "Deprecated in this version")
 	flag.StringVar(&fee, "fee", fee, "Specify transaction fee to be used")
 	flag.BoolVar(&apply2bal, "a", apply2bal, "Apply changes to the balance folder (does not work with -raw)")

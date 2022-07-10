@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/bip39"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strings"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/bip39"
 )
 
 /*
@@ -32,6 +35,19 @@ func main() {
 			return
 		}
 		mnemonic = string(seed)
+		re := regexp.MustCompile("[^a-zA-Z]")
+		a := re.ReplaceAll([]byte(mnemonic), []byte(" "))
+		lns := strings.Split(string(a), " ")
+		mnemonic = ""
+		for _, l := range lns {
+			if l != "" {
+				if mnemonic != "" {
+					mnemonic = mnemonic + " " + l
+				} else {
+					mnemonic = l
+				}
+			}
+		}
 	} else {
 		entropy, _ := bip39.NewEntropy(256)
 		mnemonic, er = bip39.NewMnemonic(entropy)
@@ -54,26 +70,45 @@ func main() {
 	fmt.Println(hex.EncodeToString(seed))
 
 	fmt.Println()
-	fmt.Println("BIP32 Root Key:")
+	fmt.Println("Extended Master Private Key:")
 	fmt.Println("", wal.String())
 
-	ch := wal.Child(0) // m/0
-
+	wal.Prefix = btc.PrivateZ
 	fmt.Println()
-	fmt.Println("BIP32 Extended Private Key:")
-	fmt.Println("", ch.String())
+	fmt.Println("Extended Master zprv:")
+	fmt.Println("", wal.String())
 
-	fmt.Println()
-	fmt.Println("BIP32 Extended Public Key:")
-	fmt.Println("", ch.Pub().String())
+	wasad := wal.Child(84 | 0x80000000).Child(0x80000000).Child(0x80000000) // m/84'/0'/0'
 
-	// m/0/0 to m/0/19
+	wasad.Prefix = btc.Private
 	fmt.Println()
-	for i := uint32(0); i < 20; i++ {
+	fmt.Println("Extended Account Private Key:")
+	fmt.Println("", wasad.String())
+
+	wasad.Prefix = btc.PrivateZ
+	fmt.Println()
+	fmt.Println("Extended Account zprv:")
+	fmt.Println("", wasad.String())
+
+	wasad.Prefix = btc.Private
+	fmt.Println()
+	fmt.Println("Extended Account Public Key:")
+	fmt.Println("", wasad.Pub().String())
+
+	wasad.Prefix = btc.PrivateZ
+	fmt.Println()
+	fmt.Println("Extended Account zpub:")
+	fmt.Println("", wasad.Pub().String())
+
+	ch := wasad.Child(0) // 84'/0'/0'/0
+
+	// 84'/0'/0'/0/0 to 84'/0'/0'/0/5
+	fmt.Println()
+	for i := uint32(0); i <= 5; i++ {
 		cc := ch.Child(i)
 		puba := cc.PubAddr()
 		prva := btc.NewPrivateAddr(cc.Key[1:], btc.AddrVerPubkey(false)|0x80 /*private key version*/, true /*comprtessed*/)
-		fmt.Print("m/0/", i)
+		fmt.Print("84'/0'/0'/0/", i)
 		fmt.Print(" \t")
 		fmt.Print(puba.String())
 		fmt.Print(" \t")
