@@ -82,7 +82,7 @@ type NewUnspentOpts struct {
 	UnwindBufferLen uint32
 	CB              CallbackFunctions
 	AbortNow        *bool
-	UseGoHeap       bool
+	CompressRecords bool
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
@@ -103,6 +103,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 		}
 	}
 
+	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
 			db.HashMap[i] = make(map[UtxoKeyType][]byte, int(UTXO_RECORDS_PREALLOC)/256)

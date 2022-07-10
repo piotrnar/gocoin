@@ -82,6 +82,7 @@ type BlockDBOpts struct {
 	MaxDataFileSize uint64
 	DataFilesKeep   uint32
 	DataFilesBackup bool
+	CompressOnDisk  bool
 }
 
 type oneB2W struct {
@@ -103,6 +104,7 @@ type BlockDB struct {
 
 	maxidxfilepos, maxdatfilepos int64
 	maxdatfileidx                uint32
+	do_not_compress              bool
 
 	blocksToWrite chan oneB2W
 	datToWrite    uint64
@@ -134,6 +136,7 @@ func NewBlockDBExt(dir string, opts *BlockDBOpts) (db *BlockDB) {
 		db.max_data_file_size = opts.MaxDataFileSize
 		db.data_files_keep = opts.DataFilesKeep
 		db.data_files_backup = opts.DataFilesBackup
+		db.do_not_compress = !opts.CompressOnDisk
 	}
 
 	if db.max_cached_blocks == 0 {
@@ -322,8 +325,14 @@ func (db *BlockDB) writeOne() (written bool) {
 
 	db.disk_access.Lock()
 
-	rec.compressed, rec.snappied = true, true
-	cbts := snappy.Encode(nil, b2w.data)
+	var cbts []byte
+	if db.do_not_compress {
+		rec.compressed, rec.snappied = false, false
+		cbts = b2w.data
+	} else {
+		rec.compressed, rec.snappied = true, true
+		cbts = snappy.Encode(nil, b2w.data)
+	}
 	rec.blen = uint32(len(cbts))
 	rec.ipos = db.maxidxfilepos
 
@@ -344,7 +353,12 @@ func (db *BlockDB) writeOne() (written bool) {
 
 	rec.datfileidx = db.maxdatfileidx
 	rec.fpos = uint64(db.maxdatfilepos)
-	fl[0] |= BLOCK_COMPRSD | BLOCK_SNAPPED // gzip compression is deprecated
+	if rec.compressed {
+		fl[0] |= BLOCK_COMPRSD
+	}
+	if rec.snappied {
+		fl[0] |= BLOCK_SNAPPED
+	}
 	if rec.trusted {
 		fl[0] |= BLOCK_TRUSTED
 	}

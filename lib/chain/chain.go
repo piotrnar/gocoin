@@ -48,6 +48,7 @@ type NewChanOpts struct {
 	BlockMinedCB     func(*btc.Block) // used to remove mined txs from memory pool
 	BlockUndoneCB    func(*btc.Block) // used to put undone txs back into memory pool
 	DoNotRescan      bool             // when set UTXO will not be automatically updated with new block found on disk
+	CompressUTXO     bool
 }
 
 // NewChainExt is the very first function one should call in order to use this package.
@@ -86,7 +87,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
 		Dir: dbrootdir, Rescan: rescan, VolatimeMode: opts.UTXOVolatileMode,
-		CB: opts.UTXOCallbacks, AbortNow: &AbortNow})
+		CB: opts.UTXOCallbacks, AbortNow: &AbortNow, CompressRecords: opts.CompressUTXO})
 
 	if AbortNow {
 		return

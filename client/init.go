@@ -71,7 +71,7 @@ func host_init() {
 		UTXOVolatileMode: common.FLAG.VolatileUTXO,
 		UndoBlocks:       common.FLAG.UndoBlocks,
 		BlockMinedCB:     blockMined, BlockUndoneCB: blockUndone,
-		DoNotRescan: true}
+		DoNotRescan: true, CompressUTXO: common.CFG.UTXOSave.CompressRecords}
 
 	if ext.UndoBlocks > 0 {
 		ext.BlockUndoneCB = nil // Do not call the callback if undoing blocks as it will panic
@@ -83,7 +83,8 @@ func host_init() {
 			MaxCachedBlocks: int(common.CFG.Memory.MaxCachedBlks),
 			MaxDataFileSize: uint64(common.CFG.Memory.MaxDataFileMB) << 20,
 			DataFilesKeep:   common.CFG.Memory.DataFilesKeep,
-			DataFilesBackup: common.CFG.Memory.OldDataBackup})
+			DataFilesBackup: common.CFG.Memory.OldDataBackup,
+			CompressOnDisk:  common.CFG.Memory.CompressBlockDB})
 	if chain.AbortNow {
 		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
 		common.BlockChain.Close()

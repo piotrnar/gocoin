@@ -1,4 +1,5 @@
 1.10.2
+* Client: New config value "Memory.CompressBlockDB" (default true)
 * Client: fixed a bug that was aborting chain sync when a peer sent a corrupt block
 * Client: Removed config value "CFG.Stat.BSizeBlks" (replaced with a constant)
 * Lib: Updated "lib/others/memory" to the recent version from "gitlab.com/cznic/memory" (old one could crash)

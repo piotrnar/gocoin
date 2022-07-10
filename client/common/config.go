@@ -98,6 +98,7 @@ var (
 			DataFilesKeep        uint32 // 0 for all
 			OldDataBackup        bool   // move old dat files to "oldat/" folder (instead of removing them)
 			PurgeUnspendableUTXO bool
+			CompressBlockDB      bool
 		}
 		AllBalances struct {
 			MinValue  uint64 // Do not keep balance records for values lower than this
@@ -108,7 +109,6 @@ var (
 			HashrateHrs uint
 			MiningHrs   uint
 			FeesBlks    uint
-			BSizeBlks   uint
 			NoCounters  bool
 		}
 		DropPeers struct {
@@ -117,8 +117,9 @@ var (
 			PingPeriodSec   uint // zero to not ping
 		}
 		UTXOSave struct {
-			SecondsToTake uint   // zero for as fast as possible, 600 for do it in 10 minutes
-			BlocksToHold  uint32 // zero for immediatelly, one for every other block...
+			SecondsToTake   uint   // zero for as fast as possible, 600 for do it in 10 minutes
+			BlocksToHold    uint32 // zero for immediatelly, one for every other block...
+			CompressRecords bool
 		}
 	}
 
