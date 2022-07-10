@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -141,6 +142,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
+		common.CountSafeAdd("BlockBytesWasted", uint64(len(b)))
 		common.CountSafe("BlockSameRcvd")
 		conn.Mutex.Lock()
 		delete(conn.GetBlockInProgress, idx)
@@ -175,6 +177,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	}
 
 	//println("block", b2g.BlockTreeNode.Height," len", len(b), " got from", conn.PeerAddr.Ip(), b2g.InProgress)
+
+	prev_block_raw := b2g.Block.Raw // in case if it's a corrupt one
 	b2g.Block.Raw = b
 	if conn.X.Authorized {
 		b2g.Block.Trusted.Set()
@@ -182,20 +186,30 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 	er := common.BlockChain.PostCheckBlock(b2g.Block)
 	if er != nil {
-		println("Corrupt block received from", conn.PeerAddr.Ip(), er.Error())
+		println("Corrupt block", hash.String(), b2g.BlockTreeNode.Height)
+		println(" ... received from", conn.PeerAddr.Ip(), er.Error())
 		//ioutil.WriteFile(hash.String()+"-"+conn.PeerAddr.Ip()+".bin", b, 0700)
 		conn.DoS("BadBlock")
 
 		// We don't need to remove from conn.GetBlockInProgress as we're disconnecting
 		// ... decreasing of b2g.InProgress will also be done then.
 
-		if b2g.Block.MerkleRootMatch() {
-			println("It was a wrongly mined one - clean it up")
+		if b2g.Block.MerkleRootMatch() && !strings.Contains(er.Error(), "RPC_Result:bad-witness-nonce-size") {
+			println(" <- It was a wrongly mined one - give it up")
 			DelB2G(idx) //remove it from BlocksToGet
 			if b2g.BlockTreeNode == LastCommitedHeader {
 				LastCommitedHeader = LastCommitedHeader.Parent
 			}
 			common.BlockChain.DeleteBranch(b2g.BlockTreeNode, delB2G_callback)
+		} else {
+			println(" <- Merkle Root not matching - discard the data:", len(b2g.Block.Txs), b2g.Block.TxCount,
+				b2g.Block.TxOffset, b2g.Block.NoWitnessSize, b2g.Block.BlockWeight, b2g.TotalInputs)
+			// We just recived a corrupt copy from the peer. We will ask another peer for it.
+			// But discard the data we extracted from this one, so it won't confuse us later.
+			b2g.Block.Raw = prev_block_raw
+			b2g.Block.NoWitnessSize, b2g.Block.BlockWeight, b2g.TotalInputs = 0, 0, 0
+			b2g.Block.TxCount, b2g.Block.TxOffset = 0, 0
+			b2g.Block.Txs = nil
 		}
 
 		MutexRcv.Unlock()
