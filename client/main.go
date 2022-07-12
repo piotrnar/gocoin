@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -29,6 +30,8 @@ var (
 	SaveBlockChain    *time.Timer = time.NewTimer(24 * time.Hour)
 
 	NetBlocksSize sys.SyncInt
+
+	exitat *uint = flag.Uint("exitat", 0, "Auto exit node after comitting block with the given height")
 )
 
 const (
@@ -107,6 +110,10 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
 				common.CountSafeStore("BlocksUnderflowCount", 0)
 			}
+		}
+		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
+			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
+			os.Exit(0)
 		}
 		common.Last.Mutex.Unlock()
 	} else {
