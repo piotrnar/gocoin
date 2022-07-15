@@ -116,6 +116,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
+			fmt.Printf("Wasted %dMB from %d blocks.\n",
+				common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"))
+			common.PrintBWStats()
 			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
 			os.Exit(0)
 		}
