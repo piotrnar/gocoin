@@ -319,14 +319,12 @@ var Fetch struct {
 	HasBlocksExpired   uint64
 	MaxCountInProgress uint64
 	MaxBytesInProgress uint64
-	CacheFull          uint64
 	NoWitness          uint64
 	Nothing            uint64
 	BlksCntMax         [6]uint64
 	ReachEndOfLoop     uint64
 	ReachMaxCnt        uint64
 	ReachMaxData       uint64
-	ReachCacheLimit    uint64
 
 	BlockBytesWasted uint64
 	BlockSameRcvd    uint64
@@ -374,14 +372,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		return
 	}
 
-	free_space_in_cache := common.SyncMaxCacheBytes.Get() - CachedBlocksBytes.Get() - block_data_in_progress
-	if free_space_in_cache < avg_block_size {
-		Fetch.CacheFull++
-		// wake up in a few seconds, maybe some blocks will complete by then
-		c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
-		return
-	}
-
 	var cnt uint64
 	var block_type uint32
 
@@ -395,7 +385,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
 	last_block_height := common.Last.BlockHeight()
-	max_height := last_block_height + MAX_BLOCKS_FORWARD_CNT
+	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
 	Fetc.HeightA = uint64(last_block_height)
 	Fetc.HeightB = uint64(LowestIndexToBlocksToGet)
@@ -487,12 +477,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		if block_data_in_progress > MAX_GETDATA_FORWARD {
 			Fetch.ReachMaxData++
 			break
-		}
-		if lowest_found.InProgress == 1 {
-			if free_space_in_cache -= avg_block_size; free_space_in_cache < avg_block_size {
-				Fetch.ReachCacheLimit++
-				break
-			}
 		}
 	}
 
