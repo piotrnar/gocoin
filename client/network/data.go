@@ -374,7 +374,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		return
 	}
 
-	free_space_in_cache := common.SyncMaxCacheBytes.Get() - CachedBlocksBytes.Get()
+	free_space_in_cache := common.SyncMaxCacheBytes.Get() - CachedBlocksBytes.Get() - block_data_in_progress
 	if free_space_in_cache < avg_block_size {
 		Fetch.CacheFull++
 		// wake up in a few seconds, maybe some blocks will complete by then
