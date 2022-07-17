@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -357,16 +358,23 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
 	common.Last.Mutex.Lock()
-	max_height := common.Last.Block.Height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
-	if max_height > common.Last.Block.Height+MAX_BLOCKS_FORWARD_CNT {
-		max_height = common.Last.Block.Height + MAX_BLOCKS_FORWARD_CNT
-	}
+	last_block_height := common.Last.Block.Height
 	common.Last.Mutex.Unlock()
-	if max_height > c.Node.Height {
-		max_height = c.Node.Height
+	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
+
+	common.CountSafeStore("FetcHeightA", uint64(last_block_height))
+	common.CountSafeStore("FetcHeightB", uint64(LowestIndexToBlocksToGet))
+	common.CountSafeStore("FetcHeightC", uint64(max_height))
+
+	if max_height > last_block_height+MAX_BLOCKS_FORWARD_CNT {
+		max_height = last_block_height + MAX_BLOCKS_FORWARD_CNT
 	}
-	if max_height > LastCommitedHeader.Height {
-		max_height = LastCommitedHeader.Height
+	max_max_height := max_height
+	if max_max_height > c.Node.Height {
+		max_max_height = c.Node.Height
+	}
+	if max_max_height > LastCommitedHeader.Height {
+		max_max_height = LastCommitedHeader.Height
 	}
 
 	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && (c.Node.Services&btc.SERVICE_SEGWIT) == 0 { // no segwit node
@@ -374,42 +382,57 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			max_height = common.BlockChain.Consensus.Enforce_SEGWIT - 1
 			if max_height <= common.Last.BlockHeight() {
 				c.cntLockInc("FetchNoWitness")
-				c.nextGetData = time.Now().Add(3600 * time.Second) // never do getdata
+				c.nextGetData = time.Now().Add(time.Hour) // never do getdata
 				return
 			}
 		}
 	}
 
+	common.CountSafeStore("FetcHeightD", uint64(max_height))
+
+	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	max_blocks_forward := max_height - last_block_height
 	invs := new(bytes.Buffer)
-	var cnt_in_progress uint
+	var cnt_in_progress uint32
+	var lowest_found *OneBlockToGet
 
 	for {
-		var lowest_found *OneBlockToGet
-
-		// Get block to fetch:
-
+		// Find block to fetch:
+		max_height = last_block_height + (max_blocks_forward >> cnt_in_progress)
+		if max_height > max_max_height {
+			max_height = max_max_height
+		}
+		if max_height < LowestIndexToBlocksToGet {
+			c.cntLockInc(fmt.Sprint("FetchBlksCntMax", cnt_in_progress))
+			// wake up in a few seconds, maybe some blocks will complete by then
+			c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
+			return
+		}
 		for bh := LowestIndexToBlocksToGet; bh <= max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
 				for _, idx := range idxlst {
 					v := BlocksToGet[idx]
-					if v.InProgress == cnt_in_progress && (lowest_found == nil || v.Block.Height < lowest_found.Block.Height) {
+					if uint32(v.InProgress) == cnt_in_progress {
 						c.Mutex.Lock()
-						if _, ok := c.GetBlockInProgress[idx]; !ok {
-							lowest_found = v
-						}
+						_, ok := c.GetBlockInProgress[idx]
 						c.Mutex.Unlock()
+						if !ok {
+							lowest_found = v
+							goto found_it
+						}
 					}
 				}
 			}
 		}
 
-		if lowest_found == nil {
-			cnt_in_progress++
-			if cnt_in_progress >= uint(common.CFG.Net.MaxBlockAtOnce) {
-				break
-			}
-			continue
+		// If we came here, we did not find it.
+		if cnt_in_progress++; cnt_in_progress >= max_blocks_at_once {
+			break
 		}
+		continue
+
+	found_it:
+		common.CountSafe(fmt.Sprint("FetcC", lowest_found.InProgress))
 
 		binary.Write(invs, binary.LittleEndian, block_type)
 		invs.Write(lowest_found.BlockHash.Hash[:])
@@ -430,6 +453,8 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			break
 		}
 	}
+
+	common.CountSafeStore("FetcB2G", uint64(cnt))
 
 	if cnt == 0 {
 		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
