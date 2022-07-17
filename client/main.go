@@ -110,15 +110,15 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			fmt.Printf("Sync to %d took %s  -  %.1f min.  Mem: %d %d %d MB  - errs: %d\n",
 				common.Last.Block.Height, time.Since(common.StartTime).String(),
 				float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
-				common.CounterGet("BlocksUnderflowCount"))
+				network.Fetch.CacheEmpty)
 			if common.Last.Block.Height <= 100e3 {
 				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
-				common.CountSafeStore("BlocksUnderflowCount", 0)
+				network.Fetch.CacheEmpty = 0
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
 			fmt.Printf("Wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
-				common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"),
+				network.Fetch.BlockBytesWasted>>20, network.Fetch.BlockSameRcvd,
 				network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
 			common.PrintBWStats()
 			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
@@ -265,7 +265,11 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 	}
 	retryCachedBlocks = retry_cached_blocks()
 	if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
-		common.CountSafe("BlocksUnderflowCount")
+		now := time.Now()
+		if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
+			network.Fetch.CacheEmpty++
+			network.Fetch.LastCacheEmpty = now
+		}
 	}
 }
 
@@ -528,7 +532,11 @@ func main() {
 			for retryCachedBlocks {
 				retryCachedBlocks = retry_cached_blocks()
 				if !retryCachedBlocks && network.BlocksToGetCnt() != 0 {
-					common.CountSafe("BlocksUnderflowCount")
+					now := time.Now()
+					if network.Fetch.LastCacheEmpty.IsZero() || now.Sub(network.Fetch.LastCacheEmpty) >= time.Second {
+						network.Fetch.CacheEmpty++
+						network.Fetch.LastCacheEmpty = now
+					}
 				}
 				// We have done one per loop - now do something else if pending...
 				if len(network.NetBlocks) > 0 || len(usif.UiChannel) > 0 {

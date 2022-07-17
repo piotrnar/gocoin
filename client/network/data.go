@@ -142,8 +142,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	// the blocks seems to be fine
 	if rb, got := ReceivedBlocks[idx]; got {
 		rb.Cnt++
-		common.CountSafeAdd("BlockBytesWasted", uint64(len(b)))
-		common.CountSafe("BlockSameRcvd")
+		Fetch.BlockBytesWasted += uint64(len(b))
+		Fetch.BlockSameRcvd++
 		conn.Mutex.Lock()
 		delete(conn.GetBlockInProgress, idx)
 		conn.Mutex.Unlock()
@@ -324,7 +324,13 @@ var Fetch struct {
 	BlksCntMax         [6]uint64
 	ReachEndOfLoop     uint64
 	ReachMaxCnt        uint64
-	ReachMaxData       int64
+	ReachMaxData       uint64
+
+	BlockBytesWasted uint64
+	BlockSameRcvd    uint64
+
+	CacheEmpty     uint64
+	LastCacheEmpty time.Time
 }
 
 func (c *OneConnection) GetBlockData() (yes bool) {
