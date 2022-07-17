@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -88,8 +89,29 @@ func node_info(par string) {
 		fmt.Println("GetBlocksDataNow:", r.GetBlocksDataNow)
 		fmt.Println("AllHeadersReceived:", r.AllHeadersReceived)
 		fmt.Println("Total Received:", r.BytesReceived, " /  Sent:", r.BytesSent)
+		mts := make(map[string]bool)
+		var had bool
 		for k, v := range r.Counters {
-			fmt.Println(k, ":", v)
+			if len(k) > 5 && strings.HasPrefix(k, "rbts_") || strings.HasPrefix(k, "sbts_") ||
+				strings.HasPrefix(k, "rcvd_") || strings.HasPrefix(k, "sent_") {
+				mts[k[5:]] = true
+			} else {
+				fmt.Print(k, ":", v, "  ")
+				had = true
+			}
+		}
+		if had {
+			fmt.Println()
+		}
+		mms := make([]string, 0, len(mts))
+		for k, _ := range mts {
+			mms = append(mms, k)
+		}
+		sort.Strings(mms)
+		for _, msg := range mms {
+			fmt.Printf("\t%-12s      R:[%8d | %10s]     S:[%8d | %10s]\n", msg,
+				r.Counters["rcvd_"+msg], common.BytesToString(r.Counters["rbts_"+msg]),
+				r.Counters["sent_"+msg], common.BytesToString(r.Counters["sbts_"+msg]))
 		}
 	} else {
 		fmt.Println("Not yet connected")
@@ -138,8 +160,16 @@ func net_stats(par string) {
 		}
 		fmt.Printf(" %21s %5dms", v.PeerAddr.Ip(), v.GetAveragePing())
 		//fmt.Printf(" %7d : %-16s %7d : %-16s", v.X.LastBtsRcvd, v.X.LastCmdRcvd, v.X.LastBtsSent, v.X.LastCmdSent)
-		fmt.Printf("%9s %9s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
+		fmt.Printf(" %10s %10s", common.BytesToString(v.X.BytesReceived), common.BytesToString(v.X.BytesSent))
+		if len(v.GetBlockInProgress) != 0 {
+			fmt.Printf(" %4d", len(v.GetBlockInProgress))
+		} else {
+			fmt.Print("     ")
+		}
 		fmt.Print("  ", v.Node.Agent)
+		if v.X.IsSpecial {
+			fmt.Print(" F")
+		}
 
 		if b2s := v.BytesToSent(); b2s > 0 {
 			fmt.Print("  ", b2s)
@@ -201,10 +231,153 @@ func net_friends(par string) {
 	network.FriendsAccess.Unlock()
 }
 
+func print_fetch_counters() (li string) {
+	par := "Fetch"
+	common.CounterMutex.Lock()
+	ck := make([]string, 0)
+	for k := range common.Counter {
+		if strings.HasPrefix(k, par) {
+			ck = append(ck, k[len(par):])
+		}
+	}
+	common.CounterMutex.Unlock()
+	sort.Strings(ck)
+
+	for i := range ck {
+		k := ck[i]
+		v := common.CounterGet(par + k)
+		s := fmt.Sprint(k, ":", v)
+		if len(li)+len(s) >= 72 {
+			fmt.Println("\t", li)
+			li = ""
+		} else if li != "" {
+			li += ",  "
+		}
+		li += s
+	}
+	if li != "" {
+		fmt.Println("\t", li)
+	}
+	return
+}
+
+func sync_stats(par string) {
+	common.Last.Mutex.Lock()
+	lb := common.Last.Block.Height
+	common.Last.Mutex.Unlock()
+
+	network.MutexRcv.Lock()
+	li2get := network.LowestIndexToBlocksToGet
+	network.MutexRcv.Unlock()
+
+	network.CachedBlocksMutex.Lock()
+	lencb := len(network.CachedBlocks)
+	lencbs := len(network.CachedBlockSizes)
+	network.CachedBlocksMutex.Unlock()
+
+	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
+		lb, li2get-lb-1, lencb,
+		common.AverageBlockSize.Get(), common.CounterGet("BlocksUnderflowCount"))
+	if lencb != lencbs {
+		fmt.Println("\tWARNING: len(CB) mismatches len(CBS):", lencb, lencbs)
+	}
+	tot := common.CounterGet("rbts_block")
+	if tot > 0 {
+		wst := common.CounterGet("BlockBytesWasted")
+		fmt.Printf("\tWasted %d blocks carrying %d / %dMB, which was %.2f%% of blocks bandwidth\n", common.CounterGet("BlockSameRcvd"),
+			wst>>20, tot>>20, 100*float64(wst)/float64(tot))
+	}
+
+	if strings.Index(par, "c") != -1 {
+		var lowest_cached_height, highest_cached_height uint32
+		var ready_cached_cnt uint32
+		var cached_ready_bytes int
+		m := make(map[uint32]*network.BlockRcvd)
+		for _, b := range network.CachedBlocks {
+			bh := b.BlockTreeNode.Height
+			m[bh] = b
+			if lowest_cached_height == 0 {
+				lowest_cached_height, highest_cached_height = bh, bh
+			} else if b.BlockTreeNode.Height < lowest_cached_height {
+				lowest_cached_height = bh
+			} else if bh > highest_cached_height {
+				highest_cached_height = bh
+			}
+		}
+		for {
+			if b, ok := m[lb+ready_cached_cnt+1]; ok {
+				ready_cached_cnt++
+				cached_ready_bytes += b.Size
+			} else {
+				break
+			}
+		}
+		fmt.Printf("\tCache Ready: %d:%dMB   Used: %d:%dMB   Limit: %dMB   Max Used: %d%%\n",
+			ready_cached_cnt, cached_ready_bytes>>20, lencb, network.CachedBlocksBytes.Get()>>20,
+			common.SyncMaxCacheBytes.Get()>>20,
+			100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
+	} else {
+		fmt.Printf("\tCache Used: %d:%dMB   Limit: %dMB   Max Used: %d%%\n",
+			lencb, network.CachedBlocksBytes.Get()>>20, common.SyncMaxCacheBytes.Get()>>20,
+			100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
+	}
+
+	if strings.Index(par, "x") != -1 {
+		var bip_cnt, ip_min, ip_max uint32
+		network.MutexRcv.Lock()
+		for _, bip := range network.BlocksToGet {
+			if bip.InProgress > 0 {
+				if ip_min == 0 {
+					ip_min = bip.BlockTreeNode.Height
+					ip_max = ip_min
+				} else if bip.BlockTreeNode.Height < ip_min {
+					ip_min = bip.BlockTreeNode.Height
+				} else if bip.BlockTreeNode.Height > ip_max {
+					ip_max = bip.BlockTreeNode.Height
+				}
+				bip_cnt++
+			}
+		}
+		network.MutexRcv.Unlock()
+		fmt.Printf("\tIn Progress: %d, starting from %d, up to %d (%d)\n",
+			bip_cnt, ip_min, ip_max, ip_max-ip_min)
+	}
+
+	if d := common.CounterGet("FetcHeightD"); d != 0 {
+		a := common.CounterGet("FetcHeightA")
+		if siz := d - a; siz > 0 {
+			b := common.CounterGet("FetcHeightB")
+			c := common.CounterGet("FetcHeightC")
+			fil := b - a
+			fmt.Printf("\tLast Fetch from %d:%d to %d:%d -> BTG:%d (ready %d%% of %d)\n", a, b, d, c,
+				common.CounterGet("FetcB2G"), 100*fil/siz, siz)
+		}
+	}
+
+	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	fmt.Print("\t")
+	for i := uint32(0); i < max_blocks_at_once; i++ {
+		cnt := common.CounterGet(fmt.Sprint("FetcC", i))
+		if cnt == 0 {
+			fmt.Printf("  C%d:-", i)
+		} else {
+			fmt.Printf("  C%d:%d", i, cnt)
+		}
+	}
+	fmt.Println()
+
+	print_fetch_counters()
+	if strings.Index(par, "r") != -1 {
+		common.CountSafeStore("BlocksUnderflowCount", 0)
+		println("Error counter set to 0")
+	}
+}
+
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
 	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
 	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
 	newUi("rd", false, net_rd, "Show recently disconnected incoming connections")
 	newUi("friends", false, net_friends, "Show current friends settings")
+	newUi("ss", true, sync_stats, "Show chain sync statistics. Add charecter 'c' (cache), 'x' (in progress) or 'r' (reset couter)")
 }

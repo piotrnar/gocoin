@@ -28,6 +28,7 @@ type BlockRcvd struct {
 	*chain.BlockTreeNode
 	*OneReceivedBlock
 	*btc.BlockExtraInfo
+	Size int
 }
 
 type TxRcvd struct {
@@ -56,12 +57,42 @@ var (
 	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD_CNT+10)
 	NetTxs    chan *TxRcvd    = make(chan *TxRcvd, 2000)
 
-	CachedBlocks    []*BlockRcvd
-	CachedBlocksLen sys.SyncInt
-	DiscardedBlocks map[BIDX]bool = make(map[BIDX]bool)
+	CachedBlocksMutex   sync.Mutex
+	CachedBlocks        []*BlockRcvd
+	CachedBlocksBytes   sys.SyncInt
+	MaxCachedBlocksSize sys.SyncInt
+	CachedBlockSizes    map[uint32]int = make(map[uint32]int)
+	DiscardedBlocks     map[BIDX]bool  = make(map[BIDX]bool)
 
 	HeadersReceived sys.SyncInt
 )
+
+func CachedBlocksLen() (l int) {
+	CachedBlocksMutex.Lock()
+	l = len(CachedBlocks)
+	CachedBlocksMutex.Unlock()
+	return
+}
+
+func CachedBlocksAdd(newbl *BlockRcvd) {
+	CachedBlocksMutex.Lock()
+	CachedBlocks = append(CachedBlocks, newbl)
+	CachedBlocksBytes.Add(newbl.Size)
+	if CachedBlocksBytes.Get() > MaxCachedBlocksSize.Get() {
+		MaxCachedBlocksSize.Store(CachedBlocksBytes.Get())
+	}
+	CachedBlockSizes[newbl.BlockTreeNode.Height] = newbl.Size
+	CachedBlocksMutex.Unlock()
+}
+
+func CachedBlocksDel(idx int) {
+	CachedBlocksMutex.Lock()
+	oldbl := CachedBlocks[idx]
+	delete(CachedBlockSizes, oldbl.Block.Height)
+	CachedBlocksBytes.Add(-oldbl.Size)
+	CachedBlocks = append(CachedBlocks[:idx], CachedBlocks[idx+1:]...)
+	CachedBlocksMutex.Unlock()
+}
 
 // make sure to call it with MutexRcv locked
 func DiscardBlock(n *chain.BlockTreeNode) {

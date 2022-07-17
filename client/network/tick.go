@@ -209,7 +209,7 @@ func (c *OneConnection) Tick(now time.Time) {
 		if !c.X.GetBlocksDataNow && now.After(c.nextGetData) {
 			c.X.GetBlocksDataNow = true
 		}
-		if c.X.GetBlocksDataNow && len(c.GetBlockInProgress) == 0 {
+		if c.X.GetBlocksDataNow && len(c.GetBlockInProgress) <= c.keepBlocksOver {
 			c.X.GetBlocksDataNow = false
 			c.Mutex.Unlock()
 			c.GetBlockData()
@@ -577,41 +577,21 @@ func NetworkTick() {
 	Mutex_net.Unlock()
 
 	if conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
-		var segwit_conns uint32
-		if common.CFG.Net.MinSegwitCons > 0 {
-			Mutex_net.Lock()
-			for _, cc := range OpenCons {
-				cc.Mutex.Lock()
-				if (cc.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-					segwit_conns++
-				}
-				cc.Mutex.Unlock()
-			}
-			Mutex_net.Unlock()
-		}
-
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
-			if segwit_conns < common.CFG.Net.MinSegwitCons && (ad.Services&btc.SERVICE_SEGWIT) == 0 {
-				return true
-			}
-			return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
+			return ad.Banned != 0 || !ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 || ConnectionActive(ad)
 		})
-		if len(adrs) == 0 && segwit_conns < common.CFG.Net.MinSegwitCons {
-			// we have only non-segwit peers in the database - take them
-			adrs = peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
-				return ad.Banned != 0 || !ad.SeenAlive || ConnectionActive(ad)
-			})
-		}
-		// now fetch another 128 never tried peers (this time sorted)
+		// now fetch another 32 never tried peers (this time sorted)
 		new_cnt := int(32)
 		if len(adrs) > new_cnt {
 			new_cnt = len(adrs)
 		}
 		adrs2 := peersdb.GetRecentPeers(uint(new_cnt), true, func(ad *peersdb.PeerAddr) bool {
-			return ad.Banned != 0 || ad.SeenAlive // ignore those that have been seen alive
+			return ad.Banned != 0 || ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 // ignore those that have been seen alive
 		})
 		adrs = append(adrs, adrs2...)
+		// Now we should have 128 peers known to be alive and 32 never tried ones
+		// ... giving us 20% chance of selecting a never tried one.
 		if len(adrs) != 0 {
 			ad := adrs[rand.Int31n(int32(len(adrs)))]
 			//print("chosen ", ad.String(), "\n> ")
@@ -793,7 +773,7 @@ func (c *OneConnection) Run() {
 
 		case "block": //block received
 			netBlockReceived(c, cmd.pl)
-			c.MutexSetBool(&c.X.GetBlocksDataNow, true) // try to ask for more blocks
+			c.MutexSetBool(&c.X.GetBlocksDataNow, true) // ask for more blocks during next tick
 
 		case "getblocks":
 			c.GetBlocks(cmd.pl)

@@ -1,11 +1,12 @@
-1.10.2
+1.10.2:
 * Client: New config value "Memory.CompressBlockDB" (default true)
+* Client: New config value "UTXOSave.CompressRecords" (default false)
 * Tools: utxo_compress and utxo_decompress have been fixed
 * Wallet: "bip39" switch can now have value of "-1", in which case the seed password will be treated as mnemonic
 * Wallet: New commands "-encrypt" and "-decrypt", for encrypting and decrypting files with wallet's seed (password)
-* Client: fixed a bug that causing a chain sync to abort with series of "bad-txnmrklroot" errors
-* Client: Removed config value "CFG.Stat.BSizeBlks" (replaced with a constant)
+* Client: fixed a bug that could cause chain sync to abort with series of "bad-txnmrklroot" errors
 * Lib: Updated "lib/others/memory" to the recent version from "gitlab.com/cznic/memory" (old one could crash)
+* Client: No more talking to peers that do not advertise segwit support (unless through the friends.txt file)
 
 1.10.1 - 2022-06-15
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair

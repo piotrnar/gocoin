@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 const (
@@ -77,7 +76,7 @@ type SortedConnections []struct {
 
 // GetSortedConnections returns the slowest peers first.
 // Make sure to call it with locked Mutex_net.
-func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt int) {
+func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
 	var now time.Time
 	var tlist SortedConnections
@@ -99,9 +98,6 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
-		}
-		if (v.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-			segwit_cnt++
 		}
 
 		cnt++
@@ -150,12 +146,11 @@ func GetSortedConnections() (list SortedConnections, any_ping bool, segwit_cnt i
 func drop_worst_peer() bool {
 	var list SortedConnections
 	var any_ping bool
-	var segwit_cnt int
 
 	Mutex_net.Lock()
 	defer Mutex_net.Unlock()
 
-	list, any_ping, segwit_cnt = GetSortedConnections()
+	list, any_ping = GetSortedConnections()
 	if !any_ping { // if "list" is empty "any_ping" will also be false
 		return false
 	}
@@ -165,10 +160,6 @@ func drop_worst_peer() bool {
 			continue
 		}
 		if v.Special {
-			continue
-		}
-		if common.CFG.Net.MinSegwitCons > 0 && segwit_cnt <= int(common.CFG.Net.MinSegwitCons) &&
-			(v.Conn.Node.Services&btc.SERVICE_SEGWIT) != 0 {
 			continue
 		}
 		if v.Conn.X.Incomming {

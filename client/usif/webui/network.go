@@ -1,19 +1,19 @@
 package webui
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
-	"strings"
-	"strconv"
-	"net/http"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
 	"runtime/debug"
-	"github.com/piotrnar/gocoin/lib/btc"
+	"strconv"
+	"strings"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
-
 
 func p_net(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
@@ -36,7 +36,6 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
-
 func json_netcon(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -57,7 +56,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 	defer network.Mutex_net.Unlock()
 
 	net_cons := make([]network.ConnInfo, len(network.OpenCons))
-	tmp, _, _ := network.GetSortedConnections()
+	tmp, _ := network.GetSortedConnections()
 	i := len(net_cons)
 	for _, v := range tmp {
 		i--
@@ -75,13 +74,12 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func json_peerst(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
-	if len(r.Form["id"])==0 {
+	if len(r.Form["id"]) == 0 {
 		return
 	}
 
@@ -94,7 +92,7 @@ func json_peerst(w http.ResponseWriter, r *http.Request) {
 
 	network.Mutex_net.Lock()
 	for _, v := range network.OpenCons {
-		if uint32(conid)==v.ConnID {
+		if uint32(conid) == v.ConnID {
 			res = new(network.ConnInfo)
 			v.GetStats(res)
 			break
@@ -113,29 +111,28 @@ func json_peerst(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
 	type one_ext_ip struct {
-		Ip string
+		Ip               string
 		Count, Timestamp uint
 	}
 
 	var out struct {
 		Open_conns_total int
-		Open_conns_out uint32
-		Open_conns_in uint32
-		Dl_speed_now uint64
-		Dl_speed_max uint64
-		Dl_total uint64
-		Ul_speed_now uint64
-		Ul_speed_max uint64
-		Ul_total uint64
-		ExternalIP []one_ext_ip
-		GetMPInProgress bool
+		Open_conns_out   uint32
+		Open_conns_in    uint32
+		Dl_speed_now     uint64
+		Dl_speed_max     uint64
+		Dl_total         uint64
+		Ul_speed_now     uint64
+		Ul_speed_max     uint64
+		Ul_total         uint64
+		ExternalIP       []one_ext_ip
+		GetMPInProgress  bool
 	}
 
 	common.LockBw()
@@ -158,8 +155,8 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	arr := network.GetExternalIPs()
 	for _, rec := range arr {
 		out.ExternalIP = append(out.ExternalIP, one_ext_ip{
-			Ip : fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),
-			Count:rec.Cnt, Timestamp:rec.Tim})
+			Ip:    fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),
+			Count: rec.Cnt, Timestamp: rec.Tim})
 	}
 
 	out.GetMPInProgress = len(network.GetMPInProgressTicket) != 0
@@ -190,8 +187,8 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var out struct {
-		DL [200]uint64  // max 200 records (from 200 seconds to ~16.7 hours)
-		UL [200]uint64
+		DL           [200]uint64 // max 200 records (from 200 seconds to ~16.7 hours)
+		UL           [200]uint64
 		MaxDL, MaxUL uint64
 	}
 
@@ -209,7 +206,7 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 				out.MaxDL = common.DlBytesPrevSec[idx]
 			}
 		}
-		out.DL[i] = sum/cnt
+		out.DL[i] = sum / cnt
 	}
 
 	idx = uint16(common.UlBytesPrevSecIdx)
@@ -222,7 +219,7 @@ func json_bwchar(w http.ResponseWriter, r *http.Request) {
 				out.MaxUL = common.UlBytesPrevSec[idx]
 			}
 		}
-		out.UL[i] = sum/cnt
+		out.UL[i] = sum / cnt
 	}
 
 	common.UnlockBw()

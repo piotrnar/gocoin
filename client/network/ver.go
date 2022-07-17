@@ -110,6 +110,9 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 		if c.Node.Version < MIN_PROTO_VERSION {
 			return errors.New("TooLow")
 		}
+		if (c.Node.Services & btc.SERVICE_SEGWIT) == 0 {
+			return errors.New("NoSegwit")
+		}
 		if !c.HasNetworkService() {
 			return errors.New("NoService")
 		}

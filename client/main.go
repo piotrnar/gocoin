@@ -107,17 +107,19 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == network.LastCommitedHeader.Height) {
 			al, sy := sys.MemUsed()
 			cb, _ := common.MemUsed()
-			println("Sync to", common.Last.Block.Height, "took", time.Since(common.StartTime).String(), " - ",
-				time.Since(common.StartTime)/time.Minute, "min.  Mem:", al>>20, sy>>20, cb>>20, "MB  - errs:",
+			fmt.Printf("Sync to %d took %s  -  %.1f min.  Mem: %d %d %d MB  - errs: %d\n",
+				common.Last.Block.Height, time.Since(common.StartTime).String(),
+				float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
 				common.CounterGet("BlocksUnderflowCount"))
-			if common.Last.Block.Height < 100e3 {
+			if common.Last.Block.Height <= 100e3 {
 				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
 				common.CountSafeStore("BlocksUnderflowCount", 0)
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
-			fmt.Printf("Wasted %dMB from %d blocks.\n",
-				common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"))
+			fmt.Printf("Wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
+				common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"),
+				network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
 			common.PrintBWStats()
 			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
 			os.Exit(0)
@@ -158,8 +160,7 @@ func retry_cached_blocks() bool {
 			if newbl.Block == nil {
 				os.Remove(common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String())
 			}
-			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
-			network.CachedBlocksLen.Store(len(network.CachedBlocks))
+			network.CachedBlocksDel(idx)
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
@@ -190,8 +191,7 @@ func retry_cached_blocks() bool {
 				return false
 			}
 			// remove it from cache
-			network.CachedBlocks = append(network.CachedBlocks[:idx], network.CachedBlocks[idx+1:]...)
-			network.CachedBlocksLen.Store(len(network.CachedBlocks))
+			network.CachedBlocksDel(idx)
 			return len(network.CachedBlocks) > 0
 		} else {
 			idx++
@@ -236,8 +236,7 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	if !common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
 		// it's not linking - keep it for later
-		network.CachedBlocks = append(network.CachedBlocks, newbl)
-		network.CachedBlocksLen.Store(len(network.CachedBlocks))
+		network.CachedBlocksAdd(newbl)
 		common.CountSafe("BlockPostone")
 		return
 	}

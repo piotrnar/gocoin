@@ -128,7 +128,7 @@ func show_info(par string) {
 
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
-	cached := network.CachedBlocksLen.Get()
+	cached := network.CachedBlocksLen()
 	b2g_len := len(network.BlocksToGet)
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()

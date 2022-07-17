@@ -68,7 +68,6 @@ var (
 			MaxUpKBps      uint
 			MaxDownKBps    uint
 			MaxBlockAtOnce uint32
-			MinSegwitCons  uint32
 			ExternalIP     string
 		}
 		TXPool struct {
@@ -94,6 +93,7 @@ var (
 			MaxCachedBlks        uint
 			FreeAtStart          bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk          bool
+			MaxSyncCacheMB       uint32 // When syncing chain, prebuffer up to this MB of bocks data
 			MaxDataFileMB        uint   // 0 for unlimited size
 			DataFilesKeep        uint32 // 0 for all
 			OldDataBackup        bool   // move old dat files to "oldat/" folder (instead of removing them)
@@ -109,6 +109,7 @@ var (
 			HashrateHrs uint
 			MiningHrs   uint
 			FeesBlks    uint
+			BSizeBlks   uint
 			NoCounters  bool
 		}
 		DropPeers struct {
@@ -140,7 +141,6 @@ func InitConfig() {
 	CFG.Net.MaxOutCons = 9
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
-	CFG.Net.MinSegwitCons = 4
 	CFG.Net.BindToIF = "0.0.0.0"
 
 	CFG.TextUI_Enabled = true
@@ -172,11 +172,14 @@ func InitConfig() {
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)
 	CFG.Memory.MaxCachedBlks = 200
 	CFG.Memory.CacheOnDisk = true
+	CFG.Memory.MaxSyncCacheMB = 300
 	CFG.Memory.MaxDataFileMB = 1000 // max 1GB per single data file
+	CFG.Memory.CompressBlockDB = true
 
 	CFG.Stat.HashrateHrs = 12
 	CFG.Stat.MiningHrs = 24
-	CFG.Stat.FeesBlks = 4 * 6 /*last 4 hours*/
+	CFG.Stat.FeesBlks = 4 * 6   /*last 4 hours*/
+	CFG.Stat.BSizeBlks = 12 * 6 /*half a day*/
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 100
@@ -339,7 +342,11 @@ func Reset() {
 	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB)*1e6)
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
-	atomic.StoreUint64(&routeMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
+
+	if CFG.Memory.MaxSyncCacheMB < 100 {
+		CFG.Memory.MaxSyncCacheMB = 100
+	}
+	SyncMaxCacheBytes.Store(int(CFG.Memory.MaxSyncCacheMB) << 20)
 
 	if CFG.Stat.NoCounters {
 		if !NoCounters.Get() {

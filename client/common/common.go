@@ -20,8 +20,6 @@ import (
 
 const (
 	Version = uint32(70015)
-
-	AVG_BSIZE_SPAN = 72
 )
 
 var (
@@ -84,6 +82,8 @@ var (
 	MemMutex sync.Mutex
 
 	NoCounters sys.SyncBool
+
+	SyncMaxCacheBytes sys.SyncInt
 )
 
 type TheLastBlock struct {
@@ -235,6 +235,9 @@ func HashrateToString(hr float64) string {
 func RecalcAverageBlockSize() {
 	var le uint
 	var new_avg_size int
+	mutex_cfg.Lock()
+	AVG_BSIZE_SPAN := int(CFG.Stat.BSizeBlks)
+	mutex_cfg.Unlock()
 	n := BlockChain.LastBlock()
 	new_height := n.Height
 	if avg_bsize_next != 0 && n.Height == avg_bsize_next {
