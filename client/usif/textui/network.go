@@ -343,21 +343,21 @@ func sync_stats(par string) {
 			bip_cnt, ip_min, ip_max, ip_max-ip_min)
 	}
 
-	if d := common.CounterGet("FetcHeightD"); d != 0 {
-		a := common.CounterGet("FetcHeightA")
+	if d := network.Fetc.HeightD; d != 0 {
+		a := network.Fetc.HeightA
 		if siz := d - a; siz > 0 {
-			b := common.CounterGet("FetcHeightB")
-			c := common.CounterGet("FetcHeightC")
+			b := network.Fetc.HeightB
+			c := network.Fetc.HeightC
 			fil := b - a
 			fmt.Printf("\tLast Fetch from %d:%d to %d:%d -> BTG:%d (ready %d%% of %d)\n", a, b, d, c,
-				common.CounterGet("FetcB2G"), 100*fil/siz, siz)
+				network.Fetc.B2G, 100*fil/siz, siz)
 		}
 	}
 
 	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
 	fmt.Print("\t")
 	for i := uint32(0); i < max_blocks_at_once; i++ {
-		cnt := common.CounterGet(fmt.Sprint("FetcC", i))
+		cnt := network.Fetc.C[i]
 		if cnt == 0 {
 			fmt.Printf("  C%d:-", i)
 		} else {

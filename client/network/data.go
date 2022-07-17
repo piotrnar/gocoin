@@ -306,6 +306,15 @@ func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (l
 	return
 }
 
+var Fetc struct {
+	HeightA uint64
+	HeightB uint64
+	HeightC uint64
+	HeightD uint64
+	B2G     uint64
+	C       [6]uint64
+}
+
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
 	// Need to send getdata...?
@@ -362,9 +371,9 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	common.Last.Mutex.Unlock()
 	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
-	common.CountSafeStore("FetcHeightA", uint64(last_block_height))
-	common.CountSafeStore("FetcHeightB", uint64(LowestIndexToBlocksToGet))
-	common.CountSafeStore("FetcHeightC", uint64(max_height))
+	Fetc.HeightA = uint64(last_block_height)
+	Fetc.HeightB = uint64(LowestIndexToBlocksToGet)
+	Fetc.HeightC = uint64(max_height)
 
 	if max_height > last_block_height+MAX_BLOCKS_FORWARD_CNT {
 		max_height = last_block_height + MAX_BLOCKS_FORWARD_CNT
@@ -388,7 +397,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		}
 	}
 
-	common.CountSafeStore("FetcHeightD", uint64(max_height))
+	Fetc.HeightD = uint64(max_height)
 
 	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
 	max_blocks_forward := max_height - last_block_height
@@ -432,7 +441,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		continue
 
 	found_it:
-		common.CountSafe(fmt.Sprint("FetcC", lowest_found.InProgress))
+		Fetc.C[lowest_found.InProgress]++
 
 		binary.Write(invs, binary.LittleEndian, block_type)
 		invs.Write(lowest_found.BlockHash.Hash[:])
@@ -454,7 +463,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		}
 	}
 
-	common.CountSafeStore("FetcB2G", uint64(cnt))
+	Fetc.B2G = uint64(cnt)
 
 	if cnt == 0 {
 		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
