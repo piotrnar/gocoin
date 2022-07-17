@@ -3,7 +3,6 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -315,6 +314,16 @@ var Fetc struct {
 	C       [6]uint64
 }
 
+var Fetch struct {
+	NoBlocksToGet      uint64
+	HasBlocksExpired   uint64
+	MaxCountInProgress uint64
+	MaxBytesInProgress uint64
+	NoWitness          uint64
+	Nothing            uint64
+	BlksCntMax         [6]uint64
+}
+
 func (c *OneConnection) GetBlockData() (yes bool) {
 	//MAX_GETDATA_FORWARD
 	// Need to send getdata...?
@@ -322,7 +331,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	defer MutexRcv.Unlock()
 
 	if LowestIndexToBlocksToGet == 0 || len(BlocksToGet) == 0 {
-		c.cntLockInc("FetchNoBlocksToGet")
+		Fetch.NoBlocksToGet++
 		// wake up in one minute, just in case
 		c.nextGetData = time.Now().Add(60 * time.Second)
 		return
@@ -331,14 +340,14 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	c.Mutex.Lock()
 	if c.X.BlocksExpired > 0 { // Do not fetch blocks from nodes that had not given us some in the past
 		c.Mutex.Unlock()
-		c.cntLockInc("FetchHasBlocksExpired")
+		Fetch.HasBlocksExpired++
 		return
 	}
 	cbip := len(c.GetBlockInProgress)
 	c.Mutex.Unlock()
 
 	if cbip >= MAX_PEERS_BLOCKS_IN_PROGRESS {
-		c.cntLockInc("FetchMaxCountInProgress")
+		Fetch.MaxCountInProgress++
 		// wake up in a few seconds, maybe some blocks will complete by then
 		c.nextGetData = time.Now().Add(1 * time.Second)
 		return
@@ -348,7 +357,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	block_data_in_progress := cbip * avg_block_size
 
 	if block_data_in_progress > 0 && (block_data_in_progress+avg_block_size) > MAX_GETDATA_FORWARD {
-		c.cntLockInc("FetchMaxBytesInProgress")
+		Fetch.MaxBytesInProgress++
 		// wake up in a few seconds, maybe some blocks will complete by then
 		c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
 		return
@@ -390,7 +399,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
 			max_height = common.BlockChain.Consensus.Enforce_SEGWIT - 1
 			if max_height <= common.Last.BlockHeight() {
-				c.cntLockInc("FetchNoWitness")
+				Fetch.NoWitness++
 				c.nextGetData = time.Now().Add(time.Hour) // never do getdata
 				return
 			}
@@ -412,7 +421,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 			max_height = max_max_height
 		}
 		if max_height < LowestIndexToBlocksToGet {
-			c.cntLockInc(fmt.Sprint("FetchBlksCntMax", cnt_in_progress))
+			Fetch.BlksCntMax[cnt_in_progress]++
 			// wake up in a few seconds, maybe some blocks will complete by then
 			c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
 			return
@@ -467,7 +476,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	if cnt == 0 {
 		//println(c.ConnID, "fetch nothing", cbip, block_data_in_progress, max_height-common.Last.BlockHeight(), cnt_in_progress)
-		c.cntLockInc("FetchNothing")
+		Fetch.Nothing++
 		// wake up in a few seconds, maybe it will be different next time
 		c.nextGetData = time.Now().Add(5 * time.Second)
 		return

@@ -231,34 +231,24 @@ func net_friends(par string) {
 	network.FriendsAccess.Unlock()
 }
 
-func print_fetch_counters() (li string) {
-	par := "Fetch"
-	common.CounterMutex.Lock()
-	ck := make([]string, 0)
-	for k := range common.Counter {
-		if strings.HasPrefix(k, par) {
-			ck = append(ck, k[len(par):])
+func print_fetch_counters() {
+	network.MutexRcv.Lock()
+	defer network.MutexRcv.Unlock()
+	fmt.Print("\t")
+	fmt.Print("NoBlocksToGet:", network.Fetch.NoBlocksToGet)
+	fmt.Print(",  HasBlocksExpired:", network.Fetch.HasBlocksExpired)
+	fmt.Print(",  MaxCountInProgress:", network.Fetch.MaxCountInProgress)
+	fmt.Print("\n\t")
+	fmt.Print("MaxBytesInProgress:", network.Fetch.MaxBytesInProgress)
+	fmt.Print(",  NoWitness:", network.Fetch.NoWitness)
+	fmt.Print(",  Nothing:", network.Fetch.Nothing)
+	fmt.Print("\n\tBlksCntMax   ")
+	for i, v := range network.Fetch.BlksCntMax {
+		if v != 0 {
+			fmt.Print("  x", i, ":", v)
 		}
 	}
-	common.CounterMutex.Unlock()
-	sort.Strings(ck)
-
-	for i := range ck {
-		k := ck[i]
-		v := common.CounterGet(par + k)
-		s := fmt.Sprint(k, ":", v)
-		if len(li)+len(s) >= 72 {
-			fmt.Println("\t", li)
-			li = ""
-		} else if li != "" {
-			li += ",  "
-		}
-		li += s
-	}
-	if li != "" {
-		fmt.Println("\t", li)
-	}
-	return
+	fmt.Println()
 }
 
 func sync_stats(par string) {
