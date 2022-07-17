@@ -242,6 +242,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 
 	var bei *btc.BlockExtraInfo
 
+	size := len(b2g.Block.Raw)
 	if store_on_disk {
 		if e := ioutil.WriteFile(common.TempBlocksDir()+hash.String(), b2g.Block.Raw, 0600); e == nil {
 			bei = new(btc.BlockExtraInfo)
@@ -252,7 +253,8 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 		}
 	}
 
-	NetBlocks <- &BlockRcvd{Conn: conn, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode, OneReceivedBlock: orb, BlockExtraInfo: bei}
+	NetBlocks <- &BlockRcvd{Conn: conn, Block: b2g.Block, BlockTreeNode: b2g.BlockTreeNode,
+		OneReceivedBlock: orb, BlockExtraInfo: bei, Size: size}
 }
 
 // parseLocatorsPayload parses the payload of "getblocks" or "getheaders" messages.
@@ -445,10 +447,12 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	yes = true
 
 	// we don't set c.nextGetData here, as it will be done in tick.go after "block" message
-	c.Mutex.Lock()
-	// we will come back here only after receiving half of the blocks that we have requested
-	c.keepBlocksOver = len(c.GetBlockInProgress) / 2
-	c.Mutex.Unlock()
+	/*
+		c.Mutex.Lock()
+		// we will come back here only after receiving half of the blocks that we have requested
+		c.keepBlocksOver = len(c.GetBlockInProgress) / 2
+		c.Mutex.Unlock()
+	*/
 
 	return
 }
