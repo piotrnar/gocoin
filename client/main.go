@@ -111,7 +111,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 				common.Last.Block.Height, time.Since(common.StartTime).String(),
 				float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
 				network.Fetch.CacheEmpty)
-			if common.Last.Block.Height <= 100e3 {
+			if common.Last.Block.Height <= 200e3 {
 				// Cache underflow counter is not reliable at the beginning of chain sync,s o reset it here
 				network.Fetch.CacheEmpty = 0
 			}
