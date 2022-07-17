@@ -384,9 +384,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	// We can issue getdata for this peer
 	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
 
-	common.Last.Mutex.Lock()
-	last_block_height := common.Last.Block.Height
-	common.Last.Mutex.Unlock()
+	last_block_height := common.Last.BlockHeight()
 	max_height := last_block_height + uint32(common.SyncMaxCacheBytes.Get()/avg_block_size)
 
 	Fetc.HeightA = uint64(last_block_height)
@@ -407,7 +405,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && (c.Node.Services&btc.SERVICE_SEGWIT) == 0 { // no segwit node
 		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
 			max_height = common.BlockChain.Consensus.Enforce_SEGWIT - 1
-			if max_height <= common.Last.BlockHeight() {
+			if max_height <= LowestIndexToBlocksToGet {
 				Fetch.NoWitness++
 				c.nextGetData = time.Now().Add(time.Hour) // never do getdata
 				return
@@ -425,7 +423,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	for {
 		// Find block to fetch:
-		max_height = last_block_height + (max_blocks_forward >> cnt_in_progress)
+		max_height = last_block_height + max_blocks_forward/(cnt_in_progress+1)
 		if max_height > max_max_height {
 			max_height = max_max_height
 		}

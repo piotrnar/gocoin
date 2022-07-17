@@ -140,7 +140,7 @@ func InitConfig() {
 	CFG.Net.ListenTCP = true
 	CFG.Net.MaxOutCons = 9
 	CFG.Net.MaxInCons = 10
-	CFG.Net.MaxBlockAtOnce = 3
+	CFG.Net.MaxBlockAtOnce = 6
 	CFG.Net.BindToIF = "0.0.0.0"
 
 	CFG.TextUI_Enabled = true
