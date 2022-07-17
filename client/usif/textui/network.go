@@ -266,15 +266,11 @@ func sync_stats(par string) {
 
 	network.CachedBlocksMutex.Lock()
 	lencb := len(network.CachedBlocks)
-	lencbs := len(network.CachedBlockSizes)
 	network.CachedBlocksMutex.Unlock()
 
 	fmt.Printf("@%d\tReady: %d   InCacheCnt: %d   Avg.Bl.Size: %d   EmptyCache: %d\n",
 		lb, li2get-lb-1, lencb,
 		common.AverageBlockSize.Get(), network.Fetch.CacheEmpty)
-	if lencb != lencbs {
-		fmt.Println("\tWARNING: len(CB) mismatches len(CBS):", lencb, lencbs)
-	}
 	tot := common.DlBytesTotal
 	if tot > 0 {
 		wst := network.Fetch.BlockBytesWasted
