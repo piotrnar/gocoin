@@ -322,6 +322,9 @@ var Fetch struct {
 	NoWitness          uint64
 	Nothing            uint64
 	BlksCntMax         [6]uint64
+	ReachEndOfLoop     uint64
+	ReachMaxCnt        uint64
+	ReachMaxData       int64
 }
 
 func (c *OneConnection) GetBlockData() (yes bool) {
@@ -422,9 +425,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		}
 		if max_height < LowestIndexToBlocksToGet {
 			Fetch.BlksCntMax[cnt_in_progress]++
-			// wake up in a few seconds, maybe some blocks will complete by then
-			c.nextGetData = time.Now().Add(1 * time.Second) // wait for some blocks to complete
-			return
+			break
 		}
 		for bh := LowestIndexToBlocksToGet; bh <= max_height; bh++ {
 			if idxlst, ok := IndexToBlocksToGet[bh]; ok {
@@ -445,6 +446,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 		// If we came here, we did not find it.
 		if cnt_in_progress++; cnt_in_progress >= max_blocks_at_once {
+			Fetch.ReachEndOfLoop++
 			break
 		}
 		continue
@@ -464,10 +466,12 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		c.Mutex.Unlock()
 
 		if cbip >= MAX_PEERS_BLOCKS_IN_PROGRESS {
+			Fetch.ReachMaxCnt++
 			break // no more than 2000 blocks in progress / peer
 		}
 		block_data_in_progress += avg_block_size
 		if block_data_in_progress > MAX_GETDATA_FORWARD {
+			Fetch.ReachMaxData++
 			break
 		}
 	}

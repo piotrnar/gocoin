@@ -242,6 +242,10 @@ func print_fetch_counters() {
 	fmt.Print("MaxBytesInProgress:", network.Fetch.MaxBytesInProgress)
 	fmt.Print(",  NoWitness:", network.Fetch.NoWitness)
 	fmt.Print(",  Nothing:", network.Fetch.Nothing)
+	fmt.Print("\n\t")
+	fmt.Print("ReachEndOfLoop:", network.Fetch.ReachEndOfLoop)
+	fmt.Print(",  ReachMaxCnt:", network.Fetch.ReachMaxCnt)
+	fmt.Print(",  ReachMaxData:", network.Fetch.ReachMaxData)
 	fmt.Print("\n\tBlksCntMax   ")
 	for i, v := range network.Fetch.BlksCntMax {
 		if v != 0 {
