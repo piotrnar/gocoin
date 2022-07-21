@@ -62,6 +62,15 @@ func blockUndone(bl *btc.Block) {
 	network.BlockUndone(bl)
 }
 
+func exit_now() {
+	fmt.Printf("Wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
+		network.Fetch.BlockBytesWasted>>20, network.Fetch.BlockSameRcvd,
+		network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
+	common.PrintBWStats()
+	fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
+	os.Exit(0)
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
@@ -117,12 +126,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
-			fmt.Printf("Wasted %dMB from %d blocks.  Max cache used: %d / %dMB\n",
-				network.Fetch.BlockBytesWasted>>20, network.Fetch.BlockSameRcvd,
-				network.MaxCachedBlocksSize.Get()>>20, common.SyncMaxCacheBytes.Get()>>20)
-			common.PrintBWStats()
-			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
-			os.Exit(0)
+			exit_now()
 		}
 		common.Last.Mutex.Unlock()
 	} else {
@@ -622,6 +626,9 @@ func main() {
 						break
 					}
 					common.SetBool(&common.BlockChainSynchronized, true)
+					if *exitat == 99999999 {
+						exit_now()
+					}
 					reset_save_timer()
 				} else {
 					startup_ticks = 5 // snooze by 5 seconds each time we're in here
