@@ -62,6 +62,19 @@ func blockUndone(bl *btc.Block) {
 	network.BlockUndone(bl)
 }
 
+func exit_now() {
+	al, sy := sys.MemUsed()
+	cb, _ := common.MemUsed()
+	println("Sync to", common.Last.Block.Height, "took", time.Since(common.StartTime).String(), " - ",
+		time.Since(common.StartTime)/time.Minute, "min.  Mem:", al>>20, sy>>20, cb>>20, "MB  - errs:",
+		common.CounterGet("BlocksUnderflowCount"))
+	fmt.Printf("Wasted %dMB from %d blocks.\n",
+		common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"))
+	common.PrintBWStats()
+	fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
+	os.Exit(0)
+}
+
 func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl := newbl.Block
 	if common.FLAG.TrustAll || newbl.BlockTreeNode.Trusted.Get() {
@@ -116,11 +129,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			}
 		}
 		if *exitat != 0 && uint(common.Last.Block.Height) == *exitat {
-			fmt.Printf("Wasted %dMB from %d blocks.\n",
-				common.CounterGet("BlockBytesWasted")>>20, common.CounterGet("BlockSameRcvd"))
-			common.PrintBWStats()
-			fmt.Print("Reached given block ", *exitat, ". Now exiting....\n\n\n\n")
-			os.Exit(0)
+			exit_now()
 		}
 		common.Last.Mutex.Unlock()
 	} else {
@@ -615,6 +624,9 @@ func main() {
 						break
 					}
 					common.SetBool(&common.BlockChainSynchronized, true)
+					if *exitat == 99999999 {
+                        exit_now()
+                    }
 					reset_save_timer()
 				} else {
 					startup_ticks = 5 // snooze by 5 seconds each time we're in here
