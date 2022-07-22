@@ -500,7 +500,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	// we don't set c.nextGetData here, as it will be done in tick.go after "block" message
 	c.Mutex.Lock()
 	// we will come back here only after receiving half of the blocks that we have requested
-	c.keepBlocksOver = len(c.GetBlockInProgress) / 2
+	c.keepBlocksOver = 3 * len(c.GetBlockInProgress) / 4
 	c.Mutex.Unlock()
 
 	return
