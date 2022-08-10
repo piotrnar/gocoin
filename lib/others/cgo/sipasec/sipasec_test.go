@@ -120,7 +120,6 @@ func TestSchnorrVerify(t *testing.T) {
 		if res != 1 {
 			t.Error("Schnorr_Verify failed")
 		}
-		continue
 		hasz[0]++
 		res = Schnorr_Verify(pkey, sign, hasz)
 		if res != 0 {
