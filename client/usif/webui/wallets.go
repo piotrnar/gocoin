@@ -338,9 +338,17 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 		for _, t2s := range network.TransactionsToSend {
 			for vo, to := range t2s.TxOut {
 				if a, ok := addr_map[string(to.Pk_script)]; ok {
+					var tpo btc.TxPrevOut
+					tpo.Hash = t2s.Hash.Hash
+					tpo.Vout = uint32(vo)
 					newrec := out[a]
 					newrec.PendingValue += to.Value
 					newrec.PendingCnt++
+					_, spending := network.SpentOutputs[tpo.UIdx()]
+					if spending {
+						newrec.SpendingValue += to.Value
+						newrec.SpendingCnt++
+					}
 					if !summary {
 						po := &btc.TxPrevOut{Hash: t2s.Hash.Hash, Vout: uint32(vo)}
 						_, spending := network.SpentOutputs[po.UIdx()]

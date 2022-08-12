@@ -7,6 +7,8 @@
 * Client: fixed a bug that could cause chain sync to abort with series of "bad-txnmrklroot" errors
 * Lib: Updated "lib/others/memory" to the recent version from "gitlab.com/cznic/memory" (old one could crash)
 * Client: No more talking to peers that do not advertise segwit support (unless through the friends.txt file)
+* Client/TextUI: "txdecode" shows sequence number of each input
+* Client/WebUI/Wallet: Also shows spending the mempool transactions
 
 1.10.1 - 2022-06-15
 * btc.VerifyKeyPair() alos does Schnorr sign/verify on the given key pair
@@ -46,7 +48,7 @@
 * Wallet: For each listed segwit deposit address, extend the label with the reference to its P2KH address
 * Client/WebUI: SSL server binds to TCP port 14433 in testnet mode
 * Client: BlockDB can work with new "blNNNNNNNN.dat" filenames, as well as the old "blockchain-NNNNNNNN.dat"
-* Tools/bdb - new command "-rendat" to rename old "blockchain-NNNNNNNN.dat" to new "blNNNNNNNN.dat" 
+* Tools/bdb - new command "-rendat" to rename old "blockchain-NNNNNNNN.dat" to new "blNNNNNNNN.dat"
 * Client: Added parallel updating of UTXO database by splitting it into 256 smaller hash-maps
 * Wallet: Default change address (if not specified) does not convert to P2KH anymore
 

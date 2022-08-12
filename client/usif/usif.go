@@ -48,7 +48,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
 	ss := make([]string, len(tx.TxIn))
 	for i := range tx.TxIn {
-		ss[i] += fmt.Sprintf(" %3d %s", i, tx.TxIn[i].Input.String())
+		ss[i] += fmt.Sprintf(" %3d %s seq=0x%x", i, tx.TxIn[i].Input.String(), tx.TxIn[i].Sequence)
 		var po *btc.TxOut
 
 		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
@@ -82,7 +82,7 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 			if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
 				ads = ad.String()
 			}
-			s += fmt.Sprintf(" %15.8f BTC @ %s", float64(po.Value)/1e8, ads)
+			s += fmt.Sprintf("\n\t%15.8f BTC @ %s", float64(po.Value)/1e8, ads)
 
 			if btc.IsP2SH(po.Pk_script) {
 				so := btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
