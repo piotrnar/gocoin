@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"io"
 	"io/ioutil"
+	"strings"
 )
 
 func encrypt_file(fn string, key []byte) (outfn string) {
@@ -74,7 +75,15 @@ func decrypt_file(fn string, key []byte) (outfn string) {
 		cleanExit(1)
 	}
 
-	outfn = fn + ".enc"
+	if strings.HasSuffix(fn, ".enc") {
+		if len(fn) <= 4 {
+			outfn = "out.tmp"
+		} else {
+			outfn = fn[:len(fn)-4]
+		}
+	} else {
+		outfn = fn + ".dec"
+	}
 
 	if er = ioutil.WriteFile(outfn, plaintext, 0600); er != nil {
 		println(er.Error())
