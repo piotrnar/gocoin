@@ -1,3 +1,5 @@
+1.10.3
+
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
 * Client: New config value "UTXOSave.CompressRecords" (default false)

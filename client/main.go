@@ -65,7 +65,7 @@ func blockUndone(bl *btc.Block) {
 func exit_now() {
 	al, sy := sys.MemUsed()
 	cb, _ := common.MemUsed()
-	fmt.Printf("Sync to %d took %s  -  %.0f min.  Mem: %d %d %d MB  - errs: %d\n",
+	fmt.Printf("Sync to %d took %s  -  %.0f min.  Mem: %d %d %d MB  - cachempty: %d\n",
 		common.Last.Block.Height, time.Since(common.StartTime).String(),
 		float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
 		network.Fetch.CacheEmpty)
@@ -122,7 +122,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 			((common.Last.Block.Height%50e3) == 0 || common.Last.Block.Height == network.LastCommitedHeader.Height) {
 			al, sy := sys.MemUsed()
 			cb, _ := common.MemUsed()
-			fmt.Printf("Sync to %d took %s  -  %.1f min.  Mem: %d %d %d MB  - errs: %d\n",
+			fmt.Printf("Sync to %d took %s  -  %.1f min.  Mem: %d %d %d MB  - cachempty: %d\n",
 				common.Last.Block.Height, time.Since(common.StartTime).String(),
 				float64(time.Since(common.StartTime))/float64(time.Minute), al>>20, sy>>20, cb>>20,
 				network.Fetch.CacheEmpty)
