@@ -255,7 +255,7 @@ func RecalcAverageBlockSize() {
 		avg_bsize_sum += le
 		new_avg_size = int(avg_bsize_sum) / len(avg_bsize_history)
 	} else {
-		println("Recalc avg_bsize @", new_height)
+		//println("Recalc avg_bsize @", new_height)
 		avg_bsize_history = make([]uint32, 0, AVG_BSIZE_SPAN)
 		avg_bsize_idx = 0
 		avg_bsize_sum = 0

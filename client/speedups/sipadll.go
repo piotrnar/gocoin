@@ -87,7 +87,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	common.Log.Println("Using secp256k1.dll of Bitcoin Core for EC_Verify")
+	common.Log.Println("Using secp256k1.dll of Bitcoin Core for EC_Verify, SchnorrVerify & CheckPayToContact")
 	btc.EC_Verify = EC_Verify
 	btc.Schnorr_Verify = Schnorr_Verify
 	btc.Check_PayToContract = CheckPayToContract
