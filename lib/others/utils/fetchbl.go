@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -20,7 +20,7 @@ func GetBlockFromExplorer(hash *btc.Uint256) (rawtx []byte) {
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
-			c, _ := ioutil.ReadAll(r.Body)
+			c, _ := io.ReadAll(r.Body)
 			var txx struct {
 				Raw string `json:"rawblock"`
 			}
@@ -44,7 +44,7 @@ func GetBlockFromWebBTC(hash *btc.Uint256) (raw []byte) {
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
-			raw, _ = ioutil.ReadAll(r.Body)
+			raw, _ = io.ReadAll(r.Body)
 			r.Body.Close()
 		} else {
 			fmt.Println("webbtc.com StatusCode=", r.StatusCode)
@@ -63,7 +63,7 @@ func GetBlockFromBlockchainInfo(hash *btc.Uint256) (rawtx []byte) {
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
-			rawhex, _ := ioutil.ReadAll(r.Body)
+			rawhex, _ := io.ReadAll(r.Body)
 			rawtx, er = hex.DecodeString(string(rawhex))
 		} else {
 			fmt.Println("blockchain.info StatusCode=", r.StatusCode)
@@ -81,7 +81,7 @@ func GetBlockFromBlockstream(hash *btc.Uint256, api_url string) (raw []byte) {
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
-			raw, _ = ioutil.ReadAll(r.Body)
+			raw, _ = io.ReadAll(r.Body)
 			r.Body.Close()
 		} else {
 			fmt.Println("blockstream block StatusCode=", r.StatusCode)
@@ -115,13 +115,13 @@ func IsBlockOK(raw []byte, hash *btc.Uint256) (bl *btc.Block) {
 // GetBlockFromWeb downloads a raw block from a web server (try one after another).
 func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 	var raw []byte
-	
+
 	raw = GetBlockFromBlockstream(hash, "https://blockstream.info/api/block/")
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		//println("GetTxFromBlockstream - OK")
 		return
 	}
-	
+
 	raw = GetBlockFromBlockchainInfo(hash)
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		//println("GetTxFromBlockchainInfo - OK")

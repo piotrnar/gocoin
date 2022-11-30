@@ -4,10 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 // GetTxFromExplorer downloads (and re-assembles) raw transaction from blockexplorer.com.
@@ -22,7 +24,7 @@ func GetTxFromExplorer(txid *btc.Uint256, testnet bool) (rawtx []byte) {
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
-			c, _ := ioutil.ReadAll(r.Body)
+			c, _ := io.ReadAll(r.Body)
 			var txx struct {
 				Raw string `json:"rawtx"`
 			}
@@ -46,7 +48,7 @@ func GetTxFromWebBTC(txid *btc.Uint256) (raw []byte) {
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
-			raw, _ = ioutil.ReadAll(r.Body)
+			raw, _ = io.ReadAll(r.Body)
 			r.Body.Close()
 		} else {
 			fmt.Println("webbtc.com StatusCode=", r.StatusCode)
@@ -65,7 +67,7 @@ func GetTxFromBlockchainInfo(txid *btc.Uint256) (rawtx []byte) {
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
-			rawhex, _ := ioutil.ReadAll(r.Body)
+			rawhex, _ := io.ReadAll(r.Body)
 			rawtx, er = hex.DecodeString(string(rawhex))
 		} else {
 			fmt.Println("blockchain.info StatusCode=", r.StatusCode)
@@ -83,7 +85,14 @@ func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 	var er error
 	var try_cnt int
 
-	url := "https://api.blockcypher.com/v1/" + currency + "/main/txs/" + txid.String() + "?limit=1000&instart=1000&outstart=1000&includeHex=true"
+	token := os.Getenv("BLOCKCYPHER_TOKEN")
+	if token == "" {
+		println("WARNING: BLOCKCYPHER_TOKEN envirionment variable not set (get it from blockcypher.com)")
+	} else {
+		token = "&token=" + token
+	}
+
+	url := "https://api.blockcypher.com/v1/" + currency + "/main/txs/" + txid.String() + "?limit=1000&instart=1000&outstart=1000&includeHex=true" + token
 
 	for {
 		r, er = http.Get(url)
@@ -105,7 +114,7 @@ func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 	if er == nil {
 		if r.StatusCode == 200 {
 			defer r.Body.Close()
-			c, _ := ioutil.ReadAll(r.Body)
+			c, _ := io.ReadAll(r.Body)
 			var txx struct {
 				Raw string `json:"hex"`
 			}
@@ -123,17 +132,27 @@ func GetTxFromBlockcypher(txid *btc.Uint256, currency string) (rawtx []byte) {
 func GetTxFromBlockchair(txid *btc.Uint256, currency string) (rawtx []byte) {
 	var r *http.Response
 	var er error
+	var try_cnt int
 
-	r, er = http.Get("https://api.blockchair.com/" + currency + "/raw/transaction/" + txid.String())
+	for {
+		r, er = http.Get("https://api.blockchair.com/" + currency + "/raw/transaction/" + txid.String())
 
-	if er != nil {
-		return
+		if er != nil {
+			return
+		}
+		if (r.StatusCode == 402 || r.StatusCode == 429) && try_cnt < 5 {
+			try_cnt++
+			println("Retry blockchair.com in", try_cnt, "seconds...")
+			time.Sleep(time.Duration(try_cnt) * time.Second)
+			continue
+		}
+		if r.StatusCode != 200 {
+			return
+		}
+		break
 	}
-	if r.StatusCode != 200 {
-		return
-	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result struct {
@@ -160,7 +179,7 @@ func GetTxFromBlockstream(txid *btc.Uint256, api_url string) (raw []byte) {
 	r, er := http.Get(url)
 	if er == nil {
 		if r.StatusCode == 200 {
-			raw, _ = ioutil.ReadAll(r.Body)
+			raw, _ = io.ReadAll(r.Body)
 			r.Body.Close()
 		} else {
 			fmt.Println("blockstream.info get_tx StatusCode=", r.StatusCode)
@@ -183,8 +202,8 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 
 // GetTxFromWeb downloads a raw transaction from a web server (try one after another).
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	// 
-	
+	//
+
 	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		//println("GetTxFromBlockstream - OK")

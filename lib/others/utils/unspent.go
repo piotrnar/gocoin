@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -27,7 +28,7 @@ func GetUnspentFromExplorer(addr *btc.BtcAddr, testnet bool) (res utxo.AllUnspen
 		return
 	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result []struct {
@@ -72,7 +73,7 @@ func GetUnspentFromBlockchainInfo(addr *btc.BtcAddr) (res utxo.AllUnspentTx, er 
 		return
 	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result struct {
@@ -110,8 +111,15 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 	var r *http.Response
 	var try_cnt int
 
+	token := os.Getenv("BLOCKCYPHER_TOKEN")
+	if token == "" {
+		println("WARNING: BLOCKCYPHER_TOKEN envirionment variable not set (get it from blockcypher.com)")
+	} else {
+		token = "&token=" + token
+	}
+
 	for {
-		r, er = http.Get("https://api.blockcypher.com/v1/" + currency + "/main/addrs/" + addr.String() + "?unspentOnly=true")
+		r, er = http.Get("https://api.blockcypher.com/v1/" + currency + "/main/addrs/" + addr.String() + "?unspentOnly=true" + token)
 
 		if er != nil {
 			return
@@ -131,7 +139,7 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 		break
 	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result struct {
@@ -170,19 +178,29 @@ func GetUnspentFromBlockcypher(addr *btc.BtcAddr, currency string) (res utxo.All
 // currency is either "bitcoin" or "bitcoin-cash"
 func GetUnspentFromBlockchair(addr *btc.BtcAddr, currency string) (res utxo.AllUnspentTx, er error) {
 	var r *http.Response
+	var try_cnt int
 
-	// https://api.blockchair.com/bitcoin/outputs?q=is_spent(false),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
-	r, er = http.Get("https://api.blockchair.com/" + currency + "/outputs?q=is_spent(false),recipient(" + addr.String() + ")")
+	for {
+		// https://api.blockchair.com/bitcoin/outputs?q=is_spent(false),recipient(bc1qdvpxmyvyu9urhadl6sk69gcjsfqsvrjsqfk5aq)
+		r, er = http.Get("https://api.blockchair.com/" + currency + "/outputs?q=is_spent(false),recipient(" + addr.String() + ")")
 
-	if er != nil {
-		return
+		if er != nil {
+			return
+		}
+		if (r.StatusCode == 402 || r.StatusCode == 429) && try_cnt < 5 {
+			try_cnt++
+			println("Retry blockchair.com in", try_cnt, "seconds...")
+			time.Sleep(time.Duration(try_cnt) * time.Second)
+			continue
+		}
+		if r.StatusCode != 200 {
+			er = errors.New(fmt.Sprint("HTTP StatusCode ", r.StatusCode))
+			return
+		}
+		break
 	}
-	if r.StatusCode != 200 {
-		er = errors.New(fmt.Sprint("HTTP StatusCode ", r.StatusCode))
-		return
-	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result struct {
@@ -234,7 +252,7 @@ func GetUnspentFromBlockstream(addr *btc.BtcAddr, api_url string) (res utxo.AllU
 		return
 	}
 
-	c, _ := ioutil.ReadAll(r.Body)
+	c, _ := io.ReadAll(r.Body)
 	r.Body.Close()
 
 	var result []struct {

@@ -2,6 +2,7 @@ package ltc
 
 import (
 	"bytes"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/utils"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -47,6 +48,12 @@ func NewAddrFromPkScript(scr []byte, testnet bool) (ad *btc.BtcAddr) {
 func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	var er error
 
+	res, er = utils.GetUnspentFromBlockchair(addr, "litecoin")
+	if er == nil {
+		return
+	}
+	println("GetUnspentFromBlockchair:", er.Error())
+
 	res, er = utils.GetUnspentFromBlockcypher(addr, "ltc")
 	if er == nil {
 		return
@@ -56,13 +63,28 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	return
 }
 
+func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
+	tx, _ := btc.NewTx(rawtx)
+	if tx == nil {
+		return false
+	}
+	tx.SetHash(rawtx)
+	return txid.Equal(&tx.Hash)
+}
+
 // GetTxFromWeb downloads testnet's raw transaction from a web server.
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	raw = utils.GetTxFromBlockcypher(txid, "ltc")
-	if raw != nil && txid.Equal(btc.NewSha2Hash(raw)) {
-		//println("GetTxFromBlockcypher - OK")
+	raw = utils.GetTxFromBlockchair(txid, "litecoin")
+	if raw != nil && verify_txid(txid, raw) {
 		return
 	}
+	println("GetTxFromBlockchair failed", len(raw), txid.String())
+
+	raw = utils.GetTxFromBlockcypher(txid, "ltc")
+	if raw != nil && verify_txid(txid, raw) {
+		return
+	}
+	println("GetTxFromBlockcypher failed", len(raw), txid.String())
 
 	return
 }
