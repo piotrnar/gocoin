@@ -65,6 +65,8 @@
 ["Blockfills", "/BlockfillsPool/", ""],
 ["pegapool", "/pegapool/", ""],
 ["NiceHash", "/NiceHash/", ""],
+["Titan.io", "_Titan.io_", ""],
+["mmpool", "/mmpool/", ""],
 ["RSK Merged", "_RSK_", ""],
 ["P2Pool", "_p2pool_", ""]
 ]
