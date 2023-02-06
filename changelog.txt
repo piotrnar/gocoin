@@ -1,6 +1,7 @@
 1.10.3
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
 * Tools/balio: Fixed balance fetching for Litecoin
+* Lib: New function btc.ExtractOrdinaryFile() - to extract the files from the segwit records
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
