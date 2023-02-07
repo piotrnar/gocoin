@@ -820,3 +820,32 @@ func (t *Tx) SerializeNew() []byte {
 	t.WriteSerializedNew(wr)
 	return wr.Bytes()
 }
+
+// ContainsOrdFile checks if there is a file (inscription) inside the transaction
+// ... as per github.com/casey/ord
+//
+//	quick - if set, will speed up the process assuming 1 input and 3 wintesses requirement
+//
+// return the segwit data with the encoded file (to be used with ExtractOrdFile())
+// or nil if the transaction does not contain a file
+func (tx *Tx) ContainsOrdFile(quick bool) []byte {
+	if quick {
+		// Only looks for txs with one input and 3 witnesses - then checks the 2nd witness...
+		if len(tx.SegWit) == 1 && len(tx.SegWit[0]) == 3 {
+			sw := tx.SegWit[0][1]
+			if len(sw) > 40 && sw[0] == 0x20 && bytes.Equal(sw[34:40], []byte{0x00, 0x63, 0x03, 0x6f, 0x72, 0x64}) {
+				return sw
+			}
+		}
+	} else {
+		// Browses through all the Inputs and all the witnesses...
+		for _, inp := range tx.SegWit {
+			for _, sw := range inp {
+				if len(sw) > 40 && sw[0] == 0x20 && bytes.Equal(sw[34:40], []byte{0x00, 0x63, 0x03, 0x6f, 0x72, 0x64}) {
+					return sw
+				}
+			}
+		}
+	}
+	return nil
+}

@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -78,6 +79,8 @@ var (
 
 	fl_purgedatidx bool
 	fl_rendat      bool
+
+	fl_ord string
 
 	buf [5 * 1024 * 1024]byte // 5MB should be anough
 )
@@ -377,6 +380,8 @@ func main() {
 	flag.BoolVar(&fl_purgedatidx, "purgedatidx", false, "Remove reerence to dat files which are not on disk")
 
 	flag.BoolVar(&fl_rendat, "rendat", false, "Rename all blockchain*.dat files to the new format (blNNNNNNNN.dat)")
+
+	flag.StringVar(&fl_ord, "ord", "", "Extract ord inscriptions from given blocks (specify number or range)")
 
 	flag.Parse()
 
@@ -1184,6 +1189,75 @@ func main() {
 		ioutil.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println("blockchain.new updated")
+	}
+
+	if fl_ord != "" {
+		var ofr, oto uint64
+
+		xx := strings.Split(fl_ord, "-")
+		ofr, er = strconv.ParseUint(xx[0], 10, 32)
+		if er != nil || ofr < 767430 {
+			ofr = 767430 // there are no files before this block (in bitcoin blockchain)
+		}
+		if len(xx) > 1 {
+			oto, er = strconv.ParseUint(xx[1], 10, 32)
+			if er != nil {
+				oto = 0xffffffff
+			}
+		}
+		if oto < ofr {
+			oto = ofr
+		}
+
+		os.Mkdir("ord", 0600)
+		var ord_cnt uint64
+		for off := 0; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+			if he := uint64(sl.Height()); he >= ofr && he <= oto {
+				f, er := open_dat_file(sl.DatIdx())
+				if er != nil {
+					println(er.Error())
+					return
+				}
+				bu := buf[:int(sl.DLen())]
+				f.Seek(int64(sl.DPos()), os.SEEK_SET)
+				f.Read(bu)
+				f.Close()
+				bld := decomp_block(sl.Flags(), bu)
+				if bytes.Index(bld, []byte{0x00, 0x63, 0x03, 0x6f, 0x72, 0x64}) == -1 {
+					continue
+				}
+				bl, er := btc.NewBlock(bld)
+				if er != nil {
+					println(er.Error())
+					return
+				}
+				bl.BuildTxList()
+				for _, tx := range bl.Txs {
+					if sw := tx.ContainsOrdFile(false); sw != nil {
+						if len(sw) > 39 && sw[0] == 0x20 && sw[37] == 0x6f && sw[38] == 0x72 && sw[39] == 0x64 {
+							typ, data, er := btc.ExtractOrdFile(sw)
+							if er != nil {
+								println(er.Error())
+								return
+							}
+							println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
+							if true {
+								ext := typ
+								tps := strings.SplitN(string(typ), "/", 2)
+								if len(tps) == 2 {
+									ext = tps[1]
+								}
+								ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), ".", ext), data, 0700)
+							}
+							ord_cnt++
+						}
+					}
+				}
+			}
+		}
+		println(ord_cnt, "ord files found")
+		return
 	}
 
 	var minbh, maxbh, valididx, validlen, blockondisk, minbhondisk uint32

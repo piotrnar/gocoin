@@ -397,7 +397,13 @@ func ScriptToText(p []byte) (out []string, e error) {
 	return
 }
 
-func ExtractOrdinaryFile(p []byte) (typ string, data []byte, e error) {
+// ExtractOrdFile extracts the file (inscription) stored inside the segwit data
+// ... as per github.com/casey/ord
+//
+//	p  - is the segwith data returned by transaction's ContainsOrdFile()
+//
+// returns file type and the file itself
+func ExtractOrdFile(p []byte) (typ string, data []byte, e error) {
 	var opcode_idx int
 	var byte_idx int
 
