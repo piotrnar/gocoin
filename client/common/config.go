@@ -19,7 +19,7 @@ import (
 )
 
 const LastTrustedBTCBlock = "00000000000000000003d9c7c580c42b807d87b84b83c2eaeb52583b1983ef8e" // #776666
-const LastTrustedTN3Block = "00000000000000188f42d7699753c039b7b5b2cd82b8b45d09f1588a537d0f13" // #2105100
+const LastTrustedTN3Block = "000000000299ef38c52ac67215b650202bafebc2faa715520bd311617b49f483" // #2420000
 
 var (
 	ConfigFile string = "gocoin.conf"
