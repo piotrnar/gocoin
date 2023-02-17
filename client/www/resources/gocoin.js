@@ -356,16 +356,16 @@ function show_fees_handlehover(event, pos, item) {
 		$("#fees_tooltip").remove()
 		var x = pos.x
 		var y = pos.y
+		var show_x = (x >= 0 && x<=totbytes)
+		var show_y = (y >= 0 && y<=max_spb)
 
-		if (x < 0) x = 0
-		else if (x>totbytes) x = totbytes
-
-		if (y < 0) y = 0
-		else if (y>max_spb) y = max_spb
-
-		var str = '<b>' + parseFloat(y).toFixed(2) + '</b> SPB  |  ' + '<b>' + (100.0*x/1e6).toFixed(0) + '%</b>'
+		var str = ''
+		if (show_y)  str += '<b>' + parseFloat(y).toFixed(2) + '</b> SPB'
+		if (show_x) {
+			if (str!='')  str += '  |  '
+			str += '<b>' + (100.0*x/1e6).toFixed(0) + '%</b>'
+		}
 		show_cursor_tooltip(pos.pageX, pos.pageY, str)
-		//show_cursor_tooltip(pos.pageX, pos.pageY, '<b>'+pos.y.toFixed(2) + "</b> SPB at " + (pos.x/1e4).toFixed(0) + '%')
 
 		previousPoint = null
 	}
