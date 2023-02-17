@@ -286,10 +286,11 @@ function noscroll() {
 
 function closepopup() {
 	if (light.style.display!='none') {
+		$("#block_fees").unbind("plothover")
+		$("#fees_tooltip").remove()
 		light.style.display='none'
 		fade.style.display='none'
 		window.scrollTo(0,prvpos)
-		document.removeEventListener("scroll", noscroll)
 	}
 }
 
@@ -306,19 +307,37 @@ function css(selector, property, value) {
 var last_height // used for showing block fees
 var fees_plot_data = [ { data : [] } ];
 var previousPoint = null
+var max_spb, totbytes
 
 function show_fees_tooltip(x, y, contents) {
 	$('<div id="fees_tooltip">' + contents + '</div>').css( {
 		'position': 'absolute',
 		'display': 'none',
-		'top': y - 30,
-		'left': x + 5,
+		'top': y - 29,
+		'left': x + 4,
 		'text-align' : 'center',
 		'z-index': 9999,
 		'border': '2px solid green',
 		'padding': '5px',
-		'font-size' : '14px',
+		'font-size' : '12px',
 		'background-color': '#c0c0c0',
+		'opacity': 1
+	}).appendTo("body").fadeIn(200);
+}
+
+function show_cursor_tooltip(x, y, contents) {
+	$('<div id="fees_tooltip">' + contents + '</div>').css( {
+		'position': 'absolute',
+		'display': 'none',
+		'top': y - 29,
+		'left': x + 4,
+		'text-align' : 'center',
+		'border': '1px solid black',
+		'z-index': 9999,
+		'padding': '3px',
+		'font-size' : '12px',
+		'background-color': 'white',
+		'color': 'rgba(170, 0, 0, 0.80)',
 		'opacity': 1
 	}).appendTo("body").fadeIn(200);
 }
@@ -335,6 +354,19 @@ function show_fees_handlehover(event, pos, item) {
 		}
 	} else {
 		$("#fees_tooltip").remove()
+		var x = pos.x
+		var y = pos.y
+
+		if (x < 0) x = 0
+		else if (x>totbytes) x = totbytes
+
+		if (y < 0) y = 0
+		else if (y>max_spb) y = max_spb
+
+		var str = '<b>' + parseFloat(y).toFixed(2) + '</b> SPB  |  ' + '<b>' + (100.0*x/1e6).toFixed(0) + '%</b>'
+		show_cursor_tooltip(pos.pageX, pos.pageY, str)
+		//show_cursor_tooltip(pos.pageX, pos.pageY, '<b>'+pos.y.toFixed(2) + "</b> SPB at " + (pos.x/1e4).toFixed(0) + '%')
+
 		previousPoint = null
 	}
 }
@@ -392,15 +424,15 @@ function show_fees_clicked(height) {
 
 				var plot_options = {
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
-					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 },
+					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 60 },
 					crosshair : {mode: "xy"},
 					grid: { hoverable: true, clickable: false },
 					points: { show:false },
 					lines: {show:true, fill:true}
 				}
 
-				var max_spb, min_spb, spb
-				var totbytes = 0
+				var min_spb, spb
+				totbytes = 0
 				var totfees = 0
 				for (var i=0; i<showblfees_stats.length; i++) {
 					spb = showblfees_stats[i][1] / (showblfees_stats[i][0] / 4)
@@ -422,10 +454,13 @@ function show_fees_clicked(height) {
 				stat_min_fee.innerText = min_spb.toFixed(2)
 
 				if (block_fees_range.checked) {
-					plot_options.yaxis.max = (avg_fee > 33) ? 3 * avg_fee : 100
+					max_spb = (avg_fee > 33) ? 3 * avg_fee : 100
+					plot_options.yaxis.max = max_spb
 				}
 
 				$.plot($("#block_fees"), fees_plot_data, plot_options)
+
+				$("#block_fees").unbind("plothover")
 				$("#block_fees").bind("plothover", show_fees_handlehover)
 			} catch (e) {
 				console.log('error', e)
