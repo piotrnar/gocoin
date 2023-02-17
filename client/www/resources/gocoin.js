@@ -365,7 +365,9 @@ function show_fees_handlehover(event, pos, item) {
 			if (str!='')  str += '  |  '
 			str += '<b>' + (100.0*x/1e6).toFixed(0) + '%</b>'
 		}
-		show_cursor_tooltip(pos.pageX, pos.pageY, str)
+		if (str!='') {
+			show_cursor_tooltip(pos.pageX, pos.pageY, str)
+		}
 
 		previousPoint = null
 	}
