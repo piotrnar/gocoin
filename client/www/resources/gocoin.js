@@ -393,6 +393,7 @@ function show_fees_clicked(height) {
 				var plot_options = {
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
 					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 80 },
+					crosshair : {mode: "xy"},
 					grid: { hoverable: true, clickable: false },
 					points: { show:false },
 					lines: {show:true, fill:true}

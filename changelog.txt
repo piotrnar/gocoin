@@ -3,6 +3,7 @@
 * Tools/balio: Fixed balance fetching for Litecoin
 * Lib: New functions (btc.Tx).ContainsOrdFile() and btc.ExtractOrdFile() - for files stored in txs, as per github.com/casey/ord
 * Tools/bdb - new command "-ord" to extract above mentioned files from the blockchain
+* Client/WebUI: The fees chart for an already mined block shows the cross with reference to x and y axis
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
