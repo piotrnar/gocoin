@@ -102,6 +102,8 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		newbl.TmAccepted = time.Now()
 
 		newbl.NonWitnessSize = bl.NoWitnessSize
+		newbl.TheWeight = bl.BlockWeight
+		newbl.ThePaidVSize = bl.PaidTxsVSize
 
 		common.RecalcAverageBlockSize()
 

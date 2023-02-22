@@ -20,6 +20,9 @@ type OneReceivedBlock struct {
 	FromConID      uint32
 	NonWitnessSize int
 	DoInvs         bool
+
+	TheWeight    uint
+	ThePaidVSize uint
 }
 
 type BlockRcvd struct {

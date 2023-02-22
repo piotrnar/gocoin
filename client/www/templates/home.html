@@ -74,7 +74,11 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 </span>
 &nbsp;&bull;&nbsp;
 <span onclick="chart_type_spb.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Fee SPB
+	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Average SPB
+</span>
+&nbsp;&bull;&nbsp;
+<span onclick="chart_type_wgt.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()" onclick="event.stopPropagation()"> Weight
 </span>
 &nbsp;&bull;&nbsp;
 <span onclick="chart_type_avg.click()" class="hand">
@@ -247,11 +251,14 @@ function handlehover(event, pos, item) {
 			$("#tooltip").remove();
 
 			var rec = cs[item.dataIndex]
-			var str = 'Block #'+rec.Height+', Version '+rec.Version+'<br>'
+			var str = 'Block #'+rec.Height+', Version 0x'+rec.Version.toString(16)+'<br>'
 			str += tim2str(rec.Received)+' ... '+tim2str(rec.Timestamp, true)+'<br>'
 			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
 			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
+			str += 'Block Weight: ' + rec.Weight + "<br>"
 			str += 'Mined by ' + rec.Miner
+			//if (rec.Weight > 0)
+				
 			showTooltip(item.pageX, item.pageY, str)
 		}
 	} else {
@@ -297,12 +304,16 @@ function draw_chart() {
 			} else if (chart_type_spb.checked) {
 				plot_data[0].color = 2
 				localStorage.setItem("home_chart", "spb")
+			} else if (chart_type_wgt.checked) {
+				plot_data[0].color = 5
+				localStorage.setItem("home_chart", "wgt")
 			} else {
 				plot_data[0].color = 4
 				localStorage.setItem("home_chart", "txs")
 			}
 			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
 
+			console.log(_cs)
 			cs = new Array()
 			for (var i=0; i<_cs.length; i++) {
 				if (_cs[i].TxCnt==1) {
@@ -323,6 +334,8 @@ function draw_chart() {
 							sum += _cs[ii].Size/1000.0
 						} else if (chart_type_spb.checked) {
 							sum += _cs[ii].FeeSPB
+						} else if (chart_type_wgt.checked) {
+							sum += _cs[ii].Weight
 						} else {
 							sum += _cs[ii].TxCnt
 						}
@@ -335,6 +348,8 @@ function draw_chart() {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
 					} else if (chart_type_spb.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
+					} else if (chart_type_wgt.checked) {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Weight])
 					} else {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
 					}

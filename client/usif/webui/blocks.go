@@ -2,12 +2,13 @@ package webui
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"net/http"
-//	"regexp"
+
 	"strconv"
 	"time"
 )
@@ -47,9 +48,11 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Sigops                            int
 
 		NonWitnessSize int
-		//EBAD           string
 
 		HaveFeeStats bool
+
+		PaidTxVSize uint
+		TotalFees   uint64
 	}
 
 	var blks []*one_block
@@ -57,8 +60,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	common.Last.Mutex.Lock()
 	end := common.Last.Block
 	common.Last.Mutex.Unlock()
-
-	//eb_ad_x := regexp.MustCompile("/EB[0-9]+/AD[0-9]+/")
 
 	for cnt := uint32(0); end != nil && cnt < common.GetUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
@@ -69,6 +70,24 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			break
 		}
+		common.BlockChain.BlockIndexAccess.Lock()
+		node := common.BlockChain.BlockIndex[end.BlockHash.BIdx()]
+		common.BlockChain.BlockIndexAccess.Unlock()
+
+		var cbasetx *btc.Tx
+
+		network.MutexRcv.Lock()
+		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]
+		if rb.TheWeight == 0 {
+			block.BuildTxListExt(false)
+			rb.NonWitnessSize = block.NoWitnessSize
+			rb.TheWeight = block.BlockWeight
+			rb.ThePaidVSize = block.PaidTxsVSize
+			cbasetx = block.Txs[0]
+		} else {
+			cbasetx, _ = btc.NewTx(bl[block.TxOffset:])
+		}
+		network.MutexRcv.Unlock()
 
 		b := new(one_block)
 		b.Height = end.Height
@@ -76,26 +95,20 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Hash = end.BlockHash.String()
 		b.TxCnt = block.TxCount
 		b.Size = len(bl)
-		b.Weight = block.BlockWeight
+		b.Weight = rb.TheWeight
+		b.NonWitnessSize = rb.NonWitnessSize
 		b.Version = block.Version()
 
-		cbasetx, cbaselen := btc.NewTx(bl[block.TxOffset:])
 		for o := range cbasetx.TxOut {
 			b.Reward += cbasetx.TxOut[o].Value
 		}
 
 		b.Miner, _ = common.TxMiner(cbasetx)
-		if len(bl)-block.TxOffset-cbaselen != 0 {
-			b.FeeSPB = float64(b.Reward-btc.GetBlockReward(end.Height)) / float64(len(bl)-block.TxOffset-cbaselen)
+		b.PaidTxVSize = rb.ThePaidVSize
+		b.TotalFees = b.Reward - btc.GetBlockReward(end.Height)
+		if rb.ThePaidVSize > 0 {
+			b.FeeSPB = float64(b.TotalFees) / float64(rb.ThePaidVSize)
 		}
-
-		common.BlockChain.BlockIndexAccess.Lock()
-		node := common.BlockChain.BlockIndex[end.BlockHash.BIdx()]
-		common.BlockChain.BlockIndexAccess.Unlock()
-
-		network.MutexRcv.Lock()
-		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]
-		network.MutexRcv.Unlock()
 
 		b.Received = uint32(rb.TmStart.Unix())
 		b.Sigops = int(node.SigopsCost)
@@ -127,12 +140,6 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.WasteCnt = rb.Cnt
 		b.MissedCnt = rb.TxMissing
 		b.FromConID = rb.FromConID
-
-		b.NonWitnessSize = rb.NonWitnessSize
-
-		/*if res := eb_ad_x.Find(cbasetx.TxIn[0].ScriptSig); res != nil {
-			b.EBAD = string(res)
-		}*/
 
 		usif.BlockFeesMutex.Lock()
 		_, b.HaveFeeStats = usif.BlockFees[end.Height]

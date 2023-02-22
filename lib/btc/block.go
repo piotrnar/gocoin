@@ -24,6 +24,7 @@ type Block struct {
 	// These flags are set in BuildTxList() used later (e.g. by script.VerifyTxScript):
 	NoWitnessSize int
 	BlockWeight   uint
+	PaidTxsVSize  uint
 	TotalInputs   int
 
 	NoWitnessData []byte // This is set by BuildNoWitnessData()
@@ -82,9 +83,12 @@ func (bl *Block) Bits() uint32 {
 	return binary.LittleEndian.Uint32(bl.Raw[72:76])
 }
 
-// BuildTxList parses a block's transactions and adds them to the structure, calculating hashes BTW.
-// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
-func (bl *Block) BuildTxList() (e error) {
+// BuildTxListExt parses a block's transactions and adds them to the structure.
+//
+//	dohash - set it to false if you do not ened TxIDs (it is much faster then)
+//
+// returns error if block data inconsistent
+func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 	if bl.TxCount == 0 {
 		bl.TxCount, bl.TxOffset = VLen(bl.Raw[80:])
 		if bl.TxCount == 0 || bl.TxOffset == 0 {
@@ -95,6 +99,7 @@ func (bl *Block) BuildTxList() (e error) {
 	}
 	bl.Txs = make([]*Tx, bl.TxCount)
 
+	// It would be more elegant to use bytes.Reader here, but this solution is ~20% faster.
 	offs := bl.TxOffset
 
 	var wg sync.WaitGroup
@@ -133,21 +138,31 @@ func (bl *Block) BuildTxList() (e error) {
 			witness2hash = nil
 		}
 		bl.BlockWeight += uint(3*bl.Txs[i].NoWitSize + bl.Txs[i].Size)
+		if i > 0 {
+			bl.PaidTxsVSize += uint(bl.Txs[i].VSize())
+		}
 		bl.NoWitnessSize += len(data2hash)
-		wg.Add(1)
-		go func(tx *Tx, b, w []byte) {
-			tx.Hash.Calc(b) // Calculate tx hash in a background
-			if w != nil {
-				tx.wTxID.Calc(w)
-			}
-			wg.Done()
-		}(bl.Txs[i], data2hash, witness2hash)
+		if dohash {
+			wg.Add(1)
+			go func(tx *Tx, b, w []byte) {
+				tx.Hash.Calc(b) // Calculate tx hash in a background
+				if w != nil {
+					tx.wTxID.Calc(w)
+				}
+				wg.Done()
+			}(bl.Txs[i], data2hash, witness2hash)
+		}
 		offs += n
 	}
 
 	wg.Wait()
 
 	return
+}
+
+// BuildTxList parses a block's transactions and adds them to the structure, always calculating TX IDs.
+func (bl *Block) BuildTxList() (e error) {
+	return bl.BuildTxListExt(true)
 }
 
 // The block data in non-segwit format
