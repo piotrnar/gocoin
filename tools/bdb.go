@@ -1238,10 +1238,10 @@ func main() {
 						if len(sw) > 39 && sw[0] == 0x20 && sw[37] == 0x6f && sw[38] == 0x72 && sw[39] == 0x64 {
 							typ, data, er := btc.ExtractOrdFile(sw)
 							if er != nil {
-								println(er.Error())
-								return
+								println(tx.Hash.String(), er.Error())
+								continue
 							}
-							println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
+							//println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
 							if true {
 								ext := typ
 								tps := strings.SplitN(string(typ), "/", 2)

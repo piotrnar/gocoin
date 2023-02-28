@@ -444,10 +444,9 @@ func ExtractOrdFile(p []byte) (typ string, data []byte, e error) {
 			}
 		case 5:
 			if len(vchPushValue) != 1 || vchPushValue[0] != 1 {
-				println("opcode_idx 7:", hex.EncodeToString(vchPushValue))
+				//println("opcode_idx 5:", hex.EncodeToString(vchPushValue), string(vchPushValue), "-ignore")
+				opcode_idx-- // ignore this one
 			}
-			// ignore
-			break
 		case 6:
 			typ = string(vchPushValue)
 		case 7:
