@@ -98,7 +98,7 @@ function show_versions(row, id) {
 			"  " + mbs[i].Version.toString(16) +
 			("           "+mbs[i].Length).slice(-9) +
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
-			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) + 
+			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) +
 			"  " + str.replace(/[^ -~]+/g, ' ') + "\n"
 	}
 
@@ -117,6 +117,8 @@ function refresh_mining_info() {
 	aj.onload=function() {
 		try {
 			var cs = JSON.parse(aj.responseText)
+			var height_min, height_max
+			var heights = new Array()
 			el_min_hrs.innerText = cs.MiningStatHours
 			el_first_block_time.innerText = tim2str(cs.FirstBlockTime, false)
 			el_block_cnt.innerText = cs.BlockCount
@@ -164,6 +166,14 @@ function refresh_mining_info() {
 						cnt = vers.get(b.Version)
 					}
 					vers.set(b.Version, cnt+1)
+
+					if (heights.length==0) {
+						height_min = height_max = b.Height
+					} else {
+						if (height_min > b.Height)  height_min = b.Height
+						else if (height_max < b.Height)  height_max = b.Height
+					}
+					heights[b.Height] = b.Version
 				}
 
 				row["vers"] = vers
@@ -191,6 +201,11 @@ function refresh_mining_info() {
 				totfees += m.TotalFees
 				totbts += m.TotalBytes
 			}
+			blockver_tab_n.innerHTML = height_max-height_min+1
+			block_short_history_td.style.display = 'table-cell'
+			var vvs = []
+			for (var h=height_min; h<=height_max; h++)  vvs.push([h, heights[h]])
+			do_versions("short", vvs, height_max, height_min)
 
 			el_avg_block_size.innerText = parseFloat(totbts/cs.BlockCount).toFixed(0)
 			el_total_fees.innerText = (totfees/1e8).toFixed(2)
@@ -242,7 +257,7 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 		<td colspan="2">
 			The next halving is estimated to happen in
 				&nbsp;&nbsp;
-				<b id="next_halving_days">...</b> days 
+				<b id="next_halving_days">...</b> days
 				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
 				<b id="next_halving_weeks">...</b> weeks
 				&nbsp;&nbsp;&bull;&nbsp;&nbsp;
@@ -258,26 +273,32 @@ with the average of <b id="el_avg_fpbyte"></b> SPB or <b id="el_avg_fpblock" cla
 <pre id="verinfo" class="mono"></pre>
 
 </td>
-<td valign="top" id="block_history_td" style="display:none">
-
-<table class="bord" id="blockver_tab_1000" align="right">
-<caption>Last 1000 blocks</caption>
-<tr><th>Version<th>Count<th>Share
-</table>
-
-&nbsp;&nbsp;&nbsp;&nbsp;<br>
-<table class="bord" id="blockver_tab_curr" align="right">
-<caption>Current period</caption>
-<tr><th>Version<th>Count<th>Share
-</table>
-
-&nbsp;&nbsp;&nbsp;&nbsp;<br>
-<table class="bord" id="blockver_tab_past" align="right">
-<caption>Past period</caption>
-<tr><th>Version<th>Count<th>Share
-</table>
-
+<td valign="top" id="block_short_history_td" style="display:none">
+	<table class="bord" id="blockver_tab_short" align="right">
+	<caption>Last <b id="blockver_tab_n">n</b> blocks</caption>
+	<tr><th>Version<th>Count<th>Share
+	</table>
 </td>
+
+<td valign="top" id="block_history_td" style="display:none">
+	<table class="bord" id="blockver_tab_1000" align="right">
+	<caption>Last 1000 blocks</caption>
+	<tr><th>Version<th>Count<th>Share
+	</table>
+
+	&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	<table class="bord" id="blockver_tab_curr" align="right">
+	<caption>Current period</caption>
+	<tr><th>Version<th>Count<th>Share
+	</table>
+
+	&nbsp;&nbsp;&nbsp;&nbsp;<br>
+	<table class="bord" id="blockver_tab_past" align="right">
+	<caption>Past period</caption>
+	<tr><th>Version<th>Count<th>Share
+	</table>
+</td>
+
 </tr>
 </table>
 
@@ -311,6 +332,7 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 	var blockver_tab = document.getElementById("blockver_tab_" + tabid)
 	while (blockver_tab.rows.length>1) blockver_tab.deleteRow(1)
 
+	var perc
 	for (var i=0; i<sorted.length; i++) {
 		var row = blockver_tab.insertRow(-1)
 		var c = row.insertCell(-1)
@@ -324,10 +346,11 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 			c.innerText = cc
 			c = row.insertCell(-1)
 			c.className = 'bl_perc'
-			c.innerText = Math.round(cc*100/counted) + '%'
+			perc = cc*100/counted
+			c.innerText = (block_versions.length<1000 ? perc.toFixed(1) : Math.round(perc) ) + '%'
 			break
 		}
-		
+
 		c.className = 'bl_ver'
 		c.innerText = leftpad(sorted[i].ver.toString(16),  '0',  8)
 
@@ -337,7 +360,8 @@ function do_versions(tabid, block_versions, max_block_number, min_block_number) 
 
 		c = row.insertCell(-1)
 		c.className = 'bl_perc'
-		c.innerText = Math.round(sorted[i].cnt*100/counted) + '%'
+		perc = sorted[i].cnt*100/counted
+		c.innerText = (block_versions.length<1000 ? perc.toFixed(1) : Math.round(perc)) + '%'
 	}
 }
 
@@ -371,7 +395,7 @@ blno.addEventListener("lastblock", function(e) {
 	if (e.block.Height!=last_block_height) {
 		last_block_height = e.block.Height
 		refresh_mining_info()
-		blocks_version_stats()
+		//blocks_version_stats()
 	}
 })
 </script>
