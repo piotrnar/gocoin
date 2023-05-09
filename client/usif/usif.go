@@ -321,6 +321,22 @@ func UnbanPeer(par string) (s string) {
 	return
 }
 
+func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx *btc.Tx) {
+	network.MutexRcv.Lock()
+	rb = network.ReceivedBlocks[block.Hash.BIdx()]
+	if rb.TheWeight == 0 {
+		block.BuildTxListExt(false)
+		rb.NonWitnessSize = block.NoWitnessSize
+		rb.TheWeight = block.BlockWeight
+		rb.ThePaidVSize = block.PaidTxsVSize
+		cbasetx = block.Txs[0]
+	} else {
+		cbasetx, _ = btc.NewTx(block.Raw[block.TxOffset:])
+	}
+	network.MutexRcv.Unlock()
+	return
+}
+
 func init() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 }

@@ -120,7 +120,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s := load_template("page_head.html")
 	s = strings.Replace(s, "{PAGE_TITLE}", common.CFG.WebUI.Title, 1)
 	s = strings.Replace(s, "/*_SESSION_ID_*/", "var sid = '"+sessid+"'", 1)
-	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", common.GetAverageFee()), 1)
+	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", usif.GetAverageFee()), 1)
 	s = strings.Replace(s, "/*_SERVER_MODE_*/", fmt.Sprint("var server_mode = ", common.CFG.WebUI.ServerMode), 1)
 	s = strings.Replace(s, "/*_TIME_NOW_*/", fmt.Sprint("= ", time.Now().Unix()), 1)
 	s = strings.Replace(s, "/*_WALLET_ON_*/", fmt.Sprint("var wallet_on = ", common.GetBool(&common.WalletON)), 1)

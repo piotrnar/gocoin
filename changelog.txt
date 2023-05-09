@@ -7,6 +7,7 @@
 * Client/WebUI/Home: Fixed blocks SPB values on the chart, as the ones showed previously were not accurate
 * Client/WebUI/Home: Added blocks Weight chart
 * Client/WebUI/Miners: Shows version data only for the recent blocks (as BIP9 has not been used for awhile)
+* Client: Fixed how the average TX fee is caluclated over "CFG.Stat.FeesBlks" (it was showing too low values)
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)

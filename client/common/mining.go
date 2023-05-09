@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"sync"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -73,75 +72,4 @@ func ReloadMiners() {
 			MinerIds = append(MinerIds, rec)
 		}
 	}
-}
-
-var (
-	AverageFeeMutex     sync.Mutex
-	AverageFeeBytes     uint64
-	AverageFeeTotal     uint64
-	AverageFee_SPB      float64
-	averageFeeLastBlock uint32 = 0xffffffff
-	averageFeeLastCount uint   = 0xffffffff
-)
-
-func GetAverageFee() float64 {
-	Last.Mutex.Lock()
-	end := Last.Block
-	Last.Mutex.Unlock()
-
-	LockCfg()
-	blocks := CFG.Stat.FeesBlks
-	UnlockCfg()
-	if blocks <= 0 {
-		blocks = 1 // at leats one block
-	}
-
-	AverageFeeMutex.Lock()
-	defer AverageFeeMutex.Unlock()
-
-	if end.Height == averageFeeLastBlock && averageFeeLastCount == blocks {
-		return AverageFee_SPB // we've already calculated for this block
-	}
-
-	averageFeeLastBlock = end.Height
-	averageFeeLastCount = blocks
-
-	AverageFeeBytes = 0
-	AverageFeeTotal = 0
-
-	for blocks > 0 {
-		bl, _, e := BlockChain.Blocks.BlockGet(end.BlockHash)
-		if e != nil {
-			return 0
-		}
-		block, e := btc.NewBlock(bl)
-		if e != nil {
-			return 0
-		}
-
-		cbasetx, cbasetxlen := btc.NewTx(bl[block.TxOffset:])
-		var fees_from_this_block int64
-		for o := range cbasetx.TxOut {
-			fees_from_this_block += int64(cbasetx.TxOut[o].Value)
-		}
-		fees_from_this_block -= int64(btc.GetBlockReward(end.Height))
-
-		if fees_from_this_block > 0 {
-			AverageFeeTotal += uint64(fees_from_this_block)
-		}
-
-		AverageFeeBytes += uint64(len(bl) - block.TxOffset - cbasetxlen) /*do not count block header and conibase tx */
-
-		blocks--
-		end = end.Parent
-	}
-	if AverageFeeBytes == 0 {
-		if AverageFeeTotal != 0 {
-			panic("Impossible that miner gest a fee with no transactions in the block")
-		}
-		AverageFee_SPB = 0
-	} else {
-		AverageFee_SPB = float64(AverageFeeTotal) / float64(AverageFeeBytes)
-	}
-	return AverageFee_SPB
 }

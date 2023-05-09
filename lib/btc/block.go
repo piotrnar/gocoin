@@ -35,16 +35,20 @@ type BlockExtraInfo struct {
 	Height      uint32
 }
 
+func NewBlockX(data []byte, hash *Uint256) (bl *Block, er error) {
+	bl = new(Block)
+	bl.Hash = hash
+	er = bl.UpdateContent(data)
+	return
+}
+
 // tha data may contain only the header (80 bytes)
 func NewBlock(data []byte) (bl *Block, er error) {
 	if data == nil {
 		er = errors.New("nil pointer")
 		return
 	}
-	bl = new(Block)
-	bl.Hash = NewSha2Hash(data[:80])
-	er = bl.UpdateContent(data)
-	return
+	return NewBlockX(data, NewSha2Hash(data[:80]))
 }
 
 // tha data may contain only the header (80 bytes)

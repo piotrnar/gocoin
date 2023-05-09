@@ -176,7 +176,7 @@ func show_info(par string) {
 		len(network.TransactionsRejected), common.UintToString(network.TransactionsRejectedSize))
 	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d,  ScrFlgs:0x%x\n",
 		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
-		len(network.SpentOutputs), common.GetAverageFee(),
+		len(network.SpentOutputs), usif.GetAverageFee(),
 		len(network.TransactionsPending), len(network.NetTxs), common.CurrentScriptFlags())
 	network.TxMutex.Unlock()
 

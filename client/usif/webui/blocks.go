@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 
@@ -66,7 +65,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			break
 		}
-		block, e := btc.NewBlock(bl)
+		block, e := btc.NewBlockX(bl, end.BlockHash)
 		if e != nil {
 			break
 		}
@@ -76,18 +75,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 
 		var cbasetx *btc.Tx
 
-		network.MutexRcv.Lock()
-		rb := network.ReceivedBlocks[end.BlockHash.BIdx()]
-		if rb.TheWeight == 0 {
-			block.BuildTxListExt(false)
-			rb.NonWitnessSize = block.NoWitnessSize
-			rb.TheWeight = block.BlockWeight
-			rb.ThePaidVSize = block.PaidTxsVSize
-			cbasetx = block.Txs[0]
-		} else {
-			cbasetx, _ = btc.NewTx(bl[block.TxOffset:])
-		}
-		network.MutexRcv.Unlock()
+		rb, cbasetx := usif.GetReceivedBlockX(block)
 
 		b := new(one_block)
 		b.Height = end.Height

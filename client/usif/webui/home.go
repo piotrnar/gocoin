@@ -135,7 +135,7 @@ func json_system(w http.ResponseWriter, r *http.Request) {
 	out.Qdb_extramem = int64(by)
 	out.Ecdsa_verify_cnt = btc.EcdsaVerifyCnt()
 	out.Average_block_size = common.AverageBlockSize.Get()
-	out.Average_fee = common.GetAverageFee()
+	out.Average_fee = usif.GetAverageFee()
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
