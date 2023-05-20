@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -175,6 +176,12 @@ func BlockUndone(bl *btc.Block) {
 func (c *OneConnection) SendGetMP() error {
 	b := new(bytes.Buffer)
 	TxMutex.Lock()
+	if TransactionsToSendSize > common.MaxMempoolSize()>>1 {
+		// Don't send "getmp" messages if we have more than 50% of MaxMempoolSize() used
+		fmt.Println("Mempool more than half full - not sending getmp message -", TransactionsToSendSize>>20, "/", common.MaxMempoolSize()>>20)
+		TxMutex.Unlock()
+		return errors.New("SendGetMP: Mempool more than half full")
+	}
 	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
 	if tcnt > MAX_GETMP_TXS {
 		fmt.Println("Too many transactions in the current pool", tcnt, "/", MAX_GETMP_TXS)
