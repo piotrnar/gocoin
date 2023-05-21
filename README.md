@@ -56,7 +56,7 @@ Currently that can be at least one of the following:
 In order to build Gocoin yourself, you will need the following tools installed in your system:
 
 * **Go** (recent version) - http://golang.org/doc/install
-* **Git** - http://git-scm.com/downloads (optional)
+* **Git** (optional) - http://git-scm.com/downloads
 
 If the tools mentioned above are all properly installed, you should be able to execute `go` and `git`
 from your OS's command prompt without a need to specify full path to the executables.
