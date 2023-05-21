@@ -58,18 +58,19 @@ In order to build Gocoin yourself, you will need the following tools installed i
 * **Go** (recent version) - http://golang.org/doc/install
 * **Git** (optional) - http://git-scm.com/downloads
 
-If the tools mentioned above are all properly installed, you should be able to execute `go` and `git`
-from your OS's command prompt without a need to specify full path to the executables.
+If the tools mentioned above are properly installed, you should be able to execute `go` and
+(optionally) `git` from your OS's command prompt without a need to specify full path to the
+executables.
 
 # Getting sources
 
-Download the source code from github to a local folder of your choice, e.g. by executing:
+Download the source code from github to a local folder of your choice by executing:
 
 	git clone https://github.com/piotrnar/gocoin.git
 
-Alternatively, you can download an archive with the code from
-[github.com/piotrnar/gocoin](https://github.com/piotrnar/gocoin) using any web browser.
-Then just extract the archive to your local disk.
+Alternatively - if you don't want to use git - download the code archive
+from [github.com/piotrnar/gocoin](https://github.com/piotrnar/gocoin)
+using any web browser. Then extract the archive to your local disk.
 
 # Building
 
