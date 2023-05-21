@@ -273,11 +273,23 @@ Using native heap makes the node a bit faster at a cost of using more RAM, altho
 <td class="cfg_info"> How many (recently used) blocks shall be kept in RAM.</td>
 </tr>
 <tr class="even">
+    <td class="cfg_name"> Memory.FreeAtStart</td>
+    <td class="cfg_type"> bool</td>
+    <td> false</td>
+    <td class="cfg_info"> After loading UTXO database from disk, free as much RAM as possible.</td>
+</tr>
+<tr class="even">
 <td class="cfg_name"> Memory.CacheOnDisk</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> During chain sync, store bigger blocks on disk (in datadir's "tmpblk/") instead of holding them in RAM.<br>
 Makes block chain sync process a bit slower, but saves RAM instead.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> Memory.MaxSyncCacheMB</td>
+<td class="cfg_type"> uint</td>
+<td> 500</td>
+<td class="cfg_info"> Set the size of a cached blocks buffer, used during chain sync.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> Memory.MaxDataFileMB</td>
@@ -307,7 +319,15 @@ The blocks from "oldat/" folder will still be served by the node to its peers.</
 Having just enabling this option, execute TextUI command <code>purge</code> to purge all unspendable records kept from past transactions.<br>
 Disabling this will make your node to require more RAM, but may be necessary for certain applications that one may develop on top of Gocoin's UTXO database.<br>
 </td>
-
+</tr>
+<tr class="even">
+<td class="cfg_name"> Memory.CompressBlockDB</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Compress blocks on disk.<br>
+</td>
+</tr>
+    
 <tr class="odd">
 <td class="cfg_name"> AllBalances.MinValue</td>
 <td class="cfg_type"> uint</td>
