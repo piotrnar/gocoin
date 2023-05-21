@@ -19,7 +19,7 @@ the given block number, with comparision to Bitcoin Core 23.0:
 
 ![SyncChart](website/quick_sync_gocoin_vs_core.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
-with 3.6GHz Intel i7-7700 CPU, 2x512MB SSD and 1Gbit internet connection, 
+with 3.6GHz Intel i7-7700 CPU, 2x512MB SSD and 1Gbit internet connection,
 running Debian 11 (bullseye).
 Clients using their default configuration, except for the second (blue) Bitcoin Core
 that is set to use **dbcache=16384**.<br/>
@@ -33,7 +33,7 @@ For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performanc
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
-* At least 16GB of system RAM.
+* At least 24GB of system RAM.
 
 
 **wallet**:
