@@ -68,7 +68,7 @@ Download the source code from github to a local folder of your choice, e.g. by e
 	git clone https://github.com/piotrnar/gocoin.git
 
 Alternatively, you can download an archive with the code from
-[github.com/piotrnar](https://github.com/piotrnar/) using any web browser.
+[github.com/piotrnar/gocoin](https://github.com/piotrnar/gocoin) using any web browser.
 Then just extract the archive to your local disk.
 
 # Building
