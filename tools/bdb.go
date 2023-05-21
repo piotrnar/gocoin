@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -81,6 +80,8 @@ var (
 	fl_rendat      bool
 
 	fl_ord string
+
+	fl_compress string
 
 	buf [5 * 1024 * 1024]byte // 5MB should be anough
 )
@@ -382,6 +383,8 @@ func main() {
 	flag.BoolVar(&fl_rendat, "rendat", false, "Rename all blockchain*.dat files to the new format (blNNNNNNNN.dat)")
 
 	flag.StringVar(&fl_ord, "ord", "", "Extract ord inscriptions from given blocks (specify number or range)")
+
+	flag.StringVar(&fl_compress, "compress", "", "Compress all the blocks inside the given blxxxxxxxx.dat file")
 
 	flag.Parse()
 
@@ -932,7 +935,6 @@ func main() {
 	if fl_verify {
 		var prv_perc uint64 = 0xffffffffff
 		var totlen uint64
-		var done sync.WaitGroup
 		var dat_file_open uint32 = 0xffffffff
 		var fdat *os.File
 		var cnt, cnt_nd, cnt_err int
@@ -975,8 +977,8 @@ func main() {
 
 			perc := 1000 * cur_progress / total_data_size
 			if perc != prv_perc {
-				fmt.Printf("\rVerifying blocks data - %.1f%% @ %d / %dMB processed...",
-					float64(perc)/10.0, hei, totlen>>20)
+				fmt.Printf("\rVerifying blocks data - %.1f%% @ %d / %dMB processed...  idx:%d",
+					float64(perc)/10.0, hei, totlen>>20, idx)
 				prv_perc = perc
 			}
 
@@ -1000,16 +1002,11 @@ func main() {
 				continue
 			}
 
-			done.Add(1)
-			go func(blk []byte, sl one_idx_rec, off int) {
-				verify_block(blk, sl, off)
-				done.Done()
-				cnt++
-			}(blk, sl, off)
+			verify_block(blk, sl, off)
+			cnt++
 
 			totlen += uint64(len(blk))
 		}
-		done.Wait() // wait for all the goroutines to complete
 		if fdat != nil {
 			fdat.Close()
 		}
@@ -1191,6 +1188,90 @@ func main() {
 		fmt.Println("blockchain.new updated")
 	}
 
+	if fl_compress != "" {
+		var idx int
+		if fl_compress == "blockchain.dat" {
+			idx = 0
+		} else if n, _ := fmt.Sscanf(fl_compress, "blockchain-%08x.dat", &idx); n == 1 {
+			// old format
+		} else if n, _ := fmt.Sscanf(fl_compress, "bl%08d.dat", &idx); n == 1 {
+			// new format
+		} else {
+			println("The given filename does not match the pattern")
+			return
+		}
+		fmt.Println("Compressing all blocks in data file with index", idx)
+
+		fdat, er := os.OpenFile(fl_dir+fl_compress, os.O_RDONLY, 0600)
+		if er != nil {
+			println(er.Error())
+			return
+		}
+
+		fdatnew, er := os.Create(fl_dir + fl_compress + ".tmp")
+		if er != nil {
+			println(er.Error())
+			fdat.Close()
+			return
+		}
+
+		var off int
+		var done_cnt, ignored_cnt, recompd_cnt int
+		var fdaynew_offs uint64
+		for ; off < len(dat); off += 136 {
+			sl := new_sl(dat[off : off+136])
+			if int(sl.DatIdx()) == idx {
+				var cbts []byte
+				fl := sl.Flags()
+				blen := int(sl.DLen())
+				fdat.Seek(int64(sl.DPos()), os.SEEK_SET)
+				_, er = io.ReadFull(fdat, buf[:blen])
+				if er != nil {
+					println(er.Error())
+					fdatnew.Close()
+					fdat.Close()
+					return
+				}
+				if (fl & 0x0c) == 0x0c {
+					//println("Block", height, "is already compressed = copy over", size, "bytes at offset", offs)
+					cbts = buf[:blen]
+					ignored_cnt++
+				} else {
+					//println("Block", height, " - compressing", size, "bytes at offset", offs)
+					var bb []byte
+					if (fl & 4) == 4 {
+						//println("Block", sl.Height(), " - re-compressing")
+						bb = decomp_block(fl, buf[:blen])
+						recompd_cnt++
+					} else {
+						bb = buf[:blen]
+						done_cnt++
+					}
+					cbts = snappy.Encode(nil, bb)
+				}
+				sl.sl[0] |= 0x0C // set snappy and compressed flag
+				binary.LittleEndian.PutUint64(sl.sl[40:48], fdaynew_offs)
+				binary.LittleEndian.PutUint32(sl.sl[48:52], uint32(len(cbts)))
+				fdatnew.Write(cbts)
+				fdaynew_offs += uint64(len(cbts))
+			}
+		}
+		fdatnew.Close()
+		fdat.Close()
+		fmt.Println("Blocks comprtessed:", done_cnt, "  re-compressed:", recompd_cnt, "  ignored:", ignored_cnt)
+		if done_cnt == 0 && recompd_cnt == 0 {
+			fmt.Println("Nothing done")
+			os.Remove(fl_dir + fl_compress + ".tmp")
+		} else {
+			ioutil.WriteFile("blockchain.tmp", dat, 0600)
+			os.Rename("blockchain.tmp", "blockchain.new")
+			os.Rename(fl_dir+fl_compress+".tmp", fl_dir+fl_compress)
+			fmt.Println("blockchain.new updated")
+			fmt.Println(fl_dir+fl_compress, "updated")
+		}
+		return
+	}
+
 	if fl_ord != "" {
 		var ofr, oto uint64
 
@@ -1262,11 +1343,23 @@ func main() {
 
 	var minbh, maxbh, valididx, validlen, blockondisk, minbhondisk uint32
 	var tot_len, tot_size, tot_size_bad uint64
+	var snap_cnt, gzip_cnt, uncompr_cnt int
 	minbh = binary.LittleEndian.Uint32(dat[36:40])
 	maxbh = minbh
 	minbhondisk = 0xffffffff
 	for off := 0; off < len(dat); off += 136 {
 		sl := new_sl(dat[off : off+136])
+
+		fl := sl.Flags()
+		if (fl & 4) != 0 {
+			if (fl & 8) != 0 {
+				snap_cnt++
+			} else {
+				gzip_cnt++
+			}
+		} else {
+			uncompr_cnt++
+		}
 
 		dlen := sl.DLen()
 		didx := sl.DatIdx()
@@ -1304,6 +1397,7 @@ func main() {
 	}
 	fmt.Println("Block heights from", minbh, "to", maxbh)
 	fmt.Println(blockondisk, "blocks stored on disk, from height", minbhondisk)
+	fmt.Println(uncompr_cnt, "uncompressed, ", gzip_cnt, "compressed with gzip and ", snap_cnt, "with snappy")
 	fmt.Println("Number of records with valid length:", validlen)
 	fmt.Println("Number of records with valid data file:", valididx)
 	fmt.Println("Total size of all  compressed  blocks:", tot_len)
