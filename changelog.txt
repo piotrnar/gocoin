@@ -10,6 +10,7 @@
 * Client: Fixed how the average TX fee is caluclated over "CFG.Stat.FeesBlks" (it was showing too low values)
 * Client: Don't send "getmp" messages if Mempool is more than half full
 * Tools/bdb - new command "-compress" to compress a "bl*.dat" file (after running node without "CFG.Memory.CompressBlockDB")
+* Client/TextUI: new command "usd" - tries to figure out curent BTC/USD price, using UTXOracle method
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
