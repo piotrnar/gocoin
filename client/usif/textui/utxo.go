@@ -14,6 +14,7 @@ func wallet_usd(s string) {
 	const MIN_BTC_VALUE = 20e3 // 0.001 BTC (not included)
 	const MAX_BTC_VALUE = 1e6  // 0.01 BTC (not included)
 	const VALUE_MULTIPLIER = 1000.0
+	const TICK_SPAN = 2
 
 	var blocks_back int
 	var most_often_sent_usd_amount float64
@@ -57,8 +58,12 @@ func wallet_usd(s string) {
 
 	srtd := make([][2]int, len(occ)-2)
 	var ccc int
-	for i := 1; i < len(occ)-1; i++ {
-		val := occ[i-1] + occ[i] + occ[i+1]
+	for i := TICK_SPAN; i < len(occ)-TICK_SPAN; i++ {
+		val := occ[i]
+		for ts := 1; ts <= TICK_SPAN; ts++ {
+			val += occ[i-ts] >> ts
+			val += occ[i+ts] >> ts
+		}
 		srtd[ccc][0] = i
 		srtd[ccc][1] = int(val)
 		ccc++
