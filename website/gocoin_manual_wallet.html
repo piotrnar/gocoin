@@ -29,7 +29,7 @@ In order to do this, just run <code>wallet -l</code> and your wallet's public ad
 Make sure that the disk with <code>.secret</code> file is encrypted.<br>
 <br>
 
-The seed password is the key to your entire wallet and the function used to calculate it is double SHA256, which is pretty easy to compute.<br>
+The seed password is the key to your entire wallet and the function used to calculate it is double SHA256<sup>*</sup>, which is pretty easy to compute.<br>
 That is why it is very important for you to make sure that the password you're choosing will be resistant to brute force and dictionary attacks.<br>
 <br>
 If you choose to use a memorable seed-password (aka <i>brain wallet</i>),
@@ -47,6 +47,11 @@ There are people claiming that brain wallets aren't secure because <i>brains can
 If you have such a brain, make sure to consider this risk (e.g. use a random generator to create the content of the <code>.secret</code> file).<br>
 Otherwise coming out with a memorable though <u>uncrackable</u> seed, gives you quite a secure and convenient solution,
 as you get rid of backups that are a week point of the wallet's security. On top of that you never have to carry the wallet file with you.<br>
+<br>
+<hr width="50" align="left">
+*) Wallets version 1.10.1 (or higher) support using an optional <b>scrypt</b> function to convert the password into private keys, 
+    making your  brain wallet far more resistant to bruteforce attacks.
+    See the <code>scrypt</code> config value (inside your <code>wallet.cfg</code> file) for more info.<br>
 <br>
 
 <h2>Importing other private keys</h2>
