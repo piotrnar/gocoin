@@ -3,7 +3,7 @@
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
-<td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
+<td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup_x(false)">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
 </div><div id="fade" class="black_overlay"></div>
@@ -819,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	quick_switch_wallet() // this is to force loading wallet after loading
 	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
 	window.onkeyup = function (event) {
-		if(event.keyCode == 27)  closepopup()
+		if(event.keyCode == 27)  closepopup_x(false)
 	}
 })
 </script>
