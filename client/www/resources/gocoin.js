@@ -436,7 +436,7 @@ function show_fees_clicked(height) {
 					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 60 },
 					crosshair : {mode: "xy"},
 					grid: { hoverable: true, clickable: false },
-					points: { show:false },
+					points: { show:block_fees_points.checked },
 					lines: {show:true, fill:true}
 				}
 
@@ -462,8 +462,9 @@ function show_fees_clicked(height) {
 				stat_avg_fee.innerText = avg_fee.toFixed(1)
 				stat_min_fee.innerText = min_spb.toFixed(2)
 
-				if (block_fees_range.checked) {
-					max_spb = (avg_fee > 33) ? 3 * avg_fee : 100
+				if (!block_fees_full.checked) {
+					if (block_fees_25.checked) max_spb /= 4
+					else  if (block_fees_5.checked) max_spb /= 20
 					plot_options.yaxis.max = max_spb
 				}
 

@@ -38,8 +38,19 @@ Mined by <b id="stat_mined_by"></b>
 <div id="block_fees" style="height:370px;margin:5px"></div>
 <br>
 <div width="100%" style="margin-bottom:10px;text-align:right">
-<span class="hand" onclick="block_fees_range.click()">
-	<input type="checkbox" id="block_fees_range" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Limit range
+<span class="hand" onclick="block_fees_points.click()">
+	<input type="checkbox" id="block_fees_points" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Show points
+</span>
+&nbsp;&bull;&nbsp;
+Limit range to
+<span class="hand" onclick="block_fees_full.click()">
+    <input type="radio" name="block_fees_range" id="block_fees_full" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked>100%
+</span>
+<span class="hand" onclick="block_fees_25.click()">
+	<input type="radio" name="block_fees_range" id="block_fees_25" onchange="show_fees_clicked()" onclick="event.stopPropagation()">25%
+</span>
+<span class="hand" onclick="block_fees_5.click()">
+	<input type="radio" name="block_fees_range" id="block_fees_5" onchange="show_fees_clicked()" onclick="event.stopPropagation()">5%
 </span>
 &nbsp;&bull;&nbsp;
 <span class="hand" onclick="block_fees_raw.click()">
