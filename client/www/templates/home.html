@@ -3,61 +3,7 @@
 <script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
 
-<!-- **************************** BLOCK_FEES_BEGIN **************************** -->
-<div id="light" class="white_content" style="height:auto">
-<div id="block_fee_stats" width="100%" style="text-align:center">
-
-<div style="margin-top:10px">
-Block number <b id="stat_height"></b> /
-<b id="stat_block_size"></b> bytes
--
-Max <b id="stat_max_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Avg <b id="stat_avg_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Min <b id="stat_min_fee"></b> SPB
-&nbsp;&bull;&nbsp;
-Mined by <b id="stat_mined_by"></b>
-<span style="float:right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">&nbsp;</span>
-<br><br>
-</div>
-
-<div id="stat_error" class="err" style="display:none">Something went wrong (<span id="error_info"></span>)</div>
-<div id="block_fees" style="height:370px;margin:5px"></div>
-<br>
-<div width="100%" style="margin-bottom:10px;text-align:right">
-<span class="hand" onclick="block_fees_points.click()">
-	<input type="checkbox" id="block_fees_points" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Show points
-</span>
-&nbsp;&bull;&nbsp;
-Limit range to
-<span class="hand" onclick="block_fees_full.click()">
-	<input type="radio" name="block_fees_range" id="block_fees_full" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked>100%
-</span>
-<span class="hand" onclick="block_fees_25.click()">
-	<input type="radio" name="block_fees_range" id="block_fees_25" onchange="show_fees_clicked()" onclick="event.stopPropagation()">25%
-</span>
-<span class="hand" onclick="block_fees_5.click()">
-	<input type="radio" name="block_fees_range" id="block_fees_5" onchange="show_fees_clicked()" onclick="event.stopPropagation()">5%
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_raw.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_raw" value="raw" onchange="show_fees_clicked()" onclick="event.stopPropagation()" checked> Show as is
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_gru.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_gru" value="gru" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Try to group
-</span>
-&nbsp;&bull;&nbsp;
-<span class="hand" onclick="block_fees_spb.click()">
-	<input type="radio" name="block_fees_mode" id="block_fees_spb" value="spb" onchange="show_fees_clicked()" onclick="event.stopPropagation()"> Sort by SPB
-</span>
-</div>
-
-</div>
-</div><div id="fade" class="black_overlay"></div>
-<!-- **************************** BLOCK_FEES_END **************************** -->
-
+<!-- include fees_chart.html -->
 
 <table width="100%" border="0">
 <colgroup>

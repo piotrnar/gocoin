@@ -41,6 +41,9 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 		s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
 	}
 
+	fees_chart := load_template("fees_chart.html")
+	s = strings.Replace(s, "<!-- include fees_chart.html -->", fees_chart, 1)
+
 	s = strings.Replace(s, "<!--PUB_AUTH_KEY-->", common.PublicKey, 1)
 
 	write_html_head(w, r)

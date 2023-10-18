@@ -3,6 +3,7 @@ package webui
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
@@ -17,8 +18,12 @@ func p_blocks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s := load_template("blocks.html")
+	fees_chart := load_template("fees_chart.html")
+	s = strings.Replace(s, "<!-- include fees_chart.html -->", fees_chart, 1)
+
 	write_html_head(w, r)
-	w.Write([]byte(load_template("blocks.html")))
+	w.Write([]byte(s))
 	write_html_tail(w)
 }
 
