@@ -2,10 +2,11 @@ package textui
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/btc"
-	"time"
 )
 
 func get_total_block_fees(txs []*network.OneTxToSend) (totfees uint64, totwgh, tcnt int) {
@@ -47,11 +48,11 @@ func get_total_block_fees(txs []*network.OneTxToSend) (totfees uint64, totwgh, t
 func new_block(par string) {
 	sta := time.Now()
 	txs := network.GetSortedMempool()
-	println(len(txs), "OLD tx_sort got in", time.Now().Sub(sta).String())
+	println(len(txs), "OLD tx_sort got in", time.Since(sta).String())
 
 	sta = time.Now()
 	cpfp := network.GetSortedMempoolNew()
-	println(len(cpfp), "NEW tx_sort got in", time.Now().Sub(sta).String())
+	println(len(cpfp), "NEW tx_sort got in", time.Since(sta).String())
 
 	var totwgh, tcnt int
 	var totfees, totfees2 uint64

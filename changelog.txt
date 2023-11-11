@@ -12,6 +12,7 @@
 * Tools/bdb - new command "-compress" to compress a "bl*.dat" file (after running node without "CFG.Memory.CompressBlockDB")
 * Client/TextUI: new command "usd" - tries to figure out curent BTC/USD price, using UTXOracle method
 * Client/WebUI: some improvements to the block fees chart (in Home and Blocks tab)
+* Client/TextUI: some code cleanup
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)

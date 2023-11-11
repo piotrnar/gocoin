@@ -79,8 +79,8 @@ func node_info(par string) {
 			fmt.Println("SendHeaders:", r.SendHeaders)
 		}
 		fmt.Println("Invs Done:", r.InvsDone)
-		fmt.Println("Last data got:", time.Now().Sub(r.LastDataGot).String())
-		fmt.Println("Last data sent:", time.Now().Sub(r.LastSent).String())
+		fmt.Println("Last data got:", time.Since(r.LastDataGot).String())
+		fmt.Println("Last data sent:", time.Since(r.LastSent).String())
 		fmt.Println("Last command received:", r.LastCmdRcvd, " ", r.LastBtsRcvd, "bytes")
 		fmt.Println("Last command sent:", r.LastCmdSent, " ", r.LastBtsSent, "bytes")
 		fmt.Print("Invs  Recieved:", r.InvsRecieved, "  Pending:", r.InvsToSend, "\n")
@@ -104,7 +104,7 @@ func node_info(par string) {
 			fmt.Println()
 		}
 		mms := make([]string, 0, len(mts))
-		for k, _ := range mts {
+		for k := range mts {
 			mms = append(mms, k)
 		}
 		sort.Strings(mms)
@@ -204,7 +204,7 @@ func net_rd(par string) {
 	for ip, rd := range network.RecentlyDisconencted {
 		srt[idx] = fmt.Sprintf("%31d %16s %3d %16s - %s", rd.Time.UnixNano(),
 			fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]), rd.Count,
-			time.Now().Sub(rd.Time).String(), rd.Why)
+			time.Since(rd.Time).String(), rd.Why)
 		idx++
 	}
 	sort.Strings(srt)
@@ -278,7 +278,7 @@ func sync_stats(par string) {
 			network.Fetch.BlockSameRcvd, wst>>20, tot>>20, 100*float64(wst)/float64(tot))
 	}
 
-	if strings.Index(par, "c") != -1 {
+	if strings.Contains(par, "c") {
 		var lowest_cached_height, highest_cached_height uint32
 		var ready_cached_cnt uint32
 		var cached_ready_bytes int
@@ -312,7 +312,7 @@ func sync_stats(par string) {
 			100*network.MaxCachedBlocksSize.Get()/common.SyncMaxCacheBytes.Get())
 	}
 
-	if strings.Index(par, "x") != -1 {
+	if strings.Contains(par, "x") {
 		var bip_cnt, ip_min, ip_max uint32
 		network.MutexRcv.Lock()
 		for _, bip := range network.BlocksToGet {
@@ -357,7 +357,7 @@ func sync_stats(par string) {
 	fmt.Println()
 
 	print_fetch_counters()
-	if strings.Index(par, "r") != -1 {
+	if strings.Contains(par, "r") {
 		common.CountSafeStore("BlocksUnderflowCount", 0)
 		println("Error counter set to 0")
 	}

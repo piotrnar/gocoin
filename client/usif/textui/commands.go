@@ -40,9 +40,7 @@ func newUi(cmds string, sync bool, hn func(string), help string) {
 	cs := strings.Split(cmds, " ")
 	if len(cs[0]) > 0 {
 		var c = new(oneUiCmd)
-		for i := range cs {
-			c.cmds = append(c.cmds, cs[i])
-		}
+		c.cmds = append(c.cmds, cs...)
 		c.sync = sync
 		c.help = help
 		c.handler = hn

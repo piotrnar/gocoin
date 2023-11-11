@@ -2,6 +2,7 @@ package textui
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -23,8 +24,8 @@ func load_tx(par string) {
 		println(e.Error())
 		return
 	}
-	n, _ := f.Seek(0, os.SEEK_END)
-	f.Seek(0, os.SEEK_SET)
+	n, _ := f.Seek(0, io.SeekStart)
+	f.Seek(0, io.SeekEnd)
 	buf := make([]byte, n)
 	f.Read(buf)
 	f.Close()
@@ -112,7 +113,6 @@ func save_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
@@ -129,42 +129,42 @@ func mempool_stats(par string) {
 }
 
 func list_txs(par string) {
-	limitbytes, _ := strconv.ParseUint(par, 10, 64)
-	fmt.Println("Transactions in the memory pool:", limitbytes)
+	var er error
+	var maxweigth uint64
+	maxweigth, er = strconv.ParseUint(par, 10, 64)
+	if er != nil || maxweigth > 4e6 {
+		maxweigth = 4e6
+	}
+	fmt.Println("Listing txs in mempool up to weight:", maxweigth)
 	cnt := 0
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
 
 	sorted := network.GetSortedMempool()
 
-	var totlen uint64
+	var totlen, totweigth uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
+		totweigth += uint64(v.Weight())
 		totlen += uint64(len(v.Raw))
 
-		if limitbytes != 0 && totlen > limitbytes {
+		if totweigth > maxweigth {
 			break
 		}
 
-		var oe, snt string
-		if v.Local {
-			oe = " *OWN*"
-		} else {
-			oe = ""
-		}
-
-		snt = fmt.Sprintf("INV sent %d times,   ", v.Invsentcnt)
-
+		var snt string
 		if v.SentCnt == 0 {
-			snt = "never sent"
+			snt += "tx never"
 		} else {
-			snt = fmt.Sprintf("sent %d times, last %s ago", v.SentCnt,
-				time.Now().Sub(v.Lastsent).String())
+			snt += fmt.Sprintf("tx %d times, last %s ago", v.SentCnt,
+				time.Since(v.Lastsent).String())
+		}
+		if v.Local {
+			snt += " *OWN*"
 		}
 
-		spb := float64(v.Fee) / float64(len(v.Raw))
-
-		fmt.Println(fmt.Sprintf("%5d) ...%10d %s  %6d bytes / %6.1fspb - %s%s", cnt, totlen, v.Tx.Hash.String(), len(v.Raw), spb, snt, oe))
+		fmt.Printf("%5d) ...%7d/%7d %s %6d bytes / %4.1fspb - INV snt %d times, %s\n",
+			cnt, totlen, totweigth, v.Tx.Hash.String(), len(v.Raw), v.SPB(), v.Invsentcnt, snt)
 
 	}
 }
@@ -176,7 +176,7 @@ func baned_txs(par string) {
 	for k, v := range network.TransactionsRejected {
 		cnt++
 		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", v.Size, "bytes",
-			"-", v.Reason, "-", time.Now().Sub(v.Time).String(), "ago")
+			"-", v.Reason, "-", time.Since(v.Time).String(), "ago")
 	}
 	network.TxMutex.Unlock()
 }
@@ -232,7 +232,7 @@ func load_mempool(par string) {
 	fmt.Println("Press Ctrl+C to abort...")
 	network.MempoolLoadNew(par, &abort)
 	__exit <- true
-	_ = <-__done
+	<-__done
 	if abort {
 		fmt.Println("Aborted")
 	}
@@ -256,10 +256,10 @@ func init() {
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
 	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
 	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
-	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to 1MB space <max_size>")
+	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to <max_weigth> (default 4M)")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
-	newUi("txsave", true, save_tx, "Save raw transaction from memory pool to disk")
+	newUi("savetx txsave", true, save_tx, "Save raw transaction from memory pool to disk")
 	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")

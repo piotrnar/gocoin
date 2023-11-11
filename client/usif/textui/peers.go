@@ -184,15 +184,6 @@ func unban_peer(par string) {
 	}
 }
 
-func ban_peer(par string) {
-	ad, er := peersdb.NewAddrFromString(par, false)
-	if er != nil {
-		fmt.Println(par, er.Error())
-		return
-	}
-	ad.Ban("FromTUI")
-}
-
 func add_peer(par string) {
 	ad, er := peersdb.NewAddrFromString(par, false)
 	if er != nil {
