@@ -103,15 +103,15 @@ func TestMakeWallet(t *testing.T) {
 	hdpath = "m/84'/0'/0'/0/0"
 	bip39wrds = 12
 	keycnt = 10
-	*segwit_mode = true
-	*bech32_mode = true
+	segwit_mode = true
+	bech32_mode = true
 	mkwal_check(t, "1DCw8Gjgy3pfAh2NWQvgJEXHBjZvB4PAoD")
 	if segwit[9].String() != "bc1qsh35g0djgwj7yw6evkhlkajke3twaua30ke3em" {
 		t.Error("Expected address mismatch", segwit[9].String())
 	}
-	
-	*segwit_mode = false
-	*bech32_mode = false
+
+	segwit_mode = false
+	bech32_mode = false
 	bip39wrds = 0
 }
 
