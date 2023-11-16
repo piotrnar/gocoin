@@ -4,18 +4,17 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/piotrnar/gocoin/lib/btc"
-	"github.com/piotrnar/gocoin/lib/others/ltc"
 	"io/ioutil"
 	"os"
+
+	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/ltc"
 )
 
 // sign_message signs either a message or a raw hash.
 func sign_message() {
 	var hash []byte
-	var signkey *btc.PrivateAddr
-
-	signkey = address_to_key(*signaddr)
+	var signkey *btc.PrivateAddr = address_to_key(*signaddr)
 	if signkey == nil {
 		println("You do not have a private key for", *signaddr)
 		return
