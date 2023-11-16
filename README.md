@@ -83,11 +83,10 @@ Go to the `wallet/` folder and execute `go build` there.
 
 
 ## Tools
-Go to the `tools/` folder and execute:
+Each sub-folder inside `tools/` folder is a separate tool.
 
-	go build btcversig.go
+Go to a chosen sub-folder and execute `go build` there.
 
-Repeat the `go build` for each source file of the tool you want to build.
 
 # Binaries
 
