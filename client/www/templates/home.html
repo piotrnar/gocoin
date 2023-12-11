@@ -22,6 +22,10 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 
 <table width="100%"><tr style="border:0">
 <td style="padding:0">
+<span onclick="chart_type_spb.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Average SPB
+</span>
+&nbsp;&bull;&nbsp;
 <span onclick="chart_type_siz.click()" class="hand">
 	<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" onclick="event.stopPropagation()"> Blocksize KB
 </span>
@@ -30,18 +34,21 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 	<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()" onclick="event.stopPropagation()"> Transactions
 </span>
 &nbsp;&bull;&nbsp;
-<span onclick="chart_type_spb.click()" class="hand">
-	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Average SPB
-</span>
-&nbsp;&bull;&nbsp;
 <span onclick="chart_type_wgt.click()" class="hand">
 	<input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()" onclick="event.stopPropagation()"> Weight
 </span>
 &nbsp;&bull;&nbsp;
-<span onclick="chart_type_avg.click()" class="hand">
+
+<span onclick="chart_type_avg.click()" class="hand" style="display:inline">
 	<input type="checkbox" id="chart_type_avg" onchange="draw_chart()" onclick="event.stopPropagation()">
 	<span id="avg_size">.</span> blocks average
 </span>
+
+<span onclick="chart_type_ord.click()" class="hand" title="See how much is used by ord inscriptions" id="ord_label">
+	<input type="checkbox" id="chart_type_ord" onchange="draw_chart()" onclick="event.stopPropagation()">
+	Ordinals %
+</span>
+
 </td>
 <td align="right" style="padding:0px">
 	<table>
@@ -213,7 +220,10 @@ function handlehover(event, pos, item) {
 			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
 			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
 			str += 'Block Weight: ' + rec.Weight + "<br>"
-			str += 'Mined by ' + rec.Miner
+			str += 'Mined by ' + rec.Miner + '<br>'
+			str += 'Ords use ' + (100*rec.OrdCnt/rec.TxCnt).toFixed(0) + '% txs, '
+			str += (100*rec.OrdSize/rec.Size).toFixed(0) + '% size, '
+			str += (100*rec.OrdWeight/rec.Weight).toFixed(0) + '% of weight'
 			//if (rec.Weight > 0)
 
 			showTooltip(item.pageX, item.pageY, str)
@@ -237,6 +247,8 @@ function handleclick(event, pos, item) {
 }
 
 function draw_chart() {
+	ord_label.style.display = chart_type_spb.checked ? "none" : "inline"
+	
 	var aj = ajax()
 	aj.onerror=function() {
 		setTimeout(draw_chart, 1000)
@@ -281,7 +293,7 @@ function draw_chart() {
 				}
 				cs.push(_cs[i])
 				if (chart_type_avg.checked) {
-					var sum=0, avgcnt=0;
+					var sum=0, avgcnt=0, sumord=0;
 					for (var ii=i; avgcnt<blks_average && ii>=0; ii--) {
 						if (_cs[i].TxCnt==1) {
 							continue
@@ -289,26 +301,45 @@ function draw_chart() {
 						avgcnt++;
 						if (chart_type_siz.checked) {
 							sum += _cs[ii].Size/1000.0
+							sumord += _cs[ii].OrdSize/1000.0
 						} else if (chart_type_spb.checked) {
 							sum += _cs[ii].FeeSPB
 						} else if (chart_type_wgt.checked) {
 							sum += _cs[ii].Weight
+							sumord += _cs[ii].OrdWeight
 						} else {
 							sum += _cs[ii].TxCnt
+							sumord += _cs[ii].OrdCnt
 						}
 					}
 					if (avgcnt>0) {
-						plot_data[0].data.push([_cs[i].Timestamp*1000, sum/avgcnt])
+						if (chart_type_spb.checked || !chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, sum/avgcnt])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*sumord/sum])
+						}
 					}
 				} else {
 					if (chart_type_siz.checked) {
-						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdSize/_cs[i].Size])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
+						}
 					} else if (chart_type_spb.checked) {
 						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
 					} else if (chart_type_wgt.checked) {
-						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Weight])
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdWeight/_cs[i].Weight])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Weight])
+						}
 					} else {
-						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdCnt/_cs[i].TxCnt])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
+						}
 					}
 				}
 			}

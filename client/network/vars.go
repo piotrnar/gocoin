@@ -23,6 +23,10 @@ type OneReceivedBlock struct {
 
 	TheWeight    uint
 	ThePaidVSize uint
+
+	TheOrdCnt    uint
+	TheOrdSize   uint
+	TheOrdWeight uint
 }
 
 type BlockRcvd struct {

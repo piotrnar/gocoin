@@ -27,6 +27,10 @@ type Block struct {
 	PaidTxsVSize  uint
 	TotalInputs   int
 
+	OrbTxCnt    uint
+	OrbTxSize   uint
+	OrbTxWeight uint
+
 	NoWitnessData []byte // This is set by BuildNoWitnessData()
 }
 
@@ -141,11 +145,20 @@ func (bl *Block) BuildTxListExt(dohash bool) (e error) {
 			bl.Txs[i].NoWitSize = bl.Txs[i].Size
 			witness2hash = nil
 		}
-		bl.BlockWeight += uint(3*bl.Txs[i].NoWitSize + bl.Txs[i].Size)
+		weight := uint(3*bl.Txs[i].NoWitSize + bl.Txs[i].Size)
+		bl.BlockWeight += weight
 		if i > 0 {
 			bl.PaidTxsVSize += uint(bl.Txs[i].VSize())
 		}
 		bl.NoWitnessSize += len(data2hash)
+		if i != 0 {
+			if yes, _ := bl.Txs[i].ContainsOrdFile(true); yes {
+				bl.OrbTxCnt++
+				bl.OrbTxSize += uint(n)
+				bl.OrbTxWeight += weight
+			}
+		}
+
 		if dohash {
 			wg.Add(1)
 			go func(tx *Tx, b, w []byte) {

@@ -329,6 +329,9 @@ func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx 
 		rb.NonWitnessSize = block.NoWitnessSize
 		rb.TheWeight = block.BlockWeight
 		rb.ThePaidVSize = block.PaidTxsVSize
+		rb.TheOrdCnt = block.OrbTxCnt
+		rb.TheOrdSize = block.OrbTxSize
+		rb.TheOrdWeight = block.OrbTxWeight
 		cbasetx = block.Txs[0]
 	} else {
 		cbasetx, _ = btc.NewTx(block.Raw[block.TxOffset:])

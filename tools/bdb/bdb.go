@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -80,6 +82,7 @@ var (
 	fl_rendat      bool
 
 	fl_ord string
+	fl_ox  bool
 
 	fl_compress string
 
@@ -345,6 +348,78 @@ func open_dat_file(idx uint32) (f *os.File, er error) {
 	return
 }
 
+// ExtractOrdFile extracts the file (inscription) stored inside the segwit data
+// ... as per github.com/casey/ord
+//
+//	p  - is the segwith data returned by transaction's ContainsOrdFile()
+//
+// returns file type and the file itself
+func ExtractOrdFile(p []byte) (typ string, data []byte, e error) {
+	var opcode_idx int
+	var byte_idx int
+
+	for byte_idx < len(p) {
+		opcode, vchPushValue, n, er := btc.GetOpcode(p[byte_idx:])
+		if er != nil {
+			e = errors.New("ExtractOrdinaryFile: " + er.Error())
+			return
+		}
+
+		byte_idx += n
+
+		switch opcode_idx {
+		case 0:
+			if len(vchPushValue) != 32 {
+				e = errors.New("opcode_idx 0: No push data 32 bytes")
+				return
+			}
+		case 1:
+			if opcode != btc.OP_CHECKSIG {
+				e = errors.New("opcode_idx 1: OP_CHECKSIG missing")
+				return
+			}
+		case 2:
+			if opcode != btc.OP_FALSE {
+				e = errors.New("opcode_idx 2: OP_FALSE missing")
+				return
+			}
+		case 3:
+			if opcode != btc.OP_IF {
+				e = errors.New("opcode_idx 3: OP_IF missing")
+				return
+			}
+		case 4:
+			if len(vchPushValue) != 3 || string(vchPushValue) != "ord" {
+				e = errors.New("opcode_idx 4: missing ord string")
+				return
+			}
+		case 5:
+			if len(vchPushValue) != 1 || vchPushValue[0] != 1 {
+				//println("opcode_idx 5:", hex.EncodeToString(vchPushValue), string(vchPushValue), "-ignore")
+				opcode_idx-- // ignore this one
+			}
+		case 6:
+			typ = string(vchPushValue)
+		case 7:
+			if opcode != btc.OP_FALSE {
+				if len(vchPushValue) == 1 || vchPushValue[0] == 7 {
+					break
+				}
+				e = errors.New("opcode_idx 7: OP_FALSE missing")
+				return
+			}
+		default:
+			if opcode == btc.OP_ENDIF {
+				return
+			}
+			data = append(data, vchPushValue...)
+		}
+
+		opcode_idx++
+	}
+	return
+}
+
 func main() {
 	flag.BoolVar(&fl_help, "h", false, "Show help")
 	flag.UintVar(&fl_block, "block", 0, "Print details of the given block number (or start -verify from it)")
@@ -382,7 +457,8 @@ func main() {
 
 	flag.BoolVar(&fl_rendat, "rendat", false, "Rename all blockchain*.dat files to the new format (blNNNNNNNN.dat)")
 
-	flag.StringVar(&fl_ord, "ord", "", "Extract ord inscriptions from given blocks (specify number or range)")
+	flag.StringVar(&fl_ord, "ord", "", "Analyse ord inscriptions of the given blocks (specify number or range)")
+	flag.BoolVar(&fl_ox, "ox", false, "Extract ord inscriptions instead of analysing (use with -ord))")
 
 	flag.StringVar(&fl_compress, "compress", "", "Compress all the blocks inside the given blxxxxxxxx.dat file")
 
@@ -1305,7 +1381,7 @@ func main() {
 				f.Read(bu)
 				f.Close()
 				bld := decomp_block(sl.Flags(), bu)
-				if bytes.Index(bld, []byte{0x00, 0x63, 0x03, 0x6f, 0x72, 0x64}) == -1 {
+				if !bytes.Contains(bld, []byte{0x00, 0x63, 0x03, 0x6f, 0x72, 0x64}) {
 					continue
 				}
 				bl, er := btc.NewBlock(bld)
@@ -1314,23 +1390,40 @@ func main() {
 					return
 				}
 				bl.BuildTxList()
+
+				if !fl_ox {
+					fmt.Printf("In block #%d ordinals took %2d%% of txs (%4d), %2d%% of Size (len %7d) and %2d%% of Weight (%7d)\n",
+						sl.Height(), 100*bl.OrbTxCnt/uint(bl.TxCount), bl.TxCount, 100*bl.OrbTxSize/uint(len(bl.Raw)), len(bl.Raw),
+						100*bl.OrbTxWeight/bl.BlockWeight, bl.BlockWeight)
+					continue
+				}
+
 				for _, tx := range bl.Txs {
-					if sw := tx.ContainsOrdFile(false); sw != nil {
-						if len(sw) > 39 && sw[0] == 0x20 && sw[37] == 0x6f && sw[38] == 0x72 && sw[39] == 0x64 {
-							typ, data, er := btc.ExtractOrdFile(sw)
-							if er != nil {
-								println(tx.Hash.String(), er.Error())
-								continue
-							}
-							//println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
-							if true {
-								ext := typ
-								tps := strings.SplitN(string(typ), "/", 2)
-								if len(tps) == 2 {
-									ext = tps[1]
+					if yes, sws := tx.ContainsOrdFile(false); yes {
+						if true {
+							for idx, sw := range sws {
+								if len(sw) > 39 && sw[0] == 0x20 && sw[37] == 0x6f && sw[38] == 0x72 && sw[39] == 0x64 {
+									typ, data, er := ExtractOrdFile(sw)
+									if er != nil {
+										println(er.Error())
+										println(hex.EncodeToString(sw))
+										return
+										continue
+									}
+									//println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
+									if true {
+										ext := typ
+										tps := strings.SplitN(string(typ), "/", 2)
+										if len(tps) == 2 {
+											ext = tps[1]
+										}
+										ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), "-", idx, ".", ext), data, 0700)
+									}
+									ord_cnt++
 								}
-								ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), ".", ext), data, 0700)
 							}
+						} else {
+							ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), ".tx"), tx.Raw, 0700)
 							ord_cnt++
 						}
 					}

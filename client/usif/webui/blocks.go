@@ -44,6 +44,10 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		Miner     string
 		FeeSPB    float64
 
+		OrdCnt    uint
+		OrdSize   uint
+		OrdWeight uint
+
 		Received                          uint32
 		TimePre, TimeDl, TimeVer, TimeQue int
 		WasteCnt                          uint
@@ -91,6 +95,10 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 		b.Weight = rb.TheWeight
 		b.NonWitnessSize = rb.NonWitnessSize
 		b.Version = block.Version()
+
+		b.OrdCnt = rb.TheOrdCnt
+		b.OrdSize = rb.TheOrdSize
+		b.OrdWeight = rb.TheOrdWeight
 
 		for o := range cbasetx.TxOut {
 			b.Reward += cbasetx.TxOut[o].Value
