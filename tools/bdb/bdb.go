@@ -1366,6 +1366,9 @@ func main() {
 			oto = ofr
 		}
 
+		var tot_txs, tot_siz, tot_wht uint
+		var tot_otxs, tot_osiz, tot_owht uint
+
 		os.Mkdir("ord", 0600)
 		var ord_cnt uint64
 		for off := 0; off < len(dat); off += 136 {
@@ -1390,6 +1393,13 @@ func main() {
 					return
 				}
 				bl.BuildTxList()
+
+				tot_txs += uint(bl.TxCount)
+				tot_siz += uint(len(bl.Raw))
+				tot_wht += bl.BlockWeight
+				tot_otxs += bl.OrbTxCnt
+				tot_osiz += bl.OrbTxSize
+				tot_owht += bl.OrbTxWeight
 
 				if !fl_ox {
 					fmt.Printf("In block #%d ordinals took %2d%% of txs (%4d), %2d%% of Size (len %7d) and %2d%% of Weight (%7d)\n",
@@ -1430,7 +1440,12 @@ func main() {
 				}
 			}
 		}
-		println(ord_cnt, "ord files found")
+		if fl_ox {
+			fmt.Println(ord_cnt, "ord files found")
+		} else {
+			fmt.Printf("Averagle blocks occupation: %d%% txs, %d%% bytes, %d%% weight\n",
+				100*tot_otxs/tot_txs, 100*tot_osiz/tot_siz, 100*tot_owht/tot_wht)
+		}
 		return
 	}
 

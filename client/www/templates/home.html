@@ -41,12 +41,12 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 
 <span onclick="chart_type_avg.click()" class="hand" style="display:inline">
 	<input type="checkbox" id="chart_type_avg" onchange="draw_chart()" onclick="event.stopPropagation()">
-	<span id="avg_size">.</span> blocks average
+	<span id="avg_size">.</span> bl. avg
 </span>
-
-<span onclick="chart_type_ord.click()" class="hand" title="See how much is used by ord inscriptions" id="ord_label">
+&nbsp;
+<span onclick="chart_type_ord.click()" class="hand" title="See how much is used by Ordinal Inscriptions" id="ord_label">
 	<input type="checkbox" id="chart_type_ord" onchange="draw_chart()" onclick="event.stopPropagation()">
-	Ordinals %
+	Ord. %
 </span>
 
 </td>
@@ -185,14 +185,16 @@ var cs
 
 const blks_average = 6
 
-function remember_chart_setting() {
+function restore_chart_setting() {
 	var mod = localStorage.getItem("home_chart")
-	if ((mod+'').length!=3) mod = "siz"
+	if ((mod+'').length!=3) mod = "spb"
 	document.getElementById('chart_type_'+mod).checked = true
 	chart_type_avg.checked = localStorage.getItem("home_chart_avg") === 'true'
+	chart_type_ord.checked = localStorage.getItem("home_chart_ord") === 'true'
 	avg_size.innerText = blks_average
 }
-remember_chart_setting()
+restore_chart_setting()
+var chart_type_ord_prev = chart_type_ord.checked
 
 function showTooltip(x, y, contents) {
 	$('<div id="tooltip">' + contents + '</div>').css( {
@@ -247,7 +249,15 @@ function handleclick(event, pos, item) {
 }
 
 function draw_chart() {
-	ord_label.style.display = chart_type_spb.checked ? "none" : "inline"
+	// check if would have both SPB and Ord...
+	if (chart_type_spb.checked && chart_type_ord.checked) {
+		if (!chart_type_ord_prev) {
+			chart_type_wgt.checked = true // if clicking Ord: switch to Weigth
+		} else {
+			chart_type_ord.checked = false // clicking SPB: disable Ord
+		}
+	}
+	chart_type_ord_prev = chart_type_ord.checked
 	
 	var aj = ajax()
 	aj.onerror=function() {
@@ -281,8 +291,9 @@ function draw_chart() {
 				localStorage.setItem("home_chart", "txs")
 			}
 			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
+			localStorage.setItem("home_chart_ord", chart_type_ord.checked)
 
-			console.log(_cs)
+			//console.log(_cs)
 			cs = new Array()
 			for (var i=0; i<_cs.length; i++) {
 				if (_cs[i].TxCnt==1) {
