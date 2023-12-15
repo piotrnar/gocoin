@@ -1363,7 +1363,7 @@ func main() {
 			}
 		}
 		if oto < ofr {
-			if oto < 100e3 {
+			if oto > 0 && oto < 100e3 {
 				fmt.Println("Checking ords from the last", oto, "blocks")
 				sl := new_sl(dat[len(dat)-136:])
 				ofr = uint64(sl.Height()) - oto + 1
@@ -1409,7 +1409,7 @@ func main() {
 				tot_owht += bl.OrbTxWeight
 
 				if !fl_ox {
-					fmt.Printf("In block #%d ordinals took %2d%% of txs (%4d), %2d%% of Size (len %7d) and %2d%% of Weight (%7d)\n",
+					fmt.Printf("In block #%d ordinals took %2d%% of txs (%4d), %2d%% of Size (%7d) and %2d%% of Weight (%7d)\n",
 						sl.Height(), 100*bl.OrbTxCnt/uint(bl.TxCount), bl.TxCount, 100*bl.OrbTxSize/uint(len(bl.Raw)), len(bl.Raw),
 						100*bl.OrbTxWeight/bl.BlockWeight, bl.BlockWeight)
 					continue
