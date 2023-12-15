@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
@@ -63,7 +64,6 @@ var (
 	fl_savebl            string
 	fl_purgeall          bool
 	fl_purgeto           uint
-	fl_flasg             bool
 	fl_from, fl_to       uint
 	fl_trusted           int
 	fl_invalid           int
@@ -551,8 +551,6 @@ func main() {
 					newfn := fmt.Sprintf("bl%08d.dat", idx)
 					//println("rename", fl_dir+fn, "to", fl_dir+newfn)
 					os.Rename(fl_dir+fn, fl_dir+newfn)
-				} else {
-					//println(fl_dir+fn, "- ok")
 				}
 				idxs_done[idx] = true
 			}
@@ -960,7 +958,7 @@ func main() {
 
 		// Capture Ctrl+C
 		killchan := make(chan os.Signal, 1)
-		signal.Notify(killchan, os.Interrupt, os.Kill)
+		signal.Notify(killchan, os.Interrupt, syscall.SIGTERM)
 
 		var doff uint64
 		var prv_perc uint64 = 101
@@ -1118,7 +1116,7 @@ func main() {
 				trunc_dat_idx := binary.LittleEndian.Uint32(sl[28:32])
 				cur_dat_fname := dat_fname(trunc_dat_idx)
 				fmt.Println("Truncate blockchain.new at offset", trunc_idx_offs)
-				fmt.Println("Truncate", dat_fname, "at offset", trunc_dat_offs)
+				fmt.Println("Truncate", dat_fname(trunc_dat_idx), "at offset", trunc_dat_offs)
 				if !fl_trunc {
 					new_dir := fl_dir + fmt.Sprint(height) + string(os.PathSeparator)
 					os.Mkdir(new_dir, os.ModePerm)
@@ -1424,8 +1422,8 @@ func main() {
 									if er != nil {
 										println(er.Error())
 										println(hex.EncodeToString(sw))
+										println("exiting...")
 										return
-										continue
 									}
 									//println("block", sl.Height(), "has tx", tx.Hash.String(), "len", string(typ), "-", len(data), "bytes")
 									if true {
