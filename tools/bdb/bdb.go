@@ -1363,7 +1363,14 @@ func main() {
 			}
 		}
 		if oto < ofr {
-			oto = ofr
+			if oto < 100e3 {
+				fmt.Println("Checking ords from the last", oto, "blocks")
+				sl := new_sl(dat[len(dat)-136:])
+				ofr = uint64(sl.Height()) - oto + 1
+				oto = uint64(sl.Height())
+			} else {
+				oto = ofr
+			}
 		}
 
 		var tot_txs, tot_siz, tot_wht uint
