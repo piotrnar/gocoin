@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -396,7 +397,7 @@ func main() {
 	fmt.Println("Gocoin client version", gocoin.Version)
 
 	// Disable Ctrl+C
-	signal.Notify(common.KillChan, os.Interrupt, os.Kill)
+	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -683,7 +684,7 @@ func main() {
 	if common.FLAG.UndoBlocks == 0 {
 		network.MempoolSave(false)
 	}
-	fmt.Println("Blockchain closed in", time.Now().Sub(sta).String())
+	fmt.Println("Blockchain closed in", time.Since(sta).String())
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
 	sys.UnlockDatabaseDir()
