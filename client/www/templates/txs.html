@@ -667,6 +667,9 @@ function handlehover(event, pos, item) {
 				str += ', ' + time2str(parseInt(new Date().getTime())/1000 - rec.Time_received) +' old<br>'
 				str += '' + (rec.Real_len_so_far/1e6).toFixed(2) + ' MB'
 				str += ' &#8594; ' + (rec.Weight_so_far/4e6).toFixed(2) + ' Blocks<br>'
+				str += ' Fees: ' + val2str(rec.Fees_so_far) + ' BTC<br>'
+				str += ' Ord: ' + (100*rec.Ord_weight_so_far/rec.Weight_so_far).toFixed(0) + '% weight<br>'
+				str += ' &nbsp;&nbsp;&nbsp;' + val2str(rec.Ord_fees_so_far) + ' BTC<br>'
 			}
 			showTooltip(item.pageX, item.pageY, str)
 		}
@@ -704,6 +707,7 @@ function show_mempool_fees() {
 			mp = JSON.parse(aj.responseText)
 			if (mp==null) return
 
+			console.log(mp.length, mp[0], mp[1])
 			var plot_data = [ { data : [], color : 4, points: { show:!one_block }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {

@@ -543,15 +543,21 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		Current_tx_id     string
 		Time_received     uint
 		Fees_so_far       uint64
+		Ord_weight_so_far uint
+		Ord_fees_so_far   uint64
 	}
 	var mempool_stats []one_stat_row
 
-	var totweight, reallen, totfee uint64
+	var totweight, reallen, totfee, ordweight, ordfees uint64
 	for cnt := 0; cnt < len(sorted); cnt++ {
 		v := sorted[cnt]
 		newtotweight := totweight + uint64(v.Weight())
 		reallen += uint64(len(v.Raw))
 		totfee += v.Fee
+		if yes, _ := v.ContainsOrdFile(true); yes {
+			ordweight += uint64(v.Weight())
+			ordfees += v.Fee
+		}
 
 		if cnt == 0 || cnt+1 == len(sorted) || (newtotweight/division) != (totweight/division) {
 			cur_spb := float64(v.Fee) / (float64(v.Weight() / 4.0))
@@ -563,7 +569,10 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 				Current_tx_spb:    cur_spb,
 				Current_tx_id:     v.Hash.String(),
 				Fees_so_far:       totfee,
-				Time_received:     uint(v.Firstseen.Unix())})
+				Time_received:     uint(v.Firstseen.Unix()),
+				Ord_weight_so_far: uint(ordweight),
+				Ord_fees_so_far:   ordfees,
+			})
 		}
 		totweight = newtotweight
 		if totweight >= maxweight {
