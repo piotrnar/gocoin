@@ -354,7 +354,8 @@ function draw_chart() {
 					}
 				}
 			}
-
+			
+			plot_options.yaxis.max = chart_type_ord.checked ? 100 : null
 			$("#chart").bind("plothover", handlehover)
 			$("#chart").bind("plotclick", handleclick)
 			$.plot($("#chart"), plot_data, plot_options)
