@@ -62,6 +62,8 @@ caption {
 
 <script>
 
+const avg_blocks_pr_day = 146.7 // average between #722125 and 822125
+
 var last_block_height = 0
 
 function printable(str) {
@@ -128,10 +130,10 @@ function refresh_mining_info() {
 			el_diff_change_in.innerText = (parseInt(last_block_height/2016)+1)*2016 - last_block_height
 
 			var per = (parseInt(last_block_height/210e3)+1) * 210e3
-			next_halving_days.innerText = Math.round((per - last_block_height) / 144.0)
-			next_halving_weeks.innerText = Math.round((per - last_block_height) / 144.0/7)
-			next_halving_months.innerText = Math.round((per - last_block_height) / 144.0/(365/12))
-			next_halving_years.innerText = ((per - last_block_height) / 144/365.25).toFixed(1)
+			next_halving_days.innerText = Math.round((per - last_block_height) / avg_blocks_pr_day)
+			next_halving_weeks.innerText = Math.round((per - last_block_height) / avg_blocks_pr_day/7)
+			next_halving_months.innerText = Math.round((per - last_block_height) / avg_blocks_pr_day/(365/12))
+			next_halving_years.innerText = ((per - last_block_height) / avg_blocks_pr_day/365.25).toFixed(1)
 
 			while (minerstab.rows.length>1) minerstab.deleteRow(1)
 
