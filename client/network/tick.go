@@ -30,6 +30,7 @@ var (
 	FriendsAccess      sync.Mutex
 
 	GetMPInProgressTicket = make(chan bool, 1)
+	GetMPInProgressConnID uint32
 )
 
 // call with unlocked c.Mutex
@@ -151,14 +152,16 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 
-		if common.GetBool(&common.BlockChainSynchronized) {
+		if len(c.GetMP) > 0 && common.GetBool(&common.BlockChainSynchronized) {
 			// See if to send "getmp" command
 			select {
 			case GetMPInProgressTicket <- true:
 				// ticket received - check for the request...
-				if len(c.GetMP) == 0 || c.SendGetMP() != nil {
-					// no request for "getmp" here or sending failed - clear the global flag/channel
+				GetMPInProgressConnID = c.ConnID
+				if c.SendGetMP() != nil {
+					// SendGetMP() failed - clear the global flag/channel
 					<-GetMPInProgressTicket
+					<-c.GetMP
 				}
 			default:
 				// failed to get the ticket - just do nothing
@@ -620,21 +623,26 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(GetMPInProgressTicket) == 0 {
 		// TODO: remove it at some point (should not be happening)
 		println("ERROR: GetMPDone() called with a lock, but without a ticket")
+		return
 	}
-	if len(pl) != 1 || pl[0] == 0 {
+
+	if GetMPInProgressConnID != c.ConnID {
+		if len(pl) < 1 {
+			<-c.GetMP
+		} else {
+			println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID, "held elsewere")
+		}
+		return
+	}
+
+	// the ticket is ours
+	if len(pl) < 1 || pl[0] == 0 || c.SendGetMP() != nil {
 		<-c.GetMP
-	} else {
-		if c.SendGetMP() == nil {
-			return // Get MP still in progress...
-		}
-		if len(c.GetMP) > 0 {
-			// TODO: remove it at some point (should not be happening)
-			println("ERROR: Failed SendGetMP() did not release GetMP lock (will malfunction)")
-		}
 	}
+
 	if len(GetMPInProgressTicket) == 0 {
 		// TODO: remove it at some point (should not be happening)
-		println("ERROR: GetMPDone() exitign without a ticket (will hang)")
+		println("ERROR: GetMPDone() exiting without a ticket (will hang)")
 	}
 	<-GetMPInProgressTicket
 }
@@ -902,7 +910,7 @@ func (c *OneConnection) Run() {
 		}
 	}
 
-	c.GetMPDone(nil)
+	c.GetMPDone(nil) // release the ticket, if kept
 
 	c.Conn.SetWriteDeadline(time.Now()) // this should cause c.Conn.Write() to terminate
 	c.writing_thread_done.Wait()
