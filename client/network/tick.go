@@ -16,6 +16,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network/peersdb"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/others/sys"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 	FriendsAccess      sync.Mutex
 
 	GetMPInProgressTicket = make(chan bool, 1)
-	GetMPInProgressConnID uint32
+	GetMPInProgressConnID sys.SyncInt
 )
 
 // call with unlocked c.Mutex
@@ -157,7 +158,7 @@ func (c *OneConnection) Tick(now time.Time) {
 			select {
 			case GetMPInProgressTicket <- true:
 				// ticket received - check for the request...
-				GetMPInProgressConnID = c.ConnID
+				GetMPInProgressConnID.Store(int(c.ConnID))
 				if c.SendGetMP() != nil {
 					// SendGetMP() failed - clear the global flag/channel
 					<-GetMPInProgressTicket
@@ -626,11 +627,11 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 		return
 	}
 
-	if GetMPInProgressConnID != c.ConnID {
+	if GetMPInProgressConnID.Get() != int(c.ConnID) {
 		if len(pl) < 1 {
 			<-c.GetMP
 		} else {
-			println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID, "held elsewere")
+			println("PEER", c.ConnID, "MISBEHAVE: Sent getmpdone but ticket", GetMPInProgressConnID.Get(), "held elsewere")
 		}
 		return
 	}

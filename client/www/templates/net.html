@@ -56,7 +56,7 @@ Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 <span id="bw_ul_speed_now_span">Uploading at
 <b id="bw_ul_speed_now"></b> KB/s</span>
 
-<span id="get_mp_in_progress">&nbsp;&bull;&nbsp;<b>GetMPInProgress</b></span>
+<span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span>
 
 </td>
 <td align="right">
@@ -708,7 +708,12 @@ function refreshbwinfo() {
 			sl = bw.Ul_speed_max==0 ? "not limited" : "limited to " + (bw.Ul_speed_max >> 10) + "KB/s"
 			bw_ul_speed_now_span.title = "Total " + bignum(bw.Ul_total) + 'B / Upload speed ' + sl
 
-			get_mp_in_progress.style.display = bw.GetMPInProgress ? "inline" : "none"
+			if (bw.GetMPInProgress) {
+				get_mp_conn_id.innerText = bw.GetMPConnID
+				get_mp_in_progress.style.display = "inline"
+			} else {
+				get_mp_in_progress.style.display = "none"
+			}
 		} catch(e) {
 			console.log(e)
 		}
