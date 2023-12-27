@@ -636,8 +636,12 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	}
 
 	// the ticket is ours
-	if len(pl) < 1 || pl[0] == 0 || c.SendGetMP() != nil {
+	if len(pl) < 1 || pl[0] == 0 {
 		<-c.GetMP
+	} else if c.SendGetMP() != nil {
+		<-c.GetMP
+	} else {
+		return
 	}
 
 	if len(GetMPInProgressTicket) == 0 {
