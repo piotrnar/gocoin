@@ -614,14 +614,29 @@ func (c *OneConnection) SendFeeFilter() {
 
 // GetMPDone should be called upon receiving "getmpdone" message or when the peer disconnects.
 func (c *OneConnection) GetMPDone(pl []byte) {
-	if len(c.GetMP) > 0 {
-		if len(pl) != 1 || pl[0] == 0 || c.SendGetMP() != nil {
-			<-c.GetMP
-			if len(GetMPInProgressTicket) > 0 {
-				<-GetMPInProgressTicket
-			}
+	if len(c.GetMP) == 0 {
+		return
+	}
+	if len(GetMPInProgressTicket) == 0 {
+		// TODO: remove it at some point (should not be happening)
+		println("ERROR: GetMPDone() called with a lock, but without a ticket")
+	}
+	if len(pl) != 1 || pl[0] == 0 {
+		<-c.GetMP
+	} else {
+		if c.SendGetMP() == nil {
+			return // Get MP still in progress...
+		}
+		if len(c.GetMP) > 0 {
+			// TODO: remove it at some point (should not be happening)
+			println("ERROR: Failed SendGetMP() did not release GetMP lock (will malfunction)")
 		}
 	}
+	if len(GetMPInProgressTicket) == 0 {
+		// TODO: remove it at some point (should not be happening)
+		println("ERROR: GetMPDone() exitign without a ticket (will hang)")
+	}
+	<-GetMPInProgressTicket
 }
 
 // Run starts a process that handles communication with a single peer.
