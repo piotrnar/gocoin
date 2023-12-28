@@ -15,6 +15,7 @@
 * Tools: each tool moved it its own sub-directory (IDE-s did not like multiple main-s in same folder)
 * Client/WebUI/Home: Shows the percetage occupancy of the ord inscriptions for each block
 * Tools/bdb - new command "-ord" to see ord inscriptions occupancy per block (use with "-ox" to extract the files)
+* Client: fixed lock problems releted to geting mempool content (only for peers we're authenticated with)
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
