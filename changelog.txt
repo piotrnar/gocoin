@@ -13,7 +13,7 @@
 * Client/WebUI: some improvements to the block fees chart (in Home and Blocks tab)
 * Client/TextUI: some code cleanup
 * Tools: each tool moved it its own sub-directory (IDE-s did not like multiple main-s in same folder)
-* Client/WebUI/Home: Shows the percetage occupancy of the ord inscriptions for each block
+* Client/WebUI/Home: Shows the percentage occupancy of the ord inscriptions for each block
 * Tools/bdb - new command "-ord" to see ord inscriptions occupancy per block (use with "-ox" to extract the files)
 * Client: fixed lock problems releted to geting mempool content (only for peers we're authenticated with)
 
