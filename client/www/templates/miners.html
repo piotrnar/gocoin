@@ -164,6 +164,7 @@ function refresh_mining_info() {
 				for (var j=0; j<m.MinedBlocks.length; j++) {
 					var b = m.MinedBlocks[j]
 					var cnt = 0
+					
 					if (vers.has(b.Version)) {
 						cnt = vers.get(b.Version)
 					}
@@ -176,6 +177,7 @@ function refresh_mining_info() {
 						else if (height_max < b.Height)  height_max = b.Height
 					}
 					heights[b.Height] = b.Version
+					if (b.Length>1e6)   ny_cnt++
 				}
 
 				row["vers"] = vers
@@ -211,8 +213,11 @@ function refresh_mining_info() {
 
 			el_avg_block_size.innerText = parseFloat(totbts/cs.BlockCount).toFixed(0)
 			el_total_fees.innerText = (totfees/1e8).toFixed(2)
-			el_avg_fpbyte.innerText = parseFloat(totfees/totbts).toFixed(0)
 			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
+			if (ny_cnt > 0)
+				el_avg_fpbyte.innerText = parseFloat(totfees/(ny_cnt*999500)).toFixed(0)
+			else
+				el_avg_fpbyte.innerText = '???'
 
 			loading_icon.style.display = 'none'
 			mining_info_div.style.display = 'block'
@@ -239,7 +244,7 @@ at average difficulty <b id="el_avg_diff"></b>,
 which changes in <b id="el_diff_change_in" class="size120"></b> blocks<br>
 
 Total mining fees amount to <b id="el_total_fees"></b> BTC
-with the average of <b id="el_avg_fpbyte"></b> <span title="Satoshis per real byte">SPRB</span> or <b id="el_avg_fpblock" class="size120"></b> BTC/block
+with the average of <b id="el_avg_fpblock" class="size120"></b> BTC/block or estimated <b id="el_avg_fpbyte"></b> SPB
 </div>
 <table id="minerstab" class="bord" width="100%">
 	<tr>
