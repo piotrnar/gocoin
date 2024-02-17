@@ -182,7 +182,7 @@ func InitConfig() {
 	CFG.Stat.BSizeBlks = 1008 /*one week*/
 
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
-	CFG.AllBalances.UseMapCnt = 100
+	CFG.AllBalances.UseMapCnt = 5000
 	CFG.AllBalances.AutoLoad = true
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
