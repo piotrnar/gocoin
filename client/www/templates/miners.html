@@ -63,6 +63,7 @@ caption {
 <script>
 
 const avg_blocks_pr_day = 146.7 // average between #722125 and 822125
+const estimated_block_vsize = 999500
 
 var last_block_height = 0
 
@@ -200,7 +201,7 @@ function refresh_mining_info() {
 
 				td = row.insertCell(-1)
 				td.className = 'blspb'
-				td.innerText = parseFloat(m.TotalFees/m.TotalBytes).toFixed(2)
+				td.innerText = parseFloat(m.TotalFees/(m.Blocks*estimated_block_vsize)).toFixed(0)
 
 				totfees += m.TotalFees
 				totbts += m.TotalBytes
@@ -215,7 +216,7 @@ function refresh_mining_info() {
 			el_total_fees.innerText = (totfees/1e8).toFixed(2)
 			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
 			if (ny_cnt > 0)
-				el_avg_fpbyte.innerText = parseFloat(totfees/(ny_cnt*999500)).toFixed(0)
+				el_avg_fpbyte.innerText = parseFloat(totfees/(ny_cnt*estimated_block_vsize)).toFixed(0)
 			else
 				el_avg_fpbyte.innerText = '???'
 
