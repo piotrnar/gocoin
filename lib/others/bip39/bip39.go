@@ -52,19 +52,19 @@ var (
 
 var (
 	// ErrInvalidMnemonic is returned when trying to use a malformed mnemonic.
-	ErrInvalidMnemonic = errors.New("Invalid mnenomic")
+	ErrInvalidMnemonic = errors.New("invalid mnenomic")
 
 	// ErrEntropyLengthInvalid is returned when trying to use an entropy set with
 	// an invalid size.
-	ErrEntropyLengthInvalid = errors.New("Entropy length must be [128, 256] and a multiple of 32")
+	ErrEntropyLengthInvalid = errors.New("entropy length must be [128, 256] and a multiple of 32")
 
 	// ErrValidatedSeedLengthMismatch is returned when a validated seed is not the
 	// same size as the given seed. This should never happen is present only as a
 	// sanity assertion.
-	ErrValidatedSeedLengthMismatch = errors.New("Seed length does not match validated seed length")
+	ErrValidatedSeedLengthMismatch = errors.New("seed length does not match validated seed length")
 
 	// ErrChecksumIncorrect is returned when entropy has the incorrect checksum.
-	ErrChecksumIncorrect = errors.New("Checksum incorrect")
+	ErrChecksumIncorrect = errors.New("checksum incorrect")
 )
 
 func init() {
@@ -120,7 +120,7 @@ func EntropyFromMnemonic(mnemonic string) ([]byte, error) {
 	b := big.NewInt(0)
 	for _, v := range mnemonicSlice {
 		index, found := wordMap[v]
-		if found == false {
+		if !found {
 			return nil, fmt.Errorf("word `%v` not found in reverse map", v)
 		}
 		var wordBytes [2]byte
@@ -218,8 +218,8 @@ func MnemonicToByteArray(mnemonic string, raw ...bool) ([]byte, error) {
 
 	// Pre validate that the mnemonic is well formed and only contains words that
 	// are present in the word list.
-	if !IsMnemonicValid(mnemonic) {
-		return nil, ErrInvalidMnemonic
+	if err := IsMnemonicValid(mnemonic); err != nil {
+		return nil, err
 	}
 
 	// Convert word indices to a big.Int representing the entropy.
@@ -272,9 +272,9 @@ func NewSeed(mnemonic string, password string) []byte {
 // IsMnemonicValid attempts to verify that the provided mnemonic is valid.
 // Validity is determined by both the number of words being appropriate,
 // and that all the words in the mnemonic are present in the word list.
-func IsMnemonicValid(mnemonic string) bool {
-	_, err := EntropyFromMnemonic(mnemonic)
-	return err == nil
+func IsMnemonicValid(mnemonic string) (err error) {
+	_, err = EntropyFromMnemonic(mnemonic)
+	return err
 }
 
 // Appends to data the first (len(data) / 32)bits of the result of sha256(data)
@@ -368,7 +368,7 @@ func splitMnemonicWords(mnemonic string) ([]string, bool) {
 // can get a derived key for e.g. AES-256 (which needs a 32-byte key) by
 // doing:
 //
-// 	dk := pbkdf2.Key([]byte("some password"), salt, 4096, 32, sha1.New)
+//	dk := pbkdf2.Key([]byte("some password"), salt, 4096, 32, sha1.New)
 //
 // Remember to get a good random salt. At least 8 bytes is recommended by the
 // RFC.

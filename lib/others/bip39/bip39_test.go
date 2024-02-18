@@ -61,11 +61,11 @@ func TestNewSeedWithErrorCheckingInvalidMnemonics(t *testing.T) {
 
 func TestIsMnemonicValid(t *testing.T) {
 	for _, vector := range badMnemonicSentences() {
-		assertFalse(t, IsMnemonicValid(vector.mnemonic))
+		assertFalse(t, IsMnemonicValid(vector.mnemonic) == nil)
 	}
 
 	for _, vector := range testVectors() {
-		assertTrue(t, IsMnemonicValid(vector.mnemonic))
+		assertTrue(t, IsMnemonicValid(vector.mnemonic) == nil)
 	}
 }
 
@@ -77,7 +77,7 @@ func TestMnemonicToByteArrayInvalidMnemonic(t *testing.T) {
 
 	_, err := MnemonicToByteArray("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon yellow")
 	assertNotNil(t, err)
-	assertEqual(t, err, ErrInvalidMnemonic)
+	assertEqual(t, err, ErrChecksumIncorrect)
 }
 
 func TestNewEntropy(t *testing.T) {
