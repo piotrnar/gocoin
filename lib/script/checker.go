@@ -15,7 +15,7 @@ type SigChecker struct {
 
 func (c *SigChecker) evalChecksig(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
 	if sigversion == SIGVERSION_BASE || sigversion == SIGVERSION_WITNESS_V0 {
-		return c.evalChecksigPreTapscript(vchSig, vchPubKey, p, pbegincodehash, execdata, ver_flags, sigversion)
+		return c.evalChecksigPreTapscript(vchSig, vchPubKey, p, pbegincodehash, ver_flags, sigversion)
 	}
 	if sigversion == SIGVERSION_TAPSCRIPT {
 		return c.evalChecksigTapscript(vchSig, vchPubKey, execdata, ver_flags, sigversion)
@@ -70,7 +70,7 @@ func (c *SigChecker) evalChecksigTapscript(sig, pubkey []byte, execdata *btc.Scr
 	return
 }
 
-func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegincodehash int, execdata *btc.ScriptExecutionData, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
+func (c *SigChecker) evalChecksigPreTapscript(vchSig, vchPubKey, p []byte, pbegincodehash int, ver_flags uint32, sigversion int) (ok, fSuccess bool) {
 	scriptCode := p[pbegincodehash:]
 
 	// Drop the signature in pre-segwit scripts but not segwit scripts
