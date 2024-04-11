@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	UtxoIdxLen            = 8 // Increase this value (maximum 32) for better security at a cost of memory usage
-	UTXO_RECORDS_PREALLOC = 120e6
+	UtxoIdxLen = 8 // Increase this value (maximum 32) for better security at a cost of memory usage
 )
 
 type UtxoKeyType [UtxoIdxLen]byte

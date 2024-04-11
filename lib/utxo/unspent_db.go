@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -79,10 +78,10 @@ type NewUnspentOpts struct {
 	Dir             string
 	Rescan          bool
 	VolatimeMode    bool
-	UnwindBufferLen uint32
 	CB              CallbackFunctions
 	AbortNow        *bool
 	CompressRecords bool
+	RecordsPrealloc uint
 }
 
 func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
@@ -106,7 +105,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.ComprssedUTXO = opts.CompressRecords
 	if opts.Rescan {
 		for i := range db.HashMap {
-			db.HashMap[i] = make(map[UtxoKeyType][]byte, int(UTXO_RECORDS_PREALLOC)/256)
+			db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
 		}
 		return
 	}
@@ -221,7 +220,7 @@ fatal_error:
 	db.LastBlockHeight = 0
 	db.LastBlockHash = nil
 	for i := range db.HashMap {
-		db.HashMap[i] = make(map[UtxoKeyType][]byte, int(UTXO_RECORDS_PREALLOC)/256)
+		db.HashMap[i] = make(map[UtxoKeyType][]byte, opts.RecordsPrealloc/256)
 	}
 
 	return
@@ -393,7 +392,7 @@ func (db *UnspentDB) CommitBlockTxs(changes *BlockChanges, blhash []byte) (e err
 				os.MkdirAll(db.dir_undo, 0770)
 				db.undo_dir_created = true
 			}
-			ioutil.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
+			os.WriteFile(db.dir_undo+"tmp", bu.Bytes(), 0666)
 			os.Rename(db.dir_undo+"tmp", undo_fn)
 			wg.Done()
 		}()
@@ -436,7 +435,7 @@ func (db *UnspentDB) UndoBlockTxs(bl *btc.Block, newhash []byte) {
 		fn += ".tmp"
 	}
 
-	dat, er := ioutil.ReadFile(fn)
+	dat, er := os.ReadFile(fn)
 	if er != nil {
 		panic(er.Error())
 	}
