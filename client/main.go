@@ -97,6 +97,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
+	if bl.LastKnownHeight-bl.Height > common.GetUint32(&common.CFG.Memory.MaxCachedBlks) {
+		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
+	}
 
 	if e == nil {
 		// new block accepted

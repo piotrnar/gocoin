@@ -90,7 +90,7 @@ var (
 		Memory struct {
 			GCPercTrshold        int
 			UseGoHeap            bool // Use Go Heap and Garbage Collector for UTXO records
-			MaxCachedBlks        uint
+			MaxCachedBlks        uint32
 			FreeAtStart          bool // Free all possible memory after initial loading of block chain
 			CacheOnDisk          bool
 			MaxSyncCacheMB       uint32 // When syncing chain, prebuffer up to this MB of bocks data
@@ -446,7 +446,7 @@ func str2oaa(ip string) (res *oneAllowedAddr) {
 	if n < 4 {
 		return
 	}
-	if (a|b|c|d) > 255 || n == 5 && (x < 0 || x > 32) {
+	if (a|b|c|d) > 255 || n == 5 && x > 32 {
 		return
 	}
 	res = new(oneAllowedAddr)
@@ -502,7 +502,6 @@ func SetUint32(addr *uint32, val uint32) {
 	mutex_cfg.Lock()
 	*addr = val
 	mutex_cfg.Unlock()
-	return
 }
 
 func GetBool(addr *bool) (res bool) {
