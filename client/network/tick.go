@@ -622,8 +622,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 		return
 	}
 	if len(GetMPInProgressTicket) == 0 {
-		// TODO: remove it at some point (should not be happening)
-		println("ERROR: GetMPDone() called with a lock, but without a ticket")
+		// This will happen when our chain is not yet synchronized and we are disconnecting a peer which have sent "authack"
 		return
 	}
 
