@@ -228,8 +228,8 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 		// if cur.TxCount is zero, it means we dont yet have this block's data
 		if cur.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue A")
-			fmt.Println("Trying to go:", dst.BlockHash.String())
-			fmt.Println("Cannot go at:", cur.BlockHash.String())
+			fmt.Println("Trying to go:", dst.BlockHash.String(), dst.Height)
+			fmt.Println("Cannot go at:", cur.BlockHash.String(), cur.Height)
 			return
 		}
 	}
@@ -238,8 +238,8 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	for tmp := ch.LastBlock(); tmp != cur; tmp = tmp.Parent {
 		if cur.Parent.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue B")
-			fmt.Println("Trying to go:", dst.BlockHash.String())
-			fmt.Println("Cannot go at:", cur.Parent.BlockHash.String())
+			fmt.Println("Trying to go:", dst.BlockHash.String(), dst.Height)
+			fmt.Println("Cannot go at:", cur.Parent.BlockHash.String(), cur.Parent.Height)
 			return
 		}
 		cur = cur.Parent
