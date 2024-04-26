@@ -90,7 +90,7 @@ func NewUnspentDb(opts *NewUnspentOpts) (db *UnspentDB) {
 	db.dir_utxo = opts.Dir
 	db.dir_undo = db.dir_utxo + "undo" + string(os.PathSeparator)
 	db.volatimemode = opts.VolatimeMode
-	db.UnwindBufLen = 256
+	db.UnwindBufLen = 2560
 	db.CB = opts.CB
 	db.abortwritingnow = make(chan bool, 1)
 	db.hurryup = make(chan bool, 1)
