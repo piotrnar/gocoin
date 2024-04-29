@@ -20,6 +20,7 @@
 * Lib/Utxo: New option for NewUnspentDb() allowing to specify how many map records to preallocate in case of rescan
 * Client: Different pre-defined values of preallocated records for Mainnet and Testnet (saves RAM)
 * Client: Free each block's bl.Txs after bl.CommitBlock(), during deep chain syncs (saves RAM)
+* Lib: Fix in handing chain re-orgs when a new head has less blocks, but more POW (exposed by ongoing testnet3 stressing)
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)

@@ -222,12 +222,23 @@ func (ch *Chain) OnActiveBranch(dst *BlockTreeNode) bool {
 // MoveToBlock performs a channel reorg.
 func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	cur := dst
-	for cur.Height > ch.LastBlock().Height {
+	lastblock := ch.LastBlock()
+	for cur.Height > lastblock.Height {
 		cur = cur.Parent
-
 		// if cur.TxCount is zero, it means we dont yet have this block's data
 		if cur.TxCount == 0 {
-			fmt.Println("MoveToBlock cannot continue A")
+			fmt.Println("MoveToBlock cannot continue A1")
+			fmt.Println("Trying to go:", dst.BlockHash.String(), dst.Height)
+			fmt.Println("Cannot go at:", cur.BlockHash.String(), cur.Height)
+			return
+		}
+	}
+
+	for lastblock.Height > cur.Height { // this is a rare case when the new branch has less blocks but more POW
+		lastblock = lastblock.Parent
+		// if cur.TxCount is zero, it means we dont yet have this block's data
+		if lastblock.TxCount == 0 {
+			fmt.Println("MoveToBlock cannot continue A2")
 			fmt.Println("Trying to go:", dst.BlockHash.String(), dst.Height)
 			fmt.Println("Cannot go at:", cur.BlockHash.String(), cur.Height)
 			return
@@ -235,7 +246,7 @@ func (ch *Chain) MoveToBlock(dst *BlockTreeNode) {
 	}
 
 	// At this point both "ch.blockTreeEnd" and "cur" should be at the same height
-	for tmp := ch.LastBlock(); tmp != cur; tmp = tmp.Parent {
+	for tmp := lastblock; tmp != cur; tmp = tmp.Parent {
 		if cur.Parent.TxCount == 0 {
 			fmt.Println("MoveToBlock cannot continue B")
 			fmt.Println("Trying to go:", dst.BlockHash.String(), dst.Height)
