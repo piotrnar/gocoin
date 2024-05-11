@@ -33,7 +33,7 @@ For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performanc
 
 * 64-bit architecture OS and Go compiler.
 * File system supporting files larger than 4GB.
-* At least 32GB of system RAM (you can try with less, but it may be a hassle).
+* At least 32GB of system RAM (more recommended).
 
 
 **wallet**:
