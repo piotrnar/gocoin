@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -12,8 +13,6 @@ import (
 )
 
 func (c *OneConnection) ProcessGetData(pl []byte) {
-	//var notfound []byte
-
 	//println(c.PeerAddr.Ip(), "getdata")
 	b := bytes.NewReader(pl)
 	cnt, e := btc.ReadVLen(b)
@@ -21,31 +20,40 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 		println("ProcessGetData:", e.Error(), c.PeerAddr.Ip())
 		return
 	}
-	for i := 0; i < int(cnt); i++ {
-		var typ uint32
-		var h [36]byte
 
+	if b.Len() != int(cnt)*36 {
+		println(c.ConnID, "Inconsistent getdata message:", b.Len(), "!=", cnt*36)
+		c.DoS("GetDataLenERR")
+		return
+	}
+
+	if c.unfinished_getdata != nil {
+		//println(c.ConnID, "appending pending getdata with", cnt, "more invs")
+		if c.unfinished_getdata.Len()+b.Len() > 36*50000 {
+			c.DoS("GetDataTooBigA")
+		} else {
+			io.Copy(c.unfinished_getdata, b)
+			common.CountSafe("GetDataPauseExt")
+		}
+		return
+	}
+	c.processGetData(b)
+}
+
+func (c *OneConnection) processGetData(b *bytes.Reader) {
+	var typ uint32
+	var h [36]byte
+	for b.Len() > 0 {
 		if c.SendingPaused() {
-			out := new(bytes.Buffer)
-			btc.WriteVlen(out, cnt-uint64(i))
-			for ; i < int(cnt); i++ {
-				if n, _ := b.Read(h[:]); n != 36 {
-					//println("ProcessGetData - 2: pl too short", c.PeerAddr.Ip())
-					c.DoS("GetDataA")
-					return
-				}
-				out.Write(h[:])
-			}
-			c.unfinished_getdata = out.Bytes()
+			// note that this function should not be called when c.unfinished_getdata is not nil
+			c.unfinished_getdata = new(bytes.Buffer)
+			//println(c.ConnID, "postpone getdata for", b.Len()/36, "invs")
+			io.Copy(c.unfinished_getdata, b)
 			common.CountSafe("GetDataPaused")
 			break
 		}
 
-		if n, _ := b.Read(h[:]); n != 36 {
-			//println("ProcessGetData: pl too short", c.PeerAddr.Ip())
-			c.DoS("GetDataB")
-			return
-		}
+		b.Read(h[:])
 
 		typ = binary.LittleEndian.Uint32(h[:4])
 		c.Mutex.Lock()
@@ -110,20 +118,8 @@ func (c *OneConnection) ProcessGetData(pl []byte) {
 			}
 		} else {
 			common.CountSafe("GetdataTypeInvalid")
-			if typ > 0 && typ <= 3 /*3 is a filtered block(we dont support it)*/ {
-				//notfound = append(notfound, h[:]...)
-			}
 		}
 	}
-
-	/*
-		if len(notfound)>0 {
-			buf := new(bytes.Buffer)
-			btc.WriteVlen(buf, uint64(len(notfound)/36))
-			buf.Write(notfound)
-			c.SendRawMsg("notfound", buf.Bytes())
-		}
-	*/
 }
 
 // netBlockReceived is called from a net conn thread.

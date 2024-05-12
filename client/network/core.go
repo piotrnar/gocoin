@@ -195,7 +195,7 @@ type OneConnection struct {
 		datlen  uint32
 	}
 	LastMsgTime        time.Time
-	unfinished_getdata []byte
+	unfinished_getdata *bytes.Buffer
 
 	InvDone struct {
 		Map     map[uint64]uint32
