@@ -81,7 +81,7 @@ func (c *OneConnection) ExpireHeadersAndGetData(now *time.Time, curr_ping_cnt ui
 			bip.InProgress--
 		}
 		if now == nil {
-			disconnect = "BlockDlPongExp"
+			//disconnect = "BlockDlPongExp"
 		} else {
 			disconnect = "BlockDlTimeout"
 		}
