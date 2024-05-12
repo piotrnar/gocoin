@@ -215,16 +215,14 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 		c.HandlePong(nil) // this will set PingInProgress to nil
 	}
 
-	/*
-		c.Mutex.Lock()
-		bip := len(c.GetBlockInProgress)
-		c.Mutex.Unlock()
-		if bip > 0 {
-			common.CountSafe("PingHelpBIP")
-			c.cntLockInc("PingHelpBIP")
-			return false
-		}
-	*/
+	c.Mutex.Lock()
+	bip := len(c.GetBlockInProgress)
+	c.Mutex.Unlock()
+	if bip > 0 {
+		common.CountSafe("PingHelpBIP")
+		c.cntLockInc("PingHelpBIP")
+		return false
+	}
 
 	c.X.PingSentCnt++
 	c.PingInProgress = make([]byte, 8)
