@@ -22,6 +22,7 @@
 * Client: Free each block's bl.Txs after bl.CommitBlock(), during deep chain syncs (saves RAM)
 * Lib: Fix in handing chain re-orgs when a new head has less blocks, but more POW (exposed by ongoing testnet3 stressing)
 * Client/Network: improved the way how unfinished "getdata" is stored for later (when the send buffer is full)
+* Client/Network: do not sent "ping" messages to peers that we have pending block downloads from
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
