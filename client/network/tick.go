@@ -787,7 +787,6 @@ func (c *OneConnection) Run() {
 			continue
 		}
 
-	recovered_getdata:
 		switch cmd.cmd {
 		case "inv":
 			c.ProcessInv(cmd.pl)
