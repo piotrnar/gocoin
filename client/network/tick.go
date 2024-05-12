@@ -713,11 +713,10 @@ func (c *OneConnection) Run() {
 
 		if cmd == nil {
 			if c.unfinished_getdata != nil && !c.SendingPaused() {
+				common.CountSafe("GetDataRestored")
 				c.processGetData(bytes.NewReader(c.unfinished_getdata.Bytes()))
 				//println(c.ConnID, "restoring getdata for", c.unfinished_getdata.Len()/36, "invs")
 				c.unfinished_getdata = nil
-				common.CountSafe("GetDataRestored")
-				goto recovered_getdata
 			}
 
 			if !read_tried {
