@@ -310,7 +310,7 @@ func InitConfig() {
 
 func DataSubdir() string {
 	if CFG.Testnet {
-		return "tstnet"
+		return "ts4net"
 	} else {
 		return "btcnet"
 	}
@@ -432,7 +432,7 @@ func DefaultTcpPort() (res uint16) {
 		return
 	}
 	if CFG.Testnet {
-		res = 18333
+		res = 48333
 	} else {
 		res = 8333
 	}

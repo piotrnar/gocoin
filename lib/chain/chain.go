@@ -63,18 +63,20 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	ch.CB = *opts
 
-	ch.Consensus.GensisTimestamp = 1231006505
 	ch.Consensus.MaxPOWBits = 0x1d00ffff
 	ch.Consensus.MaxPOWValue, _ = new(big.Int).SetString("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 	if ch.testnet() {
-		ch.Consensus.BIP34Height = 21111
-		ch.Consensus.BIP65Height = 581885
-		ch.Consensus.BIP66Height = 330776
-		ch.Consensus.Enforce_CSV = 770112
-		ch.Consensus.Enforce_SEGWIT = 834624
-		ch.Consensus.Enforce_Taproot = 2011968
+		println("--------------testnet4-------------")
+		ch.Consensus.GensisTimestamp = 1714777860
+		ch.Consensus.BIP34Height = 1
+		ch.Consensus.BIP65Height = 1
+		ch.Consensus.BIP66Height = 1
+		ch.Consensus.Enforce_CSV = 1
+		ch.Consensus.Enforce_SEGWIT = 1
+		ch.Consensus.Enforce_Taproot = 1
 		ch.Consensus.BIP9_Treshold = 1512
 	} else {
+		ch.Consensus.GensisTimestamp = 1231006505
 		ch.Consensus.BIP34Height = 227931
 		ch.Consensus.BIP65Height = 388381
 		ch.Consensus.BIP66Height = 363725
