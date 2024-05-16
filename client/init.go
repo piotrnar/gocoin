@@ -18,8 +18,8 @@ func host_init() {
 
 	common.Testnet = common.CFG.Testnet // So chaging this value would will only affect the behaviour after restart
 	if common.CFG.Testnet {             // testnet3
-		common.GenesisBlock = btc.NewUint256FromString("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943")
-		common.Magic = [4]byte{0x0B, 0x11, 0x09, 0x07}
+		common.GenesisBlock = btc.NewUint256FromString("00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043")
+		common.Magic = [4]byte{0x1c, 0x16, 0x3f, 0x28}
 		common.GocoinHomeDir += common.DataSubdir() + string(os.PathSeparator)
 	} else {
 		common.GenesisBlock = btc.NewUint256FromString("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")

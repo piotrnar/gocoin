@@ -599,11 +599,9 @@ func InitPeers(dir string) {
 				}, 8333)
 			} else {
 				initSeeds([]string{
-					"testnet-seed.bitcoin.jonasschnelli.ch",
-					"seed.tbtc.petertodd.org",
-					"seed.testnet.bitcoin.sprovoost.nl",
-					"testnet-seed.bluematt.me",
-				}, 18333)
+					"seed.testnet4.bitcoin.sprovoost.nl.",
+					"seed.testnet4.wiz.biz",
+				}, 48333)
 			}
 		}()
 	}
