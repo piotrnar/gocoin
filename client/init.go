@@ -17,7 +17,7 @@ func host_init() {
 	common.GocoinHomeDir = common.CFG.Datadir + string(os.PathSeparator)
 
 	common.Testnet = common.CFG.Testnet // So chaging this value would will only affect the behaviour after restart
-	if common.CFG.Testnet {             // testnet3
+	if common.CFG.Testnet {             // testnet4
 		common.GenesisBlock = btc.NewUint256FromString("00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043")
 		common.Magic = [4]byte{0x1c, 0x16, 0x3f, 0x28}
 		common.GocoinHomeDir += common.DataSubdir() + string(os.PathSeparator)
@@ -75,12 +75,6 @@ func host_init() {
 
 	if ext.UndoBlocks > 0 {
 		ext.BlockUndoneCB = nil // Do not call the callback if undoing blocks as it will panic
-	}
-
-	if common.Testnet {
-		ext.UTXOPrealloc = 19e6 // Around block #2600k
-	} else {
-		ext.UTXOPrealloc = 120e6 // Around block #838k
 	}
 
 	sta := time.Now()
