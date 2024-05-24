@@ -393,9 +393,9 @@ function recalc_to_pay() {
 		tx_size += 2+witness_size+non_segwit_cnt
 	}
 	var vsize = Math.floor((3*(non_segwit_size+1) + tx_size)/4)
-	
+
 	ets.innerText = vsize
-	
+
 	if (auto_adjust_fee.checked) {
 		var spb = parseFloat(spb_to_use.value)
 		if (isNaN(spb)) spb = 0
@@ -676,7 +676,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	txfee.onchange = recalc_to_pay
 	txfee.onkeyup = recalc_to_pay
 	// use avg_fee_spb value, but randomly modyfied by up to +/- 10%, for user's privacy
-	spb_to_use.value = (Math.random()/5+0.9)*avg_fee_spb.toFixed(10).substr(0,7)
+	spb_to_use.value = Math.max((Math.random()/5+0.9)*avg_fee_spb.toFixed(10).substr(0,7), 1.0)
 	recalc_inputs()
 	var abc = localStorage.getItem("gocoinAddressBook")
 	if (typeof(abc)!="string") {
