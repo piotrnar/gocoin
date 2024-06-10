@@ -86,7 +86,7 @@ type PeerAddr struct {
 
 func DefaultTcpPort() uint16 {
 	if Testnet {
-		return 18333
+		return 48333
 	} else {
 		return 8333
 	}
