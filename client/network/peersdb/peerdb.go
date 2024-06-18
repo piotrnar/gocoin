@@ -588,19 +588,18 @@ func InitPeers(dir string) {
 				initSeeds([]string{
 					"seed.bitcoin.sipa.be",
 					"dnsseed.bluematt.me",
-					"dnsseed.bitcoin.dashjr.org",
+					"dnsseed.bitcoin.dashjr-list-of-p2p-nodes.us",
 					"seed.bitcoinstats.com",
 					"seed.bitcoin.jonasschnelli.ch",
-					"seed.btc.petertodd.org",
+					"seed.btc.petertodd.net",
 					"seed.bitcoin.sprovoost.nl",
-					"seed.bitnodes.io",
 					"dnsseed.emzy.de",
 					"seed.bitcoin.wiz.biz",
 				}, 8333)
 			} else {
 				initSeeds([]string{
 					"testnet-seed.bitcoin.jonasschnelli.ch",
-					"seed.tbtc.petertodd.org",
+					"seed.tbtc.petertodd.net",
 					"seed.testnet.bitcoin.sprovoost.nl",
 					"testnet-seed.bluematt.me",
 				}, 18333)
