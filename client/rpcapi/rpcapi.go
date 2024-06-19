@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+
 	"github.com/piotrnar/gocoin/client/common"
 )
 
@@ -70,63 +71,82 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 	var resp RpcResponse
 	resp.Id = RpcCmd.Id
 	switch RpcCmd.Method {
-		case "getblocktemplate":
-			var resp_my RpcGetBlockTemplateResp
+	case "getblocktemplate":
+		var resp_my RpcGetBlockTemplateResp
 
-			GetNextBlockTemplate(&resp_my.Result)
+		GetNextBlockTemplate(&resp_my.Result)
 
-			if false {
-				var resp_ok RpcGetBlockTemplateResp
-				bitcoind_result := process_rpc(b)
-				//ioutil.WriteFile("getblocktemplate_resp.json", bitcoind_result, 0777)
+		if false {
+			var resp_ok RpcGetBlockTemplateResp
+			bitcoind_result := process_rpc(b)
+			//ioutil.WriteFile("getblocktemplate_resp.json", bitcoind_result, 0777)
 
-				//fmt.Print("getblocktemplate...", sto.Sub(sta).String(), string(b))
+			//fmt.Print("getblocktemplate...", sto.Sub(sta).String(), string(b))
 
-				jd = json.NewDecoder(bytes.NewReader(bitcoind_result))
-				jd.UseNumber()
-				e = jd.Decode(&resp_ok)
+			jd = json.NewDecoder(bytes.NewReader(bitcoind_result))
+			jd.UseNumber()
+			jd.Decode(&resp_ok)
 
-				if resp_my.Result.PreviousBlockHash != resp_ok.Result.PreviousBlockHash {
-					println("satoshi @", resp_ok.Result.PreviousBlockHash, resp_ok.Result.Height)
-					println("gocoin  @", resp_my.Result.PreviousBlockHash, resp_my.Result.Height)
-				} else {
-					println(".", len(resp_my.Result.Transactions), resp_my.Result.Coinbasevalue)
-					if resp_my.Result.Mintime != resp_ok.Result.Mintime {
-						println("\007Mintime:", resp_my.Result.Mintime, resp_ok.Result.Mintime)
-					}
-					if resp_my.Result.Bits != resp_ok.Result.Bits {
-						println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
-					}
-					if resp_my.Result.Target != resp_ok.Result.Target {
-						println("\007Target:", resp_my.Result.Target, resp_ok.Result.Target)
-					}
+			if resp_my.Result.PreviousBlockHash != resp_ok.Result.PreviousBlockHash {
+				println("satoshi @", resp_ok.Result.PreviousBlockHash, resp_ok.Result.Height)
+				println("gocoin  @", resp_my.Result.PreviousBlockHash, resp_my.Result.Height)
+			} else {
+				println(".", len(resp_my.Result.Transactions), resp_my.Result.Coinbasevalue)
+				if resp_my.Result.Mintime != resp_ok.Result.Mintime {
+					println("\007Mintime:", resp_my.Result.Mintime, resp_ok.Result.Mintime)
+				}
+				if resp_my.Result.Bits != resp_ok.Result.Bits {
+					println("\007Bits:", resp_my.Result.Bits, resp_ok.Result.Bits)
+				}
+				if resp_my.Result.Target != resp_ok.Result.Target {
+					println("\007Target:", resp_my.Result.Target, resp_ok.Result.Target)
 				}
 			}
+		}
 
-			b, _ = json.Marshal(&resp_my)
-			//ioutil.WriteFile("json/"+RpcCmd.Method+"_resp_my.json", b, 0777)
-			w.Write(append(b, 0x0a))
-			return
+		b, _ = json.Marshal(&resp_my)
+		//os.WriteFile("json/"+RpcCmd.Method+"_resp_my.json", b, 0777)
+		w.Write(append(b, 0x0a))
+		//print(" ... ", string(b), "\n")
+		return
 
+	case "getwork":
+		//println("geting work...")
+		var resp_my RpcGetWorkResp
+		GetWork(&resp_my)
+		b, _ = json.Marshal(&resp_my)
+		//w.Write(append(b, 0x0a))
+		//print(" ... ", string(b), "\n")
+		return
 
-		case "validateaddress":
-			switch uu := RpcCmd.Params.(type) {
-			case []interface{}:
-				if len(uu) == 1 {
-					resp.Result = ValidateAddress(uu[0].(string))
-				}
-			default:
-				println("unexpected type", uu)
+	case "getmininginfo":
+		//println("getmininginfo...")
+		var rm RpcGetMiningInfoResp
+		rm.Result = GetMiningInfoResp{Blocks: uint(common.Last.BlockHeight()), Difficulty: 1, Chain: "testnet4"}
+		b, _ = json.Marshal(&rm)
+		w.Write(append(b, 0x0a))
+		//print(" ... ", string(b), "\n")
+		return
+
+	case "validateaddress":
+		switch uu := RpcCmd.Params.(type) {
+		case []interface{}:
+			if len(uu) == 1 {
+				resp.Result = ValidateAddress(uu[0].(string))
 			}
-
-		case "submitblock":
-			//ioutil.WriteFile("submitblock.json", b, 0777)
-			SubmitBlock(&RpcCmd, &resp, b)
-
 		default:
-			fmt.Println("Method:", RpcCmd.Method, len(b))
-			//w.Write(bitcoind_result)
-			resp.Error = RpcError{Code: -32601, Message: "Method not found"}
+			println("unexpected type", uu)
+		}
+
+	case "submitblock":
+		println("_________________________SH__________________________________")
+		//os.WriteFile("submitblock.json", b, 0777)
+		SubmitBlock(&RpcCmd, &resp, b)
+
+	default:
+		fmt.Println("Method:", RpcCmd.Method, len(b))
+		//w.Write(bitcoind_result)
+		resp.Error = RpcError{Code: -32601, Message: "Method not found"}
 	}
 
 	b, e = json.Marshal(&resp)
@@ -142,5 +162,5 @@ func StartServer(port uint32) {
 	fmt.Println("Starting RPC server at port", port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", my_handler)
-	http.ListenAndServe(fmt.Sprint("127.0.0.1:",port), mux)
+	http.ListenAndServe(fmt.Sprint(":", port), mux)
 }
