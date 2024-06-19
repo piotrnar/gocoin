@@ -598,7 +598,7 @@ func InitPeers(dir string) {
 				}, 8333)
 			} else {
 				initSeeds([]string{
-					"seed.testnet4.bitcoin.sprovoost.nl.",
+					"seed.testnet4.bitcoin.sprovoost.nl",
 					"seed.testnet4.wiz.biz",
 				}, 48333)
 			}
