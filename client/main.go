@@ -327,7 +327,14 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.Last.Time = time.Now()
 	common.Last.Block = common.BlockChain.LastBlock()
 	common.UpdateScriptFlags(msg.VerifyFlags)
+	last_block := common.Last.Block
 	common.Last.Mutex.Unlock()
+
+	network.MutexRcv.Lock()
+	if last_block.Height > network.LastCommitedHeader.Height {
+		network.LastCommitedHeader = last_block
+	}
+	network.MutexRcv.Unlock()
 
 	msg.Done.Done()
 }
