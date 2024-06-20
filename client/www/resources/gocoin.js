@@ -433,7 +433,7 @@ function show_fees_clicked(height) {
 
 				var plot_options = {
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
-					yaxis : { position : "right", tickFormatter : function(a) {return a + " SPB"}, labelWidth : 60 },
+					yaxis : { position : "right", tickFormatter : function(a) {return a.toFixed((a>9||a==0)?0:(a>0.9?1:2)) + " SPB"}, labelWidth : 60 },
 					crosshair : {mode: "xy"},
 					grid: { hoverable: true, clickable: false },
 					points: { show:block_fees_points.checked },

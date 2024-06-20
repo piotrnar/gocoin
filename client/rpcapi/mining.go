@@ -49,9 +49,9 @@ type GetWorkTemplateResp struct {
 }
 
 type GetMiningInfoResp struct {
-	Blocks     uint   `json:"blocks"`
-	Difficulty uint   `json:"difficulty"`
-	Chain      string `json:"target"`
+	Blocks     uint    `json:"blocks"`
+	Difficulty float64 `json:"difficulty"`
+	Chain      string  `json:"chain"`
 }
 
 type RpcGetBlockTemplateResp struct {
@@ -73,8 +73,8 @@ type RpcGetMiningInfoResp struct {
 }
 
 var curr_block *btc.Block
-
 var the_pk_script []byte
+var mining_info GetMiningInfoResp
 
 func init() {
 	the_addr, _ := btc.NewAddrFromString("n2ASs8pUXUMxnkNjek6H7PTHfjnvre7QfQ")
@@ -135,9 +135,13 @@ func GetWork(r *RpcGetWorkResp) {
 
 	var zer [32]byte
 	var data [80]byte
-	now := uint32(time.Now().Unix()) + 10*60
+	now := uint32(time.Now().Unix())
 	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, now)
 	//fmt.Printf("BitsA:0x%08x  %d >? %d\n", bits, now, common.Last.Block.Timestamp()+chain.TargetSpacing*2)
+
+	mining_info.Blocks = uint(common.Last.Block.Height)
+	mining_info.Difficulty = btc.GetDifficulty(bits)
+	mining_info.Chain = "testnet"
 	common.Last.Mutex.Unlock()
 
 	target := btc.SetCompact(bits).Bytes()
@@ -149,6 +153,7 @@ func GetWork(r *RpcGetWorkResp) {
 	binary.LittleEndian.PutUint32(data[72:76], bits)
 	// data[76:80]  - nonce
 	r.Result.Data = hex.EncodeToString(data[:])
+
 }
 
 func GetNextBlockTemplate(r *GetBlockTemplateResp) {
@@ -156,8 +161,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 
 	common.Last.Mutex.Lock()
 
-	//r.Curtime = uint(common.Last.Block.Timestamp()) + 10*60
-	r.Curtime = uint(time.Now().Unix()) + 10*60
+	r.Curtime = uint(time.Now().Unix())
 	if now := uint(common.Last.Block.Timestamp()); now > r.Curtime {
 		r.Curtime = now
 	}
