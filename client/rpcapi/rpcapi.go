@@ -70,6 +70,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 
 	var resp RpcResponse
 	resp.Id = RpcCmd.Id
+	//println("------------------------------ RPC command:", RpcCmd.Method, "---------------------------------------------")
 	switch RpcCmd.Method {
 	case "getblocktemplate":
 		var resp_my RpcGetBlockTemplateResp
@@ -81,7 +82,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 			bitcoind_result := process_rpc(b)
 			//ioutil.WriteFile("getblocktemplate_resp.json", bitcoind_result, 0777)
 
-			//fmt.Print("getblocktemplate...", sto.Sub(sta).String(), string(b))
+			//fmt.Print("getblocktemplate...")
 
 			jd = json.NewDecoder(bytes.NewReader(bitcoind_result))
 			jd.UseNumber()
@@ -107,7 +108,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		b, _ = json.Marshal(&resp_my)
 		//os.WriteFile("json/"+RpcCmd.Method+"_resp_my.json", b, 0777)
 		w.Write(append(b, 0x0a))
-		//print(" ... ", string(b), "\n")
+		//println(" ... ", string(b))
 		return
 
 	case "getwork":
@@ -115,17 +116,17 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		var resp_my RpcGetWorkResp
 		GetWork(&resp_my)
 		b, _ = json.Marshal(&resp_my)
-		//w.Write(append(b, 0x0a))
-		//print(" ... ", string(b), "\n")
+		w.Write(append(b, 0x0a))
+		//println(" ... ", string(b))
 		return
 
 	case "getmininginfo":
 		//println("getmininginfo...")
 		var rm RpcGetMiningInfoResp
-		rm.Result = GetMiningInfoResp{Blocks: uint(common.Last.BlockHeight()), Difficulty: 1, Chain: "testnet4"}
+		rm.Result = mining_info
 		b, _ = json.Marshal(&rm)
 		w.Write(append(b, 0x0a))
-		//print(" ... ", string(b), "\n")
+		//println(" ... ", string(b))
 		return
 
 	case "validateaddress":
