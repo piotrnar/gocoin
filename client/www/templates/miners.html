@@ -98,7 +98,7 @@ function show_versions(row, id) {
 			if (bh_len >= 3 && bh_len <= 5)  str = str.substr(bh_len+1)
 		}
 		s += ("    "+mbs[i].Height).slice(-8) +
-			"  " + mbs[i].Version.toString(16) +
+			"  " + leftpad(mbs[i].Version.toString(16), '0', 8) +
 			("           "+mbs[i].Length).slice(-9) +
 			("              " + val2str_pad(mbs[i].Fees, true)).slice(-12) +
 			("     " + (mbs[i].Fees / mbs[i].Length).toFixed(1)).slice(-7) +
