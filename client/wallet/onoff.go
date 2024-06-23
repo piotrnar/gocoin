@@ -3,7 +3,7 @@ package wallet
 import (
 	"bytes"
 	"encoding/gob"
-	"io/ioutil"
+	"os"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/utxo"
@@ -16,22 +16,13 @@ var (
 
 func InitMaps(empty bool) {
 	var szs [5]int
-	var ok bool
 
-	if empty {
-		goto init
+	if !empty {
+		LoadMapSizes()
+		szs, _ = WalletAddrsCount[common.AllBalMinVal()]
+		// If yet unknown, just continue with zero size maps
 	}
 
-	LoadMapSizes()
-	szs, ok = WalletAddrsCount[common.AllBalMinVal()]
-	if ok {
-		//fmt.Println("Have map sizes for MinBal", common.AllBalMinVal(), ":", szs[0], szs[1], szs[2], szs[3])
-	} else {
-		//fmt.Println("No map sizes for MinBal", common.AllBalMinVal())
-		szs = [5]int{25e6, 8e6, 4e6, 300e3, 1e3} // defaults
-	}
-
-init:
 	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, szs[0])
 	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, szs[1])
 	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, szs[2])
@@ -104,11 +95,11 @@ func UpdateMapSizes() {
 
 	buf := new(bytes.Buffer)
 	gob.NewEncoder(buf).Encode(WalletAddrsCount)
-	ioutil.WriteFile(common.GocoinHomeDir+MAPSIZ_FILE_NAME, buf.Bytes(), 0600)
+	os.WriteFile(common.GocoinHomeDir+MAPSIZ_FILE_NAME, buf.Bytes(), 0600)
 }
 
 func LoadMapSizes() {
-	d, er := ioutil.ReadFile(common.GocoinHomeDir + MAPSIZ_FILE_NAME)
+	d, er := os.ReadFile(common.GocoinHomeDir + MAPSIZ_FILE_NAME)
 	if er != nil {
 		println("LoadMapSizes:", er.Error())
 		return
