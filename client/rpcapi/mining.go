@@ -1,6 +1,8 @@
 package rpcapi
 
 import (
+	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -10,9 +12,19 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/script"
 )
 
-const MAX_TXS_LEN = 999e3 // 999KB, with 1KB margin to not exceed 1MB with conibase
+var (
+	DO_SEGWIT        = false   // set to false for old miners that use "getblocktemplate" but dont support segwit (e.gg. bfgminer 5.5.0)
+	DO_NOT_SUBMIT    = false   // set it to true if you dont want to commit newly mined blocks to the blockchian/network
+	WAIT_FOR_SECONDS = 19 * 60 // it will allow diff 1 one minute before the others
+	COINBASE_ADDRESS = "tb1petwqkk8wnk4lgweyy4xvgxk0c7f572mrval39mwaxl34scex8zsqlpfgdd"
+	COINBASE_STRING  = "/cipa/"
+
+	currently_worked_block *btc.Block
+	mining_info            GetMiningInfoResp
+)
 
 type OneTransaction struct {
 	Data    string `json:"data"`
@@ -51,7 +63,6 @@ type GetWorkTemplateResp struct {
 type GetMiningInfoResp struct {
 	Blocks     uint    `json:"blocks"`
 	Difficulty float64 `json:"difficulty"`
-	Chain      string  `json:"chain"`
 }
 
 type RpcGetBlockTemplateResp struct {
@@ -72,111 +83,169 @@ type RpcGetMiningInfoResp struct {
 	Error  interface{}       `json:"error"`
 }
 
-var curr_block *btc.Block
-var the_pk_script []byte
-var mining_info GetMiningInfoResp
+func swap256(d []byte) {
+	if len(d) != 32 {
+		panic("swap256 call with wrong length")
+	}
+	for i := 0; i < 16; i++ {
+		d[i], d[31-i] = d[31-i], d[i]
+	}
+}
 
-func init() {
-	the_addr, _ := btc.NewAddrFromString("n2ASs8pUXUMxnkNjek6H7PTHfjnvre7QfQ")
-	the_pk_script = the_addr.OutScript()
+func swap32(d []byte) {
+	for i := 0; i < len(d); i += 4 {
+		binary.BigEndian.PutUint32(d[i:i+4], binary.LittleEndian.Uint32(d[i:i+4]))
+	}
 }
 
 func make_coinbase_tx(height uint32) (tx *btc.Tx) {
 	tx = new(btc.Tx)
 	tx.TxIn = make([]*btc.TxIn, 1)
 	tx.TxIn[0] = new(btc.TxIn)
-	/*
-		var null_32 [32]byte
-		tx.SegWit = make([][][]byte, 1)
-		tx.SegWit[0] = make([][]byte, 1)
-		tx.SegWit[0][0] = null_32[:]
-	*/
+	tx.TxIn[0].Input.Vout = 0xffffffff
 
-	var exp [6]byte
-	var exp_len int
-	if height <= 16 {
-		exp[0] = btc.OP_1 - 1 + byte(height)
-		exp_len = 1
-	} else {
-		binary.LittleEndian.PutUint32(exp[1:5], height)
-		for exp_len = 5; exp_len > 1; exp_len-- {
-			if exp[exp_len] != 0 || exp[exp_len-1] >= 0x80 {
-				break
-			}
-		}
-		exp[0] = byte(exp_len)
-		exp_len++
-	}
-	tx.TxIn[0].ScriptSig = exp[:exp_len]
+	// make the coinbase tx segwit type
+	tx.SegWit = make([][][]byte, 1)
+	tx.SegWit[0] = make([][]byte, 1)
+	tx.SegWit[0][0] = make([]byte, 32)
+	rand.Read(tx.SegWit[0][0])
+
+	wr := bytes.NewBuffer(script.UintToScript(height))
+	wr.Write([]byte{byte(len(COINBASE_STRING))})
+	wr.Write([]byte(COINBASE_STRING))
+
+	tx.TxIn[0].ScriptSig = wr.Bytes()
 	tx.TxIn[0].Sequence = 0xffffffff
 
-	tx.TxOut = make([]*btc.TxOut, 1)
+	the_addr, _ := btc.NewAddrFromString(COINBASE_ADDRESS)
+
+	// add first output (for the reward)
+	tx.TxOut = make([]*btc.TxOut, 2)
 	tx.TxOut[0] = new(btc.TxOut)
 	tx.TxOut[0].Value = 50e8
-	tx.TxOut[0].Pk_script = the_pk_script
+	tx.TxOut[0].Pk_script = the_addr.OutScript()
 
-	/*
-		tx.TxOut[1] = new(btc.TxOut)
-		merkle, _ := btc.GetWitnessMerkle([]*btc.Tx{tx})
-		with_nonce := btc.Sha2Sum(append(merkle, tx.SegWit[0][0]...))
-		tx.TxOut[1].Pk_script = append([]byte{0x6a, 0x24, 0xaa, 0x21, 0xa9, 0xed}, with_nonce[:]...)
-	*/
+	// add second output - witness merkle, null for now (to be updated after adding txs to the block)
+	tx.TxOut[1] = new(btc.TxOut)
+	tx.TxOut[1].Pk_script = make([]byte, 6+32)
+	copy(tx.TxOut[1].Pk_script[0:6], []byte{0x6a, 0x24, 0xaa, 0x21, 0xa9, 0xed})
+	return
+}
+
+func update_witness_merkle(bl *btc.Block) {
+	tx := bl.Txs[0]
+	merkle, _ := btc.GetWitnessMerkle(bl.Txs)
+	with_nonce := btc.Sha2Sum(append(merkle, tx.SegWit[0][0]...))
+	copy(tx.TxOut[1].Pk_script[6:], with_nonce[:])
+}
+
+func get_testnet_timestamp() (curtime uint32) {
+	now := time.Now().Unix()
+	prv := int64(common.Last.Block.Timestamp())
+	if now-prv > int64(WAIT_FOR_SECONDS) {
+		curtime = uint32(prv + 20*60 + 1)
+		if uint32(now) > curtime {
+			curtime = uint32(now)
+		}
+	} else {
+		curtime = uint32(now)
+	}
 	return
 }
 
 func GetWork(r *RpcGetWorkResp) {
-	curr_block = new(btc.Block)
+	bl := new(btc.Block)
+
 	common.Last.Mutex.Lock()
-	curr_block.Txs = make([]*btc.Tx, 1)
-	curr_block.Txs[0] = make_coinbase_tx(common.Last.Block.Height + 1)
-	raw_tx := curr_block.Txs[0].SerializeNew()
-	curr_block.Txs[0].SetHash(raw_tx)
-	merkle, _ := curr_block.GetMerkle()
-
-	var zer [32]byte
-	var data [80]byte
-	now := uint32(time.Now().Unix())
-	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, now)
-	//fmt.Printf("BitsA:0x%08x  %d >? %d\n", bits, now, common.Last.Block.Timestamp()+chain.TargetSpacing*2)
-
-	mining_info.Blocks = uint(common.Last.Block.Height)
-	mining_info.Difficulty = btc.GetDifficulty(bits)
-	mining_info.Chain = "testnet"
+	height := common.Last.Block.Height + 1
+	curtime := get_testnet_timestamp()
+	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(curtime))
 	common.Last.Mutex.Unlock()
 
-	target := btc.SetCompact(bits).Bytes()
-	r.Result.Target = hex.EncodeToString(append(zer[:32-len(target)], target...))
+	bl.Txs = make([]*btc.Tx, 1)
+	bl.Txs[0] = make_coinbase_tx(height)
+
+	cpfp := network.GetSortedMempoolNew()
+	//println(len(cpfp), "transactions")
+	bl.Txs[0].SetHash(bl.Txs[0].SerializeNew()) // this will not be the final hash, but to get a propoer weight in the next line
+	cur_tx_weight := bl.Txs[0].Weight()
+
+	for _, v := range cpfp {
+		tx := v.Tx
+		if !tx.IsFinal(height, uint32(curtime)) {
+			continue
+		}
+
+		w := tx.Weight()
+		if cur_tx_weight+w > 4e6 {
+			//println("Too many txs - max weight reached")
+			break
+		}
+
+		if sigops+v.SigopsCost > btc.MAX_BLOCK_SIGOPS_COST {
+			//println("Too many sigops - limit to 999000 bytes")
+			return
+		}
+
+		bl.Txs = append(bl.Txs, tx)
+		bl.Txs[0].TxOut[0].Value += v.Fee
+		cur_tx_weight += w
+		sigops += v.SigopsCost
+	}
+	update_witness_merkle(bl)
+
+	bl.Txs[0].SetHash(bl.Txs[0].SerializeNew())
+	merkle, _ := bl.GetMerkle()
+
+	var zer [32]byte
+	var data [128]byte
+
+	mining_info.Blocks = uint(height)
+	mining_info.Difficulty = btc.GetDifficulty(bits)
+
+	target_ := btc.SetCompact(bits).Bytes()
+	target := append(zer[:32-len(target_)], target_...)
+	swap256(target) // getwork is expected to return the target as little endian
+	r.Result.Target = hex.EncodeToString(target)
 	binary.LittleEndian.PutUint32(data[0:4], 0x20000000)
 	copy(data[4:36], common.Last.Block.BlockHash.Hash[:])
 	copy(data[36:36+32], merkle)
-	binary.LittleEndian.PutUint32(data[68:72], now)
+	binary.LittleEndian.PutUint32(data[68:72], uint32(curtime))
 	binary.LittleEndian.PutUint32(data[72:76], bits)
 	// data[76:80]  - nonce
+
+	bl.Raw = make([]byte, 80)
+	copy(bl.Raw, data[:80])
+
+	swap32(data[:80]) // getwork is expected to return the block header in a fucked up way
 	r.Result.Data = hex.EncodeToString(data[:])
 
+	currently_worked_block = bl
+	fmt.Printf("getwork  time_off:%d  =>  #%d / dif:%.0f / txs:%d / val:%d / ts:%s\n",
+		WAIT_FOR_SECONDS, height, btc.GetDifficulty(bits), len(bl.Txs), bl.Txs[0].TxOut[0].Value,
+		time.Unix(int64(curtime), 0).Format("15:04:05"))
 }
 
 func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	var zer [32]byte
 
 	common.Last.Mutex.Lock()
-
-	r.Curtime = uint(time.Now().Unix())
-	if now := uint(common.Last.Block.Timestamp()); now > r.Curtime {
-		r.Curtime = now
-	}
+	r.Curtime = uint(get_testnet_timestamp())
 	r.Mintime = uint(common.Last.Block.GetMedianTimePast()) + 1
 	if r.Curtime < r.Mintime {
 		r.Curtime = r.Mintime
 	}
+	println("getblocktemplate timestamp:", time.Unix(int64(r.Curtime), 0).Format("15:04:05"))
 	height := common.Last.Block.Height + 1
 	bits := common.BlockChain.GetNextWorkRequired(common.Last.Block, uint32(r.Curtime))
-	//fmt.Printf("BitsB:0x%08x\n", bits)
+	r.PreviousBlockHash = common.Last.Block.BlockHash.String()
+	common.Last.Mutex.Unlock()
+
 	target := btc.SetCompact(bits).Bytes()
 
 	r.Capabilities = []string{"proposal"}
-	r.Version = 4
-	r.PreviousBlockHash = common.Last.Block.BlockHash.String()
+	r.Version = 0x20000000
+
 	r.Transactions, r.Coinbasevalue = GetTransactions(height, uint32(r.Mintime))
 	r.Coinbasevalue += btc.GetBlockReward(height)
 	r.Coinbaseaux.Flags = ""
@@ -192,7 +261,6 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 	last_given_time = uint32(r.Curtime)
 	last_given_mintime = uint32(r.Mintime)
 
-	common.Last.Mutex.Unlock()
 }
 
 /* memory pool transaction sorting stuff */
@@ -218,7 +286,7 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 	for _, v := range network.TransactionsToSend {
 		tx := v.Tx
 
-		if tx.SegWit != nil { // testing on bfgminer 5.5.0 that cannot deal with segwit blocks
+		if !DO_SEGWIT && tx.SegWit != nil {
 			continue
 		}
 
