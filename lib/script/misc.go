@@ -1,6 +1,7 @@
 package script
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 
@@ -353,6 +354,26 @@ func DecompressScript(data []byte) (script []byte) {
 		script[0] = 65
 		pk.GetPublicKey(script[1:66])
 		script[66] = 0xac
+	}
+	return
+}
+
+func UintToScript(n uint32) (out []byte) {
+	if n >= 1 && n <= 16 {
+		out = []byte{byte(n + btc.OP_1 - 1)}
+	} else if n == 0 {
+		out = []byte{btc.OP_0}
+	} else {
+		var exp [6]byte
+		var exp_len int
+		binary.LittleEndian.PutUint32(exp[1:5], n)
+		for exp_len = 5; exp_len > 1; exp_len-- {
+			if exp[exp_len] != 0 || exp[exp_len-1] >= 0x80 {
+				break
+			}
+		}
+		exp[0] = byte(exp_len)
+		out = exp[:exp_len+1]
 	}
 	return
 }
