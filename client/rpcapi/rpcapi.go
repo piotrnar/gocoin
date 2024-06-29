@@ -5,10 +5,12 @@ package rpcapi
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"os/exec"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -32,7 +34,7 @@ type RpcCommand struct {
 }
 
 func process_rpc(b []byte) (out []byte) {
-	ioutil.WriteFile("rpc_cmd.json", b, 0777)
+	os.WriteFile("rpc_cmd.json", b, 0777)
 	ex_cmd := exec.Command("C:\\Tools\\DEV\\Git\\mingw64\\bin\\curl.EXE",
 		"--user", "gocoinrpc:gocoinpwd", "--data-binary", "@rpc_cmd.json", "http://127.0.0.1:18332/")
 	out, _ = ex_cmd.Output()
@@ -54,7 +56,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//fmt.Println("========================handler", r.Method, r.URL.String(), u, p, ok, "=================")
-	b, e := ioutil.ReadAll(r.Body)
+	b, e := io.ReadAll(r.Body)
 	if e != nil {
 		println(e.Error())
 		return
@@ -74,7 +76,6 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 	switch RpcCmd.Method {
 	case "getblocktemplate":
 		var resp_my RpcGetBlockTemplateResp
-
 		GetNextBlockTemplate(&resp_my.Result)
 
 		if false {
@@ -112,8 +113,30 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case "getwork":
-		//println("geting work...")
 		var resp_my RpcGetWorkResp
+		//println("geting work...", DO_SEGWIT, WAIT_FOR_SECONDS, DO_NOT_SUBMIT)
+		switch uu := RpcCmd.Params.(type) {
+		case []interface{}:
+			if len(uu) >= 1 {
+				if currently_worked_block == nil {
+					println("work submited, but no work in progress")
+					return
+				}
+				d, err := hex.DecodeString(uu[0].(string))
+				if err != nil {
+					println(err.Error())
+					return
+				}
+				swap32(d)
+				currently_worked_block.Raw = d[:80]
+				SubmitWork(currently_worked_block)
+				currently_worked_block = nil
+				resp.Result = true
+				goto send_response
+			}
+		default:
+			println("***something else")
+		}
 		GetWork(&resp_my)
 		b, _ = json.Marshal(&resp_my)
 		w.Write(append(b, 0x0a))
@@ -150,6 +173,7 @@ func my_handler(w http.ResponseWriter, r *http.Request) {
 		resp.Error = RpcError{Code: -32601, Message: "Method not found"}
 	}
 
+send_response:
 	b, e = json.Marshal(&resp)
 	if e != nil {
 		println("json.Marshal(&resp):", e.Error())

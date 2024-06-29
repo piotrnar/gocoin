@@ -1,10 +1,8 @@
 package rpcapi
 
 import (
+	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -57,19 +55,47 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		return
 	}
 
-	bs := new(BlockSubmited)
-
-	bs.Block, er = btc.NewBlock(bd)
+	bl, er := btc.NewBlock(bd)
 	if er != nil {
 		resp.Error = RpcError{Code: -4, Message: er.Error()}
 		return
 	}
 
+	resp.Result = submitBlockInt(bl)
+}
+
+func SubmitWork(bl *btc.Block) {
+	if bl == nil {
+		println("ERROR: No work pending")
+		return
+	}
+
+	bl.Hash = btc.NewSha2Hash(bl.Raw[:80])
+	println("NewBlock by SubmitWork:", bl.Hash.String())
+	wr := bytes.NewBuffer(bl.Raw[:80])
+	btc.WriteVlen(wr, uint64(len(bl.Txs)))
+	for _, tx := range bl.Txs {
+		tx.WriteSerializedNew(wr)
+	}
+	bl.UpdateContent(wr.Bytes())
+	submitBlockInt(bl)
+}
+
+func submitBlockInt(bl *btc.Block) (result string) {
+	if DO_NOT_SUBMIT {
+		println("*** Do not submit blocks for now - just simulation ***")
+		return
+	}
+
+	bs := new(BlockSubmited)
+
+	bs.Block = bl
+
 	network.MutexRcv.Lock()
 	network.ReceivedBlocks[bs.Block.Hash.BIdx()] = &network.OneReceivedBlock{TmStart: time.Now()}
 	network.MutexRcv.Unlock()
 
-	println("new block", bs.Block.Hash.String(), "len", len(bd), "- submitting...")
+	println("###### new block", bs.Block.Hash.String(), "len", len(bl.Raw), "######")
 	bs.Done.Add(1)
 	RpcBlocks <- bs
 	bs.Done.Wait()
@@ -77,12 +103,12 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 		//resp.Error = RpcError{Code: -10, Message: bs.Error}
 		idx := strings.Index(bs.Error, "- RPC_Result:")
 		if idx == -1 {
-			resp.Result = "inconclusive"
+			result = "inconclusive"
 		} else {
-			resp.Result = bs.Error[idx+13:]
+			result = bs.Error[idx+13:]
 		}
 		println("submiting block error:", bs.Error)
-		println("submiting block result:", resp.Result.(string))
+		println("submiting block result:", result)
 
 		print("time_now:", time.Now().Unix())
 		print("  cur_block_ts:", bs.Block.BlockTime())
@@ -95,19 +121,7 @@ func SubmitBlock(cmd *RpcCommand, resp *RpcResponse, b []byte) {
 
 		return
 	}
-
-	// cross check with bitcoind...
-	if false {
-		bitcoind_result := process_rpc(b)
-		json.Unmarshal(bitcoind_result, &resp)
-		switch cmd.Params.(type) {
-		case string:
-			println("\007Block rejected by bitcoind:", resp.Result.(string))
-			ioutil.WriteFile(fmt.Sprint(bs.Block.Height, "-", bs.Block.Hash.String()), bd, 0777)
-		default:
-			println("submiting block verified OK", bs.Error)
-		}
-	}
+	return
 }
 
 var last_given_time, last_given_mintime uint32
