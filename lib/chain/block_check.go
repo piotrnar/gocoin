@@ -2,7 +2,6 @@ package chain
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -159,23 +158,7 @@ func (ch *Chain) PostCheckBlock(bl *btc.Block) (er error) {
 
 		// Enforce rule that the coinbase starts with serialized block height
 		if bl.Height >= ch.Consensus.BIP34Height {
-			var exp [6]byte
-			var exp_len int
-			if bl.Height <= 16 {
-				exp[0] = btc.OP_1 - 1 + byte(bl.Height)
-				exp_len = 1
-			} else {
-				binary.LittleEndian.PutUint32(exp[1:5], bl.Height)
-				for exp_len = 5; exp_len > 1; exp_len-- {
-					if exp[exp_len] != 0 || exp[exp_len-1] >= 0x80 {
-						break
-					}
-				}
-				exp[0] = byte(exp_len)
-				exp_len++
-			}
-
-			if !bytes.HasPrefix(bl.Txs[0].TxIn[0].ScriptSig, exp[:exp_len]) {
+			if !bytes.HasPrefix(bl.Txs[0].TxIn[0].ScriptSig, script.UintToScript(bl.Height)) {
 				er = errors.New("CheckBlock() : Unexpected block number in coinbase: " + bl.Hash.String() + " - RPC_Result:bad-cb-height")
 				return
 			}
