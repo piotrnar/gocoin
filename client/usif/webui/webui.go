@@ -16,6 +16,7 @@ import (
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
+	rmtclient "github.com/piotrnar/gocoin/remote-wallet/client"
 )
 
 var start_time time.Time
@@ -177,6 +178,8 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServerThread() {
+    wrc := rmtclient.WalletRemoteClient{}
+
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
 	http.HandleFunc("/webui/", p_webui)
@@ -185,6 +188,7 @@ func ServerThread() {
 	http.HandleFunc("/snd", p_snd)
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
+	http.HandleFunc("/sign_transaction", sign_transaction(&wrc))
 	http.HandleFunc("/balance.zip", dl_balance)
 
 	http.HandleFunc("/net", p_net)
@@ -220,6 +224,7 @@ func ServerThread() {
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
 	go start_ssl_server()
+    go rmtclient.WaitAndEstablishConnection(&wrc)
 	http.ListenAndServe(common.CFG.WebUI.Interface, nil)
 }
 
