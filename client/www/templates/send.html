@@ -699,9 +699,20 @@ function save_address_book() {
 	addrbook_button.onclick = function() {edit_address_book()}
 }
 
+function sign_transaction() {
+
+    var data, xhr;
+    data = new FormData(document.mainform);
+    xhr = new XMLHttpRequest();
+
+    xhr.open( 'POST', '/sign_transaction', true );
+    xhr.onreadystatechange = function ( response ) {console.log(xhr.responseText)};
+    xhr.send( data );
+}
+
 </script>
 
-<form method="post" action="payment.zip">
+<form name="mainform" method="post" action="payment.zip" >
 <input type="hidden" id="outcnt_val" name="outcnt" value="">
 <h2>Payment details
 <input style="float:right;" id="addrbook_button" type="button" value="Edit Address Book" onclick="edit_address_book()">
@@ -760,10 +771,11 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		&nbsp;&nbsp;&nbsp;
 		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
 	<hr>
-		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+		<input name="download" type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
 	</td>
 </tr>
 </table>
+<input onclick="sign_transaction()" value="Sign transaction" style="width:100%">
 <i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
 
 <h2>Select Inputs</h2>
