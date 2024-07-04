@@ -9,12 +9,13 @@ import (
 	"github.com/piotrnar/gocoin/remote-wallet/common"
 )
 
+// WaitAndEstablishConnection runs a http server at common.ClientTcpServerAddr and waits for a message of type common.InitiateConnection.
+// After receiving the message, it attempts to establish a websocket connection with the WalletRemoteServer.
 func WaitAndEstablishConnection(wrc *WalletRemoteClient) {
     var websocketServerAddr string
     initCon := make(chan bool)
     mux := http.NewServeMux()
     srv := http.Server{Addr: common.ClientTcpServerAddr, Handler: mux}
-    // the client is first supposed to start a tcp server and wait for InitiateConnection request from the WalletRemoteServer
     mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         var msg common.Msg
         body, err := io.ReadAll(r.Body)

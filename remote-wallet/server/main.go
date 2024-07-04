@@ -17,7 +17,10 @@ var (
     WebsocketServerAddr = "127.0.0.1:8878"
 )
 
-func askClientToConnect() {
+/* sendInitiateConnectionReq sends a message of type common.InitiateConnection to the WalletRemoteClient so that it can initiate the conneciton. This is to improve the security of the system by not allowing anyone to be able to connect to the wallet (which contains valuable information).
+The current infrastructure is not secure by any means and serves only as a basement for building a secure system. This whole procedure shall be abstracted away in the future and made more secure. 
+*/
+func sendInitiateConnectionReq() {
     var data = common.Msg{Type: common.InitiateConnection, Payload: "ws://"+WebsocketServerAddr}
     marshalled, err := json.Marshal(data)
     if err != nil {
@@ -45,16 +48,12 @@ func main() {
         TempWalletBinaryPath = os.Args[2]
         TempWalletFolderPath = os.Args[3]
     } 
-    // 1. start server
-    // TODO: Potential race condition
     go func(){
         msgHandler := NewHandler(TempWalletFolderPath, TempWalletBinaryPath)
         wsServer := NewWebsocketServer(&msgHandler)
         wsServer.Start(WebsocketServerAddr)
-        fmt.Println("never reach here")
     }()
-    // 2. Ask client to establish connection
-    askClientToConnect()
+    sendInitiateConnectionReq()
 
     sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
