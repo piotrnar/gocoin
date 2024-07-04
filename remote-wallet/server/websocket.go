@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"context"
@@ -22,10 +22,11 @@ func (w WSMessageWriter) Write(msg common.Msg) error {
 
 type WebsocketServer struct {
     handler *MsgHandler
+    Conn *websocket.Conn
 }
 
 func NewWebsocketServer(msg *MsgHandler) WebsocketServer {
-    return WebsocketServer{msg}
+    return WebsocketServer{msg, nil}
 }
 
 func(s *WebsocketServer) Start(addr string) error {
@@ -55,21 +56,8 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         fmt.Println(err.Error())
 		return  
 	}
+    s.Conn = c
     fmt.Println("Websocket connection establish with the wallet remote client")
-    ctx := context.Background()
-    if(err != nil){
-        panic(err)
-    }
-    mwriter := WSMessageWriter{conn: c}
-    for {
-        var msg common.Msg
-        if err := wsjson.Read(ctx, c, &msg); err != nil{
-            fmt.Println("Received a message here: ", msg)
-            // fmt.Println(err)
-            break
-        }
-        s.handler.ReceiveMessage(msg, mwriter)
-    }        
 }
 
 func(s *WebsocketServer) Stop() {}
