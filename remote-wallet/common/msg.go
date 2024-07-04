@@ -14,10 +14,7 @@ type Msg struct {
     Payload interface{} `json:"payload"`
 }
 
-// The connection has to be establised from the Remote Wallet Server. Therefore, the Wallet Remote Server will first send a request to the gocoin node sideapp with the information needed to establish a connection with it. No random client will be able to connect with the Remote Wallet Server. 
-// For now the payload should be a string. In the future this will change though. 
 type InitiateConnectionRequestPayload string
-
 
 type SignTransactionResponsePayload string
 

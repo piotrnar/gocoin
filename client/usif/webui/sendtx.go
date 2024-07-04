@@ -34,7 +34,7 @@ type MultisigAddr struct {
 }
 
 
-// This function handles the use case of signing the transaction
+// TODO: Get rid of duplication between this and the dl_payment function
 func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWriter, r *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
         fmt.Println("Received sign transaction request here")
@@ -189,7 +189,6 @@ func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWrite
 
             st := rmtcmn.SignTransactionRequestPayload{}
 
-
             was_tx := make(map [[32]byte] bool, len(thisbal))
             for i := range thisbal {
                 if was_tx[thisbal[i].TxPrevOut.Hash] {
@@ -241,7 +240,6 @@ func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWrite
 }
 
 func dl_payment(w http.ResponseWriter, r *http.Request) {
-    // I have to check which button was used, whether it was payment.zip or sign transaction, based on that, I will have to do the rest
 	if !ipchecker(r) || !common.GetBool(&common.WalletON)  {
 		return
 	}

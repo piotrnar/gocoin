@@ -8,7 +8,6 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// WalletRemoteClient is used for interacting with the WalletRemoteServer. 
 type WalletRemoteClient struct {
     c *websocket.Conn
 }
