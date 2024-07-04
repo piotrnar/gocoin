@@ -16,8 +16,13 @@ import (
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
-	rmtclient "github.com/piotrnar/gocoin/remote-wallet/client"
+	rmtserver "github.com/piotrnar/gocoin/remote-wallet/server"
 )
+
+const (
+    WebsocketServerAddr = "127.0.0.1:8878"
+)
+
 
 var start_time time.Time
 
@@ -178,7 +183,7 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 }
 
 func ServerThread() {
-    wrc := rmtclient.WalletRemoteClient{}
+    wrs := rmtserver.NewWebsocketServer(&rmtserver.MsgHandler{})
 
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
@@ -188,7 +193,7 @@ func ServerThread() {
 	http.HandleFunc("/snd", p_snd)
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
-	http.HandleFunc("/sign_transaction", sign_transaction(&wrc))
+	http.HandleFunc("/sign_transaction", sign_transaction(&wrs))
 	http.HandleFunc("/balance.zip", dl_balance)
 
 	http.HandleFunc("/net", p_net)
@@ -224,7 +229,7 @@ func ServerThread() {
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
 
 	go start_ssl_server()
-    go rmtclient.WaitAndEstablishConnection(&wrc)
+    go wrs.Start(WebsocketServerAddr)
 	http.ListenAndServe(common.CFG.WebUI.Interface, nil)
 }
 

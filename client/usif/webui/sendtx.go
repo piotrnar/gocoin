@@ -3,6 +3,7 @@ package webui
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -13,9 +14,10 @@ import (
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
+	"nhooyr.io/websocket/wsjson"
 
-	rmtclnt "github.com/piotrnar/gocoin/remote-wallet/client"
 	rmtcmn "github.com/piotrnar/gocoin/remote-wallet/common"
+	rmtsrv "github.com/piotrnar/gocoin/remote-wallet/server"
 )
 
 const (
@@ -34,7 +36,7 @@ type MultisigAddr struct {
 
 
 // TODO: Get rid of duplication between this and the dl_payment function
-func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWriter, r *http.Request) {
+func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
         fmt.Println("Received sign transaction request here")
         r.ParseMultipartForm(FormParseMemBufSize)
@@ -155,6 +157,7 @@ func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWrite
                 goto error
             }
 
+
             pay_cmd += fmt.Sprint(" -seq ", seq)
 
             am, er := btc.StringToSatoshis(r.Form["txfee"][0])
@@ -216,13 +219,15 @@ func sign_transaction(wrc *rmtclnt.WalletRemoteClient)func (w http.ResponseWrite
             // Non-multisig transaction ...
             st.Tx2Sign = string(tx.Serialize())
             fmt.Println("Sending signtx msg over ws")
-            error := wrc.Write(rmtcmn.SignTransaction, st)
+
+            msg := rmtcmn.Msg{Type: rmtcmn.SignTransaction, Payload: st}
+            error := wsjson.Write(context.Background(), wrs.Conn, msg)
             if error != nil {
                 fmt.Println(error)
                 goto error
             }
             fmt.Println("waiting for ws response...")
-            msg, err := wrc.Read()
+            err := wsjson.Read(context.Background(), wrs.Conn, &msg)
             if err != nil {
                 fmt.Println(error)
                 goto error
