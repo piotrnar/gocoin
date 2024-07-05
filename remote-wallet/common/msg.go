@@ -7,6 +7,7 @@ const (
 	SignTransaction MsgType = "sign_transaction"
     SignedTransactionRawHex MsgType = "signed_tx_rawhex"
     InitiateConnection MsgType = "initiate_connection"
+    InternalError   MsgType = "internal_error"
 )
 
 type Msg struct {
