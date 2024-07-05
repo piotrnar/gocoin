@@ -232,6 +232,10 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
                 fmt.Println(error)
                 goto error
             }
+            if(msg.Type == rmtcmn.InternalError){
+                w.Write([]byte(""))
+                return 
+            }
             rawhex := msg.Payload.(string)
             w.Write([]byte(rawhex))
             

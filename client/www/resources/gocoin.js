@@ -86,8 +86,10 @@ function tim2str(tim, timeonly) {
 	return res
 }
 
-function pushtx() {
-	var rawtx = prompt("Enter raw transaction data (hexdump)")
+function pushtx(rawtx) {
+    if(!rawtx){
+	    rawtx = prompt("Enter raw transaction data (hexdump)")
+    }
 	if (rawtx!=null) {
 		var form = document.createElement("form")
 		form.setAttribute("method", "post")

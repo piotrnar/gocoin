@@ -51,11 +51,13 @@ func main(){
             reader := bufio.NewReader(os.Stdin)
             fmt.Print("Received a request to sign a transaction. Do you want to confirm(yes/no): ")
             text, _ := reader.ReadString('\n')
-            if(strings.Compare(text, "no") != 0){
-                fmt.Println("nooo")
+            txSignResp := common.Msg{}
+            if strings.TrimRight(text, "\n") == "no" {
+                txSignResp.Type = common.InternalError
+                txSignResp.Payload = common.SignTransactionRejectedError()
+                writer.Write(txSignResp)
                 continue
             }
-            txSignResp := common.Msg{}
             rawHex, err := h.SignTransaction(msg.Payload)
             if err != nil {
                 fmt.Println(err)

@@ -1,5 +1,6 @@
 <script type="text/javascript" src="webui/crypto.js"></script>
 <script type="text/javascript" src="webui/bech32.js"></script>
+<script type="text/javascript" src="webui/gocoin.js"></script>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
@@ -705,7 +706,15 @@ function sign_transaction() {
     xhr = new XMLHttpRequest();
 
     xhr.open( 'POST', '/sign_transaction', true );
-    xhr.onreadystatechange = function ( response ) {console.log(xhr.responseText)};
+    xhr.onreadystatechange = function ( response ) {
+         if (xhr.readyState == 4) {
+            console.log(xhr.responseText)
+             if(xhr.responseText) {
+                pushtx(xhr.responseText)
+             }
+             console.log("Wallet user has not granted perssion to sign the transaction.")
+         }
+    };
     xhr.send( data );
 }
 
@@ -774,7 +783,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	</td>
 </tr>
 </table>
-<input onclick="sign_transaction()" value="Sign transaction" style="width:100%">
+<input type="button" onclick="sign_transaction()" value="Sign transaction" style="width:100%">
 <i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
 
 <h2>Select Inputs</h2>
