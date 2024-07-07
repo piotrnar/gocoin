@@ -576,6 +576,10 @@ func InitPeers(dir string) {
 			println(e.Error(), ConnectOnly)
 			os.Exit(1)
 		}
+		if len(oa.IP) < 16 {
+			println("ERROR: cCould not resolve IP addess of", ConnectOnly)
+			os.Exit(1)
+		}
 		proxyPeer = NewPeer(nil)
 		proxyPeer.Services = Services
 		copy(proxyPeer.Ip4[:], oa.IP[12:16])
