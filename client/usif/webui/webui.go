@@ -17,6 +17,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
 	rmtserver "github.com/piotrnar/gocoin/remote-wallet/server"
+	rmtcmn "github.com/piotrnar/gocoin/remote-wallet/common"
 )
 
 const (
@@ -182,6 +183,17 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+
+func get_remote_wallet_status(wrs rmtcmn.WalletRemoteServer)func (w http.ResponseWriter, r *http.Request) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        if(wrs.ConnectionStatus()){
+            w.Write([]byte("1"))
+            return 
+        }
+        w.Write([]byte("0"))
+    }
+}
+
 func ServerThread() {
     wrs := rmtserver.NewWebsocketServer(&rmtserver.MsgHandler{})
 
@@ -194,6 +206,7 @@ func ServerThread() {
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
 	http.HandleFunc("/sign_transaction", sign_transaction(&wrs))
+	http.HandleFunc("/rmtwallet_status", get_remote_wallet_status(&wrs))
 	http.HandleFunc("/balance.zip", dl_balance)
 
 	http.HandleFunc("/net", p_net)

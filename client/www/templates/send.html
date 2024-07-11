@@ -56,7 +56,43 @@ var auto_transalte_to_segwit = false
 var auto_transalte_to_segwit_p2sh = false
 var auto_transalte_to_segwit_tap = false
 
+var is_remote_wallet_connected = false
+var enable_sign_tx = false
+
 const ADDR_LIST_SIZE = 15
+
+
+function check_remote_wallet_connection() {
+    var data, xhr;
+    xhr = new XMLHttpRequest();
+
+    xhr.open( 'GET', '/rmtwallet_status', true );
+    xhr.onreadystatechange = function ( response ) {
+        console.log(xhr.readyState)
+         if (xhr.readyState == 4) {
+             console.log(xhr.responseText)
+             if(xhr.responseText == "1"){
+                 console.log("Remote wallet connected")
+                 is_remote_wallet_connected = true
+                 if(enable_sign_tx) {
+                     signtx.disabled = false
+                 }
+             } else {
+                 is_remote_wallet_connected = false
+                 signtx.disabled = true
+                 console.log("Remote wallet not connected")
+             } 
+             } 
+         }
+    xhr.send( data );
+}
+(function(){
+   var f = function() {
+     check_remote_wallet_connection()
+   };
+   window.setInterval(f, 10000);
+   f();
+})();
 
 function build_change_list() {
 	var virgincounter = 0
@@ -334,7 +370,8 @@ function recalc_inputs() {
 	selcnt.innerText = selected_cnt.toString()
 
 	paybut.disabled = (selected_cnt==0)
-	signtx.disabled = (selected_cnt==0)
+    enable_sign_tx = !(selected_cnt==0)
+	signtx.disabled = !(enable_sign_tx && is_remote_wallet_connected)
 
 	recalc_to_pay()
 }
@@ -438,7 +475,8 @@ function recalc_to_pay() {
 	}
 
 	paybut.disabled = butdisabled
-    signtx.disabled = butdisabled
+    enable_sign_tx  = !butdisabled
+	signtx.disabled = !(enable_sign_tx && is_remote_wallet_connected)
 
 	if (vsize<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
@@ -720,6 +758,9 @@ function sign_transaction() {
          }
     };
     xhr.send( data );
+    // Nithish: ideally we would want a loading sort of component, or a notification type of feature for this. But that is beyond the scope of this project
+    // and can be implemented later
+    alert("Sign transaction request sent to the remote wallet.")
 }
 
 </script>

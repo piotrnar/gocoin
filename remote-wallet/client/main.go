@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/piotrnar/gocoin/remote-wallet/common"
 	"nhooyr.io/websocket"
@@ -40,6 +41,19 @@ func main(){
 	}
     h := MsgHandler{WalletBinaryPath: TempWalletBinaryPath, WalletFolderPath: TempWalletFolderPath}
     writer := WSMessageWriter{conn: wrc.c}
+
+    go func(){
+        // keep sending ping every 5 seconds so that the server can be aware of the connection
+        for range time.Tick(time.Second * 5) {
+            ping := common.Msg{Type: common.Ping, Payload: nil}
+            err = writer.Write(ping)
+            if err != nil {
+                fmt.Println(err)
+                return 
+            }
+    }
+    }()
+
     for {
         msg, err := wrc.Read()
         if err != nil {

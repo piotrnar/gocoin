@@ -8,6 +8,9 @@ const (
     SignedTransactionRawHex MsgType = "signed_tx_rawhex"
     InitiateConnection MsgType = "initiate_connection"
     InternalError   MsgType = "internal_error"
+
+    Ping MsgType = "ping"
+    Pong MsgType = "pong"
 )
 
 type Msg struct {
