@@ -19,7 +19,7 @@ import (
 )
 
 const LastTrustedBTCBlock = "00000000000000000001fcf207ce30e9172433f815bf4ca0e90ecd0601286a20" // #817490
-const LastTrustedTN3Block = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043" // #0
+const LastTrustedTSTBlock = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043" // #0
 
 var (
 	ConfigFile string = "gocoin.conf"
@@ -258,10 +258,10 @@ func InitConfig() {
 	// swap LastTrustedBlock if it's now from the other chain
 	if CFG.Testnet {
 		if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock {
-			CFG.LastTrustedBlock = LastTrustedTN3Block
+			CFG.LastTrustedBlock = LastTrustedTSTBlock
 		}
 	} else {
-		if new_config_file || CFG.LastTrustedBlock == LastTrustedTN3Block {
+		if new_config_file || CFG.LastTrustedBlock == LastTrustedTSTBlock {
 			CFG.LastTrustedBlock = LastTrustedBTCBlock
 		}
 	}
