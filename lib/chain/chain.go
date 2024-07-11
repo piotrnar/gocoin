@@ -49,11 +49,11 @@ type NewChanOpts struct {
 	BlockUndoneCB    func(*btc.Block) // used to put undone txs back into memory pool
 	DoNotRescan      bool             // when set UTXO will not be automatically updated with new block found on disk
 	CompressUTXO     bool
+	UTXOPrealloc     uint
 }
 
 // NewChainExt is the very first function one should call in order to use this package.
 func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewChanOpts, bdbopts *BlockDBOpts) (ch *Chain) {
-	var utxo_records_prealloc uint
 	ch = new(Chain)
 	ch.Genesis = genesis
 
@@ -63,10 +63,11 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 
 	ch.CB = *opts
 
+	ch.Consensus.GensisTimestamp = 1231006505
 	ch.Consensus.MaxPOWBits = 0x1d00ffff
 	ch.Consensus.MaxPOWValue, _ = new(big.Int).SetString("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 	if ch.testnet() {
-		println("--------------testnet4-------------")
+		// println("--------------testnet4-------------")
 		ch.Consensus.GensisTimestamp = 1714777860
 		ch.Consensus.BIP34Height = 1
 		ch.Consensus.BIP65Height = 1
@@ -75,9 +76,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Enforce_SEGWIT = 1
 		ch.Consensus.Enforce_Taproot = 1
 		ch.Consensus.BIP9_Treshold = 1512
-		utxo_records_prealloc = 1e6 // Fresh testnet4 blockchain - prealloc 1M txs
 	} else {
-		ch.Consensus.GensisTimestamp = 1231006505
 		ch.Consensus.BIP34Height = 227931
 		ch.Consensus.BIP65Height = 388381
 		ch.Consensus.BIP66Height = 363725
@@ -85,7 +84,6 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 		ch.Consensus.Enforce_SEGWIT = 481824
 		ch.Consensus.Enforce_Taproot = 709632
 		ch.Consensus.BIP9_Treshold = 1815
-		utxo_records_prealloc = 126e6 // Around block #844k
 	}
 
 	ch.Blocks = NewBlockDBExt(dbrootdir, bdbopts)
@@ -93,7 +91,7 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	ch.Unspent = utxo.NewUnspentDb(&utxo.NewUnspentOpts{
 		Dir: dbrootdir, Rescan: rescan, VolatimeMode: opts.UTXOVolatileMode,
 		CB: opts.UTXOCallbacks, AbortNow: &AbortNow,
-		CompressRecords: opts.CompressUTXO, RecordsPrealloc: utxo_records_prealloc})
+		CompressRecords: opts.CompressUTXO, RecordsPrealloc: opts.UTXOPrealloc})
 
 	if AbortNow {
 		return
