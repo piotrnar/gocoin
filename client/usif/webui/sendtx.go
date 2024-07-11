@@ -233,12 +233,8 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
                 goto error
             }
             fmt.Println("waiting for ws response...")
-            error = wsjson.Read(context.Background(), wrs.Conn, &msg)
-            if error != nil {
-                fmt.Println(error)
-                err = error.Error()
-                goto error
-            }
+            msg = <-wrs.Signtxchan
+            fmt.Println("received ws response...")
             if(msg.Type == rmtcmn.InternalError){
                 w.Write([]byte(""))
                 return 

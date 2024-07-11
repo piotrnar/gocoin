@@ -1,8 +1,10 @@
 package common
 
+
 type WalletRemoteServer interface {
-    Start() error
+    Start(string) error
     Stop()
+    ConnectionStatus() bool
 }
 
 type WalletRemoteClient interface {
