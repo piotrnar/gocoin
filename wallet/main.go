@@ -24,7 +24,7 @@ var (
 	singleask *bool = flag.Bool("1", false, "Do not re-ask for the password (when used along with -l)")
 	noverify  *bool = flag.Bool("q", false, "Do not double check keys while listing them (use with -l)")
 	verbose   *bool = flag.Bool("v", false, "Verbose version (print more info)")
-	ask4pass  *bool = flag.Bool("p", false, "Force the wallet to ask for seed password (ignore .secret file)")
+	ask4pass  *bool = flag.Bool("p", false, "Force the wallet to ask for seed password (ignore .secret file) and do not offer saving it")
 	nosseed   *bool = flag.Bool("is", false, "Ignore the seed paremeter from the config file")
 	subfee    *bool = flag.Bool("f", false, "Substract fee from the first value")
 
@@ -124,9 +124,11 @@ func main() {
 	}
 
 	// list public addresses?
-	if *list {
+	if no_sign_mode() {
 		make_wallet()
-		dump_addrs()
+		if *list {
+			dump_addrs()
+		}
 		cleanExit(0)
 	}
 
