@@ -46,6 +46,10 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
         }
 
         var err string
+        if(wrs.Conn == nil){
+                err = "Remote wallet is not connected"
+                goto error
+        }
 
         // here rather than downloading the zip file, we have to send it as a json to the client server
         if len(r.Form["outcnt"])==1 {
@@ -221,15 +225,18 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
             fmt.Println("Sending signtx msg over ws")
 
             msg := rmtcmn.Msg{Type: rmtcmn.SignTransaction, Payload: st}
+            
             error := wsjson.Write(context.Background(), wrs.Conn, msg)
             if error != nil {
                 fmt.Println(error)
+                err = error.Error()
                 goto error
             }
             fmt.Println("waiting for ws response...")
-            err := wsjson.Read(context.Background(), wrs.Conn, &msg)
-            if err != nil {
+            error = wsjson.Read(context.Background(), wrs.Conn, &msg)
+            if error != nil {
                 fmt.Println(error)
+                err = error.Error()
                 goto error
             }
             if(msg.Type == rmtcmn.InternalError){
@@ -239,11 +246,14 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
             rawhex := msg.Payload.(string)
             w.Write([]byte(rawhex))
             
-        }else {
+        } else {
             err = "Bad request"
+            goto error
             }
     error:
+        w.WriteHeader(http.StatusInternalServerError)
         w.Write([]byte(err))
+        return 
 }
 }
 
