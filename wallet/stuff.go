@@ -34,6 +34,10 @@ func ask_yes_no(msg string) bool {
 	}
 }
 
+func no_sign_mode() bool {
+	return *list || *dumpwords || *dumpxprv
+}
+
 func getpass() []byte {
 	var pass [1024]byte
 	var n int
@@ -79,7 +83,7 @@ func getpass() []byte {
 		return nil
 	}
 
-	if *list {
+	if no_sign_mode() {
 		if !*singleask {
 			fmt.Print("Re-enter the seed password (to be sure): ")
 			var pass2 [1024]byte
@@ -92,10 +96,10 @@ func getpass() []byte {
 			}
 			sys.ClearBuffer(pass2[:p2len])
 		}
-		if *list {
+		if !*ask4pass {
 			// Maybe he wants to save the password?
 			if ask_yes_no("Save the password on disk, so you won't be asked for it later?") {
-				e = ioutil.WriteFile(PassSeedFilename, pass[:n], 0600)
+				e = os.WriteFile(PassSeedFilename, pass[:n], 0600)
 				if e != nil {
 					fmt.Println("WARNING: Could not save the password", e.Error())
 				} else {
