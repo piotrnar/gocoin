@@ -334,6 +334,7 @@ function recalc_inputs() {
 	selcnt.innerText = selected_cnt.toString()
 
 	paybut.disabled = (selected_cnt==0)
+	signtx.disabled = (selected_cnt==0)
 
 	recalc_to_pay()
 }
@@ -437,6 +438,7 @@ function recalc_to_pay() {
 	}
 
 	paybut.disabled = butdisabled
+    signtx.disabled = butdisabled
 
 	if (vsize<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
@@ -707,12 +709,14 @@ function sign_transaction() {
 
     xhr.open( 'POST', '/sign_transaction', true );
     xhr.onreadystatechange = function ( response ) {
+        console.log(response)
          if (xhr.readyState == 4) {
-            console.log(xhr.responseText)
-             if(xhr.responseText) {
+             console.log(xhr.responseText)
+             if(xhr.responseText && xhr.status === 200) {
                 pushtx(xhr.responseText)
+             } else {
+                alert("Error: " + xhr.responseText)
              }
-             console.log("Wallet user has not granted perssion to sign the transaction.")
          }
     };
     xhr.send( data );
@@ -780,10 +784,10 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
 	<hr>
 		<input name="download" type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+        <input style="width:100%;margin-top:5px;" id="signtx" type="button" class="bord"  onclick="sign_transaction()" value="Sign transaction" disabled="disabled">
 	</td>
 </tr>
 </table>
-<input type="button" onclick="sign_transaction()" value="Sign transaction" style="width:100%">
 <i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
 
 <h2>Select Inputs</h2>
