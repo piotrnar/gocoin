@@ -25,6 +25,7 @@
 * Client/Network: do not sent "ping" messages to peers that we have pending block downloads from
 * Wallet: do not offer to save the password when "-p" switch was used
 * Wallet: "-words" and "-xprv" now prevent tx signing and no longer need to be used together with "-l"
+* Client: Fixed wallet.GetAllUnspent() for P2WSH address types (had to be broken unnoticed since Taproot was added)
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)
