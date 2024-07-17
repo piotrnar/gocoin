@@ -260,9 +260,10 @@ func (r *OneAllAddrBal) Count() int {
 
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
+
 	if aa.SegwitProg != nil {
 		var uidx [32]byte
-		if aa.SegwitProg.Version == 1 || len(aa.SegwitProg.Program) == 32 {
+		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
 			copy(uidx[:], aa.SegwitProg.Program)
 			rec = AllBalancesP2TAP[uidx]
 		} else {
