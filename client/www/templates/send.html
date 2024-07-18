@@ -1,5 +1,6 @@
 <script type="text/javascript" src="webui/crypto.js"></script>
 <script type="text/javascript" src="webui/bech32.js"></script>
+<script type="text/javascript" src="webui/gocoin.js"></script>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
@@ -55,7 +56,43 @@ var auto_transalte_to_segwit = false
 var auto_transalte_to_segwit_p2sh = false
 var auto_transalte_to_segwit_tap = false
 
+var is_remote_wallet_connected = false
+var enable_sign_tx = false
+
 const ADDR_LIST_SIZE = 15
+
+
+function check_remote_wallet_connection() {
+    var data, xhr;
+    xhr = new XMLHttpRequest();
+
+    xhr.open( 'GET', '/rmtwallet_status', true );
+    xhr.onreadystatechange = function ( response ) {
+        console.log(xhr.readyState)
+         if (xhr.readyState == 4) {
+             console.log(xhr.responseText)
+             if(xhr.responseText == "1"){
+                 console.log("Remote wallet connected")
+                 is_remote_wallet_connected = true
+                 if(enable_sign_tx) {
+                     signtx.disabled = false
+                 }
+             } else {
+                 is_remote_wallet_connected = false
+                 signtx.disabled = true
+                 console.log("Remote wallet not connected")
+             } 
+             } 
+         }
+    xhr.send( data );
+}
+(function(){
+   var f = function() {
+     check_remote_wallet_connection()
+   };
+   window.setInterval(f, 10000);
+   f();
+})();
 
 function build_change_list() {
 	var virgincounter = 0
@@ -333,6 +370,8 @@ function recalc_inputs() {
 	selcnt.innerText = selected_cnt.toString()
 
 	paybut.disabled = (selected_cnt==0)
+    enable_sign_tx = !(selected_cnt==0)
+	signtx.disabled = !(enable_sign_tx && is_remote_wallet_connected)
 
 	recalc_to_pay()
 }
@@ -436,6 +475,8 @@ function recalc_to_pay() {
 	}
 
 	paybut.disabled = butdisabled
+    enable_sign_tx  = !butdisabled
+	signtx.disabled = !(enable_sign_tx && is_remote_wallet_connected)
 
 	if (vsize<1 || isNaN(fee)) {
 		feeperbyte.innerText = '???'
@@ -699,9 +740,32 @@ function save_address_book() {
 	addrbook_button.onclick = function() {edit_address_book()}
 }
 
+function sign_transaction() {
+    var data, xhr;
+    data = new FormData(document.mainform);
+    xhr = new XMLHttpRequest();
+
+    xhr.open( 'POST', '/sign_transaction', true );
+    xhr.onreadystatechange = function ( response ) {
+        console.log(response)
+         if (xhr.readyState == 4) {
+             console.log(xhr.responseText)
+             if(xhr.responseText && xhr.status === 200) {
+                pushtx(xhr.responseText)
+             } else {
+                alert("Error: " + xhr.responseText)
+             }
+         }
+    };
+    xhr.send( data );
+    // Nithish: ideally we would want a loading sort of component, or a notification type of feature for this. But that is beyond the scope of this project
+    // and can be implemented later
+    alert("Sign transaction request sent to the remote wallet.")
+}
+
 </script>
 
-<form method="post" action="payment.zip">
+<form name="mainform" method="post" action="payment.zip" >
 <input type="hidden" id="outcnt_val" name="outcnt" value="">
 <h2>Payment details
 <input style="float:right;" id="addrbook_button" type="button" value="Edit Address Book" onclick="edit_address_book()">
@@ -760,7 +824,8 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 		&nbsp;&nbsp;&nbsp;
 		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
 	<hr>
-		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+		<input name="download" type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+        <input style="width:100%;margin-top:5px;" id="signtx" type="button" class="bord"  onclick="sign_transaction()" value="Sign transaction" disabled="disabled">
 	</td>
 </tr>
 </table>
