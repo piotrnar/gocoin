@@ -29,9 +29,13 @@ type OneAllAddrBal struct {
 func (ur *OneAllAddrInp) GetRec() (rec *utxo.UtxoRec, vout uint32) {
 	var ind utxo.UtxoKeyType
 	copy(ind[:], ur[:])
-	common.BlockChain.Unspent.MapMutex[int(ind[0])].RLock()
-	v := common.BlockChain.Unspent.HashMap[int(ind[0])][ind]
-	common.BlockChain.Unspent.MapMutex[int(ind[0])].RUnlock()
+	common.BlockChain.Unspent.Mutex.Lock()
+	defer common.BlockChain.Unspent.Mutex.Unlock()
+
+	v, er := common.BlockChain.Unspent.LDB.Get(ind[:], nil)
+	if er != nil {
+		fmt.Println("Get UTXO:", er.Error())
+	}
 	if v != nil {
 		vout = binary.LittleEndian.Uint32(ur[utxo.UtxoIdxLen:])
 		rec = utxo.NewUtxoRec(ind, v)
@@ -260,10 +264,9 @@ func (r *OneAllAddrBal) Count() int {
 
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
-
 	if aa.SegwitProg != nil {
 		var uidx [32]byte
-		if aa.SegwitProg.Version == 1 && len(aa.SegwitProg.Program) == 32 {
+		if aa.SegwitProg.Version == 1 || len(aa.SegwitProg.Program) == 32 {
 			copy(uidx[:], aa.SegwitProg.Program)
 			rec = AllBalancesP2TAP[uidx]
 		} else {

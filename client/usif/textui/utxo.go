@@ -2,6 +2,7 @@ package textui
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"sort"
 
@@ -41,19 +42,28 @@ func wallet_usd(s string) {
 	var rec *utxo.UtxoRec
 	from_block := db.LastBlockHeight - uint32(blocks_back)
 	occ := make([]int64, max_index-min_index)
-	for i := range db.HashMap {
-		for k, v := range db.HashMap[i] {
-			rec = utxo.NewUtxoRecStatic(k, v)
-			if rec.InBlock < from_block {
-				continue
-			}
-			for _, o := range rec.Outs {
-				if o != nil && o.Value > MIN_BTC_VALUE && o.Value < MAX_BTC_VALUE {
-					v10 := int64(VALUE_MULTIPLIER * (math.Log10(float64(o.Value))))
-					occ[v10-min_index]++
-				}
+
+	iter := common.BlockChain.Unspent.LDB.NewIterator(nil, nil)
+	for iter.Next() {
+		var k utxo.UtxoKeyType
+		key := iter.Key()
+		copy(k[:], key[:])
+		v := iter.Value()
+		rec = utxo.NewUtxoRecStatic(k, v)
+		if rec.InBlock < from_block {
+			continue
+		}
+		for _, o := range rec.Outs {
+			if o != nil && o.Value > MIN_BTC_VALUE && o.Value < MAX_BTC_VALUE {
+				v10 := int64(VALUE_MULTIPLIER * (math.Log10(float64(o.Value))))
+				occ[v10-min_index]++
 			}
 		}
+
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		log.Fatal(err)
 	}
 
 	srtd := make([][2]int, len(occ)-2)
