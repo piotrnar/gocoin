@@ -4,15 +4,18 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-	"github.com/piotrnar/gocoin/lib/secp256k1"
 	"math/big"
 	"sync/atomic"
+
+	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
 var (
 	ecdsaVerifyCnt    uint64
 	schnorrVerifyCnt  uint64
 	checkp2cVerifyCnt uint64
+
+	EcdsaSignWithRFC6979 bool // set this to true to create RFC6979 deterministic ECDSA signatures
 
 	EC_Verify           func(k, s, h []byte) bool
 	Schnorr_Verify      func(pkey, sign, msg []byte) bool
@@ -42,6 +45,19 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	return secp256k1.Verify(kd, sd, hash)
 }
 
+func rfc6979nonce(msg, key, algo, data []byte, counter int, out []byte) {
+	keydata := make([]byte, 64, 112)
+	copy(keydata[0:32], key)
+	copy(keydata[32:64], msg)
+	keydata = append(keydata, data...)
+	keydata = append(keydata, algo...)
+	rng := RFC6979_HMAC_Init(keydata)
+	ClearBuffer(keydata)
+	for i := 0; i <= counter; i++ {
+		rng.Generate(out)
+	}
+}
+
 func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sig secp256k1.Signature
 	var sec, msg, nonce secp256k1.Number
@@ -49,23 +65,37 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	sec.SetBytes(priv)
 	msg.SetBytes(hash)
 
-	sha := sha256.New()
-	sha.Write(priv)
-	sha.Write(hash)
-	for {
-		var buf [32]byte
-		rand.Read(buf[:])
-		sha.Write(buf[:])
-		nonce.SetBytes(sha.Sum(nil))
-		if nonce.Sign() > 0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int) < 0 {
-			break
+	if EcdsaSignWithRFC6979 {
+		// RFC6979 nonce calculation (e.g. Trezor compatible)
+		var counter int
+		var non32 [32]byte
+		for {
+			rfc6979nonce(hash, priv, nil, nil, counter, non32[:])
+			nonce.SetBytes(non32[:])
+			if nonce.Sign() > 0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int) < 0 {
+				break
+			}
+		}
+	} else {
+		// Old method GoCoin nonce calculation
+		sha := sha256.New()
+		sha.Write(priv)
+		sha.Write(hash)
+		for {
+			var buf [32]byte
+			rand.Read(buf[:])
+			sha.Write(buf[:])
+			nonce.SetBytes(sha.Sum(nil))
+			if nonce.Sign() > 0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int) < 0 {
+				break
+			}
 		}
 	}
 
 	if sig.Sign(&sec, &msg, &nonce, nil) != 1 {
 		err = errors.New("ESCDS Sign error()")
 	}
-	return &sig.R.Int, &sig.S.Int, nil
+	return &sig.R.Int, &sig.S.Int, err
 }
 
 func SchnorrVerify(pkey, sig, msg []byte) bool {
