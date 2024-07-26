@@ -1,42 +1,41 @@
 package webui
 
 import (
-	"fmt"
-	"bytes"
-	"strings"
-	"strconv"
-	"net/http"
 	"archive/zip"
+	"bytes"
 	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
-	"github.com/piotrnar/gocoin/client/usif"
-	"github.com/piotrnar/gocoin/client/common"
 )
-
 
 const (
 	AvgSignatureSize = 73
 	AvgPublicKeySize = 34 /*Assumine compressed key*/
 )
 
-
 type MultisigAddr struct {
-	MultiAddress string
-	ScriptPubKey string
+	MultiAddress               string
+	ScriptPubKey               string
 	KeysRequired, KeysProvided uint
-	RedeemScript string
-	ListOfAddres []string
+	RedeemScript               string
+	ListOfAddres               []string
 }
 
 func dl_payment(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || !common.GetBool(&common.WalletON)  {
+	if !ipchecker(r) || !common.GetBool(&common.WalletON) {
 		return
 	}
 
 	var err string
 
-	if len(r.Form["outcnt"])==1 {
+	if len(r.Form["outcnt"]) == 1 {
 		var thisbal utxo.AllUnspentTx
 		var pay_cmd string
 		var totalinput, spentsofar uint64
@@ -47,7 +46,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		tx.Lock_time = 0
 
 		seq, er := strconv.ParseInt(r.Form["tx_seq"][0], 10, 64)
-		if er != nil || seq < -2 || seq > 0xffffffff {
+		if er != nil || seq < -1000000 || seq > 0xffffffff {
 			err = "Incorrect Sequence value: " + r.Form["tx_seq"][0]
 			goto error
 		}
@@ -61,19 +60,19 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		lck.In.Wait()
 		defer lck.Out.Done()
 
-		for i:=1; i<=int(outcnt); i++ {
+		for i := 1; i <= int(outcnt); i++ {
 			is := fmt.Sprint(i)
-			if len(r.Form["txout"+is])==1 && r.Form["txout"+is][0]=="on" {
+			if len(r.Form["txout"+is]) == 1 && r.Form["txout"+is][0] == "on" {
 				hash := btc.NewUint256FromString(r.Form["txid"+is][0])
-				if hash!=nil {
+				if hash != nil {
 					vout, er := strconv.ParseUint(r.Form["txvout"+is][0], 10, 32)
-					if er==nil {
-						var po = btc.TxPrevOut{Hash:hash.Hash, Vout:uint32(vout)}
+					if er == nil {
+						var po = btc.TxPrevOut{Hash: hash.Hash, Vout: uint32(vout)}
 						if res := common.BlockChain.Unspent.UnspentGet(&po); res != nil {
 							addr := btc.NewAddrFromPkScript(res.Pk_script, common.Testnet)
 
-							unsp := &utxo.OneUnspentTx{TxPrevOut:po, Value:res.Value,
-								MinedAt:res.BlockHeight, Coinbase:res.WasCoinbase, BtcAddr:addr}
+							unsp := &utxo.OneUnspentTx{TxPrevOut: po, Value: res.Value,
+								MinedAt: res.BlockHeight, Coinbase: res.WasCoinbase, BtcAddr: addr}
 
 							thisbal = append(thisbal, unsp)
 
@@ -101,20 +100,20 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		for i:=1; ; i++ {
+		for i := 1; ; i++ {
 			adridx := fmt.Sprint("adr", i)
 			btcidx := fmt.Sprint("btc", i)
 
-			if len(r.Form[adridx])!=1 || len(r.Form[btcidx])!=1 {
+			if len(r.Form[adridx]) != 1 || len(r.Form[btcidx]) != 1 {
 				break
 			}
 
-			if len(r.Form[adridx][0])>1 {
+			if len(r.Form[adridx][0]) > 1 {
 				addr, er := btc.NewAddrFromString(r.Form[adridx][0])
 				if er == nil {
 					am, er := btc.StringToSatoshis(r.Form[btcidx][0])
-					if er==nil && am>0 {
-						if pay_cmd=="" {
+					if er == nil && am > 0 {
+						if pay_cmd == "" {
 							pay_cmd = "wallet -a=false -useallinputs -send "
 						} else {
 							pay_cmd += ","
@@ -140,7 +139,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if pay_cmd=="" {
+		if pay_cmd == "" {
 			err = "No inputs selected"
 			goto error
 		}
@@ -156,7 +155,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		pay_cmd += " -fee " + r.Form["txfee"][0]
 		spentsofar += am
 
-		if len(r.Form["change"][0])>1 {
+		if len(r.Form["change"][0]) > 1 {
 			addr, er := btc.NewAddrFromString(r.Form["change"][0])
 			if er != nil {
 				err = "Incorrect change address: " + r.Form["change"][0]
@@ -168,7 +167,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 		if totalinput > spentsofar {
 			// Add change output
-			outs, er := btc.NewSpendOutputs(change_addr, totalinput - spentsofar, common.CFG.Testnet)
+			outs, er := btc.NewSpendOutputs(change_addr, totalinput-spentsofar, common.CFG.Testnet)
 			if er != nil {
 				err = er.Error()
 				goto error
@@ -179,7 +178,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		buf := new(bytes.Buffer)
 		zi := zip.NewWriter(buf)
 
-		was_tx := make(map [[32]byte] bool, len(thisbal))
+		was_tx := make(map[[32]byte]bool, len(thisbal))
 		for i := range thisbal {
 			if was_tx[thisbal[i].TxPrevOut.Hash] {
 				continue
@@ -199,7 +198,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(fz, thisbal[i].UnspentTextLine())
 		}
 
-		if pay_cmd!="" {
+		if pay_cmd != "" {
 			fz, _ = zi.Create(common.CFG.WebUI.PayCmdName)
 			fz.Write([]byte(pay_cmd))
 		}
@@ -207,7 +206,6 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		// Non-multisig transaction ...
 		fz, _ = zi.Create("tx2sign.txt")
 		fz.Write([]byte(hex.EncodeToString(tx.Serialize())))
-
 
 		zi.Close()
 		w.Header()["Content-Type"] = []string{"application/zip"}
@@ -223,7 +221,6 @@ error:
 	w.Write([]byte(s))
 	write_html_tail(w)
 }
-
 
 func p_snd(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
