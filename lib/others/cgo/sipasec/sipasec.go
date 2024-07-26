@@ -172,6 +172,20 @@ static int check_pay_to_contract(unsigned char *m_keydata, unsigned char *base, 
     return secp256k1_xonly_pubkey_tweak_add_check(ctx, m_keydata, parity, &base_point, hash);
 }
 
+static int secp256k1_sign(unsigned char *msg, unsigned char *seckey, unsigned char *r, unsigned char *s) {
+	int result;
+	secp256k1_ecdsa_signature sig;
+
+	result = secp256k1_ecdsa_sign(ctx, &sig, msg, seckey, NULL, NULL);
+	if (result) {
+		memcpy(r, &sig.data[0], 32);
+		memcpy(s, &sig.data[32], 32);
+	}
+
+	return result;
+}
+
+
 */
 import "C"
 import "unsafe"
@@ -181,6 +195,11 @@ func EC_Verify(pkey, sign, hash []byte) int {
 	return int(C.secp256k1_verify((*C.uchar)(unsafe.Pointer(&hash[0])),
 		(*C.uchar)(unsafe.Pointer(&sign[0])), C.int(len(sign)),
 		(*C.uchar)(unsafe.Pointer(&pkey[0])), C.int(len(pkey))))
+}
+
+func EC_Sign(msg, key, r, s []byte) int {
+	return int(C.secp256k1_sign((*C.uchar)(unsafe.Pointer(&msg[0])), (*C.uchar)(unsafe.Pointer(&key[0])),
+		(*C.uchar)(unsafe.Pointer(&r[0])), (*C.uchar)(unsafe.Pointer(&s[0]))))
 }
 
 func Schnorr_Verify(pkey, sign, msg []byte) int {
