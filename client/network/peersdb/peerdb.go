@@ -86,7 +86,7 @@ type PeerAddr struct {
 
 func DefaultTcpPort() uint16 {
 	if Testnet {
-		return 48333
+		return 18333
 	} else {
 		return 8333
 	}
@@ -602,9 +602,11 @@ func InitPeers(dir string) {
 				}, 8333)
 			} else {
 				initSeeds([]string{
-					"seed.testnet4.bitcoin.sprovoost.nl",
-					"seed.testnet4.wiz.biz",
-				}, 48333)
+					"testnet-seed.bitcoin.jonasschnelli.ch",
+					"seed.tbtc.petertodd.net",
+					"seed.testnet.bitcoin.sprovoost.nl",
+					"testnet-seed.bluematt.me",
+				}, 18333)
 			}
 		}()
 	}
