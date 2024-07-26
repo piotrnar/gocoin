@@ -19,7 +19,7 @@ import (
 )
 
 const LastTrustedBTCBlock = "00000000000000000001fcf207ce30e9172433f815bf4ca0e90ecd0601286a20" // #817490
-const LastTrustedTSTBlock = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043" // #0
+const LastTrustedTN3Block = "0000000000000f56395d3d0e54515ae310541b6c8e5a4311d05edbaed567211f" // #2536700
 
 var (
 	ConfigFile string = "gocoin.conf"
@@ -258,10 +258,10 @@ func InitConfig() {
 	// swap LastTrustedBlock if it's now from the other chain
 	if CFG.Testnet {
 		if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock {
-			CFG.LastTrustedBlock = LastTrustedTSTBlock
+			CFG.LastTrustedBlock = LastTrustedTN3Block
 		}
 	} else {
-		if new_config_file || CFG.LastTrustedBlock == LastTrustedTSTBlock {
+		if new_config_file || CFG.LastTrustedBlock == LastTrustedTN3Block {
 			CFG.LastTrustedBlock = LastTrustedBTCBlock
 		}
 	}
@@ -310,7 +310,7 @@ func InitConfig() {
 
 func DataSubdir() string {
 	if CFG.Testnet {
-		return "ts4net"
+		return "tstnet"
 	} else {
 		return "btcnet"
 	}
@@ -432,7 +432,7 @@ func DefaultTcpPort() (res uint16) {
 		return
 	}
 	if CFG.Testnet {
-		res = 48333
+		res = 18333
 	} else {
 		res = 8333
 	}
