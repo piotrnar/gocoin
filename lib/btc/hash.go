@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding"
-	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 	"hash"
+
+	"github.com/piotrnar/gocoin/lib/others/ripemd160"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 
 var (
 	hash_tags = []string{"TapSighash", "TapLeaf", "TapBranch", "TapTweak"}
-	hashers [HASHER_TAPTWEAK + 1][]byte
+	hashers   [HASHER_TAPTWEAK + 1][]byte
 )
 
 func _TaggedHash(tag string) hash.Hash {
@@ -85,4 +86,117 @@ func HashFromMessage(msg []byte, out []byte) {
 	WriteVlen(b, uint64(len(msg)))
 	b.Write(msg)
 	ShaHash(b.Bytes(), out)
+}
+
+type HMAC_SHA256 struct {
+	inner, outer hash.Hash
+}
+
+type RFC6979_HMAC_SHA256 struct {
+	v, k  [32]byte
+	retry bool
+}
+
+func HMAC_Init(key []byte) (res *HMAC_SHA256) {
+	var rkey [64]byte
+	res = new(HMAC_SHA256)
+	if len(key) < 64 {
+		copy(rkey[:], key)
+	} else {
+		sha := sha256.New()
+		sha.Write(key)
+		copy(rkey[:], sha.Sum(nil))
+	}
+	res.outer = sha256.New()
+	for i := range rkey {
+		rkey[i] ^= 0x5c
+	}
+	res.outer.Write(rkey[:])
+
+	res.inner = sha256.New()
+	for i := range rkey {
+		rkey[i] ^= 0x5c ^ 0x36
+	}
+	res.inner.Write(rkey[:])
+	ClearBuffer(rkey[:])
+	return
+}
+
+func (res *HMAC_SHA256) Write(p []byte) {
+	res.inner.Write(p)
+}
+
+func (res *HMAC_SHA256) Finalize(out []byte) {
+	temp := res.inner.Sum(nil)
+	res.outer.Write(temp)
+	ClearBuffer(temp)
+	copy(out, res.outer.Sum(nil))
+}
+
+func RFC6979_HMAC_Init(key []byte) (rng *RFC6979_HMAC_SHA256) {
+	rng = new(RFC6979_HMAC_SHA256)
+	FillBuffer(rng.v[:], 1) /* RFC6979 3.2.b. */
+
+	/* RFC6979 3.2.d. */
+	hmac := HMAC_Init(rng.k[:])
+	hmac.Write(rng.v[:])
+	hmac.Write([]byte{0})
+	hmac.Write(key)
+	hmac.Finalize(rng.k[:])
+	hmac = HMAC_Init(rng.k[:])
+	hmac.Write(rng.v[:])
+	hmac.Finalize(rng.v[:])
+
+	/* RFC6979 3.2.f. */
+	hmac = HMAC_Init(rng.k[:])
+	hmac.Write(rng.v[:])
+	hmac.Write([]byte{1})
+	hmac.Write(key)
+	hmac.Finalize(rng.k[:])
+	hmac = HMAC_Init(rng.k[:])
+	hmac.Write(rng.v[:])
+	hmac.Finalize(rng.v[:])
+	return
+}
+
+func (rng *RFC6979_HMAC_SHA256) Generate(out []byte) {
+	var hmac *HMAC_SHA256
+	var outlen int
+
+	if rng.retry {
+		hmac = HMAC_Init(rng.k[:])
+		hmac.Write(rng.v[:])
+		hmac.Write([]byte{0})
+		hmac.Finalize(rng.k[:])
+		hmac = HMAC_Init(rng.k[:])
+		hmac.Write(rng.v[:])
+		hmac.Finalize(rng.v[:])
+	}
+
+	for outlen < len(out) {
+		hmac = HMAC_Init(rng.k[:])
+		hmac.Write(rng.v[:])
+		hmac.Finalize(rng.v[:])
+		copy(out[outlen:], rng.v[:])
+		outlen += 32
+	}
+
+	rng.retry = true
+}
+
+func (rng *RFC6979_HMAC_SHA256) Finalize() {
+	ClearBuffer(rng.v[:])
+	ClearBuffer(rng.k[:])
+}
+
+func ClearBuffer(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+}
+
+func FillBuffer(b []byte, v byte) {
+	for i := range b {
+		b[i] = v
+	}
 }
