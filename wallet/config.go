@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -73,7 +72,7 @@ func parse_config() {
 			cfgfn = *cfg_fn
 		}
 	}
-	d, e := ioutil.ReadFile(cfgfn)
+	d, e := os.ReadFile(cfgfn)
 	if e != nil {
 		fmt.Println(cfgfn, "not found - proceeding with the default config values.")
 	} else {
@@ -228,7 +227,17 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 					os.Exit(1)
 				}
+
+			case "rfc6979":
+				v, e := strconv.ParseBool(ll[1])
+				if e == nil {
+					*rfc6979 = v
+				} else {
+					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+					os.Exit(1)
+				}
 			}
+
 		}
 	}
 
