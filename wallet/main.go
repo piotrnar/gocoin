@@ -66,6 +66,8 @@ var (
 
 	encrypt *string = flag.String("encrypt", "", "Encrypt this file using the wallet's seed password")
 	decrypt *string = flag.String("decrypt", "", "Decrypt this file using the wallet's seed password")
+
+	rfc6979 *bool = flag.Bool("rfc6979", false, "Use deterministic signatures as per RFC6979")
 )
 
 // cleanExit exits after cleaning up private data from memory.
@@ -100,6 +102,8 @@ func main() {
 		println("ERROR: scrypt value too big")
 		os.Exit(1)
 	}
+
+	btc.EcdsaSignWithRFC6979 = *rfc6979
 
 	check_atype()
 
