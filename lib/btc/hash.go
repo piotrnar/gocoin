@@ -189,14 +189,40 @@ func (rng *RFC6979_HMAC_SHA256) Finalize() {
 	ClearBuffer(rng.k[:])
 }
 
+// ClearBuffer fills the given bytes buffer with zero
 func ClearBuffer(b []byte) {
 	for i := range b {
 		b[i] = 0
 	}
 }
 
+// ClearBuffer fills the given bytes buffer with the gikven value
 func FillBuffer(b []byte, v byte) {
 	for i := range b {
 		b[i] = v
 	}
+}
+
+// RFC6979_Nonce generates a nonce for ECDSA signature, as per RFC6979
+// Set counter to zero, unless it returned an unacceptable value, then increase by one...
+func RFC6979_Nonce(prv32, msg32, data32, algo16 []byte, counter int, out []byte) {
+	/* We feed a byte array to the PRNG as input, consisting of:
+	 * - the private key (32 bytes) and reduced message (32 bytes), see RFC 6979 3.2d.
+	 * - optionally 32 extra bytes of data, see RFC 6979 3.6 Additional Data.
+	 * - optionally 16 extra bytes with the algorithm name.
+	 * Because the arguments have distinct fixed lengths it is not possible for
+	 *  different argument mixtures to emulate each other and result in the same
+	 *  nonces.
+	 */
+	keydata := make([]byte, 64, 112)
+	copy(keydata[0:32], prv32)
+	copy(keydata[32:64], msg32)
+	keydata = append(keydata, data32...)
+	keydata = append(keydata, algo16...)
+	rng := RFC6979_HMAC_Init(keydata)
+	ClearBuffer(keydata)
+	for i := 0; i <= counter; i++ {
+		rng.Generate(out)
+	}
+	rng.Finalize()
 }
