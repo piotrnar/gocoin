@@ -661,11 +661,11 @@ function selectlabel() {
 
 function final_clicked() {
 	if (final_checkbox.checked) {
-		tx_seq.value = -2
+		tx_seq.value = -2 // 0xfffffffe
 		tx_seq.readOnly = true
 		tx_seq.style.backgroundColor = '#c0c0c0'
 	} else {
-		tx_seq.value = 0
+		tx_seq.value = -3 // 0xfffffffd
 		tx_seq.readOnly = false
 		tx_seq.style.backgroundColor = '#ffffff'
 	}
