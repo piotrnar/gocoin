@@ -45,19 +45,6 @@ func EcdsaVerify(kd []byte, sd []byte, hash []byte) bool {
 	return secp256k1.Verify(kd, sd, hash)
 }
 
-func rfc6979nonce(msg, key, algo, data []byte, counter int, out []byte) {
-	keydata := make([]byte, 64, 112)
-	copy(keydata[0:32], key)
-	copy(keydata[32:64], msg)
-	keydata = append(keydata, data...)
-	keydata = append(keydata, algo...)
-	rng := RFC6979_HMAC_Init(keydata)
-	ClearBuffer(keydata)
-	for i := 0; i <= counter; i++ {
-		rng.Generate(out)
-	}
-}
-
 func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 	var sig secp256k1.Signature
 	var sec, msg, nonce secp256k1.Number
@@ -70,7 +57,7 @@ func EcdsaSign(priv, hash []byte) (r, s *big.Int, err error) {
 		var counter int
 		var non32 [32]byte
 		for {
-			rfc6979nonce(hash, priv, nil, nil, counter, non32[:])
+			RFC6979_Nonce(priv, hash, nil, nil, counter, non32[:])
 			nonce.SetBytes(non32[:])
 			if nonce.Sign() > 0 && nonce.Cmp(&secp256k1.TheCurve.Order.Int) < 0 {
 				break
