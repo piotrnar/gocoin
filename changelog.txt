@@ -27,8 +27,10 @@
 * Wallet: "-words" and "-xprv" now prevent tx signing and no longer need to be used together with "-l"
 * Client: Fixed wallet.GetAllUnspent() for P2WSH address types (had to be broken unnoticed since Taproot was added)
 * Lib: btc.EcdsaSign() can now create deterministc signatures, as per RFC6979
-* Wallet: new command/config switch "rfc6979" to create  RFC6979 deterministic signatures
+* Wallet: new command line/config switch "rfc6979" to create  RFC6979 deterministic signatures
 * Client/WebUI/MakeTx: Default Sequence value changed from 0 to -3 (same as other wallets on the market)
+* Wallet: new command line switch "-locktime" to specify lock time value other than 0 (use with "-send")
+* Wallet: Default Sequence value changed from 0 to -3 (0xfffffffd)
 
 1.10.2 - 2022-09-06:
 * Client: New config value "Memory.CompressBlockDB" (default true)

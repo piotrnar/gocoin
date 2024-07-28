@@ -59,7 +59,7 @@ var (
 	multisign        *string = flag.String("msign", "", "Sign multisig transaction with given bitcoin address (use with -raw)")
 	allowextramsigns *bool   = flag.Bool("xtramsigs", false, "Allow to put more signatures than needed (for multisig txs)")
 
-	sequence *int = flag.Int("seq", 0, "Use given Replace-By-Fee sequence number (-1 or -2 for final)")
+	sequence *int = flag.Int("seq", -3, "Use given Replace-By-Fee sequence number (-1 or -2 for final)")
 
 	dumpxprv  *bool = flag.Bool("xprv", false, "Print BIP32 Extrened Private Key (use with type=4)")
 	dumpwords *bool = flag.Bool("words", false, "Print BIP39 mnemonic (use with type=4)")
@@ -68,6 +68,8 @@ var (
 	decrypt *string = flag.String("decrypt", "", "Decrypt this file using the wallet's seed password")
 
 	rfc6979 *bool = flag.Bool("rfc6979", false, "Use deterministic signatures as per RFC6979")
+
+	lock_time *uint = flag.Uint("locktime", 0, "Specify lock time value (timestamp if 500000000 or more, otherwise block number)")
 )
 
 // cleanExit exits after cleaning up private data from memory.
