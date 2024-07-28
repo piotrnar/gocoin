@@ -190,7 +190,7 @@ func make_signed_tx() {
 	// Make an empty transaction
 	tx := new(btc.Tx)
 	tx.Version = 1
-	tx.Lock_time = 0
+	tx.Lock_time = uint32(*lock_time)
 
 	// Select as many inputs as we need to pay the full amount (with the fee)
 	var btcsofar uint64
