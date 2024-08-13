@@ -293,7 +293,7 @@ func tcp_server() {
 		println("Check config value of Net.BindToIF - binding to any...")
 		ad.IP = net.IPv4(0, 0, 0, 0)
 	}
-	ad.Port = int(common.DefaultTcpPort())
+	ad.Port = int(common.ConfiguredTcpPort())
 
 	lis, e := net.ListenTCP("tcp4", &ad)
 	if e != nil {

@@ -37,7 +37,7 @@ func (c *SigChecker) ExecuteWitnessScript(stack *scrStack, scriptPubKey []byte, 
 					}
 					return false
 				}
-				if DBG_ERR {
+				if DBG_SCR {
 					fmt.Println("IsOpSuccess - yes")
 				}
 				return true

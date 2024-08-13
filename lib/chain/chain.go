@@ -67,12 +67,22 @@ func NewChainExt(dbrootdir string, genesis *btc.Uint256, rescan bool, opts *NewC
 	ch.Consensus.MaxPOWBits = 0x1d00ffff
 	ch.Consensus.MaxPOWValue, _ = new(big.Int).SetString("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 	if ch.testnet() {
-		ch.Consensus.BIP34Height = 21111
-		ch.Consensus.BIP65Height = 581885
-		ch.Consensus.BIP66Height = 330776
-		ch.Consensus.Enforce_CSV = 770112
-		ch.Consensus.Enforce_SEGWIT = 834624
-		ch.Consensus.Enforce_Taproot = 2011968
+		if ch.testnet4() {
+			ch.Consensus.GensisTimestamp = 1714777860
+			ch.Consensus.BIP34Height = 1
+			ch.Consensus.BIP65Height = 1
+			ch.Consensus.BIP66Height = 1
+			ch.Consensus.Enforce_CSV = 1
+			ch.Consensus.Enforce_SEGWIT = 1
+			ch.Consensus.Enforce_Taproot = 1
+		} else {
+			ch.Consensus.BIP34Height = 21111
+			ch.Consensus.BIP65Height = 581885
+			ch.Consensus.BIP66Height = 330776
+			ch.Consensus.Enforce_CSV = 770112
+			ch.Consensus.Enforce_SEGWIT = 834624
+			ch.Consensus.Enforce_Taproot = 2011968
+		}
 		ch.Consensus.BIP9_Treshold = 1512
 	} else {
 		ch.Consensus.BIP34Height = 227931
@@ -165,9 +175,14 @@ func (ch *Chain) Close() {
 	ch.Unspent.Close()
 }
 
-// testnet returns true if we are on Testnet3 chain.
+// testnet returns true if we are on Testnet3 or Testnet4 chain.
 func (ch *Chain) testnet() bool {
 	return ch.Genesis.Hash[0] == 0x43 // it's simple, but works
+}
+
+// testnet4 returns true if we are on Testnet4 chain.
+func (ch *Chain) testnet4() bool {
+	return ch.Genesis.Hash[1] == 0xf0 // it's simple, but works
 }
 
 func (ch *Chain) LastBlock() (res *BlockTreeNode) {
@@ -181,5 +196,4 @@ func (ch *Chain) SetLast(val *BlockTreeNode) {
 	ch.blockTreeAccess.Lock()
 	ch.blockTreeEnd = val
 	ch.blockTreeAccess.Unlock()
-	return
 }

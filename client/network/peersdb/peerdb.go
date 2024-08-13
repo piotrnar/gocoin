@@ -58,7 +58,6 @@ var (
 	proxyPeer    *PeerAddr // when this is not nil we should only connect to this single node
 	peerdb_mutex sync.Mutex
 
-	Testnet     bool
 	ConnectOnly string
 	Services    uint64 = 1
 
@@ -82,14 +81,6 @@ type PeerAddr struct {
 	Friend bool // Connected from friends.txt
 
 	lastSaved int64 // update the record only once per minute
-}
-
-func DefaultTcpPort() uint16 {
-	if Testnet {
-		return 18333
-	} else {
-		return 8333
-	}
 }
 
 func Lock() {
@@ -225,7 +216,7 @@ func (p *PeerAddr) UniqID() uint64 {
 }
 
 func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e error) {
-	port := DefaultTcpPort()
+	port := common.DefaultTcpPort
 	x := strings.Index(ipstr, ":")
 	if x != -1 {
 		if !force_default_port {
@@ -235,7 +226,7 @@ func NewAddrFromString(ipstr string, force_default_port bool) (p *PeerAddr, e er
 				return
 			}
 			if v > 0xffff {
-				e = errors.New("Port number too big")
+				e = errors.New("port number too big")
 				return
 			}
 			port = uint16(v)
@@ -541,7 +532,7 @@ func initSeeds(seeds []string, port uint16) {
 			//println(len(ad), "addrs from", seeds[i])
 			for j := range ad {
 				ip := net.ParseIP(ad[j])
-				if ip != nil && len(ip) == 16 {
+				if len(ip) == 16 {
 					p := NewPeer(nil)
 					p.Services = 0xFFFFFFFFFFFFFFFF
 					copy(p.Ip6[:], ip[:12])
@@ -569,7 +560,7 @@ func InitPeers(dir string) {
 	if ConnectOnly != "" {
 		x := strings.Index(ConnectOnly, ":")
 		if x == -1 {
-			ConnectOnly = fmt.Sprint(ConnectOnly, ":", DefaultTcpPort())
+			ConnectOnly = fmt.Sprint(ConnectOnly, ":", common.DefaultTcpPort)
 		}
 		oa, e := net.ResolveTCPAddr("tcp4", ConnectOnly)
 		if e != nil {
@@ -588,7 +579,8 @@ func InitPeers(dir string) {
 			proxyPeer.Ip4[0], proxyPeer.Ip4[1], proxyPeer.Ip4[2], proxyPeer.Ip4[3], proxyPeer.Port)
 	} else if PeerDB.Count() < MinPeersInDB {
 		go func() {
-			if !Testnet {
+			switch common.DefaultTcpPort {
+			case 8333: // mainnet
 				initSeeds([]string{
 					"seed.bitcoin.sipa.be",
 					"dnsseed.bluematt.me",
@@ -600,13 +592,18 @@ func InitPeers(dir string) {
 					"dnsseed.emzy.de",
 					"seed.bitcoin.wiz.biz",
 				}, 8333)
-			} else {
+			case 18333: // testnet3
 				initSeeds([]string{
 					"testnet-seed.bitcoin.jonasschnelli.ch",
 					"seed.tbtc.petertodd.net",
 					"seed.testnet.bitcoin.sprovoost.nl",
 					"testnet-seed.bluematt.me",
 				}, 18333)
+			case 48333: // testnet4
+				initSeeds([]string{
+					"seed.testnet4.bitcoin.sprovoost.nl",
+					"seed.testnet4.wiz.biz",
+				}, 48333)
 			}
 		}()
 	}

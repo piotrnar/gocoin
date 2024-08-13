@@ -20,6 +20,7 @@ import (
 
 const LastTrustedBTCBlock = "00000000000000000001fcf207ce30e9172433f815bf4ca0e90ecd0601286a20" // #817490
 const LastTrustedTN3Block = "0000000000000f56395d3d0e54515ae310541b6c8e5a4311d05edbaed567211f" // #2536700
+const LastTrustedTN4Block = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043" // #0
 
 var (
 	ConfigFile string = "gocoin.conf"
@@ -37,6 +38,7 @@ var (
 
 	CFG struct { // Options that can come from either command line or common file
 		Testnet          bool
+		Testnet4         bool
 		ConnectOnly      string
 		Datadir          string
 		TextUI_Enabled   bool
@@ -257,11 +259,17 @@ func InitConfig() {
 
 	// swap LastTrustedBlock if it's now from the other chain
 	if CFG.Testnet {
-		if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock {
-			CFG.LastTrustedBlock = LastTrustedTN3Block
+		if CFG.Testnet4 {
+			if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock || CFG.LastTrustedBlock == LastTrustedTN4Block {
+				CFG.LastTrustedBlock = LastTrustedTN4Block
+			}
+		} else {
+			if new_config_file || CFG.LastTrustedBlock == LastTrustedBTCBlock || CFG.LastTrustedBlock == LastTrustedTN3Block {
+				CFG.LastTrustedBlock = LastTrustedTN3Block
+			}
 		}
 	} else {
-		if new_config_file || CFG.LastTrustedBlock == LastTrustedTN3Block {
+		if new_config_file || CFG.LastTrustedBlock == LastTrustedTN3Block || CFG.LastTrustedBlock == LastTrustedTN4Block {
 			CFG.LastTrustedBlock = LastTrustedBTCBlock
 		}
 	}
@@ -310,7 +318,11 @@ func InitConfig() {
 
 func DataSubdir() string {
 	if CFG.Testnet {
-		return "tstnet"
+		if CFG.Testnet4 {
+			return "ts4net"
+		} else {
+			return "tstnet"
+		}
 	} else {
 		return "btcnet"
 	}
@@ -413,28 +425,20 @@ func RPCPort() (res uint32) {
 
 	if CFG.RPC.TCPPort != 0 {
 		res = CFG.RPC.TCPPort
-		return
-	}
-	if CFG.Testnet {
-		res = 18332
 	} else {
-		res = 8332
+		res = uint32(DefaultTcpPort) - 1
 	}
 	return
 }
 
-func DefaultTcpPort() (res uint16) {
+func ConfiguredTcpPort() (res uint16) {
 	mutex_cfg.Lock()
 	defer mutex_cfg.Unlock()
 
 	if CFG.Net.TCPPort != 0 {
 		res = CFG.Net.TCPPort
-		return
-	}
-	if CFG.Testnet {
-		res = 18333
 	} else {
-		res = 8333
+		res = DefaultTcpPort
 	}
 	return
 }

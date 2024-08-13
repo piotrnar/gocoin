@@ -462,7 +462,6 @@ func main() {
 
 		reset_save_timer() // we wil do one save try after loading, in case if ther was a rescan
 
-		peersdb.Testnet = common.Testnet
 		peersdb.ConnectOnly = common.CFG.ConnectOnly
 		peersdb.Services = common.Services
 		peersdb.InitPeers(common.GocoinHomeDir)
