@@ -4,7 +4,7 @@
 ["BTC.COM", "BTC.COM/", ""],
 ["BTC.COM", "BTC.com/", ""],
 ["BTC.COM", "btc.com/", ""],
-["BTC.COM", "", "3EhLZarJUNSfV6TWMZY1Nh5mi3FMsdHa5U"],
+["BTC.COM", "btccom", ""],
 ["ViaBTC", "/ViaBTC/", ""],
 ["BTCC", "/BTCC/", ""],
 ["F2Pool", "/F2Pool/", "1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY"],
@@ -58,8 +58,8 @@
 ["BTCPool", "btcpool", ""],
 ["BTCPool", "BTC-POOL", ""],
 ["SBICrypto", "/SBICrypto", ""],
-["Mara Pool", "/Mara Pool/", ""],
-["Mara Pool", "/MARA Pool", ""],
+["Mara Pool", "Mara Pool", ""],
+["Mara Pool", "MARA Pool", ""],
 ["one_more_mcd", "/one_more_mcd/", ""],
 ["Luxor", "Powered by Luxor", ""],
 ["bitdeer", "bitdeer/", ""],
@@ -73,6 +73,7 @@
 ["Lucky pool", "Lucky pool", ""],
 ["WhitePool", "WhitePool", ""],
 ["OCEAN", "OCEAN.XYZ", ""],
+["ultimus", "/ultimus/", ""],
 ["RSK Merged", "_RSK_", ""],
 ["P2Pool", "_p2pool_", ""]
 ]
