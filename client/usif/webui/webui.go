@@ -242,7 +242,11 @@ func start_ssl_server() {
 	port := common.CFG.WebUI.SSLPort
 	if port == 0 {
 		if common.Testnet {
-			port = 14433
+			if common.DefaultTcpPort == 48333 {
+				port = 44433
+			} else {
+				port = 14433
+			}
 		} else {
 			port = 4433
 		}
