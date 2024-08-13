@@ -1,3 +1,6 @@
+1.10.4:
+* Testnet4 support. For now needs "CFG.Testnet4" set to true, otherwise still uses testnet3
+
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
 * Tools/balio: Fixed balance fetching for Litecoin

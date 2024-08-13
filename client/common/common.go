@@ -28,10 +28,11 @@ var (
 	LogBuffer             = new(bytes.Buffer)
 	Log       *log.Logger = log.New(LogBuffer, "", 0)
 
-	BlockChain   *chain.Chain
-	GenesisBlock *btc.Uint256
-	Magic        [4]byte
-	Testnet      bool
+	BlockChain     *chain.Chain
+	GenesisBlock   *btc.Uint256
+	Magic          [4]byte
+	Testnet        bool
+	DefaultTcpPort uint16 = 8333
 
 	Last TheLastBlock
 
@@ -163,7 +164,7 @@ func BytesToString(val uint64) string {
 	return fmt.Sprintf("%.2f GB", float64(val)/1e9)
 }
 
-//max 6 characters
+// max 6 characters
 func UintToString(num uint64) string {
 	if num < 1e5 {
 		return fmt.Sprint(num) + " "

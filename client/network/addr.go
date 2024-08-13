@@ -98,7 +98,7 @@ func BestExternalAddr() []byte {
 	if len(arr) > 0 {
 		binary.BigEndian.PutUint32(res[20:24], arr[0].IP)
 	}
-	binary.BigEndian.PutUint16(res[24:26], common.DefaultTcpPort())
+	binary.BigEndian.PutUint16(res[24:26], common.ConfiguredTcpPort())
 	return res
 }
 
