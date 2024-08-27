@@ -7,7 +7,7 @@ type WalletRemoteServer interface {
     ConnectionStatus() bool
 }
 
-type WalletRemoteClient interface {
+type WalletRemoteGateway interface {
     Open(string) error
     Close() error
     Read() (Msg, error)
