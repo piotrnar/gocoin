@@ -13,12 +13,6 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-var(
-    TempWalletFolderPath = "/Users/humblenginr/code/gocoin/wallet"
-    TempWalletBinaryPath = TempWalletFolderPath + "/wallet"
-    WebsockerServerAddr = "127.0.0.1:8878"
-)
-
 type WSMessageWriter struct {
     conn *websocket.Conn
 }
@@ -29,16 +23,14 @@ func (w WSMessageWriter) Write(msg common.Msg) error {
 }
 
 func main(){
-    if(len(os.Args) == 2) {
-        WebsockerServerAddr = os.Args[1]
-    }
-    fmt.Println("Establishing connection with ", WebsockerServerAddr, "...")
+    common.InitConfig()
+    fmt.Println("Establishing connection with ", common.FLAG.WebsocketServerAddr, "...")
     wrc := WalletRemoteGateway{}
-    err := wrc.Open("ws://"+WebsockerServerAddr)
+    err := wrc.Open("ws://"+common.FLAG.WebsocketServerAddr)
 	if err != nil {
         panic(err)
 	}
-    h := MsgHandler{WalletBinaryPath: TempWalletBinaryPath, WalletFolderPath: TempWalletFolderPath}
+    h := MsgHandler{WalletBinaryPath: common.FLAG.WalletFolderPath+"/wallet", WalletFolderPath: common.FLAG.WalletFolderPath}
     writer := WSMessageWriter{conn: wrc.c}
 
     go func(){
