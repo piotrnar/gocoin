@@ -46,6 +46,7 @@ var (
 
 	// Decode raw tx
 	dumptxfn *string = flag.String("d", "", "Decode a raw transaction (specify filename as the parameter)")
+	prompt   *bool   = flag.Bool("prompt", false, "Decode signed transaction and prompt for confirmation before writing it to disk")
 
 	// Sign raw message
 	signhash *string = flag.String("hash", "", "Sign a raw hash value (use together with -sign parameter)")
