@@ -167,14 +167,23 @@ func write_tx_file(tx *btc.Tx) {
 	tx.SetHash(signedrawtx)
 
 	hs := tx.Hash.String()
-	fmt.Println("TxID", hs)
 
 	var fn string
-
 	if txfilename == "" {
 		fn = hs[:8] + ".txt"
 	} else {
 		fn = txfilename
+	}
+
+	if *prompt {
+		dump_tx(tx)
+		fmt.Println()
+		if !ask_yes_no("Do you confirm creating the signed transaction file (" + fn + ")?") {
+			fmt.Println("Aborted (exit code 2)")
+			cleanExit(2)
+		}
+	} else {
+		fmt.Println("TxID", hs)
 	}
 
 	f, _ := os.Create(fn)

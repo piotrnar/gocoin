@@ -138,9 +138,12 @@ func dump_raw_tx() {
 	tx := raw_tx_from_file(*dumptxfn)
 	if tx == nil {
 		fmt.Println("ERROR: Cannot decode the raw transaction")
-		return
+		cleanExit(1)
 	}
+	dump_tx(tx)
+}
 
+func dump_tx(tx *btc.Tx) {
 	var unsigned, totin, totout, noins uint64
 
 	fmt.Println("ID:", tx.Hash.String())

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -49,7 +50,7 @@ func getpass() []byte {
 			fmt.Println("ERROR: Both -p and -stdin switches are not allowed at the same time")
 			return nil
 		}
-		d, er := ioutil.ReadAll(os.Stdin)
+		d, er := io.ReadAll(os.Stdin)
 		if er != nil {
 			fmt.Println("Reading from stdin:", e.Error())
 			return nil

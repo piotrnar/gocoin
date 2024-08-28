@@ -236,8 +236,16 @@ func parse_config() {
 					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
 					os.Exit(1)
 				}
-			}
 
+			case "prompt":
+				v, e := strconv.ParseBool(ll[1])
+				if e == nil {
+					*prompt = v
+				} else {
+					println(i, "wallet.cfg: value error for", ll[0], ":", e.Error())
+					os.Exit(1)
+				}
+			}
 		}
 	}
 
