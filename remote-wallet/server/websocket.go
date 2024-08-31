@@ -91,7 +91,6 @@ func (s *WebsocketServer) watchPings(){
     for {
         select {
         case <-s.Pingchan:
-            fmt.Println("Received Ping")
             ticker.Reset(PingWaitPeriod * time.Second)
         case <-ticker.C:
             // harsh attempt to clean up resources

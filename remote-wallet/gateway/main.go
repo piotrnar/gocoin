@@ -23,18 +23,18 @@ func (w WSMessageWriter) Write(msg common.Msg) error {
 }
 
 func main(){
+    // initialize configuration
     common.InitConfig()
     fmt.Println("Establishing connection with ", common.FLAG.WebsocketServerAddr, "...")
-    wrc := WalletRemoteGateway{}
-    err := wrc.Open("ws://"+common.FLAG.WebsocketServerAddr)
+    // establish connection with gocoin node 
+    wrg := WalletRemoteGateway{}
+    err := wrg.Open("ws://"+common.FLAG.WebsocketServerAddr)
 	if err != nil {
         panic(err)
 	}
-    h := MsgHandler{WalletBinaryPath: common.FLAG.WalletFolderPath+"/wallet", WalletFolderPath: common.FLAG.WalletFolderPath}
-    writer := WSMessageWriter{conn: wrc.c}
-
+    // keep sending ping every 5 seconds so that the server can be aware of the connection
+    writer := WSMessageWriter{conn: wrg.c}
     go func(){
-        // keep sending ping every 5 seconds so that the server can be aware of the connection
         for range time.Tick(time.Second * 5) {
             ping := common.Msg{Type: common.Ping, Payload: nil}
             err = writer.Write(ping)
@@ -44,9 +44,10 @@ func main(){
             }
     }
     }()
-
+    // process the requests from the gocoin node
+    h := MsgHandler{WalletBinaryPath: common.FLAG.WalletFolderPath+"/wallet", WalletFolderPath: common.FLAG.WalletFolderPath}
     for {
-        msg, err := wrc.Read()
+        msg, err := wrg.Read()
         if err != nil {
             fmt.Println(err)
             break

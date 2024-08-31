@@ -222,7 +222,6 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
 
             // Non-multisig transaction ...
             st.Tx2Sign = string(tx.Serialize())
-            fmt.Println("Sending signtx msg over ws")
 
             msg := rmtcmn.Msg{Type: rmtcmn.SignTransaction, Payload: st}
             
@@ -232,16 +231,7 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
                 err = error.Error()
                 goto error
             }
-            fmt.Println("waiting for ws response...")
-            msg = <-wrs.Signtxchan
-            fmt.Println("received ws response...")
-            if(msg.Type == rmtcmn.InternalError){
-                w.Write([]byte(""))
-                return 
-            }
-            rawhex := msg.Payload.(string)
-            w.Write([]byte(rawhex))
-            
+            return
         } else {
             err = "Bad request"
             goto error

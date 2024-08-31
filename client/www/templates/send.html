@@ -94,6 +94,23 @@ function check_remote_wallet_connection() {
    f();
 })();
 
+function signed_tx_response_stream(){
+    const source = new EventSource("/signed_tx_stream")
+    source.onerror = (err) => {
+        console.log(err)
+    }
+    source.onmessage = (event) => {
+        console.log("OnMessage Called:")
+        console.log({event: event, data: event.data})
+        if(confirm("Received a transaction from remote wallet. Do you want to push to the mempool?")){
+            pushtx(event.data)
+        }
+    }
+}
+(function(){
+   signed_tx_response_stream()
+})();
+
 function build_change_list() {
 	var virgincounter = 0
 	while (changeaddrsel.options.length>1) changeaddrsel.remove(1)
@@ -747,14 +764,10 @@ function sign_transaction() {
 
     xhr.open( 'POST', '/sign_transaction', true );
     xhr.onreadystatechange = function ( response ) {
-        console.log(response)
          if (xhr.readyState == 4) {
-             console.log(xhr.responseText)
-             if(xhr.responseText && xhr.status === 200) {
-                pushtx(xhr.responseText)
-             } else {
+             if(xhr.status != 200) {
                 alert("Error: " + xhr.responseText)
-             }
+             } 
          }
     };
     xhr.send( data );

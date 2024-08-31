@@ -194,6 +194,75 @@ func get_remote_wallet_status(wrs rmtcmn.WalletRemoteServer)func (w http.Respons
     }
 }
 
+func SSEHandler(wrs *rmtserver.WebsocketServer) func(w http.ResponseWriter, r *http.Request) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "text/event-stream")
+        w.Header().Set("Cache-Control", "no-cache")
+        w.Header().Set("Connection", "keep-alive")
+
+        flusher, ok := w.(http.Flusher)
+        if !ok {
+            http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+            return
+        }
+
+        ticker := time.NewTicker(10 * time.Second)  // Keep-alive every 10 seconds
+        defer ticker.Stop()
+
+        for {
+            select {
+            case ev := <-wrs.Signtxchan:
+                fmt.Println("received sign transaction")
+                if ev.Type == rmtcmn.InternalError {
+                    fmt.Println("Could not sign a transaction: ", ev.Payload.(string))
+                    continue
+                }
+                rawhex, ok := ev.Payload.(string)
+                if !ok {
+                    fmt.Println("no rawhex")
+                    continue
+                }
+                fmt.Println("sending the data")
+                fmt.Fprintf(w, "data: %s\n\n", rawhex)
+                flusher.Flush()
+            case <-ticker.C:
+                // Send a keep-alive comment to prevent connection timeout
+                fmt.Fprintf(w, ": keep-alive\n\n")
+                flusher.Flush()
+            }
+        }
+    }
+}
+
+
+func stream_signed_tx_resp(wrs *rmtserver.WebsocketServer)func (w http.ResponseWriter, r *http.Request) {
+    return func(w http.ResponseWriter, r *http.Request) {
+      // set up headers and stuff
+   	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+    // Flush the headers immediately
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
+	}
+        
+    // wait for a signtx message and send it to the client
+    for {
+        ev := <-wrs.Signtxchan
+        if(ev.Type == rmtcmn.InternalError){
+              fmt.Println("Could not sign a transaction: ", ev.Payload.(string))
+              continue
+        }
+        fmt.Fprintf(w, "data: %s\n\n", ev.Payload.(string))
+        flusher.Flush()
+    }
+  }
+}
+ 
+
 func ServerThread() {
     wrs := rmtserver.NewWebsocketServer(&rmtserver.MsgHandler{})
 
@@ -205,6 +274,7 @@ func ServerThread() {
 	http.HandleFunc("/snd", p_snd)
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
+	http.HandleFunc("/signed_tx_stream", SSEHandler(&wrs))
 	http.HandleFunc("/sign_transaction", sign_transaction(&wrs))
 	http.HandleFunc("/rmtwallet_status", get_remote_wallet_status(&wrs))
 	http.HandleFunc("/balance.zip", dl_balance)
