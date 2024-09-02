@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/piotrnar/gocoin/remote-wallet/common"
@@ -54,20 +51,14 @@ func main(){
         }
         switch msg.Type {
         case common.SignTransaction:
-            reader := bufio.NewReader(os.Stdin)
-            fmt.Print("Received a request to sign a transaction. Do you want to confirm(yes/no): ")
-            text, _ := reader.ReadString('\n')
             txSignResp := common.Msg{}
-            if strings.TrimRight(text, "\n") == "no" {
+            rawHex, err := h.SignTransaction(msg.Payload)
+            if err != nil {
+                fmt.Println(err)
                 txSignResp.Type = common.InternalError
                 txSignResp.Payload = common.SignTransactionRejectedError()
                 writer.Write(txSignResp)
                 continue
-            }
-            rawHex, err := h.SignTransaction(msg.Payload)
-            if err != nil {
-                fmt.Println(err)
-                return
             }
             txSignResp.Type = common.SignedTransactionRawHex
             txSignResp.Payload = rawHex

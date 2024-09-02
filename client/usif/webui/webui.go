@@ -227,7 +227,7 @@ func SSEHandler(wrs *rmtserver.WebsocketServer) func(w http.ResponseWriter, r *h
                 flusher.Flush()
             case <-ticker.C:
                 // Send a keep-alive comment to prevent connection timeout
-                fmt.Fprintf(w, ": keep-alive\n\n")
+                fmt.Fprintf(w, "data: keep-alive\n\n")
                 flusher.Flush()
             }
         }

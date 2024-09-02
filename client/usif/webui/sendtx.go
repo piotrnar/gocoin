@@ -221,8 +221,7 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
             }
 
             // Non-multisig transaction ...
-            st.Tx2Sign = string(tx.Serialize())
-
+            st.Tx2Sign = fmt.Sprintf("%x", tx.Serialize())
             msg := rmtcmn.Msg{Type: rmtcmn.SignTransaction, Payload: st}
             
             error := wsjson.Write(context.Background(), wrs.Conn, msg)

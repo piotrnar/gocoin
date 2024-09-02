@@ -102,6 +102,7 @@ function signed_tx_response_stream(){
     source.onmessage = (event) => {
         console.log("OnMessage Called:")
         console.log({event: event, data: event.data})
+        if(event.data == "keep-alive") return
         if(confirm("Received a transaction from remote wallet. Do you want to push to the mempool?")){
             pushtx(event.data)
         }
