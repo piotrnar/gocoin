@@ -14,7 +14,6 @@ import (
 
 // MessageHandler contains all the logic for handling messages defined in the common.Msg package
 type MsgHandler struct {
-    WalletBinaryPath string
     WalletFolderPath string
 }
 
@@ -82,7 +81,7 @@ func(h *MsgHandler) SignTransaction(payload interface{}) (string, error) {
     args = append(args, "-txfn="+SignedTransactionFileName)
     args = append(args, "-prompt")
     fmt.Println("printing args, ", args)
-    cmd := exec.Command(h.WalletBinaryPath, args...)
+    cmd := exec.Command("wallet", args...)
     // set wallet folder as the directory of execution
     cmd.Dir = h.WalletFolderPath
     // set a buffer as the stdout

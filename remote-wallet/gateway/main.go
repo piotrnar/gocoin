@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	"github.com/piotrnar/gocoin/remote-wallet/common"
@@ -42,8 +44,16 @@ func main(){
             }
     }
     }()
+    walletfolderpath := common.FLAG.WalletFolderPath
+    if walletfolderpath == "" {
+        walletfolderpath, err = os.MkdirTemp(".", "wallet")
+        if err != nil {
+            fmt.Println("ERROR: Could not create temp directory: ", err)
+        }
+    }
+    defer os.RemoveAll(path.Join(".", walletfolderpath))
     // process the requests from the gocoin node
-    h := MsgHandler{WalletBinaryPath: common.FLAG.WalletFolderPath+"/wallet", WalletFolderPath: common.FLAG.WalletFolderPath}
+    h := MsgHandler{WalletFolderPath: common.FLAG.WalletFolderPath}
     for {
         msg, err := wrg.Read()
         if err != nil {
