@@ -23,7 +23,7 @@ func (wrc *WalletRemoteGateway) Open(addr string) (error) {
 }
 
 func (wrc *WalletRemoteGateway) Close() error {
-    return wrc.c.Close(websocket.StatusNormalClosure, "")
+    return wrc.c.CloseNow()
 }
 
 func (wrc *WalletRemoteGateway) Write(msgType common.MsgType, payload interface{}) error {

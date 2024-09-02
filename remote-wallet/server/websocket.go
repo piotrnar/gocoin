@@ -68,13 +68,13 @@ func(s *WebsocketServer) ConnectionStatus() bool {
     return true
 }
 
-func (s *WebsocketServer) handleMessages(){
+func (s *WebsocketServer) handleMessages(stopCh chan bool){
     for {
         msg := common.Msg{}
         error := wsjson.Read(context.Background(), s.Conn, &msg)
         if error != nil {
-            fmt.Println(error)
             // error while reading can only be because of a corrupt connection
+            stopCh<-true
             return 
         }
         switch msg.Type {
@@ -86,7 +86,7 @@ func (s *WebsocketServer) handleMessages(){
 }
 }
 
-func (s *WebsocketServer) watchPings(){
+func (s *WebsocketServer) watchPings(stopCh chan bool){
     ticker := time.NewTicker(PingWaitPeriod * time.Second)
     for {
         select {
@@ -95,6 +95,10 @@ func (s *WebsocketServer) watchPings(){
         case <-ticker.C:
             // harsh attempt to clean up resources
             s.Conn.CloseNow()
+            s.Conn = nil
+            return
+        case <-stopCh:
+            s.Conn.CloseNow() 
             s.Conn = nil
             return
         }
@@ -114,8 +118,10 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
     s.Conn = c
 
-    go s.handleMessages()
-    go s.watchPings()
+    stopCh := make(chan bool)
+
+    go s.handleMessages(stopCh)
+    go s.watchPings(stopCh)
 
     fmt.Println("Websocket connection established with the wallet remote client")
 }

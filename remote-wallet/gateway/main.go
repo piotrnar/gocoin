@@ -29,6 +29,7 @@ func main(){
 	if err != nil {
         panic(err)
 	}
+    defer wrg.Close()
     // keep sending ping every 5 seconds so that the server can be aware of the connection
     writer := WSMessageWriter{conn: wrg.c}
     go func(){
@@ -65,12 +66,11 @@ func main(){
             err = writer.Write(txSignResp)
             if err != nil {
                 fmt.Println(err)
-                return 
+                break 
             }
         default:
             fmt.Println("Unknown message type")
     }
-
     }
 }
 
