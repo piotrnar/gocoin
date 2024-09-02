@@ -1,5 +1,7 @@
 1.10.4:
 * Testnet4 support. For now needs "CFG.Testnet4" set to true, otherwise still uses testnet3
+* Wallet: new command line and config switch "prompt" to confirm writing signed transaction to disk
+* Wallet: Displays a message before exiting, when an empty seed pasword is provided
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
