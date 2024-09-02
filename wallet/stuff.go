@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,7 +40,7 @@ func no_sign_mode() bool {
 	return *list || *dumpwords || *dumpxprv
 }
 
-func getpass() []byte {
+func getpass() ([]byte, error) {
 	var pass [1024]byte
 	var n int
 	var e error
@@ -47,17 +48,15 @@ func getpass() []byte {
 
 	if stdin {
 		if *ask4pass {
-			fmt.Println("ERROR: Both -p and -stdin switches are not allowed at the same time")
-			return nil
+			return nil, errors.New("both -p and -stdin switches are not allowed")
 		}
 		d, er := io.ReadAll(os.Stdin)
 		if er != nil {
-			fmt.Println("Reading from stdin:", e.Error())
-			return nil
+			return nil, er
 		}
 		n = len(d)
 		if n <= 0 {
-			return nil
+			return nil, errors.New("empty seed password provided via stdin")
 		}
 		copy(pass[:n], d)
 		sys.ClearBuffer(d)
@@ -70,7 +69,7 @@ func getpass() []byte {
 			n, _ = f.Read(pass[:])
 			f.Close()
 			if n <= 0 {
-				return nil
+				return nil, errors.New("empty seed file " + PassSeedFilename)
 			}
 			goto check_pass
 		}
@@ -81,7 +80,7 @@ func getpass() []byte {
 	fmt.Print("Enter your wallet's seed password: ")
 	n = sys.ReadPassword(pass[:])
 	if n <= 0 {
-		return nil
+		return nil, errors.New("empty seed password entered by the user")
 	}
 
 	if no_sign_mode() {
@@ -92,8 +91,7 @@ func getpass() []byte {
 			if p2len != n || !bytes.Equal(pass[:n], pass2[:p2len]) {
 				sys.ClearBuffer(pass[:n])
 				sys.ClearBuffer(pass2[:p2len])
-				println("The two passwords you entered do not match")
-				return nil
+				return nil, errors.New("two passwords entered by the user do not match")
 			}
 			sys.ClearBuffer(pass2[:p2len])
 		}
@@ -122,7 +120,7 @@ check_pass:
 	}
 	copy(outpass[len(secret_seed):], pass[:n])
 	sys.ClearBuffer(pass[:n])
-	return outpass
+	return outpass, nil
 }
 
 // get_change_addr returns the change addrress or nil if there will be no change.

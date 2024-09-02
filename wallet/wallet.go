@@ -172,9 +172,9 @@ func make_wallet() {
 		}
 	}
 
-	pass := getpass()
-	if pass == nil {
-		println("Empty seed password provided. Aborting.")
+	pass, er := getpass()
+	if er != nil {
+		println("Error reading seed password:", er.Error())
 		cleanExit(0)
 	}
 
