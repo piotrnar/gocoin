@@ -21,7 +21,7 @@ import (
 )
 
 const (
-    WebsocketServerAddr = "127.0.0.1:8878"
+    WebsocketServerAddr = ":8878"
 )
 
 

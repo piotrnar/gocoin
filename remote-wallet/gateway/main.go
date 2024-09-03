@@ -4,12 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/piotrnar/gocoin/remote-wallet/common"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
+)
+
+var (
+    TempWalletFolderName = "wallet"
 )
 
 type WSMessageWriter struct {
@@ -24,14 +30,18 @@ func (w WSMessageWriter) Write(msg common.Msg) error {
 func main(){
     // initialize configuration
     common.InitConfig()
-    fmt.Println("Establishing connection with ", common.FLAG.WebsocketServerAddr, "...")
+    fmt.Println("Establishing connection with ", common.FLAG.RemoteWalletServerAddr, "...")
     // establish connection with gocoin node 
     wrg := WalletRemoteGateway{}
-    err := wrg.Open("ws://"+common.FLAG.WebsocketServerAddr)
+    err := wrg.Open("ws://"+common.FLAG.RemoteWalletServerAddr)
 	if err != nil {
         panic(err)
 	}
-    defer wrg.Close()
+	// Channel to listen for system signals
+	sigChan := make(chan os.Signal, 1)
+	// Notify the channel when a SIGINT (CTRL+C) or SIGTERM is received.
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
     // keep sending ping every 5 seconds so that the server can be aware of the connection
     writer := WSMessageWriter{conn: wrg.c}
     go func(){
@@ -44,43 +54,53 @@ func main(){
             }
     }
     }()
-    walletfolderpath := common.FLAG.WalletFolderPath
-    if walletfolderpath == "" {
-        walletfolderpath, err = os.MkdirTemp(".", "wallet")
+
+    walletFolderPath := common.FLAG.WalletFolderPath
+    if walletFolderPath == "" {
+        walletFolderPath = path.Join(".", TempWalletFolderName)
+        err = os.MkdirAll(walletFolderPath, 0755)
         if err != nil {
             fmt.Println("ERROR: Could not create temp directory: ", err)
         }
     }
-    defer os.RemoveAll(path.Join(".", walletfolderpath))
-    // process the requests from the gocoin node
-    h := MsgHandler{WalletFolderPath: common.FLAG.WalletFolderPath}
-    for {
-        msg, err := wrg.Read()
-        if err != nil {
-            fmt.Println(err)
-            break
+
+    go func(){
+        // process the requests from the gocoin node
+        h := MsgHandler{WalletFolderPath: walletFolderPath}
+        for {
+            msg, err := wrg.Read()
+            if err != nil {
+                fmt.Println(err)
+                break
+            }
+            switch msg.Type {
+            case common.SignTransaction:
+                txSignResp := common.Msg{}
+                rawHex, err := h.SignTransaction(msg.Payload)
+                if err != nil {
+                    fmt.Println(err)
+                    txSignResp.Type = common.InternalError
+                    txSignResp.Payload = common.SignTransactionRejectedError()
+                    writer.Write(txSignResp)
+                    continue
+                }
+                txSignResp.Type = common.SignedTransactionRawHex
+                txSignResp.Payload = rawHex
+                err = writer.Write(txSignResp)
+                if err != nil {
+                    fmt.Println(err)
+                    break 
+                }
+            default:
+                fmt.Println("Unknown message type")
         }
-        switch msg.Type {
-        case common.SignTransaction:
-            txSignResp := common.Msg{}
-            rawHex, err := h.SignTransaction(msg.Payload)
-            if err != nil {
-                fmt.Println(err)
-                txSignResp.Type = common.InternalError
-                txSignResp.Payload = common.SignTransactionRejectedError()
-                writer.Write(txSignResp)
-                continue
-            }
-            txSignResp.Type = common.SignedTransactionRawHex
-            txSignResp.Payload = rawHex
-            err = writer.Write(txSignResp)
-            if err != nil {
-                fmt.Println(err)
-                break 
-            }
-        default:
-            fmt.Println("Unknown message type")
+     }
+    }()
+
+   <- sigChan 
+    if(common.FLAG.WalletFolderPath==""){
+        os.RemoveAll(path.Join(".", TempWalletFolderName))
     }
-    }
+    wrg.Close()
 }
 
