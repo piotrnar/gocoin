@@ -58,9 +58,11 @@ func main(){
     walletFolderPath := common.FLAG.WalletFolderPath
     if walletFolderPath == "" {
         walletFolderPath = path.Join(".", TempWalletFolderName)
-        err = os.MkdirAll(walletFolderPath, 0755)
-        if err != nil {
-            fmt.Println("ERROR: Could not create temp directory: ", err)
+        if _, err := os.Stat(walletFolderPath); os.IsNotExist(err) {
+            err = os.MkdirAll(walletFolderPath, 0755)
+            if err != nil {
+                fmt.Println("ERROR: Could not create temp directory: ", err)
+            }
         }
     }
 
@@ -98,9 +100,6 @@ func main(){
     }()
 
    <- sigChan 
-    if(common.FLAG.WalletFolderPath==""){
-        os.RemoveAll(path.Join(".", TempWalletFolderName))
-    }
     wrg.Close()
 }
 

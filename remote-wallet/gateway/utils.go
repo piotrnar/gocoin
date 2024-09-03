@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-
+	"path"
 
 	"encoding/hex"
 	"os"
 	"os/exec"
 	"strings"
-	"github.com/piotrnar/gocoin/remote-wallet/common"
 
+	"github.com/piotrnar/gocoin/remote-wallet/common"
 )
 
 // MessageHandler contains all the logic for handling messages defined in the common.Msg package
@@ -24,6 +24,19 @@ func parseWalletCommandArgs(cmd string) []string {
 var Tx2SignFileName = "tx2sign.txt"
 var UnspentFileName = "unspent.txt"
 var BalanceFolderName = "balance"
+
+func (h *MsgHandler) deleteTempFiles(){
+    fileNamesToBeDeleted := []string{Tx2SignFileName, UnspentFileName, BalanceFolderName, SignedTransactionFileName}
+    for _, file := range fileNamesToBeDeleted {
+        path := path.Join(h.WalletFolderPath, file) 
+        err := os.RemoveAll(path)
+        if err != nil {
+            fmt.Println("WARN: Could not delete file: ", err)
+            continue
+        }
+    }
+
+}
 
 func (h *MsgHandler) createNecessaryFiles(payload common.SignTransactionRequestPayload) error {
     // create tx2sign.txt
@@ -73,6 +86,7 @@ func(h *MsgHandler) SignTransaction(payload interface{}) (string, error) {
     if err != nil {
         return "",err
     }
+    defer h.deleteTempFiles()
     // run the wallet command
     args := parseWalletCommandArgs(p.PayCmd)
     // set custom name for generated signed transaction file
