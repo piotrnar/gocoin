@@ -61,6 +61,21 @@ var enable_sign_tx = false
 
 const ADDR_LIST_SIZE = 15
 
+const source = new EventSource("/signed_tx_stream")
+source.addEventListener("signtx", (event)=>{
+    console.log(event)
+})
+source.onerror = (err) => {
+    console.log(err)
+}
+source.onmessage = (event) => {
+    console.log("OnMessage Called:")
+    console.log({event: event, data: event.data})
+    if(event.data == "keep-alive") return
+    if(confirm("Received a transaction from remote wallet. Do you want to push to the mempool?")){
+        pushtx(event.data)
+    }
+}
 
 function check_remote_wallet_connection() {
     var data, xhr;
@@ -94,23 +109,7 @@ function check_remote_wallet_connection() {
    f();
 })();
 
-function signed_tx_response_stream(){
-    const source = new EventSource("/signed_tx_stream")
-    source.onerror = (err) => {
-        console.log(err)
-    }
-    source.onmessage = (event) => {
-        console.log("OnMessage Called:")
-        console.log({event: event, data: event.data})
-        if(event.data == "keep-alive") return
-        if(confirm("Received a transaction from remote wallet. Do you want to push to the mempool?")){
-            pushtx(event.data)
-        }
-    }
-}
-(function(){
-   signed_tx_response_stream()
-})();
+
 
 function build_change_list() {
 	var virgincounter = 0

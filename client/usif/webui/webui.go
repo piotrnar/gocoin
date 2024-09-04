@@ -16,8 +16,8 @@ import (
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/usif"
-	rmtserver "github.com/piotrnar/gocoin/remote-wallet/server"
 	rmtcmn "github.com/piotrnar/gocoin/remote-wallet/common"
+	rmtserver "github.com/piotrnar/gocoin/remote-wallet/server"
 )
 
 const (
@@ -199,69 +199,55 @@ func SSEHandler(wrs *rmtserver.WebsocketServer) func(w http.ResponseWriter, r *h
         w.Header().Set("Content-Type", "text/event-stream")
         w.Header().Set("Cache-Control", "no-cache")
         w.Header().Set("Connection", "keep-alive")
-
+        
         flusher, ok := w.(http.Flusher)
         if !ok {
             http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
             return
         }
 
-        ticker := time.NewTicker(10 * time.Second)  // Keep-alive every 10 seconds
+        notify := r.Context().Done()
+
+        ticker := time.NewTicker(10 * time.Second)
         defer ticker.Stop()
 
         for {
             select {
             case ev := <-wrs.Signtxchan:
-                fmt.Println("received sign transaction")
+                fmt.Println("Received sign transaction")
                 if ev.Type == rmtcmn.InternalError {
                     fmt.Println("Could not sign a transaction: ", ev.Payload.(string))
                     continue
                 }
                 rawhex, ok := ev.Payload.(string)
                 if !ok {
-                    fmt.Println("no rawhex")
+                    fmt.Println("No rawhex")
                     continue
                 }
-                fmt.Println("sending the data")
-                fmt.Fprintf(w, "data: %s\n\n", rawhex)
-                flusher.Flush()
+                // fmt.Println("Sending the data: ", rawhex)
+                if _, err := fmt.Fprintf(w, "data: %s\n\n", rawhex); err != nil {
+                    fmt.Println("Error writing to client:", err)
+                    return
+                }
+                flusher.Flush() 
+                // fmt.Println("Data sent successfully")
+
             case <-ticker.C:
                 // Send a keep-alive comment to prevent connection timeout
-                fmt.Fprintf(w, "data: keep-alive\n\n")
+                if _, err := fmt.Fprintf(w, "data: keep-alive\n\n"); err != nil {
+                    fmt.Println("Error sending keep-alive:", err)
+                    return
+                }
                 flusher.Flush()
+                // fmt.Println("Keep-alive sent")
+
+            case <-notify:
+                // fmt.Println("Client disconnected")
+                return
             }
         }
     }
 }
-
-
-func stream_signed_tx_resp(wrs *rmtserver.WebsocketServer)func (w http.ResponseWriter, r *http.Request) {
-    return func(w http.ResponseWriter, r *http.Request) {
-      // set up headers and stuff
-   	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-    // Flush the headers immediately
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-		return
-	}
-        
-    // wait for a signtx message and send it to the client
-    for {
-        ev := <-wrs.Signtxchan
-        if(ev.Type == rmtcmn.InternalError){
-              fmt.Println("Could not sign a transaction: ", ev.Payload.(string))
-              continue
-        }
-        fmt.Fprintf(w, "data: %s\n\n", ev.Payload.(string))
-        flusher.Flush()
-    }
-  }
-}
- 
 
 func ServerThread() {
     wrs := rmtserver.NewWebsocketServer(&rmtserver.MsgHandler{})
