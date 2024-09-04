@@ -14,9 +14,6 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-var (
-    TempWalletFolderName = "wallet"
-)
 
 type WSMessageWriter struct {
     conn *websocket.Conn
@@ -31,15 +28,12 @@ func main(){
     // initialize configuration
     common.InitConfig()
     fmt.Println("Establishing connection with ", common.FLAG.RemoteWalletServerAddr, "...")
-    // establish connection with gocoin node 
     wrg := WalletRemoteGateway{}
     err := wrg.Open("ws://"+common.FLAG.RemoteWalletServerAddr)
 	if err != nil {
         panic(err)
 	}
-	// Channel to listen for system signals
 	sigChan := make(chan os.Signal, 1)
-	// Notify the channel when a SIGINT (CTRL+C) or SIGTERM is received.
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
     // keep sending ping every 5 seconds so that the server can be aware of the connection
@@ -57,7 +51,7 @@ func main(){
 
     walletFolderPath := common.FLAG.WalletFolderPath
     if walletFolderPath == "" {
-        walletFolderPath = path.Join(".", TempWalletFolderName)
+        walletFolderPath = path.Join(".", common.CFG.TempWalletFolderName)
         if _, err := os.Stat(walletFolderPath); os.IsNotExist(err) {
             err = os.MkdirAll(walletFolderPath, 0755)
             if err != nil {
@@ -72,8 +66,8 @@ func main(){
         for {
             msg, err := wrg.Read()
             if err != nil {
-                fmt.Println(err)
-                break
+                fmt.Println("Terminating because of broken connection with the gocoin node...")
+                os.Exit(1)
             }
             switch msg.Type {
             case common.SignTransaction:
