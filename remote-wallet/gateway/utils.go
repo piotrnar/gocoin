@@ -49,6 +49,7 @@ func (h *MsgHandler) createNecessaryFiles(payload common.SignTransactionRequestP
     if err != nil {
         return err
     }
+    defer file.Close()
     balanceFolder := fmt.Sprintf("%s/%s", h.WalletFolderPath, BalanceFolderName)
     err = os.MkdirAll(balanceFolder, os.ModePerm)
     if err != nil {
