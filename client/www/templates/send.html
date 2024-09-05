@@ -767,13 +767,14 @@ function sign_transaction() {
          if (xhr.readyState == 4) {
              if(xhr.status != 200) {
                 alert("Error: " + xhr.responseText)
+             } else {
+                alert("Sign transaction request sent to the remote wallet.")
              } 
          }
     };
     xhr.send( data );
     // Nithish: ideally we would want a loading sort of component, or a notification type of feature for this. But that is beyond the scope of this project
     // and can be implemented later
-    alert("Sign transaction request sent to the remote wallet.")
 }
 
 </script>

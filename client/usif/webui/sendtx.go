@@ -192,7 +192,7 @@ func sign_transaction(wrs *rmtsrv.WebsocketServer)func (w http.ResponseWriter, r
         if len(r.Form["outcnt"])==1 {
             tx := new(btc.Tx)
             er, thisbal, pay_cmd := make_tx(r.Form, tx)
-            if err != "" {
+            if er != "" {
                 err = er
                 goto error
             }
@@ -255,8 +255,9 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["outcnt"]) == 1 {
         tx := new(btc.Tx)
-        err, thisbal, pay_cmd := make_tx(r.Form, tx)
-        if err != "" {
+        er, thisbal, pay_cmd := make_tx(r.Form, tx)
+        if er != "" {
+            err = er
             goto error
         }
 
