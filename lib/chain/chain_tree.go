@@ -147,22 +147,22 @@ func (pindex *BlockTreeNode) GetMedianTimePast() uint32 {
 }
 
 // FindFarthestNode looks for the farthest node.
-func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, int) {
+func (n *BlockTreeNode) FindFarthestNode() (*BlockTreeNode, float64) {
 	//fmt.Println("FFN:", n.Height, "kids:", len(n.Childs))
 	if len(n.Childs) == 0 {
 		return n, 0
 	}
-	res, depth := n.Childs[0].FindFarthestNode()
+	res, pow := n.Childs[0].FindFarthestNode()
 	if len(n.Childs) > 1 {
 		for i := 1; i < len(n.Childs); i++ {
 			_re, _dept := n.Childs[i].FindFarthestNode()
-			if _dept > depth {
+			if _dept > pow {
 				res = _re
-				depth = _dept
+				pow = _dept
 			}
 		}
 	}
-	return res, depth + 1
+	return res, pow + btc.GetDifficulty(n.Bits())
 }
 
 // FindPathTo returns the next node that leads to the given destination.
