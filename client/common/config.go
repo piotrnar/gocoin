@@ -18,9 +18,9 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
-const LastTrustedBTCBlock = "00000000000000000001fcf207ce30e9172433f815bf4ca0e90ecd0601286a20" // #817490
-const LastTrustedTN3Block = "0000000000000f56395d3d0e54515ae310541b6c8e5a4311d05edbaed567211f" // #2536700
-const LastTrustedTN4Block = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043" // #0
+const LastTrustedBTCBlock = "00000000000000000000cbccaef66a79a5aa719c30e0f6114621dbb19f91d9bd" // #865020
+const LastTrustedTN3Block = "0000000000997783faebf1fdcb788aacae49c51330d1ebcc72d1f60fbe3e6d38" // #3084480
+const LastTrustedTN4Block = "0000000000000011e7cf114aa4980cbd74c2c07fccc8b025480dd4b7e1d96110" // #40320
 
 var (
 	ConfigFile string = "gocoin.conf"
@@ -82,6 +82,7 @@ var (
 			MaxRejectCnt   uint
 			SaveOnDisk     bool
 			Debug          bool
+			NotFullRBF     bool
 		}
 		TXRoute struct {
 			Enabled    bool // Global on/off swicth
@@ -227,10 +228,12 @@ func InitConfig() {
 	}
 
 	var _cfg_fn string
+	var testnet3, testnet4 bool
 	flag.StringVar(&_cfg_fn, "cfg", ConfigFile, "Specify name of the config file")
 	flag.BoolVar(&FLAG.Rescan, "r", false, "Rebuild UTXO database (fixes 'Unknown input TxID' errors)")
 	flag.BoolVar(&FLAG.VolatileUTXO, "v", false, "Use UTXO database in volatile mode (speeds up rebuilding)")
-	flag.BoolVar(&CFG.Testnet, "t", CFG.Testnet, "Use Testnet3")
+	flag.BoolVar(&testnet4, "t", CFG.Testnet && CFG.Testnet4, "Use Testnet4")
+	flag.BoolVar(&testnet3, "t3", CFG.Testnet && !CFG.Testnet4, "Use Testnet3")
 	flag.StringVar(&CFG.ConnectOnly, "c", CFG.ConnectOnly, "Connect only to this host and nowhere else")
 	flag.BoolVar(&CFG.Net.ListenTCP, "l", CFG.Net.ListenTCP, "Listen for incoming TCP connections (on default port)")
 	flag.StringVar(&CFG.Datadir, "d", CFG.Datadir, "Specify Gocoin's database root folder")
@@ -256,6 +259,9 @@ func InitConfig() {
 		os.Exit(0)
 	}
 	flag.Parse()
+
+	CFG.Testnet = testnet3 || testnet4
+	CFG.Testnet4 = testnet4
 
 	// swap LastTrustedBlock if it's now from the other chain
 	if CFG.Testnet {
@@ -333,7 +339,7 @@ func SaveConfig() bool {
 	if dat == nil {
 		return false
 	}
-	ioutil.WriteFile(ConfigFile, dat, 0660)
+	os.WriteFile(ConfigFile, dat, 0660)
 	return true
 
 }

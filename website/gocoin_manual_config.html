@@ -22,9 +22,15 @@ The config file is in JSON encoded format, so the order of the fields does not m
 <td class="cfg_name"> Testnet</td>
 <td class="cfg_type"> bool</td>
 <td> false</td>
-<td class="cfg_info"> Use testnet3 if true</td>
+<td class="cfg_info"> Use testnet if true</td>
 </tr>
 <tr>
+    <td class="cfg_name"> Testnet4</td>
+    <td class="cfg_type"> bool</td>
+    <td> false</td>
+    <td class="cfg_info"> Use testnet4 if true (otherwise testnet3)</td>
+    </tr>
+    <tr>
 <td class="cfg_name"> ConnectOnly</td>
 <td class="cfg_type"> string</td>
 <td> ""</td>
@@ -223,7 +229,13 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td> true</td>
 <td class="cfg_info"> Save content of memory pool to disk on closing and load it on startup.</td>
 </tr>
-
+<tr class="even">
+<td class="cfg_name"> TXPool.NotFullRBF</td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> When true, it only allows RBF for transactions that indicated replacebility (BIP-125).</td>
+</tr>
+    
 <tr class="odd">
 <td class="cfg_name"> TXRoute.Enabled</td>
 <td class="cfg_type"> bool</td>

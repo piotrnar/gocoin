@@ -266,10 +266,11 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	spent := make([]uint64, len(tx.TxIn))
 
 	var rbf_tx_list map[*OneTxToSend]bool
+	full_rbf := !common.GetBool(&common.CFG.TXPool.NotFullRBF)
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
-		if !final && tx.TxIn[i].Sequence >= 0xfffffffe {
+		if !full_rbf && !final && tx.TxIn[i].Sequence >= 0xfffffffe {
 			final = true
 		}
 
