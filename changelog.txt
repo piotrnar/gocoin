@@ -5,6 +5,7 @@
 * Lib: FindFarthestNode() now selects the farthest block by sum of POW, not by its height (fix for testnet4 crash at #42702)
 * Client: New config value "TxPool.NotFullRBF" for turning off full-RBF, that is enabled now in sync with Core 28.0
 * Client: Command switch "-t" now defaults to testnet4 (use "-t3" for testnet3)
+* Client/WebUI/MakeTx: Removed "Final" checkbox (next to the sequence entry)
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

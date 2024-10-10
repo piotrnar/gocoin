@@ -659,18 +659,6 @@ function selectlabel() {
 	recalc_inputs()
 }
 
-function final_clicked() {
-	if (final_checkbox.checked) {
-		tx_seq.value = -2 // 0xfffffffe
-		tx_seq.readOnly = true
-		tx_seq.style.backgroundColor = '#c0c0c0'
-	} else {
-		tx_seq.value = -3 // 0xfffffffd
-		tx_seq.readOnly = false
-		tx_seq.style.backgroundColor = '#ffffff'
-	}
-}
-
 document.addEventListener('DOMContentLoaded', function() {
 	add_new_output()
 	txfee.onchange = recalc_to_pay
@@ -728,11 +716,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td><a href="javascript:add_new_output()" title="Add another output">+add output</a>
 	|
 	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
-    <td align="center" title="Transaction sequence for RBF purpose">Sequence : <input name="tx_seq" id="tx_seq" class="mono r" size="2" value="-3">
-	&nbsp;&bull;&nbsp;
-	<span onclick="final_checkbox.click()" class="hand">
-		<input onchange="final_clicked()" type="checkbox" id="final_checkbox" onclick="event.stopPropagation()">Final
-	</span>
+    <td align="center" title="Transaction sequence number (default -3)">Sequence : <input name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
 	<td align="right">Transaction fee:
 	</table>
 	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
