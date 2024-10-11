@@ -71,32 +71,10 @@ func main() {
 	coin_idx := uint64(0)
 	var cur_txid uint64
 	sha := sha256.New()
-/*
-	d, _ := hex.DecodeString("00000747d578ddfaaf3acac28e5a22ffeda28413fc1259d7f01ea983242f22dd")
-	sha.Write(d)
-	d, _ = hex.DecodeString("00000000")
-	sha.Write(d)
-	d, _ = hex.DecodeString("baee0000")
-	sha.Write(d)
-	d, _ = hex.DecodeString("c57a0a0000000000")
-	sha.Write(d)
-	d, _ = hex.DecodeString("16")
-	sha.Write(d)
-	d, _ = hex.DecodeString("00142c1661aa6a1b70439737060e30c337d98c61bff2")
-	sha.Write(d)
-	sum := sha.Sum(nil)
-	sha.Reset()
-	sha.Write(sum)
-	sum = sha.Sum(nil)
-	fmt.Println("Done", btc.NewUint256(sum).String())
-	fmt.Println("Should be: 72ae9ddde16e7fe736bc94b5df9567d1db664ddaaaf92c283f2772dee099475f")
-	return
-*/
-
 
 	for coin_idx != coins_count {
 		if coin_idx > coins_count {
-			println("ja jebie", coin_idx, coins_count)
+			println("coins count inconsistent", coin_idx, coins_count)
 			break
 		}
 
