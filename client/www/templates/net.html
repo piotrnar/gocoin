@@ -138,6 +138,7 @@ Node Version Legend:<br>
 &bull; <b>W</b> - Supports Segregate Witness functionality<br>
 &bull; <b>X</b> - Supports Xtreme Thinblocks functionality<br>
 &bull; <b>O</b> - Blocks only mode (node does not request transactions)<br>
+&bull; <b>E</b> - Supports Encrypted Transport Protocol (BIP 324)<br>
 </td>
 </tr>
 <tr>
@@ -323,7 +324,7 @@ function update_connection_info(ci) {
 		}
 		s += '----------------------------------------------------------------\n'
 	}
-	
+
 	rawdiv.innerHTML = s
 	rawdivon.style.display = 'block'
 	if (loading_new_rawdivon) {
@@ -521,6 +522,7 @@ function refreshconnections(force) {
 				if (cs[i].Services&8)  s += 'W'
 				if (cs[i].Services&0x10)  s += 'X'
 				if (cs[i].DoNotRelayTxs)  s += 'O'
+				if (cs[i].Services&0x800)  s += 'E'
 				td.innerText = s
 
 				// user agent
