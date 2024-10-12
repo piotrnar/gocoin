@@ -14,29 +14,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
-func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
-	var chData byte
-	for {
-		chData, er = rd.ReadByte()
-		n = (n << 7) | uint64(chData&0x7F)
-		if (chData & 0x80) != 0 {
-			n++
-		} else {
-			return
-		}
-	}
-}
-
-func GetSpecialScriptSize(nSize int) int {
-	if nSize == 0 || nSize == 1 {
-		return 20
-	}
-	if nSize == 2 || nSize == 3 || nSize == 4 || nSize == 5 {
-		return 32
-	}
-	return 0
-}
-
 func main() {
 	var buf [0x400000]byte
 	if len(os.Args) != 2 {
@@ -95,39 +72,34 @@ func main() {
 		}
 
 		if coin_idx+cnt > coins_count {
-			println("pipa", coin_idx, cnt, coins_count)
+			println("too many vouts for given coins_count", coin_idx, cnt, coins_count)
 			return
 		}
 
-		//println(cur_txid, coin_idx, btc.NewUint256(txid[:]).String(), "-", cnt, "outs")
 		for _cnt := uint64(0); _cnt < cnt; _cnt++ {
-			//if vout, er = ReadVarInt(rd); er != nil {
 			if vout, er = btc.ReadVLen(rd); er != nil {
 				fmt.Println(er.Error())
 				return
 			}
 
-			inblock, er = ReadVarInt(rd)
-			if er != nil {
+			if inblock, er = btc.ReadVarInt(rd); er != nil {
 				fmt.Println(er.Error())
 				return
 			}
 
-			amount, er = ReadVarInt(rd)
-			if er != nil {
+			if amount, er = btc.ReadVarInt(rd); er != nil {
 				fmt.Println(er.Error())
 				return
 			}
 
 			// read dummy byte
-			if vl, er = ReadVarInt(rd); er != nil {
+			if vl, er = btc.ReadVarInt(rd); er != nil {
 				fmt.Println(er.Error())
 				return
 			}
 
-			//println(cur_txid, coin_idx, "script_length:", vl, _cnt, cnt)
-			if vl < 6 {
-				compr = buf[:1+GetSpecialScriptSize(int(vl))]
+			if vl < script.SPECIAL_SCRIPTS_COUNT {
+				compr = buf[:1+script.GetSpecialScriptSize(int(vl))]
 				compr[0] = byte(vl)
 				if _, er = io.ReadFull(rd, compr[1:]); er != nil {
 					fmt.Println(er.Error())
@@ -135,7 +107,7 @@ func main() {
 				}
 				scr = script.DecompressScript(compr)
 			} else {
-				vl -= 6
+				vl -= script.SPECIAL_SCRIPTS_COUNT
 				scr = buf[:vl]
 				compr = scr
 				if _, er = io.ReadFull(rd, scr); er != nil {
@@ -147,8 +119,7 @@ func main() {
 			amount = btc.DecompressAmount(amount)
 			if false {
 				fmt.Printf("%s-%03d  bl:%5d  cb:%d   %s BTC\n   scr:%s\n", btc.NewUint256(txid[:]).String(),
-					vout, inblock/2, inblock&1, btc.UintToBtc(amount),
-					hex.EncodeToString(scr))
+					vout, inblock/2, inblock&1, btc.UintToBtc(amount), hex.EncodeToString(scr))
 			}
 
 			endian := binary.LittleEndian
@@ -173,5 +144,4 @@ func main() {
 	sha.Write(sum)
 	sum = sha.Sum(nil)
 	fmt.Println("Done", btc.NewUint256(sum).String())
-	fmt.Println("Should be: b24ca9fc1cca9385dfc90a4d5cee603fe0e947cb4e81d06a17eafabf1fa80960")
 }

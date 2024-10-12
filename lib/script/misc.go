@@ -9,6 +9,10 @@ import (
 	"github.com/piotrnar/gocoin/lib/secp256k1"
 )
 
+const (
+	SPECIAL_SCRIPTS_COUNT = 6
+)
+
 func IsP2KH(scr []byte) bool {
 	return len(scr) == 25 && scr[0] == 0x76 && scr[1] == 0xa9 &&
 		scr[2] == 0x14 && scr[23] == 0x88 && scr[24] == 0xac
@@ -293,6 +297,16 @@ func CheckSequence(tx *btc.Tx, inp int, seq int64) bool {
 	}
 
 	return true
+}
+
+func GetSpecialScriptSize(length int) int {
+	if length == 0 || length == 1 {
+		return 20
+	}
+	if length == 2 || length == 3 || length == 4 || length == 5 {
+		return 32
+	}
+	return 0
 }
 
 func CompressScript(scr []byte) (out []byte) {

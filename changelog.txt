@@ -7,6 +7,7 @@
 * Client: Command switch "-t" now defaults to testnet4 (use "-t3" for testnet3)
 * Client/WebUI/MakeTx: Removed "Final" checkbox (next to the sequence entry)
 * Client: removed "client/usif/textui/consensus" package
+* Tools: new tool "txoutset" to deal with the core's UTXO dumps (from "dumptxoutset" RPC)
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

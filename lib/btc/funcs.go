@@ -1,6 +1,7 @@
 package btc
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
@@ -162,6 +163,20 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 	}
 	res, mutated = CalcMerkle(mtr)
 	return
+}
+
+// As used by core's script compress/decompress
+func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
+	var chData byte
+	for {
+		chData, er = rd.ReadByte()
+		n = (n << 7) | uint64(chData&0x7F)
+		if (chData & 0x80) != 0 {
+			n++
+		} else {
+			return
+		}
+	}
 }
 
 // ReadVLen reads var_len from the given reader.
@@ -470,8 +485,9 @@ func IsPushOnly(scr []byte) bool {
 // * If the amount is 0, output 0
 // * first, divide the amount (in base units) by the largest power of 10 possible; call the exponent e (e is max 9)
 // * if e<9, the last digit of the resulting number cannot be 0; store it as d, and drop it (divide by 10)
-//   * call the result n
-//   * output 1 + 10*(9*n + d - 1) + e
+//   - call the result n
+//   - output 1 + 10*(9*n + d - 1) + e
+//
 // * if e==9, we only know the resulting number is not zero, so output 1 + 10*(n - 1) + 9
 // (this is decodable, as d is in [1-9] and e is in [0-9])
 func CompressAmount(n uint64) uint64 {
