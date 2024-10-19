@@ -8,6 +8,7 @@
 * Client/WebUI/MakeTx: Removed "Final" checkbox (next to the sequence entry)
 * Client: removed "client/usif/textui/consensus" package
 * Tools: new tool "txoutset" to deal with the core's UTXO dumps (from "dumptxoutset" RPC)
+* Client/WebUI/Wallet: "balance.zip" also lists coins belonging to segwit ver 1 (taproot) address types (got from pubkeys)
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
