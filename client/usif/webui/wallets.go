@@ -412,27 +412,53 @@ func dl_balance(w http.ResponseWriter, r *http.Request) {
 	lck.In.Wait()
 
 	for idx, a := range addrs {
-		if aa, e := btc.NewAddrFromString(a); e == nil {
-			aa.Extra.Label = labels[idx]
-			newrecs := wallet.GetAllUnspent(aa)
+		var pubkey []byte
+		var e error
+		var aa *btc.BtcAddr
+		if len(a) == 66 && a[0] == '0' && (a[1] == '2' || a[1] == '3') {
+			pubkey, e = hex.DecodeString(a) // raw public key
+			if e != nil || len(pubkey) != 33 {
+				continue
+			}
+			if aa = btc.NewAddrFromPubkey(pubkey, btc.AddrVerPubkey(common.Testnet)); aa == nil {
+				continue
+			}
+		} else {
+			// bitcoin address (of some sort)
+			if aa, e = btc.NewAddrFromString(a); e != nil {
+				continue
+			}
+		}
+
+		aa.Extra.Label = labels[idx]
+		newrecs := wallet.GetAllUnspent(aa)
+		if len(newrecs) > 0 {
+			thisbal = append(thisbal, newrecs...)
+		}
+
+		/* Segwit P2WPKH: */
+		if aa.SegwitProg == nil && aa.Version == btc.AddrVerPubkey(common.Testnet) {
+			var ab *btc.BtcAddr
+			p2kh := aa.Hash160
+
+			// P2SH SegWit if applicable
+			h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, p2kh[:]...))
+			ab = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
+			newrecs = wallet.GetAllUnspent(ab)
 			if len(newrecs) > 0 {
 				thisbal = append(thisbal, newrecs...)
 			}
 
-			/* Segwit P2WPKH: */
-			if aa.SegwitProg == nil && aa.Version == btc.AddrVerPubkey(common.Testnet) {
-				p2kh := aa.Hash160
+			// Native SegWit if applicable
+			ab = btc.NewAddrFromPkScript(append([]byte{0, 20}, p2kh[:]...), common.Testnet)
+			newrecs = wallet.GetAllUnspent(ab)
+			if len(newrecs) > 0 {
+				thisbal = append(thisbal, newrecs...)
+			}
 
-				// P2SH SegWit if applicable
-				h160 := btc.Rimp160AfterSha256(append([]byte{0, 20}, aa.Hash160[:]...))
-				aa = btc.NewAddrFromHash160(h160[:], btc.AddrVerScript(common.Testnet))
-				newrecs = wallet.GetAllUnspent(aa)
-				if len(newrecs) > 0 {
-					thisbal = append(thisbal, newrecs...)
-				}
-
-				// Native SegWit if applicable
-				aa = btc.NewAddrFromPkScript(append([]byte{0, 20}, p2kh[:]...), common.Testnet)
+			// Also Check PAY2TAP, if pubkey mode...
+			if pubkey != nil {
+				aa.SegwitProg = &btc.SegwitProg{HRP: btc.GetSegwitHRP(common.Testnet), Version: 1, Program: pubkey[1:]}
 				newrecs = wallet.GetAllUnspent(aa)
 				if len(newrecs) > 0 {
 					thisbal = append(thisbal, newrecs...)
