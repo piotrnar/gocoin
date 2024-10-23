@@ -474,6 +474,7 @@ func (c *OneConnection) HandleError(e error) error {
 func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 	var e error
 	var n int
+	var magic_checked bool
 
 	for c.recv.hdr_len < 24 {
 		n, e = common.SockRead(c.Conn, c.recv.hdr[c.recv.hdr_len:24])
@@ -493,16 +494,20 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 			c.HandleError(e)
 			return // Make sure to exit here, in case of timeout
 		}
-		if c.recv.hdr_len >= 4 && !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
-			if c.X.Debug {
-				fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
-					hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
-					c.X.LastCmdRcvd, c.X.LastBtsRcvd, c.X.LastCmdSent, c.X.LastBtsSent)
+
+		if !magic_checked && c.recv.hdr_len >= 4 {
+			if !bytes.Equal(c.recv.hdr[:4], common.Magic[:]) {
+				if c.X.Debug {
+					fmt.Printf("BadMagic from %s %s \n hdr:%s  n:%d\n R: %s %d / S: %s %d\n> ", c.PeerAddr.Ip(), c.Node.Agent,
+						hex.EncodeToString(c.recv.hdr[:c.recv.hdr_len]), n,
+						c.X.LastCmdRcvd, c.X.LastBtsRcvd, c.X.LastCmdSent, c.X.LastBtsSent)
+				}
+				c.Mutex.Unlock()
+				common.CountSafe("NetBadMagic")
+				c.Disconnect(false, "NetBadMagic")
+				return
 			}
-			c.Mutex.Unlock()
-			common.CountSafe("NetBadMagic")
-			c.Ban("NetBadMagic")
-			return
+			magic_checked = true
 		}
 		if c.broken {
 			c.Mutex.Unlock()
