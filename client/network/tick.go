@@ -678,7 +678,9 @@ func (c *OneConnection) Run() {
 
 	c.writing_thread_push = make(chan bool, 1)
 
-	c.SendVersion()
+	if !c.X.Incomming {
+		c.SendVersion()
+	}
 
 	c.Mutex.Lock()
 	now := time.Now()
@@ -737,6 +739,10 @@ func (c *OneConnection) Run() {
 				c.Misbehave("VersionAgain", 1000/10)
 				continue
 			}
+			if c.X.Incomming {
+				//println(c.PeerAddr.Ip(), "sending our own version...")
+				c.SendVersion()
+			}
 			er := c.HandleVersion(cmd.pl)
 			if er != nil {
 				//println("version msg error:", er.Error())
@@ -785,6 +791,10 @@ func (c *OneConnection) Run() {
 			if common.IsListenTCP() {
 				c.SendOwnAddr()
 			}
+			continue
+		} else if !c.X.VersionReceived {
+			//println(c.PeerAddr.Ip(), "version not received but", cmd.cmd)
+			c.Misbehave("NoVer"+cmd.cmd, 1000/10)
 			continue
 		}
 
