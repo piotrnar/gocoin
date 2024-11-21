@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	txfee.onchange = recalc_to_pay
 	txfee.onkeyup = recalc_to_pay
 	// use avg_fee_spb value, but randomly modyfied by up to +/- 10%, for user's privacy
-	spb_to_use.value = Math.max((Math.random()/5+0.9)*avg_fee_spb.toFixed(10).substr(0,7), 1.0)
+	spb_to_use.value = Math.max(((Math.random()/5+0.9)*avg_fee_spb).toFixed(3).substr(0,7), 1.0)
 	recalc_inputs()
 	var abc = localStorage.getItem("gocoinAddressBook")
 	if (typeof(abc)!="string") {
