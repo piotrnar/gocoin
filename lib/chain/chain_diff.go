@@ -42,7 +42,7 @@ func (ch *Chain) GetNextWorkRequired(lst *BlockTreeNode, ts uint32) (res uint32)
 		prv = prv.Parent
 	}
 
-	actualTimespan := int64(lst.Timestamp() - prv.Timestamp())
+	actualTimespan := int64(lst.Timestamp()) - int64(prv.Timestamp())
 
 	if actualTimespan < POWRetargetSpam/4 {
 		actualTimespan = POWRetargetSpam / 4
