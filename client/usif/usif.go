@@ -116,8 +116,14 @@ func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64,
 		s += fmt.Sprintln("WARNING: There are missing inputs and we cannot calc input BTC amount.")
 		s += fmt.Sprintln("If there is somethign wrong with this transaction, you can loose money...")
 	} else {
-		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee (%.2f SPB)\n", float64(totinp)/1e8,
-			float64(totout)/1e8, float64(totinp-totout)/1e8, float64(totinp-totout)/float64(tx.VSize()))
+		total_fee := float64(totinp - totout)
+		fee_spb := total_fee / float64(tx.VSize())
+		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee (%.2f SPB)\n",
+			float64(totinp)/1e8, float64(totout)/1e8, total_fee/1e8, fee_spb)
+		avg_fee := GetAverageFee()
+		if fee_spb > 2*GetAverageFee() {
+			s += fmt.Sprintf("WARNING: High fee SPB of %.02f (vs %.02f average).\n", fee_spb, avg_fee)
+		}
 	}
 
 	s += fmt.Sprintln("ECDSA sig operations : ", sigops)

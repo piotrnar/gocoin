@@ -1,6 +1,16 @@
 <pre style="background-color:#ffe0e0;font-size:10px" id="txrawdata">{TX_RAW_DATA}</pre>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+	var raw_data = txrawdata.innerText
+	var warn_idx = raw_data.indexOf("WARNING")
+	if (warn_idx>=0) {
+		raw_data = raw_data.substr(warn_idx)
+		warn_idx = raw_data.indexOf("\n")
+		if (warn_idx>0) {
+			raw_data = raw_data.substr(0, warn_idx)
+		}
+		alert(raw_data)
+	}
 	show_txs2s('&ownonly=1')
 })
 </script>
