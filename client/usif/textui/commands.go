@@ -407,43 +407,6 @@ func send_inv(par string) {
 	fmt.Println("Inv sent to all peers")
 }
 
-func analyze_bip9(par string) {
-	all := par == "all"
-	n := common.BlockChain.BlockTreeRoot
-	for n != nil {
-		var i uint
-		start_block := uint(n.Height)
-		start_time := n.Timestamp()
-		bits := make(map[byte]uint32)
-		for i = 0; i < 2016 && n != nil; i++ {
-			ver := n.BlockVersion()
-			if (ver & 0x20000000) != 0 {
-				for bit := byte(0); bit <= 28; bit++ {
-					if (ver & (1 << bit)) != 0 {
-						bits[bit]++
-					}
-				}
-			}
-			n = n.FindPathTo(common.BlockChain.LastBlock())
-		}
-		if len(bits) > 0 {
-			var s string
-			for k, v := range bits {
-				if all || v >= common.BlockChain.Consensus.BIP9_Treshold {
-					if s != "" {
-						s += " | "
-					}
-					s += fmt.Sprint(v, " x bit(", k, ")")
-				}
-			}
-			if s != "" {
-				fmt.Println("Period from", time.Unix(int64(start_time), 0).Format("2006/01/02 15:04"),
-					" block #", start_block, "-", start_block+i-1, ":", s, " - active from", start_block+2*2016)
-			}
-		}
-	}
-}
-
 func switch_trust(par string) {
 	if par == "0" {
 		common.FLAG.TrustAll = false
@@ -534,7 +497,6 @@ func kill_node(par string) {
 
 func init() {
 	newUi("bchain b", true, blchain_stats, "Display blockchain statistics")
-	newUi("bip9", true, analyze_bip9, "Analyze current blockchain for BIP9 bits (add 'all' to see more)")
 	newUi("cache", true, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
@@ -552,7 +514,7 @@ func init() {
 	newUi("redo", true, redo_block, "Redo last block")
 	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
-	newUi("trust t", true, switch_trust, "Assume all donwloaded blocks trusted (1) or un-trusted (0)")
+	newUi("trust t", true, switch_trust, "Assume all downloaded blocks trusted (1) or un-trusted (0)")
 	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
 	newUi("undo", true, undo_block, "Undo last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
