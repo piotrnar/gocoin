@@ -421,16 +421,21 @@ function show_fees_clicked(height) {
 						stat2.push(curr_elem)
 					}
 					showblfees_stats = stat2
+					localStorage.setItem("fees_chart_mode", "group")
 				} else if (block_fees_spb.checked) {
 					showblfees_stats.sort(function (a, b) {
 						var spb_a = a[1] / a[0]
 						var spb_b = b[1] / b[0]
 						return ( spb_a < spb_b ) ? 1 : ( (spb_a != spb_b) ? -1 : 0 )
 					})
+					localStorage.setItem("fees_chart_mode", "sort")
+				} else {
+					localStorage.setItem("fees_chart_mode", "asis")
 				}
 
 				fees_plot_data = [ { data : [] } ];
 
+				localStorage.setItem("fees_chart_points", block_fees_points.checked)
 				var plot_options = {
 					xaxis: { position : "top", alignTicksWithAxis: 200 },
 					yaxis : { position : "right", tickFormatter : function(a) {return a.toFixed((a>9||a==0)?0:(a>0.9?1:2)) + " SPB"}, labelWidth : 60 },
@@ -463,10 +468,18 @@ function show_fees_clicked(height) {
 				stat_min_fee.innerText = min_spb.toFixed(2)
 
 				if (!block_fees_full.checked) {
-					if (block_fees_25.checked) max_spb /= 4
-					else  if (block_fees_5.checked) max_spb /= 20
+					if (block_fees_25.checked) {
+						max_spb /= 4
+						localStorage.setItem("fees_chart_scale", 25)
+					} else  if (block_fees_5.checked) {
+						max_spb /= 20
+						localStorage.setItem("fees_chart_scale", 5)
+					}
 					plot_options.yaxis.max = max_spb
+				} else {
+					localStorage.setItem("fees_chart_scale", 100)
 				}
+
 
 				$.plot($("#block_fees"), fees_plot_data, plot_options)
 

@@ -12,6 +12,7 @@
 * Client: for incomming connections, send "version" message only after receiving one (in sync with core's behaviour)
 * Lib: Fixed a bug in chain.GetNextWorkRequired() that was causing the problem at Testnet3 block #3229632
 * Client/TextUI: removed commands "bip9" and "usd"
+* Client/WebUI: Keep settings for the block fees chart (Home or Blocks page) in the local storage
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
