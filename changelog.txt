@@ -13,6 +13,10 @@
 * Lib: Fixed a bug in chain.GetNextWorkRequired() that was causing the problem at Testnet3 block #3229632
 * Client/TextUI: removed commands "bip9" and "usd"
 * Client/WebUI: Keep settings for the block fees chart (Home or Blocks page) in the local storage
+* Client/TextUI: new command "pusholdtxs", to broadcast txs that have been stuck in our mempool
+* Client/TextUI: "savetx" saves the transaction's hexdump now (instead of binary file)
+* Client/WebUI/Transactions: Decoding a transaction also shows its raw data
+* Client/WebUI/Transactions: Listed mempool transactions also show a number of unconfirmed inputs
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

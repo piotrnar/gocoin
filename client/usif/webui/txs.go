@@ -179,6 +179,10 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	fmt.Fprint(w, "<blocked>", network.ReasonToString(v.Blocked), "</blocked>")
 	fmt.Fprint(w, "<final>", v.Final, "</final>")
 	fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
+	fmt.Fprint(w, "<meminputcnt>", v.MemInputCnt, "</meminputcnt>")
+	if verbose {
+		fmt.Fprint(w, "<raw>", hex.EncodeToString(v.Raw), "</raw>")
+	}
 	w.Write([]byte("</tx>"))
 }
 

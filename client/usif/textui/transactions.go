@@ -1,11 +1,12 @@
 package textui
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -116,8 +117,8 @@ func save_tx(par string) {
 		return
 	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		fn := tx.Hash.String() + ".tx"
-		ioutil.WriteFile(fn, tx.Raw, 0600)
+		fn := tx.Hash.String() + ".txt"
+		os.WriteFile(fn, []byte(hex.EncodeToString(tx.Raw)), 0600)
 		fmt.Println("Saved to", fn)
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
@@ -249,6 +250,45 @@ func get_mempool(par string) {
 	network.GetMP(uint32(conid))
 }
 
+func push_old_txs(par string) {
+	var invs, cnt uint32
+	var weight uint64
+	var max_spb float64
+	var er error
+	var commit bool
+	ss := strings.SplitN(par, " ", 2)
+	if len(ss) >= 1 {
+		max_spb, er = strconv.ParseFloat(ss[0], 64)
+		if er != nil {
+			max_spb = 10.0
+		}
+		commit = len(ss) >= 2 && ss[1] == "yes"
+	}
+	fmt.Printf("Looking for 1+ day old txs with SPB above %.1f\n", max_spb)
+	network.TxMutex.Lock()
+	for _, tx := range network.TransactionsToSend {
+		if tx.MemInputCnt == 0 && time.Since(tx.Firstseen) > 24*time.Hour {
+			spb := tx.SPB()
+			if spb >= max_spb {
+				wg := tx.Weight()
+				if commit {
+					invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*spb))
+				} else {
+					fmt.Printf("%d) %s  SPB:%.2f   WG:%d\n", cnt+1, tx.Hash.String(), spb, wg)
+				}
+				cnt++
+				weight += uint64(wg)
+			}
+		}
+	}
+	fmt.Println("Found", cnt, "/", len(network.TransactionsToSend), "txs matching the criteria")
+	network.TxMutex.Unlock()
+	fmt.Println("Total weigth:", weight, "   number of invs sent:", invs)
+	if !commit {
+		fmt.Printf("Execute 'pusholdtxs %.1f yes' to send all the invs\n", max_spb)
+	}
+}
+
 func init() {
 	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
@@ -264,4 +304,5 @@ func init() {
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
 	newUi("getmp mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
+	newUi("pusholdtxs pot", true, push_old_txs, "Push old txs <SPB> [yes]")
 }

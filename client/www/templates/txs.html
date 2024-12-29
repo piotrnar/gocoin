@@ -19,6 +19,7 @@ td.txid {
 <td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
+<textarea id="txhexdump" style="width:100%" rows="5" readonly onclick="this.select()"></textarea>
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
 <tr>
@@ -385,6 +386,8 @@ function decode_tx_id(txid) {
 
 			rawdiv.innerHTML = s
 
+			txhexdump.value = xval(aj.responseXML,  "raw")
+
 			if (prvpos==null) {
 				fade.addEventListener('click', closepopup)
 				fade.style.cursor = 'pointer'
@@ -462,6 +465,11 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'inputs')
+				var mic = xval(txs[i], 'meminputcnt')
+				if (mic>0) {
+					c.innerHTML = '<sup style="font-size:75%">'+mic+'</sup> ' + c.innerHTML
+					c.title = mic + " unconfired input" + (mic>1 ? "s" : "")
+				}
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'outputs')
@@ -707,7 +715,7 @@ function show_mempool_fees() {
 			mp = JSON.parse(aj.responseText)
 			if (mp==null) return
 
-			console.log(mp.length, mp[0], mp[1])
+			//console.log(mp.length, mp[0], mp[1])
 			var plot_data = [ { data : [], color : 4, points: { show:!one_block }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
