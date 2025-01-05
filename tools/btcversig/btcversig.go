@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -52,10 +52,19 @@ func main() {
 		return
 	}
 
+	if *verb {
+		fmt.Println("Recovery ID value:", nv)
+	}
+
+	if nv < 27 || nv > 42 {
+		println("Incorrect Recovery ID value:", nv)
+		return
+	}
+
 	if *mess != "" {
 		msg = []byte(*mess)
 	} else if *mfil != "" {
-		msg, er = ioutil.ReadFile(*mfil)
+		msg, er = os.ReadFile(*mfil)
 		if er != nil {
 			println(er.Error())
 			return
@@ -64,7 +73,7 @@ func main() {
 		if *verb {
 			fmt.Println("Enter the message:")
 		}
-		msg, _ = ioutil.ReadAll(os.Stdin)
+		msg, _ = io.ReadAll(os.Stdin)
 	}
 
 	if *unix {
@@ -81,18 +90,9 @@ func main() {
 		btc.HashFromMessage(msg, hash)
 	}
 
-	compressed := false
-	if nv >= 31 {
-		if *verb {
-			fmt.Println("compressed key")
-		}
-		nv -= 4
-		compressed = true
-	}
-
-	pub := btcsig.RecoverPublicKey(hash[:], int(nv-27))
+	pub := btcsig.RecoverPublicKey(hash[:], int((nv-27)%4))
 	if pub != nil {
-		pk := pub.Bytes(compressed)
+		pk := pub.Bytes(nv >= 31)
 		ok := btc.EcdsaVerify(pk, btcsig.Bytes(), hash)
 		if ok {
 			sa := btc.NewAddrFromPubkey(pk, ad.Version)
