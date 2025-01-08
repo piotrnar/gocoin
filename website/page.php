@@ -45,7 +45,7 @@ echo '<html>
 <body>
 <table cellspacing="10">
 <tr>
-<td valign="top" width="200">';
+<td valign="top" width="160">';
 echo $menu;
 echo '</td>
 <td valign="top">';
