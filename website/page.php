@@ -43,7 +43,7 @@ echo '<html>
 <title>Gocoin: '.$title.'</title>
 </head>
 <body>
-<table cellspacing="10">
+<table cellspacing="2">
 <tr>
 <td valign="top" width="160">';
 echo $menu;
