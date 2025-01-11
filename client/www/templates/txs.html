@@ -557,7 +557,7 @@ function show_txsre() {
 				c = row.insertCell(-1)
 				c.className ='mono'
 				t = xval(txs[i], 'id')
-				c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
+				c.innerHTML = t
 
 				c=row.insertCell(-1);className='maturity'
 				var tim = xval(txs[i], 'time')
@@ -603,13 +603,13 @@ function show_txw4i() {
 					c.className ='mono'
 					if (j==0) {
 						t = xval(wait4s[i], 'id')
-						c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
+						c.innerHTML = t
 					}
 
 					c = row.insertCell(-1)
 					c.className ='mono'
 					t = xval(pendtxs[j], 'id')
-					c.innerHTML = '<a href="https://blockchain.info/tx/'+t+'">'+t+'</a>'
+					c.innerHTML = t
 
 					c=row.insertCell(-1);className='maturity'
 					var tim = xval(pendtxs[j], 'time')
