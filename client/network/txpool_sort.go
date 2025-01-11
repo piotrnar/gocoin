@@ -18,7 +18,6 @@ var (
 func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))
 	var idx int
-	const MIN_PKB = 200
 	for k := range TransactionsToSend {
 		all_txs[idx] = k
 		idx++
@@ -35,8 +34,8 @@ func GetSortedMempool() (result []*OneTxToSend) {
 			return rec_i.MemInputCnt < rec_j.MemInputCnt
 		}
 		for x := 0; x < 32; x++ {
-			if rec_i.Hash.Hash[x] != rec_i.Hash.Hash[x] {
-				return rec_i.Hash.Hash[x] < rec_i.Hash.Hash[x]
+			if rec_i.Hash.Hash[x] != rec_j.Hash.Hash[x] {
+				return rec_i.Hash.Hash[x] < rec_j.Hash.Hash[x]
 			}
 		}
 		return false
