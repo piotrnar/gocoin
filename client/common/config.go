@@ -356,8 +356,8 @@ func Reset() {
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
 
-	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(CFG.TXPool.MaxSizeMB)*1e6)
-	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB)*1e6)
+	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 

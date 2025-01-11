@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -32,7 +32,7 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(2e6)
 	fil, _, _ := r.FormFile("txfile")
 	if fil != nil {
-		tx2in, _ = ioutil.ReadAll(fil)
+		tx2in, _ = io.ReadAll(fil)
 	} else if len(r.Form["rawtx"]) == 1 {
 		tx2in, _ = hex.DecodeString(r.Form["rawtx"][0])
 	}
@@ -471,9 +471,9 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	network.TxMutex.Lock()
 
 	w.Write([]byte(fmt.Sprint("\"t2s_cnt\":", len(network.TransactionsToSend), ",")))
-	w.Write([]byte(fmt.Sprint("\"t2s_size\":", network.TransactionsToSendSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"t2s_size\":", uint64(float64(network.TransactionsToSendSize)*common.TX_SIZE_RAM_MULTIPLIER), ",")))
 	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(network.TransactionsRejected), ",")))
-	w.Write([]byte(fmt.Sprint("\"tre_size\":", network.TransactionsRejectedSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_size\":", uint64(float64(network.TransactionsRejectedSize)*common.TX_SIZE_RAM_MULTIPLIER), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(network.TransactionsPending), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
 	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(network.SpentOutputs), ",")))
