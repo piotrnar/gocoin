@@ -19,6 +19,9 @@
 * Client/WebUI/Transactions: Listed mempool transactions also show a number of unconfirmed inputs
 * Tools: "btcversig" now works also for signatures generated with a segwit type address
 * Client: the configured max mempool size is now closer to what bitcoin core would keep for the same value
+* Client: the new tx.Clean() is called before placing tx in a mempool, to decrease memory usage
+* Removed some warnings reported by VSCode
+
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

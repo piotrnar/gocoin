@@ -269,7 +269,7 @@ func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
 	}
 
 	if len(sd) != 65 {
-		er = errors.New("The decoded signature is not 65 bytes long")
+		er = errors.New("decoded signature not 65 bytes long")
 		return
 	}
 
@@ -306,7 +306,7 @@ func StringToSatoshis(s string) (val uint64, er error) {
 	}
 
 	if len(ss[1]) > 8 {
-		er = errors.New("Too many decimal points")
+		er = errors.New("too many decimal points")
 		return
 	}
 	if len(ss[1]) < 8 {

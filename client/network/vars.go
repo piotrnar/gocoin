@@ -108,7 +108,6 @@ func DiscardBlock(n *chain.BlockTreeNode) {
 		DiscardBlock(c)
 	}
 	DiscardedBlocks[n.BlockHash.BIdx()] = true
-	return
 }
 
 func AddB2G(b2g *OneBlockToGet) {

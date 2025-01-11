@@ -290,17 +290,6 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 	return
 }
 
-// Call it with locked MutexRcv
-func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (lowest_found *OneBlockToGet) {
-	for _, v := range BlocksToGet {
-		if v.InProgress == cnt_in_progress && v.Block.Height <= max_height &&
-			(lowest_found == nil || v.Block.Height < lowest_found.Block.Height) {
-			lowest_found = v
-		}
-	}
-	return
-}
-
 var Fetc struct {
 	HeightA uint64
 	HeightB uint64

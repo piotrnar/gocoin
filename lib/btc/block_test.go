@@ -40,7 +40,6 @@ func fetch_block(b *testing.B) {
 	} else {
 		b.Fatal(er.Error())
 	}
-	return
 }
 
 func BenchmarkBuildTxList(b *testing.B) {

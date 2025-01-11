@@ -199,7 +199,7 @@ func print_record(sl []byte) {
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
 
-func verify_block(blk []byte, sl one_idx_rec, off int) {
+func verify_block(blk []byte, sl one_idx_rec) {
 	bl, er := btc.NewBlock(blk)
 	if er != nil {
 		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), er.Error())
@@ -1076,7 +1076,7 @@ func main() {
 				continue
 			}
 
-			verify_block(blk, sl, off)
+			verify_block(blk, sl)
 			cnt++
 
 			totlen += uint64(len(blk))

@@ -107,8 +107,6 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		}
 		of += 36
 	}
-
-	return
 }
 
 func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
@@ -231,7 +229,6 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 	}
 
 	common.CountSafe("GetblksMissed")
-	return
 }
 
 func (c *OneConnection) SendInvs() (res bool) {

@@ -26,7 +26,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
+			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
 					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
@@ -78,7 +78,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	for i := range tx.TxIn {
 		idx := tx.TxIn[i].Input.UIdx()
 		if val, ok := SpentOutputs[idx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
+			if rec := TransactionsToSend[val]; rec != nil {
 				// if we got here, the txs has been Malleabled
 				if rec.Local {
 					common.CountSafe("TxMinedMalleabled")
@@ -89,7 +89,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 				rec.Delete(true, 0)
 			} else {
 				common.CountSafe("TxMinedSpentERROR")
-				fmt.Println("WTF? Input from ", rec.Tx.Hash.String(), " in mem-spent, but tx not in the mem-pool")
+				fmt.Println("WTF? Input from ", tx.TxIn[i].Input.String(), " in mem-spent, but tx not in the mem-pool")
 			}
 			delete(SpentOutputs, idx)
 		}
@@ -132,7 +132,7 @@ func MarkChildrenForMem(tx *btc.Tx) {
 	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
-			if rec, _ := TransactionsToSend[val]; rec != nil {
+			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
 					rec.MemInputs = make([]bool, len(rec.TxIn))
 				}

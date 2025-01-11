@@ -308,7 +308,7 @@ func ScriptToText(p []byte) (out []string, e error) {
 		}
 		idx += n
 
-		if vchPushValue != nil && len(vchPushValue) > MAX_SCRIPT_ELEMENT_SIZE {
+		if len(vchPushValue) > MAX_SCRIPT_ELEMENT_SIZE {
 			e = errors.New(fmt.Sprint("ScriptToText: vchPushValue too long ", len(vchPushValue)))
 			return
 		}

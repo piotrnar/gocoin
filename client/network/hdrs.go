@@ -255,8 +255,6 @@ func (c *OneConnection) GetHeaders(pl []byte) {
 	}
 
 	// Note: the deferred function will be called before exiting
-
-	return
 }
 
 func (c *OneConnection) sendGetHeaders() {

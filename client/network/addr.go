@@ -208,7 +208,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	c.X.AddrMsgsRcvd++
 	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
 	c.Mutex.Unlock()
-	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
+	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Since(c.X.ConnectedAt) < 10*time.Second {
 		// delete all the new records that came from this ip
 		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
 		common.CountSafeAdd("AddrBanUndone", uint64(delcnt))

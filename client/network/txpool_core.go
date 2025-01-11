@@ -374,7 +374,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 					// Add to waiting list:
 					var rec *OneWaitingList
-					if rec, _ = WaitingForInputs[missingid.BIdx()]; rec == nil {
+					if rec = WaitingForInputs[missingid.BIdx()]; rec == nil {
 						rec = new(OneWaitingList)
 						rec.TxID = missingid
 						rec.TxLen = uint32(len(ntx.Raw))
@@ -493,30 +493,29 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	if rbf_tx_list != nil {
-		for ctx := range rbf_tx_list {
-			// we dont remove with children because we have all of them on the list
-			ctx.Delete(false, TX_REJECTED_REPLACED)
-			common.CountSafe("TxRemovedByRBF")
-		}
+	for ctx := range rbf_tx_list {
+		// we dont remove with children because we have all of them on the list
+		ctx.Delete(false, TX_REJECTED_REPLACED)
+		common.CountSafe("TxRemovedByRBF")
 	}
 
 	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local,
 		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
-		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Now().Sub(start_time)}
+		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	TransactionsToSend[bidx] = rec
+	tx.Clean()
 
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		newsize := TransactionsToSendSize + uint64(len(rec.Raw))
+		newsize := TransactionsToSendSize + uint64(len(tx.Raw))
 		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
 			expireTxsNow = true
 		}
 		TransactionsToSendSize = newsize
 	} else {
-		TransactionsToSendSize += uint64(len(rec.Raw))
+		TransactionsToSendSize += uint64(len(tx.Raw))
 	}
-	TransactionsToSendWeight += uint64(rec.Tx.Weight())
+	TransactionsToSendWeight += uint64(tx.Weight())
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
@@ -638,7 +637,7 @@ func txChecker(tx *btc.Tx) bool {
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
 		if tr.Waiting4 != nil {
-			w4i, _ := WaitingForInputs[tr.Waiting4.BIdx()]
+			w4i := WaitingForInputs[tr.Waiting4.BIdx()]
 			delete(w4i.Ids, bidx)
 			if len(w4i.Ids) == 0 {
 				WaitingForInputsSize -= uint64(w4i.TxLen)

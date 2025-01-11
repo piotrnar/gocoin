@@ -28,7 +28,7 @@ func (c *OneConnection) HandlePong(pl []byte) {
 	} else {
 		common.CountSafe("PongTimeout")
 	}
-	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
+	ms := time.Since(c.LastPingSent) / time.Millisecond
 	if ms == 0 {
 		//println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
@@ -89,7 +89,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
 		tlist[cnt].Special = v.X.IsSpecial || v.X.Authorized
-		if v.X.VersionReceived == false || v.X.ConnectedAt.IsZero() {
+		if !v.X.VersionReceived || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {
 			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt) / time.Minute)

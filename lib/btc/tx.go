@@ -77,6 +77,19 @@ type AddrValue struct {
 	Addr20 [20]byte
 }
 
+func (t *Tx) Clean() {
+	t.hash_lock.Lock()
+	t.hashPrevouts = nil
+	t.hashSequence = nil
+	t.hashOutputs = nil
+	t.m_prevouts_single_hash = nil
+	t.m_sequences_single_hash = nil
+	t.m_outputs_single_hash = nil
+	t.m_spent_amounts_single_hash = nil
+	t.m_spent_scripts_single_hash = nil
+	t.hash_lock.Unlock()
+}
+
 func (po *TxPrevOut) UIdx() uint64 {
 	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
 }
@@ -346,8 +359,8 @@ func (tx *Tx) CheckTransaction() error {
 
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
-			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
-				len(tx.TxIn[0].ScriptSig)))
+			return fmt.Errorf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
+				len(tx.TxIn[0].ScriptSig))
 		}
 	} else {
 		for i := range tx.TxIn {
