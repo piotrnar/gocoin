@@ -10,6 +10,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 const (
@@ -20,6 +21,13 @@ const (
 var (
 	LAST_SAVED_FNAME string
 )
+
+func dump_folder_name() string {
+	return fmt.Sprint(common.Last.Block.Height, "-",
+		common.Last.Block.BlockHash.String()[64-8:64], "-",
+		utxo.UtxoIdxLen, "-", common.AllBalMinVal(), "-",
+		CURRENT_FILE_VERSION)
+}
 
 func (b *OneAllAddrBal) Save(key []byte, of io.Writer) {
 	of.Write(key)
@@ -76,12 +84,6 @@ func newAddrBal(rd io.Reader) (res *OneAllAddrBal) {
 	return
 }
 
-func cur_fname() string {
-	return fmt.Sprint(common.Last.Block.Height, "-",
-		common.Last.Block.BlockHash.String()[64-10:64], "-",
-		common.AllBalMinVal(), "-", CURRENT_FILE_VERSION)
-}
-
 func load_map(dir string, idx int, wg *sync.WaitGroup) {
 	var le uint64
 	var er error
@@ -118,7 +120,7 @@ func save_map(fn string, tm map[string]*OneAllAddrBal, wg *sync.WaitGroup) {
 }
 
 func LoadBalances() (er error) {
-	fname := cur_fname()
+	fname := dump_folder_name()
 	dir := common.GocoinHomeDir + BALANCES_SUBDIR + string(os.PathSeparator) + fname
 	if _, er = os.Stat(dir); os.IsNotExist(er) {
 		er = errors.New(dir + " does not exist")
@@ -152,7 +154,7 @@ func SaveBalances() (er error) {
 		return
 	}
 
-	fname := cur_fname()
+	fname := dump_folder_name()
 	if fname == LAST_SAVED_FNAME {
 		er = errors.New(LAST_SAVED_FNAME + " already on disk")
 		return
