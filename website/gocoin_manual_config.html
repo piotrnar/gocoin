@@ -119,7 +119,7 @@ Prefering convenience over security, change .txt extension to .bat or .sh (depen
     Note that SSL server needs valid <code>ca.crt</code>, <code>server.crt</code> and
     <code>server.key</code> in the client's <code>ssl_cert/</code> dir.</td>
     </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> Net.ListenTCP</td>
 <td class="cfg_type"> bool</td>
@@ -235,7 +235,7 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td> false</td>
 <td class="cfg_info"> When true, it only allows RBF for transactions that indicated replacebility (BIP-125).</td>
 </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> TXRoute.Enabled</td>
 <td class="cfg_type"> bool</td>
@@ -339,7 +339,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td class="cfg_info"> Compress blocks on disk.<br>
 </td>
 </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> AllBalances.MinValue</td>
 <td class="cfg_type"> uint</td>
@@ -353,12 +353,17 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td> 5000</td>
 <td class="cfg_info"> Use hashmap instead of list for addresses that have this many (or more) unspent outputs.</td>
 </tr>
-
 <tr class="odd">
 <td class="cfg_name"> AllBalances.AutoLoad</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Atomatically enable wallet functionality after the node is launched and synchronized.</td>
+</tr>
+<tr class="odd">
+<td class="cfg_name"> AllBalances.SaveBalances</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Always save all address balances before quitting (to load it from disk upon next launch).</td>
 </tr>
 
 <tr class="even">
@@ -410,7 +415,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td> false</td>
 <td class="cfg_info"> When set, it turns off node's internal counters to improve performance.</td>
 </tr>
-    
+
 <tr class="even">
 <td class="cfg_name"> UTXOSave.BlocksToHold</td>
 <td class="cfg_type"> uint</td>
