@@ -6,11 +6,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"io"
 	"os"
 	"time"
+
+	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 var (
@@ -235,7 +236,7 @@ func MempoolLoad2() bool {
 	}
 
 	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME2)
-	fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
+	//fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
 
 	return true
 
@@ -247,7 +248,6 @@ fatal_error:
 	SpentOutputs = make(map[uint64]BIDX)
 	return false
 }
-
 
 // MempoolLoadNew is only called from TextUI.
 func MempoolLoadNew(fname string, abort *bool) bool {
@@ -276,10 +276,10 @@ func MempoolLoadNew(fname string, abort *bool) bool {
 	}
 	fmt.Println("Loading", totcnt, "transactions from", fname)
 
-	oneperc = totcnt/100
+	oneperc = totcnt / 100
 
 	for idx = 0; idx < totcnt; idx++ {
-		if cntdwn==0 {
+		if cntdwn == 0 {
 			fmt.Print("\r", perc, "% complete...")
 			perc++
 			cntdwn = oneperc
