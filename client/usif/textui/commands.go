@@ -506,7 +506,7 @@ func init() {
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
-	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
+	newUi("kill", false, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
 	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")

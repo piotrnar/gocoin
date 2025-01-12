@@ -15,7 +15,7 @@ var (
 )
 
 func InitMaps(empty bool) {
-	var szs [5]int
+	var szs [IDX_CNT]int
 
 	if !empty {
 		LoadMapSizes()
@@ -23,11 +23,9 @@ func InitMaps(empty bool) {
 		// If yet unknown, just continue with zero size maps
 	}
 
-	AllBalancesP2KH = make(map[[20]byte]*OneAllAddrBal, szs[0])
-	AllBalancesP2SH = make(map[[20]byte]*OneAllAddrBal, szs[1])
-	AllBalancesP2WKH = make(map[[20]byte]*OneAllAddrBal, szs[2])
-	AllBalancesP2WSH = make(map[[32]byte]*OneAllAddrBal, szs[3])
-	AllBalancesP2TAP = make(map[[32]byte]*OneAllAddrBal, szs[4])
+	for i := range AllBalances {
+		AllBalances[i] = make(map[string]*OneAllAddrBal, szs[i])
+	}
 }
 
 func LoadBalance() {
@@ -85,14 +83,15 @@ const (
 )
 
 var (
-	WalletAddrsCount map[uint64][5]int = make(map[uint64][5]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH, [4]-P2TAP
+	WalletAddrsCount map[uint64][IDX_CNT]int = make(map[uint64][IDX_CNT]int) //index:MinValue, [0]-P2KH, [1]-P2SH, [2]-P2WSH, [3]-P2WKH, [4]-P2TAP
 )
 
 func UpdateMapSizes() {
-	WalletAddrsCount[common.AllBalMinVal()] = [5]int{len(AllBalancesP2KH),
-		len(AllBalancesP2SH), len(AllBalancesP2WKH), len(AllBalancesP2WSH),
-		len(AllBalancesP2TAP)}
-
+	var tmp [IDX_CNT]int
+	for i := range tmp {
+		tmp[i] = len(AllBalances[i])
+	}
+	WalletAddrsCount[common.AllBalMinVal()] = tmp
 	buf := new(bytes.Buffer)
 	gob.NewEncoder(buf).Encode(WalletAddrsCount)
 	os.WriteFile(common.GocoinHomeDir+MAPSIZ_FILE_NAME, buf.Bytes(), 0600)

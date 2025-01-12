@@ -82,69 +82,34 @@ func cur_fname() string {
 		common.AllBalMinVal(), "-", CURRENT_FILE_VERSION)
 }
 
-func load_map20(fn string, res *map[[20]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
-	var ke [20]byte
+func load_map(dir string, idx int, wg *sync.WaitGroup) {
 	var le uint64
 	var er error
 
 	defer wg.Done()
-	if f, _ := os.Open(fn); f != nil {
+	ke := make([]byte, IDX2SIZE[idx])
+	if f, _ := os.Open(dir + IDX2SYMB[idx]); f != nil {
 		rd := bufio.NewReaderSize(f, 0x4000)
 		if le, er = btc.ReadVLen(rd); er != nil {
 			return
 		}
-		themap := make(map[[20]byte]*OneAllAddrBal, int(le))
+		themap := make(map[string]*OneAllAddrBal, int(le))
 		for ; le > 0; le-- {
-			if _, er = io.ReadFull(rd, ke[:]); er != nil {
+			if _, er = io.ReadFull(rd, ke); er != nil {
 				return
 			}
-			themap[ke] = newAddrBal(rd)
+			themap[string(ke)] = newAddrBal(rd)
 		}
-		*res = themap
+		AllBalances[idx] = themap
 	}
 }
 
-func load_map32(fn string, res *map[[32]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
-	var ke [32]byte
-	var le uint64
-	var er error
-
-	defer wg.Done()
-	if f, _ := os.Open(fn); f != nil {
-		rd := bufio.NewReaderSize(f, 0x4000)
-		if le, er = btc.ReadVLen(rd); er != nil {
-			return
-		}
-		themap := make(map[[32]byte]*OneAllAddrBal, int(le))
-		for ; le > 0; le-- {
-			if _, er = io.ReadFull(rd, ke[:]); er != nil {
-				return
-			}
-			themap[ke] = newAddrBal(rd)
-		}
-		*res = themap
-	}
-}
-
-func save_map20(fn string, tm map[[20]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
+func save_map(fn string, tm map[string]*OneAllAddrBal, wg *sync.WaitGroup) {
 	if f, _ := os.Create(fn); f != nil {
 		wr := bufio.NewWriterSize(f, 0x100000)
 		btc.WriteVlen(wr, uint64(len(tm)))
 		for k, rec := range tm {
-			rec.Save(k[:], wr)
-		}
-		wr.Flush()
-		f.Close()
-	}
-	wg.Done()
-}
-
-func save_map32(fn string, tm map[[32]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
-	if f, _ := os.Create(fn); f != nil {
-		wr := bufio.NewWriterSize(f, 0x40000)
-		btc.WriteVlen(wr, uint64(len(tm)))
-		for k, rec := range tm {
-			rec.Save(k[:], wr)
+			rec.Save([]byte(k), wr)
 		}
 		wr.Flush()
 		f.Close()
@@ -163,19 +128,17 @@ func LoadBalances() (er error) {
 	dir += string(os.PathSeparator)
 
 	var wg sync.WaitGroup
-	wg.Add(5)
-	go load_map20(dir+"P2KH", &AllBalancesP2KH, &wg)
-	go load_map20(dir+"P2SH", &AllBalancesP2SH, &wg)
-	go load_map20(dir+"P2WKH", &AllBalancesP2WKH, &wg)
-	go load_map32(dir+"P2WSH", &AllBalancesP2WSH, &wg)
-	go load_map32(dir+"P2TAP", &AllBalancesP2TAP, &wg)
+	for i := range AllBalances {
+		wg.Add(1)
+		go load_map(dir, i, &wg)
+	}
 	wg.Wait()
 
-	println(AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH, AllBalancesP2WSH, AllBalancesP2TAP)
-
-	if AllBalancesP2KH == nil || AllBalancesP2SH == nil || AllBalancesP2WKH == nil ||
-		AllBalancesP2WSH == nil || AllBalancesP2TAP == nil {
-		er = errors.New("balances could not be restored from " + dir)
+	for i := range AllBalances {
+		if AllBalances[i] == nil {
+			er = errors.New(IDX2SYMB[i] + " balances could not be restored from " + dir)
+			return
+		}
 	}
 
 	LAST_SAVED_FNAME = fname
@@ -209,12 +172,10 @@ func SaveBalances() (er error) {
 	dir += string(os.PathSeparator)
 
 	var wg sync.WaitGroup
-	wg.Add(5)
-	go save_map20(dir+"P2KH", AllBalancesP2KH, &wg)
-	go save_map20(dir+"P2SH", AllBalancesP2SH, &wg)
-	go save_map20(dir+"P2WKH", AllBalancesP2WKH, &wg)
-	go save_map32(dir+"P2WSH", AllBalancesP2WSH, &wg)
-	go save_map32(dir+"P2TAP", AllBalancesP2TAP, &wg)
+	for i := range AllBalances {
+		wg.Add(1)
+		go save_map(dir+IDX2SYMB[i], AllBalances[i], &wg)
+	}
 	wg.Wait()
 	LAST_SAVED_FNAME = fname
 	return
