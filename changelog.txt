@@ -21,7 +21,7 @@
 * Client: the configured max mempool size is now closer to what bitcoin core would keep for the same value
 * Client: the new tx.Clean() is called before placing tx in a mempool, to decrease memory usage
 * Removed some warnings reported by VSCode
-
+* Client: New config value "AllBalances.SaveBalances" (default true) along with (save+load) support for it
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

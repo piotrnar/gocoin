@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
@@ -324,10 +325,23 @@ func wallet_on_off(s string) {
 	}
 }
 
+func save_balances(s string) {
+	if s == "force" {
+		wallet.LAST_SAVED_FNAME = ""
+	}
+	sta := time.Now()
+	if er := wallet.SaveBalances(); er != nil {
+		fmt.Println("Error:", er.Error())
+	} else {
+		fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+	}
+}
+
 func init() {
 	newUi("richest r", true, best_val, "Show addresses with most coins [0,1,2,3 or count]")
 	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
 	newUi("balance a", true, list_unspent, "List balance of given bitcoin address (or raw public key)")
 	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
+	newUi("savebal sb", true, save_balances, "Save all balances to disk [force]")
 	newUi("wallet w", false, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
 }

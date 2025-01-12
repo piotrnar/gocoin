@@ -19,7 +19,7 @@ func InitMaps(empty bool) {
 
 	if !empty {
 		LoadMapSizes()
-		szs, _ = WalletAddrsCount[common.AllBalMinVal()]
+		szs = WalletAddrsCount[common.AllBalMinVal()]
 		// If yet unknown, just continue with zero size maps
 	}
 

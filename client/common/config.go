@@ -104,9 +104,10 @@ var (
 			CompressBlockDB      bool
 		}
 		AllBalances struct {
-			MinValue  uint64 // Do not keep balance records for values lower than this
-			UseMapCnt int
-			AutoLoad  bool
+			MinValue     uint64 // Do not keep balance records for values lower than this
+			UseMapCnt    int
+			AutoLoad     bool
+			SaveBalances bool
 		}
 		Stat struct {
 			HashrateHrs uint
@@ -187,6 +188,7 @@ func InitConfig() {
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 5000
 	CFG.AllBalances.AutoLoad = true
+	CFG.AllBalances.SaveBalances = true
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
