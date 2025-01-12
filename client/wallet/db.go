@@ -371,7 +371,8 @@ func PrintStat() {
 		}
 	}
 
-	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()), "  UseMapCnt:", common.CFG.AllBalances.UseMapCnt)
+	fmt.Println("AllBalMinVal:", btc.UintToBtc(common.AllBalMinVal()),
+		"  UseMapCnt:", common.CFG.AllBalances.UseMapCnt, "  Saved As:", LAST_SAVED_FNAME)
 
 	fmt.Println("AllBalancesP2KH: ", len(AllBalancesP2KH), "records,",
 		p2kh_outs, "outputs,", btc.UintToBtc(p2kh_vals), "BTC,", p2kh_maps, "maps")

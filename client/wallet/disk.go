@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -78,88 +79,105 @@ func newAddrBal(rd io.Reader) (res *OneAllAddrBal) {
 func cur_fname() string {
 	return fmt.Sprint(common.Last.Block.Height, "-",
 		common.Last.Block.BlockHash.String()[64-10:64], "-",
-		common.AllBalMinVal(), "-", CURRENT_FILE_VERSION, ".dmp")
+		common.AllBalMinVal(), "-", CURRENT_FILE_VERSION)
 }
 
-func load_map20(rd io.Reader) (res map[[20]byte]*OneAllAddrBal, er error) {
-	var le uint64
+func load_map20(fn string, res *map[[20]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
 	var ke [20]byte
-	if le, er = btc.ReadVLen(rd); er != nil {
-		return
-	}
-	themap := make(map[[20]byte]*OneAllAddrBal, int(le))
-	for ; le > 0; le-- {
-		if _, er = io.ReadFull(rd, ke[:]); er != nil {
-			return
-		}
-		themap[ke] = newAddrBal(rd)
-	}
-	res = themap
-	return
-}
-
-func load_map32(rd io.Reader) (res map[[32]byte]*OneAllAddrBal, er error) {
 	var le uint64
-	var ke [32]byte
-	if le, er = btc.ReadVLen(rd); er != nil {
-		return
-	}
-	themap := make(map[[32]byte]*OneAllAddrBal, int(le))
-	for ; le > 0; le-- {
-		if _, er = io.ReadFull(rd, ke[:]); er != nil {
+	var er error
+
+	defer wg.Done()
+	if f, _ := os.Open(fn); f != nil {
+		rd := bufio.NewReaderSize(f, 0x4000)
+		if le, er = btc.ReadVLen(rd); er != nil {
 			return
 		}
-		themap[ke] = newAddrBal(rd)
-	}
-	res = themap
-	return
-}
-
-func save_map20(wr io.Writer, tm map[[20]byte]*OneAllAddrBal) {
-	btc.WriteVlen(wr, uint64(len(tm)))
-	for k, rec := range tm {
-		rec.Save(k[:], wr)
+		themap := make(map[[20]byte]*OneAllAddrBal, int(le))
+		for ; le > 0; le-- {
+			if _, er = io.ReadFull(rd, ke[:]); er != nil {
+				return
+			}
+			themap[ke] = newAddrBal(rd)
+		}
+		*res = themap
 	}
 }
 
-func save_map32(wr io.Writer, tm map[[32]byte]*OneAllAddrBal) {
-	btc.WriteVlen(wr, uint64(len(tm)))
-	for k, rec := range tm {
-		rec.Save(k[:], wr)
+func load_map32(fn string, res *map[[32]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
+	var ke [32]byte
+	var le uint64
+	var er error
+
+	defer wg.Done()
+	if f, _ := os.Open(fn); f != nil {
+		rd := bufio.NewReaderSize(f, 0x4000)
+		if le, er = btc.ReadVLen(rd); er != nil {
+			return
+		}
+		themap := make(map[[32]byte]*OneAllAddrBal, int(le))
+		for ; le > 0; le-- {
+			if _, er = io.ReadFull(rd, ke[:]); er != nil {
+				return
+			}
+			themap[ke] = newAddrBal(rd)
+		}
+		*res = themap
 	}
+}
+
+func save_map20(fn string, tm map[[20]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
+	if f, _ := os.Create(fn); f != nil {
+		wr := bufio.NewWriterSize(f, 0x100000)
+		btc.WriteVlen(wr, uint64(len(tm)))
+		for k, rec := range tm {
+			rec.Save(k[:], wr)
+		}
+		wr.Flush()
+		f.Close()
+	}
+	wg.Done()
+}
+
+func save_map32(fn string, tm map[[32]byte]*OneAllAddrBal, wg *sync.WaitGroup) {
+	if f, _ := os.Create(fn); f != nil {
+		wr := bufio.NewWriterSize(f, 0x40000)
+		btc.WriteVlen(wr, uint64(len(tm)))
+		for k, rec := range tm {
+			rec.Save(k[:], wr)
+		}
+		wr.Flush()
+		f.Close()
+	}
+	wg.Done()
 }
 
 func LoadBalances() (er error) {
-	var _fi *os.File
 	fname := cur_fname()
-	if _fi, er = os.Open(common.GocoinHomeDir + BALANCES_SUBDIR + string(os.PathSeparator) + fname); er != nil {
+	dir := common.GocoinHomeDir + BALANCES_SUBDIR + string(os.PathSeparator) + fname
+	if _, er = os.Stat(dir); os.IsNotExist(er) {
+		er = errors.New(dir + " does not exist")
 		return
 	}
 
-	rd := bufio.NewReaderSize(_fi, 0x4000)
+	dir += string(os.PathSeparator)
 
-	if AllBalancesP2KH, er = load_map20(rd); er != nil {
-		println("LoadBalances P2KH:", er.Error())
-		return
-	}
-	if AllBalancesP2SH, er = load_map20(rd); er != nil {
-		println("LoadBalances P2SH:", er.Error())
-		return
-	}
-	if AllBalancesP2WKH, er = load_map20(rd); er != nil {
-		println("LoadBalances P2WKH:", er.Error())
-		return
-	}
-	if AllBalancesP2WSH, er = load_map32(rd); er != nil {
-		println("LoadBalances P2WSH:", er.Error())
-		return
-	}
-	if AllBalancesP2TAP, er = load_map32(rd); er != nil {
-		println("LoadBalances P2TAP:", er.Error())
-		return
+	var wg sync.WaitGroup
+	wg.Add(5)
+	go load_map20(dir+"P2KH", &AllBalancesP2KH, &wg)
+	go load_map20(dir+"P2SH", &AllBalancesP2SH, &wg)
+	go load_map20(dir+"P2WKH", &AllBalancesP2WKH, &wg)
+	go load_map32(dir+"P2WSH", &AllBalancesP2WSH, &wg)
+	go load_map32(dir+"P2TAP", &AllBalancesP2TAP, &wg)
+	wg.Wait()
+
+	println(AllBalancesP2KH, AllBalancesP2SH, AllBalancesP2WKH, AllBalancesP2WSH, AllBalancesP2TAP)
+
+	if AllBalancesP2KH == nil || AllBalancesP2SH == nil || AllBalancesP2WKH == nil ||
+		AllBalancesP2WSH == nil || AllBalancesP2TAP == nil {
+		er = errors.New("balances could not be restored from " + dir)
 	}
 
-	_fi.Close()
 	LAST_SAVED_FNAME = fname
 	return
 
@@ -177,26 +195,27 @@ func SaveBalances() (er error) {
 		return
 	}
 
-	os.RemoveAll(common.GocoinHomeDir + BALANCES_SUBDIR)
+	dir := common.GocoinHomeDir + BALANCES_SUBDIR
+	os.RemoveAll(dir)
 	if !common.CFG.AllBalances.SaveBalances {
 		er = errors.New("saving not requested")
 		return
 	}
 
-	os.Mkdir(common.GocoinHomeDir+BALANCES_SUBDIR, 0770)
-	fil, er := os.Create(common.GocoinHomeDir + "balances" + string(os.PathSeparator) + fname)
-	if er != nil {
+	dir += string(os.PathSeparator) + fname
+	if er = os.MkdirAll(dir, 0770); er != nil {
 		return
 	}
+	dir += string(os.PathSeparator)
 
-	of := bufio.NewWriterSize(fil, 0x100000)
-	save_map20(of, AllBalancesP2KH)
-	save_map20(of, AllBalancesP2SH)
-	save_map20(of, AllBalancesP2WKH)
-	save_map32(of, AllBalancesP2WSH)
-	save_map32(of, AllBalancesP2TAP)
-	of.Flush()
-	fil.Close()
+	var wg sync.WaitGroup
+	wg.Add(5)
+	go save_map20(dir+"P2KH", AllBalancesP2KH, &wg)
+	go save_map20(dir+"P2SH", AllBalancesP2SH, &wg)
+	go save_map20(dir+"P2WKH", AllBalancesP2WKH, &wg)
+	go save_map32(dir+"P2WSH", AllBalancesP2WSH, &wg)
+	go save_map32(dir+"P2TAP", AllBalancesP2TAP, &wg)
+	wg.Wait()
 	LAST_SAVED_FNAME = fname
 	return
 }
