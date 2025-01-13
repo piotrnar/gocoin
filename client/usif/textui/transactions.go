@@ -274,7 +274,8 @@ func push_old_txs(par string) {
 				if commit {
 					invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*spb))
 				} else {
-					fmt.Printf("%d) %s  SPB:%.2f   WG:%d\n", cnt+1, tx.Hash.String(), spb, wg)
+					fmt.Printf("%d) %s  %.1f spb, %.1f kW,  %.1f day\n", cnt+1, tx.Hash.String(), spb,
+						float64(wg)/1000.0, float64(time.Since(tx.Firstseen))/float64(24*time.Hour))
 				}
 				cnt++
 				weight += uint64(wg)
