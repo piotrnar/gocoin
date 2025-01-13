@@ -59,11 +59,11 @@ var (
 )
 
 type OneTxToSend struct {
-	Invsentcnt, SentCnt uint32
-	Firstseen, Lastsent time.Time
-	Local               bool
-	Spent               []uint64 // Which records in SpentOutputs this TX added
-	Volume, Fee         uint64
+	Invsentcnt, SentCnt           uint32
+	Firstseen, Lastseen, Lastsent time.Time
+	Local                         bool
+	Spent                         []uint64 // Which records in SpentOutputs this TX added
+	Volume, Fee                   uint64
 	*btc.Tx
 	Blocked     byte   // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
@@ -133,7 +133,8 @@ func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
 // NeedThisTxExt returns false if we do not want to receive a data for this tx.
 func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
 	TxMutex.Lock()
-	if _, present := TransactionsToSend[id.BIdx()]; present {
+	if tx, present := TransactionsToSend[id.BIdx()]; present {
+		tx.Lastseen = time.Now()
 		why_not = 1
 	} else if _, present := TransactionsRejected[id.BIdx()]; present {
 		why_not = 2
@@ -499,8 +500,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRemovedByRBF")
 	}
 
-	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local,
-		Fee: fee, Firstseen: time.Now(), Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
+	now := time.Now()
+	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local, Fee: fee,
+		Firstseen: now, Lastseen: now, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	TransactionsToSend[bidx] = rec

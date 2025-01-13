@@ -131,24 +131,27 @@ func show_info(par string) {
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()
 
-	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d %d %d\n",
-		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
+	fmt.Printf("Gocoin: %s,  Synced: %t (%d)\n", gocoin.Version,
+		common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get())
+	fmt.Printf("Uptime %s,  Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB\n",
 		time.Since(common.StartTime).String(), peersdb.PeerDB.Count(),
-		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt())
+		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
+		usif.GetAverageFee())
 
 	// Memory used
 	al, sy := sys.MemUsed()
 	cb, ca := common.MemUsed()
-	fmt.Printf("Heap_used: %d MB,  System_used: %d MB,  UTXO-X-mem: %d MB in %d recs,  Saving: %t\n", al>>20, sy>>20,
-		cb>>20, ca, common.BlockChain.Unspent.WritingInProgress.Get())
+	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d,  Saving: %t\n",
+		al>>20, sy>>20, cb>>20, ca, common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
-	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	fmt.Println("LastHeder:", network.LastCommitedHeader.BlockHash.String(), "@",
+		network.LastCommitedHeader.Height)
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
-	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
-	fmt.Printf(" Time: %s (~%s),  Diff: %.0f,  Rcvd: %s ago\n",
+	fmt.Println("LastBlock:", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
+	fmt.Printf("  %s (~%s),  Diff: %.0f,  %s ago\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("15:04:05"),
 		btc.GetDifficulty(common.Last.Block.Bits()), time.Since(common.Last.Time).String())
@@ -161,21 +164,23 @@ func show_info(par string) {
 	network.Mutex_net.Unlock()
 
 	network.TxMutex.Lock()
-	var sw_cnt, sw_bts uint64
+	var sw_cnt, sw_bts, sw_wgt uint64
 	for _, v := range network.TransactionsToSend {
 		if v.SegWit != nil {
 			sw_cnt++
 			sw_bts += uint64(v.Size)
+			sw_wgt += uint64(v.Weight())
 		}
 	}
-	fmt.Printf("Txs in mempool: %d (%sB),  Using SegWit: %d (%sB),  Rejected: %d (%sB)\n",
+	fmt.Printf("Mempool: %d txs/%sB/%sW,  SW: %d/%sB/%sW,  Rej: %d/%sB\n",
 		len(network.TransactionsToSend), common.UintToString(network.TransactionsToSendSize),
-		sw_cnt, common.UintToString(sw_bts),
-		len(network.TransactionsRejected), common.UintToString(network.TransactionsRejectedSize))
-	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d,  ScrFlgs:0x%x\n",
+		common.UintToString(network.TransactionsToSendWeight), sw_cnt, common.UintToString(sw_bts),
+		common.UintToString(sw_wgt), len(network.TransactionsRejected),
+		common.UintToString(network.TransactionsRejectedSize))
+	fmt.Printf(" Wait4Inp: %d (%sB),  SpentOuts: %d,  Pend:%d/%d,  ScrFlags:0x%x\n",
 		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
-		len(network.SpentOutputs), usif.GetAverageFee(),
-		len(network.TransactionsPending), len(network.NetTxs), common.CurrentScriptFlags())
+		len(network.SpentOutputs), len(network.TransactionsPending),
+		len(network.NetTxs), common.CurrentScriptFlags())
 	network.TxMutex.Unlock()
 
 	var gs debug.GCStats

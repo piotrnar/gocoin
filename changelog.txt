@@ -23,6 +23,7 @@
 * Removed some warnings reported by VSCode
 * Client: New config value "AllBalances.SaveBalances" (default true) along with (save+load) support for it
 * Client: The wallet module has been refactored for simplicity
+* Client: Mew memory pool dump file version also stores information about when txs were last seen
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API

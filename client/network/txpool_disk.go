@@ -19,7 +19,8 @@ var (
 )
 
 const (
-	MEMPOOL_FILE_NAME2 = "mempool.dmp"
+	MEMPOOL_FILE_NAME = "mempool.dmp"
+	FILE_VERSION_3    = 0xffffffff
 )
 
 func bool2byte(v bool) byte {
@@ -40,6 +41,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	binary.Write(wr, binary.LittleEndian, t2s.Invsentcnt)
 	binary.Write(wr, binary.LittleEndian, t2s.SentCnt)
 	binary.Write(wr, binary.LittleEndian, uint32(t2s.Firstseen.Unix()))
+	binary.Write(wr, binary.LittleEndian, uint32(t2s.Lastseen.Unix()))
 	binary.Write(wr, binary.LittleEndian, uint32(t2s.Lastsent.Unix()))
 	binary.Write(wr, binary.LittleEndian, t2s.Volume)
 	binary.Write(wr, binary.LittleEndian, t2s.Fee)
@@ -50,20 +52,22 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 
 func MempoolSave(force bool) {
 	if !force && !common.CFG.TXPool.SaveOnDisk {
-		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
+		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 		return
 	}
 
-	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
+	f, er := os.Create(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		println(er.Error())
 		return
 	}
 
-	fmt.Println("Saving", MEMPOOL_FILE_NAME2)
+	fmt.Println("Saving", MEMPOOL_FILE_NAME)
 	wr := bufio.NewWriter(f)
 
 	wr.Write(common.Last.Block.BlockHash.Hash[:])
+
+	btc.WriteVlen(wr, FILE_VERSION_3)
 
 	btc.WriteVlen(wr, uint64(len(TransactionsToSend)))
 	for _, t2s := range TransactionsToSend {
@@ -89,8 +93,9 @@ func MempoolLoad2() bool {
 	var tina uint32
 	var i int
 	var cnt1, cnt2 uint
+	var mempool_file_version_3 bool
 
-	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME2)
+	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		fmt.Println("MempoolLoad:", er.Error())
 		return false
@@ -102,12 +107,18 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
-		er = errors.New(MEMPOOL_FILE_NAME2 + " is for different last block hash (try to load it with 'mpl' command)")
+		er = errors.New(MEMPOOL_FILE_NAME + " is for different last block hash (try to load it with 'mpl' command)")
 		goto fatal_error
 	}
 
 	if totcnt, er = btc.ReadVLen(rd); er != nil {
 		goto fatal_error
+	}
+	if totcnt == FILE_VERSION_3 {
+		mempool_file_version_3 = true
+		if totcnt, er = btc.ReadVLen(rd); er != nil {
+			goto fatal_error
+		}
 	}
 
 	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
@@ -127,7 +138,7 @@ func MempoolLoad2() bool {
 
 		t2s.Tx, i = btc.NewTx(raw)
 		if t2s.Tx == nil || i != len(raw) {
-			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME2, " at idx", len(TransactionsToSend)))
+			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME, " at idx", len(TransactionsToSend)))
 			goto fatal_error
 		}
 		t2s.Tx.SetHash(raw)
@@ -153,6 +164,15 @@ func MempoolLoad2() bool {
 			goto fatal_error
 		}
 		t2s.Firstseen = time.Unix(int64(tina), 0)
+
+		if mempool_file_version_3 {
+			if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
+				goto fatal_error
+			}
+			t2s.Lastseen = time.Unix(int64(tina), 0)
+		} else {
+			t2s.Lastseen = time.Now()
+		}
 
 		if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
 			goto fatal_error
@@ -213,7 +233,7 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
-		er = errors.New(MEMPOOL_FILE_NAME2 + " has marker missing")
+		er = errors.New(MEMPOOL_FILE_NAME + " has marker missing")
 		goto fatal_error
 	}
 
@@ -235,13 +255,13 @@ func MempoolLoad2() bool {
 		}
 	}
 
-	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME2)
+	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME)
 	//fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
 
 	return true
 
 fatal_error:
-	fmt.Println("Error loading", MEMPOOL_FILE_NAME2, ":", er.Error())
+	fmt.Println("Error loading", MEMPOOL_FILE_NAME, ":", er.Error())
 	TransactionsToSend = make(map[BIDX]*OneTxToSend)
 	TransactionsToSendSize = 0
 	TransactionsToSendWeight = 0

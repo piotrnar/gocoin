@@ -258,7 +258,7 @@ function draw_chart() {
 		}
 	}
 	chart_type_ord_prev = chart_type_ord.checked
-	
+
 	var aj = ajax()
 	aj.onerror=function() {
 		setTimeout(draw_chart, 1000)
@@ -354,7 +354,7 @@ function draw_chart() {
 					}
 				}
 			}
-			
+
 			plot_options.yaxis.max = chart_type_ord.checked ? 100 : null
 			$("#chart").bind("plothover", handlehover)
 			$("#chart").bind("plotclick", handleclick)
@@ -500,11 +500,11 @@ function refreshtxstat() {
 	aj.onload=function() {
 		try {
 			var ts = JSON.parse(aj.responseText)
-			ts_t2s_size.innerText = bignum(ts.t2s_size)+'B'
-			ts_t2s_size.title = ts.t2s_cnt + ' transactions accepted'
+			ts_t2s_size.innerText = bignum(ts.t2s_size_core)+'B'
+			ts_t2s_size.title = ts.t2s_cnt + ' txs accepted, ' + bignum(ts.t2s_size)+'B'
 			outspent.innerText = ts.spent_outs_cnt
 			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
-			ts_tre_size.title = ts.tre_cnt + ' transactions rejected'
+			ts_tre_size.title = ts.tre_cnt + ' txs rejected'
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(1)
 		} catch(e) {
 			console.log(e)

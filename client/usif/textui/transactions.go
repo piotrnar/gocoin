@@ -264,10 +264,10 @@ func push_old_txs(par string) {
 		}
 		commit = len(ss) >= 2 && ss[1] == "yes"
 	}
-	fmt.Printf("Looking for 1+ day old txs with SPB above %.1f\n", max_spb)
+	fmt.Printf("Looking for txs last seen over a day ago with SPB above %.1f\n", max_spb)
 	network.TxMutex.Lock()
 	for _, tx := range network.TransactionsToSend {
-		if tx.MemInputCnt == 0 && time.Since(tx.Firstseen) > 24*time.Hour {
+		if tx.MemInputCnt == 0 && time.Since(tx.Lastseen) > 24*time.Hour {
 			spb := tx.SPB()
 			if spb >= max_spb {
 				wg := tx.Weight()
@@ -275,7 +275,7 @@ func push_old_txs(par string) {
 					invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*spb))
 				} else {
 					fmt.Printf("%d) %s  %.1f spb, %.1f kW,  %.1f day\n", cnt+1, tx.Hash.String(), spb,
-						float64(wg)/1000.0, float64(time.Since(tx.Firstseen))/float64(24*time.Hour))
+						float64(wg)/1000.0, float64(time.Since(tx.Lastseen))/float64(24*time.Hour))
 				}
 				cnt++
 				weight += uint64(wg)
