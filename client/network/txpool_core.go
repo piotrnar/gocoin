@@ -510,7 +510,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		newsize := TransactionsToSendSize + uint64(len(tx.Raw))
 		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
-			expireTxsNow = true
+			limitTxpoolSizeNow = true
 		}
 		TransactionsToSendSize = newsize
 	} else {

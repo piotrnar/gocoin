@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	expireTxsNow  bool = true
-	lastTxsExpire time.Time
+	limitTxpoolSizeNow bool = true
+	lastTxsPoolLimit   time.Time
+	nextTxsPoolExpire  time.Time = time.Now().Add(time.Hour)
 )
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
@@ -638,9 +639,43 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	return
 }
 
-func ExpireTxs() {
-	lastTxsExpire = time.Now()
-	expireTxsNow = false
+func ExpireOldTxs() {
+	dur := common.GetDuration(&common.TxExpireAfter)
+	if dur == 0 {
+		// tx expiting disabled
+		//fmt.Print("ExpireOldTxs() - disabled\n> ")
+		return
+	}
+	//fmt.Print("ExpireOldTxs()... ")
+	expire_before := time.Now().Add(-dur)
+	var todel []*OneTxToSend
+	TxMutex.Lock()
+	for _, v := range TransactionsToSend {
+		if v.Lastseen.Before(expire_before) {
+			todel = append(todel, v)
+		}
+	}
+	if len(todel) > 0 {
+		totcnt := len(TransactionsToSend)
+		for _, vtx := range todel {
+			// remove with all the children
+			vtx.Delete(true, 0) // reason 0 does nont add it to the rejected list
+		}
+		totcnt -= len(TransactionsToSend)
+		common.CountAdd("TxPoolExpParent", uint64(len(todel)))
+		common.CountAdd("TxPoolExpChild", uint64(totcnt-len(todel)))
+		fmt.Print("ExpireOldTxs: ", len(todel), " -> ", totcnt, " txs expired from mempool\n> ")
+	} else {
+		common.CountSafe("TxPoolExpireNone")
+		//fmt.Println("nothing expired\n> ")
+	}
+	TxMutex.Unlock()
+	common.CountSafe("TxPoolExpireTicks")
+}
+
+func LimitTxpoolSize() {
+	lastTxsPoolLimit = time.Now()
+	limitTxpoolSizeNow = false
 
 	TxMutex.Lock()
 
@@ -652,5 +687,5 @@ func ExpireTxs() {
 
 	TxMutex.Unlock()
 
-	common.CountSafe("TxPurgedTicks")
+	common.CountSafe("TxPollLImitTicks")
 }

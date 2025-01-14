@@ -604,10 +604,15 @@ func NetworkTick() {
 		}
 	}
 
-	if expireTxsNow {
-		ExpireTxs()
-	} else if now.After(lastTxsExpire.Add(time.Minute)) {
-		expireTxsNow = true
+	if limitTxpoolSizeNow {
+		LimitTxpoolSize()
+	} else if now.After(lastTxsPoolLimit.Add(time.Minute)) {
+		limitTxpoolSizeNow = true
+	}
+
+	if now.After(nextTxsPoolExpire) {
+		ExpireOldTxs()
+		nextTxsPoolExpire = now.Add(time.Hour)
 	}
 }
 

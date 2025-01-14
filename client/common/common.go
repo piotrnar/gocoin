@@ -59,6 +59,7 @@ var (
 	DropSlowestEvery time.Duration
 	BlockExpireEvery time.Duration
 	PingPeerEvery    time.Duration
+	TxExpireAfter    time.Duration
 
 	UserAgent string
 

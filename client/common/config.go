@@ -78,6 +78,7 @@ var (
 			FeePerByte     float64
 			MaxTxSize      uint32
 			MaxSizeMB      uint
+			ExpireInDays   uint
 			MaxRejectMB    uint
 			MaxRejectCnt   uint
 			SaveOnDisk     bool
@@ -164,6 +165,7 @@ func InitConfig() {
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.MaxSizeMB = 300
+	CFG.TXPool.ExpireInDays = 7
 	CFG.TXPool.MaxRejectMB = 25
 	CFG.TXPool.MaxRejectCnt = 5000
 	CFG.TXPool.SaveOnDisk = true
@@ -357,6 +359,7 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
+	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
 	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB))

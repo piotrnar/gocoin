@@ -121,7 +121,7 @@ func BlockMined(bl *btc.Block) {
 		}
 	}
 
-	expireTxsNow = true
+	limitTxpoolSizeNow = true
 }
 
 // MarkChildrenForMem sets the MemInput flag of all the children (used when a tx is mined).
