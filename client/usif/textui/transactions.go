@@ -251,18 +251,28 @@ func get_mempool(par string) {
 }
 
 func push_old_txs(par string) {
-	var invs, cnt uint32
+	var invs uint32
 	var weight uint64
 	var max_spb float64
 	var er error
-	var commit bool
+	var push, purge bool
+	var txs_found []*network.OneTxToSend
 	ss := strings.SplitN(par, " ", 2)
 	if len(ss) >= 1 {
 		max_spb, er = strconv.ParseFloat(ss[0], 64)
 		if er != nil {
 			max_spb = 10.0
 		}
-		commit = len(ss) >= 2 && ss[1] == "yes"
+		if len(ss) >= 2 {
+			if ss[1] == "push" {
+				push = true
+			} else if ss[1] == "purge" {
+				purge = true
+			} else {
+				fmt.Println("The second argument must be eiter push or purge")
+			}
+		}
+
 	}
 	fmt.Printf("Looking for txs last seen over a day ago with SPB above %.1f\n", max_spb)
 	network.TxMutex.Lock()
@@ -271,21 +281,32 @@ func push_old_txs(par string) {
 			spb := tx.SPB()
 			if spb >= max_spb {
 				wg := tx.Weight()
-				if commit {
-					invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*spb))
-				} else {
-					fmt.Printf("%d) %s  %.1f spb, %.1f kW,  %.1f day\n", cnt+1, tx.Hash.String(), spb,
+				txs_found = append(txs_found, tx)
+				weight += uint64(wg)
+				if !push && !purge {
+					fmt.Printf("%d) %s  %.1f spb, %.1f kW,  %.1f day\n", len(txs_found), tx.Hash.String(), spb,
 						float64(wg)/1000.0, float64(time.Since(tx.Lastseen))/float64(24*time.Hour))
 				}
-				cnt++
-				weight += uint64(wg)
 			}
 		}
 	}
-	fmt.Println("Found", cnt, "/", len(network.TransactionsToSend), "txs matching the criteria")
+	totlen := len(network.TransactionsToSend)
+	fmt.Println("Found", len(txs_found), "/", totlen, "txs matching the criteria, with total weight of", weight)
+	if push || purge {
+		for _, tx := range txs_found {
+			if push {
+				invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*tx.SPB()))
+			} else if purge {
+				tx.Delete(true, 0)
+			}
+		}
+		fmt.Println("Number of invs sent:", invs)
+		fmt.Println("Number of txs purged:", totlen-len(network.TransactionsToSend))
+	} else {
+		fmt.Println("Add push to broadcast them to peers, or purge to delete them from mempool")
+	}
 	network.TxMutex.Unlock()
-	fmt.Println("Total weigth:", weight, "   number of invs sent:", invs)
-	if !commit {
+	if !push {
 		fmt.Printf("Execute 'pusholdtxs %.1f yes' to send all the invs\n", max_spb)
 	}
 }
@@ -305,5 +326,5 @@ func init() {
 	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
 	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
 	newUi("getmp mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
-	newUi("pusholdtxs pot", true, push_old_txs, "Push old txs <SPB> [yes]")
+	newUi("txold to", true, push_old_txs, "Push or delete old txs [<SPB> [push | purge]]")
 }
