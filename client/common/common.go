@@ -21,7 +21,7 @@ import (
 const (
 	Version = uint32(70015)
 
-	TX_SIZE_RAM_MULTIPLIER = 3.48 // we assume that each tx takes so much more RAM than its raw size
+	TX_SIZE_RAM_MULTIPLIER = 3 // we assume that each tx takes so much more RAM than its raw size
 )
 
 var (
