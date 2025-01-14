@@ -37,7 +37,6 @@ func send_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
 	network.TxMutex.Lock()
@@ -58,7 +57,6 @@ func send1_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
 	network.TxMutex.Lock()
@@ -79,7 +77,6 @@ func del_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
 	network.TxMutex.Lock()
@@ -95,16 +92,69 @@ func del_tx(par string) {
 	fmt.Println("Transaction", txid.String(), "and all its children removed from the memory pool")
 }
 
-func dec_tx(par string) {
-	txid := btc.NewUint256FromString(par)
+func local_tx(par string) {
+	ps := strings.SplitN(par, " ", 3)
+	txid := btc.NewUint256FromString(ps[0])
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
+	local := len(ps) == 1 || ps[1] != "0"
+	if tx := network.TransactionsToSend[txid.BIdx()]; tx != nil {
+		if tx.Local != local {
+			tx.Local = local
+		} else {
+			fmt.Println("This transaction is already marked as such.")
+		}
+	} else {
+		fmt.Println("No such transaction ID in the memory pool.")
+	}
+}
+
+func decode_tx(pars string) {
+	ps := strings.SplitN(pars, " ", 3)
+	txid := btc.NewUint256FromString(ps[0])
+	if txid == nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		return
+	}
+	var par string
+	if len(ps) > 1 {
+		par = ps[1]
+	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
-		fmt.Println(s)
+		var done bool
+		if par == "raw" || par == "all" {
+			fmt.Println(hex.EncodeToString(tx.Raw))
+			done = true
+		}
+		if par == "int" || par == "all" {
+			if done {
+				fmt.Println()
+			}
+			fmt.Println("Invs sent cnt:", tx.Invsentcnt)
+			fmt.Println("Tx sent cnt:", tx.SentCnt)
+			fmt.Println("Frst seen:", tx.Firstseen.Format("2006-01-02 15:04:05"))
+			fmt.Println("Last seen:", tx.Lastseen.Format("2006-01-02 15:04:05"))
+			fmt.Println("Last sent:", tx.Lastsent.Format("2006-01-02 15:04:05"))
+			fmt.Println("Local:", tx.Local)
+			fmt.Println("Spent:", len(tx.Spent), "recs")
+			fmt.Println("Volume:", tx.Volume)
+			fmt.Println("Fee:", tx.Fee)
+			fmt.Println("Blocked:", tx.Blocked)
+			fmt.Println("MemInputCnt:", tx.MemInputCnt, " ", tx.MemInputs)
+			fmt.Println("SigopsCost:", tx.SigopsCost)
+			fmt.Println("Final:", tx.Final)
+			fmt.Println("VerifyTime:", tx.VerifyTime.String())
+			done = true
+		}
+		if !done || par == "all" {
+			if done {
+				fmt.Println()
+			}
+			s, _, _, _, _ := usif.DecodeTx(tx.Tx)
+			fmt.Print(s)
+		}
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
 	}
@@ -312,19 +362,20 @@ func push_old_txs(par string) {
 }
 
 func init() {
-	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
-	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
-	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer (identified by a given <txid>)")
-	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
-	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
-	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
-	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to <max_weigth> (default 4M)")
+	newUi("mpcheck mpc", true, check_txs, "Verify consistency of mempool")
+	newUi("mpget mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
+	newUi("mpload mpl", true, load_mempool, "Load transaction from disk: [filename]")
+	newUi("mpsave mps", true, save_mempool, "Save memory pool to disk")
+	newUi("mpstat mp", true, mempool_stats, "Show the mempool statistics")
+	newUi("savetx txs", true, save_tx, "Save raw transaction from memory pool to disk: <txid>")
+	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer: <txid>")
+	newUi("txdecode td", true, decode_tx, "Decode transaction from memory pool: <txid> [int|raw|all]")
+	newUi("txdel", true, del_tx, "Remove a transaction from memory pool: <txid>")
+	newUi("txlist ltx", true, list_txs, "List transaction from memory pool up to: <max_weigth> (default 4M)")
 	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
-	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
-	newUi("savetx txsave", true, save_tx, "Save raw transaction from memory pool to disk")
-	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
-	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
-	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
-	newUi("getmp mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
-	newUi("txold to", true, push_old_txs, "Push or delete old txs [<SPB> [push | purge]]")
+	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
+	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
+	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
+	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
+	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
 }
