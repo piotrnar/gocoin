@@ -500,9 +500,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRemovedByRBF")
 	}
 
-	now := time.Now()
 	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local, Fee: fee,
-		Firstseen: now, Lastseen: now, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
+		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
 	TransactionsToSend[bidx] = rec
