@@ -1,6 +1,8 @@
 package btc
 
 import (
+	"bufio"
+	"bytes"
 	"testing"
 )
 
@@ -8,7 +10,7 @@ func TestParseAmount(t *testing.T) {
 	var tv = []struct {
 		af string
 		ai uint64
-	} {
+	}{
 		{"84.3449", 8434490000},
 		{"84.3448", 8434480000},
 		{"84.3447", 8434470000},
@@ -54,8 +56,38 @@ func TestParseAmount(t *testing.T) {
 	}
 	for i := range tv {
 		res, _ := StringToSatoshis(tv[i].af)
-		if res!=tv[i].ai {
+		if res != tv[i].ai {
 			t.Error("Mismatch at index", i, tv[i].af, res, tv[i].ai)
+		}
+	}
+}
+
+func TestVarInt(t *testing.T) {
+	var tv = []uint64{
+		0x0,
+		0x7f, 0x80,
+		0x407f, 0x4080,
+		0x20407f, 0x204080,
+		0x1020407f, 0x10204080,
+		0x81020407f, 0x810204080,
+		0xffffffffffffffff,
+	}
+	for i, val := range tv {
+		buf := new(bytes.Buffer)
+		wr := bufio.NewWriter(buf)
+		if er := WriteVarInt(wr, val); er != nil {
+			t.Error("WriteVarInt error at index", i, val, er.Error())
+			continue
+		}
+		wr.Flush()
+		var_int := buf.Bytes()
+		n, er := ReadVarInt(bufio.NewReader(bytes.NewBuffer(var_int)))
+		if er != nil {
+			t.Error("ReadVarInt error at index", i, val, er.Error())
+			continue
+		}
+		if n != val {
+			t.Error("Mismatch at index", i, tv[i])
 		}
 	}
 }

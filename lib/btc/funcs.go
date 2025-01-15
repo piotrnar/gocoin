@@ -165,7 +165,7 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 	return
 }
 
-// As used by core's script compress/decompress
+// As used by core's script compress/decompress and in LevelDB chainstate Database
 func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
 	var chData byte
 	for {
@@ -177,6 +177,35 @@ func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
 			return
 		}
 	}
+}
+
+// As used by core's script compress/decompress and in LevelDB chainstate Database
+func WriteVarInt(wr *bufio.Writer, n uint64) (er error) {
+	var tmp [10]byte
+	var le, idx int
+	for {
+		if le > 0 {
+			tmp[le] = byte(n&0x7F) | 0x80
+		} else {
+			tmp[le] = byte(n & 0x7F)
+		}
+		if n <= 0x7F {
+			break
+		}
+		n = (n >> 7) - 1
+		le++
+	}
+	for {
+		if er = wr.WriteByte(tmp[le]); er != nil {
+			return
+		}
+		if le == 0 {
+			break
+		}
+		le--
+		idx++
+	}
+	return
 }
 
 // ReadVLen reads var_len from the given reader.
