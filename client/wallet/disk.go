@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	CURRENT_FILE_VERSION = 1
+	CURRENT_FILE_VERSION = 2
 	BALANCES_SUBDIR      = "bal"
 )
 
@@ -29,16 +29,16 @@ func dump_folder_name() string {
 		CURRENT_FILE_VERSION)
 }
 
-func (b *OneAllAddrBal) Save(key []byte, of io.Writer) {
+func (b *OneAllAddrBal) Save(key []byte, of *bufio.Writer) {
 	of.Write(key)
-	btc.WriteVlen(of, btc.CompressAmount(b.Value))
+	btc.WriteVarInt(of, btc.CompressAmount(b.Value))
 	if b.unsp != nil {
-		btc.WriteVlen(of, uint64(len(b.unsp)))
+		btc.WriteVarInt(of, uint64(len(b.unsp)))
 		for _, u := range b.unsp {
 			of.Write(u[:])
 		}
 	} else if len(b.unspMap) != 0 {
-		btc.WriteVlen(of, uint64(len(b.unspMap)))
+		btc.WriteVarInt(of, uint64(len(b.unspMap)))
 		for k := range b.unspMap {
 			of.Write(k[:])
 		}
@@ -47,15 +47,15 @@ func (b *OneAllAddrBal) Save(key []byte, of io.Writer) {
 	}
 }
 
-func newAddrBal(rd io.Reader) (res *OneAllAddrBal) {
+func newAddrBal(rd *bufio.Reader) (res *OneAllAddrBal) {
 	b := new(OneAllAddrBal)
-	le, er := btc.ReadVLen(rd)
+	le, er := btc.ReadVarInt(rd)
 	if er != nil {
 		return
 	}
 	b.Value = btc.DecompressAmount(le)
 
-	if le, er = btc.ReadVLen(rd); er != nil {
+	if le, er = btc.ReadVarInt(rd); er != nil {
 		return
 	}
 	if le == 0 {
@@ -102,6 +102,7 @@ func load_map(dir string, idx int, wg *sync.WaitGroup) {
 			}
 			themap[string(ke)] = newAddrBal(rd)
 		}
+		f.Close()
 		AllBalances[idx] = themap
 	}
 }
