@@ -152,8 +152,7 @@ func decode_tx(pars string) {
 			if done {
 				fmt.Println()
 			}
-			s, _, _, _, _ := usif.DecodeTx(tx.Tx)
-			fmt.Print(s)
+			usif.DecodeTx(os.Stdout, tx.Tx)
 		}
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
@@ -15,8 +15,8 @@ import (
 	"github.com/piotrnar/gocoin/client/network/peersdb"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/rawtxlib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/script"
 )
 
 type OneUiReq struct {
@@ -40,280 +40,31 @@ var (
 
 	FetchingBalances sys.SyncBool
 	Exit_now         sys.SyncBool
-
-	print_buffer string
 )
 
-func hex_dump(d []byte) (s string) {
-	for {
-		le := 32
-		if len(d) < le {
-			le = len(d)
+func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {
+	inpid := btc.NewUint256(prevout.Hash[:])
+	if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
+		if int(prevout.Vout) >= len(txinmem.TxOut) {
+			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(txinmem.TxOut))
+		} else {
+			po = txinmem.TxOut[prevout.Vout]
 		}
-		s += "       " + hex.EncodeToString(d[:le]) + "\n"
-		d = d[le:]
-		if len(d) == 0 {
-			return
-		}
+	} else {
+		po = common.BlockChain.Unspent.UnspentGet(prevout)
 	}
+	return
 }
 
-func dump_raw_sigscript(d []byte) bool {
-	ss, er := btc.ScriptToText(d)
-	if er != nil {
-		println(er.Error())
-		return false
-	}
-
-	p2sh := len(ss) >= 2 && d[0] == 0
-	if p2sh {
-		ms, er := btc.NewMultiSigFromScript(d)
-		if er == nil {
-			print_buffer += fmt.Sprintln("      Multisig script", ms.SigsNeeded, "of", len(ms.PublicKeys))
-			for i := range ms.PublicKeys {
-				print_buffer += fmt.Sprintf("       pkey%d = %s\n", i+1, hex.EncodeToString(ms.PublicKeys[i]))
-			}
-			for i := range ms.Signatures {
-				print_buffer += fmt.Sprintf("       R%d = %64s\n", i+1, hex.EncodeToString(ms.Signatures[i].R.Bytes()))
-				print_buffer += fmt.Sprintf("       S%d = %64s\n", i+1, hex.EncodeToString(ms.Signatures[i].S.Bytes()))
-				print_buffer += fmt.Sprintf("       HashType%d = %02x\n", i+1, ms.Signatures[i].HashType)
-			}
-			return len(ms.Signatures) >= int(ms.SigsNeeded)
-		} else {
-			println(er.Error())
-		}
-	}
-
-	print_buffer += fmt.Sprintln("      SigScript:")
-	for i := range ss {
-		if p2sh && i == len(ss)-1 {
-			// Print p2sh script
-			d, _ = hex.DecodeString(ss[i])
-			s2, er := btc.ScriptToText(d)
-			if er != nil {
-				println(er.Error())
-				p2sh = false
-				print_buffer += fmt.Sprintln("       ", ss[i])
-				continue
-				//return
-			}
-			print_buffer += fmt.Sprintln("        P2SH spend script:")
-			for j := range s2 {
-				print_buffer += fmt.Sprintln("        ", s2[j])
-			}
-		} else {
-			print_buffer += fmt.Sprintln("       ", ss[i])
-		}
-	}
-	return true
-}
-
-func dump_sigscript(d []byte) bool {
-	if len(d) == 0 {
-		print_buffer += fmt.Sprintln("       WARNING: Empty sigScript")
-		return false
-	}
-	rd := bytes.NewReader(d)
-
-	// ECDSA Signature
-	le, _ := rd.ReadByte()
-	if le < 0x40 {
-		return dump_raw_sigscript(d)
-	}
-	sd := make([]byte, le)
-	_, er := rd.Read(sd)
-	if er != nil {
-		return dump_raw_sigscript(d)
-	}
-	sig, er := btc.NewSignature(sd)
-	if er != nil {
-		return dump_raw_sigscript(d)
-	}
-	print_buffer += fmt.Sprintf("       R = %64s\n", hex.EncodeToString(sig.R.Bytes()))
-	print_buffer += fmt.Sprintf("       S = %64s\n", hex.EncodeToString(sig.S.Bytes()))
-	print_buffer += fmt.Sprintf("       HashType = %02x\n", sig.HashType)
-
-	// Key
-	le, er = rd.ReadByte()
-	if er != nil {
-		print_buffer += fmt.Sprintln("       WARNING: PublicKey not present")
-		print_buffer += fmt.Sprint(hex_dump(d))
-		return false
-	}
-
-	sd = make([]byte, le)
-	_, er = rd.Read(sd)
-	if er != nil {
-		print_buffer += fmt.Sprintln("       WARNING: PublicKey too short", er.Error())
-		print_buffer += fmt.Sprint(hex_dump(d))
-		return false
-	}
-
-	print_buffer += fmt.Sprintf("       PublicKeyType = %02x\n", sd[0])
-	key, er := btc.NewPublicKey(sd)
-	if er != nil {
-		print_buffer += fmt.Sprintln("       WARNING: PublicKey broken", er.Error())
-		print_buffer += fmt.Sprint(hex_dump(d))
-		return false
-	}
-	print_buffer += fmt.Sprintf("       X = %64s\n", key.X.String())
-	if le >= 65 {
-		print_buffer += fmt.Sprintf("       Y = %64s\n", key.Y.String())
-	}
-
-	if rd.Len() != 0 {
-		print_buffer += fmt.Sprintln("       WARNING: Extra bytes at the end of sigScript")
-		print_buffer += fmt.Sprint(hex_dump(d[len(d)-rd.Len():]))
-	}
-	return true
-}
-
-func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {
-	s += fmt.Sprintln("ID:", tx.Hash.String())
-	s += fmt.Sprintln("WTxID:", tx.WTxID().String())
-	s += fmt.Sprintln("Tx Version:", tx.Version)
-	if tx.SegWit != nil {
-		s += fmt.Sprintln("Segregated Witness transaction", len(tx.SegWit))
-	} else {
-		s += fmt.Sprintln("Regular (non-SegWit) transaction", len(tx.SegWit))
-	}
-	sigops = btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
-	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
-	ss := make([]string, len(tx.TxIn))
-	s += fmt.Sprintln("TX IN cnt:", len(tx.TxIn))
-	for i := range tx.TxIn {
-		ss[i] += fmt.Sprintf("%4d) %s\n     scr_len=%d    seq=%08x    ", i, tx.TxIn[i].Input.String(), len(tx.TxIn[i].ScriptSig), tx.TxIn[i].Sequence)
-		var po *btc.TxOut
-
-		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
-			ss[i] += "from mempool"
-			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				ss[i] += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
-			} else {
-				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
-			}
-		} else {
-			po = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-			if po != nil {
-				ss[i] += fmt.Sprintf("from block %d", po.BlockHeight)
-			}
-		}
-		tx.Spent_outputs[i] = po
-	}
-	var unsigned uint64
-	for i := range tx.TxIn {
-		s += ss[i]
-		po := tx.Spent_outputs[i]
-		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount: po.Value, Idx: i, Tx: tx}, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
-			if !ok {
-				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
-				e = errors.New("invalid signature")
-			}
-			totinp += po.Value
-
-			ads := "???"
-			if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
-				ads = ad.String()
-			}
-			s += fmt.Sprintf("\n%15s BTC from address %s\n", btc.UintToBtc(po.Value), ads)
-
-			if len(tx.TxIn[i].ScriptSig) > 0 {
-				print_buffer = ""
-				if !dump_sigscript(tx.TxIn[i].ScriptSig) {
-					unsigned++
-				}
-				s += print_buffer
-			} else {
-				if tx.SegWit == nil || len(tx.SegWit[i]) < 2 {
-					if i < len(tx.SegWit) && len(tx.SegWit[i]) == 1 && (len(tx.SegWit[i][0])|1) == 65 {
-						s += fmt.Sprintln("      Schnorr signature:")
-						s += fmt.Sprintln("       ", hex.EncodeToString(tx.SegWit[i][0][:32]))
-						s += fmt.Sprintln("       ", hex.EncodeToString(tx.SegWit[i][0][32:]))
-						if len(tx.SegWit[i][0]) == 65 {
-							s += fmt.Sprintf("        Hash Type 0x%02x\n", tx.SegWit[i][0][64])
-						}
-						goto skip_wintesses
-					} else {
-						unsigned++
-					}
-				}
-			}
-			if tx.SegWit != nil {
-				s += fmt.Sprintln("      Witness data:")
-				for _, ww := range tx.SegWit[i] {
-					if len(ww) == 0 {
-						s += fmt.Sprintln("       ", "OP_0")
-					} else {
-						s += fmt.Sprintln("       ", hex.EncodeToString(ww))
-					}
-				}
-			}
-		skip_wintesses:
-
-			if btc.IsP2SH(po.Pk_script) {
-				so := btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
-				s += fmt.Sprintf("  + %d sigops", so)
-				sigops += so
-			}
-
-			swo := tx.CountWitnessSigOps(i, po.Pk_script)
-			if swo > 0 {
-				s += fmt.Sprintf("  + %d segops", swo)
-				sigops += swo
-			}
-
-			s += "\n"
-		} else {
-			s += fmt.Sprintln(" - UNKNOWN INPUT")
-			missinginp = true
-		}
-	}
-	s += fmt.Sprintln("TX OUT cnt:", len(tx.TxOut))
-	for i := range tx.TxOut {
-		totout += tx.TxOut[i].Value
-		adr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet)
-		if adr != nil {
-			s += fmt.Sprintf("%4d) %20s BTC  to adr %s\n", i, btc.UintToBtc(tx.TxOut[i].Value),
-				adr.String())
-		} else {
-			s += fmt.Sprintf("%4d) %20s BTC  to scr %s\n", i, btc.UintToBtc(tx.TxOut[i].Value),
-				hex.EncodeToString(tx.TxOut[i].Pk_script))
-		}
-	}
-	s += fmt.Sprintln("Lock Time:", tx.Lock_time)
-	s += fmt.Sprintln("Transaction Size:", tx.Size, "   NoWitSize:", tx.NoWitSize,
-		"   Weight:", tx.Weight(), "   VSize:", tx.VSize())
-
-	if unsigned > 0 {
-		s += fmt.Sprintln("WARNING:", unsigned, "out of", len(tx.TxIn), "inputs are not signed or signed only patially")
-	} else {
-		s += fmt.Sprintln("All", len(tx.TxIn), "transaction inputs seem to be signed")
-	}
-
-	if missinginp {
-		s += fmt.Sprintln("WARNING: There are missing inputs and we cannot calc input BTC amount.")
-		s += fmt.Sprintln("If there is somethign wrong with this transaction, you can loose money...")
-	} else {
-		total_fee := float64(totinp - totout)
-		fee_spb := total_fee / float64(tx.VSize())
-		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee (%.2f SPB)\n",
-			float64(totinp)/1e8, float64(totout)/1e8, total_fee/1e8, fee_spb)
+func DecodeTx(o io.Writer, tx *btc.Tx) {
+	totinp, totout, missinginp := rawtxlib.Decode(o, tx, getpo, common.Testnet, false)
+	if missinginp == 0 {
+		fee_spb := float64(totinp-totout) / float64(tx.VSize())
 		avg_fee := GetAverageFee()
-		if fee_spb > 2*GetAverageFee() {
-			s += fmt.Sprintf("WARNING: High fee SPB of %.02f (vs %.02f average).\n", fee_spb, avg_fee)
+		if fee_spb > 2*avg_fee {
+			fmt.Fprintf(o, "WARNING: High fee SPB of %.02f (vs %.02f average).\n", fee_spb, avg_fee)
 		}
 	}
-
-	s += fmt.Sprintln("ECDSA sig operations : ", sigops)
-
-	return
-}
-
-func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e error) {
-	s, missinginp, totinp, totout, _, e = DecodeTxSops(tx)
-	return
 }
 
 func LoadRawTx(buf []byte) (s string) {
@@ -330,7 +81,9 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 	tx.SetHash(txd)
 
-	s, _, _, _, _ = DecodeTx(tx)
+	wb := new(bytes.Buffer)
+	DecodeTx(wb, tx)
+	s = wb.String()
 
 	network.RemoveFromRejected(&tx.Hash) // in case we rejected it eariler, to try it again as trusted
 
@@ -523,8 +276,4 @@ func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx 
 	}
 	network.MutexRcv.Unlock()
 	return
-}
-
-func init() {
-	rand.Seed(int64(time.Now().Nanosecond()))
 }

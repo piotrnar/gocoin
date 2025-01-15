@@ -454,8 +454,7 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	txid := btc.NewUint256FromString(r.Form["id"][0])
 	fmt.Fprintln(w, "TxID:", txid.String())
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
-		w.Write([]byte(s))
+		usif.DecodeTx(w, tx.Tx)
 	} else {
 		fmt.Fprintln(w, "Not found")
 	}
