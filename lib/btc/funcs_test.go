@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+var var_int_tvs = []uint64{
+	0x0,
+	0x7f, 0x80,
+	0x407f, 0x4080,
+	0x20407f, 0x204080,
+	0x1020407f, 0x10204080,
+	0x81020407f, 0x810204080,
+	0xffffffffffffffff,
+}
+
 func TestParseAmount(t *testing.T) {
 	var tv = []struct {
 		af string
@@ -63,22 +73,10 @@ func TestParseAmount(t *testing.T) {
 }
 
 func TestVarInt(t *testing.T) {
-	var tv = []uint64{
-		0x0,
-		0x7f, 0x80,
-		0x407f, 0x4080,
-		0x20407f, 0x204080,
-		0x1020407f, 0x10204080,
-		0x81020407f, 0x810204080,
-		0xffffffffffffffff,
-	}
-	for i, val := range tv {
+	for i, val := range var_int_tvs {
 		buf := new(bytes.Buffer)
 		wr := bufio.NewWriter(buf)
-		if er := WriteVarInt(wr, val); er != nil {
-			t.Error("WriteVarInt error at index", i, val, er.Error())
-			continue
-		}
+		WriteVarInt(wr, val)
 		wr.Flush()
 		var_int := buf.Bytes()
 		n, er := ReadVarInt(bufio.NewReader(bytes.NewBuffer(var_int)))
@@ -87,7 +85,64 @@ func TestVarInt(t *testing.T) {
 			continue
 		}
 		if n != val {
-			t.Error("Mismatch at index", i, tv[i])
+			t.Error("Mismatch at index", i, var_int_tvs[i])
+		}
+	}
+}
+func BenchmarkVarIntRead(b *testing.B) {
+	recs := make([][]byte, len(var_int_tvs))
+	for i, v := range var_int_tvs {
+		bts := new(bytes.Buffer)
+		wr := bufio.NewWriter(bts)
+		WriteVarInt(wr, v)
+		wr.Flush()
+		recs[i] = bts.Bytes()
+
+	}
+
+	rd := bufio.NewReader(nil)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, rec := range recs {
+			rd.Reset(bytes.NewBuffer(rec))
+			ReadVarInt(rd)
+		}
+	}
+}
+func BenchmarkVarIntWrite(b *testing.B) {
+	wr := bufio.NewWriter(nil)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		wr.Reset(new(bytes.Buffer))
+		for _, v := range var_int_tvs {
+			WriteVarInt(wr, v)
+		}
+		wr.Flush()
+	}
+}
+
+func BenchmarkVLenRead(b *testing.B) {
+	recs := make([][]byte, len(var_int_tvs))
+	for i, v := range var_int_tvs {
+		bts := new(bytes.Buffer)
+		WriteVlen(bts, v)
+		recs[i] = bts.Bytes()
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, rec := range recs {
+			ReadVLen(bytes.NewBuffer(rec))
+		}
+	}
+}
+func BenchmarkVLenWrite(b *testing.B) {
+	wr := new(bytes.Buffer)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, v := range var_int_tvs {
+			wr.Reset()
+			WriteVlen(wr, v)
 		}
 	}
 }

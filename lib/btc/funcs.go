@@ -180,9 +180,9 @@ func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
 }
 
 // As used by core's script compress/decompress and in LevelDB chainstate Database
-func WriteVarInt(wr *bufio.Writer, n uint64) (er error) {
+func WriteVarInt(wr *bufio.Writer, n uint64) {
 	var tmp [10]byte
-	var le, idx int
+	var le int
 	for {
 		if le > 0 {
 			tmp[le] = byte(n&0x7F) | 0x80
@@ -196,16 +196,12 @@ func WriteVarInt(wr *bufio.Writer, n uint64) (er error) {
 		le++
 	}
 	for {
-		if er = wr.WriteByte(tmp[le]); er != nil {
-			return
-		}
+		wr.WriteByte(tmp[le])
 		if le == 0 {
 			break
 		}
 		le--
-		idx++
 	}
-	return
 }
 
 // ReadVLen reads var_len from the given reader.
