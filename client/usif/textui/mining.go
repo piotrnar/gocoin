@@ -11,7 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-func do_mining(s string) {
+func do_miningstat(s string) {
 	var totbtc, hrs, segwit_cnt uint64
 	if s != "" {
 		hrs, _ = strconv.ParseUint(s, 10, 64)
@@ -136,10 +136,11 @@ func do_minstring(s string) {
 }
 
 func init() {
-	newUi("minerstat m", false, do_mining, "Look for the miner ID in recent blocks (optionally specify number of hours)")
-	newUi("minsw", false, do_segwit, "Mine segwit blocks (0 or 1)")
-	newUi("minstop ms", false, do_minon, "Tur off submtting mined blocks (0 or 1)")
-	newUi("minminutes mm", false, do_minsec, "Allow forcing of difficulty one in so many mintes after (before, if negative) last block's timestamp")
-	newUi("minaddr ma", false, do_minaddr, "Set the address to be put inside the coinbase")
-	newUi("minstring mx", false, do_minstring, "Specify the string to be put inside the coinbase")
+	newUi("mining m", false, do_miningstat, "Show mining statistics: [<hours>]")
+
+	newUi("minadr ma", false, do_minaddr, "Minig API: set COINBASE_ADDRESS variable: <string>")
+	newUi("minmin mm", false, do_minsec, "Minig API: set WAIT_FOR_SECONDS variable: <int-minutes>")
+	newUi("minsegw mw", false, do_segwit, "Minig API: set DO_SEGWIT variable: 0|1")
+	newUi("minstop ms", false, do_minon, "Minig API: set DO_NOT_SUBMIT variable: 0|1")
+	newUi("minstr mx", false, do_minstring, "Minig API: set COINBASE_STRING variable: <string>")
 }

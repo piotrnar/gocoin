@@ -306,10 +306,10 @@ func save_balances(s string) {
 }
 
 func init() {
-	newUi("richest r", true, best_val, "Show addresses with most coins [[type] count]")
-	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [[type] count]")
-	newUi("balance a", true, list_unspent, "List balance of given bitcoin address (or raw public key)")
-	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
-	newUi("savebal sb", true, save_balances, "Save all balances to disk [force]")
-	newUi("wallet w", false, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
+	newUi("richest r", true, best_val, "Show addresses with most BTC: [[type] count]")
+	newUi("maxouts o", true, max_outs, "Show addresses with most UTXOs: [[type] count]")
+	newUi("balance a", true, list_unspent, "List UTXOs of BTC address or public key: <string>")
+	newUi("allbal ab", true, all_val_stats, "Show balances DB statistics")
+	newUi("savebal sb", true, save_balances, "Save balances DB to disk: [force]")
+	newUi("wallet w", false, wallet_on_off, "Enable or disable wallet functionality: on|off")
 }

@@ -94,6 +94,6 @@ func gettxchildren(par string) {
 }
 
 func init() {
-	newUi("newblock nb", true, new_block, "build a new block")
-	newUi("txchild ch", true, gettxchildren, "show all the children fo the given tx")
+	newUi("newblock nb", true, new_block, "Build a new block")
+	newUi("txchild ch", true, gettxchildren, "show all mempool children of the given: <txid>")
 }

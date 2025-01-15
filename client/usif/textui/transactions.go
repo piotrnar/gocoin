@@ -167,8 +167,8 @@ func save_tx(par string) {
 		return
 	}
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		fn := tx.Hash.String() + ".txt"
-		os.WriteFile(fn, []byte(hex.EncodeToString(tx.Raw)), 0600)
+		fn := tx.Hash.String() + ".tx"
+		os.WriteFile(fn, tx.Raw, 0600)
 		fmt.Println("Saved to", fn)
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")

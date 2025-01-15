@@ -365,9 +365,11 @@ func sync_stats(par string) {
 
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
-	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
-	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
-	newUi("rd", false, net_rd, "Show recently disconnected incoming connections")
-	newUi("friends", false, net_friends, "Show current friends settings")
-	newUi("ss", true, sync_stats, "Show chain sync statistics. Add charecter 'c' (cache), 'x' (in progress) or 'r' (reset couter)")
+	newUi("netconn conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
+	newUi("netdrop drop", false, net_drop, "Disconenct from node with a given IP")
+	newUi("netfriend", false, net_friends, "Show current friends settings")
+	newUi("netlimd dl", false, set_dlmax, "Set maximum download speed: 0|<max_kbps>")
+	newUi("netlimu ul", false, set_ulmax, "Set maximum download speed: 0|<max_kbps>")
+	newUi("netrd rd", false, net_rd, "Show recently disconnected incoming connections")
+	newUi("netsync ss", true, sync_stats, "Show chain sync statistics. Add charecter 'c' (cache), 'x' (in progress) or 'r' (reset couter)")
 }
