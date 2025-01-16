@@ -108,6 +108,10 @@ func MempoolLoad2() bool {
 	if totcnt, er = btc.ReadVLen(rd); er != nil {
 		goto fatal_error
 	}
+	if totcnt >= 0x80000000 {
+		fmt.Println("New version of the mempool file - do not load it")
+		goto fatal_error
+	}
 
 	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
