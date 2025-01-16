@@ -109,7 +109,7 @@ func MempoolLoad2() bool {
 		goto fatal_error
 	}
 	if totcnt >= 0x80000000 {
-		fmt.Println("New version of the mempool file - do not load it")
+		er = errors.New(MEMPOOL_FILE_NAME2 + " - new version of the file (not supported by this code)")
 		goto fatal_error
 	}
 
