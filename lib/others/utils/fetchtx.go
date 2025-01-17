@@ -125,17 +125,15 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 
 // GetTestnetTxFromWeb downloads a testnet's raw transaction from a web server.
 func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
-	if false {
-		raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet/api/tx/")
-		if raw != nil && verify_txid(txid, raw) {
-			println("Testnet GetTxFromBlockstream - OK")
-			return
-		}
+	raw = GetTxFromBlockstream(txid, "https://blockstream.info/testnet/api/tx/")
+	if raw != nil && verify_txid(txid, raw) {
+		//println("Testnet GetTxFromBlockstream - OK")
+		return
 	}
 
 	raw = GetTxFromMempoolSpace(txid, "testnet/")
 	if raw != nil && verify_txid(txid, raw) {
-		println("GetTxFromMempoolSpace - OK")
+		//println("GetTxFromMempoolSpace - OK")
 		return
 	}
 
