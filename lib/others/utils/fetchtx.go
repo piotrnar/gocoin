@@ -104,19 +104,19 @@ func verify_txid(txid *btc.Uint256, rawtx []byte) bool {
 func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 	raw = GetTxFromBlockstream(txid, "https://blockstream.info/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
-		println("GetTxFromBlockstream - OK")
+		//println("GetTxFromBlockstream - OK")
 		return
 	}
 
 	raw = GetTxFromMempoolSpace(txid, "")
 	if raw != nil && verify_txid(txid, raw) {
-		println("GetTxFromMempoolSpace - OK")
+		//println("GetTxFromMempoolSpace - OK")
 		return
 	}
 
 	raw = GetTxFromBlockchair(txid, "bitcoin")
 	if raw != nil && verify_txid(txid, raw) {
-		println("GetTxFromBlockchair - OK")
+		//println("GetTxFromBlockchair - OK")
 		return
 	}
 
