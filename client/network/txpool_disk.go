@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -68,6 +69,10 @@ func (txr *OneTxRejected) WriteBytes(wr io.Writer) {
 	if txr.Tx != nil {
 		if txr.Size != uint32(len(txr.Tx.Raw)) {
 			println("ERROR: Rejected Tx Size mismatch. THIS SHOUDL NOT HAPPEN - PLEASE REPORT!")
+			println(txr.Id.String())
+			println(txr.Tx.Hash.String())
+			println(txr.Size, uint32(len(txr.Tx.Raw)))
+			println(hex.EncodeToString(txr.Tx.Raw))
 			txr.Tx = nil
 		} else {
 			tmp32 |= HAS_TX_FLAG
@@ -214,41 +219,38 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	var tina uint32
 	var i int
-
 	txr = new(OneTxRejected)
 	txr.Id = new(btc.Uint256)
 	if _, er = io.ReadFull(rd, txr.Id.Hash[:]); er != nil {
 		return
 	}
-
 	if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
 		return
 	}
 	txr.Time = time.Unix(int64(tina), 0)
-
 	if er = binary.Read(rd, binary.LittleEndian, &tina); er != nil {
 		return
 	}
 	txr.Size = tina & (HAS_TX_FLAG - 1)
 	txr.Reason = byte(tina >> 24)
-
 	if (tina & HAS_TX_FLAG) != 0 {
 		raw := make([]byte, txr.Size)
+		if _, er = io.ReadFull(rd, raw); er != nil {
+			return
+		}
 		txr.Tx, i = btc.NewTx(raw)
 		if txr.Tx == nil || i != len(raw) {
-			er = errors.New(fmt.Sprint("Error parsing tx from ", MEMPOOL_FILE_NAME, " at idx ", len(TransactionsToSend)))
+			er = errors.New(fmt.Sprint("Error parsing rejected tx from ", MEMPOOL_FILE_NAME, " at idx ", len(TransactionsRejected)))
 			return
 		}
 		txr.Tx.Hash.Hash = txr.Id.Hash
 	}
-
 	if (tina & HAS_WAITING4_FLAG) != 0 {
 		txr.Waiting4 = new(btc.Uint256)
 		if _, er = io.ReadFull(rd, txr.Waiting4.Hash[:]); er != nil {
 			return
 		}
 	}
-
 	return
 }
 
@@ -362,8 +364,9 @@ func MempoolLoad() bool {
 		}
 	}
 
-	fmt.Println(len(TransactionsToSend), "transactions taking", TransactionsToSendSize, "Bytes loaded from", MEMPOOL_FILE_NAME)
+	fmt.Println(len(TransactionsToSend), "transactions with total size of", TransactionsToSendSize, "bytes loaded from", MEMPOOL_FILE_NAME)
 	//fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
+	fmt.Println("Also loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 
 	return true
 
