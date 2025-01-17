@@ -499,7 +499,7 @@ func main() {
 		}
 
 		if common.CFG.TXPool.SaveOnDisk {
-			network.MempoolLoad2()
+			network.MempoolLoad()
 		}
 
 		usif.LoadBlockFees()

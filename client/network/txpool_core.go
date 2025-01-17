@@ -61,25 +61,25 @@ var (
 type OneTxToSend struct {
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
-	Local                         bool
 	Spent                         []uint64 // Which records in SpentOutputs this TX added
-	Volume, Fee                   uint64
+	Volume                        uint64
 	*btc.Tx
-	Blocked     byte   // if non-zero, it gives you the reason why this tx nas not been routed
 	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
 	MemInputCnt int
 	SigopsCost  uint64
-	Final       bool // if true RFB will not work on it
 	VerifyTime  time.Duration
+	Local       bool
+	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
+	Final       bool // if true RFB will not work on it
 }
 
 type OneTxRejected struct {
 	Id *btc.Uint256
 	time.Time
 	Size     uint32
-	Reason   byte
 	Waiting4 *btc.Uint256
 	*btc.Tx
+	Reason byte
 }
 
 type OneWaitingList struct {
@@ -500,7 +500,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		common.CountSafe("TxRemovedByRBF")
 	}
 
-	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local, Fee: fee,
+	tx.Fee = fee
+	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
