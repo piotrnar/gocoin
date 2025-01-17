@@ -54,12 +54,6 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	}
 	println("GetUnspentFromBlockchair:", er.Error())
 
-	res, er = utils.GetUnspentFromBlockcypher(addr, "ltc")
-	if er == nil {
-		return
-	}
-	println("GetUnspentFromBlockcypher:", er.Error())
-
 	return
 }
 
@@ -79,12 +73,6 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 		return
 	}
 	println("GetTxFromBlockchair failed", len(raw), txid.String())
-
-	raw = utils.GetTxFromBlockcypher(txid, "ltc")
-	if raw != nil && verify_txid(txid, raw) {
-		return
-	}
-	println("GetTxFromBlockcypher failed", len(raw), txid.String())
 
 	return
 }
