@@ -142,6 +142,17 @@ func GetUnspent(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 		println("GetUnspentFromBlockstream:", er.Error())
 	}
 
+	res, er = GetUnspentFromBlockstream(addr, "https://mempool.space/api/address/")
+	if er == nil {
+		if Verbose {
+			println("GetUnspentFromMempoolSpace OK")
+		}
+		return
+	}
+	if Verbose {
+		println("GetUnspentFromMempoolSpace:", er.Error())
+	}
+
 	res, er = GetUnspentFromBlockchair(addr, "bitcoin")
 	if er == nil {
 		if Verbose {
@@ -168,6 +179,17 @@ func GetUnspentTestnet(addr *btc.BtcAddr) (res utxo.AllUnspentTx) {
 	}
 	if Verbose {
 		println("GetUnspentFromBlockstream:", er.Error())
+	}
+
+	res, er = GetUnspentFromBlockstream(addr, "https://mempool.space/testnet/api/address/")
+	if er == nil {
+		if Verbose {
+			println("GetUnspentFromMempoolSpace OK")
+		}
+		return
+	}
+	if Verbose {
+		println("GetUnspentFromMempoolSpace:", er.Error())
 	}
 
 	return

@@ -11,24 +11,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-// GetTxFromMempoolSpace downloads (and re-assembles) raw transaction from blockchain.info.
-func GetTxFromMempoolSpace(txid *btc.Uint256, chain string) (rawtx []byte) {
-	url := "https://mempool.space/" + chain + "api/tx/" + txid.String() + "/raw"
-	r, er := http.Get(url)
-	if er == nil {
-		if r.StatusCode == 200 {
-			defer r.Body.Close()
-			rawtx, er = io.ReadAll(r.Body)
-		} else {
-			fmt.Println("mempool.space StatusCode=", r.StatusCode)
-		}
-	}
-	if er != nil {
-		fmt.Println("mempool.space:", er.Error())
-	}
-	return
-}
-
 func GetTxFromBlockchair(txid *btc.Uint256, currency string) (rawtx []byte) {
 	var r *http.Response
 	var er error
@@ -113,7 +95,7 @@ func GetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 		println("GetTxFromBlockstream error")
 	}
 
-	raw = GetTxFromMempoolSpace(txid, "")
+	raw = GetTxFromBlockstream(txid, "https://mempool.space/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
 			println("GetTxFromMempoolSpace - OK")
@@ -151,7 +133,7 @@ func GetTestnetTxFromWeb(txid *btc.Uint256) (raw []byte) {
 		println("GetTxFromBlockstream error")
 	}
 
-	raw = GetTxFromMempoolSpace(txid, "testnet/")
+	raw = GetTxFromBlockstream(txid, "https://mempool.space/testnet/api/tx/")
 	if raw != nil && verify_txid(txid, raw) {
 		if Verbose {
 			println("GetTxFromMempoolSpace - OK")

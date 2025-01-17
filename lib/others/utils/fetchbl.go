@@ -8,42 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-// GetBlockFromWebBTC downloads a raw block from webbtc.com.
-func GetBlockFromWebBTC(hash *btc.Uint256) (raw []byte) {
-	url := "https://webbtc.com/block/" + hash.String() + ".bin"
-	r, er := http.Get(url)
-	if er == nil {
-		if r.StatusCode == 200 {
-			raw, _ = io.ReadAll(r.Body)
-			r.Body.Close()
-		} else {
-			fmt.Println("webbtc.com StatusCode=", r.StatusCode)
-		}
-	}
-	if er != nil {
-		fmt.Println("webbtc.com:", er.Error())
-	}
-	return
-}
-
-// GetBlockFromMempoolSpace downloads a raw block from blockchain.info.
-func GetBlockFromMempoolSpace(hash *btc.Uint256) (raw []byte) {
-	url := "https://mempool.space/api/block/" + hash.String() + "/raw"
-	r, er := http.Get(url)
-	if er == nil {
-		if r.StatusCode == 200 {
-			defer r.Body.Close()
-			raw, er = io.ReadAll(r.Body)
-		} else {
-			fmt.Println("mempool.space StatusCode=", r.StatusCode)
-		}
-	}
-	if er != nil {
-		fmt.Println("mempool.space:", er.Error())
-	}
-	return
-}
-
 // GetBlockFromBlockstream downloads a raw block from blockstream
 func GetBlockFromBlockstream(hash *btc.Uint256, api_url string) (raw []byte) {
 	url := api_url + hash.String() + "/raw"
@@ -96,7 +60,7 @@ func GetBlockFromWeb(hash *btc.Uint256) (bl *btc.Block) {
 		println("GetTxFromBlockstream error")
 	}
 
-	raw = GetBlockFromMempoolSpace(hash)
+	raw = GetBlockFromBlockstream(hash, "https://mempool.space/api/block/")
 	if bl = IsBlockOK(raw, hash); bl != nil {
 		if Verbose {
 			println("GetBlockFromMempoolSpace - OK")
