@@ -67,7 +67,7 @@ func GetTxFromBlockchair(txid *btc.Uint256, currency string) (rawtx []byte) {
 	}
 
 	if rec, ok := result.Data[txid.String()]; ok {
-		rawtx, er = hex.DecodeString(rec.Raw)
+		rawtx, _ = hex.DecodeString(rec.Raw)
 	}
 
 	return
