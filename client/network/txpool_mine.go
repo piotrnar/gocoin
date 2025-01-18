@@ -102,8 +102,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 		if t.Tx != nil {
 			for _, ti := range t.Tx.TxIn {
 				if spent[ti.Input.UIdx()] {
-					TransactionsRejectedSize -= uint64(len(t.Raw))
-					t.Tx = nil
+					t.Discard()
 					common.CountSafe(fmt.Sprint("TxMinedRTxIn-", t.Reason))
 					break
 				}

@@ -565,7 +565,11 @@ function show_txsre() {
 				c.innerHTML = get_maturity(tim)
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'size')
+				if (xval(txs[i], 'inmem')==='true') {
+					c.innerHTML = '<b>'+xval(txs[i], 'size')+'</b>'
+				} else {
+					c.innerHTML = '<i style="font-size:75%">'+xval(txs[i], 'size')+'</i>'
+				}
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'reason')

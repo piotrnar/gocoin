@@ -244,8 +244,7 @@ func txr_purge(par string) {
 	network.TxMutex.Lock()
 	for _, v := range network.TransactionsRejected {
 		if v.Tx != nil && v.Time.Before(tim) {
-			network.TransactionsRejectedSize -= uint64(len(v.Raw))
-			v.Tx = nil
+			v.Discard()
 			done[v.Reason]++
 		}
 	}

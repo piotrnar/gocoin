@@ -58,7 +58,7 @@ func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 }
 
 func (txr *OneTxRejected) WriteBytes(wr io.Writer) {
-	wr.Write(txr.Hash.Hash[:])
+	wr.Write(txr.Id.Hash[:])
 	binary.Write(wr, binary.LittleEndian, uint32(txr.Time.Unix()))
 
 	// the next 32 bits is: (reason << 24) | has_waiting4 << 23 | has tx << 22

@@ -397,6 +397,7 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 		fmt.Fprint(w, "<size>", v.Size, "</size>")
+		fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
 		fmt.Fprint(w, "<reason>", network.ReasonToString(v.Reason), "</reason>")
 		w.Write([]byte("</tx>"))
 	}

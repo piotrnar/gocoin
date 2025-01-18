@@ -635,17 +635,31 @@ func txChecker(tx *btc.Tx) bool {
 	return ok
 }
 
+func (tr *OneTxRejected) freeW4() {
+	if tr.Waiting4 != nil {
+		w4i := WaitingForInputs[tr.Waiting4.BIdx()]
+		delete(w4i.Ids, tr.Hash.BIdx())
+		if len(w4i.Ids) == 0 {
+			WaitingForInputsSize -= uint64(w4i.TxLen)
+			delete(WaitingForInputs, tr.Waiting4.BIdx())
+		}
+	}
+}
+
+// Make sure to call it with locked TxMutex
+func (tr *OneTxRejected) Discard() {
+	if tr.Tx == nil {
+		panic("OneTxRejected.Discard() called, but it's already empty")
+	}
+	tr.freeW4()
+	TransactionsRejectedSize -= uint64(tr.Size)
+	tr.Tx = nil
+}
+
 // Make sure to call it with locked TxMutex
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
-		if tr.Waiting4 != nil {
-			w4i := WaitingForInputs[tr.Waiting4.BIdx()]
-			delete(w4i.Ids, bidx)
-			if len(w4i.Ids) == 0 {
-				WaitingForInputsSize -= uint64(w4i.TxLen)
-				delete(WaitingForInputs, tr.Waiting4.BIdx())
-			}
-		}
+		tr.freeW4()
 		if tr.Tx != nil {
 			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
 		}
