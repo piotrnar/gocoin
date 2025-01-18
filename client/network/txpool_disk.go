@@ -233,6 +233,12 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	}
 	txr.Size = tina & (HAS_TX_FLAG - 1)
 	txr.Reason = byte(tina >> 24)
+	if (tina & HAS_WAITING4_FLAG) != 0 {
+		txr.Waiting4 = new(btc.Uint256)
+		if _, er = io.ReadFull(rd, txr.Waiting4.Hash[:]); er != nil {
+			return
+		}
+	}
 	if (tina & HAS_TX_FLAG) != 0 {
 		raw := make([]byte, txr.Size)
 		if _, er = io.ReadFull(rd, raw); er != nil {
@@ -244,12 +250,6 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			return
 		}
 		txr.Tx.Hash.Hash = txr.Id.Hash
-	}
-	if (tina & HAS_WAITING4_FLAG) != 0 {
-		txr.Waiting4 = new(btc.Uint256)
-		if _, er = io.ReadFull(rd, txr.Waiting4.Hash[:]); er != nil {
-			return
-		}
 	}
 	return
 }
@@ -366,7 +366,9 @@ func MempoolLoad() bool {
 
 	fmt.Println(len(TransactionsToSend), "transactions with total size of", TransactionsToSendSize, "bytes loaded from", MEMPOOL_FILE_NAME)
 	//fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
-	fmt.Println("Also loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
+	if len(TransactionsRejected) > 0 {
+		fmt.Println("Also loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
+	}
 
 	return true
 
