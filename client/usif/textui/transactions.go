@@ -231,6 +231,36 @@ func baned_txs(par string) {
 	network.TxMutex.Unlock()
 }
 
+func txr_purge(par string) {
+	var minage time.Duration = time.Hour
+	tmp, er := strconv.ParseUint(par, 10, 64)
+	if er != nil {
+		minage = time.Duration(tmp) * time.Minute
+	}
+	tim := time.Now().Add(-minage)
+
+	fmt.Println("Purging data of all transactions rejected before", tim.Format(("2006-01-02 15:04:05")))
+
+	done := make(map[byte]int)
+	network.TxMutex.Lock()
+	for _, v := range network.TransactionsRejected {
+		if v.Tx != nil && v.Time.Before(tim) {
+			network.TransactionsRejectedSize -= uint64(len(v.Raw))
+			v.Tx = nil
+			done[v.Reason]++
+		}
+	}
+	network.TxMutex.Unlock()
+	if len(done) > 0 {
+		for k, c := range done {
+			fmt.Println("Deleted", c, "txs rejected for reason", k)
+		}
+	} else {
+		fmt.Println("Nothing deleted despite having")
+
+	}
+}
+
 func send_all_tx(par string) {
 	var tmp []*network.OneTxToSend
 	network.TxMutex.Lock()
@@ -375,6 +405,7 @@ func init() {
 	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
 	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
+	newUi("txrpurge", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
 }
