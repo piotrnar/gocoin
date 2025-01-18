@@ -75,8 +75,10 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 	}
 
 	// Go through all the inputs and make sure we are not leaving them in SpentOutputs
+	spent := make(map[uint64]bool)
 	for i := range tx.TxIn {
 		idx := tx.TxIn[i].Input.UIdx()
+		spent[idx] = true
 		if val, ok := SpentOutputs[idx]; ok {
 			if rec := TransactionsToSend[val]; rec != nil {
 				// if we got here, the txs has been Malleabled
@@ -92,6 +94,20 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 				fmt.Println("WTF? Input from ", tx.TxIn[i].Input.String(), " in mem-spent, but tx not in the mem-pool")
 			}
 			delete(SpentOutputs, idx)
+		}
+	}
+
+	// Remove all rejected txs that use any of currently mined inputs
+	for _, t := range TransactionsRejected {
+		if t.Tx != nil {
+			for _, ti := range t.Tx.TxIn {
+				if spent[ti.Input.UIdx()] {
+					TransactionsRejectedSize -= uint64(len(t.Raw))
+					t.Tx = nil
+					common.CountSafe(fmt.Sprint("TxMinedRTxIn-", t.Reason))
+					break
+				}
+			}
 		}
 	}
 
