@@ -648,7 +648,7 @@ func txChecker(tx *btc.Tx) bool {
 func (tr *OneTxRejected) freeW4() {
 	if tr.Waiting4 != nil {
 		w4i := WaitingForInputs[tr.Waiting4.BIdx()]
-		delete(w4i.Ids, tr.Hash.BIdx())
+		delete(w4i.Ids, tr.Id.BIdx())
 		if len(w4i.Ids) == 0 {
 			WaitingForInputsSize -= uint64(w4i.TxLen)
 			delete(WaitingForInputs, tr.Waiting4.BIdx())
