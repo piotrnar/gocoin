@@ -233,8 +233,7 @@ func baned_txs(par string) {
 
 func txr_purge(par string) {
 	var minage time.Duration = time.Hour
-	tmp, er := strconv.ParseUint(par, 10, 64)
-	if er != nil {
+	if tmp, er := strconv.ParseUint(par, 10, 64); er == nil {
 		minage = time.Duration(tmp) * time.Minute
 	}
 	tim := time.Now().Add(-minage)
