@@ -683,7 +683,12 @@ func LimitTxpoolSize() {
 		LimitPoolSize(maxpoolsize)
 	}
 
-	LimitRejectedSize()
+	if len(GetMPInProgressTicket) == 0 {
+		LimitRejectedSize()
+	} else {
+		// do not do it while "getmp" is being done as there will be many waiting for inputs
+		common.CountSafe("TxRejectedLimitHold")
+	}
 
 	TxMutex.Unlock()
 

@@ -113,6 +113,7 @@ func local_tx(par string) {
 }
 
 func decode_tx(pars string) {
+	var tx *btc.Tx
 	ps := strings.SplitN(pars, " ", 3)
 	txid := btc.NewUint256FromString(ps[0])
 	if txid == nil {
@@ -123,40 +124,63 @@ func decode_tx(pars string) {
 	if len(ps) > 1 {
 		par = ps[1]
 	}
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		var done bool
-		if par == "raw" || par == "all" {
-			fmt.Println(hex.EncodeToString(tx.Raw))
-			done = true
-		}
-		if par == "int" || par == "all" {
-			if done {
-				fmt.Println()
-			}
-			fmt.Println("Invs sent cnt:", tx.Invsentcnt)
-			fmt.Println("Tx sent cnt:", tx.SentCnt)
-			fmt.Println("Frst seen:", tx.Firstseen.Format("2006-01-02 15:04:05"))
-			fmt.Println("Last seen:", tx.Lastseen.Format("2006-01-02 15:04:05"))
-			fmt.Println("Last sent:", tx.Lastsent.Format("2006-01-02 15:04:05"))
-			fmt.Println("Local:", tx.Local)
-			fmt.Println("Spent:", len(tx.Spent), "recs")
-			fmt.Println("Volume:", tx.Volume)
-			fmt.Println("Fee:", tx.Fee)
-			fmt.Println("Blocked:", tx.Blocked)
-			fmt.Println("MemInputCnt:", tx.MemInputCnt, " ", tx.MemInputs)
-			fmt.Println("SigopsCost:", tx.SigopsCost)
-			fmt.Println("Final:", tx.Final)
-			fmt.Println("VerifyTime:", tx.VerifyTime.String())
-			done = true
-		}
-		if !done || par == "all" {
-			if done {
-				fmt.Println()
-			}
-			usif.DecodeTx(os.Stdout, tx.Tx)
-		}
-	} else {
+	t2s := network.TransactionsToSend[txid.BIdx()]
+	txr := network.TransactionsRejected[txid.BIdx()]
+	if t2s == nil && txr == nil {
 		fmt.Println("No such transaction ID in the memory pool.")
+		return
+	}
+	if t2s != nil {
+		tx = t2s.Tx
+	} else {
+		fmt.Println("*** Transaction Rejected ***")
+		tx = txr.Tx
+		if tx == nil {
+			fmt.Println("Transaction data not available.")
+			par = "int"
+		}
+	}
+
+	var done bool
+	if par == "raw" || par == "all" {
+		fmt.Println(hex.EncodeToString(tx.Raw))
+		done = true
+	}
+	if par == "int" || par == "all" {
+		if done {
+			fmt.Println()
+		}
+		if t2s != nil {
+			fmt.Println("Invs sent cnt:", t2s.Invsentcnt)
+			fmt.Println("Tx sent cnt:", t2s.SentCnt)
+			fmt.Println("Frst seen:", t2s.Firstseen.Format("2006-01-02 15:04:05"))
+			fmt.Println("Last seen:", t2s.Lastseen.Format("2006-01-02 15:04:05"))
+			fmt.Println("Last sent:", t2s.Lastsent.Format("2006-01-02 15:04:05"))
+			fmt.Println("Spent:", len(t2s.Spent), "recs")
+			fmt.Println("Volume:", t2s.Volume)
+			fmt.Println("Fee:", t2s.Fee)
+			fmt.Println("MemInputCnt:", t2s.MemInputCnt, " ", t2s.MemInputs)
+			fmt.Println("SigopsCost:", t2s.SigopsCost)
+			fmt.Println("VerifyTime:", t2s.VerifyTime.String())
+			fmt.Println("Local:", t2s.Local)
+			fmt.Println("Blocked:", t2s.Blocked)
+			fmt.Println("Final:", t2s.Final)
+		}
+		if txr != nil {
+			fmt.Println("Reason:", txr.Reason)
+			fmt.Println("Time:", txr.Time.Format("2006-01-02 15:04:05"))
+			fmt.Println("Size:", txr.Size)
+			if txr.Waiting4 != nil {
+				fmt.Println("Waiting for:", txr.Waiting4.String())
+			}
+		}
+		done = true
+	}
+	if !done || par == "all" {
+		if done {
+			fmt.Println()
+		}
+		usif.DecodeTx(os.Stdout, tx)
 	}
 }
 
@@ -166,7 +190,16 @@ func save_tx(par string) {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		return
 	}
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+	var tx *btc.Tx
+
+	if t2s := network.TransactionsToSend[txid.BIdx()]; t2s != nil {
+		tx = t2s.Tx
+	} else {
+		if txr := network.TransactionsRejected[txid.BIdx()]; txr != nil {
+			tx = txr.Tx
+		}
+	}
+	if tx != nil {
 		fn := tx.Hash.String() + ".tx"
 		os.WriteFile(fn, tx.Raw, 0600)
 		fmt.Println("Saved to", fn)
@@ -224,9 +257,10 @@ func baned_txs(par string) {
 	fmt.Println("Rejected transactions:")
 	cnt := 0
 	network.TxMutex.Lock()
-	for k, v := range network.TransactionsRejected {
+	sorted := network.GetSortedRejected()
+	for _, v := range sorted {
 		cnt++
-		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", v.Size, "bytes",
+		fmt.Println("", cnt, v.Id.String(), "-", v.Size, "bytes",
 			"-", v.Reason, "-", time.Since(v.Time).String(), "ago")
 	}
 	network.TxMutex.Unlock()
@@ -270,6 +304,7 @@ func txr_stats(par string) {
 	var reasons []int
 
 	network.TxMutex.Lock()
+	fmt.Println(len(network.TransactionsRejected), "rejected transactions:")
 	for _, v := range network.TransactionsRejected {
 		var rec *rect
 		if rec = cnts[v.Reason]; rec == nil {
@@ -299,9 +334,9 @@ func txr_stats(par string) {
 	for _, r := range reasons {
 		rea := byte(r)
 		rec := cnts[rea]
-		fmt.Println("Reason:", rea)
-		fmt.Println("   Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
-		fmt.Println("   Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
+		fmt.Println("  Reason:", rea)
+		fmt.Println("    Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
+		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
 	}
 }
 
