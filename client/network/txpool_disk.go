@@ -249,6 +249,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			er = errors.New(fmt.Sprint("Error parsing rejected tx from ", MEMPOOL_FILE_NAME, " at idx ", len(TransactionsRejected)))
 			return
 		}
+		txr.Raw = raw
 		txr.Tx.Hash.Hash = txr.Id.Hash
 	}
 	return

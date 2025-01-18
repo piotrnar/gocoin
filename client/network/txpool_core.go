@@ -181,7 +181,11 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 
 	// TODO: only store tx for selected reasons
 	if why >= 200 {
+		tx.Clean()
 		rec.Tx = tx
+		if tx.Raw == nil {
+			println("tx raw not set!!") // TODO: remove this
+		}
 		rec.Id = &tx.Hash
 		TransactionsRejectedSize += uint64(rec.Size)
 	} else {

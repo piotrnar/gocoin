@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -259,6 +260,51 @@ func txr_purge(par string) {
 	}
 }
 
+func txr_stats(par string) {
+	type rect struct {
+		totsize, memsize uint64
+		totcnt, memcnt   uint32
+		from, to         time.Time
+	}
+	cnts := make(map[byte]*rect)
+	var reasons []int
+
+	network.TxMutex.Lock()
+	for _, v := range network.TransactionsRejected {
+		var rec *rect
+		if rec = cnts[v.Reason]; rec == nil {
+			reasons = append(reasons, int(v.Reason))
+			rec = new(rect)
+		}
+		rec.totsize += uint64(v.Size)
+		rec.totcnt++
+		if v.Tx != nil {
+			rec.memsize += uint64(len(v.Raw))
+			rec.memcnt++
+		}
+		if rec.from.IsZero() {
+			rec.from = v.Time
+			rec.to = v.Time
+		} else {
+			if v.Time.Before(rec.from) {
+				rec.from = v.Time
+			} else if rec.to.Before(v.Time) {
+				rec.to = v.Time
+			}
+		}
+		cnts[v.Reason] = rec
+	}
+	network.TxMutex.Unlock()
+	sort.Ints(reasons)
+	for _, r := range reasons {
+		rea := byte(r)
+		rec := cnts[rea]
+		fmt.Println("Reason:", rea)
+		fmt.Println("   Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
+		fmt.Println("   Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
+	}
+}
+
 func send_all_tx(par string) {
 	var tmp []*network.OneTxToSend
 	network.TxMutex.Lock()
@@ -399,11 +445,12 @@ func init() {
 	newUi("txdecode td", true, decode_tx, "Decode transaction from memory pool: <txid> [int|raw|all]")
 	newUi("txdel", true, del_tx, "Remove a transaction from memory pool: <txid>")
 	newUi("txlist ltx", true, list_txs, "List transaction from memory pool up to: <max_weigth> (default 4M)")
-	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
 	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
 	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrpurge", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
+	newUi("txrlist txrl", true, baned_txs, "List the transaction that we have rejected")
+	newUi("txrpurge txrp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
+	newUi("txrstat txrs", true, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
 }
