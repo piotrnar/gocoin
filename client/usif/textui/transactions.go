@@ -167,7 +167,7 @@ func decode_tx(pars string) {
 			fmt.Println("Final:", t2s.Final)
 		}
 		if txr != nil {
-			fmt.Println("Reason:", txr.Reason)
+			fmt.Println("Reason:", txr.Reason, network.ReasonToString(txr.Reason))
 			fmt.Println("Time:", txr.Time.Format("2006-01-02 15:04:05"))
 			fmt.Println("Size:", txr.Size)
 			if txr.Waiting4 != nil {
@@ -259,8 +259,12 @@ func baned_txs(par string) {
 	network.TxMutex.Lock()
 	sorted := network.GetSortedRejected()
 	for _, v := range sorted {
+		var bts string = "bytes"
 		cnt++
-		fmt.Println("", cnt, v.Id.String(), "-", v.Size, "bytes",
+		if v.Tx == nil {
+			bts = "v-bts"
+		}
+		fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
 			"-", v.Reason, "-", time.Since(v.Time).String(), "ago")
 	}
 	network.TxMutex.Unlock()
@@ -279,14 +283,15 @@ func txr_purge(par string) {
 	network.TxMutex.Lock()
 	for _, v := range network.TransactionsRejected {
 		if v.Tx != nil && v.Time.Before(tim) {
-			v.Discard()
 			done[v.Reason]++
+			v.Reason = network.TX_REJECTED_DATA_PURGED
+			v.Discard()
 		}
 	}
 	network.TxMutex.Unlock()
 	if len(done) > 0 {
 		for k, c := range done {
-			fmt.Println("Deleted", c, "txs rejected for reason", k)
+			fmt.Println("Deleted", c, "txs rejected for reason", k, network.ReasonToString(k))
 		}
 	} else {
 		fmt.Println("Nothing deleted despite having")
@@ -334,7 +339,7 @@ func txr_stats(par string) {
 	for _, r := range reasons {
 		rea := byte(r)
 		rec := cnts[rea]
-		fmt.Println("  Reason:", rea)
+		fmt.Println("  Reason:", rea, network.ReasonToString(rea))
 		fmt.Println("    Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
 		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
 	}

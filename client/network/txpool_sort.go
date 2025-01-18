@@ -181,9 +181,10 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 		sorted[idx] = t
 		idx++
 	}
-	var now = time.Now()
+	//var now = time.Now()
 	sort.Slice(sorted, func(i, j int) bool {
-		return int64(sorted[i].Size)*int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size)*int64(now.Sub(sorted[j].Time))
+		//return int64(sorted[i].Size)*int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size)*int64(now.Sub(sorted[j].Time))
+		return sorted[j].Time.Before(sorted[i].Time)
 	})
 	return
 }

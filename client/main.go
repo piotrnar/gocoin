@@ -693,6 +693,7 @@ func main() {
 
 		common.BlockChain.Unspent.HurryUp()
 		wallet.UpdateMapSizes()
+		fmt.Println("Shutting down PID", os.Getpid())
 		network.NetCloseAll()
 	}
 

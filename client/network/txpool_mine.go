@@ -103,6 +103,7 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 			for _, ti := range t.Tx.TxIn {
 				if spent[ti.Input.UIdx()] {
 					t.Discard()
+					t.Reason = TX_REJECTED_INPUT_MINED
 					common.CountSafe(fmt.Sprint("TxMinedRTxIn-", t.Reason))
 					break
 				}

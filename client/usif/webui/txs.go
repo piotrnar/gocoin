@@ -392,7 +392,8 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	network.TxMutex.Lock()
-	for _, v := range network.TransactionsRejected {
+	sorted := network.GetSortedRejected()
+	for _, v := range sorted {
 		w.Write([]byte("<tx>"))
 		fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
