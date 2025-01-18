@@ -309,7 +309,7 @@ func txr_stats(par string) {
 	var reasons []int
 
 	network.TxMutex.Lock()
-	fmt.Println(len(network.TransactionsRejected), "rejected transactions:")
+	fmt.Println(len(network.TransactionsRejected), "transactions with total in-memory size of", network.TransactionsRejectedSize)
 	for _, v := range network.TransactionsRejected {
 		var rec *rect
 		if rec = cnts[v.Reason]; rec == nil {

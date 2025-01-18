@@ -477,6 +477,7 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprint("\"t2s_size_core\":", uint64(float64(network.TransactionsToSendSize)*common.TX_SIZE_RAM_MULTIPLIER), ",")))
 	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(network.TransactionsRejected), ",")))
 	w.Write([]byte(fmt.Sprint("\"tre_size\":", network.TransactionsRejectedSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_size_core\":", uint64(float64(network.TransactionsRejectedSize)*common.TX_SIZE_RAM_MULTIPLIER), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(network.TransactionsPending), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
 	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(network.SpentOutputs), ",")))
