@@ -699,10 +699,10 @@ func main() {
 
 	sta := time.Now()
 	common.CloseBlockChain()
+	fmt.Println("Blockchain closed in", time.Since(sta).String())
 	if common.FLAG.UndoBlocks == 0 {
 		network.MempoolSave(false)
 	}
-	fmt.Println("Blockchain closed in", time.Since(sta).String())
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
 	sta = time.Now()
