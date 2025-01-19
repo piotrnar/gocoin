@@ -253,11 +253,23 @@ func list_txs(par string) {
 }
 
 func baned_txs(par string) {
-	fmt.Println("Rejected transactions:")
+	var reason byte
+	if par != "" {
+		if val, er := strconv.ParseUint(par, 10, 64); er != nil || val < 1 || val > 255 {
+			println("Rejection reason must be a value between 1 and 255")
+			return
+		} else {
+			reason = byte(val)
+		}
+	}
+	fmt.Println("Listing Rejected transactions", reason, ":")
 	cnt := 0
 	network.TxMutex.Lock()
 	sorted := network.GetSortedRejected()
 	for _, v := range sorted {
+		if reason != 0 && reason != v.Reason {
+			continue
+		}
 		var bts string = "bytes"
 		cnt++
 		if v.Tx == nil {
