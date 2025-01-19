@@ -257,12 +257,11 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
 				rec = new(OneWaitingList)
 				rec.TxID = txr.Waiting4
-				rec.TxLen = uint32(len(txr.Raw))
 				rec.Ids = make(map[BIDX]time.Time)
-				WaitingForInputsSize += uint64(rec.TxLen)
 			}
 			rec.Ids[txr.Id.BIdx()] = time.Now()
 			WaitingForInputs[txr.Waiting4.BIdx()] = rec
+			WaitingForInputsSize += uint64(len(txr.Raw))
 		}
 	} else if txr.Waiting4 != nil {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
@@ -352,7 +351,9 @@ func MempoolLoad() bool {
 				goto fatal_error
 			}
 			TransactionsRejected[txr.Id.BIdx()] = txr
-			TransactionsRejectedSize += uint64(txr.Size)
+			if txr.Tx != nil {
+				TransactionsRejectedSize += uint64(len(txr.Raw))
+			}
 		}
 	}
 

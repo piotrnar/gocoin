@@ -85,9 +85,8 @@ type OneTxRejected struct {
 }
 
 type OneWaitingList struct {
-	TxID  *btc.Uint256
-	TxLen uint32
-	Ids   map[BIDX]time.Time // List of pending tx ids
+	TxID *btc.Uint256
+	Ids  map[BIDX]time.Time // List of pending tx ids
 }
 
 func ReasonToString(reason byte) string {
@@ -385,13 +384,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					if rec = WaitingForInputs[missingid.BIdx()]; rec == nil {
 						rec = new(OneWaitingList)
 						rec.TxID = missingid
-						rec.TxLen = uint32(len(ntx.Raw))
 						rec.Ids = make(map[BIDX]time.Time)
 						newone = true
-						WaitingForInputsSize += uint64(rec.TxLen)
 					}
 					rec.Ids[bidx] = time.Now()
 					WaitingForInputs[missingid.BIdx()] = rec
+					WaitingForInputsSize += uint64(len(ntx.Raw))
 				}
 
 				TxMutex.Unlock()
@@ -647,7 +645,6 @@ func (tr *OneTxRejected) freeW4() {
 		if w4i := WaitingForInputs[tr.Waiting4.BIdx()]; w4i != nil {
 			delete(w4i.Ids, tr.Id.BIdx())
 			if len(w4i.Ids) == 0 {
-				WaitingForInputsSize -= uint64(w4i.TxLen)
 				delete(WaitingForInputs, tr.Waiting4.BIdx())
 			}
 		} else {
@@ -655,6 +652,7 @@ func (tr *OneTxRejected) freeW4() {
 			println("   from rejected tx", tr.Id.String())
 			common.CountSafe("TxRejectedW4error") // TODO: check this counter increasing
 		}
+		WaitingForInputsSize -= uint64(len(tr.Raw))
 	}
 }
 
