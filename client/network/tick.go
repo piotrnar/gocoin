@@ -953,7 +953,7 @@ func (c *OneConnection) Run() {
 		if ban {
 			c.PeerAddr.Ban(c.ban_reason)
 			common.CountSafe("PeersBanned")
-		} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
+		} else if c.X.Incomming && !c.MutexGetBool(&c.X.Authorized) {
 			var rd *RecentlyDisconenctedType
 			HammeringMutex.Lock()
 			rd = RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4]
