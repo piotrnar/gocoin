@@ -26,6 +26,7 @@
 * Client: Mew memory pool dump file version also stores information about when txs were last seen
 * Client/TextUI: Updated/added/removed various commands
 * Client: Mempool file format upgraded from version 2 to 4, now contains rejected txs and last seen of each mempool txs
+* Client: Some other improvements and optimizations, which I don't rememebr
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
