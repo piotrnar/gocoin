@@ -97,6 +97,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
+
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	if bl.LastKnownHeight-bl.Height > common.GetUint32(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
@@ -753,11 +754,14 @@ func main() {
 	}
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
+
 	sta = time.Now()
-	if er := wallet.SaveBalances(); er != nil {
-		fmt.Println("SaveBalances:", er.Error())
-	} else {
-		fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+	if common.GetBool(&common.WalletON) {
+		if er := wallet.SaveBalances(); er != nil {
+			fmt.Println("SaveBalances:", er.Error())
+		} else {
+			fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+		}
 	}
 	sys.UnlockDatabaseDir()
 	os.RemoveAll(common.TempBlocksDir())
