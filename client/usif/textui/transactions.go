@@ -470,9 +470,9 @@ func init() {
 	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
 	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrlist txrl", true, baned_txs, "List the transaction that we have rejected")
-	newUi("txrpurge txrp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
-	newUi("txrstat txrs", true, txr_stats, "Show stats of the rejected txs")
+	newUi("txrlist rtxl", true, baned_txs, "List the transaction that we have rejected: [<reason>]")
+	newUi("txrpurge rtxp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
+	newUi("txrstat rtxs", true, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
 }
