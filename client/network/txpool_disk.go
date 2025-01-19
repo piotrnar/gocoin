@@ -382,10 +382,10 @@ func MempoolLoad() bool {
 		}
 	}
 
-	fmt.Println(len(TransactionsToSend), "transactions with total size of", TransactionsToSendSize, "bytes loaded from", MEMPOOL_FILE_NAME)
+	fmt.Println(len(TransactionsToSend), "transactions with total size of", TransactionsToSendSize, "bytes loaded")
 	//fmt.Println(cnt1, "transactions use", cnt2, "memory inputs")
 	if len(TransactionsRejected) > 0 {
-		fmt.Println("Also loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
+		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
 	return true
