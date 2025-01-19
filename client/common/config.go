@@ -105,10 +105,11 @@ var (
 			CompressBlockDB      bool
 		}
 		AllBalances struct {
-			MinValue     uint64 // Do not keep balance records for values lower than this
-			UseMapCnt    int
-			AutoLoad     bool
-			SaveBalances bool
+			MinValue      uint64 // Do not keep balance records for values lower than this
+			UseMapCnt     int
+			AutoLoad      bool
+			SaveBalances  bool
+			InstantWallet bool
 		}
 		Stat struct {
 			HashrateHrs uint
@@ -191,6 +192,7 @@ func InitConfig() {
 	CFG.AllBalances.UseMapCnt = 5000
 	CFG.AllBalances.AutoLoad = true
 	CFG.AllBalances.SaveBalances = true
+	CFG.AllBalances.InstantWallet = false
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
@@ -253,6 +255,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
+	flag.BoolVar(&CFG.AllBalances.InstantWallet, "iw", CFG.AllBalances.InstantWallet, "Make sure to fetch all wallet balances before starting UI and network")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"

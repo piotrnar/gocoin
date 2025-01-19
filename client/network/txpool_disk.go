@@ -251,7 +251,24 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		}
 		txr.Raw = raw
 		txr.Tx.Hash.Hash = txr.Id.Hash
+
+		if txr.Waiting4 != nil {
+			var rec *OneWaitingList
+			if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
+				rec = new(OneWaitingList)
+				rec.TxID = txr.Waiting4
+				rec.TxLen = uint32(len(txr.Raw))
+				rec.Ids = make(map[BIDX]time.Time)
+				WaitingForInputsSize += uint64(rec.TxLen)
+			}
+			rec.Ids[txr.Id.BIdx()] = time.Now()
+			WaitingForInputs[txr.Waiting4.BIdx()] = rec
+		}
+	} else if txr.Waiting4 != nil {
+		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
+		txr.Waiting4 = nil
 	}
+
 	return
 }
 
@@ -379,108 +396,5 @@ fatal_error:
 	TransactionsToSendSize = 0
 	TransactionsToSendWeight = 0
 	SpentOutputs = make(map[uint64]BIDX)
-	return false
-}
-
-// MempoolLoadNew is only called from TextUI.
-func MempoolLoadNew(fname string, abort *bool) bool {
-	var ntx *TxRcvd
-	var idx, totcnt, le, tmp64, oneperc, cntdwn, perc uint64
-	var tmp [32]byte
-	var tina uint32
-	var i int
-	var cnt1, cnt2 uint
-	var t2s OneTxToSend
-
-	f, er := os.Open(fname)
-	if er != nil {
-		fmt.Println("MempoolLoad:", er.Error())
-		return false
-	}
-	defer f.Close()
-
-	rd := bufio.NewReader(f)
-	if _, er = io.ReadFull(rd, tmp[:32]); er != nil {
-		goto fatal_error
-	}
-
-	if totcnt, er = btc.ReadVLen(rd); er != nil {
-		goto fatal_error
-	}
-	fmt.Println("Loading", totcnt, "transactions from", fname)
-
-	oneperc = totcnt / 100
-
-	for idx = 0; idx < totcnt; idx++ {
-		if cntdwn == 0 {
-			fmt.Print("\r", perc, "% complete...")
-			perc++
-			cntdwn = oneperc
-		}
-		cntdwn--
-		if abort != nil && *abort {
-			break
-		}
-		le, er = btc.ReadVLen(rd)
-		if er != nil {
-			goto fatal_error
-		}
-
-		ntx = new(TxRcvd)
-		raw := make([]byte, int(le))
-
-		_, er = io.ReadFull(rd, raw)
-		if er != nil {
-			goto fatal_error
-		}
-
-		ntx.Tx, i = btc.NewTx(raw)
-		if ntx.Tx == nil || i != len(raw) {
-			er = errors.New(fmt.Sprint("Error parsing tx from ", fname, " at idx", idx))
-			goto fatal_error
-		}
-		ntx.SetHash(raw)
-
-		le, er = btc.ReadVLen(rd)
-		if er != nil {
-			goto fatal_error
-		}
-
-		for le > 0 {
-			if er = binary.Read(rd, binary.LittleEndian, &tmp64); er != nil {
-				goto fatal_error
-			}
-			le--
-		}
-
-		// discard all the rest...
-		binary.Read(rd, binary.LittleEndian, &t2s.Invsentcnt)
-		binary.Read(rd, binary.LittleEndian, &t2s.SentCnt)
-		binary.Read(rd, binary.LittleEndian, &tina)
-		binary.Read(rd, binary.LittleEndian, &tina)
-		binary.Read(rd, binary.LittleEndian, &t2s.Volume)
-		binary.Read(rd, binary.LittleEndian, &t2s.Fee)
-		binary.Read(rd, binary.LittleEndian, &t2s.SigopsCost)
-		binary.Read(rd, binary.LittleEndian, &t2s.VerifyTime)
-		if _, er = io.ReadFull(rd, tmp[:4]); er != nil {
-			goto fatal_error
-		}
-
-		// submit tx if we dont have it yet...
-		if NeedThisTx(&ntx.Hash, nil) {
-			cnt2++
-			if HandleNetTx(ntx, true) {
-				cnt1++
-			}
-		}
-	}
-
-	fmt.Print("\r                                    \r")
-	fmt.Println(cnt1, "out of", cnt2, "new transactions accepted into memory pool")
-
-	return true
-
-fatal_error:
-	fmt.Println("Error loading", fname, ":", er.Error())
 	return false
 }

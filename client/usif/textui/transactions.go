@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -374,34 +373,6 @@ func check_txs(par string) {
 	}
 }
 
-func load_mempool(par string) {
-	if par == "" {
-		par = common.GocoinHomeDir + "mempool.dmp"
-	}
-	var abort bool
-	__exit := make(chan bool)
-	__done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case s := <-common.KillChan:
-				fmt.Println(s)
-				abort = true
-			case <-__exit:
-				__done <- true
-				return
-			}
-		}
-	}()
-	fmt.Println("Press Ctrl+C to abort...")
-	network.MempoolLoadNew(par, &abort)
-	__exit <- true
-	<-__done
-	if abort {
-		fmt.Println("Aborted")
-	}
-}
-
 func get_mempool(par string) {
 	conid, e := strconv.ParseUint(par, 10, 32)
 	if e != nil {
@@ -477,7 +448,6 @@ func push_old_txs(par string) {
 func init() {
 	newUi("mpcheck mpc", true, check_txs, "Verify consistency of mempool")
 	newUi("mpget mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
-	newUi("mpload mpl", true, load_mempool, "Load transaction from disk: [filename]")
 	newUi("mpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("mpstat mp", true, mempool_stats, "Show the mempool statistics")
 	newUi("savetx txs", true, save_tx, "Save raw transaction from memory pool to disk: <txid>")

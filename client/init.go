@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -48,7 +49,8 @@ func host_init() {
 	fmt.Println("Public auth key:", "@"+common.PublicKey)
 
 	__exit := make(chan bool)
-	__done := make(chan bool)
+	var done sync.WaitGroup
+	done.Add(1)
 	go func() {
 		for {
 			select {
@@ -56,7 +58,7 @@ func host_init() {
 				fmt.Println(s)
 				chain.AbortNow = true
 			case <-__exit:
-				__done <- true
+				done.Done()
 				return
 			}
 		}
@@ -67,7 +69,7 @@ func host_init() {
 		os.Exit(1)
 	}
 
-	fmt.Print(string(common.LogBuffer.Bytes()))
+	fmt.Print(common.LogBuffer.String())
 	common.LogBuffer = nil
 
 	if btc.EC_Verify == nil {
@@ -99,11 +101,13 @@ func host_init() {
 			DataFilesBackup: common.CFG.Memory.OldDataBackup,
 			CompressOnDisk:  common.CFG.Memory.CompressBlockDB})
 	if chain.AbortNow {
-		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Now().Sub(sta).String())
+		fmt.Printf("Blockchain opening aborted after %s seconds\n", time.Since(sta).String())
 		common.BlockChain.Close()
 		sys.UnlockDatabaseDir()
 		os.Exit(1)
 	}
+	__exit <- true
+	done.Wait()
 
 	if lb, _ := common.BlockChain.BlockTreeRoot.FindFarthestNode(); lb.Height > common.BlockChain.LastBlock().Height {
 		common.Last.ParseTill = lb
@@ -135,7 +139,5 @@ func host_init() {
 		common.Last.Time.Format("2006-01-02 15:04:05"))
 
 	common.StartTime = time.Now()
-	__exit <- true
-	_ = <-__done
 
 }

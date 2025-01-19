@@ -185,13 +185,10 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	rec.Size = uint32(len(tx.Raw))
 	rec.Reason = why
 
-	// TODO: only store tx for selected reasons
+	// only store tx for selected reasons
 	if why >= 200 {
 		tx.Clean()
 		rec.Tx = tx
-		if tx.Raw == nil {
-			println("tx raw not set!!") // TODO: remove this
-		}
 		rec.Id = &tx.Hash
 		TransactionsRejectedSize += uint64(rec.Size)
 	} else {
@@ -654,6 +651,8 @@ func (tr *OneTxRejected) freeW4() {
 				delete(WaitingForInputs, tr.Waiting4.BIdx())
 			}
 		} else {
+			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
+			println("   from rejected tx", tr.Id.String())
 			common.CountSafe("TxRejectedW4error") // TODO: check this counter increasing
 		}
 	}

@@ -28,7 +28,7 @@ func InitMaps(empty bool) {
 	}
 }
 
-func LoadBalance() {
+func LoadBalancesFromUtxo() {
 	if common.GetBool(&common.WalletON) {
 		//fmt.Println("wallet.LoadBalance() ignore: ", common.GetBool(&common.WalletON))
 		return
