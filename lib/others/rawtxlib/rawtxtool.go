@@ -198,6 +198,7 @@ func Decode(o io.Writer, tx *btc.Tx, getpo func(*btc.TxPrevOut) *btc.TxOut, tstn
 				totin += val
 				fmt.Fprintf(o, "%15s BTC from address %s\n", btc.UintToBtc(val), btc.NewAddrFromPkScript(po.Pk_script, tstnet))
 			} else {
+				fmt.Fprintf(o, "      *** UTXO not available ***\n")
 				noins++
 			}
 
