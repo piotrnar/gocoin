@@ -399,6 +399,48 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 	//fmt.Println("all blocks queued", len(network.NetBlocks))
 }
 
+func fetch_balances_now() {
+	var prev_progress uint32
+	var abort bool
+	const info = "\rFetching all balances (Ctrl+C to skip) - "
+	__exit := make(chan bool)
+	var done sync.WaitGroup
+	done.Add(1)
+	go func() {
+		for {
+			select {
+			case s := <-common.KillChan:
+				fmt.Println(s)
+				abort = true
+			case <-__exit:
+				done.Done()
+				return
+			}
+		}
+	}()
+	wallet.FetchingBalanceTick = func() bool {
+		if abort {
+			return true
+		}
+		if new_progress := common.WalletProgress / 10; new_progress != prev_progress {
+			prev_progress = new_progress
+			fmt.Print(info, prev_progress, "% complete ... ")
+		}
+		return false
+	}
+	sta := time.Now()
+	fmt.Print(info)
+	wallet.LoadBalancesFromUtxo()
+	fmt.Print("\r                                                                 \r")
+	__exit <- true
+	done.Wait()
+	if !abort {
+		fmt.Println("All balances fetched in", time.Since(sta))
+		common.SetBool(&common.WalletON, true)
+		common.SetUint32(&common.WalletOnIn, 0)
+	}
+}
+
 func main() {
 	var ptr *byte
 	if unsafe.Sizeof(ptr) < 8 {
@@ -505,7 +547,6 @@ func main() {
 
 		usif.LoadBlockFees()
 
-		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		if !common.FLAG.NoWallet {
 			sta := time.Now()
 			if er := wallet.LoadBalances(); er == nil {
@@ -515,45 +556,7 @@ func main() {
 			} else {
 				fmt.Println("wallet.LoadBalances:", er.Error())
 				if common.CFG.AllBalances.InstantWallet {
-					var prev_progress uint32
-					var abort bool
-					const info = "\rFetching all balances (Ctrl+C to skip) - "
-					__exit := make(chan bool)
-					var done sync.WaitGroup
-					done.Add(1)
-					go func() {
-						for {
-							select {
-							case s := <-common.KillChan:
-								fmt.Println(s)
-								abort = true
-							case <-__exit:
-								done.Done()
-								return
-							}
-						}
-					}()
-					wallet.FetchingBalanceTick = func() bool {
-						if abort {
-							return true
-						}
-						if new_progress := common.WalletProgress / 10; new_progress != prev_progress {
-							prev_progress = new_progress
-							fmt.Print(info, prev_progress, "% complete ... ")
-						}
-						return false
-					}
-					sta := time.Now()
-					fmt.Print(info)
-					wallet.LoadBalancesFromUtxo()
-					fmt.Print("\r                                                                 \r")
-					__exit <- true
-					done.Wait()
-					if !abort {
-						fmt.Println("All balances fetched in", time.Since(sta))
-						common.SetBool(&common.WalletON, true)
-						common.SetUint32(&common.WalletOnIn, 0)
-					}
+					fetch_balances_now()
 				}
 			}
 			if !common.GetBool(&common.WalletON) {
@@ -602,6 +605,7 @@ func main() {
 			go textui.MainThread()
 		}
 
+		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
