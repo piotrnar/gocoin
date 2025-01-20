@@ -597,14 +597,8 @@ function show_txsre() {
 				c.innerHTML = (i+1).toString()
 
 				c = row.insertCell(-1)
-				c.className ='mono'
-				var txid = xval(txs[i], 'id')
-				c.innerHTML = txid
-				if (inmem) {
-					c.id = txid
-					c.addEventListener('click', decode_tx2, false)
-					c.style.cursor='pointer'
-				}
+				c.className ='txid11'
+				add_txid_and_icon(c, xval(txs[i], 'id'), inmem)
 
 				c=row.insertCell(-1);className='maturity'
 				var tim = xval(txs[i], 'time')
