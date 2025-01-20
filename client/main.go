@@ -542,7 +542,7 @@ func main() {
 			network.LastCommitedHeader = common.Last.Block
 		}
 
-		if common.CFG.TXPool.SaveOnDisk {
+		if common.CFG.TXPool.SaveOnDisk && !common.FLAG.NoMempoolLoad {
 			network.MempoolLoad()
 		}
 
