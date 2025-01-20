@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -414,7 +415,20 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<pending>"))
 	network.TxMutex.Lock()
-	for _, v := range network.WaitingForInputs {
+	type onerec struct {
+		val  uint64
+		bidx network.BIDX
+	}
+	w4ilist := make([]onerec, 0, len(network.WaitingForInputs))
+	for k, v := range network.WaitingForInputs {
+		r := onerec{val: binary.LittleEndian.Uint64((v.TxID.Hash[24:32])), bidx: k}
+		w4ilist = append(w4ilist, r)
+	}
+	sort.Slice(w4ilist, func(i, j int) bool {
+		return w4ilist[i].val < w4ilist[j].val
+	})
+	for _, k := range w4ilist {
+		v := network.WaitingForInputs[k.bidx]
 		w.Write([]byte("<wait4>"))
 		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
 		for _, x := range v.Ids {
@@ -454,13 +468,13 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	txid := btc.NewUint256FromString(r.Form["id"][0])
-	fmt.Fprintln(w, "TxID:", txid.String())
+	fmt.Fprint(w, "TxID ", txid.String(), " - ")
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		fmt.Fprintln(w, "Present in TransactionsToSend")
+		fmt.Fprintln(w, "From TransactionsToSend")
 		usif.DecodeTx(w, tx.Tx)
 	} else {
 		if tx, ok := network.TransactionsRejected[txid.BIdx()]; ok && tx.Tx != nil {
-			fmt.Fprintln(w, "Present in TransactionsRejected")
+			fmt.Fprintln(w, "From TransactionsRejected")
 			usif.DecodeTx(w, tx.Tx)
 		} else {
 			fmt.Fprintln(w, "Not found")
