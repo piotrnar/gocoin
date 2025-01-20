@@ -145,6 +145,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
 &nbsp;&nbsp;&nbsp;
 <input type="button" value="Decode mempool TX" onclick="show_txid()">
+<input type="button" value="Decode TX" onclick="show_raw_tx()">
 </table>
 
 
@@ -398,13 +399,42 @@ function decode_tx_id(txid) {
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
 
+			txhexdump.style.display = 'inline-block'
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)
 		}
 	}
-	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
+	aj.open("GET","txs2s.xml?id="+txid, true);
 	aj.send(null);
+}
+
+function do_raw_tx(txid) {
+	var aj = ajax()
+	tx_decoding_in_progress = true
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			tx_decoding_in_progress = false
+			rawdiv.innerHTML = aj.responseText
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+			txhexdump.style.display = 'none'
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+		}
+	}
+	aj.open("GET","raw_tx?id="+txid, true);
+	aj.send(null);
+}
+
+function show_raw_tx() {
+	if (!tx_decoding_in_progress) {
+		var tid = prompt("Enter ID of the TX");
+		if (tid!=null) {
+			do_raw_tx(tid)
+		}
+	}
 }
 
 function quiet_txs2s(extrapar) {
@@ -706,7 +736,6 @@ function show_txid() {
 		}
 	}
 }
-
 
 function show_mempool_fees() {
 	var aj = ajax()
