@@ -188,7 +188,6 @@ func PrintBWStats() {
 	fmt.Printf("  |  Uploading at %d/%d KB/s, %s total\n",
 		GetAvgBW(UlBytesPrevSec[:], UlBytesPrevSecIdx, 5)>>10, UploadLimit()>>10, BytesToString(UlBytesTotal))
 	bw_mutex.Unlock()
-	return
 }
 
 func SetDownloadLimit(val uint64) {

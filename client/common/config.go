@@ -34,6 +34,7 @@ var (
 		NoWallet      bool
 		Log           bool
 		SaveConfig    bool
+		NoMempoolLoad bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -255,6 +256,7 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
+	flag.BoolVar(&FLAG.NoMempoolLoad, "mp0", FLAG.NoMempoolLoad, "Do not attempt to load mempool from disk (start with empty one)")
 	flag.BoolVar(&CFG.AllBalances.InstantWallet, "iw", CFG.AllBalances.InstantWallet, "Make sure to fetch all wallet balances before starting UI and network")
 
 	if CFG.Datadir == "" {

@@ -599,11 +599,17 @@ func (rec *OneTxToSend) isRoutable() bool {
 
 func RetryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
-		pendtxrcv := &TxRcvd{Tx: TransactionsRejected[k].Tx}
+		txr := TransactionsRejected[k]
+		if txr.Tx == nil {
+			fmt.Printf("ERROR: txr %s %d in w4i rec %16x, but has not data (its w4prt:%p)",
+				txr.Id.String(), txr.Reason, k, txr.Waiting4)
+			continue
+		}
+		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
 			if txr, ok := TransactionsRejected[k]; ok {
-				println("tx", txr.Id.String(), "accepted but still in rejected")
+				println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
 			}
 		} else {
 			common.CountSafe("TxRetryRejected")
@@ -702,10 +708,14 @@ func (tr *OneTxRejected) cleanup() {
 					newlist = append(newlist, x)
 				}
 			}
-			if len(newlist) == 0 {
-				delete(WaitingForInputs, w4idx)
+			if len(newlist) == len(w4i.Ids) {
+				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
 			} else {
-				w4i.Ids = newlist
+				if len(newlist) == 0 {
+					delete(WaitingForInputs, w4idx)
+				} else {
+					w4i.Ids = newlist
+				}
 			}
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
