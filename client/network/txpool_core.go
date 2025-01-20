@@ -61,6 +61,8 @@ var (
 	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
 
 	// Transactions that are waiting for inputs:
+	// Each record points to a list of transactions that are waiting for the transaction from the index of the map
+	// This way when a new tx is received, we can quickly find all the txs that have been waiting for it
 	WaitingForInputs     map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
 	WaitingForInputsSize uint64
 
@@ -601,7 +603,7 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
 		if txr.Tx == nil {
-			fmt.Printf("ERROR: txr %s %d in w4i rec %16x, but has not data (its w4prt:%p)",
+			fmt.Printf("ERROR: txr %s %d in w4i rec %16x, but has not data (its w4prt:%p)\n",
 				txr.Id.String(), txr.Reason, k, txr.Waiting4)
 			continue
 		}

@@ -54,7 +54,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 }
 
 // tx_mined is called for each tx mined in a new block.
-func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
+func tx_mined(tx *btc.Tx) {
 	h := tx.Hash
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedToSend")
@@ -120,29 +120,26 @@ func tx_mined(tx *btc.Tx) (wtg *OneWaitingList) {
 			delete(RejectedUsedUTXOs_Strings, idx)
 		}
 	}
-
-	wtg = WaitingForInputs[h.BIdx()]
-	return
 }
 
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
-	wtgs := make([]*OneWaitingList, len(bl.Txs)-1)
-	var wtg_cnt int
+	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
-	for i := 1; i < len(bl.Txs); i++ {
-		wtg := tx_mined(bl.Txs[i])
-		if wtg != nil {
-			wtgs[wtg_cnt] = wtg
-			wtg_cnt++
+	for _, tx := range bl.Txs[1:] {
+		tx_mined(tx)
+	}
+	for _, tx := range bl.Txs[1:] {
+		if wtg := WaitingForInputs[tx.Hash.BIdx()]; wtg != nil {
+			wtgs = append(wtgs, wtg)
 		}
 	}
 	TxMutex.Unlock()
 
 	// Try to redo waiting txs
-	if wtg_cnt > 0 {
-		common.CountSafeAdd("TxMinedGotInput", uint64(wtg_cnt))
-		for _, wtg := range wtgs[:wtg_cnt] {
+	if len(wtgs) > 0 {
+		common.CountSafeAdd("TxMinedGotInput", uint64(len(wtgs)))
+		for _, wtg := range wtgs {
 			RetryWaitingForInput(wtg)
 		}
 	}
