@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -42,6 +41,7 @@ var (
 		Testnet4         bool
 		ConnectOnly      string
 		Datadir          string
+		UtxoSubdir       string
 		TextUI_Enabled   bool
 		UserAgent        string
 		LastTrustedBlock string
@@ -221,7 +221,7 @@ func InitConfig() {
 		}
 	}
 
-	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
+	cfgfilecontent, e := os.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
 		if e != nil {

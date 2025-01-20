@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -39,11 +38,11 @@ func host_init() {
 	os.MkdirAll(common.GocoinHomeDir, 0770)
 	sys.LockDatabaseDir(common.GocoinHomeDir)
 
-	common.SecretKey, _ = ioutil.ReadFile(common.GocoinHomeDir + "authkey")
+	common.SecretKey, _ = os.ReadFile(common.GocoinHomeDir + "authkey")
 	if len(common.SecretKey) != 32 {
 		common.SecretKey = make([]byte, 32)
 		rand.Read(common.SecretKey)
-		ioutil.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600)
+		os.WriteFile(common.GocoinHomeDir+"authkey", common.SecretKey, 0600)
 	}
 	common.PublicKey = btc.Encodeb58(btc.PublicFromPrivate(common.SecretKey, true))
 	fmt.Println("Public auth key:", "@"+common.PublicKey)
@@ -77,6 +76,7 @@ func host_init() {
 	}
 
 	ext := &chain.NewChanOpts{
+		UtxoFilesSubdir:  common.CFG.UtxoSubdir,
 		UTXOVolatileMode: common.FLAG.VolatileUTXO,
 		UndoBlocks:       common.FLAG.UndoBlocks,
 		BlockMinedCB:     blockMined, BlockUndoneCB: blockUndone,
