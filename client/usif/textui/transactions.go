@@ -154,8 +154,9 @@ func decode_tx(pars string) {
 			fmt.Println("Tx sent cnt:", t2s.SentCnt)
 			fmt.Println("Frst seen:", t2s.Firstseen.Format("2006-01-02 15:04:05"))
 			fmt.Println("Last seen:", t2s.Lastseen.Format("2006-01-02 15:04:05"))
-			fmt.Println("Last sent:", t2s.Lastsent.Format("2006-01-02 15:04:05"))
-			fmt.Println("Spent:", len(t2s.Spent), "recs")
+			if t2s.SentCnt > 0 {
+				fmt.Println("Last sent:", t2s.Lastsent.Format("2006-01-02 15:04:05"))
+			}
 			fmt.Println("Volume:", t2s.Volume)
 			fmt.Println("Fee:", t2s.Fee)
 			fmt.Println("MemInputCnt:", t2s.MemInputCnt, " ", t2s.MemInputs)
@@ -345,7 +346,6 @@ func txr_stats(par string) {
 		}
 		cnts[v.Reason] = rec
 	}
-	network.TxMutex.Unlock()
 	sort.Ints(reasons)
 	for _, r := range reasons {
 		rea := byte(r)
@@ -354,6 +354,12 @@ func txr_stats(par string) {
 		fmt.Println("    Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
 		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
 	}
+	cnt := 0
+	for _, lst := range network.RejectedUsedUTXOs {
+		cnt += len(lst)
+	}
+	fmt.Println("RejectedUsedUTXOs count:", cnt, "in", len(network.RejectedUsedUTXOs), "records")
+	network.TxMutex.Unlock()
 }
 
 func send_all_tx(par string) {
@@ -373,7 +379,9 @@ func send_all_tx(par string) {
 }
 
 func save_mempool(par string) {
+	network.TxMutex.Lock()
 	network.MempoolSave(true)
+	network.TxMutex.Unlock()
 }
 
 func check_txs(par string) {
@@ -394,6 +402,22 @@ func get_mempool(par string) {
 
 	fmt.Println("Getting mempool from connection ID", conid, "...")
 	network.GetMP(uint32(conid))
+}
+
+func mempool_purge(par string) {
+	network.TxMutex.Lock()
+	network.TransactionsToSend = make(map[network.BIDX]*network.OneTxToSend)
+	network.TransactionsToSendSize = 0
+	network.TransactionsToSendWeight = 0
+	network.SpentOutputs = make(map[uint64]network.BIDX, 10e3)
+	network.TransactionsRejected = make(map[network.BIDX]*network.OneTxRejected)
+	network.TransactionsRejectedSize = 0
+	network.TransactionsPending = make(map[network.BIDX]bool)
+	network.WaitingForInputs = make(map[network.BIDX]*network.OneWaitingList)
+	network.WaitingForInputsSize = 0
+	network.RejectedUsedUTXOs = make(map[uint64][]network.BIDX)
+	network.TxMutex.Unlock()
+	fmt.Println("Done")
 }
 
 func push_old_txs(par string) {
@@ -460,6 +484,7 @@ func push_old_txs(par string) {
 func init() {
 	newUi("mpcheck mpc", true, check_txs, "Verify consistency of mempool")
 	newUi("mpget mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
+	newUi("mpurge", true, mempool_purge, "Purge memory pool (restart from empty)")
 	newUi("mpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("mpstat mp", true, mempool_stats, "Show the mempool statistics")
 	newUi("savetx txs", true, save_tx, "Save raw transaction from memory pool to disk: <txid>")
@@ -470,9 +495,9 @@ func init() {
 	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
 	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
 	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrlist rtxl", true, baned_txs, "List the transaction that we have rejected: [<reason>]")
-	newUi("txrpurge rtxp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
-	newUi("txrstat rtxs", true, txr_stats, "Show stats of the rejected txs")
+	newUi("txrlist rtl", true, baned_txs, "List the transaction that we have rejected: [<reason>]")
+	newUi("txrpurge rtp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
+	newUi("txrstat rts", true, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
 }

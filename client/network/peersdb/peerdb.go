@@ -611,7 +611,7 @@ func InitPeers(dir string) {
 
 func ClosePeerDB() {
 	if PeerDB != nil {
-		fmt.Println("Closing peer DB")
+		//fmt.Println("Closing peer DB")
 		PeerDB.Sync()
 		PeerDB.Defrag(true)
 		PeerDB.Close()

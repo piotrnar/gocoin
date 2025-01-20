@@ -8,8 +8,10 @@ import (
 )
 
 // MempoolCheck verifies the Mempool for consistency.
+// Usefull for debuggning as normally there should be no consistencies.
 // Make sure to call it with TxMutex Locked.
-func MempoolCheck() (dupa bool) {
+func MempoolCheck() bool {
+	var dupa int
 	var spent_cnt int
 	var w4i_cnt int
 	var totsize uint64
@@ -23,89 +25,96 @@ func MempoolCheck() (dupa bool) {
 
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
-
-			outk, ok := SpentOutputs[inp.Input.UIdx()]
-			if ok {
+			if outk, ok := SpentOutputs[inp.Input.UIdx()]; ok {
 				if outk != t2s.Hash.BIdx() {
-					fmt.Println("Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
-					dupa = true
+					dupa++
+					fmt.Println(dupa, "Tx", t2s.Hash.String(), "input", i, "has a mismatch in SpentOutputs record", outk)
 				}
 			} else {
-				fmt.Println("Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
-				dupa = true
+				dupa++
+				fmt.Println(dupa, "Tx", t2s.Hash.String(), "input", i, "is not in SpentOutputs")
 			}
 
-			_, ok = TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
+			_, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]
 
 			if t2s.MemInputs == nil {
 				if ok {
-					fmt.Println("Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
-					dupa = true
+					dupa++
+					fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInputs==nil but input", i, "is in mempool", inp.Input.String())
 				}
 			} else {
 				if t2s.MemInputs[i] {
 					micnt++
 					if !ok {
-						fmt.Println("Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
-						dupa = true
+						dupa++
+						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput set but input", i, "NOT in mempool", inp.Input.String())
 					}
 				} else {
 					if ok {
-						fmt.Println("Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
-						dupa = true
+						dupa++
+						fmt.Println(dupa, "Tx", t2s.Hash.String(), "MemInput NOT set but input", i, "IS in mempool", inp.Input.String())
 					}
 				}
 			}
-
 			if _, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; !ok {
 				if unsp := common.BlockChain.Unspent.UnspentGet(&inp.Input); unsp == nil {
-					fmt.Println("Mempool tx", t2s.Hash.String(), "has no input", i)
-					dupa = true
+					dupa++
+					fmt.Println(dupa, "Mempool tx", t2s.Hash.String(), "has no input", i)
 				}
 			}
 		}
 		if t2s.MemInputs != nil && micnt == 0 {
-			fmt.Println("Tx", t2s.Hash.String(), "has MemInputs array with all false values")
-			dupa = true
+			dupa++
+			fmt.Println(dupa, "Tx", t2s.Hash.String(), "has MemInputs array with all false values")
 		}
 		if t2s.MemInputCnt != micnt {
-			fmt.Println("Tx", t2s.Hash.String(), "has incorrect MemInputCnt", t2s.MemInputCnt, micnt)
-			dupa = true
+			dupa++
+			fmt.Println(dupa, "Tx", t2s.Hash.String(), "has incorrect MemInputCnt", t2s.MemInputCnt, micnt)
 		}
 	}
 
+	for _, so := range SpentOutputs {
+		if _, ok := TransactionsToSend[so]; !ok {
+			dupa++
+			fmt.Println(dupa, "SpentOutput", btc.BIdxString(so), "does not have tx in mempool")
+		}
+	}
 	if spent_cnt != len(SpentOutputs) {
-		fmt.Println("SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
-		dupa = true
+		dupa++
+		fmt.Println(dupa, "SpentOutputs length mismatch", spent_cnt, len(SpentOutputs))
 	}
 
 	if totsize != TransactionsToSendSize {
-		fmt.Println("TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
-		dupa = true
+		dupa++
+		fmt.Println(dupa, "TransactionsToSendSize mismatch", totsize, TransactionsToSendSize)
 	}
 
 	totsize = 0
+	tot_utxo_used := 0
 	for _, tr := range TransactionsRejected {
 		if tr.Tx != nil {
 			if tr.Tx.Raw == nil {
-				fmt.Println("RejectedTx", tr.Id.String(), "has Tx but no Raw")
-				dupa = true
+				dupa++
+				fmt.Println(dupa, "TxR", tr.Id.String(), "has Tx but no Raw")
 			} else {
 				totsize += uint64(len(tr.Raw))
+				tot_utxo_used += len(tr.Tx.TxIn)
 			}
 			if tr.Reason < 200 {
-				fmt.Println("RejectedTx", tr.Id.String(), "reason", tr.Reason, "but no data")
+				dupa++
+				fmt.Println(dupa, "TxR", tr.Id.String(), "reason", tr.Reason, "but no data")
 			}
 		} else {
 			if tr.Reason >= 200 {
-				fmt.Println("RejectedTx", tr.Id.String(), "has sata, reason", tr.Reason)
+				dupa++
+				fmt.Println(dupa, "TxR", tr.Id.String(), "has sata, reason", tr.Reason)
 			}
 		}
 
 		if tr.Waiting4 != nil {
 			if tr.Tx == nil || tr.Tx.Raw == nil {
-				fmt.Println("RejectedTx", tr.Id.String(), "has w4i but no tx data")
-				dupa = true
+				dupa++
+				fmt.Println(dupa, "TxR", tr.Id.String(), tr.Reason, "has w4i but no tx data")
 			} else {
 				w4i_cnt++
 				w4isize += uint64(len(tr.Raw))
@@ -113,8 +122,8 @@ func MempoolCheck() (dupa bool) {
 		}
 	}
 	if totsize != TransactionsRejectedSize {
-		fmt.Println("TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
-		dupa = true
+		dupa++
+		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
 	}
 
 	spent_cnt = 0
@@ -122,13 +131,75 @@ func MempoolCheck() (dupa bool) {
 		spent_cnt += len(rec.Ids)
 	}
 	if w4i_cnt != spent_cnt {
-		fmt.Println("WaitingForInputs count mismatch", w4i_cnt, spent_cnt)
-		dupa = true
+		dupa++
+		fmt.Println(dupa, "WaitingForInputs count mismatch", w4i_cnt, spent_cnt)
 	}
 	if w4isize != WaitingForInputsSize {
-		fmt.Println("WaitingForInputsSize mismatch", w4isize, totsize)
-		dupa = true
+		dupa++
+		fmt.Println(dupa, "WaitingForInputsSize mismatch", w4isize, totsize)
 	}
 
-	return
+	spent_cnt = 0
+	for utxoidx, lst := range RejectedUsedUTXOs {
+		spent_cnt += len(lst)
+		for _, bidx := range lst {
+			if txr, ok := TransactionsRejected[bidx]; ok && txr.Tx != nil {
+				var found bool
+				for _, inp := range txr.TxIn {
+					if _, ok := RejectedUsedUTXOs[inp.Input.UIdx()]; ok {
+						found = true
+						break
+					}
+					if !found {
+						dupa++
+						fmt.Println(dupa, "Tx", txr.Id.String(), "in RejectedUsedUTXOs but without back reference to RejectedUsedUTXOs")
+					}
+				}
+
+			} else {
+				dupa++
+				fmt.Println(dupa, "BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
+					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
+				fmt.Println("   ", RejectedUsedUTXOs_Strings[utxoidx])
+				if t2s, ok := TransactionsToSend[bidx]; ok {
+					fmt.Println("   It is however in T2S", t2s.Hash.String())
+				} else {
+					fmt.Println("   Not it is in T2S")
+				}
+			}
+		}
+	}
+	if spent_cnt != tot_utxo_used {
+		dupa++
+		fmt.Println(dupa, "RejectedUsedUTXOs count mismatch", spent_cnt, tot_utxo_used)
+
+		fmt.Println("Checking which txids are missing...")
+		for bidx, txr := range TransactionsRejected {
+			if txr.Tx == nil {
+				continue
+			}
+			for _, inp := range txr.TxIn {
+				uidx := inp.Input.UIdx()
+				if lst, ok := RejectedUsedUTXOs[uidx]; ok {
+					var found bool
+					for _, bi := range lst {
+						if bidx == bi {
+							found = true
+							break
+						}
+					}
+					if !found {
+						fmt.Println(" - Missing on list", inp.Input.String(), "\n  for", txr.Id.String())
+					}
+				} else {
+					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
+				}
+				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
+				RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
+			}
+		}
+
+	}
+
+	return dupa > 0
 }

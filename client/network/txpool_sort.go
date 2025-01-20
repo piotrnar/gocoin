@@ -543,7 +543,13 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 		if _, ok := already_in[tx]; ok {
 			continue
 		}
-		result[res_idx] = [2]uint64{uint64(tx.Weight()), tx.Fee}
+		wg := tx.Weight()
+		if wg == 0 {
+			println("ERROR: weigth 0")
+			println(tx.Hash.String())
+			continue
+		}
+		result[res_idx] = [2]uint64{uint64(wg), tx.Fee}
 		res_idx++
 		weightsofar += uint64(tx.Weight())
 

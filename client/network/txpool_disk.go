@@ -21,10 +21,9 @@ var (
 
 const (
 	MEMPOOL_FILE_NAME = "mempool.dmp"
-	FILE_VERSION_MAX  = 0xffffffff
-	FILE_VERSION_3    = FILE_VERSION_MAX
-	FILE_VERSION_4    = FILE_VERSION_3 - 1
-	FILE_VERSION_CUR  = FILE_VERSION_4
+	FILE_VERSION_MAX  = 0xffffffff // this is version 3
+	FILE_VERSION_6    = FILE_VERSION_MAX - 3
+	FILE_VERSION_CUR  = FILE_VERSION_6
 
 	HAS_WAITING4_FLAG = 1 << 23
 	HAS_TX_FLAG       = 1 << 22
@@ -41,9 +40,6 @@ func bool2byte(v bool) byte {
 func (t2s *OneTxToSend) WriteBytes(wr io.Writer) {
 	btc.WriteVlen(wr, uint64(len(t2s.Raw)))
 	wr.Write(t2s.Raw)
-
-	btc.WriteVlen(wr, uint64(len(t2s.Spent)))
-	binary.Write(wr, binary.LittleEndian, t2s.Spent[:])
 
 	binary.Write(wr, binary.LittleEndian, t2s.Invsentcnt)
 	binary.Write(wr, binary.LittleEndian, t2s.SentCnt)
@@ -111,12 +107,6 @@ func MempoolSave(force bool) {
 		t2s.WriteBytes(wr)
 	}
 
-	btc.WriteVlen(wr, uint64(len(SpentOutputs)))
-	for k, v := range SpentOutputs {
-		binary.Write(wr, binary.LittleEndian, k)
-		binary.Write(wr, binary.LittleEndian, v)
-	}
-
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
 	for _, v := range TransactionsRejected {
 		v.WriteBytes(wr)
@@ -151,12 +141,14 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 	}
 	t2s.Tx.SetHash(raw)
 
-	if le, er = btc.ReadVLen(rd); er != nil {
-		return
-	}
-	t2s.Spent = make([]uint64, int(le))
-	if er = binary.Read(rd, binary.LittleEndian, t2s.Spent[:]); er != nil {
-		return
+	if file_version < 6 {
+		if le, er = btc.ReadVLen(rd); er != nil {
+			return
+		}
+		spent := make([]uint64, int(le))
+		if er = binary.Read(rd, binary.LittleEndian, spent); er != nil {
+			return
+		}
 	}
 
 	if er = binary.Read(rd, binary.LittleEndian, &t2s.Invsentcnt); er != nil {
@@ -252,6 +244,12 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		txr.Raw = raw
 		txr.Tx.Hash.Hash = txr.Id.Hash
 
+		for _, inp := range txr.TxIn {
+			uidx := inp.Input.UIdx()
+			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
+			RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
+		}
+
 		if txr.Waiting4 != nil {
 			var rec *OneWaitingList
 			if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
@@ -316,6 +314,7 @@ func MempoolLoad() bool {
 	}
 	fmt.Println(MEMPOOL_FILE_NAME, "file version", file_version)
 
+	//println("TransactionsToSend cnt:", totcnt)
 	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
 		if t2s, er = newOneTxToSendFromFile(rd, file_version); er != nil {
@@ -326,25 +325,34 @@ func MempoolLoad() bool {
 		TransactionsToSendWeight += uint64(t2s.Weight())
 	}
 
-	if totcnt, er = btc.ReadVLen(rd); er != nil {
-		goto fatal_error
+	if file_version < 5 {
+		if totcnt, er = btc.ReadVLen(rd); er != nil {
+			goto fatal_error
+		}
+		println("SpentOutputs cnt:", totcnt, "- discarding")
+		for ; totcnt > 0; totcnt-- {
+			if er = binary.Read(rd, binary.LittleEndian, &le); er != nil {
+				goto fatal_error
+			}
+			if er = binary.Read(rd, binary.LittleEndian, &bi); er != nil {
+				goto fatal_error
+			}
+		}
 	}
 
-	SpentOutputs = make(map[uint64]BIDX, int(totcnt))
-	for ; totcnt > 0; totcnt-- {
-		if er = binary.Read(rd, binary.LittleEndian, &le); er != nil {
-			goto fatal_error
+	//fmt.Println("Rebuilding SpentOutputs")
+	SpentOutputs = make(map[uint64]BIDX, 4*len(TransactionsToSend))
+	for bidx, t2s := range TransactionsToSend {
+		for _, inp := range t2s.TxIn {
+			SpentOutputs[inp.Input.UIdx()] = bidx
 		}
-		if er = binary.Read(rd, binary.LittleEndian, &bi); er != nil {
-			goto fatal_error
-		}
-		SpentOutputs[le] = bi
 	}
 
 	if file_version >= 4 {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
+		//println("TransactionsRejected cnt:", totcnt)
 		TransactionsRejected = make(map[BIDX]*OneTxRejected, int(totcnt))
 		for ; totcnt > 0; totcnt-- {
 			if txr, er = newOneTxRejectedFromFile(rd); er != nil {

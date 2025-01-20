@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,17 +15,20 @@ import (
 )
 
 const (
-	TX_REJECTED_DISABLED = 1
+	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
 
 	TX_REJECTED_TOO_BIG      = 101
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
 	TX_REJECTED_INPUT_MINED  = 105
-	TX_REJECTED_DATA_PURGED  = 106
+	TX_REJECTED_REJ_MINED_OK = 107
 
-	TX_REJECTED_OVERSPEND = 154
-	TX_REJECTED_BAD_INPUT = 157
+	TX_REJECTED_OVERSPEND     = 154
+	TX_REJECTED_BAD_INPUT     = 157
+	TX_REJECTED_REJ_MINED_BAD = 158
+
+	TX_REJECTED_DATA_PURGED = 199
 
 	// Anything from the list below might eventually get mined
 	TX_REJECTED_NO_TXOU     = 202
@@ -46,7 +50,8 @@ var (
 	TransactionsToSendWeight uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
-	SpentOutputs map[uint64]BIDX = make(map[uint64]BIDX)
+	// Each record is indexed by 64-bit-coded(TxID:Vout) and points to list of txs (from T2S)
+	SpentOutputs map[uint64]BIDX = make(map[uint64]BIDX, 10e3)
 
 	// Transactions that we downloaded, but rejected:
 	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
@@ -58,12 +63,16 @@ var (
 	// Transactions that are waiting for inputs:
 	WaitingForInputs     map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
 	WaitingForInputsSize uint64
+
+	// Inputs that are being used by TransactionsRejected
+	// Each record points to one TransactionsRejected with Reason of 200 or more
+	RejectedUsedUTXOs         map[uint64][]BIDX = make(map[uint64][]BIDX)
+	RejectedUsedUTXOs_Strings map[uint64]string = make(map[uint64]string)
 )
 
 type OneTxToSend struct {
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
-	Spent                         []uint64 // Which records in SpentOutputs this TX added
 	Volume                        uint64
 	*btc.Tx
 	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
@@ -107,6 +116,10 @@ func ReasonToString(reason byte) string {
 		return "INPUT_MINED"
 	case TX_REJECTED_DATA_PURGED:
 		return "PURGED"
+	case TX_REJECTED_REJ_MINED_OK:
+		return "REJ_MINED_OK"
+	case TX_REJECTED_REJ_MINED_BAD:
+		return "REJ_MINED_BAD"
 	case TX_REJECTED_OVERSPEND:
 		return "OVERSPEND"
 	case TX_REJECTED_BAD_INPUT:
@@ -190,6 +203,11 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 		rec.Tx = tx
 		rec.Id = &tx.Hash
 		TransactionsRejectedSize += uint64(rec.Size)
+		for _, inp := range tx.TxIn {
+			uidx := inp.Input.UIdx()
+			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], rec.Hash.BIdx())
+			RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
+		}
 	} else {
 		rec.Id = new(btc.Uint256)
 		rec.Id.Hash = tx.Hash.Hash
@@ -506,10 +524,14 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	tx.Fee = fee
-	rec := &OneTxToSend{Spent: spent, Volume: totinp, Local: ntx.local,
+	rec := &OneTxToSend{Volume: totinp, Local: ntx.local,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
+	if f, _ := os.OpenFile("bidx_list.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660); f != nil {
+		fmt.Fprintf(f, "%s: %s %s\n", time.Now().Format("01/02 15:04:05"), btc.BIdxString(bidx), tx.Hash.String())
+		f.Close()
+	}
 	TransactionsToSend[bidx] = rec
 	tx.Clean()
 
@@ -581,6 +603,9 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 		pendtxrcv := &TxRcvd{Tx: TransactionsRejected[k].Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
+			if txr, ok := TransactionsRejected[k]; ok {
+				println("tx", txr.Id.String(), "accepted but still in rejected")
+			}
 		} else {
 			common.CountSafe("TxRetryRejected")
 		}
@@ -605,8 +630,8 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
-	for i := range tx.Spent {
-		delete(SpentOutputs, tx.Spent[i])
+	for _, txin := range tx.TxIn {
+		delete(SpentOutputs, txin.Input.UIdx())
 	}
 
 	TransactionsToSendSize -= uint64(len(tx.Raw))
@@ -640,18 +665,48 @@ func txChecker(tx *btc.Tx) bool {
 	return ok
 }
 
-func (tr *OneTxRejected) freeW4() {
+// Remove any references to WaitingForInputs and RejectedUsedUTXOs
+func (tr *OneTxRejected) cleanup() {
+	bidx := tr.Id.BIdx()
+
+	// remove references to this tx from RejectedUsedUTXOs
+	for _, inp := range tr.TxIn {
+		uidx := inp.Input.UIdx()
+		ref := RejectedUsedUTXOs[uidx]
+		newref := make([]BIDX, 0, len(ref)-1)
+		for _, bi := range ref {
+			if bi != bidx {
+				newref = append(newref, bi)
+			}
+		}
+		if len(newref) == len(ref) {
+			fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
+			common.CountSafe("Tx**UsedUTXOnil")
+		} else {
+			if len(newref) == 0 {
+				delete(RejectedUsedUTXOs, uidx)
+				delete(RejectedUsedUTXOs_Strings, uidx)
+				common.CountSafe("TxUsedUTXOdel")
+			} else {
+				RejectedUsedUTXOs[uidx] = newref
+				common.CountSafe("TxUsedUTXOrem")
+			}
+		}
+	}
+
+	// remove references to this tx from WaitingForInputs
 	if tr.Waiting4 != nil {
 		if w4i := WaitingForInputs[tr.Waiting4.BIdx()]; w4i != nil {
-			delete(w4i.Ids, tr.Id.BIdx())
+			delete(w4i.Ids, bidx)
 			if len(w4i.Ids) == 0 {
 				delete(WaitingForInputs, tr.Waiting4.BIdx())
 			}
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
 			println("   from rejected tx", tr.Id.String())
-			common.CountSafe("TxRejectedW4error") // TODO: check this counter increasing
+			common.CountSafe("Tx**RejectedW4error")
 		}
+		tr.Waiting4 = nil
 		WaitingForInputsSize -= uint64(len(tr.Raw))
 	}
 }
@@ -661,7 +716,7 @@ func (tr *OneTxRejected) Discard() {
 	if tr.Tx == nil {
 		panic("OneTxRejected.Discard() called, but it's already empty")
 	}
-	tr.freeW4()
+	tr.cleanup()
 	TransactionsRejectedSize -= uint64(tr.Size)
 	tr.Tx = nil
 }
@@ -669,11 +724,13 @@ func (tr *OneTxRejected) Discard() {
 // Make sure to call it with locked TxMutex
 func deleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
-		tr.freeW4()
 		if tr.Tx != nil {
+			tr.cleanup()
 			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
 		}
 		delete(TransactionsRejected, bidx)
+	} else {
+		common.CountSafe("Tx**RejDelMiss")
 	}
 }
 
