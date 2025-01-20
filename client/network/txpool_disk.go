@@ -232,6 +232,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		}
 	}
 	if (tina & HAS_TX_FLAG) != 0 {
+		bidx := txr.Id.BIdx()
 		raw := make([]byte, txr.Size)
 		if _, er = io.ReadFull(rd, raw); er != nil {
 			return
@@ -246,19 +247,19 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 
 		for _, inp := range txr.TxIn {
 			uidx := inp.Input.UIdx()
-			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
+			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
 			RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
 		}
 
 		if txr.Waiting4 != nil {
+			w4bidx := txr.Waiting4.BIdx()
 			var rec *OneWaitingList
-			if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
+			if rec = WaitingForInputs[w4bidx]; rec == nil {
 				rec = new(OneWaitingList)
 				rec.TxID = txr.Waiting4
-				rec.Ids = make(map[BIDX]time.Time)
 			}
-			rec.Ids[txr.Id.BIdx()] = time.Now()
-			WaitingForInputs[txr.Waiting4.BIdx()] = rec
+			rec.Ids = append(rec.Ids, bidx)
+			WaitingForInputs[w4bidx] = rec
 			WaitingForInputsSize += uint64(len(txr.Raw))
 		}
 	} else if txr.Waiting4 != nil {

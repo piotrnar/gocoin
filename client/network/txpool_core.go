@@ -95,7 +95,7 @@ type OneTxRejected struct {
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
-	Ids  map[BIDX]time.Time // List of pending tx ids
+	Ids  []BIDX // List of pending tx ids
 }
 
 func ReasonToString(reason byte) string {
@@ -402,10 +402,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					if rec = WaitingForInputs[missingid.BIdx()]; rec == nil {
 						rec = new(OneWaitingList)
 						rec.TxID = missingid
-						rec.Ids = make(map[BIDX]time.Time)
 						newone = true
 					}
-					rec.Ids[bidx] = time.Now()
+					rec.Ids = append(rec.Ids, bidx)
 					WaitingForInputs[missingid.BIdx()] = rec
 					WaitingForInputsSize += uint64(len(ntx.Raw))
 				}
@@ -599,7 +598,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 }
 
 func RetryWaitingForInput(wtg *OneWaitingList) {
-	for k := range wtg.Ids {
+	for _, k := range wtg.Ids {
 		pendtxrcv := &TxRcvd{Tx: TransactionsRejected[k].Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
@@ -668,7 +667,6 @@ func txChecker(tx *btc.Tx) bool {
 // Remove any references to WaitingForInputs and RejectedUsedUTXOs
 func (tr *OneTxRejected) cleanup() {
 	bidx := tr.Id.BIdx()
-
 	// remove references to this tx from RejectedUsedUTXOs
 	for _, inp := range tr.TxIn {
 		uidx := inp.Input.UIdx()
@@ -696,10 +694,18 @@ func (tr *OneTxRejected) cleanup() {
 
 	// remove references to this tx from WaitingForInputs
 	if tr.Waiting4 != nil {
-		if w4i := WaitingForInputs[tr.Waiting4.BIdx()]; w4i != nil {
-			delete(w4i.Ids, bidx)
+		w4idx := tr.Waiting4.BIdx()
+		if w4i := WaitingForInputs[w4idx]; w4i != nil {
+			newlist := make([]BIDX, 0, len(w4i.Ids)-1)
+			for _, x := range w4i.Ids {
+				if x != bidx {
+					newlist = append(newlist, x)
+				}
+			}
 			if len(w4i.Ids) == 0 {
-				delete(WaitingForInputs, tr.Waiting4.BIdx())
+				delete(WaitingForInputs, w4idx)
+			} else {
+				w4i.Ids = newlist
 			}
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
