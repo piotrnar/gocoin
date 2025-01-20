@@ -128,6 +128,10 @@ func MempoolCheck() bool {
 
 	spent_cnt = 0
 	for _, rec := range WaitingForInputs {
+		if len(rec.Ids) == 0 {
+			dupa++
+			fmt.Println(dupa, "WaitingForInputs", rec.TxID.String(), "has zero records")
+		}
 		spent_cnt += len(rec.Ids)
 	}
 	if w4i_cnt != spent_cnt {
