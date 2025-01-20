@@ -702,7 +702,7 @@ func (tr *OneTxRejected) cleanup() {
 					newlist = append(newlist, x)
 				}
 			}
-			if len(w4i.Ids) == 0 {
+			if len(newlist) == 0 {
 				delete(WaitingForInputs, w4idx)
 			} else {
 				w4i.Ids = newlist
