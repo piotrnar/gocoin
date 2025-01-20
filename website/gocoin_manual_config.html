@@ -45,6 +45,13 @@ or "~/.bitcoin/gocoin"</td>
 It contains the bock chain, UTXO and peers database, plus some other files used by the client.
 </tr>
 <tr>
+<td class="cfg_name"> UtxoSubdir</td>
+<td class="cfg_type"> string</td>
+<td>""</td>
+<td class="cfg_info"> If specified, will store UTXO snapshots inside such subfolder of the data dir.<br>
+Useful for storing UTXO snapshots on a faster drive, as they are more disk speed sensitive.
+</tr>
+<tr>
 <td class="cfg_name"> UserAgent</td>
 <td class="cfg_type"> string</td>
 <td> ""</td>
@@ -212,6 +219,12 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td class="cfg_info"> If not zero, the node will keep the mempool size below this value.</td>
 </tr>
 <tr class="even">
+<td class="cfg_name"> TXPool.ExpireInDays</td>
+<td class="cfg_type"> uint</td>
+<td> 7</td>
+<td class="cfg_info"> Remove transaction from memory pool, if it has not been seen for so many days.
+</tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.MaxRejectMB</td>
 <td class="cfg_type"> uint</td>
 <td> 25</td>
@@ -359,11 +372,18 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td> true</td>
 <td class="cfg_info"> Atomatically enable wallet functionality after the node is launched and synchronized.</td>
 </tr>
+</tr>
 <tr class="odd">
 <td class="cfg_name"> AllBalances.SaveBalances</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Always save all address balances before quitting (to load it from disk upon next launch).</td>
+</tr>
+<tr class="odd">
+<td class="cfg_name"> AllBalances.InstantWallet</td></td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> If set, the client will fetch all wallet balances before starting UI and network.</td>
 </tr>
 
 <tr class="even">
