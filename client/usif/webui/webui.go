@@ -57,10 +57,6 @@ func load_template(fn string) string {
 	return string(dat)
 }
 
-func templ_add(tmpl string, id string, val string) string {
-	return strings.Replace(tmpl, id, val+id, 1)
-}
-
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -143,7 +139,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 
 func write_html_tail(w http.ResponseWriter) {
 	s := load_template("page_tail.html")
-	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Now().Sub(start_time).String(), 1)
+	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Since(start_time).String(), 1)
 	w.Write([]byte(s))
 }
 
