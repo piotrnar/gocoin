@@ -428,6 +428,13 @@ function do_raw_tx(txid) {
 	aj.send(null);
 }
 
+// same as decode_tx, but will also do rejected tx
+function decode_tx2() {
+	if (!tx_decoding_in_progress) {
+		do_raw_tx(this.id)
+	}
+}
+
 function show_raw_tx() {
 	if (!tx_decoding_in_progress) {
 		var tid = prompt("Enter ID of the TX");
@@ -577,17 +584,23 @@ function show_txsre() {
 			txs = aj.responseXML.getElementsByTagName('tx')
 			butre.value = ' ' + txs.length + ' '
 			for (var i=0; i<txs.length; i++) {
-				var t,c,row = txsre.insertRow(-1)
+				var row = txsre.insertRow(-1)
+				var inmem = xval(txs[i], 'inmem')==='true'
 
 				row.className='hov'
 
-				c=row.insertCell(-1);c.align='right'
+				var c = row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
 
 				c = row.insertCell(-1)
 				c.className ='mono'
-				t = xval(txs[i], 'id')
-				c.innerHTML = t
+				var txid = xval(txs[i], 'id')
+				c.innerHTML = txid
+				if (inmem) {
+					c.id = txid
+					c.addEventListener('click', decode_tx2, false)
+					c.style.cursor='pointer'
+				}
 
 				c=row.insertCell(-1);className='maturity'
 				var tim = xval(txs[i], 'time')
@@ -595,7 +608,7 @@ function show_txsre() {
 				c.innerHTML = get_maturity(tim)
 
 				c=row.insertCell(-1);c.align='right'
-				if (xval(txs[i], 'inmem')==='true') {
+				if (inmem) {
 					c.innerHTML = '<b>'+xval(txs[i], 'size')+'</b>'
 				} else {
 					c.innerHTML = '<i style="font-size:75%">'+xval(txs[i], 'size')+'</i>'
@@ -624,11 +637,11 @@ function show_txw4i() {
 				pendtxs = wait4s[i].getElementsByTagName('tx')
 				idx++
 				for (var j=0; j<pendtxs.length; j++) {
-					var t,c,row = txw4i.insertRow(-1)
+					var row = txw4i.insertRow(-1)
 
 					row.className='hov'
 
-					c=row.insertCell(-1);c.align='right'
+					var c = row.insertCell(-1);c.align='right'
 					if (j==0) {
 						c.innerHTML = idx.toString()
 					}
@@ -642,10 +655,13 @@ function show_txw4i() {
 
 					c = row.insertCell(-1)
 					c.className ='mono'
-					t = xval(pendtxs[j], 'id')
-					c.innerHTML = t
+					var txid = xval(pendtxs[j], 'id')
+					c.innerHTML = txid
+					c.id = txid
+					c.addEventListener('click', decode_tx2, false)
+					c.style.cursor='pointer'
 
-					c=row.insertCell(-1);className='maturity'
+					c = row.insertCell(-1);className='maturity'
 					var tim = xval(pendtxs[j], 'time')
 					c["numeric_value"]  = tim
 					c.innerHTML = get_maturity(tim)
