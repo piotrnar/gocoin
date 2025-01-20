@@ -124,7 +124,7 @@ function add_address_and_icons(td, adr, lab) {
 	td.appendChild(document.createTextNode('\u00A0' + adr + '\u00A0'))
 
 	// add copy icon
-	img = document.createElement("img")
+	var img = document.createElement("img")
 	img["text2copy"] = adr
 	img.style.verticalAlign = "bottom"
 	img.src = 'webui/copy.png'

@@ -124,7 +124,7 @@ func LimitPoolSize(maxlen uint64) {
 				var cnt uint64
 				for k, v := range TransactionsRejected {
 					if v.Reason == TX_REJECTED_LOW_FEE {
-						deleteRejected(k)
+						DeleteRejected(k)
 						cnt++
 					}
 				}
@@ -205,7 +205,7 @@ func LimitRejectedSize() {
 		sorted = GetSortedRejected()
 		maxcnt -= maxcnt >> 5
 		for idx = maxcnt; idx < len(sorted); idx++ {
-			deleteRejected(sorted[idx].Id.BIdx())
+			DeleteRejected(sorted[idx].Id.BIdx())
 		}
 		sorted = sorted[:maxcnt]
 	}
@@ -217,7 +217,7 @@ func LimitRejectedSize() {
 		}
 		maxlen -= maxlen >> 5
 		for idx = len(sorted) - 1; idx >= 0; idx-- {
-			deleteRejected(sorted[idx].Hash.BIdx())
+			DeleteRejected(sorted[idx].Hash.BIdx())
 			if TransactionsRejectedSize <= maxlen {
 				break
 			}

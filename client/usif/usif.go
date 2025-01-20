@@ -85,7 +85,9 @@ func LoadRawTx(buf []byte) (s string) {
 	DecodeTx(wb, tx)
 	s = wb.String()
 
-	network.RemoveFromRejected(&tx.Hash) // in case we rejected it eariler, to try it again as trusted
+	network.TxMutex.Lock()
+	network.DeleteRejected(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
+	network.TxMutex.Unlock()
 
 	if why := network.NeedThisTxExt(&tx.Hash, nil); why != 0 {
 		s += fmt.Sprintln("Transaction not needed or not wanted", why)

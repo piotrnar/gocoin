@@ -81,15 +81,18 @@ func del_tx(par string) {
 	}
 	network.TxMutex.Lock()
 	defer network.TxMutex.Unlock()
-	tx, ok := network.TransactionsToSend[txid.BIdx()]
-	if !ok {
-		network.TxMutex.Unlock()
-		fmt.Println("No such transaction ID in the memory pool.")
-		list_txs("")
+
+	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		tx.Delete(true, 0)
+		fmt.Println("Tx", txid.String(), "removed from ToSend")
 		return
 	}
-	tx.Delete(true, 0)
-	fmt.Println("Transaction", txid.String(), "and all its children removed from the memory pool")
+	if txr, ok := network.TransactionsRejected[txid.BIdx()]; ok {
+		network.DeleteRejected(txr.Id.BIdx())
+		fmt.Println("TxR", txid.String(), "removed from Rejected")
+		return
+	}
+	fmt.Println("No such transaction ID in the memory pool.")
 }
 
 func local_tx(par string) {
@@ -487,17 +490,17 @@ func init() {
 	newUi("mpurge", true, mempool_purge, "Purge memory pool (restart from empty)")
 	newUi("mpsave mps", true, save_mempool, "Save memory pool to disk")
 	newUi("mpstat mp", true, mempool_stats, "Show the mempool statistics")
-	newUi("savetx txs", true, save_tx, "Save raw transaction from memory pool to disk: <txid>")
-	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer: <txid>")
-	newUi("txdecode td", true, decode_tx, "Decode transaction from memory pool: <txid> [int|raw|all]")
-	newUi("txdel", true, del_tx, "Remove a transaction from memory pool: <txid>")
-	newUi("txlist ltx", true, list_txs, "List transaction from memory pool up to: <max_weigth> (default 4M)")
-	newUi("txload txl", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
-	newUi("txlocal txloc", true, local_tx, "Mark transaction as local: <txid> [0|1]")
-	newUi("txold to", true, push_old_txs, "Push or delete transactions not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrlist rtl", true, baned_txs, "List the transaction that we have rejected: [<reason>]")
+	newUi("savetx txs", true, save_tx, "Save raw tx from memory pool to disk: <txid>")
+	newUi("tx1send stx1", true, send1_tx, "Broadcast tx to a single random peer: <txid>")
+	newUi("txdecode td", true, decode_tx, "Decode tx from memory pool: <txid> [int|raw|all]")
+	newUi("txdel", true, del_tx, "Remove tx from memory: <txid>")
+	newUi("txlist ltx", true, list_txs, "List tx from memory pool up to: <max_weigth> (default 4M)")
+	newUi("txload txl", true, load_tx, "Load tx data from the given file, decode it and store in memory")
+	newUi("txlocal txloc", true, local_tx, "Mark tx as local: <txid> [0|1]")
+	newUi("txold to", true, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
+	newUi("txrlist rtl", true, baned_txs, "List the tx that we have rejected: [<reason>]")
 	newUi("txrpurge rtp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
 	newUi("txrstat rts", true, txr_stats, "Show stats of the rejected txs")
-	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool: <txid>")
-	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local transactions (what you see after ltx)")
+	newUi("txsend stx", true, send_tx, "Broadcast tx from memory pool: <txid>")
+	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
 }

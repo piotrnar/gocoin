@@ -286,7 +286,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	} else {
 		// In case case of retry, it is on the rejected list,
 		// so remove it now to free any tied WaitingForInputs
-		deleteRejected(bidx)
+		DeleteRejected(bidx)
 	}
 
 	pos := make([]*btc.TxOut, len(tx.TxIn))
@@ -740,7 +740,7 @@ func (tr *OneTxRejected) Discard() {
 }
 
 // Make sure to call it with locked TxMutex
-func deleteRejected(bidx BIDX) {
+func DeleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
 		if tr.Tx != nil {
 			tr.cleanup()
@@ -750,12 +750,6 @@ func deleteRejected(bidx BIDX) {
 	} else {
 		common.CountSafe("Tx**RejDelMiss")
 	}
-}
-
-func RemoveFromRejected(hash *btc.Uint256) {
-	TxMutex.Lock()
-	deleteRejected(hash.BIdx())
-	TxMutex.Unlock()
 }
 
 func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {

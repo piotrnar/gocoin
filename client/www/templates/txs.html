@@ -12,6 +12,10 @@ td.txid {
 	font-family: monospace;
 	font-size:7px;
 }
+td.txid11 {
+	font-family: monospace;
+	font-size:11px;
+}
 </style>
 <div id="light" class="white_content">
 <table width="100%"><tr>
@@ -23,7 +27,7 @@ td.txid {
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
 <tr>
-<td><b>Memory Pool:</b></td>
+<td><b>Memory Pool:</b> <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px"></td>
 <td align="right">
 <span onclick="mempool_new_sort.click()" class="hand" title="Uses less bandwidth">
 	<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
@@ -647,21 +651,15 @@ function show_txw4i() {
 					}
 
 					c = row.insertCell(-1)
-					c.className ='mono'
-					if (j==0) {
-						t = xval(wait4s[i], 'id')
-						c.innerHTML = t
-					}
+					c.className ='txid11'
+					add_txid_and_icon(c, xval(wait4s[i], 'id'), false)
 
 					c = row.insertCell(-1)
-					c.className ='mono'
-					var txid = xval(pendtxs[j], 'id')
-					c.innerHTML = txid
-					c.id = txid
-					c.addEventListener('click', decode_tx2, false)
-					c.style.cursor='pointer'
+					c.className ='txid11'
+					add_txid_and_icon(c, xval(pendtxs[j], 'id'), true)
 
-					c = row.insertCell(-1);className='maturity'
+					c = row.insertCell(-1)
+					c.className='maturity'
 					var tim = xval(pendtxs[j], 'time')
 					c["numeric_value"]  = tim
 					c.innerHTML = get_maturity(tim)
@@ -674,6 +672,44 @@ function show_txw4i() {
 	aj.open("GET","txw4i.xml", true);
 	aj.send(null);
 }
+
+function add_txid_and_icon(td, txid, decode) {
+	var txt
+	if (decode) {
+		txt = document.createElement("span")
+		txt.innerHTML = txid
+		txt.title = 'Decode this Tx'
+		txt.id = txid
+		txt.addEventListener('click', decode_tx2, false)
+		txt.style.cursor='pointer'
+	} else {
+		txt = document.createElement("a")
+		txt.innerHTML = txid
+		txt.href = 'https://mempool.space/tx/'+txid
+		txt.title = 'Look at mempool.space'
+		txt.target = '_blank'
+	}
+	td.appendChild(txt)
+
+	td.appendChild(document.createTextNode(' '))
+
+	// add copy icon
+	var img = document.createElement("img")
+	img["text2copy"] = txid
+	img.style.verticalAlign = "bottom"
+	img.src = 'webui/copy.png'
+	img.className = "hand"
+	img.title = "Copy TxID to clipboard"
+	img.addEventListener("click", function(e) {
+		autocopy.style.display = 'inline'
+		autocopy.value = e.srcElement["text2copy"]
+		autocopy.select()
+		document.execCommand('copy')
+		autocopy.style.display = 'none'
+	})
+	td.appendChild(img)
+}
+
 
 var previousPoint = null
 var mp = []
