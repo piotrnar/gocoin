@@ -184,7 +184,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th width="20" align="right">#
 		<th>Waiting for
 		<th>Pending Tx
-		<th width="60" align="right">Maturity
+		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
 </table>
 <script>
 if (!server_mode) {
@@ -651,7 +651,6 @@ function show_txw4i() {
 					c.innerHTML = get_maturity(tim)
 				}
 			}
-			sorttab('txw4i', 3)
 			txw4i.style.display = 'table'
 		}
 	}
