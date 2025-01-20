@@ -417,11 +417,11 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 	for _, v := range network.WaitingForInputs {
 		w.Write([]byte("<wait4>"))
 		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
-		for x, t := range v.Ids {
+		for _, x := range v.Ids {
 			w.Write([]byte("<tx>"))
 			if v, ok := network.TransactionsRejected[x]; ok {
 				fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
-				fmt.Fprint(w, "<time>", t.Unix(), "</time>")
+				fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 			} else {
 				fmt.Fprint(w, "<id>FATAL ERROR!!! This should not happen! Please report</id>")
 				fmt.Fprint(w, "<time>", time.Now().Unix(), "</time>")
@@ -456,9 +456,15 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	txid := btc.NewUint256FromString(r.Form["id"][0])
 	fmt.Fprintln(w, "TxID:", txid.String())
 	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		fmt.Fprintln(w, "Present in TransactionsToSend")
 		usif.DecodeTx(w, tx.Tx)
 	} else {
-		fmt.Fprintln(w, "Not found")
+		if tx, ok := network.TransactionsRejected[txid.BIdx()]; ok && tx.Tx != nil {
+			fmt.Fprintln(w, "Present in TransactionsRejected")
+			usif.DecodeTx(w, tx.Tx)
+		} else {
+			fmt.Fprintln(w, "Not found")
+		}
 	}
 }
 
