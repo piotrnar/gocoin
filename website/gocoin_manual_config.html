@@ -235,8 +235,8 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td class="cfg_type"> uint</td>
 <td> 5</td>
 <td class="cfg_info"> If not zero, the node will keep the cache of rejected txs with an unknown UTXO below this size.<br>
-Note that these may be either UTXOs from txs that were never sent to us,
-or (more likely) UTXOs that were mined and spent before the tx was sent to us.</td>
+Note that "unknown UTXOs" are either UTXOs from parent txs that we have never received,
+or (more likely) UTXOs that had been mined and spent before the tx was received.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.MaxRejectCnt</td>
