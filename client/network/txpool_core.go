@@ -678,24 +678,24 @@ func (tr *OneTxRejected) cleanup() {
 	// remove references to this tx from RejectedUsedUTXOs
 	for _, inp := range tr.TxIn {
 		uidx := inp.Input.UIdx()
-		ref := RejectedUsedUTXOs[uidx]
-		newref := make([]BIDX, 0, len(ref)-1)
-		for _, bi := range ref {
-			if bi != bidx {
-				newref = append(newref, bi)
+		if ref := RejectedUsedUTXOs[uidx]; ref != nil {
+			newref := make([]BIDX, 0, len(ref)-1)
+			for _, bi := range ref {
+				if bi != bidx {
+					newref = append(newref, bi)
+				}
 			}
-		}
-		if len(newref) == len(ref) {
-			fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
-			common.CountSafe("Tx**UsedUTXOnil")
-		} else {
-			if len(newref) == 0 {
-				delete(RejectedUsedUTXOs, uidx)
-				delete(RejectedUsedUTXOs_Strings, uidx)
-				common.CountSafe("TxUsedUTXOdel")
+			if len(newref) == len(ref) {
+				fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
+				common.CountSafe("Tx**UsedUTXOnil")
 			} else {
-				RejectedUsedUTXOs[uidx] = newref
-				common.CountSafe("TxUsedUTXOrem")
+				if len(newref) == 0 {
+					delete(RejectedUsedUTXOs, uidx)
+					common.CountSafe("TxUsedUTXOdel")
+				} else {
+					RejectedUsedUTXOs[uidx] = newref
+					common.CountSafe("TxUsedUTXOrem")
+				}
 			}
 		}
 	}
