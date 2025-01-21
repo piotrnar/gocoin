@@ -125,18 +125,12 @@ func tx_mined(tx *btc.Tx) {
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
-	txrremoved := make(map[BIDX]bool, len(bl.Txs)-1)
 	TxMutex.Lock()
 	for _, tx := range bl.Txs[1:] {
 		tx_mined(tx)
 	}
 	for _, tx := range bl.Txs[1:] {
 		bidx := tx.Hash.BIdx()
-		if txrremoved[bidx] {
-			// this will happen when both; the tx we were waiting for and the pending txr was just mined
-			common.CountSafeAdd("Tx_MinedW4iNo", uint64(len(wtgs)))
-			continue // make syre not to call RetryWaitingForInput() for this one
-		}
 		if wtg := WaitingForInputs[bidx]; wtg != nil {
 			wtgs = append(wtgs, wtg)
 		}
