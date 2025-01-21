@@ -208,8 +208,8 @@ func LimitRejectedSize() {
 			DeleteRejected(sorted[idx].Id.BIdx())
 		}
 		sorted = sorted[:maxcnt]
-		common.CountSafeAdd("TxRLimitCntCnt", uint64(len(TransactionsRejected)-old_cnt))
-		common.CountSafeAdd("TxRLimitCntBts", TransactionsRejectedSize-old_size)
+		common.CountSafeAdd("TxRLimitCntCnt", uint64(old_cnt-len(TransactionsRejected)))
+		common.CountSafeAdd("TxRLimitCntBts", old_size-TransactionsRejectedSize)
 		old_cnt = len(TransactionsRejected)
 		old_size = TransactionsRejectedSize
 	}
@@ -232,8 +232,8 @@ func LimitRejectedSize() {
 				break
 			}
 		}
-		common.CountSafeAdd("TxRLimitUtxoCnt", uint64(len(TransactionsRejected)-old_cnt))
-		common.CountSafeAdd("TxRLimitUtxoBts", TransactionsRejectedSize-old_size)
+		common.CountSafeAdd("TxRLimitUtxoCnt", uint64(old_cnt-len(TransactionsRejected)))
+		common.CountSafeAdd("TxRLimitUtxoBts", old_size-TransactionsRejectedSize)
 		old_cnt = len(TransactionsRejected)
 		old_size = TransactionsRejectedSize
 	}
@@ -258,8 +258,8 @@ func LimitRejectedSize() {
 				break
 			}
 		}
-		common.CountSafeAdd("TxRLimitSizeCnt", uint64(len(TransactionsRejected)-old_cnt))
-		common.CountSafeAdd("TxRLimitSizeBts", TransactionsRejectedSize-old_size)
+		common.CountSafeAdd("TxRLimitSizeCnt", uint64(old_cnt-len(TransactionsRejected)))
+		common.CountSafeAdd("TxRLimitSizeBts", old_size-TransactionsRejectedSize)
 	}
 }
 

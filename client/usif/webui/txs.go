@@ -436,9 +436,11 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 			if v, ok := network.TransactionsRejected[x]; ok {
 				fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 				fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
+				fmt.Fprint(w, "<size>", v.Size, "</size>")
 			} else {
 				fmt.Fprint(w, "<id>FATAL ERROR!!! This should not happen! Please report</id>")
 				fmt.Fprint(w, "<time>", time.Now().Unix(), "</time>")
+				fmt.Fprint(w, "<size>666</size>")
 			}
 			w.Write([]byte("</tx>"))
 		}

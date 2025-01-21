@@ -368,9 +368,24 @@ func Reset() {
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
 	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
-	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
-	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
-	atomic.StoreUint64(&maxNoUtxoSizeBytes, uint64(float64(CFG.TXPool.MaxNoUtxoMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	if CFG.TXPool.MaxSizeMB > 0 {
+		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	} else {
+		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
+	}
+	if CFG.TXPool.MaxRejectMB != 0 {
+		atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	} else {
+		fmt.Println("WARNING: TXPool config value MaxRejectMB is zero (unlimited rejected txs cache size)")
+	}
+	if CFG.TXPool.MaxNoUtxoMB == 0 {
+		atomic.StoreUint64(&maxNoUtxoSizeBytes, atomic.LoadUint64(&maxRejectedSizeBytes))
+	} else if CFG.TXPool.MaxRejectMB != 0 && CFG.TXPool.MaxNoUtxoMB > CFG.TXPool.MaxRejectMB {
+		fmt.Println("WARNING: TXPool config value MaxNoUtxoMB not smaller then MaxRejectMB (ignoring it)")
+		atomic.StoreUint64(&maxNoUtxoSizeBytes, atomic.LoadUint64(&maxRejectedSizeBytes))
+	} else {
+		atomic.StoreUint64(&maxNoUtxoSizeBytes, uint64(float64(CFG.TXPool.MaxNoUtxoMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 
