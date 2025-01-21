@@ -248,7 +248,6 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		for _, inp := range txr.TxIn {
 			uidx := inp.Input.UIdx()
 			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
-			RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
 		}
 
 		if txr.Waiting4 != nil {

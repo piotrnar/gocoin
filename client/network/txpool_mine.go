@@ -62,14 +62,8 @@ func tx_mined(tx *btc.Tx) {
 		rec.Delete(false, 0)
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		if mr.Tx != nil {
-			common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Reason))
-			mr.Reason = TX_REJECTED_REJ_MINED_OK
-			mr.Discard()
-		} else {
-			common.CountSafe(fmt.Sprint("Tx**MinedRNO-", mr.Reason))
-			mr.Reason = TX_REJECTED_REJ_MINED_BAD
-		}
+		common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Tx != nil))
+		delete(TransactionsPending, h.BIdx())
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
 		common.CountSafe("TxMinedPending")
@@ -102,22 +96,14 @@ func tx_mined(tx *btc.Tx) {
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
-					if txr.Tx != nil {
-						//fmt.Fprintf(wr, "remove %s %d because of %016x %s\n", txr.Id.String(), txr.Reason, idx, inp.Input.String())
-						common.CountSafe(fmt.Sprint("TxMinedRTxIn-", txr.Reason))
-						txr.Discard() // This should also clean other RejectedUsedUTXOs referring to this tx
-						txr.Reason = TX_REJECTED_INPUT_MINED
-					} else {
-						// It will happen if the Tx was mined in this block (discarded above)
-						common.CountSafe(fmt.Sprint("TxMinedNotRTxIn-", txr.Reason))
-					}
+					common.CountSafe(fmt.Sprint("TxMinedROK-", txr.Tx != nil))
+					delete(TransactionsPending, bidx)
 				} else {
 					common.CountSafe("Tx***MinedRTxIn-NoT2S")
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
 				}
 			}
 			delete(RejectedUsedUTXOs, idx) // this record will not be needed anymore
-			delete(RejectedUsedUTXOs_Strings, idx)
 		}
 	}
 }

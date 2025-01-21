@@ -21,12 +21,9 @@ const (
 	TX_REJECTED_FORMAT       = 102
 	TX_REJECTED_LEN_MISMATCH = 103
 	TX_REJECTED_EMPTY_INPUT  = 104
-	TX_REJECTED_INPUT_MINED  = 105
-	TX_REJECTED_REJ_MINED_OK = 107
 
-	TX_REJECTED_OVERSPEND     = 154
-	TX_REJECTED_BAD_INPUT     = 157
-	TX_REJECTED_REJ_MINED_BAD = 158
+	TX_REJECTED_OVERSPEND = 154
+	TX_REJECTED_BAD_INPUT = 157
 
 	TX_REJECTED_DATA_PURGED = 199
 
@@ -68,8 +65,7 @@ var (
 
 	// Inputs that are being used by TransactionsRejected
 	// Each record points to one TransactionsRejected with Reason of 200 or more
-	RejectedUsedUTXOs         map[uint64][]BIDX = make(map[uint64][]BIDX)
-	RejectedUsedUTXOs_Strings map[uint64]string = make(map[uint64]string)
+	RejectedUsedUTXOs map[uint64][]BIDX = make(map[uint64][]BIDX)
 )
 
 type OneTxToSend struct {
@@ -114,14 +110,8 @@ func ReasonToString(reason byte) string {
 		return "LEN_MISMATCH"
 	case TX_REJECTED_EMPTY_INPUT:
 		return "EMPTY_INPUT"
-	case TX_REJECTED_INPUT_MINED:
-		return "INPUT_MINED"
 	case TX_REJECTED_DATA_PURGED:
 		return "PURGED"
-	case TX_REJECTED_REJ_MINED_OK:
-		return "REJ_MINED_OK"
-	case TX_REJECTED_REJ_MINED_BAD:
-		return "REJ_MINED_BAD"
 	case TX_REJECTED_OVERSPEND:
 		return "OVERSPEND"
 	case TX_REJECTED_BAD_INPUT:
@@ -208,7 +198,6 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 		for _, inp := range tx.TxIn {
 			uidx := inp.Input.UIdx()
 			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], rec.Hash.BIdx())
-			RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
 		}
 	} else {
 		rec.Id = new(btc.Uint256)
@@ -273,7 +262,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	var frommem []bool
 	var frommemcnt int
 
-	TxMutex.Lock()
+	TxMutex.Lock() // Make sure to Unlock it before each possible return
 
 	if !retry {
 		if _, present := TransactionsPending[bidx]; !present {
@@ -410,7 +399,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 					WaitingForInputs[missingid.BIdx()] = rec
 					WaitingForInputsSize += uint64(len(ntx.Raw))
 				}
-
 				TxMutex.Unlock()
 				if newone {
 					common.CountSafe("TxRejectedNoInpNew")
@@ -748,7 +736,7 @@ func DeleteRejected(bidx BIDX) {
 		}
 		delete(TransactionsRejected, bidx)
 	} else {
-		common.CountSafe("Tx**RejDelMiss")
+		println("ERROR: DeleteRejected called for non-existing txr")
 	}
 }
 

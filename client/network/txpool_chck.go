@@ -164,7 +164,6 @@ func MempoolCheck() bool {
 				dupa++
 				fmt.Println(dupa, "BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
 					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
-				fmt.Println("   ", RejectedUsedUTXOs_Strings[utxoidx])
 				if t2s, ok := TransactionsToSend[bidx]; ok {
 					fmt.Println("   It is however in T2S", t2s.Hash.String())
 				} else {
@@ -199,11 +198,33 @@ func MempoolCheck() bool {
 					fmt.Println(" - Missing record", inp.Input.String(), "\n  for", txr.Id.String())
 				}
 				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
-				RejectedUsedUTXOs_Strings[uidx] = inp.Input.String()
 			}
 		}
-
 	}
 
 	return dupa > 0
 }
+
+/* --== Let's keep it here for now as it sometimes comes handy for debuging
+
+var first_ = true
+
+// call this one when TxMutex is locked
+func MPC_locked() bool {
+	if first_ && MempoolCheck() {
+		first_ = false
+		_, file, line, _ := runtime.Caller(1)
+		println("=====================================================")
+		println("Mempool first iime seen broken from", file, line)
+		return true
+	}
+	return false
+}
+
+func MPC() (res bool) {
+	TxMutex.Lock()
+	res = MPC_locked()
+	TxMutex.Unlock()
+	return
+}
+*/

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -326,6 +327,7 @@ func txr_purge(par string) {
 				network.DeleteRejected(k)
 			}
 			fmt.Println(len(todo), "rejected txs deleted")
+			common.CountSafeAdd("TxRDelUiTot", uint64(len(todo)))
 		}
 	} else {
 		fmt.Println("Nothing found")

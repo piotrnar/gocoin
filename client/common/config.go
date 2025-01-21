@@ -81,6 +81,7 @@ var (
 			MaxSizeMB      uint
 			ExpireInDays   uint
 			MaxRejectMB    uint
+			MaxNoUtxoMB    uint
 			MaxRejectCnt   uint
 			SaveOnDisk     bool
 			Debug          bool
@@ -169,6 +170,7 @@ func InitConfig() {
 	CFG.TXPool.MaxSizeMB = 300
 	CFG.TXPool.ExpireInDays = 7
 	CFG.TXPool.MaxRejectMB = 25
+	CFG.TXPool.MaxNoUtxoMB = 5
 	CFG.TXPool.MaxRejectCnt = 5000
 	CFG.TXPool.SaveOnDisk = true
 
@@ -368,6 +370,7 @@ func Reset() {
 
 	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	atomic.StoreUint64(&maxNoUtxoSizeBytes, uint64(float64(CFG.TXPool.MaxNoUtxoMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 
@@ -576,9 +579,10 @@ func MaxMempoolSize() uint64 {
 	return atomic.LoadUint64(&maxMempoolSizeBytes)
 }
 
-func RejectedTxsLimits() (size uint64, cnt int) {
+func RejectedTxsLimits() (cnt int, maxsize, maxw4i uint64) {
 	mutex_cfg.Lock()
-	size = maxRejectedSizeBytes
+	maxsize = maxRejectedSizeBytes
+	maxw4i = maxNoUtxoSizeBytes
 	cnt = int(CFG.TXPool.MaxRejectCnt)
 	mutex_cfg.Unlock()
 	return

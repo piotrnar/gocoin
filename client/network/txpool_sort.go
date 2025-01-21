@@ -198,22 +198,58 @@ func LimitRejectedSize() {
 	old_cnt := len(TransactionsRejected)
 	old_size := TransactionsRejectedSize
 
-	maxlen, maxcnt := common.RejectedTxsLimits()
+	maxcnt, maxlen, maxw4ilen := common.RejectedTxsLimits()
 
 	if maxcnt > 0 && len(TransactionsRejected) > maxcnt {
-		common.CountSafe("TxRejectedCntHigh")
+		common.CountSafe("TxRLimitCnt")
 		sorted = GetSortedRejected()
 		maxcnt -= maxcnt >> 5
 		for idx = maxcnt; idx < len(sorted); idx++ {
 			DeleteRejected(sorted[idx].Id.BIdx())
 		}
 		sorted = sorted[:maxcnt]
+		common.CountSafeAdd("TxRLimitCntCnt", uint64(len(TransactionsRejected)-old_cnt))
+		common.CountSafeAdd("TxRLimitCntBts", TransactionsRejectedSize-old_size)
+		old_cnt = len(TransactionsRejected)
+		old_size = TransactionsRejectedSize
+	}
+
+	var removed map[int]bool
+	if maxw4ilen > 0 && WaitingForInputsSize > maxw4ilen {
+		common.CountSafe("TxRLimitUtxo")
+		if sorted == nil {
+			sorted = GetSortedRejected()
+		}
+		maxw4ilen -= maxw4ilen >> 5
+		removed = make(map[int]bool, len(sorted))
+		for idx = len(sorted) - 1; idx >= 0; idx-- {
+			if sorted[idx].Waiting4 == nil {
+				continue
+			}
+			DeleteRejected(sorted[idx].Hash.BIdx())
+			removed[idx] = true
+			if WaitingForInputsSize <= maxw4ilen {
+				break
+			}
+		}
+		common.CountSafeAdd("TxRLimitUtxoCnt", uint64(len(TransactionsRejected)-old_cnt))
+		common.CountSafeAdd("TxRLimitUtxoBts", TransactionsRejectedSize-old_size)
+		old_cnt = len(TransactionsRejected)
+		old_size = TransactionsRejectedSize
 	}
 
 	if maxlen > 0 && TransactionsRejectedSize > maxlen {
-		common.CountSafe("TxRejectedBtsHigh")
+		common.CountSafe("TxRLimitSize")
 		if sorted == nil {
 			sorted = GetSortedRejected()
+		} else if len(removed) > 0 {
+			sorted_new := make([]*OneTxRejected, 0, len(sorted))
+			for i := range sorted {
+				if !removed[i] {
+					sorted_new = append(sorted_new, sorted[i])
+				}
+			}
+			sorted = sorted_new
 		}
 		maxlen -= maxlen >> 5
 		for idx = len(sorted) - 1; idx >= 0; idx-- {
@@ -222,43 +258,10 @@ func LimitRejectedSize() {
 				break
 			}
 		}
-	}
-
-	if old_cnt > len(TransactionsRejected) {
-		common.CounterMutex.Lock()
-		common.CountAdd("TxRejectedSizCnt", uint64(old_cnt-len(TransactionsRejected)))
-		common.CountAdd("TxRejectedSizBts", old_size-TransactionsRejectedSize)
-		if common.GetBool(&common.CFG.TXPool.Debug) {
-			println("Removed", uint64(old_cnt-len(TransactionsRejected)), "txs and", old_size-TransactionsRejectedSize,
-				"bytes from the rejected poool")
-		}
-		common.CounterMutex.Unlock()
+		common.CountSafeAdd("TxRLimitSizeCnt", uint64(len(TransactionsRejected)-old_cnt))
+		common.CountSafeAdd("TxRLimitSizeBts", TransactionsRejectedSize-old_size)
 	}
 }
-
-/* --== Let's keep it here for now as it sometimes comes handy for debuging
-
-var first_ = true
-
-// call this one when TxMutex is locked
-func MPC_locked() bool {
-	if first_ && MempoolCheck() {
-		first_ = false
-		_, file, line, _ := runtime.Caller(1)
-		println("=====================================================")
-		println("Mempool first iime seen broken from", file, line)
-		return true
-	}
-	return false
-}
-
-func MPC() (res bool) {
-	TxMutex.Lock()
-	res = MPC_locked()
-	TxMutex.Unlock()
-	return
-}
-*/
 
 // GetChildren gets all first level children of the tx.
 func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
