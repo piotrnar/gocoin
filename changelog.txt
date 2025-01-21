@@ -19,14 +19,7 @@
 * Client/WebUI/Transactions: Listed mempool transactions also show a number of unconfirmed inputs
 * Tools: "btcversig" now works also for signatures generated with a segwit type address
 * Client: the configured max mempool size is now closer to what bitcoin core would keep for the same value
-* Client: the new tx.Clean() is called before placing tx in a mempool, to decrease memory usage
-* Removed some warnings reported by VSCode
-* Client: New config value "AllBalances.SaveBalances" (default true) along with (save+load) support for it
-* Client: The wallet module has been refactored for simplicity
-* Client: Mew memory pool dump file version also stores information about when txs were last seen
-* Client/TextUI: Updated/added/removed various commands
-* Client: Mempool file format upgraded from version 2 to 4, now contains rejected txs and last seen of each mempool txs
-* Client: Some other improvements and optimizations, which I don't rememebr
+*** jan25 pack: big refactoring all over the codebase; improvements, new features, all kind of cleanups
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
