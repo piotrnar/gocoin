@@ -16,6 +16,9 @@ td.txid11 {
 	font-family: monospace;
 	font-size:11px;
 }
+td.txsize {
+	text-align: right;
+}
 </style>
 <div id="light" class="white_content">
 <table width="100%"><tr>
@@ -188,7 +191,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th width="20" align="right">#
 		<th>Waiting for
 		<th>Pending Tx
-		<th>Size
+		<th align="right">Size
 		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Age
 </table>
 <script>
@@ -654,6 +657,7 @@ function show_txw4i() {
 					add_txid_and_icon(c, xval(pendtxs[j], 'id'), true)
 
 					c = row.insertCell(-1)
+					c.className = 'txsize'
 					c.innerText = xval(pendtxs[j], 'size')
 
 					c = row.insertCell(-1)
