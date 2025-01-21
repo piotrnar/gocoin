@@ -366,6 +366,10 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
+	if CFG.TXPool.ExpireInDays == 0 {
+		CFG.TXPool.ExpireInDays = 1
+		fmt.Println("WARNING: TXPool config value ExpireInDays was zero, so changed it to", CFG.TXPool.ExpireInDays)
+	}
 	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
 	if CFG.TXPool.MaxSizeMB > 0 {
