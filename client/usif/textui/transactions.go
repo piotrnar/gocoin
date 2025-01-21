@@ -287,31 +287,50 @@ func baned_txs(par string) {
 
 func txr_purge(par string) {
 	var minage time.Duration = time.Hour
-	if tmp, er := strconv.ParseUint(par, 10, 64); er == nil {
-		minage = time.Duration(tmp) * time.Minute
+	var commit bool
+	ss := strings.Split(par, " ")
+	for _, s := range ss {
+		if s == "commit" {
+			commit = true
+			continue
+		}
+		if tmp, er := strconv.ParseUint(par, 10, 64); er == nil {
+			minage = time.Duration(tmp) * time.Minute
+		} else {
+			fmt.Println("Argument must be either commit or a positive integer")
+			return
+		}
 	}
+
 	tim := time.Now().Add(-minage)
 
 	fmt.Println("Purging data of all transactions rejected before", tim.Format(("2006-01-02 15:04:05")))
 
-	done := make(map[byte]int)
+	todo := make([]network.BIDX, 0, 100)
 	network.TxMutex.Lock()
-	for _, v := range network.TransactionsRejected {
-		if v.Tx != nil && v.Time.Before(tim) {
-			done[v.Reason]++
-			v.Reason = network.TX_REJECTED_DATA_PURGED
-			v.Discard()
+	for k, txr := range network.TransactionsRejected {
+		if txr.Tx != nil && txr.Time.Before(tim) {
+			todo = append(todo, k)
+			var ds string
+			if txr.Tx != nil {
+				ds = fmt.Sprint(len(txr.Tx.Raw), " bytes")
+			} else {
+				ds = fmt.Sprint(txr.Size, " v-bts")
+			}
+			fmt.Printf("%4d) %s  %s  %s\n", len(todo), txr.Id.String(), network.ReasonToString(txr.Reason), ds)
 		}
 	}
-	network.TxMutex.Unlock()
-	if len(done) > 0 {
-		for k, c := range done {
-			fmt.Println("Deleted", c, "txs rejected for reason", k, network.ReasonToString(k))
+	if len(todo) > 0 {
+		if commit {
+			for _, k := range todo {
+				network.DeleteRejected(k)
+			}
+			fmt.Println(len(todo), "rejected txs deleted")
 		}
 	} else {
-		fmt.Println("Nothing deleted despite having")
-
+		fmt.Println("Nothing found")
 	}
+	network.TxMutex.Unlock()
 }
 
 func txr_stats(par string) {
@@ -499,7 +518,7 @@ func init() {
 	newUi("txlocal txloc", true, local_tx, "Mark tx as local: <txid> [0|1]")
 	newUi("txold to", true, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
 	newUi("txrlist rtl", true, baned_txs, "List the tx that we have rejected: [<reason>]")
-	newUi("txrpurge rtp", true, txr_purge, "Purge replaced txs from TransactionsRejected: [<min_age_in_minutes>]")
+	newUi("txrpurge rtp", true, txr_purge, "Purge txs from rejected list: [<min_age_in_minutes>] [commit]")
 	newUi("txrstat rts", true, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", true, send_tx, "Broadcast tx from memory pool: <txid>")
 	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
