@@ -253,6 +253,12 @@ func LimitRejectedSize() {
 		}
 		maxlen -= maxlen >> 5
 		for idx = len(sorted) - 1; idx >= 0; idx-- {
+			if _, ok := TransactionsRejected[sorted[idx].Hash.BIdx()]; ok {
+				println("ERROR in LimitRejectedSize - txr in sorted but not in Rejected", idx, len(sorted))
+				println("  txid:", sorted[idx].Hash.String())
+				common.CountSafe("Tx**RLimitPipa")
+				continue
+			}
 			DeleteRejected(sorted[idx].Hash.BIdx())
 			if TransactionsRejectedSize <= maxlen {
 				break
