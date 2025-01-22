@@ -17,15 +17,14 @@ import (
 )
 
 var (
-	END_MARKER          = []byte("END_OF_FILE")
-	loaded_file_version int
+	END_MARKER = []byte("END_OF_FILE")
 )
 
 const (
 	MEMPOOL_FILE_NAME = "mempool.dmp"
 	FILE_VERSION_MAX  = 0xffffffff // this is version 3
-	FILE_VERSION_7    = FILE_VERSION_MAX - 4
-	FILE_VERSION_CUR  = FILE_VERSION_7
+	FILE_VERSION_8    = FILE_VERSION_MAX - 5
+	FILE_VERSION_CUR  = FILE_VERSION_8
 
 	HAS_WAITING4_FLAG = 1 << 23
 	HAS_TX_FLAG       = 1 << 22
@@ -113,23 +112,8 @@ func MempoolSave(force bool) {
 	}
 
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
-	if loaded_file_version != 0 && loaded_file_version < 7 {
-		// they were not sorted by age before
-		fmt.Println("Sorting TransactionsRejected before saving")
-		sorted := make([]*OneTxRejected, 0, len(TransactionsRejected))
-		for _, t := range TransactionsRejected {
-			sorted = append(sorted, t)
-		}
-		sort.Slice(sorted, func(i, j int) bool {
-			return sorted[j].Time.Before(sorted[i].Time)
-		})
-		for _, v := range sorted {
-			v.WriteBytes(wr)
-		}
-	} else {
-		for _, v := range TransactionsRejected {
-			v.WriteBytes(wr)
-		}
+	for _, v := range TransactionsRejected {
+		v.WriteBytes(wr)
 	}
 
 	wr.Write(END_MARKER[:])
@@ -304,8 +288,6 @@ func MempoolLoad() bool {
 	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
 	defer TxMutex.Unlock()
 
-	loaded_file_version = 0
-
 	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		fmt.Println("MempoolLoad:", er.Error())
@@ -379,11 +361,29 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		for ; totcnt > 0; totcnt-- {
-			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
-				goto fatal_error
+		if file_version < 8 {
+			// they were not stored sorted before - we have to sort them now
+			sorted := make([]*OneTxRejected, 0, totcnt)
+			for ; totcnt > 0; totcnt-- {
+				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
+					goto fatal_error
+				}
+				sorted = append(sorted, txr)
 			}
-			AddRejectedTx(txr)
+			sort.Slice(sorted, func(i, j int) bool {
+				return sorted[j].Time.After(sorted[i].Time)
+			})
+			for _, txr := range sorted {
+				AddRejectedTx(txr)
+			}
+			fmt.Println("RejectedTransactions have been sorted by age during loading")
+		} else {
+			for ; totcnt > 0; totcnt-- {
+				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
+					goto fatal_error
+				}
+				AddRejectedTx(txr)
+			}
 		}
 	}
 
@@ -419,7 +419,6 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
-	loaded_file_version = file_version
 	return true
 
 fatal_error:
