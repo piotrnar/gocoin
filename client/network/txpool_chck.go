@@ -124,7 +124,10 @@ func MempoolCheck() bool {
 				w4isize += uint64(len(tr.Raw))
 			}
 		} else {
-			fmt.Println(dupa, "TxR", tr.Id.String(), "has not w4i but reason", ReasonToString(tr.Reason))
+			if tr.Reason == TX_REJECTED_NO_TXOU {
+				dupa++
+				fmt.Println(dupa, "TxR", tr.Id.String(), "has not w4i but reason", ReasonToString(tr.Reason))
+			}
 		}
 	}
 	if totsize != TransactionsRejectedSize {
