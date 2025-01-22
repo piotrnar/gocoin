@@ -559,7 +559,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 
 	var sorted []*network.OneTxToSend
 	if len(r.Form["new"]) > 0 {
-		sorted = network.GetSortedMempoolNew()
+		sorted = network.GetSortedMempoolRBF()
 	} else {
 		sorted = network.GetSortedMempool()
 	}

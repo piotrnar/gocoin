@@ -1,41 +1,13 @@
 package network
 
 import (
-	"encoding/binary"
 	"fmt"
-	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
-	"github.com/piotrnar/gocoin/lib/script"
-)
-
-const (
-	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
-
-	TX_REJECTED_TOO_BIG      = 101
-	TX_REJECTED_FORMAT       = 102
-	TX_REJECTED_LEN_MISMATCH = 103
-	TX_REJECTED_EMPTY_INPUT  = 104
-
-	TX_REJECTED_OVERSPEND = 154
-	TX_REJECTED_BAD_INPUT = 157
-
-	TX_REJECTED_DATA_PURGED = 199
-
-	// Anything from the list below might eventually get mined
-	TX_REJECTED_NO_TXOU     = 202
-	TX_REJECTED_LOW_FEE     = 205
-	TX_REJECTED_NOT_MINED   = 208
-	TX_REJECTED_CB_INMATURE = 209
-	TX_REJECTED_RBF_LOWFEE  = 210
-	TX_REJECTED_RBF_FINAL   = 211
-	TX_REJECTED_RBF_100     = 212
-	TX_REJECTED_REPLACED    = 213
 )
 
 var (
@@ -50,22 +22,8 @@ var (
 	// Each record is indexed by 64-bit-coded(TxID:Vout) and points to list of txs (from T2S)
 	SpentOutputs map[uint64]BIDX = make(map[uint64]BIDX, 10e3)
 
-	// Transactions that we downloaded, but rejected:
-	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
-	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
-
 	// Transactions that are received from network (via "tx"), but not yet processed:
 	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
-
-	// Transactions that are waiting for inputs:
-	// Each record points to a list of transactions that are waiting for the transaction from the index of the map
-	// This way when a new tx is received, we can quickly find all the txs that have been waiting for it
-	WaitingForInputs     map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
-	WaitingForInputsSize uint64
-
-	// Inputs that are being used by TransactionsRejected
-	// Each record points to one TransactionsRejected with Reason of 200 or more
-	RejectedUsedUTXOs map[uint64][]BIDX = make(map[uint64][]BIDX)
 )
 
 type OneTxToSend struct {
@@ -80,531 +38,6 @@ type OneTxToSend struct {
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
 	Final       bool // if true RFB will not work on it
-}
-
-type OneTxRejected struct {
-	Id *btc.Uint256
-	time.Time
-	Size     uint32
-	Waiting4 *btc.Uint256
-	*btc.Tx
-	Reason byte
-}
-
-type OneWaitingList struct {
-	TxID *btc.Uint256
-	Ids  []BIDX // List of pending tx ids
-}
-
-func ReasonToString(reason byte) string {
-	switch reason {
-	case 0:
-		return ""
-	case TX_REJECTED_DISABLED:
-		return "RELAY_OFF"
-	case TX_REJECTED_TOO_BIG:
-		return "TOO_BIG"
-	case TX_REJECTED_FORMAT:
-		return "FORMAT"
-	case TX_REJECTED_LEN_MISMATCH:
-		return "LEN_MISMATCH"
-	case TX_REJECTED_EMPTY_INPUT:
-		return "EMPTY_INPUT"
-	case TX_REJECTED_DATA_PURGED:
-		return "PURGED"
-	case TX_REJECTED_OVERSPEND:
-		return "OVERSPEND"
-	case TX_REJECTED_BAD_INPUT:
-		return "BAD_INPUT"
-	case TX_REJECTED_NO_TXOU:
-		return "NO_TXOU"
-	case TX_REJECTED_LOW_FEE:
-		return "LOW_FEE"
-	case TX_REJECTED_NOT_MINED:
-		return "NOT_MINED"
-	case TX_REJECTED_CB_INMATURE:
-		return "CB_INMATURE"
-	case TX_REJECTED_RBF_LOWFEE:
-		return "RBF_LOWFEE"
-	case TX_REJECTED_RBF_FINAL:
-		return "RBF_FINAL"
-	case TX_REJECTED_RBF_100:
-		return "RBF_100"
-	case TX_REJECTED_REPLACED:
-		return "REPLACED"
-	}
-	return fmt.Sprint("UNKNOWN_", reason)
-}
-
-func NeedThisTx(id *btc.Uint256, cb func()) (res bool) {
-	return NeedThisTxExt(id, cb) == 0
-}
-
-// NeedThisTxExt returns false if we do not want to receive a data for this tx.
-func NeedThisTxExt(id *btc.Uint256, cb func()) (why_not int) {
-	TxMutex.Lock()
-	if tx, present := TransactionsToSend[id.BIdx()]; present {
-		tx.Lastseen = time.Now()
-		why_not = 1
-	} else if _, present := TransactionsRejected[id.BIdx()]; present {
-		why_not = 2
-	} else if _, present := TransactionsPending[id.BIdx()]; present {
-		why_not = 3
-	} else if common.BlockChain.Unspent.TxPresent(id) {
-		why_not = 4
-		// This assumes that tx's out #0 has not been spent yet, which may not always be the case, but well...
-		common.CountSafe("TxAlreadyMined")
-	} else {
-		// why_not = 0
-		if cb != nil {
-			cb()
-		}
-	}
-	TxMutex.Unlock()
-	return
-}
-
-// TxInvNotify handles tx-inv notifications.
-func (c *OneConnection) TxInvNotify(hash []byte) {
-	if NeedThisTx(btc.NewUint256(hash), nil) {
-		var b [1 + 4 + 32]byte
-		b[0] = 1 // One inv
-		if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-			binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
-			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
-		} else {
-			b[1] = MSG_TX // Tx
-		}
-		copy(b[5:37], hash)
-		c.SendRawMsg("getdata", b[:])
-	}
-}
-
-// RejectTx adds a transaction to the rejected list or not, if it has been mined already.
-// Make sure to call it with locked TxMutex.
-// Returns the OneTxRejected or nil if it has not been added.
-func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
-	rec := new(OneTxRejected)
-	rec.Time = time.Now()
-	rec.Size = uint32(len(tx.Raw))
-	rec.Reason = why
-
-	// only store tx for selected reasons
-	if why >= 200 {
-		tx.Clean()
-		rec.Tx = tx
-		rec.Id = &tx.Hash
-		TransactionsRejectedSize += uint64(rec.Size)
-		for _, inp := range tx.TxIn {
-			uidx := inp.Input.UIdx()
-			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], rec.Hash.BIdx())
-		}
-	} else {
-		rec.Id = new(btc.Uint256)
-		rec.Id.Hash = tx.Hash.Hash
-	}
-
-	bidx := tx.Hash.BIdx()
-	TransactionsRejected[bidx] = rec
-
-	return rec
-}
-
-// ParseTxNet handles incoming "tx" messages.
-func (c *OneConnection) ParseTxNet(pl []byte) {
-	tx, le := btc.NewTx(pl)
-	if tx == nil {
-		c.DoS("TxRejectedBroken")
-		return
-	}
-	if le != len(pl) {
-		c.DoS("TxRejectedLenMismatch")
-		return
-	}
-	if len(tx.TxIn) < 1 {
-		c.Misbehave("TxRejectedNoInputs", 100)
-		return
-	}
-
-	tx.SetHash(pl)
-
-	if tx.Weight() > 4*int(common.GetUint32(&common.CFG.TXPool.MaxTxSize)) {
-		TxMutex.Lock()
-		RejectTx(tx, TX_REJECTED_TOO_BIG)
-		TxMutex.Unlock()
-		common.CountSafe("TxRejectedBig")
-		return
-	}
-
-	NeedThisTx(&tx.Hash, func() {
-		// This body is called with a locked TxMutex
-		tx.Raw = pl
-		select {
-		case NetTxs <- &TxRcvd{conn: c, Tx: tx, trusted: c.X.Authorized}:
-			TransactionsPending[tx.Hash.BIdx()] = true
-		default:
-			common.CountSafe("TxRejectedFullQ")
-			//println("NetTxsFULL")
-		}
-	})
-}
-
-// HandleNetTx must be called from the chain's thread.
-func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
-	common.CountSafe("HandleNetTx")
-
-	tx := ntx.Tx
-	bidx := tx.Hash.BIdx()
-	start_time := time.Now()
-	var final bool // set to true if any of the inpits has a final sequence
-
-	var totinp, totout uint64
-	var frommem []bool
-	var frommemcnt int
-
-	TxMutex.Lock() // Make sure to Unlock it before each possible return
-
-	if !retry {
-		if _, present := TransactionsPending[bidx]; !present {
-			// It had to be mined in the meantime, so just drop it now
-			TxMutex.Unlock()
-			common.CountSafe("TxNotPending")
-			return
-		}
-		delete(TransactionsPending, bidx)
-	} else {
-		// In case case of retry, it is on the rejected list,
-		// so remove it now to free any tied WaitingForInputs
-		DeleteRejected(bidx)
-	}
-
-	pos := make([]*btc.TxOut, len(tx.TxIn))
-	spent := make([]uint64, len(tx.TxIn))
-
-	var rbf_tx_list map[*OneTxToSend]bool
-	full_rbf := !common.GetBool(&common.CFG.TXPool.NotFullRBF)
-
-	// Check if all the inputs exist in the chain
-	for i := range tx.TxIn {
-		if !full_rbf && !final && tx.TxIn[i].Sequence >= 0xfffffffe {
-			final = true
-		}
-
-		spent[i] = tx.TxIn[i].Input.UIdx()
-
-		if so, ok := SpentOutputs[spent[i]]; ok {
-			// Can only be accepted as RBF...
-
-			if rbf_tx_list == nil {
-				rbf_tx_list = make(map[*OneTxToSend]bool)
-			}
-
-			ctx := TransactionsToSend[so]
-
-			if !ntx.trusted && ctx.Final {
-				RejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL)
-				TxMutex.Unlock()
-				common.CountSafe("TxRejectedRBFFinal")
-				return
-			}
-
-			rbf_tx_list[ctx] = true
-			if !ntx.trusted && len(rbf_tx_list) > 100 {
-				RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
-				TxMutex.Unlock()
-				common.CountSafe("TxRejectedRBF100+")
-				return
-			}
-
-			chlds := ctx.GetAllChildren()
-			for _, ctx = range chlds {
-				if !ntx.trusted && ctx.Final {
-					RejectTx(ntx.Tx, TX_REJECTED_RBF_FINAL)
-					TxMutex.Unlock()
-					common.CountSafe("TxRejectedRBF_Final")
-					return
-				}
-
-				rbf_tx_list[ctx] = true
-
-				if !ntx.trusted && len(rbf_tx_list) > 100 {
-					RejectTx(ntx.Tx, TX_REJECTED_RBF_100)
-					TxMutex.Unlock()
-					common.CountSafe("TxRejectedRBF100+")
-					return
-				}
-			}
-		}
-
-		if txinmem, ok := TransactionsToSend[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				RejectTx(ntx.Tx, TX_REJECTED_BAD_INPUT)
-				TxMutex.Unlock()
-				common.CountSafe("TxRejectedBadInput")
-				return
-			}
-
-			if !ntx.trusted && !common.CFG.TXPool.AllowMemInputs {
-				RejectTx(ntx.Tx, TX_REJECTED_NOT_MINED)
-				TxMutex.Unlock()
-				common.CountSafe("TxRejectedMemInput1")
-				return
-			}
-
-			pos[i] = txinmem.TxOut[tx.TxIn[i].Input.Vout]
-			common.CountSafe("TxInputInMemory")
-			if frommem == nil {
-				frommem = make([]bool, len(tx.TxIn))
-			}
-			frommem[i] = true
-			frommemcnt++
-		} else {
-			pos[i] = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-			if pos[i] == nil {
-				var newone bool
-
-				if !common.CFG.TXPool.AllowMemInputs {
-					RejectTx(ntx.Tx, TX_REJECTED_NOT_MINED)
-					TxMutex.Unlock()
-					common.CountSafe("TxRejectedMemInput2")
-					return
-				}
-
-				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					if rej.Reason != TX_REJECTED_NO_TXOU || rej.Waiting4 == nil {
-						RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU)
-						TxMutex.Unlock()
-						common.CountSafe("TxRejectedParentRej")
-						return
-					}
-					common.CountSafe("TxWait4ParentsParent")
-				}
-
-				// In this case, let's "save" it for later...
-				missingid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-				nrtx := RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU)
-
-				if nrtx != nil && nrtx.Tx != nil {
-					nrtx.Waiting4 = missingid
-					//nrtx.Tx = ntx.Tx
-
-					// Add to waiting list:
-					var rec *OneWaitingList
-					if rec = WaitingForInputs[missingid.BIdx()]; rec == nil {
-						rec = new(OneWaitingList)
-						rec.TxID = missingid
-						newone = true
-					}
-					rec.Ids = append(rec.Ids, bidx)
-					WaitingForInputs[missingid.BIdx()] = rec
-					WaitingForInputsSize += uint64(len(ntx.Raw))
-				}
-				TxMutex.Unlock()
-				if newone {
-					common.CountSafe("TxRejectedNoInpNew")
-				} else {
-					common.CountSafe("TxRejectedNoInpOld")
-				}
-				return
-			} else {
-				if pos[i].WasCoinbase {
-					if common.Last.BlockHeight()+1-pos[i].BlockHeight < chain.COINBASE_MATURITY {
-						RejectTx(ntx.Tx, TX_REJECTED_CB_INMATURE)
-						TxMutex.Unlock()
-						common.CountSafe("TxRejectedCBInmature")
-						fmt.Println(tx.Hash.String(), "trying to spend inmature coinbase block", pos[i].BlockHeight, "at", common.Last.BlockHeight())
-						return
-					}
-				}
-			}
-		}
-		totinp += pos[i].Value
-	}
-
-	// Check if total output value does not exceed total input
-	for i := range tx.TxOut {
-		totout += tx.TxOut[i].Value
-	}
-
-	if totout > totinp {
-		RejectTx(ntx.Tx, TX_REJECTED_OVERSPEND)
-		TxMutex.Unlock()
-		if ntx.conn != nil {
-			ntx.conn.DoS("TxOverspend")
-		}
-		return
-	}
-
-	// Check for a proper fee
-	fee := totinp - totout
-	if !ntx.local && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) { // do not check minimum fee for locally loaded txs
-		RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE)
-		TxMutex.Unlock()
-		common.CountSafe("TxRejectedLowFee")
-		return
-	}
-
-	if rbf_tx_list != nil {
-		var totweight int
-		var totfees uint64
-
-		for ctx := range rbf_tx_list {
-			totweight += ctx.Weight()
-			totfees += ctx.Fee
-		}
-
-		if !ntx.local && totfees*uint64(tx.Weight()) >= fee*uint64(totweight) {
-			RejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE)
-			TxMutex.Unlock()
-			common.CountSafe("TxRejectedRBFLowFee")
-			return
-		}
-	}
-
-	sigops := btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
-
-	if !ntx.trusted { // Verify scripts
-		var wg sync.WaitGroup
-		var ver_err_cnt uint32
-		ver_flags := common.CurrentScriptFlags()
-
-		tx.Spent_outputs = pos
-		prev_dbg_err := script.DBG_ERR
-		script.DBG_ERR = false // keep quiet for incorrect txs
-		for i := range tx.TxIn {
-			wg.Add(1)
-			go func(i int, tx *btc.Tx) {
-				if !script.VerifyTxScript(tx.Spent_outputs[i].Pk_script,
-					&script.SigChecker{Amount: tx.Spent_outputs[i].Value, Idx: i, Tx: tx}, ver_flags) {
-					atomic.AddUint32(&ver_err_cnt, 1)
-				}
-				wg.Done()
-			}(i, tx)
-		}
-
-		wg.Wait()
-		script.DBG_ERR = prev_dbg_err
-
-		if ver_err_cnt > 0 {
-			// not moving it to rejected, but baning the peer
-			TxMutex.Unlock()
-			if ntx.conn != nil {
-				ntx.conn.DoS("TxScriptFail")
-			}
-			if len(rbf_tx_list) > 0 {
-				fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
-				fmt.Print("> ")
-			}
-			return
-		}
-	}
-
-	for i := range tx.TxIn {
-		if btc.IsP2SH(pos[i].Pk_script) {
-			sigops += btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
-		}
-		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
-	}
-
-	for ctx := range rbf_tx_list {
-		// we dont remove with children because we have all of them on the list
-		ctx.Delete(false, TX_REJECTED_REPLACED)
-		common.CountSafe("TxRemovedByRBF")
-	}
-
-	tx.Fee = fee
-	rec := &OneTxToSend{Volume: totinp, Local: ntx.local,
-		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
-		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
-
-	if f, _ := os.OpenFile("bidx_list.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660); f != nil {
-		fmt.Fprintf(f, "%s: %s %s\n", time.Now().Format("01/02 15:04:05"), btc.BIdxString(bidx), tx.Hash.String())
-		f.Close()
-	}
-	TransactionsToSend[bidx] = rec
-	tx.Clean()
-
-	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		newsize := TransactionsToSendSize + uint64(len(tx.Raw))
-		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
-			limitTxpoolSizeNow = true
-		}
-		TransactionsToSendSize = newsize
-	} else {
-		TransactionsToSendSize += uint64(len(tx.Raw))
-	}
-	TransactionsToSendWeight += uint64(tx.Weight())
-
-	for i := range spent {
-		SpentOutputs[spent[i]] = bidx
-	}
-
-	wtg := WaitingForInputs[bidx]
-	if wtg != nil {
-		defer RetryWaitingForInput(wtg) // Redo waiting txs when leaving this function
-	}
-
-	TxMutex.Unlock()
-	common.CountSafe("TxAccepted")
-
-	if frommem != nil && !common.GetBool(&common.CFG.TXRoute.MemInputs) {
-		// By default Gocoin does not route txs that spend unconfirmed inputs
-		rec.Blocked = TX_REJECTED_NOT_MINED
-		common.CountSafe("TxRouteNotMined")
-	} else if !ntx.trusted && rec.isRoutable() {
-		// do not automatically route loacally loaded txs
-		rec.Invsentcnt += NetRouteInvExt(1, &tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.Raw)))
-		common.CountSafe("TxRouteOK")
-	}
-
-	if ntx.conn != nil {
-		ntx.conn.Mutex.Lock()
-		ntx.conn.txsCur++
-		ntx.conn.X.TxsReceived++
-		ntx.conn.Mutex.Unlock()
-	}
-
-	accepted = true
-	return
-}
-
-func (rec *OneTxToSend) isRoutable() bool {
-	if !common.CFG.TXRoute.Enabled {
-		common.CountSafe("TxRouteDisabled")
-		rec.Blocked = TX_REJECTED_DISABLED
-		return false
-	}
-	if rec.Weight() > 4*int(common.GetUint32(&common.CFG.TXRoute.MaxTxSize)) {
-		common.CountSafe("TxRouteTooBig")
-		rec.Blocked = TX_REJECTED_TOO_BIG
-		return false
-	}
-	if rec.Fee < (uint64(rec.VSize()) * common.RouteMinFeePerKB() / 1000) {
-		common.CountSafe("TxRouteLowFee")
-		rec.Blocked = TX_REJECTED_LOW_FEE
-		return false
-	}
-	return true
-}
-
-func RetryWaitingForInput(wtg *OneWaitingList) {
-	for _, k := range wtg.Ids {
-		txr := TransactionsRejected[k]
-		if txr.Tx == nil {
-			fmt.Printf("ERROR: txr %s %d in w4i rec %16x, but has not data (its w4prt:%p)\n",
-				txr.Id.String(), txr.Reason, k, txr.Waiting4)
-			continue
-		}
-		pendtxrcv := &TxRcvd{Tx: txr.Tx}
-		if HandleNetTx(pendtxrcv, true) {
-			common.CountSafe("TxRetryAccepted")
-			if txr, ok := TransactionsRejected[k]; ok {
-				println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
-			}
-		} else {
-			common.CountSafe("TxRetryRejected")
-		}
-	}
 }
 
 // Delete deletes the tx from the mempool.
@@ -717,31 +150,150 @@ func (tr *OneTxRejected) cleanup() {
 	}
 }
 
-// Make sure to call it with locked TxMutex
-func (tr *OneTxRejected) Discard() {
-	if tr.Tx == nil {
-		panic("OneTxRejected.Discard() called, but it's already empty")
-	}
-	tr.cleanup()
-	TransactionsRejectedSize -= uint64(tr.Size)
-	tr.Tx = nil
-}
+// GetChildren gets all first level children of the tx.
+func (tx *OneTxToSend) GetChildren() (result []*OneTxToSend) {
+	var po btc.TxPrevOut
+	po.Hash = tx.Hash.Hash
 
-// Make sure to call it with locked TxMutex
-func DeleteRejected(bidx BIDX) {
-	if tr, ok := TransactionsRejected[bidx]; ok {
-		if tr.Tx != nil {
-			tr.cleanup()
-			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
+	res := make(map[*OneTxToSend]bool)
+
+	for po.Vout = 0; po.Vout < uint32(len(tx.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			res[TransactionsToSend[val]] = true
 		}
-		delete(TransactionsRejected, bidx)
-	} else {
-		println("ERROR: DeleteRejected called for non-existing txr")
 	}
+
+	result = make([]*OneTxToSend, len(res))
+	var idx int
+	for ttx := range res {
+		result[idx] = ttx
+		idx++
+	}
+	return
 }
 
-func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
-	return HandleNetTx(&TxRcvd{Tx: tx, trusted: true, local: true}, true)
+// GetItWithAllChildren gets all the children (and all of their children...) of the tx.
+// If any of the children has other unconfirmed parents, they are also included in the result.
+// The result is sorted with the input parent first and always with parents before their children.
+func (tx *OneTxToSend) GetItWithAllChildren() (result []*OneTxToSend) {
+	already_included := make(map[*OneTxToSend]bool)
+
+	result = []*OneTxToSend{tx} // out starting (parent) tx shall be the first element of the result
+	already_included[tx] = true
+
+	for idx := 0; idx < len(result); idx++ {
+		par := result[idx]
+		for _, ch := range par.GetChildren() {
+			// do it for each returned child,
+
+			// but only if it has not been included yet ...
+			if _, ok := already_included[ch]; !ok {
+
+				// first make sure we have all of its parents...
+				for _, prnt := range ch.GetAllParentsExcept(par) {
+					if _, ok := already_included[prnt]; !ok {
+						// if we dont have a parent, just insert it here into the result
+						result = append(result, prnt)
+						// ... and mark it as included, for later
+						already_included[prnt] = true
+					}
+				}
+
+				// now we can safely insert the child, as all its parent shall be already included
+				result = append(result, ch)
+				// ... and mark it as included, for later
+				already_included[ch] = true
+			}
+		}
+	}
+	return
+}
+
+// GetAllChildren gets all the children (and all of their children...) of the tx.
+// The result is sorted by the oldest parent.
+func (tx *OneTxToSend) GetAllChildren() (result []*OneTxToSend) {
+	already_included := make(map[*OneTxToSend]bool)
+	var idx int
+	par := tx
+	for {
+		chlds := par.GetChildren()
+		for _, ch := range chlds {
+			if _, ok := already_included[ch]; !ok {
+				already_included[ch] = true
+				result = append(result, ch)
+			}
+		}
+		if idx == len(result) {
+			break
+		}
+
+		par = result[idx]
+		already_included[par] = true
+		idx++
+	}
+	return
+}
+
+// GetAllParents gets all the unconfirmed parents of the given tx.
+// The result is sorted by the oldest parent.
+func (tx *OneTxToSend) GetAllParents() (result []*OneTxToSend) {
+	already_in := make(map[*OneTxToSend]bool)
+	already_in[tx] = true
+	var do_one func(*OneTxToSend)
+	do_one = func(tx *OneTxToSend) {
+		if tx.MemInputCnt > 0 {
+			for idx := range tx.TxIn {
+				if tx.MemInputs[idx] {
+					par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]
+					if _, ok := already_in[par_tx]; !ok {
+						do_one(par_tx)
+					}
+				}
+			}
+		}
+		if _, ok := already_in[tx]; !ok {
+			result = append(result, tx)
+			already_in[tx] = true
+		}
+	}
+	do_one(tx)
+	return
+}
+
+// GetAllParents gets all the unconfirmed parents of the given tx, except for the input tx (and its parents).
+// The result is sorted by the oldest parent.
+func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTxToSend) {
+	already_in := make(map[*OneTxToSend]bool)
+	already_in[tx] = true
+	var do_one func(*OneTxToSend)
+	do_one = func(tx *OneTxToSend) {
+		if tx.MemInputCnt > 0 {
+			for idx := range tx.TxIn {
+				if tx.MemInputs[idx] {
+					if par_tx := TransactionsToSend[btc.BIdx(tx.TxIn[idx].Input.Hash[:])]; par_tx != except {
+						if _, ok := already_in[par_tx]; !ok {
+							do_one(par_tx)
+						}
+					}
+				}
+			}
+		}
+		if _, ok := already_in[tx]; !ok {
+			result = append(result, tx)
+			already_in[tx] = true
+		}
+	}
+	do_one(tx)
+	return
+}
+
+func (tx *OneTxToSend) SPW() float64 {
+	return float64(tx.Fee) / float64(tx.Weight())
+}
+
+func (tx *OneTxToSend) SPB() float64 {
+	return tx.SPW() * 4.0
 }
 
 func init() {

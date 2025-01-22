@@ -165,7 +165,7 @@ func GetWork(r *RpcGetWorkResp) {
 	bl.Txs = make([]*btc.Tx, 1)
 	bl.Txs[0] = make_coinbase_tx(height)
 
-	cpfp := network.GetSortedMempoolNew()
+	cpfp := network.GetSortedMempoolRBF()
 	//println(len(cpfp), "transactions")
 	bl.Txs[0].SetHash(bl.Txs[0].SerializeNew()) // this will not be the final hash, but to get a propoer weight in the next line
 	cur_tx_weight := bl.Txs[0].Weight()

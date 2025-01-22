@@ -51,7 +51,7 @@ func new_block(par string) {
 	println(len(txs), "OLD tx_sort got in", time.Since(sta).String())
 
 	sta = time.Now()
-	cpfp := network.GetSortedMempoolNew()
+	cpfp := network.GetSortedMempoolRBF()
 	println(len(cpfp), "NEW tx_sort got in", time.Since(sta).String())
 
 	var totwgh, tcnt int
