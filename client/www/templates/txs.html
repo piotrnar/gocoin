@@ -914,9 +914,9 @@ function refreshtxstat() {
 		try {
 			var ts = JSON.parse(aj.responseText)
 
-			ts_t2s_size.value = bignum(ts.t2s_size)+'B in ' + ts.t2s_cnt + ' txs'
+			ts_t2s_size.value = (ts.t2s_size/1e6).toFixed(1)+' MB in ' + ts.t2s_cnt + ' txs'
 			ts_t2s_size.title = 'Avg size: ' + (ts.t2s_size/ts.t2s_cnt).toFixed(0) +
-				' bytes,  Total Weight: ' + bignum(ts.t2s_weight)
+				' bytes,  Total Weight: ' + (ts.t2s_weight/1e6).toFixed(1) + " M"
 			outspent.innerText = ts.spent_outs_cnt
 			if (ts.t2s_cnt>0) {
 				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
@@ -924,8 +924,8 @@ function refreshtxstat() {
 				avgoutspertx.innerText = '?'
 			}
 			butre.value = ts.tre_cnt
-			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
-			butw4i.value = ts.awaiting_inputs + " / " + bignum(ts.awaiting_inputs_size)
+			ts_tre_size.innerText = (ts.tre_size/1e3).toFixed(1)+' KB'
+			butw4i.value = ts.awaiting_inputs + " / " + (ts.awaiting_inputs_size/1e3).toFixed(1) + " KB"
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)
