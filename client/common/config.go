@@ -382,7 +382,7 @@ func Reset() {
 		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.RejectRecCnt)
 	}
 	if CFG.TXPool.MaxRejectMB != 0 {
-		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB*1e6/TX_SIZE_RAM_MULTIPLIER))
+		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB*1e6))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxRejectMB is zero (unlimited rejected txs cache size)")
 	}
@@ -392,9 +392,8 @@ func Reset() {
 		fmt.Println("WARNING: TXPool config value MaxNoUtxoMB not smaller then MaxRejectMB (ignoring it)")
 		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))
 	} else {
-		atomic.StoreUint64(&MaxNoUtxoSizeBytes, uint64(CFG.TXPool.MaxNoUtxoMB*1e6/TX_SIZE_RAM_MULTIPLIER))
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, uint64(CFG.TXPool.MaxNoUtxoMB*1e6))
 	}
-	fmt.Println("Max rejected sizes:", atomic.LoadUint64(&MaxRejectedSizeBytes), atomic.LoadUint64(&MaxNoUtxoSizeBytes))
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
 

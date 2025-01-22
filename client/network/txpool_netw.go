@@ -121,9 +121,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		delete(TransactionsPending, bidx)
 	} else {
-		// In case case of retry, it is on the rejected list,
+		// In case of retry, it is on the rejected list,
 		// so remove it now to free any tied WaitingForInputs
-		DeleteRejected(bidx)
+		DeleteRejectedByIdx(bidx)
 	}
 
 	pos := make([]*btc.TxOut, len(tx.TxIn))

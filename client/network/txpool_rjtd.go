@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"sync/atomic"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -90,7 +91,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		common.CountSafe("Tx**RejAddConflict")
 		return
 	}
-	DeleteRejected(TRIdxArray[TRIdxHead])
+	DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
 	TRIdxHead = TRIdxNext(TRIdxHead)
@@ -119,14 +120,19 @@ func AddRejectedTx(txr *OneTxRejected) {
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejected(bidx BIDX) (ok bool, trx *OneTxRejected) {
-	if trx, ok = TransactionsRejected[bidx]; ok {
-		common.CountSafe(fmt.Sprint("TxRIdxDelCnt-", trx.Reason))
-		if trx.Tx != nil {
-			trx.cleanup()
-			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
-		}
-		delete(TransactionsRejected, bidx)
+func DeleteRejectedByTxr(txr *OneTxRejected) {
+	common.CountSafe(fmt.Sprint("TxRIdxDelCnt-", txr.Reason))
+	if txr.Tx != nil {
+		TransactionsRejectedSize -= uint64(len(txr.Raw))
+		txr.cleanup()
+	}
+	delete(TransactionsRejected, txr.Id.BIdx())
+}
+
+// Make sure to call it with locked TxMutex
+func DeleteRejectedByIdx(bidx BIDX) (ok bool, txr *OneTxRejected) {
+	if txr, ok = TransactionsRejected[bidx]; ok {
+		DeleteRejectedByTxr(txr)
 	} else {
 		common.CountSafe("TxRIdxNull")
 	}
@@ -288,7 +294,24 @@ func limitRejectedSizeIfNeeded() {
 	if len(GetMPInProgressTicket) != 0 {
 		return // don't do it during mpget as there always are many short lived NO_TXOU
 	}
-	max := common.GetUint64(&common.MaxRejectedSizeBytes)
+
+	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
+	if WaitingForInputsSize > max {
+		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max)
+		start_cnt := len(TransactionsRejected)
+		start_siz := TransactionsRejectedSize
+		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
+			DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
+			TRIdxTail = TRIdxNext(TRIdxTail)
+			if TransactionsRejectedSize <= max {
+				break
+			}
+		}
+		common.CountSafeAdd("TxRLimNoUtxoBts", start_siz-TransactionsRejectedSize)
+		common.CountSafeAdd("TxRLimNoUtxoCnt", uint64(start_cnt-len(TransactionsRejected)))
+	}
+
+	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
 	if TransactionsRejectedSize <= max {
 		return
 	}
@@ -296,7 +319,7 @@ func limitRejectedSizeIfNeeded() {
 	start_cnt := len(TransactionsRejected)
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
-		DeleteRejected(TRIdxArray[TRIdxTail])
+		DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
 		TRIdxTail = TRIdxNext(TRIdxTail)
 		if TransactionsRejectedSize <= max {
 			break
@@ -317,7 +340,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	for {
 		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
 			old_txrs = append(old_txrs, txr)
-			DeleteRejected(txr.Hash.BIdx())
+			DeleteRejectedByTxr(txr)
 		}
 		if TRIdxTail == TRIdxHead {
 			break

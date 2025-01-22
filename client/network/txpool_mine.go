@@ -63,7 +63,7 @@ func tx_mined(tx *btc.Tx) {
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Tx != nil))
-		DeleteRejected(h.BIdx())
+		DeleteRejectedByTxr(mr)
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
 		common.CountSafe("TxMinedPending")
@@ -97,7 +97,7 @@ func tx_mined(tx *btc.Tx) {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
 					common.CountSafe(fmt.Sprint("TxMinedRTxInOK-", txr.Tx != nil))
-					DeleteRejected(bidx)
+					DeleteRejectedByIdx(bidx)
 				} else {
 					common.CountSafe("Tx***MinedRTxIn-NoT2S")
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")

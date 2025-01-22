@@ -86,7 +86,7 @@ func LoadRawTx(buf []byte) (s string) {
 	s = wb.String()
 
 	network.TxMutex.Lock()
-	network.DeleteRejected(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
+	network.DeleteRejectedByIdx(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
 	network.TxMutex.Unlock()
 
 	if why := network.NeedThisTxExt(&tx.Hash, nil); why != 0 {

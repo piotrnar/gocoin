@@ -89,7 +89,7 @@ func del_tx(par string) {
 		return
 	}
 	if txr, ok := network.TransactionsRejected[txid.BIdx()]; ok {
-		network.DeleteRejected(txr.Id.BIdx())
+		network.DeleteRejectedByTxr(txr)
 		fmt.Println("TxR", txid.String(), "removed from Rejected")
 		return
 	}
@@ -325,7 +325,7 @@ func txr_purge(par string) {
 	if len(todo) > 0 {
 		if commit {
 			for _, k := range todo {
-				network.DeleteRejected(k)
+				network.DeleteRejectedByIdx(k)
 			}
 			fmt.Println(len(todo), "rejected txs deleted")
 			common.CountSafeAdd("TxRDelUiTot", uint64(len(todo)))

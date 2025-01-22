@@ -122,9 +122,9 @@ func LimitPoolSize(maxlen uint64) {
 		if TransactionsToSendSize < maxlen-2*ticklen {
 			if common.SetMinFeePerKB(0) {
 				var cnt uint64
-				for k, v := range TransactionsRejected {
+				for _, v := range TransactionsRejected {
 					if v.Reason == TX_REJECTED_LOW_FEE {
-						DeleteRejected(k)
+						DeleteRejectedByTxr(v)
 						cnt++
 					}
 				}
