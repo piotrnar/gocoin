@@ -297,8 +297,8 @@ func limitRejectedSizeIfNeeded() {
 	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
 	if WaitingForInputsSize > max {
 		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max)
-		start_cnt := len(TransactionsRejected)
-		start_siz := TransactionsRejectedSize
+		start_cnt := len(WaitingForInputs)
+		start_siz := WaitingForInputsSize
 		first_valid_tail := -1
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
 			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
@@ -312,8 +312,8 @@ func limitRejectedSizeIfNeeded() {
 				break
 			}
 		}
-		common.CountSafeAdd("TxRLimNoUtxoBytes", start_siz-TransactionsRejectedSize)
-		common.CountSafeAdd("TxRLimNoUtxoCount", uint64(start_cnt-len(TransactionsRejected)))
+		common.CountSafeAdd("TxRLimNoUtxoBytes", start_siz-WaitingForInputsSize)
+		common.CountSafeAdd("TxRLimNoUtxoCount", uint64(start_cnt-len(WaitingForInputs)))
 		if first_valid_tail >= 0 {
 			cnt := first_valid_tail - TRIdxTail
 			if cnt < 0 {
@@ -322,6 +322,8 @@ func limitRejectedSizeIfNeeded() {
 			common.CountSafeAdd("TxRLimNoUtxoMoveTail", uint64(cnt))
 			TRIdxTail = first_valid_tail
 		}
+		fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.   New size:",
+			start_siz-WaitingForInputsSize, "  new_tail:", first_valid_tail)
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
@@ -342,7 +344,7 @@ func limitRejectedSizeIfNeeded() {
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
 
 	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:",
-		start_siz-TransactionsRejectedSize, "-")
+		start_siz-TransactionsRejectedSize)
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {
