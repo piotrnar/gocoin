@@ -296,7 +296,7 @@ func limitRejectedSizeIfNeeded() {
 
 	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
 	if WaitingForInputsSize > max {
-		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max)
+		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max, TRIdxTail, TRIdxHead)
 		start_cnt := len(WaitingForInputs)
 		start_siz := WaitingForInputsSize
 		first_valid_tail := -1
