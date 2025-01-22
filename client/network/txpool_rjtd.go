@@ -282,30 +282,6 @@ func ReasonToString(reason byte) string {
 	return fmt.Sprint("UNKNOWN_", reason)
 }
 
-/*
-func GetSortedRejected() (sorted []*OneTxRejected) {
-	sorted = make([]*OneTxRejected, 0, len(TransactionsRejected))
-	idx := TRIdxHead
-	for {
-		if idx == TRIdxTail {
-			return
-		}
-		if idx == 0 {
-			idx = len(TRIdxArray) - 1
-		} else {
-			idx--
-		}
-		if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
-			if txr == nil {
-				println("ERROR: TransactionsRejected record is nil - this must not happen!!!")
-				continue
-			}
-			sorted = append(sorted, txr)
-		}
-	}
-}
-*/
-
 func resizeTransactionsRejectedCount(newcnt int) {
 	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:",
 		len(TransactionsRejected), TRIdxTail, TRIdxHead)
