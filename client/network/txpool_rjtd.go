@@ -114,21 +114,23 @@ func AddRejectedTx(txr *OneTxRejected) {
 		}
 		TransactionsRejectedSize += uint64(len(txr.Raw))
 	}
+
+	limitRejectedSizeIfNeeded()
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejected(bidx BIDX) {
-	if tr, ok := TransactionsRejected[bidx]; ok {
-		common.CountSafe(fmt.Sprint("TxRIdxDel-", tr.Reason))
-		if tr.Tx != nil {
-			tr.cleanup()
+func DeleteRejected(bidx BIDX) (ok bool, trx *OneTxRejected) {
+	if trx, ok = TransactionsRejected[bidx]; ok {
+		common.CountSafe(fmt.Sprint("TxRIdxDelCnt-", trx.Reason))
+		if trx.Tx != nil {
+			trx.cleanup()
 			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
 		}
 		delete(TransactionsRejected, bidx)
 	} else {
 		common.CountSafe("TxRIdxNull")
-		//println("ERROR: DeleteRejected called for non-existing txr")
 	}
+	return
 }
 
 // Remove any references to WaitingForInputs and RejectedUsedUTXOs
@@ -282,6 +284,31 @@ func ReasonToString(reason byte) string {
 	return fmt.Sprint("UNKNOWN_", reason)
 }
 
+func limitRejectedSizeIfNeeded() {
+	if len(GetMPInProgressTicket) != 0 {
+		return // don't do it during mpget as there always are many short lived NO_TXOU
+	}
+	max := common.GetUint64(&common.MaxRejectedSizeBytes)
+	if TransactionsRejectedSize <= max {
+		return
+	}
+	fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
+	start_cnt := len(TransactionsRejected)
+	start_siz := TransactionsRejectedSize
+	for TRIdxTail != TRIdxHead {
+		DeleteRejected(TRIdxArray[TRIdxTail])
+		TRIdxTail = TRIdxNext(TRIdxTail)
+		if TransactionsRejectedSize <= max {
+			break
+		}
+	}
+	common.CountSafeAdd("TxRLimSizBts", start_siz-TransactionsRejectedSize)
+	common.CountSafeAdd("TxRLimSizCnt", uint64(start_cnt-len(TransactionsRejected)))
+
+	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:",
+		start_siz-TransactionsRejectedSize, "-")
+}
+
 func resizeTransactionsRejectedCount(newcnt int) {
 	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:",
 		len(TransactionsRejected), TRIdxTail, TRIdxHead)
@@ -331,6 +358,7 @@ func doRejected() {
 		resizeTransactionsRejectedCount(cnt)
 		return
 	}
+	limitRejectedSizeIfNeeded()
 	if false && MempoolCheck() {
 		println("MempoolCheck failed in doRejected")
 		debug.PrintStack()
