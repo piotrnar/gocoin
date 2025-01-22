@@ -97,7 +97,7 @@ func tx_mined(tx *btc.Tx) {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
 					common.CountSafe(fmt.Sprint("TxMinedRTxInOK-", txr.Tx != nil))
-					DeleteRejectedByIdx(bidx)
+					DeleteRejectedByTxr(txr)
 				} else {
 					common.CountSafe("Tx***MinedRTxIn-NoT2S")
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
