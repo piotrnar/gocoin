@@ -68,11 +68,18 @@ const (
 	TX_REJECTED_REPLACED    = 213
 )
 
-func nextIdx(idx int) int {
+func TRIdxNext(idx int) int {
 	if idx == len(TRIdxArray)-1 {
 		return 0
 	}
 	return idx + 1
+}
+
+func TRIdxPrev(idx int) int {
+	if idx == 0 {
+		return len(TRIdxArray) - 1
+	}
+	return idx - 1
 }
 
 // Make sure to call it with locked TxMutex.
@@ -86,9 +93,9 @@ func AddRejectedTx(txr *OneTxRejected) {
 	DeleteRejected(TRIdxArray[TRIdxHead])
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
-	TRIdxHead = nextIdx(TRIdxHead)
+	TRIdxHead = TRIdxNext(TRIdxHead)
 	if TRIdxHead == TRIdxTail {
-		TRIdxTail = nextIdx(TRIdxTail)
+		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 	if txr.Tx != nil {
 		for _, inp := range txr.TxIn {
@@ -275,6 +282,7 @@ func ReasonToString(reason byte) string {
 	return fmt.Sprint("UNKNOWN_", reason)
 }
 
+/*
 func GetSortedRejected() (sorted []*OneTxRejected) {
 	sorted = make([]*OneTxRejected, 0, len(TransactionsRejected))
 	idx := TRIdxHead
@@ -296,6 +304,7 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 		}
 	}
 }
+*/
 
 func resizeTransactionsRejectedCount(newcnt int) {
 	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:",
@@ -310,7 +319,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		if TRIdxTail == TRIdxHead {
 			break
 		}
-		TRIdxTail = nextIdx(TRIdxTail)
+		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 
 	fmt.Println("Got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected),

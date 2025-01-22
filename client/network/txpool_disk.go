@@ -23,8 +23,8 @@ var (
 const (
 	MEMPOOL_FILE_NAME = "mempool.dmp"
 	FILE_VERSION_MAX  = 0xffffffff // this is version 3
-	FILE_VERSION_8    = FILE_VERSION_MAX - 5
-	FILE_VERSION_CUR  = FILE_VERSION_8
+	FILE_VERSION_9    = FILE_VERSION_MAX - 6
+	FILE_VERSION_CUR  = FILE_VERSION_9
 
 	HAS_WAITING4_FLAG = 1 << 23
 	HAS_TX_FLAG       = 1 << 22
@@ -99,7 +99,7 @@ func MempoolSave(force bool) {
 		return
 	}
 
-	fmt.Println("Saving", MEMPOOL_FILE_NAME)
+	fmt.Println("Saving", MEMPOOL_FILE_NAME, "version", FILE_VERSION_MAX-FILE_VERSION_CUR+3)
 	wr := bufio.NewWriter(f)
 
 	wr.Write(common.Last.Block.BlockHash.Hash[:])
@@ -112,8 +112,13 @@ func MempoolSave(force bool) {
 	}
 
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
-	for _, v := range TransactionsRejected {
-		v.WriteBytes(wr)
+	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
+		if txr := TransactionsRejected[TRIdxArray[idx]]; txr != nil {
+			txr.WriteBytes(wr)
+		}
+		if idx == TRIdxHead {
+			break
+		}
 	}
 
 	wr.Write(END_MARKER[:])
@@ -343,14 +348,13 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		if file_version < 8 {
+		if file_version < 9 {
 			// they were not stored sorted before - we have to sort them now
 			sorted := make([]*OneTxRejected, 0, totcnt)
 			for ; totcnt > 0; totcnt-- {
 				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 					goto fatal_error
 				}
-				AddRejectedTx(txr)
 				sorted = append(sorted, txr)
 			}
 			sort.Slice(sorted, func(i, j int) bool {

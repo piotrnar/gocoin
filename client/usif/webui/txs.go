@@ -393,15 +393,16 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
 	network.TxMutex.Lock()
-	sorted := network.GetSortedRejected()
-	for _, v := range sorted {
-		w.Write([]byte("<tx>"))
-		fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
-		fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
-		fmt.Fprint(w, "<size>", v.Size, "</size>")
-		fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
-		fmt.Fprint(w, "<reason>", network.ReasonToString(v.Reason), "</reason>")
-		w.Write([]byte("</tx>"))
+	for idx := network.TRIdxHead; idx != network.TRIdxTail; idx = network.TRIdxPrev(idx) {
+		if v := network.TransactionsRejected[network.TRIdxArray[idx]]; v != nil {
+			w.Write([]byte("<tx>"))
+			fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
+			fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
+			fmt.Fprint(w, "<size>", v.Size, "</size>")
+			fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
+			fmt.Fprint(w, "<reason>", network.ReasonToString(v.Reason), "</reason>")
+			w.Write([]byte("</tx>"))
+		}
 	}
 	network.TxMutex.Unlock()
 	w.Write([]byte("</txbanned>"))

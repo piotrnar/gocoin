@@ -270,18 +270,19 @@ func baned_txs(par string) {
 	fmt.Println("Listing Rejected transactions", reason, ":")
 	cnt := 0
 	network.TxMutex.Lock()
-	sorted := network.GetSortedRejected()
-	for _, v := range sorted {
-		if reason != 0 && reason != v.Reason {
-			continue
+	for idx := network.TRIdxHead; idx != network.TRIdxTail; idx = network.TRIdxPrev(idx) {
+		if v := network.TransactionsRejected[network.TRIdxArray[idx]]; v != nil {
+			if reason != 0 && reason != v.Reason {
+				continue
+			}
+			var bts string = "bytes"
+			cnt++
+			if v.Tx == nil {
+				bts = "v-bts"
+			}
+			fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
+				"-", network.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago")
 		}
-		var bts string = "bytes"
-		cnt++
-		if v.Tx == nil {
-			bts = "v-bts"
-		}
-		fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
-			"-", v.Reason, "-", time.Since(v.Time).String(), "ago")
 	}
 	network.TxMutex.Unlock()
 }
