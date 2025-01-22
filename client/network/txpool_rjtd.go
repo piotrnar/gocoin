@@ -130,13 +130,12 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejectedByIdx(bidx BIDX) (ok bool, txr *OneTxRejected) {
-	if txr, ok = TransactionsRejected[bidx]; ok {
+func DeleteRejectedByIdx(bidx BIDX) {
+	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
 	} else {
 		common.CountSafe("TxRIdxNull")
 	}
-	return
 }
 
 // Remove any references to WaitingForInputs and RejectedUsedUTXOs
@@ -300,15 +299,29 @@ func limitRejectedSizeIfNeeded() {
 		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max)
 		start_cnt := len(TransactionsRejected)
 		start_siz := TransactionsRejectedSize
+		first_valid_tail := -1
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
-			DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
-			TRIdxTail = TRIdxNext(TRIdxTail)
-			if TransactionsRejectedSize <= max {
+			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
+				if txr.Waiting4 != nil {
+					DeleteRejectedByTxr(txr)
+				} else if first_valid_tail < 0 {
+					first_valid_tail = idx
+				}
+			}
+			if WaitingForInputsSize <= max {
 				break
 			}
 		}
-		common.CountSafeAdd("TxRLimNoUtxoBts", start_siz-TransactionsRejectedSize)
-		common.CountSafeAdd("TxRLimNoUtxoCnt", uint64(start_cnt-len(TransactionsRejected)))
+		common.CountSafeAdd("TxRLimNoUtxoBytes", start_siz-TransactionsRejectedSize)
+		common.CountSafeAdd("TxRLimNoUtxoCount", uint64(start_cnt-len(TransactionsRejected)))
+		if first_valid_tail >= 0 {
+			cnt := first_valid_tail - TRIdxTail
+			if cnt < 0 {
+				cnt += len(TRIdxArray)
+			}
+			common.CountSafeAdd("TxRLimNoUtxoMoveTail", uint64(cnt))
+			TRIdxTail = first_valid_tail
+		}
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
@@ -325,8 +338,8 @@ func limitRejectedSizeIfNeeded() {
 			break
 		}
 	}
-	common.CountSafeAdd("TxRLimSizBts", start_siz-TransactionsRejectedSize)
-	common.CountSafeAdd("TxRLimSizCnt", uint64(start_cnt-len(TransactionsRejected)))
+	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
+	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
 
 	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:",
 		start_siz-TransactionsRejectedSize, "-")
