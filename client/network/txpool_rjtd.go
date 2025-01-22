@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -205,19 +204,6 @@ func ReasonToString(reason byte) string {
 		return "REPLACED"
 	}
 	return fmt.Sprint("UNKNOWN_", reason)
-}
-
-func GetSortedRejectedOld() (sorted []*OneTxRejected) {
-	var idx int
-	sorted = make([]*OneTxRejected, len(TransactionsRejected))
-	for _, t := range TransactionsRejected {
-		sorted[idx] = t
-		idx++
-	}
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[j].Time.Before(sorted[i].Time)
-	})
-	return
 }
 
 func GetSortedRejected() (sorted []*OneTxRejected) {
