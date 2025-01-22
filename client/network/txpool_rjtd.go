@@ -296,7 +296,7 @@ func limitRejectedSizeIfNeeded() {
 
 	max := atomic.LoadUint64(&common.MaxNoUtxoSizeBytes)
 	if WaitingForInputsSize > max {
-		fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max, TRIdxTail, TRIdxHead)
+		//fmt.Println("Limiting NoUtxo cached txs from", WaitingForInputsSize, "to", max, TRIdxTail, TRIdxHead)
 		start_cnt := len(WaitingForInputs)
 		start_siz := WaitingForInputsSize
 		first_valid_tail := -1
@@ -326,15 +326,14 @@ func limitRejectedSizeIfNeeded() {
 			common.CountSafeAdd("TxRLimNoUtxoMoveTail", uint64(cnt))
 			TRIdxTail = first_valid_tail
 		}
-		fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.  New size:", WaitingForInputsSize,
-			"  new_tail:", first_valid_tail)
+		//fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.  New size:", WaitingForInputsSize, "  new_tail:", first_valid_tail)
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
 	if TransactionsRejectedSize <= max {
 		return
 	}
-	fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
+	//fmt.Println("Limiting rejected size from", TransactionsRejectedSize, "to", max)
 	start_cnt := len(TransactionsRejected)
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
@@ -346,12 +345,11 @@ func limitRejectedSizeIfNeeded() {
 	}
 	common.CountSafeAdd("TxRLimSizBytes", start_siz-TransactionsRejectedSize)
 	common.CountSafeAdd("TxRLimSizCount", uint64(start_cnt-len(TransactionsRejected)))
-	fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize)
+	//fmt.Println("Deleted", start_cnt-len(TransactionsRejected), "txrs.   New size:", TransactionsRejectedSize)
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {
-	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:",
-		len(TransactionsRejected), TRIdxTail, TRIdxHead)
+	//fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:", len(TransactionsRejected), TRIdxTail, TRIdxHead)
 
 	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
 	for {
@@ -364,9 +362,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		}
 		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
-
-	fmt.Println("Got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected),
-		TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
+	//fmt.Println("Got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected), TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
 
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
 	TRIdxArray = make([]BIDX, newcnt)
@@ -376,18 +372,11 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	var from_idx int
 	if newcnt < len(old_txrs) {
 		from_idx = len(old_txrs) - newcnt
-		fmt.Println("Advancing from_idx to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
+		//fmt.Println("Advancing from_idx to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
 	}
 
 	for _, txr := range old_txrs[from_idx:] {
 		AddRejectedTx(txr)
-	}
-
-	if MempoolCheck() {
-		println("Final MempoolCheck failed")
-		os.Exit(1)
-	} else {
-		println("Final MempoolCheck OK")
 	}
 }
 
