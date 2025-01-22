@@ -103,17 +103,30 @@ func ReasonToString(reason byte) string {
 }
 
 // Make sure to call it with locked TxMutex.
-func InitTransactionsRejected() {
-	TransactionsRejected = make(map[BIDX]*OneTxRejected, common.GetUint32(&common.CFG.TXPool.MaxRejectCnt))
-	TransactionsRejectedSize = 0
-	WaitingForInputs = make(map[BIDX]*OneWaitingList)
-	WaitingForInputsSize = 0
-	RejectedUsedUTXOs = make(map[uint64][]BIDX)
+func AddRejectedTx(txr *OneTxRejected) {
+	bidx := txr.Id.BIdx()
+	if _, ok := TransactionsRejected[bidx]; ok {
+		println("ERROR in AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
+		common.CountSafe("Tx**RejAddConflict")
+		return
+	}
+	TransactionsRejected[bidx] = txr
+	if txr.Tx != nil {
+		TransactionsRejectedSize += uint64(len(txr.Raw))
+	}
 }
 
-// Make sure to call it with locked TxMutex.
-func AddRejectedTx(txr *OneTxRejected) {
-	TransactionsRejected[txr.Id.BIdx()] = txr
+// Make sure to call it with locked TxMutex
+func DeleteRejected(bidx BIDX) {
+	if tr, ok := TransactionsRejected[bidx]; ok {
+		if tr.Tx != nil {
+			tr.cleanup()
+			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
+		}
+		delete(TransactionsRejected, bidx)
+	} else {
+		println("ERROR: DeleteRejected called for non-existing txr")
+	}
 }
 
 // RejectTx adds a transaction to the rejected list or not, if it has been mined already.
@@ -124,13 +137,11 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 	rec.Time = time.Now()
 	rec.Size = uint32(len(tx.Raw))
 	rec.Reason = why
-
 	// only store tx for selected reasons
 	if why >= 200 {
 		tx.Clean()
 		rec.Tx = tx
 		rec.Id = &tx.Hash
-		TransactionsRejectedSize += uint64(rec.Size)
 		for _, inp := range tx.TxIn {
 			uidx := inp.Input.UIdx()
 			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], rec.Hash.BIdx())
@@ -139,12 +150,11 @@ func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
 		rec.Id = new(btc.Uint256)
 		rec.Id.Hash = tx.Hash.Hash
 	}
-
-	bidx := tx.Hash.BIdx()
-	TransactionsRejected[bidx] = rec
-
+	AddRejectedTx(rec)
 	return rec
 }
+
+// Make sure to call it with locked TxMutex
 func RetryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
@@ -173,19 +183,6 @@ func (tr *OneTxRejected) Discard() {
 	tr.cleanup()
 	TransactionsRejectedSize -= uint64(tr.Size)
 	tr.Tx = nil
-}
-
-// Make sure to call it with locked TxMutex
-func DeleteRejected(bidx BIDX) {
-	if tr, ok := TransactionsRejected[bidx]; ok {
-		if tr.Tx != nil {
-			tr.cleanup()
-			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
-		}
-		delete(TransactionsRejected, bidx)
-	} else {
-		println("ERROR: DeleteRejected called for non-existing txr")
-	}
 }
 
 // LimitRejectedSize must be called with TxMutex locked.
@@ -266,4 +263,13 @@ func LimitRejectedSize() {
 		common.CountSafeAdd("TxRLimitSizeCnt", uint64(old_cnt-len(TransactionsRejected)))
 		common.CountSafeAdd("TxRLimitSizeBts", old_size-TransactionsRejectedSize)
 	}
+}
+
+// Make sure to call it with locked TxMutex.
+func InitTransactionsRejected() {
+	TransactionsRejected = make(map[BIDX]*OneTxRejected, common.GetUint32(&common.CFG.TXPool.MaxRejectCnt))
+	TransactionsRejectedSize = 0
+	WaitingForInputs = make(map[BIDX]*OneWaitingList)
+	WaitingForInputsSize = 0
+	RejectedUsedUTXOs = make(map[uint64][]BIDX)
 }

@@ -84,6 +84,9 @@ func (txr *OneTxRejected) WriteBytes(wr io.Writer) {
 }
 
 func MempoolSave(force bool) {
+	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
+	defer TxMutex.Unlock()
+
 	if !force && !common.CFG.TXPool.SaveOnDisk {
 		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 		return
@@ -279,6 +282,11 @@ func MempoolLoad() bool {
 
 	var file_version int
 
+	InitMempool()
+
+	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
+	defer TxMutex.Unlock()
+
 	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		fmt.Println("MempoolLoad:", er.Error())
@@ -352,16 +360,11 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		//println("TransactionsRejected cnt:", totcnt)
-		TransactionsRejected = make(map[BIDX]*OneTxRejected, int(totcnt))
 		for ; totcnt > 0; totcnt-- {
 			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 				goto fatal_error
 			}
-			TransactionsRejected[txr.Id.BIdx()] = txr
-			if txr.Tx != nil {
-				TransactionsRejectedSize += uint64(len(txr.Raw))
-			}
+			AddRejectedTx(txr)
 		}
 	}
 

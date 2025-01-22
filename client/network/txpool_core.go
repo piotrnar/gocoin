@@ -23,7 +23,7 @@ var (
 	SpentOutputs map[uint64]BIDX
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
-	TransactionsPending map[BIDX]bool
+	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
 )
 
 type OneTxToSend struct {
@@ -38,17 +38,6 @@ type OneTxToSend struct {
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
 	Final       bool // if true RFB will not work on it
-}
-
-func InitMempool() {
-	TxMutex.Lock()
-	TransactionsToSend = make(map[BIDX]*OneTxToSend)
-	TransactionsToSendSize = 0
-	TransactionsToSendWeight = 0
-	SpentOutputs = make(map[uint64]BIDX, 10e3)
-	TransactionsPending = make(map[BIDX]bool)
-	InitTransactionsRejected()
-	TxMutex.Unlock()
 }
 
 // Delete deletes the tx from the mempool.
@@ -305,6 +294,20 @@ func (tx *OneTxToSend) SPW() float64 {
 
 func (tx *OneTxToSend) SPB() float64 {
 	return tx.SPW() * 4.0
+}
+
+func InitTransactionsToSend() {
+	TransactionsToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSendSize = 0
+	TransactionsToSendWeight = 0
+	SpentOutputs = make(map[uint64]BIDX, 10e3)
+}
+
+func InitMempool() {
+	TxMutex.Lock()
+	InitTransactionsToSend()
+	InitTransactionsRejected()
+	TxMutex.Unlock()
 }
 
 func init() {

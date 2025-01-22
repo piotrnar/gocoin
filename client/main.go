@@ -529,8 +529,6 @@ func main() {
 			fmt.Println(len(keys), "peers un-baned")
 		}
 
-		network.InitMempool()
-
 		for k, v := range common.BlockChain.BlockIndex {
 			network.ReceivedBlocks[k] = &network.OneReceivedBlock{TmStart: time.Unix(int64(v.Timestamp()), 0)}
 		}
@@ -546,6 +544,8 @@ func main() {
 
 		if common.CFG.TXPool.SaveOnDisk && !common.FLAG.NoMempoolLoad {
 			network.MempoolLoad()
+		} else {
+			network.InitMempool()
 		}
 
 		usif.LoadBlockFees()
