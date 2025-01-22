@@ -82,7 +82,7 @@ var (
 			ExpireInDays   uint
 			MaxRejectMB    uint
 			MaxNoUtxoMB    uint
-			MaxRejectCnt   uint32
+			MaxRejectCnt   uint
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool
@@ -377,18 +377,22 @@ func Reset() {
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
+	if CFG.TXPool.MaxRejectCnt < 100 {
+		CFG.TXPool.MaxRejectCnt = 100
+		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.MaxRejectCnt)
+	}
 	if CFG.TXPool.MaxRejectMB != 0 {
-		atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxRejectMB is zero (unlimited rejected txs cache size)")
 	}
 	if CFG.TXPool.MaxNoUtxoMB == 0 {
-		atomic.StoreUint64(&maxNoUtxoSizeBytes, atomic.LoadUint64(&maxRejectedSizeBytes))
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))
 	} else if CFG.TXPool.MaxRejectMB != 0 && CFG.TXPool.MaxNoUtxoMB > CFG.TXPool.MaxRejectMB {
 		fmt.Println("WARNING: TXPool config value MaxNoUtxoMB not smaller then MaxRejectMB (ignoring it)")
-		atomic.StoreUint64(&maxNoUtxoSizeBytes, atomic.LoadUint64(&maxRejectedSizeBytes))
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))
 	} else {
-		atomic.StoreUint64(&maxNoUtxoSizeBytes, uint64(float64(CFG.TXPool.MaxNoUtxoMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, uint64(float64(CFG.TXPool.MaxNoUtxoMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
 	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
 	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
@@ -596,15 +600,6 @@ func IsListenTCP() (res bool) {
 
 func MaxMempoolSize() uint64 {
 	return atomic.LoadUint64(&maxMempoolSizeBytes)
-}
-
-func RejectedTxsLimits() (cnt int, maxsize, maxw4i uint64) {
-	mutex_cfg.Lock()
-	maxsize = maxRejectedSizeBytes
-	maxw4i = maxNoUtxoSizeBytes
-	cnt = int(CFG.TXPool.MaxRejectCnt)
-	mutex_cfg.Unlock()
-	return
 }
 
 func TempBlocksDir() string {

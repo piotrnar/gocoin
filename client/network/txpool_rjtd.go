@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -37,6 +38,10 @@ var (
 	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
 	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
 
+	TransactionsRejectedIdx  []BIDX
+	TransactionsRejectedHead int
+	TransactionsRejectedTail int
+
 	// Transactions that are waiting for inputs:
 	// Each record points to a list of transactions that are waiting for the transaction from the index of the map
 	// This way when a new tx is received, we can quickly find all the txs that have been waiting for it
@@ -62,44 +67,11 @@ type OneWaitingList struct {
 	Ids  []BIDX // List of pending tx ids
 }
 
-func ReasonToString(reason byte) string {
-	switch reason {
-	case 0:
-		return ""
-	case TX_REJECTED_DISABLED:
-		return "RELAY_OFF"
-	case TX_REJECTED_TOO_BIG:
-		return "TOO_BIG"
-	case TX_REJECTED_FORMAT:
-		return "FORMAT"
-	case TX_REJECTED_LEN_MISMATCH:
-		return "LEN_MISMATCH"
-	case TX_REJECTED_EMPTY_INPUT:
-		return "EMPTY_INPUT"
-	case TX_REJECTED_DATA_PURGED:
-		return "PURGED"
-	case TX_REJECTED_OVERSPEND:
-		return "OVERSPEND"
-	case TX_REJECTED_BAD_INPUT:
-		return "BAD_INPUT"
-	case TX_REJECTED_NO_TXOU:
-		return "NO_TXOU"
-	case TX_REJECTED_LOW_FEE:
-		return "LOW_FEE"
-	case TX_REJECTED_NOT_MINED:
-		return "NOT_MINED"
-	case TX_REJECTED_CB_INMATURE:
-		return "CB_INMATURE"
-	case TX_REJECTED_RBF_LOWFEE:
-		return "RBF_LOWFEE"
-	case TX_REJECTED_RBF_FINAL:
-		return "RBF_FINAL"
-	case TX_REJECTED_RBF_100:
-		return "RBF_100"
-	case TX_REJECTED_REPLACED:
-		return "REPLACED"
+func nextIdx(idx int) int {
+	if idx == len(TransactionsRejectedIdx)-1 {
+		return 0
 	}
-	return fmt.Sprint("UNKNOWN_", reason)
+	return idx + 1
 }
 
 // Make sure to call it with locked TxMutex.
@@ -110,6 +82,14 @@ func AddRejectedTx(txr *OneTxRejected) {
 		common.CountSafe("Tx**RejAddConflict")
 		return
 	}
+	next_head := nextIdx(TransactionsRejectedHead)
+	if next_head == TransactionsRejectedTail {
+		DeleteRejected(TransactionsRejectedIdx[next_head])
+		common.CountSafe("TxRIdxNextTail")
+		TransactionsRejectedTail = nextIdx(TransactionsRejectedTail)
+	}
+	TransactionsRejectedIdx[TransactionsRejectedHead] = bidx
+	TransactionsRejectedHead = next_head
 	TransactionsRejected[bidx] = txr
 	if txr.Tx != nil {
 		TransactionsRejectedSize += uint64(len(txr.Raw))
@@ -119,13 +99,15 @@ func AddRejectedTx(txr *OneTxRejected) {
 // Make sure to call it with locked TxMutex
 func DeleteRejected(bidx BIDX) {
 	if tr, ok := TransactionsRejected[bidx]; ok {
+		common.CountSafe(fmt.Sprint("TxRIdxDel-", tr.Reason))
 		if tr.Tx != nil {
 			tr.cleanup()
 			TransactionsRejectedSize -= uint64(TransactionsRejected[bidx].Size)
 		}
 		delete(TransactionsRejected, bidx)
 	} else {
-		println("ERROR: DeleteRejected called for non-existing txr")
+		common.CountSafe("TxRIdxNull")
+		//println("ERROR: DeleteRejected called for non-existing txr")
 	}
 }
 
@@ -185,90 +167,93 @@ func (tr *OneTxRejected) Discard() {
 	tr.Tx = nil
 }
 
-// LimitRejectedSize must be called with TxMutex locked.
-func LimitRejectedSize() {
-	//ticklen := maxlen >> 5 // 1/32th of the max size = X
+func ReasonToString(reason byte) string {
+	switch reason {
+	case 0:
+		return ""
+	case TX_REJECTED_DISABLED:
+		return "RELAY_OFF"
+	case TX_REJECTED_TOO_BIG:
+		return "TOO_BIG"
+	case TX_REJECTED_FORMAT:
+		return "FORMAT"
+	case TX_REJECTED_LEN_MISMATCH:
+		return "LEN_MISMATCH"
+	case TX_REJECTED_EMPTY_INPUT:
+		return "EMPTY_INPUT"
+	case TX_REJECTED_DATA_PURGED:
+		return "PURGED"
+	case TX_REJECTED_OVERSPEND:
+		return "OVERSPEND"
+	case TX_REJECTED_BAD_INPUT:
+		return "BAD_INPUT"
+	case TX_REJECTED_NO_TXOU:
+		return "NO_TXOU"
+	case TX_REJECTED_LOW_FEE:
+		return "LOW_FEE"
+	case TX_REJECTED_NOT_MINED:
+		return "NOT_MINED"
+	case TX_REJECTED_CB_INMATURE:
+		return "CB_INMATURE"
+	case TX_REJECTED_RBF_LOWFEE:
+		return "RBF_LOWFEE"
+	case TX_REJECTED_RBF_FINAL:
+		return "RBF_FINAL"
+	case TX_REJECTED_RBF_100:
+		return "RBF_100"
+	case TX_REJECTED_REPLACED:
+		return "REPLACED"
+	}
+	return fmt.Sprint("UNKNOWN_", reason)
+}
+
+func GetSortedRejectedOld() (sorted []*OneTxRejected) {
 	var idx int
-	var sorted []*OneTxRejected
-
-	old_cnt := len(TransactionsRejected)
-	old_size := TransactionsRejectedSize
-
-	maxcnt, maxlen, maxw4ilen := common.RejectedTxsLimits()
-
-	if maxcnt > 0 && len(TransactionsRejected) > maxcnt {
-		common.CountSafe("TxRLimitCnt")
-		sorted = GetSortedRejected()
-		maxcnt -= maxcnt >> 5
-		for idx = maxcnt; idx < len(sorted); idx++ {
-			DeleteRejected(sorted[idx].Id.BIdx())
-		}
-		sorted = sorted[:maxcnt]
-		common.CountSafeAdd("TxRLimitCntCnt", uint64(old_cnt-len(TransactionsRejected)))
-		common.CountSafeAdd("TxRLimitCntBts", old_size-TransactionsRejectedSize)
-		old_cnt = len(TransactionsRejected)
-		old_size = TransactionsRejectedSize
+	sorted = make([]*OneTxRejected, len(TransactionsRejected))
+	for _, t := range TransactionsRejected {
+		sorted[idx] = t
+		idx++
 	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[j].Time.Before(sorted[i].Time)
+	})
+	return
+}
 
-	var removed map[int]bool
-	if maxw4ilen > 0 && WaitingForInputsSize > maxw4ilen {
-		common.CountSafe("TxRLimitUtxo")
-		if sorted == nil {
-			sorted = GetSortedRejected()
+func GetSortedRejected() (sorted []*OneTxRejected) {
+	sorted = make([]*OneTxRejected, 0, len(TransactionsRejected))
+	idx := TransactionsRejectedHead
+	for {
+		if idx == TransactionsRejectedTail {
+			return
 		}
-		maxw4ilen -= maxw4ilen >> 5
-		removed = make(map[int]bool, len(sorted))
-		for idx = len(sorted) - 1; idx >= 0; idx-- {
-			if sorted[idx].Waiting4 == nil {
+		if idx == 0 {
+			idx = len(TransactionsRejectedIdx) - 1
+		} else {
+			idx--
+		}
+		if txr, ok := TransactionsRejected[TransactionsRejectedIdx[idx]]; ok {
+			if txr == nil {
+				println("ERROR: TransactionsRejected record is nil - this must not happen!!!")
 				continue
 			}
-			DeleteRejected(sorted[idx].Hash.BIdx())
-			removed[idx] = true
-			if WaitingForInputsSize <= maxw4ilen {
-				break
-			}
+			sorted = append(sorted, txr)
 		}
-		common.CountSafeAdd("TxRLimitUtxoCnt", uint64(old_cnt-len(TransactionsRejected)))
-		common.CountSafeAdd("TxRLimitUtxoBts", old_size-TransactionsRejectedSize)
-		old_cnt = len(TransactionsRejected)
-		old_size = TransactionsRejectedSize
-	}
-
-	if maxlen > 0 && TransactionsRejectedSize > maxlen {
-		common.CountSafe("TxRLimitSize")
-		if sorted == nil {
-			sorted = GetSortedRejected()
-		} else if len(removed) > 0 {
-			sorted_new := make([]*OneTxRejected, 0, len(sorted))
-			for i := range sorted {
-				if !removed[i] {
-					sorted_new = append(sorted_new, sorted[i])
-				}
-			}
-			sorted = sorted_new
-		}
-		maxlen -= maxlen >> 5
-		for idx = len(sorted) - 1; idx >= 0; idx-- {
-			if _, ok := TransactionsRejected[sorted[idx].Hash.BIdx()]; ok {
-				println("ERROR in LimitRejectedSize - txr in sorted but not in Rejected", idx, len(sorted))
-				println("  txid:", sorted[idx].Hash.String())
-				common.CountSafe("Tx**RLimitPipa")
-				continue
-			}
-			DeleteRejected(sorted[idx].Hash.BIdx())
-			if TransactionsRejectedSize <= maxlen {
-				break
-			}
-		}
-		common.CountSafeAdd("TxRLimitSizeCnt", uint64(old_cnt-len(TransactionsRejected)))
-		common.CountSafeAdd("TxRLimitSizeBts", old_size-TransactionsRejectedSize)
 	}
 }
 
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
-	TransactionsRejected = make(map[BIDX]*OneTxRejected, common.GetUint32(&common.CFG.TXPool.MaxRejectCnt))
+	common.LockCfg()
+	cnt := common.CFG.TXPool.MaxRejectCnt
+	common.UnlockCfg()
+	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
+
+	TransactionsRejectedIdx = make([]BIDX, cnt)
+	TransactionsRejectedHead = 0
+	TransactionsRejectedTail = 0
+
 	WaitingForInputs = make(map[BIDX]*OneWaitingList)
 	WaitingForInputsSize = 0
 	RejectedUsedUTXOs = make(map[uint64][]BIDX)

@@ -174,21 +174,6 @@ func LimitPoolSize(maxlen uint64) {
 	}
 }
 
-func GetSortedRejected() (sorted []*OneTxRejected) {
-	var idx int
-	sorted = make([]*OneTxRejected, len(TransactionsRejected))
-	for _, t := range TransactionsRejected {
-		sorted[idx] = t
-		idx++
-	}
-	//var now = time.Now()
-	sort.Slice(sorted, func(i, j int) bool {
-		//return int64(sorted[i].Size)*int64(now.Sub(sorted[i].Time)) < int64(sorted[j].Size)*int64(now.Sub(sorted[j].Time))
-		return sorted[j].Time.Before(sorted[i].Time)
-	})
-	return
-}
-
 type OneTxsPackage struct {
 	Txs    []*OneTxToSend
 	Weight int
@@ -355,21 +340,10 @@ func ExpireOldTxs() {
 func LimitTxpoolSize() {
 	lastTxsPoolLimit = time.Now()
 	limitTxpoolSizeNow = false
-
 	TxMutex.Lock()
-
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
 		LimitPoolSize(maxpoolsize)
 	}
-
-	if len(GetMPInProgressTicket) == 0 {
-		LimitRejectedSize()
-	} else {
-		// do not do it while "getmp" is being done as there will be many waiting for inputs
-		common.CountSafe("TxRejectedLimitHold")
-	}
-
 	TxMutex.Unlock()
-
 	common.CountSafe("TxPollLImitTicks")
 }
