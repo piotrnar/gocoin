@@ -82,7 +82,7 @@ var (
 			ExpireInDays   uint
 			MaxRejectMB    uint
 			MaxNoUtxoMB    uint
-			MaxRejectCnt   uint
+			MaxRejectCnt   uint32
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool
@@ -377,8 +377,8 @@ func Reset() {
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
-	if CFG.TXPool.MaxRejectCnt < 100 {
-		CFG.TXPool.MaxRejectCnt = 100
+	if CFG.TXPool.MaxRejectCnt < 10 {
+		CFG.TXPool.MaxRejectCnt = 10
 		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.MaxRejectCnt)
 	}
 	if CFG.TXPool.MaxRejectMB != 0 {

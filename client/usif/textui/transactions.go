@@ -345,12 +345,18 @@ func txr_stats(par string) {
 	var reasons []int
 
 	network.TxMutex.Lock()
-	idx_use := network.TransactionsRejectedHead - network.TransactionsRejectedTail
+
+	idx_use := network.TRIdxHead - network.TRIdxTail
 	if idx_use < 0 {
-		idx_use += len(network.TransactionsRejectedIdx)
+		idx_use += len(network.TRIdxArray)
 	}
+	if _, ok := network.TransactionsRejected[network.TRIdxArray[network.TRIdxHead]]; ok {
+		idx_use++
+	}
+
 	fmt.Println(len(network.TransactionsRejected), "/", idx_use, "txs with total in-memory size of",
-		network.TransactionsRejectedSize)
+		network.TransactionsRejectedSize, "  head:", network.TRIdxHead, "  tail:", network.TRIdxTail)
+
 	for _, v := range network.TransactionsRejected {
 		var rec *rect
 		if rec = cnts[v.Reason]; rec == nil {

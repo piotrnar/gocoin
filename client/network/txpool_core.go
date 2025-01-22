@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -66,7 +65,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	if reason != 0 {
-		RejectTx(tx.Tx, reason)
+		RejectTx(tx.Tx, reason, nil)
 	}
 }
 
@@ -91,63 +90,6 @@ func txChecker(tx *btc.Tx) bool {
 		common.CountSafe("TxScrMissed")
 	}
 	return ok
-}
-
-// Remove any references to WaitingForInputs and RejectedUsedUTXOs
-func (tr *OneTxRejected) cleanup() {
-	bidx := tr.Id.BIdx()
-	// remove references to this tx from RejectedUsedUTXOs
-	for _, inp := range tr.TxIn {
-		uidx := inp.Input.UIdx()
-		if ref := RejectedUsedUTXOs[uidx]; ref != nil {
-			newref := make([]BIDX, 0, len(ref)-1)
-			for _, bi := range ref {
-				if bi != bidx {
-					newref = append(newref, bi)
-				}
-			}
-			if len(newref) == len(ref) {
-				fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
-				common.CountSafe("Tx**UsedUTXOnil")
-			} else {
-				if len(newref) == 0 {
-					delete(RejectedUsedUTXOs, uidx)
-					common.CountSafe("TxUsedUTXOdel")
-				} else {
-					RejectedUsedUTXOs[uidx] = newref
-					common.CountSafe("TxUsedUTXOrem")
-				}
-			}
-		}
-	}
-
-	// remove references to this tx from WaitingForInputs
-	if tr.Waiting4 != nil {
-		w4idx := tr.Waiting4.BIdx()
-		if w4i := WaitingForInputs[w4idx]; w4i != nil {
-			newlist := make([]BIDX, 0, len(w4i.Ids)-1)
-			for _, x := range w4i.Ids {
-				if x != bidx {
-					newlist = append(newlist, x)
-				}
-			}
-			if len(newlist) == len(w4i.Ids) {
-				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
-			} else {
-				if len(newlist) == 0 {
-					delete(WaitingForInputs, w4idx)
-				} else {
-					w4i.Ids = newlist
-				}
-			}
-		} else {
-			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
-			println("   from rejected tx", tr.Id.String())
-			common.CountSafe("Tx**RejectedW4error")
-		}
-		tr.Waiting4 = nil
-		WaitingForInputsSize -= uint64(len(tr.Raw))
-	}
 }
 
 // GetChildren gets all first level children of the tx.

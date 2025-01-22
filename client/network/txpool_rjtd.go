@@ -2,34 +2,11 @@ package network
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
-)
-
-const (
-	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
-
-	TX_REJECTED_TOO_BIG      = 101
-	TX_REJECTED_FORMAT       = 102
-	TX_REJECTED_LEN_MISMATCH = 103
-	TX_REJECTED_EMPTY_INPUT  = 104
-
-	TX_REJECTED_OVERSPEND = 154
-	TX_REJECTED_BAD_INPUT = 157
-
-	TX_REJECTED_DATA_PURGED = 199
-
-	// Anything from the list below might eventually get mined
-	TX_REJECTED_NO_TXOU     = 202
-	TX_REJECTED_LOW_FEE     = 205
-	TX_REJECTED_NOT_MINED   = 208
-	TX_REJECTED_CB_INMATURE = 209
-	TX_REJECTED_RBF_LOWFEE  = 210
-	TX_REJECTED_RBF_FINAL   = 211
-	TX_REJECTED_RBF_100     = 212
-	TX_REJECTED_REPLACED    = 213
 )
 
 var (
@@ -37,9 +14,9 @@ var (
 	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
 	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
 
-	TransactionsRejectedIdx  []BIDX
-	TransactionsRejectedHead int
-	TransactionsRejectedTail int
+	TRIdxArray []BIDX
+	TRIdxHead  int
+	TRIdxTail  int
 
 	// Transactions that are waiting for inputs:
 	// Each record points to a list of transactions that are waiting for the transaction from the index of the map
@@ -66,11 +43,93 @@ type OneWaitingList struct {
 	Ids  []BIDX // List of pending tx ids
 }
 
+const (
+	TX_REJECTED_DISABLED = 1 // Only used for transactions in TransactionsToSend for Blocked field
+
+	TX_REJECTED_TOO_BIG      = 101
+	TX_REJECTED_FORMAT       = 102
+	TX_REJECTED_LEN_MISMATCH = 103
+	TX_REJECTED_EMPTY_INPUT  = 104
+
+	TX_REJECTED_OVERSPEND = 154
+	TX_REJECTED_BAD_INPUT = 157
+
+	TX_REJECTED_DATA_PURGED = 199
+
+	// Anything from the list below might eventually get mined
+	TX_REJECTED_NO_TXOU     = 202
+	TX_REJECTED_LOW_FEE     = 205
+	TX_REJECTED_NOT_MINED   = 208
+	TX_REJECTED_CB_INMATURE = 209
+	TX_REJECTED_RBF_LOWFEE  = 210
+	TX_REJECTED_RBF_FINAL   = 211
+	TX_REJECTED_RBF_100     = 212
+	TX_REJECTED_REPLACED    = 213
+)
+
 func nextIdx(idx int) int {
-	if idx == len(TransactionsRejectedIdx)-1 {
+	if idx == len(TRIdxArray)-1 {
 		return 0
 	}
 	return idx + 1
+}
+
+var do_not_try_again bool
+
+func resizeTransactionsRejectedCount(newcnt int) {
+	if do_not_try_again {
+		return
+	}
+	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:", len(TransactionsRejected), TRIdxTail, TRIdxHead)
+	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
+	if MempoolCheck() {
+		println("First MempoolCheck failed")
+		os.Exit(1)
+	}
+	//fmt.Println("Going into the loop...")
+	for ; TRIdxTail != TRIdxHead; TRIdxTail = nextIdx(TRIdxTail) {
+		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
+			old_txrs = append(old_txrs, txr)
+			//fmt.Println("Removing index", TRIdxTail, txr.Id.String(), txr.Reason, txr.Size, "  size:", len(TransactionsRejected))
+			DeleteRejected(txr.Hash.BIdx())
+			//fmt.Println(" ...size:", len(TransactionsRejected))
+			if false && MempoolCheck() {
+				println("MempoolCheck 2 failed")
+				os.Exit(1)
+			}
+		} else {
+			//fmt.Println("Pipa at index", TRIdxTail, btc.BIdxString(TRIdxArray[TRIdxTail]))
+		}
+	}
+	fmt.Println("got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected),
+		TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
+
+	if MempoolCheck() {
+		println("Middle MempoolCheck failed")
+		os.Exit(1)
+	}
+
+	if newcnt < len(TRIdxArray) {
+		old_txrs = old_txrs[len(TRIdxArray)-newcnt-1:]
+	}
+	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
+	TRIdxArray = make([]BIDX, newcnt)
+	TRIdxHead = 0
+	TRIdxTail = 0
+
+	from_idx := 0
+	if newcnt <= len(old_txrs) {
+		from_idx = len(old_txrs) - newcnt + 1
+		fmt.Println("Moving from to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
+	}
+	for _, txr := range old_txrs[from_idx:] {
+		AddRejectedTx(txr)
+	}
+
+	if MempoolCheck() {
+		println("Final MempoolCheck failed")
+		os.Exit(1)
+	}
 }
 
 // Make sure to call it with locked TxMutex.
@@ -81,17 +140,33 @@ func AddRejectedTx(txr *OneTxRejected) {
 		common.CountSafe("Tx**RejAddConflict")
 		return
 	}
-	next_head := nextIdx(TransactionsRejectedHead)
-	if next_head == TransactionsRejectedTail {
-		DeleteRejected(TransactionsRejectedIdx[next_head])
-		common.CountSafe("TxRIdxNextTail")
-		TransactionsRejectedTail = nextIdx(TransactionsRejectedTail)
-	}
-	TransactionsRejectedIdx[TransactionsRejectedHead] = bidx
-	TransactionsRejectedHead = next_head
+	DeleteRejected(TRIdxArray[TRIdxHead])
+	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
+	TRIdxHead = nextIdx(TRIdxHead)
+	if TRIdxHead == TRIdxTail {
+		TRIdxTail = nextIdx(TRIdxTail)
+	}
 	if txr.Tx != nil {
+		for _, inp := range txr.TxIn {
+			uidx := inp.Input.UIdx()
+			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
+			if txr.Waiting4 != nil {
+				var rec *OneWaitingList
+				if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
+					rec = new(OneWaitingList)
+					rec.TxID = txr.Waiting4
+				}
+				rec.Ids = append(rec.Ids, txr.Id.BIdx())
+				WaitingForInputs[txr.Waiting4.BIdx()] = rec
+				WaitingForInputsSize += uint64(len(txr.Raw))
+			}
+		}
 		TransactionsRejectedSize += uint64(len(txr.Raw))
+	}
+
+	if cnt := int(common.GetUint32(&common.CFG.TXPool.MaxRejectCnt)); cnt != len(TRIdxArray) {
+		resizeTransactionsRejectedCount(cnt)
 	}
 }
 
@@ -110,29 +185,84 @@ func DeleteRejected(bidx BIDX) {
 	}
 }
 
+// Remove any references to WaitingForInputs and RejectedUsedUTXOs
+func (tr *OneTxRejected) cleanup() {
+	bidx := tr.Id.BIdx()
+	// remove references to this tx from RejectedUsedUTXOs
+	for _, inp := range tr.TxIn {
+		uidx := inp.Input.UIdx()
+		if ref := RejectedUsedUTXOs[uidx]; ref != nil {
+			newref := make([]BIDX, 0, len(ref)-1)
+			for _, bi := range ref {
+				if bi != bidx {
+					newref = append(newref, bi)
+				}
+			}
+			if len(newref) == len(ref) {
+				fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
+				common.CountSafe("Tx**UsedUTXOnil")
+			} else {
+				if len(newref) == 0 {
+					delete(RejectedUsedUTXOs, uidx)
+					common.CountSafe("TxUsedUTXOdel")
+				} else {
+					RejectedUsedUTXOs[uidx] = newref
+					common.CountSafe("TxUsedUTXOrem")
+				}
+			}
+		}
+	}
+
+	// remove references to this tx from WaitingForInputs
+	if tr.Waiting4 != nil {
+		w4idx := tr.Waiting4.BIdx()
+		if w4i := WaitingForInputs[w4idx]; w4i != nil {
+			newlist := make([]BIDX, 0, len(w4i.Ids)-1)
+			for _, x := range w4i.Ids {
+				if x != bidx {
+					newlist = append(newlist, x)
+				}
+			}
+			if len(newlist) == len(w4i.Ids) {
+				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
+			} else {
+				if len(newlist) == 0 {
+					delete(WaitingForInputs, w4idx)
+				} else {
+					w4i.Ids = newlist
+				}
+			}
+		} else {
+			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
+			println("   from rejected tx", tr.Id.String())
+			common.CountSafe("Tx**RejectedW4error")
+		}
+		tr.Waiting4 = nil
+		WaitingForInputsSize -= uint64(len(tr.Raw))
+	}
+}
+
 // RejectTx adds a transaction to the rejected list or not, if it has been mined already.
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.
-func RejectTx(tx *btc.Tx, why byte) *OneTxRejected {
-	rec := new(OneTxRejected)
-	rec.Time = time.Now()
-	rec.Size = uint32(len(tx.Raw))
-	rec.Reason = why
+func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
+	txr := new(OneTxRejected)
+	txr.Time = time.Now()
+	txr.Size = uint32(len(tx.Raw))
+	txr.Reason = why
 	// only store tx for selected reasons
 	if why >= 200 {
 		tx.Clean()
-		rec.Tx = tx
-		rec.Id = &tx.Hash
-		for _, inp := range tx.TxIn {
-			uidx := inp.Input.UIdx()
-			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], rec.Hash.BIdx())
-		}
+		txr.Tx = tx
+		txr.Id = &tx.Hash
+		txr.Waiting4 = missingid
+		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
 	} else {
-		rec.Id = new(btc.Uint256)
-		rec.Id.Hash = tx.Hash.Hash
+		txr.Id = new(btc.Uint256)
+		txr.Id.Hash = tx.Hash.Hash
 	}
-	AddRejectedTx(rec)
-	return rec
+	AddRejectedTx(txr)
+	//return rec
 }
 
 // Make sure to call it with locked TxMutex
@@ -208,17 +338,17 @@ func ReasonToString(reason byte) string {
 
 func GetSortedRejected() (sorted []*OneTxRejected) {
 	sorted = make([]*OneTxRejected, 0, len(TransactionsRejected))
-	idx := TransactionsRejectedHead
+	idx := TRIdxHead
 	for {
-		if idx == TransactionsRejectedTail {
+		if idx == TRIdxTail {
 			return
 		}
 		if idx == 0 {
-			idx = len(TransactionsRejectedIdx) - 1
+			idx = len(TRIdxArray) - 1
 		} else {
 			idx--
 		}
-		if txr, ok := TransactionsRejected[TransactionsRejectedIdx[idx]]; ok {
+		if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
 			if txr == nil {
 				println("ERROR: TransactionsRejected record is nil - this must not happen!!!")
 				continue
@@ -230,15 +360,13 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
-	common.LockCfg()
-	cnt := common.CFG.TXPool.MaxRejectCnt
-	common.UnlockCfg()
+	cnt := common.GetUint32(&common.CFG.TXPool.MaxRejectCnt)
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
 
-	TransactionsRejectedIdx = make([]BIDX, cnt)
-	TransactionsRejectedHead = 0
-	TransactionsRejectedTail = 0
+	TRIdxArray = make([]BIDX, cnt)
+	TRIdxHead = 0
+	TRIdxTail = 0
 
 	WaitingForInputs = make(map[BIDX]*OneWaitingList)
 	WaitingForInputsSize = 0

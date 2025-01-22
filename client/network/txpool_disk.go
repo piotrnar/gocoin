@@ -236,7 +236,6 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		}
 	}
 	if (tina & HAS_TX_FLAG) != 0 {
-		bidx := txr.Id.BIdx()
 		raw := make([]byte, txr.Size)
 		if _, er = io.ReadFull(rd, raw); er != nil {
 			return
@@ -248,23 +247,6 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		}
 		txr.Raw = raw
 		txr.Tx.Hash.Hash = txr.Id.Hash
-
-		for _, inp := range txr.TxIn {
-			uidx := inp.Input.UIdx()
-			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
-		}
-
-		if txr.Waiting4 != nil {
-			w4bidx := txr.Waiting4.BIdx()
-			var rec *OneWaitingList
-			if rec = WaitingForInputs[w4bidx]; rec == nil {
-				rec = new(OneWaitingList)
-				rec.TxID = txr.Waiting4
-			}
-			rec.Ids = append(rec.Ids, bidx)
-			WaitingForInputs[w4bidx] = rec
-			WaitingForInputsSize += uint64(len(txr.Raw))
-		}
 	} else if txr.Waiting4 != nil {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
@@ -368,6 +350,7 @@ func MempoolLoad() bool {
 				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 					goto fatal_error
 				}
+				AddRejectedTx(txr)
 				sorted = append(sorted, txr)
 			}
 			sort.Slice(sorted, func(i, j int) bool {
