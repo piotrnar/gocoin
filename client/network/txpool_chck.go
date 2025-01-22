@@ -140,7 +140,7 @@ func MempoolCheck() bool {
 	}
 	if w4isize != WaitingForInputsSize {
 		dupa++
-		fmt.Println(dupa, "WaitingForInputsSize mismatch", w4isize, totsize)
+		fmt.Println(dupa, "WaitingForInputsSize mismatch", w4isize, WaitingForInputsSize)
 	}
 
 	spent_cnt = 0

@@ -82,7 +82,7 @@ var (
 			ExpireInDays   uint
 			MaxRejectMB    uint
 			MaxNoUtxoMB    uint
-			MaxRejectCnt   uint32
+			RejectRecCnt   uint32
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool
@@ -171,7 +171,7 @@ func InitConfig() {
 	CFG.TXPool.ExpireInDays = 7
 	CFG.TXPool.MaxRejectMB = 25
 	CFG.TXPool.MaxNoUtxoMB = 5
-	CFG.TXPool.MaxRejectCnt = 5000
+	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true
@@ -377,9 +377,9 @@ func Reset() {
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
-	if CFG.TXPool.MaxRejectCnt < 10 {
-		CFG.TXPool.MaxRejectCnt = 10
-		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.MaxRejectCnt)
+	if CFG.TXPool.RejectRecCnt < 100 {
+		CFG.TXPool.RejectRecCnt = 100
+		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.RejectRecCnt)
 	}
 	if CFG.TXPool.MaxRejectMB != 0 {
 		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))

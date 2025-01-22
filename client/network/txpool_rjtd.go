@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -74,64 +75,6 @@ func nextIdx(idx int) int {
 	return idx + 1
 }
 
-var do_not_try_again bool
-
-func resizeTransactionsRejectedCount(newcnt int) {
-	if do_not_try_again {
-		return
-	}
-	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:", len(TransactionsRejected), TRIdxTail, TRIdxHead)
-	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
-	if MempoolCheck() {
-		println("First MempoolCheck failed")
-		os.Exit(1)
-	}
-	//fmt.Println("Going into the loop...")
-	for ; TRIdxTail != TRIdxHead; TRIdxTail = nextIdx(TRIdxTail) {
-		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
-			old_txrs = append(old_txrs, txr)
-			//fmt.Println("Removing index", TRIdxTail, txr.Id.String(), txr.Reason, txr.Size, "  size:", len(TransactionsRejected))
-			DeleteRejected(txr.Hash.BIdx())
-			//fmt.Println(" ...size:", len(TransactionsRejected))
-			if false && MempoolCheck() {
-				println("MempoolCheck 2 failed")
-				os.Exit(1)
-			}
-		} else {
-			//fmt.Println("Pipa at index", TRIdxTail, btc.BIdxString(TRIdxArray[TRIdxTail]))
-		}
-	}
-	fmt.Println("got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected),
-		TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
-
-	if MempoolCheck() {
-		println("Middle MempoolCheck failed")
-		os.Exit(1)
-	}
-
-	if newcnt < len(TRIdxArray) {
-		old_txrs = old_txrs[len(TRIdxArray)-newcnt-1:]
-	}
-	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
-	TRIdxArray = make([]BIDX, newcnt)
-	TRIdxHead = 0
-	TRIdxTail = 0
-
-	from_idx := 0
-	if newcnt <= len(old_txrs) {
-		from_idx = len(old_txrs) - newcnt + 1
-		fmt.Println("Moving from to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
-	}
-	for _, txr := range old_txrs[from_idx:] {
-		AddRejectedTx(txr)
-	}
-
-	if MempoolCheck() {
-		println("Final MempoolCheck failed")
-		os.Exit(1)
-	}
-}
-
 // Make sure to call it with locked TxMutex.
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
@@ -151,22 +94,18 @@ func AddRejectedTx(txr *OneTxRejected) {
 		for _, inp := range txr.TxIn {
 			uidx := inp.Input.UIdx()
 			RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], bidx)
-			if txr.Waiting4 != nil {
-				var rec *OneWaitingList
-				if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
-					rec = new(OneWaitingList)
-					rec.TxID = txr.Waiting4
-				}
-				rec.Ids = append(rec.Ids, txr.Id.BIdx())
-				WaitingForInputs[txr.Waiting4.BIdx()] = rec
-				WaitingForInputsSize += uint64(len(txr.Raw))
+		}
+		if txr.Waiting4 != nil {
+			var rec *OneWaitingList
+			if rec = WaitingForInputs[txr.Waiting4.BIdx()]; rec == nil {
+				rec = new(OneWaitingList)
+				rec.TxID = txr.Waiting4
 			}
+			rec.Ids = append(rec.Ids, txr.Id.BIdx())
+			WaitingForInputs[txr.Waiting4.BIdx()] = rec
+			WaitingForInputsSize += uint64(len(txr.Raw))
 		}
 		TransactionsRejectedSize += uint64(len(txr.Raw))
-	}
-
-	if cnt := int(common.GetUint32(&common.CFG.TXPool.MaxRejectCnt)); cnt != len(TRIdxArray) {
-		resizeTransactionsRejectedCount(cnt)
 	}
 }
 
@@ -358,9 +297,65 @@ func GetSortedRejected() (sorted []*OneTxRejected) {
 	}
 }
 
+func resizeTransactionsRejectedCount(newcnt int) {
+	fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:",
+		len(TransactionsRejected), TRIdxTail, TRIdxHead)
+
+	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
+	for {
+		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
+			old_txrs = append(old_txrs, txr)
+			DeleteRejected(txr.Hash.BIdx())
+		}
+		if TRIdxTail == TRIdxHead {
+			break
+		}
+		TRIdxTail = nextIdx(TRIdxTail)
+	}
+
+	fmt.Println("Got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected),
+		TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
+
+	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
+	TRIdxArray = make([]BIDX, newcnt)
+	TRIdxHead = 0
+	TRIdxTail = 0
+
+	var from_idx int
+	if newcnt < len(old_txrs) {
+		from_idx = len(old_txrs) - newcnt
+		fmt.Println("Advancing from_idx to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
+	}
+
+	for _, txr := range old_txrs[from_idx:] {
+		AddRejectedTx(txr)
+	}
+
+	if MempoolCheck() {
+		println("Final MempoolCheck failed")
+		os.Exit(1)
+	} else {
+		println("Final MempoolCheck OK")
+	}
+}
+
+func doRejected() {
+	TxMutex.Lock()
+	defer TxMutex.Unlock()
+	if cnt := int(common.GetUint32(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
+		resizeTransactionsRejectedCount(cnt)
+		return
+	}
+	if false && MempoolCheck() {
+		println("MempoolCheck failed in doRejected")
+		debug.PrintStack()
+		os.Exit(1)
+	}
+}
+
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
-	cnt := common.GetUint32(&common.CFG.TXPool.MaxRejectCnt)
+	cnt := common.GetUint32(&common.CFG.TXPool.RejectRecCnt)
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
 

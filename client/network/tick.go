@@ -614,6 +614,8 @@ func NetworkTick() {
 		ExpireOldTxs()
 		nextTxsPoolExpire = now.Add(time.Hour)
 	}
+
+	doRejected()
 }
 
 func (c *OneConnection) SendFeeFilter() {

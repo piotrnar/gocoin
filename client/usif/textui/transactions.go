@@ -354,8 +354,9 @@ func txr_stats(par string) {
 		idx_use++
 	}
 
-	fmt.Println(len(network.TransactionsRejected), "/", idx_use, "txs with total in-memory size of",
-		network.TransactionsRejectedSize, "  head:", network.TRIdxHead, "  tail:", network.TRIdxTail)
+	fmt.Println(len(network.TransactionsRejected), "/", idx_use, "/", len(network.TRIdxArray),
+		"txs with total in-memory size of", network.TransactionsRejectedSize, "  head:",
+		network.TRIdxHead, "  tail:", network.TRIdxTail)
 
 	for _, v := range network.TransactionsRejected {
 		var rec *rect

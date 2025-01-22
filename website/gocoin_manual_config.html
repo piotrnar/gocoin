@@ -239,10 +239,10 @@ Note that "unknown UTXOs" are either UTXOs from parent txs that we have never re
 or (more likely) UTXOs that had been mined and spent before the tx was received.</td>
 </tr>
 <tr class="even">
-<td class="cfg_name"> TXPool.MaxRejectCnt</td>
+<td class="cfg_name"> TXPool.RejectRecCnt</td>
 <td class="cfg_type"> uint</td>
-<td> 5000</td>
-<td class="cfg_info"> If not zero, the node will not keep more than this many records of rejected transaction.</td>
+<td> 20000</td>
+<td class="cfg_info"> The node will not keep more than this many records of rejected transaction.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.SaveOnDisk</td>
