@@ -102,6 +102,20 @@ func ReasonToString(reason byte) string {
 	return fmt.Sprint("UNKNOWN_", reason)
 }
 
+// Make sure to call it with locked TxMutex.
+func InitTransactionsRejected() {
+	TransactionsRejected = make(map[BIDX]*OneTxRejected, common.GetUint32(&common.CFG.TXPool.MaxRejectCnt))
+	TransactionsRejectedSize = 0
+	WaitingForInputs = make(map[BIDX]*OneWaitingList)
+	WaitingForInputsSize = 0
+	RejectedUsedUTXOs = make(map[uint64][]BIDX)
+}
+
+// Make sure to call it with locked TxMutex.
+func AddRejectedTx(txr *OneTxRejected) {
+	TransactionsRejected[txr.Id.BIdx()] = txr
+}
+
 // RejectTx adds a transaction to the rejected list or not, if it has been mined already.
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.

@@ -14,16 +14,16 @@ var (
 	TxMutex sync.Mutex
 
 	// The actual memory pool:
-	TransactionsToSend       map[BIDX]*OneTxToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSend       map[BIDX]*OneTxToSend
 	TransactionsToSendSize   uint64
 	TransactionsToSendWeight uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
 	// Each record is indexed by 64-bit-coded(TxID:Vout) and points to list of txs (from T2S)
-	SpentOutputs map[uint64]BIDX = make(map[uint64]BIDX, 10e3)
+	SpentOutputs map[uint64]BIDX
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
-	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
+	TransactionsPending map[BIDX]bool
 )
 
 type OneTxToSend struct {
@@ -38,6 +38,17 @@ type OneTxToSend struct {
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
 	Final       bool // if true RFB will not work on it
+}
+
+func InitMempool() {
+	TxMutex.Lock()
+	TransactionsToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSendSize = 0
+	TransactionsToSendWeight = 0
+	SpentOutputs = make(map[uint64]BIDX, 10e3)
+	TransactionsPending = make(map[BIDX]bool)
+	InitTransactionsRejected()
+	TxMutex.Unlock()
 }
 
 // Delete deletes the tx from the mempool.

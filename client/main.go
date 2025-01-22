@@ -529,6 +529,8 @@ func main() {
 			fmt.Println(len(keys), "peers un-baned")
 		}
 
+		network.InitMempool()
+
 		for k, v := range common.BlockChain.BlockIndex {
 			network.ReceivedBlocks[k] = &network.OneReceivedBlock{TmStart: time.Unix(int64(v.Timestamp()), 0)}
 		}

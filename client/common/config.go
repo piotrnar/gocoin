@@ -82,7 +82,7 @@ var (
 			ExpireInDays   uint
 			MaxRejectMB    uint
 			MaxNoUtxoMB    uint
-			MaxRejectCnt   uint
+			MaxRejectCnt   uint32
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool

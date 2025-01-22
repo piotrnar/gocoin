@@ -429,18 +429,7 @@ func get_mempool(par string) {
 }
 
 func mempool_purge(par string) {
-	network.TxMutex.Lock()
-	network.TransactionsToSend = make(map[network.BIDX]*network.OneTxToSend)
-	network.TransactionsToSendSize = 0
-	network.TransactionsToSendWeight = 0
-	network.SpentOutputs = make(map[uint64]network.BIDX, 10e3)
-	network.TransactionsRejected = make(map[network.BIDX]*network.OneTxRejected)
-	network.TransactionsRejectedSize = 0
-	network.TransactionsPending = make(map[network.BIDX]bool)
-	network.WaitingForInputs = make(map[network.BIDX]*network.OneWaitingList)
-	network.WaitingForInputsSize = 0
-	network.RejectedUsedUTXOs = make(map[uint64][]network.BIDX)
-	network.TxMutex.Unlock()
+	network.InitMempool()
 	fmt.Println("Done")
 }
 
