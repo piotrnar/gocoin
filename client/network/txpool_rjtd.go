@@ -300,15 +300,11 @@ func limitRejectedSizeIfNeeded() {
 		start_cnt := len(WaitingForInputs)
 		start_siz := WaitingForInputsSize
 		first_valid_tail := -1
-		var cnt [4]int
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
-			cnt[0]++
-			if txr, ok := TransactionsRejected[TRIdxArray[TRIdxTail]]; ok {
+			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
 				if txr.Waiting4 != nil {
-					cnt[1]++
 					DeleteRejectedByTxr(txr)
 				} else if first_valid_tail < 0 {
-					cnt[2]++
 					first_valid_tail = idx
 				}
 			}
@@ -327,7 +323,7 @@ func limitRejectedSizeIfNeeded() {
 			TRIdxTail = first_valid_tail
 		}
 		fmt.Println("Deleted", start_cnt-len(WaitingForInputs), "NoUtxo.  New size:", WaitingForInputsSize,
-			"  new_tail:", first_valid_tail, cnt[0], cnt[1], cnt[2], cnt[3])
+			"  new_tail:", first_valid_tail)
 	}
 
 	max = atomic.LoadUint64(&common.MaxRejectedSizeBytes)
