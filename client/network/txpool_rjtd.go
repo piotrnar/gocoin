@@ -300,12 +300,16 @@ func limitRejectedSizeIfNeeded() {
 		start_cnt := len(WaitingForInputs)
 		start_siz := WaitingForInputsSize
 		first_valid_tail := -1
+		var stop_moving_tail bool
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
 			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
 				if txr.Waiting4 != nil {
 					DeleteRejectedByTxr(txr)
-				} else if first_valid_tail < 0 {
-					first_valid_tail = idx
+					if !stop_moving_tail {
+						first_valid_tail = idx
+					}
+				} else {
+					stop_moving_tail = true
 				}
 			}
 			if WaitingForInputsSize <= max {
