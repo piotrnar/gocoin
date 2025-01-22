@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -306,10 +305,6 @@ func MempoolLoad() bool {
 	}
 
 	if totcnt > FILE_VERSION_MAX/2 {
-		if totcnt < FILE_VERSION_CUR {
-			er = errors.New(MEMPOOL_FILE_NAME + " - new version of the file (not supported by this code)")
-			goto fatal_error
-		}
 		file_version = FILE_VERSION_MAX - int(totcnt) + 3 // FILE_VERSION_MAX is vesion 3
 
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
@@ -319,6 +314,10 @@ func MempoolLoad() bool {
 		file_version = 2 // version 2 did not have the version field
 	}
 	fmt.Println(MEMPOOL_FILE_NAME, "file version", file_version)
+	if file_version != 9 {
+		er = errors.New("file version not supported")
+		goto fatal_error
+	}
 
 	//println("TransactionsToSend cnt:", totcnt)
 	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
@@ -358,29 +357,11 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		if file_version < 9 {
-			// they were not stored sorted before - we have to sort them now
-			sorted := make([]*OneTxRejected, 0, totcnt)
-			for ; totcnt > 0; totcnt-- {
-				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
-					goto fatal_error
-				}
-				sorted = append(sorted, txr)
+		for ; totcnt > 0; totcnt-- {
+			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
+				goto fatal_error
 			}
-			sort.Slice(sorted, func(i, j int) bool {
-				return sorted[j].Time.After(sorted[i].Time)
-			})
-			for _, txr := range sorted {
-				AddRejectedTx(txr)
-			}
-			fmt.Println("RejectedTransactions have been sorted by age during loading")
-		} else {
-			for ; totcnt > 0; totcnt-- {
-				if txr, er = newOneTxRejectedFromFile(rd); er != nil {
-					goto fatal_error
-				}
-				AddRejectedTx(txr)
-			}
+			AddRejectedTx(txr)
 		}
 	}
 
