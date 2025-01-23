@@ -1,4 +1,4 @@
-1.10.4:
+1.10.4 - 2025-01-23:
 * Testnet4 support. For now needs "CFG.Testnet4" set to true, otherwise still uses testnet3
 * Wallet: new command line and config switch "prompt" to confirm writing signed transaction to disk
 * Wallet: Displays a message before exiting, when an empty seed pasword is provided
