@@ -248,8 +248,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	txr.Size = tina & (HAS_TX_FLAG - 1)
 	txr.Reason = byte(tina >> 24)
 
-	fmt.Println(" ", len(TransactionsRejected), "+txr", txr.Id.String(), txr.Size, ReasonToString(txr.Reason),
-		(tina&HAS_WAITING4_FLAG) != 0, (tina&HAS_TX_FLAG) != 0)
+	//fmt.Println(" ", len(TransactionsRejected), "+txr", txr.Id.String(), txr.Size, ReasonToString(txr.Reason), (tina&HAS_WAITING4_FLAG) != 0, (tina&HAS_TX_FLAG) != 0)
 	if (tina & HAS_WAITING4_FLAG) != 0 {
 		txr.Waiting4 = new(btc.Uint256)
 		if _, er = io.ReadFull(rd, txr.Waiting4.Hash[:]); er != nil {
