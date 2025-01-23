@@ -14,7 +14,7 @@ td.txid {
 }
 td.txid11 {
 	font-family: monospace;
-	font-size:11px;
+	font-size:10px;
 }
 td.txsize {
 	text-align: right;
@@ -693,7 +693,7 @@ function add_txid_and_icon(td, txid, decode) {
 	}
 	td.appendChild(txt)
 
-	td.appendChild(document.createTextNode(' '))
+	td.appendChild(document.createTextNode('\u00A0'))
 
 	// add copy icon
 	var img = document.createElement("img")
