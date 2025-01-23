@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -639,43 +640,79 @@ func (db *UnspentDB) abortWriting() {
 }
 
 func (db *UnspentDB) UTXOStats() (s string) {
-	var outcnt, sum, sumcb uint64
+	var outcnt, sum, sumcb, lele uint64
 	var filesize, unspendable, unspendable_recs, unspendable_bytes uint64
 
 	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
 
-	var lele int
+	tickets := make(chan bool, runtime.NumCPU())
+	println("numcpu", cap(tickets))
 
+	var wg sync.WaitGroup
 	for _i := range db.HashMap {
-		db.MapMutex[_i].RLock()
-		lele += len(db.HashMap[_i])
-		for k, v := range db.HashMap[_i] {
-			reclen := uint64(len(v) + UtxoIdxLen)
-			filesize += uint64(btc.VLenSize(reclen))
-			filesize += reclen
-			rec := NewUtxoRecStatic(k, v)
-			var spendable_found bool
-			for _, r := range rec.Outs {
-				if r != nil {
-					outcnt++
-					sum += r.Value
-					if rec.Coinbase {
-						sumcb += r.Value
-					}
-					if script.IsUnspendable(r.PKScr) {
-						unspendable++
-						unspendable_bytes += uint64(8 + len(r.PKScr))
-					} else {
-						spendable_found = true
+		tickets <- true
+		wg.Add(1)
+		go func(_i int) {
+			var (
+				sta_rec  UtxoRec
+				rec_outs = make([]*UtxoTxOut, MAX_OUTS_SEEN)
+				rec_pool = make([]UtxoTxOut, MAX_OUTS_SEEN)
+				rec_idx  int
+				sta_cbs  = NewUtxoOutAllocCbs{
+					OutsList: func(cnt int) (res []*UtxoTxOut) {
+						if len(rec_outs) < cnt {
+							println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
+							rec_outs = make([]*UtxoTxOut, cnt)
+							rec_pool = make([]UtxoTxOut, cnt)
+						}
+						rec_idx = 0
+						res = rec_outs[:cnt]
+						for i := range res {
+							res[i] = nil
+						}
+						return
+					},
+					OneOut: func() (res *UtxoTxOut) {
+						res = &rec_pool[rec_idx]
+						rec_idx++
+						return
+					},
+				}
+			)
+			rec := &sta_rec
+			db.MapMutex[_i].RLock()
+			atomic.AddUint64(&lele, uint64(len(db.HashMap[_i])))
+			for k, v := range db.HashMap[_i] {
+				reclen := uint64(len(v) + UtxoIdxLen)
+				atomic.AddUint64(&filesize, uint64(btc.VLenSize(reclen))+reclen)
+				NewUtxoRecOwn(k, v, rec, &sta_cbs)
+				//rec := NewUtxoRecStatic(k, v)
+				var spendable_found bool
+				for _, r := range rec.Outs {
+					if r != nil {
+						atomic.AddUint64(&outcnt, 1)
+						atomic.AddUint64(&sum, r.Value)
+						if rec.Coinbase {
+							atomic.AddUint64(&sumcb, r.Value)
+						}
+						if script.IsUnspendable(r.PKScr) {
+							atomic.AddUint64(&unspendable, 1)
+							atomic.AddUint64(&unspendable_bytes, uint64(8+len(r.PKScr)))
+						} else {
+							spendable_found = true
+						}
 					}
 				}
+				if !spendable_found {
+					atomic.AddUint64(&unspendable_recs, 1)
+				}
 			}
-			if !spendable_found {
-				unspendable_recs++
-			}
-		}
-		db.MapMutex[_i].RUnlock()
+			db.MapMutex[_i].RUnlock()
+			<-tickets
+			wg.Done()
+		}(_i)
 	}
+	wg.Wait()
 
 	s = fmt.Sprintf("UNSPENT: %.8f BTC in %d outs from %d txs. %.8f BTC in coinbase.\n",
 		float64(sum)/1e8, outcnt, lele, float64(sumcb)/1e8)
