@@ -1,4 +1,7 @@
-1.10.4:
+1.11.0:
+* Big refactoring all over the codebase; improvements, new features, all kind of cleanups
+
+1.10.4 - 2025-01-23:
 * Testnet4 support. For now needs "CFG.Testnet4" set to true, otherwise still uses testnet3
 * Wallet: new command line and config switch "prompt" to confirm writing signed transaction to disk
 * Wallet: Displays a message before exiting, when an empty seed pasword is provided
@@ -19,7 +22,6 @@
 * Client/WebUI/Transactions: Listed mempool transactions also show a number of unconfirmed inputs
 * Tools: "btcversig" now works also for signatures generated with a segwit type address
 * Client: the configured max mempool size is now closer to what bitcoin core would keep for the same value
-*** jan25 pack: big refactoring all over the codebase; improvements, new features, all kind of cleanups
 
 1.10.3 - 2024-08-13:
 * Tools/balio: Some improvements around blockchair.com and blockcypher.com API
