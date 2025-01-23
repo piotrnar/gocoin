@@ -112,6 +112,7 @@ func MempoolSave(force bool) {
 
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
 	var cnt int
+	println("***Remove this code from MempoolLoad()***")
 	storedid := make(map[BIDX]int, len(TransactionsRejected))
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		if txr := TransactionsRejected[TRIdxArray[idx]]; txr != nil {
@@ -131,8 +132,9 @@ func MempoolSave(force bool) {
 	if cnt != len(TransactionsRejected) {
 		println("ERROR: saved", cnt, "txrs but was supposed to save", len(TransactionsRejected))
 		println("mempool check error:", MempoolCheck())
+	} else {
+		fmt.Println(len(TransactionsRejected), "txrs saved OK")
 	}
-	fmt.Println(len(TransactionsRejected), "txrs saved")
 
 	wr.Write(END_MARKER[:])
 	wr.Flush()
