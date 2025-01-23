@@ -646,8 +646,6 @@ func (db *UnspentDB) UTXOStats() (s string) {
 	filesize = 8 + 32 + 8 // UTXO.db: block_no + block_hash + rec_cnt
 
 	tickets := make(chan bool, runtime.NumCPU())
-	println("numcpu", cap(tickets))
-
 	var wg sync.WaitGroup
 	for _i := range db.HashMap {
 		tickets <- true
