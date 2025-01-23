@@ -111,14 +111,28 @@ func MempoolSave(force bool) {
 	}
 
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
+	var cnt int
+	storedid := make(map[BIDX]int, len(TransactionsRejected))
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		if txr := TransactionsRejected[TRIdxArray[idx]]; txr != nil {
+			bidx := txr.Id.BIdx()
+			if i, ok := storedid[bidx]; ok {
+				println("WTF? Second time txr", txr.Id.String(), "  first at", i, idx, TRIdxTail, TRIdxHead)
+				continue
+			}
+			storedid[bidx] = idx
 			txr.WriteBytes(wr)
+			cnt++
 		}
 		if idx == TRIdxHead {
 			break
 		}
 	}
+	if cnt != len(TransactionsRejected) {
+		println("ERROR: saved", cnt, "txrs but was supposed to save", len(TransactionsRejected))
+		println("mempool check error:", MempoolCheck())
+	}
+	fmt.Println(len(TransactionsRejected), "txrs saved")
 
 	wr.Write(END_MARKER[:])
 	wr.Flush()
@@ -233,6 +247,9 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	}
 	txr.Size = tina & (HAS_TX_FLAG - 1)
 	txr.Reason = byte(tina >> 24)
+
+	fmt.Println(" ", len(TransactionsRejected), "+txr", txr.Id.String(), txr.Size, ReasonToString(txr.Reason),
+		(tina&HAS_WAITING4_FLAG) != 0, (tina&HAS_TX_FLAG) != 0)
 	if (tina & HAS_WAITING4_FLAG) != 0 {
 		txr.Waiting4 = new(btc.Uint256)
 		if _, er = io.ReadFull(rd, txr.Waiting4.Hash[:]); er != nil {
@@ -347,6 +364,7 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
+		fmt.Println("loading", totcnt, "txrs...")
 		for ; totcnt > 0; totcnt-- {
 			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 				goto fatal_error
@@ -360,6 +378,9 @@ func MempoolLoad() bool {
 	}
 	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
 		er = errors.New(MEMPOOL_FILE_NAME + " has marker missing")
+		println("marker error", string(tmp[:len(END_MARKER)]))
+		println(hex.EncodeToString(tmp[:len(END_MARKER)]))
+		os.Exit(1)
 		goto fatal_error
 	}
 
