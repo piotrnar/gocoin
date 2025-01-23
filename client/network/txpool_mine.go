@@ -247,7 +247,8 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	var redo [1]byte
 
 	TxMutex.Lock()
-	for k, v := range TransactionsToSend {
+	txs := GetSortedMempool() // we want to send parent txs first, thus the sorting
+	for _, v := range txs {
 		c.Mutex.Lock()
 		bts := c.BytesToSent()
 		c.Mutex.Unlock()
@@ -255,7 +256,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 			redo[0] = 1
 			break
 		}
-		if !has_this_one[k] {
+		if !has_this_one[v.Hash.BIdx()] {
 			c.SendRawMsg("tx", v.Raw)
 			data_sent_so_far += 24 + len(v.Raw)
 		}
