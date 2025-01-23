@@ -303,7 +303,7 @@ func limitRejectedSizeIfNeeded() {
 		var stop_moving_tail bool
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
 			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
-				if txr.Waiting4 != nil {
+				if txr.Reason == TX_REJECTED_NO_TXOU {
 					DeleteRejectedByTxr(txr)
 					if !stop_moving_tail {
 						first_valid_tail = idx

@@ -15,6 +15,27 @@ var (
 	nextTxsPoolExpire  time.Time = time.Now().Add(time.Hour)
 )
 
+func VerifyMempoolSort(txs []*OneTxToSend) {
+	idxs := make(map[BIDX]int, len(txs))
+	for i, t2s := range txs {
+		idxs[t2s.Hash.BIdx()] = i
+	}
+	var oks int
+	for i, t2s := range txs {
+		for _, txin := range t2s.TxIn {
+			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
+				if idx > i {
+					println("mempool sorting error:", i, "points to", idx)
+					return
+				} else {
+					oks++
+				}
+			}
+		}
+	}
+	println("mempool sorting OK", oks, len(txs))
+}
+
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
 func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))

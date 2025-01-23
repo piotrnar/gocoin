@@ -112,21 +112,12 @@ func MempoolCheck() bool {
 		}
 
 		if tr.Waiting4 != nil {
-			if tr.Reason != TX_REJECTED_NO_TXOU {
-				dupa++
-				fmt.Println(dupa, "TxR", tr.Id.String(), "has w4i and reason", ReasonToString(tr.Reason))
-			}
 			if tr.Tx == nil || tr.Tx.Raw == nil {
 				dupa++
 				fmt.Println(dupa, "TxR", tr.Id.String(), tr.Reason, "has w4i but no tx data")
 			} else {
 				w4i_cnt++
 				w4isize += uint64(len(tr.Raw))
-			}
-		} else {
-			if tr.Reason == TX_REJECTED_NO_TXOU {
-				dupa++
-				fmt.Println(dupa, "TxR", tr.Id.String(), "has not w4i but reason", ReasonToString(tr.Reason))
 			}
 		}
 	}

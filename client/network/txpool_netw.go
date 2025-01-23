@@ -217,7 +217,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				}
 
 				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					if rej.Reason != TX_REJECTED_NO_TXOU || rej.Waiting4 == nil {
+					if rej.Waiting4 == nil {
 						RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU, nil)
 						TxMutex.Unlock()
 						common.CountSafe("TxRejectedParentRej")
