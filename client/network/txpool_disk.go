@@ -87,11 +87,6 @@ func MempoolSave(force bool) {
 	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
 	defer TxMutex.Unlock()
 
-	if MempoolCheck() {
-		println("MempoolCheck fail before save")
-		return
-	}
-
 	if !force && !common.CFG.TXPool.SaveOnDisk {
 		os.Remove(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 		return
@@ -128,11 +123,6 @@ func MempoolSave(force bool) {
 	wr.Write(END_MARKER[:])
 	wr.Flush()
 	f.Close()
-
-	if MempoolCheck() {
-		println("MempoolCheck fail after save")
-		return
-	}
 }
 
 func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, er error) {
@@ -397,10 +387,6 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
-	if MempoolCheck() {
-		println("MempoolCheck fail after load")
-		os.Exit(1)
-	}
 	return true
 
 fatal_error:

@@ -2,8 +2,6 @@ package network
 
 import (
 	"fmt"
-	"os"
-	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -391,11 +389,6 @@ func doRejected() {
 		return
 	}
 	limitRejectedSizeIfNeeded()
-	if false && MempoolCheck() {
-		println("MempoolCheck failed in doRejected")
-		debug.PrintStack()
-		os.Exit(1)
-	}
 }
 
 // Make sure to call it with locked TxMutex.
