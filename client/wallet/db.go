@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sync"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -22,6 +23,7 @@ const (
 
 var (
 	AllBalances [IDX_CNT]map[string]*OneAllAddrBal
+	AccessMutex sync.Mutex
 	IDX2SYMB    [IDX_CNT]string = [IDX_CNT]string{"P2KH", "P2SH", "P2WKH", "P2WSH", "P2TAP"}
 	IDX2SIZE    [IDX_CNT]int    = [IDX_CNT]int{20, 20, 20, 32, 32}
 )
@@ -67,13 +69,14 @@ func Script2Idx(pkscr []byte) (idx int, uidx []byte) {
 	return
 }
 
-func TxNotifyAdd(tx *utxo.UtxoRec) {
+func NewUTXO(tx *utxo.UtxoRec) {
 	var uidx []byte
 	var idx int
 	var rec *OneAllAddrBal
 	var nr OneAllAddrInp
 
 	copy(nr[:utxo.UtxoIdxLen], tx.TxID[:]) //RecIdx
+
 	for vout := uint32(0); vout < uint32(len(tx.Outs)); vout++ {
 		out := tx.Outs[vout]
 		if out == nil {
@@ -85,7 +88,6 @@ func TxNotifyAdd(tx *utxo.UtxoRec) {
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
-
 		rec = AllBalances[idx][string(uidx)]
 		if rec == nil {
 			rec = &OneAllAddrBal{}
@@ -115,7 +117,7 @@ func TxNotifyAdd(tx *utxo.UtxoRec) {
 	}
 }
 
-func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
+func all_del_utxos(tx *utxo.UtxoRec, outs []bool) {
 	var uidx []byte
 	var rec *OneAllAddrBal
 	var i, idx int
@@ -135,7 +137,6 @@ func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
 		if idx, uidx = Script2Idx(out.PKScr); uidx == nil {
 			continue
 		}
-
 		rec = AllBalances[idx][string(uidx)]
 
 		if rec == nil {
@@ -178,6 +179,20 @@ func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
 	}
 }
 
+// TxNotifyAdd is called while accepting the block (from the chain's thread).
+func TxNotifyAdd(tx *utxo.UtxoRec) {
+	AccessMutex.Lock()
+	NewUTXO(tx)
+	AccessMutex.Unlock()
+}
+
+// TxNotifyDel is called while accepting the block (from the chain's thread).
+func TxNotifyDel(tx *utxo.UtxoRec, outs []bool) {
+	AccessMutex.Lock()
+	all_del_utxos(tx, outs)
+	AccessMutex.Unlock()
+}
+
 // Call the cb function for each unspent record
 func (r *OneAllAddrBal) Browse(cb func(*OneAllAddrInp)) {
 	if r.unspMap != nil {
@@ -199,7 +214,6 @@ func (r *OneAllAddrBal) Count() int {
 	}
 }
 
-// This function is not mutex protected so make sure to call it from the main thread
 func GetAllUnspent(aa *btc.BtcAddr) (thisbal utxo.AllUnspentTx) {
 	var rec *OneAllAddrBal
 
