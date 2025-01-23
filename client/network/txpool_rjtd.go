@@ -82,6 +82,12 @@ func TRIdxPrev(idx int) int {
 	return idx - 1
 }
 
+func TRIdZeroArrayRec(idx int) {
+	for i := range TRIdxArray[0] {
+		TRIdxArray[0][i] = 0
+	}
+}
+
 // Make sure to call it with locked TxMutex.
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
@@ -306,6 +312,7 @@ func limitRejectedSizeIfNeeded() {
 			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
 				if txr.Waiting4 != nil {
 					DeleteRejectedByTxr(txr)
+					TRIdZeroArrayRec(idx)
 					if !stop_moving_tail {
 						first_valid_tail = idx
 					}
@@ -339,6 +346,7 @@ func limitRejectedSizeIfNeeded() {
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
 		DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
+		TRIdZeroArrayRec(TRIdxTail)
 		TRIdxTail = TRIdxNext(TRIdxTail)
 		if TransactionsRejectedSize <= max {
 			break
