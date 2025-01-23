@@ -217,10 +217,12 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 				}
 
 				if rej, ok := TransactionsRejected[btc.BIdx(tx.TxIn[i].Input.Hash[:])]; ok {
-					if rej.Waiting4 == nil {
-						RejectTx(ntx.Tx, TX_REJECTED_NO_TXOU, nil)
+					if rej.Reason > 200 && rej.Waiting4 == nil {
+						// The parent has been softly rejected but not by NO_TXOU
+						// We will keep the data, in case the parent gets mined
+						RejectTx(ntx.Tx, TX_REJECTED_BAD_PARENT, nil)
 						TxMutex.Unlock()
-						common.CountSafe("TxRejectedParentRej")
+						common.CountSafe("TxRejectedBadParent")
 						return
 					}
 					common.CountSafe("TxWait4ParentsParent")

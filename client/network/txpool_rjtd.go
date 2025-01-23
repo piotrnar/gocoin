@@ -60,6 +60,7 @@ const (
 
 	// Anything from the list below might eventually get mined
 	TX_REJECTED_NO_TXOU     = 202
+	TX_REJECTED_BAD_PARENT  = 203
 	TX_REJECTED_LOW_FEE     = 205
 	TX_REJECTED_NOT_MINED   = 208
 	TX_REJECTED_CB_INMATURE = 209
@@ -271,6 +272,8 @@ func ReasonToString(reason byte) string {
 		return "BAD_INPUT"
 	case TX_REJECTED_NO_TXOU:
 		return "NO_TXOU"
+	case TX_REJECTED_BAD_PARENT:
+		return "BAD_PARENT"
 	case TX_REJECTED_LOW_FEE:
 		return "LOW_FEE"
 	case TX_REJECTED_NOT_MINED:
@@ -303,7 +306,7 @@ func limitRejectedSizeIfNeeded() {
 		var stop_moving_tail bool
 		for idx := TRIdxTail; idx != TRIdxHead; idx = TRIdxNext(idx) {
 			if txr, ok := TransactionsRejected[TRIdxArray[idx]]; ok {
-				if txr.Reason == TX_REJECTED_NO_TXOU {
+				if txr.Waiting4 != nil {
 					DeleteRejectedByTxr(txr)
 					if !stop_moving_tail {
 						first_valid_tail = idx
