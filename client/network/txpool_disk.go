@@ -375,6 +375,7 @@ func MempoolLoad() bool {
 	if _, er = io.ReadFull(rd, tmp[:len(END_MARKER)]); er != nil {
 		goto fatal_error
 	}
+
 	if !bytes.Equal(tmp[:len(END_MARKER)], END_MARKER) {
 		er = errors.New(MEMPOOL_FILE_NAME + " has marker missing")
 		println("marker error", string(tmp[:len(END_MARKER)]))
@@ -382,6 +383,7 @@ func MempoolLoad() bool {
 		os.Exit(1)
 		goto fatal_error
 	}
+	println("***Remove this code from MempoolLoad()***")
 
 	// recover MemInputs
 	for _, t2s := range TransactionsToSend {
