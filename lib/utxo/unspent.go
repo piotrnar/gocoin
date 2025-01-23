@@ -54,7 +54,7 @@ func (ou *OneUnspentTx) String() (s string) {
 		s += fmt.Sprint(" ", ou.MinedAt)
 	}
 	if ou.Coinbase {
-		s += fmt.Sprint(" Coinbase")
+		s += " Coinbase"
 	}
 	if ou.Message != nil {
 		s += "  "

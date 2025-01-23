@@ -5,7 +5,7 @@ import (
 )
 
 /*
-	These are functions for dealing with uncompressed UTXO records
+These are functions for dealing with uncompressed UTXO records
 */
 
 func FullUtxoRecU(dat []byte) *UtxoRec {
@@ -14,57 +14,9 @@ func FullUtxoRecU(dat []byte) *UtxoRec {
 	return NewUtxoRec(key, dat[UtxoIdxLen:])
 }
 
-func NewUtxoRecStaticU(key UtxoKeyType, dat []byte) *UtxoRec {
-	var off, n, i, rec_idx int
-	var u64, idx uint64
-
-	off = 32 - UtxoIdxLen
-	copy(sta_rec.TxID[:UtxoIdxLen], key[:])
-	copy(sta_rec.TxID[UtxoIdxLen:], dat[:off])
-
-	u64, n = btc.VULe(dat[off:])
-	off += n
-	sta_rec.InBlock = uint32(u64)
-
-	u64, n = btc.VULe(dat[off:])
-	off += n
-
-	sta_rec.Coinbase = (u64 & 1) != 0
-	u64 >>= 1
-	if len(rec_outs) < int(u64) {
-		rec_outs = make([]*UtxoTxOut, u64)
-		rec_pool = make([]UtxoTxOut, u64)
-	}
-	sta_rec.Outs = rec_outs[:u64]
-	for i := range sta_rec.Outs {
-		sta_rec.Outs[i] = nil
-	}
-
-	for off < len(dat) {
-		idx, n = btc.VULe(dat[off:])
-		off += n
-
-		sta_rec.Outs[idx] = &rec_pool[rec_idx]
-		rec_idx++
-
-		u64, n = btc.VULe(dat[off:])
-		off += n
-		sta_rec.Outs[idx].Value = uint64(u64)
-
-		i, n = btc.VLen(dat[off:])
-		off += n
-
-		sta_rec.Outs[idx].PKScr = dat[off : off+i]
-		off += i
-	}
-
-	return &sta_rec
-}
-
-func NewUtxoRecU(key UtxoKeyType, dat []byte) *UtxoRec {
+func NewUtxoRecOwnU(key UtxoKeyType, dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
 	var off, n, i int
 	var u64, idx uint64
-	var rec UtxoRec
 
 	off = 32 - UtxoIdxLen
 	copy(rec.TxID[:UtxoIdxLen], key[:])
@@ -78,12 +30,20 @@ func NewUtxoRecU(key UtxoKeyType, dat []byte) *UtxoRec {
 	off += n
 
 	rec.Coinbase = (u64 & 1) != 0
-	rec.Outs = make([]*UtxoTxOut, u64>>1)
+	if cbs != nil {
+		rec.Outs = cbs.OutsList(int(u64 >> 1))
+	} else {
+		rec.Outs = make([]*UtxoTxOut, u64>>1)
+	}
 
 	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
-		rec.Outs[idx] = new(UtxoTxOut)
+		if cbs != nil {
+			rec.Outs[idx] = cbs.OneOut()
+		} else {
+			rec.Outs[idx] = new(UtxoTxOut)
+		}
 
 		u64, n = btc.VULe(dat[off:])
 		off += n
@@ -95,6 +55,16 @@ func NewUtxoRecU(key UtxoKeyType, dat []byte) *UtxoRec {
 		rec.Outs[idx].PKScr = dat[off : off+i]
 		off += i
 	}
+}
+
+func NewUtxoRecStaticU(key UtxoKeyType, dat []byte) *UtxoRec {
+	NewUtxoRecOwnU(key, dat, &sta_rec, &sta_cbs)
+	return &sta_rec
+}
+
+func NewUtxoRecU(key UtxoKeyType, dat []byte) *UtxoRec {
+	var rec UtxoRec
+	NewUtxoRecOwnU(key, dat, &rec, nil)
 	return &rec
 }
 
@@ -142,9 +112,10 @@ func OneUtxoRecU(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {
 }
 
 // Serialize() returns UTXO-heap pointer to the freshly allocated serialized record.
-//  rec - UTXO record to serialize
-//  full - to have entire 256 bits of TxID at the beginning of the record.
-//  use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc().
+//
+//	rec - UTXO record to serialize
+//	full - to have entire 256 bits of TxID at the beginning of the record.
+//	use_buf - the data will be serialized into this memory. if nil, it will be allocated by Memory_Malloc().
 func SerializeU(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) {
 	var le, of int
 	var any_out bool

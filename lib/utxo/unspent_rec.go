@@ -30,20 +30,64 @@ type UtxoTxOut struct {
 	PKScr []byte
 }
 
+type NewUtxoOutAllocCbs struct {
+	OutsList func(cnt int) []*UtxoTxOut
+	OneOut   func() *UtxoTxOut
+}
+
+const MAX_OUTS_SEEN = 13107 // this is the know max for BTC block #880000
+
 var (
 	sta_rec  UtxoRec
-	rec_outs = make([]*UtxoTxOut, 30001)
-	rec_pool = make([]UtxoTxOut, 30001)
+	rec_outs = make([]*UtxoTxOut, MAX_OUTS_SEEN)
+	rec_pool = make([]UtxoTxOut, MAX_OUTS_SEEN)
+	rec_idx  int
+	sta_cbs  = NewUtxoOutAllocCbs{
+		OutsList: func(cnt int) (res []*UtxoTxOut) {
+			if len(rec_outs) < cnt {
+				println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
+				rec_outs = make([]*UtxoTxOut, cnt)
+				rec_pool = make([]UtxoTxOut, cnt)
+			}
+			rec_idx = 0
+			res = rec_outs[:cnt]
+			for i := range res {
+				res[i] = nil
+			}
+			return
+		},
+		OneOut: func() (res *UtxoTxOut) {
+			res = &rec_pool[rec_idx]
+			rec_idx++
+			return
+		},
+	}
 )
 
 var (
-	FullUtxoRec func(dat []byte) *UtxoRec = FullUtxoRecU
-	NewUtxoRecStatic func(key UtxoKeyType, dat []byte) *UtxoRec = NewUtxoRecStaticU
-	NewUtxoRec func(key UtxoKeyType, dat []byte) *UtxoRec = NewUtxoRecU
-	OneUtxoRec func(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut = OneUtxoRecU
-	Serialize func(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) = SerializeU
+	NewUtxoRecOwn func(UtxoKeyType, []byte, *UtxoRec, *NewUtxoOutAllocCbs)   = NewUtxoRecOwnU
+	OneUtxoRec    func(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut  = OneUtxoRecU
+	Serialize     func(rec *UtxoRec, full bool, use_buf []byte) (buf []byte) = SerializeU
 )
 
+func NewUtxoRecStatic(key UtxoKeyType, dat []byte) *UtxoRec {
+	NewUtxoRecOwn(key, dat, &sta_rec, &sta_cbs)
+	return &sta_rec
+}
+
+func NewUtxoRec(key UtxoKeyType, dat []byte) *UtxoRec {
+	var rec UtxoRec
+	NewUtxoRecOwn(key, dat, &rec, nil)
+	return &rec
+}
+
+func FullUtxoRec(dat []byte) *UtxoRec {
+	var key UtxoKeyType
+	var rec UtxoRec
+	copy(key[:], dat[:UtxoIdxLen])
+	NewUtxoRecOwn(key, dat[UtxoIdxLen:], &rec, nil)
+	return &rec
+}
 
 func (r *UtxoRec) ToUnspent(idx uint32, ad *btc.BtcAddr) (nr *OneUnspentTx) {
 	nr = new(OneUnspentTx)

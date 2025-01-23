@@ -1,9 +1,10 @@
 package utxo
 
 import (
+	"sync"
+
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
-	"sync"
 )
 
 /*
@@ -17,68 +18,9 @@ var (
 	ComprScrLen     = []int{21, 21, 33, 33, 33, 33}
 )
 
-func FullUtxoRecC(dat []byte) *UtxoRec {
-	var key UtxoKeyType
-	copy(key[:], dat[:UtxoIdxLen])
-	return NewUtxoRecC(key, dat[UtxoIdxLen:])
-}
-
-func NewUtxoRecStaticC(key UtxoKeyType, dat []byte) *UtxoRec {
-	var off, n, i, rec_idx int
-	var u64, idx uint64
-
-	off = 32 - UtxoIdxLen
-	copy(sta_rec.TxID[:UtxoIdxLen], key[:])
-	copy(sta_rec.TxID[UtxoIdxLen:], dat[:off])
-
-	u64, n = btc.VULe(dat[off:])
-	off += n
-	sta_rec.InBlock = uint32(u64)
-
-	u64, n = btc.VULe(dat[off:])
-	off += n
-
-	sta_rec.Coinbase = (u64 & 1) != 0
-	u64 >>= 1
-	if len(rec_outs) < int(u64) {
-		rec_outs = make([]*UtxoTxOut, u64)
-		rec_pool = make([]UtxoTxOut, u64)
-	}
-	sta_rec.Outs = rec_outs[:u64]
-	for i := range sta_rec.Outs {
-		sta_rec.Outs[i] = nil
-	}
-
-	for off < len(dat) {
-		idx, n = btc.VULe(dat[off:])
-		off += n
-
-		sta_rec.Outs[idx] = &rec_pool[rec_idx]
-		rec_idx++
-
-		u64, n = btc.VULe(dat[off:])
-		off += n
-		sta_rec.Outs[idx].Value = btc.DecompressAmount(uint64(u64))
-
-		i, n = btc.VLen(dat[off:])
-		if i < 6 {
-			i = ComprScrLen[i]
-			sta_rec.Outs[idx].PKScr = script.DecompressScript(dat[off : off+i])
-		} else {
-			off += n
-			i -= 6
-			sta_rec.Outs[idx].PKScr = dat[off : off+i]
-		}
-		off += i
-	}
-
-	return &sta_rec
-}
-
-func NewUtxoRecC(key UtxoKeyType, dat []byte) *UtxoRec {
+func NewUtxoRecOwnC(key UtxoKeyType, dat []byte, rec *UtxoRec, cbs *NewUtxoOutAllocCbs) {
 	var off, n, i int
 	var u64, idx uint64
-	var rec UtxoRec
 
 	off = 32 - UtxoIdxLen
 	copy(rec.TxID[:UtxoIdxLen], key[:])
@@ -92,12 +34,20 @@ func NewUtxoRecC(key UtxoKeyType, dat []byte) *UtxoRec {
 	off += n
 
 	rec.Coinbase = (u64 & 1) != 0
-	rec.Outs = make([]*UtxoTxOut, u64>>1)
+	if cbs != nil {
+		rec.Outs = cbs.OutsList(int(u64 >> 1))
+	} else {
+		rec.Outs = make([]*UtxoTxOut, u64>>1)
+	}
 
 	for off < len(dat) {
 		idx, n = btc.VULe(dat[off:])
 		off += n
-		rec.Outs[idx] = new(UtxoTxOut)
+		if cbs != nil {
+			rec.Outs[idx] = cbs.OneOut()
+		} else {
+			rec.Outs[idx] = new(UtxoTxOut)
+		}
 
 		u64, n = btc.VULe(dat[off:])
 		off += n
@@ -114,7 +64,6 @@ func NewUtxoRecC(key UtxoKeyType, dat []byte) *UtxoRec {
 		}
 		off += i
 	}
-	return &rec
 }
 
 func OneUtxoRecC(key UtxoKeyType, dat []byte, vout uint32) *btc.TxOut {

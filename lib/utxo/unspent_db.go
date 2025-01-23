@@ -198,9 +198,7 @@ redo:
 
 	atomic.StoreUint32(&db.CurrentHeightOnDisk, db.LastBlockHeight)
 	if db.ComprssedUTXO {
-		FullUtxoRec = FullUtxoRecC
-		NewUtxoRecStatic = NewUtxoRecStaticC
-		NewUtxoRec = NewUtxoRecC
+		NewUtxoRecOwn = NewUtxoRecOwnC
 		OneUtxoRec = OneUtxoRecC
 		Serialize = SerializeC
 	}
@@ -311,7 +309,7 @@ func (db *UnspentDB) save() {
 			if check_time {
 				check_time = false
 				data_progress = int64(current_record<<20) / int64(total_records)
-				time_progress = int64(time.Now().Sub(start_time)<<20) / int64(UTXO_WRITING_TIME_TARGET)
+				time_progress = int64(time.Since(start_time)<<20) / int64(UTXO_WRITING_TIME_TARGET)
 				if data_progress > time_progress {
 					select {
 					case <-db.abortwritingnow:
