@@ -30,7 +30,7 @@ var (
 )
 
 type OneTxRejected struct {
-	Id       *btc.Uint256
+	Id       btc.Uint256
 	Waiting4 *btc.Uint256
 	*btc.Tx
 	time.Time
@@ -226,6 +226,7 @@ func (tr *OneTxRejected) cleanup() {
 // Returns the OneTxRejected or nil if it has not been added.
 func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	txr := new(OneTxRejected)
+	txr.Id.Hash = tx.Hash.Hash
 	txr.Time = time.Now()
 	txr.Size = uint32(len(tx.Raw))
 	txr.Reason = why
@@ -233,12 +234,8 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	if why >= 200 {
 		tx.Clean()
 		txr.Tx = tx
-		txr.Id = &tx.Hash
 		txr.Waiting4 = missingid
 		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
-	} else {
-		txr.Id = new(btc.Uint256)
-		txr.Id.Hash = tx.Hash.Hash
 	}
 	AddRejectedTx(txr)
 	//return rec
