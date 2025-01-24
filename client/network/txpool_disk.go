@@ -236,7 +236,6 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 	var tina uint32
 	var i int
 	txr = new(OneTxRejected)
-	txr.Id = new(btc.Uint256)
 	if _, er = io.ReadFull(rd, txr.Id.Hash[:]); er != nil {
 		return
 	}
