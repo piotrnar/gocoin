@@ -62,7 +62,7 @@ func tx_mined(tx *btc.Tx) {
 		rec.Delete(false, 0)
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafe(fmt.Sprint("TxMinedROK-", mr.Reason))
+		common.CountSafe(fmt.Sprint("TxMinedRjctdOK-", mr.Reason))
 		DeleteRejectedByTxr(mr)
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
@@ -86,8 +86,7 @@ func tx_mined(tx *btc.Tx) {
 				}
 				rec.Delete(true, 0)
 			} else {
-				common.CountSafe("Tx**MinedSpentERROR")
-				fmt.Println("WTF? Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
+				println("ERROR: Input from ", inp.Input.String(), " in SpentOutputs, but tx not in mempool")
 			}
 			delete(SpentOutputs, idx)
 		}
@@ -96,10 +95,9 @@ func tx_mined(tx *btc.Tx) {
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafe(fmt.Sprint("TxMinedRTxInOK-", txr.Reason))
+					common.CountSafe(fmt.Sprint("TxMinedRjctdTxInOK-", txr.Reason))
 					DeleteRejectedByTxr(txr)
 				} else {
-					common.CountSafe("Tx***MinedRTxIn-NoT2S")
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
 				}
 			}

@@ -102,12 +102,13 @@ func TRIdIsZeroArrayRec(idx int) bool {
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
 	if _, ok := TransactionsRejected[bidx]; ok {
-		println("ERROR in AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
-		common.CountSafe("Tx**RejAddConflict")
+		println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
 		return
 	}
 	txr.ArrIndex = uint32(TRIdxHead)
-	DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
+	if !TRIdIsZeroArrayRec(TRIdxHead) {
+		DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
+	}
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
 	TRIdxHead = TRIdxNext(TRIdxHead)
@@ -137,7 +138,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 
 // Make sure to call it with locked TxMutex
 func DeleteRejectedByTxr(txr *OneTxRejected) {
-	common.CountSafe(fmt.Sprint("TxRIdxDelCnt-", txr.Reason))
+	common.CountSafe(fmt.Sprint("TxRjctdDelCnt-", txr.Reason))
 	if txr.Tx != nil {
 		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
@@ -160,7 +161,7 @@ func DeleteRejectedByIdx(bidx BIDX) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
 	} else {
-		common.CountSafe("TxRIdxNull")
+		println("ERROR: DeleteRejectedByIdx called with bidx which does not point to any txr", btc.BIdxString(bidx))
 	}
 }
 
@@ -178,8 +179,7 @@ func (tr *OneTxRejected) cleanup() {
 				}
 			}
 			if len(newref) == len(ref) {
-				fmt.Println("ERROR: RxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
-				common.CountSafe("Tx**UsedUTXOnil")
+				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
 			} else {
 				if len(newref) == 0 {
 					delete(RejectedUsedUTXOs, uidx)
@@ -212,9 +212,7 @@ func (tr *OneTxRejected) cleanup() {
 				}
 			}
 		} else {
-			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String())
-			println("   from rejected tx", tr.Id.String())
-			common.CountSafe("Tx**RejectedW4error")
+			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		tr.Waiting4 = nil
 		WaitingForInputsSize -= uint64(len(tr.Raw))
@@ -246,8 +244,7 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 	for _, k := range wtg.Ids {
 		txr := TransactionsRejected[k]
 		if txr.Tx == nil {
-			fmt.Printf("ERROR: txr %s %d in w4i rec %16x, but has not data (its w4prt:%p)\n",
-				txr.Id.String(), txr.Reason, k, txr.Waiting4)
+			println(fmt.Sprintf("ERROR: txr %s %d in w4i rec %16x, but data is nil (its w4prt:%p)", txr.Id.String(), txr.Reason, k, txr.Waiting4))
 			continue
 		}
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
@@ -363,7 +360,9 @@ func limitRejectedSizeIfNeeded() {
 	start_cnt := len(TransactionsRejected)
 	start_siz := TransactionsRejectedSize
 	for TRIdxTail != TRIdxHead {
-		DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
+		if !TRIdIsZeroArrayRec(TRIdxTail) {
+			DeleteRejectedByIdx(TRIdxArray[TRIdxTail])
+		}
 		TRIdZeroArrayRec(TRIdxTail)
 		TRIdxTail = TRIdxNext(TRIdxTail)
 		if TransactionsRejectedSize <= max {
