@@ -111,29 +111,13 @@ func MempoolSave(force bool) {
 	}
 
 	btc.WriteVlen(wr, uint64(len(TransactionsRejected)))
-	var cnt int
-	println("***Remove this code from MempoolSave()***")
-	storedid := make(map[BIDX]int, len(TransactionsRejected))
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		if txr := TransactionsRejected[TRIdxArray[idx]]; txr != nil {
-			bidx := txr.Id.BIdx()
-			if i, ok := storedid[bidx]; ok {
-				println("WTF? Second time txr", txr.Id.String(), "  first at", i, idx, TRIdxTail, TRIdxHead)
-				continue
-			}
-			storedid[bidx] = idx
 			txr.WriteBytes(wr)
-			cnt++
 		}
 		if idx == TRIdxHead {
 			break
 		}
-	}
-	if cnt != len(TransactionsRejected) {
-		println("ERROR: saved", cnt, "txrs but was supposed to save", len(TransactionsRejected))
-		println("mempool check error:", MempoolCheck())
-	} else {
-		fmt.Println(len(TransactionsRejected), "txrs saved OK")
 	}
 
 	wr.Write(END_MARKER[:])
@@ -381,10 +365,8 @@ func MempoolLoad() bool {
 		er = errors.New(MEMPOOL_FILE_NAME + " has marker missing")
 		println("marker error", string(tmp[:len(END_MARKER)]))
 		println(hex.EncodeToString(tmp[:len(END_MARKER)]))
-		os.Exit(1)
 		goto fatal_error
 	}
-	println("***Remove this code from MempoolLoad()***")
 
 	// recover MemInputs
 	for _, t2s := range TransactionsToSend {
@@ -410,7 +392,7 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
-	println("***Remove too: Mempool error after loading:", MempoolCheck())
+	//println("***Remove this: Mempool error after loading:", MempoolCheck())
 	return true
 
 fatal_error:

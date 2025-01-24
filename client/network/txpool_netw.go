@@ -214,7 +214,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 						// We will keep the data, in case the parent gets mined
 						RejectTx(ntx.Tx, TX_REJECTED_BAD_PARENT, nil)
 						TxMutex.Unlock()
-						common.CountSafe(fmt.Sprint("TxRejectedBadParent-", rej.Reason))
+						common.CountSafe(fmt.Sprint("TxRejBadParent-", rej.Reason))
 						return
 					}
 					common.CountSafe("TxWait4ParentsParent")
