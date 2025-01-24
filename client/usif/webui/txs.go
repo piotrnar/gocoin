@@ -471,18 +471,28 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	txid := btc.NewUint256FromString(r.Form["id"][0])
-	fmt.Fprint(w, "TxID ", txid.String(), " - ")
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		fmt.Fprintln(w, "From TransactionsToSend")
-		usif.DecodeTx(w, tx.Tx)
-	} else {
-		if tx, ok := network.TransactionsRejected[txid.BIdx()]; ok && tx.Tx != nil {
-			fmt.Fprintln(w, "From TransactionsRejected")
-			usif.DecodeTx(w, tx.Tx)
-		} else {
-			fmt.Fprintln(w, "Not found")
-		}
+	if txid == nil {
+		fmt.Fprintln(w, "Incorrect id")
+		return
 	}
+	var tx *btc.Tx
+	var header string
+	network.TxMutex.Lock()
+	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		header = "From TransactionsToSend"
+		tx = t2s.Tx
+	} else if txr, ok := network.TransactionsRejected[txid.BIdx()]; ok && txr.Tx != nil {
+		header = "From TransactionsRejected"
+		tx = txr.Tx
+	}
+	network.TxMutex.Unlock()
+	if tx != nil {
+		fmt.Fprintln(w, header)
+		usif.DecodeTx(w, tx)
+	} else {
+		fmt.Fprint(w, "TxID ", txid.String(), " not found")
+	}
+
 }
 
 func json_txstat(w http.ResponseWriter, r *http.Request) {

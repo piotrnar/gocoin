@@ -460,10 +460,10 @@ func main() {
 			}
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
-			network.NetCloseAll()
-			common.CloseBlockChain()
-			peersdb.ClosePeerDB()
-			sys.UnlockDatabaseDir()
+			//network.NetCloseAll()
+			//common.CloseBlockChain()
+			//peersdb.ClosePeerDB()
+			//sys.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()

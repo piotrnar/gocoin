@@ -44,11 +44,20 @@ var (
 
 func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {
 	inpid := btc.NewUint256(prevout.Hash[:])
-	if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
-		if int(prevout.Vout) >= len(txinmem.TxOut) {
-			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(txinmem.TxOut))
+	bidx := inpid.BIdx()
+	var tx *btc.Tx
+	network.TxMutex.Lock()
+	if t2s, ok := network.TransactionsToSend[bidx]; ok {
+		tx = t2s.Tx
+	} else if txr, ok := network.TransactionsRejected[bidx]; ok {
+		tx = txr.Tx
+	}
+	network.TxMutex.Unlock()
+	if tx != nil {
+		if int(prevout.Vout) >= len(tx.TxOut) {
+			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(tx.TxOut))
 		} else {
-			po = txinmem.TxOut[prevout.Vout]
+			po = tx.TxOut[prevout.Vout]
 		}
 	} else {
 		po = common.BlockChain.Unspent.UnspentGet(prevout)
