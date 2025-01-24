@@ -138,7 +138,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 
 // Make sure to call it with locked TxMutex
 func DeleteRejectedByTxr(txr *OneTxRejected) {
-	common.CountSafe(fmt.Sprint("TxRjctdDelCnt-", txr.Reason))
+	common.CountSafe(fmt.Sprint("TxRejectedDel-", txr.Reason))
 	if txr.Tx != nil {
 		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
