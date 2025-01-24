@@ -165,7 +165,7 @@ function refresh_mining_info() {
 				for (var j=0; j<m.MinedBlocks.length; j++) {
 					var b = m.MinedBlocks[j]
 					var cnt = 0
-					
+
 					if (vers.has(b.Version)) {
 						cnt = vers.get(b.Version)
 					}
@@ -216,7 +216,7 @@ function refresh_mining_info() {
 			el_total_fees.innerText = (totfees/1e8).toFixed(2)
 			el_avg_fpblock.innerText = (totfees/cs.BlockCount/1e8).toFixed(3)
 			if (ny_cnt > 0)
-				el_avg_fpbyte.innerText = parseFloat(totfees/(ny_cnt*estimated_block_vsize)).toFixed(0)
+				el_avg_fpbyte.innerText = parseFloat(totfees/(ny_cnt*estimated_block_vsize)).toFixed(1)
 			else
 				el_avg_fpbyte.innerText = '???'
 
