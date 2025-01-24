@@ -35,7 +35,7 @@ type OneTxRejected struct {
 	*btc.Tx
 	time.Time
 	Size     uint32
-	ArrIndex uint32
+	ArrIndex uint16
 	Reason   byte
 }
 
@@ -105,7 +105,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
 		return
 	}
-	txr.ArrIndex = uint32(TRIdxHead)
+	txr.ArrIndex = uint16(TRIdxHead)
 	if !TRIdIsZeroArrayRec(TRIdxHead) {
 		DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
 	}
@@ -410,7 +410,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 func doRejected() {
 	TxMutex.Lock()
 	defer TxMutex.Unlock()
-	if cnt := int(common.GetUint32(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
+	if cnt := int(common.GetUint16(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
 		resizeTransactionsRejectedCount(cnt)
 		return
 	}
@@ -419,7 +419,7 @@ func doRejected() {
 
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
-	cnt := common.GetUint32(&common.CFG.TXPool.RejectRecCnt)
+	cnt := common.GetUint16(&common.CFG.TXPool.RejectRecCnt)
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
 

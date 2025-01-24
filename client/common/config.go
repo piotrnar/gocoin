@@ -82,7 +82,7 @@ var (
 			ExpireInDays   uint
 			MaxRejectMB    float64
 			MaxNoUtxoMB    float64
-			RejectRecCnt   uint32
+			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool
@@ -140,6 +140,22 @@ type oneAllowedAddr struct {
 }
 
 var WebUIAllowed []oneAllowedAddr
+
+func AssureValueInRange[T int | uint | uint16 | uint32](label string, val *T, min, max T) {
+	if max < min {
+		panic("max < min")
+	}
+	nval := *val
+	if *val < min {
+		nval = min
+	} else if *val > max {
+		nval = max
+	}
+	if nval != *val {
+		fmt.Println("WARNING: config value", label, "must be from", min, "to", max, " so changinig", *val, "->", nval)
+		*val = nval
+	}
+}
 
 func InitConfig() {
 	var new_config_file bool
@@ -366,10 +382,7 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
-	if CFG.TXPool.ExpireInDays == 0 {
-		CFG.TXPool.ExpireInDays = 1
-		fmt.Println("WARNING: TXPool config value ExpireInDays was zero, so changed it to", CFG.TXPool.ExpireInDays)
-	}
+	AssureValueInRange("TXPool.ExpireInDays", &CFG.TXPool.ExpireInDays, 1, 1e6)
 	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
 	if CFG.TXPool.MaxSizeMB > 0 {
@@ -377,10 +390,7 @@ func Reset() {
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
-	if CFG.TXPool.RejectRecCnt < 100 {
-		CFG.TXPool.RejectRecCnt = 100
-		fmt.Println("WARNING: TXPool config value MaxRejectCnt was too low - changed it to", CFG.TXPool.RejectRecCnt)
-	}
+	AssureValueInRange("TXPool.RejectRecCnt", &CFG.TXPool.RejectRecCnt, 100, 60000)
 	if CFG.TXPool.MaxRejectMB != 0 {
 		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB*1e6))
 	} else {
@@ -540,6 +550,13 @@ func GetUint64(addr *uint64) (res uint64) {
 }
 
 func GetUint32(addr *uint32) (res uint32) {
+	mutex_cfg.Lock()
+	res = *addr
+	mutex_cfg.Unlock()
+	return
+}
+
+func GetUint16(addr *uint16) (res uint16) {
 	mutex_cfg.Lock()
 	res = *addr
 	mutex_cfg.Unlock()
