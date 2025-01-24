@@ -73,7 +73,6 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.InvStore(typ, pl[of+4:of+36])
 		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
-		//common.CountSafe(fmt.Sprint("InvGot-", typ))
 		if typ == MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4 : of+36])
 			if !ahr {
@@ -125,7 +124,9 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 
 // NetRouteInvExt is called from the main thread (or from a UI).
 func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint32) {
-	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
+	if !common.NoCounters.Get() {
+		common.CountSafe(fmt.Sprint("NetRouteInv-", typ))
+	}
 
 	// Prepare the inv
 	inv := new([36]byte)
@@ -157,7 +158,9 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 			if send_inv {
 				if len(v.PendingInvs) < 500 {
 					if typ, ok := v.InvDone.Map[hash2invid(inv[4:36])]; ok {
-						common.CountSafe(fmt.Sprint("SendInvSame-", typ))
+						if !common.NoCounters.Get() {
+							common.CountSafe(fmt.Sprint("SendInvSame-", typ))
+						}
 					} else {
 						v.PendingInvs = append(v.PendingInvs, inv)
 						cnt++

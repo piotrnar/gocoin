@@ -138,7 +138,9 @@ func AddRejectedTx(txr *OneTxRejected) {
 
 // Make sure to call it with locked TxMutex
 func DeleteRejectedByTxr(txr *OneTxRejected) {
-	common.CountSafe(fmt.Sprint("TxRejectedDel-", txr.Reason))
+	if !common.NoCounters.Get() {
+		common.CountSafe(fmt.Sprint("TxRejectedDel-", txr.Reason))
+	}
 	if txr.Tx != nil {
 		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
@@ -235,7 +237,9 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 		txr.Waiting4 = missingid
 		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
 	}
-	common.CountSafe(fmt.Sprint("TxRejected-", txr.Reason))
+	if !common.NoCounters.Get() {
+		common.CountSafe(fmt.Sprint("TxRejected-", txr.Reason))
+	}
 	AddRejectedTx(txr)
 	//return rec
 }

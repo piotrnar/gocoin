@@ -62,7 +62,9 @@ func tx_mined(tx *btc.Tx) {
 		rec.Delete(false, 0)
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
-		common.CountSafe(fmt.Sprint("TxMinedRejected-", mr.Reason))
+		if !common.NoCounters.Get() {
+			common.CountSafe(fmt.Sprint("TxMinedRejected-", mr.Reason))
+		}
 		DeleteRejectedByTxr(mr)
 	}
 	if _, ok := TransactionsPending[h.BIdx()]; ok {
@@ -95,7 +97,9 @@ func tx_mined(tx *btc.Tx) {
 		if lst, ok := RejectedUsedUTXOs[idx]; ok {
 			for _, bidx := range lst {
 				if txr, ok := TransactionsRejected[bidx]; ok {
-					common.CountSafe(fmt.Sprint("TxMinedRjctUTXO-", txr.Reason))
+					if !common.NoCounters.Get() {
+						common.CountSafe(fmt.Sprint("TxMinedRjctUTXO-", txr.Reason))
+					}
 					DeleteRejectedByTxr(txr)
 				} else {
 					println("ERROR: txr marked for removal but not present in TransactionsRejected")
