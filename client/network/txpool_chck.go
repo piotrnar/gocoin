@@ -1,6 +1,7 @@
 package network
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -133,6 +134,27 @@ func MempoolCheck() bool {
 	if totsize != TransactionsRejectedSize {
 		dupa++
 		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
+	}
+
+	seen := make(map[BIDX]int)
+	for i, bidx := range TRIdxArray {
+		if txr, ok := TransactionsRejected[TRIdxArray[i]]; ok {
+			if idx, ok := seen[bidx]; ok {
+				dupa++
+				fmt.Println(dupa, "TxR", txr.Id.String(), ReasonToString(txr.Reason), "from idx", idx,
+					"present again in TRIdxArray at", i, TRIdxHead, TRIdxTail)
+			} else {
+				seen[bidx] = i
+			}
+		} else {
+			for ii := range bidx {
+				if bidx[ii] != 0 {
+					dupa++
+					fmt.Println(dupa, "TRIdxArray index", i, "is not zero", hex.EncodeToString(bidx[:]),
+						"but has not txr in the map", TRIdxHead, TRIdxTail)
+				}
+			}
+		}
 	}
 
 	spent_cnt = 0
