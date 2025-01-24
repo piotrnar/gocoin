@@ -65,9 +65,10 @@ var (
 
 	ListenTCP bool
 
-	minFeePerKB, routeMinFeePerKB, minminFeePerKB uint64
-	maxMempoolSizeBytes                           uint64
-	MaxRejectedSizeBytes, MaxNoUtxoSizeBytes      uint64
+	cfgRouteMinFeePerKB, cfgFeePerKB         uint64 // these are from the config file
+	minFeePerKB                              uint64 // this one is dynamic, controled by mempool limit size
+	maxMempoolSizeBytes                      uint64
+	MaxRejectedSizeBytes, MaxNoUtxoSizeBytes uint64
 
 	KillChan chan os.Signal = make(chan os.Signal)
 

@@ -272,15 +272,15 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	if rbf_tx_list != nil {
-		var totweight int
+		var totvsize int
 		var totfees uint64
 
 		for ctx := range rbf_tx_list {
-			totweight += ctx.Weight()
+			totvsize += ctx.VSize()
 			totfees += ctx.Fee
 		}
 
-		if !ntx.local && totfees*uint64(tx.Weight()) >= fee*uint64(totweight) {
+		if !ntx.local && totfees*uint64(tx.VSize()) >= fee*uint64(totvsize) {
 			RejectTx(ntx.Tx, TX_REJECTED_RBF_LOWFEE, nil)
 			TxMutex.Unlock()
 			common.CountSafe("TxRejectedRBFLowFee")

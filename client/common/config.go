@@ -395,7 +395,9 @@ func Reset() {
 		atomic.StoreUint64(&MaxNoUtxoSizeBytes, uint64(CFG.TXPool.MaxNoUtxoMB*1e6))
 	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
-	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
+	atomic.StoreUint64(&cfgFeePerKB, MinFeePerKB())
+
+	atomic.StoreUint64(&cfgRouteMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 
 	if CFG.Memory.MaxSyncCacheMB < 100 {
 		CFG.Memory.MaxSyncCacheMB = 100
@@ -576,9 +578,9 @@ func MinFeePerKB() uint64 {
 }
 
 func SetMinFeePerKB(val uint64) bool {
-	minmin := atomic.LoadUint64(&minminFeePerKB)
-	if val < minmin {
-		val = minmin
+	cfgmin := atomic.LoadUint64(&cfgFeePerKB)
+	if val < cfgmin {
+		val = cfgmin // do not set it lower than the value from the config
 	}
 	if val == MinFeePerKB() {
 		return false
@@ -588,7 +590,7 @@ func SetMinFeePerKB(val uint64) bool {
 }
 
 func RouteMinFeePerKB() uint64 {
-	return atomic.LoadUint64(&routeMinFeePerKB)
+	return atomic.LoadUint64(&cfgRouteMinFeePerKB)
 }
 
 func IsListenTCP() (res bool) {
