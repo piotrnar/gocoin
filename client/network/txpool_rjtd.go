@@ -235,6 +235,7 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 		txr.Waiting4 = missingid
 		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
 	}
+	common.CountSafe(fmt.Sprint("TxRejected-", txr.Reason))
 	AddRejectedTx(txr)
 	//return rec
 }
