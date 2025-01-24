@@ -35,7 +35,8 @@ type OneTxRejected struct {
 	Size     uint32
 	Waiting4 *btc.Uint256
 	*btc.Tx
-	Reason byte
+	ArrIndex int
+	Reason   byte
 }
 
 type OneWaitingList struct {
@@ -84,8 +85,17 @@ func TRIdxPrev(idx int) int {
 
 func TRIdZeroArrayRec(idx int) {
 	for i := range TRIdxArray[0] {
-		TRIdxArray[0][i] = 0
+		TRIdxArray[idx][i] = 0
 	}
+}
+
+func TRIdIsZeroArrayRec(idx int) bool {
+	for i := range TRIdxArray[0] {
+		if TRIdxArray[idx][i] == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Make sure to call it with locked TxMutex.
@@ -96,6 +106,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		common.CountSafe("Tx**RejAddConflict")
 		return
 	}
+	txr.ArrIndex = TRIdxHead
 	DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
@@ -130,6 +141,16 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 	if txr.Tx != nil {
 		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
+	}
+	TRIdZeroArrayRec(txr.ArrIndex)
+	if TRIdxTail == txr.ArrIndex {
+		for { // advance tail to the nearest non-zero index or to the head
+			TRIdxTail = TRIdxNext(TRIdxTail)
+			if TRIdxTail == TRIdxHead || !TRIdIsZeroArrayRec(TRIdxTail) {
+				break
+			}
+		}
+
 	}
 	delete(TransactionsRejected, txr.Id.BIdx())
 }
@@ -358,8 +379,6 @@ func limitRejectedSizeIfNeeded() {
 }
 
 func resizeTransactionsRejectedCount(newcnt int) {
-	//fmt.Println("Resizing TXR buffer from", len(TRIdxArray), "to", newcnt, "...   size:", len(TransactionsRejected), TRIdxTail, TRIdxHead)
-
 	old_txrs := make([]*OneTxRejected, 0, len(TransactionsRejected))
 	for {
 		if txr := TransactionsRejected[TRIdxArray[TRIdxTail]]; txr != nil {
@@ -371,7 +390,6 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		}
 		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
-	//fmt.Println("Got", len(old_txrs), "txs to save.  check for all zeros:", len(TransactionsRejected), TransactionsRejectedSize, len(WaitingForInputs), WaitingForInputsSize, len(RejectedUsedUTXOs))
 
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
 	TRIdxArray = make([]BIDX, newcnt)
@@ -381,7 +399,6 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	var from_idx int
 	if newcnt < len(old_txrs) {
 		from_idx = len(old_txrs) - newcnt
-		//fmt.Println("Advancing from_idx to", from_idx, "as we're trying to fit", len(old_txrs), "txs in cnt of", newcnt)
 	}
 
 	for _, txr := range old_txrs[from_idx:] {

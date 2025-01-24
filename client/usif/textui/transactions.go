@@ -422,7 +422,9 @@ func save_mempool(par string) {
 }
 
 func check_txs(par string) {
+	fmt.Println("Locking TxMutex")
 	network.TxMutex.Lock()
+	fmt.Println("TxMutex Locked")
 	err := network.MempoolCheck()
 	network.TxMutex.Unlock()
 	if !err {
@@ -508,22 +510,22 @@ func push_old_txs(par string) {
 }
 
 func init() {
-	newUi("mpcheck mpc", true, check_txs, "Verify consistency of mempool")
-	newUi("mpget mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
-	newUi("mpurge", true, mempool_purge, "Purge memory pool (restart from empty)")
-	newUi("mpsave mps", true, save_mempool, "Save memory pool to disk")
-	newUi("mpstat mp", true, mempool_stats, "Show the mempool statistics")
-	newUi("savetx txs", true, save_tx, "Save raw tx from memory pool to disk: <txid>")
-	newUi("tx1send stx1", true, send1_tx, "Broadcast tx to a single random peer: <txid>")
-	newUi("txdecode td", true, decode_tx, "Decode tx from memory pool: <txid> [int|raw|all]")
-	newUi("txdel", true, del_tx, "Remove tx from memory: <txid>")
-	newUi("txlist ltx", true, list_txs, "List tx from memory pool up to: <max_weigth> (default 4M)")
-	newUi("txload txl", true, load_tx, "Load tx data from the given file, decode it and store in memory")
-	newUi("txlocal txloc", true, local_tx, "Mark tx as local: <txid> [0|1]")
-	newUi("txold to", true, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
-	newUi("txrlist rtl", true, baned_txs, "List the tx that we have rejected: [<reason>]")
-	newUi("txrpurge rtp", true, txr_purge, "Purge txs from rejected list: [<min_age_in_minutes>] [commit]")
-	newUi("txrstat rts", true, txr_stats, "Show stats of the rejected txs")
-	newUi("txsend stx", true, send_tx, "Broadcast tx from memory pool: <txid>")
-	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
+	newUi("mpcheck mpc", false, check_txs, "Verify consistency of mempool")
+	newUi("mpget mpg", false, get_mempool, "Send getmp message to the peer with the given ID")
+	newUi("mpurge", false, mempool_purge, "Purge memory pool (restart from empty)")
+	newUi("mpsave mps", false, save_mempool, "Save memory pool to disk")
+	newUi("mpstat mp", false, mempool_stats, "Show the mempool statistics")
+	newUi("savetx txs", false, save_tx, "Save raw tx from memory pool to disk: <txid>")
+	newUi("tx1send stx1", false, send1_tx, "Broadcast tx to a single random peer: <txid>")
+	newUi("txdecode td", false, decode_tx, "Decode tx from memory pool: <txid> [int|raw|all]")
+	newUi("txdel", false, del_tx, "Remove tx from memory: <txid>")
+	newUi("txlist ltx", false, list_txs, "List tx from memory pool up to: <max_weigth> (default 4M)")
+	newUi("txload txl", false, load_tx, "Load tx data from the given file, decode it and store in memory")
+	newUi("txlocal txloc", false, local_tx, "Mark tx as local: <txid> [0|1]")
+	newUi("txold to", false, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
+	newUi("txrlist rtl", false, baned_txs, "List the tx that we have rejected: [<reason>]")
+	newUi("txrpurge rtp", false, txr_purge, "Purge txs from rejected list: [<min_age_in_minutes>] [commit]")
+	newUi("txrstat rts", false, txr_stats, "Show stats of the rejected txs")
+	newUi("txsend stx", false, send_tx, "Broadcast tx from memory pool: <txid>")
+	newUi("txsendall stxa", false, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
 }

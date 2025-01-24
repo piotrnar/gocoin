@@ -8,6 +8,33 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+func check_the_index(dupa int) int {
+	seen := make(map[BIDX]int)
+	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
+		bidx := TRIdxArray[idx]
+		if txr := TransactionsRejected[bidx]; txr != nil {
+			if idx, ok := seen[bidx]; ok {
+				dupa++
+				fmt.Println(dupa, "TxR", txr.Id.String(), ReasonToString(txr.Reason), "from idx", idx,
+					"present again in TRIdxArray at", idx, TRIdxHead, TRIdxTail)
+			} else {
+				seen[bidx] = idx
+			}
+		} else {
+			if !TRIdIsZeroArrayRec(idx) {
+				dupa++
+				fmt.Println(dupa, "TRIdxArray index", idx, "is not zero", hex.EncodeToString(bidx[:]),
+					"but has not txr in the map", TRIdxHead, TRIdxTail)
+				break
+			}
+		}
+		if idx == TRIdxHead {
+			break
+		}
+	}
+	return dupa
+}
+
 // MempoolCheck verifies the Mempool for consistency.
 // Usefull for debuggning as normally there should be no consistencies.
 // Make sure to call it with TxMutex Locked.
@@ -136,26 +163,7 @@ func MempoolCheck() bool {
 		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
 	}
 
-	seen := make(map[BIDX]int)
-	for i, bidx := range TRIdxArray {
-		if txr, ok := TransactionsRejected[TRIdxArray[i]]; ok {
-			if idx, ok := seen[bidx]; ok {
-				dupa++
-				fmt.Println(dupa, "TxR", txr.Id.String(), ReasonToString(txr.Reason), "from idx", idx,
-					"present again in TRIdxArray at", i, TRIdxHead, TRIdxTail)
-			} else {
-				seen[bidx] = i
-			}
-		} else {
-			for ii := range bidx {
-				if bidx[ii] != 0 {
-					dupa++
-					fmt.Println(dupa, "TRIdxArray index", i, "is not zero", hex.EncodeToString(bidx[:]),
-						"but has not txr in the map", TRIdxHead, TRIdxTail)
-				}
-			}
-		}
-	}
+	dupa += check_the_index(dupa)
 
 	spent_cnt = 0
 	for _, rec := range WaitingForInputs {
