@@ -154,6 +154,9 @@ func ver_script(testnet, litecoin bool) byte {
 
 func Decode(o io.Writer, tx *btc.Tx, getpo func(*btc.TxPrevOut) *btc.TxOut, tstnet, ltc bool) (totin, totout, noins uint64) {
 	var unsigned int
+	if tx.Size == 0 || tx.NoWitSize == 0 {
+		tx.SetHash(nil) // this will fix the size fields (slow, but we are not in performance sensitive function)
+	}
 	fmt.Fprintln(o, "ID:", tx.Hash.String())
 	fmt.Fprintln(o, "WTxID:", tx.WTxID().String())
 	fmt.Fprintln(o, "Tx Version:", tx.Version)
