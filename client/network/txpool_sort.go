@@ -127,8 +127,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	}
 
 	if idx != len(result) || idx != len(already_in) || len(parent_of) != 0 {
-		fmt.Println("Get sorted mempool idx:", idx, " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
-		fmt.Println("DUPA!!!!!!!!!!")
+		println("ERROR: Get sorted mempool idx:", idx, " result:", len(result), " alreadyin:", len(already_in), " parents:", len(parent_of))
 		result = result[:idx]
 	}
 
@@ -366,5 +365,5 @@ func LimitTxpoolSize() {
 		LimitPoolSize(maxpoolsize)
 	}
 	TxMutex.Unlock()
-	common.CountSafe("TxPollLImitTicks")
+	common.CountSafe("TxPooLimitTicks")
 }
