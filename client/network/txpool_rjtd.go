@@ -30,12 +30,12 @@ var (
 )
 
 type OneTxRejected struct {
-	Id *btc.Uint256
-	time.Time
-	Size     uint32
+	Id       *btc.Uint256
 	Waiting4 *btc.Uint256
 	*btc.Tx
-	ArrIndex int
+	time.Time
+	Size     uint32
+	ArrIndex uint32
 	Reason   byte
 }
 
@@ -106,7 +106,7 @@ func AddRejectedTx(txr *OneTxRejected) {
 		common.CountSafe("Tx**RejAddConflict")
 		return
 	}
-	txr.ArrIndex = TRIdxHead
+	txr.ArrIndex = uint32(TRIdxHead)
 	DeleteRejectedByIdx(TRIdxArray[TRIdxHead])
 	TRIdxArray[TRIdxHead] = bidx
 	TransactionsRejected[bidx] = txr
@@ -142,8 +142,8 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
 	}
-	TRIdZeroArrayRec(txr.ArrIndex)
-	if TRIdxTail == txr.ArrIndex {
+	TRIdZeroArrayRec(int(txr.ArrIndex))
+	if TRIdxTail == int(txr.ArrIndex) {
 		for { // advance tail to the nearest non-zero index or to the head
 			TRIdxTail = TRIdxNext(TRIdxTail)
 			if TRIdxTail == TRIdxHead || !TRIdIsZeroArrayRec(TRIdxTail) {
