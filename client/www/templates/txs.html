@@ -22,7 +22,7 @@ td.txsize {
 </style>
 <div id="light" class="white_content">
 <table width="100%"><tr>
-<td><h3><b class="mono" id="disp_txid"></b></h3>
+<td align="center"><h3><b class="mono" id="disp_txid"></b></h3>
 <td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
@@ -423,6 +423,7 @@ function do_raw_tx(txid) {
 	aj.onreadystatechange=function() {
 		if(aj.readyState==4) {
 			tx_decoding_in_progress = false
+			disp_txid.innerText = txid
 			rawdiv.innerHTML = aj.responseText
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
