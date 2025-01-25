@@ -179,9 +179,7 @@ func (c *OneConnection) HandleVersion(pl []byte) error {
 			for x, v := range IgnoreExternalIpFrom {
 				if c.Node.Agent == v {
 					use_this_ip = false
-					if !common.NoCounters.Get() {
-						common.CountSafe(fmt.Sprint("IgnoreExtIP-", x))
-					}
+					common.CountSafePar("IgnoreExtIP-", x)
 					break
 				}
 			}
