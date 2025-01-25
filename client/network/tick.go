@@ -950,9 +950,7 @@ func (c *OneConnection) Run() {
 	c.Mutex.Unlock()
 
 	if c.PeerAddr.Friend || c.X.Authorized {
-		if !common.NoCounters.Get() {
-			common.CountSafe(fmt.Sprint("FDisconnect-", ban))
-		}
+		common.CountSafePar("FDisconnect-", ban)
 	} else {
 		if ban {
 			c.PeerAddr.Ban(c.ban_reason)
