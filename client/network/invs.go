@@ -1,7 +1,7 @@
 package network
 
 import (
-	"fmt"
+
 	//"time"
 	"bytes"
 	"encoding/binary"
@@ -124,9 +124,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 
 // NetRouteInvExt is called from the main thread (or from a UI).
 func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint32) {
-	if !common.NoCounters.Get() {
-		common.CountSafe(fmt.Sprint("NetRouteInv-", typ))
-	}
+	common.CountSafePar("NetRouteInv-", typ)
 
 	// Prepare the inv
 	inv := new([36]byte)
@@ -158,9 +156,7 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 			if send_inv {
 				if len(v.PendingInvs) < 500 {
 					if typ, ok := v.InvDone.Map[hash2invid(inv[4:36])]; ok {
-						if !common.NoCounters.Get() {
-							common.CountSafe(fmt.Sprint("SendInvSame-", typ))
-						}
+						common.CountSafePar("SendInvSame-", typ)
 					} else {
 						v.PendingInvs = append(v.PendingInvs, inv)
 						cnt++
