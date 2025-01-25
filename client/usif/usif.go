@@ -133,9 +133,7 @@ func LoadRawTx(buf []byte) (s string) {
 }
 
 func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
-	if !common.NoCounters.Get() {
-		common.CountSafe(fmt.Sprint("NetSendOneInv-", typ))
-	}
+	common.CountSafePar("NetSendOneInv-", typ)
 
 	// Prepare the inv
 	inv := new([36]byte)
