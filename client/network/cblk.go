@@ -332,9 +332,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			}
 			shortids[sid] = v.Raw
 			cnt_found++
-			if !common.NoCounters.Get() {
-				common.CountSafe(fmt.Sprint("CmpctBlkUseRej-", v.Reason))
-			}
+			common.CountSafePar("CmpctBlkUseRej-", v.Reason)
 		}
 	}
 
