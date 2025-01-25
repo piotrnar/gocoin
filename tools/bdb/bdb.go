@@ -1425,10 +1425,6 @@ func main() {
 					if yes, sws := tx.ContainsOrdFile(false); yes {
 						if true {
 							for idx, sw := range sws {
-								os.WriteFile(fmt.Sprintf("ord/%05d.bin", idx), sw, 0700)
-							}
-
-							for idx, sw := range sws {
 								if len(sw) > 39 && sw[0] == 0x20 && sw[37] == 0x6f && sw[38] == 0x72 && sw[39] == 0x64 {
 									typ, data, er := ExtractOrdFile(sw)
 									if er != nil {
