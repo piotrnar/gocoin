@@ -107,6 +107,14 @@ func (b *TheLastBlock) BlockHeight() (res uint32) {
 	return
 }
 
+func CountSafePar[T bool | byte | uint32 | int](k string, par T) {
+	if !NoCounters.Get() {
+		CounterMutex.Lock()
+		Counter[fmt.Sprint(k, par)]++
+		CounterMutex.Unlock()
+	}
+}
+
 func CountSafe(k string) {
 	if !NoCounters.Get() {
 		CounterMutex.Lock()
