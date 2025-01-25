@@ -233,7 +233,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
-	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
+	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
 	MutexRcv.Unlock()
 
 	var bei *btc.BlockExtraInfo
@@ -400,7 +400,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 
 	Fetc.HeightD = uint64(max_height)
 
-	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
 	max_blocks_forward := max_height - last_block_height
 	invs := new(bytes.Buffer)
 	var cnt_in_progress uint32

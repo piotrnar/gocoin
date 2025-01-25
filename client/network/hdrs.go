@@ -72,7 +72,7 @@ func (c *OneConnection) ProcessNewHeader(hdr []byte) (int, *OneBlockToGet) {
 	}
 
 	if common.LastTrustedBlockMatch(node.BlockHash) {
-		common.SetUint32(&common.LastTrustedBlockHeight, node.Height)
+		common.Set(&common.LastTrustedBlockHeight, node.Height)
 		for node != nil {
 			node.Trusted.Set()
 			node = node.Parent

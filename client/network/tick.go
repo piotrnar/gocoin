@@ -109,7 +109,7 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	if len(c.blocksreceived) > 0 {
 		var i int
 		for i = 0; i < len(c.blocksreceived); i++ {
-			if c.blocksreceived[i].Add(common.GetDuration(&common.BlockExpireEvery)).After(now) {
+			if c.blocksreceived[i].Add(common.Get(&common.BlockExpireEvery)).After(now) {
 				break
 			}
 			common.CountSafe("BlksRcvdExpired")
@@ -154,7 +154,7 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 
-		if len(c.GetMP) > 0 && common.GetBool(&common.BlockChainSynchronized) {
+		if len(c.GetMP) > 0 && common.Get(&common.BlockChainSynchronized) {
 			// See if to send "getmp" command
 			select {
 			case GetMPInProgressTicket <- true:
@@ -309,7 +309,7 @@ func tcp_server() {
 		Mutex_net.Lock()
 		ica := InConsActive
 		Mutex_net.Unlock()
-		if ica < common.GetUint32(&common.CFG.Net.MaxInCons) {
+		if ica < common.Get(&common.CFG.Net.MaxInCons) {
 			lis.SetDeadline(time.Now().Add(100 * time.Millisecond))
 			tc, e := lis.AcceptTCP()
 			if e == nil && common.IsListenTCP() {
@@ -546,13 +546,13 @@ func NetworkTick() {
 
 	if common.CFG.DropPeers.DropEachMinutes != 0 {
 		if next_drop_peer.IsZero() {
-			next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
+			next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
 		} else if now.After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
+				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery) >> 2)
+				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery) >> 2)
 			}
 		}
 	}
@@ -581,7 +581,7 @@ func NetworkTick() {
 	}
 	Mutex_net.Unlock()
 
-	if conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
+	if conn_cnt < common.Get(&common.CFG.Net.MaxOutCons) {
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
 			return ad.Banned != 0 || !ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 || ConnectionActive(ad)
@@ -693,7 +693,7 @@ func (c *OneConnection) Run() {
 	now := time.Now()
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
-	c.LastPingSent = now.Add(5*time.Second - common.GetDuration(&common.PingPeerEvery)) // do first ping ~5 seconds from now
+	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
 	c.txsNxt = now.Add(TxsCounterPeriod)
 	c.txsCha = make(chan int, TxsCounterBufLen)
@@ -777,7 +777,7 @@ func (c *OneConnection) Run() {
 					if c.X.LastMinFeePerKByte != 0 {
 						c.SendFeeFilter()
 					}
-					if c.Node.Version >= 70014 && common.GetBool(&common.CFG.TXPool.Enabled) {
+					if c.Node.Version >= 70014 && common.Get(&common.CFG.TXPool.Enabled) {
 						if (c.Node.Services & btc.SERVICE_SEGWIT) == 0 {
 							// if the node does not support segwit, request compact blocks
 							// only if we have not achieved the segwit enforcement moment
@@ -890,7 +890,7 @@ func (c *OneConnection) Run() {
 			}
 
 		case "cmpctblock":
-			if common.GetBool(&common.BlockChainSynchronized) {
+			if common.Get(&common.BlockChainSynchronized) {
 				c.ProcessCmpctBlock(cmd.pl)
 			}
 

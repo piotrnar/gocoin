@@ -29,14 +29,14 @@ func InitMaps(empty bool) {
 }
 
 func LoadBalancesFromUtxo() {
-	if common.GetBool(&common.WalletON) {
+	if common.Get(&common.WalletON) {
 		//fmt.Println("wallet.LoadBalance() ignore: ", common.GetBool(&common.WalletON))
 		return
 	}
 
 	var aborted bool
 
-	common.SetUint32(&common.WalletProgress, 1)
+	common.Set(&common.WalletProgress, 1)
 	common.ApplyBalMinVal()
 
 	InitMaps(false)
@@ -54,27 +54,27 @@ func LoadBalancesFromUtxo() {
 		if aborted {
 			break
 		}
-		common.SetUint32(&common.WalletProgress, 1000*(uint32(_i)+1)/256)
+		common.Set(&common.WalletProgress, 1000*(uint32(_i)+1)/256)
 	}
 	if aborted {
 		InitMaps(true)
 	} else {
 		common.BlockChain.Unspent.CB.NotifyTxAdd = TxNotifyAdd
 		common.BlockChain.Unspent.CB.NotifyTxDel = TxNotifyDel
-		common.SetBool(&common.WalletON, true)
+		common.Set(&common.WalletON, true)
 	}
-	common.SetUint32(&common.WalletProgress, 0)
+	common.Set(&common.WalletProgress, 0)
 }
 
 func Disable() {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		//fmt.Println("wallet.Disable() ignore: ", common.GetBool(&common.WalletON))
 		return
 	}
 	UpdateMapSizes()
 	common.BlockChain.Unspent.CB.NotifyTxAdd = nil
 	common.BlockChain.Unspent.CB.NotifyTxDel = nil
-	common.SetBool(&common.WalletON, false)
+	common.Set(&common.WalletON, false)
 	InitMaps(true)
 }
 

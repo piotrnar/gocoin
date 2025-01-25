@@ -76,7 +76,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	if tx.Weight() > 4*int(common.GetUint32(&common.CFG.TXPool.MaxTxSize)) {
+	if tx.Weight() > 4*int(common.Get(&common.CFG.TXPool.MaxTxSize)) {
 		TxMutex.Lock()
 		RejectTx(tx, TX_REJECTED_TOO_BIG, nil)
 		TxMutex.Unlock()
@@ -129,7 +129,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	spent := make([]uint64, len(tx.TxIn))
 
 	var rbf_tx_list map[*OneTxToSend]bool
-	full_rbf := !common.GetBool(&common.CFG.TXPool.NotFullRBF)
+	full_rbf := !common.Get(&common.CFG.TXPool.NotFullRBF)
 
 	// Check if all the inputs exist in the chain
 	for i := range tx.TxIn {
@@ -361,7 +361,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Unlock()
 	common.CountSafe("TxAccepted")
 
-	if frommem != nil && !common.GetBool(&common.CFG.TXRoute.MemInputs) {
+	if frommem != nil && !common.Get(&common.CFG.TXRoute.MemInputs) {
 		// By default Gocoin does not route txs that spend unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
@@ -388,7 +388,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if rec.Weight() > 4*int(common.GetUint32(&common.CFG.TXRoute.MaxTxSize)) {
+	if rec.Weight() > 4*int(common.Get(&common.CFG.TXRoute.MaxTxSize)) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false

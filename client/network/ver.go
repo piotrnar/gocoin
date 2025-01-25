@@ -39,7 +39,7 @@ func (c *OneConnection) SendVersion() {
 	common.UnlockCfg()
 
 	binary.Write(b, binary.LittleEndian, uint32(common.Last.BlockHeight()))
-	if !common.GetBool(&common.CFG.TXPool.Enabled) {
+	if !common.Get(&common.CFG.TXPool.Enabled) {
 		b.WriteByte(0) // don't notify me about txs
 	}
 
@@ -271,7 +271,7 @@ func (c *OneConnection) AuthRvcd(pl []byte) {
 		}
 	}
 	var repl [1]byte // return whether (we think that) we are synchronized
-	if common.GetBool(&common.BlockChainSynchronized) {
+	if common.Get(&common.BlockChainSynchronized) {
 		repl[0] = 1
 	}
 	c.SendRawMsg("authack", repl[:])

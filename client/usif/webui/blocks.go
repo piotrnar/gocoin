@@ -69,7 +69,7 @@ func json_blocks(w http.ResponseWriter, r *http.Request) {
 	end := common.Last.Block
 	common.Last.Mutex.Unlock()
 
-	for cnt := uint32(0); end != nil && cnt < common.GetUint32(&common.CFG.WebUI.ShowBlocks); cnt++ {
+	for cnt := uint32(0); end != nil && cnt < common.Get(&common.CFG.WebUI.ShowBlocks); cnt++ {
 		bl, _, e := common.BlockChain.Blocks.BlockGet(end.BlockHash)
 		if e != nil {
 			break

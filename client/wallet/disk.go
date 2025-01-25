@@ -150,7 +150,7 @@ func LoadBalances() (er error) {
 }
 
 func SaveBalances() (er error) {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		er = errors.New("the wallet is not on")
 		return
 	}

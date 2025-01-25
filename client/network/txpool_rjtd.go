@@ -406,7 +406,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 func doRejected() {
 	TxMutex.Lock()
 	defer TxMutex.Unlock()
-	if cnt := int(common.GetUint16(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
+	if cnt := int(common.Get(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
 		resizeTransactionsRejectedCount(cnt)
 		return
 	}
@@ -415,7 +415,7 @@ func doRejected() {
 
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
-	cnt := common.GetUint16(&common.CFG.TXPool.RejectRecCnt)
+	cnt := common.Get(&common.CFG.TXPool.RejectRecCnt)
 	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
 

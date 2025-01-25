@@ -613,7 +613,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 // Check c.X.AuthAckGot before calling this function
 func (c *OneConnection) GetMPNow() {
-	if common.GetBool(&common.CFG.TXPool.Enabled) {
+	if common.Get(&common.CFG.TXPool.Enabled) {
 		select {
 		case c.GetMP <- true:
 		default:
@@ -709,7 +709,7 @@ func NetCloseAll() {
 	sta := time.Now()
 	println("Closing network")
 	common.NetworkClosed.Set()
-	common.SetBool(&common.ListenTCP, false)
+	common.Set(&common.ListenTCP, false)
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {

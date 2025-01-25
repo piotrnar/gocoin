@@ -56,7 +56,7 @@ func all_addrs(par string) {
 	var cnt int = 15
 	var mode int = wallet.IDX_CNT
 
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -214,7 +214,7 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 }
 
 func list_unspent(addr string) {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -254,7 +254,7 @@ func list_unspent(addr string) {
 }
 
 func all_val_stats(s string) {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -277,18 +277,18 @@ func wallet_on_off(s string) {
 		return
 	}
 
-	if common.GetBool(&common.WalletON) {
+	if common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently ENABLED. Execute 'wallet off' to disable it.")
 		fmt.Println("")
 	} else {
-		if perc := common.GetUint32(&common.WalletProgress); perc != 0 {
+		if perc := common.Get(&common.WalletProgress); perc != 0 {
 			fmt.Println("Enabling wallet functionality -", (perc-1)/10, "percent complete. Execute 'wallet off' to abort it.")
 		} else {
 			fmt.Println("Wallet functionality is currently DISABLED. Execute 'wallet on' to enable it.")
 		}
 	}
 
-	if pend := common.GetUint32(&common.WalletOnIn); pend > 0 {
+	if pend := common.Get(&common.WalletOnIn); pend > 0 {
 		fmt.Println("Wallet functionality will auto enable in", pend, "seconds")
 	}
 }

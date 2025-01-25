@@ -163,7 +163,7 @@ func drop_worst_peer() bool {
 			continue
 		}
 		if v.Conn.X.Incomming {
-			if InConsActive+2 > common.GetUint32(&common.CFG.Net.MaxInCons) {
+			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
 				if common.FLAG.Log {
 					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
@@ -178,7 +178,7 @@ func drop_worst_peer() bool {
 				return true
 			}
 		} else {
-			if OutConsActive+2 > common.GetUint32(&common.CFG.Net.MaxOutCons) {
+			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
 				if common.FLAG.Log {
 					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
@@ -202,7 +202,7 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 		return false // insufficient protocol version
 	}
 
-	pingdur := common.GetDuration(&common.PingPeerEvery)
+	pingdur := common.Get(&common.PingPeerEvery)
 	if pingdur == 0 {
 		return false // pinging disabled in global config
 	}

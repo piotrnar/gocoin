@@ -535,48 +535,14 @@ func CloseBlockChain() {
 	}
 }
 
-func GetDuration(addr *time.Duration) (res time.Duration) {
+func Get[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T) (res T) {
 	mutex_cfg.Lock()
 	res = *addr
 	mutex_cfg.Unlock()
 	return
 }
 
-func GetUint64(addr *uint64) (res uint64) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func GetUint32(addr *uint32) (res uint32) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func GetUint16(addr *uint16) (res uint16) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func SetUint32(addr *uint32, val uint32) {
-	mutex_cfg.Lock()
-	*addr = val
-	mutex_cfg.Unlock()
-}
-
-func GetBool(addr *bool) (res bool) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func SetBool(addr *bool, val bool) {
+func Set[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T, val T) {
 	mutex_cfg.Lock()
 	*addr = val
 	mutex_cfg.Unlock()

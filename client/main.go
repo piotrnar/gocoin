@@ -99,7 +99,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	network.MutexRcv.Unlock()
 
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
-	if bl.LastKnownHeight-bl.Height > common.GetUint32(&common.CFG.Memory.MaxCachedBlks) {
+	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
 
@@ -241,8 +241,8 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	defer func() {
 		common.CountSafe("MainNetBlock")
-		if common.GetUint32(&common.WalletOnIn) > 0 {
-			common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
+		if common.Get(&common.WalletOnIn) > 0 {
+			common.Set(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
 		}
 	}()
 
@@ -437,8 +437,8 @@ func fetch_balances_now() {
 	done.Wait()
 	if !abort {
 		fmt.Println("All balances fetched in", time.Since(sta))
-		common.SetBool(&common.WalletON, true)
-		common.SetUint32(&common.WalletOnIn, 0)
+		common.Set(&common.WalletON, true)
+		common.Set(&common.WalletOnIn, 0)
 	}
 }
 
@@ -553,8 +553,8 @@ func main() {
 		if !common.FLAG.NoWallet {
 			sta := time.Now()
 			if er := wallet.LoadBalances(); er == nil {
-				common.SetBool(&common.WalletON, true)
-				common.SetUint32(&common.WalletOnIn, 0)
+				common.Set(&common.WalletON, true)
+				common.Set(&common.WalletOnIn, 0)
 				fmt.Println("AllBalances loaded from", wallet.LAST_SAVED_FNAME, "in", time.Since(sta).String())
 			} else {
 				fmt.Println("wallet.LoadBalances:", er.Error())
@@ -562,9 +562,9 @@ func main() {
 					fetch_balances_now()
 				}
 			}
-			if !common.GetBool(&common.WalletON) {
+			if !common.Get(&common.WalletON) {
 				// snooze the timer to 10 seconds after startup_ticks goes down
-				common.SetUint32(&common.WalletOnIn, 10)
+				common.Set(&common.WalletOnIn, 10)
 			}
 		}
 
@@ -696,7 +696,7 @@ func main() {
 				}
 
 				// Now check if the chain is synchronized...
-				if (network.HeadersReceived.Get() > int(common.GetUint32(&common.CFG.Net.MaxOutCons)/2) ||
+				if (network.HeadersReceived.Get() > int(common.Get(&common.CFG.Net.MaxOutCons)/2) ||
 					peersdb.ConnectOnly != "" && network.HeadersReceived.Get() >= 1) &&
 					network.BlocksToGetCnt() == 0 && len(network.NetBlocks) == 0 &&
 					len(network.CachedBlocks) == 0 {
@@ -705,7 +705,7 @@ func main() {
 						startup_ticks--
 						break
 					}
-					common.SetBool(&common.BlockChainSynchronized, true)
+					common.Set(&common.BlockChainSynchronized, true)
 					if *exitat == 99999999 {
 						exit_now()
 					}
@@ -737,7 +737,7 @@ func main() {
 					}
 				} else {
 					wallet.Disable()
-					common.SetUint32(&common.WalletOnIn, 0)
+					common.Set(&common.WalletOnIn, 0)
 				}
 			}
 		}
@@ -758,7 +758,7 @@ func main() {
 	usif.SaveBlockFees()
 
 	sta = time.Now()
-	if common.GetBool(&common.WalletON) {
+	if common.Get(&common.WalletON) {
 		if er := wallet.SaveBalances(); er != nil {
 			fmt.Println("SaveBalances:", er.Error())
 		} else {

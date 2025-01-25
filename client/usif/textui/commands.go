@@ -132,7 +132,7 @@ func show_info(par string) {
 	network.MutexRcv.Unlock()
 
 	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d\n", gocoin.Version,
-		common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid())
+		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid())
 	fmt.Printf("Uptime %s,  Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB\n",
 		time.Since(common.StartTime).String(), peersdb.PeerDB.Count(),
 		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),

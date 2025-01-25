@@ -324,7 +324,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 }
 
 func ExpireOldTxs() {
-	dur := common.GetDuration(&common.TxExpireAfter)
+	dur := common.Get(&common.TxExpireAfter)
 	if dur == 0 {
 		// tx expiting disabled
 		//fmt.Print("ExpireOldTxs() - disabled\n> ")

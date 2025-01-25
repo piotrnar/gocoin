@@ -344,7 +344,7 @@ func sync_stats(par string) {
 		}
 	}
 
-	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
 	fmt.Print("\t")
 	for i := uint32(0); i < max_blocks_at_once; i++ {
 		cnt := network.Fetc.C[i]
