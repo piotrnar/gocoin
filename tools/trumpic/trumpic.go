@@ -33,7 +33,7 @@ func main() {
 	var er error
 	var d []byte
 
-	fmt.Println("https://mempool.space/block/" + block_hash + "?audit=false")
+	fmt.Println("https://mempool.space/block/" + block_hash)
 	raw_block_file := "blocks/" + block_hash + ".bin"
 
 	if d, er = os.ReadFile(raw_block_file); er == nil {
