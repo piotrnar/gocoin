@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/binary"
-	"os"
 	"runtime"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,14 +39,10 @@ func do_the_thing(db *utxo.UnspentDB, i int, tmp *uint32) {
 	}
 }
 
-func main() {
+func utxo_benchmark(dir string) {
 	var tmp uint32
-	var dir = ""
 
 	println("UtxoIdxLen:", utxo.UtxoIdxLen)
-	if len(os.Args) > 1 {
-		dir = os.Args[1]
-	}
 
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{Dir: dir})
@@ -62,8 +56,6 @@ func main() {
 		cnt += len(db.HashMap[i])
 	}
 	println(cnt, "UTXO records/txs loaded in", time.Since(sta).String())
-
-	debug.SetGCPercent(30)
 
 	print("Going through the map...")
 	sta = time.Now()
@@ -139,4 +131,5 @@ func main() {
 
 	al, sy := sys.MemUsed()
 	println("Mem Used:", al>>20, "/", sy>>20)
+	db.Close()
 }

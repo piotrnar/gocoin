@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -12,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/memory"
 
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -25,42 +22,19 @@ func print_help() {
 	fmt.Println("You have to specify at least one argument")
 	fmt.Println("   * Path to UTXO.db file - to see basic info about it")
 	fmt.Println("   * Path to dir (may be .) with UTXO db - (de)compress UTXO records")
-	fmt.Println("   * -compress or -decompress - to request DB conversion")
-	fmt.Println("   * -gc[<perc>] - to use native Go heap [with the given GC target percentage]")
-	fmt.Println("   * -n[<num>] - to concurrent threads [number of threads to be used]")
+	fmt.Println("   * -bench : to benchmark UTXO db")
+	fmt.Println("   * -compr or -decompr : to request DB conversion")
+	fmt.Println("   * -gc[<perc>] : to use native Go heap [with the given GC target percentage]")
+	fmt.Println("   * -n[<num>] : to use concurrent threads [number of threads]")
 	os.Exit(1)
-}
-
-func decode_utxo_header(fn string) {
-	var buf [48]byte
-	f, er := os.Open(fn)
-	if er != nil {
-		fmt.Println(er.Error())
-		return
-	}
-	_, er = io.ReadFull(f, buf[:])
-	f.Close()
-	if er != nil {
-		fmt.Println(er.Error())
-		return
-	}
-	u64 := binary.LittleEndian.Uint64(buf[:8])
-	if (u64 & 0x8000000000000000) != 0 {
-		fmt.Println("Records: Compressed")
-	} else {
-		fmt.Println("Records: Not compressed")
-	}
-	fmt.Println("Last Block Height:", uint32(u64))
-	fmt.Println("Last Block Hash:", btc.NewUint256(buf[8:40]).String())
-	fmt.Println("Number of UTXO records:", binary.LittleEndian.Uint64(buf[40:48]))
-	os.Exit(0)
 }
 
 func main() {
 	var dir = ""
 	var compress, decompress bool
+	var benchmark bool
 	var gc int = -1
-	var ncpu int = 1
+	var ncpu int = -1
 
 	if len(os.Args) < 2 {
 		print_help()
@@ -68,7 +42,15 @@ func main() {
 
 	for _, arg := range os.Args[1:] {
 		arg = strings.ToLower(arg)
-		if strings.HasPrefix(arg, "-com") {
+		if strings.HasPrefix(arg, "-h") {
+			print_help()
+		} else if strings.HasPrefix(arg, "-b") {
+			if benchmark {
+				println("ERROR: benchmark specified more than once")
+				print_help()
+			}
+			benchmark = true
+		} else if strings.HasPrefix(arg, "-com") {
 			if compress {
 				println("ERROR: compress specified more than once")
 				print_help()
@@ -91,8 +73,8 @@ func main() {
 				gc = 30
 				println("WARNING: Using default GC value")
 			}
-		} else if strings.HasPrefix(arg, "-") {
-			if gc != -1 {
+		} else if strings.HasPrefix(arg, "-n") {
+			if ncpu != -1 {
 				println("ERROR: n specified more than once")
 				print_help()
 			}
@@ -107,8 +89,14 @@ func main() {
 				println("ERROR: db directory specified more than once")
 				print_help()
 			}
+			println("dir:", arg)
 			dir = arg
 		}
+	}
+
+	println("-dir:", dir)
+	if ncpu == -1 {
+		ncpu = 1
 	}
 
 	if dir != "" {
@@ -148,6 +136,11 @@ func main() {
 	}
 	sys.LockDatabaseDir(dir)
 	defer sys.UnlockDatabaseDir()
+
+	if benchmark {
+		utxo_benchmark(dir)
+		return
+	}
 
 	sta := time.Now()
 	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{Dir: dir})
