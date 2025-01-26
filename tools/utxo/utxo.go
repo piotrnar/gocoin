@@ -27,7 +27,7 @@ func print_help() {
 	fmt.Println("   * Path to dir (may be .) with UTXO db - (de)compress UTXO records")
 	fmt.Println("   * -compress or -decompress - to request DB conversion")
 	fmt.Println("   * -gc[<perc>] - to use native Go heap [with the given GC target percentage]")
-	fmt.Println("   * -n[<num>] - to use so many concurrent threads")
+	fmt.Println("   * -n[<num>] - to concurrent threads [number of threads to be used]")
 	os.Exit(1)
 }
 
@@ -60,7 +60,7 @@ func main() {
 	var dir = ""
 	var compress, decompress bool
 	var gc int = -1
-	ncpu := runtime.NumCPU()
+	var ncpu int = 1
 
 	if len(os.Args) < 2 {
 		print_help()
@@ -99,8 +99,8 @@ func main() {
 			if n, er := strconv.ParseUint(arg[2:], 10, 32); er == nil && n > 0 && n < 1e6 {
 				ncpu = int(n)
 			} else {
-				println("ERROR: illegal number of threads:", arg[2:])
-				print_help()
+				ncpu = runtime.NumCPU()
+				println("WARNING: Using default NumCPU value")
 			}
 		} else {
 			if dir != "" {
