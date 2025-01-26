@@ -4,16 +4,8 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
-
-	"github.com/piotrnar/gocoin/lib/others/memory"
-
-	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 func print_help() {
@@ -31,10 +23,7 @@ func print_help() {
 
 func main() {
 	var dir = ""
-	var compress, decompress bool
 	var benchmark bool
-	var gc int = -1
-	var ncpu int = -1
 
 	if len(os.Args) < 2 {
 		print_help()
@@ -93,10 +82,6 @@ func main() {
 		}
 	}
 
-	if ncpu == -1 {
-		ncpu = 1
-	}
-
 	if dir != "" {
 		if fi, er := os.Stat(dir); er == nil && !fi.IsDir() {
 			decode_utxo_header(dir)
@@ -112,113 +97,10 @@ func main() {
 		dir += string(os.PathSeparator)
 	}
 
-	if gc == -1 {
-		var Memory memory.Allocator
-		var MemMutex sync.Mutex
-
-		fmt.Println("Using designated memory allocator")
-		utxo.Memory_Malloc = func(le int) (res []byte) {
-			MemMutex.Lock()
-			res, _ = Memory.Malloc(le)
-			MemMutex.Unlock()
-			return
-		}
-		utxo.Memory_Free = func(ptr []byte) {
-			MemMutex.Lock()
-			Memory.Free(ptr)
-			MemMutex.Unlock()
-		}
-	} else {
-		fmt.Println("Using native Go heap with GC target of", gc)
-		debug.SetGCPercent(gc)
-	}
-	sys.LockDatabaseDir(dir)
-	defer sys.UnlockDatabaseDir()
-
 	if benchmark {
 		utxo_benchmark(dir)
 		return
 	}
 
-	sta := time.Now()
-	db := utxo.NewUnspentDb(&utxo.NewUnspentOpts{Dir: dir})
-	if db == nil {
-		println("UTXO.db (or UTXO.old) not found.")
-		return
-	}
-	fmt.Println("UTXO db open in", time.Since(sta))
-
-	if db.ComprssedUTXO {
-		fmt.Println("UTXO.db is compressed")
-	} else {
-		fmt.Println("UTXO.db is not compressed")
-	}
-
-	if !compress && !decompress {
-		fmt.Println("No conversion requested")
-		db.Close()
-		return
-	}
-
-	if compress {
-		fmt.Println("Compressing UTXO records")
-	} else {
-		fmt.Println("Decompressing UTXO records")
-	}
-
-	var wg sync.WaitGroup
-	tickets := make(chan bool, ncpu)
-	fmt.Println("Using", cap(tickets), "concurrent threads")
-	sta = time.Now()
-	for i := range db.HashMap {
-		tickets <- true
-		wg.Add(1)
-		go func(i int) {
-			var (
-				rec      utxo.UtxoRec
-				rec_outs = make([]*utxo.UtxoTxOut, utxo.MAX_OUTS_SEEN)
-				rec_pool = make([]utxo.UtxoTxOut, utxo.MAX_OUTS_SEEN)
-				rec_idx  int
-				sta_cbs  = utxo.NewUtxoOutAllocCbs{
-					OutsList: func(cnt int) (res []*utxo.UtxoTxOut) {
-						if len(rec_outs) < cnt {
-							println("utxo.MAX_OUTS_SEEN", len(rec_outs), "->", cnt)
-							rec_outs = make([]*utxo.UtxoTxOut, cnt)
-							rec_pool = make([]utxo.UtxoTxOut, cnt)
-						}
-						rec_idx = 0
-						res = rec_outs[:cnt]
-						for i := range res {
-							res[i] = nil
-						}
-						return
-					},
-					OneOut: func() (res *utxo.UtxoTxOut) {
-						res = &rec_pool[rec_idx]
-						rec_idx++
-						return
-					},
-				}
-			)
-			for k, v := range db.HashMap[i] {
-				utxo.NewUtxoRecOwn(k, v, &rec, &sta_cbs)
-				if compress {
-					db.HashMap[i][k] = utxo.SerializeC(&rec, false, nil)
-				} else {
-					db.HashMap[i][k] = utxo.SerializeU(&rec, false, nil)
-				}
-				utxo.Memory_Free(v)
-			}
-			defer wg.Done()
-			<-tickets
-		}(i)
-	}
-	wg.Wait()
-	fmt.Println("Done in", time.Since(sta))
-	db.ComprssedUTXO = compress
-	db.DirtyDB.Set()
-	fmt.Println("Saving new UTXO.db...")
-	db.Close()
-	fmt.Println("Done in", time.Since(sta))
-	fmt.Println("WARNING: the undo folder has not been converted")
+	do_compress(dir, compress, decompress, ncpu)
 }
