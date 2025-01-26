@@ -162,7 +162,7 @@ func InitConfig() {
 
 	// Fill in default values
 	CFG.Net.ListenTCP = true
-	CFG.Net.MaxOutCons = 9
+	CFG.Net.MaxOutCons = 10
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
 	CFG.Net.BindToIF = "0.0.0.0"
