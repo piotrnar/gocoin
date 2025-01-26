@@ -89,12 +89,10 @@ func main() {
 				println("ERROR: db directory specified more than once")
 				print_help()
 			}
-			println("dir:", arg)
 			dir = arg
 		}
 	}
 
-	println("-dir:", dir)
 	if ncpu == -1 {
 		ncpu = 1
 	}
