@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -72,23 +71,6 @@ func one_map(i int) {
 }
 
 func do_compress(dir string, compress, decompress bool, ncpu int) {
-	if gc == -1 {
-		fmt.Println("Using designated memory allocator")
-		utxo.Memory_Malloc = func(le int) (res []byte) {
-			MemMutex.Lock()
-			res, _ = Memory.Malloc(le)
-			MemMutex.Unlock()
-			return
-		}
-		utxo.Memory_Free = func(ptr []byte) {
-			MemMutex.Lock()
-			Memory.Free(ptr)
-			MemMutex.Unlock()
-		}
-	} else {
-		fmt.Println("Using native Go heap with GC target of", gc)
-		debug.SetGCPercent(gc)
-	}
 	sys.LockDatabaseDir(dir)
 	defer sys.UnlockDatabaseDir()
 

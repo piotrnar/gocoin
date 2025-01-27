@@ -56,6 +56,8 @@ func utxo_benchmark(dir string) {
 		cnt += len(db.HashMap[i])
 	}
 	println(cnt, "UTXO records/txs loaded in", time.Since(sta).String())
+	al, sy := sys.MemUsed()
+	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20)
 
 	print("Going through the map...")
 	sta = time.Now()
@@ -129,7 +131,7 @@ func utxo_benchmark(dir string) {
 	}
 	println("\rDecoding all records in dynamic mode done in", time.Since(sta).String(), tmp)
 
-	al, sy := sys.MemUsed()
-	println("Mem Used:", al>>20, "/", sy>>20)
+	al, sy = sys.MemUsed()
+	println("Mem Used:", al>>20, "/", sy>>20, "/", Memory.Bytes>>20)
 	db.Close()
 }

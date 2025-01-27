@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
+
+	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
 func print_help() {
@@ -95,6 +98,24 @@ func main() {
 
 	if dir != "" && !strings.HasSuffix(dir, string(os.PathSeparator)) {
 		dir += string(os.PathSeparator)
+	}
+
+	if gc == -1 {
+		fmt.Println("Using designated memory allocator")
+		utxo.Memory_Malloc = func(le int) (res []byte) {
+			MemMutex.Lock()
+			res, _ = Memory.Malloc(le)
+			MemMutex.Unlock()
+			return
+		}
+		utxo.Memory_Free = func(ptr []byte) {
+			MemMutex.Lock()
+			Memory.Free(ptr)
+			MemMutex.Unlock()
+		}
+	} else {
+		fmt.Println("Using native Go heap with GC target of", gc)
+		debug.SetGCPercent(gc)
 	}
 
 	if benchmark {
