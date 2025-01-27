@@ -14,15 +14,16 @@ The **client** (p2p node) is an application independent from the **wallet**.
 It keeps the entire UTXO set in RAM, providing an instant access to all its records
 and - in consequece - an extraordinary blochchain processing performance.
 
-System memory and time Gocoin client 1.10.1 needs to sync the blockchain up to
-the given block number, with comparision to Bitcoin Core 23.0:
+System memory and time Gocoin client 1.11.1 needs to sync the blockchain up to
+the given block number, with comparision to Bitcoin Core 28.1:
 
-![SyncChart](website/quick_sync_gocoin_vs_core.png)
+![SyncChart](website/quick_sync_gocoin_vs_core_jan25.png)
 *The above data was collected using [Hetzner](https://hetzner.com) dedicated server
-with 3.6GHz Intel i7-7700 CPU, 2x512MB SSD and 1Gbit internet connection,
-running Debian 11 (bullseye).
+with 3.2GHz Intel i7-7800 CPU, 128GB RAM, 2x512MB SSD and 1Gbit internet connection,
+running Debian 12 (bookworm).
 Clients using their default configuration, except for the second (blue) Bitcoin Core
-that is set to use **dbcache=16384**.<br/>
+that is set to use **dbcache=32768**.
+In all cases "assumevalid" parameter was used to bypass verification of all the scripts and signatures.
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
