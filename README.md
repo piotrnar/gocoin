@@ -23,7 +23,7 @@ with 3.2GHz Intel i7-7800 CPU, 128GB RAM, 2x512MB SSD and 1Gbit internet connect
 running Debian 12 (bookworm).
 Clients using their default configuration, except for the second (blue) Bitcoin Core
 that is set to use **dbcache=32768**.
-In all cases "assumevalid" parameter was used to bypass verification of all the scripts and signatures.
+In all cases "assumevalid" parameter was used to skip verification of all the scripts and signatures.
 For other performance charts see [gocoin.pl](https://gocoin.pl/gocoin_performance.html) website.*
 
 # Requirements
