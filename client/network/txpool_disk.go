@@ -350,7 +350,6 @@ func MempoolLoad() bool {
 		if totcnt, er = btc.ReadVLen(rd); er != nil {
 			goto fatal_error
 		}
-		fmt.Println("loading", totcnt, "txrs...")
 		for ; totcnt > 0; totcnt-- {
 			if txr, er = newOneTxRejectedFromFile(rd); er != nil {
 				goto fatal_error
