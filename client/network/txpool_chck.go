@@ -8,6 +8,53 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+func checkPoolSizes() (dupa int) {
+	var t2s_size, txr_size, w4i_size int
+	for _, t2x := range TransactionsToSend {
+		ts := t2x.SysSize()
+		if ts != int(t2x.Footprint) {
+			dupa++
+			fmt.Println(dupa, "ERROR: T2S", t2x.Hash.String(), "mismatch footprint:", t2x.Footprint, ts)
+		}
+		t2s_size += ts
+	}
+	for _, txr := range TransactionsRejected {
+		ts := txr.SysSize()
+		if ts != int(txr.Footprint) {
+			dupa++
+			fmt.Println(dupa, "ERROR: TxR", txr.Hash.String(), "mismatch footprint:", txr.Footprint, ts)
+		}
+		txr_size += ts
+		if txr.Waiting4 != nil {
+			w4i_size += ts
+		}
+	}
+
+	if TransactionsToSendSize != uint64(t2s_size) {
+		dupa++
+		fmt.Println("ERROR: TransactionsToSendSize mismatch:", TransactionsToSendSize, "  real:", t2s_size)
+	}
+
+	if TransactionsRejectedSize != uint64(txr_size) {
+		dupa++
+		fmt.Println("ERROR: TransactionsRejectedSize mismatch:", TransactionsRejectedSize, "  real:", txr_size)
+	}
+
+	if WaitingForInputsSize != uint64(w4i_size) {
+		dupa++
+		fmt.Println("ERROR: WaitingForInputsSize mismatch:", WaitingForInputsSize, "  real:", w4i_size)
+	}
+
+	return
+}
+
+func CheckPoolSizes() (dupa int) {
+	TxMutex.Lock()
+	dupa = checkPoolSizes()
+	TxMutex.Unlock()
+	return
+}
+
 func check_the_index(dupa int) int {
 	seen := make(map[BIDX]int)
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
@@ -49,7 +96,7 @@ func MempoolCheck() bool {
 	for _, t2s := range TransactionsToSend {
 		var micnt int
 
-		totsize += uint64(len(t2s.Raw))
+		totsize += uint64(t2s.Footprint)
 
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
@@ -125,7 +172,7 @@ func MempoolCheck() bool {
 				dupa++
 				fmt.Println(dupa, "TxR", tr.Id.String(), "has Tx but no Raw")
 			} else {
-				totsize += uint64(len(tr.Raw))
+				totsize += uint64(tr.Footprint)
 				tot_utxo_used += len(tr.Tx.TxIn)
 			}
 			if tr.Reason < 200 {
@@ -149,7 +196,7 @@ func MempoolCheck() bool {
 				fmt.Println(dupa, "TxR", tr.Id.String(), tr.Reason, "has w4i but no tx data")
 			} else {
 				w4i_cnt++
-				w4isize += uint64(len(tr.Raw))
+				w4isize += uint64(tr.Footprint)
 			}
 		} else {
 			if tr.Reason == TX_REJECTED_NO_TXOU {
@@ -162,8 +209,6 @@ func MempoolCheck() bool {
 		dupa++
 		fmt.Println(dupa, "TransactionsRejectedSize mismatch", totsize, TransactionsRejectedSize)
 	}
-
-	dupa += check_the_index(dupa)
 
 	spent_cnt = 0
 	for _, rec := range WaitingForInputs {
@@ -181,6 +226,9 @@ func MempoolCheck() bool {
 		dupa++
 		fmt.Println(dupa, "WaitingForInputsSize mismatch", w4isize, WaitingForInputsSize)
 	}
+
+	dupa += check_the_index(dupa)
+	dupa += checkPoolSizes()
 
 	spent_cnt = 0
 	for utxoidx, lst := range RejectedUsedUTXOs {

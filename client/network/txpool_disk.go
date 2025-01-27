@@ -256,6 +256,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
 	}
+	txr.Footprint = uint32(txr.SysSize())
 
 	return
 }
@@ -316,8 +317,9 @@ func MempoolLoad() bool {
 		if t2s, er = newOneTxToSendFromFile(rd, file_version); er != nil {
 			goto fatal_error
 		}
+		t2s.Footprint = uint32(t2s.SysSize())
 		TransactionsToSend[t2s.Hash.BIdx()] = t2s
-		TransactionsToSendSize += uint64(len(t2s.Raw))
+		TransactionsToSendSize += uint64(t2s.Footprint)
 		TransactionsToSendWeight += uint64(t2s.Weight())
 	}
 
@@ -382,6 +384,7 @@ func MempoolLoad() bool {
 			if t2s.MemInputCnt == 0 {
 				println("ERROR: MemInputs not nil but nothing found")
 				t2s.MemInputs = nil
+				t2s.Footprint = uint32(t2s.SysSize())
 			}
 		}
 	}

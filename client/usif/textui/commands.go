@@ -122,8 +122,6 @@ func MainThread() {
 }
 
 func show_info(par string) {
-	fmt.Println("main.go last seen in line:", common.BusyIn())
-
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
 	cached := network.CachedBlocksLen()
@@ -131,18 +129,18 @@ func show_info(par string) {
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()
 
-	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d\n", gocoin.Version,
-		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid())
-	fmt.Printf("Uptime %s,  Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB\n",
-		time.Since(common.StartTime).String(), peersdb.PeerDB.Count(),
-		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
-		usif.GetAverageFee())
-
+	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d,   Uptime %s\n", gocoin.Version,
+		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid(),
+		time.Since(common.StartTime).String())
 	// Memory used
 	al, sy := sys.MemUsed()
 	cb, ca := common.MemUsed()
-	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d,  Saving: %t\n",
-		al>>20, sy>>20, cb>>20, ca, common.BlockChain.Unspent.WritingInProgress.Get())
+	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d\n",
+		al>>20, sy>>20, cb>>20, ca)
+	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t\n",
+		peersdb.PeerDB.Count(),
+		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
+		usif.GetAverageFee(), common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
 	fmt.Println("LastHeder:", network.LastCommitedHeader.BlockHash.String(), "@",
@@ -163,32 +161,11 @@ func show_info(par string) {
 		atomic.LoadUint32(&common.BlockChain.Unspent.CurrentHeightOnDisk))
 	network.Mutex_net.Unlock()
 
-	network.TxMutex.Lock()
-	var sw_cnt, sw_bts, sw_wgt uint64
-	for _, v := range network.TransactionsToSend {
-		if v.SegWit != nil {
-			sw_cnt++
-			sw_bts += uint64(v.Size)
-			sw_wgt += uint64(v.Weight())
-		}
-	}
-	fmt.Printf("Mempool: %d txs/%sB/%sW,  SW: %d/%sB/%sW,  Rej: %d/%sB\n",
-		len(network.TransactionsToSend), common.UintToString(network.TransactionsToSendSize),
-		common.UintToString(network.TransactionsToSendWeight), sw_cnt, common.UintToString(sw_bts),
-		common.UintToString(sw_wgt), len(network.TransactionsRejected),
-		common.UintToString(network.TransactionsRejectedSize))
-	fmt.Printf(" Wait4Inp: %d (%sB),  SpentOuts: %d,  Rutxo:%d,   Pend:%d/%d,  ScrFlags:0x%x\n",
-		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
-		len(network.SpentOutputs), len(network.RejectedUsedUTXOs), len(network.TransactionsPending),
-		len(network.NetTxs), common.CurrentScriptFlags())
-	network.TxMutex.Unlock()
-
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
 	usif.BlockFeesMutex.Lock()
 	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Since(gs.LastGC).String(),
-		"  NumGC:", gs.NumGC,
-		"  PauseTotal:", gs.PauseTotal.String())
+		"  NumGC:", gs.NumGC, "  PauseTotal:", gs.PauseTotal.String())
 	usif.BlockFeesMutex.Unlock()
 }
 

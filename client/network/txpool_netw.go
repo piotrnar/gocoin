@@ -3,7 +3,6 @@ package network
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -331,22 +330,17 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
-	if f, _ := os.OpenFile("bidx_list.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660); f != nil {
-		fmt.Fprintf(f, "%s: %s %s\n", time.Now().Format("01/02 15:04:05"), btc.BIdxString(bidx), tx.Hash.String())
-		f.Close()
-	}
+	//tx.Clean()
+	rec.Footprint = uint32(rec.SysSize())
 	TransactionsToSend[bidx] = rec
-	tx.Clean()
 
+	newsize := TransactionsToSendSize + uint64(rec.Footprint)
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		newsize := TransactionsToSendSize + uint64(len(tx.Raw))
 		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
 			limitTxpoolSizeNow = true
 		}
-		TransactionsToSendSize = newsize
-	} else {
-		TransactionsToSendSize += uint64(len(tx.Raw))
 	}
+	TransactionsToSendSize = newsize
 	TransactionsToSendWeight += uint64(tx.Weight())
 
 	for i := range spent {

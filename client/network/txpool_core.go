@@ -34,6 +34,7 @@ type OneTxToSend struct {
 	MemInputCnt int
 	SigopsCost  uint64
 	VerifyTime  time.Duration
+	Footprint   uint32
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
 	Final       bool // if true RFB will not work on it
@@ -44,6 +45,8 @@ type OneTxToSend struct {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
+	TransactionsToSendSize -= uint64(tx.Footprint)
+
 	if with_children {
 		// remove all the children that are spending from tx
 		var po btc.TxPrevOut
@@ -61,7 +64,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		delete(SpentOutputs, txin.Input.UIdx())
 	}
 
-	TransactionsToSendSize -= uint64(len(tx.Raw))
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	if reason != 0 {

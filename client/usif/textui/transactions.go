@@ -509,6 +509,40 @@ func push_old_txs(par string) {
 	}
 }
 
+func tx_pool_stats(par string) {
+	network.CheckPoolSizes()
+	network.TxMutex.Lock()
+	var sw_cnt, sw_siz, sw_wgt uint64
+	for _, v := range network.TransactionsToSend {
+		if v.SegWit != nil {
+			sw_cnt++
+			sw_siz += uint64(v.Footprint)
+			sw_wgt += uint64(v.Weight())
+		}
+	}
+
+	var sw_perc_cnt, sw_perc_size, sw_perc_weight uint64
+	if len(network.TransactionsToSend) > 0 { // to avoid division by zero
+		sw_perc_cnt = 100 * sw_cnt / uint64(len(network.TransactionsToSend))
+	}
+	if network.TransactionsToSendSize > 0 { // to avoid division by zero
+		sw_perc_size = 100 * sw_siz / network.TransactionsToSendSize
+	}
+	if network.TransactionsToSendWeight > 0 { // to avoid division by zero
+		sw_perc_weight = 100 * sw_wgt / network.TransactionsToSendWeight
+	}
+
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", network.TransactionsToSendSize, len(network.TransactionsToSend), network.TransactionsToSendWeight, network.TransactionsToSendWeight/4e6)
+	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
+	fmt.Printf("  Number of Spent Outputs: %d\n", len(network.SpentOutputs))
+	fmt.Printf("Rejected: %d in %d txs\n", network.TransactionsRejectedSize, len(network.TransactionsRejected))
+	fmt.Printf("  Waiting4Input: %d in %d txs\n", network.WaitingForInputsSize, len(network.WaitingForInputs))
+	fmt.Printf("  Rejected used UTXOs: %d\n", len(network.RejectedUsedUTXOs))
+	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(network.TransactionsPending), len(network.NetTxs))
+	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
+	network.TxMutex.Unlock()
+}
+
 func init() {
 	newUi("mpcheck mpc", false, check_txs, "Verify consistency of mempool")
 	newUi("mpget mpg", false, get_mempool, "Send getmp message to the peer with the given ID")
@@ -528,4 +562,5 @@ func init() {
 	newUi("txrstat rts", false, txr_stats, "Show stats of the rejected txs")
 	newUi("txsend stx", false, send_tx, "Broadcast tx from memory pool: <txid>")
 	newUi("txsendall stxa", false, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
+	newUi("txstats ts", false, tx_pool_stats, "Mempool and other transaction related statistics")
 }

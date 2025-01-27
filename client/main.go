@@ -90,7 +90,6 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	newbl.TmQueue = time.Now()
 
 	if newbl.DoInvs {
-		common.Busy()
 		network.NetRouteInv(network.MSG_BLOCK, bl.Hash, newbl.Conn)
 	}
 
@@ -185,7 +184,6 @@ func retry_cached_blocks() bool {
 			return len(network.CachedBlocks) > 0
 		}
 		if common.BlockChain.HasAllParents(newbl.BlockTreeNode) {
-			common.Busy()
 
 			if newbl.Block == nil {
 				tmpfn := common.TempBlocksDir() + newbl.BlockTreeNode.BlockHash.String()
@@ -278,7 +276,6 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 		newbl.Block.BlockExtraInfo = *newbl.BlockExtraInfo
 	}
 
-	common.Busy()
 	if e := LocalAcceptBlock(newbl); e != nil {
 		common.CountSafe("DiscardFreshBlockB")
 		fmt.Println("AcceptBlock1", newbl.Block.Hash.String(), "-", e.Error())
@@ -610,7 +607,6 @@ func main() {
 
 		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		for !usif.Exit_now.Get() {
-			common.Busy()
 
 			common.CountSafe("MainThreadLoops")
 			for retryCachedBlocks {
@@ -631,57 +627,45 @@ func main() {
 			// first check for priority messages; kill signal or a new block
 			select {
 			case <-common.KillChan:
-				common.Busy()
 				usif.Exit_now.Set()
 				continue
 
 			case newbl := <-network.NetBlocks:
-				common.Busy()
 				HandleNetBlock(newbl)
 
 			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
 				HandleRpcBlock(rpcbl)
 
 			default: // timeout immediatelly if no priority message
 			}
 
-			common.Busy()
-
 			select {
 			case <-common.KillChan:
-				common.Busy()
 				usif.Exit_now.Set()
 				continue
 
 			case newbl := <-network.NetBlocks:
-				common.Busy()
 				HandleNetBlock(newbl)
 
 			case rpcbl := <-rpcapi.RpcBlocks:
-				common.Busy()
 				HandleRpcBlock(rpcbl)
 
 			case rec := <-usif.LocksChan:
-				common.Busy()
 				common.CountSafe("MainLocks")
 				rec.In.Done()
 				rec.Out.Wait()
 
 			case <-SaveBlockChain.C:
-				common.Busy()
 				common.CountSafe("SaveBlockChain")
 				if common.BlockChain.Idle() {
 					common.CountSafe("ChainIdleUsed")
 				}
 
 			case newtx := <-network.NetTxs:
-				common.Busy()
 				common.CountSafe("MainNetTx")
 				network.HandleNetTx(newtx, false)
 
 			case <-netTick:
-				common.Busy()
 				common.CountSafe("MainNetTick")
 				if common.Last.ParseTill != nil {
 					break
@@ -715,18 +699,15 @@ func main() {
 				}
 
 			case cmd := <-usif.UiChannel:
-				common.Busy()
 				common.CountSafe("MainUICmd")
 				cmd.Handler(cmd.Param)
 				cmd.Done.Done()
 
 			case <-peersTick:
-				common.Busy()
 				peersdb.ExpirePeers()
 				usif.ExpireBlockFees()
 
 			case on := <-wallet.OnOff:
-				common.Busy()
 				if on {
 					if common.BlockChainSynchronized {
 						usif.FetchingBalances.Set()

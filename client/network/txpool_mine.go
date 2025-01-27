@@ -43,7 +43,10 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				common.CountSafe("TxMinedMeminOut")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
+					reduxed_size := (len(rec.MemInputs) + 7) & ^7
 					rec.MemInputs = nil
+					rec.Footprint -= uint32(reduxed_size)
+					TransactionsToSendSize -= uint64(reduxed_size)
 				}
 			} else {
 				common.CountSafe("TxMinedMeminERR")

@@ -34,9 +34,10 @@ type OneTxRejected struct {
 	Waiting4 *btc.Uint256
 	*btc.Tx
 	time.Time
-	Size     uint32
-	ArrIndex uint16
-	Reason   byte
+	Size      uint32
+	Footprint uint32
+	ArrIndex  uint16
+	Reason    byte
 }
 
 type OneWaitingList struct {
@@ -128,9 +129,9 @@ func AddRejectedTx(txr *OneTxRejected) {
 			}
 			rec.Ids = append(rec.Ids, txr.Id.BIdx())
 			WaitingForInputs[txr.Waiting4.BIdx()] = rec
-			WaitingForInputsSize += uint64(len(txr.Raw))
+			WaitingForInputsSize += uint64(txr.Footprint)
 		}
-		TransactionsRejectedSize += uint64(len(txr.Raw))
+		TransactionsRejectedSize += uint64(txr.Footprint)
 	}
 
 	limitRejectedSizeIfNeeded()
@@ -139,8 +140,8 @@ func AddRejectedTx(txr *OneTxRejected) {
 // Make sure to call it with locked TxMutex
 func DeleteRejectedByTxr(txr *OneTxRejected) {
 	common.CountSafePar("TxRejectedDel-", txr.Reason)
+	TransactionsRejectedSize -= uint64(txr.Footprint)
 	if txr.Tx != nil {
-		TransactionsRejectedSize -= uint64(len(txr.Raw))
 		txr.cleanup()
 	}
 	TRIdZeroArrayRec(int(txr.ArrIndex))
@@ -214,8 +215,9 @@ func (tr *OneTxRejected) cleanup() {
 		} else {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
+		WaitingForInputsSize -= uint64(tr.Footprint)
 		tr.Waiting4 = nil
-		WaitingForInputsSize -= uint64(len(tr.Raw))
+		// note that this will affect Footprint
 	}
 }
 
@@ -230,11 +232,12 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	txr.Reason = why
 	// only store tx for selected reasons
 	if why >= 200 {
-		tx.Clean()
+		//tx.Clean()
 		txr.Tx = tx
 		txr.Waiting4 = missingid
 		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx
 	}
+	txr.Footprint = uint32(txr.SysSize())
 	common.CountSafePar("TxRejected-", txr.Reason)
 	AddRejectedTx(txr)
 	//return rec
@@ -265,9 +268,11 @@ func (tr *OneTxRejected) Discard() {
 	if tr.Tx == nil {
 		panic("OneTxRejected.Discard() called, but it's already empty")
 	}
+	TransactionsRejectedSize -= uint64(tr.Footprint)
 	tr.cleanup()
-	TransactionsRejectedSize -= uint64(tr.Size)
 	tr.Tx = nil
+	tr.Footprint = uint32(tr.SysSize())
+	TransactionsRejectedSize += uint64(tr.Footprint)
 }
 
 func ReasonToString(reason byte) string {
