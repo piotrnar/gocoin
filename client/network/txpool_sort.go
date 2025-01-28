@@ -1,7 +1,6 @@
 package network
 
 import (
-	"encoding/binary"
 	"fmt"
 	"sort"
 	"time"
@@ -254,6 +253,8 @@ func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend bool) {
 func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	rate_i := rec_i.Fee * uint64(rec_j.Weight())
 	rate_j := rec_j.Fee * uint64(rec_i.Weight())
+	return rate_i > rate_j
+	/* - this is more deterministic sorting, but not neccessary for our applicaiton:
 	if rate_i != rate_j {
 		return rate_i > rate_j
 	}
@@ -262,6 +263,7 @@ func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	}
 	return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
 		binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
+	*/
 }
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
@@ -585,7 +587,12 @@ func LimitTxpoolSize() {
 
 func GetSortedMempool() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
+	var prv_idx uint64
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+		if prv_idx != 0 && prv_idx >= t2s.SortIndex {
+			println("ERROR: GetSortedMempool corupt sort index")
+		}
+		prv_idx = t2s.SortIndex
 		result = append(result, t2s)
 	}
 	return
@@ -615,50 +622,3 @@ func BuildSortedList() {
 	}
 	WorstT2S.Worse = nil
 }
-
-/*
-var suspend bool = true
-
-func verify_sort_list(lab string) {
-	if suspend {
-		return
-	}
-	wr := new(bytes.Buffer)
-	defer func() {
-		if wr.Len() > 0 {
-			println("verify_sort_list failed\n", lab)
-			wr.Write([]byte(lab))
-			os.WriteFile("verify_sort_list.log", wr.Bytes(), 0600)
-			println("crash dump written to verify_sort_list.log", lab)
-			debug.PrintStack()
-			suspend = true
-		}
-	}()
-
-	tx1 := GetSortedMempoolSlow()
-	tx2 := GetSortedMempool()
-	if len(tx1) != len(tx2) {
-		fmt.Fprintln(wr, lab, "len mismatch", len(tx1), len(tx2))
-		goto aaa
-	} else {
-		for i := range tx1 {
-			if tx1[i] != tx2[i] {
-				fmt.Fprintln(wr, lab, "error at index", i)
-				goto aaa
-			}
-		}
-		return
-	}
-aaa:
-	println("dumping tx1:")
-	for i, t := range tx1 {
-		fmt.Fprintf(wr, " %d) %p %s idx:%d  spb:%.5f  mic:%d  %p <-> %p\n",
-			i, t, btc.BIdxString(t.Hash.BIdx()), t.SortIndex, t.SPB(), t.MemInputCnt, t.Better, t.Worse)
-	}
-	fmt.Fprintln(wr, "dumping tx2:")
-	for i, t := range tx2 {
-		fmt.Fprintf(wr, " %d) %p %s idx:%d  spb:%.5f mic:%d  %p <-> %p\n",
-			i, t, btc.BIdxString(t.Hash.BIdx()), t.SortIndex, t.SPB(), t.MemInputCnt, t.Better, t.Worse)
-	}
-}
-*/
