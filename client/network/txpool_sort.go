@@ -1,11 +1,8 @@
 package network
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
-	"runtime/debug"
 	"sort"
 	"time"
 
@@ -13,8 +10,8 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+const SORT_START_INDEX = 0x1000000000000000 // 1/16th of max uint64 value
 const SORT_INDEX_STEP = 1e10
-const DISABLE_SORTING = false
 
 var (
 	limitTxpoolSizeNow bool = true
@@ -25,12 +22,7 @@ var (
 
 // insertes given tx into sorted list at its proper position
 func (t2s *OneTxToSend) AddToSort() {
-	if DISABLE_SORTING {
-		return
-	}
 	var wpr *OneTxToSend
-
-	//s += fmt.Sprintf("after add: %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
 
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
 
@@ -41,7 +33,6 @@ func (t2s *OneTxToSend) AddToSort() {
 		}
 		WorstT2S, BestT2S = t2s, t2s
 		t2s.Better, t2s.Worse = nil, nil
-		//println("made as first and last element")
 		return
 	}
 
@@ -65,44 +56,7 @@ func (t2s *OneTxToSend) AddToSort() {
 	}
 	for wpr != nil {
 		if is_first_spb_bigger(t2s, wpr) {
-			var reindex bool
-			// we insert it here and renumber all the indexes down
-			//msg += fmt.Sprintln(" ... inserting", btc.BIdxString(t2s.Hash.BIdx()), "before", btc.BIdxString(wpr.Hash.BIdx()), "at idx", sort_index, wpr.Better, wpr.Worse)
-			//println(" ... inserting", btc.BIdxString(t2s.Hash.BIdx()), "before", btc.BIdxString(wpr.Hash.BIdx()), "at idx", wpr.SortIndex, wpr.Better, wpr.Worse)
-			if wpr == BestT2S {
-				BestT2S = t2s
-				t2s.Better = nil
-				t2s.SortIndex = wpr.SortIndex - SORT_INDEX_STEP
-			} else {
-				wpr.Better.Worse = t2s
-				t2s.Better = wpr.Better
-				t2s.SortIndex = (wpr.Better.SortIndex + wpr.SortIndex) / 2
-				if t2s.SortIndex == wpr.Better.SortIndex || t2s.SortIndex == wpr.SortIndex {
-					reindex = true
-				}
-			}
-			t2s.Worse = wpr
-			wpr.Better = t2s
-			if reindex {
-				t2s.SortIndex = wpr.SortIndex
-				cnt := 0
-				from := t2s.SortIndex
-				next_index := t2s.SortIndex + SORT_INDEX_STEP/4
-				for {
-					wpr.SortIndex = next_index
-					cnt++
-					wpr = wpr.Worse
-					if wpr == nil {
-						println("reindexed", cnt, "records", from/SORT_INDEX_STEP, "till to the END", next_index/SORT_INDEX_STEP)
-						return
-					}
-					next_index += SORT_INDEX_STEP / 4
-					if wpr.SortIndex >= next_index {
-						println("reindexed", cnt, "records", from/SORT_INDEX_STEP, "till to STOP", wpr.SortIndex/SORT_INDEX_STEP)
-						return
-					}
-				}
-			}
+			t2s.insertBefore(wpr)
 			return
 		}
 		wpr = wpr.Worse
@@ -113,8 +67,6 @@ func (t2s *OneTxToSend) AddToSort() {
 	t2s.Worse = nil
 	t2s.SortIndex = WorstT2S.SortIndex + SORT_INDEX_STEP
 	WorstT2S = t2s
-	//msg += fmt.Sprintln(" ... added at the end", BestT2S, WorstT2S)
-
 }
 
 func (t2s *OneTxToSend) ResortAllChildren() {
@@ -135,36 +87,26 @@ func (t2s *OneTxToSend) ResortAllChildren() {
 
 // removes given tx from the sorted list
 func (t2s *OneTxToSend) DelFromSort() {
-	if DISABLE_SORTING {
-		return
-	}
-	//fmt.Printf("deleting %p / %s with spb %.2f  idx   %d %p/%p\n", t2s,btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), t2s.SortIndex, BestT2S, WorstT2S)
-	//msg += fmt.Sprintf("after del %p / %s with spb %.2f  idx   %d %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), t2s.SortIndex, BestT2S, WorstT2S)
 	if t2s == BestT2S {
 		if t2s == WorstT2S {
-			//println("    PIPA")
 			BestT2S, WorstT2S = nil, nil
 		} else {
 			BestT2S = BestT2S.Worse
 			BestT2S.Better = nil
 		}
-		//println("   .. deleted the first one", BestT2S, WorstT2S)
 		return
 	}
 	if t2s == WorstT2S {
 		if t2s == BestT2S {
-			//println("    CIPA")
 			BestT2S, WorstT2S = nil, nil
 		} else {
 			WorstT2S = WorstT2S.Better
 			WorstT2S.Worse = nil
 		}
-		//println("   .. deleted the last  one", BestT2S, WorstT2S)
 		return
 	}
 	t2s.Worse.Better = t2s.Better
 	t2s.Better.Worse = t2s.Worse
-	//println("   .. deleted in the middle", t2s.Better, t2s.Worse)
 }
 
 func VerifyMempoolSort(txs []*OneTxToSend) {
@@ -186,6 +128,73 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 		}
 	}
 	println("mempool sorting OK", oks, len(txs))
+}
+
+func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
+	if wpr == BestT2S {
+		BestT2S = t2s
+		t2s.Better = nil
+	} else {
+		wpr.Better.Worse = t2s
+		t2s.Better = wpr.Better
+	}
+	t2s.Worse = wpr
+	wpr.Better = t2s
+	t2s.fixIndex()
+}
+
+func (t2s *OneTxToSend) fixIndex() {
+	if t2s.Better == nil {
+		if t2s.Worse == nil {
+			t2s.SortIndex = SORT_START_INDEX
+			return
+		}
+		if t2s.Worse.SortIndex > SORT_INDEX_STEP {
+			t2s.SortIndex = t2s.Worse.SortIndex - SORT_INDEX_STEP
+			return
+		}
+		t2s.SortIndex = t2s.Worse.SortIndex / 2
+		if t2s.SortIndex == t2s.Worse.SortIndex {
+			t2s.SortIndex = SORT_START_INDEX
+			cnt, _ := t2s.reindexDown(SORT_INDEX_STEP)
+			common.CountSafeAdd("TxSortReindexALL", cnt)
+			return
+		}
+	}
+
+	better_idx := t2s.Better.SortIndex
+	if t2s.Worse == nil {
+		t2s.SortIndex = better_idx + SORT_INDEX_STEP
+		return
+	}
+
+	diff := t2s.Worse.SortIndex - better_idx
+	if diff >= 2 {
+		t2s.SortIndex = better_idx + diff/2
+		return
+	}
+
+	// we will have tp reindex down
+	cnt, end := t2s.Better.reindexDown(SORT_INDEX_STEP / 4)
+	if end {
+		common.CountSafeAdd("TxSortReindexEnd", cnt)
+	} else {
+		common.CountSafeAdd("TxSortReindexMid", cnt)
+	}
+}
+
+func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend bool) {
+	index := t.SortIndex
+	for t = t.Worse; t != nil; t = t.Worse {
+		index += step
+		if t.SortIndex >= index {
+			return
+		}
+		t.SortIndex = index
+		cnt++
+	}
+	toend = true
+	return
 }
 
 func is_first_spb_bigger(rec_i, rec_j *OneTxToSend) bool {
@@ -537,11 +546,12 @@ func BuildSortedList() {
 		fmt.Println("BuildSortedList: Mempool empty")
 		return
 	}
-	var SortIndex int64
+	var SortIndex uint64
 	BestT2S, WorstT2S = ts[0], ts[0]
 	BestT2S.Better, BestT2S.Worse = nil, nil
 	WorstT2S.Better, WorstT2S.Worse = nil, nil
-	BestT2S.SortIndex = 0
+	SortIndex = SORT_START_INDEX
+	BestT2S.SortIndex = SortIndex
 	for _, t2s := range ts[1:] {
 		SortIndex += SORT_INDEX_STEP
 		t2s.SortIndex = SortIndex
@@ -552,6 +562,7 @@ func BuildSortedList() {
 	WorstT2S.Worse = nil
 }
 
+/*
 var suspend bool = true
 
 func verify_sort_list(lab string) {
@@ -596,3 +607,4 @@ aaa:
 			i, t, btc.BIdxString(t.Hash.BIdx()), t.SortIndex, t.SPB(), t.MemInputCnt, t.Better, t.Worse)
 	}
 }
+*/

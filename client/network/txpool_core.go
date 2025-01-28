@@ -35,7 +35,7 @@ type OneTxToSend struct {
 	MemInputCnt int
 	SigopsCost  uint64
 	VerifyTime  time.Duration
-	SortIndex   int64
+	SortIndex   uint64
 	Footprint   uint32
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
