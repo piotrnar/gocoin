@@ -183,7 +183,7 @@ func InitConfig() {
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
-	CFG.TXPool.MaxSizeMB = 330 // 10% more than core's default, to fit about the same transactions
+	CFG.TXPool.MaxSizeMB = 300
 	CFG.TXPool.ExpireInDays = 7
 	CFG.TXPool.MaxRejectMB = 25.0
 	CFG.TXPool.MaxNoUtxoMB = 5.0
@@ -387,7 +387,7 @@ func Reset() {
 
 	if CFG.TXPool.MaxSizeMB > 0 {
 		AssureValueInRange("TXPool.MaxSizeMB", &CFG.TXPool.MaxSizeMB, 10, 1e6)
-		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6))
+		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1024*1024))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
