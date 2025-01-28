@@ -1,7 +1,11 @@
 package network
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sort"
 	"time"
 
@@ -9,11 +13,178 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
+const SORT_INDEX_STEP = 1e12
+
 var (
 	limitTxpoolSizeNow bool = true
 	lastTxsPoolLimit   time.Time
 	nextTxsPoolExpire  time.Time = time.Now().Add(time.Hour)
+	BestT2S, WorstT2S  *OneTxToSend
 )
+
+func (t2s *OneTxToSend) AddToSort() {
+	t2s.AddToSortExt(false)
+}
+
+// insertes given tx into sorted list at its proper position
+func (t2s *OneTxToSend) AddToSortExt(nover bool) {
+	var wpr *OneTxToSend
+
+	msg := "AddToSortExt"
+
+	//s += fmt.Sprintf("after add: %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
+
+	defer func() {
+		if !nover {
+			verify_sort_list(msg)
+		}
+	}()
+	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
+
+	if WorstT2S == nil || BestT2S == nil {
+		if WorstT2S != nil || BestT2S != nil {
+			println("ERROR: if WorstT2S is nil BestT2S should be nil too", WorstT2S, BestT2S)
+			WorstT2S, BestT2S = nil, nil
+		}
+		WorstT2S, BestT2S = t2s, t2s
+		t2s.Better, t2s.Worse = nil, nil
+		//println("made as first and last element")
+		return
+	}
+
+	for i, mi := range t2s.MemInputs {
+		if mi {
+			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
+			parent := TransactionsToSend[parent_bidx]
+			if parent == nil {
+				println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
+				return
+			}
+			if wpr == nil || parent.SortIndex > wpr.SortIndex {
+				wpr = parent
+			}
+		}
+	}
+	if wpr == nil {
+		wpr = BestT2S
+	} else {
+		wpr = wpr.Worse // we must insert it after the best parent (not before it)
+	}
+	for wpr != nil {
+		if is_first_spb_bigger(t2s, wpr) {
+			var reindex bool
+			// we insert it here and renumber all the indexes down
+			//msg += fmt.Sprintln(" ... inserting", btc.BIdxString(t2s.Hash.BIdx()), "before", btc.BIdxString(wpr.Hash.BIdx()), "at idx", sort_index, wpr.Better, wpr.Worse)
+			//println(" ... inserting", btc.BIdxString(t2s.Hash.BIdx()), "before", btc.BIdxString(wpr.Hash.BIdx()), "at idx", wpr.SortIndex, wpr.Better, wpr.Worse)
+			if wpr == BestT2S {
+				BestT2S = t2s
+				t2s.Better = nil
+				if wpr.SortIndex < 2 {
+					t2s.SortIndex = wpr.SortIndex / 2
+				} else {
+					t2s.SortIndex = SORT_INDEX_STEP
+					reindex = true
+				}
+			} else {
+				wpr.Better.Worse = t2s
+				t2s.Better = wpr.Better
+				t2s.SortIndex = (wpr.Better.SortIndex + wpr.SortIndex) / 2
+				if t2s.SortIndex == wpr.Better.SortIndex || t2s.SortIndex == wpr.SortIndex {
+					t2s.SortIndex = wpr.Better.SortIndex + SORT_INDEX_STEP
+					reindex = true
+				}
+			}
+			t2s.Worse = wpr
+			wpr.Better = t2s
+			if reindex {
+				//println("Sort indexes too close:", t2s.SortIndex, wpr.SortIndex, wpr.Worse.SortIndex, "- need to reindex")
+				//println("TODO: Implement a way to reindex in smaller steps up to the first bigger one")
+				//verify_sort_list("pipa")
+				//println("po pipie")
+				next_index := t2s.SortIndex + SORT_INDEX_STEP/2
+				for {
+					wpr.SortIndex = next_index
+					wpr = wpr.Worse
+					if wpr == nil {
+						//println("done reindexing")
+						return
+					}
+					next_index += SORT_INDEX_STEP / 2
+					if wpr.SortIndex >= next_index {
+						return
+					}
+				}
+			}
+			return
+		}
+		wpr = wpr.Worse
+	}
+	// we reached the worst element - append it at the end
+	WorstT2S.Worse = t2s
+	t2s.Better = WorstT2S
+	t2s.Worse = nil
+	t2s.SortIndex = WorstT2S.SortIndex + SORT_INDEX_STEP
+	WorstT2S = t2s
+	//msg += fmt.Sprintln(" ... added at the end", BestT2S, WorstT2S)
+
+}
+
+func (t2s *OneTxToSend) ResortAllChildren() {
+	var po btc.TxPrevOut
+	po.Hash = t2s.Hash.Hash
+	for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
+		uidx := po.UIdx()
+		if val, ok := SpentOutputs[uidx]; ok {
+			if rec, ok := TransactionsToSend[val]; ok {
+				rec.DelFromSortExt(true)
+				rec.AddToSortExt(true)
+				rec.ResortAllChildren()
+				//println("Resorted", btc.BIdxString(val), "becase of", btc.BIdxString(t2s.Hash.BIdx()))
+			}
+		}
+	}
+}
+
+func (t2s *OneTxToSend) DelFromSort() {
+	t2s.DelFromSortExt(false)
+}
+
+// removes given tx from the sorted list
+func (t2s *OneTxToSend) DelFromSortExt(nover bool) {
+	msg := "DelFromSortExt"
+	//fmt.Printf("deleting %p / %s with spb %.2f  idx   %d %p/%p\n", t2s,btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), t2s.SortIndex, BestT2S, WorstT2S)
+	//msg += fmt.Sprintf("after del %p / %s with spb %.2f  idx   %d %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), t2s.SortIndex, BestT2S, WorstT2S)
+	defer func() {
+		if !nover {
+			verify_sort_list(msg)
+		}
+	}()
+	if t2s == BestT2S {
+		if t2s == WorstT2S {
+			//println("    PIPA")
+			BestT2S, WorstT2S = nil, nil
+		} else {
+			BestT2S = BestT2S.Worse
+			BestT2S.Better = nil
+		}
+		//println("   .. deleted the first one", BestT2S, WorstT2S)
+		return
+	}
+	if t2s == WorstT2S {
+		if t2s == BestT2S {
+			//println("    CIPA")
+			BestT2S, WorstT2S = nil, nil
+		} else {
+			WorstT2S = WorstT2S.Better
+			WorstT2S.Worse = nil
+		}
+		//println("   .. deleted the last  one", BestT2S, WorstT2S)
+		return
+	}
+	t2s.Worse.Better = t2s.Better
+	t2s.Better.Worse = t2s.Worse
+	//println("   .. deleted in the middle", t2s.Better, t2s.Worse)
+}
 
 func VerifyMempoolSort(txs []*OneTxToSend) {
 	idxs := make(map[BIDX]int, len(txs))
@@ -36,6 +207,19 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 	println("mempool sorting OK", oks, len(txs))
 }
 
+func is_first_spb_bigger(rec_i, rec_j *OneTxToSend) bool {
+	rate_i := rec_i.Fee * uint64(rec_j.Weight())
+	rate_j := rec_j.Fee * uint64(rec_i.Weight())
+	if rate_i != rate_j {
+		return rate_i > rate_j
+	}
+	if rec_i.MemInputCnt != rec_j.MemInputCnt {
+		return rec_i.MemInputCnt < rec_j.MemInputCnt
+	}
+	return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
+		binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
+}
+
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
 func GetSortedMempool() (result []*OneTxToSend) {
 	all_txs := make([]BIDX, len(TransactionsToSend))
@@ -47,20 +231,7 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	sort.Slice(all_txs, func(i, j int) bool {
 		rec_i := TransactionsToSend[all_txs[i]]
 		rec_j := TransactionsToSend[all_txs[j]]
-		rate_i := rec_i.Fee * uint64(rec_j.Weight())
-		rate_j := rec_j.Fee * uint64(rec_i.Weight())
-		if rate_i != rate_j {
-			return rate_i > rate_j
-		}
-		if rec_i.MemInputCnt != rec_j.MemInputCnt {
-			return rec_i.MemInputCnt < rec_j.MemInputCnt
-		}
-		for x := 0; x < 32; x++ {
-			if rec_i.Hash.Hash[x] != rec_j.Hash.Hash[x] {
-				return rec_i.Hash.Hash[x] < rec_j.Hash.Hash[x]
-			}
-		}
-		return false
+		return is_first_spb_bigger(rec_i, rec_j)
 	})
 
 	// now put the childrer after the parents
@@ -366,4 +537,81 @@ func LimitTxpoolSize() {
 	}
 	TxMutex.Unlock()
 	common.CountSafe("TxPooLimitTicks")
+}
+
+func GetSortedMempoolNew() (result []*OneTxToSend) {
+	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
+	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+		result = append(result, t2s)
+	}
+	return
+}
+
+func BuildSortedList() {
+	TxMutex.Lock()
+	defer TxMutex.Unlock()
+	ts := GetSortedMempool()
+	if len(ts) == 0 {
+		BestT2S, WorstT2S = nil, nil
+		fmt.Println("BuildSortedList: Mempool empty")
+		return
+	}
+	var SortIndex uint64
+	BestT2S, WorstT2S = ts[0], ts[0]
+	BestT2S.Better, BestT2S.Worse = nil, nil
+	WorstT2S.Better, WorstT2S.Worse = nil, nil
+	BestT2S.SortIndex = SORT_INDEX_STEP
+	for _, t2s := range ts[1:] {
+		SortIndex += SORT_INDEX_STEP
+		t2s.SortIndex = SortIndex
+		t2s.Better = WorstT2S
+		WorstT2S.Worse = t2s
+		WorstT2S = t2s
+	}
+	WorstT2S.Worse = nil
+}
+
+var suspend bool = true
+
+func verify_sort_list(lab string) {
+	if suspend {
+		return
+	}
+	wr := new(bytes.Buffer)
+	defer func() {
+		if wr.Len() > 0 {
+			println("verify_sort_list failed\n", lab)
+			wr.Write([]byte(lab))
+			os.WriteFile("verify_sort_list.log", wr.Bytes(), 0600)
+			println("crash dump written to verify_sort_list.log", lab)
+			debug.PrintStack()
+			suspend = true
+		}
+	}()
+
+	tx1 := GetSortedMempool()
+	tx2 := GetSortedMempoolNew()
+	if len(tx1) != len(tx2) {
+		fmt.Fprintln(wr, lab, "len mismatch", len(tx1), len(tx2))
+		goto aaa
+	} else {
+		for i := range tx1 {
+			if tx1[i] != tx2[i] {
+				fmt.Fprintln(wr, lab, "error at index", i)
+				goto aaa
+			}
+		}
+		return
+	}
+aaa:
+	println("dumping tx1:")
+	for i, t := range tx1 {
+		fmt.Fprintf(wr, " %d) %p %s idx:%d  spb:%.5f  mic:%d  %p <-> %p\n",
+			i, t, btc.BIdxString(t.Hash.BIdx()), t.SortIndex, t.SPB(), t.MemInputCnt, t.Better, t.Worse)
+	}
+	fmt.Fprintln(wr, "dumping tx2:")
+	for i, t := range tx2 {
+		fmt.Fprintf(wr, " %d) %p %s idx:%d  spb:%.5f mic:%d  %p <-> %p\n",
+			i, t, btc.BIdxString(t.Hash.BIdx()), t.SortIndex, t.SPB(), t.MemInputCnt, t.Better, t.Worse)
+	}
 }

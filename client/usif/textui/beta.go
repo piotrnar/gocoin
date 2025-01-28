@@ -95,7 +95,51 @@ func gettxchildren(par string) {
 	println("Groups SPB:", float64(tot_fee)/float64(tot_wg)*4.0)
 }
 
+func sort_test(par string) {
+	network.TxMutex.Lock()
+
+	sta := time.Now()
+	tx1 := network.GetSortedMempool()
+	tim1 := time.Since(sta)
+
+	sta = time.Now()
+	tx2 := network.GetSortedMempoolNew()
+	tim2 := time.Since(sta)
+
+	sta = time.Now()
+	tx3 := network.GetSortedMempoolRBF()
+	tim3 := time.Since(sta)
+
+	defer network.TxMutex.Unlock()
+
+	println("execution times:", tim1.String(), tim2.String(), tim3.String())
+
+	if len(tx1) != len(tx2) || len(tx1) != len(tx3) {
+		println("Transaction count mismatch:", len(tx1), len(tx2), len(tx3))
+		return
+	}
+
+	network.VerifyMempoolSort(tx1)
+	network.VerifyMempoolSort(tx3)
+	println("all good so far -", len(tx1), "txs each")
+	for i := range tx1 {
+		if tx1[i] != tx2[i] {
+			println("tx1 / tx2 different at index", i)
+			return
+		}
+	}
+	println("both lists are identical")
+
+	if par != "" {
+		for i, t := range tx2 {
+			fmt.Printf("%d5) %p idx:%d  spb:%.5f  mic:%d  %s  %p <-> %p\n",
+				i, t, t.SortIndex, t.SPB(), t.MemInputCnt, btc.BIdxString(t.Hash.BIdx()), t.Better, t.Worse)
+		}
+	}
+}
+
 func init() {
 	newUi("newblock nb", true, new_block, "Build a new block")
 	newUi("txchild ch", true, gettxchildren, "show all mempool children of the given: <txid>")
+	newUi("txsortest tt", true, sort_test, "Test the enw tx sprting functionality: [list]")
 }

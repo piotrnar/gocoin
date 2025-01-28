@@ -162,7 +162,8 @@ func DeleteRejectedByIdx(bidx BIDX) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
 	} else {
-		println("ERROR: DeleteRejectedByIdx called with bidx which does not point to any txr", btc.BIdxString(bidx))
+		// this may happen when undoing a block
+		//println("ERROR: DeleteRejectedByIdx called with bidx which does not point to any txr", btc.BIdxString(bidx))
 	}
 }
 
@@ -232,7 +233,6 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	txr.Reason = why
 	// only store tx for selected reasons
 	if why >= 200 {
-		//tx.Clean()
 		txr.Tx = tx
 		txr.Waiting4 = missingid
 		// Note: WaitingForInputs and RejectedUsedUTXOs will be updated in AddRejectedTx

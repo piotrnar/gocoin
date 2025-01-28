@@ -122,6 +122,8 @@ func MainThread() {
 }
 
 func show_info(par string) {
+	fmt.Println("main.go last seen in line:", common.BusyIn())
+
 	network.MutexRcv.Lock()
 	discarded := len(network.DiscardedBlocks)
 	cached := network.CachedBlocksLen()

@@ -273,9 +273,6 @@ func MempoolLoad() bool {
 
 	InitMempool()
 
-	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
-	defer TxMutex.Unlock()
-
 	f, er := os.Open(common.GocoinHomeDir + MEMPOOL_FILE_NAME)
 	if er != nil {
 		fmt.Println("MempoolLoad:", er.Error())
@@ -312,6 +309,9 @@ func MempoolLoad() bool {
 	}
 
 	//println("TransactionsToSend cnt:", totcnt)
+	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
+	defer TxMutex.Unlock()
+
 	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
 		if t2s, er = newOneTxToSendFromFile(rd, file_version); er != nil {
@@ -395,6 +395,7 @@ func MempoolLoad() bool {
 	}
 
 	//println("***Remove this: Mempool error after loading:", MempoolCheck())
+
 	return true
 
 fatal_error:

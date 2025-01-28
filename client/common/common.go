@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,6 +41,8 @@ var (
 
 	CounterMutex sync.Mutex
 	Counter      map[string]uint64 = make(map[string]uint64)
+
+	busyLine int32
 
 	NetworkClosed sys.SyncBool
 
@@ -151,6 +154,16 @@ func CountAdd(k string, val uint64) {
 	if !NoCounters.Get() {
 		Counter[k] += val
 	}
+}
+
+func Busy() {
+	var line int
+	_, _, line, _ = runtime.Caller(1)
+	atomic.StoreInt32(&busyLine, int32(line))
+}
+
+func BusyIn() int {
+	return int(atomic.LoadInt32(&busyLine))
 }
 
 func BytesToString(val uint64) string {

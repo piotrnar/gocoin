@@ -26,6 +26,7 @@ var (
 )
 
 type OneTxToSend struct {
+	Better, Worse                 *OneTxToSend
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
 	Volume                        uint64
@@ -34,10 +35,16 @@ type OneTxToSend struct {
 	MemInputCnt int
 	SigopsCost  uint64
 	VerifyTime  time.Duration
+	SortIndex   uint64
 	Footprint   uint32
 	Local       bool
 	Blocked     byte // if non-zero, it gives you the reason why this tx nas not been routed
 	Final       bool // if true RFB will not work on it
+}
+
+func (t2s *OneTxToSend) Add(bidx BIDX) {
+	TransactionsToSend[bidx] = t2s
+	t2s.AddToSort()
 }
 
 // Delete deletes the tx from the mempool.
@@ -66,6 +73,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
+	tx.DelFromSort()
 	if reason != 0 {
 		RejectTx(tx.Tx, reason, nil)
 	}

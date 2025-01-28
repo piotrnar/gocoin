@@ -330,9 +330,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
-	//tx.Clean()
 	rec.Footprint = uint32(rec.SysSize())
-	TransactionsToSend[bidx] = rec
+	rec.Add(bidx)
 
 	newsize := TransactionsToSendSize + uint64(rec.Footprint)
 	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
