@@ -22,8 +22,6 @@ var (
 
 // insertes given tx into sorted list at its proper position
 func (t2s *OneTxToSend) AddToSort() {
-	var wpr *OneTxToSend
-
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
 
 	if WorstT2S == nil || BestT2S == nil {
@@ -36,26 +34,16 @@ func (t2s *OneTxToSend) AddToSort() {
 		return
 	}
 
-	for i, mi := range t2s.MemInputs {
-		if mi {
-			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
-			parent := TransactionsToSend[parent_bidx]
-			if parent == nil {
-				println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
-				return
-			}
-			if wpr == nil || parent.SortIndex > wpr.SortIndex {
-				wpr = parent
-			}
-		}
-	}
-	if wpr == nil {
-		wpr = BestT2S
+	if wpr := t2s.findWorstParent(); wpr == nil {
+		t2s.insertDownFromHere(BestT2S)
 	} else {
-		wpr = wpr.Worse // we must insert it after the best parent (not before it)
+		t2s.insertDownFromHere(wpr.Worse)
 	}
+}
+
+func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	for wpr != nil {
-		if is_first_spb_bigger(t2s, wpr) {
+		if isFirstTxBetter(t2s, wpr) {
 			t2s.insertBefore(wpr)
 			return
 		}
@@ -69,16 +57,65 @@ func (t2s *OneTxToSend) AddToSort() {
 	WorstT2S = t2s
 }
 
-func (t2s *OneTxToSend) ResortAllChildren() {
+func (t2s *OneTxToSend) ResortWithChildren() {
+	// now get the new worst parent
+	wpr := t2s.findWorstParent()
+	if wpr == t2s.Better {
+		goto do_the_children
+	}
+	// we may have to move it. first let's remove it from the index
+	if wpr == nil {
+		wpr = BestT2S
+	} else {
+		wpr = wpr.Worse // we must insert it after the worst parent (not before it)
+	}
+	if wpr.SortIndex > t2s.SortIndex {
+		// we have to move it down the list as our parent is now below us
+		t2s.DelFromSort()
+		t2s.insertDownFromHere(wpr)
+		common.CountSafe("TxSortRDegraded")
+	} else {
+		// our parent is above us - we can only move up the list
+		// first check if we can move it at all
+		one_above_us := t2s.Better
+		if one_above_us == nil {
+			println("ERROR: we have a parent but we are on top")
+			goto do_the_children
+		}
+		if !isFirstTxBetter(t2s, one_above_us) {
+			common.CountSafe("TxSortRLeft")
+			goto do_the_children // we cannot move even by one, so stop trying
+		}
+
+		// we will move by at least one, so we can delete the record now
+		t2s.DelFromSort()
+		if BestT2S == nil || WorstT2S == nil {
+			println("ERROR: we have a parent but the list is empty after we removed ourselves")
+			return // we dont need to check for children as there obviously arent any records left
+		}
+
+		for wpr != one_above_us {
+			if isFirstTxBetter(t2s, wpr) {
+				t2s.insertBefore(wpr)
+				common.CountSafe("TxSortRUpgraded")
+				goto do_the_children // we cannot move even by one, so stop trying
+			}
+			wpr = wpr.Worse
+		}
+		// we reached one above os which we already know that we can skip
+		t2s.insertBefore(wpr)
+		goto do_the_children // we cannot move even by one, so stop trying
+	}
+
+do_the_children:
+	// now do the children
 	var po btc.TxPrevOut
 	po.Hash = t2s.Hash.Hash
 	for po.Vout = 0; po.Vout < uint32(len(t2s.TxOut)); po.Vout++ {
 		uidx := po.UIdx()
 		if val, ok := SpentOutputs[uidx]; ok {
 			if rec, ok := TransactionsToSend[val]; ok {
-				rec.DelFromSort()
-				rec.AddToSort()
-				rec.ResortAllChildren()
+				rec.ResortWithChildren()
 				//println("Resorted", btc.BIdxString(val), "becase of", btc.BIdxString(t2s.Hash.BIdx()))
 			}
 		}
@@ -128,6 +165,23 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 		}
 	}
 	println("mempool sorting OK", oks, len(txs))
+}
+
+func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
+	for i, mi := range t2s.MemInputs {
+		if mi {
+			parent_bidx := btc.BIdx(t2s.Tx.TxIn[i].Input.Hash[:])
+			parent := TransactionsToSend[parent_bidx]
+			if parent == nil {
+				println("ERROR: not existing parent", btc.BIdxString(parent_bidx), "for", t2s.Hash.String())
+				return
+			}
+			if wpr == nil || parent.SortIndex > wpr.SortIndex {
+				wpr = parent
+			}
+		}
+	}
+	return
 }
 
 func (t2s *OneTxToSend) insertBefore(wpr *OneTxToSend) {
@@ -197,7 +251,7 @@ func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend bool) {
 	return
 }
 
-func is_first_spb_bigger(rec_i, rec_j *OneTxToSend) bool {
+func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	rate_i := rec_i.Fee * uint64(rec_j.Weight())
 	rate_j := rec_j.Fee * uint64(rec_i.Weight())
 	if rate_i != rate_j {
@@ -221,7 +275,7 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 	sort.Slice(all_txs, func(i, j int) bool {
 		rec_i := TransactionsToSend[all_txs[i]]
 		rec_j := TransactionsToSend[all_txs[j]]
-		return is_first_spb_bigger(rec_i, rec_j)
+		return isFirstTxBetter(rec_i, rec_j)
 	})
 
 	// now put the childrer after the parents
