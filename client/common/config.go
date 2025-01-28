@@ -387,7 +387,7 @@ func Reset() {
 
 	if CFG.TXPool.MaxSizeMB > 0 {
 		AssureValueInRange("TXPool.MaxSizeMB", &CFG.TXPool.MaxSizeMB, 10, 1e6)
-		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1024*1024))
+		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6))
 	} else {
 		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
 	}
