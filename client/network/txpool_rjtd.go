@@ -92,11 +92,11 @@ func TRIdZeroArrayRec(idx int) {
 
 func TRIdIsZeroArrayRec(idx int) bool {
 	for i := range TRIdxArray[0] {
-		if TRIdxArray[idx][i] == 0 {
-			return true
+		if TRIdxArray[idx][i] != 0 {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 // Make sure to call it with locked TxMutex.

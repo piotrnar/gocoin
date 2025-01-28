@@ -132,8 +132,6 @@ func BlockMined(bl *btc.Block) {
 			RetryWaitingForInput(wtg)
 		}
 	}
-
-	limitTxpoolSizeNow = true
 }
 
 // MarkChildrenForMem sets the MemInput flag of all the children (used when a tx is mined).

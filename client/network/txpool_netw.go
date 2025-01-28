@@ -254,7 +254,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	// Check for a proper fee
 	fee := totinp - totout
 	if !ntx.local && fee < (uint64(tx.VSize())*common.MinFeePerKB()/1000) { // do not check minimum fee for locally loaded txs
-		RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)
+		//RejectTx(ntx.Tx, TX_REJECTED_LOW_FEE, nil)  - we do not store low fee txs in TransactionsRejected anymore
 		TxMutex.Unlock()
 		return
 	}
@@ -332,15 +332,6 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec.Footprint = uint32(rec.SysSize())
 	rec.Add(bidx)
-
-	newsize := TransactionsToSendSize + uint64(rec.Footprint)
-	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		if TransactionsToSendSize < maxpoolsize && newsize >= maxpoolsize {
-			limitTxpoolSizeNow = true
-		}
-	}
-	TransactionsToSendSize = newsize
-	TransactionsToSendWeight += uint64(tx.Weight())
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx

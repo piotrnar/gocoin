@@ -45,6 +45,31 @@ type OneTxToSend struct {
 func (t2s *OneTxToSend) Add(bidx BIDX) {
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
+
+	TransactionsToSendWeight += uint64(t2s.Weight())
+	TransactionsToSendSize += uint64(t2s.Footprint)
+	if removeExcessiveTxs() == 0 {
+		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
+	}
+}
+
+func removeExcessiveTxs() (cnt int) {
+	var newspkb uint64
+	for TransactionsToSendSize > common.MaxMempoolSize() {
+		if WorstT2S == nil {
+			println("ERROR: TransactionsToSendSize above limit, but WorstT2S is nil")
+			return
+		}
+		common.CountSafe("TxPurgedSizCnt")
+		common.CountSafeAdd("TxPurgedSizBts", uint64(WorstT2S.Footprint))
+		newspkb = uint64(float64(1000*WorstT2S.Fee) / float64(WorstT2S.VSize()))
+		WorstT2S.Delete(true, 0)
+		cnt++
+	}
+	if cnt > 0 {
+		common.SetMinFeePerKB(newspkb)
+	}
+	return
 }
 
 // Delete deletes the tx from the mempool.

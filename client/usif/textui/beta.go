@@ -135,7 +135,7 @@ func sort_test(par string) {
 
 	for i := range tx1 {
 		if tx1[i] != tx2[i] {
-			println("ERROR: tx1 / tx2 different at index", i)
+			println("The two lists become different at index", i)
 			if par == "save" {
 				println("Saving both the lists")
 				DumpTxList("Old", "txs_old_sort.log", tx1)

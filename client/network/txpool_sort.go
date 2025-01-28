@@ -14,8 +14,6 @@ const SORT_START_INDEX = 0x1000000000000000 // 1/16th of max uint64 value
 const SORT_INDEX_STEP = 1e10
 
 var (
-	limitTxpoolSizeNow bool = true
-	lastTxsPoolLimit   time.Time
 	nextTxsPoolExpire  time.Time = time.Now().Add(time.Hour)
 	BestT2S, WorstT2S  *OneTxToSend
 )
@@ -349,66 +347,6 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 	return
 }
 
-// LimitPoolSize must be called with TxMutex locked.
-func LimitPoolSize(maxlen uint64) {
-	ticklen := maxlen >> 5 // 1/32th of the max size = X
-
-	if TransactionsToSendSize < maxlen {
-		if TransactionsToSendSize < maxlen-2*ticklen {
-			if common.SetMinFeePerKB(0) {
-				var cnt uint64
-				for _, v := range TransactionsRejected {
-					if v.Reason == TX_REJECTED_LOW_FEE {
-						DeleteRejectedByTxr(v)
-						cnt++
-					}
-				}
-				common.CounterMutex.Lock()
-				common.Count("TxPoolSizeLow")
-				common.CountAdd("TxRejectedFeeUndone", cnt)
-				common.CounterMutex.Unlock()
-				//fmt.Println("Mempool size low:", TransactionsToSendSize, maxlen, maxlen-2*ticklen, "-", cnt, "rejected purged")
-			}
-		} else {
-			common.CountSafe("TxPoolSizeOK")
-			//fmt.Println("Mempool size OK:", TransactionsToSendSize, maxlen, maxlen-2*ticklen)
-		}
-		return
-	}
-
-	//sta := time.Now()
-
-	sorted := GetSortedMempoolRBF()
-	idx := len(sorted)
-
-	old_size := TransactionsToSendSize
-
-	maxlen -= ticklen
-
-	for idx > 0 && TransactionsToSendSize > maxlen {
-		idx--
-		tx := sorted[idx]
-		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-			// this has already been rmoved
-			continue
-		}
-		tx.Delete(true, TX_REJECTED_LOW_FEE)
-	}
-
-	if cnt := len(sorted) - idx; cnt > 0 {
-		newspkb := uint64(float64(1000*sorted[idx].Fee) / float64(sorted[idx].VSize()))
-		common.SetMinFeePerKB(newspkb)
-
-		/*fmt.Println("Mempool purged in", time.Now().Sub(sta).String(), "-",
-		old_size-TransactionsToSendSize, "/", old_size, "bytes and", cnt, "/", len(sorted), "txs removed. SPKB:", newspkb)*/
-		common.CounterMutex.Lock()
-		common.Count("TxPoolSizeHigh")
-		common.CountAdd("TxPurgedSizCnt", uint64(cnt))
-		common.CountAdd("TxPurgedSizBts", old_size-TransactionsToSendSize)
-		common.CounterMutex.Unlock()
-	}
-}
-
 type OneTxsPackage struct {
 	Txs    []*OneTxToSend
 	Weight int
@@ -570,17 +508,6 @@ func ExpireOldTxs() {
 	}
 	TxMutex.Unlock()
 	common.CountSafe("TxPoolExpireTicks")
-}
-
-func LimitTxpoolSize() {
-	lastTxsPoolLimit = time.Now()
-	limitTxpoolSizeNow = false
-	TxMutex.Lock()
-	if maxpoolsize := common.MaxMempoolSize(); maxpoolsize != 0 {
-		LimitPoolSize(maxpoolsize)
-	}
-	TxMutex.Unlock()
-	common.CountSafe("TxPooLimitTicks")
 }
 
 func GetSortedMempool() (result []*OneTxToSend) {
