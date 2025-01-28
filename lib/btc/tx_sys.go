@@ -61,13 +61,13 @@ func (tx *Tx) SysSize() (size int) {
 	}
 
 	if tx.hashPrevouts != nil {
-		size += (len(tx.hashPrevouts) + 7) &^ 7
+		size += int(unsafe.Sizeof(*tx.hashPrevouts))
 	}
 	if tx.hashSequence != nil {
-		size += (len(tx.hashSequence) + 7) &^ 7
+		size += int(unsafe.Sizeof(*tx.hashSequence))
 	}
 	if tx.hashOutputs != nil {
-		size += (len(tx.hashOutputs) + 7) &^ 7
+		size += int(unsafe.Sizeof(*tx.hashOutputs))
 	}
 
 	if tx.Spent_outputs != nil {
@@ -77,20 +77,11 @@ func (tx *Tx) SysSize() (size int) {
 		}
 	}
 
-	if tx.m_prevouts_single_hash != nil {
-		size += (len(tx.m_prevouts_single_hash) + 7) &^ 7
-	}
-	if tx.m_sequences_single_hash != nil {
-		size += (len(tx.m_sequences_single_hash) + 7) &^ 7
+	if tx.m_taproot != nil {
+		size += int(unsafe.Sizeof(*tx.m_taproot))
 	}
 	if tx.m_outputs_single_hash != nil {
-		size += (len(tx.m_outputs_single_hash) + 7) &^ 7
-	}
-	if tx.m_spent_amounts_single_hash != nil {
-		size += (len(tx.m_spent_amounts_single_hash) + 7) &^ 7
-	}
-	if tx.m_spent_scripts_single_hash != nil {
-		size += (len(tx.m_spent_scripts_single_hash) + 7) &^ 7
+		size += int(unsafe.Sizeof(*tx.m_outputs_single_hash))
 	}
 
 	return

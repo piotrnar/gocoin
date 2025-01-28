@@ -60,16 +60,14 @@ type Tx struct {
 	wTxID Uint256
 
 	hash_lock    sync.Mutex
-	hashPrevouts []byte
-	hashSequence []byte
-	hashOutputs  []byte
+	hashPrevouts *[32]byte
+	hashSequence *[32]byte
+	hashOutputs  *[32]byte
 
-	Spent_outputs               []*TxOut // this is used by TaprootSigHash()
-	m_prevouts_single_hash      []byte
-	m_sequences_single_hash     []byte
-	m_outputs_single_hash       []byte
-	m_spent_amounts_single_hash []byte
-	m_spent_scripts_single_hash []byte
+	Spent_outputs []*TxOut // this is used by TaprootSigHash()
+
+	m_taproot             *taproot_temp_hashes
+	m_outputs_single_hash *[32]byte
 }
 
 type AddrValue struct {
@@ -82,11 +80,8 @@ func (t *Tx) Clean() {
 	t.hashPrevouts = nil
 	t.hashSequence = nil
 	t.hashOutputs = nil
-	t.m_prevouts_single_hash = nil
-	t.m_sequences_single_hash = nil
+	t.m_taproot = nil
 	t.m_outputs_single_hash = nil
-	t.m_spent_amounts_single_hash = nil
-	t.m_spent_scripts_single_hash = nil
 	t.hash_lock.Unlock()
 }
 
@@ -644,10 +639,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashPrevouts = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashPrevouts)
-			tx.hashPrevouts = sha.Sum(nil)
+			tx.hashPrevouts = new([32]byte)
+			copy(tx.hashPrevouts[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashPrevouts = tx.hashPrevouts
+		hashPrevouts = tx.hashPrevouts[:]
 	} else {
 		hashPrevouts = nullHash[:]
 	}
@@ -660,10 +656,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashSequence = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashSequence)
-			tx.hashSequence = sha.Sum(nil)
+			tx.hashSequence = new([32]byte)
+			copy(tx.hashSequence[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashSequence = tx.hashSequence
+		hashSequence = tx.hashSequence[:]
 	} else {
 		hashSequence = nullHash[:]
 	}
@@ -678,10 +675,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashOutputs = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashOutputs)
-			tx.hashOutputs = sha.Sum(nil)
+			tx.hashOutputs = new([32]byte)
+			copy(tx.hashOutputs[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashOutputs = tx.hashOutputs
+		hashOutputs = tx.hashOutputs[:]
 	} else if (hashType&0x1f) == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
 		binary.Write(sha, binary.LittleEndian, tx.TxOut[nIn].Value)
 		WriteVlen(sha, uint64(len(tx.TxOut[nIn].Pk_script)))
