@@ -192,11 +192,11 @@ func (c *OneConnection) SendGetMP() error {
 	}
 	b := new(bytes.Buffer)
 	TxMutex.Lock()
-	if TransactionsToSendSize > 7*common.MaxMempoolSize()/8 {
-		// Don't send "getmp" messages, if the mempool if more than 7/8 full
+	if int(common.MaxMempoolSize()-TransactionsToSendSize) < 5e6 {
+		// Don't send "getmp" messages, if we have less than 5MB of free space in mempool
 		TxMutex.Unlock()
 		c.cntInc("GetMPHold")
-		return errors.New("SendGetMP: Mempool more than half full")
+		return errors.New("SendGetMP: Mempool almost full")
 	}
 	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
 	if tcnt > MAX_GETMP_TXS {
