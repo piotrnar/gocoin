@@ -72,34 +72,28 @@ func (t2s *OneTxToSend) AddToSort() {
 			if wpr == BestT2S {
 				BestT2S = t2s
 				t2s.Better = nil
-				if wpr.SortIndex > 2*SORT_INDEX_STEP {
-					t2s.SortIndex = wpr.SortIndex - SORT_INDEX_STEP
-				} else {
-					t2s.SortIndex = SORT_INDEX_STEP
-					reindex = true
-				}
+				t2s.SortIndex = wpr.SortIndex - SORT_INDEX_STEP
 			} else {
 				wpr.Better.Worse = t2s
 				t2s.Better = wpr.Better
-				dif := (wpr.SortIndex - wpr.Better.SortIndex) / 2
-				if dif > 10 {
-					t2s.SortIndex = wpr.Better.SortIndex + dif
-				} else {
-					t2s.SortIndex = wpr.Better.SortIndex + SORT_INDEX_STEP
+				t2s.SortIndex = (wpr.Better.SortIndex + wpr.SortIndex) / 2
+				if t2s.SortIndex == wpr.Better.SortIndex || t2s.SortIndex == wpr.SortIndex {
 					reindex = true
 				}
 			}
 			t2s.Worse = wpr
 			wpr.Better = t2s
 			if reindex {
+				t2s.SortIndex = wpr.SortIndex
 				cnt := 0
+				from := t2s.SortIndex
 				next_index := t2s.SortIndex + SORT_INDEX_STEP //2
 				for {
 					wpr.SortIndex = next_index
 					cnt++
 					wpr = wpr.Worse
 					if wpr == nil {
-						println("reindexed", cnt, "records till the END", next_index/SORT_INDEX_STEP)
+						println("reindexed", cnt, "records", from, "till the END", next_index/SORT_INDEX_STEP)
 						return
 					}
 					next_index += SORT_INDEX_STEP // 2
@@ -539,11 +533,11 @@ func BuildSortedList() {
 		fmt.Println("BuildSortedList: Mempool empty")
 		return
 	}
-	var SortIndex uint64
+	var SortIndex int64
 	BestT2S, WorstT2S = ts[0], ts[0]
 	BestT2S.Better, BestT2S.Worse = nil, nil
 	WorstT2S.Better, WorstT2S.Worse = nil, nil
-	BestT2S.SortIndex = 0x8000000000000000
+	BestT2S.SortIndex = 0
 	for _, t2s := range ts[1:] {
 		SortIndex += SORT_INDEX_STEP
 		t2s.SortIndex = SortIndex
