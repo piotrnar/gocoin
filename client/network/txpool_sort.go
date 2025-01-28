@@ -1,6 +1,7 @@
 package network
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"time"
@@ -253,8 +254,6 @@ func (t *OneTxToSend) reindexDown(step uint64) (cnt uint64, toend bool) {
 func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	rate_i := rec_i.Fee * uint64(rec_j.Weight())
 	rate_j := rec_j.Fee * uint64(rec_i.Weight())
-	return rate_i > rate_j
-	/* - this is more deterministic sorting, but not neccessary for our applicaiton:
 	if rate_i != rate_j {
 		return rate_i > rate_j
 	}
@@ -263,7 +262,6 @@ func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 	}
 	return binary.LittleEndian.Uint64(rec_i.Hash.Hash[:btc.Uint256IdxLen]) >
 		binary.LittleEndian.Uint64(rec_j.Hash.Hash[:btc.Uint256IdxLen])
-	*/
 }
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
