@@ -586,9 +586,11 @@ func LimitTxpoolSize() {
 func GetSortedMempool() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	var prv_idx uint64
+	var cnt int
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+		cnt++
 		if prv_idx != 0 && prv_idx >= t2s.SortIndex {
-			println("ERROR: GetSortedMempool corupt sort index")
+			println("ERROR: GetSortedMempool corupt sort index", cnt, len(TransactionsToSend), prv_idx, t2s.SortIndex)
 		}
 		prv_idx = t2s.SortIndex
 		result = append(result, t2s)
