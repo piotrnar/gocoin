@@ -48,7 +48,7 @@ func (t2s *OneTxToSend) Add(bidx BIDX) {
 
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
-	if removeExcessiveTxs() == 0 {
+	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
 }
@@ -96,6 +96,9 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		delete(SpentOutputs, txin.Input.UIdx())
 	}
 
+	/*if ns := uint32(tx.SysSize()); tx.Footprint != ns {
+		println("Footprint of t2s", tx.Hash.String(), "has been fucked up:", tx.Footprint, "=>", ns)
+	}*/
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	tx.DelFromSort()

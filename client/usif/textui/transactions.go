@@ -540,6 +540,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(network.RejectedUsedUTXOs))
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(network.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
+	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", network.SortingSupressed, network.SortListDirty)
 	network.TxMutex.Unlock()
 }
 

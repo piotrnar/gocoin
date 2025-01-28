@@ -14,12 +14,33 @@ const SORT_START_INDEX = 0x1000000000000000 // 1/16th of max uint64 value
 const SORT_INDEX_STEP = 1e10
 
 var (
-	nextTxsPoolExpire  time.Time = time.Now().Add(time.Hour)
-	BestT2S, WorstT2S  *OneTxToSend
+	nextTxsPoolExpire time.Time = time.Now().Add(time.Hour)
+	BestT2S, WorstT2S *OneTxToSend
+	SortingSupressed  bool
+	SortListDirty     bool
 )
+
+// call it with false to restore sorting
+func SupressMempooolSorting(yes bool) {
+	TxMutex.Lock()
+	if yes {
+		SortingSupressed = true
+	} else {
+		SortingSupressed = false
+		if SortListDirty {
+			buildSortedList()
+			SortListDirty = false
+		}
+	}
+	TxMutex.Unlock()
+}
 
 // insertes given tx into sorted list at its proper position
 func (t2s *OneTxToSend) AddToSort() {
+	if SortingSupressed {
+		SortListDirty = true
+		return
+	}
 	//fmt.Printf("adding %p / %s with spb %.2f  %p/%p\n", t2s, btc.BIdxString(t2s.Hash.BIdx()), t2s.SPB(), BestT2S, WorstT2S)
 
 	if WorstT2S == nil || BestT2S == nil {
@@ -56,6 +77,10 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 }
 
 func (t2s *OneTxToSend) ResortWithChildren() {
+	if SortingSupressed {
+		SortListDirty = true
+		return
+	}
 	// now get the new worst parent
 	wpr := t2s.findWorstParent()
 	if wpr == t2s.Better {
@@ -63,7 +88,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 	}
 	// we may have to move it. first let's remove it from the index
 	if wpr == nil {
-		wpr = BestT2S
+		wpr = BestT2S // if there is no parent, we can go all the way to the top
 	} else {
 		wpr = wpr.Worse // we must insert it after the worst parent (not before it)
 	}
@@ -71,7 +96,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 		// we have to move it down the list as our parent is now below us
 		t2s.DelFromSort()
 		t2s.insertDownFromHere(wpr)
-		common.CountSafe("TxSortRDegraded")
+		common.CountSafe("TxSortDonwgr")
 	} else {
 		// our parent is above us - we can only move up the list
 		// first check if we can move it at all
@@ -81,7 +106,7 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 			goto do_the_children
 		}
 		if !isFirstTxBetter(t2s, one_above_us) {
-			common.CountSafe("TxSortRLeft")
+			common.CountSafe("TxSortAdvNO")
 			goto do_the_children // we cannot move even by one, so stop trying
 		}
 
@@ -92,15 +117,18 @@ func (t2s *OneTxToSend) ResortWithChildren() {
 			return // we dont need to check for children as there obviously arent any records left
 		}
 
+		// this is version 2 - from top to bottom:
+		common.CountSafe("TxSortAdvDOWN")
 		for wpr != one_above_us {
 			if isFirstTxBetter(t2s, wpr) {
 				t2s.insertBefore(wpr)
-				common.CountSafe("TxSortRUpgraded")
+				common.CountSafe("TxSortImporveA")
 				goto do_the_children // we cannot move even by one, so stop trying
 			}
 			wpr = wpr.Worse
 		}
 		// we reached one above os which we already know that we can skip
+		common.CountSafe("TxSortImporveB")
 		t2s.insertBefore(wpr)
 		goto do_the_children // we cannot move even by one, so stop trying
 	}
@@ -122,6 +150,10 @@ do_the_children:
 
 // removes given tx from the sorted list
 func (t2s *OneTxToSend) DelFromSort() {
+	if SortingSupressed {
+		SortListDirty = true
+		return
+	}
 	if t2s == BestT2S {
 		if t2s == WorstT2S {
 			BestT2S, WorstT2S = nil, nil
@@ -511,6 +543,10 @@ func ExpireOldTxs() {
 }
 
 func GetSortedMempool() (result []*OneTxToSend) {
+	if SortListDirty {
+		return GetSortedMempoolSlow()
+	}
+
 	result = make([]*OneTxToSend, 0, len(TransactionsToSend))
 	var prv_idx uint64
 	var cnt int
@@ -527,7 +563,12 @@ func GetSortedMempool() (result []*OneTxToSend) {
 
 func BuildSortedList() {
 	TxMutex.Lock()
-	defer TxMutex.Unlock()
+	buildSortedList()
+	TxMutex.Unlock()
+}
+
+// call it with the mutex locked
+func buildSortedList() {
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil

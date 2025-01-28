@@ -394,6 +394,7 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
+	buildSortedList()
 	//println("***Remove this: Mempool error after loading:", MempoolCheck())
 
 	return true

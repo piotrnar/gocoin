@@ -330,6 +330,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
+	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 	rec.Add(bidx)
 
