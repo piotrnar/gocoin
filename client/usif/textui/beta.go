@@ -99,11 +99,11 @@ func sort_test(par string) {
 	network.TxMutex.Lock()
 
 	sta := time.Now()
-	tx1 := network.GetSortedMempool()
+	tx1 := network.GetSortedMempoolSlow()
 	tim1 := time.Since(sta)
 
 	sta = time.Now()
-	tx2 := network.GetSortedMempoolNew()
+	tx2 := network.GetSortedMempool()
 	tim2 := time.Since(sta)
 
 	sta = time.Now()

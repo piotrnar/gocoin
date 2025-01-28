@@ -38,7 +38,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 					fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
 					continue
 				}
-				rec.DelFromSortExt(true)
+				rec.DelFromSort()
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
 				common.CountSafe("TxMinedMeminOut")
@@ -49,7 +49,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 					rec.Footprint -= uint32(reduxed_size)
 					TransactionsToSendSize -= uint64(reduxed_size)
 				}
-				rec.AddToSortExt(true)
+				rec.AddToSort()
 				rec.ResortAllChildren()
 			} else {
 				common.CountSafe("TxMinedMeminERR")
@@ -151,10 +151,10 @@ func MarkChildrenForMem(tx *btc.Tx) {
 					rec.MemInputs = make([]bool, len(rec.TxIn))
 				}
 				idx := rec.IIdx(uidx)
-				rec.DelFromSortExt(true)
+				rec.DelFromSort()
 				rec.MemInputs[idx] = true
 				rec.MemInputCnt++
-				rec.AddToSortExt(true)
+				rec.AddToSort()
 				rec.ResortAllChildren()
 				common.CountSafe("TxPutBackMemIn")
 			} else {
