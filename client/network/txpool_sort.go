@@ -87,16 +87,20 @@ func (t2s *OneTxToSend) AddToSort() {
 				t2s.SortIndex = wpr.SortIndex
 				cnt := 0
 				from := t2s.SortIndex
-				next_index := t2s.SortIndex + SORT_INDEX_STEP //2
+				next_index := t2s.SortIndex + SORT_INDEX_STEP/4
 				for {
 					wpr.SortIndex = next_index
 					cnt++
 					wpr = wpr.Worse
 					if wpr == nil {
-						println("reindexed", cnt, "records", from, "till the END", next_index/SORT_INDEX_STEP)
+						println("reindexed", cnt, "records", from/SORT_INDEX_STEP, "till to the END", next_index/SORT_INDEX_STEP)
 						return
 					}
-					next_index += SORT_INDEX_STEP // 2
+					next_index += SORT_INDEX_STEP / 4
+					if wpr.SortIndex >= next_index {
+						println("reindexed", cnt, "records", from/SORT_INDEX_STEP, "till to STOP", wpr.SortIndex/SORT_INDEX_STEP)
+						return
+					}
 				}
 			}
 			return
