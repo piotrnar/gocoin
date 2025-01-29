@@ -15,11 +15,11 @@ import (
 const (
 	MSG_WITNESS_FLAG = 0x40000000
 
-	MSG_TX            = 1
-	MSG_BLOCK         = 2
-	MSG_CMPCT_BLOCK   = 4
-	MSG_WITNESS_TX    = MSG_TX | MSG_WITNESS_FLAG
-	MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG
+	MSG_TX            = uint32(1)
+	MSG_BLOCK         = uint32(2)
+	MSG_CMPCT_BLOCK   = uint32(4)
+	MSG_WITNESS_TX    = uint32(MSG_TX | MSG_WITNESS_FLAG)
+	MSG_WITNESS_BLOCK = uint32(MSG_BLOCK | MSG_WITNESS_FLAG)
 )
 
 func blockReceived(bh *btc.Uint256) (ok bool) {
@@ -104,6 +104,8 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			} else {
 				common.CountSafe("InvTxIgnored")
 			}
+		} else {
+			common.CountSafePar("InvUnknTyp-", typ)
 		}
 		of += 36
 	}
@@ -114,7 +116,7 @@ func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 	if typ == MSG_TX {
 		txpool.TxMutex.Lock()
 		if tx, ok := txpool.TransactionsToSend[h.BIdx()]; ok {
-			fee_spkb = (1000 * tx.Fee) / uint64(tx.VSize())
+			fee_spkb = (4000 * tx.Fee) / uint64(tx.Weight())
 		} else {
 			println("NetRouteInv: txid", h.String(), "not in mempool")
 		}
@@ -146,13 +148,6 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 					send_inv = false
 					common.CountSafe("SendInvFeeTooLow")
 				}
-
-				/* This is to prevent sending own txs to "spying" peers:
-				else if fromConn==nil && v.X.InvsRecieved==0 {
-					send_inv = false
-					common.CountSafe("SendInvOwnBlocked")
-				}
-				*/
 			}
 			if send_inv {
 				if len(v.PendingInvs) < 500 {

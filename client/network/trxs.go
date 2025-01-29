@@ -53,13 +53,8 @@ func (c *OneConnection) SendGetMP() error {
 func (c *OneConnection) TxInvNotify(hash []byte) {
 	if txpool.NeedThisTx(btc.NewUint256(hash), nil) {
 		var b [1 + 4 + 32]byte
-		b[0] = 1 // One inv
-		if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-			binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
-			//println(c.ConnID, "getdata", btc.NewUint256(hash).String())
-		} else {
-			b[1] = MSG_TX // Tx
-		}
+		b[0] = 1                                              // One inv
+		binary.LittleEndian.PutUint32(b[1:5], MSG_WITNESS_TX) // SegWit Tx
 		copy(b[5:37], hash)
 		c.SendRawMsg("getdata", b[:])
 	}
@@ -76,7 +71,7 @@ func txPoolCB(conid uint32, info int, par interface{}) (res int) {
 
 	if info == txpool.FEEDBACK_TX_ROUTABLE {
 		p := par.(*txpool.FeedbackRoutable)
-		res = int(NetRouteInvExt(1, p.TxID, c, p.SPKB))
+		res = int(NetRouteInvExt(MSG_TX, p.TxID, c, p.SPKB))
 		return
 	}
 

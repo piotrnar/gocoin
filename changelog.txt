@@ -1,5 +1,6 @@
 1.11.0:
 * Big refactoring all over the codebase; improvements, new features, all kind of cleanups
+* Support for non-segwit nodes and pre-segwit network commands have been completely removed
 
 1.10.4 - 2025-01-23:
 * Testnet4 support. For now needs "CFG.Testnet4" set to true, otherwise still uses testnet3

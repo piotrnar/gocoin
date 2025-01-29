@@ -771,16 +771,8 @@ func (c *OneConnection) Run() {
 						c.SendFeeFilter()
 					}
 					if c.Node.Version >= 70014 && common.Get(&common.CFG.TXPool.Enabled) {
-						if (c.Node.Services & btc.SERVICE_SEGWIT) == 0 {
-							// if the node does not support segwit, request compact blocks
-							// only if we have not achieved the segwit enforcement moment
-							if common.BlockChain.Consensus.Enforce_SEGWIT == 0 ||
-								common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
-								c.SendRawMsg("sendcmpct", []byte{0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-							}
-						} else {
-							c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-						}
+						// ask for compact blocks version 2 only
+						c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 					}
 				}
 			}

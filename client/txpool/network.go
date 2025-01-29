@@ -322,13 +322,13 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		// By default Gocoin does not route txs that spend unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
-	} else if !ntx.Trusted && rec.isRoutable() {
+	} else if !ntx.Local && rec.isRoutable() {
 		// do not automatically route loacally loaded txs
 		rec.Invsentcnt += uint32(ntx.feedback(FEEDBACK_TX_ROUTABLE,
 			&FeedbackRoutable{TxID: &tx.Hash, SPKB: 4000 * fee / uint64(ntx.Weight())}))
-		//uint32(ntx.feedback("Inv:??????"))
-		//NetRouteInvExt(1, &tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.Raw)))
 		common.CountSafe("TxRouteOK")
+	} else {
+		common.CountSafe("TxRouteNO")
 	}
 
 	accepted = true
