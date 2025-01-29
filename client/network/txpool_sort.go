@@ -3,6 +3,8 @@ package network
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sort"
 	"time"
 
@@ -10,11 +12,14 @@ import (
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
-const SORT_START_INDEX = 0x1000000000000000 // 1/16th of max uint64 value
-const SORT_INDEX_STEP = 1e10
+const (
+	SORT_START_INDEX     = 0x1000000000000000 // 1/16th of max uint64 value
+	SORT_INDEX_STEP      = 1e10
+	POOL_EXPIRE_INTERVAL = time.Hour
+)
 
 var (
-	nextTxsPoolExpire time.Time = time.Now().Add(time.Hour)
+	nextTxsPoolExpire time.Time = time.Now().Add(POOL_EXPIRE_INTERVAL)
 	BestT2S, WorstT2S *OneTxToSend
 	SortingSupressed  bool
 	SortListDirty     bool
@@ -172,7 +177,28 @@ func (t2s *OneTxToSend) DelFromSort() {
 		}
 		return
 	}
+	if t2s.Worse == nil {
+		println("ERROR: t2s.Worse is nil but t2s was not WorstT2S", WorstT2S, BestT2S, t2s.Worse)
+		debug.PrintStack()
+		os.Exit(1)
+	}
+	if t2s.Worse.Better != t2s {
+		println("ERROR: t2s.Worse.Better is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.Worse, t2s.Worse.Better)
+		debug.PrintStack()
+		os.Exit(1)
+	}
 	t2s.Worse.Better = t2s.Better
+
+	if t2s.Better == nil {
+		println("ERROR: t2s.Better is nil but t2s was not BestT2S", WorstT2S, BestT2S, t2s.Better)
+		debug.PrintStack()
+		os.Exit(1)
+	}
+	if t2s.Better.Worse != t2s {
+		println("ERROR: t2s.Better.Worse is not pointing to t2s", WorstT2S, BestT2S, t2s, t2s.Better, t2s.Better.Worse)
+		debug.PrintStack()
+		os.Exit(1)
+	}
 	t2s.Better.Worse = t2s.Worse
 }
 
@@ -535,12 +561,17 @@ func ExpireOldTxs() {
 	if len(todel) > 0 {
 		totcnt := len(TransactionsToSend)
 		for _, vtx := range todel {
+			// make sure it was not deleted as a child of one of the previous txs
+			if _, ok := TransactionsToSend[vtx.Hash.BIdx()]; !ok {
+				common.CountSafe("TxPoolExpSkept")
+				continue
+			}
 			// remove with all the children
 			vtx.Delete(true, 0) // reason 0 does nont add it to the rejected list
 		}
 		totcnt -= len(TransactionsToSend)
-		common.CountAdd("TxPoolExpParent", uint64(len(todel)))
-		common.CountAdd("TxPoolExpChild", uint64(totcnt-len(todel)))
+		common.CountSafeAdd("TxPoolExpParent", uint64(len(todel)))
+		common.CountSafeAdd("TxPoolExpChild", uint64(totcnt-len(todel)))
 		fmt.Print("ExpireOldTxs: ", len(todel), " -> ", totcnt, " txs expired from mempool\n> ")
 	} else {
 		common.CountSafe("TxPoolExpireNone")

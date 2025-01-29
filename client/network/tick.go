@@ -606,7 +606,7 @@ func NetworkTick() {
 
 	if now.After(nextTxsPoolExpire) {
 		ExpireOldTxs()
-		nextTxsPoolExpire = now.Add(time.Hour)
+		nextTxsPoolExpire = now.Add(POOL_EXPIRE_INTERVAL)
 	}
 
 	doRejected()

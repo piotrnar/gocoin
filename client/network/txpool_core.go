@@ -1,6 +1,8 @@
 package network
 
 import (
+	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -77,6 +79,11 @@ func removeExcessiveTxs() (cnt int) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
+	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+		println("ERROR: Trying to delete and already deleted tx", tx.Hash.String())
+		debug.PrintStack()
+		os.Exit(1)
+	}
 	TransactionsToSendSize -= uint64(tx.Footprint)
 
 	if with_children {
