@@ -183,10 +183,14 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 	}
 	var oks int
 	for i, t2s := range txs {
+		if t2s.Weight() == 0 {
+			println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
+			return
+		}
 		for _, txin := range t2s.TxIn {
 			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
 				if idx > i {
-					println("mempool sorting error:", i, "points to", idx)
+					println("ERROR: in mempool sorting:", i, "points to", idx)
 					return
 				} else {
 					oks++
