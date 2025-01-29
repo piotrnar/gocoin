@@ -619,7 +619,7 @@ func buildSortedList() {
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil
-		fmt.Println("BuildSortedList: Mempool empty")
+		//fmt.Println("BuildSortedList: Mempool empty")
 		return
 	}
 	var SortIndex uint64
