@@ -44,30 +44,28 @@ type TxOut struct {
 
 type Tx struct {
 	Version   uint32
+	Lock_time uint32
 	TxIn      []*TxIn
 	TxOut     []*TxOut
 	SegWit    [][][]byte
-	Lock_time uint32
 
-	// These three fields should be set in block.go:
+	// Set by SetHash() method:
 	Raw             []byte
 	Size, NoWitSize uint32
 	Hash            Uint256
+	wTxID           Uint256
 
-	// This field is only set in chain's ProcessBlockTransactions:
-	Fee uint64
-
-	wTxID Uint256
-
-	hash_lock    sync.Mutex
-	hashPrevouts *[32]byte
-	hashSequence *[32]byte
-	hashOutputs  *[32]byte
-
+	// Set in chain's ProcessBlockTransactions:
 	Spent_outputs []*TxOut // this is used by TaprootSigHash()
+	Fee           uint64
 
-	m_taproot             *taproot_temp_hashes
-	m_outputs_single_hash *[32]byte
+	// Segwit/taproot internat fields:
+	hashLock         sync.Mutex
+	hashPrevouts     *[32]byte
+	hashSequence     *[32]byte
+	hashOutputs      *[32]byte
+	tapSingleHashes  *taprootSHType
+	tapOutSingleHash *[32]byte
 }
 
 type AddrValue struct {
@@ -76,13 +74,13 @@ type AddrValue struct {
 }
 
 func (t *Tx) Clean() {
-	t.hash_lock.Lock()
+	t.hashLock.Lock()
 	t.hashPrevouts = nil
 	t.hashSequence = nil
 	t.hashOutputs = nil
-	t.m_taproot = nil
-	t.m_outputs_single_hash = nil
-	t.hash_lock.Unlock()
+	t.tapSingleHashes = nil
+	t.tapOutSingleHash = nil
+	t.hashLock.Unlock()
 }
 
 func (po *TxPrevOut) UIdx() uint64 {
@@ -625,8 +623,8 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	var hashSequence []byte
 	var hashOutputs []byte
 
-	tx.hash_lock.Lock()
-	defer tx.hash_lock.Unlock()
+	tx.hashLock.Lock()
+	defer tx.hashLock.Unlock()
 
 	sha := sha256.New()
 

@@ -77,11 +77,11 @@ func (tx *Tx) SysSize() (size int) {
 		}
 	}
 
-	if tx.m_taproot != nil {
-		size += int(unsafe.Sizeof(*tx.m_taproot))
+	if tx.tapSingleHashes != nil {
+		size += int(unsafe.Sizeof(*tx.tapSingleHashes))
 	}
-	if tx.m_outputs_single_hash != nil {
-		size += int(unsafe.Sizeof(*tx.m_outputs_single_hash))
+	if tx.tapOutSingleHash != nil {
+		size += int(unsafe.Sizeof(*tx.tapOutSingleHash))
 	}
 
 	return
