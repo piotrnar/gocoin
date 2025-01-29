@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/piotrnar/gocoin/client/network/txpool"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
