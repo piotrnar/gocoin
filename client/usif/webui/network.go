@@ -12,6 +12,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -160,7 +161,7 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 			Count: rec.Cnt, Timestamp: rec.Tim})
 	}
 
-	out.GetMPInProgress = len(network.GetMPInProgressTicket) != 0
+	out.GetMPInProgress = len(txpool.GetMPInProgressTicket) != 0
 	out.GetMPConnID = network.GetMPInProgressConnID.Get()
 
 	bx, er := json.Marshal(out)

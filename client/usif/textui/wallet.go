@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -180,21 +180,21 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 		addr_printed = true
 		for i := range unsp {
 			fmt.Println(unsp[i].String())
-			network.TxMutex.Lock()
-			bidx, spending := network.SpentOutputs[unsp[i].TxPrevOut.UIdx()]
-			var t2s *network.OneTxToSend
+			txpool.TxMutex.Lock()
+			bidx, spending := txpool.SpentOutputs[unsp[i].TxPrevOut.UIdx()]
+			var t2s *txpool.OneTxToSend
 			if spending {
-				t2s, spending = network.TransactionsToSend[bidx]
+				t2s, spending = txpool.TransactionsToSend[bidx]
 			}
-			network.TxMutex.Unlock()
+			txpool.TxMutex.Unlock()
 			if spending {
 				fmt.Println("\t- being spent by TxID", t2s.Hash.String())
 			}
 		}
 	}
 
-	network.TxMutex.Lock()
-	for _, t2s := range network.TransactionsToSend {
+	txpool.TxMutex.Lock()
+	for _, t2s := range txpool.TransactionsToSend {
 		for vo, to := range t2s.TxOut {
 			if bytes.Equal(to.Pk_script, outscr) {
 				if !addr_printed {
@@ -206,7 +206,7 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 			}
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 
 	if !addr_printed {
 		fmt.Println(ad.String(), "has no coins")

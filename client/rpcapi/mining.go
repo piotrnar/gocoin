@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
 )
@@ -165,7 +165,7 @@ func GetWork(r *RpcGetWorkResp) {
 	bl.Txs = make([]*btc.Tx, 1)
 	bl.Txs[0] = make_coinbase_tx(height)
 
-	cpfp := network.GetSortedMempoolRBF()
+	cpfp := txpool.GetSortedMempoolRBF()
 	//println(len(cpfp), "transactions")
 	bl.Txs[0].SetHash(bl.Txs[0].SerializeNew()) // this will not be the final hash, but to get a propoer weight in the next line
 	cur_tx_weight := bl.Txs[0].Weight()
@@ -265,7 +265,7 @@ func GetNextBlockTemplate(r *GetBlockTemplateResp) {
 
 /* memory pool transaction sorting stuff */
 type one_mining_tx struct {
-	*network.OneTxToSend
+	*txpool.OneTxToSend
 	depends []uint
 	startat int
 }
@@ -283,7 +283,7 @@ var sigops uint64
 func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 	var unsp *btc.TxOut
 	var all_inputs_found bool
-	for _, v := range network.TransactionsToSend {
+	for _, v := range txpool.TransactionsToSend {
 		tx := v.Tx
 
 		if !DO_SEGWIT && tx.SegWit != nil {
@@ -336,15 +336,15 @@ func get_next_tranche_of_txs(height, timestamp uint32) (res sortedTxList) {
 
 func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees uint64) {
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	var cnt int
 	var sorted sortedTxList
 	txs_so_far = make(map[[32]byte]uint)
 	totlen = 0
 	sigops = 0
-	//println("\ngetting txs from the pool of", len(network.TransactionsToSend), "...")
+	//println("\ngetting txs from the pool of", len(txpool.TransactionsToSend), "...")
 	for {
 		new_piece := get_next_tranche_of_txs(height, timestamp)
 		if new_piece.Len() == 0 {
@@ -359,7 +359,7 @@ func GetTransactions(height, timestamp uint32) (res []OneTransaction, totfees ui
 
 		sorted = append(sorted, new_piece...)
 	}
-	/*if len(txs_so_far)!=len(network.TransactionsToSend) {
+	/*if len(txs_so_far)!=len(txpool.TransactionsToSend) {
 		println("ERROR: txs_so_far len", len(txs_so_far), " - please report!")
 	}*/
 	txs_so_far = nil // leave it for the garbage collector

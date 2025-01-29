@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -94,18 +95,18 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 				common.CountSafe("GetdataTxSw")
 			}
 			// ransaction
-			TxMutex.Lock()
-			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked == 0 {
+			txpool.TxMutex.Lock()
+			if tx, ok := txpool.TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked == 0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
-				TxMutex.Unlock()
+				txpool.TxMutex.Unlock()
 				if tx.SegWit == nil || typ == MSG_WITNESS_TX {
 					c.SendRawMsg("tx", tx.Raw)
 				} else {
 					c.SendRawMsg("tx", tx.Serialize())
 				}
 			} else {
-				TxMutex.Unlock()
+				txpool.TxMutex.Unlock()
 				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {

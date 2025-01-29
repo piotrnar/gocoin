@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
-func get_total_block_fees(txs []*network.OneTxToSend) (totfees uint64, totwgh, tcnt int) {
+func get_total_block_fees(txs []*txpool.OneTxToSend) (totfees uint64, totwgh, tcnt int) {
 	var quiet bool
 	already_in := make(map[[32]byte]bool)
 	for _, tx := range txs {
@@ -49,18 +49,18 @@ func get_total_block_fees(txs []*network.OneTxToSend) (totfees uint64, totwgh, t
 }
 
 func new_block(par string) {
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	sta := time.Now()
-	txs := network.GetSortedMempool()
+	txs := txpool.GetSortedMempool()
 	println(len(txs), "OLD tx_sort got in", time.Since(sta).String())
-	network.VerifyMempoolSort(txs)
+	txpool.VerifyMempoolSort(txs)
 
 	sta = time.Now()
-	cpfp := network.GetSortedMempoolRBF()
+	cpfp := txpool.GetSortedMempoolRBF()
 	println(len(cpfp), "NEW tx_sort got in", time.Since(sta).String())
-	network.VerifyMempoolSort(cpfp)
+	txpool.VerifyMempoolSort(cpfp)
 
 	var totwgh, tcnt int
 	var totfees, totfees2 uint64
@@ -78,8 +78,8 @@ func new_block(par string) {
 }
 
 func gettxchildren(par string) {
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
@@ -87,7 +87,7 @@ func gettxchildren(par string) {
 		return
 	}
 	bidx := txid.BIdx()
-	t2s := network.TransactionsToSend[bidx]
+	t2s := txpool.TransactionsToSend[bidx]
 	if t2s == nil {
 		println(txid.String(), "not im mempool")
 		return
@@ -105,19 +105,19 @@ func gettxchildren(par string) {
 }
 
 func sort_test(par string) {
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	sta := time.Now()
-	tx1 := network.GetSortedMempoolSlow()
+	tx1 := txpool.GetSortedMempoolSlow()
 	tim1 := time.Since(sta)
 
 	sta = time.Now()
-	tx2 := network.GetSortedMempool()
+	tx2 := txpool.GetSortedMempool()
 	tim2 := time.Since(sta)
 
 	sta = time.Now()
-	tx3 := network.GetSortedMempoolRBF()
+	tx3 := txpool.GetSortedMempoolRBF()
 	tim3 := time.Since(sta)
 
 	println("Execution times:", tim1.String(), tim2.String(), tim3.String())
@@ -128,9 +128,9 @@ func sort_test(par string) {
 	}
 	println("All lists have", len(tx1), "txs each")
 
-	network.VerifyMempoolSort(tx1)
-	network.VerifyMempoolSort(tx2)
-	network.VerifyMempoolSort(tx3)
+	txpool.VerifyMempoolSort(tx1)
+	txpool.VerifyMempoolSort(tx2)
+	txpool.VerifyMempoolSort(tx3)
 	println("Correct sorting verification complete")
 
 	for i := range tx1 {
@@ -164,9 +164,9 @@ func show_tdepends(s string) {
 	}
 	println("Looking for tx at BIDX", btc.BIdxString(bidx))
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
-	if t2s, ok := network.TransactionsToSend[bidx]; ok {
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+	if t2s, ok := txpool.TransactionsToSend[bidx]; ok {
 		println("TxID:", t2s.Hash.String(), "   MemInCnt:", t2s.MemInputCnt)
 		for i, yes := range t2s.MemInputs {
 			if yes {
@@ -180,7 +180,7 @@ func show_tdepends(s string) {
 	}
 }
 
-func DumpTxList(label, fn string, txs []*network.OneTxToSend) {
+func DumpTxList(label, fn string, txs []*txpool.OneTxToSend) {
 	if f, er := os.Create(fn); er == nil {
 		fmt.Fprintln(f, label+" sorting:")
 		for i, t := range txs {

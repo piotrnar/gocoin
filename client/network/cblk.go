@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/siphash"
@@ -292,9 +293,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	var cnt_found int
 
-	TxMutex.Lock()
+	txpool.TxMutex.Lock()
 
-	for _, v := range TransactionsToSend {
+	for _, v := range txpool.TransactionsToSend {
 		var hash2take *btc.Uint256
 		if c.Node.SendCmpctVer == 2 {
 			hash2take = v.Tx.WTxID()
@@ -313,7 +314,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 	}
 
-	for _, v := range TransactionsRejected {
+	for _, v := range txpool.TransactionsRejected {
 		if v.Tx == nil {
 			continue
 		}
@@ -371,7 +372,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			shortidx_idx += 6
 		}
 	}
-	TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 
 	if missing == 0 {
 		//sta := time.Now()

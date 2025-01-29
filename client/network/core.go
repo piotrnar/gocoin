@@ -211,7 +211,7 @@ type OneConnection struct {
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 	sendInvsNow sys.SyncBool
 
-	GetBlockInProgress map[BIDX]*oneBlockDl
+	GetBlockInProgress map[btc.BIDX]*oneBlockDl
 
 	// Ping stats
 	LastPingSent   time.Time
@@ -236,8 +236,6 @@ type OneConnection struct {
 	GetMP chan bool
 }
 
-type BIDX [btc.Uint256IdxLen]byte
-
 type oneBlockDl struct {
 	hash          *btc.Uint256
 	start         time.Time
@@ -253,7 +251,7 @@ type BCmsg struct {
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
 	c.PeerAddr = ad
-	c.GetBlockInProgress = make(map[BIDX]*oneBlockDl)
+	c.GetBlockInProgress = make(map[btc.BIDX]*oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)

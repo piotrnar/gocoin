@@ -1,4 +1,4 @@
-package network
+package txpool
 
 import (
 	"bufio"
@@ -266,7 +266,7 @@ func MempoolLoad() bool {
 	var txr *OneTxRejected
 	var totcnt, le uint64
 	var tmp [32]byte
-	var bi BIDX
+	var bi btc.BIDX
 	var cnt1, cnt2 uint
 
 	var file_version int
@@ -312,7 +312,7 @@ func MempoolLoad() bool {
 	TxMutex.Lock() // this should not be needed in our application, but just to have everything consistant
 	defer TxMutex.Unlock()
 
-	TransactionsToSend = make(map[BIDX]*OneTxToSend, int(totcnt))
+	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend, int(totcnt))
 	for ; totcnt > 0; totcnt-- {
 		if t2s, er = newOneTxToSendFromFile(rd, file_version); er != nil {
 			goto fatal_error
@@ -339,7 +339,7 @@ func MempoolLoad() bool {
 	}
 
 	//fmt.Println("Rebuilding SpentOutputs")
-	SpentOutputs = make(map[uint64]BIDX, 4*len(TransactionsToSend))
+	SpentOutputs = make(map[uint64]btc.BIDX, 4*len(TransactionsToSend))
 	for bidx, t2s := range TransactionsToSend {
 		for _, inp := range t2s.TxIn {
 			SpentOutputs[inp.Input.UIdx()] = bidx
@@ -401,9 +401,9 @@ func MempoolLoad() bool {
 
 fatal_error:
 	fmt.Println("Error loading", MEMPOOL_FILE_NAME, ":", er.Error())
-	TransactionsToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend)
 	TransactionsToSendSize = 0
 	TransactionsToSendWeight = 0
-	SpentOutputs = make(map[uint64]BIDX)
+	SpentOutputs = make(map[uint64]btc.BIDX)
 	return false
 }

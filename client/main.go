@@ -16,6 +16,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/client/rpcapi"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
@@ -56,14 +57,14 @@ func reset_save_timer() {
 }
 
 func blockMined(bl *btc.Block) {
-	network.BlockMined(bl)
+	txpool.BlockMined(bl)
 	if int(bl.LastKnownHeight)-int(bl.Height) < 144 { // do not run it when syncing chain
 		usif.ProcessBlockFees(bl.Height, bl)
 	}
 }
 
 func blockUndone(bl *btc.Block) {
-	network.BlockUndone(bl)
+	txpool.BlockUndone(bl)
 }
 
 func exit_now() {
@@ -101,7 +102,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	network.MutexRcv.Unlock()
 
 	reenableMempoolSort.Stop()
-	network.SupressMempooolSorting(true)
+	txpool.SupressMempooolSorting(true)
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
 	reenableMempoolSort.Reset(ReenableMempoolSorting) // if we receive no new block within the next second
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
@@ -548,9 +549,9 @@ func main() {
 		}
 
 		if common.CFG.TXPool.SaveOnDisk && !common.FLAG.NoMempoolLoad {
-			network.MempoolLoad()
+			txpool.MempoolLoad()
 		} else {
-			network.InitMempool()
+			txpool.InitMempool()
 		}
 
 		usif.LoadBlockFees()
@@ -582,7 +583,7 @@ func main() {
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("DoMainNetTx")
-				network.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx, false)
 
 			case <-netTick:
 				common.CountSafe("DoMainNetTick")
@@ -683,12 +684,12 @@ func main() {
 			case <-reenableMempoolSort.C:
 				common.Busy()
 				common.CountSafe("TxSortReEnable")
-				network.SupressMempooolSorting(false)
+				txpool.SupressMempooolSorting(false)
 
 			case newtx := <-network.NetTxs:
 				common.Busy()
 				common.CountSafe("MainNetTx")
-				network.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx, false)
 
 			case <-netTick:
 				common.Busy()
@@ -762,7 +763,7 @@ func main() {
 	common.CloseBlockChain()
 	fmt.Println("Blockchain closed in", time.Since(sta).String())
 	if common.FLAG.UndoBlocks == 0 {
-		network.MempoolSave(false)
+		txpool.MempoolSave(false)
 	}
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()

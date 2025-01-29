@@ -16,6 +16,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -31,7 +32,6 @@ var (
 	SpecialIPs         [][4]byte
 	FriendsAccess      sync.Mutex
 
-	GetMPInProgressTicket = make(chan bool, 1)
 	GetMPInProgressConnID sys.SyncInt
 )
 
@@ -157,12 +157,12 @@ func (c *OneConnection) Tick(now time.Time) {
 		if len(c.GetMP) > 0 && common.Get(&common.BlockChainSynchronized) {
 			// See if to send "getmp" command
 			select {
-			case GetMPInProgressTicket <- true:
+			case txpool.GetMPInProgressTicket <- true:
 				// ticket received - check for the request...
 				GetMPInProgressConnID.Store(int(c.ConnID))
 				if c.SendGetMP() != nil {
 					// SendGetMP() failed - clear the global flag/channel
-					<-GetMPInProgressTicket
+					<-txpool.GetMPInProgressTicket
 					<-c.GetMP
 				}
 			default:
@@ -604,12 +604,9 @@ func NetworkTick() {
 		}
 	}
 
-	if now.After(nextTxsPoolExpire) {
-		ExpireOldTxs()
-		nextTxsPoolExpire = now.Add(POOL_EXPIRE_INTERVAL)
-	}
+	txpool.ExpireOldTxs()
 
-	doRejected()
+	txpool.LimitRejected()
 }
 
 func (c *OneConnection) SendFeeFilter() {
@@ -623,7 +620,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) == 0 {
 		return
 	}
-	if len(GetMPInProgressTicket) == 0 {
+	if len(txpool.GetMPInProgressTicket) == 0 {
 		// This will happen when our chain is not yet synchronized and we are disconnecting a peer which have sent "authack"
 		return
 	}
@@ -646,11 +643,11 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 		return
 	}
 
-	if len(GetMPInProgressTicket) == 0 {
+	if len(txpool.GetMPInProgressTicket) == 0 {
 		// TODO: remove it at some point (should not be happening)
 		println("ERROR: GetMPDone() exiting without a ticket (will hang)")
 	}
-	<-GetMPInProgressTicket
+	<-txpool.GetMPInProgressTicket
 }
 
 // Run starts a process that handles communication with a single peer.

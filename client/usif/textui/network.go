@@ -11,6 +11,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 )
 
 type SortedKeys []struct {
@@ -192,7 +193,7 @@ func net_stats(par string) {
 
 	network.Mutex_net.Unlock()
 
-	fmt.Println("GetMPInProgress:", len(network.GetMPInProgressTicket) != 0)
+	fmt.Println("GetMPInProgress:", len(txpool.GetMPInProgressTicket) != 0)
 
 	common.PrintBWStats()
 }

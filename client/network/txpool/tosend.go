@@ -1,4 +1,4 @@
-package network
+package txpool
 
 import (
 	"os"
@@ -15,16 +15,16 @@ var (
 	TxMutex sync.Mutex
 
 	// The actual memory pool:
-	TransactionsToSend       map[BIDX]*OneTxToSend
+	TransactionsToSend       map[btc.BIDX]*OneTxToSend
 	TransactionsToSendSize   uint64
 	TransactionsToSendWeight uint64
 
 	// All the outputs that are currently spent in TransactionsToSend:
 	// Each record is indexed by 64-bit-coded(TxID:Vout) and points to list of txs (from T2S)
-	SpentOutputs map[uint64]BIDX
+	SpentOutputs map[uint64]btc.BIDX
 
 	// Transactions that are received from network (via "tx"), but not yet processed:
-	TransactionsPending map[BIDX]bool = make(map[BIDX]bool)
+	TransactionsPending map[btc.BIDX]bool = make(map[btc.BIDX]bool)
 )
 
 type OneTxToSend struct {
@@ -44,7 +44,7 @@ type OneTxToSend struct {
 	Final       bool // if true RFB will not work on it
 }
 
-func (t2s *OneTxToSend) Add(bidx BIDX) {
+func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 
@@ -110,7 +110,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	tx.DelFromSort()
 	if reason != 0 {
-		RejectTx(tx.Tx, reason, nil)
+		rejectTx(tx.Tx, reason, nil)
 	}
 }
 
@@ -284,10 +284,10 @@ func (tx *OneTxToSend) SPB() float64 {
 }
 
 func InitTransactionsToSend() {
-	TransactionsToSend = make(map[BIDX]*OneTxToSend)
+	TransactionsToSend = make(map[btc.BIDX]*OneTxToSend)
 	TransactionsToSendSize = 0
 	TransactionsToSendWeight = 0
-	SpentOutputs = make(map[uint64]BIDX, 10e3)
+	SpentOutputs = make(map[uint64]btc.BIDX, 10e3)
 }
 
 func InitMempool() {

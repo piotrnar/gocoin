@@ -1,4 +1,4 @@
-package network
+package txpool
 
 import (
 	"encoding/hex"
@@ -56,7 +56,7 @@ func CheckPoolSizes() (dupa int) {
 }
 
 func check_the_index(dupa int) int {
-	seen := make(map[BIDX]int)
+	seen := make(map[btc.BIDX]int)
 	for idx := TRIdxTail; ; idx = TRIdxNext(idx) {
 		bidx := TRIdxArray[idx]
 		if txr := TransactionsRejected[bidx]; txr != nil {
@@ -254,7 +254,7 @@ func MempoolCheck() bool {
 
 			} else {
 				dupa++
-				fmt.Println(dupa, "BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
+				fmt.Println(dupa, "btc.BIDX", btc.BIdxString(bidx), "present in RejectedUsedUTXOs",
 					fmt.Sprintf("%016x", utxoidx), "but not in TransactionsRejected")
 				if t2s, ok := TransactionsToSend[bidx]; ok {
 					fmt.Println("   It is however in T2S", t2s.Hash.String())

@@ -15,6 +15,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/script"
@@ -80,7 +81,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 	for i := range tx.TxIn {
 		var po *btc.TxOut
 		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
+		if txinmem, ok := txpool.TransactionsToSend[inpid.BIdx()]; ok {
 			if int(tx.TxIn[i].Input.Vout) < len(txinmem.TxOut) {
 				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
 			}
@@ -149,7 +150,7 @@ func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
 	w.Write([]byte("</output_list>"))
 }
 
-func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
+func tx_xml(w http.ResponseWriter, v *txpool.OneTxToSend, verbose bool) {
 	w.Write([]byte("<tx><status>OK</status>"))
 	fmt.Fprint(w, "<id>", v.Tx.Hash.String(), "</id>")
 	fmt.Fprint(w, "<version>", v.Tx.Version, "</version>")
@@ -177,7 +178,7 @@ func tx_xml(w http.ResponseWriter, v *network.OneTxToSend, verbose bool) {
 	fmt.Fprint(w, "<sentlast>", v.Lastsent.Unix(), "</sentlast>")
 	fmt.Fprint(w, "<volume>", v.Volume, "</volume>")
 	fmt.Fprint(w, "<fee>", v.Fee, "</fee>")
-	fmt.Fprint(w, "<blocked>", network.ReasonToString(v.Blocked), "</blocked>")
+	fmt.Fprint(w, "<blocked>", txpool.ReasonToString(v.Blocked), "</blocked>")
 	fmt.Fprint(w, "<final>", v.Final, "</final>")
 	fmt.Fprint(w, "<verify_us>", uint(v.VerifyTime/time.Microsecond), "</verify_us>")
 	fmt.Fprint(w, "<meminputcnt>", v.MemInputCnt, "</meminputcnt>")
@@ -221,7 +222,7 @@ func output_utxo_tx_xml(w http.ResponseWriter, minedid, minedat string) {
 }
 
 /* memory pool transaction sorting stuff */
-type sortedTxList []*network.OneTxToSend
+type sortedTxList []*txpool.OneTxToSend
 
 func (tl sortedTxList) Len() int      { return len(tl) }
 func (tl sortedTxList) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
@@ -287,9 +288,9 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		if txid == nil {
 			return
 		}
-		network.TxMutex.Lock()
-		defer network.TxMutex.Unlock()
-		if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+		txpool.TxMutex.Lock()
+		defer txpool.TxMutex.Unlock()
+		if t2s, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 			tx_xml(w, t2s, true)
 		} else {
 			w.Write([]byte("<tx>"))
@@ -304,20 +305,20 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		if len(r.Form["del"]) > 0 {
 			tid := btc.NewUint256FromString(r.Form["del"][0])
 			if tid != nil {
-				network.TxMutex.Lock()
-				if tts, ok := network.TransactionsToSend[tid.BIdx()]; ok {
+				txpool.TxMutex.Lock()
+				if tts, ok := txpool.TransactionsToSend[tid.BIdx()]; ok {
 					tts.Delete(true, 0)
 				}
-				network.TxMutex.Unlock()
+				txpool.TxMutex.Unlock()
 			}
 		}
 
 		if len(r.Form["send"]) > 0 {
 			tid := btc.NewUint256FromString(r.Form["send"][0])
 			if tid != nil {
-				network.TxMutex.Lock()
-				if ptx, ok := network.TransactionsToSend[tid.BIdx()]; ok {
-					network.TxMutex.Unlock()
+				txpool.TxMutex.Lock()
+				if ptx, ok := txpool.TransactionsToSend[tid.BIdx()]; ok {
+					txpool.TxMutex.Unlock()
 					cnt := network.NetRouteInv(1, tid, nil)
 					if cnt == 0 {
 						usif.SendInvToRandomPeer(1, tid)
@@ -325,7 +326,7 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 						ptx.Invsentcnt += cnt
 					}
 				} else {
-					network.TxMutex.Unlock()
+					txpool.TxMutex.Unlock()
 				}
 			}
 		}
@@ -333,13 +334,13 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		if len(r.Form["sendone"]) > 0 {
 			tid := btc.NewUint256FromString(r.Form["sendone"][0])
 			if tid != nil {
-				network.TxMutex.Lock()
-				if ptx, ok := network.TransactionsToSend[tid.BIdx()]; ok {
-					network.TxMutex.Unlock()
+				txpool.TxMutex.Lock()
+				if ptx, ok := txpool.TransactionsToSend[tid.BIdx()]; ok {
+					txpool.TxMutex.Unlock()
 					usif.SendInvToRandomPeer(1, tid)
 					ptx.Invsentcnt++
 				} else {
-					network.TxMutex.Unlock()
+					txpool.TxMutex.Unlock()
 				}
 			}
 		}
@@ -362,12 +363,12 @@ func xml_txs2s(w http.ResponseWriter, r *http.Request) {
 		txs2s_sort_desc = len(r.Form["descending"]) > 0
 	}
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	sorted := make(sortedTxList, len(network.TransactionsToSend))
+	sorted := make(sortedTxList, len(txpool.TransactionsToSend))
 	var cnt int
-	for _, v := range network.TransactionsToSend {
+	for _, v := range txpool.TransactionsToSend {
 		if len(r.Form["ownonly"]) > 0 && !v.Local {
 			continue
 		}
@@ -392,19 +393,19 @@ func xml_txsre(w http.ResponseWriter, r *http.Request) {
 
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<txbanned>"))
-	network.TxMutex.Lock()
-	for idx := network.TRIdxHead; idx != network.TRIdxTail; idx = network.TRIdxPrev(idx) {
-		if v := network.TransactionsRejected[network.TRIdxArray[idx]]; v != nil {
+	txpool.TxMutex.Lock()
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
+		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
 			w.Write([]byte("<tx>"))
 			fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 			fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 			fmt.Fprint(w, "<size>", v.Size, "</size>")
 			fmt.Fprint(w, "<inmem>", v.Tx != nil, "</inmem>")
-			fmt.Fprint(w, "<reason>", network.ReasonToString(v.Reason), "</reason>")
+			fmt.Fprint(w, "<reason>", txpool.ReasonToString(v.Reason), "</reason>")
 			w.Write([]byte("</tx>"))
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	w.Write([]byte("</txbanned>"))
 }
 
@@ -415,13 +416,13 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 
 	w.Header()["Content-Type"] = []string{"text/xml"}
 	w.Write([]byte("<pending>"))
-	network.TxMutex.Lock()
+	txpool.TxMutex.Lock()
 	type onerec struct {
 		val  uint64
-		bidx network.BIDX
+		bidx btc.BIDX
 	}
-	w4ilist := make([]onerec, 0, len(network.WaitingForInputs))
-	for k, v := range network.WaitingForInputs {
+	w4ilist := make([]onerec, 0, len(txpool.WaitingForInputs))
+	for k, v := range txpool.WaitingForInputs {
 		r := onerec{val: binary.LittleEndian.Uint64((v.TxID.Hash[24:32])), bidx: k}
 		w4ilist = append(w4ilist, r)
 	}
@@ -429,12 +430,12 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 		return w4ilist[i].val < w4ilist[j].val
 	})
 	for _, k := range w4ilist {
-		v := network.WaitingForInputs[k.bidx]
+		v := txpool.WaitingForInputs[k.bidx]
 		w.Write([]byte("<wait4>"))
 		fmt.Fprint(w, "<id>", v.TxID.String(), "</id>")
 		for _, x := range v.Ids {
 			w.Write([]byte("<tx>"))
-			if v, ok := network.TransactionsRejected[x]; ok {
+			if v, ok := txpool.TransactionsRejected[x]; ok {
 				fmt.Fprint(w, "<id>", v.Id.String(), "</id>")
 				fmt.Fprint(w, "<time>", v.Time.Unix(), "</time>")
 				fmt.Fprint(w, "<size>", v.Size, "</size>")
@@ -447,7 +448,7 @@ func xml_txw4i(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte("</wait4>"))
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	w.Write([]byte("</pending>"))
 }
 
@@ -477,15 +478,15 @@ func raw_tx(w http.ResponseWriter, r *http.Request) {
 	}
 	var tx *btc.Tx
 	var header string
-	network.TxMutex.Lock()
-	if t2s, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+	txpool.TxMutex.Lock()
+	if t2s, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		header = "From TransactionsToSend"
 		tx = t2s.Tx
-	} else if txr, ok := network.TransactionsRejected[txid.BIdx()]; ok && txr.Tx != nil {
+	} else if txr, ok := txpool.TransactionsRejected[txid.BIdx()]; ok && txr.Tx != nil {
 		header = "From TransactionsRejected"
 		tx = txr.Tx
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	if tx != nil {
 		fmt.Fprintln(w, header)
 		usif.DecodeTx(w, tx)
@@ -502,21 +503,21 @@ func json_txstat(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"application/json"}
 	w.Write([]byte("{"))
 
-	network.TxMutex.Lock()
+	txpool.TxMutex.Lock()
 
-	w.Write([]byte(fmt.Sprint("\"t2s_cnt\":", len(network.TransactionsToSend), ",")))
-	w.Write([]byte(fmt.Sprint("\"t2s_size\":", network.TransactionsToSendSize, ",")))
-	w.Write([]byte(fmt.Sprint("\"t2s_weight\":", network.TransactionsToSendWeight, ",")))
-	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(network.TransactionsRejected), ",")))
-	w.Write([]byte(fmt.Sprint("\"tre_size\":", network.TransactionsRejectedSize, ",")))
-	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(network.TransactionsPending), ",")))
+	w.Write([]byte(fmt.Sprint("\"t2s_cnt\":", len(txpool.TransactionsToSend), ",")))
+	w.Write([]byte(fmt.Sprint("\"t2s_size\":", txpool.TransactionsToSendSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"t2s_weight\":", txpool.TransactionsToSendWeight, ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_cnt\":", len(txpool.TransactionsRejected), ",")))
+	w.Write([]byte(fmt.Sprint("\"tre_size\":", txpool.TransactionsRejectedSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"ptr1_cnt\":", len(txpool.TransactionsPending), ",")))
 	w.Write([]byte(fmt.Sprint("\"ptr2_cnt\":", len(network.NetTxs), ",")))
-	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(network.SpentOutputs), ",")))
-	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(network.WaitingForInputs), ",")))
-	w.Write([]byte(fmt.Sprint("\"awaiting_inputs_size\":", network.WaitingForInputsSize, ",")))
+	w.Write([]byte(fmt.Sprint("\"spent_outs_cnt\":", len(txpool.SpentOutputs), ",")))
+	w.Write([]byte(fmt.Sprint("\"awaiting_inputs\":", len(txpool.WaitingForInputs), ",")))
+	w.Write([]byte(fmt.Sprint("\"awaiting_inputs_size\":", txpool.WaitingForInputsSize, ",")))
 	w.Write([]byte(fmt.Sprint("\"min_fee_per_kb\":", common.MinFeePerKB(), "")))
 
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 
 	w.Write([]byte("}\n"))
 }
@@ -537,20 +538,20 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	if len(r.Form["max"]) > 0 {
 		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
 		if e != nil {
-			maxweight = network.TransactionsToSendWeight
+			maxweight = txpool.TransactionsToSendWeight
 		}
 	} else {
-		maxweight = network.TransactionsToSendWeight
+		maxweight = txpool.TransactionsToSendWeight
 	}
 
-	if maxweight > network.TransactionsToSendWeight {
-		maxweight = network.TransactionsToSendWeight
+	if maxweight > txpool.TransactionsToSendWeight {
+		maxweight = txpool.TransactionsToSendWeight
 	}
 
 	if len(r.Form["div"]) > 0 {
@@ -566,11 +567,11 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	var sorted []*network.OneTxToSend
+	var sorted []*txpool.OneTxToSend
 	if len(r.Form["new"]) > 0 {
-		sorted = network.GetSortedMempoolRBF()
+		sorted = txpool.GetSortedMempoolRBF()
 	} else {
-		sorted = network.GetSortedMempool()
+		sorted = txpool.GetSortedMempool()
 	}
 
 	type one_stat_row struct {
@@ -636,20 +637,20 @@ func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
 	if len(r.Form["max"]) > 0 {
 		maxweight, e = strconv.ParseUint(r.Form["max"][0], 10, 64)
 		if e != nil {
-			maxweight = network.TransactionsToSendWeight
+			maxweight = txpool.TransactionsToSendWeight
 		}
 	} else {
-		maxweight = network.TransactionsToSendWeight
+		maxweight = txpool.TransactionsToSendWeight
 	}
 
-	if maxweight > network.TransactionsToSendWeight {
-		maxweight = network.TransactionsToSendWeight
+	if maxweight > txpool.TransactionsToSendWeight {
+		maxweight = txpool.TransactionsToSendWeight
 	}
 
 	if len(r.Form["div"]) > 0 {
@@ -665,7 +666,7 @@ func json_mempool_fees(w http.ResponseWriter, r *http.Request) {
 		division = 1
 	}
 
-	sorted := network.GetMempoolFees(maxweight)
+	sorted := txpool.GetMempoolFees(maxweight)
 
 	var mempool_stats [][3]uint64
 	var totweight uint64

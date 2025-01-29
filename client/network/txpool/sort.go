@@ -1,4 +1,4 @@
-package network
+package txpool
 
 import (
 	"encoding/binary"
@@ -203,7 +203,7 @@ func (t2s *OneTxToSend) DelFromSort() {
 }
 
 func VerifyMempoolSort(txs []*OneTxToSend) {
-	idxs := make(map[BIDX]int, len(txs))
+	idxs := make(map[btc.BIDX]int, len(txs))
 	for i, t2s := range txs {
 		idxs[t2s.Hash.BIdx()] = i
 	}
@@ -325,8 +325,9 @@ func isFirstTxBetter(rec_i, rec_j *OneTxToSend) bool {
 }
 
 // GetSortedMempool returns txs sorted by SPB, but with parents first.
+// Make sure to call it with TxMutex locked
 func GetSortedMempoolSlow() (result []*OneTxToSend) {
-	all_txs := make([]BIDX, len(TransactionsToSend))
+	all_txs := make([]btc.BIDX, len(TransactionsToSend))
 	var idx int
 	for k := range TransactionsToSend {
 		all_txs[idx] = k
@@ -340,12 +341,12 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 
 	// now put the childrer after the parents
 	result = make([]*OneTxToSend, len(all_txs))
-	already_in := make(map[BIDX]bool, len(all_txs))
-	parent_of := make(map[BIDX][]BIDX)
+	already_in := make(map[btc.BIDX]bool, len(all_txs))
+	parent_of := make(map[btc.BIDX][]btc.BIDX)
 
 	idx = 0
 
-	var missing_parents = func(txkey BIDX, is_any bool) (res []BIDX, yes bool) {
+	var missing_parents = func(txkey btc.BIDX, is_any bool) (res []btc.BIDX, yes bool) {
 		tx := TransactionsToSend[txkey]
 		if tx.MemInputs == nil {
 			return
@@ -372,8 +373,8 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 		return
 	}
 
-	var append_txs func(txkey BIDX)
-	append_txs = func(txkey BIDX) {
+	var append_txs func(txkey btc.BIDX)
+	append_txs = func(txkey btc.BIDX) {
 		result[idx] = TransactionsToSend[txkey]
 		idx++
 		already_in[txkey] = true
@@ -543,6 +544,11 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 }
 
 func ExpireOldTxs() {
+	if time.Now().Before(nextTxsPoolExpire) {
+		return
+	}
+	nextTxsPoolExpire = time.Now().Add(POOL_EXPIRE_INTERVAL)
+
 	dur := common.Get(&common.TxExpireAfter)
 	if dur == 0 {
 		// tx expiting disabled
@@ -581,6 +587,7 @@ func ExpireOldTxs() {
 	common.CountSafe("TxPoolExpireTicks")
 }
 
+// Make sure to call it with TxMutex locked
 func GetSortedMempool() (result []*OneTxToSend) {
 	if SortListDirty {
 		return GetSortedMempoolSlow()

@@ -14,6 +14,8 @@ type Uint256 struct {
 	Hash [32]byte
 }
 
+type BIDX [Uint256IdxLen]byte
+
 func NewUint256(h []byte) (res *Uint256) {
 	res = new(Uint256)
 	copy(res.Hash[:], h)
@@ -63,12 +65,12 @@ func (u *Uint256) Calc(data []byte) {
 	ShaHash(data, u.Hash[:])
 }
 
-func BIdx(hash []byte) (o [Uint256IdxLen]byte) {
+func BIdx(hash []byte) (o BIDX) {
 	copy(o[:], hash[:Uint256IdxLen])
 	return
 }
 
-func (u *Uint256) BIdx() (o [Uint256IdxLen]byte) {
+func (u *Uint256) BIdx() (o BIDX) {
 	o = BIdx(u.Hash[:])
 	return
 }

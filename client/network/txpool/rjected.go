@@ -1,4 +1,4 @@
-package network
+package txpool
 
 import (
 	"fmt"
@@ -11,22 +11,22 @@ import (
 
 var (
 	// Transactions that we downloaded, but rejected:
-	TransactionsRejected     map[BIDX]*OneTxRejected = make(map[BIDX]*OneTxRejected)
+	TransactionsRejected     map[btc.BIDX]*OneTxRejected = make(map[btc.BIDX]*OneTxRejected)
 	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
 
-	TRIdxArray []BIDX
+	TRIdxArray []btc.BIDX
 	TRIdxHead  int
 	TRIdxTail  int
 
 	// Transactions that are waiting for inputs:
 	// Each record points to a list of transactions that are waiting for the transaction from the index of the map
 	// This way when a new tx is received, we can quickly find all the txs that have been waiting for it
-	WaitingForInputs     map[BIDX]*OneWaitingList = make(map[BIDX]*OneWaitingList)
+	WaitingForInputs     map[btc.BIDX]*OneWaitingList = make(map[btc.BIDX]*OneWaitingList)
 	WaitingForInputsSize uint64
 
 	// Inputs that are being used by TransactionsRejected
 	// Each record points to one TransactionsRejected with Reason of 200 or more
-	RejectedUsedUTXOs map[uint64][]BIDX = make(map[uint64][]BIDX)
+	RejectedUsedUTXOs map[uint64][]btc.BIDX = make(map[uint64][]btc.BIDX)
 )
 
 type OneTxRejected struct {
@@ -42,7 +42,7 @@ type OneTxRejected struct {
 
 type OneWaitingList struct {
 	TxID *btc.Uint256
-	Ids  []BIDX // List of pending tx ids
+	Ids  []btc.BIDX // List of pending tx ids
 }
 
 const (
@@ -161,7 +161,7 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 }
 
 // Make sure to call it with locked TxMutex
-func DeleteRejectedByIdx(bidx BIDX) {
+func DeleteRejectedByIdx(bidx btc.BIDX) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
 	} else {
@@ -177,7 +177,7 @@ func (tr *OneTxRejected) cleanup() {
 	for _, inp := range tr.TxIn {
 		uidx := inp.Input.UIdx()
 		if ref := RejectedUsedUTXOs[uidx]; ref != nil {
-			newref := make([]BIDX, 0, len(ref)-1)
+			newref := make([]btc.BIDX, 0, len(ref)-1)
 			for _, bi := range ref {
 				if bi != bidx {
 					newref = append(newref, bi)
@@ -201,7 +201,7 @@ func (tr *OneTxRejected) cleanup() {
 	if tr.Waiting4 != nil {
 		w4idx := tr.Waiting4.BIdx()
 		if w4i := WaitingForInputs[w4idx]; w4i != nil {
-			newlist := make([]BIDX, 0, len(w4i.Ids)-1)
+			newlist := make([]btc.BIDX, 0, len(w4i.Ids)-1)
 			for _, x := range w4i.Ids {
 				if x != bidx {
 					newlist = append(newlist, x)
@@ -225,10 +225,16 @@ func (tr *OneTxRejected) cleanup() {
 	}
 }
 
-// RejectTx adds a transaction to the rejected list or not, if it has been mined already.
+func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
+	TxMutex.Lock()
+	rejectTx(tx, why, missingid)
+	TxMutex.Unlock()
+}
+
+// rejectTx adds a transaction to the rejected list or not, if it has been mined already.
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.
-func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
+func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	txr := new(OneTxRejected)
 	txr.Id.Hash = tx.Hash.Hash
 	txr.Time = time.Now()
@@ -397,8 +403,8 @@ func resizeTransactionsRejectedCount(newcnt int) {
 		TRIdxTail = TRIdxNext(TRIdxTail)
 	}
 
-	TransactionsRejected = make(map[BIDX]*OneTxRejected, newcnt)
-	TRIdxArray = make([]BIDX, newcnt)
+	TransactionsRejected = make(map[btc.BIDX]*OneTxRejected, newcnt)
+	TRIdxArray = make([]btc.BIDX, newcnt)
 	TRIdxHead = 0
 	TRIdxTail = 0
 
@@ -412,7 +418,7 @@ func resizeTransactionsRejectedCount(newcnt int) {
 	}
 }
 
-func doRejected() {
+func LimitRejected() {
 	TxMutex.Lock()
 	defer TxMutex.Unlock()
 	if cnt := int(common.Get(&common.CFG.TXPool.RejectRecCnt)); cnt != len(TRIdxArray) {
@@ -425,14 +431,14 @@ func doRejected() {
 // Make sure to call it with locked TxMutex.
 func InitTransactionsRejected() {
 	cnt := common.Get(&common.CFG.TXPool.RejectRecCnt)
-	TransactionsRejected = make(map[BIDX]*OneTxRejected, cnt)
+	TransactionsRejected = make(map[btc.BIDX]*OneTxRejected, cnt)
 	TransactionsRejectedSize = 0
 
-	TRIdxArray = make([]BIDX, cnt)
+	TRIdxArray = make([]btc.BIDX, cnt)
 	TRIdxHead = 0
 	TRIdxTail = 0
 
-	WaitingForInputs = make(map[BIDX]*OneWaitingList)
+	WaitingForInputs = make(map[btc.BIDX]*OneWaitingList)
 	WaitingForInputsSize = 0
-	RejectedUsedUTXOs = make(map[uint64][]BIDX)
+	RejectedUsedUTXOs = make(map[uint64][]btc.BIDX)
 }

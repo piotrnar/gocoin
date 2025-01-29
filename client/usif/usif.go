@@ -13,6 +13,7 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/rawtxlib"
@@ -46,13 +47,13 @@ func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {
 	inpid := btc.NewUint256(prevout.Hash[:])
 	bidx := inpid.BIdx()
 	var tx *btc.Tx
-	network.TxMutex.Lock()
-	if t2s, ok := network.TransactionsToSend[bidx]; ok {
+	txpool.TxMutex.Lock()
+	if t2s, ok := txpool.TransactionsToSend[bidx]; ok {
 		tx = t2s.Tx
-	} else if txr, ok := network.TransactionsRejected[bidx]; ok {
+	} else if txr, ok := txpool.TransactionsRejected[bidx]; ok {
 		tx = txr.Tx
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	if tx != nil {
 		if int(prevout.Vout) >= len(tx.TxOut) {
 			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(tx.TxOut))
@@ -94,24 +95,24 @@ func LoadRawTx(buf []byte) (s string) {
 	DecodeTx(wb, tx)
 	s = wb.String()
 
-	network.TxMutex.Lock()
-	network.DeleteRejectedByIdx(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	txpool.DeleteRejectedByIdx(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
+	txpool.TxMutex.Unlock()
 
-	if why := network.NeedThisTxExt(&tx.Hash, nil); why != 0 {
+	if why := txpool.NeedThisTxExt(&tx.Hash, nil); why != 0 {
 		s += fmt.Sprintln("Transaction not needed or not wanted", why)
-		network.TxMutex.Lock()
-		if t2s := network.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
+		txpool.TxMutex.Lock()
+		if t2s := txpool.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
 			t2s.Local = true // make as own (if not needed)
 		}
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		return
 	}
 
-	if !network.SubmitLocalTx(tx, txd) {
-		network.TxMutex.Lock()
-		rr := network.TransactionsRejected[tx.Hash.BIdx()]
-		network.TxMutex.Unlock()
+	if !txpool.SubmitLocalTx(tx, txd) {
+		txpool.TxMutex.Lock()
+		rr := txpool.TransactionsRejected[tx.Hash.BIdx()]
+		txpool.TxMutex.Unlock()
 		if rr != nil {
 			s += fmt.Sprintln("Transaction rejected", rr.Reason)
 		} else {
@@ -120,9 +121,9 @@ func LoadRawTx(buf []byte) (s string) {
 		return
 	}
 
-	network.TxMutex.Lock()
-	_, ok := network.TransactionsToSend[tx.Hash.BIdx()]
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	_, ok := txpool.TransactionsToSend[tx.Hash.BIdx()]
+	txpool.TxMutex.Unlock()
 	if ok {
 		s += fmt.Sprintln("Transaction added to the memory pool. You can broadcast it now.")
 	} else {
@@ -198,10 +199,10 @@ func ExecUiReq(req *OneUiReq) {
 
 func MemoryPoolFees() (res string) {
 	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	sorted := network.GetSortedMempoolRBF()
+	sorted := txpool.GetSortedMempoolRBF()
 
 	var totlen, rawlen uint64
 	for cnt := 0; cnt < len(sorted); cnt++ {

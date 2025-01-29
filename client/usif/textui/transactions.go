@@ -12,6 +12,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/network/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -40,15 +41,15 @@ func send_tx(par string) {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		return
 	}
-	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+		txpool.TxMutex.Unlock()
 		cnt := network.NetRouteInv(1, txid, nil)
 		ptx.Invsentcnt += cnt
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 	}
@@ -60,15 +61,15 @@ func send1_tx(par string) {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		return
 	}
-	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+		txpool.TxMutex.Unlock()
 		usif.SendInvToRandomPeer(1, txid)
 		ptx.Invsentcnt++
 		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 	}
@@ -80,16 +81,16 @@ func del_tx(par string) {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		return
 	}
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
+	if tx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
 		tx.Delete(true, 0)
 		fmt.Println("Tx", txid.String(), "removed from ToSend")
 		return
 	}
-	if txr, ok := network.TransactionsRejected[txid.BIdx()]; ok {
-		network.DeleteRejectedByTxr(txr)
+	if txr, ok := txpool.TransactionsRejected[txid.BIdx()]; ok {
+		txpool.DeleteRejectedByTxr(txr)
 		fmt.Println("TxR", txid.String(), "removed from Rejected")
 		return
 	}
@@ -104,7 +105,7 @@ func local_tx(par string) {
 		return
 	}
 	local := len(ps) == 1 || ps[1] != "0"
-	if tx := network.TransactionsToSend[txid.BIdx()]; tx != nil {
+	if tx := txpool.TransactionsToSend[txid.BIdx()]; tx != nil {
 		if tx.Local != local {
 			tx.Local = local
 		} else {
@@ -127,8 +128,8 @@ func decode_tx(pars string) {
 	if len(ps) > 1 {
 		par = ps[1]
 	}
-	t2s := network.TransactionsToSend[txid.BIdx()]
-	txr := network.TransactionsRejected[txid.BIdx()]
+	t2s := txpool.TransactionsToSend[txid.BIdx()]
+	txr := txpool.TransactionsRejected[txid.BIdx()]
 	if t2s == nil && txr == nil {
 		fmt.Println("No such transaction ID in the memory pool.")
 		return
@@ -171,7 +172,7 @@ func decode_tx(pars string) {
 			fmt.Println("Final:", t2s.Final)
 		}
 		if txr != nil {
-			fmt.Println("Reason:", txr.Reason, network.ReasonToString(txr.Reason))
+			fmt.Println("Reason:", txr.Reason, txpool.ReasonToString(txr.Reason))
 			fmt.Println("Time:", txr.Time.Format("2006-01-02 15:04:05"))
 			fmt.Println("Size:", txr.Size)
 			if txr.Waiting4 != nil {
@@ -196,10 +197,10 @@ func save_tx(par string) {
 	}
 	var tx *btc.Tx
 
-	if t2s := network.TransactionsToSend[txid.BIdx()]; t2s != nil {
+	if t2s := txpool.TransactionsToSend[txid.BIdx()]; t2s != nil {
 		tx = t2s.Tx
 	} else {
-		if txr := network.TransactionsRejected[txid.BIdx()]; txr != nil {
+		if txr := txpool.TransactionsRejected[txid.BIdx()]; txr != nil {
 			tx = txr.Tx
 		}
 	}
@@ -225,10 +226,10 @@ func list_txs(par string) {
 	}
 	fmt.Println("Listing txs in mempool up to weight:", maxweigth)
 	cnt := 0
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	sorted := network.GetSortedMempool()
+	sorted := txpool.GetSortedMempool()
 
 	var totlen, totweigth uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
@@ -269,9 +270,9 @@ func baned_txs(par string) {
 	}
 	fmt.Println("Listing Rejected transactions", reason, ":")
 	cnt := 0
-	network.TxMutex.Lock()
-	for idx := network.TRIdxHead; idx != network.TRIdxTail; idx = network.TRIdxPrev(idx) {
-		if v := network.TransactionsRejected[network.TRIdxArray[idx]]; v != nil {
+	txpool.TxMutex.Lock()
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
+		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
 			if reason != 0 && reason != v.Reason {
 				continue
 			}
@@ -281,10 +282,10 @@ func baned_txs(par string) {
 				bts = "v-bts"
 			}
 			fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
-				"-", network.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago")
+				"-", txpool.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago")
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 }
 
 func txr_purge(par string) {
@@ -308,9 +309,9 @@ func txr_purge(par string) {
 
 	fmt.Println("Purging data of all transactions rejected before", tim.Format(("2006-01-02 15:04:05")))
 
-	todo := make([]network.BIDX, 0, 100)
-	network.TxMutex.Lock()
-	for k, txr := range network.TransactionsRejected {
+	todo := make([]btc.BIDX, 0, 100)
+	txpool.TxMutex.Lock()
+	for k, txr := range txpool.TransactionsRejected {
 		if txr.Tx != nil && txr.Time.Before(tim) {
 			todo = append(todo, k)
 			var ds string
@@ -319,13 +320,13 @@ func txr_purge(par string) {
 			} else {
 				ds = fmt.Sprint(txr.Size, " v-bts")
 			}
-			fmt.Printf("%4d) %s  %s  %s\n", len(todo), txr.Id.String(), network.ReasonToString(txr.Reason), ds)
+			fmt.Printf("%4d) %s  %s  %s\n", len(todo), txr.Id.String(), txpool.ReasonToString(txr.Reason), ds)
 		}
 	}
 	if len(todo) > 0 {
 		if commit {
 			for _, k := range todo {
-				network.DeleteRejectedByIdx(k)
+				txpool.DeleteRejectedByIdx(k)
 			}
 			fmt.Println(len(todo), "rejected txs deleted")
 			common.CountSafeAdd("TxRDelUiTot", uint64(len(todo)))
@@ -333,7 +334,7 @@ func txr_purge(par string) {
 	} else {
 		fmt.Println("Nothing found")
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 }
 
 func txr_stats(par string) {
@@ -345,21 +346,21 @@ func txr_stats(par string) {
 	cnts := make(map[byte]*rect)
 	var reasons []int
 
-	network.TxMutex.Lock()
+	txpool.TxMutex.Lock()
 
-	idx_use := network.TRIdxHead - network.TRIdxTail
+	idx_use := txpool.TRIdxHead - txpool.TRIdxTail
 	if idx_use < 0 {
-		idx_use += len(network.TRIdxArray)
+		idx_use += len(txpool.TRIdxArray)
 	}
-	if _, ok := network.TransactionsRejected[network.TRIdxArray[network.TRIdxHead]]; ok {
+	if _, ok := txpool.TransactionsRejected[txpool.TRIdxArray[txpool.TRIdxHead]]; ok {
 		idx_use++
 	}
 
-	fmt.Println(len(network.TransactionsRejected), "/", idx_use, "/", len(network.TRIdxArray),
-		"txs with total in-memory size of", network.TransactionsRejectedSize, "  head:",
-		network.TRIdxHead, "  tail:", network.TRIdxTail)
+	fmt.Println(len(txpool.TransactionsRejected), "/", idx_use, "/", len(txpool.TRIdxArray),
+		"txs with total in-memory size of", txpool.TransactionsRejectedSize, "  head:",
+		txpool.TRIdxHead, "  tail:", txpool.TRIdxTail)
 
-	for _, v := range network.TransactionsRejected {
+	for _, v := range txpool.TransactionsRejected {
 		var rec *rect
 		if rec = cnts[v.Reason]; rec == nil {
 			reasons = append(reasons, int(v.Reason))
@@ -387,27 +388,27 @@ func txr_stats(par string) {
 	for _, r := range reasons {
 		rea := byte(r)
 		rec := cnts[rea]
-		fmt.Println("  Reason:", rea, network.ReasonToString(rea))
+		fmt.Println("  Reason:", rea, txpool.ReasonToString(rea))
 		fmt.Println("    Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
 		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
 	}
 	cnt := 0
-	for _, lst := range network.RejectedUsedUTXOs {
+	for _, lst := range txpool.RejectedUsedUTXOs {
 		cnt += len(lst)
 	}
-	fmt.Println("RejectedUsedUTXOs count:", cnt, "in", len(network.RejectedUsedUTXOs), "records")
-	network.TxMutex.Unlock()
+	fmt.Println("RejectedUsedUTXOs count:", cnt, "in", len(txpool.RejectedUsedUTXOs), "records")
+	txpool.TxMutex.Unlock()
 }
 
 func send_all_tx(par string) {
-	var tmp []*network.OneTxToSend
-	network.TxMutex.Lock()
-	for _, v := range network.TransactionsToSend {
+	var tmp []*txpool.OneTxToSend
+	txpool.TxMutex.Lock()
+	for _, v := range txpool.TransactionsToSend {
 		if v.Local {
 			tmp = append(tmp, v)
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	for _, v := range tmp {
 		cnt := network.NetRouteInv(1, &v.Tx.Hash, nil)
 		v.Invsentcnt += cnt
@@ -416,17 +417,17 @@ func send_all_tx(par string) {
 }
 
 func save_mempool(par string) {
-	network.TxMutex.Lock()
-	network.MempoolSave(true)
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	txpool.MempoolSave(true)
+	txpool.TxMutex.Unlock()
 }
 
 func check_txs(par string) {
 	fmt.Println("Locking TxMutex")
-	network.TxMutex.Lock()
+	txpool.TxMutex.Lock()
 	fmt.Println("TxMutex Locked")
-	err := network.MempoolCheck()
-	network.TxMutex.Unlock()
+	err := txpool.MempoolCheck()
+	txpool.TxMutex.Unlock()
 	if !err {
 		fmt.Println("Memory Pool seems to be consistent")
 	}
@@ -444,7 +445,7 @@ func get_mempool(par string) {
 }
 
 func mempool_purge(par string) {
-	network.InitMempool()
+	txpool.InitMempool()
 	fmt.Println("Done")
 }
 
@@ -454,7 +455,7 @@ func push_old_txs(par string) {
 	var max_spb float64
 	var er error
 	var push, purge bool
-	var txs_found []*network.OneTxToSend
+	var txs_found []*txpool.OneTxToSend
 	ss := strings.SplitN(par, " ", 2)
 	if len(ss) >= 1 {
 		max_spb, er = strconv.ParseFloat(ss[0], 64)
@@ -473,8 +474,8 @@ func push_old_txs(par string) {
 
 	}
 	fmt.Printf("Looking for txs last seen over a day ago with SPB above %.1f\n", max_spb)
-	network.TxMutex.Lock()
-	for _, tx := range network.TransactionsToSend {
+	txpool.TxMutex.Lock()
+	for _, tx := range txpool.TransactionsToSend {
 		if tx.MemInputCnt == 0 && time.Since(tx.Lastseen) > 24*time.Hour {
 			spb := tx.SPB()
 			if spb >= max_spb {
@@ -488,7 +489,7 @@ func push_old_txs(par string) {
 			}
 		}
 	}
-	totlen := len(network.TransactionsToSend)
+	totlen := len(txpool.TransactionsToSend)
 	fmt.Println("Found", len(txs_found), "/", totlen, "txs matching the criteria, with total weight of", weight)
 	if push || purge {
 		for _, tx := range txs_found {
@@ -499,21 +500,21 @@ func push_old_txs(par string) {
 			}
 		}
 		fmt.Println("Number of invs sent:", invs)
-		fmt.Println("Number of txs purged:", totlen-len(network.TransactionsToSend))
+		fmt.Println("Number of txs purged:", totlen-len(txpool.TransactionsToSend))
 	} else {
 		fmt.Println("Add push to broadcast them to peers, or purge to delete them from mempool")
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	if !push {
 		fmt.Printf("Execute 'pusholdtxs %.1f yes' to send all the invs\n", max_spb)
 	}
 }
 
 func tx_pool_stats(par string) {
-	network.CheckPoolSizes()
-	network.TxMutex.Lock()
+	txpool.CheckPoolSizes()
+	txpool.TxMutex.Lock()
 	var sw_cnt, sw_siz, sw_wgt uint64
-	for _, v := range network.TransactionsToSend {
+	for _, v := range txpool.TransactionsToSend {
 		if v.SegWit != nil {
 			sw_cnt++
 			sw_siz += uint64(v.Footprint)
@@ -522,26 +523,26 @@ func tx_pool_stats(par string) {
 	}
 
 	var sw_perc_cnt, sw_perc_size, sw_perc_weight uint64
-	if len(network.TransactionsToSend) > 0 { // to avoid division by zero
-		sw_perc_cnt = 100 * sw_cnt / uint64(len(network.TransactionsToSend))
+	if len(txpool.TransactionsToSend) > 0 { // to avoid division by zero
+		sw_perc_cnt = 100 * sw_cnt / uint64(len(txpool.TransactionsToSend))
 	}
-	if network.TransactionsToSendSize > 0 { // to avoid division by zero
-		sw_perc_size = 100 * sw_siz / network.TransactionsToSendSize
+	if txpool.TransactionsToSendSize > 0 { // to avoid division by zero
+		sw_perc_size = 100 * sw_siz / txpool.TransactionsToSendSize
 	}
-	if network.TransactionsToSendWeight > 0 { // to avoid division by zero
-		sw_perc_weight = 100 * sw_wgt / network.TransactionsToSendWeight
+	if txpool.TransactionsToSendWeight > 0 { // to avoid division by zero
+		sw_perc_weight = 100 * sw_wgt / txpool.TransactionsToSendWeight
 	}
 
-	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", network.TransactionsToSendSize, len(network.TransactionsToSend), network.TransactionsToSendWeight, network.TransactionsToSendWeight/4e6)
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
 	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
-	fmt.Printf("  Number of Spent Outputs: %d\n", len(network.SpentOutputs))
-	fmt.Printf("Rejected: %d in %d txs\n", network.TransactionsRejectedSize, len(network.TransactionsRejected))
-	fmt.Printf("  Waiting4Input: %d in %d txs\n", network.WaitingForInputsSize, len(network.WaitingForInputs))
-	fmt.Printf("  Rejected used UTXOs: %d\n", len(network.RejectedUsedUTXOs))
-	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(network.TransactionsPending), len(network.NetTxs))
+	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
+	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))
+	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
+	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
+	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
-	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", network.SortingSupressed, network.SortListDirty)
-	network.TxMutex.Unlock()
+	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
+	txpool.TxMutex.Unlock()
 }
 
 func init() {

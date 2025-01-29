@@ -1,8 +1,6 @@
-package network
+package txpool
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -163,7 +161,7 @@ func BlockUndone(bl *btc.Block) {
 	var cnt int
 	for _, tx := range bl.Txs[1:] {
 		// put it back into the mempool
-		ntx := &TxRcvd{Tx: tx, trusted: true}
+		ntx := &TxRcvd{Tx: tx, Trusted: true}
 
 		if NeedThisTx(&ntx.Hash, nil) {
 			if HandleNetTx(ntx, true) {
@@ -182,87 +180,4 @@ func BlockUndone(bl *btc.Block) {
 	if cnt != len(bl.Txs)-1 {
 		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
 	}
-}
-
-func (c *OneConnection) SendGetMP() error {
-	if len(c.GetMP) == 0 {
-		// TODO: remove it at some point (should not be happening)
-		println("ERROR: SendGetMP() called with no GetMP lock")
-		return nil
-	}
-	b := new(bytes.Buffer)
-	TxMutex.Lock()
-	if int(common.MaxMempoolSize()-TransactionsToSendSize) < 5e6 {
-		// Don't send "getmp" messages, if we have less than 5MB of free space in mempool
-		TxMutex.Unlock()
-		c.cntInc("GetMPHold")
-		return errors.New("SendGetMP: Mempool almost full")
-	}
-	tcnt := len(TransactionsToSend) + len(TransactionsRejected)
-	if tcnt > MAX_GETMP_TXS {
-		fmt.Println("Too many transactions in the current pool", tcnt, "/", MAX_GETMP_TXS)
-		tcnt = MAX_GETMP_TXS
-	}
-	btc.WriteVlen(b, uint64(tcnt))
-	var cnt int
-	for k := range TransactionsToSend {
-		b.Write(k[:])
-		cnt++
-		if cnt == MAX_GETMP_TXS {
-			break
-		}
-	}
-	for k := range TransactionsRejected {
-		b.Write(k[:])
-		cnt++
-		if cnt == MAX_GETMP_TXS {
-			break
-		}
-	}
-	TxMutex.Unlock()
-	return c.SendRawMsg("getmp", b.Bytes())
-}
-
-func (c *OneConnection) ProcessGetMP(pl []byte) {
-	br := bytes.NewBuffer(pl)
-
-	cnt, er := btc.ReadVLen(br)
-	if er != nil {
-		println("getmp message does not have the length field")
-		c.DoS("GetMPError1")
-		return
-	}
-
-	has_this_one := make(map[BIDX]bool, cnt)
-	for i := 0; i < int(cnt); i++ {
-		var idx BIDX
-		if n, _ := br.Read(idx[:]); n != len(idx) {
-			println("getmp message too short")
-			c.DoS("GetMPError2")
-			return
-		}
-		has_this_one[idx] = true
-	}
-
-	var data_sent_so_far int
-	var redo [1]byte
-
-	TxMutex.Lock()
-	txs := GetSortedMempool() // we want to send parent txs first, thus the sorting
-	for _, v := range txs {
-		c.Mutex.Lock()
-		bts := c.BytesToSent()
-		c.Mutex.Unlock()
-		if bts > SendBufSize/4 {
-			redo[0] = 1
-			break
-		}
-		if !has_this_one[v.Hash.BIdx()] {
-			c.SendRawMsg("tx", v.Raw)
-			data_sent_so_far += 24 + len(v.Raw)
-		}
-	}
-	TxMutex.Unlock()
-
-	c.SendRawMsg("getmpdone", redo[:])
 }
