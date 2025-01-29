@@ -12,20 +12,31 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
+const (
+	FEEDBACK_TX_BAD      = 1 // param is string
+	FEEDBACK_TX_ACCEPTED = 2 // param is nil
+	FEEDBACK_TX_ROUTABLE = 3 // param is FeedbackRoutable
+)
+
 var (
 	GetMPInProgressTicket = make(chan bool, 1)
 )
 
 type TxRcvd struct {
 	*btc.Tx
-	FeedbackCB     func(connid uint32, info string) int
+	FeedbackCB     func(connid uint32, info int, param interface{}) int
 	FromCID        uint32
 	Trusted, Local bool
 }
 
-func (t *TxRcvd) feedback(s string) (res int) {
+type FeedbackRoutable struct {
+	TxID *btc.Uint256
+	SPKB uint64
+}
+
+func (t *TxRcvd) feedback(info int, param interface{}) (res int) {
 	if t.FeedbackCB != nil {
-		res = t.FeedbackCB(t.FromCID, s)
+		res = t.FeedbackCB(t.FromCID, info, param)
 	}
 	return
 }
@@ -208,7 +219,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	if totout > totinp {
 		rejectTx(ntx.Tx, TX_REJECTED_OVERSPEND, nil)
 		TxMutex.Unlock()
-		ntx.feedback("Ban:TxOverspend")
+		ntx.feedback(FEEDBACK_TX_BAD, "TxOverspend")
 		return
 	}
 
@@ -263,7 +274,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		if ver_err_cnt > 0 {
 			// not moving it to rejected, but baning the peer
 			TxMutex.Unlock()
-			ntx.feedback("Ban:TxScriptFail")
+			ntx.feedback(FEEDBACK_TX_BAD, "TxScriptFail")
 			if len(rbf_tx_list) > 0 {
 				fmt.Println("RBF try", ver_err_cnt, "script(s) failed!")
 				fmt.Print("> ")
@@ -305,25 +316,20 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	TxMutex.Unlock()
 	common.CountSafe("TxAccepted")
 
+	ntx.feedback(FEEDBACK_TX_ACCEPTED, nil)
+
 	if frommem != nil && !common.Get(&common.CFG.TXRoute.MemInputs) {
 		// By default Gocoin does not route txs that spend unconfirmed inputs
 		rec.Blocked = TX_REJECTED_NOT_MINED
 		common.CountSafe("TxRouteNotMined")
 	} else if !ntx.Trusted && rec.isRoutable() {
 		// do not automatically route loacally loaded txs
-		rec.Invsentcnt += uint32(ntx.feedback("Inv:??????"))
+		rec.Invsentcnt += uint32(ntx.feedback(FEEDBACK_TX_ROUTABLE,
+			&FeedbackRoutable{TxID: &tx.Hash, SPKB: 4000 * fee / uint64(ntx.Weight())}))
+		//uint32(ntx.feedback("Inv:??????"))
 		//NetRouteInvExt(1, &tx.Hash, ntx.conn, 1000*fee/uint64(len(ntx.Raw)))
 		common.CountSafe("TxRouteOK")
 	}
-
-	ntx.feedback(fmt.Sprint("TxRcvd"))
-	/*
-		if ntx.conn != nil {
-			ntx.conn.Mutex.Lock()
-			ntx.conn.txsCur++
-			ntx.conn.X.TxsReceived++
-			ntx.conn.Mutex.Unlock()
-		}*/
 
 	accepted = true
 	return

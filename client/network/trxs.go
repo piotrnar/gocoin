@@ -66,8 +66,36 @@ func (c *OneConnection) TxInvNotify(hash []byte) {
 	}
 }
 
-func txPoolCB(connid uint32, info string) int {
-	return 0
+func txPoolCB(conid uint32, info int, par interface{}) (res int) {
+	Mutex_net.Lock()
+	c := GetConnFromID(conid)
+	Mutex_net.Unlock()
+	if c == nil {
+		// the connection has been closed since
+		return
+	}
+
+	if info == txpool.FEEDBACK_TX_ROUTABLE {
+		p := par.(*txpool.FeedbackRoutable)
+		res = int(NetRouteInvExt(1, p.TxID, c, p.SPKB))
+		return
+	}
+
+	if info == txpool.FEEDBACK_TX_ACCEPTED {
+		c.Mutex.Lock()
+		c.txsCur++
+		c.X.TxsReceived++
+		c.Mutex.Unlock()
+		return
+	}
+
+	if info == txpool.FEEDBACK_TX_BAD {
+		c.DoS(par.(string))
+		return
+	}
+
+	println("ERROR: unhandled txPoolCB command", info)
+	return
 }
 
 // ParseTxNet handles incoming "tx" messages.

@@ -737,20 +737,29 @@ func NetCloseAll() {
 	}
 }
 
-func DropPeer(conid uint32) {
-	Mutex_net.Lock()
-	defer Mutex_net.Unlock()
+// Make sure to call it with Mutex_net locked
+func GetConnFromID(conid uint32) (c *OneConnection) {
 	for _, v := range OpenCons {
 		if uint32(conid) == v.ConnID {
-			if v.X.IsSpecial {
-				v.Disconnect(false, "FromUI")
-			} else {
-				v.DoS("FromUI")
-			}
+			c = v
 			return
 		}
 	}
-	fmt.Println("DropPeer: There is no such an active connection", conid)
+	return
+}
+
+func DropPeer(conid uint32) {
+	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+	if v := GetConnFromID(conid); v != nil {
+		if v.X.IsSpecial {
+			v.Disconnect(false, "FromUI")
+		} else {
+			v.DoS("FromUI")
+		}
+	} else {
+		fmt.Println("DropPeer: There is no such an active connection", conid)
+	}
 }
 
 // GetMP() is called from UI, to force asking the given peer for its mempool
