@@ -400,6 +400,10 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 
 func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	for _, tx := range txs {
+		if tx.Weight() == 0 { // TODO: remove this check
+			println("ERROR: LookForPackages found weight 0 in", tx.Hash.String())
+			continue
+		}
 		if tx.MemInputCnt > 0 {
 			continue
 		}

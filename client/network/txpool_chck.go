@@ -98,6 +98,11 @@ func MempoolCheck() bool {
 
 		totsize += uint64(t2s.Footprint)
 
+		if t2s.Weight() == 0 {
+			dupa++
+			fmt.Println(dupa, "Tx", t2s.Hash.String(), "haz seight 0")
+		}
+
 		for i, inp := range t2s.TxIn {
 			spent_cnt++
 			if outk, ok := SpentOutputs[inp.Input.UIdx()]; ok {
