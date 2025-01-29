@@ -78,10 +78,8 @@ type SortedConnections []struct {
 // Make sure to call it with locked Mutex_net.
 func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
-	var now time.Time
-	var tlist SortedConnections
-	now = time.Now()
-	tlist = make(SortedConnections, len(OpenCons))
+	now := time.Now()
+	tlist := make(SortedConnections, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
@@ -99,7 +97,6 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
-
 		cnt++
 	}
 	if cnt > 0 {
@@ -156,7 +153,7 @@ func drop_worst_peer() bool {
 	}
 
 	for _, v := range list {
-		if v.MinutesOnline < OnlineImmunityMinutes {
+		if v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes)) {
 			continue
 		}
 		if v.Special {

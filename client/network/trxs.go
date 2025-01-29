@@ -13,7 +13,6 @@ import (
 
 func (c *OneConnection) SendGetMP() error {
 	if len(c.GetMP) == 0 {
-		// TODO: remove it at some point (should not be happening)
 		println("ERROR: SendGetMP() called with no GetMP lock")
 		return nil
 	}
@@ -83,7 +82,7 @@ func txPoolCB(conid uint32, info int, par interface{}) (res int) {
 
 	if info == txpool.FEEDBACK_TX_ACCEPTED {
 		c.Mutex.Lock()
-		c.txsCur++
+		c.txsCha[c.txsCurIdx]++
 		c.X.TxsReceived++
 		c.Mutex.Unlock()
 		return

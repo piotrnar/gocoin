@@ -121,9 +121,10 @@ var (
 			NoCounters  bool
 		}
 		DropPeers struct {
-			DropEachMinutes uint // zero for never
-			BlckExpireHours uint // zero for never
-			PingPeriodSec   uint // zero to not ping
+			DropEachMinutes uint32 // zero for never
+			BlckExpireHours uint32 // zero for never
+			PingPeriodSec   uint32 // zero to not ping
+			ImmunityMinutes uint32
 		}
 		UTXOSave struct {
 			SecondsToTake   uint   // zero for as fast as possible, 600 for do it in 10 minutes
@@ -216,6 +217,7 @@ func InitConfig() {
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
+	CFG.DropPeers.ImmunityMinutes = 15
 
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6

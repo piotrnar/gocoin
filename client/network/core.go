@@ -46,9 +46,9 @@ const (
 
 	MAX_INV_HISTORY = 500
 
-	TxsCounterPeriod      = 6 * time.Second // how long for one tick
-	TxsCounterBufLen      = 60              // how many ticks
-	OnlineImmunityMinutes = int(TxsCounterBufLen * TxsCounterPeriod / time.Minute)
+	TxsCounterPeriod = time.Hour       // how long we remeber txs sent by a peer
+	TxsCounterTick   = 6 * time.Second // 10 ticks per minute
+	TxsCounterBufLen = TxsCounterPeriod / TxsCounterTick
 
 	PeerTickPeriod  = 100 * time.Millisecond // run the peer's tick not more often than this
 	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
@@ -225,10 +225,10 @@ type OneConnection struct {
 	nextGetData     time.Time
 	keepBlocksOver  int
 
-	// we need these three below to count txs received only during last hour
-	txsCur int
-	txsCha chan int
-	txsNxt time.Time
+	// we need these three below to count txs received only within last hour
+	txsCha    [TxsCounterBufLen]uint32
+	txsCurIdx int
+	txsNxt    time.Time
 
 	writing_thread_done sync.WaitGroup
 	writing_thread_push chan bool

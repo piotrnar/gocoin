@@ -174,7 +174,6 @@ func BlockUndone(bl *btc.Block) {
 			common.CountSafe("TxPutBackNoNeed")
 		}
 
-		// TODO: make sure to set MemInputs of ones using it back to true (issue #58)
 		MarkChildrenForMem(tx)
 	}
 	if cnt != len(bl.Txs)-1 {

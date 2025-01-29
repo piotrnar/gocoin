@@ -104,19 +104,20 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	c.ExpireHeadersAndGetData(&now, 0)
 
-	// Expire BlocksReceived after two days
+	// Expire BlocksReceived counter
 	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
-		var i int
-		for i = 0; i < len(c.blocksreceived); i++ {
-			if c.blocksreceived[i].Add(common.Get(&common.BlockExpireEvery)).After(now) {
+		expire_before := now.Add(-common.Get(&common.BlockExpireEvery))
+		var remove_blocks_cnt uint64
+		for _, br := range c.blocksreceived {
+			if br.After(expire_before) {
 				break
 			}
-			common.CountSafe("BlksRcvdExpired")
+			remove_blocks_cnt++
 		}
-		if i > 0 {
-			//println(c.ConnID, "expire", i, "block(s)")
-			c.blocksreceived = c.blocksreceived[i:]
+		if remove_blocks_cnt > 0 {
+			c.blocksreceived = c.blocksreceived[remove_blocks_cnt:]
+			common.CountSafeAdd("BlksRcvdExpired", remove_blocks_cnt)
 		}
 	}
 	c.Mutex.Unlock()
@@ -173,13 +174,14 @@ func (c *OneConnection) Tick(now time.Time) {
 		// Tick the recent transactions counter
 		if now.After(c.txsNxt) {
 			c.Mutex.Lock()
-			if len(c.txsCha) == cap(c.txsCha) {
-				tmp := <-c.txsCha
-				c.X.TxsReceived -= tmp
+			if c.txsCurIdx == len(c.txsCha)-1 {
+				c.txsCurIdx = 0
+			} else {
+				c.txsCurIdx++
 			}
-			c.txsCha <- c.txsCur
-			c.txsCur = 0
-			c.txsNxt = c.txsNxt.Add(TxsCounterPeriod)
+			c.X.TxsReceived -= int(c.txsCha[c.txsCurIdx])
+			c.txsCha[c.txsCurIdx] = 0
+			c.txsNxt = c.txsNxt.Add(TxsCounterTick)
 			c.Mutex.Unlock()
 		}
 
@@ -514,7 +516,7 @@ func NetworkTick() {
 	var max_headers_got_cnt int
 	var _v *OneConnection
 	for _, v := range OpenCons {
-		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
+		v.Mutex.Lock()
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -544,7 +546,8 @@ func NetworkTick() {
 		}
 	}
 
-	if common.CFG.DropPeers.DropEachMinutes != 0 {
+	if common.Get(&common.CFG.DropPeers.DropEachMinutes) != 0 &&
+		common.Get(&common.CFG.DropPeers.ImmunityMinutes) != 0 {
 		if next_drop_peer.IsZero() {
 			next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
 		} else if now.After(next_drop_peer) {
@@ -686,8 +689,7 @@ func (c *OneConnection) Run() {
 	c.nextMaintanence = now.Add(time.Minute)
 	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
-	c.txsNxt = now.Add(TxsCounterPeriod)
-	c.txsCha = make(chan int, TxsCounterBufLen)
+	c.txsNxt = now.Add(TxsCounterTick)
 
 	c.Mutex.Unlock()
 
@@ -959,8 +961,4 @@ func (c *OneConnection) Run() {
 		}
 	}
 	c.Conn.Close()
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
 }

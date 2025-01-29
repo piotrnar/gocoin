@@ -62,7 +62,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 	for _, v := range tmp {
 		i--
 		v.Conn.GetStats(&net_cons[i])
-		net_cons[i].HasImmunity = v.MinutesOnline < network.OnlineImmunityMinutes
+		net_cons[i].HasImmunity = v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
 	}
 
 	bx, er := json.Marshal(net_cons)

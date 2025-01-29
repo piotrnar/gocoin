@@ -131,6 +131,7 @@ func NewPeer(v []byte) (p *PeerAddr) {
 		p.Banned = (xd & 0x7fffffff) << 1
 		if !p.SeenAlive && p.Banned > 1893452400 /*Year 2030*/ {
 			// Convert from the old DB - TODO: remove it at some point (now is 14th of July 2021)
+			println("Convert from the old DB -done")
 			p.Banned >>= 1
 		}
 		if len(v) >= 35 {
