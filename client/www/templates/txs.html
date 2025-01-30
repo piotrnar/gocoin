@@ -12,10 +12,17 @@ td.txid {
 	font-family: monospace;
 	font-size:7px;
 }
+td.txid11 {
+	font-family: monospace;
+	font-size:10px;
+}
+td.txsize {
+	text-align: right;
+}
 </style>
 <div id="light" class="white_content">
 <table width="100%"><tr>
-<td><h3><b class="mono" id="disp_txid"></b></h3>
+<td align="center"><h3><b class="mono" id="disp_txid"></b></h3>
 <td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
@@ -23,7 +30,7 @@ td.txid {
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
 <tr>
-<td><b>Memory Pool:</b></td>
+<td><b>Memory Pool:</b> <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px"></td>
 <td align="right">
 <span onclick="mempool_new_sort.click()" class="hand" title="Uses less bandwidth">
 	<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
@@ -145,6 +152,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 - <input type="button" value="show me now..." onclick="show_txs2s('')">
 &nbsp;&nbsp;&nbsp;
 <input type="button" value="Decode mempool TX" onclick="show_txid()">
+<input type="button" value="Decode TX" onclick="show_raw_tx()">
 </table>
 
 
@@ -173,7 +181,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 <table class="txs bord" id="txsre" style="display:none" width="100%">
 	<tr>
 		<th width="20" align="right">#
-		<th>Transaction ID
+		<th>Rejected Transaction ID
 		<th onclick="sorttab('txsre', 2)" style="cursor:pointer" width="60" align="right">Maturity
 		<th onclick="sorttab('txsre', 3)" style="cursor:pointer" width="60" align="right">Size
 		<th width="100" align="right">Reason rejected
@@ -183,7 +191,8 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th width="20" align="right">#
 		<th>Waiting for
 		<th>Pending Tx
-		<th onclick="sorttab('txw4i', 3)" style="cursor:pointer" width="60" align="right">Maturity
+		<th align="right">Size
+		<th onclick="sorttab('txw4i', 4)" style="cursor:pointer" width="60" align="right">Age
 </table>
 <script>
 if (!server_mode) {
@@ -398,13 +407,50 @@ function decode_tx_id(txid) {
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
 
+			txhexdump.style.display = 'inline-block'
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)
 		}
 	}
-	aj.open("GET","txs2s.xml?id="+txid+'&sid='+sid, true);
+	aj.open("GET","txs2s.xml?id="+txid, true);
 	aj.send(null);
+}
+
+function do_raw_tx(txid) {
+	var aj = ajax()
+	tx_decoding_in_progress = true
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			tx_decoding_in_progress = false
+			disp_txid.innerText = txid
+			rawdiv.innerHTML = aj.responseText
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+			txhexdump.style.display = 'none'
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+		}
+	}
+	aj.open("GET","raw_tx?id="+txid, true);
+	aj.send(null);
+}
+
+// same as decode_tx, but will also do rejected tx
+function decode_tx2() {
+	if (!tx_decoding_in_progress) {
+		do_raw_tx(this.id)
+	}
+}
+
+function show_raw_tx() {
+	if (!tx_decoding_in_progress) {
+		var tid = prompt("Enter ID of the TX");
+		if (tid!=null) {
+			do_raw_tx(tid)
+		}
+	}
 }
 
 function quiet_txs2s(extrapar) {
@@ -547,17 +593,17 @@ function show_txsre() {
 			txs = aj.responseXML.getElementsByTagName('tx')
 			butre.value = ' ' + txs.length + ' '
 			for (var i=0; i<txs.length; i++) {
-				var t,c,row = txsre.insertRow(-1)
+				var row = txsre.insertRow(-1)
+				var inmem = xval(txs[i], 'inmem')==='true'
 
 				row.className='hov'
 
-				c=row.insertCell(-1);c.align='right'
+				var c = row.insertCell(-1);c.align='right'
 				c.innerHTML = (i+1).toString()
 
 				c = row.insertCell(-1)
-				c.className ='mono'
-				t = xval(txs[i], 'id')
-				c.innerHTML = t
+				c.className ='txid11'
+				add_txid_and_icon(c, xval(txs[i], 'id'), inmem)
 
 				c=row.insertCell(-1);className='maturity'
 				var tim = xval(txs[i], 'time')
@@ -565,7 +611,11 @@ function show_txsre() {
 				c.innerHTML = get_maturity(tim)
 
 				c=row.insertCell(-1);c.align='right'
-				c.innerHTML = xval(txs[i], 'size')
+				if (inmem) {
+					c.innerHTML = '<b>'+xval(txs[i], 'size')+'</b>'
+				} else {
+					c.innerHTML = '<i style="font-size:75%">'+xval(txs[i], 'size')+'</i>'
+				}
 
 				c=row.insertCell(-1);c.align='right'
 				c.innerHTML = xval(txs[i], 'reason')
@@ -590,28 +640,29 @@ function show_txw4i() {
 				pendtxs = wait4s[i].getElementsByTagName('tx')
 				idx++
 				for (var j=0; j<pendtxs.length; j++) {
-					var t,c,row = txw4i.insertRow(-1)
+					var row = txw4i.insertRow(-1)
 
 					row.className='hov'
 
-					c=row.insertCell(-1);c.align='right'
+					var c = row.insertCell(-1);c.align='right'
 					if (j==0) {
 						c.innerHTML = idx.toString()
 					}
 
 					c = row.insertCell(-1)
-					c.className ='mono'
-					if (j==0) {
-						t = xval(wait4s[i], 'id')
-						c.innerHTML = t
-					}
+					c.className ='txid11'
+					add_txid_and_icon(c, xval(wait4s[i], 'id'), false)
 
 					c = row.insertCell(-1)
-					c.className ='mono'
-					t = xval(pendtxs[j], 'id')
-					c.innerHTML = t
+					c.className ='txid11'
+					add_txid_and_icon(c, xval(pendtxs[j], 'id'), true)
 
-					c=row.insertCell(-1);className='maturity'
+					c = row.insertCell(-1)
+					c.className = 'txsize'
+					c.innerText = xval(pendtxs[j], 'size')
+
+					c = row.insertCell(-1)
+					c.className='maturity'
 					var tim = xval(pendtxs[j], 'time')
 					c["numeric_value"]  = tim
 					c.innerHTML = get_maturity(tim)
@@ -624,6 +675,44 @@ function show_txw4i() {
 	aj.open("GET","txw4i.xml", true);
 	aj.send(null);
 }
+
+function add_txid_and_icon(td, txid, decode) {
+	var txt
+	if (decode) {
+		txt = document.createElement("span")
+		txt.innerHTML = txid
+		txt.title = 'Decode this Tx'
+		txt.id = txid
+		txt.addEventListener('click', decode_tx2, false)
+		txt.style.cursor='pointer'
+	} else {
+		txt = document.createElement("a")
+		txt.innerHTML = txid
+		txt.href = 'https://mempool.space/tx/'+txid
+		txt.title = 'Look at mempool.space'
+		txt.target = '_blank'
+	}
+	td.appendChild(txt)
+
+	td.appendChild(document.createTextNode('\u00A0'))
+
+	// add copy icon
+	var img = document.createElement("img")
+	img["text2copy"] = txid
+	img.style.verticalAlign = "bottom"
+	img.src = 'webui/copy.png'
+	img.className = "hand"
+	img.title = "Copy TxID to clipboard"
+	img.addEventListener("click", function(e) {
+		autocopy.style.display = 'inline'
+		autocopy.value = e.srcElement["text2copy"]
+		autocopy.select()
+		document.execCommand('copy')
+		autocopy.style.display = 'none'
+	})
+	td.appendChild(img)
+}
+
 
 var previousPoint = null
 var mp = []
@@ -702,7 +791,6 @@ function show_txid() {
 		}
 	}
 }
-
 
 function show_mempool_fees() {
 	var aj = ajax()
@@ -827,8 +915,9 @@ function refreshtxstat() {
 		try {
 			var ts = JSON.parse(aj.responseText)
 
-			ts_t2s_size.value = bignum(ts.t2s_size)+'B in ' + ts.t2s_cnt + ' txs'
-			ts_t2s_size.title = "Average TX size: " + (ts.t2s_size/ts.t2s_cnt).toFixed(0) + " Bytes"
+			ts_t2s_size.value = (ts.t2s_size/1e6).toFixed(1)+' MB in ' + ts.t2s_cnt + ' txs'
+			ts_t2s_size.title = 'Avg size: ' + (ts.t2s_size/ts.t2s_cnt).toFixed(0) +
+				' bytes,  Total Weight: ' + (ts.t2s_weight/1e6).toFixed(1) + " M"
 			outspent.innerText = ts.spent_outs_cnt
 			if (ts.t2s_cnt>0) {
 				avgoutspertx.innerText = (ts.spent_outs_cnt/ts.t2s_cnt).toFixed(2)
@@ -836,8 +925,8 @@ function refreshtxstat() {
 				avgoutspertx.innerText = '?'
 			}
 			butre.value = ts.tre_cnt
-			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
-			butw4i.value = ts.awaiting_inputs + " / " + bignum(ts.awaiting_inputs_size)
+			ts_tre_size.innerText = (ts.tre_size/1e3).toFixed(1)+' KB'
+			butw4i.value = ts.awaiting_inputs + " / " + (ts.awaiting_inputs_size/1e3).toFixed(1) + " KB"
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)

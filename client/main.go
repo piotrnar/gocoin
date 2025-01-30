@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -14,7 +15,8 @@ import (
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/rpcapi"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
@@ -27,8 +29,9 @@ import (
 )
 
 var (
-	retryCachedBlocks bool
-	SaveBlockChain    *time.Timer = time.NewTimer(24 * time.Hour)
+	retryCachedBlocks   bool
+	SaveBlockChain      *time.Timer = time.NewTimer(1<<63 - 1)
+	reenableMempoolSort *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
 
@@ -38,6 +41,7 @@ var (
 const (
 	SaveBlockChainAfter       = 2 * time.Second
 	SaveBlockChainAfterNoSync = 10 * time.Minute
+	ReenableMempoolSorting    = 2 * time.Second
 )
 
 func reset_save_timer() {
@@ -53,14 +57,14 @@ func reset_save_timer() {
 }
 
 func blockMined(bl *btc.Block) {
-	network.BlockMined(bl)
+	txpool.BlockMined(bl)
 	if int(bl.LastKnownHeight)-int(bl.Height) < 144 { // do not run it when syncing chain
 		usif.ProcessBlockFees(bl.Height, bl)
 	}
 }
 
 func blockUndone(bl *btc.Block) {
-	network.BlockUndone(bl)
+	txpool.BlockUndone(bl)
 }
 
 func exit_now() {
@@ -96,8 +100,12 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	network.MutexRcv.Lock()
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
+
+	reenableMempoolSort.Stop()
+	txpool.SupressMempooolSorting(true)
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
-	if bl.LastKnownHeight-bl.Height > common.GetUint32(&common.CFG.Memory.MaxCachedBlks) {
+	reenableMempoolSort.Reset(ReenableMempoolSorting) // if we receive no new block within the next second
+	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
 
@@ -120,11 +128,11 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		common.UpdateScriptFlags(bl.VerifyFlags)
 
 		if common.Last.ParseTill != nil && (common.Last.Block.Height%100e3) == 0 {
-			println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String())
+			fmt.Println("Parsing to", common.Last.Block.Height, "took", time.Since(newbl.TmStart).String())
 		}
 
 		if common.Last.ParseTill != nil && common.Last.Block == common.Last.ParseTill {
-			println("Initial parsing finished in", time.Since(newbl.TmStart).String())
+			fmt.Println("Initial parsing finished in", time.Since(newbl.TmStart).String())
 			common.Last.ParseTill = nil
 		}
 		if common.Last.ParseTill == nil && !common.BlockChainSynchronized &&
@@ -161,7 +169,7 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 		need_more_headers := prev_last_header != network.LastCommitedHeader
 		network.MutexRcv.Unlock()
 		if need_more_headers {
-			//println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
+			//fmt.Println("LastCommitedHeader moved to", network.LastCommitedHeader.Height)
 			network.GetMoreHeaders()
 		}
 	}
@@ -239,8 +247,8 @@ func HandleNetBlock(newbl *network.BlockRcvd) {
 
 	defer func() {
 		common.CountSafe("MainNetBlock")
-		if common.GetUint32(&common.WalletOnIn) > 0 {
-			common.SetUint32(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
+		if common.Get(&common.WalletOnIn) > 0 {
+			common.Set(&common.WalletOnIn, 5) // snooze the timer to 5 seconds from now
 		}
 	}()
 
@@ -321,7 +329,7 @@ func HandleRpcBlock(msg *rpcapi.BlockSubmited) {
 	common.RecalcAverageBlockSize()
 
 	common.CountSafe("RPCBlockOK")
-	println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
+	fmt.Println("New mined block", msg.Block.Height, "accepted OK in", rb.TmAccepted.Sub(rb.TmQueue).String())
 
 	common.Last.Mutex.Lock()
 	common.Last.Time = time.Now()
@@ -349,7 +357,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 		}
 
 		if nxt.BlockSize == 0 {
-			println("BlockSize is zero - corrupt database")
+			fmt.Println("BlockSize is zero - corrupt database")
 			break
 		}
 
@@ -361,7 +369,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 		bl, er := btc.NewBlock(crec.Data)
 		if er != nil {
-			println("btc.NewBlock() error - corrupt database")
+			fmt.Println("btc.NewBlock() error - corrupt database")
 			break
 		}
 		bl.Height = nxt.Height
@@ -371,7 +379,7 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 
 		er = bl.BuildTxList()
 		if er != nil {
-			println("bl.BuildTxList() error - corrupt database")
+			fmt.Println("bl.BuildTxList() error - corrupt database")
 			break
 		}
 
@@ -395,7 +403,49 @@ func do_the_blocks(end *chain.BlockTreeNode) {
 		last = nxt
 
 	}
-	//println("all blocks queued", len(network.NetBlocks))
+	//fmt.Println("all blocks queued", len(network.NetBlocks))
+}
+
+func fetch_balances_now() {
+	var prev_progress uint32
+	var abort bool
+	const info = "\rFetching all balances (Ctrl+C to skip) - "
+	__exit := make(chan bool)
+	var done sync.WaitGroup
+	done.Add(1)
+	go func() {
+		for {
+			select {
+			case s := <-common.KillChan:
+				fmt.Println(s)
+				abort = true
+			case <-__exit:
+				done.Done()
+				return
+			}
+		}
+	}()
+	wallet.FetchingBalanceTick = func() bool {
+		if abort {
+			return true
+		}
+		if new_progress := common.WalletProgress / 10; new_progress != prev_progress {
+			prev_progress = new_progress
+			fmt.Print(info, prev_progress, "% complete ... ")
+		}
+		return false
+	}
+	sta := time.Now()
+	fmt.Print(info)
+	wallet.LoadBalancesFromUtxo()
+	fmt.Print("\r                                                                 \r")
+	__exit <- true
+	done.Wait()
+	if !abort {
+		fmt.Println("All balances fetched in", time.Since(sta))
+		common.Set(&common.WalletON, true)
+		common.Set(&common.WalletOnIn, 0)
+	}
 }
 
 func main() {
@@ -416,10 +466,10 @@ func main() {
 			}
 			fmt.Println("main panic recovered:", err.Error())
 			fmt.Println(string(debug.Stack()))
-			network.NetCloseAll()
-			common.CloseBlockChain()
-			peersdb.ClosePeerDB()
-			sys.UnlockDatabaseDir()
+			//network.NetCloseAll()
+			//common.CloseBlockChain()
+			//peersdb.ClosePeerDB()
+			//sys.UnlockDatabaseDir()
 			os.Exit(1)
 		}
 	}()
@@ -491,30 +541,38 @@ func main() {
 
 		if common.Last.ParseTill != nil {
 			network.LastCommitedHeader = common.Last.ParseTill
-			println("Hold on network for now as we have",
+			fmt.Println("Hold on network for now as we have",
 				common.Last.ParseTill.Height-common.Last.Block.Height, "new blocks on disk.")
 			go do_the_blocks(common.Last.ParseTill)
 		} else {
 			network.LastCommitedHeader = common.Last.Block
 		}
 
-		if common.CFG.TXPool.SaveOnDisk {
-			network.MempoolLoad2()
-		}
-
-		if common.CFG.TextUI_Enabled {
-			go textui.MainThread()
-		}
-
-		if common.CFG.WebUI.Interface != "" {
-			go webui.ServerThread()
-		}
-
-		if common.CFG.RPC.Enabled {
-			go rpcapi.StartServer(common.RPCPort())
+		if common.CFG.TXPool.SaveOnDisk && !common.FLAG.NoMempoolLoad {
+			txpool.MempoolLoad()
+		} else {
+			txpool.InitMempool()
 		}
 
 		usif.LoadBlockFees()
+
+		if !common.FLAG.NoWallet {
+			sta := time.Now()
+			if er := wallet.LoadBalances(); er == nil {
+				common.Set(&common.WalletON, true)
+				common.Set(&common.WalletOnIn, 0)
+				fmt.Println("AllBalances loaded from", wallet.LAST_SAVED_FNAME, "in", time.Since(sta).String())
+			} else {
+				fmt.Println("wallet.LoadBalances:", er.Error())
+				if common.CFG.AllBalances.InstantWallet {
+					fetch_balances_now()
+				}
+			}
+			if !common.Get(&common.WalletON) {
+				// snooze the timer to 10 seconds after startup_ticks goes down
+				common.Set(&common.WalletOnIn, 10)
+			}
+		}
 
 		wallet.FetchingBalanceTick = func() bool {
 			select {
@@ -525,7 +583,7 @@ func main() {
 
 			case newtx := <-network.NetTxs:
 				common.CountSafe("DoMainNetTx")
-				network.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx, false)
 
 			case <-netTick:
 				common.CountSafe("DoMainNetTick")
@@ -544,12 +602,19 @@ func main() {
 			return usif.Exit_now.Get()
 		}
 
-		startup_ticks := 5 // give 5 seconds for finding out missing blocks
-		if !common.FLAG.NoWallet {
-			// snooze the timer to 10 seconds after startup_ticks goes down
-			common.SetUint32(&common.WalletOnIn, 10)
+		if common.CFG.WebUI.Interface != "" {
+			go webui.ServerThread()
 		}
 
+		if common.CFG.RPC.Enabled {
+			go rpcapi.StartServer(common.RPCPort())
+		}
+
+		if common.CFG.TextUI_Enabled {
+			go textui.MainThread()
+		}
+
+		startup_ticks := 5 // give 5 seconds for finding out missing blocks
 		for !usif.Exit_now.Get() {
 			common.Busy()
 
@@ -616,10 +681,15 @@ func main() {
 					common.CountSafe("ChainIdleUsed")
 				}
 
+			case <-reenableMempoolSort.C:
+				common.Busy()
+				common.CountSafe("TxSortReEnable")
+				txpool.SupressMempooolSorting(false)
+
 			case newtx := <-network.NetTxs:
 				common.Busy()
 				common.CountSafe("MainNetTx")
-				network.HandleNetTx(newtx, false)
+				txpool.HandleNetTx(newtx, false)
 
 			case <-netTick:
 				common.Busy()
@@ -637,7 +707,7 @@ func main() {
 				}
 
 				// Now check if the chain is synchronized...
-				if (network.HeadersReceived.Get() > int(common.GetUint32(&common.CFG.Net.MaxOutCons)/2) ||
+				if (network.HeadersReceived.Get() > int(common.Get(&common.CFG.Net.MaxOutCons)/2) ||
 					peersdb.ConnectOnly != "" && network.HeadersReceived.Get() >= 1) &&
 					network.BlocksToGetCnt() == 0 && len(network.NetBlocks) == 0 &&
 					len(network.CachedBlocks) == 0 {
@@ -646,7 +716,7 @@ func main() {
 						startup_ticks--
 						break
 					}
-					common.SetBool(&common.BlockChainSynchronized, true)
+					common.Set(&common.BlockChainSynchronized, true)
 					if *exitat == 99999999 {
 						exit_now()
 					}
@@ -671,31 +741,41 @@ func main() {
 				if on {
 					if common.BlockChainSynchronized {
 						usif.FetchingBalances.Set()
-						wallet.LoadBalance()
+						wallet.LoadBalancesFromUtxo()
 						usif.FetchingBalances.Clr()
 					} else {
 						fmt.Println("Cannot enable wallet functionality with blockchain sync in progress")
 					}
 				} else {
 					wallet.Disable()
-					common.SetUint32(&common.WalletOnIn, 0)
+					common.Set(&common.WalletOnIn, 0)
 				}
 			}
 		}
 
 		common.BlockChain.Unspent.HurryUp()
 		wallet.UpdateMapSizes()
+		fmt.Println("Shutting down PID", os.Getpid())
 		network.NetCloseAll()
 	}
 
 	sta := time.Now()
 	common.CloseBlockChain()
-	if common.FLAG.UndoBlocks == 0 {
-		network.MempoolSave(false)
-	}
 	fmt.Println("Blockchain closed in", time.Since(sta).String())
+	if common.FLAG.UndoBlocks == 0 {
+		txpool.MempoolSave(false)
+	}
 	peersdb.ClosePeerDB()
 	usif.SaveBlockFees()
+
+	sta = time.Now()
+	if common.Get(&common.WalletON) {
+		if er := wallet.SaveBalances(); er != nil {
+			fmt.Println("SaveBalances:", er.Error())
+		} else {
+			fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+		}
+	}
 	sys.UnlockDatabaseDir()
 	os.RemoveAll(common.TempBlocksDir())
 }

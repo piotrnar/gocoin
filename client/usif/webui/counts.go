@@ -8,25 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-type many_counters []one_counter
-
-type one_counter struct {
-	key string
-	cnt uint64
-}
-
-func (c many_counters) Len() int {
-	return len(c)
-}
-
-func (c many_counters) Less(i, j int) bool {
-	return c[i].key < c[j].key
-}
-
-func (c many_counters) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
-}
-
 func p_counts(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return

@@ -12,11 +12,13 @@ of a running <b>client</b>.<br>
 Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Stats.NoCounters</code> to <b>true</b>.<br>
 This will turn off node's internal statistics which should improve performance.<br>
 <br>
+<i>Note: It is likely that such a performance gain will not be noticable.</i><br>
+<br>
 
 <h2>Turn off caching on disk</h2>
 Edit the <a href="gocoin_manual_config.html">config file</a> and set the value of <code>Memory.CacheOnDisk</code> to <b>false</b>.<br>
-This will prevent the node from caching blocks on disk, 
-which may improve initial chain sync performance (at a cost of using more RAM).<br>
+It prevents the node from caching blocks on disk, keeping them cached in RAM.<br>
+With a fast (e.g. 1Gbit) network connection and some RAM to spare, this will significantly improve the time needed for initial chain sync.<br>
 <br>
 
 <h2>Disable wallet functionality</h2>
@@ -30,7 +32,7 @@ set the value of <code>AllBalances.AutoLoad</code> to <code>false</code> in the
 <a href="gocoin_manual_config.html">config file</a>.<br>
 <br>
 <i>Note: You can manually enable wallet functionality at any time while the node is running,
-either from WebUI or by executing TextUI command <code>wallet on</code></i><br>
+either from WebUI or by executing TextUI command <code>wallet on</code>.</i><br>
 <br>
 <a name="libsecp256k1"></a>
 <h2>External secp256k1 speedups</h2>
@@ -42,7 +44,7 @@ that is written in C and assembler.<br>
 
 <i><b>Note:</b>
 Thanks to the recent improvements, an external library does not always perform better than the Gocoin's native one.<br>
-To check if it does, use test programs from <code>gocoin/lib/others/cgo/ec_bench/</code> - for instance: <code>go run gonative.go</code> vs <code>go run sipasec.go</code></i><br>
+To check if it does, use test programs from <code>gocoin/lib/others/cgo/ec_bench/</code> - for instance: <code>go run gonative.go</code> vs <code>go run sipasec.go</code>.</i><br>
 <br>
 
 To make Gocoin client to use the external library, copy either the file
@@ -75,7 +77,7 @@ On Debian based Linux system, simply execute the following commands:<br>
 <code>&nbsp;&nbsp;sudo make install</code> <br>
 <br>
 <i>Note: When the library is properly installed, executing <code>go test</code> inside
-<code>gocoin/lib/others/cgo/sipasec/</code> says <b>PASS</b></i>
+<code>gocoin/lib/others/cgo/sipasec/</code> says <b>PASS</b>.</i>
 </td>
 
 <td valign="top">
@@ -98,15 +100,17 @@ To build <b>secp256k1.dll</b> youself, look into
 <h2>Compress UTXO records</h2>
 To save some system memory as well as a disk space, although at the cost of a performance, you can compress UTXO database.<br>
 <br>
-In order to do this, execute the tool <code>utxo_compress</code>.<br>
+In order to do this, execute the tool <code>utxo -compress</code>.<br>
 The tool needs to be executed from inside the data folder - where the <code>UTXO.db</code> file is.<br>
 The node must not be running while executing the tool.<br>
 <br>
-You can reverse the operation of compressing the database, be running <code>utxo_decompress</code>.<br>
+You can reverse the operation of compressing the database, be running <code>utxo -decompress</code>.<br>
+<br>
+<i>Note: It saves only about 3% of space used by UTXO.db file.</i><br>
 <br>
 
 <h2>Garbage Collector and UTXO heap</h2>
-If you have RAM to spare, try switching UTXO records to Go's heap manager 
+If you have RAM to spare, try switching UTXO records to Go's heap manager
 and increasing Garbage Collector's treshold.<br>
 This will increase memory usage, but should improve block processing performance
 (e.g. during initial blockchain download).<br>
@@ -116,6 +120,10 @@ Edit the <a href="gocoin_manual_config.html">config file</a> to set
 <code>Memory.GCPercTrshold</code> to <b>100</b> or more (higher value for more effect).<br>
 You may also try only increasing <code>Memory.GCPercTrshold</code>, leaving <code>Memory.UseGoHeap</code> set to <b>false</b>.<br>
 <br>
-<i>Note: The node needs to be restarted to apply a new value of <code>Memory.UseGoHeap</code></i>
+<i>Notes:<br>
+1. Do not do this if you have less than 64GB of RAM, as it will likely slow your system down.<br>
+2. Monitor your system for RAM usage. If it uses all the RAM, means you set <code>GCPercTrshold</code> too high.<br>
+3. The node needs to be restarted to apply a new value of <code>Memory.UseGoHeap</code>.
+</i>
 </body>
 </html>

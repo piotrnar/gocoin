@@ -35,6 +35,7 @@ func print_help() {
 	fmt.Println()
 	fmt.Println("Add -ltc at the command line, to force fetching Litecoin balance.")
 	fmt.Println("Add -t at the command line, to force fetching Testnet balance.")
+	fmt.Println("Add -v at the command line, to see some additional messages.")
 	fmt.Println()
 	fmt.Println("To use Tor, setup environment variable TOR=host:port")
 	fmt.Println("The host:port should point to your Tor's SOCKS proxy.")
@@ -175,6 +176,8 @@ func main() {
 			ltc_mode = true
 		} else if os.Args[i] == "-t" {
 			tbtc = true
+		} else if os.Args[i] == "-v" {
+			utils.Verbose = true
 		} else {
 			argz = append(argz, os.Args[i])
 		}

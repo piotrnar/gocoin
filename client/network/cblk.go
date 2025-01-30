@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/siphash"
@@ -202,16 +203,10 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		b2g.SendInvs = true
 	}
 
-	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && c.Node.SendCmpctVer < 2 {
-		if b2g.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
-			common.CountSafe("CmpctBlockIgnore")
-			println("Ignore compact block", b2g.Block.Height, "from non-segwit node", c.ConnID)
-			if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-				// it only makes sense to ask this node for block's data, if it supports segwit
-				c.MutexSetBool(&c.X.GetBlocksDataNow, true)
-			}
-			return
-		}
+	if c.Node.SendCmpctVer != 2 {
+		common.CountSafe("CmpctBlockIgnore")
+		println("Ignore compact block", b2g.Block.Height, "version", c.Node.SendCmpctVer, "from ConnID", c.ConnID)
+		c.MutexSetBool(&c.X.GetBlocksDataNow, true)
 	}
 
 	// if we got here, we shall download this block
@@ -292,9 +287,9 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 
 	var cnt_found int
 
-	TxMutex.Lock()
+	txpool.TxMutex.Lock()
 
-	for _, v := range TransactionsToSend {
+	for _, v := range txpool.TransactionsToSend {
 		var hash2take *btc.Uint256
 		if c.Node.SendCmpctVer == 2 {
 			hash2take = v.Tx.WTxID()
@@ -313,7 +308,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 		}
 	}
 
-	for _, v := range TransactionsRejected {
+	for _, v := range txpool.TransactionsRejected {
 		if v.Tx == nil {
 			continue
 		}
@@ -332,7 +327,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			}
 			shortids[sid] = v.Raw
 			cnt_found++
-			common.CountSafe(fmt.Sprint("CmpctBlkUseRej-", v.Reason))
+			common.CountSafePar("CmpctBlkUseRej-", v.Reason)
 		}
 	}
 
@@ -371,7 +366,7 @@ func (c *OneConnection) ProcessCmpctBlock(pl []byte) {
 			shortidx_idx += 6
 		}
 	}
-	TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 
 	if missing == 0 {
 		//sta := time.Now()
@@ -490,7 +485,7 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		raw_tx := pl[offs : offs+n]
 		var tx_hash btc.Uint256
 		tx_hash.Calc(raw_tx)
-		if common.GetBool(&common.CFG.TXPool.Debug) {
+		if common.Get(&common.CFG.TXPool.Debug) {
 			if f, _ := os.OpenFile("missing_txs.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660); f != nil {
 				_tx, _ := btc.NewTx(raw_tx)
 				_tx.SetHash(raw_tx)

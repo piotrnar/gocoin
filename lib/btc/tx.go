@@ -44,32 +44,28 @@ type TxOut struct {
 
 type Tx struct {
 	Version   uint32
+	Lock_time uint32
 	TxIn      []*TxIn
 	TxOut     []*TxOut
 	SegWit    [][][]byte
-	Lock_time uint32
 
-	// These three fields should be set in block.go:
+	// Set by SetHash() method:
 	Raw             []byte
 	Size, NoWitSize uint32
 	Hash            Uint256
+	wTxID           Uint256
 
-	// This field is only set in chain's ProcessBlockTransactions:
-	Fee uint64
+	// Set in chain's ProcessBlockTransactions:
+	Spent_outputs []*TxOut // this is used by TaprootSigHash()
+	Fee           uint64
 
-	wTxID Uint256
-
-	hash_lock    sync.Mutex
-	hashPrevouts []byte
-	hashSequence []byte
-	hashOutputs  []byte
-
-	Spent_outputs               []*TxOut // this is used by TaprootSigHash()
-	m_prevouts_single_hash      []byte
-	m_sequences_single_hash     []byte
-	m_outputs_single_hash       []byte
-	m_spent_amounts_single_hash []byte
-	m_spent_scripts_single_hash []byte
+	// Segwit/taproot internat fields:
+	hashLock         sync.Mutex
+	hashPrevouts     *[32]byte
+	hashSequence     *[32]byte
+	hashOutputs      *[32]byte
+	tapSingleHashes  *taprootSHType
+	tapOutSingleHash *[32]byte
 }
 
 type AddrValue struct {
@@ -77,8 +73,19 @@ type AddrValue struct {
 	Addr20 [20]byte
 }
 
+func (t *Tx) Clean() {
+	t.hashLock.Lock()
+	t.hashPrevouts = nil
+	t.hashSequence = nil
+	t.hashOutputs = nil
+	t.tapSingleHashes = nil
+	t.tapOutSingleHash = nil
+	t.hashLock.Unlock()
+}
+
 func (po *TxPrevOut) UIdx() uint64 {
-	return binary.LittleEndian.Uint64(po.Hash[:8]) ^ uint64(po.Vout)
+	// use different bytes than BIDX, just to make sure we're not mixing them
+	return binary.LittleEndian.Uint64(po.Hash[24:32]) ^ uint64(po.Vout)
 }
 
 func (to *TxOut) String(testnet bool) (s string) {
@@ -346,8 +353,8 @@ func (tx *Tx) CheckTransaction() error {
 
 	if tx.IsCoinBase() {
 		if len(tx.TxIn[0].ScriptSig) < 2 || len(tx.TxIn[0].ScriptSig) > 100 {
-			return errors.New(fmt.Sprintf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
-				len(tx.TxIn[0].ScriptSig)))
+			return fmt.Errorf("CheckTransaction() : coinbase script size %d - RPC_Result:bad-cb-length",
+				len(tx.TxIn[0].ScriptSig))
 		}
 	} else {
 		for i := range tx.TxIn {
@@ -616,8 +623,8 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 	var hashSequence []byte
 	var hashOutputs []byte
 
-	tx.hash_lock.Lock()
-	defer tx.hash_lock.Unlock()
+	tx.hashLock.Lock()
+	defer tx.hashLock.Unlock()
 
 	sha := sha256.New()
 
@@ -630,10 +637,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashPrevouts = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashPrevouts)
-			tx.hashPrevouts = sha.Sum(nil)
+			tx.hashPrevouts = new([32]byte)
+			copy(tx.hashPrevouts[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashPrevouts = tx.hashPrevouts
+		hashPrevouts = tx.hashPrevouts[:]
 	} else {
 		hashPrevouts = nullHash[:]
 	}
@@ -646,10 +654,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashSequence = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashSequence)
-			tx.hashSequence = sha.Sum(nil)
+			tx.hashSequence = new([32]byte)
+			copy(tx.hashSequence[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashSequence = tx.hashSequence
+		hashSequence = tx.hashSequence[:]
 	} else {
 		hashSequence = nullHash[:]
 	}
@@ -664,10 +673,11 @@ func (tx *Tx) WitnessSigHash(scriptCode []byte, amount uint64, nIn int, hashType
 			hashOutputs = sha.Sum(nil)
 			sha.Reset()
 			sha.Write(hashOutputs)
-			tx.hashOutputs = sha.Sum(nil)
+			tx.hashOutputs = new([32]byte)
+			copy(tx.hashOutputs[:], sha.Sum(nil))
 			sha.Reset()
 		}
-		hashOutputs = tx.hashOutputs
+		hashOutputs = tx.hashOutputs[:]
 	} else if (hashType&0x1f) == SIGHASH_SINGLE && nIn < len(tx.TxOut) {
 		binary.Write(sha, binary.LittleEndian, tx.TxOut[nIn].Value)
 		WriteVlen(sha, uint64(len(tx.TxOut[nIn].Pk_script)))

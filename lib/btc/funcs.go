@@ -165,7 +165,7 @@ func GetWitnessMerkle(txs []*Tx) (res []byte, mutated bool) {
 	return
 }
 
-// As used by core's script compress/decompress
+// As used by core's script compress/decompress and in LevelDB chainstate Database
 func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
 	var chData byte
 	for {
@@ -176,6 +176,31 @@ func ReadVarInt(rd *bufio.Reader) (n uint64, er error) {
 		} else {
 			return
 		}
+	}
+}
+
+// As used by core's script compress/decompress and in LevelDB chainstate Database
+func WriteVarInt(wr *bufio.Writer, n uint64) {
+	var tmp [10]byte
+	var le int
+	for {
+		if le > 0 {
+			tmp[le] = byte(n&0x7F) | 0x80
+		} else {
+			tmp[le] = byte(n & 0x7F)
+		}
+		if n <= 0x7F {
+			break
+		}
+		n = (n >> 7) - 1
+		le++
+	}
+	for {
+		wr.WriteByte(tmp[le])
+		if le == 0 {
+			break
+		}
+		le--
 	}
 }
 
@@ -269,7 +294,7 @@ func ParseMessageSignature(encsig string) (nv byte, sig *Signature, er error) {
 	}
 
 	if len(sd) != 65 {
-		er = errors.New("The decoded signature is not 65 bytes long")
+		er = errors.New("decoded signature not 65 bytes long")
 		return
 	}
 
@@ -306,7 +331,7 @@ func StringToSatoshis(s string) (val uint64, er error) {
 	}
 
 	if len(ss[1]) > 8 {
-		er = errors.New("Too many decimal points")
+		er = errors.New("too many decimal points")
 		return
 	}
 	if len(ss[1]) < 8 {

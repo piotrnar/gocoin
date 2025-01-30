@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
@@ -35,7 +35,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		p_wallet_is_off(w, r)
 		return
 	}
@@ -75,7 +75,7 @@ func getaddrtype(aa *btc.BtcAddr) string {
 }
 
 func json_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || !common.GetBool(&common.WalletON) {
+	if !ipchecker(r) || !common.Get(&common.WalletON) {
 		return
 	}
 
@@ -175,9 +175,9 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 			as = aa.String()
 			for _, u := range unsp {
 				newrec.Value += u.Value
-				network.TxMutex.Lock()
-				_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
-				network.TxMutex.Unlock()
+				txpool.TxMutex.Lock()
+				_, spending := txpool.SpentOutputs[u.TxPrevOut.UIdx()]
+				txpool.TxMutex.Unlock()
 				if spending {
 					newrec.SpendingValue += u.Value
 					newrec.SpendingCnt++
@@ -221,9 +221,9 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 				newrec.SegWitCnt = len(unsp)
 				for _, u := range unsp {
 					newrec.Value += u.Value
-					network.TxMutex.Lock()
-					_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
-					network.TxMutex.Unlock()
+					txpool.TxMutex.Lock()
+					_, spending := txpool.SpentOutputs[u.TxPrevOut.UIdx()]
+					txpool.TxMutex.Unlock()
 					if spending {
 						newrec.SpendingValue += u.Value
 						newrec.SpendingCnt++
@@ -259,9 +259,9 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 				newrec.SegWitNativeCnt = len(unsp)
 				for _, u := range unsp {
 					newrec.Value += u.Value
-					network.TxMutex.Lock()
-					_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
-					network.TxMutex.Unlock()
+					txpool.TxMutex.Lock()
+					_, spending := txpool.SpentOutputs[u.TxPrevOut.UIdx()]
+					txpool.TxMutex.Unlock()
 					if spending {
 						newrec.SpendingValue += u.Value
 						newrec.SpendingCnt++
@@ -301,9 +301,9 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec.SegWitTapCnt = len(unsp)
 					for _, u := range unsp {
 						newrec.Value += u.Value
-						network.TxMutex.Lock()
-						_, spending := network.SpentOutputs[u.TxPrevOut.UIdx()]
-						network.TxMutex.Unlock()
+						txpool.TxMutex.Lock()
+						_, spending := txpool.SpentOutputs[u.TxPrevOut.UIdx()]
+						txpool.TxMutex.Unlock()
 						if spending {
 							newrec.SpendingValue += u.Value
 							newrec.SpendingCnt++
@@ -334,8 +334,8 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 
 	// check memory pool
 	if mempool {
-		network.TxMutex.Lock()
-		for _, t2s := range network.TransactionsToSend {
+		txpool.TxMutex.Lock()
+		for _, t2s := range txpool.TransactionsToSend {
 			for vo, to := range t2s.TxOut {
 				if a, ok := addr_map[string(to.Pk_script)]; ok {
 					var tpo btc.TxPrevOut
@@ -344,14 +344,14 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 					newrec := out[a]
 					newrec.PendingValue += to.Value
 					newrec.PendingCnt++
-					_, spending := network.SpentOutputs[tpo.UIdx()]
+					_, spending := txpool.SpentOutputs[tpo.UIdx()]
 					if spending {
 						newrec.SpendingValue += to.Value
 						newrec.SpendingCnt++
 					}
 					if !summary {
 						po := &btc.TxPrevOut{Hash: t2s.Hash.Hash, Vout: uint32(vo)}
-						_, spending := network.SpentOutputs[po.UIdx()]
+						_, spending := txpool.SpentOutputs[po.UIdx()]
 						newrec.PendingOuts = append(newrec.PendingOuts, OneOut{
 							TxId: t2s.Hash.String(), Vout: uint32(vo),
 							Value: to.Value, Spending: spending})
@@ -359,7 +359,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 	}
 
 	lck.Out.Done()
@@ -374,7 +374,7 @@ func json_balance(w http.ResponseWriter, r *http.Request) {
 }
 
 func dl_balance(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) || !common.GetBool(&common.WalletON) {
+	if !ipchecker(r) || !common.Get(&common.WalletON) {
 		return
 	}
 

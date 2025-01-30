@@ -1,12 +1,13 @@
 package network
 
 import (
-	"fmt"
+
 	//"time"
 	"bytes"
 	"encoding/binary"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 )
@@ -14,11 +15,11 @@ import (
 const (
 	MSG_WITNESS_FLAG = 0x40000000
 
-	MSG_TX            = 1
-	MSG_BLOCK         = 2
-	MSG_CMPCT_BLOCK   = 4
-	MSG_WITNESS_TX    = MSG_TX | MSG_WITNESS_FLAG
-	MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG
+	MSG_TX            = uint32(1)
+	MSG_BLOCK         = uint32(2)
+	MSG_CMPCT_BLOCK   = uint32(4)
+	MSG_WITNESS_TX    = uint32(MSG_TX | MSG_WITNESS_FLAG)
+	MSG_WITNESS_BLOCK = uint32(MSG_BLOCK | MSG_WITNESS_FLAG)
 )
 
 func blockReceived(bh *btc.Uint256) (ok bool) {
@@ -73,7 +74,6 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 		c.InvStore(typ, pl[of+4:of+36])
 		ahr := c.X.AllHeadersReceived
 		c.Mutex.Unlock()
-		//common.CountSafe(fmt.Sprint("InvGot-", typ))
 		if typ == MSG_BLOCK {
 			bhash := btc.NewUint256(pl[of+4 : of+36])
 			if !ahr {
@@ -104,30 +104,30 @@ func (c *OneConnection) ProcessInv(pl []byte) {
 			} else {
 				common.CountSafe("InvTxIgnored")
 			}
+		} else {
+			common.CountSafePar("InvUnknTyp-", typ)
 		}
 		of += 36
 	}
-
-	return
 }
 
 func NetRouteInv(typ uint32, h *btc.Uint256, fromConn *OneConnection) uint32 {
 	var fee_spkb uint64
 	if typ == MSG_TX {
-		TxMutex.Lock()
-		if tx, ok := TransactionsToSend[h.BIdx()]; ok {
-			fee_spkb = (1000 * tx.Fee) / uint64(tx.VSize())
+		txpool.TxMutex.Lock()
+		if tx, ok := txpool.TransactionsToSend[h.BIdx()]; ok {
+			fee_spkb = (4000 * tx.Fee) / uint64(tx.Weight())
 		} else {
 			println("NetRouteInv: txid", h.String(), "not in mempool")
 		}
-		TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 	}
 	return NetRouteInvExt(typ, h, fromConn, fee_spkb)
 }
 
 // NetRouteInvExt is called from the main thread (or from a UI).
 func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spkb uint64) (cnt uint32) {
-	common.CountSafe(fmt.Sprint("NetRouteInv", typ))
+	common.CountSafePar("NetRouteInv-", typ)
 
 	// Prepare the inv
 	inv := new([36]byte)
@@ -148,18 +148,11 @@ func NetRouteInvExt(typ uint32, h *btc.Uint256, fromConn *OneConnection, fee_spk
 					send_inv = false
 					common.CountSafe("SendInvFeeTooLow")
 				}
-
-				/* This is to prevent sending own txs to "spying" peers:
-				else if fromConn==nil && v.X.InvsRecieved==0 {
-					send_inv = false
-					common.CountSafe("SendInvOwnBlocked")
-				}
-				*/
 			}
 			if send_inv {
 				if len(v.PendingInvs) < 500 {
 					if typ, ok := v.InvDone.Map[hash2invid(inv[4:36])]; ok {
-						common.CountSafe(fmt.Sprint("SendInvSame-", typ))
+						common.CountSafePar("SendInvSame-", typ)
 					} else {
 						v.PendingInvs = append(v.PendingInvs, inv)
 						cnt++
@@ -231,7 +224,6 @@ func (c *OneConnection) GetBlocks(pl []byte) {
 	}
 
 	common.CountSafe("GetblksMissed")
-	return
 }
 
 func (c *OneConnection) SendInvs() (res bool) {

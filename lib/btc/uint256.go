@@ -1,17 +1,20 @@
 package btc
 
 import (
-	"fmt"
 	"bytes"
-	"math/big"
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
+	"math/big"
 )
 
-const Uint256IdxLen = 8  // The bigger it is, the more memory is needed, but lower chance of a collision
+const Uint256IdxLen = 8 // The bigger it is, the more memory is needed, but lower chance of a collision
 
 type Uint256 struct {
 	Hash [32]byte
 }
+
+type BIDX [Uint256IdxLen]byte
 
 func NewUint256(h []byte) (res *Uint256) {
 	res = new(Uint256)
@@ -26,17 +29,16 @@ func NewUint256FromString(s string) (res *Uint256) {
 		//println("NewUint256FromString", s, e.Error())
 		return
 	}
-	if len(d)!=32 {
+	if len(d) != 32 {
 		//println("NewUint256FromString", s, "not 32 bytes long")
 		return
 	}
 	res = new(Uint256)
-	for i := 0; i<32; i++ {
+	for i := 0; i < 32; i++ {
 		res.Hash[31-i] = d[i]
 	}
 	return
 }
-
 
 func NewSha2Hash(data []byte) (res *Uint256) {
 	res = new(Uint256)
@@ -44,15 +46,13 @@ func NewSha2Hash(data []byte) (res *Uint256) {
 	return
 }
 
-
 func (u *Uint256) Bytes() []byte {
 	return u.Hash[:]
 }
 
-
 func (u *Uint256) String() (s string) {
-	for i := 0; i<32; i++ {
-		s+= fmt.Sprintf("%02x", u.Hash[31-i])
+	for i := 0; i < 32; i++ {
+		s += fmt.Sprintf("%02x", u.Hash[31-i])
 	}
 	return
 }
@@ -65,14 +65,18 @@ func (u *Uint256) Calc(data []byte) {
 	ShaHash(data, u.Hash[:])
 }
 
-
-func BIdx(hash []byte) (o [Uint256IdxLen]byte) {
+func BIdx(hash []byte) (o BIDX) {
 	copy(o[:], hash[:Uint256IdxLen])
 	return
 }
 
-func (u *Uint256) BIdx() (o [Uint256IdxLen]byte) {
+func (u *Uint256) BIdx() (o BIDX) {
 	o = BIdx(u.Hash[:])
+	return
+}
+
+func BIdxString(o [Uint256IdxLen]byte) (s string) {
+	s = fmt.Sprintf("%016x", binary.LittleEndian.Uint64(o[:]))
 	return
 }
 

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
@@ -37,18 +39,17 @@ func send_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
-	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+		txpool.TxMutex.Unlock()
 		cnt := network.NetRouteInv(1, txid, nil)
 		ptx.Invsentcnt += cnt
 		fmt.Println("INV for TxID", txid.String(), "sent to", cnt, "node(s)")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 	}
@@ -58,18 +59,17 @@ func send1_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
-	network.TxMutex.Lock()
-	if ptx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	if ptx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+		txpool.TxMutex.Unlock()
 		usif.SendInvToRandomPeer(1, txid)
 		ptx.Invsentcnt++
 		fmt.Println("INV for TxID", txid.String(), "sent to a random node")
 		fmt.Println("If it does not appear in the chain, you may want to redo it.")
 	} else {
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		fmt.Println("No such transaction ID in the memory pool.")
 		list_txs("")
 	}
@@ -79,34 +79,113 @@ func del_tx(par string) {
 	txid := btc.NewUint256FromString(par)
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
-	tx, ok := network.TransactionsToSend[txid.BIdx()]
-	if !ok {
-		network.TxMutex.Unlock()
-		fmt.Println("No such transaction ID in the memory pool.")
-		list_txs("")
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
+
+	if tx, ok := txpool.TransactionsToSend[txid.BIdx()]; ok {
+		tx.Delete(true, 0)
+		fmt.Println("Tx", txid.String(), "removed from ToSend")
 		return
 	}
-	tx.Delete(true, 0)
-	fmt.Println("Transaction", txid.String(), "and all its children removed from the memory pool")
+	if txr, ok := txpool.TransactionsRejected[txid.BIdx()]; ok {
+		txpool.DeleteRejectedByTxr(txr)
+		fmt.Println("TxR", txid.String(), "removed from Rejected")
+		return
+	}
+	fmt.Println("No such transaction ID in the memory pool.")
 }
 
-func dec_tx(par string) {
-	txid := btc.NewUint256FromString(par)
+func local_tx(par string) {
+	ps := strings.SplitN(par, " ", 3)
+	txid := btc.NewUint256FromString(ps[0])
 	if txid == nil {
 		fmt.Println("You must specify a valid transaction ID for this command.")
-		list_txs("")
 		return
 	}
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		s, _, _, _, _ := usif.DecodeTx(tx.Tx)
-		fmt.Println(s)
+	local := len(ps) == 1 || ps[1] != "0"
+	if tx := txpool.TransactionsToSend[txid.BIdx()]; tx != nil {
+		if tx.Local != local {
+			tx.Local = local
+		} else {
+			fmt.Println("This transaction is already marked as such.")
+		}
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
+	}
+}
+
+func decode_tx(pars string) {
+	var tx *btc.Tx
+	ps := strings.SplitN(pars, " ", 3)
+	txid := btc.NewUint256FromString(ps[0])
+	if txid == nil {
+		fmt.Println("You must specify a valid transaction ID for this command.")
+		return
+	}
+	var par string
+	if len(ps) > 1 {
+		par = ps[1]
+	}
+	t2s := txpool.TransactionsToSend[txid.BIdx()]
+	txr := txpool.TransactionsRejected[txid.BIdx()]
+	if t2s == nil && txr == nil {
+		fmt.Println("No such transaction ID in the memory pool.")
+		return
+	}
+	if t2s != nil {
+		tx = t2s.Tx
+	} else {
+		fmt.Println("*** Transaction Rejected ***")
+		tx = txr.Tx
+		if tx == nil {
+			fmt.Println("Transaction data not available.")
+			par = "int"
+		}
+	}
+
+	var done bool
+	if par == "raw" || par == "all" {
+		fmt.Println(hex.EncodeToString(tx.Raw))
+		done = true
+	}
+	if par == "int" || par == "all" {
+		if done {
+			fmt.Println()
+		}
+		if t2s != nil {
+			fmt.Println("Invs sent cnt:", t2s.Invsentcnt)
+			fmt.Println("Tx sent cnt:", t2s.SentCnt)
+			fmt.Println("Frst seen:", t2s.Firstseen.Format("2006-01-02 15:04:05"))
+			fmt.Println("Last seen:", t2s.Lastseen.Format("2006-01-02 15:04:05"))
+			if t2s.SentCnt > 0 {
+				fmt.Println("Last sent:", t2s.Lastsent.Format("2006-01-02 15:04:05"))
+			}
+			fmt.Println("Volume:", t2s.Volume)
+			fmt.Println("Fee:", t2s.Fee)
+			fmt.Println("MemInputCnt:", t2s.MemInputCnt, " ", t2s.MemInputs)
+			fmt.Println("SigopsCost:", t2s.SigopsCost)
+			fmt.Println("VerifyTime:", t2s.VerifyTime.String())
+			fmt.Println("Local:", t2s.Local)
+			fmt.Println("Blocked:", t2s.Blocked)
+			fmt.Println("Final:", t2s.Final)
+		}
+		if txr != nil {
+			fmt.Println("Reason:", txr.Reason, txpool.ReasonToString(txr.Reason))
+			fmt.Println("Time:", txr.Time.Format("2006-01-02 15:04:05"))
+			fmt.Println("Size:", txr.Size)
+			if txr.Waiting4 != nil {
+				fmt.Println("Waiting for:", txr.Waiting4.String())
+			}
+		}
+		done = true
+	}
+	if !done || par == "all" {
+		if done {
+			fmt.Println()
+		}
+		usif.DecodeTx(os.Stdout, tx)
 	}
 }
 
@@ -116,9 +195,18 @@ func save_tx(par string) {
 		fmt.Println("You must specify a valid transaction ID for this command.")
 		return
 	}
-	if tx, ok := network.TransactionsToSend[txid.BIdx()]; ok {
-		fn := tx.Hash.String() + ".txt"
-		os.WriteFile(fn, []byte(hex.EncodeToString(tx.Raw)), 0600)
+	var tx *btc.Tx
+
+	if t2s := txpool.TransactionsToSend[txid.BIdx()]; t2s != nil {
+		tx = t2s.Tx
+	} else {
+		if txr := txpool.TransactionsRejected[txid.BIdx()]; txr != nil {
+			tx = txr.Tx
+		}
+	}
+	if tx != nil {
+		fn := tx.Hash.String() + ".tx"
+		os.WriteFile(fn, tx.Raw, 0600)
 		fmt.Println("Saved to", fn)
 	} else {
 		fmt.Println("No such transaction ID in the memory pool.")
@@ -138,10 +226,10 @@ func list_txs(par string) {
 	}
 	fmt.Println("Listing txs in mempool up to weight:", maxweigth)
 	cnt := 0
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	sorted := network.GetSortedMempool()
+	sorted := txpool.GetSortedMempool()
 
 	var totlen, totweigth uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
@@ -171,26 +259,156 @@ func list_txs(par string) {
 }
 
 func baned_txs(par string) {
-	fmt.Println("Rejected transactions:")
-	cnt := 0
-	network.TxMutex.Lock()
-	for k, v := range network.TransactionsRejected {
-		cnt++
-		fmt.Println("", cnt, btc.NewUint256(k[:]).String(), "-", v.Size, "bytes",
-			"-", v.Reason, "-", time.Since(v.Time).String(), "ago")
+	var reason byte
+	if par != "" {
+		if val, er := strconv.ParseUint(par, 10, 64); er != nil || val < 1 || val > 255 {
+			println("Rejection reason must be a value between 1 and 255")
+			return
+		} else {
+			reason = byte(val)
+		}
 	}
-	network.TxMutex.Unlock()
+	fmt.Println("Listing Rejected transactions", reason, ":")
+	cnt := 0
+	txpool.TxMutex.Lock()
+	for idx := txpool.TRIdxHead; idx != txpool.TRIdxTail; idx = txpool.TRIdxPrev(idx) {
+		if v := txpool.TransactionsRejected[txpool.TRIdxArray[idx]]; v != nil {
+			if reason != 0 && reason != v.Reason {
+				continue
+			}
+			var bts string = "bytes"
+			cnt++
+			if v.Tx == nil {
+				bts = "v-bts"
+			}
+			fmt.Println("", cnt, v.Id.String(), "-", v.Size, bts,
+				"-", txpool.ReasonToString(v.Reason), "-", time.Since(v.Time).String(), "ago")
+		}
+	}
+	txpool.TxMutex.Unlock()
+}
+
+func txr_purge(par string) {
+	var minage time.Duration = time.Hour
+	var commit bool
+	ss := strings.Split(par, " ")
+	for _, s := range ss {
+		if s == "commit" {
+			commit = true
+			continue
+		}
+		if tmp, er := strconv.ParseUint(par, 10, 64); er == nil {
+			minage = time.Duration(tmp) * time.Minute
+		} else {
+			fmt.Println("Argument must be either commit or a positive integer")
+			return
+		}
+	}
+
+	tim := time.Now().Add(-minage)
+
+	fmt.Println("Purging data of all transactions rejected before", tim.Format(("2006-01-02 15:04:05")))
+
+	todo := make([]btc.BIDX, 0, 100)
+	txpool.TxMutex.Lock()
+	for k, txr := range txpool.TransactionsRejected {
+		if txr.Tx != nil && txr.Time.Before(tim) {
+			todo = append(todo, k)
+			var ds string
+			if txr.Tx != nil {
+				ds = fmt.Sprint(len(txr.Tx.Raw), " bytes")
+			} else {
+				ds = fmt.Sprint(txr.Size, " v-bts")
+			}
+			fmt.Printf("%4d) %s  %s  %s\n", len(todo), txr.Id.String(), txpool.ReasonToString(txr.Reason), ds)
+		}
+	}
+	if len(todo) > 0 {
+		if commit {
+			for _, k := range todo {
+				txpool.DeleteRejectedByIdx(k)
+			}
+			fmt.Println(len(todo), "rejected txs deleted")
+			common.CountSafeAdd("TxRDelUiTot", uint64(len(todo)))
+		}
+	} else {
+		fmt.Println("Nothing found")
+	}
+	txpool.TxMutex.Unlock()
+}
+
+func txr_stats(par string) {
+	type rect struct {
+		totsize, memsize uint64
+		totcnt, memcnt   uint32
+		from, to         time.Time
+	}
+	cnts := make(map[byte]*rect)
+	var reasons []int
+
+	txpool.TxMutex.Lock()
+
+	idx_use := txpool.TRIdxHead - txpool.TRIdxTail
+	if idx_use < 0 {
+		idx_use += len(txpool.TRIdxArray)
+	}
+	if _, ok := txpool.TransactionsRejected[txpool.TRIdxArray[txpool.TRIdxHead]]; ok {
+		idx_use++
+	}
+
+	fmt.Println(len(txpool.TransactionsRejected), "/", idx_use, "/", len(txpool.TRIdxArray),
+		"txs with total in-memory size of", txpool.TransactionsRejectedSize, "  head:",
+		txpool.TRIdxHead, "  tail:", txpool.TRIdxTail)
+
+	for _, v := range txpool.TransactionsRejected {
+		var rec *rect
+		if rec = cnts[v.Reason]; rec == nil {
+			reasons = append(reasons, int(v.Reason))
+			rec = new(rect)
+		}
+		rec.totsize += uint64(v.Size)
+		rec.totcnt++
+		if v.Tx != nil {
+			rec.memsize += uint64(len(v.Raw))
+			rec.memcnt++
+		}
+		if rec.from.IsZero() {
+			rec.from = v.Time
+			rec.to = v.Time
+		} else {
+			if v.Time.Before(rec.from) {
+				rec.from = v.Time
+			} else if rec.to.Before(v.Time) {
+				rec.to = v.Time
+			}
+		}
+		cnts[v.Reason] = rec
+	}
+	sort.Ints(reasons)
+	for _, r := range reasons {
+		rea := byte(r)
+		rec := cnts[rea]
+		fmt.Println("  Reason:", rea, txpool.ReasonToString(rea))
+		fmt.Println("    Total Size:", rec.totsize, "in", rec.totcnt, "recs", "   InMem Size:", rec.memsize, "in", rec.memcnt, "recs")
+		fmt.Println("    Time from", rec.from.Format("2006-01-02 15:04:05"), "to", rec.to.Format("2006-01-02 15:04:05"))
+	}
+	cnt := 0
+	for _, lst := range txpool.RejectedUsedUTXOs {
+		cnt += len(lst)
+	}
+	fmt.Println("RejectedUsedUTXOs count:", cnt, "in", len(txpool.RejectedUsedUTXOs), "records")
+	txpool.TxMutex.Unlock()
 }
 
 func send_all_tx(par string) {
-	var tmp []*network.OneTxToSend
-	network.TxMutex.Lock()
-	for _, v := range network.TransactionsToSend {
+	var tmp []*txpool.OneTxToSend
+	txpool.TxMutex.Lock()
+	for _, v := range txpool.TransactionsToSend {
 		if v.Local {
 			tmp = append(tmp, v)
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 	for _, v := range tmp {
 		cnt := network.NetRouteInv(1, &v.Tx.Hash, nil)
 		v.Invsentcnt += cnt
@@ -199,43 +417,19 @@ func send_all_tx(par string) {
 }
 
 func save_mempool(par string) {
-	network.MempoolSave(true)
+	txpool.TxMutex.Lock()
+	txpool.MempoolSave(true)
+	txpool.TxMutex.Unlock()
 }
 
 func check_txs(par string) {
-	network.TxMutex.Lock()
-	err := network.MempoolCheck()
-	network.TxMutex.Unlock()
+	fmt.Println("Locking TxMutex")
+	txpool.TxMutex.Lock()
+	fmt.Println("TxMutex Locked")
+	err := txpool.MempoolCheck()
+	txpool.TxMutex.Unlock()
 	if !err {
 		fmt.Println("Memory Pool seems to be consistent")
-	}
-}
-
-func load_mempool(par string) {
-	if par == "" {
-		par = common.GocoinHomeDir + "mempool.dmp"
-	}
-	var abort bool
-	__exit := make(chan bool)
-	__done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case s := <-common.KillChan:
-				fmt.Println(s)
-				abort = true
-			case <-__exit:
-				__done <- true
-				return
-			}
-		}
-	}()
-	fmt.Println("Press Ctrl+C to abort...")
-	network.MempoolLoadNew(par, &abort)
-	__exit <- true
-	<-__done
-	if abort {
-		fmt.Println("Aborted")
 	}
 }
 
@@ -250,59 +444,125 @@ func get_mempool(par string) {
 	network.GetMP(uint32(conid))
 }
 
+func mempool_purge(par string) {
+	txpool.InitMempool()
+	fmt.Println("Done")
+}
+
 func push_old_txs(par string) {
-	var invs, cnt uint32
+	var invs uint32
 	var weight uint64
 	var max_spb float64
 	var er error
-	var commit bool
+	var push, purge bool
+	var txs_found []*txpool.OneTxToSend
 	ss := strings.SplitN(par, " ", 2)
 	if len(ss) >= 1 {
 		max_spb, er = strconv.ParseFloat(ss[0], 64)
 		if er != nil {
 			max_spb = 10.0
 		}
-		commit = len(ss) >= 2 && ss[1] == "yes"
+		if len(ss) >= 2 {
+			if ss[1] == "push" {
+				push = true
+			} else if ss[1] == "purge" {
+				purge = true
+			} else {
+				fmt.Println("The second argument must be eiter push or purge")
+			}
+		}
+
 	}
-	fmt.Printf("Looking for 1+ day old txs with SPB above %.1f\n", max_spb)
-	network.TxMutex.Lock()
-	for _, tx := range network.TransactionsToSend {
-		if tx.MemInputCnt == 0 && time.Since(tx.Firstseen) > 24*time.Hour {
+	fmt.Printf("Looking for txs last seen over a day ago with SPB above %.1f\n", max_spb)
+	txpool.TxMutex.Lock()
+	for _, tx := range txpool.TransactionsToSend {
+		if tx.MemInputCnt == 0 && time.Since(tx.Lastseen) > 24*time.Hour {
 			spb := tx.SPB()
 			if spb >= max_spb {
 				wg := tx.Weight()
-				if commit {
-					invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*spb))
-				} else {
-					fmt.Printf("%d) %s  SPB:%.2f   WG:%d\n", cnt+1, tx.Hash.String(), spb, wg)
-				}
-				cnt++
+				txs_found = append(txs_found, tx)
 				weight += uint64(wg)
+				if !push && !purge {
+					fmt.Printf("%d) %s  %.1f spb, %.1f kW,  %.1f day\n", len(txs_found), tx.Hash.String(), spb,
+						float64(wg)/1000.0, float64(time.Since(tx.Lastseen))/float64(24*time.Hour))
+				}
 			}
 		}
 	}
-	fmt.Println("Found", cnt, "/", len(network.TransactionsToSend), "txs matching the criteria")
-	network.TxMutex.Unlock()
-	fmt.Println("Total weigth:", weight, "   number of invs sent:", invs)
-	if !commit {
+	totlen := len(txpool.TransactionsToSend)
+	fmt.Println("Found", len(txs_found), "/", totlen, "txs matching the criteria, with total weight of", weight)
+	if push || purge {
+		for _, tx := range txs_found {
+			if push {
+				invs += network.NetRouteInvExt(network.MSG_TX, &tx.Hash, nil, uint64(1000.0*tx.SPB()))
+			} else if purge {
+				tx.Delete(true, 0)
+			}
+		}
+		fmt.Println("Number of invs sent:", invs)
+		fmt.Println("Number of txs purged:", totlen-len(txpool.TransactionsToSend))
+	} else {
+		fmt.Println("Add push to broadcast them to peers, or purge to delete them from mempool")
+	}
+	txpool.TxMutex.Unlock()
+	if !push {
 		fmt.Printf("Execute 'pusholdtxs %.1f yes' to send all the invs\n", max_spb)
 	}
 }
 
+func tx_pool_stats(par string) {
+	txpool.CheckPoolSizes()
+	txpool.TxMutex.Lock()
+	var sw_cnt, sw_siz, sw_wgt uint64
+	for _, v := range txpool.TransactionsToSend {
+		if v.SegWit != nil {
+			sw_cnt++
+			sw_siz += uint64(v.Footprint)
+			sw_wgt += uint64(v.Weight())
+		}
+	}
+
+	var sw_perc_cnt, sw_perc_size, sw_perc_weight uint64
+	if len(txpool.TransactionsToSend) > 0 { // to avoid division by zero
+		sw_perc_cnt = 100 * sw_cnt / uint64(len(txpool.TransactionsToSend))
+	}
+	if txpool.TransactionsToSendSize > 0 { // to avoid division by zero
+		sw_perc_size = 100 * sw_siz / txpool.TransactionsToSendSize
+	}
+	if txpool.TransactionsToSendWeight > 0 { // to avoid division by zero
+		sw_perc_weight = 100 * sw_wgt / txpool.TransactionsToSendWeight
+	}
+
+	fmt.Printf("Mempool: %d in %d txs, carrying total weight of %d (~%d blocks)\n", txpool.TransactionsToSendSize, len(txpool.TransactionsToSend), txpool.TransactionsToSendWeight, txpool.TransactionsToSendWeight/4e6)
+	fmt.Printf("  SegWit-txs: %d (%d%%) in %d (%d%%) txs, carrying weight %d (%d%%)\n", sw_siz, sw_perc_size, sw_cnt, sw_perc_cnt, sw_wgt, sw_perc_weight)
+	fmt.Printf("  Number of Spent Outputs: %d\n", len(txpool.SpentOutputs))
+	fmt.Printf("Rejected: %d in %d txs\n", txpool.TransactionsRejectedSize, len(txpool.TransactionsRejected))
+	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
+	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
+	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
+	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
+	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
+	txpool.TxMutex.Unlock()
+}
+
 func init() {
-	newUi("txload tx", true, load_tx, "Load transaction data from the given file, decode it and store in memory")
-	newUi("txsend stx", true, send_tx, "Broadcast transaction from memory pool (identified by a given <txid>)")
-	newUi("tx1send stx1", true, send1_tx, "Broadcast transaction to a single random peer (identified by a given <txid>)")
-	newUi("txsendall stxa", true, send_all_tx, "Broadcast all the transactions (what you see after ltx)")
-	newUi("txdel dtx", true, del_tx, "Remove a transaction from memory pool (identified by a given <txid>)")
-	newUi("txdecode td", true, dec_tx, "Decode a transaction from memory pool (identified by a given <txid>)")
-	newUi("txlist ltx", true, list_txs, "List all the transaction loaded into memory pool up to <max_weigth> (default 4M)")
-	newUi("txlistban ltxb", true, baned_txs, "List the transaction that we have rejected")
-	newUi("mempool mp", true, mempool_stats, "Show the mempool statistics")
-	newUi("savetx txsave", true, save_tx, "Save raw transaction from memory pool to disk")
-	newUi("txmpsave mps", true, save_mempool, "Save memory pool to disk")
-	newUi("txcheck txc", true, check_txs, "Verify consistency of mempool")
-	newUi("txmpload mpl", true, load_mempool, "Load transaction from the given file (must be in mempool.dmp format)")
-	newUi("getmp mpg", true, get_mempool, "Send getmp message to the peer with the given ID")
-	newUi("pusholdtxs pot", true, push_old_txs, "Push old txs <SPB> [yes]")
+	newUi("mpcheck mpc", false, check_txs, "Verify consistency of mempool")
+	newUi("mpget mpg", false, get_mempool, "Send getmp message to the peer with the given ID")
+	newUi("mpurge", false, mempool_purge, "Purge memory pool (restart from empty)")
+	newUi("mpsave mps", false, save_mempool, "Save memory pool to disk")
+	newUi("mpstat mp", false, mempool_stats, "Show the mempool statistics")
+	newUi("savetx txs", false, save_tx, "Save raw tx from memory pool to disk: <txid>")
+	newUi("tx1send stx1", false, send1_tx, "Broadcast tx to a single random peer: <txid>")
+	newUi("txdecode td", false, decode_tx, "Decode tx from memory pool: <txid> [int|raw|all]")
+	newUi("txdel", false, del_tx, "Remove tx from memory: <txid>")
+	newUi("txlist ltx", false, list_txs, "List tx from memory pool up to: <max_weigth> (default 4M)")
+	newUi("txload txl", false, load_tx, "Load tx data from the given file, decode it and store in memory")
+	newUi("txlocal txloc", false, local_tx, "Mark tx as local: <txid> [0|1]")
+	newUi("txold to", false, push_old_txs, "Push or delete txs not seen for 1+ day: <SPB> [push|purge]")
+	newUi("txrlist rtl", false, baned_txs, "List the tx that we have rejected: [<reason>]")
+	newUi("txrpurge rtp", false, txr_purge, "Purge txs from rejected list: [<min_age_in_minutes>] [commit]")
+	newUi("txrstat rts", false, txr_stats, "Show stats of the rejected txs")
+	newUi("txsend stx", false, send_tx, "Broadcast tx from memory pool: <txid>")
+	newUi("txsendall stxa", false, send_all_tx, "Broadcast all the local txs (what you see after ltx)")
+	newUi("txstats ts", false, tx_pool_stats, "Mempool and other transaction related statistics")
 }

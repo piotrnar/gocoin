@@ -2,9 +2,10 @@ package utxo
 
 import (
 	"bytes"
-	"testing"
-	"github.com/piotrnar/gocoin/lib/btc"
 	"encoding/hex"
+	"testing"
+
+	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 const (
@@ -17,6 +18,7 @@ func TestFullUtxoRec(t *testing.T) {
 	rec := FullUtxoRec(raw)
 	if rec == nil {
 		t.Error("nil returned")
+		return
 	}
 	refid := btc.NewUint256FromString("68e34a6dd92377762938d7344ca1ba96943c39a897494c635f6ed1f97a876bb2")
 	txid := btc.NewUint256(rec.TxID[:])
@@ -65,7 +67,6 @@ func BenchmarkFullUtxoRec(b *testing.B) {
 	}
 }
 
-
 func BenchmarkNewUtxoRec(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
@@ -79,7 +80,6 @@ func BenchmarkNewUtxoRec(b *testing.B) {
 	}
 }
 
-
 func BenchmarkNewUtxoRecStatic(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
@@ -92,7 +92,6 @@ func BenchmarkNewUtxoRecStatic(b *testing.B) {
 		}
 	}
 }
-
 
 func BenchmarkSerialize(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
@@ -109,7 +108,6 @@ func BenchmarkSerialize(b *testing.B) {
 	}
 }
 
-
 func BenchmarkSerializeFull(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
@@ -125,7 +123,6 @@ func BenchmarkSerializeFull(b *testing.B) {
 	}
 }
 
-
 func BenchmarkSerializeWithAlloc(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
 	var key UtxoKeyType
@@ -139,7 +136,6 @@ func BenchmarkSerializeWithAlloc(b *testing.B) {
 		}
 	}
 }
-
 
 func BenchmarkSerializeCompress(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)
@@ -156,7 +152,6 @@ func BenchmarkSerializeCompress(b *testing.B) {
 		}
 	}
 }
-
 
 func BenchmarkSerializeCompressWithAlloc(b *testing.B) {
 	raw, _ := hex.DecodeString(UtxoRecord)

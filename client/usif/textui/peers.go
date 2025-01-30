@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 )
@@ -215,10 +215,10 @@ func del_peer(par string) {
 }
 
 func init() {
-	newUi("ban", false, show_node_stats, "Ban a peer specified by IP")
-	newUi("nodestat ns", false, show_node_stats, "Shows all known nodes version statistics")
-	newUi("peeradd pa", false, add_peer, "Add a peer to the database, mark it as alive")
+	newUi("peeradd pa", false, add_peer, "Add a peer to the DB and mark it as alive: <host[:port]>")
+	newUi("peerban ban", false, show_node_stats, "Ban a peer: <IP[:port]>")
 	newUi("peerdel pd", false, del_peer, "Delete peer from the DB")
 	newUi("peers p", false, show_addresses, "Operation on pers database ('peers help' for help)")
-	newUi("unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
+	newUi("peerstat ps", false, show_node_stats, "Shows Agent stats of known peers")
+	newUi("peerunban unban", false, unban_peer, "Unban a peer specified by IP[:port] (or 'unban all')")
 }

@@ -7,16 +7,17 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/wallet"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 type OneWalletAddrs struct {
-	Typ int // 0-p2kh, 1-p2sh, 2-segwit_prog, 3-taproot
-	Key []byte
+	Idx int
+	Key string
 	rec *wallet.OneAllAddrBal
 }
 
@@ -49,21 +50,13 @@ func best_val(par string) {
 	all_addrs(par)
 }
 
-func new_slice(in []byte) (kk []byte) {
-	kk = make([]byte, len(in))
-	copy(kk, in)
-	return
-}
-
 func all_addrs(par string) {
-	var ptkh_outs, ptkh_vals, ptsh_outs, ptsh_vals uint64
-	var ptwkh_outs, ptwkh_vals, ptwsh_outs, ptwsh_vals uint64
-	var ptap_outs, ptap_vals uint64
+	var outs, vals [wallet.IDX_CNT]uint64
 	var best SortedWalletAddrs
 	var cnt int = 15
-	var mode int
+	var mode int = wallet.IDX_CNT
 
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -71,21 +64,34 @@ func all_addrs(par string) {
 	if par != "" {
 		prs := strings.SplitN(par, " ", 2)
 		if len(prs) > 0 {
-			if c, e := strconv.ParseUint(prs[0], 10, 32); e == nil {
-				if c > 4 {
-					cnt = int(c)
-				} else {
-					mode = int(c + 1)
-					fmt.Println("Counting only addr type", ([]string{"P2KH", "P2SH", "P2WKH", "P2WSH", "P2TAP"})[int(c)])
-					if len(prs) > 1 {
-						if c, e := strconv.ParseUint(prs[1], 10, 32); e == nil {
-							cnt = int(c)
-						}
+			c, e := strconv.ParseUint(prs[0], 10, 32)
+			if e != nil {
+				// first argument not a number
+				mode = -1
+				for idx, symb := range wallet.IDX2SYMB {
+					//if strings.ToLower(prs[0]) == strings.ToLower(symb) {
+					if strings.EqualFold(prs[0], symb) {
+						mode = idx
+						e = nil
+						break
+					}
+				}
+				if mode >= 0 && len(prs) > 1 {
+					if c, e = strconv.ParseUint(prs[1], 10, 32); e == nil {
+						cnt = int(c)
 					}
 				}
 			} else {
+				cnt = int(c)
+			}
+
+			if e != nil || mode < 0 || cnt <= 0 {
 				fmt.Println("Specify the address type or/and number of top records to display")
-				fmt.Println("Valid address types: 0-P2K, 1-P2SH, 2-P2WKH, 3-P2WSH, 4-P2TAP")
+				fmt.Print("Valid address types:")
+				for _, symb := range wallet.IDX2SYMB {
+					fmt.Print(" ", symb)
+				}
+				fmt.Println()
 				return
 			}
 		}
@@ -94,64 +100,23 @@ func all_addrs(par string) {
 	var MIN_BTC uint64 = 100e8
 	var MIN_OUTS int = 1000
 
-	if mode != 0 {
+	if mode != wallet.IDX_CNT {
 		MIN_BTC = 0
 		MIN_OUTS = 0
 	}
 
-	if mode == 0 || mode == 1 {
-		for k, rec := range wallet.AllBalancesP2KH {
-			ptkh_vals += rec.Value
-			ptkh_outs += uint64(rec.Count())
-			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-				best = append(best, OneWalletAddrs{Typ: 0, Key: new_slice(k[:]), rec: rec})
+	for idx := range wallet.AllBalances {
+		if mode == wallet.IDX_CNT || mode == idx {
+			for k, rec := range wallet.AllBalances[idx] {
+				vals[idx] += rec.Value
+				outs[idx] += uint64(rec.Count())
+				if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
+					best = append(best, OneWalletAddrs{Idx: idx, Key: k, rec: rec})
+				}
 			}
+			fmt.Println(btc.UintToBtc(vals[idx]), "BTC in", outs[idx], "unspent recs from",
+				len(wallet.AllBalances[idx]), wallet.IDX2SYMB[idx], "addresses")
 		}
-		fmt.Println(btc.UintToBtc(ptkh_vals), "BTC in", ptkh_outs, "unspent recs from", len(wallet.AllBalancesP2KH), "P2KH addresses")
-	}
-
-	if mode == 0 || mode == 2 {
-		for k, rec := range wallet.AllBalancesP2SH {
-			ptsh_vals += rec.Value
-			ptsh_outs += uint64(rec.Count())
-			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-				best = append(best, OneWalletAddrs{Typ: 1, Key: new_slice(k[:]), rec: rec})
-			}
-		}
-		fmt.Println(btc.UintToBtc(ptsh_vals), "BTC in", ptsh_outs, "unspent recs from", len(wallet.AllBalancesP2SH), "P2SH addresses")
-	}
-
-	if mode == 0 || mode == 3 {
-		for k, rec := range wallet.AllBalancesP2WKH {
-			ptwkh_vals += rec.Value
-			ptwkh_outs += uint64(rec.Count())
-			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-				best = append(best, OneWalletAddrs{Typ: 2, Key: new_slice(k[:]), rec: rec})
-			}
-		}
-		fmt.Println(btc.UintToBtc(ptwkh_vals), "BTC in", ptwkh_outs, "unspent recs from", len(wallet.AllBalancesP2WKH), "P2WKH addresses")
-	}
-
-	if mode == 0 || mode == 4 {
-		for k, rec := range wallet.AllBalancesP2WSH {
-			ptwsh_vals += rec.Value
-			ptwsh_outs += uint64(rec.Count())
-			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-				best = append(best, OneWalletAddrs{Typ: 2, Key: new_slice(k[:]), rec: rec})
-			}
-		}
-		fmt.Println(btc.UintToBtc(ptwsh_vals), "BTC in", ptwsh_outs, "unspent recs from", len(wallet.AllBalancesP2WSH), "P2WSH addresses")
-	}
-
-	if mode == 0 || mode == 5 {
-		for k, rec := range wallet.AllBalancesP2TAP {
-			ptap_vals += rec.Value
-			ptap_outs += uint64(rec.Count())
-			if sort_by_cnt && rec.Count() >= MIN_OUTS || !sort_by_cnt && rec.Value >= MIN_BTC {
-				best = append(best, OneWalletAddrs{Typ: 3, Key: new_slice(k[:]), rec: rec})
-			}
-		}
-		fmt.Println(btc.UintToBtc(ptap_vals), "BTC in", ptap_outs, "unspent recs from", len(wallet.AllBalancesP2TAP), "P2TAP addresses")
 	}
 
 	if sort_by_cnt {
@@ -177,19 +142,23 @@ func all_addrs(par string) {
 	pkscr_p2kh[24] = 0xac
 
 	for i := 0; i < len(best) && i < cnt; i++ {
-		switch best[i].Typ {
-		case 0:
+		switch best[i].Idx {
+		case wallet.IDX_P2KH:
 			copy(pkscr_p2kh[3:23], best[i].Key)
 			ad = btc.NewAddrFromPkScript(pkscr_p2kh[:], common.CFG.Testnet)
-		case 1:
+		case wallet.IDX_P2SH:
 			copy(pkscr_p2sk[2:22], best[i].Key)
 			ad = btc.NewAddrFromPkScript(pkscr_p2sk[:], common.CFG.Testnet)
-		case 2, 3:
+		case wallet.IDX_P2WKH, wallet.IDX_P2WSH, wallet.IDX_P2TAP:
 			ad = new(btc.BtcAddr)
 			ad.SegwitProg = new(btc.SegwitProg)
 			ad.SegwitProg.HRP = btc.GetSegwitHRP(common.CFG.Testnet)
-			ad.SegwitProg.Program = best[i].Key
-			ad.SegwitProg.Version = best[i].Typ - 2
+			ad.SegwitProg.Program = []byte(best[i].Key)
+			if best[i].Idx != wallet.IDX_P2TAP {
+				ad.SegwitProg.Version = 0
+			} else {
+				ad.SegwitProg.Version = 1
+			}
 		}
 		fmt.Println(i+1, ad.String(), btc.UintToBtc(best[i].rec.Value), "BTC in", best[i].rec.Count(), "inputs")
 	}
@@ -211,21 +180,21 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 		addr_printed = true
 		for i := range unsp {
 			fmt.Println(unsp[i].String())
-			network.TxMutex.Lock()
-			bidx, spending := network.SpentOutputs[unsp[i].TxPrevOut.UIdx()]
-			var t2s *network.OneTxToSend
+			txpool.TxMutex.Lock()
+			bidx, spending := txpool.SpentOutputs[unsp[i].TxPrevOut.UIdx()]
+			var t2s *txpool.OneTxToSend
 			if spending {
-				t2s, spending = network.TransactionsToSend[bidx]
+				t2s, spending = txpool.TransactionsToSend[bidx]
 			}
-			network.TxMutex.Unlock()
+			txpool.TxMutex.Unlock()
 			if spending {
 				fmt.Println("\t- being spent by TxID", t2s.Hash.String())
 			}
 		}
 	}
 
-	network.TxMutex.Lock()
-	for _, t2s := range network.TransactionsToSend {
+	txpool.TxMutex.Lock()
+	for _, t2s := range txpool.TransactionsToSend {
 		for vo, to := range t2s.TxOut {
 			if bytes.Equal(to.Pk_script, outscr) {
 				if !addr_printed {
@@ -237,7 +206,7 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 			}
 		}
 	}
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Unlock()
 
 	if !addr_printed {
 		fmt.Println(ad.String(), "has no coins")
@@ -245,7 +214,7 @@ func list_unspent_addr(ad *btc.BtcAddr) {
 }
 
 func list_unspent(addr string) {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -285,7 +254,7 @@ func list_unspent(addr string) {
 }
 
 func all_val_stats(s string) {
-	if !common.GetBool(&common.WalletON) {
+	if !common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently disabled.")
 		return
 	}
@@ -308,26 +277,39 @@ func wallet_on_off(s string) {
 		return
 	}
 
-	if common.GetBool(&common.WalletON) {
+	if common.Get(&common.WalletON) {
 		fmt.Println("Wallet functionality is currently ENABLED. Execute 'wallet off' to disable it.")
 		fmt.Println("")
 	} else {
-		if perc := common.GetUint32(&common.WalletProgress); perc != 0 {
+		if perc := common.Get(&common.WalletProgress); perc != 0 {
 			fmt.Println("Enabling wallet functionality -", (perc-1)/10, "percent complete. Execute 'wallet off' to abort it.")
 		} else {
 			fmt.Println("Wallet functionality is currently DISABLED. Execute 'wallet on' to enable it.")
 		}
 	}
 
-	if pend := common.GetUint32(&common.WalletOnIn); pend > 0 {
+	if pend := common.Get(&common.WalletOnIn); pend > 0 {
 		fmt.Println("Wallet functionality will auto enable in", pend, "seconds")
 	}
 }
 
+func save_balances(s string) {
+	if s == "force" {
+		wallet.LAST_SAVED_FNAME = ""
+	}
+	sta := time.Now()
+	if er := wallet.SaveBalances(); er != nil {
+		fmt.Println("Error:", er.Error())
+	} else {
+		fmt.Println(wallet.LAST_SAVED_FNAME, "saved in", time.Since(sta).String())
+	}
+}
+
 func init() {
-	newUi("richest r", true, best_val, "Show addresses with most coins [0,1,2,3 or count]")
-	newUi("maxouts o", true, max_outs, "Show addresses with highest number of outputs [0,1,2,3 or count]")
-	newUi("balance a", true, list_unspent, "List balance of given bitcoin address (or raw public key)")
-	newUi("allbal ab", true, all_val_stats, "Show Allbalance statistics")
-	newUi("wallet w", false, wallet_on_off, "Enable (on) or disable (off) wallet functionality")
+	newUi("richest r", true, best_val, "Show addresses with most BTC: [[type] count]")
+	newUi("maxouts o", true, max_outs, "Show addresses with most UTXOs: [[type] count]")
+	newUi("balance a", true, list_unspent, "List UTXOs of BTC address or public key: <string>")
+	newUi("allbal ab", true, all_val_stats, "Show balances DB statistics")
+	newUi("savebal sb", true, save_balances, "Save balances DB to disk: [force]")
+	newUi("wallet w", false, wallet_on_off, "Enable or disable wallet functionality: on|off")
 }

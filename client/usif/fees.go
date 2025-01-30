@@ -67,7 +67,7 @@ func ExpireBlockFees() {
 
 	BlockFeesMutex.Lock()
 	if BlockFeesDirty {
-		for k, _ := range BlockFees {
+		for k := range BlockFees {
 			if k < height {
 				delete(BlockFees, k)
 			}

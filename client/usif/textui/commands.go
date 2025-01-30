@@ -17,7 +17,7 @@ import (
 	"github.com/piotrnar/gocoin"
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -131,24 +131,27 @@ func show_info(par string) {
 	b2g_idx_len := len(network.IndexToBlocksToGet)
 	network.MutexRcv.Unlock()
 
-	fmt.Printf("Gocoin: %s,  Synced: %t (%d),  Uptime %s,  Peers: %d,  ECDSAs: %d %d %d\n",
-		gocoin.Version, common.GetBool(&common.BlockChainSynchronized), network.HeadersReceived.Get(),
-		time.Since(common.StartTime).String(), peersdb.PeerDB.Count(),
-		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt())
-
+	fmt.Printf("Gocoin: %s,  Synced: %t (%d),   PID: %d,   Uptime %s\n", gocoin.Version,
+		common.Get(&common.BlockChainSynchronized), network.HeadersReceived.Get(), os.Getpid(),
+		time.Since(common.StartTime).String())
 	// Memory used
 	al, sy := sys.MemUsed()
 	cb, ca := common.MemUsed()
-	fmt.Printf("Heap_used: %d MB,  System_used: %d MB,  UTXO-X-mem: %d MB in %d recs,  Saving: %t\n", al>>20, sy>>20,
-		cb>>20, ca, common.BlockChain.Unspent.WritingInProgress.Get())
+	fmt.Printf("HeapUsed: %d MB,  SysUsed: %d MB,  UTXO-X-mem: %dMB in %d\n",
+		al>>20, sy>>20, cb>>20, ca)
+	fmt.Printf("Peers: %d,  ECDSAs: %d %d %d,  AvgFee: %.1f SPB,  Saving: %t\n",
+		peersdb.PeerDB.Count(),
+		btc.EcdsaVerifyCnt(), btc.SchnorrVerifyCnt(), btc.CheckPay2ContractCnt(),
+		usif.GetAverageFee(), common.BlockChain.Unspent.WritingInProgress.Get())
 
 	network.MutexRcv.Lock()
-	fmt.Println("Last Header:", network.LastCommitedHeader.BlockHash.String(), "@", network.LastCommitedHeader.Height)
+	fmt.Println("LastHeder:", network.LastCommitedHeader.BlockHash.String(), "@",
+		network.LastCommitedHeader.Height)
 	network.MutexRcv.Unlock()
 
 	common.Last.Mutex.Lock()
-	fmt.Println("Last Block :", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
-	fmt.Printf(" Time: %s (~%s),  Diff: %.0f,  Rcvd: %s ago\n",
+	fmt.Println("LastBlock:", common.Last.Block.BlockHash.String(), "@", common.Last.Block.Height)
+	fmt.Printf("  %s (~%s),  Diff: %.0f,  %s ago\n",
 		time.Unix(int64(common.Last.Block.Timestamp()), 0).Format("2006/01/02 15:04:05"),
 		time.Unix(int64(common.Last.Block.GetMedianTimePast()), 0).Format("15:04:05"),
 		btc.GetDifficulty(common.Last.Block.Bits()), time.Since(common.Last.Time).String())
@@ -160,30 +163,11 @@ func show_info(par string) {
 		atomic.LoadUint32(&common.BlockChain.Unspent.CurrentHeightOnDisk))
 	network.Mutex_net.Unlock()
 
-	network.TxMutex.Lock()
-	var sw_cnt, sw_bts uint64
-	for _, v := range network.TransactionsToSend {
-		if v.SegWit != nil {
-			sw_cnt++
-			sw_bts += uint64(v.Size)
-		}
-	}
-	fmt.Printf("Txs in mempool: %d (%sB),  Using SegWit: %d (%sB),  Rejected: %d (%sB)\n",
-		len(network.TransactionsToSend), common.UintToString(network.TransactionsToSendSize),
-		sw_cnt, common.UintToString(sw_bts),
-		len(network.TransactionsRejected), common.UintToString(network.TransactionsRejectedSize))
-	fmt.Printf(" Wait4Input: %d (%sB),  SpentOuts: %d,  AvgFee: %.1f SpB,  Pending:%d/%d,  ScrFlgs:0x%x\n",
-		len(network.WaitingForInputs), common.UintToString(network.WaitingForInputsSize),
-		len(network.SpentOutputs), usif.GetAverageFee(),
-		len(network.TransactionsPending), len(network.NetTxs), common.CurrentScriptFlags())
-	network.TxMutex.Unlock()
-
 	var gs debug.GCStats
 	debug.ReadGCStats(&gs)
 	usif.BlockFeesMutex.Lock()
 	fmt.Println("Go version:", runtime.Version(), "  LastGC:", time.Since(gs.LastGC).String(),
-		"  NumGC:", gs.NumGC,
-		"  PauseTotal:", gs.PauseTotal.String())
+		"  NumGC:", gs.NumGC, "  PauseTotal:", gs.PauseTotal.String())
 	usif.BlockFeesMutex.Unlock()
 }
 
@@ -500,22 +484,20 @@ func init() {
 	newUi("cache", true, show_cached, "Show blocks cached in memory")
 	newUi("configload cl", false, load_config, "Re-load settings from the common file")
 	newUi("configsave cs", false, save_config, "Save current settings to a common file")
-	newUi("configset cfg", false, set_config, "Set a specific common value - use JSON, omit top {}")
-	newUi("counters c", false, show_counters, "Show all kind of debug counters")
-	newUi("dlimit dl", false, set_dlmax, "Set maximum download speed. The value is in KB/second - 0 for unlimited")
+	newUi("configset cfg", false, set_config, "Set a specific common value: use JSON, omit top {}")
+	newUi("counters c", false, show_counters, "Show all the internal debug counters")
 	newUi("help h ?", false, show_help, "Shows this help")
 	newUi("info i", false, show_info, "Shows general info about the node")
 	newUi("inv", false, send_inv, "Send inv message to all the peers - specify type & hash")
-	newUi("kill", true, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
-	newUi("mem", false, show_mem, "Show detailed memory stats (optionally free, gc or a numeric param)")
+	newUi("kill", false, kill_node, "Kill the node. WARNING: not safe - use 'quit' instead")
+	newUi("mem", false, show_mem, "Show memory stats or: [free|gc|<new_gc_perc>]")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
 	newUi("quit q", false, ui_quit, "Quit the node")
 	newUi("redo", true, redo_block, "Redo last block")
-	newUi("savebl", false, dump_block, "Saves a block with a given hash to a binary file")
+	newUi("savebl bls", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")
-	newUi("trust t", true, switch_trust, "Assume all downloaded blocks trusted (1) or un-trusted (0)")
-	newUi("ulimit ul", false, set_ulmax, "Set maximum upload speed. The value is in KB/second - 0 for unlimited")
-	newUi("undo", true, undo_block, "Undo last block")
+	newUi("trust t", true, switch_trust, "Assume all downloaded blocks trusted: 0|1")
+	newUi("undo", true, undo_block, "Undo one last block")
 	newUi("utxo u", true, blchain_utxodb, "Display UTXO-db statistics")
 }

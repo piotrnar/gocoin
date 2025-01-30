@@ -249,10 +249,6 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 			}
 		}
 
-		if e != nil { // this should not happen as every error has a return
-			return // If any input fails, do not continue
-		}
-
 		sumblockin += txinsum
 
 		for j := range bl.Txs[i].TxOut {

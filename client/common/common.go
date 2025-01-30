@@ -20,8 +20,6 @@ import (
 
 const (
 	Version = uint32(70015)
-
-	TX_SIZE_RAM_MULTIPLIER = 3.48 // we assume that each tx takes so much more RAM than its raw size
 )
 
 var (
@@ -59,13 +57,16 @@ var (
 	DropSlowestEvery time.Duration
 	BlockExpireEvery time.Duration
 	PingPeerEvery    time.Duration
+	TxExpireAfter    time.Duration
 
 	UserAgent string
 
 	ListenTCP bool
 
-	minFeePerKB, routeMinFeePerKB, minminFeePerKB uint64
-	maxMempoolSizeBytes, maxRejectedSizeBytes     uint64
+	cfgRouteMinFeePerKB, cfgFeePerKB         uint64 // these are from the config file
+	minFeePerKB                              uint64 // this one is dynamic, controled by mempool limit size
+	maxMempoolSizeBytes                      uint64
+	MaxRejectedSizeBytes, MaxNoUtxoSizeBytes uint64
 
 	KillChan chan os.Signal = make(chan os.Signal)
 
@@ -102,6 +103,14 @@ func (b *TheLastBlock) BlockHeight() (res uint32) {
 	res = b.Block.Height
 	b.Mutex.Unlock()
 	return
+}
+
+func CountSafePar[T bool | byte | uint32 | int](k string, par T) {
+	if !NoCounters.Get() {
+		CounterMutex.Lock()
+		Counter[fmt.Sprint(k, par)]++
+		CounterMutex.Unlock()
+	}
 }
 
 func CountSafe(k string) {

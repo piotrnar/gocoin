@@ -57,10 +57,6 @@ func load_template(fn string) string {
 	return string(dat)
 }
 
-func templ_add(tmpl string, id string, val string) string {
-	return strings.Replace(tmpl, id, val+id, 1)
-}
-
 func p_webui(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -123,8 +119,8 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "/*_AVERAGE_FEE_SPB_*/", fmt.Sprint("var avg_fee_spb = ", usif.GetAverageFee()), 1)
 	s = strings.Replace(s, "/*_SERVER_MODE_*/", fmt.Sprint("var server_mode = ", common.CFG.WebUI.ServerMode), 1)
 	s = strings.Replace(s, "/*_TIME_NOW_*/", fmt.Sprint("= ", time.Now().Unix()), 1)
-	s = strings.Replace(s, "/*_WALLET_ON_*/", fmt.Sprint("var wallet_on = ", common.GetBool(&common.WalletON)), 1)
-	s = strings.Replace(s, "/*_CHAIN_IN_SYNC_*/", fmt.Sprint("var chain_in_sync = ", common.GetBool(&common.BlockChainSynchronized)), 1)
+	s = strings.Replace(s, "/*_WALLET_ON_*/", fmt.Sprint("var wallet_on = ", common.Get(&common.WalletON)), 1)
+	s = strings.Replace(s, "/*_CHAIN_IN_SYNC_*/", fmt.Sprint("var chain_in_sync = ", common.Get(&common.BlockChainSynchronized)), 1)
 
 	if r.URL.Path != "/" {
 		s = strings.Replace(s, "{HELPURL}", "help#"+r.URL.Path[1:], 1)
@@ -143,7 +139,7 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 
 func write_html_tail(w http.ResponseWriter) {
 	s := load_template("page_tail.html")
-	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Now().Sub(start_time).String(), 1)
+	s = strings.Replace(s, "<!--LOAD_TIME-->", time.Since(start_time).String(), 1)
 	w.Write([]byte(s))
 }
 

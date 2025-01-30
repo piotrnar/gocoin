@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -132,7 +132,7 @@ func (c *OneConnection) SendOwnAddr() {
 
 // ParseAddr parses the network's "addr" message.
 func (c *OneConnection) ParseAddr(pl []byte) {
-	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale uint64
+	var c_ip_invalid, c_future, c_old, c_new_rejected, c_new_taken, c_stale, c_no_segwit uint64
 	have_enough := peersdb.PeerDB.Count() > peersdb.MinPeersInDB
 	b := bytes.NewBuffer(pl)
 	cnt, _ := btc.ReadVLen(b)
@@ -145,7 +145,9 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			break
 		}
 		a := peersdb.NewPeer(buf[:])
-		if !sys.ValidIp4(a.Ip4[:]) {
+		if (a.Services & btc.SERVICE_SEGWIT) == 0 {
+			c_no_segwit++
+		} else if !sys.ValidIp4(a.Ip4[:]) {
 			c_ip_invalid++
 		} else {
 			now := uint32(time.Now().Unix())
@@ -165,7 +167,7 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 			peersdb.Lock()
 			v := peersdb.PeerDB.Get(k)
 			if v != nil {
-				op := peersdb.NewPeer(v[:])
+				op := peersdb.NewPeer(v)
 				if !op.SeenAlive && a.Time > op.Time {
 					op.Time = a.Time // only update the time if peer not seen alive (yet)
 				}
@@ -203,12 +205,15 @@ func (c *OneConnection) ParseAddr(pl []byte) {
 	if c_stale > 0 {
 		common.CountAdd("AddrStale", c_stale)
 	}
+	if c_no_segwit > 0 {
+		common.CountAdd("AddrNoSegWit", c_no_segwit)
+	}
 	common.CounterMutex.Unlock()
 	c.Mutex.Lock()
 	c.X.AddrMsgsRcvd++
 	c.X.NewAddrsRcvd += c_new_taken + c_new_rejected
 	c.Mutex.Unlock()
-	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Now().Sub(c.X.ConnectedAt) < 10*time.Second {
+	if c.X.NewAddrsRcvd > 100 && c.X.AddrMsgsRcvd >= 10 && time.Since(c.X.ConnectedAt) < 10*time.Second {
 		// delete all the new records that came from this ip
 		delcnt := peersdb.DeleteFromIP(c.PeerAddr.Ip4[:])
 		common.CountSafeAdd("AddrBanUndone", uint64(delcnt))

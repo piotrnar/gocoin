@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/chain"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -38,12 +39,6 @@ type BlockRcvd struct {
 	Size int
 }
 
-type TxRcvd struct {
-	conn *OneConnection
-	*btc.Tx
-	trusted, local bool
-}
-
 type OneBlockToGet struct {
 	Started time.Time
 	*btc.Block
@@ -54,21 +49,21 @@ type OneBlockToGet struct {
 }
 
 var (
-	ReceivedBlocks           map[BIDX]*OneReceivedBlock = make(map[BIDX]*OneReceivedBlock, 400e3)
-	BlocksToGet              map[BIDX]*OneBlockToGet    = make(map[BIDX]*OneBlockToGet)
-	IndexToBlocksToGet       map[uint32][]BIDX          = make(map[uint32][]BIDX)
+	ReceivedBlocks           map[btc.BIDX]*OneReceivedBlock = make(map[btc.BIDX]*OneReceivedBlock, 400e3)
+	BlocksToGet              map[btc.BIDX]*OneBlockToGet    = make(map[btc.BIDX]*OneBlockToGet)
+	IndexToBlocksToGet       map[uint32][]btc.BIDX          = make(map[uint32][]btc.BIDX)
 	LowestIndexToBlocksToGet uint32
 	LastCommitedHeader       *chain.BlockTreeNode
 	MutexRcv                 sync.Mutex
 
-	NetBlocks chan *BlockRcvd = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD_CNT+10)
-	NetTxs    chan *TxRcvd    = make(chan *TxRcvd, 2000)
+	NetBlocks chan *BlockRcvd     = make(chan *BlockRcvd, MAX_BLOCKS_FORWARD_CNT+10)
+	NetTxs    chan *txpool.TxRcvd = make(chan *txpool.TxRcvd, 2000)
 
 	CachedBlocksMutex   sync.Mutex
 	CachedBlocks        []*BlockRcvd
 	CachedBlocksBytes   sys.SyncInt
 	MaxCachedBlocksSize sys.SyncInt
-	DiscardedBlocks     map[BIDX]bool = make(map[BIDX]bool)
+	DiscardedBlocks     map[btc.BIDX]bool = make(map[btc.BIDX]bool)
 
 	HeadersReceived sys.SyncInt
 )
@@ -108,7 +103,6 @@ func DiscardBlock(n *chain.BlockTreeNode) {
 		DiscardBlock(c)
 	}
 	DiscardedBlocks[n.BlockHash.BIdx()] = true
-	return
 }
 
 func AddB2G(b2g *OneBlockToGet) {
@@ -119,18 +113,9 @@ func AddB2G(b2g *OneBlockToGet) {
 	if LowestIndexToBlocksToGet == 0 || bh < LowestIndexToBlocksToGet {
 		LowestIndexToBlocksToGet = bh
 	}
-
-	/* TODO: this was causing deadlock. Removing it for now as maybe it is not even needed.
-	// Trigger each connection to as the peer for block data
-	Mutex_net.Lock()
-	for _, v := range OpenCons {
-		v.MutexSetBool(&v.X.GetBlocksDataNow, true)
-	}
-	Mutex_net.Unlock()
-	*/
 }
 
-func DelB2G(idx BIDX) {
+func DelB2G(idx btc.BIDX) {
 	b2g := BlocksToGet[idx]
 	if b2g == nil {
 		println("DelB2G - not found")
@@ -140,7 +125,7 @@ func DelB2G(idx BIDX) {
 	bh := b2g.BlockTreeNode.Height
 	iii := IndexToBlocksToGet[bh]
 	if len(iii) > 1 {
-		var n []BIDX
+		var n []btc.BIDX
 		for _, cidx := range iii {
 			if cidx != idx {
 				n = append(n, cidx)

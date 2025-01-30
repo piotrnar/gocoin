@@ -183,17 +183,17 @@ func TestChildren(t *testing.T) {
 	hdpub := hdwal.Pub()
 
 	for i := 0; i < 1000; i++ {
-		prv := hdwal.Child(uint32(i|0x80000000))
-		if len(prv.Key)!=33 || prv.Key[0]!=0 {
+		prv := hdwal.Child(uint32(i | 0x80000000))
+		if len(prv.Key) != 33 || prv.Key[0] != 0 {
 			t.Error("Bad private derivated key", i)
 		}
 
 		prv = hdwal.Child(uint32(i))
 		pub := hdpub.Child(uint32(i))
-		if len(prv.Key)!=33 || prv.Key[0]!=0 {
+		if len(prv.Key) != 33 || prv.Key[0] != 0 {
 			t.Error("Bad private key", i)
 		}
-		if len(pub.Key)!=33 || (pub.Key[0]!=2 && pub.Key[0]!=3) {
+		if len(pub.Key) != 33 || (pub.Key[0] != 2 && pub.Key[0] != 3) {
 			t.Error("Bad public key", i)
 		}
 		pu2 := PublicFromPrivate(prv.Key[1:], true)
@@ -219,8 +219,7 @@ func BenchmarkStringChildPub(b *testing.B) {
 }
 
 func BenchmarkStringChildPrv(b *testing.B) {
-	var a uint32
-	a = 0x80000000
+	a := uint32(0x80000000)
 	for i := 0; i < b.N; i++ {
 		StringChild(m_prv1, a)
 	}
@@ -229,7 +228,7 @@ func BenchmarkStringChildPrv(b *testing.B) {
 func BenchmarkStringPubString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		w, _ := StringWallet(m_prv2)
-		w.Pub().String()
+		_ = w.Pub().String()
 	}
 }
 

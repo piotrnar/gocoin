@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -18,7 +17,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/utxo"
 )
 
-const LastTrustedBTCBlock = "00000000000000000000cbccaef66a79a5aa719c30e0f6114621dbb19f91d9bd" // #865020
+const LastTrustedBTCBlock = "00000000000000000000bd0d6228247ee821e15b9c709f53a57a57fb499aab61" // #880760
 const LastTrustedTN3Block = "0000000000997783faebf1fdcb788aacae49c51330d1ebcc72d1f60fbe3e6d38" // #3084480
 const LastTrustedTN4Block = "0000000000000011e7cf114aa4980cbd74c2c07fccc8b025480dd4b7e1d96110" // #40320
 
@@ -34,6 +33,7 @@ var (
 		NoWallet      bool
 		Log           bool
 		SaveConfig    bool
+		NoMempoolLoad bool
 	}
 
 	CFG struct { // Options that can come from either command line or common file
@@ -41,6 +41,7 @@ var (
 		Testnet4         bool
 		ConnectOnly      string
 		Datadir          string
+		UtxoSubdir       string
 		TextUI_Enabled   bool
 		UserAgent        string
 		LastTrustedBlock string
@@ -78,8 +79,10 @@ var (
 			FeePerByte     float64
 			MaxTxSize      uint32
 			MaxSizeMB      uint
-			MaxRejectMB    uint
-			MaxRejectCnt   uint
+			ExpireInDays   uint
+			MaxRejectMB    float64
+			MaxNoUtxoMB    float64
+			RejectRecCnt   uint16
 			SaveOnDisk     bool
 			Debug          bool
 			NotFullRBF     bool
@@ -104,9 +107,11 @@ var (
 			CompressBlockDB      bool
 		}
 		AllBalances struct {
-			MinValue  uint64 // Do not keep balance records for values lower than this
-			UseMapCnt int
-			AutoLoad  bool
+			MinValue      uint64 // Do not keep balance records for values lower than this
+			UseMapCnt     int
+			AutoLoad      bool
+			SaveBalances  bool
+			InstantWallet bool
 		}
 		Stat struct {
 			HashrateHrs uint
@@ -116,9 +121,10 @@ var (
 			NoCounters  bool
 		}
 		DropPeers struct {
-			DropEachMinutes uint // zero for never
-			BlckExpireHours uint // zero for never
-			PingPeriodSec   uint // zero to not ping
+			DropEachMinutes uint32 // zero for never
+			BlckExpireHours uint32 // zero for never
+			PingPeriodSec   uint32 // zero to not ping
+			ImmunityMinutes uint32
 		}
 		UTXOSave struct {
 			SecondsToTake   uint   // zero for as fast as possible, 600 for do it in 10 minutes
@@ -136,12 +142,28 @@ type oneAllowedAddr struct {
 
 var WebUIAllowed []oneAllowedAddr
 
+func AssureValueInRange[T int | uint | uint16 | uint32 | float64](label string, val *T, min, max T) {
+	if max < min {
+		panic("max < min")
+	}
+	nval := *val
+	if *val < min {
+		nval = min
+	} else if *val > max {
+		nval = max
+	}
+	if nval != *val {
+		fmt.Println("WARNING: config value", label, "must be from", min, "to", max, " so changinig", *val, "->", nval)
+		*val = nval
+	}
+}
+
 func InitConfig() {
 	var new_config_file bool
 
 	// Fill in default values
 	CFG.Net.ListenTCP = true
-	CFG.Net.MaxOutCons = 9
+	CFG.Net.MaxOutCons = 10
 	CFG.Net.MaxInCons = 10
 	CFG.Net.MaxBlockAtOnce = 3
 	CFG.Net.BindToIF = "0.0.0.0"
@@ -163,8 +185,10 @@ func InitConfig() {
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.MaxSizeMB = 300
-	CFG.TXPool.MaxRejectMB = 25
-	CFG.TXPool.MaxRejectCnt = 5000
+	CFG.TXPool.ExpireInDays = 7
+	CFG.TXPool.MaxRejectMB = 25.0
+	CFG.TXPool.MaxNoUtxoMB = 5.0
+	CFG.TXPool.RejectRecCnt = 20000
 	CFG.TXPool.SaveOnDisk = true
 
 	CFG.TXRoute.Enabled = true
@@ -187,10 +211,13 @@ func InitConfig() {
 	CFG.AllBalances.MinValue = 1e5 // 0.001 BTC
 	CFG.AllBalances.UseMapCnt = 5000
 	CFG.AllBalances.AutoLoad = true
+	CFG.AllBalances.SaveBalances = true
+	CFG.AllBalances.InstantWallet = false
 
 	CFG.DropPeers.DropEachMinutes = 5  // minutes
 	CFG.DropPeers.BlckExpireHours = 24 // hours
 	CFG.DropPeers.PingPeriodSec = 15   // seconds
+	CFG.DropPeers.ImmunityMinutes = 15
 
 	CFG.UTXOSave.SecondsToTake = 300
 	CFG.UTXOSave.BlocksToHold = 6
@@ -214,7 +241,7 @@ func InitConfig() {
 		}
 	}
 
-	cfgfilecontent, e := ioutil.ReadFile(ConfigFile)
+	cfgfilecontent, e := os.ReadFile(ConfigFile)
 	if e == nil && len(cfgfilecontent) > 0 {
 		e = json.Unmarshal(cfgfilecontent, &CFG)
 		if e != nil {
@@ -249,6 +276,8 @@ func InitConfig() {
 	flag.BoolVar(&FLAG.NoWallet, "nowallet", FLAG.NoWallet, "Do not automatically enable the wallet functionality (lower memory usage and faster block processing)")
 	flag.BoolVar(&FLAG.Log, "log", FLAG.Log, "Store some runtime information in the log files")
 	flag.BoolVar(&FLAG.SaveConfig, "sc", FLAG.SaveConfig, "Save "+ConfigFile+" file and exit (use to create default config file)")
+	flag.BoolVar(&FLAG.NoMempoolLoad, "mp0", FLAG.NoMempoolLoad, "Do not attempt to load mempool from disk (start with empty one)")
+	flag.BoolVar(&CFG.AllBalances.InstantWallet, "iw", CFG.AllBalances.InstantWallet, "Make sure to fetch all wallet balances before starting UI and network")
 
 	if CFG.Datadir == "" {
 		CFG.Datadir = sys.BitcoinHome() + "gocoin"
@@ -355,11 +384,35 @@ func Reset() {
 	DropSlowestEvery = time.Duration(CFG.DropPeers.DropEachMinutes) * time.Minute
 	BlockExpireEvery = time.Duration(CFG.DropPeers.BlckExpireHours) * time.Hour
 	PingPeerEvery = time.Duration(CFG.DropPeers.PingPeriodSec) * time.Second
+	AssureValueInRange("TXPool.ExpireInDays", &CFG.TXPool.ExpireInDays, 1, 1e6)
+	TxExpireAfter = time.Duration(CFG.TXPool.ExpireInDays) * time.Hour * 24
 
-	atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
-	atomic.StoreUint64(&maxRejectedSizeBytes, uint64(float64(CFG.TXPool.MaxRejectMB)*1e6/TX_SIZE_RAM_MULTIPLIER))
+	if CFG.TXPool.MaxSizeMB > 0 {
+		AssureValueInRange("TXPool.MaxSizeMB", &CFG.TXPool.MaxSizeMB, 10, 1e6)
+		atomic.StoreUint64(&maxMempoolSizeBytes, uint64(float64(CFG.TXPool.MaxSizeMB)*1e6))
+	} else {
+		fmt.Println("WARNING: TXPool config value MaxSizeMB is zero (unlimited mempool size)")
+	}
+	AssureValueInRange("TXPool.RejectRecCnt", &CFG.TXPool.RejectRecCnt, 100, 60000)
+	if CFG.TXPool.MaxRejectMB != 0 {
+		AssureValueInRange("TXPool.MaxRejectMB", &CFG.TXPool.MaxRejectMB, 0.3, 1e6)
+		atomic.StoreUint64(&MaxRejectedSizeBytes, uint64(CFG.TXPool.MaxRejectMB*1e6))
+	} else {
+		fmt.Println("WARNING: TXPool config value MaxRejectMB is zero (unlimited rejected txs cache size)")
+	}
+	if CFG.TXPool.MaxNoUtxoMB == 0 {
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))
+	} else if CFG.TXPool.MaxRejectMB != 0 && CFG.TXPool.MaxNoUtxoMB > CFG.TXPool.MaxRejectMB {
+		fmt.Println("WARNING: TXPool config value MaxNoUtxoMB not smaller then MaxRejectMB (ignoring it)")
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, atomic.LoadUint64(&MaxRejectedSizeBytes))
+	} else {
+		AssureValueInRange("TXPool.MaxNoUtxoMB", &CFG.TXPool.MaxNoUtxoMB, 0.1, 1e6)
+		atomic.StoreUint64(&MaxNoUtxoSizeBytes, uint64(CFG.TXPool.MaxNoUtxoMB*1e6))
+	}
 	atomic.StoreUint64(&minFeePerKB, uint64(CFG.TXPool.FeePerByte*1000))
-	atomic.StoreUint64(&minminFeePerKB, MinFeePerKB())
+	atomic.StoreUint64(&cfgFeePerKB, MinFeePerKB())
+
+	atomic.StoreUint64(&cfgRouteMinFeePerKB, uint64(CFG.TXRoute.FeePerByte*1000))
 
 	if CFG.Memory.MaxSyncCacheMB < 100 {
 		CFG.Memory.MaxSyncCacheMB = 100
@@ -487,41 +540,14 @@ func CloseBlockChain() {
 	}
 }
 
-func GetDuration(addr *time.Duration) (res time.Duration) {
+func Get[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T) (res T) {
 	mutex_cfg.Lock()
 	res = *addr
 	mutex_cfg.Unlock()
 	return
 }
 
-func GetUint64(addr *uint64) (res uint64) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func GetUint32(addr *uint32) (res uint32) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func SetUint32(addr *uint32, val uint32) {
-	mutex_cfg.Lock()
-	*addr = val
-	mutex_cfg.Unlock()
-}
-
-func GetBool(addr *bool) (res bool) {
-	mutex_cfg.Lock()
-	res = *addr
-	mutex_cfg.Unlock()
-	return
-}
-
-func SetBool(addr *bool, val bool) {
+func Set[T bool | uint16 | uint32 | uint64 | time.Duration](addr *T, val T) {
 	mutex_cfg.Lock()
 	*addr = val
 	mutex_cfg.Unlock()
@@ -540,9 +566,9 @@ func MinFeePerKB() uint64 {
 }
 
 func SetMinFeePerKB(val uint64) bool {
-	minmin := atomic.LoadUint64(&minminFeePerKB)
-	if val < minmin {
-		val = minmin
+	cfgmin := atomic.LoadUint64(&cfgFeePerKB)
+	if val < cfgmin {
+		val = cfgmin // do not set it lower than the value from the config
 	}
 	if val == MinFeePerKB() {
 		return false
@@ -552,7 +578,7 @@ func SetMinFeePerKB(val uint64) bool {
 }
 
 func RouteMinFeePerKB() uint64 {
-	return atomic.LoadUint64(&routeMinFeePerKB)
+	return atomic.LoadUint64(&cfgRouteMinFeePerKB)
 }
 
 func IsListenTCP() (res bool) {
@@ -564,14 +590,6 @@ func IsListenTCP() (res bool) {
 
 func MaxMempoolSize() uint64 {
 	return atomic.LoadUint64(&maxMempoolSizeBytes)
-}
-
-func RejectedTxsLimits() (size uint64, cnt int) {
-	mutex_cfg.Lock()
-	size = maxRejectedSizeBytes
-	cnt = int(CFG.TXPool.MaxRejectCnt)
-	mutex_cfg.Unlock()
-	return
 }
 
 func TempBlocksDir() string {

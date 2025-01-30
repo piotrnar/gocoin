@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"strconv"
@@ -199,7 +198,7 @@ func print_record(sl []byte) {
 	fmt.Println("   ->", btc.NewUint256(hdr[4:36]).String())
 }
 
-func verify_block(blk []byte, sl one_idx_rec, off int) {
+func verify_block(blk []byte, sl one_idx_rec) {
 	bl, er := btc.NewBlock(blk)
 	if er != nil {
 		println("\nERROR verify_block", sl.Height(), btc.NewUint256(sl.Hash()).String(), er.Error())
@@ -229,7 +228,7 @@ func decomp_block(fl uint32, buf []byte) (blk []byte) {
 			blk, _ = snappy.Decode(nil, buf)
 		} else {
 			gz, _ := gzip.NewReader(bytes.NewReader(buf))
-			blk, _ = ioutil.ReadAll(gz)
+			blk, _ = io.ReadAll(gz)
 			gz.Close()
 		}
 	} else {
@@ -326,7 +325,7 @@ func split_the_data_file(parent_f *os.File, idx uint32, maxlen uint64, dat []byt
 		sl.SetDPos(sl.DPos() - pos_from)
 	}
 	// flush blockchain.new to disk wicth each noe split for safety
-	ioutil.WriteFile("blockchain.tmp", dat, 0600)
+	os.WriteFile("blockchain.tmp", dat, 0600)
 	os.Rename("blockchain.tmp", "blockchain.new")
 
 	return true
@@ -357,6 +356,7 @@ func open_dat_file(idx uint32) (f *os.File, er error) {
 func ExtractOrdFile(p []byte) (typ string, data []byte, e error) {
 	var opcode_idx int
 	var byte_idx int
+	var op_false_found bool
 
 	for byte_idx < len(p) {
 		opcode, vchPushValue, n, er := btc.GetOpcode(p[byte_idx:])
@@ -408,7 +408,15 @@ func ExtractOrdFile(p []byte) (typ string, data []byte, e error) {
 				e = errors.New("opcode_idx 7: OP_FALSE missing")
 				return
 			}
+		case 8:
 		default:
+			if !op_false_found {
+				if opcode == btc.OP_FALSE && len(vchPushValue) == 0 {
+					op_false_found = true
+				} else {
+					break
+				}
+			}
 			if opcode == btc.OP_ENDIF {
 				return
 			}
@@ -478,7 +486,7 @@ func main() {
 			fl_append += string(os.PathSeparator)
 		}
 		fmt.Println("Loading", fl_append+"blockchain.new")
-		dat, er := ioutil.ReadFile(fl_append + "blockchain.new")
+		dat, er := os.ReadFile(fl_append + "blockchain.new")
 		if er != nil {
 			fmt.Println(er.Error())
 			return
@@ -532,7 +540,7 @@ func main() {
 	}
 
 	fmt.Println("Loading", fl_dir+"blockchain.new")
-	dat, er := ioutil.ReadFile(fl_dir + "blockchain.new")
+	dat, er := os.ReadFile(fl_dir + "blockchain.new")
 	if er != nil {
 		fmt.Println(er.Error())
 		return
@@ -610,7 +618,7 @@ func main() {
 			binary.LittleEndian.PutUint32(sl[28:32], uint32(fl_to))
 			cnt++
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		os.Remove(from_fn)
 		fmt.Println(from_fn, "removed and", cnt, "records updated in blockchain.new")
@@ -653,7 +661,7 @@ func main() {
 			binary.LittleEndian.PutUint32(sl[28:32], uint32(fl_to))
 			cnt++
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename(from_fn, to_fn)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println(from_fn, "renamed to ", to_fn, "and", cnt, "records updated in blockchain.new")
@@ -732,7 +740,7 @@ func main() {
 			}
 		}
 		if cnt > 0 {
-			ioutil.WriteFile("blockchain.tmp", dat, 0600)
+			os.WriteFile("blockchain.tmp", dat, 0600)
 			os.Rename("blockchain.tmp", "blockchain.new")
 			fmt.Println(cnt, "records removed from blockchain.new")
 		} else {
@@ -774,7 +782,7 @@ func main() {
 				}
 			}
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println(cnt, "flags updated in blockchain.new")
 	}
@@ -785,7 +793,7 @@ func main() {
 			binary.LittleEndian.PutUint64(sl[40:48], 0)
 			binary.LittleEndian.PutUint32(sl[48:52], 0)
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println("blockchain.new upated. Now delete blockchain.dat yourself...")
 	}
@@ -829,7 +837,7 @@ func main() {
 				o.Write(buf[:blen])
 			}
 		}
-		ioutil.WriteFile(newdir+"blockchain.new", dat, 0600)
+		os.WriteFile(newdir+"blockchain.new", dat, 0600)
 		return
 	}
 
@@ -1076,7 +1084,7 @@ func main() {
 				continue
 			}
 
-			verify_block(blk, sl, off)
+			verify_block(blk, sl)
 			cnt++
 
 			totlen += uint64(len(blk))
@@ -1209,7 +1217,7 @@ func main() {
 				f.Seek(int64(sl.DPos()), os.SEEK_SET)
 				f.Read(bu)
 				f.Close()
-				ioutil.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), bu), 0600)
+				os.WriteFile(bh.String()+".bin", decomp_block(sl.Flags(), bu), 0600)
 				fmt.Println(bh.String()+".bin written to disk. It has height", sl.Height())
 				return
 			}
@@ -1257,7 +1265,7 @@ func main() {
 				totlen += uint64(len(blk))
 			}
 		}
-		ioutil.WriteFile("blockchain.tmp", dat, 0600)
+		os.WriteFile("blockchain.tmp", dat, 0600)
 		os.Rename("blockchain.tmp", "blockchain.new")
 		fmt.Println("blockchain.new updated")
 	}
@@ -1337,7 +1345,7 @@ func main() {
 			fmt.Println("Nothing done")
 			os.Remove(fl_dir + fl_compress + ".tmp")
 		} else {
-			ioutil.WriteFile("blockchain.tmp", dat, 0600)
+			os.WriteFile("blockchain.tmp", dat, 0600)
 			os.Rename("blockchain.tmp", "blockchain.new")
 			os.Rename(fl_dir+fl_compress+".tmp", fl_dir+fl_compress)
 			fmt.Println("blockchain.new updated")
@@ -1432,13 +1440,13 @@ func main() {
 										if len(tps) == 2 {
 											ext = tps[1]
 										}
-										ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), "-", idx, ".", ext), data, 0700)
+										os.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), "-", idx, ".", ext), data, 0700)
 									}
 									ord_cnt++
 								}
 							}
 						} else {
-							ioutil.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), ".tx"), tx.Raw, 0700)
+							os.WriteFile(fmt.Sprint("ord/", sl.Height(), "-", tx.Hash.String(), ".tx"), tx.Raw, 0700)
 							ord_cnt++
 						}
 					}

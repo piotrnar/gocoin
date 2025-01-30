@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -190,11 +189,6 @@ func (db *BlockDB) GetStats() (s string) {
 	s += fmt.Sprintf("BlockDB: %d blocks, %d/%d in cache.  ToWriteCnt:%d (%dKB)\n",
 		len(db.blockIndex), len(db.cache), db.max_cached_blocks, len(db.blocksToWrite), db.datToWrite>>10)
 	db.mutex.Unlock()
-	return
-}
-
-func hash2idx(h []byte) (idx [btc.Uint256IdxLen]byte) {
-	copy(idx[:], h[:btc.Uint256IdxLen])
 	return
 }
 
@@ -466,7 +460,7 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
 		db.mutex.Unlock()
-		e = errors.New("Block not in the index")
+		e = errors.New("block not in the index")
 		return
 	}
 
@@ -482,12 +476,12 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 	db.mutex.Unlock()
 
 	if rec.ipos == -1 {
-		e = errors.New("Block not written yet and not in the cache")
+		e = errors.New("block not written yet and not in the cache")
 		return
 	}
 
 	if rec.blen == 0 {
-		e = errors.New("Block purged from disk")
+		e = errors.New("block purged from disk")
 		return
 	}
 
@@ -529,7 +523,7 @@ func (db *BlockDB) BlockGetInternal(hash *btc.Uint256, do_not_cache bool) (cache
 			}
 		} else {
 			gz, _ := gzip.NewReader(bytes.NewReader(bl))
-			bl, _ = ioutil.ReadAll(gz)
+			bl, _ = io.ReadAll(gz)
 			gz.Close()
 		}
 	}
@@ -567,7 +561,7 @@ func (db *BlockDB) BlockLength(hash *btc.Uint256, decode_if_needed bool) (length
 	rec, ok := db.blockIndex[hash.BIdx()]
 	if !ok {
 		db.mutex.Unlock()
-		e = errors.New("Block not in the index")
+		e = errors.New("block not in the index")
 		return
 	}
 	db.mutex.Unlock()

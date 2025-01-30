@@ -45,6 +45,13 @@ or "~/.bitcoin/gocoin"</td>
 It contains the bock chain, UTXO and peers database, plus some other files used by the client.
 </tr>
 <tr>
+<td class="cfg_name"> UtxoSubdir</td>
+<td class="cfg_type"> string</td>
+<td>""</td>
+<td class="cfg_info"> If specified, will store UTXO snapshots inside such subfolder of the data dir.<br>
+Useful for storing UTXO snapshots on a faster drive, as they are more disk speed sensitive.
+</tr>
+<tr>
 <td class="cfg_name"> UserAgent</td>
 <td class="cfg_type"> string</td>
 <td> ""</td>
@@ -119,7 +126,7 @@ Prefering convenience over security, change .txt extension to .bat or .sh (depen
     Note that SSL server needs valid <code>ca.crt</code>, <code>server.crt</code> and
     <code>server.key</code> in the client's <code>ssl_cert/</code> dir.</td>
     </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> Net.ListenTCP</td>
 <td class="cfg_type"> bool</td>
@@ -143,7 +150,7 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <tr class="odd">
 <td class="cfg_name"> Net.MaxOutCons</td>
 <td class="cfg_type"> uint32</td>
-<td> 9</td>
+<td> 10</td>
 <td class="cfg_info"> Maximum number of outgoing TCP connections.</td>
 </tr>
 <tr class="odd">
@@ -212,16 +219,30 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td class="cfg_info"> If not zero, the node will keep the mempool size below this value.</td>
 </tr>
 <tr class="even">
+<td class="cfg_name"> TXPool.ExpireInDays</td>
+<td class="cfg_type"> uint</td>
+<td> 7</td>
+<td class="cfg_info"> Remove transaction from memory pool, if it has not been seen for so many days.
+</tr>
+<tr class="even">
 <td class="cfg_name"> TXPool.MaxRejectMB</td>
 <td class="cfg_type"> uint</td>
 <td> 25</td>
-<td class="cfg_info"> If not zero, the node will keep the cache of rejected transaction below this value.</td>
+<td class="cfg_info"> If not zero, the node will keep the cache of rejected transaction below this size.</td>
 </tr>
 <tr class="even">
-<td class="cfg_name"> TXPool.MaxRejectCnt</td>
+<td class="cfg_name"> TXPool.MaxNoUtxoMB</td>
 <td class="cfg_type"> uint</td>
-<td> 5000</td>
-<td class="cfg_info"> If not zero, the node will not keep more than this many records of rejected transaction.</td>
+<td> 5</td>
+<td class="cfg_info"> If not zero, the node will keep the cache of rejected txs with an unknown UTXO below this size.<br>
+Note that "unknown UTXOs" are either UTXOs from parent txs that we have never received,
+or (more likely) UTXOs that had been mined and spent before the tx was received.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> TXPool.RejectRecCnt</td>
+<td class="cfg_type"> uint</td>
+<td> 20000</td>
+<td class="cfg_info"> The node will not keep more than this many records of rejected transaction.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.SaveOnDisk</td>
@@ -235,7 +256,7 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td> false</td>
 <td class="cfg_info"> When true, it only allows RBF for transactions that indicated replacebility (BIP-125).</td>
 </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> TXRoute.Enabled</td>
 <td class="cfg_type"> bool</td>
@@ -339,7 +360,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td class="cfg_info"> Compress blocks on disk.<br>
 </td>
 </tr>
-    
+
 <tr class="odd">
 <td class="cfg_name"> AllBalances.MinValue</td>
 <td class="cfg_type"> uint</td>
@@ -353,12 +374,24 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td> 5000</td>
 <td class="cfg_info"> Use hashmap instead of list for addresses that have this many (or more) unspent outputs.</td>
 </tr>
-
 <tr class="odd">
 <td class="cfg_name"> AllBalances.AutoLoad</td>
 <td class="cfg_type"> bool</td>
 <td> true</td>
 <td class="cfg_info"> Atomatically enable wallet functionality after the node is launched and synchronized.</td>
+</tr>
+</tr>
+<tr class="odd">
+<td class="cfg_name"> AllBalances.SaveBalances</td>
+<td class="cfg_type"> bool</td>
+<td> true</td>
+<td class="cfg_info"> Always save all address balances before quitting (to load it from disk upon next launch).</td>
+</tr>
+<tr class="odd">
+<td class="cfg_name"> AllBalances.InstantWallet</td></td>
+<td class="cfg_type"> bool</td>
+<td> false</td>
+<td class="cfg_info"> If set, the client will fetch all wallet balances before starting UI and network.</td>
 </tr>
 
 <tr class="even">
@@ -378,6 +411,12 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td class="cfg_type"> uint</td>
 <td> 15</td>
 <td class="cfg_info"> How many seconds between sending ping comand to a peer. 0 - do not ping.</td>
+</tr>
+<tr class="even">
+<td class="cfg_name"> DropPeers.ImmunityMinutes</td>
+<td class="cfg_type"> uint</td>
+<td> 15</td>
+<td class="cfg_info"> This many minutes will be give to new peers before they can be dropped. 0 - never drop peers.</td>
 </tr>
 
 <tr class="odd">
@@ -410,7 +449,7 @@ Disabling this will make your node to require more RAM, but may be necessary for
 <td> false</td>
 <td class="cfg_info"> When set, it turns off node's internal counters to improve performance.</td>
 </tr>
-    
+
 <tr class="even">
 <td class="cfg_name"> UTXOSave.BlocksToHold</td>
 <td class="cfg_type"> uint</td>

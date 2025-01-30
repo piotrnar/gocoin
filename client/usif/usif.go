@@ -1,21 +1,23 @@
 package usif
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/qdb"
+	"github.com/piotrnar/gocoin/lib/others/rawtxlib"
 	"github.com/piotrnar/gocoin/lib/others/sys"
-	"github.com/piotrnar/gocoin/lib/script"
 )
 
 type OneUiReq struct {
@@ -41,99 +43,38 @@ var (
 	Exit_now         sys.SyncBool
 )
 
-func DecodeTxSops(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, sigops uint, e error) {
-	s += fmt.Sprintln("Transaction details (for your information):")
-	s += fmt.Sprintln(len(tx.TxIn), "Input(s):")
-	sigops = btc.WITNESS_SCALE_FACTOR * tx.GetLegacySigOpCount()
-	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
-	ss := make([]string, len(tx.TxIn))
-	for i := range tx.TxIn {
-		ss[i] += fmt.Sprintf(" %3d %s seq=0x%x", i, tx.TxIn[i].Input.String(), tx.TxIn[i].Sequence)
-		var po *btc.TxOut
-
-		inpid := btc.NewUint256(tx.TxIn[i].Input.Hash[:])
-		if txinmem, ok := network.TransactionsToSend[inpid.BIdx()]; ok {
-			ss[i] += fmt.Sprint(" mempool")
-			if int(tx.TxIn[i].Input.Vout) >= len(txinmem.TxOut) {
-				ss[i] += fmt.Sprintf(" - Vout TOO BIG (%d/%d)!", int(tx.TxIn[i].Input.Vout), len(txinmem.TxOut))
-			} else {
-				po = txinmem.TxOut[tx.TxIn[i].Input.Vout]
-			}
-		} else {
-			po = common.BlockChain.Unspent.UnspentGet(&tx.TxIn[i].Input)
-			if po != nil {
-				ss[i] += fmt.Sprintf("%8d", po.BlockHeight)
-			}
-		}
-		tx.Spent_outputs[i] = po
+func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {
+	inpid := btc.NewUint256(prevout.Hash[:])
+	bidx := inpid.BIdx()
+	var tx *btc.Tx
+	txpool.TxMutex.Lock()
+	if t2s, ok := txpool.TransactionsToSend[bidx]; ok {
+		tx = t2s.Tx
+	} else if txr, ok := txpool.TransactionsRejected[bidx]; ok {
+		tx = txr.Tx
 	}
-	for i := range tx.TxIn {
-		s += ss[i]
-		po := tx.Spent_outputs[i]
-		if po != nil {
-			ok := script.VerifyTxScript(po.Pk_script, &script.SigChecker{Amount: po.Value, Idx: i, Tx: tx}, script.VER_P2SH|script.VER_DERSIG|script.VER_CLTV)
-			if !ok {
-				s += fmt.Sprintln("\nERROR: The transacion does not have a valid signature.")
-				e = errors.New("Invalid signature")
-			}
-			totinp += po.Value
-
-			ads := "???"
-			if ad := btc.NewAddrFromPkScript(po.Pk_script, common.Testnet); ad != nil {
-				ads = ad.String()
-			}
-			s += fmt.Sprintf("\n\t%15.8f BTC @ %s", float64(po.Value)/1e8, ads)
-
-			if btc.IsP2SH(po.Pk_script) {
-				so := btc.WITNESS_SCALE_FACTOR * btc.GetP2SHSigOpCount(tx.TxIn[i].ScriptSig)
-				s += fmt.Sprintf("  + %d sigops", so)
-				sigops += so
-			}
-
-			swo := tx.CountWitnessSigOps(i, po.Pk_script)
-			if swo > 0 {
-				s += fmt.Sprintf("  + %d segops", swo)
-				sigops += swo
-			}
-
-			s += "\n"
+	txpool.TxMutex.Unlock()
+	if tx != nil {
+		if int(prevout.Vout) >= len(tx.TxOut) {
+			println("ERROR: Vout TOO BIG (%d/%d)!", int(prevout.Vout), len(tx.TxOut))
 		} else {
-			s += fmt.Sprintln(" - UNKNOWN INPUT")
-			missinginp = true
+			po = tx.TxOut[prevout.Vout]
 		}
-	}
-	s += fmt.Sprintln(len(tx.TxOut), "Output(s):")
-	for i := range tx.TxOut {
-		totout += tx.TxOut[i].Value
-		adr := btc.NewAddrFromPkScript(tx.TxOut[i].Pk_script, common.Testnet)
-		if adr != nil {
-			s += fmt.Sprintf(" %15.8f BTC to adr %s\n", float64(tx.TxOut[i].Value)/1e8, adr.String())
-		} else {
-			s += fmt.Sprintf(" %15.8f BTC to scr %s\n", float64(tx.TxOut[i].Value)/1e8, hex.EncodeToString(tx.TxOut[i].Pk_script))
-		}
-	}
-	if missinginp {
-		s += fmt.Sprintln("WARNING: There are missing inputs and we cannot calc input BTC amount.")
-		s += fmt.Sprintln("If there is somethign wrong with this transaction, you can loose money...")
 	} else {
-		total_fee := float64(totinp - totout)
-		fee_spb := total_fee / float64(tx.VSize())
-		s += fmt.Sprintf("All OK: %.8f BTC in -> %.8f BTC out, with %.8f BTC fee (%.2f SPB)\n",
-			float64(totinp)/1e8, float64(totout)/1e8, total_fee/1e8, fee_spb)
-		avg_fee := GetAverageFee()
-		if fee_spb > 2*GetAverageFee() {
-			s += fmt.Sprintf("WARNING: High fee SPB of %.02f (vs %.02f average).\n", fee_spb, avg_fee)
-		}
+		po = common.BlockChain.Unspent.UnspentGet(prevout)
 	}
-
-	s += fmt.Sprintln("ECDSA sig operations : ", sigops)
-
 	return
 }
 
-func DecodeTx(tx *btc.Tx) (s string, missinginp bool, totinp, totout uint64, e error) {
-	s, missinginp, totinp, totout, _, e = DecodeTxSops(tx)
-	return
+func DecodeTx(o io.Writer, tx *btc.Tx) {
+	totinp, totout, missinginp := rawtxlib.Decode(o, tx, getpo, common.Testnet, false)
+	if missinginp == 0 {
+		fee_spb := float64(totinp-totout) / float64(tx.VSize())
+		avg_fee := GetAverageFee()
+		if fee_spb > 2*avg_fee {
+			fmt.Fprintf(o, "WARNING: High fee SPB of %.02f (vs %.02f average).\n", fee_spb, avg_fee)
+		}
+	}
 }
 
 func LoadRawTx(buf []byte) (s string) {
@@ -150,24 +91,28 @@ func LoadRawTx(buf []byte) (s string) {
 	}
 	tx.SetHash(txd)
 
-	s, _, _, _, _ = DecodeTx(tx)
+	wb := new(bytes.Buffer)
+	DecodeTx(wb, tx)
+	s = wb.String()
 
-	network.RemoveFromRejected(&tx.Hash) // in case we rejected it eariler, to try it again as trusted
+	txpool.TxMutex.Lock()
+	txpool.DeleteRejectedByIdx(tx.Hash.BIdx()) // in case we rejected it eariler, to try it again as trusted
+	txpool.TxMutex.Unlock()
 
-	if why := network.NeedThisTxExt(&tx.Hash, nil); why != 0 {
+	if why := txpool.NeedThisTxExt(&tx.Hash, nil); why != 0 {
 		s += fmt.Sprintln("Transaction not needed or not wanted", why)
-		network.TxMutex.Lock()
-		if t2s := network.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
+		txpool.TxMutex.Lock()
+		if t2s := txpool.TransactionsToSend[tx.Hash.BIdx()]; t2s != nil {
 			t2s.Local = true // make as own (if not needed)
 		}
-		network.TxMutex.Unlock()
+		txpool.TxMutex.Unlock()
 		return
 	}
 
-	if !network.SubmitLocalTx(tx, txd) {
-		network.TxMutex.Lock()
-		rr := network.TransactionsRejected[tx.Hash.BIdx()]
-		network.TxMutex.Unlock()
+	if !txpool.SubmitLocalTx(tx, txd) {
+		txpool.TxMutex.Lock()
+		rr := txpool.TransactionsRejected[tx.Hash.BIdx()]
+		txpool.TxMutex.Unlock()
 		if rr != nil {
 			s += fmt.Sprintln("Transaction rejected", rr.Reason)
 		} else {
@@ -176,9 +121,9 @@ func LoadRawTx(buf []byte) (s string) {
 		return
 	}
 
-	network.TxMutex.Lock()
-	_, ok := network.TransactionsToSend[tx.Hash.BIdx()]
-	network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	_, ok := txpool.TransactionsToSend[tx.Hash.BIdx()]
+	txpool.TxMutex.Unlock()
 	if ok {
 		s += fmt.Sprintln("Transaction added to the memory pool. You can broadcast it now.")
 	} else {
@@ -189,7 +134,7 @@ func LoadRawTx(buf []byte) (s string) {
 }
 
 func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
-	common.CountSafe(fmt.Sprint("NetSendOneInv", typ))
+	common.CountSafePar("NetSendOneInv-", typ)
 
 	// Prepare the inv
 	inv := new([36]byte)
@@ -210,7 +155,6 @@ func SendInvToRandomPeer(typ uint32, h *btc.Uint256) {
 		cnt++
 	}
 	network.Mutex_net.Unlock()
-	return
 }
 
 func GetNetworkHashRateNum() float64 {
@@ -255,10 +199,10 @@ func ExecUiReq(req *OneUiReq) {
 
 func MemoryPoolFees() (res string) {
 	res = fmt.Sprintln("Content of mempool sorted by fee's SPB:")
-	network.TxMutex.Lock()
-	defer network.TxMutex.Unlock()
+	txpool.TxMutex.Lock()
+	defer txpool.TxMutex.Unlock()
 
-	sorted := network.GetSortedMempoolNew()
+	sorted := txpool.GetSortedMempoolRBF()
 
 	var totlen, rawlen uint64
 	for cnt := 0; cnt < len(sorted); cnt++ {
@@ -344,8 +288,4 @@ func GetReceivedBlockX(block *btc.Block) (rb *network.OneReceivedBlock, cbasetx 
 	}
 	network.MutexRcv.Unlock()
 	return
-}
-
-func init() {
-	rand.Seed(int64(time.Now().Nanosecond()))
 }

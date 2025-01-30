@@ -28,7 +28,7 @@ func (c *OneConnection) HandlePong(pl []byte) {
 	} else {
 		common.CountSafe("PongTimeout")
 	}
-	ms := time.Now().Sub(c.LastPingSent) / time.Millisecond
+	ms := time.Since(c.LastPingSent) / time.Millisecond
 	if ms == 0 {
 		//println(c.ConnID, "Ping returned after 0ms")
 		ms = 1
@@ -78,10 +78,8 @@ type SortedConnections []struct {
 // Make sure to call it with locked Mutex_net.
 func GetSortedConnections() (list SortedConnections, any_ping bool) {
 	var cnt int
-	var now time.Time
-	var tlist SortedConnections
-	now = time.Now()
-	tlist = make(SortedConnections, len(OpenCons))
+	now := time.Now()
+	tlist := make(SortedConnections, len(OpenCons))
 	for _, v := range OpenCons {
 		v.Mutex.Lock()
 		tlist[cnt].Conn = v
@@ -89,7 +87,7 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		tlist[cnt].BlockCount = len(v.blocksreceived)
 		tlist[cnt].TxsCount = v.X.TxsReceived
 		tlist[cnt].Special = v.X.IsSpecial || v.X.Authorized
-		if v.X.VersionReceived == false || v.X.ConnectedAt.IsZero() {
+		if !v.X.VersionReceived || v.X.ConnectedAt.IsZero() {
 			tlist[cnt].MinutesOnline = 0
 		} else {
 			tlist[cnt].MinutesOnline = int(now.Sub(v.X.ConnectedAt) / time.Minute)
@@ -99,7 +97,6 @@ func GetSortedConnections() (list SortedConnections, any_ping bool) {
 		if tlist[cnt].Ping > 0 {
 			any_ping = true
 		}
-
 		cnt++
 	}
 	if cnt > 0 {
@@ -156,14 +153,14 @@ func drop_worst_peer() bool {
 	}
 
 	for _, v := range list {
-		if v.MinutesOnline < OnlineImmunityMinutes {
+		if v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes)) {
 			continue
 		}
 		if v.Special {
 			continue
 		}
 		if v.Conn.X.Incomming {
-			if InConsActive+2 > common.GetUint32(&common.CFG.Net.MaxInCons) {
+			if InConsActive+2 > common.Get(&common.CFG.Net.MaxInCons) {
 				common.CountSafe("PeerInDropped")
 				if common.FLAG.Log {
 					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
@@ -178,7 +175,7 @@ func drop_worst_peer() bool {
 				return true
 			}
 		} else {
-			if OutConsActive+2 > common.GetUint32(&common.CFG.Net.MaxOutCons) {
+			if OutConsActive+2 > common.Get(&common.CFG.Net.MaxOutCons) {
 				common.CountSafe("PeerOutDropped")
 				if common.FLAG.Log {
 					f, _ := os.OpenFile("drop_log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
@@ -202,7 +199,7 @@ func (c *OneConnection) TryPing(now time.Time) bool {
 		return false // insufficient protocol version
 	}
 
-	pingdur := common.GetDuration(&common.PingPeerEvery)
+	pingdur := common.Get(&common.PingPeerEvery)
 	if pingdur == 0 {
 		return false // pinging disabled in global config
 	}

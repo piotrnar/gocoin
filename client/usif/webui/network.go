@@ -12,6 +12,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -61,7 +62,7 @@ func json_netcon(w http.ResponseWriter, r *http.Request) {
 	for _, v := range tmp {
 		i--
 		v.Conn.GetStats(&net_cons[i])
-		net_cons[i].HasImmunity = v.MinutesOnline < network.OnlineImmunityMinutes
+		net_cons[i].HasImmunity = v.MinutesOnline < int(common.Get(&common.CFG.DropPeers.ImmunityMinutes))
 	}
 
 	bx, er := json.Marshal(net_cons)
@@ -160,7 +161,7 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 			Count: rec.Cnt, Timestamp: rec.Tim})
 	}
 
-	out.GetMPInProgress = len(network.GetMPInProgressTicket) != 0
+	out.GetMPInProgress = len(txpool.GetMPInProgressTicket) != 0
 	out.GetMPConnID = network.GetMPInProgressConnID.Get()
 
 	bx, er := json.Marshal(out)

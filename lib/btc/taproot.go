@@ -23,6 +23,13 @@ type ScriptExecutionData struct {
 	M_validation_weight_left int64
 }
 
+type taprootSHType struct {
+	prevouts     [32]byte
+	sequences    [32]byte
+	spentAmounts [32]byte
+	spentScripts [32]byte
+}
+
 // TaprootSigHash implements taproot's sighash algorithm
 // script - if true uses TAPSCRIPT mode (not TAPROOT)
 func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_type byte, script bool) []byte {
@@ -32,8 +39,8 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 		ext_flag = 1
 	}
 
-	tx.hash_lock.Lock()
-	defer tx.hash_lock.Unlock()
+	tx.hashLock.Lock()
+	defer tx.hashLock.Unlock()
 
 	sha := Hasher(HASHER_TAPSIGHASH)
 
@@ -58,52 +65,56 @@ func (tx *Tx) TaprootSigHash(execdata *ScriptExecutionData, in_pos int, hash_typ
 	binary.Write(sha, binary.LittleEndian, tx.Lock_time)
 
 	if input_type != SIGHASH_ANYONECANPAY {
-		if tx.m_prevouts_single_hash == nil {
+		if tx.tapSingleHashes == nil {
+			tx.tapSingleHashes = new(taprootSHType)
 			sh := sha256.New()
 			for _, ti := range tx.TxIn {
 				sh.Write(ti.Input.Hash[:])
 				binary.Write(sh, binary.LittleEndian, ti.Input.Vout)
 			}
-			tx.m_prevouts_single_hash = sh.Sum(nil)
+			copy(tx.tapSingleHashes.prevouts[:], sh.Sum(nil))
 
 			sh.Reset()
 			for i := range tx.TxIn {
 				binary.Write(sh, binary.LittleEndian, tx.Spent_outputs[i].Value)
 			}
-			tx.m_spent_amounts_single_hash = sh.Sum(nil)
+			copy(tx.tapSingleHashes.spentAmounts[:], sh.Sum(nil))
 
 			sh.Reset()
 			for i := range tx.TxIn {
 				WriteVlen(sh, uint64(len(tx.Spent_outputs[i].Pk_script)))
 				sh.Write(tx.Spent_outputs[i].Pk_script)
 			}
-			tx.m_spent_scripts_single_hash = sh.Sum(nil)
+			copy(tx.tapSingleHashes.spentScripts[:], sh.Sum(nil))
 
 			sh.Reset()
 			for _, vin := range tx.TxIn {
 				binary.Write(sh, binary.LittleEndian, vin.Sequence)
 			}
-			tx.m_sequences_single_hash = sh.Sum(nil)
+			copy(tx.tapSingleHashes.sequences[:], sh.Sum(nil))
+
 		}
 
-		sha.Write(tx.m_prevouts_single_hash)
-		sha.Write(tx.m_spent_amounts_single_hash)
-		sha.Write(tx.m_spent_scripts_single_hash)
-		sha.Write(tx.m_sequences_single_hash)
+		sha.Write(tx.tapSingleHashes.prevouts[:])
+		sha.Write(tx.tapSingleHashes.spentAmounts[:])
+		sha.Write(tx.tapSingleHashes.spentScripts[:])
+		sha.Write(tx.tapSingleHashes.sequences[:])
 	}
 
 	if output_type == SIGHASH_ALL {
-		if tx.m_outputs_single_hash == nil {
+		if tx.tapOutSingleHash == nil {
 			sh := sha256.New()
 			for _, vout := range tx.TxOut {
 				binary.Write(sh, binary.LittleEndian, vout.Value)
 				WriteVlen(sh, uint64(len(vout.Pk_script)))
 				sh.Write(vout.Pk_script)
 			}
-			tx.m_outputs_single_hash = sh.Sum(nil)
+			tx.tapOutSingleHash = new([32]byte)
+			copy(tx.tapOutSingleHash[:], sh.Sum(nil))
+
 		}
 
-		sha.Write(tx.m_outputs_single_hash)
+		sha.Write(tx.tapOutSingleHash[:])
 	}
 
 	// Data about the input/prevout being spent

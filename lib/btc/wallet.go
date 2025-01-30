@@ -123,17 +123,17 @@ func DecodePrivateAddr(s string) (*PrivateAddr, error) {
 	}
 
 	if len(pkb) < 37 {
-		return nil, errors.New("Decoded data too short")
+		return nil, errors.New("decoded data too short")
 	}
 
 	if len(pkb) > 38 {
-		return nil, errors.New("Decoded data too long")
+		return nil, errors.New("decoded data too long")
 	}
 
 	var sh [32]byte
 	ShaHash(pkb[:len(pkb)-4], sh[:])
 	if !bytes.Equal(sh[:4], pkb[len(pkb)-4:]) {
-		return nil, errors.New("Checksum error")
+		return nil, errors.New("checksum error")
 	}
 
 	return NewPrivateAddr(pkb[1:33], pkb[0], len(pkb) == 38 && pkb[33] == 1), nil

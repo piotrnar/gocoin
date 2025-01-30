@@ -9,7 +9,7 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
@@ -82,12 +82,12 @@ func json_status(w http.ResponseWriter, r *http.Request) {
 	out.Version = common.Last.Block.BlockVersion()
 	common.Last.Mutex.Unlock()
 	out.MinValue = common.AllBalMinVal()
-	out.WalletON = common.GetBool(&common.WalletON)
-	out.LastTrustedBlockHeight = common.GetUint32(&common.LastTrustedBlockHeight)
+	out.WalletON = common.Get(&common.WalletON)
+	out.LastTrustedBlockHeight = common.Get(&common.LastTrustedBlockHeight)
 	network.MutexRcv.Lock()
 	out.LastHeaderHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
-	out.BlockChainSynchronized = common.GetBool(&common.BlockChainSynchronized)
+	out.BlockChainSynchronized = common.Get(&common.BlockChainSynchronized)
 
 	bx, er := json.Marshal(out)
 	if er == nil {

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -46,9 +46,9 @@ const (
 
 	MAX_INV_HISTORY = 500
 
-	TxsCounterPeriod      = 6 * time.Second // how long for one tick
-	TxsCounterBufLen      = 60              // how many ticks
-	OnlineImmunityMinutes = int(TxsCounterBufLen * TxsCounterPeriod / time.Minute)
+	TxsCounterPeriod = time.Hour       // how long we remeber txs sent by a peer
+	TxsCounterTick   = 6 * time.Second // 10 ticks per minute
+	TxsCounterBufLen = TxsCounterPeriod / TxsCounterTick
 
 	PeerTickPeriod  = 100 * time.Millisecond // run the peer's tick not more often than this
 	InvsFlushPeriod = 10 * time.Millisecond  // send all the pending invs to the peer not more often than this
@@ -211,7 +211,7 @@ type OneConnection struct {
 	PendingInvs []*[36]byte // List of pending INV to send and the mutex protecting access to it
 	sendInvsNow sys.SyncBool
 
-	GetBlockInProgress map[BIDX]*oneBlockDl
+	GetBlockInProgress map[btc.BIDX]*oneBlockDl
 
 	// Ping stats
 	LastPingSent   time.Time
@@ -225,18 +225,16 @@ type OneConnection struct {
 	nextGetData     time.Time
 	keepBlocksOver  int
 
-	// we need these three below to count txs received only during last hour
-	txsCur int
-	txsCha chan int
-	txsNxt time.Time
+	// we need these three below to count txs received only within last hour
+	txsCha    [TxsCounterBufLen]uint32
+	txsCurIdx int
+	txsNxt    time.Time
 
 	writing_thread_done sync.WaitGroup
 	writing_thread_push chan bool
 
 	GetMP chan bool
 }
-
-type BIDX [btc.Uint256IdxLen]byte
 
 type oneBlockDl struct {
 	hash          *btc.Uint256
@@ -253,7 +251,7 @@ type BCmsg struct {
 func NewConnection(ad *peersdb.PeerAddr) (c *OneConnection) {
 	c = new(OneConnection)
 	c.PeerAddr = ad
-	c.GetBlockInProgress = make(map[BIDX]*oneBlockDl)
+	c.GetBlockInProgress = make(map[btc.BIDX]*oneBlockDl)
 	c.ConnID = atomic.AddUint32(&LastConnId, 1)
 	c.counters = make(map[string]uint64)
 	c.InvDone.Map = make(map[uint64]uint32, MAX_INV_HISTORY)
@@ -613,7 +611,7 @@ func (c *OneConnection) FetchMessage() (ret *BCmsg, timeout_or_data bool) {
 
 // Check c.X.AuthAckGot before calling this function
 func (c *OneConnection) GetMPNow() {
-	if common.GetBool(&common.CFG.TXPool.Enabled) {
+	if common.Get(&common.CFG.TXPool.Enabled) {
 		select {
 		case c.GetMP <- true:
 		default:
@@ -709,7 +707,7 @@ func NetCloseAll() {
 	sta := time.Now()
 	println("Closing network")
 	common.NetworkClosed.Set()
-	common.SetBool(&common.ListenTCP, false)
+	common.Set(&common.ListenTCP, false)
 	Mutex_net.Lock()
 	if InConsActive > 0 || OutConsActive > 0 {
 		for _, v := range OpenCons {
@@ -739,20 +737,29 @@ func NetCloseAll() {
 	}
 }
 
-func DropPeer(conid uint32) {
-	Mutex_net.Lock()
-	defer Mutex_net.Unlock()
+// Make sure to call it with Mutex_net locked
+func GetConnFromID(conid uint32) (c *OneConnection) {
 	for _, v := range OpenCons {
 		if uint32(conid) == v.ConnID {
-			if v.X.IsSpecial {
-				v.Disconnect(false, "FromUI")
-			} else {
-				v.DoS("FromUI")
-			}
+			c = v
 			return
 		}
 	}
-	fmt.Println("DropPeer: There is no such an active connection", conid)
+	return
+}
+
+func DropPeer(conid uint32) {
+	Mutex_net.Lock()
+	defer Mutex_net.Unlock()
+	if v := GetConnFromID(conid); v != nil {
+		if v.X.IsSpecial {
+			v.Disconnect(false, "FromUI")
+		} else {
+			v.DoS("FromUI")
+		}
+	} else {
+		fmt.Println("DropPeer: There is no such an active connection", conid)
+	}
 }
 
 // GetMP() is called from UI, to force asking the given peer for its mempool

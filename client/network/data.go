@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
 
@@ -60,52 +61,32 @@ func (c *OneConnection) processGetData(b *bytes.Reader) {
 		c.InvStore(typ, h[4:36])
 		c.Mutex.Unlock()
 
-		if typ == MSG_BLOCK || typ == MSG_WITNESS_BLOCK {
-			if typ == MSG_BLOCK {
-				common.CountSafe("GetdataBlock")
-			} else {
-				common.CountSafe("GetdataBlockSw")
-			}
+		if typ == MSG_WITNESS_BLOCK { // Note: MSG_BLOCK is not longer supported
+			common.CountSafe("GetdataBlockSw")
 			hash := btc.NewUint256(h[4:])
 			crec, _, er := common.BlockChain.Blocks.BlockGetExt(hash)
-
 			if er == nil {
 				bl := crec.Data
-				if typ == MSG_BLOCK {
-					// remove witness data from the block
-					if crec.Block == nil {
-						crec.Block, _ = btc.NewBlock(bl)
-					}
-					if crec.Block.NoWitnessData == nil {
-						crec.Block.BuildNoWitnessData()
-					}
-					//println("block size", len(crec.Data), "->", len(bl))
-					bl = crec.Block.NoWitnessData
-				}
 				c.SendRawMsg("block", bl)
 			} else {
 				//fmt.Println("BlockGetExt-2 failed for", hash.String(), er.Error())
 				//notfound = append(notfound, h[:]...)
 			}
-		} else if typ == MSG_TX || typ == MSG_WITNESS_TX {
-			if typ == MSG_TX {
-				common.CountSafe("GetdataTx")
-			} else {
-				common.CountSafe("GetdataTxSw")
-			}
+		} else if typ == MSG_WITNESS_TX { // Note: MSG_TX is no longer supported
+			common.CountSafe("GetdataTxSw")
 			// ransaction
-			TxMutex.Lock()
-			if tx, ok := TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked == 0 {
+			txpool.TxMutex.Lock()
+			if tx, ok := txpool.TransactionsToSend[btc.NewUint256(h[4:]).BIdx()]; ok && tx.Blocked == 0 {
 				tx.SentCnt++
 				tx.Lastsent = time.Now()
-				TxMutex.Unlock()
+				txpool.TxMutex.Unlock()
 				if tx.SegWit == nil || typ == MSG_WITNESS_TX {
 					c.SendRawMsg("tx", tx.Raw)
 				} else {
 					c.SendRawMsg("tx", tx.Serialize())
 				}
 			} else {
-				TxMutex.Unlock()
+				txpool.TxMutex.Unlock()
 				//notfound = append(notfound, h[:]...)
 			}
 		} else if typ == MSG_CMPCT_BLOCK {
@@ -233,7 +214,7 @@ func netBlockReceived(conn *OneConnection, b []byte) {
 	ReceivedBlocks[idx] = orb
 	DelB2G(idx) //remove it from BlocksToGet if no more pending downloads
 
-	store_on_disk := len(BlocksToGet) > 10 && common.GetBool(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
+	store_on_disk := len(BlocksToGet) > 10 && common.Get(&common.CFG.Memory.CacheOnDisk) && len(b2g.Block.Raw) > 16*1024
 	MutexRcv.Unlock()
 
 	var bei *btc.BlockExtraInfo
@@ -287,17 +268,6 @@ func parseLocatorsPayload(pl []byte) (h2get []*btc.Uint256, hashstop *btc.Uint25
 	hashstop = new(btc.Uint256)
 	b.Read(hashstop.Hash[:]) // if not there, don't make a big deal about it
 
-	return
-}
-
-// Call it with locked MutexRcv
-func getBlockToFetch(max_height uint32, cnt_in_progress, avg_block_size uint) (lowest_found *OneBlockToGet) {
-	for _, v := range BlocksToGet {
-		if v.InProgress == cnt_in_progress && v.Block.Height <= max_height &&
-			(lowest_found == nil || v.Block.Height < lowest_found.Block.Height) {
-			lowest_found = v
-		}
-	}
 	return
 }
 
@@ -369,13 +339,6 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	}
 
 	var cnt uint64
-	var block_type uint32
-
-	if (c.Node.Services & btc.SERVICE_SEGWIT) != 0 {
-		block_type = MSG_WITNESS_BLOCK
-	} else {
-		block_type = MSG_BLOCK
-	}
 
 	// We can issue getdata for this peer
 	// Let's look for the lowest height block in BlocksToGet that isn't being downloaded yet
@@ -398,20 +361,9 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 		max_max_height = LastCommitedHeader.Height
 	}
 
-	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 && (c.Node.Services&btc.SERVICE_SEGWIT) == 0 { // no segwit node
-		if max_height >= common.BlockChain.Consensus.Enforce_SEGWIT-1 {
-			max_height = common.BlockChain.Consensus.Enforce_SEGWIT - 1
-			if max_height <= LowestIndexToBlocksToGet {
-				Fetch.NoWitness++
-				c.nextGetData = time.Now().Add(time.Hour) // never do getdata
-				return
-			}
-		}
-	}
-
 	Fetc.HeightD = uint64(max_height)
 
-	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
 	max_blocks_forward := max_height - last_block_height
 	invs := new(bytes.Buffer)
 	var cnt_in_progress uint32
@@ -454,7 +406,7 @@ func (c *OneConnection) GetBlockData() (yes bool) {
 	found_it:
 		Fetc.C[lowest_found.InProgress]++
 
-		binary.Write(invs, binary.LittleEndian, block_type)
+		binary.Write(invs, binary.LittleEndian, MSG_WITNESS_BLOCK)
 		invs.Write(lowest_found.BlockHash.Hash[:])
 		lowest_found.InProgress++
 		cnt++

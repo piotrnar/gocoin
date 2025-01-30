@@ -10,7 +10,8 @@ import (
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
+	"github.com/piotrnar/gocoin/client/txpool"
 )
 
 type SortedKeys []struct {
@@ -192,7 +193,7 @@ func net_stats(par string) {
 
 	network.Mutex_net.Unlock()
 
-	fmt.Println("GetMPInProgress:", len(network.GetMPInProgressTicket) != 0)
+	fmt.Println("GetMPInProgress:", len(txpool.GetMPInProgressTicket) != 0)
 
 	common.PrintBWStats()
 }
@@ -344,7 +345,7 @@ func sync_stats(par string) {
 		}
 	}
 
-	max_blocks_at_once := common.GetUint32(&common.CFG.Net.MaxBlockAtOnce)
+	max_blocks_at_once := common.Get(&common.CFG.Net.MaxBlockAtOnce)
 	fmt.Print("\t")
 	for i := uint32(0); i < max_blocks_at_once; i++ {
 		cnt := network.Fetc.C[i]
@@ -365,9 +366,11 @@ func sync_stats(par string) {
 
 func init() {
 	newUi("net n", false, net_stats, "Show network statistics. Specify ID to see its details.")
-	newUi("drop", false, net_drop, "Disconenct from node with a given IP")
-	newUi("conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
-	newUi("rd", false, net_rd, "Show recently disconnected incoming connections")
-	newUi("friends", false, net_friends, "Show current friends settings")
-	newUi("ss", true, sync_stats, "Show chain sync statistics. Add charecter 'c' (cache), 'x' (in progress) or 'r' (reset couter)")
+	newUi("netconn conn", false, net_conn, "Connect to the given node (specify IP and optionally a port)")
+	newUi("netdrop drop", false, net_drop, "Disconenct from node with a given IP")
+	newUi("netfriend", false, net_friends, "Show current friends settings")
+	newUi("netlimd dl", false, set_dlmax, "Set maximum download speed: 0|<max_kbps>")
+	newUi("netlimu ul", false, set_ulmax, "Set maximum download speed: 0|<max_kbps>")
+	newUi("netrd rd", false, net_rd, "Show recently disconnected incoming connections")
+	newUi("netsync ss", true, sync_stats, "Show chain sync statistics. Add charecter 'c' (cache), 'x' (in progress) or 'r' (reset couter)")
 }

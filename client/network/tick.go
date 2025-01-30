@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"github.com/piotrnar/gocoin/client/common"
-	"github.com/piotrnar/gocoin/client/network/peersdb"
+	"github.com/piotrnar/gocoin/client/peersdb"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/lib/btc"
 	"github.com/piotrnar/gocoin/lib/others/sys"
 )
@@ -31,7 +32,6 @@ var (
 	SpecialIPs         [][4]byte
 	FriendsAccess      sync.Mutex
 
-	GetMPInProgressTicket = make(chan bool, 1)
 	GetMPInProgressConnID sys.SyncInt
 )
 
@@ -104,19 +104,20 @@ func (c *OneConnection) Maintanence(now time.Time) {
 	// Expire GetBlockInProgress after five minutes, if they are not in BlocksToGet
 	c.ExpireHeadersAndGetData(&now, 0)
 
-	// Expire BlocksReceived after two days
+	// Expire BlocksReceived counter
 	c.Mutex.Lock()
 	if len(c.blocksreceived) > 0 {
-		var i int
-		for i = 0; i < len(c.blocksreceived); i++ {
-			if c.blocksreceived[i].Add(common.GetDuration(&common.BlockExpireEvery)).After(now) {
+		expire_before := now.Add(-common.Get(&common.BlockExpireEvery))
+		var remove_blocks_cnt uint64
+		for _, br := range c.blocksreceived {
+			if br.After(expire_before) {
 				break
 			}
-			common.CountSafe("BlksRcvdExpired")
+			remove_blocks_cnt++
 		}
-		if i > 0 {
-			//println(c.ConnID, "expire", i, "block(s)")
-			c.blocksreceived = c.blocksreceived[i:]
+		if remove_blocks_cnt > 0 {
+			c.blocksreceived = c.blocksreceived[remove_blocks_cnt:]
+			common.CountSafeAdd("BlksRcvdExpired", remove_blocks_cnt)
 		}
 	}
 	c.Mutex.Unlock()
@@ -154,15 +155,15 @@ func (c *OneConnection) Tick(now time.Time) {
 			return
 		}
 
-		if len(c.GetMP) > 0 && common.GetBool(&common.BlockChainSynchronized) {
+		if len(c.GetMP) > 0 && common.Get(&common.BlockChainSynchronized) {
 			// See if to send "getmp" command
 			select {
-			case GetMPInProgressTicket <- true:
+			case txpool.GetMPInProgressTicket <- true:
 				// ticket received - check for the request...
 				GetMPInProgressConnID.Store(int(c.ConnID))
 				if c.SendGetMP() != nil {
 					// SendGetMP() failed - clear the global flag/channel
-					<-GetMPInProgressTicket
+					<-txpool.GetMPInProgressTicket
 					<-c.GetMP
 				}
 			default:
@@ -173,13 +174,14 @@ func (c *OneConnection) Tick(now time.Time) {
 		// Tick the recent transactions counter
 		if now.After(c.txsNxt) {
 			c.Mutex.Lock()
-			if len(c.txsCha) == cap(c.txsCha) {
-				tmp := <-c.txsCha
-				c.X.TxsReceived -= tmp
+			if c.txsCurIdx == len(c.txsCha)-1 {
+				c.txsCurIdx = 0
+			} else {
+				c.txsCurIdx++
 			}
-			c.txsCha <- c.txsCur
-			c.txsCur = 0
-			c.txsNxt = c.txsNxt.Add(TxsCounterPeriod)
+			c.X.TxsReceived -= int(c.txsCha[c.txsCurIdx])
+			c.txsCha[c.txsCurIdx] = 0
+			c.txsNxt = c.txsNxt.Add(TxsCounterTick)
 			c.Mutex.Unlock()
 		}
 
@@ -309,7 +311,7 @@ func tcp_server() {
 		Mutex_net.Lock()
 		ica := InConsActive
 		Mutex_net.Unlock()
-		if ica < common.GetUint32(&common.CFG.Net.MaxInCons) {
+		if ica < common.Get(&common.CFG.Net.MaxInCons) {
 			lis.SetDeadline(time.Now().Add(100 * time.Millisecond))
 			tc, e := lis.AcceptTCP()
 			if e == nil && common.IsListenTCP() {
@@ -514,7 +516,7 @@ func NetworkTick() {
 	var max_headers_got_cnt int
 	var _v *OneConnection
 	for _, v := range OpenCons {
-		v.Mutex.Lock() // TODO: Sometimes it might hang here - check why!!
+		v.Mutex.Lock()
 		if !v.X.AllHeadersReceived || v.X.GetHeadersInProgress {
 			cnt_headers_in_progress++
 		} else if !v.X.LastHeadersEmpty {
@@ -544,15 +546,16 @@ func NetworkTick() {
 		}
 	}
 
-	if common.CFG.DropPeers.DropEachMinutes != 0 {
+	if common.Get(&common.CFG.DropPeers.DropEachMinutes) != 0 &&
+		common.Get(&common.CFG.DropPeers.ImmunityMinutes) != 0 {
 		if next_drop_peer.IsZero() {
-			next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
+			next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
 		} else if now.After(next_drop_peer) {
 			if drop_worst_peer() {
-				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery))
+				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery))
 			} else {
 				// If no peer dropped this time, try again sooner
-				next_drop_peer = now.Add(common.GetDuration(&common.DropSlowestEvery) >> 2)
+				next_drop_peer = now.Add(common.Get(&common.DropSlowestEvery) >> 2)
 			}
 		}
 	}
@@ -581,7 +584,7 @@ func NetworkTick() {
 	}
 	Mutex_net.Unlock()
 
-	if conn_cnt < common.GetUint32(&common.CFG.Net.MaxOutCons) {
+	if conn_cnt < common.Get(&common.CFG.Net.MaxOutCons) {
 		// First we will choose up to 128 peers that we have seen alive - do not sort them
 		adrs := peersdb.GetRecentPeers(128, false, func(ad *peersdb.PeerAddr) bool {
 			return ad.Banned != 0 || !ad.SeenAlive || (ad.Services&btc.SERVICE_SEGWIT) == 0 || ConnectionActive(ad)
@@ -604,11 +607,9 @@ func NetworkTick() {
 		}
 	}
 
-	if expireTxsNow {
-		ExpireTxs()
-	} else if now.After(lastTxsExpire.Add(time.Minute)) {
-		expireTxsNow = true
-	}
+	txpool.ExpireOldTxs()
+
+	txpool.LimitRejected()
 }
 
 func (c *OneConnection) SendFeeFilter() {
@@ -622,7 +623,7 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 	if len(c.GetMP) == 0 {
 		return
 	}
-	if len(GetMPInProgressTicket) == 0 {
+	if len(txpool.GetMPInProgressTicket) == 0 {
 		// This will happen when our chain is not yet synchronized and we are disconnecting a peer which have sent "authack"
 		return
 	}
@@ -645,11 +646,11 @@ func (c *OneConnection) GetMPDone(pl []byte) {
 		return
 	}
 
-	if len(GetMPInProgressTicket) == 0 {
+	if len(txpool.GetMPInProgressTicket) == 0 {
 		// TODO: remove it at some point (should not be happening)
 		println("ERROR: GetMPDone() exiting without a ticket (will hang)")
 	}
-	<-GetMPInProgressTicket
+	<-txpool.GetMPInProgressTicket
 }
 
 // Run starts a process that handles communication with a single peer.
@@ -686,10 +687,9 @@ func (c *OneConnection) Run() {
 	now := time.Now()
 	c.X.LastDataGot = now
 	c.nextMaintanence = now.Add(time.Minute)
-	c.LastPingSent = now.Add(5*time.Second - common.GetDuration(&common.PingPeerEvery)) // do first ping ~5 seconds from now
+	c.LastPingSent = now.Add(5*time.Second - common.Get(&common.PingPeerEvery)) // do first ping ~5 seconds from now
 
-	c.txsNxt = now.Add(TxsCounterPeriod)
-	c.txsCha = make(chan int, TxsCounterBufLen)
+	c.txsNxt = now.Add(TxsCounterTick)
 
 	c.Mutex.Unlock()
 
@@ -770,17 +770,9 @@ func (c *OneConnection) Run() {
 					if c.X.LastMinFeePerKByte != 0 {
 						c.SendFeeFilter()
 					}
-					if c.Node.Version >= 70014 && common.GetBool(&common.CFG.TXPool.Enabled) {
-						if (c.Node.Services & btc.SERVICE_SEGWIT) == 0 {
-							// if the node does not support segwit, request compact blocks
-							// only if we have not achieved the segwit enforcement moment
-							if common.BlockChain.Consensus.Enforce_SEGWIT == 0 ||
-								common.Last.BlockHeight() < common.BlockChain.Consensus.Enforce_SEGWIT {
-								c.SendRawMsg("sendcmpct", []byte{0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-							}
-						} else {
-							c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-						}
+					if c.Node.Version >= 70014 && common.Get(&common.CFG.TXPool.Enabled) {
+						// ask for compact blocks version 2 only
+						c.SendRawMsg("sendcmpct", []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 					}
 				}
 			}
@@ -883,7 +875,7 @@ func (c *OneConnection) Run() {
 			}
 
 		case "cmpctblock":
-			if common.GetBool(&common.BlockChainSynchronized) {
+			if common.Get(&common.BlockChainSynchronized) {
 				c.ProcessCmpctBlock(cmd.pl)
 			}
 
@@ -943,12 +935,12 @@ func (c *OneConnection) Run() {
 	c.Mutex.Unlock()
 
 	if c.PeerAddr.Friend || c.X.Authorized {
-		common.CountSafe(fmt.Sprint("FDisconnect-", ban))
+		common.CountSafePar("FDisconnect-", ban)
 	} else {
 		if ban {
 			c.PeerAddr.Ban(c.ban_reason)
 			common.CountSafe("PeersBanned")
-		} else if c.X.Incomming && !c.MutexGetBool(&c.X.IsSpecial) {
+		} else if c.X.Incomming && !c.MutexGetBool(&c.X.Authorized) {
 			var rd *RecentlyDisconenctedType
 			HammeringMutex.Lock()
 			rd = RecentlyDisconencted[c.PeerAddr.NetAddr.Ip4]
@@ -961,8 +953,4 @@ func (c *OneConnection) Run() {
 		}
 	}
 	c.Conn.Close()
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
 }
