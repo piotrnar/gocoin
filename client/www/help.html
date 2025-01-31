@@ -12,8 +12,8 @@ The home page of Gocoin's WebUI consists fo the following parts.
 setting of the web interface to a JSON file.<br>
 <span class="but"><img valign="bottom" src="static/restore.png"> Import</span> (restore)
 the settings from a previously created JSON file.<br>
-The settings include content of all the wallets from <a href="/wal">Wallet</a> page
-and the address book from <a href="/snd">MakeTx</a> page.<br>
+The settings include content of all the wallets from <a href="/wallet">Wallet</a> page
+and the address book from <a href="/send">MakeTx</a> page.<br>
 
 <h3>Edit configuration</h3>
 Use it to edit config file. The file is in JSON format.
@@ -36,7 +36,7 @@ Trusted nodes will respond to <b>getmp</b> command of this node.
 They will also assume all transactions and blocks sent by this node as valid (won't be verifying them).
 
 <hr>
-<a name="wal" href="/wal"><h2>Wallet</h2></a>
+<a name="wallet" href="/wallet"><h2>Wallet</h2></a>
 Edit <b>Your wallets</b> and quickly switch between them.<br>
 <span class="note">Note that the wallets' data is only stored inside your browser.</span>
 
@@ -57,7 +57,7 @@ Select this checkbox to also see the current wallet's transactions that are in m
 Disable wallet functionality to save memory and speed up block chain processing.<br>
 Switching wallet functionality on and off does not require restart, but might take awhile.
 <hr>
-<a name="snd" href="/snd"><h2>MakeTx</h2></a>
+<a name="send" href="/send"><h2>MakeTx</h2></a>
 
 Create a transaction to be signed by gocoin's <b>wallet</b>.
 
@@ -67,7 +67,7 @@ Together they must carry enough BTC to satisfy your total output volume and the 
 
 <h3>Payment details</h3>
 Fill in the outputs (address - BTC value) of the transaction, choose <b>Transaction fee</b> and <b>Change</b> address.<br>
-If change addres you want to use is not on the list, you have to add it to the currently selected wallet on <a href="/wal">Wallet</a> page.<br>
+If change addres you want to use is not on the list, you have to add it to the currently selected wallet on <a href="/wallet">Wallet</a> page.<br>
 If you need more outputs, press the <a>+ add output</a> link.<br>
 <br>
 <span class="note">Note that the estimated transaction size may not be accurate.

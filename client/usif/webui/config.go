@@ -66,7 +66,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 			if len(r.Form["page"]) > 0 {
 				http.Redirect(w, r, r.Form["page"][0], http.StatusFound)
 			} else {
-				http.Redirect(w, r, "/wal", http.StatusFound)
+				http.Redirect(w, r, "/wallet", http.StatusFound)
 			}
 			return
 		}

@@ -215,7 +215,7 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		err = "Bad request"
 	}
 error:
-	generate_error_page(w, r, err, "snd")
+	generate_error_page(w, r, err, "send")
 }
 
 func generate_error_page(w http.ResponseWriter, r *http.Request, err string, gotopage string) {

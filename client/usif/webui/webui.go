@@ -128,9 +128,14 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 }
 
 func p_general(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+
 	var page string
 	if r.URL.Path == "/" {
-		page = "home"
+		http.Redirect(w, r, "/home", http.StatusFound)
+		return
 		// home
 	} else {
 		ss := strings.Split(r.URL.Path, "/")
@@ -141,7 +146,7 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 		}
 		page = ss[1]
 	}
-	if page == "snd" || page == "wal" {
+	if page == "send" || page == "wallet" {
 		if !common.Get(&common.WalletON) {
 			p_wallet_is_off(w, r)
 			return

@@ -639,7 +639,7 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 	Only list your wallet's <b>public addresses</b> here!
 	Empty lines and lines starting with <b>#</b> are ignored.<br>
 	Make a line of <b># SegWit</b> or <b># SegWit P2SH</b> or <b># SegWit Tap</b>
-	 to auto-translate change addresses to SegWit format in <a href="snd">MakeTx</a> tab.
+	 to auto-translate change addresses to SegWit format in <a href="send">MakeTx</a> tab.
 	</i>
 </form>
 </table>
@@ -648,7 +648,7 @@ Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 
 <form id="form_b" method="post" action="cfg" style="margin:0px;text-align:center" onsubmit="return confirm('Disable wallet functionality')">
 <input type="hidden" name="wallet" value="off">
-<input type="hidden" name="page" value="/wal">
+<input type="hidden" name="page" value="/wallet">
 <input type="submit" value="Disable wallet functionality for lower memory usage and faster block processing">
 </form>
 
