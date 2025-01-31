@@ -63,6 +63,18 @@ div.tablab {
 </tr>
 </table>
 <script>
+function make_clickable(el) {
+	var s = el.innerText
+	var dashpos = s.indexOf("-")
+	if (dashpos > 0) {
+		s = s.substr(0, dashpos+1)
+	}
+	el.title = 'Click to Copy'
+	el.className = 'hand'
+	el["text2copy"] = s
+	el.addEventListener("click", copyonclick)
+}
+
 function ref_counters() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -104,6 +116,7 @@ function ref_counters() {
 				}
 				row.cells[0].innerText = gen_a[i].var
 				row.cells[1].innerText = gen_a[i].cnt
+				make_clickable(row.cells[0])
 			}
 			while (tab_gen_a.rows.length > gen_a.length + 1) {
 				tab_gen_a.deleteRow(tab_gen_a.rows.length-1)
@@ -122,6 +135,7 @@ function ref_counters() {
 				}
 				row.cells[0].innerText = gen_b[i].var
 				row.cells[1].innerText = gen_b[i].cnt
+				make_clickable(row.cells[0])
 			}
 			while (tab_gen_b.rows.length > gen_b.length + 1) {
 				tab_gen_b.deleteRow(tab_gen_b.rows.length-1)
@@ -141,6 +155,7 @@ function ref_counters() {
 				}
 				row.cells[0].innerText = cts.txs[i].var
 				row.cells[1].innerText = cts.txs[i].cnt
+				make_clickable(row.cells[0])
 			}
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
@@ -150,6 +165,7 @@ function ref_counters() {
 				var col = row.insertCell(-1)
 				col.className = 'netnam'
 				col.innerText = cts.net[i].var
+				make_clickable(col)
 
 				col = row.insertCell(-1)
 				col.className = 'netcnt'
