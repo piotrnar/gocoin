@@ -563,8 +563,19 @@ function import_file_selected(e) {
 }
 
 function get_auth_key() {
-	pub_auth_key.innerText = "pipa"
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(get_auth_key, 5000)
+		pub_auth_key.innerText = "..."
+	}
+	aj.onload=function() {
+		pub_auth_key.innerText = '@'+aj.responseText
+	}
+	aj.open("GET","cfg?getauthkey&sid="+sid,true)
+	aj.send(null)
+	
 }
+get_auth_key()
 
 document.addEventListener('DOMContentLoaded', function() {
 	window.onkeyup = function (event) {
