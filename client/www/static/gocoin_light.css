@@ -1,0 +1,341 @@
+body {
+	font-family:Arial;
+	font-size:14px;
+}
+a {
+	color:blue;
+	text-decoration:none;
+}
+
+a:visited {
+	color:blue;
+	text-decoration:none;
+}
+
+a:hover {
+	background-color:yellow;
+}
+
+a.topmenu {
+	color:#2020e0;
+	padding-top:2px;
+	padding-bottom:2px;
+	padding-left:6px;
+	padding-right:6px;
+	border: 1px solid white;
+	border-collapse: collapse;
+	font-size:16px;
+}
+
+a.topmenu:hover {
+	//background-color:pink;
+	border-radius: 8px;
+	border: 1px solid blue;
+}
+
+a.menuat {
+	//text-decoration:underline;
+	border-radius: 8px;
+	border: 1px solid black;
+}
+
+a.dimenu {
+	color:#a0a0ff;
+}
+
+.mono {
+	font-family: monospace;
+font-size:12px;
+}
+
+.bold {
+	font-weight: bold;
+}
+
+.r {
+	text-align: right;
+}
+
+.i {
+	font-style:italic;
+}
+
+table {
+	font-size:14px;
+}
+
+h2 {
+	margin-bottom:5px;
+}
+
+h3 {
+	margin-bottom:3px;
+}
+
+table.bord {
+	border: 1px #000000 solid;
+	border-spacing:0;
+	border-collapse:collapse;
+}
+
+table.wal {
+	font-size:80%;
+	width:100%;
+}
+
+#unspent {
+	border: 1px #000000 solid;
+	border-spacing:0;
+	border-collapse:collapse;
+	font-size:75%
+}
+
+tr {
+	border-top: 1px solid #000;
+	border-bottom: 1px solid #000;
+}
+
+
+#rawdiv {
+	font-family: monospace;
+	background-color:#ffffff;
+	width: 100%;
+	overflow-x: auto;
+	font-size:85%
+}
+
+td,th {
+	padding: 5px;
+}
+
+th {
+	background-color:rgb(0,0,80);
+	color:yellow;
+}
+
+tr.bip152 {
+	background-color:#fffff8;
+}
+
+tr.immune {
+	background-color:#f4fff4;
+}
+
+tr.special {
+	background-color:#f8f4e4;
+}
+
+tr.secure {
+	background-color:#ffe8f0;
+}
+
+tr.CFN {
+	background-color:#f0ffff;
+}
+
+tr.own {
+	background-color:#ffe0e0;
+}
+
+tr.hov {
+}
+
+tr.hov:hover {
+	background-color:#e0e0e0;
+}
+
+.hand {
+	cursor:pointer;
+}
+
+.small {
+	font-size:75%
+}
+
+.err {
+	background-color:#ff8080
+}
+
+.dis {
+	background-color:#dddddd;
+}
+
+.cod {
+	font-family: monospace;
+	font-size:12px;
+	background-color:#eeeeee;
+	color:#006000;
+}
+
+.note {
+	font-style:italic;
+	background-color:#eeeeff;
+}
+
+.but {
+	color:#442200;
+	background-color:#ddeeff;
+	padding:2px;
+	//font-weight:bold;
+}
+
+input[type=button], input[type=submit] {
+	background-color:#dddddd;
+	font-weight:bold;
+	/*border: 2px #000000 solid;*/
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 3px;
+	padding-bottom: 3px;
+	font-size:12px;
+}
+
+input[type=button], input[type=submit], input[type=text], select {
+}
+
+input[type=button]:hover, input[type=submit]:hover {
+	background-color:#ffeeee;
+	cursor:pointer;
+}
+
+table.blocks {
+	font-size:12px;
+	width:100%;
+}
+
+td.block_hash {
+	font-size:12px;
+}
+
+td.nodeid {
+	font-size:11px;
+	color:#0000c0;
+	font-weight:bold;
+}
+
+td.blstatmissedtxs {
+	color:purple;
+	font-size:10px;
+}
+
+td.blstatwaste {
+	font-size:8px;
+}
+
+td.blstat {
+	font-size:10px;
+	font-style:italic;
+}
+
+td.blsigops {
+	color:#c00000;
+	font-size:9px;
+}
+
+td.blswsize {
+	color:blue;
+}
+
+td.blreward {
+	color:#008000;
+	font-family: monospace;
+	text-align: right;
+	font-size:12px;
+}
+
+td.blspb {
+	font-size:12px;
+	color:#0000c0;
+	font-family: monospace;
+	text-align: right;
+}
+
+table.netcons {
+}
+
+div.footer {
+	margin-top:10px;
+	font-style:italic;
+	text-align:right;
+	font-size:11px;
+}
+
+
+#conninfo {
+	font-size:14px;
+}
+
+.black_overlay{
+	display: none;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	z-index:1001;
+	-moz-opacity: 0.8;
+	opacity:.80;
+	filter: alpha(opacity=80);
+}
+
+.white_content {
+	display: none;
+	position: absolute;
+	top: 10%;
+	left: 10%;
+	width: 80%;
+	height: 80%;
+	padding-left: 8px;
+	padding-right: 8px;
+	border: 5px solid #d0d0d0;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+}
+
+.qr_addr_label {
+	font-size:24px;
+	font-weight:bold;
+}
+
+.qr_addr_addr {
+	font-family: monospace;
+	font-size:17px;
+	font-weight:bold;
+	text-align:center;
+	width:400px;
+	border: 0px solid;
+	outline: none;
+}
+
+.nw {
+	white-space: nowrap;
+}
+
+.unspent_minus {
+	color:red;
+}
+.unspent_plus {
+	color:green;
+}
+.size120 {
+	font-size:130%;
+}
+
+input[type='checkbox'] {
+	cursor:pointer;
+}
+
+input[type='radio'] {
+	cursor:pointer;
+}
+
+td.uploadtx {
+	background-color: #f0fff0;
+	border:1px solid black;
+}
+
+.walminwarn {
+	color:#purple;
+}
