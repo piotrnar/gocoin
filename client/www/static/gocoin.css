@@ -98,7 +98,7 @@ tr {
 
 #rawdiv {
 	font-family: monospace;
-	background-color:#e0e0e0;
+	background-color:#ffffff;
 	width: 100%;
 	overflow-x: auto;
 	font-size:85%
@@ -139,6 +139,9 @@ tr.CFN {
 
 tr.own {
 	background-color:#ffe0e0;
+}
+
+tr.hov {
 }
 
 tr.hov:hover {
@@ -191,6 +194,9 @@ input[type=button], input[type=submit] {
 	font-size:12px;
 }
 
+input[type=button], input[type=submit], input[type=text], select {
+}
+
 input[type=button]:hover, input[type=submit]:hover {
 	background-color:#ffeeee;
 	cursor:pointer;
@@ -240,13 +246,6 @@ td.blreward {
 td.blspb {
 	font-size:12px;
 	color:#0000c0;
-	font-family: monospace;
-	text-align: right;
-}
-
-td.blminspb {
-	font-size:10px;
-	color:purple;
 	font-family: monospace;
 	text-align: right;
 }
@@ -330,4 +329,13 @@ input[type='checkbox'] {
 
 input[type='radio'] {
 	cursor:pointer;
+}
+
+td.uploadtx {
+	background-color: #f0fff0;
+	border:1px solid black;
+}
+
+.walminwarn {
+	color:#purple;
 }

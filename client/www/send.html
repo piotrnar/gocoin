@@ -5,7 +5,7 @@
 <td><h3><b class="mono" id="disp_txid"></b></h3>
 <td align="right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup_x(false)">
 </table>
-<pre id="rawdiv" style="background-color:white"></pre>
+<pre id="rawdiv"></pre>
 </div><div id="fade" class="black_overlay"></div>
 
 <style>
@@ -592,7 +592,7 @@ function add_new_output() {
 	}
 
 	c = r.insertCell(-1)
-	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
+	c.innerHTML = '<input type="text" id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
 	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+
 		addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')" tabindex="-1">'
 
@@ -716,7 +716,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	<td><a href="javascript:add_new_output()" title="Add another output">+add output</a>
 	|
 	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
-    <td align="center" title="Transaction sequence number (default -3)">Sequence : <input name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
+	<td align="center" title="Transaction sequence number (default -3)">Sequence : <input type="text" name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
 	<td align="right">Transaction fee:
 	</table>
 	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">

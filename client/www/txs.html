@@ -25,7 +25,7 @@ td.txsize {
 <td align="center"><h3><b class="mono" id="disp_txid"></b></h3>
 <td align="right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup()">
 </table>
-<pre id="rawdiv" style="background-color:white"></pre>
+<pre id="rawdiv"></pre>
 <textarea id="txhexdump" style="width:100%" rows="5" readonly onclick="this.select()"></textarea>
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
@@ -99,7 +99,7 @@ X for
 			<td>Relaying transactions:
 			<td><img id="switch_txr_pool" src="static/switch-off.png" height="32" valign="bottom">
 		<tr>
-			<td colspan="2" bgcolor="#f0fff0" style="border:1px solid black">
+			<td colspan="2" class="uploadtx">
 				<b>Upload Transaction File:</b><br>
 				<br>
 				<form id="theform" method="post" enctype="multipart/form-data" onchange="theform.submit()">
