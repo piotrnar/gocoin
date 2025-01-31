@@ -26,7 +26,6 @@ Address: <b id="external_ip"></b>
 &nbsp;&bull;&nbsp;
 Connections:
 <b id="out_connections"></b> <img title="outgoing" src="static/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="static/incoming.png">
-<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 &nbsp;&bull;&nbsp;
 Listening for incoming connections:
 <img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom">
@@ -483,14 +482,8 @@ function refreshconnections(force) {
 				td.innerHTML = cs[i].PeerIp
 				td.title = "Click to Copy"
 				td.className = 'hand'
-				td["peerip"] = cs[i].PeerIp
-				td.addEventListener("click", function(e) {
-					autocopy.style.display = 'inline'
-					autocopy.value = e.srcElement["peerip"]
-					autocopy.select()
-					document.execCommand('copy')
-					autocopy.style.display = 'none'
-				})
+				td["text2copy"] = cs[i].PeerIp
+				td.addEventListener("click", copyonclick)
 
 				// direction
 				td = row.insertCell(-1)

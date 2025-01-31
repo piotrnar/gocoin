@@ -504,3 +504,11 @@ function show_block_fees(height,size,minedby) {
 	stat_mined_by.innerText = minedby
 	show_fees_clicked()
 }
+
+function copyonclick(e) {
+	autocopy.style.display = 'inline'
+	autocopy.value = e.srcElement["text2copy"]
+	autocopy.select()
+	document.execCommand('copy')
+	autocopy.style.display = 'none'
+}

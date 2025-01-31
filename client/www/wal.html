@@ -131,13 +131,7 @@ function add_address_and_icons(td, adr, lab) {
 	img.src = "static/copy.png"
 	img.className = "hand"
 	img.title = "Copy to clipboard"
-	img.addEventListener("click", function(e) {
-		autocopy.style.display = 'inline'
-		autocopy.value = e.srcElement["text2copy"]
-		autocopy.select()
-		document.execCommand('copy')
-		autocopy.style.display = 'none'
-	})
+	img.addEventListener("click", copyonclick)
 	td.appendChild(img)
 }
 
@@ -596,7 +590,6 @@ function at_click() {
 </span>
 </h2>
 
-<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a href="javascript:get_balance_zip()">balance.zip</a>)
 &nbsp;&bull;&nbsp;
 <span class="hand" onclick="show_mempol.click()">

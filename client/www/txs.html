@@ -30,7 +30,7 @@ td.txsize {
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
 <tr>
-<td><b>Memory Pool:</b> <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px"></td>
+<td><b>Memory Pool:</b></td>
 <td align="right">
 <span onclick="mempool_new_sort.click()" class="hand" title="Uses less bandwidth">
 	<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
@@ -738,13 +738,7 @@ function add_txid_and_icon(td, txid, decode) {
 	img.src = "static/copy.png"
 	img.className = "hand"
 	img.title = "Copy TxID to clipboard"
-	img.addEventListener("click", function(e) {
-		autocopy.style.display = 'inline'
-		autocopy.value = e.srcElement["text2copy"]
-		autocopy.select()
-		document.execCommand('copy')
-		autocopy.style.display = 'none'
-	})
+	img.addEventListener("click", copyonclick)
 	td.appendChild(img)
 }
 
