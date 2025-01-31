@@ -53,23 +53,6 @@ Limit range to
 </div><div id="fade" class="black_overlay"></div>
 `)
 
-function closepopup_x(fees) {
-	if (light.style.display!='none') {
-		if (fees) {
-			$("#block_fees").unbind("plothover")
-			$("#fees_tooltip").remove()
-		}
-		light.style.display='none'
-		fade.style.display='none'
-		window.scrollTo(0,prvpos)
-		document.removeEventListener("scroll", noscroll)
-	}
-}
-
-function closepopup() {
-	closepopup_x(true)
-}
-
 var last_height // used for showing block fees
 var fees_plot_data = [ { data : [] } ];
 var previousPoint = null

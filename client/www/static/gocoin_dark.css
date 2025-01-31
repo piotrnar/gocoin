@@ -30,13 +30,11 @@ a.topmenu {
 }
 
 a.topmenu:hover {
-	//background-color:pink;
 	border-radius: 8px;
 	border: 1px solid #aaaaaa;
 }
 
 a.menuat {
-	//text-decoration:underline;
 	border-radius: 8px;
 	border: 1px solid black;
 }
@@ -113,7 +111,7 @@ td,th {
 
 th {
 	background-color:#222222;
-	color:#c0ca60;
+	color:#a0aa50;
 }
 
 tr.bip152 {
@@ -121,7 +119,7 @@ tr.bip152 {
 }
 
 tr.immune {
-	background-color:#081008;
+	background-color:#0c1610;
 }
 
 tr.special {
@@ -134,9 +132,6 @@ tr.secure {
 
 tr.own {
 	background-color:#220808;
-}
-
-tr.hov {
 }
 
 tr.hov:hover {
@@ -170,10 +165,9 @@ tr.hov:hover {
 	font-weight:bold;
 }
 
-input[type=button], input[type=submit] {
-	background-color:#aaaaaa;
-	font-weight:bold;
-	/*border: 2px #000000 solid;*/
+input[type=button], input[type=submit], input[type="text"], select, textarea {
+	background-color:#222222;
+	border: 3px #555555 solid;
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 3px;
@@ -181,21 +175,30 @@ input[type=button], input[type=submit] {
 	font-size:12px;
 }
 
-input[type=button], input[type=submit], input[type=text], select {
-	background-color:#aaaaaa;
+input[type="text"].fixtext {
+	color:#e0e0e0;
+}
+
+select, textarea {
+	color:#e0e0e0;
+}
+
+input[type=button], input[type=submit] {
+	color:#e0e0e0;
+	font-weight:bold;
 }
 
 input[type=button]:hover, input[type=submit]:hover, select:hover {
-	background-color:#bbbbbb;
+	background-color:#777777;
 	cursor:pointer;
 }
 
 input[type=text].dis {
-	background-color:#777777;
+	background-color:#444444;
 }
 
 input[type=text].err {
-	background-color:#cc8888
+	background-color:#440000
 }
 
 table.blocks {
@@ -250,9 +253,6 @@ td.blspb {
 	text-align: right;
 }
 
-table.netcons {
-}
-
 div.footer {
 	margin-top:10px;
 	font-style:italic;
@@ -292,6 +292,7 @@ div.footer {
 	background-color: black;
 	z-index:1002;
 	overflow: auto;
+	overflow-x:hidden;
 }
 
 .qr_addr_label {
@@ -404,4 +405,71 @@ td.outcnt {
 }
 .positive {
 	color: #88ff88;
+}
+
+td.bl_ver {
+	font-family: monospace;
+	text-align:right;
+}
+td.bl_cnt {
+	text-align:right;
+}
+td.bl_perc {
+	text-align:right;
+}
+td.mi_unkn {
+	font-style:italic;
+	font-size:80%;
+}
+td.mi_netshare {
+	font-family: monospace;
+	text-align:right;
+	font-weight:bold;
+}
+td.mi_hashrate {
+	font-family: monospace;
+	text-align:right;
+	font-style:italic;
+	font-size:90%;
+	white-space:nowrap;
+}
+td.mi_bsize {
+	font-family: monospace;
+	text-align:right;
+	font-size:90%;
+	font-weight:bold;
+}
+td.mi_tot {
+	text-align:right;
+	color:#9040c8;
+	font-style:italic;
+	font-weight:bold;
+}
+td.mi_vers {
+	text-align:right;
+	color:rgb(177, 77, 77);
+	font-style:italic;
+	font-weight:bold;
+}
+tr.ver_others {
+	font-weight:bold;
+	font-style:italic;
+}
+caption {
+	margin-bottom:6px;
+}
+#verinfo {
+	left:0px;
+	top:0px;
+	z-index:1000;
+	width:800px;
+	background-color:#e0e0e0;
+	overflow-x:auto;
+}
+
+td.minblspb {
+	font-size:14px;
+	color:#3131bf;
+	font-family: monospace;
+	text-align: right;
 }

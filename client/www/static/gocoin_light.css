@@ -28,13 +28,11 @@ a.topmenu {
 }
 
 a.topmenu:hover {
-	//background-color:pink;
 	border-radius: 8px;
 	border: 1px solid blue;
 }
 
 a.menuat {
-	//text-decoration:underline;
 	border-radius: 8px;
 	border: 1px solid black;
 }
@@ -133,9 +131,6 @@ tr.own {
 	background-color:#ffe0e0;
 }
 
-tr.hov {
-}
-
 tr.hov:hover {
 	background-color:#e0e0e0;
 }
@@ -172,7 +167,6 @@ tr.hov:hover {
 	color:#442200;
 	background-color:#ddeeff;
 	padding:2px;
-	//font-weight:bold;
 }
 
 input[type=button], input[type=submit] {
@@ -184,9 +178,6 @@ input[type=button], input[type=submit] {
 	padding-top: 3px;
 	padding-bottom: 3px;
 	font-size:12px;
-}
-
-input[type=button], input[type=submit], input[type=text], select {
 }
 
 input[type=button]:hover, input[type=submit]:hover {
@@ -244,9 +235,6 @@ td.blspb {
 	color:#0000c0;
 	font-family: monospace;
 	text-align: right;
-}
-
-table.netcons {
 }
 
 div.footer {
@@ -333,7 +321,7 @@ td.uploadtx {
 }
 
 .walminwarn {
-	color:#purple;
+	color:purple;
 }
 
 td.addr_long {
@@ -391,4 +379,71 @@ td.outcnt {
 }
 .positive {
 	color:green;
+}
+
+td.bl_ver {
+	font-family: monospace;
+	text-align:right;
+}
+td.bl_cnt {
+	text-align:right;
+}
+td.bl_perc {
+	text-align:right;
+}
+td.mi_unkn {
+	font-style:italic;
+	font-size:80%;
+}
+td.mi_netshare {
+	font-family: monospace;
+	text-align:right;
+	font-weight:bold;
+}
+td.mi_hashrate {
+	font-family: monospace;
+	text-align:right;
+	font-style:italic;
+	font-size:90%;
+	white-space:nowrap;
+}
+td.mi_bsize {
+	font-family: monospace;
+	text-align:right;
+	font-size:90%;
+	font-weight:bold;
+}
+td.mi_tot {
+	text-align:right;
+	color:purple;
+	font-style:italic;
+	font-weight:bold;
+}
+td.mi_vers {
+	text-align:right;
+	color:brown;
+	font-style:italic;
+	font-weight:bold;
+}
+tr.ver_others {
+	font-weight:bold;
+	font-style:italic;
+}
+caption {
+	margin-bottom:6px;
+}
+#verinfo {
+	left:0px;
+	top:0px;
+	z-index:1000;
+	width:800px;
+	background-color:#e0e0e0;
+	overflow-x:auto;
+}
+
+td.minblspb {
+	font-size:12px;
+	color:#7090e0;
+	font-family: monospace;
+	text-align: right;
 }

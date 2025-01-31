@@ -284,6 +284,23 @@ function noscroll() {
 	scroll(0,0)
 }
 
+function closepopup_x(fees) {
+	if (light.style.display!='none') {
+		if (fees) {
+			$("#block_fees").unbind("plothover")
+			$("#fees_tooltip").remove()
+		}
+		light.style.display='none'
+		fade.style.display='none'
+		window.scrollTo(0,prvpos)
+		document.removeEventListener("scroll", noscroll)
+	}
+}
+
+function closepopup() {
+	closepopup_x(true)
+}
+
 function css(selector, property, value) {
 	for (var i=0; i<document.styleSheets.length;i++) {//Loop through all styles
 		//Try add rule

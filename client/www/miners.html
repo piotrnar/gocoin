@@ -1,65 +1,3 @@
-<style>
-td.bl_ver {
-	font-family: monospace;
-	text-align:right;
-}
-td.bl_cnt {
-	text-align:right;
-}
-td.bl_perc {
-	text-align:right;
-}
-td.mi_unkn {
-	font-style:italic;
-	font-size:80%;
-}
-td.mi_netshare {
-	font-family: monospace;
-	text-align:right;
-	font-weight:bold;
-}
-td.mi_hashrate {
-	font-family: monospace;
-	text-align:right;
-	font-style:italic;
-	font-size:90%;
-	white-space:nowrap;
-}
-td.mi_bsize {
-	font-family: monospace;
-	text-align:right;
-	font-size:90%;
-	font-weight:bold;
-}
-td.mi_tot {
-	text-align:right;
-	color:purple;
-	font-style:italic;
-	font-weight:bold;
-}
-td.mi_vers {
-	text-align:right;
-	color:brown;
-	font-style:italic;
-	font-weight:bold;
-}
-tr.ver_others {
-	font-weight:bold;
-	font-style:italic;
-}
-caption {
-	margin-bottom:6px;
-}
-#verinfo {
-	left:0px;
-	top:0px;
-	z-index:1000;
-	width:800px;
-	background-color:#e0e0e0;
-	overflow-x:auto;
-}
-</style>
-
 <script>
 
 const avg_blocks_pr_day = 146.7 // average between #722125 and 822125
@@ -200,8 +138,8 @@ function refresh_mining_info() {
 				td.innerText = val2str_pad(m.TotalFees, true)
 
 				td = row.insertCell(-1)
-				td.className = 'blspb'
-				td.innerText = parseFloat(m.TotalFees/(m.Blocks*estimated_block_vsize)).toFixed(0)
+				td.className = 'minblspb'
+				td.innerText = parseFloat(m.TotalFees/(m.Blocks*estimated_block_vsize)).toFixed(1)
 
 				totfees += m.TotalFees
 				totbts += m.TotalBytes
