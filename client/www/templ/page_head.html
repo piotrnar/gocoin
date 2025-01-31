@@ -1,7 +1,13 @@
 <html><head><title>{PAGE_TITLE} {VERSION}{TESTNET}</title>
 <script type="text/javascript" src="static/gocoin.js"></script>
 <script>
-	var dark_mode = localStorage.getItem("dark_mode")==="true"
+	/*AUTO_DARK*/
+	var dark_mode
+	if (auto_dark_theme) {
+		dark_mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+	} else {
+		dark_mode = localStorage.getItem("dark_mode")==="true"
+	}
 	if (dark_mode) {
 		document.write(`<link rel="stylesheet" href="static/gocoin_dark.css" type="text/css">`)
 	} else {
@@ -66,11 +72,13 @@ function beep_clicked() {
 		<td align="center" align="center">
 			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
 <script>
+if (!auto_dark_theme) {
 	if (dark_mode) {
 		document.write(`<img src="static/light.png" height="16" class="hand" onclick="change_theme()" title="Switch theme">`)
 	} else {
 		document.write(`<img src="static/dark.png" height="16" class="hand" onclick="change_theme()" valign="top" title="Switch theme">`)
 	}
+}
 </script>
 		</td>
 		<td align="center">

@@ -335,3 +335,53 @@ td.uploadtx {
 .walminwarn {
 	color:#purple;
 }
+
+td.addr_long {
+	font-size:9px;
+	font-weight:bold;
+	white-space: nowrap;
+}
+td.addr_pubkey {
+	font-size:8px;
+	font-weight:bold;
+	white-space:nowrap;
+	font-family: monospace;
+}
+td.addr_norm {
+	font-weight:bold;
+	white-space: nowrap;
+}
+td.addr_label {
+	white-space: nowrap;
+	overflow-x: hidden;
+}
+td.balbtc {
+	text-align: right;
+	font-family: monospace;
+	font-size: 110%;
+	width: 150px;
+}
+.p2sh {
+	color:brown;
+}
+.native {
+	color:darkgreen;
+}
+.p2tap {
+	color:blue;
+}
+.segwitaddr {
+	font-style:italic;
+	font-size: 90%;
+}
+.pubkey {
+	color:darkblue;
+}
+td.segwitaddr {
+	text-align: left;
+	white-space: nowrap;
+}
+td.outcnt {
+	text-align: right;
+	white-space: nowrap;
+}
