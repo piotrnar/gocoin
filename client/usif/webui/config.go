@@ -147,13 +147,13 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["txponoff"]) > 0 {
 		common.CFG.TXPool.Enabled = !common.CFG.TXPool.Enabled
-		http.Redirect(w, r, "txs", http.StatusFound)
+		w.Write([]byte(fmt.Sprint(common.CFG.TXPool.Enabled)))
 		return
 	}
 
 	if len(r.Form["txronoff"]) > 0 {
 		common.CFG.TXRoute.Enabled = !common.CFG.TXRoute.Enabled
-		http.Redirect(w, r, "txs", http.StatusFound)
+		w.Write([]byte(fmt.Sprint(common.CFG.TXRoute.Enabled)))
 		return
 	}
 

@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -55,28 +54,6 @@ func load_template(fn string) string {
 		return er.Error() + "\n"
 	}
 	return string(dat)
-}
-
-func p_static(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
-	if len(pth) == 2 {
-		dat, _ := os.ReadFile("www/static/" + pth[1])
-		if len(dat) > 0 {
-			switch filepath.Ext(r.URL.Path) {
-			case ".js":
-				w.Header()["Content-Type"] = []string{"text/javascript"}
-			case ".css":
-				w.Header()["Content-Type"] = []string{"text/css"}
-			}
-			w.Write(dat)
-		} else {
-			http.NotFound(w, r)
-		}
-	}
 }
 
 func sid(r *http.Request) string {
@@ -187,7 +164,7 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 func ServerThread() {
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
-	http.HandleFunc("/static/", p_static)
+	http.Handle("/static/", http.FileServer(http.Dir("www")))
 
 	http.HandleFunc("/", p_general)
 	http.HandleFunc("/cfg", p_cfg)
