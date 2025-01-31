@@ -52,16 +52,6 @@ func (x onemiernstat) Swap(i, j int) {
 	x[i], x[j] = x[j], x[i]
 }
 
-func p_miners(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	write_html_head(w, r)
-	w.Write([]byte(load_template("miners.html")))
-	write_html_tail(w)
-}
-
 func json_blkver(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return

@@ -6,9 +6,9 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -50,7 +50,7 @@ func ipchecker(r *http.Request) bool {
 }
 
 func load_template(fn string) string {
-	dat, er := ioutil.ReadFile("www/" + fn)
+	dat, er := os.ReadFile("www/" + fn)
 	if er != nil {
 		return er.Error() + "\n"
 	}
@@ -64,7 +64,7 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 
 	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
 	if len(pth) == 2 {
-		dat, _ := ioutil.ReadFile("www/webui/" + pth[1])
+		dat, _ := os.ReadFile("www/webui/" + pth[1])
 		if len(dat) > 0 {
 			switch filepath.Ext(r.URL.Path) {
 			case ".js":
@@ -172,31 +172,56 @@ func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 	write_html_tail(w)
 }
 
+func p_general(w http.ResponseWriter, r *http.Request) {
+	var page string
+	if r.URL.Path == "/" {
+		page = "home"
+		// home
+	} else {
+		ss := strings.Split(r.URL.Path, "/")
+		if len(ss) != 2 {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Not found " + r.URL.Path))
+			return
+		}
+		page = ss[1]
+	}
+	if page == "snd" || page == "wal" {
+		if !common.Get(&common.WalletON) {
+			p_wallet_is_off(w, r)
+			return
+		}
+	}
+	if dat, er := os.ReadFile("www/" + page + ".html"); er == nil {
+		write_html_head(w, r)
+		w.Write(dat)
+		write_html_tail(w)
+
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(er.Error()))
+	}
+}
+
 func ServerThread() {
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
 	http.HandleFunc("/webui/", p_webui)
 
-	http.HandleFunc("/wal", p_wal)
-	http.HandleFunc("/snd", p_snd)
+	http.HandleFunc("/", p_general)
+	http.HandleFunc("/txs", p_txs)
+	http.HandleFunc("/cfg", p_cfg)
+	http.HandleFunc("/help", p_help)
+
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)
 	http.HandleFunc("/balance.zip", dl_balance)
-
-	http.HandleFunc("/net", p_net)
-	http.HandleFunc("/txs", p_txs)
-	http.HandleFunc("/blocks", p_blocks)
-	http.HandleFunc("/miners", p_miners)
-	http.HandleFunc("/counts", p_counts)
-	http.HandleFunc("/cfg", p_cfg)
-	http.HandleFunc("/help", p_help)
 
 	http.HandleFunc("/txs2s.xml", xml_txs2s)
 	http.HandleFunc("/txsre.xml", xml_txsre)
 	http.HandleFunc("/txw4i.xml", xml_txw4i)
 	http.HandleFunc("/raw_tx", raw_tx)
 
-	http.HandleFunc("/", p_home)
 	http.HandleFunc("/status.json", json_status)
 	http.HandleFunc("/counts.json", json_counts)
 	http.HandleFunc("/system.json", json_system)
@@ -228,7 +253,7 @@ func (nl null_logger) Write(p []byte) (n int, err error) {
 
 func start_ssl_server() {
 	// try to start SSL server...
-	dat, err := ioutil.ReadFile("ssl_cert/ca.crt")
+	dat, err := os.ReadFile("ssl_cert/ca.crt")
 	if err != nil {
 		println("ssl_cert/ca.crt not found")
 		// no "ca.crt" file - do not start SSL server

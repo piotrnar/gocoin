@@ -2,9 +2,7 @@
 <script type="text/javascript" src="webui/jquery.flot.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
 <script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
-
-<!-- include fees_chart.html -->
-
+<script type="text/javascript" src="webui/feeschart.js"></script>
 <table width="100%" border="0">
 <colgroup>
 	<col width="50%">
@@ -110,7 +108,7 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
 		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic">
 	<tr title="Public Authorization Key"><td>Auth Key:
-		<td colspan="3" align="left" class="small"><b>@<!--PUB_AUTH_KEY--></b>
+		<td colspan="3" align="left" class="small"><b id="pub_auth_key"></b>
 	</table>
 <td valign="top">
 	<h2>Node</h2>
@@ -562,6 +560,10 @@ function import_file_selected(e) {
 		}
 	};
 	reader.readAsText(f)
+}
+
+function get_auth_key() {
+	pub_auth_key.innerText = "pipa"
 }
 
 document.addEventListener('DOMContentLoaded', function() {

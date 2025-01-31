@@ -221,20 +221,3 @@ error:
 	w.Write([]byte(s))
 	write_html_tail(w)
 }
-
-func p_snd(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	if !common.Get(&common.WalletON) {
-		p_wallet_is_off(w, r)
-		return
-	}
-
-	s := load_template("send.html")
-
-	write_html_head(w, r)
-	w.Write([]byte(s))
-	write_html_tail(w)
-}

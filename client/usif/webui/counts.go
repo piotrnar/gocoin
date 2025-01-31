@@ -8,16 +8,6 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 )
 
-func p_counts(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-	s := load_template("counts.html")
-	write_html_head(w, r)
-	w.Write([]byte(s))
-	write_html_tail(w)
-}
-
 func json_counts(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return

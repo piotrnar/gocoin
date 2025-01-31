@@ -1,5 +1,4 @@
-<!-- included from blocks.html and home.html -->
-
+document.write(`
 <div id="light" class="white_content" style="height:auto">
 <div id="block_fee_stats" width="100%" style="text-align:center">
 
@@ -52,7 +51,7 @@ Limit range to
 
 </div>
 </div><div id="fade" class="black_overlay"></div>
-<script>
+`)
 function fees_chart_restore_settings() {
 	if (localStorage.getItem("fees_chart_points")) block_fees_points.checked = true
 	var val = localStorage.getItem("fees_chart_scale")
@@ -63,4 +62,3 @@ function fees_chart_restore_settings() {
 	else  if (val=="sort")  block_fees_spb.checked=true
 }
 fees_chart_restore_settings()
-</script>

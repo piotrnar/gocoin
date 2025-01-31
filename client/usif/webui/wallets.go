@@ -29,22 +29,6 @@ const (
 	AT_P2TAP       = "P2TAP"
 )
 
-func p_wal(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	if !common.Get(&common.WalletON) {
-		p_wallet_is_off(w, r)
-		return
-	}
-
-	page := load_template("wallet.html")
-	write_html_head(w, r)
-	w.Write([]byte(page))
-	write_html_tail(w)
-}
-
 func getaddrtype(aa *btc.BtcAddr) string {
 	if aa.SegwitProg != nil {
 		if aa.SegwitProg.Version == 0 && len(aa.SegwitProg.Program) == 20 {

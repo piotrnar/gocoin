@@ -12,18 +12,6 @@ import (
 	"github.com/piotrnar/gocoin/client/txpool"
 )
 
-func p_net(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	net_page := load_template("net.html")
-
-	write_html_head(w, r)
-	w.Write([]byte(net_page))
-	write_html_tail(w)
-}
-
 func json_netcon(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
@@ -147,9 +135,7 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	out.ListenTCPOn = common.IsListenTCP()
 	out.DefaultTCPPort = common.ConfiguredTcpPort()
 
-	arr := network.GetExternalIPs()
-
-	for _, rec := range arr {
+	for _, rec := range network.GetExternalIPs() {
 		out.ExternalIP = append(out.ExternalIP, one_ext_ip{
 			Ip:    fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),
 			Count: rec.Cnt, Timestamp: rec.Tim})

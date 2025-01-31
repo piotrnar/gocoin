@@ -3,7 +3,6 @@ package webui
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,29 +19,6 @@ var (
 	lastHrate  float64
 	nextHrate  time.Time
 )
-
-func p_home(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	// The handler also gets called for /favicon.ico
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	s := load_template("home.html")
-
-	fees_chart := load_template("fees_chart.html")
-	s = strings.Replace(s, "<!-- include fees_chart.html -->", fees_chart, 1)
-
-	s = strings.Replace(s, "<!--PUB_AUTH_KEY-->", common.PublicKey, 1)
-
-	write_html_head(w, r)
-	w.Write([]byte(s))
-	write_html_tail(w)
-}
 
 func json_status(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
