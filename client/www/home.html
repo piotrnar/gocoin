@@ -203,7 +203,7 @@ function showTooltip(x, y, contents) {
 		border: '2px solid #fdd',
 		padding: '5px',
 		'font-size' : '14px',
-		'background-color': '#fee',
+		'background-color': dark_mode ? '#111111' : '#fee',
 		opacity: 1
 	}).appendTo("body").fadeIn(200);
 }
@@ -265,7 +265,7 @@ function draw_chart() {
 	aj.onload=function() {
 		try {
 			_cs = JSON.parse(aj.responseText)
-			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}},
+            var plot_data = [ { data : [], points: { show:true, fill:true, fillColor: flot_points_fill_color() }, lines: {show:true, fill:true}},
 							{ data : [], bars:{ show:true, fill:true,  lineWidth:5}, color:"black" } ];
 			var plot_options = {
 				grid: { hoverable: true, clickable: true,  markings:[] },

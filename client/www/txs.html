@@ -757,7 +757,7 @@ function showTooltip(x, y, contents) {
 		border: '2px solid #fdd',
 		padding: '5px',
 		'font-size' : '14px',
-		'background-color': '#fee',
+		'background-color': dark_mode ? '#111111' : '#fee',
 		opacity: 1
 	}).appendTo("body").fadeIn(200);
 }
@@ -842,7 +842,7 @@ function show_mempool_fees() {
 			}
 
 			//console.log(mp.length, mp[0], mp[1])
-			var plot_data = [ { data : [], color : 4, points: { show:!one_block }, lines: {show:true, fill:true}} ];
+			var plot_data = [ { data : [], color : 4, points: { show:!one_block, fillColor:flot_points_fill_color() }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
 					markings: [ { xaxis: { from: 0, to: 4e6 }, color: col1 },

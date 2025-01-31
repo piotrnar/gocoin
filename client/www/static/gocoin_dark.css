@@ -47,7 +47,7 @@ a.dimenu {
 
 .mono {
 	font-family: monospace;
-font-size:12px;
+	font-size:12px;
 }
 
 .bold {
@@ -121,7 +121,7 @@ tr.bip152 {
 }
 
 tr.immune {
-	background-color:#112211;
+	background-color:#081008;
 }
 
 tr.special {
@@ -129,11 +129,11 @@ tr.special {
 }
 
 tr.secure {
-	background-color:#441111;
+	background-color:#220808;
 }
 
 tr.own {
-	background-color:#330811;
+	background-color:#220808;
 }
 
 tr.hov {
@@ -149,14 +149,6 @@ tr.hov:hover {
 
 .small {
 	font-size:75%
-}
-
-.err {
-	background-color:#882222
-}
-
-.dis {
-	background-color:#dddddd;
 }
 
 .cod {
@@ -196,6 +188,14 @@ input[type=button], input[type=submit], input[type=text], select {
 input[type=button]:hover, input[type=submit]:hover, select:hover {
 	background-color:#bbbbbb;
 	cursor:pointer;
+}
+
+input[type=text].dis {
+	background-color:#777777;
+}
+
+input[type=text].err {
+	background-color:#cc8888
 }
 
 table.blocks {
@@ -397,4 +397,11 @@ td.segwitaddr {
 td.outcnt {
 	text-align: right;
 	white-space: nowrap;
+}
+
+.negative {
+	color: #ff8888;
+}
+.positive {
+	color: #88ff88;
 }

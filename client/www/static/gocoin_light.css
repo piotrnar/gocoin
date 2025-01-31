@@ -385,3 +385,10 @@ td.outcnt {
 	text-align: right;
 	white-space: nowrap;
 }
+
+.negative {
+	color:red;
+}
+.positive {
+	color:green;
+}

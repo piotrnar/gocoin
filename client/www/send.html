@@ -416,18 +416,18 @@ function recalc_to_pay() {
 	changeval.value = val2str(chval)
 	changeval_mbtc.value = val2str(1000*chval)
 	if (chval<0) {
-		changeval.style.color = 'red'
+		changeval.className = "mono r dis negative"
 		butdisabled = true
 		include_fee_out_checkbox.classList.remove('err')
 	} else if (chval>0) {
-		changeval.style.color = 'green'
+		changeval.className = "mono r dis positive"
 		if (!include_fee_output_in_size_calculation.checked) {
 			include_fee_out_checkbox.classList.add('err')
 		} else {
 			include_fee_out_checkbox.classList.remove('err')
 		}
 	} else {
-		changeval.style.color = ''
+		changeval.className = "mono r dis"
 		if (include_fee_output_in_size_calculation.checked) {
 			include_fee_out_checkbox.classList.add('err')
 		} else {
@@ -754,7 +754,7 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 Wallet: <select id="qswal" onchange="quick_switch_wallet()"></select>
 -
 total balance of <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
-<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
+<i id="wallet_min_warning" class="walminwarn" style="float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
 <img src="static/warning.png" style="vertical-align:middle">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 <br><br>
