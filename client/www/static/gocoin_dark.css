@@ -165,9 +165,10 @@ tr.hov:hover {
 	font-weight:bold;
 }
 
-input[type=button], input[type=submit], input[type="text"], select, textarea {
-	background-color:#222222;
-	border: 3px #555555 solid;
+input[type=button], input[type=submit] {
+	background-color:#aaaaaa;
+	font-weight:bold;
+	/*border: 2px #000000 solid;*/
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 3px;
