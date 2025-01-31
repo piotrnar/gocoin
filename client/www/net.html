@@ -743,11 +743,21 @@ function refreshbwinfo() {
 				get_mp_in_progress.style.display = "none"
 			}
 
-			if (bw.ExternalIP.length > 0)
-				external_ip.innerText = bw.ExternalIP[0].Ip + ":" + bw.DefaultTCPPort
-			else
+			if (bw.ExternalIP.length > 0) {
+				var ips = bw.ExternalIP[0].Ip + ":" + bw.DefaultTCPPort
+				external_ip.innerText = ips
+				external_ip.title = "Click to Copy"
+				external_ip.className = 'hand'
+				external_ip["text2copy"] = ips
+				external_ip.addEventListener("click", copyonclick)
+			}
+			else {
 				external_ip.innerText = '???'
-
+				external_ip.title = ""
+				external_ip.className = ''
+				external_ip["text2copy"] = ips
+				external_ip.removeEventListener("click", copyonclick)
+			}
 
 			set_server_switch_icon(bw.ListenTCPOn)
 			if (bw.TXPServerStarted) {

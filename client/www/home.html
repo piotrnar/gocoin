@@ -476,6 +476,9 @@ function refreshbwinfo() {
 			if (bw.ExternalIP.length==0) {
 				external_ip0.innerText = '?'
 				external_ip0.title = ''
+				external_ip0.className = ''
+				external_ip0["text2copy"] = ips
+				external_ip0.removeEventListener("click", copyonclick)
 				external_others.innerHTML = ''
 			} else {
 				var ht=''
@@ -491,7 +494,10 @@ function refreshbwinfo() {
 					}
 				}
 				external_ip0.innerText = bw.ExternalIP[0].Ip
-				external_ip0.title = bw.ExternalIP[0].Count+' times, last at '+tim2str(bw.ExternalIP[0].Timestamp)
+				external_ip0.title = bw.ExternalIP[0].Count+' times, last at '+tim2str(bw.ExternalIP[0].Timestamp) + ' (Click to Copy)'
+				external_ip0.className = 'hand'
+				external_ip0["text2copy"] = external_ip0.innerText
+				external_ip0.addEventListener("click", copyonclick)
 				external_others.innerHTML = ht
 			}
 		} catch(e) {
@@ -567,9 +573,16 @@ function get_auth_key() {
 	aj.onerror=function() {
 		setTimeout(get_auth_key, 5000)
 		pub_auth_key.innerText = "..."
+		pub_auth_key.title = ""
+		pub_auth_key.className = ""
+		pub_auth_key.addEventListener("click", copyonclick)
 	}
 	aj.onload=function() {
 		pub_auth_key.innerText = '@'+aj.responseText
+		pub_auth_key.title = "Click to Copy"
+		pub_auth_key.className = "hand"
+		pub_auth_key["text2copy"] = pub_auth_key.innerText
+		pub_auth_key.addEventListener("click", copyonclick)
 	}
 	aj.open("GET","cfg?getauthkey&sid="+sid,true)
 	aj.send(null)
