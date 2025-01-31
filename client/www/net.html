@@ -1,6 +1,6 @@
 <style>
 .dbg {
-	//display:table-cell;
+	/*display:table-cell;*/
 	display:none;
 }
 td.agent {
@@ -22,12 +22,16 @@ td.agent {
 </span>
 
 
-<b>{EXTERNAL_ADDR}</b>
-<==>
-<b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png"> connections<br>
+Address: <b id="external_ip"></b>
+&nbsp;&bull;&nbsp;
+Connections:
+<b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png">
 <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
-Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
-<span id="el_tcp_listen_switch" style="display:none">[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
+&nbsp;&bull;&nbsp;
+Listening for incoming connections:
+<img id="listen_tcp_info" src="webui/switch-off.png" height="24" valign="bottom">
+<img id="tcp_server_running" src="webui/server_running.png" height="16" valign="middle">
+<br>
 </div>
 
 
@@ -90,10 +94,6 @@ Resolution:
 <span class="hand" onclick="hide_outgoing_cb.click()">
 	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/outgoing.png">
 </span>
-<!--
-&nbsp;&bull;&nbsp;
-<input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
--->
 </td>
 <td align="right">
 <span onclick="net_list_order_sp.click()" class="hand">
@@ -123,7 +123,6 @@ Resolution:
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
 	<th class="r"><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
 </tr>
-<!--PEER_ROW-->
 </table>
 
 
@@ -153,9 +152,7 @@ Node Version Legend:<br>
 
 
 <script>
-if (!server_mode) {
-	el_tcp_listen_switch.style.display='inline'
-}
+enable_server_switching(!server_mode)
 
 var raw_timer = null
 var curr_monitor_id = -1
@@ -172,6 +169,32 @@ function connect_peer() {
 		aj.open("GET",'cfg?conn='+encodeURI(ip)+'&sid='+sid, true);
 		aj.send(null);
 	}
+}
+
+function enable_server_switching(enable) {
+	if (enable) {
+		listen_tcp_info.addEventListener('click', server_on_off)
+		listen_tcp_info.style.cursor = 'hand'
+		listen_tcp_info.title = "Switch ON/OFF" 
+	} else {
+		listen_tcp_info.removeEventListener('click', server_on_off)
+		listen_tcp_info.style.cursor = 'auto'
+		listen_tcp_info.title = "Switching not possible" 
+	}
+}
+
+function server_on_off() {
+	var aj = ajax()
+	aj.onerror=function() {
+		alert("Error contacting the server")
+	}
+	aj.onload=function() {
+		set_server_switch_icon(aj.responseText==='true')
+		enable_server_switching(true)
+	}
+	enable_server_switching(false)
+	aj.open("GET",'cfg?lonoff&sid='+sid, true);
+	aj.send(null);
 }
 
 function unban_peer() {
@@ -690,6 +713,10 @@ function draw_chart() {
 	aj.send(null)
 }
 
+function set_server_switch_icon(on) {
+	listen_tcp_info.src = "webui/switch-" + (on ? "on" : "off") + ".png"
+}
+
 function refreshbwinfo() {
 	var aj = ajax()
 	aj.onerror=function() {
@@ -715,6 +742,20 @@ function refreshbwinfo() {
 				get_mp_in_progress.style.display = "inline"
 			} else {
 				get_mp_in_progress.style.display = "none"
+			}
+
+			if (bw.ExternalIP.length > 0)
+				external_ip.innerText = bw.ExternalIP[0].Ip + ":" + bw.DefaultTCPPort
+			else 
+				external_ip.innerText = '???'
+
+
+			set_server_switch_icon(bw.ListenTCPOn)
+			if (bw.TXPServerStarted) {
+				tcp_server_running.style.display = bw.TXPServerStarted ? 'inline' : 'none'
+				tcp_server_running.title = "TCP server running on port " + bw.DefaultTCPPort
+			} else {
+				tcp_server_running.style.display = 'none'
 			}
 		} catch(e) {
 			console.log(e)

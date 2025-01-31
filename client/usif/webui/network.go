@@ -3,17 +3,13 @@ package webui
 import (
 	"encoding/json"
 	"fmt"
-	"html"
-	"io/ioutil"
 	"net/http"
 	"runtime/debug"
 	"strconv"
-	"strings"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/txpool"
-	"github.com/piotrnar/gocoin/lib/btc"
 )
 
 func p_net(w http.ResponseWriter, r *http.Request) {
@@ -22,15 +18,6 @@ func p_net(w http.ResponseWriter, r *http.Request) {
 	}
 
 	net_page := load_template("net.html")
-
-	network.Mutex_net.Lock()
-	net_page = strings.Replace(net_page, "{LISTEN_TCP}", fmt.Sprint(common.IsListenTCP(), network.TCPServerStarted), 1)
-	net_page = strings.Replace(net_page, "{EXTERNAL_ADDR}", btc.NewNetAddr(network.BestExternalAddr()).String(), 1)
-
-	network.Mutex_net.Unlock()
-
-	d, _ := ioutil.ReadFile(common.GocoinHomeDir + "friends.txt")
-	net_page = strings.Replace(net_page, "{FRIENDS_TXT}", html.EscapeString(string(d)), 1)
 
 	write_html_head(w, r)
 	w.Write([]byte(net_page))
@@ -135,6 +122,9 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 		ExternalIP       []one_ext_ip
 		GetMPInProgress  bool
 		GetMPConnID      int
+		ListenTCPOn      bool
+		TXPServerStarted bool
+		DefaultTCPPort   uint16
 	}
 
 	common.LockBw()
@@ -152,9 +142,13 @@ func json_bwidth(w http.ResponseWriter, r *http.Request) {
 	out.Open_conns_total = len(network.OpenCons)
 	out.Open_conns_out = network.OutConsActive
 	out.Open_conns_in = network.InConsActive
+	out.TXPServerStarted = network.TCPServerStarted
 	network.Mutex_net.Unlock()
+	out.ListenTCPOn = common.IsListenTCP()
+	out.DefaultTCPPort = common.ConfiguredTcpPort()
 
 	arr := network.GetExternalIPs()
+
 	for _, rec := range arr {
 		out.ExternalIP = append(out.ExternalIP, one_ext_ip{
 			Ip:    fmt.Sprintf("%d.%d.%d.%d", byte(rec.IP>>24), byte(rec.IP>>16), byte(rec.IP>>8), byte(rec.IP)),

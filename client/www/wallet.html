@@ -15,7 +15,7 @@
 </div><div id="fade" class="black_overlay"></div>
 
 <script>
-/*WALLET_JS_VARS*/
+var segwit_active=true
 var qrcode = new QRCode(document.getElementById("qrcode"), {width:300, height:300})
 var address_type // initited from localStorage's wallet_address_type: 0 = pubkey, 1 - P2KH, 2 - P2TAP
 var p2sh_sw_mode // when set to true, use old (base58) address type
@@ -62,7 +62,8 @@ td.addr_norm {
 	white-space: nowrap;
 }
 td.addr_label {
-	//white-space: nowrap;
+	white-space: nowrap;
+	overflow-x: hidden;
 }
 td.balbtc {
 	text-align: right;

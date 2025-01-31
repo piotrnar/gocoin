@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/txpool"
@@ -40,17 +39,7 @@ func p_wal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var str string
-	common.Last.Mutex.Lock()
-	if common.BlockChain.Consensus.Enforce_SEGWIT != 0 &&
-		common.Last.Block.Height >= common.BlockChain.Consensus.Enforce_SEGWIT {
-		str = "var segwit_active=true"
-	} else {
-		str = "var segwit_active=false"
-	}
-	common.Last.Mutex.Unlock()
 	page := load_template("wallet.html")
-	page = strings.Replace(page, "/*WALLET_JS_VARS*/", str, 1)
 	write_html_head(w, r)
 	w.Write([]byte(page))
 	write_html_tail(w)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -127,7 +128,15 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// All the functions below change modify the config file
+	if len(r.Form["getfriends"]) > 0 {
+		if !common.CFG.WebUI.ServerMode {
+			d, _ := os.ReadFile(common.GocoinHomeDir + "friends.txt")
+			w.Write(d)
+		}
+		return
+	}
+
+	// All the functions below modify the config file
 	common.LockCfg()
 	defer common.UnlockCfg()
 
@@ -146,14 +155,14 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 	if len(r.Form["lonoff"]) > 0 {
 		common.CFG.Net.ListenTCP = !common.CFG.Net.ListenTCP
 		common.ListenTCP = common.CFG.Net.ListenTCP
-		http.Redirect(w, r, "net", http.StatusFound)
+		w.Write([]byte(fmt.Sprint(common.ListenTCP)))
 		return
 	}
 
 	if len(r.Form["savecfg"]) > 0 {
 		dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
 		if dat != nil {
-			ioutil.WriteFile(common.ConfigFile, dat, 0660)
+			os.WriteFile(common.ConfigFile, dat, 0660)
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
