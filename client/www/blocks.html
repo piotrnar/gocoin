@@ -203,7 +203,6 @@ function refreshblocks() {
 				if (cs[i].NonWitnessSize>0 && cs[i].NonWitnessSize!=cs[i].Size) {
 					td.classList.add("blswsize")
 					td.title = cs[i].Size + ' -> ' + cs[i].NonWitnessSize
-					//(cs[i].NonWitnessSize/1000.0).toFixed(1)
 				}
 				td = row.insertCell(-1)
 				td.innerText = ''
@@ -276,10 +275,6 @@ function refreshblocks() {
 				if (cs[i].TimeVer>=0) { // block received during this uptime
 					if (cs[i].MissedCnt>=0) {
 						row.classList.add("bip152")
-					} else {
-						if (cs[i].MissedCnt==-2) {
-							row.classList.add("CFN") // Cornell-Falcon-Network
-						}
 					}
 				}
 			}

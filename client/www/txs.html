@@ -832,13 +832,22 @@ function show_mempool_fees() {
 			mp = JSON.parse(aj.responseText)
 			if (mp==null) return
 
+			var col1 = "#e0ffe0"
+			var col2 = "#f0f0e0"
+			var col3 = "#ffe0e0"
+			if (dark_mode) {
+				col1 = "#112211"
+				col2 = "#222211"
+				col3 = "#332211"
+			}
+
 			//console.log(mp.length, mp[0], mp[1])
 			var plot_data = [ { data : [], color : 4, points: { show:!one_block }, lines: {show:true, fill:true}} ];
 			var plot_options = {
 				grid: {
-					markings: [ { xaxis: { from: 0, to: 4e6 }, color: "#e0ffe0" },
-						{ xaxis: { from: 4e6, to: 8e6 }, color: "#f0f0e0" },
-						{ xaxis: { from: 8e6 }, color: "#ffe0e0" },
+					markings: [ { xaxis: { from: 0, to: 4e6 }, color: col1 },
+						{ xaxis: { from: 4e6, to: 8e6 }, color: col2 },
+						{ xaxis: { from: 8e6 }, color: col3 },
 					 ],
 					hoverable: true,
 					clickable: true

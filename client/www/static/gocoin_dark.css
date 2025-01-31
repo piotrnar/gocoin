@@ -99,6 +99,7 @@ tr {
 
 
 #rawdiv {
+	border: 1px solid #888888;
 	font-family: monospace;
 	background-color:#000000;
 	width: 100%;
@@ -120,28 +121,22 @@ tr.bip152 {
 }
 
 tr.immune {
-	background-color:#f4fff4;
+	background-color:#112211;
 }
 
 tr.special {
-	background-color:#f8f4e4;
+	background-color:#221811;
 }
 
 tr.secure {
-	background-color:#ffe8f0;
-}
-
-tr.CFN {
-	background-color:#f0ffff;
+	background-color:#441111;
 }
 
 tr.own {
-	background-color:#ffe0e0;
+	background-color:#330811;
 }
 
 tr.hov {
-	/*color:#e0e0e0;
-	background-color:#333333;*/
 }
 
 tr.hov:hover {
