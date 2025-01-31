@@ -1,0 +1,184 @@
+<style>
+td.gennam {}
+td.genval {text-align:right}
+td.txsnam {}
+td.txsval {text-align:right}
+td.netnam {}
+td.netcnt {text-align:right}
+td.netbts {text-align:right}
+div.tablab {
+	font-weight:bold;
+	margin-bottom:10px;
+}
+</style>
+<div id="nocounters_message" style="display:none">
+	<br>
+	Counters disabled in the config file (<code>Stats.NoCounters</code>)</div>
+<table width="100%" id="counters_table" style="display:none">
+<tr>
+<td valign="top" align="center">
+	<div class="tablab">Generic counters A</div>
+	<table class="mono bord" width="100%" id="tab_gen_a">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	<!--GEN_ROW-->
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Generic counters B</div>
+	<table class="mono bord" width="100%" id="tab_gen_b">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	<!--GEN_ROW-->
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Transaction counters</div>
+	<table class="mono bord" width="100%" id="tab_txs">
+	<tr>
+		<th>Counter
+		<th>Value
+	</tr>
+	<!--TXS_ROW-->
+	</table>
+</td>
+<td valign="top" align="center">
+	<div class="tablab">Network counters</div>
+	<table class="mono bord" width="100%" id="tab_net">
+	<tr>
+		<th rowspan="2">Network Message
+		<th colspan="2">Received
+		<th colspan="2">Sent
+	</tr>
+	<tr>
+		<th>Times
+		<th>Bytes
+		<th>Times
+		<th>Bytes
+	</tr>
+	<!--NET_ROW-->
+    </table>
+</td>
+</tr>
+</table>
+<script>
+function ref_counters() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(ref_counters, 10000)
+	}
+	aj.onload=function() {
+		try {
+			var i, cts = JSON.parse(aj.responseText)
+			//console.log(cts)
+
+			if (cts.gen==null && cts.txs==null && cts.net==null) {
+				nocounters_message.style.display='block'
+				counters_table.style.display='none'
+				return
+			}
+
+			var gen_a = new Array()
+			var gen_b = new Array()
+			
+			if (cts.gen!=null) for (i=0; i<cts.gen.length; i++) {
+				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
+					gen_b.push(cts.gen[i])
+				} else {
+					gen_a.push(cts.gen[i])
+				}
+				any_cnts = true
+			}
+
+			for (i=0; i<gen_a.length; i++) {
+				var row
+				if (i < tab_gen_a.rows.length-1) {
+					row = tab_gen_a.rows[i+1]
+				} else {
+					row = tab_gen_a.insertRow(-1)
+					row.insertCell(-1)
+					row.insertCell(-1)
+					row.cells[0].className = 'gennam'
+					row.cells[1].className = 'genval'
+				}
+				row.cells[0].innerText = gen_a[i].var
+				row.cells[1].innerText = gen_a[i].cnt
+			}
+			while (tab_gen_a.rows.length > gen_a.length + 1) {
+				tab_gen_a.deleteRow(tab_gen_a.rows.length-1)
+			}
+
+			for (i=0; i<gen_b.length; i++) {
+				var row
+				if (i < tab_gen_b.rows.length-1) {
+					row = tab_gen_b.rows[i+1]
+				} else {
+					row = tab_gen_b.insertRow(-1)
+					row.insertCell(-1)
+					row.insertCell(-1)
+					row.cells[0].className = 'gennam'
+					row.cells[1].className = 'genval'
+				}
+				row.cells[0].innerText = gen_b[i].var
+				row.cells[1].innerText = gen_b[i].cnt
+			}
+			while (tab_gen_b.rows.length > gen_b.length + 1) {
+				tab_gen_b.deleteRow(tab_gen_b.rows.length-1)
+			}
+
+			while (tab_txs.rows.length>1) tab_txs.deleteRow(1)
+			if (cts.txs!=null) for (i=0; i<cts.txs.length; i++) {
+				var row
+				if (i < tab_txs.rows.length-1) {
+					row = tab_txs.rows[i+1]
+				} else {
+					row = tab_txs.insertRow(-1)
+					row.insertCell(-1)
+					row.insertCell(-1)
+					row.cells[0].className = 'txsnam'
+					row.cells[1].className = 'txsval'
+				}
+				row.cells[0].innerText = cts.txs[i].var
+				row.cells[1].innerText = cts.txs[i].cnt
+			}
+
+			while (tab_net.rows.length>2) tab_net.deleteRow(2)
+			if (cts.net!=null)  for (i=0; i<cts.net.length; i++) {
+				var row = tab_net.insertRow(-1)
+
+				var col = row.insertCell(-1)
+				col.className = 'netnam'
+				col.innerText = cts.net[i].var
+
+				col = row.insertCell(-1)
+				col.className = 'netcnt'
+				col.innerText = cts.net[i].rcvd
+
+				col = row.insertCell(-1)
+				col.className = 'netcnt'
+				col.innerText = cts.net[i].rbts
+
+				col = row.insertCell(-1)
+				col.className = 'netbts'
+				col.innerText = cts.net[i].sent
+
+				col = row.insertCell(-1)
+				col.className = 'netcnt'
+				col.innerText = cts.net[i].sbts
+			}
+			nocounters_message.style.display='none'
+			counters_table.style.display='table'
+		} catch(e) {
+			console.log("error", e)
+		}
+		setTimeout(ref_counters, 1000)
+	}
+	aj.open("GET","counts.json",true)
+	aj.send(null)
+}
+ref_counters()
+</script>

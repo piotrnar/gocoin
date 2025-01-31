@@ -1,0 +1,331 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
+<style>
+.stat0 {
+}
+.stat1 {
+}
+.time0 {
+}
+.time1 {
+}
+td.bordr {
+	border-right: 1px solid;
+}
+</style>
+
+<!-- include fees_chart.html -->
+
+<div style="text-align:right;margin-bottom:8px;">
+<span class="hand" onclick="stats_type_min.click()">
+	<input type="radio" name="stats_type" id="stats_type_min" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Mining Information
+</span>
+&nbsp;&bull;&nbsp;
+<span class="hand" onclick="stats_type_pro.click()">
+	<input type="radio" name="stats_type" id="stats_type_pro" onchange="switch_stats_type()" onclick="event.stopPropagation()"> Block Processing
+</span>
+</div>
+<table class="blocks bord" id="blkstab">
+<tr>
+	<th colspan="7">Block info
+	<th class="stat0 hand" colspan="4" onclick="stats_type_pro.click()">Mining Information
+	<th class="stat1 hand" colspan="7" onclick="stats_type_min.click()">Block Processing <i>(ms)</i>
+<tr>
+	<th width="52">Height
+	<th class="time0" width="70" onclick="swap_time_mode()" style="cursor:pointer">Received
+	<th class="time1" width="70" onclick="swap_time_mode()" style="cursor:pointer;font-size:85%">Timestamp
+	<th width="480">Hash
+	<th width="35" align="right">TXs
+	<th width="40" align="right">SiOps
+	<th width="45" align="right">kByte
+	<th>
+	<th class="stat0" width="30">BTC
+	<th class="stat0" width="30" align="right">SPB
+	<th class="stat0" width="20">Ver
+	<th class="stat0 bordr" align="left">Miner
+	<th class="stat1" width="10" title="Received from ConnID">Fro
+	<th class="stat1" width="10" title="Missing TXs in cmpctblk">Mis
+	<th class="stat1" width="20" title="Preprocessing time ms" align="right">Pre
+	<th class="stat1" width="20" title="Full download time ms" align="right">D/L
+	<th class="stat1" width="20" title="Queueing time ms" align="right">Que
+	<th class="stat1" width="20" title="Block committed after ms" align="right">Ver
+	<th class="stat1" width="10" title="Extra times received">X
+</tr>
+</table>
+<script>
+function switch_stats_type() {
+	if (stats_type_pro.checked) {
+		css('.stat1', 'display', 'table-cell')
+		css('.stat0', 'display', 'none')
+		localStorage.setItem("blocks_info", "pro")
+	} else {
+		css('.stat0', 'display', 'table-cell')
+		css('.stat1', 'display', 'none')
+		localStorage.setItem("blocks_info", "min")
+	}
+}
+function remember_info_setting() {
+	var mod = localStorage.getItem("blocks_info")
+	if ((mod+'').length!=3) mod = "min"
+	document.getElementById('stats_type_'+mod).checked = true
+}
+remember_info_setting()
+switch_stats_type()
+
+const MINER_ID_COLUMN = 11
+const VERSION_COLUMN = 10
+
+var show_timestamp = false
+
+function swap_time_mode() {
+	show_timestamp = !show_timestamp
+	if (show_timestamp) {
+		css('.time1', 'display', 'table-cell')
+		css('.time0', 'display', 'none')
+	} else {
+		css('.time0', 'display', 'table-cell')
+		css('.time1', 'display', 'none')
+	}
+	localStorage.setItem("blocks_show_timestmp", show_timestamp)
+}
+
+var mid = null
+
+function hl_rows(column, i) {
+	var row = blkstab.rows[2+i]
+	mid = row.cells[column].innerHTML
+	if (row.className.indexOf("own")!=-1) {
+		mid = null
+	}
+	for (var i=2; i<blkstab.rows.length; i++) {
+		if (blkstab.rows[i].cells[column].innerHTML==mid) {
+			blkstab.rows[i].classList.add("own")
+		} else {
+			blkstab.rows[i].classList.remove("own")
+		}
+	}
+}
+
+
+function do_rcvd_time(td) {
+	td.innerText = ((time_now-parseInt(td.name))/60.0).toFixed(1) + 'min'
+}
+
+
+function ms2str(v) {
+	if (v>=10e3) {
+		if (v>=180e3) {
+			if (v>=3600e3) {
+				v = (v/3600e3).toFixed(1) + 'hrs'
+			} else {
+				v = (v/60e3).toFixed(1) + 'min'
+			}
+		} else {
+			v = (v/1000).toFixed(1) + 's'
+		}
+	}
+	return v
+}
+
+
+function refreshblocks() {
+	function onc_mid(c,id) {
+		c.onclick = function() {hl_rows(MINER_ID_COLUMN, id)}
+	}
+
+	function onc_ver(c,id) {
+		c.onclick = function() {hl_rows(VERSION_COLUMN, id)}
+	}
+
+	function onc_stat(c,height,size,minedby) {
+		c.onclick = function() {
+			show_block_fees(height,size,minedby)
+			return false
+		}
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshblocks, 1000)
+	}
+	aj.onload=function() {
+		try {
+			var cs = JSON.parse(aj.responseText)
+
+			while (blkstab.rows.length>2) blkstab.deleteRow(2)
+
+			for (var i=0; i<cs.length; i++) {
+				var td, row = blkstab.insertRow(-1)
+
+				row.className = 'hov'
+				row.title = "Rcvd at " + tim2str(cs[i].Received) + " with TS " + tim2str(cs[i].Timestamp)
+
+				td = row.insertCell(-1)
+				td.className = 'bold'
+				td.style.textAlign = 'center'
+				td.innerText = cs[i].Height
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i time0'
+				td.name = cs[i].Received
+				do_rcvd_time(td)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'i time1'
+				td.name = cs[i].Received
+				td.innerText = tim2str(cs[i].Timestamp, true)
+
+				td = row.insertCell(-1)
+				td.className = 'mono block_hash nw'
+				td.innerText = cs[i].Hash
+				//var h = cs[i].Hash
+				if (cs[i].HaveFeeStats) {
+					var img = document.createElement('img')
+					img.src = 'webui/stats.png'
+					img.className = 'hand'
+					img.style.margin = '0px 0px 0px 10px'
+					td.appendChild(img)
+					onc_stat(img, cs[i].Height, cs[i].Size, cs[i].Miner.substr(0,12))
+					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
+				}
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				if (cs[i].TxCnt>1)  td.innerText = cs[i].TxCnt
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blsigops'
+				if (cs[i].Sigops>0)  td.innerText = cs[i].Sigops
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'bold'
+				td.innerText = (cs[i].Size/1000.0).toFixed(1)
+				if (cs[i].NonWitnessSize>0 && cs[i].NonWitnessSize!=cs[i].Size) {
+					td.style.color = 'blue'
+					td.title = cs[i].Size + ' -> ' + cs[i].NonWitnessSize
+					//(cs[i].NonWitnessSize/1000.0).toFixed(1)
+				}
+				td = row.insertCell(-1)
+				td.innerText = ''
+
+				td = row.insertCell(-1)
+				td.className = 'blreward stat0'
+				td.innerText = (cs[i].Reward/1e8).toFixed(2)
+
+				td = row.insertCell(-1)
+				td.className = 'blspb stat0'
+				td.innerText = cs[i].FeeSPB.toFixed(1)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'center'
+				td.className = 'stat0 hand'
+				td.innerText = (cs[i].Version&15).toString(16)
+				td.title = '0x' + cs[i].Version.toString(16)
+				onc_ver(td, i)
+
+				var miner = cs[i].Miner.substr(0,11)
+				td = row.insertCell(-1)
+				td.className = "i stat0 hand bordr"
+				td.innerText = miner
+				onc_mid(td, i)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'nodeid stat1'
+				if (cs[i].FromConID>0)  td.innerText = cs[i].FromConID
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstatmissedtxs stat1'
+				if (cs[i].MissedCnt>0)  td.innerText = cs[i].MissedCnt
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat stat1'
+				var time_base = cs[i].TimePre
+				if (cs[i].TimePre>0)  td.innerText = ms2str(cs[i].TimePre)
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat stat1'
+				if (cs[i].TimeDl>0) {
+					td.innerText = ms2str(cs[i].TimeDl - time_base)
+					time_base = cs[i].TimeDl
+				}
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat stat1'
+				if (cs[i].TimeQue>0) {
+					td.innerText = ms2str(cs[i].TimeQue - time_base)
+					time_base = cs[i].TimeQue
+				}
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstat stat1'
+				if (cs[i].TimeVer>0) {
+					td.innerText = ms2str(cs[i].TimeVer - time_base)
+				}
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'blstatwaste stat1'
+				if (cs[i].WasteCnt>0)  td.innerText = cs[i].WasteCnt
+
+				if (cs[i].TimeVer>=0) { // block received during this uptime
+					if (cs[i].MissedCnt>=0) {
+						row.classList.add("bip152")
+					} else {
+						if (cs[i].MissedCnt==-2) {
+							row.classList.add("CFN") // Cornell-Falcon-Network
+						}
+					}
+				}
+			}
+
+			if (mid!=null) {
+				for (var i=2; i<blkstab.rows.length; i++) {
+					if (blkstab.rows[i].cells[7].innerHTML==mid) {
+						blkstab.rows[i].classList.add("own")
+					}
+				}
+			}
+		} catch(e) {
+			console.log(e)
+		}
+	}
+	aj.open("GET","blocks.json",true)
+	aj.send(null)
+}
+
+
+
+var _lblo = 0
+
+blno.addEventListener("lastblock", function(e) {
+	if (e.block.Height!=_lblo) {
+		_lblo = e.block.Height
+		refreshblocks() // refersh the table for each new block notifiaction
+	} else {
+		for (var i=2; i<blkstab.rows.length; i++) {
+			do_rcvd_time(blkstab.rows[i].cells[1])
+		}
+	}
+})
+
+document.addEventListener('DOMContentLoaded', function() {
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
+})
+
+show_timestamp = localStorage.getItem("blocks_show_timestmp")!=="true"
+swap_time_mode()
+
+</script>

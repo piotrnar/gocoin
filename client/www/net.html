@@ -1,0 +1,761 @@
+<style>
+.dbg {
+	//display:table-cell;
+	display:none;
+}
+td.agent {
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap
+}
+</style>
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+
+<div style="width:100%;line-height:24px;white-space:nowrap;">
+
+<span style="float:right;display:none" id="connect_buttons">
+<input type="button" id="edit_friends" value="Edit Friends" onclick="edit_friends()">
+<input type="button" id="unban_peer_but" value="Unban" onclick="unban_peer()">
+<input type="button" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
+</span>
+
+
+<b>{EXTERNAL_ADDR}</b>
+<==>
+<b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png"> connections<br>
+<input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
+Listening for incoming TCP connections: <b>{LISTEN_TCP}</b>
+<span id="el_tcp_listen_switch" style="display:none">[<a href="javascript:config('lonoff')">Switch ON/OFF</a>]</span><br>
+</div>
+
+
+<div style="display:none" id="friends_form">
+<table width="100%" cellspacing="0" cellpadding="0"><tr><td align="right">
+<form method="post" action="cfg" >
+<table cellspacing="0" cellpadding="0">
+<tr><td colspan="2" align="right">
+	<textarea name="friends_file" id="friends_file_el" style="width:600px" rows="12">{FRIENDS_TXT}</textarea>
+	<br>
+	<i>Valid lines contain <b>hostname:port</b>, <b>@AuthKey</b>, <b>+IP</b> or <b>*AgentPrefix</b>. Use # for comments.</i>
+<tr><td align="center">
+	<td align="right">
+	<input type="button" value="Cancel" onclick="cancel_friends()">
+	<input type="submit" name="apply" value="Save & Connect">
+</table>
+</form>
+</table>
+</div>
+
+<table style="margin-top:5px" width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td align="left"><span id="bw_dl_speed_now_span">
+Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
+&nbsp;&bull;&nbsp;
+<span id="bw_ul_speed_now_span">Uploading at
+<b id="bw_ul_speed_now"></b> KB/s</span>
+
+<span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span>
+
+</td>
+<td align="right">
+Resolution:
+<select id="bw_chart_seconds" onchange="draw_chart()">
+	<option value="1">1 second</option>
+	<option value="5">5 seconds</option>
+	<option value="30">30 seconds</option>
+	<option value="300">5 minutes</option>
+</select>
+</td>
+</tr>
+<tr>
+<td colspan="2">
+<div id="chart" style="height:180px;margin:0px"></div>
+</td>
+</tr>
+</table>
+
+<table style="width:100%">
+<tr>
+<td align="left" valign="top">
+<span class="hand" onclick="stat_freeze.click()">
+	<input type="checkbox" id="stat_freeze" onchange="freeze_stats()" onclick="event.stopPropagation()">Freeze table
+</span>
+&nbsp;&bull;&nbsp;
+<span class="hand" onclick="hide_incoming_cb.click()">
+	<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/incoming.png">
+</span>
+&nbsp;
+<span class="hand" onclick="hide_outgoing_cb.click()">
+	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/outgoing.png">
+</span>
+<!--
+&nbsp;&bull;&nbsp;
+<input type="checkbox" id="show_debug_mode" onchange="switch_debug_mode()"><span class="hand" onclick="show_debug_mode.click()">More info</span>
+-->
+</td>
+<td align="right">
+<span onclick="net_list_order_sp.click()" class="hand">
+	<input type="radio" name="net_list_order" id="net_list_order_sp" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by speed
+</span>
+&nbsp;&bull;&nbsp;
+<span onclick="net_list_order_id.click()" class="hand">
+	<input type="radio" name="net_list_order" id="net_list_order_id" onchange="switch_order_type()" onclick="event.stopPropagation()"> Sort by age
+</span>
+</td>
+</tr>
+</table>
+<table class="netcons bord" width="100%" id="netcons">
+<tr>
+	<th width="30">ID
+	<th width="80">Age
+	<th width="130" colspan="2">Peer Address
+	<th width="20">Ping
+	<th class="dbg">Rcvd
+	<th class="dbg">Sent
+	<th width="60" >Tot In
+	<th width="60" >Tot Out
+	<th colspan="3">Node Version
+	<th width="60" colspan="2" title="Received / In Progress">Blks
+	<th >Txs
+	<th class="dbg" title="Bytes waiting to be sent">ToSend
+	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
+	<th class="r"><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
+</tr>
+<!--PEER_ROW-->
+</table>
+
+
+<table width="100%"><tr>
+<td class="small">
+Node Version Legend:<br>
+&bull; <b>N</b> - Capable of serving the complete block chain<br>
+&bull; <b>n</b> - Limited network (can only serve last 288 blocks)<br>
+&bull; <b>H</b> - Requested BIP130 mode (via <code>sendheaders</code> message)<br>
+&bull; <b>B</b> - Supports Bloom Filtering (for serving SPV clients)<br>
+&bull; <b>1,2</b> - Supports Compact Blocks (<b>+</b> for high bandwidth mode)<br>
+&bull; <b>W</b> - Supports Segregate Witness functionality<br>
+&bull; <b>X</b> - Supports Xtreme Thinblocks functionality<br>
+&bull; <b>O</b> - Blocks only mode (node does not request transactions)<br>
+&bull; <b>E</b> - Supports Encrypted Transport Protocol (BIP 324)<br>
+</td>
+</tr>
+<tr>
+<td>
+<a name="rawdiv"></a>
+<div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
+<img title="Refresh peer info" src="webui/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
+<img title="Hide peer info" src="webui/close.png" style="position:absolute;right:5px;top:5px;z-index:2000;cursor:hand" onclick="hide_peer_info()">
+<pre id="rawdiv" class="mono" style="left:0px;top: 0px;z-index:1000;width:100%;"></pre>
+</div>
+</td></tr></table>
+
+
+<script>
+if (!server_mode) {
+	el_tcp_listen_switch.style.display='inline'
+}
+
+var raw_timer = null
+var curr_monitor_id = -1
+var friends_file_bak = ''
+var loading_new_rawdivon = false
+
+function connect_peer() {
+	var ip = prompt("Enter IP of the peer to connect to");
+	if (ip!=null) {
+		var aj = ajax()
+		aj.onload=function() {
+			console.log(aj.responseText)
+		}
+		aj.open("GET",'cfg?conn='+encodeURI(ip)+'&sid='+sid, true);
+		aj.send(null);
+	}
+}
+
+function unban_peer() {
+	var ip = prompt("Enter IP of the peer to unban or 'all'");
+	if (ip!=null) {
+		var aj = ajax()
+		aj.onload=function() {
+			console.log(aj.responseText)
+		}
+		aj.open("GET",'cfg?unban='+encodeURI(ip)+'&sid='+sid, true);
+		aj.send(null);
+	}
+}
+
+function edit_friends() {
+	friends_file_bak = friends_file_el.value
+	friends_form.style.display = 'block'
+}
+
+function cancel_friends() {
+	friends_form.style.display = 'none'
+	friends_file_el.value = friends_file_bak
+}
+
+function freeze_stats() {
+	if (!stat_freeze.checked) {
+		refreshconnections(false)
+		if (curr_monitor_id!=-1) {
+			raw_load(curr_monitor_id,false)
+		}
+	}
+}
+
+function switch_hidden(cb) {
+	if (hide_incoming_cb.checked && hide_outgoing_cb.checked) {
+		if (cb.id=="hide_incoming_cb") {
+			hide_outgoing_cb.checked = !hide_outgoing_cb.checked
+		} else {
+			hide_incoming_cb.checked = !hide_incoming_cb.checked
+		}
+	}
+	hide_peer_info()
+	refreshconnections(false)
+	return false
+}
+
+function hide_peer_info() {
+	if (raw_timer!=null) {
+		clearTimeout(raw_timer)
+		raw_timer = null
+	}
+	rawdiv.innerHTML = ''
+	curr_monitor_id = -1
+	rawdivon.style.display = 'none'
+}
+
+function refresh_raw() {
+	if (!stat_freeze.checked) {
+		stat_freeze.click()
+	}
+	raw_load(curr_monitor_id,true)
+}
+
+function refresh_conns() {
+	if (!stat_freeze.checked) {
+		stat_freeze.click()
+	}
+	refreshconnections(true)
+}
+
+function show_info(id) {
+	loading_new_rawdivon = true
+	raw_load(id,true)
+}
+
+function update_connection_info(ci) {
+	var s = 'Connection ID ' + ci.ID + ':\n'
+
+	s += ci.LocalAddr + (ci.Incomming ? ' <== ' : ' ==> ') + ci.RemoteAddr + '\n'
+	s += 'Connected at ' + tim2str(Date.parse(ci.ConnectedAt)/1000) + ' | Ticks: ' + ci.Ticks + '\n'
+	s += 'Node Version: ' + ci.Version + ' | Services: 0x' + ci.Services.toString(16) + ' | Chain Height: ' + ci.Height + '\n'
+	s += 'User Agent: ' + ci.Agent + ' | Reported IP: ' + int2ip(ci.ReportedIp4) + '\n'
+	s += 'SendHeaders: ' + ci.SendHeaders + ' | SendCmpctVer: ' + ci.SendCmpctVer + ' | HighBandwidth: ' + ci.HighBandwidth + '\n'
+	s += 'Last command rcvd at ' + tim2str(Date.parse(ci.LastDataGot)/1000, true) + ' - ' + ci.LastCmdRcvd + ':' + ci.LastBtsRcvd + '\n'
+	s += 'Last command sent at ' + tim2str(Date.parse(ci.LastSent)/1000, true) + ' - ' + ci.LastCmdSent + ':' + ci.LastBtsSent + '\n'
+
+	s += 'Total Received:' + ci.BytesReceived + ' / Sent:' + ci.BytesSent + '   Bytes to send:' + ci.BytesToSend + ' (' + ci.MaxSentBufSize + ' max)\n'
+
+	s += 'Invs:  Done=' + ci.InvsDone + '   Recieved=' + ci.InvsRecieved + '  Pending=' + ci.InvsToSend +  '\n'
+	s += 'Get Headers:' + '  InProgress=' + ci.GetHeadersInProgress + '  AllReceived=' + ci.AllHeadersReceived + '  LastEmpty=' + ci.LastHeadersEmpty + '\n'
+	s += 'Get Blocks:' + '  InProgress=' + ci.BlocksInProgress + '  GetDataNow=' + ci.GetBlocksDataNow + '\n'
+
+	s += 'Authorized:' + ci.Authorized + '  AuthAckGot:' + ci.AuthAckGot + '  ChainSynced:' + ci.ChainSynchronized + '  GetMPInProgress:' + ci.GetMPInProgress + '\n'
+	s += 'GetAddrDone:' + ci.GetAddrDone + ' / MinFeeSPKB:' + ci.MinFeeSPKB  + ' / LastMinFeeSent:' + ci.LastMinFeePerKByte + '\n'
+	s += 'Ping history:'
+
+	var idx = ci.PingHistoryIdx
+	for (var i=0; i<ci.PingHistory.length; i++) {
+		if (ci.PingHistory[idx]>0) {
+			s += ' ' + ci.PingHistory[idx]
+		}
+		idx = (idx+1)%ci.PingHistory.length
+	}
+	s += ' -> ' + ci.AveragePing + ' ms\n'
+
+	var cnts = ''
+	var msgs = new Array()
+	var has_counters = false
+
+	for (var k in ci.Counters) {
+		if (k[4]=='_') {
+			if (isNaN(msgs[k.substr(5)])) msgs[k.substr(5)] = new Array()
+			msgs[k.substr(5)][k.substr(0,4)] = ci.Counters[k]
+		} else {
+			if (cnts!='') cnts+=',  '
+			cnts += k + '=' + ci.Counters[k]
+		}
+		has_counters = true
+	}
+	if (!has_counters) {
+		s += 'No counters yet or counters disabled in config file (Stats.NoCounters)'
+	} else {
+		if (cnts!='') {
+			s += 'Counters: ' + cnts + '\n'
+		}
+		s += '----------------------------------------------------------------\n'
+		s += ' Network message     Received from peer          Sent to peer\n'
+		s += '----------------------------------------------------------------\n'
+		var kks = []
+		for (var k in msgs) {
+			kks.push(k)
+		}
+		kks.sort()
+		for (var i=0; i<kks.length; i++) {
+			var v
+			var k = kks[i]
+			s += ' ' + rightpad(k,  ' ', 16) + ' '
+			v = msgs[k]["rcvd"]
+			s += leftpad(isNaN(v)?' ':v, ' ', 8)
+			v = msgs[k]["rbts"]
+			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+			s += '   '
+
+
+			v = msgs[k]["sent"]
+			s += leftpad(isNaN(v)?' ':v, ' ', 8)
+			v = msgs[k]["sbts"]
+			s += ' ' + leftpad(isNaN(v)?' ':v,  ' ', 12)
+			s += '\n'
+		}
+		s += '----------------------------------------------------------------\n'
+	}
+
+	rawdiv.innerHTML = s
+	rawdivon.style.display = 'block'
+	if (loading_new_rawdivon) {
+		window.scrollTo(0,document.body.scrollHeight)
+		loading_new_rawdivon = false
+	}
+}
+
+function raw_load(id,force) {
+	//console.log(this)
+	if (raw_timer!=null) {
+		clearTimeout(raw_timer)
+		raw_timer = null
+	}
+	if (!force && stat_freeze.checked) {
+		return
+	}
+	curr_monitor_id = id
+	var aj = ajax()
+	aj.onload=function() {
+		try {
+			var ci = JSON.parse(aj.responseText)
+			update_connection_info(ci)
+		} catch (e) {
+			console.log("Closing peer info because", e)
+			hide_peer_info()
+		}
+		raw_timer = setTimeout('raw_load('+id+',false)', 900)
+	}
+	aj.open("GET","peerst.json?id="+id, true);
+	aj.send(null);
+}
+
+function net_drop(id) {
+	if (server_mode) {
+		alert('Droping connections is not available in Server Mode')
+		return
+	}
+	if (confirm("Drop Connection ID "+id+" and ban its IP")) {
+		document.location = 'cfg?drop='+id+'&sid='+sid
+	}
+	return false
+}
+
+function net_getmp(id) {
+	if (!confirm("Request all missing transactions from Connection ID "+id)) {
+		return
+	}
+	var aj = ajax()
+	aj.open("GET", 'cfg?getmp='+id+'&sid='+sid, true)
+	aj.send(null)
+}
+
+function refreshconnections(force) {
+	if (!force && stat_freeze.checked) {
+		return
+	}
+
+	if (loading_new_rawdivon) {
+		setTimeout('refreshconnections(false)', 2500)
+		return
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout('refreshconnections(false)', 5000)
+	}
+	aj.onload=function() {
+		try {
+			var cs = JSON.parse(aj.responseText)
+
+			if (net_list_order_id.checked) {
+				cs.sort(function(a,b){
+					return (a.ID>b.ID) ? 1 : -1;
+				})
+			}
+
+			while (netcons.rows.length>1) netcons.deleteRow(1)
+
+			var ins=0, outs=0
+			var id_found = false
+
+			for (var i=0; i<cs.length; i++) {
+				if (cs[i].Incomming) {
+					ins++
+					if (hide_incoming_cb.checked) continue
+				} else {
+					outs++
+					if (hide_outgoing_cb.checked) continue
+				}
+
+				var td, row = netcons.insertRow(-1)
+				var id = cs[i].ID
+
+				if (curr_monitor_id==id) {
+					update_connection_info(cs[i])
+					id_found = true
+				}
+
+				row.id = id
+				row.className = 'hov small'
+
+				// id
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.className = 'nodeid'
+				td.innerHTML = '&nbsp;<b>'+id+'</b>&nbsp;'
+
+
+				// age
+				td = row.insertCell(-1)
+				td.noWrap = true
+				td.style.textAlign = 'right'
+				if (cs[i].ConnectedAt.substr(0,4)!="0001" && typeof(time_now)=="number") {
+					var secs = time_now - parseInt(Date.parse(cs[i].ConnectedAt)/1000)
+					if (secs<0)  secs = 0
+					if (secs<120) {
+						td.innerHTML = (secs/60).toFixed(1) + ' min'
+					} else {
+						td.innerHTML = period2str( secs )
+					}
+				}
+
+				// addr
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].PeerIp
+				td.title = "Click to Copy"
+				td.className = 'hand'
+				td["peerip"] = cs[i].PeerIp
+				td.addEventListener("click", function(e) {
+					autocopy.style.display = 'inline'
+					autocopy.value = e.srcElement["peerip"]
+					autocopy.select()
+					document.execCommand('copy')
+					autocopy.style.display = 'none'
+				})
+
+				// direction
+				td = row.insertCell(-1)
+				if (cs[i].Incomming) {
+					td.innerHTML = "<img src=\"webui/incoming.png\">"
+				} else {
+					td.innerHTML = "<img src=\"webui/outgoing.png\">"
+				}
+
+				// ping
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = '<i>'+cs[i].AveragePing+'&nbsp;ms</i>'
+
+				// last_cmd_rcvd
+				td = row.insertCell(-1)
+				td.className = 'dbg mono'
+				td.title = cs[i].LastBtsRcvd
+				td.innerHTML = cs[i].LastCmdRcvd
+
+				// last_cmd_sent
+				td = row.insertCell(-1)
+				td.className = 'dbg mono'
+				td.title = cs[i].LastBtsSent
+				td.innerHTML = cs[i].LastCmdSent
+
+				// total_rcvd
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = bignum(cs[i].BytesReceived)+'B'
+
+				// total_sent
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = bignum(cs[i].BytesSent)+'B'
+
+				// node_version
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].Version
+				td.title = 'Services : 0x' + cs[i].Services.toString(16)
+
+				//Flags: X-compact blocks,  W - SegWit
+				td = row.insertCell(-1)
+				td.className = 'bold'
+				td.style.textAlign = 'center'
+				var s = ''
+				if (cs[i].Services&1)  s += 'N'
+				else  if (cs[i].Services&0x400)  s += 'n'
+				if (cs[i].SendHeaders) s += 'H'
+				if (cs[i].Services&4) s += 'B'
+				if (cs[i].SendCmpctVer) {
+					s += cs[i].SendCmpctVer
+					if (cs[i].HighBandwidth)  s += '+'
+				}
+				if (cs[i].Services&8)  s += 'W'
+				if (cs[i].Services&0x10)  s += 'X'
+				if (cs[i].DoNotRelayTxs)  s += 'O'
+				if (cs[i].Services&0x800)  s += 'E'
+				td.innerText = s
+
+				// user agent
+				td = row.insertCell(-1)
+				td.style.overay = 'auto'
+				td.className = 'agent'
+				td.title = td.innerText = cs[i].Agent//.substr(0,20)
+
+				// blocks received
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].BlocksReceived>0) td.innerHTML = cs[i].BlocksReceived
+
+				// blocks in progress
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].BlocksInProgress>0) {
+					td.innerHTML = cs[i].BlocksInProgress + ( cs[i].GetHeadersInProgress ? '*' : '')
+				} else if (cs[i].GetHeadersInProgress) {
+					td.innerHTML = '*'
+				}
+
+				/*
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = cs[i].TotalNewHeadersCount
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.innerHTML = cs[i].LastHeadersEmpty
+				td.title = cs[i].LastHeadersHeightAsk
+				*/
+
+				td = row.insertCell(-1)
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].TxsReceived!=0) td.innerText = cs[i].TxsReceived + ( cs[i].GetMPInProgress ? '..' : '' )
+				//td.innerText = cs[i].NewAddrsRcvd
+
+				td = row.insertCell(-1)
+				td.className = "dbg"
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				if (cs[i].BytesToSend>0) td.innerHTML = cs[i].BytesToSend
+
+				td = row.insertCell(-1)
+				td.className = "dbg"
+				td.style.textAlign = 'right'
+				td.noWrap = true
+				td.innerHTML = cs[i].MaxSentBufSize
+
+				// action icons
+				var peer_ip = cs[i].PeerIp.split(':')[0]
+				td = row.insertCell(-1)
+				td.className = "r nw"
+				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')"> ' +
+					'<img title="Connection Details" class="hand" src="webui/info.png" onclick="show_info('+id+')"> '
+				if ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) {
+					var img = document.createElement('img');
+					img.src = "webui/request.png"
+					img.title = "Request missing transactions"
+					img.classList.add('hand')
+					img["connid"] = id
+					img.addEventListener("click", function(e) {
+						net_getmp(e.srcElement["connid"])
+						e.stopPropagation()
+					})
+					td.insertBefore(img, td.firstChild)
+				}
+
+				if (cs[i].Authorized) {
+					row.classList.add("secure")
+				} else if (cs[i].IsSpecial) {
+					row.classList.add("special")
+				} else if (cs[i].HasImmunity) {
+					row.classList.add("immune")
+				}
+			}
+
+			if (curr_monitor_id!=-1 && !id_found) {
+				//console.log(curr_monitor_id, "not found - hide")
+				hide_peer_info()
+			}
+
+			in_connections.innerText = ins
+			out_connections.innerText = outs
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout('refreshconnections(false)', 2500)
+	}
+	aj.open("GET","netcon.json",true)
+	aj.send(null)
+}
+
+function switch_debug_mode() {
+	if (false/*show_debug_mode.checked*/) {
+		css('.dbg', 'display', 'table-cell')
+		css('td.agent', 'max-width', '100px')
+	} else {
+		css('.dbg', 'display', 'none')
+		css('td.agent', 'max-width', '350px')
+	}
+}
+
+function draw_chart() {
+	var seconds = parseInt(bw_chart_seconds.value)
+
+	localStorage.setItem("net_bw_seconds", seconds)
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(draw_chart, 1000)
+	}
+
+	aj.onload=function() {
+		try {
+			cs = JSON.parse(aj.responseText)
+
+			var plot_data = [
+				{ data : [], color:3, lines: {show:true, fill:true} },
+				{ data : [], color:2, lines: {show:true, fill:true} }
+				];
+			var plot_options = {
+				xaxis: { tickSize:60,  tickFormatter : function(a,b) {
+					if (a==0) return ''
+					if (seconds>60) {
+						return (parseInt(-a*seconds/3600) + 'h')
+					}
+					return (parseInt(-a*seconds/60) + 'min')
+				} },
+				yaxis : {labelWidth : 40, min : 0, position : "right",  label:"kB/s" },
+				legend: { position: 'nw' }
+			}
+
+			/*if (cs.MaxUL && cs.MaxUL > cs.MaxDL) {
+				plot_options.yaxis.max = cs.MaxUL/900
+			} else {
+				plot_options.yaxis.max = cs.MaxDL/900
+			}*/
+
+			var tot_dl = 0
+			var tot_ul = 0
+			for (var i=0; i<200; i++) {
+				plot_data[0].data.push([-i, cs.DL[i]/1e3])
+				plot_data[1].data.push([-i, cs.UL[i]/1e3])
+				tot_dl += cs.DL[i]
+				tot_ul += cs.UL[i]
+			}
+
+			plot_data[0].label = 'Downloading in kB/s - avg ' + (tot_dl / 256e3).toFixed(1)
+			plot_data[1].label = 'Uploading in kB/s - avg ' + (tot_ul / 256e3).toFixed(1)
+
+			$.plot($("#chart"), plot_data, plot_options)
+
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(draw_chart, 990*seconds)
+	}
+	aj.open("GET","bwchar.json?seconds="+seconds, true)
+	aj.send(null)
+}
+
+function refreshbwinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshbwinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var bw = JSON.parse(aj.responseText)
+
+			in_connections.innerText = bw.Open_conns_in
+			out_connections.innerText = bw.Open_conns_out
+
+			bw_dl_speed_now.innerText = bw.Dl_speed_now >> 10
+			var sl = bw.Dl_speed_max==0 ? "not limited" : "limited to " + (bw.Dl_speed_max >> 10) + "KB/s"
+			bw_dl_speed_now_span.title = "Total " + bignum(bw.Dl_total) + 'B / Download speed ' + sl
+
+			bw_ul_speed_now.innerText = bw.Ul_speed_now >> 10
+			sl = bw.Ul_speed_max==0 ? "not limited" : "limited to " + (bw.Ul_speed_max >> 10) + "KB/s"
+			bw_ul_speed_now_span.title = "Total " + bignum(bw.Ul_total) + 'B / Upload speed ' + sl
+
+			if (bw.GetMPInProgress) {
+				get_mp_conn_id.innerText = bw.GetMPConnID
+				get_mp_in_progress.style.display = "inline"
+			} else {
+				get_mp_in_progress.style.display = "none"
+			}
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshbwinfo, 1000)
+	}
+	aj.open("GET","bwidth.json",true)
+	aj.send(null)
+}
+
+
+if (!server_mode) {
+	connect_buttons.style.display = 'inline'
+}
+
+function switch_order_type() {
+	if (net_list_order_sp.checked) {
+		localStorage.setItem("net_order", "sp")
+	} else {
+		localStorage.setItem("net_order", "id")
+	}
+	refreshconnections(true)
+}
+function remember_info_setting() {
+	var mod = localStorage.getItem("net_order")
+	if ((mod+'').length!=2) mod = "sp"
+	document.getElementById('net_list_order_'+mod).checked = true
+
+	// bw chart resolution:
+	var seconds = localStorage.getItem("net_bw_seconds")
+	for (var i=0; i<bw_chart_seconds.options.length; i++) {
+		if (bw_chart_seconds.options[i].value==seconds) {
+			bw_chart_seconds.selectedIndex = i
+			break
+		}
+	}
+}
+remember_info_setting()
+switch_order_type()
+switch_debug_mode()
+draw_chart()
+refreshbwinfo()
+
+</script>

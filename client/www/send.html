@@ -1,0 +1,809 @@
+<script type="text/javascript" src="webui/crypto.js"></script>
+<script type="text/javascript" src="webui/bech32.js"></script>
+<div id="light" class="white_content">
+<table width="100%"><tr>
+<td><h3><b class="mono" id="disp_txid"></b></h3>
+<td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup_x(false)">
+</table>
+<pre id="rawdiv" style="background-color:white"></pre>
+</div><div id="fade" class="black_overlay"></div>
+
+<style>
+td.inpid {
+	text-align: left;
+	font-size: 90%;
+	font-family: monospace;
+}
+td.P2SH-P2WPKH {
+	color:brown;
+	font-style:italic;
+}
+td.P2WSH {
+	color:purple;
+	font-style:italic;
+}
+td.P2WPKH {
+	color:darkgreen;
+	font-style:italic;
+}
+td.P2TAP {
+	color:blue;
+	font-style:italic;
+}
+td.long_addr {
+	font-size:9px;
+}
+</style>
+<script>
+const addrbook_lab = "Address Book"
+
+const AvgOutputSize = 34
+
+var selected_value = 0
+var ets_inputs = 0
+var witness_size = 0
+var non_segwit_cnt = 0
+var first_input_addr = ''
+var selected_cnt = 0
+var total_to_pay = 0
+var cur_but = null
+
+var wallet = new Array()
+var addrbook = new Array()
+var basic_addrbook_len = 0 // without the wallets virgin addrs
+var auto_transalte_to_segwit = false
+var auto_transalte_to_segwit_p2sh = false
+var auto_transalte_to_segwit_tap = false
+
+const ADDR_LIST_SIZE = 15
+
+function build_change_list() {
+	var virgincounter = 0
+	while (changeaddrsel.options.length>1) changeaddrsel.remove(1)
+	//changeaddrsel.options = [changeaddrsel.options[0]]
+	for (var i=0; i<wallet.length; i++) {
+		var wpkh = ''
+		var op = document.createElement("option")
+		if (wallet[i].virgin) {
+			op.text = "* "
+		}
+
+		wpkh = translate_address(wallet[i].addr)
+
+		if (wpkh != '') {
+			op.text += 'SW:' + wallet[i].label
+			op.text += " - " + wpkh
+			op.value = wpkh
+		} else {
+			op.text += wallet[i].label
+			op.text += " - " + wallet[i].addr
+			op.value = wallet[i].addr
+		}
+
+		if (wallet[i].virgin) {
+			virgincounter++
+			changeaddrsel.add(op, changeaddrsel[virgincounter])
+		} else {
+			changeaddrsel.add(op)
+		}
+	}
+}
+
+
+function show_input_tx() {
+	var aj = ajax()
+	var vout = parseInt(this["vout"])
+	aj.onreadystatechange=function() {
+		if(aj.readyState==4) {
+			var sta = xval(aj.responseXML,  "status")
+			if (sta!="OK") {
+				alert(sta)
+				return
+			}
+			disp_txid.innerHTML = xval(aj.responseXML,  "id")
+
+			var s = ''
+			var tout = 0
+
+			s += 'Len: ' + xval(aj.responseXML,  "size") + '\n'
+			s += "Total inputs: " + aj.responseXML.getElementsByTagName('input').length + "\n"
+			s += "\n"
+
+			var is = aj.responseXML.getElementsByTagName('output')
+			for (var i=0; i<is.length; i++) {
+				s += (i+1) + ") "
+				var val = parseInt(xval(is[i], "value"))
+				tout += val
+				s += (parseFloat(val)/1e8).toFixed(8)
+				s += " BTC => " + xval(is[i], "addr")
+				if (i==vout)  s += " <-------------------------------"
+				s += "\n"
+			}
+			s += "Total output: " + (parseFloat(tout)/1e8).toFixed(8) + " BTC\n"
+
+			rawdiv.innerHTML = s
+
+			if (prvpos==null) {
+				fade.addEventListener('click', closepopup)
+				fade.style.cursor = 'pointer'
+				fade.title = 'Click here to close the popup'
+			}
+			prvpos = document.body.scrollTop
+			window.scrollTo(0,0)
+
+			light.style.display='block'
+			fade.style.display='block'
+			document.addEventListener("scroll", noscroll)
+		}
+	}
+	aj.open("GET","txs2s.xml?minedid="+this["txid"]+'&minedat='+this["block"]+'&sid='+sid, true);
+	aj.send(null);
+}
+
+function fetch_wallet_balance(name) {
+	var curr_wallet_raw = localStorage.getItem("gocoinWal_"+name)
+	auto_transalte_to_segwit = curr_wallet_raw.indexOf("SegWit") != -1
+	if (auto_transalte_to_segwit) {
+		auto_transalte_to_segwit_p2sh = curr_wallet_raw.indexOf("SegWit P2SH") != -1
+		if (!auto_transalte_to_segwit_p2sh) {
+			auto_transalte_to_segwit_tap = curr_wallet_raw.indexOf("SegWit Tap") != -1
+		}
+	}
+
+	wallet = parse_wallet(curr_wallet_raw)
+	var wallet_addr = new Array()
+
+	for (var i=0; i<wallet.length; i++) {
+		wallet_addr.push(wallet[i].addr)
+	}
+
+	while (unspent.rows.length>1) {
+		unspent.deleteRow(1)
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		console.log("onerror")
+	}
+
+	aj.onload=function() {
+		try {
+			var totbtc = 0
+			var totouts = 0
+			bal = JSON.parse(aj.responseText)
+			var outs = new Array()
+			var i, ii
+			for (i in wallet) {
+				var rec = bal[wallet[i].addr]
+				if (typeof(rec)=='undefined') continue
+				if (rec.Outs!=null) {
+					totouts += rec.Outs.length
+					for (ii in rec.Outs) {
+						var ty = rec.Outs[ii].AddrType
+						if (ty=='P2PKH') {
+							var ad = rec.Outs[ii].Addr
+							if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
+								ty = ad.length > 45 ? "P2WSH" : "P2WPKH"
+							}
+						}
+						outs.push({'block':rec.Outs[ii].Height, 'txid':rec.Outs[ii].TxId,
+							'vout':rec.Outs[ii].Vout, 'value':rec.Outs[ii].Value,
+							'addr':wallet[i].addr, 'label':wallet[i].label,
+							'addr2':rec.Outs[ii].Addr,  'msg':rec.Outs[ii].Message, 'type':ty})
+					}
+				}
+				totbtc += rec.Value
+			}
+			outs.sort(function(a,b){
+				if (a.block == b.block)  return 0
+				return (a.block > b.block) ? 1 : -1;
+			})
+
+			outcnt_val.value = outs.length
+			for (i in outs) {
+				var row_number = parseInt(i)+1
+				var inp,  td, row = unspent.insertRow(-1)
+				row.className = "how"
+				row["addr"] = outs[i].addr2
+				row["value"] = outs[i].value
+				row["label"] = outs[i].label
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.name = "txid"+row_number
+				inp.value = outs[i].txid
+				row.appendChild(inp)
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.name = "txvout"+row_number
+				inp.value = outs[i].vout
+				row.appendChild(inp)
+
+				inp = document.createElement('input')
+				inp.type = 'hidden'
+				inp.id = "txsigsiz"+row_number
+				inp["segwit_size"] = 0
+				if (outs[i].type=="P2PKH") {
+					inp.value = 72 + 34  // pub_key + signature
+				} else if (outs[i].type=="P2WPSH") {
+					inp.value = 23  // P2SH script
+					inp["segwit_size"] = 1 + 72 + 34 // witness_ver + key + signature
+				} else if (outs[i].type=="P2WPKH") {
+					inp.value = 0
+					inp["segwit_size"] = 1 + 72 + 34 // witness_ver + key + signature
+				} else if (outs[i].type=="P2TAP") {
+					inp.value = 0
+					inp["segwit_size"] = 1 + 1 + 64 + 0  // wit_ver + scr_len + schnorr_signature [+ hash_type]
+				} else {
+					// default for P2SH and P2WSH (3 keys and 2 signatures)
+					inp.value = 2 + 3*34 + 2*73
+				}
+				row.appendChild(inp)
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.innerText = row_number
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.innerText = outs[i].block
+
+				td = row.insertCell(-1)
+				td.className = 'inpid hand'
+				td.innerText = outs[i].txid + ' - ' + outs[i].vout
+				td["txid"] = outs[i].txid
+				td["vout"] = outs[i].vout
+				td["block"] = outs[i].block
+				td.addEventListener('click', show_input_tx)
+
+				td = row.insertCell(-1)
+				td.align = 'right'
+				td.className = 'mono bold'
+				td.innerText = val2str_pad(outs[i].value,true)
+
+				td = row.insertCell(-1)
+				td.className = 'bold hand'
+				td["row_number"] = row_number
+				td.addEventListener('click', selectadr)
+				td.classList.add(outs[i].type)
+				td.innerText = outs[i].addr2
+				if (outs[i].addr2.length>45) {
+					td.classList.add("long_addr")
+				}
+				td.title = outs[i].addr
+
+				td = row.insertCell(-1)
+				td.className = 'hand'
+				td["row_number"] = row_number
+				td.addEventListener('click', selectlabel)
+				td.innerText = outs[i].label
+
+				td = row.insertCell(-1)
+				td.className = 'hand'
+				if (typeof(outs[i].msg)=='string' && outs[i].msg != '') {
+					var img = document.createElement("img")
+					img.src = 'webui/message.png'
+					img.title = outs[i].msg.substr(0,2)=='j0' ? ('*'+outs[i].msg.substr(2)) : outs[i].msg
+					td.appendChild(img)
+				}
+
+				td = row.insertCell(-1)
+				td.align = 'center'
+				var inp = document.createElement("input")
+				inp.id = "txout"+row_number
+				inp.type = "checkbox"
+				inp.name = "txout"+row_number
+				inp.onchange = recalc_inputs
+				td.appendChild(inp)
+			}
+
+			total_btc.innerText = val2str(totbtc)
+			outs_cnt.innerText = totouts
+		} catch (e) {
+			console.log(e)
+		}
+	}
+
+	aj.open("POST", "balance.json", true)
+	aj.send(JSON.stringify(wallet_addr))
+}
+
+function recalc_inputs() {
+	selected_value = 0
+	selected_cnt = 0
+	ets_inputs = 0
+	witness_size = 0
+	non_segwit_cnt = 0
+	first_input_addr = ''
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (document.getElementById('txout'+i).checked) {
+			if (first_input_addr=='')  first_input_addr=unspent.rows[i].addr
+			selected_value += unspent.rows[i].value
+			selected_cnt++
+			var el = document.getElementById('txsigsiz'+i)
+			ets_inputs += 36 + 1 + parseFloat(el.value) + 4
+			var sws = el["segwit_size"]
+			if (sws==0)  non_segwit_cnt++
+			else  witness_size += sws
+		}
+	}
+
+	selval.innerText = (selected_value/1e8).toFixed(8)
+	selcnt.innerText = selected_cnt.toString()
+
+	paybut.disabled = (selected_cnt==0)
+
+	recalc_to_pay()
+}
+
+function addr2outsize(ad) {
+	if (ad.substr(0,3)=="bc1" || ad.substr(0,3)=="tb1") {
+		return 8 + ((ad.length>45) ? 35 : 23)
+	}
+	switch (ad[0]) {
+		case '1':
+		case 'm':
+		case 'n':
+			return 8+1+25
+		case '2':
+		case '3':
+			return 8+1+23
+	}
+	return AvgOutputSize
+}
+
+
+function recalc_to_pay() {
+	var el, v, fee, totsend=0
+	var butdisabled = false
+	var non_segwit_size = 10+ets_inputs // version + v_in + n_out + lock_time
+
+	fee = val2int(txfee.value)
+
+	for (var idx=1; idx<outtab.rows.length-3; idx++) {
+		el = document.getElementById('out'+idx)
+		v = val2int(el.value)
+		if (isNaN(v)) {
+			el.classList.add('err')
+			butdisabled = true
+			document.getElementById('mbtc_out'+idx).value = ''
+		} else {
+			el.classList.remove('err')
+			totsend += v
+			document.getElementById('mbtc_out'+idx).value = val2str(1000*v)
+		}
+		var ad = document.getElementById('inadr'+idx).value
+		non_segwit_size += addr2outsize(ad)
+	}
+
+	if (include_fee_output_in_size_calculation.checked) {
+		var ad = changeaddrsel.selectedIndex
+		if (ad!=0) {
+			ad = changeaddrsel.options[ad].value
+			non_segwit_size += addr2outsize(ad)
+		} else {
+			non_segwit_size += addr2outsize(first_input_addr)
+		}
+	}
+
+	var tx_size = non_segwit_size
+	if (witness_size>0) {
+		// segwit tx is 2 bytes longer, plus each non-segwit input uses one extra byte (0) in its segwit section
+		tx_size += 2+witness_size+non_segwit_cnt
+	}
+	var vsize = Math.floor((3*(non_segwit_size+1) + tx_size)/4)
+
+	ets.innerText = vsize
+
+	if (auto_adjust_fee.checked) {
+		var spb = parseFloat(spb_to_use.value)
+		if (isNaN(spb)) spb = 0
+		fee = Math.round(vsize*spb)
+		txfee.value = val2str(fee)
+	}
+
+	if (isNaN(fee)) {
+		txfee.classList.add('err')
+		butdisabled = true
+		txfee_mbtc.value = ''
+	} else {
+		txfee.classList.remove('err')
+		txfee_mbtc.value = val2str(1000*fee)
+	}
+
+	var chval = selected_value-totsend-fee
+	changeval.value = val2str(chval)
+	changeval_mbtc.value = val2str(1000*chval)
+	if (chval<0) {
+		changeval.style.color = 'red'
+		butdisabled = true
+		include_fee_out_checkbox.classList.remove('err')
+	} else if (chval>0) {
+		changeval.style.color = 'green'
+		if (!include_fee_output_in_size_calculation.checked) {
+			include_fee_out_checkbox.classList.add('err')
+		} else {
+			include_fee_out_checkbox.classList.remove('err')
+		}
+	} else {
+		changeval.style.color = ''
+		if (include_fee_output_in_size_calculation.checked) {
+			include_fee_out_checkbox.classList.add('err')
+		} else {
+			include_fee_out_checkbox.classList.remove('err')
+		}
+	}
+
+	paybut.disabled = butdisabled
+
+	if (vsize<1 || isNaN(fee)) {
+		feeperbyte.innerText = '???'
+	} else {
+		feeperbyte.innerText = (fee/vsize).toFixed(1)
+	}
+}
+
+
+function auto_adjust_fee_clicked() {
+	if (auto_adjust_fee.checked) {
+		recalc_to_pay()
+	}
+}
+
+function translate_address(t) {
+	var pkb = hex2array(t)
+	if (pkb!=null && typeof(pkb)=="object" && pkb.length==33 && (pkb[0]==2 || pkb[0]==3)) {
+		// public key
+		if (auto_transalte_to_segwit_tap) {
+			return sw_encode(testnet?"tb":"bc", 1, pkb.slice(1, 33))
+		}
+		t = pubkey_to_p2kh(pkb)
+		// fallback to regulat addr transation
+	}
+	if (!auto_transalte_to_segwit)  return t
+	if (auto_transalte_to_segwit_p2sh)  return p2kh_to_witness_p2sh(t)
+	try {
+		var r = Base58.decode(t)
+		if (25!=r.length || 0!=r[0] && 111!=r[0]) return ""
+		return sw_encode(testnet?"tb":"bc", 0, r.slice(1,21))
+	} catch (e) {
+		return ""
+	}
+}
+
+
+function open_address_book(idx) {
+	if (cur_but!=null) {
+		cur_but.click()
+	}
+
+	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
+	basic_addrbook_len = addrbook.length
+
+	// append the curtrent wallet's virgin addresses
+	try { // in case if we had no wallets in the browser
+		var tmp = parse_wallet(localStorage.getItem("gocoinWal_"+qswal.options[qswal.selectedIndex].text))
+		for (var i in tmp) {
+			if (tmp[i].virgin) addrbook.push(tmp[i])
+		}
+	} catch (ex) {}
+
+	var c = outtab.rows[idx].cells[1]
+	var inadr = document.getElementById('inadr'+idx)
+	var div = document.createElement("div")
+	c.style.position="realitive"
+	div.style.position="absolute"
+
+	var sel = document.createElement("select")
+	sel.style.width = '100%'
+	sel.size = ADDR_LIST_SIZE
+
+	for (var i=0; i<addrbook.length; i++) {
+		var op = document.createElement("option")
+		var wpkh = ''
+
+		if (i >= basic_addrbook_len) {
+			wpkh = translate_address(addrbook[i].addr)
+		}
+
+		if (wpkh != '') {
+			var label = 'SW:' + addrbook[i].label
+			op = document.createElement("option")
+			op.text += label
+			op.text += " - " + wpkh
+			op.value = wpkh
+			op.selected = inadr.value==op.value
+			op["addr_label"] = label
+		} else {
+			op.text += addrbook[i].label
+			op.text += " - " + addrbook[i].addr
+			op.value = addrbook[i].addr
+			op.selected = inadr.value==op.value
+			op["addr_label"] = addrbook[i].label
+		}
+		sel.add(op)
+	}
+
+	div.appendChild(sel)
+	c.appendChild(div)
+
+	var but = document.getElementById("addrbook"+idx)
+	var prv_valu = but.value
+	var prv_oncl = but.onclick
+	but.value = "Close the list"
+	cur_but = but
+	but.onclick = sel.onchange = function() {
+		c.removeChild(div)
+		but.onclick = prv_oncl
+		if (sel.selectedIndex!=-1) {
+			inadr.value = sel.options[sel.selectedIndex].value
+			but.value = sel.options[sel.selectedIndex].addr_label
+		} else {
+			but.value = addrbook_lab
+		}
+		cur_but = null
+		recalc_to_pay()
+	}
+}
+
+
+function reslab(idx) {
+	var val = document.getElementById("inadr"+idx).value
+	var but = document.getElementById("addrbook"+idx)
+	for (var i=0; i<addrbook.length; i++) {
+		if (val==addrbook[i].addr) {
+			but.value = addrbook[i].label
+			return
+		}
+	}
+	for (var i=0; i<wallet.length; i++) {
+		if (val==wallet[i].addr) {
+			but.value = wallet[i].label
+			return
+		}
+	}
+	but.value = addrbook_lab
+}
+
+
+function del_last_output() {
+	if (outtab.rows.length<=5) {
+		alert('You cannot remove the only output')
+		return
+	}
+	if (confirm('Remove the last output?')) {
+		outtab.deleteRow(outtab.rows.length-4)
+		recalc_to_pay()
+	}
+}
+
+function add_new_output() {
+	var idx = outtab.rows.length-3
+	var val, c, r = outtab.insertRow(idx)
+
+	c = r.insertCell(-1)
+	c.innerHTML = 'Out#'+idx
+	if (idx>1) {
+		c.style.cursor = 'pointer'
+		c.title = 'Click to delete this output'
+		c.id = idx
+		c.onclick = function() {del_output(idx)}
+	}
+
+	c = r.insertCell(-1)
+	c.innerHTML = '<input id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
+	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+
+		addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')" tabindex="-1">'
+
+	// amount BTC
+	c = r.insertCell(-1)
+	val = document.createElement('input')
+	val.type = 'text'
+	val.size = 13
+	val.id = 'out'+idx
+	val.name = 'btc'+idx
+	val.onchange = recalc_to_pay
+	val.onkeyup = recalc_to_pay
+	val.className = 'mono r'
+	val.setAttribute("autocomplete","off")
+	val.autoComplete = false
+	val.value = ''
+	c.appendChild(val)
+
+	// empty cell between BTC and mBTC
+	c = r.insertCell(-1)
+
+	// amount mBTC
+	c = r.insertCell(-1)
+	val = document.createElement('input')
+	val.type = 'text'
+	val.size = 13
+	val.id = 'mbtc_out'+idx
+	val.className = 'mono r dis'
+	val.readOnly = true
+	val.tabIndex = -1
+	c.appendChild(val)
+
+	recalc_to_pay()
+}
+
+function allchange(t) {
+	for (var i=1; i<unspent.rows.length; i++) {
+		document.getElementById('txout'+i).checked = t.checked
+	}
+	recalc_inputs()
+}
+
+function selectadr() {
+	var idx = this.row_number
+	var addr = unspent.rows[idx].addr
+	var chkd = document.getElementById('txout'+idx).checked
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (unspent.rows[i].addr==addr) {
+			document.getElementById('txout'+i).checked = !chkd
+		}
+	}
+	recalc_inputs()
+}
+
+function selectlabel() {
+	var idx = this.row_number
+	var label = unspent.rows[idx].label
+	var chkd = document.getElementById('txout'+idx).checked
+	for (var i=1; i<unspent.rows.length; i++) {
+		if (unspent.rows[i].label==label) {
+			document.getElementById('txout'+i).checked = !chkd
+		}
+	}
+	recalc_inputs()
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	add_new_output()
+	txfee.onchange = recalc_to_pay
+	txfee.onkeyup = recalc_to_pay
+	// use avg_fee_spb value, but randomly modyfied by up to +/- 10%, for user's privacy
+	spb_to_use.value = Math.max(((Math.random()/5+0.9)*avg_fee_spb).toFixed(3).substr(0,7), 1.0)
+	recalc_inputs()
+	var abc = localStorage.getItem("gocoinAddressBook")
+	if (typeof(abc)!="string") {
+		abc = "# Empty Address Book"
+		localStorage.setItem("gocoinAddressBook", abc)
+	}
+	address_book.value = abc
+})
+
+function edit_address_book() {
+	addrr_book_div.style.display='block'
+	addrbook_button.value = "Save Address Book"
+	addrbook_button.onclick = function() {save_address_book()}
+}
+
+function save_address_book() {
+	localStorage.setItem("gocoinAddressBook", address_book.value)
+	addrr_book_div.style.display='none'
+	addrbook_button.value = "Edit Address Book"
+	addrbook_button.onclick = function() {edit_address_book()}
+}
+
+</script>
+
+<form method="post" action="payment.zip">
+<input type="hidden" id="outcnt_val" name="outcnt" value="">
+<h2>Payment details
+<input style="float:right;" id="addrbook_button" type="button" value="Edit Address Book" onclick="edit_address_book()">
+</h2>
+
+<div id="addrr_book_div" style="display:none">
+<textarea id="address_book" style="width:100%" rows="15"></textarea>
+<br><br>
+</div>
+
+Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outputs.
+<table class="bord" vspace="10" id="outtab">
+<tr>
+	<th>&nbsp;
+	<th>Pay to address
+	<th>Amount BTC
+	<th>
+	<th><i>... mBTC</i>
+</tr>
+
+<tr>
+	<td colspan="2">
+	<table width="100%"><tr>
+	<td><a href="javascript:add_new_output()" title="Add another output">+add output</a>
+	|
+	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
+    <td align="center" title="Transaction sequence number (default -3)">Sequence : <input name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
+	<td align="right">Transaction fee:
+	</table>
+	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+	<td style="font-size:10px" title="Fee per byte"><b id="feeperbyte"></b><br>SPB
+	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis" readonly="readonly" tabindex="-1">
+</tr>
+
+<tr title="Transaction change">
+	<td>Change
+	<td><select name="change" style="width:100%" id="changeaddrsel" onchange="recalc_to_pay()">
+			<option value="">The first input's address</option>
+		</select>
+	<td class="r">
+	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
+	<td id="include_fee_out_checkbox"><input type="checkbox" id="include_fee_output_in_size_calculation" title="Include in size calculation" onchange="recalc_to_pay()">
+	<td class="r">
+	<input type="text" class="mono r dis" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
+</tr>
+
+<tr>
+	<td colspan="5" align="left">
+		<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
+		Auto-calc transaction fee using price of&nbsp;
+		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
+		&nbsp;&nbsp;&nbsp;
+		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
+	<hr>
+		<input type="submit" id="paybut" disabled="disabled" value="Download payment.zip" style="width:100%">
+	</td>
+</tr>
+</table>
+<i><b>Note:</b> all the inputs selected below will be combined within one transaction, despite of the amounts entered above.</i>
+
+<h2>Select Inputs</h2>
+Wallet: <select id="qswal" onchange="quick_switch_wallet()"></select>
+-
+total balance of <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
+<i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
+<img src="webui/warning.png" style="vertical-align:middle">
+Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
+<br><br>
+<table id="unspent" width="100%">
+<tr>
+	<th width="20">#
+	<th width="40">Block
+	<th>TxID - VOut
+	<th width="80">BTC Value
+	<th colspan="2">Address
+	<th>&nbsp;
+	<th><input type="checkbox" onchange="allchange(this)">
+</tr>
+<!--UTXOROW-->
+</table>
+
+</form>
+<script>
+
+if (typeof(localStorage.gocoinWallets)=="string") {
+	build_wallet_list()
+} else {
+	localStorage.gocoinWallets = ""
+}
+
+
+var warning_set = false
+blno.addEventListener("lastblock", function(e) {
+	if (!e.block.WalletON) {
+		location.reload()
+		return
+	}
+	if (!warning_set) {
+		warning_set = true
+		if (e.block.MinValue>0) {
+			min_val_btc.innerText = val2str(e.block.MinValue)
+			wallet_min_warning.style.display = 'block'
+		}
+	}
+})
+qswal.addEventListener("loadwallet", function(e) {
+	fetch_wallet_balance(e.name)
+	build_change_list()
+})
+document.addEventListener('DOMContentLoaded', function() {
+	quick_switch_wallet() // this is to force loading wallet after loading
+	addrbook = parse_wallet(localStorage.getItem("gocoinAddressBook"))
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup_x(false)
+	}
+})
+</script>

@@ -1,0 +1,559 @@
+<script type="text/javascript" src="webui/jquery.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
+<script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
+
+<!-- include fees_chart.html -->
+
+<table width="100%" border="0">
+<colgroup>
+	<col width="50%">
+	<col width="50%">
+</colgroup>
+
+<tr><td colspan="2" style="padding:0px">
+<div align="right" style="float:right;font-size:12px;padding-top:0px">
+WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
+<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="webui/backup.png"> Export</a>
+&nbsp;
+<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="webui/restore.png"> Import</a>
+</div>
+<h2 style="margin-top:10px;margin-bottom:5px">Recent Blocks</h2>
+
+<table width="100%"><tr style="border:0">
+<td style="padding:0">
+<span onclick="chart_type_spb.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_spb" onchange="draw_chart()" onclick="event.stopPropagation()"> Average SPB
+</span>
+&nbsp;&bull;&nbsp;
+<span onclick="chart_type_siz.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_siz" onchange="draw_chart()" onclick="event.stopPropagation()"> Blocksize KB
+</span>
+&nbsp;&bull;&nbsp;
+<span onclick="chart_type_txs.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_txs" onchange="draw_chart()" onclick="event.stopPropagation()"> Transactions
+</span>
+&nbsp;&bull;&nbsp;
+<span onclick="chart_type_wgt.click()" class="hand">
+	<input type="radio" name="chart_type" id="chart_type_wgt" onchange="draw_chart()" onclick="event.stopPropagation()"> Weight
+</span>
+&nbsp;&bull;&nbsp;
+
+<span onclick="chart_type_avg.click()" class="hand" style="display:inline">
+	<input type="checkbox" id="chart_type_avg" onchange="draw_chart()" onclick="event.stopPropagation()">
+	<span id="avg_size">.</span> bl. avg
+</span>
+&nbsp;
+<span onclick="chart_type_ord.click()" class="hand" title="See how much is used by Ordinal Inscriptions" id="ord_label">
+	<input type="checkbox" id="chart_type_ord" onchange="draw_chart()" onclick="event.stopPropagation()">
+	Ord. %
+</span>
+
+</td>
+<td align="right" style="padding:0px">
+	<table>
+	<tr style="border:0"><td style="padding-top:0px;padding-bottom:0px;" >Average:
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" nowrap="nowrap" title="Mining hash rate"><a href="http://bitcoin.sipa.be/" target="_blank"><span id="si_network_hashrate"></span></a>
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Transaction fee"><a href="https://mempool.space/" target="_blank"><span id="si_avg_fee_spb"></span> SPB</a>
+	<td align="right" style="padding-top:0px;padding-bottom:0px;" title="Block size"><a href="https://www.blockchain.com/explorer/charts/avg-block-size" target="_blank" id="si_avg_block_size"></a>
+	</table>
+
+</td>
+</tr></table>
+<div id="chart" style="height:200px;margin-left:0px;margin-right:5px;margin-top:0px;margin-bottom:5px"></div>
+
+
+<tr><td colspan="2">
+	<h2>Last Block</h2>
+<table border="0" width="100%">
+	<tr><td align="right" class="nw">Block Hash:<td colspan="7"><b id="last_block_hash"></b>
+		<td align="right" class="nw">Last Header:
+			<td><b title="Last known header" id="si_last_hdr_height"></b>
+
+	<tr>
+		<td align="right" colspan="1">Version:
+			<td colspan="1"><b id="last_block_version"></b>
+		<td align="right">Received:
+			<td><b id="last_block_received"></b>
+		<td align="right">Timestamp:
+			<td class="nw"><b id="last_block_timestamp"></b>
+		<td align="right">Median:
+			<td class="nw"><b id="last_block_median"></b>
+		<td align="right">Difficulty:
+			<td><b id="last_block_difficulty"></b>
+	</table>
+</td>
+</tr>
+
+<tr><td valign="top">
+	<h2>Network</h2>
+	<table width="90%">
+	<colgroup>
+		<col width="25%">
+		<col width="20%">
+		<col width="25%">
+		<col width="30%">
+	</colgroup>
+	<tr><td nowrap="nowrap">Connections:
+		<td align="right"><b id="bw_open_conns_total"></b>
+		<td align="right" class="nw"><img title="outgoing" src="webui/outgoing.png"> <b id="bw_open_conns_out"></b>
+		<td align="right" class="nw"><img title="incoming" src="webui/incoming.png"> <b id="bw_open_conns_in"></b>
+	<tr><td>Downloading:
+		<td align="right" class="nw"><b id="bw_dl_speed_now"></b> KB/s
+		<td align="right" class="nw"><b id="bw_dl_speed_max"></b> KB/s max
+		<td align="right" class="nw"><b id="bw_dl_total"></b> tot
+	<tr><td>Uploading:
+		<td align="right" class="nw"><b id="bw_ul_speed_now"></b> KB/s
+		<td align="right" class="nw"><b id="bw_ul_speed_max"></b> KB/s max
+		<td align="right" class="nw"><b id="bw_ul_total"></b> tot
+	<tr><td>External IP:
+		<td colspan="1" align="right" id="external_ip0" style="font-weight:bold">
+		<td colspan="2" align="right" id="external_others" style="font-size:70%;font-style:italic">
+	<tr title="Public Authorization Key"><td>Auth Key:
+		<td colspan="3" align="left" class="small"><b>@<!--PUB_AUTH_KEY--></b>
+	</table>
+<td valign="top">
+	<h2>Node</h2>
+	<table width="100%">
+	<tr><td>Uptime:<td>
+		<b id="si_node_uptime"></b>
+		&nbsp;&bull;&nbsp;
+		<b title="Known peers" id="si_known_peers"></b> peers
+		&nbsp;&bull;&nbsp;
+		<b title="ECDSA verify operations" id="si_ecdsa_verify_cnt"></b> ECs
+	<tr><td>Mem Used MB:<td>
+		<b title="Total memory used" id="si_total_mem"></b>
+		(<b title="Native Go heap" id="si_heap_size"></b> +
+		<b title="QDB UTXO records" id="si_qdb_extramem"></b>)
+		&nbsp;<span id="el_free_mem" style="display:none">[<a href="javascript:config('freemem')">FREE</a>]</span>
+
+	<tr><td nowrap="nowrap">TX Mempool:<td aligh="left">
+		<b title="Accepted" id="ts_t2s_size"></b>
+		&nbsp;&bull;&nbsp;
+		<b title="Rejected" id="ts_tre_size" style="font-weight:bold"></b>
+		&nbsp;&bull;&nbsp;
+		<b title="UTXOs spent in memory" id="outspent" style="font-weight:bold"></b>
+		&nbsp;&bull;&nbsp;
+		<b title="Minimum SPB" id="min_spb" style="font-weight:bold"></b> spb
+	<tr><td>Pending Data:<td><b id="si_net_tx_qsize"></b> txs,
+		&nbsp;<b id="si_net_block_qsize"></b> blocks,
+		&nbsp;<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
+		&nbsp;<b id="si_blocks_to_get"></b> to get
+		<img id="si_saving" src="webui/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
+	</tr>
+	<tr id="showcfg" style="display:none">
+
+<form method="post" style="margin:0" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
+<td align="left" style="padding:0px"><input type="button" value="Edit configuration" onclick="shwcfg()">
+<td align="right" style="padding:0px">
+<input type="button" value="Save configuration" onclick="savecfg()">
+<input type="hidden" name="shutdown" value="1">
+<input type="submit" value="Shutdown Node">
+</form>
+</td>
+
+</tr>
+	</table>
+</table>
+
+<div id="formcfg" style="display:none">
+<h2>Configuration</h2>
+<table width="100%">
+<form method="post" action="cfg">
+<tr><td colspan="2"align="left">See <a href="http://gocoin.pl/gocoin_manual_client_config.html" target="_blank">help page</a> for the format of the configuration data.
+<tr><td colspan="2">
+	<textarea name="configjson" id="configjson" style="width:100%" rows="26">{CONFIG_FILE}</textarea>
+<tr><td align="center">
+	<i>Please note that some config values require a restart in order to be applied.
+	<td align="right">
+	<input type="button" value="Cancel" onclick="location.reload()">
+	<input type="submit" name="apply" value="Apply">
+	<input type="submit" name="save" value="Apply & Save">
+</form>
+</table>
+</div>
+
+<script>
+if (!server_mode) {
+	showcfg.style.display='table-row'
+	el_free_mem.style.display='inline'
+}
+
+
+var previousPoint = null;
+var cs
+
+const blks_average = 6
+
+function restore_chart_setting() {
+	var mod = localStorage.getItem("home_chart")
+	if ((mod+'').length!=3) mod = "spb"
+	document.getElementById('chart_type_'+mod).checked = true
+	chart_type_avg.checked = localStorage.getItem("home_chart_avg") === 'true'
+	chart_type_ord.checked = localStorage.getItem("home_chart_ord") === 'true'
+	avg_size.innerText = blks_average
+}
+restore_chart_setting()
+var chart_type_ord_prev = chart_type_ord.checked
+
+function showTooltip(x, y, contents) {
+	$('<div id="tooltip">' + contents + '</div>').css( {
+		position: 'absolute',
+		display: 'none',
+		top: y - 30,
+		left: x + 5,
+		border: '2px solid #fdd',
+		padding: '5px',
+		'font-size' : '14px',
+		'background-color': '#fee',
+		opacity: 1
+	}).appendTo("body").fadeIn(200);
+}
+
+function handlehover(event, pos, item) {
+	if (item) {
+		if (previousPoint != item.dataIndex) {
+			previousPoint = item.dataIndex;
+			$("#tooltip").remove();
+
+			var rec = cs[item.dataIndex]
+			var str = 'Block #'+rec.Height+', Version 0x'+rec.Version.toString(16)+'<br>'
+			str += tim2str(rec.Received)+' ... '+tim2str(rec.Timestamp, true)+'<br>'
+			str += ''+rec.TxCnt+' transactions / '+rec.Size+' bytes<br>'
+			str += val2str(rec.Reward)+' BTC / ' + rec.FeeSPB.toFixed(2)+' SPB<br>'
+			str += 'Block Weight: ' + rec.Weight + "<br>"
+			str += 'Mined by ' + rec.Miner + '<br>'
+			str += 'Ords use ' + (100*rec.OrdCnt/rec.TxCnt).toFixed(0) + '% txs, '
+			str += (100*rec.OrdSize/rec.Size).toFixed(0) + '% size, '
+			str += (100*rec.OrdWeight/rec.Weight).toFixed(0) + '% of weight'
+			//if (rec.Weight > 0)
+
+			showTooltip(item.pageX, item.pageY, str)
+		}
+	} else {
+		$("#tooltip").remove();
+		previousPoint = null;
+	}
+}
+
+
+function handleclick(event, pos, item) {
+	if (item) {
+		var rec = cs[item.dataIndex]
+		if (rec.HaveFeeStats) {
+			show_block_fees(rec.Height,rec.Size,rec.Miner.substr(0,12))
+		} else {
+			//alert("No fee stats for this block")
+		}
+	}
+}
+
+function draw_chart() {
+	// check if would have both SPB and Ord...
+	if (chart_type_spb.checked && chart_type_ord.checked) {
+		if (!chart_type_ord_prev) {
+			chart_type_wgt.checked = true // if clicking Ord: switch to Weigth
+		} else {
+			chart_type_ord.checked = false // clicking SPB: disable Ord
+		}
+	}
+	chart_type_ord_prev = chart_type_ord.checked
+
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(draw_chart, 1000)
+	}
+
+	aj.onload=function() {
+		try {
+			_cs = JSON.parse(aj.responseText)
+			var plot_data = [ { data : [], points: { show:true, fill:true }, lines: {show:true, fill:true}},
+							{ data : [], bars:{ show:true, fill:true,  lineWidth:5}, color:"black" } ];
+			var plot_options = {
+				grid: { hoverable: true, clickable: true,  markings:[] },
+				xaxis: { mode: 'time', timeformat: "%H:%M", timezone: "browser" },
+				yaxis : {labelWidth : 30, min : 0, position : "right"}
+			}
+
+			if (chart_type_siz.checked) {
+				plot_data[0].color = 3
+				//plot_options.yaxis.max = 1100
+				//plot_options.yaxis.tickFormatter = function(a,b) {return (a/1e3).toFixed(1)+'M'}
+				localStorage.setItem("home_chart", "siz")
+			} else if (chart_type_spb.checked) {
+				plot_data[0].color = 2
+				localStorage.setItem("home_chart", "spb")
+			} else if (chart_type_wgt.checked) {
+				plot_data[0].color = 5
+				localStorage.setItem("home_chart", "wgt")
+			} else {
+				plot_data[0].color = 4
+				localStorage.setItem("home_chart", "txs")
+			}
+			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
+			localStorage.setItem("home_chart_ord", chart_type_ord.checked)
+
+			//console.log(_cs)
+			cs = new Array()
+			for (var i=0; i<_cs.length; i++) {
+				if (_cs[i].TxCnt==1) {
+					//plot_data[1].data.push([_cs[i].Timestamp*1000, 100])
+					var tt = _cs[i].Timestamp*1000
+					plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: "#f0f0d0" })
+					continue // ignore blocks with a single conbase tx
+				}
+				cs.push(_cs[i])
+				if (chart_type_avg.checked) {
+					var sum=0, avgcnt=0, sumord=0;
+					for (var ii=i; avgcnt<blks_average && ii>=0; ii--) {
+						if (_cs[i].TxCnt==1) {
+							continue
+						}
+						avgcnt++;
+						if (chart_type_siz.checked) {
+							sum += _cs[ii].Size/1000.0
+							sumord += _cs[ii].OrdSize/1000.0
+						} else if (chart_type_spb.checked) {
+							sum += _cs[ii].FeeSPB
+						} else if (chart_type_wgt.checked) {
+							sum += _cs[ii].Weight
+							sumord += _cs[ii].OrdWeight
+						} else {
+							sum += _cs[ii].TxCnt
+							sumord += _cs[ii].OrdCnt
+						}
+					}
+					if (avgcnt>0) {
+						if (chart_type_spb.checked || !chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, sum/avgcnt])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*sumord/sum])
+						}
+					}
+				} else {
+					if (chart_type_siz.checked) {
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdSize/_cs[i].Size])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Size/1000.0])
+						}
+					} else if (chart_type_spb.checked) {
+						plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].FeeSPB])
+					} else if (chart_type_wgt.checked) {
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdWeight/_cs[i].Weight])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].Weight])
+						}
+					} else {
+						if (chart_type_ord.checked) {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, 100*_cs[i].OrdCnt/_cs[i].TxCnt])
+						} else {
+							plot_data[0].data.push([_cs[i].Timestamp*1000, _cs[i].TxCnt])
+						}
+					}
+				}
+			}
+
+			plot_options.yaxis.max = chart_type_ord.checked ? 100 : null
+			$("#chart").bind("plothover", handlehover)
+			$("#chart").bind("plotclick", handleclick)
+			$.plot($("#chart"), plot_data, plot_options)
+
+		} catch(e) {
+			console.log(e)
+		}
+	}
+	aj.open("GET","blocks.json",true)
+	aj.send(null)
+}
+
+
+var last_block_height = -1
+
+function shwcfg() {
+	showcfg.style.display='none'
+	formcfg.style.display='block'
+	window.scrollTo(0,document.body.scrollHeight)
+}
+
+blno.addEventListener("lastblock", function(e) {
+	var stat = e.block
+	if (last_block_height != stat.Height) {
+		last_block_hash.innerText = stat.Hash
+		last_block_timestamp.innerText = tim2str(stat.Timestamp)
+		last_block_height = stat.Height
+		last_block_difficulty.innerText = bignum(stat.Diff)
+		last_block_median.innerText = tim2str(stat.Median)
+		last_block_version.innerText = '0x' + leftpad(stat.Version.toString(16),  '0',  8)
+		draw_chart()
+	}
+	var ago = stat.Time_now - stat.Received
+	if (ago<120) {
+		last_block_received.innerText = ago + ' sec ago'
+	} else if (ago<2*3600) {
+		last_block_received.innerText = (ago/60.0).toFixed(1) + ' min ago'
+	}
+})
+
+</script>
+
+<script>
+function refreshsysinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshsysinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var si = JSON.parse(aj.responseText)
+			si_known_peers.innerText = si.Known_peers
+			si_total_mem.innerText = ((si.Heap_size+si.Qdb_extramem)/0x100000).toFixed(0)
+			el_free_mem.title = (si.Heap_sysmem/0x100000).toFixed(0)
+			si_heap_size.innerText = (si.Heap_size/0x100000).toFixed(0)
+			si_qdb_extramem.innerText = (si.Qdb_extramem/0x100000).toFixed(0)
+			si_net_block_qsize.innerText = si.Net_block_qsize
+			si_net_tx_qsize.innerText = si.Net_tx_qsize
+			si_ecdsa_verify_cnt.innerText = si.Ecdsa_verify_cnt
+			si_avg_block_size.innerText = (si.Average_block_size/1000).toFixed(1) + ' kB'
+			si_avg_fee_spb.innerText = si.Average_fee.toFixed(1)
+			if (si.Blocks_on_disk>0) {
+				si_blocks_cached.innerText = si.Blocks_on_disk
+				si_blocks_cached_label.innerText = "on disk"
+			} else {
+				si_blocks_cached.innerText = si.Blocks_cached
+				si_blocks_cached_label.innerText = "cached"
+			}
+			si_blocks_to_get.innerText = si.BlocksToGet
+			si_node_uptime.innerText = period2str(si.Node_uptime)
+			si_last_hdr_height.innerText = si.LastHeaderHeight
+			si_network_hashrate.innerText = bignum(si.NetworkHashRate) +'H/s'
+			si_saving.style.display = si.SavingUTXO ? "block" : "none"
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshsysinfo, 1000)
+	}
+	aj.open("GET","system.json",true)
+	aj.send(null)
+}
+refreshsysinfo()
+</script>
+
+<script>
+function refreshbwinfo() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshbwinfo, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var bw = JSON.parse(aj.responseText)
+			bw_open_conns_total.innerText = bw.Open_conns_total
+			bw_open_conns_out.innerText = bw.Open_conns_out
+			bw_open_conns_in.innerText = bw.Open_conns_in
+			bw_dl_speed_now.innerText = bw.Dl_speed_now >> 10
+			bw_dl_speed_max.innerText = bw.Dl_speed_max >> 10
+			bw_dl_total.innerText = bignum(bw.Dl_total)+'B'
+			bw_ul_speed_now.innerText = bw.Ul_speed_now >> 10
+			bw_ul_speed_max.innerText = bw.Ul_speed_max >> 10
+			bw_ul_total.innerText = bignum(bw.Ul_total)+'B'
+
+			// external IP
+			if (bw.ExternalIP.length==0) {
+				external_ip0.innerText = '?'
+				external_ip0.title = ''
+				external_others.innerHTML = ''
+			} else {
+				var ht=''
+				if (bw.ExternalIP.length>1) {
+					for (var i=1; i<bw.ExternalIP.length; i++) {
+						if (i>1) ht += ', '
+						ht += '<span title="'+bw.ExternalIP[i].Count+' times, last at '+tim2str(bw.ExternalIP[i].Timestamp)+
+						'">' + bw.ExternalIP[i].Ip + '</span>'
+						if (i==2 && bw.ExternalIP.length>=3) {
+							ht+= ', <span title="' + (bw.ExternalIP.length-3) + ' more">...</span>'
+							break
+						}
+					}
+				}
+				external_ip0.innerText = bw.ExternalIP[0].Ip
+				external_ip0.title = bw.ExternalIP[0].Count+' times, last at '+tim2str(bw.ExternalIP[0].Timestamp)
+				external_others.innerHTML = ht
+			}
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshbwinfo, 1000)
+	}
+	aj.open("GET","bwidth.json",true)
+	aj.send(null)
+}
+refreshbwinfo()
+
+
+function refreshtxstat() {
+	var aj = ajax()
+	aj.onerror=function() {
+		setTimeout(refreshtxstat, 5000)
+	}
+	aj.onload=function() {
+		try {
+			var ts = JSON.parse(aj.responseText)
+			ts_t2s_size.innerText = bignum(ts.t2s_size)+'B'
+			ts_t2s_size.title = ts.t2s_cnt + ' txs accepted'
+			outspent.innerText = ts.spent_outs_cnt
+			ts_tre_size.innerText = bignum(ts.tre_size)+'B'
+			ts_tre_size.title = ts.tre_cnt + ' txs rejected'
+			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(1)
+		} catch(e) {
+			console.log(e)
+		}
+		setTimeout(refreshtxstat, 1000)
+	}
+	aj.open("GET","txstat.json",true)
+	aj.send(null)
+}
+refreshtxstat()
+
+function export_settings() {
+	var jsonstring = JSON.stringify(localStorage)
+	var a = document.createElement("a")
+	var file = new Blob([jsonstring], {type: 'application/json'})
+	a.href = URL.createObjectURL(file)
+	a.download = "gocoin-config.json"
+	a.click()
+}
+
+function import_file_click() {
+	import_file.click()
+}
+
+function import_file_selected(e) {
+	var f = import_file.files[0]
+	var reader = new FileReader()
+	reader.onload = function(e) {
+		//console.log('aac', e, e.target.result)
+		try {
+			var sets = JSON.parse(e.target.result)
+			var wlts = ''
+			localStorage.clear()
+			for (var nam in sets) {
+				localStorage.setItem(nam, sets[nam])
+			}
+			location.reload()
+		} catch (ex) {
+			console.log(ex)
+		}
+	};
+	reader.readAsText(f)
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	window.onkeyup = function (event) {
+		if(event.keyCode == 27)  closepopup()
+	}
+	import_file.addEventListener('change', import_file_selected, false);
+})
+
+</script>
