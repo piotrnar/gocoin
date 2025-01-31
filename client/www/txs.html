@@ -63,7 +63,7 @@ X for
 
 <tr>
 <td valign="top">
-	<table>
+	<table border="0">
 	<colgroup>
 		<col width="200">
 		<col width="100">
@@ -74,7 +74,6 @@ X for
 			<input type="button" id="ts_t2s_size" onclick="show_mempool_fees()"
 				title="Click to see mempool fee statistics"
 				style="width:100%">
-			<td align="right">
 		<tr><td>UTXOs spent in memory:
 			<td><b id="outspent"></b>
 			<td align="right" nowrap="nowrap" style="font-size:70%">avg. <b id="avgoutspertx"></b> / tx
@@ -90,21 +89,17 @@ X for
 			<td colspan="2"><b id="fees_from_first_block">...</b> BTC from 1st block
 	</table>
 <td valign="top">
-	<table>
+	<table border="0">
 		<col width="150">
-		<col width="100">
 		<col width="*">
 		<tr>
 			<td>Memory pool:
-			<td><b><!--MEM_POOL_ENABLED--></b>
-			<td><span id="el_txp_switch" style="display:none">[<a href="javascript:config('txponoff')">Switch ON/OFF</a>]</span>
+			<td><img id="switch_txp_pool" src="static/switch-off.png" height="32" valign="bottom">
 		<tr>
-			<td>Relay transactions:
-			<td><b><!--TX_ROUTE_ENABLED--></b>
-			<td><span id="el_txr_switch" style="display:none">[<a href="javascript:config('txronoff')">Switch ON/OFF</a>]</span>
-		<tr><td colspan="3">&nbsp;
+			<td>Relaying transactions:
+			<td><img id="switch_txr_pool" src="static/switch-off.png" height="32" valign="bottom">
 		<tr>
-			<td colspan="3" bgcolor="#f0fff0" style="border:1px solid black">
+			<td colspan="2" bgcolor="#f0fff0" style="border:1px solid black">
 				<b>Upload Transaction File:</b><br>
 				<br>
 				<form id="theform" method="post" enctype="multipart/form-data" onchange="theform.submit()">
@@ -195,10 +190,6 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 		<th onclick="sorttab('txw4i', 4)" style="cursor:pointer" width="60" align="right">Age
 </table>
 <script>
-if (!server_mode) {
-	el_txp_switch.style.display='inline'
-	el_txr_switch.style.display='inline'
-}
 
 function sortclick(type) {
 	var os = mp_show_sort.options
@@ -215,6 +206,50 @@ function sortclick(type) {
 	}
 	show_txs2s('')
 }
+
+
+function enable_pool_switching(el, enable) {
+	if (enable) {
+		el.addEventListener('click', pool_on_off_click)
+		el.style.cursor = 'hand'
+		el.title = "Switch ON/OFF"
+	} else {
+		el.removeEventListener('click', pool_on_off_click)
+		el.style.cursor = 'auto'
+		el.title = "Switching not possible"
+	}
+}
+enable_pool_switching(switch_txp_pool, !server_mode)
+enable_pool_switching(switch_txr_pool, !server_mode)
+
+function set_pool_switch_icon(el, on) {
+	el.src = "static/switch-" + (on ? "on" : "off") + ".png"
+}
+
+function pool_on_off_click(e) {
+	var cmd, el = e.srcElement
+	if (el.id == "switch_txp_pool") {
+		cmd = 'txponoff'
+	} else if (el.id == "switch_txr_pool") {
+		cmd = 'txronoff'
+	} else {
+		return
+	}
+
+	var aj = ajax()
+	aj.onerror=function() {
+		alert("Error contacting the server")
+	}
+	aj.onload=function() {
+		set_pool_switch_icon(el, aj.responseText==='true')
+		enable_pool_switching(el, true)
+	}
+	enable_pool_switching(el, false)
+	aj.open("GET",'cfg?'+cmd+'&sid='+sid, true);
+	aj.send(null);
+}
+
+
 
 function sorter(a,b) {
 	return a.val<b.val
@@ -930,6 +965,9 @@ function refreshtxstat() {
 			ts_ptr1_cnt.innerText = ts.ptr1_cnt
 			ts_ptr2_cnt.innerText = ts.ptr2_cnt
 			min_spb.innerText = (ts.min_fee_per_kb/1000.0).toFixed(3)
+
+			set_pool_switch_icon(switch_txp_pool, ts.tx_pool_on)
+			set_pool_switch_icon(switch_txr_pool, ts.tx_routing_on)
 		} catch(e) {
 			console.log(e)
 		}
