@@ -50,7 +50,7 @@ func ipchecker(r *http.Request) bool {
 }
 
 func load_template(fn string) string {
-	dat, er := ioutil.ReadFile("www/templates/" + fn)
+	dat, er := ioutil.ReadFile("www/" + fn)
 	if er != nil {
 		return er.Error() + "\n"
 	}
@@ -64,7 +64,7 @@ func p_webui(w http.ResponseWriter, r *http.Request) {
 
 	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
 	if len(pth) == 2 {
-		dat, _ := ioutil.ReadFile("www/resources/" + pth[1])
+		dat, _ := ioutil.ReadFile("www/webui/" + pth[1])
 		if len(dat) > 0 {
 			switch filepath.Ext(r.URL.Path) {
 			case ".js":
