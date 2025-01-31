@@ -584,7 +584,7 @@ function get_auth_key() {
 		pub_auth_key["text2copy"] = pub_auth_key.innerText
 		pub_auth_key.addEventListener("click", copyonclick)
 	}
-	aj.open("GET","cfg?getauthkey&sid="+sid,true)
+	aj.open("GET","authkey.txt",true)
 	aj.send(null)
 
 }

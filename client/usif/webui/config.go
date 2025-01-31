@@ -136,11 +136,6 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(r.Form["getauthkey"]) > 0 {
-		w.Write([]byte(common.PublicKey))
-		return
-	}
-
 	// All the functions below modify the config file
 	common.LockCfg()
 	defer common.UnlockCfg()

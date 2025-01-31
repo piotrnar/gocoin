@@ -167,6 +167,14 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func p_authkey(w http.ResponseWriter, r *http.Request) {
+	if !ipchecker(r) {
+		return
+	}
+	w.Header()["Content-Type"] = []string{"text/plain"}
+	w.Write([]byte(common.PublicKey))
+}
+
 func ServerThread() {
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
@@ -201,6 +209,7 @@ func ServerThread() {
 	http.HandleFunc("/walsta.json", json_wallet_status)
 
 	http.HandleFunc("/mempool_fees.txt", txt_mempool_fees)
+	http.HandleFunc("/authkey.txt", p_authkey)
 
 	go start_ssl_server()
 	http.ListenAndServe(common.CFG.WebUI.Interface, nil)
