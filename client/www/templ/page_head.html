@@ -1,6 +1,17 @@
 <html><head><title>{PAGE_TITLE} {VERSION}{TESTNET}</title>
 <script type="text/javascript" src="static/gocoin.js"></script>
-<link rel="stylesheet" href="static/gocoin.css" type="text/css">
+<script>
+	var dark_mode = localStorage.getItem("dark_mode")==="true"
+	if (dark_mode) {
+		document.write(`<link rel="stylesheet" href="static/gocoin_dark.css" type="text/css">`)
+	} else {
+		document.write(`<link rel="stylesheet" href="static/gocoin_light.css" type="text/css">`)
+	}
+function change_theme() {
+	localStorage.setItem("dark_mode", !dark_mode)
+	location.reload()
+}
+</script>
 <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
 <script>
 /*_SESSION_ID_*/
@@ -54,6 +65,13 @@ function beep_clicked() {
 		</td>
 		<td align="center" align="center">
 			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
+<script>
+	if (dark_mode) {
+		document.write(`<img src="static/light.png" height="16" class="hand" onclick="change_theme()" title="Switch theme">`)
+	} else {
+		document.write(`<img src="static/dark.png" height="16" class="hand" onclick="change_theme()" valign="top" title="Switch theme">`)
+	}
+</script>
 		</td>
 		<td align="center">
 			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
