@@ -178,8 +178,12 @@ function refreshblocks() {
 				td.innerText = tim2str(cs[i].Timestamp, true)
 
 				td = row.insertCell(-1)
-				td.className = 'mono block_hash nw'
+				td.className = 'mono block_hash nw hand'
 				td.innerText = cs[i].Hash
+				td.title = "Click to Copy"
+				td["text2copy"] = td.innerText
+				td.addEventListener("click", copyonclick)
+
 				//var h = cs[i].Hash
 				if (cs[i].HaveFeeStats) {
 					var img = document.createElement('img')
