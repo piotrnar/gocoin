@@ -162,11 +162,11 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 <form method="post" action="cfg">
 <tr><td colspan="2"align="left">See <a href="http://gocoin.pl/gocoin_manual_client_config.html" target="_blank">help page</a> for the format of the configuration data.
 <tr><td colspan="2">
-	<textarea name="configjson" id="configjson" style="width:100%" rows="26">{CONFIG_FILE}</textarea>
+	<textarea name="configjson" id="configjson" style="width:100%" rows="26"></textarea>
 <tr><td align="center">
 	<i>Please note that some config values require a restart in order to be applied.
 	<td align="right">
-	<input type="button" value="Cancel" onclick="location.reload()">
+	<input type="button" value="Cancel" onclick="cfg_cancel()">
 	<input type="submit" name="apply" value="Apply">
 	<input type="submit" name="save" value="Apply & Save">
 </form>
@@ -372,9 +372,24 @@ function draw_chart() {
 var last_block_height = -1
 
 function shwcfg() {
-	showcfg.style.display='none'
-	formcfg.style.display='block'
-	window.scrollTo(0,document.body.scrollHeight)
+	var aj = ajax()
+	aj.onerror=function() {
+		alert('Error communicating with the server')
+	}
+	aj.onload=function() {
+		configjson.value=aj.responseText
+		showcfg.style.display='none'
+		formcfg.style.display='block'
+		window.scrollTo(0,document.body.scrollHeight)
+	}
+	aj.open("GET","cfg?getconfig&sid="+sid,true)
+	aj.send(null)
+}
+
+function cfg_cancel() {
+	showcfg.style.display='table-row'
+	formcfg.style.display='none'
+	window.scrollTo(0,0)
 }
 
 blno.addEventListener("lastblock", function(e) {

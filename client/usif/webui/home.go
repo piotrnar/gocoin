@@ -34,13 +34,6 @@ func p_home(w http.ResponseWriter, r *http.Request) {
 
 	s := load_template("home.html")
 
-	if !common.CFG.WebUI.ServerMode {
-		common.LockCfg()
-		dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
-		common.UnlockCfg()
-		s = strings.Replace(s, "{CONFIG_FILE}", strings.Replace(string(dat), ",\"", ", \"", -1), 1)
-	}
-
 	fees_chart := load_template("fees_chart.html")
 	s = strings.Replace(s, "<!-- include fees_chart.html -->", fees_chart, 1)
 

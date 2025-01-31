@@ -117,6 +117,16 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(r.Form["getconfig"]) > 0 {
+		if !common.CFG.WebUI.ServerMode {
+			common.LockCfg()
+			dat, _ := json.MarshalIndent(&common.CFG, "", "    ")
+			common.UnlockCfg()
+			w.Write(dat)
+		}
+		return
+	}
+
 	// All the functions below change modify the config file
 	common.LockCfg()
 	defer common.UnlockCfg()
