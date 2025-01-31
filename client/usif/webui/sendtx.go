@@ -215,9 +215,14 @@ func dl_payment(w http.ResponseWriter, r *http.Request) {
 		err = "Bad request"
 	}
 error:
-	s := load_template("send_error.html")
+	generate_error_page(w, r, err)
+}
+
+func generate_error_page(w http.ResponseWriter, r *http.Request, err string) {
+	s := load_template("error.html")
 	write_html_head(w, r)
 	s = strings.Replace(s, "<!--ERROR_MSG-->", err, 1)
+	s = strings.Replace(s, "<!--PREV_PAGE-->", r.URL.Path, 2)
 	w.Write([]byte(s))
 	write_html_tail(w)
 }

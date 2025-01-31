@@ -10,8 +10,8 @@ td.agent {
 	white-space: nowrap
 }
 </style>
-<script type="text/javascript" src="webui/jquery.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<script type="text/javascript" src="static/jquery.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.min.js"></script>
 
 <div style="width:100%;line-height:24px;white-space:nowrap;">
 
@@ -25,12 +25,12 @@ td.agent {
 Address: <b id="external_ip"></b>
 &nbsp;&bull;&nbsp;
 Connections:
-<b id="out_connections"></b> <img title="outgoing" src="webui/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="webui/incoming.png">
+<b id="out_connections"></b> <img title="outgoing" src="static/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="static/incoming.png">
 <input type="text" id="autocopy" style="display:none;font-size:1px;float:right;width:10px;height:4px">
 &nbsp;&bull;&nbsp;
 Listening for incoming connections:
-<img id="listen_tcp_info" src="webui/switch-off.png" height="24" valign="bottom">
-<img id="tcp_server_running" src="webui/server_running.png" height="16" valign="middle">
+<img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom">
+<img id="tcp_server_running" src="static/server_running.png" height="16" valign="middle">
 <br>
 </div>
 
@@ -88,11 +88,11 @@ Resolution:
 </span>
 &nbsp;&bull;&nbsp;
 <span class="hand" onclick="hide_incoming_cb.click()">
-	<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/incoming.png">
+	<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="static/incoming.png">
 </span>
 &nbsp;
 <span class="hand" onclick="hide_outgoing_cb.click()">
-	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="webui/outgoing.png">
+	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="static/outgoing.png">
 </span>
 </td>
 <td align="right">
@@ -121,7 +121,7 @@ Resolution:
 	<th >Txs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
-	<th class="r"><img title="Refresh table" src="webui/refresh.png" style="cursor:hand" onclick="refresh_conns()">
+	<th class="r"><img title="Refresh table" src="static/refresh.png" style="cursor:hand" onclick="refresh_conns()">
 </tr>
 </table>
 
@@ -144,8 +144,8 @@ Node Version Legend:<br>
 <td>
 <a name="rawdiv"></a>
 <div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
-<img title="Refresh peer info" src="webui/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
-<img title="Hide peer info" src="webui/close.png" style="position:absolute;right:5px;top:5px;z-index:2000;cursor:hand" onclick="hide_peer_info()">
+<img title="Refresh peer info" src="static/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
+<img title="Hide peer info" src="static/close.png" style="position:absolute;right:5px;top:5px;z-index:2000;cursor:hand" onclick="hide_peer_info()">
 <pre id="rawdiv" class="mono" style="left:0px;top: 0px;z-index:1000;width:100%;"></pre>
 </div>
 </td></tr></table>
@@ -174,11 +174,11 @@ function enable_server_switching(enable) {
 	if (enable) {
 		listen_tcp_info.addEventListener('click', server_on_off)
 		listen_tcp_info.style.cursor = 'hand'
-		listen_tcp_info.title = "Switch ON/OFF" 
+		listen_tcp_info.title = "Switch ON/OFF"
 	} else {
 		listen_tcp_info.removeEventListener('click', server_on_off)
 		listen_tcp_info.style.cursor = 'auto'
-		listen_tcp_info.title = "Switching not possible" 
+		listen_tcp_info.title = "Switching not possible"
 	}
 }
 
@@ -495,9 +495,9 @@ function refreshconnections(force) {
 				// direction
 				td = row.insertCell(-1)
 				if (cs[i].Incomming) {
-					td.innerHTML = "<img src=\"webui/incoming.png\">"
+					td.innerHTML = "<img src=\"static/incoming.png\">"
 				} else {
-					td.innerHTML = "<img src=\"webui/outgoing.png\">"
+					td.innerHTML = "<img src=\"static/outgoing.png\">"
 				}
 
 				// ping
@@ -610,11 +610,11 @@ function refreshconnections(force) {
 				var peer_ip = cs[i].PeerIp.split(':')[0]
 				td = row.insertCell(-1)
 				td.className = "r nw"
-				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="webui/del.png" onclick="net_drop('+id+')"> ' +
-					'<img title="Connection Details" class="hand" src="webui/info.png" onclick="show_info('+id+')"> '
+				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="static/del.png" onclick="net_drop('+id+')"> ' +
+					'<img title="Connection Details" class="hand" src="static/info.png" onclick="show_info('+id+')"> '
 				if ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) {
 					var img = document.createElement('img');
-					img.src = "webui/request.png"
+					img.src = "static/request.png"
 					img.title = "Request missing transactions"
 					img.classList.add('hand')
 					img["connid"] = id
@@ -720,7 +720,7 @@ function draw_chart() {
 }
 
 function set_server_switch_icon(on) {
-	listen_tcp_info.src = "webui/switch-" + (on ? "on" : "off") + ".png"
+	listen_tcp_info.src = "static/switch-" + (on ? "on" : "off") + ".png"
 }
 
 function refreshbwinfo() {
@@ -752,7 +752,7 @@ function refreshbwinfo() {
 
 			if (bw.ExternalIP.length > 0)
 				external_ip.innerText = bw.ExternalIP[0].Ip + ":" + bw.DefaultTCPPort
-			else 
+			else
 				external_ip.innerText = '???'
 
 

@@ -21,11 +21,7 @@ import (
 	"github.com/piotrnar/gocoin/lib/script"
 )
 
-func p_txs(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
+func txs_page_modify(r *http.Request, page *[]byte) {
 	var txloadresult string
 	var wg sync.WaitGroup
 	var tx2in []byte
@@ -50,30 +46,12 @@ func p_txs(w http.ResponseWriter, r *http.Request) {
 		usif.UiChannel <- req
 	}
 
-	s := load_template("txs.html")
-
 	wg.Wait()
 	if txloadresult != "" {
 		ld := load_template("txs_load.html")
 		ld = strings.Replace(ld, "{TX_RAW_DATA}", txloadresult, 1)
-		s = strings.Replace(s, "<!--TX_LOAD-->", ld, 1)
+		*page = []byte(strings.Replace(string(*page), "<!--TX_LOAD-->", ld, 1))
 	}
-
-	if common.CFG.TXPool.Enabled {
-		s = strings.Replace(s, "<!--MEM_POOL_ENABLED-->", "Enabled", 1)
-	} else {
-		s = strings.Replace(s, "<!--MEM_POOL_ENABLED-->", "Disabled", 1)
-	}
-
-	if common.CFG.TXRoute.Enabled {
-		s = strings.Replace(s, "<!--TX_ROUTE_ENABLED-->", "Enabled", 1)
-	} else {
-		s = strings.Replace(s, "<!--TX_ROUTE_ENABLED-->", "Disabled", 1)
-	}
-
-	write_html_head(w, r)
-	w.Write([]byte(s))
-	write_html_tail(w)
 }
 
 func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {

@@ -50,21 +50,21 @@ func ipchecker(r *http.Request) bool {
 }
 
 func load_template(fn string) string {
-	dat, er := os.ReadFile("www/" + fn)
+	dat, er := os.ReadFile("www/templ/" + fn)
 	if er != nil {
 		return er.Error() + "\n"
 	}
 	return string(dat)
 }
 
-func p_webui(w http.ResponseWriter, r *http.Request) {
+func p_static(w http.ResponseWriter, r *http.Request) {
 	if !ipchecker(r) {
 		return
 	}
 
 	pth := strings.SplitN(r.URL.Path[1:], "/", 3)
 	if len(pth) == 2 {
-		dat, _ := os.ReadFile("www/webui/" + pth[1])
+		dat, _ := os.ReadFile("www/static/" + pth[1])
 		if len(dat) > 0 {
 			switch filepath.Ext(r.URL.Path) {
 			case ".js":
@@ -143,28 +143,6 @@ func write_html_tail(w http.ResponseWriter) {
 	w.Write([]byte(s))
 }
 
-func p_help(w http.ResponseWriter, r *http.Request) {
-	if !ipchecker(r) {
-		return
-	}
-
-	fname := "help.html"
-	if len(r.Form["topic"]) > 0 && len(r.Form["topic"][0]) == 4 {
-		for i := 0; i < 4; i++ {
-			if r.Form["topic"][0][i] < 'a' || r.Form["topic"][0][i] > 'z' {
-				goto broken_topic // we only accept 4 locase characters
-			}
-		}
-		fname = "help_" + r.Form["topic"][0] + ".html"
-	}
-broken_topic:
-
-	page := load_template(fname)
-	write_html_head(w, r)
-	w.Write([]byte(page))
-	write_html_tail(w)
-}
-
 func p_wallet_is_off(w http.ResponseWriter, r *http.Request) {
 	s := load_template("wallet_off.html")
 	write_html_head(w, r)
@@ -193,6 +171,9 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if dat, er := os.ReadFile("www/" + page + ".html"); er == nil {
+		if page == "txs" {
+			txs_page_modify(r, &dat)
+		}
 		write_html_head(w, r)
 		w.Write(dat)
 		write_html_tail(w)
@@ -206,12 +187,10 @@ func p_general(w http.ResponseWriter, r *http.Request) {
 func ServerThread() {
 	fmt.Println("Starting WebUI at", common.CFG.WebUI.Interface)
 
-	http.HandleFunc("/webui/", p_webui)
+	http.HandleFunc("/static/", p_static)
 
 	http.HandleFunc("/", p_general)
-	http.HandleFunc("/txs", p_txs)
 	http.HandleFunc("/cfg", p_cfg)
-	http.HandleFunc("/help", p_help)
 
 	http.HandleFunc("/balance.json", json_balance)
 	http.HandleFunc("/payment.zip", dl_payment)

@@ -1,9 +1,9 @@
-<script type="text/javascript" src="webui/crypto.js"></script>
-<script type="text/javascript" src="webui/bech32.js"></script>
+<script type="text/javascript" src="static/crypto.js"></script>
+<script type="text/javascript" src="static/bech32.js"></script>
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td><h3><b class="mono" id="disp_txid"></b></h3>
-<td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup_x(false)">
+<td align="right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup_x(false)">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
 </div><div id="fade" class="black_overlay"></div>
@@ -283,7 +283,7 @@ function fetch_wallet_balance(name) {
 				td.className = 'hand'
 				if (typeof(outs[i].msg)=='string' && outs[i].msg != '') {
 					var img = document.createElement("img")
-					img.src = 'webui/message.png'
+					img.src = "static/message.png"
 					img.title = outs[i].msg.substr(0,2)=='j0' ? ('*'+outs[i].msg.substr(2)) : outs[i].msg
 					td.appendChild(img)
 				}
@@ -755,7 +755,7 @@ Wallet: <select id="qswal" onchange="quick_switch_wallet()"></select>
 -
 total balance of <b id="total_btc"></b> BTC in <b id="outs_cnt"></b> outputs.
 <i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
-<img src="webui/warning.png" style="vertical-align:middle">
+<img src="static/warning.png" style="vertical-align:middle">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 <br><br>
 <table id="unspent" width="100%">

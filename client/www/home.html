@@ -1,8 +1,8 @@
-<script type="text/javascript" src="webui/jquery.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.time.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
-<script type="text/javascript" src="webui/feeschart.js"></script>
+<script type="text/javascript" src="static/jquery.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.time.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.crosshair.js"></script>
+<script type="text/javascript" src="static/feeschart.js"></script>
 <table width="100%" border="0">
 <colgroup>
 	<col width="50%">
@@ -12,9 +12,9 @@
 <tr><td colspan="2" style="padding:0px">
 <div align="right" style="float:right;font-size:12px;padding-top:0px">
 WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
-<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="webui/backup.png"> Export</a>
+<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="static/backup.png"> Export</a>
 &nbsp;
-<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="webui/restore.png"> Import</a>
+<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="static/restore.png"> Import</a>
 </div>
 <h2 style="margin-top:10px;margin-bottom:5px">Recent Blocks</h2>
 
@@ -94,8 +94,8 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 	</colgroup>
 	<tr><td nowrap="nowrap">Connections:
 		<td align="right"><b id="bw_open_conns_total"></b>
-		<td align="right" class="nw"><img title="outgoing" src="webui/outgoing.png"> <b id="bw_open_conns_out"></b>
-		<td align="right" class="nw"><img title="incoming" src="webui/incoming.png"> <b id="bw_open_conns_in"></b>
+		<td align="right" class="nw"><img title="outgoing" src="static/outgoing.png"> <b id="bw_open_conns_out"></b>
+		<td align="right" class="nw"><img title="incoming" src="static/incoming.png"> <b id="bw_open_conns_in"></b>
 	<tr><td>Downloading:
 		<td align="right" class="nw"><b id="bw_dl_speed_now"></b> KB/s
 		<td align="right" class="nw"><b id="bw_dl_speed_max"></b> KB/s max
@@ -137,7 +137,7 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 		&nbsp;<b id="si_net_block_qsize"></b> blocks,
 		&nbsp;<b id="si_blocks_cached"></b> <span id="si_blocks_cached_label"></span>,
 		&nbsp;<b id="si_blocks_to_get"></b> to get
-		<img id="si_saving" src="webui/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
+		<img id="si_saving" src="static/saving.png" style="float:right;display:none" title="Saving UTXO.db in progress">
 	</tr>
 	<tr id="showcfg" style="display:none">
 
@@ -573,7 +573,7 @@ function get_auth_key() {
 	}
 	aj.open("GET","cfg?getauthkey&sid="+sid,true)
 	aj.send(null)
-	
+
 }
 get_auth_key()
 

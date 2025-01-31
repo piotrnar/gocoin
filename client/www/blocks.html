@@ -1,6 +1,6 @@
-<script type="text/javascript" src="webui/jquery.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.crosshair.js"></script>
+<script type="text/javascript" src="static/jquery.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.crosshair.js"></script>
 <style>
 .stat0 {
 }
@@ -14,7 +14,7 @@ td.bordr {
 	border-right: 1px solid;
 }
 </style>
-<script type="text/javascript" src="webui/feeschart.js"></script>
+<script type="text/javascript" src="static/feeschart.js"></script>
 
 <div style="text-align:right;margin-bottom:8px;">
 <span class="hand" onclick="stats_type_min.click()">
@@ -183,12 +183,12 @@ function refreshblocks() {
 				//var h = cs[i].Hash
 				if (cs[i].HaveFeeStats) {
 					var img = document.createElement('img')
-					img.src = 'webui/stats.png'
+					img.src = 'static/stats.png'
 					img.className = 'hand'
 					img.style.margin = '0px 0px 0px 10px'
 					td.appendChild(img)
 					onc_stat(img, cs[i].Height, cs[i].Size, cs[i].Miner.substr(0,12))
-					//h += '<img src="webui/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
+					//h += '<img src="static/stats.png" style="float:right" onclick="feestats(\'' + h + '\')">'
 				}
 
 				td = row.insertCell(-1)

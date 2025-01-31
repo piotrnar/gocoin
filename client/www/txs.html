@@ -1,5 +1,5 @@
-<script type="text/javascript" src="webui/jquery.min.js"></script>
-<script type="text/javascript" src="webui/jquery.flot.min.js"></script>
+<script type="text/javascript" src="static/jquery.min.js"></script>
+<script type="text/javascript" src="static/jquery.flot.min.js"></script>
 <style>
 table.txs {
 	font-size:75%
@@ -23,7 +23,7 @@ td.txsize {
 <div id="light" class="white_content">
 <table width="100%"><tr>
 <td align="center"><h3><b class="mono" id="disp_txid"></b></h3>
-<td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
+<td align="right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup()">
 </table>
 <pre id="rawdiv" style="background-color:white"></pre>
 <textarea id="txhexdump" style="width:100%" rows="5" readonly onclick="this.select()"></textarea>
@@ -551,11 +551,11 @@ function show_txs2s(extrapar) {
 
 				c=row.insertCell(-1);c.align='right'
 				if (own) {
-                    c.innerHTML = '<img style="cursor:pointer" title="Send this TX to one random peer" onclick="send1tx_click(\''+txid+'\')" src="webui/send_once.png">'
+                    c.innerHTML = '<img style="cursor:pointer" title="Send this TX to one random peer" onclick="send1tx_click(\''+txid+'\')" src="static/send_once.png">'
 					c.innerHTML += '&nbsp;'
-                    c.innerHTML += '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="webui/send.png">'
+                    c.innerHTML += '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="static/send.png">'
 					c.innerHTML += '&nbsp;'
-					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="webui/del.png">'
+					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="static/del.png">'
 				} else {
 					c.innerHTML = xval(txs[i], 'blocked')
 				}
@@ -700,7 +700,7 @@ function add_txid_and_icon(td, txid, decode) {
 	var img = document.createElement("img")
 	img["text2copy"] = txid
 	img.style.verticalAlign = "bottom"
-	img.src = 'webui/copy.png'
+	img.src = "static/copy.png"
 	img.className = "hand"
 	img.title = "Copy TxID to clipboard"
 	img.addEventListener("click", function(e) {

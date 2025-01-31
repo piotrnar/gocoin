@@ -1,13 +1,13 @@
-<script type="text/javascript" src="webui/jquery.min.js"></script>
-<script type="text/javascript" src="webui/qrcode.min.js"></script>
-<script type="text/javascript" src="webui/crypto.js"></script>
-<script type="text/javascript" src="webui/bech32.js"></script>
+<script type="text/javascript" src="static/jquery.min.js"></script>
+<script type="text/javascript" src="static/qrcode.min.js"></script>
+<script type="text/javascript" src="static/crypto.js"></script>
+<script type="text/javascript" src="static/bech32.js"></script>
 <div id="light" class="white_content" style="height:auto;left:20%;width:60%">
 <table width="100%">
-<tr><td align="right"><img title="Close this popup" src="webui/close.png" class="hand" onclick="closepopup()">
+<tr><td align="right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup()">
 <tr><td align="center"><span class="qr_addr_label" id="qr_label"></span>
 <tr><td align="center"><input type="text" class="qr_addr_addr" id="qr_address" onclick="this.select()" readonly="readonly">
-<img src="webui/copy.png" title="Copy to clipboard" class="hand" onclick="qr_address.select();document.execCommand('copy')">
+<img src="static/copy.png" title="Copy to clipboard" class="hand" onclick="qr_address.select();document.execCommand('copy')">
 <tr><td align="center">
 <div id="qrcode"></div>
 <tr><td align="right">&nbsp;
@@ -116,7 +116,7 @@ function remove_comment_from_label(lab) {
 
 function add_address_and_icons(td, adr, lab) {
 	var qrc = document.createElement("img")
-	qrc.src = "webui/qrcode.png"
+	qrc.src = "static/qrcode.png"
 	qrc.className = 'hand'
 	qrc["qr_addr"] = adr
 	qrc["qr_label"] = lab
@@ -128,7 +128,7 @@ function add_address_and_icons(td, adr, lab) {
 	var img = document.createElement("img")
 	img["text2copy"] = adr
 	img.style.verticalAlign = "bottom"
-	img.src = 'webui/copy.png'
+	img.src = "static/copy.png"
 	img.className = "hand"
 	img.title = "Copy to clipboard"
 	img.addEventListener("click", function(e) {
@@ -203,7 +203,7 @@ function fetch_wallet_balance(name) {
 				row["addr_label"] = wallet[i].label
 
 				td = row.insertCell(-1)
-				var adr_string = wallet_addr[i] 
+				var adr_string = wallet_addr[i]
 				var pubkey_mode = valid_pubkey(adr_string);
 				if (pubkey_mode && address_type!=0) {
 					var pkb = hex2array(adr_string)
@@ -282,13 +282,13 @@ function fetch_wallet_balance(name) {
 					if (rec.SegWitNativeCnt>0) {
 						td.innerHTML += ' <span class="segwitaddr native">+' + rec.SegWitNativeCnt + '</span>'
 					}
-					
+
 					if (rec.SegWitTapCnt>0) {
 						td.innerHTML += ' <span class="segwitaddr p2tap">+' + rec.SegWitTapCnt + '</span>'
 					}
 					totouts += rec.OutCnt
 				} else {
-					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="webui/del.png"></a>'
+					td.innerHTML = '<a href="javascript:setunused('+idxx+')"><img src="static/del.png"></a>'
 				}
 
 				totvalin += rec.PendingValue
@@ -589,7 +589,7 @@ function at_click() {
 <hr>
 
 <div id="showwal">
-<h2>Current wallet: <span id="cur_wallet_name"></span> <img title="Loading balance" id="loading_icon" src="webui/loading.gif" style="display:none">
+<h2>Current wallet: <span id="cur_wallet_name"></span> <img title="Loading balance" id="loading_icon" src="static/loading.gif" style="display:none">
 
 <span style="float:right">
 <input type="button" value="Edit" onclick="edit_wallet()">
@@ -603,7 +603,7 @@ Balance: <b id="total_btc"></b> BTC in <b id="unspent_outs"></b> outputs (<a hre
 	<input type="checkbox" id="show_mempol" onchange="show_mempool_clicked()" onclick="event.stopPropagation()"> Show unconfirmed
 </span>
 <i id="wallet_min_warning" style="color:purple;float:right;display:none" title="Modify MinValue in gocoin.conf to change it">
-<img src="webui/warning.png" style="vertical-align:middle">
+<img src="static/warning.png" style="vertical-align:middle">
 Only accounting outputs with at least <b id="min_val_btc"></b> BTC</i>
 <br><br>
 
