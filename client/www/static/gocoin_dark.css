@@ -15,7 +15,7 @@ a:visited {
 }
 
 a:hover {
-	background-color:#405040;
+	color:#ffe0e0;
 }
 
 a.topmenu {
@@ -184,11 +184,11 @@ input[type=button], input[type=submit] {
 	background-color:#444444;
 	color:#d0f0d0;
 	font-weight:bold;
-	border: 2px #222222 solid;
+	border: 2px #777777 solid;
 	padding-left: 10px;
 	padding-right: 10px;
-	padding-top: 6px;
-	padding-bottom: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
 	font-size:12px;
 }
 
@@ -491,4 +491,20 @@ td.minblspb {
 	color:#3131bf;
 	font-family: monospace;
 	text-align: right;
+}
+
+img#dark_light_icon {
+	content:url("light.png");
+}
+
+img#auto_theme_switch_img {
+	content:url("theme-switch-white.png");
+}
+
+img.export_icon {
+	content:url("export-white.png");
+}
+
+img.import_icon {
+	content:url("import-white.png");
 }

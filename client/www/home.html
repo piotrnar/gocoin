@@ -12,12 +12,12 @@
 <tr><td colspan="2" style="padding:0px">
 <div align="right" style="float:right;font-size:14px;padding-top:0px">
 WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
-<a href="javascript:export_settings()" title="Backup settings"><img valign="bottom" src="static/backup.png" height="18"> Export</a>
+<a href="javascript:export_settings()" title="Backup settings"><img valign="bottom" class="export_icon" height="18"> Export</a>
 &nbsp;
-<a href="javascript:import_file_click()" title="Restore settings"><img valign="bottom" src="static/restore.png" height="18"> Import</a>
+<a href="javascript:import_file_click()" title="Restore settings"><img valign="bottom" class="import_icon" height="18"> Import</a>
 &nbsp;&bull;&nbsp;
 <span class="hand" onclick="auto_theme_switch_box.click()" title="Switch light/dark mode automatically">
-<img valign="bottom" title="Restore" src="static/theme-switch-black.jpg" height="18"> Auto
+<img valign="bottom" id="auto_theme_switch_img" title="Restore" src="static/theme-switch-black.jpg" height="18"> Auto
 <input type="checkbox" id="auto_theme_switch_box" onchange="auto_theme_switch()" onclick="event.stopPropagation()">
 </span>
 </div>

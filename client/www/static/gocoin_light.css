@@ -172,11 +172,11 @@ tr.hov:hover {
 input[type=button], input[type=submit] {
 	background-color:#dddddd;
 	font-weight:bold;
-	/*border: 2px #000000 solid;*/
+	border: 2px #000000 solid;
 	padding-left: 10px;
 	padding-right: 10px;
-	padding-top: 3px;
-	padding-bottom: 3px;
+	padding-top: 4px;
+	padding-bottom: 4px;
 	font-size:12px;
 }
 
@@ -446,4 +446,20 @@ td.minblspb {
 	color:#7090e0;
 	font-family: monospace;
 	text-align: right;
+}
+
+img#dark_light_icon {
+	content:url("dark.png");
+}
+
+img#auto_theme_switch_img {
+	content:url("theme-switch-black.png");
+}
+
+img.export_icon {
+	content:url("export-black.png");
+}
+
+img.import_icon {
+	content:url("import-black.png");
 }

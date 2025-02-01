@@ -8,15 +8,10 @@
 		return dark_mode ? "static/gocoin_dark.css" : "static/gocoin_light.css"
 	}
 
-	function dark_light_icon_src() {
-		return dark_mode ? "static/light.png" : "static/dark.png"
-	}
-
 	function change_theme() {
 		dark_mode = !dark_mode
 		localStorage.setItem("dark_mode", dark_mode)
 		loaded_css.href = css_filename()
-		dark_light_icon.src = dark_light_icon_src()
 
 		var e = document.createEvent("Event")
 		e.initEvent("theme_changed", false, false)
@@ -101,8 +96,6 @@ function beep_clicked() {
 
 if (auto_dark_mode) {
 	dark_light_icon.style.display = "none"
-} else {
-	dark_light_icon.src = dark_light_icon_src()
 }
 
 function set_tblock_hash() {
