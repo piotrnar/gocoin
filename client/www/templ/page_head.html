@@ -69,20 +69,23 @@ function beep_clicked() {
 		<colgroup>
 			<col>  <!-- top menu -->
 			<col width="90"> <!-- block height -->
-			<col width="60"> <!-- beep -->
 			<col width="70"> <!-- status icons -->
+			<col width="60"> <!-- beep -->
+			<col width="30"> <!-- theme switcher -->
 			<col width="80"> <!-- PushTX -->
 			<col> <!-- right menu -->
 		</colgroup>
 
 		<td id="topmenu"></td>
 		<td align="center" class="nw bold" id="blno">...</td>
+		<td align="center" align="center">
+			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
+		</td>
 		<td align="center" class"min" title="Beep on each new block" class="hand" onclick="beep_clicked()">
 			<input type="checkbox" id="beep_new_block" class="hand"><img class="music_icon">
 		</td>
-		<td align="center" align="center">
-			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
-			<img id="dark_light_icon" src="" height="16" class="hand" onclick="change_theme()" title="Switch theme">
+		<td align="center" style="padding:0px">
+			<img id="dark_light_icon" src="" class="hand" onclick="change_theme()" title="Switch theme">
 		</td>
 		<td align="center">
 			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>

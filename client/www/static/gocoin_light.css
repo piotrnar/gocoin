@@ -450,6 +450,7 @@ td.minblspb {
 
 img#dark_light_icon {
 	content:url("dark.png");
+	height:20px;
 }
 
 img#auto_theme_switch_img {
