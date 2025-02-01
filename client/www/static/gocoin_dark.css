@@ -15,7 +15,8 @@ a:visited {
 }
 
 a:hover {
-	color:#ffe0e0;
+	/*color:#ffe0e0;*/
+	background-color:#303000;
 }
 
 a.topmenu {
@@ -36,7 +37,7 @@ a.topmenu:hover {
 
 a.menuat {
 	border-radius: 8px;
-	border: 1px solid black;
+	border: 1px solid white;
 }
 
 a.dimenu {
