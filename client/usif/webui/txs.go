@@ -55,6 +55,8 @@ func txs_page_modify(r *http.Request, page *[]byte) {
 }
 
 func output_tx_xml(w http.ResponseWriter, tx *btc.Tx) {
+	tx.AllocVerVars()
+	defer tx.Clean()
 	tx.Spent_outputs = make([]*btc.TxOut, len(tx.TxIn))
 	for i := range tx.TxIn {
 		var po *btc.TxOut
