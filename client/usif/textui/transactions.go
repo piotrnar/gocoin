@@ -1,6 +1,7 @@
 package textui
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -171,6 +172,9 @@ func decode_tx(pars string) {
 			fmt.Println("Blocked:", t2s.Blocked)
 			fmt.Println("Final:", t2s.Final)
 			fmt.Println("Footprint:", t2s.Footprint, t2s.SysSize())
+			wr := new(bytes.Buffer)
+			t2s.SysSizeDbg(wr)
+			fmt.Print(wr.String())
 		}
 		if txr != nil {
 			fmt.Println("Reason:", txr.Reason, txpool.ReasonToString(txr.Reason))
