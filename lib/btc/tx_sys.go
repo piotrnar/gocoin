@@ -72,9 +72,10 @@ func (tx *Tx) SysSize() (size int) {
 
 	if tx.Spent_outputs != nil {
 		size += 8 * len(tx.Spent_outputs)
+		/* we do not include these as they belong to another tx (account for its size)
 		for _, so := range tx.Spent_outputs {
 			size += so.SysSize()
-		}
+		}*/
 	}
 
 	if tx.tapSingleHashes != nil {
