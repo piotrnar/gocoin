@@ -523,3 +523,8 @@ img.qrcode {
 	content:url("qrcode-black.png");
 	height:16px;
 }
+
+img.warning {
+	content:url("warning-black.png");
+	height:20px;
+}

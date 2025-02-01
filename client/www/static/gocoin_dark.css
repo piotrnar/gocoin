@@ -574,3 +574,8 @@ img.qrcode {
 	content:url("qrcode-white.png");
 	height:16px;
 }
+
+img.warning {
+	content:url("warning-white.png");
+	height:20px;
+}
