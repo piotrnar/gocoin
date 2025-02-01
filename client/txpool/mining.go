@@ -36,6 +36,10 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 					println("ERROR: ", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
 					continue
 				}
+				if !rec.MemInputs[idx] {
+					println("ERROR: ", rec.Hash.String(), "meminp", idx, "is already false")
+					println("  ", rec.MemInputCnt, rec.MemInputs, rec.Footprint, rec.SysSize())
+				}
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
 				common.CountSafe("TxMinedMeminOut")
