@@ -27,13 +27,13 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
 					common.CountSafe("TxMinedMeminER1")
-					fmt.Println("WTF?", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
+					println("ERROR: ", po.String(), "just mined in", rec.Hash.String(), "- not marked as mem")
 					continue
 				}
 				idx := rec.IIdx(uidx)
 				if idx < 0 {
 					common.CountSafe("TxMinedMeminER2")
-					fmt.Println("WTF?", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
+					println("ERROR: ", po.String(), " just mined. Was in SpentOutputs & mempool, but DUPA")
 					continue
 				}
 				rec.MemInputs[idx] = false
@@ -49,7 +49,7 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				rec.ResortWithChildren()
 			} else {
 				common.CountSafe("TxMinedMeminERR")
-				fmt.Println("WTF?", po.String(), " in SpentOutputs, but not in mempool")
+				println("ERROR:", po.String(), " in SpentOutputs, but not in mempool")
 			}
 		}
 	}

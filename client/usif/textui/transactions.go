@@ -170,6 +170,7 @@ func decode_tx(pars string) {
 			fmt.Println("Local:", t2s.Local)
 			fmt.Println("Blocked:", t2s.Blocked)
 			fmt.Println("Final:", t2s.Final)
+			fmt.Println("Footprint:", t2s.Footprint, t2s.SysSize())
 		}
 		if txr != nil {
 			fmt.Println("Reason:", txr.Reason, txpool.ReasonToString(txr.Reason))
