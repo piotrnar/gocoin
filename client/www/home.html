@@ -282,18 +282,16 @@ function draw_chart() {
 			}
 
 			if (chart_type_siz.checked) {
-				plot_data[0].color = 3
-				//plot_options.yaxis.max = 1100
-				//plot_options.yaxis.tickFormatter = function(a,b) {return (a/1e3).toFixed(1)+'M'}
+				plot_data[0].color = dark_mode ? '#2D872D' : '#4DA74D'
 				localStorage.setItem("home_chart", "siz")
 			} else if (chart_type_spb.checked) {
-				plot_data[0].color = 2
+				plot_data[0].color = dark_mode ? '#AB2B2B' : '#CB4B4B'
 				localStorage.setItem("home_chart", "spb")
 			} else if (chart_type_wgt.checked) {
-				plot_data[0].color = 5
+				plot_data[0].color = dark_mode ? '#9D7B13' : '#BD9B33'
 				localStorage.setItem("home_chart", "wgt")
 			} else {
-				plot_data[0].color = 4
+				plot_data[0].color = dark_mode ? '#7240CD' : '#9440ED'
 				localStorage.setItem("home_chart", "txs")
 			}
 			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
@@ -305,7 +303,7 @@ function draw_chart() {
 				if (_cs[i].TxCnt==1) {
 					//plot_data[1].data.push([_cs[i].Timestamp*1000, 100])
 					var tt = _cs[i].Timestamp*1000
-					plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: "#f0f0d0" })
+                    plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: dark_mode ? "#808060" : "#f0f0d0" })
 					continue // ignore blocks with a single conbase tx
 				}
 				cs.push(_cs[i])
