@@ -505,3 +505,14 @@ img.request {
 	cursor:pointer;
 	padding-right:2px;
 }
+
+img#tcp_server_running {
+	content:url("server-black.png");
+	height:16px;
+}
+
+img.refresh {
+	content:url("refresh-black.png");
+	height:16px;
+	cursor:pointer;
+}

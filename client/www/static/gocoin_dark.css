@@ -551,3 +551,14 @@ img.request {
 	cursor:pointer;
 	padding-right:2px;
 }
+
+img#tcp_server_running {
+	content:url("server-white.png");
+	height:16px;
+}
+
+img.refresh {
+	content:url("refresh-white.png");
+	height:16px;
+	cursor:pointer;
+}

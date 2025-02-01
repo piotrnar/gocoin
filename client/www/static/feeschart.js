@@ -13,7 +13,7 @@ Avg <b id="stat_avg_fee"></b> SPB
 Min <b id="stat_min_fee"></b> SPB
 &nbsp;&bull;&nbsp;
 Mined by <b id="stat_mined_by"></b>
-<span style="float:right"><img title="Close this popup" src="static/close.png" class="hand" onclick="closepopup()">&nbsp;</span>
+<span style="float:right"><img title="Close this popup" class="del" onclick="closepopup()">&nbsp;</span>
 <br><br>
 </div>
 

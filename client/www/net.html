@@ -70,7 +70,7 @@ Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 </td>
 <td align="right">Listening for incoming connections:</td>
 <td><img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom"></td>
-<td><img id="tcp_server_running" src="static/server_running.png" height="16" valign="middle"></td>
+<td><img id="tcp_server_running" valign="middle"></td>
 </td>
 <td></td>
 <td align="right">
@@ -131,7 +131,7 @@ Resolution:
 	<th >Txs
 	<th class="dbg" title="Bytes waiting to be sent">ToSend
 	<th class="dbg" title="Max bytes waiting to be sent">MaxSend
-	<th class="r"><img title="Refresh table" src="static/refresh.png" style="cursor:hand" onclick="refresh_conns()">
+	<th class="r"><img title="Refresh table" class="refresh" onclick="refresh_conns()">
 </tr>
 </table>
 
@@ -154,8 +154,8 @@ Node Version Legend:<br>
 <td>
 <a name="rawdiv"></a>
 <div id="rawdivon" style="position:relative;width:100%;height:auto;display:none">
-<img title="Refresh peer info" src="static/refresh.png" style="position:absolute;right:25px;top:5px;z-index:2000;cursor:hand" onclick="refresh_raw()">
-<img title="Hide peer info" src="static/close.png" style="position:absolute;right:5px;top:5px;z-index:2000;cursor:hand" onclick="hide_peer_info()">
+<img title="Refresh peer info" class="refresh" style="position:absolute;right:25px;top:5px;z-index:2000" onclick="refresh_raw()">
+<img title="Hide peer info" class="del" style="position:absolute;right:5px;top:5px;z-index:2000" onclick="hide_peer_info()">
 <pre id="rawdiv" class="mono" style="left:0px;top: 0px;z-index:1000;width:100%;"></pre>
 </div>
 </td></tr></table>
