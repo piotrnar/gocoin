@@ -282,16 +282,16 @@ function draw_chart() {
 			}
 
 			if (chart_type_siz.checked) {
-				plot_data[0].color = dark_mode ? '#2D872D' : '#4DA74D'
+				plot_data[0].color = '#4DA74D'
 				localStorage.setItem("home_chart", "siz")
 			} else if (chart_type_spb.checked) {
-				plot_data[0].color = dark_mode ? '#AB2B2B' : '#CB4B4B'
+				plot_data[0].color = '#CB4B4B'
 				localStorage.setItem("home_chart", "spb")
 			} else if (chart_type_wgt.checked) {
-				plot_data[0].color = dark_mode ? '#9D7B13' : '#BD9B33'
+				plot_data[0].color = '#BD9B33'
 				localStorage.setItem("home_chart", "wgt")
 			} else {
-				plot_data[0].color = dark_mode ? '#7240CD' : '#9440ED'
+				plot_data[0].color = '#9440ED'
 				localStorage.setItem("home_chart", "txs")
 			}
 			localStorage.setItem("home_chart_avg", chart_type_avg.checked)
