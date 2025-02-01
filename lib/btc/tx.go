@@ -75,6 +75,7 @@ type AddrValue struct {
 
 func (t *Tx) Clean() {
 	t.hashLock.Lock()
+	t.Spent_outputs = nil
 	t.hashPrevouts = nil
 	t.hashSequence = nil
 	t.hashOutputs = nil

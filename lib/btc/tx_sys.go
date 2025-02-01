@@ -72,10 +72,10 @@ func (tx *Tx) SysSize() (size int) {
 
 	if tx.Spent_outputs != nil {
 		size += 8 * len(tx.Spent_outputs)
-		/* we do not include these as they belong to another tx (account for its size)
+		// should we not include these as they belong to another tx (account for its size) ???
 		for _, so := range tx.Spent_outputs {
 			size += so.SysSize()
-		}*/
+		}
 	}
 
 	if tx.tapSingleHashes != nil {
@@ -89,6 +89,10 @@ func (tx *Tx) SysSize() (size int) {
 }
 
 func (tx *Tx) SysSizeDbg(wr io.Writer) (size int) {
+	defer func() {
+		fmt.Fprintln(wr, "Tx-final", size)
+	}()
+
 	size = int(unsafe.Sizeof(*tx))
 	fmt.Fprintln(wr, "OneTxToSend base:", size)
 
@@ -147,10 +151,9 @@ func (tx *Tx) SysSizeDbg(wr io.Writer) (size int) {
 	if tx.Spent_outputs != nil {
 		size += 8 * len(tx.Spent_outputs)
 		fmt.Fprintln(wr, "Spent_outputs", len(tx.Spent_outputs), size)
-		/* we do not include these as they belong to another tx (account for its size)
 		for _, so := range tx.Spent_outputs {
 			size += so.SysSize()
-		}*/
+		}
 	}
 
 	if tx.tapSingleHashes != nil {
@@ -161,7 +164,6 @@ func (tx *Tx) SysSizeDbg(wr io.Writer) (size int) {
 		size += int(unsafe.Sizeof(*tx.tapOutSingleHash))
 		fmt.Fprintln(wr, "tapOutSingleHash", size)
 	}
-	fmt.Fprintln(wr, "Tx-final", size)
 
 	return
 }
