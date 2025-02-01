@@ -174,7 +174,8 @@ func decode_tx(pars string) {
 			fmt.Println("Footprint:", t2s.Footprint, t2s.SysSize())
 			wr := new(bytes.Buffer)
 			t2s.SysSizeDbg(wr)
-			fmt.Print(wr.String())
+			os.WriteFile(txid.String()+".size", wr.Bytes(), 0600)
+			//fmt.Print(wr.String())
 		}
 		if txr != nil {
 			fmt.Println("Reason:", txr.Reason, txpool.ReasonToString(txr.Reason))
