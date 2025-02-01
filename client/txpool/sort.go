@@ -2,7 +2,6 @@ package txpool
 
 import (
 	"encoding/binary"
-	"fmt"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -579,7 +578,7 @@ func ExpireOldTxs() {
 		totcnt -= len(TransactionsToSend)
 		common.CountSafeAdd("TxPoolExpParent", uint64(len(todel)))
 		common.CountSafeAdd("TxPoolExpChild", uint64(totcnt-len(todel)))
-		fmt.Print("ExpireOldTxs: ", len(todel), " -> ", totcnt, " txs expired from mempool\n> ")
+		//fmt.Print("ExpireOldTxs: ", len(todel), " -> ", totcnt, " txs expired from mempool\n> ")
 	} else {
 		common.CountSafe("TxPoolExpireNone")
 		//fmt.Println("nothing expired\n> ")
