@@ -165,41 +165,66 @@ tr.hov:hover {
 	font-weight:bold;
 }
 
+textarea {
+	background-color:#333333;
+	color:#e0e0e0;
+}
+
+select {
+	background-color:#444444;
+	color:#d0f0d0;
+}
+
+select:hover {
+	background-color:#555555;
+	color:#c0e0c0;
+}
+
 input[type=button], input[type=submit] {
-	background-color:#aaaaaa;
+	background-color:#444444;
+	color:#d0f0d0;
 	font-weight:bold;
-	/*border: 2px #000000 solid;*/
+	border: 2px #222222 solid;
 	padding-left: 10px;
 	padding-right: 10px;
-	padding-top: 3px;
-	padding-bottom: 3px;
+	padding-top: 6px;
+	padding-bottom: 6px;
 	font-size:12px;
 }
 
-input[type="text"].fixtext {
-	color:#e0e0e0;
+input[type=button]:hover, input[type=submit]:hover {
+	background-color:#555555;
+	color:#c0e0c0;
 }
 
-select, textarea {
-	color:#e0e0e0;
-}
-
-input[type=button], input[type=submit] {
-	color:#e0e0e0;
-	font-weight:bold;
-}
-
-input[type=button]:hover, input[type=submit]:hover, select:hover {
-	background-color:#777777;
-	cursor:pointer;
-}
-
-input[type=text].dis {
+input[type=button]:disabled, input[type=submit]:disabled {
 	background-color:#444444;
+	color:#709070;
 }
 
-input[type=text].err {
+input[type=text] {
+	background-color:#111111;
+	color:#ffffcc;
+}
+
+input[type=text].err { /*red background for a wrong value*/
 	background-color:#440000
+}
+
+input[type=text]:read-only {
+	background-color:#444444;
+	color:#808060;
+}
+
+input[type=text]:read-only.negative {
+	color: #ff8888;
+}
+input[type=text]:read-only.positive {
+	color: #88ff88;
+}
+
+td.err { /*highlights "include fee" chackbox on MakeTx page*/
+	background-color:#661111;
 }
 
 table.blocks {
@@ -399,13 +424,6 @@ td.segwitaddr {
 td.outcnt {
 	text-align: right;
 	white-space: nowrap;
-}
-
-.negative {
-	color: #ff8888;
-}
-.positive {
-	color: #88ff88;
 }
 
 td.bl_ver {

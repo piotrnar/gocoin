@@ -416,18 +416,18 @@ function recalc_to_pay() {
 	changeval.value = val2str(chval)
 	changeval_mbtc.value = val2str(1000*chval)
 	if (chval<0) {
-		changeval.className = "mono r dis negative"
+		changeval.className = "mono r negative"
 		butdisabled = true
 		include_fee_out_checkbox.classList.remove('err')
 	} else if (chval>0) {
-		changeval.className = "mono r dis positive"
+		changeval.className = "mono r positive"
 		if (!include_fee_output_in_size_calculation.checked) {
 			include_fee_out_checkbox.classList.add('err')
 		} else {
 			include_fee_out_checkbox.classList.remove('err')
 		}
 	} else {
-		changeval.className = "mono r dis"
+		changeval.className = "mono r"
 		if (include_fee_output_in_size_calculation.checked) {
 			include_fee_out_checkbox.classList.add('err')
 		} else {
@@ -592,7 +592,7 @@ function add_new_output() {
 	}
 
 	c = r.insertCell(-1)
-	c.innerHTML = '<input type="text" id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono fixtext" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
+	c.innerHTML = '<input type="text" id="inadr'+idx+'" name="adr'+idx+'" size="68" class="mono" onkeyup="reslab('+idx+')" onchange="reslab('+idx+')">'
 	c.innerHTML += ' <input type="button" style="width:100px;font-size:12px;padding:2px" value="'+
 		addrbook_lab+'" id="addrbook'+idx+'" onclick="open_address_book('+idx+')" tabindex="-1">'
 
@@ -605,7 +605,7 @@ function add_new_output() {
 	val.name = 'btc'+idx
 	val.onchange = recalc_to_pay
 	val.onkeyup = recalc_to_pay
-	val.className = 'mono r fixtext'
+	val.className = 'mono r'
 	val.setAttribute("autocomplete","off")
 	val.autoComplete = false
 	val.value = ''
@@ -620,7 +620,7 @@ function add_new_output() {
 	val.type = 'text'
 	val.size = 13
 	val.id = 'mbtc_out'+idx
-	val.className = 'mono r dis fixtext'
+	val.className = 'mono r'
 	val.readOnly = true
 	val.tabIndex = -1
 	c.appendChild(val)
@@ -717,12 +717,12 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 	|
 	<a href="javascript:del_last_output()" title="Remove last output">-remove last</a>
 	<td align="center" title="Transaction sequence number (default -3)">Sequence :
-	<input type="text" name="tx_seq" id="tx_seq" class="mono r fixtext" size="10" value="-3">
+	<input type="text" name="tx_seq" id="tx_seq" class="mono r" size="10" value="-3">
 	<td align="right">Transaction fee:
 	</table>
-	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r fixtext" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
+	<td><input type="text" id="txfee" name="txfee" size="13" class="mono r" value="0.0001" onchange="recalc_to_pay" onkeyup="recalc_to_pay">
 	<td style="font-size:10px" title="Fee per byte"><b id="feeperbyte"></b><br>SPB
-	<td><input type="text" id="txfee_mbtc" size="13" class="mono r dis fixtext" readonly="readonly" tabindex="-1">
+	<td><input type="text" id="txfee_mbtc" size="13" class="mono r" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr title="Transaction change">
@@ -731,17 +731,17 @@ Selected amount: <b id="selval">0.00000000</b> BTC in <b id="selcnt">0</b> outpu
 			<option value="">The first input's address</option>
 		</select>
 	<td class="r">
-	<input type="text" class="mono r dis" id="changeval" size="13" readonly="readonly" onclick="this.select()">
+	<input type="text" class="mono r" id="changeval" size="13" readonly="readonly" onclick="this.select()">
 	<td id="include_fee_out_checkbox"><input type="checkbox" id="include_fee_output_in_size_calculation" title="Include in size calculation" onchange="recalc_to_pay()">
 	<td class="r">
-	<input type="text" class="mono r dis fixtext" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
+	<input type="text" class="mono r" id="changeval_mbtc" size="13" readonly="readonly" tabindex="-1">
 </tr>
 
 <tr>
 	<td colspan="5" align="left">
 		<input type="checkbox" title="auto adjust the fee" id="auto_adjust_fee" checked="checked" onchange="auto_adjust_fee_clicked()">
 		Auto-calc transaction fee using price of&nbsp;
-		<input type="text" id="spb_to_use" class="mono r fixtext" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
+		<input type="text" id="spb_to_use" class="mono r" size="7" onchange="recalc_to_pay()"> Satoshis Per Byte.
 		&nbsp;&nbsp;&nbsp;
 		Estimated virtual transaction size: <span id="ets" style="font-weight:bold"></span> bytes
 	<hr>
