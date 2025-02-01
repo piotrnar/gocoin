@@ -549,7 +549,6 @@ img.request {
 	content:url("request-white.png");
 	height:16px;
 	cursor:pointer;
-	padding-right:2px;
 }
 
 img#tcp_server_running {

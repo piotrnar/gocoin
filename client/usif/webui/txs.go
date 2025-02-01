@@ -47,6 +47,7 @@ func txs_page_modify(r *http.Request, page *[]byte) {
 	}
 
 	wg.Wait()
+
 	if txloadresult != "" {
 		ld := load_template("txs_load.html")
 		ld = strings.Replace(ld, "{TX_RAW_DATA}", txloadresult, 1)
