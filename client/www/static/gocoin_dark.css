@@ -110,8 +110,8 @@ td,th {
 }
 
 th {
-	background-color:#181818;
-	color:#c0ca90;
+	background-color:#111144;
+	color:#aaaa00;
 }
 
 tr.bip152 {
@@ -507,4 +507,9 @@ img.export_icon {
 
 img.import_icon {
 	content:url("import-white.png");
+}
+
+img.music_icon {
+	content:url("music-white.png");
+	height:16px;
 }

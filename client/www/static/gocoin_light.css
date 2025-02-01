@@ -463,3 +463,8 @@ img.export_icon {
 img.import_icon {
 	content:url("import-black.png");
 }
+
+img.music_icon {
+	content:url("music-black.png");
+	height:16px;
+}
