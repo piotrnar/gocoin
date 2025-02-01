@@ -7,33 +7,6 @@
 </table>
 <pre id="rawdiv"></pre>
 </div><div id="fade" class="black_overlay"></div>
-
-<style>
-td.inpid {
-	text-align: left;
-	font-size: 90%;
-	font-family: monospace;
-}
-td.P2SH-P2WPKH {
-	color:brown;
-	font-style:italic;
-}
-td.P2WSH {
-	color:purple;
-	font-style:italic;
-}
-td.P2WPKH {
-	color:darkgreen;
-	font-style:italic;
-}
-td.P2TAP {
-	color:blue;
-	font-style:italic;
-}
-td.long_addr {
-	font-size:9px;
-}
-</style>
 <script>
 const addrbook_lab = "Address Book"
 
@@ -263,10 +236,10 @@ function fetch_wallet_balance(name) {
 				td.innerText = val2str_pad(outs[i].value,true)
 
 				td = row.insertCell(-1)
-				td.className = 'bold hand'
+				td.className = 'bold hand i'
 				td["row_number"] = row_number
 				td.addEventListener('click', selectadr)
-				td.classList.add(outs[i].type)
+				td.classList.add(outs[i].type.toLowerCase())
 				td.innerText = outs[i].addr2
 				if (outs[i].addr2.length>45) {
 					td.classList.add("long_addr")

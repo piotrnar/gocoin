@@ -396,21 +396,33 @@ td.balbtc {
 	font-size: 110%;
 	width: 150px;
 }
-.p2sh {
+.p2sh, .p2sh-p2wpkh {
 	color:#ff7A7A;
 }
-.native {
+.native, .p2wpkh {
 	color:#77ff77;
 }
 .p2tap {
-	color:#22aaff;
+	color:#6666ff;
 }
 .segwitaddr {
 	font-style:italic;
 	font-size: 90%;
 }
+.p2wsh {
+	color:#ff66e0;
+}
 .pubkey {
-	color:#aa22ff;
+	color:#b6aac3;
+}
+
+td.inpid {
+	text-align: left;
+	font-size: 90%;
+	font-family: monospace;
+}
+td.long_addr {
+	font-size:9px;
 }
 td.segwitaddr {
 	text-align: left;
@@ -557,3 +569,4 @@ img.refresh {
 	height:16px;
 	cursor:pointer;
 }
+

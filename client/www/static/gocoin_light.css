@@ -349,10 +349,10 @@ td.balbtc {
 	font-size: 110%;
 	width: 150px;
 }
-.p2sh {
+.p2sh, .p2sh-p2wpkh {
 	color:brown;
 }
-.native {
+.native, .p2wpkh {
 	color:darkgreen;
 }
 .p2tap {
@@ -361,6 +361,9 @@ td.balbtc {
 .segwitaddr {
 	font-style:italic;
 	font-size: 90%;
+}
+.p2wsh {
+	color:purple;
 }
 .pubkey {
 	color:darkblue;
@@ -515,3 +518,4 @@ img.refresh {
 	height:16px;
 	cursor:pointer;
 }
+
