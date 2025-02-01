@@ -2,15 +2,15 @@ body {
 	font-family:Arial;
 	font-size:14px;
 	background-color:black;
-	color: #c0c0c0;
+	color: #ffffff;
 }
 a {
-	color:#d0d0ff;
+	color:#e0e0ff;
 	text-decoration:none;
 }
 
 a:visited {
-	color:#d0d0ff;
+	color:#e0e0ff;
 	text-decoration:none;
 }
 
@@ -19,7 +19,7 @@ a:hover {
 }
 
 a.topmenu {
-	color:#d0d0ff;
+	color:#e0e0ff;
 	padding-top:2px;
 	padding-bottom:2px;
 	padding-left:6px;
@@ -91,8 +91,8 @@ table.wal {
 }
 
 tr {
-	border-top: 1px solid #cdcdcd;
-	border-bottom: 1px solid #cdcdcd;
+	border-top: 1px solid #ffffff;
+	border-bottom: 1px solid #ffffff;
 }
 
 
@@ -111,7 +111,7 @@ td,th {
 
 th {
 	background-color:#111144;
-	color:#aaaa00;
+	color:#ffff90;
 }
 
 tr.bip152 {
@@ -146,45 +146,39 @@ tr.hov:hover {
 	font-size:75%
 }
 
-.cod {
+.cod { /*help page*/
 	font-family: monospace;
-	font-size:12px;
 	background-color:#333333;
-	color:#80f080;
+	color:#00ffc0;
 }
 
-.note {
+.note { /*help page*/
 	font-style:italic;
 	background-color:#333344;
 }
 
-.but {
-	color:#bfdfbf;
+.but { /*help page*/
+	color:#efffef;
 	background-color:#222222;
 	padding:2px;
 	font-weight:bold;
 }
 
 textarea {
-	background-color:#333333;
-	color:#e0e0e0;
+	background-color:#222222;
+	color:#ffffff;
 }
 
 select {
 	background-color:#444444;
-	color:#d0f0d0;
-}
-
-select:hover {
-	background-color:#555555;
-	color:#c0e0c0;
+	color:#e0ffe0;
 }
 
 input[type=button], input[type=submit] {
 	background-color:#444444;
-	color:#b0c0b0;
+	color:#e0ffe0;
 	font-weight:bold;
-	border: 2px #777777 solid;
+	border: 2px #ffffff solid;
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 4px;
@@ -194,17 +188,16 @@ input[type=button], input[type=submit] {
 
 input[type=button]:hover, input[type=submit]:hover {
 	background-color:#555555;
-	color:#c0e0c0;
 }
 
 input[type=button]:disabled, input[type=submit]:disabled {
 	background-color:#444444;
-	color:#709070;
+	color:#608060;
 }
 
 input[type=text] {
 	background-color:#111111;
-	color:#ffffcc;
+	color:#ffffee;
 }
 
 input[type=text].err { /*red background for a wrong value*/
@@ -213,14 +206,14 @@ input[type=text].err { /*red background for a wrong value*/
 
 input[type=text]:read-only {
 	background-color:#444444;
-	color:#808060;
+	color:#d0d0a0;
 }
 
 input[type=text]:read-only.negative {
-	color: #ff8888;
+	color: #ffaaaa;
 }
 input[type=text]:read-only.positive {
-	color: #88ff88;
+	color: #aaffaa;
 }
 
 td.err { /*highlights "include fee" chackbox on MakeTx page*/
@@ -236,14 +229,15 @@ td.block_hash {
 	font-size:12px;
 }
 
-td.nodeid {
+td.nodeid { /*network table*/
 	font-size:11px;
-	color:#55a080;
+	color:#75f0a0;
 	font-weight:bold;
 }
 
+/*blocks page:*/
 td.blstatmissedtxs {
-	color:purple;
+	color:#ff00ff;
 	font-size:10px;
 }
 
@@ -257,16 +251,16 @@ td.blstat {
 }
 
 td.blsigops {
-	color:#c06666;
+	color:#ff9999;
 	font-size:9px;
 }
 
 td.blswsize {
-	color:#2060bb;
+	color:#60a0ff;
 }
 
 td.blreward {
-	color:#008000;
+	color:#00ff00;
 	font-family: monospace;
 	text-align: right;
 	font-size:12px;
@@ -274,7 +268,7 @@ td.blreward {
 
 td.blspb {
 	font-size:12px;
-	color:#8833c0;
+	color:#aa55ff;
 	font-family: monospace;
 	text-align: right;
 }
@@ -314,7 +308,7 @@ div.footer {
 	height: 80%;
 	padding-left: 8px;
 	padding-right: 8px;
-	border: 5px solid #d0d0d0;
+	border: 5px solid #cccccc;
 	background-color: black;
 	z-index:1002;
 	overflow: auto;
@@ -364,7 +358,7 @@ td.uploadtx {
 }
 
 .walminwarn {
-	color:#aa66aa;
+	color:#ee99ee;
 }
 
 #chart > div.legend > table {
@@ -402,20 +396,20 @@ td.balbtc {
 	width: 150px;
 }
 .p2sh {
-	color:#c54A4A;
+	color:#ff7A7A;
 }
 .native {
-	color:#66dd66;
+	color:#77ff77;
 }
 .p2tap {
-	color:blue;
+	color:#22aaff;
 }
 .segwitaddr {
 	font-style:italic;
 	font-size: 90%;
 }
 .pubkey {
-	color:#8888ff;
+	color:#aa22ff;
 }
 td.segwitaddr {
 	text-align: left;
@@ -460,13 +454,13 @@ td.mi_bsize {
 }
 td.mi_tot {
 	text-align:right;
-	color:#9040c8;
+	color:#d060ff;
 	font-style:italic;
 	font-weight:bold;
 }
 td.mi_vers {
 	text-align:right;
-	color:rgb(177, 77, 77);
+	color:#ff3030;
 	font-style:italic;
 	font-weight:bold;
 }
@@ -482,7 +476,8 @@ caption {
 	top:0px;
 	z-index:1000;
 	width:800px;
-	background-color:#e0e0e0;
+	background-color:#111111;
+	color: #ffffff;
 	overflow-x:auto;
 }
 
@@ -495,7 +490,7 @@ td.minblspb {
 
 pre#loadedtxdata {
 	background-color:#220808;
-	color:#bbbbbb;
+	color:#ffffff;
 	font-size:10px;
 	width:1000px;
 	overflow-x:auto
