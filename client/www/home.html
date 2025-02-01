@@ -303,7 +303,7 @@ function draw_chart() {
 				if (_cs[i].TxCnt==1) {
 					//plot_data[1].data.push([_cs[i].Timestamp*1000, 100])
 					var tt = _cs[i].Timestamp*1000
-                    plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: dark_mode ? "#808060" : "#f0f0d0" })
+                    plot_options.grid.markings.push({ xaxis: { from: tt, to: tt+240000 }, color: dark_mode ? "#404030" : "#f0f0d0" })
 					continue // ignore blocks with a single conbase tx
 				}
 				cs.push(_cs[i])
