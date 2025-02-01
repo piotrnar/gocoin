@@ -42,11 +42,10 @@ type TxOut struct {
 	WasCoinbase bool
 }
 
+// Make sure to call tx's AllocVerVars() before using any of these fields and Clean() once done
 type TxVerVars struct {
-	CalculatedFee uint64
-	Spent_outputs []*TxOut // this is used by TaprootSigHash()
-
-	// Segwit/taproot internat fields:
+	CalculatedFee    uint64
+	Spent_outputs    []*TxOut // this is used by TaprootSigHash()
 	hashLock         sync.Mutex
 	hashPrevouts     *[32]byte
 	hashSequence     *[32]byte
