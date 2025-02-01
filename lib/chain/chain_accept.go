@@ -83,8 +83,8 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			if ch.CB.BlockMinedCB != nil {
 				ch.CB.BlockMinedCB(bl)
 			}
-			bl.Clean()
 		}
+		bl.Clean()
 	} else {
 		// The block's parent is not the current head of the chain...
 

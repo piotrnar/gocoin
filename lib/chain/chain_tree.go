@@ -92,6 +92,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 
 		changes, sigopscost, er := ch.ProcessBlockTransactions(bl, nxt.Height, end.Height)
 		if er != nil {
+			bl.Clean()
 			println("ProcessBlockTransactionsB", nxt.BlockHash.String(), nxt.Height, er.Error())
 			ch.DeleteBranch(nxt, nil)
 			break
