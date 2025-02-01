@@ -570,3 +570,7 @@ img.refresh {
 	cursor:pointer;
 }
 
+img.qrcode {
+	content:url("qrcode-white.png");
+	height:16px;
+}

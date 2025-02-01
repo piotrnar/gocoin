@@ -63,8 +63,8 @@ function remove_comment_from_label(lab) {
 
 function add_address_and_icons(td, adr, lab) {
 	var qrc = document.createElement("img")
-	qrc.src = "static/qrcode.png"
-	qrc.className = 'hand'
+	qrc.className = 'hand qrcode'
+	qrc.title = "Show QR code"
 	qrc["qr_addr"] = adr
 	qrc["qr_label"] = lab
 	qrc.onclick = function(){showtheqr(this)}

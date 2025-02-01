@@ -519,3 +519,7 @@ img.refresh {
 	cursor:pointer;
 }
 
+img.qrcode {
+	content:url("qrcode-black.png");
+	height:16px;
+}
