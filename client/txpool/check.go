@@ -17,6 +17,10 @@ func checkPoolSizes() (dupa int) {
 			fmt.Println(dupa, "ERROR: T2S", t2x.Hash.String(), "mismatch footprint:", t2x.Footprint, ts)
 		}
 		t2s_size += ts
+		if t2x.TxVerVars != nil {
+			dupa++
+			fmt.Println(dupa, "ERROR: T2S", t2x.Hash.String(), "does not seem to be clean")
+		}
 	}
 	for _, txr := range TransactionsRejected {
 		ts := txr.SysSize()

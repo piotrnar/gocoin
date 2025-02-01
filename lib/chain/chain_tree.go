@@ -111,6 +111,7 @@ func (ch *Chain) ParseTillBlock(end *BlockTreeNode) {
 			bl.LastKnownHeight = end.Height
 			ch.CB.BlockMinedCB(bl)
 		}
+		bl.Clean()
 	}
 
 	if !AbortNow && last != end {

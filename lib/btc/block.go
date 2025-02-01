@@ -55,6 +55,13 @@ func NewBlock(data []byte) (bl *Block, er error) {
 	return NewBlockX(data, NewSha2Hash(data[:80]))
 }
 
+// clean all the transactions
+func (bl *Block) Clean() {
+	for _, t := range bl.Txs[1:] {
+		t.Clean()
+	}
+}
+
 // tha data may contain only the header (80 bytes)
 func (bl *Block) UpdateContent(data []byte) error {
 	if len(data) < 80 {

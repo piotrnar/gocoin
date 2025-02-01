@@ -42,6 +42,19 @@ type TxOut struct {
 	WasCoinbase bool
 }
 
+type TxVerVars struct {
+	CalculatedFee uint64
+	Spent_outputs []*TxOut // this is used by TaprootSigHash()
+
+	// Segwit/taproot internat fields:
+	hashLock         sync.Mutex
+	hashPrevouts     *[32]byte
+	hashSequence     *[32]byte
+	hashOutputs      *[32]byte
+	tapSingleHashes  *taprootSHType
+	tapOutSingleHash *[32]byte
+}
+
 type Tx struct {
 	Version   uint32
 	Lock_time uint32
@@ -55,17 +68,7 @@ type Tx struct {
 	Hash            Uint256
 	wTxID           Uint256
 
-	// Set in chain's ProcessBlockTransactions:
-	Spent_outputs []*TxOut // this is used by TaprootSigHash()
-	Fee           uint64
-
-	// Segwit/taproot internat fields:
-	hashLock         sync.Mutex
-	hashPrevouts     *[32]byte
-	hashSequence     *[32]byte
-	hashOutputs      *[32]byte
-	tapSingleHashes  *taprootSHType
-	tapOutSingleHash *[32]byte
+	*TxVerVars
 }
 
 type AddrValue struct {
@@ -73,15 +76,16 @@ type AddrValue struct {
 	Addr20 [20]byte
 }
 
+func (t *Tx) AllocVerVars() {
+	if t.TxVerVars == nil {
+		t.TxVerVars = new(TxVerVars)
+	} else {
+		println("ERROR: AllocVerVars() not neccesary")
+	}
+}
+
 func (t *Tx) Clean() {
-	t.hashLock.Lock()
-	t.Spent_outputs = nil
-	t.hashPrevouts = nil
-	t.hashSequence = nil
-	t.hashOutputs = nil
-	t.tapSingleHashes = nil
-	t.tapOutSingleHash = nil
-	t.hashLock.Unlock()
+	t.TxVerVars = nil
 }
 
 func (po *TxPrevOut) UIdx() uint64 {

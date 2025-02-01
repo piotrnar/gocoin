@@ -211,8 +211,6 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 		t2s.MemInputs = make([]bool, len(t2s.TxIn))
 	}
 	t2s.Final = tmp[3] != 0
-
-	t2s.Tx.Fee = t2s.Fee
 	return
 }
 

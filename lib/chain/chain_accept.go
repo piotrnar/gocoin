@@ -83,6 +83,7 @@ func (ch *Chain) CommitBlock(bl *btc.Block, cur *BlockTreeNode) (e error) {
 			if ch.CB.BlockMinedCB != nil {
 				ch.CB.BlockMinedCB(bl)
 			}
+			bl.Clean()
 		}
 	} else {
 		// The block's parent is not the current head of the chain...
@@ -119,6 +120,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 	var ver_err_cnt uint32
 
 	for i, tx := range bl.Txs {
+		tx.AllocVerVars()
 		txoutsum, txinsum = 0, 0
 
 		sigopscost += uint32(btc.WITNESS_SCALE_FACTOR * bl.Txs[i].GetLegacySigOpCount())
@@ -257,7 +259,7 @@ func (ch *Chain) commitTxs(bl *btc.Block, changes *utxo.BlockChanges) (sigopscos
 		sumblockout += txoutsum
 
 		if i > 0 {
-			bl.Txs[i].Fee = txinsum - txoutsum
+			bl.Txs[i].CalculatedFee = txinsum - txoutsum
 			if txoutsum > txinsum {
 				e = fmt.Errorf("more spent (%.8f) than at the input (%.8f) in TX %s",
 					float64(txoutsum)/1e8, float64(txinsum)/1e8, bl.Txs[i].Hash.String())

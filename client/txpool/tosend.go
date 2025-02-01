@@ -31,7 +31,7 @@ type OneTxToSend struct {
 	Better, Worse                 *OneTxToSend
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
-	Volume                        uint64
+	Volume, Fee                   uint64
 	*btc.Tx
 	MemInputs   []bool // transaction is spending inputs from other unconfirmed tx(s)
 	MemInputCnt int

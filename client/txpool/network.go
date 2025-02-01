@@ -254,6 +254,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		var ver_err_cnt uint32
 		ver_flags := common.CurrentScriptFlags()
 
+		tx.AllocVerVars()
 		tx.Spent_outputs = pos
 		prev_dbg_err := script.DBG_ERR
 		script.DBG_ERR = false // keep quiet for incorrect txs
@@ -295,8 +296,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		ctx.Delete(false, TX_REJECTED_REPLACED)
 	}
 
-	tx.Fee = fee
-	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local,
+	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 

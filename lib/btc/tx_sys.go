@@ -60,6 +60,11 @@ func (tx *Tx) SysSize() (size int) {
 		size += (len(tx.Raw) + 7) &^ 7
 	}
 
+	if tx.TxVerVars == nil {
+		return
+	}
+	size += int(unsafe.Sizeof(*tx.TxVerVars))
+
 	if tx.hashPrevouts != nil {
 		size += int(unsafe.Sizeof(*tx.hashPrevouts))
 	}
@@ -134,6 +139,12 @@ func (tx *Tx) SysSizeDbg(wr io.Writer) (size int) {
 		size += (len(tx.Raw) + 7) &^ 7
 		fmt.Fprintln(wr, "Raw", size)
 	}
+
+	if tx.TxVerVars == nil {
+		return
+	}
+	size += int(unsafe.Sizeof(*tx.TxVerVars))
+	fmt.Fprintln(wr, "TxVerVars", size)
 
 	if tx.hashPrevouts != nil {
 		size += int(unsafe.Sizeof(*tx.hashPrevouts))
