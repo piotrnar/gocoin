@@ -3,20 +3,32 @@
 <script>
 	/*AUTO_DARK*/
 	var dark_mode
+	
+	function css_filename() {
+		return dark_mode ? "static/gocoin_dark.css" : "static/gocoin_light.css"
+	}
+	
+	function dark_light_icon_src() {
+		return dark_mode ? "static/light.png" : "static/dark.png"
+	}
+	
+	function change_theme() {
+		dark_mode = !dark_mode
+		localStorage.setItem("dark_mode", dark_mode)
+		loaded_css.href = css_filename()
+		dark_light_icon.src = dark_light_icon_src()
+	}
+	
 	if (auto_dark_theme) {
 		dark_mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+    		dark_mode = event.matches
+		})
 	} else {
 		dark_mode = localStorage.getItem("dark_mode")==="true"
 	}
-	if (dark_mode) {
-		document.write(`<link rel="stylesheet" href="static/gocoin_dark.css" type="text/css">`)
-	} else {
-		document.write(`<link rel="stylesheet" href="static/gocoin_light.css" type="text/css">`)
-	}
-function change_theme() {
-	localStorage.setItem("dark_mode", !dark_mode)
-	location.reload()
-}
+
+	document.write('<link rel="stylesheet" href="'+css_filename()+'" type="text/css" id="loaded_css">')
 </script>
 <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
 <script>
@@ -73,11 +85,7 @@ function beep_clicked() {
 			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
 <script>
 if (!auto_dark_theme) {
-	if (dark_mode) {
-		document.write(`<img src="static/light.png" height="16" class="hand" onclick="change_theme()" title="Switch theme">`)
-	} else {
-		document.write(`<img src="static/dark.png" height="16" class="hand" onclick="change_theme()" valign="top" title="Switch theme">`)
-	}
+	document.write('<img id="dark_light_icon" src="'+dark_light_icon_src()+'" height="16" class="hand" onclick="change_theme()" title="Switch theme">')
 }
 </script>
 		</td>
