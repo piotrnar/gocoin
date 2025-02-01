@@ -55,7 +55,6 @@ var (
 			PayCmdName  string
 			ServerMode  bool
 			SSLPort     uint16
-			AutoDark    bool
 		}
 		RPC struct {
 			Enabled  bool

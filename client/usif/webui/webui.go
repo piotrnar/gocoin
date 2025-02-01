@@ -98,7 +98,6 @@ func write_html_head(w http.ResponseWriter, r *http.Request) {
 	s = strings.Replace(s, "/*_TIME_NOW_*/", fmt.Sprint("= ", time.Now().Unix()), 1)
 	s = strings.Replace(s, "/*_WALLET_ON_*/", fmt.Sprint("var wallet_on = ", common.Get(&common.WalletON)), 1)
 	s = strings.Replace(s, "/*_CHAIN_IN_SYNC_*/", fmt.Sprint("var chain_in_sync = ", common.Get(&common.BlockChainSynchronized)), 1)
-	s = strings.Replace(s, "/*AUTO_DARK*/", fmt.Sprint("var auto_dark_theme = ", common.Get(&common.CFG.WebUI.AutoDark)), 1)
 
 	if r.URL.Path != "/" {
 		s = strings.Replace(s, "{HELPURL}", "help#"+r.URL.Path[1:], 1)

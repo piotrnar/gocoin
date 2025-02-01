@@ -1,25 +1,29 @@
 <html><head><title>{PAGE_TITLE} {VERSION}{TESTNET}</title>
 <script type="text/javascript" src="static/gocoin.js"></script>
 <script>
-	/*AUTO_DARK*/
+	var auto_dark_mode = localStorage.getItem("auto_dark_mode")==="true"
 	var dark_mode
-	
+
 	function css_filename() {
 		return dark_mode ? "static/gocoin_dark.css" : "static/gocoin_light.css"
 	}
-	
+
 	function dark_light_icon_src() {
 		return dark_mode ? "static/light.png" : "static/dark.png"
 	}
-	
+
 	function change_theme() {
 		dark_mode = !dark_mode
 		localStorage.setItem("dark_mode", dark_mode)
 		loaded_css.href = css_filename()
 		dark_light_icon.src = dark_light_icon_src()
+
+		var e = document.createEvent("Event")
+		e.initEvent("theme_changed", false, false)
+		dark_light_icon.dispatchEvent(e)
 	}
-	
-	if (auto_dark_theme) {
+
+	if (auto_dark_mode) {
 		dark_mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
     		dark_mode = event.matches
@@ -83,11 +87,7 @@ function beep_clicked() {
 		</td>
 		<td align="center" align="center">
 			<img id="chainsync_icon" src="static/chainsync.png" class="hand" style="display:none" onclick="set_tblock_hash()">
-<script>
-if (!auto_dark_theme) {
-	document.write('<img id="dark_light_icon" src="'+dark_light_icon_src()+'" height="16" class="hand" onclick="change_theme()" title="Switch theme">')
-}
-</script>
+			<img id="dark_light_icon" src="" height="16" class="hand" onclick="change_theme()" title="Switch theme">
 		</td>
 		<td align="center">
 			<a href="javascript:pushtx()" class="topmenu" title="Load Raw TX">PushTx</a>
@@ -98,6 +98,12 @@ if (!auto_dark_theme) {
 	</tr></table>
 <hr style="margin:2px">
 <script>
+
+if (auto_dark_mode) {
+	dark_light_icon.style.display = "none"
+} else {
+	dark_light_icon.src = dark_light_icon_src()
+}
 
 function set_tblock_hash() {
 	var hash = prompt("To speed up chain sync, enter hash of the highest block you trust")

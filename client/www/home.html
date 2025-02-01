@@ -10,11 +10,16 @@
 </colgroup>
 
 <tr><td colspan="2" style="padding:0px">
-<div align="right" style="float:right;font-size:12px;padding-top:0px">
+<div align="right" style="float:right;font-size:14px;padding-top:0px">
 WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" accept=".json">
-<a href="javascript:export_settings()"><img valign="bottom" title="Backup" src="static/backup.png" height="16"> Export</a>
+<a href="javascript:export_settings()" title="Backup settings"><img valign="bottom" src="static/backup.png" height="18"> Export</a>
 &nbsp;
-<a href="javascript:import_file_click()"><img valign="bottom" title="Restore" src="static/restore.png" height="16"> Import</a>
+<a href="javascript:import_file_click()" title="Restore settings"><img valign="bottom" src="static/restore.png" height="18"> Import</a>
+&nbsp;&bull;&nbsp;
+<span class="hand" onclick="auto_theme_switch_box.click()" title="Switch light/dark mode automatically">
+<img valign="bottom" title="Restore" src="static/theme-switch-black.jpg" height="18"> Auto
+<input type="checkbox" id="auto_theme_switch_box" onchange="auto_theme_switch()" onclick="event.stopPropagation()">
+</span>
 </div>
 <h2 style="margin-top:10px;margin-bottom:5px">Recent Blocks</h2>
 
@@ -177,6 +182,11 @@ if (!server_mode) {
 	el_free_mem.style.display='inline'
 }
 
+auto_theme_switch_box.checked = auto_dark_mode
+function auto_theme_switch() {
+	localStorage.setItem("auto_dark_mode", !auto_dark_mode)
+	location.reload()
+}
 
 var previousPoint = null;
 var cs
@@ -595,6 +605,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(event.keyCode == 27)  closepopup()
 	}
 	import_file.addEventListener('change', import_file_selected, false);
+})
+
+dark_light_icon.addEventListener("theme_changed", function(e) {
+	draw_chart()
 })
 
 </script>
