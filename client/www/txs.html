@@ -152,6 +152,7 @@ in descending <input id="mp_show_sort_desc" type="checkbox" checked="checked"> o
 
 
 <!--TX_LOAD-->
+</script>
 <table class="txs bord" id="txs2s" style="display:none" width="100%">
 	<tr>
 		<th width="20" align="right">#
@@ -305,7 +306,7 @@ function deltx_click(id) {
 	if (confirm("Delete TX "+id)) {
 		show_txs2s('&del='+id+'&ownonly=1')
 	}
-	txrawdata.innerText = ''
+	loadedtxdata.innerText = ''
 }
 
 var tx_decoding_in_progress = false
@@ -590,7 +591,7 @@ function show_txs2s(extrapar) {
 					c.innerHTML += '&nbsp;'
                     c.innerHTML += '<img style="cursor:pointer" title="Broadcast this TX" onclick="sendtx_click(\''+txid+'\')" src="static/send.png">'
 					c.innerHTML += '&nbsp;'
-					c.innerHTML += '<img style="cursor:pointer" title="Remove this TX" onclick="deltx_click(\''+txid+'\')" src="static/del.png">'
+                    c.innerHTML += '<img title="Remove this TX" onclick="deltx_click(\''+txid+'\')" class="del">'
 				} else {
 					c.innerHTML = xval(txs[i], 'blocked')
 				}

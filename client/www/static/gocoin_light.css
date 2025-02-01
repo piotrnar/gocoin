@@ -448,6 +448,13 @@ td.minblspb {
 	text-align: right;
 }
 
+pre#loadedtxdata {
+	background-color:#ffe0e0;
+	font-size:10px;
+	width:1000px;
+	overflow-x:auto
+}
+
 img#dark_light_icon {
 	content:url("dark.png");
 	height:20px;
@@ -468,4 +475,33 @@ img.import_icon {
 img.music_icon {
 	content:url("music-black.png");
 	height:16px;
+}
+
+img.incoming {
+	content:url("in-black.png");
+	height:16px;
+}
+
+img.outgoing {
+	content:url("out-black.png");
+	height:16px;
+}
+
+img.info {
+	content:url("info-black.png");
+	height:16px;
+	cursor:pointer;
+}
+
+img.del {
+	content:url("del-black.png");
+	height:16px;
+	cursor:pointer;
+}
+
+img.request {
+	content:url("request-black.png");
+	height:16px;
+	cursor:pointer;
+	padding-right:2px;
 }

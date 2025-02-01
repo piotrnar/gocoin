@@ -13,26 +13,26 @@ td.agent {
 <script type="text/javascript" src="static/jquery.min.js"></script>
 <script type="text/javascript" src="static/jquery.flot.min.js"></script>
 
-<div style="width:100%;line-height:24px;white-space:nowrap;">
-
-<span style="float:right;display:none" id="connect_buttons">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<colgroup>
+	<col width="360">
+	<col>
+	<col width="360">
+</colgroup>
+<tr>
+<td align="left">Address: <b id="external_ip"></b></td>
+<td align="center">
+	Connections: <b id="out_connections"></b> <img title="outgoing" class="outgoing"> + <b id="in_connections"></b> <img title="incoming" class="incoming">
+</td>
+<td align="right">
+<span style="display:none" id="connect_buttons">
 <input type="button" id="edit_friends" value="Edit Friends" onclick="edit_friends()">
 <input type="button" id="unban_peer_but" value="Unban" onclick="unban_peer()">
 <input type="button" id="conn_peer_but" value="Connect Peer" onclick="connect_peer()">
 </span>
-
-
-Address: <b id="external_ip"></b>
-&nbsp;&bull;&nbsp;
-Connections:
-<b id="out_connections"></b> <img title="outgoing" src="static/outgoing.png"> + <b id="in_connections"></b> <img title="incoming" src="static/incoming.png">
-&nbsp;&bull;&nbsp;
-Listening for incoming connections:
-<img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom">
-<img id="tcp_server_running" src="static/server_running.png" height="16" valign="middle">
-<br>
-</div>
-
+</td>
+</tr>
+</table>
 
 <div style="display:none" id="friends_form">
 <table width="100%" cellspacing="0" cellpadding="0"><tr><td align="right">
@@ -51,17 +51,28 @@ Listening for incoming connections:
 </table>
 </div>
 
-<table style="margin-top:5px" width="100%" border="0" cellspacing="0" cellpadding="0">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<colgroup>
+	<col width="360"> <!-- dl/ul speed -->
+	<col width="260"> <!-- TCP listen -->
+	<col width="30"> <!-- on/off icon -->
+	<col width="30"> <!-- listening icon -->
+	<col > <!-- TCP listen -->
+	<col width="200"> <!-- resolution -->
+<colgroup>
 <tr>
 <td align="left"><span id="bw_dl_speed_now_span">
 Downloading at <b id="bw_dl_speed_now"></b> KB/s</span>
 &nbsp;&bull;&nbsp;
 <span id="bw_ul_speed_now_span">Uploading at
 <b id="bw_ul_speed_now"></b> KB/s</span>
-
 <span id="get_mp_in_progress" style="display:none">&nbsp;&bull;&nbsp;<b>GetMPInProgress:<span id="get_mp_conn_id"></span></b></span>
-
 </td>
+<td align="right">Listening for incoming connections:</td>
+<td><img id="listen_tcp_info" src="static/switch-off.png" height="24" valign="bottom"></td>
+<td><img id="tcp_server_running" src="static/server_running.png" height="16" valign="middle"></td>
+</td>
+<td></td>
 <td align="right">
 Resolution:
 <select id="bw_chart_seconds" onchange="draw_chart()">
@@ -73,7 +84,7 @@ Resolution:
 </td>
 </tr>
 <tr>
-<td colspan="2">
+<td colspan="6">
 <div id="chart" style="height:180px;margin:0px"></div>
 </td>
 </tr>
@@ -87,11 +98,11 @@ Resolution:
 </span>
 &nbsp;&bull;&nbsp;
 <span class="hand" onclick="hide_incoming_cb.click()">
-	<input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="static/incoming.png">
+    <input type="checkbox" id="hide_incoming_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img class="incoming">
 </span>
 &nbsp;
 <span class="hand" onclick="hide_outgoing_cb.click()">
-	<input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img src="static/outgoing.png">
+    <input type="checkbox" id="hide_outgoing_cb" onchange="switch_hidden(this)" onclick="event.stopPropagation()">Hide <img class="outgoing">
 </span>
 </td>
 <td align="right">
@@ -488,9 +499,9 @@ function refreshconnections(force) {
 				// direction
 				td = row.insertCell(-1)
 				if (cs[i].Incomming) {
-					td.innerHTML = "<img src=\"static/incoming.png\">"
+					td.innerHTML = "<img class=\"incoming\">"
 				} else {
-					td.innerHTML = "<img src=\"static/outgoing.png\">"
+					td.innerHTML = "<img class=\"outgoing\">"
 				}
 
 				// ping
@@ -603,13 +614,12 @@ function refreshconnections(force) {
 				var peer_ip = cs[i].PeerIp.split(':')[0]
 				td = row.insertCell(-1)
 				td.className = "r nw"
-				td.innerHTML = '<img title="Drop this connection and ban peer" class="hand" src="static/del.png" onclick="net_drop('+id+')"> ' +
-					'<img title="Connection Details" class="hand" src="static/info.png" onclick="show_info('+id+')"> '
+				td.innerHTML = '<img title="Drop this connection and ban peer" class="del" onclick="net_drop('+id+')"> ' +
+					'<img title="Connection Details" class="info" onclick="show_info('+id+')"> '
 				if ( cs[i].IsGocoin && !cs[i].GetMPInProgress ) {
 					var img = document.createElement('img');
-					img.src = "static/request.png"
+					img.className = "request"
 					img.title = "Request missing transactions"
-					img.classList.add('hand')
 					img["connid"] = id
 					img.addEventListener("click", function(e) {
 						net_getmp(e.srcElement["connid"])
