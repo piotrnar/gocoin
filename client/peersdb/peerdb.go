@@ -129,11 +129,6 @@ func NewPeer(v []byte) (p *PeerAddr) {
 		xd := binary.LittleEndian.Uint32(v[30:34])
 		p.SeenAlive = (xd & 0x80000000) != 0
 		p.Banned = (xd & 0x7fffffff) << 1
-		if !p.SeenAlive && p.Banned > 1893452400 /*Year 2030*/ {
-			// Convert from the old DB - TODO: remove it at some point (now is 14th of July 2021)
-			println("Convert from the old DB -done")
-			p.Banned >>= 1
-		}
 		if len(v) >= 35 {
 			extra_fields := v[34]
 			if extra_fields != 0 {

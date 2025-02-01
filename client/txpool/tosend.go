@@ -58,7 +58,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 func removeExcessiveTxs() (cnt int) {
 	var newspkb uint64
 	for TransactionsToSendSize > common.MaxMempoolSize() {
-		if WorstT2S == nil {
+		if common.Get(&common.CFG.TXPool.CheckErrors) && WorstT2S == nil {
 			println("ERROR: TransactionsToSendSize above limit, but WorstT2S is nil")
 			return
 		}
@@ -79,10 +79,12 @@ func removeExcessiveTxs() (cnt int) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-		println("ERROR: Trying to delete and already deleted tx", tx.Hash.String())
-		debug.PrintStack()
-		os.Exit(1)
+	if common.Get(&common.CFG.TXPool.CheckErrors) {
+		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
+			println("ERROR: Trying to delete and already deleted tx", tx.Hash.String())
+			debug.PrintStack()
+			os.Exit(1)
+		}
 	}
 	TransactionsToSendSize -= uint64(tx.Footprint)
 

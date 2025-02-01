@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sync"
 	"time"
 
@@ -485,15 +484,6 @@ func (c *OneConnection) ProcessBlockTxn(pl []byte) {
 		raw_tx := pl[offs : offs+n]
 		var tx_hash btc.Uint256
 		tx_hash.Calc(raw_tx)
-		if common.Get(&common.CFG.TXPool.Debug) {
-			if f, _ := os.OpenFile("missing_txs.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660); f != nil {
-				_tx, _ := btc.NewTx(raw_tx)
-				_tx.SetHash(raw_tx)
-				fmt.Fprintf(f, "%s: Tx %s was missing in bock %d\n",
-					time.Now().Format("2006-01-02 15:04:05"), _tx.Hash.String(), b2g.Block.Height)
-				f.Close()
-			}
-		}
 		offs += n
 
 		sid := siphash.Hash(col.K0, col.K1, tx_hash.Hash[:]) & 0xffffffffffff

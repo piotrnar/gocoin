@@ -84,8 +84,8 @@ var (
 			MaxNoUtxoMB    float64
 			RejectRecCnt   uint16
 			SaveOnDisk     bool
-			Debug          bool
 			NotFullRBF     bool
+			CheckErrors    bool
 		}
 		TXRoute struct {
 			Enabled    bool // Global on/off swicth

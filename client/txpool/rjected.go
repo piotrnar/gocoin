@@ -12,7 +12,7 @@ import (
 var (
 	// Transactions that we downloaded, but rejected:
 	TransactionsRejected     map[btc.BIDX]*OneTxRejected = make(map[btc.BIDX]*OneTxRejected)
-	TransactionsRejectedSize uint64                  // only include those that have *Tx pointer set
+	TransactionsRejectedSize uint64                      // only include those that have *Tx pointer set
 
 	TRIdxArray []btc.BIDX
 	TRIdxHead  int
@@ -102,9 +102,11 @@ func TRIdIsZeroArrayRec(idx int) bool {
 // Make sure to call it with locked TxMutex.
 func AddRejectedTx(txr *OneTxRejected) {
 	bidx := txr.Id.BIdx()
-	if _, ok := TransactionsRejected[bidx]; ok {
-		println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
-		return
+	if common.Get(&common.CFG.TXPool.CheckErrors) {
+		if _, ok := TransactionsRejected[bidx]; ok {
+			println("ERROR: AddRejectedTx: TxR", txr.Id.String(), "is already on the list")
+			return
+		}
 	}
 	txr.ArrIndex = uint16(TRIdxHead)
 	if !TRIdIsZeroArrayRec(TRIdxHead) {
@@ -164,9 +166,6 @@ func DeleteRejectedByTxr(txr *OneTxRejected) {
 func DeleteRejectedByIdx(bidx btc.BIDX) {
 	if txr, ok := TransactionsRejected[bidx]; ok {
 		DeleteRejectedByTxr(txr)
-	} else {
-		// this may happen when undoing a block
-		//println("ERROR: DeleteRejectedByIdx called with bidx which does not point to any txr", btc.BIdxString(bidx))
 	}
 }
 
@@ -183,9 +182,7 @@ func (tr *OneTxRejected) cleanup() {
 					newref = append(newref, bi)
 				}
 			}
-			if len(newref) == len(ref) {
-				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
-			} else {
+			if len(newref) != len(ref) {
 				if len(newref) == 0 {
 					delete(RejectedUsedUTXOs, uidx)
 					common.CountSafe("TxUsedUTXOdel")
@@ -193,6 +190,8 @@ func (tr *OneTxRejected) cleanup() {
 					RejectedUsedUTXOs[uidx] = newref
 					common.CountSafe("TxUsedUTXOrem")
 				}
+			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+				println("ERROR: TxR", tr.Id.String(), "was in RejectedUsedUTXOs, but not on the list. PLEASE REPORT!")
 			}
 		}
 	}
@@ -207,16 +206,16 @@ func (tr *OneTxRejected) cleanup() {
 					newlist = append(newlist, x)
 				}
 			}
-			if len(newlist) == len(w4i.Ids) {
-				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
-			} else {
+			if len(newlist) != len(w4i.Ids) {
 				if len(newlist) == 0 {
 					delete(WaitingForInputs, w4idx)
 				} else {
 					w4i.Ids = newlist
 				}
+			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
+				println("ERROR: WaitingForInputs record", tr.Waiting4.String(), "did not point back to txr", tr.Id.String())
 			}
-		} else {
+		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
 			println("ERROR: WaitingForInputs record not found for", tr.Waiting4.String(), "from txr", tr.Id.String())
 		}
 		WaitingForInputsSize -= uint64(tr.Footprint)
@@ -264,8 +263,10 @@ func RetryWaitingForInput(wtg *OneWaitingList) {
 		pendtxrcv := &TxRcvd{Tx: txr.Tx}
 		if HandleNetTx(pendtxrcv, true) {
 			common.CountSafe("TxRetryAccepted")
-			if txr, ok := TransactionsRejected[k]; ok {
-				println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
+			if common.Get(&common.CFG.TXPool.CheckErrors) {
+				if txr, ok := TransactionsRejected[k]; ok {
+					println("ERROR: tx", txr.Id.String(), "accepted but still in rejected")
+				}
 			}
 		} else {
 			common.CountSafe("TxRetryRejected")
