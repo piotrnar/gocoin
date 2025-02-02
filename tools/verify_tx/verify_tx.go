@@ -1,6 +1,5 @@
 // +build windows
 
-// On Windows OS copy this file to gocoin\client\usif\textui to enable consensus checking
 // Make sure you have proper "libbitcoinconsensus-0.dll" in a folder where OS can find it.
 
 package main
