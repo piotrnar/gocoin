@@ -1,7 +1,9 @@
 <br>
 Your node is restarting. Once it is back online, reload the <a href="/">Home</a> page.
 <script>
-setTimeout(function() {
-	document.location = "/"
-}, 300e3) // auto reaload in 5 minutes
+blno.addEventListener("lastblock", function(e) {
+	setTimeout(function() {
+		document.location = "/"
+	}, 2000) // after 2 seconds from getting back online, reload home page
+})
 </script>

@@ -1,2 +1,9 @@
 <br>
 Your node is shutting down. If you manually restart it, go back to the <a href="/">Home</a> page.
+<script>
+blno.addEventListener("lastblock", function(e) {
+	setTimeout(function() {
+		document.location = "/"
+	}, 2000) // after 2 seconds from getting back online, reload home page
+})
+</script>
