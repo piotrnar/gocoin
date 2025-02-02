@@ -277,6 +277,9 @@ func dump_block(s string) {
 }
 
 func ui_quit(par string) {
+	if par != "" && par[0] == 'r' {
+		usif.Restart.Set()
+	}
 	usif.Exit_now.Set()
 }
 
@@ -476,6 +479,9 @@ func redo_block(par string) {
 }
 
 func kill_node(par string) {
+	if par != "" && par[0] == 'r' {
+		os.WriteFile(".restart", []byte("Gocoin's temporary file - client killed"), 0600)
+	}
 	os.Exit(1)
 }
 
@@ -493,7 +499,7 @@ func init() {
 	newUi("mem", false, show_mem, "Show memory stats or: [free|gc|<new_gc_perc>]")
 	newUi("pend", false, show_pending, "Show pending blocks, to be fetched")
 	newUi("purge", true, purge_utxo, "Purge all unspendable outputs from UTXO database")
-	newUi("quit q", false, ui_quit, "Quit the node")
+	newUi("quit q", false, ui_quit, "Quit the node: [restart]")
 	newUi("redo", true, redo_block, "Redo last block")
 	newUi("savebl bls", false, dump_block, "Saves a block to disk: <hash>")
 	newUi("saveutxo s", true, save_utxo, "Save UTXO database now")

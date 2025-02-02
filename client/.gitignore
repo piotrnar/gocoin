@@ -2,6 +2,7 @@
 balance/
 client
 *.conf
+.restart
 .stealth
 *.bat
 ssl_cert/*.crt

@@ -41,6 +41,7 @@ var (
 
 	FetchingBalances sys.SyncBool
 	Exit_now         sys.SyncBool
+	Restart          sys.SyncBool
 )
 
 func getpo(prevout *btc.TxPrevOut) (po *btc.TxOut) {

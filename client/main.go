@@ -16,8 +16,8 @@ import (
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/client/network"
 	"github.com/piotrnar/gocoin/client/peersdb"
-	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/rpcapi"
+	"github.com/piotrnar/gocoin/client/txpool"
 	"github.com/piotrnar/gocoin/client/usif"
 	"github.com/piotrnar/gocoin/client/usif/textui"
 	"github.com/piotrnar/gocoin/client/usif/webui"
@@ -42,6 +42,7 @@ const (
 	SaveBlockChainAfter       = 2 * time.Second
 	SaveBlockChainAfterNoSync = 10 * time.Minute
 	ReenableMempoolSorting    = 2 * time.Second
+	RESTART_FILENAME          = ".restart"
 )
 
 func reset_save_timer() {
@@ -456,6 +457,8 @@ func main() {
 
 	fmt.Println("Gocoin client version", gocoin.Version)
 
+	os.Remove(RESTART_FILENAME)
+
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
 	defer func() {
@@ -778,4 +781,8 @@ func main() {
 	}
 	sys.UnlockDatabaseDir()
 	os.RemoveAll(common.TempBlocksDir())
+
+	if usif.Restart.Get() {
+		os.WriteFile(RESTART_FILENAME, []byte("Gocoin's temporary file"), 0600)
+	}
 }
