@@ -1,8 +1,4 @@
-*.txt
-balance/
 client
 *.conf
-.restart
-.stealth
 ssl_cert/*.crt
 ssl_cert/*.key

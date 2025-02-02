@@ -2,7 +2,7 @@
 
 while true; do
 	./client
-	if [ ! -e .restart ]; then
+	if [ $? -ne 2 ]; then
 		break
 	fi
 done
