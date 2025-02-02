@@ -395,6 +395,14 @@ func MempoolLoad() bool {
 	buildSortedList()
 	//println("***Remove this: Mempool error after loading:", MempoolCheck())
 
+	if common.Get(&common.CFG.TXPool.CheckErrors) {
+		if MempoolCheck() {
+			println("ERROR: TXPool not OK after loading. Start the client with -mp0 to recover.")
+			os.Exit(1)
+		}
+		fmt.Println("Mempool OK so far. CheckErrors is on - will be checking for errors")
+	}
+
 	return true
 
 fatal_error:
