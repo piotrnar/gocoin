@@ -151,13 +151,16 @@ func MarkChildrenForMem(tx *btc.Tx) {
 					rec.MemInputs = make([]bool, len(rec.TxIn))
 					extra_size := (len(rec.MemInputs) + 7) & ^7
 					rec.Footprint += uint32(extra_size)
-					TransactionsRejectedSize += uint64(extra_size)
+					TransactionsToSendSize += uint64(extra_size)
 				}
 				idx := rec.IIdx(uidx)
 				rec.MemInputs[idx] = true
 				rec.MemInputCnt++
 				rec.ResortWithChildren()
 				common.CountSafe("TxPutBackMemIn")
+				if common.Get(&common.CFG.TXPool.CheckErrors) && rec.Footprint != uint32(rec.SysSize()) {
+					println("ERROR: MarkChildrenForMem footprint mismatch", rec.Footprint, uint32(rec.SysSize()))
+				}
 			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
 				println("ERROR: MarkChildrenForMem", po.String(), " in SpentOutputs, but not in mempool")
 				common.CountSafe("TxPutBackMeminERR")
@@ -183,7 +186,9 @@ func BlockUndone(bl *btc.Block) {
 			common.CountSafe("TxPutBackNoNeed")
 		}
 
+		TxMutex.Lock()
 		MarkChildrenForMem(tx)
+		TxMutex.Unlock()
 	}
 	if cnt != len(bl.Txs)-1 {
 		println("WARNING: network.BlockUndone("+bl.Hash.String()+") - ", cnt, "of", len(bl.Txs)-1, "txs put back")
