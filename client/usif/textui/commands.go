@@ -480,7 +480,7 @@ func redo_block(par string) {
 
 func kill_node(par string) {
 	if par != "" && par[0] == 'r' {
-		os.WriteFile(".restart", []byte("Gocoin's temporary file - client killed"), 0600)
+		os.Exit(2)
 	}
 	os.Exit(1)
 }

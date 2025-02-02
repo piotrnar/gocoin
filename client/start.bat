@@ -1,4 +1,4 @@
 @echo off
 :again
 client.exe
-if exist .restart goto again
+if errorlevel 2 goto again

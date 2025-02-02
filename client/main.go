@@ -42,7 +42,6 @@ const (
 	SaveBlockChainAfter       = 2 * time.Second
 	SaveBlockChainAfterNoSync = 10 * time.Minute
 	ReenableMempoolSorting    = 2 * time.Second
-	RESTART_FILENAME          = ".restart"
 )
 
 func reset_save_timer() {
@@ -457,8 +456,6 @@ func main() {
 
 	fmt.Println("Gocoin client version", gocoin.Version)
 
-	os.Remove(RESTART_FILENAME)
-
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
 	defer func() {
@@ -783,6 +780,6 @@ func main() {
 	os.RemoveAll(common.TempBlocksDir())
 
 	if usif.Restart.Get() {
-		os.WriteFile(RESTART_FILENAME, []byte("Gocoin's temporary file"), 0600)
+		os.Exit(2)
 	}
 }
