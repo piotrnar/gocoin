@@ -185,7 +185,7 @@ func InitConfig() {
 	CFG.TXPool.FeePerByte = 1.0
 	CFG.TXPool.MaxTxSize = 100e3
 	CFG.TXPool.MaxSizeMB = 300
-	CFG.TXPool.ExpireInDays = 7
+	CFG.TXPool.ExpireInDays = 14
 	CFG.TXPool.MaxRejectMB = 25.0
 	CFG.TXPool.MaxNoUtxoMB = 5.0
 	CFG.TXPool.RejectRecCnt = 20000
