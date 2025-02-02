@@ -47,10 +47,10 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				common.CountSafe("TxMinedMeminOut")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
-					reduxed_size := (len(rec.MemInputs) + 7) & ^7
+					reduced_size := (len(rec.MemInputs) + 7) & ^7
 					rec.MemInputs = nil
-					rec.Footprint -= uint32(reduxed_size)
-					TransactionsToSendSize -= uint64(reduxed_size)
+					rec.Footprint -= uint32(reduced_size)
+					TransactionsToSendSize -= uint64(reduced_size)
 				}
 				rec.ResortWithChildren()
 			} else if common.Get(&common.CFG.TXPool.CheckErrors) {
@@ -149,6 +149,9 @@ func MarkChildrenForMem(tx *btc.Tx) {
 			if rec := TransactionsToSend[val]; rec != nil {
 				if rec.MemInputs == nil {
 					rec.MemInputs = make([]bool, len(rec.TxIn))
+					extra_size := (len(rec.MemInputs) + 7) & ^7
+					rec.Footprint += uint32(extra_size)
+					TransactionsRejectedSize += uint64(extra_size)
 				}
 				idx := rec.IIdx(uidx)
 				rec.MemInputs[idx] = true
