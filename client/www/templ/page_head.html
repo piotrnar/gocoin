@@ -8,20 +8,24 @@
 		return dark_mode ? "static/gocoin_dark.css" : "static/gocoin_light.css"
 	}
 
-	function change_theme() {
-		dark_mode = !dark_mode
-		localStorage.setItem("dark_mode", dark_mode)
+	function set_theme() {
 		loaded_css.href = css_filename()
-
 		var e = document.createEvent("Event")
 		e.initEvent("theme_changed", false, false)
 		dark_light_icon.dispatchEvent(e)
 	}
 
+	function change_theme() {
+		dark_mode = !dark_mode
+		localStorage.setItem("dark_mode", dark_mode)
+		set_theme()
+	}
+
 	if (auto_dark_mode) {
 		dark_mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    		dark_mode = event.matches
+			dark_mode = event.matches
+			set_theme()
 		})
 	} else {
 		dark_mode = localStorage.getItem("dark_mode")==="true"
