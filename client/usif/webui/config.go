@@ -3,7 +3,6 @@ package webui
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -43,7 +42,7 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(r.Form["friends_file"]) > 0 {
-			ioutil.WriteFile(common.GocoinHomeDir+"friends.txt", []byte(r.Form["friends_file"][0]), 0600)
+			os.WriteFile(common.GocoinHomeDir+"friends.txt", []byte(r.Form["friends_file"][0]), 0600)
 			network.Mutex_net.Lock()
 			network.NextConnectFriends = time.Now()
 			network.Mutex_net.Unlock()
@@ -53,7 +52,18 @@ func p_cfg(w http.ResponseWriter, r *http.Request) {
 
 		if len(r.Form["shutdown"]) > 0 {
 			usif.Exit_now.Set()
-			w.Write([]byte("Your node should shut down soon"))
+			write_html_head(w, r)
+			w.Write([]byte(load_template("shutdown.html")))
+			write_html_tail(w)
+			return
+		}
+
+		if len(r.Form["restart"]) > 0 {
+			usif.Restart.Set()
+			usif.Exit_now.Set()
+			write_html_head(w, r)
+			w.Write([]byte(load_template("restarting.html")))
+			write_html_tail(w)
 			return
 		}
 

@@ -145,11 +145,17 @@ WebUI Settings:&nbsp;<input style="display:none" type="file" id="import_file" ac
 	<tr id="showcfg" style="display:none">
 
 <form method="post" style="margin:0" action="cfg" onsubmit="return confirm('Are you sure that you want to shut down this node?');">
-<td align="left" style="padding:0px"><input type="button" value="Edit configuration" onclick="shwcfg()">
-<td align="right" style="padding:0px">
-<input type="button" value="Save configuration" onclick="savecfg()">
-<input type="hidden" name="shutdown" value="1">
-<input type="submit" value="Shutdown Node">
+<td align="left" style="padding:0px" colspan="2">
+<table width="100%" cellspacing="0" cellpadding="0"><tr>
+<td align="left">
+	<input type="button" value="Edit config" onclick="shwcfg()">
+	<input type="button" value="Save config" onclick="savecfg()">
+</td>
+<td align="right">
+	<input type="submit" name="restart" value="Restart node">
+	<input type="submit" name="shutdown" value="Shutdown">
+</td>
+</tr></table>
 </form>
 </td>
 
