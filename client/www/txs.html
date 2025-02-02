@@ -21,12 +21,12 @@ td.txsize {
 }
 </style>
 <div id="light" class="white_content">
-<table width="100%"><tr>
-<td align="center"><h3><b class="mono" id="disp_txid"></b></h3>
-<td align="right"><img title="Close this popup" class="del" onclick="closepopup()">
-</table>
+<span style="float:right"><img title="Close this popup" class="del" onclick="closepopup()"></span>
+<div class="rawdatalabel mono" id="disp_txid"></div>
 <pre id="rawdiv"></pre>
-<textarea id="txhexdump" style="width:100%" rows="5" readonly onclick="this.select()"></textarea>
+<span id="txhexdumpsection" style="width:100%"><div class="rawdatalabel">Raw TX data</div>
+<textarea id="txhexdump" style="width:100%" rows="4" readonly onclick="this.select()"></textarea>
+</span>
 </div><div id="fade" class="black_overlay"></div>
 <table width="100%">
 <tr>
@@ -443,7 +443,7 @@ function decode_tx_id(txid) {
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
 
-			txhexdump.style.display = 'inline-block'
+			txhexdumpsection.style.display = 'inline-block'
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)
@@ -463,7 +463,7 @@ function do_raw_tx(txid) {
 			rawdiv.innerHTML = aj.responseText
 			prvpos = document.body.scrollTop
 			window.scrollTo(0,0)
-			txhexdump.style.display = 'none'
+			txhexdumpsection.style.display = 'none'
 			light.style.display='block'
 			fade.style.display='block'
 			document.addEventListener("scroll", noscroll)

@@ -97,13 +97,19 @@ tr {
 }
 
 
-#rawdiv {
-	border: 1px solid #888888;
+pre#rawdiv {
 	font-family: monospace;
-	background-color:#000000;
+	background-color:#222222;
 	width: 100%;
 	overflow-x: auto;
 	font-size:85%
+}
+
+textarea#txhexdump {
+	background-color:#222222;
+	color:#aaaaaa;
+	font-size:75%;
+	overflow-x: auto;
 }
 
 td,th {
@@ -300,15 +306,13 @@ div.footer {
 	filter: alpha(opacity=80);
 }
 
-.white_content {
+div.white_content {
 	display: none;
 	position: absolute;
 	top: 10%;
 	left: 10%;
 	width: 80%;
 	height: 80%;
-	padding-left: 8px;
-	padding-right: 8px;
 	border: 5px solid #cccccc;
 	background-color: black;
 	z-index:1002;
