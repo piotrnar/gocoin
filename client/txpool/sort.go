@@ -465,13 +465,13 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	already_in := make(map[*OneTxToSend]bool, len(txs))
 	for txs_idx < len(txs) {
 		tx := txs[txs_idx]
-
+	same_tx:
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
 			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
-					continue
+					goto same_tx
 				}
 				// all package's txs new: incude them all
 				copy(result[res_idx:], pk.Txs)
@@ -479,7 +479,7 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
-				continue
+				goto same_tx
 			}
 		}
 
