@@ -44,6 +44,8 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				}
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
+				FeePackagesDirty = true
+				common.CountSafe("TxPkgsMinus")
 				common.CountSafe("TxMinedMeminOut")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")

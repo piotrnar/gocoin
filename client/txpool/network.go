@@ -303,6 +303,11 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
 	rec.Add(bidx)
+	if frommemcnt > 0 {
+		FeePackagesDirty = true
+		common.CountSafe("TxPkgsPlus")
+
+	}
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx

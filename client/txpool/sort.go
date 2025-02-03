@@ -83,6 +83,7 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 
 // this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) ResortWithChildren() {
+	common.CountSafe("TxPkgsResort")
 	FeePackagesDirty = true // if we enter here Mem Input Count has just changes
 	if SortingSupressed {
 		// We always suppress sorting for block commit, but this check is here just in case
@@ -435,8 +436,10 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	if !FeePackagesDirty && FeePackages != nil {
 		result = FeePackages
+		common.CountSafe("TxPkgsLookSkept")
 		return
 	}
+	common.CountSafe("TxPkgsLookDone")
 	for _, tx := range txs {
 		if common.Get(&common.CFG.TXPool.CheckErrors) && tx.Weight() == 0 {
 			println("ERROR: LookForPackages found weight 0 in", tx.Hash.String())
