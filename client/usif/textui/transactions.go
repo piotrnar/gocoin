@@ -541,9 +541,9 @@ func tx_pool_stats(par string) {
 	fmt.Printf("  Waiting4Input: %d in %d txs\n", txpool.WaitingForInputsSize, len(txpool.WaitingForInputs))
 	fmt.Printf("  Rejected used UTXOs: %d\n", len(txpool.RejectedUsedUTXOs))
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
-	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
+	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 	txpool.TxMutex.Unlock()
 }
 
