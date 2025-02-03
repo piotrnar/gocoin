@@ -341,11 +341,12 @@ func (t2s *OneTxToSend) updateAllPackages() {
 					pkg.Fee += t.Fee
 				}
 				resort = true
+				common.CountSafe("TxPkgsUpdated")
 			}
 		}
 		if resort {
+			common.CountSafe("TxPkgsResortA")
 			sortFeePackages()
-			GetSortedMempoolRBF()
 		}
 	}
 }
@@ -393,7 +394,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	}
 
 	if resort {
-		common.CountSafe("TxPkgsResort")
+		common.CountSafe("TxPkgsResortD")
 		sortFeePackages()
 	}
 }

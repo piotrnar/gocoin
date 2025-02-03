@@ -314,6 +314,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	TxMutex.Unlock()
+	mpc()
 	common.CountSafe("TxAccepted")
 
 	ntx.feedback(FEEDBACK_TX_ACCEPTED, nil)
