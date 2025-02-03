@@ -22,6 +22,8 @@ var (
 	BestT2S, WorstT2S *OneTxToSend
 	SortingSupressed  bool
 	SortListDirty     bool
+	FeePackages       []*OneTxsPackage
+	FeePackagesDirty  bool
 )
 
 // call it with false to restore sorting
@@ -29,11 +31,10 @@ func SupressMempooolSorting(yes bool) {
 	TxMutex.Lock()
 	if yes {
 		SortingSupressed = true
-	} else {
+	} else if !SortingSupressed {
 		SortingSupressed = false
 		if SortListDirty {
 			buildSortedList()
-			SortListDirty = false
 		}
 	}
 	TxMutex.Unlock()
@@ -80,8 +81,11 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 	WorstT2S = t2s
 }
 
+// this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) ResortWithChildren() {
+	FeePackagesDirty = true // if we enter here Mem Input Count has just changes
 	if SortingSupressed {
+		// We always suppress sorting for block commit, but this check is here just in case
 		SortListDirty = true
 		return
 	}
@@ -428,7 +432,11 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
-func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
+func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
+	if !FeePackagesDirty && FeePackages != nil {
+		result = FeePackages
+		return
+	}
 	for _, tx := range txs {
 		if common.Get(&common.CFG.TXPool.CheckErrors) && tx.Weight() == 0 {
 			println("ERROR: LookForPackages found weight 0 in", tx.Hash.String())
@@ -451,13 +459,18 @@ func LookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Fee*uint64(result[j].Weight) > result[j].Fee*uint64(result[i].Weight)
 	})
+	FeePackages = result
+	FeePackagesDirty = false
 	return
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
+	sta1 := time.Now()
 	txs := GetSortedMempool()
-	pkgs := LookForPackages(txs)
+	sta2 := time.Now()
+	pkgs := lookForPackages(txs)
+	sta3 := time.Now()
 	//println(len(pkgs), "pkgs from", len(txs), "txs")
 
 	result = make([]*OneTxToSend, len(txs))
@@ -491,14 +504,21 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		already_in[tx] = true
 		res_idx++
 	}
-	//println("All sorted.  res_idx:", res_idx, "  txs:", len(txs))
+	sta4 := time.Now()
+	if common.Get(&common.CFG.TXPool.Debug) {
+		println("RBF sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
+			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String())
+	}
 	return
 }
 
 // GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
+	sta1 := time.Now()
 	txs := GetSortedMempool()
-	pkgs := LookForPackages(txs)
+	sta2 := time.Now()
+	pkgs := lookForPackages(txs)
+	sta3 := time.Now()
 
 	var txs_idx, pks_idx, res_idx int
 	var weightsofar uint64
@@ -506,26 +526,23 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	already_in := make(map[*OneTxToSend]bool, len(txs))
 	for txs_idx < len(txs) && weightsofar < maxweight {
 		tx := txs[txs_idx]
-
+	go_again:
 		if pks_idx < len(pkgs) {
 			pk := pkgs[pks_idx]
 			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
 				if pk.AnyIn(already_in) {
-					continue
+					goto go_again
 				}
-
 				result[res_idx] = [2]uint64{uint64(pk.Weight), pk.Fee}
 				res_idx++
 				weightsofar += uint64(pk.Weight)
-
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
-				continue
+				goto go_again
 			}
 		}
-
 		txs_idx++
 		if _, ok := already_in[tx]; ok {
 			continue
@@ -539,10 +556,15 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 		result[res_idx] = [2]uint64{uint64(wg), tx.Fee}
 		res_idx++
 		weightsofar += uint64(tx.Weight())
-
 		already_in[tx] = true
 	}
 	result = result[:res_idx]
+	sta4 := time.Now()
+	if common.Get(&common.CFG.TXPool.Debug) {
+		println("Fees sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
+			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String(),
+			"  SLD:", SortListDirty)
+	}
 	return
 }
 
@@ -608,14 +630,9 @@ func GetSortedMempool() (result []*OneTxToSend) {
 	return
 }
 
-func BuildSortedList() {
-	TxMutex.Lock()
-	buildSortedList()
-	TxMutex.Unlock()
-}
-
 // call it with the mutex locked
 func buildSortedList() {
+	SortListDirty = false
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {
 		BestT2S, WorstT2S = nil, nil

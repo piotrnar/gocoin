@@ -86,6 +86,7 @@ var (
 			SaveOnDisk     bool
 			NotFullRBF     bool
 			CheckErrors    bool
+			Debug          bool
 		}
 		TXRoute struct {
 			Enabled    bool // Global on/off swicth

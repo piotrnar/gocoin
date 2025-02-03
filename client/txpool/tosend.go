@@ -46,6 +46,7 @@ type OneTxToSend struct {
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
+	FeePackagesDirty = true
 	t2s.AddToSort()
 
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -87,6 +88,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 	TransactionsToSendSize -= uint64(tx.Footprint)
+	FeePackagesDirty = true
 
 	if with_children {
 		// remove all the children that are spending from tx
