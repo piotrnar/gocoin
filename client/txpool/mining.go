@@ -44,9 +44,8 @@ func (tx *OneTxToSend) UnMarkChildrenForMem() {
 				}
 				rec.MemInputs[idx] = false
 				rec.MemInputCnt--
-				FeePackagesDirty = true
-				common.CountSafe("TxPkgsMinus")
-				common.CountSafe("TxMinedMeminOut")
+
+				common.CountSafe("TxMinedMeminCnt")
 				if rec.MemInputCnt == 0 {
 					common.CountSafe("TxMinedMeminTx")
 					reduced_size := (len(rec.MemInputs) + 7) & ^7
@@ -118,6 +117,9 @@ func tx_mined(tx *btc.Tx) {
 
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
+	FeePackagesDirty = true
+	common.CountSafe("TxPkgsBlockMined")
+
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
 	for _, tx := range bl.Txs[1:] {
@@ -173,6 +175,8 @@ func MarkChildrenForMem(tx *btc.Tx) {
 
 func BlockUndone(bl *btc.Block) {
 	var cnt int
+	FeePackagesDirty = true
+	common.CountSafe("TxPkgsBlockUndo")
 	for _, tx := range bl.Txs[1:] {
 		// put it back into the mempool
 		ntx := &TxRcvd{Tx: tx, Trusted: true}

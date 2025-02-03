@@ -83,7 +83,7 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 
 // this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) ResortWithChildren() {
-	common.CountSafe("TxPkgsResort")
+	common.CountSafe("TxPkgsResWithCh")
 	FeePackagesDirty = true // if we enter here Mem Input Count has just changes
 	if SortingSupressed {
 		// We always suppress sorting for block commit, but this check is here just in case
@@ -433,6 +433,13 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
+func sortFeePackages() {
+	common.CountSafe("TxPkgsSort")
+	sort.Slice(FeePackages, func(i, j int) bool {
+		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
+	})
+}
+
 func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	if !FeePackagesDirty && FeePackages != nil {
 		result = FeePackages
@@ -459,10 +466,8 @@ func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 			result = append(result, &pkg)
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Fee*uint64(result[j].Weight) > result[j].Fee*uint64(result[i].Weight)
-	})
 	FeePackages = result
+	sortFeePackages()
 	FeePackagesDirty = false
 	return
 }
