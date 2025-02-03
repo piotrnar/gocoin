@@ -292,8 +292,8 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	for ctx := range rbf_tx_list {
-		// we dont remove with children because we have all of them on the list
-		ctx.Delete(true, TX_REJECTED_REPLACED)
+		// we dont remove with children because it can't have any in the mempool yet
+		ctx.Delete(false, TX_REJECTED_REPLACED)
 	}
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
