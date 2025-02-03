@@ -47,46 +47,50 @@ type OneTxToSend struct {
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
+	TransactionsToSendWeight += uint64(t2s.Weight())
+	TransactionsToSendSize += uint64(t2s.Footprint)
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 {
-		var resort bool
 		common.CountSafe("TxPkgsPlus")
-		// first add us to any group originated from any of our ancestors
-		ancestors := t2s.getAllAncestors()
-		for _, pkg := range FeePackages {
-			if ancestors[pkg.Txs[0]] {
-				pkg.Txs = append(pkg.Txs, t2s)
-				pkg.Fee += t2s.Fee
-				pkg.Weight += t2s.Weight()
-				resort = true
-				common.CountSafe("TxPkgsPlusExtend")
-			}
-		}
+		FeePackagesDirty = true
 
-		// now go through any of our meminputs and add a new group ending with us
-		for idx, meminput := range t2s.MemInputs {
-			if meminput {
-				if ptx, ok := TransactionsToSend[btc.BIdx(t2s.TxIn[idx].Input.Hash[:])]; ok {
-					pkg := new(OneTxsPackage)
-					pkg.Txs = []*OneTxToSend{ptx, t2s}
-					pkg.Weight = t2s.Weight() + ptx.Weight()
-					pkg.Fee = t2s.Fee + ptx.Fee
-					FeePackages = append(FeePackages, pkg)
+		if false {
+			var resort bool
+			// first add us to any group originated from any of our ancestors
+			ancestors := t2s.getAllAncestors()
+			for _, pkg := range FeePackages {
+				if ancestors[pkg.Txs[0]] {
+					pkg.Txs = append(pkg.Txs, t2s)
+					pkg.Fee += t2s.Fee
+					pkg.Weight += t2s.Weight()
 					resort = true
-					common.CountSafe("TxPkgsPlusAppend")
-				} else {
-					println("ERROR: t2s.Add: tx from meminput", idx, "not found in the pool")
+					common.CountSafe("TxPkgsPlusExtend")
 				}
 			}
-		}
 
-		if resort {
-			sortFeePackages()
+			// now go through any of our meminputs and add a new group ending with us
+			for idx, meminput := range t2s.MemInputs {
+				if meminput {
+					if ptx, ok := TransactionsToSend[btc.BIdx(t2s.TxIn[idx].Input.Hash[:])]; ok {
+						pkg := new(OneTxsPackage)
+						pkg.Txs = []*OneTxToSend{ptx, t2s}
+						pkg.Weight = t2s.Weight() + ptx.Weight()
+						pkg.Fee = t2s.Fee + ptx.Fee
+						FeePackages = append(FeePackages, pkg)
+						resort = true
+						common.CountSafe("TxPkgsPlusAppend")
+					} else {
+						println("ERROR: t2s.Add: tx from meminput", idx, "not found in the pool")
+					}
+				}
+			}
+
+			if resort {
+				sortFeePackages()
+			}
 		}
 	}
 
-	TransactionsToSendWeight += uint64(t2s.Weight())
-	TransactionsToSendSize += uint64(t2s.Footprint)
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
