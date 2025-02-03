@@ -539,6 +539,11 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		already_in[tx] = true
 		res_idx++
 	}
+	if VerifyMempoolSort(result) {
+		println("RBF sort failed")
+		debug.PrintStack()
+		os.Exit(1)
+	}
 	return
 }
 
