@@ -145,9 +145,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 
 	if !FeePackagesDirty && tx.MemInputCnt > 0 {
-		//FeePackagesDirty = true
 		tx.removeFromPackages()
-		GetSortedMempoolRBF()
 	}
 
 	TransactionsToSendWeight -= uint64(tx.Weight())
@@ -156,6 +154,8 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
+
+	//GetSortedMempoolRBF()
 }
 
 func txChecker(tx *btc.Tx) bool {
@@ -346,18 +346,28 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 // its looking for all the ancestors of the t2s and then removes itself from any group starting with them
 func (t2s *OneTxToSend) removeFromPackages() {
 	common.CountSafe("TxPkgsRemove")
+	//FeePackagesDirty = true
+	//return
 
 	var records2remove int
 	var resort bool
+	ancestors := t2s.getAllAncestors()
+	if len(ancestors) == 0 {
+		common.CountSafe("TxPkgsRemove**Emp")
+		return
+	}
 
 	for _, pkg := range FeePackages {
 		for idx, t := range pkg.Txs {
 			if t == t2s {
-				println("RFP:", t2s.Hash.String(), "found @", idx, "/", len(pkg.Txs))
+				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs), ancestors[pkg.Txs[0]], len(ancestors))
 				if len(pkg.Txs) == 2 {
 					pkg.Txs = nil
 					records2remove++
 				} else {
+					common.CountSafe("TxPkgsRemoveTx")
+					pkg.Fee -= t2s.Fee
+					pkg.Weight -= t2s.Weight()
 					copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
 					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
 					resort = true
