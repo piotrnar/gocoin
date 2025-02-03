@@ -68,7 +68,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			if meminput {
 				if ptx, ok := TransactionsToSend[btc.BIdx(t2s.TxIn[idx].Input.Hash[:])]; ok {
 					pkg := new(OneTxsPackage)
-					pkg.Txs = []*OneTxToSend{t2s, ptx}
+					pkg.Txs = []*OneTxToSend{ptx, t2s}
 					pkg.Weight = t2s.Weight() + ptx.Weight()
 					pkg.Fee = t2s.Fee + ptx.Fee
 					FeePackages = append(FeePackages, pkg)
@@ -83,7 +83,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		if resort {
 			sortFeePackages()
 		}
-
 	}
 
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -150,7 +149,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 
 	if !FeePackagesDirty && tx.MemInputCnt > 0 {
 		tx.removeFromPackages()
-		//FeePackagesDirty = true
 	}
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
@@ -329,8 +327,8 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 			if meminput {
 				if _t2s, ok := TransactionsToSend[btc.BIdx(t.Tx.TxIn[idx].Input.Hash[:])]; ok {
 					if len(_t2s.MemInputs) != 0 {
-						ancestors[_t2s] = true
 						add_ancestors(_t2s)
+						ancestors[_t2s] = true
 					}
 				} else {
 					println("ERROR: meminput missing for t2s", t.Hash.String(),

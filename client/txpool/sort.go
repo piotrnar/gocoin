@@ -210,7 +210,7 @@ func (t2s *OneTxToSend) DelFromSort() {
 	t2s.Better.Worse = t2s.Worse
 }
 
-func VerifyMempoolSort(txs []*OneTxToSend) {
+func VerifyMempoolSort(txs []*OneTxToSend) bool {
 	idxs := make(map[btc.BIDX]int, len(txs))
 	for i, t2s := range txs {
 		idxs[t2s.Hash.BIdx()] = i
@@ -219,13 +219,13 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 	for i, t2s := range txs {
 		if t2s.Weight() == 0 {
 			println("ERROR: in mempool sorting:", i, "has weight 0", t2s.Hash.String())
-			return
+			return true
 		}
 		for _, txin := range t2s.TxIn {
 			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
 				if idx > i {
 					println("ERROR: in mempool sorting:", i, "points to", idx)
-					return
+					return true
 				} else {
 					oks++
 				}
@@ -233,6 +233,7 @@ func VerifyMempoolSort(txs []*OneTxToSend) {
 		}
 	}
 	println("mempool sorting OK", oks, len(txs))
+	return false
 }
 
 func (t2s *OneTxToSend) findWorstParent() (wpr *OneTxToSend) {
@@ -509,6 +510,7 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 				copy(result[res_idx:], pk.Txs)
 				res_idx += len(pk.Txs)
 				for _, _t := range pk.Txs {
+					chkTx(_t, "group")
 					already_in[_t] = true
 				}
 				goto same_tx
@@ -519,11 +521,19 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		if _, ok := already_in[tx]; ok {
 			continue
 		}
+		chkTx(tx, "tx")
 		result[res_idx] = tx
 		already_in[tx] = true
 		res_idx++
 	}
 	return
+}
+
+func chkTx(t *OneTxToSend, lab string) {
+	if _, ok := TransactionsToSend[t.Hash.BIdx()]; !ok {
+		println("ERROR: chkTx in", lab, "missing tx:", t.Hash.String())
+		os.Exit(1)
+	}
 }
 
 // GetMempoolFees only takes tx/package weight and the fee.
