@@ -148,6 +148,9 @@ func newOneTxToSendFromFile(rd io.Reader, file_version int) (t2s *OneTxToSend, e
 		return
 	}
 	t2s.Tx.SetHash(raw)
+	if t2s.Weight() == 0 {
+		println("DUPA at", t2s.Hash.String())
+	}
 
 	if file_version < 6 {
 		if le, er = btc.ReadVLen(rd); er != nil {
@@ -248,8 +251,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			er = errors.New(fmt.Sprint("Error parsing rejected tx from ", MEMPOOL_FILE_NAME, " at idx ", len(TransactionsRejected)))
 			return
 		}
-		txr.Raw = raw
-		txr.Tx.Hash.Hash = txr.Id.Hash
+		txr.SetHash(raw)
 	} else if txr.Waiting4 != nil {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
