@@ -454,7 +454,7 @@ func main() {
 		fmt.Println("WARNING: Gocoin client shall be build for 64-bit arch. It will likely crash now.")
 	}
 
-	fmt.Println("Gocoin client version", gocoin.Version)
+	fmt.Println("Gocoin client version", gocoin.Version, " PID", os.Getpid())
 
 	// Disable Ctrl+C
 	signal.Notify(common.KillChan, os.Interrupt, syscall.SIGTERM)
