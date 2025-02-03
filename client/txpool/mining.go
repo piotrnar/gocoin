@@ -67,8 +67,8 @@ func tx_mined(tx *btc.Tx) {
 	h := tx.Hash
 	if rec, ok := TransactionsToSend[h.BIdx()]; ok {
 		common.CountSafe("TxMinedAccepted")
-		rec.UnMarkChildrenForMem()
 		rec.Delete(false, 0)
+		rec.UnMarkChildrenForMem()
 	}
 	if mr, ok := TransactionsRejected[h.BIdx()]; ok {
 		common.CountSafePar("TxMinedRejected-", mr.Reason)
