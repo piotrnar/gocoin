@@ -433,11 +433,22 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
+var (
+	SortFeePackagesTime  time.Duration
+	SortFeePackagesCount uint
+
+	LookForPackagesTime  time.Duration
+	LookForPackagesCount uint
+)
+
 func sortFeePackages() {
 	common.CountSafe("TxPkgsSort")
+	sta := time.Now()
 	sort.Slice(FeePackages, func(i, j int) bool {
 		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 	})
+	SortFeePackagesTime += time.Since(sta)
+	SortFeePackagesCount++
 }
 
 func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
@@ -447,6 +458,7 @@ func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 		return
 	}
 	common.CountSafe("TxPkgsLookDone")
+	sta := time.Now()
 	for _, tx := range txs {
 		if common.Get(&common.CFG.TXPool.CheckErrors) && tx.Weight() == 0 {
 			println("ERROR: LookForPackages found weight 0 in", tx.Hash.String())
@@ -469,6 +481,8 @@ func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 	FeePackages = result
 	sortFeePackages()
 	FeePackagesDirty = false
+	LookForPackagesTime += time.Since(sta)
+	LookForPackagesCount++
 	return
 }
 

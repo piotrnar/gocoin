@@ -550,12 +550,7 @@ func json_mempool_stats(w http.ResponseWriter, r *http.Request) {
 		division = 100
 	}
 
-	var sorted []*txpool.OneTxToSend
-	if len(r.Form["new"]) > 0 {
-		sorted = txpool.GetSortedMempoolRBF()
-	} else {
-		sorted = txpool.GetSortedMempool()
-	}
+	sorted := txpool.GetSortedMempoolRBF()
 
 	type one_stat_row struct {
 		Txs_so_far        uint

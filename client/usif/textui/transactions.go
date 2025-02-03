@@ -230,7 +230,7 @@ func list_txs(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
-	sorted := txpool.GetSortedMempool()
+	sorted := txpool.GetSortedMempoolRBF()
 
 	var totlen, totweigth uint64
 	for cnt = 0; cnt < len(sorted); cnt++ {
@@ -543,6 +543,8 @@ func tx_pool_stats(par string) {
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
+	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
+	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 	txpool.TxMutex.Unlock()
 }

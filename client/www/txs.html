@@ -925,17 +925,17 @@ function show_mempool_fees() {
 		}
 	}
 
-	var url = mempool_new_sort.checked ? "mempool_fees.json?new" : "mempool_stats.json?new"
+	var url = mempool_new_sort.checked ? "mempool_fees.json" : "mempool_stats.json"
 
 	localStorage.setItem("txs_chart_y_limit", mempool_spb_range.checked)
 	localStorage.setItem("txs_chart_new_sort", mempool_new_sort.checked)
 
 	if (mempool_siz_range_1.checked) {
 		localStorage.setItem("txs_chart_x", "1")
-		url += "&max=4000000&div=1"
+		url += "?max=4000000&div=1"
 	} else if (mempool_siz_range_6.checked) {
 		localStorage.setItem("txs_chart_x", "6")
-		url += "&max=24000000"
+		url += "?max=24000000"
 	} else {
 		localStorage.setItem("txs_chart_x", "a")
 	}
