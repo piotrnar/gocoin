@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"os"
+	"reflect"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -52,42 +53,34 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 {
 		common.CountSafe("TxPkgsPlus")
-		FeePackagesDirty = true
 
-		if false {
-			var resort bool
-			// first add us to any group originated from any of our ancestors
-			ancestors := t2s.getAllAncestors()
-			for _, pkg := range FeePackages {
-				if ancestors[pkg.Txs[0]] {
-					pkg.Txs = append(pkg.Txs, t2s)
-					pkg.Fee += t2s.Fee
-					pkg.Weight += t2s.Weight()
-					resort = true
-					common.CountSafe("TxPkgsPlusExtend")
-				}
-			}
-
-			// now go through any of our meminputs and add a new group ending with us
-			for idx, meminput := range t2s.MemInputs {
-				if meminput {
-					if ptx, ok := TransactionsToSend[btc.BIdx(t2s.TxIn[idx].Input.Hash[:])]; ok {
-						pkg := new(OneTxsPackage)
-						pkg.Txs = []*OneTxToSend{ptx, t2s}
-						pkg.Weight = t2s.Weight() + ptx.Weight()
-						pkg.Fee = t2s.Fee + ptx.Fee
-						FeePackages = append(FeePackages, pkg)
-						resort = true
-						common.CountSafe("TxPkgsPlusAppend")
-					} else {
-						println("ERROR: t2s.Add: tx from meminput", idx, "not found in the pool")
+		var resort bool
+		ancestors := t2s.getAllAncestors()
+		for _, pkg := range FeePackages {
+			if ancestors[pkg.Txs[0]] {
+				pandch := t2s.GetItWithAllChildren()
+				if common.Get(&common.CFG.TXPool.CheckErrors) {
+					if len(pandch) < 2 {
+						println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
+					}
+					if len(pkg.Txs) == len(pandch) {
+						println("ERROR: GetItWithAllChildren returns same len", len(pandch), t2s.Hash.String(),
+							" identical:", reflect.DeepEqual(pkg.Txs, pandch))
 					}
 				}
-			}
 
-			if resort {
-				sortFeePackages()
+				pkg.Txs = pandch
+				pkg.Weight = 0
+				pkg.Fee = 0
+				for _, t := range pkg.Txs {
+					pkg.Weight += t.Weight()
+					pkg.Fee += t.Fee
+				}
+				resort = true
 			}
+		}
+		if resort {
+			sortFeePackages()
 		}
 	}
 
@@ -152,8 +145,11 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 
 	if !FeePackagesDirty && tx.MemInputCnt > 0 {
+		//FeePackagesDirty = true
 		tx.removeFromPackages()
+		GetSortedMempoolRBF()
 	}
+
 	TransactionsToSendWeight -= uint64(tx.Weight())
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	tx.DelFromSort()
@@ -337,6 +333,8 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 				} else {
 					println("ERROR: meminput missing for t2s", t.Hash.String(),
 						"\n    inp:", btc.NewUint256(t.Tx.TxIn[idx].Input.Hash[:]).String())
+					debug.PrintStack()
+					os.Exit(1)
 				}
 			}
 		}
@@ -349,54 +347,25 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 func (t2s *OneTxToSend) removeFromPackages() {
 	common.CountSafe("TxPkgsRemove")
 
-	ancestors := t2s.getAllAncestors()
-	if len(ancestors) == 0 {
-		common.CountSafe("TxPkgsRemoveEmpty")
-		return
-	}
-
-	common.CountSafe("TxPkgsRemoveSome")
-
 	var records2remove int
 	var resort bool
 
-	// at this moment we should have all the ancestors in the ancestors map
 	for _, pkg := range FeePackages {
-		if ancestors[pkg.Txs[0]] {
-			if len(pkg.Txs) == 2 {
-				// it only has one child (u), so remove the entire group
-				pkg.Txs = nil
-				records2remove++
-			} else {
-				common.CountSafe("TxPkgsRemoveTx")
-				idx := 1
-				for idx < len(pkg.Txs)-1 {
-					if pkg.Txs[idx] == t2s {
-						copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
-						goto finish_the_job
-					}
+		for idx, t := range pkg.Txs {
+			if t == t2s {
+				println("RFP:", t2s.Hash.String(), "found @", idx, "/", len(pkg.Txs))
+				if len(pkg.Txs) == 2 {
+					pkg.Txs = nil
+					records2remove++
+				} else {
+					copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
+					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+					resort = true
 				}
-				// if we got here, we should be at the last element
-				if common.Get(&common.CFG.TXPool.CheckErrors) {
-					if len(pkg.Txs) < 2 {
-						println("ERROR: removeFromPackages", t2s.Hash.String(), "- group had only", len(pkg.Txs), "txs")
-						return
-					}
-					if pkg.Txs[idx] != t2s {
-						println("ERROR: removeFromPackages", t2s.Hash.String(), "- did not find ourselves in", len(pkg.Txs))
-						return
-					}
-				}
-			finish_the_job:
-				pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-				pkg.Fee -= t2s.Fee
-				pkg.Weight -= t2s.Weight()
-				resort = true
 			}
 		}
 	}
 
-	// remove any records if neccessary
 	if records2remove > 0 {
 		common.CountSafeAdd("TxPkgsRemoveGr", uint64(records2remove))
 		new_pkgs_list := make([]*OneTxsPackage, 0, len(FeePackages)-records2remove)
@@ -413,6 +382,71 @@ func (t2s *OneTxToSend) removeFromPackages() {
 		common.CountSafe("TxPkgsResort")
 		sortFeePackages()
 	}
+	/*
+		ancestors := t2s.getAllAncestors()
+		if len(ancestors) == 0 {
+			common.CountSafe("TxPkgsRemoveEmpty")
+			return
+		}
+
+		common.CountSafe("TxPkgsRemoveSome")
+
+
+		// at this moment we should have all the ancestors in the ancestors map
+		for _, pkg := range FeePackages {
+			if ancestors[pkg.Txs[0]] {
+				if len(pkg.Txs) == 2 {
+					// it only has one child (us), so remove the entire group
+					pkg.Txs = nil
+					records2remove++
+					common.CountSafe("TxPkgsRemoveGr")
+					if common.Get(&common.CFG.TXPool.CheckErrors) && pkg.Txs[1] != t2s {
+						println("ERROR: removeFromPackages only two elements, but second not us", t2s.Hash.String())
+					}
+				} else {
+					common.CountSafe("TxPkgsRemoveTx")
+					//println("remove", t2s, "from", pkg.Txs, "...")
+					idx := 1
+					for idx < len(pkg.Txs)-1 {
+						if pkg.Txs[idx] == t2s {
+							copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
+							goto finish_the_job
+						}
+					}
+					// if we got here, we should be at the last element
+					if common.Get(&common.CFG.TXPool.CheckErrors) {
+						if len(pkg.Txs) < 2 {
+							println("ERROR: removeFromPackages", t2s.Hash.String(), "- group had only", len(pkg.Txs), "txs")
+							return
+						}
+						if pkg.Txs[idx] != t2s {
+							println("ERROR: removeFromPackages", t2s.Hash.String(), "- did not find ourselves in", len(pkg.Txs))
+							return
+						}
+					}
+				finish_the_job:
+					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+					pkg.Fee -= t2s.Fee
+					pkg.Weight -= t2s.Weight()
+					resort = true
+					//println("    ... after:", pkg.Txs)
+				}
+			}
+		}
+
+		// remove any records if neccessary
+		if records2remove > 0 {
+			common.CountSafeAdd("TxPkgsRemoveGr", uint64(records2remove))
+			new_pkgs_list := make([]*OneTxsPackage, 0, len(FeePackages)-records2remove)
+			for _, pkg := range FeePackages {
+				if pkg.Txs != nil {
+					new_pkgs_list = append(new_pkgs_list, pkg)
+				}
+			}
+			FeePackages = new_pkgs_list
+			resort = true
+		}
+	*/
 }
 
 func (tx *OneTxToSend) SPW() float64 {

@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -224,7 +225,9 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 		for _, txin := range t2s.TxIn {
 			if idx, ok := idxs[btc.BIdx(txin.Input.Hash[:])]; ok {
 				if idx > i {
-					println("ERROR: in mempool sorting:", i, "points to", idx)
+					println("ERROR: in mempool sorting:", i, "points to", idx, "\n",
+						"    ", i, t2s.Hash.String(), "\n",
+						" -> ", idx, btc.NewUint256(txin.Input.Hash[:]).String())
 					return true
 				} else {
 					oks++
@@ -232,7 +235,7 @@ func VerifyMempoolSort(txs []*OneTxToSend) bool {
 			}
 		}
 	}
-	println("mempool sorting OK", oks, len(txs))
+	//println("mempool sorting OK", oks, len(txs))
 	return false
 }
 
@@ -448,6 +451,18 @@ func sortFeePackages() {
 	sort.Slice(FeePackages, func(i, j int) bool {
 		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 	})
+
+	if ttt1 := GetSortedMempool(); VerifyMempoolSort(ttt1) {
+		println("Normal sorting fucked up")
+		debug.PrintStack()
+		os.Exit(1)
+	}
+	if ttt2 := GetSortedMempool(); VerifyMempoolSort(ttt2) {
+		println("RBF sorting fucked up")
+		debug.PrintStack()
+		os.Exit(1)
+	}
+
 	SortFeePackagesTime += time.Since(sta)
 	SortFeePackagesCount++
 }
@@ -491,8 +506,6 @@ func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	txs := GetSortedMempool()
 	pkgs := lookForPackages(txs)
-	//println(len(pkgs), "pkgs from", len(txs), "txs")
-
 	result = make([]*OneTxToSend, len(txs))
 	var txs_idx, pks_idx, res_idx int
 	already_in := make(map[*OneTxToSend]bool, len(txs))
@@ -529,9 +542,24 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	return
 }
 
+var ttdone bool
+
+func dumpPkgList(fname string) {
+	f, _ := os.Create(fname)
+	for i, pkg := range FeePackages {
+		fmt.Fprintf(f, "%d: Fee:%d  Weight:%d  Txs:%d   SPB:%.5f\n", i, pkg.Fee, pkg.Weight, len(pkg.Txs),
+			4.0*float64(pkg.Fee)/float64(pkg.Weight))
+		for _, tx := range pkg.Txs {
+			fmt.Fprintf(f, "    %s\n", tx.Hash.String())
+		}
+	}
+	f.Close()
+}
+
 func chkTx(t *OneTxToSend, lab string) {
 	if _, ok := TransactionsToSend[t.Hash.BIdx()]; !ok {
 		println("ERROR: chkTx in", lab, "missing tx:", t.Hash.String())
+		debug.PrintStack()
 		os.Exit(1)
 	}
 }

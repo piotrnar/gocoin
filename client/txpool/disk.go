@@ -393,7 +393,8 @@ func MempoolLoad() bool {
 	}
 
 	buildSortedList()
-	//println("***Remove this: Mempool error after loading:", MempoolCheck())
+	lookForPackages(GetSortedMempool())
+	println("***Optimize this: lookForPackages(GetSortedMempool())")
 
 	if common.Get(&common.CFG.TXPool.CheckErrors) {
 		if MempoolCheck() {
