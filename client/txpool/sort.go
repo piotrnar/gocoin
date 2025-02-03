@@ -488,12 +488,8 @@ func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
-	sta1 := time.Now()
 	txs := GetSortedMempool()
-	sta2 := time.Now()
-	fpd := FeePackagesDirty
 	pkgs := lookForPackages(txs)
-	sta3 := time.Now()
 	//println(len(pkgs), "pkgs from", len(txs), "txs")
 
 	result = make([]*OneTxToSend, len(txs))
@@ -527,23 +523,13 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		already_in[tx] = true
 		res_idx++
 	}
-	sta4 := time.Now()
-	if common.Get(&common.CFG.TXPool.Debug) {
-		println("RBF sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
-			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String(),
-			"  FPD:", fpd, "  SLD:", SortListDirty)
-	}
 	return
 }
 
 // GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
-	sta1 := time.Now()
 	txs := GetSortedMempool()
-	sta2 := time.Now()
-	fpd := FeePackagesDirty
 	pkgs := lookForPackages(txs)
-	sta3 := time.Now()
 
 	var txs_idx, pks_idx, res_idx int
 	var weightsofar uint64
@@ -584,12 +570,6 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 		already_in[tx] = true
 	}
 	result = result[:res_idx]
-	sta4 := time.Now()
-	if common.Get(&common.CFG.TXPool.Debug) {
-		println("Fees sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
-			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String(),
-			"  FPD:", fpd, "  SLD:", SortListDirty)
-	}
 	return
 }
 

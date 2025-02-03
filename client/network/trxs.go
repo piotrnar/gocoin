@@ -153,7 +153,7 @@ func (c *OneConnection) ProcessGetMP(pl []byte) {
 	var redo [1]byte
 
 	txpool.TxMutex.Lock()
-	txs := txpool.GetSortedMempool() // we want to send parent txs first, thus the sorting
+	txs := txpool.GetSortedMempoolRBF() // we want to send parent txs first, thus the sorting
 	for _, v := range txs {
 		c.Mutex.Lock()
 		bts := c.BytesToSent()
