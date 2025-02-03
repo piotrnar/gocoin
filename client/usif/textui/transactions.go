@@ -543,6 +543,7 @@ func tx_pool_stats(par string) {
 	fmt.Printf("Pending: %d txs, with %d inside the network queue\n", len(txpool.TransactionsPending), len(network.NetTxs))
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 	fmt.Printf("SortingSupressed: %t,  SortIndexDirty: %t\n", txpool.SortingSupressed, txpool.SortListDirty)
+	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
 	txpool.TxMutex.Unlock()
 }
 
