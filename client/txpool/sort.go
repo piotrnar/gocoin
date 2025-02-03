@@ -461,17 +461,6 @@ func sortFeePackages() {
 		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 	})
 
-	if ttt1 := GetSortedMempool(); VerifyMempoolSort(ttt1) {
-		println("Normal sorting fucked up")
-		debug.PrintStack()
-		os.Exit(1)
-	}
-	if ttt2 := GetSortedMempoolRBF(); VerifyMempoolSort(ttt2) {
-		println("RBF sorting fucked up")
-		debug.PrintStack()
-		os.Exit(1)
-	}
-
 	SortFeePackagesTime += time.Since(sta)
 	SortFeePackagesCount++
 }
