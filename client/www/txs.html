@@ -925,7 +925,7 @@ function show_mempool_fees() {
 		}
 	}
 
-	var url = mempool_new_sort.checked ? "mempool_fees.json" : "mempool_stats.json?new=1"
+	var url = mempool_new_sort.checked ? "mempool_fees.json?new" : "mempool_stats.json?new"
 
 	localStorage.setItem("txs_chart_y_limit", mempool_spb_range.checked)
 	localStorage.setItem("txs_chart_new_sort", mempool_new_sort.checked)

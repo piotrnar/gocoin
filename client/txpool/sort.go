@@ -469,6 +469,7 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	sta1 := time.Now()
 	txs := GetSortedMempool()
 	sta2 := time.Now()
+	fpd := FeePackagesDirty
 	pkgs := lookForPackages(txs)
 	sta3 := time.Now()
 	//println(len(pkgs), "pkgs from", len(txs), "txs")
@@ -507,7 +508,8 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	sta4 := time.Now()
 	if common.Get(&common.CFG.TXPool.Debug) {
 		println("RBF sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
-			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String())
+			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String(),
+			"  FPD:", fpd, "  SLD:", SortListDirty)
 	}
 	return
 }
@@ -517,6 +519,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	sta1 := time.Now()
 	txs := GetSortedMempool()
 	sta2 := time.Now()
+	fpd := FeePackagesDirty
 	pkgs := lookForPackages(txs)
 	sta3 := time.Now()
 
@@ -563,7 +566,7 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 	if common.Get(&common.CFG.TXPool.Debug) {
 		println("Fees sorted.  pckgs:", len(pkgs), "  txs:", len(txs), "  timing:",
 			sta2.Sub(sta1).String(), sta3.Sub(sta2).String(), sta4.Sub(sta3).String(),
-			"  SLD:", SortListDirty)
+			"  FPD:", fpd, "  SLD:", SortListDirty)
 	}
 	return
 }
