@@ -437,6 +437,15 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
+func (pk *OneTxsPackage) FindIn(tx2find *OneTxToSend) int {
+	for idx, par := range pk.Txs {
+		if par == tx2find {
+			return idx
+		}
+	}
+	return -1
+}
+
 var (
 	SortFeePackagesTime  time.Duration
 	SortFeePackagesCount uint

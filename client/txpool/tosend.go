@@ -53,69 +53,12 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 {
 		common.CountSafe("TxPkgsPlus")
-
-		if false {
-			FeePackagesDirty = true
-		} else {
-			var resort bool
-			ancestors := t2s.getAllAncestors()
-			for _, pkg := range FeePackages {
-				if ancestors[pkg.Txs[0]] {
-					pandch := t2s.GetItWithAllChildren()
-					if common.Get(&common.CFG.TXPool.CheckErrors) {
-						if len(pandch) < 2 {
-							println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
-						}
-						if len(pkg.Txs) == len(pandch) {
-							println("ERROR: GetItWithAllChildren returns same len", len(pandch), t2s.Hash.String(),
-								" identical:", reflect.DeepEqual(pkg.Txs, pandch))
-						}
-					}
-
-					pkg.Txs = pandch
-					pkg.Weight = 0
-					pkg.Fee = 0
-					for _, t := range pkg.Txs {
-						pkg.Weight += t.Weight()
-						pkg.Fee += t.Fee
-					}
-					resort = true
-				}
-			}
-			if resort {
-				sortFeePackages()
-				GetSortedMempoolRBF()
-			}
-		}
+		t2s.updateAllPackages()
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
-}
-
-func removeExcessiveTxs() (cnt int) {
-	var worst_fee, worst_weight uint64
-	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
-		sorted_txs := GetSortedMempoolRBF()
-		for idx := len(sorted_txs) - 1; idx >= 0; idx-- {
-			worst_tx := sorted_txs[idx]
-			common.CountSafe("TxPurgedSizCnt")
-			common.CountSafeAdd("TxPurgedSizBts", uint64(worst_tx.Footprint))
-			worst_fee = worst_tx.Fee // we do not do the division here, as it may be more expensive
-			worst_weight = uint64(worst_tx.Weight())
-			worst_tx.Delete(true, 0)
-			cnt++
-			if TransactionsToSendSize <= common.MaxMempoolSize() {
-				break
-			}
-		}
-	}
-	if cnt > 0 {
-		newspkb := 4000 * worst_fee / worst_weight
-		common.SetMinFeePerKB(newspkb)
-	}
-	return
 }
 
 // Delete deletes the tx from the mempool.
@@ -162,6 +105,30 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 
 	GetSortedMempoolRBF()
+}
+
+func removeExcessiveTxs() (cnt int) {
+	var worst_fee, worst_weight uint64
+	if TransactionsToSendSize >= common.MaxMempoolSize()+1e6 { // only remove txs when we are 1MB over the maximum size
+		sorted_txs := GetSortedMempoolRBF()
+		for idx := len(sorted_txs) - 1; idx >= 0; idx-- {
+			worst_tx := sorted_txs[idx]
+			common.CountSafe("TxPurgedSizCnt")
+			common.CountSafeAdd("TxPurgedSizBts", uint64(worst_tx.Footprint))
+			worst_fee = worst_tx.Fee // we do not do the division here, as it may be more expensive
+			worst_weight = uint64(worst_tx.Weight())
+			worst_tx.Delete(true, 0)
+			cnt++
+			if TransactionsToSendSize <= common.MaxMempoolSize() {
+				break
+			}
+		}
+	}
+	if cnt > 0 {
+		newspkb := 4000 * worst_fee / worst_weight
+		common.SetMinFeePerKB(newspkb)
+	}
+	return
 }
 
 func txChecker(tx *btc.Tx) bool {
@@ -349,6 +316,42 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 	return
 }
 
+func (t2s *OneTxToSend) updateAllPackages() {
+	if common.Get(&common.CFG.Net.MaxInCons) == 666 {
+		FeePackagesDirty = true
+	} else {
+		var resort bool
+		//ancestors := t2s.getAllAncestors()
+		for _, pkg := range FeePackages {
+			if idx := pkg.FindIn(t2s); idx != -1 {
+				//if ancestors[pkg.Txs[0]] {
+				pandch := t2s.GetItWithAllChildren()
+				if common.Get(&common.CFG.TXPool.CheckErrors) {
+					if len(pandch) < 2 {
+						println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
+					}
+					if len(pkg.Txs) == len(pandch) {
+						println("ERROR: GetItWithAllChildren returns same len", len(pandch), t2s.Hash.String(),
+							" identical:", reflect.DeepEqual(pkg.Txs, pandch))
+					}
+				}
+				pkg.Txs = pandch
+				pkg.Weight = 0
+				pkg.Fee = 0
+				for _, t := range pkg.Txs {
+					pkg.Weight += t.Weight()
+					pkg.Fee += t.Fee
+				}
+				resort = true
+			}
+		}
+		if resort {
+			sortFeePackages()
+			GetSortedMempoolRBF()
+		}
+	}
+}
+
 // its looking for all the ancestors of the t2s and then removes itself from any group starting with them
 func (t2s *OneTxToSend) removeFromPackages() {
 	common.CountSafe("TxPkgsRemove")
@@ -363,20 +366,18 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	}
 
 	for _, pkg := range FeePackages {
-		for idx, t := range pkg.Txs {
-			if t == t2s {
-				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs), ancestors[pkg.Txs[0]], len(ancestors))
-				if len(pkg.Txs) == 2 {
-					pkg.Txs = nil
-					records2remove++
-				} else {
-					common.CountSafe("TxPkgsRemoveTx")
-					pkg.Fee -= t2s.Fee
-					pkg.Weight -= t2s.Weight()
-					copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
-					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-					resort = true
-				}
+		if idx := pkg.FindIn(t2s); idx != -1 {
+			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs), ancestors[pkg.Txs[0]], len(ancestors))
+			if len(pkg.Txs) == 2 {
+				pkg.Txs = nil
+				records2remove++
+			} else {
+				common.CountSafe("TxPkgsRemoveTx")
+				pkg.Fee -= t2s.Fee
+				pkg.Weight -= t2s.Weight()
+				copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
+				pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+				resort = true
 			}
 		}
 	}
