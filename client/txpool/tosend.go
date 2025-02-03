@@ -103,8 +103,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
-
-	GetSortedMempoolRBF()
 }
 
 func removeExcessiveTxs() (cnt int) {
