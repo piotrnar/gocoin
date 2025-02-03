@@ -466,7 +466,7 @@ func sortFeePackages() {
 		debug.PrintStack()
 		os.Exit(1)
 	}
-	if ttt2 := GetSortedMempool(); VerifyMempoolSort(ttt2) {
+	if ttt2 := GetSortedMempoolRBF(); VerifyMempoolSort(ttt2) {
 		println("RBF sorting fucked up")
 		debug.PrintStack()
 		os.Exit(1)
