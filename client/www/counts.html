@@ -63,8 +63,8 @@ div.tablab {
 </tr>
 </table>
 <script>
-function make_clickable(el) {
-	var s = el.innerText
+function make_clickable(el, t2c='') {
+	var s = t2c=='' ? el.innerText : t2c
 	var dashpos = s.indexOf("-")
 	if (dashpos > 0) {
 		s = s.substr(0, dashpos+1)
@@ -155,7 +155,7 @@ function ref_counters() {
 				}
 				row.cells[0].innerText = cts.txs[i].var
 				row.cells[1].innerText = cts.txs[i].cnt
-				make_clickable(row.cells[0])
+				make_clickable(row.cells[0], "Tx"+cts.txs[i].var)
 			}
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
