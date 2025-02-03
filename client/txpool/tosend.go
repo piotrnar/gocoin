@@ -323,16 +323,16 @@ func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
 	ancestors = make(map[*OneTxToSend]bool)
 	var add_ancestors func(t *OneTxToSend)
 	add_ancestors = func(t *OneTxToSend) {
-		for idx, meminput := range t.MemInputs {
-			if meminput {
-				if _t2s, ok := TransactionsToSend[btc.BIdx(t.Tx.TxIn[idx].Input.Hash[:])]; ok {
-					if len(_t2s.MemInputs) != 0 {
-						add_ancestors(_t2s)
-						ancestors[_t2s] = true
+		for idx, inp := range t.Tx.TxIn {
+			if t.MemInputs[idx] {
+				if partx, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; ok {
+					if len(partx.MemInputs) != 0 {
+						add_ancestors(partx)
+						ancestors[partx] = true
 					}
 				} else {
 					println("ERROR: meminput missing for t2s", t.Hash.String(),
-						"\n    inp:", btc.NewUint256(t.Tx.TxIn[idx].Input.Hash[:]).String())
+						"\n  <-  inp:", btc.NewUint256(inp.Input.Hash[:]).String())
 					debug.PrintStack()
 					os.Exit(1)
 				}
