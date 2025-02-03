@@ -144,13 +144,14 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		delete(SpentOutputs, txin.Input.UIdx())
 	}
 
+	TransactionsToSendWeight -= uint64(tx.Weight())
+	delete(TransactionsToSend, tx.Hash.BIdx())
+	tx.DelFromSort()
+
 	if !FeePackagesDirty && tx.MemInputCnt > 0 {
 		tx.removeFromPackages()
 	}
 
-	TransactionsToSendWeight -= uint64(tx.Weight())
-	delete(TransactionsToSend, tx.Hash.BIdx())
-	tx.DelFromSort()
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
@@ -351,16 +352,19 @@ func (t2s *OneTxToSend) removeFromPackages() {
 
 	var records2remove int
 	var resort bool
-	ancestors := t2s.getAllAncestors()
-	if len(ancestors) == 0 {
-		common.CountSafe("TxPkgsRemove**Emp")
-		return
-	}
+
+	/*
+		ancestors := t2s.getAllAncestors()
+		if len(ancestors) == 0 {
+			common.CountSafe("TxPkgsRemove**Emp")
+			return
+		}
+	*/
 
 	for _, pkg := range FeePackages {
 		for idx, t := range pkg.Txs {
 			if t == t2s {
-				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs), ancestors[pkg.Txs[0]], len(ancestors))
+				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs) /*, ancestors[pkg.Txs[0]], len(ancestors)*/)
 				if len(pkg.Txs) == 2 {
 					pkg.Txs = nil
 					records2remove++
