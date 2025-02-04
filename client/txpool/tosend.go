@@ -1,8 +1,6 @@
 package txpool
 
 import (
-	"bytes"
-	"fmt"
 	"os"
 	"reflect"
 	"runtime/debug"
@@ -50,7 +48,7 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
-	cfl("before add")
+	//cfl("before add")
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -69,7 +67,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
-	cfl("end of add")
+	//cfl("end of add")
 }
 
 // Delete deletes the tx from the mempool.
@@ -85,10 +83,10 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
-	cfl("before del")
+	/*cfl("before del")
 	rdbg = new(bytes.Buffer)
 	fmt.Fprintln(rdbg, "Deleting t2s", tx.Hash.String(), with_children, reason)
-	dumpPkgListHere(rdbg)
+	dumpPkgListHere(rdbg)*/
 
 	if FeePackagesDirty {
 		tx.InPackages = nil // fee the memory as this wont be needed anymore
@@ -119,12 +117,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	tx.DelFromSort()
 
-	cfl("middle del")
+	//cfl("middle del")
 
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
-	cfl("end of del")
+	//cfl("end of del")
 }
 
 func removeExcessiveTxs() (cnt int) {
@@ -376,15 +374,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 	var records2remove int
 	var resort bool
 	if len(t2s.InPackages) == 0 {
-		/*
-			if common.Get(&common.CFG.TXPool.CheckErrors) {
-				for _, pkg := range FeePackages {
-					if idx := slices.Index(pkg.Txs, t2s); idx != -1 {
-						println("ERROR: found RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
-					}
-				}
-			}
-		*/
 		return
 	}
 
@@ -394,10 +383,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 		DelFromPackagesCount++
 	}()
 
-	fmt.Fprintln(rdbg, "InPackages:", len(t2s.InPackages))
+	//fmt.Fprintln(rdbg, "InPackages:", len(t2s.InPackages))
 	for _, pkg := range t2s.InPackages {
 		common.CountSafe("TxPkgsDelTick")
-		fmt.Fprintln(rdbg, "pkg.Txs:", len(pkg.Txs), "  meminputs:", t2s.MemInputCnt)
+		//fmt.Fprintln(rdbg, "pkg.Txs:", len(pkg.Txs), "  meminputs:", t2s.MemInputCnt)
 		if len(pkg.Txs) == 2 {
 			pkg.unlinkTxsExcept(t2s)
 			pkg.Txs = nil
@@ -422,22 +411,20 @@ func (t2s *OneTxToSend) delFromPackages() {
 	}
 	t2s.InPackages = nil
 
-	fmt.Fprintln(rdbg, "records2remove:", records2remove)
+	//fmt.Fprintln(rdbg, "records2remove:", records2remove)
 	if records2remove > 0 {
 		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
 		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
-		for idx, pkg := range FeePackages {
+		for _, pkg := range FeePackages {
 			if pkg.Txs != nil {
 				new_pkgs_list = append(new_pkgs_list, pkg)
-			} else {
-				fmt.Fprintln(rdbg, "  - del pkg number ", idx)
 			}
 		}
 		FeePackages = new_pkgs_list
 		resort = true
 	}
 
-	fmt.Fprintln(rdbg, "resort:", resort)
+	//fmt.Fprintln(rdbg, "resort:", resort)
 	if resort {
 		common.CountSafe("TxPkgsDelResort")
 		sortFeePackages()

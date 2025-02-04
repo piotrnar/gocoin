@@ -361,4 +361,5 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
+	cfl("in tick")
 }
