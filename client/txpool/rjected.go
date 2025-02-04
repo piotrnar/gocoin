@@ -234,6 +234,9 @@ func RejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 // Make sure to call it with locked TxMutex.
 // Returns the OneTxRejected or nil if it has not been added.
 func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
+	if checkFeeList() {
+		println("*** Pipa before rejecting tx", why, tx.Hash.String(), "***")
+	}
 	txr := new(OneTxRejected)
 	txr.Id.Hash = tx.Hash.Hash
 	txr.Time = time.Now()
@@ -249,6 +252,9 @@ func rejectTx(tx *btc.Tx, why byte, missingid *btc.Uint256) {
 	txr.Footprint = uint32(txr.SysSize())
 	common.CountSafePar("TxRejected-", txr.Reason)
 	AddRejectedTx(txr)
+	if checkFeeList() {
+		println("*** Pipa after rejecting tx", why, tx.Hash.String(), "***")
+	}
 	//return rec
 }
 
