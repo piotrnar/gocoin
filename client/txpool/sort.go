@@ -431,9 +431,15 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 }
 
 type OneTxsPackage struct {
+	Id     int
 	Txs    []*OneTxToSend
 	Weight int
 	Fee    uint64
+}
+
+func (pk *OneTxsPackage) String() (res string) {
+	res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
+	return
 }
 
 func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
@@ -472,11 +478,11 @@ func dumpPkgList(fn string) {
 
 func dumpPkgListHere(f io.Writer) {
 	for _, pkg := range FeePackages {
-		fmt.Fprintln(f, "package", pkg, "with", len(pkg.Txs), "txs:")
+		fmt.Fprintln(f, "package", pkg.String(), "with", len(pkg.Txs), "txs:")
 		for _, t := range pkg.Txs {
 			fmt.Fprintln(f, "   *", t.Hash.String(), len(t.InPackages))
 			for idx, pkg := range t.InPackages {
-				fmt.Fprintln(f, "   ", idx, pkg)
+				fmt.Fprintln(f, "   ", idx, pkg.String())
 			}
 			fmt.Fprintln(f)
 		}
