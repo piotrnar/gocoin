@@ -440,15 +440,6 @@ func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
-func (pk *OneTxsPackage) findIn(tx2find *OneTxToSend) int {
-	for idx, par := range pk.Txs {
-		if par == tx2find {
-			return idx
-		}
-	}
-	return -1
-}
-
 var (
 	SortFeePackagesTime  time.Duration
 	SortFeePackagesCount uint
@@ -463,7 +454,6 @@ func sortFeePackages() {
 	sort.Slice(FeePackages, func(i, j int) bool {
 		return FeePackages[i].Fee*uint64(FeePackages[j].Weight) > FeePackages[j].Fee*uint64(FeePackages[i].Weight)
 	})
-
 	SortFeePackagesTime += time.Since(sta)
 	SortFeePackagesCount++
 }

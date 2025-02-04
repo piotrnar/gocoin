@@ -354,11 +354,6 @@ func (t2s *OneTxToSend) addToPackages() {
 func (t2s *OneTxToSend) removeFromPackages() {
 	common.CountSafe("TxPkgsDel")
 
-	/*if true {
-		FeePackagesDirty = true
-		return
-	}*/
-
 	var records2remove int
 	var resort bool
 
@@ -371,7 +366,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 			records2remove++
 		} else {
 			common.CountSafe("TxPkgsDelTx")
-			idx := pkg.findIn(t2s)
+			idx := slices.Index(pkg.Txs, t2s)
 			if common.Get(&common.CFG.TXPool.CheckErrors) && idx < 0 {
 				println("ERROR: removeFromPackages referenced package not on list")
 				os.Exit(1)
@@ -384,24 +379,6 @@ func (t2s *OneTxToSend) removeFromPackages() {
 		}
 	}
 	t2s.InPackages = nil
-	/*
-		for _, pkg := range FeePackages {
-			if idx := pkg.findIn(t2s); idx != -1 {
-				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
-				if len(pkg.Txs) == 2 {
-					pkg.Txs = nil
-					records2remove++
-				} else {
-					common.CountSafe("TxPkgsRemoveTx")
-					pkg.Fee -= t2s.Fee
-					pkg.Weight -= t2s.Weight()
-					copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
-					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-					resort = true
-				}
-			}
-		}
-	*/
 
 	if records2remove > 0 {
 		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
@@ -416,7 +393,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	}
 
 	if resort {
-		common.CountSafe("TxPkgsResortD")
+		common.CountSafe("TxPkgsDelResort")
 		sortFeePackages()
 	}
 }
