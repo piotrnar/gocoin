@@ -33,6 +33,7 @@ func checkFeeList() bool {
 		for idx, t := range pkg.Txs {
 			if !t.isInMap() {
 				println("ERROR: tx in pkg does not point to a valid t2s", idx, len(pkg.Txs))
+				println("    ...", t.Hash.String())
 				return true
 			}
 		}

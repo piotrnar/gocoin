@@ -339,11 +339,6 @@ func (t2s *OneTxToSend) addToPackages() {
 		common.CountSafe("TxPkgsAddResort")
 		sortFeePackages()
 	}
-	if checkFeeList() {
-		println("resort:", resort)
-		debug.PrintStack()
-		os.Exit(1)
-	}
 }
 
 // removes itself from any grup containing it

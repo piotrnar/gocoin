@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -503,9 +504,10 @@ func lookForPackages() {
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	lookForPackages()
 	result = make([]*OneTxToSend, len(TransactionsToSend))
-	var pks_idx, res_idx int
+	var pks_idx, res_idx, cnt int
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
 	for tx := BestT2S; tx != nil; tx = tx.Worse {
+		cnt++
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
@@ -532,6 +534,27 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 			if !tx.isInMap() {
 				println("ERROR: adding single t2s that isn't in the map", tx.Hash.String())
 			} else {
+				if res_idx >= len(result) {
+					println("ERROR: WTF? not enogh space in the buffer", res_idx, len(result), len(TransactionsToSend), cnt)
+					println("Unable to enter txid:", tx.Hash.String())
+					println("Writing what is already in it into a file")
+					f, _ := os.Create("inbuf.txt")
+					for _, txx := range result[:res_idx] {
+						fmt.Fprintln(f, txx.Hash.String())
+						if !tx.isInMap() {
+							fmt.Fprintln(f, "  *** Not In MAP ***")
+						}
+					}
+					f.Close()
+
+					f, _ = os.Create("inpool.txt")
+					for _, txx := range TransactionsToSend {
+						fmt.Fprintln(f, txx.Hash.String())
+					}
+					f.Close()
+					debug.PrintStack()
+					os.Exit(1)
+				}
 				result[res_idx] = tx
 				already_in[tx] = true
 				res_idx++
