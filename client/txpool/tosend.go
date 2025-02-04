@@ -83,11 +83,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if FeePackagesDirty {
 		tx.InPackages = nil // fee the memory as this wont be needed anymore
 	} else {
-		if tx.MemInputCnt > 0 {
-			tx.removeFromPackages() // remove it from FeePackages
-		} else if tx.InPackages != nil {
-			println("del t2s", tx.Hash.String(), "has no mem inpus, but InPackages:", tx.InPackages)
-		}
+		tx.removeFromPackages() // remove it from FeePackages
 	}
 
 	TransactionsToSendSize -= uint64(tx.Footprint)
@@ -361,7 +357,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 		for _, t := range pkg.Txs {
 			t.removePkg(pkg)
 		}
-		if len(pkg.Txs) == 2 {
+		if t2s.MemInputCnt == 0 || len(pkg.Txs) == 2 {
 			pkg.Txs = nil
 			records2remove++
 		} else {
@@ -373,8 +369,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 			}
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
-			copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
-			pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+			pkg.Txs = slices.Delete(pkg.Txs, idx, idx)
 			resort = true
 		}
 	}
@@ -410,19 +405,12 @@ func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
 		}
 		t2s.InPackages = nil
 	} else {
-		newinp := t2s.InPackages[:len(t2s.InPackages)-1] // new list will be one element shorter
-		for i, t := range newinp {
-			if t == pkg {
-				copy(t2s.InPackages[i:], t2s.InPackages[i+1:])
-				t2s.InPackages = newinp
-				return
-			}
-		}
-		if common.Get(&common.CFG.TXPool.CheckErrors) && t2s.InPackages[len(t2s.InPackages)-1] != pkg {
+		if idx := slices.Index(t2s.InPackages, pkg); idx >= 0 {
+			t2s.InPackages = slices.Delete(t2s.InPackages, idx, idx)
+		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
 			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.InPackages))
 			return
 		}
-		t2s.InPackages = newinp
 	}
 }
 

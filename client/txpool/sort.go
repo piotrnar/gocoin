@@ -22,7 +22,7 @@ var (
 	BestT2S, WorstT2S *OneTxToSend
 	SortingSupressed  bool
 	SortListDirty     bool
-	FeePackages       []*OneTxsPackage
+	FeePackages       []*OneTxsPackage = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
 	FeePackagesDirty  bool
 )
 
@@ -470,7 +470,7 @@ func lookForPackages() {
 	}
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
-	FeePackages = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
+	FeePackages = FeePackages[:0] // to avoid new memory allocation
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
 		t2s.InPackages = nil
 		if t2s.MemInputCnt > 0 {
