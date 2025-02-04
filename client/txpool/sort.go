@@ -507,7 +507,7 @@ func lookForPackages() {
 		}
 	}
 	sortFeePackages()
-	dumpPkgList("packages.txt")
+	//dumpPkgList("packages.txt")
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
