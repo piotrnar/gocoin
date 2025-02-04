@@ -4,14 +4,14 @@ import (
 	"unsafe"
 )
 
-// Mind that .InPackages and .MemInputs can be modyfied when TX is alerady in the mempool
-// .. in which case .Footprint and TransactionsToSendSize are not updated.
 func (t *OneTxToSend) SysSize() (size int) {
 	size = int(unsafe.Sizeof(*t))
 	size += t.Tx.SysSize()
+	/*  exclude these for now, to not trigger mempool check errors.
 	if t.InPackages != nil {
 		size += 8 * len(t.InPackages)
 	}
+	*/
 	if t.MemInputs != nil {
 		size += (len(t.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}

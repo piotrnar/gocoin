@@ -3,6 +3,7 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
+	"runtime/debug"
 	"slices"
 
 	"github.com/piotrnar/gocoin/client/common"
@@ -17,6 +18,20 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 		yes = false
 	}
 	return
+}
+
+var donot bool
+
+func cfl(label string) {
+	if donot {
+		return
+	}
+	if checkFeeList() {
+		println("*** fee packages list first noticed broken in", label)
+		dumpPkgList("packages_broken.txt")
+		debug.PrintStack()
+		donot = true
+	}
 }
 
 func checkFeeList() bool {

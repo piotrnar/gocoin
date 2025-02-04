@@ -48,6 +48,7 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
+	cfl("before add")
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -66,6 +67,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
 	}
+	cfl("end of add")
 }
 
 // Delete deletes the tx from the mempool.
@@ -73,9 +75,10 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
+	cfl("before del")
 	if common.Get(&common.CFG.TXPool.CheckErrors) {
 		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
-			println("ERROR: Trying to delete and already deleted tx", tx.Hash.String())
+			println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
 			debug.PrintStack()
 			os.Exit(1)
 		}
@@ -109,9 +112,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	delete(TransactionsToSend, tx.Hash.BIdx())
 	tx.DelFromSort()
 
+	cfl("middle del")
+
 	if reason != 0 {
 		rejectTx(tx.Tx, reason, nil)
 	}
+	cfl("end of del")
 }
 
 func removeExcessiveTxs() (cnt int) {
