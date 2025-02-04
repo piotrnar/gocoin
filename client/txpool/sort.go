@@ -480,26 +480,33 @@ func lookForPackages() {
 	}
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
-	FeePackages = make([]*OneTxsPackage, 0, 10e3)
+	FeePackages = make([]*OneTxsPackage, 0, 10e3) // prealloc 10k records, which takes only 80KB of RAM but can save time later
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+		t2s.InPackages = nil
 		if t2s.MemInputCnt > 0 {
 			continue
 		}
-		var pkg OneTxsPackage
 		pandch := t2s.GetItWithAllChildren()
 		if len(pandch) > 1 {
-			pkg.Txs = pandch
+			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pkg.Txs {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
+				t.InPackages = append(t.InPackages, pkg)
 			}
-			FeePackages = append(FeePackages, &pkg)
+			FeePackages = append(FeePackages, pkg)
+			t2s.InPackages = append(t2s.InPackages, pkg)
 		}
 	}
 	sortFeePackages()
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
+
+	if checkFeeList() {
+		debug.PrintStack()
+		os.Exit(1)
+	}
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
@@ -516,6 +523,11 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 					continue
 				}
 				// all package's txs new: incude them all
+				for _, tt := range pk.Txs {
+					if !tx.isInMap() {
+						println("ERROR: adding group t2s that isn't in the map", tt.Hash.String())
+					}
+				}
 				copy(result[res_idx:], pk.Txs)
 				res_idx += len(pk.Txs)
 				for _, _t := range pk.Txs {
@@ -527,9 +539,13 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		}
 
 		if _, ok := already_in[tx]; !ok {
-			result[res_idx] = tx
-			already_in[tx] = true
-			res_idx++
+			if !tx.isInMap() {
+				println("ERROR: adding single t2s that isn't in the map", tx.Hash.String())
+			} else {
+				result[res_idx] = tx
+				already_in[tx] = true
+				res_idx++
+			}
 		}
 	}
 	return
@@ -633,7 +649,6 @@ func GetSortedMempool() (result []*OneTxToSend) {
 		prv_idx = t2s.SortIndex
 		result = append(result, t2s)
 	}
-	println("aaa:", len(result))
 	return
 }
 

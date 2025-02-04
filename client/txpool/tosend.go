@@ -4,6 +4,7 @@ import (
 	"os"
 	"reflect"
 	"runtime/debug"
+	"slices"
 	"sync"
 	"time"
 
@@ -30,6 +31,7 @@ var (
 
 type OneTxToSend struct {
 	Better, Worse                 *OneTxToSend
+	InPackages                    []*OneTxsPackage
 	Invsentcnt, SentCnt           uint32
 	Firstseen, Lastseen, Lastsent time.Time
 	Volume, Fee                   uint64
@@ -51,9 +53,14 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
 
-	if !FeePackagesDirty && t2s.MemInputCnt > 0 {
-		common.CountSafe("TxPkgsPlus")
-		t2s.updateAllPackages()
+	if FeePackagesDirty {
+		t2s.InPackages = nil // fee the memory as this wont be needed anymore
+	} else {
+		if t2s.MemInputCnt > 0 {
+			t2s.addToPackages()
+		} else if t2s.InPackages != nil {
+			println("add t2s", t2s.Hash.String(), "has no mem inpus, but InPackages:", t2s.InPackages)
+		}
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
@@ -73,8 +80,14 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			os.Exit(1)
 		}
 	}
-	if !FeePackagesDirty && tx.MemInputCnt > 0 {
-		tx.removeFromPackages() // remove it from FeePackages
+	if FeePackagesDirty {
+		tx.InPackages = nil // fee the memory as this wont be needed anymore
+	} else {
+		if tx.MemInputCnt > 0 {
+			tx.removeFromPackages() // remove it from FeePackages
+		} else if tx.InPackages != nil {
+			println("del t2s", tx.Hash.String(), "has no mem inpus, but InPackages:", tx.InPackages)
+		}
 	}
 
 	TransactionsToSendSize -= uint64(tx.Footprint)
@@ -290,67 +303,108 @@ func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTx
 	return
 }
 
-func (t2s *OneTxToSend) updateAllPackages() {
-	if common.Get(&common.CFG.Net.MaxInCons) == 666 {
+func (t2s *OneTxToSend) addToPackages() {
+	common.CountSafe("TxPkgsAdd")
+	if false {
 		FeePackagesDirty = true
-	} else {
-		var resort bool
-		for _, pkg := range FeePackages {
-			if idx := pkg.findIn(t2s); idx != -1 {
-				pandch := t2s.GetItWithAllChildren()
-				if common.Get(&common.CFG.TXPool.CheckErrors) {
-					if len(pandch) < 2 {
-						println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
-					}
-					if len(pkg.Txs) == len(pandch) {
-						println("ERROR: GetItWithAllChildren returns same len", len(pandch), t2s.Hash.String(),
-							" identical:", reflect.DeepEqual(pkg.Txs, pandch))
-					}
-				}
-				pkg.Txs = pandch
-				pkg.Weight = 0
-				pkg.Fee = 0
-				for _, t := range pkg.Txs {
-					pkg.Weight += t.Weight()
-					pkg.Fee += t.Fee
-				}
-				resort = true
-				common.CountSafe("TxPkgsUpdated")
+		return
+	}
+
+	var resort bool
+	if len(t2s.InPackages) == 0 {
+		return
+	}
+	for _, pkg := range t2s.InPackages {
+		pandch := t2s.GetItWithAllChildren()
+		if common.Get(&common.CFG.TXPool.CheckErrors) {
+			if len(pandch) < 2 {
+				println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
+			}
+			if len(pkg.Txs) <= len(pandch) {
+				println("ERROR: GetItWithAllChildren returns same or lower len", len(pandch), t2s.Hash.String(),
+					" identical:", reflect.DeepEqual(pkg.Txs, pandch))
 			}
 		}
-		if resort {
-			common.CountSafe("TxPkgsResortA")
-			sortFeePackages()
+		pkg.Txs = pandch
+		pkg.Weight = 0
+		pkg.Fee = 0
+		for _, t := range pkg.Txs {
+			pkg.Weight += t.Weight()
+			pkg.Fee += t.Fee
+			if !slices.Contains(t.InPackages, pkg) {
+				t.InPackages = append(t.InPackages, pkg)
+				common.CountSafe("TxPkgsAddInp")
+			}
 		}
+		resort = true
+		common.CountSafe("TxPkgsAddUpd")
+	}
+	if resort {
+		common.CountSafe("TxPkgsAddResort")
+		sortFeePackages()
+	}
+	if checkFeeList() {
+		println("resort:", resort)
+		debug.PrintStack()
+		os.Exit(1)
 	}
 }
 
-// its looking for all the ancestors of the t2s and then removes itself from any group starting with them
+// removes itself from any grup containing it
 func (t2s *OneTxToSend) removeFromPackages() {
-	common.CountSafe("TxPkgsRemove")
+	common.CountSafe("TxPkgsDel")
+
+	/*if true {
+		FeePackagesDirty = true
+		return
+	}*/
 
 	var records2remove int
 	var resort bool
 
-	for _, pkg := range FeePackages {
-		if idx := pkg.findIn(t2s); idx != -1 {
-			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
-			if len(pkg.Txs) == 2 {
-				pkg.Txs = nil
-				records2remove++
-			} else {
-				common.CountSafe("TxPkgsRemoveTx")
-				pkg.Fee -= t2s.Fee
-				pkg.Weight -= t2s.Weight()
-				copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
-				pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-				resort = true
+	for _, pkg := range t2s.InPackages {
+		for _, t := range pkg.Txs {
+			t.removePkg(pkg)
+		}
+		if len(pkg.Txs) == 2 {
+			pkg.Txs = nil
+			records2remove++
+		} else {
+			common.CountSafe("TxPkgsDelTx")
+			idx := pkg.findIn(t2s)
+			if common.Get(&common.CFG.TXPool.CheckErrors) && idx < 0 {
+				println("ERROR: removeFromPackages referenced package not on list")
+				os.Exit(1)
 			}
+			pkg.Fee -= t2s.Fee
+			pkg.Weight -= t2s.Weight()
+			copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
+			pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+			resort = true
 		}
 	}
+	t2s.InPackages = nil
+	/*
+		for _, pkg := range FeePackages {
+			if idx := pkg.findIn(t2s); idx != -1 {
+				println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
+				if len(pkg.Txs) == 2 {
+					pkg.Txs = nil
+					records2remove++
+				} else {
+					common.CountSafe("TxPkgsRemoveTx")
+					pkg.Fee -= t2s.Fee
+					pkg.Weight -= t2s.Weight()
+					copy(pkg.Txs[idx:], pkg.Txs[idx+1:])
+					pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
+					resort = true
+				}
+			}
+		}
+	*/
 
 	if records2remove > 0 {
-		common.CountSafeAdd("TxPkgsRemoveGr", uint64(records2remove))
+		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
 		new_pkgs_list := make([]*OneTxsPackage, 0, len(FeePackages)-records2remove)
 		for _, pkg := range FeePackages {
 			if pkg.Txs != nil {
@@ -364,6 +418,34 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	if resort {
 		common.CountSafe("TxPkgsResortD")
 		sortFeePackages()
+	}
+}
+
+// removes a reference to a given package from the t2s
+func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
+	if common.Get(&common.CFG.TXPool.CheckErrors) && len(t2s.InPackages) == 0 {
+		println("ERROR: removePkg called on txs with no removePkg")
+		return
+	}
+	if len(t2s.InPackages) == 1 {
+		if common.Get(&common.CFG.TXPool.CheckErrors) && t2s.InPackages[0] != pkg {
+			println("ERROR: removePkg called on txs with one pkg, bot not the one")
+		}
+		t2s.InPackages = nil
+	} else {
+		newinp := t2s.InPackages[:len(t2s.InPackages)-1] // new list will be one element shorter
+		for i, t := range newinp {
+			if t == pkg {
+				copy(t2s.InPackages[i:], t2s.InPackages[i+1:])
+				t2s.InPackages = newinp
+				return
+			}
+		}
+		if common.Get(&common.CFG.TXPool.CheckErrors) && t2s.InPackages[len(t2s.InPackages)-1] != pkg {
+			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.InPackages))
+			return
+		}
+		t2s.InPackages = newinp
 	}
 }
 

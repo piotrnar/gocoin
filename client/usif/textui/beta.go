@@ -108,6 +108,13 @@ func sort_test(par string) {
 	txpool.TxMutex.Lock()
 	defer txpool.TxMutex.Unlock()
 
+	println("Doing mempool check first")
+	if txpool.MempoolCheck() {
+		println("PIPA")
+		return
+	}
+	println("Mempool looks OK")
+
 	sta := time.Now()
 	tx1 := txpool.GetSortedMempoolSlow()
 	tim1 := time.Since(sta)

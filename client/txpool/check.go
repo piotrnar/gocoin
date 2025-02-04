@@ -3,10 +3,55 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
+
+func (t *OneTxToSend) isInMap() (yes bool) {
+	var tt *OneTxToSend
+	tt, yes = TransactionsToSend[t.Hash.BIdx()]
+	if yes && tt != t {
+		println("ERROR: t2x in the map does not point back to itself", t.Hash.String(), "\n  ", tt.Hash.String())
+		yes = false
+	}
+	return
+}
+
+func checkFeeList() bool {
+	if FeePackagesDirty {
+		common.CountSafe("TxPkgsCheckDirty")
+		return true
+	}
+
+	for _, pkg := range FeePackages {
+		if len(pkg.Txs) < 2 {
+			println("ERROR: package has only", len(pkg.Txs), "txs")
+			return true
+		}
+		for idx, t := range pkg.Txs {
+			if !t.isInMap() {
+				println("ERROR: tx in pkg does not point to a valid t2s", idx, len(pkg.Txs))
+				return true
+			}
+		}
+	}
+
+	for _, t2s := range TransactionsToSend {
+		if t2s.InPackages != nil {
+			for _, pkg := range t2s.InPackages {
+				if !slices.Contains(pkg.Txs, t2s) {
+					println("ERROR: pkg does not have the tx which ir should")
+					return true
+				}
+			}
+		}
+	}
+
+	common.CountSafe("TxPkgsCheckOK")
+	return false
+}
 
 func checkPoolSizes() (dupa int) {
 	var t2s_size, txr_size, w4i_size int
@@ -296,6 +341,11 @@ func MempoolCheck() bool {
 				RejectedUsedUTXOs[uidx] = append(RejectedUsedUTXOs[uidx], txr.Id.BIdx())
 			}
 		}
+	}
+
+	if checkFeeList() {
+		dupa++
+		fmt.Println(dupa, "checkFeeList failed")
 	}
 
 	return dupa > 0

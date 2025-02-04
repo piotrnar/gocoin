@@ -1,4 +1,5 @@
 <style>
+tr.highlight {background-color:#ffeeee}
 td.genval {text-align:right}
 td.txsval {text-align:right}
 td.netcnt {text-align:right}
@@ -156,6 +157,9 @@ function ref_counters() {
 				row.cells[0].innerText = cts.txs[i].var
 				row.cells[1].innerText = cts.txs[i].cnt
 				make_clickable(row.cells[0], "Tx"+cts.txs[i].var)
+				if (cts.txs[i].var.substr(0,4)=="Pkgs") {
+					row.classList.add('highlight')
+				}
 			}
 
 			while (tab_net.rows.length>2) tab_net.deleteRow(2)
