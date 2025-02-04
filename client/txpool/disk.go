@@ -282,7 +282,7 @@ func MempoolLoad() bool {
 		goto fatal_error
 	}
 	if !bytes.Equal(tmp[:32], common.Last.Block.BlockHash.Hash[:]) {
-		er = errors.New(MEMPOOL_FILE_NAME + " is for different last block hash (try to load it with 'mpl' command)")
+		er = errors.New(MEMPOOL_FILE_NAME + " is for different last block hash")
 		goto fatal_error
 	}
 
@@ -391,9 +391,9 @@ func MempoolLoad() bool {
 		fmt.Println("Additionally loaded", len(TransactionsRejected), "rejected transactions taking", TransactionsRejectedSize, "bytes")
 	}
 
-	buildSortedList()
-	lookForPackages(GetSortedMempool())
-	println("***Optimize this: lookForPackages(GetSortedMempool())")
+	FeePackagesDirty = true
+	SortListDirty = true
+	lookForPackages()
 
 	if common.Get(&common.CFG.TXPool.CheckErrors) {
 		if MempoolCheck() {

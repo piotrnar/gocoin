@@ -2,7 +2,6 @@ package txpool
 
 import (
 	"encoding/binary"
-	"fmt"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -214,6 +213,10 @@ func (t2s *OneTxToSend) DelFromSort() {
 func VerifyMempoolSort(txs []*OneTxToSend) bool {
 	idxs := make(map[btc.BIDX]int, len(txs))
 	for i, t2s := range txs {
+		if t2s == nil {
+			println("tx at idx", i, len(txs), len(TransactionsToSend), "is nil")
+			return true
+		}
 		idxs[t2s.Hash.BIdx()] = i
 	}
 	var oks int
@@ -428,7 +431,7 @@ type OneTxsPackage struct {
 	Fee    uint64
 }
 
-func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
+func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
 	for _, par := range pk.Txs {
 		if _, ok = list[par]; ok {
 			return
@@ -437,7 +440,7 @@ func (pk *OneTxsPackage) AnyIn(list map[*OneTxToSend]bool) (ok bool) {
 	return
 }
 
-func (pk *OneTxsPackage) FindIn(tx2find *OneTxToSend) int {
+func (pk *OneTxsPackage) findIn(tx2find *OneTxToSend) int {
 	for idx, par := range pk.Txs {
 		if par == tx2find {
 			return idx
@@ -465,126 +468,88 @@ func sortFeePackages() {
 	SortFeePackagesCount++
 }
 
-func lookForPackages(txs []*OneTxToSend) (result []*OneTxsPackage) {
+// builds FeePackages list, if neccessary
+func lookForPackages() {
+	if SortListDirty {
+		common.CountSafe("TxBuildListFirst")
+		buildSortedList()
+	}
 	if !FeePackagesDirty && FeePackages != nil {
-		result = FeePackages
-		common.CountSafe("TxPkgsLookSkept")
+		common.CountSafe("TxPkgsHaveThem")
 		return
 	}
-	common.CountSafe("TxPkgsLookDone")
+	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
-	for _, tx := range txs {
-		if common.Get(&common.CFG.TXPool.CheckErrors) && tx.Weight() == 0 {
-			println("ERROR: LookForPackages found weight 0 in", tx.Hash.String())
-			continue
-		}
-		if tx.MemInputCnt > 0 {
+	FeePackages = make([]*OneTxsPackage, 0, 10e3)
+	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
+		if t2s.MemInputCnt > 0 {
 			continue
 		}
 		var pkg OneTxsPackage
-		pandch := tx.GetItWithAllChildren()
+		pandch := t2s.GetItWithAllChildren()
 		if len(pandch) > 1 {
 			pkg.Txs = pandch
 			for _, t := range pkg.Txs {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
 			}
-			result = append(result, &pkg)
+			FeePackages = append(FeePackages, &pkg)
 		}
 	}
-	FeePackages = result
 	sortFeePackages()
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
-	return
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.
 func GetSortedMempoolRBF() (result []*OneTxToSend) {
-	txs := GetSortedMempool()
-	pkgs := lookForPackages(txs)
-	result = make([]*OneTxToSend, len(txs))
-	var txs_idx, pks_idx, res_idx int
-	already_in := make(map[*OneTxToSend]bool, len(txs))
-	for txs_idx < len(txs) {
-		tx := txs[txs_idx]
-	same_tx:
-		if pks_idx < len(pkgs) {
-			pk := pkgs[pks_idx]
-			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
+	lookForPackages()
+	result = make([]*OneTxToSend, len(TransactionsToSend))
+	var pks_idx, res_idx int
+	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	for tx := BestT2S; tx != nil; tx = tx.Worse {
+		for pks_idx < len(FeePackages) {
+			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
-				if pk.AnyIn(already_in) {
-					goto same_tx
+				if pk.anyIn(already_in) {
+					continue
 				}
 				// all package's txs new: incude them all
 				copy(result[res_idx:], pk.Txs)
 				res_idx += len(pk.Txs)
 				for _, _t := range pk.Txs {
-					chkTx(_t, "group")
 					already_in[_t] = true
 				}
-				goto same_tx
+				continue
 			}
+			break
 		}
 
-		txs_idx++
-		if _, ok := already_in[tx]; ok {
-			continue
+		if _, ok := already_in[tx]; !ok {
+			result[res_idx] = tx
+			already_in[tx] = true
+			res_idx++
 		}
-		chkTx(tx, "tx")
-		result[res_idx] = tx
-		already_in[tx] = true
-		res_idx++
-	}
-	if VerifyMempoolSort(result) {
-		println("RBF sort failed")
-		debug.PrintStack()
-		os.Exit(1)
 	}
 	return
 }
 
-var ttdone bool
-
-func dumpPkgList(fname string) {
-	f, _ := os.Create(fname)
-	for i, pkg := range FeePackages {
-		fmt.Fprintf(f, "%d: Fee:%d  Weight:%d  Txs:%d   SPB:%.5f\n", i, pkg.Fee, pkg.Weight, len(pkg.Txs),
-			4.0*float64(pkg.Fee)/float64(pkg.Weight))
-		for _, tx := range pkg.Txs {
-			fmt.Fprintf(f, "    %s\n", tx.Hash.String())
-		}
-	}
-	f.Close()
-}
-
-func chkTx(t *OneTxToSend, lab string) {
-	if _, ok := TransactionsToSend[t.Hash.BIdx()]; !ok {
-		println("ERROR: chkTx in", lab, "missing tx:", t.Hash.String())
-		debug.PrintStack()
-		os.Exit(1)
-	}
-}
-
 // GetMempoolFees only takes tx/package weight and the fee.
 func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
-	txs := GetSortedMempool()
-	pkgs := lookForPackages(txs)
+	lookForPackages() // it will do buildSortedList() if needed
 
 	var txs_idx, pks_idx, res_idx int
 	var weightsofar uint64
-	result = make([][2]uint64, len(txs))
-	already_in := make(map[*OneTxToSend]bool, len(txs))
-	for txs_idx < len(txs) && weightsofar < maxweight {
-		tx := txs[txs_idx]
-	go_again:
-		if pks_idx < len(pkgs) {
-			pk := pkgs[pks_idx]
+	result = make([][2]uint64, len(TransactionsToSend))
+	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	for tx := BestT2S; tx != nil && weightsofar < maxweight; tx = tx.Worse {
+		for pks_idx < len(FeePackages) {
+			pk := FeePackages[pks_idx]
 			if pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
-				if pk.AnyIn(already_in) {
-					goto go_again
+				if pk.anyIn(already_in) {
+					continue
 				}
 				result[res_idx] = [2]uint64{uint64(pk.Weight), pk.Fee}
 				res_idx++
@@ -592,18 +557,18 @@ func GetMempoolFees(maxweight uint64) (result [][2]uint64) {
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
-				goto go_again
+				continue
 			}
+			break
 		}
 		txs_idx++
-		if _, ok := already_in[tx]; ok {
-			continue
+		if _, ok := already_in[tx]; !ok {
+			wg := tx.Weight()
+			result[res_idx] = [2]uint64{uint64(wg), tx.Fee}
+			res_idx++
+			weightsofar += uint64(tx.Weight())
+			already_in[tx] = true
 		}
-		wg := tx.Weight()
-		result[res_idx] = [2]uint64{uint64(wg), tx.Fee}
-		res_idx++
-		weightsofar += uint64(tx.Weight())
-		already_in[tx] = true
 	}
 	result = result[:res_idx]
 	return
@@ -668,11 +633,13 @@ func GetSortedMempool() (result []*OneTxToSend) {
 		prv_idx = t2s.SortIndex
 		result = append(result, t2s)
 	}
+	println("aaa:", len(result))
 	return
 }
 
 // call it with the mutex locked
 func buildSortedList() {
+	common.CountSafePar("TxSortBuild-", SortingSupressed)
 	SortListDirty = false
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {

@@ -290,39 +290,13 @@ func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTx
 	return
 }
 
-func (t2s *OneTxToSend) getAllAncestors() (ancestors map[*OneTxToSend]bool) {
-	ancestors = make(map[*OneTxToSend]bool)
-	var add_ancestors func(t *OneTxToSend)
-	add_ancestors = func(t *OneTxToSend) {
-		for idx, inp := range t.Tx.TxIn {
-			if t.MemInputs[idx] {
-				if partx, ok := TransactionsToSend[btc.BIdx(inp.Input.Hash[:])]; ok {
-					if len(partx.MemInputs) != 0 {
-						add_ancestors(partx)
-						ancestors[partx] = true
-					}
-				} else {
-					println("ERROR: meminput missing for t2s", t.Hash.String(),
-						"\n  <-  inp:", btc.NewUint256(inp.Input.Hash[:]).String())
-					debug.PrintStack()
-					os.Exit(1)
-				}
-			}
-		}
-	}
-	add_ancestors(t2s)
-	return
-}
-
 func (t2s *OneTxToSend) updateAllPackages() {
 	if common.Get(&common.CFG.Net.MaxInCons) == 666 {
 		FeePackagesDirty = true
 	} else {
 		var resort bool
-		//ancestors := t2s.getAllAncestors()
 		for _, pkg := range FeePackages {
-			if idx := pkg.FindIn(t2s); idx != -1 {
-				//if ancestors[pkg.Txs[0]] {
+			if idx := pkg.findIn(t2s); idx != -1 {
 				pandch := t2s.GetItWithAllChildren()
 				if common.Get(&common.CFG.TXPool.CheckErrors) {
 					if len(pandch) < 2 {
@@ -358,15 +332,9 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	var records2remove int
 	var resort bool
 
-	/*ancestors := t2s.getAllAncestors()
-	if len(ancestors) == 0 {
-		common.CountSafe("TxPkgsRemove**Emp")
-		return
-	}*/
-
 	for _, pkg := range FeePackages {
-		if idx := pkg.FindIn(t2s); idx != -1 {
-			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs) /*, ancestors[pkg.Txs[0]], len(ancestors)*/)
+		if idx := pkg.findIn(t2s); idx != -1 {
+			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
 			if len(pkg.Txs) == 2 {
 				pkg.Txs = nil
 				records2remove++

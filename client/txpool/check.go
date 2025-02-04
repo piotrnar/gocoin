@@ -3,20 +3,10 @@ package txpool
 import (
 	"encoding/hex"
 	"fmt"
-	"os"
-	"runtime/debug"
 
 	"github.com/piotrnar/gocoin/client/common"
 	"github.com/piotrnar/gocoin/lib/btc"
 )
-
-func mpc() {
-	if MempoolCheck() {
-		println("******************** Mempool fucked **************")
-		debug.PrintStack()
-		os.Exit(1)
-	}
-}
 
 func checkPoolSizes() (dupa int) {
 	var t2s_size, txr_size, w4i_size int
