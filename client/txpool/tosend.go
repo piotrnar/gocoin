@@ -358,15 +358,15 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	var records2remove int
 	var resort bool
 
-	ancestors := t2s.getAllAncestors()
+	/*ancestors := t2s.getAllAncestors()
 	if len(ancestors) == 0 {
 		common.CountSafe("TxPkgsRemove**Emp")
 		return
-	}
+	}*/
 
 	for _, pkg := range FeePackages {
 		if idx := pkg.FindIn(t2s); idx != -1 {
-			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs), ancestors[pkg.Txs[0]], len(ancestors))
+			println("RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs) /*, ancestors[pkg.Txs[0]], len(ancestors)*/)
 			if len(pkg.Txs) == 2 {
 				pkg.Txs = nil
 				records2remove++
