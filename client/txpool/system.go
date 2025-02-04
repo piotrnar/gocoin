@@ -7,6 +7,9 @@ import (
 func (t *OneTxToSend) SysSize() (size int) {
 	size = int(unsafe.Sizeof(*t))
 	size += t.Tx.SysSize()
+	if t.InPackages != nil {
+		size += 8 * len(t.InPackages)
+	}
 	if t.MemInputs != nil {
 		size += (len(t.MemInputs) + 7) & ^7 // round the size up to the nearest 8 bytes
 	}
