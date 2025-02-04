@@ -780,6 +780,6 @@ func main() {
 	os.RemoveAll(common.TempBlocksDir())
 
 	if usif.Restart.Get() {
-		os.Exit(2)
+		os.Exit(66)
 	}
 }
