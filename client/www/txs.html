@@ -32,8 +32,8 @@ td.txsize {
 <tr>
 <td><b>Memory Pool:</b></td>
 <td align="right">
-<span onclick="mempool_new_sort.click()" class="hand" title="Uses less bandwidth">
-	<input type="checkbox" id="mempool_new_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
+<span onclick="mempool_quick_sort.click()" class="hand" title="Uses less bandwidth">
+	<input type="checkbox" id="mempool_quick_sort" onchange="show_mempool_fees()" onclick="event.stopPropagation()">Quick
 </span>
 &nbsp;&bull;&nbsp;
 <span onclick="mempool_spb_range.click()" class="hand">
@@ -807,7 +807,7 @@ function handlehover(event, pos, item) {
 }
 
 function handleclick(event, pos, item) {
-	if (!loading_in_progress && !mempool_new_sort.checked && !tx_decoding_in_progress) {
+	if (!loading_in_progress && !mempool_quick_sort.checked && !tx_decoding_in_progress) {
 		var rec = mp[item.dataIndex]
 		decode_tx_id(rec.Current_tx_id)
 	}
@@ -869,7 +869,7 @@ function show_mempool_fees() {
 			var lenforfee = 0
 			var cr_spb, prv_spb = 21e14
 
-			if (mempool_new_sort.checked) {
+			if (mempool_quick_sort.checked) {
 				for (var i=0; i < mp.length; i++) {
 					if (mp[i][1] > max_spb) {
 						max_spb = mp[i][1]
@@ -925,10 +925,10 @@ function show_mempool_fees() {
 		}
 	}
 
-	var url = mempool_new_sort.checked ? "mempool_fees.json" : "mempool_stats.json"
+	var url = mempool_quick_sort.checked ? "mempool_fees.json" : "mempool_stats.json"
 
 	localStorage.setItem("txs_chart_y_limit", mempool_spb_range.checked)
-	localStorage.setItem("txs_chart_new_sort", mempool_new_sort.checked)
+	localStorage.setItem("txs_chart_new_sort", mempool_quick_sort.checked)
 
 	if (mempool_siz_range_1.checked) {
 		localStorage.setItem("txs_chart_x", "1")
@@ -985,7 +985,7 @@ function restore_settings() {
 	var el = document.getElementById('mempool_siz_range_'+localStorage.getItem("txs_chart_x"))
 	if (el!=null) el.checked = true
 	mempool_spb_range.checked = localStorage.getItem("txs_chart_y_limit") !== "false"
-	mempool_new_sort.checked = localStorage.getItem("txs_chart_new_sort") !== "false"
+	mempool_quick_sort.checked = localStorage.getItem("txs_chart_new_sort") !== "false"
 }
 restore_settings()
 
