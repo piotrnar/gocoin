@@ -606,10 +606,7 @@ func NetworkTick() {
 			DoNetwork(ad)
 		}
 	}
-
-	txpool.ExpireOldTxs()
-
-	txpool.LimitRejected()
+	txpool.Tick()
 }
 
 func (c *OneConnection) SendFeeFilter() {
