@@ -248,7 +248,7 @@ func newOneTxRejectedFromFile(rd io.Reader) (txr *OneTxRejected, er error) {
 			er = errors.New(fmt.Sprint("Error parsing rejected tx from ", MEMPOOL_FILE_NAME, " at idx ", len(TransactionsRejected)))
 			return
 		}
-		txr.SetHash(raw)
+		txr.SetHash(raw) // this will update the sizes and wtxid
 	} else if txr.Waiting4 != nil {
 		println("WARNING: RejectedTx", txr.Id.String(), "was waiting for inputs, but has no data")
 		txr.Waiting4 = nil
