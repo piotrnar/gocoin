@@ -542,3 +542,7 @@ img.warning {
 	content:url("warning-black.png");
 	height:20px;
 }
+
+tr.highlight {
+	background-color:#ffeeee
+}

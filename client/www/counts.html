@@ -1,5 +1,4 @@
 <style>
-tr.highlight {background-color:#ffeeee}
 td.genval {text-align:right}
 td.txsval {text-align:right}
 td.netcnt {text-align:right}
@@ -94,7 +93,7 @@ function ref_counters() {
 
 			var gen_a = new Array()
 			var gen_b = new Array()
-			
+
 			if (cts.gen!=null) for (i=0; i<cts.gen.length; i++) {
 				if (cts.gen[i].var[0]>='M' || cts.gen[i].var.substr(0,3)=='Ban') {
 					gen_b.push(cts.gen[i])
