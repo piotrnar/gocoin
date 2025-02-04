@@ -369,7 +369,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 			}
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
-			pkg.Txs = slices.Delete(pkg.Txs, idx, idx)
+			pkg.Txs = slices.Delete(pkg.Txs, idx, idx+1)
 			resort = true
 		}
 	}
@@ -406,7 +406,7 @@ func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
 		t2s.InPackages = nil
 	} else {
 		if idx := slices.Index(t2s.InPackages, pkg); idx >= 0 {
-			t2s.InPackages = slices.Delete(t2s.InPackages, idx, idx)
+			t2s.InPackages = slices.Delete(t2s.InPackages, idx, idx+1)
 		} else if common.Get(&common.CFG.TXPool.CheckErrors) {
 			println("ERROR: removePkg cannot find the given pkg in t2s.InPackages", len(t2s.InPackages))
 			return
