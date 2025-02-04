@@ -22,7 +22,7 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 func checkFeeList() bool {
 	if FeePackagesDirty {
 		common.CountSafe("TxPkgsCheckDirty")
-		return true
+		return false
 	}
 
 	for _, pkg := range FeePackages {
