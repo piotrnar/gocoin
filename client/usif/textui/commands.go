@@ -480,7 +480,7 @@ func redo_block(par string) {
 
 func kill_node(par string) {
 	if par != "" && par[0] == 'r' {
-		os.Exit(2)
+		os.Exit(66)
 	}
 	os.Exit(1)
 }
