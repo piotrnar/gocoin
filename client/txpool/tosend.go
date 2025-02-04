@@ -83,7 +83,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	if FeePackagesDirty {
 		tx.InPackages = nil // fee the memory as this wont be needed anymore
 	} else {
-		tx.removeFromPackages() // remove it from FeePackages
+		tx.delFromPackages() // remove it from FeePackages
 	}
 
 	TransactionsToSendSize -= uint64(tx.Footprint)
@@ -299,6 +299,14 @@ func (tx *OneTxToSend) GetAllParentsExcept(except *OneTxToSend) (result []*OneTx
 	return
 }
 
+var (
+	AddToPackagesTime  time.Duration
+	AddToPackagesCount uint
+
+	DelFromPackagesTime  time.Duration
+	DelFromPackagesCount uint
+)
+
 func (t2s *OneTxToSend) addToPackages() {
 	common.CountSafe("TxPkgsAdd")
 	if false {
@@ -310,6 +318,13 @@ func (t2s *OneTxToSend) addToPackages() {
 	if len(t2s.InPackages) == 0 {
 		return
 	}
+
+	sta := time.Now()
+	defer func() {
+		AddToPackagesTime += time.Since(sta)
+		AddToPackagesCount++
+	}()
+
 	for _, pkg := range t2s.InPackages {
 		pandch := t2s.GetItWithAllChildren()
 		if common.Get(&common.CFG.TXPool.CheckErrors) {
@@ -342,45 +357,54 @@ func (t2s *OneTxToSend) addToPackages() {
 }
 
 // removes itself from any grup containing it
-func (t2s *OneTxToSend) removeFromPackages() {
+func (t2s *OneTxToSend) delFromPackages() {
 	common.CountSafe("TxPkgsDel")
 
 	var records2remove int
 	var resort bool
-
 	if len(t2s.InPackages) == 0 {
-		if common.Get(&common.CFG.TXPool.CheckErrors) {
-			for _, pkg := range FeePackages {
-				if idx := slices.Index(pkg.Txs, t2s); idx != -1 {
-					println("ERROR: found RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
+		/*
+			if common.Get(&common.CFG.TXPool.CheckErrors) {
+				for _, pkg := range FeePackages {
+					if idx := slices.Index(pkg.Txs, t2s); idx != -1 {
+						println("ERROR: found RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
+					}
 				}
 			}
-		}
+		*/
 		return
 	}
+
+	sta := time.Now()
+	defer func() {
+		DelFromPackagesTime += time.Since(sta)
+		DelFromPackagesCount++
+	}()
 
 	for _, pkg := range t2s.InPackages {
 		common.CountSafe("TxPkgsDelTick")
 		for _, t := range pkg.Txs {
-			t.removePkg(pkg)
+			if t != t2s {
+				t.removePkg(pkg)
+			}
 		}
-		if t2s.MemInputCnt == 0 {
-			println("Removing entire package with", t2s.Hash.String(), len(pkg.Txs), "as the parnet")
+		if len(pkg.Txs) == 2 {
 			pkg.Txs = nil
 			records2remove++
-		} else if len(pkg.Txs) == 2 {
+		} else if t2s.MemInputCnt == 0 {
+			println("Removing entire package with", len(pkg.Txs), "txs as the parent\n  ", t2s.Hash.String())
 			pkg.Txs = nil
 			records2remove++
 		} else {
 			common.CountSafe("TxPkgsDelTx")
-			idx := slices.Index(pkg.Txs, t2s)
-			if common.Get(&common.CFG.TXPool.CheckErrors) && idx < 0 {
+			txidx := slices.Index(pkg.Txs, t2s)
+			if common.Get(&common.CFG.TXPool.CheckErrors) && txidx < 0 {
 				println("ERROR: removeFromPackages referenced package not on list")
 				os.Exit(1)
 			}
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
-			pkg.Txs = slices.Delete(pkg.Txs, idx, idx+1)
+			pkg.Txs = slices.Delete(pkg.Txs, txidx, txidx+1)
 			resort = true
 		}
 	}

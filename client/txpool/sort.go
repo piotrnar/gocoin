@@ -459,19 +459,21 @@ func sortFeePackages() {
 	SortFeePackagesCount++
 }
 
-/*
 func dumpPkgList(fn string) {
 	f, _ := os.Create(fn)
 	defer f.Close()
 	for _, pkg := range FeePackages {
-		fmt.Fprintln(f, "package with", len(pkg.Txs), "txs:")
+		fmt.Fprintln(f, "package", pkg, "with", len(pkg.Txs), "txs:")
 		for _, t := range pkg.Txs {
 			fmt.Fprintln(f, "   *", t.Hash.String(), len(t.InPackages))
+			for idx, pkg := range t.InPackages {
+				fmt.Fprintln(f, "   ", idx, pkg)
+			}
+			fmt.Fprintln(f)
 		}
 	}
 	println("pkg list stored in", fn)
 }
-*/
 
 // builds FeePackages list, if neccessary
 func lookForPackages() {
@@ -495,8 +497,7 @@ func lookForPackages() {
 		}
 		pandch := t2s.GetItWithAllChildren()
 		if len(pandch) > 1 {
-			pkg := new(OneTxsPackage)
-			pkg.Txs = pandch
+			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
@@ -506,6 +507,7 @@ func lookForPackages() {
 		}
 	}
 	sortFeePackages()
+	dumpPkgList("packages.txt")
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++

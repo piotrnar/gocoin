@@ -545,6 +545,8 @@ func tx_pool_stats(par string) {
 	fmt.Printf("FeePackages Count: %d,  FeePackagesDirty: %t\n", len(txpool.FeePackages), txpool.FeePackagesDirty)
 	fmt.Printf("SortFeePackages happened %d times, taking %s total\n", txpool.SortFeePackagesCount, txpool.SortFeePackagesTime.String())
 	fmt.Printf("LookForPackages happened %d times, taking %s total\n", txpool.LookForPackagesCount, txpool.LookForPackagesTime.String())
+	fmt.Printf("AddToPackages happened %d times, taking %s total\n", txpool.AddToPackagesCount, txpool.AddToPackagesTime.String())
+	fmt.Printf("DelFromPackages happened %d times, taking %s total\n", txpool.DelFromPackagesCount, txpool.DelFromPackagesTime.String())
 	fmt.Printf("Current script verification flags: 0x%x\n", common.CurrentScriptFlags())
 	txpool.TxMutex.Unlock()
 }

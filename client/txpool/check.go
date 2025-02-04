@@ -32,13 +32,16 @@ func checkFeeList() bool {
 		}
 		for idx, t := range pkg.Txs {
 			if !t.isInMap() {
-				println("ERROR: tx in pkg does not point to a valid t2s", idx, len(pkg.Txs))
+				println("ERROR: tx in pkg", pkg, "does not point to a valid t2s", idx, len(pkg.Txs))
 				println("    ...", t.Hash.String())
 				return true
 			}
 			if !slices.Contains(t.InPackages, pkg) {
-				println("ERROR: tx in pkg does not paint back to the package", idx, len(pkg.Txs),
+				println("ERROR: tx in pkg", pkg, "does not point back to the package", idx, len(pkg.Txs),
 					"\n  ...", t.Hash.String())
+				for _, p := range t.InPackages {
+					println(" -", p)
+				}
 				return true
 			}
 		}
