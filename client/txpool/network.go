@@ -358,17 +358,7 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true}, true)
 }
 
-var stop bool
-
 func Tick() {
-	if !stop && checkFeeList() {
-		println("*** tick begin checkFeeList() error ***")
-		stop = true
-	}
 	ExpireOldTxs()
 	LimitRejected()
-	if !stop && checkFeeList() {
-		println("*** tick end checkFeeList() error ***")
-		stop = true
-	}
 }

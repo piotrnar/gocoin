@@ -459,6 +459,20 @@ func sortFeePackages() {
 	SortFeePackagesCount++
 }
 
+/*
+func dumpPkgList(fn string) {
+	f, _ := os.Create(fn)
+	defer f.Close()
+	for _, pkg := range FeePackages {
+		fmt.Fprintln(f, "package with", len(pkg.Txs), "txs:")
+		for _, t := range pkg.Txs {
+			fmt.Fprintln(f, "   *", t.Hash.String(), len(t.InPackages))
+		}
+	}
+	println("pkg list stored in", fn)
+}
+*/
+
 // builds FeePackages list, if neccessary
 func lookForPackages() {
 	if SortListDirty {
@@ -473,31 +487,28 @@ func lookForPackages() {
 	sta := time.Now()
 	FeePackages = FeePackages[:0] // to avoid unneeded memory allocation, just reuse the old buffer
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
-		t2s.InPackages = nil
+		t2s.InPackages = nil // we have to do this first run only to reset InPackages field
+	}
+	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
 		if t2s.MemInputCnt > 0 {
 			continue
 		}
 		pandch := t2s.GetItWithAllChildren()
 		if len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch}
-			for _, t := range pkg.Txs {
+			pkg := new(OneTxsPackage)
+			pkg.Txs = pandch
+			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
 				t.InPackages = append(t.InPackages, pkg)
 			}
 			FeePackages = append(FeePackages, pkg)
-			t2s.InPackages = append(t2s.InPackages, pkg)
 		}
 	}
 	sortFeePackages()
 	FeePackagesDirty = false
 	LookForPackagesTime += time.Since(sta)
 	LookForPackagesCount++
-
-	if checkFeeList() {
-		debug.PrintStack()
-		os.Exit(1)
-	}
 }
 
 // GetSortedMempoolRBF is like GetSortedMempool(), but one uses Child-Pays-For-Parent algo.

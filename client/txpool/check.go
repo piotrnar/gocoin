@@ -36,6 +36,11 @@ func checkFeeList() bool {
 				println("    ...", t.Hash.String())
 				return true
 			}
+			if !slices.Contains(t.InPackages, pkg) {
+				println("ERROR: tx in pkg does not paint back to the package", idx, len(pkg.Txs),
+					"\n  ...", t.Hash.String())
+				return true
+			}
 		}
 	}
 

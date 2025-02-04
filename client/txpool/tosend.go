@@ -348,11 +348,27 @@ func (t2s *OneTxToSend) removeFromPackages() {
 	var records2remove int
 	var resort bool
 
+	if len(t2s.InPackages) == 0 {
+		if common.Get(&common.CFG.TXPool.CheckErrors) {
+			for _, pkg := range FeePackages {
+				if idx := slices.Index(pkg.Txs, t2s); idx != -1 {
+					println("ERROR: found RFP:", t2s.Hash.String(), "found @", idx+1, "/", len(pkg.Txs))
+				}
+			}
+		}
+		return
+	}
+
 	for _, pkg := range t2s.InPackages {
+		common.CountSafe("TxPkgsDelTick")
 		for _, t := range pkg.Txs {
 			t.removePkg(pkg)
 		}
-		if t2s.MemInputCnt == 0 || len(pkg.Txs) == 2 {
+		if t2s.MemInputCnt == 0 {
+			println("Removing entire package with", t2s.Hash.String(), len(pkg.Txs), "as the parnet")
+			pkg.Txs = nil
+			records2remove++
+		} else if len(pkg.Txs) == 2 {
 			pkg.Txs = nil
 			records2remove++
 		} else {
@@ -391,7 +407,7 @@ func (t2s *OneTxToSend) removeFromPackages() {
 // removes a reference to a given package from the t2s
 func (t2s *OneTxToSend) removePkg(pkg *OneTxsPackage) {
 	if common.Get(&common.CFG.TXPool.CheckErrors) && len(t2s.InPackages) == 0 {
-		println("ERROR: removePkg called on txs with no removePkg")
+		println("ERROR: removePkg called on txs with no InPackages", t2s.Hash.String())
 		return
 	}
 	if len(t2s.InPackages) == 1 {
