@@ -464,13 +464,13 @@ func lookForPackages() {
 		common.CountSafe("TxBuildListFirst")
 		buildSortedList()
 	}
-	if !FeePackagesDirty && FeePackages != nil {
+	if !FeePackagesDirty {
 		common.CountSafe("TxPkgsHaveThem")
 		return
 	}
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
-	FeePackages = FeePackages[:0] // to avoid new memory allocation
+	FeePackages = FeePackages[:0] // to avoid unneeded memory allocation, just reuse the old buffer
 	for t2s := BestT2S; t2s != nil; t2s = t2s.Worse {
 		t2s.InPackages = nil
 		if t2s.MemInputCnt > 0 {
