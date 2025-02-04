@@ -437,6 +437,14 @@ type OneTxsPackage struct {
 	Fee    uint64
 }
 
+func (pkg *OneTxsPackage) unlinkTxsExcept(t2s *OneTxToSend) {
+	for _, t := range pkg.Txs {
+		if t != t2s {
+			t.removePkg(pkg)
+		}
+	}
+}
+
 func (pk *OneTxsPackage) String() (res string) {
 	res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
 	return
@@ -489,6 +497,8 @@ func dumpPkgListHere(f io.Writer) {
 	}
 }
 
+var pkg_id int
+
 // builds FeePackages list, if neccessary
 func lookForPackages() {
 	if SortListDirty {
@@ -511,13 +521,14 @@ func lookForPackages() {
 		}
 		pandch := t2s.GetItWithAllChildren()
 		if len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch}
+			pkg := &OneTxsPackage{Txs: pandch, Id: pkg_id}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
 				t.InPackages = append(t.InPackages, pkg)
 			}
 			FeePackages = append(FeePackages, pkg)
+			pkg_id++
 		}
 	}
 	sortFeePackages()

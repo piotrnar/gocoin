@@ -86,9 +86,9 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 	}
 
 	cfl("before del")
-	recentDebugs = new(bytes.Buffer)
-	fmt.Fprintln(recentDebugs, "Deleting t2s", tx.Hash.String(), with_children, reason)
-	dumpPkgListHere(recentDebugs)
+	rdbg = new(bytes.Buffer)
+	fmt.Fprintln(rdbg, "Deleting t2s", tx.Hash.String(), with_children, reason)
+	dumpPkgListHere(rdbg)
 
 	if FeePackagesDirty {
 		tx.InPackages = nil // fee the memory as this wont be needed anymore
@@ -394,18 +394,17 @@ func (t2s *OneTxToSend) delFromPackages() {
 		DelFromPackagesCount++
 	}()
 
+	fmt.Fprintln(rdbg, "InPackages:", len(t2s.InPackages))
 	for _, pkg := range t2s.InPackages {
 		common.CountSafe("TxPkgsDelTick")
-		for _, t := range pkg.Txs {
-			if t != t2s {
-				t.removePkg(pkg)
-			}
-		}
+		fmt.Fprintln(rdbg, "pkg.Txs:", len(pkg.Txs), "  meminputs:", t2s.MemInputCnt)
 		if len(pkg.Txs) == 2 {
+			pkg.unlinkTxsExcept(t2s)
 			pkg.Txs = nil
 			records2remove++
 		} else if t2s.MemInputCnt == 0 {
 			println("Removing entire package with", len(pkg.Txs), "txs as the parent\n  ", t2s.Hash.String())
+			pkg.unlinkTxsExcept(t2s)
 			pkg.Txs = nil
 			records2remove++
 		} else {
@@ -423,18 +422,22 @@ func (t2s *OneTxToSend) delFromPackages() {
 	}
 	t2s.InPackages = nil
 
+	fmt.Fprintln(rdbg, "records2remove:", records2remove)
 	if records2remove > 0 {
 		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
-		new_pkgs_list := make([]*OneTxsPackage, 0, len(FeePackages)-records2remove)
-		for _, pkg := range FeePackages {
+		new_pkgs_list := make([]*OneTxsPackage, 0, cap(FeePackages))
+		for idx, pkg := range FeePackages {
 			if pkg.Txs != nil {
 				new_pkgs_list = append(new_pkgs_list, pkg)
+			} else {
+				fmt.Fprintln(rdbg, "  - del pkg number ", idx)
 			}
 		}
 		FeePackages = new_pkgs_list
 		resort = true
 	}
 
+	fmt.Fprintln(rdbg, "resort:", resort)
 	if resort {
 		common.CountSafe("TxPkgsDelResort")
 		sortFeePackages()
