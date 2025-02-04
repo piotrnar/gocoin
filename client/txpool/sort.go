@@ -84,13 +84,16 @@ func (t2s *OneTxToSend) insertDownFromHere(wpr *OneTxToSend) {
 
 // this function is only called from withing BlockChain.CommitBlock()
 func (t2s *OneTxToSend) ResortWithChildren() {
-	common.CountSafe("TxPkgsResWithCh")
-	FeePackagesDirty = true // if we enter here Mem Input Count has just changes
-	if SortingSupressed {
-		// We always suppress sorting for block commit, but this check is here just in case
+	FeePackagesDirty = true // it's faster to rebuild the packages after than maintain them here.
+	// ... same for keeping mempool sorted, so we always suppress sorting before comitting a block
+	if SortingSupressed { // But this check is here just in case
 		SortListDirty = true
 		return
 	}
+
+	// Normally we should not get here as blocks are precessed with SortingSupressed
+	// So the code below is pretty much unused, althout it has been seen working fine.
+	common.CountSafe("TxMined**Resort")
 	// now get the new worst parent
 	wpr := t2s.findWorstParent()
 	if wpr == t2s.Better {
