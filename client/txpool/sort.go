@@ -3,6 +3,7 @@ package txpool
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -464,7 +465,12 @@ func sortFeePackages() {
 
 func dumpPkgList(fn string) {
 	f, _ := os.Create(fn)
-	defer f.Close()
+	dumpPkgListHere(f)
+	f.Close()
+	println("pkg list stored in", fn)
+}
+
+func dumpPkgListHere(f io.Writer) {
 	for _, pkg := range FeePackages {
 		fmt.Fprintln(f, "package", pkg, "with", len(pkg.Txs), "txs:")
 		for _, t := range pkg.Txs {
@@ -475,7 +481,6 @@ func dumpPkgList(fn string) {
 			fmt.Fprintln(f)
 		}
 	}
-	println("pkg list stored in", fn)
 }
 
 // builds FeePackages list, if neccessary

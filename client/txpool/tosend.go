@@ -1,6 +1,8 @@
 package txpool
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"reflect"
 	"runtime/debug"
@@ -75,7 +77,6 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 // If reason is not zero, add the deleted txs to the rejected list.
 // Make sure to call it with locked TxMutex.
 func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
-	cfl("before del")
 	if common.Get(&common.CFG.TXPool.CheckErrors) {
 		if _, ok := TransactionsToSend[tx.Hash.BIdx()]; !ok {
 			println("ERROR: Trying to delete already deleted tx", tx.Hash.String())
@@ -83,6 +84,12 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			os.Exit(1)
 		}
 	}
+
+	cfl("before del")
+	recentDebugs = new(bytes.Buffer)
+	fmt.Fprintln(recentDebugs, "Deleting t2s", tx.Hash.String(), with_children, reason)
+	dumpPkgListHere(recentDebugs)
+
 	if FeePackagesDirty {
 		tx.InPackages = nil // fee the memory as this wont be needed anymore
 	} else {

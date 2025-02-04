@@ -1,8 +1,10 @@
 package txpool
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"runtime/debug"
 	"slices"
 
@@ -21,17 +23,26 @@ func (t *OneTxToSend) isInMap() (yes bool) {
 }
 
 var donot bool
+var recentDebugs *bytes.Buffer
 
 func cfl(label string) {
 	if donot {
+		recentDebugs = nil
 		return
 	}
+	common.CountSafe("TxPkgs_CLF")
 	if checkFeeList() {
 		println("*** fee packages list first noticed broken in", label)
 		dumpPkgList("packages_broken.txt")
 		debug.PrintStack()
 		donot = true
+
+		if recentDebugs != nil {
+			os.WriteFile("packages_before.txt", recentDebugs.Bytes(), 0600)
+			println("packages_broken.txt also created")
+		}
 	}
+	recentDebugs = nil
 }
 
 func checkFeeList() bool {
