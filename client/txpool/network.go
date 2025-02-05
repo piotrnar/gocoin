@@ -369,12 +369,10 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true}, true)
 }
 
-func Tick() {
-	ExpireOldTxs()
-	LimitRejected()
-	cfl("in tick")
+func checkSortedOK(from string) {
 	TxMutex.Lock()
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
+		println("Sorting fucked in", from)
 		println("Retry sort again, this time with FeePackagesDirty")
 		FeePackagesDirty = true
 		if VerifyMempoolSort(GetSortedMempoolRBF()) {
@@ -385,4 +383,11 @@ func Tick() {
 		}
 	}
 	TxMutex.Unlock()
+}
+
+func Tick() {
+	ExpireOldTxs()
+	LimitRejected()
+	cfl("in tick")
+	checkSortedOK("in tick")
 }

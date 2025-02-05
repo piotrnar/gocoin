@@ -47,6 +47,7 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
+
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
@@ -66,6 +67,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
+		checkSortedOK("add begin")
 		/*
 			cfl("before add")
 			rdbg = new(bytes.Buffer)
@@ -91,6 +93,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			sortFeePackages()
 		}
 		cfl("end of add")
+		checkSortedOK("add end")
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
