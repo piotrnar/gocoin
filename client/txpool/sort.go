@@ -616,41 +616,6 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, len(TransactionsToSend))
 	var pks_idx, res_idx, cnt int
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
-	/*
-		mark_in := func(t *OneTxToSend, x int) bool {
-			if _, ok := already_in[t]; ok {
-				println("ERROR: called mark_in on tx that already is in", x, res_idx, t.Hash.String())
-				return true
-			}
-			if !t.isInMap() {
-				println("ERROR: adding group t2s that isn't in the map", x, res_idx, t.Hash.String())
-				return true
-			}
-			already_in[t] = true
-			return false
-		}
-
-		check_size := func(cnt int) {
-			if res_idx+cnt > len(result) {
-				println("ERROR: WTF? not enogh space in the buffer", res_idx, len(result), len(TransactionsToSend))
-				println("Unable to enter:", cnt)
-				println("Writing what is already in it into a file")
-				f, _ := os.Create("inbuf.txt")
-				for _, txx := range result[:res_idx] {
-					fmt.Fprintln(f, txx.Hash.String())
-				}
-				f.Close()
-
-				f, _ = os.Create("inpool.txt")
-				for _, txx := range TransactionsToSend {
-					fmt.Fprintln(f, txx.Hash.String())
-				}
-				f.Close()
-				debug.PrintStack()
-				os.Exit(1)
-			}
-		}
-	*/
 	for tx := BestT2S; tx != nil; tx = tx.Worse {
 		cnt++
 		for pks_idx < len(FeePackages) {
@@ -662,7 +627,6 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
-				//check_size(len(pk.Txs))
 				copy(result[res_idx:], pk.Txs)
 				res_idx += len(pk.Txs)
 				continue
@@ -671,7 +635,6 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		}
 
 		if _, ok := already_in[tx]; !ok {
-			//check_size(1)
 			result[res_idx] = tx
 			already_in[tx] = true
 			res_idx++

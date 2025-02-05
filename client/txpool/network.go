@@ -312,18 +312,13 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
 		SigopsCost: uint64(sigops), Final: final, VerifyTime: time.Since(start_time)}
 
+	rec.Clean()
+	rec.Footprint = uint32(rec.SysSize())
+
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
 	}
-
-	rec.Clean()
-	rec.Footprint = uint32(rec.SysSize())
-	checkSortedOK("net.A")
-	rdbg = new(bytes.Buffer)
-	fmt.Fprintln(rdbg, "adding tx", rec.Hash.String())
 	rec.Add(bidx)
-	checkSortedOK("net.B")
-	rdbg = nil
 
 	wtg := WaitingForInputs[bidx]
 	if wtg != nil {

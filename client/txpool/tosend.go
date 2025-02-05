@@ -1,7 +1,6 @@
 package txpool
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -66,20 +65,16 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 		}
 	}
 
-	fmt.Fprintln(rdbg, "add", t2s.Hash.String(), FeePackagesDirty, t2s.MemInputCnt)
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
 		parents := t2s.getAllTopParents()
-		fmt.Fprintln(rdbg, " + found", len(parents), "top parents", FeePackagesNeedSorting)
 		for _, parent := range parents {
 			if parent.MemInputCnt != 0 {
 				println("ERROR: parent.MemInputCnt!=0 must not happen here")
 				continue
 			}
 			parent.addToPackages(t2s)
-			fmt.Fprintln(rdbg, " + added to parent", parent.Hash.String(), "   resort:", FeePackagesNeedSorting)
 		}
 	}
-	fmt.Fprintln(rdbg, "after need sorting:", FeePackagesNeedSorting)
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
 		common.SetMinFeePerKB(0) // nothing removed so set the minimal fee
@@ -119,11 +114,6 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 			os.Exit(1)
 		}
 	}
-
-	//cfl("before del")
-	/*rdbg = new(bytes.Buffer)
-	fmt.Fprintln(rdbg, "Deleting t2s", tx.Hash.String(), with_children, reason)
-	dumpPkgListHere(rdbg)*/
 
 	fprint2remove := uint64(tx.Footprint)
 
@@ -408,10 +398,6 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 				pkg.Fee += t.Fee
 				t.InPackages = append(t.InPackages, pkg)
 			}
-			fmt.Fprintln(rdbg, "   - add new pkg with parent", parent.Id(), "and", len(pandch), "txs")
-			for _, t := range pandch {
-				fmt.Fprintln(rdbg, "      tx", t.Id(), "  meminputs:", t.MemInputCnt)
-			}
 			FeePackages = append(FeePackages, pkg)
 			FeePackagesNeedSorting = true
 			common.CountSafe("TxPkgsAddNew")
@@ -422,21 +408,17 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 			println("ERROR: in addToPackages parent's GetItWithAllChildren returned only", len(pandch), "txs")
 		}
 	} else {
-		fmt.Fprintln(rdbg, " - update old packages", len(parent.InPackages))
 		// here we go through all the packages and append the new_child at their ends
 		for _, pkg := range parent.InPackages {
 			if !pkg.hasAllTheParentsFor(new_child) {
 				// this is not out package
-				fmt.Fprintln(rdbg, "   - does not have all the parents", len(parent.InPackages))
 				continue
 			}
 			if slices.Contains(pkg.Txs, new_child) {
-				fmt.Fprintln(rdbg, "   - skip")
 				// this can happen when a new child uses more tha one vout from the parent
 				common.CountSafe("TxPkgsAddDupTx")
 				continue
 			}
-			fmt.Fprintln(rdbg, "   - add tx number", len(pkg.Txs))
 			pkg.Txs = append(pkg.Txs, new_child)
 			pkg.Weight += new_child.Weight()
 			pkg.Fee += new_child.Fee
@@ -446,8 +428,6 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 			if CheckForErrors() {
 				pkg.checkForDups()
 			}
-			ch := parent.GetItWithAllChildren()
-			fmt.Fprintln(rdbg, "     ... verify pkg's txs count", len(pkg.Txs), len(ch))
 		}
 	}
 }
@@ -469,7 +449,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 		DelFromPackagesCount++
 	}()
 
-	//fmt.Fprintln(rdbg, "InPackages:", len(t2s.InPackages))
 	for _, pkg := range t2s.InPackages {
 		common.CountSafe("TxPkgsDelTick")
 		if CheckForErrors() {
@@ -485,7 +464,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 		}
 
-		//fmt.Fprintln(rdbg, "pkg.Txs:", len(pkg.Txs), "  meminputs:", t2s.MemInputCnt)
 		if len(pkg.Txs) == 2 {
 			pkg.Txs[0].removePkg(pkg) // remove reference to this pkg from our parent
 			pkg.Txs = nil
@@ -505,7 +483,6 @@ func (t2s *OneTxToSend) delFromPackages() {
 		}
 	}
 
-	//fmt.Fprintln(rdbg, "records2remove:", records2remove)
 	if records2remove > 0 {
 		common.CountSafe("TxPkgsDelGrCnt")
 		common.CountSafeAdd("TxPkgsDelGroup", uint64(records2remove))
