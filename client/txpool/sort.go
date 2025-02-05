@@ -444,6 +444,9 @@ func (pk *OneTxsPackage) String() (res string) {
 }
 
 func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
+	if CheckForErrors() {
+		pk.checkForDups()
+	}
 	for _, par := range pk.Txs {
 		if _, ok = list[par]; ok {
 			return
@@ -593,9 +596,6 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
-				if CheckForErrors() && pk.checkForDups() {
-					return
-				}
 				if pk.anyIn(already_in) {
 					continue
 				}
