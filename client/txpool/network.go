@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -291,9 +292,19 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	for ctx := range rbf_tx_list {
-		// we dont remove with children because it can't have any in the mempool yet
+	for len(rbf_tx_list) > 0 {
+		var ctx *OneTxToSend
+		for ctx = range rbf_tx_list {
+			if ctx.HasNoChildren() {
+				break
+			}
+		}
+		if ctx == nil {
+			println("ERROR: rbf_tx_list not emty, but cannot find a tx with no children")
+			break
+		}
 		ctx.Delete(false, TX_REJECTED_REPLACED)
+		delete(rbf_tx_list, ctx)
 	}
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
@@ -362,4 +373,16 @@ func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
 	cfl("in tick")
+	TxMutex.Lock()
+	if VerifyMempoolSort(GetSortedMempoolRBF()) {
+		println("Retry sort again, this time with FeePackagesDirty")
+		FeePackagesDirty = true
+		if VerifyMempoolSort(GetSortedMempoolRBF()) {
+			println("*** again fucked ***")
+			os.Exit(1)
+		} else {
+			println("Fixed")
+		}
+	}
+	TxMutex.Unlock()
 }

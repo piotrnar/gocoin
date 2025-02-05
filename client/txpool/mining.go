@@ -115,16 +115,21 @@ func tx_mined(tx *btc.Tx) {
 	}
 }
 
+var insideMining bool
+
 // BlockMined removes all the block's tx from the mempool.
 func BlockMined(bl *btc.Block) {
-	FeePackagesDirty = true
 	common.CountSafe("TxPkgsBlockMined")
 
 	wtgs := make([]*OneWaitingList, 0, len(bl.Txs)-1)
 	TxMutex.Lock()
+	FeePackagesDirty = true
+
+	insideMining = true
 	for _, tx := range bl.Txs[1:] {
 		tx_mined(tx)
 	}
+	insideMining = false
 	for _, tx := range bl.Txs[1:] {
 		bidx := tx.Hash.BIdx()
 		if wtg := WaitingForInputs[bidx]; wtg != nil {

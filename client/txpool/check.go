@@ -383,6 +383,10 @@ func MempoolCheck() bool {
 	return dupa > 0
 }
 
+func CheckForErrors() bool {
+	return common.Get(&common.CFG.TXPool.CheckErrors)
+}
+
 /* --== Let's keep it here for now as it sometimes comes handy for debuging
 
 var first_ = true

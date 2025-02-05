@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"runtime/debug"
+	"slices"
 	"sort"
 	"time"
 
@@ -437,14 +438,6 @@ type OneTxsPackage struct {
 	Fee    uint64
 }
 
-func (pkg *OneTxsPackage) unlinkTxsExcept(t2s *OneTxToSend) {
-	for _, t := range pkg.Txs {
-		if t != t2s {
-			t.removePkg(pkg)
-		}
-	}
-}
-
 func (pk *OneTxsPackage) String() (res string) {
 	res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
 	return
@@ -457,6 +450,18 @@ func (pk *OneTxsPackage) anyIn(list map[*OneTxToSend]bool) (ok bool) {
 		}
 	}
 	return
+}
+
+func (pk *OneTxsPackage) checkForDups() bool {
+	for i, t := range pk.Txs[:len(pk.Txs)-1] {
+		if slices.Contains(pk.Txs[i+1:], t) {
+			println("ERROR: pkg", pk.String(), "contains the same tx twice:", t.Hash.String())
+			debug.PrintStack()
+			os.Exit(1)
+			return true
+		}
+	}
+	return false
 }
 
 var (
@@ -497,7 +502,12 @@ func dumpPkgListHere(f io.Writer) {
 	}
 }
 
-var pkg_id int
+var _pkg_id int
+
+func newPkgId() int {
+	_pkg_id++
+	return _pkg_id
+}
 
 // builds FeePackages list, if neccessary
 func lookForPackages() {
@@ -521,14 +531,13 @@ func lookForPackages() {
 		}
 
 		if pandch := t2s.GetItWithAllChildren(); len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch, Id: pkg_id}
+			pkg := &OneTxsPackage{Txs: pandch, Id: newPkgId()}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
 				t.InPackages = append(t.InPackages, pkg)
 			}
 			FeePackages = append(FeePackages, pkg)
-			pkg_id++
 		}
 	}
 	sortFeePackages()
@@ -544,59 +553,68 @@ func GetSortedMempoolRBF() (result []*OneTxToSend) {
 	result = make([]*OneTxToSend, len(TransactionsToSend))
 	var pks_idx, res_idx, cnt int
 	already_in := make(map[*OneTxToSend]bool, len(TransactionsToSend))
+	/*
+		mark_in := func(t *OneTxToSend, x int) bool {
+			if _, ok := already_in[t]; ok {
+				println("ERROR: called mark_in on tx that already is in", x, res_idx, t.Hash.String())
+				return true
+			}
+			if !t.isInMap() {
+				println("ERROR: adding group t2s that isn't in the map", x, res_idx, t.Hash.String())
+				return true
+			}
+			already_in[t] = true
+			return false
+		}
+
+		check_size := func(cnt int) {
+			if res_idx+cnt > len(result) {
+				println("ERROR: WTF? not enogh space in the buffer", res_idx, len(result), len(TransactionsToSend))
+				println("Unable to enter:", cnt)
+				println("Writing what is already in it into a file")
+				f, _ := os.Create("inbuf.txt")
+				for _, txx := range result[:res_idx] {
+					fmt.Fprintln(f, txx.Hash.String())
+				}
+				f.Close()
+
+				f, _ = os.Create("inpool.txt")
+				for _, txx := range TransactionsToSend {
+					fmt.Fprintln(f, txx.Hash.String())
+				}
+				f.Close()
+				debug.PrintStack()
+				os.Exit(1)
+			}
+		}
+	*/
 	for tx := BestT2S; tx != nil; tx = tx.Worse {
 		cnt++
 		for pks_idx < len(FeePackages) {
 			if pk := FeePackages[pks_idx]; pk.Fee*uint64(tx.Weight()) > tx.Fee*uint64(pk.Weight) {
 				pks_idx++
+				if CheckForErrors() && pk.checkForDups() {
+					return
+				}
 				if pk.anyIn(already_in) {
 					continue
 				}
-				// all package's txs new: incude them all
-				for _, tt := range pk.Txs {
-					if !tx.isInMap() {
-						println("ERROR: adding group t2s that isn't in the map", tt.Hash.String())
-					}
-				}
-				copy(result[res_idx:], pk.Txs)
-				res_idx += len(pk.Txs)
 				for _, _t := range pk.Txs {
 					already_in[_t] = true
 				}
+				//check_size(len(pk.Txs))
+				copy(result[res_idx:], pk.Txs)
+				res_idx += len(pk.Txs)
 				continue
 			}
 			break
 		}
 
 		if _, ok := already_in[tx]; !ok {
-			if !tx.isInMap() {
-				println("ERROR: adding single t2s that isn't in the map", tx.Hash.String())
-			} else {
-				if res_idx >= len(result) {
-					println("ERROR: WTF? not enogh space in the buffer", res_idx, len(result), len(TransactionsToSend), cnt)
-					println("Unable to enter txid:", tx.Hash.String())
-					println("Writing what is already in it into a file")
-					f, _ := os.Create("inbuf.txt")
-					for _, txx := range result[:res_idx] {
-						fmt.Fprintln(f, txx.Hash.String())
-						if !tx.isInMap() {
-							fmt.Fprintln(f, "  *** Not In MAP ***")
-						}
-					}
-					f.Close()
-
-					f, _ = os.Create("inpool.txt")
-					for _, txx := range TransactionsToSend {
-						fmt.Fprintln(f, txx.Hash.String())
-					}
-					f.Close()
-					debug.PrintStack()
-					os.Exit(1)
-				}
-				result[res_idx] = tx
-				already_in[tx] = true
-				res_idx++
-			}
+			//check_size(1)
+			result[res_idx] = tx
+			already_in[tx] = true
+			res_idx++
 		}
 	}
 	return
