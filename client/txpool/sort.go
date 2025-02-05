@@ -34,16 +34,9 @@ var (
 )
 
 // call it with false to restore sorting
-func SupressMempooolSorting(yes bool) {
+func BlockCommitInProgress(yes bool) {
 	TxMutex.Lock()
-	if yes {
-		SortingSupressed = true
-	} else if !SortingSupressed {
-		SortingSupressed = false
-		if SortListDirty {
-			buildSortedList()
-		}
-	}
+	SortingSupressed = yes
 	TxMutex.Unlock()
 }
 
@@ -436,16 +429,19 @@ func GetSortedMempoolSlow() (result []*OneTxToSend) {
 }
 
 type OneTxsPackage struct {
-	Id     int
 	Txs    []*OneTxToSend
 	Weight int
 	Fee    uint64
 }
 
 func (pk *OneTxsPackage) String() (res string) {
-	//res = fmt.Sprintf("Id:%d  SPB:%.5f  Txs:%d", pk.Id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
-	res = fmt.Sprintf("SPB:%.5f  w:%d   f:%d Txs:%d", 4.0*float64(pk.Fee)/float64(pk.Weight), pk.Weight,
-		pk.Fee, len(pk.Txs))
+	var id string
+	if len(pk.Txs) == 0 {
+		id = "xxxxxxxxxxxxxxxx"
+	} else {
+		id = pk.Txs[0].Hash.String()[:16]
+	}
+	res = fmt.Sprintf("Id:%s  SPB:%.5f  Txs:%d", id, 4.0*float64(pk.Fee)/float64(pk.Weight), len(pk.Txs))
 	return
 }
 
@@ -555,33 +551,13 @@ func dumpPkgListHere(f io.Writer) {
 	}
 }
 
-var _pkg_id int
-
-func newPkgId() int {
-	_pkg_id++
-	return _pkg_id
-}
-
 // builds FeePackages list, if neccessary
 func lookForPackages() {
 	defer sortFeePackages()
-	if rdbg != nil {
-		fmt.Fprintln(rdbg, "lookForPackages  sld:", SortListDirty, "  fpd:", FeePackagesDirty, "  fpns:", FeePackagesNeedSorting)
-	}
-
-	if SortListDirty {
-		common.CountSafe("TxBuildListFirst")
-		buildSortedList()
-	}
+	buildSortedList()
 	if !FeePackagesDirty {
-		if rdbg != nil {
-			fmt.Fprintln(rdbg, "lookForPackages  TxPkgsHaveThem")
-		}
 		common.CountSafe("TxPkgsHaveThem")
 		return
-	}
-	if rdbg != nil {
-		fmt.Fprintln(rdbg, "lookForPackages  TxPkgsNeedThem")
 	}
 	common.CountSafe("TxPkgsNeedThem")
 	sta := time.Now()
@@ -595,7 +571,7 @@ func lookForPackages() {
 		}
 
 		if pandch := t2s.GetItWithAllChildren(); len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch, Id: newPkgId()}
+			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
@@ -747,6 +723,11 @@ func GetSortedMempool() (result []*OneTxToSend) {
 // call it with the mutex locked
 func buildSortedList() {
 	common.CountSafePar("TxSortBuild-", SortingSupressed)
+	if !SortListDirty {
+		common.CountSafe("TxSortBuildSkept")
+		return
+	}
+	common.CountSafe("TxSortBuildNeeded")
 	SortListDirty = false
 	ts := GetSortedMempoolSlow()
 	if len(ts) == 0 {

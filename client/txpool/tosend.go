@@ -130,7 +130,7 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
-	if CheckForErrors() && !insideMining && !tx.HasNoChildren() {
+	if CheckForErrors() && !SortingSupressed && !tx.HasNoChildren() {
 		println("ERROR: Delete called on t2s that still has some children", with_children,
 			"\n  ", tx.Hash.String())
 		ch := tx.GetChildren()
@@ -392,7 +392,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	if len(parent.InPackages) == 0 {
 		// we create a new package, like in lookForPackages()
 		if pandch := parent.GetItWithAllChildren(); len(pandch) > 1 {
-			pkg := &OneTxsPackage{Txs: pandch, Id: newPkgId()}
+			pkg := &OneTxsPackage{Txs: pandch}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()
 				pkg.Fee += t.Fee
@@ -435,8 +435,8 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 // removes itself from any grup containing it
 func (t2s *OneTxToSend) delFromPackages() {
 	common.CountSafe("TxPkgsDel")
-	FeePackagesDirty = true
-	return
+	//FeePackagesDirty = true
+	//return
 
 	var records2remove int
 	if len(t2s.InPackages) == 0 {
@@ -451,17 +451,10 @@ func (t2s *OneTxToSend) delFromPackages() {
 
 	for _, pkg := range t2s.InPackages {
 		common.CountSafe("TxPkgsDelTick")
-		if CheckForErrors() {
-			if pkg.Txs[len(pkg.Txs)-1] != t2s {
-				println("ERROR: delFromPackages called on t2s that isn't last of txs in", pkg)
-				FeePackagesDirty = true
-				return
-			}
-			if len(pkg.Txs) < 2 {
-				println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
-				FeePackagesDirty = true
-				return
-			}
+		if CheckForErrors() && len(pkg.Txs) < 2 {
+			println("ERROR: delFromPackages called on t2s that has pkg with less than txs", pkg)
+			FeePackagesDirty = true
+			return
 		}
 
 		if len(pkg.Txs) == 2 {
