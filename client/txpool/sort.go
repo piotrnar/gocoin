@@ -519,8 +519,8 @@ func lookForPackages() {
 		if t2s.MemInputCnt > 0 {
 			continue
 		}
-		pandch := t2s.GetItWithAllChildren()
-		if len(pandch) > 1 {
+
+		if pandch := t2s.GetItWithAllChildren(); len(pandch) > 1 {
 			pkg := &OneTxsPackage{Txs: pandch, Id: pkg_id}
 			for _, t := range pandch {
 				pkg.Weight += t.Weight()

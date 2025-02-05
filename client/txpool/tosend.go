@@ -1,8 +1,8 @@
 package txpool
 
 import (
+	"fmt"
 	"os"
-	"reflect"
 	"runtime/debug"
 	"slices"
 	"sync"
@@ -48,19 +48,35 @@ type OneTxToSend struct {
 }
 
 func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
-	//cfl("before add")
+	/*
+		cfl("before add")
+		rdbg = new(bytes.Buffer)
+		fmt.Fprintln(rdbg, "Adding t2s", t2s.Hash.String(), t2s.MemInputCnt)
+		dumpPkgListHere(rdbg)
+	*/
+
 	TransactionsToSend[bidx] = t2s
 	t2s.AddToSort()
 	TransactionsToSendWeight += uint64(t2s.Weight())
 	TransactionsToSendSize += uint64(t2s.Footprint)
 
-	if FeePackagesDirty {
-		t2s.InPackages = nil // fee the memory as this wont be needed anymore
-	} else {
-		if t2s.MemInputCnt > 0 {
-			t2s.addToPackages()
-		} else if t2s.InPackages != nil {
-			println("add t2s", t2s.Hash.String(), "has no mem inpus, but InPackages:", t2s.InPackages)
+	if t2s.InPackages != nil {
+		println("ERROR: Add to mempool called for tx that already has InPackages", len(t2s.InPackages))
+		FeePackagesDirty = true
+		return
+	}
+
+	// TODO: make it work... (without crashing)
+	if false && t2s.MemInputCnt > 0 {
+		// go through all the parents...
+		for vout, yes := range t2s.MemInputs {
+			if yes { // and add yoursef to their packages
+				if pt, ok := TransactionsToSend[btc.BIdx(t2s.TxIn[vout].Input.Hash[:])]; ok {
+					pt.addToPackages(t2s)
+				} else {
+					println("ERROR: t2s being added has mem input which does not exist")
+				}
+			}
 		}
 	}
 
@@ -83,8 +99,8 @@ func (tx *OneTxToSend) Delete(with_children bool, reason byte) {
 		}
 	}
 
-	/*cfl("before del")
-	rdbg = new(bytes.Buffer)
+	//cfl("before del")
+	/*rdbg = new(bytes.Buffer)
 	fmt.Fprintln(rdbg, "Deleting t2s", tx.Hash.String(), with_children, reason)
 	dumpPkgListHere(rdbg)*/
 
@@ -318,48 +334,40 @@ var (
 	DelFromPackagesCount uint
 )
 
-func (t2s *OneTxToSend) addToPackages() {
+// If t2s belongs to any packages, we add the child at the end of each of them
+// If t2s does not belong to any packages, we create a new 2-txs package for it and the child
+func (t2s *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 	common.CountSafe("TxPkgsAdd")
-	if false {
-		FeePackagesDirty = true
-		return
-	}
-
 	var resort bool
-	if len(t2s.InPackages) == 0 {
-		return
-	}
-
 	sta := time.Now()
 	defer func() {
 		AddToPackagesTime += time.Since(sta)
 		AddToPackagesCount++
 	}()
 
-	for _, pkg := range t2s.InPackages {
-		pandch := t2s.GetItWithAllChildren()
-		if common.Get(&common.CFG.TXPool.CheckErrors) {
-			if len(pandch) < 2 {
-				println("ERROR: GetItWithAllChildren returns only", len(pandch), "txs", t2s.Hash.String())
-			}
-			if len(pkg.Txs) <= len(pandch) {
-				println("ERROR: GetItWithAllChildren returns same or lower len", len(pandch), t2s.Hash.String(),
-					" identical:", reflect.DeepEqual(pkg.Txs, pandch))
-			}
-		}
-		pkg.Txs = pandch
-		pkg.Weight = 0
-		pkg.Fee = 0
-		for _, t := range pkg.Txs {
-			pkg.Weight += t.Weight()
-			pkg.Fee += t.Fee
-			if !slices.Contains(t.InPackages, pkg) {
-				t.InPackages = append(t.InPackages, pkg)
-				common.CountSafe("TxPkgsAddInp")
-			}
-		}
+	if len(t2s.InPackages) == 0 {
+		// we can only create a package that starts with this one...
+		pkg := &OneTxsPackage{Txs: []*OneTxToSend{t2s, new_child}, Id: pkg_id}
+		pkg.Weight += t2s.Weight() + new_child.Weight()
+		pkg.Fee += t2s.Fee + new_child.Fee
+		t2s.InPackages = []*OneTxsPackage{pkg}
+		new_child.InPackages = append(new_child.InPackages, pkg) // there can be more than one call with same new_child
+		FeePackages = append(FeePackages, pkg)
+		pkg_id++
 		resort = true
-		common.CountSafe("TxPkgsAddUpd")
+		common.CountSafe("TxPkgsAddNew")
+		fmt.Fprintln(rdbg, "Created new package", pkg)
+	} else {
+		// here we go through all the packages and append the new_child at their ends
+		for _, pkg := range t2s.InPackages {
+			pkg.Txs = append(pkg.Txs, new_child)
+			pkg.Weight += new_child.Weight()
+			pkg.Fee += new_child.Fee
+			new_child.InPackages = append(new_child.InPackages, pkg)
+			resort = true
+			common.CountSafe("TxPkgsAddUpd")
+			fmt.Fprintln(rdbg, "Updated old package", pkg)
+		}
 	}
 	if resort {
 		common.CountSafe("TxPkgsAddResort")
