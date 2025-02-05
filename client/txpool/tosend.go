@@ -399,7 +399,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 				t.InPackages = append(t.InPackages, pkg)
 			}
 			FeePackages = append(FeePackages, pkg)
-			FeePackagesNeedSorting = true
+			FeePackagesReSort = true
 			common.CountSafe("TxPkgsAddNew")
 			if CheckForErrors() {
 				pkg.checkForDups()
@@ -423,7 +423,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 			pkg.Weight += new_child.Weight()
 			pkg.Fee += new_child.Fee
 			new_child.InPackages = append(new_child.InPackages, pkg)
-			FeePackagesNeedSorting = true
+			FeePackagesReSort = true
 			common.CountSafe("TxPkgsAddAppend")
 			if CheckForErrors() {
 				pkg.checkForDups()
@@ -472,7 +472,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			pkg.Fee -= t2s.Fee
 			pkg.Weight -= t2s.Weight()
 			pkg.Txs = pkg.Txs[:len(pkg.Txs)-1]
-			FeePackagesNeedSorting = true
+			FeePackagesReSort = true
 		}
 	}
 
@@ -486,7 +486,7 @@ func (t2s *OneTxToSend) delFromPackages() {
 			}
 		}
 		FeePackages = new_pkgs_list
-		FeePackagesNeedSorting = true
+		FeePackagesReSort = true
 	}
 }
 
