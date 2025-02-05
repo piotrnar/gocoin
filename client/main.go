@@ -29,9 +29,8 @@ import (
 )
 
 var (
-	retryCachedBlocks   bool
-	SaveBlockChain      *time.Timer = time.NewTimer(1<<63 - 1)
-	reenableMempoolSort *time.Timer = time.NewTimer(1<<63 - 1)
+	retryCachedBlocks bool
+	SaveBlockChain    *time.Timer = time.NewTimer(1<<63 - 1)
 
 	NetBlocksSize sys.SyncInt
 
@@ -101,10 +100,9 @@ func LocalAcceptBlock(newbl *network.BlockRcvd) (e error) {
 	bl.LastKnownHeight = network.LastCommitedHeader.Height
 	network.MutexRcv.Unlock()
 
-	reenableMempoolSort.Stop()
-	txpool.SupressMempooolSorting(true)
+	txpool.BlockCommitInProgress(true)
 	e = common.BlockChain.CommitBlock(bl, newbl.BlockTreeNode)
-	reenableMempoolSort.Reset(ReenableMempoolSorting) // if we receive no new block within the next second
+	txpool.BlockCommitInProgress(false)
 	if bl.LastKnownHeight-bl.Height > common.Get(&common.CFG.Memory.MaxCachedBlks) {
 		bl.Txs = nil // we won't be needing bl.Txs anymore, so might as well mark the memory as unused
 	}
@@ -680,11 +678,6 @@ func main() {
 				if common.BlockChain.Idle() {
 					common.CountSafe("ChainIdleUsed")
 				}
-
-			case <-reenableMempoolSort.C:
-				common.Busy()
-				common.CountSafe("TxSortReEnable")
-				txpool.SupressMempooolSorting(false)
 
 			case newtx := <-network.NetTxs:
 				common.Busy()
