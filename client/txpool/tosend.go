@@ -430,7 +430,7 @@ func (parent *OneTxToSend) addToPackages(new_child *OneTxToSend) {
 				fmt.Fprintln(rdbg, "   - does not have all the parents", len(parent.InPackages))
 				continue
 			}
-			if !slices.Contains(pkg.Txs, new_child) {
+			if slices.Contains(pkg.Txs, new_child) {
 				fmt.Fprintln(rdbg, "   - skip")
 				// this can happen when a new child uses more tha one vout from the parent
 				common.CountSafe("TxPkgsAddDupTx")
