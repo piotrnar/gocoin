@@ -371,6 +371,7 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 
 func checkSortedOK(from string) {
 	TxMutex.Lock()
+	cfl("in tick")
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
 		println("Sorting fucked in", from)
 		println("Retry sort again, this time with FeePackagesDirty")
@@ -388,6 +389,5 @@ func checkSortedOK(from string) {
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
-	cfl("in tick")
 	checkSortedOK("in tick")
 }

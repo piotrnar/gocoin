@@ -67,7 +67,7 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 	}
 
 	if !FeePackagesDirty && t2s.MemInputCnt > 0 { // go through all the parents...
-		checkSortedOK("add begin")
+		//checkSortedOK("add begin")
 		/*
 			cfl("before add")
 			rdbg = new(bytes.Buffer)
@@ -92,8 +92,8 @@ func (t2s *OneTxToSend) Add(bidx btc.BIDX) {
 			common.CountSafe("TxPkgsAddResort")
 			sortFeePackages()
 		}
-		cfl("end of add")
-		checkSortedOK("add end")
+		//cfl("end of add")
+		//checkSortedOK("add end")
 	}
 
 	if !SortingSupressed && !SortListDirty && removeExcessiveTxs() == 0 {
