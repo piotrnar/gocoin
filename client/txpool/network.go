@@ -293,33 +293,35 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		sigops += uint(tx.CountWitnessSigOps(i, pos[i].Pk_script))
 	}
 
-	cfl("pre ctx.Delete for")
-	rdbg = new(bytes.Buffer)
-	rd1 = new(bytes.Buffer)
-	rd2 = new(bytes.Buffer)
-	dumpPkgListHere(rd1)
-	fmt.Fprintln(rdbg, "About to delete replaced txs cnt", len(rbf_tx_list))
-	for len(rbf_tx_list) > 0 {
-		var ctx *OneTxToSend
-		for ctx = range rbf_tx_list {
-			if ctx.HasNoChildren() {
+	if len(rbf_tx_list) > 0 {
+		cfl("pre ctx.Delete for")
+		rdbg = new(bytes.Buffer)
+		rd1 = new(bytes.Buffer)
+		rd2 = new(bytes.Buffer)
+		dumpPkgListHere(rd1)
+		fmt.Fprintln(rdbg, "About to delete replaced txs cnt", len(rbf_tx_list))
+		for len(rbf_tx_list) > 0 {
+			var ctx *OneTxToSend
+			for ctx = range rbf_tx_list {
+				if ctx.HasNoChildren() {
+					break
+				}
+			}
+			if ctx == nil {
+				println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
 				break
 			}
-		}
-		if ctx == nil {
-			println("ERROR: rbf_tx_list not empty, but cannot find a tx with no children")
-			break
-		}
-		fmt.Fprintln(rdbg, " ... doing del txid", ctx.Id(), "-", len(rbf_tx_list), "left")
-		dumpPkgListHere(rd2)
+			fmt.Fprintln(rdbg, " ... doing del txid", ctx.Id(), "-", len(rbf_tx_list), "left")
+			dumpPkgListHere(rd2)
 
-		ctx.Delete(false, TX_REJECTED_REPLACED)
-		cfl("post ctx.Delete" + ctx.Id())
-		delete(rbf_tx_list, ctx)
+			ctx.Delete(false, TX_REJECTED_REPLACED)
+			cfl("post ctx.Delete" + ctx.Id())
+			delete(rbf_tx_list, ctx)
+		}
+		rdbg = nil
+		rd1 = nil
+		rd2 = nil
 	}
-	rdbg = nil
-	rd1 = nil
-	rd2 = nil
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
 		Firstseen: start_time, Lastseen: start_time, Tx: tx, MemInputs: frommem, MemInputCnt: frommemcnt,
