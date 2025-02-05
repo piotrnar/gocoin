@@ -77,7 +77,7 @@ var (
 			Enabled        bool // Global on/off swicth
 			AllowMemInputs bool
 			FeePerByte     float64
-			MaxTxSize      uint32
+			MaxTxWeight    uint32
 			MaxSizeMB      uint
 			ExpireInDays   uint
 			MaxRejectMB    float64
@@ -88,10 +88,10 @@ var (
 			CheckErrors    bool
 		}
 		TXRoute struct {
-			Enabled    bool // Global on/off swicth
-			FeePerByte float64
-			MaxTxSize  uint32
-			MemInputs  bool
+			Enabled     bool // Global on/off swicth
+			FeePerByte  float64
+			MaxTxWeight uint32
+			MemInputs   bool
 		}
 		Memory struct {
 			GCPercTrshold        int
@@ -183,7 +183,7 @@ func InitConfig() {
 	CFG.TXPool.Enabled = true
 	CFG.TXPool.AllowMemInputs = true
 	CFG.TXPool.FeePerByte = 1.0
-	CFG.TXPool.MaxTxSize = 100e3
+	CFG.TXPool.MaxTxWeight = 400e3
 	CFG.TXPool.MaxSizeMB = 300
 	CFG.TXPool.ExpireInDays = 14
 	CFG.TXPool.MaxRejectMB = 25.0
@@ -193,7 +193,7 @@ func InitConfig() {
 
 	CFG.TXRoute.Enabled = true
 	CFG.TXRoute.FeePerByte = 0.0
-	CFG.TXRoute.MaxTxSize = 100e3
+	CFG.TXRoute.MaxTxWeight = 400e3
 	CFG.TXRoute.MemInputs = true
 
 	CFG.Memory.GCPercTrshold = 30 // 30% (To save mem)

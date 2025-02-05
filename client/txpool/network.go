@@ -358,7 +358,7 @@ func (rec *OneTxToSend) isRoutable() bool {
 		rec.Blocked = TX_REJECTED_DISABLED
 		return false
 	}
-	if rec.Weight() > 4*int(common.Get(&common.CFG.TXRoute.MaxTxSize)) {
+	if rec.Weight() > int(common.Get(&common.CFG.TXRoute.MaxTxWeight)) {
 		common.CountSafe("TxRouteTooBig")
 		rec.Blocked = TX_REJECTED_TOO_BIG
 		return false

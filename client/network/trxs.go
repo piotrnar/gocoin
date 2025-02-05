@@ -110,7 +110,7 @@ func (c *OneConnection) ParseTxNet(pl []byte) {
 
 	tx.SetHash(pl)
 
-	if tx.Weight() > 4*int(common.Get(&common.CFG.TXPool.MaxTxSize)) {
+	if tx.Weight() > int(common.Get(&common.CFG.TXPool.MaxTxWeight)) {
 		txpool.RejectTx(tx, txpool.TX_REJECTED_TOO_BIG, nil)
 		return
 	}

@@ -207,10 +207,10 @@ Note that Bitcoin Core (before version 23.0) does not connect to TCP ports other
 <td class="cfg_info"> Required minimum fee per byte to accept a transaction to the memory pool.</td>
 </tr>
 <tr class="even">
-<td class="cfg_name"> TXPool.MaxTxSize</td>
+<td class="cfg_name"> TXPool.MaxTxWeight</td>
 <td class="cfg_type"> uint32</td>
-<td> 100000</td>
-<td class="cfg_info"> Maximum size of a transaction that would be accepted to the memory pool.</td>
+<td> 400000</td>
+<td class="cfg_info"> Maximum weight of a transaction that would be accepted to the memory pool.</td>
 </tr>
 <tr class="even">
 <td class="cfg_name"> TXPool.MaxSizeMB</td>
@@ -272,10 +272,10 @@ Note that transactions which do not meet "TXPool.FeePerByte" (see above) are not
 therefore setting it to 0.0 will route all the accepted transactions.</td>
 </tr>
 <tr class="odd">
-<td class="cfg_name"> TXRoute.MaxTxSize</td>
+<td class="cfg_name"> TXRoute.MaxTxWeight</td>
 <td class="cfg_type"> uint32</td>
-<td> 100000</td>
-<td class="cfg_info"> Maximum size of a transaction that will be routed to other peers.</td>
+<td> 400000</td>
+<td class="cfg_info"> Maximum weight of a transaction that will be routed to other peers.</td>
 </tr>
 <tr class="odd">
 <td class="cfg_name"> TXRoute.MemInputs</td>
