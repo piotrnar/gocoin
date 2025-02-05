@@ -293,6 +293,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 	}
 
 	for len(rbf_tx_list) > 0 {
+		checkSortedOK("net.RBF.A")
 		var ctx *OneTxToSend
 		for ctx = range rbf_tx_list {
 			if ctx.HasNoChildren() {
@@ -305,6 +306,7 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 		}
 		ctx.Delete(false, TX_REJECTED_REPLACED)
 		delete(rbf_tx_list, ctx)
+		checkSortedOK("net.RBF.B")
 	}
 
 	rec := &OneTxToSend{Volume: totinp, Local: ntx.Local, Fee: fee,
@@ -313,7 +315,9 @@ func HandleNetTx(ntx *TxRcvd, retry bool) (accepted bool) {
 
 	rec.Clean()
 	rec.Footprint = uint32(rec.SysSize())
+	checkSortedOK("net.A")
 	rec.Add(bidx)
+	checkSortedOK("net.B")
 
 	for i := range spent {
 		SpentOutputs[spent[i]] = bidx
@@ -369,8 +373,8 @@ func SubmitLocalTx(tx *btc.Tx, rawtx []byte) bool {
 	return HandleNetTx(&TxRcvd{Tx: tx, Trusted: true, Local: true}, true)
 }
 
+// make sure to call it with the mutex locked
 func checkSortedOK(from string) {
-	TxMutex.Lock()
 	cfl("in tick")
 	if VerifyMempoolSort(GetSortedMempoolRBF()) {
 		println("Sorting fucked in", from)
@@ -383,11 +387,12 @@ func checkSortedOK(from string) {
 			println("Fixed")
 		}
 	}
-	TxMutex.Unlock()
 }
 
 func Tick() {
 	ExpireOldTxs()
 	LimitRejected()
-	checkSortedOK("in tick")
+	TxMutex.Lock()
+	checkSortedOK("Tick")
+	TxMutex.Unlock()
 }
